@@ -242,9 +242,11 @@
 * better error logging in server DONE 12/16/2024
 * store and archive player cookies DONE 12/17/2024
 * make ips less precise for user safety DONE 12/17/2024
-* send client logs back to server 
-* seperate server config from client config
+* send client logs back to server  DONE 12/18/2024
+* render more info in info overlay
 * right click brings up player info menu
+* create new view for enemies & personal units
+* seperate server config from client config
 * give naval units health
 * bug: player names not updating sometimes
 * make player editeable configs

@@ -67,6 +67,7 @@ export function createRenderer(canvas: HTMLCanvasElement, game: Game, eventBus: 
 	playerInfo.eventBus = eventBus
 	playerInfo.clientID = clientID
 	playerInfo.transform = transformHandler
+	playerInfo.game = game
 
 
 	const layers: Layer[] = [
