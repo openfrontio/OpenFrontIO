@@ -43,6 +43,7 @@ app.get('/lobbies', (req, res) => {
     });
 });
 
+
 app.post('/private_lobby', (req, res) => {
     const id = gm.createPrivateGame()
     console.log('creating private lobby with id ${id}')
@@ -99,9 +100,16 @@ app.get('/lobby/:id/exists', (req, res) => {
 });
 
 
-app.get('/private_lobby/:id', (req, res) => {
+app.get('/game/:id', (req, res) => {
+    const game = gm.game(req.params.id)
+    if (game == null) {
+        return res.status(404).json({ error: 'Game not found' });
+    }
     res.json({
-        hi: '5'
+        players: game.activeClients.map(c => ({
+            username: c.username,
+            clientID: c.clientID
+        }))
     });
 });
 

@@ -11,6 +11,9 @@ export class HostLobbyModal extends LitElement {
   @state() private selectedDiffculty: Difficulty = Difficulty.Medium;
   @state() private lobbyId = 'a345d';
   @state() private copySuccess = false;
+  @state() private players: string[] = []
+
+  private playersInterval = null
 
   static styles = css`
     .modal-overlay {
@@ -199,7 +202,6 @@ export class HostLobbyModal extends LitElement {
       }
     });
   }
-
 
   private async copyToClipboard() {
     try {

@@ -21,7 +21,7 @@ export class GameServer {
 
     private turns: Turn[] = []
     private intents: Intent[] = []
-    private activeClients: Client[] = []
+    public activeClients: Client[] = []
     // Used for record record keeping
     private allClients: Map<ClientID, Client> = new Map()
     private _hasStarted = false

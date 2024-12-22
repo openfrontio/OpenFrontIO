@@ -258,13 +258,19 @@
 * highlight player spawn DONE 12/21/2024
 * make bots less likely to build ships DONE 12/21/2024
 * bugix: wait for css to load on front page DONE 12/21/2024
-
+* fix lag/game freezes every 30s
+* h-bomb: pay money but not sent
 -- v0.13.0 release
 
+* can reconnect to game
+
+CidUbnQg
+
 * show players joined username in private lobby
+* redraw graphics
 * troop density affects attack bonus
-* bug: NPCs don't have money
 * right click brings up player info menu
+
 * seperate server config from client config
 * bug: player names not updating sometimes
 * make player editeable configs
@@ -283,9 +289,7 @@
 * record commit hash of game
 * remove alliance when player dies
 * put delay on adjust troop ratio to reduce number of messages
-* make clientID & playerID smaller
 * pause button in single player
-* when hovering over another player have the name not appear ontop of the exit cross
 * have a visual thing of who your attacking and how many boats you sent
 * make the sliders bigger. Like vertically.
 * add way to hide leaderboard n such
