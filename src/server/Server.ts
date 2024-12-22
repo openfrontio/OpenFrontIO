@@ -11,6 +11,7 @@ import { Client } from './Client';
 import { GamePhase, GameServer } from './GameServer';
 import { archive } from './Archive';
 import { DiscordBot } from './DiscordBot';
+import {MAX_USERNAME_LENGTH, MIN_USERNAME_LENGTH} from "../core/Util";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -103,6 +104,16 @@ app.get('/private_lobby/:id', (req, res) => {
     res.json({
         hi: '5'
     });
+});
+
+app.post('/validate-username', (req, res) => {
+    const { username } = req.body;
+
+    if (!username || username.length < MIN_USERNAME_LENGTH || username.length > MAX_USERNAME_LENGTH) {
+        return res.status(400).json({ success: false, error: `Username must be between ${MIN_USERNAME_LENGTH} and ${MAX_USERNAME_LENGTH} characters.` });
+    }
+
+    res.json({ success: true, message: 'Username is valid.' });
 });
 
 wss.on('connection', (ws, req) => {

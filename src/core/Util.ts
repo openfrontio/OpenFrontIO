@@ -8,6 +8,10 @@ import { number } from 'zod';
 import { GameConfig, GameID, GameRecord, PlayerRecord, Turn } from './Schemas';
 import { customAlphabet, nanoid } from 'nanoid';
 
+
+export const MIN_USERNAME_LENGTH = 3;
+export const MAX_USERNAME_LENGTH = 12;
+
 export function manhattanDist(c1: Cell, c2: Cell): number {
     return Math.abs(c1.x - c2.x) + Math.abs(c1.y - c2.y);
 }
@@ -185,7 +189,7 @@ export function getMode(list: string[]): string {
 }
 
 export function sanitize(name: string): string {
-    return Array.from(name).slice(0, 10).join('').replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}]/gu, '');
+    return Array.from(name).join('').replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}]/gu, '');
 }
 
 export function processName(name: string): string {
