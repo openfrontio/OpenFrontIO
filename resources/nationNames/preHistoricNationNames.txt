@@ -1,25 +1,24 @@
-Achaean
+Achaean League 
 Adiabene
-Aetolian
-Akkadian
+Aetolian League 
+Akkadian Empire
 Alamanni
-Ammon
-Kingdom
-Kingdom
+Ammon 
+Kingdom of Hatra
+Kingdom of Armenia
 Assyria
-Neo
+Neo-Assyrian Empire
 Atropatene
-Attalid
-Avar
-Axumite
+Attalid kingdom
+Avar Kingdom
+Axumite Kingdom
 Babylonia
-Neo
+Neo-Babylonian Empire
 Bithynia
-Bosporan
-Kingdoms
-Burgundian
+Bosporan Kingdom
+Burgundian Kingdom
 Cappadocia
-Caucasian
+Caucasian Iberia
 Carthage
 Chaldea
 Characene
@@ -27,36 +26,36 @@ Commagene
 Colchis
 Cyrene
 Dacia
-Delian
+Delian League 
 Edom
 Egrisi
-Egyptian
+Egyptian Empire
 Elam
 Elymais
-Ancient
+Ancient Epirus
 Etruria
-Fatimid
+Fatimid Caliphate
 Finnveden
-Kingdom
-Frisian
+Kingdom of the Franks
+Frisian kingdom
 Galatia
-Gallic
-Gepid
-Ghassanid
+Gallic Empire
+Gepid Kingdom
+Ghassanid Kingdom
 Gordyene
-Greco
-Hellenic
-Hellenistic
+Greco-Bactrian Kingdom
+Hellenic city
+Hellenistic Empires 
 Himyar
 Hittites
-Hunnic
+Hunnic Empire
 Hurrians
 Illyria
-Hebrew
+Hebrew kingdoms of Israel
 Kindah
 Kush
 Lakhmids
-Lombard
+Lombard Kingdoms
 Lycia
 Lydia
 Macedon
@@ -64,233 +63,217 @@ Mauritania
 Media
 Meroe
 Moab
-Nabataean
+Nabataean kingdom
 Nekor
 Njudung
-The
+The petty kingdoms of present
 Nubia
-Numidian
+Numidian Kingdom
 Saxons
-Odrysian
+Odrysian kingdom of Thrace
 Osroene
-Ostrogothic
+Ostrogothic Kingdom
 Palmyra
 Parthia
 Philistines
-Phoenician
+Phoenician city states
 Pontus
 Rome
-Roman
-Roman
-Roman
+Roman Kingdom
+Roman Republic
+Roman Empire
 Rugiland
 Scythia
-Domain
-Suebic
-Sumerian
+Domain of Soissons
+Suebic Kingdom
+Sumerian city states
 Tartessos
 Thuringia
 Urartu
-V
+Varend
 Vasconia
-Visigothic
+Visigothic Kingdom
 Yamkhad
-Yemeni
+Yemeni Kingdoms
 Qataban
 Hadramaut
 Sabaeans
 Minaeans
 Troy
-There
-Medieval
-England
-After
-Sub
-Dumnonia,
-Kingdom
-Bryneich,
-Ebrauc,
-Calchfynedd,
-Elmet,
-Rheged,
-Pengwern,
-Anglo
-Northumbria,
-Beornice
-Dere
-Mercia,
-East
-Kent.
-Sussex,
-Wessex,
-Essex,
-Haestingas,
-Magonsaete,
-Hwicce,
-Middle
-Suthrege,
-Hicca,
-Wreoconsaete,
-Gyre,
-Wihtwara,
-Kingdom
-Wales
-Sub
-Kingdom
+Medieval England
+Dumnonia
+Kingdom of Cornwall
+Bryneich
+Ebrauc
+Calchfynedd
+Elmet
+Rheged
+Pengwern
+Northumbria
+Beornice or Bernicia
+Dere or Deira
+Mercia
+East Anglia
+Kent
+Sussex
+Wessex
+Essex
+Haestingas
+Magonsaete
+Hwicce
+Middle Saxons
+Suthrege
+Hicca
+Wreoconsaete
+Gyre
+Wihtwara
+Kingdom of England
 Dyfed
 Deheubarth
 Powys
-Brycheiniog,
+Brycheiniog
 Ceredigion
 Gwent
-Morgannwg,
+Morgannwg
 Gwerthyrnion
-Meirionnydd,
+Meirionnydd
 Seisyllwg
 Rhufoniog
 Rhos
 Dogfeiling
 Dunoting
 Maelienydd
-Principality
+Principality of Wales
 Scotland
-Sub
-Valentia,
-Alt
+Valentia
+Alt Clud 
 Gododdin
-Manau
-Pictish
-Cait
-Ce
-Circinn
-Fib
-Fidach
-Fotla
-Fortriu
-Gaelic
-D
-Other
-Kingdom
-Kingdom
-Kingdom
-Kingdom
+Manau Gododdin
+Cait 
+Ce 
+Circinn 
+Fib 
+Fidach 
+Fotla 
+Fortriu 
+Kingdom of Scotland
+Kingdom of the Isles
+Kingdom of Galloway
+Kingdom of the Rhinns
 Ireland
-Extinct
-Aileach
+Aileach 
 Airg
 Ulaid
 Mide
 Laighin
 Osraighe
-Munster
-U
+Munster 
+Ui Maine
 Connacht
-Between
 Aidhne
 Breifne
-D
-D
-D
+Dal Fiatech
+Dal nAraidi
+Dal Riata 
 Desmond
 Dublin
-Fir
+Fir Manach
 Meath
 Moylurg
-U
-For
+Ui Failghe
 France
-Frankish
-West
-Visigothic
-Central
-Kingdom
-Duchy
-Duchy
-Duchy
-Papal
+Frankish Kingdom
+West Francia
+Visigothic Kingdom of Tolosa
+Central Francia
+Kingdom of Lotharingia 
+Duchy of Lorraine
+Duchy of Burgundy 
+Duchy of Brittany 
+Papal states of
 Avignon
 Pe
-Republic
-Duchy
-Duchy
-Low
-in
-Seventeen
-Batavian
-Countship
-Duchy
-Countship
-Duchy
-Countship
+Republic of St
+Duchy of Normandy 
+Duchy of Bar
+Low Countries
+in the Low Countries 
+Seventeen Provinces was transformed
+Batavian Republic
+Countship of Flanders
+Duchy of Gelre 
+Countship of Holland
+Duchy of Bouillon
+Countship of Namur
 Drenthe
 Prince
-Duchy
-Countship
-Countship
-Breda
-Bergen
+Duchy of Brabant
+Countship of Hainaut 
+Countship of Hoorn
+Breda-bishopric of Liege
+Bergen op Zoom
 Arkel
 Thorn
 Montfoort
-Friesland
+Friesland 
 Groningen
 Oostergo
 Westergo
 Gemert
 Woerden
-Prince
-Countship
-Germany
-in
-East
-Holy
-List
-Pomerania
-Monastic
-Great
-Spain
-Iberian
-Christian
-Crown
-Aragon
+Prince-bishopric of Utrecht
+Countship of Zutphen
+Germany and neighbouring countries
+in historic and present
+East Francia
+Holy Roman Empire 
+List of states in the Holy Roman Empire
+Pomerania ruled by the Dukes of Pomerania 
+Monastic State of the Teutonic Knights
+Great Moravia
+Spain and Portugal
+Iberian states
+Christian Hispania
+Crown of Aragon 
+Aragon 
 Ribagorza
 Sobrarbe
-Principality
-Countship
+Principality of Catalonia 
+Countship of Barcelona 
 Urgell
-Pallars
-Pallars
-Emp
+Pallars Sobir
+Pallars Juss
+Empuries
+Kingdom of Valencia
+Kingdom of Majorca
+Kingdom of Asturias 
+Kingdom of Leon
 Kingdom
-Kingdom
-Kingdom
-Kingdom
-Kingdom
-Kingdom
-County
-County
-Kingdom
-Kingdom
-Kingdom
-Visigothic
-Vandalic
-Moorish
-Caliphate
-Taifa
+Kingdom of Galicia and Portugal
+County of Portugal 
+County of Coimbra
+Kingdom of Castile 
+Kingdom of Navarre
+Kingdom of the Suebi 
+Visigothic Kingdom 
+Vandalic and Alanic kingdoms in Iberia
+Moorish Al Andalus
+Caliphate of Cordoba
+Taifa kingdoms
 Albarrac
 Algeciras
 Almer
 Alpuente
 Badajoz
 Baeza
-Balearic
-Beja
+Balearic Islands or Majorca
+Beja and 
 Carmona
-Constantina
+Constantina and Hornachuelos
 Cordova
 Denia
 Granada
-Guadix
+Guadix and Baza
 Huelva
 Jaen
 J
@@ -302,7 +285,7 @@ M
 Molina
 Mor
 Murcia
-Murviedro
+Murviedro and Sagunto
 Niebla
 Orihuela
 Purchena
@@ -321,160 +304,153 @@ Tortosa
 Valencia
 Zaragoza
 Italy
-in
-Roman
-Roman
-Roman
-Roman
+Roman states
+Roman monarchy 
+Roman Republic 
+Roman Empire 
 Post
-Republic
-Republic
+Republic of Venice 
+Republic of Genoa 
 Carantania
-Duchy
-Duchy
-Duchy
-Kingdom
-Duchy
-Kingdoms
-Kingdom
+Duchy of Lucca
+Duchy of Modena and Reggio
+Duchy of Parma
+Kingdom of Sardinia
+Duchy 
+Kingdoms of Naples and Sicily 
+Kingdom of the Two Sicilies 
 Tuscany
-Papal
-and
-in
-Etruscan
-Roman
-Roman
-Western
+Papal States
+Etruscan civilization
+Roman Republic
+Roman Empire
+Western Roman Empire
 Ostrogoths
-Byzantine
-Emirate
-Russia
-Main
-In
-Volga
-Novgorod
-Golden
-Khazar
-Kievan
-Trubczewsk
-Grand
-Balkans
-Category
-Balkan
-Principality
-Republic
-Medieval
-Great
-First
-Second
-Bulgarian
-Lordship
-Byzantine
-Empire
-Empire
-Despotate
-Despotate
-European
-Latin
-Kingdom
-Principality
-Duchy
-Duchy
-Serbian
-Grand
-Serbian
-Serbian
-Serbian
-Middle
-Sultanate
-Armenian
-Crusader
-Countship
-Kingdom
-Principality
-Countship
-Kingdom
-Khwarezmian
-Mongol
-Great
-Timurid
-Empire
-Uyunid
-Ottoman
+Byzantine Empire
+Emirate of Cordoba
+Russia and Ukraine
+Main article
+In and around present
+Volga Bulgaria 
+Novgorod Republic
+Golden Horde 
+Khazar Empire 
+Kievan Rus 
+Trubczewsk 
+Grand Duchy of Lithuania 
+Balkan states
+Principality of Arb
+Republic of Ragusa
+Medieval Croatian state 
+Great Bulgaria 
+First Bulgarian Empire 
+Second Bulgarian Empire 
+Bulgarian Khanate 
+Lordship of Zeta
+Byzantine Empire 
+Empire of Nicaea 
+Empire of Trebizond
+Despotate of Epirus
+Despotate of Morea
+European Crusader States 
+Latin Empire of Constantinople
+Kingdom of Thessalonica
+Principality of Achaea
+Duchy of Athens
+Duchy of the Archipelago
+Serbian Principality 
+Grand Principality of Duklja 
+Serbian Grand Principality 
+Serbian Kingdom 
+Serbian Empire 
+Middle East
+Sultanate of Rum 
+Armenian Kingdom of Cilicia 
+Crusader States 
+Countship of Edessa
+Kingdom of Jerusalem
+Principality of Antioch
+Countship of Tripoli
+Kingdom of Cyprus
+Khwarezmian Empire 
+Mongol Empire established in 
+Great Seljuq Empire
+Timurid Empire Persia
+Empire of Trebizond 
+Uyunid Emirate 
+Ottoman Empire 
 Other
-Icelandic
-kingdom
-kingdom
+Icelandic Commonwealth 
+kingdom of Hungary 
+kingdom of Poland 
 Caucuses
-Crimean
-Dzungar
-North
-Kingdom
-Egyptian
-Kingdom
-Kingdom
-Carthaginian
-Fatimid
+Crimean Khanate 
+Dzungar 
+North Africa
+Kingdom of Egypt
+Egyptian Empire 
+Kingdom of Egypt 
+Kingdom of Carthage
+Carthaginian Empire
+Fatimid Caliphate 
 Sanhaja
-Mauretania
-Asia
-South
-Indus
-Janapadas
-Mahajanapadas
+Mauretania 
+Indus Valley civilisation 
+Janapadas 
+Mahajanapadas 
 Magadha
-Nanda
-Maurya
-Shunga
-Kanva
-Mahameghavana
-Kuninda
-Indo
-Chera
-Pandyan
-Chola
-Satavahana
-Indo
-Indo
-Western
-Kushan
-Indo
-Kalabhras
-Gupta
-Pallava
-Kadamba
-Western
+Nanda Empire
+Maurya Empire
+Shunga Empire
+Kanva Empire
+Mahameghavana dynasty
+Kuninda Kingdom
+Indo Scythian Kingdom
+Chera dynasty 
+Pandyan Kingdom
+Chola Empire
+Satavahana Empire
+Indo-Greek Kingdom
+Indo-Parthian Kingdom
+Western Satraps
+Kushan Empire
+Indo-Sassanid Kingdom
+Kalabhras Kingdom
+Gupta Empire
+Pallava dynasty
+Kadamba dynasty
+Western Ganga dynasty
 Vishnukundina
-Huna
-Chalukya
+Huna Kingdom
+Chalukya dynasty
 Harsha
-Eastern
-Pratihara
-Pala
-Rashtrakuta
-Paramara
-Yadava
-Chaulukya
-Western
-Hoysala
-Sena
-Eastern
-Kakatiya
+Eastern Chalukyas
+Pratihara Empire
+Pala Empire
+Rashtrakuta dynasty
+Paramara dynasty
+Yadava Kingdom
+Chaulukya kingdom
+Western Chalukya Empire
+Hoysala Empire
+Sena dynasty
+Eastern Ganga dynasty
+Kakatiya dynasty
 Kalachuri
-Muslim
-Delhi
-Ahom
-Vijayanagara
-Kingdom
+Muslim Sultanates
+Delhi Sultanate
+Ahom Kingdom
+Vijayanagara Empire
+Kingdom of Mysore 
 Madurai
-Thanjavur
-Maratha
-Sikh
-Mughal
+Thanjavur Nayak kingdom
+Maratha Empire
+Sikh Empire 
+Mughal Empire 
 China
-Shang
-Zhou
-Warring
+Shang dynasty
+Zhou dynasty
+Warring States
 Chu
 Cai
 Cao
@@ -491,186 +467,176 @@ Zhao
 Qi
 Yan
 Qin
-Qin
-Han
-Three
-Eastern
-Cao
-Shu
-Jin
-Sixteen
-Cheng
-Former
-Former
-Former
-Han
-Later
-Later
-Later
-Later
-Northern
-Northern
-Southern
-Southern
-Western
-Western
+Qin dynasty
+Han dynasty
+Three Kingdoms
+Eastern Wu
+Cao Wei
+Shu Han
+Jin dynasty
+Sixteen Kingdoms
+Cheng Han
+Former Liang
+Former Qin
+Former Yan
+Han Zhao
+Later Liang
+Later Qin
+Later Yan
+Later Zhao
+Northern Liang
+Northern Yan
+Southern Liang
+Southern Yan
+Western Liang
+Western Qin
 Xia
-Southern
-Liu
-Northern
-Southern
-Eastern
-Liang
-Western
+Liu Song
+Northern Wei
+Southern Qi
+Eastern Wei
+Liang dynasty
+Western Wei
 Chen
-Northern
-Northern
-Sui
-Tang
-Five
-Later
-Later
-Later
-Later
-Later
+Northern Qi
+Northern Zhou
+Sui dynasty
+Tang dynasty
+Later Liang
+Later Tang
+Later Jin
+Later Han
+Later Zhou
 Wu
 Wuyue
 Min
 Chu
-Southern
-Former
-Later
+Southern Han
+Former Shu
+Later Shu
 Jingnan
-Southern
-Northern
-Song
-Yuan
-Ming
-Qing
-The
-Liao
-Western
-Jin
-A
+Southern Tang
+Northern Han
+Song dynasty
+Yuan dynasty
+Ming dynasty
+Qing dynasty
+Liao dynasty 
+Western Xia 
+Jin dynasty 
 Karasahr
 Khotan
 Kucha
 Yarkand
-Unsorted
-Tibetan
-Nanzhao
-Kingdom
-Guge
+Tibetan Empire 
+Nanzhao 
+Kingdom of Dali 
+Guge 
 Korea
-The
 Gojoseon
-Proto
+Proto Three Kingdoms
 Buyeo
 Okjeo
 Dongye
 Jin
-Samhan
-Three
+Samhan 
+Three Kingdoms
 Goguryeo
 Baekje
 Silla
-Gaya
-North
+Gaya Confederacy
+North South States
 Balhae
-Unified
-Later
+Unified Silla
+Later Three Kingdoms
 Taebong
 Hubaekje
 Silla
 Goryeo
 Joseon
-Korean
+Korean Empire
 Japan
-Republic
-Ryukyu
+Republic of Ezo
+Ryukyu Kingdom
 Philippines
-Sultanate
-Kingdom
-Kingdom
-Kingdom
+Sultanate of Maguindanao
+Kingdom of Tondo
+Kingdom of Maynila
+Kingdom of Namayan
 Vietnam
-The
-Annam
-Annam
-u
+Annam 
+Au Lac
 Champa
-Amaravati
+Amaravati 
 Kauthara
-Panduranga
-Vijaya
+Panduranga 
+Vijaya 
 Cochinchina
 Funan
-Kampuchea
-Nam
-North
+Kampuchea Krom
+Nam Vi
+North Vietnam
 Sedang
-South
+South Vietnam
 Tonkin
-V
-V
+Van Xuan
+Van Lang
 Cambodia
-Khmer
+Khmer Empire 
 Chenla
 Shambhupura
-c
+Oc Eo
 Langkasuka
-Sukhothai
+Sukhothai kingdom
 Tambralinga
-Patani
+Patani Kingdom
 Lanna
 Dvaravati
 Raktamaritika
 Hariphunchai
 Burma
-Pyu
-Mon
+Pyu city-states 
+Mon kingdoms 
 Singhanavati
 Malaya
 Pasai
-Gangga
-Pan
+Gangga Negara
+Pan Pan
 Tarumanagara
-Sultanate
-Sultanate
+Sultanate of Aceh
+Sultanate of Demak
 Majapahit
-Mataram
-Sunda
-Melayu
+Mataram Kingdom
+Sunda Kingdom
+Melayu Kingdom
 Singhasari
-Kediri
-Malacca
-Pala
+Kediri 
+Malacca Sultanate
+Pala Empire
 Singhasari
 Srivijaya
-Johor
-Federation
-Kingdom
-Sultanate
-Pre
-The
-Ancestral
-Aztec
+Johor Sultanate
+Federation of Malaya
+Kingdom of Pajang
+Sultanate of Sulu and North Borneo 
+Ancestral Puebloans 
+Aztec Empire
 Cahokia
 Carib
 Chachapoya
 Chim
 Ciboney
-Huari
-Inca
+Huari 
+Inca civilization
 Tiwanaku
-Maya
-Moche
-Nazca
+Maya civilization
+Moche 
+Nazca 
 Olmec
-Selk�
+Selk
 Taino
 Timucuan
-Teotihuacan
+Teotihuacan Empire
 Tlaxcala
 Toltecs
-Tahuantinsuyu
+Tahuantinsuyu 
