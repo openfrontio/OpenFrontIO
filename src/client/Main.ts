@@ -41,9 +41,7 @@ class Client {
         document.addEventListener('single-player', this.handleSinglePlayer.bind(this));
 
         const spModal = document.querySelector('single-player-modal') as SinglePlayerModal;
-
         spModal instanceof SinglePlayerModal
-
         document.getElementById('single-player').addEventListener('click', async () => {
             const username = this.usernameInput?.getCurrentUsername();
 
