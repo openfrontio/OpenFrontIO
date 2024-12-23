@@ -185,7 +185,7 @@ export function getMode(list: string[]): string {
 }
 
 export function sanitize(name: string): string {
-    return Array.from(name).slice(0, 10).join('').replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}]/gu, '');
+    return Array.from(name).slice(0, 32).join('').replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}]/gu, '');
 }
 
 export function processName(name: string): string {

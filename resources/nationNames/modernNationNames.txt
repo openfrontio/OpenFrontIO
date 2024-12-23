@@ -1,0 +1,783 @@
+Republic of Salé 
+Republic of the Rif 
+Makuria 
+Alodia 
+Mamluk Sultanate 
+Shilluk Kingdom 
+Egypt Eyalet 
+Sultanate of Sennar 
+Sultanate of Darfur 
+Mahdist State 
+Tripolitanian Republic 
+Emirate of Cyrenaica 
+United Arab Republic 
+Hafsid dynasty 
+Hafsid Emirate of Béjaïa 
+Kingdom of Tlemcen 
+Kingdom of Kuku 
+Kingdom of Beni Abbas 
+Regency of Algiers 
+Emirate of Abdelkader 
+Ali Soilih Regime 
+State of Anjouan 
+Kingdom of Antankarana 
+Kingdom of Antongil 
+Kingdom of Boina 
+Kingdom of Menabe 
+Kingdom of Imerina 
+Kingdom of Tamatave 
+Kingdom of Tanibe 
+Bornu Empire 
+Shilluk Kingdom 
+Ajuran Sultanate 
+Adal Sultanate 
+Majeerteen Sultanate 
+Imamate of Aussa 
+Aussa Sultanate 
+Isaaq Sultanate 
+Sultanate of Hobyo 
+Sokoto Caliphate 
+Kingdom of Cayor 
+Imamate of Futa Jallon 
+Wassoulou Empire 
+Ashanti Empire 
+Kingdom of Dahomey 
+Aro Confederacy 
+People's Revolutionary Republic of Guinea 
+Republic of Maryland 
+Republic of Dahomey 
+Republic of Benin 
+Biafra 
+Buganda 
+Bunyoro 
+Ankole 
+Toro Kingdom 
+Busoga 
+Kingdom of Burundi 
+Witu Sultanate 
+Sultanate of Zanzibar 
+Tanganyika 
+Kingdom of Loango 
+Kingdom of Kongo 
+Congo Free State 
+Republic of Zaire 
+Kingdom of Mutapa 
+Graaff-Reinet 
+South African Republic 
+Orange Free State 
+Griqualand East 
+Nieuwe Republiek 
+Natalia Republic 
+State of Goshen 
+Republic of Stellaland 
+United States of Stellaland 
+Republic of Upingtonia 
+Union of South Africa 
+Bophuthatswana 
+Ciskei 
+Transkei 
+Venda 
+Rhodesia 
+Chagatai Khanate 
+Emirate of Bukhara 
+Alash Autonomy 
+Turkestan Autonomy 
+Khanate of Khiva 
+Confederated Republic of Altai 
+Bukharan People's Soviet Republic 
+Khorezm People's Soviet Republic 
+First East Turkestan Republic 
+Second East Turkestan Republic 
+Bogd Khanate of Mongolia 
+Republic of China 
+People's Revolutionary Government of the Republic of China 
+Reformed Government of the Republic of China 
+Reorganized National Government of the Republic of China 
+Provisional Government of the Republic of China 
+East Hebei Autonomous Government 
+Great Han Sichuan Military Government 
+Jiangxi
+Jiangxi Soviet 
+Korean People's Association in Manchuria 
+Manchukuo 
+Mengjiang United Autonomous Government 
+Ming dynasty 
+Qing dynasty 
+Ryukyu Kingdom 
+Shanghai Great Way Government 
+Soviet Zone of China 
+Taiping Heavenly Kingdom 
+Tibet under Ganden Phodrang government 
+Tibet 
+Tibetan states 
+Kingdom of Tungning 
+Tuvan People's Republic 
+Yuan Dynasty 
+Allied Occupied Japan 
+Ashikaga shogunate 
+Azuchi
+Empire of Japan 
+Tokugawa shogunate 
+Joseon 
+Korean Empire 
+People's Republic of Korea 
+Provisional People's Committee of North Korea 
+First Republic of Korea 
+Second Republic of Korea 
+Supreme Council for National Reconstruction 
+Third Republic of Korea 
+Fourth Republic of Korea 
+Fifth Republic of Korea 
+Hotak dynasty 
+Durrani Empire 
+Khanate of Kalat 
+Durrani Empire 
+Beylik of Candar 
+Alaiye 
+Empire of Trebizond 
+Kars Republic 
+Ottoman Empire 
+Kingdom of Cyprus 
+Kingdom of Kurdistan 
+All-Palestine Government 
+Iran-u-Turan 
+The Expansive Realm of Iran 
+Guarded Domains of Iran 
+Guarded Domains of Iran 
+Sublime State of Persia/Iran 
+Persian Socialist Soviet Republic in Gilan 
+Imperial State of Persia/Iran 
+Azerbaijan People's Government 
+United Arab Republic 
+Free Lebanon State 
+Islamic State 
+Syrian Arab Republic 
+Sheikhdom of Kuwait 
+Bani Khalid Emirate 
+Emirate of Diriyah 
+Emirate of Nejd 
+Muscat and Oman 
+Emirate of Jabal Shammar 
+Emirate of Riyadh 
+Idrisid Emirate of Asir 
+Sheikdom of Upper Asir 
+Emirate of Nejd and Hasa 
+Sultanate of Nejd 
+Kingdom of Hejaz 
+Kingdom of Hejaz and Nejd 
+Mutawakkilite Kingdom of Yemen 
+People's Democratic Republic of Yemen 
+Yemen Arab Republic 
+Fadhli Sultanate 
+Qu'aiti Sultanate in Hadhramaut 
+Sultanate of Upper Yafa 
+Sultanate of Lower Yafa 
+Emirate of Beihan 
+Emirate of Dhala 
+Wahidi Sultanate of Balhaf 
+Wahidi Sultanate of Haban 
+Kathiri Sultanate in Hadhramaut 
+Mahra State of Qishn and Socotra 
+Sultanate of Lahej 
+Federation of South Arabia 
+Garhwal Kingdom 
+Kingdom of Cochin 
+Delhi Sultanate 
+Bengal Sultanate 
+Kingdom of Mysore 
+Bengal Subah 
+Maratha Confederacy 
+Sikh Empire 
+Mughal Empire 
+Provisional Government of Free India 
+Hyderabad State 
+Travancore 
+Udaipur State 
+Manikya dynasty 
+United Suvadive Republic 
+Sultanate of Maldives 
+Sikkim 
+Kingdom of Cambodia 
+Kingdom of Luang Phrabang 
+Kingdom of Champasak 
+Lao Issara 
+Nghệ-Tĩnh Soviet 
+Democratic Republic of Vietnam 
+Republic of Cochinchina 
+Provisional Central Government of Vietnam 
+State of Vietnam 
+Republic of Vietnam 
+Republic of South Vietnam 
+Hanthawaddy Kingdom 
+Taungoo dynasty 
+Konbaung dynasty 
+Shan States 
+State of Burma 
+Ayutthaya Kingdom 
+Thonburi Kingdom 
+Pattani kingdom 
+Kingdom of Setul Mambang Segara 
+Kingdom of Siam 
+Republic of Indonesia 
+United States of Indonesia 
+State of East Indonesia 
+State of East Java 
+State of East Sumatra 
+State of Madura 
+State of Pasundan 
+State of South Sumatra 
+Great Dayak 
+West Kalimantan 
+Sultanate of Aceh 
+Sultanate of Deli 
+Sultanate of Langkat 
+Sultanate of Serdang 
+Majapahit 
+Sultanate of Mataram 
+Sultanate of Banten 
+Sultanate of Cirebon 
+Bali Kingdoms 
+Bima Sultanate 
+Sultanate of Gowa 
+Sultanate of Bone 
+Sultanate of Ternate 
+Bruneian Empire 
+Pontianak Sultanate 
+Kingdom of Sarawak 
+Sultanate of Bulungan 
+Sultanate of Banjar 
+Lanfang Republic 
+Riau-Lingga Sultanate 
+Pahang Kingdom 
+Malayan Union 
+Federation of Malaya 
+Sultanate of Maguindanao 
+Sultanate of Sulu 
+Republic of Negros 
+Cantonal Government of Negros 
+Sovereign Tagalog Nation 
+First Philippine Republic 
+Tagalog Republic 
+Second Philippine Republic 
+Kingdom of Finland 
+Finnish Socialist Workers' Republic 
+United Kingdoms of Sweden and Norway 
+Schleswig 
+Kingdom of France 
+Duchy of Brittany 
+Duchy of Burgundy 
+French Empire 
+First French Empire 
+Second French Empire 
+Duchy of Normandy 
+Duchy of Lorraine 
+Viscounty of Béarn 
+Free City of Danzig 
+Duchy of Warsaw 
+Territory of the Saar Basin 
+Vichy France 
+Saar Protectorate 
+Corsican Republic 
+Anglo-Corsican Kingdom 
+County of Foix 
+Free Cities of Menton and Roquebrune 
+Holy Roman Empire 
+Confederation of the Rhine 
+Duchy of Anhalt 
+Principality of Reuss-Gera 
+Grand Duchy of Frankfurt 
+German Confederation 
+German Empire 
+North German Federation 
+German Empire 
+West Berlin 
+German Democratic Republic 
+Baden 
+Kingdom of Bavaria 
+Bremen 
+Brunswick 
+Frankfurt 
+Hamburg 
+Kingdom of Hanover 
+Hesse-Homburg 
+Hesse-Kassel 
+Hohenzollern-Hechingen 
+Hohenzollern-Sigmaringen 
+Holstein 
+Lippe 
+Lübeck 
+Mecklenburg-Schwerin 
+Mecklenburg-Strelitz 
+Nassau 
+Oldenburg 
+Pomerania 
+Prussia 
+Duchy of Prussia 
+Brandenburg-Prussia 
+Kingdom of Prussia 
+Reuss 
+Saxe-Altenburg 
+Saxe-Coburg-Saalfeld 
+Saxe-Coburg and Gotha 
+Saxe-Gotha 
+Saxe-Hildburghausen 
+Saxe-Lauenburg 
+Saxe-Meiningen 
+Saxe-Weimar-Eisenach 
+Saxony 
+Schaumburg-Lippe 
+Schwarzburg-Rudolstadt 
+Schwarzburg-Sondershausen 
+Württemberg 
+Free State of Bottleneck 
+Archduchy of Austria 
+County of Tyrol 
+Duchy of Styria 
+Republic of German-Austria 
+Austrian Empire 
+Old Swiss Confederacy 
+Helvetic Republic 
+Rhodanic Republic 
+Republic of Ancona 
+Republic of Florence 
+Kingdom of Naples 
+Duchy of Urbino 
+Anconine Republic 
+Judicate of Arborea 
+Kingdom of Etruria 
+United Provinces of Central Italy 
+Cisalpine Republic 
+Cispadane Republic 
+Republic of Cospaia 
+Principality of Elba 
+Kingdom of Etruria 
+Marquisate of Finale 
+Regency of Carnaro 
+Gozitan Nation 
+Italian Republic 
+Kingdom of Italy 
+Kingdom of Lombardy
+Duchy of Lucca 
+Principality of Lucca and Piombino 
+Republic of Lucca 
+Sovereign Military Order of Malta 
+Duchy of Mantua 
+Duchy of Massa and Carrara 
+Duchy of Milan 
+Duchy of Modena 
+Kingdom of Naples 
+Republic of Noli 
+Duchy of Parma 
+Papal States 
+Republic of Pisa 
+Kingdom of Sardinia 
+Republic of San Marco 
+Kingdom of Sicily 
+Grand Duchy of Tuscany 
+Kingdom of the Two Sicilies 
+Republic of Venice 
+Republic of Genoa 
+Italian protectorate of Albania 
+Italian governorate of Montenegro 
+Kingdom of Tavolara 
+Free Territory of Trieste 
+Republic of Rose Island 
+Kingdom of Gwynedd 
+Kingdom of Powys 
+Kingdom of Scotland 
+Kingdom of England 
+Angevin Empire 
+Principality of Wales 
+Commonwealth of England 
+The Protectorate 
+Kingdom of Great Britain 
+United Kingdom of Great Britain and Ireland 
+Kingdom of Leinster 
+Tyrconnell 
+Lordship of Ireland 
+Kingdom of Ireland 
+Irish Catholic Confederation 
+Irish soviets 
+Irish Free State 
+Prince-Bishopric of Liège 
+Duchy of Brabant 
+Duchy of Bouillon 
+United Belgian States 
+Republic of the Seven United Netherlands 
+Batavian Republic 
+Kingdom of Holland 
+Sovereign Principality of the United Netherlands 
+United Kingdom of the Netherlands 
+Duchy of Silesia 
+Duchy of Opole 
+Duchy of Teschen 
+Royal Prussia 
+Duchy of Prussia 
+Duchy of Courland and Semigallia 
+Kingdom of Galicia and Lodomeria 
+Duchy of Warsaw 
+Free, Independent, and Strictly Neutral City of Cracow with its Territory 
+Kingdom of Poland 
+Vistula Land 
+Grand Duchy of Posen 
+Grand Duchy of Kraków 
+Polish National Government 
+Polish National Government 
+Kingdom of Poland 
+Republic of Tarnobrzeg 
+Komancza Republic 
+Lemko-Rusyn People's Republic 
+Second Polish Republic 
+Republic of Central Lithuania 
+Free City of Danzig 
+General Governorate for the Occupied Polish Region 
+Polish Underground State 
+Provisional Government of the Republic of Poland 
+Provisional Government of National Unity 
+Republic of Poland 
+Polish People's Republic 
+Polish National-Territorial Region 
+Kholodny Yar Republic 
+Zaporozhian Sich 
+Ukrainian People's Republic 
+Ukrainian Soviet Socialist Republic 
+Makhnovshchina 
+Donetsk People's Republic 
+Luhansk People's Republic 
+Crimean Khanate 
+Crimean People's Republic 
+Crimean Autonomous Soviet Socialist Republic 
+Principality of Polotsk 
+Grand Duchy of Lithuania 
+Republic of Lithuania 
+Republic of Perloja 
+Republic of Central Lithuania 
+Lithuanian
+Belarusian People's Republic 
+Byelorussian Soviet Socialist Republic 
+State of the Teutonic Order 
+Kingdom of Livonia 
+Latvian Socialist Soviet Republic 
+First Latvian Republic 
+Soviet Republic of Naissaar on an Estonian Baltic Sea island 
+Commune of the Working People of Estonia 
+First Estonian Republic 
+Dacian Kingdom 
+Voivodship of Transylvania 
+Principality of Wallachia 
+Principality of Moldavia 
+Principality of Transylvania 
+Temeşvar Eyalet 
+Varat Eyalet 
+Grand Principality of Transylvania 
+Banat of Temeswar 
+Duchy of Bukovina 
+United Principalities of Moldavia and Wallachia 
+Banat Republic 
+Moldavian Democratic Republic 
+Novgorod Republic 
+Pskov Republic 
+Principality of Tver 
+Principality of Beloozero 
+Principality of Yaroslavl 
+Grand Duchy of Ryazan 
+Principality of Great Perm 
+Golden Horde 
+Astrakhan Khanate 
+Khanate of Kazan 
+Khanate of Sibir 
+Kalmyk Khanate 
+Republic of Uhtua 
+Kuban People's Republic 
+Don Republic 
+Idel-Ural State 
+Far Eastern Republic 
+Green Ukraine 
+Tungus Republic 
+State of Buryat-Mongolia 
+Grand Duchy of Moscow 
+Tsardom of Russia 
+Kingdom of Poland 
+Grand Duchy of Finland 
+Petrograd Soviet of Workers' and Soldiers' Deputies 
+Donetsk
+Russian Soviet Federative Socialist Republic 
+Union of Soviet Socialist Republics 
+Armenian Soviet Socialist Republic 
+Azerbaijan Soviet Socialist Republic 
+Byelorussian Soviet Socialist Republic 
+Estonian Soviet Socialist Republic 
+Georgian Soviet Socialist Republic 
+Karelo-Finnish Soviet Socialist Republic 
+Kazakh Soviet Socialist Republic 
+Kirghiz Soviet Socialist Republic 
+Latvian Soviet Socialist Republic 
+Lithuanian Soviet Socialist Republic 
+Moldavian Soviet Socialist Republic 
+Pridnestrovian Moldavian Soviet Socialist Republic 
+Russian Soviet Federative Socialist Republic 
+Turkestan Autonomous Soviet Socialist Republic 
+Volga German Autonomous Soviet Socialist Republic 
+Bashkir Autonomous Soviet Socialist Republic 
+Tatar Autonomous Soviet Socialist Republic 
+Kazakh Autonomous Socialist Soviet Republic 
+Mountain Autonomous Soviet Socialist Republic 
+Dagestan Autonomous Soviet Socialist Republic 
+Crimean Autonomous Soviet Socialist Republic 
+Yakut Autonomous Soviet Socialist Republic 
+Buryat Autonomous Soviet Socialist Republic 
+Karelian Autonomous Soviet Socialist Republic 
+Kirghiz Autonomous Socialist Soviet Republic 
+Mordovian Autonomous Soviet Socialist Republic 
+Udmurt Autonomous Soviet Socialist Republic 
+Kalmyk Autonomous Soviet Socialist Republic 
+Checheno-Ingush Autonomous Soviet Socialist Republic 
+Kabardino-Balkarian Autonomous Soviet Socialist Republic 
+Komi Autonomous Soviet Socialist Republic 
+Mari Autonomous Soviet Socialist Republic 
+North Ossetian Autonomous Soviet Socialist Republic 
+Kabardin Autonomous Soviet Socialist Republic 
+Tuvan Autonomous Soviet Socialist Republic 
+Khakas Autonomous Oblast 
+Gorno-Altai Autonomous Soviet Socialist Republic 
+Tajik Soviet Socialist Republic 
+Turkmen Soviet Socialist Republic 
+Ukrainian Soviet Socialist Republic 
+Uzbek Soviet Socialist Republic 
+Principality of Hungary 
+Kingdom of Hungary 
+Eastern Hungarian Kingdom 
+Principality of Transylvania 
+Principality of Upper Hungary 
+Principality of Transylvania 
+Kingdom of Croatia 
+Kingdom of Hungary 
+Duchy of Bohemia 
+Kingdom of Bohemia 
+Margraviate of Moravia 
+Slovak Republic 
+Duchy of Austria 
+Archduchy of Austria 
+Austrian Empire 
+Austria-Hungary 
+Independent Albania 
+Republic of Central Albania 
+Principality of Albania 
+Italian protectorate over Albania 
+Italian protectorate of Albania 
+German occupation of Albania 
+People's Socialist Republic of Albania 
+First Hellenic Republic 
+Areopagus of Eastern Continental Greece 
+Kingdom of Greece 
+Italian Islands of the Aegean 
+Kingdom of Bosnia 
+Condominium of Bosnia and Herzegovina 
+Republic of Bosnia and Herzegovina 
+Autonomous Province of Western Bosnia 
+Republika Srpska 
+Croatian Republic of Herzeg-Bosnia 
+Second Bulgarian Empire 
+Despotate of Dobruja 
+Kingdom of Croatia 
+Kingdom of Croatia 
+Kingdom of Slavonia 
+Kingdom of Croatia-Slavonia 
+Free State of Fiume 
+Independent State of Croatia 
+Free Territory of Trieste 
+Republic of Ragusa 
+Republic of Serbian Krajina 
+First Hellenic Republic 
+Areopagus of Eastern Continental Greece 
+Kingdom of Greece 
+United States of the Ionian Islands 
+Septinsular Republic 
+Principality of Samos 
+Cretan State 
+Italian Islands of the Aegean 
+Prince-Bishopric of Montenegro 
+Principality of Montenegro 
+Kingdom of Montenegro 
+Italian governorate of Montenegro 
+German-occupied territory of Montenegro 
+Revolutionary Serbia 
+Principality of Serbia 
+Kingdom of Serbia 
+Kingdom of Yugoslavia 
+Socialist Federal Republic of Yugoslavia 
+Federal Republic of Yugoslavia 
+Serbia and Montenegro 
+Republic of Kosova 
+Byzantine Empire 
+Duchy of Athens 
+Ottoman Empire 
+Government of the Grand National Assembly 
+Caucasian Albania 
+Kabardia 
+Circassia 
+Avar Khanate 
+Caucasian Imamate 
+Mountainous Republic of the Northern Caucasus 
+North Caucasian Emirate 
+Chechen Republic of Ichkeria 
+Kingdom of Georgia 
+Kingdom of Imereti 
+Principality of Svaneti 
+Principality of Mingrelia 
+Principality of Guria 
+Kingdom of Kakheti 
+Kingdom of Kartli-Kakheti 
+Democratic Republic of Georgia 
+Republic of Mountainous Armenia 
+Republic of Aras 
+Military Dictatorship of Mughan 
+Transcaucasian Democratic Federative Republic 
+Kingdom of Galicia 
+Emirate of Córdoba 
+Kingdom of Asturias 
+Kingdom of Navarre 
+Kingdom of León 
+Couto Misto 
+Kingdom of Castile 
+Principality of Catalonia 
+Crown of Aragon 
+Crown of Castile 
+Kingdom of Majorca 
+Emirate of Granada 
+First Catalan Republic 
+United Kingdom of Portugal, Brazil and the Algarves 
+Ditadura Nacional 
+Revolutionary Catalonia 
+Republic of Anguilla 
+Republic of Pirates 
+Republic of Canada 
+Republic of Manitoba 
+Dominion of Newfoundland 
+Republic of Spanish Haiti 
+First Dominican Republic 
+State of Los Altos 
+First Empire of Haiti 
+State of Haiti 
+Kingdom of Haiti 
+Toltec Empire 
+Cocollán 
+First Mexican Empire 
+Provisional Government of Mexico 
+First Mexican Republic 
+Centralist Republic of Mexico 
+Republic of Yucatán 
+Second Federal Republic of Mexico 
+Republic of Sonora 
+Republic of Baja California 
+Second Mexican Empire 
+Iroquois Confederacy 
+Cherokee Nation 
+Vermont Republic 
+State of Muskogee 
+Republic of Texas 
+State of Deseret 
+California Republic 
+Palmetto Republic 
+Confederate States of America 
+Tuʻi Tonga Empire 
+Kingdom of Tahiti 
+Kingdom of Fiji 
+Dominion of Fiji 
+Kingdom of Hawaii 
+Provisional Government of Hawaii 
+Republic of Hawaii 
+Kingdom of Rarotonga 
+Kingdom of Abemama 
+People's Provisional Government of Vanuatu 
+United Provinces of the Río de la Plata 
+Argentine Confederation 
+Republic of Entre Ríos 
+Republic of Tucumán 
+State of Buenos Aires 
+Kingdom of Araucanía and Patagonia 
+Bolivian Republic 
+Peru-Bolivian Confederation 
+Republic of Acre 
+Empire of Brazil 
+Riograndense Republic 
+Republic of Counani 
+Principality of Trinidad 
+Kingdom of Chile 
+New State of Chile 
+Conservative Republic 
+Muisca Confederation 
+Governing Junta of the Province of Cartagena 
+Governing Junta of Santiago de Cali 
+Free and Independent State of Cundinamarca 
+United Provinces of New Granada 
+Gran Colombia 
+Republic of New Granada 
+State of Quito 
+Free Province of Guayaquil 
+El Stronato 
+Protectorate of Peru 
+Iquicha 
+Republic of South Peru 
+Republic of North Peru 
+Peru-Bolivian Confederation 
+Peruvian Republic 
+Liga Federal 
+Supreme Junta 
+First Republic of Venezuela 
+Second Republic of Venezuela 
+Third Republic of Venezuela 
+Greater German Reich 
+Empire of Brazil 
+Central America 
+Republic of China 
+Czechoslovakia 
+Korea 
+Mali Federation 
+Rhodesia 
+Serbia and Montenegro 
+Somali Republic 
+Soviet Union 
+United Arab Republic 
+Yugoslavia 
+Bophuthatswana 
+Ciskei 
+Transkei 
+Venda 
+Carpatho-Ukraine 
+Catalan Republic 
+Chechnya 
+Confederate States 
+Green Ukraine 
+Herzeg-Bosnia 
+Italian Social Republic 
+Katanga 
+Red River Rebellion 
+Serbian Krajina 
+South Kasai 
+Supreme Administration of Northern Region 
+Republika Srpska 
+Principality of Trinidad 
+Western Bosnia 
+Novorossiya 
+Donetsk People's Republic 
+Luhansk People's Republic 
+Republic of Artsakh 
+Couto Misto 
+Crete 
+East Germany 
+England 
+Franceville 
+Hatay 
+Hawaii 
+Khanate of Kalat 
+Moresnet 
+Natalia Republic 
+Newfoundland
+Islands of Refreshment 
+Scotland 
+South Vietnam 
+Republic of Tatarstan 
+Transvaal 
+Texas 
+Vermont Republic 
