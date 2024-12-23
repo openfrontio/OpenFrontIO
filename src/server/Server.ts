@@ -12,6 +12,7 @@ import { GamePhase, GameServer } from './GameServer';
 import { archive } from './Archive';
 import { DiscordBot } from './DiscordBot';
 import {MAX_USERNAME_LENGTH, MIN_USERNAME_LENGTH} from "../core/Util";
+import {validateUsername} from "../core/validations/username";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -131,12 +132,26 @@ wss.on('connection', (ws, req) => {
                 ? forwarded[0]  // Get the first IP if it's an array
                 : forwarded || req.socket.remoteAddress;
 
+            const username = clientMsg.username;
+            const { isValid, error } = validateUsername(username);
+            if (!isValid) {
+                const errorMsg = error || "Invalid username.";
+                // Send error back to the client
+                ws.send(JSON.stringify({
+                    type: 'error',
+                    input: 'username-input',
+                    message: errorMsg,
+                }));
+                return;
+            }
+
+            // If username is valid, add the client
             gm.addClient(
                 new Client(
                     clientMsg.clientID,
                     clientMsg.persistentID,
                     ip,
-                    clientMsg.username,
+                    username,
                     ws
                 ),
                 clientMsg.gameID,

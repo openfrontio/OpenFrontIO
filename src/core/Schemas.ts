@@ -32,11 +32,12 @@ export type Turn = z.infer<typeof TurnSchema>
 export type GameConfig = z.infer<typeof GameConfigSchema>
 
 export type ClientMessage = ClientPingMessage | ClientIntentMessage | ClientJoinMessage | ClientLogMessage
-export type ServerMessage = ServerSyncMessage | ServerStartGameMessage | ServerPingMessage
+export type ServerMessage = ServerSyncMessage | ServerStartGameMessage | ServerPingMessage | ServerValidationErrorMessageSchema
 
 export type ServerSyncMessage = z.infer<typeof ServerTurnMessageSchema>
 export type ServerStartGameMessage = z.infer<typeof ServerStartGameMessageSchema>
 export type ServerPingMessage = z.infer<typeof ServerPingMessageSchema>
+export type ServerValidationErrorMessageSchema = z.infer<typeof ServerValidationErrorMessageSchema>
 
 export type ClientPingMessage = z.infer<typeof ClientPingMessageSchema>
 export type ClientIntentMessage = z.infer<typeof ClientIntentMessageSchema>
@@ -210,9 +211,18 @@ export const ServerStartGameMessageSchema = ServerBaseMessageSchema.extend({
     config: GameConfigSchema
 })
 
+export const ServerValidationErrorMessageSchema = ServerBaseMessageSchema.extend({
+    type: z.literal('validationError'),
+    input: z.string(),
+    message: z.string()
+});
 
-export const ServerMessageSchema = z.union([ServerTurnMessageSchema, ServerStartGameMessageSchema, ServerPingMessageSchema]);
-
+export const ServerMessageSchema = z.union([
+    ServerTurnMessageSchema,
+    ServerStartGameMessageSchema,
+    ServerPingMessageSchema,
+    ServerValidationErrorMessageSchema,
+]);
 
 // Client
 

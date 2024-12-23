@@ -210,7 +210,7 @@ export class NameLayer implements Layer {
 
 
         if (myPlayer != null) {
-            const emojis = render.player.outgoingEmojis().filter(e => e.recipient == AllPlayers || e.recipient == myPlayer);
+            const emojis = render.player.outgoingEmojis().filter(e => e.recipient == AllPlayers || e.recipient == myPlayer)
             if (emojis.length > 0) {
                 context.font = `${render.fontSize * 4}px ${this.theme.font()}`;
                 context.fillStyle = this.theme.playerInfoColor(render.player.id()).toHex();

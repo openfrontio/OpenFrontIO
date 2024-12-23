@@ -47,12 +47,11 @@ export class UsernameInput extends LitElement {
     connectedCallback() {
         super.connectedCallback();
         this.username = this.getStoredUsername();
-        this.dispatchUsernameEvent();
+        this.dispatchUsernameEvent()
     }
 
     render() {
         return html`
-      <div>
         <input 
           type="text" 
           .value=${this.username}
@@ -63,7 +62,6 @@ export class UsernameInput extends LitElement {
         ${this.validationError
             ? html`<div class="error">${this.validationError}</div>`
             : null}
-      </div>
     `;
     }
 
@@ -91,7 +89,7 @@ export class UsernameInput extends LitElement {
 
     private dispatchUsernameEvent() {
         this.dispatchEvent(new CustomEvent('username-change', {
-            detail: { username: this.username },
+            detail: {username: this.username},
             bubbles: true,
             composed: true
         }));

@@ -10,7 +10,7 @@ import { customAlphabet, nanoid } from 'nanoid';
 
 
 export const MIN_USERNAME_LENGTH = 3;
-export const MAX_USERNAME_LENGTH = 12;
+export const MAX_USERNAME_LENGTH = 15;
 
 export function manhattanDist(c1: Cell, c2: Cell): number {
     return Math.abs(c1.x - c2.x) + Math.abs(c1.y - c2.y);
