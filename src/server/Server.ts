@@ -11,6 +11,8 @@ import { Client } from './Client';
 import { GamePhase, GameServer } from './GameServer';
 import { archive } from './Archive';
 import { DiscordBot } from './DiscordBot';
+import {MAX_USERNAME_LENGTH, MIN_USERNAME_LENGTH} from "../core/Util";
+import {validateUsername} from "../core/validations/username";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -113,6 +115,16 @@ app.get('/game/:id', (req, res) => {
     });
 });
 
+app.post('/validate-username', (req, res) => {
+    const { username } = req.body;
+
+    if (!username || username.length < MIN_USERNAME_LENGTH || username.length > MAX_USERNAME_LENGTH) {
+        return res.status(400).json({ success: false, error: `Username must be between ${MIN_USERNAME_LENGTH} and ${MAX_USERNAME_LENGTH} characters.` });
+    }
+
+    res.json({ success: true, message: 'Username is valid.' });
+});
+
 wss.on('connection', (ws, req) => {
     ws.on('message', (message: string) => {
         const clientMsg: ClientMessage = ClientMessageSchema.parse(JSON.parse(message))
@@ -128,12 +140,26 @@ wss.on('connection', (ws, req) => {
                 ? forwarded[0]  // Get the first IP if it's an array
                 : forwarded || req.socket.remoteAddress;
 
+            const username = clientMsg.username;
+            const { isValid, error } = validateUsername(username);
+            if (!isValid) {
+                const errorMsg = error || "Invalid username.";
+                // Send error back to the client
+                ws.send(JSON.stringify({
+                    type: 'error',
+                    input: 'username-input',
+                    message: errorMsg,
+                }));
+                return;
+            }
+
+            // If username is valid, add the client
             gm.addClient(
                 new Client(
                     clientMsg.clientID,
                     clientMsg.persistentID,
                     ip,
-                    clientMsg.username,
+                    username,
                     ws
                 ),
                 clientMsg.gameID,

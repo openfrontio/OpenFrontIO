@@ -3,6 +3,7 @@ import {Cell, Game, PlayerType, Tile, TileEvent} from "../game/Game";
 import {PseudoRandom} from "../PseudoRandom";
 import {GameID, SpawnIntent} from "../Schemas";
 import {bfs, dist as dist, manhattanDist, simpleHash} from "../Util";
+import {BOT_NAME_PREFIXES, BOT_NAME_SUFFIXES} from "./utils/BotNames";
 
 
 export class BotSpawner {
@@ -20,7 +21,8 @@ export class BotSpawner {
                 consolex.log('too many retries while spawning bots, giving up')
                 return this.bots
             }
-            const spawn = this.spawnBot("Bot" + this.bots.length)
+            const botName = this.randomBotName();
+            const spawn = this.spawnBot(botName);
             if (spawn != null) {
                 this.bots.push(spawn);
             } else {
@@ -50,6 +52,12 @@ export class BotSpawner {
         };
     }
 
+    private randomBotName(): string {
+        const prefixIndex = this.random.nextInt(0, BOT_NAME_PREFIXES.length);
+        const suffixIndex = this.random.nextInt(0, BOT_NAME_SUFFIXES.length);
+        return `${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
+    }
+
     private randTile(): Tile {
         return this.gs.tile(new Cell(
             this.random.nextInt(0, this.gs.width()),
@@ -57,4 +65,3 @@ export class BotSpawner {
         ))
     }
 }
-

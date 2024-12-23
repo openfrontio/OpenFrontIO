@@ -5,6 +5,10 @@ import { AllianceRequest, AllPlayers, Cell, GameType, Player, PlayerID, PlayerTy
 import { ClientID, ClientIntentMessageSchema, ClientJoinMessageSchema, GameID, Intent, ServerMessage, ServerMessageSchema, ClientPingMessageSchema, GameConfig, ClientLogMessageSchema } from "../core/Schemas"
 import { LobbyConfig } from "./GameRunner"
 import { LocalServer } from "./LocalServer"
+import {UsernameInput} from "./UsernameInput";
+import {HostLobbyModal as HostPrivateLobbyModal} from "./HostLobbyModal";
+import {JoinPrivateLobbyModal} from "./JoinPrivateLobbyModal";
+import {SinglePlayerModal} from "./SinglePlayerModal";
 
 
 export class SendAllianceRequestIntentEvent implements GameEvent {
@@ -175,7 +179,20 @@ export class Transport {
             onconnect()
         };
         this.socket.onmessage = (event: MessageEvent) => {
-            onmessage(ServerMessageSchema.parse(JSON.parse(event.data)))
+            try {
+                const serverMsg = ServerMessageSchema.parse(JSON.parse(event.data));
+
+                // Handle validation errors
+                if (serverMsg.type === 'validationError' && serverMsg.input === 'username-input') {
+                    this.handleValidationError(serverMsg.message);
+                    return;
+                }
+
+                // Process other message types
+                this.onmessage(serverMsg);
+            } catch (error) {
+                console.error('Failed to process server message:', error);
+            }
         };
         this.socket.onerror = (err) => {
             console.error('Socket encountered error: ', err, 'Closing socket');
@@ -236,7 +253,23 @@ export class Transport {
         this.socket.onclose = (event: CloseEvent) => { }
     }
 
+    private handleValidationError(message: string) {
+        const usernameInput = document.querySelector('username-input') as UsernameInput;
+        const hostModal = document.querySelector('host-lobby-modal') as HostPrivateLobbyModal;
+        const joinModal = document.querySelector('join-private-lobby-modal') as JoinPrivateLobbyModal;
+        const singlePlayerModal = document.querySelector('single-player-modal') as SinglePlayerModal;
 
+        if (usernameInput) {
+            this.closeAllModals([hostModal, joinModal, singlePlayerModal]);
+            usernameInput.validationError = message;
+        }
+    }
+
+    private closeAllModals(modals: (HostPrivateLobbyModal | JoinPrivateLobbyModal | SinglePlayerModal)[]) {
+        modals.forEach(modal => {
+            modal.close();
+        });
+    }
     private onSendAllianceRequest(event: SendAllianceRequestIntentEvent) {
         this.sendIntent({
             type: "allianceRequest",
