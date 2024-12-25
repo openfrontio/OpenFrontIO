@@ -12,6 +12,8 @@ import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import { generateID } from "../core/Util";
 import { generateCryptoRandomUUID } from "./Utils";
 import { consolex } from "../core/Consolex";
+import {validateUsername} from "../core/validations/username";
+import {PublicLobby} from "./PublicLobby";
 
 class Client {
     private gameStop: () => void
@@ -102,16 +104,10 @@ class Client {
         this.usernameInput.validationError = '';
 
         try {
-            const response = await fetch('/validate-username', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username }),
-            });
+            const { isValid, error } = validateUsername(username);
 
-            const result = await response.json();
-
-            if (!response.ok || !result.success) {
-                this.usernameInput.validationError = result.error || 'Failed to validate username.';
+            if (!isValid) {
+                this.usernameInput.validationError = error || 'Failed to validate username.';
                 return false;
             }
 
@@ -125,11 +121,25 @@ class Client {
 
 
     private async handleJoinLobby(event: CustomEvent) {
-        const lobby = event.detail.lobby
-        consolex.log(`joining lobby ${lobby.id}`)
+        const lobby = event.detail.lobby;
+        consolex.log(`Attempting to join lobby ${lobby.id}`);
+
+        // Validate the username
+        const username = this.usernameInput?.getCurrentUsername();
+        if (!username) {
+            this.usernameInput.validationError = 'Username is required';
+            return;
+        }
+
+        const isValid = await this.validateUsername(username);
+        if (!isValid) {
+            return;
+        }
+
+        // Stop existing game
         if (this.gameStop != null) {
-            consolex.log('joining lobby, stopping existing game')
-            this.gameStop()
+            consolex.log('Stopping existing game before joining a new lobby');
+            this.gameStop();
         }
         this.gameStop = joinLobby(
             {
@@ -144,9 +154,14 @@ class Client {
             },
             () => this.joinModal.close()
         );
+        const publicLobbyElement = document.querySelector('public-lobby') as PublicLobby;
+        publicLobbyElement.highlightLobby();
     }
 
+
     private async handleLeaveLobby(event: CustomEvent) {
+        const publicLobbyElement = document.querySelector('public-lobby') as PublicLobby;
+        publicLobbyElement.highlightLobby();
         if (this.gameStop == null) {
             return
         }

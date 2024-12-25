@@ -57,7 +57,7 @@ export class UsernameInput extends LitElement {
           .value=${this.username}
           @input=${this.handleInput}
           placeholder="Enter your username"
-          maxlength="${MAX_USERNAME_LENGTH}"
+          maxlength="123"
         >
         ${this.validationError
             ? html`<div class="error">${this.validationError}</div>`
