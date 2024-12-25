@@ -135,7 +135,6 @@ wss.on('connection', (ws, req) => {
                 const ip = Array.isArray(forwarded)
                     ? forwarded[0]  // Get the first IP if it's an array
                     : forwarded || req.socket.remoteAddress;
-
                 const username = clientMsg.username;
                 const { isValid, error } = validateUsername(username);
                 if (!isValid) {

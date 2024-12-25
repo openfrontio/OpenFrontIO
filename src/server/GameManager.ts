@@ -16,6 +16,10 @@ export class GameManager {
 
     constructor(private config: Config) { }
 
+    public game(id: GameID): GameServer | null {
+        return this.games.find(g => g.id == id)
+    }
+
     gamesByPhase(phase: GamePhase): GameServer[] {
         return this.games.filter(g => g.phase() == phase)
     }

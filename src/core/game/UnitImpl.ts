@@ -58,6 +58,7 @@ export class UnitImpl implements MutableUnit {
 
     setOwner(newOwner: Player): void {
         const oldOwner = this._owner
+        oldOwner._units = oldOwner._units.filter(u => u != this)
         this._owner = newOwner as PlayerImpl
         this.g.fireUnitUpdateEvent(this, this.tile())
         this.g.displayMessage(
@@ -93,5 +94,9 @@ export class UnitImpl implements MutableUnit {
 
     hash(): number {
         return this.tile().cell().x + this.tile().cell().y + simpleHash(this.type())
+    }
+
+    toString(): string {
+        return `Unit:${this._type},owner:${this.owner().name()}`
     }
 }

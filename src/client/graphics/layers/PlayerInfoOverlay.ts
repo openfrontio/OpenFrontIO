@@ -55,7 +55,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             this.player = owner;
             this.setVisible(true);
         } else if (!tile.isLand()) {
-            const units = this.game.units(UnitType.Destroyer, UnitType.Battleship)
+            const units = this.game.units(UnitType.Destroyer, UnitType.Battleship, UnitType.TradeShip)
                 .filter(u => euclideanDist(worldCoord, u.tile().cell()) < 50)
                 .sort(distSortUnit(tile));
 

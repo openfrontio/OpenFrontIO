@@ -258,24 +258,38 @@
 * highlight player spawn DONE 12/21/2024
 * make bots less likely to build ships DONE 12/21/2024
 * bugix: wait for css to load on front page DONE 12/21/2024
+* fix nuke delete error DONE 12/21/2024
+* make spawn phase longer DONE 12/22/2024
+* show trade ships in overview DONE 12/22/2024
 
 -- v0.13.0 release
 
+<<<<<<< HEAD
+* make troops regenerate slower in mid-late game
+* player info show territory
+* make boats work on lakes
+* compute mini map offline
+=======
+>>>>>>> 10d70d3 (fix nuke bug, make spawn phase longer, show trade ships in overview)
+* make url allow to join game
 * show players joined username in private lobby
+* have bots build cities & defense posts & nukes
 * troop density affects attack bonus
-* bug: NPCs don't have money
+* record game winner
+* pause button in single player
+* refresh graphics after tab away
 * right click brings up player info menu
 * seperate server config from client config
 * bug: player names not updating sometimes
+
+--- v0.14.0 release
+
 * make player editeable configs
 * couldn't scroll left on build menu to deploy bombs (mobile)
 * UI/test too big on mobile
 * bug: build city 25k bump doesn't match troop/worker ratio
 * bug: mobile: if you don't have enough money can't get rid of build menu
-* have bots build cities & defense posts
 * allow longer names and allow them to be displayed in the Rank UI not be cut
-* make boats work on lakes 
-* record game winner
 * repaint canvas after tab away to prevent blank screen
 * have nation spawn with irl territory
 * on mobile can't click away from build menu
@@ -283,8 +297,6 @@
 * record commit hash of game
 * remove alliance when player dies
 * put delay on adjust troop ratio to reduce number of messages
-* make clientID & playerID smaller
-* pause button in single player
 * when hovering over another player have the name not appear ontop of the exit cross
 * have a visual thing of who your attacking and how many boats you sent
 * make the sliders bigger. Like vertically.

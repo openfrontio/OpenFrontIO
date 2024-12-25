@@ -171,7 +171,7 @@ export class FakeHumanExecution implements Execution {
     }
 
     private maybeSpawnWarship(shipType: UnitType.Destroyer | UnitType.Battleship): boolean {
-        if (!this.random.chance(10)) {
+        if (!this.random.chance(30)) {
             return false
         }
         const ports = this.player.units(UnitType.Port)

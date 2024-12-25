@@ -180,7 +180,12 @@ export class GameRunner {
         this.isProcessingTurn = true
         this.gs.addExecution(...this.executor.createExecs(this.turns[this.currTurn]))
         try {
+            const start = performance.now()
             this.gs.executeNextTick()
+            const duration = performance.now() - start
+            if (duration > 200) {
+                console.warn(`tick ${this.gs.ticks() - 1} took ${duration}ms to execute`)
+            }
         } catch (error) {
             const errorText = `Error: ${error.message}\nStack: ${error.stack}`;
             consolex.error(errorText)

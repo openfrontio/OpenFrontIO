@@ -116,6 +116,7 @@ export class GameRenderer {
 	}
 
 	renderGame() {
+		const start = performance.now()
 		// Set background
 		this.context.fillStyle = this.game.config().theme().backgroundColor().toHex();
 		this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -140,6 +141,11 @@ export class GameRenderer {
 		})
 
 		requestAnimationFrame(() => this.renderGame());
+
+		const duration = performance.now() - start
+		if (duration > 50) {
+			console.warn(`tick ${this.game.ticks()} took ${duration}ms to render frame`)
+		}
 	}
 
 	tick() {

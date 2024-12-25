@@ -9,8 +9,11 @@ export class HostLobbyModal extends LitElement {
   @state() private isModalOpen = false;
   @state() private selectedMap: GameMap = GameMap.World;
   @state() private selectedDiffculty: Difficulty = Difficulty.Medium;
-  @state() private lobbyId = 'a345d';
+  @state() private lobbyId = '';
   @state() private copySuccess = false;
+  @state() private players: string[] = []
+
+  private playersInterval = null
 
   static styles = css`
     .modal-overlay {
@@ -135,6 +138,9 @@ export class HostLobbyModal extends LitElement {
             </select>
           </div>
           <button @click=${this.startGame}>Start Game</button>
+        <div>
+        <p>Players: ${this.players.join(", ")}<p>
+        </div>
         </div>
       </div>
     `;
@@ -160,11 +166,16 @@ export class HostLobbyModal extends LitElement {
 
     })
     this.isModalOpen = true;
+    this.playersInterval = setInterval(() => this.pollPlayers(), 1000)
   }
 
   public close() {
     this.isModalOpen = false;
     this.copySuccess = false;
+    if (this.playersInterval) {
+      clearInterval(this.playersInterval)
+      this.playersInterval = null
+    }
   }
 
   private async handleMapChange(e: Event) {
@@ -200,7 +211,6 @@ export class HostLobbyModal extends LitElement {
     });
   }
 
-
   private async copyToClipboard() {
     try {
       await navigator.clipboard.writeText(this.lobbyId);
@@ -213,6 +223,18 @@ export class HostLobbyModal extends LitElement {
     }
   }
 
+  private async pollPlayers() {
+    fetch(`/lobby/${this.lobbyId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    }).then(response => response.json())
+      .then(data => {
+        console.log(`got response: ${data}`)
+        this.players = data.players.map(p => p.username)
+      })
+  }
 }
 
 

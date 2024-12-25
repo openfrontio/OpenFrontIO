@@ -106,8 +106,8 @@ export abstract class DefaultConfig implements Config {
                 return {
                     cost: (p: Player) =>
                         Math.min(
-                            500_000,
-                            (p.units(UnitType.DefensePost).length + 1) * 100_000
+                            250_000,
+                            (p.units(UnitType.DefensePost).length + 1) * 50_000
                         ),
                     territoryBound: true
                 }
@@ -157,7 +157,7 @@ export abstract class DefaultConfig implements Config {
         return 500
     }
     numSpawnPhaseTurns(gameType: GameType): number {
-        return gameType == GameType.Singleplayer ? 100 : 200
+        return gameType == GameType.Singleplayer ? 100 : 300
     }
     numBots(): number {
         return 400
@@ -252,7 +252,7 @@ export abstract class DefaultConfig implements Config {
     }
 
     maxPopulation(player: Player): number {
-        let maxPop = Math.sqrt(player.numTilesOwned()) * 3000 + 50000
+        let maxPop = Math.pow(player.numTilesOwned(), .6) * 1000 + 50000
         if (player.type() == PlayerType.Bot) {
             return maxPop
         }
@@ -262,12 +262,12 @@ export abstract class DefaultConfig implements Config {
     populationIncreaseRate(player: Player): number {
         let max = this.maxPopulation(player)
 
-        let toAdd = 10 + (player.population() + Math.sqrt(player.population() * player.numTilesOwned())) / 100
+        // const thing = Math.sqrt(player.population() + player.population() * player.workers())
+
+        let toAdd = 10 + Math.pow(player.population(), .7) / 5
 
         const ratio = 1 - (player.population() / max)
         toAdd *= ratio
-        toAdd *= .5
-        // consolex.log(`to add ${toAdd}`)
 
         if (player.type() == PlayerType.FakeHuman) {
             toAdd *= 1.0
@@ -276,7 +276,7 @@ export abstract class DefaultConfig implements Config {
             toAdd *= .7
         }
 
-        return Math.min(player.troops() + toAdd, max) - player.troops()
+        return Math.min(player.population() + toAdd, max) - player.population()
     }
 
     goldAdditionRate(player: Player): number {
