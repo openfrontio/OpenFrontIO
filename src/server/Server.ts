@@ -99,6 +99,20 @@ app.get('/lobby/:id/exists', (req, res) => {
     });
 });
 
+app.get('/lobby/:id', (req, res) => {
+    const game = gm.game(req.params.id)
+    if (game == null) {
+        console.log(`lobby ${req.params.id} not found`)
+        return res.status(404).json({ error: 'Game not found' });
+    }
+    res.json({
+        players: game.activeClients.map(c => ({
+            username: c.username,
+            clientID: c.clientID
+        }))
+    });
+});
+
 
 app.get('/private_lobby/:id', (req, res) => {
     res.json({
@@ -108,54 +122,58 @@ app.get('/private_lobby/:id', (req, res) => {
 
 wss.on('connection', (ws, req) => {
     ws.on('message', (message: string) => {
-        const clientMsg: ClientMessage = ClientMessageSchema.parse(JSON.parse(message))
-        slog({
-            logKey: 'websocket_msg',
-            msg: 'server received websocket message',
-            data: clientMsg,
-            severity: LogSeverity.Debug
-        })
-        if (clientMsg.type == "join") {
-            const forwarded = req.headers['x-forwarded-for']
-            const ip = Array.isArray(forwarded)
-                ? forwarded[0]  // Get the first IP if it's an array
-                : forwarded || req.socket.remoteAddress;
-
-            const username = clientMsg.username;
-            const { isValid, error } = validateUsername(username);
-            if (!isValid) {
-                const errorMsg = error || "Invalid username.";
-                // Send error back to the client
-                ws.send(JSON.stringify({
-                    type: 'error',
-                    input: 'username-input',
-                    message: errorMsg,
-                }));
-                return;
-            }
-
-            // If username is valid, add the client
-            gm.addClient(
-                new Client(
-                    clientMsg.clientID,
-                    clientMsg.persistentID,
-                    ip,
-                    username,
-                    ws
-                ),
-                clientMsg.gameID,
-                clientMsg.lastTurn
-            )
-        }
-        if (clientMsg.type == "log") {
+        try {
+            const clientMsg: ClientMessage = ClientMessageSchema.parse(JSON.parse(message))
             slog({
-                logKey: "client_console_log",
-                msg: clientMsg.log,
-                severity: clientMsg.severity,
-                clientID: clientMsg.clientID,
-                gameID: clientMsg.gameID,
-                persistentID: clientMsg.persistentID,
+                logKey: 'websocket_msg',
+                msg: 'server received websocket message',
+                data: clientMsg,
+                severity: LogSeverity.Debug
             })
+            if (clientMsg.type == "join") {
+                const forwarded = req.headers['x-forwarded-for']
+                const ip = Array.isArray(forwarded)
+                    ? forwarded[0]  // Get the first IP if it's an array
+                    : forwarded || req.socket.remoteAddress;
+
+                const username = clientMsg.username;
+                const { isValid, error } = validateUsername(username);
+                if (!isValid) {
+                    const errorMsg = error || "Invalid username.";
+                    // Send error back to the client
+                    ws.send(JSON.stringify({
+                        type: 'error',
+                        input: 'username-input',
+                        message: errorMsg,
+                    }));
+                    return;
+                }
+
+                // If username is valid, add the client
+                gm.addClient(
+                    new Client(
+                        clientMsg.clientID,
+                        clientMsg.persistentID,
+                        ip,
+                        username,
+                        ws
+                    ),
+                    clientMsg.gameID,
+                    clientMsg.lastTurn
+                )
+            }
+            if (clientMsg.type == "log") {
+                slog({
+                    logKey: "client_console_log",
+                    msg: clientMsg.log,
+                    severity: clientMsg.severity,
+                    clientID: clientMsg.clientID,
+                    gameID: clientMsg.gameID,
+                    persistentID: clientMsg.persistentID,
+                })
+            }
+        } catch (error) {
+            console.log(`errror handling websocket message: ${error}`)
         }
     })
 });
