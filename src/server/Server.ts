@@ -140,7 +140,6 @@ wss.on('connection', (ws, req) => {
                 const { isValid, error } = validateUsername(username);
                 if (!isValid) {
                     const errorMsg = error || "Invalid username.";
-                    // Send error back to the client
                     ws.send(JSON.stringify({
                         type: 'error',
                         input: 'username-input',
@@ -148,14 +147,12 @@ wss.on('connection', (ws, req) => {
                     }));
                     return;
                 }
-
-                // If username is valid, add the client
                 gm.addClient(
                     new Client(
                         clientMsg.clientID,
                         clientMsg.persistentID,
                         ip,
-                        username,
+                        clientMsg.username,
                         ws
                     ),
                     clientMsg.gameID,
