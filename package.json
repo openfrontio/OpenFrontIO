@@ -6,8 +6,8 @@
     "build-prod": "webpack --config webpack.config.js --mode production",
     "start:client": "webpack serve --open --node-env development",
     "start:server": "node --loader ts-node/esm --experimental-specifier-resolution=node src/server/Server.ts",
-    "start:server-dev": "GAME_ENV=dev node --loader ts-node/esm --experimental-specifier-resolution=node src/server/Server.ts",
-    "dev": "GAME_ENV=dev concurrently \"npm run start:client\" \"npm run start:server-dev\"",
+    "start:server-dev": "cross-env GAME_ENV=dev node --loader ts-node/esm --experimental-specifier-resolution=node src/server/Server.ts",
+    "dev": "cross-env GAME_ENV=dev concurrently \"npm run start:client\" \"npm run start:server-dev\"",
     "tunnel": "npm run build-prod && npm run start:server",
     "test": "jest",
     "tailwind": "tailwindcss build -i ./src/client/tailwind.css -o public/tailwind.css"
@@ -29,6 +29,7 @@
     "binary-base64-loader": "^1.0.0",
     "chai": "^5.1.1",
     "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
     "css-loader": "^7.1.2",
     "file-loader": "^6.2.0",
     "html-inline-script-webpack-plugin": "^3.2.1",
