@@ -1,10 +1,4 @@
-import {
-  AllPlayers,
-  Cell,
-  Game,
-  Player,
-  PlayerType,
-} from "../../../core/game/Game";
+import { AllPlayers, Cell, PlayerType } from "../../../core/game/Game";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { Theme } from "../../../core/configuration/Config";
 import { Layer } from "./Layer";
@@ -25,7 +19,7 @@ class RenderInfo {
     public lastRenderCalc: number,
     public location: Cell,
     public fontSize: number,
-    public element: HTMLElement,
+    public element: HTMLElement
   ) {}
 }
 
@@ -49,7 +43,7 @@ export class NameLayer implements Layer {
     private game: GameView,
     private theme: Theme,
     private transformHandler: TransformHandler,
-    private clientID: ClientID,
+    private clientID: ClientID
   ) {
     this.traitorIconImage = new Image();
     this.traitorIconImage.src = traitorIcon;
@@ -62,8 +56,20 @@ export class NameLayer implements Layer {
   }
 
   resizeCanvas() {
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
+    // Initialize 2D context with proper DPR scaling
+    const ctx = this.canvas.getContext("2d", { alpha: true });
+    const dpr = window.devicePixelRatio || 1;
+    ctx.scale(dpr, dpr);
+
+    // Set proper canvas size accounting for DPR
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    this.canvas.width = width * dpr;
+    this.canvas.height = height * dpr;
+
+    // Set display size
+    this.canvas.style.width = width + "px";
+    this.canvas.style.height = height + "px";
   }
 
   shouldTransform(): boolean {
@@ -81,6 +87,9 @@ export class NameLayer implements Layer {
     this.container.style.top = "50%";
     this.container.style.pointerEvents = "none";
     this.container.style.zIndex = "2";
+    // Add transform-style for container
+    this.container.style.transformStyle = "preserve-3d";
+    this.container.style.backfaceVisibility = "hidden";
     document.body.appendChild(this.container);
   }
 
@@ -100,28 +109,24 @@ export class NameLayer implements Layer {
         if (!this.seenPlayers.has(player)) {
           this.seenPlayers.add(player);
           this.renders.push(
-            new RenderInfo(
-              player,
-              0,
-              null,
-              0,
-              this.createPlayerElement(player),
-            ),
+            new RenderInfo(player, 0, null, 0, this.createPlayerElement(player))
           );
         }
       }
     }
   }
 
-  public renderLayer(mainContex: CanvasRenderingContext2D) {
+  public renderLayer(mainContext: CanvasRenderingContext2D) {
+    const dpr = window.devicePixelRatio || 1;
     const screenPosOld = this.transformHandler.worldToScreenCoordinates(
-      new Cell(0, 0),
+      new Cell(0, 0)
     );
     const screenPos = new Cell(
       screenPosOld.x - window.innerWidth / 2,
-      screenPosOld.y - window.innerHeight / 2,
+      screenPosOld.y - window.innerHeight / 2
     );
-    this.container.style.transform = `translate(${screenPos.x}px, ${screenPos.y}px) scale(${this.transformHandler.scale})`;
+
+    this.container.style.transform = `translate3d(${screenPos.x}px, ${screenPos.y}px, 0) scale(${this.transformHandler.scale})`;
 
     const now = Date.now();
     if (now > this.lastChecked + this.renderCheckRate) {
@@ -131,13 +136,16 @@ export class NameLayer implements Layer {
       }
     }
 
-    mainContex.drawImage(
+    mainContext.save();
+    mainContext.scale(dpr, dpr);
+    mainContext.drawImage(
       this.canvas,
       0,
       0,
-      mainContex.canvas.width,
-      mainContex.canvas.height,
+      mainContext.canvas.width / dpr,
+      mainContext.canvas.height / dpr
     );
+    mainContext.restore();
   }
 
   private createPlayerElement(player: PlayerView): HTMLDivElement {
@@ -148,6 +156,12 @@ export class NameLayer implements Layer {
     element.style.alignItems = "center";
     element.style.gap = "0px";
 
+    // Add transform-style to ensure crisp text rendering
+    element.style.transformStyle = "preserve-3d";
+    element.style.backfaceVisibility = "hidden";
+    // Add will-change to optimize performance
+    element.style.willChange = "transform";
+
     const nameDiv = document.createElement("div");
     nameDiv.innerHTML = player.name();
     nameDiv.style.color = this.theme.playerInfoColor(player.id()).toHex();
@@ -156,6 +170,11 @@ export class NameLayer implements Layer {
     nameDiv.style.overflow = "hidden";
     nameDiv.style.textOverflow = "ellipsis";
     nameDiv.style.zIndex = "2";
+    // Add text rendering optimizations
+    nameDiv.style.textRendering = "optimizeLegibility";
+    // Force subpixel antialiasing where available
+    (nameDiv.style as any)["-webkit-font-smoothing"] = "antialiased";
+    (nameDiv.style as any)["-moz-osx-font-smoothing"] = "grayscale";
     element.appendChild(nameDiv);
 
     const troopsDiv = document.createElement("div");
@@ -164,6 +183,10 @@ export class NameLayer implements Layer {
     troopsDiv.style.fontFamily = this.theme.font();
     troopsDiv.style.fontWeight = "bold";
     troopsDiv.style.zIndex = "2";
+    // Apply same text optimizations to troops
+    troopsDiv.style.textRendering = "optimizeLegibility";
+    (troopsDiv.style as any)["-webkit-font-smoothing"] = "antialiased";
+    (troopsDiv.style as any)["-moz-osx-font-smoothing"] = "grayscale";
     element.appendChild(troopsDiv);
 
     const iconsDiv = document.createElement("div");
@@ -171,10 +194,10 @@ export class NameLayer implements Layer {
     iconsDiv.style.gap = "4px";
     iconsDiv.style.justifyContent = "center";
     iconsDiv.style.alignItems = "center";
-    iconsDiv.style.position = "absolute"; // Add this
-    iconsDiv.style.zIndex = "1"; // Add this
-    iconsDiv.style.width = "100%"; // Add this
-    iconsDiv.style.height = "100%"; // Add this
+    iconsDiv.style.position = "absolute";
+    iconsDiv.style.zIndex = "1";
+    iconsDiv.style.width = "100%";
+    iconsDiv.style.height = "100%";
     element.appendChild(iconsDiv);
 
     this.container.appendChild(element);
@@ -191,16 +214,17 @@ export class NameLayer implements Layer {
     const oldLocation = render.location;
     render.location = new Cell(
       render.player.nameLocation().x,
-      render.player.nameLocation().y,
+      render.player.nameLocation().y
     );
 
-    // Calculate base size and scale
+    // Calculate base size with reduced scale
     const baseSize = Math.max(1, Math.floor(render.player.nameLocation().size));
-    render.fontSize = Math.max(4, Math.floor(baseSize * 0.4));
+    // Use smaller font multiplier but keep minimum size reasonable
+    render.fontSize = Math.max(8, Math.floor(baseSize * 0.2));
 
-    // Screen space calculations
+    // Screen space calculations with larger minimum size
     const size = this.transformHandler.scale * baseSize;
-    if (size < 7 || !this.transformHandler.isOnScreen(render.location)) {
+    if (size < 8 || !this.transformHandler.isOnScreen(render.location)) {
       render.element.style.display = "none";
       return;
     }
@@ -213,16 +237,19 @@ export class NameLayer implements Layer {
     }
     render.lastRenderCalc = now + this.rand.nextInt(0, 100);
 
-    // Update text sizes
+    // Update text sizes with DPR consideration
     const nameDiv = render.element.children[0] as HTMLDivElement;
     const troopsDiv = render.element.children[1] as HTMLDivElement;
+
+    // Apply font size directly without DPR scaling
     nameDiv.style.fontSize = `${render.fontSize}px`;
     troopsDiv.style.fontSize = `${render.fontSize}px`;
     troopsDiv.textContent = renderTroops(render.player.troops());
 
     // Handle icons
     const iconsDiv = render.element.children[2] as HTMLDivElement;
-    const iconSize = Math.min(render.fontSize * 1.5, 48);
+    const dpr = window.devicePixelRatio || 1;
+    const iconSize = Math.min((render.fontSize * 1.5) / dpr, 48);
     const myPlayer = this.getPlayer();
 
     // Crown icon
@@ -230,7 +257,7 @@ export class NameLayer implements Layer {
     if (render.player === this.firstPlace) {
       if (!existingCrown) {
         iconsDiv.appendChild(
-          this.createIconElement(this.crownIconImage.src, iconSize, "crown"),
+          this.createIconElement(this.crownIconImage.src, iconSize, "crown")
         );
       }
     } else if (existingCrown) {
@@ -242,11 +269,7 @@ export class NameLayer implements Layer {
     if (render.player.isTraitor()) {
       if (!existingTraitor) {
         iconsDiv.appendChild(
-          this.createIconElement(
-            this.traitorIconImage.src,
-            iconSize,
-            "traitor",
-          ),
+          this.createIconElement(this.traitorIconImage.src, iconSize, "traitor")
         );
       }
     } else if (existingTraitor) {
@@ -261,8 +284,8 @@ export class NameLayer implements Layer {
           this.createIconElement(
             this.allianceIconImage.src,
             iconSize,
-            "alliance",
-          ),
+            "alliance"
+          )
         );
       }
     } else if (existingAlliance) {
@@ -277,7 +300,7 @@ export class NameLayer implements Layer {
     ) {
       if (!existingTarget) {
         iconsDiv.appendChild(
-          this.createIconElement(this.targetIconImage.src, iconSize, "target"),
+          this.createIconElement(this.targetIconImage.src, iconSize, "target")
         );
       }
     } else if (existingTarget) {
@@ -291,7 +314,7 @@ export class NameLayer implements Layer {
       .filter(
         (emoji) =>
           emoji.recipientID == AllPlayers ||
-          emoji.recipientID == myPlayer?.smallID(),
+          emoji.recipientID == myPlayer?.smallID()
       );
 
     if (emojis.length > 0) {
@@ -299,8 +322,10 @@ export class NameLayer implements Layer {
         const emojiDiv = document.createElement("div");
         emojiDiv.setAttribute("data-icon", "emoji");
         emojiDiv.style.fontSize = `${iconSize}px`;
-        // emojiDiv.textAlign = 'center'
         emojiDiv.textContent = emojis[0].message;
+        emojiDiv.style.textRendering = "optimizeLegibility";
+        (emojiDiv.style as any)["-webkit-font-smoothing"] = "antialiased";
+        (emojiDiv.style as any)["-moz-osx-font-smoothing"] = "grayscale";
         iconsDiv.appendChild(emojiDiv);
       }
     } else if (existingEmoji) {
@@ -314,17 +339,18 @@ export class NameLayer implements Layer {
       icon.style.height = `${iconSize}px`;
     }
 
-    // Position element with scale
+    // Position element with reduced scale
     if (render.location && render.location != oldLocation) {
-      const scale = Math.min(baseSize * 0.25, 3);
-      render.element.style.transform = `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) scale(${scale})`;
+      const scale = Math.min(baseSize * 0.1, 3);
+      // Use translate3d for hardware acceleration
+      render.element.style.transform = `translate3d(${render.location.x}px, ${render.location.y}px, 0) translate(-50%, -50%) scale(${scale})`;
     }
   }
 
   private createIconElement(
     src: string,
     size: number,
-    id: string,
+    id: string
   ): HTMLImageElement {
     const icon = document.createElement("img");
     icon.src = src;
@@ -332,6 +358,8 @@ export class NameLayer implements Layer {
     icon.style.height = `${size}px`;
     icon.setAttribute("data-icon", id);
     icon.style.position = "absolute";
+    // Add image rendering optimization
+    icon.style.imageRendering = "crisp-edges";
     return icon;
   }
 
