@@ -1,0 +1,177 @@
+{
+    "name": "South America",
+    "width": 2000,
+    "height": 1000,
+    "nations": [
+        {
+            "coordinates": [377, 192],
+            "name": "Bahamas 🇧🇸",
+            "strength": 1
+        },
+        {
+            "coordinates": [350, 248],
+            "name": "Cuba 🇨🇺",
+            "strength": 2
+        },
+        {
+            "coordinates": [572, 315],
+            "name": "Dominican Republic 🇩🇴",
+            "strength": 1
+        },
+        {
+            "coordinates": [507, 310],
+            "name": "Haiti 🇭🇹",
+            "strength": 1
+        },
+        {
+            "coordinates": [640, 327],
+            "name": "Puerto Rico (US) 🇵🇷",
+            "strength": 1
+        },
+        {
+            "coordinates": [258, 512],
+            "name": "Costa Rica 🇨🇷",
+            "strength": 1
+        },
+        {
+            "coordinates": [140, 440],
+            "name": "El Salvador 🇸🇻",
+            "strength": 1
+        },
+        {
+            "coordinates": [270, 150],
+            "name": "Florida (US) 🇺🇸",
+            "strength": 3
+        },
+        {
+            "coordinates": [90, 385],
+            "name": "Guatemala 🇬🇹",
+            "strength": 1
+        },
+        {
+            "coordinates": [210, 390],
+            "name": "Honduras 🇭🇳",
+            "strength": 1
+        },
+        {
+            "coordinates": [50, 45],
+            "name": "Louisiana (US) 🇺🇸",
+            "strength": 2
+        },
+        {
+            "coordinates": [210, 440],
+            "name": "Nicaragua 🇳🇮",
+            "strength": 1
+        },
+        {
+            "coordinates": [350, 514],
+            "name": "Panama 🇵🇦",
+            "strength": 1
+        },
+        {
+            "coordinates": [670, 800],
+            "name": "Amazonas (BR) 🇧🇷",
+            "strength": 2
+        },
+        {
+            "coordinates": [1250, 980],
+            "name": "Bahia (BR) 🇧🇷",
+            "strength": 3
+        },
+        {
+            "coordinates": [740, 1180],
+            "name": "Bolivia 🇧🇴",
+            "strength": 1
+        },
+        {
+            "coordinates": [770, 1760],
+            "name": "Buenos Aires (AR) 🇦🇷",
+            "strength": 3
+        },
+        {
+            "coordinates": [670, 1250],
+            "name": "Catamarca (AR) 🇦🇷",
+            "strength": 1
+        },
+        {
+            "coordinates": [580, 1280],
+            "name": "Chile 🇨🇱",
+            "strength": 1
+        },
+        {
+            "coordinates": [480, 620],
+            "name": "Colombia 🇨🇴",
+            "strength": 1
+        },
+        {
+            "coordinates": [360, 740],
+            "name": "Ecuador 🇪🇨",
+            "strength": 1
+        },
+        {
+            "coordinates": [960, 620],
+            "name": "French Guyana (FR) 🇬🇫",
+            "strength": 1
+        },
+        {
+            "coordinates": [80, 720],
+            "name": "Galapagos (EC) 🇪🇨",
+            "strength": 1
+        },
+        {
+            "coordinates": [800, 575],
+            "name": "Guyana 🇬🇾",
+            "strength": 1
+        },
+        {
+            "coordinates": [1070, 1090],
+            "name": "Minas Gerais (BR) 🇧🇷",
+            "strength": 1
+        },
+        {
+            "coordinates": [940, 820],
+            "name": "Pará (BR) 🇧🇷",
+            "strength": 1
+        },
+        {
+            "coordinates": [420, 900],
+            "name": "Peru 🇵🇪",
+            "strength": 1
+        },
+        {
+            "coordinates": [820, 1180],
+            "name": "Paraguay 🇵🇾",
+            "strength": 1
+        },
+        {
+            "coordinates": [1150, 1185],
+            "name": "Rio de Janeiro (BR) 🇧🇷",
+            "strength": 3
+        },
+        {
+            "coordinates": [565, 1660],
+            "name": "Santa Cruz (AR) 🇦🇷",
+            "strength": 1
+        },
+        {
+            "coordinates": [980, 1170],
+            "name": "São Paulo (BR) 🇧🇷",
+            "strength": 2
+        },
+        {
+            "coordinates": [890, 610],
+            "name": "Suriname 🇸🇷",
+            "strength": 1
+        },
+        {
+            "coordinates": [890, 1375],
+            "name": "Uruguay 🇺🇾",
+            "strength": 1
+        },
+        {
+            "coordinates": [640, 570],
+            "name": "Venezuela 🇻🇪",
+            "strength": 2
+        }
+    ]
+}
