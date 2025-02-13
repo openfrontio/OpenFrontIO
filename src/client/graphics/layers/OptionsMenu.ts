@@ -6,11 +6,34 @@ import { GameType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { UserSettings } from "../../../core/game/UserSettings";
+
+const button = ({
+  classes = "",
+  onClick = () => {},
+  title = "",
+  children,
+}) => html`
+  <button
+    class="flex items-center justify-center p-1 
+                               bg-opacity-70 bg-gray-700 text-opacity-90 text-white
+                               border-none rounded cursor-pointer
+                               hover:bg-opacity-60 hover:bg-gray-600
+                               transition-colors duration-200
+                               text-sm lg:text-xl ${classes}"
+    @click=${onClick}
+    aria-label=${title}
+    title=${title}
+  >
+    ${children}
+  </button>
+`;
 
 @customElement("options-menu")
 export class OptionsMenu extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
+  private userSettings: UserSettings = new UserSettings();
 
   @state()
   private showPauseButton: boolean = true;
@@ -20,6 +43,9 @@ export class OptionsMenu extends LitElement implements Layer {
 
   @state()
   private timer: number = 0;
+
+  @state()
+  private showSettings: boolean = false;
 
   private isVisible = false;
 
@@ -33,9 +59,24 @@ export class OptionsMenu extends LitElement implements Layer {
     return this;
   }
 
+  private onSettingsButtonClick() {
+    this.showSettings = !this.showSettings;
+    this.requestUpdate();
+  }
+
   private onPauseButtonClick() {
     this.isPaused = !this.isPaused;
     this.eventBus.emit(new PauseGameEvent(this.isPaused));
+  }
+
+  private onToggleEmojisButtonClick() {
+    this.userSettings.toggleEmojis();
+    this.requestUpdate();
+  }
+
+  private onToggleDarkModeButtonClick() {
+    this.userSettings.toggleDarkMode();
+    this.requestUpdate();
   }
 
   init() {
@@ -71,20 +112,13 @@ export class OptionsMenu extends LitElement implements Layer {
         <div
           class="bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-lg backdrop-blur-md"
         >
-          <div class="flex items-center gap-1 lg:gap-2">
-            <button
-              class="${!this.showPauseButton ? "hidden" : ""} 
-                               w-8 h-8 lg:w-10 lg:h-10 flex items-center justify-center 
-                               bg-opacity-70 bg-gray-700 text-opacity-90 text-white
-                               border-none rounded cursor-pointer
-                               hover:bg-opacity-60 hover:bg-gray-600
-                               transition-colors duration-200
-                               text-sm lg:text-xl"
-              @click=${this.onPauseButtonClick}
-              aria-label="${this.isPaused ? "Resume game" : "Pause game"}"
-            >
-              ${this.isPaused ? "▶" : "⏸"}
-            </button>
+          <div class="flex items-stretch gap-1 lg:gap-2">
+            ${button({
+              classes: !this.showPauseButton ? "hidden" : "",
+              onClick: this.onPauseButtonClick,
+              title: this.isPaused ? "Resume game" : "Pause game",
+              children: this.isPaused ? "▶️" : "⏸",
+            })}
             <div
               class="w-14 h-8 lg:w-20 lg:h-10 flex items-center justify-center 
                               bg-opacity-50 bg-gray-700 text-opacity-90 text-white 
@@ -92,19 +126,35 @@ export class OptionsMenu extends LitElement implements Layer {
             >
               ${this.timer}
             </div>
-            <button
-              class="w-8 h-8 lg:w-10 lg:h-10 flex items-center justify-center 
-                               bg-opacity-70 bg-gray-700 text-opacity-90 text-white
-                               border-none rounded cursor-pointer
-                               hover:bg-opacity-60 hover:bg-gray-600
-                               transition-colors duration-200
-                               text-sm lg:text-xl"
-              @click=${this.onExitButtonClick}
-              aria-label="Exit game"
-            >
-              ×
-            </button>
+            ${button({
+              onClick: this.onExitButtonClick,
+              title: "Exit game",
+              children: "❌",
+            })}
+            ${button({
+              onClick: this.onSettingsButtonClick,
+              title: "Settings",
+              children: "⚙️",
+            })}
           </div>
+        </div>
+
+        <div
+          class="options-menu flex flex-wrap justify-around gap-y-3 mt-2 bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-lg backdrop-blur-md ${!this
+            .showSettings
+            ? "hidden"
+            : ""}"
+        >
+          ${button({
+            onClick: this.onToggleEmojisButtonClick,
+            title: "Toggle Emojis",
+            children: "🙂: " + (this.userSettings.emojis() ? "On" : "Off"),
+          })}
+          ${button({
+            onClick: this.onToggleDarkModeButtonClick,
+            title: "Dark Mode",
+            children: "🌙: " + (this.userSettings.darkMode() ? "On" : "Off"),
+          })}
         </div>
       </div>
     `;

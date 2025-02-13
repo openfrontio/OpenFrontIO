@@ -1,4 +1,5 @@
 import { GameType, Player, PlayerInfo, UnitInfo, UnitType } from "../game/Game";
+import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
 import { ServerConfig } from "./Config";
 import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
@@ -13,8 +14,8 @@ export class DevServerConfig extends DefaultServerConfig {
 }
 
 export class DevConfig extends DefaultConfig {
-  constructor(sc: ServerConfig, gc: GameConfig) {
-    super(sc, gc);
+  constructor(sc: ServerConfig, gc: GameConfig, us: UserSettings) {
+    super(sc, gc, us);
   }
 
   numSpawnPhaseTurns(): number {

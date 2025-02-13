@@ -24,6 +24,7 @@ import { createGame } from "./game/GameImpl";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { ClientID, GameConfig, Turn } from "./Schemas";
 import { GameUpdateViewData } from "./game/GameUpdates";
+import { UserSettings } from "./game/UserSettings";
 
 export async function createGameRunner(
   gameID: string,
@@ -31,7 +32,8 @@ export async function createGameRunner(
   clientID: ClientID,
   callBack: (gu: GameUpdateViewData) => void,
 ): Promise<GameRunner> {
-  const config = getConfig(gameConfig);
+  const userSettings: UserSettings = new UserSettings();
+  const config = getConfig(gameConfig, userSettings);
   const gameMap = await loadGameMap(gameConfig.gameMap);
   const game = createGame(
     gameMap.gameMap,

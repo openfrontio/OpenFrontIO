@@ -46,6 +46,7 @@ import { consolex, initRemoteSender } from "../core/Consolex";
 import { getConfig, getServerConfig } from "../core/configuration/Config";
 import { GameView, PlayerView } from "../core/game/GameView";
 import { GameUpdateViewData } from "../core/game/GameUpdates";
+import { UserSettings } from "../core/game/UserSettings";
 
 export interface LobbyConfig {
   flag: () => string;
@@ -75,6 +76,7 @@ export function joinLobby(
 
   const serverConfig = getServerConfig();
 
+  const userSettings: UserSettings = new UserSettings();
   let gameConfig: GameConfig = null;
   if (lobbyConfig.gameType == GameType.Singleplayer) {
     gameConfig = {
@@ -102,9 +104,13 @@ export function joinLobby(
     if (message.type == "start") {
       consolex.log("lobby: game started");
       onjoin();
-      createClientGame(lobbyConfig, message.config, eventBus, transport).then(
-        (r) => r.start(),
-      );
+      createClientGame(
+        lobbyConfig,
+        message.config,
+        eventBus,
+        transport,
+        userSettings,
+      ).then((r) => r.start());
     }
   };
   transport.connect(onconnect, onmessage);
@@ -119,8 +125,9 @@ export async function createClientGame(
   gameConfig: GameConfig,
   eventBus: EventBus,
   transport: Transport,
+  userSettings: UserSettings,
 ): Promise<ClientGameRunner> {
-  const config = getConfig(gameConfig);
+  const config = getConfig(gameConfig, userSettings);
 
   const gameMap = await loadTerrainMap(gameConfig.gameMap);
   const worker = new WorkerClient(

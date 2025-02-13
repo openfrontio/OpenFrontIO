@@ -322,7 +322,7 @@ export class NameLayer implements Layer {
           emoji.recipientID == myPlayer?.smallID(),
       );
 
-    if (emojis.length > 0) {
+    if (this.game.config().userSettings().emojis() && emojis.length > 0) {
       if (!existingEmoji) {
         const emojiDiv = document.createElement("div");
         emojiDiv.setAttribute("data-icon", "emoji");
