@@ -19,7 +19,7 @@ import europe from "../../../resources/maps/Europe.png";
 import mena from "../../../resources/maps/Mena.png";
 import northAmerica from "../../../resources/maps/NorthAmerica.png";
 import blackSea from "../../../resources/maps/BlackSea.png";
-import antarctica from "../../../resources/maps/Antarctica.png;
+import antarctica from "../../../resources/maps/Antarctica.png";
 
 @customElement("map-display")
 export class MapDisplay extends LitElement {
