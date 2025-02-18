@@ -1,1 +1,14 @@
-
+{
+  "name": "Antarctica",
+  "width": 535,
+  "height": 489,
+  "nations": [
+    {
+      "coordinates": [227, 232],
+      "name": "Antarctica",
+      "strength": 1,
+      "flag": "aq"
+    },
+    }
+  ]
+}
