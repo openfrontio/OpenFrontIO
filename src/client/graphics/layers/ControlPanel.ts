@@ -250,7 +250,10 @@ export class ControlPanel extends LitElement implements Layer {
 
         <div class="relative mb-0 lg:mb-4">
           <label class="block text-white mb-1"
-            >Attack Ratio: ${(this.attackRatio * 100).toFixed(0)}%</label
+            >Attack Ratio: ${(this.attackRatio * 100).toFixed(0)}%
+            <span
+              >(${renderTroops(this._troops * this.attackRatio)})</span
+            ></label
           >
           <div class="relative h-8">
             <!-- Background track -->
