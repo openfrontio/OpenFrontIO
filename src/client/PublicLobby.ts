@@ -9,8 +9,10 @@ import { getMapsImage } from "./utilities/Maps";
 export class PublicLobby extends LitElement {
   @state() private lobbies: Lobby[] = [];
   @state() private isLobbyHighlighted: boolean = false;
-  private lobbiesInterval: number | null = null;
   private currLobby: Lobby = null;
+  private timer: NodeJS.Timeout | null = null;
+  private nextFetch: NodeJS.Timeout | null = null;
+  @state() private timeRemaining: number = 0;
 
   createRenderRoot() {
     return this;
@@ -19,27 +21,58 @@ export class PublicLobby extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.fetchAndUpdateLobbies();
-    this.lobbiesInterval = window.setInterval(
-      () => this.fetchAndUpdateLobbies(),
-      1000,
-    );
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    if (this.lobbiesInterval !== null) {
-      clearInterval(this.lobbiesInterval);
-      this.lobbiesInterval = null;
+
+    if (this.timer !== null) {
+      clearTimeout(this.timer);
     }
+
+    if (this.nextFetch !== null) {
+      clearTimeout(this.nextFetch);
+    }
+  }
+
+  private startTimer(lobby: Lobby) {
+    if (this.timer !== null) {
+      clearTimeout(this.timer);
+    }
+
+    this.timer = setInterval(() => {
+      const lobby = this.lobbies[0];
+      const timeRemaining = Math.max(
+        0,
+        Math.floor((lobby.msUntilStart -= 100) / 1000),
+      );
+      this.timeRemaining = timeRemaining;
+      this.requestUpdate();
+    }, 100);
   }
 
   private async fetchAndUpdateLobbies(): Promise<void> {
     try {
-      const lobbies = await this.fetchLobbies();
-      this.lobbies = lobbies;
+      let lobbies = [];
+      while (lobbies.length === 0) {
+        lobbies = await this.fetchLobbies();
+
+        if (lobbies.length !== 0) {
+          this.lobbies = lobbies;
+          this.scheduleNextFetch(lobbies[0].msUntilStart + 200);
+          this.startTimer(lobbies[0]);
+        }
+      }
     } catch (error) {
       consolex.error("Error fetching lobbies:", error);
     }
+  }
+
+  private scheduleNextFetch(msUntilStart: number): void {
+    const timeRemaining = Math.max(0, msUntilStart);
+    this.nextFetch = setTimeout(() => {
+      this.fetchAndUpdateLobbies();
+    }, timeRemaining + 300);
   }
 
   async fetchLobbies(): Promise<Lobby[]> {
@@ -56,9 +89,12 @@ export class PublicLobby extends LitElement {
   }
 
   public stop() {
-    if (this.lobbiesInterval !== null) {
-      clearInterval(this.lobbiesInterval);
-      this.lobbiesInterval = null;
+    if (this.timer !== null) {
+      clearTimeout(this.timer);
+    }
+
+    if (this.nextFetch !== null) {
+      clearTimeout(this.nextFetch);
     }
   }
 
@@ -66,11 +102,10 @@ export class PublicLobby extends LitElement {
     if (this.lobbies.length === 0) return html``;
 
     const lobby = this.lobbies[0];
-    const timeRemaining = Math.max(0, Math.floor(lobby.msUntilStart / 1000));
 
     // Format time to show minutes and seconds
-    const minutes = Math.floor(timeRemaining / 60);
-    const seconds = timeRemaining % 60;
+    const minutes = Math.floor(this.timeRemaining / 60);
+    const seconds = this.timeRemaining % 60;
     const timeDisplay = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
 
     return html`
