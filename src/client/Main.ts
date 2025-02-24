@@ -38,6 +38,18 @@ export interface JoinLobbyEvent {
   gameRecord?: GameRecord;
 }
 
+var spModal: SinglePlayerModal;
+var hostModal: HostPrivateLobbyModal;
+var joinModal: JoinPrivateLobbyModal;
+var helpModal: HelpModal;
+
+export function closeAllModals() {
+  spModal.close();
+  hostModal.close();
+  helpModal.close();
+  joinModal.close();
+}
+
 class Client {
   private gameStop: () => void;
 
@@ -45,7 +57,6 @@ class Client {
   private flagInput: FlagInput | null = null;
   private darkModeButton: DarkModeButton | null = null;
 
-  private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
   private googleAds: NodeListOf<GoogleAdElement>;
   private userSettings: UserSettings = new UserSettings();
@@ -95,7 +106,7 @@ class Client {
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
 
-    const spModal = document.querySelector(
+    spModal = document.querySelector(
       "single-player-modal",
     ) as SinglePlayerModal;
     spModal instanceof SinglePlayerModal;
@@ -105,13 +116,13 @@ class Client {
       }
     });
 
-    const hlpModal = document.querySelector("help-modal") as HelpModal;
-    hlpModal instanceof HelpModal;
+    helpModal = document.querySelector("help-modal") as HelpModal;
+    helpModal instanceof HelpModal;
     document.getElementById("help-button").addEventListener("click", () => {
-      hlpModal.open();
+      helpModal.open();
     });
 
-    const hostModal = document.querySelector(
+    hostModal = document.querySelector(
       "host-lobby-modal",
     ) as HostPrivateLobbyModal;
     hostModal instanceof HostPrivateLobbyModal;
@@ -124,15 +135,15 @@ class Client {
         }
       });
 
-    this.joinModal = document.querySelector(
+    joinModal = document.querySelector(
       "join-private-lobby-modal",
     ) as JoinPrivateLobbyModal;
-    this.joinModal instanceof JoinPrivateLobbyModal;
+    joinModal instanceof JoinPrivateLobbyModal;
     document
       .getElementById("join-private-lobby-button")
       .addEventListener("click", () => {
         if (this.usernameInput.isValid()) {
-          this.joinModal.open();
+          joinModal.open();
         }
       });
 
@@ -149,7 +160,7 @@ class Client {
       }
       const lobbyId = ctx.params.lobbyId;
 
-      this.joinModal.open(lobbyId);
+      joinModal.open(lobbyId);
 
       consolex.log(`joining lobby ${lobbyId}`);
     });
@@ -192,7 +203,7 @@ class Client {
         gameRecord: lobby.gameRecord,
       },
       () => {
-        this.joinModal.close();
+        closeAllModals();
         this.publicLobby.stop();
         document.querySelectorAll(".ad").forEach((ad) => {
           (ad as HTMLElement).style.display = "none";
