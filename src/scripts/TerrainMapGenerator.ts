@@ -362,6 +362,7 @@ function processOcean(map: Terrain[][]) {
       displayProgress((marked / totalWater) * 100, "[_Processing__Ocean_]");
     }
   }
+  displayProgress(100, "[_Processing__Ocean_]");
   process.stdout.write("\n");
 }
 
