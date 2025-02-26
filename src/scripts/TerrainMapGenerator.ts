@@ -3,11 +3,18 @@ import path from "path";
 import fs from "fs/promises";
 import { createReadStream } from "fs";
 import { fileURLToPath } from "url";
+import readline from "readline";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const mapName = "Asia";
+// #Unbuilt was here~!
+
+// Global settings from user input
+let mapFolderPath: string;
+let mapName: string;
+let pngFileName: string;
+let removeLakesFlag: boolean = true; // default
 
 interface Coord {
   x: number;
@@ -26,16 +33,63 @@ class Terrain {
   constructor(public type: TerrainType) {}
 }
 
-export async function loadTerrainMap(): Promise<void> {
-  const imagePath = path.resolve(
-    __dirname,
-    "..",
-    "..",
-    "resources",
-    "maps",
-    mapName + ".png",
+// --- Main function to prompt user then build the map ---
+async function main() {
+  // Prompt for folder path containing the PNG and JSON files
+  mapFolderPath = await prompt(
+    "Enter map folder path (e.g., C:\\Users\\user\\map_folder): ",
   );
 
+  // Read folder contents to locate the JSON and PNG files
+  const files = await fs.readdir(mapFolderPath);
+  const jsonFiles = files.filter((f) => f.toLowerCase().endsWith(".json"));
+  const pngFiles = files.filter((f) => f.toLowerCase().endsWith(".png"));
+
+  if (jsonFiles.length !== 1) {
+    console.error("Error: Expected exactly one JSON file in the folder.");
+    process.exit(1);
+  }
+  if (pngFiles.length !== 1) {
+    console.error("Error: Expected exactly one PNG file in the folder.");
+    process.exit(1);
+  }
+
+  // Read the JSON file to get the map name
+  const jsonPath = path.join(mapFolderPath, jsonFiles[0]);
+  const jsonContent = await fs.readFile(jsonPath, "utf8");
+  let jsonData: any;
+  try {
+    jsonData = JSON.parse(jsonContent);
+  } catch (error) {
+    console.error("Error parsing JSON file:", error);
+    process.exit(1);
+  }
+  mapName = jsonData.name;
+  pngFileName = pngFiles[0];
+
+  // Prompt for removing small lakes
+  const removeAns = await prompt("Remove small lakes? [y/n]: ");
+  removeLakesFlag = removeAns.toLowerCase().startsWith("y");
+
+  await loadTerrainMap();
+}
+
+function prompt(question: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  return new Promise((resolve) =>
+    rl.question(question, (ans) => {
+      rl.close();
+      resolve(ans);
+    }),
+  );
+}
+
+export async function loadTerrainMap(): Promise<void> {
+  // Use the PNG file from the provided folder
+  const imagePath = path.join(mapFolderPath, pngFileName);
   const readStream = createReadStream(imagePath);
   const img = await decodePNGFromStream(readStream);
 
@@ -46,7 +100,8 @@ export async function loadTerrainMap(): Promise<void> {
     .fill(null)
     .map(() => Array(img.height).fill(null));
 
-  // Iterate through each pixel
+  // --- Phase 1: Process pixels ---
+  const totalColumns = img.width;
   for (let x = 0; x < img.width; x++) {
     for (let y = 0; y < img.height; y++) {
       const color = img.getPixelRGBA(x, y);
@@ -65,32 +120,37 @@ export async function loadTerrainMap(): Promise<void> {
         terrain[x][y].magnitude = mag / 2;
       }
     }
+    displayProgress(((x + 1) / totalColumns) * 100, "[_Processing_Pixels_]");
+  }
+  process.stdout.write("\n");
+
+  // --- Phase 2: Remove small lakes (if enabled) ---
+  if (removeLakesFlag) {
+    removeSmallLakes(terrain);
+  } else {
+    console.log("Skipping removal of small lakes");
   }
 
-  removeSmallLakes(terrain);
+  // --- Phase 3: Process shore and distances ---
   const shorelineWaters = processShore(terrain);
   processDistToLand(shorelineWaters, terrain);
+
+  // --- Phase 4: Process ocean ---
   processOcean(terrain);
-  const outputPath = path.join(
-    __dirname,
-    "..",
-    "..",
-    "resources",
-    "maps",
-    mapName + ".bin",
-  );
-  fs.writeFile(outputPath, packTerrain(terrain));
+
+  // --- Write output files to the same folder ---
+  const outputPath = path.join(mapFolderPath, mapName + ".bin");
+  await fs.writeFile(outputPath, packTerrain(terrain));
 
   const miniTerrain = await createMiniMap(terrain);
-  const miniOutputPath = path.join(
-    __dirname,
-    "..",
-    "..",
-    "resources",
-    "maps",
-    mapName + "Mini.bin",
+  const miniOutputPath = path.join(mapFolderPath, mapName + "Mini.bin");
+  await fs.writeFile(miniOutputPath, packTerrain(miniTerrain));
+
+  console.log("Complete, Generated bin files");
+  console.log("You will need to add files to: \n..\\resources\\maps");
+  console.log(
+    "You will need to edit code in: \n..\\src\\client\\components\\Maps.ts \n..\\src\\client\\utilities\\Maps.ts\n..\\src\\core\\game\\Game.ts\n..\\src\\core\\game\\TerrainMapFileLoader.ts\n..\\src\\server\\GameManager.ts",
   );
-  fs.writeFile(miniOutputPath, packTerrain(miniTerrain));
 }
 
 export async function createMiniMap(tm: Terrain[][]): Promise<Terrain[][]> {
@@ -119,6 +179,8 @@ export async function createMiniMap(tm: Terrain[][]): Promise<Terrain[][]> {
 
 function processShore(map: Terrain[][]): Coord[] {
   const shorelineWaters: Coord[] = [];
+  const totalCells = map.length * map[0].length;
+  let processedCells = 0;
   for (let x = 0; x < map.length; x++) {
     for (let y = 0; y < map[0].length; y++) {
       const terrain = map[x][y];
@@ -133,14 +195,22 @@ function processShore(map: Terrain[][]): Coord[] {
           shorelineWaters.push({ x, y });
         }
       }
+      processedCells++;
+      displayProgress(
+        (processedCells / totalCells) * 100,
+        "[_Processing__Shore_]",
+      );
     }
   }
+  process.stdout.write("\n");
   return shorelineWaters;
 }
 
 function processDistToLand(shorelineWaters: Coord[], map: Terrain[][]) {
   const queue: [Coord, number][] = shorelineWaters.map((coord) => [coord, 0]);
   const visited = new Set<string>();
+  const totalCells = map.length * map[0].length;
+  let processedCells = 0;
 
   while (queue.length > 0) {
     const [coord, distance] = queue.shift()!;
@@ -172,7 +242,14 @@ function processDistToLand(shorelineWaters: Coord[], map: Terrain[][]) {
         }
       }
     }
+    processedCells++;
+    displayProgress(
+      (processedCells / totalCells) * 100,
+      "[ProcessingDist2Land]",
+    );
   }
+  displayProgress(100, "[ProcessingDist2Land]");
+  process.stdout.write("\n");
 }
 
 function neighbors(x: number, y: number, map: Terrain[][]): Terrain[] {
@@ -234,6 +311,13 @@ function packTerrain(map: Terrain[][]): Uint8Array {
 }
 
 function processOcean(map: Terrain[][]) {
+  let totalWater = 0;
+  for (let x = 0; x < map.length; x++) {
+    for (let y = 0; y < map[0].length; y++) {
+      if (map[x][y].type === TerrainType.Water) totalWater++;
+    }
+  }
+  let marked = 0;
   const queue: Coord[] = [];
   if (map[0][0].type == TerrainType.Water) {
     queue.push({ x: 0, y: 0 });
@@ -274,13 +358,16 @@ function processOcean(map: Terrain[][]) {
           queue.push({ x: newX, y: newY });
         }
       }
+      // Update progress based on water cells marked
+      displayProgress((marked / totalWater) * 100, "[_Processing__Ocean_]");
     }
   }
+  process.stdout.write("\n");
 }
 
 function removeSmallLakes(map: Terrain[][]) {
-  console.log(`removing lakes ${map.length}, ${map[0].length}`);
-
+  //console.log(`removing lakes ${map.length} x ${map[0].length}`);
+  const totalRows = map.length;
   for (let x = 0; x < map.length; x++) {
     for (let y = 0; y < map[0].length; y++) {
       if (map[x][y].type != TerrainType.Water) {
@@ -290,6 +377,7 @@ function removeSmallLakes(map: Terrain[][]) {
       for (const neighbor of neighbors(x, y, map)) {
         if (neighbor.type != TerrainType.Land) {
           allLand = false;
+          break;
         }
       }
       if (allLand) {
@@ -297,7 +385,9 @@ function removeSmallLakes(map: Terrain[][]) {
         map[x][y].magnitude = 0;
       }
     }
+    displayProgress(((x + 1) / totalRows) * 100, "[__Removing__Lakes__]");
   }
+  process.stdout.write("\n");
 }
 
 function logBinaryAsBits(data: Uint8Array, length: number = 8) {
@@ -307,4 +397,13 @@ function logBinaryAsBits(data: Uint8Array, length: number = 8) {
   console.log("Binary data (bits):", bits);
 }
 
-await loadTerrainMap();
+// --- Progress bar function ---
+function displayProgress(percent: number, label: string = "[Progress]") {
+  const totalBars = 30;
+  const filledBars = Math.floor((percent / 100) * totalBars);
+  const emptyBars = totalBars - filledBars;
+  const bar = "[" + "=".repeat(filledBars) + " ".repeat(emptyBars) + "]";
+  process.stdout.write(`\r${label}: ${bar} ${percent.toFixed(0)}%`);
+}
+
+await main();
