@@ -35,37 +35,23 @@ class Terrain {
 
 // --- Main function to prompt user then build the map ---
 async function main() {
-  // Prompt for folder path containing the PNG and JSON files
+  // Prompt for folder path containing the PNG file
   mapFolderPath = await prompt(
     "Enter map folder path (e.g., C:\\Users\\user\\map_folder): ",
   );
 
-  // Read folder contents to locate the JSON and PNG files
+  // Read folder contents to locate the PNG file
   const files = await fs.readdir(mapFolderPath);
-  const jsonFiles = files.filter((f) => f.toLowerCase().endsWith(".json"));
   const pngFiles = files.filter((f) => f.toLowerCase().endsWith(".png"));
 
-  if (jsonFiles.length !== 1) {
-    console.error("Error: Expected exactly one JSON file in the folder.");
-    process.exit(1);
-  }
   if (pngFiles.length !== 1) {
     console.error("Error: Expected exactly one PNG file in the folder.");
     process.exit(1);
   }
 
-  // Read the JSON file to get the map name
-  const jsonPath = path.join(mapFolderPath, jsonFiles[0]);
-  const jsonContent = await fs.readFile(jsonPath, "utf8");
-  let jsonData: any;
-  try {
-    jsonData = JSON.parse(jsonContent);
-  } catch (error) {
-    console.error("Error parsing JSON file:", error);
-    process.exit(1);
-  }
-  mapName = jsonData.name;
+  // Use the PNG file name as the map name
   pngFileName = pngFiles[0];
+  mapName = path.parse(pngFileName).name; // Get file name without extension
 
   // Prompt for removing small lakes
   const removeAns = await prompt("Remove small lakes? [y/n]: ");
