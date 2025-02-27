@@ -29,6 +29,7 @@ import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyEx
 import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { EmojiExecution } from "./EmojiExecution";
+import { ChatExecution } from "./ChatExecution";
 import { DonateExecution } from "./DonateExecution";
 import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
 import { ConstructionExecution } from "./ConstructionExecution";
@@ -116,6 +117,8 @@ export class Executor {
           intent.recipient,
           intent.emoji,
         );
+      case "chat":
+        return new ChatExecution(intent.sender, intent.recipient, intent.message);
       case "donate":
         return new DonateExecution(
           intent.playerID,

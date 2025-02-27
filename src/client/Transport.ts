@@ -92,6 +92,13 @@ export class SendEmojiIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendChatIntentEvent implements GameEvent {
+    constructor(
+        public readonly recipient: Player | typeof AllPlayers,
+        public readonly message: string
+    ) { }
+}
+
 export class SendDonateIntentEvent implements GameEvent {
   constructor(
     public readonly sender: PlayerView,
@@ -150,6 +157,7 @@ export class Transport {
       this.onSendTargetPlayerIntent(e),
     );
     this.eventBus.on(SendEmojiIntentEvent, (e) => this.onSendEmojiIntent(e));
+            this.eventBus.on(SendChatIntentEvent, (e) => this.onSendChatIntent(e))
     this.eventBus.on(SendDonateIntentEvent, (e) => this.onSendDonateIntent(e));
     this.eventBus.on(SendSetTargetTroopRatioEvent, (e) =>
       this.onSendSetTargetTroopRatioEvent(e),
@@ -387,6 +395,16 @@ export class Transport {
     });
   }
 
+private onSendChatIntent(event: SendChatIntentEvent) {
+        this.sendIntent({
+            type: "chat",
+            clientID: this.lobbyConfig.clientID,
+            sender: this.lobbyConfig.playerID,
+            recipient: event.recipient == AllPlayers ? AllPlayers : event.recipient.id(),
+            message: event.message
+        })
+  }
+  
   private onSendDonateIntent(event: SendDonateIntentEvent) {
     this.sendIntent({
       type: "donate",

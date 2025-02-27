@@ -20,6 +20,7 @@ export type Intent =
   | BreakAllianceIntent
   | TargetPlayerIntent
   | EmojiIntent
+  | ChatIntent
   | DonateIntent
   | TargetTroopRatioIntent
   | BuildUnitIntent;
@@ -34,6 +35,7 @@ export type AllianceRequestReplyIntent = z.infer<
 export type BreakAllianceIntent = z.infer<typeof BreakAllianceIntentSchema>;
 export type TargetPlayerIntent = z.infer<typeof TargetPlayerIntentSchema>;
 export type EmojiIntent = z.infer<typeof EmojiIntentSchema>;
+export type ChatIntent = z.infer<typeof ChatIntentSchema>;
 export type DonateIntent = z.infer<typeof DonateIntentSchema>;
 export type TargetTroopRatioIntent = z.infer<
   typeof TargetTroopRatioIntentSchema
@@ -117,6 +119,17 @@ const EmojiSchema = z.string().refine(
     message: "Must contain at least one emoji character",
   },
 );
+
+const ChatSchema = z.string().refine(
+    (val) => {
+        return val.length > 0;
+        // Can add a regex test here.
+    },
+    {
+        message: "Must contain at least one character"
+    }
+);
+
 const ID = z
   .string()
   .regex(/^[a-zA-Z0-9]+$/)
@@ -131,6 +144,7 @@ const BaseIntentSchema = z.object({
     "name",
     "targetPlayer",
     "emoji",
+    "chat",
     "troop_ratio",
     "build_unit",
   ]),
@@ -196,6 +210,13 @@ export const EmojiIntentSchema = BaseIntentSchema.extend({
   emoji: EmojiSchema,
 });
 
+export const ChatIntentSchema = BaseIntentSchema.extend({
+    type: z.literal('chat'),
+    sender: z.string(),
+    recipient: z.string(),
+    chat: ChatSchema,
+})
+
 export const DonateIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate"),
   playerID: ID,
@@ -226,6 +247,7 @@ const IntentSchema = z.union([
   BreakAllianceIntentSchema,
   TargetPlayerIntentSchema,
   EmojiIntentSchema,
+  ChatIntentSchema,
   DonateIntentSchema,
   TargetTroopRatioIntentSchema,
   BuildUnitIntentSchema,

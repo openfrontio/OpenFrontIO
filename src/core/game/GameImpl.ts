@@ -16,6 +16,7 @@ import {
   GameUpdates,
   TerrainType,
   EmojiMessage,
+  ChatMessage,
 } from "./Game";
 import { GameUpdate } from "./GameUpdates";
 import { GameUpdateType } from "./GameUpdates";
@@ -496,6 +497,13 @@ export class GameImpl implements Game {
     this.addUpdate({
       type: GameUpdateType.EmojiUpdate,
       emoji: msg,
+    });
+  }
+  
+  sendChatUpdate(msg: ChatMessage): void {
+    this.addUpdate({
+      type: GameUpdateType.ChatUpdate,
+      message: msg,
     });
   }
 

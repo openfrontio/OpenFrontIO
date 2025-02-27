@@ -12,6 +12,7 @@ import {
   DisplayMessageUpdate,
 } from "../../../core/game/GameUpdates";
 import { EmojiUpdate } from "../../../core/game/GameUpdates";
+import { ChatUpdate } from "../../../core/game/GameUpdates";
 import { TargetPlayerUpdate } from "../../../core/game/GameUpdates";
 import { AllianceExpiredUpdate } from "../../../core/game/GameUpdates";
 import { BrokeAllianceUpdate } from "../../../core/game/GameUpdates";
@@ -64,6 +65,7 @@ export class EventsDisplay extends LitElement implements Layer {
     [GameUpdateType.BrokeAlliance, (u) => this.onBrokeAllianceEvent(u)],
     [GameUpdateType.TargetPlayer, (u) => this.onTargetPlayerEvent(u)],
     [GameUpdateType.EmojiUpdate, (u) => this.onEmojiMessageEvent(u)],
+    [GameUpdateType.ChatUpdate, (u) => this.onChatMessageEvent(u)],
   ]);
 
   constructor() {
@@ -302,6 +304,38 @@ export class EventsDisplay extends LitElement implements Layer {
       this.addEvent({
         description: `Sent ${(recipient as PlayerView).displayName()}: ${
           update.emoji.message
+        }`,
+        unsafeDescription: true,
+        type: MessageType.INFO,
+        highlight: true,
+        createdAt: this.game.ticks(),
+      });
+    }
+  }
+  onChatMessageEvent(update: ChatUpdate) {
+    const myPlayer = this.game.playerByClientID(this.clientID);
+    if (!myPlayer) return;
+
+    const recipient =
+      update.message.recipientID == AllPlayers
+        ? AllPlayers
+        : this.game.playerBySmallID(update.message.recipientID);
+    const sender = this.game.playerBySmallID(
+      update.message.senderID,
+    ) as PlayerView;
+
+    if (recipient == myPlayer) {
+      this.addEvent({
+        description: `${sender.displayName()}:${update.message.message}`,
+        unsafeDescription: true,
+        type: MessageType.INFO,
+        highlight: true,
+        createdAt: this.game.ticks(),
+      });
+    } else if (sender === myPlayer && recipient !== AllPlayers) {
+      this.addEvent({
+        description: `Sent ${(recipient as PlayerView).displayName()}: ${
+          update.message.message
         }`,
         unsafeDescription: true,
         type: MessageType.INFO,

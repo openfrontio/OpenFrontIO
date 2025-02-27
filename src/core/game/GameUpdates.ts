@@ -1,6 +1,7 @@
 import { ClientID } from "../Schemas";
 import {
   EmojiMessage,
+  ChatMessage,
   GameUpdates,
   MapPos,
   MessageType,
@@ -35,6 +36,7 @@ export enum GameUpdateType {
   AllianceExpired,
   TargetPlayer,
   EmojiUpdate,
+  ChatUpdate,
   WinUpdate,
 }
 
@@ -49,6 +51,7 @@ export type GameUpdate =
   | DisplayMessageUpdate
   | TargetPlayerUpdate
   | EmojiUpdate
+  | ChatUpdate
   | WinUpdate;
 
 export interface TileUpdateWrapper {
@@ -97,6 +100,7 @@ export interface PlayerUpdate {
   isTraitor: boolean;
   targets: number[];
   outgoingEmojis: EmojiMessage[];
+  outgoingChats: ChatMessage[];
   outgoingAttacks: AttackUpdate[];
   incomingAttacks: AttackUpdate[];
 }
@@ -135,6 +139,11 @@ export interface TargetPlayerUpdate {
 export interface EmojiUpdate {
   type: GameUpdateType.EmojiUpdate;
   emoji: EmojiMessage;
+}
+
+export interface ChatUpdate {
+  type: GameUpdateType.ChatUpdate;
+  message: ChatMessage;
 }
 
 export interface DisplayMessageUpdate {

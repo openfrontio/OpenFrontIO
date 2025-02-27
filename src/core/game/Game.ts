@@ -300,6 +300,10 @@ export interface Player {
   outgoingEmojis(): EmojiMessage[];
   sendEmoji(recipient: Player | typeof AllPlayers, emoji: string): void;
 
+  canSendChat(recipient: Player | typeof AllPlayers): boolean
+  outgoingChats(): ChatMessage[];
+  sendChat(recipient: Player | typeof AllPlayers, message: string): void
+
   // Trading
   canDonate(recipient: Player): boolean;
   donate(recipient: Player, troops: number): void;
@@ -371,6 +375,7 @@ export interface PlayerActions {
   canAttack: boolean;
   buildableUnits: BuildableUnit[];
   canSendEmojiAllPlayers: boolean;
+  canSendChatAllPlayers: boolean;
   interaction?: PlayerInteraction;
 }
 
@@ -388,6 +393,7 @@ export interface PlayerProfile {
 export interface PlayerInteraction {
   sharedBorder: boolean;
   canSendEmoji: boolean;
+  canSendChat: boolean;
   canSendAllianceRequest: boolean;
   canBreakAlliance: boolean;
   canTarget: boolean;
@@ -395,6 +401,12 @@ export interface PlayerInteraction {
 }
 
 export interface EmojiMessage {
+  message: string;
+  senderID: number;
+  recipientID: number | typeof AllPlayers;
+  createdAt: Tick;
+}
+export interface ChatMessage {
   message: string;
   senderID: number;
   recipientID: number | typeof AllPlayers;

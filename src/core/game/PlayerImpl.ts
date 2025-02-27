@@ -16,6 +16,7 @@ import {
   Unit,
   Relation,
   EmojiMessage,
+  ChatMessage,
   PlayerProfile,
   Attack,
 } from "./Game";
@@ -76,7 +77,8 @@ export class PlayerImpl implements Player {
   private targets_: Target[] = [];
 
   private outgoingEmojis_: EmojiMessage[] = [];
-
+  private outgoingChats_: ChatMessage[] = [];
+  
   private sentDonations: Donation[] = [];
 
   private relations = new Map<Player, number>();
@@ -122,6 +124,7 @@ export class PlayerImpl implements Player {
       isTraitor: this.isTraitor(),
       targets: this.targets().map((p) => p.smallID()),
       outgoingEmojis: this.outgoingEmojis(),
+      outgoingChats: this.outgoingChats(),
       outgoingAttacks: this._outgoingAttacks.map(
         (a) =>
           ({
@@ -458,6 +461,47 @@ export class PlayerImpl implements Player {
       if (
         this.mg.ticks() - msg.createdAt <
         this.mg.config().emojiMessageCooldown()
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+  
+  sendChat(recipient: Player | typeof AllPlayers, message: string): void {
+    if (recipient == this) {
+      throw Error(`Cannot send message to oneself: ${this}`);
+    }
+    const msg: ChatMessage = {
+      message: message,
+      senderID: this.smallID(),
+      recipientID: recipient == AllPlayers ? recipient : recipient.smallID(),
+      createdAt: this.mg.ticks(),
+    };
+    this.outgoingChats_.push(msg);
+    this.mg.sendChatUpdate(msg);
+  }
+
+  outgoingChats(): ChatMessage[] {
+    return this.outgoingChats_
+      .filter(
+        (e) =>
+          this.mg.ticks() - e.createdAt <
+          this.mg.config().chatMessageDuration(),
+      )
+      .sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  canSendChat(recipient: Player | typeof AllPlayers): boolean {
+    const recipientID =
+      recipient == AllPlayers ? AllPlayers : recipient.smallID();
+    const prevMsgs = this.outgoingChats_.filter(
+      (msg) => msg.recipientID == recipientID,
+    );
+    for (const msg of prevMsgs) {
+      if (
+        this.mg.ticks() - msg.createdAt <
+        this.mg.config().chatMessageCooldown()
       ) {
         return false;
       }
