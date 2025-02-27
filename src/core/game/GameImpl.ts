@@ -30,6 +30,8 @@ import { UnitImpl } from "./UnitImpl";
 import { consolex } from "../Consolex";
 import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
 import { DefenseGrid } from "./DefensePostGrid";
+import { StatsImpl } from "./StatsImpl";
+import { Stats } from "./Stats";
 
 export function createGame(
   gameMap: GameMap,
@@ -65,6 +67,9 @@ export class GameImpl implements Game {
 
   private updates: GameUpdates = createGameUpdatesMap();
   private defenseGrid: DefenseGrid;
+
+  // Not initialized until the game has finished spawning
+  private _stats: StatsImpl;
 
   constructor(
     private _map: GameMap,
@@ -217,6 +222,11 @@ export class GameImpl implements Game {
   }
 
   executeNextTick(): GameUpdates {
+    if (!this.inSpawnPhase() && !this._stats) {
+      const playerIds = Array.from(this._players.keys());
+      this._stats = new StatsImpl();
+    }
+
     this.updates = createGameUpdatesMap();
     this.execs.forEach((e) => {
       if (
@@ -629,6 +639,9 @@ export class GameImpl implements Game {
   }
   numTilesWithFallout(): number {
     return this._map.numTilesWithFallout();
+  }
+  stats(): Stats {
+    return this._stats;
   }
 }
 

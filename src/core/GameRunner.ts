@@ -167,6 +167,7 @@ export class GameRunner {
         canSendAllianceRequest: player.canSendAllianceRequest(other),
         canBreakAlliance: player.isAlliedWith(other),
         canDonate: player.canDonate(other),
+        stats: this.game.stats().getPlayerStats(other.id()),
       };
     }
 
