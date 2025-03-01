@@ -143,7 +143,10 @@ class Client {
     this.gameStop = joinLobby(
       {
         gameType: gameType,
-        flag: (): string => this.flagInput.getCurrentFlag(),
+        flag: (): string =>
+          this.flagInput.getCurrentFlag() == "xx"
+            ? ""
+            : this.flagInput.getCurrentFlag(),
         playerName: (): string => this.usernameInput.getCurrentUsername(),
         gameID: lobby.id,
         persistentID: getPersistentIDFromCookie(),
