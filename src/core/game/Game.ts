@@ -214,6 +214,9 @@ export interface Unit {
 
   // Updates
   toUpdate(): UnitUpdate;
+
+  // Only for some types, otherwise return null
+  getDstPort(): Unit;
 }
 
 export interface TerraNullius {
@@ -267,7 +270,12 @@ export interface Player {
   units(...types: UnitType[]): Unit[];
   unitsIncludingConstruction(type: UnitType): Unit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
-  buildUnit(type: UnitType, troops: number, tile: TileRef): Unit;
+  buildUnit(
+    type: UnitType,
+    troops: number,
+    tile: TileRef,
+    dstPort?: Unit,
+  ): Unit;
   captureUnit(unit: Unit): void;
 
   // Relations & Diplomacy
@@ -300,9 +308,16 @@ export interface Player {
   outgoingEmojis(): EmojiMessage[];
   sendEmoji(recipient: Player | typeof AllPlayers, emoji: string): void;
 
-  // Trading
+  // Donation
   canDonate(recipient: Player): boolean;
   donate(recipient: Player, troops: number): void;
+
+  // Embargo
+  hasEmbargoAgainst(other: Player): boolean;
+  tradingPartners(): Player[];
+  addEmbargo(other: PlayerID): void;
+  stopEmbargo(other: PlayerID): void;
+  canTrade(other: Player): boolean;
 
   // Attacking.
   canAttack(tile: TileRef): boolean;
@@ -392,6 +407,7 @@ export interface PlayerInteraction {
   canBreakAlliance: boolean;
   canTarget: boolean;
   canDonate: boolean;
+  canEmbargo: boolean;
 }
 
 export interface EmojiMessage {

@@ -49,7 +49,12 @@ export class TradeShipExecution implements Execution {
         this.active = false;
         return;
       }
-      this.tradeShip = this.origOwner.buildUnit(UnitType.TradeShip, 0, spawn);
+      this.tradeShip = this.origOwner.buildUnit(
+        UnitType.TradeShip,
+        0,
+        spawn,
+        this.dstPort,
+      );
     }
 
     if (!this.tradeShip.isActive()) {
@@ -65,7 +70,7 @@ export class TradeShipExecution implements Execution {
     if (
       !this.wasCaptured &&
       (!this.dstPort.isActive() ||
-        !this.tradeShip.owner().isAlliedWith(this.dstPort.owner()))
+        !this.tradeShip.owner().canTrade(this.dstPort.owner()))
     ) {
       this.tradeShip.delete(false);
       this.active = false;
@@ -153,5 +158,9 @@ export class TradeShipExecution implements Execution {
 
   activeDuringSpawnPhase(): boolean {
     return false;
+  }
+
+  getDstPort(): TileRef {
+    return this.dstPort.tile();
   }
 }
