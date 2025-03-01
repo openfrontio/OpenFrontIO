@@ -78,7 +78,12 @@ export class WarshipExecution implements Execution {
       .filter((u) => u.owner() != this.warship.owner())
       .filter((u) => u != this.warship)
       .filter((u) => !u.owner().isAlliedWith(this.warship.owner()))
-      .filter((u) => !this.alreadySentShell.has(u));
+      .filter((u) => !this.alreadySentShell.has(u))
+      .filter(
+        (u) =>
+          u.type() != UnitType.TradeShip ||
+          u.getDstPort().owner() != this.owner(),
+      );
 
     this.target =
       ships.sort((a, b) => {

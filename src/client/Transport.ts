@@ -100,6 +100,20 @@ export class SendDonateIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendEmbargoIntentEvent implements GameEvent {
+  constructor(
+    public readonly sender: PlayerView,
+    public readonly target: PlayerView,
+  ) {}
+}
+
+export class SendStopEmbargoIntentEvent implements GameEvent {
+  constructor(
+    public readonly sender: PlayerView,
+    public readonly target: PlayerView,
+  ) {}
+}
+
 export class SendSetTargetTroopRatioEvent implements GameEvent {
   constructor(public readonly ratio: number) {}
 }
@@ -151,6 +165,12 @@ export class Transport {
     );
     this.eventBus.on(SendEmojiIntentEvent, (e) => this.onSendEmojiIntent(e));
     this.eventBus.on(SendDonateIntentEvent, (e) => this.onSendDonateIntent(e));
+    this.eventBus.on(SendEmbargoIntentEvent, (e) =>
+      this.onSendEmbargoIntent(e),
+    );
+    this.eventBus.on(SendStopEmbargoIntentEvent, (e) =>
+      this.onSendStopEmbargoIntent(e),
+    );
     this.eventBus.on(SendSetTargetTroopRatioEvent, (e) =>
       this.onSendSetTargetTroopRatioEvent(e),
     );
@@ -394,6 +414,24 @@ export class Transport {
       playerID: event.sender.id(),
       recipient: event.recipient.id(),
       troops: event.troops,
+    });
+  }
+
+  private onSendStopEmbargoIntent(event: SendStopEmbargoIntentEvent) {
+    this.sendIntent({
+      type: "stop_embargo",
+      clientID: this.lobbyConfig.clientID,
+      playerID: this.lobbyConfig.playerID,
+      targetID: event.target.id(),
+    });
+  }
+
+  private onSendEmbargoIntent(event: SendEmbargoIntentEvent) {
+    this.sendIntent({
+      type: "embargo",
+      clientID: this.lobbyConfig.clientID,
+      playerID: this.lobbyConfig.playerID,
+      targetID: event.target.id(),
     });
   }
 

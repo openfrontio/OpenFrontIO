@@ -187,6 +187,10 @@ export class PlayerView {
     return this.data.allies.some((n) => other.smallID() == n);
   }
 
+  hasEmbargoAgainst(other: PlayerView): boolean {
+    return this.data.embargoes.has(other.id());
+  }
+
   profile(): Promise<PlayerProfile> {
     return this.game.worker.playerProfile(this.smallID());
   }

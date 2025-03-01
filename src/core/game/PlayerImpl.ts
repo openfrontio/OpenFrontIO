@@ -62,6 +62,8 @@ export class PlayerImpl implements Player {
 
   isTraitor_ = false;
 
+  private embargoes: Set<PlayerID> = new Set();
+
   public _borderTiles: Set<TileRef> = new Set();
 
   public _units: UnitImpl[] = [];
@@ -119,6 +121,7 @@ export class PlayerImpl implements Player {
       troops: this.troops(),
       targetTroopRatio: this.targetTroopRatio(),
       allies: this.alliances().map((a) => a.other(this).smallID()),
+      embargoes: this.embargoes,
       isTraitor: this.isTraitor(),
       targets: this.targets().map((p) => p.smallID()),
       outgoingEmojis: this.outgoingEmojis(),
@@ -497,6 +500,28 @@ export class PlayerImpl implements Player {
     );
   }
 
+  hasEmbargoAgainst(other: Player): boolean {
+    return this.embargoes.has(other.id());
+  }
+
+  canTrade(other: Player): boolean {
+    return !other.hasEmbargoAgainst(this) && !this.hasEmbargoAgainst(other);
+  }
+
+  addEmbargo(other: PlayerID): void {
+    this.embargoes.add(other);
+  }
+
+  stopEmbargo(other: PlayerID): void {
+    this.embargoes.delete(other);
+  }
+
+  tradingPartners(): Player[] {
+    return this.mg
+      .players()
+      .filter((other) => other != this && this.canTrade(other));
+  }
+
   gold(): Gold {
     return this._gold;
   }
@@ -583,7 +608,12 @@ export class PlayerImpl implements Player {
     );
   }
 
-  buildUnit(type: UnitType, troops: number, spawnTile: TileRef): UnitImpl {
+  buildUnit(
+    type: UnitType,
+    troops: number,
+    spawnTile: TileRef,
+    dstPort?: Unit,
+  ): UnitImpl {
     const cost = this.mg.unitInfo(type).cost(this);
     const b = new UnitImpl(
       type,
@@ -592,6 +622,7 @@ export class PlayerImpl implements Player {
       troops,
       this.mg.nextUnitID(),
       this,
+      dstPort,
     );
     this._units.push(b);
     this.removeGold(cost);

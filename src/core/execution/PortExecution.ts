@@ -69,22 +69,20 @@ export class PortExecution implements Execution {
       return;
     }
 
-    const alliedPorts = this.player()
-      .alliances()
-      .map((a) => a.other(this.player()))
+    const tradingPartnersPorts = this.player()
+      .tradingPartners()
       .flatMap((p) => p.units(UnitType.Port));
-    const alliedPortsSet = new Set(alliedPorts);
+    const tradingPartnersPortsSet = new Set(tradingPartnersPorts);
 
-    const allyConnections = new Set(
+    const tradingPartnersConnections = new Set(
       Array.from(this.portPaths.keys()).map((p) => p.owner()),
     );
-    allyConnections;
 
-    for (const port of alliedPorts) {
-      if (allyConnections.has(port.owner())) {
+    for (const port of tradingPartnersPorts) {
+      if (tradingPartnersConnections.has(port.owner())) {
         continue;
       }
-      allyConnections.add(port.owner());
+      tradingPartnersConnections.add(port.owner());
       if (this.computingPaths.has(port)) {
         const aStar = this.computingPaths.get(port);
         switch (aStar.compute()) {
@@ -114,7 +112,7 @@ export class PortExecution implements Execution {
     }
 
     for (const port of this.portPaths.keys()) {
-      if (!port.isActive() || !alliedPortsSet.has(port)) {
+      if (!port.isActive() || !tradingPartnersPortsSet.has(port)) {
         this.portPaths.delete(port);
         this.computingPaths.delete(port);
       }

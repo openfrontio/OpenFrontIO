@@ -18,6 +18,8 @@ import {
   SendDonateIntentEvent,
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
+  SendEmbargoIntentEvent,
+  SendStopEmbargoIntentEvent,
 } from "../../Transport";
 import { EmojiTable } from "./EmojiTable";
 
@@ -76,6 +78,26 @@ export class PlayerPanel extends LitElement implements Layer {
     this.hide();
   }
 
+  private handleEmbargoClick(
+    e: Event,
+    myPlayer: PlayerView,
+    other: PlayerView,
+  ) {
+    e.stopPropagation();
+    this.eventBus.emit(new SendEmbargoIntentEvent(myPlayer, other));
+    this.hide();
+  }
+
+  private handleStopEmbargoClick(
+    e: Event,
+    myPlayer: PlayerView,
+    other: PlayerView,
+  ) {
+    e.stopPropagation();
+    this.eventBus.emit(new SendStopEmbargoIntentEvent(myPlayer, other));
+    this.hide();
+  }
+
   private handleEmojiClick(e: Event, myPlayer: PlayerView, other: PlayerView) {
     e.stopPropagation();
     this.emojiTable.showTable((emoji: string) => {
@@ -131,6 +153,7 @@ export class PlayerPanel extends LitElement implements Layer {
         : this.actions.interaction?.canSendEmoji;
     const canBreakAlliance = this.actions.interaction?.canBreakAlliance;
     const canTarget = this.actions.interaction?.canTarget;
+    const canEmbargo = this.actions.interaction?.canEmbargo;
 
     return html`
       <div
@@ -187,6 +210,15 @@ export class PlayerPanel extends LitElement implements Layer {
               <div class="text-white text-opacity-80 text-sm px-2">Traitor</div>
               <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
                 ${other.isTraitor() ? "Yes" : "No"}
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <div class="text-white text-opacity-80 text-sm px-2">
+                Embargo against you
+              </div>
+              <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
+                ${other.hasEmbargoAgainst(myPlayer) ? "Yes" : "No"}
               </div>
             </div>
 
@@ -249,6 +281,27 @@ export class PlayerPanel extends LitElement implements Layer {
                   </button>`
                 : ""}
             </div>
+            ${canEmbargo && other != myPlayer
+              ? html`<button
+                  @click=${(e) => this.handleEmbargoClick(e, myPlayer, other)}
+                  class="w-100 h-10 flex items-center justify-center
+                          bg-opacity-50 bg-gray-700 hover:bg-opacity-70
+                          text-white rounded-lg transition-colors"
+                >
+                  Start embargo
+                </button>`
+              : ""}
+            ${!canEmbargo && other != myPlayer
+              ? html`<button
+                  @click=${(e) =>
+                    this.handleStopEmbargoClick(e, myPlayer, other)}
+                  class="w-100 h-10 flex items-center justify-center
+                          bg-opacity-50 bg-gray-700 hover:bg-opacity-70
+                          text-white rounded-lg transition-colors"
+                >
+                  Stop embargo
+                </button>`
+              : ""}
           </div>
         </div>
       </div>
