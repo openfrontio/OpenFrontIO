@@ -1,17 +1,18 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { Layer } from "./Layer";
-import { ClientID } from "../../../core/Schemas";
+import { LitElement, css, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { EventBus, GameEvent } from "../../../core/EventBus";
-import { renderNumber } from "../../Utils";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { ClientID } from "../../../core/Schemas";
+import { renderNumber } from "../../Utils";
+import { Layer } from "./Layer";
 
 interface Entry {
   name: string;
   position: number;
   score: string;
   gold: string;
+  troops: string;
   isMyPlayer: boolean;
   player: PlayerView;
 }
@@ -25,6 +26,13 @@ export class Leaderboard extends LitElement implements Layer {
   public game: GameView;
   public clientID: ClientID;
   public eventBus: EventBus;
+
+  players: Entry[] = [];
+
+  @state()
+  private _leaderboardHidden = true;
+  private _shownOnInit = false;
+  private showTopFive = true;
 
   init() {}
 
@@ -58,14 +66,25 @@ export class Leaderboard extends LitElement implements Layer {
     const numTilesWithoutFallout =
       this.game.numLandTiles() - this.game.numTilesWithFallout();
 
-    this.players = sorted.slice(0, 5).map((player, index) => ({
-      name: player.displayName(),
-      position: index + 1,
-      score: formatPercentage(player.numTilesOwned() / numTilesWithoutFallout),
-      gold: renderNumber(player.gold()),
-      isMyPlayer: player == myPlayer,
-      player: player,
-    }));
+    const playersToShow = this.showTopFive ? sorted.slice(0, 5) : sorted;
+
+    this.players = playersToShow.map((player, index) => {
+      let troops = player.troops() / 10;
+      if (!player.isAlive()) {
+        troops = 0;
+      }
+      return {
+        name: player.displayName(),
+        position: index + 1,
+        score: formatPercentage(
+          player.numTilesOwned() / numTilesWithoutFallout,
+        ),
+        gold: renderNumber(player.gold()),
+        troops: renderNumber(troops),
+        isMyPlayer: player == myPlayer,
+        player: player,
+      };
+    });
 
     if (myPlayer != null && this.players.find((p) => p.isMyPlayer) == null) {
       let place = 0;
@@ -76,6 +95,10 @@ export class Leaderboard extends LitElement implements Layer {
         }
       }
 
+      let myPlayerTroops = myPlayer.troops() / 10;
+      if (!myPlayer.isAlive()) {
+        myPlayerTroops = 0;
+      }
       this.players.pop();
       this.players.push({
         name: myPlayer.displayName(),
@@ -84,6 +107,7 @@ export class Leaderboard extends LitElement implements Layer {
           myPlayer.numTilesOwned() / this.game.numLandTiles(),
         ),
         gold: renderNumber(myPlayer.gold()),
+        troops: renderNumber(myPlayerTroops),
         isMyPlayer: true,
         player: myPlayer,
       });
@@ -119,10 +143,10 @@ export class Leaderboard extends LitElement implements Layer {
       padding-top: 0px;
       box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
       border-radius: 10px;
-      max-width: 300px;
-      max-height: 80vh;
+      max-width: 500px;
+      max-height: 30vh;
       overflow-y: auto;
-      width: 300px;
+      width: 400px;
       backdrop-filter: blur(5px);
     }
     table {
@@ -180,6 +204,13 @@ export class Leaderboard extends LitElement implements Layer {
       cursor: pointer;
     }
 
+    .leaderboard-top-five-button {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+
     .player-name {
       max-width: 10ch;
       overflow: hidden;
@@ -197,13 +228,6 @@ export class Leaderboard extends LitElement implements Layer {
       }
     }
   `;
-
-  players: Entry[] = [];
-
-  @state()
-  private _leaderboardHidden = true;
-
-  private _shownOnInit = false;
 
   render() {
     return html`
@@ -225,6 +249,15 @@ export class Leaderboard extends LitElement implements Layer {
         >
           Hide
         </button>
+        <button
+          class="leaderboard-top-five-button"
+          @click=${() => {
+            this.showTopFive = !this.showTopFive;
+            this.updateLeaderboard();
+          }}
+        >
+          ${this.showTopFive ? "Show All" : "Show Top 5"}
+        </button>
         <table>
           <thead>
             <tr>
@@ -232,6 +265,7 @@ export class Leaderboard extends LitElement implements Layer {
               <th>Player</th>
               <th>Owned</th>
               <th>Gold</th>
+              <th>Troops</th>
             </tr>
           </thead>
           <tbody>
@@ -245,6 +279,7 @@ export class Leaderboard extends LitElement implements Layer {
                   <td class="player-name">${unsafeHTML(player.name)}</td>
                   <td>${player.score}</td>
                   <td>${player.gold}</td>
+                  <td>${player.troops}</td>
                 </tr>
               `,
             )}
