@@ -8,6 +8,7 @@ import {
   UnitType,
   TerraNullius,
   MessageType,
+  NukeType,
 } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { consolex } from "../Consolex";
@@ -22,10 +23,7 @@ export class NukeExecution implements Execution {
   private random: PseudoRandom;
 
   constructor(
-    private type:
-      | UnitType.AtomBomb
-      | UnitType.HydrogenBomb
-      | UnitType.MIRVWarhead,
+    private type: NukeType,
     private senderID: PlayerID,
     private dst: TileRef,
     private src?: TileRef,
@@ -74,6 +72,14 @@ export class NukeExecution implements Execution {
             target.id(),
           );
         }
+
+        this.mg
+          .stats()
+          .increaseNukeCount(
+            this.senderID,
+            target.id(),
+            this.nuke.type() as NukeType,
+          );
       }
     }
     if (this.waitTicks > 0) {
@@ -157,6 +163,7 @@ export class NukeExecution implements Execution {
         const prev = attacked.get(mp);
         attacked.set(mp, prev + 1);
       }
+
       if (this.mg.isLand(tile)) {
         this.mg.setFallout(tile, true);
       }

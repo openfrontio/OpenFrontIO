@@ -55,6 +55,14 @@ export class MirvExecution implements Execution {
     this.pathFinder = PathFinder.Mini(mg, 10_000, true);
     this.player = mg.player(this.senderID);
     this.targetPlayer = this.mg.owner(this.dst);
+
+    this.mg
+      .stats()
+      .increaseNukeCount(
+        this.player.id(),
+        this.targetPlayer.id(),
+        UnitType.MIRV,
+      );
   }
 
   tick(ticks: number): void {
