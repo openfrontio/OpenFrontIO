@@ -222,7 +222,15 @@ export class HelpModal extends LitElement {
               <tbody class="text-left">
                 <tr>
                   <td>Space</td>
-                  <td>Alternate view</td>
+                  <td>Alternate view (terrain/countries)</td>
+                </tr>
+                <tr>
+                  <td>Shift + left click</td>
+                  <td>Attack (when left click is set to open menu)</td>
+                </tr>
+                <tr>
+                  <td>Ctrl + left click</td>
+                  <td>Open build menu</td>
                 </tr>
                 <tr>
                   <td>Q / E</td>
@@ -288,7 +296,7 @@ export class HelpModal extends LitElement {
                 <li class="mb-4">Pause/Unpause the game - Only available in single player mode.</li>
                 <li class="mb-4">Timer - Time passed since the start of the game.</li>
                 <li class="mb-4">Exit button.</li>
-                <li class="mb-4">Settings - Open the settings menu. Inside you can toggle the Alternate View, Dark Mode, and Emojis.</li>
+                <li class="mb-4">Settings - Open the settings menu. Inside you can toggle the Alternate View, Dark Mode, Emojis and action on left click.</li>
               </ul>
             </div>
           </div>

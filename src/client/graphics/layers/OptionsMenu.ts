@@ -16,7 +16,7 @@ const button = ({
   children,
 }) => html`
   <button
-    class="flex items-center justify-center p-1 
+    class="flex items-center justify-center p-1
                                bg-opacity-70 bg-gray-700 text-opacity-90 text-white
                                border-none rounded cursor-pointer
                                hover:bg-opacity-60 hover:bg-gray-600
@@ -96,6 +96,10 @@ export class OptionsMenu extends LitElement implements Layer {
     this.eventBus.emit(new RefreshGraphicsEvent());
   }
 
+  private onToggleLeftClickOpensMenu() {
+    this.userSettings.toggleLeftClickOpenMenu();
+  }
+
   init() {
     console.log("init called from OptionsMenu");
     this.showPauseButton =
@@ -137,8 +141,8 @@ export class OptionsMenu extends LitElement implements Layer {
               children: this.isPaused ? "▶️" : "⏸",
             })}
             <div
-              class="w-14 h-8 lg:w-20 lg:h-10 flex items-center justify-center 
-                              bg-opacity-50 bg-gray-700 text-opacity-90 text-white 
+              class="w-14 h-8 lg:w-20 lg:h-10 flex items-center justify-center
+                              bg-opacity-50 bg-gray-700 text-opacity-90 text-white
                               rounded text-sm lg:text-xl"
             >
               ${this.timer}
@@ -176,6 +180,15 @@ export class OptionsMenu extends LitElement implements Layer {
             onClick: this.onToggleDarkModeButtonClick,
             title: "Dark Mode",
             children: "🌙: " + (this.userSettings.darkMode() ? "On" : "Off"),
+          })}
+          ${button({
+            onClick: this.onToggleLeftClickOpensMenu,
+            title: "Left click",
+            children:
+              "🖱️: " +
+              (this.userSettings.leftClickOpensMenu()
+                ? "Opens menu"
+                : "Attack"),
           })}
         </div>
       </div>

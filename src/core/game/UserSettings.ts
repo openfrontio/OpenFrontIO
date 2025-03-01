@@ -21,6 +21,14 @@ export class UserSettings {
     return this.get("settings.darkMode", false);
   }
 
+  leftClickOpensMenu() {
+    return this.get("settings.leftClickOpensMenu", false);
+  }
+
+  toggleLeftClickOpenMenu() {
+    this.set("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
+  }
+
   toggleEmojis() {
     this.set("settings.emojis", !this.emojis());
   }
