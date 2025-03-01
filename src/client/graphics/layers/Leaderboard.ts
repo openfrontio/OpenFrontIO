@@ -1,11 +1,11 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { Layer } from "./Layer";
-import { ClientID } from "../../../core/Schemas";
+import { LitElement, css, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { EventBus, GameEvent } from "../../../core/EventBus";
-import { renderNumber } from "../../Utils";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { ClientID } from "../../../core/Schemas";
+import { renderNumber } from "../../Utils";
+import { Layer } from "./Layer";
 
 interface Entry {
   name: string;

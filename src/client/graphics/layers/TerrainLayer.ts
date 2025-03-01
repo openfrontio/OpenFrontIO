@@ -1,6 +1,6 @@
-import { Layer } from "./Layer";
-import { GameView } from "../../../core/game/GameView";
 import { Theme } from "../../../core/configuration/Config";
+import { GameView } from "../../../core/game/GameView";
+import { Layer } from "./Layer";
 
 export class TerrainLayer implements Layer {
   private canvas: HTMLCanvasElement;

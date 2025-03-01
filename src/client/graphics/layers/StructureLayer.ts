@@ -1,16 +1,16 @@
 import { colord, Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
-import { Layer } from "./Layer";
 import { EventBus } from "../../../core/EventBus";
+import { Layer } from "./Layer";
 
 import anchorIcon from "../../../../resources/images/AnchorIcon.png";
+import cityIcon from "../../../../resources/images/CityIcon.png";
 import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
 import shieldIcon from "../../../../resources/images/ShieldIcon.png";
-import cityIcon from "../../../../resources/images/CityIcon.png";
-import { GameView, UnitView } from "../../../core/game/GameView";
 import { Cell, UnitType } from "../../../core/game/Game";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { euclDistFN } from "../../../core/game/GameMap";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { GameView, UnitView } from "../../../core/game/GameView";
 
 const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
 

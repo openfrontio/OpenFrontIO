@@ -1,14 +1,13 @@
 import { Config } from "../configuration/Config";
-import { GameEvent } from "../EventBus";
-import { PlayerView } from "./GameView";
-import { ClientID, GameConfig, GameID } from "../Schemas";
-import { GameMap, GameMapImpl, TileRef } from "./GameMap";
+import { ClientID } from "../Schemas";
+import { GameMap, TileRef } from "./GameMap";
 import {
   GameUpdate,
   GameUpdateType,
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
+import { PlayerView } from "./GameView";
 
 export type PlayerID = string;
 export type Tick = number;

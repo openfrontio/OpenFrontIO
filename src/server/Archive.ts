@@ -1,12 +1,6 @@
-import {
-  GameConfig,
-  GameID,
-  GameRecord,
-  GameRecordSchema,
-  Turn,
-} from "../core/Schemas";
-import { Storage } from "@google-cloud/storage";
 import { BigQuery } from "@google-cloud/bigquery";
+import { Storage } from "@google-cloud/storage";
+import { GameID, GameRecord, GameRecordSchema } from "../core/Schemas";
 
 const storage = new Storage();
 const bucket = storage.bucket("openfront-games");

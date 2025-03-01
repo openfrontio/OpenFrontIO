@@ -1,8 +1,8 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { LitElement, css, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { consolex } from "../core/Consolex";
 import { Difficulty, GameMapType, GameType } from "../core/game/Game";
 import { Lobby } from "../core/Schemas";
-import { consolex } from "../core/Consolex";
 import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";

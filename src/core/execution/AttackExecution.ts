@@ -1,19 +1,17 @@
 import { PriorityQueue } from "@datastructures-js/priority-queue";
+import { renderNumber } from "../../client/Utils";
 import {
   Attack,
-  Cell,
   Execution,
   Game,
+  MessageType,
   Player,
   PlayerID,
-  PlayerType,
   TerrainType,
   TerraNullius,
 } from "../game/Game";
-import { PseudoRandom } from "../PseudoRandom";
-import { MessageType } from "../game/Game";
-import { renderNumber } from "../../client/Utils";
 import { TileRef } from "../game/GameMap";
+import { PseudoRandom } from "../PseudoRandom";
 
 export class AttackExecution implements Execution {
   private breakAlliance = false;

@@ -1,22 +1,15 @@
-import {
-  AllPlayers,
-  Cell,
-  Game,
-  Player,
-  PlayerType,
-} from "../../../core/game/Game";
-import { PseudoRandom } from "../../../core/PseudoRandom";
-import { Theme } from "../../../core/configuration/Config";
-import { Layer } from "./Layer";
-import { TransformHandler } from "../TransformHandler";
-import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
 import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
 import crownIcon from "../../../../resources/images/CrownIcon.svg";
 import targetIcon from "../../../../resources/images/TargetIcon.svg";
+import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
+import { PseudoRandom } from "../../../core/PseudoRandom";
 import { ClientID } from "../../../core/Schemas";
+import { Theme } from "../../../core/configuration/Config";
+import { AllPlayers, Cell } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { createCanvas, renderTroops } from "../../Utils";
-import { sanitize } from "../../../core/Util";
+import { TransformHandler } from "../TransformHandler";
+import { Layer } from "./Layer";
 
 class RenderInfo {
   public icons: Map<string, HTMLImageElement> = new Map(); // Track icon elements
