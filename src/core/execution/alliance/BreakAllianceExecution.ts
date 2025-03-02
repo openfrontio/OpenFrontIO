@@ -1,11 +1,5 @@
 import { consolex } from "../../Consolex";
-import {
-  AllianceRequest,
-  Execution,
-  Game,
-  Player,
-  PlayerID,
-} from "../../game/Game";
+import { Execution, Game, Player, PlayerID } from "../../game/Game";
 
 export class BreakAllianceExecution implements Execution {
   private active = true;

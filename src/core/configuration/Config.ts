@@ -1,26 +1,24 @@
+import { Colord } from "colord";
+import { consolex } from "../Consolex";
 import {
   Difficulty,
   Game,
-  GameType,
   Gold,
   Player,
-  PlayerID,
   PlayerInfo,
   TerraNullius,
   Tick,
   UnitInfo,
   UnitType,
 } from "../game/Game";
-import { Colord, colord } from "colord";
-import { preprodConfig } from "./PreprodConfig";
-import { prodConfig } from "./ProdConfig";
-import { consolex } from "../Consolex";
-import { GameConfig } from "../Schemas";
-import { DefaultConfig } from "./DefaultConfig";
-import { DevConfig, DevServerConfig } from "./DevConfig";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
+import { GameConfig } from "../Schemas";
+import { DefaultConfig } from "./DefaultConfig";
+import { DevConfig, DevServerConfig } from "./DevConfig";
+import { preprodConfig } from "./PreprodConfig";
+import { prodConfig } from "./ProdConfig";
 
 export enum GameEnv {
   Dev,

@@ -3,7 +3,6 @@ import {
   AllianceRequest,
   EmojiMessage,
   GameUpdates,
-  MapPos,
   MessageType,
   NameViewData,
   PlayerID,

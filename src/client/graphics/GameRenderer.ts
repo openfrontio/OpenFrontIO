@@ -1,29 +1,28 @@
-import { Game, PlayerInfo } from "../../core/game/Game";
-import { NameLayer } from "./layers/NameLayer";
-import { TerrainLayer } from "./layers/TerrainLayer";
-import { TerritoryLayer } from "./layers/TerritoryLayer";
-import { ClientID } from "../../core/Schemas";
+import { consolex } from "../../core/Consolex";
 import { EventBus } from "../../core/EventBus";
+import { ClientID } from "../../core/Schemas";
+import { GameView } from "../../core/game/GameView";
+import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { TransformHandler } from "./TransformHandler";
-import { Layer } from "./layers/Layer";
-import { EventsDisplay } from "./layers/EventsDisplay";
-import { RadialMenu } from "./layers/RadialMenu";
-import { EmojiTable } from "./layers/EmojiTable";
-import { Leaderboard } from "./layers/Leaderboard";
-import { ControlPanel } from "./layers/ControlPanel";
 import { UIState } from "./UIState";
 import { BuildMenu } from "./layers/BuildMenu";
-import { UnitLayer } from "./layers/UnitLayer";
-import { StructureLayer } from "./layers/StructureLayer";
-import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
-import { consolex } from "../../core/Consolex";
-import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
-import { GameView } from "../../core/game/GameView";
-import { WinModal } from "./layers/WinModal";
-import { SpawnTimer } from "./layers/SpawnTimer";
+import { ControlPanel } from "./layers/ControlPanel";
+import { EmojiTable } from "./layers/EmojiTable";
+import { EventsDisplay } from "./layers/EventsDisplay";
+import { Layer } from "./layers/Layer";
+import { Leaderboard } from "./layers/Leaderboard";
+import { NameLayer } from "./layers/NameLayer";
 import { OptionsMenu } from "./layers/OptionsMenu";
-import { TopBar } from "./layers/TopBar";
+import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
+import { RadialMenu } from "./layers/RadialMenu";
+import { SpawnTimer } from "./layers/SpawnTimer";
+import { StructureLayer } from "./layers/StructureLayer";
+import { TerrainLayer } from "./layers/TerrainLayer";
+import { TerritoryLayer } from "./layers/TerritoryLayer";
+import { TopBar } from "./layers/TopBar";
+import { UnitLayer } from "./layers/UnitLayer";
+import { WinModal } from "./layers/WinModal";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,

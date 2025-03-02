@@ -1,9 +1,14 @@
-import express, { json, Request, Response, NextFunction } from "express";
+import { SecretManagerServiceClient } from "@google-cloud/secret-manager";
+import crypto from "crypto";
+import dotenv from "dotenv";
+import express, { NextFunction, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
 import http from "http";
-import { WebSocketServer } from "ws";
 import path from "path";
+import { RateLimiterMemory } from "rate-limiter-flexible";
+import * as si from "systeminformation";
 import { fileURLToPath } from "url";
-import { GameManager } from "./GameManager";
+import { WebSocketServer } from "ws";
 import {
   ClientMessage,
   ClientMessageSchema,
@@ -12,27 +17,18 @@ import {
   LogSeverity,
   ServerStartGameMessageSchema,
 } from "../core/Schemas";
-import {
-  GameEnv,
-  getConfig,
-  getServerConfig,
-} from "../core/configuration/Config";
-import { slog } from "./StructuredLog";
-import { Client } from "./Client";
-import { GamePhase, GameServer } from "./GameServer";
-import { archive, gameRecordExists, readGameRecord } from "./Archive";
-import { DiscordBot } from "./DiscordBot";
+import { GameEnv, getServerConfig } from "../core/configuration/Config";
 import {
   sanitizeUsername,
   validateUsername,
 } from "../core/validations/username";
-import { SecretManagerServiceClient } from "@google-cloud/secret-manager";
-import dotenv from "dotenv";
-import crypto from "crypto";
+import { archive, gameRecordExists, readGameRecord } from "./Archive";
+import { Client } from "./Client";
+import { DiscordBot } from "./DiscordBot";
+import { GameManager } from "./GameManager";
+import { GamePhase } from "./GameServer";
+import { slog } from "./StructuredLog";
 dotenv.config();
-import rateLimit from "express-rate-limit";
-import { RateLimiterMemory } from "rate-limiter-flexible";
-import * as si from "systeminformation";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

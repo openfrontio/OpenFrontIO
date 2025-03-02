@@ -53,6 +53,7 @@
     "postcss": "^8.5.1",
     "postcss-loader": "^8.1.1",
     "prettier": "^3.5.0",
+    "prettier-plugin-organize-imports": "^4.1.0",
     "raw-loader": "^4.0.2",
     "sinon": "^18.0.0",
     "sinon-chai": "^4.0.0",

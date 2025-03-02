@@ -1,22 +1,21 @@
-import { PlayerID, GameMapType, Difficulty, GameType } from "../core/game/Game";
+import { consolex, initRemoteSender } from "../core/Consolex";
 import { EventBus } from "../core/EventBus";
-import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
-import { InputHandler, MouseUpEvent } from "./InputHandler";
 import { ClientID, GameConfig, GameID, ServerMessage } from "../core/Schemas";
+import { getConfig, getServerConfig } from "../core/configuration/Config";
+import { Difficulty, GameMapType, GameType, PlayerID } from "../core/game/Game";
+import { ErrorUpdate, GameUpdateViewData } from "../core/game/GameUpdates";
+import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap } from "../core/game/TerrainMapLoader";
+import { UserSettings } from "../core/game/UserSettings";
+import { WorkerClient } from "../core/worker/WorkerClient";
+import { InputHandler, MouseUpEvent } from "./InputHandler";
 import {
   SendAttackIntentEvent,
   SendSpawnIntentEvent,
   Transport,
 } from "./Transport";
 import { createCanvas } from "./Utils";
-import { ErrorUpdate } from "../core/game/GameUpdates";
-import { WorkerClient } from "../core/worker/WorkerClient";
-import { consolex, initRemoteSender } from "../core/Consolex";
-import { getConfig, getServerConfig } from "../core/configuration/Config";
-import { GameView, PlayerView } from "../core/game/GameView";
-import { GameUpdateViewData } from "../core/game/GameUpdates";
-import { UserSettings } from "../core/game/UserSettings";
+import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 
 export interface LobbyConfig {
   flag: () => string;

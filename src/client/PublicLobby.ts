@@ -1,8 +1,8 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { consolex } from "../core/Consolex";
 import { Lobby } from "../core/Schemas";
 import { Difficulty, GameMapType, GameType } from "../core/game/Game";
-import { consolex } from "../core/Consolex";
 import { getMapsImage } from "./utilities/Maps";
 
 @customElement("public-lobby")

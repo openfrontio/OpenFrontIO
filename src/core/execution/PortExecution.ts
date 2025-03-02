@@ -1,21 +1,18 @@
+import { consolex } from "../Consolex";
 import {
-  AllPlayers,
-  Cell,
   Execution,
   Game,
   Player,
-  Unit,
   PlayerID,
-  TerrainType,
+  Unit,
   UnitType,
 } from "../game/Game";
-import { PathFinder } from "../pathfinding/PathFinding";
+import { manhattanDistFN, TileRef } from "../game/GameMap";
 import { PathFindResultType } from "../pathfinding/AStar";
+import { MiniAStar } from "../pathfinding/MiniAStar";
+import { PathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { TradeShipExecution } from "./TradeShipExecution";
-import { consolex } from "../Consolex";
-import { MiniAStar } from "../pathfinding/MiniAStar";
-import { manhattanDistFN, TileRef } from "../game/GameMap";
 
 export class PortExecution implements Execution {
   private active = true;

@@ -1,23 +1,18 @@
-import {
-  GameUpdates,
-  MapPos,
-  MessageType,
-  Player,
-  PlayerActions,
-  PlayerProfile,
-  Unit,
-} from "./Game";
-import { AttackUpdate, PlayerUpdate } from "./GameUpdates";
-import { UnitUpdate } from "./GameUpdates";
-import { NameViewData } from "./Game";
-import { GameUpdateType } from "./GameUpdates";
 import { Config } from "../configuration/Config";
+import { ClientID } from "../Schemas";
+import { WorkerClient } from "../worker/WorkerClient";
+import { DefenseGrid } from "./DefensePostGrid";
 import {
   Cell,
   EmojiMessage,
+  GameUpdates,
   Gold,
+  NameViewData,
+  Player,
+  PlayerActions,
   PlayerID,
   PlayerInfo,
+  PlayerProfile,
   PlayerType,
   TerrainType,
   TerraNullius,
@@ -25,12 +20,15 @@ import {
   UnitInfo,
   UnitType,
 } from "./Game";
-import { ClientID } from "../Schemas";
+import { GameMap, TileRef, TileUpdate } from "./GameMap";
+import {
+  AttackUpdate,
+  GameUpdateType,
+  GameUpdateViewData,
+  PlayerUpdate,
+  UnitUpdate,
+} from "./GameUpdates";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
-import { WorkerClient } from "../worker/WorkerClient";
-import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
-import { GameUpdateViewData } from "./GameUpdates";
-import { DefenseGrid } from "./DefensePostGrid";
 
 export class UnitView {
   public _wasUpdated = true;

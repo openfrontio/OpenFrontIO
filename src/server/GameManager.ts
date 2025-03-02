@@ -1,11 +1,10 @@
-import { Config, ServerConfig } from "../core/configuration/Config";
-import { ClientID, GameConfig, GameID } from "../core/Schemas";
-import { v4 as uuidv4 } from "uuid";
+import { ServerConfig } from "../core/configuration/Config";
+import { Difficulty, GameMapType, GameType } from "../core/game/Game";
+import { PseudoRandom } from "../core/PseudoRandom";
+import { GameConfig, GameID } from "../core/Schemas";
+import { generateID } from "../core/Util";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
-import { Difficulty, GameMapType, GameType } from "../core/game/Game";
-import { generateID } from "../core/Util";
-import { PseudoRandom } from "../core/PseudoRandom";
 
 export class GameManager {
   private lastNewLobby: number = 0;

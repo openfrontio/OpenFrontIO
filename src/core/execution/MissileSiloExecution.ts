@@ -1,11 +1,10 @@
 import { consolex } from "../Consolex";
 import {
-  Cell,
   Execution,
   Game,
   Player,
-  Unit,
   PlayerID,
+  Unit,
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
@@ -36,7 +35,7 @@ export class MissileSiloExecution implements Execution {
     if (this.silo == null) {
       if (!this.player.canBuild(UnitType.MissileSilo, this.tile)) {
         consolex.warn(
-          `player ${this.player} cannot build port at ${this.tile}`,
+          `player ${this.player} cannot build missile silo at ${this.tile}`,
         );
         this.active = false;
         return;

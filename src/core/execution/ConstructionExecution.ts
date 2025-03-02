@@ -1,13 +1,12 @@
 import { consolex } from "../Consolex";
 import {
-  Cell,
   Execution,
   Game,
   Player,
-  Unit,
   PlayerID,
-  UnitType,
   Tick,
+  Unit,
+  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { CityExecution } from "./CityExecution";

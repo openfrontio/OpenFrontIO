@@ -1,39 +1,22 @@
-import {
-  Cell,
-  Execution,
-  Game,
-  Player,
-  PlayerInfo,
-  TerraNullius,
-  PlayerType,
-  Alliance,
-  UnitType,
-} from "../game/Game";
-import {
-  AttackIntent,
-  BoatAttackIntentSchema,
-  ClientID,
-  GameID,
-  Intent,
-  Turn,
-} from "../Schemas";
-import { AttackExecution } from "./AttackExecution";
-import { SpawnExecution } from "./SpawnExecution";
-import { BotSpawner } from "./BotSpawner";
-import { TransportShipExecution } from "./TransportShipExecution";
+import { Execution, Game, PlayerInfo, PlayerType } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
-import { FakeHumanExecution } from "./FakeHumanExecution";
+import { ClientID, GameID, Intent, Turn } from "../Schemas";
 import { sanitize, simpleHash } from "../Util";
+import { fixProfaneUsername } from "../validations/username";
 import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
 import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
-import { TargetPlayerExecution } from "./TargetPlayerExecution";
-import { EmojiExecution } from "./EmojiExecution";
-import { DonateExecution } from "./DonateExecution";
-import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
+import { AttackExecution } from "./AttackExecution";
+import { BotSpawner } from "./BotSpawner";
 import { ConstructionExecution } from "./ConstructionExecution";
-import { fixProfaneUsername, isProfaneUsername } from "../validations/username";
+import { DonateExecution } from "./DonateExecution";
+import { EmojiExecution } from "./EmojiExecution";
+import { FakeHumanExecution } from "./FakeHumanExecution";
 import { NoOpExecution } from "./NoOpExecution";
+import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
+import { SpawnExecution } from "./SpawnExecution";
+import { TargetPlayerExecution } from "./TargetPlayerExecution";
+import { TransportShipExecution } from "./TransportShipExecution";
 
 export class Executor {
   // private random = new PseudoRandom(999)
