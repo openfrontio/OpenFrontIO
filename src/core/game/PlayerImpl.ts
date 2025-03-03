@@ -41,6 +41,8 @@ import { renderTroops } from "../../client/Utils";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
 import { AttackImpl } from "./AttackImpl";
+import { PseudoRandom } from "../PseudoRandom";
+import { consolex } from "../Consolex";
 
 interface Target {
   tick: Tick;
@@ -56,6 +58,7 @@ class Donation {
 
 export class PlayerImpl implements Player {
   public _lastTileChange: number = 0;
+  public _pseudo_random: PseudoRandom;
 
   private _gold: bigint;
   private _troops: bigint;
@@ -103,6 +106,7 @@ export class PlayerImpl implements Player {
     this._workers = 0n;
     this._gold = 0n;
     this._displayName = this._name; // processName(this._name)
+    this._pseudo_random = new PseudoRandom(simpleHash(this.playerInfo.id));
   }
 
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
@@ -139,6 +143,8 @@ export class PlayerImpl implements Player {
             attackerID: a.attacker().smallID(),
             targetID: a.target().smallID(),
             troops: a.troops(),
+            id: a.id(),
+            retreating: a.retreating(),
           }) as AttackUpdate,
       ),
       incomingAttacks: this._incomingAttacks.map(
@@ -147,6 +153,8 @@ export class PlayerImpl implements Player {
             attackerID: a.attacker().smallID(),
             targetID: a.target().smallID(),
             troops: a.troops(),
+            id: a.id(),
+            retreating: a.retreating(),
           }) as AttackUpdate,
       ),
       outgoingAllianceRequests: outgoingAllianceRequests,
@@ -245,6 +253,22 @@ export class PlayerImpl implements Player {
   }
   conquer(tile: TileRef) {
     this.mg.conquer(this, tile);
+  }
+  orderRetreat(id: string) {
+    const attack = this._outgoingAttacks.filter((attack) => attack.id() == id);
+    if (!attack || !attack[0]) {
+      consolex.warn(`Didn't find outgoing attack with id ${id}`);
+      return;
+    }
+    attack[0].orderRetreat();
+  }
+  executeRetreat(id: string): void {
+    const attack = this._outgoingAttacks.filter((attack) => attack.id() == id);
+    // Execution is delayed so it's not an error that the attack does not exist.
+    if (!attack || !attack[0]) {
+      return;
+    }
+    attack[0].executeRetreat();
   }
   relinquish(tile: TileRef) {
     if (this.mg.owner(tile) != this) {
@@ -845,7 +869,13 @@ export class PlayerImpl implements Player {
     troops: number,
     sourceTile: TileRef,
   ): Attack {
-    const attack = new AttackImpl(target, this, troops, sourceTile);
+    const attack = new AttackImpl(
+      this._pseudo_random.nextID(),
+      target,
+      this,
+      troops,
+      sourceTile,
+    );
     this._outgoingAttacks.push(attack);
     if (target.isPlayer()) {
       (target as PlayerImpl)._incomingAttacks.push(attack);

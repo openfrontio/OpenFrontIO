@@ -4,8 +4,11 @@ import { PlayerImpl } from "./PlayerImpl";
 
 export class AttackImpl implements Attack {
   private _isActive = true;
+  public _retreating = false;
+  public _retreated = false;
 
   constructor(
+    private _id: string,
     private _target: Player | TerraNullius,
     private _attacker: Player,
     private _troops: number,
@@ -33,6 +36,10 @@ export class AttackImpl implements Attack {
     return this._isActive;
   }
 
+  id() {
+    return this._id;
+  }
+
   delete() {
     if (this._target.isPlayer()) {
       (this._target as PlayerImpl)._incomingAttacks = (
@@ -45,5 +52,21 @@ export class AttackImpl implements Attack {
     )._outgoingAttacks.filter((a) => a != this);
 
     this._isActive = false;
+  }
+
+  orderRetreat() {
+    this._retreating = true;
+  }
+
+  executeRetreat() {
+    this._retreated = true;
+  }
+
+  retreating(): boolean {
+    return this._retreating;
+  }
+
+  retreated(): boolean {
+    return this._retreated;
   }
 }

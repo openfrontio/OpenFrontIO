@@ -14,6 +14,7 @@ export type ClientID = string;
 export type Intent =
   | SpawnIntent
   | AttackIntent
+  | CancelAttackIntent
   | BoatAttackIntent
   | AllianceRequestIntent
   | AllianceRequestReplyIntent
@@ -26,6 +27,7 @@ export type Intent =
   | EmbargoIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
+export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
 export type SpawnIntent = z.infer<typeof SpawnIntentSchema>;
 export type BoatAttackIntent = z.infer<typeof BoatAttackIntentSchema>;
 export type AllianceRequestIntent = z.infer<typeof AllianceRequestIntentSchema>;
@@ -134,6 +136,7 @@ const ID = z
 const BaseIntentSchema = z.object({
   type: z.enum([
     "attack",
+    "cancel_attack",
     "spawn",
     "boat",
     "name",
@@ -233,8 +236,15 @@ export const BuildUnitIntentSchema = BaseIntentSchema.extend({
   y: z.number(),
 });
 
+export const CancelAttackIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("cancel_attack"),
+  playerID: ID,
+  attackID: z.string(),
+});
+
 const IntentSchema = z.union([
   AttackIntentSchema,
+  CancelAttackIntentSchema,
   SpawnIntentSchema,
   BoatAttackIntentSchema,
   AllianceRequestIntentSchema,

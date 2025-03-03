@@ -149,6 +149,11 @@ export interface Execution {
 }
 
 export interface Attack {
+  id(): string;
+  retreating(): boolean;
+  retreated(): boolean;
+  orderRetreat(): void;
+  executeRetreat(): void;
   target(): Player | TerraNullius;
   attacker(): Player;
   troops(): number;
@@ -334,6 +339,8 @@ export interface Player {
   ): Attack;
   outgoingAttacks(): Attack[];
   incomingAttacks(): Attack[];
+  orderRetreat(attackID: string): void;
+  executeRetreat(attackID: string): void;
 
   // Misc
   executions(): Execution[];

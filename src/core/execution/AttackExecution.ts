@@ -15,6 +15,8 @@ import { MessageType } from "../game/Game";
 import { renderNumber } from "../../client/Utils";
 import { TileRef } from "../game/GameMap";
 
+const malusForRetreat = 25;
+
 export class AttackExecution implements Execution {
   private breakAlliance = false;
   private active: boolean = true;
@@ -162,7 +164,19 @@ export class AttackExecution implements Execution {
     }
   }
 
+  private retreat(malusPercent = 0) {
+    this._owner.addTroops(this.attack.troops() * (1 - malusPercent / 100));
+    this.attack.delete();
+    this.active = false;
+  }
+
   tick(ticks: number) {
+    if (this.attack.retreated()) {
+      this.retreat(malusForRetreat);
+      this.active = false;
+      return;
+    }
+
     if (!this.attack.isActive()) {
       this.active = false;
       return;
@@ -175,9 +189,7 @@ export class AttackExecution implements Execution {
     }
     if (this.target.isPlayer() && this._owner.isAlliedWith(this.target)) {
       // In this case a new alliance was created AFTER the attack started.
-      this._owner.addTroops(this.attack.troops());
-      this.attack.delete();
-      this.active = false;
+      this.retreat();
       return;
     }
 
@@ -201,9 +213,7 @@ export class AttackExecution implements Execution {
 
       if (this.toConquer.size() == 0) {
         this.refreshToConquer();
-        this.active = false;
-        this._owner.addTroops(this.attack.troops());
-        this.attack.delete();
+        this.retreat();
         return;
       }
 

@@ -20,7 +20,10 @@ import { AllianceRequestUpdate } from "../../../core/game/GameUpdates";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { ClientID } from "../../../core/Schemas";
 import { Layer } from "./Layer";
-import { SendAllianceReplyIntentEvent } from "../../Transport";
+import {
+  CancelAttackIntentEvent,
+  SendAllianceReplyIntentEvent,
+} from "../../Transport";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { onlyImages, sanitize } from "../../../core/Util";
 import { GameView, PlayerView } from "../../../core/game/GameView";
@@ -298,6 +301,12 @@ export class EventsDisplay extends LitElement implements Layer {
     });
   }
 
+  emitCancelAttackIntent(id: string) {
+    const myPlayer = this.game.playerByClientID(this.clientID);
+    if (!myPlayer) return;
+    this.eventBus.emit(new CancelAttackIntentEvent(myPlayer.id(), id));
+  }
+
   onEmojiMessageEvent(update: EmojiUpdate) {
     const myPlayer = this.game.playerByClientID(this.clientID);
     if (!myPlayer) return;
@@ -386,6 +395,16 @@ export class EventsDisplay extends LitElement implements Layer {
                       ${(
                         this.game.playerBySmallID(attack.targetID) as PlayerView
                       )?.name()}
+                      ${!attack.retreating
+                        ? html`<button
+                            ${attack.retreating ? "disabled" : ""}
+                            @click=${() => {
+                              this.emitCancelAttackIntent(attack.id);
+                            }}
+                          >
+                            ❌
+                          </button>`
+                        : "(retreating...)"}
                     </div>
                   `,
                 )}

@@ -110,6 +110,13 @@ export class SendEmbargoIntentEvent implements GameEvent {
   ) {}
 }
 
+export class CancelAttackIntentEvent implements GameEvent {
+  constructor(
+    public readonly playerID: PlayerID,
+    public readonly attackID: string,
+  ) {}
+}
+
 export class SendSetTargetTroopRatioEvent implements GameEvent {
   constructor(public readonly ratio: number) {}
 }
@@ -179,6 +186,9 @@ export class Transport {
     this.eventBus.on(PauseGameEvent, (e) => this.onPauseGameEvent(e));
     this.eventBus.on(SendWinnerEvent, (e) => this.onSendWinnerEvent(e));
     this.eventBus.on(SendHashEvent, (e) => this.onSendHashEvent(e));
+    this.eventBus.on(CancelAttackIntentEvent, (e) =>
+      this.onCancelAttackIntentEvent(e),
+    );
   }
 
   private startPing() {
@@ -499,6 +509,15 @@ export class Transport {
       );
       console.log("attempting reconnect");
     }
+  }
+
+  private onCancelAttackIntentEvent(event: CancelAttackIntentEvent) {
+    this.sendIntent({
+      type: "cancel_attack",
+      clientID: this.lobbyConfig.clientID,
+      playerID: event.playerID,
+      attackID: event.attackID,
+    });
   }
 
   private sendIntent(intent: Intent) {

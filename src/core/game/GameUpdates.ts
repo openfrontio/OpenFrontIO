@@ -77,6 +77,8 @@ export interface AttackUpdate {
   attackerID: number;
   targetID: number;
   troops: number;
+  id: string;
+  retreating: boolean;
 }
 
 export interface PlayerUpdate {

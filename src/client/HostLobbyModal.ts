@@ -10,7 +10,6 @@ import { generateID } from "../core/Util";
 import { getConfig, getServerConfig } from "../core/configuration/Config";
 import randomMap from "../../resources/images/RandomMap.png";
 
-
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
   @state() private isModalOpen = false;
