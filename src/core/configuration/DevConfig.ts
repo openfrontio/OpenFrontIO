@@ -23,7 +23,7 @@ export class DevConfig extends DefaultConfig {
   }
 
   buildingDensityLimit(): number {
-    return 30; // Matching DefaultConfig
+    return 10;
   }
 
   numSpawnPhaseTurns(): number {
