@@ -290,7 +290,9 @@ export class InputHandler {
       Math.abs(event.y - this.lastPointerDownY);
     if (dist < 10) {
       if (event.pointerType == "touch") {
+        this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
         event.preventDefault();
+        return;
       }
 
       if (!this.userSettings.leftClickOpensMenu() || event.shiftKey) {
