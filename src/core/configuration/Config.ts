@@ -130,6 +130,7 @@ export interface Config {
   defensePostRange(): number;
   defensePostDefenseBonus(): number;
   falloutDefenseModifier(): number;
+  buildingDensityLimit(): number;
   difficultyModifier(difficulty: Difficulty): number;
 }
 
