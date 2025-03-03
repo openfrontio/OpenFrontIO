@@ -1,3 +1,4 @@
+import { consolex } from "../Consolex";
 import {
   Player,
   PlayerInfo,
@@ -673,7 +674,7 @@ export class PlayerImpl implements Player {
       case UnitType.DefensePost:
       case UnitType.City:
       case UnitType.Construction:
-        return this.landBasedStructureSpawn(targetTile);
+        return this.landBasedStructureSpawn(targetTile, unitType);
       default:
         assertNever(unitType);
     }
@@ -686,6 +687,8 @@ export class PlayerImpl implements Player {
     if (spawns.length == 0) {
       return false;
     }
+
+    // We don't need density check for nukes, only for missile silos
     return spawns[0].tile();
   }
 
@@ -699,7 +702,10 @@ export class PlayerImpl implements Player {
     if (spawns.length == 0) {
       return false;
     }
-    return spawns[0];
+
+    // Check density limits for the best spawn point
+    const bestSpawn = spawns[0];
+    return this.landBasedStructureSpawn(bestSpawn, UnitType.Port);
   }
 
   warshipSpawn(tile: TileRef): TileRef | false {
@@ -723,10 +729,86 @@ export class PlayerImpl implements Player {
     return spawns[0].tile();
   }
 
-  landBasedStructureSpawn(tile: TileRef): TileRef | false {
+  // Helper method to check building density for any tile
+  private checkBuildingDensity(tile: TileRef, unitType: UnitType): boolean {
+    const buildingTypes = [
+      UnitType.DefensePost,
+      UnitType.City,
+      UnitType.Port,
+      UnitType.MissileSilo,
+    ];
+    // Early return if not a building type we care about
+    if (!buildingTypes.includes(unitType)) {
+      return true;
+    }
+
+    // Get density limit from config
+    const densityLimit = this.mg.config().buildingDensityLimit();
+    consolex.log(
+      `Checking density for ${unitType} at tile (${this.mg.x(tile)},${this.mg.y(tile)}) with limit ${densityLimit}`,
+    );
+
+    // Check existing buildings
+    for (const unit of this._units) {
+      // Check completed buildings of restricted types
+      if (buildingTypes.includes(unit.type())) {
+        const unitTile = unit.tile();
+        const distance = this.mg.manhattanDist(tile, unitTile);
+        const unitX = this.mg.x(unitTile);
+        const unitY = this.mg.y(unitTile);
+
+        consolex.log(
+          `Comparing to ${unit.type()} at (${unitX},${unitY}), distance=${distance}`,
+        );
+
+        if (distance < densityLimit && distance > 0) {
+          // Skip the exact same tile
+          consolex.log(
+            `BLOCKED: Too close to ${unit.type()} at distance ${distance}`,
+          );
+          return false; // Too close to another building
+        }
+      }
+
+      // Also check construction sites for restricted types
+      if (
+        unit.type() === UnitType.Construction &&
+        unit.constructionType() &&
+        buildingTypes.includes(unit.constructionType())
+      ) {
+        const unitTile = unit.tile();
+        const distance = this.mg.manhattanDist(tile, unitTile);
+        const unitX = this.mg.x(unitTile);
+        const unitY = this.mg.y(unitTile);
+
+        consolex.log(
+          `Comparing to construction site for ${unit.constructionType()} at (${unitX},${unitY}), distance=${distance}`,
+        );
+
+        if (distance < densityLimit && distance > 0) {
+          // Skip the exact same tile
+          consolex.log(
+            `BLOCKED: Too close to construction site for ${unit.constructionType()} at distance ${distance}`,
+          );
+          return false; // Too close to a construction site
+        }
+      }
+    }
+
+    consolex.log(`Density check PASSED for ${unitType}`);
+    return true; // Density check passed
+  }
+
+  landBasedStructureSpawn(tile: TileRef, unitType: UnitType): TileRef | false {
     if (this.mg.owner(tile) != this) {
       return false;
     }
+
+    // Check for building density
+    if (!this.checkBuildingDensity(tile, unitType)) {
+      return false;
+    }
+
     return tile;
   }
 
