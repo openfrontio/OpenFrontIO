@@ -21,21 +21,20 @@ import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
 import { GameType } from "../core/game/Game";
 
-let spModal: SinglePlayerModal;
-let hostModal: HostPrivateLobbyModal;
-let joinModal: JoinPrivateLobbyModal;
-let helpModal: HelpModal;
-let flagInput: FlagInput;
-
-export function closeAllModals() {
-  spModal.close();
-  hostModal.close();
-  helpModal.close();
-  joinModal.close();
-  flagInput.close();
-}
-
 class Client {
+  private spModal: SinglePlayerModal;
+  private hostModal: HostPrivateLobbyModal;
+  private joinModal: JoinPrivateLobbyModal;
+  private helpModal: HelpModal;
+  private flagInput: FlagInput;
+
+  closeAllModals() {
+    this.spModal.close();
+    this.hostModal.close();
+    this.helpModal.close();
+    this.joinModal.close();
+    this.flagInput.close();
+  }
   private gameStop: () => void;
 
   private usernameInput: UsernameInput | null = null;
@@ -47,8 +46,8 @@ class Client {
   constructor() {}
 
   initialize(): void {
-    flagInput = document.querySelector("flag-input") as FlagInput;
-    if (!flagInput) {
+    this.flagInput = document.querySelector("flag-input") as FlagInput;
+    if (!this.flagInput) {
       consolex.warn("Flag input element not found");
     }
 
@@ -79,44 +78,44 @@ class Client {
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
 
-    spModal = document.querySelector(
+    this.spModal = document.querySelector(
       "single-player-modal",
     ) as SinglePlayerModal;
-    spModal instanceof SinglePlayerModal;
+    this.spModal instanceof SinglePlayerModal;
     document.getElementById("single-player").addEventListener("click", () => {
       if (this.usernameInput.isValid()) {
-        spModal.open();
+        this.spModal.open();
       }
     });
 
-    helpModal = document.querySelector("help-modal") as HelpModal;
-    helpModal instanceof HelpModal;
+    this.helpModal = document.querySelector("help-modal") as HelpModal;
+    this.helpModal instanceof HelpModal;
     document.getElementById("help-button").addEventListener("click", () => {
-      helpModal.open();
+      this.helpModal.open();
     });
 
-    hostModal = document.querySelector(
+    this.hostModal = document.querySelector(
       "host-lobby-modal",
     ) as HostPrivateLobbyModal;
-    hostModal instanceof HostPrivateLobbyModal;
+    this.hostModal instanceof HostPrivateLobbyModal;
     document
       .getElementById("host-lobby-button")
       .addEventListener("click", () => {
         if (this.usernameInput.isValid()) {
-          hostModal.open();
+          this.hostModal.open();
           this.publicLobby.leaveLobby();
         }
       });
 
-    joinModal = document.querySelector(
+    this.joinModal = document.querySelector(
       "join-private-lobby-modal",
     ) as JoinPrivateLobbyModal;
-    joinModal instanceof JoinPrivateLobbyModal;
+    this.joinModal instanceof JoinPrivateLobbyModal;
     document
       .getElementById("join-private-lobby-button")
       .addEventListener("click", () => {
         if (this.usernameInput.isValid()) {
-          joinModal.open();
+          this.joinModal.open();
         }
       });
 
@@ -133,7 +132,7 @@ class Client {
       }
       const lobbyId = ctx.params.lobbyId;
 
-      joinModal.open(lobbyId);
+      this.joinModal.open(lobbyId);
 
       consolex.log(`joining lobby ${lobbyId}`);
     });
@@ -153,7 +152,9 @@ class Client {
       {
         gameType: gameType,
         flag: (): string =>
-          flagInput.getCurrentFlag() == "xx" ? "" : flagInput.getCurrentFlag(),
+          this.flagInput.getCurrentFlag() == "xx"
+            ? ""
+            : this.flagInput.getCurrentFlag(),
         playerName: (): string => this.usernameInput.getCurrentUsername(),
         gameID: lobby.gameID,
         persistentID: getPersistentIDFromCookie(),
@@ -168,7 +169,7 @@ class Client {
         disableNPCs: event.detail.disableNPCs,
       },
       () => {
-        closeAllModals();
+        this.closeAllModals();
         this.publicLobby.stop();
         if (gameType != GameType.Singleplayer) {
           window.history.pushState({}, "", `/join/${lobby.gameID}`);
