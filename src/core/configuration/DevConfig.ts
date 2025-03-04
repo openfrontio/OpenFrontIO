@@ -22,10 +22,6 @@ export class DevConfig extends DefaultConfig {
     super(sc, gc, us);
   }
 
-  buildingDensityLimit(): number {
-    return 10;
-  }
-
   numSpawnPhaseTurns(): number {
     return this.gameConfig().gameType == GameType.Singleplayer ? 40 : 100;
     // return 100

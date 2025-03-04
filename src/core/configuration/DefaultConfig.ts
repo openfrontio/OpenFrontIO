@@ -104,7 +104,7 @@ export class DefaultConfig implements Config {
     return 5;
   }
   buildingDensityLimit(): number {
-    return 10; // Minimum distance required between structures (in map units)
+    return 15; // Minimum distance required between structures (in map units)
   }
   spawnNPCs(): boolean {
     return !this._gameConfig.disableNPCs;

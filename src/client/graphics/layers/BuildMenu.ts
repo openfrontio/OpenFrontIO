@@ -266,22 +266,9 @@ export class BuildMenu extends LitElement implements Layer {
       return "Not enough gold";
     }
 
-    const buildingTypes = [
-      UnitType.DefensePost,
-      UnitType.City,
-      UnitType.Port,
-      UnitType.MissileSilo,
-    ];
-    if (buildingTypes.includes(item.unitType) && !unit.canBuild) {
-      // If cost is affordable but we still can't build, it's likely a density issue
-      // Check if tile is valid for ownership checks
-      const x = this.game.x(this.clickedTile);
-      const y = this.game.y(this.clickedTile);
-      console.log(
-        `Build tooltip for ${item.unitType} at (${x},${y}): canBuild=${unit.canBuild}`,
-      );
-
-      return "Too close to another building";
+    // If we can afford it but can't build, return appropriate message
+    if (!unit.canBuild) {
+      return "Invalid location";
     }
 
     return "";
