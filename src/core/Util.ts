@@ -67,20 +67,28 @@ export function sourceDstOceanShore(
   let srcTile = closestShoreFromPlayer(gm, src, tile);
   let dstTile: TileRef | null = null;
   if (dst.isPlayer()) {
-    dstTile = closestShoreFromPlayer(gm, dst as Player, tile);
+    // dstTile = closestShoreFromPlayer(gm, dst as Player, tile);
+    dstTile = closestShoreTN(gm, src, tile, 50, dst as Player);
   } else {
-    dstTile = closestShoreTN(gm, tile, 50);
+    dstTile = closestShoreTN(gm, src, tile, 50);
   }
   return [srcTile, dstTile];
 }
 
-export function targetTransportTile(gm: Game, tile: TileRef): TileRef | null {
+export function targetTransportTile(
+  gm: Game,
+  tile: TileRef,
+  player: Player,
+): TileRef | null {
   const dst = gm.playerBySmallID(gm.ownerID(tile));
   let dstTile: TileRef | null = null;
+  console.log("player" + dst.isPlayer());
   if (dst.isPlayer()) {
-    dstTile = closestShoreFromPlayer(gm, dst as Player, tile);
+    //closest shore from player is now only used to get your own shore but not when attacking others
+    // dstTile = closestShoreFromPlayer(gm, dst as Player, tile);
+    dstTile = closestShoreTN(gm, player, tile, 50, dst as Player);
   } else {
-    dstTile = closestShoreTN(gm, tile, 50);
+    dstTile = closestShoreTN(gm, player, tile, 50);
   }
   return dstTile;
 }
@@ -112,23 +120,67 @@ export function closestShoreFromPlayer(
   });
 }
 
+// searches the nearest shore based on the position of the player and the target tile
 function closestShoreTN(
   gm: GameMap,
-  tile: TileRef,
+  attacker: Player,
+  target: TileRef,
   searchDist: number,
-): TileRef {
-  const tn = Array.from(
-    gm.bfs(
-      tile,
-      andFN((_, t) => !gm.hasOwner(t), manhattanDistFN(tile, searchDist)),
-    ),
-  )
-    .filter((t) => gm.isShore(t))
-    .sort((a, b) => gm.manhattanDist(tile, a) - gm.manhattanDist(tile, b));
-  if (tn.length == 0) {
-    return null;
+  defender?: Player,
+): TileRef | null {
+  const borderTiles = Array.from(attacker.borderTiles());
+
+  const queue: [TileRef, number][] = [[target, 0]];
+  const visited = new Set<TileRef>();
+  const shoreTiles: TileRef[] = [];
+
+  const targetIsWater = gm.isWater(target);
+
+  while (queue.length > 0) {
+    const [tile, dist] = queue.shift()!;
+    if (visited.has(tile) || dist > searchDist) continue;
+    visited.add(tile);
+
+    // when sending a ship to another player prevent the search using shores not belonging to the player you try to attack
+    if (gm.isShore(tile) && dist > 0) {
+      if (!defender || gm.ownerID(tile) === defender.smallID()) {
+        shoreTiles.push(tile);
+      }
+      continue;
+    }
+
+    //search the neighboring tiles that are not water tiles (prevents shores from other islands from being used) but not when the starting tile is water itself
+    for (const neighbor of gm.neighbors(tile)) {
+      if (!visited.has(neighbor) && (targetIsWater || !gm.isWater(neighbor))) {
+        queue.push([neighbor, dist + 1]);
+      }
+    }
   }
-  return tn[0];
+
+  if (shoreTiles.length === 0) return null;
+
+  // based on the players border tiles get the shortest path from player to shore
+  return shoreTiles.reduce((closest, current) => {
+    const currentToPlayerBorderDistance = borderTiles.reduce(
+      (minDist, borderTile) => {
+        const dist = gm.manhattanDist(borderTile, current);
+        return dist < minDist ? dist : minDist;
+      },
+      Infinity,
+    );
+
+    const closestToPlayerBorderDistance = borderTiles.reduce(
+      (minDist, borderTile) => {
+        const dist = gm.manhattanDist(borderTile, closest);
+        return dist < minDist ? dist : minDist;
+      },
+      Infinity,
+    );
+
+    return currentToPlayerBorderDistance < closestToPlayerBorderDistance
+      ? current
+      : closest;
+  });
 }
 
 export function simpleHash(str: string): number {

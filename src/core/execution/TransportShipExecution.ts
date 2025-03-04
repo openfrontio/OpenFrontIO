@@ -106,7 +106,8 @@ export class TransportShipExecution implements Execution {
 
     this.troops = Math.min(this.troops, this.attacker.troops());
 
-    this.dst = targetTransportTile(this.mg, this.ref);
+    // destination tile of the ship
+    this.dst = targetTransportTile(this.mg, this.ref, this.attacker);
     if (this.dst == null) {
       consolex.warn(
         `${this.attacker} cannot send ship to ${this.target}, cannot find attack tile`,

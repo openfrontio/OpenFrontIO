@@ -667,6 +667,7 @@ export class PlayerImpl implements Player {
     return b;
   }
 
+  // decides where the unit or building spawns
   canBuild(unitType: UnitType, targetTile: TileRef): TileRef | false {
     const cost = this.mg.unitInfo(unitType).cost(this);
     if (!this.isAlive() || this.gold() < cost) {
@@ -810,7 +811,8 @@ export class PlayerImpl implements Player {
       return false;
     }
 
-    const dst = targetTransportTile(this.mg, tile);
+    // destination tile of the ship
+    const dst = targetTransportTile(this.mg, tile, this);
     if (dst == null) {
       return false;
     }
