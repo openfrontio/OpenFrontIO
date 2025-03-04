@@ -22,7 +22,6 @@ import { getConfig, getServerConfig } from "../core/configuration/Config";
 import { GameView, PlayerView } from "../core/game/GameView";
 import { GameUpdateViewData } from "../core/game/GameUpdates";
 import { UserSettings } from "../core/game/UserSettings";
-import { closeAllModals } from "./Main";
 
 export interface LobbyConfig {
   flag: () => string;
@@ -92,7 +91,6 @@ export function joinLobby(
         userSettings,
       ).then((r) => r.start());
     }
-    closeAllModals();
   };
   transport.connect(onconnect, onmessage);
   return () => {

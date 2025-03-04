@@ -21,23 +21,24 @@ import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
 import { GameType } from "../core/game/Game";
 
-var spModal: SinglePlayerModal;
-var hostModal: HostPrivateLobbyModal;
-var joinModal: JoinPrivateLobbyModal;
-var helpModal: HelpModal;
+let spModal: SinglePlayerModal;
+let hostModal: HostPrivateLobbyModal;
+let joinModal: JoinPrivateLobbyModal;
+let helpModal: HelpModal;
+let flagInput: FlagInput;
 
 export function closeAllModals() {
   spModal.close();
   hostModal.close();
   helpModal.close();
   joinModal.close();
+  flagInput.close();
 }
 
 class Client {
   private gameStop: () => void;
 
   private usernameInput: UsernameInput | null = null;
-  private flagInput: FlagInput | null = null;
   private darkModeButton: DarkModeButton | null = null;
 
   private publicLobby: PublicLobby;
@@ -46,8 +47,8 @@ class Client {
   constructor() {}
 
   initialize(): void {
-    this.flagInput = document.querySelector("flag-input") as FlagInput;
-    if (!this.flagInput) {
+    flagInput = document.querySelector("flag-input") as FlagInput;
+    if (!flagInput) {
       consolex.warn("Flag input element not found");
     }
 
@@ -152,9 +153,7 @@ class Client {
       {
         gameType: gameType,
         flag: (): string =>
-          this.flagInput.getCurrentFlag() == "xx"
-            ? ""
-            : this.flagInput.getCurrentFlag(),
+          flagInput.getCurrentFlag() == "xx" ? "" : flagInput.getCurrentFlag(),
         playerName: (): string => this.usernameInput.getCurrentUsername(),
         gameID: lobby.gameID,
         persistentID: getPersistentIDFromCookie(),
