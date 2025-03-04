@@ -32,6 +32,7 @@ export class FlagInput extends LitElement {
     this.flag = flag;
     this.showModal = false;
     this.storeFlag(flag);
+    this.close();
   }
 
   public getCurrentFlag(): string {
@@ -72,6 +73,10 @@ export class FlagInput extends LitElement {
 
   createRenderRoot() {
     return this;
+  }
+
+  close() {
+    this.showModal = false;
   }
 
   render() {

@@ -90,7 +90,6 @@ export function joinLobby(
         (r) => r.start(),
       );
     }
-    closeAllModals();
   };
   transport.connect(onconnect, onmessage);
   return () => {

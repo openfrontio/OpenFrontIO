@@ -48,13 +48,13 @@ export function closeAllModals() {
   hostModal.close();
   helpModal.close();
   joinModal.close();
+  flagInput.close();
 }
 
 class Client {
   private gameStop: () => void;
 
   private usernameInput: UsernameInput | null = null;
-  private flagInput: FlagInput | null = null;
   private darkModeButton: DarkModeButton | null = null;
 
   private publicLobby: PublicLobby;
