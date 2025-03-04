@@ -130,20 +130,43 @@ function closestShoreTN(
 ): TileRef | null {
   const borderTiles = Array.from(attacker.borderTiles());
 
+  const targetIsWater = gm.isWater(target);
+
+  // prevents the search from ignoring islands when the target is a water tile
+  if (targetIsWater) {
+    const tn = Array.from(
+      gm.bfs(
+        target,
+        andFN(
+          (_, t) => !(gm.ownerID(t) === attacker.smallID()),
+          manhattanDistFN(target, searchDist),
+        ),
+      ),
+    )
+      .filter((t) => gm.isShore(t))
+      .sort(
+        (a, b) => gm.manhattanDist(target, a) - gm.manhattanDist(target, b),
+      );
+
+    target = tn.length > 0 ? tn[0] : null;
+    if (!target) return null;
+  }
+
   const queue: [TileRef, number][] = [[target, 0]];
   const visited = new Set<TileRef>();
   const shoreTiles: TileRef[] = [];
-
-  const targetIsWater = gm.isWater(target);
 
   while (queue.length > 0) {
     const [tile, dist] = queue.shift()!;
     if (visited.has(tile) || dist > searchDist) continue;
     visited.add(tile);
 
-    // when sending a ship to another player prevent the search using shores not belonging to the player you try to attack
+    // when sending a ship to another player prevent the search using shores not belonging to the player you try to attack and shores belonging to yourself
     if (gm.isShore(tile) && dist > 0) {
-      if (!defender || gm.ownerID(tile) === defender.smallID()) {
+      if (
+        (!defender || gm.ownerID(tile) === defender.smallID()) &&
+        !(gm.ownerID(tile) === attacker.smallID())
+      ) {
         shoreTiles.push(tile);
       }
       continue;
@@ -151,7 +174,11 @@ function closestShoreTN(
 
     //search the neighboring tiles that are not water tiles (prevents shores from other islands from being used) but not when the starting tile is water itself
     for (const neighbor of gm.neighbors(tile)) {
-      if (!visited.has(neighbor) && (targetIsWater || !gm.isWater(neighbor))) {
+      if (
+        !visited.has(neighbor) &&
+        !(gm.ownerID(tile) === attacker.smallID()) &&
+        (targetIsWater || !gm.isWater(neighbor))
+      ) {
         queue.push([neighbor, dist + 1]);
       }
     }
