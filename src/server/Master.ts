@@ -1,16 +1,16 @@
 import cluster from "cluster";
-import http from "http";
 import express from "express";
-import { GameMapType, GameType, Difficulty } from "../core/game/Game";
-import { generateID } from "../core/Util";
-import { PseudoRandom } from "../core/PseudoRandom";
-import { GameEnv, getServerConfig } from "../core/configuration/Config";
-import { GameInfo } from "../core/Schemas";
-import path from "path";
 import rateLimit from "express-rate-limit";
+import http from "http";
+import path from "path";
 import { fileURLToPath } from "url";
-import { isHighTrafficTime } from "./Util";
+import { getServerConfig } from "../core/configuration/Config";
+import { Difficulty, GameMapType, GameType } from "../core/game/Game";
+import { PseudoRandom } from "../core/PseudoRandom";
+import { GameInfo } from "../core/Schemas";
+import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
+import { isHighTrafficTime } from "./Util";
 
 const config = getServerConfig();
 const readyWorkers = new Set();

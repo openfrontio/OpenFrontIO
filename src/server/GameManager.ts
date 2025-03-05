@@ -1,8 +1,8 @@
 import { ServerConfig } from "../core/configuration/Config";
+import { Difficulty, GameMapType, GameType } from "../core/game/Game";
 import { GameConfig, GameID } from "../core/Schemas";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
-import { Difficulty, GameMapType, GameType } from "../core/game/Game";
 import { isHighTrafficTime } from "./Util";
 
 export class GameManager {

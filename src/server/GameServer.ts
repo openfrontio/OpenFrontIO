@@ -1,4 +1,3 @@
-import { RateLimiterMemory } from "rate-limiter-flexible";
 import WebSocket from "ws";
 import {
   ClientID,
@@ -18,8 +17,8 @@ import { ServerConfig } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import { archive } from "./Archive";
 import { Client } from "./Client";
-import { slog } from "./StructuredLog";
 import { gatekeeper } from "./Gatekeeper";
+import { slog } from "./StructuredLog";
 
 export enum GamePhase {
   Lobby = "LOBBY",

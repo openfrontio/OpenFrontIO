@@ -1,9 +1,7 @@
 import { ClientID } from "../Schemas";
 import {
-  AllianceRequest,
   EmojiMessage,
   GameUpdates,
-  MapPos,
   MessageType,
   NameViewData,
   PlayerID,

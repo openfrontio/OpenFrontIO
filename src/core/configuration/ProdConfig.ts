@@ -1,5 +1,5 @@
 import { GameEnv } from "./Config";
-import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
+import { DefaultServerConfig } from "./DefaultConfig";
 
 export const prodConfig = new (class extends DefaultServerConfig {
   env(): GameEnv {

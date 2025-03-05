@@ -1,7 +1,5 @@
 import { ClientID } from "../Schemas";
-import { TerraNullius, Cell, PlayerID } from "./Game";
-import { GameImpl } from "./GameImpl";
-import { TileRef } from "./GameMap";
+import { PlayerID, TerraNullius } from "./Game";
 
 export class TerraNulliusImpl implements TerraNullius {
   constructor() {}
