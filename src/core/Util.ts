@@ -58,77 +58,152 @@ export function distSortUnit(
 }
 
 // TODO: refactor to new file
-export function sourceDstOceanShore(
-  gm: Game,
-  src: Player,
-  tile: TileRef,
-): [TileRef | null, TileRef | null] {
-  const dst = gm.owner(tile);
-  let srcTile = closestShoreFromPlayer(gm, src, tile);
-  let dstTile: TileRef | null = null;
-  if (dst.isPlayer()) {
-    dstTile = closestShoreFromPlayer(gm, dst as Player, tile);
-  } else {
-    dstTile = closestShoreTN(gm, tile, 50);
-  }
-  return [srcTile, dstTile];
-}
+// export function sourceDstOceanShore(
+//   gm: Game,
+//   src: Player,
+//   tile: TileRef,
+// ): [TileRef | null, TileRef | null] {
+//   const dst = gm.owner(tile);
+//   let srcTile = closestShoreFromPlayer(gm, src, tile);
+//   let dstTile: TileRef | null = null;
+//   let borderTile: TileRef | null = null;
+//   if (dst.isPlayer()) {
+//     [dstTile, borderTile] = closestShoreTN(gm, src, tile, 50, dst as Player);
+//   } else {
+//     [dstTile, borderTile] = closestShoreTN(gm, src, tile, 50);
+//   }
+//   return [srcTile, dstTile];
+// }
 
-export function targetTransportTile(gm: Game, tile: TileRef): TileRef | null {
+export function targetTransportTile(
+  gm: Game,
+  tile: TileRef,
+  player: Player,
+): [TileRef | null, TileRef | null] {
   const dst = gm.playerBySmallID(gm.ownerID(tile));
   let dstTile: TileRef | null = null;
+  let borderTile: TileRef | null = null;
   if (dst.isPlayer()) {
-    dstTile = closestShoreFromPlayer(gm, dst as Player, tile);
+    [dstTile, borderTile] = closestShoreTN(gm, player, tile, 50, dst as Player);
   } else {
-    dstTile = closestShoreTN(gm, tile, 50);
+    [dstTile, borderTile] = closestShoreTN(gm, player, tile, 50);
   }
-  return dstTile;
+  return [dstTile, borderTile];
 }
 
-export function closestShoreFromPlayer(
+// export function closestShoreFromPlayer(
+//   gm: GameMap,
+//   player: Player,
+//   target: TileRef,
+// ): TileRef | null {
+//   const shoreTiles = Array.from(player.borderTiles()).filter((t) =>
+//     gm.isShore(t),
+//   );
+//   if (shoreTiles.length == 0) {
+//     return null;
+//   }
+
+//   return shoreTiles.reduce((closest, current) => {
+//     const closestDistance = manhattanDistWrapped(
+//       gm.cell(target),
+//       gm.cell(closest),
+//       gm.width(),
+//     );
+//     const currentDistance = manhattanDistWrapped(
+//       gm.cell(target),
+//       gm.cell(current),
+//       gm.width(),
+//     );
+//     return currentDistance < closestDistance ? current : closest;
+//   });
+// }
+
+// searches the nearest shore based on the position of the player and the target tile
+export function closestShoreTN(
   gm: GameMap,
-  player: Player,
+  attacker: Player,
   target: TileRef,
-): TileRef | null {
-  const shoreTiles = Array.from(player.borderTiles()).filter((t) =>
+  searchDist: number,
+  defender?: Player,
+): [TileRef | null, TileRef | null] {
+  const borderTiles = Array.from(attacker.borderTiles()).filter((t) =>
     gm.isShore(t),
   );
-  if (shoreTiles.length == 0) {
-    return null;
+
+  var targetIsWater = gm.isWater(target);
+
+  // prevents the search from ignoring islands when the target is a water tile
+  if (targetIsWater) {
+    const tn = Array.from(
+      gm.bfs(
+        target,
+        andFN(
+          (_, t) => !(gm.ownerID(t) === attacker.smallID()),
+          manhattanDistFN(target, searchDist),
+        ),
+      ),
+    )
+      .filter((t) => gm.isShore(t))
+      .sort(
+        (a, b) => gm.manhattanDist(target, a) - gm.manhattanDist(target, b),
+      );
+
+    target = tn.length > 0 ? tn[0] : null;
+    targetIsWater = gm.isWater(target);
+    if (!target) return [null, null];
   }
 
-  return shoreTiles.reduce((closest, current) => {
-    const closestDistance = manhattanDistWrapped(
-      gm.cell(target),
-      gm.cell(closest),
-      gm.width(),
-    );
-    const currentDistance = manhattanDistWrapped(
-      gm.cell(target),
-      gm.cell(current),
-      gm.width(),
-    );
-    return currentDistance < closestDistance ? current : closest;
-  });
-}
+  const queue: [TileRef, number][] = [[target, 0]];
+  const visited = new Set<TileRef>();
+  const shoreTiles: TileRef[] = [];
 
-function closestShoreTN(
-  gm: GameMap,
-  tile: TileRef,
-  searchDist: number,
-): TileRef {
-  const tn = Array.from(
-    gm.bfs(
-      tile,
-      andFN((_, t) => !gm.hasOwner(t), manhattanDistFN(tile, searchDist)),
-    ),
-  )
-    .filter((t) => gm.isShore(t))
-    .sort((a, b) => gm.manhattanDist(tile, a) - gm.manhattanDist(tile, b));
-  if (tn.length == 0) {
-    return null;
+  while (queue.length > 0) {
+    const [tile, dist] = queue.shift()!;
+    if (visited.has(tile) || dist > searchDist) continue;
+    visited.add(tile);
+
+    // when sending a ship to another player prevent the search using shores not belonging to the player you try to attack and shores belonging to yourself
+    if (gm.isShore(tile) && dist > 0) {
+      if (
+        (!defender || gm.ownerID(tile) === defender.smallID()) &&
+        !(gm.ownerID(tile) === attacker.smallID())
+      ) {
+        shoreTiles.push(tile);
+      }
+      continue;
+    }
+
+    //search the neighboring tiles that are not water tiles (prevents shores from other islands from being used) but not when the starting tile is water itself
+    for (const neighbor of gm.neighbors(tile)) {
+      if (
+        !visited.has(neighbor) &&
+        !(gm.ownerID(neighbor) === attacker.smallID()) &&
+        (targetIsWater || !gm.isWater(neighbor))
+      ) {
+        queue.push([neighbor, dist + 1]);
+      }
+    }
   }
-  return tn[0];
+
+  if (shoreTiles.length === 0) return [null, null];
+
+  let bestShore: TileRef | null = null;
+  let bestBorderTile: TileRef | null = null;
+  let minDist = Infinity;
+
+  // based on the players border tiles get the shortest path from player to shore
+  for (const shore of shoreTiles) {
+    for (const border of borderTiles) {
+      const dist = gm.manhattanDist(border, shore);
+      if (dist < minDist) {
+        minDist = dist;
+        bestShore = shore;
+        bestBorderTile = border;
+      }
+    }
+  }
+
+  return [bestShore, bestBorderTile];
 }
 
 export function simpleHash(str: string): number {
