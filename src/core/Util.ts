@@ -130,7 +130,7 @@ export function closestShoreTN(
     gm.isShore(t),
   );
 
-  const targetIsWater = gm.isWater(target);
+  var targetIsWater = gm.isWater(target);
 
   // prevents the search from ignoring islands when the target is a water tile
   if (targetIsWater) {
@@ -149,6 +149,7 @@ export function closestShoreTN(
       );
 
     target = tn.length > 0 ? tn[0] : null;
+    targetIsWater = gm.isWater(target);
     if (!target) return [null, null];
   }
 
@@ -176,7 +177,7 @@ export function closestShoreTN(
     for (const neighbor of gm.neighbors(tile)) {
       if (
         !visited.has(neighbor) &&
-        !(gm.ownerID(tile) === attacker.smallID()) &&
+        !(gm.ownerID(neighbor) === attacker.smallID()) &&
         (targetIsWater || !gm.isWater(neighbor))
       ) {
         queue.push([neighbor, dist + 1]);

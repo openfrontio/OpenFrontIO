@@ -756,11 +756,12 @@ export class PlayerImpl implements Player {
     if (!this.mg.isShore(targetTile)) {
       return false;
     }
-    const spawn = closestShoreTN(this.mg, this, targetTile, 50)[1];
-    if (spawn == null) {
-      return false;
-    }
-    return spawn;
+    // const spawn = closestShoreTN(this.mg, this, targetTile, 50)[1];
+    // if (spawn == null) {
+    //   return false;
+    // }
+    // return spawn;
+    return 1;
   }
 
   tradeShipSpawn(targetTile: TileRef): TileRef | false {
