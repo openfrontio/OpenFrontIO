@@ -158,6 +158,16 @@ export class TransportShipExecution implements Execution {
           this.active = false;
           return;
         }
+
+        // if the transport ships target is not a player but the actual destination is a player make the transport ship still attack the player of the destination tile
+        if (
+          this.mg.playerBySmallID(this.mg.ownerID(this.dst)) &&
+          Object.keys(this.target).length === 0
+        ) {
+          this.target = this.mg.playerBySmallID(this.mg.ownerID(this.dst));
+          this.targetID = this.target.id();
+        }
+
         if (this.target.isPlayer() && this.attacker.isAlliedWith(this.target)) {
           this.target.addTroops(this.troops);
         } else {
