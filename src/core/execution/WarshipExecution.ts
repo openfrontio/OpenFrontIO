@@ -56,6 +56,12 @@ export class WarshipExecution implements Execution {
   }
 
   tick(ticks: number): void {
+    // Check if owner still exists
+    if (!this._owner || !this._owner.isAlive()) {
+      this.active = false;
+      return;
+    }
+
     if (this.warship == null) {
       const spawn = this._owner.canBuild(UnitType.Warship, this.patrolTile);
       if (spawn == false) {
@@ -65,15 +71,20 @@ export class WarshipExecution implements Execution {
       this.warship = this._owner.buildUnit(UnitType.Warship, 0, spawn);
       return;
     }
-    if (!this.warship.isActive()) {
+
+    // Additional check if warship exists and is active
+    if (!this.warship || !this.warship.isActive()) {
       this.active = false;
       return;
     }
+
     if (this.target != null && !this.target.isActive()) {
       this.target = null;
     }
+
     const ships = this.mg
       .units(UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip)
+      .filter((u) => u && u.isActive()) // Ensure unit exists and is active
       .filter((u) => this.mg.manhattanDist(u.tile(), this.warship.tile()) < 130)
       .filter((u) => u.owner() != this.warship.owner())
       .filter((u) => u != this.warship)
@@ -110,7 +121,11 @@ export class WarshipExecution implements Execution {
         return distSortUnit(this.mg, this.warship)(a, b);
       })[0] ?? null;
 
-    this.warship.setTarget(this.target);
+    // Guard against null target
+    if (this.target) {
+      this.warship.setTarget(this.target);
+    }
+
     if (this.target == null || this.target.type() != UnitType.TradeShip) {
       // Patrol unless we are hunting down a tradeship
       const result = this.pathfinder.nextTile(
@@ -132,15 +147,20 @@ export class WarshipExecution implements Execution {
           break;
       }
     }
+
+    // Additional check to ensure both target and warship exist before proceeding
     if (
-      this.target == null ||
+      !this.target ||
       !this.target.isActive() ||
+      !this.warship ||
+      !this.warship.isActive() ||
       this.target.owner() == this._owner
     ) {
       // In case another destroyer captured or destroyed target
       this.target = null;
       return;
     }
+
     if (this.target.type() != UnitType.TradeShip) {
       if (this.mg.ticks() - this.lastShellAttack > this.shellAttackRate) {
         this.lastShellAttack = this.mg.ticks();
