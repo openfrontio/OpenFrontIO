@@ -1,31 +1,26 @@
 import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
-import { MouseUpEvent } from "../../InputHandler";
-import {
-  AllPlayers,
-  Player,
-  PlayerActions,
-  UnitType,
-} from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { renderNumber, renderTroops } from "../../Utils";
-import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
-import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
-import donateIcon from "../../../../resources/images/DonateIconWhite.svg";
-import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
+import { customElement, state } from "lit/decorators.js";
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
+import donateIcon from "../../../../resources/images/DonateIconWhite.svg";
+import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
+import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
+import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
+import { EventBus } from "../../../core/EventBus";
+import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
+import { TileRef } from "../../../core/game/GameMap";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { MouseUpEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
   SendDonateIntentEvent,
+  SendEmbargoIntentEvent,
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
-  SendEmbargoIntentEvent,
 } from "../../Transport";
+import { renderNumber, renderTroops } from "../../Utils";
 import { EmojiTable } from "./EmojiTable";
+import { Layer } from "./Layer";
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {

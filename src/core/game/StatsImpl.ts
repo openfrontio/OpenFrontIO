@@ -1,4 +1,4 @@
-import { NukeType, Player, PlayerID, UnitType } from "./Game";
+import { NukeType, PlayerID, UnitType } from "./Game";
 import { PlayerStats, Stats } from "./Stats";
 
 interface StatsInternalData {

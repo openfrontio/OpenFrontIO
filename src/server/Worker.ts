@@ -1,19 +1,17 @@
-import express, { Request, Response, NextFunction } from "express";
+import express, { NextFunction, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
 import http from "http";
-import { WebSocketServer } from "ws";
 import path from "path";
 import { fileURLToPath } from "url";
-import { GameManager } from "./GameManager";
+import { WebSocket, WebSocketServer } from "ws";
 import { getServerConfig } from "../core/configuration/Config";
-import { WebSocket } from "ws";
-import { Client } from "./Client";
-import rateLimit from "express-rate-limit";
-import { RateLimiterMemory } from "rate-limiter-flexible";
-import { GameConfig, GameRecord, LogSeverity } from "../core/Schemas";
-import { slog } from "./StructuredLog";
 import { GameType } from "../core/game/Game";
+import { GameConfig, GameRecord, LogSeverity } from "../core/Schemas";
 import { archive } from "./Archive";
+import { Client } from "./Client";
+import { GameManager } from "./GameManager";
 import { LimiterType, gatekeeper } from "./Gatekeeper";
+import { slog } from "./StructuredLog";
 
 const config = getServerConfig();
 

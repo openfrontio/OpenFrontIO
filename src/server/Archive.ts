@@ -1,6 +1,6 @@
-import { GameRecord, GameID } from "../core/Schemas";
-import { S3 } from "@aws-sdk/client-s3";
 import { RedshiftData } from "@aws-sdk/client-redshift-data";
+import { S3 } from "@aws-sdk/client-s3";
+import { GameID, GameRecord } from "../core/Schemas";
 
 // Initialize AWS clients
 const s3 = new S3();

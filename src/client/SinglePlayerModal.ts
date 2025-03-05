@@ -1,12 +1,12 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { Difficulty, GameMapType, GameType } from "../core/game/Game";
-import { generateID as generateID } from "../core/Util";
+import { LitElement, css, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import randomMap from "../../resources/images/RandomMap.png";
 import { consolex } from "../core/Consolex";
+import { Difficulty, GameMapType, GameType } from "../core/game/Game";
+import { generateID } from "../core/Util";
 import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
-import randomMap from "../../resources/images/RandomMap.png";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {

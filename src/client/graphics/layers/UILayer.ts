@@ -1,12 +1,12 @@
 import { Colord } from "colord";
-import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
-import { Layer } from "./Layer";
 import { EventBus } from "../../../core/EventBus";
 import { ClientID } from "../../../core/Schemas";
+import { Theme } from "../../../core/configuration/Config";
+import { UnitType } from "../../../core/game/Game";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { UnitSelectionEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
+import { Layer } from "./Layer";
 
 /**
  * Layer responsible for drawing UI elements that overlay the game

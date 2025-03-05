@@ -1,18 +1,17 @@
+import { consolex } from "../Consolex";
 import {
-  Cell,
   Execution,
   Game,
-  Player,
-  PlayerID,
-  Unit,
-  UnitType,
-  TerraNullius,
   MessageType,
   NukeType,
+  Player,
+  PlayerID,
+  TerraNullius,
+  Unit,
+  UnitType,
 } from "../game/Game";
-import { PseudoRandom } from "../PseudoRandom";
-import { consolex } from "../Consolex";
 import { TileRef } from "../game/GameMap";
+import { PseudoRandom } from "../PseudoRandom";
 
 export class NukeExecution implements Execution {
   private player: Player;
