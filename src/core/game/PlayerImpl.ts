@@ -24,12 +24,12 @@ import { GameUpdateType } from "./GameUpdates";
 import { ClientID } from "../Schemas";
 import {
   assertNever,
-  closestShoreFromPlayer,
+  closestShoreTN,
   distSortUnit,
   maxInt,
   minInt,
   simpleHash,
-  sourceDstOceanShore,
+  // sourceDstOceanShore,
   targetTransportTile,
   toInt,
   within,
@@ -756,7 +756,7 @@ export class PlayerImpl implements Player {
     if (!this.mg.isShore(targetTile)) {
       return false;
     }
-    const spawn = closestShoreFromPlayer(this.mg, this, targetTile);
+    const spawn = closestShoreTN(this.mg, this, targetTile, 50)[1];
     if (spawn == null) {
       return false;
     }
@@ -812,7 +812,7 @@ export class PlayerImpl implements Player {
     }
 
     // destination tile of the ship
-    const dst = targetTransportTile(this.mg, tile, this);
+    const dst = targetTransportTile(this.mg, tile, this)[0];
     if (dst == null) {
       return false;
     }

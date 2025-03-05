@@ -107,7 +107,10 @@ export class TransportShipExecution implements Execution {
     this.troops = Math.min(this.troops, this.attacker.troops());
 
     // destination tile of the ship
-    this.dst = targetTransportTile(this.mg, this.ref, this.attacker);
+    const start = performance.now();
+    let result = targetTransportTile(this.mg, this.ref, this.attacker);
+
+    this.dst = result[0];
     if (this.dst == null) {
       consolex.warn(
         `${this.attacker} cannot send ship to ${this.target}, cannot find attack tile`,
@@ -122,13 +125,15 @@ export class TransportShipExecution implements Execution {
       return;
     }
 
-    this.src = src;
+    this.src = result[1];
 
     this.boat = this.attacker.buildUnit(
       UnitType.TransportShip,
       this.troops,
       this.src,
     );
+    const end = performance.now();
+    console.log(start, end);
   }
 
   tick(ticks: number) {
