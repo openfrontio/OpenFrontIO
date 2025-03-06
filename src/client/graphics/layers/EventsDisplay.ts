@@ -23,6 +23,7 @@ import { Layer } from "./Layer";
 import {
   CancelAttackIntentEvent,
   SendAllianceReplyIntentEvent,
+  SendAttackIntentEvent,
 } from "../../Transport";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { onlyImages, sanitize } from "../../../core/Util";
@@ -307,6 +308,12 @@ export class EventsDisplay extends LitElement implements Layer {
     this.eventBus.emit(new CancelAttackIntentEvent(myPlayer.id(), id));
   }
 
+  emitRetaliateIntent(id: number, troops: number) {
+    const targetPlayer = this.game.playerBySmallID(id);
+    if (!targetPlayer) return;
+    this.eventBus.emit(new SendAttackIntentEvent(targetPlayer.id(), troops));
+  }
+
   onEmojiMessageEvent(update: EmojiUpdate) {
     const myPlayer = this.game.playerByClientID(this.clientID);
     if (!myPlayer) return;
@@ -377,6 +384,16 @@ export class EventsDisplay extends LitElement implements Layer {
                           attack.attackerID,
                         ) as PlayerView
                       )?.name()}
+                      ${html`<button
+                        @click=${() => {
+                          this.emitRetaliateIntent(
+                            attack.attackerID,
+                            attack.troops,
+                          );
+                        }}
+                      >
+                        ⚔️
+                      </button>`}
                     </div>
                   `,
                 )}
