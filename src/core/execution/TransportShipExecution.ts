@@ -107,7 +107,6 @@ export class TransportShipExecution implements Execution {
     this.troops = Math.min(this.troops, this.attacker.troops());
 
     // destination and start tile of the ship
-    const start = performance.now();
     let result = targetTransportTile(this.mg, this.ref, this.attacker);
 
     this.dst = result[0];
@@ -132,8 +131,6 @@ export class TransportShipExecution implements Execution {
       this.troops,
       this.src,
     );
-    const end = performance.now();
-    console.log(end - start);
   }
 
   tick(ticks: number) {
