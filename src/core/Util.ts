@@ -126,9 +126,11 @@ export function closestShoreTN(
   searchDist: number,
   defender?: Player,
 ): [TileRef | null, TileRef | null] {
-  const borderTiles = Array.from(attacker.borderTiles()).filter((t) =>
-    gm.isShore(t),
-  );
+  const borderTile = Array.from(attacker.borderTiles())
+    .filter((t) => gm.isShore(t))
+    .sort(
+      (a, b) => gm.manhattanDist(target, a) - gm.manhattanDist(target, b),
+    )[0];
 
   var targetIsWater = gm.isWater(target);
 
@@ -189,22 +191,18 @@ export function closestShoreTN(
   if (shoreTiles.length === 0) return [null, null];
 
   let bestShore: TileRef | null = null;
-  let bestBorderTile: TileRef | null = null;
   let minDist = Infinity;
 
   // based on the players border tiles get the shortest path from player to shore
   for (const shore of shoreTiles) {
-    for (const border of borderTiles) {
-      const dist = gm.manhattanDist(border, shore);
-      if (dist < minDist) {
-        minDist = dist;
-        bestShore = shore;
-        bestBorderTile = border;
-      }
+    const dist = gm.manhattanDist(borderTile, shore);
+    if (dist < minDist) {
+      minDist = dist;
+      bestShore = shore;
     }
   }
 
-  return [bestShore, bestBorderTile];
+  return [bestShore, borderTile];
 }
 
 export function simpleHash(str: string): number {
