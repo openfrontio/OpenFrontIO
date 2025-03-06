@@ -756,6 +756,7 @@ export class PlayerImpl implements Player {
     if (!this.mg.isShore(targetTile)) {
       return false;
     }
+    // not needed anymore because closestShoreTN gives back start and end tile
     // const spawn = closestShoreTN(this.mg, this, targetTile, 50)[1];
     // if (spawn == null) {
     //   return false;

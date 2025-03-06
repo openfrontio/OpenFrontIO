@@ -150,8 +150,9 @@ export function closestShoreTN(
 
     target = tn.length > 0 ? tn[0] : null;
     targetIsWater = gm.isWater(target);
-    if (!target) return [null, null];
   }
+
+  if (!target) return [null, null];
 
   const queue: [TileRef, number][] = [[target, 0]];
   const visited = new Set<TileRef>();
@@ -178,7 +179,7 @@ export function closestShoreTN(
       if (
         !visited.has(neighbor) &&
         !(gm.ownerID(neighbor) === attacker.smallID()) &&
-        (targetIsWater || !gm.isWater(neighbor))
+        !gm.isWater(neighbor)
       ) {
         queue.push([neighbor, dist + 1]);
       }

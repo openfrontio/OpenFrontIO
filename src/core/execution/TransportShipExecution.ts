@@ -120,8 +120,8 @@ export class TransportShipExecution implements Execution {
       return;
     }
     //just gives back if the boat can be build or not
-    const src = this.attacker.canBuild(UnitType.TransportShip, this.dst);
-    if (src == false) {
+    const buildable = this.attacker.canBuild(UnitType.TransportShip, this.dst);
+    if (!buildable) {
       consolex.warn(`can't build transport ship`);
       this.active = false;
       return;
