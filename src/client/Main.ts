@@ -24,13 +24,24 @@ import { GameType } from "../core/game/Game";
 import { getServerConfigFromClient } from "../core/configuration/Config";
 
 class Client {
+  private spModal: SinglePlayerModal;
+  private hostModal: HostPrivateLobbyModal;
+  private joinModal: JoinPrivateLobbyModal;
+  private helpModal: HelpModal;
+  private flagInput: FlagInput;
+
+  closeAllModals() {
+    this.spModal.close();
+    this.hostModal.close();
+    this.helpModal.close();
+    this.joinModal.close();
+    this.flagInput.close();
+  }
   private gameStop: () => void;
 
   private usernameInput: UsernameInput | null = null;
-  private flagInput: FlagInput | null = null;
   private darkModeButton: DarkModeButton | null = null;
 
-  private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
 
@@ -69,31 +80,31 @@ class Client {
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
 
-    const spModal = document.querySelector(
+    this.spModal = document.querySelector(
       "single-player-modal",
     ) as SinglePlayerModal;
-    spModal instanceof SinglePlayerModal;
+    this.spModal instanceof SinglePlayerModal;
     document.getElementById("single-player").addEventListener("click", () => {
       if (this.usernameInput.isValid()) {
-        spModal.open();
+        this.spModal.open();
       }
     });
 
-    const hlpModal = document.querySelector("help-modal") as HelpModal;
-    hlpModal instanceof HelpModal;
+    this.helpModal = document.querySelector("help-modal") as HelpModal;
+    this.helpModal instanceof HelpModal;
     document.getElementById("help-button").addEventListener("click", () => {
-      hlpModal.open();
+      this.helpModal.open();
     });
 
-    const hostModal = document.querySelector(
+    this.hostModal = document.querySelector(
       "host-lobby-modal",
     ) as HostPrivateLobbyModal;
-    hostModal instanceof HostPrivateLobbyModal;
+    this.hostModal instanceof HostPrivateLobbyModal;
     document
       .getElementById("host-lobby-button")
       .addEventListener("click", () => {
         if (this.usernameInput.isValid()) {
-          hostModal.open();
+          this.hostModal.open();
           this.publicLobby.leaveLobby();
         }
       });
@@ -162,7 +173,7 @@ class Client {
         disableNPCs: event.detail.disableNPCs,
       },
       () => {
-        this.joinModal.close();
+        this.closeAllModals();
         this.publicLobby.stop();
 
         // show when the game loads
