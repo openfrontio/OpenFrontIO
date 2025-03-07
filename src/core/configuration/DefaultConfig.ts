@@ -28,9 +28,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
   adminToken(): string {
     return process.env.ADMIN_TOKEN;
   }
-  numWorkers(): number {
-    return 2;
-  }
+  abstract numWorkers(): number;
   abstract env(): GameEnv;
   abstract discordRedirectURI(): string;
   turnIntervalMs(): number {
@@ -38,9 +36,9 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   gameCreationRate(highTraffic: boolean): number {
     if (highTraffic) {
-      return 30 * 1000;
+      return 20 * 1000;
     } else {
-      return 60 * 1000;
+      return 50 * 1000;
     }
   }
   lobbyLifetime(highTraffic: boolean): number {
@@ -147,8 +145,11 @@ export class DefaultConfig implements Config {
           cost: (p: Player) =>
             p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
-              : (p.unitsIncludingConstruction(UnitType.Warship).length + 1) *
-                250_000,
+              : Math.min(
+                  1_000_000,
+                  (p.unitsIncludingConstruction(UnitType.Warship).length + 1) *
+                    250_000,
+                ),
           territoryBound: false,
           maxHealth: 1000,
         };

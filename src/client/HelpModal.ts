@@ -250,6 +250,10 @@ export class HelpModal extends LitElement {
                   <td>Center camera on player</td>
                 </tr>
                 <tr>
+                  <td>C</td>
+                  <td>Center camera on player</td>
+                </tr>
+                <tr>
                   <td>Q / E</td>
                   <td>Zoom out/in</td>
                 </tr>

@@ -4,7 +4,7 @@ import { WebSocketServer } from "ws";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GameManager } from "./GameManager";
-import { getServerConfig } from "../core/configuration/Config";
+import { getServerConfigFromServer } from "../core/configuration/Config";
 import { WebSocket } from "ws";
 import { Client } from "./Client";
 import rateLimit from "express-rate-limit";
@@ -13,9 +13,9 @@ import { GameConfig, GameRecord, LogSeverity } from "../core/Schemas";
 import { slog } from "./StructuredLog";
 import { GameType } from "../core/game/Game";
 import { archive } from "./Archive";
-import { LimiterType, gatekeeper } from "./Gatekeeper";
+import { gatekeeper, LimiterType } from "./Gatekeeper";
 
-const config = getServerConfig();
+const config = getServerConfigFromServer();
 
 // Worker setup
 export function startWorker() {
@@ -69,7 +69,7 @@ export function startWorker() {
 
   // Endpoint to create a private lobby
   app.post(
-    "/create_game/:id",
+    "/api/create_game/:id",
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
       const id = req.params.id;
       if (!id) {
@@ -79,9 +79,12 @@ export function startWorker() {
       // TODO: if game is public make sure request came from localhohst!!!
       const clientIP = req.ip || req.socket.remoteAddress || "unknown";
       const gc = req.body?.gameConfig as GameConfig;
-      if (gc?.gameType == GameType.Public && !isAdmin(req)) {
+      if (
+        gc?.gameType == GameType.Public &&
+        req.headers[config.adminHeader()] !== config.adminToken()
+      ) {
         console.warn(
-          `cannot create public game ${id}, ip ${clientIP} not admin`,
+          `cannot create public game ${id}, ip ${clientIP} incorrect admin token`,
         );
         return res.status(400);
       }
@@ -106,7 +109,7 @@ export function startWorker() {
 
   // Add other endpoints from your original server
   app.post(
-    "/start_game/:id",
+    "/api/start_game/:id",
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
       console.log(`starting private lobby with id ${req.params.id}`);
       const game = gm.game(req.params.id);
@@ -126,7 +129,7 @@ export function startWorker() {
   );
 
   app.put(
-    "/game/:id",
+    "/api/game/:id",
     gatekeeper.httpHandler(LimiterType.Put, async (req, res) => {
       // TODO: only update public game if from local host
       const lobbyID = req.params.id;
@@ -157,7 +160,7 @@ export function startWorker() {
   );
 
   app.get(
-    "/game/:id/exists",
+    "/api/game/:id/exists",
     gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
       const lobbyId = req.params.id;
       res.json({
@@ -167,7 +170,7 @@ export function startWorker() {
   );
 
   app.get(
-    "/game/:id",
+    "/api/game/:id",
     gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
       const game = gm.game(req.params.id);
       if (game == null) {
@@ -179,7 +182,7 @@ export function startWorker() {
   );
 
   app.post(
-    "/archive_singleplayer_game",
+    "/api/archive_singleplayer_game",
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
       const gameRecord: GameRecord = req.body;
       const clientIP = req.ip || req.socket.remoteAddress || "unknown";
@@ -319,7 +322,3 @@ export function startWorker() {
     });
   });
 }
-
-const isAdmin = (req: Request): boolean => {
-  return req.headers[config.adminHeader()] === config.adminToken();
-};

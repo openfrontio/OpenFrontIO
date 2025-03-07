@@ -12,6 +12,7 @@ import {
   UnitType,
 } from "./Game";
 import { TileRef, TileUpdate } from "./GameMap";
+import { PlayerStats } from "./Stats";
 
 export interface GameUpdateViewData {
   tick: number;
@@ -107,6 +108,7 @@ export interface PlayerUpdate {
   outgoingAttacks: AttackUpdate[];
   incomingAttacks: AttackUpdate[];
   outgoingAllianceRequests: PlayerID[];
+  stats: PlayerStats;
 }
 
 export interface AllianceRequestUpdate {

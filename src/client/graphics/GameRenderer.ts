@@ -25,6 +25,7 @@ import { SpawnTimer } from "./layers/SpawnTimer";
 import { OptionsMenu } from "./layers/OptionsMenu";
 import { TopBar } from "./layers/TopBar";
 import { PlayerPanel } from "./layers/PlayerPanel";
+import { GameStartingModal } from "../gameStartingModal";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,
@@ -35,6 +36,13 @@ export function createRenderer(
   const transformHandler = new TransformHandler(game, eventBus, canvas);
 
   const uiState = { attackRatio: 20 };
+
+  //hide when the game renders
+  const startingModal = document.querySelector(
+    "game-starting-modal",
+  ) as GameStartingModal;
+  startingModal instanceof GameStartingModal;
+  startingModal.hide();
 
   // TODO maybe append this to dcoument instead of querying for them?
   const emojiTable = document.querySelector("emoji-table") as EmojiTable;

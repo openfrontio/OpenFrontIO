@@ -1,9 +1,4 @@
-import {
-  Config,
-  GameEnv,
-  getServerConfig,
-  ServerConfig,
-} from "../core/configuration/Config";
+import { Config, GameEnv, ServerConfig } from "../core/configuration/Config";
 import { consolex } from "../core/Consolex";
 import { GameEvent } from "../core/EventBus";
 import {
@@ -22,12 +17,14 @@ import {
 } from "../core/Schemas";
 import { CreateGameRecord, generateID } from "../core/Util";
 import { LobbyConfig } from "./ClientGameRunner";
+import { LocalPersistantStats } from "./LocalPersistantStats";
 import { getPersistentIDFromCookie } from "./Main";
 
 export class LocalServer {
   private turns: Turn[] = [];
   private intents: Intent[] = [];
   private startedAt: number;
+  private localPersistantsStats = new LocalPersistantStats();
 
   private endTurnIntervalID;
 
@@ -130,7 +127,7 @@ export class LocalServer {
     const blob = new Blob([JSON.stringify(GameRecordSchema.parse(record))], {
       type: "application/json",
     });
-    const workerPath = getServerConfig().workerPath(this.lobbyConfig.gameID);
-    navigator.sendBeacon(`/${workerPath}/archive_singleplayer_game`, blob);
+    const workerPath = this.serverConfig.workerPath(this.lobbyConfig.gameID);
+    navigator.sendBeacon(`/${workerPath}/api/archive_singleplayer_game`, blob);
   }
 }

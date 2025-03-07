@@ -14,19 +14,25 @@ export default (env, argv) => {
     entry: "./src/client/Main.ts",
     output: {
       publicPath: "/",
-      filename: "bundle.js",
-      path: path.resolve(__dirname, "out"),
+      filename: "js/[name].[contenthash].js", // Added content hash
+      path: path.resolve(__dirname, "static"),
       clean: true,
     },
     module: {
       rules: [
         {
           test: /\.bin$/,
-          use: "raw-loader",
+          type: "asset/resource", // Changed from raw-loader
+          generator: {
+            filename: "binary/[name].[contenthash][ext]", // Added content hash
+          },
         },
         {
           test: /\.txt$/,
-          use: "raw-loader",
+          type: "asset/resource", // Changed from raw-loader
+          generator: {
+            filename: "text/[name].[contenthash][ext]", // Added content hash
+          },
         },
         {
           test: /\.ts$/,
@@ -57,7 +63,7 @@ export default (env, argv) => {
           test: /\.(png|jpe?g|gif)$/i,
           type: "asset/resource",
           generator: {
-            filename: "images/[hash][ext][query]",
+            filename: "images/[name].[contenthash][ext]", // Added content hash
           },
         },
         {
@@ -66,20 +72,17 @@ export default (env, argv) => {
         },
         {
           test: /\.svg$/,
-          type: "asset/inline",
+          type: "asset/resource", // Changed from asset/inline for caching
+          generator: {
+            filename: "images/[name].[contenthash][ext]", // Added content hash
+          },
         },
         {
           test: /\.(woff|woff2|eot|ttf|otf)$/,
-          use: [
-            {
-              loader: "file-loader",
-              options: {
-                name: "[name].[ext]",
-                outputPath: "fonts/",
-                publicPath: "../fonts/", // This is important
-              },
-            },
-          ],
+          type: "asset/resource", // Changed from file-loader
+          generator: {
+            filename: "fonts/[name].[contenthash][ext]", // Added content hash and fixed path
+          },
         },
       ],
     },
@@ -96,6 +99,17 @@ export default (env, argv) => {
       new HtmlWebpackPlugin({
         template: "./src/client/index.html",
         filename: "index.html",
+        // Add optimization for HTML
+        minify: isProduction
+          ? {
+              collapseWhitespace: true,
+              removeComments: true,
+              removeRedundantAttributes: true,
+              removeScriptTypeAttributes: true,
+              removeStyleLinkTypeAttributes: true,
+              useShortDoctype: true,
+            }
+          : false,
       }),
       new webpack.DefinePlugin({
         "process.env.WEBSOCKET_URL": JSON.stringify(
@@ -106,18 +120,42 @@ export default (env, argv) => {
         "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
       }),
       new CopyPlugin({
-        patterns: [{ from: "resources", to: path.resolve(__dirname, "out") }],
+        patterns: [
+          {
+            from: "resources",
+            to: ".", // Copy to the output directory (static)
+            // Add content hashing to copied files
+            transform: function (content, path) {
+              return content; // Return unmodified content
+            },
+            // Don't hash HTML files from resources
+            noErrorOnMissing: true,
+          },
+        ],
         options: {
           concurrency: 100,
         },
       }),
     ],
+    optimization: {
+      // Add optimization configuration for better caching
+      runtimeChunk: "single",
+      splitChunks: {
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: "vendors",
+            chunks: "all",
+          },
+        },
+      },
+    },
     devServer: isProduction
       ? {}
       : {
           devMiddleware: { writeToDisk: true },
           static: {
-            directory: path.join(__dirname, "out"),
+            directory: path.join(__dirname, "static"),
           },
           historyApiFallback: true,
           compress: true,
@@ -184,14 +222,15 @@ export default (env, argv) => {
             // Original API endpoints
             {
               context: [
-                "/public_lobbies",
-                "/join_game",
-                "/start_game",
-                "/create_game",
-                "/archive_singleplayer_game",
-                "/debug-ip",
-                "/auth/callback",
-                "/auth/discord",
+                "/api/env",
+                "/api/game",
+                "/api/public_lobbies",
+                "/api/join_game",
+                "/api/start_game",
+                "/api/create_game",
+                "/api/archive_singleplayer_game",
+                "/api/auth/callback",
+                "/api/auth/discord",
               ],
               target: "http://localhost:3000",
               secure: false,

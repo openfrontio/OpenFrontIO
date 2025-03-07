@@ -18,12 +18,14 @@ import {
 } from "../core/game/GameUpdates";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { consolex, initRemoteSender } from "../core/Consolex";
-import { getConfig, getServerConfig } from "../core/configuration/Config";
+import { getConfig, ServerConfig } from "../core/configuration/Config";
 import { GameView, PlayerView } from "../core/game/GameView";
 import { GameUpdateViewData } from "../core/game/GameUpdates";
 import { UserSettings } from "../core/game/UserSettings";
+import { LocalPersistantStats } from "./LocalPersistantStats";
 
 export interface LobbyConfig {
+  serverConfig: ServerConfig;
   flag: () => string;
   playerName: () => string;
   clientID: ClientID;
@@ -51,8 +53,6 @@ export function joinLobby(
     `joinging lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}, persistentID: ${lobbyConfig.persistentID}`,
   );
 
-  const serverConfig = getServerConfig();
-
   const userSettings: UserSettings = new UserSettings();
   let gameConfig: GameConfig = null;
   if (lobbyConfig.gameType == GameType.Singleplayer) {
@@ -72,7 +72,7 @@ export function joinLobby(
     lobbyConfig,
     gameConfig,
     eventBus,
-    serverConfig,
+    lobbyConfig.serverConfig,
   );
 
   const onconnect = () => {
@@ -106,7 +106,7 @@ export async function createClientGame(
   transport: Transport,
   userSettings: UserSettings,
 ): Promise<ClientGameRunner> {
-  const config = getConfig(gameConfig, userSettings);
+  const config = await getConfig(gameConfig, userSettings);
 
   const gameMap = await loadTerrainMap(gameConfig.gameMap);
   const worker = new WorkerClient(
@@ -120,6 +120,7 @@ export async function createClientGame(
     config,
     gameMap.gameMap,
     lobbyConfig.clientID,
+    lobbyConfig.gameID,
   );
 
   consolex.log("going to init path finder");
@@ -137,7 +138,7 @@ export async function createClientGame(
   );
 
   return new ClientGameRunner(
-    lobbyConfig.clientID,
+    lobbyConfig,
     eventBus,
     gameRenderer,
     new InputHandler(canvas, eventBus),
@@ -148,6 +149,7 @@ export async function createClientGame(
 }
 
 export class ClientGameRunner {
+  private localPersistantsStats = new LocalPersistantStats();
   private myPlayer: PlayerView;
   private isActive = false;
 
@@ -155,7 +157,7 @@ export class ClientGameRunner {
   private hasJoined = false;
 
   constructor(
-    private clientID: ClientID,
+    private lobby: LobbyConfig,
     private eventBus: EventBus,
     private renderer: GameRenderer,
     private input: InputHandler,
@@ -165,6 +167,7 @@ export class ClientGameRunner {
   ) {}
 
   public start() {
+    this.localPersistantsStats.startGame(this.lobby);
     consolex.log("starting client game");
     this.isActive = true;
     this.eventBus.on(MouseUpEvent, (e) => this.inputEvent(e));
@@ -173,7 +176,7 @@ export class ClientGameRunner {
     this.input.initialize();
     this.worker.start((gu: GameUpdateViewData | ErrorUpdate) => {
       if ("errMsg" in gu) {
-        showErrorModal(gu.errMsg, gu.stack, this.clientID);
+        showErrorModal(gu.errMsg, gu.stack, this.lobby.clientID);
         return;
       }
       gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
@@ -217,7 +220,7 @@ export class ClientGameRunner {
         showErrorModal(
           `desync from server: ${JSON.stringify(message)}`,
           "",
-          this.clientID,
+          this.lobby.clientID,
         );
       }
       if (message.type == "turn") {
@@ -269,7 +272,7 @@ export class ClientGameRunner {
       return;
     }
     if (this.myPlayer == null) {
-      this.myPlayer = this.gameView.playerByClientID(this.clientID);
+      this.myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
       if (this.myPlayer == null) {
         return;
       }

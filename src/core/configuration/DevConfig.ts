@@ -20,6 +20,9 @@ export class DevServerConfig extends DefaultServerConfig {
   discordRedirectURI(): string {
     return "http://localhost:3000/auth/callback";
   }
+  numWorkers(): number {
+    return 2;
+  }
 }
 
 export class DevConfig extends DefaultConfig {

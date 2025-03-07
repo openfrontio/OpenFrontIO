@@ -4,7 +4,10 @@ import express from "express";
 import { GameMapType, GameType, Difficulty } from "../core/game/Game";
 import { generateID } from "../core/Util";
 import { PseudoRandom } from "../core/PseudoRandom";
-import { GameEnv, getServerConfig } from "../core/configuration/Config";
+import {
+  GameEnv,
+  getServerConfigFromServer,
+} from "../core/configuration/Config";
 import { GameInfo } from "../core/Schemas";
 import path from "path";
 import rateLimit from "express-rate-limit";
@@ -12,7 +15,7 @@ import { fileURLToPath } from "url";
 import { isHighTrafficTime } from "./Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 
-const config = getServerConfig();
+const config = getServerConfigFromServer();
 const readyWorkers = new Set();
 
 const app = express();
@@ -21,8 +24,25 @@ const server = http.createServer(app);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.json());
-// Serve static files from the 'out' directory
-app.use(express.static(path.join(__dirname, "../../out")));
+app.use(
+  express.static(path.join(__dirname, "../../static"), {
+    maxAge: "1y", // Set max-age to 1 year for all static assets
+    setHeaders: (res, path) => {
+      // You can conditionally set different cache times based on file types
+      if (path.endsWith(".html")) {
+        // HTML files get shorter cache time
+        res.setHeader("Cache-Control", "public, max-age=60");
+      } else if (path.match(/\.(js|css|svg)$/)) {
+        // JS, CSS, SVG get long cache with immutable
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      } else if (path.match(/\.(bin|dat|exe|dll|so|dylib)$/)) {
+        // Binary files also get long cache with immutable
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      }
+      // Other file types use the default maxAge setting
+    },
+  }),
+);
 app.use(express.json());
 
 app.set("trust proxy", 3);
@@ -122,9 +142,19 @@ export async function startMaster() {
   });
 }
 
+app.get(
+  "/api/env",
+  gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
+    const envConfig = {
+      game_env: process.env.GAME_ENV || "prod",
+    };
+    res.json(envConfig);
+  }),
+);
+
 // Add lobbies endpoint to list public games for this worker
 app.get(
-  "/public_lobbies",
+  "/api/public_lobbies",
   gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
     res.send(publicLobbiesJsonStr);
   }),
@@ -135,7 +165,9 @@ async function fetchLobbies(): Promise<void> {
 
   for (const gameID of publicLobbyIDs) {
     const port = config.workerPort(gameID);
-    const promise = fetch(`http://localhost:${port}/game/${gameID}`)
+    const promise = fetch(`http://localhost:${port}/api/game/${gameID}`, {
+      headers: { [config.adminHeader()]: config.adminToken() },
+    })
       .then((resp) => resp.json())
       .then((json) => {
         return json as GameInfo;
@@ -191,27 +223,29 @@ async function schedulePublicGame() {
     disableNPCs: false,
     bots: 400,
   };
+
   const workerPath = config.workerPath(gameID);
+
   // Send request to the worker to start the game
   try {
     const response = await fetch(
-      `http://localhost:${config.workerPort(gameID)}/create_game/${gameID}`,
+      `http://localhost:${config.workerPort(gameID)}/api/create_game/${gameID}`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Internal-Request": "true",
           [config.adminHeader()]: config.adminToken(),
         },
         body: JSON.stringify({
-          gameID: gameID,
           gameConfig: defaultGameConfig,
         }),
       },
     );
+
     if (!response.ok) {
       throw new Error(`Failed to schedule public game: ${response.statusText}`);
     }
+
     const data = await response.json();
   } catch (error) {
     console.error(
@@ -222,9 +256,11 @@ async function schedulePublicGame() {
   }
 }
 
+// Map rotation management (moved from GameManager)
 let mapsPlaylist: GameMapType[] = [];
 const random = new PseudoRandom(123);
 
+// Get the next map in rotation
 function getNextMap(): GameMapType {
   if (mapsPlaylist.length > 0) {
     return mapsPlaylist.shift()!;
@@ -235,7 +271,6 @@ function getNextMap(): GameMapType {
     Europe: 4,
     Mena: 2,
     NorthAmerica: 2,
-    Oceania: 1,
     BlackSea: 2,
     Africa: 2,
     Asia: 2,
@@ -275,5 +310,5 @@ function sleep(ms: number): Promise<void> {
 
 // SPA fallback route
 app.get("*", function (req, res) {
-  res.sendFile(path.join(__dirname, "../../out/index.html"));
+  res.sendFile(path.join(__dirname, "../../static/index.html"));
 });

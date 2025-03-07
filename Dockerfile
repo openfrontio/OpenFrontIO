@@ -2,7 +2,7 @@
 FROM node:18
 
 # Add environment variable
-ARG GAME_ENV=preprod
+ARG GAME_ENV=prod
 ENV GAME_ENV=$GAME_ENV
 
 # Install Nginx, Supervisor and Git (for Husky)

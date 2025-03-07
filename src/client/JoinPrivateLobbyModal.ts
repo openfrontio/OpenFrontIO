@@ -1,9 +1,9 @@
 import { LitElement, css, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { getServerConfig } from "../core/configuration/Config";
 import { consolex } from "../core/Consolex";
 import { GameMapType, GameType } from "../core/game/Game";
 import { GameInfo } from "../core/Schemas";
+import { getServerConfigFromClient } from "../core/configuration/Config";
 
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {
@@ -363,12 +363,13 @@ export class JoinPrivateLobbyModal extends LitElement {
     }
   }
 
-  private joinLobby() {
+  private async joinLobby() {
     const lobbyId = this.lobbyIdInput.value;
     consolex.log(`Joining lobby with ID: ${lobbyId}`);
     this.message = "Checking lobby..."; // Set initial message
 
-    const url = `/${getServerConfig().workerPath(lobbyId)}/game/${lobbyId}/exists`;
+    const config = await getServerConfigFromClient();
+    const url = `/${config.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
     fetch(url, {
       method: "GET",
       headers: {
@@ -406,9 +407,10 @@ export class JoinPrivateLobbyModal extends LitElement {
 
   private async pollPlayers() {
     if (!this.lobbyIdInput?.value) return;
+    const config = await getServerConfigFromClient();
 
     fetch(
-      `/${getServerConfig().workerPath(this.lobbyIdInput.value)}/game/${this.lobbyIdInput.value}`,
+      `/${config.workerPath(this.lobbyIdInput.value)}/api/game/${this.lobbyIdInput.value}`,
       {
         method: "GET",
         headers: {

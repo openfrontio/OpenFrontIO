@@ -22,21 +22,24 @@ import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 
+let cachedSC: ServerConfig = null;
+
 export enum GameEnv {
   Dev,
   Preprod,
   Prod,
 }
-export function getConfig(
+
+export async function getConfig(
   gameConfig: GameConfig,
   userSettings: UserSettings | null = null,
-): Config {
-  const sc = getServerConfig();
-  switch (process.env.GAME_ENV) {
-    case "dev":
+): Promise<Config> {
+  const sc = await getServerConfigFromClient();
+  switch (sc.env()) {
+    case GameEnv.Dev:
       return new DevConfig(sc, gameConfig, userSettings);
-    case "preprod":
-    case "prod":
+    case GameEnv.Preprod:
+    case GameEnv.Prod:
       consolex.log("using prod config");
       return new DefaultConfig(sc, gameConfig, userSettings);
     default:
@@ -44,20 +47,43 @@ export function getConfig(
   }
 }
 
-export function getServerConfig(): ServerConfig {
-  switch (process.env.GAME_ENV) {
+export async function getServerConfigFromClient(): Promise<ServerConfig> {
+  if (cachedSC) {
+    return cachedSC;
+  }
+  const response = await fetch("/api/env");
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch server config: ${response.status} ${response.statusText}`,
+    );
+  }
+  const config = await response.json();
+  // Log the retrieved configuration
+  console.log("Server config loaded:", config);
+
+  cachedSC = getServerConfig(config.game_env);
+  return cachedSC;
+}
+
+export function getServerConfigFromServer(): ServerConfig {
+  const gameEnv = process.env.GAME_ENV;
+  return getServerConfig(gameEnv);
+}
+
+function getServerConfig(gameEnv: string) {
+  switch (gameEnv) {
     case "dev":
-      consolex.log("using dev config");
+      consolex.log("using dev server config");
       return new DevServerConfig();
-    case "preprod":
-      consolex.log("using preprod config");
+    case "staging":
+      consolex.log("using preprod server config");
       return preprodConfig;
     case "prod":
-    default:
-      consolex.log("using prod config");
+      consolex.log("using prod server config");
       return prodConfig;
-    // default:
-    // 	throw Error(`unsupported server configuration: ${process.env.GAME_ENV}`)
+    default:
+      throw Error(`unsupported server configuration: ${gameEnv}`);
   }
 }
 

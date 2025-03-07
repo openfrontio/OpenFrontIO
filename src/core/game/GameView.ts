@@ -24,12 +24,13 @@ import {
   UnitInfo,
   UnitType,
 } from "./Game";
-import { ClientID } from "../Schemas";
+import { ClientID, GameID } from "../Schemas";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { WorkerClient } from "../worker/WorkerClient";
 import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdateViewData } from "./GameUpdates";
 import { DefenseGrid } from "./DefensePostGrid";
+import { PlayerStats } from "./Stats";
 
 export class UnitView {
   public _wasUpdated = true;
@@ -220,6 +221,9 @@ export class PlayerView {
       this.id(),
     );
   }
+  stats(): PlayerStats {
+    return this.data.stats;
+  }
 }
 
 export class GameView implements GameMap {
@@ -240,6 +244,7 @@ export class GameView implements GameMap {
     private _config: Config,
     private _map: GameMap,
     private _myClientID: ClientID,
+    private _gameID: GameID,
   ) {
     this.lastUpdate = {
       tick: 0,
@@ -486,5 +491,8 @@ export class GameView implements GameMap {
   }
   numTilesWithFallout(): number {
     return this._map.numTilesWithFallout();
+  }
+  gameID(): GameID {
+    return this._gameID;
   }
 }

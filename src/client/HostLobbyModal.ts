@@ -6,9 +6,12 @@ import { consolex } from "../core/Consolex";
 import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
-import { generateID } from "../core/Util";
-import { getConfig, getServerConfig } from "../core/configuration/Config";
 import randomMap from "../../resources/images/RandomMap.png";
+import { generateID } from "../core/Util";
+import {
+  getConfig,
+  getServerConfigFromClient,
+} from "../core/configuration/Config";
 
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
@@ -26,6 +29,8 @@ export class HostLobbyModal extends LitElement {
   @state() private useRandomMap: boolean = false;
 
   private playersInterval = null;
+  // Add a new timer for debouncing bot changes
+  private botsUpdateTimer: number | null = null;
 
   static styles = css`
     .modal-overlay {
@@ -571,11 +576,18 @@ export class HostLobbyModal extends LitElement {
       clearInterval(this.playersInterval);
       this.playersInterval = null;
     }
+    // Clear any pending bot updates
+    if (this.botsUpdateTimer !== null) {
+      clearTimeout(this.botsUpdateTimer);
+      this.botsUpdateTimer = null;
+    }
   }
+
   private async handleRandomMapToggle() {
     this.useRandomMap = true;
     this.putGameConfig();
   }
+
   private async handleMapSelection(value: GameMapType) {
     this.selectedMap = value;
     this.useRandomMap = false;
@@ -586,14 +598,28 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
+  // Modified to include debouncing
   private handleBotsChange(e: Event) {
     const value = parseInt((e.target as HTMLInputElement).value);
     if (isNaN(value) || value < 0 || value > 400) {
       return;
     }
+
+    // Update the display value immediately
     this.bots = value;
-    this.putGameConfig();
+
+    // Clear any existing timer
+    if (this.botsUpdateTimer !== null) {
+      clearTimeout(this.botsUpdateTimer);
+    }
+
+    // Set a new timer to call putGameConfig after 300ms of inactivity
+    this.botsUpdateTimer = window.setTimeout(() => {
+      this.putGameConfig();
+      this.botsUpdateTimer = null;
+    }, 300);
   }
+
   private handleInstantBuildChange(e: Event) {
     this.instantBuild = Boolean((e.target as HTMLInputElement).checked);
     this.putGameConfig();
@@ -614,8 +640,9 @@ export class HostLobbyModal extends LitElement {
   }
 
   private async putGameConfig() {
+    const config = await getServerConfigFromClient();
     const response = await fetch(
-      `${window.location.origin}/${getServerConfig().workerPath(this.lobbyId)}/game/${this.lobbyId}`,
+      `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`,
       {
         method: "PUT",
         headers: {
@@ -650,8 +677,9 @@ export class HostLobbyModal extends LitElement {
       `Starting private game with map: ${GameMapType[this.selectedMap]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     this.close();
+    const config = await getServerConfigFromClient();
     const response = await fetch(
-      `${window.location.origin}/${getServerConfig().workerPath(this.lobbyId)}/start_game/${this.lobbyId}`,
+      `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
       {
         method: "POST",
         headers: {
@@ -677,15 +705,13 @@ export class HostLobbyModal extends LitElement {
   }
 
   private async pollPlayers() {
-    fetch(
-      `/${getServerConfig().workerPath(this.lobbyId)}/game/${this.lobbyId}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+    const config = await getServerConfigFromClient();
+    fetch(`/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
       },
-    )
+    })
       .then((response) => response.json())
       .then((data: GameInfo) => {
         console.log(`got response: ${data}`);
@@ -695,11 +721,11 @@ export class HostLobbyModal extends LitElement {
 }
 
 async function createLobby(): Promise<GameInfo> {
-  const serverConfig = getServerConfig();
+  const config = await getServerConfigFromClient();
   try {
     const id = generateID();
     const response = await fetch(
-      `/${serverConfig.workerPath(id)}/create_game/${id}`,
+      `/${config.workerPath(id)}/api/create_game/${id}`,
       {
         method: "POST",
         headers: {

@@ -8,6 +8,7 @@ import {
   AllPlayers,
   Player,
   PlayerActions,
+  PlayerID,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -133,8 +134,8 @@ export class PlayerPanel extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  getTotalNukesSent(): number {
-    const stats = this.actions.interaction?.stats;
+  getTotalNukesSent(otherId: PlayerID): number {
+    const stats = this.g.player(otherId).stats();
     if (!stats) {
       return 0;
     }
@@ -189,7 +190,7 @@ export class PlayerPanel extends LitElement implements Layer {
           <button
             @click=${this.handleClose}
             class="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center
-                   bg-red-500 hover:bg-red-600 text-white rounded-full 
+                   bg-red-500 hover:bg-red-600 text-white rounded-full
                    text-sm font-bold transition-colors"
           >
             ✕
@@ -199,7 +200,7 @@ export class PlayerPanel extends LitElement implements Layer {
             <!-- Name section -->
             <div class="flex items-center gap-1 lg:gap-2">
               <div
-                class="px-4 h-8 lg:h-10 flex items-center justify-center 
+                class="px-4 h-8 lg:h-10 flex items-center justify-center
                        bg-opacity-50 bg-gray-700 text-opacity-90 text-white
                        rounded text-sm lg:text-xl w-full"
               >
@@ -251,7 +252,7 @@ export class PlayerPanel extends LitElement implements Layer {
                 Nukes sent by them to you
               </div>
               <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
-                ${this.getTotalNukesSent()}
+                ${this.getTotalNukesSent(other.id())}
               </div>
             </div>
 
@@ -261,7 +262,7 @@ export class PlayerPanel extends LitElement implements Layer {
                 ? html`<button
                     @click=${(e) => this.handleTargetClick(e, other)}
                     class="w-10 h-10 flex items-center justify-center
-                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70 
+                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70
                            text-white rounded-lg transition-colors"
                   >
                     <img src=${targetIcon} alt="Target" class="w-6 h-6" />
