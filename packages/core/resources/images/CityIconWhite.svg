@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+
+<svg
+   fill="#000000"
+   width="800px"
+   height="800px"
+   viewBox="0 0 24 24"
+   version="1.1"
+   id="svg4"
+   sodipodi:docname="CityIconWhite.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs8" />
+  <sodipodi:namedview
+     id="namedview6"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="0.295"
+     inkscape:cx="401.69492"
+     inkscape:cy="400"
+     inkscape:window-width="1536"
+     inkscape:window-height="987"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg4" />
+  <path
+     d="M13,9a1,1,0,0,0-1-1H3A1,1,0,0,0,2,9V22H13ZM6,20H4V18H6Zm0-4H4V14H6Zm0-4H4V10H6Zm5,8H8V18h3Zm0-4H8V14h3Zm0-4H8V10h3Zm3.5-6H6V3A1,1,0,0,1,7,2H17a1,1,0,0,1,1,1v7H15V6.5A.5.5,0,0,0,14.5,6ZM22,13v9H19.5V18h-2v4H15V13a1,1,0,0,1,1-1h5A1,1,0,0,1,22,13Z"
+     id="path2" />
+  <path
+     style="fill:#ffffff;stroke-width:3.38983"
+     d="M 67.79661,511.52542 V 290.84746 l 11.621631,-11.62163 11.621632,-11.62163 161.555287,0.94366 161.55528,0.94367 8.17902,9.51106 8.17901,9.51106 V 510.35852 732.20339 H 249.15254 67.79661 Z M 200,633.89831 V 600 h -33.89831 -33.8983 v 33.89831 33.8983 H 166.10169 200 Z m 169.49153,0 V 600 h -52.54238 -52.54237 v 33.89831 33.8983 h 52.54237 52.54238 z M 200,500 v -35.59322 h -33.89831 -33.8983 V 500 535.59322 H 166.10169 200 Z m 169.49153,0 V 464.40678 H 316.94915 264.40678 V 500 535.59322 h 52.54237 52.54238 z M 200,366.10169 v -33.8983 h -33.89831 -33.8983 V 366.10169 400 H 166.10169 200 Z m 169.49153,0 v -33.8983 H 316.94915 264.40678 V 366.10169 400 h 52.54237 52.54238 z"
+     id="path183"
+     transform="scale(0.03)" />
+  <path
+     style="fill:#ffffff;stroke-width:3.38983"
+     d="m 501.69492,270.16949 c 0,-43.72881 -1.20034,-63.23423 -4.0678,-66.10169 C 494.58828,201.02896 456.35566,200 346.48184,200 H 199.40436 l 1.14528,-53.55002 c 1.24728,-58.31948 4.26404,-68.716423 21.88222,-75.414844 11.34097,-4.31183 343.79529,-4.31183 355.13628,0 4.68488,1.781189 11.26725,7.431255 14.62745,12.555701 5.54217,8.452001 6.20319,20.427403 7.11855,128.964863 l 1.00901,119.64769 h -49.3141 -49.31413 z"
+     id="path185"
+     transform="scale(0.03)" />
+  <path
+     style="fill:#ffffff;stroke-width:3.38983"
+     d="M 501.69492,578.01958 V 423.83577 l 9.89142,-11.07043 9.89143,-11.07042 h 92.80003 c 83.69792,0 93.71458,0.59923 102.12428,6.10948 5.12834,3.36022 10.78159,9.94258 12.56278,14.62746 1.88177,4.94941 3.23853,71.62228 3.23853,159.14475 V 732.20339 H 691.52542 650.84746 V 666.10169 600 h -33.89831 -33.8983 v 66.10169 66.1017 h -40.67797 -40.67796 z"
+     id="path187"
+     transform="scale(0.03)" />
+</svg>

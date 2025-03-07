@@ -1,0 +1,43 @@
+{
+  "name": "@openfrontio/client",
+  "version": "1.0.0",
+  "description": "OpenFront Web-Client",
+  "scripts": {
+    "build-dev": "webpack --config webpack.config.js --mode development",
+    "build-prod": "webpack --config webpack.config.js --mode production",
+    "start:client": "webpack serve --open --node-env development"
+  },
+  "dependencies": {
+    "@datastructures-js/priority-queue": "^6.3.1",
+    "@openfrontio/core": "workspace:@openfrontio/core",
+    "colord": "^2.9.3",
+    "d3": "^7.9.0",
+    "lit": "^3.2.1",
+    "page": "^1.11.6",
+    "protobufjs": "^7.3.2",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/d3": "^7.4.3",
+    "@types/uuid": "^10.0.0",
+    "autoprefixer": "^10.4.20",
+    "binary-loader": "^0.0.1",
+    "copy-webpack-plugin": "^12.0.2",
+    "css-loader": "^7.1.2",
+    "file-loader": "^6.2.0",
+    "html-inline-script-webpack-plugin": "^3.2.1",
+    "html-loader": "^5.1.0",
+    "html-webpack-plugin": "^5.6.3",
+    "postcss": "^8.5.1",
+    "postcss-loader": "^8.1.1",
+    "raw-loader": "^4.0.2",
+    "style-loader": "^4.0.0",
+    "tailwindcss": "^3.4.17",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5",
+    "webpack": "^5.91.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.0.4"
+  }
+}

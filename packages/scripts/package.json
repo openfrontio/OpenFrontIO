@@ -1,0 +1,14 @@
+{
+  "name": "@openfrontio/scripts",
+  "version": "1.0.0",
+  "description": "OpenFront Scripts",
+  "scripts": {
+    "build-map": "bun run src/TerrainMapGenerator.ts"
+  },
+  "dependencies": {
+    "pureimage": "^0.4.13"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

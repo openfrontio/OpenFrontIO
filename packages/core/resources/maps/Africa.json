@@ -1,0 +1,43 @@
+{
+  "name": "Africa",
+  "width": 2000,
+  "height": 2128,
+  "nations": [
+    {
+      "coordinates": [1173, 1984],
+      "name": "South Africa",
+      "strength": 3,
+      "flag": "za"
+    },
+    {
+      "coordinates": [1681, 752],
+      "name": "Sudan",
+      "strength": 2,
+      "flag": "sd"
+    },
+    {
+      "coordinates": [1850, 1691],
+      "name": "Madagascar",
+      "strength": 1,
+      "flag": "mg"
+    },
+    {
+      "coordinates": [1111, 1019],
+      "name": "Central African Republic",
+      "strength": 2,
+      "flag": "cf"
+    },
+    {
+      "coordinates": [746, 124],
+      "name": "Tunisia",
+      "strength": 3,
+      "flag": "tn"
+    },
+    {
+      "coordinates": [1397, 304],
+      "name": "Egypt",
+      "strength": 3,
+      "flag": "eg"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+  <g id="color">
+    <rect x="5" y="17" width="62" height="38" fill="#781e32"/>
+    <polygon fill="#fff" points="5 17 19 17 26 19.5 19.5 21.9 26 24.2 19.5 26.6 26 28.9 19.5 31.3 26 33.7 19.5 36 26 38.4 19.5 40.7 26 43.1 19.5 45.5 26 47.8 19.5 50.2 26 52.5 19 55 5 55 5 17"/>
+  </g>
+  <g id="line">
+    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+  </g>
+</svg>

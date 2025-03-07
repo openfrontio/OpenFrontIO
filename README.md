@@ -24,8 +24,7 @@ This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 
 ## 📋 Prerequisites
 
-- [Node.js](https://nodejs.org/) (v16.x or higher)
-- [npm](https://www.npmjs.com/) (v8.x or higher)
+- [Bun.js](https://bun.sh/) (v1.2.4 or higher)
 - A modern web browser (Chrome, Firefox, Edge, etc.)
 
 ## 🚀 Installation
@@ -37,10 +36,14 @@ This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
    cd OpenFrontIO
    ```
 
-2. **Install dependencies**
+2. **Install bun.js**
+
+   see for info
+
+3. **Install dependencies**
 
    ```bash
-   npm install
+   bun i
    ```
 
 ## 🎮 Running the Game
@@ -50,7 +53,7 @@ This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 Run both the client and server in development mode with live reloading:
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 This will:
@@ -64,7 +67,7 @@ This will:
 To run just the client with hot reloading:
 
 ```bash
-npm run start:client
+bun run start:client
 ```
 
 ### Server Only
@@ -72,22 +75,34 @@ npm run start:client
 To run just the server with development settings:
 
 ```bash
-npm run start:server-dev
+bun run start:server-dev
 ```
 
 ## 🛠️ Development Tools
 
 - **Format code**:
+
   ```bash
-  npm run format
+  bun run format
+  ```
+
+- **Lint the code**:
+
+  ```bash
+  bun run lint
+  ```
+
+- **Test the code**:
+  ```bash
+  bun test
   ```
 
 ## 🏗️ Project Structure
 
-- `/src/client` - Frontend game client
-- `/src/core` - Shared game logic
-- `/src/server` - Backend game server
-- `/resources` - Static assets (images, maps, etc.)
+- `/packages/client` - Frontend game client
+- `/packages/server` - Backend game server
+- `/packages/core` - Shared game logic
+  - `./resources` - Static assets (images, maps, etc.)
 
 ## 📝 License
 

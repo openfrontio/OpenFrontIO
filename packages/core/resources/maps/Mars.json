@@ -1,0 +1,43 @@
+{
+  "name": "Mars",
+  "width": 2000,
+  "height": 1000,
+  "nations": [
+    {
+      "coordinates": [650, 415],
+      "name": "United States",
+      "strength": 3,
+      "flag": "us"
+    },
+    {
+      "coordinates": [122, 750],
+      "name": "USSR",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [1232, 735],
+      "name": "Russia",
+      "strength": 2,
+      "flag": "ru"
+    },
+    {
+      "coordinates": [966, 511],
+      "name": "European Space Agency",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [1460, 488],
+      "name": "United Kingdom",
+      "strength": 3,
+      "flag": "gb"
+    },
+    {
+      "coordinates": [1850, 415],
+      "name": "China",
+      "strength": 3,
+      "flag": "cn"
+    }
+  ]
+}

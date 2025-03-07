@@ -1,0 +1,55 @@
+{
+  "name": "BlackSea",
+  "width": 1500,
+  "height": 1100,
+  "nations": [
+    {
+      "coordinates": [122, 647],
+      "name": "Bulgaria",
+      "strength": 1,
+      "flag": "bg"
+    },
+    {
+      "coordinates": [513, 929],
+      "name": "Turkiye",
+      "strength": 2,
+      "flag": "tr"
+    },
+    {
+      "coordinates": [123, 237],
+      "name": "Romania",
+      "strength": 1,
+      "flag": "ro"
+    },
+    {
+      "coordinates": [300, 188],
+      "name": "Moldova",
+      "strength": 1,
+      "flag": "md"
+    },
+    {
+      "coordinates": [737, 120],
+      "name": "Ukraine",
+      "strength": 1,
+      "flag": "ua"
+    },
+    {
+      "coordinates": [1180, 354],
+      "name": "Russia",
+      "strength": 3,
+      "flag": "ru"
+    },
+    {
+      "coordinates": [1362, 722],
+      "name": "Georgia",
+      "strength": 1,
+      "flag": "ge"
+    },
+    {
+      "coordinates": [1382, 943],
+      "name": "Armenia",
+      "strength": 1,
+      "flag": "am"
+    }
+  ]
+}
