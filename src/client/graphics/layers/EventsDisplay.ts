@@ -6,6 +6,7 @@ import {
   MessageType,
   PlayerType,
   Tick,
+  UnitType,
 } from "../../../core/game/Game";
 import {
   AttackUpdate,
@@ -60,6 +61,7 @@ export class EventsDisplay extends LitElement implements Layer {
   private events: Event[] = [];
   @state() private incomingAttacks: AttackUpdate[] = [];
   @state() private outgoingAttacks: AttackUpdate[] = [];
+  @state() private outgoingBoats: any[] = [];
   @state() private _hidden: boolean = false;
   @state() private newEvents: number = 0;
 
@@ -88,6 +90,7 @@ export class EventsDisplay extends LitElement implements Layer {
     this.events = [];
     this.incomingAttacks = [];
     this.outgoingAttacks = [];
+    this.outgoingBoats = [];
   }
 
   init() {}
@@ -130,6 +133,11 @@ export class EventsDisplay extends LitElement implements Layer {
     this.outgoingAttacks = myPlayer
       .outgoingAttacks()
       .filter((a) => a.targetID != 0);
+
+    this.outgoingBoats = myPlayer
+      .units()
+      .filter((u) => u.type() === UnitType.TransportShip);
+    console.log("loan", this.outgoingBoats);
 
     this.requestUpdate();
   }
@@ -448,11 +456,38 @@ export class EventsDisplay extends LitElement implements Layer {
     `;
   }
 
+  private renderBoats() {
+    if (this.outgoingBoats.length === 0) {
+      return html``;
+    }
+
+    return html`
+      ${this.outgoingBoats.length > 0
+        ? html`
+            <tr class="border-t border-gray-700">
+              <td class="lg:p-3 p-1 text-left text-blue-400">
+                ${this.outgoingBoats.map((boats) =>
+                  boats.targetID !== null
+                    ? html`
+                        <button class="ml-2">
+                          Boat: ${renderTroops(boats.data.troops)}
+                        </button>
+                      `
+                    : "",
+                )}
+              </td>
+            </tr>
+          `
+        : ""}
+    `;
+  }
+
   render() {
     if (
       this.events.length === 0 &&
       this.incomingAttacks.length === 0 &&
-      this.outgoingAttacks.length === 0
+      this.outgoingAttacks.length === 0 &&
+      this.outgoingBoats.length === 0
     ) {
       return html``;
     }
@@ -553,7 +588,7 @@ export class EventsDisplay extends LitElement implements Layer {
                   </tr>
                 `,
               )}
-              ${this.renderAttacks()}
+              ${this.renderAttacks()} ${this.renderBoats()}
             </tbody>
           </table>
         </div>
