@@ -1,10 +1,10 @@
+import { EventBus } from "@openfrontio/core/src/EventBus";
+import { GameType } from "@openfrontio/core/src/game/Game";
+import { GameUpdateType } from "@openfrontio/core/src/game/GameUpdates";
+import { GameView } from "@openfrontio/core/src/game/GameView";
+import { UserSettings } from "@openfrontio/core/src/game/UserSettings";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
-import { GameType } from "../../../core/game/Game";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView } from "../../../core/game/GameView";
-import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
 import { Layer } from "./Layer";

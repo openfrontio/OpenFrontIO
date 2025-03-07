@@ -1,3 +1,7 @@
+import { EventBus } from "@openfrontio/core/src/EventBus";
+import { Cell, PlayerActions, UnitType } from "@openfrontio/core/src/game/Game";
+import { TileRef } from "@openfrontio/core/src/game/GameMap";
+import { GameView } from "@openfrontio/core/src/game/GameView";
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
@@ -9,10 +13,6 @@ import hydrogenBombIcon from "../../../../resources/images/MushroomCloudIconWhit
 import atomBombIcon from "../../../../resources/images/NukeIconWhite.svg";
 import portIcon from "../../../../resources/images/PortIcon.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
-import { EventBus } from "../../../core/EventBus";
-import { Cell, PlayerActions, UnitType } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { GameView } from "../../../core/game/GameView";
 import { BuildUnitIntentEvent } from "../../Transport";
 import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";

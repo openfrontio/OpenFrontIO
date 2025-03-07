@@ -1,18 +1,31 @@
-import { consolex, initRemoteSender } from "../core/Consolex";
-import { EventBus } from "../core/EventBus";
-import { ClientID, GameConfig, GameID, ServerMessage } from "../core/Schemas";
-import { getConfig, ServerConfig } from "../core/configuration/Config";
-import { Difficulty, GameMapType, GameType, PlayerID } from "../core/game/Game";
+import { consolex, initRemoteSender } from "@openfrontio/core/src/Consolex";
+import { EventBus } from "@openfrontio/core/src/EventBus";
+import {
+  ClientID,
+  GameConfig,
+  GameID,
+  ServerMessage,
+} from "@openfrontio/core/src/Schemas";
+import {
+  getConfig,
+  ServerConfig,
+} from "@openfrontio/core/src/configuration/Config";
+import {
+  Difficulty,
+  GameMapType,
+  GameType,
+  PlayerID,
+} from "@openfrontio/core/src/game/Game";
 import {
   ErrorUpdate,
   GameUpdateType,
   GameUpdateViewData,
   HashUpdate,
-} from "../core/game/GameUpdates";
-import { GameView, PlayerView } from "../core/game/GameView";
-import { loadTerrainMap } from "../core/game/TerrainMapLoader";
-import { UserSettings } from "../core/game/UserSettings";
-import { WorkerClient } from "../core/worker/WorkerClient";
+} from "@openfrontio/core/src/game/GameUpdates";
+import { GameView, PlayerView } from "@openfrontio/core/src/game/GameView";
+import { loadTerrainMap } from "@openfrontio/core/src/game/TerrainMapLoader";
+import { UserSettings } from "@openfrontio/core/src/game/UserSettings";
+import { WorkerClient } from "@openfrontio/core/src/worker/WorkerClient";
 import { InputHandler, MouseUpEvent } from "./InputHandler";
 import { LocalPersistantStats } from "./LocalPersistantStats";
 import {

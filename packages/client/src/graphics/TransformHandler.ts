@@ -1,6 +1,6 @@
-import { EventBus } from "../../core/EventBus";
-import { Cell } from "../../core/game/Game";
-import { GameView } from "../../core/game/GameView";
+import { EventBus } from "../@openfrontio/core/src/EventBus";
+import { Cell } from "../@openfrontio/core/src/game/Game";
+import { GameView } from "../@openfrontio/core/src/game/GameView";
 import { CenterCameraEvent, DragEvent, ZoomEvent } from "../InputHandler";
 import { GoToPlayerEvent } from "./layers/Leaderboard";
 

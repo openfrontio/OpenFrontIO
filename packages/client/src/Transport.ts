@@ -1,6 +1,6 @@
-import { ServerConfig } from "../core/configuration/Config";
-import { SendLogEvent } from "../core/Consolex";
-import { EventBus, GameEvent } from "../core/EventBus";
+import { ServerConfig } from "@openfrontio/core/src/configuration/Config";
+import { SendLogEvent } from "@openfrontio/core/src/Consolex";
+import { EventBus, GameEvent } from "@openfrontio/core/src/EventBus";
 import {
   AllPlayers,
   Cell,
@@ -9,8 +9,8 @@ import {
   PlayerType,
   Tick,
   UnitType,
-} from "../core/game/Game";
-import { PlayerView } from "../core/game/GameView";
+} from "@openfrontio/core/src/game/Game";
+import { PlayerView } from "@openfrontio/core/src/game/GameView";
 import {
   ClientID,
   ClientIntentMessageSchema,
@@ -23,7 +23,7 @@ import {
   Intent,
   ServerMessage,
   ServerMessageSchema,
-} from "../core/Schemas";
+} from "@openfrontio/core/src/Schemas";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
 

@@ -1,10 +1,10 @@
+import { EventBus } from "@openfrontio/core/src/EventBus";
+import { GameUpdateType } from "@openfrontio/core/src/game/GameUpdates";
+import { GameView, PlayerView } from "@openfrontio/core/src/game/GameView";
+import { PseudoRandom } from "@openfrontio/core/src/PseudoRandom";
+import { simpleHash } from "@openfrontio/core/src/Util";
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { PseudoRandom } from "../../../core/PseudoRandom";
-import { simpleHash } from "../../../core/Util";
 import { GameStat, LocalPersistantStats } from "../../LocalPersistantStats";
 import { SendWinnerEvent } from "../../Transport";
 import { Layer } from "./Layer";

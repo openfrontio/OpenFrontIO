@@ -1,16 +1,20 @@
-import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
+import { EventBus } from "@openfrontio/core/src/EventBus";
 import {
   PlayerProfile,
   PlayerType,
   Relation,
   Unit,
   UnitType,
-} from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
+} from "@openfrontio/core/src/game/Game";
+import { TileRef } from "@openfrontio/core/src/game/GameMap";
+import {
+  GameView,
+  PlayerView,
+  UnitView,
+} from "@openfrontio/core/src/game/GameView";
+import { ClientID } from "@openfrontio/core/src/Schemas";
+import { LitElement, html } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { MouseMoveEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";

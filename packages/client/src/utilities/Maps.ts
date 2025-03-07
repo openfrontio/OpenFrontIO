@@ -8,7 +8,7 @@ import northAmerica from "../../../resources/maps/NorthAmerica.png";
 import oceania from "../../../resources/maps/Oceania.png";
 import world from "../../../resources/maps/WorldMap.png";
 
-import { GameMapType } from "../../core/game/Game";
+import { GameMapType } from "../@openfrontio/core/src/game/Game";
 
 export function getMapsImage(map: GameMapType): string {
   switch (map) {

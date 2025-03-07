@@ -1,9 +1,9 @@
+import { EventBus } from "@openfrontio/core/src/EventBus";
+import { ClientID } from "@openfrontio/core/src/Schemas";
+import { Theme } from "@openfrontio/core/src/configuration/Config";
+import { UnitType } from "@openfrontio/core/src/game/Game";
+import { GameView, UnitView } from "@openfrontio/core/src/game/GameView";
 import { Colord } from "colord";
-import { EventBus } from "../../../core/EventBus";
-import { ClientID } from "../../../core/Schemas";
-import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
-import { GameView, UnitView } from "../../../core/game/GameView";
 import { UnitSelectionEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";

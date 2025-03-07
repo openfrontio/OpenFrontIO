@@ -1,6 +1,6 @@
+import { GameView } from "@openfrontio/core/src/game/GameView";
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
-import { GameView } from "../../../core/game/GameView";
 import { renderNumber, renderTroops } from "../../Utils";
 import { Layer } from "./Layer";
 

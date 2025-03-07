@@ -1,6 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { GameMapType } from "../../core/game/Game";
+import { GameMapType } from "../@openfrontio/core/src/game/Game";
 import { getMapsImage } from "../utilities/Maps";
 
 // Add map descriptions

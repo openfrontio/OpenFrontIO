@@ -1,10 +1,10 @@
+import { EventBus, GameEvent } from "@openfrontio/core/src/EventBus";
+import { GameView, PlayerView } from "@openfrontio/core/src/game/GameView";
+import { ClientID } from "@openfrontio/core/src/Schemas";
+import { renderNumber } from "@openfrontio/core/src/Util";
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
-import { EventBus, GameEvent } from "../../../core/EventBus";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
-import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
 
 interface Entry {

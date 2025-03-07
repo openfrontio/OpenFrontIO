@@ -1,6 +1,6 @@
-import { EventBus, GameEvent } from "../core/EventBus";
-import { UnitView } from "../core/game/GameView";
-import { UserSettings } from "../core/game/UserSettings";
+import { EventBus, GameEvent } from "@openfrontio/core/src/EventBus";
+import { UnitView } from "@openfrontio/core/src/game/GameView";
+import { UserSettings } from "@openfrontio/core/src/game/UserSettings";
 
 export class MouseUpEvent implements GameEvent {
   constructor(

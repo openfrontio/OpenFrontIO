@@ -1,5 +1,5 @@
-import { Theme } from "../../../core/configuration/Config";
-import { GameView } from "../../../core/game/GameView";
+import { Theme } from "@openfrontio/core/src/configuration/Config";
+import { GameView } from "@openfrontio/core/src/game/GameView";
 import { Layer } from "./Layer";
 
 export class TerrainLayer implements Layer {

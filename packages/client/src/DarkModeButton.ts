@@ -1,6 +1,6 @@
+import { UserSettings } from "@openfrontio/core/src/game/UserSettings";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { UserSettings } from "../core/game/UserSettings";
 
 @customElement("dark-mode-button")
 export class DarkModeButton extends LitElement {

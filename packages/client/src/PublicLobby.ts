@@ -1,8 +1,12 @@
+import { consolex } from "@openfrontio/core/src/Consolex";
+import {
+  Difficulty,
+  GameMapType,
+  GameType,
+} from "@openfrontio/core/src/game/Game";
+import { GameInfo } from "@openfrontio/core/src/Schemas";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { consolex } from "../core/Consolex";
-import { Difficulty, GameMapType, GameType } from "../core/game/Game";
-import { GameInfo } from "../core/Schemas";
 import { getMapsImage } from "./utilities/Maps";
 
 @customElement("public-lobby")

@@ -1,16 +1,19 @@
 import { PriorityQueue } from "@datastructures-js/priority-queue";
-import { Colord } from "colord";
-import { Theme } from "../../../core/configuration/Config";
-import { EventBus } from "../../../core/EventBus";
-import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
+import { Theme } from "@openfrontio/core/src/configuration/Config";
+import { EventBus } from "@openfrontio/core/src/EventBus";
+import { Cell, PlayerType, UnitType } from "@openfrontio/core/src/game/Game";
 import {
   euclDistFN,
   manhattanDistFN,
   TileRef,
-} from "../../../core/game/GameMap";
-import { GameUpdateType, UnitUpdate } from "../../../core/game/GameUpdates";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { PseudoRandom } from "../../../core/PseudoRandom";
+} from "@openfrontio/core/src/game/GameMap";
+import {
+  GameUpdateType,
+  UnitUpdate,
+} from "@openfrontio/core/src/game/GameUpdates";
+import { GameView, PlayerView } from "@openfrontio/core/src/game/GameView";
+import { PseudoRandom } from "@openfrontio/core/src/PseudoRandom";
+import { Colord } from "colord";
 import { AlternateViewEvent, DragEvent } from "../../InputHandler";
 import { Layer } from "./Layer";
 

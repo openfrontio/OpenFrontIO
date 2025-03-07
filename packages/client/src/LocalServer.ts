@@ -1,5 +1,5 @@
-import { ServerConfig } from "../core/configuration/Config";
-import { consolex } from "../core/Consolex";
+import { ServerConfig } from "@openfrontio/core/src/configuration/Config";
+import { consolex } from "@openfrontio/core/src/Consolex";
 import {
   ClientID,
   ClientMessage,
@@ -11,8 +11,8 @@ import {
   ServerMessage,
   ServerStartGameMessageSchema,
   Turn,
-} from "../core/Schemas";
-import { CreateGameRecord } from "../core/Util";
+} from "@openfrontio/core/src/Schemas";
+import { CreateGameRecord } from "@openfrontio/core/src/Util";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalPersistantStats } from "./LocalPersistantStats";
 import { getPersistentIDFromCookie } from "./Main";

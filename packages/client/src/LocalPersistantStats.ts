@@ -1,7 +1,11 @@
-import { consolex } from "../core/Consolex";
-import { Difficulty, GameMapType, GameType } from "../core/game/Game";
-import { PlayerStats } from "../core/game/Stats";
-import { ClientID, GameID } from "../core/Schemas";
+import { consolex } from "@openfrontio/core/src/Consolex";
+import {
+  Difficulty,
+  GameMapType,
+  GameType,
+} from "@openfrontio/core/src/game/Game";
+import { PlayerStats } from "@openfrontio/core/src/game/Stats";
+import { ClientID, GameID } from "@openfrontio/core/src/Schemas";
 import { LobbyConfig } from "./ClientGameRunner";
 
 export interface GameStat {

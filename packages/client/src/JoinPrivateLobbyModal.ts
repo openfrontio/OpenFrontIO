@@ -1,9 +1,9 @@
+import { getServerConfigFromClient } from "@openfrontio/core/src/configuration/Config";
+import { consolex } from "@openfrontio/core/src/Consolex";
+import { GameMapType, GameType } from "@openfrontio/core/src/game/Game";
+import { GameInfo } from "@openfrontio/core/src/Schemas";
 import { LitElement, css, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { getServerConfigFromClient } from "../core/configuration/Config";
-import { consolex } from "../core/Consolex";
-import { GameMapType, GameType } from "../core/game/Game";
-import { GameInfo } from "../core/Schemas";
 
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {

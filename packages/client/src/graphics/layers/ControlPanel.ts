@@ -1,8 +1,8 @@
+import { EventBus } from "@openfrontio/core/src/EventBus";
+import { GameView } from "@openfrontio/core/src/game/GameView";
+import { ClientID } from "@openfrontio/core/src/Schemas";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
-import { GameView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
 import { AttackRatioEvent } from "../../InputHandler";
 import { SendSetTargetTroopRatioEvent } from "../../Transport";
 import { renderNumber, renderTroops } from "../../Utils";

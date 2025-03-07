@@ -1,3 +1,12 @@
+import { EventBus } from "@openfrontio/core/src/EventBus";
+import {
+  AllPlayers,
+  PlayerActions,
+  PlayerID,
+  UnitType,
+} from "@openfrontio/core/src/game/Game";
+import { TileRef } from "@openfrontio/core/src/game/GameMap";
+import { GameView, PlayerView } from "@openfrontio/core/src/game/GameView";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
@@ -5,15 +14,6 @@ import donateIcon from "../../../../resources/images/DonateIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
-import { EventBus } from "../../../core/EventBus";
-import {
-  AllPlayers,
-  PlayerActions,
-  PlayerID,
-  UnitType,
-} from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { GameView, PlayerView } from "../../../core/game/GameView";
 import { MouseUpEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,

@@ -1,16 +1,16 @@
+import { Theme } from "@openfrontio/core/src/configuration/Config";
+import { EventBus } from "@openfrontio/core/src/EventBus";
 import { colord, Colord } from "colord";
-import { Theme } from "../../../core/configuration/Config";
-import { EventBus } from "../../../core/EventBus";
 import { Layer } from "./Layer";
 
+import { Cell, UnitType } from "@openfrontio/core/src/game/Game";
+import { euclDistFN } from "@openfrontio/core/src/game/GameMap";
+import { GameUpdateType } from "@openfrontio/core/src/game/GameUpdates";
+import { GameView, UnitView } from "@openfrontio/core/src/game/GameView";
 import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
 import shieldIcon from "../../../../resources/images/buildings/fortAlt2.png";
 import anchorIcon from "../../../../resources/images/buildings/port1.png";
 import missileSiloIcon from "../../../../resources/images/buildings/silo1.png";
-import { Cell, UnitType } from "../../../core/game/Game";
-import { euclDistFN } from "../../../core/game/GameMap";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView, UnitView } from "../../../core/game/GameView";
 
 const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
 

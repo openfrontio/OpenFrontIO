@@ -1,4 +1,4 @@
-import { GameView } from "../../../core/game/GameView";
+import { GameView } from "@openfrontio/core/src/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 

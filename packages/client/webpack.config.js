@@ -91,7 +91,7 @@ export default (env, argv) => {
       alias: {
         "protobufjs/minimal": path.resolve(
           __dirname,
-          "node_modules/protobufjs/minimal.js",
+          "../../node_modules/protobufjs/minimal.js",
         ),
       },
     },

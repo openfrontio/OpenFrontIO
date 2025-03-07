@@ -1,9 +1,13 @@
+import { consolex } from "@openfrontio/core/src/Consolex";
+import {
+  Difficulty,
+  GameMapType,
+  GameType,
+} from "@openfrontio/core/src/game/Game";
+import { generateID } from "@openfrontio/core/src/Util";
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import randomMap from "../../resources/images/RandomMap.png";
-import { consolex } from "../core/Consolex";
-import { Difficulty, GameMapType, GameType } from "../core/game/Game";
-import { generateID } from "../core/Util";
 import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
