@@ -4,6 +4,7 @@
   "workspaces": [
     "packages/*"
   ],
+  "type": "module",
   "scripts": {
     "build-dev": "bun run --filter @openfrontio/client build-dev",
     "build-prod": "bun run --filter @openfrontio/client build-prod",
