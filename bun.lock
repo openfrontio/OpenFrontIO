@@ -60,7 +60,6 @@
       "dependencies": {
         "@datastructures-js/priority-queue": "^6.3.1",
         "colord": "^2.9.3",
-        "d3": "^7.9.0",
         "dompurify": "^3.1.7",
         "nanoid": "^5.0.9",
         "obscenity": "^0.4.3",
@@ -70,7 +69,6 @@
       },
       "devDependencies": {
         "@types/bun": "latest",
-        "@types/d3": "^7.4.3",
         "@types/dompurify": "^3.0.5",
         "@types/twemoji": "^13.1.1",
         "@types/uuid": "^10.0.0",
