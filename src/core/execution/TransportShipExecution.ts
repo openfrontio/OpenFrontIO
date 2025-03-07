@@ -106,7 +106,11 @@ export class TransportShipExecution implements Execution {
 
     this.troops = Math.min(this.troops, this.attacker.troops());
 
-    this.dst = targetTransportTile(this.mg, this.ref);
+    // destination and start tile of the ship
+    let result = targetTransportTile(this.mg, this.ref, this.attacker);
+
+    this.dst = result[0];
+    this.src = result[1];
     if (this.dst == null) {
       consolex.warn(
         `${this.attacker} cannot send ship to ${this.target}, cannot find attack tile`,
@@ -114,14 +118,13 @@ export class TransportShipExecution implements Execution {
       this.active = false;
       return;
     }
-    const src = this.attacker.canBuild(UnitType.TransportShip, this.dst);
-    if (src == false) {
+    //just gives back if the boat can be build or not
+    const buildable = this.attacker.canBuild(UnitType.TransportShip, this.dst);
+    if (!buildable) {
       consolex.warn(`can't build transport ship`);
       this.active = false;
       return;
     }
-
-    this.src = src;
 
     this.boat = this.attacker.buildUnit(
       UnitType.TransportShip,
@@ -152,6 +155,16 @@ export class TransportShipExecution implements Execution {
           this.active = false;
           return;
         }
+
+        // if the transport ships target is not a player but the actual destination is a player make the transport ship still attack the player of the destination tile
+        if (
+          this.mg.playerBySmallID(this.mg.ownerID(this.dst)) &&
+          Object.keys(this.target).length === 0
+        ) {
+          this.target = this.mg.playerBySmallID(this.mg.ownerID(this.dst));
+          this.targetID = this.target.id();
+        }
+
         if (this.target.isPlayer() && this.attacker.isAlliedWith(this.target)) {
           this.target.addTroops(this.troops);
         } else {

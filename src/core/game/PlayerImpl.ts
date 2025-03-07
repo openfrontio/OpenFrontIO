@@ -24,12 +24,12 @@ import { GameUpdateType } from "./GameUpdates";
 import { ClientID } from "../Schemas";
 import {
   assertNever,
-  closestShoreFromPlayer,
+  closestShoreTN,
   distSortUnit,
   maxInt,
   minInt,
   simpleHash,
-  sourceDstOceanShore,
+  // sourceDstOceanShore,
   targetTransportTile,
   toInt,
   within,
@@ -668,6 +668,7 @@ export class PlayerImpl implements Player {
     return b;
   }
 
+  // decides where the unit or building spawns
   canBuild(unitType: UnitType, targetTile: TileRef): TileRef | false {
     const cost = this.mg.unitInfo(unitType).cost(this);
     if (!this.isAlive() || this.gold() < cost) {
@@ -756,11 +757,13 @@ export class PlayerImpl implements Player {
     if (!this.mg.isShore(targetTile)) {
       return false;
     }
-    const spawn = closestShoreFromPlayer(this.mg, this, targetTile);
-    if (spawn == null) {
-      return false;
-    }
-    return spawn;
+    // not needed anymore because closestShoreTN gives back start and end tile
+    // const spawn = closestShoreTN(this.mg, this, targetTile, 50)[1];
+    // if (spawn == null) {
+    //   return false;
+    // }
+    // return spawn;
+    return 1;
   }
 
   tradeShipSpawn(targetTile: TileRef): TileRef | false {
@@ -811,7 +814,8 @@ export class PlayerImpl implements Player {
       return false;
     }
 
-    const dst = targetTransportTile(this.mg, tile);
+    // destination tile of the ship
+    const dst = targetTransportTile(this.mg, tile, this)[0];
     if (dst == null) {
       return false;
     }
