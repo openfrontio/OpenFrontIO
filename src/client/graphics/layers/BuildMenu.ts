@@ -61,6 +61,12 @@ const buildTable: BuildItemDisplay[][] = [
       icon: missileSiloIcon,
       description: "Used to launch nukes",
     },
+    // needs new icon
+    {
+      unitType: UnitType.SAMLauncher,
+      icon: shieldIcon,
+      description: "Defends against incoming nukes",
+    },
     {
       unitType: UnitType.DefensePost,
       icon: shieldIcon,

@@ -3,10 +3,11 @@ import { Theme } from "../../../core/configuration/Config";
 import { Layer } from "./Layer";
 import { EventBus } from "../../../core/EventBus";
 
-import anchorIcon from "../../../../resources/images/AnchorIcon.png";
-import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
-import shieldIcon from "../../../../resources/images/ShieldIcon.png";
-import cityIcon from "../../../../resources/images/CityIcon.png";
+import anchorIcon from "../../../../resources/images/buildings/port1.png";
+import missileSiloIcon from "../../../../resources/images/buildings/silo1.png";
+import SAMMissileIcon from "../../../../resources/images/buildings/extra/silo4.png";
+import shieldIcon from "../../../../resources/images/buildings/fortAlt2.png";
+import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { Cell, UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
@@ -43,8 +44,8 @@ export class StructureLayer implements Layer {
       borderRadius: 8,
       territoryRadius: 6,
     },
-    [UnitType.City]: {
-      icon: cityIcon,
+    [UnitType.SAMLauncher]: {
+      icon: SAMMissileIcon,
       borderRadius: 8,
       territoryRadius: 6,
     },
