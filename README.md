@@ -82,13 +82,20 @@ bun run start:server-dev
   bun run format
   ```
 
-- **Lint the code**:
+- **Lint code**:
 
   ```bash
   bun run lint
   ```
 
+- **Lint and fix code**:
+
+  ```bash
+  bun run lint:fix
+  ```
+
 - **Test the code**:
+
   ```bash
   bun test
   ```

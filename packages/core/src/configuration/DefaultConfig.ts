@@ -279,9 +279,6 @@ export class DefaultConfig implements Config {
   boatMaxNumber(): number {
     return 3;
   }
-  boatMaxDistance(): number {
-    return 500;
-  }
   numSpawnPhaseTurns(): number {
     return this._gameConfig.gameType == GameType.Singleplayer ? 100 : 300;
   }

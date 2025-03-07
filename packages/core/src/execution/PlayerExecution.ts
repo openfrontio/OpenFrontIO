@@ -180,31 +180,62 @@ export class PlayerExecution implements Execution {
       // so double check.
       return;
     }
-    const result = new Set<number>(); // Use Set to automatically deduplicate ownerIDs
-    for (const t of cluster) {
-      for (const neighbor of this.mg.neighbors(t)) {
-        if (this.mg.ownerID(neighbor) != this.player.smallID()) {
-          result.add(this.mg.ownerID(neighbor));
-        }
-      }
-    }
-    const mode = getMode(result);
-    if (!this.mg.playerBySmallID(mode).isPlayer()) {
+
+    const capturing = this.getCapturingPlayer(cluster);
+    if (capturing == null) {
       return;
     }
+
     const firstTile = cluster.values().next().value;
     const filter = (_, t: TileRef): boolean =>
       this.mg.ownerID(t) == this.player.smallID();
     const tiles = this.mg.bfs(firstTile, filter);
 
-    const modePlayer = this.mg.playerBySmallID(mode);
-    if (!modePlayer.isPlayer()) {
-      consolex.warn("mode player is null");
-      return;
-    }
     for (const tile of tiles) {
-      (modePlayer as Player).conquer(tile);
+      capturing.conquer(tile);
     }
+  }
+
+  private getCapturingPlayer(cluster: Set<TileRef>): Player | null {
+    const neighborsIDs = new Set<number>();
+    for (const t of cluster) {
+      for (const neighbor of this.mg.neighbors(t)) {
+        if (this.mg.ownerID(neighbor) != this.player.smallID()) {
+          neighborsIDs.add(this.mg.ownerID(neighbor));
+        }
+      }
+    }
+
+    let largestNeighborAttack: Player | null = null;
+    let largestTroopCount: number = 0;
+    for (const id of neighborsIDs) {
+      const neighbor = this.mg.playerBySmallID(id);
+      if (!neighbor.isPlayer()) {
+        continue;
+      }
+      for (const attack of neighbor.outgoingAttacks()) {
+        if (attack.target() == this.player) {
+          if (attack.troops() > largestTroopCount) {
+            largestTroopCount = attack.troops();
+            largestNeighborAttack = neighbor;
+          }
+        }
+      }
+    }
+    if (largestNeighborAttack != null) {
+      return largestNeighborAttack;
+    }
+
+    // fall back to getting mode if no attacks
+    const mode = getMode(neighborsIDs);
+    if (!this.mg.playerBySmallID(mode).isPlayer()) {
+      return null;
+    }
+    const capturing = this.mg.playerBySmallID(mode);
+    if (!capturing.isPlayer()) {
+      return null;
+    }
+    return capturing as Player;
   }
 
   private calculateClusters(): Set<TileRef>[] {
