@@ -685,6 +685,7 @@ export class PlayerImpl implements Player {
       case UnitType.Warship:
         return this.warshipSpawn(targetTile);
       case UnitType.Shell:
+      case UnitType.Missile:
         return targetTile;
       case UnitType.TransportShip:
         return this.transportShipSpawn(targetTile);
@@ -692,6 +693,7 @@ export class PlayerImpl implements Player {
         return this.tradeShipSpawn(targetTile);
       case UnitType.MissileSilo:
       case UnitType.DefensePost:
+      case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Construction:
         return this.landBasedStructureSpawn(targetTile);

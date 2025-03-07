@@ -43,6 +43,12 @@ export class StructureLayer implements Layer {
       borderRadius: 8,
       territoryRadius: 6,
     },
+    // needs new icon
+    [UnitType.SAMLauncher]: {
+      icon: shieldIcon,
+      borderRadius: 8,
+      territoryRadius: 6,
+    },
     [UnitType.City]: {
       icon: cityIcon,
       borderRadius: 8,
