@@ -36,11 +36,7 @@ This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
    cd OpenFrontIO
    ```
 
-2. **Install bun.js**
-
-   see for info
-
-3. **Install dependencies**
+2. **Install dependencies**
 
    ```bash
    bun i
