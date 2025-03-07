@@ -15,10 +15,17 @@ WORKDIR /usr/src/app
 # Copy package.json and package-lock.json
 COPY package.json bun.lock ./
 
+# Copy all package.json files from the packages directory
+COPY packages/core/package.json packages/core/
+COPY packages/server/package.json packages/server/
+COPY packages/client/package.json packages/client/
+COPY packages/scripts/package.json packages/scripts/
+
 # Install dependencies while bypassing Husky hooks
 ENV HUSKY=0 
 ENV NPM_CONFIG_IGNORE_SCRIPTS=1
-RUN mkdir -p .git && bun install --include=dev
+RUN mkdir -p .git
+RUN bun install --frozen-lockfile
 
 # Copy the rest of the application code
 COPY . .

@@ -5,6 +5,12 @@
     "packages/*"
   ],
   "scripts": {
+    "build-dev": "bun run --filter @openfrontio/client build-dev",
+    "build-prod": "bun run --filter @openfrontio/client build-prod",
+    "start:client": "bun run --filter @openfrontio/client start:client",
+    "start:server": "bun run --filter @openfrontio/server start:server",
+    "start:server-dev": "bun run --filter @openfrontio/server start:server-dev",
+    "tunnel": "bun run --filter @openfrontio/server tunnel",
     "prepare": "husky",
     "dev": "cross-env GAME_ENV=dev concurrently \"bun run start:client\" \"bun run start:server-dev\"",
     "format": "prettier --ignore-unknown --write .",

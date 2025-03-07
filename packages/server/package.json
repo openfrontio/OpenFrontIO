@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "OpenFront Server",
   "scripts": {
-    "start:server": "bun run src/server/Server.ts",
-    "start:server-dev": "cross-env GAME_ENV=dev bun run src/server/Server.ts",
+    "start:server": "bun run src/Server.ts",
+    "start:server-dev": "cross-env GAME_ENV=dev bun run src/Server.ts",
     "tunnel": "bun run build-prod && bun run start:server"
   },
   "dependencies": {

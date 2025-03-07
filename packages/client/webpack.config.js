@@ -11,7 +11,7 @@ export default (env, argv) => {
   const isProduction = argv.mode === "production";
 
   return {
-    entry: "./src/client/Main.ts",
+    entry: "./src/Main.ts",
     output: {
       publicPath: "/",
       filename: "js/[name].[contenthash].js", // Added content hash
@@ -97,7 +97,7 @@ export default (env, argv) => {
     },
     plugins: [
       new HtmlWebpackPlugin({
-        template: "./src/client/index.html",
+        template: "./src/index.html",
         filename: "index.html",
         // Add optimization for HTML
         minify: isProduction

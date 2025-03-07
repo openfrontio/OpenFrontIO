@@ -26,7 +26,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.json());
 app.use(
-  express.static(path.join(__dirname, "../../static"), {
+  express.static(path.join(__dirname, "../../client/static"), {
     maxAge: "1y", // Set max-age to 1 year for all static assets
     setHeaders: (res, path) => {
       // You can conditionally set different cache times based on file types
@@ -311,5 +311,5 @@ function sleep(ms: number): Promise<void> {
 
 // SPA fallback route
 app.get("*", function (req, res) {
-  res.sendFile(path.join(__dirname, "../../static/index.html"));
+  res.sendFile(path.join(__dirname, "../../client/static/index.html"));
 });
