@@ -1,9 +1,9 @@
 import { LitElement, css, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
+import { getServerConfigFromClient } from "../core/configuration/Config";
 import { consolex } from "../core/Consolex";
 import { GameMapType, GameType } from "../core/game/Game";
 import { GameInfo } from "../core/Schemas";
-import { getServerConfigFromClient } from "../core/configuration/Config";
 
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {

@@ -1,3 +1,4 @@
+import { consolex } from "../Consolex";
 import {
   AllianceRequest,
   Cell,
@@ -13,20 +14,18 @@ import {
   Tick,
   UnitType,
 } from "../game/Game";
-import { PseudoRandom } from "../PseudoRandom";
-import { AttackExecution } from "./AttackExecution";
-import { TransportShipExecution } from "./TransportShipExecution";
-import { SpawnExecution } from "./SpawnExecution";
-import { GameID } from "../Schemas";
-import { consolex } from "../Consolex";
-import { NukeExecution } from "./NukeExecution";
-import { EmojiExecution } from "./EmojiExecution";
-import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
-import { closestTwoTiles } from "./Util";
-import { calculateBoundingBox, simpleHash } from "../Util";
 import { andFN, manhattanDistFN, TileRef } from "../game/GameMap";
+import { PseudoRandom } from "../PseudoRandom";
+import { GameID } from "../Schemas";
+import { calculateBoundingBox, simpleHash } from "../Util";
+import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
+import { AttackExecution } from "./AttackExecution";
 import { ConstructionExecution } from "./ConstructionExecution";
-import { renderTroops } from "../../client/Utils";
+import { EmojiExecution } from "./EmojiExecution";
+import { NukeExecution } from "./NukeExecution";
+import { SpawnExecution } from "./SpawnExecution";
+import { TransportShipExecution } from "./TransportShipExecution";
+import { closestTwoTiles } from "./Util";
 
 export class FakeHumanExecution implements Execution {
   private firstMove = true;

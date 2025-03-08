@@ -1,15 +1,29 @@
-import { PlayerID, GameMapType, Difficulty, GameType } from "../core/game/Game";
+import { consolex, initRemoteSender } from "../core/Consolex";
 import { EventBus } from "../core/EventBus";
-import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
-import { InputHandler, MouseUpEvent } from "./InputHandler";
 import {
   ClientID,
   GameConfig,
   GameID,
-  ServerMessage,
   PlayerRecord,
+  ServerMessage,
 } from "../core/Schemas";
+import { CreateGameRecord } from "../core/Util";
+import { getConfig, ServerConfig } from "../core/configuration/Config";
+import { Difficulty, GameMapType, GameType, PlayerID } from "../core/game/Game";
+import {
+  ErrorUpdate,
+  GameUpdateType,
+  GameUpdateViewData,
+  HashUpdate,
+  WinUpdate,
+} from "../core/game/GameUpdates";
+import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap } from "../core/game/TerrainMapLoader";
+import { UserSettings } from "../core/game/UserSettings";
+import { WorkerClient } from "../core/worker/WorkerClient";
+import { InputHandler, MouseUpEvent } from "./InputHandler";
+import { LocalPersistantStats } from "./LocalPersistantStats";
+import { getPersistentIDFromCookie } from "./Main";
 import {
   SendAttackIntentEvent,
   SendHashEvent,
@@ -17,21 +31,7 @@ import {
   Transport,
 } from "./Transport";
 import { createCanvas } from "./Utils";
-import {
-  ErrorUpdate,
-  GameUpdateType,
-  HashUpdate,
-  WinUpdate,
-} from "../core/game/GameUpdates";
-import { WorkerClient } from "../core/worker/WorkerClient";
-import { consolex, initRemoteSender } from "../core/Consolex";
-import { getConfig, ServerConfig } from "../core/configuration/Config";
-import { GameView, PlayerView } from "../core/game/GameView";
-import { GameUpdateViewData } from "../core/game/GameUpdates";
-import { UserSettings } from "../core/game/UserSettings";
-import { LocalPersistantStats } from "./LocalPersistantStats";
-import { CreateGameRecord } from "../core/Util";
-import { getPersistentIDFromCookie } from "./Main";
+import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;

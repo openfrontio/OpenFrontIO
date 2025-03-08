@@ -3,8 +3,8 @@ import {
   Execution,
   Game,
   Player,
-  Unit,
   PlayerID,
+  Unit,
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
