@@ -43,6 +43,7 @@ export enum GameMapType {
   Europe = "Europe",
   Mena = "Mena",
   NorthAmerica = "North America",
+  SouthAmerica = "South America",
   Oceania = "Oceania",
   BlackSea = "Black Sea",
   Africa = "Africa",

@@ -137,7 +137,6 @@ export class EventsDisplay extends LitElement implements Layer {
     this.outgoingBoats = myPlayer
       .units()
       .filter((u) => u.type() === UnitType.TransportShip);
-    console.log("loan", this.outgoingBoats);
 
     this.requestUpdate();
   }

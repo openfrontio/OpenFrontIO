@@ -3,6 +3,7 @@ import oceania from "../../../resources/maps/Oceania.png";
 import europe from "../../../resources/maps/Europe.png";
 import mena from "../../../resources/maps/Mena.png";
 import northAmerica from "../../../resources/maps/NorthAmerica.png";
+import southAmerica from "../../../resources/maps/SouthAmerica.png";
 import blackSea from "../../../resources/maps/BlackSea.png";
 import africa from "../../../resources/maps/Africa.png";
 import asia from "../../../resources/maps/Asia.png";
@@ -22,6 +23,8 @@ export function getMapsImage(map: GameMapType): string {
       return mena;
     case GameMapType.NorthAmerica:
       return northAmerica;
+    case GameMapType.SouthAmerica:
+      return southAmerica;
     case GameMapType.BlackSea:
       return blackSea;
     case GameMapType.Africa:

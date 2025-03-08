@@ -17,6 +17,7 @@ const maps = [
   "Mena",
   "Oceania",
   "NorthAmerica",
+  "SouthAmerica",
 ];
 const min_island_size = 30;
 
