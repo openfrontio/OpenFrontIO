@@ -1,0 +1,145 @@
+{
+  "name": "Britannia",
+  "width": 2000,
+  "height": 1397,
+  "nations": [
+    {
+      "coordinates": [960, 1258],
+      "name": "Dumnonia",
+      "strength": 1,
+      "flag": "1_Dumnonia"
+    },
+    {
+      "coordinates": [918, 1088],
+      "name": "Dyfed",
+      "strength": 1,
+      "flag": "1_Dyfed"
+    },
+    {
+      "coordinates": [1114, 1108],
+      "name": "Gwent",
+      "strength": 1,
+      "flag": "1_Gwent"
+    },
+    {
+      "coordinates": [1048, 936],
+      "name": "Gwynedd",
+      "strength": 2,
+      "flag": "1_Gwynedd"
+    },
+    {
+      "coordinates": [1108, 986],
+      "name": "Powys",
+      "strength": 2,
+      "flag": "1_Powys"
+    },
+    {
+      "coordinates": [952, 536],
+      "name": "Strathclyde",
+      "strength": 2,
+      "flag": "1_Strathclyde"
+    },
+    {
+      "coordinates": [748, 556],
+      "name": "Dalriata",
+      "strength": 1,
+      "flag": "1_Dalriata"
+    },
+    {
+      "coordinates": [1228, 1176],
+      "name": "Wessex",
+      "strength": 3,
+      "flag": "1_Wessex"
+    },
+    {
+      "coordinates": [1442, 1226],
+      "name": "Sussex",
+      "strength": 1,
+      "flag": "1_Sussex"
+    },
+    {
+      "coordinates": [1600, 1188],
+      "name": "Kent",
+      "strength": 2,
+      "flag": "1_Kent"
+    },
+    {
+      "coordinates": [1621, 1085],
+      "name": "Essex",
+      "strength": 1,
+      "flag": "1_Essex"
+    },
+    {
+      "coordinates": [1707, 1018],
+      "name": "East Anglia",
+      "strength": 2,
+      "flag": "1_East Anglia"
+    },
+    {
+      "coordinates": [1370, 1002],
+      "name": "Mercia",
+      "strength": 3,
+      "flag": "1_Mercia"
+    },
+    {
+      "coordinates": [1298, 724],
+      "name": "Northumbria",
+      "strength": 2,
+      "flag": "1_Northumbria"
+    },
+    {
+      "coordinates": [962, 366],
+      "name": "Fortriu",
+      "strength": 2,
+      "flag": "1_Fortriu"
+    },
+    {
+      "coordinates": [272, 1041],
+      "name": "Munster",
+      "strength": 2,
+      "flag": "1_Munster"
+    },
+    {
+      "coordinates": [264, 830],
+      "name": "Connacht",
+      "strength": 2,
+      "flag": "1_Connacht"
+    },
+    {
+      "coordinates": [608, 975],
+      "name": "Laigin",
+      "strength": 2,
+      "flag": "1_Laigin"
+    },
+    {
+      "coordinates": [564, 845],
+      "name": "Southern Uí Néill",
+      "strength": 3,
+      "flag": "1_Southern Uí Néill"
+    },
+    {
+      "coordinates": [639, 680],
+      "name": "Ulaid",
+      "strength": 2,
+      "flag": "1_Ulaid"
+    },
+    {
+      "coordinates": [509, 759],
+      "name": "Airgialla",
+      "strength": 2,
+      "flag": "1_Airgialla"
+    },
+    {
+      "coordinates": [416, 678],
+      "name": "Northern Uí Néill",
+      "strength": 3,
+      "flag": "1_Northern Uí Néill"
+    },
+    {
+      "coordinates": [1869, 1308],
+      "name": "Franks",
+      "strength": 3,
+      "flag": "1_Franks"
+    }
+  ]
+}
