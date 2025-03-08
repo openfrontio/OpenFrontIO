@@ -2,7 +2,7 @@ import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { EventBus, GameEvent } from "../../../core/EventBus";
-import { GameView, PlayerView } from "../../../core/game/GameView";
+import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
 import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
@@ -19,6 +19,10 @@ interface Entry {
 
 export class GoToPlayerEvent implements GameEvent {
   constructor(public player: PlayerView) {}
+}
+
+export class GoToUnitEvent implements GameEvent {
+  constructor(public unit: UnitView) {}
 }
 
 @customElement("leader-board")
@@ -116,7 +120,7 @@ export class Leaderboard extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  private handleRowClick(player: PlayerView) {
+  private handleRowClickPlayer(player: PlayerView) {
     this.eventBus.emit(new GoToPlayerEvent(player));
   }
 
@@ -274,7 +278,7 @@ export class Leaderboard extends LitElement implements Layer {
               (player) => html`
                 <tr
                   class="${player.isMyPlayer ? "myPlayer" : "otherPlayer"}"
-                  @click=${() => this.handleRowClick(player.player)}
+                  @click=${() => this.handleRowClickPlayer(player.player)}
                 >
                   <td>${player.position}</td>
                   <td class="player-name">${unsafeHTML(player.name)}</td>

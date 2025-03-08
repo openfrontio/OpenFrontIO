@@ -29,9 +29,9 @@ import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import { DirectiveResult } from "lit/directive.js";
 
 import { onlyImages, sanitize } from "../../../core/Util";
-import { GameView, PlayerView } from "../../../core/game/GameView";
+import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { renderTroops } from "../../Utils";
-import { GoToPlayerEvent } from "./Leaderboard";
+import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
 
 interface Event {
   description: string;
@@ -61,7 +61,7 @@ export class EventsDisplay extends LitElement implements Layer {
   private events: Event[] = [];
   @state() private incomingAttacks: AttackUpdate[] = [];
   @state() private outgoingAttacks: AttackUpdate[] = [];
-  @state() private outgoingBoats: any[] = [];
+  @state() private outgoingBoats: UnitView[] = [];
   @state() private _hidden: boolean = false;
   @state() private newEvents: number = 0;
 
@@ -330,6 +330,10 @@ export class EventsDisplay extends LitElement implements Layer {
     this.eventBus.emit(new GoToPlayerEvent(attacker));
   }
 
+  emitGoToUnitEvent(unit: UnitView) {
+    this.eventBus.emit(new GoToUnitEvent(unit));
+  }
+
   onEmojiMessageEvent(update: EmojiUpdate) {
     const myPlayer = this.game.playerByClientID(this.clientID);
     if (!myPlayer) return;
@@ -465,15 +469,15 @@ export class EventsDisplay extends LitElement implements Layer {
       ${this.outgoingBoats.length > 0
         ? html`
             <tr class="border-t border-gray-700">
-              <td class="lg:p-3 p-1 text-left text-blue-400">
-                ${this.outgoingBoats.map((boats) =>
-                  boats.targetID !== null
-                    ? html`
-                        <button class="ml-2">
-                          Boat: ${renderTroops(boats.data.troops)}
-                        </button>
-                      `
-                    : "",
+              <td
+                class="lg:p-3 p-1 text-left text-blue-400 grid grid-cols-3 gap-2"
+              >
+                ${this.outgoingBoats.map(
+                  (boats) => html`
+                    <button @click=${() => this.emitGoToUnitEvent(boats)}>
+                      Boat: ${renderTroops(boats.troops())}
+                    </button>
+                  `,
                 )}
               </td>
             </tr>
