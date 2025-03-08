@@ -3,18 +3,17 @@ import { customElement, state } from "lit/decorators.js";
 import { Difficulty, GameMapType, GameType } from "../core/game/Game";
 import { consolex } from "../core/Consolex";
 import { getMapsImage } from "./utilities/Maps";
-import { GameInfo } from "../core/Schemas";
+import { GameID, GameInfo } from "../core/Schemas";
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {
-  private lobbyOutOfDate = true;
-
   @state() private lobbies: GameInfo[] = [];
   @state() public isLobbyHighlighted: boolean = false;
   @state() private isButtonDebounced: boolean = false;
   private lobbiesInterval: number | null = null;
   private currLobby: GameInfo = null;
   private debounceDelay: number = 750;
+  private lobbyIDToStart = new Map<GameID, number>();
 
   createRenderRoot() {
     return this;
@@ -39,17 +38,14 @@ export class PublicLobby extends LitElement {
 
   private async fetchAndUpdateLobbies(): Promise<void> {
     try {
-      // Due to cache we only update every 2s,
-      // but reduce time by 1s so countdown looks nice.
-      if (this.lobbyOutOfDate) {
-        this.lobbies = await this.fetchLobbies();
-      } else {
-        this.lobbies.forEach((l) => {
-          l.msUntilStart -= 1000;
-        });
-        this.requestUpdate();
-      }
-      this.lobbyOutOfDate = !this.lobbyOutOfDate;
+      this.lobbies = await this.fetchLobbies();
+      this.lobbies.forEach((l) => {
+        // Store the start time on first fetch because endpoint is cached, causing
+        // the time to appear irregular.
+        if (!this.lobbyIDToStart.has(l.gameID)) {
+          this.lobbyIDToStart.set(l.gameID, l.msUntilStart + Date.now());
+        }
+      });
     } catch (error) {
       consolex.error("Error fetching lobbies:", error);
     }
@@ -83,7 +79,10 @@ export class PublicLobby extends LitElement {
     if (!lobby?.gameConfig) {
       return;
     }
-    const timeRemaining = Math.max(0, Math.floor(lobby.msUntilStart / 1000));
+    const timeRemaining = Math.max(
+      0,
+      Math.floor((this.lobbyIDToStart.get(lobby.gameID) - Date.now()) / 1000),
+    );
 
     // Format time to show minutes and seconds
     const minutes = Math.floor(timeRemaining / 60);
