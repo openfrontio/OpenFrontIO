@@ -235,7 +235,7 @@ export class UnitLayer implements Layer {
     // Clear previous area
     for (const t of this.game.bfs(
       unit.lastTile(),
-      euclDistFN(unit.lastTile(), 6),
+      euclDistFN(unit.lastTile(), 6, false),
     )) {
       this.clearCell(this.game.x(t), this.game.y(t));
     }
@@ -256,7 +256,10 @@ export class UnitLayer implements Layer {
     }
 
     // Paint outer territory
-    for (const t of this.game.bfs(unit.tile(), euclDistFN(unit.tile(), 5))) {
+    for (const t of this.game.bfs(
+      unit.tile(),
+      euclDistFN(unit.tile(), 5, false),
+    )) {
       this.paintCell(this.game.x(t), this.game.y(t), rel, outerColor, 255);
     }
 
@@ -275,7 +278,10 @@ export class UnitLayer implements Layer {
     }
 
     // Paint inner territory
-    for (const t of this.game.bfs(unit.tile(), euclDistFN(unit.tile(), 1))) {
+    for (const t of this.game.bfs(
+      unit.tile(),
+      euclDistFN(unit.tile(), 1, false),
+    )) {
       this.paintCell(
         this.game.x(t),
         this.game.y(t),
@@ -336,7 +342,7 @@ export class UnitLayer implements Layer {
     // Clear previous area
     for (const t of this.game.bfs(
       unit.lastTile(),
-      euclDistFN(unit.lastTile(), range),
+      euclDistFN(unit.lastTile(), range, false),
     )) {
       this.clearCell(this.game.x(t), this.game.y(t));
     }
@@ -344,7 +350,7 @@ export class UnitLayer implements Layer {
     if (unit.isActive()) {
       for (const t of this.game.bfs(
         unit.tile(),
-        euclDistFN(unit.tile(), range),
+        euclDistFN(unit.tile(), range, false),
       )) {
         this.paintCell(
           this.game.x(t),
@@ -354,7 +360,10 @@ export class UnitLayer implements Layer {
           255,
         );
       }
-      for (const t of this.game.bfs(unit.tile(), euclDistFN(unit.tile(), 2))) {
+      for (const t of this.game.bfs(
+        unit.tile(),
+        euclDistFN(unit.tile(), 2, false),
+      )) {
         this.paintCell(
           this.game.x(t),
           this.game.y(t),
@@ -389,7 +398,7 @@ export class UnitLayer implements Layer {
     // Clear previous area
     for (const t of this.game.bfs(
       unit.lastTile(),
-      euclDistFN(unit.lastTile(), 3),
+      euclDistFN(unit.lastTile(), 3, false),
     )) {
       this.clearCell(this.game.x(t), this.game.y(t));
     }

@@ -109,7 +109,10 @@ export class TerritoryLayer implements Layer {
       if (!centerTile) {
         continue;
       }
-      for (const tile of this.game.bfs(centerTile, euclDistFN(centerTile, 9))) {
+      for (const tile of this.game.bfs(
+        centerTile,
+        euclDistFN(centerTile, 9, false),
+      )) {
         if (!this.game.hasOwner(tile)) {
           this.paintHighlightCell(
             new Cell(this.game.x(tile), this.game.y(tile)),

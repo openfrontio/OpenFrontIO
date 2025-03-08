@@ -320,17 +320,22 @@ export class GameMapImpl implements GameMap {
 export function euclDistFN(
   root: TileRef,
   dist: number,
+  center: boolean,
 ): (gm: GameMap, tile: TileRef) => boolean {
-  return (gm: GameMap, n: TileRef) => {
-    // shifts the root tile’s coordinates by -0.5 so that its “center”
-    // center becomes the corner of four pixels rather than the middle of one pixel.
-    // just makes things based off even pixels instead of odd. Used to use 9x9 icons now 10x10 icons etc...
-    const rootX = gm.x(root) - 0.5;
-    const rootY = gm.y(root) - 0.5;
-    const dx = gm.x(n) - rootX;
-    const dy = gm.y(n) - rootY;
-    return Math.sqrt(dx * dx + dy * dy) <= dist;
-  };
+  if (!center) {
+    return (gm: GameMap, n: TileRef) => gm.euclideanDist(root, n) <= dist;
+  } else {
+    return (gm: GameMap, n: TileRef) => {
+      // shifts the root tile’s coordinates by -0.5 so that its “center”
+      // center becomes the corner of four pixels rather than the middle of one pixel.
+      // just makes things based off even pixels instead of odd. Used to use 9x9 icons now 10x10 icons etc...
+      const rootX = gm.x(root) - 0.5;
+      const rootY = gm.y(root) - 0.5;
+      const dx = gm.x(n) - rootX;
+      const dy = gm.y(n) - rootY;
+      return Math.sqrt(dx * dx + dy * dy) <= dist;
+    };
+  }
 }
 
 export function manhattanDistFN(

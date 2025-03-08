@@ -136,7 +136,7 @@ export class StructureLayer implements Layer {
     // Clear previous rendering
     for (const tile of this.game.bfs(
       unit.tile(),
-      euclDistFN(unit.tile(), config.borderRadius),
+      euclDistFN(unit.tile(), config.borderRadius, true),
     )) {
       this.clearCell(new Cell(this.game.x(tile), this.game.y(tile)));
     }
@@ -148,7 +148,7 @@ export class StructureLayer implements Layer {
     // Draw border and territory
     for (const tile of this.game.bfs(
       unit.tile(),
-      euclDistFN(unit.tile(), config.borderRadius),
+      euclDistFN(unit.tile(), config.borderRadius, true),
     )) {
       this.paintCell(
         new Cell(this.game.x(tile), this.game.y(tile)),
@@ -161,7 +161,7 @@ export class StructureLayer implements Layer {
 
     for (const tile of this.game.bfs(
       unit.tile(),
-      euclDistFN(unit.tile(), config.territoryRadius),
+      euclDistFN(unit.tile(), config.territoryRadius, true),
     )) {
       this.paintCell(
         new Cell(this.game.x(tile), this.game.y(tile)),

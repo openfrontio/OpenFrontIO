@@ -1,7 +1,7 @@
 import { euclDistFN, GameMap, TileRef } from "../game/GameMap";
 
 export function getSpawnTiles(gm: GameMap, tile: TileRef): TileRef[] {
-  return Array.from(gm.bfs(tile, euclDistFN(tile, 4))).filter(
+  return Array.from(gm.bfs(tile, euclDistFN(tile, 4, false))).filter(
     (t) => !gm.hasOwner(t) && gm.isLand(t),
   );
 }
