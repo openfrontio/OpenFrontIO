@@ -85,20 +85,27 @@ bun run start:server-dev
 - **Lint code**:
 
   ```bash
-  npm run lint
+  bun run lint
   ```
 
 - **Lint and fix code**:
+
   ```bash
-  npm run lint:fix
+  bun run lint:fix
+  ```
+
+- **Test the code**:
+
+  ```bash
+  bun test
   ```
 
 ## 🏗️ Project Structure
 
-- `/src/client` - Frontend game client
-- `/src/core` - Shared game logic
-- `/src/server` - Backend game server
-- `/resources` - Static assets (images, maps, etc.)
+- `/packages/client` - Frontend game client
+- `/packages/server` - Backend game server
+- `/packages/core` - Shared game logic
+  - `./resources` - Static assets (images, maps, etc.)
 
 ## 📝 License
 

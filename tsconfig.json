@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "ESNext",
-    "rootDir": "src",
+    "rootDir": "packages",
     "moduleResolution": "node",
     "sourceMap": true,
     "allowSyntheticDefaultImports": true,
@@ -10,12 +10,6 @@
     "experimentalDecorators": true,
     "useDefineForClassFields": false
   },
-  "include": [
-    "src/**/*",
-    "resources/**/*",
-    "generated/**/*",
-    "test/core/GameImpl.test.ts",
-    "src/scripts"
-  ],
+  "include": ["packages/*/src/**/*.ts"],
   "exclude": ["node_modules"]
 }
