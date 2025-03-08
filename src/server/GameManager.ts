@@ -52,7 +52,7 @@ export class GameManager {
     for (const [id, game] of this.games) {
       const phase = game.phase();
       if (phase == GamePhase.Active) {
-        if (game.isPublic && !game.hasStarted()) {
+        if (!game.hasStarted()) {
           try {
             game.start();
           } catch (error) {

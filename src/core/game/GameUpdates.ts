@@ -1,4 +1,4 @@
-import { ClientID } from "../Schemas";
+import { ClientID, PlayerStats, AllPlayersStats } from "../Schemas";
 import {
   AllianceRequest,
   EmojiMessage,
@@ -71,6 +71,7 @@ export interface UnitUpdate {
   isActive: boolean;
   health?: number;
   constructionType?: UnitType;
+  targetId?: number;
 }
 
 export interface AttackUpdate {
@@ -106,6 +107,7 @@ export interface PlayerUpdate {
   outgoingAttacks: AttackUpdate[];
   incomingAttacks: AttackUpdate[];
   outgoingAllianceRequests: PlayerID[];
+  stats: PlayerStats;
 }
 
 export interface AllianceRequestUpdate {
@@ -153,6 +155,7 @@ export interface DisplayMessageUpdate {
 
 export interface WinUpdate {
   type: GameUpdateType.Win;
+  allPlayersStats: AllPlayersStats;
   winnerID: number;
 }
 

@@ -99,7 +99,8 @@ export class SerialAStar implements AStar {
       const openSet = isForward ? this.fwdOpenSet : this.bwdOpenSet;
       const cameFrom = isForward ? this.fwdCameFrom : this.bwdCameFrom;
 
-      let tentativeGScore = gScore.get(current)! + this.gameMap.cost(neighbor);
+      const tentativeGScore =
+        gScore.get(current)! + this.gameMap.cost(neighbor);
 
       if (!gScore.has(neighbor) || tentativeGScore < gScore.get(neighbor)!) {
         cameFrom.set(neighbor, current);

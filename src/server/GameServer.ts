@@ -1,6 +1,7 @@
 import { RateLimiterMemory } from "rate-limiter-flexible";
 import WebSocket from "ws";
 import {
+  AllPlayersStats,
   ClientID,
   ClientMessage,
   ClientMessageSchema,
@@ -45,6 +46,8 @@ export class GameServer {
   private lastPingUpdate = 0;
 
   private winner: ClientID | null = null;
+  // This field is currently only filled at victory
+  private allPlayersStats: AllPlayersStats = {};
 
   constructor(
     public readonly id: string,
@@ -162,6 +165,7 @@ export class GameServer {
           }
           if (clientMsg.type == "winner") {
             this.winner = clientMsg.winner;
+            this.allPlayersStats = clientMsg.allPlayersStats;
           }
         } catch (error) {
           console.log(
@@ -298,6 +302,7 @@ export class GameServer {
             this._startTime,
             Date.now(),
             this.winner,
+            this.allPlayersStats,
           ),
         );
       } else {

@@ -25,6 +25,7 @@ import {
   ClientLogMessageSchema,
   ClientSendWinnerSchema,
   ClientMessageSchema,
+  AllPlayersStats,
 } from "../core/Schemas";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
@@ -122,7 +123,10 @@ export class SendSetTargetTroopRatioEvent implements GameEvent {
 }
 
 export class SendWinnerEvent implements GameEvent {
-  constructor(public readonly winner: ClientID) {}
+  constructor(
+    public readonly winner: ClientID,
+    public readonly allPlayersStats: AllPlayersStats,
+  ) {}
 }
 export class SendHashEvent implements GameEvent {
   constructor(
@@ -480,6 +484,7 @@ export class Transport {
         persistentID: this.lobbyConfig.persistentID,
         gameID: this.lobbyConfig.gameID,
         winner: event.winner,
+        allPlayersStats: event.allPlayersStats,
       });
       this.sendMsg(JSON.stringify(msg));
     } else {

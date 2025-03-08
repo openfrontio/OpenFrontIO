@@ -77,6 +77,9 @@ export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
 export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;
 export type GameRecord = z.infer<typeof GameRecordSchema>;
 
+export type AllPlayersStats = z.infer<typeof AllPlayersStatsSchema>;
+export type PlayerStats = z.infer<typeof PlayerStatsSchema>;
+
 const PlayerTypeSchema = z.nativeEnum(PlayerType);
 
 export interface GameInfo {
@@ -131,6 +134,21 @@ const ID = z
   .string()
   .regex(/^[a-zA-Z0-9]+$/)
   .length(8);
+
+const NukesEnum = z.enum([
+  "Atom Bomb",
+  "Hydrogen Bomb",
+  "MIRV",
+  "MIRV Warhead",
+]);
+
+const NukeStatsSchema = z.record(NukesEnum, z.number());
+
+export const PlayerStatsSchema = z.object({
+  sentNukes: z.record(ID, NukeStatsSchema),
+});
+
+export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
 // Zod schemas
 const BaseIntentSchema = z.object({
@@ -313,6 +331,7 @@ const ClientBaseMessageSchema = z.object({
 export const ClientSendWinnerSchema = ClientBaseMessageSchema.extend({
   type: z.literal("winner"),
   winner: ID.nullable(),
+  allPlayersStats: AllPlayersStatsSchema,
 });
 
 export const ClientHashSchema = ClientBaseMessageSchema.extend({
@@ -371,4 +390,6 @@ export const GameRecordSchema = z.object({
   num_turns: z.number(),
   turns: z.array(TurnSchema),
   winner: ID.nullable(),
+  allPlayersStats: z.record(ID, PlayerStatsSchema),
+  version: z.enum(["v0.0.1"]),
 });

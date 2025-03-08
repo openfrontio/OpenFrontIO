@@ -26,6 +26,18 @@ export interface Gatekeeper {
   ) => (message: string) => Promise<void>;
 }
 
+let gk: Gatekeeper = null;
+
+async function getGatekeeperCached(): Promise<Gatekeeper> {
+  if (gk != null) {
+    return gk;
+  }
+  return getGatekeeper().then((g) => {
+    gk = g;
+    return gk;
+  });
+}
+
 // Function to get the appropriate security middleware implementation
 async function getGatekeeper(): Promise<Gatekeeper> {
   try {
@@ -78,6 +90,41 @@ async function getGatekeeper(): Promise<Gatekeeper> {
   }
 }
 
+export class GatekeeperWrapper implements Gatekeeper {
+  constructor(private getGK: () => Promise<Gatekeeper>) {}
+
+  httpHandler(
+    limiterType: LimiterType,
+    fn: (req: Request, res: Response, next: NextFunction) => Promise<any>,
+  ) {
+    return async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const gk = await this.getGK();
+        const handler = gk.httpHandler(limiterType, fn);
+        return handler(req, res, next);
+      } catch (error) {
+        next(error);
+      }
+    };
+  }
+
+  // Corrected implementation for WebSocket handler wrapper
+  wsHandler(
+    req: http.IncomingMessage | string,
+    fn: (message: string) => Promise<void>,
+  ) {
+    return async (message: string) => {
+      try {
+        const gk = await this.getGK();
+        const handler = gk.wsHandler(req, fn);
+        return handler(message);
+      } catch (error) {
+        console.error("WebSocket handler error:", error);
+      }
+    };
+  }
+}
+
 export class NoOpGatekeeper implements Gatekeeper {
   // Simple pass-through with no rate limiting
   httpHandler(
@@ -108,17 +155,6 @@ export class NoOpGatekeeper implements Gatekeeper {
   }
 }
 
-// Initialize the security middleware with a default implementation
-// We'll use the NoOpSecurityMiddleware initially and then replace it
-// with the real implementation once it's loaded
-export const gatekeeper: Gatekeeper = new NoOpGatekeeper();
-
-// Immediately try to load the real middleware
-getGatekeeper()
-  .then((middleware) => {
-    // Replace the methods of securityMiddleware with those from the loaded middleware
-    Object.assign(gatekeeper, middleware);
-  })
-  .catch((error) => {
-    console.error("Failed to initialize gatekeeper:", error);
-  });
+export const gatekeeper: Gatekeeper = new GatekeeperWrapper(() =>
+  getGatekeeperCached(),
+);

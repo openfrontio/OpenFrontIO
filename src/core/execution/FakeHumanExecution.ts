@@ -282,19 +282,14 @@ export class FakeHumanExecution implements Execution {
     if (closest == null) {
       return;
     }
-    if (
-      this.mg.manhattanDist(closest.x, closest.y) <
-      this.mg.config().boatMaxDistance()
-    ) {
-      this.mg.addExecution(
-        new TransportShipExecution(
-          this.player.id(),
-          other.id(),
-          closest.y,
-          this.player.troops() / 5,
-        ),
-      );
-    }
+    this.mg.addExecution(
+      new TransportShipExecution(
+        this.player.id(),
+        other.id(),
+        closest.y,
+        this.player.troops() / 5,
+      ),
+    );
   }
 
   private handleUnits() {
@@ -403,7 +398,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   private warshipSpawnTile(portTile: TileRef): TileRef | null {
-    const radius = this.mg.config().boatMaxDistance() / 2;
+    const radius = 250;
     for (let attempts = 0; attempts < 50; attempts++) {
       const randX = this.random.nextInt(
         this.mg.x(portTile) - radius,
@@ -418,12 +413,6 @@ export class FakeHumanExecution implements Execution {
       }
       const tile = this.mg.ref(randX, randY);
       // Sanity check
-      if (
-        this.mg.manhattanDist(tile, portTile) >=
-        this.mg.config().boatMaxDistance()
-      ) {
-        continue;
-      }
       if (!this.mg.isOcean(tile)) {
         continue;
       }

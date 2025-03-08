@@ -33,7 +33,7 @@ export class WinCheckExecution implements Execution {
       (max.numTilesOwned() / numTilesWithoutFallout) * 100 >
       this.mg.config().percentageTilesOwnedToWin()
     ) {
-      this.mg.setWinner(max);
+      this.mg.setWinner(max, this.mg.stats().stats());
       console.log(`${max.name()} has won the game`);
       this.active = false;
     }

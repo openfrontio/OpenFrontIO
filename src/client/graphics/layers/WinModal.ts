@@ -17,7 +17,7 @@ declare global {
   }
 }
 // Add this at the top of your file
-declare var adsbygoogle: any[];
+declare let adsbygoogle: any[];
 
 @customElement("win-modal")
 export class WinModal extends LitElement implements Layer {
@@ -228,10 +228,11 @@ export class WinModal extends LitElement implements Layer {
       this.won = false;
       this.show();
     }
-
     this.game.updatesSinceLastTick()[GameUpdateType.Win].forEach((wu) => {
       const winner = this.game.playerBySmallID(wu.winnerID) as PlayerView;
-      this.eventBus.emit(new SendWinnerEvent(winner.clientID()));
+      this.eventBus.emit(
+        new SendWinnerEvent(winner.clientID(), wu.allPlayersStats),
+      );
       if (winner == this.game.myPlayer()) {
         this._title = "You Won!";
         this.won = true;

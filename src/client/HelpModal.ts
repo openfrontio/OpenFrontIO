@@ -57,6 +57,9 @@ export class HelpModal extends LitElement {
     }
 
     #helpModal .close {
+      position: sticky;
+      top: 0px;
+      right: 0px;
       color: #aaa;
       float: right;
       font-size: 28px;
@@ -411,9 +414,11 @@ export class HelpModal extends LitElement {
                   <td>Port</td>
                   <td><div class="icon port-icon"></div></td>
                   <td>
-                    Automatically sends trade ships between allied ports,
-                    giving gold to both sides. Allows building Battleships.
-                    Can only be built near water.
+                    Automatically sends trade ships between ports of your
+                    country and other countries (except if you clicked "stop
+                    trade" on them or they clicked "stop trade on you"), giving
+                    gold to both sides. Allows building Battleships. Can only
+                    be built near water.
                   </td>
                 </tr>
                 <tr>

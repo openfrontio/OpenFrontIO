@@ -68,6 +68,60 @@
           drop-shadow(1px -1px 0px rgb(255, 255, 255))
           drop-shadow(-1px 1px 0px rgb(255, 255, 255));
       }
+
+      .left-gutter-ad {
+        position: fixed;
+        left: 0;
+        top: 200px; /* Changed from top: 50% */
+        transform: none; /* Removed translateY(-50%) since we don't need to center anymore */
+        z-index: 40;
+        width: 300px;
+        height: 600px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        pointer-events: auto;
+        background: rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(2px);
+      }
+
+      .left-gutter-ad google-ad {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      .right-gutter-ad {
+        position: fixed;
+        right: 0;
+        top: 200px; /* Changed from top: 50% */
+        transform: none; /* Removed translateY(-50%) since we don't need to center anymore */
+        z-index: 40;
+        width: 300px;
+        height: 600px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        pointer-events: auto;
+        background: rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(2px);
+      }
+
+      .right-gutter-ad google-ad {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      /* Media query to hide the gutter ad on smaller screens */
+      @media (max-width: 1280px) {
+        .left-gutter-ad {
+          display: none;
+        }
+        .right-gutter-ad {
+          display: none;
+        }
+      }
     </style>
 
     <!-- Immediate execution to prevent FOUC -->
@@ -159,8 +213,24 @@
 
     <div class="bg-image"></div>
 
+    <!-- Left gutter ad placement - full height, no empty space -->
+    <div class="left-gutter-ad ad">
+      <google-ad
+        adSlot="5220834834"
+        adFormat="vertical"
+        fullWidthResponsive="false"
+      ></google-ad>
+    </div>
+
+    <div class="right-gutter-ad ad">
+      <google-ad
+        adSlot="1814331462"
+        adFormat="vertical"
+        fullWidthResponsive="false"
+      ></google-ad>
+    </div>
+
     <dark-mode-button></dark-mode-button>
-    <google-ad></google-ad>
 
     <!-- Main container with responsive padding -->
     <div class="flex justify-center items-center flex-grow">
@@ -174,6 +244,7 @@
 
         <div class="max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl mx-auto mt-4">
           <a
+            target="_blank"
             href="https://discord.gg/k22YrnAzGp"
             class="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white p-3 sm:p-4 lg:p-5 font-medium text-lg sm:text-xl lg:text-2xl rounded-lg border-none cursor-pointer transition-colors duration-300 flex justify-center items-center gap-5"
           >
@@ -246,6 +317,7 @@
     <leader-board></leader-board>
     <build-menu></build-menu>
     <win-modal></win-modal>
+    <game-starting-modal></game-starting-modal>
     <top-bar></top-bar>
     <player-panel></player-panel>
     <help-modal></help-modal>

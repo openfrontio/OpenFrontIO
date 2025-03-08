@@ -110,12 +110,17 @@ export class InputHandler {
   initialize() {
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
-    this.canvas.addEventListener("wheel", (e) => this.onScroll(e), {
-      passive: false,
-    });
-    this.canvas.addEventListener("wheel", (e) => this.onShiftScroll(e), {
-      passive: false,
-    });
+    this.canvas.addEventListener(
+      "wheel",
+      (e) => {
+        this.onScroll(e);
+        this.onShiftScroll(e);
+        e.preventDefault();
+      },
+      {
+        passive: false,
+      },
+    );
     window.addEventListener("pointermove", this.onPointerMove.bind(this));
     this.canvas.addEventListener("contextmenu", (e: MouseEvent) => {
       this.onContextMenu(e);
@@ -195,6 +200,8 @@ export class InputHandler {
           "Digit1",
           "Digit2",
           "KeyC",
+          "ControlLeft",
+          "ControlRight",
         ].includes(e.code)
       ) {
         this.activeKeys.add(e.code);
@@ -245,6 +252,8 @@ export class InputHandler {
           "Digit1",
           "Digit2",
           "KeyC",
+          "ControlLeft",
+          "ControlRight",
         ].includes(e.code)
       ) {
         this.activeKeys.delete(e.code);
@@ -305,7 +314,11 @@ export class InputHandler {
 
   private onScroll(event: WheelEvent) {
     if (!event.shiftKey) {
-      this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY));
+      const realCtrl =
+        this.activeKeys.has("ControlLeft") ||
+        this.activeKeys.has("ControlRight");
+      const ratio = event.ctrlKey && !realCtrl ? 10 : 1; // Compensate pinch-zoom low sensitivity
+      this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY * ratio));
     }
   }
 

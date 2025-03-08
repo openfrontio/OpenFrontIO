@@ -7,6 +7,7 @@ import { UsernameInput } from "./UsernameInput";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
+import { GameStartingModal } from "./gameStartingModal";
 import { generateID } from "../core/Util";
 import { generateCryptoRandomUUID } from "./Utils";
 import { consolex } from "../core/Consolex";
@@ -20,6 +21,8 @@ import { DarkModeButton } from "./DarkModeButton";
 import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
 import { GameType } from "../core/game/Game";
+import { getServerConfigFromClient } from "../core/configuration/Config";
+import GoogleAdElement from "./GoogleAdElement";
 
 class Client {
   private gameStop: () => void;
@@ -30,6 +33,7 @@ class Client {
 
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
+  private googleAds: NodeListOf<GoogleAdElement>;
   private userSettings: UserSettings = new UserSettings();
 
   constructor() {}
@@ -55,6 +59,9 @@ class Client {
     }
 
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
+    this.googleAds = document.querySelectorAll(
+      "google-ad",
+    ) as NodeListOf<GoogleAdElement>;
 
     window.addEventListener("beforeunload", (event) => {
       consolex.log("Browser is closing");
@@ -136,9 +143,11 @@ class Client {
       consolex.log("joining lobby, stopping existing game");
       this.gameStop();
     }
+    const config = await getServerConfigFromClient();
     const gameType = event.detail.gameType;
     this.gameStop = joinLobby(
       {
+        serverConfig: config,
         gameType: gameType,
         flag: (): string =>
           this.flagInput.getCurrentFlag() == "xx"
@@ -160,6 +169,17 @@ class Client {
       () => {
         this.joinModal.close();
         this.publicLobby.stop();
+        document.querySelectorAll(".ad").forEach((ad) => {
+          (ad as HTMLElement).style.display = "none";
+        });
+
+        // show when the game loads
+        const startingModal = document.querySelector(
+          "game-starting-modal",
+        ) as GameStartingModal;
+        startingModal instanceof GameStartingModal;
+        startingModal.show();
+
         if (gameType != GameType.Singleplayer) {
           window.history.pushState({}, "", `/join/${lobby.gameID}`);
           sessionStorage.setItem("inLobby", "true");
@@ -198,7 +218,7 @@ export function getPersistentIDFromCookie(): string {
 
   // Try to get existing cookie
   const cookies = document.cookie.split(";");
-  for (let cookie of cookies) {
+  for (const cookie of cookies) {
     const [cookieName, cookieValue] = cookie.split("=").map((c) => c.trim());
     if (cookieName === COOKIE_NAME) {
       return cookieValue;

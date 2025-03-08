@@ -256,7 +256,7 @@ export class AttackExecution implements Execution {
       let numOwnedByMe = this.mg
         .neighbors(neighbor)
         .filter((t) => this.mg.owner(t) == this._owner).length;
-      let dist = 0;
+      const dist = 0;
       if (numOwnedByMe > 2) {
         numOwnedByMe = 10;
       }
@@ -283,32 +283,32 @@ export class AttackExecution implements Execution {
   }
 
   private handleDeadDefender() {
-    if (this.target.isPlayer() && this.target.numTilesOwned() < 100) {
-      const gold = this.target.gold();
-      this.mg.displayMessage(
-        `Conquered ${this.target.displayName()} received ${renderNumber(
-          gold,
-        )} gold`,
-        MessageType.SUCCESS,
-        this._owner.id(),
-      );
-      this.target.removeGold(gold);
-      this._owner.addGold(gold);
+    if (!(this.target.isPlayer() && this.target.numTilesOwned() < 100)) return;
 
-      for (let i = 0; i < 10; i++) {
-        for (const tile of this.target.tiles()) {
-          const borders = this.mg
-            .neighbors(tile)
-            .some((t) => this.mg.owner(t) == this._owner);
-          if (borders) {
-            this._owner.conquer(tile);
-          } else {
-            for (const neighbor of this.mg.neighbors(tile)) {
-              const no = this.mg.owner(neighbor);
-              if (no.isPlayer() && no != this.target) {
-                this.mg.player(no.id()).conquer(tile);
-                break;
-              }
+    const gold = this.target.gold();
+    this.mg.displayMessage(
+      `Conquered ${this.target.displayName()} received ${renderNumber(
+        gold,
+      )} gold`,
+      MessageType.SUCCESS,
+      this._owner.id(),
+    );
+    this.target.removeGold(gold);
+    this._owner.addGold(gold);
+
+    for (let i = 0; i < 10; i++) {
+      for (const tile of this.target.tiles()) {
+        const borders = this.mg
+          .neighbors(tile)
+          .some((t) => this.mg.owner(t) == this._owner);
+        if (borders) {
+          this._owner.conquer(tile);
+        } else {
+          for (const neighbor of this.mg.neighbors(tile)) {
+            const no = this.mg.owner(neighbor);
+            if (no.isPlayer() && no != this.target) {
+              this.mg.player(no.id()).conquer(tile);
+              break;
             }
           }
         }

@@ -110,6 +110,7 @@ export class WarshipExecution implements Execution {
         return distSortUnit(this.mg, this.warship)(a, b);
       })[0] ?? null;
 
+    this.warship.setTarget(this.target);
     if (this.target == null || this.target.type() != UnitType.TradeShip) {
       // Patrol unless we are hunting down a tradeship
       const result = this.pathfinder.nextTile(

@@ -24,7 +24,7 @@ import { PlayerImpl } from "./PlayerImpl";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { AllianceRequestImpl } from "./AllianceRequestImpl";
 import { AllianceImpl } from "./AllianceImpl";
-import { ClientID, GameConfig } from "../Schemas";
+import { ClientID, AllPlayersStats } from "../Schemas";
 import { MessageType } from "./Game";
 import { UnitImpl } from "./UnitImpl";
 import { consolex } from "../Consolex";
@@ -320,7 +320,12 @@ export class GameImpl implements Game {
   }
 
   addPlayer(playerInfo: PlayerInfo, manpower: number): Player {
-    let player = new PlayerImpl(this, this.nextPlayerID, playerInfo, manpower);
+    const player = new PlayerImpl(
+      this,
+      this.nextPlayerID,
+      playerInfo,
+      manpower,
+    );
     this._playersBySmallID.push(player);
     this.nextPlayerID++;
     this._players.set(playerInfo.id, player);
@@ -378,7 +383,7 @@ export class GameImpl implements Game {
     if (!this.isLand(tile)) {
       throw Error(`cannot conquer water`);
     }
-    let previousOwner = this.owner(tile) as TerraNullius | PlayerImpl;
+    const previousOwner = this.owner(tile) as TerraNullius | PlayerImpl;
     if (previousOwner.isPlayer()) {
       previousOwner._lastTileChange = this._ticks;
       previousOwner._tiles.delete(tile);
@@ -403,7 +408,7 @@ export class GameImpl implements Game {
       throw new Error("Cannot relinquish water");
     }
 
-    let previousOwner = this.owner(tile) as PlayerImpl;
+    const previousOwner = this.owner(tile) as PlayerImpl;
     previousOwner._lastTileChange = this._ticks;
     previousOwner._tiles.delete(tile);
     previousOwner._borderTiles.delete(tile);
@@ -438,7 +443,7 @@ export class GameImpl implements Game {
       return false;
     }
     for (const neighbor of this.neighbors(tile)) {
-      let bordersEnemy = this.owner(tile) != this.owner(neighbor);
+      const bordersEnemy = this.owner(tile) != this.owner(neighbor);
       if (bordersEnemy) {
         return true;
       }
@@ -511,10 +516,11 @@ export class GameImpl implements Game {
     });
   }
 
-  setWinner(winner: Player): void {
+  setWinner(winner: Player, allPlayersStats: AllPlayersStats): void {
     this.addUpdate({
       type: GameUpdateType.Win,
       winnerID: winner.smallID(),
+      allPlayersStats,
     });
   }
 

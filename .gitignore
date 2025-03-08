@@ -1,6 +1,7 @@
 build/
 node_modules/
 out/
+static/
 TODO.txt
 resources/images/.DS_Store
 resources/.DS_Store

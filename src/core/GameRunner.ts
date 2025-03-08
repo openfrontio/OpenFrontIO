@@ -32,7 +32,7 @@ export async function createGameRunner(
   clientID: ClientID,
   callBack: (gu: GameUpdateViewData) => void,
 ): Promise<GameRunner> {
-  const config = getConfig(gameConfig, null);
+  const config = await getConfig(gameConfig, null);
   const gameMap = await loadGameMap(gameConfig.gameMap);
   const game = createGame(
     gameMap.gameMap,
@@ -168,7 +168,6 @@ export class GameRunner {
         canBreakAlliance: player.isAlliedWith(other),
         canDonate: player.canDonate(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
-        stats: this.game.stats().getPlayerStats(other.id()),
       };
     }
 

@@ -31,8 +31,13 @@ export class StructureLayer implements Layer {
   private readonly unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
     [UnitType.Port]: {
       icon: anchorIcon,
-      borderRadius: 8,
-      territoryRadius: 6,
+      borderRadius: 8.525,
+      territoryRadius: 6.525,
+    },
+    [UnitType.City]: {
+      icon: cityIcon,
+      borderRadius: 8.525,
+      territoryRadius: 6.525,
     },
     [UnitType.MissileSilo]: {
       icon: missileSiloIcon,

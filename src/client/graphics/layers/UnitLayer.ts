@@ -1,4 +1,4 @@
-import { Colord } from "colord";
+import { colord, Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { Unit, UnitType, Player } from "../../../core/game/Game";
 import { Layer } from "./Layer";
@@ -247,15 +247,20 @@ export class UnitLayer implements Layer {
       return;
     }
 
+    let outerColor = this.theme.territoryColor(unit.owner().info());
+    if (unit.targetId()) {
+      const targetOwner = this.game
+        .units()
+        .find((u) => u.id() == unit.targetId())
+        ?.owner();
+      if (targetOwner == this.myPlayer) {
+        outerColor = colord({ r: 200, b: 0, g: 0 });
+      }
+    }
+
     // Paint outer territory
     for (const t of this.game.bfs(unit.tile(), euclDistFN(unit.tile(), 5))) {
-      this.paintCell(
-        this.game.x(t),
-        this.game.y(t),
-        rel,
-        this.theme.territoryColor(unit.owner().info()),
-        255,
-      );
+      this.paintCell(this.game.x(t), this.game.y(t), rel, outerColor, 255);
     }
 
     // Paint border

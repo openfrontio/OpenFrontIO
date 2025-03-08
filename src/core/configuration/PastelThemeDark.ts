@@ -274,7 +274,7 @@ export const pastelThemeDark = new (class implements Theme {
   }
 
   terrainColor(gm: GameMap, tile: TileRef): Colord {
-    let mag = gm.magnitude(tile);
+    const mag = gm.magnitude(tile);
     if (gm.isShore(tile)) {
       return this.shore;
     }

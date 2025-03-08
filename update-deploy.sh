@@ -1,52 +1,110 @@
 #!/bin/bash
-# Check if the --env flag is provided
-if [[ "$1" != "--env" ]]; then
-    echo "Usage: $0 --env [dev|prod]"
+# deploy.sh - Complete deployment script for staging and production environments
+# This script:
+# 1. Builds and uploads the Docker image to ECR with appropriate tag
+# 2. Copies the update script to EC2 instance (staging or prod)
+# 3. Executes the update script on the EC2 instance
+set -e  # Exit immediately if a command exits with a non-zero status
+
+# Function to print section headers
+print_header() {
+    echo "======================================================"
+    echo "🚀 $1"
+    echo "======================================================"
+}
+
+# Load environment variables
+if [ -f .env ]; then
+    echo "Loading configuration from .env file..."
+    export $(grep -v '^#' .env | xargs)
+fi
+
+# Check command line argument
+if [ $# -ne 1 ] || ([ "$1" != "staging" ] && [ "$1" != "prod" ]); then
+    echo "Error: Please specify environment (staging or prod)"
+    echo "Usage: $0 [staging|prod]"
     exit 1
 fi
 
-# Get the environment from the command line argument
-ENV="$2"
+ENV=$1
+VERSION_TAG=""
 
-# Validate the environment
-if [[ "$ENV" != "dev" && "$ENV" != "prod" ]]; then
-    echo "Invalid environment. Use 'dev' or 'prod'."
-    exit 1
-fi
-
-# Set the instance name based on the environment
-if [[ "$ENV" == "dev" ]]; then
-    INSTANCE_NAME="openfrontio-dev-instance"
-    TAG="dev"
-    GAME_ENV="preprod"
-    echo "[DEV] Deploying to openfront.dev"
+# Set environment-specific variables
+if [ "$ENV" == "staging" ]; then
+    print_header "DEPLOYING TO STAGING ENVIRONMENT"
+    EC2_HOST=$EC2_HOST_STAGING
+    VERSION_TAG="staging"
 else
-    INSTANCE_NAME="openfrontio-instance"
-    TAG="latest"
-    GAME_ENV="prod"
-    echo "[PROD] Deploying to openfront.io"
+    print_header "DEPLOYING TO PRODUCTION ENVIRONMENT"
+    EC2_HOST=$EC2_HOST_PROD
+    VERSION_TAG="latest"
 fi
 
-# Ensure you're authenticated with Google Cloud
-gcloud auth configure-docker us-central1-docker.pkg.dev
+# Check required environment variables
+if [ -z "$EC2_HOST" ]; then
+    echo "Error: EC2_HOST_${ENV^^} not defined in .env file or environment"
+    exit 1
+fi
 
-# Build the new Docker image with platform specification and GAME_ENV build argument
-docker build --platform linux/amd64 --build-arg GAME_ENV=$GAME_ENV -t openfrontio .
+# Configuration
+EC2_KEY=${EC2_KEY:-"~/.ssh/id_rsa"}      # Use default or override from .env
+BUILD_SCRIPT="./upload.sh"     # Path to your build script
+UPDATE_SCRIPT="./update.sh"    # Path to your update script
+REMOTE_UPDATE_SCRIPT="/home/ec2-user/update-openfront.sh"  # Where to place the script on EC2
 
-# Tag the new image
-docker tag openfrontio us-central1-docker.pkg.dev/openfrontio/openfrontio/game-server:$TAG
+# Check if required scripts exist
+if [ ! -f "$BUILD_SCRIPT" ]; then
+    echo "Error: Build script $BUILD_SCRIPT not found!"
+    exit 1
+fi
 
-# Push the new image to Google Container Registry
-docker push us-central1-docker.pkg.dev/openfrontio/openfrontio/game-server:$TAG
+if [ ! -f "$UPDATE_SCRIPT" ]; then
+    echo "Error: Update script $UPDATE_SCRIPT not found!"
+    exit 1
+fi
 
-# Prune Docker system on the instance
-gcloud compute ssh $INSTANCE_NAME --zone us-central1-a --command 'docker system prune -f -a'
-gcloud compute ssh $INSTANCE_NAME --zone us-central1-a --command 'docker kill $(docker ps -q)'
-gcloud compute ssh $INSTANCE_NAME --zone us-central1-a --command 'docker rmi $(docker images -q) -f'
+# Step 1: Build and upload Docker image to ECR
+print_header "STEP 1: Building and uploading Docker image to ECR"
+echo "Environment: ${ENV}"
+echo "Using version tag: $VERSION_TAG"
 
-# Update the GCE instance with the new container image
-gcloud compute instances update-container $INSTANCE_NAME \
-  --container-image us-central1-docker.pkg.dev/openfrontio/openfrontio/game-server:$TAG \
-  --zone=us-central1-a
+# Execute the build script with the version tag
+$BUILD_SCRIPT $VERSION_TAG
+if [ $? -ne 0 ]; then
+    echo "❌ Build and upload failed. Stopping deployment."
+    exit 1
+fi
 
-echo "Deployment to $ENV environment complete. New version should be live soon on $INSTANCE_NAME."
+# Step 2: Copy update script to EC2 instance
+print_header "STEP 2: Copying update script to EC2 instance"
+echo "Target: $EC2_HOST"
+
+# Make sure the update script is executable
+chmod +x $UPDATE_SCRIPT
+
+# Copy the update script to the EC2 instance
+scp -i $EC2_KEY $UPDATE_SCRIPT $EC2_HOST:$REMOTE_UPDATE_SCRIPT
+scp -i $EC2_KEY .env $EC2_HOST:/home/ec2-user/.env
+# After copying the .env file, secure it
+ssh -i $EC2_KEY $EC2_HOST "chmod 600 /home/ec2-user/.env"
+
+if [ $? -ne 0 ]; then
+    echo "❌ Failed to copy update script to EC2 instance. Stopping deployment."
+    exit 1
+fi
+echo "✅ Update script successfully copied to EC2 instance."
+
+# Step 3: Execute the update script on the EC2 instance
+print_header "STEP 3: Executing update script on EC2 instance"
+
+# Make the script executable on the remote server and execute it with the environment parameter
+ssh -i $EC2_KEY $EC2_HOST "chmod +x $REMOTE_UPDATE_SCRIPT && $REMOTE_UPDATE_SCRIPT $ENV"
+if [ $? -ne 0 ]; then
+    echo "❌ Failed to execute update script on EC2 instance."
+    exit 1
+fi
+
+print_header "DEPLOYMENT COMPLETED SUCCESSFULLY"
+echo "✅ New version deployed to ${ENV} environment!"
+echo "🌐 Check your ${ENV} server to verify the deployment."
+echo "======================================================"

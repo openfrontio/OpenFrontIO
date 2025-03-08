@@ -68,7 +68,7 @@ export async function loadTerrainFromFile(fileData: string): Promise<GameMap> {
 function logBinaryAsAscii(data: string, length: number = 8) {
   consolex.log("Binary data (1 = set bit, 0 = unset bit):");
   for (let i = 0; i < Math.min(length, data.length); i++) {
-    let byte = data.charCodeAt(i);
+    const byte = data.charCodeAt(i);
     let byteString = "";
     for (let j = 7; j >= 0; j--) {
       byteString += byte & (1 << j) ? "1" : "0";

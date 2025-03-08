@@ -11,6 +11,8 @@ export class UnitImpl implements Unit {
   private _active = true;
   private _health: bigint;
   private _lastTile: TileRef = null;
+  // Currently only warship use it
+  private _target: Unit = null;
 
   private _constructionType: UnitType = undefined;
 
@@ -28,6 +30,10 @@ export class UnitImpl implements Unit {
     this._lastTile = _tile;
   }
 
+  id() {
+    return this._id;
+  }
+
   toUpdate(): UnitUpdate {
     return {
       type: GameUpdateType.Unit,
@@ -40,6 +46,7 @@ export class UnitImpl implements Unit {
       lastPos: this._lastTile,
       health: this.hasHealth() ? Number(this._health) : undefined,
       constructionType: this._constructionType,
+      targetId: this.target() ? this.target().id() : null,
     };
   }
 
@@ -149,5 +156,13 @@ export class UnitImpl implements Unit {
 
   dstPort(): Unit {
     return this._dstPort;
+  }
+
+  setTarget(target: Unit) {
+    this._target = target;
+  }
+
+  target() {
+    return this._target;
   }
 }

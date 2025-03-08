@@ -3,11 +3,13 @@ import twemoji from "twemoji";
 import DOMPurify from "dompurify";
 import { Cell, Game, Player, Unit } from "./game/Game";
 import {
+  AllPlayersStats,
   ClientID,
   GameConfig,
   GameID,
   GameRecord,
   PlayerRecord,
+  PlayerStats,
   Turn,
 } from "./Schemas";
 import { customAlphabet, nanoid } from "nanoid";
@@ -24,7 +26,7 @@ export function manhattanDistWrapped(
   dx = Math.min(dx, width - dx);
 
   // Calculate y distance (no wrapping for y-axis)
-  let dy = Math.abs(c1.y - c2.y);
+  const dy = Math.abs(c1.y - c2.y);
 
   // Return the sum of x and y distances
   return dx + dy;
@@ -64,7 +66,7 @@ export function sourceDstOceanShore(
   tile: TileRef,
 ): [TileRef | null, TileRef | null] {
   const dst = gm.owner(tile);
-  let srcTile = closestShoreFromPlayer(gm, src, tile);
+  const srcTile = closestShoreFromPlayer(gm, src, tile);
   let dstTile: TileRef | null = null;
   if (dst.isPlayer()) {
     dstTile = closestShoreFromPlayer(gm, dst as Player, tile);
@@ -262,6 +264,7 @@ export function CreateGameRecord(
   start: number,
   end: number,
   winner: ClientID | null,
+  allPlayersStats: AllPlayersStats,
 ): GameRecord {
   const record: GameRecord = {
     id: id,
@@ -270,6 +273,8 @@ export function CreateGameRecord(
     endTimestampMS: end,
     date: new Date().toISOString().split("T")[0],
     turns: [],
+    allPlayersStats,
+    version: "v0.0.1",
   };
 
   for (const turn of turns) {

@@ -332,8 +332,8 @@ function getArea(
   visited: Set<string>,
   targetType: TerrainType,
 ) {
-  let area = [];
-  let next = [[x, y]];
+  const area = [];
+  const next = [[x, y]];
   while (next.length) {
     const [x, y] = next.pop();
     const key = `${x},${y}`;
