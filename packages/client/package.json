@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "OpenFront Web-Client",
   "scripts": {
-    "build-dev": "webpack --config webpack.config.js --stats-children --mode development",
-    "build-prod": "webpack --config webpack.config.js --stats-children --mode production",
+    "build-dev": "webpack --config webpack.config.js --mode development",
+    "build-prod": "webpack --config webpack.config.js --mode production",
     "start:client": "webpack serve --open --node-env development"
   },
   "dependencies": {

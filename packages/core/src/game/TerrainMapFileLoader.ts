@@ -66,13 +66,13 @@ class GameMapLoader {
 
     const [binModule, miniBinModule, infoModule] = await Promise.all([
       import(
-        `!!binary-loader!../../../resources/maps/${fileName}.bin`
+        `!!binary-loader!../../../core/resources/maps/${fileName}.bin`
       ) as Promise<BinModule>,
       import(
-        `!!binary-loader!../../../resources/maps/${fileName}Mini.bin`
+        `!!binary-loader!../../../core/resources/maps/${fileName}Mini.bin`
       ) as Promise<BinModule>,
       import(
-        `../../../resources/maps/${fileName}.json`
+        `../../../core/resources/maps/${fileName}.json`
       ) as Promise<NationMapModule>,
     ]);
 

@@ -122,7 +122,7 @@ export default (env, argv) => {
       new CopyPlugin({
         patterns: [
           {
-            from: "resources",
+            from: "packages/core/resources",
             to: ".", // Copy to the output directory (static)
             // Add content hashing to copied files
             transform: function (content, path) {
