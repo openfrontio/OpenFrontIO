@@ -37,8 +37,6 @@ export class SAMLauncherExecution implements Execution {
   private missileAttackRate = 50;
   private lastMissileAttack = 0;
 
-  private alreadySentMissile = new Set<Unit>();
-
   private pseudoRandom: PseudoRandom;
 
   constructor(
@@ -55,7 +53,7 @@ export class SAMLauncherExecution implements Execution {
     }
     this.player = mg.player(this.ownerId);
 
-    this.pseudoRandom = new PseudoRandom(80085);
+    this.pseudoRandom = new PseudoRandom(this.post.id());
   }
 
   tick(ticks: number): void {
