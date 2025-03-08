@@ -30,6 +30,7 @@ import { UnitImpl } from "./UnitImpl";
 import { consolex } from "../Consolex";
 import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
 import { DefenseGrid } from "./DefensePostGrid";
+import { CityGrid } from "./CityGrid";
 import { StatsImpl } from "./StatsImpl";
 import { Stats } from "./Stats";
 
@@ -67,6 +68,7 @@ export class GameImpl implements Game {
 
   private updates: GameUpdates = createGameUpdatesMap();
   private defenseGrid: DefenseGrid;
+  private cityGrid: CityGrid;
 
   private _stats: StatsImpl = new StatsImpl();
 
@@ -92,6 +94,7 @@ export class GameImpl implements Game {
       this._map,
       this._config.defensePostRange(),
     );
+    this.cityGrid = new CityGrid(this._map, this._config.cityRange());
   }
   isOnEdgeOfMap(ref: TileRef): boolean {
     return this._map.isOnEdgeOfMap(ref);
@@ -549,6 +552,17 @@ export class GameImpl implements Game {
 
   nearbyDefensePosts(tile: TileRef): Unit[] {
     return this.defenseGrid.nearbyDefenses(tile) as Unit[];
+  }
+
+  addCity(dp: Unit) {
+    this.cityGrid.addCity(dp);
+  }
+  removeCity(dp: Unit) {
+    this.cityGrid.removeCity(dp);
+  }
+
+  nearbyCities(tile: TileRef): Unit[] {
+    return this.cityGrid.nearbyCities(tile) as Unit[];
   }
 
   ref(x: number, y: number): TileRef {

@@ -273,6 +273,16 @@ export const pastelThemeDark = new (class implements Theme {
     });
   }
 
+  cityColor(playerInfo: PlayerInfo): Colord {
+    const bc = this.cityColor(playerInfo).rgba;
+
+    return colord({
+      r: Math.min(bc.r - 10, 0),
+      g: Math.min(bc.g - 10, 0),
+      b: Math.min(bc.b - 10, 0),
+    });
+  }
+
   terrainColor(gm: GameMap, tile: TileRef): Colord {
     const mag = gm.magnitude(tile);
     if (gm.isShore(tile)) {

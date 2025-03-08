@@ -119,6 +119,9 @@ export class UnitImpl implements Unit {
     if (this.type() == UnitType.DefensePost) {
       this.mg.removeDefensePost(this);
     }
+    if (this.type() == UnitType.City) {
+      this.mg.removeCity(this);
+    }
     if (displayMessage) {
       this.mg.displayMessage(
         `Your ${this.type()} was destroyed`,

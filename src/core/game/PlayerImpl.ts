@@ -665,6 +665,9 @@ export class PlayerImpl implements Player {
     if (type == UnitType.DefensePost) {
       this.mg.addDefensePost(b);
     }
+    if (type == UnitType.City) {
+      this.mg.addCity(b);
+    }
     return b;
   }
 

@@ -31,6 +31,7 @@ import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdateViewData } from "./GameUpdates";
 import { DefenseGrid } from "./DefensePostGrid";
 import { PlayerStats } from "./Stats";
+import { CityGrid } from "./CityGrid";
 
 export class UnitView {
   public _wasUpdated = true;
@@ -236,6 +237,7 @@ export class GameView implements GameMap {
   private _myPlayer: PlayerView | null = null;
 
   private defensePostGrid: DefenseGrid;
+  private cityGrid: CityGrid;
 
   private toDelete = new Set<number>();
 
@@ -254,6 +256,7 @@ export class GameView implements GameMap {
       playerNameViewData: {},
     };
     this.defensePostGrid = new DefenseGrid(_map, _config.defensePostRange());
+    this.cityGrid = new CityGrid(_map, _config.defensePostRange());
   }
   isOnEdgeOfMap(ref: TileRef): boolean {
     return this._map.isOnEdgeOfMap(ref);
@@ -306,6 +309,13 @@ export class GameView implements GameMap {
           this.defensePostGrid.removeDefense(unit);
         }
       }
+      if (update.unitType == UnitType.City) {
+        if (update.isActive) {
+          this.cityGrid.addCity(unit);
+        } else {
+          this.cityGrid.removeCity(unit);
+        }
+      }
       if (!unit.isActive()) {
         // Wait until next tick to delete the unit.
         this.toDelete.add(unit.id());
@@ -319,6 +329,10 @@ export class GameView implements GameMap {
 
   nearbyDefenses(tile: TileRef): UnitView[] {
     return this.defensePostGrid.nearbyDefenses(tile) as UnitView[];
+  }
+
+  nearbyCities(tile: TileRef): UnitView[] {
+    return this.cityGrid.nearbyCities(tile) as UnitView[];
   }
 
   myClientID(): ClientID {

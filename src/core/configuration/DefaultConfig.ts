@@ -111,6 +111,10 @@ export class DefaultConfig implements Config {
   defensePostDefenseBonus(): number {
     return 5;
   }
+
+  cityRange(): number {
+    return 10;
+  }
   spawnNPCs(): boolean {
     return !this._gameConfig.disableNPCs;
   }

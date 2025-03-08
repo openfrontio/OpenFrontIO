@@ -158,6 +158,7 @@ export interface Config {
   defensePostDefenseBonus(): number;
   falloutDefenseModifier(): number;
   difficultyModifier(difficulty: Difficulty): number;
+  cityRange(): number;
   // 0-1
   traitorDefenseDebuff(): number;
 }
@@ -166,6 +167,7 @@ export interface Theme {
   territoryColor(playerInfo: PlayerInfo): Colord;
   borderColor(playerInfo: PlayerInfo): Colord;
   defendedBorderColor(playerInfo: PlayerInfo): Colord;
+  cityColor(playerInfo: PlayerInfo): Colord;
   terrainColor(gm: GameMap, tile: TileRef): Colord;
   backgroundColor(): Colord;
   falloutColor(): Colord;

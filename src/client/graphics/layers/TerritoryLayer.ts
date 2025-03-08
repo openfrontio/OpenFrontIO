@@ -81,6 +81,16 @@ export class TerritoryLayer implements Layer {
             }
           });
       }
+      if (update.unitType == UnitType.City && update.isActive) {
+        const tile = update.pos;
+        this.game
+          .bfs(tile, manhattanDistFN(tile, this.game.config().cityRange()))
+          .forEach((t) => {
+            if (this.game.ownerID(t) == update.ownerID) {
+              this.enqueueTile(t);
+            }
+          });
+      }
     });
 
     if (!this.game.inSpawnPhase()) {
@@ -262,6 +272,17 @@ export class TerritoryLayer implements Layer {
         150,
       );
     }
+
+    if (
+      this.game.nearbyCities(tile).filter((u) => u.owner() == owner).length > 0
+    ) {
+      this.paintCell(
+        this.game.x(tile),
+        this.game.y(tile),
+        this.theme.cityColor(owner.info()),
+        255,
+      );
+    }
   }
 
   paintCell(x: number, y: number, color: Colord, alpha: number) {
@@ -271,6 +292,31 @@ export class TerritoryLayer implements Layer {
     this.imageData.data[offset + 1] = color.rgba.g;
     this.imageData.data[offset + 2] = color.rgba.b;
     this.imageData.data[offset + 3] = alpha;
+  }
+
+  paintCircle(
+    x: number,
+    y: number,
+    radius: number,
+    color: Colord,
+    alpha: number,
+  ) {
+    const startX = Math.max(0, x - radius);
+    const endX = Math.min(this.game.width() - 1, x + radius);
+    const startY = Math.max(0, y - radius);
+    const endY = Math.min(this.game.height() - 1, y + radius);
+
+    for (let cy = startY; cy <= endY; cy++) {
+      for (let cx = startX; cx <= endX; cx++) {
+        const dx = cx - x;
+        const dy = cy - y;
+        const distSquared = dx * dx + dy * dy;
+
+        if (distSquared <= radius * radius) {
+          this.paintCell(cx, cy, color, alpha);
+        }
+      }
+    }
   }
 
   clearCell(cell: Cell) {
