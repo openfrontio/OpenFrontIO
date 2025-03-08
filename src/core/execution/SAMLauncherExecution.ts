@@ -10,19 +10,7 @@ import {
 } from "../game/Game";
 import { manhattanDistFN, TileRef } from "../game/GameMap";
 import { SAMMissileExecution } from "./SAMMissileExecution";
-
-class PseudoRandom {
-  private seed: number;
-
-  constructor(seed: number) {
-    this.seed = seed;
-  }
-
-  next(): number {
-    this.seed = (this.seed * 1664525 + 1013904223) % 0x100000000;
-    return (this.seed >>> 0) / 0x100000000;
-  }
-}
+import { PseudoRandom } from "../PseudoRandom";
 
 export class SAMLauncherExecution implements Execution {
   private player: Player;
@@ -52,8 +40,6 @@ export class SAMLauncherExecution implements Execution {
       return;
     }
     this.player = mg.player(this.ownerId);
-
-    this.pseudoRandom = new PseudoRandom(this.post.id());
   }
 
   tick(ticks: number): void {
@@ -69,6 +55,10 @@ export class SAMLauncherExecution implements Execution {
     if (!this.post.isActive()) {
       this.active = false;
       return;
+    }
+
+    if (!this.pseudoRandom) {
+      this.pseudoRandom = new PseudoRandom(this.post.id());
     }
 
     const nukes = this.mg
