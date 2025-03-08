@@ -20,6 +20,7 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@types/d3": "^7.4.3",
+    "@types/page": "^1.11.9",
     "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.20",
     "binary-loader": "^0.0.1",
