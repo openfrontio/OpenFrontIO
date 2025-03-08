@@ -1,13 +1,13 @@
 import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { PauseGameEvent } from "../../Transport";
 import { GameType } from "../../../core/game/Game";
-import { GameView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
+import { PauseGameEvent } from "../../Transport";
+import { Layer } from "./Layer";
 
 const button = ({
   classes = "",

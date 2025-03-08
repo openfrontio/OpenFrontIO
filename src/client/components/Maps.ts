@@ -1,4 +1,4 @@
-import { LitElement, html, css } from "lit";
+import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { GameMapType } from "../../core/game/Game";
 import { getMapsImage } from "../utilities/Maps";

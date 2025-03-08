@@ -1,14 +1,8 @@
-import { colord } from "colord";
 import { EventBus } from "../../core/EventBus";
-import { Cell, Game, Player } from "../../core/game/Game";
-import {
-  calculateBoundingBox,
-  calculateBoundingBoxCenter,
-} from "../../core/Util";
-import { ZoomEvent, DragEvent, CenterCameraEvent } from "../InputHandler";
-import { GoToPlayerEvent, GoToUnitEvent } from "./layers/Leaderboard";
-import { placeName } from "./NameBoxCalculator";
+import { Cell } from "../../core/game/Game";
 import { GameView } from "../../core/game/GameView";
+import { CenterCameraEvent, DragEvent, ZoomEvent } from "../InputHandler";
+import { GoToPlayerEvent, GoToUnitEvent } from "./layers/Leaderboard";
 
 export class TransformHandler {
   public scale: number = 1.8;

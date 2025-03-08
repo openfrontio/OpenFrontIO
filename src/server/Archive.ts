@@ -1,10 +1,6 @@
-import { GameRecord, GameID } from "../core/Schemas";
 import { S3 } from "@aws-sdk/client-s3";
-import { RedshiftData } from "@aws-sdk/client-redshift-data";
-import {
-  GameEnv,
-  getServerConfigFromServer,
-} from "../core/configuration/Config";
+import { getServerConfigFromServer } from "../core/configuration/Config";
+import { GameID, GameRecord } from "../core/Schemas";
 
 const config = getServerConfigFromServer();
 
