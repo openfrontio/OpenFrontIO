@@ -159,6 +159,11 @@ export class DefaultConfig implements Config {
           territoryBound: false,
           damage: 250,
         };
+      case UnitType.SAMMissile:
+        return {
+          cost: () => 0,
+          territoryBound: false,
+        };
       case UnitType.Port:
         return {
           cost: (p: Player) =>
@@ -224,6 +229,20 @@ export class DefaultConfig implements Config {
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
+        };
+      case UnitType.SAMLauncher:
+        return {
+          cost: (p: Player) =>
+            p.type() == PlayerType.Human && this.infiniteGold()
+              ? 0
+              : Math.min(
+                  1_000_000,
+                  (p.unitsIncludingConstruction(UnitType.SAMLauncher).length +
+                    1) *
+                    1_000_000,
+                ),
+          territoryBound: true,
+          constructionDuration: this.instantBuild() ? 0 : 10 * 10,
         };
       case UnitType.City:
         return {

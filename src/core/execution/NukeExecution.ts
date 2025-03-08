@@ -82,6 +82,14 @@ export class NukeExecution implements Execution {
           );
       }
     }
+
+    // make the nuke unactive if it was intercepted
+    if (!this.nuke.isActive()) {
+      consolex.warn(`Nuke destroyed before reaching target`);
+      this.active = false;
+      return;
+    }
+
     if (this.waitTicks > 0) {
       this.waitTicks--;
       return;

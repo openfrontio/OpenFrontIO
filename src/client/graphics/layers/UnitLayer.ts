@@ -215,6 +215,9 @@ export class UnitLayer implements Layer {
       case UnitType.Shell:
         this.handleShellEvent(unit);
         break;
+      case UnitType.SAMMissile:
+        this.handleMissileEvent(unit);
+        break;
       case UnitType.TradeShip:
         this.handleTradeShipEvent(unit);
         break;
@@ -322,6 +325,42 @@ export class UnitLayer implements Layer {
       this.theme.borderColor(unit.owner().info()),
       255,
     );
+  }
+
+  // interception missle from SAM
+  private handleMissileEvent(unit: UnitView) {
+    const rel = this.relationship(unit);
+    const range = 2;
+
+    for (const t of this.game.bfs(
+      unit.lastTile(),
+      euclDistFN(unit.lastTile(), range),
+    )) {
+      this.clearCell(this.game.x(t), this.game.y(t));
+    }
+
+    if (unit.isActive()) {
+      for (const t of this.game.bfs(
+        unit.tile(),
+        euclDistFN(unit.tile(), range),
+      )) {
+        this.paintCell(
+          this.game.x(t),
+          this.game.y(t),
+          rel,
+          this.theme.spawnHighlightColor(),
+          255,
+        );
+      }
+
+      this.paintCell(
+        this.game.x(unit.tile()),
+        this.game.y(unit.tile()),
+        rel,
+        this.theme.borderColor(unit.owner().info()),
+        255,
+      );
+    }
   }
 
   private handleNuke(unit: UnitView) {

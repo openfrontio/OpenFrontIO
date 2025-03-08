@@ -12,6 +12,7 @@ import {
 import { TileRef } from "../game/GameMap";
 import { CityExecution } from "./CityExecution";
 import { DefensePostExecution } from "./DefensePostExecution";
+import { SAMLauncherExecution } from "./SAMLauncherExecution";
 import { MirvExecution } from "./MIRVExecution";
 import { MissileSiloExecution } from "./MissileSiloExecution";
 import { NukeExecution } from "./NukeExecution";
@@ -110,6 +111,9 @@ export class ConstructionExecution implements Execution {
         break;
       case UnitType.DefensePost:
         this.mg.addExecution(new DefensePostExecution(player.id(), this.tile));
+        break;
+      case UnitType.SAMLauncher:
+        this.mg.addExecution(new SAMLauncherExecution(player.id(), this.tile));
         break;
       case UnitType.City:
         this.mg.addExecution(new CityExecution(player.id(), this.tile));
