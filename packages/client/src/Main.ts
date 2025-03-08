@@ -1,10 +1,10 @@
+import favicon from "@openfrontio/core/resources/images/Favicon.svg";
 import { consolex } from "@openfrontio/core/src/Consolex";
 import { generateID } from "@openfrontio/core/src/Util";
 import { getServerConfigFromClient } from "@openfrontio/core/src/configuration/Config";
 import { GameType } from "@openfrontio/core/src/game/Game";
 import { UserSettings } from "@openfrontio/core/src/game/UserSettings";
 import page from "page";
-import favicon from "../../resources/images/Favicon.svg";
 import { joinLobby } from "./ClientGameRunner";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";

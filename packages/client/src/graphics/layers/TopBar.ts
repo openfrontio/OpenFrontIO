@@ -1,7 +1,7 @@
 import { GameView } from "@openfrontio/core/src/game/GameView";
+import { renderNumber, renderTroops } from "@openfrontio/core/src/Util";
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
-import { renderNumber, renderTroops } from "../../Utils";
 import { Layer } from "./Layer";
 
 @customElement("top-bar")

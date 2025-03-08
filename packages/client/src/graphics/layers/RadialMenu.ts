@@ -1,3 +1,9 @@
+import boatIcon from "@openfrontio/core/resources/images/BoatIconWhite.svg";
+import buildIcon from "@openfrontio/core/resources/images/BuildIconWhite.svg";
+import disabledIcon from "@openfrontio/core/resources/images/DisabledIcon.svg";
+import infoIcon from "@openfrontio/core/resources/images/InfoIcon.svg";
+import swordIcon from "@openfrontio/core/resources/images/SwordIconWhite.svg";
+import xIcon from "@openfrontio/core/resources/images/XIcon.svg";
 import { consolex } from "@openfrontio/core/src/Consolex";
 import { EventBus } from "@openfrontio/core/src/EventBus";
 import { Cell, PlayerActions } from "@openfrontio/core/src/game/Game";
@@ -5,12 +11,6 @@ import { TileRef } from "@openfrontio/core/src/game/GameMap";
 import { GameView, PlayerView } from "@openfrontio/core/src/game/GameView";
 import { ClientID } from "@openfrontio/core/src/Schemas";
 import * as d3 from "d3";
-import boatIcon from "../../../../resources/images/BoatIconWhite.svg";
-import buildIcon from "../../../../resources/images/BuildIconWhite.svg";
-import disabledIcon from "../../../../resources/images/DisabledIcon.svg";
-import infoIcon from "../../../../resources/images/InfoIcon.svg";
-import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
-import xIcon from "../../../../resources/images/XIcon.svg";
 import {
   CloseViewEvent,
   ContextMenuEvent,

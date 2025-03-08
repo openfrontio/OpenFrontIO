@@ -1,3 +1,8 @@
+import allianceIcon from "@openfrontio/core/resources/images/AllianceIconWhite.svg";
+import donateIcon from "@openfrontio/core/resources/images/DonateIconWhite.svg";
+import emojiIcon from "@openfrontio/core/resources/images/EmojiIconWhite.svg";
+import targetIcon from "@openfrontio/core/resources/images/TargetIconWhite.svg";
+import traitorIcon from "@openfrontio/core/resources/images/TraitorIconWhite.svg";
 import { EventBus } from "@openfrontio/core/src/EventBus";
 import {
   AllPlayers,
@@ -7,13 +12,9 @@ import {
 } from "@openfrontio/core/src/game/Game";
 import { TileRef } from "@openfrontio/core/src/game/GameMap";
 import { GameView, PlayerView } from "@openfrontio/core/src/game/GameView";
+import { renderNumber, renderTroops } from "@openfrontio/core/src/Util";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
-import donateIcon from "../../../../resources/images/DonateIconWhite.svg";
-import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
-import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
-import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import { MouseUpEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
@@ -23,7 +24,6 @@ import {
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
-import { renderNumber, renderTroops } from "../../Utils";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
 

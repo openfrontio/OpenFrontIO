@@ -5,7 +5,8 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { AttackRatioEvent } from "../../InputHandler";
 import { SendSetTargetTroopRatioEvent } from "../../Transport";
-import { renderNumber, renderTroops } from "../../Utils";
+
+import { renderNumber, renderTroops } from "@openfrontio/core/src/Util";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 

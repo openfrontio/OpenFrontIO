@@ -1,15 +1,17 @@
+import allianceIcon from "@openfrontio/core/resources/images/AllianceIcon.svg";
+import allianceRequestIcon from "@openfrontio/core/resources/images/AllianceRequestIcon.svg";
+import crownIcon from "@openfrontio/core/resources/images/CrownIcon.svg";
+import embargoIcon from "@openfrontio/core/resources/images/EmbargoIcon.svg";
+import targetIcon from "@openfrontio/core/resources/images/TargetIcon.svg";
+import traitorIcon from "@openfrontio/core/resources/images/TraitorIcon.svg";
 import { PseudoRandom } from "@openfrontio/core/src/PseudoRandom";
 import { ClientID } from "@openfrontio/core/src/Schemas";
 import { Theme } from "@openfrontio/core/src/configuration/Config";
 import { AllPlayers, Cell } from "@openfrontio/core/src/game/Game";
 import { GameView, PlayerView } from "@openfrontio/core/src/game/GameView";
-import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
-import allianceRequestIcon from "../../../../resources/images/AllianceRequestIcon.svg";
-import crownIcon from "../../../../resources/images/CrownIcon.svg";
-import embargoIcon from "../../../../resources/images/EmbargoIcon.svg";
-import targetIcon from "../../../../resources/images/TargetIcon.svg";
-import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
-import { createCanvas, renderTroops } from "../../Utils";
+import { createCanvas } from "../../Utils";
+
+import { renderTroops } from "@openfrontio/core/src/Util";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 

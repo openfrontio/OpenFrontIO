@@ -1,14 +1,14 @@
-import africa from "../../../resources/maps/Africa.png";
-import asia from "../../../resources/maps/Asia.png";
-import blackSea from "../../../resources/maps/BlackSea.png";
-import europe from "../../../resources/maps/Europe.png";
-import mars from "../../../resources/maps/Mars.png";
-import mena from "../../../resources/maps/Mena.png";
-import northAmerica from "../../../resources/maps/NorthAmerica.png";
-import oceania from "../../../resources/maps/Oceania.png";
-import world from "../../../resources/maps/WorldMap.png";
+import africa from "@openfrontio/core/resources/maps/Africa.png";
+import asia from "@openfrontio/core/resources/maps/Asia.png";
+import blackSea from "@openfrontio/core/resources/maps/BlackSea.png";
+import europe from "@openfrontio/core/resources/maps/Europe.png";
+import mars from "@openfrontio/core/resources/maps/Mars.png";
+import mena from "@openfrontio/core/resources/maps/Mena.png";
+import northAmerica from "@openfrontio/core/resources/maps/NorthAmerica.png";
+import oceania from "@openfrontio/core/resources/maps/Oceania.png";
+import world from "@openfrontio/core/resources/maps/WorldMap.png";
 
-import { GameMapType } from "../@openfrontio/core/src/game/Game";
+import { GameMapType } from "@openfrontio/core/src/game/Game";
 
 export function getMapsImage(map: GameMapType): string {
   switch (map) {

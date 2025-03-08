@@ -1,7 +1,7 @@
-import { consolex } from "../@openfrontio/core/src/Consolex";
-import { EventBus } from "../@openfrontio/core/src/EventBus";
-import { ClientID } from "../@openfrontio/core/src/Schemas";
-import { GameView } from "../@openfrontio/core/src/game/GameView";
+import { consolex } from "@openfrontio/core/src/Consolex";
+import { EventBus } from "@openfrontio/core/src/EventBus";
+import { ClientID } from "@openfrontio/core/src/Schemas";
+import { GameView } from "@openfrontio/core/src/game/GameView";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { GameStartingModal } from "../gameStartingModal";
 import { TransformHandler } from "./TransformHandler";

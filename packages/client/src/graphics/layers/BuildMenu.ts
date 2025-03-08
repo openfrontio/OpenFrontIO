@@ -1,20 +1,20 @@
+import warshipIcon from "@openfrontio/core/resources/images/BattleshipIconWhite.svg";
+import cityIcon from "@openfrontio/core/resources/images/CityIconWhite.svg";
+import goldCoinIcon from "@openfrontio/core/resources/images/GoldCoinIcon.svg";
+import mirvIcon from "@openfrontio/core/resources/images/MIRVIcon.svg";
+import missileSiloIcon from "@openfrontio/core/resources/images/MissileSiloIconWhite.svg";
+import hydrogenBombIcon from "@openfrontio/core/resources/images/MushroomCloudIconWhite.svg";
+import atomBombIcon from "@openfrontio/core/resources/images/NukeIconWhite.svg";
+import portIcon from "@openfrontio/core/resources/images/PortIcon.svg";
+import shieldIcon from "@openfrontio/core/resources/images/ShieldIconWhite.svg";
 import { EventBus } from "@openfrontio/core/src/EventBus";
 import { Cell, PlayerActions, UnitType } from "@openfrontio/core/src/game/Game";
 import { TileRef } from "@openfrontio/core/src/game/GameMap";
 import { GameView } from "@openfrontio/core/src/game/GameView";
+import { renderNumber } from "@openfrontio/core/src/Util";
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
-import cityIcon from "../../../../resources/images/CityIconWhite.svg";
-import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
-import mirvIcon from "../../../../resources/images/MIRVIcon.svg";
-import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
-import hydrogenBombIcon from "../../../../resources/images/MushroomCloudIconWhite.svg";
-import atomBombIcon from "../../../../resources/images/NukeIconWhite.svg";
-import portIcon from "../../../../resources/images/PortIcon.svg";
-import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import { BuildUnitIntentEvent } from "../../Transport";
-import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
 
 interface BuildItemDisplay {

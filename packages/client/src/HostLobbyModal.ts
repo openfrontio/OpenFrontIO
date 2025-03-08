@@ -1,3 +1,4 @@
+import randomMap from "@openfrontio/core/resources/images/RandomMap.png";
 import { getServerConfigFromClient } from "@openfrontio/core/src/configuration/Config";
 import { consolex } from "@openfrontio/core/src/Consolex";
 import {
@@ -9,7 +10,6 @@ import { GameConfig, GameInfo } from "@openfrontio/core/src/Schemas";
 import { generateID } from "@openfrontio/core/src/Util";
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import randomMap from "../../resources/images/RandomMap.png";
 import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";

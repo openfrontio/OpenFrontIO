@@ -13,10 +13,10 @@ import {
   UnitView,
 } from "@openfrontio/core/src/game/GameView";
 import { ClientID } from "@openfrontio/core/src/Schemas";
+import { renderNumber, renderTroops } from "@openfrontio/core/src/Util";
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { MouseMoveEvent } from "../../InputHandler";
-import { renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
