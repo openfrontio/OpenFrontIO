@@ -135,6 +135,13 @@ export class SendHashEvent implements GameEvent {
   ) {}
 }
 
+export class MoveWarshipIntentEvent implements GameEvent {
+  constructor(
+    public readonly unitId: number,
+    public readonly tile: number,
+  ) {}
+}
+
 export class Transport {
   private socket: WebSocket;
 
@@ -193,6 +200,9 @@ export class Transport {
     this.eventBus.on(CancelAttackIntentEvent, (e) =>
       this.onCancelAttackIntentEvent(e),
     );
+    this.eventBus.on(MoveWarshipIntentEvent, (e) => {
+      this.onMoveWarshipEvent(e);
+    });
   }
 
   private startPing() {
@@ -522,6 +532,16 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       playerID: event.playerID,
       attackID: event.attackID,
+    });
+  }
+
+  private onMoveWarshipEvent(event: MoveWarshipIntentEvent) {
+    this.sendIntent({
+      type: "move_warship",
+      clientID: this.lobbyConfig.clientID,
+      playerID: this.lobbyConfig.playerID,
+      unitId: event.unitId,
+      tile: event.tile,
     });
   }
 
