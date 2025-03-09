@@ -94,9 +94,7 @@ export class TerritoryLayer implements Layer {
           const radiusSquared = radius * radius;
 
           if (distanceSquared <= radiusSquared) {
-            // if (this.game.ownerID(targetTile) == update.ownerID) {
             this.enqueueTile(targetTile);
-            // }
             return true;
           }
           return false;

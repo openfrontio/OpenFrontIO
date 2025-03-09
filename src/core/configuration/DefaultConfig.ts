@@ -452,12 +452,12 @@ export class DefaultConfig implements Config {
         ? 1_000_000_000
         : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
           player.units(UnitType.City).reduce((sum, city) => {
-            const citySize = city.size();
+            const citySize = Math.floor(city.size() * city.ownerRatio());
             let populationIncrease = this.cityPopulationIncrease();
             let multiplier = 1.0;
 
-            // increase the pop that city gives by the size of the city and multiplier that is used
-            // example city of size 20 gets this.cityPopulationIncrease() * this.cityUpgradePopulationIncrease()^3 added to the max population
+            // increase the pop that city gives by the size of the city its ratio of tiles occupied and multiplier that is used
+            // example city of size 20 with 0.75 ratio (15) gets this.cityPopulationIncrease() * this.cityUpgradePopulationIncrease()^2 added to the max population
             if (citySize > 5) {
               const extraSize = citySize - 5;
               const multiplierCount = Math.floor(extraSize / 5);

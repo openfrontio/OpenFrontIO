@@ -99,6 +99,9 @@ export class UnitView {
   size() {
     return this.data.size;
   }
+  ownerRatio() {
+    return this.data.ownerRatio;
+  }
 }
 
 export class PlayerView {

@@ -237,6 +237,9 @@ export interface Unit {
 
   increaseSize(amount: number): void;
   size(): number;
+
+  ownerRatio(): number;
+  calcOwnerRatio(gm: GameMap): void;
 }
 
 export interface TerraNullius {

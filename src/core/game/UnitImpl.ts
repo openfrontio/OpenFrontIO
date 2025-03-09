@@ -5,7 +5,7 @@ import { simpleHash, toInt, within, withinInt } from "../Util";
 import { Unit, TerraNullius, UnitType, Player, UnitInfo } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { PlayerImpl } from "./PlayerImpl";
-import { TileRef } from "./GameMap";
+import { GameMap, TileRef } from "./GameMap";
 
 export class UnitImpl implements Unit {
   private _active = true;
@@ -24,6 +24,7 @@ export class UnitImpl implements Unit {
     private _id: number,
     public _owner: PlayerImpl,
     private _size: number,
+    private _ownerRatio: number,
     private _dstPort?: Unit,
   ) {
     // default to 60% health (or 1.2 is no health specified)
@@ -49,6 +50,7 @@ export class UnitImpl implements Unit {
       constructionType: this._constructionType,
       targetId: this.target() ? this.target().id() : null,
       size: this.size(),
+      ownerRatio: this.ownerRatio(),
     };
   }
 
@@ -165,6 +167,40 @@ export class UnitImpl implements Unit {
 
   size(): number {
     return this._size;
+  }
+
+  ownerRatio(): number {
+    return this._ownerRatio;
+  }
+
+  calcOwnerRatio(gm: GameMap): void {
+    const cityTile = this.tile();
+    const radius = this.size();
+
+    let totalTiles = 0;
+    let ownedTiles = 0;
+
+    gm.bfs(cityTile, (gm, targetTile) => {
+      const dx = gm.x(targetTile) - gm.x(cityTile);
+      const dy = gm.y(targetTile) - gm.y(cityTile);
+
+      const distanceSquared = dx * dx + dy * dy;
+      const radiusSquared = radius * radius;
+
+      if (distanceSquared > radiusSquared) return false;
+
+      totalTiles++;
+      if (gm.ownerID(targetTile) == gm.ownerID(cityTile)) {
+        ownedTiles++;
+      }
+
+      return true;
+    });
+
+    const ownershipRatio = totalTiles > 0 ? ownedTiles / totalTiles : 0;
+
+    console.log(ownershipRatio);
+    this._ownerRatio = ownershipRatio;
   }
 
   increaseSize(amount: number): void {

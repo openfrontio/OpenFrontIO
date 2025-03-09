@@ -664,6 +664,7 @@ export class PlayerImpl implements Player {
         this.removeGold(cost);
         this.removeTroops(troops);
         this.mg.addUpdate(existingCity.toUpdate());
+        existingCity.calcOwnerRatio(this.mg);
         return existingCity;
       }
     }
@@ -675,6 +676,7 @@ export class PlayerImpl implements Player {
       this.mg.nextUnitID(),
       this,
       10,
+      1,
       dstPort,
     );
     this._units.push(b);
@@ -686,6 +688,7 @@ export class PlayerImpl implements Player {
     }
     if (type == UnitType.City) {
       this.mg.addCity(b);
+      b.calcOwnerRatio(this.mg);
     }
     return b;
   }

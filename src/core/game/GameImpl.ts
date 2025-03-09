@@ -401,6 +401,14 @@ export class GameImpl implements Game {
       type: GameUpdateType.Tile,
       update: this.toTileUpdate(tile),
     });
+
+    const result = this.nearbyCity(tile);
+
+    const closestCity = result?.city;
+    const insideCity = result?.insideCity;
+    if (closestCity && insideCity) {
+      closestCity.calcOwnerRatio(this._map);
+    }
   }
 
   relinquish(tile: TileRef) {

@@ -74,6 +74,7 @@ export interface UnitUpdate {
   constructionType?: UnitType;
   targetId?: number;
   size?: number;
+  ownerRatio?: number;
 }
 
 export interface AttackUpdate {
