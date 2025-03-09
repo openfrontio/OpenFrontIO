@@ -255,7 +255,7 @@ export function onlyImages(html: string) {
   });
 }
 
-export function CreateGameRecord(
+export function createGameRecord(
   id: GameID,
   gameConfig: GameConfig,
   // username does not need to be set.
@@ -278,7 +278,7 @@ export function CreateGameRecord(
   };
 
   for (const turn of turns) {
-    if (turn.intents.length != 0) {
+    if (turn.intents.length != 0 || turn.hash != undefined) {
       record.turns.push(turn);
       for (const intent of turn.intents) {
         if (intent.type == "spawn") {
@@ -298,6 +298,25 @@ export function CreateGameRecord(
   record.num_turns = turns.length;
   record.winner = winner;
   return record;
+}
+
+export function decompressGameRecord(gameRecord: GameRecord) {
+  const turns = [];
+  let lastTurnNum = 0;
+  for (const turn of gameRecord.turns) {
+    while (lastTurnNum < turn.turnNumber - 1) {
+      lastTurnNum++;
+      turns.push({
+        gameID: gameRecord.id,
+        turnNumber: lastTurnNum,
+        intents: [],
+      });
+    }
+    turns.push(turn);
+    lastTurnNum = turn.turnNumber;
+  }
+  gameRecord.turns = turns;
+  return gameRecord;
 }
 
 export function assertNever(x: never): never {

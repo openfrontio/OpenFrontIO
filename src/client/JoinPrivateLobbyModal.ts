@@ -2,8 +2,9 @@ import { LitElement, css, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { consolex } from "../core/Consolex";
 import { GameMapType, GameType } from "../core/game/Game";
-import { GameInfo } from "../core/Schemas";
+import { GameInfo, GameRecord } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/Config";
+import { JoinLobbyEvent } from "./Main";
 
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {
@@ -370,39 +371,56 @@ export class JoinPrivateLobbyModal extends LitElement {
 
     const config = await getServerConfigFromClient();
     const url = `/${config.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
-    fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => {
-        return response.json();
-      })
-      .then((data) => {
-        if (data.exists) {
-          this.message = "Joined successfully! Waiting for game to start...";
-          this.hasJoined = true;
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const gameInfo = await response.json();
+      if (gameInfo.exists) {
+        this.message = "Joined successfully! Waiting for game to start...";
+        this.hasJoined = true;
+        this.dispatchEvent(
+          new CustomEvent("join-lobby", {
+            detail: {
+              gameID: lobbyId,
+            } as JoinLobbyEvent,
+            bubbles: true,
+            composed: true,
+          }),
+        );
+        this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
+      } else {
+        const archive_url = `/${config.workerPath(lobbyId)}/api/archived_game/${lobbyId}`;
+        const archive_response = await fetch(archive_url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        const archive_data = await archive_response.json();
+        if (archive_data.exists) {
+          const gr = archive_data.gameRecord as GameRecord;
           this.dispatchEvent(
             new CustomEvent("join-lobby", {
               detail: {
-                lobby: { gameID: lobbyId },
-                gameType: GameType.Private,
-                map: GameMapType.World,
-              },
+                gameID: lobbyId,
+                gameRecord: gr,
+              } as JoinLobbyEvent,
               bubbles: true,
               composed: true,
             }),
           );
-          this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
         } else {
           this.message = "Lobby not found. Please check the ID and try again.";
         }
-      })
-      .catch((error) => {
-        consolex.error("Error checking lobby existence:", error);
-        this.message = "An error occurred. Please try again.";
-      });
+      }
+    } catch (error) {
+      consolex.error("Error checking lobby existence:", error);
+      this.message = "An error occurred. Please try again.";
+    }
   }
 
   private async pollPlayers() {

@@ -23,6 +23,16 @@ import { HelpModal } from "./HelpModal";
 import { GameType } from "../core/game/Game";
 import { getServerConfigFromClient } from "../core/configuration/Config";
 import GoogleAdElement from "./GoogleAdElement";
+import { GameConfig, GameInfo, GameRecord } from "../core/Schemas";
+
+export interface JoinLobbyEvent {
+  // Multiplayer games only have gameID, gameConfig is not known until game starts.
+  gameID: string;
+  // GameConfig only exists when playing a singleplayer game.
+  gameConfig?: GameConfig;
+  // GameRecord exists when replaying an archived game.
+  gameRecord?: GameRecord;
+}
 
 class Client {
   private gameStop: () => void;
@@ -137,18 +147,16 @@ class Client {
   }
 
   private async handleJoinLobby(event: CustomEvent) {
-    const lobby = event.detail.lobby;
-    consolex.log(`joining lobby ${lobby.id}`);
+    const lobby = event.detail as JoinLobbyEvent;
+    consolex.log(`joining lobby ${lobby.gameID}`);
     if (this.gameStop != null) {
       consolex.log("joining lobby, stopping existing game");
       this.gameStop();
     }
     const config = await getServerConfigFromClient();
-    const gameType = event.detail.gameType;
     this.gameStop = joinLobby(
       {
         serverConfig: config,
-        gameType: gameType,
         flag: (): string =>
           this.flagInput.getCurrentFlag() == "xx"
             ? ""
@@ -158,13 +166,8 @@ class Client {
         persistentID: getPersistentIDFromCookie(),
         playerID: generateID(),
         clientID: generateID(),
-        map: event.detail.map,
-        difficulty: event.detail.difficulty,
-        infiniteGold: event.detail.infiniteGold,
-        infiniteTroops: event.detail.infiniteTroops,
-        instantBuild: event.detail.instantBuild,
-        bots: event.detail.bots,
-        disableNPCs: event.detail.disableNPCs,
+        gameConfig: lobby.gameConfig ?? lobby.gameRecord?.gameConfig,
+        gameRecord: lobby.gameRecord,
       },
       () => {
         this.joinModal.close();
@@ -180,7 +183,7 @@ class Client {
         startingModal instanceof GameStartingModal;
         startingModal.show();
 
-        if (gameType != GameType.Singleplayer) {
+        if (event.detail.gameConfig?.gameType != GameType.Singleplayer) {
           window.history.pushState({}, "", `/join/${lobby.gameID}`);
           sessionStorage.setItem("inLobby", "true");
         }

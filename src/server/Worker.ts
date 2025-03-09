@@ -12,7 +12,7 @@ import { RateLimiterMemory } from "rate-limiter-flexible";
 import { GameConfig, GameRecord, LogSeverity } from "../core/Schemas";
 import { slog } from "./StructuredLog";
 import { GameType } from "../core/game/Game";
-import { archive } from "./Archive";
+import { archive, readGameRecord } from "./Archive";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 
 const config = getServerConfigFromServer();
@@ -175,9 +175,26 @@ export function startWorker() {
       const game = gm.game(req.params.id);
       if (game == null) {
         console.log(`lobby ${req.params.id} not found`);
-        return res.status(404).json({ error: "Game not found" });
+        return res.status(404);
       }
       res.json(game.gameInfo());
+    }),
+  );
+
+  app.get(
+    "/api/archived_game/:id",
+    gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
+      const gameRecord = await readGameRecord(req.params.id);
+      if (!gameRecord) {
+        res.json({
+          exists: false,
+        });
+        return;
+      }
+      res.json({
+        exists: true,
+        gameRecord: gameRecord,
+      });
     }),
   );
 

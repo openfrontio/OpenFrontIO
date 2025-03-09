@@ -158,12 +158,7 @@ export class PublicLobby extends LitElement {
       this.currLobby = lobby;
       this.dispatchEvent(
         new CustomEvent("join-lobby", {
-          detail: {
-            lobby,
-            gameType: GameType.Public,
-            map: GameMapType.World,
-            difficulty: Difficulty.Medium,
-          },
+          detail: lobby,
           bubbles: true,
           composed: true,
         }),

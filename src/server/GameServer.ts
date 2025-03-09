@@ -14,7 +14,7 @@ import {
   ServerTurnMessageSchema,
   Turn,
 } from "../core/Schemas";
-import { CreateGameRecord } from "../core/Util";
+import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import { archive } from "./Archive";
@@ -161,7 +161,7 @@ export class GameServer {
             client.lastPing = Date.now();
           }
           if (clientMsg.type == "hash") {
-            client.hashes.set(clientMsg.tick, clientMsg.hash);
+            client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
           }
           if (clientMsg.type == "winner") {
             this.winner = clientMsg.winner;
@@ -251,7 +251,7 @@ export class GameServer {
     this.turns.push(pastTurn);
     this.intents = [];
 
-    this.maybeSendDesync();
+    this.handleSynchronization();
 
     let msg = "";
     try {
@@ -262,7 +262,12 @@ export class GameServer {
         }),
       );
     } catch (error) {
-      console.log(`error sending message for game ${this.id}`);
+      console.log(
+        `error sending message for game ${this.id}, error ${error}`.substring(
+          0,
+          250,
+        ),
+      );
       return;
     }
 
@@ -293,8 +298,11 @@ export class GameServer {
           username: client.username,
           persistentID: client.persistentID,
         }));
+        console.log(
+          `${this.id}: archiving game with turns: ${JSON.stringify(this.turns)}`,
+        );
         archive(
-          CreateGameRecord(
+          createGameRecord(
             this.id,
             this.gameConfig,
             playerRecords,
@@ -405,8 +413,8 @@ export class GameServer {
     return this.gameConfig.gameType == GameType.Public;
   }
 
-  private maybeSendDesync() {
-    if (this.activeClients.length <= 1) {
+  private handleSynchronization() {
+    if (this.activeClients.length < 1) {
       return;
     }
     if (this.turns.length % 10 == 0 && this.turns.length != 0) {
@@ -414,6 +422,10 @@ export class GameServer {
 
       let { mostCommonHash, outOfSyncClients } =
         this.findOutOfSyncClients(lastHashTurn);
+
+      if (outOfSyncClients.length == 0) {
+        this.turns[lastHashTurn].hash = mostCommonHash;
+      }
 
       if (
         outOfSyncClients.length >= Math.floor(this.activeClients.length / 2)
@@ -430,8 +442,6 @@ export class GameServer {
           this.outOfSyncClients.add(oos.clientID);
         }
       }
-      return;
-      // TODO: renable this once desync issue fixed
 
       const serverDesync = ServerDesyncSchema.safeParse({
         type: "desync",

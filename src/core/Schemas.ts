@@ -280,6 +280,8 @@ export const TurnSchema = z.object({
   turnNumber: z.number(),
   gameID: ID,
   intents: z.array(IntentSchema),
+  // The hash of the game state at the end of the turn.
+  hash: z.number().optional(),
 });
 
 // Server
@@ -310,6 +312,7 @@ export const ServerDesyncSchema = ServerBaseMessageSchema.extend({
   correctHash: z.number().nullable(),
   clientsWithCorrectHash: z.number(),
   totalActiveClients: z.number(),
+  yourHash: z.number().optional(),
 });
 
 export const ServerMessageSchema = z.union([
@@ -337,7 +340,7 @@ export const ClientSendWinnerSchema = ClientBaseMessageSchema.extend({
 export const ClientHashSchema = ClientBaseMessageSchema.extend({
   type: z.literal("hash"),
   hash: z.number(),
-  tick: z.number(),
+  turnNumber: z.number(),
 });
 
 export const ClientLogMessageSchema = ClientBaseMessageSchema.extend({

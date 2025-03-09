@@ -1,4 +1,4 @@
-import { GameRecord, GameID } from "../core/Schemas";
+import { GameRecord, GameID, GameRecordSchema } from "../core/Schemas";
 import { S3 } from "@aws-sdk/client-s3";
 import { RedshiftData } from "@aws-sdk/client-redshift-data";
 import {
@@ -107,27 +107,29 @@ async function archiveFullGameToS3(gameRecord: GameRecord) {
   console.log(`${gameRecord.id}: game record successfully written to S3`);
 }
 
-export async function readGameRecord(gameId: GameID): Promise<GameRecord> {
+export async function readGameRecord(
+  gameId: GameID,
+): Promise<GameRecord | null> {
   try {
     // Check if file exists and download in one operation
     const response = await s3.getObject({
       Bucket: gameBucket,
       Key: gameId,
     });
-
     // Parse the response body
     const bodyContents = await response.Body.transformToString();
-    const gameRecord = JSON.parse(bodyContents);
-
-    return gameRecord as GameRecord;
+    return JSON.parse(bodyContents) as GameRecord;
   } catch (error) {
+    // Log the error for monitoring purposes
     console.error(`${gameId}: Error reading game record from S3: ${error}`, {
       message: error?.message || error,
       stack: error?.stack,
       name: error?.name,
       ...(error && typeof error === "object" ? error : {}),
     });
-    throw error;
+
+    // Return null instead of throwing the error
+    return null;
   }
 }
 

@@ -12,6 +12,7 @@ import {
   getConfig,
   getServerConfigFromClient,
 } from "../core/configuration/Config";
+import { JoinLobbyEvent } from "./Main";
 
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
@@ -548,18 +549,8 @@ export class HostLobbyModal extends LitElement {
         this.dispatchEvent(
           new CustomEvent("join-lobby", {
             detail: {
-              gameType: GameType.Private,
-              lobby: {
-                gameID: this.lobbyId,
-              },
-              map: this.selectedMap,
-              difficulty: this.selectedDifficulty,
-              disableNPCs: this.disableNPCs,
-              bots: this.bots,
-              infiniteGold: this.infiniteGold,
-              infiniteTroops: this.infiniteTroops,
-              instantBuild: this.instantBuild,
-            },
+              gameID: this.lobbyId,
+            } as JoinLobbyEvent,
             bubbles: true,
             composed: true,
           }),
