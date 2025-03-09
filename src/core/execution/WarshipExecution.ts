@@ -55,6 +55,70 @@ export class WarshipExecution implements Execution {
     this.random = new PseudoRandom(mg.ticks());
   }
 
+  // Only for warships with "moveTarget" set
+  goToMoveTarget(target: TileRef): boolean {
+    // Patrol unless we are hunting down a tradeship
+    const result = this.pathfinder.nextTile(this.warship.tile(), target);
+    switch (result.type) {
+      case PathFindResultType.Completed:
+        this.warship.setMoveTarget(null);
+        return;
+      case PathFindResultType.NextTile:
+        this.warship.move(result.tile);
+        break;
+      case PathFindResultType.Pending:
+        break;
+      case PathFindResultType.PathNotFound:
+        consolex.log(`path not found to target`);
+        break;
+    }
+  }
+
+  private shoot() {
+    if (this.mg.ticks() - this.lastShellAttack > this.shellAttackRate) {
+      this.lastShellAttack = this.mg.ticks();
+      this.mg.addExecution(
+        new ShellExecution(
+          this.warship.tile(),
+          this.warship.owner(),
+          this.warship,
+          this.target,
+        ),
+      );
+      if (!this.target.hasHealth()) {
+        // Don't send multiple shells to target that can be oneshotted
+        this.alreadySentShell.add(this.target);
+        this.target = null;
+        return;
+      }
+    }
+  }
+
+  private patrol() {
+    this.warship.setWarshipTarget(this.target);
+    if (this.target == null || this.target.type() != UnitType.TradeShip) {
+      // Patrol unless we are hunting down a tradeship
+      const result = this.pathfinder.nextTile(
+        this.warship.tile(),
+        this.patrolTile,
+      );
+      switch (result.type) {
+        case PathFindResultType.Completed:
+          this.patrolTile = this.randomTile();
+          break;
+        case PathFindResultType.NextTile:
+          this.warship.move(result.tile);
+          break;
+        case PathFindResultType.Pending:
+          return;
+        case PathFindResultType.PathNotFound:
+          consolex.log(`path not found to patrol tile`);
+          this.patrolTile = this.randomTile();
+          break;
+      }
+    }
+  }
+
   tick(ticks: number): void {
     if (this.warship == null) {
       const spawn = this._owner.canBuild(UnitType.Warship, this.patrolTile);
@@ -110,28 +174,17 @@ export class WarshipExecution implements Execution {
         return distSortUnit(this.mg, this.warship)(a, b);
       })[0] ?? null;
 
-    this.warship.setWarshipTarget(this.target);
-    if (this.target == null || this.target.type() != UnitType.TradeShip) {
-      // Patrol unless we are hunting down a tradeship
-      const result = this.pathfinder.nextTile(
-        this.warship.tile(),
-        this.patrolTile,
-      );
-      switch (result.type) {
-        case PathFindResultType.Completed:
-          this.patrolTile = this.randomTile();
-          break;
-        case PathFindResultType.NextTile:
-          this.warship.move(result.tile);
-          break;
-        case PathFindResultType.Pending:
-          return;
-        case PathFindResultType.PathNotFound:
-          consolex.log(`path not found to patrol tile`);
-          this.patrolTile = this.randomTile();
-          break;
+    if (this.warship.moveTarget()) {
+      this.goToMoveTarget(this.warship.moveTarget());
+      // If we have a "move target" then we cannot target trade ships as it
+      // requires moving.
+      if (this.target && this.target.type() == UnitType.TradeShip) {
+        this.target = null;
       }
+    } else if (!this.target || this.target.type() != UnitType.TradeShip) {
+      this.patrol();
     }
+
     if (
       this.target == null ||
       !this.target.isActive() ||
@@ -141,25 +194,16 @@ export class WarshipExecution implements Execution {
       this.target = null;
       return;
     }
+
+    this.warship.setWarshipTarget(this.target);
+
+    // If we have a move target we do not want to go after trading ships
+    if (!this.target) {
+      return;
+    }
+
     if (this.target.type() != UnitType.TradeShip) {
-      if (this.mg.ticks() - this.lastShellAttack > this.shellAttackRate) {
-        this.lastShellAttack = this.mg.ticks();
-        this.mg.addExecution(
-          new ShellExecution(
-            this.warship.tile(),
-            this.warship.owner(),
-            this.warship,
-            this.target,
-          ),
-        );
-        if (!this.target.hasHealth()) {
-          // Don't send multiple shells to target that can be oneshotted
-          this.alreadySentShell.add(this.target);
-          this.target = null;
-          return;
-        }
-      }
-      // Only hunt down tradeships
+      this.shoot();
       return;
     }
 

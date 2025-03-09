@@ -1,4 +1,4 @@
-import { MessageType, nukeTypes, UnitSpecificInfos } from "./Game";
+import { MessageType, UnitSpecificInfos } from "./Game";
 import { UnitUpdate } from "./GameUpdates";
 import { GameUpdateType } from "./GameUpdates";
 import { simpleHash, toInt, within, withinInt } from "../Util";
@@ -14,6 +14,7 @@ export class UnitImpl implements Unit {
   private _lastTile: TileRef = null;
   // Currently only warship use it
   private _target: Unit = null;
+  private _moveTarget: TileRef = null;
 
   private _constructionType: UnitType = undefined;
 
@@ -183,5 +184,13 @@ export class UnitImpl implements Unit {
 
   setDstPort(dstPort: Unit): void {
     this._dstPort = dstPort;
+  }
+
+  setMoveTarget(moveTarget: TileRef) {
+    this._moveTarget = moveTarget;
+  }
+
+  moveTarget(): TileRef | null {
+    return this._moveTarget;
   }
 }
