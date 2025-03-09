@@ -12,7 +12,7 @@ import {
 } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { MessageType } from "../game/Game";
-import { renderNumber } from "../../client/Utils";
+import { renderNumber, renderTroops } from "../../client/Utils";
 import { TileRef } from "../game/GameMap";
 
 const malusForRetreat = 25;
@@ -165,7 +165,15 @@ export class AttackExecution implements Execution {
   }
 
   private retreat(malusPercent = 0) {
-    this._owner.addTroops(this.attack.troops() * (1 - malusPercent / 100));
+    const deaths = this.attack.troops() * (malusPercent / 100);
+    if (deaths) {
+      this.mg.displayMessage(
+        `Attack cancelled, ${renderTroops(deaths)} soldiers killed during retreat.`,
+        MessageType.SUCCESS,
+        this._owner.id(),
+      );
+    }
+    this._owner.addTroops(this.attack.troops() - deaths);
     this.attack.delete();
     this.active = false;
   }
