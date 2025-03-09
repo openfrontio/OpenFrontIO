@@ -130,7 +130,7 @@ export class DefaultConfig implements Config {
     return 10000 + 150 * Math.pow(dist, 1.1);
   }
   tradeShipSpawnRate(): number {
-    return 500;
+    return this._gameConfig.gameType == GameType.Singleplayer ? 700 : 500;
   }
 
   unitInfo(type: UnitType): UnitInfo {
