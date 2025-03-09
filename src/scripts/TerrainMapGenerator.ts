@@ -386,7 +386,7 @@ function removeSmallIslands(map: Terrain[][]) {
 
 function removeSmallLakes(mapName: string, map: Terrain[][]) {
   const visited = new Set<string>();
-  const min_lake_size = 30; // Using same size threshold as islands
+  const min_lake_size = 200;
 
   console.log(
     `${mapName}: removing small lakes ${map.length}, ${map[0].length}`,

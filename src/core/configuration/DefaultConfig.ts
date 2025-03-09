@@ -127,10 +127,10 @@ export class DefaultConfig implements Config {
     return this._gameConfig.infiniteTroops;
   }
   tradeShipGold(dist: number): Gold {
-    return 10000 + 100 * Math.pow(dist, 1.1);
+    return 10000 + 150 * Math.pow(dist, 1.1);
   }
   tradeShipSpawnRate(): number {
-    return 700;
+    return 500;
   }
 
   unitInfo(type: UnitType): UnitInfo {
@@ -271,7 +271,7 @@ export class DefaultConfig implements Config {
     return 30 * 10;
   }
   allianceDuration(): Tick {
-    return 240 * 10; // 4 minutes
+    return 600 * 10; // 10 minutes.
   }
   percentageTilesOwnedToWin(): number {
     return 80;

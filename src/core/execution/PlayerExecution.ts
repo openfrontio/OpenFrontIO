@@ -155,7 +155,7 @@ export class PlayerExecution implements Execution {
   private isSurrounded(cluster: Set<TileRef>): boolean {
     const enemyTiles = new Set<TileRef>();
     for (const tr of cluster) {
-      if (this.mg.isOceanShore(tr) || this.mg.isOnEdgeOfMap(tr)) {
+      if (this.mg.isShore(tr) || this.mg.isOnEdgeOfMap(tr)) {
         return false;
       }
       this.mg
