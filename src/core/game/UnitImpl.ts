@@ -23,6 +23,7 @@ export class UnitImpl implements Unit {
     private _troops: number,
     private _id: number,
     public _owner: PlayerImpl,
+    private _size: number,
     private _dstPort?: Unit,
   ) {
     // default to 60% health (or 1.2 is no health specified)
@@ -47,6 +48,7 @@ export class UnitImpl implements Unit {
       health: this.hasHealth() ? Number(this._health) : undefined,
       constructionType: this._constructionType,
       targetId: this.target() ? this.target().id() : null,
+      size: this.size(),
     };
   }
 
@@ -159,6 +161,14 @@ export class UnitImpl implements Unit {
 
   dstPort(): Unit {
     return this._dstPort;
+  }
+
+  size(): number {
+    return this._size;
+  }
+
+  increaseSize(amount: number): void {
+    this._size += amount;
   }
 
   setTarget(target: Unit) {

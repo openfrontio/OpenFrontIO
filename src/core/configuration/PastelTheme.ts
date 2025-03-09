@@ -273,13 +273,14 @@ export const pastelTheme = new (class implements Theme {
     });
   }
 
+  // color of the circle around cities
   cityColor(playerInfo: PlayerInfo): Colord {
-    const bc = this.cityColor(playerInfo).rgba;
+    const tc = this.territoryColor(playerInfo).rgba;
 
     return colord({
-      r: Math.min(bc.r - 10, 0),
-      g: Math.min(bc.g - 10, 0),
-      b: Math.min(bc.b - 10, 0),
+      r: Math.max(tc.r - 10, 0),
+      g: Math.max(tc.g - 10, 0),
+      b: Math.max(tc.b - 10, 0),
     });
   }
 

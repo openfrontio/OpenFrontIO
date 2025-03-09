@@ -311,6 +311,12 @@ export class FakeHumanExecution implements Execution {
       2,
       (t) => new ConstructionExecution(this.player.id(), t, UnitType.City),
     );
+    this.maybeSpawnStructure(
+      UnitType.CityUpgrade,
+      1,
+      (t) =>
+        new ConstructionExecution(this.player.id(), t, UnitType.CityUpgrade),
+    );
     if (this.maybeSpawnWarship()) {
       return;
     }
@@ -336,7 +342,26 @@ export class FakeHumanExecution implements Execution {
     ) {
       return;
     }
-    const tile = this.randTerritoryTile(this.player);
+
+    let tile: TileRef | null = null;
+
+    //get a random city and upgrade it
+    if (type === UnitType.CityUpgrade) {
+      const cities = this.player
+        .units(UnitType.City)
+        .filter((city) => city.size() < 50);
+
+      if (cities.length > 0) {
+        const randomCity =
+          cities[Math.floor(this.random.next() * cities.length)];
+        tile = randomCity.tile();
+      } else {
+        return;
+      }
+    } else {
+      tile = this.randTerritoryTile(this.player);
+    }
+
     if (tile == null) {
       return;
     }

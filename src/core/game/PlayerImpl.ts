@@ -647,8 +647,26 @@ export class PlayerImpl implements Player {
     troops: number,
     spawnTile: TileRef,
     dstPort?: Unit,
-  ): UnitImpl {
+  ): Unit {
     const cost = this.mg.unitInfo(type).cost(this);
+
+    if (type === UnitType.CityUpgrade) {
+      const result = this.mg.nearbyCity(spawnTile);
+
+      const nearbyCity = result.city;
+      const insideCity = result.insideCity;
+
+      // increase the size of the existing city instead of adding a new unit
+      if (nearbyCity && insideCity) {
+        const existingCity = nearbyCity;
+
+        existingCity.increaseSize(5);
+        this.removeGold(cost);
+        this.removeTroops(troops);
+        this.mg.addUpdate(existingCity.toUpdate());
+        return existingCity;
+      }
+    }
     const b = new UnitImpl(
       type,
       this.mg,
@@ -656,6 +674,7 @@ export class PlayerImpl implements Player {
       troops,
       this.mg.nextUnitID(),
       this,
+      10,
       dstPort,
     );
     this._units.push(b);
@@ -676,6 +695,53 @@ export class PlayerImpl implements Player {
     if (!this.isAlive() || this.gold() < cost) {
       return false;
     }
+
+    if (
+      this.mg.nearbyCity(targetTile).insideCity &&
+      unitType == UnitType.City
+    ) {
+      return false;
+    }
+
+    if (unitType == UnitType.CityUpgrade) {
+      const city = this.mg.nearbyCity(targetTile)?.city;
+      let isValid = true;
+
+      // if there is a city check the tiles in a radius + 5 around them so the city actually has the space to expand outward
+      if (city) {
+        const cityTile = city.tile();
+        const citySize = city.size();
+        const radius = citySize + 5;
+
+        // only in 8 directions because of performance
+        const angleStep = Math.PI / 4;
+        for (let angle = 0; angle < 2 * Math.PI; angle += angleStep) {
+          const checkX =
+            this.mg.x(cityTile) + Math.round(Math.cos(angle) * radius);
+          const checkY =
+            this.mg.y(cityTile) + Math.round(Math.sin(angle) * radius);
+          const checkTile = checkY * this.mg.width() + checkX;
+
+          if (checkTile) {
+            const tileOwner = this.mg.ownerID(checkTile);
+            if (tileOwner !== this.mg.ownerID(cityTile)) {
+              isValid = false;
+              break;
+            }
+          }
+        }
+      }
+
+      if (
+        !this.mg.nearbyCity(targetTile).insideCity ||
+        this.mg.nearbyCity(targetTile).city.size() ==
+          this.mg.config().cityMaxSize() ||
+        !isValid
+      ) {
+        return false;
+      }
+    }
+
     switch (unitType) {
       case UnitType.MIRV:
         return this.nukeSpawn(targetTile);
@@ -697,6 +763,7 @@ export class PlayerImpl implements Player {
       case UnitType.MissileSilo:
       case UnitType.DefensePost:
       case UnitType.City:
+      case UnitType.CityUpgrade:
       case UnitType.Construction:
         return this.landBasedStructureSpawn(targetTile);
       default:

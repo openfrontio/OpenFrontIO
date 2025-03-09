@@ -71,6 +71,12 @@ const buildTable: BuildItemDisplay[][] = [
       icon: cityIcon,
       description: "Increase max population",
     },
+    // needs new icon
+    {
+      unitType: UnitType.CityUpgrade,
+      icon: cityIcon,
+      description: "Upgrades an existing City",
+    },
   ],
 ];
 

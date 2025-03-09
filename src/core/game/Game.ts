@@ -76,6 +76,7 @@ export enum UnitType {
   MissileSilo = "Missile Silo",
   DefensePost = "Defense Post",
   City = "City",
+  CityUpgrade = "CityUpgrade",
   MIRV = "MIRV",
   MIRVWarhead = "MIRV Warhead",
   Construction = "Construction",
@@ -233,6 +234,9 @@ export interface Unit {
 
   // Only for some types, otherwise return null
   dstPort(): Unit;
+
+  increaseSize(amount: number): void;
+  size(): number;
 }
 
 export interface TerraNullius {
@@ -385,6 +389,7 @@ export interface Game extends GameMap {
   units(...types: UnitType[]): Unit[];
   unitInfo(type: UnitType): UnitInfo;
   nearbyDefensePosts(tile: TileRef): Unit[];
+  nearbyCity(tile: TileRef): { city: Unit | null; insideCity: boolean };
 
   addExecution(...exec: Execution[]): void;
   displayMessage(

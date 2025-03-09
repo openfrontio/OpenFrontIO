@@ -101,6 +101,10 @@ export class DefaultConfig implements Config {
     return 250_000;
   }
 
+  cityUpgradePopulationIncrease(): number {
+    return 1.2;
+  }
+
   falloutDefenseModifier(): number {
     return 5;
   }
@@ -112,8 +116,8 @@ export class DefaultConfig implements Config {
     return 5;
   }
 
-  cityRange(): number {
-    return 10;
+  cityMaxSize(): number {
+    return 50;
   }
   spawnNPCs(): boolean {
     return !this._gameConfig.disableNPCs;
@@ -243,6 +247,13 @@ export class DefaultConfig implements Config {
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+        };
+      case UnitType.CityUpgrade:
+        return {
+          cost: (p: Player) =>
+            p.type() == PlayerType.Human && this.infiniteGold() ? 0 : 300_000,
+          territoryBound: true,
+          constructionDuration: this.instantBuild() ? 0 : 2 * 20,
         };
       case UnitType.Construction:
         return {
@@ -435,11 +446,34 @@ export class DefaultConfig implements Config {
   }
 
   maxPopulation(player: Player | PlayerView): number {
+    // consider the size of cities too
     const maxPop =
       player.type() == PlayerType.Human && this.infiniteTroops()
         ? 1_000_000_000
         : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
-          player.units(UnitType.City).length * this.cityPopulationIncrease();
+          player.units(UnitType.City).reduce((sum, city) => {
+            const citySize = city.size();
+            let populationIncrease = this.cityPopulationIncrease();
+            let multiplier = 1.0;
+
+            // increase the pop that city gives by the size of the city and multiplier that is used
+            // example city of size 20 gets this.cityPopulationIncrease() * this.cityUpgradePopulationIncrease()^3 added to the max population
+            if (citySize > 5) {
+              const extraSize = citySize - 5;
+              const multiplierCount = Math.floor(extraSize / 5);
+
+              multiplier = Math.pow(
+                this.cityUpgradePopulationIncrease(),
+                multiplierCount,
+              );
+
+              sum += Math.floor(populationIncrease * multiplier);
+            } else {
+              sum += populationIncrease;
+            }
+
+            return sum;
+          }, 0);
 
     if (player.type() == PlayerType.Bot) {
       return maxPop / 2;

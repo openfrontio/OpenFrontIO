@@ -11,6 +11,7 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { CityExecution } from "./CityExecution";
+import { CityUpgradeExecution } from "./CityUpgradeExecution";
 import { DefensePostExecution } from "./DefensePostExecution";
 import { MirvExecution } from "./MIRVExecution";
 import { MissileSiloExecution } from "./MissileSiloExecution";
@@ -51,6 +52,13 @@ export class ConstructionExecution implements Execution {
         this.completeConstruction();
         this.active = false;
         return;
+      }
+      // if an upgrade is done make the construction over the existing city
+      if (
+        this.mg.nearbyCity(this.tile).insideCity &&
+        this.constructionType == UnitType.CityUpgrade
+      ) {
+        this.tile = this.mg.nearbyCity(this.tile).city.tile();
       }
       const spawnTile = this.player.canBuild(this.constructionType, this.tile);
       if (spawnTile == false) {
@@ -113,6 +121,9 @@ export class ConstructionExecution implements Execution {
         break;
       case UnitType.City:
         this.mg.addExecution(new CityExecution(player.id(), this.tile));
+        break;
+      case UnitType.CityUpgrade:
+        this.mg.addExecution(new CityUpgradeExecution(player.id(), this.tile));
         break;
       default:
         throw Error(`unit type ${this.constructionType} not supported`);

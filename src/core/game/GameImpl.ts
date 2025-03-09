@@ -94,7 +94,7 @@ export class GameImpl implements Game {
       this._map,
       this._config.defensePostRange(),
     );
-    this.cityGrid = new CityGrid(this._map, this._config.cityRange());
+    this.cityGrid = new CityGrid(this._map, this._config.cityMaxSize());
   }
   isOnEdgeOfMap(ref: TileRef): boolean {
     return this._map.isOnEdgeOfMap(ref);
@@ -561,8 +561,12 @@ export class GameImpl implements Game {
     this.cityGrid.removeCity(dp);
   }
 
-  nearbyCities(tile: TileRef): Unit[] {
-    return this.cityGrid.nearbyCities(tile) as Unit[];
+  nearbyCity(tile: TileRef): { city: Unit | null; insideCity: boolean } {
+    const result = this.cityGrid.nearbyCity(tile);
+    return {
+      city: result.city as Unit | null,
+      insideCity: result.insideCity,
+    };
   }
 
   ref(x: number, y: number): TileRef {

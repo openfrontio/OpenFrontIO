@@ -65,7 +65,7 @@ export class TerritoryLayer implements Layer {
     this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
     this.game.updatesSinceLastTick()[GameUpdateType.Unit].forEach((u) => {
       const update = u as UnitUpdate;
-      if (update.unitType == UnitType.DefensePost && update.isActive) {
+      if (update.unitType == UnitType.DefensePost) {
         const tile = update.pos;
         this.game
           .bfs(
@@ -81,15 +81,26 @@ export class TerritoryLayer implements Layer {
             }
           });
       }
-      if (update.unitType == UnitType.City && update.isActive) {
+      // update tiles in the range of the city
+      if (update.unitType == UnitType.City) {
         const tile = update.pos;
-        this.game
-          .bfs(tile, manhattanDistFN(tile, this.game.config().cityRange()))
-          .forEach((t) => {
-            if (this.game.ownerID(t) == update.ownerID) {
-              this.enqueueTile(t);
-            }
-          });
+        const radius = update.size;
+
+        this.game.bfs(tile, (gm, targetTile) => {
+          const dx = this.game.x(targetTile) - this.game.x(tile);
+          const dy = this.game.y(targetTile) - this.game.y(tile);
+
+          const distanceSquared = dx * dx + dy * dy;
+          const radiusSquared = radius * radius;
+
+          if (distanceSquared <= radiusSquared) {
+            // if (this.game.ownerID(targetTile) == update.ownerID) {
+            this.enqueueTile(targetTile);
+            // }
+            return true;
+          }
+          return false;
+        });
       }
     });
 
@@ -265,23 +276,25 @@ export class TerritoryLayer implements Layer {
         );
       }
     } else {
-      this.paintCell(
-        this.game.x(tile),
-        this.game.y(tile),
-        this.theme.territoryColor(owner.info()),
-        150,
-      );
-    }
-
-    if (
-      this.game.nearbyCities(tile).filter((u) => u.owner() == owner).length > 0
-    ) {
-      this.paintCell(
-        this.game.x(tile),
-        this.game.y(tile),
-        this.theme.cityColor(owner.info()),
-        255,
-      );
+      // paint a circle around the city based on the tiles that are counted as inside of the city
+      if (
+        this.game.nearbyCity(tile).city?.owner() == owner &&
+        this.game.nearbyCity(tile).insideCity
+      ) {
+        this.paintCell(
+          this.game.x(tile),
+          this.game.y(tile),
+          this.theme.cityColor(owner.info()),
+          255,
+        );
+      } else {
+        this.paintCell(
+          this.game.x(tile),
+          this.game.y(tile),
+          this.theme.territoryColor(owner.info()),
+          150,
+        );
+      }
     }
   }
 

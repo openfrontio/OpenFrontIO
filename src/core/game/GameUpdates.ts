@@ -73,6 +73,7 @@ export interface UnitUpdate {
   health?: number;
   constructionType?: UnitType;
   targetId?: number;
+  size?: number;
 }
 
 export interface AttackUpdate {

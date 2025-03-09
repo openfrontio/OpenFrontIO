@@ -158,7 +158,7 @@ export interface Config {
   defensePostDefenseBonus(): number;
   falloutDefenseModifier(): number;
   difficultyModifier(difficulty: Difficulty): number;
-  cityRange(): number;
+  cityMaxSize(): number;
   // 0-1
   traitorDefenseDebuff(): number;
 }

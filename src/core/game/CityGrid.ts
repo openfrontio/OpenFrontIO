@@ -1,4 +1,4 @@
-import { Unit } from "./Game";
+import { Unit, UnitType } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
 import { UnitView } from "./GameView";
 
@@ -50,12 +50,15 @@ export class CityGrid {
     );
   }
 
-  nearbyCities(tile: TileRef): Array<Unit | UnitView> {
+  // gets the nearest city that you are in range of and if you are inside of the cities range
+  nearbyCity(tile: TileRef): {
+    city: Unit | UnitView | null;
+    insideCity: boolean;
+  } {
     const x = this.gm.x(tile);
     const y = this.gm.y(tile);
     const [gridX, gridY] = this.getGridCoords(x, y);
     const cellsToCheck = Math.ceil(this.searchRange / this.cellSize);
-    const nearby: Array<Unit | UnitView> = [];
 
     const startGridX = Math.max(0, gridX - cellsToCheck);
     const endGridX = Math.min(this.grid[0].length - 1, gridX + cellsToCheck);
@@ -64,22 +67,48 @@ export class CityGrid {
 
     const rangeSquared = this.searchRange * this.searchRange;
 
+    let closestCity: Unit | UnitView | null = null;
+    let insideCity = false;
+    let cities: {
+      city: Unit | UnitView;
+      distSquared: number;
+      inside: boolean;
+    }[] = [];
+
     for (let cy = startGridY; cy <= endGridY; cy++) {
       for (let cx = startGridX; cx <= endGridX; cx++) {
         for (const unit of this.grid[cy][cx]) {
-          const tileX = this.gm.x(unit.tile());
-          const tileY = this.gm.y(unit.tile());
+          if (unit.type() !== UnitType.City) continue;
+
+          const cityTile = unit.tile();
+          const citySize = unit.size();
+          const tileX = this.gm.x(cityTile);
+          const tileY = this.gm.y(cityTile);
           const dx = tileX - x;
           const dy = tileY - y;
           const distSquared = dx * dx + dy * dy;
 
+          const cityRadiusSquared = citySize * citySize;
+
           if (distSquared <= rangeSquared) {
-            nearby.push(unit);
+            const isInside = distSquared <= cityRadiusSquared;
+            cities.push({ city: unit, distSquared, inside: isInside });
           }
         }
       }
     }
 
-    return nearby;
+    // cities that you are inside of first then the nearest city
+    cities.sort((a, b) => {
+      if (a.inside === b.inside) {
+        return a.distSquared - b.distSquared;
+      }
+      return a.inside ? -1 : 1;
+    });
+
+    closestCity = cities.length > 0 ? cities[0].city : null;
+    insideCity = closestCity !== null && cities[0].inside;
+
+    return { city: closestCity, insideCity };
   }
 }

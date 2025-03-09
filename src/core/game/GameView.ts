@@ -96,6 +96,9 @@ export class UnitView {
   targetId() {
     return this.data.targetId;
   }
+  size() {
+    return this.data.size;
+  }
 }
 
 export class PlayerView {
@@ -256,7 +259,7 @@ export class GameView implements GameMap {
       playerNameViewData: {},
     };
     this.defensePostGrid = new DefenseGrid(_map, _config.defensePostRange());
-    this.cityGrid = new CityGrid(_map, _config.defensePostRange());
+    this.cityGrid = new CityGrid(_map, _config.cityMaxSize());
   }
   isOnEdgeOfMap(ref: TileRef): boolean {
     return this._map.isOnEdgeOfMap(ref);
@@ -331,8 +334,12 @@ export class GameView implements GameMap {
     return this.defensePostGrid.nearbyDefenses(tile) as UnitView[];
   }
 
-  nearbyCities(tile: TileRef): UnitView[] {
-    return this.cityGrid.nearbyCities(tile) as UnitView[];
+  nearbyCity(tile: TileRef): { city: UnitView | null; insideCity: boolean } {
+    const result = this.cityGrid.nearbyCity(tile);
+    return {
+      city: result.city as UnitView | null,
+      insideCity: result.insideCity,
+    };
   }
 
   myClientID(): ClientID {
