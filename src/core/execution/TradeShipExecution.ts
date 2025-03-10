@@ -65,6 +65,14 @@ export class TradeShipExecution implements Execution {
       this.wasCaptured = true;
     }
 
+    // If a player captures an other player's port while trading we should delete
+    // the ship.
+    if (this._dstPort.owner().id() == this.srcPort.owner().id()) {
+      this.tradeShip.delete(false);
+      this.active = false;
+      return;
+    }
+
     if (
       !this.wasCaptured &&
       (!this._dstPort.isActive() ||

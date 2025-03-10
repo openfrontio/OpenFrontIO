@@ -539,7 +539,9 @@ export class PlayerImpl implements Player {
   }
 
   canTrade(other: Player): boolean {
-    return !other.hasEmbargoAgainst(this) && !this.hasEmbargoAgainst(other);
+    const embargo =
+      other.hasEmbargoAgainst(this) || this.hasEmbargoAgainst(other);
+    return !embargo && other.id() != this.id();
   }
 
   addEmbargo(other: PlayerID): void {
