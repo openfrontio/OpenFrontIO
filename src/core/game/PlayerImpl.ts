@@ -1,3 +1,4 @@
+import { consolex } from "../Consolex";
 import {
   Player,
   PlayerInfo,
@@ -700,7 +701,7 @@ export class PlayerImpl implements Player {
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Construction:
-        return this.landBasedStructureSpawn(targetTile);
+        return this.landBasedStructureSpawn(targetTile, unitType);
       default:
         assertNever(unitType);
     }
@@ -713,6 +714,8 @@ export class PlayerImpl implements Player {
     if (spawns.length == 0) {
       return false;
     }
+
+    // We don't need density check for nukes, only for missile silos
     return spawns[0].tile();
   }
 
@@ -726,7 +729,10 @@ export class PlayerImpl implements Player {
     if (spawns.length == 0) {
       return false;
     }
-    return spawns[0];
+
+    // Check density limits for the best spawn point
+    const bestSpawn = spawns[0];
+    return this.landBasedStructureSpawn(bestSpawn, UnitType.Port);
   }
 
   warshipSpawn(tile: TileRef): TileRef | false {
@@ -744,10 +750,58 @@ export class PlayerImpl implements Player {
     return spawns[0].tile();
   }
 
-  landBasedStructureSpawn(tile: TileRef): TileRef | false {
+  // Helper method to check if an existing building is too close to the target location
+  private isExistingBuildingTooClose(
+    tile: TileRef,
+    unitType: UnitType,
+  ): boolean {
+    // Early return if not a territory-bound unit type
+    if (!this.mg.config().unitInfo(unitType).territoryBound) {
+      return false;
+    }
+
+    // Get density limit from config
+    const densityLimit = this.mg.config().buildingDensityLimit();
+    consolex.log(
+      `Checking density for ${unitType} at tile (${this.mg.x(tile)},${this.mg.y(tile)}) with limit ${densityLimit}`,
+    );
+
+    // Check existing buildings
+    for (const unit of this._units) {
+      // Check completed buildings or construction sites that are territory bound
+      if (
+        this.mg.config().unitInfo(unit.type()).territoryBound ||
+        (unit.type() === UnitType.Construction &&
+          unit.constructionType() &&
+          this.mg.config().unitInfo(unit.constructionType()).territoryBound)
+      ) {
+        const unitTile = unit.tile();
+        const distance = this.mg.manhattanDist(tile, unitTile);
+
+        // Skip the exact same tile (distance == 0)
+        if (distance < densityLimit && distance > 0) {
+          consolex.log(
+            `BLOCKED: Too close to ${unit.type()} at distance ${distance}`,
+          );
+          return true; // Too close to another building
+        }
+      }
+    }
+
+    consolex.log(`Density check PASSED for ${unitType}`);
+    return false; // No nearby buildings
+  }
+
+  landBasedStructureSpawn(tile: TileRef, unitType: UnitType): TileRef | false {
     if (this.mg.owner(tile) != this) {
       return false;
     }
+
+    // Check if there are buildings too close
+    if (this.isExistingBuildingTooClose(tile, unitType)) {
+      return false;
+    }
+
     return tile;
   }
 
