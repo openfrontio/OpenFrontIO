@@ -1,5 +1,5 @@
 import { consolex } from "../Consolex";
-import { Cell, GameMapType, TerrainType } from "./Game";
+import { GameMapType } from "./Game";
 import { GameMap, GameMapImpl } from "./GameMap";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
