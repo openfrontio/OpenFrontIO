@@ -96,7 +96,7 @@ export class LocalServer {
         return;
       }
       const archivedHash = this.turns[clientMsg.turnNumber].hash;
-      if (archivedHash != clientMsg.hash) {
+      if (archivedHash && archivedHash != clientMsg.hash) {
         console.warn(
           `desync detected on turn ${clientMsg.turnNumber}, client hash: ${clientMsg.hash}, server hash: ${archivedHash}`,
         );
