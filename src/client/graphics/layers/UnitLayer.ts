@@ -17,6 +17,7 @@ import {
 } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { TransformHandler } from "../TransformHandler";
+import { MoveWarshipIntentEvent } from "../../Transport";
 
 enum Relationship {
   Self,
@@ -44,7 +45,7 @@ export class UnitLayer implements Layer {
   private selectedUnit: UnitView | null = null;
 
   // Configuration for unit selection
-  private readonly WARSHIP_SELECTION_RADIUS = 3; // Radius in game cells for warship selection hit zone
+  private readonly WARSHIP_SELECTION_RADIUS = 10; // Radius in game cells for warship selection hit zone
 
   constructor(
     private game: GameView,
@@ -121,19 +122,19 @@ export class UnitLayer implements Layer {
     // Find warships near this cell, sorted by distance
     const nearbyWarships = this.findWarshipsNearCell(cell);
 
-    if (nearbyWarships.length > 0) {
+    if (this.selectedUnit) {
+      const clickRef = this.game.ref(cell.x, cell.y);
+      if (this.game.isOcean(clickRef)) {
+        this.eventBus.emit(
+          new MoveWarshipIntentEvent(this.selectedUnit.id(), clickRef),
+        );
+      }
+      // Deselect
+      this.eventBus.emit(new UnitSelectionEvent(this.selectedUnit, false));
+    } else if (nearbyWarships.length > 0) {
       // Toggle selection of the closest warship
       const clickedUnit = nearbyWarships[0];
-      if (this.selectedUnit === clickedUnit) {
-        // Deselect if already selected
-        this.eventBus.emit(new UnitSelectionEvent(clickedUnit, false));
-      } else {
-        // Select the new unit
-        this.eventBus.emit(new UnitSelectionEvent(clickedUnit, true));
-      }
-    } else if (this.selectedUnit) {
-      // If clicked elsewhere and there's a selection, deselect it
-      this.eventBus.emit(new UnitSelectionEvent(this.selectedUnit, false));
+      this.eventBus.emit(new UnitSelectionEvent(clickedUnit, true));
     }
   }
 
