@@ -197,7 +197,7 @@ export class ControlPanel extends LitElement implements Layer {
         <div class="hidden lg:block bg-black/30 text-white mb-4 p-2 rounded">
           <div class="flex justify-between mb-1">
             <span class="font-bold">Pop:</span>
-            <span
+            <span translate="no"
               >${renderTroops(this._population)} /
               ${renderTroops(this._maxPopulation)}
               <span
@@ -210,7 +210,7 @@ export class ControlPanel extends LitElement implements Layer {
           </div>
           <div class="flex justify-between">
             <span class="font-bold">Gold:</span>
-            <span
+            <span translate="no"
               >${renderNumber(this._gold)}
               (+${renderNumber(this._goldPerSecond)})</span
             >
@@ -219,8 +219,9 @@ export class ControlPanel extends LitElement implements Layer {
 
         <div class="relative mb-4 lg:mb-4">
           <label class="block text-white mb-1"
-            >Troops: ${renderTroops(this._troops)} | Workers:
-            ${renderTroops(this._workers)}</label
+            >Troops: <span translate="no">${renderTroops(this._troops)}</span> |
+            Workers:
+            <span translate="no">${renderTroops(this._workers)}</span></label
           >
           <div class="relative h-8">
             <!-- Background track -->
