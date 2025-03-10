@@ -204,6 +204,7 @@ export class ControlPanel extends LitElement implements Layer {
                 class="${this._popRateIsIncreasing
                   ? "text-green-500"
                   : "text-yellow-500"}"
+                translate="no"
                 >(+${renderTroops(this.popRate)})</span
               ></span
             >
@@ -218,7 +219,7 @@ export class ControlPanel extends LitElement implements Layer {
         </div>
 
         <div class="relative mb-4 lg:mb-4">
-          <label class="block text-white mb-1"
+          <label class="block text-white mb-1" translate="no"
             >Troops: <span translate="no">${renderTroops(this._troops)}</span> |
             Workers:
             <span translate="no">${renderTroops(this._workers)}</span></label
@@ -250,7 +251,7 @@ export class ControlPanel extends LitElement implements Layer {
         </div>
 
         <div class="relative mb-0 lg:mb-4">
-          <label class="block text-white mb-1"
+          <label class="block text-white mb-1" translate="no"
             >Attack Ratio: ${(this.attackRatio * 100).toFixed(0)}%
             (${renderTroops(
               this.game?.myPlayer()?.troops() * this.attackRatio,

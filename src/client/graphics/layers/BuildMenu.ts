@@ -296,7 +296,7 @@ export class BuildMenu extends LitElement implements Layer {
                     />
                     <span class="build-name">${item.unitType}</span>
                     <span class="build-description">${item.description}</span>
-                    <span class="build-cost">
+                    <span class="build-cost" translate="no">
                       ${renderNumber(
                         this.game && this.game.myPlayer() ? this.cost(item) : 0,
                       )}

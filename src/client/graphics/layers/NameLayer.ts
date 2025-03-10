@@ -200,6 +200,7 @@ export class NameLayer implements Layer {
 
     const troopsDiv = document.createElement("div");
     troopsDiv.classList.add("player-troops");
+    troopsDiv.setAttribute("translate", "no");
     troopsDiv.textContent = renderTroops(player.troops());
     troopsDiv.style.color = this.theme.textColor(player.info());
     troopsDiv.style.fontFamily = this.theme.font();

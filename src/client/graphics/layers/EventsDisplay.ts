@@ -407,6 +407,7 @@ export class EventsDisplay extends LitElement implements Layer {
                 ${this.incomingAttacks.map(
                   (attack) => html`
                     <button
+                      translate="no"
                       class="ml-2"
                       @click=${() =>
                         this.emitGoToPlayerEvent(attack.attackerID)}
@@ -431,6 +432,7 @@ export class EventsDisplay extends LitElement implements Layer {
                 ${this.outgoingAttacks.map(
                   (attack) => html`
                     <button
+                      translate="no"
                       class="ml-2"
                       @click=${() => this.emitGoToPlayerEvent(attack.targetID)}
                     >
@@ -473,7 +475,10 @@ export class EventsDisplay extends LitElement implements Layer {
               >
                 ${this.outgoingBoats.map(
                   (boats) => html`
-                    <button @click=${() => this.emitGoToUnitEvent(boats)}>
+                    <button
+                      translate="no"
+                      @click=${() => this.emitGoToUnitEvent(boats)}
+                    >
                       Boat: ${renderTroops(boats.troops())}
                     </button>
                   `,
