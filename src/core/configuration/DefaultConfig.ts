@@ -115,6 +115,12 @@ export class DefaultConfig implements Config {
   defensePostDefenseBonus(): number {
     return 5;
   }
+  cityDefensePostDefenseBonus(): number {
+    return 8;
+  }
+  cityDefenseDebuff(): number {
+    return 0.8;
+  }
 
   cityMaxSize(): number {
     return 50;
@@ -335,11 +341,23 @@ export class DefaultConfig implements Config {
         throw new Error(`terrain type ${type} not supported`);
     }
     if (defender.isPlayer()) {
+      //make it easier to conquer city tiles
+      if (gm.nearbyCity(tileToConquer)?.insideCity) {
+        mag *= this.cityDefenseDebuff();
+        speed *= this.cityDefenseDebuff();
+      }
       for (const dp of gm.nearbyDefensePosts(tileToConquer)) {
         if (dp.owner() == defender) {
-          mag *= this.defensePostDefenseBonus();
-          speed *= this.defensePostDefenseBonus();
-          break;
+          // make it harder to conquer city tiles in the range of an defense post
+          if (gm.nearbyCity(tileToConquer)?.insideCity) {
+            mag *= this.cityDefensePostDefenseBonus();
+            speed *= this.cityDefensePostDefenseBonus();
+            break;
+          } else {
+            mag *= this.defensePostDefenseBonus();
+            speed *= this.defensePostDefenseBonus();
+            break;
+          }
         }
       }
     }

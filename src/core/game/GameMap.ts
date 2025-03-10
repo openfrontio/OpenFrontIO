@@ -44,6 +44,15 @@ export interface GameMap {
     filter: (gm: GameMap, tile: TileRef) => boolean,
   ): Set<TileRef>;
 
+  getCityRadius(
+    cityID: number,
+    dx: number,
+    dy: number,
+    citySize: number,
+    maxRange: number,
+  ): number;
+  circularNoise(seed: number, x: number, y: number): number;
+
   toTileUpdate(tile: TileRef): bigint;
   updateTile(tu: TileUpdate): TileRef;
 
@@ -289,6 +298,42 @@ export class GameMapImpl implements GameMap {
       }
     }
     return seen;
+  }
+
+  getCityRadius(
+    cityID: number,
+    dx: number,
+    dy: number,
+    citySize: number,
+    maxRange: number,
+  ): number {
+    const baseRadius = citySize;
+    const noiseFactor = this.circularNoise(cityID + dx + dy, dx, dy);
+
+    const adjustedRadius = baseRadius * (0.9 + noiseFactor * 0.2);
+
+    const cityMaxRangeSquared = maxRange * maxRange;
+    const finalRadiusSquared = Math.min(
+      adjustedRadius * adjustedRadius,
+      cityMaxRangeSquared,
+    );
+
+    return finalRadiusSquared;
+  }
+
+  circularNoise(seed: number, x: number, y: number): number {
+    const angle = Math.atan2(y, x);
+    const pseudoRandom = (n: number) => (Math.sin(n * 78.233) * 43758.5453) % 1;
+
+    const baseNoise = pseudoRandom(seed + angle * 10);
+
+    const smoothNoise =
+      (baseNoise +
+        pseudoRandom(seed + angle * 11) +
+        pseudoRandom(seed + angle * 12)) /
+      3;
+
+    return (smoothNoise - 0.5) * 2;
   }
 
   toTileUpdate(tile: TileRef): bigint {

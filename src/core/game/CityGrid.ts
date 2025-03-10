@@ -88,7 +88,13 @@ export class CityGrid {
           const dy = tileY - y;
           const distSquared = dx * dx + dy * dy;
 
-          const cityRadiusSquared = citySize * citySize;
+          const cityRadiusSquared = this.gm.getCityRadius(
+            unit.id(),
+            dx,
+            dy,
+            citySize,
+            this.searchRange,
+          );
 
           if (distSquared <= rangeSquared) {
             const isInside = distSquared <= cityRadiusSquared;

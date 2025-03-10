@@ -185,7 +185,13 @@ export class UnitImpl implements Unit {
       const dy = gm.y(targetTile) - gm.y(cityTile);
 
       const distanceSquared = dx * dx + dy * dy;
-      const radiusSquared = radius * radius;
+      const radiusSquared = gm.getCityRadius(
+        this.id(),
+        dx,
+        dy,
+        radius,
+        this.mg.config().cityMaxSize(),
+      );
 
       if (distanceSquared > radiusSquared) return false;
 
@@ -200,6 +206,7 @@ export class UnitImpl implements Unit {
     const ownershipRatio = totalTiles > 0 ? ownedTiles / totalTiles : 0;
 
     console.log(ownershipRatio);
+
     this._ownerRatio = ownershipRatio;
   }
 

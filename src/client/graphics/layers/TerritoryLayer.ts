@@ -74,7 +74,7 @@ export class TerritoryLayer implements Layer {
           )
           .forEach((t) => {
             if (
-              this.game.isBorder(t) &&
+              (this.game.isBorder(t) || this.game.nearbyCity(t)?.insideCity) &&
               this.game.ownerID(t) == update.ownerID
             ) {
               this.enqueueTile(t);
@@ -91,7 +91,13 @@ export class TerritoryLayer implements Layer {
           const dy = this.game.y(targetTile) - this.game.y(tile);
 
           const distanceSquared = dx * dx + dy * dy;
-          const radiusSquared = radius * radius;
+          const radiusSquared = gm.getCityRadius(
+            update.id,
+            dx,
+            dy,
+            radius,
+            this.game.config().cityMaxSize(),
+          );
 
           if (distanceSquared <= radiusSquared) {
             this.enqueueTile(targetTile);
@@ -279,12 +285,13 @@ export class TerritoryLayer implements Layer {
         this.game.nearbyCity(tile).city?.owner() == owner &&
         this.game.nearbyCity(tile).insideCity
       ) {
-        this.paintCell(
-          this.game.x(tile),
-          this.game.y(tile),
-          this.theme.cityColor(owner.info()),
-          255,
-        );
+        const color =
+          this.game.nearbyDefenses(tile).filter((u) => u.owner() == owner)
+            .length > 0
+            ? this.theme.defendedCityColor(owner.info())
+            : this.theme.cityColor(owner.info());
+
+        this.paintCell(this.game.x(tile), this.game.y(tile), color, 255);
       } else {
         this.paintCell(
           this.game.x(tile),

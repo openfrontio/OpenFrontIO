@@ -660,7 +660,7 @@ export class PlayerImpl implements Player {
       if (nearbyCity && insideCity) {
         const existingCity = nearbyCity;
 
-        existingCity.increaseSize(5);
+        existingCity.increaseSize(10);
         this.removeGold(cost);
         this.removeTroops(troops);
         this.mg.addUpdate(existingCity.toUpdate());
@@ -707,39 +707,10 @@ export class PlayerImpl implements Player {
     }
 
     if (unitType == UnitType.CityUpgrade) {
-      const city = this.mg.nearbyCity(targetTile)?.city;
-      let isValid = true;
-
-      // if there is a city check the tiles in a radius + 5 around them so the city actually has the space to expand outward
-      if (city) {
-        const cityTile = city.tile();
-        const citySize = city.size();
-        const radius = citySize + 5;
-
-        // only in 8 directions because of performance
-        const angleStep = Math.PI / 4;
-        for (let angle = 0; angle < 2 * Math.PI; angle += angleStep) {
-          const checkX =
-            this.mg.x(cityTile) + Math.round(Math.cos(angle) * radius);
-          const checkY =
-            this.mg.y(cityTile) + Math.round(Math.sin(angle) * radius);
-          const checkTile = checkY * this.mg.width() + checkX;
-
-          if (checkTile) {
-            const tileOwner = this.mg.ownerID(checkTile);
-            if (tileOwner !== this.mg.ownerID(cityTile)) {
-              isValid = false;
-              break;
-            }
-          }
-        }
-      }
-
       if (
         !this.mg.nearbyCity(targetTile).insideCity ||
         this.mg.nearbyCity(targetTile).city.size() ==
-          this.mg.config().cityMaxSize() ||
-        !isValid
+          this.mg.config().cityMaxSize()
       ) {
         return false;
       }

@@ -664,6 +664,18 @@ export class GameImpl implements Game {
   ): Set<TileRef> {
     return this._map.bfs(tile, filter);
   }
+  getCityRadius(
+    cityID: number,
+    dx: number,
+    dy: number,
+    citySize: number,
+    maxRange: number,
+  ): number {
+    return this._map.getCityRadius(cityID, dx, dy, citySize, maxRange);
+  }
+  circularNoise(seed: number, x: number, y: number): number {
+    return this._map.circularNoise(seed, x, y);
+  }
   toTileUpdate(tile: TileRef): bigint {
     return this._map.toTileUpdate(tile);
   }
