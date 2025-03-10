@@ -245,10 +245,10 @@ export class UnitLayer implements Layer {
     }
 
     let outerColor = this.theme.territoryColor(unit.owner().info());
-    if (unit.unitSpecificInfos().warshipTargetId) {
+    if (unit.warshipTargetId()) {
       const targetOwner = this.game
         .units()
-        .find((u) => u.id() == unit.unitSpecificInfos().warshipTargetId)
+        .find((u) => u.id() == unit.warshipTargetId())
         ?.owner();
       if (targetOwner == this.myPlayer) {
         outerColor = colord({ r: 200, b: 0, g: 0 });

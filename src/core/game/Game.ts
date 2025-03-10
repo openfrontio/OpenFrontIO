@@ -230,8 +230,10 @@ export interface Unit {
   modifyHealth(delta: number): void;
 
   setWarshipTarget(target: Unit): void; // warship only
+  warshipTarget(): Unit;
 
-  unitsSpecificInfos(): UnitSpecificInfos;
+  dstPort(): Unit; // Only for trade ships
+  detonationDst(): TileRef; // Only for nukes
 
   // Mutations
   setTroops(troops: number): void;

@@ -80,9 +80,7 @@ export class WarshipExecution implements Execution {
       .filter((u) => !u.owner().isAlliedWith(this.warship.owner()))
       .filter((u) => !this.alreadySentShell.has(u))
       .filter((u) => {
-        const portOwner = u.unitsSpecificInfos().dstPort
-          ? u.unitsSpecificInfos().dstPort.owner()
-          : null;
+        const portOwner = u.dstPort() ? u.dstPort().owner() : null;
         return u.type() != UnitType.TradeShip || portOwner != this.owner();
       });
 
