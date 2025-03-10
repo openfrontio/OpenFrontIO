@@ -185,6 +185,10 @@ export class AttackExecution implements Execution {
       return;
     }
 
+    if (this.attack.retreating()) {
+      return;
+    }
+
     if (!this.attack.isActive()) {
       this.active = false;
       return;
