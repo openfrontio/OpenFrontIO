@@ -187,7 +187,12 @@ export class ClientGameRunner {
     this.input.initialize();
     this.worker.start((gu: GameUpdateViewData | ErrorUpdate) => {
       if ("errMsg" in gu) {
-        showErrorModal(gu.errMsg, gu.stack, this.lobby.clientID);
+        showErrorModal(
+          gu.errMsg,
+          gu.stack,
+          this.lobby.gameID,
+          this.lobby.clientID,
+        );
         this.stop();
         return;
       }
@@ -234,8 +239,9 @@ export class ClientGameRunner {
       }
       if (message.type == "desync") {
         showErrorModal(
-          `game: ${this.lobby.gameID}, clientID: ${this.lobby.clientID}, desync from server: ${JSON.stringify(message)}`,
+          `desync from server: ${JSON.stringify(message)}`,
           "",
+          this.lobby.gameID,
           this.lobby.clientID,
         );
         this.stop();
@@ -309,12 +315,17 @@ export class ClientGameRunner {
   }
 }
 
-function showErrorModal(errMsg: string, stack: string, clientID: ClientID) {
+function showErrorModal(
+  errMsg: string,
+  stack: string,
+  gameID: GameID,
+  clientID: ClientID,
+) {
   const errorText = `Error: ${errMsg}\nStack: ${stack}`;
   consolex.error(errorText);
 
   const modal = document.createElement("div");
-  const content = `Game crashed! client id: ${clientID}\nPlease paste the following in your bug report in Discord:\n${errorText}`;
+  const content = `Game crashed! game id: ${gameID}, client id: ${clientID}\nPlease paste the following in your bug report in Discord:\n${errorText}`;
 
   // Create elements
   const pre = document.createElement("pre");
