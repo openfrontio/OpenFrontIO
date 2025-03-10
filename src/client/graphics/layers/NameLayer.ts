@@ -2,8 +2,11 @@ import {
   AllPlayers,
   Cell,
   Game,
+  NukeType,
+  nukeTypes,
   Player,
   PlayerType,
+  UnitType,
 } from "../../../core/game/Game";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { Theme } from "../../../core/configuration/Config";
@@ -15,6 +18,7 @@ import allianceRequestIcon from "../../../../resources/images/AllianceRequestIco
 import crownIcon from "../../../../resources/images/CrownIcon.svg";
 import targetIcon from "../../../../resources/images/TargetIcon.svg";
 import embargoIcon from "../../../../resources/images/EmbargoIcon.svg";
+import nukeIcon from "../../../../resources/images/NukeIconWhite.svg";
 import { ClientID } from "../../../core/Schemas";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { createCanvas, renderTroops } from "../../Utils";
@@ -47,6 +51,7 @@ export class NameLayer implements Layer {
   private targetIconImage: HTMLImageElement;
   private crownIconImage: HTMLImageElement;
   private embargoIconImage: HTMLImageElement;
+  private nukeIconImage: HTMLImageElement;
   private container: HTMLDivElement;
   private myPlayer: PlayerView | null = null;
   private firstPlace: PlayerView | null = null;
@@ -69,6 +74,8 @@ export class NameLayer implements Layer {
     this.targetIconImage.src = targetIcon;
     this.embargoIconImage = new Image();
     this.embargoIconImage.src = embargoIcon;
+    this.nukeIconImage = new Image();
+    this.nukeIconImage.src = nukeIcon;
   }
 
   resizeCanvas() {
@@ -402,6 +409,25 @@ export class NameLayer implements Layer {
       }
     } else if (existingEmbargo) {
       existingEmbargo.remove();
+    }
+
+    const sendingNukeAgainstPlayer = this.game.units().find((unit) => {
+      const detonationDst = unit.unitSpecificInfos().detonationDst;
+      const targetId = this.game.owner(detonationDst).id();
+      const isPlayerTarget = targetId == this.myPlayer.id();
+      const isSendingNuke = render.player.id() == unit.owner().id();
+      return nukeTypes.includes(unit.type()) && isPlayerTarget && isSendingNuke;
+    });
+    const existingNuke = iconsDiv.querySelector('[data-icon="nuke"]');
+
+    if (myPlayer && sendingNukeAgainstPlayer) {
+      if (!existingNuke) {
+        iconsDiv.appendChild(
+          this.createIconElement(this.nukeIconImage.src, iconSize, "nuke"),
+        );
+      }
+    } else if (existingNuke) {
+      existingNuke.remove();
     }
 
     // Update all icon sizes

@@ -18,6 +18,7 @@ import {
   EmojiMessage,
   PlayerProfile,
   Attack,
+  UnitSpecificInfos,
 } from "./Game";
 import { AttackUpdate, PlayerUpdate } from "./GameUpdates";
 import { GameUpdateType } from "./GameUpdates";
@@ -646,7 +647,7 @@ export class PlayerImpl implements Player {
     type: UnitType,
     troops: number,
     spawnTile: TileRef,
-    dstPort?: Unit,
+    unitSpecificInfos: UnitSpecificInfos = {},
   ): UnitImpl {
     const cost = this.mg.unitInfo(type).cost(this);
     const b = new UnitImpl(
@@ -656,7 +657,7 @@ export class PlayerImpl implements Player {
       troops,
       this.mg.nextUnitID(),
       this,
-      dstPort,
+      unitSpecificInfos,
     );
     this._units.push(b);
     this.removeGold(cost);

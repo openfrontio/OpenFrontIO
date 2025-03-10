@@ -55,7 +55,9 @@ export class NukeExecution implements Execution {
         this.active = false;
         return;
       }
-      this.nuke = this.player.buildUnit(this.type, 0, spawn);
+      this.nuke = this.player.buildUnit(this.type, 0, spawn, {
+        detonationDst: this.dst,
+      });
       if (this.mg.hasOwner(this.dst)) {
         const target = this.mg.owner(this.dst) as Player;
         if (this.type == UnitType.AtomBomb) {

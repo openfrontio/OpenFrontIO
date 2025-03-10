@@ -1,4 +1,4 @@
-import { MessageType } from "./Game";
+import { MessageType, UnitSpecificInfos } from "./Game";
 import { UnitUpdate } from "./GameUpdates";
 import { GameUpdateType } from "./GameUpdates";
 import { simpleHash, toInt, within, withinInt } from "../Util";
@@ -23,7 +23,7 @@ export class UnitImpl implements Unit {
     private _troops: number,
     private _id: number,
     public _owner: PlayerImpl,
-    private _dstPort?: Unit,
+    private _unitsSpecificInfos: UnitSpecificInfos = {},
   ) {
     this._health = toInt(this.mg.unitInfo(_type).maxHealth ?? 1);
     this._lastTile = _tile;
@@ -34,6 +34,8 @@ export class UnitImpl implements Unit {
   }
 
   toUpdate(): UnitUpdate {
+    const warshipTarget = this.unitsSpecificInfos().warshipTarget;
+    const dstPort = this.unitsSpecificInfos().dstPort;
     return {
       type: GameUpdateType.Unit,
       unitType: this._type,
@@ -45,7 +47,11 @@ export class UnitImpl implements Unit {
       lastPos: this._lastTile,
       health: this.hasHealth() ? Number(this._health) : undefined,
       constructionType: this._constructionType,
-      targetId: this.target() ? this.target().id() : null,
+      unitSpecificInfos: {
+        dstPortId: dstPort ? dstPort.id() : null,
+        warshipTargetId: warshipTarget ? warshipTarget.id() : null,
+        detonationDst: this.unitsSpecificInfos().detonationDst,
+      },
     };
   }
 
@@ -153,15 +159,11 @@ export class UnitImpl implements Unit {
     return `Unit:${this._type},owner:${this.owner().name()}`;
   }
 
-  dstPort(): Unit {
-    return this._dstPort;
+  setWarshipTarget(target: Unit) {
+    this._unitsSpecificInfos.warshipTarget = target;
   }
 
-  setTarget(target: Unit) {
-    this._target = target;
-  }
-
-  target() {
-    return this._target;
+  unitsSpecificInfos(): UnitSpecificInfos {
+    return this._unitsSpecificInfos;
   }
 }
