@@ -9,6 +9,7 @@ import {
   PlayerID,
   PlayerType,
   Tick,
+  UnitSpecificInfos,
   UnitType,
 } from "./Game";
 import { TileRef, TileUpdate } from "./GameMap";
@@ -59,6 +60,12 @@ export interface TileUpdateWrapper {
   update: TileUpdate;
 }
 
+export interface UnitViewSpecificInfos {
+  dstPortId?: number; // Only for trade ships
+  detonationDst?: TileRef; // Only for nukes
+  warshipTargetId?: number;
+}
+
 export interface UnitUpdate {
   type: GameUpdateType.Unit;
   unitType: UnitType;
@@ -69,9 +76,9 @@ export interface UnitUpdate {
   pos: TileRef;
   lastPos: TileRef;
   isActive: boolean;
+  unitSpecificInfos: UnitViewSpecificInfos;
   health?: number;
   constructionType?: UnitType;
-  targetId?: number;
 }
 
 export interface AttackUpdate {

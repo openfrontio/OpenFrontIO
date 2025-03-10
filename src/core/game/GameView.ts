@@ -5,8 +5,13 @@ import {
   Player,
   PlayerActions,
   PlayerProfile,
+  UnitSpecificInfos,
 } from "./Game";
-import { AttackUpdate, PlayerUpdate } from "./GameUpdates";
+import {
+  AttackUpdate,
+  PlayerUpdate,
+  UnitViewSpecificInfos,
+} from "./GameUpdates";
 import { UnitUpdate } from "./GameUpdates";
 import { NameViewData } from "./Game";
 import { GameUpdateType } from "./GameUpdates";
@@ -91,8 +96,8 @@ export class UnitView {
   constructionType(): UnitType | undefined {
     return this.data.constructionType;
   }
-  targetId() {
-    return this.data.targetId;
+  unitSpecificInfos(): UnitViewSpecificInfos {
+    return this.data.unitSpecificInfos;
   }
 }
 
