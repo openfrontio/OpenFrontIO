@@ -302,7 +302,7 @@ export function createGameRecord(
 
 export function decompressGameRecord(gameRecord: GameRecord) {
   const turns = [];
-  let lastTurnNum = 0;
+  let lastTurnNum = -1;
   for (const turn of gameRecord.turns) {
     while (lastTurnNum < turn.turnNumber - 1) {
       lastTurnNum++;

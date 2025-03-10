@@ -53,6 +53,7 @@ export class LocalServer {
     this.clientConnect();
     if (this.lobbyConfig.gameRecord) {
       this.turns = decompressGameRecord(this.lobbyConfig.gameRecord).turns;
+      console.log(`loaded turns: ${JSON.stringify(this.turns)}`);
     }
     this.clientMessage(
       ServerStartGameMessageSchema.parse({
@@ -96,8 +97,14 @@ export class LocalServer {
         return;
       }
       const archivedHash = this.turns[clientMsg.turnNumber].hash;
-      if (archivedHash && archivedHash != clientMsg.hash) {
+      if (!archivedHash) {
         console.warn(
+          `no archived hash found for turn ${clientMsg.turnNumber}, client hash: ${clientMsg.hash}`,
+        );
+        return;
+      }
+      if (archivedHash != clientMsg.hash) {
+        console.error(
           `desync detected on turn ${clientMsg.turnNumber}, client hash: ${clientMsg.hash}, server hash: ${archivedHash}`,
         );
         this.clientMessage({
