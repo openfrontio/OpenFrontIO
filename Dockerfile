@@ -1,18 +1,10 @@
-# Use an official Node runtime as the base image
-FROM oven/bun:1
+# Build stage - will use your native architecture
+FROM --platform=$BUILDPLATFORM oven/bun:1 AS builder
 
-# Add environment variable
-ARG GAME_ENV=prod
-ENV GAME_ENV=$GAME_ENV
+# Set the working directory for the build
+WORKDIR /build
 
-# Install Nginx, Supervisor and Git (for Husky)
-RUN apt-get update && apt-get install -y nginx supervisor git && \
-    rm -rf /var/lib/apt/lists/*
-
-# Set the working directory in the container
-WORKDIR /usr/src/app
-
-# Copy package.json and package-lock.json
+# Copy package files
 COPY package.json bun.lock ./
 
 # Install dependencies while bypassing Husky hooks
@@ -23,10 +15,36 @@ RUN mkdir -p .git && bun install --include=dev
 # Copy the rest of the application code
 COPY . .
 
-# Build the client-side application
-RUN bun run build-prod
+# Build the client-side application with verbose output
+RUN echo "Starting build process..." && bun run build-prod && echo "Build completed successfully!"
 
+# Check output directory
+RUN ls -la static || echo "Static directory not found"
+
+# Production stage
+FROM oven/bun:1
+
+# Add environment variable
+ARG GAME_ENV=prod
+ENV GAME_ENV=$GAME_ENV
 ENV NODE_ENV=production
+
+# Install Nginx, Supervisor and Git (for Husky)
+RUN apt-get update && apt-get install -y nginx supervisor && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set the working directory in the container
+WORKDIR /usr/src/app
+
+# Copy output files from builder (using the correct 'static' directory)
+COPY --from=builder /build/static ./static
+COPY --from=builder /build/node_modules ./node_modules
+COPY --from=builder /build/package.json ./package.json
+COPY --from=builder /build/bun.lock ./bun.lock
+
+# Copy server files
+COPY --from=builder /build/src ./src
+
 
 # Copy Nginx configuration and ensure it's used instead of the default
 COPY nginx.conf /etc/nginx/conf.d/default.conf
