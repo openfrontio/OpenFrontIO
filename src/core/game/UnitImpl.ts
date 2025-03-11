@@ -180,4 +180,8 @@ export class UnitImpl implements Unit {
   dstPort(): Unit {
     return this._dstPort;
   }
+
+  setDstPort(dstPort: Unit): void {
+    this._dstPort = dstPort;
+  }
 }
