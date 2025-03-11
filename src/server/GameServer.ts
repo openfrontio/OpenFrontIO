@@ -425,8 +425,6 @@ export class GameServer {
           this.outOfSyncClients.add(oos.clientID);
         }
       }
-      return;
-      // TODO: renable this once desync issue fixed
 
       const serverDesync = ServerDesyncSchema.safeParse({
         type: "desync",
