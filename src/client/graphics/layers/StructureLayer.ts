@@ -5,7 +5,7 @@ import { EventBus } from "../../../core/EventBus";
 
 import anchorIcon from "../../../../resources/images/buildings/port1.png";
 import missileSiloIcon from "../../../../resources/images/buildings/silo1.png";
-import SAMMissileIcon from "../../../../resources/images/buildings/Extra/silo4.png";
+import SAMMissileIcon from "../../../../resources/images/buildings/silo4.png";
 import shieldIcon from "../../../../resources/images/buildings/fortAlt2.png";
 import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
 import { GameView, UnitView } from "../../../core/game/GameView";
