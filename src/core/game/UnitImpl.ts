@@ -205,8 +205,6 @@ export class UnitImpl implements Unit {
 
     const ownershipRatio = totalTiles > 0 ? ownedTiles / totalTiles : 0;
 
-    console.log(ownershipRatio);
-
     this._ownerRatio = ownershipRatio;
   }
 

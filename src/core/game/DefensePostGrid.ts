@@ -55,12 +55,14 @@ export class DefenseGrid {
 
   // Get all defense units within range of a point
   // Returns [unit, distanceSquared] pairs for efficient filtering
-  nearbyDefenses(tile: TileRef): Array<Unit | UnitView> {
+  nearbyDefenses(
+    tile: TileRef,
+  ): Array<{ unit: Unit | UnitView; distSquared: number }> {
     const x = this.gm.x(tile);
     const y = this.gm.y(tile);
     const [gridX, gridY] = this.getGridCoords(x, y);
     const cellsToCheck = Math.ceil(this.searchRange / this.cellSize);
-    const nearby: Array<Unit | UnitView> = [];
+    const nearby: Array<{ unit: Unit | UnitView; distSquared: number }> = [];
 
     // Pre-calculate range bounds for efficiency
     const startGridX = Math.max(0, gridX - cellsToCheck);
@@ -81,7 +83,7 @@ export class DefenseGrid {
           const distSquared = dx * dx + dy * dy;
 
           if (distSquared <= rangeSquared) {
-            nearby.push(unit);
+            nearby.push({ unit, distSquared });
           }
         }
       }

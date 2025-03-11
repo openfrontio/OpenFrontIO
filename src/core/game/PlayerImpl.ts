@@ -710,7 +710,13 @@ export class PlayerImpl implements Player {
       if (
         !this.mg.nearbyCity(targetTile).insideCity ||
         this.mg.nearbyCity(targetTile).city.size() ==
-          this.mg.config().cityMaxSize()
+          this.mg.config().cityMaxSize() ||
+        this.mg
+          .units(UnitType.Construction)
+          .some(
+            (unit) =>
+              unit.tile() === this.mg.nearbyCity(targetTile).city.tile(),
+          )
       ) {
         return false;
       }

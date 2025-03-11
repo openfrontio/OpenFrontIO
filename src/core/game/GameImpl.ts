@@ -558,8 +558,13 @@ export class GameImpl implements Game {
     this.defenseGrid.removeDefense(dp);
   }
 
-  nearbyDefensePosts(tile: TileRef): Unit[] {
-    return this.defenseGrid.nearbyDefenses(tile) as Unit[];
+  nearbyDefensePosts(
+    tile: TileRef,
+  ): Array<{ unit: Unit; distSquared: number }> {
+    return this.defenseGrid.nearbyDefenses(tile) as Array<{
+      unit: Unit;
+      distSquared: number;
+    }>;
   }
 
   addCity(dp: Unit) {

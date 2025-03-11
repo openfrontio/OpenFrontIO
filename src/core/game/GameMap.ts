@@ -312,6 +312,8 @@ export class GameMapImpl implements GameMap {
 
     const adjustedRadius = baseRadius * (0.9 + noiseFactor * 0.2);
 
+    maxRange = maxRange - 10;
+
     const cityMaxRangeSquared = maxRange * maxRange;
     const finalRadiusSquared = Math.min(
       adjustedRadius * adjustedRadius,

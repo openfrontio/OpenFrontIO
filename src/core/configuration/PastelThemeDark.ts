@@ -294,6 +294,16 @@ export const pastelThemeDark = new (class implements Theme {
     });
   }
 
+  defenseRingColor(playerInfo: PlayerInfo): Colord {
+    const tc = this.territoryColor(playerInfo).rgba;
+
+    return colord({
+      r: Math.max(tc.r - 15, 0),
+      g: Math.max(tc.g - 15, 0),
+      b: Math.max(tc.b - 15, 0),
+    });
+  }
+
   terrainColor(gm: GameMap, tile: TileRef): Colord {
     const mag = gm.magnitude(tile);
     if (gm.isShore(tile)) {

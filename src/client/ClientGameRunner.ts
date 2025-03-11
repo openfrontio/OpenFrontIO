@@ -259,6 +259,7 @@ export class ClientGameRunner {
       return;
     }
     consolex.log(`clicked cell ${cell}`);
+    // console.log("tile. "+cell.y * 2000 + cell.x)
     const tile = this.gameView.ref(cell.x, cell.y);
     if (
       this.gameView.isLand(tile) &&

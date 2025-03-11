@@ -169,6 +169,7 @@ export interface Theme {
   defendedBorderColor(playerInfo: PlayerInfo): Colord;
   cityColor(playerInfo: PlayerInfo): Colord;
   defendedCityColor(playerInfo: PlayerInfo): Colord;
+  defenseRingColor(playerInfo: PlayerInfo): Colord;
   terrainColor(gm: GameMap, tile: TileRef): Colord;
   backgroundColor(): Colord;
   falloutColor(): Colord;

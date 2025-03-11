@@ -67,19 +67,31 @@ export class TerritoryLayer implements Layer {
       const update = u as UnitUpdate;
       if (update.unitType == UnitType.DefensePost) {
         const tile = update.pos;
-        this.game
-          .bfs(
-            tile,
-            manhattanDistFN(tile, this.game.config().defensePostRange()),
-          )
-          .forEach((t) => {
+
+        this.game.bfs(tile, (gm, targetTile) => {
+          const dx = this.game.x(targetTile) - this.game.x(tile);
+          const dy = this.game.y(targetTile) - this.game.y(tile);
+
+          const distanceSquared = dx * dx + dy * dy;
+          const radiusSquared =
+            this.game.config().defensePostRange() *
+            this.game.config().defensePostRange();
+          if (distanceSquared <= radiusSquared) {
             if (
-              (this.game.isBorder(t) || this.game.nearbyCity(t)?.insideCity) &&
-              this.game.ownerID(t) == update.ownerID
+              (Math.abs(
+                Math.sqrt(distanceSquared) -
+                  this.game.config().defensePostRange(),
+              ) < 1.5 ||
+                this.game.nearbyCity(targetTile)?.insideCity) &&
+              this.game.ownerID(tile) == update.ownerID
             ) {
-              this.enqueueTile(t);
+              this.enqueueTile(targetTile);
             }
-          });
+            // make the bfs search even when its not the ring yet
+            return true;
+          }
+          return false;
+        });
       }
       // update tiles in the range of the city
       if (update.unitType == UnitType.City) {
@@ -100,7 +112,9 @@ export class TerritoryLayer implements Layer {
           );
 
           if (distanceSquared <= radiusSquared) {
-            this.enqueueTile(targetTile);
+            if (this.game.ownerID(tile) == update.ownerID) {
+              this.enqueueTile(targetTile);
+            }
             return true;
           }
           return false;
@@ -262,7 +276,7 @@ export class TerritoryLayer implements Layer {
     const owner = this.game.owner(tile) as PlayerView;
     if (this.game.isBorder(tile)) {
       if (
-        this.game.nearbyDefenses(tile).filter((u) => u.owner() == owner)
+        this.game.nearbyDefenses(tile).filter((u) => u.unit.owner() == owner)
           .length > 0
       ) {
         this.paintCell(
@@ -280,13 +294,28 @@ export class TerritoryLayer implements Layer {
         );
       }
     } else {
-      // paint a circle around the city based on the tiles that are counted as inside of the city
-      if (
+      const isOnDefenseRing = this.game
+        .nearbyDefenses(tile)
+        .filter((u) => u.unit.owner() == owner)
+        .some((u) => {
+          const dist = Math.sqrt(u.distSquared);
+          return Math.abs(dist - this.game.config().defensePostRange()) < 1.5;
+        });
+
+      if (isOnDefenseRing) {
+        this.paintCell(
+          this.game.x(tile),
+          this.game.y(tile),
+          this.theme.defenseRingColor(owner.info()),
+          255,
+        );
+      } else if (
         this.game.nearbyCity(tile).city?.owner() == owner &&
         this.game.nearbyCity(tile).insideCity
       ) {
+        // paint the area around the city based on the tiles that are counted as inside of the city
         const color =
-          this.game.nearbyDefenses(tile).filter((u) => u.owner() == owner)
+          this.game.nearbyDefenses(tile).filter((u) => u.unit.owner() == owner)
             .length > 0
             ? this.theme.defendedCityColor(owner.info())
             : this.theme.cityColor(owner.info());

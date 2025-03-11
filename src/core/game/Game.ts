@@ -391,7 +391,7 @@ export interface Game extends GameMap {
   // Units
   units(...types: UnitType[]): Unit[];
   unitInfo(type: UnitType): UnitInfo;
-  nearbyDefensePosts(tile: TileRef): Unit[];
+  nearbyDefensePosts(tile: TileRef): Array<{ unit: Unit; distSquared: number }>;
   nearbyCity(tile: TileRef): { city: Unit | null; insideCity: boolean };
 
   addExecution(...exec: Execution[]): void;

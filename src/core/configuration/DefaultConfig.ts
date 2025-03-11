@@ -347,7 +347,7 @@ export class DefaultConfig implements Config {
         speed *= this.cityDefenseDebuff();
       }
       for (const dp of gm.nearbyDefensePosts(tileToConquer)) {
-        if (dp.owner() == defender) {
+        if (dp.unit.owner() == defender) {
           // make it harder to conquer city tiles in the range of an defense post
           if (gm.nearbyCity(tileToConquer)?.insideCity) {
             mag *= this.cityDefensePostDefenseBonus();

@@ -333,8 +333,13 @@ export class GameView implements GameMap {
     return this.updatedTiles;
   }
 
-  nearbyDefenses(tile: TileRef): UnitView[] {
-    return this.defensePostGrid.nearbyDefenses(tile) as UnitView[];
+  nearbyDefenses(
+    tile: TileRef,
+  ): Array<{ unit: UnitView; distSquared: number }> {
+    return this.defensePostGrid.nearbyDefenses(tile) as Array<{
+      unit: UnitView;
+      distSquared: number;
+    }>;
   }
 
   nearbyCity(tile: TileRef): { city: UnitView | null; insideCity: boolean } {
