@@ -352,9 +352,9 @@ function getArea(
       next.push([x - 1, y]);
       next.push([x, y + 1]);
       next.push([x, y - 1]);
+      area.push([x, y]);
     }
 
-    area.push([x, y]);
     visited.add(key);
   }
 
