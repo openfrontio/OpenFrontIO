@@ -25,6 +25,16 @@ export abstract class DefaultServerConfig implements ServerConfig {
   gitCommit(): string {
     return process.env.GIT_COMMIT;
   }
+  r2Endpoint(): string {
+    return process.env.R2_ENDPOINT;
+  }
+  r2AccessKey(): string {
+    return process.env.R2_ACCESS_KEY;
+  }
+  r2SecretKey(): string {
+    return process.env.R2_SECRET_KEY;
+  }
+  abstract r2Bucket(): string;
   adminHeader(): string {
     return "x-admin-key";
   }

@@ -11,18 +11,23 @@ fi
 # Set environment from parameter
 ENV=$1
 CONTAINER_NAME="openfront-${ENV}"
-LOG_GROUP="/aws/ec2/docker-containers/${ENV}"
+IMAGE_NAME="${DOCKER_USERNAME}/${DOCKER_REPO}"
+FULL_IMAGE_NAME="${IMAGE_NAME}:latest"
 
-# Get AWS account ID
-AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-ECR_REPO="${AWS_ACCOUNT_ID}.dkr.ecr.eu-west-1.amazonaws.com/openfront:latest"
+echo "======================================================"
+echo "🔄 UPDATING SERVER: ${ENV} ENVIRONMENT"
+echo "======================================================"
+echo "Container name: ${CONTAINER_NAME}"
+echo "Docker image: ${FULL_IMAGE_NAME}"
 
-echo "Deploying to ${ENV} environment..."
-echo "Logging in to ECR..."
-aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.eu-west-1.amazonaws.com
+# Load environment variables if .env exists
+if [ -f /root/.env ]; then
+  echo "Loading environment variables from .env file..."
+  export $(grep -v '^#' /root/.env | xargs)
+fi
 
-echo "Pulling latest image..."
-docker pull $ECR_REPO
+echo "Pulling latest image from Docker Hub..."
+docker pull $FULL_IMAGE_NAME
 
 echo "Checking for existing container..."
 # Check for running container
@@ -64,14 +69,12 @@ fi
 echo "Starting new container for ${ENV} environment..."
 docker run -d -p 80:80 \
   --restart=always \
-  --log-driver=awslogs \
-  --log-opt awslogs-region=eu-west-1 \
-  --log-opt awslogs-group=${LOG_GROUP} \
-  --log-opt awslogs-create-group=true \
+  $VOLUME_MOUNTS \
+  $NETWORK_FLAGS \
   --env GAME_ENV=${ENV} \
-  --env-file /home/ec2-user/.env \
+  --env-file /root/.env \
   --name ${CONTAINER_NAME} \
-  $ECR_REPO
+  $FULL_IMAGE_NAME
 
 if [ $? -eq 0 ]; then
   echo "Update complete! New ${ENV} container is running."
@@ -83,4 +86,11 @@ if [ $? -eq 0 ]; then
   echo "Cleanup complete."
 else
   echo "Failed to start container"
+  exit 1
 fi
+
+echo "======================================================"
+echo "✅ SERVER UPDATE COMPLETED SUCCESSFULLY"
+echo "Container name: ${CONTAINER_NAME}"
+echo "Image: ${FULL_IMAGE_NAME}"
+echo "======================================================"

@@ -1,6 +1,5 @@
 import { GameRecord, GameID, GameRecordSchema } from "../core/Schemas";
 import { S3 } from "@aws-sdk/client-s3";
-import { RedshiftData } from "@aws-sdk/client-redshift-data";
 import {
   GameEnv,
   getServerConfigFromServer,
@@ -8,23 +7,32 @@ import {
 
 const config = getServerConfigFromServer();
 
-const s3 = new S3({ region: "eu-west-1" });
+// R2 client configuration
+const r2 = new S3({
+  region: "auto", // R2 ignores region, but it's required by the SDK
+  endpoint: config.r2Endpoint(), // You'll need to add this to your config
+  credentials: {
+    accessKeyId: config.r2AccessKey(), // You'll need to add these
+    secretAccessKey: config.r2SecretKey(), // credential methods to your config
+  },
+});
 
-const gameBucket = "openfront-games";
-const analyticsBucket = "openfront-analytics";
+const bucket = config.r2Bucket();
+const gameFolder = "games";
+const analyticsFolder = "analytics";
 
 export async function archive(gameRecord: GameRecord) {
   try {
     gameRecord.gitCommit = config.gitCommit();
-    // Archive to Redshift Serverless
-    await archiveAnalyticsToS3(gameRecord);
+    // Archive to R2
+    await archiveAnalyticsToR2(gameRecord);
 
-    // Archive to S3 if there are turns
+    // Archive full game if there are turns
     if (gameRecord.turns.length > 0) {
       console.log(
-        `${gameRecord.id}: game has more than zero turns, attempting to write to full game to S3`,
+        `${gameRecord.id}: game has more than zero turns, attempting to write to full game to R2`,
       );
-      await archiveFullGameToS3(gameRecord);
+      await archiveFullGameToR2(gameRecord);
     }
   } catch (error) {
     console.error(`${gameRecord.id}: Final archive error: ${error}`, {
@@ -36,8 +44,8 @@ export async function archive(gameRecord: GameRecord) {
   }
 }
 
-async function archiveAnalyticsToS3(gameRecord: GameRecord) {
-  // Create analytics data object (similar to what was going to Redshift)
+async function archiveAnalyticsToR2(gameRecord: GameRecord) {
+  // Create analytics data object
   const analyticsData = {
     id: gameRecord.id,
     env: config.env(),
@@ -61,17 +69,17 @@ async function archiveAnalyticsToS3(gameRecord: GameRecord) {
     // Store analytics data using just the game ID as the key
     const analyticsKey = `${gameRecord.id}.json`;
 
-    await s3.putObject({
-      Bucket: analyticsBucket,
-      Key: analyticsKey,
+    await r2.putObject({
+      Bucket: bucket,
+      Key: `${analyticsFolder}/${analyticsKey}`,
       Body: JSON.stringify(analyticsData),
       ContentType: "application/json",
     });
 
-    console.log(`${gameRecord.id}: successfully wrote game analytics to S3`);
+    console.log(`${gameRecord.id}: successfully wrote game analytics to R2`);
   } catch (error) {
     console.error(
-      `${gameRecord.id}: Error writing game analytics to S3: ${error}`,
+      `${gameRecord.id}: Error writing game analytics to R2: ${error}`,
       {
         message: error?.message || error,
         stack: error?.stack,
@@ -83,7 +91,7 @@ async function archiveAnalyticsToS3(gameRecord: GameRecord) {
   }
 }
 
-async function archiveFullGameToS3(gameRecord: GameRecord) {
+async function archiveFullGameToR2(gameRecord: GameRecord) {
   // Create a deep copy to avoid modifying the original
   const recordCopy = JSON.parse(JSON.stringify(gameRecord));
 
@@ -94,9 +102,9 @@ async function archiveFullGameToS3(gameRecord: GameRecord) {
   });
 
   try {
-    await s3.putObject({
-      Bucket: gameBucket,
-      Key: recordCopy.id,
+    await r2.putObject({
+      Bucket: bucket,
+      Key: `${gameFolder}/${recordCopy.id}`,
       Body: JSON.stringify(recordCopy),
       ContentType: "application/json",
     });
@@ -105,7 +113,7 @@ async function archiveFullGameToS3(gameRecord: GameRecord) {
     throw error;
   }
 
-  console.log(`${gameRecord.id}: game record successfully written to S3`);
+  console.log(`${gameRecord.id}: game record successfully written to R2`);
 }
 
 export async function readGameRecord(
@@ -113,16 +121,16 @@ export async function readGameRecord(
 ): Promise<GameRecord | null> {
   try {
     // Check if file exists and download in one operation
-    const response = await s3.getObject({
-      Bucket: gameBucket,
-      Key: gameId,
+    const response = await r2.getObject({
+      Bucket: bucket,
+      Key: `${gameFolder}/${gameId}`, // Fixed - needed to include gameFolder
     });
     // Parse the response body
     const bodyContents = await response.Body.transformToString();
     return JSON.parse(bodyContents) as GameRecord;
   } catch (error) {
     // Log the error for monitoring purposes
-    console.error(`${gameId}: Error reading game record from S3: ${error}`, {
+    console.error(`${gameId}: Error reading game record from R2: ${error}`, {
       message: error?.message || error,
       stack: error?.stack,
       name: error?.name,
@@ -136,9 +144,9 @@ export async function readGameRecord(
 
 export async function gameRecordExists(gameId: GameID): Promise<boolean> {
   try {
-    await s3.headObject({
-      Bucket: gameBucket,
-      Key: gameId,
+    await r2.headObject({
+      Bucket: bucket,
+      Key: `${gameFolder}/${gameId}`, // Fixed - needed to include gameFolder
     });
     return true;
   } catch (error) {
