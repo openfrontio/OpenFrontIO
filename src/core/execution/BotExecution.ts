@@ -73,12 +73,12 @@ export class BotExecution implements Execution {
       this.neighborsTerraNullius = false;
     }
 
-    const border = Array.from(this.bot.borderTiles())
-      .flatMap((t) => this.mg.neighbors(t))
-      .filter((t) => this.mg.hasOwner(t) && this.mg.owner(t) != this.bot);
+  const border = new Set(
+  this.bot.borderTiles().flatMap((t) => this.mg.neighbors(t)));
+  const enemies = Array.from(border).filter(
+  (t) => this.mg.hasOwner(t) && this.mg.owner(t) !== this.bot);
 
-    if (border.length == 0) {
-      return;
+if (enemies.length === 0) return;
     }
 
     const toAttack = border[this.random.nextInt(0, border.length)];
