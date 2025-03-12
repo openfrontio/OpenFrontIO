@@ -418,7 +418,7 @@ export class NameLayer implements Layer {
 
     const nukesSentByOtherPlayer = this.game.units().filter((unit) => {
       const isSendingNuke = render.player.id() == unit.owner().id();
-      const notMyPlayer = unit.owner().id() != myPlayer.id();
+      const notMyPlayer = !myPlayer || unit.owner().id() != myPlayer.id();
       return (
         nukeTypes.includes(unit.type()) &&
         isSendingNuke &&
@@ -429,7 +429,7 @@ export class NameLayer implements Layer {
     const isMyPlayerTarget = nukesSentByOtherPlayer.find((unit) => {
       const detonationDst = unit.detonationDst();
       const targetId = this.game.owner(detonationDst).id();
-      return targetId == this.myPlayer.id();
+      return myPlayer && targetId == this.myPlayer.id();
     });
     const existingNuke = iconsDiv.querySelector(
       '[data-icon="nuke"]',
@@ -449,7 +449,7 @@ export class NameLayer implements Layer {
       ) {
         existingNuke.src = this.nukeWhiteIconImage.src;
       }
-    } else if (myPlayer && nukesSentByOtherPlayer.length > 0) {
+    } else if (nukesSentByOtherPlayer.length > 0) {
       if (!existingNuke) {
         const icon = isMyPlayerTarget
           ? this.nukeRedIconImage.src
