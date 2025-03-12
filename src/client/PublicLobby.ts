@@ -131,12 +131,6 @@ export class PublicLobby extends LitElement {
                 ${timeDisplay}
               </div>
             </div>
-            <div class="flex flex-col items-start">
-              <div class="text-md font-medium text-blue-100">
-                Game starts when ${playersRemainingBeforeMax} more players join
-                or in ${timeDisplay} seconds.
-              </div>
-            </div>
           </div>
         </div>
       </button>
