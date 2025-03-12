@@ -380,7 +380,14 @@ export class GameServer {
       }
     }
 
-    if (now - this.createdAt < this.config.lobbyLifetime(this.highTraffic)) {
+    const msSinceCreation = now - this.createdAt;
+    const lessThanLifetime =
+      msSinceCreation < this.config.lobbyLifetime(this.highTraffic);
+    const notEnoughPlayers =
+      this.gameConfig.gameType == GameType.Public &&
+      this.gameConfig.maxPlayers &&
+      this.activeClients.length < this.gameConfig.maxPlayers;
+    if (lessThanLifetime && notEnoughPlayers) {
       return GamePhase.Lobby;
     }
     const warmupOver =

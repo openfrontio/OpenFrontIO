@@ -110,6 +110,7 @@ const GameConfigSchema = z.object({
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
+  maxPlayers: z.number().optional(),
 });
 
 const SafeString = z

@@ -44,6 +44,9 @@ export abstract class DefaultServerConfig implements ServerConfig {
       return 50 * 1000;
     }
   }
+  lobbyMaxPlayers(): number {
+    return Math.random() < 0.1 ? 100 : 35;
+  }
   lobbyLifetime(highTraffic: boolean): number {
     return this.gameCreationRate(highTraffic) * 2;
   }

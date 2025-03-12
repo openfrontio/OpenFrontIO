@@ -8,7 +8,7 @@ import {
   GameEnv,
   getServerConfigFromServer,
 } from "../core/configuration/Config";
-import { GameInfo } from "../core/Schemas";
+import { GameConfig, GameInfo } from "../core/Schemas";
 import path from "path";
 import rateLimit from "express-rate-limit";
 import { fileURLToPath } from "url";
@@ -197,7 +197,7 @@ async function fetchLobbies(): Promise<void> {
     });
 
   lobbyInfos.forEach((l) => {
-    if (l.msUntilStart <= 250) {
+    if (l.msUntilStart <= 250 || l.gameConfig.maxPlayers == l.numClients) {
       publicLobbyIDs.delete(l.gameID);
     }
   });
@@ -215,6 +215,7 @@ async function schedulePublicGame() {
   // Create the default public game config (from your GameManager)
   const defaultGameConfig = {
     gameMap: getNextMap(),
+    maxPlayers: config.lobbyMaxPlayers(),
     gameType: GameType.Public,
     difficulty: Difficulty.Medium,
     infiniteGold: false,
@@ -222,7 +223,7 @@ async function schedulePublicGame() {
     instantBuild: false,
     disableNPCs: false,
     bots: 400,
-  };
+  } as GameConfig;
 
   const workerPath = config.workerPath(gameID);
 
