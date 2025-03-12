@@ -21,9 +21,9 @@ if [ -f .env ]; then
 fi
 
 # Check command line argument
-if [ $# -ne 1 ] || ([ "$1" != "staging" ] && [ "$1" != "prod" ]); then
-    echo "Error: Please specify environment (staging or prod)"
-    echo "Usage: $0 [staging|prod]"
+if [ $# -ne 1 ] || ([ "$1" != "staging" ] && [ "$1" != "prod" ] && [ "$1" != "alt" ]); then
+    echo "Error: Please specify environment (staging, prod, or alt)"
+    echo "Usage: $0 [staging|prod|alt]"
     exit 1
 fi
 
@@ -39,6 +39,11 @@ if [ "$ENV" == "staging" ]; then
     print_header "DEPLOYING TO STAGING ENVIRONMENT"
     SERVER_HOST=$SERVER_HOST_STAGING
     DOCKER_REPO=$DOCKER_REPO_STAGING
+elif [ "$ENV" == "alt" ]; then
+    print_header "DEPLOYING TO ALT ENVIRONMENT"
+    SERVER_HOST=$SERVER_HOST_ALT
+    DOCKER_REPO=$DOCKER_REPO_PROD  # Uses prod Docker repo for alt environment
+    ENV="prod"
 else
     print_header "DEPLOYING TO PRODUCTION ENVIRONMENT"
     SERVER_HOST=$SERVER_HOST_PROD
