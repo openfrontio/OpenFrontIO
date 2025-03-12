@@ -34,7 +34,7 @@ enum TerrainType {
 class Terrain {
   public shoreline: boolean = false;
   public magnitude: number = 0;
-  public ocean: boolean;
+  public ocean: boolean = false;
   constructor(public type: TerrainType) {}
 }
 
@@ -169,42 +169,20 @@ function processDistToLand(shorelineWaters: Coord[], map: Terrain[][]) {
     if (terrain.type === TerrainType.Water) {
       terrain.magnitude = distance;
 
-      for (const [dx, dy] of [
-        [-1, 0],
-        [1, 0],
-        [0, -1],
-        [0, 1],
-      ]) {
-        const newX = coord.x + dx;
-        const newY = coord.y + dy;
-
-        if (
-          newX >= 0 &&
-          newX < map.length &&
-          newY >= 0 &&
-          newY < map[0].length
-        ) {
-          queue.push([{ x: newX, y: newY }, distance + 1]);
-        }
-      }
+      const nCoords: Coord[] = getNeighborCoords(coord.x, coord.y, map);
+      nCoords.forEach((nCoord) => {
+        queue.push([{ x: nCoord.x, y: nCoord.y }, distance + 1]);
+      });
     }
   }
 }
 
 function neighbors(x: number, y: number, map: Terrain[][]): Terrain[] {
+  const nCoords: Coord[] = getNeighborCoords(x, y, map);
   const ns: Terrain[] = [];
-  if (x > 0) {
-    ns.push(map[x - 1][y]);
-  }
-  if (x < map.length - 1) {
-    ns.push(map[x + 1][y]);
-  }
-  if (y > 0) {
-    ns.push(map[x][y - 1]);
-  }
-  if (y < map[0].length - 1) {
-    ns.push(map[x][y + 1]);
-  }
+  nCoords.forEach((nCoord) => {
+    ns.push(map[nCoord.x][nCoord.y]);
+  });
   return ns;
 }
 
@@ -220,49 +198,11 @@ function processOcean(map: Terrain[][]) {
         const key = `${x},${y}`;
         if (visited.has(key)) continue;
 
-        // Find all connected water tiles
-        const waterBody: Coord[] = [];
-        const queue: Coord[] = [{ x, y }];
-
-        while (queue.length > 0) {
-          const coord = queue.shift()!;
-          const currentKey = `${coord.x},${coord.y}`;
-
-          if (visited.has(currentKey)) continue;
-          visited.add(currentKey);
-
-          if (map[coord.x][coord.y].type === TerrainType.Water) {
-            waterBody.push(coord);
-
-            // Check all four directions
-            for (const [dx, dy] of [
-              [-1, 0],
-              [1, 0],
-              [0, -1],
-              [0, 1],
-            ]) {
-              const newX = coord.x + dx;
-              const newY = coord.y + dy;
-
-              if (
-                newX >= 0 &&
-                newX < map.length &&
-                newY >= 0 &&
-                newY < map[0].length
-              ) {
-                queue.push({ x: newX, y: newY });
-              }
-            }
-          }
-        }
-
-        // Store this water body if it has any tiles
-        if (waterBody.length > 0) {
-          waterBodies.push({
-            coords: waterBody,
-            size: waterBody.length,
-          });
-        }
+        const waterBody: Coord[] = getArea(x, y, map, visited);
+        waterBodies.push({
+          coords: waterBody,
+          size: waterBody.length,
+        });
       }
     }
   }
@@ -327,37 +267,31 @@ function packTerrain(mapName: string, map: Terrain[][]): Uint8Array {
 }
 
 function getArea(
-  map: Terrain[][],
   x: number,
   y: number,
+  map: Terrain[][],
   visited: Set<string>,
-  targetType: TerrainType,
-) {
-  const area = [];
-  const next = [[x, y]];
-  while (next.length) {
-    const [x, y] = next.pop();
-    const key = `${x},${y}`;
-    if (
-      x < 0 ||
-      x >= map.length ||
-      y < 0 ||
-      y >= map[0].length ||
-      visited.has(key)
-    )
-      continue;
+): Coord[] {
+  const targetType: TerrainType = map[x][y].type;
+  const area: Coord[] = [];
+  const queue: Coord[] = [{ x, y }];
 
-    if (map[x][y].type === targetType) {
-      next.push([x + 1, y]);
-      next.push([x - 1, y]);
-      next.push([x, y + 1]);
-      next.push([x, y - 1]);
-    }
+  while (queue.length > 0) {
+    const coord = queue.shift()!;
+    const key = `${coord.x},${coord.y}`;
 
-    area.push([x, y]);
+    if (visited.has(key)) continue;
     visited.add(key);
-  }
 
+    if (map[coord.x][coord.y].type === targetType) {
+      area.push({ x: coord.x, y: coord.y });
+
+      const nCoords: Coord[] = getNeighborCoords(coord.x, coord.y, map);
+      nCoords.forEach((nCoord) => {
+        queue.push({ x: nCoord.x, y: nCoord.y });
+      });
+    }
+  }
   return area;
 }
 
@@ -370,13 +304,10 @@ function removeSmallIslands(map: Terrain[][]) {
         const key = `${x},${y}`;
         if (visited.has(key)) continue;
 
-        const island = getArea(map, x, y, visited, TerrainType.Land);
+        const island = getArea(x, y, map, visited);
         if (island.length < min_island_size) {
-          island.forEach((pos) => {
-            const x = pos[0];
-            const y = pos[1];
-            map[x][y].type = TerrainType.Water;
-            map[x][y].ocean = true;
+          island.forEach((coord) => {
+            map[coord.x][coord.y].type = TerrainType.Water;
           });
         }
       }
@@ -394,18 +325,15 @@ function removeSmallLakes(mapName: string, map: Terrain[][]) {
 
   for (let x = 0; x < map.length; x++) {
     for (let y = 0; y < map[0].length; y++) {
-      if (map[x][y].type === TerrainType.Water && !map[x][y].ocean) {
+      if (map[x][y].type === TerrainType.Water) {
         const key = `${x},${y}`;
         if (visited.has(key)) continue;
 
-        const lake = getArea(map, x, y, visited, TerrainType.Water);
+        const lake = getArea(x, y, map, visited);
         if (lake.length < min_lake_size) {
-          lake.forEach((pos) => {
-            const x = pos[0];
-            const y = pos[1];
-            map[x][y].type = TerrainType.Land;
-            map[x][y].magnitude = 0;
-            map[x][y].ocean = false;
+          lake.forEach((coord) => {
+            map[coord.x][coord.y].type = TerrainType.Land;
+            map[coord.x][coord.y].magnitude = 0;
           });
         }
       }
@@ -422,6 +350,23 @@ function logBinaryAsBits(
     .map((b) => b.toString(2).padStart(8, "0"))
     .join(" ");
   console.log(`${mapName}: Binary data (bits):`, bits);
+}
+
+function getNeighborCoords(x: number, y: number, map: Terrain[][]): Coord[] {
+  const coords: Coord[] = [];
+  if (x > 0) {
+    coords.push({ x: x - 1, y: y });
+  }
+  if (x < map.length - 1) {
+    coords.push({ x: x + 1, y });
+  }
+  if (y > 0) {
+    coords.push({ x: x, y: y - 1 });
+  }
+  if (y < map[0].length - 1) {
+    coords.push({ x: x, y: y + 1 });
+  }
+  return coords;
 }
 
 await loadTerrainMaps();
