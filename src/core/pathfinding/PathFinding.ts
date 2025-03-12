@@ -101,14 +101,7 @@ export class PathFinder {
       return true;
     }
     const dist = this.game.manhattanDist(curr, dst);
-    let tolerance = 10;
-    if (dist > 50) {
-      tolerance = 10;
-    } else if (dist > 25) {
-      tolerance = 5;
-    } else {
-      tolerance = 0;
-    }
+    const tolerance = dist > 50 ? 10 : dist > 25 ? 5 : 0;
     if (this.game.manhattanDist(this.dst, dst) > tolerance) {
       return true;
     }
