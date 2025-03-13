@@ -246,10 +246,38 @@ export class BuildMenu extends LitElement implements Layer {
     const unit = this.playerActions.buildableUnits.filter(
       (u) => u.type == item.unitType,
     );
-    if (!unit) {
+    if (!unit || unit.length === 0) {
       return false;
     }
     return unit[0].canBuild;
+  }
+
+  private getBuildTooltip(item: BuildItemDisplay): string {
+    if (this.game?.myPlayer() == null || this.playerActions == null) {
+      return "";
+    }
+
+    const unit = this.playerActions.buildableUnits.find(
+      (u) => u.type == item.unitType,
+    );
+
+    if (!unit) {
+      return "";
+    }
+
+    const cost = this.cost(item);
+    const playerGold = this.game.myPlayer().gold();
+
+    if (playerGold < cost) {
+      return "Not enough gold";
+    }
+
+    // If we can afford it but can't build, return appropriate message
+    if (!unit.canBuild) {
+      return "Invalid location";
+    }
+
+    return "";
   }
 
   private cost(item: BuildItemDisplay): number {
@@ -286,7 +314,7 @@ export class BuildMenu extends LitElement implements Layer {
                     class="build-button"
                     @click=${() => this.onBuildSelected(item)}
                     ?disabled=${!this.canBuild(item)}
-                    title=${!this.canBuild(item) ? "Not enough money" : ""}
+                    title=${this.getBuildTooltip(item)}
                   >
                     <img
                       src=${item.icon}

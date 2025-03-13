@@ -127,6 +127,9 @@ export class DefaultConfig implements Config {
   defensePostDefenseBonus(): number {
     return 5;
   }
+  buildingDensityLimit(): number {
+    return 15; // Minimum distance required between structures (in map units)
+  }
   spawnNPCs(): boolean {
     return !this._gameConfig.disableNPCs;
   }
