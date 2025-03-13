@@ -110,6 +110,7 @@ export interface Config {
   percentageTilesOwnedToWin(): number;
   numBots(): number;
   spawnNPCs(): boolean;
+  allowNukes(): boolean;
   bots(): number;
   infiniteGold(): boolean;
   infiniteTroops(): boolean;

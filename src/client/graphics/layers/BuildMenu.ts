@@ -274,37 +274,50 @@ export class BuildMenu extends LitElement implements Layer {
         ${buildTable.map(
           (row) => html`
             <div class="build-row">
-              ${row.map(
-                (item) => html`
-                  <button
-                    class="build-button"
-                    @click=${() => this.onBuildSelected(item)}
-                    ?disabled=${!this.canBuild(item)}
-                    title=${!this.canBuild(item) ? "Not enough money" : ""}
-                  >
-                    <img
-                      src=${item.icon}
-                      alt="${item.unitType}"
-                      width="40"
-                      height="40"
-                    />
-                    <span class="build-name">${item.unitType}</span>
-                    <span class="build-description">${item.description}</span>
-                    <span class="build-cost">
-                      ${renderNumber(
-                        this.game && this.game.myPlayer() ? this.cost(item) : 0,
-                      )}
+              ${row
+                .filter(
+                  (item) =>
+                    this.game?.config()?.allowNukes() ||
+                    ![
+                      UnitType.AtomBomb,
+                      UnitType.MIRV,
+                      UnitType.HydrogenBomb,
+                      UnitType.MissileSilo,
+                    ].includes(item.unitType),
+                )
+                .map(
+                  (item) => html`
+                    <button
+                      class="build-button"
+                      @click=${() => this.onBuildSelected(item)}
+                      ?disabled=${!this.canBuild(item)}
+                      title=${!this.canBuild(item) ? "Not enough money" : ""}
+                    >
                       <img
-                        src=${goldCoinIcon}
-                        alt="gold"
-                        width="12"
-                        height="12"
-                        style="vertical-align: middle;"
+                        src=${item.icon}
+                        alt="${item.unitType}"
+                        width="40"
+                        height="40"
                       />
-                    </span>
-                  </button>
-                `,
-              )}
+                      <span class="build-name">${item.unitType}</span>
+                      <span class="build-description">${item.description}</span>
+                      <span class="build-cost">
+                        ${renderNumber(
+                          this.game && this.game.myPlayer()
+                            ? this.cost(item)
+                            : 0,
+                        )}
+                        <img
+                          src=${goldCoinIcon}
+                          alt="gold"
+                          width="12"
+                          height="12"
+                          style="vertical-align: middle;"
+                        />
+                      </span>
+                    </button>
+                  `,
+                )}
             </div>
           `,
         )}

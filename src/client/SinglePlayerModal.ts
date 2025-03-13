@@ -14,6 +14,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs: boolean = false;
+  @state() private disableNukes: boolean = false;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
@@ -409,6 +410,20 @@ export class SinglePlayerModal extends LitElement {
                   />
                   <div class="option-card-title">Infinite troops</div>
                 </label>
+
+                <label
+                  for="disable-nukes"
+                  class="option-card ${this.disableNukes ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="disable-nukes"
+                    @change=${this.handleDisableNukesChange}
+                    .checked=${this.disableNukes}
+                  />
+                  <div class="option-card-title">Disable Nukes</div>
+                </label>
               </div>
             </div>
           </div>
@@ -462,6 +477,9 @@ export class SinglePlayerModal extends LitElement {
   private handleDisableNPCsChange(e: Event) {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
   }
+  private handleDisableNukesChange(e: Event) {
+    this.disableNukes = Boolean((e.target as HTMLInputElement).checked);
+  }
 
   private getRandomMap(): GameMapType {
     const maps = Object.values(GameMapType);
@@ -489,6 +507,7 @@ export class SinglePlayerModal extends LitElement {
           map: this.selectedMap,
           difficulty: this.selectedDifficulty,
           disableNPCs: this.disableNPCs,
+          disableNukes: this.disableNukes,
           bots: this.bots,
           infiniteGold: this.infiniteGold,
           infiniteTroops: this.infiniteTroops,

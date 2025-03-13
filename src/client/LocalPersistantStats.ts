@@ -16,6 +16,7 @@ export interface GameStat {
     instantBuild: boolean | null;
     bots: number | null;
     disableNPCs: boolean | null;
+    disableNukes: boolean | null;
   };
   playerStats?: PlayerStats;
   outcome?: "victory" | "defeat";
@@ -60,6 +61,7 @@ export class LocalPersistantStats {
         instantBuild: lobby.instantBuild,
         bots: lobby.bots,
         disableNPCs: lobby.disableNPCs,
+        disableNukes: lobby.disableNukes,
       },
     };
     localStorage.setItem("stats", JSON.stringify(stats));

@@ -40,6 +40,7 @@ export interface LobbyConfig {
   instantBuild: boolean | null;
   bots: number | null;
   disableNPCs: boolean | null;
+  disableNukes: boolean | null;
 }
 
 export function joinLobby(
@@ -61,6 +62,7 @@ export function joinLobby(
       gameMap: lobbyConfig.map,
       difficulty: lobbyConfig.difficulty,
       disableNPCs: lobbyConfig.disableNPCs,
+      disableNukes: lobbyConfig.disableNukes,
       bots: lobbyConfig.bots,
       infiniteGold: lobbyConfig.infiniteGold,
       infiniteTroops: lobbyConfig.infiniteTroops,

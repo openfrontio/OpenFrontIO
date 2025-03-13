@@ -165,6 +165,7 @@ class Client {
         instantBuild: event.detail.instantBuild,
         bots: event.detail.bots,
         disableNPCs: event.detail.disableNPCs,
+        disableNukes: event.detail.disableNukes,
       },
       () => {
         this.joinModal.close();
