@@ -1,6 +1,7 @@
 import {
   Difficulty,
   Game,
+  GameMapType,
   GameType,
   Gold,
   Player,
@@ -12,7 +13,7 @@ import {
   UnitInfo,
   UnitType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
+import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID } from "../Schemas";
@@ -54,8 +55,16 @@ export abstract class DefaultServerConfig implements ServerConfig {
       return 50 * 1000;
     }
   }
-  lobbyMaxPlayers(): number {
-    return Math.random() < 0.1 ? 100 : 35;
+  lobbyMaxPlayers(map: GameMapType): number {
+    if (map == GameMapType.World) {
+      return Math.random() < 0.3 ? 150 : 60;
+    }
+    if (
+      [GameMapType.Mars, GameMapType.Africa, GameMapType.BlackSea].includes(map)
+    ) {
+      return Math.random() < 0.3 ? 70 : 50;
+    }
+    return Math.random() < 0.3 ? 60 : 40;
   }
   lobbyLifetime(highTraffic: boolean): number {
     return this.gameCreationRate(highTraffic) * 2;

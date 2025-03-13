@@ -1,4 +1,4 @@
-import { GameType, Player, PlayerInfo, UnitInfo, UnitType } from "../game/Game";
+import { GameType, UnitInfo, UnitType } from "../game/Game";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
 import { GameEnv, ServerConfig } from "./Config";
