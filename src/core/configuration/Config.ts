@@ -163,7 +163,7 @@ export interface Config {
   tradeShipSpawnRate(): number;
   defensePostRange(): number;
   defensePostDefenseBonus(): number;
-  falloutDefenseModifier(): number;
+  falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
   // 0-1
   traitorDefenseDebuff(): number;

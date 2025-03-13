@@ -117,8 +117,10 @@ export class DefaultConfig implements Config {
     return 250_000;
   }
 
-  falloutDefenseModifier(): number {
-    return 5;
+  falloutDefenseModifier(falloutRatio: number): number {
+    // falloutRatio is between 0 and 1
+    // So defense modifier is between [5, 2.5]
+    return 5 - falloutRatio * 2;
   }
 
   defensePostRange(): number {
@@ -365,8 +367,9 @@ export class DefaultConfig implements Config {
     }
 
     if (gm.hasFallout(tileToConquer)) {
-      mag *= this.falloutDefenseModifier();
-      speed *= this.falloutDefenseModifier();
+      const falloutRatio = gm.numTilesWithFallout() / gm.numLandTiles();
+      mag *= this.falloutDefenseModifier(falloutRatio);
+      speed *= this.falloutDefenseModifier(falloutRatio);
     }
 
     if (attacker.isPlayer() && defender.isPlayer()) {
