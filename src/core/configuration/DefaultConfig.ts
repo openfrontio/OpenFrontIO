@@ -145,7 +145,12 @@ export class DefaultConfig implements Config {
   tradeShipGold(dist: number): Gold {
     return 10000 + 150 * Math.pow(dist, 1.1);
   }
-  tradeShipSpawnRate(): number {
+  tradeShipSpawnRate(numberOfPorts: number): number {
+    if (numberOfPorts <= 3) return 180;
+    if (numberOfPorts <= 5) return 250;
+    if (numberOfPorts <= 8) return 350;
+    if (numberOfPorts <= 10) return 400;
+    if (numberOfPorts <= 12) return 450;
     return 500;
   }
 

@@ -160,7 +160,7 @@ export interface Config {
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
   tradeShipGold(dist: number): Gold;
-  tradeShipSpawnRate(): number;
+  tradeShipSpawnRate(numberOfPorts: number): number;
   defensePostRange(): number;
   defensePostDefenseBonus(): number;
   falloutDefenseModifier(): number;
