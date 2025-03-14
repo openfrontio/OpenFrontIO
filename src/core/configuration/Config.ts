@@ -1,7 +1,7 @@
 import {
   Difficulty,
   Game,
-  GameType,
+  GameMapType,
   Gold,
   Player,
   PlayerID,
@@ -91,7 +91,7 @@ export interface ServerConfig {
   turnIntervalMs(): number;
   gameCreationRate(highTraffic: boolean): number;
   lobbyLifetime(highTraffic: boolean): number;
-  lobbyMaxPlayers(): number;
+  lobbyMaxPlayers(map: GameMapType): number;
   discordRedirectURI(): string;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
@@ -161,10 +161,10 @@ export interface Config {
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
   tradeShipGold(dist: number): Gold;
-  tradeShipSpawnRate(): number;
+  tradeShipSpawnRate(numberOfPorts: number): number;
   defensePostRange(): number;
   defensePostDefenseBonus(): number;
-  falloutDefenseModifier(): number;
+  falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
   // 0-1
   traitorDefenseDebuff(): number;

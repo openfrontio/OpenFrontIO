@@ -70,7 +70,6 @@ export function startWorker() {
     }),
   );
 
-  // Endpoint to create a private lobby
   app.post(
     "/api/create_game/:id",
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {

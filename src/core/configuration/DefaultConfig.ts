@@ -1,6 +1,7 @@
 import {
   Difficulty,
   Game,
+  GameMapType,
   GameType,
   Gold,
   Player,
@@ -12,7 +13,7 @@ import {
   UnitInfo,
   UnitType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
+import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID } from "../Schemas";
@@ -54,8 +55,16 @@ export abstract class DefaultServerConfig implements ServerConfig {
       return 50 * 1000;
     }
   }
-  lobbyMaxPlayers(): number {
-    return Math.random() < 0.1 ? 100 : 35;
+  lobbyMaxPlayers(map: GameMapType): number {
+    if (map == GameMapType.World) {
+      return Math.random() < 0.3 ? 150 : 60;
+    }
+    if (
+      [GameMapType.Mars, GameMapType.Africa, GameMapType.BlackSea].includes(map)
+    ) {
+      return Math.random() < 0.3 ? 70 : 50;
+    }
+    return Math.random() < 0.3 ? 60 : 40;
   }
   lobbyLifetime(highTraffic: boolean): number {
     return this.gameCreationRate(highTraffic) * 2;
@@ -117,8 +126,10 @@ export class DefaultConfig implements Config {
     return 250_000;
   }
 
-  falloutDefenseModifier(): number {
-    return 5;
+  falloutDefenseModifier(falloutRatio: number): number {
+    // falloutRatio is between 0 and 1
+    // So defense modifier is between [5, 2.5]
+    return 5 - falloutRatio * 2;
   }
 
   defensePostRange(): number {
@@ -148,7 +159,12 @@ export class DefaultConfig implements Config {
   tradeShipGold(dist: number): Gold {
     return 10000 + 150 * Math.pow(dist, 1.1);
   }
-  tradeShipSpawnRate(): number {
+  tradeShipSpawnRate(numberOfPorts: number): number {
+    if (numberOfPorts <= 3) return 180;
+    if (numberOfPorts <= 5) return 250;
+    if (numberOfPorts <= 8) return 350;
+    if (numberOfPorts <= 10) return 400;
+    if (numberOfPorts <= 12) return 450;
     return 500;
   }
 
@@ -368,8 +384,9 @@ export class DefaultConfig implements Config {
     }
 
     if (gm.hasFallout(tileToConquer)) {
-      mag *= this.falloutDefenseModifier();
-      speed *= this.falloutDefenseModifier();
+      const falloutRatio = gm.numTilesWithFallout() / gm.numLandTiles();
+      mag *= this.falloutDefenseModifier(falloutRatio);
+      speed *= this.falloutDefenseModifier(falloutRatio);
     }
 
     if (attacker.isPlayer() && defender.isPlayer()) {

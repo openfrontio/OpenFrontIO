@@ -90,27 +90,21 @@ export async function startMaster() {
       if (readyWorkers.size === config.numWorkers()) {
         console.log("All workers ready, starting game scheduling");
 
-        // Safe implementation of dynamic interval
-        let timeoutId = null;
-
         const scheduleLobbies = () => {
-          schedulePublicGame()
-            .catch((error) => {
-              console.error("Error scheduling public game:", error);
-            })
-            .finally(() => {
-              // Schedule next run with the current config value
-              const currentLifetime =
-                config.gameCreationRate(isHighTrafficTime());
-              timeoutId = setTimeout(scheduleLobbies, currentLifetime);
-            });
+          schedulePublicGame().catch((error) => {
+            console.error("Error scheduling public game:", error);
+          });
         };
 
-        // Run first execution immediately
-        scheduleLobbies();
-
-        // Regular interval for fetching lobbies
-        setInterval(() => fetchLobbies(), 250);
+        setInterval(
+          () =>
+            fetchLobbies().then((lobbies) => {
+              if (lobbies == 0) {
+                scheduleLobbies();
+              }
+            }),
+          100,
+        );
       }
     }
   });
@@ -162,7 +156,7 @@ app.get(
   }),
 );
 
-async function fetchLobbies(): Promise<void> {
+async function fetchLobbies(): Promise<number> {
   const fetchPromises = [];
 
   for (const gameID of publicLobbyIDs) {
@@ -208,16 +202,19 @@ async function fetchLobbies(): Promise<void> {
   publicLobbiesJsonStr = JSON.stringify({
     lobbies: lobbyInfos,
   });
+
+  return publicLobbyIDs.size;
 }
 
 // Function to schedule a new public game
 async function schedulePublicGame() {
   const gameID = generateID();
+  const map = getNextMap();
   publicLobbyIDs.add(gameID);
   // Create the default public game config (from your GameManager)
   const defaultGameConfig = {
-    gameMap: getNextMap(),
-    maxPlayers: config.lobbyMaxPlayers(),
+    gameMap: map,
+    maxPlayers: config.lobbyMaxPlayers(map),
     gameType: GameType.Public,
     difficulty: Difficulty.Medium,
     infiniteGold: false,
