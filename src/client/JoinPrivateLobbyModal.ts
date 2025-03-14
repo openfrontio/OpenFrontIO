@@ -1,9 +1,8 @@
 import { LitElement, css, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { consolex } from "../core/Consolex";
-import { GameMapType, GameType } from "../core/game/Game";
-import { GameInfo, GameRecord } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/Config";
+import { consolex } from "../core/Consolex";
+import { GameInfo, GameRecord } from "../core/Schemas";
 import { JoinLobbyEvent } from "./Main";
 
 @customElement("join-private-lobby-modal")

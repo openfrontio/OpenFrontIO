@@ -92,6 +92,7 @@
         "postcss": "^8.5.1",
         "postcss-loader": "^8.1.1",
         "prettier": "^3.5.0",
+        "prettier-plugin-organize-imports": "^4.1.0",
         "raw-loader": "^4.0.2",
         "sinon": "^18.0.0",
         "sinon-chai": "^4.0.0",
@@ -2147,6 +2148,8 @@
     "prelude-ls": ["prelude-ls@1.2.1", "", {}, "sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g=="],
 
     "prettier": ["prettier@3.5.0", "", { "bin": "bin/prettier.cjs" }, "sha512-quyMrVt6svPS7CjQ9gKb3GLEX/rl3BCL2oa/QkNcXv4YNVBC9olt3s+H7ukto06q7B1Qz46PbrKLO34PR6vXcA=="],
+
+    "prettier-plugin-organize-imports": ["prettier-plugin-organize-imports@4.1.0", "", { "peerDependencies": { "prettier": ">=2.0", "typescript": ">=2.9", "vue-tsc": "^2.1.0" }, "optionalPeers": ["vue-tsc"] }, "sha512-5aWRdCgv645xaa58X8lOxzZoiHAldAPChljr/MT0crXVOWTZ+Svl4hIWlz+niYSlO6ikE5UXkN1JrRvIP2ut0A=="],
 
     "pretty-error": ["pretty-error@4.0.0", "", { "dependencies": { "lodash": "^4.17.20", "renderkid": "^3.0.0" } }, "sha512-AoJ5YMAcXKYxKhuJGdcvse+Voc6v1RgnsR3nWcYU7q4t6z0Q6T86sv5Zq8VIRbOWWFpvdGE83LtdSMNd+6Y0xw=="],
 
