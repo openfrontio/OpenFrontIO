@@ -9,6 +9,7 @@ import {
   Player,
   PlayerID,
   PlayerType,
+  TeamName,
   Tick,
   UnitType,
 } from "../core/game/Game";
@@ -124,8 +125,9 @@ export class SendSetTargetTroopRatioEvent implements GameEvent {
 
 export class SendWinnerEvent implements GameEvent {
   constructor(
-    public readonly winner: ClientID,
+    public readonly winner: ClientID | TeamName,
     public readonly allPlayersStats: AllPlayersStats,
+    public readonly winnerType: "player" | "team",
   ) {}
 }
 export class SendHashEvent implements GameEvent {
@@ -492,6 +494,7 @@ export class Transport {
         gameID: this.lobbyConfig.gameID,
         winner: event.winner,
         allPlayersStats: event.allPlayersStats,
+        winnerType: event.winnerType,
       });
       this.sendMsg(JSON.stringify(msg));
     } else {

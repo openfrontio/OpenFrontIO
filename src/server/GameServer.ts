@@ -5,6 +5,7 @@ import {
   ClientID,
   ClientMessage,
   ClientMessageSchema,
+  ClientSendWinnerMessage,
   GameConfig,
   GameInfo,
   Intent,
@@ -45,7 +46,7 @@ export class GameServer {
 
   private lastPingUpdate = 0;
 
-  private winner: ClientID | null = null;
+  private winner: ClientSendWinnerMessage = null;
   // This field is currently only filled at victory
   private allPlayersStats: AllPlayersStats = {};
 
@@ -62,30 +63,10 @@ export class GameServer {
   }
 
   public updateGameConfig(gameConfig: GameConfig): void {
-    if (gameConfig.gameMap != null) {
-      this.gameConfig.gameMap = gameConfig.gameMap;
-    }
-    if (gameConfig.difficulty != null) {
-      this.gameConfig.difficulty = gameConfig.difficulty;
-    }
-    if (gameConfig.disableNPCs != null) {
-      this.gameConfig.disableNPCs = gameConfig.disableNPCs;
-    }
-    if (gameConfig.disableNukes != null) {
-      this.gameConfig.disableNukes = gameConfig.disableNukes;
-    }
-    if (gameConfig.bots != null) {
-      this.gameConfig.bots = gameConfig.bots;
-    }
-    if (gameConfig.infiniteGold != null) {
-      this.gameConfig.infiniteGold = gameConfig.infiniteGold;
-    }
-    if (gameConfig.infiniteTroops != null) {
-      this.gameConfig.infiniteTroops = gameConfig.infiniteTroops;
-    }
-    if (gameConfig.instantBuild != null) {
-      this.gameConfig.instantBuild = gameConfig.instantBuild;
-    }
+    this.gameConfig = {
+      ...this.gameConfig,
+      ...gameConfig,
+    };
   }
 
   public addClient(client: Client, lastTurn: number) {
@@ -171,7 +152,7 @@ export class GameServer {
             client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
           }
           if (clientMsg.type == "winner") {
-            this.winner = clientMsg.winner;
+            this.winner = clientMsg;
             this.allPlayersStats = clientMsg.allPlayersStats;
           }
         } catch (error) {
@@ -318,7 +299,8 @@ export class GameServer {
             this.turns,
             this._startTime,
             Date.now(),
-            this.winner,
+            this.winner.winner,
+            this.winner.winnerType,
             this.allPlayersStats,
           ),
         );

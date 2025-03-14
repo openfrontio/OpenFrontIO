@@ -335,7 +335,7 @@ export class DefaultConfig implements Config {
     return 600 * 10; // 10 minutes.
   }
   percentageTilesOwnedToWin(): number {
-    return 80;
+    return 60;
   }
   boatMaxNumber(): number {
     return 3;

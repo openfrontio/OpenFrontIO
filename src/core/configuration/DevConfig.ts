@@ -56,9 +56,9 @@ export class DevConfig extends DefaultConfig {
   //   return 10;
   // }
 
-  // percentageTilesOwnedToWin(): number {
-  //     return 1
-  // }
+  percentageTilesOwnedToWin(): number {
+    return 40;
+  }
 
   // populationIncreaseRate(player: Player): number {
   //     return this.maxPopulation(player)

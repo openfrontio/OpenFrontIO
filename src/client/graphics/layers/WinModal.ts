@@ -218,18 +218,32 @@ export class WinModal extends LitElement implements Layer {
       this.show();
     }
     this.game.updatesSinceLastTick()[GameUpdateType.Win].forEach((wu) => {
-      const winner = this.game.playerBySmallID(wu.winnerID) as PlayerView;
-      this.eventBus.emit(
-        new SendWinnerEvent(winner.clientID(), wu.allPlayersStats),
-      );
-      if (winner == this.game.myPlayer()) {
-        this._title = "You Won!";
-        this.won = true;
+      if (typeof wu.winner === "string") {
+        this.eventBus.emit(
+          new SendWinnerEvent(wu.winner, wu.allPlayersStats, "team"),
+        );
+        if (wu.winner == this.game.myPlayer()?.teamName()) {
+          this._title = "Your team won!";
+          this.won = true;
+        } else {
+          this._title = `${wu.winner} team has won!`;
+          this.won = false;
+        }
+        this.show();
       } else {
-        this._title = `${winner.name()} has won!`;
-        this.won = false;
+        const winner = this.game.playerBySmallID(wu.winner) as PlayerView;
+        this.eventBus.emit(
+          new SendWinnerEvent(winner.clientID(), wu.allPlayersStats, "player"),
+        );
+        if (winner == this.game.myPlayer()) {
+          this._title = "You Won!";
+          this.won = true;
+        } else {
+          this._title = `${winner.name()} has won!`;
+          this.won = false;
+        }
+        this.show();
       }
-      this.show();
     });
   }
 

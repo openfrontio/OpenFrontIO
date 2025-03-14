@@ -40,7 +40,7 @@ export class AllianceRequestExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.requestor.isAlliedWith(this.recipient)) {
+    if (this.requestor.isFriendly(this.recipient)) {
       consolex.warn("already allied");
     } else if (!this.requestor.canSendAllianceRequest(this.recipient)) {
       consolex.warn("recent or pending alliance request");

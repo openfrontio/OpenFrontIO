@@ -241,23 +241,23 @@ export const pastelThemeDark = new (class implements Theme {
 
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
 
-  territoryColor(playerInfo: PlayerInfo): Colord {
-    if (playerInfo.playerType == PlayerType.Human) {
+  territoryColor(player: PlayerView): Colord {
+    if (player.info().playerType == PlayerType.Human) {
       return this.humanColors[
-        simpleHash(playerInfo.name) % this.humanColors.length
+        simpleHash(player.info().name) % this.humanColors.length
       ];
     }
     return this.territoryColors[
-      simpleHash(playerInfo.name) % this.territoryColors.length
+      simpleHash(player.info().name) % this.territoryColors.length
     ];
   }
 
-  textColor(playerInfo: PlayerInfo): string {
-    return playerInfo.playerType == PlayerType.Human ? "#ffffff" : "#e6e6e6";
+  textColor(player: PlayerView): string {
+    return player.info().playerType == PlayerType.Human ? "#ffffff" : "#e6e6e6";
   }
 
-  specialBuildingColor(playerInfo: PlayerInfo): Colord {
-    const tc = this.territoryColor(playerInfo).rgba;
+  specialBuildingColor(player: PlayerView): Colord {
+    const tc = this.territoryColor(player).rgba;
     return colord({
       r: Math.max(tc.r - 50, 0),
       g: Math.max(tc.g - 50, 0),
@@ -265,16 +265,16 @@ export const pastelThemeDark = new (class implements Theme {
     });
   }
 
-  borderColor(playerInfo: PlayerInfo): Colord {
-    const tc = this.territoryColor(playerInfo).rgba;
+  borderColor(player: PlayerView): Colord {
+    const tc = this.territoryColor(player).rgba;
     return colord({
       r: Math.max(tc.r - 40, 0),
       g: Math.max(tc.g - 40, 0),
       b: Math.max(tc.b - 40, 0),
     });
   }
-  defendedBorderColor(playerInfo: PlayerInfo): Colord {
-    const bc = this.borderColor(playerInfo).rgba;
+  defendedBorderColor(player: PlayerView): Colord {
+    const bc = this.borderColor(player).rgba;
     return colord({
       r: Math.max(bc.r - 40, 0),
       g: Math.max(bc.g - 40, 0),
