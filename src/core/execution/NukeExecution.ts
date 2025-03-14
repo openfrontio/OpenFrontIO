@@ -55,7 +55,9 @@ export class NukeExecution implements Execution {
         this.active = false;
         return;
       }
-      this.nuke = this.player.buildUnit(this.type, 0, spawn);
+      this.nuke = this.player.buildUnit(this.type, 0, spawn, {
+        detonationDst: this.dst,
+      });
       if (this.mg.hasOwner(this.dst)) {
         const target = this.mg.owner(this.dst) as Player;
         if (this.type == UnitType.AtomBomb) {
@@ -82,6 +84,14 @@ export class NukeExecution implements Execution {
           );
       }
     }
+
+    // make the nuke unactive if it was intercepted
+    if (!this.nuke.isActive()) {
+      consolex.warn(`Nuke destroyed before reaching target`);
+      this.active = false;
+      return;
+    }
+
     if (this.waitTicks > 0) {
       this.waitTicks--;
       return;
@@ -134,7 +144,7 @@ export class NukeExecution implements Execution {
     let magnitude;
     switch (this.type) {
       case UnitType.MIRVWarhead:
-        magnitude = { inner: 30, outer: 35 };
+        magnitude = { inner: 25, outer: 30 };
         break;
       case UnitType.AtomBomb:
         magnitude = { inner: 12, outer: 30 };

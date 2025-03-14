@@ -10,7 +10,7 @@ export class Client {
   constructor(
     public readonly clientID: ClientID,
     public readonly persistentID: string,
-    public readonly ip: string | null,
+    public readonly ip: string,
     public readonly username: string,
     public readonly ws: WebSocket,
   ) {}

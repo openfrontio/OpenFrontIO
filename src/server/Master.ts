@@ -8,7 +8,7 @@ import {
   GameEnv,
   getServerConfigFromServer,
 } from "../core/configuration/Config";
-import { GameInfo } from "../core/Schemas";
+import { GameConfig, GameInfo } from "../core/Schemas";
 import path from "path";
 import rateLimit from "express-rate-limit";
 import { fileURLToPath } from "url";
@@ -30,8 +30,10 @@ app.use(
     setHeaders: (res, path) => {
       // You can conditionally set different cache times based on file types
       if (path.endsWith(".html")) {
-        // HTML files get shorter cache time
-        res.setHeader("Cache-Control", "public, max-age=60");
+        // Set HTML files to no-cache to ensure Express doesn't send 304s
+        res.setHeader("Cache-Control", "no-cache, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
       } else if (path.match(/\.(js|css|svg)$/)) {
         // JS, CSS, SVG get long cache with immutable
         res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
@@ -197,7 +199,7 @@ async function fetchLobbies(): Promise<void> {
     });
 
   lobbyInfos.forEach((l) => {
-    if (l.msUntilStart <= 250) {
+    if (l.msUntilStart <= 250 || l.gameConfig.maxPlayers == l.numClients) {
       publicLobbyIDs.delete(l.gameID);
     }
   });
@@ -215,6 +217,7 @@ async function schedulePublicGame() {
   // Create the default public game config (from your GameManager)
   const defaultGameConfig = {
     gameMap: getNextMap(),
+    maxPlayers: config.lobbyMaxPlayers(),
     gameType: GameType.Public,
     difficulty: Difficulty.Medium,
     infiniteGold: false,
@@ -223,7 +226,7 @@ async function schedulePublicGame() {
     disableNPCs: false,
     disableNukes: false,
     bots: 400,
-  };
+  } as GameConfig;
 
   const workerPath = config.workerPath(gameID);
 

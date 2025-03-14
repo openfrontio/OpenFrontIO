@@ -47,12 +47,9 @@ export class TradeShipExecution implements Execution {
         this.active = false;
         return;
       }
-      this.tradeShip = this.origOwner.buildUnit(
-        UnitType.TradeShip,
-        0,
-        spawn,
-        this._dstPort,
-      );
+      this.tradeShip = this.origOwner.buildUnit(UnitType.TradeShip, 0, spawn, {
+        dstPort: this._dstPort,
+      });
     }
 
     if (!this.tradeShip.isActive()) {
@@ -63,6 +60,14 @@ export class TradeShipExecution implements Execution {
     if (this.origOwner != this.tradeShip.owner()) {
       // Store as vairable in case ship is recaptured by previous owner
       this.wasCaptured = true;
+    }
+
+    // If a player captures an other player's port while trading we should delete
+    // the ship.
+    if (this._dstPort.owner().id() == this.srcPort.owner().id()) {
+      this.tradeShip.delete(false);
+      this.active = false;
+      return;
     }
 
     if (
@@ -86,6 +91,7 @@ export class TradeShipExecution implements Execution {
         return;
       } else {
         this._dstPort = ports[0];
+        this.tradeShip.setDstPort(this._dstPort);
       }
     }
 

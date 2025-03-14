@@ -1,4 +1,4 @@
-import { ClientID } from "../Schemas";
+import { ClientID, PlayerStats, AllPlayersStats } from "../Schemas";
 import {
   AllianceRequest,
   EmojiMessage,
@@ -12,7 +12,6 @@ import {
   UnitType,
 } from "./Game";
 import { TileRef, TileUpdate } from "./GameMap";
-import { PlayerStats } from "./Stats";
 
 export interface GameUpdateViewData {
   tick: number;
@@ -70,9 +69,11 @@ export interface UnitUpdate {
   pos: TileRef;
   lastPos: TileRef;
   isActive: boolean;
+  dstPortId?: number; // Only for trade ships
+  detonationDst?: TileRef; // Only for nukes
+  warshipTargetId?: number;
   health?: number;
   constructionType?: UnitType;
-  targetId?: number;
 }
 
 export interface AttackUpdate {
@@ -156,6 +157,7 @@ export interface DisplayMessageUpdate {
 
 export interface WinUpdate {
   type: GameUpdateType.Win;
+  allPlayersStats: AllPlayersStats;
   winnerID: number;
 }
 

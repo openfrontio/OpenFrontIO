@@ -215,6 +215,9 @@ export class UnitLayer implements Layer {
       case UnitType.Shell:
         this.handleShellEvent(unit);
         break;
+      case UnitType.SAMMissile:
+        this.handleMissileEvent(unit);
+        break;
       case UnitType.TradeShip:
         this.handleTradeShipEvent(unit);
         break;
@@ -235,7 +238,7 @@ export class UnitLayer implements Layer {
     // Clear previous area
     for (const t of this.game.bfs(
       unit.lastTile(),
-      euclDistFN(unit.lastTile(), 6),
+      euclDistFN(unit.lastTile(), 6, false),
     )) {
       this.clearCell(this.game.x(t), this.game.y(t));
     }
@@ -245,10 +248,10 @@ export class UnitLayer implements Layer {
     }
 
     let outerColor = this.theme.territoryColor(unit.owner().info());
-    if (unit.targetId()) {
+    if (unit.warshipTargetId()) {
       const targetOwner = this.game
         .units()
-        .find((u) => u.id() == unit.targetId())
+        .find((u) => u.id() == unit.warshipTargetId())
         ?.owner();
       if (targetOwner == this.myPlayer) {
         outerColor = colord({ r: 200, b: 0, g: 0 });
@@ -256,7 +259,10 @@ export class UnitLayer implements Layer {
     }
 
     // Paint outer territory
-    for (const t of this.game.bfs(unit.tile(), euclDistFN(unit.tile(), 5))) {
+    for (const t of this.game.bfs(
+      unit.tile(),
+      euclDistFN(unit.tile(), 5, false),
+    )) {
       this.paintCell(this.game.x(t), this.game.y(t), rel, outerColor, 255);
     }
 
@@ -275,7 +281,10 @@ export class UnitLayer implements Layer {
     }
 
     // Paint inner territory
-    for (const t of this.game.bfs(unit.tile(), euclDistFN(unit.tile(), 1))) {
+    for (const t of this.game.bfs(
+      unit.tile(),
+      euclDistFN(unit.tile(), 1, false),
+    )) {
       this.paintCell(
         this.game.x(t),
         this.game.y(t),
@@ -318,6 +327,42 @@ export class UnitLayer implements Layer {
     );
   }
 
+  // interception missle from SAM
+  private handleMissileEvent(unit: UnitView) {
+    const rel = this.relationship(unit);
+    const range = 2;
+
+    for (const t of this.game.bfs(
+      unit.lastTile(),
+      euclDistFN(unit.lastTile(), range, false),
+    )) {
+      this.clearCell(this.game.x(t), this.game.y(t));
+    }
+
+    if (unit.isActive()) {
+      for (const t of this.game.bfs(
+        unit.tile(),
+        euclDistFN(unit.tile(), range, false),
+      )) {
+        this.paintCell(
+          this.game.x(t),
+          this.game.y(t),
+          rel,
+          this.theme.spawnHighlightColor(),
+          255,
+        );
+      }
+
+      this.paintCell(
+        this.game.x(unit.tile()),
+        this.game.y(unit.tile()),
+        rel,
+        this.theme.borderColor(unit.owner().info()),
+        255,
+      );
+    }
+  }
+
   private handleNuke(unit: UnitView) {
     const rel = this.relationship(unit);
     let range = 0;
@@ -336,7 +381,7 @@ export class UnitLayer implements Layer {
     // Clear previous area
     for (const t of this.game.bfs(
       unit.lastTile(),
-      euclDistFN(unit.lastTile(), range),
+      euclDistFN(unit.lastTile(), range, false),
     )) {
       this.clearCell(this.game.x(t), this.game.y(t));
     }
@@ -344,7 +389,7 @@ export class UnitLayer implements Layer {
     if (unit.isActive()) {
       for (const t of this.game.bfs(
         unit.tile(),
-        euclDistFN(unit.tile(), range),
+        euclDistFN(unit.tile(), range, false),
       )) {
         this.paintCell(
           this.game.x(t),
@@ -354,7 +399,10 @@ export class UnitLayer implements Layer {
           255,
         );
       }
-      for (const t of this.game.bfs(unit.tile(), euclDistFN(unit.tile(), 2))) {
+      for (const t of this.game.bfs(
+        unit.tile(),
+        euclDistFN(unit.tile(), 2, false),
+      )) {
         this.paintCell(
           this.game.x(t),
           this.game.y(t),
@@ -389,7 +437,7 @@ export class UnitLayer implements Layer {
     // Clear previous area
     for (const t of this.game.bfs(
       unit.lastTile(),
-      euclDistFN(unit.lastTile(), 3),
+      euclDistFN(unit.lastTile(), 3, false),
     )) {
       this.clearCell(this.game.x(t), this.game.y(t));
     }

@@ -1,28 +1,38 @@
 #!/bin/bash
-# Script to update Docker container
+# update.sh - Script to update Docker container on Hetzner server
+# Called by deploy.sh after uploading Docker image to Docker Hub
 
 # Check if environment parameter is provided
-if [ -z "$1" ]; then
-  echo "Error: Environment parameter is required (prod or staging)"
-  echo "Usage: $0 <environment>"
+if [ $# -lt 3 ]; then
+  echo "Error: Required parameters missing"
+  echo "Usage: $0 <environment> <docker_username> <docker_repo>"
   exit 1
 fi
 
-# Set environment from parameter
+# Set parameters
 ENV=$1
+DOCKER_USERNAME=$2
+DOCKER_REPO=$3
+
+# Container and image configuration
 CONTAINER_NAME="openfront-${ENV}"
-LOG_GROUP="/aws/ec2/docker-containers/${ENV}"
+IMAGE_NAME="${DOCKER_USERNAME}/${DOCKER_REPO}"
+FULL_IMAGE_NAME="${IMAGE_NAME}:latest"
 
-# Get AWS account ID
-AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-ECR_REPO="${AWS_ACCOUNT_ID}.dkr.ecr.eu-west-1.amazonaws.com/openfront:latest"
+echo "======================================================"
+echo "🔄 UPDATING SERVER: ${ENV} ENVIRONMENT"
+echo "======================================================"
+echo "Container name: ${CONTAINER_NAME}"
+echo "Docker image: ${FULL_IMAGE_NAME}"
 
-echo "Deploying to ${ENV} environment..."
-echo "Logging in to ECR..."
-aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.eu-west-1.amazonaws.com
+# Load environment variables if .env exists
+if [ -f /root/.env ]; then
+  echo "Loading environment variables from .env file..."
+  export $(grep -v '^#' /root/.env | xargs)
+fi
 
-echo "Pulling latest image..."
-docker pull $ECR_REPO
+echo "Pulling latest image from Docker Hub..."
+docker pull $FULL_IMAGE_NAME
 
 echo "Checking for existing container..."
 # Check for running container
@@ -64,18 +74,16 @@ fi
 echo "Starting new container for ${ENV} environment..."
 docker run -d -p 80:80 \
   --restart=always \
-  --log-driver=awslogs \
-  --log-opt awslogs-region=eu-west-1 \
-  --log-opt awslogs-group=${LOG_GROUP} \
-  --log-opt awslogs-create-group=true \
+  $VOLUME_MOUNTS \
   --env GAME_ENV=${ENV} \
-  --env-file /home/ec2-user/.env \
+  --env-file /root/.env \
   --name ${CONTAINER_NAME} \
-  $ECR_REPO
+  $FULL_IMAGE_NAME
 
 if [ $? -eq 0 ]; then
   echo "Update complete! New ${ENV} container is running."
-    # Final cleanup after successful deployment
+  
+  # Final cleanup after successful deployment
   echo "Performing final cleanup of unused Docker resources..."
   echo "Removing unused images (not tagged and not referenced)..."
   docker image prune -f
@@ -83,4 +91,11 @@ if [ $? -eq 0 ]; then
   echo "Cleanup complete."
 else
   echo "Failed to start container"
+  exit 1
 fi
+
+echo "======================================================"
+echo "✅ SERVER UPDATE COMPLETED SUCCESSFULLY"
+echo "Container name: ${CONTAINER_NAME}"
+echo "Image: ${FULL_IMAGE_NAME}"
+echo "======================================================"

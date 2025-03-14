@@ -2,7 +2,14 @@ import { PlayerID, GameMapType, Difficulty, GameType } from "../core/game/Game";
 import { EventBus } from "../core/EventBus";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { InputHandler, MouseUpEvent } from "./InputHandler";
-import { ClientID, GameConfig, GameID, ServerMessage } from "../core/Schemas";
+import {
+  ClientID,
+  GameConfig,
+  GameID,
+  ServerMessage,
+  PlayerRecord,
+  GameRecord,
+} from "../core/Schemas";
 import { loadTerrainMap } from "../core/game/TerrainMapLoader";
 import {
   SendAttackIntentEvent,
@@ -15,6 +22,7 @@ import {
   ErrorUpdate,
   GameUpdateType,
   HashUpdate,
+  WinUpdate,
 } from "../core/game/GameUpdates";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { consolex, initRemoteSender } from "../core/Consolex";
@@ -23,6 +31,8 @@ import { GameView, PlayerView } from "../core/game/GameView";
 import { GameUpdateViewData } from "../core/game/GameUpdates";
 import { UserSettings } from "../core/game/UserSettings";
 import { LocalPersistantStats } from "./LocalPersistantStats";
+import { createGameRecord } from "../core/Util";
+import { getPersistentIDFromCookie } from "./Main";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -31,16 +41,11 @@ export interface LobbyConfig {
   clientID: ClientID;
   playerID: PlayerID;
   persistentID: string;
-  gameType: GameType;
   gameID: GameID;
-  map: GameMapType | null;
-  difficulty: Difficulty | null;
-  infiniteGold: boolean | null;
-  infiniteTroops: boolean | null;
-  instantBuild: boolean | null;
-  bots: number | null;
-  disableNPCs: boolean | null;
-  disableNukes: boolean | null;
+  // GameConfig only exists when playing a singleplayer game.
+  gameConfig?: GameConfig;
+  // GameRecord exists when replaying an archived game.
+  gameRecord?: GameRecord;
 }
 
 export function joinLobby(
@@ -55,27 +60,13 @@ export function joinLobby(
   );
 
   const userSettings: UserSettings = new UserSettings();
-  let gameConfig: GameConfig = null;
-  if (lobbyConfig.gameType == GameType.Singleplayer) {
-    gameConfig = {
-      gameType: GameType.Singleplayer,
-      gameMap: lobbyConfig.map,
-      difficulty: lobbyConfig.difficulty,
-      disableNPCs: lobbyConfig.disableNPCs,
-      disableNukes: lobbyConfig.disableNukes,
-      bots: lobbyConfig.bots,
-      infiniteGold: lobbyConfig.infiniteGold,
-      infiniteTroops: lobbyConfig.infiniteTroops,
-      instantBuild: lobbyConfig.instantBuild,
-    };
-  }
-
-  const transport = new Transport(
-    lobbyConfig,
-    gameConfig,
-    eventBus,
-    lobbyConfig.serverConfig,
+  LocalPersistantStats.startGame(
+    lobbyConfig.gameID,
+    lobbyConfig.playerID,
+    lobbyConfig.gameConfig,
   );
+
+  const transport = new Transport(lobbyConfig, eventBus);
 
   const onconnect = () => {
     consolex.log(`Joined game lobby ${lobbyConfig.gameID}`);
@@ -85,13 +76,11 @@ export function joinLobby(
     if (message.type == "start") {
       consolex.log("lobby: game started");
       onjoin();
-      createClientGame(
-        lobbyConfig,
-        message.config,
-        eventBus,
-        transport,
-        userSettings,
-      ).then((r) => r.start());
+      // For multiplayer games, GameConfig is not known until game starts.
+      lobbyConfig.gameConfig = message.config;
+      createClientGame(lobbyConfig, eventBus, transport, userSettings).then(
+        (r) => r.start(),
+      );
     }
   };
   transport.connect(onconnect, onmessage);
@@ -103,17 +92,16 @@ export function joinLobby(
 
 export async function createClientGame(
   lobbyConfig: LobbyConfig,
-  gameConfig: GameConfig,
   eventBus: EventBus,
   transport: Transport,
   userSettings: UserSettings,
 ): Promise<ClientGameRunner> {
-  const config = await getConfig(gameConfig, userSettings);
+  const config = await getConfig(lobbyConfig.gameConfig, userSettings);
 
-  const gameMap = await loadTerrainMap(gameConfig.gameMap);
+  const gameMap = await loadTerrainMap(lobbyConfig.gameConfig.gameMap);
   const worker = new WorkerClient(
     lobbyConfig.gameID,
-    gameConfig,
+    lobbyConfig.gameConfig,
     lobbyConfig.clientID,
   );
   await worker.initialize();
@@ -136,7 +124,7 @@ export async function createClientGame(
   );
 
   consolex.log(
-    `creating private game got difficulty: ${gameConfig.difficulty}`,
+    `creating private game got difficulty: ${lobbyConfig.gameConfig.difficulty}`,
   );
 
   return new ClientGameRunner(
@@ -151,7 +139,6 @@ export async function createClientGame(
 }
 
 export class ClientGameRunner {
-  private localPersistantsStats = new LocalPersistantStats();
   private myPlayer: PlayerView;
   private isActive = false;
 
@@ -168,8 +155,30 @@ export class ClientGameRunner {
     private gameView: GameView,
   ) {}
 
+  private saveGame(update: WinUpdate) {
+    const players: PlayerRecord[] = [
+      {
+        ip: null,
+        persistentID: getPersistentIDFromCookie(),
+        username: this.lobby.playerName(),
+        clientID: this.lobby.clientID,
+      },
+    ];
+    const record = createGameRecord(
+      this.lobby.gameID,
+      this.lobby.gameConfig,
+      players,
+      // Not saving turns locally
+      [],
+      LocalPersistantStats.startTime(),
+      Date.now(),
+      this.gameView.playerBySmallID(update.winnerID).id(),
+      update.allPlayersStats,
+    );
+    LocalPersistantStats.endGame(record);
+  }
+
   public start() {
-    this.localPersistantsStats.startGame(this.lobby);
     consolex.log("starting client game");
     this.isActive = true;
     this.eventBus.on(MouseUpEvent, (e) => this.inputEvent(e));
@@ -178,7 +187,13 @@ export class ClientGameRunner {
     this.input.initialize();
     this.worker.start((gu: GameUpdateViewData | ErrorUpdate) => {
       if ("errMsg" in gu) {
-        showErrorModal(gu.errMsg, gu.stack, this.lobby.clientID);
+        showErrorModal(
+          gu.errMsg,
+          gu.stack,
+          this.lobby.gameID,
+          this.lobby.clientID,
+        );
+        this.stop();
         return;
       }
       gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
@@ -186,6 +201,10 @@ export class ClientGameRunner {
       });
       this.gameView.update(gu);
       this.renderer.tick();
+
+      if (gu.updates[GameUpdateType.Win].length > 0) {
+        this.saveGame(gu.updates[GameUpdateType.Win][0]);
+      }
     });
     const worker = this.worker;
     const keepWorkerAlive = () => {
@@ -222,7 +241,10 @@ export class ClientGameRunner {
         showErrorModal(
           `desync from server: ${JSON.stringify(message)}`,
           "",
+          this.lobby.gameID,
           this.lobby.clientID,
+          true,
+          "You are desynced from other players. What you see might differ from other players.",
         );
       }
       if (message.type == "turn") {
@@ -293,12 +315,22 @@ export class ClientGameRunner {
   }
 }
 
-function showErrorModal(errMsg: string, stack: string, clientID: ClientID) {
+function showErrorModal(
+  errMsg: string,
+  stack: string,
+  gameID: GameID,
+  clientID: ClientID,
+  closable = false,
+  heading = "Game crashed!",
+) {
   const errorText = `Error: ${errMsg}\nStack: ${stack}`;
-  consolex.error(errorText);
+
+  if (document.querySelector("#error-modal")) {
+    return;
+  }
 
   const modal = document.createElement("div");
-  const content = `Game crashed! client id: ${clientID}\nPlease paste the following in your bug report in Discord:\n${errorText}`;
+  const content = `${heading}\n game id: ${gameID}, client id: ${clientID}\nPlease paste the following in your bug report in Discord:\n${errorText}`;
 
   // Create elements
   const pre = document.createElement("pre");
@@ -315,11 +347,23 @@ function showErrorModal(errMsg: string, stack: string, clientID: ClientID) {
       .catch(() => (button.textContent = "Failed to copy"));
   });
 
+  const closeButton = document.createElement("button");
+  closeButton.textContent = "X";
+  closeButton.style.cssText =
+    "color: white;top: 0px;right: 0px;cursor: pointer;background: red;margin-right: 0px;position: fixed;width: 40px;";
+  closeButton.addEventListener("click", () => {
+    modal.style.display = "none";
+  });
+
   // Add to modal
   modal.style.cssText =
     "position:fixed; padding:20px; background:white; border:1px solid black; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999;";
   modal.appendChild(pre);
   modal.appendChild(button);
+  modal.id = "error-modal";
+  if (closable) {
+    modal.appendChild(closeButton);
+  }
 
   document.body.appendChild(modal);
 }

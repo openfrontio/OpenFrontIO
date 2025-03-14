@@ -213,7 +213,10 @@ export class PlayerPanel extends LitElement implements Layer {
               <div class="flex flex-col gap-1">
                 <!-- Gold -->
                 <div class="text-white text-opacity-80 text-sm px-2">Gold</div>
-                <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
+                <div
+                  class="bg-opacity-50 bg-gray-700 rounded p-2 text-white"
+                  translate="no"
+                >
                   ${renderNumber(other.gold() || 0)}
                 </div>
               </div>
@@ -222,7 +225,10 @@ export class PlayerPanel extends LitElement implements Layer {
                 <div class="text-white text-opacity-80 text-sm px-2">
                   Troops
                 </div>
-                <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
+                <div
+                  class="bg-opacity-50 bg-gray-700 rounded p-2 text-white"
+                  translate="no"
+                >
                   ${renderTroops(other.troops() || 0)}
                 </div>
               </div>

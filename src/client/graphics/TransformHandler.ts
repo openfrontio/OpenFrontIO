@@ -6,7 +6,7 @@ import {
   calculateBoundingBoxCenter,
 } from "../../core/Util";
 import { ZoomEvent, DragEvent, CenterCameraEvent } from "../InputHandler";
-import { GoToPlayerEvent } from "./layers/Leaderboard";
+import { GoToPlayerEvent, GoToUnitEvent } from "./layers/Leaderboard";
 import { placeName } from "./NameBoxCalculator";
 import { GameView } from "../../core/game/GameView";
 
@@ -27,6 +27,7 @@ export class TransformHandler {
     this.eventBus.on(ZoomEvent, (e) => this.onZoom(e));
     this.eventBus.on(DragEvent, (e) => this.onMove(e));
     this.eventBus.on(GoToPlayerEvent, (e) => this.onGoToPlayer(e));
+    this.eventBus.on(GoToUnitEvent, (e) => this.onGoToUnit(e));
     this.eventBus.on(CenterCameraEvent, () => this.centerCamera());
   }
 
@@ -145,6 +146,15 @@ export class TransformHandler {
     this.target = new Cell(
       event.player.nameLocation().x,
       event.player.nameLocation().y,
+    );
+    this.intervalID = setInterval(() => this.goTo(), 1);
+  }
+
+  onGoToUnit(event: GoToUnitEvent) {
+    this.clearTarget();
+    this.target = new Cell(
+      this.game.x(event.unit.lastTile()),
+      this.game.y(event.unit.lastTile()),
     );
     this.intervalID = setInterval(() => this.goTo(), 1);
   }

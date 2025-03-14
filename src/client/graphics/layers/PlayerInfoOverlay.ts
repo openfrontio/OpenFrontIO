@@ -201,10 +201,10 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           ${player.name()}
         </div>
         <div class="text-sm opacity-80">Type: ${playerType}</div>
-        <div class="text-sm opacity-80">
+        <div class="text-sm opacity-80" translate="no">
           Troops: ${renderTroops(player.troops())}
         </div>
-        <div class="text-sm opacity-80">
+        <div class="text-sm opacity-80" translate="no">
           Gold: ${renderNumber(player.gold())}
         </div>
         ${relationHtml}

@@ -46,9 +46,11 @@ export class PathFinder {
   nextTile(curr: TileRef, dst: TileRef, dist: number = 1): TileResult {
     if (curr == null) {
       consolex.error("curr is null");
+      return { type: PathFindResultType.PathNotFound };
     }
     if (dst == null) {
       consolex.error("dst is null");
+      return { type: PathFindResultType.PathNotFound };
     }
 
     if (this.game.manhattanDist(curr, dst) < dist) {

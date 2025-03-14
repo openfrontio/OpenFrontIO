@@ -57,11 +57,12 @@ export class TopBar extends LitElement implements Layer {
           class="sm:col-span-1 flex items-center space-x-1 overflow-x-auto whitespace-nowrap"
         >
           <span class="font-bold shrink-0">Pop:</span>
-          <span
+          <span translate="no"
             >${renderTroops(myPlayer.population())} /
             ${renderTroops(maxPop)}</span
           >
           <span
+            translate="no"
             class="${this._popRateIsIncreasing
               ? "text-green-500"
               : "text-yellow-500"}"
@@ -73,7 +74,7 @@ export class TopBar extends LitElement implements Layer {
           class="flex items-center space-x-2 overflow-x-auto whitespace-nowrap"
         >
           <span class="font-bold shrink-0">Gold:</span>
-          <span
+          <span translate="no"
             >${renderNumber(myPlayer.gold())}
             (+${renderNumber(goldPerSecond)})</span
           >

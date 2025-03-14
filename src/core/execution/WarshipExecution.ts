@@ -79,10 +79,10 @@ export class WarshipExecution implements Execution {
       .filter((u) => u != this.warship)
       .filter((u) => !u.owner().isAlliedWith(this.warship.owner()))
       .filter((u) => !this.alreadySentShell.has(u))
-      .filter(
-        (u) =>
-          u.type() != UnitType.TradeShip || u.dstPort().owner() != this.owner(),
-      );
+      .filter((u) => {
+        const portOwner = u.dstPort() ? u.dstPort().owner() : null;
+        return u.type() != UnitType.TradeShip || portOwner != this.owner();
+      });
 
     this.target =
       ships.sort((a, b) => {
@@ -110,7 +110,7 @@ export class WarshipExecution implements Execution {
         return distSortUnit(this.mg, this.warship)(a, b);
       })[0] ?? null;
 
-    this.warship.setTarget(this.target);
+    this.warship.setWarshipTarget(this.target);
     if (this.target == null || this.target.type() != UnitType.TradeShip) {
       // Patrol unless we are hunting down a tradeship
       const result = this.pathfinder.nextTile(

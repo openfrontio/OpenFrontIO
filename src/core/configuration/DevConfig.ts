@@ -5,6 +5,9 @@ import { GameEnv, ServerConfig } from "./Config";
 import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
 
 export class DevServerConfig extends DefaultServerConfig {
+  r2Bucket(): string {
+    return "openfront-staging";
+  }
   adminToken(): string {
     return "WARNING_DEV_ADMIN_KEY_DO_NOT_USE_IN_PRODUCTION";
   }
@@ -17,11 +20,18 @@ export class DevServerConfig extends DefaultServerConfig {
     return 5 * 1000;
   }
 
+  lobbyMaxPlayers(): number {
+    return Math.random() < 0.5 ? 2 : 3;
+  }
+
   discordRedirectURI(): string {
     return "http://localhost:3000/auth/callback";
   }
   numWorkers(): number {
     return 2;
+  }
+  gitCommit(): string {
+    return "DEV";
   }
 }
 

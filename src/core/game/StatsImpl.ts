@@ -1,13 +1,9 @@
-import { NukeType, Player, PlayerID, UnitType } from "./Game";
-import { PlayerStats, Stats } from "./Stats";
-
-interface StatsInternalData {
-  // player
-  [key: PlayerID]: PlayerStats;
-}
+import { AllPlayersStats, PlayerStats } from "../Schemas";
+import { NukeType, PlayerID, UnitType } from "./Game";
+import { Stats } from "./Stats";
 
 export class StatsImpl implements Stats {
-  data: StatsInternalData = {};
+  data: AllPlayersStats = {};
 
   _createUserData(sender: PlayerID, target: PlayerID): void {
     if (!this.data[sender]) {
@@ -30,5 +26,9 @@ export class StatsImpl implements Stats {
 
   getPlayerStats(player: PlayerID): PlayerStats {
     return this.data[player];
+  }
+
+  stats() {
+    return this.data;
   }
 }

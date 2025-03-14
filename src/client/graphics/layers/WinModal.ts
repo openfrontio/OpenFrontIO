@@ -9,7 +9,6 @@ import { PseudoRandom } from "../../../core/PseudoRandom";
 import { simpleHash } from "../../../core/Util";
 import { EventBus } from "../../../core/EventBus";
 import { SendWinnerEvent } from "../../Transport";
-import { GameStat, LocalPersistantStats } from "../../LocalPersistantStats";
 
 // Add this at the top of your file
 declare global {
@@ -28,7 +27,6 @@ export class WinModal extends LitElement implements Layer {
   private rand: PseudoRandom;
 
   private hasShownDeathModal = false;
-  private localPersistantsStats = new LocalPersistantStats();
 
   @state()
   isVisible = false;
@@ -151,7 +149,7 @@ export class WinModal extends LitElement implements Layer {
     return html`
       <div class="win-modal ${this.isVisible ? "visible" : ""}">
         <h2>${this._title || ""}</h2>
-        ${this.won ? this.supportHTML() : this.adsHTML()}
+        ${this.supportHTML()}
         <div class="button-container">
           <button @click=${this._handleExit}>Exit Game</button>
           <button @click=${this.hide}>Keep Playing</button>
@@ -172,17 +170,6 @@ export class WinModal extends LitElement implements Layer {
         console.error("Error initializing ad:", error);
       }
     }
-  }
-
-  adsHTML() {
-    return html`<ins
-      class="adsbygoogle"
-      style="display:block"
-      data-ad-client="ca-pub-7035513310742290"
-      data-ad-slot="winmodalad"
-      data-ad-format="auto"
-      data-full-width-responsive="true"
-    ></ins>`;
   }
 
   supportHTML() {
@@ -222,14 +209,6 @@ export class WinModal extends LitElement implements Layer {
     this.rand = new PseudoRandom(simpleHash(this.game.myClientID()));
   }
 
-  private updateGameStats(outcome: GameStat["outcome"]) {
-    this.localPersistantsStats.endGame(
-      this.game.gameID(),
-      this.game.myPlayer().stats(),
-      outcome,
-    );
-  }
-
   tick() {
     const myPlayer = this.game.myPlayer();
     if (!this.hasShownDeathModal && myPlayer && !myPlayer.isAlive()) {
@@ -240,15 +219,15 @@ export class WinModal extends LitElement implements Layer {
     }
     this.game.updatesSinceLastTick()[GameUpdateType.Win].forEach((wu) => {
       const winner = this.game.playerBySmallID(wu.winnerID) as PlayerView;
-      this.eventBus.emit(new SendWinnerEvent(winner.clientID()));
+      this.eventBus.emit(
+        new SendWinnerEvent(winner.clientID(), wu.allPlayersStats),
+      );
       if (winner == this.game.myPlayer()) {
         this._title = "You Won!";
         this.won = true;
-        this.updateGameStats("victory");
       } else {
         this._title = `${winner.name()} has won!`;
         this.won = false;
-        this.updateGameStats("defeat");
       }
       this.show();
     });

@@ -90,7 +90,8 @@ function getServerConfig(gameEnv: string) {
 export interface ServerConfig {
   turnIntervalMs(): number;
   gameCreationRate(highTraffic: boolean): number;
-  lobbyLifetime(highTraffic): number;
+  lobbyLifetime(highTraffic: boolean): number;
+  lobbyMaxPlayers(): number;
   discordRedirectURI(): string;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
@@ -100,6 +101,12 @@ export interface ServerConfig {
   env(): GameEnv;
   adminToken(): string;
   adminHeader(): string;
+  // Only available on the server
+  gitCommit(): string;
+  r2Bucket(): string;
+  r2Endpoint(): string;
+  r2AccessKey(): string;
+  r2SecretKey(): string;
 }
 
 export interface Config {

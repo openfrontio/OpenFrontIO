@@ -54,13 +54,17 @@ if [ $? -ne 0 ]; then
     fi
 fi
 
+GIT_COMMIT=$(git rev-parse HEAD)
+echo "Git commit: $GIT_COMMIT"
+
 # Build the Docker image
 echo "Building Docker image..."
-docker buildx build --platform linux/amd64 -t $ECR_REPO_NAME:$VERSION_TAG .
-if [ $? -ne 0 ]; then
-    echo "Error: Docker build failed."
-    exit 1
-fi
+docker buildx build \
+  --platform linux/amd64 \
+  --build-arg GIT_COMMIT=$GIT_COMMIT \
+  -t $ECR_REPO_NAME:$VERSION_TAG \
+  .
+
 
 # Authenticate to ECR
 echo "Authenticating to ECR..."

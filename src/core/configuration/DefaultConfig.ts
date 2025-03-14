@@ -22,6 +22,19 @@ import { pastelTheme } from "./PastelTheme";
 import { pastelThemeDark } from "./PastelThemeDark";
 
 export abstract class DefaultServerConfig implements ServerConfig {
+  gitCommit(): string {
+    return process.env.GIT_COMMIT;
+  }
+  r2Endpoint(): string {
+    return process.env.R2_ENDPOINT;
+  }
+  r2AccessKey(): string {
+    return process.env.R2_ACCESS_KEY;
+  }
+  r2SecretKey(): string {
+    return process.env.R2_SECRET_KEY;
+  }
+  abstract r2Bucket(): string;
   adminHeader(): string {
     return "x-admin-key";
   }
@@ -40,6 +53,9 @@ export abstract class DefaultServerConfig implements ServerConfig {
     } else {
       return 50 * 1000;
     }
+  }
+  lobbyMaxPlayers(): number {
+    return Math.random() < 0.1 ? 100 : 35;
   }
   lobbyLifetime(highTraffic: boolean): number {
     return this.gameCreationRate(highTraffic) * 2;
@@ -130,7 +146,7 @@ export class DefaultConfig implements Config {
     return this._gameConfig.infiniteTroops;
   }
   tradeShipGold(dist: number): Gold {
-    return 10000 + 100 * Math.pow(dist, 1.1);
+    return 10000 + 150 * Math.pow(dist, 1.1);
   }
   tradeShipSpawnRate(): number {
     return 500;
@@ -161,6 +177,11 @@ export class DefaultConfig implements Config {
           cost: () => 0,
           territoryBound: false,
           damage: 250,
+        };
+      case UnitType.SAMMissile:
+        return {
+          cost: () => 0,
+          territoryBound: false,
         };
       case UnitType.Port:
         return {
@@ -193,8 +214,8 @@ export class DefaultConfig implements Config {
         return {
           cost: (p: Player) =>
             p.type() == PlayerType.Human && this.infiniteGold()
-              ? 25
-              : 25_000_000,
+              ? 0
+              : 15_000_000,
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -227,6 +248,20 @@ export class DefaultConfig implements Config {
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
+        };
+      case UnitType.SAMLauncher:
+        return {
+          cost: (p: Player) =>
+            p.type() == PlayerType.Human && this.infiniteGold()
+              ? 0
+              : Math.min(
+                  1_000_000,
+                  (p.unitsIncludingConstruction(UnitType.SAMLauncher).length +
+                    1) *
+                    1_000_000,
+                ),
+          territoryBound: true,
+          constructionDuration: this.instantBuild() ? 0 : 10 * 10,
         };
       case UnitType.City:
         return {
@@ -274,7 +309,7 @@ export class DefaultConfig implements Config {
     return 30 * 10;
   }
   allianceDuration(): Tick {
-    return 240 * 10; // 4 minutes
+    return 600 * 10; // 10 minutes.
   }
   percentageTilesOwnedToWin(): number {
     return 80;

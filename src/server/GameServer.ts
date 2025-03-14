@@ -1,6 +1,7 @@
 import { RateLimiterMemory } from "rate-limiter-flexible";
 import WebSocket from "ws";
 import {
+  AllPlayersStats,
   ClientID,
   ClientMessage,
   ClientMessageSchema,
@@ -13,7 +14,7 @@ import {
   ServerTurnMessageSchema,
   Turn,
 } from "../core/Schemas";
-import { CreateGameRecord } from "../core/Util";
+import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import { archive } from "./Archive";
@@ -45,6 +46,8 @@ export class GameServer {
   private lastPingUpdate = 0;
 
   private winner: ClientID | null = null;
+  // This field is currently only filled at victory
+  private allPlayersStats: AllPlayersStats = {};
 
   constructor(
     public readonly id: string,
@@ -161,10 +164,11 @@ export class GameServer {
             client.lastPing = Date.now();
           }
           if (clientMsg.type == "hash") {
-            client.hashes.set(clientMsg.tick, clientMsg.hash);
+            client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
           }
           if (clientMsg.type == "winner") {
             this.winner = clientMsg.winner;
+            this.allPlayersStats = clientMsg.allPlayersStats;
           }
         } catch (error) {
           console.log(
@@ -237,7 +241,12 @@ export class GameServer {
         ),
       );
     } catch (error) {
-      throw new Error(`error sending start message for game ${this.id}`);
+      throw new Error(
+        `error sending start message for game ${this.id}, ${error}`.substring(
+          0,
+          250,
+        ),
+      );
     }
   }
 
@@ -250,7 +259,7 @@ export class GameServer {
     this.turns.push(pastTurn);
     this.intents = [];
 
-    this.maybeSendDesync();
+    this.handleSynchronization();
 
     let msg = "";
     try {
@@ -261,7 +270,12 @@ export class GameServer {
         }),
       );
     } catch (error) {
-      console.log(`error sending message for game ${this.id}`);
+      console.log(
+        `error sending message for game ${this.id}, error ${error}`.substring(
+          0,
+          250,
+        ),
+      );
       return;
     }
 
@@ -293,7 +307,7 @@ export class GameServer {
           persistentID: client.persistentID,
         }));
         archive(
-          CreateGameRecord(
+          createGameRecord(
             this.id,
             this.gameConfig,
             playerRecords,
@@ -301,6 +315,7 @@ export class GameServer {
             this._startTime,
             Date.now(),
             this.winner,
+            this.allPlayersStats,
           ),
         );
       } else {
@@ -368,7 +383,14 @@ export class GameServer {
       }
     }
 
-    if (now - this.createdAt < this.config.lobbyLifetime(this.highTraffic)) {
+    const msSinceCreation = now - this.createdAt;
+    const lessThanLifetime =
+      msSinceCreation < this.config.lobbyLifetime(this.highTraffic);
+    const notEnoughPlayers =
+      this.gameConfig.gameType == GameType.Public &&
+      this.gameConfig.maxPlayers &&
+      this.activeClients.length < this.gameConfig.maxPlayers;
+    if (lessThanLifetime && notEnoughPlayers) {
       return GamePhase.Lobby;
     }
     const warmupOver =
@@ -403,8 +425,8 @@ export class GameServer {
     return this.gameConfig.gameType == GameType.Public;
   }
 
-  private maybeSendDesync() {
-    if (this.activeClients.length <= 1) {
+  private handleSynchronization() {
+    if (this.activeClients.length < 1) {
       return;
     }
     if (this.turns.length % 10 == 0 && this.turns.length != 0) {
@@ -413,7 +435,12 @@ export class GameServer {
       let { mostCommonHash, outOfSyncClients } =
         this.findOutOfSyncClients(lastHashTurn);
 
+      if (outOfSyncClients.length == 0) {
+        this.turns[lastHashTurn].hash = mostCommonHash;
+      }
+
       if (
+        outOfSyncClients.length > 0 &&
         outOfSyncClients.length >= Math.floor(this.activeClients.length / 2)
       ) {
         // If half clients out of sync assume all are out of sync.
@@ -428,8 +455,6 @@ export class GameServer {
           this.outOfSyncClients.add(oos.clientID);
         }
       }
-      return;
-      // TODO: renable this once desync issue fixed
 
       const serverDesync = ServerDesyncSchema.safeParse({
         type: "desync",

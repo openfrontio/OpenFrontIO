@@ -3,11 +3,13 @@ import twemoji from "twemoji";
 import DOMPurify from "dompurify";
 import { Cell, Game, Player, Unit } from "./game/Game";
 import {
+  AllPlayersStats,
   ClientID,
   GameConfig,
   GameID,
   GameRecord,
   PlayerRecord,
+  PlayerStats,
   Turn,
 } from "./Schemas";
 import { customAlphabet, nanoid } from "nanoid";
@@ -253,7 +255,7 @@ export function onlyImages(html: string) {
   });
 }
 
-export function CreateGameRecord(
+export function createGameRecord(
   id: GameID,
   gameConfig: GameConfig,
   // username does not need to be set.
@@ -262,6 +264,7 @@ export function CreateGameRecord(
   start: number,
   end: number,
   winner: ClientID | null,
+  allPlayersStats: AllPlayersStats,
 ): GameRecord {
   const record: GameRecord = {
     id: id,
@@ -270,10 +273,12 @@ export function CreateGameRecord(
     endTimestampMS: end,
     date: new Date().toISOString().split("T")[0],
     turns: [],
+    allPlayersStats,
+    version: "v0.0.1",
   };
 
   for (const turn of turns) {
-    if (turn.intents.length != 0) {
+    if (turn.intents.length != 0 || turn.hash != undefined) {
       record.turns.push(turn);
       for (const intent of turn.intents) {
         if (intent.type == "spawn") {
@@ -293,6 +298,25 @@ export function CreateGameRecord(
   record.num_turns = turns.length;
   record.winner = winner;
   return record;
+}
+
+export function decompressGameRecord(gameRecord: GameRecord) {
+  const turns = [];
+  let lastTurnNum = -1;
+  for (const turn of gameRecord.turns) {
+    while (lastTurnNum < turn.turnNumber - 1) {
+      lastTurnNum++;
+      turns.push({
+        gameID: gameRecord.id,
+        turnNumber: lastTurnNum,
+        intents: [],
+      });
+    }
+    turns.push(turn);
+    lastTurnNum = turn.turnNumber;
+  }
+  gameRecord.turns = turns;
+  return gameRecord;
 }
 
 export function assertNever(x: never): never {

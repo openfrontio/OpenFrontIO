@@ -24,7 +24,7 @@ import { PlayerImpl } from "./PlayerImpl";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { AllianceRequestImpl } from "./AllianceRequestImpl";
 import { AllianceImpl } from "./AllianceImpl";
-import { ClientID, GameConfig } from "../Schemas";
+import { ClientID, AllPlayersStats } from "../Schemas";
 import { MessageType } from "./Game";
 import { UnitImpl } from "./UnitImpl";
 import { consolex } from "../Consolex";
@@ -516,10 +516,11 @@ export class GameImpl implements Game {
     });
   }
 
-  setWinner(winner: Player): void {
+  setWinner(winner: Player, allPlayersStats: AllPlayersStats): void {
     this.addUpdate({
       type: GameUpdateType.Win,
       winnerID: winner.smallID(),
+      allPlayersStats,
     });
   }
 

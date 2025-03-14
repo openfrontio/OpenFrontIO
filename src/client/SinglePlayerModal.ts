@@ -7,6 +7,8 @@ import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
 import randomMap from "../../resources/images/RandomMap.png";
+import { GameInfo } from "../core/Schemas";
+import { JoinLobbyEvent } from "./Main";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
@@ -500,19 +502,19 @@ export class SinglePlayerModal extends LitElement {
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
-          gameType: GameType.Singleplayer,
-          lobby: {
-            gameID: generateID(),
+          gameID: generateID(),
+          gameConfig: {
+            gameMap: this.selectedMap,
+            gameType: GameType.Singleplayer,
+            difficulty: this.selectedDifficulty,
+            disableNPCs: this.disableNPCs,
+            disableNukes: this.disableNukes,
+            bots: this.bots,
+            infiniteGold: this.infiniteGold,
+            infiniteTroops: this.infiniteTroops,
+            instantBuild: this.instantBuild,
           },
-          map: this.selectedMap,
-          difficulty: this.selectedDifficulty,
-          disableNPCs: this.disableNPCs,
-          disableNukes: this.disableNukes,
-          bots: this.bots,
-          infiniteGold: this.infiniteGold,
-          infiniteTroops: this.infiniteTroops,
-          instantBuild: this.instantBuild,
-        },
+        } as JoinLobbyEvent,
         bubbles: true,
         composed: true,
       }),
