@@ -141,8 +141,8 @@ export class DefaultConfig implements Config {
   spawnNPCs(): boolean {
     return !this._gameConfig.disableNPCs;
   }
-  allowNukes(): boolean {
-    return !this._gameConfig.disableNukes;
+  disableNukes(): boolean {
+    return this._gameConfig.disableNukes;
   }
   bots(): number {
     return this._gameConfig.bots;

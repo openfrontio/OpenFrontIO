@@ -280,50 +280,37 @@ export class BuildMenu extends LitElement implements Layer {
         ${buildTable.map(
           (row) => html`
             <div class="build-row">
-              ${row
-                .filter(
-                  (item) =>
-                    this.game?.config()?.allowNukes() ||
-                    ![
-                      UnitType.AtomBomb,
-                      UnitType.MIRV,
-                      UnitType.HydrogenBomb,
-                      UnitType.MissileSilo,
-                    ].includes(item.unitType),
-                )
-                .map(
-                  (item) => html`
-                    <button
-                      class="build-button"
-                      @click=${() => this.onBuildSelected(item)}
-                      ?disabled=${!this.canBuild(item)}
-                      title=${!this.canBuild(item) ? "Not enough money" : ""}
-                    >
+              ${row.map(
+                (item) => html`
+                  <button
+                    class="build-button"
+                    @click=${() => this.onBuildSelected(item)}
+                    ?disabled=${!this.canBuild(item)}
+                    title=${!this.canBuild(item) ? "Not enough money" : ""}
+                  >
+                    <img
+                      src=${item.icon}
+                      alt="${item.unitType}"
+                      width="40"
+                      height="40"
+                    />
+                    <span class="build-name">${item.unitType}</span>
+                    <span class="build-description">${item.description}</span>
+                    <span class="build-cost" translate="no">
+                      ${renderNumber(
+                        this.game && this.game.myPlayer() ? this.cost(item) : 0,
+                      )}
                       <img
-                        src=${item.icon}
-                        alt="${item.unitType}"
-                        width="40"
-                        height="40"
+                        src=${goldCoinIcon}
+                        alt="gold"
+                        width="12"
+                        height="12"
+                        style="vertical-align: middle;"
                       />
-                      <span class="build-name">${item.unitType}</span>
-                      <span class="build-description">${item.description}</span>
-                      <span class="build-cost" translate="no">
-                        ${renderNumber(
-                          this.game && this.game.myPlayer()
-                            ? this.cost(item)
-                            : 0,
-                        )}
-                        <img
-                          src=${goldCoinIcon}
-                          alt="gold"
-                          width="12"
-                          height="12"
-                          style="vertical-align: middle;"
-                        />
-                      </span>
-                    </button>
-                  `,
-                )}
+                    </span>
+                  </button>
+                `,
+              )}
             </div>
           `,
         )}
@@ -350,6 +337,21 @@ export class BuildMenu extends LitElement implements Layer {
         this.playerActions = actions;
         this.requestUpdate();
       });
+
+    // remove nukes and missle silo from the buildtable
+    if (this.game?.config()?.disableNukes()) {
+      buildTable.forEach((row, index) => {
+        buildTable[index] = row.filter(
+          (item) =>
+            ![
+              UnitType.AtomBomb,
+              UnitType.MIRV,
+              UnitType.HydrogenBomb,
+              UnitType.MissileSilo,
+            ].includes(item.unitType),
+        );
+      });
+    }
   }
 
   get isVisible() {
