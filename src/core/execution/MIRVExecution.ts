@@ -1,20 +1,18 @@
-import { nextTick } from "process";
+import { consolex } from "../Consolex";
 import {
-  Cell,
   Execution,
   Game,
+  MessageType,
   Player,
   PlayerID,
+  TerraNullius,
   Unit,
   UnitType,
-  TerraNullius,
-  MessageType,
 } from "../game/Game";
-import { PathFinder } from "../pathfinding/PathFinding";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PseudoRandom } from "../PseudoRandom";
-import { consolex } from "../Consolex";
 import { TileRef } from "../game/GameMap";
+import { PathFindResultType } from "../pathfinding/AStar";
+import { PathFinder } from "../pathfinding/PathFinding";
+import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
 import { NukeExecution } from "./NukeExecution";
 

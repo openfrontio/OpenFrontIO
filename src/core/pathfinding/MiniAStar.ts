@@ -1,5 +1,5 @@
 import { Cell } from "../game/Game";
-import { GameMap, GameMapImpl, TileRef } from "../game/GameMap";
+import { GameMap, TileRef } from "../game/GameMap";
 import { AStar, PathFindResultType } from "./AStar";
 import { SerialAStar } from "./SerialAStar";
 
