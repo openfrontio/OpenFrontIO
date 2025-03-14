@@ -66,9 +66,6 @@ export abstract class DefaultServerConfig implements ServerConfig {
     }
     return Math.random() < 0.3 ? 60 : 40;
   }
-  lobbyLifetime(highTraffic: boolean): number {
-    return this.gameCreationRate(highTraffic) * 2;
-  }
   workerIndex(gameID: GameID): number {
     return simpleHash(gameID) % this.numWorkers();
   }
