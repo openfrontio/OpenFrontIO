@@ -85,12 +85,12 @@ bun run start:server-dev
 - **Lint code**:
 
   ```bash
-  npm run lint
+  bun run lint
   ```
 
 - **Lint and fix code**:
   ```bash
-  npm run lint:fix
+  bun run lint:fix
   ```
 
 ## 🏗️ Project Structure
