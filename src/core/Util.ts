@@ -315,6 +315,14 @@ export function decompressGameRecord(gameRecord: GameRecord) {
     turns.push(turn);
     lastTurnNum = turn.turnNumber;
   }
+  const turnLength = turns.length;
+  for (let i = turnLength; i < gameRecord.num_turns; i++) {
+    turns.push({
+      gameID: gameRecord.id,
+      turnNumber: i,
+      intents: [],
+    });
+  }
   gameRecord.turns = turns;
   return gameRecord;
 }
