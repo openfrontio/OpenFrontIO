@@ -364,6 +364,12 @@ export class FakeHumanExecution implements Execution {
       (t) =>
         new ConstructionExecution(this.player.id(), t, UnitType.MissileSilo),
     );
+    this.maybeSpawnStructure(
+      UnitType.SAMLauncher,
+      1,
+      (t) =>
+        new ConstructionExecution(this.player.id(), t, UnitType.SAMLauncher),
+    );
   }
 
   private maybeSpawnStructure(
