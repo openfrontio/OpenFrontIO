@@ -337,6 +337,21 @@ export class BuildMenu extends LitElement implements Layer {
         this.playerActions = actions;
         this.requestUpdate();
       });
+
+    // remove nukes and missle silo from the buildtable
+    if (this.game?.config()?.disableNukes()) {
+      buildTable.forEach((row, index) => {
+        buildTable[index] = row.filter(
+          (item) =>
+            ![
+              UnitType.AtomBomb,
+              UnitType.MIRV,
+              UnitType.HydrogenBomb,
+              UnitType.MissileSilo,
+            ].includes(item.unitType),
+        );
+      });
+    }
   }
 
   get isVisible() {

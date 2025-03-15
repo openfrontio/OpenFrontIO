@@ -36,6 +36,7 @@ export class GameManager {
         gameType: GameType.Private,
         difficulty: Difficulty.Medium,
         disableNPCs: false,
+        disableNukes: false,
         infiniteGold: false,
         infiniteTroops: false,
         instantBuild: false,
