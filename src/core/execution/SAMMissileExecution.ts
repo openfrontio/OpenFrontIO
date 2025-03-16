@@ -69,7 +69,12 @@ export class SAMMissileExecution implements Execution {
             this.pseudoRandom < this.hittingChanceHydrogen
           ) {
             hit = true;
-          } else if (this.pseudoRandom < this.hittingChance) {
+          } else if (
+            [UnitType.MIRVWarhead, UnitType.AtomBomb].includes(
+              this.target.type(),
+            ) &&
+            this.pseudoRandom < this.hittingChance
+          ) {
             hit = true;
           }
 
