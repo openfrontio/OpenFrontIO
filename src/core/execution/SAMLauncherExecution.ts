@@ -20,9 +20,9 @@ export class SAMLauncherExecution implements Execution {
 
   private target: Unit = null;
 
-  private searchRange = 100;
+  private searchRangeRadius = 75;
 
-  private missileAttackRate = 100; // 10 seconds
+  private missileAttackRate = 75; // 7.5 seconds
   private lastMissileAttack = 0;
 
   private pseudoRandom: PseudoRandom;
@@ -63,10 +63,16 @@ export class SAMLauncherExecution implements Execution {
 
     const nukes = this.mg
       .units(UnitType.AtomBomb, UnitType.HydrogenBomb)
-      .filter(
-        (u) =>
-          this.mg.manhattanDist(u.tile(), this.post.tile()) < this.searchRange,
-      )
+      .filter((u) => {
+        // (x - center_x)² + (y - center_y)² < radius²
+        const x = this.mg.x(u.tile());
+        const y = this.mg.y(u.tile());
+        const centerX = this.mg.x(this.post.tile());
+        const centerY = this.mg.y(this.post.tile());
+        const isInRange =
+          (x - centerX) ** 2 + (y - centerY) ** 2 < this.searchRangeRadius ** 2;
+        return isInRange;
+      })
       .filter((u) => u.owner() !== this.player)
       .filter((u) => !u.owner().isAlliedWith(this.player));
 
