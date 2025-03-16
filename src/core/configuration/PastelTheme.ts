@@ -285,14 +285,12 @@ export const pastelTheme = new (class implements Theme {
         if (gm.isShoreline(tile) && gm.isWater(tile)) {
           return this.shorelineWater;
         }
-        if (gm.magnitude(tile) < 10) {
-          return colord({
-            r: Math.max(w.r - 10 + mag, 0),
-            g: Math.max(w.g - 10 + mag, 0),
-            b: Math.max(w.b - 10 + mag, 0),
-          });
-        }
-        return this.water;
+        return colord({
+          r: Math.max(w.r - 10 + (11 - Math.min(mag, 10)), 0),
+          g: Math.max(w.g - 10 + (11 - Math.min(mag, 10)), 0),
+          b: Math.max(w.b - 10 + (11 - Math.min(mag, 10)), 0),
+        });
+
       case TerrainType.Plains:
         return colord({
           r: 190,
