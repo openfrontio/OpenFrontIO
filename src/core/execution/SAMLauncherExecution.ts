@@ -22,7 +22,8 @@ export class SAMLauncherExecution implements Execution {
 
   private searchRange = 100;
 
-  private missileAttackRate = 100; // 10 seconds
+  // the attack rate of the missile should ensure that 2 nukes coming at once can not be defended so the value should never be below 5sec (in a searchrange of 100) anything above just gives a bit of extra time for the second nuke
+  private missileAttackRate = 75; // 7.5 seconds
   private lastMissileAttack = 0;
 
   private pseudoRandom: PseudoRandom;
@@ -61,6 +62,8 @@ export class SAMLauncherExecution implements Execution {
       this.pseudoRandom = new PseudoRandom(this.post.id());
     }
 
+    // only attack atom or hydrogen bombs
+    // mirvs and mirvwarheads should never be attacked by an sam to keep them as the "game ender"
     const nukes = this.mg
       .units(UnitType.AtomBomb, UnitType.HydrogenBomb)
       .filter(

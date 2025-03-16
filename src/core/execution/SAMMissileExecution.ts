@@ -23,10 +23,11 @@ export class SAMMissileExecution implements Execution {
     private target: Unit,
     private mg: Game,
     private pseudoRandom: number,
-    private speed: number = 6,
-    // Regular atom bomb or warhead of MIRV
+    // make it able to catch up to nukes
+    private speed: number = 10,
+    // the hitting chance should never be below 50% because then it will feel useless because more then half of the time it doesnt actually intercept the nuke
     private hittingChance: number = 0.75,
-    private hittingChanceHydrogen: number = 0.1,
+    private hittingChanceHydrogen: number = 0.5,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -65,15 +66,10 @@ export class SAMMissileExecution implements Execution {
           this.active = false;
           let hit = false;
           if (
-            this.target.type() == UnitType.HydrogenBomb &&
-            this.pseudoRandom < this.hittingChanceHydrogen
-          ) {
-            hit = true;
-          } else if (
-            [UnitType.MIRVWarhead, UnitType.AtomBomb].includes(
-              this.target.type(),
-            ) &&
-            this.pseudoRandom < this.hittingChance
+            (this.target.type() == UnitType.AtomBomb &&
+              this.pseudoRandom < this.hittingChance) ||
+            (this.target.type() == UnitType.HydrogenBomb &&
+              this.pseudoRandom < this.hittingChanceHydrogen)
           ) {
             hit = true;
           }

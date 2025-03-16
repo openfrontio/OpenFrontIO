@@ -255,16 +255,18 @@ export class DefaultConfig implements Config {
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
         };
+      // the starting cost should allways be 1mil because the way to defeat a sam launcher is to send 2 nukes at once and it should then give a positive gold trade because 2 nukes are 1.5mil and the first sam is 1mil
+      // when there are multiple sam launchers at the same both try to intercept the same nuke so sending 2 at once also works in that case and prevents building unnukable areas
       case UnitType.SAMLauncher:
         return {
           cost: (p: Player) =>
             p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
-                  1_500_000 * 3,
+                  3_000_000 * 3,
                   (p.unitsIncludingConstruction(UnitType.SAMLauncher).length +
                     1) *
-                    1_500_000,
+                    1_000_000,
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 30 * 10,
