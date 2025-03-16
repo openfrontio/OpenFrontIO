@@ -129,7 +129,7 @@ export class DefaultConfig implements Config {
     return 30;
   }
   SAMRange(): number {
-    return 100;
+    return 75;
   }
   defensePostDefenseBonus(): number {
     return 5;

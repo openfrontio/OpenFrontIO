@@ -20,7 +20,7 @@ export class SAMLauncherExecution implements Execution {
 
   private target: Unit = null;
 
-  private searchRange = 100;
+  private searchRange: number;
 
   private missileAttackRate = 100; // 10 seconds
   private lastMissileAttack = 0;
@@ -40,6 +40,8 @@ export class SAMLauncherExecution implements Execution {
       return;
     }
     this.player = mg.player(this.ownerId);
+
+    this.searchRange = this.mg.config().SAMRange();
   }
 
   tick(ticks: number): void {
@@ -63,10 +65,11 @@ export class SAMLauncherExecution implements Execution {
 
     const nukes = this.mg
       .units(UnitType.AtomBomb, UnitType.HydrogenBomb)
-      .filter(
-        (u) =>
-          this.mg.manhattanDist(u.tile(), this.post.tile()) < this.searchRange,
-      )
+      .filter((u) => {
+        const dx = this.mg.x(u.tile()) - this.mg.x(this.post.tile());
+        const dy = this.mg.y(u.tile()) - this.mg.y(this.post.tile());
+        return dx * dx + dy * dy < this.searchRange * this.searchRange;
+      })
       .filter((u) => u.owner() !== this.player)
       .filter((u) => !u.owner().isAlliedWith(this.player));
 
