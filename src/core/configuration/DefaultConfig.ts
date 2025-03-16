@@ -394,9 +394,14 @@ export class DefaultConfig implements Config {
       }
     }
 
-    let largeModifier = 1;
+    let largeLossModifier = 1;
     if (attacker.numTilesOwned() > 100_000) {
-      largeModifier = Math.sqrt(100_000 / attacker.numTilesOwned());
+      largeLossModifier = Math.sqrt(100_000 / attacker.numTilesOwned());
+    }
+    let largeSpeedMalus = 1;
+    if (attacker.numTilesOwned() > 75_000) {
+      // sqrt is only exponent 1/2 which doesn't slow enough huge players
+      largeSpeedMalus = (75_000 / attacker.numTilesOwned()) ** 0.6;
     }
 
     if (defender.isPlayer()) {
@@ -405,13 +410,13 @@ export class DefaultConfig implements Config {
           within(defender.troops() / attackTroops, 0.6, 2) *
           mag *
           0.8 *
-          largeModifier *
+          largeLossModifier *
           (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
         defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
         tilesPerTickUsed:
           within(defender.troops() / (4 * attackTroops), 0.2, 1.5) *
           speed *
-          largeModifier,
+          largeSpeedMalus,
       };
     } else {
       return {
