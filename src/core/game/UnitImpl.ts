@@ -18,6 +18,7 @@ export class UnitImpl implements Unit {
 
   private _constructionType: UnitType = undefined;
 
+  private _isSamCooldown: boolean;
   private _dstPort: Unit | null = null; // Only for trade ships
   private _detonationDst: TileRef | null = null; // Only for nukes
   private _warshipTarget: Unit | null = null;
@@ -59,6 +60,7 @@ export class UnitImpl implements Unit {
       dstPortId: dstPort ? dstPort.id() : null,
       warshipTargetId: warshipTarget ? warshipTarget.id() : null,
       detonationDst: this.detonationDst(),
+      isSamCooldown: this.isSamCooldown() ? this.isSamCooldown() : null,
     };
   }
 
@@ -180,6 +182,15 @@ export class UnitImpl implements Unit {
 
   dstPort(): Unit {
     return this._dstPort;
+  }
+
+  setSamCooldown(cooldown: boolean): void {
+    this._isSamCooldown = cooldown;
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  isSamCooldown(): boolean {
+    return this._isSamCooldown;
   }
 
   setDstPort(dstPort: Unit): void {

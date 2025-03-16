@@ -92,8 +92,15 @@ export class SAMLauncherExecution implements Execution {
         );
       })[0] ?? null;
 
+    const cooldown =
+      this.lastMissileAttack != 0 &&
+      this.mg.ticks() - this.lastMissileAttack <= this.missileAttackRate;
+    if (this.post.isSamCooldown() != cooldown) {
+      this.post.setSamCooldown(cooldown);
+    }
+
     if (this.target != null) {
-      if (this.mg.ticks() - this.lastMissileAttack > this.missileAttackRate) {
+      if (!this.post.isSamCooldown()) {
         this.lastMissileAttack = this.mg.ticks();
         this.mg.addExecution(
           new SAMMissileExecution(
