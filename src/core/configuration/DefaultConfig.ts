@@ -261,13 +261,13 @@ export class DefaultConfig implements Config {
             p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
-                  1_000_000,
+                  1_500_000 * 3,
                   (p.unitsIncludingConstruction(UnitType.SAMLauncher).length +
                     1) *
-                    1_000_000,
+                    1_500_000,
                 ),
           territoryBound: true,
-          constructionDuration: this.instantBuild() ? 0 : 10 * 10,
+          constructionDuration: this.instantBuild() ? 0 : 30 * 10,
         };
       case UnitType.City:
         return {

@@ -24,7 +24,9 @@ export class SAMMissileExecution implements Execution {
     private mg: Game,
     private pseudoRandom: number,
     private speed: number = 6,
+    // Regular atom bomb or warhead of MIRV
     private hittingChance: number = 0.75,
+    private hittingChanceHydrogen: number = 0.1,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -61,7 +63,17 @@ export class SAMMissileExecution implements Execution {
       switch (result.type) {
         case PathFindResultType.Completed:
           this.active = false;
-          if (this.pseudoRandom < this.hittingChance) {
+          let hit = false;
+          if (
+            this.target.type() == UnitType.HydrogenBomb &&
+            this.pseudoRandom < this.hittingChanceHydrogen
+          ) {
+            hit = true;
+          } else if (this.pseudoRandom < this.hittingChance) {
+            hit = true;
+          }
+
+          if (hit) {
             this.target.delete();
 
             this.mg.displayMessage(
