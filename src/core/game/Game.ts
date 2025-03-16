@@ -402,7 +402,12 @@ export interface Game extends GameMap {
   // Units
   units(...types: UnitType[]): Unit[];
   unitInfo(type: UnitType): UnitInfo;
-  nearbyDefensePosts(tile: TileRef): Unit[];
+  // nearbyDefensePosts(tile: TileRef): Unit[];
+  nearbyUnits(
+    tile: TileRef,
+    searchRange: number,
+    type: UnitType,
+  ): Array<{ unit: Unit; distSquared: number }>;
 
   addExecution(...exec: Execution[]): void;
   displayMessage(

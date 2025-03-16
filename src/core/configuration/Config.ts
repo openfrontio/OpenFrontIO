@@ -161,6 +161,7 @@ export interface Config {
   tradeShipGold(dist: number): Gold;
   tradeShipSpawnRate(numberOfPorts: number): number;
   defensePostRange(): number;
+  SAMRange(): number;
   defensePostDefenseBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
@@ -172,6 +173,7 @@ export interface Theme {
   territoryColor(playerInfo: PlayerInfo): Colord;
   borderColor(playerInfo: PlayerInfo): Colord;
   defendedBorderColor(playerInfo: PlayerInfo): Colord;
+  SAMRingColor(playerInfo: PlayerInfo): Colord;
   terrainColor(gm: GameMap, tile: TileRef): Colord;
   backgroundColor(): Colord;
   falloutColor(): Colord;
