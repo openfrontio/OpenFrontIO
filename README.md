@@ -24,7 +24,7 @@ This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 
 ## 📋 Prerequisites
 
-- [Bun.js](https://bun.sh/) (v1.2.4 or higher)
+- [npm](https://www.npmjs.com/) (v10.9.2 or higher)
 - A modern web browser (Chrome, Firefox, Edge, etc.)
 
 ## 🚀 Installation
@@ -39,7 +39,7 @@ This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 2. **Install dependencies**
 
    ```bash
-   bun i
+   npm i
    ```
 
 ## 🎮 Running the Game
@@ -49,7 +49,7 @@ This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 Run both the client and server in development mode with live reloading:
 
 ```bash
-bun run dev
+npm run dev
 ```
 
 This will:
@@ -63,7 +63,7 @@ This will:
 To run just the client with hot reloading:
 
 ```bash
-bun run start:client
+npm run start:client
 ```
 
 ### Server Only
@@ -71,7 +71,7 @@ bun run start:client
 To run just the server with development settings:
 
 ```bash
-bun run start:server-dev
+npm run start:server-dev
 ```
 
 ## 🛠️ Development Tools
@@ -79,7 +79,7 @@ bun run start:server-dev
 - **Format code**:
 
   ```bash
-  bun run format
+  npm run format
   ```
 
 - **Lint code**:

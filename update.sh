@@ -5,22 +5,22 @@
 # Check if environment parameter is provided
 if [ $# -lt 3 ]; then
   echo "Error: Required parameters missing"
-  echo "Usage: $0 <environment> <docker_username> <docker_repo>"
+  echo "Usage: $0 <REGION> <docker_username> <docker_repo>"
   exit 1
 fi
 
 # Set parameters
-ENV=$1
+REGION=$1
 DOCKER_USERNAME=$2
 DOCKER_REPO=$3
 
 # Container and image configuration
-CONTAINER_NAME="openfront-${ENV}"
+CONTAINER_NAME="openfront-${REGION}"
 IMAGE_NAME="${DOCKER_USERNAME}/${DOCKER_REPO}"
 FULL_IMAGE_NAME="${IMAGE_NAME}:latest"
 
 echo "======================================================"
-echo "🔄 UPDATING SERVER: ${ENV} ENVIRONMENT"
+echo "🔄 UPDATING SERVER: ${REGION} ENVIRONMENT"
 echo "======================================================"
 echo "Container name: ${CONTAINER_NAME}"
 echo "Docker image: ${FULL_IMAGE_NAME}"
@@ -71,7 +71,12 @@ if [ -n "$PORT_CHECK" ]; then
   echo "Attempting to proceed anyway..."
 fi
 
-echo "Starting new container for ${ENV} environment..."
+ENV="prod"
+if [ "$REGION" == "staging" ]; then
+  ENV="staging"
+fi
+
+echo "Starting new container for ${REGION} environment..."
 docker run -d -p 80:80 \
   --restart=always \
   $VOLUME_MOUNTS \
@@ -81,7 +86,7 @@ docker run -d -p 80:80 \
   $FULL_IMAGE_NAME
 
 if [ $? -eq 0 ]; then
-  echo "Update complete! New ${ENV} container is running."
+  echo "Update complete! New ${REGION} container is running."
   
   # Final cleanup after successful deployment
   echo "Performing final cleanup of unused Docker resources..."
