@@ -170,6 +170,7 @@ export interface Config {
 
 export interface Theme {
   territoryColor(playerInfo: PlayerInfo): Colord;
+  specialBuildingColor(playerInfo: PlayerInfo): Colord;
   borderColor(playerInfo: PlayerInfo): Colord;
   defendedBorderColor(playerInfo: PlayerInfo): Colord;
   terrainColor(gm: GameMap, tile: TileRef): Colord;

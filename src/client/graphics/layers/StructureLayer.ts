@@ -43,17 +43,17 @@ export class StructureLayer implements Layer {
     },
     [UnitType.MissileSilo]: {
       icon: missileSiloIcon,
-      borderRadius: 8,
+      borderRadius: 9.5,
       territoryRadius: 6,
     },
     [UnitType.DefensePost]: {
       icon: shieldIcon,
-      borderRadius: 8,
+      borderRadius: 9.5,
       territoryRadius: 6,
     },
     [UnitType.SAMLauncher]: {
       icon: SAMMissileIcon,
-      borderRadius: 8,
+      borderRadius: 10,
       territoryRadius: 6,
     },
   };
