@@ -228,7 +228,7 @@
 
     <dark-mode-button></dark-mode-button>
 
-    <!-- Main container with responsive padding -->
+    
     <div class="flex justify-center items-center flex-grow">
       <div class="container px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         <div
@@ -238,6 +238,15 @@
           <username-input class="w-full"></username-input>
         </div>
 
+        
+        <a
+  id="auth-button"
+  href="https://discord.com/oauth2/authorize?client_id=1350525654499852410&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauth%2Fdiscord%2Fcallback&scope=identify"
+  class="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white p-3 sm:p-4 lg:p-5 font-medium text-lg sm:text-xl lg:text-2xl rounded-lg border-none cursor-pointer transition-colors duration-300 flex justify-center items-center gap-5"
+>
+  <i class="fa-brands fa-discord text-2xl"></i>
+  <span id="button-text">Login with Discord</span>
+</a>
         <div class="max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl mx-auto mt-4">
           <a
             target="_blank"
@@ -353,6 +362,12 @@
             >How to Play</a
           >
           <a
+            href="https://openfront.dev/"
+            class="text-white/70 hover:text-white transition-colors duration-300"
+            target="_blank"
+            >Test the game with us</a
+          >
+          <a
             href="https://openfront.miraheze.org/wiki/Main_Page"
             class="text-white/70 hover:text-white transition-colors duration-300"
             target="_blank"
@@ -387,5 +402,7 @@
       src="https://static.cloudflareinsights.com/beacon.min.js"
       data-cf-beacon='{"token": "03d93e6fefb349c28ee69b408fa25a13"}'
     ></script>
+    
+    <script src="auth.js"></script>
   </body>
 </html>
