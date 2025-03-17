@@ -42,12 +42,15 @@ export class PlayerExecution implements Execution {
 
   tick(ticks: number) {
     this.player.decayRelations();
+    const hasPort = this.player.units(UnitType.Port).length > 0;
     this.player.units().forEach((u) => {
       if (u.health() <= 0) {
         u.delete();
         return;
       }
-      u.modifyHealth(1);
+      if (hasPort && u.type() == UnitType.Warship) {
+        u.modifyHealth(1);
+      }
       const tileOwner = this.mg.owner(u.tile());
       if (u.info().territoryBound) {
         if (tileOwner.isPlayer()) {
