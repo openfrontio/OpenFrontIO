@@ -1,7 +1,7 @@
 {
   "name": "openfront-client",
   "scripts": {
-    "build-map": "node --loader ts-node/esm --experimental-specifier-resolution=node src/scripts/TerrainMapGenerator.ts",
+    "build-map": "node --loader ts-node/esm --experimental-specifier-resolution=node src/scripts/generateTerrainMaps.ts",
     "build-dev": "webpack --config webpack.config.js --mode development",
     "build-prod": "webpack --config webpack.config.js --mode production",
     "start:client": "webpack serve --open --node-env development",
@@ -103,7 +103,7 @@
     "jimp": "^0.22.12",
     "lit": "^3.2.1",
     "msgpack5": "^6.0.2",
-    "nanoid": "^5.0.9",
+    "nanoid": "^3.3.6",
     "node-addon-api": "^8.1.0",
     "node-gyp": "^10.2.0",
     "obscenity": "^0.4.3",
