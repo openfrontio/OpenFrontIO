@@ -16,7 +16,7 @@ export class DevServerConfig extends DefaultServerConfig {
     return GameEnv.Dev;
   }
 
-  gameCreationRate(highTraffic: boolean): number {
+  gameCreationRate(): number {
     return 5 * 1000;
   }
 

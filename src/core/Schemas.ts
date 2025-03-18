@@ -24,7 +24,8 @@ export type Intent =
   | DonateIntent
   | TargetTroopRatioIntent
   | BuildUnitIntent
-  | EmbargoIntent;
+  | EmbargoIntent
+  | MoveWarshipIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -43,6 +44,7 @@ export type TargetTroopRatioIntent = z.infer<
   typeof TargetTroopRatioIntentSchema
 >;
 export type BuildUnitIntent = z.infer<typeof BuildUnitIntentSchema>;
+export type MoveWarshipIntent = z.infer<typeof MoveWarshipIntentSchema>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -165,6 +167,7 @@ const BaseIntentSchema = z.object({
     "troop_ratio",
     "build_unit",
     "embargo",
+    "move_warship",
   ]),
   clientID: ID,
   playerID: ID,
@@ -262,6 +265,12 @@ export const CancelAttackIntentSchema = BaseIntentSchema.extend({
   attackID: z.string(),
 });
 
+export const MoveWarshipIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("move_warship"),
+  unitId: z.number(),
+  tile: z.number(),
+});
+
 const IntentSchema = z.union([
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -276,6 +285,7 @@ const IntentSchema = z.union([
   TargetTroopRatioIntentSchema,
   BuildUnitIntentSchema,
   EmbargoIntentSchema,
+  MoveWarshipIntentSchema,
 ]);
 
 export const TurnSchema = z.object({

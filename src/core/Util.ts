@@ -100,16 +100,8 @@ export function closestShoreFromPlayer(
   }
 
   return shoreTiles.reduce((closest, current) => {
-    const closestDistance = manhattanDistWrapped(
-      gm.cell(target),
-      gm.cell(closest),
-      gm.width(),
-    );
-    const currentDistance = manhattanDistWrapped(
-      gm.cell(target),
-      gm.cell(current),
-      gm.width(),
-    );
+    const closestDistance = gm.manhattanDist(target, closest);
+    const currentDistance = gm.manhattanDist(target, current);
     return currentDistance < closestDistance ? current : closest;
   });
 }
@@ -314,6 +306,14 @@ export function decompressGameRecord(gameRecord: GameRecord) {
     }
     turns.push(turn);
     lastTurnNum = turn.turnNumber;
+  }
+  const turnLength = turns.length;
+  for (let i = turnLength; i < gameRecord.num_turns; i++) {
+    turns.push({
+      gameID: gameRecord.id,
+      turnNumber: i,
+      intents: [],
+    });
   }
   gameRecord.turns = turns;
   return gameRecord;

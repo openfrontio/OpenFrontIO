@@ -48,12 +48,8 @@ export abstract class DefaultServerConfig implements ServerConfig {
   turnIntervalMs(): number {
     return 100;
   }
-  gameCreationRate(highTraffic: boolean): number {
-    if (highTraffic) {
-      return 20 * 1000;
-    } else {
-      return 50 * 1000;
-    }
+  gameCreationRate(): number {
+    return 30 * 1000;
   }
   lobbyMaxPlayers(map: GameMapType): number {
     if (map == GameMapType.World) {
@@ -65,9 +61,6 @@ export abstract class DefaultServerConfig implements ServerConfig {
       return Math.random() < 0.3 ? 70 : 50;
     }
     return Math.random() < 0.3 ? 60 : 40;
-  }
-  lobbyLifetime(highTraffic: boolean): number {
-    return this.gameCreationRate(highTraffic) * 2;
   }
   workerIndex(gameID: GameID): number {
     return simpleHash(gameID) % this.numWorkers();
@@ -271,13 +264,13 @@ export class DefaultConfig implements Config {
             p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
-                  1_000_000,
+                  1_500_000 * 3,
                   (p.unitsIncludingConstruction(UnitType.SAMLauncher).length +
                     1) *
-                    1_000_000,
+                    1_500_000,
                 ),
           territoryBound: true,
-          constructionDuration: this.instantBuild() ? 0 : 10 * 10,
+          constructionDuration: this.instantBuild() ? 0 : 30 * 10,
         };
       case UnitType.City:
         return {
@@ -359,8 +352,8 @@ export class DefaultConfig implements Config {
     const type = gm.terrainType(tileToConquer);
     switch (type) {
       case TerrainType.Plains:
-        mag = 80;
-        speed = 15;
+        mag = 85;
+        speed = 16.5;
         break;
       case TerrainType.Highland:
         mag = 100;
@@ -405,21 +398,21 @@ export class DefaultConfig implements Config {
     }
 
     let largeModifier = 1;
-    if (attacker.numTilesOwned() > 50_000) {
-      largeModifier = Math.sqrt(50_000 / attacker.numTilesOwned());
+    if (attacker.numTilesOwned() > 100_000) {
+      largeModifier = Math.sqrt(100_000 / attacker.numTilesOwned());
     }
 
     if (defender.isPlayer()) {
       return {
         attackerTroopLoss:
-          within(defender.troops() / attackTroops, 0.5, 2) *
+          within(defender.troops() / attackTroops, 0.6, 2) *
           mag *
           0.8 *
           largeModifier *
           (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
         defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
         tilesPerTickUsed:
-          within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
+          within(defender.troops() / (4 * attackTroops), 0.2, 1.5) *
           speed *
           largeModifier,
       };

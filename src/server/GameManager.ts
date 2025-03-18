@@ -3,7 +3,6 @@ import { GameConfig, GameID } from "../core/Schemas";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
 import { Difficulty, GameMapType, GameType } from "../core/game/Game";
-import { isHighTrafficTime } from "./Util";
 
 export class GameManager {
   private games: Map<GameID, GameServer> = new Map();
@@ -26,24 +25,18 @@ export class GameManager {
   }
 
   createGame(id: GameID, gameConfig: GameConfig | undefined) {
-    const game = new GameServer(
-      id,
-      Date.now(),
-      isHighTrafficTime(),
-      this.config,
-      {
-        gameMap: GameMapType.World,
-        gameType: GameType.Private,
-        difficulty: Difficulty.Medium,
-        disableNPCs: false,
-        disableNukes: false,
-        infiniteGold: false,
-        infiniteTroops: false,
-        instantBuild: false,
-        bots: 400,
-        ...gameConfig,
-      },
-    );
+    const game = new GameServer(id, Date.now(), this.config, {
+      gameMap: GameMapType.World,
+      gameType: GameType.Private,
+      difficulty: Difficulty.Medium,
+      disableNPCs: false,
+      disableNukes: false,
+      infiniteGold: false,
+      infiniteTroops: false,
+      instantBuild: false,
+      bots: 400,
+      ...gameConfig,
+    });
     this.games.set(id, game);
     return game;
   }

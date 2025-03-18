@@ -93,9 +93,11 @@ export class LocalServer {
     }
     if (clientMsg.type == "hash") {
       if (!this.lobbyConfig.gameRecord) {
-        // Don't do hash verification on singleplayer games.
+        // If we are playing a singleplayer then store hash.
+        this.turns[clientMsg.turnNumber].hash = clientMsg.hash;
         return;
       }
+      // If we are replaying a game then verify hash.
       const archivedHash = this.turns[clientMsg.turnNumber].hash;
       if (!archivedHash) {
         console.warn(
@@ -144,7 +146,7 @@ export class LocalServer {
     });
   }
 
-  public endGame() {
+  public endGame(saveFullGame: boolean = false) {
     consolex.log("local server ending game");
     clearInterval(this.endTurnIntervalID);
     const players: PlayerRecord[] = [
@@ -165,8 +167,10 @@ export class LocalServer {
       this.winner,
       this.allPlayersStats,
     );
-    // Clear turns because beacon only supports up to 64kb
-    record.turns = [];
+    if (!saveFullGame) {
+      // Clear turns because beacon only supports up to 64kb
+      record.turns = [];
+    }
     // For unload events, sendBeacon is the only reliable method
     const blob = new Blob([JSON.stringify(GameRecordSchema.parse(record))], {
       type: "application/json",

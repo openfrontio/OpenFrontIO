@@ -27,9 +27,6 @@ if [ $# -ne 1 ] || ([ "$1" != "staging" ] && [ "$1" != "prod" ] && [ "$1" != "al
     exit 1
 fi
 
-# TODO: fix this - need to build before creating the image
-bun run build-prod
-
 ENV=$1
 VERSION_TAG="latest"
 DOCKER_REPO=""
@@ -79,7 +76,6 @@ GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
 echo "Git commit: $GIT_COMMIT"
 
 docker buildx build \
-  --no-cache \
   --platform linux/amd64 \
   --build-arg GIT_COMMIT=$GIT_COMMIT \
   -t $DOCKER_USERNAME/$DOCKER_REPO:$VERSION_TAG \

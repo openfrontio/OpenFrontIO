@@ -113,3 +113,61 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin amazing-feature`)
 5. Open a Pull Request
+
+### Project Governance
+
+- The project maintainer ([evan](https://github.com/evanpelle)) has final authority on all code changes and design decisions
+- All pull requests require maintainer approval before merging
+- The maintainer reserves the right to reject contributions that don't align with the project's vision or quality standards
+
+### Contribution Path for New Contributors
+
+To ensure code quality and project stability, we use a progressive contribution system:
+
+1. **New Contributors**: Limited to UI improvements and small bug fixes only
+
+   - This helps you become familiar with the codebase
+   - UI changes are easier to review and less likely to break core functionality
+   - Small, focused PRs have a higher chance of being accepted
+
+2. **Established Contributors**: After several successful PRs and demonstrating understanding of the codebase, you may work on more complex features
+
+3. **Core Contributors**: Only those with extensive experience with the project may modify critical game systems
+
+### How to Contribute Successfully
+
+1. **Before Starting Work**:
+
+   - Open an issue describing what you want to contribute
+   - Wait for maintainer feedback before investing significant time
+   - Small improvements can proceed directly to PR stage
+
+2. **Code Quality Requirements**:
+
+   - All code must be well-commented and follow existing style patterns
+   - New features should not break existing functionality
+   - Code should be thoroughly tested before submission
+
+3. **Pull Request Process**:
+
+   - Keep PRs focused on a single feature or bug fix
+   - Include screenshots for UI changes
+   - Describe what testing you've performed
+   - Be responsive to feedback and requested changes
+
+4. **Testing Requirements**:
+   - Verify your changes work as expected
+   - Test on multiple systems/browsers if applicable
+   - Document your testing process in the PR
+
+### Communication
+
+- Be respectful and constructive in all project interactions
+- Questions are welcome, but please search existing issues first
+- For major changes, discuss in an issue before starting work
+
+### Final Notes
+
+Remember that maintaining this project requires significant effort. The maintainer appreciates your contributions but must prioritize long-term project health and stability. Not all contributions will be accepted, and that's okay.
+
+Thank you for helping make OpenFront better!

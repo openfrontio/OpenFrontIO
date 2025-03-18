@@ -193,7 +193,7 @@ export class ClientGameRunner {
           this.lobby.gameID,
           this.lobby.clientID,
         );
-        this.stop();
+        this.stop(true);
         return;
       }
       gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
@@ -265,10 +265,10 @@ export class ClientGameRunner {
     this.transport.connect(onconnect, onmessage);
   }
 
-  public stop() {
+  public stop(saveFullGame: boolean = false) {
     this.worker.cleanup();
     this.isActive = false;
-    this.transport.leaveGame();
+    this.transport.leaveGame(saveFullGame);
   }
 
   private inputEvent(event: MouseUpEvent) {

@@ -238,6 +238,9 @@ export interface Unit {
   dstPort(): Unit; // Only for trade ships
   detonationDst(): TileRef; // Only for nukes
 
+  setMoveTarget(cell: TileRef): void;
+  moveTarget(): TileRef | null;
+
   // Mutations
   setTroops(troops: number): void;
   delete(displayerMessage?: boolean): void;

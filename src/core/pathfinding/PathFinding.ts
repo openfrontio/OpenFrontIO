@@ -12,8 +12,6 @@ export class PathFinder {
   private aStar: AStar;
   private computeFinished = true;
 
-  private pathCache: Map<number, TileRef[]> = new Map();
-
   private constructor(
     private game: Game,
     private newAStar: (curr: TileRef, dst: TileRef) => AStar,
@@ -57,15 +55,6 @@ export class PathFinder {
       return { type: PathFindResultType.Completed, tile: curr };
     }
 
-    // make key the same between port a -> b and b -> a
-    const key = curr < dst ? curr * 1_000_000 + dst : dst * 1_000_000 + curr;
-
-    // get the cached path
-    if (this.pathCache.has(key)) {
-      this.path = this.pathCache.get(key)!;
-      return { type: PathFindResultType.NextTile, tile: this.path.shift() };
-    }
-
     if (this.computeFinished) {
       if (this.shouldRecompute(curr, dst)) {
         this.curr = curr;
@@ -86,8 +75,6 @@ export class PathFinder {
         // Remove the start tile
         this.path.shift();
 
-        // save the path in the cache
-        this.pathCache.set(key, [...this.path]);
         return this.nextTile(curr, dst);
       case PathFindResultType.Pending:
         return { type: PathFindResultType.Pending };

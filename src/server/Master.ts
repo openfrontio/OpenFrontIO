@@ -12,7 +12,6 @@ import { GameConfig, GameInfo } from "../core/Schemas";
 import path from "path";
 import rateLimit from "express-rate-limit";
 import { fileURLToPath } from "url";
-import { isHighTrafficTime } from "./Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 
 const config = getServerConfigFromServer();
@@ -268,14 +267,15 @@ function getNextMap(): GameMapType {
   }
 
   const frequency = {
-    World: 4,
-    Europe: 4,
+    World: 3,
+    Europe: 3,
     Mena: 2,
     NorthAmerica: 2,
     BlackSea: 2,
     Africa: 2,
     Asia: 2,
     Mars: 2,
+    Britannia: 2,
   };
 
   Object.keys(GameMapType).forEach((key) => {

@@ -89,8 +89,7 @@ function getServerConfig(gameEnv: string) {
 
 export interface ServerConfig {
   turnIntervalMs(): number;
-  gameCreationRate(highTraffic: boolean): number;
-  lobbyLifetime(highTraffic: boolean): number;
+  gameCreationRate(): number;
   lobbyMaxPlayers(map: GameMapType): number;
   discordRedirectURI(): string;
   numWorkers(): number;
