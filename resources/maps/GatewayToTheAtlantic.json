@@ -1,0 +1,187 @@
+{
+  "name": "Britannia",
+  "width": 2000,
+  "height": 1397,
+  "nations": [
+    {
+      "coordinates": [2144, 344],
+      "name": "Switzerland",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [1964, 371],
+      "name": "Burgundy",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [1334, 537],
+      "name": "Aquitaine",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [2115, 684],
+      "name": "Provence",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [1207, 763],
+      "name": "The Basque",
+      "strength": 3,
+      "flag": ""
+    },
+    {
+      "coordinates": [1281, 1142],
+      "name": "Valencia",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [1660, 891],
+      "name": "Catalan",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [561, 764],
+      "name": "Galicia",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [1004, 1436],
+      "name": "Granada",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [431, 1197],
+      "name": "Portugal",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [560, 1894],
+      "name": "Morocco",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [1609, 1837],
+      "name": "Algeria",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [1733, 622],
+      "name": "Armagnac",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [896, 1240],
+      "name": "Cordoba",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [636, 1781],
+      "name": "Seville",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [750, 873],
+      "name": "Leon",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [1001, 882],
+      "name": "Castille",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [775, 724],
+      "name": "Asturias",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [1755, 1130],
+      "name": "The Old Ones",
+      "strength": 3,
+      "flag": ""
+    },
+    {
+      "coordinates": [2097, 1670],
+      "name": "Jesuit Monks",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [979, 1013],
+      "name": "Spain",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [468, 930],
+      "name": "Sardines",
+      "strength": 3,
+      "flag": ""
+    },
+    {
+      "coordinates": [1667, 96],
+      "name": "Paris",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [1716, 296],
+      "name": "Baguettes",
+      "strength": 3,
+      "flag": ""
+    },
+    {
+      "coordinates": [1017, 180],
+      "name": "Brittany",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [2072, 567],
+      "name": "An Anti-Pope",
+      "strength": 3,
+      "flag": ""
+    },
+    {
+      "coordinates": [1355, 76],
+      "name": "Normandy",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [1402, 529],
+      "name": "Wine",
+      "strength": 1,
+      "flag": ""
+    },
+    {
+      "coordinates": [1475, 1657],
+      "name": "French Foreign Legion",
+      "strength": 3,
+      "flag": ""
+    },
+    {
+      "coordinates": [1685, 417],
+      "name": "France",
+      "strength": 3,
+      "flag": ""
+    }
+  ]
+}
