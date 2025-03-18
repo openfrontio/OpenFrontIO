@@ -205,7 +205,7 @@ async function fetchLobbies(): Promise<number> {
     });
 
   lobbyInfos.forEach((l) => {
-    if (l.msUntilStart <= 250 || l.gameConfig.maxPlayers >= l.numClients) {
+    if (l.msUntilStart <= 250 || l.gameConfig.maxPlayers <= l.numClients) {
       publicLobbyIDs.delete(l.gameID);
     }
   });
