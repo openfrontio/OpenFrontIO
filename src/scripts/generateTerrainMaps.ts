@@ -3,16 +3,17 @@ import path from "path";
 import fs from "fs/promises";
 
 const maps = [
-  "Africa",
-  "Asia",
-  "WorldMap",
-  "BlackSea",
-  "Europe",
-  "Mars",
-  "Mena",
-  "Oceania",
-  "NorthAmerica",
-  "SouthAmerica",
+  //"Africa",
+  //"Asia",
+  //"WorldMap",
+  //"BlackSea",
+  //"Europe",
+  //"Mars",
+  //"Mena",
+  //"Oceania",
+  //"NorthAmerica",
+  //"SouthAmerica",
+  "GatewayToTheAtlantic",
 ];
 
 async function loadTerrainMaps() {
