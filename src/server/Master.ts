@@ -13,12 +13,17 @@ import path from "path";
 import rateLimit from "express-rate-limit";
 import { fileURLToPath } from "url";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
+import { setupMetricsServer } from "./MasterMetrics";
 
 const config = getServerConfigFromServer();
 const readyWorkers = new Set();
 
 const app = express();
 const server = http.createServer(app);
+
+// Create a separate metrics server on port 9090
+const metricsApp = express();
+const metricsServer = http.createServer(metricsApp);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -135,6 +140,9 @@ export async function startMaster() {
   server.listen(PORT, () => {
     console.log(`Master HTTP server listening on port ${PORT}`);
   });
+
+  // Setup the metrics server
+  setupMetricsServer();
 }
 
 app.get(

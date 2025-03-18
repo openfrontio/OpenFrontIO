@@ -110,6 +110,7 @@
     "page": "^1.11.6",
     "pg": "^8.13.3",
     "priority-queue-typescript": "^1.0.1",
+    "prom-client": "^15.1.3",
     "protobufjs": "^7.3.2",
     "pureimage": "^0.4.13",
     "raphael": "^2.3.0",

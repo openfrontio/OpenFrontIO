@@ -40,6 +40,18 @@ export class GameManager {
     return game;
   }
 
+  activeGames(): number {
+    return this.games.size;
+  }
+
+  activeClients(): number {
+    let totalClients = 0;
+    this.games.forEach((game: GameServer) => {
+      totalClients += game.activeClients.length;
+    });
+    return totalClients;
+  }
+
   tick() {
     const active = new Map<GameID, GameServer>();
     for (const [id, game] of this.games) {

@@ -77,7 +77,7 @@ if [ "$REGION" == "staging" ]; then
 fi
 
 echo "Starting new container for ${REGION} environment..."
-docker run -d -p 80:80 \
+docker run -d -p 80:80 -p 127.0.0.1:9090:9090 \
   --restart=always \
   $VOLUME_MOUNTS \
   --log-driver json-file \

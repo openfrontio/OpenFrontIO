@@ -17,6 +17,7 @@ import { slog } from "./StructuredLog";
 import { GameType } from "../core/game/Game";
 import { archive, readGameRecord } from "./Archive";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
+import { metrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
 
@@ -34,6 +35,11 @@ export function startWorker() {
   const wss = new WebSocketServer({ server });
 
   const gm = new GameManager(config);
+
+  // Set up periodic metrics updates
+  setInterval(() => {
+    metrics.updateGameMetrics(gm);
+  }, 15000); // Update every 15 seconds
 
   // Middleware to handle /wX path prefix
   app.use((req, res, next) => {
@@ -238,6 +244,24 @@ export function startWorker() {
       res.json({
         success: true,
       });
+    }),
+  );
+
+  app.get(
+    "/metrics",
+    gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
+      if (req.headers[config.adminHeader()] !== config.adminToken()) {
+        return res.status(403).end("Access denied");
+      }
+      console.log(`metrics requested on worker ${workerId}`);
+
+      try {
+        const metricsData = await metrics.register.metrics();
+        res.set("Content-Type", metrics.register.contentType);
+        res.end(metricsData);
+      } catch (error) {
+        res.status(500).end(error.message);
+      }
     }),
   );
 
