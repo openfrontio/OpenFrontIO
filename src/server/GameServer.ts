@@ -21,7 +21,7 @@ import { archive } from "./Archive";
 import { Client } from "./Client";
 import { slog } from "./StructuredLog";
 import { gatekeeper } from "./Gatekeeper";
-
+import { Logger } from "winston";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -49,12 +49,17 @@ export class GameServer {
   // This field is currently only filled at victory
   private allPlayersStats: AllPlayersStats = {};
 
+  private log: Logger;
+
   constructor(
     public readonly id: string,
+    readonly log_: Logger,
     public readonly createdAt: number,
     private config: ServerConfig,
     public gameConfig: GameConfig,
-  ) {}
+  ) {
+    this.log = log_.child({ gameID: id });
+  }
 
   public updateGameConfig(gameConfig: GameConfig): void {
     if (gameConfig.gameMap != null) {
@@ -81,7 +86,7 @@ export class GameServer {
   }
 
   public addClient(client: Client, lastTurn: number) {
-    console.log(`${this.id}: adding client ${client.clientID}`);
+    this.log.info(`adding client ${client.clientID}`);
     slog({
       logKey: "client_joined_game",
       msg: `client ${client.clientID} (re)joining game ${this.id}`,
@@ -102,7 +107,7 @@ export class GameServer {
         (c) => c.ip == client.ip && c.clientID != client.clientID,
       ).length >= 3
     ) {
-      console.log(
+      this.log.info(
         `cannot add client ${client.clientID}, already have 3 ips (${client.ip})`,
       );
       return;
@@ -136,7 +141,7 @@ export class GameServer {
           if (this.allClients.has(clientMsg.clientID)) {
             const client = this.allClients.get(clientMsg.clientID);
             if (client.persistentID != clientMsg.persistentID) {
-              console.warn(
+              this.log.warn(
                 `Client ID ${clientMsg.clientID} sent incorrect id ${clientMsg.persistentID}, does not match persistent id ${client.persistentID}`,
               );
               return;
@@ -150,7 +155,7 @@ export class GameServer {
             if (clientMsg.gameID == this.id) {
               this.addIntent(clientMsg.intent);
             } else {
-              console.warn(
+              this.log.warn(
                 `${this.id}: client ${clientMsg.clientID} sent to wrong game`,
               );
             }
@@ -167,14 +172,14 @@ export class GameServer {
             this.allPlayersStats = clientMsg.allPlayersStats;
           }
         } catch (error) {
-          console.log(
+          this.log.info(
             `error handline websocket request in game server: ${error}`,
           );
         }
       }),
     );
     client.ws.on("close", () => {
-      console.log(`${this.id}: client ${client.clientID} disconnected`);
+      this.log.info(`${this.id}: client ${client.clientID} disconnected`);
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID != client.clientID,
       );
@@ -216,7 +221,7 @@ export class GameServer {
       this.config.turnIntervalMs(),
     );
     this.activeClients.forEach((c) => {
-      console.log(`${this.id}: sending start message to ${c.clientID}`);
+      this.log.info(`${this.id}: sending start message to ${c.clientID}`);
       this.sendStartGameMsg(c.ws, 0);
     });
   }
@@ -266,7 +271,7 @@ export class GameServer {
         }),
       );
     } catch (error) {
-      console.log(
+      this.log.info(
         `error sending message for game ${this.id}, error ${error}`.substring(
           0,
           250,
@@ -289,7 +294,7 @@ export class GameServer {
         client.ws.close(1000, "game has ended");
       }
     });
-    console.log(
+    this.log.info(
       `${this.id}: ending game ${this.id} with ${this.turns.length} turns`,
     );
     try {
@@ -315,7 +320,7 @@ export class GameServer {
           ),
         );
       } else {
-        console.log(`${this.id}: no clients joined, not archiving game`);
+        this.log.info(`${this.id}: no clients joined, not archiving game`);
       }
     } catch (error) {
       let errorDetails;
@@ -334,7 +339,7 @@ export class GameServer {
         }
       }
 
-      console.error("Error archiving game record details:", {
+      this.log.error("Error archiving game record details:", {
         gameId: this.id,
         errorType: typeof error,
         error: errorDetails,
@@ -347,7 +352,7 @@ export class GameServer {
     const alive = [];
     for (const client of this.activeClients) {
       if (now - client.lastPing > 60_000) {
-        console.log(
+        this.log.info(
           `${this.id}: no pings from ${client.clientID}, terminating connection`,
         );
         if (client.ws.readyState === WebSocket.OPEN) {
@@ -359,7 +364,7 @@ export class GameServer {
     }
     this.activeClients = alive;
     if (now > this.createdAt + this.maxGameDuration) {
-      console.warn(`${this.id}: game past max duration ${this.id}`);
+      this.log.warn(`${this.id}: game past max duration ${this.id}`);
       return GamePhase.Finished;
     }
 
@@ -369,7 +374,7 @@ export class GameServer {
     if (this.gameConfig.gameType != GameType.Public) {
       if (this._hasStarted) {
         if (noActive && noRecentPings) {
-          console.log(`${this.id}: private game: ${this.id} complete`);
+          this.log.info(`${this.id}: private game: ${this.id} complete`);
           return GamePhase.Finished;
         } else {
           return GamePhase.Active;
@@ -443,7 +448,7 @@ export class GameServer {
 
       for (const oos of outOfSyncClients) {
         if (!this.outOfSyncClients.has(oos.clientID)) {
-          console.warn(
+          this.log.warn(
             `Game ${this.id}: has out of sync client ${oos.clientID} on turn ${lastHashTurn}`,
           );
           this.outOfSyncClients.add(oos.clientID);
@@ -461,13 +466,13 @@ export class GameServer {
       if (serverDesync.success) {
         const desyncMsg = JSON.stringify(serverDesync.data);
         for (const c of outOfSyncClients) {
-          console.log(
+          this.log.info(
             `game: ${this.id}: sending desync to client ${c.clientID}`,
           );
           c.ws.send(desyncMsg);
         }
       } else {
-        console.warn(`failed to create desync message ${serverDesync.error}`);
+        this.log.warn(`failed to create desync message ${serverDesync.error}`);
       }
     }
   }
