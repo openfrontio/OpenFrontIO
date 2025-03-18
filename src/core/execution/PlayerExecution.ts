@@ -149,7 +149,13 @@ export class PlayerExecution implements Execution {
     if (enemies.size != 1) {
       return false;
     }
-    return this.mg.playerBySmallID(Array.from(enemies)[0]) as Player;
+    const enemy = this.mg.playerBySmallID(Array.from(enemies)[0]) as Player;
+    const enemyBox = calculateBoundingBox(this.mg, enemy.borderTiles());
+    const clusterBox = calculateBoundingBox(this.mg, cluster);
+    if (inscribed(enemyBox, clusterBox)) {
+      return enemy;
+    }
+    return false;
   }
 
   private isSurrounded(cluster: Set<TileRef>): boolean {

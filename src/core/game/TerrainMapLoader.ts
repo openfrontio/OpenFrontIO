@@ -9,9 +9,6 @@ const loadedMaps = new Map<
 >();
 
 export interface NationMap {
-  name: string;
-  width: number;
-  height: number;
   nations: Nation[];
 }
 
@@ -30,8 +27,8 @@ export async function loadTerrainMap(
   }
   const mapFiles = await terrainMapFileLoader.getMapData(map);
 
-  const gameMap = await loadTerrainFromFile(mapFiles.mapBin);
-  const miniGameMap = await loadTerrainFromFile(mapFiles.miniMapBin);
+  const gameMap = await genTerrainFromBin(mapFiles.mapBin);
+  const miniGameMap = await genTerrainFromBin(mapFiles.miniMapBin);
   const result = {
     nationMap: mapFiles.nationMap,
     gameMap: gameMap,
@@ -41,13 +38,13 @@ export async function loadTerrainMap(
   return result;
 }
 
-export async function loadTerrainFromFile(fileData: string): Promise<GameMap> {
-  const width = (fileData.charCodeAt(1) << 8) | fileData.charCodeAt(0);
-  const height = (fileData.charCodeAt(3) << 8) | fileData.charCodeAt(2);
+export async function genTerrainFromBin(data: string): Promise<GameMap> {
+  const width = (data.charCodeAt(1) << 8) | data.charCodeAt(0);
+  const height = (data.charCodeAt(3) << 8) | data.charCodeAt(2);
 
-  if (fileData.length != width * height + 4) {
+  if (data.length != width * height + 4) {
     throw new Error(
-      `Invalid data: buffer size ${fileData.length} incorrect for ${width}x${height} terrain plus 4 bytes for dimensions.`,
+      `Invalid data: buffer size ${data.length} incorrect for ${width}x${height} terrain plus 4 bytes for dimensions.`,
     );
   }
 
@@ -57,7 +54,7 @@ export async function loadTerrainFromFile(fileData: string): Promise<GameMap> {
 
   // Copy data starting after the header
   for (let i = 0; i < width * height; i++) {
-    const packedByte = fileData.charCodeAt(i + 4);
+    const packedByte = data.charCodeAt(i + 4);
     rawData[i] = packedByte;
     if (packedByte & 0b10000000) numLand++;
   }

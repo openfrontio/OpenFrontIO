@@ -308,9 +308,6 @@ export function startWorker() {
     });
   });
 
-  // Set up ticker
-  setInterval(() => gm.tick(), 1000);
-
   // The load balancer will handle routing to this server based on path
   const PORT = config.workerPortByIndex(workerId);
   server.listen(PORT, () => {
