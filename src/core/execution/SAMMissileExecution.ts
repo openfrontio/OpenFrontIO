@@ -15,6 +15,7 @@ export class SAMMissileExecution implements Execution {
   private active = true;
   private pathFinder: PathFinder;
   private SAMMissile: Unit;
+  private mg: Game;
 
   constructor(
     private spawn: TileRef,
@@ -26,6 +27,7 @@ export class SAMMissileExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.pathFinder = PathFinder.Mini(mg, 2000, true, 10);
+    this.mg = mg;
   }
 
   tick(ticks: number): void {
@@ -60,7 +62,13 @@ export class SAMMissileExecution implements Execution {
       );
       switch (result.type) {
         case PathFindResultType.Completed:
+          this.mg.displayMessage(
+            `Missile intercepted ${this.target.type()}`,
+            MessageType.SUCCESS,
+            this._owner.id(),
+          );
           this.active = false;
+          this.target.delete();
           this.SAMMissile.delete(false);
           return;
         case PathFindResultType.NextTile:

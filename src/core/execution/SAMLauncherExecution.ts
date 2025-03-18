@@ -23,7 +23,6 @@ export class SAMLauncherExecution implements Execution {
 
   private searchRangeRadius = 75;
 
-  private missileAttackRate = 75; // 7.5 seconds
   private lastMissileAttack = 0;
 
   private pseudoRandom: PseudoRandom;
@@ -101,10 +100,11 @@ export class SAMLauncherExecution implements Execution {
 
     const cooldown =
       this.lastMissileAttack != 0 &&
-      this.mg.ticks() - this.lastMissileAttack <= this.missileAttackRate;
+      this.mg.ticks() - this.lastMissileAttack <=
+        this.mg.config().samCooldown();
 
-    if (this.post.isSamCooldown() != cooldown) {
-      this.post.setSamCooldown(cooldown);
+    if (this.post.isSamCooldown() && !cooldown) {
+      this.post.setSamCooldown(false);
     }
 
     if (
@@ -113,15 +113,9 @@ export class SAMLauncherExecution implements Execution {
       !this.target.targetedBySAM()
     ) {
       this.lastMissileAttack = this.mg.ticks();
+      this.post.setSamCooldown(true);
       const random = this.pseudoRandom.next();
-      const hittingChance = 0.8;
-      let hit = false;
-      if (random < hittingChance) {
-        this.target.delete();
-        hit = true;
-      } else {
-        hit = false;
-      }
+      const hit = random < this.mg.config().samHittingChance();
 
       this.lastMissileAttack = this.mg.ticks();
       if (!hit) {

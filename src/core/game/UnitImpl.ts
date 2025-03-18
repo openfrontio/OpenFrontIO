@@ -19,7 +19,7 @@ export class UnitImpl implements Unit {
 
   private _constructionType: UnitType = undefined;
 
-  private _isSamCooldown: boolean;
+  private _isSamCooldown: boolean = false;
   private _dstPort: Unit | null = null; // Only for trade ships
   private _detonationDst: TileRef | null = null; // Only for nukes
   private _warshipTarget: Unit | null = null;
