@@ -18,6 +18,7 @@ const maps = [
   "Oceania",
   "NorthAmerica",
   "SouthAmerica",
+  "GatewayToTheAtlantic",
 ];
 const min_island_size = 30;
 
