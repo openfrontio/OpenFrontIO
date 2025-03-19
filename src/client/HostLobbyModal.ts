@@ -1,17 +1,14 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { Difficulty, GameMapType, GameType } from "../core/game/Game";
-import { GameConfig, GameInfo } from "../core/Schemas";
+import { LitElement, css, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import randomMap from "../../resources/images/RandomMap.png";
+import { getServerConfigFromClient } from "../core/configuration/Config";
 import { consolex } from "../core/Consolex";
+import { Difficulty, GameMapType } from "../core/game/Game";
+import { GameConfig, GameInfo } from "../core/Schemas";
+import { generateID } from "../core/Util";
 import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
-import randomMap from "../../resources/images/RandomMap.png";
-import { generateID } from "../core/Util";
-import {
-  getConfig,
-  getServerConfigFromClient,
-} from "../core/configuration/Config";
 import { JoinLobbyEvent } from "./Main";
 
 @customElement("host-lobby-modal")

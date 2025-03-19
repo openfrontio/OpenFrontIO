@@ -1,15 +1,15 @@
-import world from "../../../resources/maps/WorldMapThumb.png";
-import oceania from "../../../resources/maps/OceaniaThumb.png";
-import europe from "../../../resources/maps/EuropeThumb.png";
-import mena from "../../../resources/maps/MenaThumb.png";
-import northAmerica from "../../../resources/maps/NorthAmericaThumb.png";
-import southAmerica from "../../../resources/maps/SouthAmericaThumb.png";
-import blackSea from "../../../resources/maps/BlackSeaThumb.png";
 import africa from "../../../resources/maps/AfricaThumb.png";
 import asia from "../../../resources/maps/AsiaThumb.png";
-import mars from "../../../resources/maps/MarsThumb.png";
+import blackSea from "../../../resources/maps/BlackSeaThumb.png";
 import britannia from "../../../resources/maps/BritanniaThumb.png";
+import europe from "../../../resources/maps/EuropeThumb.png";
 import gatewayToTheAtlantic from "../../../resources/maps/GatewayToTheAtlanticThumb.png";
+import mars from "../../../resources/maps/MarsThumb.png";
+import mena from "../../../resources/maps/MenaThumb.png";
+import northAmerica from "../../../resources/maps/NorthAmericaThumb.png";
+import oceania from "../../../resources/maps/OceaniaThumb.png";
+import southAmerica from "../../../resources/maps/SouthAmericaThumb.png";
+import world from "../../../resources/maps/WorldMapThumb.png";
 
 import { GameMapType } from "../../core/game/Game";
 

@@ -1,37 +1,36 @@
 import { Config } from "../configuration/Config";
+import { consolex } from "../Consolex";
+import { AllPlayersStats, ClientID } from "../Schemas";
+import { AllianceImpl } from "./AllianceImpl";
+import { AllianceRequestImpl } from "./AllianceRequestImpl";
+import { DefenseGrid } from "./DefensePostGrid";
 import {
+  Alliance,
+  AllianceRequest,
   Cell,
+  EmojiMessage,
   Execution,
   Game,
+  GameUpdates,
+  MessageType,
+  Nation,
+  Player,
   PlayerID,
   PlayerInfo,
-  Player,
+  TerrainType,
   TerraNullius,
   Unit,
-  AllianceRequest,
-  Alliance,
-  Nation,
-  UnitType,
   UnitInfo,
-  GameUpdates,
-  TerrainType,
-  EmojiMessage,
+  UnitType,
 } from "./Game";
-import { GameUpdate } from "./GameUpdates";
-import { GameUpdateType } from "./GameUpdates";
-import { NationMap } from "./TerrainMapLoader";
+import { GameMap, TileRef, TileUpdate } from "./GameMap";
+import { GameUpdate, GameUpdateType } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
-import { TerraNulliusImpl } from "./TerraNulliusImpl";
-import { AllianceRequestImpl } from "./AllianceRequestImpl";
-import { AllianceImpl } from "./AllianceImpl";
-import { ClientID, AllPlayersStats } from "../Schemas";
-import { MessageType } from "./Game";
-import { UnitImpl } from "./UnitImpl";
-import { consolex } from "../Consolex";
-import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
-import { DefenseGrid } from "./DefensePostGrid";
-import { StatsImpl } from "./StatsImpl";
 import { Stats } from "./Stats";
+import { StatsImpl } from "./StatsImpl";
+import { NationMap } from "./TerrainMapLoader";
+import { TerraNulliusImpl } from "./TerraNulliusImpl";
+import { UnitImpl } from "./UnitImpl";
 
 export function createGame(
   gameMap: GameMap,
