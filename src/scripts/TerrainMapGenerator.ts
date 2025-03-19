@@ -25,6 +25,7 @@ class Terrain {
 
 export async function generateMap(
   imageBuffer: Buffer,
+  removeSmall = true,
 ): Promise<{ map: Uint8Array; miniMap: Uint8Array }> {
   const stream = Readable.from(imageBuffer);
   const img = await decodePNGFromStream(stream);
@@ -56,8 +57,10 @@ export async function generateMap(
     }
   }
 
-  removeSmallIslands(terrain);
-  removeSmallLakes(terrain);
+  if (removeSmall) {
+    removeSmallIslands(terrain);
+    removeSmallLakes(terrain);
+  }
   const shorelineWaters = processShore(terrain);
   processDistToLand(shorelineWaters, terrain);
   processOcean(terrain);

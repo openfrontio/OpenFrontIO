@@ -7,12 +7,13 @@ import { TestConfig } from "./TestConfig";
 import { TestServerConfig } from "./TestServerConfig";
 import { UserSettings } from "../../src/core/game/UserSettings";
 import { Difficulty, GameType } from "../../src/core/game/Game";
+import { GameConfig } from "../../src/core/Schemas";
 
-export async function setup(mapName: string) {
+export async function setup(mapName: string, _gameConfig: GameConfig = {}) {
   // Load the specified map
   const mapPath = path.join(__dirname, "..", "testdata", `${mapName}.png`);
   const imageBuffer = await fs.readFile(mapPath);
-  const { map, miniMap } = await generateMap(imageBuffer);
+  const { map, miniMap } = await generateMap(imageBuffer, false);
   const gameMap = await genTerrainFromBin(String.fromCharCode.apply(null, map));
   const miniGameMap = await genTerrainFromBin(
     String.fromCharCode.apply(null, miniMap),
@@ -30,6 +31,7 @@ export async function setup(mapName: string) {
     infiniteGold: false,
     infiniteTroops: false,
     instantBuild: false,
+    ..._gameConfig,
   };
   const config = new TestConfig(serverConfig, gameConfig, new UserSettings());
 

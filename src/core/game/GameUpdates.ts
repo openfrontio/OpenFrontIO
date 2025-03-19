@@ -74,6 +74,7 @@ export interface UnitUpdate {
   warshipTargetId?: number;
   health?: number;
   constructionType?: UnitType;
+  isSamCooldown?: boolean;
 }
 
 export interface AttackUpdate {

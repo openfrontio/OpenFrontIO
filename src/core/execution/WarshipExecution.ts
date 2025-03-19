@@ -136,6 +136,7 @@ export class WarshipExecution implements Execution {
     if (this.target != null && !this.target.isActive()) {
       this.target = null;
     }
+    const hasPort = this._owner.units(UnitType.Port).length > 0;
     const ships = this.mg
       .units(UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip)
       .filter((u) => this.mg.manhattanDist(u.tile(), this.warship.tile()) < 130)
@@ -143,6 +144,8 @@ export class WarshipExecution implements Execution {
       .filter((u) => u != this.warship)
       .filter((u) => !u.owner().isAlliedWith(this.warship.owner()))
       .filter((u) => !this.alreadySentShell.has(u))
+      // Do not target trade ships if we don't have port
+      .filter((u) => u.type() != UnitType.TradeShip || hasPort)
       .filter((u) => {
         const portOwner = u.dstPort() ? u.dstPort().owner() : null;
         return u.type() != UnitType.TradeShip || portOwner != this.owner();

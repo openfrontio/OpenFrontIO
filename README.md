@@ -147,6 +147,7 @@ To ensure code quality and project stability, we use a progressive contribution 
    - All code must be well-commented and follow existing style patterns
    - New features should not break existing functionality
    - Code should be thoroughly tested before submission
+   - All code changes in src/core _MUST_ be tested.
 
 3. **Pull Request Process**:
 
