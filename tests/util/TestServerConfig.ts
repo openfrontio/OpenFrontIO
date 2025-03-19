@@ -3,6 +3,9 @@ import { GameMapType } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
+  region(): string {
+    return "test";
+  }
   turnIntervalMs(): number {
     throw new Error("Method not implemented.");
   }

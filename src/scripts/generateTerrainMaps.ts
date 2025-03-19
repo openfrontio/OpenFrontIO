@@ -1,6 +1,8 @@
+import { encodePNGToStream } from "pureimage";
 import { generateMap } from "./TerrainMapGenerator.js";
 import path from "path";
 import fs from "fs/promises";
+import { WriteStream, createWriteStream } from "fs";
 
 const maps = [
   "Africa",
@@ -13,6 +15,7 @@ const maps = [
   "Oceania",
   "NorthAmerica",
   "SouthAmerica",
+  "Britannia",
   "GatewayToTheAtlantic",
 ];
 
@@ -26,7 +29,7 @@ async function loadTerrainMaps() {
         map + ".png",
       );
       const imageBuffer = await fs.readFile(mapPath);
-      const { map: mainMap, miniMap } = await generateMap(imageBuffer);
+      const { map: mainMap, miniMap, thumb } = await generateMap(imageBuffer);
 
       const outputPath = path.join(
         process.cwd(),
@@ -40,10 +43,21 @@ async function loadTerrainMaps() {
         "maps",
         map + "Mini.bin",
       );
+      const thumbOutputPath = path.join(
+        process.cwd(),
+        "resources",
+        "maps",
+        map + "Thumb.png",
+      );
+      const thumbOutStream: WriteStream = createWriteStream(
+        thumbOutputPath,
+        "binary",
+      );
 
       await Promise.all([
         fs.writeFile(outputPath, mainMap),
         fs.writeFile(miniOutputPath, miniMap),
+        encodePNGToStream(thumb, thumbOutStream),
       ]);
     }),
   );

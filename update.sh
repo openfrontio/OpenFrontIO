@@ -86,6 +86,7 @@ docker run -d -p 80:80 -p 127.0.0.1:9090:9090 \
   --log-opt max-size=10m \
   --log-opt max-file=3 \
   --env GAME_ENV=${ENV} \
+  --env REGION=${REGION} \
   --env-file /root/.env \
   --name ${CONTAINER_NAME} \
   $FULL_IMAGE_NAME

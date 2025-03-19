@@ -4,8 +4,11 @@ import {
   GameEnv,
   getServerConfigFromServer,
 } from "../core/configuration/Config";
+import { logger } from "./Logger";
 
 const config = getServerConfigFromServer();
+
+const log = logger.child({ component: "Archive" });
 
 // R2 client configuration
 const r2 = new S3({
@@ -29,13 +32,13 @@ export async function archive(gameRecord: GameRecord) {
 
     // Archive full game if there are turns
     if (gameRecord.turns.length > 0) {
-      console.log(
+      log.info(
         `${gameRecord.id}: game has more than zero turns, attempting to write to full game to R2`,
       );
       await archiveFullGameToR2(gameRecord);
     }
   } catch (error) {
-    console.error(`${gameRecord.id}: Final archive error: ${error}`, {
+    log.error(`${gameRecord.id}: Final archive error: ${error}`, {
       message: error?.message || error,
       stack: error?.stack,
       name: error?.name,
@@ -76,9 +79,9 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
       ContentType: "application/json",
     });
 
-    console.log(`${gameRecord.id}: successfully wrote game analytics to R2`);
+    log.info(`${gameRecord.id}: successfully wrote game analytics to R2`);
   } catch (error) {
-    console.error(
+    log.error(
       `${gameRecord.id}: Error writing game analytics to R2: ${error}`,
       {
         message: error?.message || error,
@@ -109,11 +112,11 @@ async function archiveFullGameToR2(gameRecord: GameRecord) {
       ContentType: "application/json",
     });
   } catch (error) {
-    console.log(`error saving game ${gameRecord.id}`);
+    log.error(`error saving game ${gameRecord.id}`);
     throw error;
   }
 
-  console.log(`${gameRecord.id}: game record successfully written to R2`);
+  log.info(`${gameRecord.id}: game record successfully written to R2`);
 }
 
 export async function readGameRecord(
@@ -130,7 +133,7 @@ export async function readGameRecord(
     return JSON.parse(bodyContents) as GameRecord;
   } catch (error) {
     // Log the error for monitoring purposes
-    console.error(`${gameId}: Error reading game record from R2: ${error}`, {
+    log.error(`${gameId}: Error reading game record from R2: ${error}`, {
       message: error?.message || error,
       stack: error?.stack,
       name: error?.name,
@@ -153,7 +156,7 @@ export async function gameRecordExists(gameId: GameID): Promise<boolean> {
     if (error.name === "NotFound") {
       return false;
     }
-    console.error(`${gameId}: Error checking archive existence: ${error}`, {
+    log.error(`${gameId}: Error checking archive existence: ${error}`, {
       message: error?.message || error,
       stack: error?.stack,
       name: error?.name,
