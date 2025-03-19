@@ -353,9 +353,9 @@ function getThumbnailColor(t: Terrain): {
     //all other water
     const waterAdjRGB: number = 11 - Math.min(t.magnitude / 2, 10) - 10;
     return {
-      r: Math.max(70 - waterAdjRGB, 0),
-      g: Math.max(132 - waterAdjRGB, 0),
-      b: Math.max(180 - waterAdjRGB, 0),
+      r: Math.max(70 + waterAdjRGB, 0),
+      g: Math.max(132 + waterAdjRGB, 0),
+      b: Math.max(180 + waterAdjRGB, 0),
       a: 0,
     };
   }
