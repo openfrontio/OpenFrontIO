@@ -49,7 +49,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return 100;
   }
   gameCreationRate(): number {
-    return 60 * 1000;
+    return 30 * 1000;
   }
   lobbyMaxPlayers(map: GameMapType): number {
     if (map == GameMapType.World) {

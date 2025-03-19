@@ -100,16 +100,8 @@ export function closestShoreFromPlayer(
   }
 
   return shoreTiles.reduce((closest, current) => {
-    const closestDistance = manhattanDistWrapped(
-      gm.cell(target),
-      gm.cell(closest),
-      gm.width(),
-    );
-    const currentDistance = manhattanDistWrapped(
-      gm.cell(target),
-      gm.cell(current),
-      gm.width(),
-    );
+    const closestDistance = gm.manhattanDist(target, closest);
+    const currentDistance = gm.manhattanDist(target, current);
     return currentDistance < closestDistance ? current : closest;
   });
 }

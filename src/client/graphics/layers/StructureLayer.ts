@@ -6,6 +6,7 @@ import { EventBus } from "../../../core/EventBus";
 import anchorIcon from "../../../../resources/images/buildings/port1.png";
 import missileSiloIcon from "../../../../resources/images/buildings/silo1.png";
 import SAMMissileIcon from "../../../../resources/images/buildings/silo4.png";
+import SAMMissileReloadingIcon from "../../../../resources/images/buildings/silo4-reloading.png";
 import shieldIcon from "../../../../resources/images/buildings/fortAlt2.png";
 import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
 import { GameView, UnitView } from "../../../core/game/GameView";
@@ -14,6 +15,7 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { euclDistFN } from "../../../core/game/GameMap";
 
 const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
+const reloadingColor = colord({ r: 255, g: 0, b: 0 });
 
 interface UnitRenderConfig {
   icon: string;
@@ -41,17 +43,17 @@ export class StructureLayer implements Layer {
     },
     [UnitType.MissileSilo]: {
       icon: missileSiloIcon,
-      borderRadius: 8,
+      borderRadius: 9.5,
       territoryRadius: 6,
     },
     [UnitType.DefensePost]: {
       icon: shieldIcon,
-      borderRadius: 8,
+      borderRadius: 9.5,
       territoryRadius: 6,
     },
     [UnitType.SAMLauncher]: {
       icon: SAMMissileIcon,
-      borderRadius: 8,
+      borderRadius: 10,
       territoryRadius: 6,
     },
   };
@@ -62,32 +64,41 @@ export class StructureLayer implements Layer {
   ) {
     this.theme = game.config().theme();
     this.loadIconData();
+    this.loadIcon("reloadingSam", {
+      icon: SAMMissileReloadingIcon,
+      borderRadius: 8.525,
+      territoryRadius: 6.525,
+    });
+  }
+
+  private loadIcon(unitType: string, config: UnitRenderConfig) {
+    const image = new Image();
+    image.src = config.icon;
+    image.onload = () => {
+      // Create temporary canvas for icon processing
+      const tempCanvas = document.createElement("canvas");
+      const tempContext = tempCanvas.getContext("2d");
+      tempCanvas.width = image.width;
+      tempCanvas.height = image.height;
+
+      // Draw the unit icon
+      tempContext.drawImage(image, 0, 0);
+      const iconData = tempContext.getImageData(
+        0,
+        0,
+        tempCanvas.width,
+        tempCanvas.height,
+      );
+      this.unitIcons.set(unitType, iconData);
+      console.log(
+        `icond data width height: ${iconData.width}, ${iconData.height}`,
+      );
+    };
   }
 
   private loadIconData() {
     Object.entries(this.unitConfigs).forEach(([unitType, config]) => {
-      const image = new Image();
-      image.src = config.icon;
-      image.onload = () => {
-        // Create temporary canvas for icon processing
-        const tempCanvas = document.createElement("canvas");
-        const tempContext = tempCanvas.getContext("2d");
-        tempCanvas.width = image.width;
-        tempCanvas.height = image.height;
-
-        // Draw the unit icon
-        tempContext.drawImage(image, 0, 0);
-        const iconData = tempContext.getImageData(
-          0,
-          0,
-          tempCanvas.width,
-          tempCanvas.height,
-        );
-        this.unitIcons.set(unitType, iconData);
-        console.log(
-          `icond data width height: ${iconData.width}, ${iconData.height}`,
-        );
-      };
+      this.loadIcon(unitType, config);
     });
   }
 
@@ -132,10 +143,17 @@ export class StructureLayer implements Layer {
 
   private handleUnitRendering(unit: UnitView) {
     const unitType = unit.constructionType() ?? unit.type();
+    let iconType = unitType;
     if (!this.isUnitTypeSupported(unitType)) return;
 
     const config = this.unitConfigs[unitType];
-    const icon = this.unitIcons.get(unitType);
+    let icon: ImageData;
+
+    if (unitType == UnitType.SAMLauncher && unit.isSamCooldown()) {
+      icon = this.unitIcons.get("reloadingSam");
+    } else {
+      icon = this.unitIcons.get(iconType);
+    }
 
     if (!config || !icon) return;
 
@@ -151,6 +169,13 @@ export class StructureLayer implements Layer {
       return;
     }
 
+    let borderColor = this.theme.borderColor(unit.owner().info());
+    if (unitType == UnitType.SAMLauncher && unit.isSamCooldown()) {
+      borderColor = reloadingColor;
+    } else if (unit.type() == UnitType.Construction) {
+      borderColor = underConstructionColor;
+    }
+
     // Draw border and territory
     for (const tile of this.game.bfs(
       unit.tile(),
@@ -158,9 +183,7 @@ export class StructureLayer implements Layer {
     )) {
       this.paintCell(
         new Cell(this.game.x(tile), this.game.y(tile)),
-        unit.type() == UnitType.Construction
-          ? underConstructionColor
-          : this.theme.borderColor(unit.owner().info()),
+        borderColor,
         255,
       );
     }

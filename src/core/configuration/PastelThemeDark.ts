@@ -256,6 +256,15 @@ export const pastelThemeDark = new (class implements Theme {
     return playerInfo.playerType == PlayerType.Human ? "#ffffff" : "#e6e6e6";
   }
 
+  specialBuildingColor(playerInfo: PlayerInfo): Colord {
+    const tc = this.territoryColor(playerInfo).rgba;
+    return colord({
+      r: Math.max(tc.r - 50, 0),
+      g: Math.max(tc.g - 50, 0),
+      b: Math.max(tc.b - 50, 0),
+    });
+  }
+
   borderColor(playerInfo: PlayerInfo): Colord {
     const tc = this.territoryColor(playerInfo).rgba;
     return colord({

@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "ESNext",
-    "rootDir": "src",
+    "rootDir": ".",
     "moduleResolution": "node",
     "sourceMap": true,
     "allowSyntheticDefaultImports": true,
@@ -14,7 +14,7 @@
     "src/**/*",
     "resources/**/*",
     "generated/**/*",
-    "test/core/GameImpl.test.ts",
+    "tests/**/*",
     "src/scripts"
   ],
   "exclude": ["node_modules"]

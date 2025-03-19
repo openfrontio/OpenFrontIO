@@ -13,12 +13,17 @@ import path from "path";
 import rateLimit from "express-rate-limit";
 import { fileURLToPath } from "url";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
+import { setupMetricsServer } from "./MasterMetrics";
 
 const config = getServerConfigFromServer();
 const readyWorkers = new Set();
 
 const app = express();
 const server = http.createServer(app);
+
+// Create a separate metrics server on port 9090
+const metricsApp = express();
+const metricsServer = http.createServer(metricsApp);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,9 +35,14 @@ app.use(
       // You can conditionally set different cache times based on file types
       if (path.endsWith(".html")) {
         // Set HTML files to no-cache to ensure Express doesn't send 304s
-        res.setHeader("Cache-Control", "no-cache, must-revalidate");
+        res.setHeader(
+          "Cache-Control",
+          "no-store, no-cache, must-revalidate, proxy-revalidate",
+        );
         res.setHeader("Pragma", "no-cache");
         res.setHeader("Expires", "0");
+        // Prevent conditional requests
+        res.setHeader("ETag", "");
       } else if (path.match(/\.(js|css|svg)$/)) {
         // JS, CSS, SVG get long cache with immutable
         res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
@@ -135,6 +145,9 @@ export async function startMaster() {
   server.listen(PORT, () => {
     console.log(`Master HTTP server listening on port ${PORT}`);
   });
+
+  // Setup the metrics server
+  setupMetricsServer();
 }
 
 app.get(
@@ -192,7 +205,7 @@ async function fetchLobbies(): Promise<number> {
     });
 
   lobbyInfos.forEach((l) => {
-    if (l.msUntilStart <= 250 || l.gameConfig.maxPlayers == l.numClients) {
+    if (l.msUntilStart <= 250 || l.gameConfig.maxPlayers <= l.numClients) {
       publicLobbyIDs.delete(l.gameID);
     }
   });
