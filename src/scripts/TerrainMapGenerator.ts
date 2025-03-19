@@ -26,7 +26,7 @@ class Terrain {
 export async function generateMap(
   imageBuffer: Buffer,
   removeSmall = true,
-  ): Promise<{ map: Uint8Array; miniMap: Uint8Array; thumb: Bitmap }> {
+): Promise<{ map: Uint8Array; miniMap: Uint8Array; thumb: Bitmap }> {
   const stream = Readable.from(imageBuffer);
   const img = await decodePNGFromStream(stream);
 
@@ -351,7 +351,7 @@ function getThumbnailColor(t: Terrain): {
     //shoreline water
     if (t.shoreline) return { r: 100, g: 143, b: 255, a: 0 };
     //all other water
-    const waterAdjRGB: number = 10 + (11 - Math.min(t.magnitude / 2, 10));
+    const waterAdjRGB: number = 11 - Math.min(t.magnitude / 2, 10) - 10;
     return {
       r: Math.max(70 - waterAdjRGB, 0),
       g: Math.max(132 - waterAdjRGB, 0),
