@@ -1,9 +1,4 @@
-import {
-  PlayerActions,
-  PlayerID,
-  PlayerInfo,
-  PlayerProfile,
-} from "../game/Game";
+import { PlayerActions, PlayerID, PlayerProfile } from "../game/Game";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameConfig, GameID, Turn } from "../Schemas";
 import { generateID } from "../Util";

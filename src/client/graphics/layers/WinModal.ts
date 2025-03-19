@@ -1,14 +1,12 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { Player } from "../../../core/game/Game";
-import { ClientID } from "../../../core/Schemas";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
+import { LitElement, css, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { EventBus } from "../../../core/EventBus";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { GameView, PlayerView } from "../../../core/game/GameView";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { simpleHash } from "../../../core/Util";
-import { EventBus } from "../../../core/EventBus";
 import { SendWinnerEvent } from "../../Transport";
+import { Layer } from "./Layer";
 
 // Add this at the top of your file
 declare global {

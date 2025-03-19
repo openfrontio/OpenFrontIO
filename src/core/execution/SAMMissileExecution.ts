@@ -1,3 +1,4 @@
+import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -6,10 +7,9 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { PathFinder } from "../pathfinding/PathFinding";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { consolex } from "../Consolex";
 import { TileRef } from "../game/GameMap";
+import { PathFindResultType } from "../pathfinding/AStar";
+import { PathFinder } from "../pathfinding/PathFinding";
 
 export class SAMMissileExecution implements Execution {
   private active = true;

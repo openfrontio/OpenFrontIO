@@ -1,5 +1,4 @@
-import { Cell, GameMapType, TerrainType } from "./Game";
-import { consolex } from "../Consolex";
+import { GameMapType } from "./Game";
 import { NationMap } from "./TerrainMapLoader";
 
 interface MapData {
