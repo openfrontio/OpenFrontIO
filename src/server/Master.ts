@@ -68,18 +68,24 @@ let publicLobbiesJsonStr = "";
 
 const publicLobbyIDs: Set<string> = new Set();
 //discord login section
-import dotenv from 'dotenv';
-dotenv.config();
-
 import session from 'express-session';
 import fetch from 'node-fetch'; 
 
+// Get environment from config
+const gameEnv = process.env.GAME_ENV || "prod";
 
+// Session configuration with environment-aware secret
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'defaultsecret',
+  secret: process.env.SESSION_SECRET || (gameEnv === "dev" ? "dummysecret" : undefined),
   resave: false,
   saveUninitialized: false,
 }));
+
+// Check if we're missing the session secret in production
+if (!process.env.SESSION_SECRET && gameEnv !== "dev") {
+  log.error("SESSION_SECRET environment variable is required in production");
+  process.exit(1); // Exit the application if no session secret in production
+}
 //end discord login section
 // Start the master process
 export async function startMaster() {
