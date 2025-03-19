@@ -23,10 +23,8 @@ export class SAMMissileExecution implements Execution {
     private target: Unit,
     private mg: Game,
     private pseudoRandom: number,
-    private speed: number = 6,
-    // Regular atom bomb or warhead of MIRV
+    private speed: number = 12,
     private hittingChance: number = 0.75,
-    private hittingChanceHydrogen: number = 0.1,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -45,10 +43,13 @@ export class SAMMissileExecution implements Execution {
       this.active = false;
       return;
     }
+    // Mirv warheads are too fast, and mirv shouldn't be stopped ever
+    const nukesWhitelist = [UnitType.AtomBomb, UnitType.HydrogenBomb];
     if (
       !this.target.isActive() ||
       !this.ownerUnit.isActive() ||
-      this.target.owner() == this.SAMMissile.owner()
+      this.target.owner() == this.SAMMissile.owner() ||
+      !nukesWhitelist.includes(this.target.type())
     ) {
       this.SAMMissile.delete(false);
       this.active = false;
@@ -63,22 +64,7 @@ export class SAMMissileExecution implements Execution {
       switch (result.type) {
         case PathFindResultType.Completed:
           this.active = false;
-          let hit = false;
-          if (
-            this.target.type() == UnitType.HydrogenBomb &&
-            this.pseudoRandom < this.hittingChanceHydrogen
-          ) {
-            hit = true;
-          } else if (
-            [UnitType.MIRVWarhead, UnitType.AtomBomb].includes(
-              this.target.type(),
-            ) &&
-            this.pseudoRandom < this.hittingChance
-          ) {
-            hit = true;
-          }
-
-          if (hit) {
+          if (this.pseudoRandom < this.hittingChance) {
             this.target.delete();
 
             this.mg.displayMessage(
@@ -88,7 +74,7 @@ export class SAMMissileExecution implements Execution {
             );
           } else {
             this.mg.displayMessage(
-              `Missile failed to intercept ${this.target.type()}`,
+              `Missile failed to target ${this.target.type()}`,
               MessageType.ERROR,
               this._owner.id(),
             );

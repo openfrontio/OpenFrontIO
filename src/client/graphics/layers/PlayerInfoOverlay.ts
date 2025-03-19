@@ -165,6 +165,10 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     const myPlayer = this.myPlayer();
     const isAlly = myPlayer?.isAlliedWith(player);
     let relationHtml = null;
+    const attackingTroops = player
+      .outgoingAttacks()
+      .map((a) => a.troops)
+      .reduce((a, b) => a + b, 0);
 
     if (player.type() == PlayerType.FakeHuman && myPlayer != null) {
       const relation =
@@ -201,11 +205,28 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           ${player.name()}
         </div>
         <div class="text-sm opacity-80">Type: ${playerType}</div>
-        <div class="text-sm opacity-80" translate="no">
-          Troops: ${renderTroops(player.troops())}
-        </div>
+        ${player.troops() >= 1 &&
+        html`<div class="text-sm opacity-80" translate="no">
+          Defending troops: ${renderTroops(player.troops())}
+        </div>`}
+        ${attackingTroops >= 1 &&
+        html`<div class="text-sm opacity-80" translate="no">
+          Attacking troops: ${renderTroops(attackingTroops)}
+        </div>`}
         <div class="text-sm opacity-80" translate="no">
           Gold: ${renderNumber(player.gold())}
+        </div>
+        <div class="text-sm opacity-80" translate="no">
+          Ports: ${player.units(UnitType.Port).length}
+        </div>
+        <div class="text-sm opacity-80" translate="no">
+          Cities: ${player.units(UnitType.City).length}
+        </div>
+        <div class="text-sm opacity-80" translate="no">
+          Missile launchers: ${player.units(UnitType.MissileSilo).length}
+        </div>
+        <div class="text-sm opacity-80" translate="no">
+          SAMs: ${player.units(UnitType.SAMLauncher).length}
         </div>
         ${relationHtml}
       </div>
