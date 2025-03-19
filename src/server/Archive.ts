@@ -1,9 +1,7 @@
 import { GameRecord, GameID, GameRecordSchema } from "../core/Schemas";
 import { S3 } from "@aws-sdk/client-s3";
-import {
-  GameEnv,
-  getServerConfigFromServer,
-} from "../core/configuration/Config";
+import { GameEnv } from "../core/configuration/Config";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { logger } from "./Logger";
 
 const config = getServerConfigFromServer();

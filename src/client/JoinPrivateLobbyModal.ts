@@ -3,7 +3,7 @@ import { customElement, query, state } from "lit/decorators.js";
 import { consolex } from "../core/Consolex";
 import { GameMapType, GameType } from "../core/game/Game";
 import { GameInfo, GameRecord } from "../core/Schemas";
-import { getServerConfigFromClient } from "../core/configuration/Config";
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { JoinLobbyEvent } from "./Main";
 
 @customElement("join-private-lobby-modal")

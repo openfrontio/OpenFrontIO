@@ -8,10 +8,8 @@ import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
 import randomMap from "../../resources/images/RandomMap.png";
 import { generateID } from "../core/Util";
-import {
-  getConfig,
-  getServerConfigFromClient,
-} from "../core/configuration/Config";
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { getConfig } from "../core/configuration/ConfigLoader";
 import { JoinLobbyEvent } from "./Main";
 
 @customElement("host-lobby-modal")

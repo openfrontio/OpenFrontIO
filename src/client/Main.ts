@@ -21,7 +21,7 @@ import { DarkModeButton } from "./DarkModeButton";
 import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
 import { GameType } from "../core/game/Game";
-import { getServerConfigFromClient } from "../core/configuration/Config";
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import GoogleAdElement from "./GoogleAdElement";
 import { GameConfig, GameInfo, GameRecord } from "../core/Schemas";
 
