@@ -4,7 +4,7 @@ import express from "express";
 import { GameMapType, GameType, Difficulty } from "../core/game/Game";
 import { generateID } from "../core/Util";
 import { PseudoRandom } from "../core/PseudoRandom";
-import { getServerConfigFromServer } from "../core/configuration/Config";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameConfig, GameInfo } from "../core/Schemas";
 import path from "path";
 import rateLimit from "express-rate-limit";

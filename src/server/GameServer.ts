@@ -29,7 +29,7 @@ export enum GamePhase {
 }
 
 export class GameServer {
-  private outOfSyncClients = new Set<ClientID>();
+  private sentDesyncMessageClients = new Set<ClientID>();
 
   private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
 
@@ -428,52 +428,47 @@ export class GameServer {
     if (this.activeClients.length < 1) {
       return;
     }
-    if (this.turns.length % 10 == 0 && this.turns.length != 0) {
-      const lastHashTurn = this.turns.length - 10;
+    if (this.turns.length % 10 != 0 || this.turns.length < 10) {
+      // Check hashes every 10 turns
+      return;
+    }
 
-      let { mostCommonHash, outOfSyncClients } =
-        this.findOutOfSyncClients(lastHashTurn);
+    const lastHashTurn = this.turns.length - 10;
 
-      if (outOfSyncClients.length == 0) {
-        this.turns[lastHashTurn].hash = mostCommonHash;
+    let { mostCommonHash, outOfSyncClients } =
+      this.findOutOfSyncClients(lastHashTurn);
+
+    if (outOfSyncClients.length == 0) {
+      this.turns[lastHashTurn].hash = mostCommonHash;
+      return;
+    }
+
+    if (outOfSyncClients.length >= Math.floor(this.activeClients.length / 2)) {
+      // If half clients out of sync assume all are out of sync.
+      outOfSyncClients = this.activeClients;
+    }
+
+    const serverDesync = ServerDesyncSchema.safeParse({
+      type: "desync",
+      turn: lastHashTurn,
+      correctHash: mostCommonHash,
+      clientsWithCorrectHash:
+        this.activeClients.length - outOfSyncClients.length,
+      totalActiveClients: this.activeClients.length,
+    });
+    if (!serverDesync.success) {
+      this.log.warn(`failed to create desync message ${serverDesync.error}`);
+      return;
+    }
+
+    const desyncMsg = JSON.stringify(serverDesync.data);
+    for (const c of outOfSyncClients) {
+      if (this.sentDesyncMessageClients.has(c.clientID)) {
+        continue;
       }
-
-      if (
-        outOfSyncClients.length > 0 &&
-        outOfSyncClients.length >= Math.floor(this.activeClients.length / 2)
-      ) {
-        // If half clients out of sync assume all are out of sync.
-        outOfSyncClients = this.activeClients;
-      }
-
-      for (const oos of outOfSyncClients) {
-        if (!this.outOfSyncClients.has(oos.clientID)) {
-          this.log.warn(
-            `Game ${this.id}: has out of sync client ${oos.clientID} on turn ${lastHashTurn}`,
-          );
-          this.outOfSyncClients.add(oos.clientID);
-        }
-      }
-
-      const serverDesync = ServerDesyncSchema.safeParse({
-        type: "desync",
-        turn: lastHashTurn,
-        correctHash: mostCommonHash,
-        clientsWithCorrectHash:
-          this.activeClients.length - outOfSyncClients.length,
-        totalActiveClients: this.activeClients.length,
-      });
-      if (serverDesync.success) {
-        const desyncMsg = JSON.stringify(serverDesync.data);
-        for (const c of outOfSyncClients) {
-          this.log.info(
-            `game: ${this.id}: sending desync to client ${c.clientID}`,
-          );
-          c.ws.send(desyncMsg);
-        }
-      } else {
-        this.log.warn(`failed to create desync message ${serverDesync.error}`);
-      }
+      this.sentDesyncMessageClients.add(c.clientID);
+      this.log.info(`game: ${this.id}: sending desync to client ${c.clientID}`);
+      c.ws.send(desyncMsg);
     }
   }
 
