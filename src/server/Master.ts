@@ -285,6 +285,7 @@ function getNextMap(): GameMapType {
     Asia: 2,
     Mars: 2,
     Britannia: 2,
+    GatewayToTheAtlantic: 2,
   };
 
   Object.keys(GameMapType).forEach((key) => {
