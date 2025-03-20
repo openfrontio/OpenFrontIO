@@ -17,6 +17,7 @@ import {
 } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { TransformHandler } from "../TransformHandler";
+import { MoveWarshipIntentEvent } from "../../Transport";
 
 enum Relationship {
   Self,
@@ -44,7 +45,7 @@ export class UnitLayer implements Layer {
   private selectedUnit: UnitView | null = null;
 
   // Configuration for unit selection
-  private readonly WARSHIP_SELECTION_RADIUS = 3; // Radius in game cells for warship selection hit zone
+  private readonly WARSHIP_SELECTION_RADIUS = 10; // Radius in game cells for warship selection hit zone
 
   constructor(
     private game: GameView,
@@ -121,19 +122,19 @@ export class UnitLayer implements Layer {
     // Find warships near this cell, sorted by distance
     const nearbyWarships = this.findWarshipsNearCell(cell);
 
-    if (nearbyWarships.length > 0) {
+    if (this.selectedUnit) {
+      const clickRef = this.game.ref(cell.x, cell.y);
+      if (this.game.isOcean(clickRef)) {
+        this.eventBus.emit(
+          new MoveWarshipIntentEvent(this.selectedUnit.id(), clickRef),
+        );
+      }
+      // Deselect
+      this.eventBus.emit(new UnitSelectionEvent(this.selectedUnit, false));
+    } else if (nearbyWarships.length > 0) {
       // Toggle selection of the closest warship
       const clickedUnit = nearbyWarships[0];
-      if (this.selectedUnit === clickedUnit) {
-        // Deselect if already selected
-        this.eventBus.emit(new UnitSelectionEvent(clickedUnit, false));
-      } else {
-        // Select the new unit
-        this.eventBus.emit(new UnitSelectionEvent(clickedUnit, true));
-      }
-    } else if (this.selectedUnit) {
-      // If clicked elsewhere and there's a selection, deselect it
-      this.eventBus.emit(new UnitSelectionEvent(this.selectedUnit, false));
+      this.eventBus.emit(new UnitSelectionEvent(clickedUnit, true));
     }
   }
 
@@ -215,6 +216,9 @@ export class UnitLayer implements Layer {
       case UnitType.Shell:
         this.handleShellEvent(unit);
         break;
+      case UnitType.SAMMissile:
+        this.handleMissileEvent(unit);
+        break;
       case UnitType.TradeShip:
         this.handleTradeShipEvent(unit);
         break;
@@ -235,7 +239,7 @@ export class UnitLayer implements Layer {
     // Clear previous area
     for (const t of this.game.bfs(
       unit.lastTile(),
-      euclDistFN(unit.lastTile(), 6),
+      euclDistFN(unit.lastTile(), 6, false),
     )) {
       this.clearCell(this.game.x(t), this.game.y(t));
     }
@@ -245,10 +249,10 @@ export class UnitLayer implements Layer {
     }
 
     let outerColor = this.theme.territoryColor(unit.owner().info());
-    if (unit.targetId()) {
+    if (unit.warshipTargetId()) {
       const targetOwner = this.game
         .units()
-        .find((u) => u.id() == unit.targetId())
+        .find((u) => u.id() == unit.warshipTargetId())
         ?.owner();
       if (targetOwner == this.myPlayer) {
         outerColor = colord({ r: 200, b: 0, g: 0 });
@@ -256,7 +260,10 @@ export class UnitLayer implements Layer {
     }
 
     // Paint outer territory
-    for (const t of this.game.bfs(unit.tile(), euclDistFN(unit.tile(), 5))) {
+    for (const t of this.game.bfs(
+      unit.tile(),
+      euclDistFN(unit.tile(), 5, false),
+    )) {
       this.paintCell(this.game.x(t), this.game.y(t), rel, outerColor, 255);
     }
 
@@ -275,7 +282,10 @@ export class UnitLayer implements Layer {
     }
 
     // Paint inner territory
-    for (const t of this.game.bfs(unit.tile(), euclDistFN(unit.tile(), 1))) {
+    for (const t of this.game.bfs(
+      unit.tile(),
+      euclDistFN(unit.tile(), 1, false),
+    )) {
       this.paintCell(
         this.game.x(t),
         this.game.y(t),
@@ -318,6 +328,42 @@ export class UnitLayer implements Layer {
     );
   }
 
+  // interception missle from SAM
+  private handleMissileEvent(unit: UnitView) {
+    const rel = this.relationship(unit);
+    const range = 2;
+
+    for (const t of this.game.bfs(
+      unit.lastTile(),
+      euclDistFN(unit.lastTile(), range, false),
+    )) {
+      this.clearCell(this.game.x(t), this.game.y(t));
+    }
+
+    if (unit.isActive()) {
+      for (const t of this.game.bfs(
+        unit.tile(),
+        euclDistFN(unit.tile(), range, false),
+      )) {
+        this.paintCell(
+          this.game.x(t),
+          this.game.y(t),
+          rel,
+          this.theme.spawnHighlightColor(),
+          255,
+        );
+      }
+
+      this.paintCell(
+        this.game.x(unit.tile()),
+        this.game.y(unit.tile()),
+        rel,
+        this.theme.borderColor(unit.owner().info()),
+        255,
+      );
+    }
+  }
+
   private handleNuke(unit: UnitView) {
     const rel = this.relationship(unit);
     let range = 0;
@@ -336,7 +382,7 @@ export class UnitLayer implements Layer {
     // Clear previous area
     for (const t of this.game.bfs(
       unit.lastTile(),
-      euclDistFN(unit.lastTile(), range),
+      euclDistFN(unit.lastTile(), range, false),
     )) {
       this.clearCell(this.game.x(t), this.game.y(t));
     }
@@ -344,7 +390,7 @@ export class UnitLayer implements Layer {
     if (unit.isActive()) {
       for (const t of this.game.bfs(
         unit.tile(),
-        euclDistFN(unit.tile(), range),
+        euclDistFN(unit.tile(), range, false),
       )) {
         this.paintCell(
           this.game.x(t),
@@ -354,7 +400,10 @@ export class UnitLayer implements Layer {
           255,
         );
       }
-      for (const t of this.game.bfs(unit.tile(), euclDistFN(unit.tile(), 2))) {
+      for (const t of this.game.bfs(
+        unit.tile(),
+        euclDistFN(unit.tile(), 2, false),
+      )) {
         this.paintCell(
           this.game.x(t),
           this.game.y(t),
@@ -389,7 +438,7 @@ export class UnitLayer implements Layer {
     // Clear previous area
     for (const t of this.game.bfs(
       unit.lastTile(),
-      euclDistFN(unit.lastTile(), 3),
+      euclDistFN(unit.lastTile(), 3, false),
     )) {
       this.clearCell(this.game.x(t), this.game.y(t));
     }

@@ -2,6 +2,7 @@ import {
   GameUpdates,
   MapPos,
   MessageType,
+  nukeTypes,
   Player,
   PlayerActions,
   PlayerProfile,
@@ -24,13 +25,13 @@ import {
   UnitInfo,
   UnitType,
 } from "./Game";
-import { ClientID, GameID } from "../Schemas";
+import { ClientID, GameID, PlayerStats } from "../Schemas";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { WorkerClient } from "../worker/WorkerClient";
 import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdateViewData } from "./GameUpdates";
 import { DefenseGrid } from "./DefensePostGrid";
-import { PlayerStats } from "./Stats";
+import { consolex } from "../Consolex";
 
 export class UnitView {
   public _wasUpdated = true;
@@ -92,8 +93,26 @@ export class UnitView {
   constructionType(): UnitType | undefined {
     return this.data.constructionType;
   }
-  targetId() {
-    return this.data.targetId;
+  dstPortId(): number {
+    if (this.type() != UnitType.TradeShip) {
+      throw Error("Must be a trade ship");
+    }
+    return this.data.dstPortId;
+  }
+  detonationDst(): TileRef {
+    if (!nukeTypes.includes(this.type())) {
+      throw Error("Must be a nuke");
+    }
+    return this.data.detonationDst;
+  }
+  warshipTargetId(): number {
+    if (this.type() != UnitType.Warship) {
+      throw Error("Must be a warship");
+    }
+    return this.data.warshipTargetId;
+  }
+  isSamCooldown(): boolean {
+    return this.data.isSamCooldown;
   }
 }
 

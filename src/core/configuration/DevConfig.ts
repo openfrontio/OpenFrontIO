@@ -1,10 +1,13 @@
-import { GameType, Player, PlayerInfo, UnitInfo, UnitType } from "../game/Game";
+import { GameType, UnitInfo, UnitType } from "../game/Game";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
 import { GameEnv, ServerConfig } from "./Config";
 import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
 
 export class DevServerConfig extends DefaultServerConfig {
+  r2Bucket(): string {
+    return "openfront-staging";
+  }
   adminToken(): string {
     return "WARNING_DEV_ADMIN_KEY_DO_NOT_USE_IN_PRODUCTION";
   }
@@ -13,8 +16,12 @@ export class DevServerConfig extends DefaultServerConfig {
     return GameEnv.Dev;
   }
 
-  gameCreationRate(highTraffic: boolean): number {
+  gameCreationRate(): number {
     return 5 * 1000;
+  }
+
+  lobbyMaxPlayers(): number {
+    return Math.random() < 0.5 ? 2 : 3;
   }
 
   discordRedirectURI(): string {
@@ -22,6 +29,9 @@ export class DevServerConfig extends DefaultServerConfig {
   }
   numWorkers(): number {
     return 2;
+  }
+  gitCommit(): string {
+    return "DEV";
   }
 }
 

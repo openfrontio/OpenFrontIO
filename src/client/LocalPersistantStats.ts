@@ -1,88 +1,63 @@
 import { consolex } from "../core/Consolex";
-import { Difficulty, GameMapType, GameType } from "../core/game/Game";
-import { PlayerStats } from "../core/game/Stats";
-import { ClientID, GameID } from "../core/Schemas";
-import { LobbyConfig } from "./ClientGameRunner";
+import { PlayerID } from "../core/game/Game";
+import { GameConfig, GameID, GameRecord } from "../core/Schemas";
 
-export interface GameStat {
-  lobby: {
-    clientID: ClientID;
-    persistentID: string;
-    map: GameMapType | null;
-    gameType: GameType;
-    difficulty: Difficulty | null;
-    infiniteGold: boolean | null;
-    infiniteTroops: boolean | null;
-    instantBuild: boolean | null;
-    bots: number | null;
-    disableNPCs: boolean | null;
-  };
-  playerStats?: PlayerStats;
-  outcome?: "victory" | "defeat";
-}
-
-export class PersistantStats {
-  // Can be used to handle breaking changes
-  version: "v0.0.1";
-  games: {
-    [key: GameID]: GameStat;
+export interface LocalStatsData {
+  [key: GameID]: {
+    playerId: PlayerID;
+    lobby: GameConfig;
+    // Only once the game is over
+    gameRecord?: GameRecord;
   };
 }
 
-export class LocalPersistantStats {
-  private getStats() {
-    const statsStr = localStorage.getItem("stats");
-    let stats: PersistantStats;
-    if (!statsStr) {
-      stats = { version: "v0.0.1", games: {} };
-    } else {
-      stats = JSON.parse(statsStr);
-    }
+export namespace LocalPersistantStats {
+  let _startTime: number;
 
-    return stats;
+  function getStats(): LocalStatsData {
+    const statsStr = localStorage.getItem("game-records");
+    return statsStr ? JSON.parse(statsStr) : {};
   }
 
-  public startGame(lobby: LobbyConfig) {
+  function save(stats: LocalStatsData) {
+    // To execute asynchronously
+    setTimeout(
+      () => localStorage.setItem("game-records", JSON.stringify(stats)),
+      0,
+    );
+  }
+
+  // The user can quit the game anytime so better save the lobby as soon as the
+  // game starts.
+  export function startGame(id: GameID, playerId: PlayerID, lobby: GameConfig) {
     if (typeof localStorage === "undefined") {
       return;
     }
 
-    const stats = this.getStats();
-    stats.games[lobby.gameID] = {
-      lobby: {
-        clientID: lobby.clientID,
-        persistentID: lobby.persistentID,
-        map: lobby.map,
-        gameType: lobby.gameType,
-        difficulty: lobby.difficulty,
-        infiniteGold: lobby.infiniteGold,
-        infiniteTroops: lobby.infiniteTroops,
-        instantBuild: lobby.instantBuild,
-        bots: lobby.bots,
-        disableNPCs: lobby.disableNPCs,
-      },
-    };
-    localStorage.setItem("stats", JSON.stringify(stats));
+    _startTime = Date.now();
+    const stats = getStats();
+    stats[id] = { playerId, lobby };
+    save(stats);
   }
 
-  public endGame(
-    id: GameID,
-    playerStats: PlayerStats,
-    outcome: GameStat["outcome"],
-  ) {
+  export function startTime() {
+    return _startTime;
+  }
+
+  export function endGame(gameRecord: GameRecord) {
     if (typeof localStorage === "undefined") {
       return;
     }
 
-    const stats = this.getStats();
-    const gameStat = stats.games[id];
+    const stats = getStats();
+    const gameStat = stats[gameRecord.id];
+
     if (!gameStat) {
-      consolex.log("game not found");
+      consolex.log("LocalPersistantStats: game not found");
       return;
     }
 
-    gameStat.outcome = outcome;
-    gameStat.playerStats = playerStats;
-    localStorage.setItem("stats", JSON.stringify(stats));
+    gameStat.gameRecord = gameRecord;
+    save(stats);
   }
 }

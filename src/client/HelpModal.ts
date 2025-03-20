@@ -126,6 +126,12 @@ export class HelpModal extends LitElement {
       mask: url(/images/MissileSiloIconWhite.svg) no-repeat center / cover;
     }
 
+    #helpModal .sam-launcher-icon {
+      -webkit-mask: url(/images/SamLauncherIconWhite.svg) no-repeat center /
+        cover;
+      mask: url(/images/SamLauncherIconWhite.svg) no-repeat center / cover;
+    }
+
     #helpModal .atom-bomb-icon {
       -webkit-mask: url(/images/NukeIconWhite.svg) no-repeat center / cover;
       mask: url(/images/NukeIconWhite.svg) no-repeat center / cover;
@@ -229,10 +235,6 @@ export class HelpModal extends LitElement {
                 </tr>
               </thead>
               <tbody class="text-left">
-                <tr>
-                  <td>CTRL + Left Click</td>
-                  <td>Open build menu</td>
-                </tr>
                 <tr>
                   <td>Space</td>
                   <td>Alternate view (terrain/countries)</td>
@@ -434,6 +436,12 @@ export class HelpModal extends LitElement {
                   <td>Missile Silo</td>
                   <td><div class="icon missile-silo-icon"></div></td>
                   <td>Allows launching missiles.</td>
+                </tr>
+                <tr>
+                  <td>SAM Launcher</td>
+                  <td><div class="icon sam-launcher-icon"></div></td>
+                  <td>Has a 75% chance to intercept enemy missiles in it's 100 pixel range.
+                    The SAM has a 7.5 second cooldown and can not intercept MIRVs.</td>
                 </tr>
                 <tr>
                   <td>Atom Bomb</td>

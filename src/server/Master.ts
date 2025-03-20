@@ -4,22 +4,26 @@ import express from "express";
 import { GameMapType, GameType, Difficulty } from "../core/game/Game";
 import { generateID } from "../core/Util";
 import { PseudoRandom } from "../core/PseudoRandom";
-import {
-  GameEnv,
-  getServerConfigFromServer,
-} from "../core/configuration/Config";
-import { GameInfo } from "../core/Schemas";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { GameConfig, GameInfo } from "../core/Schemas";
 import path from "path";
 import rateLimit from "express-rate-limit";
 import { fileURLToPath } from "url";
-import { isHighTrafficTime } from "./Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
+import { setupMetricsServer } from "./MasterMetrics";
+import { logger } from "./Logger";
 
 const config = getServerConfigFromServer();
 const readyWorkers = new Set();
 
 const app = express();
 const server = http.createServer(app);
+
+// Create a separate metrics server on port 9090
+const metricsApp = express();
+const metricsServer = http.createServer(metricsApp);
+
+const log = logger.child({ component: "Master" });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,8 +34,15 @@ app.use(
     setHeaders: (res, path) => {
       // You can conditionally set different cache times based on file types
       if (path.endsWith(".html")) {
-        // HTML files get shorter cache time
-        res.setHeader("Cache-Control", "public, max-age=60");
+        // Set HTML files to no-cache to ensure Express doesn't send 304s
+        res.setHeader(
+          "Cache-Control",
+          "no-store, no-cache, must-revalidate, proxy-revalidate",
+        );
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+        // Prevent conditional requests
+        res.setHeader("ETag", "");
       } else if (path.match(/\.(js|css|svg)$/)) {
         // JS, CSS, SVG get long cache with immutable
         res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
@@ -65,8 +76,8 @@ export async function startMaster() {
     );
   }
 
-  console.log(`Primary ${process.pid} is running`);
-  console.log(`Setting up ${config.numWorkers()} workers...`);
+  log.info(`Primary ${process.pid} is running`);
+  log.info(`Setting up ${config.numWorkers()} workers...`);
 
   // Fork workers
   for (let i = 0; i < config.numWorkers(); i++) {
@@ -74,41 +85,35 @@ export async function startMaster() {
       WORKER_ID: i,
     });
 
-    console.log(`Started worker ${i} (PID: ${worker.process.pid})`);
+    log.info(`Started worker ${i} (PID: ${worker.process.pid})`);
   }
 
   cluster.on("message", (worker, message) => {
     if (message.type === "WORKER_READY") {
       const workerId = message.workerId;
       readyWorkers.add(workerId);
-      console.log(
+      log.info(
         `Worker ${workerId} is ready. (${readyWorkers.size}/${config.numWorkers()} ready)`,
       );
       // Start scheduling when all workers are ready
       if (readyWorkers.size === config.numWorkers()) {
-        console.log("All workers ready, starting game scheduling");
-
-        // Safe implementation of dynamic interval
-        let timeoutId = null;
+        log.info("All workers ready, starting game scheduling");
 
         const scheduleLobbies = () => {
-          schedulePublicGame()
-            .catch((error) => {
-              console.error("Error scheduling public game:", error);
-            })
-            .finally(() => {
-              // Schedule next run with the current config value
-              const currentLifetime =
-                config.gameCreationRate(isHighTrafficTime());
-              timeoutId = setTimeout(scheduleLobbies, currentLifetime);
-            });
+          schedulePublicGame().catch((error) => {
+            log.error("Error scheduling public game:", error);
+          });
         };
 
-        // Run first execution immediately
-        scheduleLobbies();
-
-        // Regular interval for fetching lobbies
-        setInterval(() => fetchLobbies(), 250);
+        setInterval(
+          () =>
+            fetchLobbies().then((lobbies) => {
+              if (lobbies == 0) {
+                scheduleLobbies();
+              }
+            }),
+          100,
+        );
       }
     }
   });
@@ -117,29 +122,32 @@ export async function startMaster() {
   cluster.on("exit", (worker, code, signal) => {
     const workerId = (worker as any).process?.env?.WORKER_ID;
     if (!workerId) {
-      console.error(`worker crashed could not find id`);
+      log.error(`worker crashed could not find id`);
       return;
     }
 
-    console.warn(
+    log.warn(
       `Worker ${workerId} (PID: ${worker.process.pid}) died with code: ${code} and signal: ${signal}`,
     );
-    console.log(`Restarting worker ${workerId}...`);
+    log.info(`Restarting worker ${workerId}...`);
 
     // Restart the worker with the same ID
     const newWorker = cluster.fork({
       WORKER_ID: workerId,
     });
 
-    console.log(
+    log.info(
       `Restarted worker ${workerId} (New PID: ${newWorker.process.pid})`,
     );
   });
 
   const PORT = 3000;
   server.listen(PORT, () => {
-    console.log(`Master HTTP server listening on port ${PORT}`);
+    log.info(`Master HTTP server listening on port ${PORT}`);
   });
+
+  // Setup the metrics server
+  setupMetricsServer();
 }
 
 app.get(
@@ -160,7 +168,7 @@ app.get(
   }),
 );
 
-async function fetchLobbies(): Promise<void> {
+async function fetchLobbies(): Promise<number> {
   const fetchPromises = [];
 
   for (const gameID of publicLobbyIDs) {
@@ -173,7 +181,7 @@ async function fetchLobbies(): Promise<void> {
         return json as GameInfo;
       })
       .catch((error) => {
-        console.error(`Error fetching game ${gameID}:`, error);
+        log.error(`Error fetching game ${gameID}:`, error);
         // Return null or a placeholder if fetch fails
         return null;
       });
@@ -197,7 +205,7 @@ async function fetchLobbies(): Promise<void> {
     });
 
   lobbyInfos.forEach((l) => {
-    if (l.msUntilStart <= 250) {
+    if (l.msUntilStart <= 250 || l.gameConfig.maxPlayers <= l.numClients) {
       publicLobbyIDs.delete(l.gameID);
     }
   });
@@ -206,15 +214,19 @@ async function fetchLobbies(): Promise<void> {
   publicLobbiesJsonStr = JSON.stringify({
     lobbies: lobbyInfos,
   });
+
+  return publicLobbyIDs.size;
 }
 
 // Function to schedule a new public game
 async function schedulePublicGame() {
   const gameID = generateID();
+  const map = getNextMap();
   publicLobbyIDs.add(gameID);
   // Create the default public game config (from your GameManager)
   const defaultGameConfig = {
-    gameMap: getNextMap(),
+    gameMap: map,
+    maxPlayers: config.lobbyMaxPlayers(map),
     gameType: GameType.Public,
     difficulty: Difficulty.Medium,
     infiniteGold: false,
@@ -222,7 +234,7 @@ async function schedulePublicGame() {
     instantBuild: false,
     disableNPCs: false,
     bots: 400,
-  };
+  } as GameConfig;
 
   const workerPath = config.workerPath(gameID);
 
@@ -248,10 +260,7 @@ async function schedulePublicGame() {
 
     const data = await response.json();
   } catch (error) {
-    console.error(
-      `Failed to schedule public game on worker ${workerPath}:`,
-      error,
-    );
+    log.error(`Failed to schedule public game on worker ${workerPath}:`, error);
     throw error;
   }
 }
@@ -267,14 +276,15 @@ function getNextMap(): GameMapType {
   }
 
   const frequency = {
-    World: 4,
-    Europe: 4,
+    World: 3,
+    Europe: 3,
     Mena: 2,
     NorthAmerica: 2,
     BlackSea: 2,
     Africa: 2,
     Asia: 2,
     Mars: 2,
+    Britannia: 2,
   };
 
   Object.keys(GameMapType).forEach((key) => {

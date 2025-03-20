@@ -61,6 +61,12 @@ const buildTable: BuildItemDisplay[][] = [
       icon: missileSiloIcon,
       description: "Used to launch nukes",
     },
+    // needs new icon
+    {
+      unitType: UnitType.SAMLauncher,
+      icon: shieldIcon,
+      description: "Defends against incoming nukes",
+    },
     {
       unitType: UnitType.DefensePost,
       icon: shieldIcon,
@@ -290,7 +296,7 @@ export class BuildMenu extends LitElement implements Layer {
                     />
                     <span class="build-name">${item.unitType}</span>
                     <span class="build-description">${item.description}</span>
-                    <span class="build-cost">
+                    <span class="build-cost" translate="no">
                       ${renderNumber(
                         this.game && this.game.myPlayer() ? this.cost(item) : 0,
                       )}

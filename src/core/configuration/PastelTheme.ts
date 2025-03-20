@@ -256,6 +256,15 @@ export const pastelTheme = new (class implements Theme {
     return playerInfo.playerType == PlayerType.Human ? "#000000" : "#4D4D4D";
   }
 
+  specialBuildingColor(playerInfo: PlayerInfo): Colord {
+    const tc = this.territoryColor(playerInfo).rgba;
+    return colord({
+      r: Math.max(tc.r - 50, 0),
+      g: Math.max(tc.g - 50, 0),
+      b: Math.max(tc.b - 50, 0),
+    });
+  }
+
   borderColor(playerInfo: PlayerInfo): Colord {
     const tc = this.territoryColor(playerInfo).rgba;
     return colord({
@@ -285,14 +294,12 @@ export const pastelTheme = new (class implements Theme {
         if (gm.isShoreline(tile) && gm.isWater(tile)) {
           return this.shorelineWater;
         }
-        if (gm.magnitude(tile) < 10) {
-          return colord({
-            r: Math.max(w.r - 10 + mag, 0),
-            g: Math.max(w.g - 10 + mag, 0),
-            b: Math.max(w.b - 10 + mag, 0),
-          });
-        }
-        return this.water;
+        return colord({
+          r: Math.max(w.r - 10 + (11 - Math.min(mag, 10)), 0),
+          g: Math.max(w.g - 10 + (11 - Math.min(mag, 10)), 0),
+          b: Math.max(w.b - 10 + (11 - Math.min(mag, 10)), 0),
+        });
+
       case TerrainType.Plains:
         return colord({
           r: 190,

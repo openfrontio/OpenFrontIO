@@ -10,8 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
         with:
-          bun-version: 1.2.4
-      - run: bun i
-      - run: bunx prettier --check .
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - run: npx prettier --check .

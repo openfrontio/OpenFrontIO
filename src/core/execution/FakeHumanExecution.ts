@@ -5,6 +5,7 @@ import {
   Execution,
   Game,
   Player,
+  PlayerID,
   PlayerInfo,
   PlayerType,
   Relation,
@@ -40,6 +41,7 @@ export class FakeHumanExecution implements Execution {
 
   private lastEnemyUpdateTick: number = 0;
   private lastEmojiSent = new Map<Player, Tick>();
+  private embargoMalusApplied = new Set<PlayerID>();
 
   constructor(
     gameID: GameID,
@@ -55,6 +57,46 @@ export class FakeHumanExecution implements Execution {
     if (this.random.chance(10)) {
       // this.isTraitor = true
     }
+  }
+
+  private updateRelationsFromEmbargos() {
+    const others = this.mg.players().filter((p) => p.id() != this.player.id());
+
+    others.forEach((other: Player) => {
+      const embargoMalus = -20;
+      if (
+        other.hasEmbargoAgainst(this.player) &&
+        !this.embargoMalusApplied.has(other.id())
+      ) {
+        this.player.updateRelation(other, embargoMalus);
+        this.embargoMalusApplied.add(other.id());
+      } else if (
+        !other.hasEmbargoAgainst(this.player) &&
+        this.embargoMalusApplied.has(other.id())
+      ) {
+        this.player.updateRelation(other, -embargoMalus);
+        this.embargoMalusApplied.delete(other.id());
+      }
+    });
+  }
+
+  private handleEmbargoesToHostileNations() {
+    const others = this.mg.players().filter((p) => p.id() != this.player.id());
+
+    others.forEach((other: Player) => {
+      /* When player is hostile starts embargo. Do not stop until neutral again */
+      if (
+        this.player.relation(other) <= Relation.Hostile &&
+        !this.player.hasEmbargoAgainst(other)
+      ) {
+        this.player.addEmbargo(other.id());
+      } else if (
+        this.player.relation(other) >= Relation.Neutral &&
+        this.player.hasEmbargoAgainst(other)
+      ) {
+        this.player.stopEmbargo(other.id());
+      }
+    });
   }
 
   tick(ticks: number) {
@@ -96,9 +138,11 @@ export class FakeHumanExecution implements Execution {
       this.player.setTargetTroopRatio(0.7);
     }
 
+    this.updateRelationsFromEmbargos();
     this.handleAllianceRequests();
     this.handleEnemies();
     this.handleUnits();
+    this.handleEmbargoesToHostileNations();
 
     const enemyborder = Array.from(this.player.borderTiles())
       .flatMap((t) => this.mg.neighbors(t))

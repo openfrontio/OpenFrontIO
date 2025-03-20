@@ -33,7 +33,7 @@ export function fixProfaneUsername(username: string): string {
 }
 
 export function isProfaneUsername(username: string): boolean {
-  return matcher.hasMatch(username);
+  return matcher.hasMatch(username) || username.toLowerCase().includes("nig");
 }
 
 export function validateUsername(username: string): {

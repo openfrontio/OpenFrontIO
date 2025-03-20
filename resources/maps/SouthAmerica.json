@@ -1,0 +1,241 @@
+{
+  "name": "Americas",
+  "width": 2000,
+  "height": 2000,
+  "nations": [
+    {
+      "coordinates": [377, 192],
+      "name": "Bahamas",
+      "strength": 1,
+      "flag": "bs"
+    },
+    {
+      "coordinates": [350, 248],
+      "name": "Cuba",
+      "strength": 1,
+      "flag": "cu"
+    },
+    {
+      "coordinates": [572, 315],
+      "name": "Dominican Republic",
+      "strength": 1,
+      "flag": "do"
+    },
+    {
+      "coordinates": [507, 310],
+      "name": "Haiti",
+      "strength": 1,
+      "flag": "ht"
+    },
+    {
+      "coordinates": [395, 330],
+      "name": "Jamaica",
+      "strength": 1,
+      "flag": "jm"
+    },
+    {
+      "coordinates": [640, 327],
+      "name": "Puerto Rico",
+      "strength": 1,
+      "flag": "pr"
+    },
+    {
+      "coordinates": [760, 490],
+      "name": "Trinidad & Tobago",
+      "strength": 1,
+      "flag": "tt"
+    },
+    {
+      "coordinates": [130, 340],
+      "name": "Belize",
+      "strength": 1,
+      "flag": "bz"
+    },
+    {
+      "coordinates": [258, 512],
+      "name": "Costa Rica",
+      "strength": 1,
+      "flag": "cr"
+    },
+    {
+      "coordinates": [140, 440],
+      "name": "El Salvador",
+      "strength": 1,
+      "flag": "sv"
+    },
+    {
+      "coordinates": [270, 150],
+      "name": "Florida",
+      "strength": 1,
+      "flag": "us"
+    },
+    {
+      "coordinates": [90, 385],
+      "name": "Guatemala",
+      "strength": 1,
+      "flag": "gt"
+    },
+    {
+      "coordinates": [210, 390],
+      "name": "Honduras",
+      "strength": 1,
+      "flag": "hn"
+    },
+    {
+      "coordinates": [50, 45],
+      "name": "Louisiana",
+      "strength": 1,
+      "flag": "us"
+    },
+    {
+      "coordinates": [210, 440],
+      "name": "Nicaragua",
+      "strength": 1,
+      "flag": "ni"
+    },
+    {
+      "coordinates": [350, 514],
+      "name": "Panama",
+      "strength": 1,
+      "flag": "pa"
+    },
+    {
+      "coordinates": [670, 800],
+      "name": "Amazonas",
+      "strength": 1,
+      "flag": "br"
+    },
+    {
+      "coordinates": [1250, 980],
+      "name": "Bahia",
+      "strength": 1,
+      "flag": "br"
+    },
+    {
+      "coordinates": [740, 1180],
+      "name": "Bolivia",
+      "strength": 1,
+      "flag": "bo"
+    },
+    {
+      "coordinates": [770, 1760],
+      "name": "Buenos Aires",
+      "strength": 1,
+      "flag": "ar"
+    },
+    {
+      "coordinates": [670, 1250],
+      "name": "Catamarca",
+      "strength": 1,
+      "flag": "ar"
+    },
+    {
+      "coordinates": [1230, 805],
+      "name": "Ceará",
+      "strength": 1,
+      "flag": "br"
+    },
+    {
+      "coordinates": [580, 1280],
+      "name": "Chile",
+      "strength": 1,
+      "flag": "cl"
+    },
+    {
+      "coordinates": [480, 620],
+      "name": "Colombia",
+      "strength": 1,
+      "flag": "co"
+    },
+    {
+      "coordinates": [360, 740],
+      "name": "Ecuador",
+      "strength": 1,
+      "flag": "ec"
+    },
+    {
+      "coordinates": [820, 1792],
+      "name": "Falklands",
+      "strength": 1,
+      "flag": "fk"
+    },
+    {
+      "coordinates": [960, 620],
+      "name": "French Guyana",
+      "strength": 1,
+      "flag": "gf"
+    },
+    {
+      "coordinates": [80, 720],
+      "name": "Galapagos",
+      "strength": 1,
+      "flag": "ec"
+    },
+    {
+      "coordinates": [800, 575],
+      "name": "Guyana",
+      "strength": 1,
+      "flag": "gy"
+    },
+    {
+      "coordinates": [1070, 1090],
+      "name": "Minas Gerais",
+      "strength": 1,
+      "flag": "br"
+    },
+    {
+      "coordinates": [940, 820],
+      "name": "Pará",
+      "strength": 1,
+      "flag": "br"
+    },
+    {
+      "coordinates": [420, 900],
+      "name": "Peru",
+      "strength": 1,
+      "flag": "pe"
+    },
+    {
+      "coordinates": [820, 1180],
+      "name": "Paraguay",
+      "strength": 1,
+      "flag": "py"
+    },
+    {
+      "coordinates": [1150, 1185],
+      "name": "Rio de Janeiro",
+      "strength": 1,
+      "flag": "br"
+    },
+    {
+      "coordinates": [565, 1660],
+      "name": "Santa Cruz",
+      "strength": 1,
+      "flag": "ar"
+    },
+    {
+      "coordinates": [980, 1170],
+      "name": "São Paulo",
+      "strength": 1,
+      "flag": "br"
+    },
+    {
+      "coordinates": [890, 610],
+      "name": "Suriname",
+      "strength": 1,
+      "flag": "sr"
+    },
+    {
+      "coordinates": [890, 1375],
+      "name": "Uruguay",
+      "strength": 1,
+      "flag": "uy"
+    },
+    {
+      "coordinates": [640, 570],
+      "name": "Venezuela",
+      "strength": 1,
+      "flag": "ve"
+    }
+  ]
+}

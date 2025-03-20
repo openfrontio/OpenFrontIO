@@ -33,6 +33,9 @@ const MAP_FILE_NAMES: Record<GameMapType, string> = {
   [GameMapType.Africa]: "Africa",
   [GameMapType.Asia]: "Asia",
   [GameMapType.Mars]: "Mars",
+  [GameMapType.SouthAmerica]: "SouthAmerica",
+  [GameMapType.Britannia]: "Britannia",
+  [GameMapType.GatewayToTheAtlantic]: "GatewayToTheAtlantic",
 };
 
 class GameMapLoader {

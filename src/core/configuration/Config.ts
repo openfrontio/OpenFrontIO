@@ -1,7 +1,7 @@
 import {
   Difficulty,
   Game,
-  GameType,
+  GameMapType,
   Gold,
   Player,
   PlayerID,
@@ -12,17 +12,10 @@ import {
   UnitType,
 } from "../game/Game";
 import { Colord, colord } from "colord";
-import { preprodConfig } from "./PreprodConfig";
-import { prodConfig } from "./ProdConfig";
-import { consolex } from "../Consolex";
 import { GameConfig, GameID } from "../Schemas";
-import { DefaultConfig } from "./DefaultConfig";
-import { DevConfig, DevServerConfig } from "./DevConfig";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
-
-let cachedSC: ServerConfig = null;
 
 export enum GameEnv {
   Dev,
@@ -30,67 +23,10 @@ export enum GameEnv {
   Prod,
 }
 
-export async function getConfig(
-  gameConfig: GameConfig,
-  userSettings: UserSettings | null = null,
-): Promise<Config> {
-  const sc = await getServerConfigFromClient();
-  switch (sc.env()) {
-    case GameEnv.Dev:
-      return new DevConfig(sc, gameConfig, userSettings);
-    case GameEnv.Preprod:
-    case GameEnv.Prod:
-      consolex.log("using prod config");
-      return new DefaultConfig(sc, gameConfig, userSettings);
-    default:
-      throw Error(`unsupported server configuration: ${process.env.GAME_ENV}`);
-  }
-}
-
-export async function getServerConfigFromClient(): Promise<ServerConfig> {
-  if (cachedSC) {
-    return cachedSC;
-  }
-  const response = await fetch("/api/env");
-
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch server config: ${response.status} ${response.statusText}`,
-    );
-  }
-  const config = await response.json();
-  // Log the retrieved configuration
-  console.log("Server config loaded:", config);
-
-  cachedSC = getServerConfig(config.game_env);
-  return cachedSC;
-}
-
-export function getServerConfigFromServer(): ServerConfig {
-  const gameEnv = process.env.GAME_ENV;
-  return getServerConfig(gameEnv);
-}
-
-function getServerConfig(gameEnv: string) {
-  switch (gameEnv) {
-    case "dev":
-      consolex.log("using dev server config");
-      return new DevServerConfig();
-    case "staging":
-      consolex.log("using preprod server config");
-      return preprodConfig;
-    case "prod":
-      consolex.log("using prod server config");
-      return prodConfig;
-    default:
-      throw Error(`unsupported server configuration: ${gameEnv}`);
-  }
-}
-
 export interface ServerConfig {
   turnIntervalMs(): number;
-  gameCreationRate(highTraffic: boolean): number;
-  lobbyLifetime(highTraffic): number;
+  gameCreationRate(): number;
+  lobbyMaxPlayers(map: GameMapType): number;
   discordRedirectURI(): string;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
@@ -98,8 +34,15 @@ export interface ServerConfig {
   workerPort(gameID: GameID): number;
   workerPortByIndex(workerID: number): number;
   env(): GameEnv;
+  region(): string;
   adminToken(): string;
   adminHeader(): string;
+  // Only available on the server
+  gitCommit(): string;
+  r2Bucket(): string;
+  r2Endpoint(): string;
+  r2AccessKey(): string;
+  r2SecretKey(): string;
 }
 
 export interface Config {
@@ -153,10 +96,10 @@ export interface Config {
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
   tradeShipGold(dist: number): Gold;
-  tradeShipSpawnRate(): number;
+  tradeShipSpawnRate(numberOfPorts: number): number;
   defensePostRange(): number;
   defensePostDefenseBonus(): number;
-  falloutDefenseModifier(): number;
+  falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
   // 0-1
   traitorDefenseDebuff(): number;
@@ -164,6 +107,7 @@ export interface Config {
 
 export interface Theme {
   territoryColor(playerInfo: PlayerInfo): Colord;
+  specialBuildingColor(playerInfo: PlayerInfo): Colord;
   borderColor(playerInfo: PlayerInfo): Colord;
   defendedBorderColor(playerInfo: PlayerInfo): Colord;
   terrainColor(gm: GameMap, tile: TileRef): Colord;

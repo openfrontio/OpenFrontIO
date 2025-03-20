@@ -36,6 +36,7 @@ import { fixProfaneUsername, isProfaneUsername } from "../validations/username";
 import { NoOpExecution } from "./NoOpExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { RetreatExecution } from "./RetreatExecution";
+import { MoveWarshipExecution } from "./MoveWarshipExecution";
 
 export class Executor {
   // private random = new PseudoRandom(999)
@@ -83,6 +84,8 @@ export class Executor {
       }
       case "cancel_attack":
         return new RetreatExecution(intent.playerID, intent.attackID);
+      case "move_warship":
+        return new MoveWarshipExecution(intent.unitId, intent.tile);
       case "spawn":
         return new SpawnExecution(
           new PlayerInfo(

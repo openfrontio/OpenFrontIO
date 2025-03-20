@@ -1,9 +1,8 @@
 # Use an official Node runtime as the base image
-FROM oven/bun:1
+FROM node:18
 
-# Add environment variable
-ARG GAME_ENV=prod
-ENV GAME_ENV=$GAME_ENV
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT=$GIT_COMMIT
 
 # Install Nginx, Supervisor and Git (for Husky)
 RUN apt-get update && apt-get install -y nginx supervisor git && \
@@ -13,20 +12,18 @@ RUN apt-get update && apt-get install -y nginx supervisor git && \
 WORKDIR /usr/src/app
 
 # Copy package.json and package-lock.json
-COPY package.json bun.lock ./
+COPY package*.json ./
 
 # Install dependencies while bypassing Husky hooks
 ENV HUSKY=0 
 ENV NPM_CONFIG_IGNORE_SCRIPTS=1
-RUN mkdir -p .git && bun install --include=dev
+RUN mkdir -p .git && npm install
 
 # Copy the rest of the application code
 COPY . .
 
 # Build the client-side application
-RUN bun run build-prod
-
-ENV NODE_ENV=production
+RUN npm run build-prod
 
 # Copy Nginx configuration and ensure it's used instead of the default
 COPY nginx.conf /etc/nginx/conf.d/default.conf

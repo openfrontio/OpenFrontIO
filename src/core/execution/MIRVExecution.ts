@@ -9,7 +9,6 @@ import {
   UnitType,
   TerraNullius,
   MessageType,
-  AllPlayers,
 } from "../game/Game";
 import { PathFinder } from "../pathfinding/PathFinding";
 import { PathFindResultType } from "../pathfinding/AStar";
@@ -28,6 +27,7 @@ export class MirvExecution implements Execution {
 
   private nuke: Unit;
 
+  private mirvRange = 1500;
   private warheadCount = 350;
 
   private random: PseudoRandom;
@@ -74,14 +74,16 @@ export class MirvExecution implements Execution {
         return;
       }
       this.nuke = this.player.buildUnit(UnitType.MIRV, 0, spawn);
-      const x = Math.floor(Math.floor(this.mg.width() / 2));
-      const y = Math.min(this.mg.height(), 50);
+      const x = Math.floor(
+        (this.mg.x(this.dst) + this.mg.x(this.mg.x(this.nuke.tile()))) / 2,
+      );
+      const y = Math.max(0, this.mg.y(this.dst) - 500) + 50;
       this.separateDst = this.mg.ref(x, y);
 
       this.mg.displayMessage(
-        `⚠️⚠️⚠️ ${this.player.name()} - MIRV LAUNCH DETECTED ⚠️⚠️⚠️`,
+        `⚠️⚠️⚠️ ${this.player.name()} - MIRV INBOUND ⚠️⚠️⚠️`,
         MessageType.ERROR,
-        null,
+        this.targetPlayer.id(),
       );
     }
 
@@ -116,7 +118,7 @@ export class MirvExecution implements Execution {
     let attempts = 1000;
     while (attempts > 0 && dsts.length < this.warheadCount) {
       attempts--;
-      const potential = this.randomLand(dsts);
+      const potential = this.randomLand(this.dst, dsts);
       if (potential == null) {
         continue;
       }
@@ -154,12 +156,18 @@ export class MirvExecution implements Execution {
     this.nuke.delete(false);
   }
 
-  randomLand(taken: TileRef[]): TileRef | null {
+  randomLand(ref: TileRef, taken: TileRef[]): TileRef | null {
     let tries = 0;
     while (tries < 100) {
       tries++;
-      const x = this.random.nextInt(0, this.mg.width());
-      const y = this.random.nextInt(0, this.mg.height());
+      const x = this.random.nextInt(
+        this.mg.x(ref) - this.mirvRange,
+        this.mg.x(ref) + this.mirvRange,
+      );
+      const y = this.random.nextInt(
+        this.mg.y(ref) - this.mirvRange,
+        this.mg.y(ref) + this.mirvRange,
+      );
       if (!this.mg.isValidCoord(x, y)) {
         continue;
       }
@@ -168,11 +176,10 @@ export class MirvExecution implements Execution {
       if (!this.mg.isLand(tile)) {
         continue;
       }
-      const owner = this.mg.owner(tile);
-      if (!owner.isPlayer()) {
+      if (this.mg.euclideanDist(tile, ref) > this.mirvRange) {
         continue;
       }
-      if (owner == this.player || this.player.allianceWith(owner)) {
+      if (this.mg.owner(tile) != this.targetPlayer) {
         continue;
       }
       for (const t of taken) {
@@ -182,7 +189,7 @@ export class MirvExecution implements Execution {
       }
       return tile;
     }
-    console.log("could find place giving up");
+    console.log("couldn't find place, giving up");
     return null;
   }
 

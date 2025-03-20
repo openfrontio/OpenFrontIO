@@ -42,12 +42,15 @@ export class PlayerExecution implements Execution {
 
   tick(ticks: number) {
     this.player.decayRelations();
+    const hasPort = this.player.units(UnitType.Port).length > 0;
     this.player.units().forEach((u) => {
       if (u.health() <= 0) {
         u.delete();
         return;
       }
-      u.modifyHealth(1);
+      if (hasPort && u.type() == UnitType.Warship) {
+        u.modifyHealth(1);
+      }
       const tileOwner = this.mg.owner(u.tile());
       if (u.info().territoryBound) {
         if (tileOwner.isPlayer()) {
@@ -149,13 +152,19 @@ export class PlayerExecution implements Execution {
     if (enemies.size != 1) {
       return false;
     }
-    return this.mg.playerBySmallID(Array.from(enemies)[0]) as Player;
+    const enemy = this.mg.playerBySmallID(Array.from(enemies)[0]) as Player;
+    const enemyBox = calculateBoundingBox(this.mg, enemy.borderTiles());
+    const clusterBox = calculateBoundingBox(this.mg, cluster);
+    if (inscribed(enemyBox, clusterBox)) {
+      return enemy;
+    }
+    return false;
   }
 
   private isSurrounded(cluster: Set<TileRef>): boolean {
     const enemyTiles = new Set<TileRef>();
     for (const tr of cluster) {
-      if (this.mg.isOceanShore(tr) || this.mg.isOnEdgeOfMap(tr)) {
+      if (this.mg.isShore(tr) || this.mg.isOnEdgeOfMap(tr)) {
         return false;
       }
       this.mg

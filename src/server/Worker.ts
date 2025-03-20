@@ -4,7 +4,8 @@ import { WebSocketServer } from "ws";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GameManager } from "./GameManager";
-import { getServerConfigFromServer } from "../core/configuration/Config";
+import { GameEnv } from "../core/configuration/Config";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { WebSocket } from "ws";
 import { Client } from "./Client";
 import rateLimit from "express-rate-limit";
@@ -12,16 +13,21 @@ import { RateLimiterMemory } from "rate-limiter-flexible";
 import { GameConfig, GameRecord, LogSeverity } from "../core/Schemas";
 import { slog } from "./StructuredLog";
 import { GameType } from "../core/game/Game";
-import { archive } from "./Archive";
+import { archive, readGameRecord } from "./Archive";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
+import { metrics } from "./WorkerMetrics";
+import { logger } from "./Logger";
 
 const config = getServerConfigFromServer();
+
+let log = logger.child({ component: "Worker" });
 
 // Worker setup
 export function startWorker() {
   // Get worker ID from environment variable
   const workerId = parseInt(process.env.WORKER_ID || "0");
-  console.log(`Worker ${workerId} starting...`);
+  log = log.child({ workerId: workerId });
+  log.info(`Worker ${workerId} starting...`);
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
@@ -30,7 +36,12 @@ export function startWorker() {
   const server = http.createServer(app);
   const wss = new WebSocketServer({ server });
 
-  const gm = new GameManager(config);
+  const gm = new GameManager(config, log);
+
+  // Set up periodic metrics updates
+  setInterval(() => {
+    metrics.updateGameMetrics(gm);
+  }, 15000); // Update every 15 seconds
 
   // Middleware to handle /wX path prefix
   app.use((req, res, next) => {
@@ -67,13 +78,12 @@ export function startWorker() {
     }),
   );
 
-  // Endpoint to create a private lobby
   app.post(
     "/api/create_game/:id",
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
       const id = req.params.id;
       if (!id) {
-        console.warn(`cannot create game, id not found`);
+        log.warn(`cannot create game, id not found`);
         return;
       }
       // TODO: if game is public make sure request came from localhohst!!!
@@ -83,7 +93,7 @@ export function startWorker() {
         gc?.gameType == GameType.Public &&
         req.headers[config.adminHeader()] !== config.adminToken()
       ) {
-        console.warn(
+        log.warn(
           `cannot create public game ${id}, ip ${clientIP} incorrect admin token`,
         );
         return res.status(400);
@@ -92,7 +102,7 @@ export function startWorker() {
       // Double-check this worker should host this game
       const expectedWorkerId = config.workerIndex(id);
       if (expectedWorkerId !== workerId) {
-        console.warn(
+        log.warn(
           `This game ${id} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
         );
         return res.status(400);
@@ -100,7 +110,7 @@ export function startWorker() {
 
       const game = gm.createGame(id, gc);
 
-      console.log(
+      log.info(
         `Worker ${workerId}: IP ${clientIP} creating game ${game.isPublic() ? "Public" : "Private"} with id ${id}`,
       );
       res.json(game.gameInfo());
@@ -111,14 +121,14 @@ export function startWorker() {
   app.post(
     "/api/start_game/:id",
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
-      console.log(`starting private lobby with id ${req.params.id}`);
+      log.info(`starting private lobby with id ${req.params.id}`);
       const game = gm.game(req.params.id);
       if (!game) {
         return;
       }
       if (game.isPublic()) {
         const clientIP = req.ip || req.socket.remoteAddress || "unknown";
-        console.log(
+        log.info(
           `cannot start public game ${game.id}, game is public, ip: ${clientIP}`,
         );
         return;
@@ -134,7 +144,7 @@ export function startWorker() {
       // TODO: only update public game if from local host
       const lobbyID = req.params.id;
       if (req.body.gameType == GameType.Public) {
-        console.log(`cannot update game ${lobbyID} to public`);
+        log.info(`cannot update game ${lobbyID} to public`);
         return res.status(400);
       }
       const game = gm.game(lobbyID);
@@ -143,7 +153,7 @@ export function startWorker() {
       }
       if (game.isPublic()) {
         const clientIP = req.ip || req.socket.remoteAddress || "unknown";
-        console.warn(`cannot update public game ${game.id}, ip: ${clientIP}`);
+        log.warn(`cannot update public game ${game.id}, ip: ${clientIP}`);
         return res.status(400);
       }
       game.updateGameConfig({
@@ -174,10 +184,49 @@ export function startWorker() {
     gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
       const game = gm.game(req.params.id);
       if (game == null) {
-        console.log(`lobby ${req.params.id} not found`);
-        return res.status(404).json({ error: "Game not found" });
+        log.info(`lobby ${req.params.id} not found`);
+        return res.status(404);
       }
       res.json(game.gameInfo());
+    }),
+  );
+
+  app.get(
+    "/api/archived_game/:id",
+    gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
+      const gameRecord = await readGameRecord(req.params.id);
+
+      if (!gameRecord) {
+        return res.status(404).json({
+          success: false,
+          error: "Game not found",
+          exists: false,
+        });
+      }
+
+      if (
+        config.env() != GameEnv.Dev &&
+        gameRecord.gitCommit != config.gitCommit()
+      ) {
+        log.warn(
+          `git commit mismatch for game ${req.params.id}, expected ${config.gitCommit()}, got ${gameRecord.gitCommit}`,
+        );
+        return res.status(409).json({
+          success: false,
+          error: "Version mismatch",
+          exists: true,
+          details: {
+            expectedCommit: config.gitCommit(),
+            actualCommit: gameRecord.gitCommit,
+          },
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        exists: true,
+        gameRecord: gameRecord,
+      });
     }),
   );
 
@@ -188,7 +237,7 @@ export function startWorker() {
       const clientIP = req.ip || req.socket.remoteAddress || "unknown";
 
       if (!gameRecord) {
-        console.log("game record not found in request");
+        log.info("game record not found in request");
         res.status(404).json({ error: "Game record not found" });
         return;
       }
@@ -200,6 +249,24 @@ export function startWorker() {
     }),
   );
 
+  app.get(
+    "/metrics",
+    gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
+      if (req.headers[config.adminHeader()] !== config.adminToken()) {
+        return res.status(403).end("Access denied");
+      }
+      log.info(`metrics requested on worker ${workerId}`);
+
+      try {
+        const metricsData = await metrics.register.metrics();
+        res.set("Content-Type", metrics.register.contentType);
+        res.end(metricsData);
+      } catch (error) {
+        res.status(500).end(error.message);
+      }
+    }),
+  );
+
   // WebSocket handling
   wss.on("connection", (ws: WebSocket, req) => {
     ws.on(
@@ -208,7 +275,7 @@ export function startWorker() {
         const forwarded = req.headers["x-forwarded-for"];
         const ip = Array.isArray(forwarded)
           ? forwarded[0]
-          : forwarded || req.socket.remoteAddress;
+          : forwarded || req.socket.remoteAddress || "unknown";
 
         try {
           // Process WebSocket messages as in your original code
@@ -219,7 +286,7 @@ export function startWorker() {
             // Verify this worker should handle this game
             const expectedWorkerId = config.workerIndex(clientMsg.gameID);
             if (expectedWorkerId !== workerId) {
-              console.warn(
+              log.warn(
                 `Worker mismatch: Game ${clientMsg.gameID} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
               );
               return;
@@ -241,7 +308,7 @@ export function startWorker() {
             );
 
             if (!wasFound) {
-              console.log(
+              log.info(
                 `game ${clientMsg.gameID} not found on worker ${workerId}`,
               );
               // Handle game not found case
@@ -250,7 +317,7 @@ export function startWorker() {
 
           // Handle other message types
         } catch (error) {
-          console.warn(
+          log.warn(
             `error handling websocket message for ${ip}: ${error}`.substring(
               0,
               250,
@@ -267,27 +334,24 @@ export function startWorker() {
     });
   });
 
-  // Set up ticker
-  setInterval(() => gm.tick(), 1000);
-
   // The load balancer will handle routing to this server based on path
   const PORT = config.workerPortByIndex(workerId);
   server.listen(PORT, () => {
-    console.log(`Worker ${workerId} running on http://localhost:${PORT}`);
-    console.log(`Handling requests with path prefix /w${workerId}/`);
+    log.info(`Worker ${workerId} running on http://localhost:${PORT}`);
+    log.info(`Handling requests with path prefix /w${workerId}/`);
     // Signal to the master process that this worker is ready
     if (process.send) {
       process.send({
         type: "WORKER_READY",
         workerId: workerId,
       });
-      console.log(`Worker ${workerId} signaled ready state to master`);
+      log.info(`Worker ${workerId} signaled ready state to master`);
     }
   });
 
   // Global error handler
   app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-    console.error(`Error in ${req.method} ${req.path}:`, err);
+    log.error(`Error in ${req.method} ${req.path}:`, err);
     slog({
       logKey: "server_error",
       msg: `Unhandled exception in ${req.method} ${req.path}: ${err.message}`,
@@ -299,7 +363,7 @@ export function startWorker() {
 
   // Process-level error handlers
   process.on("uncaughtException", (err) => {
-    console.error(`Worker ${workerId} uncaught exception:`, err);
+    log.error(`Worker ${workerId} uncaught exception:`, err);
     slog({
       logKey: "uncaught_exception",
       msg: `Worker ${workerId} uncaught exception: ${err.message}`,
@@ -309,7 +373,7 @@ export function startWorker() {
   });
 
   process.on("unhandledRejection", (reason, promise) => {
-    console.error(
+    log.error(
       `Worker ${workerId} unhandled rejection at:`,
       promise,
       "reason:",
