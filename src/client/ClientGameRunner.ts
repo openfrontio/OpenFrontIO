@@ -312,6 +312,13 @@ export class ClientGameRunner {
           ),
         );
       }
+
+      const owner = this.gameView.owner(tile) as PlayerView;
+      if (owner && owner.isPlayer()) {
+        this.gameView.setFocusedPlayer(owner);
+      } else {
+        this.gameView.setFocusedPlayer(null);
+      }
     });
   }
 }

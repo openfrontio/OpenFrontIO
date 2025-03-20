@@ -265,16 +265,24 @@ export const pastelThemeDark = new (class implements Theme {
     });
   }
 
-  borderColor(playerInfo: PlayerInfo): Colord {
-    const tc = this.territoryColor(playerInfo).rgba;
-    return colord({
-      r: Math.max(tc.r - 40, 0),
-      g: Math.max(tc.g - 40, 0),
-      b: Math.max(tc.b - 40, 0),
-    });
+  borderColor(playerInfo: PlayerInfo, focused: boolean = false): Colord {
+    if (focused) {
+      return colord({
+        r: 255,
+        g: 255,
+        b: 255,
+      });      
+    } else {
+      const tc = this.territoryColor(playerInfo).rgba;
+      return colord({
+        r: Math.max(tc.r - 40, 0),
+        g: Math.max(tc.g - 40, 0),
+        b: Math.max(tc.b - 40, 0),
+      });      
+    }
   }
-  defendedBorderColor(playerInfo: PlayerInfo): Colord {
-    const bc = this.borderColor(playerInfo).rgba;
+  defendedBorderColor(playerInfo: PlayerInfo, focused: boolean = false): Colord {
+    const bc = this.borderColor(playerInfo, focused).rgba;
     return colord({
       r: Math.max(bc.r - 40, 0),
       g: Math.max(bc.g - 40, 0),
