@@ -111,18 +111,10 @@ function closestShoreTN(
   tile: TileRef,
   searchDist: number,
 ): TileRef {
-  const tn = Array.from(
-    gm.bfs(
-      tile,
-      andFN((_, t) => !gm.hasOwner(t), manhattanDistFN(tile, searchDist)),
-    ),
-  )
+  const tn = Array.from(gm.bfs(tile, manhattanDistFN(tile, searchDist)))
     .filter((t) => gm.isShore(t))
     .sort((a, b) => gm.manhattanDist(tile, a) - gm.manhattanDist(tile, b));
-  if (tn.length == 0) {
-    return null;
-  }
-  return tn[0];
+  return tn.length > 0 ? tn[0] : null;
 }
 
 export function simpleHash(str: string): number {
