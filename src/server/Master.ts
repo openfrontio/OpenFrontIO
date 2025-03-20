@@ -67,7 +67,26 @@ app.use(
 let publicLobbiesJsonStr = "";
 
 const publicLobbyIDs: Set<string> = new Set();
+//discord login section
+import session from 'express-session';
+import fetch from 'node-fetch'; 
 
+// Get environment from config
+const gameEnv = process.env.GAME_ENV || "prod";
+
+// Session configuration with environment-aware secret
+app.use(session({
+  secret: process.env.SESSION_SECRET || (gameEnv === "dev" ? "dummysecret" : undefined),
+  resave: false,
+  saveUninitialized: false,
+}));
+
+// Check if we're missing the session secret in production
+if (!process.env.SESSION_SECRET && gameEnv !== "dev") {
+  log.error("SESSION_SECRET environment variable is required in production");
+  process.exit(1); // Exit the application if no session secret in production
+}
+//end discord login section
 // Start the master process
 export async function startMaster() {
   if (!cluster.isPrimary) {
@@ -318,6 +337,69 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Discord section
+app.get('/auth/discord/callback', async (req, res) => {
+  const code = req.query.code as string;
+  if (!code) {
+    return res.redirect('/');
+  }
+
+  
+  const params = new URLSearchParams();
+  params.append('client_id', process.env.DISCORD_CLIENT_ID!);
+  params.append('client_secret', process.env.DISCORD_CLIENT_SECRET!);
+  params.append('grant_type', 'authorization_code');
+  params.append('code', code);
+  params.append('redirect_uri', process.env.DISCORD_REDIRECT_URI!);
+
+  try {
+    // Exchange code for token
+    const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+    const tokenData = await tokenResponse.json();
+    if (tokenData.error) {
+      console.error('Discord token error:', tokenData);
+      return res.redirect('/');
+    }
+
+    
+    const userResponse = await fetch('https://discord.com/api/users/@me', {
+      headers: { 'Authorization': `${tokenData.token_type} ${tokenData.access_token}` },
+    });
+    const userData = await userResponse.json();
+
+    
+    (req.session as any).discordUser = userData;
+    (req.session as any).accessToken = tokenData.access_token;
+
+    
+    res.redirect('/');
+  } catch (error) {
+    console.error('Error processing Discord OAuth callback:', error);
+    res.redirect('/');
+  }
+});
+
+
+app.get('/api/auth/status', (req, res) => {
+  if ((req.session as any).discordUser) {
+    res.json({ loggedIn: true, user: (req.session as any).discordUser });
+  } else {
+    res.json({ loggedIn: false });
+  }
+});
+
+
+app.get('/auth/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.redirect('/');
+  });
+});
+
+//end discord sec.
 // SPA fallback route
 app.get("*", function (req, res) {
   res.sendFile(path.join(__dirname, "../../static/index.html"));
