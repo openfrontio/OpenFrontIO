@@ -229,4 +229,10 @@ export const BOT_NAME_SUFFIXES = [
   "Dominion",
   "Assembly",
   "Republics",
+  "Realm",
+  "Realms",
+  "Socialist Republic",
+  "Socialist Republics",
+  "Democratic Republic",
+  "Democratic Republics",
 ];
