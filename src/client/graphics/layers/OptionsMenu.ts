@@ -16,10 +16,10 @@ const button = ({
   children,
 }) => html`
   <button
-    class="flex items-center justify-center p-1
-                               bg-opacity-70 bg-gray-700 text-opacity-90 text-white
+    class="flex items-center justify-center p-1 
+                           hover:bg-gray-800/70 px-2
+                               text-opacity-90 text-white
                                border-none rounded cursor-pointer
-                               hover:bg-opacity-60 hover:bg-gray-600
                                transition-colors duration-200
                                text-sm lg:text-xl ${classes}"
     @click=${onClick}
@@ -127,7 +127,7 @@ export class OptionsMenu extends LitElement implements Layer {
     }
     return html`
       <div
-        class="top-0 lg:top-4 right-0 lg:right-4 z-50 pointer-events-auto"
+        class="lg:mt-2.5 lg:mr-2.5 m-0 z-50 pointer-events-auto flex flex-col items-end"
         @contextmenu=${(e) => e.preventDefault()}
       >
         <div
@@ -141,8 +141,8 @@ export class OptionsMenu extends LitElement implements Layer {
               children: this.isPaused ? "▶️" : "⏸",
             })}
             <div
-              class="w-14 h-8 lg:w-20 lg:h-10 flex items-center justify-center
-                              bg-opacity-50 bg-gray-700 text-opacity-90 text-white
+              class="px-1 lg:px-2 h-8 lg:h-10 flex items-center justify-center
+                              text-opacity-90 text-white
                               rounded text-sm lg:text-xl"
             >
               ${this.timer}
@@ -161,7 +161,7 @@ export class OptionsMenu extends LitElement implements Layer {
         </div>
 
         <div
-          class="options-menu flex flex-wrap justify-around gap-y-3 mt-2 bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-lg backdrop-blur-md ${!this
+          class="options-menu flex flex-col flex-wrap lg:min-w-48 items-center justify-center gap-y-3 mt-2 bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-lg backdrop-blur-md ${!this
             .showSettings
             ? "hidden"
             : ""}"

@@ -196,7 +196,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     }
 
     return html`
-      <div class="p-2">
+      <div class="p-2 lg:p-3">
         <div
           class="text-bold text-sm lg:text-lg font-bold mb-1 ${isAlly
             ? "text-green-500"
@@ -240,7 +240,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       false;
 
     return html`
-      <div class="p-2">
+      <div class="p-2 lg:p-3">
         <div class="font-bold mb-1 ${isAlly ? "text-green-500" : "text-white"}">
           ${unit.owner().name()}
         </div>
@@ -249,6 +249,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           ${unit.hasHealth()
             ? html`
                 <div class="text-sm opacity-80">Health: ${unit.health()}</div>
+              `
+            : ""}
+          ${unit.troops() >= 1
+            ? html`
+                <div class="text-sm opacity-80" translate="no">
+                  Troops: ${renderTroops(unit.troops())}
+                </div>
               `
             : ""}
         </div>
@@ -267,11 +274,11 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="flex w-full  z-50 flex flex-col"
+        class="flex z-50 flex flex-col lg:mr-2.5 mr-0"
         @contextmenu=${(e) => e.preventDefault()}
       >
         <div
-          class="bg-opacity-70 bg-gray-900 rounded-lg shadow-lg backdrop-blur-sm transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
+          class="bg-opacity-60 bg-gray-900 rounded-lg shadow-lg backdrop-blur-sm transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
         >
           ${this.player != null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit != null ? this.renderUnitInfo(this.unit) : ""}
