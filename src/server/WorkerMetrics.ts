@@ -1,6 +1,6 @@
 import promClient from "prom-client";
 import { GameManager } from "./GameManager";
-import { getServerConfigFromServer } from "../core/configuration/Config";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 
 const config = getServerConfigFromServer();
 const region = config.region();
@@ -13,21 +13,21 @@ promClient.collectDefaultMetrics({ register });
 
 // Add worker-specific metrics
 const activeGamesGauge = new promClient.Gauge({
-  name: "openfont_active_games_count",
+  name: "openfront_active_games_count",
   help: "Number of active games on this worker",
   labelNames: ["region"],
   registers: [register],
 });
 
 const connectedClientsGauge = new promClient.Gauge({
-  name: "openfont_connected_clients_count",
+  name: "openfront_connected_clients_count",
   help: "Number of connected clients on this worker",
   labelNames: ["region"],
   registers: [register],
 });
 
 const memoryUsageGauge = new promClient.Gauge({
-  name: "openfont_memory_usage_bytes",
+  name: "openfront_memory_usage_bytes",
   help: "Current memory usage of the worker process in bytes",
   labelNames: ["region"],
   registers: [register],

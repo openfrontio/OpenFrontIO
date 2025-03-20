@@ -30,21 +30,24 @@ fi
 REGION=$1
 VERSION_TAG="latest"
 DOCKER_REPO=""
+ENV=""
 
 # Set environment-specific variables
 if [ "$REGION" == "staging" ]; then
     print_header "DEPLOYING TO STAGING ENVIRONMENT"
     SERVER_HOST=$SERVER_HOST_STAGING
     DOCKER_REPO=$DOCKER_REPO_STAGING
+    ENV="staging"
 elif [ "$REGION" == "us" ]; then
     print_header "DEPLOYING TO US ENVIRONMENT"
     SERVER_HOST=$SERVER_HOST_US
     DOCKER_REPO=$DOCKER_REPO_PROD  # Uses prod Docker repo for alt environment
-    REGION="prod"
+    ENV="prod"
 else
     print_header "DEPLOYING TO EU ENVIRONMENT"
     SERVER_HOST=$SERVER_HOST_EU
     DOCKER_REPO=$DOCKER_REPO_PROD
+    ENV="prod"
 fi
 
 # Check required environment variables
