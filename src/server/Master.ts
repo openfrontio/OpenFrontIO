@@ -1,6 +1,7 @@
 import cluster from "cluster";
 import http from "http";
 import express from "express";
+import session from "express-session"; // NEW: import session
 import { GameMapType, GameType, Difficulty } from "../core/game/Game";
 import { generateID } from "../core/Util";
 import { PseudoRandom } from "../core/PseudoRandom";
@@ -64,91 +65,107 @@ app.use(
   }),
 );
 
+
+app.use(
+  session({
+    secret: config.sessionSecret(),
+    resave: false,
+    saveUninitialized: false,
+  }),
+);
+
 let publicLobbiesJsonStr = "";
 
 const publicLobbyIDs: Set<string> = new Set();
+// DISCORD OAUTH ENDPOINTS
+app.get("/auth/discord", (req, res) => {
+  const params = new URLSearchParams({
+    client_id: config.discordClientID(),
+    redirect_uri: config.discordRedirectURI(),
+    response_type: "code",
+    scope: "identify email", // adjust scopes as needed
+  });
+  
+  res.redirect(`https://discord.com/api/oauth2/authorize?${params.toString()}`);
+});
 
-// Start the master process
-export async function startMaster() {
-  if (!cluster.isPrimary) {
-    throw new Error(
-      "startMaster() should only be called in the primary process",
-    );
+
+app.get("/auth/discord/callback", async (req, res) => {
+  const code = req.query.code as string;
+  if (!code) {
+    return res.status(400).send("Missing code parameter");
   }
+  try {
+    // Exchange the authorization code for an access token
+    const tokenParams = new URLSearchParams();
+    tokenParams.append("client_id", config.discordClientID());
+    tokenParams.append("client_secret", config.discordClientSecret());
+    tokenParams.append("grant_type", "authorization_code");
+    tokenParams.append("code", code);
+    tokenParams.append("redirect_uri", config.discordRedirectURI());
 
-  log.info(`Primary ${process.pid} is running`);
-  log.info(`Setting up ${config.numWorkers()} workers...`);
-
-  // Fork workers
-  for (let i = 0; i < config.numWorkers(); i++) {
-    const worker = cluster.fork({
-      WORKER_ID: i,
+    const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
+      method: "POST",
+      body: tokenParams,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
     });
+    if (!tokenResponse.ok) {
+      throw new Error(`Token exchange failed: ${tokenResponse.statusText}`);
+    }
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
 
-    log.info(`Started worker ${i} (PID: ${worker.process.pid})`);
+    // Fetch user information from Discord
+    const userResponse = await fetch("https://discord.com/api/users/@me", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    if (!userResponse.ok) {
+      throw new Error(`Failed to fetch user info: ${userResponse.statusText}`);
+    }
+    const userData = await userResponse.json();
+
+    // Store basic user data in the session
+    req.session.user = {
+      id: userData.id,
+      username: userData.username,
+      discriminator: userData.discriminator,
+      email: userData.email,
+      avatar: userData.avatar,
+    };
+
+    
+    res.redirect("/");
+  } catch (err) {
+    console.error("Discord OAuth error:", err);
+    res.status(500).send("Authentication failed");
   }
+});
 
-  cluster.on("message", (worker, message) => {
-    if (message.type === "WORKER_READY") {
-      const workerId = message.workerId;
-      readyWorkers.add(workerId);
-      log.info(
-        `Worker ${workerId} is ready. (${readyWorkers.size}/${config.numWorkers()} ready)`,
-      );
-      // Start scheduling when all workers are ready
-      if (readyWorkers.size === config.numWorkers()) {
-        log.info("All workers ready, starting game scheduling");
 
-        const scheduleLobbies = () => {
-          schedulePublicGame().catch((error) => {
-            log.error("Error scheduling public game:", error);
-          });
-        };
-
-        setInterval(
-          () =>
-            fetchLobbies().then((lobbies) => {
-              if (lobbies == 0) {
-                scheduleLobbies();
-              }
-            }),
-          100,
-        );
-      }
+app.get("/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("Error destroying session:", err);
     }
+    res.redirect("/");
   });
+});
 
-  // Handle worker crashes
-  cluster.on("exit", (worker, code, signal) => {
-    const workerId = (worker as any).process?.env?.WORKER_ID;
-    if (!workerId) {
-      log.error(`worker crashed could not find id`);
-      return;
-    }
 
-    log.warn(
-      `Worker ${workerId} (PID: ${worker.process.pid}) died with code: ${code} and signal: ${signal}`,
-    );
-    log.info(`Restarting worker ${workerId}...`);
+app.get("/api/auth/status", (req, res) => {
+  if (req.session.user) {
+    res.json({ loggedIn: true, user: req.session.user });
+  } else {
+    res.json({ loggedIn: false });
+  }
+});
 
-    // Restart the worker with the same ID
-    const newWorker = cluster.fork({
-      WORKER_ID: workerId,
-    });
+// END DISCORD OAUTH SECTION
 
-    log.info(
-      `Restarted worker ${workerId} (New PID: ${newWorker.process.pid})`,
-    );
-  });
-
-  const PORT = 3000;
-  server.listen(PORT, () => {
-    log.info(`Master HTTP server listening on port ${PORT}`);
-  });
-
-  // Setup the metrics server
-  setupMetricsServer();
-}
 
 app.get(
   "/api/env",
@@ -289,7 +306,6 @@ function getNextMap(): GameMapType {
 
   Object.keys(GameMapType).forEach((key) => {
     let count = parseInt(frequency[key]);
-
     while (count > 0) {
       mapsPlaylist.push(GameMapType[key]);
       count--;

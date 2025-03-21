@@ -37,6 +37,10 @@ export interface ServerConfig {
   region(): string;
   adminToken(): string;
   adminHeader(): string;
+  discordClientID(): string;
+  discordClientSecret(): string;
+  discordRedirectURI(): string;
+  sessionSecret(): string;
   // Only available on the server
   gitCommit(): string;
   r2Bucket(): string;
