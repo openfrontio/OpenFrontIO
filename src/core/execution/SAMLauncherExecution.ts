@@ -20,7 +20,7 @@ export class SAMLauncherExecution implements Execution {
 
   private target: Unit = null;
 
-  private searchRangeRadius: number;
+  private searchRangeRadius = 75;
 
   private missileAttackRate = 75; // 7.5 seconds
   private lastMissileAttack = 0;
@@ -40,8 +40,6 @@ export class SAMLauncherExecution implements Execution {
       return;
     }
     this.player = mg.player(this.ownerId);
-
-    this.searchRangeRadius = this.mg.config().SAMRange();
   }
 
   tick(ticks: number): void {

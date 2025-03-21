@@ -30,7 +30,6 @@ import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { WorkerClient } from "../worker/WorkerClient";
 import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdateViewData } from "./GameUpdates";
-// import { DefenseGrid } from "./DefensePostGrid";
 import { UnitGrid } from "./UnitGrid";
 import { consolex } from "../Consolex";
 import { SAMLauncherExecution } from "../execution/SAMLauncherExecution";
@@ -256,7 +255,6 @@ export class GameView implements GameMap {
 
   private _myPlayer: PlayerView | null = null;
 
-  // private defensePostGrid: DefenseGrid;
   private unitGrid: UnitGrid;
 
   private toDelete = new Set<number>();
@@ -275,7 +273,6 @@ export class GameView implements GameMap {
       updates: null,
       playerNameViewData: {},
     };
-    // this.defensePostGrid = new DefenseGrid(_map, _config.defensePostRange());
     this.unitGrid = new UnitGrid(_map);
   }
   isOnEdgeOfMap(ref: TileRef): boolean {
@@ -322,13 +319,6 @@ export class GameView implements GameMap {
         unit = new UnitView(this, update);
         this._units.set(update.id, unit);
       }
-      // if (update.unitType == UnitType.DefensePost) {
-      //   if (update.isActive) {
-      //     this.defensePostGrid.addDefense(unit);
-      //   } else {
-      //     this.defensePostGrid.removeDefense(unit);
-      //   }
-      // }
       if (update.isActive) {
         this.unitGrid.addUnit(unit);
       } else {
@@ -344,10 +334,6 @@ export class GameView implements GameMap {
   recentlyUpdatedTiles(): TileRef[] {
     return this.updatedTiles;
   }
-
-  // nearbyDefenses(tile: TileRef): UnitView[] {
-  //   return this.defensePostGrid.nearbyDefenses(tile) as UnitView[];
-  // }
 
   nearbyUnits(
     tile: TileRef,

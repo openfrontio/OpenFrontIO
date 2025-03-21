@@ -29,7 +29,6 @@ import { MessageType } from "./Game";
 import { UnitImpl } from "./UnitImpl";
 import { consolex } from "../Consolex";
 import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
-// import { DefenseGrid } from "./DefensePostGrid";
 import { UnitGrid } from "./UnitGrid";
 import { StatsImpl } from "./StatsImpl";
 import { Stats } from "./Stats";
@@ -90,10 +89,6 @@ export class GameImpl implements Game {
           n.strength,
         ),
     );
-    // this.defenseGrid = new DefenseGrid(
-    //   this._map,
-    //   this._config.defensePostRange(),
-    // );
     this.unitGrid = new UnitGrid(this._map);
   }
   isOnEdgeOfMap(ref: TileRef): boolean {
@@ -544,23 +539,12 @@ export class GameImpl implements Game {
     });
   }
 
-  // addDefensePost(dp: Unit) {
-  //   this.defenseGrid.addDefense(dp);
-  // }
-  // removeDefensePost(dp: Unit) {
-  //   this.defenseGrid.removeDefense(dp);
-  // }
-
   addUnit(u: Unit) {
     this.unitGrid.addUnit(u);
   }
   removeUnit(u: Unit) {
     this.unitGrid.removeUnit(u);
   }
-
-  // nearbyDefensePosts(tile: TileRef): Unit[] {
-  //   return this.defenseGrid.nearbyDefenses(tile) as Unit[];
-  // }
 
   nearbyUnits(
     tile: TileRef,

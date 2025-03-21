@@ -81,31 +81,6 @@ export class TerritoryLayer implements Layer {
             }
           });
       }
-      if (update.unitType == UnitType.SAMLauncher) {
-        const tile = update.pos;
-
-        this.game.bfs(tile, (gm, targetTile) => {
-          const dx = this.game.x(targetTile) - this.game.x(tile);
-          const dy = this.game.y(targetTile) - this.game.y(tile);
-
-          const distanceSquared = dx * dx + dy * dy;
-          const radiusSquared =
-            this.game.config().SAMRange() * this.game.config().SAMRange();
-          if (distanceSquared <= radiusSquared) {
-            if (
-              Math.abs(
-                Math.sqrt(distanceSquared) - this.game.config().SAMRange(),
-              ) < 1.5 &&
-              this.game.ownerID(tile) == update.ownerID
-            ) {
-              this.enqueueTile(targetTile);
-            }
-            // make the bfs search even when its not the ring yet
-            return true;
-          }
-          return false;
-        });
-      }
     });
 
     if (!this.game.inSpawnPhase()) {
@@ -288,29 +263,12 @@ export class TerritoryLayer implements Layer {
         );
       }
     } else {
-      const isOnDefenseRing = this.game
-        .nearbyUnits(tile, this.game.config().SAMRange(), UnitType.SAMLauncher)
-        .filter((u) => u.unit.owner() == owner)
-        .some((u) => {
-          const dist = Math.sqrt(u.distSquared);
-          return Math.abs(dist - this.game.config().SAMRange()) < 1.5;
-        });
-
-      if (isOnDefenseRing) {
-        this.paintCell(
-          this.game.x(tile),
-          this.game.y(tile),
-          this.theme.SAMRingColor(owner.info()),
-          255,
-        );
-      } else {
-        this.paintCell(
-          this.game.x(tile),
-          this.game.y(tile),
-          this.theme.territoryColor(owner.info()),
-          150,
-        );
-      }
+      this.paintCell(
+        this.game.x(tile),
+        this.game.y(tile),
+        this.theme.territoryColor(owner.info()),
+        150,
+      );
     }
   }
 

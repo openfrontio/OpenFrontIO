@@ -405,7 +405,6 @@ export interface Game extends GameMap {
   // Units
   units(...types: UnitType[]): Unit[];
   unitInfo(type: UnitType): UnitInfo;
-  // nearbyDefensePosts(tile: TileRef): Unit[];
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
