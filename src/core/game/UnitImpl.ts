@@ -131,9 +131,7 @@ export class UnitImpl implements Unit {
     this._owner._units = this._owner._units.filter((b) => b != this);
     this._active = false;
     this.mg.addUpdate(this.toUpdate());
-    if (this.type() == UnitType.DefensePost) {
-      this.mg.removeDefensePost(this);
-    }
+    this.mg.removeUnit(this);
     if (displayMessage) {
       this.mg.displayMessage(
         `Your ${this.type()} was destroyed`,

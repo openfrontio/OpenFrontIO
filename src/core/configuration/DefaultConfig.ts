@@ -381,8 +381,12 @@ export class DefaultConfig implements Config {
         throw new Error(`terrain type ${type} not supported`);
     }
     if (defender.isPlayer()) {
-      for (const dp of gm.nearbyDefensePosts(tileToConquer)) {
-        if (dp.owner() == defender) {
+      for (const dp of gm.nearbyUnits(
+        tileToConquer,
+        gm.config().defensePostRange(),
+        UnitType.DefensePost,
+      )) {
+        if (dp.unit.owner() == defender) {
           mag *= this.defensePostDefenseBonus();
           speed *= this.defensePostDefenseBonus();
           break;
