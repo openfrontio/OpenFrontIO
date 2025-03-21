@@ -110,7 +110,6 @@ export interface Theme {
   specialBuildingColor(playerInfo: PlayerInfo): Colord;
   borderColor(playerInfo: PlayerInfo): Colord;
   defendedBorderColor(playerInfo: PlayerInfo): Colord;
-  SAMRingColor(playerInfo: PlayerInfo): Colord;
   terrainColor(gm: GameMap, tile: TileRef): Colord;
   backgroundColor(): Colord;
   falloutColor(): Colord;
