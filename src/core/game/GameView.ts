@@ -145,6 +145,10 @@ export class PlayerView {
       .filter((u) => u.owner().smallID() == this.smallID());
   }
 
+  borderTiles(): ReadonlySet<TileRef> {
+    return this.data.borderTiles;
+  }
+
   nameLocation(): NameViewData {
     return this.nameData;
   }
@@ -253,6 +257,7 @@ export class GameView implements GameMap {
   private updatedTiles: TileRef[] = [];
 
   private _myPlayer: PlayerView | null = null;
+  private _focusedPlayer: PlayerView | null = null;
 
   private defensePostGrid: DefenseGrid;
 
@@ -513,5 +518,12 @@ export class GameView implements GameMap {
   }
   gameID(): GameID {
     return this._gameID;
+  }
+
+  focusedPlayer(): PlayerView | null {
+    return this._focusedPlayer;
+  }
+  setFocusedPlayer(player: PlayerView | null): void {
+    this._focusedPlayer = player;
   }
 }
