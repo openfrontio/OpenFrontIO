@@ -314,10 +314,8 @@ export class TerritoryLayer implements Layer {
   }
 
   enqueuePlayerBorder(player: PlayerView) {
-    this.game.forEachTile((tile) => {
-      if (this.game.ownerID(tile) === player.smallID() && this.game.isBorder(tile)) {
-        this.enqueueTile(tile);
-      }
+    player.borderTiles().forEach((tile: TileRef) => {
+      this.enqueueTile(tile);
     });
   }
 

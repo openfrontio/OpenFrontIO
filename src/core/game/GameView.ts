@@ -145,6 +145,10 @@ export class PlayerView {
       .filter((u) => u.owner().smallID() == this.smallID());
   }
 
+  borderTiles(): ReadonlySet<TileRef> {
+    return this.data.borderTiles;
+  }
+
   nameLocation(): NameViewData {
     return this.nameData;
   }
