@@ -241,6 +241,8 @@ export const pastelTheme = new (class implements Theme {
 
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
 
+  private _focusedBorderColor = colord({ r: 255, g: 255, b: 255 });
+
   territoryColor(playerInfo: PlayerInfo): Colord {
     if (playerInfo.playerType == PlayerType.Human) {
       return this.humanColors[
@@ -267,11 +269,7 @@ export const pastelTheme = new (class implements Theme {
 
   borderColor(playerInfo: PlayerInfo, focused: boolean = false): Colord {
     if (focused) {
-      return colord({
-        r: 255,
-        g: 255,
-        b: 255,
-      });      
+      return this._focusedBorderColor;     
     } else {
       const tc = this.territoryColor(playerInfo).rgba;
       return colord({
