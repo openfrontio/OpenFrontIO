@@ -234,4 +234,9 @@ export const BOT_NAME_SUFFIXES = [
   "Socialist Republics",
   "Democratic Republic",
   "Democratic Republics",
+  "United Nation",
+  "United State",
+  "United Nations",
+  "United States",
+  "City State",
 ];
