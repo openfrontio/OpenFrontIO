@@ -89,6 +89,14 @@ export class DefaultConfig implements Config {
     private _userSettings: UserSettings,
   ) {}
 
+  samHittingChance(): number {
+    return 0.8;
+  }
+
+  samCooldown(): Tick {
+    return 100;
+  }
+
   traitorDefenseDebuff(): number {
     return 0.8;
   }

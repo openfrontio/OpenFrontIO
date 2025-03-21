@@ -15,9 +15,12 @@ export function constructionExecution(
   unit: UnitType,
 ) {
   game.addExecution(new ConstructionExecution(playerID, game.ref(x, y), unit));
-  // Init
+  // Init exec
   game.executeNextTick();
-  // Exec
+  // Exec construction execution
   game.executeNextTick();
+  // Add the execution related to the building
+  game.executeNextTick();
+  // First tick of the execution of the constructed structure/unit
   game.executeNextTick();
 }

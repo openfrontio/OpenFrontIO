@@ -244,6 +244,9 @@ export interface Unit {
   setMoveTarget(cell: TileRef): void;
   moveTarget(): TileRef | null;
 
+  setTargetedBySAM(targeted: boolean): void;
+  targetedBySAM(): boolean;
+
   // Mutations
   setTroops(troops: number): void;
   delete(displayerMessage?: boolean): void;
