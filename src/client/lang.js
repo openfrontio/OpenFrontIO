@@ -14,14 +14,20 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function applyTranslation(translations) {
-    // console.log("Applying translations:", translations);
-    document.title = translations.title || document.title;
+    document.title = translations.main?.title || document.title;
 
     document.querySelectorAll("[data-i18n]").forEach((element) => {
       const key = element.getAttribute("data-i18n");
-      if (translations[key]) {
-        // console.log(`Updating [${key}] -> ${translations[key]}`);
-        element.innerHTML = translations[key];
+      const keys = key.split(".");
+      let text = translations;
+
+      for (const k of keys) {
+        text = text?.[k];
+        if (!text) break;
+      }
+
+      if (text) {
+        element.innerHTML = text;
       } else {
         console.warn(`Missing translation key: ${key}`);
       }
@@ -37,6 +43,11 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   const translations = await loadLanguage(userLang);
   applyTranslation(translations);
+
+  const langSelector = document.getElementById("lang-selector");
+  if (langSelector) {
+    langSelector.value = userLang;
+  }
 
   document
     .getElementById("lang-selector")
