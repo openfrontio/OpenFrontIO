@@ -1,7 +1,7 @@
 {
   "name": "NorthAmerica",
-  "width": 2000,
-  "height": 1000,
+  "width": 3000,
+  "height": 1500,
   "nations": [
     {
       "coordinates": [1814, 1083],
@@ -22,22 +22,10 @@
       "flag": "mx"
     },
     {
-      "coordinates": [1684, 1301],
-      "name": "Belize",
-      "strength": 1,
-      "flag": "bz"
-    },
-    {
       "coordinates": [1667, 1341],
       "name": "Guatemala",
       "strength": 1,
       "flag": "gt"
-    },
-    {
-      "coordinates": [1681, 1362],
-      "name": "El Salvador",
-      "strength": 1,
-      "flag": "sv"
     },
     {
       "coordinates": [1727, 1335],
@@ -50,12 +38,6 @@
       "name": "Nicaragua",
       "strength": 1,
       "flag": "ni"
-    },
-    {
-      "coordinates": [1801, 1462],
-      "name": "Costa Rica",
-      "strength": 1,
-      "flag": "cr"
     },
     {
       "coordinates": [1858, 1453],
@@ -82,30 +64,6 @@
       "flag": "cu"
     },
     {
-      "coordinates": [1895, 1279],
-      "name": "Jamaica",
-      "strength": 1,
-      "flag": "jm"
-    },
-    {
-      "coordinates": [1994, 1270],
-      "name": "Haiti",
-      "strength": 1,
-      "flag": "ht"
-    },
-    {
-      "coordinates": [2028, 1267],
-      "name": "Dominican Republic",
-      "strength": 1,
-      "flag": "do"
-    },
-    {
-      "coordinates": [1748, 1000],
-      "name": "Alabama",
-      "strength": 1,
-      "flag": "Alabama"
-    },
-    {
       "coordinates": [500, 345],
       "name": "Alaska",
       "strength": 1,
@@ -116,12 +74,6 @@
       "name": "Arizona",
       "strength": 1,
       "flag": "Arizona"
-    },
-    {
-      "coordinates": [1620, 980],
-      "name": "Arkansas",
-      "strength": 1,
-      "flag": "Arkansas"
     },
     {
       "coordinates": [1082, 896],
@@ -160,18 +112,6 @@
       "flag": "Illinois"
     },
     {
-      "coordinates": [1726, 848],
-      "name": "Indiana",
-      "strength": 1,
-      "flag": "Indiana"
-    },
-    {
-      "coordinates": [1607, 814],
-      "name": "Iowa",
-      "strength": 1,
-      "flag": "Iowa"
-    },
-    {
       "coordinates": [1513, 904],
       "name": "Kansas",
       "strength": 1,
@@ -194,18 +134,6 @@
       "name": "Maine",
       "strength": 1,
       "flag": "Maine"
-    },
-    {
-      "coordinates": [1912, 867],
-      "name": "Maryland",
-      "strength": 1,
-      "flag": "Maryland"
-    },
-    {
-      "coordinates": [1995, 816],
-      "name": "Massachusetts",
-      "strength": 1,
-      "flag": ""
     },
     {
       "coordinates": [1751, 791],
@@ -250,18 +178,6 @@
       "flag": "Nevada"
     },
     {
-      "coordinates": [1996, 759],
-      "name": "New Hampshire",
-      "strength": 1,
-      "flag": "New_Hampshire"
-    },
-    {
-      "coordinates": [1939, 960],
-      "name": "New Jersey",
-      "strength": 1,
-      "flag": "New_Jersey"
-    },
-    {
       "coordinates": [1342, 967],
       "name": "New Mexico",
       "strength": 1,
@@ -272,12 +188,6 @@
       "name": "New York",
       "strength": 1,
       "flag": "New_York"
-    },
-    {
-      "coordinates": [1883, 942],
-      "name": "North Carolina",
-      "strength": 1,
-      "flag": "North_Carolina"
     },
     {
       "coordinates": [1547, 742],
@@ -308,12 +218,6 @@
       "name": "Pennsylvania",
       "strength": 1,
       "flag": "Pennsylvania"
-    },
-    {
-      "coordinates": [2014, 819],
-      "name": "Rhode Island",
-      "strength": 1,
-      "flag": "Rhode_Island"
     },
     {
       "coordinates": [1839, 971],
@@ -356,18 +260,6 @@
       "name": "Washington",
       "strength": 1,
       "flag": "Washington"
-    },
-    {
-      "coordinates": [1836, 867],
-      "name": "West Virginia",
-      "strength": 1,
-      "flag": "West Virginia"
-    },
-    {
-      "coordinates": [1681, 781],
-      "name": "Wisconsin",
-      "strength": 1,
-      "flag": "Wisconsin"
     },
     {
       "coordinates": [1351, 786],

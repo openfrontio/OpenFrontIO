@@ -673,6 +673,21 @@ export class PlayerImpl implements Player {
   }
 
   canBuild(unitType: UnitType, targetTile: TileRef): TileRef | false {
+    // prevent the building of nukes and nuke related buildings
+    if (this.mg.config().disableNukes()) {
+      if (
+        unitType === UnitType.MissileSilo ||
+        unitType === UnitType.MIRV ||
+        unitType === UnitType.AtomBomb ||
+        unitType === UnitType.HydrogenBomb ||
+        unitType === UnitType.SAMLauncher ||
+        unitType === UnitType.SAMMissile ||
+        unitType === UnitType.MIRVWarhead
+      ) {
+        return false;
+      }
+    }
+
     const cost = this.mg.unitInfo(unitType).cost(this);
     if (!this.isAlive() || this.gold() < cost) {
       return false;

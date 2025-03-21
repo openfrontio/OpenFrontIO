@@ -164,6 +164,7 @@ export function startWorker() {
         instantBuild: req.body.instantBuild,
         bots: req.body.bots,
         disableNPCs: req.body.disableNPCs,
+        disableNukes: req.body.disableNukes,
       });
       res.status(200).json({ success: true });
     }),
