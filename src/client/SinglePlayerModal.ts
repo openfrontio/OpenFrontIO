@@ -269,12 +269,14 @@ export class SinglePlayerModal extends LitElement {
         <div class="modal-content">
           <span class="close" @click=${this.close}>&times;</span>
 
-          <div class="title">Single Player</div>
+          <div class="title">${this.translateText("single_modal.title")}</div>
 
           <div class="options-layout">
             <!-- Map Selection -->
             <div class="options-section">
-              <div class="option-title">Map</div>
+              <div class="option-title">
+                ${this.translateText("single_modal.map")}
+              </div>
               <div class="option-cards">
                 ${Object.entries(GameMapType)
                   .filter(([key]) => isNaN(Number(key)))
@@ -289,6 +291,9 @@ export class SinglePlayerModal extends LitElement {
                           .mapKey=${key}
                           .selected=${!this.useRandomMap &&
                           this.selectedMap === value}
+                          .translation=${this.translateText(
+                            `map.${key.toLowerCase()}`,
+                          )}
                         ></map-display>
                       </div>
                     `,
@@ -306,14 +311,18 @@ export class SinglePlayerModal extends LitElement {
                       style="width:100%; aspect-ratio: 4/2; object-fit:cover; border-radius:8px;"
                     />
                   </div>
-                  <div class="option-card-title">Random</div>
+                  <div class="option-card-title">
+                    ${this.translateText("map.random")}
+                  </div>
                 </div>
               </div>
             </div>
 
             <!-- Difficulty Selection -->
             <div class="options-section">
-              <div class="option-title">Difficulty</div>
+              <div class="option-title">
+                ${this.translateText("single_modal.difficulty")}
+              </div>
               <div class="option-cards">
                 ${Object.entries(Difficulty)
                   .filter(([key]) => isNaN(Number(key)))
@@ -328,8 +337,15 @@ export class SinglePlayerModal extends LitElement {
                         <difficulty-display
                           .difficultyKey=${key}
                         ></difficulty-display>
-                        <p class="option-card-title">
+                        <!-- <p data-i18n="single_modal.${DifficultyDescription[
+                          key
+                        ]}" class="option-card-title">
                           ${DifficultyDescription[key]}
+                        </p> -->
+                        <p class="option-card-title">
+                          ${this.translateText(
+                            `single_modal.${DifficultyDescription[key]}`,
+                          )}
                         </p>
                       </div>
                     `,
@@ -339,7 +355,9 @@ export class SinglePlayerModal extends LitElement {
 
             <!-- Game Options -->
             <div class="options-section">
-              <div class="option-title">Options</div>
+              <div class="option-title">
+                ${this.translateText("single_modal.options_title")}
+              </div>
               <div class="option-cards">
                 <label for="bots-count" class="option-card">
                   <input
@@ -353,7 +371,10 @@ export class SinglePlayerModal extends LitElement {
                     .value="${this.bots}"
                   />
                   <div class="option-card-title">
-                    Bots: ${this.bots == 0 ? "Disabled" : this.bots}
+                    <span>${this.translateText("single_modal.bots")}</span
+                    >${this.bots == 0
+                      ? '${this.translateText("single_modal.bots_disabled")}'
+                      : this.bots}
                   </div>
                 </label>
 
@@ -368,7 +389,9 @@ export class SinglePlayerModal extends LitElement {
                     @change=${this.handleDisableNPCsChange}
                     .checked=${this.disableNPCs}
                   />
-                  <div class="option-card-title">Disable Nations</div>
+                  <div class="option-card-title">
+                    ${this.translateText("single_modal.disable_nations")}
+                  </div>
                 </label>
                 <label
                   for="instant-build"
@@ -381,7 +404,9 @@ export class SinglePlayerModal extends LitElement {
                     @change=${this.handleInstantBuildChange}
                     .checked=${this.instantBuild}
                   />
-                  <div class="option-card-title">Instant build</div>
+                  <div class="option-card-title">
+                    ${this.translateText("single_modal.instant_build")}
+                  </div>
                 </label>
 
                 <label
@@ -395,7 +420,9 @@ export class SinglePlayerModal extends LitElement {
                     @change=${this.handleInfiniteGoldChange}
                     .checked=${this.infiniteGold}
                   />
-                  <div class="option-card-title">Infinite gold</div>
+                  <div class="option-card-title">
+                    ${this.translateText("single_modal.infinite_gold")}
+                  </div>
                 </label>
 
                 <label
@@ -409,14 +436,16 @@ export class SinglePlayerModal extends LitElement {
                     @change=${this.handleInfiniteTroopsChange}
                     .checked=${this.infiniteTroops}
                   />
-                  <div class="option-card-title">Infinite troops</div>
+                  <div class="option-card-title">
+                    ${this.translateText("single_modal.infinite_troops")}
+                  </div>
                 </label>
               </div>
             </div>
           </div>
 
           <button @click=${this.startGame} class="start-game-button">
-            Start Game
+            ${this.translateText("single_modal.start")}
           </button>
         </div>
       </div>
@@ -501,5 +530,23 @@ export class SinglePlayerModal extends LitElement {
       }),
     );
     this.close();
+  }
+  translateText(
+    key: string,
+    params: Record<string, string | number> = {},
+  ): string {
+    const keys = key.split(".");
+    let text: any = (window as any).translations;
+
+    for (const k of keys) {
+      text = text?.[k];
+      if (!text) return key;
+    }
+
+    for (const [param, value] of Object.entries(params)) {
+      text = text.replace(`{${param}}`, String(value));
+    }
+
+    return text;
   }
 }

@@ -88,5 +88,38 @@
     "icon_crown": "Crown - This is the number 1 player in the leaderboard",
     "icon_traitor": "Crossed swords - Traitor. This player attacked an ally.",
     "icon_ally": "Handshake - Ally. This player is your ally."
+  },
+  "single_modal": {
+    "title": "Single Player",
+    "map": "Map",
+    "difficulty": "difficulty",
+    "Relaxed": "Relaxed",
+    "Balanced": "Balanced",
+    "Intense": "Intense",
+    "Impossible": "Impossible",
+    "allow_alliances": "Allow alliances",
+    "options_title": "Options",
+    "bots": "Bots: ",
+    "bots_disabled": "Disabled",
+    "disable_nations": "Disable Nations",
+    "instant_build": "Instant build",
+    "infinite_gold": "Infinite gold",
+    "infinite_troops": "Infinite troops",
+    "start": "Start Game"
+  },
+  "map": {
+    "world": "World",
+    "europe": "Europe",
+    "mena": "MENA",
+    "northamerica": "North America",
+    "oceania": "Oceania",
+    "blacksea": "Black Sea",
+    "africa": "Africa",
+    "asia": "Asia",
+    "mars": "Mars",
+    "southamerica": "South America",
+    "britannia": "Britannia",
+    "gatewaytotheatlantic": "Gateway to the Atlantic",
+    "random": "Random"
   }
 }

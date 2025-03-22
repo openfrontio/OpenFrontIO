@@ -77,5 +77,38 @@
     "icon_crown": "王冠 - リーダーボード1位のプレイヤー",
     "icon_traitor": "交差した剣 - 裏切り者（同盟を攻撃）",
     "icon_ally": "握手 - 味方（同盟関係）"
+  },
+  "single_modal": {
+    "title": "シングルプレイヤー",
+    "map": "マップ",
+    "difficulty": "難易度",
+    "Relaxed": "簡単",
+    "Balanced": "普通",
+    "Intense": "難しい",
+    "Impossible": "不可能",
+    "allow_alliances": "同盟を許可",
+    "options_title": "オプション",
+    "bots": "ボット数: ",
+    "bots_disabled": "無効",
+    "disable_nations": "国家を無効化",
+    "instant_build": "即時建設",
+    "infinite_gold": "資金無限",
+    "infinite_troops": "無限部隊",
+    "start": "ゲーム開始"
+  },
+  "map": {
+    "world": "世界",
+    "europe": "ヨーロッパ",
+    "mena": "中東・北アフリカ",
+    "northamerica": "北アメリカ",
+    "oceania": "オセアニア",
+    "blacksea": "黒海",
+    "africa": "アフリカ",
+    "asia": "アジア",
+    "mars": "火星",
+    "southamerica": "南アメリカ",
+    "britannia": "ブリタニア",
+    "gatewaytotheatlantic": "大西洋への玄関",
+    "random": "ランダム"
   }
 }
