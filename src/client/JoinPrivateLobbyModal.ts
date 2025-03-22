@@ -5,6 +5,7 @@ import { GameMapType, GameType } from "../core/game/Game";
 import { GameInfo, GameRecord } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { JoinLobbyEvent } from "./Main";
+import { translateText } from "../client/Utils";
 
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {
@@ -244,12 +245,12 @@ export class JoinPrivateLobbyModal extends LitElement {
         ></div>
         <div class="modal-content">
           <span class="close" @click=${this.closeAndLeave}>&times;</span>
-          <div class="title">${this.translateText("private_lobby.title")}</div>
+          <div class="title">${translateText("private_lobby.title")}</div>
           <div class="lobby-id-box">
             <input
               type="text"
               id="lobbyIdInput"
-              placeholder="${this.translateText("private_lobby.enter_id")}"
+              placeholder="${translateText("private_lobby.enter_id")}"
               @keyup=${this.handleChange}
             />
             <button
@@ -282,8 +283,8 @@ export class JoinPrivateLobbyModal extends LitElement {
                   <div class="option-title">
                     ${this.players.length}
                     ${this.players.length === 1
-                      ? `${this.translateText("private_lobby.player")}`
-                      : `${this.translateText("private_lobby.players")}`}
+                      ? translateText("private_lobby.player")
+                      : translateText("private_lobby.players")}
                   </div>
 
                   <div class="players-list">
@@ -297,7 +298,7 @@ export class JoinPrivateLobbyModal extends LitElement {
           </div>
           ${!this.hasJoined
             ? html`<button class="start-game-button" @click=${this.joinLobby}>
-                ${this.translateText("private_lobby.join_lobby")}
+                ${translateText("private_lobby.join_lobby")}
               </button>`
             : ""}
         </div>
@@ -369,7 +370,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   private async joinLobby(): Promise<void> {
     const lobbyId = this.lobbyIdInput.value;
     consolex.log(`Joining lobby with ID: ${lobbyId}`);
-    this.message = `${this.translateText("private_lobby.checking")}`;
+    this.message = `${translateText("private_lobby.checking")}`;
 
     try {
       // First, check if the game exists in active lobbies
@@ -380,10 +381,10 @@ export class JoinPrivateLobbyModal extends LitElement {
       const archivedGame = await this.checkArchivedGame(lobbyId);
       if (archivedGame) return;
 
-      this.message = `${this.translateText("private_lobby.not_found")}`;
+      this.message = `${translateText("private_lobby.not_found")}`;
     } catch (error) {
       consolex.error("Error checking lobby existence:", error);
-      this.message = `${this.translateText("private_lobby.error")}`;
+      this.message = `${translateText("private_lobby.error")}`;
     }
   }
 
@@ -399,7 +400,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     const gameInfo = await response.json();
 
     if (gameInfo.exists) {
-      this.message = this.translateText("private_lobby.joined_waiting");
+      this.message = translateText("private_lobby.joined_waiting");
       this.hasJoined = true;
 
       this.dispatchEvent(
@@ -481,23 +482,5 @@ export class JoinPrivateLobbyModal extends LitElement {
       .catch((error) => {
         consolex.error("Error polling players:", error);
       });
-  }
-  translateText(
-    key: string,
-    params: Record<string, string | number> = {},
-  ): string {
-    const keys = key.split(".");
-    let text: any = (window as any).translations;
-
-    for (const k of keys) {
-      text = text?.[k];
-      if (!text) return key;
-    }
-
-    for (const [param, value] of Object.entries(params)) {
-      text = text.replace(`{${param}}`, String(value));
-    }
-
-    return text;
   }
 }

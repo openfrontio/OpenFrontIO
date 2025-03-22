@@ -9,6 +9,7 @@ import "./components/Maps";
 import randomMap from "../../resources/images/RandomMap.png";
 import { GameInfo } from "../core/Schemas";
 import { JoinLobbyEvent } from "./Main";
+import { translateText } from "../client/Utils";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
@@ -270,13 +271,13 @@ export class SinglePlayerModal extends LitElement {
         <div class="modal-content">
           <span class="close" @click=${this.close}>&times;</span>
 
-          <div class="title">${this.translateText("single_modal.title")}</div>
+          <div class="title">${translateText("single_modal.title")}</div>
 
           <div class="options-layout">
             <!-- Map Selection -->
             <div class="options-section">
               <div class="option-title">
-                ${this.translateText("single_modal.map")}
+                ${translateText("single_modal.map")}
               </div>
               <div class="option-cards">
                 ${Object.entries(GameMapType)
@@ -292,7 +293,7 @@ export class SinglePlayerModal extends LitElement {
                           .mapKey=${key}
                           .selected=${!this.useRandomMap &&
                           this.selectedMap === value}
-                          .translation=${this.translateText(
+                          .translation=${translateText(
                             `map.${key.toLowerCase()}`,
                           )}
                         ></map-display>
@@ -313,7 +314,7 @@ export class SinglePlayerModal extends LitElement {
                     />
                   </div>
                   <div class="option-card-title">
-                    ${this.translateText("map.random")}
+                    ${translateText("map.random")}
                   </div>
                 </div>
               </div>
@@ -322,7 +323,7 @@ export class SinglePlayerModal extends LitElement {
             <!-- Difficulty Selection -->
             <div class="options-section">
               <div class="option-title">
-                ${this.translateText("single_modal.difficulty")}
+                ${translateText("single_modal.difficulty")}
               </div>
               <div class="option-cards">
                 ${Object.entries(Difficulty)
@@ -344,7 +345,7 @@ export class SinglePlayerModal extends LitElement {
                           ${DifficultyDescription[key]}
                         </p> -->
                         <p class="option-card-title">
-                          ${this.translateText(
+                          ${translateText(
                             `single_modal.${DifficultyDescription[key]}`,
                           )}
                         </p>
@@ -357,7 +358,7 @@ export class SinglePlayerModal extends LitElement {
             <!-- Game Options -->
             <div class="options-section">
               <div class="option-title">
-                ${this.translateText("single_modal.options_title")}
+                ${translateText("single_modal.options_title")}
               </div>
               <div class="option-cards">
                 <label for="bots-count" class="option-card">
@@ -372,9 +373,9 @@ export class SinglePlayerModal extends LitElement {
                     .value="${this.bots}"
                   />
                   <div class="option-card-title">
-                    <span>${this.translateText("single_modal.bots")}</span
-                    >${this.bots == 0
-                      ? '${this.translateText("single_modal.bots_disabled")}'
+                    <span>${translateText("single_modal.bots")}</span>${this
+                      .bots == 0
+                      ? translateText("single_modal.bots_disabled")
                       : this.bots}
                   </div>
                 </label>
@@ -391,7 +392,7 @@ export class SinglePlayerModal extends LitElement {
                     .checked=${this.disableNPCs}
                   />
                   <div class="option-card-title">
-                    ${this.translateText("single_modal.disable_nations")}
+                    ${translateText("single_modal.disable_nations")}
                   </div>
                 </label>
                 <label
@@ -406,7 +407,7 @@ export class SinglePlayerModal extends LitElement {
                     .checked=${this.instantBuild}
                   />
                   <div class="option-card-title">
-                    ${this.translateText("single_modal.instant_build")}
+                    ${translateText("single_modal.instant_build")}
                   </div>
                 </label>
 
@@ -422,7 +423,7 @@ export class SinglePlayerModal extends LitElement {
                     .checked=${this.infiniteGold}
                   />
                   <div class="option-card-title">
-                    ${this.translateText("single_modal.infinite_gold")}
+                    ${translateText("single_modal.infinite_gold")}
                   </div>
                 </label>
 
@@ -438,7 +439,7 @@ export class SinglePlayerModal extends LitElement {
                     .checked=${this.infiniteTroops}
                   />
                   <div class="option-card-title">
-                    ${this.translateText("single_modal.infinite_troops")}
+                    ${translateText("single_modal.infinite_troops")}
                   </div>
                 </label>
 
@@ -460,7 +461,7 @@ export class SinglePlayerModal extends LitElement {
           </div>
 
           <button @click=${this.startGame} class="start-game-button">
-            ${this.translateText("single_modal.start")}
+            ${translateText("single_modal.start")}
           </button>
         </div>
       </div>
@@ -549,23 +550,5 @@ export class SinglePlayerModal extends LitElement {
       }),
     );
     this.close();
-  }
-  translateText(
-    key: string,
-    params: Record<string, string | number> = {},
-  ): string {
-    const keys = key.split(".");
-    let text: any = (window as any).translations;
-
-    for (const k of keys) {
-      text = text?.[k];
-      if (!text) return key;
-    }
-
-    for (const [param, value] of Object.entries(params)) {
-      text = text.replace(`{${param}}`, String(value));
-    }
-
-    return text;
   }
 }
