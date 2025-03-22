@@ -186,6 +186,14 @@ export class ClientGameRunner {
       "single-player-modal",
       "host-lobby-modal",
       "join-private-lobby-modal",
+      "emoji-table",
+      "leader-board",
+      "build-menu",
+      "win-modal",
+      "game-starting-modal",
+      "top-bar",
+      "player-panel",
+      "help-modal",
     ].forEach((tag) => {
       const modal = document.querySelector(tag) as HTMLElement & {
         close?: () => void;
