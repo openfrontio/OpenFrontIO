@@ -36,6 +36,7 @@ const MAP_FILE_NAMES: Record<GameMapType, string> = {
   [GameMapType.SouthAmerica]: "SouthAmerica",
   [GameMapType.Britannia]: "Britannia",
   [GameMapType.GatewayToTheAtlantic]: "GatewayToTheAtlantic",
+  [GameMapType.Australia]: "Australia",
 };
 
 class GameMapLoader {
