@@ -133,5 +133,9 @@
     "not_found": "Lobby not found. Please check the ID and try again.",
     "error": "An error occurred. Please try again.",
     "joined_waiting": "Joined successfully! Waiting for game to start..."
+  },
+  "public_lobby": {
+    "join": "Join next Game",
+    "waiting": "players waiting"
   }
 }
