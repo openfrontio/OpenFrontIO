@@ -96,6 +96,7 @@ export class BuildMenu extends LitElement implements Layer {
   public eventBus: EventBus;
   private clickedTile: TileRef;
   private playerActions: PlayerActions | null;
+  private filteredBuildTable: BuildItemDisplay[][] = buildTable;
 
   tick() {
     if (!this._hidden) {
@@ -342,7 +343,7 @@ export class BuildMenu extends LitElement implements Layer {
         class="build-menu ${this._hidden ? "hidden" : ""}"
         @contextmenu=${(e) => e.preventDefault()}
       >
-        ${buildTable.map(
+        ${this.filteredBuildTable.map(
           (row) => html`
             <div class="build-row">
               ${row.map(
@@ -407,6 +408,26 @@ export class BuildMenu extends LitElement implements Layer {
         this.playerActions = actions;
         this.requestUpdate();
       });
+
+    // removed disabled buildings from the buildtable
+    this.filteredBuildTable = this.getBuildableUnits();
+  }
+
+  private getBuildableUnits(): BuildItemDisplay[][] {
+    if (this.game?.config()?.disableNukes()) {
+      return buildTable.map((row) =>
+        row.filter(
+          (item) =>
+            ![
+              UnitType.AtomBomb,
+              UnitType.MIRV,
+              UnitType.HydrogenBomb,
+              UnitType.MissileSilo,
+            ].includes(item.unitType),
+        ),
+      );
+    }
+    return buildTable;
   }
 
   get isVisible() {

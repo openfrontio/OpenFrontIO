@@ -233,6 +233,7 @@ async function schedulePublicGame() {
     infiniteTroops: false,
     instantBuild: false,
     disableNPCs: false,
+    disableNukes: false,
     bots: 400,
   } as GameConfig;
 
@@ -285,6 +286,7 @@ function getNextMap(): GameMapType {
     Asia: 2,
     Mars: 2,
     Britannia: 2,
+    GatewayToTheAtlantic: 2,
   };
 
   Object.keys(GameMapType).forEach((key) => {
