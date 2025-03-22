@@ -38,10 +38,12 @@ document.addEventListener("DOMContentLoaded", async function () {
     // console.log(`Changing language to: ${lang}`);
     localStorage.setItem("lang", lang);
     const translations = await loadLanguage(lang);
+    window.translations = translations;
     applyTranslation(translations);
   }
 
   const translations = await loadLanguage(userLang);
+  window.translations = translations;
   applyTranslation(translations);
 
   const langSelector = document.getElementById("lang-selector");
