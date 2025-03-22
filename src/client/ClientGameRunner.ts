@@ -181,6 +181,22 @@ export class ClientGameRunner {
 
   public start() {
     consolex.log("starting client game");
+    console.log("Closing modals");
+    [
+      "single-player-modal",
+      "host-lobby-modal",
+      "join-private-lobby-modal",
+    ].forEach((tag) => {
+      const modal = document.querySelector(tag) as HTMLElement & {
+        close?: () => void;
+        isModalOpen?: boolean;
+      };
+      if (modal?.close) {
+        modal.close();
+      } else if ("isModalOpen" in modal) {
+        modal.isModalOpen = false;
+      }
+    });
     this.isActive = true;
     this.eventBus.on(MouseUpEvent, (e) => this.inputEvent(e));
 
