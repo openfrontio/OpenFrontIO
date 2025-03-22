@@ -1,5 +1,9 @@
 document.addEventListener("DOMContentLoaded", async function () {
-  const defaultLang = navigator.language.startsWith("ja") ? "ja" : "en";
+  const defaultLang = navigator.language.startsWith("ja")
+    ? "ja"
+    : navigator.language.startsWith("bg")
+      ? "bg"
+      : "en";
   const userLang = localStorage.getItem("lang") || defaultLang;
 
   async function loadLanguage(lang) {
