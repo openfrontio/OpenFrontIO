@@ -11,12 +11,12 @@ async function updateAuthButton() {
 
     if (data.loggedIn) {
       authBtn.textContent = 'Logout';
-      authBtn.onclick = () => {
+      authBtn.onclick = function() {
         window.location.href = '/logout';
       };
     } else {
       authBtn.textContent = 'Login with Discord';
-      authBtn.onclick = () => {
+      authBtn.onclick = function() {
         window.location.href = '/auth/discord';
       };
     }
@@ -24,5 +24,4 @@ async function updateAuthButton() {
     console.error("Failed to fetch auth status", err);
   }
 }
-
 document.addEventListener("DOMContentLoaded", updateAuthButton);
