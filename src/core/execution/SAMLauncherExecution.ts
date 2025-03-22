@@ -15,15 +15,12 @@ import { PseudoRandom } from "../PseudoRandom";
 export class SAMLauncherExecution implements Execution {
   private player: Player;
   private mg: Game;
-  private post: Unit;
+  private sam: Unit;
   private active: boolean = true;
 
   private target: Unit = null;
 
   private searchRangeRadius = 75;
-
-  private missileAttackRate = 75; // 7.5 seconds
-  private lastMissileAttack = 0;
 
   private pseudoRandom: PseudoRandom;
 
@@ -43,22 +40,22 @@ export class SAMLauncherExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.post == null) {
+    if (this.sam == null) {
       const spawnTile = this.player.canBuild(UnitType.SAMLauncher, this.tile);
       if (spawnTile == false) {
         consolex.warn("cannot build SAM Launcher");
         this.active = false;
         return;
       }
-      this.post = this.player.buildUnit(UnitType.SAMLauncher, 0, spawnTile);
+      this.sam = this.player.buildUnit(UnitType.SAMLauncher, 0, spawnTile);
     }
-    if (!this.post.isActive()) {
+    if (!this.sam.isActive()) {
       this.active = false;
       return;
     }
 
     if (!this.pseudoRandom) {
-      this.pseudoRandom = new PseudoRandom(this.post.id());
+      this.pseudoRandom = new PseudoRandom(this.sam.id());
     }
 
     const nukes = this.mg
@@ -67,8 +64,8 @@ export class SAMLauncherExecution implements Execution {
         // (x - center_x)² + (y - center_y)² < radius²
         const x = this.mg.x(u.tile());
         const y = this.mg.y(u.tile());
-        const centerX = this.mg.x(this.post.tile());
-        const centerY = this.mg.y(this.post.tile());
+        const centerX = this.mg.x(this.sam.tile());
+        const centerY = this.mg.y(this.sam.tile());
         const isInRange =
           (x - centerX) ** 2 + (y - centerY) ** 2 < this.searchRangeRadius ** 2;
         return isInRange;
@@ -93,26 +90,30 @@ export class SAMLauncherExecution implements Execution {
         }
         // If both are the same type, sort by distance
         return (
-          this.mg.manhattanDist(this.post.tile(), a.tile()) -
-          this.mg.manhattanDist(this.post.tile(), b.tile())
+          this.mg.manhattanDist(this.sam.tile(), a.tile()) -
+          this.mg.manhattanDist(this.sam.tile(), b.tile())
         );
       })[0] ?? null;
 
-    const cooldown =
-      this.lastMissileAttack != 0 &&
-      this.mg.ticks() - this.lastMissileAttack <= this.missileAttackRate;
-    if (this.post.isSamCooldown() != cooldown) {
-      this.post.setSamCooldown(cooldown);
+    if (
+      this.sam.getCooldown() &&
+      this.mg.ticks() - this.sam.getCooldown() >= this.mg.config().SAMCooldown()
+    ) {
+      this.sam.setCooldown(false);
     }
 
     if (this.target != null) {
-      if (!this.post.isSamCooldown()) {
-        this.lastMissileAttack = this.mg.ticks();
+      if (
+        this.sam.getCooldown() &&
+        this.mg.ticks() - this.sam.getCooldown() >=
+          this.mg.config().SAMCooldown()
+      ) {
+        this.sam.setCooldown(true);
         this.mg.addExecution(
           new SAMMissileExecution(
-            this.post.tile(),
-            this.post.owner(),
-            this.post,
+            this.sam.tile(),
+            this.sam.owner(),
+            this.sam,
             this.target,
             this.mg,
             this.pseudoRandom.next(),

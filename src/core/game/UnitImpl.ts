@@ -1,4 +1,4 @@
-import { MessageType, UnitSpecificInfos } from "./Game";
+import { MessageType, Tick, UnitSpecificInfos } from "./Game";
 import { UnitUpdate } from "./GameUpdates";
 import { GameUpdateType } from "./GameUpdates";
 import { simpleHash, toInt, within, withinInt } from "../Util";
@@ -18,7 +18,7 @@ export class UnitImpl implements Unit {
 
   private _constructionType: UnitType = undefined;
 
-  private _isSamCooldown: boolean;
+  private _cooldownTick: Tick | null = null;
   private _dstPort: Unit | null = null; // Only for trade ships
   private _detonationDst: TileRef | null = null; // Only for nukes
   private _warshipTarget: Unit | null = null;
@@ -60,7 +60,7 @@ export class UnitImpl implements Unit {
       dstPortId: dstPort ? dstPort.id() : null,
       warshipTargetId: warshipTarget ? warshipTarget.id() : null,
       detonationDst: this.detonationDst(),
-      isSamCooldown: this.isSamCooldown() ? this.isSamCooldown() : null,
+      getCooldown: this.getCooldown() ? this.getCooldown() : null,
     };
   }
 
@@ -184,13 +184,19 @@ export class UnitImpl implements Unit {
     return this._dstPort;
   }
 
-  setSamCooldown(cooldown: boolean): void {
-    this._isSamCooldown = cooldown;
-    this.mg.addUpdate(this.toUpdate());
+  // set the cooldown to the current tick or remove it
+  setCooldown(triggerCooldown: boolean): void {
+    if (triggerCooldown) {
+      this._cooldownTick = this.mg.ticks();
+      this.mg.addUpdate(this.toUpdate());
+    } else {
+      this._cooldownTick = null;
+      this.mg.addUpdate(this.toUpdate());
+    }
   }
 
-  isSamCooldown(): boolean {
-    return this._isSamCooldown;
+  getCooldown(): Tick | null {
+    return this._cooldownTick;
   }
 
   setDstPort(dstPort: Unit): void {

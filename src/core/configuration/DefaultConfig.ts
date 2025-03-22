@@ -130,6 +130,12 @@ export class DefaultConfig implements Config {
     // So defense modifier is between [5, 2.5]
     return 5 - falloutRatio * 2;
   }
+  SAMCooldown(): number {
+    return 75;
+  }
+  SiloCooldown(): number {
+    return 75;
+  }
 
   defensePostRange(): number {
     return 30;
