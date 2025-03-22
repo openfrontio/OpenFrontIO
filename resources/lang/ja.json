@@ -114,6 +114,8 @@
   "private_lobby": {
     "title": "プライベートゲームに参加",
     "enter_id": "ロビーIDを入力",
+    "player": "人のプレイヤー",
+    "players": "人のプレイヤー",
     "join_lobby": "ロビーに参加",
     "checking": "ロビーを確認中...",
     "not_found": "ロビーが見つかりません。IDを確認してもう一度お試しください。",

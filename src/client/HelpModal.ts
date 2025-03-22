@@ -326,7 +326,7 @@ export class HelpModal extends LitElement {
 
           <hr class="mt-6 mb-4">
 
-          <div data-i18n="radial_title" class="text-2xl font-bold text-center">Radial menu</div>
+          <div data-i18n="help_modal.radial_title" class="text-2xl font-bold text-center">Radial menu</div>
 
           <div class="flex flex-col md:flex-row gap-4">
             <img src="/images/helpModal/radialMenu.png" alt="Radial menu" title="Radial menu", class="radial-menu-image" />
