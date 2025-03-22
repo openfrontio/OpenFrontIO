@@ -73,13 +73,26 @@ export class PortExecution implements Execution {
       return;
     }
 
-    const ports = this.mg
+    let ports = this.mg
       .players()
       .filter((p) => p != this.port.owner() && p.canTrade(this.port.owner()))
-      .flatMap((p) => p.units(UnitType.Port));
+      .flatMap((p) => p.units(UnitType.Port))
+      .sort((p) => this.mg.manhattanDist(this.port.tile(), p.tile()));
     if (ports.length == 0) {
       return;
     }
+
+    if (ports.length > 10) {
+      ports = ports.slice(0, 10);
+    }
+
+    // Make ally ports twice more likely by putting them again
+    this.mg
+      .players()
+      .filter((p) => p != this.port.owner() && p.canTrade(this.port.owner()))
+      .filter((p) => p.isAlliedWith(this.player()))
+      .flatMap((p) => p.units(UnitType.Port))
+      .forEach((p) => ports.push(p));
 
     const port = this.random.randElement(ports);
     const pf = PathFinder.Mini(this.mg, 2500, false);
