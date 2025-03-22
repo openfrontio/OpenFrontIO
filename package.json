@@ -13,7 +13,8 @@
     "format": "prettier --ignore-unknown --write .",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "prepare": "husky"
+    "prepare": "husky",
+    "electron:start": "electron ./electron/main.cjs"
   },
   "lint-staged": {
     "**/*": [
@@ -29,7 +30,6 @@
     "@types/d3": "^7.4.3",
     "@types/jest": "^29.5.12",
     "@types/jquery": "^3.5.31",
-    "@types/mocha": "^10.0.7",
     "@types/node": "^22.10.2",
     "@types/pg": "^8.11.11",
     "@types/sinon": "^17.0.3",
@@ -44,6 +44,8 @@
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
     "css-loader": "^7.1.2",
+    "electron": "^29.4.6",
+    "electron-builder": "^24.13.3",
     "eslint": "^9.21.0",
     "eslint-config-prettier": "^10.1.1",
     "file-loader": "^6.2.0",
@@ -53,7 +55,6 @@
     "husky": "^9.1.7",
     "jest": "^29.7.0",
     "lint-staged": "^15.4.3",
-    "mocha": "^10.7.0",
     "mrmime": "^2.0.0",
     "postcss": "^8.5.1",
     "postcss-loader": "^8.1.1",
@@ -65,7 +66,6 @@
     "tailwindcss": "^3.4.17",
     "ts-jest": "^29.2.4",
     "ts-loader": "^9.5.2",
-    "ts-mocha": "^10.0.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.17.0",
