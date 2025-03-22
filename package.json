@@ -80,6 +80,7 @@
     "@google-cloud/secret-manager": "^5.6.0",
     "@types/dompurify": "^3.0.5",
     "@types/express": "^4.17.21",
+    "@types/express-session": "^1.18.1",
     "@types/google-protobuf": "^3.15.12",
     "@types/hammerjs": "^2.0.45",
     "@types/jimp": "^0.2.28",
@@ -125,7 +126,9 @@
     "wheelnav": "^1.7.1",
     "winston": "^3.17.0",
     "ws": "^8.18.0",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "express-session": "^1.17.3",
+    "node-fetch": "^3.2.10"
   },
   "type": "module"
 }
