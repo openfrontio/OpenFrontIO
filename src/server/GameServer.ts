@@ -71,6 +71,9 @@ export class GameServer {
     if (gameConfig.disableNPCs != null) {
       this.gameConfig.disableNPCs = gameConfig.disableNPCs;
     }
+    if (gameConfig.disableNukes != null) {
+      this.gameConfig.disableNukes = gameConfig.disableNukes;
+    }
     if (gameConfig.bots != null) {
       this.gameConfig.bots = gameConfig.bots;
     }

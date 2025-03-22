@@ -17,6 +17,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   SouthAmerica: "South America",
   Britannia: "Britannia",
   GatewayToTheAtlantic: "Gateway to the Atlantic",
+  Australia: "Australia",
 };
 
 @customElement("map-display")
