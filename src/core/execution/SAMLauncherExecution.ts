@@ -105,10 +105,8 @@ export class SAMLauncherExecution implements Execution {
 
     if (
       this.target &&
-      this.sam.getCooldown() &&
-      !this.target.targetedBySAM() &&
-      this.mg.ticks() - this.sam.getCooldown() >=
-        this.mg.config().SAMCooldown()
+      this.sam.getCooldown() == null &&
+      !this.target.targetedBySAM()
     ) {
       this.sam.setCooldown(true);
       const random = this.pseudoRandom.next();

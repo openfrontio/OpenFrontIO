@@ -740,11 +740,7 @@ export class PlayerImpl implements Player {
     const spawns = this.units(UnitType.MissileSilo)
       .map((u) => u as Unit)
       .filter((silo) => {
-        const cooldownTick = silo.getCooldown();
-        return (
-          cooldownTick === null ||
-          this.mg.ticks() - cooldownTick >= this.mg.config().SiloCooldown()
-        );
+        return silo.getCooldown() == null;
       })
       .sort(distSortUnit(this.mg, tile));
     if (spawns.length == 0) {

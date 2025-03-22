@@ -155,21 +155,13 @@ export class StructureLayer implements Layer {
     const config = this.unitConfigs[unitType];
     let icon: ImageData;
 
-    if (
-      unitType == UnitType.SAMLauncher &&
-      unit.getCooldown() &&
-      this.game.ticks() - unit.getCooldown() < this.game.config().SAMCooldown()
-    ) {
+    if (unitType == UnitType.SAMLauncher && unit.getCooldown()) {
       icon = this.unitIcons.get("reloadingSam");
     } else {
       icon = this.unitIcons.get(iconType);
     }
 
-    if (
-      unitType == UnitType.MissileSilo &&
-      unit.getCooldown() &&
-      this.game.ticks() - unit.getCooldown() < this.game.config().SiloCooldown()
-    ) {
+    if (unitType == UnitType.MissileSilo && unit.getCooldown()) {
       icon = this.unitIcons.get("reloadingSilo");
     } else {
       icon = this.unitIcons.get(iconType);
@@ -190,21 +182,13 @@ export class StructureLayer implements Layer {
     }
 
     let borderColor = this.theme.borderColor(unit.owner().info());
-    if (
-      unitType == UnitType.SAMLauncher &&
-      unit.getCooldown() &&
-      this.game.ticks() - unit.getCooldown() < this.game.config().SAMCooldown()
-    ) {
+    if (unitType == UnitType.SAMLauncher && unit.getCooldown()) {
       borderColor = reloadingColor;
     } else if (unit.type() == UnitType.Construction) {
       borderColor = underConstructionColor;
     }
 
-    if (
-      unitType == UnitType.MissileSilo &&
-      unit.getCooldown() &&
-      this.game.ticks() - unit.getCooldown() < this.game.config().SiloCooldown()
-    ) {
+    if (unitType == UnitType.MissileSilo && unit.getCooldown()) {
       borderColor = reloadingColor;
     } else if (unit.type() == UnitType.Construction) {
       borderColor = underConstructionColor;
