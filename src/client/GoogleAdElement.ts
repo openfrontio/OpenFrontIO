@@ -23,6 +23,7 @@ export class GoogleAdElement extends LitElement {
   @property({ type: String }) adTest = "off"; // "on" for testing, remove or set to "off" for production
   @property({ type: String }) backgroundColor = "rgba(255, 255, 255, 0.1)";
   @property({ type: String }) darkBackgroundColor = "rgba(0, 0, 0, 0.2)";
+  @property({ type: Boolean }) hidden = false;
 
   // Disable shadow DOM so AdSense can access the elements
   createRenderRoot() {
