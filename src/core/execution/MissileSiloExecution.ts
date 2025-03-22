@@ -43,6 +43,14 @@ export class MissileSiloExecution implements Execution {
       }
       this.silo = this.player.buildUnit(UnitType.MissileSilo, 0, this.tile);
     }
+
+    if (
+      this.silo.getCooldown() &&
+      this.mg.ticks() - this.silo.getCooldown() >=
+        this.mg.config().SAMCooldown()
+    ) {
+      this.silo.setCooldown(false);
+    }
   }
 
   owner(): Player {

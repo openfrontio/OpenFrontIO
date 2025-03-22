@@ -111,8 +111,8 @@ export class UnitView {
     }
     return this.data.warshipTargetId;
   }
-  isSamCooldown(): boolean {
-    return this.data.isSamCooldown;
+  getCooldown(): Tick | null {
+    return this.data.getCooldown;
   }
 }
 
