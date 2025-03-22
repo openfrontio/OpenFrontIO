@@ -21,6 +21,8 @@ import { assertNever, simpleHash, within } from "../Util";
 import { Config, GameEnv, ServerConfig, Theme } from "./Config";
 import { pastelTheme } from "./PastelTheme";
 import { pastelThemeDark } from "./PastelThemeDark";
+import dotenv from 'dotenv';
+dotenv.config();
 
 export abstract class DefaultServerConfig implements ServerConfig {
   region(): string {
@@ -31,6 +33,22 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   gitCommit(): string {
     return process.env.GIT_COMMIT;
+  }
+  discordClientID(): string {
+    return process.env.DISCORD_CLIENT_ID;
+    
+  }
+   discordClientSecret(): string {
+    return process.env.DISCORD_CLIENT_SECRET;
+    
+  }
+  discordRedirectURI(): string {
+    return process.env.DISCORD_REDIRECT_URI;
+    
+  }
+  sessionSecret(): string {
+    return process.env.SESSION_SECRET;
+    
   }
   r2Endpoint(): string {
     return process.env.R2_ENDPOINT;
