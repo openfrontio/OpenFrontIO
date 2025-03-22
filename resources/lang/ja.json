@@ -110,5 +110,14 @@
     "britannia": "ブリタニア",
     "gatewaytotheatlantic": "大西洋への玄関",
     "random": "ランダム"
+  },
+  "private_lobby": {
+    "title": "プライベートゲームに参加",
+    "enter_id": "ロビーIDを入力",
+    "join_lobby": "ロビーに参加",
+    "checking": "ロビーを確認中...",
+    "not_found": "ロビーが見つかりません。IDを確認してもう一度お試しください。",
+    "error": "エラーが発生しました。もう一度お試しください。",
+    "joined_waiting": "参加に成功しました！ゲーム開始をお待ちください..."
   }
 }

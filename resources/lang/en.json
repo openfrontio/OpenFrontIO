@@ -121,5 +121,16 @@
     "britannia": "Britannia",
     "gatewaytotheatlantic": "Gateway to the Atlantic",
     "random": "Random"
+  },
+  "private_lobby": {
+    "title": "Join Private Lobby",
+    "enter_id": "Enter Lobby ID",
+    "player": "Player",
+    "players": "Players",
+    "join_lobby": "Join Lobby",
+    "checking": "Checking lobby...",
+    "not_found": "Lobby not found. Please check the ID and try again.",
+    "error": "An error occurred. Please try again.",
+    "joined_waiting": "Joined successfully! Waiting for game to start..."
   }
 }
