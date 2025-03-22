@@ -7,6 +7,7 @@ import {
   Unit,
   PlayerID,
   UnitType,
+  MessageType,
 } from "../game/Game";
 import { manhattanDistFN, TileRef } from "../game/GameMap";
 import { SAMMissileExecution } from "./SAMMissileExecution";
@@ -102,21 +103,30 @@ export class SAMLauncherExecution implements Execution {
       this.sam.setCooldown(false);
     }
 
-    if (this.target != null) {
-      if (
-        this.sam.getCooldown() &&
-        this.mg.ticks() - this.sam.getCooldown() >=
-          this.mg.config().SAMCooldown()
-      ) {
-        this.sam.setCooldown(true);
+    if (
+      this.target &&
+      this.sam.getCooldown() &&
+      !this.target.targetedBySAM() &&
+      this.mg.ticks() - this.sam.getCooldown() >=
+        this.mg.config().SAMCooldown()
+    ) {
+      this.sam.setCooldown(true);
+      const random = this.pseudoRandom.next();
+      const hit = random < this.mg.config().samHittingChance();
+      if (!hit) {
+        this.mg.displayMessage(
+          `Missile failed to intercept ${this.target.type()}`,
+          MessageType.ERROR,
+          this.sam.owner().id(),
+        );
+      } else {
+        this.target.setTargetedBySAM(true);
         this.mg.addExecution(
           new SAMMissileExecution(
             this.sam.tile(),
             this.sam.owner(),
             this.sam,
             this.target,
-            this.mg,
-            this.pseudoRandom.next(),
           ),
         );
       }

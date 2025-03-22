@@ -249,7 +249,7 @@
               alt="Discord"
               src="../../resources/icons/discord.svg"
             />
-            Join the Discord!
+            <span data-i18n="main.join_discord"> Join the Discord! </span>
           </a>
         </div>
 
@@ -262,12 +262,14 @@
         >
           <button
             id="host-lobby-button"
+            data-i18n="main.create_lobby"
             class="bg-blue-100 hover:bg-blue-200 text-blue-900 p-3 sm:p-4 lg:p-5 font-medium text-sm sm:text-base lg:text-lg rounded-md w-full border-none cursor-pointer transition-colors duration-300"
           >
             Create Lobby
           </button>
           <button
             id="join-private-lobby-button"
+            data-i18n="main.join_lobby"
             class="bg-blue-100 hover:bg-blue-200 text-blue-900 p-3 sm:p-4 lg:p-5 font-medium text-sm sm:text-base lg:text-lg rounded-md w-full border-none cursor-pointer transition-colors duration-300"
           >
             Join Lobby
@@ -279,6 +281,7 @@
         >
           <button
             id="single-player"
+            data-i18n="main.single_player"
             class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 sm:p-4 lg:p-5 font-bold text-lg sm:text-xl lg:text-2xl rounded-lg border-none cursor-pointer transition-colors duration-300"
           >
             Single Player
@@ -290,10 +293,22 @@
         >
           <button
             id="help-button"
+            data-i18n="main.instructions"
             class="w-25 bg-blue-100 hover:bg-blue-200 text-blue-900 p-3 sm:p-4 lg:p-5 font-medium text-sm sm:text-base lg:text-lg rounded-md w-full border-none cursor-pointer transition-colors duration-300"
           >
             Instructions
           </button>
+        </div>
+        <div
+          class="pt-4 flex gap-4 sm:gap-6 lg:gap-8 max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl mx-auto"
+        >
+          <select
+            id="lang-selector"
+            class="text-center appearance-none w-full bg-blue-100 hover:bg-blue-200 text-blue-900 p-3 sm:p-4 lg:p-5 font-medium text-sm sm:text-base lg:text-lg rounded-md border-none cursor-pointer transition-colors duration-300"
+          >
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
         </div>
       </div>
     </div>
@@ -348,12 +363,14 @@
         <div class="flex sm:flex-row flex-col sm:gap-8 gap-2">
           <a
             href="https://youtu.be/jvHEvbko3uw?si=znspkP84P76B1w5I"
+            data-i18n="main.how_to_play"
             class="text-white/70 hover:text-white transition-colors duration-300"
             target="_blank"
             >How to Play</a
           >
           <a
             href="https://openfront.miraheze.org/wiki/Main_Page"
+            data-i18n="main.wiki"
             class="text-white/70 hover:text-white transition-colors duration-300"
             target="_blank"
             >Wiki</a
@@ -380,6 +397,7 @@
         });
       });
     </script>
+    <script src="lang.js"></script>
 
     <!-- Analytics -->
     <script

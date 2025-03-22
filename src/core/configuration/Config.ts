@@ -46,6 +46,8 @@ export interface ServerConfig {
 }
 
 export interface Config {
+  samHittingChance(): number;
+  samCooldown(): Tick;
   spawnImmunityDuration(): Tick;
   serverConfig(): ServerConfig;
   gameConfig(): GameConfig;
@@ -53,6 +55,7 @@ export interface Config {
   percentageTilesOwnedToWin(): number;
   numBots(): number;
   spawnNPCs(): boolean;
+  disableNukes(): boolean;
   bots(): number;
   infiniteGold(): boolean;
   infiniteTroops(): boolean;

@@ -10,6 +10,7 @@ import asia from "../../../resources/maps/AsiaThumb.png";
 import mars from "../../../resources/maps/MarsThumb.png";
 import britannia from "../../../resources/maps/BritanniaThumb.png";
 import gatewayToTheAtlantic from "../../../resources/maps/GatewayToTheAtlanticThumb.png";
+import australia from "../../../resources/maps/AustraliaThumb.png";
 
 import { GameMapType } from "../../core/game/Game";
 
@@ -39,6 +40,8 @@ export function getMapsImage(map: GameMapType): string {
       return britannia;
     case GameMapType.GatewayToTheAtlantic:
       return gatewayToTheAtlantic;
+    case GameMapType.Australia:
+      return australia;
     default:
       return "";
   }

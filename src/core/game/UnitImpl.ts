@@ -15,6 +15,7 @@ export class UnitImpl implements Unit {
   // Currently only warship use it
   private _target: Unit = null;
   private _moveTarget: TileRef = null;
+  private _targetedBySAM = false;
 
   private _constructionType: UnitType = undefined;
 
@@ -209,5 +210,13 @@ export class UnitImpl implements Unit {
 
   moveTarget(): TileRef | null {
     return this._moveTarget;
+  }
+
+  setTargetedBySAM(targeted: boolean): void {
+    this._targetedBySAM = targeted;
+  }
+
+  targetedBySAM(): boolean {
+    return this._targetedBySAM;
   }
 }

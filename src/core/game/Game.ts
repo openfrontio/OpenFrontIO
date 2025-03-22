@@ -51,6 +51,7 @@ export enum GameMapType {
   Mars = "Mars",
   Britannia = "Britannia",
   GatewayToTheAtlantic = "Gateway to the Atlantic",
+  Australia = "Australia",
 }
 
 export enum GameType {
@@ -243,6 +244,9 @@ export interface Unit {
 
   setMoveTarget(cell: TileRef): void;
   moveTarget(): TileRef | null;
+
+  setTargetedBySAM(targeted: boolean): void;
+  targetedBySAM(): boolean;
 
   // Mutations
   setTroops(troops: number): void;
