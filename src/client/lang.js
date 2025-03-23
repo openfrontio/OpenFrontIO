@@ -26,6 +26,15 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (!text) break;
       }
 
+      if (!text && window.defaultTranslations) {
+        let fallback = window.defaultTranslations;
+        for (const k of keys) {
+          fallback = fallback?.[k];
+          if (!fallback) break;
+        }
+        text = fallback;
+      }
+
       if (text) {
         element.innerHTML = text;
       } else {
@@ -42,6 +51,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     applyTranslation(translations);
   }
 
+  const defaultTranslations = await loadLanguage("en");
+  window.defaultTranslations = defaultTranslations;
   const translations = await loadLanguage(userLang);
   window.translations = translations;
   applyTranslation(translations);
