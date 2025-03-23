@@ -93,7 +93,8 @@
     "disable_nations": "国家を無効化",
     "instant_build": "即時建設",
     "infinite_gold": "資金無限",
-    "infinite_troops": "無限部隊",
+    "infinite_troops": "兵士無限",
+    "disable_nukes": "核兵器使用禁止",
     "start": "ゲーム開始"
   },
   "map": {

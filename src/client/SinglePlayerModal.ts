@@ -454,7 +454,9 @@ export class SinglePlayerModal extends LitElement {
                     @change=${this.handleDisableNukesChange}
                     .checked=${this.disableNukes}
                   />
-                  <div class="option-card-title">Disable Nukes</div>
+                  <div class="option-card-title">
+                    ${translateText("single_modal.disable_nukes")}
+                  </div>
                 </label>
               </div>
             </div>
