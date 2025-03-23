@@ -22,7 +22,7 @@ function createWindow() {
   mainWindow.maximize();
   mainWindow.show();
   // Automatically open DevTools when the window is created
-  // mainWindow.webContents.openDevTools();
+  mainWindow.webContents.openDevTools();
 
   mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
     (details, callback) => {
