@@ -51,6 +51,7 @@ export enum GameMapType {
   Mars = "Mars",
   Britannia = "Britannia",
   GatewayToTheAtlantic = "Gateway to the Atlantic",
+  Australia = "Australia",
 }
 
 export enum GameType {

@@ -233,6 +233,7 @@ async function schedulePublicGame() {
     infiniteTroops: false,
     instantBuild: false,
     disableNPCs: false,
+    disableNukes: false,
     bots: 400,
   } as GameConfig;
 
