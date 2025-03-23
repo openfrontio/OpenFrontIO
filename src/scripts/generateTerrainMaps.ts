@@ -6,7 +6,6 @@ import { WriteStream, createWriteStream } from "fs";
 
 const maps = [
   "Africa",
-  "Pangaea",
   "Asia",
   "WorldMap",
   "BlackSea",
@@ -19,6 +18,7 @@ const maps = [
   "Britannia",
   "GatewayToTheAtlantic",
   "Australia",
+  "Pangaea",
 ];
 
 async function loadTerrainMaps() {
