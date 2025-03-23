@@ -241,8 +241,6 @@ export const pastelTheme = new (class implements Theme {
 
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
 
-  private _focusedBorderColor = colord({ r: 255, g: 255, b: 255 });
-
   territoryColor(playerInfo: PlayerInfo): Colord {
     if (playerInfo.playerType == PlayerType.Human) {
       return this.humanColors[
@@ -267,25 +265,28 @@ export const pastelTheme = new (class implements Theme {
     });
   }
 
-  borderColor(playerInfo: PlayerInfo, focused: boolean = false): Colord {
-    if (focused) {
-      return this._focusedBorderColor;     
-    } else {
-      const tc = this.territoryColor(playerInfo).rgba;
-      return colord({
-        r: Math.max(tc.r - 40, 0),
-        g: Math.max(tc.g - 40, 0),
-        b: Math.max(tc.b - 40, 0),
-      });      
-    }
+  borderColor(playerInfo: PlayerInfo): Colord {
+    const tc = this.territoryColor(playerInfo).rgba;
+    return colord({
+      r: Math.max(tc.r - 40, 0),
+      g: Math.max(tc.g - 40, 0),
+      b: Math.max(tc.b - 40, 0),
+    });
   }
-  defendedBorderColor(playerInfo: PlayerInfo, focused: boolean = false): Colord {
-    const bc = this.borderColor(playerInfo, focused).rgba;
+  defendedBorderColor(playerInfo: PlayerInfo): Colord {
+    const bc = this.borderColor(playerInfo).rgba;
     return colord({
       r: Math.max(bc.r - 40, 0),
       g: Math.max(bc.g - 40, 0),
       b: Math.max(bc.b - 40, 0),
     });
+  }
+
+  focusedBorderColor(): Colord {
+    return colord({ r: 255, g: 255, b: 255 });
+  }
+  focusedDefendedBorderColor(): Colord {
+    return colord({ r: 215, g: 215, b: 215 });
   }
 
   terrainColor(gm: GameMap, tile: TileRef): Colord {

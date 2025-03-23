@@ -50,11 +50,8 @@ export class TerritoryLayer implements Layer {
 
   private refreshRate = 50;
   private lastRefresh = 0;
-  
+
   private lastFocusedPlayer: PlayerView | null = null;
-  private lastMousePosition: { x: number, y: number } | null = null;
-  private mouseHoverTimer: number | null = null;
-  private readonly HOVER_DELAY = 200;
 
   constructor(
     private game: GameView,
@@ -150,11 +147,6 @@ export class TerritoryLayer implements Layer {
       // TODO: consider re-enabling this on mobile or low end devices for smoother dragging.
       // this.lastDragTime = Date.now();
     });
-    
-    this.eventBus.on(MouseMoveEvent, (e) => {
-      this.onMouseMove(e);
-    });
-        
     this.redraw();
   }
 
@@ -267,17 +259,23 @@ export class TerritoryLayer implements Layer {
         this.game.nearbyDefenses(tile).filter((u) => u.owner() == owner)
           .length > 0
       ) {
+        const useDefendedBorderColor = playerIsFocused
+          ? this.theme.focusedDefendedBorderColor()
+          : this.theme.defendedBorderColor(owner.info());
         this.paintCell(
           this.game.x(tile),
           this.game.y(tile),
-          this.theme.defendedBorderColor(owner.info(), playerIsFocused),
+          useDefendedBorderColor,
           255,
         );
       } else {
+        const useBorderColor = playerIsFocused
+          ? this.theme.focusedBorderColor()
+          : this.theme.borderColor(owner.info());
         this.paintCell(
           this.game.x(tile),
           this.game.y(tile),
-          this.theme.borderColor(owner.info(), playerIsFocused),
+          useBorderColor,
           255,
         );
       }
@@ -327,40 +325,5 @@ export class TerritoryLayer implements Layer {
 
   clearHighlightCell(cell: Cell) {
     this.highlightContext.clearRect(cell.x, cell.y, 1, 1);
-  }
-
-  private onMouseMove(event: MouseMoveEvent) {
-    this.lastMousePosition = { x: event.x, y: event.y };
-    this.clearHoverTimer();
-    
-    this.mouseHoverTimer = window.setTimeout(() => {
-      this.checkTileUnderCursor();
-    }, this.HOVER_DELAY);
-  }
-  
-  private clearHoverTimer() {
-    if (this.mouseHoverTimer !== null) {
-      clearTimeout(this.mouseHoverTimer);
-      this.mouseHoverTimer = null;
-    }
-  }
-  
-  private checkTileUnderCursor() {
-    if (!this.lastMousePosition || !this.transformHandler) return;
-    
-    const cell = this.transformHandler.screenToWorldCoordinates(
-      this.lastMousePosition.x, 
-      this.lastMousePosition.y
-    );
-
-    if (!cell || !this.game.isValidCoord(cell.x, cell.y)) {
-      return;
-    }
-        
-    const tile = this.game.ref(cell.x, cell.y);
-    const owner = this.game.owner(tile) as PlayerView;
-    if (owner && owner.isPlayer()) {
-      this.game.setFocusedPlayer(owner);
-    }
   }
 }

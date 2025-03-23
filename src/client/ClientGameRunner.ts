@@ -1,7 +1,7 @@
 import { PlayerID, GameMapType, Difficulty, GameType } from "../core/game/Game";
 import { EventBus } from "../core/EventBus";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
-import { InputHandler, MouseUpEvent } from "./InputHandler";
+import { InputHandler, MouseUpEvent, MouseMoveEvent } from "./InputHandler";
 import {
   ClientID,
   GameConfig,
@@ -146,6 +146,10 @@ export class ClientGameRunner {
   private turnsSeen = 0;
   private hasJoined = false;
 
+  private lastMousePosition: { x: number; y: number } | null = null;
+  private mouseHoverTimer: number | null = null;
+  private readonly HOVER_DELAY = 200;
+
   constructor(
     private lobby: LobbyConfig,
     private eventBus: EventBus,
@@ -183,6 +187,7 @@ export class ClientGameRunner {
     consolex.log("starting client game");
     this.isActive = true;
     this.eventBus.on(MouseUpEvent, (e) => this.inputEvent(e));
+    this.eventBus.on(MouseMoveEvent, (e) => this.onMouseMove(e));
 
     this.renderer.initialize();
     this.input.initialize();
@@ -313,13 +318,48 @@ export class ClientGameRunner {
         );
       }
 
-      const owner = this.gameView.owner(tile) as PlayerView;
-      if (owner && owner.isPlayer()) {
-        this.gameView.setFocusedPlayer(owner);
+      const owner = this.gameView.owner(tile);
+      if (owner.isPlayer()) {
+        this.gameView.setFocusedPlayer(owner as PlayerView);
       } else {
         this.gameView.setFocusedPlayer(null);
       }
     });
+  }
+
+  private onMouseMove(event: MouseMoveEvent) {
+    this.lastMousePosition = { x: event.x, y: event.y };
+    this.clearHoverTimer();
+
+    this.mouseHoverTimer = window.setTimeout(() => {
+      this.checkTileUnderCursor();
+    }, this.HOVER_DELAY);
+  }
+
+  private clearHoverTimer() {
+    if (this.mouseHoverTimer !== null) {
+      clearTimeout(this.mouseHoverTimer);
+      this.mouseHoverTimer = null;
+    }
+  }
+
+  private checkTileUnderCursor() {
+    if (!this.lastMousePosition || !this.renderer.transformHandler) return;
+
+    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
+      this.lastMousePosition.x,
+      this.lastMousePosition.y,
+    );
+
+    if (!cell || !this.gameView.isValidCoord(cell.x, cell.y)) {
+      return;
+    }
+
+    const tile = this.gameView.ref(cell.x, cell.y);
+    const owner = this.gameView.owner(tile);
+    if (owner.isPlayer()) {
+      this.gameView.setFocusedPlayer(owner as PlayerView);
+    }
   }
 }
 
