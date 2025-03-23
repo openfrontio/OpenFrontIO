@@ -1,5 +1,5 @@
 import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { PauseGameEvent } from "../../Transport";
 import { GameType } from "../../../core/game/Game";
@@ -29,6 +29,16 @@ const button = ({
     ${children}
   </button>
 `;
+
+const secondsToHms = (d: number): string => {
+  const h = Math.floor(d / 3600);
+  const m = Math.floor((d % 3600) / 60);
+  const s = Math.floor((d % 3600) % 60);
+  let time = d === 0 ? "-" : `${s}s`;
+  if (m > 0) time = `${m}m` + time;
+  if (h > 0) time = `${h}h` + time;
+  return time;
+};
 
 @customElement("options-menu")
 export class OptionsMenu extends LitElement implements Layer {
@@ -141,11 +151,11 @@ export class OptionsMenu extends LitElement implements Layer {
               children: this.isPaused ? "▶️" : "⏸",
             })}
             <div
-              class="w-14 h-8 lg:w-20 lg:h-10 flex items-center justify-center
+              class="w-15 h-8 lg:w-24 lg:h-10 flex items-center justify-center
                               bg-opacity-50 bg-gray-700 text-opacity-90 text-white
                               rounded text-sm lg:text-xl"
             >
-              ${this.timer}
+              ${secondsToHms(this.timer)}
             </div>
             ${button({
               onClick: this.onExitButtonClick,
@@ -161,7 +171,7 @@ export class OptionsMenu extends LitElement implements Layer {
         </div>
 
         <div
-          class="options-menu flex flex-wrap justify-around gap-y-3 mt-2 bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-lg backdrop-blur-md ${!this
+          class="options-menu flex flex-col justify-around gap-y-3 mt-2 bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-lg backdrop-blur-md ${!this
             .showSettings
             ? "hidden"
             : ""}"

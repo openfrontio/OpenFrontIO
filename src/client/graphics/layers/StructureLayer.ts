@@ -91,7 +91,7 @@ export class StructureLayer implements Layer {
       );
       this.unitIcons.set(unitType, iconData);
       console.log(
-        `icond data width height: ${iconData.width}, ${iconData.height}`,
+        `icon data width height: ${iconData.width}, ${iconData.height}`,
       );
     };
   }
