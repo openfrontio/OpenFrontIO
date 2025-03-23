@@ -93,10 +93,6 @@
     "title": "Single Player",
     "map": "Map",
     "difficulty": "difficulty",
-    "Relaxed": "Relaxed",
-    "Balanced": "Balanced",
-    "Intense": "Intense",
-    "Impossible": "Impossible",
     "allow_alliances": "Allow alliances",
     "options_title": "Options",
     "bots": "Bots: ",
@@ -149,7 +145,19 @@
   "host_modal": {
     "title": "Private Lobby",
     "map": "Map",
-    "difficulty": "Difficulty"
+    "difficulty": "Difficulty",
+    "options_title": "Options",
+    "bots": "Bots: ",
+    "bots_disabled": "Disabled",
+    "disable_nations": "Disable Nations",
+    "instant_build": "Instant build",
+    "infinite_gold": "Infinite gold",
+    "infinite_troops": "Infinite troops",
+    "disable_nukes": "Disable Nukes",
+    "player": "Player",
+    "players": "Players",
+    "waiting": "Waiting for players...",
+    "start": "Start Game"
   },
   "difficulty": {
     "Relaxed": "Relaxed",

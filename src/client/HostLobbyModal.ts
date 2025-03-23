@@ -11,6 +11,7 @@ import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { getConfig } from "../core/configuration/ConfigLoader";
 import { JoinLobbyEvent } from "./Main";
+import { translateText } from "../client/Utils";
 
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
@@ -341,7 +342,7 @@ export class HostLobbyModal extends LitElement {
         <div class="modal-content">
           <span class="close" @click=${this.close}>&times;</span>
 
-          <div class="title">Private Lobby</div>
+          <div class="title">${translateText("host_modal.title")}</div>
           <div class="lobby-id-box">
             <button
               class="lobby-id-button"
@@ -373,7 +374,7 @@ export class HostLobbyModal extends LitElement {
           <div class="options-layout">
             <!-- Map Selection -->
             <div class="options-section">
-              <div class="option-title">Map</div>
+              <div class="option-title">${translateText("host_modal.map")}</div>
               <div class="option-cards">
                 ${Object.entries(GameMapType)
                   .filter(([key]) => isNaN(Number(key)))
@@ -384,6 +385,9 @@ export class HostLobbyModal extends LitElement {
                           .mapKey=${key}
                           .selected=${!this.useRandomMap &&
                           this.selectedMap === value}
+                          .translation=${translateText(
+                            `map.${key.toLowerCase()}`,
+                          )}
                         ></map-display>
                       </div>
                     `,
@@ -401,14 +405,18 @@ export class HostLobbyModal extends LitElement {
                       style="width:100%; aspect-ratio: 4/2; object-fit:cover; border-radius:8px;"
                     />
                   </div>
-                  <div class="option-card-title">Random</div>
+                  <div class="option-card-title">
+                    ${translateText("map.random")}
+                  </div>
                 </div>
               </div>
             </div>
 
             <!-- Difficulty Selection -->
             <div class="options-section">
-              <div class="option-title">Difficulty</div>
+              <div class="option-title">
+                ${translateText("host_modal.difficulty")}
+              </div>
               <div class="option-cards">
                 ${Object.entries(Difficulty)
                   .filter(([key]) => isNaN(Number(key)))
@@ -437,7 +445,9 @@ export class HostLobbyModal extends LitElement {
 
             <!-- Game Options -->
             <div class="options-section">
-              <div class="option-title">Options</div>
+              <div class="option-title">
+                ${translateText("host_modal.options_title")}
+              </div>
               <div class="option-cards">
                 <label for="bots-count" class="option-card">
                   <input
@@ -451,7 +461,10 @@ export class HostLobbyModal extends LitElement {
                     .value="${String(this.bots)}"
                   />
                   <div class="option-card-title">
-                    Bots: ${this.bots == 0 ? "Disabled" : this.bots}
+                    <span>${translateText("host_modal.bots")}</span>${this
+                      .bots == 0
+                      ? translateText("host_modal.bots_disabled")
+                      : this.bots}
                   </div>
                 </label>
 
@@ -466,7 +479,9 @@ export class HostLobbyModal extends LitElement {
                     @change=${this.handleDisableNPCsChange}
                     .checked=${this.disableNPCs}
                   />
-                  <div class="option-card-title">Disable Nations</div>
+                  <div class="option-card-title">
+                    ${translateText("host_modal.disable_nations")}
+                  </div>
                 </label>
 
                 <label
@@ -480,7 +495,9 @@ export class HostLobbyModal extends LitElement {
                     @change=${this.handleInstantBuildChange}
                     .checked=${this.instantBuild}
                   />
-                  <div class="option-card-title">Instant build</div>
+                  <div class="option-card-title">
+                    ${translateText("host_modal.instant_build")}
+                  </div>
                 </label>
 
                 <label
@@ -494,7 +511,9 @@ export class HostLobbyModal extends LitElement {
                     @change=${this.handleInfiniteGoldChange}
                     .checked=${this.infiniteGold}
                   />
-                  <div class="option-card-title">Infinite gold</div>
+                  <div class="option-card-title">
+                    ${translateText("host_modal.infinite_gold")}
+                  </div>
                 </label>
 
                 <label
@@ -508,7 +527,9 @@ export class HostLobbyModal extends LitElement {
                     @change=${this.handleInfiniteTroopsChange}
                     .checked=${this.infiniteTroops}
                   />
-                  <div class="option-card-title">Infinite troops</div>
+                  <div class="option-card-title">
+                    ${translateText("host_modal.infinite_troops")}
+                  </div>
                 </label>
 
                 <label
@@ -522,7 +543,9 @@ export class HostLobbyModal extends LitElement {
                     @change=${this.handleDisableNukesChange}
                     .checked=${this.disableNukes}
                   />
-                  <div class="option-card-title">Disable Nukes</div>
+                  <div class="option-card-title">
+                    ${translateText("host_modal.disable_nukes")}
+                  </div>
                 </label>
               </div>
             </div>
@@ -531,7 +554,9 @@ export class HostLobbyModal extends LitElement {
             <div class="options-section">
               <div class="option-title">
                 ${this.players.length}
-                ${this.players.length === 1 ? "Player" : "Players"}
+                ${this.players.length === 1
+                  ? translateText("host_modal.player")
+                  : translateText("host_modal.players")}
               </div>
 
               <div class="players-list">
@@ -547,8 +572,8 @@ export class HostLobbyModal extends LitElement {
             class="start-game-button"
           >
             ${this.players.length === 1
-              ? "Waiting for players..."
-              : "Start Game"}
+              ? translateText("host_modal.waiting")
+              : translateText("host_modal.start")}
           </button>
         </div>
       </div>
