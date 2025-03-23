@@ -1,0 +1,55 @@
+{
+  "name": "Iceland",
+  "width": 2000,
+  "height": 1500,
+  "nations": [
+    {
+      "coordinates": [455, 1115],
+      "name": "Southern Peninsula",
+      "strength": 2,
+      "flag": "is"
+    },
+    {
+      "coordinates": [550, 1050],
+      "name": "Capital Region",
+      "strength": 2,
+      "flag": "is"
+    },
+    {
+      "coordinates": [370, 810],
+      "name": "Western Region",
+      "strength": 1,
+      "flag": "is"
+    },
+    {
+      "coordinates": [290, 560],
+      "name": "Westfjords",
+      "strength": 2,
+      "flag": "is"
+    },
+    {
+      "coordinates": [790, 555],
+      "name": "Northwestern Region",
+      "strength": 2,
+      "flag": "is"
+    },
+    {
+      "coordinates": [1050, 1235],
+      "name": "Southern Region",
+      "strength": 2,
+      "flag": "is"
+    },
+    {
+      "coordinates": [1240, 660],
+      "name": "Northeastern Region",
+      "strength": 2,
+      "flag": "is"
+    },
+    {
+      "coordinates": [1740, 740],
+      "name": "Eastern Region",
+      "strength": 2,
+      "flag": "is"
+    }
+  ]
+}
