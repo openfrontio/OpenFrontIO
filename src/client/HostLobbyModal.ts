@@ -424,7 +424,10 @@ export class HostLobbyModal extends LitElement {
                           .difficultyKey=${key}
                         ></difficulty-display>
                         <p class="option-card-title">
-                          ${DifficultyDescription[key]}
+                          <!--${DifficultyDescription[key]}-->
+                          ${translateText(
+                            `difficulty.${DifficultyDescription[key]}`,
+                          )}
                         </p>
                       </div>
                     `,

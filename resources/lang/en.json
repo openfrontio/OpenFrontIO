@@ -145,5 +145,16 @@
     "too_short": "Username must be at least {min} characters long.",
     "too_long": "Username must not exceed {max} characters.",
     "invalid_chars": "Username can only contain letters, numbers, spaces, underscores, and [square brackets]."
+  },
+  "host_modal": {
+    "title": "Private Lobby",
+    "map": "Map",
+    "difficulty": "Difficulty"
+  },
+  "difficulty": {
+    "Relaxed": "Relaxed",
+    "Balanced": "Balanced",
+    "Intense": "Intense",
+    "Impossible": "Impossible"
   }
 }

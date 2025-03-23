@@ -346,7 +346,7 @@ export class SinglePlayerModal extends LitElement {
                         </p> -->
                         <p class="option-card-title">
                           ${translateText(
-                            `single_modal.${DifficultyDescription[key]}`,
+                            `difficulty.${DifficultyDescription[key]}`,
                           )}
                         </p>
                       </div>

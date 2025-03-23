@@ -134,5 +134,11 @@
     "too_short": "ユーザー名は{min}文字より長い必要があります。",
     "too_long": "ユーザー名は{max}文字より短い必要があります",
     "invalid_chars": "ユーザー名には英字、数字、スペース、アンダースコア、および [角括弧] のみ使用できます。"
+  },
+  "difficulty": {
+    "Relaxed": "簡単",
+    "Balanced": "普通",
+    "Intense": "難しい",
+    "Impossible": "不可能"
   }
 }
