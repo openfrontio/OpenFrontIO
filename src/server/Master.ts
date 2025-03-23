@@ -13,6 +13,7 @@ import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { setupMetricsServer } from "./MasterMetrics";
 import { logger } from "./Logger";
 import session from "express-session";
+
 const config = getServerConfigFromServer();
 const readyWorkers = new Set();
 
@@ -67,13 +68,16 @@ app.use(
 let publicLobbiesJsonStr = "";
 
 const publicLobbyIDs: Set<string> = new Set();
+
+// Added session middleware using config values.
 app.use(
   session({
-    secret: config.sessionSecret(), 
+    secret: config.sessionSecret(),
     resave: false,
     saveUninitialized: false,
   }),
 );
+
 // Start the master process
 export async function startMaster() {
   if (!cluster.isPrimary) {
@@ -297,7 +301,6 @@ function getNextMap(): GameMapType {
 
   Object.keys(GameMapType).forEach((key) => {
     let count = parseInt(frequency[key]);
-
     while (count > 0) {
       mapsPlaylist.push(GameMapType[key]);
       count--;
@@ -325,7 +328,8 @@ function allNonConsecutive(maps: GameMapType[]): boolean {
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-//discord login section
+
+// --- Discord Login Section ---
 app.get("/auth/discord", (req, res) => {
   const params = new URLSearchParams({
     client_id: config.discordClientID(),
@@ -335,7 +339,6 @@ app.get("/auth/discord", (req, res) => {
   });
   res.redirect(`https://discord.com/api/oauth2/authorize?${params.toString()}`);
 });
-
 
 app.get("/auth/discord/callback", async (req, res) => {
   const code = req.query.code as string;
@@ -369,8 +372,8 @@ app.get("/auth/discord/callback", async (req, res) => {
     }
     const userData = await userResponse.json();
 
-    // Save user info in session(maybe database later on?)
-    req.session.user = {
+    // Save user info in session (casting req.session as any to allow custom property)
+    (req.session as any).user = {
       id: userData.id,
       username: userData.username,
       discriminator: userData.discriminator,
@@ -378,14 +381,12 @@ app.get("/auth/discord/callback", async (req, res) => {
       avatar: userData.avatar,
     };
 
-    
     res.redirect("/");
   } catch (err) {
     console.error("Discord OAuth error:", err);
     res.status(500).send("Authentication failed");
   }
 });
-
 
 app.get("/logout", (req, res) => {
   req.session.destroy((err) => {
@@ -396,14 +397,14 @@ app.get("/logout", (req, res) => {
   });
 });
 
-
 app.get("/api/auth/status", (req, res) => {
-  if (req.session.user) {
-    res.json({ loggedIn: true, user: req.session.user });
+  if ((req.session as any).user) {
+    res.json({ loggedIn: true, user: (req.session as any).user });
   } else {
     res.json({ loggedIn: false });
   }
 });
+
 // SPA fallback route
 app.get("*", function (req, res) {
   res.sendFile(path.join(__dirname, "../../static/index.html"));
