@@ -42,11 +42,15 @@ export class MissileSiloExecution implements Execution {
         return;
       }
       this.silo = this.player.buildUnit(UnitType.MissileSilo, 0, this.tile);
+
+      if (this.player != this.owner()) {
+        this.player = this.owner();
+      }
     }
   }
 
   owner(): Player {
-    return null;
+    return this.silo.owner();
   }
 
   isActive(): boolean {

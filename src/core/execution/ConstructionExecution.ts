@@ -76,6 +76,10 @@ export class ConstructionExecution implements Execution {
       return;
     }
 
+    if (this.player != this.owner()) {
+      this.player = this.owner();
+    }
+
     if (this.ticksUntilComplete == 0) {
       this.player = this.construction.owner();
       this.construction.delete(false);
@@ -124,7 +128,7 @@ export class ConstructionExecution implements Execution {
   }
 
   owner(): Player {
-    return null;
+    return this.construction.owner();
   }
 
   isActive(): boolean {

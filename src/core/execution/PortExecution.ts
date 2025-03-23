@@ -66,6 +66,10 @@ export class PortExecution implements Execution {
       return;
     }
 
+    if (this._owner != this.owner().id()) {
+      this._owner = this.owner().id();
+    }
+
     const totalNbOfPorts = this.mg.units(UnitType.Port).length;
     if (
       !this.random.chance(this.mg.config().tradeShipSpawnRate(totalNbOfPorts))
@@ -89,7 +93,7 @@ export class PortExecution implements Execution {
   }
 
   owner(): Player {
-    return null;
+    return this.port.owner();
   }
 
   isActive(): boolean {
