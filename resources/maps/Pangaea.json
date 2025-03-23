@@ -1,0 +1,223 @@
+{
+  "name": "Pangaea",
+  "width": 1000,
+  "height": 1000,
+  "nations": [
+    {
+      "coordinates": [173, 984],
+      "name": "South Africa",
+      "strength": 2,
+      "flag": "za"
+    },
+    {
+      "coordinates": [218, 599],
+      "name": "Sudan",
+      "strength": 2,
+      "flag": "sd"
+    },
+    {
+      "coordinates": [850, 648],
+      "name": "Madagascar",
+      "strength": 1,
+      "flag": "mg"
+    },
+    {
+      "coordinates": [90, 866],
+      "name": "Central African Republic",
+      "strength": 2,
+      "flag": "cf"
+    },
+    {
+      "coordinates": [768, 82],
+      "name": "Tunisia",
+      "strength": 2,
+      "flag": "tn"
+    },
+    {
+      "coordinates": [397, 304],
+      "name": "Egypt",
+      "strength": 2,
+      "flag": "eg"
+    },
+    {
+      "coordinates": [305, 221],
+      "name": "Morocco",
+      "strength": 2,
+      "flag": "ma"
+    },
+    {
+      "coordinates": [539, 234],
+      "name": "Algeria",
+      "strength": 2,
+      "flag": "dz"
+    },
+    {
+      "coordinates": [975, 272],
+      "name": "Libya",
+      "strength": 2,
+      "flag": "dz"
+    },
+    {
+      "coordinates": [787, 534],
+      "name": "Niger",
+      "strength": 2,
+      "flag": "ne"
+    },
+    {
+      "coordinates": [213, 871],
+      "name": "Sierra Leon",
+      "strength": 2,
+      "flag": "sl"
+    },
+    {
+      "coordinates": [351, 550],
+      "name": "Mali",
+      "strength": 2,
+      "flag": "ml"
+    },
+    {
+      "coordinates": [273, 881],
+      "name": "Liberia",
+      "strength": 2,
+      "flag": "lr"
+    },
+    {
+      "coordinates": [745, 831],
+      "name": "Nigeria",
+      "strength": 2,
+      "flag": "ng"
+    },
+    {
+      "coordinates": [122, 145],
+      "name": "Democratic Republic of the Congo",
+      "strength": 2,
+      "flag": "cg"
+    },
+    {
+      "coordinates": [47, 430],
+      "name": "Angola",
+      "strength": 2,
+      "flag": "ao"
+    },
+    {
+      "coordinates": [38, 737],
+      "name": "Namibia",
+      "strength": 2,
+      "flag": "na"
+    },
+    {
+      "coordinates": [204, 720],
+      "name": "Botswana",
+      "strength": 2,
+      "flag": "bw"
+    },
+    {
+      "coordinates": [622, 893],
+      "name": "Benin",
+      "strength": 2,
+      "flag": "bj"
+    },
+    {
+      "coordinates": [459, 724],
+      "name": "Zimbabwa",
+      "strength": 2,
+      "flag": "zw"
+    },
+    {
+      "coordinates": [570, 531],
+      "name": "Mozambique",
+      "strength": 2,
+      "flag": "na"
+    },
+    {
+      "coordinates": [452, 250],
+      "name": "Tanzania",
+      "strength": 2,
+      "flag": "tz"
+    },
+    {
+      "coordinates": [633, 978],
+      "name": "Kenya",
+      "strength": 2,
+      "flag": "ke"
+    },
+    {
+      "coordinates": [906, 831],
+      "name": "Somalia",
+      "strength": 2,
+      "flag": "so"
+    },
+    {
+      "coordinates": [623, 871],
+      "name": "Ethiopia",
+      "strength": 2,
+      "flag": "et"
+    },
+    {
+      "coordinates": [382, 808],
+      "name": "South Sudan",
+      "strength": 2,
+      "flag": "ss"
+    },
+    {
+      "coordinates": [510, 216],
+      "name": "Israel",
+      "strength": 2,
+      "flag": "il"
+    },
+    {
+      "coordinates": [601, 66],
+      "name": "Syria",
+      "strength": 2,
+      "flag": "sy"
+    },
+    {
+      "coordinates": [812, 195],
+      "name": "Iraq",
+      "strength": 1,
+      "flag": "iq"
+    },
+    {
+      "coordinates": [802, 399],
+      "name": "Saudi Arabia",
+      "strength": 2,
+      "flag": "sa"
+    },
+    {
+      "coordinates": [811, 668],
+      "name": "Yemen",
+      "strength": 1,
+      "flag": "ye"
+    },
+    {
+      "coordinates": [290, 16],
+      "name": "Portugal",
+      "strength": 1,
+      "flag": "pt"
+    },
+    {
+      "coordinates": [152, 27],
+      "name": "Greece",
+      "strength": 1,
+      "flag": "gr"
+    },
+    {
+      "coordinates": [937, 24],
+      "name": "Italy",
+      "strength": 1,
+      "flag": "it"
+    },
+    {
+      "coordinates": [2, 674],
+      "name": "Senegal",
+      "strength": 2,
+      "flag": "sn"
+    },
+    {
+      "coordinates": [898, 99],
+      "name": "Gabon",
+      "strength": 2,
+      "flag": "ga"
+    }
+  ]
+}

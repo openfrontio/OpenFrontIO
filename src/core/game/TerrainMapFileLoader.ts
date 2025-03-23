@@ -31,6 +31,7 @@ const MAP_FILE_NAMES: Record<GameMapType, string> = {
   [GameMapType.Oceania]: "Oceania",
   [GameMapType.BlackSea]: "BlackSea",
   [GameMapType.Africa]: "Africa",
+  [GameMapType.Pangaea]: "Pangaea",
   [GameMapType.Asia]: "Asia",
   [GameMapType.Mars]: "Mars",
   [GameMapType.SouthAmerica]: "SouthAmerica",

@@ -6,6 +6,7 @@ import { WriteStream, createWriteStream } from "fs";
 
 const maps = [
   "Africa",
+  "Pangaea",
   "Asia",
   "WorldMap",
   "BlackSea",
