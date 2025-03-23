@@ -80,7 +80,15 @@ export function translateText(
 
   for (const k of keys) {
     text = text?.[k];
-    if (!text) return key;
+    if (!text) break;
+  }
+
+  if (!text && (window as any).defaultTranslations) {
+    text = (window as any).defaultTranslations;
+    for (const k of keys) {
+      text = text?.[k];
+      if (!text) return key;
+    }
   }
 
   for (const [param, value] of Object.entries(params)) {
