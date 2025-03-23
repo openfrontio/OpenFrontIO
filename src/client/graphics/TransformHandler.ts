@@ -142,7 +142,7 @@ export class TransformHandler {
   }
 
   onGoToPlayer(event: GoToPlayerEvent) {
-    this.game.setFocusedPlayer(event.player)
+    this.game.setFocusedPlayer(event.player);
     this.clearTarget();
     this.target = new Cell(
       event.player.nameLocation().x,
