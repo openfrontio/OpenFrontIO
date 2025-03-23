@@ -156,6 +156,7 @@ export class GameRunner {
         } as BuildableUnit;
       }),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
+      borderTiles: player.borderTiles(),
     } as PlayerActions;
 
     if (this.game.hasOwner(tile)) {

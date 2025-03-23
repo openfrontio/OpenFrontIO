@@ -17,7 +17,6 @@ import {
   AlternateViewEvent,
   DragEvent,
   MouseDownEvent,
-  MouseMoveEvent,
 } from "../../InputHandler";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import {
@@ -56,7 +55,6 @@ export class TerritoryLayer implements Layer {
   constructor(
     private game: GameView,
     private eventBus: EventBus,
-    private transformHandler: any,
   ) {
     this.theme = game.config().theme();
   }
@@ -311,10 +309,15 @@ export class TerritoryLayer implements Layer {
     });
   }
 
-  enqueuePlayerBorder(player: PlayerView) {
-    player.borderTiles().forEach((tile: TileRef) => {
-      this.enqueueTile(tile);
-    });
+  async enqueuePlayerBorder(player: PlayerView) {
+    const dummyTile = this.game.ref(0, 0);
+    const actions = await player.actions(dummyTile);
+
+    if (actions.borderTiles) {
+      actions.borderTiles.forEach((tile: TileRef) => {
+        this.enqueueTile(tile);
+      });
+    }
   }
 
   paintHighlightCell(cell: Cell, color: Colord, alpha: number) {

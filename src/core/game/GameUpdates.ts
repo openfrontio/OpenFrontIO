@@ -97,7 +97,6 @@ export interface PlayerUpdate {
   playerType: PlayerType;
   isAlive: boolean;
   tilesOwned: number;
-  borderTiles: ReadonlySet<TileRef>;
   gold: number;
   population: number;
   workers: number;

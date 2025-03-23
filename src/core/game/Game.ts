@@ -431,6 +431,7 @@ export interface PlayerActions {
   buildableUnits: BuildableUnit[];
   canSendEmojiAllPlayers: boolean;
   interaction?: PlayerInteraction;
+  borderTiles?: ReadonlySet<TileRef>;
 }
 
 export interface BuildableUnit {
