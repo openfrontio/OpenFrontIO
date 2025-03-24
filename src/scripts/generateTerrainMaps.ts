@@ -5,18 +5,18 @@ import fs from "fs/promises";
 import { WriteStream, createWriteStream } from "fs";
 
 const maps = [
-  //"Africa",
-  //"Asia",
-  //"WorldMap",
-  //"BlackSea",
-  //"Europe",
-  //"Mars",
-  //"Mena",
-  //"Oceania",
-  //"NorthAmerica",
-  //"SouthAmerica",
-  //"Britannia",
-  //"GatewayToTheAtlantic",
+  "Africa",
+  "Asia",
+  "WorldMap",
+  "BlackSea",
+  "Europe",
+  "Mars",
+  "Mena",
+  "Oceania",
+  "NorthAmerica",
+  "SouthAmerica",
+  "Britannia",
+  "GatewayToTheAtlantic",
   "Australia",
 ];
 
