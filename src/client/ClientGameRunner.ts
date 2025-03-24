@@ -34,11 +34,6 @@ import { UserSettings } from "../core/game/UserSettings";
 import { LocalPersistantStats } from "./LocalPersistantStats";
 import { createGameRecord } from "../core/Util";
 import { getPersistentIDFromCookie } from "./Main";
-import {
-  BOT_NAME_PREFIXES,
-  BOT_NAME_SUFFIXES,
-} from "../core/execution/utils/BotNames";
-import { PseudoRandom } from "../core/PseudoRandom";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -161,8 +156,6 @@ export class ClientGameRunner {
     private gameView: GameView,
   ) {}
 
-  private random: PseudoRandom;
-
   private saveGame(update: WinUpdate) {
     const players: PlayerRecord[] = [
       {
@@ -274,16 +267,6 @@ export class ClientGameRunner {
       }
     };
     this.transport.connect(onconnect, onmessage);
-
-    const randomBotName = () => {
-      const prefixIndex = this.random.nextInt(0, BOT_NAME_PREFIXES.length);
-      const suffixIndex = this.random.nextInt(0, BOT_NAME_SUFFIXES.length);
-      return `${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
-    };
-
-    // this.gameView.players().forEach((player) => {
-    //   displayNameMap[player.name()] = `★${randomBotName()}`;
-    // });
   }
 
   public stop(saveFullGame: boolean = false) {

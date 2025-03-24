@@ -7,6 +7,7 @@ import {
   PlayerActions,
   PlayerProfile,
 } from "./Game";
+import { displayNameMap } from "../execution/PlayerExecution";
 import { AttackUpdate, PlayerUpdate } from "./GameUpdates";
 import { UnitUpdate } from "./GameUpdates";
 import { NameViewData } from "./Game";
@@ -159,7 +160,8 @@ export class PlayerView {
     return this.data.name;
   }
   displayName(): string {
-    return this.data.displayName;
+    console.log("lol:", displayNameMap);
+    return displayNameMap[this.data.displayName] ?? this.data.displayName;
   }
   clientID(): ClientID {
     return this.data.clientID;
