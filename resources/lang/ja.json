@@ -139,7 +139,7 @@
     "options_title": "オプション",
     "bots": "ボット数: ",
     "bots_disabled": "無効",
-    "disable_nations": "国家を無効化",
+    "disable_nations": "実在する国家を無効化",
     "instant_build": "即時建設",
     "infinite_gold": "資金無限",
     "infinite_troops": "兵士無限",
