@@ -64,19 +64,19 @@
       "flag": "aq"
     },
     {
-      "coordinates": [530, 80],
+      "coordinates": [400, 245],
       "name": "Greenland",
       "strength": 2,
       "flag": "gl"
     },
     {
-      "coordinates": [280, 110],
+      "coordinates": [550, 440],
       "name": "Spain",
       "strength": 1,
       "flag": "es"
     },
     {
-      "coordinates": [958, 220],
+      "coordinates": [555, 370],
       "name": "France",
       "strength": 2,
       "flag": "fr"
@@ -88,49 +88,43 @@
       "flag": "de"
     },
     {
-      "coordinates": [340, 50],
+      "coordinates": [510, 390],
       "name": "Sweden",
       "strength": 1,
       "flag": "se"
     },
     {
-      "coordinates": [390, 160],
+      "coordinates": [640, 300],
       "name": "Turkey",
       "strength": 1,
       "flag": "tr"
     },
     {
-      "coordinates": [285, 70],
-      "name": "Norway",
-      "strength": 1,
-      "flag": "no"
-    },
-    {
-      "coordinates": [390, 60],
+      "coordinates": [555, 370],
       "name": "Finland",
       "strength": 1,
       "flag": "fi"
     },
     {
-      "coordinates": [370, 150],
+      "coordinates": [600, 360],
       "name": "Ukraine",
       "strength": 1,
       "flag": "ua"
     },
     {
-      "coordinates": [450, 160],
+      "coordinates": [620, 340],
       "name": "Russia",
       "strength": 3,
       "flag": "ru"
     },
     {
-      "coordinates": [540, 200],
+      "coordinates": [500, 200],
       "name": "Mongolia",
       "strength": 1,
       "flag": "mn"
     },
     {
-      "coordinates": [620, 350],
+      "coordinates": [346, 70],
       "name": "China",
       "strength": 3,
       "flag": "cn"
@@ -178,10 +172,16 @@
       "flag": "nz"
     },
     {
-      "coordinates": [640, 360],
+      "coordinates": [345, 30],
       "name": "Japan",
       "strength": 1,
       "flag": "jp"
+    },
+    {
+      "coordinates": [485, 415],
+      "name": "United Kingdom",
+      "strength": 2,
+      "flag": "gb"
     }
   ]
 }
