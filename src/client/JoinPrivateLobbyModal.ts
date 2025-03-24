@@ -23,12 +23,12 @@ export class JoinPrivateLobbyModal extends LitElement {
 
   render() {
     return html`
-      <o-modal title=`${translateText("private_lobby.title")}`>
+      <o-modal title=${translateText("private_lobby.title")}>
         <div class="lobby-id-box">
           <input
             type="text"
             id="lobbyIdInput"
-            placeholder=`${translateText("private_lobby.enter_id")}`
+            placeholder=${translateText("private_lobby.enter_id")}
             @keyup=${this.handleChange}
           />
           <button
@@ -57,12 +57,12 @@ export class JoinPrivateLobbyModal extends LitElement {
         <div class="options-layout">
           ${this.hasJoined && this.players.length > 0
             ? html` <div class="options-section">
-                  <div class="option-title">
-                    ${this.players.length}
-                    ${this.players.length === 1
-                      ? translateText("private_lobby.player")
-                      : translateText("private_lobby.players")}
-                  </div>
+                <div class="option-title">
+                  ${this.players.length}
+                  ${this.players.length === 1
+                    ? translateText("private_lobby.player")
+                    : translateText("private_lobby.players")}
+                </div>
 
                 <div class="players-list">
                   ${this.players.map(
@@ -75,7 +75,7 @@ export class JoinPrivateLobbyModal extends LitElement {
         <div class="flex justify-center">
           ${!this.hasJoined
             ? html` <o-button
-                title=`${translateText("private_lobby.join_lobby")}`
+                title=${translateText("private_lobby.join_lobby")}
                 block
                 @click=${this.joinLobby}
               ></o-button>`
