@@ -17,6 +17,7 @@ import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
 import portIcon from "../../../../resources/images/PortIcon.svg";
 import mirvIcon from "../../../../resources/images/MIRVIcon.svg";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
+import samlauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import { renderNumber } from "../../Utils";
 import { GameView, PlayerView } from "../../../core/game/GameView";
@@ -71,7 +72,7 @@ const buildTable: BuildItemDisplay[][] = [
     // needs new icon
     {
       unitType: UnitType.SAMLauncher,
-      icon: shieldIcon,
+      icon: samlauncherIcon,
       description: "Defends against incoming nukes",
       countable: true,
     },

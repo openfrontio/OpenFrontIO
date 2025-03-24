@@ -320,7 +320,7 @@ export class GameMapImpl implements GameMap {
 export function euclDistFN(
   root: TileRef,
   dist: number,
-  center: boolean,
+  center: boolean = false,
 ): (gm: GameMap, tile: TileRef) => boolean {
   if (!center) {
     return (gm: GameMap, n: TileRef) => gm.euclideanDist(root, n) <= dist;
@@ -341,8 +341,63 @@ export function euclDistFN(
 export function manhattanDistFN(
   root: TileRef,
   dist: number,
+  center: boolean = false,
 ): (gm: GameMap, tile: TileRef) => boolean {
-  return (gm: GameMap, n: TileRef) => gm.manhattanDist(root, n) <= dist;
+  if (!center) {
+    return (gm: GameMap, n: TileRef) => gm.manhattanDist(root, n) <= dist;
+  } else {
+    return (gm: GameMap, n: TileRef) => {
+      const rootX = gm.x(root) - 0.5;
+      const rootY = gm.y(root) - 0.5;
+      const dx = Math.abs(gm.x(n) - rootX);
+      const dy = Math.abs(gm.y(n) - rootY);
+      return dx + dy <= dist;
+    };
+  }
+}
+
+export function rectDistFN(
+  root: TileRef,
+  dist: number,
+  center: boolean = false,
+): (gm: GameMap, tile: TileRef) => boolean {
+  if (!center) {
+    return (gm: GameMap, n: TileRef) => {
+      const dx = Math.abs(gm.x(n) - gm.x(root));
+      const dy = Math.abs(gm.y(n) - gm.y(root));
+      return dx <= dist && dy <= dist;
+    };
+  } else {
+    return (gm: GameMap, n: TileRef) => {
+      const rootX = gm.x(root) - 0.5;
+      const rootY = gm.y(root) - 0.5;
+      const dx = Math.abs(gm.x(n) - rootX);
+      const dy = Math.abs(gm.y(n) - rootY);
+      return dx <= dist && dy <= dist;
+    };
+  }
+}
+
+export function hexDistFN(
+  root: TileRef,
+  dist: number,
+  center: boolean = false,
+): (gm: GameMap, tile: TileRef) => boolean {
+  if (!center) {
+    return (gm: GameMap, n: TileRef) => {
+      const dx = Math.abs(gm.x(n) - gm.x(root));
+      const dy = Math.abs(gm.y(n) - gm.y(root));
+      return dx <= dist && dy <= dist && dx + dy <= dist * 1.5;
+    };
+  } else {
+    return (gm: GameMap, n: TileRef) => {
+      const rootX = gm.x(root) - 0.5;
+      const rootY = gm.y(root) - 0.5;
+      const dx = Math.abs(gm.x(n) - rootX);
+      const dy = Math.abs(gm.y(n) - rootY);
+      return dx <= dist && dy <= dist && dx + dy <= dist * 1.5;
+    };
+  }
 }
 
 export function andFN(
