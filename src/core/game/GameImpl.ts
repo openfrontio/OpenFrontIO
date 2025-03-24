@@ -16,6 +16,7 @@ import {
   GameUpdates,
   TerrainType,
   EmojiMessage,
+  MutableAlliance,
 } from "./Game";
 import { GameUpdate } from "./GameUpdates";
 import { GameUpdateType } from "./GameUpdates";
@@ -100,6 +101,11 @@ export class GameImpl implements Game {
   owner(ref: TileRef): Player | TerraNullius {
     return this.playerBySmallID(this.ownerID(ref));
   }
+
+  alliances(): MutableAlliance[] {
+    return this.alliances_;
+  }
+
   playerBySmallID(id: number): Player | TerraNullius {
     if (id == 0) {
       return this.terraNullius();

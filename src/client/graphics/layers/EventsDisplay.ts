@@ -24,6 +24,7 @@ import { Layer } from "./Layer";
 import {
   CancelAttackIntentEvent,
   SendAllianceReplyIntentEvent,
+  SendAllianceRequestIntentEvent,
 } from "../../Transport";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import { DirectiveResult } from "lit/directive.js";
@@ -36,6 +37,7 @@ import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
 interface Event {
   description: string;
   unsafeDescription?: boolean;
+  tags?: string[];
   buttons?: {
     text: string;
     className: string;
@@ -83,6 +85,7 @@ export class EventsDisplay extends LitElement implements Layer {
     [GameUpdateType.BrokeAlliance, (u) => this.onBrokeAllianceEvent(u)],
     [GameUpdateType.TargetPlayer, (u) => this.onTargetPlayerEvent(u)],
     [GameUpdateType.Emoji, (u) => this.onEmojiMessageEvent(u)],
+    [GameUpdateType.AllianceExpired, (u) => this.onAllianceExpiredEvent(u)],
   ]);
 
   constructor() {
@@ -154,6 +157,19 @@ export class EventsDisplay extends LitElement implements Layer {
       ...this.events.slice(0, index),
       ...this.events.slice(index + 1),
     ];
+  }
+
+  private removeEventByTags(tags: string[]) {
+    this.events = this.events.filter((event) => {
+      if (event.tags) {
+        for (const tag of tags) {
+          if (event.tags.includes(tag)) {
+            return false;
+          }
+        }
+      }
+      return true;
+    });
   }
 
   shouldTransform(): boolean {
@@ -230,26 +246,51 @@ export class EventsDisplay extends LitElement implements Layer {
       duration: 150,
       focusID: update.requestorID,
     });
+
+    this.removeEventByTags(["alliance" + update.requestorID]);
   }
 
   onAllianceRequestReplyEvent(update: AllianceRequestReplyUpdate) {
     const myPlayer = this.game.playerByClientID(this.clientID);
-    if (!myPlayer || update.request.requestorID !== myPlayer.smallID()) {
+    if (
+      !myPlayer ||
+      (update.request.requestorID !== myPlayer.smallID() &&
+        update.request.recipientID !== myPlayer.smallID())
+    ) {
       return;
     }
 
-    const recipient = this.game.playerBySmallID(
-      update.request.recipientID,
+    if (update.request.requestorID == myPlayer.smallID()) {
+      const recipient = this.game.playerBySmallID(
+        update.request.recipientID,
+      ) as PlayerView;
+
+      this.addEvent({
+        description: `${recipient.name()} ${
+          update.accepted ? "accepted" : "rejected"
+        } your alliance request`,
+        type: update.accepted ? MessageType.SUCCESS : MessageType.ERROR,
+        highlight: true,
+        createdAt: this.game.ticks(),
+        focusID: update.request.recipientID,
+      });
+      return;
+    }
+
+    if (!update.accepted) {
+      return;
+    }
+
+    const requestor = this.game.playerBySmallID(
+      update.request.requestorID,
     ) as PlayerView;
 
     this.addEvent({
-      description: `${recipient.name()} ${
-        update.accepted ? "accepted" : "rejected"
-      } your alliance request`,
-      type: update.accepted ? MessageType.SUCCESS : MessageType.ERROR,
+      description: `You are now allied to ${requestor.name()}`,
+      type: MessageType.SUCCESS,
       highlight: true,
       createdAt: this.game.ticks(),
-      focusID: update.request.recipientID,
+      focusID: update.request.requestorID,
     });
   }
 
@@ -289,12 +330,33 @@ export class EventsDisplay extends LitElement implements Layer {
         : update.player2ID === myPlayer.smallID()
           ? update.player1ID
           : null;
+
+    if (!otherID) return;
+
     const other = this.game.playerBySmallID(otherID) as PlayerView;
     if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
 
     this.addEvent({
       description: `Your alliance with ${other.name()} expired`,
       type: MessageType.WARN,
+      tags: ["alliance" + otherID],
+      duration: 100,
+      buttons: [
+        {
+          text: "Focus",
+          className: "btn-gray",
+          action: () => this.eventBus.emit(new GoToPlayerEvent(other)),
+          preventClose: true,
+        },
+        {
+          text: "Propose to renew",
+          className: "btn",
+          action: () =>
+            this.eventBus.emit(
+              new SendAllianceRequestIntentEvent(myPlayer, other),
+            ),
+        },
+      ],
       highlight: true,
       createdAt: this.game.ticks(),
       focusID: otherID,

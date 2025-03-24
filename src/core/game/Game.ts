@@ -331,6 +331,7 @@ export interface Player {
   incomingAllianceRequests(): AllianceRequest[];
   outgoingAllianceRequests(): AllianceRequest[];
   alliances(): MutableAlliance[];
+  expiredAlliances(): Alliance[];
   allies(): Player[];
   isAlliedWith(other: Player): boolean;
   allianceWith(other: Player): MutableAlliance | null;
@@ -398,6 +399,9 @@ export interface Game extends GameMap {
   addPlayer(playerInfo: PlayerInfo, manpower: number): Player;
   terraNullius(): TerraNullius;
   owner(ref: TileRef): Player | TerraNullius;
+
+  // Alliances
+  alliances(): MutableAlliance[];
 
   // Game State
   ticks(): Tick;

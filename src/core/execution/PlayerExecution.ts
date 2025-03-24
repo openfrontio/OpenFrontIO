@@ -86,16 +86,6 @@ export class PlayerExecution implements Execution {
     this.player.addTroops(adjustRate);
     this.player.removeWorkers(adjustRate);
 
-    const alliances = Array.from(this.player.alliances());
-    for (const alliance of alliances) {
-      if (
-        this.mg.ticks() - alliance.createdAt() >
-        this.mg.config().allianceDuration()
-      ) {
-        alliance.expire();
-      }
-    }
-
     if (ticks - this.lastCalc > this.ticksPerClusterCalc) {
       if (this.player.lastTileChange() > this.lastCalc) {
         this.lastCalc = ticks;
