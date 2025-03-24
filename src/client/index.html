@@ -404,14 +404,6 @@
       document.addEventListener("DOMContentLoaded", async function () {
         const locale = new Intl.Locale(navigator.language);
         const defaultLang = locale.language;
-          ? "ja"
-          : navigator.language.startsWith("bg")
-            ? "bg"
-            : navigator.language.startsWith("fr")
-              ? "fr"
-              : navigator.language.startsWith("nl")
-                ? "nl"
-                : "en";
         const userLang = localStorage.getItem("lang") || defaultLang;
         async function loadLanguage(lang) {
           try {
