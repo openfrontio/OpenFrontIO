@@ -13,8 +13,7 @@
     "format": "prettier --ignore-unknown --write .",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "prepare": "husky",
-    "electron:start": "electron ./electron/main.cjs"
+    "prepare": "husky"
   },
   "lint-staged": {
     "**/*": [
@@ -44,8 +43,6 @@
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
     "css-loader": "^7.1.2",
-    "electron": "^29.4.6",
-    "electron-builder": "^24.13.3",
     "eslint": "^9.21.0",
     "eslint-config-prettier": "^10.1.1",
     "file-loader": "^6.2.0",

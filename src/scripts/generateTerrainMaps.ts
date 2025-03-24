@@ -19,6 +19,7 @@ const maps = [
   "GatewayToTheAtlantic",
   "Australia",
   "Pangaea",
+  "Iceland",
 ];
 
 async function loadTerrainMaps() {

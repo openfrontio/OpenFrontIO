@@ -38,6 +38,7 @@ const MAP_FILE_NAMES: Record<GameMapType, string> = {
   [GameMapType.Britannia]: "Britannia",
   [GameMapType.GatewayToTheAtlantic]: "GatewayToTheAtlantic",
   [GameMapType.Australia]: "Australia",
+  [GameMapType.Iceland]: "Iceland",
 };
 
 class GameMapLoader {
