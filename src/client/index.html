@@ -310,6 +310,7 @@
             <option value="bg">Български</option>
             <option value="ja">日本語</option>
             <option value="fr">Français</option>
+            <option value="nl">Nederlands</option>
           </select>
         </div>
       </div>
@@ -407,7 +408,9 @@
             ? "bg"
             : navigator.language.startsWith("fr")
               ? "fr"
-              : "en";
+              : navigator.language.startsWith("nl")
+                ? "nl"
+                : "en";
         const userLang = localStorage.getItem("lang") || defaultLang;
         async function loadLanguage(lang) {
           try {
