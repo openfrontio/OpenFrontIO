@@ -401,7 +401,8 @@
     </script>
     <script>
       document.addEventListener("DOMContentLoaded", async function () {
-        const defaultLang = navigator.language.startsWith("ja")
+        const locale = new Intl.Locale(navigator.language);
+        const defaultLang = locale.language;
           ? "ja"
           : navigator.language.startsWith("bg")
             ? "bg"
