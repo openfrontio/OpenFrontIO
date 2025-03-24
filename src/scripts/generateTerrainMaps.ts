@@ -5,20 +5,22 @@ import fs from "fs/promises";
 import { WriteStream, createWriteStream } from "fs";
 
 const maps = [
-  "Africa",
-  "Asia",
-  "WorldMap",
-  "BlackSea",
-  "Europe",
-  "Mars",
-  "Mena",
-  "Oceania",
-  "NorthAmerica",
-  "SouthAmerica",
-  "Britannia",
-  "GatewayToTheAtlantic",
+  //"Africa",
+  //"Asia",
+  //"WorldMap",
+  //"BlackSea",
+  //"Europe",
+  //"Mars",
+  //"Mena",
+  //"Oceania",
+  //"NorthAmerica",
+  //"SouthAmerica",
+  //"Britannia",
+  //"GatewayToTheAtlantic",
   "Australia",
 ];
+
+const removeSmall = true;
 
 async function loadTerrainMaps() {
   await Promise.all(
@@ -30,7 +32,11 @@ async function loadTerrainMaps() {
         map + ".png",
       );
       const imageBuffer = await fs.readFile(mapPath);
-      const { map: mainMap, miniMap, thumb } = await generateMap(imageBuffer);
+      const {
+        map: mainMap,
+        miniMap,
+        thumb,
+      } = await generateMap(imageBuffer, removeSmall, map);
 
       const outputPath = path.join(
         process.cwd(),
