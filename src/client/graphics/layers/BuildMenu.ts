@@ -87,6 +87,12 @@ const buildTable: BuildItemDisplay[][] = [
       description: "Increase max population",
       countable: true,
     },
+    {
+      unitType: UnitType.Factory,
+      icon: goldCoinIcon,
+      description: "Increase worker revenue",
+      countable: true,
+    },
   ],
 ];
 

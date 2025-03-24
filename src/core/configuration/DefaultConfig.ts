@@ -301,6 +301,21 @@ export class DefaultConfig implements Config {
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
         };
+      case UnitType.Factory:
+        return {
+          cost: (p: Player) =>
+            p.type() == PlayerType.Human && this.infiniteGold()
+              ? 0
+              : Math.min(
+                  1_000_000,
+                  Math.pow(
+                    2,
+                    p.unitsIncludingConstruction(UnitType.Factory).length,
+                  ) * 125_000,
+                ),
+          territoryBound: true,
+          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+        };
       case UnitType.Construction:
         return {
           cost: () => 0,
@@ -557,7 +572,13 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): number {
-    return Math.sqrt(player.workers() * player.numTilesOwned()) / 200;
+    return (
+      Math.sqrt(
+        player.workers() *
+          player.numTilesOwned() *
+          (1 + player.units(UnitType.Factory).length * 0.2),
+      ) / 200
+    );
   }
 
   troopAdjustmentRate(player: Player): number {

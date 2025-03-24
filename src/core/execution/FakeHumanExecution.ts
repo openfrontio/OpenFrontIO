@@ -355,6 +355,11 @@ export class FakeHumanExecution implements Execution {
       2,
       (t) => new ConstructionExecution(this.player.id(), t, UnitType.City),
     );
+    this.maybeSpawnStructure(
+      UnitType.Factory,
+      1,
+      (t) => new ConstructionExecution(this.player.id(), t, UnitType.Factory),
+    );
     if (this.maybeSpawnWarship()) {
       return;
     }

@@ -85,6 +85,7 @@ export enum UnitType {
   MIRV = "MIRV",
   MIRVWarhead = "MIRV Warhead",
   Construction = "Construction",
+  Factory = "Factory",
 }
 
 export const nukeTypes = [
