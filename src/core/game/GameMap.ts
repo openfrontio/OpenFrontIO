@@ -362,7 +362,11 @@ export function rectDistFN(
   center: boolean = false,
 ): (gm: GameMap, tile: TileRef) => boolean {
   if (!center) {
-    return (gm: GameMap, n: TileRef) => gm.manhattanDist(root, n) <= dist;
+    return (gm: GameMap, n: TileRef) => {
+      const dx = Math.abs(gm.x(n) - gm.x(root));
+      const dy = Math.abs(gm.y(n) - gm.y(root));
+      return dx <= dist && dy <= dist;
+    };
   } else {
     return (gm: GameMap, n: TileRef) => {
       const rootX = gm.x(root) - 0.5;
@@ -380,7 +384,11 @@ export function hexDistFN(
   center: boolean = false,
 ): (gm: GameMap, tile: TileRef) => boolean {
   if (!center) {
-    return (gm: GameMap, n: TileRef) => gm.manhattanDist(root, n) <= dist;
+    return (gm: GameMap, n: TileRef) => {
+      const dx = Math.abs(gm.x(n) - gm.x(root));
+      const dy = Math.abs(gm.y(n) - gm.y(root));
+      return dx <= dist && dy <= dist && dx + dy <= dist * 1.5;
+    };
   } else {
     return (gm: GameMap, n: TileRef) => {
       const rootX = gm.x(root) - 0.5;

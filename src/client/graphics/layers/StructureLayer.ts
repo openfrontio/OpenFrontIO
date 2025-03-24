@@ -88,7 +88,7 @@ export class StructureLayer implements Layer {
       icon: SAMMissileReloadingIcon,
       borderRadius: 8.525,
       territoryRadius: 6.525,
-      borderType: UnitBorderType.Diamond,
+      borderType: UnitBorderType.Square,
     });
   }
 
