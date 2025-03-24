@@ -4,10 +4,8 @@ import { WebSocketServer } from "ws";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GameManager } from "./GameManager";
-import {
-  GameEnv,
-  getServerConfigFromServer,
-} from "../core/configuration/Config";
+import { GameEnv } from "../core/configuration/Config";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { WebSocket } from "ws";
 import { Client } from "./Client";
 import rateLimit from "express-rate-limit";
@@ -166,6 +164,7 @@ export function startWorker() {
         instantBuild: req.body.instantBuild,
         bots: req.body.bots,
         disableNPCs: req.body.disableNPCs,
+        disableNukes: req.body.disableNukes,
       });
       res.status(200).json({ success: true });
     }),

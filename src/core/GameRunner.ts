@@ -1,6 +1,6 @@
 import { utcDay } from "d3";
 import { placeName } from "../client/graphics/NameBoxCalculator";
-import { getConfig } from "./configuration/Config";
+import { getConfig } from "./configuration/ConfigLoader";
 import { EventBus } from "./EventBus";
 import { Executor } from "./execution/ExecutionManager";
 import { WinCheckExecution } from "./execution/WinCheckExecution";

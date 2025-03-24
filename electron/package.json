@@ -1,0 +1,19 @@
+{
+  "name": "openfront-electron",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ./main.js",
+    "build": "electron-builder"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "Electron client for OpenFront",
+  "devDependencies": {
+    "electron": "^29.4.6",
+    "electron-builder": "^24.13.3"
+  },
+  "dependencies": {
+    "greenworks": "^0.1.0"
+  }
+}

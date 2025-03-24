@@ -44,6 +44,7 @@ import { andFN, manhattanDistFN, TileRef } from "./GameMap";
 import { AttackImpl } from "./AttackImpl";
 import { PseudoRandom } from "../PseudoRandom";
 import { consolex } from "../Consolex";
+import { sanitizeUsername } from "../validations/username";
 
 interface Target {
   tick: Tick;
@@ -101,7 +102,7 @@ export class PlayerImpl implements Player {
     startTroops: number,
   ) {
     this._flag = playerInfo.flag;
-    this._name = playerInfo.name;
+    this._name = sanitizeUsername(playerInfo.name);
     this._targetTroopRatio = 95n;
     this._troops = toInt(startTroops);
     this._workers = 0n;
@@ -672,6 +673,21 @@ export class PlayerImpl implements Player {
   }
 
   canBuild(unitType: UnitType, targetTile: TileRef): TileRef | false {
+    // prevent the building of nukes and nuke related buildings
+    if (this.mg.config().disableNukes()) {
+      if (
+        unitType === UnitType.MissileSilo ||
+        unitType === UnitType.MIRV ||
+        unitType === UnitType.AtomBomb ||
+        unitType === UnitType.HydrogenBomb ||
+        unitType === UnitType.SAMLauncher ||
+        unitType === UnitType.SAMMissile ||
+        unitType === UnitType.MIRVWarhead
+      ) {
+        return false;
+      }
+    }
+
     const cost = this.mg.unitInfo(unitType).cost(this);
     if (!this.isAlive() || this.gold() < cost) {
       return false;

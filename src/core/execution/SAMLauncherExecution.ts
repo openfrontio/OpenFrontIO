@@ -7,6 +7,7 @@ import {
   Unit,
   PlayerID,
   UnitType,
+  MessageType,
 } from "../game/Game";
 import { manhattanDistFN, TileRef } from "../game/GameMap";
 import { SAMMissileExecution } from "./SAMMissileExecution";
@@ -22,7 +23,6 @@ export class SAMLauncherExecution implements Execution {
 
   private searchRangeRadius = 75;
 
-  private missileAttackRate = 75; // 7.5 seconds
   private lastMissileAttack = 0;
 
   private pseudoRandom: PseudoRandom;
@@ -100,22 +100,38 @@ export class SAMLauncherExecution implements Execution {
 
     const cooldown =
       this.lastMissileAttack != 0 &&
-      this.mg.ticks() - this.lastMissileAttack <= this.missileAttackRate;
-    if (this.post.isSamCooldown() != cooldown) {
-      this.post.setSamCooldown(cooldown);
+      this.mg.ticks() - this.lastMissileAttack <=
+        this.mg.config().samCooldown();
+
+    if (this.post.isSamCooldown() && !cooldown) {
+      this.post.setSamCooldown(false);
     }
 
-    if (this.target != null) {
-      if (!this.post.isSamCooldown()) {
-        this.lastMissileAttack = this.mg.ticks();
+    if (
+      this.target &&
+      !this.post.isSamCooldown() &&
+      !this.target.targetedBySAM()
+    ) {
+      this.lastMissileAttack = this.mg.ticks();
+      this.post.setSamCooldown(true);
+      const random = this.pseudoRandom.next();
+      const hit = random < this.mg.config().samHittingChance();
+
+      this.lastMissileAttack = this.mg.ticks();
+      if (!hit) {
+        this.mg.displayMessage(
+          `Missile failed to intercept ${this.target.type()}`,
+          MessageType.ERROR,
+          this.post.owner().id(),
+        );
+      } else {
+        this.target.setTargetedBySAM(true);
         this.mg.addExecution(
           new SAMMissileExecution(
             this.post.tile(),
             this.post.owner(),
             this.post,
             this.target,
-            this.mg,
-            this.pseudoRandom.next(),
           ),
         );
       }

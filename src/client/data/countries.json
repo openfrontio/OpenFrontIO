@@ -283,6 +283,11 @@
     "name": "Costa Rica"
   },
   {
+    "code": "ci",
+    "continent": "Africa",
+    "name": "Côte d'Ivoire"
+  },
+  {
     "code": "hr",
     "continent": "Europe",
     "name": "Croatia"
@@ -306,11 +311,6 @@
     "code": "cz",
     "continent": "Europe",
     "name": "Czech Republic"
-  },
-  {
-    "code": "ci",
-    "continent": "Africa",
-    "name": "Côte d'Ivoire"
   },
   {
     "code": "cd",
@@ -939,6 +939,11 @@
     "name": "Republic of the Congo"
   },
   {
+    "code": "re",
+    "continent": "Africa",
+    "name": "Réunion"
+  },
+  {
     "code": "ro",
     "continent": "Europe",
     "name": "Romania"
@@ -952,11 +957,6 @@
     "code": "rw",
     "continent": "Africa",
     "name": "Rwanda"
-  },
-  {
-    "code": "re",
-    "continent": "Africa",
-    "name": "Réunion"
   },
   {
     "code": "bl",
@@ -1194,6 +1194,11 @@
     "name": "Tunisia"
   },
   {
+    "code": "tr",
+    "continent": "Asia",
+    "name": "Türkiye"
+  },
+  {
     "code": "tm",
     "continent": "Asia",
     "name": "Turkmenistan"
@@ -1207,11 +1212,6 @@
     "code": "tv",
     "continent": "Oceania",
     "name": "Tuvalu"
-  },
-  {
-    "code": "tr",
-    "continent": "Asia",
-    "name": "Türkiye"
   },
   {
     "code": "ug",
@@ -1311,5 +1311,285 @@
     "code": "zw",
     "continent": "Africa",
     "name": "Zimbabwe"
+  },
+  {
+    "code": "1_Airgialla",
+    "name": "Airgialla"
+  },
+  {
+    "code": "1_Connacht",
+    "name": "Connacht"
+  },
+  {
+    "code": "1_Dalriata",
+    "name": "Dalriata"
+  },
+  {
+    "code": "1_Dumnonia",
+    "name": "Dumnonia"
+  },
+  {
+    "code": "1_Dyfed",
+    "name": "Dyfed"
+  },
+  {
+    "code": "1_East Anglia",
+    "name": "East Anglia"
+  },
+  {
+    "code": "1_Essex",
+    "name": "Essex"
+  },
+  {
+    "code": "1_Fortriu",
+    "name": "Fortriu"
+  },
+  {
+    "code": "1_Franks",
+    "name": "Franks"
+  },
+  {
+    "code": "1_Gwent",
+    "name": "Gwent"
+  },
+  {
+    "code": "1_Gwynedd",
+    "name": "Gwynedd"
+  },
+  {
+    "code": "1_Kent",
+    "name": "Kent"
+  },
+  {
+    "code": "1_Laigin",
+    "name": "Laigin"
+  },
+  {
+    "code": "1_Mercia",
+    "name": "Mercia"
+  },
+  {
+    "code": "1_Munster",
+    "name": "Munster"
+  },
+  {
+    "code": "1_Northern Uí Néill",
+    "name": "Northern Uí Néill"
+  },
+  {
+    "code": "1_Northumbria",
+    "name": "Northumbria"
+  },
+  {
+    "code": "1_Powys",
+    "name": "Powys"
+  },
+  {
+    "code": "1_Southern Uí Néill",
+    "name": "Southern Uí Néill"
+  },
+  {
+    "code": "1_Strathclyde",
+    "name": "Strathclyde"
+  },
+  {
+    "code": "1_Sussex",
+    "name": "Sussex"
+  },
+  {
+    "code": "1_Ulaid",
+    "name": "Ulaid"
+  },
+  {
+    "code": "1_Wessex",
+    "name": "Wessex"
+  },
+  {
+    "code": "Alabama",
+    "name": "Alabama"
+  },
+  {
+    "code": "Alaskaa",
+    "name": "Alaska"
+  },
+  {
+    "code": "Arizona",
+    "name": "Arizona"
+  },
+  {
+    "code": "Arkansas",
+    "name": "Arkansas"
+  },
+  {
+    "code": "California",
+    "name": "California"
+  },
+  {
+    "code": "Colorado",
+    "name": "Colorado"
+  },
+  {
+    "code": "Florida",
+    "name": "Florida"
+  },
+  {
+    "code": "Georgia_US",
+    "name": "Georgia"
+  },
+  {
+    "code": "Hawaii",
+    "name": "Hawaii"
+  },
+  {
+    "code": "Idaho",
+    "name": "Idaho"
+  },
+  {
+    "code": "Illinois",
+    "name": "Illinois"
+  },
+  {
+    "code": "Indiana",
+    "name": "Indiana"
+  },
+  {
+    "code": "Iowa",
+    "name": "Iowa"
+  },
+  {
+    "code": "Kansas",
+    "name": "Kansas"
+  },
+  {
+    "code": "Kentucky",
+    "name": "Kentucky"
+  },
+  {
+    "code": "Louisiana",
+    "name": "Louisiana"
+  },
+  {
+    "code": "Maine",
+    "name": "Maine"
+  },
+  {
+    "code": "Maryland",
+    "name": "Maryland"
+  },
+  {
+    "code": "Michigan",
+    "name": "Michigan"
+  },
+  {
+    "code": "Minnesota",
+    "name": "Minnesota"
+  },
+  {
+    "code": "Mississippi",
+    "name": "Mississippi"
+  },
+  {
+    "code": "Missouri",
+    "name": "Missouri"
+  },
+  {
+    "code": "Montana",
+    "name": "Montana"
+  },
+  {
+    "code": "Nebraska",
+    "name": "Nebraska"
+  },
+  {
+    "code": "Nevada",
+    "name": "Nevada"
+  },
+  {
+    "code": "New_Hampshire",
+    "name": "New Hampshire"
+  },
+  {
+    "code": "New_Jersey",
+    "name": "New Jersey"
+  },
+  {
+    "code": "New_Mexico",
+    "name": "New Mexico"
+  },
+  {
+    "code": "New_York",
+    "name": "New York"
+  },
+  {
+    "code": "North_Carolina",
+    "name": "North Carolina"
+  },
+  {
+    "code": "North_Dakota",
+    "name": "North Dakota"
+  },
+  {
+    "code": "Ohio",
+    "name": "Ohio"
+  },
+  {
+    "code": "Oklahoma",
+    "name": "Oklahoma"
+  },
+  {
+    "code": "Oregon",
+    "name": "Oregon"
+  },
+  {
+    "code": "Pennsylvania",
+    "name": "Pennsylvania"
+  },
+  {
+    "code": "Quebec",
+    "name": "Quebec"
+  },
+  {
+    "code": "Rhode_Island",
+    "name": "Rhode Island"
+  },
+  {
+    "code": "South_Carolina",
+    "name": "South Carolina"
+  },
+  {
+    "code": "South_Dakota",
+    "name": "South Dakota"
+  },
+  {
+    "code": "Tennessee",
+    "name": "Tennessee"
+  },
+  {
+    "code": "Texas",
+    "name": "Texas"
+  },
+  {
+    "code": "Vermont",
+    "name": "Vermont"
+  },
+  {
+    "code": "Virginia",
+    "name": "Virginia"
+  },
+  {
+    "code": "Washington",
+    "name": "Washington"
+  },
+  {
+    "code": "West Virginia",
+    "name": "West Virginia"
+  },
+  {
+    "code": "Wisconsin",
+    "name": "Wisconsin"
+  },
+  {
+    "code": "Wyoming",
+    "name": "Wyoming"
   }
 ]

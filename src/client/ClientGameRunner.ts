@@ -26,7 +26,8 @@ import {
 } from "../core/game/GameUpdates";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { consolex, initRemoteSender } from "../core/Consolex";
-import { getConfig, ServerConfig } from "../core/configuration/Config";
+import { ServerConfig } from "../core/configuration/Config";
+import { getConfig } from "../core/configuration/ConfigLoader";
 import { GameView, PlayerView } from "../core/game/GameView";
 import { GameUpdateViewData } from "../core/game/GameUpdates";
 import { UserSettings } from "../core/game/UserSettings";

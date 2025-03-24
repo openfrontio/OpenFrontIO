@@ -8,10 +8,8 @@ import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
 import randomMap from "../../resources/images/RandomMap.png";
 import { generateID } from "../core/Util";
-import {
-  getConfig,
-  getServerConfigFromClient,
-} from "../core/configuration/Config";
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { getConfig } from "../core/configuration/ConfigLoader";
 import { JoinLobbyEvent } from "./Main";
 
 @customElement("host-lobby-modal")
@@ -20,6 +18,7 @@ export class HostLobbyModal extends LitElement {
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs = false;
+  @state() private disableNukes: boolean = false;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
@@ -508,6 +507,20 @@ export class HostLobbyModal extends LitElement {
                   />
                   <div class="option-card-title">Infinite troops</div>
                 </label>
+
+                <label
+                  for="disable-nukes"
+                  class="option-card ${this.disableNukes ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="disable-nukes"
+                    @change=${this.handleDisableNukesChange}
+                    .checked=${this.disableNukes}
+                  />
+                  <div class="option-card-title">Disable Nukes</div>
+                </label>
               </div>
             </div>
 
@@ -623,6 +636,9 @@ export class HostLobbyModal extends LitElement {
     this.infiniteTroops = Boolean((e.target as HTMLInputElement).checked);
     this.putGameConfig();
   }
+  private handleDisableNukesChange(e: Event) {
+    this.disableNukes = Boolean((e.target as HTMLInputElement).checked);
+  }
 
   private async handleDisableNPCsChange(e: Event) {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
@@ -643,6 +659,7 @@ export class HostLobbyModal extends LitElement {
           gameMap: this.selectedMap,
           difficulty: this.selectedDifficulty,
           disableNPCs: this.disableNPCs,
+          disableNukes: this.disableNukes,
           bots: this.bots,
           infiniteGold: this.infiniteGold,
           infiniteTroops: this.infiniteTroops,

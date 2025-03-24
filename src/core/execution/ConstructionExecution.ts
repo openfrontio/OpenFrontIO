@@ -55,7 +55,7 @@ export class ConstructionExecution implements Execution {
       }
       const spawnTile = this.player.canBuild(this.constructionType, this.tile);
       if (spawnTile == false) {
-        consolex.warn(`cannot build ${UnitType.Construction}`);
+        consolex.warn(`cannot build ${this.constructionType}`);
         this.active = false;
         return;
       }

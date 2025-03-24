@@ -4,7 +4,7 @@ import express from "express";
 import { GameMapType, GameType, Difficulty } from "../core/game/Game";
 import { generateID } from "../core/Util";
 import { PseudoRandom } from "../core/PseudoRandom";
-import { getServerConfigFromServer } from "../core/configuration/Config";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameConfig, GameInfo } from "../core/Schemas";
 import path from "path";
 import rateLimit from "express-rate-limit";
@@ -233,6 +233,7 @@ async function schedulePublicGame() {
     infiniteTroops: false,
     instantBuild: false,
     disableNPCs: false,
+    disableNukes: false,
     bots: 400,
   } as GameConfig;
 
@@ -285,6 +286,7 @@ function getNextMap(): GameMapType {
     Asia: 2,
     Mars: 2,
     Britannia: 2,
+    GatewayToTheAtlantic: 2,
   };
 
   Object.keys(GameMapType).forEach((key) => {

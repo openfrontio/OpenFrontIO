@@ -1,7 +1,7 @@
 import express from "express";
 import http from "http";
 import promClient from "prom-client";
-import { getServerConfigFromServer } from "../core/configuration/Config";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 
 const config = getServerConfigFromServer();
 

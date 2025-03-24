@@ -108,6 +108,7 @@ const GameConfigSchema = z.object({
   difficulty: z.nativeEnum(Difficulty),
   gameType: z.nativeEnum(GameType),
   disableNPCs: z.boolean(),
+  disableNukes: z.boolean(),
   bots: z.number().int().min(0).max(400),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
