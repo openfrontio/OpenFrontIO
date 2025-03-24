@@ -3,7 +3,6 @@ import { decodePNGFromStream, Bitmap } from "pureimage";
 //import fs from "fs/promises";
 //import { createReadStream } from "fs";
 import { Readable } from "stream";
-import { networkInterfaceDefault } from "systeminformation";
 
 const min_island_size = 30;
 const min_lake_size = 30;
