@@ -1,6 +1,8 @@
 import { ClientGameRunner, joinLobby } from "./ClientGameRunner";
 import favicon from "../../resources/images/Favicon.svg";
 import "./PublicLobby";
+import "./components/baseComponents/Button";
+import "./components/baseComponents/Modal";
 import "./UsernameInput";
 import "./styles.css";
 import { UsernameInput } from "./UsernameInput";
