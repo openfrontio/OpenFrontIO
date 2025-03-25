@@ -307,11 +307,11 @@ export class DefaultConfig implements Config {
             p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
-                  1_000_000,
+                  2_000_000,
                   Math.pow(
                     2,
                     p.unitsIncludingConstruction(UnitType.Factory).length,
-                  ) * 125_000,
+                  ) * 150_000,
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
@@ -576,7 +576,7 @@ export class DefaultConfig implements Config {
       Math.sqrt(
         player.workers() *
           player.numTilesOwned() *
-          (1 + player.units(UnitType.Factory).length * 0.2),
+          (1 + player.units(UnitType.Factory).length * 0.25),
       ) / 200
     );
   }

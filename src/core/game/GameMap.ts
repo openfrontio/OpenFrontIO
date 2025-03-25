@@ -378,7 +378,7 @@ export function rectDistFN(
   }
 }
 
-export function hexDistFN(
+export function octDistFN(
   root: TileRef,
   dist: number,
   center: boolean = false,
