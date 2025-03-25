@@ -66,7 +66,6 @@ export class GameImpl implements Game {
   private _nextUnitID = 1;
 
   private updates: GameUpdates = createGameUpdatesMap();
-  // private defenseGrid: DefenseGrid;
   private unitGrid: UnitGrid;
 
   private _stats: StatsImpl = new StatsImpl();
