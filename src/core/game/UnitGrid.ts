@@ -74,14 +74,16 @@ export class UnitGrid {
     for (let cy = startGridY; cy <= endGridY; cy++) {
       for (let cx = startGridX; cx <= endGridX; cx++) {
         for (const unit of this.grid[cy][cx]) {
-          const tileX = this.gm.x(unit.tile());
-          const tileY = this.gm.y(unit.tile());
-          const dx = tileX - x;
-          const dy = tileY - y;
-          const distSquared = dx * dx + dy * dy;
+          if (unit.isActive()) {
+            const tileX = this.gm.x(unit.tile());
+            const tileY = this.gm.y(unit.tile());
+            const dx = tileX - x;
+            const dy = tileY - y;
+            const distSquared = dx * dx + dy * dy;
 
-          if (distSquared <= rangeSquared && typeSet.has(unit.type())) {
-            nearby.push({ unit, distSquared });
+            if (distSquared <= rangeSquared && typeSet.has(unit.type())) {
+              nearby.push({ unit, distSquared });
+            }
           }
         }
       }
