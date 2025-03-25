@@ -434,7 +434,6 @@ export interface PlayerActions {
   buildableUnits: BuildableUnit[];
   canSendEmojiAllPlayers: boolean;
   interaction?: PlayerInteraction;
-  borderTiles?: ReadonlySet<TileRef>;
 }
 
 export interface BuildableUnit {
@@ -446,6 +445,10 @@ export interface BuildableUnit {
 export interface PlayerProfile {
   relations: Record<number, Relation>;
   alliances: number[];
+}
+
+export interface PlayerBorderTiles {
+  borderTiles: ReadonlySet<TileRef>;
 }
 
 export interface PlayerInteraction {

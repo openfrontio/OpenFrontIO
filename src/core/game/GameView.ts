@@ -6,6 +6,7 @@ import {
   Player,
   PlayerActions,
   PlayerProfile,
+  PlayerBorderTiles,
 } from "./Game";
 import { AttackUpdate, PlayerUpdate } from "./GameUpdates";
 import { UnitUpdate } from "./GameUpdates";
@@ -129,6 +130,10 @@ export class PlayerView {
       this.game.x(tile),
       this.game.y(tile),
     );
+  }
+
+  async borderTiles(): Promise<PlayerBorderTiles> {
+    return this.game.worker.playerBorderTiles(this.id());
   }
 
   outgoingAttacks(): AttackUpdate[] {

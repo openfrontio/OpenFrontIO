@@ -310,14 +310,10 @@ export class TerritoryLayer implements Layer {
   }
 
   async enqueuePlayerBorder(player: PlayerView) {
-    const dummyTile = this.game.ref(0, 0);
-    const actions = await player.actions(dummyTile);
-
-    if (actions.borderTiles) {
-      actions.borderTiles.forEach((tile: TileRef) => {
-        this.enqueueTile(tile);
-      });
-    }
+    const playerBorderTiles = await player.borderTiles();
+    playerBorderTiles.borderTiles.forEach((tile: TileRef) => {
+      this.enqueueTile(tile);
+    });
   }
 
   paintHighlightCell(cell: Cell, color: Colord, alpha: number) {
