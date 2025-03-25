@@ -21,6 +21,8 @@ const maps = [
   "Iceland",
 ];
 
+const removeSmall = true;
+
 async function loadTerrainMaps() {
   await Promise.all(
     maps.map(async (map) => {
@@ -31,7 +33,11 @@ async function loadTerrainMaps() {
         map + ".png",
       );
       const imageBuffer = await fs.readFile(mapPath);
-      const { map: mainMap, miniMap, thumb } = await generateMap(imageBuffer);
+      const {
+        map: mainMap,
+        miniMap,
+        thumb,
+      } = await generateMap(imageBuffer, removeSmall, map);
 
       const outputPath = path.join(
         process.cwd(),
