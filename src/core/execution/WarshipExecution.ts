@@ -138,17 +138,21 @@ export class WarshipExecution implements Execution {
     }
     const hasPort = this._owner.units(UnitType.Port).length > 0;
     const ships = this.mg
-      .units(UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip)
-      .filter((u) => this.mg.manhattanDist(u.tile(), this.warship.tile()) < 130)
-      .filter((u) => u.owner() != this.warship.owner())
-      .filter((u) => u != this.warship)
+      .nearbyUnits(
+        this.warship.tile(),
+        130, // Search range
+        [UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip],
+      )
+      .map(({ unit }) => unit) // Extract unit from the returned objects
+      .filter((u) => u.owner() !== this.warship.owner())
+      .filter((u) => u !== this.warship)
       .filter((u) => !u.owner().isAlliedWith(this.warship.owner()))
       .filter((u) => !this.alreadySentShell.has(u))
-      // Do not target trade ships if we don't have port
-      .filter((u) => u.type() != UnitType.TradeShip || hasPort)
+      // Do not target trade ships if we don't have a port
+      .filter((u) => u.type() !== UnitType.TradeShip || hasPort)
       .filter((u) => {
         const portOwner = u.dstPort() ? u.dstPort().owner() : null;
-        return u.type() != UnitType.TradeShip || portOwner != this.owner();
+        return u.type() !== UnitType.TradeShip || portOwner !== this.owner();
       });
 
     this.target =

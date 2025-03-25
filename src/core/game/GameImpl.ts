@@ -548,9 +548,9 @@ export class GameImpl implements Game {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    type: UnitType,
+    types: UnitType | UnitType[],
   ): Array<{ unit: Unit; distSquared: number }> {
-    return this.unitGrid.nearbyUnits(tile, searchRange, type) as Array<{
+    return this.unitGrid.nearbyUnits(tile, searchRange, types) as Array<{
       unit: Unit;
       distSquared: number;
     }>;

@@ -338,9 +338,9 @@ export class GameView implements GameMap {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    type: UnitType,
+    types: UnitType | UnitType[],
   ): Array<{ unit: UnitView; distSquared: number }> {
-    return this.unitGrid.nearbyUnits(tile, searchRange, type) as Array<{
+    return this.unitGrid.nearbyUnits(tile, searchRange, types) as Array<{
       unit: UnitView;
       distSquared: number;
     }>;

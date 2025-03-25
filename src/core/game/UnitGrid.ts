@@ -55,7 +55,7 @@ export class UnitGrid {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    type: UnitType,
+    types: UnitType | UnitType[],
   ): Array<{ unit: Unit | UnitView; distSquared: number }> {
     const x = this.gm.x(tile);
     const y = this.gm.y(tile);
@@ -69,6 +69,7 @@ export class UnitGrid {
     const endGridY = Math.min(this.grid.length - 1, gridY + cellsToCheck);
 
     const rangeSquared = searchRange * searchRange;
+    const typeSet = Array.isArray(types) ? new Set(types) : new Set([types]);
 
     for (let cy = startGridY; cy <= endGridY; cy++) {
       for (let cx = startGridX; cx <= endGridX; cx++) {
@@ -79,10 +80,8 @@ export class UnitGrid {
           const dy = tileY - y;
           const distSquared = dx * dx + dy * dy;
 
-          if (distSquared <= rangeSquared) {
-            if (unit.type() == type) {
-              nearby.push({ unit, distSquared });
-            }
+          if (distSquared <= rangeSquared && typeSet.has(unit.type())) {
+            nearby.push({ unit, distSquared });
           }
         }
       }
