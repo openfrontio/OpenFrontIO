@@ -414,6 +414,22 @@
           }
         }
         function applyTranslation(translations) {
+          const components = [
+            "single-player-modal",
+            "host-lobby-modal",
+            "join-private-lobby-modal",
+            "emoji-table",
+            "leader-board",
+            "build-menu",
+            "win-modal",
+            "game-starting-modal",
+            "top-bar",
+            "player-panel",
+            "help-modal",
+            "username-input",
+            "public-lobby",
+          ];
+
           document.title = translations.main?.title || document.title;
 
           document.querySelectorAll("[data-i18n]").forEach((element) => {
@@ -438,6 +454,16 @@
               console.warn(`Missing translation key: ${key}`);
             }
           });
+          components.forEach((tagName) => {
+            const el = document.querySelector(tagName);
+            if (el && typeof el.requestUpdate === "function") {
+              el.requestUpdate();
+            } else {
+              console.warn(
+                `requestUpdate() not available on <${tagName}> or element not found.`,
+              );
+            }
+          });
         }
         async function changeLanguage(lang) {
           // console.log(`Changing language to: ${lang}`);
@@ -451,6 +477,7 @@
         const translations = await loadLanguage(userLang);
         window.translations = translations;
         applyTranslation(translations);
+
         const langSelector = document.getElementById("lang-selector");
         if (langSelector) {
           langSelector.value = userLang;
