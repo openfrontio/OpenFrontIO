@@ -7,7 +7,7 @@ import {
   PlayerActions,
   PlayerProfile,
 } from "./Game";
-import { displayNameMap } from "../execution/PlayerExecution";
+// import { displayNameMap } from "../execution/PlayerExecution";
 import { AttackUpdate, PlayerUpdate } from "./GameUpdates";
 import { UnitUpdate } from "./GameUpdates";
 import { NameViewData } from "./Game";
@@ -33,6 +33,35 @@ import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdateViewData } from "./GameUpdates";
 import { DefenseGrid } from "./DefensePostGrid";
 import { consolex } from "../Consolex";
+
+import {
+  BOT_NAME_PREFIXES,
+  BOT_NAME_SUFFIXES,
+} from "../execution/utils/BotNames";
+
+const displayNameMap: Record<PlayerID, string> = {};
+
+export function returnDisplayNameMap(mg) {
+  if (mg === null) {
+    return displayNameMap;
+  }
+  mg.players().forEach((player) => {
+    // if (player.isPlayer()) {
+    const prefixIndex = Math.floor(Math.random() * BOT_NAME_PREFIXES.length);
+    const suffixIndex = Math.floor(Math.random() * BOT_NAME_SUFFIXES.length);
+    const randomName = `★${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
+    if (!displayNameMap[player.name()]) {
+      displayNameMap[player.name()] = randomName;
+    }
+    // }
+  });
+  console.log("Debug::: Display name map", displayNameMap);
+  try {
+    localStorage.setItem("displayNameMap", JSON.stringify(displayNameMap));
+  } catch (e) {
+    console.warn("Failed to save displayNameMap:", e);
+  }
+}
 
 export class UnitView {
   public _wasUpdated = true;
@@ -157,10 +186,25 @@ export class PlayerView {
     return this.data.flag;
   }
   name(): string {
+    if (this.data.playerType === "HUMAN") {
+      const prefixIndex = Math.floor(Math.random() * BOT_NAME_PREFIXES.length);
+      const suffixIndex = Math.floor(Math.random() * BOT_NAME_SUFFIXES.length);
+      const randomName = `★${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
+      if (!displayNameMap[this.data.name]) {
+        displayNameMap[this.data.name] = randomName;
+      }
+    }
     return displayNameMap[this.data.displayName] ?? this.data.name;
   }
   displayName(): string {
-    console.log(`why: ${displayNameMap}`);
+    if (this.data.playerType === "HUMAN") {
+      const prefixIndex = Math.floor(Math.random() * BOT_NAME_PREFIXES.length);
+      const suffixIndex = Math.floor(Math.random() * BOT_NAME_SUFFIXES.length);
+      const randomName = `★${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
+      if (!displayNameMap[this.data.name]) {
+        displayNameMap[this.data.name] = randomName;
+      }
+    }
     return displayNameMap[this.data.displayName] ?? this.data.displayName;
   }
   clientID(): ClientID {

@@ -13,7 +13,7 @@ import { consolex } from "../Consolex";
 import { GameMap, TileRef } from "../game/GameMap";
 import { BOT_NAME_PREFIXES, BOT_NAME_SUFFIXES } from "./utils/BotNames";
 
-export const displayNameMap: Record<PlayerID, string> = {};
+import { returnDisplayNameMap } from "../game/GameView";
 
 export class PlayerExecution implements Execution {
   private readonly ticksPerClusterCalc = 20;
@@ -41,17 +41,7 @@ export class PlayerExecution implements Execution {
     this.player = mg.player(this.playerID);
     this.lastCalc =
       ticks + (simpleHash(this.player.name()) % this.ticksPerClusterCalc);
-    mg.players().forEach((player) => {
-      // if (player.isPlayer()) {
-      const prefixIndex = Math.floor(Math.random() * BOT_NAME_PREFIXES.length);
-      const suffixIndex = Math.floor(Math.random() * BOT_NAME_SUFFIXES.length);
-      const randomName = `★${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
-      if (!displayNameMap[player.name()]) {
-        displayNameMap[player.name()] = randomName;
-      }
-      // }
-    });
-    console.log("Debug::: Display name map", displayNameMap);
+    returnDisplayNameMap(mg);
   }
 
   tick(ticks: number) {
