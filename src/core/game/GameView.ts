@@ -41,28 +41,6 @@ import {
 
 const displayNameMap: Record<PlayerID, string> = {};
 
-export function returnDisplayNameMap(mg) {
-  if (mg === null) {
-    return displayNameMap;
-  }
-  mg.players().forEach((player) => {
-    // if (player.isPlayer()) {
-    const prefixIndex = Math.floor(Math.random() * BOT_NAME_PREFIXES.length);
-    const suffixIndex = Math.floor(Math.random() * BOT_NAME_SUFFIXES.length);
-    const randomName = `★${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
-    if (!displayNameMap[player.name()]) {
-      displayNameMap[player.name()] = randomName;
-    }
-    // }
-  });
-  console.log("Debug::: Display name map", displayNameMap);
-  try {
-    localStorage.setItem("displayNameMap", JSON.stringify(displayNameMap));
-  } catch (e) {
-    console.warn("Failed to save displayNameMap:", e);
-  }
-}
-
 export class UnitView {
   public _wasUpdated = true;
   public lastPos: TileRef[] = [];

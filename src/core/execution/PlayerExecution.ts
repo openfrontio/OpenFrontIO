@@ -11,9 +11,6 @@ import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 import { GameImpl } from "../game/GameImpl";
 import { consolex } from "../Consolex";
 import { GameMap, TileRef } from "../game/GameMap";
-import { BOT_NAME_PREFIXES, BOT_NAME_SUFFIXES } from "./utils/BotNames";
-
-import { returnDisplayNameMap } from "../game/GameView";
 
 export class PlayerExecution implements Execution {
   private readonly ticksPerClusterCalc = 20;
@@ -41,7 +38,6 @@ export class PlayerExecution implements Execution {
     this.player = mg.player(this.playerID);
     this.lastCalc =
       ticks + (simpleHash(this.player.name()) % this.ticksPerClusterCalc);
-    returnDisplayNameMap(mg);
   }
 
   tick(ticks: number) {

@@ -182,8 +182,6 @@ export class ClientGameRunner {
   public start() {
     consolex.log("starting client game");
 
-    const displayNameMap: Record<string, string> = {};
-
     this.isActive = true;
     this.eventBus.on(MouseUpEvent, (e) => this.inputEvent(e));
 
