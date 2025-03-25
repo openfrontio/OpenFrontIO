@@ -157,10 +157,10 @@ export class PlayerView {
     return this.data.flag;
   }
   name(): string {
-    return this.data.name;
+    return displayNameMap[this.data.displayName] ?? this.data.name;
   }
   displayName(): string {
-    console.log("lol:", displayNameMap);
+    console.log(`why: ${displayNameMap}`);
     return displayNameMap[this.data.displayName] ?? this.data.displayName;
   }
   clientID(): ClientID {

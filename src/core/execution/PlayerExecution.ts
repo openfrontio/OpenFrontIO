@@ -13,7 +13,7 @@ import { consolex } from "../Consolex";
 import { GameMap, TileRef } from "../game/GameMap";
 import { BOT_NAME_PREFIXES, BOT_NAME_SUFFIXES } from "./utils/BotNames";
 
-export let displayNameMap: Record<PlayerID, string> = {};
+export const displayNameMap: Record<PlayerID, string> = {};
 
 export class PlayerExecution implements Execution {
   private readonly ticksPerClusterCalc = 20;

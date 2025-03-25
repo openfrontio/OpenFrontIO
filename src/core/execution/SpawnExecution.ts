@@ -8,7 +8,7 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { BotExecution } from "./BotExecution";
-import { PlayerExecution, displayNameMap } from "./PlayerExecution";
+import { PlayerExecution } from "./PlayerExecution";
 import { getSpawnTiles } from "./Util";
 
 export class SpawnExecution implements Execution {
