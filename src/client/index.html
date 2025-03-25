@@ -477,7 +477,6 @@
         const translations = await loadLanguage(userLang);
         window.translations = translations;
         applyTranslation(translations);
-
         const langSelector = document.getElementById("lang-selector");
         if (langSelector) {
           langSelector.value = userLang;
