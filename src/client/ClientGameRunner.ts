@@ -1,4 +1,11 @@
-import { PlayerID, GameMapType, Difficulty, GameType } from "../core/game/Game";
+import {
+  PlayerID,
+  GameMapType,
+  Difficulty,
+  GameType,
+  Unit,
+  UnitType,
+} from "../core/game/Game";
 import { EventBus } from "../core/EventBus";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { InputHandler, MouseUpEvent, MouseMoveEvent } from "./InputHandler";
@@ -28,12 +35,41 @@ import { WorkerClient } from "../core/worker/WorkerClient";
 import { consolex, initRemoteSender } from "../core/Consolex";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { GameView, PlayerView } from "../core/game/GameView";
+import { GameView, PlayerView, UnitView } from "../core/game/GameView";
 import { GameUpdateViewData } from "../core/game/GameUpdates";
 import { UserSettings } from "../core/game/UserSettings";
 import { LocalPersistantStats } from "./LocalPersistantStats";
 import { createGameRecord } from "../core/Util";
 import { getPersistentIDFromCookie } from "./Main";
+import { TileRef } from "../core/game/GameMap";
+
+// function euclideanDistWorld(
+//   coord: { x: number; y: number },
+//   tileRef: TileRef,
+//   game: GameView,
+// ): number {
+//   const x = game.x(tileRef);
+//   const y = game.y(tileRef);
+//   const dx = coord.x - x;
+//   const dy = coord.y - y;
+//   return Math.sqrt(dx * dx + dy * dy);
+// }
+
+// function distSortUnitWorld(coord: { x: number; y: number }, game: GameView) {
+//   return (a: Unit | UnitView, b: Unit | UnitView) => {
+//     const distA = euclideanDistWorld(coord, a.tile(), game);
+//     const distB = euclideanDistWorld(coord, b.tile(), game);
+//     return distA - distB;
+//   };
+// }
+
+function distSortUnitWorld(tile: TileRef, game: GameView) {
+  return (a: Unit | UnitView, b: Unit | UnitView) => {
+    return (
+      game.euclideanDist(tile, a.tile()) - game.euclideanDist(tile, b.tile())
+    );
+  };
+}
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -356,9 +392,20 @@ export class ClientGameRunner {
     }
 
     const tile = this.gameView.ref(cell.x, cell.y);
-    const owner = this.gameView.owner(tile);
-    if (owner.isPlayer()) {
-      this.gameView.setFocusedPlayer(owner as PlayerView);
+
+    if (this.gameView.isLand(tile)) {
+      const owner = this.gameView.owner(tile);
+      if (owner.isPlayer()) {
+        this.gameView.setFocusedPlayer(owner as PlayerView);
+      }
+    } else {
+      const units = this.gameView
+        .units(UnitType.Warship, UnitType.TradeShip, UnitType.TransportShip)
+        .filter((u) => this.gameView.euclideanDist(tile, u.tile()) < 50)
+        .sort(distSortUnitWorld(tile, this.gameView));
+      if (units.length > 0) {
+        this.gameView.setFocusedPlayer(units[0].owner() as PlayerView);
+      }
     }
   }
 }
