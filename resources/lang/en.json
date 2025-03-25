@@ -10,11 +10,8 @@
   },
   "help_modal": {
     "hotkeys": "Hotkeys",
-
     "table_key": "Key",
-
     "table_action": "Action",
-
     "action_alt_view": "Alternate view (terrain/countries)",
     "action_attack_altclick": "Attack (when left click is set to open menu)",
     "action_build": "Open build menu",
@@ -23,7 +20,6 @@
     "action_move_camera": "Move camera",
     "action_ratio_change": "Decrease/Increase attack ratio",
     "action_reset_gfx": "Reset graphics",
-
     "ui_section": "Game UI",
     "ui_leaderboard": "Leaderboard",
     "ui_leaderboard_desc": "Shows the top players of the game and their names, % owned land and gold.",
@@ -33,37 +29,31 @@
     "ui_gold": "Gold - The amount of gold you have and the rate at which you gain it.",
     "ui_troops_workers": "Troops and Workers - The amount of allocated troops and workers. Troops are used to attack or defend against attacks. Workers are used to generate gold. You can adjust the number of troops and workers using the slider.",
     "ui_attack_ratio": "Attack ratio - The amount of troops that will be used when you attack. You can adjust the attack ratio using the slider.",
-
     "ui_options": "Options",
     "ui_options_desc": "The following elements can be found inside:",
     "option_pause": "Pause/Unpause the game - Only available in single player mode.",
     "option_timer": "Timer - Time passed since the start of the game.",
     "option_exit": "Exit button.",
     "option_settings": "Settings - Open the settings menu. Inside you can toggle the Alternate View, Dark Mode, Emojis and action on left click.",
-
     "radial_title": "Radial menu",
     "radial_desc": "Right clicking (or touch on mobile) opens the radial menu. From there you can:",
     "radial_build": "Open the build menu.",
     "radial_info": "Open the Info menu.",
     "radial_boat": "Send a boat to attack at the selected location (only available if you have access to water).",
     "radial_close": "Close the menu.",
-
     "info_title": "Info menu",
     "info_enemy_desc": "Contains information such for the selected player name, gold, troops, and if the player is a traitor.Traitor is a player who betrayed and attacked a player who was in an alliance with them. The icons below represent the following interactions:",
     "info_target": "Place a target mark on the player, marking it for all allies, used to coordinate attacks.",
     "info_alliance": "Send an alliance request to the player. Allies can share resources and troops, but can't attack each other.",
     "info_emoji": "Send an emoji to the player.",
-
     "info_ally_panel": "Ally info panel",
     "info_ally_desc": "When you ally with a player, the following new icons become available:",
     "ally_betray": "Betray your ally, ending the alliance. You will now have a permanent icon stuck next to your name. Bots are less likely to ally with you and players will think twice before doing so.",
     "ally_donate": "Donate some of your troops to your ally. Used when they're low on troops and are being attacked, or when they need that extra power to crush an enemy.",
-
     "build_menu_title": "Build menu",
     "build_name": "Name",
     "build_icon": "Icon",
     "build_desc": "Description",
-
     "build_city": "City",
     "build_city_desc": "Increases your max population. Useful when you can't expand your territory or you're about to hit your population limit.",
     "build_defense": "Defense Post",
@@ -82,17 +72,17 @@
     "build_hydrogen_desc": "Large explosive bomb. Spawns from the nearest Missile Silo and lands in the area you first clicked to build it.",
     "build_mirv": "MIRV",
     "build_mirv_desc": "The most powerful bomb in the game. Splits up into smaller bombs that will cover a huge range of territory. Only damages the player that you first clicked on to build it. Spawns from the nearest Missile Silo and lands in the area you first clicked to build it.",
-
     "player_icons": "Player icons",
     "icon_desc": "Examples of some of the ingame icons you will encounter and what they mean:",
     "icon_crown": "Crown - This is the number 1 player in the leaderboard",
     "icon_traitor": "Crossed swords - Traitor. This player attacked an ally.",
-    "icon_ally": "Handshake - Ally. This player is your ally."
+    "icon_ally": "Handshake - Ally. This player is your ally.",
+    "info_enemy_panel": "Enemy info panel"
   },
   "single_modal": {
     "title": "Single Player",
     "map": "Map",
-    "difficulty": "difficulty",
+    "difficulty": "Difficulty",
     "allow_alliances": "Allow alliances",
     "options_title": "Options",
     "bots": "Bots: ",
@@ -118,8 +108,9 @@
     "britannia": "Britannia",
     "gatewaytotheatlantic": "Gateway to the Atlantic",
     "australia": "Australia",
+    "random": "Random",
     "iceland": "Iceland",
-    "random": "Random"
+    "pangaea": "Pangaea"
   },
   "private_lobby": {
     "title": "Join Private Lobby",
