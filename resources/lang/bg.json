@@ -91,8 +91,6 @@
   },
   "single_modal": {
     "title": "Самостоятелна Игра",
-    "map": "Карта",
-    "difficulty": "Трудност",
     "allow_alliances": "Позволяване на съюзничества",
     "options_title": "Опции",
     "bots": "Ботове: ",
@@ -105,6 +103,7 @@
     "start": "Започване на игра"
   },
   "map": {
+    "map": "Карта",
     "world": "Свят",
     "europe": "Европа",
     "mena": "МЕНА",
@@ -144,8 +143,6 @@
   },
   "host_modal": {
     "title": "Частно лоби",
-    "map": "Карта",
-    "difficulty": "Трудност",
     "options_title": "Опции",
     "bots": "Ботове: ",
     "bots_disabled": "Изключено",
@@ -160,6 +157,7 @@
     "start": "Започване на игра"
   },
   "difficulty": {
+    "difficulty": "Трудност",
     "Relaxed": "Релаксирано",
     "Balanced": "Балансирано",
     "Intense": "Интензивно",

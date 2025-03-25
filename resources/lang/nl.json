@@ -91,8 +91,6 @@
   },
   "single_modal": {
     "title": "Enkelspeler",
-    "map": "Kaart",
-    "difficulty": "Moeilijkheidsgraad",
     "allow_alliances": "Bondgenootschappen toestaan",
     "options_title": "Opties",
     "bots": "Bots: ",
@@ -105,6 +103,7 @@
     "start": "Start Spel"
   },
   "map": {
+    "map": "Kaart",
     "world": "Wereld",
     "europe": "Europa",
     "mena": "MENA",
@@ -144,8 +143,6 @@
   },
   "host_modal": {
     "title": "Privé Lobby",
-    "map": "Kaart",
-    "difficulty": "Moeilijkheidsgraad",
     "options_title": "Opties",
     "bots": "Bots: ",
     "bots_disabled": "Uitgeschakeld",
@@ -160,6 +157,7 @@
     "start": "Start Spel"
   },
   "difficulty": {
+    "difficulty": "Moeilijkheidsgraad",
     "Relaxed": "Ontspannen",
     "Balanced": "Gebalanceerd",
     "Intense": "Intens",

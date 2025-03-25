@@ -95,6 +95,7 @@
     "start": "ゲーム開始"
   },
   "map": {
+    "map": "マップ",
     "world": "世界",
     "europe": "ヨーロッパ",
     "mena": "中東・北アフリカ",
@@ -152,6 +153,7 @@
     "start": "ゲーム開始"
   },
   "difficulty": {
+    "difficulty": "難易度",
     "Relaxed": "簡単",
     "Balanced": "普通",
     "Intense": "難しい",

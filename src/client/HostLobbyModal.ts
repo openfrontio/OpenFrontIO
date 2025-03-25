@@ -71,7 +71,7 @@ export class HostLobbyModal extends LitElement {
         <div class="options-layout">
           <!-- Map Selection -->
           <div class="options-section">
-            <div class="option-title">${translateText("host_modal.map")}</div>
+            <div class="option-title">${translateText("map.map")}</div>
             <div class="option-cards">
               ${Object.entries(GameMapType)
                 .filter(([key]) => isNaN(Number(key)))
@@ -109,7 +109,7 @@ export class HostLobbyModal extends LitElement {
 
           <!-- Difficulty Selection -->
           <div class="options-section">
-            <div class="option-title">${translateText("host_modal.difficulty")}</div>
+            <div class="option-title">${translateText("difficulty.difficulty")}</div>
             <div class="option-cards">
               ${Object.entries(Difficulty)
                 .filter(([key]) => isNaN(Number(key)))
