@@ -5,7 +5,7 @@ import { decodePNGFromStream, Bitmap } from "pureimage";
 import { Readable } from "stream";
 
 const min_island_size = 30;
-const min_lake_size = 30;
+const min_lake_size = 200;
 
 interface Coord {
   x: number;
