@@ -7,7 +7,7 @@ import "./components/Difficulties";
 import "./components/baseComponents/Modal";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
-import randomMap from "../../resources/images/RandomMap.png";
+import randomMap from "../../resources/images/RandomMap.webp";
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { JoinLobbyEvent } from "./Main";

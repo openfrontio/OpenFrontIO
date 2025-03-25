@@ -8,7 +8,7 @@ import "./components/baseComponents/Modal";
 import "./components/baseComponents/Button";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
-import randomMap from "../../resources/images/RandomMap.png";
+import randomMap from "../../resources/images/RandomMap.webp";
 import { GameInfo } from "../core/Schemas";
 import { JoinLobbyEvent } from "./Main";
 import { translateText } from "../client/Utils";
