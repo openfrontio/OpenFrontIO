@@ -1,7 +1,13 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
+@import url("./styles/core/variables.css");
+@import url("./styles/core/typography.css");
+@import url("./styles/layout/header.css");
+@import url("./styles/layout/footer.css");
+@import url("./styles/layout/container.css");
+@import url("./styles/components/button.css");
+@import url("./styles/components/modal.css");
 * {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
@@ -473,118 +479,4 @@ label.option-card:hover {
   font-size: 14px;
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-/*Base styles*/
-.c-button {
-  background: #2563eb;
-  color: #fff;
-  cursor: pointer;
-  outline: none;
-  display: inline-block;
-  font-size: 16px;
-  border: 1px solid transparent;
-  text-align: center;
-  padding: 0.8rem 1rem;
-  border-radius: 8px;
-
-  @media (min-width: 1024px) {
-    font-size: 18px;
-  }
-}
-
-.c-button:hover,
-.c-button:active,
-.c-button:focus {
-  background: #1d4ed8;
-}
-
-.c-button:disabled {
-  background: linear-gradient(to right, rgb(74, 74, 74), rgb(61, 61, 61));
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.c-button--secondary {
-  background: #dbeafe;
-  color: #202020;
-}
-
-.c-button--secondary:hover,
-.c-button--secondary:active,
-.c-button--secondary:focus {
-  background: #bfdbfe;
-}
-
-.c-button--block {
-  display: block;
-  width: 100%;
-}
-
-.c-button--blockDesktop {
-  display: block;
-  width: 100%;
-
-  @media (min-width: 1024px) {
-    width: auto;
-    margin: 0 auto;
-  }
-}
-
-.c-modal {
-  position: fixed;
-  padding: 1rem;
-  z-index: 1000;
-  left: 0;
-  bottom: 0;
-  right: 0;
-  top: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  overflow-y: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.c-modal__wrapper {
-  background: #23232382;
-  border-radius: 8px;
-  min-width: 340px;
-  max-width: 860px;
-}
-
-.c-modal__header {
-  position: relative;
-  border-top-left-radius: 4px;
-  border-top-right-radius: 4px;
-  font-size: 18px;
-  background: #000000a1;
-  text-align: center;
-  color: #fff;
-  padding: 1rem 2.4rem 1rem 1.4rem;
-}
-
-.c-modal__close {
-  cursor: pointer;
-  position: absolute;
-  right: 1rem;
-  top: 1rem;
-}
-
-.c-modal__content {
-  position: relative;
-  color: #fff;
-  padding: 1.4rem;
-  max-height: 60dvh;
-  overflow-y: scroll;
-  backdrop-filter: blur(8px);
-}
-
-/*This will be removed in future*/
-o-modal o-button {
-  @media (min-width: 1024px) {
-    margin: 0 auto;
-    display: block;
-    text-align: center;
-  }
 }

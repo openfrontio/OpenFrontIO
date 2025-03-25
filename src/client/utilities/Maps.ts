@@ -6,6 +6,7 @@ import northAmerica from "../../../resources/maps/NorthAmericaThumb.png";
 import southAmerica from "../../../resources/maps/SouthAmericaThumb.png";
 import blackSea from "../../../resources/maps/BlackSeaThumb.png";
 import africa from "../../../resources/maps/AfricaThumb.png";
+import pangaea from "../../../resources/maps/PangaeaThumb.png";
 import asia from "../../../resources/maps/AsiaThumb.png";
 import mars from "../../../resources/maps/MarsThumb.png";
 import britannia from "../../../resources/maps/BritanniaThumb.png";
@@ -33,6 +34,8 @@ export function getMapsImage(map: GameMapType): string {
       return blackSea;
     case GameMapType.Africa:
       return africa;
+    case GameMapType.Pangaea:
+      return pangaea;
     case GameMapType.Asia:
       return asia;
     case GameMapType.Mars:

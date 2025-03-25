@@ -18,6 +18,7 @@ const maps = [
   "Britannia",
   "GatewayToTheAtlantic",
   "Australia",
+  "Pangaea",
   "Iceland",
 ];
 

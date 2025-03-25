@@ -47,6 +47,7 @@ export enum GameMapType {
   Oceania = "Oceania",
   BlackSea = "Black Sea",
   Africa = "Africa",
+  Pangaea = "Pangaea",
   Asia = "Asia",
   Mars = "Mars",
   Britannia = "Britannia",
