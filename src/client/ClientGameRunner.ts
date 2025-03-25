@@ -181,7 +181,6 @@ export class ClientGameRunner {
 
   public start() {
     consolex.log("starting client game");
-
     this.isActive = true;
     this.eventBus.on(MouseUpEvent, (e) => this.inputEvent(e));
 
