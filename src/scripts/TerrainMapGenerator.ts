@@ -5,6 +5,7 @@ import { decodePNGFromStream, Bitmap } from "pureimage";
 import { Readable } from "stream";
 
 const min_island_size = 30;
+const min_lake_size = 200;
 
 interface Coord {
   x: number;
@@ -26,10 +27,12 @@ class Terrain {
 export async function generateMap(
   imageBuffer: Buffer,
   removeSmall = true,
+  name: string = "",
 ): Promise<{ map: Uint8Array; miniMap: Uint8Array; thumb: Bitmap }> {
   const stream = Readable.from(imageBuffer);
   const img = await decodePNGFromStream(stream);
 
+  console.log(`Processing Map: ${name}`);
   console.log("Image loaded successfully");
   console.log("Image dimensions:", img.width, "x", img.height);
 
@@ -57,13 +60,8 @@ export async function generateMap(
     }
   }
 
-  if (removeSmall) {
-    removeSmallIslands(terrain);
-    removeSmallLakes(terrain);
-  }
-  const shorelineWaters = processShore(terrain);
-  processDistToLand(shorelineWaters, terrain);
-  processOcean(terrain);
+  removeSmallIslands(terrain, removeSmall);
+  processWater(terrain, removeSmall);
 
   const miniTerrain = await createMiniMap(terrain);
   const thumb = await createMapThumbnail(miniTerrain);
@@ -75,7 +73,7 @@ export async function generateMap(
   };
 }
 
-export async function createMiniMap(tm: Terrain[][]): Promise<Terrain[][]> {
+async function createMiniMap(tm: Terrain[][]): Promise<Terrain[][]> {
   // Create 2D array properly with correct dimensions
   const miniMap: Terrain[][] = Array(Math.floor(tm.length / 2))
     .fill(null)
@@ -100,18 +98,19 @@ export async function createMiniMap(tm: Terrain[][]): Promise<Terrain[][]> {
 }
 
 function processShore(map: Terrain[][]): Coord[] {
+  console.log("Identifying shorelines");
   const shorelineWaters: Coord[] = [];
   for (let x = 0; x < map.length; x++) {
     for (let y = 0; y < map[0].length; y++) {
-      const terrain = map[x][y];
+      const tile = map[x][y];
       const ns = neighbors(x, y, map);
-      if (terrain.type == TerrainType.Land) {
+      if (tile.type == TerrainType.Land) {
         if (ns.filter((t) => t.type == TerrainType.Water).length > 0) {
-          terrain.shoreline = true;
+          tile.shoreline = true;
         }
       } else {
         if (ns.filter((t) => t.type == TerrainType.Land).length > 0) {
-          terrain.shoreline = true;
+          tile.shoreline = true;
           shorelineWaters.push({ x, y });
         }
       }
@@ -121,24 +120,20 @@ function processShore(map: Terrain[][]): Coord[] {
 }
 
 function processDistToLand(shorelineWaters: Coord[], map: Terrain[][]) {
-  const queue: [Coord, number][] = shorelineWaters.map((coord) => [coord, 0]);
-  const visited = new Set<string>();
-
-  while (queue.length > 0) {
-    const [coord, distance] = queue.shift()!;
-    const key = `${coord.x},${coord.y}`;
-
-    if (visited.has(key)) continue;
-    visited.add(key);
-
-    const terrain = map[coord.x][coord.y];
-    if (terrain.type === TerrainType.Water) {
-      terrain.magnitude = distance;
-
-      const nCoords: Coord[] = getNeighborCoords(coord.x, coord.y, map);
-      nCoords.forEach((nCoord) => {
-        queue.push([{ x: nCoord.x, y: nCoord.y }, distance + 1]);
-      });
+  console.log("Setting Water tiles magnitude = distance from land");
+  for (let x = 0; x < map.length; x++) {
+    for (let y = 0; y < map[0].length; y++) {
+      const tile = map[x][y];
+      if (tile.type == TerrainType.Water) {
+        if (shorelineWaters.some((coord) => coord.x == x && coord.y == y)) {
+          tile.magnitude = 0;
+        } else {
+          const dist = shorelineWaters.map(
+            (coord) => Math.abs(x - coord.x) + Math.abs(y - coord.y),
+          );
+          tile.magnitude = Math.min(...dist);
+        }
+      }
     }
   }
 }
@@ -146,14 +141,14 @@ function processDistToLand(shorelineWaters: Coord[], map: Terrain[][]) {
 function neighbors(x: number, y: number, map: Terrain[][]): Terrain[] {
   const nCoords: Coord[] = getNeighborCoords(x, y, map);
   const ns: Terrain[] = [];
-  nCoords.forEach((nCoord) => {
+  for (const nCoord of nCoords) {
     ns.push(map[nCoord.x][nCoord.y]);
-  });
+  }
   return ns;
 }
 
-// Improved processOcean function that identifies the largest body of water
-function processOcean(map: Terrain[][]) {
+function processWater(map: Terrain[][], removeSmall: boolean) {
+  console.log("Processing water bodies");
   const visited = new Set<string>();
   const waterBodies: { coords: Coord[]; size: number }[] = [];
 
@@ -176,16 +171,37 @@ function processOcean(map: Terrain[][]) {
   // Sort water bodies by size (largest first)
   waterBodies.sort((a, b) => b.size - a.size);
 
-  // Mark the largest water body as ocean
-  if (waterBodies.length > 0) {
-    const largestWaterBody = waterBodies[0];
+  let smallLakes = 0;
 
-    // Mark all tiles in the largest water body as ocean
+  if (waterBodies.length > 0) {
+    // Mark the largest water body as ocean
+    const largestWaterBody = waterBodies[0];
     for (const coord of largestWaterBody.coords) {
       map[coord.x][coord.y].ocean = true;
     }
-
     console.log(`Identified ocean with ${largestWaterBody.size} water tiles`);
+
+    if (removeSmall) {
+      // Assess size of the other water bodies and remove those smaller than min_lake_size
+      console.log("Searching for small water bodies for removal");
+      for (let w = 1; w < waterBodies.length; w++) {
+        if (waterBodies[w].size < min_lake_size) {
+          smallLakes++;
+          for (const coord of waterBodies[w].coords) {
+            map[coord.x][coord.y].type = TerrainType.Land;
+            map[coord.x][coord.y].magnitude = 0;
+          }
+        }
+      }
+      console.log(
+        `Identified and removed ${smallLakes} bodies of water smaller than ${min_lake_size} tiles`,
+      );
+    }
+
+    //Identify shoreline tiles, get array of shoreline water tiles
+    const shorelineWaters = processShore(map);
+    //Adjust water tile magnitudes to reflect distance from land
+    processDistToLand(shorelineWaters, map);
   } else {
     console.log("No water bodies found in the map");
   }
@@ -204,25 +220,25 @@ function packTerrain(map: Terrain[][]): Uint8Array {
 
   for (let x = 0; x < width; x++) {
     for (let y = 0; y < height; y++) {
-      const terrain = map[x][y];
+      const tile = map[x][y];
       let packedByte = 0;
-      if (terrain == null) {
+      if (tile == null) {
         throw new Error(`terrain null at ${x}:${y}`);
       }
 
-      if (terrain.type === TerrainType.Land) {
+      if (tile.type === TerrainType.Land) {
         packedByte |= 0b10000000;
       }
-      if (terrain.shoreline) {
+      if (tile.shoreline) {
         packedByte |= 0b01000000;
       }
-      if (terrain.ocean) {
+      if (tile.ocean) {
         packedByte |= 0b00100000;
       }
-      if (terrain.type == TerrainType.Land) {
-        packedByte |= Math.min(Math.ceil(terrain.magnitude), 31);
+      if (tile.type == TerrainType.Land) {
+        packedByte |= Math.min(Math.ceil(tile.magnitude), 31);
       } else {
-        packedByte |= Math.min(Math.ceil(terrain.magnitude / 2), 31);
+        packedByte |= Math.min(Math.ceil(tile.magnitude / 2), 31);
       }
 
       packedData[4 + y * width + x] = packedByte;
@@ -253,56 +269,49 @@ function getArea(
       area.push({ x: coord.x, y: coord.y });
 
       const nCoords: Coord[] = getNeighborCoords(coord.x, coord.y, map);
-      nCoords.forEach((nCoord) => {
+      for (const nCoord of nCoords) {
         queue.push({ x: nCoord.x, y: nCoord.y });
-      });
+      }
     }
   }
   return area;
 }
 
-function removeSmallIslands(map: Terrain[][]) {
+function removeSmallIslands(map: Terrain[][], removeSmall: boolean) {
+  if (!removeSmall) return;
   const visited = new Set<string>();
+  const landBodies: { coords: Coord[]; size: number }[] = [];
 
+  // Find all distinct land bodies
   for (let x = 0; x < map.length; x++) {
     for (let y = 0; y < map[0].length; y++) {
       if (map[x][y].type === TerrainType.Land) {
         const key = `${x},${y}`;
         if (visited.has(key)) continue;
 
-        const island = getArea(x, y, map, visited);
-        if (island.length < min_island_size) {
-          island.forEach((coord) => {
-            map[coord.x][coord.y].type = TerrainType.Water;
-          });
-        }
+        const landBody: Coord[] = getArea(x, y, map, visited);
+        landBodies.push({
+          coords: landBody,
+          size: landBody.length,
+        });
       }
     }
   }
-}
 
-function removeSmallLakes(map: Terrain[][]) {
-  const visited = new Set<string>();
-  const min_lake_size = 200;
+  let smallIslands = 0;
 
-  console.log(`removing small lakes ${map.length}, ${map[0].length}`);
-
-  for (let x = 0; x < map.length; x++) {
-    for (let y = 0; y < map[0].length; y++) {
-      if (map[x][y].type === TerrainType.Water) {
-        const key = `${x},${y}`;
-        if (visited.has(key)) continue;
-
-        const lake = getArea(x, y, map, visited);
-        if (lake.length < min_lake_size) {
-          lake.forEach((coord) => {
-            map[coord.x][coord.y].type = TerrainType.Land;
-            map[coord.x][coord.y].magnitude = 0;
-          });
-        }
+  for (let b = 0; b < landBodies.length; b++) {
+    if (landBodies[b].size < min_island_size) {
+      smallIslands++;
+      for (const coord of landBodies[b].coords) {
+        map[coord.x][coord.y].type = TerrainType.Water;
+        map[coord.x][coord.y].magnitude = 0;
       }
     }
   }
+  console.log(
+    `Identified and removed ${smallIslands} islands smaller than ${min_island_size} tiles`,
+  );
 }
 
 function logBinaryAsBits(data: Uint8Array, length: number = 8) {

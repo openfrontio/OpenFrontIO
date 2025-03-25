@@ -4,6 +4,7 @@ import { Difficulty, GameMapType, GameType } from "../core/game/Game";
 import { consolex } from "../core/Consolex";
 import { getMapsImage } from "./utilities/Maps";
 import { GameID, GameInfo } from "../core/Schemas";
+import { translateText } from "../client/Utils";
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {
@@ -102,7 +103,9 @@ export class PublicLobby extends LitElement {
           ? "opacity-70 cursor-not-allowed"
           : ""}"
       >
-        <div class="text-lg md:text-2xl font-semibold mb-2">Join next Game</div>
+        <div class="text-lg md:text-2xl font-semibold mb-2">
+          ${translateText("public_lobby.join")}
+        </div>
         <div class="flex">
           <img
             src="${getMapsImage(lobby.gameConfig.gameMap)}"
@@ -115,13 +118,16 @@ export class PublicLobby extends LitElement {
           >
             <div class="flex flex-col items-start">
               <div class="text-md font-medium text-blue-100">
-                ${lobby.gameConfig.gameMap}
+                <!-- ${lobby.gameConfig.gameMap} -->
+                ${translateText(
+                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/\s+/g, "")}`,
+                )}
               </div>
             </div>
             <div class="flex flex-col items-start">
               <div class="text-md font-medium text-blue-100">
-                ${lobby.numClients} / ${lobby.gameConfig.maxPlayers} players
-                waiting
+                ${lobby.numClients} / ${lobby.gameConfig.maxPlayers}
+                ${translateText("public_lobby.waiting")}
               </div>
             </div>
             <div class="flex items-center">

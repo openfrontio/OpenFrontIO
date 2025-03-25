@@ -1,0 +1,168 @@
+{
+  "main": {
+    "join_discord": "Word lid van de Discord!",
+    "create_lobby": "Maak een Lobby aan",
+    "join_lobby": "Treed een Lobby toe",
+    "single_player": "Enkelspeler",
+    "instructions": "Instructies",
+    "how_to_play": "Hoe spelen?",
+    "wiki": "Wiki"
+  },
+  "help_modal": {
+    "hotkeys": "Sneltoetsen",
+
+    "table_key": "Toets",
+
+    "table_action": "Actie",
+
+    "action_alt_view": "Alternatieve weergave (terrein/landen)",
+    "action_attack_altclick": "Aanvallen (wanneer linkerklik is ingesteld om menu te openen)",
+    "action_build": "Open bouwmenu",
+    "action_center": "Camera centreren op de speler",
+    "action_zoom": "In-/uitzoomen",
+    "action_move_camera": "Camera bewegen",
+    "action_ratio_change": "Aanvalsverhouding verlagen/verhogen",
+    "action_reset_gfx": "Grafische instellingen herstellen",
+
+    "ui_section": "Spel-UI",
+    "ui_leaderboard": "Leaderboard",
+    "ui_leaderboard_desc": "Toont de top spelers van het spel en hun namen, % bezette land en goud.",
+    "ui_control": "Controlepaneel",
+    "ui_control_desc": "Het controlepaneel bevat de volgende elementen:",
+    "ui_pop": "Pop - Jouw totale bevolking, jouw maximale bevolking en de snelheid waarmee je ze verwerft.",
+    "ui_gold": "Goud - Het goud dat je hebt en de snelheid waarmee je het verwerft.",
+    "ui_troops_workers": "Troepen en Werkers - Het aantal toegewezen troepen en werkers. Troepen worden gebruikt om aan te vallen of verdedigen. Werkers worden gebruikt om goud te genereren. Je kunt het aantal troepen en werkers aanpassen met de schuifbalk.",
+    "ui_attack_ratio": "Aanvalsverhouding - Het aantal troepen dat wordt gebruikt bij een aanval. Je kunt de aanvalsverhouding aanpassen met de schuifbalk.",
+
+    "ui_options": "Opties",
+    "ui_options_desc": "De volgende elementen zijn hierin te vinden:",
+    "option_pause": "Spel pauzeren/hervatten - Alleen beschikbaar in enkelspelermodus.",
+    "option_timer": "Timer - Tijd verstreken sinds het begin van het spel.",
+    "option_exit": "Afsluitknop.",
+    "option_settings": "Instellingen - Open het instellingenmenu. Daarin kun je Alternatieve Weergave, Donkere Modus, Emoji's en actie bij linkerklikken aan- of uitzetten.",
+
+    "radial_title": "Radiaal menu",
+    "radial_desc": "Met rechtermuisklik (of tikken op mobiel) opent je het radiale menu. Van daaruit kun je:",
+    "radial_build": "Het bouwmenu openen.",
+    "radial_info": "Het Infomenu openen.",
+    "radial_boat": "Een boot sturen om de geselecteerde locatie aan te vallen (alleen beschikbaar als je toegang hebt tot water).",
+    "radial_close": "Het menu sluiten.",
+
+    "info_title": "Infomenu",
+    "info_enemy_desc": "Bevat informatie zoals de naam van de geselecteerde speler, goud, troepen en of de speler een verrader is. Een verrader is een speler die een bondgenoot heeft aangevallen. De iconen hieronder staan voor de volgende interacties:",
+    "info_target": "Plaats een doelmarkering op de speler, zichtbaar voor alle bondgenoten, wordt gebruikt om aanvallen te coördineren.",
+    "info_alliance": "Stuur een bondgenootschapsverzoek naar de speler. Bondgenoten kunnen goud en troepen delen, maar kunnen elkaar niet aanvallen.",
+    "info_emoji": "Stuur een emoji naar de speler.",
+
+    "info_ally_panel": "Bondgenoot-informatiepaneel",
+    "info_ally_desc": "Wanneer je een bondgenootschap sluit met een speler, worden de volgende nieuwe iconen beschikbaar:",
+    "ally_betray": "Verraad je bondgenoot, beëindig het bondgenootschap. Je krijgt dan een permanent icoon naast je naam. Bots zijn minder geneigd om met je een bondgenootschap aan te gaan en spelers zullen er tweemaal over nadenken.",
+    "ally_donate": "Geef een deel van je troepen af aan een bondgenoot. Gebruikt wanneer ze weinig troepen hebben en worden aangevallen, of wanneer ze extra kracht nodig hebben om een vijand te verslaan.",
+
+    "build_menu_title": "Bouwmenu",
+    "build_name": "Naam",
+    "build_icon": "Icoon",
+    "build_desc": "Beschrijving",
+
+    "build_city": "Stad",
+    "build_city_desc": "Verhoogt je maximale bevolking. Handig wanneer je je gebied niet kunt uitbreiden of bijna je bevolkingslimiet heb bereikt.",
+    "build_defense": "Verdedigingspost",
+    "build_defense_desc": "Versterkt verdediging rond nabijgelegen grenzen. Aanvallen van vijanden zijn trager en hebben meer slachtoffers.",
+    "build_port": "Haven",
+    "build_port_desc": "Stuurt automatisch handelsschepen tussen havens van je land en andere landen (tenzij je \"stop handel\" hebt geklikt op hen of zij \"stop handel\" op jou hebben geklikt), wat goud oplevert voor beide partijen. Maakt het bouwen van Oorlogsschepen mogelijk. Kan alleen in de nabijheid van water worden gebouwd.",
+    "build_warship": "Oorlogsschip",
+    "build_warship_desc": "Patrouilleert in een gebied, vangt handelsschepen en vernietigt vijandelijke Oorlogsschepen en Boten. Spawnt vanuit de dichtstbijzijnde Haven en patrouilleert in het gebied waar je voor het eerst hebt geklikt om het te bouwen.",
+    "build_silo": "Raketsilo",
+    "build_silo_desc": "Maakt het lanceren van raketten mogelijk.",
+    "build_sam": "SAM-lanceerder",
+    "build_sam_desc": "Heeft een 75% kans om vijandelijke raketten binnen een straal van 100 pixels te onderscheppen. De SAM heeft een afkoeltijd van 7,5 seconden en kan geen MIRV's onderscheppen.",
+    "build_atom": "Atoombom",
+    "build_atom_desc": "Kleine explosieve bom die gebied, gebouwen, schepen en boten vernietigt. Spawnt vanuit de dichtstbijzijnde Raketsilo en landt in het gebied waar je voor het eerst hebt geklikt om het te bouwen.",
+    "build_hydrogen": "Waterstofbom",
+    "build_hydrogen_desc": "Grote explosieve bom. Spawnt vanuit de dichtstbijzijnde Raketsilo en landt in het gebied waar je voor het eerst hebt geklikt om het te bouwen.",
+    "build_mirv": "MIRV",
+    "build_mirv_desc": "De krachtigste bom in het spel. Splitst zich op in kleinere bommen die een enorm gebied dekken. Schaadt alleen de speler waar je voor het eerst op hebt geklikt om het te bouwen. Spawnt vanuit de dichtstbijzijnde Raketsilo en landt in het gebied waar je voor het eerst hebt geklikt om het te bouwen.",
+
+    "player_icons": "Spelericonen",
+    "icon_desc": "Voorbeelden van enkele ingame-iconen die je zult tegenkomen en wat ze betekenen:",
+    "icon_crown": "Kroon - Dit is de nummer 1 speler op de leaderboard",
+    "icon_traitor": "Gekruiste zwaarden - Verrader. Deze speler heeft een bondgenoot aangevallen.",
+    "icon_ally": "Handdruk - Bondgenoot. Deze speler is je bondgenoot."
+  },
+  "single_modal": {
+    "title": "Enkelspeler",
+    "map": "Kaart",
+    "difficulty": "Moeilijkheidsgraad",
+    "allow_alliances": "Bondgenootschappen toestaan",
+    "options_title": "Opties",
+    "bots": "Bots: ",
+    "bots_disabled": "Uitgeschakeld",
+    "disable_nations": "Naties uitschakelen",
+    "instant_build": "Bouw wachttijd afschaffen",
+    "infinite_gold": "Oneindig goud",
+    "infinite_troops": "Oneindig troepen",
+    "disable_nukes": "Kernwapens uitschakelen",
+    "start": "Start Spel"
+  },
+  "map": {
+    "world": "Wereld",
+    "europe": "Europa",
+    "mena": "MENA",
+    "northamerica": "Noord-Amerika",
+    "oceania": "Oceanië",
+    "blacksea": "Zwarte Zee",
+    "africa": "Afrika",
+    "asia": "Azië",
+    "mars": "Mars",
+    "southamerica": "Zuid-Amerika",
+    "britannia": "Groot-Brittanië",
+    "gatewaytotheatlantic": "Poort van de Atlantische Oceaan",
+    "australia": "Australië",
+    "random": "Willekeurig"
+  },
+  "private_lobby": {
+    "title": "Treed een Privé Lobby toe",
+    "enter_id": "Voer Lobby-ID in",
+    "player": "Speler",
+    "players": "Spelers",
+    "join_lobby": "Treed een Lobby toe",
+    "checking": "Lobby controleren...",
+    "not_found": "Lobby niet gevonden. Controleer de ID en probeer het opnieuw.",
+    "error": "Er is een fout opgetreden. Probeer het opnieuw.",
+    "joined_waiting": "Succesvol toegetreden! Wachten tot het spel begint..."
+  },
+  "public_lobby": {
+    "join": "Treed de volgende spel binnen",
+    "waiting": "spelers wachten"
+  },
+  "username": {
+    "enter_username": "Voer je gebruikersnaam in",
+    "not_string": "Gebruikersnaam moet een tekenreeks zijn.",
+    "too_short": "Gebruikersnaam moet minstens {min} tekens lang zijn.",
+    "too_long": "Gebruikersnaam mag niet langer zijn dan {max} tekens.",
+    "invalid_chars": "Gebruikersnaam mag alleen letters, cijfers, spaties, underscores en [vierkante haken] bevatten."
+  },
+  "host_modal": {
+    "title": "Privé Lobby",
+    "map": "Kaart",
+    "difficulty": "Moeilijkheidsgraad",
+    "options_title": "Opties",
+    "bots": "Bots: ",
+    "bots_disabled": "Uitgeschakeld",
+    "disable_nations": "Naties uitschakelen",
+    "instant_build": "Direct bouwen",
+    "infinite_gold": "Oneindig goud",
+    "infinite_troops": "Oneindig troepen",
+    "disable_nukes": "Kernwapens uitschakelen",
+    "player": "Speler",
+    "players": "Spelers",
+    "waiting": "Wachten op spelers...",
+    "start": "Start Spel"
+  },
+  "difficulty": {
+    "Relaxed": "Ontspannen",
+    "Balanced": "Gebalanceerd",
+    "Intense": "Intens",
+    "Impossible": "Onmogelijk"
+  }
+}

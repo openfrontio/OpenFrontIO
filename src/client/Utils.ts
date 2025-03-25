@@ -70,3 +70,30 @@ export function generateCryptoRandomUUID(): string {
     },
   );
 }
+
+export function translateText(
+  key: string,
+  params: Record<string, string | number> = {},
+): string {
+  const keys = key.split(".");
+  let text: any = (window as any).translations;
+
+  for (const k of keys) {
+    text = text?.[k];
+    if (!text) break;
+  }
+
+  if (!text && (window as any).defaultTranslations) {
+    text = (window as any).defaultTranslations;
+    for (const k of keys) {
+      text = text?.[k];
+      if (!text) return key;
+    }
+  }
+
+  for (const [param, value] of Object.entries(params)) {
+    text = text.replace(`{${param}}`, String(value));
+  }
+
+  return text;
+}

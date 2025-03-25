@@ -88,5 +88,82 @@
     "icon_crown": "Crown - This is the number 1 player in the leaderboard",
     "icon_traitor": "Crossed swords - Traitor. This player attacked an ally.",
     "icon_ally": "Handshake - Ally. This player is your ally."
+  },
+  "single_modal": {
+    "title": "Single Player",
+    "map": "Map",
+    "difficulty": "difficulty",
+    "allow_alliances": "Allow alliances",
+    "options_title": "Options",
+    "bots": "Bots: ",
+    "bots_disabled": "Disabled",
+    "disable_nations": "Disable Nations",
+    "instant_build": "Instant build",
+    "infinite_gold": "Infinite gold",
+    "infinite_troops": "Infinite troops",
+    "disable_nukes": "Disable Nukes",
+    "start": "Start Game"
+  },
+  "map": {
+    "world": "World",
+    "europe": "Europe",
+    "mena": "MENA",
+    "northamerica": "North America",
+    "oceania": "Oceania",
+    "blacksea": "Black Sea",
+    "africa": "Africa",
+    "asia": "Asia",
+    "mars": "Mars",
+    "southamerica": "South America",
+    "britannia": "Britannia",
+    "gatewaytotheatlantic": "Gateway to the Atlantic",
+    "australia": "Australia",
+    "iceland": "Iceland",
+    "random": "Random"
+  },
+  "private_lobby": {
+    "title": "Join Private Lobby",
+    "enter_id": "Enter Lobby ID",
+    "player": "Player",
+    "players": "Players",
+    "join_lobby": "Join Lobby",
+    "checking": "Checking lobby...",
+    "not_found": "Lobby not found. Please check the ID and try again.",
+    "error": "An error occurred. Please try again.",
+    "joined_waiting": "Joined successfully! Waiting for game to start..."
+  },
+  "public_lobby": {
+    "join": "Join next Game",
+    "waiting": "players waiting"
+  },
+  "username": {
+    "enter_username": "Enter your username",
+    "not_string": "Username must be a string.",
+    "too_short": "Username must be at least {min} characters long.",
+    "too_long": "Username must not exceed {max} characters.",
+    "invalid_chars": "Username can only contain letters, numbers, spaces, underscores, and [square brackets]."
+  },
+  "host_modal": {
+    "title": "Private Lobby",
+    "map": "Map",
+    "difficulty": "Difficulty",
+    "options_title": "Options",
+    "bots": "Bots: ",
+    "bots_disabled": "Disabled",
+    "disable_nations": "Disable Nations",
+    "instant_build": "Instant build",
+    "infinite_gold": "Infinite gold",
+    "infinite_troops": "Infinite troops",
+    "disable_nukes": "Disable Nukes",
+    "player": "Player",
+    "players": "Players",
+    "waiting": "Waiting for players...",
+    "start": "Start Game"
+  },
+  "difficulty": {
+    "Relaxed": "Relaxed",
+    "Balanced": "Balanced",
+    "Intense": "Intense",
+    "Impossible": "Impossible"
   }
 }

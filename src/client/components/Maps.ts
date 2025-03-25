@@ -12,18 +12,21 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Oceania: "Oceania",
   BlackSea: "Black Sea",
   Africa: "Africa",
+  Pangaea: "Pangaea",
   Asia: "Asia",
   Mars: "Mars",
   SouthAmerica: "South America",
   Britannia: "Britannia",
   GatewayToTheAtlantic: "Gateway to the Atlantic",
   Australia: "Australia",
+  Iceland: "Iceland",
 };
 
 @customElement("map-display")
 export class MapDisplay extends LitElement {
   @property({ type: String }) mapKey = "";
   @property({ type: Boolean }) selected = false;
+  @property({ type: String }) translation: string = "";
 
   static styles = css`
     .option-card {
@@ -89,7 +92,9 @@ export class MapDisplay extends LitElement {
               <p>${this.mapKey}</p>
             </div>`}
         <div class="option-card-title">
-          ${MapDescription[this.mapKey as keyof typeof GameMapType]}
+          <!-- ${MapDescription[this.mapKey as keyof typeof GameMapType]}-->
+          ${this.translation ||
+          MapDescription[this.mapKey as keyof typeof GameMapType]}
         </div>
       </div>
     `;

@@ -6,11 +6,13 @@ import northAmerica from "../../../resources/maps/NorthAmericaThumb.png";
 import southAmerica from "../../../resources/maps/SouthAmericaThumb.png";
 import blackSea from "../../../resources/maps/BlackSeaThumb.png";
 import africa from "../../../resources/maps/AfricaThumb.png";
+import pangaea from "../../../resources/maps/PangaeaThumb.png";
 import asia from "../../../resources/maps/AsiaThumb.png";
 import mars from "../../../resources/maps/MarsThumb.png";
 import britannia from "../../../resources/maps/BritanniaThumb.png";
 import gatewayToTheAtlantic from "../../../resources/maps/GatewayToTheAtlanticThumb.png";
 import australia from "../../../resources/maps/AustraliaThumb.png";
+import iceland from "../../../resources/maps/IcelandThumb.png";
 
 import { GameMapType } from "../../core/game/Game";
 
@@ -32,6 +34,8 @@ export function getMapsImage(map: GameMapType): string {
       return blackSea;
     case GameMapType.Africa:
       return africa;
+    case GameMapType.Pangaea:
+      return pangaea;
     case GameMapType.Asia:
       return asia;
     case GameMapType.Mars:
@@ -42,6 +46,8 @@ export function getMapsImage(map: GameMapType): string {
       return gatewayToTheAtlantic;
     case GameMapType.Australia:
       return australia;
+    case GameMapType.Iceland:
+      return iceland;
     default:
       return "";
   }
