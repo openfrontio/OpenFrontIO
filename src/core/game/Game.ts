@@ -47,11 +47,13 @@ export enum GameMapType {
   Oceania = "Oceania",
   BlackSea = "Black Sea",
   Africa = "Africa",
+  Pangaea = "Pangaea",
   Asia = "Asia",
   Mars = "Mars",
   Britannia = "Britannia",
   GatewayToTheAtlantic = "Gateway to the Atlantic",
   Australia = "Australia",
+  Iceland = "Iceland",
 }
 
 export enum GameType {
