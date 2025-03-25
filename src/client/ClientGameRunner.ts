@@ -43,26 +43,6 @@ import { createGameRecord } from "../core/Util";
 import { getPersistentIDFromCookie } from "./Main";
 import { TileRef } from "../core/game/GameMap";
 
-// function euclideanDistWorld(
-//   coord: { x: number; y: number },
-//   tileRef: TileRef,
-//   game: GameView,
-// ): number {
-//   const x = game.x(tileRef);
-//   const y = game.y(tileRef);
-//   const dx = coord.x - x;
-//   const dy = coord.y - y;
-//   return Math.sqrt(dx * dx + dy * dy);
-// }
-
-// function distSortUnitWorld(coord: { x: number; y: number }, game: GameView) {
-//   return (a: Unit | UnitView, b: Unit | UnitView) => {
-//     const distA = euclideanDistWorld(coord, a.tile(), game);
-//     const distB = euclideanDistWorld(coord, b.tile(), game);
-//     return distA - distB;
-//   };
-// }
-
 function distSortUnitWorld(tile: TileRef, game: GameView) {
   return (a: Unit | UnitView, b: Unit | UnitView) => {
     return (
