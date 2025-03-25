@@ -186,7 +186,10 @@ export class PlayerView {
     return this.data.flag;
   }
   name(): string {
-    if (this.data.playerType === "HUMAN") {
+    if (
+      this.data.playerType === "HUMAN" &&
+      !(localStorage.getItem("username") === this.data.name)
+    ) {
       const prefixIndex = Math.floor(Math.random() * BOT_NAME_PREFIXES.length);
       const suffixIndex = Math.floor(Math.random() * BOT_NAME_SUFFIXES.length);
       const randomName = `★${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
@@ -194,10 +197,16 @@ export class PlayerView {
         displayNameMap[this.data.name] = randomName;
       }
     }
-    return displayNameMap[this.data.displayName] ?? this.data.name;
+    return localStorage.getItem("settings.randomname") === "true" &&
+      displayNameMap[this.data.displayName]
+      ? displayNameMap[this.data.displayName]
+      : this.data.name;
   }
   displayName(): string {
-    if (this.data.playerType === "HUMAN") {
+    if (
+      this.data.playerType === "HUMAN" &&
+      !(localStorage.getItem("username") === this.data.name)
+    ) {
       const prefixIndex = Math.floor(Math.random() * BOT_NAME_PREFIXES.length);
       const suffixIndex = Math.floor(Math.random() * BOT_NAME_SUFFIXES.length);
       const randomName = `★${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
@@ -205,7 +214,10 @@ export class PlayerView {
         displayNameMap[this.data.name] = randomName;
       }
     }
-    return displayNameMap[this.data.displayName] ?? this.data.displayName;
+    return localStorage.getItem("settings.randomname") === "true" &&
+      displayNameMap[this.data.displayName]
+      ? displayNameMap[this.data.displayName]
+      : this.data.displayName;
   }
   clientID(): ClientID {
     return this.data.clientID;

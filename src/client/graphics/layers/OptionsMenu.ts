@@ -96,6 +96,11 @@ export class OptionsMenu extends LitElement implements Layer {
     this.eventBus.emit(new RefreshGraphicsEvent());
   }
 
+  private onToggleRandomNameModeButtonClick() {
+    this.userSettings.toggleRandomName();
+    this.requestUpdate();
+  }
+
   private onToggleLeftClickOpensMenu() {
     this.userSettings.toggleLeftClickOpenMenu();
   }
@@ -181,6 +186,11 @@ export class OptionsMenu extends LitElement implements Layer {
             title: "Dark Mode",
             children: "🌙: " + (this.userSettings.darkMode() ? "On" : "Off"),
           })}
+          <!--${button({
+            onClick: this.onToggleRandomNameModeButtonClick,
+            title: "Random name mode",
+            children: "🥷: " + (this.userSettings.randomName() ? "On" : "Off"),
+          })}-->
           ${button({
             onClick: this.onToggleLeftClickOpensMenu,
             title: "Left click",
