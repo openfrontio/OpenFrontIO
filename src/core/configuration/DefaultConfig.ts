@@ -470,6 +470,10 @@ export class DefaultConfig implements Config {
     return Math.floor(attacker.troops() / 5);
   }
 
+  warshipShellLifetime(): number {
+    return 20; // in ticks (one tick is 100ms)
+  }
+
   attackAmount(attacker: Player, defender: Player | TerraNullius) {
     if (attacker.type() == PlayerType.Bot) {
       return attacker.troops() / 20;

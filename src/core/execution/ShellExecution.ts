@@ -8,6 +8,8 @@ export class ShellExecution implements Execution {
   private active = true;
   private pathFinder: PathFinder;
   private shell: Unit;
+  private mg: Game;
+  private destroyAtTick: number = -1;
 
   constructor(
     private spawn: TileRef,
@@ -18,6 +20,7 @@ export class ShellExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.pathFinder = PathFinder.Mini(mg, 2000, true, 10);
+    this.mg = mg;
   }
 
   tick(ticks: number): void {
@@ -30,13 +33,19 @@ export class ShellExecution implements Execution {
     }
     if (
       !this.target.isActive() ||
-      !this.ownerUnit.isActive() ||
-      this.target.owner() == this.shell.owner()
+      this.target.owner() == this.shell.owner() ||
+      (this.destroyAtTick != -1 && this.mg.ticks() >= this.destroyAtTick)
     ) {
       this.shell.delete(false);
       this.active = false;
       return;
     }
+
+    if (this.destroyAtTick == -1 && !this.ownerUnit.isActive()) {
+      this.destroyAtTick =
+        this.mg.ticks() + this.mg.config().warshipShellLifetime();
+    }
+
     for (let i = 0; i < 3; i++) {
       const result = this.pathFinder.nextTile(
         this.shell.tile(),
