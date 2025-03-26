@@ -338,15 +338,31 @@ function getNeighborCoords(x: number, y: number, map: Terrain[][]): Coord[] {
   return coords;
 }
 
-async function createMapThumbnail(map: Terrain[][]): Promise<Bitmap> {
+async function createMapThumbnail(
+  map: Terrain[][],
+  quality: number = 0.5,
+): Promise<Bitmap> {
   console.log("creating thumbnail");
-  const bitmap = new Bitmap(map.length, map[0].length);
-  for (let x = 0; x < bitmap.width; x++) {
-    for (let y = 0; y < bitmap.height; y++) {
-      const rgba = getThumbnailColor(map[x][y]);
+
+  const srcWidth = map.length;
+  const srcHeight = map[0].length;
+
+  const targetWidth = Math.max(1, Math.floor(srcWidth * quality));
+  const targetHeight = Math.max(1, Math.floor(srcHeight * quality));
+
+  const bitmap = new Bitmap(targetWidth, targetHeight);
+
+  for (let x = 0; x < targetWidth; x++) {
+    for (let y = 0; y < targetHeight; y++) {
+      const srcX = Math.floor(x / quality);
+      const srcY = Math.floor(y / quality);
+      const terrain =
+        map[Math.min(srcX, srcWidth - 1)][Math.min(srcY, srcHeight - 1)];
+      const rgba = getThumbnailColor(terrain);
       bitmap.setPixelRGBA_i(x, y, rgba.r, rgba.g, rgba.b, rgba.a);
     }
   }
+
   return bitmap;
 }
 
@@ -357,9 +373,9 @@ function getThumbnailColor(t: Terrain): {
   a: number;
 } {
   if (t.type === TerrainType.Water) {
-    //shoreline water
+    // Shoreline water
     if (t.shoreline) return { r: 100, g: 143, b: 255, a: 0 };
-    //all other water
+    // All other water: adjust based on magnitude
     const waterAdjRGB: number = 11 - Math.min(t.magnitude / 2, 10) - 10;
     return {
       r: Math.max(70 + waterAdjRGB, 0),

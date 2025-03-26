@@ -1,11 +1,1 @@
-<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
-  <g id="color">
-    <rect x="5" y="17" width="62" height="38" fill="#5c9e31"/>
-    <polygon fill="#fcea2b" points="59.023 36.023 35.866 50.653 12.977 36.291 36.134 21.661 59.023 36.023"/>
-    <circle cx="36" cy="36" r="9" fill="#1e50a0"/>
-    <path fill="#fff" d="M44.1587,39.7815a9.0459,9.0459,0,0,0,.6963-2.2587,11.4735,11.4735,0,0,0-17.4766-4.0415,8.9839,8.9839,0,0,0-.3529,2.0137,10.9983,10.9983,0,0,1,17.1332,4.2865Z"/>
-  </g>
-  <g id="line">
-    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72"><path fill="#5c9e31" d="M5 17h62v38H5z"/><path fill="#fcea2b" d="m59.023 36.023-23.157 14.63-22.889-14.362 23.157-14.63 22.889 14.362z"/><circle cx="36" cy="36" r="9" fill="#1e50a0"/><path fill="#fff" d="M44.159 39.782a9.046 9.046 0 0 0 .696-2.26 11.473 11.473 0 0 0-17.477-4.04 8.984 8.984 0 0 0-.352 2.013 10.998 10.998 0 0 1 17.133 4.287Z"/><path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 17h62v38H5z"/></svg>

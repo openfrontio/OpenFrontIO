@@ -7,7 +7,7 @@ import "./components/Difficulties";
 import "./components/baseComponents/Modal";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
-import randomMap from "../../resources/images/RandomMap.png";
+import randomMap from "../../resources/images/RandomMap.webp";
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { JoinLobbyEvent } from "./Main";
@@ -371,6 +371,7 @@ export class HostLobbyModal extends LitElement {
   }
   private handleDisableNukesChange(e: Event) {
     this.disableNukes = Boolean((e.target as HTMLInputElement).checked);
+    this.putGameConfig();
   }
 
   private async handleDisableNPCsChange(e: Event) {
