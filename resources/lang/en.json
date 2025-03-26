@@ -148,6 +148,10 @@
     "waiting": "Waiting for players...",
     "start": "Start Game"
   },
+  "game_starting_modal": {
+    "title": "Game is Starting...",
+    "desc": "Preparing for the lobby to start. Please wait."
+  },
   "difficulty": {
     "difficulty": "Difficulty",
     "Relaxed": "Relaxed",

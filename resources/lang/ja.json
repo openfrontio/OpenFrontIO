@@ -152,6 +152,10 @@
     "waiting": "他のプレイヤーの参加を待っています...",
     "start": "ゲーム開始"
   },
+  "game_starting_modal": {
+    "title": "ゲーム開始中...",
+    "desc": "スタートのためにロビー準備中... ちょっとまってね!"
+  },
   "difficulty": {
     "difficulty": "難易度",
     "Relaxed": "簡単",
