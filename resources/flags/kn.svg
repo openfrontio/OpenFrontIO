@@ -1,12 +1,1 @@
-<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
-  <g id="color">
-    <rect x="5" y="17" width="62" height="38" fill="#d22f27" stroke="#f1b31c" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-    <polygon fill="#5c9e31" points="5 17 5 55 67 17 5 17"/>
-    <polygon stroke="#f1b31c" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="67 24 67 17 59 17 5 48 5 55 13 55 67 24"/>
-    <polygon fill="#fff" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" points="44.799 33.5 43.78 28.5 47.5 31.905 42.5 31.396 46.87 28.815 44.799 33.5"/>
-    <polygon fill="#fff" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" points="25.799 44.5 24.78 39.5 28.5 42.905 23.5 42.396 27.87 39.815 25.799 44.5"/>
-  </g>
-  <g id="line">
-    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72"><path fill="#d22f27" stroke="#f1b31c" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 17h62v38H5z"/><path fill="#5c9e31" d="M5 17v38l62-38H5z"/><path stroke="#f1b31c" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M67 24v-7h-8L5 48v7h8l54-31z"/><path fill="#fff" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" d="m44.799 33.5-1.019-5 3.72 3.405-5-.509 4.37-2.581-2.071 4.685zM25.799 44.5l-1.019-5 3.72 3.405-5-.509 4.37-2.581-2.071 4.685z"/><path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 17h62v38H5z"/></svg>

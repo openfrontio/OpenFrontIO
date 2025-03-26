@@ -47,10 +47,13 @@ export enum GameMapType {
   Oceania = "Oceania",
   BlackSea = "Black Sea",
   Africa = "Africa",
+  Pangaea = "Pangaea",
   Asia = "Asia",
   Mars = "Mars",
   Britannia = "Britannia",
   GatewayToTheAtlantic = "Gateway to the Atlantic",
+  Australia = "Australia",
+  Iceland = "Iceland",
 }
 
 export enum GameType {
@@ -243,6 +246,9 @@ export interface Unit {
   setMoveTarget(cell: TileRef): void;
   moveTarget(): TileRef | null;
 
+  setTargetedBySAM(targeted: boolean): void;
+  targetedBySAM(): boolean;
+
   // Mutations
   setTroops(troops: number): void;
   delete(displayerMessage?: boolean): void;
@@ -403,7 +409,11 @@ export interface Game extends GameMap {
   // Units
   units(...types: UnitType[]): Unit[];
   unitInfo(type: UnitType): UnitInfo;
-  nearbyDefensePosts(tile: TileRef): Unit[];
+  nearbyUnits(
+    tile: TileRef,
+    searchRange: number,
+    types: UnitType | UnitType[],
+  ): Array<{ unit: Unit; distSquared: number }>;
 
   addExecution(...exec: Execution[]): void;
   displayMessage(

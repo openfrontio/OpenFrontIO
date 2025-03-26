@@ -17,6 +17,7 @@ import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
 import portIcon from "../../../../resources/images/PortIcon.svg";
 import mirvIcon from "../../../../resources/images/MIRVIcon.svg";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
+import samlauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import { renderNumber } from "../../Utils";
 import { GameView, PlayerView } from "../../../core/game/GameView";
@@ -27,6 +28,7 @@ interface BuildItemDisplay {
   unitType: UnitType;
   icon: string;
   description?: string;
+  countable?: boolean;
 }
 
 const buildTable: BuildItemDisplay[][] = [
@@ -35,47 +37,56 @@ const buildTable: BuildItemDisplay[][] = [
       unitType: UnitType.AtomBomb,
       icon: atomBombIcon,
       description: "Small explosion",
+      countable: false,
     },
     {
       unitType: UnitType.MIRV,
       icon: mirvIcon,
       description: "Huge explosion, only targets selected player",
+      countable: false,
     },
     {
       unitType: UnitType.HydrogenBomb,
       icon: hydrogenBombIcon,
       description: "Large explosion",
+      countable: false,
     },
     {
       unitType: UnitType.Warship,
       icon: warshipIcon,
       description: "Captures trade ships, destroys ships and boats",
+      countable: true,
     },
     {
       unitType: UnitType.Port,
       icon: portIcon,
       description: "Sends trade ships to allies to generate gold",
+      countable: true,
     },
     {
       unitType: UnitType.MissileSilo,
       icon: missileSiloIcon,
       description: "Used to launch nukes",
+      countable: true,
     },
     // needs new icon
     {
       unitType: UnitType.SAMLauncher,
-      icon: shieldIcon,
+      icon: samlauncherIcon,
       description: "Defends against incoming nukes",
+      countable: true,
     },
     {
       unitType: UnitType.DefensePost,
       icon: shieldIcon,
       description: "Increase defenses of nearby borders",
+      countable: true,
     },
     {
       unitType: UnitType.City,
       icon: cityIcon,
       description: "Increase max population",
+      countable: true,
     },
   ],
 ];
@@ -86,6 +97,7 @@ export class BuildMenu extends LitElement implements Layer {
   public eventBus: EventBus;
   private clickedTile: TileRef;
   private playerActions: PlayerActions | null;
+  private filteredBuildTable: BuildItemDisplay[][] = buildTable;
 
   tick() {
     if (!this._hidden) {
@@ -124,6 +136,7 @@ export class BuildMenu extends LitElement implements Layer {
       width: 100%;
     }
     .build-button {
+      position: relative;
       width: 120px;
       height: 140px;
       border: 2px solid #444;
@@ -177,6 +190,37 @@ export class BuildMenu extends LitElement implements Layer {
     .hidden {
       display: none !important;
     }
+    .build-count-chip {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      background-color: #2c2c2c;
+      color: white;
+      padding: 2px 10px;
+      border-radius: 10000px;
+      transition: all 0.3s ease;
+      font-size: 12px;
+      display: flex;
+      justify-content: center;
+      align-content: center;
+      border: 1px solid #444;
+    }
+    .build-button:not(:disabled):hover > .build-count-chip {
+      background-color: #3a3a3a;
+      border-color: #666;
+    }
+    .build-button:not(:disabled):active > .build-count-chip {
+      background-color: #4a4a4a;
+    }
+    .build-button:disabled > .build-count-chip {
+      background-color: #1a1a1a;
+      border-color: #333;
+      cursor: not-allowed;
+    }
+    .build-count {
+      font-weight: bold;
+      font-size: 14px;
+    }
 
     @media (max-width: 768px) {
       .build-menu {
@@ -201,6 +245,13 @@ export class BuildMenu extends LitElement implements Layer {
       .build-cost {
         font-size: 11px;
       }
+      .build-count {
+        font-weight: bold;
+        font-size: 10px;
+      }
+      .build-count-chip {
+        padding: 1px 5px;
+      }
     }
 
     @media (max-width: 480px) {
@@ -224,6 +275,13 @@ export class BuildMenu extends LitElement implements Layer {
       }
       .build-cost {
         font-size: 9px;
+      }
+      .build-count {
+        font-weight: bold;
+        font-size: 8px;
+      }
+      .build-count-chip {
+        padding: 0 3px;
       }
       .build-button img {
         width: 24px;
@@ -261,6 +319,15 @@ export class BuildMenu extends LitElement implements Layer {
     return 0;
   }
 
+  private count(item: BuildItemDisplay): string {
+    const player = this.game?.myPlayer();
+    if (!player) {
+      return "?";
+    }
+
+    return player.units(item.unitType).length.toString();
+  }
+
   public onBuildSelected = (item: BuildItemDisplay) => {
     this.eventBus.emit(
       new BuildUnitIntentEvent(
@@ -277,7 +344,7 @@ export class BuildMenu extends LitElement implements Layer {
         class="build-menu ${this._hidden ? "hidden" : ""}"
         @contextmenu=${(e) => e.preventDefault()}
       >
-        ${buildTable.map(
+        ${this.filteredBuildTable.map(
           (row) => html`
             <div class="build-row">
               ${row.map(
@@ -308,6 +375,11 @@ export class BuildMenu extends LitElement implements Layer {
                         style="vertical-align: middle;"
                       />
                     </span>
+                    ${item.countable
+                      ? html`<div class="build-count-chip">
+                          <span class="build-count">${this.count(item)}</span>
+                        </div>`
+                      : ""}
                   </button>
                 `,
               )}
@@ -337,6 +409,26 @@ export class BuildMenu extends LitElement implements Layer {
         this.playerActions = actions;
         this.requestUpdate();
       });
+
+    // removed disabled buildings from the buildtable
+    this.filteredBuildTable = this.getBuildableUnits();
+  }
+
+  private getBuildableUnits(): BuildItemDisplay[][] {
+    if (this.game?.config()?.disableNukes()) {
+      return buildTable.map((row) =>
+        row.filter(
+          (item) =>
+            ![
+              UnitType.AtomBomb,
+              UnitType.MIRV,
+              UnitType.HydrogenBomb,
+              UnitType.MissileSilo,
+            ].includes(item.unitType),
+        ),
+      );
+    }
+    return buildTable;
   }
 
   get isVisible() {
