@@ -1,8 +1,8 @@
+import { WriteStream, createWriteStream } from "fs";
+import fs from "fs/promises";
+import path from "path";
 import { encodePNGToStream } from "pureimage";
 import { generateMap } from "./TerrainMapGenerator.js";
-import path from "path";
-import fs from "fs/promises";
-import { WriteStream, createWriteStream } from "fs";
 
 const maps = [
   "Africa",

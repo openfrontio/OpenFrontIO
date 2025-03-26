@@ -1,14 +1,13 @@
 import { consolex } from "../Consolex";
 import {
-  Cell,
   Execution,
   Game,
   Player,
-  Unit,
   PlayerID,
+  Unit,
   UnitType,
 } from "../game/Game";
-import { manhattanDistFN, TileRef } from "../game/GameMap";
+import { TileRef } from "../game/GameMap";
 
 export class DefensePostExecution implements Execution {
   private player: Player;

@@ -1,17 +1,9 @@
-import { Colord, colord, random } from "colord";
-import {
-  Game,
-  PlayerID,
-  PlayerInfo,
-  PlayerType,
-  TerrainType,
-} from "../game/Game";
-import { Theme } from "./Config";
-import { time } from "console";
+import { Colord, colord } from "colord";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
+import { PlayerInfo, PlayerType, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
-import { PlayerView } from "../game/GameView";
+import { Theme } from "./Config";
 
 export const pastelTheme = new (class implements Theme {
   private rand = new PseudoRandom(123);

@@ -1,20 +1,18 @@
-import { MessageType } from "../game/Game";
 import { renderNumber } from "../../client/Utils";
+import { consolex } from "../Consolex";
 import {
-  AllPlayers,
-  Cell,
   Execution,
   Game,
-  Unit,
+  MessageType,
   Player,
   PlayerID,
+  Unit,
   UnitType,
 } from "../game/Game";
-import { PathFinder } from "../pathfinding/PathFinding";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { distSortUnit } from "../Util";
-import { consolex } from "../Consolex";
 import { TileRef } from "../game/GameMap";
+import { PathFindResultType } from "../pathfinding/AStar";
+import { PathFinder } from "../pathfinding/PathFinding";
+import { distSortUnit } from "../Util";
 
 export class TradeShipExecution implements Execution {
   private active = true;

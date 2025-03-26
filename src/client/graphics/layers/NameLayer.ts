@@ -1,29 +1,19 @@
-import {
-  AllPlayers,
-  Cell,
-  Game,
-  NukeType,
-  nukeTypes,
-  Player,
-  PlayerType,
-  UnitType,
-} from "../../../core/game/Game";
-import { PseudoRandom } from "../../../core/PseudoRandom";
-import { Theme } from "../../../core/configuration/Config";
-import { Layer } from "./Layer";
-import { TransformHandler } from "../TransformHandler";
-import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
 import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
 import allianceRequestIcon from "../../../../resources/images/AllianceRequestIcon.svg";
 import crownIcon from "../../../../resources/images/CrownIcon.svg";
-import targetIcon from "../../../../resources/images/TargetIcon.svg";
 import embargoIcon from "../../../../resources/images/EmbargoIcon.svg";
-import nukeWhiteIcon from "../../../../resources/images/NukeIconWhite.svg";
 import nukeRedIcon from "../../../../resources/images/NukeIconRed.svg";
+import nukeWhiteIcon from "../../../../resources/images/NukeIconWhite.svg";
+import targetIcon from "../../../../resources/images/TargetIcon.svg";
+import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
+import { PseudoRandom } from "../../../core/PseudoRandom";
 import { ClientID } from "../../../core/Schemas";
+import { Theme } from "../../../core/configuration/Config";
+import { AllPlayers, Cell, nukeTypes } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { createCanvas, renderTroops } from "../../Utils";
-import { sanitize } from "../../../core/Util";
+import { TransformHandler } from "../TransformHandler";
+import { Layer } from "./Layer";
 
 class RenderInfo {
   public icons: Map<string, HTMLImageElement> = new Map(); // Track icon elements

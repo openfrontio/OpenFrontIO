@@ -1,12 +1,12 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
+import { translateText } from "../client/Utils";
 import { consolex } from "../core/Consolex";
 import { GameInfo, GameRecord } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { JoinLobbyEvent } from "./Main";
-import { translateText } from "../client/Utils";
-import "./components/baseComponents/Modal";
 import "./components/baseComponents/Button";
+import "./components/baseComponents/Modal";
 
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {

@@ -1,6 +1,6 @@
+import { PlayerActions, PlayerID, PlayerProfile } from "../game/Game";
 import { GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameConfig, GameID, Turn } from "../Schemas";
-import { PlayerActions, PlayerID, PlayerProfile } from "../game/Game";
 
 export type WorkerMessageType =
   | "heartbeat"

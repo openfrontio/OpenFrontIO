@@ -1,5 +1,5 @@
-import { EventBus, GameEvent } from "../EventBus";
-import { Execution, Game, Player, PlayerID } from "../game/Game";
+import { GameEvent } from "../EventBus";
+import { Execution, Game, Player } from "../game/Game";
 
 export class WinEvent implements GameEvent {
   constructor(public readonly winner: Player) {}

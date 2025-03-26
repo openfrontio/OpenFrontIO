@@ -1,18 +1,17 @@
+import { Colord } from "colord";
+import { GameConfig, GameID } from "../Schemas";
 import {
   Difficulty,
   Game,
   GameMapType,
   Gold,
   Player,
-  PlayerID,
   PlayerInfo,
   TerraNullius,
   Tick,
   UnitInfo,
   UnitType,
 } from "../game/Game";
-import { Colord, colord } from "colord";
-import { GameConfig, GameID } from "../Schemas";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";

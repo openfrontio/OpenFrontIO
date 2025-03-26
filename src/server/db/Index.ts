@@ -1,5 +1,5 @@
-import { Pool, PoolClient } from "pg";
 import dotenv from "dotenv";
+import { Pool, PoolClient } from "pg";
 import { schemas } from "./Schema";
 dotenv.config();
 
