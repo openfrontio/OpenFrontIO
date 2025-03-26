@@ -40,6 +40,7 @@ import {
 } from "../execution/utils/BotNames";
 
 const displayNameMap: Record<PlayerID, string> = {};
+const usedNames = new Set<string>(); // すでに使われた名前を記録
 
 export class UnitView {
   public _wasUpdated = true;
@@ -166,11 +167,24 @@ export class PlayerView {
   name(): string {
     if (
       this.data.playerType === "HUMAN" &&
-      !(localStorage.getItem("username") === this.data.name)
+      localStorage.getItem("username") !== this.data.name
     ) {
-      const prefixIndex = Math.floor(Math.random() * BOT_NAME_PREFIXES.length);
-      const suffixIndex = Math.floor(Math.random() * BOT_NAME_SUFFIXES.length);
-      const randomName = `★ ${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
+      let randomName = "";
+      let tries = 0;
+      const MAX_TRIES = 10;
+      do {
+        const prefixIndex = Math.floor(
+          Math.random() * BOT_NAME_PREFIXES.length,
+        );
+        const suffixIndex = Math.floor(
+          Math.random() * BOT_NAME_SUFFIXES.length,
+        );
+        randomName = `<b>👤 ${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}</b>`;
+        tries++;
+      } while (
+        Object.values(displayNameMap).includes(randomName) &&
+        tries < MAX_TRIES
+      );
       if (!displayNameMap[this.data.name]) {
         displayNameMap[this.data.name] = randomName;
       }
@@ -178,16 +192,31 @@ export class PlayerView {
     return localStorage.getItem("settings.randomname") === "true" &&
       displayNameMap[this.data.displayName]
       ? displayNameMap[this.data.displayName]
-      : this.data.name;
+      : this.data.playerType === "HUMAN"
+        ? `<b>${this.data.name}</b>`
+        : `<u>${this.data.name}</u>`;
   }
   displayName(): string {
     if (
       this.data.playerType === "HUMAN" &&
-      !(localStorage.getItem("username") === this.data.name)
+      localStorage.getItem("username") !== this.data.name
     ) {
-      const prefixIndex = Math.floor(Math.random() * BOT_NAME_PREFIXES.length);
-      const suffixIndex = Math.floor(Math.random() * BOT_NAME_SUFFIXES.length);
-      const randomName = `★ ${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
+      let randomName = "";
+      let tries = 0;
+      const MAX_TRIES = 10;
+      do {
+        const prefixIndex = Math.floor(
+          Math.random() * BOT_NAME_PREFIXES.length,
+        );
+        const suffixIndex = Math.floor(
+          Math.random() * BOT_NAME_SUFFIXES.length,
+        );
+        randomName = `<b>👤 ${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}</b>`;
+        tries++;
+      } while (
+        Object.values(displayNameMap).includes(randomName) &&
+        tries < MAX_TRIES
+      );
       if (!displayNameMap[this.data.name]) {
         displayNameMap[this.data.name] = randomName;
       }
@@ -195,7 +224,9 @@ export class PlayerView {
     return localStorage.getItem("settings.randomname") === "true" &&
       displayNameMap[this.data.displayName]
       ? displayNameMap[this.data.displayName]
-      : this.data.displayName;
+      : this.data.playerType === "HUMAN"
+        ? `<b>${this.data.displayName}</b>`
+        : `<u>${this.data.displayName}</u>`;
   }
   clientID(): ClientID {
     return this.data.clientID;
