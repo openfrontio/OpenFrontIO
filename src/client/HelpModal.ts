@@ -81,8 +81,14 @@ export class HelpModal extends LitElement {
         </div>
         <div class="flex flex-col md:flex-row gap-4">
           <div class="flex flex-col items-center">
-            <div class="text-gray-300">${translateText("help_modal.ui_leaderboard")}</div>
-            <img src="/images/helpModal/leaderboard.webp" alt="Leaderboard" title="Leaderboard" />
+            <div class="text-gray-300">
+              ${translateText("help_modal.ui_leaderboard")}
+            </div>
+            <img
+              src="/images/helpModal/leaderboard.webp"
+              alt="Leaderboard"
+              title="Leaderboard"
+            />
           </div>
           <div>
             <p>${translateText("help_modal.ui_leaderboard_desc")}</p>
@@ -93,8 +99,14 @@ export class HelpModal extends LitElement {
 
         <div class="flex flex-col md:flex-row gap-4">
           <div class="flex flex-col items-center w-full md:w-[80%]">
-            <div data-i18n="help_modal.ui_control" class="text-gray-300">${translateText("help_modal.ui_control")}</div>
-            <img src="/images/helpModal/controlPanel.webp" alt="Control panel" title="Control panel" />
+            <div data-i18n="help_modal.ui_control" class="text-gray-300">
+              ${translateText("help_modal.ui_control")}
+            </div>
+            <img
+              src="/images/helpModal/controlPanel.webp"
+              alt="Control panel"
+              title="Control panel"
+            />
           </div>
           <div>
             <p class="mb-4">${translateText("help_modal.ui_control_desc")}</p>
@@ -115,8 +127,14 @@ export class HelpModal extends LitElement {
 
         <div class="flex flex-col md:flex-row gap-4">
           <div class="flex flex-col items-center">
-            <div data-i18n="help_modal.ui_options" class="text-gray-300">${translateText("help_modal.ui_options")}</div>
-            <img src="/images/helpModal/options.webp" alt="Options" title="Options" />
+            <div data-i18n="help_modal.ui_options" class="text-gray-300">
+              ${translateText("help_modal.ui_options")}
+            </div>
+            <img
+              src="/images/helpModal/options.webp"
+              alt="Options"
+              title="Options"
+            />
           </div>
           <div>
             <p class="mb-4">${translateText("help_modal.ui_options_desc")}</p>
@@ -138,7 +156,13 @@ export class HelpModal extends LitElement {
         </div>
 
         <div class="flex flex-col md:flex-row gap-4">
-          <img src="/images/helpModal/radialMenu.webp" alt="Radial menu" title="Radial menu", class="radial-menu-image" />
+          <img
+            src="/images/helpModal/radialMenu.webp"
+            alt="Radial menu"
+            title="Radial menu"
+            ,
+            class="radial-menu-image"
+          />
           <div>
             <p class="mb-4">${translateText("help_modal.radial_desc")}</p>
             <ul>
@@ -175,8 +199,17 @@ export class HelpModal extends LitElement {
 
           <div class="flex flex-col md:flex-row gap-4 mt-2">
             <div class="flex flex-col items-center w-full md:w-[80%]">
-              <div data-i18n="help_modal.info_enemy_panel" class="text-gray-300">${translateText("help_modal.info_enemy_panel")}</div>
-              <img src="/images/helpModal/infoMenu.webp" alt="Enemy info panel" title="Enemy info panel" />
+              <div
+                data-i18n="help_modal.info_enemy_panel"
+                class="text-gray-300"
+              >
+                ${translateText("help_modal.info_enemy_panel")}
+              </div>
+              <img
+                src="/images/helpModal/infoMenu.webp"
+                alt="Enemy info panel"
+                title="Enemy info panel"
+              />
             </div>
             <div class="pt-4">
               <p class="mb-4">${translateText("help_modal.info_enemy_desc")}</p>
@@ -201,8 +234,14 @@ export class HelpModal extends LitElement {
 
           <div class="flex flex-col md:flex-row gap-4">
             <div class="flex flex-col items-center w-full md:w-[62%]">
-              <div class="text-gray-300">${translateText("help_modal.info_ally_panel")}</div>
-              <img src="/images/helpModal/infoMenuAlly.webp" alt="Ally info panel" title="Ally info panel" />
+              <div class="text-gray-300">
+                ${translateText("help_modal.info_ally_panel")}
+              </div>
+              <img
+                src="/images/helpModal/infoMenuAlly.webp"
+                alt="Ally info panel"
+                title="Ally info panel"
+              />
             </div>
             <div class="pt-4">
               <p class="mb-4">${translateText("help_modal.info_ally_desc")}</p>
@@ -293,17 +332,31 @@ export class HelpModal extends LitElement {
           <p>${translateText("help_modal.icon_desc")}</p>
           <div class="flex flex-col md:flex-row gap-4 mt-2">
             <div class="flex flex-col items-center">
-              <div class="text-gray-300">${translateText("help_modal.icon_crown")}</div>
-              <img src="/images/helpModal/number1.webp" alt="Number 1 player" title="Number 1 player" />
+              <div class="text-gray-300">
+                ${translateText("help_modal.icon_crown")}
+              </div>
+              <img
+                src="/images/helpModal/number1.webp"
+                alt="Number 1 player"
+                title="Number 1 player"
+              />
             </div>
 
             <div class="flex flex-col items-center">
-              <div class="text-gray-300">${translateText("help_modal.icon_traitor")}</div>
-              <img src="/images/helpModal/traitor.webp" alt="Traitor" title="Traitor" />
+              <div class="text-gray-300">
+                ${translateText("help_modal.icon_traitor")}
+              </div>
+              <img
+                src="/images/helpModal/traitor.webp"
+                alt="Traitor"
+                title="Traitor"
+              />
             </div>
 
             <div class="flex flex-col items-center">
-              <div class="text-gray-300">${translateText("help_modal.icon_ally")}</div>
+              <div class="text-gray-300">
+                ${translateText("help_modal.icon_ally")}
+              </div>
               <img src="/images/helpModal/ally.webp" alt="Ally" title="Ally" />
             </div>
           </div>
