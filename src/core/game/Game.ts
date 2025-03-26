@@ -378,6 +378,7 @@ export interface Player {
   toUpdate(): PlayerUpdate;
   playerProfile(): PlayerProfile;
   canBoat(tile: TileRef): boolean;
+  tradingPorts(port: Unit): Unit[];
 }
 
 export interface Game extends GameMap {
