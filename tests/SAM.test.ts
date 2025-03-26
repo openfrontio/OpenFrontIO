@@ -1,3 +1,5 @@
+import { NukeExecution } from "../src/core/execution/NukeExecution";
+import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import {
   Game,
   Player,
@@ -5,11 +7,9 @@ import {
   PlayerType,
   UnitType,
 } from "../src/core/game/Game";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
+import { TileRef } from "../src/core/game/GameMap";
 import { setup } from "./util/Setup";
 import { constructionExecution } from "./util/utils";
-import { NukeExecution } from "../src/core/execution/NukeExecution";
-import { TileRef } from "../src/core/game/GameMap";
 
 let game: Game;
 let attacker: Player;

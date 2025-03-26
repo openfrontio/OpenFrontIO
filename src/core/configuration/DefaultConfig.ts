@@ -13,7 +13,7 @@ import {
   UnitInfo,
   UnitType,
 } from "../game/Game";
-import { GameMap, TileRef } from "../game/GameMap";
+import { TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID } from "../Schemas";

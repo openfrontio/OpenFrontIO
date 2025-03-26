@@ -1,23 +1,23 @@
 import { colord, Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
-import { Layer } from "./Layer";
 import { EventBus } from "../../../core/EventBus";
+import { Layer } from "./Layer";
 
+import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
+import shieldIcon from "../../../../resources/images/buildings/fortAlt2.png";
 import anchorIcon from "../../../../resources/images/buildings/port1.png";
 import missileSiloIcon from "../../../../resources/images/buildings/silo1.png";
-import SAMMissileIcon from "../../../../resources/images/buildings/silo4.png";
 import SAMMissileReloadingIcon from "../../../../resources/images/buildings/silo4-reloading.png";
-import shieldIcon from "../../../../resources/images/buildings/fortAlt2.png";
-import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
-import { GameView, UnitView } from "../../../core/game/GameView";
+import SAMMissileIcon from "../../../../resources/images/buildings/silo4.png";
 import { Cell, UnitType } from "../../../core/game/Game";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import {
   euclDistFN,
+  hexDistFN,
   manhattanDistFN,
   rectDistFN,
-  hexDistFN,
 } from "../../../core/game/GameMap";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { GameView, UnitView } from "../../../core/game/GameView";
 
 const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
 const reloadingColor = colord({ r: 255, g: 0, b: 0 });

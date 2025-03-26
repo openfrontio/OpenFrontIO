@@ -1,13 +1,13 @@
-import { generateMap } from "../../src/scripts/TerrainMapGenerator";
 import fs from "fs/promises";
 import path from "path";
+import { Difficulty, GameType } from "../../src/core/game/Game";
 import { createGame } from "../../src/core/game/GameImpl";
 import { genTerrainFromBin } from "../../src/core/game/TerrainMapLoader";
+import { UserSettings } from "../../src/core/game/UserSettings";
+import { GameConfig } from "../../src/core/Schemas";
+import { generateMap } from "../../src/scripts/TerrainMapGenerator";
 import { TestConfig } from "./TestConfig";
 import { TestServerConfig } from "./TestServerConfig";
-import { UserSettings } from "../../src/core/game/UserSettings";
-import { Difficulty, GameType } from "../../src/core/game/Game";
-import { GameConfig } from "../../src/core/Schemas";
 
 export async function setup(mapName: string, _gameConfig: GameConfig = {}) {
   // Load the specified map

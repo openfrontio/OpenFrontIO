@@ -1,27 +1,6 @@
-import {
-  Player,
-  PlayerInfo,
-  PlayerID,
-  PlayerType,
-  TerraNullius,
-  Cell,
-  Execution,
-  AllianceRequest,
-  MutableAlliance,
-  Alliance,
-  Tick,
-  AllPlayers,
-  Gold,
-  UnitType,
-  Unit,
-  Relation,
-  EmojiMessage,
-  PlayerProfile,
-  Attack,
-  UnitSpecificInfos,
-} from "./Game";
-import { AttackUpdate, PlayerUpdate } from "./GameUpdates";
-import { GameUpdateType } from "./GameUpdates";
+import { renderTroops } from "../../client/Utils";
+import { consolex } from "../Consolex";
+import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
   assertNever,
@@ -30,21 +9,40 @@ import {
   maxInt,
   minInt,
   simpleHash,
-  sourceDstOceanShore,
   targetTransportTile,
   toInt,
   within,
 } from "../Util";
-import { CellString, GameImpl } from "./GameImpl";
-import { UnitImpl } from "./UnitImpl";
-import { MessageType } from "./Game";
-import { renderTroops } from "../../client/Utils";
-import { TerraNulliusImpl } from "./TerraNulliusImpl";
-import { andFN, manhattanDistFN, TileRef } from "./GameMap";
-import { AttackImpl } from "./AttackImpl";
-import { PseudoRandom } from "../PseudoRandom";
-import { consolex } from "../Consolex";
 import { sanitizeUsername } from "../validations/username";
+import { AttackImpl } from "./AttackImpl";
+import {
+  Alliance,
+  AllianceRequest,
+  AllPlayers,
+  Attack,
+  Cell,
+  EmojiMessage,
+  Execution,
+  Gold,
+  MessageType,
+  MutableAlliance,
+  Player,
+  PlayerID,
+  PlayerInfo,
+  PlayerProfile,
+  PlayerType,
+  Relation,
+  TerraNullius,
+  Tick,
+  Unit,
+  UnitSpecificInfos,
+  UnitType,
+} from "./Game";
+import { GameImpl } from "./GameImpl";
+import { andFN, manhattanDistFN, TileRef } from "./GameMap";
+import { AttackUpdate, GameUpdateType, PlayerUpdate } from "./GameUpdates";
+import { TerraNulliusImpl } from "./TerraNulliusImpl";
+import { UnitImpl } from "./UnitImpl";
 
 interface Target {
   tick: Tick;

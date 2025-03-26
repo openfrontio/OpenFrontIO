@@ -1,8 +1,8 @@
-import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
-import { PathFinder } from "../pathfinding/PathFinding";
-import { PathFindResultType } from "../pathfinding/AStar";
 import { consolex } from "../Consolex";
+import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { PathFindResultType } from "../pathfinding/AStar";
+import { PathFinder } from "../pathfinding/PathFinding";
 
 export class ShellExecution implements Execution {
   private active = true;

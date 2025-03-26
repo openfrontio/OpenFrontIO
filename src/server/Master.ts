@@ -1,17 +1,17 @@
 import cluster from "cluster";
-import http from "http";
 import express from "express";
-import { GameMapType, GameType, Difficulty } from "../core/game/Game";
-import { generateID } from "../core/Util";
-import { PseudoRandom } from "../core/PseudoRandom";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameConfig, GameInfo } from "../core/Schemas";
-import path from "path";
 import rateLimit from "express-rate-limit";
+import http from "http";
+import path from "path";
 import { fileURLToPath } from "url";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { Difficulty, GameMapType, GameType } from "../core/game/Game";
+import { PseudoRandom } from "../core/PseudoRandom";
+import { GameConfig, GameInfo } from "../core/Schemas";
+import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
-import { setupMetricsServer } from "./MasterMetrics";
 import { logger } from "./Logger";
+import { setupMetricsServer } from "./MasterMetrics";
 
 const config = getServerConfigFromServer();
 const readyWorkers = new Set();
