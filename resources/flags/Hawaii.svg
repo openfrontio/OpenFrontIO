@@ -1,16 +1,1 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 48 24">
-<clipPath id="c">
-<path d="M0,0V6H22V12H21zM21,0H10.5V13H0V12z"/>
-</clipPath>
-<rect width="48" height="24" fill="#012169"/>
-<g>
-<path d="M0,0 21,12M21,0 0,12" stroke="#fff" stroke-width="2.4"/>
-<path d="M0,0 21,12M21,0 0,12" stroke="#c8102e" stroke-width="1.6" clip-path="url(#c)"/>
-<path d="M10.5,0V15M0,6H24" stroke="#fff" stroke-width="4"/>
-<path d="M10.5,0V15M0,6H24" stroke="#c8102e" stroke-width="2.4"/>
-</g>
-<path d="M21,12V9L24,6 21,3V0H48V24H0V18z" fill="#fff"/>
-<path d="M21,6V9H48V3zM0,15V18H48V12z" fill="#012169"/>
-<path d="M21,4.5H48M0,13.5H48M0,22.5H48" stroke="#c8102e" stroke-width="3"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 48 24"><clipPath id="a"><path d="M0 0v6h22v6h-1zm21 0H10.5v13H0v-1z"/></clipPath><path fill="#012169" d="M0 0h48v24H0z"/><path stroke="#fff" stroke-width="2.4" d="m0 0 21 12m0-12L0 12"/><path stroke="#c8102e" stroke-width="1.6" d="m0 0 21 12m0-12L0 12" clip-path="url(#a)"/><path stroke="#fff" stroke-width="4" d="M10.5 0v15M0 6h24"/><path stroke="#c8102e" stroke-width="2.4" d="M10.5 0v15M0 6h24"/><path fill="#fff" d="M21 12V9l3-3-3-3V0h27v24H0v-6z"/><path fill="#012169" d="M21 6v3h27V3zM0 15v3h48v-6z"/><path stroke="#c8102e" stroke-width="3" d="M21 4.5h27m-48 9h48m-48 9h48"/></svg>
