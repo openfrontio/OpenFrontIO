@@ -66,33 +66,32 @@ export class SAMLauncherExecution implements Execution {
         UnitType.AtomBomb,
         UnitType.HydrogenBomb,
       ])
-      .map(({ unit }) => unit)
       .filter(
-        (u) =>
-          u.owner() !== this.player && !u.owner().isAlliedWith(this.player),
+        ({ unit }) =>
+          unit.owner() !== this.player &&
+          !unit.owner().isAlliedWith(this.player),
       );
 
     this.target =
       nukes.sort((a, b) => {
-        // Prioritize HydrogenBombs first
+        const { unit: unitA, distSquared: distA } = a;
+        const { unit: unitB, distSquared: distB } = b;
+
+        // Prioritize Hydrogen Bombs
         if (
-          a.type() === UnitType.HydrogenBomb &&
-          b.type() !== UnitType.HydrogenBomb
-        ) {
+          unitA.type() === UnitType.HydrogenBomb &&
+          unitB.type() !== UnitType.HydrogenBomb
+        )
           return -1;
-        }
         if (
-          a.type() !== UnitType.HydrogenBomb &&
-          b.type() === UnitType.HydrogenBomb
-        ) {
+          unitA.type() !== UnitType.HydrogenBomb &&
+          unitB.type() === UnitType.HydrogenBomb
+        )
           return 1;
-        }
-        // If both are the same type, sort by distance
-        return (
-          this.mg.manhattanDist(this.post.tile(), a.tile()) -
-          this.mg.manhattanDist(this.post.tile(), b.tile())
-        );
-      })[0] ?? null;
+
+        // If both are the same type, sort by distance (lower `distSquared` means closer)
+        return distA - distB;
+      })[0]?.unit ?? null;
 
     const cooldown =
       this.lastMissileAttack != 0 &&
