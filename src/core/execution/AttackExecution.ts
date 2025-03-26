@@ -81,6 +81,10 @@ export class AttackExecution implements Execution {
         ? mg.terraNullius()
         : mg.player(this._targetID);
 
+    if (this.target && this.target.isPlayer()) {
+      (this.target as Player).addEmbargo(this._owner.id());
+    }
+
     if (this._owner == this.target) {
       console.error(`Player ${this._owner} cannot attack itself`);
       this.active = false;
