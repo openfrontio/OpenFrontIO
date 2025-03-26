@@ -48,9 +48,10 @@ import { PlayerPanel } from "./PlayerPanel";
 
 enum Slot {
   Info,
+  Alliance,
   Boat,
   Build,
-  Close,
+  // Close,
 }
 
 export class RadialMenu implements Layer {
@@ -70,7 +71,8 @@ export class RadialMenu implements Layer {
         icon: null,
       },
     ],
-    [Slot.Close, { name: "close", disabled: true, action: () => {} }],
+    //[Slot.Close, { name: "close", disabled: true, action: () => {} }],
+    [Slot.Alliance, { name: "alliance", disabled: true, action: () => {} }],
     [Slot.Build, { name: "build", disabled: true, action: () => {} }],
     [
       Slot.Info,
@@ -87,7 +89,7 @@ export class RadialMenu implements Layer {
   private readonly menuSize = 190;
   private readonly centerButtonSize = 30;
   private readonly iconSize = 32;
-  private readonly centerIconSize = 48;
+  private readonly centerIconSize = 44;
   private readonly disabledColor = d3.rgb(128, 128, 128).toString();
 
   private isCenterButtonEnabled = false;
@@ -253,6 +255,8 @@ export class RadialMenu implements Layer {
       .attr("r", this.centerButtonSize)
       .attr("fill", "transparent")
       .style("cursor", "pointer")
+      .attr("stroke", "#ffffff")
+      .attr("stroke-width", "2")
       .on("click", () => this.handleCenterButtonClick())
       .on("touchstart", (event: Event) => {
         event.preventDefault();
@@ -271,11 +275,11 @@ export class RadialMenu implements Layer {
     centerButton
       .append("image")
       .attr("class", "center-button-icon")
-      .attr("xlink:href", swordIcon)
+      .attr("xlink:href", xIcon)
       .attr("width", this.centerIconSize)
       .attr("height", this.centerIconSize)
       .attr("x", -this.centerIconSize / 2)
-      .attr("y", -this.centerIconSize / 2)
+      .attr("y", -this.centerIconSize / 2 + 4)
       .style("pointer-events", "none");
   }
 
@@ -345,7 +349,7 @@ export class RadialMenu implements Layer {
     actions: PlayerActions,
     tile: TileRef,
   ) {
-    this.activateMenuElement(Slot.Build, "#ebe250", buildIcon, () => {
+    this.activateMenuElement(Slot.Build, "#EBE250", buildIcon, () => {
       this.buildMenu.showMenu(tile);
     });
     if (this.g.hasOwner(tile)) {
@@ -353,10 +357,24 @@ export class RadialMenu implements Layer {
         this.playerPanel.show(actions, tile);
       });
     }
-    this.activateMenuElement(Slot.Close, "#DC2626", xIcon, () => {});
+
+    let other = this.g.owner(tile);
+    other = other as PlayerView;
+
+    if (other.isPlayer()) {
+      if (actions.interaction?.canSendAllianceRequest) {
+        this.activateMenuElement(Slot.Alliance, "#34EB4C", allianceIcon, () =>
+          this.handleAllianceClick(myPlayer, other),
+        );
+      } else if (actions.interaction?.canBreakAlliance) {
+        this.activateMenuElement(Slot.Alliance, "#F57E42", traitorIcon, () =>
+          this.handleBreakAllianceClick(myPlayer, other),
+        );
+      }
+    }
 
     if (actions.canBoat) {
-      this.activateMenuElement(Slot.Boat, "#3f6ab1", boatIcon, () => {
+      this.activateMenuElement(Slot.Boat, "#3F6AB1", boatIcon, () => {
         this.eventBus.emit(
           new SendBoatAttackIntentEvent(
             this.g.owner(tile).id(),
@@ -366,9 +384,7 @@ export class RadialMenu implements Layer {
         );
       });
     }
-    if (actions.canAttack) {
-      this.enableCenterButton(true);
-    }
+    this.enableCenterButton(true);
 
     if (!this.g.hasOwner(tile)) {
       return;
@@ -402,24 +418,16 @@ export class RadialMenu implements Layer {
   }
 
   private handleCenterButtonClick() {
-    if (!this.isCenterButtonEnabled) {
-      return;
-    }
-    consolex.log("Center button clicked");
-    const clicked = this.g.ref(this.clickedCell.x, this.clickedCell.y);
-    if (this.g.inSpawnPhase()) {
-      this.eventBus.emit(new SendSpawnIntentEvent(this.clickedCell));
-    } else {
-      const myPlayer = this.g.myPlayer();
-      if (myPlayer != null && this.g.owner(clicked) != myPlayer) {
-        this.eventBus.emit(
-          new SendAttackIntentEvent(
-            this.g.owner(clicked).id(),
-            this.uiState.attackRatio * myPlayer.troops(),
-          ),
-        );
-      }
-    }
+    this.hideRadialMenu();
+  }
+
+  private handleAllianceClick(myPlayer: PlayerView, other: PlayerView) {
+    this.eventBus.emit(new SendAllianceRequestIntentEvent(myPlayer, other));
+    this.hideRadialMenu();
+  }
+
+  private handleBreakAllianceClick(myPlayer: PlayerView, other: PlayerView) {
+    this.eventBus.emit(new SendBreakAllianceIntentEvent(myPlayer, other));
     this.hideRadialMenu();
   }
 
@@ -453,7 +461,7 @@ export class RadialMenu implements Layer {
   private onCenterButtonHover(isHovering: boolean) {
     if (!this.isCenterButtonEnabled) return;
 
-    const scale = isHovering ? 1.2 : 1;
+    const scale = isHovering ? 1.1 : 1;
     const fontSize = isHovering ? "18px" : "16px";
 
     this.menuElement
@@ -477,16 +485,10 @@ export class RadialMenu implements Layer {
     this.isCenterButtonEnabled = enabled;
     const centerButton = this.menuElement.select(".center-button");
 
-    centerButton
-      .select(".center-button-hitbox")
-      .style("cursor", enabled ? "pointer" : "not-allowed");
+    centerButton.select(".center-button-hitbox").style("cursor", "pointer");
 
-    centerButton
-      .select(".center-button-visible")
-      .attr("fill", enabled ? "#2c3e50" : "#999999");
+    centerButton.select(".center-button-visible").attr("fill", "#DC2626");
 
-    centerButton
-      .select(".center-button-text")
-      .attr("fill", enabled ? "white" : "#cccccc");
+    centerButton.select(".center-button-text").attr("fill", "white");
   }
 }
