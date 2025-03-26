@@ -66,6 +66,8 @@
 
     "build_city": "City",
     "build_city_desc": "Increases your max population. Useful when you can't expand your territory or you're about to hit your population limit.",
+    "build_factory": "Factory",
+    "build_factory_desc": "Increases the gold income of workers. Useful when you can't expand your territory or you're not able to utilize trade.",
     "build_defense": "Defense Post",
     "build_defense_desc": "Increases defenses around nearby borders. Attacks from enemies are slower and have more casualties.",
     "build_port": "Port",
