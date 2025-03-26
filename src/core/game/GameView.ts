@@ -194,7 +194,7 @@ export class PlayerView {
       ? displayNameMap[this.data.displayName]
       : this.data.playerType === "HUMAN"
         ? `<b>${this.data.name}</b>`
-        : `<u>${this.data.name}</u>`;
+        : `<i>${this.data.name}</i>`;
   }
   displayName(): string {
     if (
@@ -226,7 +226,7 @@ export class PlayerView {
       ? displayNameMap[this.data.displayName]
       : this.data.playerType === "HUMAN"
         ? `<b>${this.data.displayName}</b>`
-        : `<u>${this.data.displayName}</u>`;
+        : `<i>${this.data.displayName}</i>`;
   }
   clientID(): ClientID {
     return this.data.clientID;
