@@ -11,7 +11,6 @@ import {
 import { PathFinder } from "../pathfinding/PathFinding";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PseudoRandom } from "../PseudoRandom";
-import { distSort, distSortUnit } from "../Util";
 import { consolex } from "../Consolex";
 import { TileRef } from "../game/GameMap";
 import { ShellExecution } from "./ShellExecution";
