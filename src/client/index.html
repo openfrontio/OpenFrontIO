@@ -379,6 +379,21 @@
     </script>
     <script>
       document.addEventListener("DOMContentLoaded", async function () {
+        let debugMode = false;
+        let dKeyPressed = false;
+
+        window.addEventListener("keydown", (e) => {
+          if (e.key.toLowerCase() === "d") dKeyPressed = true;
+        });
+        window.addEventListener("keyup", (e) => {
+          if (e.key.toLowerCase() === "d") dKeyPressed = false;
+        });
+        document
+          .getElementById("lang-selector")
+          .addEventListener("mousedown", () => {
+            debugMode = dKeyPressed;
+          });
+
         const locale = new Intl.Locale(navigator.language);
         const defaultLang = locale.language;
         const userLang = localStorage.getItem("lang") || defaultLang;
@@ -448,11 +463,41 @@
               console.error(`Failed to load ${langCode}:`, err);
             }
           }
+          if (debugMode) {
+            const button = document.createElement("button");
+            button.className =
+              "w-full flex items-center gap-2 p-2 rounded hover:bg-blue-100 transition";
+            button.innerHTML = `<span>Debug (Debug)</span>`;
+            button.onclick = () => {
+              changeLanguage("debug");
+              document
+                .getElementById("language-modal")
+                ?.classList.add("hidden");
+            };
+            list.appendChild(button);
+          }
+          if (localStorage.getItem("lang") === "debug") {
+            const langRes = await fetch(`/lang/debug.json`);
+            if (!langRes.ok) {
+              console.warn(`Missing lang file: debug`);
+            }
+            const langData = await langRes.json();
+            const native = langData.lang?.native ?? "debug";
+            const enName = langData.lang?.en ?? "debug";
+            const svg = langData.lang?.svg ?? "debug";
+            const flag = document.getElementById("lang-flag");
+            const name = document.getElementById("lang-name");
+            if (flag && name) {
+              flag.src = `/flags/${svg}.svg`;
+              name.textContent = `${native} (${enName})`;
+            }
+          }
         }
 
         document
           .getElementById("lang-selector")
           .addEventListener("click", () => {
+            populateLanguageSelector();
             document
               .getElementById("language-modal")
               .classList.remove("hidden");
