@@ -95,7 +95,7 @@ export default async (env, argv) => {
           ],
         },
         {
-          test: /\.(png|jpe?g|gif)$/i,
+          test: /\.(webp|png|jpe?g|gif)$/i,
           type: "asset/resource",
           generator: {
             filename: "images/[name].[contenthash][ext]", // Added content hash

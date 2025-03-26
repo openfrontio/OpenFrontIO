@@ -1,12 +1,1 @@
-<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
-  <g id="color">
-    <rect x="5" y="17" width="62" height="38" fill="#d22f27"/>
-    <rect x="5" y="36" width="62" height="19" fill="#5c9e31"/>
-    <path d="m25.248,36.6804L6.5332,53.6128c-.5899.5337-1.5332.1151-1.5332-.6804V19.0675c0-.7955.9432-1.2141,1.5332-.6804l18.7148,16.9325c.4026.3643.4026.9965,0,1.3608Z"/>
-    <polygon fill="#f1b31c" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="26 34 5 17 5 21 23.529 36 5 51 5 55 26 38 67 38 67 34 26 34"/>
-    <path fill="none" stroke="#f1b31c" stroke-linecap="round" stroke-linejoin="round" d="m12.3334,39.2727c2.1513.1362,4.0105-1.4864,4.1666-3.6363-.1248-1.72-1.6123-3.0181-3.3333-2.9091-1.3768-.0872-2.5668.9512-2.6667,2.3272.0799,1.1008,1.0319,1.9316,2.1334,1.8619"/>
-  </g>
-  <g id="line">
-    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72"><path fill="#d22f27" d="M5 17h62v38H5z"/><path fill="#5c9e31" d="M5 36h62v19H5z"/><path d="M25.248 36.68 6.533 53.613A.918.918 0 0 1 5 52.933V19.066a.918.918 0 0 1 1.533-.68L25.248 35.32a.918.918 0 0 1 0 1.36Z"/><path fill="#f1b31c" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M26 34 5 17v4l18.529 15L5 51v4l21-17h41v-4H26z"/><path fill="none" stroke="#f1b31c" stroke-linecap="round" stroke-linejoin="round" d="M12.333 39.273a3.929 3.929 0 0 0 4.167-3.637 3.143 3.143 0 0 0-3.333-2.909 2.514 2.514 0 0 0-2.667 2.328 2.012 2.012 0 0 0 2.133 1.861"/><path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 17h62v38H5z"/></svg>

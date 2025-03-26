@@ -62,41 +62,36 @@ export class SAMLauncherExecution implements Execution {
     }
 
     const nukes = this.mg
-      .units(UnitType.AtomBomb, UnitType.HydrogenBomb)
-      .filter((u) => {
-        // (x - center_x)² + (y - center_y)² < radius²
-        const x = this.mg.x(u.tile());
-        const y = this.mg.y(u.tile());
-        const centerX = this.mg.x(this.post.tile());
-        const centerY = this.mg.y(this.post.tile());
-        const isInRange =
-          (x - centerX) ** 2 + (y - centerY) ** 2 < this.searchRangeRadius ** 2;
-        return isInRange;
-      })
-      .filter((u) => u.owner() !== this.player)
-      .filter((u) => !u.owner().isAlliedWith(this.player));
+      .nearbyUnits(this.post.tile(), this.searchRangeRadius, [
+        UnitType.AtomBomb,
+        UnitType.HydrogenBomb,
+      ])
+      .filter(
+        ({ unit }) =>
+          unit.owner() !== this.player &&
+          !unit.owner().isAlliedWith(this.player),
+      );
 
     this.target =
       nukes.sort((a, b) => {
-        // Prioritize HydrogenBombs first
+        const { unit: unitA, distSquared: distA } = a;
+        const { unit: unitB, distSquared: distB } = b;
+
+        // Prioritize Hydrogen Bombs
         if (
-          a.type() === UnitType.HydrogenBomb &&
-          b.type() !== UnitType.HydrogenBomb
-        ) {
+          unitA.type() === UnitType.HydrogenBomb &&
+          unitB.type() !== UnitType.HydrogenBomb
+        )
           return -1;
-        }
         if (
-          a.type() !== UnitType.HydrogenBomb &&
-          b.type() === UnitType.HydrogenBomb
-        ) {
+          unitA.type() !== UnitType.HydrogenBomb &&
+          unitB.type() === UnitType.HydrogenBomb
+        )
           return 1;
-        }
-        // If both are the same type, sort by distance
-        return (
-          this.mg.manhattanDist(this.post.tile(), a.tile()) -
-          this.mg.manhattanDist(this.post.tile(), b.tile())
-        );
-      })[0] ?? null;
+
+        // If both are the same type, sort by distance (lower `distSquared` means closer)
+        return distA - distB;
+      })[0]?.unit ?? null;
 
     const cooldown =
       this.lastMissileAttack != 0 &&
