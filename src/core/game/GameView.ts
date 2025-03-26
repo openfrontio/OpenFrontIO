@@ -170,7 +170,7 @@ export class PlayerView {
     ) {
       const prefixIndex = Math.floor(Math.random() * BOT_NAME_PREFIXES.length);
       const suffixIndex = Math.floor(Math.random() * BOT_NAME_SUFFIXES.length);
-      const randomName = `★${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
+      const randomName = `★ ${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
       if (!displayNameMap[this.data.name]) {
         displayNameMap[this.data.name] = randomName;
       }
@@ -187,7 +187,7 @@ export class PlayerView {
     ) {
       const prefixIndex = Math.floor(Math.random() * BOT_NAME_PREFIXES.length);
       const suffixIndex = Math.floor(Math.random() * BOT_NAME_SUFFIXES.length);
-      const randomName = `★${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
+      const randomName = `★ ${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
       if (!displayNameMap[this.data.name]) {
         displayNameMap[this.data.name] = randomName;
       }
