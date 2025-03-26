@@ -148,7 +148,7 @@ export class WarshipExecution implements Execution {
       .filter((u) => u.type() != UnitType.TradeShip || hasPort)
       .filter((u) => {
         const portOwner = u.dstPort() ? u.dstPort().owner() : null;
-        return u.type() != UnitType.TradeShip || portOwner != this.owner();
+        return u.type() != UnitType.TradeShip || portOwner != this._owner;
       });
 
     this.target =
@@ -219,7 +219,7 @@ export class WarshipExecution implements Execution {
       );
       switch (result.type) {
         case PathFindResultType.Completed:
-          this.owner().captureUnit(this.target);
+          this._owner.captureUnit(this.target);
           this.target = null;
           return;
         case PathFindResultType.NextTile:
@@ -232,10 +232,6 @@ export class WarshipExecution implements Execution {
           break;
       }
     }
-  }
-
-  owner(): Player {
-    return this._owner;
   }
 
   isActive(): boolean {

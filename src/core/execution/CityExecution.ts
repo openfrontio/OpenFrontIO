@@ -45,13 +45,9 @@ export class CityExecution implements Execution {
       return;
     }
 
-    if (this.player != this.owner()) {
-      this.player = this.owner();
+    if (this.player != this.city.owner()) {
+      this.player = this.city.owner();
     }
-  }
-
-  owner(): Player {
-    return this.city.owner();
   }
 
   isActive(): boolean {

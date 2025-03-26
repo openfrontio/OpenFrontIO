@@ -46,13 +46,9 @@ export class DefensePostExecution implements Execution {
       return;
     }
 
-    if (this.player != this.owner()) {
-      this.player = this.owner();
+    if (this.player != this.post.owner()) {
+      this.player = this.post.owner();
     }
-  }
-
-  owner(): Player {
-    return this.post.owner();
   }
 
   isActive(): boolean {
