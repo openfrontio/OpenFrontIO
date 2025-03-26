@@ -1,4 +1,9 @@
 {
+  "lang": {
+    "en": "Japanese",
+    "native": "日本語",
+    "svg": "jp"
+  },
   "main": {
     "join_discord": "Discordサーバーに参加！",
     "create_lobby": "ロビーを作成",

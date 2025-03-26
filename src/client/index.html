@@ -260,16 +260,18 @@
           secondary
         ></o-button>
         <div class="container__row">
-          <select
+          <button
             id="lang-selector"
-            class="text-center appearance-none w-full bg-blue-100 hover:bg-blue-200 text-blue-900 p-3 sm:p-4 lg:p-5 font-medium text-sm sm:text-base lg:text-lg rounded-md border-none cursor-pointer transition-colors duration-300"
+            class="text-center appearance-none w-full bg-blue-100 hover:bg-blue-200 text-blue-900 p-3 sm:p-4 lg:p-5 font-medium text-sm sm:text-base lg:text-lg rounded-md border-none cursor-pointer transition-colors duration-300 flex items-center gap-2 justify-center"
           >
-            <option value="en">English</option>
-            <option value="bg">Български</option>
-            <option value="ja">日本語</option>
-            <option value="fr">Français</option>
-            <option value="nl">Nederlands</option>
-          </select>
+            <img
+              id="lang-flag"
+              class="w-6 h-4"
+              src="../../resources/flags/xx.svg"
+              alt="flag"
+            />
+            <span id="lang-name">English (English)</span>
+          </button>
         </div>
       </div>
     </main>
@@ -348,6 +350,24 @@
     <player-panel></player-panel>
     <help-modal></help-modal>
     <dark-mode-button></dark-mode-button>
+    <div
+      id="language-modal"
+      class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden justify-center items-center"
+    >
+      <div class="bg-white rounded-lg shadow-lg p-6 w-96 max-w-full">
+        <h2 class="text-xl font-semibold mb-4">Select Language</h2>
+        <div
+          id="language-list"
+          class="space-y-2 max-h-80 overflow-y-auto"
+        ></div>
+        <button
+          class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
+          onclick="document.getElementById('language-modal').classList.add('hidden')"
+        >
+          Close
+        </button>
+      </div>
+    </div>
     <!-- Scripts -->
     <script>
       // Remove preload class after everything is loaded
@@ -375,7 +395,71 @@
           }
         }
 
+        async function populateLanguageSelector() {
+          const response = await fetch("/lang/index.json");
+          const data = await response.json();
+          const list = document.getElementById("language-list");
+          if (!list) {
+            console.error("#language-list not found");
+            return;
+          }
+          list.innerHTML = "";
+          const currentLang = localStorage.getItem("lang") || "en";
+          for (const langCode of data.languages) {
+            try {
+              const langRes = await fetch(`/lang/${langCode}.json`);
+              if (!langRes.ok) {
+                console.warn(`Missing lang file: ${langCode}`);
+                continue;
+              }
+              const langData = await langRes.json();
+              const native = langData.lang?.native ?? langCode;
+              const enName = langData.lang?.en ?? langCode;
+              const svg = langData.lang?.svg ?? langCode;
+              const button = document.createElement("button");
+              button.className =
+                "w-full flex items-center gap-2 p-2 rounded hover:bg-blue-100 transition";
+              if (langCode === currentLang) {
+                button.classList.add("bg-blue-200");
+              }
+              button.innerHTML = `
+                <img src="/flags/${svg}.svg" class="w-6 h-4" alt="${langCode}" />
+                <span>${native} (${enName})</span>
+              `;
+
+              button.onclick = () => {
+                changeLanguage(langCode);
+                document
+                  .getElementById("language-modal")
+                  ?.classList.add("hidden");
+              };
+
+              list.appendChild(button);
+
+              if (langCode === currentLang) {
+                const flag = document.getElementById("lang-flag");
+                const name = document.getElementById("lang-name");
+                if (flag && name) {
+                  flag.src = `/flags/${svg}.svg`;
+                  name.textContent = `${native} (${enName})`;
+                }
+              }
+            } catch (err) {
+              console.error(`Failed to load ${langCode}:`, err);
+            }
+          }
+        }
+
+        document
+          .getElementById("lang-selector")
+          .addEventListener("click", () => {
+            document
+              .getElementById("language-modal")
+              .classList.remove("hidden");
+          });
+
         function applyTranslation(translations) {
+          populateLanguageSelector();
           const components = [
             "single-player-modal",
             "host-lobby-modal",

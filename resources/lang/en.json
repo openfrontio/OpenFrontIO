@@ -1,4 +1,9 @@
 {
+  "lang": {
+    "en": "English",
+    "native": "English",
+    "svg": "xx"
+  },
   "main": {
     "join_discord": "Join the Discord!",
     "create_lobby": "Create Lobby",

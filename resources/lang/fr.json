@@ -1,4 +1,9 @@
 {
+  "lang": {
+    "en": "French",
+    "native": "Français",
+    "svg": "fr"
+  },
   "main": {
     "join_discord": "Rejoignez le Discord !",
     "create_lobby": "Créer un Salon",

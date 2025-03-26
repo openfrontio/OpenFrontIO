@@ -1,4 +1,9 @@
 {
+  "lang": {
+    "en": "Dutch",
+    "native": "Nederlands",
+    "svg": "nl"
+  },
   "main": {
     "join_discord": "Word lid van de Discord!",
     "create_lobby": "Lobby aanmaken",

@@ -1,4 +1,9 @@
 {
+  "lang": {
+    "en": "Bulgaria",
+    "native": "България",
+    "svg": "bg"
+  },
   "main": {
     "join_discord": "Влизане в Дискорд!",
     "create_lobby": "Създаване на Лоби",
