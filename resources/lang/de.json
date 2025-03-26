@@ -22,7 +22,7 @@
     "action_reset_gfx": "Grafik zurücksetzen",
     "ui_section": "Spiel UI",
     "ui_leaderboard": "Bestenliste",
-    "ui_leaderboard_desc": "Zeigt die top-Spieler des Spiels und deren Namen, % Landbesitz und Gold.",
+    "ui_leaderboard_desc": "Zeigt die top-Spieler des Spiels und deren Namen, Landbesitz in % sowie deren Gold",
     "ui_control": "Bedienfeld",
     "ui_control_desc": "Das Bedienfeld enthält die folgenden Elemente:",
     "ui_pop": "Pop - Die Anzahl der eigenen Einheiten, die maximale Bevölkerung und die und die Bevölkerungswachstumsrate.",
@@ -46,7 +46,7 @@
     "info_target": "Eine Zielmarkierung auf einen Spieler setzen, markiert den Spieler für alle verbündeten, zum koordinieren von Angriffen.",
     "info_alliance": "Eine Verbündungsanfrage an den Spieler senden. Verbündete können Ressourcen und Truppen teilen, aber können sich nicht gegenseitig angreifen.",
     "info_emoji": "Einen Emoji an den Spieler senden.",
-    "info_ally_panel": "Verbündeten-Infopanel",
+    "info_ally_panel": "Verbündeten-Infomenü",
     "info_ally_desc": "Wenn du dich mit einem Spieler verbündest, werden die folgenden neuen Symbole freigeschaltet:",
     "ally_betray": "Den Verbündeten verraten, beendet das Bündnis. Nun wirst du ein permanentes Symbol neben deinem Namen haben. Bots haben eine geringere Wahrscheinlichkeit, sich mit dir zu verbünden und Spieler denken lieber zweimal nach.",
     "ally_donate": "Spende einige der eigenen Truppen zu deinem Verbündeten. Wird genutzt, wenn dieser wenige Truppen hat und angregriffen wird, oder wenn dieser die extra-Kraft braucht, um einen Gegner zu zerschlagen.",
@@ -77,7 +77,7 @@
     "icon_crown": "Krone - Dies ist der Spieler mit dem meisten Territorium.",
     "icon_traitor": "Überkreuzte Schwerter - Verräter. Dieser Spieler hat einen Verbündeten angegriffen.",
     "icon_ally": "Handschlag - Verbündeter. Dieser Spieler ist mit dir verbündet.",
-    "info_enemy_panel": "Gegner-Infopanel"
+    "info_enemy_panel": "Gegner-Infomenü"
   },
   "single_modal": {
     "title": "Einzelspieler",
@@ -113,7 +113,7 @@
     "pangaea": "Pangaea"
   },
   "private_lobby": {
-    "title": "Privaer Lobby beitreten",
+    "title": "Privater Lobby beitreten",
     "enter_id": "Lobby ID eingeben",
     "player": "Spieler",
     "players": "Spieler",
@@ -129,7 +129,7 @@
   },
   "username": {
     "enter_username": "Gib deinen Benutzernamen ein",
-    "not_string": "Benutzername muss ein string sein.",
+    "not_string": "Benutzername muss eine Zeichenkette sein.",
     "too_short": "Benutzername muss mindestens {min} zeichen enthalten.",
     "too_long": "Benutzername darf maximal {max} zeichen enthalten.",
     "invalid_chars": "Benutzername kann nur Buchstaben, Zahlen, Leerzeichen, Unterstriche und [eckige Klammern] enthalten."
