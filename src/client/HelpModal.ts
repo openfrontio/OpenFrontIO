@@ -197,6 +197,14 @@ export class HelpModal extends LitElement {
               </td>
             </tr>
             <tr>
+              <td data-i18n="help_modal.build_factory">Factory</td>
+              <td><div class="icon factory-icon"></div></td>
+              <td data-i18n="help_modal.build_factory_desc">
+                Increases the gold income of workers. Useful when you can't
+                expand your territory or you're not able to utilize trade.
+              </td>
+            </tr>
+            <tr>
               <td data-i18n="help_modal.build_defense">Defense Post</td>
               <td><div class="icon defense-post-icon"></div></td>
               <td data-i18n="help_modal.build_defense_desc">
