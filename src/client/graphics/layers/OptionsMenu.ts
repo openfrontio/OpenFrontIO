@@ -110,6 +110,10 @@ export class OptionsMenu extends LitElement implements Layer {
     this.userSettings.toggleLeftClickOpenMenu();
   }
 
+  private onToggleRadialMenuMode() {
+    this.userSettings.toggleRadialMenuMode();
+  }
+
   init() {
     console.log("init called from OptionsMenu");
     this.showPauseButton =
@@ -199,6 +203,11 @@ export class OptionsMenu extends LitElement implements Layer {
               (this.userSettings.leftClickOpensMenu()
                 ? "Opens menu"
                 : "Attack"),
+          })}
+          ${button({
+            onClick: this.onToggleRadialMenuMode,
+            title: "Radial menu mode",
+            children: "🎛: " + this.userSettings.radialMenuMode(),
           })}
         </div>
       </div>

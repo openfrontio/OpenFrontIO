@@ -45,13 +45,14 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import { TileRef } from "../../../core/game/GameMap";
 import { PlayerInfoOverlay } from "./PlayerInfoOverlay";
 import { PlayerPanel } from "./PlayerPanel";
+import { RadialMenuMode, UserSettings } from "../../../core/game/UserSettings";
 
 enum Slot {
   Info,
   Alliance,
   Boat,
   Build,
-  // Close,
+  Close,
 }
 
 export class RadialMenu implements Layer {
@@ -60,6 +61,13 @@ export class RadialMenu implements Layer {
 
   private menuElement: d3.Selection<HTMLDivElement, unknown, null, undefined>;
   private isVisible: boolean = false;
+
+  private userSettings = new UserSettings();
+
+  private getMenuMode() {
+    return this.userSettings.radialMenuMode();
+  }
+
   private readonly menuItems = new Map([
     [
       Slot.Boat,
@@ -71,8 +79,9 @@ export class RadialMenu implements Layer {
         icon: null,
       },
     ],
-    //[Slot.Close, { name: "close", disabled: true, action: () => {} }],
-    [Slot.Alliance, { name: "alliance", disabled: true, action: () => {} }],
+    this.getMenuMode() === RadialMenuMode.Classic
+      ? [Slot.Close, { name: "close", disabled: true, action: () => {} }]
+      : [Slot.Alliance, { name: "alliance", disabled: true, action: () => {} }],
     [Slot.Build, { name: "build", disabled: true, action: () => {} }],
     [
       Slot.Info,
@@ -272,15 +281,27 @@ export class RadialMenu implements Layer {
       .attr("fill", "#2c3e50")
       .style("pointer-events", "none");
 
-    centerButton
-      .append("image")
-      .attr("class", "center-button-icon")
-      .attr("xlink:href", xIcon)
-      .attr("width", this.centerIconSize)
-      .attr("height", this.centerIconSize)
-      .attr("x", -this.centerIconSize / 2)
-      .attr("y", -this.centerIconSize / 2 + 4)
-      .style("pointer-events", "none");
+    if (this.getMenuMode() == RadialMenuMode.Default) {
+      centerButton
+        .append("image")
+        .attr("class", "center-button-icon")
+        .attr("xlink:href", xIcon)
+        .attr("width", this.centerIconSize)
+        .attr("height", this.centerIconSize)
+        .attr("x", -this.centerIconSize / 2)
+        .attr("y", -this.centerIconSize / 2 + 4)
+        .style("pointer-events", "none");
+    } else if (this.getMenuMode() == RadialMenuMode.Classic) {
+      centerButton
+        .append("image")
+        .attr("class", "center-button-icon")
+        .attr("xlink:href", swordIcon)
+        .attr("width", this.centerIconSize)
+        .attr("height", this.centerIconSize)
+        .attr("x", -this.centerIconSize / 2)
+        .attr("y", -this.centerIconSize / 2 + 4)
+        .style("pointer-events", "none");
+    }
   }
 
   tick() {
@@ -358,18 +379,26 @@ export class RadialMenu implements Layer {
       });
     }
 
-    let other = this.g.owner(tile);
-    other = other as PlayerView;
+    if (this.getMenuMode() == RadialMenuMode.Default) {
+      let other = this.g.owner(tile);
+      other = other as PlayerView;
 
-    if (other.isPlayer()) {
-      if (actions.interaction?.canSendAllianceRequest) {
-        this.activateMenuElement(Slot.Alliance, "#34EB4C", allianceIcon, () =>
-          this.handleAllianceClick(myPlayer, other),
-        );
-      } else if (actions.interaction?.canBreakAlliance) {
-        this.activateMenuElement(Slot.Alliance, "#F57E42", traitorIcon, () =>
-          this.handleBreakAllianceClick(myPlayer, other),
-        );
+      if (other.isPlayer()) {
+        if (actions?.interaction?.canSendAllianceRequest) {
+          this.activateMenuElement(Slot.Alliance, "#34EB4C", allianceIcon, () =>
+            this.handleAllianceClick(myPlayer, other),
+          );
+        } else if (actions?.interaction?.canBreakAlliance) {
+          this.activateMenuElement(Slot.Alliance, "#F57E42", traitorIcon, () =>
+            this.handleBreakAllianceClick(myPlayer, other),
+          );
+        }
+      }
+      this.enableCenterButton(true);
+    } else if (this.getMenuMode() == RadialMenuMode.Classic) {
+      this.activateMenuElement(Slot.Close, "#DC2626", xIcon, () => {});
+      if (actions.canAttack) {
+        this.enableCenterButton(true);
       }
     }
 
@@ -384,7 +413,6 @@ export class RadialMenu implements Layer {
         );
       });
     }
-    this.enableCenterButton(true);
 
     if (!this.g.hasOwner(tile)) {
       return;
@@ -418,6 +446,26 @@ export class RadialMenu implements Layer {
   }
 
   private handleCenterButtonClick() {
+    if (this.getMenuMode() == RadialMenuMode.Classic) {
+      if (!this.isCenterButtonEnabled) {
+        return;
+      }
+      consolex.log("Center button clicked");
+      const clicked = this.g.ref(this.clickedCell.x, this.clickedCell.y);
+      if (this.g.inSpawnPhase()) {
+        this.eventBus.emit(new SendSpawnIntentEvent(this.clickedCell));
+      } else {
+        const myPlayer = this.g.myPlayer();
+        if (myPlayer != null && this.g.owner(clicked) != myPlayer) {
+          this.eventBus.emit(
+            new SendAttackIntentEvent(
+              this.g.owner(clicked).id(),
+              this.uiState.attackRatio * myPlayer.troops(),
+            ),
+          );
+        }
+      }
+    }
     this.hideRadialMenu();
   }
 
@@ -485,10 +533,22 @@ export class RadialMenu implements Layer {
     this.isCenterButtonEnabled = enabled;
     const centerButton = this.menuElement.select(".center-button");
 
-    centerButton.select(".center-button-hitbox").style("cursor", "pointer");
+    if (this.getMenuMode() == RadialMenuMode.Default) {
+      centerButton.select(".center-button-hitbox").style("cursor", "pointer");
+      centerButton.select(".center-button-visible").attr("fill", "#DC2626");
+      centerButton.select(".center-button-text").attr("fill", "white");
+    } else {
+      centerButton
+        .select(".center-button-hitbox")
+        .style("cursor", enabled ? "pointer" : "not-allowed");
 
-    centerButton.select(".center-button-visible").attr("fill", "#DC2626");
+      centerButton
+        .select(".center-button-visible")
+        .attr("fill", enabled ? "#2c3e50" : "#999999");
 
-    centerButton.select(".center-button-text").attr("fill", "white");
+      centerButton
+        .select(".center-button-text")
+        .attr("fill", enabled ? "white" : "#cccccc");
+    }
   }
 }
