@@ -77,8 +77,9 @@ export function validateUsername(username: string): {
 }
 
 export function sanitizeUsername(str: string): string {
-  const sanitized = str
-    .replace(/[^a-zA-Z0-9_\[\] 🐈🍀]/gu, "")
-    .slice(0, MAX_USERNAME_LENGTH);
-  return sanitized.padEnd(MIN_USERNAME_LENGTH, "x");
+  let sanitized = str.replace(/[^a-zA-Z0-9_\[\] 🐈🍀]/gu, "");
+  if (sanitized.length < MIN_USERNAME_LENGTH) {
+    sanitized += Math.random().toString(36).substring(2, 2 + MIN_USERNAME_LENGTH - sanitized.length);
+  }
+  return sanitized.slice(0, MAX_USERNAME_LENGTH);
 }
