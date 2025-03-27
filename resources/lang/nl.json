@@ -1,4 +1,9 @@
 {
+  "lang": {
+    "en": "Dutch",
+    "native": "Nederlands",
+    "svg": "nl"
+  },
   "main": {
     "join_discord": "Word lid van de Discord!",
     "create_lobby": "Lobby aanmaken",
@@ -81,8 +86,6 @@
   },
   "single_modal": {
     "title": "Enkele speler",
-    "map": "Kaart",
-    "difficulty": "Moeilijkheidsgraad",
     "allow_alliances": "Bondgenootschappen toestaan",
     "options_title": "Opties",
     "bots": "Bots:",
@@ -95,6 +98,7 @@
     "start": "Start Spel"
   },
   "map": {
+    "map": "Kaart",
     "world": "Wereld",
     "europe": "Europa",
     "mena": "MENA",
@@ -136,8 +140,6 @@
   },
   "host_modal": {
     "title": "Privé lobby",
-    "map": "Kaart",
-    "difficulty": "Moeilijkheidsgraad",
     "options_title": "Opties",
     "bots": "Bots:",
     "bots_disabled": "Uitgeschakeld",
@@ -152,6 +154,7 @@
     "start": "Start Spel"
   },
   "difficulty": {
+    "difficulty": "Moeilijkheidsgraad",
     "Relaxed": "Ontspannen",
     "Balanced": "Gebalanceerd",
     "Intense": "Intens",

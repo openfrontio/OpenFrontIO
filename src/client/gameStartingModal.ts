@@ -1,5 +1,6 @@
 import { LitElement, html, css } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { translateText } from "../client/Utils";
 
 @customElement("game-starting-modal")
 export class GameStartingModal extends LitElement {
@@ -88,8 +89,8 @@ export class GameStartingModal extends LitElement {
   render() {
     return html`
       <div class="modal ${this.isVisible ? "visible" : ""}">
-        <h2>Game is Starting...</h2>
-        <p>Preparing for the lobby to start. Please wait.</p>
+        <h2>${translateText("game_starting_modal.title")}</h2>
+        <p>${translateText("game_starting_modal.desc")}</p>
       </div>
     `;
   }

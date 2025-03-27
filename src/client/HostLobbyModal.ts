@@ -71,7 +71,7 @@ export class HostLobbyModal extends LitElement {
         <div class="options-layout">
           <!-- Map Selection -->
           <div class="options-section">
-            <div class="option-title">${translateText("host_modal.map")}</div>
+            <div class="option-title">${translateText("map.map")}</div>
             <div class="option-cards">
               ${Object.entries(GameMapType)
                 .filter(([key]) => isNaN(Number(key)))
@@ -109,7 +109,7 @@ export class HostLobbyModal extends LitElement {
 
           <!-- Difficulty Selection -->
           <div class="options-section">
-            <div class="option-title">${translateText("host_modal.difficulty")}</div>
+            <div class="option-title">${translateText("difficulty.difficulty")}</div>
             <div class="option-cards">
               ${Object.entries(Difficulty)
                 .filter(([key]) => isNaN(Number(key)))
@@ -162,13 +162,13 @@ export class HostLobbyModal extends LitElement {
                 </label>
 
                 <label
-                  for="host-modal-disable-npcs"
+                  for="disable-npcs"
                   class="option-card ${this.disableNPCs ? "selected" : ""}"
                 >
                   <div class="checkbox-icon"></div>
                   <input
                     type="checkbox"
-                    id="host-modal-disable-npcs"
+                    id="disable-npcs"
                     @change=${this.handleDisableNPCsChange}
                     .checked=${this.disableNPCs}
                   />
@@ -178,13 +178,13 @@ export class HostLobbyModal extends LitElement {
                 </label>
 
                 <label
-                  for="host-modal-instant-build"
+                  for="instant-build"
                   class="option-card ${this.instantBuild ? "selected" : ""}"
                 >
                   <div class="checkbox-icon"></div>
                   <input
                     type="checkbox"
-                    id="host-modal-instant-build"
+                    id="instant-build"
                     @change=${this.handleInstantBuildChange}
                     .checked=${this.instantBuild}
                   />
@@ -194,13 +194,13 @@ export class HostLobbyModal extends LitElement {
                 </label>
 
                 <label
-                  for="host-modal-infinite-gold"
+                  for="infinite-gold"
                   class="option-card ${this.infiniteGold ? "selected" : ""}"
                 >
                   <div class="checkbox-icon"></div>
                   <input
                     type="checkbox"
-                    id="host-modal-infinite-gold"
+                    id="infinite-gold"
                     @change=${this.handleInfiniteGoldChange}
                     .checked=${this.infiniteGold}
                   />
@@ -210,13 +210,13 @@ export class HostLobbyModal extends LitElement {
                 </label>
 
                 <label
-                  for="host-modal-infinite-troops"
+                  for="infinite-troops"
                   class="option-card ${this.infiniteTroops ? "selected" : ""}"
                 >
                   <div class="checkbox-icon"></div>
                   <input
                     type="checkbox"
-                    id="host-modal-infinite-troops"
+                    id="infinite-troops"
                     @change=${this.handleInfiniteTroopsChange}
                     .checked=${this.infiniteTroops}
                   />
@@ -226,13 +226,13 @@ export class HostLobbyModal extends LitElement {
                 </label>
 
                 <label
-                  for="host-modal-disable-nukes"
+                  for="disable-nukes"
                   class="option-card ${this.disableNukes ? "selected" : ""}"
                 >
                   <div class="checkbox-icon"></div>
                   <input
                     type="checkbox"
-                    id="host-modal-disable-nukes"
+                    id="disable-nukes"
                     @change=${this.handleDisableNukesChange}
                     .checked=${this.disableNukes}
                   />

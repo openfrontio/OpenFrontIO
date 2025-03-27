@@ -1,4 +1,9 @@
 {
+  "lang": {
+    "en": "English",
+    "native": "English",
+    "svg": "xx"
+  },
   "main": {
     "join_discord": "Join the Discord!",
     "create_lobby": "Create Lobby",
@@ -81,8 +86,6 @@
   },
   "single_modal": {
     "title": "Single Player",
-    "map": "Map",
-    "difficulty": "Difficulty",
     "allow_alliances": "Allow alliances",
     "options_title": "Options",
     "bots": "Bots: ",
@@ -95,6 +98,7 @@
     "start": "Start Game"
   },
   "map": {
+    "map": "Map",
     "world": "World",
     "europe": "Europe",
     "mena": "MENA",
@@ -136,8 +140,6 @@
   },
   "host_modal": {
     "title": "Private Lobby",
-    "map": "Map",
-    "difficulty": "Difficulty",
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
@@ -151,7 +153,12 @@
     "waiting": "Waiting for players...",
     "start": "Start Game"
   },
+  "game_starting_modal": {
+    "title": "Game is Starting...",
+    "desc": "Preparing for the lobby to start. Please wait."
+  },
   "difficulty": {
+    "difficulty": "Difficulty",
     "Relaxed": "Relaxed",
     "Balanced": "Balanced",
     "Intense": "Intense",

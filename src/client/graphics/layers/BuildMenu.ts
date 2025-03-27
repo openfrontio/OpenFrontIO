@@ -424,7 +424,6 @@ export class BuildMenu extends LitElement implements Layer {
               UnitType.MIRV,
               UnitType.HydrogenBomb,
               UnitType.MissileSilo,
-              UnitType.SAMLauncher,
             ].includes(item.unitType),
         ),
       );
