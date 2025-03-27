@@ -95,7 +95,7 @@
   "map": {
     "world": "Мир",
     "europe": "Европа",
-    "mena": "БВСА",
+    "mena": "MENA",
     "northamerica": "Северная Америка",
     "oceania": "Океания",
     "blacksea": "Чёрное море",
@@ -104,7 +104,7 @@
     "mars": "Марс",
     "southamerica": "Южная Америка",
     "britannia": "Британия",
-    "gatewaytotheatlantic": "Ворота в Атлантику",
+    "gatewaytotheatlantic": "Гибралтарский пролив",
     "australia": "Австралия",
     "random": "Случайно",
     "iceland": "Исландия",
