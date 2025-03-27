@@ -1,4 +1,9 @@
 {
+  "lang": {
+    "en": "Spanish",
+    "native": "Español",
+    "svg": "es"
+  },
   "main": {
     "join_discord": "¡Únete al Discord!",
     "create_lobby": "Crear Partida Privada",
