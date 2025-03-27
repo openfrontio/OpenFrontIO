@@ -79,7 +79,7 @@ export class PortExecution implements Execution {
       return;
     }
 
-    const ports = this.owner().tradingPorts(this.port);
+    const ports = this.player().tradingPorts(this.port);
 
     if (ports.length == 0) {
       return;
