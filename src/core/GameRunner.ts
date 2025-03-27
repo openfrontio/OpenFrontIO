@@ -25,6 +25,7 @@ import { createGame } from "./game/GameImpl";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { ClientID, GameConfig, Turn } from "./Schemas";
 import { GameUpdateViewData } from "./game/GameUpdates";
+import { AllianceExpireCheckExecution } from "./execution/alliance/AllianceExpireCheckExecution";
 
 export async function createGameRunner(
   gameID: string,
@@ -72,6 +73,7 @@ export class GameRunner {
       this.game.addExecution(...this.execManager.fakeHumanExecutions());
     }
     this.game.addExecution(new WinCheckExecution());
+    this.game.addExecution(new AllianceExpireCheckExecution());
   }
 
   public addTurn(turn: Turn): void {

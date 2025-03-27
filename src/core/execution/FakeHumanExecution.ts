@@ -127,6 +127,16 @@ export class FakeHumanExecution implements Execution {
       return;
     }
 
+    // Renew expired alliances
+    this.player.expiredAlliances().forEach((a) => {
+      if (
+        !a.other(this.player).isTraitor() &&
+        this.player.canSendAllianceRequest(a.other(this.player))
+      ) {
+        this.player.createAllianceRequest(a.other(this.player));
+      }
+    });
+
     if (ticks % this.random.nextInt(40, 80) != 0) {
       return;
     }
