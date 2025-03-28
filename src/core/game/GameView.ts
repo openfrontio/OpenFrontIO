@@ -36,7 +36,6 @@ import { UnitGrid } from "./UnitGrid";
 import { consolex } from "../Consolex";
 import { simpleHash } from "../Util";
 
-
 import {
   BOT_NAME_PREFIXES,
   BOT_NAME_SUFFIXES,
@@ -168,6 +167,28 @@ export class PlayerView {
   flag(): string {
     return this.data.flag;
   }
+  name_notag(): string {
+    if (
+      this.data.playerType === "HUMAN" &&
+      localStorage.getItem("username") !== this.data.name
+    ) {
+      let randomName = "";
+      const hash = simpleHash(this.data.name);
+      const prefixIndex = hash % BOT_NAME_PREFIXES.length;
+      const suffixIndex =
+        Math.floor(hash / BOT_NAME_PREFIXES.length) % BOT_NAME_SUFFIXES.length;
+
+      randomName = `<b>👤 ${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}</b>`;
+
+      if (!displayNameMap[this.data.name]) {
+        displayNameMap[this.data.name] = randomName;
+      }
+    }
+    return localStorage.getItem("settings.randomname") === "true" &&
+      displayNameMap[this.data.displayName]
+      ? displayNameMap[this.data.displayName]
+      : this.data.name;
+  }
   name(): string {
     if (
       this.data.playerType === "HUMAN" &&
@@ -176,10 +197,11 @@ export class PlayerView {
       let randomName = "";
       const hash = simpleHash(this.data.name);
       const prefixIndex = hash % BOT_NAME_PREFIXES.length;
-      const suffixIndex = (Math.floor(hash / BOT_NAME_PREFIXES.length)) % BOT_NAME_SUFFIXES.length;
-    
+      const suffixIndex =
+        Math.floor(hash / BOT_NAME_PREFIXES.length) % BOT_NAME_SUFFIXES.length;
+
       randomName = `<b>👤 ${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}</b>`;
-    
+
       if (!displayNameMap[this.data.name]) {
         displayNameMap[this.data.name] = randomName;
       }
@@ -199,10 +221,11 @@ export class PlayerView {
       let randomName = "";
       const hash = simpleHash(this.data.name);
       const prefixIndex = hash % BOT_NAME_PREFIXES.length;
-      const suffixIndex = (Math.floor(hash / BOT_NAME_PREFIXES.length)) % BOT_NAME_SUFFIXES.length;
-    
+      const suffixIndex =
+        Math.floor(hash / BOT_NAME_PREFIXES.length) % BOT_NAME_SUFFIXES.length;
+
       randomName = `<b>👤 ${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}</b>`;
-    
+
       if (!displayNameMap[this.data.name]) {
         displayNameMap[this.data.name] = randomName;
       }
