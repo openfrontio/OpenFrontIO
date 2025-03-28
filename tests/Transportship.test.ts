@@ -9,6 +9,7 @@ import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import { setup } from "./util/Setup";
 import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
 import { AttackExecution } from "../src/core/execution/AttackExecution";
+import { GameImpl } from "../src/core/game/GameImpl";
 
 let game: Game;
 let attackerPlayer: Player;
@@ -42,7 +43,7 @@ describe("Transport Ship", () => {
     game.addPlayer(targetPlayerInfo, 1000);
 
     // spawn the attacker on a shore
-    const attackerSpawnTile = game.map().ref(3, 0);
+    const attackerSpawnTile = game.map().ref(7, 0);
     game.addExecution(
       new SpawnExecution(
         game.player(attackerPlayerInfo.id).info(),
@@ -51,7 +52,7 @@ describe("Transport Ship", () => {
     );
 
     // Spawn the target player on a shore
-    const targetSpawnTile = game.map().ref(3, 7);
+    const targetSpawnTile = game.map().ref(7, 15);
     game.addExecution(
       new SpawnExecution(
         game.player(targetPlayerInfo.id).info(),
@@ -73,7 +74,7 @@ describe("Transport Ship", () => {
     const transportExecution = new TransportShipExecution(
       attackerPlayer.id(),
       null,
-      game.map().ref(4, 7),
+      game.map().ref(8, 15),
       10,
     );
     game.addExecution(transportExecution);
@@ -84,12 +85,12 @@ describe("Transport Ship", () => {
     expect(attackerPlayer.units(UnitType.TransportShip)).toHaveLength(1);
 
     // Move the transport ship until it reaches the shore
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 18; i++) {
       game.executeNextTick();
     }
 
     // Ensure the attack was triggered and is attacking the target player
-    const attackExecutions = attackerPlayer
+    const attackExecutions = (game as GameImpl)
       .executions()
       .filter((exec) => exec instanceof AttackExecution);
 
