@@ -25,11 +25,6 @@ export class MoveWarshipExecution implements Execution {
     this.active = false;
   }
 
-  owner(): Player {
-    const warship = this.mg.units().find((u) => u.id() == this.unitId);
-    return warship ? warship.owner() : null;
-  }
-
   isActive(): boolean {
     return this.active;
   }

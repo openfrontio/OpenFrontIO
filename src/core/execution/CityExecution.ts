@@ -44,10 +44,10 @@ export class CityExecution implements Execution {
       this.active = false;
       return;
     }
-  }
 
-  owner(): Player {
-    return null;
+    if (this.player != this.city.owner()) {
+      this.player = this.city.owner();
+    }
   }
 
   isActive(): boolean {

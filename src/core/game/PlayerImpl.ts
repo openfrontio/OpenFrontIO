@@ -285,11 +285,6 @@ export class PlayerImpl implements Player {
   isAlive(): boolean {
     return this._tiles.size > 0;
   }
-  executions(): Execution[] {
-    return this.mg
-      .executions()
-      .filter((exec) => exec.owner().id() == this.id());
-  }
 
   incomingAllianceRequests(): AllianceRequest[] {
     return this.mg.allianceRequests.filter((ar) => ar.recipient() == this);
@@ -666,9 +661,8 @@ export class PlayerImpl implements Player {
     this.removeGold(cost);
     this.removeTroops(troops);
     this.mg.addUpdate(b.toUpdate());
-    if (type == UnitType.DefensePost) {
-      this.mg.addDefensePost(b);
-    }
+    this.mg.addUnit(b);
+
     return b;
   }
 
@@ -958,5 +952,39 @@ export class PlayerImpl implements Player {
       }
       return false;
     }
+  }
+
+  // It's a probability list, so if an element appears twice it's because it's
+  // twice more likely to be picked later.
+  tradingPorts(port: Unit): Unit[] {
+    let ports = this.mg
+      .players()
+      .filter((p) => p != port.owner() && p.canTrade(port.owner()))
+      .flatMap((p) => p.units(UnitType.Port))
+      .sort((p1, p2) => {
+        return (
+          this.mg.manhattanDist(port.tile(), p1.tile()) -
+          this.mg.manhattanDist(port.tile(), p2.tile())
+        );
+      });
+
+    // Make close ports twice more likely by putting them again
+    for (
+      let i = 0;
+      i < this.mg.config().proximityBonusPortsNb(ports.length);
+      i++
+    ) {
+      ports.push(ports[i]);
+    }
+
+    // Make ally ports twice more likely by putting them again
+    this.mg
+      .players()
+      .filter((p) => p != port.owner() && p.canTrade(port.owner()))
+      .filter((p) => p.isAlliedWith(port.owner()))
+      .flatMap((p) => p.units(UnitType.Port))
+      .forEach((p) => ports.push(p));
+
+    return ports;
   }
 }

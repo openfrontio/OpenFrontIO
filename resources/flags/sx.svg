@@ -1,14 +1,1 @@
-<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
-  <g id="color">
-    <rect x="5" y="17" width="62" height="38" fill="#d22f27"/>
-    <rect x="5" y="36" width="62" height="19" fill="#1e50a0"/>
-    <polygon fill="#fff" points="26 36 5 55 5 17 26 36"/>
-    <circle cx="13" cy="31" r="2.5" fill="#fcea2b" stroke="#fcea2b" stroke-linecap="round" stroke-linejoin="round"/>
-    <path fill="#92d3f5" stroke="#d22f27" stroke-linecap="round" stroke-linejoin="round" d="M18,31.7758v4.6121C18,39.847,13.0417,41,13.0417,41S8.0833,39.847,8.0833,36.3879V31.7758A16.6778,16.6778,0,0,1,18,31.7758Z"/>
-    <path fill="none" stroke="#fcea2b" stroke-linecap="round" stroke-linejoin="round" d="M19,39c0,1.933-2.6863,3.5-6,3.5S7,40.933,7,39"/>
-    <rect x="11" y="34" width="4" height="3" fill="#fff" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-  </g>
-  <g id="line">
-    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72"><path fill="#d22f27" d="M5 17h62v38H5z"/><path fill="#1e50a0" d="M5 36h62v19H5z"/><path fill="#fff" d="M26 36 5 55V17l21 19z"/><circle cx="13" cy="31" r="2.5" fill="#fcea2b" stroke="#fcea2b" stroke-linecap="round" stroke-linejoin="round"/><path fill="#92d3f5" stroke="#d22f27" stroke-linecap="round" stroke-linejoin="round" d="M18 31.776v4.612C18 39.847 13.042 41 13.042 41s-4.959-1.153-4.959-4.612v-4.612a16.678 16.678 0 0 1 9.917 0Z"/><path fill="none" stroke="#fcea2b" stroke-linecap="round" stroke-linejoin="round" d="M19 39c0 1.933-2.686 3.5-6 3.5S7 40.933 7 39"/><path fill="#fff" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 34h4v3h-4z"/><path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 17h62v38H5z"/></svg>

@@ -7,7 +7,7 @@ import "./components/Difficulties";
 import "./components/baseComponents/Modal";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
-import randomMap from "../../resources/images/RandomMap.png";
+import randomMap from "../../resources/images/RandomMap.webp";
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { JoinLobbyEvent } from "./Main";
@@ -162,13 +162,13 @@ export class HostLobbyModal extends LitElement {
                 </label>
 
                 <label
-                  for="disable-npcs"
+                  for="host-modal-disable-npcs"
                   class="option-card ${this.disableNPCs ? "selected" : ""}"
                 >
                   <div class="checkbox-icon"></div>
                   <input
                     type="checkbox"
-                    id="disable-npcs"
+                    id="host-modal-disable-npcs"
                     @change=${this.handleDisableNPCsChange}
                     .checked=${this.disableNPCs}
                   />
@@ -178,13 +178,13 @@ export class HostLobbyModal extends LitElement {
                 </label>
 
                 <label
-                  for="instant-build"
+                  for="host-modal-instant-build"
                   class="option-card ${this.instantBuild ? "selected" : ""}"
                 >
                   <div class="checkbox-icon"></div>
                   <input
                     type="checkbox"
-                    id="instant-build"
+                    id="host-modal-instant-build"
                     @change=${this.handleInstantBuildChange}
                     .checked=${this.instantBuild}
                   />
@@ -194,13 +194,13 @@ export class HostLobbyModal extends LitElement {
                 </label>
 
                 <label
-                  for="infinite-gold"
+                  for="host-modal-infinite-gold"
                   class="option-card ${this.infiniteGold ? "selected" : ""}"
                 >
                   <div class="checkbox-icon"></div>
                   <input
                     type="checkbox"
-                    id="infinite-gold"
+                    id="host-modal-infinite-gold"
                     @change=${this.handleInfiniteGoldChange}
                     .checked=${this.infiniteGold}
                   />
@@ -210,13 +210,13 @@ export class HostLobbyModal extends LitElement {
                 </label>
 
                 <label
-                  for="infinite-troops"
+                  for="host-modal-infinite-troops"
                   class="option-card ${this.infiniteTroops ? "selected" : ""}"
                 >
                   <div class="checkbox-icon"></div>
                   <input
                     type="checkbox"
-                    id="infinite-troops"
+                    id="host-modal-infinite-troops"
                     @change=${this.handleInfiniteTroopsChange}
                     .checked=${this.infiniteTroops}
                   />
@@ -226,13 +226,13 @@ export class HostLobbyModal extends LitElement {
                 </label>
 
                 <label
-                  for="disable-nukes"
+                  for="host-modal-disable-nukes"
                   class="option-card ${this.disableNukes ? "selected" : ""}"
                 >
                   <div class="checkbox-icon"></div>
                   <input
                     type="checkbox"
-                    id="disable-nukes"
+                    id="host-modal-disable-nukes"
                     @change=${this.handleDisableNukesChange}
                     .checked=${this.disableNukes}
                   />
@@ -371,6 +371,7 @@ export class HostLobbyModal extends LitElement {
   }
   private handleDisableNukesChange(e: Event) {
     this.disableNukes = Boolean((e.target as HTMLInputElement).checked);
+    this.putGameConfig();
   }
 
   private async handleDisableNPCsChange(e: Event) {

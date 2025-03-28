@@ -240,8 +240,13 @@ export class TerritoryLayer implements Layer {
     const owner = this.game.owner(tile) as PlayerView;
     if (this.game.isBorder(tile)) {
       if (
-        this.game.nearbyDefenses(tile).filter((u) => u.owner() == owner)
-          .length > 0
+        this.game
+          .nearbyUnits(
+            tile,
+            this.game.config().defensePostRange(),
+            UnitType.DefensePost,
+          )
+          .filter((u) => u.unit.owner() == owner).length > 0
       ) {
         this.paintCell(
           this.game.x(tile),
