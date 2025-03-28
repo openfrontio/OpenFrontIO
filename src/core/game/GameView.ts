@@ -6,6 +6,7 @@ import {
   Player,
   PlayerActions,
   PlayerProfile,
+  TeamName,
 } from "./Game";
 import { AttackUpdate, PlayerUpdate } from "./GameUpdates";
 import { UnitUpdate } from "./GameUpdates";
@@ -168,6 +169,9 @@ export class PlayerView {
   id(): PlayerID {
     return this.data.id;
   }
+  teamName(): TeamName {
+    return this.data.teamName;
+  }
   type(): PlayerType {
     return this.data.playerType;
   }
@@ -208,6 +212,16 @@ export class PlayerView {
 
   isAlliedWith(other: PlayerView): boolean {
     return this.data.allies.some((n) => other.smallID() == n);
+  }
+
+  isOnSameTeam(other: PlayerView): boolean {
+    return (
+      this.data.teamName != null && this.data.teamName == other.data.teamName
+    );
+  }
+
+  isFriendly(other: PlayerView): boolean {
+    return this.isAlliedWith(other) || this.isOnSameTeam(other);
   }
 
   isRequestingAllianceWith(other: PlayerView) {

@@ -19,6 +19,7 @@ import {
   PlayerProfile,
   Attack,
   UnitSpecificInfos,
+  Team,
 } from "./Game";
 import { AttackUpdate, PlayerUpdate } from "./GameUpdates";
 import { GameUpdateType } from "./GameUpdates";
@@ -100,6 +101,7 @@ export class PlayerImpl implements Player {
     private _smallID: number,
     private readonly playerInfo: PlayerInfo,
     startTroops: number,
+    private _team: Team | null,
   ) {
     this._flag = playerInfo.flag;
     this._name = sanitizeUsername(playerInfo.name);
@@ -125,6 +127,7 @@ export class PlayerImpl implements Player {
       name: this.name(),
       displayName: this.displayName(),
       id: this.id(),
+      teamName: this.team()?.name,
       smallID: this.smallID(),
       playerType: this.type(),
       isAlive: this.isAlive(),
@@ -324,7 +327,7 @@ export class PlayerImpl implements Player {
     if (other == this) {
       return false;
     }
-    if (this.isAlliedWith(other)) {
+    if (this.isFriendly(other)) {
       return false;
     }
 
@@ -426,7 +429,7 @@ export class PlayerImpl implements Player {
     if (this == other) {
       return false;
     }
-    if (this.isAlliedWith(other)) {
+    if (this.isFriendly(other)) {
       return false;
     }
     for (const t of this.targets_) {
@@ -500,7 +503,7 @@ export class PlayerImpl implements Player {
   }
 
   canDonate(recipient: Player): boolean {
-    if (!this.isAlliedWith(recipient)) {
+    if (!this.isFriendly(recipient)) {
       return false;
     }
     for (const donation of this.sentDonations) {
@@ -553,6 +556,24 @@ export class PlayerImpl implements Player {
     return this.mg
       .players()
       .filter((other) => other != this && this.canTrade(other));
+  }
+
+  team(): Team | null {
+    return this._team;
+  }
+
+  isOnSameTeam(other: Player): boolean {
+    if (other == this) {
+      return false;
+    }
+    if (this.team() == null || other.team() == null) {
+      return false;
+    }
+    return this._team == other.team();
+  }
+
+  isFriendly(other: Player): boolean {
+    return this.isOnSameTeam(other) || this.isAlliedWith(other);
   }
 
   gold(): Gold {
@@ -837,7 +858,7 @@ export class PlayerImpl implements Player {
     if (other == this) {
       return false;
     }
-    if (other.isPlayer() && this.allianceWith(other)) {
+    if (other.isPlayer() && this.isFriendly(other)) {
       return false;
     }
 
@@ -930,12 +951,13 @@ export class PlayerImpl implements Player {
     if (this.mg.owner(tile) == this) {
       return false;
     }
-    if (
-      this.mg.hasOwner(tile) &&
-      this.isAlliedWith(this.mg.owner(tile) as Player)
-    ) {
-      return false;
+    if (this.mg.hasOwner(tile)) {
+      const other = this.mg.owner(tile) as Player;
+      if (this.isFriendly(other)) {
+        return false;
+      }
     }
+
     if (!this.mg.isLand(tile)) {
       return false;
     }

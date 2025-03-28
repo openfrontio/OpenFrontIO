@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, query, property, state } from "lit/decorators.js";
-import { Difficulty, GameMapType, GameType } from "../core/game/Game";
+import { Difficulty, GameMapType, GameMode, GameType } from "../core/game/Game";
 import { GameConfig, GameInfo } from "../core/Schemas";
 import { consolex } from "../core/Consolex";
 import "./components/Difficulties";
@@ -22,6 +22,7 @@ export class HostLobbyModal extends LitElement {
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs = false;
+  @state() private gameMode: GameMode = GameMode.FFA;
   @state() private disableNukes: boolean = false;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
@@ -135,31 +136,54 @@ export class HostLobbyModal extends LitElement {
             </div>
           </div>
 
-            <!-- Game Options -->
-            <div class="options-section">
-              <div class="option-title">
-                ${translateText("host_modal.options_title")}
+          <!-- Game Mode Selection -->
+          <div class="options-section">
+            <div class="option-title">${translateText("host_modal.mode")}</div>
+            <div class="option-cards">
+              <div
+                class="option-card ${this.gameMode === GameMode.FFA ? "selected" : ""}"
+                @click=${() => this.handleGameModeSelection(GameMode.FFA)}
+              >
+                <div class="option-card-title">
+                  ${translateText("game_mode.ffa")}
+                </div>
               </div>
-              <div class="option-cards">
-                <label for="bots-count" class="option-card">
-                  <input
-                    type="range"
-                    id="bots-count"
-                    min="0"
-                    max="400"
-                    step="1"
-                    @input=${this.handleBotsChange}
-                    @change=${this.handleBotsChange}
-                    .value="${String(this.bots)}"
-                  />
-                  <div class="option-card-title">
-                    <span>${translateText("host_modal.bots")}</span>${
-                      this.bots == 0
-                        ? translateText("host_modal.bots_disabled")
-                        : this.bots
-                    }
-                  </div>
-                </label>
+              <div
+                class="option-card ${this.gameMode === GameMode.Team ? "selected" : ""}"
+                @click=${() => this.handleGameModeSelection(GameMode.Team)}
+              >
+                <div class="option-card-title">
+                  ${translateText("game_mode.teams")}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game Options -->
+          <div class="options-section">
+            <div class="option-title">
+              ${translateText("host_modal.options_title")}
+            </div>
+            <div class="option-cards">
+              <label for="bots-count" class="option-card">
+                <input
+                  type="range"
+                  id="bots-count"
+                  min="0"
+                  max="400"
+                  step="1"
+                  @input=${this.handleBotsChange}
+                  @change=${this.handleBotsChange}
+                  .value="${String(this.bots)}"
+                />
+                <div class="option-card-title">
+                  <span>${translateText("host_modal.bots")}</span>${
+                    this.bots == 0
+                      ? translateText("host_modal.bots_disabled")
+                      : this.bots
+                  }
+                </div>
+              </label>
 
                 <label
                   for="host-modal-disable-npcs"
@@ -244,37 +268,37 @@ export class HostLobbyModal extends LitElement {
             </div>
           </div>
 
-            <!-- Lobby Selection -->
-            <div class="options-section">
-              <div class="option-title">
-                ${this.players.length}
-                ${
-                  this.players.length === 1
-                    ? translateText("host_modal.player")
-                    : translateText("host_modal.players")
-                }
-              </div>
-
-            <div class="players-list">
-              ${this.players.map(
-                (player) => html`<span class="player-tag">${player}</span>`,
-              )}
-            </div>
-          </div>
-					
-          <button
-            @click=${this.startGame}
-            ?disabled=${this.players.length < 2}
-            class="start-game-button"
-          >
+        <!-- Lobby Selection -->
+        <div class="options-section">
+          <div class="option-title">
+            ${this.players.length}
             ${
               this.players.length === 1
-                ? translateText("host_modal.waiting")
-                : translateText("host_modal.start")
+                ? translateText("host_modal.player")
+                : translateText("host_modal.players")
             }
-          </button>
+          </div>
+
+          <div class="players-list">
+            ${this.players.map(
+              (player) => html`<span class="player-tag">${player}</span>`,
+            )}
+          </div>
         </div>
-      </o-modal>
+					
+        <button
+          @click=${this.startGame}
+          ?disabled=${this.players.length < 2}
+          class="start-game-button"
+        >
+          ${
+            this.players.length === 1
+              ? translateText("host_modal.waiting")
+              : translateText("host_modal.start")
+          }
+        </button>
+      </div>
+    </o-modal>
     `;
   }
 
@@ -380,6 +404,11 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
+  private async handleGameModeSelection(value: GameMode) {
+    this.gameMode = value;
+    this.putGameConfig();
+  }
+
   private async putGameConfig() {
     const config = await getServerConfigFromClient();
     const response = await fetch(
@@ -398,6 +427,7 @@ export class HostLobbyModal extends LitElement {
           infiniteGold: this.infiniteGold,
           infiniteTroops: this.infiniteTroops,
           instantBuild: this.instantBuild,
+          gameMode: this.gameMode,
         } as GameConfig),
       },
     );
@@ -456,7 +486,7 @@ export class HostLobbyModal extends LitElement {
     })
       .then((response) => response.json())
       .then((data: GameInfo) => {
-        console.log(`got response: ${data}`);
+        console.log(`got game info response: ${JSON.stringify(data)}`);
         this.players = data.clients.map((p) => p.username);
       });
   }

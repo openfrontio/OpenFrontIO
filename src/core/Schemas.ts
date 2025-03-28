@@ -3,8 +3,10 @@ import {
   AllPlayers,
   Difficulty,
   GameMapType,
+  GameMode,
   GameType,
   PlayerType,
+  TeamName,
   UnitType,
 } from "./game/Game";
 
@@ -107,6 +109,7 @@ const GameConfigSchema = z.object({
   gameMap: z.nativeEnum(GameMapType),
   difficulty: z.nativeEnum(Difficulty),
   gameType: z.nativeEnum(GameType),
+  gameMode: z.nativeEnum(GameMode),
   disableNPCs: z.boolean(),
   disableNukes: z.boolean(),
   bots: z.number().int().min(0).max(400),
@@ -345,8 +348,9 @@ const ClientBaseMessageSchema = z.object({
 
 export const ClientSendWinnerSchema = ClientBaseMessageSchema.extend({
   type: z.literal("winner"),
-  winner: ID.nullable(),
+  winner: ID.or(z.nativeEnum(TeamName)).nullable(),
   allPlayersStats: AllPlayersStatsSchema,
+  winnerType: z.enum(["player", "team"]),
 });
 
 export const ClientHashSchema = ClientBaseMessageSchema.extend({
@@ -404,7 +408,11 @@ export const GameRecordSchema = z.object({
   date: SafeString,
   num_turns: z.number(),
   turns: z.array(TurnSchema),
-  winner: ID.nullable(),
+  winner: z
+    .union([ID, z.nativeEnum(TeamName)])
+    .nullable()
+    .optional(),
+  winnerType: z.enum(["player", "team"]).nullable().optional(),
   allPlayersStats: z.record(ID, PlayerStatsSchema),
   version: z.enum(["v0.0.1"]),
   gitCommit: z.string().nullable().optional(),

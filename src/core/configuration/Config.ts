@@ -113,15 +113,15 @@ export interface Config {
 }
 
 export interface Theme {
-  territoryColor(playerInfo: PlayerInfo): Colord;
-  specialBuildingColor(playerInfo: PlayerInfo): Colord;
-  borderColor(playerInfo: PlayerInfo): Colord;
-  defendedBorderColor(playerInfo: PlayerInfo): Colord;
+  territoryColor(playerInfo: PlayerView): Colord;
+  specialBuildingColor(playerInfo: PlayerView): Colord;
+  borderColor(playerInfo: PlayerView): Colord;
+  defendedBorderColor(playerInfo: PlayerView): Colord;
   terrainColor(gm: GameMap, tile: TileRef): Colord;
   backgroundColor(): Colord;
   falloutColor(): Colord;
   font(): string;
-  textColor(playerInfo: PlayerInfo): string;
+  textColor(playerInfo: PlayerView): string;
   // unit color for alternate view
   selfColor(): Colord;
   allyColor(): Colord;
