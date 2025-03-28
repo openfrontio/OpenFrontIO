@@ -156,7 +156,6 @@ export interface Execution {
   activeDuringSpawnPhase(): boolean;
   init(mg: Game, ticks: number): void;
   tick(ticks: number): void;
-  owner(): Player;
 }
 
 export interface Attack {
@@ -375,10 +374,10 @@ export interface Player {
   executeRetreat(attackID: string): void;
 
   // Misc
-  executions(): Execution[];
   toUpdate(): PlayerUpdate;
   playerProfile(): PlayerProfile;
   canBoat(tile: TileRef): boolean;
+  tradingPorts(port: Unit): Unit[];
 }
 
 export interface Game extends GameMap {

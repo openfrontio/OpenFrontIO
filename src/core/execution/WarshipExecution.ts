@@ -11,7 +11,6 @@ import {
 import { PathFinder } from "../pathfinding/PathFinding";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PseudoRandom } from "../PseudoRandom";
-import { distSort, distSortUnit } from "../Util";
 import { consolex } from "../Consolex";
 import { TileRef } from "../game/GameMap";
 import { ShellExecution } from "./ShellExecution";
@@ -151,7 +150,7 @@ export class WarshipExecution implements Execution {
           !this.alreadySentShell.has(unit) &&
           (unit.type() !== UnitType.TradeShip || hasPort) &&
           (unit.type() !== UnitType.TradeShip ||
-            unit.dstPort()?.owner() !== this.owner()),
+            unit.dstPort()?.owner() !== this._owner),
       );
 
     this.target =
@@ -229,7 +228,7 @@ export class WarshipExecution implements Execution {
       );
       switch (result.type) {
         case PathFindResultType.Completed:
-          this.owner().captureUnit(this.target);
+          this._owner.captureUnit(this.target);
           this.target = null;
           return;
         case PathFindResultType.NextTile:
@@ -242,10 +241,6 @@ export class WarshipExecution implements Execution {
           break;
       }
     }
-  }
-
-  owner(): Player {
-    return this._owner;
   }
 
   isActive(): boolean {

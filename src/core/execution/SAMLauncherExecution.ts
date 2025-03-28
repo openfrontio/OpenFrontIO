@@ -57,6 +57,10 @@ export class SAMLauncherExecution implements Execution {
       return;
     }
 
+    if (this.player != this.post.owner()) {
+      this.player = this.post.owner();
+    }
+
     if (!this.pseudoRandom) {
       this.pseudoRandom = new PseudoRandom(this.post.id());
     }
@@ -131,10 +135,6 @@ export class SAMLauncherExecution implements Execution {
         );
       }
     }
-  }
-
-  owner(): Player {
-    return null;
   }
 
   isActive(): boolean {

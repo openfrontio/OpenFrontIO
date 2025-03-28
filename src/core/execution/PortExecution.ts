@@ -38,7 +38,6 @@ export class PortExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.port == null) {
-      // TODO: use canBuild
       const tile = this.tile;
       const player = this.mg.player(this._owner);
       if (!player.canBuild(UnitType.Port, tile)) {
@@ -46,12 +45,15 @@ export class PortExecution implements Execution {
         this.active = false;
         return;
       }
-      const spawns = Array.from(this.mg.bfs(tile, manhattanDistFN(tile, 20)))
-        .filter((t) => this.mg.isOceanShore(t) && this.mg.owner(t) == player)
-        .sort(
-          (a, b) =>
-            this.mg.manhattanDist(a, tile) - this.mg.manhattanDist(b, tile),
-        );
+      const spawns = Array.from(
+        this.mg.bfs(
+          tile,
+          manhattanDistFN(tile, this.mg.config().radiusPortSpawn()),
+        ),
+      ).sort(
+        (a, b) =>
+          this.mg.manhattanDist(a, tile) - this.mg.manhattanDist(b, tile),
+      );
 
       if (spawns.length == 0) {
         consolex.warn(`cannot find spawn for port`);
@@ -66,6 +68,10 @@ export class PortExecution implements Execution {
       return;
     }
 
+    if (this._owner != this.port.owner().id()) {
+      this._owner = this.port.owner().id();
+    }
+
     const totalNbOfPorts = this.mg.units(UnitType.Port).length;
     if (
       !this.random.chance(this.mg.config().tradeShipSpawnRate(totalNbOfPorts))
@@ -73,10 +79,8 @@ export class PortExecution implements Execution {
       return;
     }
 
-    const ports = this.mg
-      .players()
-      .filter((p) => p != this.port.owner() && p.canTrade(this.port.owner()))
-      .flatMap((p) => p.units(UnitType.Port));
+    const ports = this.owner().tradingPorts(this.port);
+
     if (ports.length == 0) {
       return;
     }
@@ -86,10 +90,6 @@ export class PortExecution implements Execution {
     this.mg.addExecution(
       new TradeShipExecution(this.player().id(), this.port, port, pf),
     );
-  }
-
-  owner(): Player {
-    return null;
   }
 
   isActive(): boolean {

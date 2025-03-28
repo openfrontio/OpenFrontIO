@@ -85,6 +85,10 @@ export interface Config {
     tilesPerTickUsed: number;
   };
   attackAmount(attacker: Player, defender: Player | TerraNullius): number;
+  radiusPortSpawn(): number;
+  // When computing likelihood of trading for any given port, the X closest port
+  // are twice more likely to be selected. X is determined below.
+  proximityBonusPortsNb(totalPorts: number): number;
   maxPopulation(player: Player | PlayerView): number;
   cityPopulationIncrease(): number;
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number;

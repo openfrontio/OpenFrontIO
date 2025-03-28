@@ -474,6 +474,14 @@ export class DefaultConfig implements Config {
     return Math.floor(attacker.troops() / 5);
   }
 
+  radiusPortSpawn() {
+    return 20;
+  }
+
+  proximityBonusPortsNb(totalPorts: number) {
+    return within(totalPorts / 3, 4, totalPorts);
+  }
+
   attackAmount(attacker: Player, defender: Player | TerraNullius) {
     if (attacker.type() == PlayerType.Bot) {
       return attacker.troops() / 20;
