@@ -146,6 +146,18 @@ class Client {
     });
 
     page();
+    function updateSliderProgress(slider) {
+      const percent =
+        ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
+      slider.style.setProperty("--progress", `${percent}%`);
+    }
+
+    document
+      .querySelectorAll("#bots-count, #private-lobby-bots-count")
+      .forEach((slider) => {
+        updateSliderProgress(slider);
+        slider.addEventListener("input", () => updateSliderProgress(slider));
+      });
   }
 
   private async handleJoinLobby(event: CustomEvent) {
