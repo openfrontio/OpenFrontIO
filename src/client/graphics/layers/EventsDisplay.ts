@@ -397,13 +397,6 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private renderAttacks() {
-    if (
-      this.incomingAttacks.length === 0 &&
-      this.outgoingAttacks.length === 0 &&
-      this.outgoingLandAttacks.length === 0
-    ) {
-      return html``;
-    }
 
     return html`
       ${this.incomingAttacks.length > 0
