@@ -477,7 +477,7 @@ export class DefaultConfig implements Config {
   warshipShellLifetime(): number {
     return 20; // in ticks (one tick is 100ms)
   }
-  
+
   radiusPortSpawn() {
     return 20;
   }
