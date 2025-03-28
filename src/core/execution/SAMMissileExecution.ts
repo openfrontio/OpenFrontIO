@@ -85,9 +85,6 @@ export class SAMMissileExecution implements Execution {
     }
   }
 
-  owner(): Player {
-    return null;
-  }
   isActive(): boolean {
     return this.active;
   }

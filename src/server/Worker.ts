@@ -165,6 +165,7 @@ export function startWorker() {
         bots: req.body.bots,
         disableNPCs: req.body.disableNPCs,
         disableNukes: req.body.disableNukes,
+        gameMode: req.body.gameMode,
       });
       res.status(200).json({ success: true });
     }),

@@ -16,6 +16,9 @@ import {
   GameUpdates,
   TerrainType,
   EmojiMessage,
+  Team,
+  GameMode,
+  TeamName,
 } from "./Game";
 import { GameUpdate } from "./GameUpdates";
 import { GameUpdateType } from "./GameUpdates";
@@ -29,9 +32,10 @@ import { MessageType } from "./Game";
 import { UnitImpl } from "./UnitImpl";
 import { consolex } from "../Consolex";
 import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
-import { DefenseGrid } from "./DefensePostGrid";
+import { UnitGrid } from "./UnitGrid";
 import { StatsImpl } from "./StatsImpl";
 import { Stats } from "./Stats";
+import { simpleHash } from "../Util";
 
 export function createGame(
   gameMap: GameMap,
@@ -66,9 +70,11 @@ export class GameImpl implements Game {
   private _nextUnitID = 1;
 
   private updates: GameUpdates = createGameUpdatesMap();
-  private defenseGrid: DefenseGrid;
+  private unitGrid: UnitGrid;
 
   private _stats: StatsImpl = new StatsImpl();
+
+  private teams_: Team[] = [];
 
   constructor(
     private _map: GameMap,
@@ -88,10 +94,10 @@ export class GameImpl implements Game {
           n.strength,
         ),
     );
-    this.defenseGrid = new DefenseGrid(
-      this._map,
-      this._config.defensePostRange(),
-    );
+    this.unitGrid = new UnitGrid(this._map);
+    if (this._config.gameConfig().gameMode == GameMode.Team) {
+      this.teams_ = [{ name: TeamName.Red }, { name: TeamName.Blue }];
+    }
   }
   isOnEdgeOfMap(ref: TileRef): boolean {
     return this._map.isOnEdgeOfMap(ref);
@@ -325,11 +331,20 @@ export class GameImpl implements Game {
       this.nextPlayerID,
       playerInfo,
       manpower,
+      this.maybeAssignTeam(playerInfo),
     );
     this._playersBySmallID.push(player);
     this.nextPlayerID++;
     this._players.set(playerInfo.id, player);
     return player;
+  }
+
+  private maybeAssignTeam(player: PlayerInfo): Team | null {
+    if (this._config.gameConfig().gameMode != GameMode.Team) {
+      return null;
+    }
+    const rand = simpleHash(player.id);
+    return this.teams_[rand % this.teams_.length];
   }
 
   player(id: PlayerID | null): Player {
@@ -516,12 +531,17 @@ export class GameImpl implements Game {
     });
   }
 
-  setWinner(winner: Player, allPlayersStats: AllPlayersStats): void {
+  setWinner(winner: Player | TeamName, allPlayersStats: AllPlayersStats): void {
     this.addUpdate({
       type: GameUpdateType.Win,
-      winnerID: winner.smallID(),
+      winner: typeof winner === "string" ? winner : winner.smallID(),
+      winnerType: typeof winner === "string" ? "team" : "player",
       allPlayersStats,
     });
+  }
+
+  teams(): Team[] {
+    return this.teams_;
   }
 
   displayMessage(
@@ -541,15 +561,22 @@ export class GameImpl implements Game {
     });
   }
 
-  addDefensePost(dp: Unit) {
-    this.defenseGrid.addDefense(dp);
+  addUnit(u: Unit) {
+    this.unitGrid.addUnit(u);
   }
-  removeDefensePost(dp: Unit) {
-    this.defenseGrid.removeDefense(dp);
+  removeUnit(u: Unit) {
+    this.unitGrid.removeUnit(u);
   }
 
-  nearbyDefensePosts(tile: TileRef): Unit[] {
-    return this.defenseGrid.nearbyDefenses(tile) as Unit[];
+  nearbyUnits(
+    tile: TileRef,
+    searchRange: number,
+    types: UnitType | UnitType[],
+  ): Array<{ unit: Unit; distSquared: number }> {
+    return this.unitGrid.nearbyUnits(tile, searchRange, types) as Array<{
+      unit: Unit;
+      distSquared: number;
+    }>;
   }
 
   ref(x: number, y: number): TileRef {

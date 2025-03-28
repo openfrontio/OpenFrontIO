@@ -76,6 +76,10 @@ export class ConstructionExecution implements Execution {
       return;
     }
 
+    if (this.player != this.construction.owner()) {
+      this.player = this.construction.owner();
+    }
+
     if (this.ticksUntilComplete == 0) {
       this.player = this.construction.owner();
       this.construction.delete(false);
@@ -121,10 +125,6 @@ export class ConstructionExecution implements Execution {
       default:
         throw Error(`unit type ${this.constructionType} not supported`);
     }
-  }
-
-  owner(): Player {
-    return null;
   }
 
   isActive(): boolean {

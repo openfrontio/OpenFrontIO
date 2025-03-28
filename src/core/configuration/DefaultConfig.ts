@@ -244,7 +244,7 @@ export class DefaultConfig implements Config {
           cost: (p: Player) =>
             p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
-              : 15_000_000,
+              : 20_000_000,
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -387,8 +387,12 @@ export class DefaultConfig implements Config {
         throw new Error(`terrain type ${type} not supported`);
     }
     if (defender.isPlayer()) {
-      for (const dp of gm.nearbyDefensePosts(tileToConquer)) {
-        if (dp.owner() == defender) {
+      for (const dp of gm.nearbyUnits(
+        tileToConquer,
+        gm.config().defensePostRange(),
+        UnitType.DefensePost,
+      )) {
+        if (dp.unit.owner() == defender) {
           mag *= this.defensePostDefenseBonus();
           speed *= this.defensePostDefenseBonus();
           break;
@@ -474,6 +478,14 @@ export class DefaultConfig implements Config {
 
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number {
     return Math.floor(attacker.troops() / 5);
+  }
+
+  radiusPortSpawn() {
+    return 20;
+  }
+
+  proximityBonusPortsNb(totalPorts: number) {
+    return within(totalPorts / 3, 4, totalPorts);
   }
 
   attackAmount(attacker: Player, defender: Player | TerraNullius) {

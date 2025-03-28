@@ -21,7 +21,6 @@ export class GoogleAdElement extends LitElement {
   @property({ type: String }) adFormat = "auto";
   @property({ type: Boolean }) fullWidthResponsive = true;
   @property({ type: String }) adTest = "off"; // "on" for testing, remove or set to "off" for production
-  @property({ type: String }) backgroundColor = "rgba(255, 255, 255, 0.1)";
   @property({ type: String }) darkBackgroundColor = "rgba(0, 0, 0, 0.2)";
 
   // Disable shadow DOM so AdSense can access the elements
@@ -50,13 +49,11 @@ export class GoogleAdElement extends LitElement {
   `;
 
   render() {
-    // Apply background color dynamically
-    const containerStyle = `
-      background-color: ${this.backgroundColor};
-    `;
-
+    if (isElectron()) {
+      return html``;
+    }
     return html`
-      <div class="google-ad-container" style="${containerStyle}">
+      <div class="google-ad-container">
         <ins
           class="adsbygoogle"
           style="display:block"
@@ -85,4 +82,38 @@ export class GoogleAdElement extends LitElement {
     }, 100);
   }
 }
+
+// Check if running in Electron
+const isElectron = () => {
+  // Renderer process
+  if (
+    typeof window !== "undefined" &&
+    typeof window.process === "object" &&
+    // @ts-ignore
+    window.process.type === "renderer"
+  ) {
+    return true;
+  }
+
+  // Main process
+  if (
+    typeof process !== "undefined" &&
+    typeof process.versions === "object" &&
+    !!process.versions.electron
+  ) {
+    return true;
+  }
+
+  // Detect the user agent when the `nodeIntegration` option is set to false
+  if (
+    typeof navigator === "object" &&
+    typeof navigator.userAgent === "string" &&
+    navigator.userAgent.indexOf("Electron") >= 0
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
 export default GoogleAdElement;

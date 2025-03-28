@@ -282,11 +282,13 @@ function getNextMap(): GameMapType {
     Mena: 2,
     NorthAmerica: 2,
     BlackSea: 2,
+    Pangaea: 2,
     Africa: 2,
     Asia: 2,
     Mars: 2,
     Britannia: 2,
     GatewayToTheAtlantic: 2,
+    Iceland: 2,
   };
 
   Object.keys(GameMapType).forEach((key) => {

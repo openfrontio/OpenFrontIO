@@ -42,6 +42,10 @@ export class MissileSiloExecution implements Execution {
         return;
       }
       this.silo = this.player.buildUnit(UnitType.MissileSilo, 0, this.tile);
+
+      if (this.player != this.silo.owner()) {
+        this.player = this.silo.owner();
+      }
     }
 
     if (
@@ -51,10 +55,6 @@ export class MissileSiloExecution implements Execution {
     ) {
       this.silo.setCooldown(false);
     }
-  }
-
-  owner(): Player {
-    return null;
   }
 
   isActive(): boolean {

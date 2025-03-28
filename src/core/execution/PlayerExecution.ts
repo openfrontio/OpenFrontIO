@@ -116,7 +116,7 @@ export class PlayerExecution implements Execution {
     const main = clusters.shift();
     this.player.largestClusterBoundingBox = calculateBoundingBox(this.mg, main);
     const surroundedBy = this.surroundedBySamePlayer(main);
-    if (surroundedBy && !this.player.isAlliedWith(surroundedBy)) {
+    if (surroundedBy && !this.player.isFriendly(surroundedBy)) {
       this.removeCluster(main);
     }
 

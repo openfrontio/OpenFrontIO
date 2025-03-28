@@ -14,6 +14,13 @@ OpenFront is an online real-time strategy game focused on territorial control an
 
 This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 
+# OpenFront - Licensing
+
+This project uses a dual-licensing approach:
+
+- Code in the `server/` and `core/` directory is licensed under MIT
+- Client code (in the `client/` directory) is licensed under GPL v3
+
 ## 🌟 Features
 
 - **Real-time Strategy Gameplay**: Expand your territory and engage in strategic battles

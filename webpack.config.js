@@ -7,7 +7,7 @@ import CopyPlugin from "copy-webpack-plugin";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default (env, argv) => {
+export default async (env, argv) => {
   const isProduction = argv.mode === "production";
 
   return {
@@ -16,7 +16,7 @@ export default (env, argv) => {
       publicPath: "/",
       filename: "js/[name].[contenthash].js", // Added content hash
       path: path.resolve(__dirname, "static"),
-      clean: true,
+      clean: isProduction,
     },
     module: {
       rules: [
@@ -60,7 +60,7 @@ export default (env, argv) => {
           ],
         },
         {
-          test: /\.(png|jpe?g|gif)$/i,
+          test: /\.(webp|png|jpe?g|gif)$/i,
           type: "asset/resource",
           generator: {
             filename: "images/[name].[contenthash][ext]", // Added content hash
@@ -122,19 +122,12 @@ export default (env, argv) => {
       new CopyPlugin({
         patterns: [
           {
-            from: "resources",
-            to: ".", // Copy to the output directory (static)
-            // Add content hashing to copied files
-            transform: function (content, path) {
-              return content; // Return unmodified content
-            },
-            // Don't hash HTML files from resources
+            from: path.resolve(__dirname, "resources"),
+            to: path.resolve(__dirname, "static"),
             noErrorOnMissing: true,
           },
         ],
-        options: {
-          concurrency: 100,
-        },
+        options: { concurrency: 100 },
       }),
     ],
     optimization: {

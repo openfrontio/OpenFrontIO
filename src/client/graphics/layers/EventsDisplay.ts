@@ -304,7 +304,7 @@ export class EventsDisplay extends LitElement implements Layer {
   onTargetPlayerEvent(event: TargetPlayerUpdate) {
     const other = this.game.playerBySmallID(event.playerID) as PlayerView;
     const myPlayer = this.game.playerByClientID(this.clientID) as PlayerView;
-    if (!myPlayer || !myPlayer.isAlliedWith(other)) return;
+    if (!myPlayer || !myPlayer.isFriendly(other)) return;
 
     const target = this.game.playerBySmallID(event.targetID) as PlayerView;
 
