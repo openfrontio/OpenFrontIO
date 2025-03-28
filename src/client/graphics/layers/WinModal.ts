@@ -245,7 +245,7 @@ export class WinModal extends LitElement implements Layer {
           this._title = "You Won!";
           this.won = true;
         } else {
-          this._title = `${winner.name()} has won!`;
+          this._title = `${winner.name_notag()} has won!`;
           this.won = false;
         }
         this.show();

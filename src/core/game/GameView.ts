@@ -34,7 +34,7 @@ import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdateViewData } from "./GameUpdates";
 import { UnitGrid } from "./UnitGrid";
 import { consolex } from "../Consolex";
-import { simpleHash } from "../Util";
+import { simpleHash, createRandomName } from "../Util";
 
 import {
   BOT_NAME_PREFIXES,
@@ -167,44 +167,10 @@ export class PlayerView {
   flag(): string {
     return this.data.flag;
   }
-  name_notag(): string {
-    if (
-      this.data.playerType === "HUMAN" &&
-      localStorage.getItem("username") !== this.data.name
-    ) {
-      let randomName = "";
-      const hash = simpleHash(this.data.name);
-      const prefixIndex = hash % BOT_NAME_PREFIXES.length;
-      const suffixIndex =
-        Math.floor(hash / BOT_NAME_PREFIXES.length) % BOT_NAME_SUFFIXES.length;
-
-      randomName = `<b>👤 ${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}</b>`;
-
-      if (!displayNameMap[this.data.name]) {
-        displayNameMap[this.data.name] = randomName;
-      }
-    }
-    return localStorage.getItem("settings.randomname") === "true" &&
-      displayNameMap[this.data.displayName]
-      ? displayNameMap[this.data.displayName]
-      : this.data.name;
-  }
   name(): string {
-    if (
-      this.data.playerType === "HUMAN" &&
-      localStorage.getItem("username") !== this.data.name
-    ) {
-      let randomName = "";
-      const hash = simpleHash(this.data.name);
-      const prefixIndex = hash % BOT_NAME_PREFIXES.length;
-      const suffixIndex =
-        Math.floor(hash / BOT_NAME_PREFIXES.length) % BOT_NAME_SUFFIXES.length;
-
-      randomName = `<b>👤 ${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}</b>`;
-
-      if (!displayNameMap[this.data.name]) {
-        displayNameMap[this.data.name] = randomName;
-      }
+    let randomName = createRandomName(this.data);
+    if (!displayNameMap[this.data.name] && randomName !== "") {
+      displayNameMap[this.data.name] = randomName;
     }
     return localStorage.getItem("settings.randomname") === "true" &&
       displayNameMap[this.data.displayName]
@@ -213,22 +179,20 @@ export class PlayerView {
         ? `<b>${this.data.name}</b>`
         : `<i>${this.data.name}</i>`;
   }
+  name_notag(): string {
+    let randomName = createRandomName(this.data);
+    if (!displayNameMap[this.data.name] && randomName !== "") {
+      displayNameMap[this.data.name] = randomName;
+    }
+    return localStorage.getItem("settings.randomname") === "true" &&
+      displayNameMap[this.data.displayName]
+      ? displayNameMap[this.data.displayName]
+      : this.data.name;
+  }
   displayName(): string {
-    if (
-      this.data.playerType === "HUMAN" &&
-      localStorage.getItem("username") !== this.data.name
-    ) {
-      let randomName = "";
-      const hash = simpleHash(this.data.name);
-      const prefixIndex = hash % BOT_NAME_PREFIXES.length;
-      const suffixIndex =
-        Math.floor(hash / BOT_NAME_PREFIXES.length) % BOT_NAME_SUFFIXES.length;
-
-      randomName = `<b>👤 ${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}</b>`;
-
-      if (!displayNameMap[this.data.name]) {
-        displayNameMap[this.data.name] = randomName;
-      }
+    let randomName = createRandomName(this.data);
+    if (!displayNameMap[this.data.name] && randomName !== "") {
+      displayNameMap[this.data.name] = randomName;
     }
     return localStorage.getItem("settings.randomname") === "true" &&
       displayNameMap[this.data.displayName]
@@ -236,6 +200,16 @@ export class PlayerView {
       : this.data.playerType === "HUMAN"
         ? `<b>${this.data.displayName}</b>`
         : `<i>${this.data.displayName}</i>`;
+  }
+  displayName_notag(): string {
+    let randomName = createRandomName(this.data);
+    if (!displayNameMap[this.data.name] && randomName !== "") {
+      displayNameMap[this.data.name] = randomName;
+    }
+    return localStorage.getItem("settings.randomname") === "true" &&
+      displayNameMap[this.data.displayName]
+      ? displayNameMap[this.data.displayName]
+      : this.data.displayName;
   }
   clientID(): ClientID {
     return this.data.clientID;
