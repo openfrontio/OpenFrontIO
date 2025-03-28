@@ -519,6 +519,8 @@
             "help-modal",
             "username-input",
             "public-lobby",
+            "o-modal",
+            "o-button",
           ];
 
           document.title = translations.main?.title || document.title;
@@ -546,14 +548,20 @@
             }
           });
           components.forEach((tagName) => {
-            const el = document.querySelector(tagName);
-            if (el && typeof el.requestUpdate === "function") {
-              el.requestUpdate();
-            } else {
-              console.warn(
-                `requestUpdate() not available on <${tagName}> or element not found.`,
-              );
+            const elements = document.querySelectorAll(tagName);
+            if (elements.length === 0) {
+              console.warn(`No elements found for <${tagName}>.`);
             }
+
+            elements.forEach((el) => {
+              if (typeof el.requestUpdate === "function") {
+                el.requestUpdate();
+              } else {
+                console.warn(
+                  `requestUpdate() not available on <${tagName}> element.`,
+                );
+              }
+            });
           });
         }
 

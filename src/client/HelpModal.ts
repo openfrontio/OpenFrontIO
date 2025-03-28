@@ -99,7 +99,7 @@ export class HelpModal extends LitElement {
 
         <div class="flex flex-col md:flex-row gap-4">
           <div class="flex flex-col items-center w-full md:w-[80%]">
-            <div data-i18n="help_modal.ui_control" class="text-gray-300">
+            <div class="text-gray-300">
               ${translateText("help_modal.ui_control")}
             </div>
             <img
@@ -127,7 +127,7 @@ export class HelpModal extends LitElement {
 
         <div class="flex flex-col md:flex-row gap-4">
           <div class="flex flex-col items-center">
-            <div data-i18n="help_modal.ui_options" class="text-gray-300">
+            <div class="text-gray-300">
               ${translateText("help_modal.ui_options")}
             </div>
             <img
@@ -199,10 +199,7 @@ export class HelpModal extends LitElement {
 
           <div class="flex flex-col md:flex-row gap-4 mt-2">
             <div class="flex flex-col items-center w-full md:w-[80%]">
-              <div
-                data-i18n="help_modal.info_enemy_panel"
-                class="text-gray-300"
-              >
+              <divclass="text-gray-300">
                 ${translateText("help_modal.info_enemy_panel")}
               </div>
               <img
