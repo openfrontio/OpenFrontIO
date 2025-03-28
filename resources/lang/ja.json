@@ -141,8 +141,7 @@
   },
   "host_modal": {
     "title": "プライベートロビー",
-    "map": "マップ",
-    "difficulty": "難易度",
+    "mode": "モード",
     "allow_alliances": "同盟を許可",
     "options_title": "オプション",
     "bots": "ボット数: ",
@@ -167,5 +166,9 @@
     "Balanced": "普通",
     "Intense": "難しい",
     "Impossible": "不可能"
+  },
+  "game_mode": {
+    "ffa": "バトルロワイヤル",
+    "teams": "チーム戦"
   }
 }
