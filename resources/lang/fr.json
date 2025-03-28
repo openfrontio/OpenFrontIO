@@ -21,7 +21,7 @@
     "action_center": "Recentrer la caméra",
     "action_zoom": "Zoom avant/arrière",
     "action_move_camera": "Déplacer la caméra",
-    "action_ratio_change":"Modifier le ratio d'attaque",
+    "action_ratio_change": "Modifier le ratio d'attaque",
     "action_ratio_increasedecrease": "Diminuer/Augmenter le ratio d'attaque",
     "action_send_boat": "Envoyer un bateau à la position du curseur",
     "action_reset_gfx": "Réinitialiser les graphismes",
