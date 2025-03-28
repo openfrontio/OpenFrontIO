@@ -1,6 +1,5 @@
 import path from "path";
 import { fileURLToPath } from "url";
-import fs from "fs/promises";
 import HtmlWebpackPlugin from "html-webpack-plugin";
 import webpack from "webpack";
 import CopyPlugin from "copy-webpack-plugin";
@@ -8,40 +7,6 @@ import CopyPlugin from "copy-webpack-plugin";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function checkResourcesCopied(sourceDir, targetDir) {
-  async function checkDir(source, target) {
-    let items;
-    try {
-      items = await fs.readdir(source, { withFileTypes: true });
-    } catch (error) {
-      console.error(`Error reading directory ${source}:`, error);
-      return false;
-    }
-    for (const item of items) {
-      const sourcePath = path.join(source, item.name);
-      const targetPath = path.join(target, item.name);
-      if (item.isDirectory()) {
-        try {
-          await fs.access(targetPath);
-        } catch (error) {
-          // Target directory does not exist.
-          return false;
-        }
-        const exists = await checkDir(sourcePath, targetPath);
-        if (!exists) return false;
-      } else if (item.isFile()) {
-        try {
-          await fs.access(targetPath);
-        } catch (error) {
-          // Target file does not exist.
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-  return checkDir(sourceDir, targetDir);
-}
 export default async (env, argv) => {
   const isProduction = argv.mode === "production";
 
@@ -154,48 +119,16 @@ export default async (env, argv) => {
       new webpack.DefinePlugin({
         "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
       }),
-      ...(await (async () => {
-        if (isProduction) {
-          return [
-            new CopyPlugin({
-              patterns: [
-                {
-                  from: "resources",
-                  to: ".",
-                  noErrorOnMissing: true,
-                },
-              ],
-              options: { concurrency: 100 },
-            }),
-          ];
-        } else {
-          const resourcesDir = path.resolve(__dirname, "resources");
-          const targetDir = path.resolve(__dirname, "static");
-          const allExist = await checkResourcesCopied(resourcesDir, targetDir);
-          if (allExist) {
-            console.log(
-              "[CopyPlugin] Skipped: All resources already exist in static/.",
-            );
-            return []; // Skip CopyPlugin if all resources are present.
-          } else {
-            console.log(
-              "[CopyPlugin] Copying missing resources to static/ ...",
-            );
-            return [
-              new CopyPlugin({
-                patterns: [
-                  {
-                    from: "resources",
-                    to: ".",
-                    noErrorOnMissing: true,
-                  },
-                ],
-                options: { concurrency: 100 },
-              }),
-            ];
-          }
-        }
-      })()),
+      new CopyPlugin({
+        patterns: [
+          {
+            from: path.resolve(__dirname, "resources"),
+            to: path.resolve(__dirname, "static"),
+            noErrorOnMissing: true,
+          },
+        ],
+        options: { concurrency: 100 },
+      }),
     ],
     optimization: {
       // Add optimization configuration for better caching

@@ -38,6 +38,11 @@ export enum Difficulty {
   Impossible = "Impossible",
 }
 
+export enum TeamName {
+  Red = "Red",
+  Blue = "Blue",
+}
+
 export enum GameMapType {
   World = "World",
   Europe = "Europe",
@@ -60,6 +65,15 @@ export enum GameType {
   Singleplayer = "Singleplayer",
   Public = "Public",
   Private = "Private",
+}
+
+export enum GameMode {
+  FFA = "Free For All",
+  Team = "Team",
+}
+
+export interface Team {
+  name: TeamName;
 }
 
 export interface UnitInfo {
@@ -95,6 +109,7 @@ export const nukeTypes = [
   UnitType.MIRVWarhead,
   UnitType.MIRV,
 ] as UnitType[];
+
 export type NukeType = (typeof nukeTypes)[number];
 
 export enum Relation {
@@ -327,8 +342,10 @@ export interface Player {
   allRelationsSorted(): { player: Player; relation: Relation }[];
   updateRelation(other: Player, delta: number): void;
   decayRelations(): void;
-
-  // Alliances
+  isOnSameTeam(other: Player): boolean;
+  // Either allied or on same team.
+  isFriendly(other: Player): boolean;
+  team(): Team | null;
   incomingAllianceRequests(): AllianceRequest[];
   outgoingAllianceRequests(): AllianceRequest[];
   alliances(): MutableAlliance[];
@@ -400,11 +417,13 @@ export interface Game extends GameMap {
   terraNullius(): TerraNullius;
   owner(ref: TileRef): Player | TerraNullius;
 
+  teams(): Team[];
+
   // Game State
   ticks(): Tick;
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
-  setWinner(winner: Player, allPlayersStats: AllPlayersStats): void;
+  setWinner(winner: Player | TeamName, allPlayersStats: AllPlayersStats): void;
   config(): Config;
 
   // Units

@@ -72,8 +72,7 @@ export class SAMLauncherExecution implements Execution {
       ])
       .filter(
         ({ unit }) =>
-          unit.owner() !== this.player &&
-          !unit.owner().isAlliedWith(this.player),
+          unit.owner() !== this.player && !this.player.isFriendly(unit.owner()),
       );
 
     this.target =

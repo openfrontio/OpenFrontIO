@@ -251,14 +251,14 @@ export class TerritoryLayer implements Layer {
         this.paintCell(
           this.game.x(tile),
           this.game.y(tile),
-          this.theme.defendedBorderColor(owner.info()),
+          this.theme.defendedBorderColor(owner),
           255,
         );
       } else {
         this.paintCell(
           this.game.x(tile),
           this.game.y(tile),
-          this.theme.borderColor(owner.info()),
+          this.theme.borderColor(owner),
           255,
         );
       }
@@ -266,7 +266,7 @@ export class TerritoryLayer implements Layer {
       this.paintCell(
         this.game.x(tile),
         this.game.y(tile),
-        this.theme.territoryColor(owner.info()),
+        this.theme.territoryColor(owner),
         150,
       );
     }

@@ -163,5 +163,9 @@
     "Balanced": "Balanced",
     "Intense": "Intense",
     "Impossible": "Impossible"
+  },
+  "game_mode": {
+    "ffa": "Free for All",
+    "teams": "Teams"
   }
 }

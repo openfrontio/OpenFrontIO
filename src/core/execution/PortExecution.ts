@@ -40,27 +40,13 @@ export class PortExecution implements Execution {
     if (this.port == null) {
       const tile = this.tile;
       const player = this.mg.player(this._owner);
-      if (!player.canBuild(UnitType.Port, tile)) {
+      const spawn = player.canBuild(UnitType.Port, tile);
+      if (spawn === false) {
         consolex.warn(`player ${player} cannot build port at ${this.tile}`);
         this.active = false;
         return;
       }
-      const spawns = Array.from(
-        this.mg.bfs(
-          tile,
-          manhattanDistFN(tile, this.mg.config().radiusPortSpawn()),
-        ),
-      ).sort(
-        (a, b) =>
-          this.mg.manhattanDist(a, tile) - this.mg.manhattanDist(b, tile),
-      );
-
-      if (spawns.length == 0) {
-        consolex.warn(`cannot find spawn for port`);
-        this.active = false;
-        return;
-      }
-      this.port = player.buildUnit(UnitType.Port, 0, spawns[0]);
+      this.port = player.buildUnit(UnitType.Port, 0, spawn);
     }
 
     if (!this.port.isActive()) {
@@ -79,7 +65,7 @@ export class PortExecution implements Execution {
       return;
     }
 
-    const ports = this.owner().tradingPorts(this.port);
+    const ports = this.player().tradingPorts(this.port);
 
     if (ports.length == 0) {
       return;
