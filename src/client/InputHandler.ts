@@ -227,75 +227,70 @@ export class InputHandler {
     });
 
     window.addEventListener("keyup", (e) => {
-      if (e.code === "Space") {
-        e.preventDefault();
-        this.alternateView = false;
-        this.eventBus.emit(new AlternateViewEvent(false));
-      }
-      if (e.key.toLowerCase() === "r" && e.altKey && !e.ctrlKey) {
-        e.preventDefault();
-        this.eventBus.emit(new RefreshGraphicsEvent());
-      }
-
-      if (e.code === "Digit1") {
-        e.preventDefault();
-        this.eventBus.emit(new AttackSetRatioEvent(10));
-      }
-
-      if (e.code === "Digit2") {
-        e.preventDefault();
-        this.eventBus.emit(new AttackSetRatioEvent(20));
-      }
-
-      if (e.code === "Digit3") {
-        e.preventDefault();
-        this.eventBus.emit(new AttackSetRatioEvent(30));
-      }
-
-      if (e.code === "Digit4") {
-        e.preventDefault();
-        this.eventBus.emit(new AttackSetRatioEvent(40));
-      }
-
-      if (e.code === "Digit5") {
-        e.preventDefault();
-        this.eventBus.emit(new AttackSetRatioEvent(50));
-      }
-
-      if (e.code === "Digit6") {
-        e.preventDefault();
-        this.eventBus.emit(new AttackSetRatioEvent(60));
-      }
-
-      if (e.code === "Digit7") {
-        e.preventDefault();
-        this.eventBus.emit(new AttackSetRatioEvent(70));
-      }
-
-      if (e.code === "Digit8") {
-        e.preventDefault();
-        this.eventBus.emit(new AttackSetRatioEvent(80));
-      }
-
-      if (e.code === "Digit9") {
-        e.preventDefault();
-        this.eventBus.emit(new AttackSetRatioEvent(90));
-      }
-
-      if (e.code === "Digit0") {
-        e.preventDefault();
-        this.eventBus.emit(new AttackSetRatioEvent(100));
-      }
-
-      if (e.code === "KeyB") {
-        this.eventBus.emit(
-          new SendBoatEvent(this.currentPointerX, this.currentPointerY),
-        );
-      }
-
-      if (e.code === "KeyC") {
-        e.preventDefault();
-        this.eventBus.emit(new CenterCameraEvent());
+      switch (e.code) {
+        case "Space":
+          e.preventDefault();
+          this.alternateView = false;
+          this.eventBus.emit(new AlternateViewEvent(false));
+          break;
+        case "Digit1":
+          e.preventDefault();
+          this.eventBus.emit(new AttackSetRatioEvent(10));
+          break;
+        case "Digit2":
+          e.preventDefault();
+          this.eventBus.emit(new AttackSetRatioEvent(20));
+          break;
+        case "Digit3":
+          e.preventDefault();
+          this.eventBus.emit(new AttackSetRatioEvent(30));
+          break;
+        case "Digit4":
+          e.preventDefault();
+          this.eventBus.emit(new AttackSetRatioEvent(40));
+          break;
+        case "Digit5":
+          e.preventDefault();
+          this.eventBus.emit(new AttackSetRatioEvent(50));
+          break;
+        case "Digit6":
+          e.preventDefault();
+          this.eventBus.emit(new AttackSetRatioEvent(60));
+          break;
+        case "Digit7":
+          e.preventDefault();
+          this.eventBus.emit(new AttackSetRatioEvent(70));
+          break;
+        case "Digit8":
+          e.preventDefault();
+          this.eventBus.emit(new AttackSetRatioEvent(80));
+          break;
+        case "Digit9":
+          e.preventDefault();
+          this.eventBus.emit(new AttackSetRatioEvent(90));
+          break;
+        case "Digit0":
+          e.preventDefault();
+          this.eventBus.emit(new AttackSetRatioEvent(100));
+          break;
+        case "KeyB":
+          e.preventDefault();
+          this.eventBus.emit(
+            new SendBoatEvent(this.currentPointerX, this.currentPointerY),
+          );
+          break;
+        case "KeyC":
+          e.preventDefault();
+          this.eventBus.emit(new CenterCameraEvent());
+          break;
+        case "KeyR":
+          if (e.altKey && !e.ctrlKey) {
+            e.preventDefault();
+            this.eventBus.emit(new RefreshGraphicsEvent());
+          }
+          break;
+        default:
+          break;
       }
 
       // Remove all movement keys from activeKeys
