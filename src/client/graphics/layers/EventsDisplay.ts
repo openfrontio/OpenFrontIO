@@ -61,6 +61,7 @@ export class EventsDisplay extends LitElement implements Layer {
   private events: Event[] = [];
   @state() private incomingAttacks: AttackUpdate[] = [];
   @state() private outgoingAttacks: AttackUpdate[] = [];
+  @state() private outgoingLandAttacks: AttackUpdate[] = [];
   @state() private outgoingBoats: UnitView[] = [];
   @state() private _hidden: boolean = false;
   @state() private newEvents: number = 0;
@@ -133,6 +134,10 @@ export class EventsDisplay extends LitElement implements Layer {
     this.outgoingAttacks = myPlayer
       .outgoingAttacks()
       .filter((a) => a.targetID != 0);
+
+    this.outgoingLandAttacks = myPlayer
+      .outgoingAttacks()
+      .filter((a) => a.targetID == 0);
 
     this.outgoingBoats = myPlayer
       .units()
@@ -394,7 +399,8 @@ export class EventsDisplay extends LitElement implements Layer {
   private renderAttacks() {
     if (
       this.incomingAttacks.length === 0 &&
-      this.outgoingAttacks.length === 0
+      this.outgoingAttacks.length === 0 &&
+      this.outgoingLandAttacks.length === 0
     ) {
       return html``;
     }
@@ -459,6 +465,36 @@ export class EventsDisplay extends LitElement implements Layer {
             </tr>
           `
         : ""}
+      ${this.outgoingLandAttacks.length > 0
+        ? html`
+            <tr class="border-t border-gray-700">
+              <td class="lg:p-3 p-1 text-left text-gray-400">
+                ${this.outgoingLandAttacks.map(
+                  (attack) => html`
+                    <button
+                      translate="no"
+                      class="ml-2"
+                      @click=${() => this.emitGoToPlayerEvent(attack.targetID)}
+                    >
+                      ${renderTroops(attack.troops)} Wilderness
+                    </button>
+
+                    ${!attack.retreating
+                      ? html`<button
+                          ${attack.retreating ? "disabled" : ""}
+                          @click=${() => {
+                            this.emitCancelAttackIntent(attack.id);
+                          }}
+                        >
+                          ❌
+                        </button>`
+                      : "(retreating...)"}
+                  `,
+                )}
+              </td>
+            </tr>
+          `
+        : ""}
     `;
   }
 
@@ -496,6 +532,7 @@ export class EventsDisplay extends LitElement implements Layer {
       this.events.length === 0 &&
       this.incomingAttacks.length === 0 &&
       this.outgoingAttacks.length === 0 &&
+      this.outgoingLandAttacks.length === 0 &&
       this.outgoingBoats.length === 0
     ) {
       return html``;
