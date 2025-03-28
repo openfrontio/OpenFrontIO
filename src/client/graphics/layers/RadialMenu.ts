@@ -12,6 +12,7 @@ import {
   ContextMenuEvent,
   MouseUpEvent,
   ShowBuildMenuEvent,
+  SendBoatEvent,
 } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
@@ -124,6 +125,43 @@ export class RadialMenu implements Layer {
         return;
       }
       this.buildMenu.showMenu(tile);
+    });
+    this.eventBus.on(SendBoatEvent, (e) => {
+      const cellUnderMouse = this.transformHandler.screenToWorldCoordinates(
+        e.x,
+        e.y,
+      );
+      if (cellUnderMouse == null) {
+        return;
+      }
+      if (!this.g.isValidCoord(cellUnderMouse.x, cellUnderMouse.y)) {
+        return;
+      }
+
+      const tile = this.g.ref(cellUnderMouse.x, cellUnderMouse.y);
+
+      const p = this.g.playerByClientID(this.clientID);
+      if (p == null) {
+        return;
+      }
+      const myPlayer = this.g
+        .playerViews()
+        .find((p) => p.clientID() == this.clientID);
+      if (myPlayer == null) {
+        return;
+      }
+
+      myPlayer.actions(tile).then((actions) => {
+        if (actions.canBoat) {
+          this.eventBus.emit(
+            new SendBoatAttackIntentEvent(
+              this.g.owner(tile).id(),
+              cellUnderMouse,
+              this.uiState.attackRatio * myPlayer.troops(),
+            ),
+          );
+        }
+      });
     });
 
     this.eventBus.on(CloseViewEvent, () => this.closeMenu());

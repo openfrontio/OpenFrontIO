@@ -21,9 +21,10 @@
     "action_center": "Recentrer la caméra",
     "action_zoom": "Zoom avant/arrière",
     "action_move_camera": "Déplacer la caméra",
-    "action_ratio_change": "Diminuer/Augmenter le ratio d'attaque",
+    "action_ratio_change":"Modifier le ratio d'attaque",
+    "action_ratio_increasedecrease": "Diminuer/Augmenter le ratio d'attaque",
+    "action_send_boat": "Envoyer un bateau à la position du curseur",
     "action_reset_gfx": "Réinitialiser les graphismes",
-
     "ui_section": "Interface utilisateur du jeu",
     "ui_leaderboard": "Classement",
     "ui_leaderboard_desc": "Affiche les meilleurs joueurs du jeu avec leurs noms, le % de territoire possédé et l'or.",

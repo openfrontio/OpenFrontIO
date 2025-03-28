@@ -71,7 +71,18 @@ export class ShowBuildMenuEvent implements GameEvent {
   ) {}
 }
 
+export class SendBoatEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
 export class AttackRatioEvent implements GameEvent {
+  constructor(public readonly attackRatio: number) {}
+}
+
+export class AttackSetRatioEvent implements GameEvent {
   constructor(public readonly attackRatio: number) {}
 }
 
@@ -85,6 +96,9 @@ export class InputHandler {
 
   private lastPointerDownX: number = 0;
   private lastPointerDownY: number = 0;
+
+  private currentPointerX: number = 0;
+  private currentPointerY: number = 0;
 
   private pointers: Map<number, PointerEvent> = new Map();
 
@@ -129,6 +143,8 @@ export class InputHandler {
       if (e.movementX == 0 && e.movementY == 0) {
         return;
       }
+      this.currentPointerX = e.clientX;
+      this.currentPointerY = e.clientY;
       this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
     });
     this.pointers.clear();
@@ -189,6 +205,7 @@ export class InputHandler {
           "KeyA",
           "KeyS",
           "KeyD",
+          "KeyB",
           "ArrowUp",
           "ArrowLeft",
           "ArrowDown",
@@ -199,6 +216,7 @@ export class InputHandler {
           "KeyQ",
           "Digit1",
           "Digit2",
+          "KeyB",
           "KeyC",
           "ControlLeft",
           "ControlRight",
@@ -221,12 +239,58 @@ export class InputHandler {
 
       if (e.code === "Digit1") {
         e.preventDefault();
-        this.eventBus.emit(new AttackRatioEvent(-10));
+        this.eventBus.emit(new AttackSetRatioEvent(10));
       }
 
       if (e.code === "Digit2") {
         e.preventDefault();
-        this.eventBus.emit(new AttackRatioEvent(10));
+        this.eventBus.emit(new AttackSetRatioEvent(20));
+      }
+
+      if (e.code === "Digit3") {
+        e.preventDefault();
+        this.eventBus.emit(new AttackSetRatioEvent(30));
+      }
+
+      if (e.code === "Digit4") {
+        e.preventDefault();
+        this.eventBus.emit(new AttackSetRatioEvent(40));
+      }
+
+      if (e.code === "Digit5") {
+        e.preventDefault();
+        this.eventBus.emit(new AttackSetRatioEvent(50));
+      }
+
+      if (e.code === "Digit6") {
+        e.preventDefault();
+        this.eventBus.emit(new AttackSetRatioEvent(60));
+      }
+
+      if (e.code === "Digit7") {
+        e.preventDefault();
+        this.eventBus.emit(new AttackSetRatioEvent(70));
+      }
+
+      if (e.code === "Digit8") {
+        e.preventDefault();
+        this.eventBus.emit(new AttackSetRatioEvent(80));
+      }
+
+      if (e.code === "Digit9") {
+        e.preventDefault();
+        this.eventBus.emit(new AttackSetRatioEvent(90));
+      }
+
+      if (e.code === "Digit0") {
+        e.preventDefault();
+        this.eventBus.emit(new AttackSetRatioEvent(100));
+      }
+
+      if (e.code === "KeyB") {
+        this.eventBus.emit(
+          new SendBoatEvent(this.currentPointerX, this.currentPointerY),
+        );
       }
 
       if (e.code === "KeyC") {
@@ -251,6 +315,7 @@ export class InputHandler {
           "KeyQ",
           "Digit1",
           "Digit2",
+          "KeyB",
           "KeyC",
           "ControlLeft",
           "ControlRight",
