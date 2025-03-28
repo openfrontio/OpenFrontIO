@@ -138,6 +138,7 @@
     "title": "Private Lobby",
     "map": "Map",
     "difficulty": "Difficulty",
+    "mode": "Mode",
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
@@ -156,5 +157,9 @@
     "Balanced": "Balanced",
     "Intense": "Intense",
     "Impossible": "Impossible"
+  },
+  "game_mode": {
+    "ffa": "Free for All",
+    "teams": "Teams"
   }
 }

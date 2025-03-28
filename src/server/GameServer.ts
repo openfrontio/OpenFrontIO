@@ -5,6 +5,7 @@ import {
   ClientID,
   ClientMessage,
   ClientMessageSchema,
+  ClientSendWinnerMessage,
   GameConfig,
   GameInfo,
   Intent,
@@ -45,7 +46,7 @@ export class GameServer {
 
   private lastPingUpdate = 0;
 
-  private winner: ClientID | null = null;
+  private winner: ClientSendWinnerMessage = null;
   // This field is currently only filled at victory
   private allPlayersStats: AllPlayersStats = {};
 
@@ -85,6 +86,9 @@ export class GameServer {
     }
     if (gameConfig.instantBuild != null) {
       this.gameConfig.instantBuild = gameConfig.instantBuild;
+    }
+    if (gameConfig.gameMode != null) {
+      this.gameConfig.gameMode = gameConfig.gameMode;
     }
   }
 
@@ -171,7 +175,7 @@ export class GameServer {
             client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
           }
           if (clientMsg.type == "winner") {
-            this.winner = clientMsg.winner;
+            this.winner = clientMsg;
             this.allPlayersStats = clientMsg.allPlayersStats;
           }
         } catch (error) {
@@ -318,7 +322,8 @@ export class GameServer {
             this.turns,
             this._startTime,
             Date.now(),
-            this.winner,
+            this.winner.winner,
+            this.winner.winnerType,
             this.allPlayersStats,
           ),
         );

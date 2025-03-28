@@ -146,7 +146,7 @@ export class WarshipExecution implements Execution {
         ({ unit }) =>
           unit.owner() !== this.warship.owner() &&
           unit !== this.warship &&
-          !unit.owner().isAlliedWith(this.warship.owner()) &&
+          !unit.owner().isFriendly(this.warship.owner()) &&
           !this.alreadySentShell.has(unit) &&
           (unit.type() !== UnitType.TradeShip || hasPort) &&
           (unit.type() !== UnitType.TradeShip ||
