@@ -36,7 +36,7 @@ export class SinglePlayerModal extends LitElement {
         <div class="options-layout">
           <!-- Map Selection -->
           <div class="options-section">
-            <div class="option-title">${translateText("single_modal.map")}</div>
+            <div class="option-title">${translateText("map.map")}</div>
             <div class="option-cards">
               ${Object.entries(GameMapType)
                 .filter(([key]) => isNaN(Number(key)))
@@ -81,7 +81,7 @@ export class SinglePlayerModal extends LitElement {
           <!-- Difficulty Selection -->
           <div class="options-section">
             <div class="option-title">
-              ${translateText("single_modal.difficulty")}
+              ${translateText("difficulty.difficulty")}
             </div>
             <div class="option-cards">
               ${Object.entries(Difficulty)

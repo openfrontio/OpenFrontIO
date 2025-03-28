@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { classMap } from "lit/directives/class-map.js";
+import { translateText } from "../../Utils";
 
 @customElement("o-button")
 export class OButton extends LitElement {
@@ -18,7 +19,6 @@ export class OButton extends LitElement {
   render() {
     return html`
       <button
-        data-i18n="${this.translationKey}"
         class=${classMap({
           "c-button": true,
           "c-button--block": this.block,
@@ -28,7 +28,9 @@ export class OButton extends LitElement {
         })}
         ?disabled=${this.disable}
       >
-        ${this.title}
+        ${`${this.translationKey}` === ""
+          ? `${this.title}`
+          : `${translateText(this.translationKey)}`}
       </button>
     `;
   }
