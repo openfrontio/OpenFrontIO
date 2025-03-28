@@ -12,15 +12,30 @@ import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { Cell, UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { euclDistFN } from "../../../core/game/GameMap";
+import {
+  euclDistFN,
+  manhattanDistFN,
+  rectDistFN,
+  hexDistFN,
+} from "../../../core/game/GameMap";
 
 const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
 const reloadingColor = colord({ r: 255, g: 0, b: 0 });
+
+type DistanceFunction = typeof euclDistFN;
+
+enum UnitBorderType {
+  Round,
+  Diamond,
+  Square,
+  Hexagon,
+}
 
 interface UnitRenderConfig {
   icon: string;
   borderRadius: number;
   territoryRadius: number;
+  borderType: UnitBorderType;
 }
 
 export class StructureLayer implements Layer {
@@ -35,26 +50,31 @@ export class StructureLayer implements Layer {
       icon: anchorIcon,
       borderRadius: 8.525,
       territoryRadius: 6.525,
+      borderType: UnitBorderType.Round,
     },
     [UnitType.City]: {
       icon: cityIcon,
       borderRadius: 8.525,
       territoryRadius: 6.525,
+      borderType: UnitBorderType.Round,
     },
     [UnitType.MissileSilo]: {
       icon: missileSiloIcon,
-      borderRadius: 9.5,
-      territoryRadius: 6,
+      borderRadius: 8.525,
+      territoryRadius: 6.525,
+      borderType: UnitBorderType.Square,
     },
     [UnitType.DefensePost]: {
       icon: shieldIcon,
-      borderRadius: 9.5,
-      territoryRadius: 6,
+      borderRadius: 8.525,
+      territoryRadius: 6.525,
+      borderType: UnitBorderType.Hexagon,
     },
     [UnitType.SAMLauncher]: {
       icon: SAMMissileIcon,
-      borderRadius: 10,
-      territoryRadius: 6,
+      borderRadius: 8.525,
+      territoryRadius: 6.525,
+      borderType: UnitBorderType.Square,
     },
   };
 
@@ -68,6 +88,7 @@ export class StructureLayer implements Layer {
       icon: SAMMissileReloadingIcon,
       borderRadius: 8.525,
       territoryRadius: 6.525,
+      borderType: UnitBorderType.Square,
     });
   }
 
@@ -91,7 +112,7 @@ export class StructureLayer implements Layer {
       );
       this.unitIcons.set(unitType, iconData);
       console.log(
-        `icond data width height: ${iconData.width}, ${iconData.height}`,
+        `icon data width height: ${iconData.width}, ${iconData.height}`,
       );
     };
   }
@@ -141,6 +162,51 @@ export class StructureLayer implements Layer {
     return unitType in this.unitConfigs;
   }
 
+  private drawBorder(
+    unit: UnitView,
+    borderColor: Colord,
+    config: UnitRenderConfig,
+    distanceFN: DistanceFunction,
+  ) {
+    // Draw border and territory
+    for (const tile of this.game.bfs(
+      unit.tile(),
+      distanceFN(unit.tile(), config.borderRadius, true),
+    )) {
+      this.paintCell(
+        new Cell(this.game.x(tile), this.game.y(tile)),
+        borderColor,
+        255,
+      );
+    }
+
+    for (const tile of this.game.bfs(
+      unit.tile(),
+      distanceFN(unit.tile(), config.territoryRadius, true),
+    )) {
+      this.paintCell(
+        new Cell(this.game.x(tile), this.game.y(tile)),
+        unit.type() == UnitType.Construction
+          ? underConstructionColor
+          : this.theme.territoryColor(unit.owner()),
+        130,
+      );
+    }
+  }
+
+  private getDrawFN(type: UnitBorderType) {
+    switch (type) {
+      case UnitBorderType.Round:
+        return euclDistFN;
+      case UnitBorderType.Diamond:
+        return manhattanDistFN;
+      case UnitBorderType.Square:
+        return rectDistFN;
+      case UnitBorderType.Hexagon:
+        return hexDistFN;
+    }
+  }
+
   private handleUnitRendering(unit: UnitView) {
     const unitType = unit.constructionType() ?? unit.type();
     let iconType = unitType;
@@ -157,49 +223,25 @@ export class StructureLayer implements Layer {
 
     if (!config || !icon) return;
 
+    const drawFunction = this.getDrawFN(config.borderType);
     // Clear previous rendering
     for (const tile of this.game.bfs(
       unit.tile(),
-      euclDistFN(unit.tile(), config.borderRadius, true),
+      drawFunction(unit.tile(), config.borderRadius, true),
     )) {
       this.clearCell(new Cell(this.game.x(tile), this.game.y(tile)));
     }
 
-    if (!unit.isActive()) {
-      return;
-    }
+    if (!unit.isActive()) return;
 
-    let borderColor = this.theme.borderColor(unit.owner().info());
+    let borderColor = this.theme.borderColor(unit.owner());
     if (unitType == UnitType.SAMLauncher && unit.isSamCooldown()) {
       borderColor = reloadingColor;
     } else if (unit.type() == UnitType.Construction) {
       borderColor = underConstructionColor;
     }
 
-    // Draw border and territory
-    for (const tile of this.game.bfs(
-      unit.tile(),
-      euclDistFN(unit.tile(), config.borderRadius, true),
-    )) {
-      this.paintCell(
-        new Cell(this.game.x(tile), this.game.y(tile)),
-        borderColor,
-        255,
-      );
-    }
-
-    for (const tile of this.game.bfs(
-      unit.tile(),
-      euclDistFN(unit.tile(), config.territoryRadius, true),
-    )) {
-      this.paintCell(
-        new Cell(this.game.x(tile), this.game.y(tile)),
-        unit.type() == UnitType.Construction
-          ? underConstructionColor
-          : this.theme.territoryColor(unit.owner().info()),
-        130,
-      );
-    }
+    this.drawBorder(unit, borderColor, config, drawFunction);
 
     const startX = this.game.x(unit.tile()) - Math.floor(icon.width / 2);
     const startY = this.game.y(unit.tile()) - Math.floor(icon.height / 2);
@@ -215,7 +257,7 @@ export class StructureLayer implements Layer {
     height: number,
     unit: UnitView,
   ) {
-    let color = this.theme.borderColor(unit.owner().info());
+    let color = this.theme.borderColor(unit.owner());
     if (unit.type() == UnitType.Construction) {
       color = underConstructionColor;
     }

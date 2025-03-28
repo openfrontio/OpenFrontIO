@@ -15,10 +15,11 @@ export class UnitImpl implements Unit {
   // Currently only warship use it
   private _target: Unit = null;
   private _moveTarget: TileRef = null;
+  private _targetedBySAM = false;
 
   private _constructionType: UnitType = undefined;
 
-  private _isSamCooldown: boolean;
+  private _isSamCooldown: boolean = false;
   private _dstPort: Unit | null = null; // Only for trade ships
   private _detonationDst: TileRef | null = null; // Only for nukes
   private _warshipTarget: Unit | null = null;
@@ -130,9 +131,7 @@ export class UnitImpl implements Unit {
     this._owner._units = this._owner._units.filter((b) => b != this);
     this._active = false;
     this.mg.addUpdate(this.toUpdate());
-    if (this.type() == UnitType.DefensePost) {
-      this.mg.removeDefensePost(this);
-    }
+    this.mg.removeUnit(this);
     if (displayMessage) {
       this.mg.displayMessage(
         `Your ${this.type()} was destroyed`,
@@ -203,5 +202,13 @@ export class UnitImpl implements Unit {
 
   moveTarget(): TileRef | null {
     return this._moveTarget;
+  }
+
+  setTargetedBySAM(targeted: boolean): void {
+    this._targetedBySAM = targeted;
+  }
+
+  targetedBySAM(): boolean {
+    return this._targetedBySAM;
   }
 }

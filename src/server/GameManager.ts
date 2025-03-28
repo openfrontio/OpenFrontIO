@@ -2,7 +2,7 @@ import { ServerConfig } from "../core/configuration/Config";
 import { GameConfig, GameID } from "../core/Schemas";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
-import { Difficulty, GameMapType, GameType } from "../core/game/Game";
+import { Difficulty, GameMapType, GameMode, GameType } from "../core/game/Game";
 import { Logger } from "winston";
 
 export class GameManager {
@@ -34,9 +34,11 @@ export class GameManager {
       gameType: GameType.Private,
       difficulty: Difficulty.Medium,
       disableNPCs: false,
+      disableNukes: false,
       infiniteGold: false,
       infiniteTroops: false,
       instantBuild: false,
+      gameMode: GameMode.FFA,
       bots: 400,
       ...gameConfig,
     });

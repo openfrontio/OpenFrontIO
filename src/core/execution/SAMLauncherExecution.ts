@@ -7,6 +7,7 @@ import {
   Unit,
   PlayerID,
   UnitType,
+  MessageType,
 } from "../game/Game";
 import { manhattanDistFN, TileRef } from "../game/GameMap";
 import { SAMMissileExecution } from "./SAMMissileExecution";
@@ -22,7 +23,6 @@ export class SAMLauncherExecution implements Execution {
 
   private searchRangeRadius = 75;
 
-  private missileAttackRate = 75; // 7.5 seconds
   private lastMissileAttack = 0;
 
   private pseudoRandom: PseudoRandom;
@@ -57,73 +57,83 @@ export class SAMLauncherExecution implements Execution {
       return;
     }
 
+    if (this.player != this.post.owner()) {
+      this.player = this.post.owner();
+    }
+
     if (!this.pseudoRandom) {
       this.pseudoRandom = new PseudoRandom(this.post.id());
     }
 
     const nukes = this.mg
-      .units(UnitType.AtomBomb, UnitType.HydrogenBomb)
-      .filter((u) => {
-        // (x - center_x)² + (y - center_y)² < radius²
-        const x = this.mg.x(u.tile());
-        const y = this.mg.y(u.tile());
-        const centerX = this.mg.x(this.post.tile());
-        const centerY = this.mg.y(this.post.tile());
-        const isInRange =
-          (x - centerX) ** 2 + (y - centerY) ** 2 < this.searchRangeRadius ** 2;
-        return isInRange;
-      })
-      .filter((u) => u.owner() !== this.player)
-      .filter((u) => !u.owner().isAlliedWith(this.player));
+      .nearbyUnits(this.post.tile(), this.searchRangeRadius, [
+        UnitType.AtomBomb,
+        UnitType.HydrogenBomb,
+      ])
+      .filter(
+        ({ unit }) =>
+          unit.owner() !== this.player && !this.player.isFriendly(unit.owner()),
+      );
 
     this.target =
       nukes.sort((a, b) => {
-        // Prioritize HydrogenBombs first
+        const { unit: unitA, distSquared: distA } = a;
+        const { unit: unitB, distSquared: distB } = b;
+
+        // Prioritize Hydrogen Bombs
         if (
-          a.type() === UnitType.HydrogenBomb &&
-          b.type() !== UnitType.HydrogenBomb
-        ) {
+          unitA.type() === UnitType.HydrogenBomb &&
+          unitB.type() !== UnitType.HydrogenBomb
+        )
           return -1;
-        }
         if (
-          a.type() !== UnitType.HydrogenBomb &&
-          b.type() === UnitType.HydrogenBomb
-        ) {
+          unitA.type() !== UnitType.HydrogenBomb &&
+          unitB.type() === UnitType.HydrogenBomb
+        )
           return 1;
-        }
-        // If both are the same type, sort by distance
-        return (
-          this.mg.manhattanDist(this.post.tile(), a.tile()) -
-          this.mg.manhattanDist(this.post.tile(), b.tile())
-        );
-      })[0] ?? null;
+
+        // If both are the same type, sort by distance (lower `distSquared` means closer)
+        return distA - distB;
+      })[0]?.unit ?? null;
 
     const cooldown =
       this.lastMissileAttack != 0 &&
-      this.mg.ticks() - this.lastMissileAttack <= this.missileAttackRate;
-    if (this.post.isSamCooldown() != cooldown) {
-      this.post.setSamCooldown(cooldown);
+      this.mg.ticks() - this.lastMissileAttack <=
+        this.mg.config().samCooldown();
+
+    if (this.post.isSamCooldown() && !cooldown) {
+      this.post.setSamCooldown(false);
     }
 
-    if (this.target != null) {
-      if (!this.post.isSamCooldown()) {
-        this.lastMissileAttack = this.mg.ticks();
+    if (
+      this.target &&
+      !this.post.isSamCooldown() &&
+      !this.target.targetedBySAM()
+    ) {
+      this.lastMissileAttack = this.mg.ticks();
+      this.post.setSamCooldown(true);
+      const random = this.pseudoRandom.next();
+      const hit = random < this.mg.config().samHittingChance();
+
+      this.lastMissileAttack = this.mg.ticks();
+      if (!hit) {
+        this.mg.displayMessage(
+          `Missile failed to intercept ${this.target.type()}`,
+          MessageType.ERROR,
+          this.post.owner().id(),
+        );
+      } else {
+        this.target.setTargetedBySAM(true);
         this.mg.addExecution(
           new SAMMissileExecution(
             this.post.tile(),
             this.post.owner(),
             this.post,
             this.target,
-            this.mg,
-            this.pseudoRandom.next(),
           ),
         );
       }
     }
-  }
-
-  owner(): Player {
-    return null;
   }
 
   isActive(): boolean {

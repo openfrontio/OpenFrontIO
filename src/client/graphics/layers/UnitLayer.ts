@@ -194,7 +194,7 @@ export class UnitLayer implements Layer {
     if (this.myPlayer == unit.owner()) {
       return Relationship.Self;
     }
-    if (this.myPlayer.isAlliedWith(unit.owner())) {
+    if (this.myPlayer.isFriendly(unit.owner())) {
       return Relationship.Ally;
     }
     return Relationship.Enemy;
@@ -248,7 +248,7 @@ export class UnitLayer implements Layer {
       return;
     }
 
-    let outerColor = this.theme.territoryColor(unit.owner().info());
+    let outerColor = this.theme.territoryColor(unit.owner());
     if (unit.warshipTargetId()) {
       const targetOwner = this.game
         .units()
@@ -276,7 +276,7 @@ export class UnitLayer implements Layer {
         this.game.x(t),
         this.game.y(t),
         rel,
-        this.theme.borderColor(unit.owner().info()),
+        this.theme.borderColor(unit.owner()),
         255,
       );
     }
@@ -290,7 +290,7 @@ export class UnitLayer implements Layer {
         this.game.x(t),
         this.game.y(t),
         rel,
-        this.theme.territoryColor(unit.owner().info()),
+        this.theme.territoryColor(unit.owner()),
         255,
       );
     }
@@ -316,14 +316,14 @@ export class UnitLayer implements Layer {
       this.game.x(unit.tile()),
       this.game.y(unit.tile()),
       rel,
-      this.theme.borderColor(unit.owner().info()),
+      this.theme.borderColor(unit.owner()),
       255,
     );
     this.paintCell(
       this.game.x(unit.lastTile()),
       this.game.y(unit.lastTile()),
       rel,
-      this.theme.borderColor(unit.owner().info()),
+      this.theme.borderColor(unit.owner()),
       255,
     );
   }
@@ -358,7 +358,7 @@ export class UnitLayer implements Layer {
         this.game.x(unit.tile()),
         this.game.y(unit.tile()),
         rel,
-        this.theme.borderColor(unit.owner().info()),
+        this.theme.borderColor(unit.owner()),
         255,
       );
     }
@@ -408,7 +408,7 @@ export class UnitLayer implements Layer {
           this.game.x(t),
           this.game.y(t),
           rel,
-          this.theme.borderColor(unit.owner().info()),
+          this.theme.borderColor(unit.owner()),
           255,
         );
       }
@@ -426,7 +426,7 @@ export class UnitLayer implements Layer {
         this.game.x(unit.tile()),
         this.game.y(unit.tile()),
         rel,
-        this.theme.borderColor(unit.owner().info()),
+        this.theme.borderColor(unit.owner()),
         255,
       );
     }
@@ -453,7 +453,7 @@ export class UnitLayer implements Layer {
           this.game.x(t),
           this.game.y(t),
           rel,
-          this.theme.territoryColor(unit.owner().info()),
+          this.theme.territoryColor(unit.owner()),
           255,
         );
       }
@@ -467,7 +467,7 @@ export class UnitLayer implements Layer {
           this.game.x(t),
           this.game.y(t),
           rel,
-          this.theme.borderColor(unit.owner().info()),
+          this.theme.borderColor(unit.owner()),
           255,
         );
       }
@@ -498,7 +498,7 @@ export class UnitLayer implements Layer {
           this.game.x(t),
           this.game.y(t),
           rel,
-          this.theme.territoryColor(unit.owner().info()),
+          this.theme.territoryColor(unit.owner()),
           150,
         );
       }
@@ -512,7 +512,7 @@ export class UnitLayer implements Layer {
           this.game.x(t),
           this.game.y(t),
           rel,
-          this.theme.borderColor(unit.owner().info()),
+          this.theme.borderColor(unit.owner()),
           255,
         );
       }
@@ -526,7 +526,7 @@ export class UnitLayer implements Layer {
           this.game.x(t),
           this.game.y(t),
           rel,
-          this.theme.territoryColor(unit.owner().info()),
+          this.theme.territoryColor(unit.owner()),
           255,
         );
       }

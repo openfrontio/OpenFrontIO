@@ -192,7 +192,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   private shouldAttack(other: Player): boolean {
-    if (this.player.isAlliedWith(other)) {
+    if (this.player.isFriendly(other)) {
       if (this.shouldDiscourageAttack(other)) {
         return this.random.chance(200);
       }
@@ -271,12 +271,11 @@ export class FakeHumanExecution implements Execution {
       }
     }
 
-    if (this.player.isAlliedWith(this.enemy)) {
-      this.enemy = null;
-      return;
-    }
-
     if (this.enemy) {
+      if (this.player.isFriendly(this.enemy)) {
+        this.enemy = null;
+        return;
+      }
       this.maybeSendNuke(this.enemy);
       if (this.player.sharesBorderWith(this.enemy)) {
         this.sendAttack(this.enemy);
@@ -358,12 +357,14 @@ export class FakeHumanExecution implements Execution {
     if (this.maybeSpawnWarship()) {
       return;
     }
-    this.maybeSpawnStructure(
-      UnitType.MissileSilo,
-      1,
-      (t) =>
-        new ConstructionExecution(this.player.id(), t, UnitType.MissileSilo),
-    );
+    if (!this.mg.config().disableNukes()) {
+      this.maybeSpawnStructure(
+        UnitType.MissileSilo,
+        1,
+        (t) =>
+          new ConstructionExecution(this.player.id(), t, UnitType.MissileSilo),
+      );
+    }
   }
 
   private maybeSpawnStructure(
@@ -535,7 +536,7 @@ export class FakeHumanExecution implements Execution {
       }
       if (
         this.mg.owner(dst).isPlayer() &&
-        this.player.isAlliedWith(this.mg.owner(dst) as Player)
+        this.player.isFriendly(this.mg.owner(dst) as Player)
       ) {
         continue;
       }

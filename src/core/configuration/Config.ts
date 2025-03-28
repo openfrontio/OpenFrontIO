@@ -46,6 +46,8 @@ export interface ServerConfig {
 }
 
 export interface Config {
+  samHittingChance(): number;
+  samCooldown(): Tick;
   spawnImmunityDuration(): Tick;
   serverConfig(): ServerConfig;
   gameConfig(): GameConfig;
@@ -53,6 +55,7 @@ export interface Config {
   percentageTilesOwnedToWin(): number;
   numBots(): number;
   spawnNPCs(): boolean;
+  disableNukes(): boolean;
   bots(): number;
   infiniteGold(): boolean;
   infiniteTroops(): boolean;
@@ -82,6 +85,10 @@ export interface Config {
     tilesPerTickUsed: number;
   };
   attackAmount(attacker: Player, defender: Player | TerraNullius): number;
+  radiusPortSpawn(): number;
+  // When computing likelihood of trading for any given port, the X closest port
+  // are twice more likely to be selected. X is determined below.
+  proximityBonusPortsNb(totalPorts: number): number;
   maxPopulation(player: Player | PlayerView): number;
   cityPopulationIncrease(): number;
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number;
@@ -106,15 +113,15 @@ export interface Config {
 }
 
 export interface Theme {
-  territoryColor(playerInfo: PlayerInfo): Colord;
-  specialBuildingColor(playerInfo: PlayerInfo): Colord;
-  borderColor(playerInfo: PlayerInfo): Colord;
-  defendedBorderColor(playerInfo: PlayerInfo): Colord;
+  territoryColor(playerInfo: PlayerView): Colord;
+  specialBuildingColor(playerInfo: PlayerView): Colord;
+  borderColor(playerInfo: PlayerView): Colord;
+  defendedBorderColor(playerInfo: PlayerView): Colord;
   terrainColor(gm: GameMap, tile: TileRef): Colord;
   backgroundColor(): Colord;
   falloutColor(): Colord;
   font(): string;
-  textColor(playerInfo: PlayerInfo): string;
+  textColor(playerInfo: PlayerView): string;
   // unit color for alternate view
   selfColor(): Colord;
   allyColor(): Colord;

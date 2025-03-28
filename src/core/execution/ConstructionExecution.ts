@@ -55,7 +55,7 @@ export class ConstructionExecution implements Execution {
       }
       const spawnTile = this.player.canBuild(this.constructionType, this.tile);
       if (spawnTile == false) {
-        consolex.warn(`cannot build ${UnitType.Construction}`);
+        consolex.warn(`cannot build ${this.constructionType}`);
         this.active = false;
         return;
       }
@@ -74,6 +74,10 @@ export class ConstructionExecution implements Execution {
     if (!this.construction.isActive()) {
       this.active = false;
       return;
+    }
+
+    if (this.player != this.construction.owner()) {
+      this.player = this.construction.owner();
     }
 
     if (this.ticksUntilComplete == 0) {
@@ -121,10 +125,6 @@ export class ConstructionExecution implements Execution {
       default:
         throw Error(`unit type ${this.constructionType} not supported`);
     }
-  }
-
-  owner(): Player {
-    return null;
   }
 
   isActive(): boolean {

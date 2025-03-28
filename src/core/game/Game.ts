@@ -38,6 +38,11 @@ export enum Difficulty {
   Impossible = "Impossible",
 }
 
+export enum TeamName {
+  Red = "Red",
+  Blue = "Blue",
+}
+
 export enum GameMapType {
   World = "World",
   Europe = "Europe",
@@ -47,16 +52,28 @@ export enum GameMapType {
   Oceania = "Oceania",
   BlackSea = "Black Sea",
   Africa = "Africa",
+  Pangaea = "Pangaea",
   Asia = "Asia",
   Mars = "Mars",
   Britannia = "Britannia",
   GatewayToTheAtlantic = "Gateway to the Atlantic",
+  Australia = "Australia",
+  Iceland = "Iceland",
 }
 
 export enum GameType {
   Singleplayer = "Singleplayer",
   Public = "Public",
   Private = "Private",
+}
+
+export enum GameMode {
+  FFA = "Free For All",
+  Team = "Team",
+}
+
+export interface Team {
+  name: TeamName;
 }
 
 export interface UnitInfo {
@@ -92,6 +109,7 @@ export const nukeTypes = [
   UnitType.MIRVWarhead,
   UnitType.MIRV,
 ] as UnitType[];
+
 export type NukeType = (typeof nukeTypes)[number];
 
 export enum Relation {
@@ -153,7 +171,6 @@ export interface Execution {
   activeDuringSpawnPhase(): boolean;
   init(mg: Game, ticks: number): void;
   tick(ticks: number): void;
-  owner(): Player;
 }
 
 export interface Attack {
@@ -244,6 +261,9 @@ export interface Unit {
   setMoveTarget(cell: TileRef): void;
   moveTarget(): TileRef | null;
 
+  setTargetedBySAM(targeted: boolean): void;
+  targetedBySAM(): boolean;
+
   // Mutations
   setTroops(troops: number): void;
   delete(displayerMessage?: boolean): void;
@@ -322,8 +342,10 @@ export interface Player {
   allRelationsSorted(): { player: Player; relation: Relation }[];
   updateRelation(other: Player, delta: number): void;
   decayRelations(): void;
-
-  // Alliances
+  isOnSameTeam(other: Player): boolean;
+  // Either allied or on same team.
+  isFriendly(other: Player): boolean;
+  team(): Team | null;
   incomingAllianceRequests(): AllianceRequest[];
   outgoingAllianceRequests(): AllianceRequest[];
   alliances(): MutableAlliance[];
@@ -369,10 +391,10 @@ export interface Player {
   executeRetreat(attackID: string): void;
 
   // Misc
-  executions(): Execution[];
   toUpdate(): PlayerUpdate;
   playerProfile(): PlayerProfile;
   canBoat(tile: TileRef): boolean;
+  tradingPorts(port: Unit): Unit[];
 }
 
 export interface Game extends GameMap {
@@ -395,17 +417,23 @@ export interface Game extends GameMap {
   terraNullius(): TerraNullius;
   owner(ref: TileRef): Player | TerraNullius;
 
+  teams(): Team[];
+
   // Game State
   ticks(): Tick;
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
-  setWinner(winner: Player, allPlayersStats: AllPlayersStats): void;
+  setWinner(winner: Player | TeamName, allPlayersStats: AllPlayersStats): void;
   config(): Config;
 
   // Units
   units(...types: UnitType[]): Unit[];
   unitInfo(type: UnitType): UnitInfo;
-  nearbyDefensePosts(tile: TileRef): Unit[];
+  nearbyUnits(
+    tile: TileRef,
+    searchRange: number,
+    types: UnitType | UnitType[],
+  ): Array<{ unit: Unit; distSquared: number }>;
 
   addExecution(...exec: Execution[]): void;
   displayMessage(

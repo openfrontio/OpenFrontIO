@@ -31,6 +31,19 @@ if [ -f /root/.env ]; then
   export $(grep -v '^#' /root/.env | xargs)
 fi
 
+# Install Loki Docker plugin if not already installed
+if ! docker plugin ls | grep -q "loki"; then
+  echo "Installing Loki Docker plugin..."
+  docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
+  if [ $? -ne 0 ]; then
+    echo "Failed to install Loki Docker plugin. Continuing anyway..."
+  else
+    echo "Loki Docker plugin installed successfully."
+  fi
+else
+  echo "Loki Docker plugin already installed."
+fi
+
 echo "Pulling latest image from Docker Hub..."
 docker pull $FULL_IMAGE_NAME
 
@@ -80,11 +93,10 @@ echo "Starting new container for ${REGION} environment..."
 docker run -d -p 80:80 -p 127.0.0.1:9090:9090 \
   --restart=always \
   $VOLUME_MOUNTS \
-  --log-driver json-file \
-  --log-opt tag="{{.Name}}" \
-  --log-opt labels="log_level" \
-  --log-opt max-size=10m \
-  --log-opt max-file=3 \
+  --log-driver=loki \
+  --log-opt loki-url="http://localhost:3100/loki/api/v1/push" \
+  --log-opt loki-batch-size="400" \
+  --log-opt loki-external-labels="job=docker,environment=${ENV},host=${REGION},region=${REGION}" \
   --env GAME_ENV=${ENV} \
   --env REGION=${REGION} \
   --env-file /root/.env \
@@ -109,4 +121,5 @@ echo "======================================================"
 echo "✅ SERVER UPDATE COMPLETED SUCCESSFULLY"
 echo "Container name: ${CONTAINER_NAME}"
 echo "Image: ${FULL_IMAGE_NAME}"
+echo "Logs: Configured to send to Loki on port 3100"
 echo "======================================================"
