@@ -381,8 +381,12 @@ export class DefaultConfig implements Config {
         throw new Error(`terrain type ${type} not supported`);
     }
     if (defender.isPlayer()) {
-      for (const dp of gm.nearbyDefensePosts(tileToConquer)) {
-        if (dp.owner() == defender) {
+      for (const dp of gm.nearbyUnits(
+        tileToConquer,
+        gm.config().defensePostRange(),
+        UnitType.DefensePost,
+      )) {
+        if (dp.unit.owner() == defender) {
           mag *= this.defensePostDefenseBonus();
           speed *= this.defensePostDefenseBonus();
           break;
@@ -472,6 +476,14 @@ export class DefaultConfig implements Config {
 
   warshipShellLifetime(): number {
     return 20; // in ticks (one tick is 100ms)
+  }
+  
+  radiusPortSpawn() {
+    return 20;
+  }
+
+  proximityBonusPortsNb(totalPorts: number) {
+    return within(totalPorts / 3, 4, totalPorts);
   }
 
   attackAmount(attacker: Player, defender: Player | TerraNullius) {

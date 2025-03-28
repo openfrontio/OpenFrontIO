@@ -73,7 +73,7 @@ export class HelpModal extends LitElement {
         <div class="flex flex-col md:flex-row gap-4">
           <div class="flex flex-col items-center">
             <div data-i18n="help_modal.ui_leaderboard" class="text-gray-300">Leaderboard</div>
-            <img src="/images/helpModal/leaderboard.png" alt="Leaderboard" title="Leaderboard" />
+            <img src="/images/helpModal/leaderboard.webp" alt="Leaderboard" title="Leaderboard" />
           </div>
           <div>
             <p data-i18n="help_modal.ui_leaderboard_desc">Shows the top players of the game and their names, % owned land and gold.</p>
@@ -85,7 +85,7 @@ export class HelpModal extends LitElement {
         <div class="flex flex-col md:flex-row gap-4">
           <div class="flex flex-col items-center w-full md:w-[80%]">
             <div data-i18n="help_modal.ui_control" class="text-gray-300">Control panel</div>
-            <img src="/images/helpModal/controlPanel.png" alt="Control panel" title="Control panel" />
+            <img src="/images/helpModal/controlPanel.webp" alt="Control panel" title="Control panel" />
           </div>
           <div>
             <p data-i18n="help_modal.ui_control_desc" class="mb-4">The control panel contains the following elements:</p>
@@ -103,7 +103,7 @@ export class HelpModal extends LitElement {
         <div class="flex flex-col md:flex-row gap-4">
           <div class="flex flex-col items-center">
             <div data-i18n="help_modal.ui_options" class="text-gray-300">Options</div>
-            <img src="/images/helpModal/options.png" alt="Options" title="Options" />
+            <img src="/images/helpModal/options.webp" alt="Options" title="Options" />
           </div>
           <div>
             <p data-i18n="help_modal.ui_options_desc" class="mb-4">The following elements can be found inside:</p>
@@ -121,7 +121,7 @@ export class HelpModal extends LitElement {
         <div data-i18n="radial_title" class="text-2xl font-bold text-center">Radial menu</div>
 
         <div class="flex flex-col md:flex-row gap-4">
-          <img src="/images/helpModal/radialMenu.png" alt="Radial menu" title="Radial menu", class="radial-menu-image" />
+          <img src="/images/helpModal/radialMenu.webp" alt="Radial menu" title="Radial menu", class="radial-menu-image" />
           <div>
             <p data-i18n="help_modal.radial_desc" class="mb-4">Right clicking (or touch on mobile) opens the radial menu. From there you can:</p>
             <ul>
@@ -141,7 +141,7 @@ export class HelpModal extends LitElement {
           <div class="flex flex-col md:flex-row gap-4 mt-2">
             <div class="flex flex-col items-center w-full md:w-[80%]">
               <div data-i18n="help_modal.info_enemy_panel" class="text-gray-300">Enemy info panel</div>
-              <img src="/images/helpModal/infoMenu.png" alt="Enemy info panel" title="Enemy info panel" />
+              <img src="/images/helpModal/infoMenu.webp" alt="Enemy info panel" title="Enemy info panel" />
             </div>
             <div class="pt-4">
               <p data-i18n="help_modal.info_enemy_desc" class="mb-4">
@@ -160,7 +160,7 @@ export class HelpModal extends LitElement {
           <div class="flex flex-col md:flex-row gap-4">
             <div class="flex flex-col items-center w-full md:w-[62%]">
               <div data-i18n="help_modal.info_ally_panel" class="text-gray-300">Ally info panel</div>
-              <img src="/images/helpModal/infoMenuAlly.png" alt="Ally info panel" title="Ally info panel" />
+              <img src="/images/helpModal/infoMenuAlly.webp" alt="Ally info panel" title="Ally info panel" />
             </div>
             <div class="pt-4">
               <p data-i18n="help_modal.info_ally_desc" class="mb-4">
@@ -262,17 +262,17 @@ export class HelpModal extends LitElement {
           <div class="flex flex-col md:flex-row gap-4 mt-2">
             <div class="flex flex-col items-center">
               <div data-i18n="help_modal.icon_crown" class="text-gray-300">Crown - This is the number 1 player in the leaderboard</div>
-              <img src="/images/helpModal/number1.png" alt="Number 1 player" title="Number 1 player" />
+              <img src="/images/helpModal/number1.webp" alt="Number 1 player" title="Number 1 player" />
             </div>
 
             <div class="flex flex-col items-center">
               <div data-i18n="help_modal.icon_traitor" class="text-gray-300">Crossed swords - Traitor. This player attacked an ally.</div>
-              <img src="/images/helpModal/traitor.png" alt="Traitor" title="Traitor" />
+              <img src="/images/helpModal/traitor.webp" alt="Traitor" title="Traitor" />
             </div>
 
             <div class="flex flex-col items-center">
               <div data-i18n="help_modal.icon_ally" class="text-gray-300">Handshake - Ally. This player is your ally.</div>
-              <img src="/images/helpModal/ally.png" alt="Ally" title="Ally" />
+              <img src="/images/helpModal/ally.webp" alt="Ally" title="Ally" />
             </div>
           </div>
         </div>

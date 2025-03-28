@@ -1,0 +1,19 @@
+:root {
+  --theme: "light";
+  --breakPoint-tablet: 800px;
+  --breakPoint-Desktop: 1024px;
+  --blur-md: 4px;
+  --boxBackgroundColor: #111827cc;
+  --fontColor: #202020;
+  --fontColorLight: #fff;
+  --primaryColor: #2563eb;
+  --primaryColorHover: #1d4ed8;
+  --primaryColorDisabled: linear-gradient(
+    to right,
+    rgb(74, 74, 74),
+    rgb(61, 61, 61)
+  );
+  --secondaryColor: #dbeafe;
+  --secondaryColorHover: #bfdbfe;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

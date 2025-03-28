@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { Difficulty, GameMapType, GameType } from "../core/game/Game";
+import { Difficulty, GameMapType, GameMode, GameType } from "../core/game/Game";
 import { generateID as generateID } from "../core/Util";
 import { consolex } from "../core/Consolex";
 import "./components/Difficulties";
@@ -8,9 +8,10 @@ import "./components/baseComponents/Modal";
 import "./components/baseComponents/Button";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
-import randomMap from "../../resources/images/RandomMap.png";
+import randomMap from "../../resources/images/RandomMap.webp";
 import { GameInfo } from "../core/Schemas";
 import { JoinLobbyEvent } from "./Main";
+import { translateText } from "../client/Utils";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
@@ -27,14 +28,15 @@ export class SinglePlayerModal extends LitElement {
   @state() private infiniteTroops: boolean = false;
   @state() private instantBuild: boolean = false;
   @state() private useRandomMap: boolean = false;
+  @state() private gameMode: GameMode = GameMode.FFA;
 
   render() {
     return html`
-      <o-modal title="Single Player">
+      <o-modal title=${translateText("single_modal.title")}>
         <div class="options-layout">
           <!-- Map Selection -->
           <div class="options-section">
-            <div class="option-title">Map</div>
+            <div class="option-title">${translateText("single_modal.map")}</div>
             <div class="option-cards">
               ${Object.entries(GameMapType)
                 .filter(([key]) => isNaN(Number(key)))
@@ -49,6 +51,9 @@ export class SinglePlayerModal extends LitElement {
                         .mapKey=${key}
                         .selected=${!this.useRandomMap &&
                         this.selectedMap === value}
+                        .translation=${translateText(
+                          `map.${key.toLowerCase()}`,
+                        )}
                       ></map-display>
                     </div>
                   `,
@@ -66,14 +71,18 @@ export class SinglePlayerModal extends LitElement {
                     style="width:100%; aspect-ratio: 4/2; object-fit:cover; border-radius:8px;"
                   />
                 </div>
-                <div class="option-card-title">Random</div>
+                <div class="option-card-title">
+                  ${translateText("map.random")}
+                </div>
               </div>
             </div>
           </div>
 
           <!-- Difficulty Selection -->
           <div class="options-section">
-            <div class="option-title">Difficulty</div>
+            <div class="option-title">
+              ${translateText("single_modal.difficulty")}
+            </div>
             <div class="option-cards">
               ${Object.entries(Difficulty)
                 .filter(([key]) => isNaN(Number(key)))
@@ -89,7 +98,9 @@ export class SinglePlayerModal extends LitElement {
                         .difficultyKey=${key}
                       ></difficulty-display>
                       <p class="option-card-title">
-                        ${DifficultyDescription[key]}
+                        ${translateText(
+                          `difficulty.${DifficultyDescription[key]}`,
+                        )}
                       </p>
                     </div>
                   `,
@@ -97,9 +108,38 @@ export class SinglePlayerModal extends LitElement {
             </div>
           </div>
 
+          <!-- Game Mode Selection -->
+          <div class="options-section">
+            <div class="option-title">${translateText("host_modal.mode")}</div>
+            <div class="option-cards">
+              <div
+                class="option-card ${this.gameMode === GameMode.FFA
+                  ? "selected"
+                  : ""}"
+                @click=${() => this.handleGameModeSelection(GameMode.FFA)}
+              >
+                <div class="option-card-title">
+                  ${translateText("game_mode.ffa")}
+                </div>
+              </div>
+              <div
+                class="option-card ${this.gameMode === GameMode.Team
+                  ? "selected"
+                  : ""}"
+                @click=${() => this.handleGameModeSelection(GameMode.Team)}
+              >
+                <div class="option-card-title">
+                  ${translateText("game_mode.teams")}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Game Options -->
           <div class="options-section">
-            <div class="option-title">Options</div>
+            <div class="option-title">
+              ${translateText("single_modal.options_title")}
+            </div>
             <div class="option-cards">
               <label for="bots-count" class="option-card">
                 <input
@@ -110,10 +150,13 @@ export class SinglePlayerModal extends LitElement {
                   step="1"
                   @input=${this.handleBotsChange}
                   @change=${this.handleBotsChange}
-                  .value="${this.bots}"
+                  .value="${String(this.bots)}"
                 />
                 <div class="option-card-title">
-                  Bots: ${this.bots == 0 ? "Disabled" : this.bots}
+                  <span>${translateText("single_modal.bots")}</span>${this
+                    .bots == 0
+                    ? translateText("single_modal.bots_disabled")
+                    : this.bots}
                 </div>
               </label>
 
@@ -128,7 +171,9 @@ export class SinglePlayerModal extends LitElement {
                   @change=${this.handleDisableNPCsChange}
                   .checked=${this.disableNPCs}
                 />
-                <div class="option-card-title">Disable Nations</div>
+                <div class="option-card-title">
+                  ${translateText("single_modal.disable_nations")}
+                </div>
               </label>
               <label
                 for="instant-build"
@@ -141,7 +186,9 @@ export class SinglePlayerModal extends LitElement {
                   @change=${this.handleInstantBuildChange}
                   .checked=${this.instantBuild}
                 />
-                <div class="option-card-title">Instant build</div>
+                <div class="option-card-title">
+                  ${translateText("single_modal.instant_build")}
+                </div>
               </label>
 
               <label
@@ -155,7 +202,9 @@ export class SinglePlayerModal extends LitElement {
                   @change=${this.handleInfiniteGoldChange}
                   .checked=${this.infiniteGold}
                 />
-                <div class="option-card-title">Infinite gold</div>
+                <div class="option-card-title">
+                  ${translateText("single_modal.infinite_gold")}
+                </div>
               </label>
 
               <label
@@ -169,7 +218,9 @@ export class SinglePlayerModal extends LitElement {
                   @change=${this.handleInfiniteTroopsChange}
                   .checked=${this.infiniteTroops}
                 />
-                <div class="option-card-title">Infinite troops</div>
+                <div class="option-card-title">
+                  ${translateText("single_modal.infinite_troops")}
+                </div>
               </label>
 
               <label
@@ -183,14 +234,16 @@ export class SinglePlayerModal extends LitElement {
                   @change=${this.handleDisableNukesChange}
                   .checked=${this.disableNukes}
                 />
-                <div class="option-card-title">Disable Nukes</div>
+                <div class="option-card-title">
+                  ${translateText("single_modal.disable_nukes")}
+                </div>
               </label>
             </div>
           </div>
         </div>
 
         <o-button
-          title="Start Game"
+          title=${translateText("single_modal.start")}
           @click=${this.startGame}
           blockDesktop
         ></o-button>
@@ -252,6 +305,10 @@ export class SinglePlayerModal extends LitElement {
     this.disableNukes = Boolean((e.target as HTMLInputElement).checked);
   }
 
+  private handleGameModeSelection(value: GameMode) {
+    this.gameMode = value;
+  }
+
   private getRandomMap(): GameMapType {
     const maps = Object.values(GameMapType);
     const randIdx = Math.floor(Math.random() * maps.length);
@@ -275,6 +332,7 @@ export class SinglePlayerModal extends LitElement {
           gameConfig: {
             gameMap: this.selectedMap,
             gameType: GameType.Singleplayer,
+            gameMode: this.gameMode,
             difficulty: this.selectedDifficulty,
             disableNPCs: this.disableNPCs,
             disableNukes: this.disableNukes,

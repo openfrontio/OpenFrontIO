@@ -195,7 +195,7 @@ export class NameLayer implements Layer {
       nameDiv.appendChild(flagImg);
     }
     nameDiv.classList.add("player-name");
-    nameDiv.style.color = this.theme.textColor(player.info());
+    nameDiv.style.color = this.theme.textColor(player);
     nameDiv.style.fontFamily = this.theme.font();
     nameDiv.style.whiteSpace = "nowrap";
     nameDiv.style.textOverflow = "ellipsis";
@@ -213,7 +213,7 @@ export class NameLayer implements Layer {
     troopsDiv.classList.add("player-troops");
     troopsDiv.setAttribute("translate", "no");
     troopsDiv.textContent = renderTroops(player.troops());
-    troopsDiv.style.color = this.theme.textColor(player.info());
+    troopsDiv.style.color = this.theme.textColor(player);
     troopsDiv.style.fontFamily = this.theme.font();
     troopsDiv.style.zIndex = "3";
     troopsDiv.style.marginTop = "-5%";
@@ -242,7 +242,7 @@ export class NameLayer implements Layer {
     // Calculate base size and scale
     const baseSize = Math.max(1, Math.floor(render.player.nameLocation().size));
     render.fontSize = Math.max(4, Math.floor(baseSize * 0.4));
-    render.fontColor = this.theme.textColor(render.player.info());
+    render.fontColor = this.theme.textColor(render.player);
 
     // Screen space calculations
     const size = this.transformHandler.scale * baseSize;

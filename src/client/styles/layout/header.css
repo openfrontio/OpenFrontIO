@@ -1,0 +1,39 @@
+.l-header {
+  background: var(--boxBackgroundColor);
+  backdrop-filter: blur(var(--blur-md));
+  display: flex;
+  justify-content: center;
+  padding: 24px 24px 12px;
+
+  @media (min-width: 800px) {
+    padding: 24px 24px;
+  }
+}
+
+.l-header__content {
+  display: flex;
+  flex: 1;
+  max-width: 600px;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.l-header__logo {
+  max-width: 450px;
+  fill: url(#logo-gradient);
+  filter: drop-shadow(1px 1px 0px rgb(255, 255, 255))
+    drop-shadow(-1px -1px 0px rgb(255, 255, 255))
+    drop-shadow(1px -1px 0px rgb(255, 255, 255))
+    drop-shadow(-1px 1px 0px rgb(255, 255, 255))
+    drop-shadow(3px 3px 0px rgb(255, 255, 255));
+}
+
+.l-header__highlightText {
+  color: #2563eb;
+  font-weight: 700;
+  filter: drop-shadow(1px 1px 0px rgb(255, 255, 255))
+    drop-shadow(-1px -1px 0px rgb(255, 255, 255))
+    drop-shadow(1px -1px 0px rgb(255, 255, 255))
+    drop-shadow(-1px 1px 0px rgb(255, 255, 255));
+}

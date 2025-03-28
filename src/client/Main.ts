@@ -26,6 +26,8 @@ import { GameType } from "../core/game/Game";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import GoogleAdElement from "./GoogleAdElement";
 import { GameConfig, GameInfo, GameRecord } from "../core/Schemas";
+import "./LangSelector";
+import { LangSelector } from "./LangSelector";
 
 export interface JoinLobbyEvent {
   // Multiplayer games only have gameID, gameConfig is not known until game starts.
@@ -51,6 +53,13 @@ class Client {
   constructor() {}
 
   initialize(): void {
+    const langSelector = document.querySelector(
+      "lang-selector",
+    ) as LangSelector;
+    if (!langSelector) {
+      consolex.warn("Lang selector element not found");
+    }
+
     this.flagInput = document.querySelector("flag-input") as FlagInput;
     if (!this.flagInput) {
       consolex.warn("Flag input element not found");

@@ -188,7 +188,7 @@ export class StructureLayer implements Layer {
         new Cell(this.game.x(tile), this.game.y(tile)),
         unit.type() == UnitType.Construction
           ? underConstructionColor
-          : this.theme.territoryColor(unit.owner().info()),
+          : this.theme.territoryColor(unit.owner()),
         130,
       );
     }
@@ -234,7 +234,7 @@ export class StructureLayer implements Layer {
 
     if (!unit.isActive()) return;
 
-    let borderColor = this.theme.borderColor(unit.owner().info());
+    let borderColor = this.theme.borderColor(unit.owner());
     if (unitType == UnitType.SAMLauncher && unit.isSamCooldown()) {
       borderColor = reloadingColor;
     } else if (unit.type() == UnitType.Construction) {
@@ -257,7 +257,7 @@ export class StructureLayer implements Layer {
     height: number,
     unit: UnitView,
   ) {
-    let color = this.theme.borderColor(unit.owner().info());
+    let color = this.theme.borderColor(unit.owner());
     if (unit.type() == UnitType.Construction) {
       color = underConstructionColor;
     }

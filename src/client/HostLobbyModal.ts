@@ -1,16 +1,17 @@
 import { LitElement, html } from "lit";
 import { customElement, query, property, state } from "lit/decorators.js";
-import { Difficulty, GameMapType, GameType } from "../core/game/Game";
+import { Difficulty, GameMapType, GameMode, GameType } from "../core/game/Game";
 import { GameConfig, GameInfo } from "../core/Schemas";
 import { consolex } from "../core/Consolex";
 import "./components/Difficulties";
 import "./components/baseComponents/Modal";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
-import randomMap from "../../resources/images/RandomMap.png";
+import randomMap from "../../resources/images/RandomMap.webp";
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { JoinLobbyEvent } from "./Main";
+import { translateText } from "../client/Utils";
 
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
@@ -21,6 +22,7 @@ export class HostLobbyModal extends LitElement {
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs = false;
+  @state() private gameMode: GameMode = GameMode.FFA;
   @state() private disableNukes: boolean = false;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
@@ -37,7 +39,7 @@ export class HostLobbyModal extends LitElement {
 
   render() {
     return html`
-      <o-modal title="Private lobby">
+      <o-modal title=${translateText("host_modal.title")}>
         <div class="lobby-id-box">
           <button
             class="lobby-id-button"
@@ -45,30 +47,32 @@ export class HostLobbyModal extends LitElement {
             ?disabled=${this.copySuccess}
           >
             <span class="lobby-id">${this.lobbyId}</span>
-            ${this.copySuccess
-              ? html`<span class="copy-success-icon">✓</span>`
-              : html`
-                  <svg
-                    class="clipboard-icon"
-                    stroke="currentColor"
-                    fill="currentColor"
-                    stroke-width="0"
-                    viewBox="0 0 512 512"
-                    height="18px"
-                    width="18px"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M296 48H176.5C154.4 48 136 65.4 136 87.5V96h-7.5C106.4 96 88 113.4 88 135.5v288c0 22.1 18.4 40.5 40.5 40.5h208c22.1 0 39.5-18.4 39.5-40.5V416h8.5c22.1 0 39.5-18.4 39.5-40.5V176L296 48zm0 44.6l83.4 83.4H296V92.6zm48 330.9c0 4.7-3.4 8.5-7.5 8.5h-208c-4.4 0-8.5-4.1-8.5-8.5v-288c0-4.1 3.8-7.5 8.5-7.5h7.5v255.5c0 22.1 10.4 32.5 32.5 32.5H344v7.5zm48-48c0 4.7-3.4 8.5-7.5 8.5h-208c-4.4 0-8.5-4.1-8.5-8.5v-288c0-4.1 3.8-7.5 8.5-7.5H264v128h128v167.5z"
-                    ></path>
-                  </svg>
-                `}
+            ${
+              this.copySuccess
+                ? html`<span class="copy-success-icon">✓</span>`
+                : html`
+                    <svg
+                      class="clipboard-icon"
+                      stroke="currentColor"
+                      fill="currentColor"
+                      stroke-width="0"
+                      viewBox="0 0 512 512"
+                      height="18px"
+                      width="18px"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M296 48H176.5C154.4 48 136 65.4 136 87.5V96h-7.5C106.4 96 88 113.4 88 135.5v288c0 22.1 18.4 40.5 40.5 40.5h208c22.1 0 39.5-18.4 39.5-40.5V416h8.5c22.1 0 39.5-18.4 39.5-40.5V176L296 48zm0 44.6l83.4 83.4H296V92.6zm48 330.9c0 4.7-3.4 8.5-7.5 8.5h-208c-4.4 0-8.5-4.1-8.5-8.5v-288c0-4.1 3.8-7.5 8.5-7.5h7.5v255.5c0 22.1 10.4 32.5 32.5 32.5H344v7.5zm48-48c0 4.7-3.4 8.5-7.5 8.5h-208c-4.4 0-8.5-4.1-8.5-8.5v-288c0-4.1 3.8-7.5 8.5-7.5H264v128h128v167.5z"
+                      ></path>
+                    </svg>
+                  `
+            }
           </button>
         </div>
         <div class="options-layout">
           <!-- Map Selection -->
           <div class="options-section">
-            <div class="option-title">Map</div>
+            <div class="option-title">${translateText("host_modal.map")}</div>
             <div class="option-cards">
               ${Object.entries(GameMapType)
                 .filter(([key]) => isNaN(Number(key)))
@@ -79,14 +83,17 @@ export class HostLobbyModal extends LitElement {
                         .mapKey=${key}
                         .selected=${!this.useRandomMap &&
                         this.selectedMap === value}
+                        .translation=${translateText(
+                          `map.${key.toLowerCase()}`,
+                        )}
                       ></map-display>
                     </div>
                   `,
                 )}
               <div
-                class="option-card random-map ${this.useRandomMap
-                  ? "selected"
-                  : ""}"
+                class="option-card random-map ${
+                  this.useRandomMap ? "selected" : ""
+                }"
                 @click=${this.handleRandomMapToggle}
               >
                 <div class="option-image">
@@ -96,14 +103,14 @@ export class HostLobbyModal extends LitElement {
                     style="width:100%; aspect-ratio: 4/2; object-fit:cover; border-radius:8px;"
                   />
                 </div>
-                <div class="option-card-title">Random</div>
+                <div class="option-card-title">${translateText("map.random")}</div>
               </div>
             </div>
           </div>
 
           <!-- Difficulty Selection -->
           <div class="options-section">
-            <div class="option-title">Difficulty</div>
+            <div class="option-title">${translateText("host_modal.difficulty")}</div>
             <div class="option-cards">
               ${Object.entries(Difficulty)
                 .filter(([key]) => isNaN(Number(key)))
@@ -119,7 +126,9 @@ export class HostLobbyModal extends LitElement {
                         .difficultyKey=${key}
                       ></difficulty-display>
                       <p class="option-card-title">
-                        ${DifficultyDescription[key]}
+                        ${translateText(
+                          `difficulty.${DifficultyDescription[key]}`,
+                        )}
                       </p>
                     </div>
                   `,
@@ -127,14 +136,39 @@ export class HostLobbyModal extends LitElement {
             </div>
           </div>
 
+          <!-- Game Mode Selection -->
+          <div class="options-section">
+            <div class="option-title">${translateText("host_modal.mode")}</div>
+            <div class="option-cards">
+              <div
+                class="option-card ${this.gameMode === GameMode.FFA ? "selected" : ""}"
+                @click=${() => this.handleGameModeSelection(GameMode.FFA)}
+              >
+                <div class="option-card-title">
+                  ${translateText("game_mode.ffa")}
+                </div>
+              </div>
+              <div
+                class="option-card ${this.gameMode === GameMode.Team ? "selected" : ""}"
+                @click=${() => this.handleGameModeSelection(GameMode.Team)}
+              >
+                <div class="option-card-title">
+                  ${translateText("game_mode.teams")}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Game Options -->
           <div class="options-section">
-            <div class="option-title">Options</div>
+            <div class="option-title">
+              ${translateText("host_modal.options_title")}
+            </div>
             <div class="option-cards">
-              <label for="private-lobby-bots-count" class="option-card">
+              <label for="bots-count" class="option-card">
                 <input
                   type="range"
-                  id="private-lobby-bots-count"
+                  id="bots-count"
                   min="0"
                   max="400"
                   step="1"
@@ -143,107 +177,128 @@ export class HostLobbyModal extends LitElement {
                   .value="${String(this.bots)}"
                 />
                 <div class="option-card-title">
-                  Bots: ${this.bots == 0 ? "Disabled" : this.bots}
+                  <span>${translateText("host_modal.bots")}</span>${
+                    this.bots == 0
+                      ? translateText("host_modal.bots_disabled")
+                      : this.bots
+                  }
                 </div>
               </label>
 
-              <label
-                for="private-lobby-disable-npcd"
-                class="option-card ${this.disableNPCs ? "selected" : ""}"
-              >
-                <div class="checkbox-icon"></div>
-                <input
-                  type="checkbox"
-                  id="private-lobby-disable-npcd"
-                  @change=${this.handleDisableNPCsChange}
-                  .checked=${this.disableNPCs}
-                />
-                <div class="option-card-title">Disable Nations</div>
-              </label>
+                <label
+                  for="host-modal-disable-npcs"
+                  class="option-card ${this.disableNPCs ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="host-modal-disable-npcs"
+                    @change=${this.handleDisableNPCsChange}
+                    .checked=${this.disableNPCs}
+                  />
+                  <div class="option-card-title">
+                    ${translateText("host_modal.disable_nations")}
+                  </div>
+                </label>
 
-              <label
-                for="private-lobby-instant-build"
-                class="option-card ${this.instantBuild ? "selected" : ""}"
-              >
-                <div class="checkbox-icon"></div>
-                <input
-                  type="checkbox"
-                  id="private-lobby-instant-build"
-                  @change=${this.handleInstantBuildChange}
-                  .checked=${this.instantBuild}
-                />
-                <div class="option-card-title">Instant build</div>
-              </label>
+                <label
+                  for="host-modal-instant-build"
+                  class="option-card ${this.instantBuild ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="host-modal-instant-build"
+                    @change=${this.handleInstantBuildChange}
+                    .checked=${this.instantBuild}
+                  />
+                  <div class="option-card-title">
+                    ${translateText("host_modal.instant_build")}
+                  </div>
+                </label>
 
-              <label
-                for="private-lobby-infinite-gold"
-                class="option-card ${this.infiniteGold ? "selected" : ""}"
-              >
-                <div class="checkbox-icon"></div>
-                <input
-                  type="checkbox"
-                  id="private-lobby-infinite-gold"
-                  @change=${this.handleInfiniteGoldChange}
-                  .checked=${this.infiniteGold}
-                />
-                <div class="option-card-title">Infinite gold</div>
-              </label>
+                <label
+                  for="host-modal-infinite-gold"
+                  class="option-card ${this.infiniteGold ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="host-modal-infinite-gold"
+                    @change=${this.handleInfiniteGoldChange}
+                    .checked=${this.infiniteGold}
+                  />
+                  <div class="option-card-title">
+                    ${translateText("host_modal.infinite_gold")}
+                  </div>
+                </label>
 
-              <label
-                for="private-lobby-infinite-troops"
-                class="option-card ${this.infiniteTroops ? "selected" : ""}"
-              >
-                <div class="checkbox-icon"></div>
-                <input
-                  type="checkbox"
-                  id="private-lobby-infinite-troops"
-                  @change=${this.handleInfiniteTroopsChange}
-                  .checked=${this.infiniteTroops}
-                />
-                <div class="option-card-title">Infinite troops</div>
-              </label>
-              <label
-                for="private-lobby-disable-nukes"
-                class="option-card ${this.disableNukes ? "selected" : ""}"
-              >
-                <div class="checkbox-icon"></div>
-                <input
-                  type="checkbox"
-                  id="disable-nukes"
-                  @change=${this.handleDisableNukesChange}
-                  .checked=${this.disableNukes}
-                />
-                <div class="option-card-title">Disable Nukes</div>
-              </label>
+                <label
+                  for="host-modal-infinite-troops"
+                  class="option-card ${this.infiniteTroops ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="host-modal-infinite-troops"
+                    @change=${this.handleInfiniteTroopsChange}
+                    .checked=${this.infiniteTroops}
+                  />
+                  <div class="option-card-title">
+                    ${translateText("host_modal.infinite_troops")}
+                  </div>
+                </label>
+
+                <label
+                  for="host-modal-disable-nukes"
+                  class="option-card ${this.disableNukes ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="host-modal-disable-nukes"
+                    @change=${this.handleDisableNukesChange}
+                    .checked=${this.disableNukes}
+                  />
+                  <div class="option-card-title">
+                    ${translateText("host_modal.disable_nukes")}
+                  </div>
+                </label>
+              </div>
             </div>
           </div>
 
-          <!-- Lobby Selection -->
-          <div class="options-section">
-            <div class="option-title">
-              ${this.players.length}
-              ${this.players.length === 1 ? "Player" : "Players"}
-            </div>
+        <!-- Lobby Selection -->
+        <div class="options-section">
+          <div class="option-title">
+            ${this.players.length}
+            ${
+              this.players.length === 1
+                ? translateText("host_modal.player")
+                : translateText("host_modal.players")
+            }
+          </div>
 
-            <div class="players-list">
-              ${this.players.map(
-                (player) => html`<span class="player-tag">${player}</span>`,
-              )}
-            </div>
+          <div class="players-list">
+            ${this.players.map(
+              (player) => html`<span class="player-tag">${player}</span>`,
+            )}
           </div>
         </div>
-        <div class="flex justify-center">
-          <o-button
-            .title=${this.players.length === 1
-              ? "Waiting for players..."
-              : "Start Game"}
-            ?disable=${this.players.length < 2}
-            @click=${this.startGame}
-            block
-          >
-          </o-button>
-        </div>
-      </o-modal>
+					
+        <button
+          @click=${this.startGame}
+          ?disabled=${this.players.length < 2}
+          class="start-game-button"
+        >
+          ${
+            this.players.length === 1
+              ? translateText("host_modal.waiting")
+              : translateText("host_modal.start")
+          }
+        </button>
+      </div>
+    </o-modal>
     `;
   }
 
@@ -340,11 +395,17 @@ export class HostLobbyModal extends LitElement {
   }
   private handleDisableNukesChange(e: Event) {
     this.disableNukes = Boolean((e.target as HTMLInputElement).checked);
+    this.putGameConfig();
   }
 
   private async handleDisableNPCsChange(e: Event) {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
     consolex.log(`updating disable npcs to ${this.disableNPCs}`);
+    this.putGameConfig();
+  }
+
+  private async handleGameModeSelection(value: GameMode) {
+    this.gameMode = value;
     this.putGameConfig();
   }
 
@@ -366,6 +427,7 @@ export class HostLobbyModal extends LitElement {
           infiniteGold: this.infiniteGold,
           infiniteTroops: this.infiniteTroops,
           instantBuild: this.instantBuild,
+          gameMode: this.gameMode,
         } as GameConfig),
       },
     );
@@ -424,7 +486,7 @@ export class HostLobbyModal extends LitElement {
     })
       .then((response) => response.json())
       .then((data: GameInfo) => {
-        console.log(`got response: ${data}`);
+        console.log(`got game info response: ${JSON.stringify(data)}`);
         this.players = data.clients.map((p) => p.username);
       });
   }

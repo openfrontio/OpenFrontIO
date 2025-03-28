@@ -163,7 +163,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
   private renderPlayerInfo(player: PlayerView) {
     const myPlayer = this.myPlayer();
-    const isAlly = myPlayer?.isAlliedWith(player);
+    const isFriendly = myPlayer?.isFriendly(player);
     let relationHtml = null;
     const attackingTroops = player
       .outgoingAttacks()
@@ -198,7 +198,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     return html`
       <div class="p-2">
         <div
-          class="text-bold text-sm lg:text-lg font-bold mb-1 inline-flex ${isAlly
+          class="text-bold text-sm lg:text-lg font-bold mb-1 inline-flex ${isFriendly
             ? "text-green-500"
             : "text-white"}"
         >
@@ -244,7 +244,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   private renderUnitInfo(unit: UnitView) {
     const isAlly =
       (unit.owner() == this.myPlayer() ||
-        this.myPlayer()?.isAlliedWith(unit.owner())) ??
+        this.myPlayer()?.isFriendly(unit.owner())) ??
       false;
 
     return html`

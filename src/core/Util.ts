@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import twemoji from "twemoji";
 import DOMPurify from "dompurify";
-import { Cell, Game, Player, Unit } from "./game/Game";
+import { Cell, Game, Player, TeamName, Unit } from "./game/Game";
 import {
   AllPlayersStats,
   ClientID,
@@ -255,7 +255,8 @@ export function createGameRecord(
   turns: Turn[],
   start: number,
   end: number,
-  winner: ClientID | null,
+  winner: ClientID | TeamName | null,
+  winnerType: "player" | "team" | null,
   allPlayersStats: AllPlayersStats,
 ): GameRecord {
   const record: GameRecord = {
@@ -289,6 +290,7 @@ export function createGameRecord(
   );
   record.num_turns = turns.length;
   record.winner = winner;
+  record.winnerType = winnerType;
   return record;
 }
 

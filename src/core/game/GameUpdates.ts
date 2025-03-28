@@ -8,6 +8,7 @@ import {
   NameViewData,
   PlayerID,
   PlayerType,
+  TeamName,
   Tick,
   UnitType,
 } from "./Game";
@@ -93,6 +94,7 @@ export interface PlayerUpdate {
   name: string;
   displayName: string;
   id: PlayerID;
+  teamName?: TeamName;
   smallID: number;
   playerType: PlayerType;
   isAlive: boolean;
@@ -159,7 +161,9 @@ export interface DisplayMessageUpdate {
 export interface WinUpdate {
   type: GameUpdateType.Win;
   allPlayersStats: AllPlayersStats;
-  winnerID: number;
+  // Player id or team name.
+  winner: number | TeamName;
+  winnerType: "player" | "team";
 }
 
 export interface HashUpdate {

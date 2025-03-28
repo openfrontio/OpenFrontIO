@@ -19,6 +19,7 @@ import {
   PlayerProfile,
   Attack,
   UnitSpecificInfos,
+  Team,
 } from "./Game";
 import { AttackUpdate, PlayerUpdate } from "./GameUpdates";
 import { GameUpdateType } from "./GameUpdates";
@@ -100,6 +101,7 @@ export class PlayerImpl implements Player {
     private _smallID: number,
     private readonly playerInfo: PlayerInfo,
     startTroops: number,
+    private _team: Team | null,
   ) {
     this._flag = playerInfo.flag;
     this._name = sanitizeUsername(playerInfo.name);
@@ -125,6 +127,7 @@ export class PlayerImpl implements Player {
       name: this.name(),
       displayName: this.displayName(),
       id: this.id(),
+      teamName: this.team()?.name,
       smallID: this.smallID(),
       playerType: this.type(),
       isAlive: this.isAlive(),
@@ -285,11 +288,6 @@ export class PlayerImpl implements Player {
   isAlive(): boolean {
     return this._tiles.size > 0;
   }
-  executions(): Execution[] {
-    return this.mg
-      .executions()
-      .filter((exec) => exec.owner().id() == this.id());
-  }
 
   incomingAllianceRequests(): AllianceRequest[] {
     return this.mg.allianceRequests.filter((ar) => ar.recipient() == this);
@@ -329,7 +327,7 @@ export class PlayerImpl implements Player {
     if (other == this) {
       return false;
     }
-    if (this.isAlliedWith(other)) {
+    if (this.isFriendly(other)) {
       return false;
     }
 
@@ -431,7 +429,7 @@ export class PlayerImpl implements Player {
     if (this == other) {
       return false;
     }
-    if (this.isAlliedWith(other)) {
+    if (this.isFriendly(other)) {
       return false;
     }
     for (const t of this.targets_) {
@@ -505,7 +503,7 @@ export class PlayerImpl implements Player {
   }
 
   canDonate(recipient: Player): boolean {
-    if (!this.isAlliedWith(recipient)) {
+    if (!this.isFriendly(recipient)) {
       return false;
     }
     for (const donation of this.sentDonations) {
@@ -558,6 +556,24 @@ export class PlayerImpl implements Player {
     return this.mg
       .players()
       .filter((other) => other != this && this.canTrade(other));
+  }
+
+  team(): Team | null {
+    return this._team;
+  }
+
+  isOnSameTeam(other: Player): boolean {
+    if (other == this) {
+      return false;
+    }
+    if (this.team() == null || other.team() == null) {
+      return false;
+    }
+    return this._team == other.team();
+  }
+
+  isFriendly(other: Player): boolean {
+    return this.isOnSameTeam(other) || this.isAlliedWith(other);
   }
 
   gold(): Gold {
@@ -666,9 +682,8 @@ export class PlayerImpl implements Player {
     this.removeGold(cost);
     this.removeTroops(troops);
     this.mg.addUpdate(b.toUpdate());
-    if (type == UnitType.DefensePost) {
-      this.mg.addDefensePost(b);
-    }
+    this.mg.addUnit(b);
+
     return b;
   }
 
@@ -736,7 +751,12 @@ export class PlayerImpl implements Player {
   }
 
   portSpawn(tile: TileRef): TileRef | false {
-    const spawns = Array.from(this.mg.bfs(tile, manhattanDistFN(tile, 20)))
+    const spawns = Array.from(
+      this.mg.bfs(
+        tile,
+        manhattanDistFN(tile, this.mg.config().radiusPortSpawn()),
+      ),
+    )
       .filter((t) => this.mg.owner(t) == this && this.mg.isOceanShore(t))
       .sort(
         (a, b) =>
@@ -838,7 +858,7 @@ export class PlayerImpl implements Player {
     if (other == this) {
       return false;
     }
-    if (other.isPlayer() && this.allianceWith(other)) {
+    if (other.isPlayer() && this.isFriendly(other)) {
       return false;
     }
 
@@ -931,12 +951,13 @@ export class PlayerImpl implements Player {
     if (this.mg.owner(tile) == this) {
       return false;
     }
-    if (
-      this.mg.hasOwner(tile) &&
-      this.isAlliedWith(this.mg.owner(tile) as Player)
-    ) {
-      return false;
+    if (this.mg.hasOwner(tile)) {
+      const other = this.mg.owner(tile) as Player;
+      if (this.isFriendly(other)) {
+        return false;
+      }
     }
+
     if (!this.mg.isLand(tile)) {
       return false;
     }
@@ -958,5 +979,39 @@ export class PlayerImpl implements Player {
       }
       return false;
     }
+  }
+
+  // It's a probability list, so if an element appears twice it's because it's
+  // twice more likely to be picked later.
+  tradingPorts(port: Unit): Unit[] {
+    let ports = this.mg
+      .players()
+      .filter((p) => p != port.owner() && p.canTrade(port.owner()))
+      .flatMap((p) => p.units(UnitType.Port))
+      .sort((p1, p2) => {
+        return (
+          this.mg.manhattanDist(port.tile(), p1.tile()) -
+          this.mg.manhattanDist(port.tile(), p2.tile())
+        );
+      });
+
+    // Make close ports twice more likely by putting them again
+    for (
+      let i = 0;
+      i < this.mg.config().proximityBonusPortsNb(ports.length);
+      i++
+    ) {
+      ports.push(ports[i]);
+    }
+
+    // Make ally ports twice more likely by putting them again
+    this.mg
+      .players()
+      .filter((p) => p != port.owner() && p.canTrade(port.owner()))
+      .filter((p) => p.isAlliedWith(port.owner()))
+      .flatMap((p) => p.units(UnitType.Port))
+      .forEach((p) => ports.push(p));
+
+    return ports;
   }
 }

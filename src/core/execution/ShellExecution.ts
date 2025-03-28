@@ -72,9 +72,6 @@ export class ShellExecution implements Execution {
     }
   }
 
-  owner(): Player {
-    return null;
-  }
   isActive(): boolean {
     return this.active;
   }

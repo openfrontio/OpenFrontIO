@@ -11,7 +11,6 @@ import {
 import { PathFinder } from "../pathfinding/PathFinding";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PseudoRandom } from "../PseudoRandom";
-import { distSort, distSortUnit } from "../Util";
 import { consolex } from "../Consolex";
 import { TileRef } from "../game/GameMap";
 import { ShellExecution } from "./ShellExecution";
@@ -138,44 +137,54 @@ export class WarshipExecution implements Execution {
     }
     const hasPort = this._owner.units(UnitType.Port).length > 0;
     const ships = this.mg
-      .units(UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip)
-      .filter((u) => this.mg.manhattanDist(u.tile(), this.warship.tile()) < 130)
-      .filter((u) => u.owner() != this.warship.owner())
-      .filter((u) => u != this.warship)
-      .filter((u) => !u.owner().isAlliedWith(this.warship.owner()))
-      .filter((u) => !this.alreadySentShell.has(u))
-      // Do not target trade ships if we don't have port
-      .filter((u) => u.type() != UnitType.TradeShip || hasPort)
-      .filter((u) => {
-        const portOwner = u.dstPort() ? u.dstPort().owner() : null;
-        return u.type() != UnitType.TradeShip || portOwner != this.owner();
-      });
+      .nearbyUnits(
+        this.warship.tile(),
+        130, // Search range
+        [UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip],
+      )
+      .filter(
+        ({ unit }) =>
+          unit.owner() !== this.warship.owner() &&
+          unit !== this.warship &&
+          !unit.owner().isFriendly(this.warship.owner()) &&
+          !this.alreadySentShell.has(unit) &&
+          (unit.type() !== UnitType.TradeShip || hasPort) &&
+          (unit.type() !== UnitType.TradeShip ||
+            unit.dstPort()?.owner() !== this._owner),
+      );
 
     this.target =
       ships.sort((a, b) => {
-        // First compare by Warship type
-        if (a.type() === UnitType.Warship && b.type() !== UnitType.Warship) {
-          return -1;
-        }
-        if (a.type() !== UnitType.Warship && b.type() === UnitType.Warship) {
-          return 1;
-        }
-        // Then favor transport ship
+        const { unit: unitA, distSquared: distA } = a;
+        const { unit: unitB, distSquared: distB } = b;
+
+        // Prioritize Warships
         if (
-          a.type() === UnitType.TransportShip &&
-          b.type() !== UnitType.TransportShip
-        ) {
+          unitA.type() === UnitType.Warship &&
+          unitB.type() !== UnitType.Warship
+        )
           return -1;
-        }
         if (
-          a.type() !== UnitType.TransportShip &&
-          b.type() === UnitType.TransportShip
-        ) {
+          unitA.type() !== UnitType.Warship &&
+          unitB.type() === UnitType.Warship
+        )
           return 1;
-        }
-        // If both are same type, sort by distance
-        return distSortUnit(this.mg, this.warship)(a, b);
-      })[0] ?? null;
+
+        // Then favor Transport Ships over Trade Ships
+        if (
+          unitA.type() === UnitType.TransportShip &&
+          unitB.type() !== UnitType.TransportShip
+        )
+          return -1;
+        if (
+          unitA.type() !== UnitType.TransportShip &&
+          unitB.type() === UnitType.TransportShip
+        )
+          return 1;
+
+        // If both are the same type, sort by distance (lower `distSquared` means closer)
+        return distA - distB;
+      })[0]?.unit ?? null;
 
     if (this.warship.moveTarget()) {
       this.goToMoveTarget(this.warship.moveTarget());
@@ -219,7 +228,7 @@ export class WarshipExecution implements Execution {
       );
       switch (result.type) {
         case PathFindResultType.Completed:
-          this.owner().captureUnit(this.target);
+          this._owner.captureUnit(this.target);
           this.target = null;
           return;
         case PathFindResultType.NextTile:
@@ -232,10 +241,6 @@ export class WarshipExecution implements Execution {
           break;
       }
     }
-  }
-
-  owner(): Player {
-    return this._owner;
   }
 
   isActive(): boolean {

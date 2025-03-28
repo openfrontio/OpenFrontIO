@@ -151,10 +151,6 @@ export class TradeShipExecution implements Execution {
     return;
   }
 
-  owner(): Player {
-    return null;
-  }
-
   isActive(): boolean {
     return this.active;
   }
