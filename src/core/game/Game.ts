@@ -237,7 +237,8 @@ export interface Unit {
   warshipTarget(): Unit;
 
   setCooldown(triggerCooldown: boolean): void; // Only for sam
-  getCooldown(): Tick | null;
+  ticksLeftInCooldown(): Tick | null;
+  isCooldown(): boolean;
   setDstPort(dstPort: Unit): void;
   dstPort(): Unit; // Only for trade ships
   detonationDst(): TileRef; // Only for nukes

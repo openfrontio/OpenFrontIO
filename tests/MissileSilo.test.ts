@@ -74,7 +74,7 @@ describe("MissileSilo", () => {
   });
 
   test("missilesilo should cooldown as long as configured", async () => {
-    expect(attacker.units(UnitType.MissileSilo)[0].getCooldown()).toBe(null);
+    expect(attacker.units(UnitType.MissileSilo)[0].isCooldown()).toBeFalsy();
     // send the nuke far enough away so it doesnt destroy the silo
     attackerBuildsNuke(null, game.ref(50, 50));
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(1);
@@ -87,11 +87,11 @@ describe("MissileSilo", () => {
     for (let i = 0; i < game.config().samCooldown() - 1; i++) {
       game.executeNextTick();
       expect(
-        attacker.units(UnitType.MissileSilo)[0].getCooldown(),
+        attacker.units(UnitType.MissileSilo)[0].ticksLeftInCooldown(),
       ).toBeDefined();
     }
 
     game.executeNextTick();
-    expect(attacker.units(UnitType.MissileSilo)[0].getCooldown()).toBe(null);
+    expect(attacker.units(UnitType.MissileSilo)[0].isCooldown()).toBeFalsy();
   });
 });

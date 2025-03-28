@@ -97,17 +97,14 @@ export class SAMLauncherExecution implements Execution {
       })[0] ?? null;
 
     if (
-      this.sam.getCooldown() &&
-      this.mg.ticks() - this.sam.getCooldown() >= this.mg.config().SAMCooldown()
+      this.sam.isCooldown() &&
+      this.mg.ticks() - this.sam.ticksLeftInCooldown() >=
+        this.mg.config().SAMCooldown()
     ) {
       this.sam.setCooldown(false);
     }
 
-    if (
-      this.target &&
-      this.sam.getCooldown() == null &&
-      !this.target.targetedBySAM()
-    ) {
+    if (this.target && !this.sam.isCooldown() && !this.target.targetedBySAM()) {
       this.sam.setCooldown(true);
       const random = this.pseudoRandom.next();
       const hit = random < this.mg.config().samHittingChance();

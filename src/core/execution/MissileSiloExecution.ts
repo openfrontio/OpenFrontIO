@@ -45,8 +45,8 @@ export class MissileSiloExecution implements Execution {
     }
 
     if (
-      this.silo.getCooldown() &&
-      this.mg.ticks() - this.silo.getCooldown() >=
+      this.silo.isCooldown() &&
+      this.mg.ticks() - this.silo.ticksLeftInCooldown() >=
         this.mg.config().SAMCooldown()
     ) {
       this.silo.setCooldown(false);

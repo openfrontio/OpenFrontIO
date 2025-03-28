@@ -652,16 +652,6 @@ export class PlayerImpl implements Player {
     spawnTile: TileRef,
     unitSpecificInfos: UnitSpecificInfos = {},
   ): UnitImpl {
-    // after sending an nuke set the missilesilo on cooldown
-    if (
-      [UnitType.AtomBomb, UnitType.HydrogenBomb, UnitType.MIRV].includes(type)
-    ) {
-      const silo = this.units(UnitType.MissileSilo).find(
-        (silo) => silo.tile() === spawnTile,
-      );
-      silo.setCooldown(true);
-    }
-
     const cost = this.mg.unitInfo(type).cost(this);
     const b = new UnitImpl(
       type,
@@ -740,7 +730,7 @@ export class PlayerImpl implements Player {
     const spawns = this.units(UnitType.MissileSilo)
       .map((u) => u as Unit)
       .filter((silo) => {
-        return silo.getCooldown() == null;
+        return !silo.isCooldown();
       })
       .sort(distSortUnit(this.mg, tile));
     if (spawns.length == 0) {

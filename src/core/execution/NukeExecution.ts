@@ -83,6 +83,12 @@ export class NukeExecution implements Execution {
             this.nuke.type() as NukeType,
           );
       }
+
+      // after sending an nuke set the missilesilo on cooldown
+      const silo = this.player
+        .units(UnitType.MissileSilo)
+        .find((silo) => silo.tile() === spawn);
+      silo.setCooldown(true);
     }
 
     // make the nuke unactive if it was intercepted

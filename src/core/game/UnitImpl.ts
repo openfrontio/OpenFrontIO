@@ -61,7 +61,10 @@ export class UnitImpl implements Unit {
       dstPortId: dstPort ? dstPort.id() : null,
       warshipTargetId: warshipTarget ? warshipTarget.id() : null,
       detonationDst: this.detonationDst(),
-      getCooldown: this.getCooldown() ? this.getCooldown() : null,
+      ticksLeftInCooldown: this.ticksLeftInCooldown()
+        ? this.ticksLeftInCooldown()
+        : null,
+      isCooldown: this.isCooldown(),
     };
   }
 
@@ -196,8 +199,12 @@ export class UnitImpl implements Unit {
     }
   }
 
-  getCooldown(): Tick | null {
+  ticksLeftInCooldown(): Tick | null {
     return this._cooldownTick;
+  }
+
+  isCooldown(): boolean {
+    return this._cooldownTick ? true : false;
   }
 
   setDstPort(dstPort: Unit): void {
