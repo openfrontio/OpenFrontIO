@@ -396,7 +396,7 @@ export class EventsDisplay extends LitElement implements Layer {
       : event.description;
   }
 
-  private renderAttacks() {
+  private renderIncomingAttacks() {
     return html`
       ${this.incomingAttacks.length > 0
         ? html`
@@ -424,6 +424,11 @@ export class EventsDisplay extends LitElement implements Layer {
             </tr>
           `
         : ""}
+    `;
+  }
+
+  private renderOutgoingAttacks() {
+    return html`
       ${this.outgoingAttacks.length > 0
         ? html`
             <tr class="border-t border-gray-700">
@@ -457,25 +462,26 @@ export class EventsDisplay extends LitElement implements Layer {
             </tr>
           `
         : ""}
+    `;
+  }
+
+  private renderOutgoingLandAttacks() {
+    return html`
       ${this.outgoingLandAttacks.length > 0
         ? html`
             <tr class="border-t border-gray-700">
               <td class="lg:p-3 p-1 text-left text-gray-400">
                 ${this.outgoingLandAttacks.map(
-                  (attack) => html`
-                    <button
-                      translate="no"
-                      class="ml-2"
-                      @click=${() => this.emitGoToPlayerEvent(attack.targetID)}
-                    >
-                      ${renderTroops(attack.troops)} Wilderness
+                  (landAttack) => html`
+                    <button translate="no" class="ml-2">
+                      ${renderTroops(landAttack.troops)} Wilderness
                     </button>
 
-                    ${!attack.retreating
+                    ${!landAttack.retreating
                       ? html`<button
-                          ${attack.retreating ? "disabled" : ""}
+                          ${landAttack.retreating ? "disabled" : ""}
                           @click=${() => {
-                            this.emitCancelAttackIntent(attack.id);
+                            this.emitCancelAttackIntent(landAttack.id);
                           }}
                         >
                           ❌
@@ -520,15 +526,6 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   render() {
-    if (
-      this.events.length === 0 &&
-      this.incomingAttacks.length === 0 &&
-      this.outgoingAttacks.length === 0 &&
-      this.outgoingLandAttacks.length === 0 &&
-      this.outgoingBoats.length === 0
-    ) {
-      return html``;
-    }
     this.events.sort((a, b) => {
       const aPrior = a.priority ?? 100000;
       const bPrior = b.priority ?? 100000;
@@ -626,7 +623,8 @@ export class EventsDisplay extends LitElement implements Layer {
                   </tr>
                 `,
               )}
-              ${this.renderAttacks()} ${this.renderBoats()}
+              ${this.renderIncomingAttacks()} ${this.renderOutgoingAttacks()}
+              ${this.renderOutgoingLandAttacks()} ${this.renderBoats()}
             </tbody>
           </table>
         </div>
