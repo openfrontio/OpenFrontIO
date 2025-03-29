@@ -240,15 +240,24 @@ label.option-card:hover {
 #private-lobby-bots-count {
   width: 80%;
   height: 16px;
+  appearance: none;
 }
 
 #bots-count::-webkit-slider-runnable-track,
 #private-lobby-bots-count::-webkit-slider-runnable-track {
-  background: #0075ff;
+  appearance: none;
+  background: linear-gradient(
+    to right,
+    #0075ff var(--progress, 0%),
+    white var(--progress, 0%)
+  );
   height: 8px;
 }
+
 #bots-count::-webkit-slider-thumb,
 #private-lobby-bots-count::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
   background: #0075ff;
   border-color: #0075ff;
   position: relative;

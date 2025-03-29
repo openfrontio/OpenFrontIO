@@ -41,6 +41,7 @@ export enum Difficulty {
 export enum TeamName {
   Red = "Red",
   Blue = "Blue",
+  Bot = "Bot",
 }
 
 export enum GameMapType {

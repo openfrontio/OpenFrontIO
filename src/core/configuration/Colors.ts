@@ -1,5 +1,9 @@
 import { colord, Colord } from "colord";
 
+export const red: Colord = colord({ r: 235, g: 53, b: 53 }); // Bright Red
+export const blue: Colord = colord({ r: 41, g: 98, b: 255 }); // Royal Blue
+export const botColor: Colord = colord({ r: 210, g: 206, b: 200 }); // Muted Beige Gray
+
 export const territoryColors: Colord[] = [
   colord({ r: 230, g: 100, b: 100 }), // Bright Red
   colord({ r: 100, g: 180, b: 230 }), // Sky Blue
@@ -206,147 +210,54 @@ export const humanColors: Colord[] = [
   colord({ r: 234, g: 179, b: 8 }), // Daffodil
 ];
 
-export const redShades = [
-  colord({ r: 210, g: 0, b: 0 }), // Most distinct colors sorted by brightness
-  colord({ r: 225, g: 0, b: 0 }),
-  colord({ r: 240, g: 0, b: 0 }),
-  colord({ r: 255, g: 0, b: 0 }),
-  colord({ r: 210, g: 21, b: 21 }),
-  colord({ r: 225, g: 23, b: 23 }),
-  colord({ r: 240, g: 25, b: 25 }),
-  colord({ r: 255, g: 26, b: 26 }),
-  colord({ r: 210, g: 42, b: 42 }),
-  colord({ r: 225, g: 45, b: 45 }),
-  colord({ r: 240, g: 48, b: 48 }),
-  colord({ r: 255, g: 51, b: 51 }),
-  colord({ r: 195, g: 59, b: 59 }),
-  colord({ r: 210, g: 63, b: 63 }),
-  colord({ r: 225, g: 68, b: 68 }),
-  colord({ r: 240, g: 72, b: 72 }),
-  colord({ r: 255, g: 77, b: 77 }),
-  colord({ r: 180, g: 72, b: 72 }),
-  colord({ r: 195, g: 78, b: 78 }),
-  colord({ r: 210, g: 84, b: 84 }),
-  colord({ r: 225, g: 90, b: 90 }),
-  colord({ r: 240, g: 96, b: 96 }),
-  colord({ r: 255, g: 102, b: 102 }),
-  colord({ r: 165, g: 83, b: 83 }),
-  colord({ r: 180, g: 90, b: 90 }),
-  colord({ r: 195, g: 98, b: 98 }),
-  colord({ r: 210, g: 105, b: 105 }),
-  colord({ r: 225, g: 113, b: 113 }),
-  colord({ r: 240, g: 120, b: 120 }),
-  colord({ r: 255, g: 128, b: 128 }),
-  colord({ r: 150, g: 90, b: 90 }),
-  colord({ r: 165, g: 99, b: 99 }),
-  colord({ r: 180, g: 108, b: 108 }),
-  colord({ r: 195, g: 117, b: 117 }),
-  colord({ r: 210, g: 126, b: 126 }),
-  colord({ r: 225, g: 135, b: 135 }),
-  colord({ r: 240, g: 144, b: 144 }),
-  colord({ r: 255, g: 153, b: 153 }),
-  colord({ r: 135, g: 95, b: 95 }),
-  colord({ r: 150, g: 105, b: 105 }),
-  colord({ r: 165, g: 116, b: 116 }),
-  colord({ r: 180, g: 126, b: 126 }),
-  colord({ r: 195, g: 137, b: 137 }),
-  colord({ r: 210, g: 147, b: 147 }),
-  colord({ r: 225, g: 158, b: 158 }),
-  colord({ r: 240, g: 168, b: 168 }),
-  colord({ r: 255, g: 179, b: 179 }),
-  colord({ r: 120, g: 108, b: 108 }),
-  colord({ r: 135, g: 122, b: 122 }),
-  colord({ r: 150, g: 135, b: 135 }),
-  colord({ r: 165, g: 149, b: 149 }),
-  colord({ r: 180, g: 162, b: 162 }),
-  colord({ r: 195, g: 176, b: 176 }),
-  colord({ r: 210, g: 189, b: 189 }),
-  colord({ r: 225, g: 203, b: 203 }),
-  colord({ r: 240, g: 216, b: 216 }),
-  colord({ r: 255, g: 230, b: 230 }),
-  colord({ r: 195, g: 0, b: 0 }),
-  colord({ r: 195, g: 20, b: 20 }),
-  colord({ r: 195, g: 39, b: 39 }),
-  colord({ r: 180, g: 54, b: 54 }),
-  colord({ r: 165, g: 66, b: 66 }),
-  colord({ r: 150, g: 75, b: 75 }),
-  colord({ r: 135, g: 81, b: 81 }),
-  colord({ r: 120, g: 84, b: 84 }),
-  colord({ r: 135, g: 108, b: 108 }),
-  colord({ r: 150, g: 120, b: 120 }),
-  colord({ r: 165, g: 132, b: 132 }),
-  colord({ r: 180, g: 144, b: 144 }),
-];
-
-export const blueShades = [
-  colord({ r: 0, g: 0, b: 120 }), // Most distinct colors sorted by brightness
-  colord({ r: 0, g: 0, b: 135 }),
-  colord({ r: 0, g: 0, b: 150 }),
-  colord({ r: 0, g: 0, b: 165 }),
-  colord({ r: 0, g: 0, b: 180 }),
-  colord({ r: 0, g: 0, b: 195 }),
-  colord({ r: 0, g: 0, b: 210 }),
-  colord({ r: 0, g: 0, b: 225 }),
-  colord({ r: 0, g: 0, b: 240 }),
-  colord({ r: 0, g: 0, b: 255 }),
-  colord({ r: 12, g: 12, b: 120 }),
-  colord({ r: 14, g: 14, b: 135 }),
-  colord({ r: 15, g: 15, b: 150 }),
-  colord({ r: 17, g: 17, b: 165 }),
-  colord({ r: 18, g: 18, b: 180 }),
-  colord({ r: 20, g: 20, b: 195 }),
-  colord({ r: 21, g: 21, b: 210 }),
-  colord({ r: 23, g: 23, b: 225 }),
-  colord({ r: 25, g: 25, b: 240 }),
-  colord({ r: 26, g: 26, b: 255 }),
-  colord({ r: 24, g: 24, b: 120 }),
-  colord({ r: 27, g: 27, b: 135 }),
-  colord({ r: 30, g: 30, b: 150 }),
-  colord({ r: 33, g: 33, b: 165 }),
-  colord({ r: 36, g: 36, b: 180 }),
-  colord({ r: 39, g: 39, b: 195 }),
-  colord({ r: 42, g: 42, b: 210 }),
-  colord({ r: 45, g: 45, b: 225 }),
-  colord({ r: 48, g: 48, b: 240 }),
-  colord({ r: 51, g: 51, b: 255 }),
-  colord({ r: 36, g: 36, b: 120 }),
-  colord({ r: 41, g: 41, b: 135 }),
-  colord({ r: 45, g: 45, b: 150 }),
-  colord({ r: 50, g: 50, b: 165 }),
-  colord({ r: 54, g: 54, b: 180 }),
-  colord({ r: 59, g: 59, b: 195 }),
-  colord({ r: 63, g: 63, b: 210 }),
-  colord({ r: 68, g: 68, b: 225 }),
-  colord({ r: 72, g: 72, b: 240 }),
-  colord({ r: 77, g: 77, b: 255 }),
-  colord({ r: 48, g: 48, b: 120 }),
-  colord({ r: 54, g: 54, b: 135 }),
-  colord({ r: 60, g: 60, b: 150 }),
-  colord({ r: 66, g: 66, b: 165 }),
-  colord({ r: 72, g: 72, b: 180 }),
-  colord({ r: 78, g: 78, b: 195 }),
-  colord({ r: 84, g: 84, b: 210 }),
-  colord({ r: 90, g: 90, b: 225 }),
-  colord({ r: 96, g: 96, b: 240 }),
-  colord({ r: 102, g: 102, b: 255 }),
-  colord({ r: 60, g: 60, b: 120 }),
-  colord({ r: 68, g: 68, b: 135 }),
-  colord({ r: 75, g: 75, b: 150 }),
-  colord({ r: 83, g: 83, b: 165 }),
-  colord({ r: 90, g: 90, b: 180 }),
-  colord({ r: 98, g: 98, b: 195 }),
-  colord({ r: 105, g: 105, b: 210 }),
-  colord({ r: 113, g: 113, b: 225 }),
-  colord({ r: 120, g: 120, b: 240 }),
-  colord({ r: 128, g: 128, b: 255 }),
-  colord({ r: 72, g: 72, b: 120 }),
-  colord({ r: 81, g: 81, b: 135 }),
-  colord({ r: 90, g: 90, b: 150 }),
-  colord({ r: 99, g: 99, b: 165 }),
-  colord({ r: 108, g: 108, b: 180 }),
-  colord({ r: 117, g: 117, b: 195 }),
-  colord({ r: 126, g: 126, b: 210 }),
-  colord({ r: 135, g: 135, b: 225 }),
-  colord({ r: 144, g: 144, b: 240 }),
-  colord({ r: 153, g: 153, b: 255 }),
+export const botColors: Colord[] = [
+  colord({ r: 190, g: 120, b: 120 }), // Muted Red
+  colord({ r: 120, g: 160, b: 190 }), // Muted Sky Blue
+  colord({ r: 190, g: 160, b: 100 }), // Muted Golden Yellow
+  colord({ r: 160, g: 120, b: 190 }), // Muted Purple
+  colord({ r: 100, g: 170, b: 130 }), // Muted Emerald Green
+  colord({ r: 190, g: 130, b: 160 }), // Muted Pink
+  colord({ r: 120, g: 150, b: 100 }), // Muted Olive Green
+  colord({ r: 190, g: 140, b: 120 }), // Muted Peach
+  colord({ r: 100, g: 120, b: 160 }), // Muted Navy Blue
+  colord({ r: 170, g: 170, b: 120 }), // Muted Lime Yellow
+  colord({ r: 160, g: 120, b: 130 }), // Muted Maroon
+  colord({ r: 120, g: 170, b: 170 }), // Muted Turquoise
+  colord({ r: 170, g: 140, b: 100 }), // Muted Light Orange
+  colord({ r: 140, g: 120, b: 160 }), // Muted Lavender
+  colord({ r: 150, g: 170, b: 130 }), // Muted Light Green
+  colord({ r: 170, g: 120, b: 140 }), // Muted Hot Pink
+  colord({ r: 120, g: 140, b: 120 }), // Muted Sea Green
+  colord({ r: 180, g: 160, b: 160 }), // Muted Light Pink
+  colord({ r: 130, g: 130, b: 160 }), // Muted Periwinkle
+  colord({ r: 160, g: 150, b: 120 }), // Muted Sand
+  colord({ r: 120, g: 160, b: 150 }), // Muted Aquamarine
+  colord({ r: 170, g: 150, b: 170 }), // Muted Orchid
+  colord({ r: 150, g: 160, b: 120 }), // Muted Yellow Green
+  colord({ r: 120, g: 130, b: 140 }), // Muted Steel Blue
+  colord({ r: 180, g: 140, b: 140 }), // Muted Salmon
+  colord({ r: 140, g: 160, b: 170 }), // Muted Light Blue
+  colord({ r: 170, g: 150, b: 130 }), // Muted Tan
+  colord({ r: 160, g: 130, b: 160 }), // Muted Plum
+  colord({ r: 130, g: 170, b: 130 }), // Muted Light Sea Green
+  colord({ r: 170, g: 130, b: 130 }), // Muted Coral
+  colord({ r: 130, g: 150, b: 170 }), // Muted Cornflower Blue
+  colord({ r: 170, g: 170, b: 140 }), // Muted Khaki
+  colord({ r: 150, g: 130, b: 150 }), // Muted Purple Gray
+  colord({ r: 140, g: 160, b: 140 }), // Muted Dark Sea Green
+  colord({ r: 170, g: 130, b: 120 }), // Muted Dark Salmon
+  colord({ r: 130, g: 150, b: 160 }), // Muted Cadet Blue
+  colord({ r: 160, g: 160, b: 150 }), // Muted Tan Gray
+  colord({ r: 150, g: 140, b: 160 }), // Muted Medium Purple
+  colord({ r: 150, g: 170, b: 150 }), // Muted Pale Green
+  colord({ r: 160, g: 140, b: 130 }), // Muted Rosy Brown
+  colord({ r: 140, g: 150, b: 160 }), // Muted Light Slate Gray
+  colord({ r: 160, g: 150, b: 140 }), // Muted Dark Khaki
+  colord({ r: 140, g: 130, b: 140 }), // Muted Thistle
+  colord({ r: 150, g: 160, b: 160 }), // Muted Pale Blue Green
+  colord({ r: 160, g: 140, b: 150 }), // Muted Puce
+  colord({ r: 130, g: 160, b: 150 }), // Muted Medium Aquamarine
+  colord({ r: 160, g: 150, b: 160 }), // Muted Mauve
+  colord({ r: 150, g: 160, b: 140 }), // Muted Dark Olive Green
+  colord({ r: 150, g: 140, b: 150 }), // Muted Dusty Rose
 ];

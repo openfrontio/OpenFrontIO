@@ -19,6 +19,7 @@ import {
   Team,
   GameMode,
   TeamName,
+  PlayerType,
 } from "./Game";
 import { GameUpdate } from "./GameUpdates";
 import { GameUpdateType } from "./GameUpdates";
@@ -74,7 +75,11 @@ export class GameImpl implements Game {
 
   private _stats: StatsImpl = new StatsImpl();
 
-  private teams_: Team[] = [];
+  private playerTeams: Team[] = [
+    { name: TeamName.Red },
+    { name: TeamName.Blue },
+  ];
+  private botTeam: Team = { name: TeamName.Bot };
 
   constructor(
     private _map: GameMap,
@@ -95,9 +100,6 @@ export class GameImpl implements Game {
         ),
     );
     this.unitGrid = new UnitGrid(this._map);
-    if (this._config.gameConfig().gameMode == GameMode.Team) {
-      this.teams_ = [{ name: TeamName.Red }, { name: TeamName.Blue }];
-    }
   }
   isOnEdgeOfMap(ref: TileRef): boolean {
     return this._map.isOnEdgeOfMap(ref);
@@ -343,8 +345,11 @@ export class GameImpl implements Game {
     if (this._config.gameConfig().gameMode != GameMode.Team) {
       return null;
     }
+    if (player.playerType == PlayerType.Bot) {
+      return this.botTeam;
+    }
     const rand = simpleHash(player.id);
-    return this.teams_[rand % this.teams_.length];
+    return this.playerTeams[rand % this.playerTeams.length];
   }
 
   player(id: PlayerID | null): Player {
@@ -541,7 +546,10 @@ export class GameImpl implements Game {
   }
 
   teams(): Team[] {
-    return this.teams_;
+    if (this._config.gameConfig().gameMode != GameMode.Team) {
+      return [];
+    }
+    return [this.botTeam, ...this.playerTeams];
   }
 
   displayMessage(
