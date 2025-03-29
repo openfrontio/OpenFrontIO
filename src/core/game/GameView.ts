@@ -113,11 +113,11 @@ export class UnitView {
     }
     return this.data.warshipTargetId;
   }
-  ticksLeftInCooldown(): Tick | null {
+  ticksLeftInCooldown(): Tick {
     return this.data.ticksLeftInCooldown;
   }
   isCooldown(): boolean {
-    return this.data.isCooldown;
+    return this.data.ticksLeftInCooldown > 0;
   }
 }
 

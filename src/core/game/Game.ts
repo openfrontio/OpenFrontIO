@@ -227,6 +227,7 @@ export interface UnitSpecificInfos {
   dstPort?: Unit; // Only for trade ships
   detonationDst?: TileRef; // Only for nukes
   warshipTarget?: Unit;
+  cooldownDuration?: number;
 }
 
 export interface Unit {
@@ -253,7 +254,7 @@ export interface Unit {
   warshipTarget(): Unit;
 
   setCooldown(triggerCooldown: boolean): void; // Only for sam
-  ticksLeftInCooldown(): Tick | null;
+  ticksLeftInCooldown(cooldownDuration: number): Tick;
   isCooldown(): boolean;
   setDstPort(dstPort: Unit): void;
   dstPort(): Unit; // Only for trade ships

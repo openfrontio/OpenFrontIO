@@ -48,7 +48,9 @@ export class SAMLauncherExecution implements Execution {
         this.active = false;
         return;
       }
-      this.sam = this.player.buildUnit(UnitType.SAMLauncher, 0, spawnTile);
+      this.sam = this.player.buildUnit(UnitType.SAMLauncher, 0, spawnTile, {
+        cooldownDuration: this.mg.config().SAMCooldown(),
+      });
     }
     if (!this.sam.isActive()) {
       this.active = false;
@@ -96,8 +98,7 @@ export class SAMLauncherExecution implements Execution {
 
     if (
       this.sam.isCooldown() &&
-      this.mg.ticks() - this.sam.ticksLeftInCooldown() >=
-        this.mg.config().SAMCooldown()
+      this.sam.ticksLeftInCooldown(this.mg.config().SAMCooldown()) == 0
     ) {
       this.sam.setCooldown(false);
     }

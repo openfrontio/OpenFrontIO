@@ -84,11 +84,9 @@ describe("MissileSilo", () => {
     }
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(0);
 
-    for (let i = 0; i < game.config().samCooldown() - 1; i++) {
+    for (let i = 0; i < game.config().SiloCooldown() - 25; i++) {
       game.executeNextTick();
-      expect(
-        attacker.units(UnitType.MissileSilo)[0].ticksLeftInCooldown(),
-      ).toBeDefined();
+      expect(attacker.units(UnitType.MissileSilo)[0].isCooldown()).toBeTruthy();
     }
 
     game.executeNextTick();

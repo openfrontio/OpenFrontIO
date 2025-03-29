@@ -99,11 +99,9 @@ describe("SAM", () => {
     game.executeNextTick();
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(0);
 
-    for (let i = 0; i < game.config().samCooldown() - 1; i++) {
+    for (let i = 0; i < game.config().SAMCooldown() - 2; i++) {
       game.executeNextTick();
-      expect(
-        defender.units(UnitType.SAMLauncher)[0].ticksLeftInCooldown(),
-      ).toBeDefined();
+      expect(defender.units(UnitType.SAMLauncher)[0].isCooldown()).toBeTruthy();
     }
 
     game.executeNextTick();

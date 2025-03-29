@@ -93,10 +93,6 @@ export class DefaultConfig implements Config {
     return 0.8;
   }
 
-  samCooldown(): Tick {
-    return 100;
-  }
-
   traitorDefenseDebuff(): number {
     return 0.8;
   }

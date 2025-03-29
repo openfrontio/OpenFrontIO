@@ -23,6 +23,7 @@ export class UnitImpl implements Unit {
   private _dstPort: Unit | null = null; // Only for trade ships
   private _detonationDst: TileRef | null = null; // Only for nukes
   private _warshipTarget: Unit | null = null;
+  private _cooldownDuration: number | null = null;
 
   constructor(
     private _type: UnitType,
@@ -38,6 +39,7 @@ export class UnitImpl implements Unit {
     this._dstPort = unitsSpecificInfos.dstPort;
     this._detonationDst = unitsSpecificInfos.detonationDst;
     this._warshipTarget = unitsSpecificInfos.warshipTarget;
+    this._cooldownDuration = unitsSpecificInfos.cooldownDuration;
   }
 
   id() {
@@ -61,10 +63,7 @@ export class UnitImpl implements Unit {
       dstPortId: dstPort ? dstPort.id() : null,
       warshipTargetId: warshipTarget ? warshipTarget.id() : null,
       detonationDst: this.detonationDst(),
-      ticksLeftInCooldown: this.ticksLeftInCooldown()
-        ? this.ticksLeftInCooldown()
-        : null,
-      isCooldown: this.isCooldown(),
+      ticksLeftInCooldown: this.ticksLeftInCooldown(this._cooldownDuration),
     };
   }
 
@@ -197,8 +196,11 @@ export class UnitImpl implements Unit {
     }
   }
 
-  ticksLeftInCooldown(): Tick | null {
-    return this._cooldownTick;
+  ticksLeftInCooldown(cooldownDuration: number): Tick {
+    return Math.max(
+      0,
+      cooldownDuration - (this.mg.ticks() - this._cooldownTick),
+    );
   }
 
   isCooldown(): boolean {
