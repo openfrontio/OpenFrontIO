@@ -13,14 +13,18 @@ export function constructionExecution(
   x: number,
   y: number,
   unit: UnitType,
+  ticks = 4,
 ) {
   game.addExecution(new ConstructionExecution(playerID, game.ref(x, y), unit));
-  // Init exec
-  game.executeNextTick();
+
+  // 4 ticks by default as it usually goes like this
+  // Init of construction execution
   // Exec construction execution
-  game.executeNextTick();
-  // Add the execution related to the building
-  game.executeNextTick();
-  // First tick of the execution of the constructed structure/unit
-  game.executeNextTick();
+  // Tick of construction execution which adds the execution related to the building/unit
+  // First tick of the execution of the constructed building/unit
+  // (sometimes step 3 and 4 are merged in one)
+
+  for (let i = 0; i < ticks; i++) {
+    game.executeNextTick();
+  }
 }

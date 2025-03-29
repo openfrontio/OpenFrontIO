@@ -10,6 +10,7 @@ import {
   TerrainType,
   TerraNullius,
   Tick,
+  Unit,
   UnitInfo,
   UnitType,
 } from "../game/Game";
@@ -18,7 +19,7 @@ import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID } from "../Schemas";
 import { assertNever, simpleHash, within } from "../Util";
-import { Config, GameEnv, ServerConfig, Theme } from "./Config";
+import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { pastelTheme } from "./PastelTheme";
 import { pastelThemeDark } from "./PastelThemeDark";
 
@@ -585,5 +586,25 @@ export class DefaultConfig implements Config {
       return adjustment * 5;
     }
     return adjustment;
+  }
+
+  nukeMagnitudes(unitType: UnitType): NukeMagnitude {
+    switch (unitType) {
+      case UnitType.MIRVWarhead:
+        return { inner: 25, outer: 30 };
+      case UnitType.AtomBomb:
+        return { inner: 12, outer: 30 };
+      case UnitType.HydrogenBomb:
+        return { inner: 80, outer: 100 };
+    }
+  }
+
+  defaultNukeSpeed(): number {
+    return 4;
+  }
+
+  // Humans can be population, soldiers attacking, soldiers in boat etc.
+  nukeDeathFactor(humans: number, tilesOwned: number): number {
+    return (5 * humans) / tilesOwned;
   }
 }
