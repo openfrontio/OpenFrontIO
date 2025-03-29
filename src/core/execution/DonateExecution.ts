@@ -43,7 +43,7 @@ export class DonateExecution implements Execution {
       this.sender.removeTroops(taxAmount);
     } else {
       consolex.warn(
-        `cannot send tropps from ${this.sender} to ${this.recipient}`,
+        `cannot send troops from ${this.sender} to ${this.recipient}`,
       );
     }
     this.active = false;
