@@ -110,6 +110,7 @@ export interface Config {
   difficultyModifier(difficulty: Difficulty): number;
   // 0-1
   traitorDefenseDebuff(): number;
+  donationTax(initialDonateAmount: number): number;
 }
 
 export interface Theme {

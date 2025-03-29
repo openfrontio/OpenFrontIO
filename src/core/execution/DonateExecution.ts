@@ -4,6 +4,7 @@ import { Execution, Game, Player, PlayerID } from "../game/Game";
 export class DonateExecution implements Execution {
   private sender: Player;
   private recipient: Player;
+  private mg: Game;
 
   private active = true;
 
@@ -14,6 +15,7 @@ export class DonateExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
+    this.mg = mg;
     if (!mg.hasPlayer(this.senderID)) {
       console.warn(`DonateExecution: sender ${this.senderID} not found`);
       this.active = false;
@@ -34,8 +36,11 @@ export class DonateExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.sender.canDonate(this.recipient)) {
-      this.sender.donate(this.recipient, this.troops);
+      const taxAmount = this.troops * this.mg.config().donationTax(this.troops);
+      const afterTax = this.troops - taxAmount;
+      this.sender.donate(this.recipient, afterTax);
       this.recipient.updateRelation(this.sender, 50);
+      this.sender.removeTroops(taxAmount);
     } else {
       consolex.warn(
         `cannot send tropps from ${this.sender} to ${this.recipient}`,

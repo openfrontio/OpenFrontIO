@@ -28,6 +28,7 @@ import {
 } from "../../Transport";
 import { EmojiTable } from "./EmojiTable";
 import { UIState } from "../UIState";
+import { Config } from "../../../core/configuration/Config";
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {
