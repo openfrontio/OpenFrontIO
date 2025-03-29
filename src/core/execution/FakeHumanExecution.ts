@@ -192,6 +192,9 @@ export class FakeHumanExecution implements Execution {
   }
 
   private shouldAttack(other: Player): boolean {
+    if (this.player.team() == other.team() && this.player.team()) {
+      return false;
+    }
     if (this.player.isFriendly(other)) {
       if (this.shouldDiscourageAttack(other)) {
         return this.random.chance(200);
