@@ -52,12 +52,16 @@ export class HelpModal extends LitElement {
               <td data-i18n="help_modal.action_move_camera">Move camera</td>
             </tr>
             <tr>
-              <td>1 / 2</td>
-              <td data-i18n="help_modal.action_ratio_change">Decrease/Increase attack ratio</td>
+              <td>1 / 2 / 3 / .. / 0</td>
+              <td data-i18n="help_modal.action_ratio_change">Change the attack ratio</td>
             </tr>
             <tr>
               <td>Shift + scroll down / scroll up</td>
-              <td data-i18n="help_modal.action_ratio_change">Decrease/Increase attack ratio</td>
+              <td data-i18n="help_modal.action_ratio_increasedecrease">Decrease/Increase attack ratio</td>
+            </tr>
+            <tr>
+              <td>B</td>
+              <td data-i18n="help_modal.action_send_boat">Send boat to cursor position</td>
             </tr>
             <tr>
               <td>ALT + R</td>
