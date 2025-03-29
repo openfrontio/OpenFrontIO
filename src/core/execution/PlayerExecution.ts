@@ -2,6 +2,7 @@ import { Config } from "../configuration/Config";
 import {
   Execution,
   Game,
+  MessageType,
   Player,
   PlayerID,
   TerraNullius,
@@ -11,6 +12,7 @@ import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 import { GameImpl } from "../game/GameImpl";
 import { consolex } from "../Consolex";
 import { GameMap, TileRef } from "../game/GameMap";
+import { renderNumber } from "../../client/Utils";
 
 export class PlayerExecution implements Execution {
   private readonly ticksPerClusterCalc = 20;
@@ -200,6 +202,19 @@ export class PlayerExecution implements Execution {
     const filter = (_, t: TileRef): boolean =>
       this.mg.ownerID(t) == this.player.smallID();
     const tiles = this.mg.bfs(firstTile, filter);
+
+    if (this.player.numTilesOwned() == tiles.size) {
+      const gold = this.player.gold();
+      this.mg.displayMessage(
+        `Conquered ${this.player.displayName()} received ${renderNumber(
+          gold,
+        )} gold`,
+        MessageType.SUCCESS,
+        capturing.id(),
+      );
+      capturing.addGold(gold);
+      this.player.removeGold(gold);
+    }
 
     for (const tile of tiles) {
       capturing.conquer(tile);
