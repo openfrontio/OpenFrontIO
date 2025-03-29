@@ -113,6 +113,7 @@
     "pureimage": "^0.4.13",
     "raphael": "^2.3.0",
     "rate-limiter-flexible": "^5.0.5",
+    "sharp": "^0.33.5",
     "systeminformation": "^5.25.11",
     "twemoji": "^14.0.2",
     "uuid": "^10.0.0",

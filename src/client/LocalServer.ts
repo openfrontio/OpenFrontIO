@@ -6,6 +6,7 @@ import {
   ClientID,
   ClientMessage,
   ClientMessageSchema,
+  ClientSendWinnerMessage,
   GameConfig,
   GameID,
   GameRecordSchema,
@@ -33,7 +34,7 @@ export class LocalServer {
 
   private paused = false;
 
-  private winner: ClientID | null = null;
+  private winner: ClientSendWinnerMessage = null;
   private allPlayersStats: AllPlayersStats = {};
 
   constructor(
@@ -124,7 +125,7 @@ export class LocalServer {
       }
     }
     if (clientMsg.type == "winner") {
-      this.winner = clientMsg.winner;
+      this.winner = clientMsg;
       this.allPlayersStats = clientMsg.allPlayersStats;
     }
   }
@@ -164,7 +165,8 @@ export class LocalServer {
       this.turns,
       this.startedAt,
       Date.now(),
-      this.winner,
+      this.winner?.winner,
+      this.winner?.winnerType,
       this.allPlayersStats,
     );
     if (!saveFullGame) {

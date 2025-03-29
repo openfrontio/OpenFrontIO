@@ -5,6 +5,7 @@ import {
   GameType,
   Unit,
   UnitType,
+  TeamName,
 } from "../core/game/Game";
 import { EventBus } from "../core/EventBus";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
@@ -185,6 +186,15 @@ export class ClientGameRunner {
         clientID: this.lobby.clientID,
       },
     ];
+    let winner: ClientID | TeamName | null = null;
+    if (update.winnerType == "player") {
+      winner = this.gameView
+        .playerBySmallID(update.winner as number)
+        .clientID();
+    } else {
+      winner = update.winner as TeamName;
+    }
+
     const record = createGameRecord(
       this.lobby.gameID,
       this.lobby.gameConfig,
@@ -193,7 +203,8 @@ export class ClientGameRunner {
       [],
       LocalPersistantStats.startTime(),
       Date.now(),
-      this.gameView.playerBySmallID(update.winnerID).id(),
+      winner,
+      update.winnerType,
       update.allPlayersStats,
     );
     LocalPersistantStats.endGame(record);

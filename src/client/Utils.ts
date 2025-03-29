@@ -1,3 +1,5 @@
+import { LangSelector } from "./LangSelector";
+
 export function renderTroops(troops: number): string {
   return renderNumber(troops / 10);
 }
@@ -71,29 +73,25 @@ export function generateCryptoRandomUUID(): string {
   );
 }
 
-export function translateText(
+// Re-export translateText from LangSelector
+export const translateText = (
   key: string,
   params: Record<string, string | number> = {},
-): string {
-  const keys = key.split(".");
-  let text: any = (window as any).translations;
-
-  for (const k of keys) {
-    text = text?.[k];
-    if (!text) break;
+): string => {
+  const langSelector = document.querySelector("lang-selector") as LangSelector;
+  if (!langSelector) {
+    console.warn("LangSelector not found in DOM");
+    return key;
   }
 
-  if (!text && (window as any).defaultTranslations) {
-    text = (window as any).defaultTranslations;
-    for (const k of keys) {
-      text = text?.[k];
-      if (!text) return key;
-    }
+  // Wait for translations to be loaded
+  if (
+    !langSelector.translations ||
+    Object.keys(langSelector.translations).length === 0
+  ) {
+    console.warn("Translations not loaded yet");
+    return key;
   }
 
-  for (const [param, value] of Object.entries(params)) {
-    text = text.replace(`{${param}}`, String(value));
-  }
-
-  return text;
-}
+  return langSelector.translateText(key, params);
+};

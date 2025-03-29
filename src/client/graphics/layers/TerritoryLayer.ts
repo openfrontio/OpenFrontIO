@@ -254,12 +254,17 @@ export class TerritoryLayer implements Layer {
     if (this.game.isBorder(tile)) {
       const playerIsFocused = owner && this.game.focusedPlayer() == owner;
       if (
-        this.game.nearbyDefenses(tile).filter((u) => u.owner() == owner)
-          .length > 0
+        this.game
+          .nearbyUnits(
+            tile,
+            this.game.config().defensePostRange(),
+            UnitType.DefensePost,
+          )
+          .filter((u) => u.unit.owner() == owner).length > 0
       ) {
         const useDefendedBorderColor = playerIsFocused
           ? this.theme.focusedDefendedBorderColor()
-          : this.theme.defendedBorderColor(owner.info());
+          : this.theme.defendedBorderColor(owner);
         this.paintCell(
           this.game.x(tile),
           this.game.y(tile),
@@ -269,7 +274,7 @@ export class TerritoryLayer implements Layer {
       } else {
         const useBorderColor = playerIsFocused
           ? this.theme.focusedBorderColor()
-          : this.theme.borderColor(owner.info());
+          : this.theme.borderColor(owner);
         this.paintCell(
           this.game.x(tile),
           this.game.y(tile),
@@ -281,7 +286,7 @@ export class TerritoryLayer implements Layer {
       this.paintCell(
         this.game.x(tile),
         this.game.y(tile),
-        this.theme.territoryColor(owner.info()),
+        this.theme.territoryColor(owner),
         150,
       );
     }

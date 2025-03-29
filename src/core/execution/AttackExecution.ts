@@ -81,6 +81,17 @@ export class AttackExecution implements Execution {
         ? mg.terraNullius()
         : mg.player(this._targetID);
 
+    if (this.target && this.target.isPlayer()) {
+      const targetPlayer = this.target as Player;
+      if (
+        targetPlayer.type() != PlayerType.Bot &&
+        this._owner.type() != PlayerType.Bot
+      ) {
+        // Don't let bots embargo since they can't trade anyways.
+        targetPlayer.addEmbargo(this._owner.id());
+      }
+    }
+
     if (this._owner == this.target) {
       console.error(`Player ${this._owner} cannot attack itself`);
       this.active = false;
