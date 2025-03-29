@@ -93,10 +93,6 @@ export class DefaultConfig implements Config {
     return 0.8;
   }
 
-  samCooldown(): Tick {
-    return 100;
-  }
-
   traitorDefenseDebuff(): number {
     return 0.8;
   }
@@ -137,6 +133,12 @@ export class DefaultConfig implements Config {
     // falloutRatio is between 0 and 1
     // So defense modifier is between [5, 2.5]
     return 5 - falloutRatio * 2;
+  }
+  SAMCooldown(): number {
+    return 75;
+  }
+  SiloCooldown(): number {
+    return 75;
   }
 
   defensePostRange(): number {

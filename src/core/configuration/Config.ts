@@ -47,7 +47,6 @@ export interface ServerConfig {
 
 export interface Config {
   samHittingChance(): number;
-  samCooldown(): Tick;
   spawnImmunityDuration(): Tick;
   serverConfig(): ServerConfig;
   gameConfig(): GameConfig;
@@ -105,6 +104,8 @@ export interface Config {
   tradeShipGold(dist: number): Gold;
   tradeShipSpawnRate(numberOfPorts: number): number;
   defensePostRange(): number;
+  SAMCooldown(): number;
+  SiloCooldown(): number;
   defensePostDefenseBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
