@@ -36,7 +36,6 @@ import { fixProfaneUsername, isProfaneUsername } from "../validations/username";
 import { NoOpExecution } from "./NoOpExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { RetreatExecution } from "./RetreatExecution";
-import { BoatRetreatExecution } from "./BoatRetreatExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 
 export class Executor {
@@ -86,7 +85,14 @@ export class Executor {
       case "cancel_attack":
         return new RetreatExecution(intent.playerID, intent.attackID);
       case "cancel_boat":
-        return new BoatRetreatExecution(intent.playerID, intent.targetID);
+        if (!this.mg.hasPlayer(intent.playerID)) {
+          console.warn(
+            `intent ${intent.type} has incorrect Player ${intent.playerID}`,
+          );
+          return new NoOpExecution();
+        }
+        this.mg.player(intent.playerID).orderBoatRetreat(intent.targetID);
+        return new NoOpExecution();
       case "move_warship":
         return new MoveWarshipExecution(intent.unitId, intent.tile);
       case "spawn":
