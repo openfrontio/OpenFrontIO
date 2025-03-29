@@ -474,6 +474,10 @@ export class DefaultConfig implements Config {
     return Math.floor(attacker.troops() / 5);
   }
 
+  warshipShellLifetime(): number {
+    return 20; // in ticks (one tick is 100ms)
+  }
+
   radiusPortSpawn() {
     return 20;
   }
