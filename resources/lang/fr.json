@@ -1,4 +1,9 @@
 {
+  "lang": {
+    "en": "French",
+    "native": "Français",
+    "svg": "fr"
+  },
   "main": {
     "join_discord": "Rejoignez le Discord !",
     "create_lobby": "Créer un Salon",
@@ -91,8 +96,6 @@
   },
   "single_modal": {
     "title": "Joueur seul",
-    "map": "Carte",
-    "difficulty": "Difficulté",
     "allow_alliances": "Autoriser les alliances",
     "options_title": "Options",
     "bots": "Bots : ",
@@ -105,6 +108,7 @@
     "start": "Commencer la partie"
   },
   "map": {
+    "map": "Carte",
     "world": "Monde",
     "europe": "Europe",
     "mena": "MENA",
@@ -145,8 +149,6 @@
   },
   "host_modal": {
     "title": "Salon privé",
-    "map": "Carte",
-    "difficulty": "Difficulté",
     "options_title": "Options",
     "bots": "Bots : ",
     "bots_disabled": "Désactivé",
@@ -161,6 +163,7 @@
     "start": "Commencer la partie"
   },
   "difficulty": {
+    "difficulty": "Difficulté",
     "Relaxed": "Détendu",
     "Balanced": "Équilibré",
     "Intense": "Intense",

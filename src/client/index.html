@@ -339,6 +339,24 @@
     <player-panel></player-panel>
     <help-modal></help-modal>
     <dark-mode-button></dark-mode-button>
+    <div
+      id="language-modal"
+      class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center"
+    >
+      <div class="bg-white rounded-lg shadow-lg p-6 w-96 max-w-full">
+        <h2 class="text-xl font-semibold mb-4">Select Language</h2>
+        <div
+          id="language-list"
+          class="space-y-2 max-h-80 overflow-y-auto"
+        ></div>
+        <button
+          class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
+          onclick="document.getElementById('language-modal').classList.add('hidden')"
+        >
+          Close
+        </button>
+      </div>
+    </div>
     <!-- Scripts -->
     <script>
       // Remove preload class after everything is loaded
