@@ -27,12 +27,14 @@ import {
   SendEmbargoIntentEvent,
 } from "../../Transport";
 import { EmojiTable } from "./EmojiTable";
+import { UIState } from "../UIState";
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {
   public g: GameView;
   public eventBus: EventBus;
   public emojiTable: EmojiTable;
+  public uiState: UIState;
 
   private actions: PlayerActions = null;
   private tile: TileRef = null;
@@ -79,7 +81,13 @@ export class PlayerPanel extends LitElement implements Layer {
 
   private handleDonateClick(e: Event, myPlayer: PlayerView, other: PlayerView) {
     e.stopPropagation();
-    this.eventBus.emit(new SendDonateIntentEvent(myPlayer, other, null));
+    this.eventBus.emit(
+      new SendDonateIntentEvent(
+        myPlayer,
+        other,
+        myPlayer.troops() * this.uiState.attackRatio,
+      ),
+    );
     this.hide();
   }
 
