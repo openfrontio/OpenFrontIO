@@ -102,16 +102,6 @@ export class LangSelector extends LitElement {
       return await response.json();
     } catch (err) {
       console.error("Language load failed:", err);
-    this.applyTranslation(this.translations);
-  }
-
-  private async loadLanguage(lang: string): Promise<any> {
-    try {
-      const translation = translations[lang as keyof typeof translations];
-      if (!translation) throw new Error(`Language file not found: ${lang}`);
-      return translation;
-    } catch (error) {
-      console.error("🚨 Translation load error:", error);
       return {};
     }
   }
@@ -277,6 +267,21 @@ export class LangSelector extends LitElement {
   }
 
   render() {
+    const currentLang =
+      this.languageList.find((l) => l.code === this.currentLang) ??
+      (this.currentLang === "debug"
+        ? {
+            code: "debug",
+            native: "Debug",
+            en: "Debug",
+            svg: "xx",
+          }
+        : {
+            native: "English",
+            en: "English",
+            svg: "xx",
+          });
+
     return html`
       <div class="container__row">
         <button
@@ -284,8 +289,13 @@ export class LangSelector extends LitElement {
           @click=${this.openModal}
           class="text-center appearance-none w-full bg-blue-100 hover:bg-blue-200 text-blue-900 p-3 sm:p-4 lg:p-5 font-medium text-sm sm:text-base lg:text-lg rounded-md border-none cursor-pointer transition-colors duration-300 flex items-center gap-2 justify-center"
         >
-          <img id="lang-flag" class="w-6 h-4" src="/flags/xx.svg" alt="flag" />
-          <span id="lang-name">English (English)</span>
+          <img
+            id="lang-flag"
+            class="w-6 h-4"
+            src="/flags/${currentLang.svg}.svg"
+            alt="flag"
+          />
+          <span id="lang-name">${currentLang.native} (${currentLang.en})</span>
         </button>
       </div>
 
