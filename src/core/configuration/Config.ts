@@ -117,6 +117,8 @@ export interface Theme {
   specialBuildingColor(playerInfo: PlayerView): Colord;
   borderColor(playerInfo: PlayerView): Colord;
   defendedBorderColor(playerInfo: PlayerView): Colord;
+  focusedBorderColor(): Colord;
+  focusedDefendedBorderColor(): Colord;
   terrainColor(gm: GameMap, tile: TileRef): Colord;
   backgroundColor(): Colord;
   falloutColor(): Colord;

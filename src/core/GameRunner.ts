@@ -15,6 +15,7 @@ import {
   PlayerActions,
   PlayerID,
   PlayerProfile,
+  PlayerBorderTiles,
   PlayerType,
   UnitType,
 } from "./game/Game";
@@ -179,5 +180,14 @@ export class GameRunner {
       throw new Error(`player with id ${playerID} not found`);
     }
     return player.playerProfile();
+  }
+  public playerBorderTiles(playerID: PlayerID): PlayerBorderTiles {
+    const player = this.game.player(playerID);
+    if (!player.isPlayer()) {
+      throw new Error(`player with id ${playerID} not found`);
+    }
+    return {
+      borderTiles: player.borderTiles(),
+    } as PlayerBorderTiles;
   }
 }

@@ -3,11 +3,13 @@ import {
   GameMapType,
   Difficulty,
   GameType,
+  Unit,
+  UnitType,
   TeamName,
 } from "../core/game/Game";
 import { EventBus } from "../core/EventBus";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
-import { InputHandler, MouseUpEvent } from "./InputHandler";
+import { InputHandler, MouseUpEvent, MouseMoveEvent } from "./InputHandler";
 import {
   ClientID,
   GameConfig,
@@ -34,12 +36,21 @@ import { WorkerClient } from "../core/worker/WorkerClient";
 import { consolex, initRemoteSender } from "../core/Consolex";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { GameView, PlayerView } from "../core/game/GameView";
+import { GameView, PlayerView, UnitView } from "../core/game/GameView";
 import { GameUpdateViewData } from "../core/game/GameUpdates";
 import { UserSettings } from "../core/game/UserSettings";
 import { LocalPersistantStats } from "./LocalPersistantStats";
 import { createGameRecord } from "../core/Util";
 import { getPersistentIDFromCookie } from "./Main";
+import { TileRef } from "../core/game/GameMap";
+
+function distSortUnitWorld(tile: TileRef, game: GameView) {
+  return (a: Unit | UnitView, b: Unit | UnitView) => {
+    return (
+      game.euclideanDist(tile, a.tile()) - game.euclideanDist(tile, b.tile())
+    );
+  };
+}
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -152,6 +163,10 @@ export class ClientGameRunner {
   private turnsSeen = 0;
   private hasJoined = false;
 
+  private lastMousePosition: { x: number; y: number } | null = null;
+  private mouseHoverTimer: number | null = null;
+  private readonly HOVER_DELAY = 200;
+
   constructor(
     private lobby: LobbyConfig,
     private eventBus: EventBus,
@@ -199,6 +214,7 @@ export class ClientGameRunner {
     consolex.log("starting client game");
     this.isActive = true;
     this.eventBus.on(MouseUpEvent, (e) => this.inputEvent(e));
+    this.eventBus.on(MouseMoveEvent, (e) => this.onMouseMove(e));
 
     this.renderer.initialize();
     this.input.initialize();
@@ -328,7 +344,60 @@ export class ClientGameRunner {
           ),
         );
       }
+
+      const owner = this.gameView.owner(tile);
+      if (owner.isPlayer()) {
+        this.gameView.setFocusedPlayer(owner as PlayerView);
+      } else {
+        this.gameView.setFocusedPlayer(null);
+      }
     });
+  }
+
+  private onMouseMove(event: MouseMoveEvent) {
+    this.lastMousePosition = { x: event.x, y: event.y };
+    this.clearHoverTimer();
+
+    this.mouseHoverTimer = window.setTimeout(() => {
+      this.checkTileUnderCursor();
+    }, this.HOVER_DELAY);
+  }
+
+  private clearHoverTimer() {
+    if (this.mouseHoverTimer !== null) {
+      clearTimeout(this.mouseHoverTimer);
+      this.mouseHoverTimer = null;
+    }
+  }
+
+  private checkTileUnderCursor() {
+    if (!this.lastMousePosition || !this.renderer.transformHandler) return;
+
+    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
+      this.lastMousePosition.x,
+      this.lastMousePosition.y,
+    );
+
+    if (!cell || !this.gameView.isValidCoord(cell.x, cell.y)) {
+      return;
+    }
+
+    const tile = this.gameView.ref(cell.x, cell.y);
+
+    if (this.gameView.isLand(tile)) {
+      const owner = this.gameView.owner(tile);
+      if (owner.isPlayer()) {
+        this.gameView.setFocusedPlayer(owner as PlayerView);
+      }
+    } else {
+      const units = this.gameView
+        .units(UnitType.Warship, UnitType.TradeShip, UnitType.TransportShip)
+        .filter((u) => this.gameView.euclideanDist(tile, u.tile()) < 50)
+        .sort(distSortUnitWorld(tile, this.gameView));
+      if (units.length > 0) {
+        this.gameView.setFocusedPlayer(units[0].owner() as PlayerView);
+      }
+    }
   }
 }
 

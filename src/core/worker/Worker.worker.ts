@@ -6,6 +6,7 @@ import {
   InitializedMessage,
   PlayerActionsResultMessage,
   PlayerProfileResultMessage,
+  PlayerBorderTilesResultMessage,
 } from "./WorkerMessages";
 
 const ctx: Worker = self as any;
@@ -98,6 +99,25 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         } as PlayerProfileResultMessage);
       } catch (error) {
         console.error("Failed to check borders:", error);
+        throw error;
+      }
+      break;
+    case "player_border_tiles":
+      if (!gameRunner) {
+        throw new Error("Game runner not initialized");
+      }
+
+      try {
+        const borderTiles = (await gameRunner).playerBorderTiles(
+          message.playerID,
+        );
+        sendMessage({
+          type: "player_border_tiles_result",
+          id: message.id,
+          result: borderTiles,
+        } as PlayerBorderTilesResultMessage);
+      } catch (error) {
+        console.error("Failed to get border tiles:", error);
         throw error;
       }
       break;

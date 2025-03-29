@@ -3,6 +3,7 @@ import {
   PlayerID,
   PlayerInfo,
   PlayerProfile,
+  PlayerBorderTiles,
 } from "../game/Game";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameConfig, GameID, Turn } from "../Schemas";
@@ -126,6 +127,32 @@ export class WorkerClient {
 
       this.worker.postMessage({
         type: "player_profile",
+        id: messageId,
+        playerID: playerID,
+      });
+    });
+  }
+
+  playerBorderTiles(playerID: PlayerID): Promise<PlayerBorderTiles> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (
+          message.type === "player_border_tiles_result" &&
+          message.result !== undefined
+        ) {
+          resolve(message.result);
+        }
+      });
+
+      this.worker.postMessage({
+        type: "player_border_tiles",
         id: messageId,
         playerID: playerID,
       });

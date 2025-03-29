@@ -50,6 +50,8 @@ export class TerritoryLayer implements Layer {
   private refreshRate = 50;
   private lastRefresh = 0;
 
+  private lastFocusedPlayer: PlayerView | null = null;
+
   constructor(
     private game: GameView,
     private eventBus: EventBus,
@@ -82,6 +84,17 @@ export class TerritoryLayer implements Layer {
           });
       }
     });
+
+    const focusedPlayer = this.game.focusedPlayer();
+    if (focusedPlayer !== this.lastFocusedPlayer) {
+      if (this.lastFocusedPlayer) {
+        this.enqueuePlayerBorder(this.lastFocusedPlayer);
+      }
+      if (focusedPlayer) {
+        this.enqueuePlayerBorder(focusedPlayer);
+      }
+      this.lastFocusedPlayer = focusedPlayer;
+    }
 
     if (!this.game.inSpawnPhase()) {
       return;
@@ -239,6 +252,7 @@ export class TerritoryLayer implements Layer {
     }
     const owner = this.game.owner(tile) as PlayerView;
     if (this.game.isBorder(tile)) {
+      const playerIsFocused = owner && this.game.focusedPlayer() == owner;
       if (
         this.game
           .nearbyUnits(
@@ -248,17 +262,23 @@ export class TerritoryLayer implements Layer {
           )
           .filter((u) => u.unit.owner() == owner).length > 0
       ) {
+        const useDefendedBorderColor = playerIsFocused
+          ? this.theme.focusedDefendedBorderColor()
+          : this.theme.defendedBorderColor(owner);
         this.paintCell(
           this.game.x(tile),
           this.game.y(tile),
-          this.theme.defendedBorderColor(owner),
+          useDefendedBorderColor,
           255,
         );
       } else {
+        const useBorderColor = playerIsFocused
+          ? this.theme.focusedBorderColor()
+          : this.theme.borderColor(owner);
         this.paintCell(
           this.game.x(tile),
           this.game.y(tile),
-          this.theme.borderColor(owner),
+          useBorderColor,
           255,
         );
       }
@@ -291,6 +311,13 @@ export class TerritoryLayer implements Layer {
     this.tileToRenderQueue.push({
       tile: tile,
       lastUpdate: this.game.ticks() + this.random.nextFloat(0, 0.5),
+    });
+  }
+
+  async enqueuePlayerBorder(player: PlayerView) {
+    const playerBorderTiles = await player.borderTiles();
+    playerBorderTiles.borderTiles.forEach((tile: TileRef) => {
+      this.enqueueTile(tile);
     });
   }
 
