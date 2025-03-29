@@ -93,6 +93,9 @@ export class BotExecution implements Execution {
           return;
         }
       }
+      if (this.bot.team() == owner.team() && this.bot.team()) {
+        return;
+      }
     }
     this.sendAttack(owner);
   }
