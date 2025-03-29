@@ -135,7 +135,7 @@ export class CancelAttackIntentEvent implements GameEvent {
 export class CancelBoatIntentEvent implements GameEvent {
   constructor(
     public readonly playerID: PlayerID,
-    public readonly targetID: number,
+    public readonly unitID: number,
   ) {}
 }
 
@@ -584,7 +584,7 @@ export class Transport {
       type: "cancel_boat",
       clientID: this.lobbyConfig.clientID,
       playerID: event.playerID,
-      targetID: event.targetID,
+      unitID: event.unitID,
     });
   }
 
