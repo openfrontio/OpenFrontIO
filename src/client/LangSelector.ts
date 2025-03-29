@@ -102,6 +102,16 @@ export class LangSelector extends LitElement {
       return await response.json();
     } catch (err) {
       console.error("Language load failed:", err);
+    this.applyTranslation(this.translations);
+  }
+
+  private async loadLanguage(lang: string): Promise<any> {
+    try {
+      const translation = translations[lang as keyof typeof translations];
+      if (!translation) throw new Error(`Language file not found: ${lang}`);
+      return translation;
+    } catch (error) {
+      console.error("🚨 Translation load error:", error);
       return {};
     }
   }
@@ -125,7 +135,6 @@ export class LangSelector extends LitElement {
         });
       }
 
-      // debug は最後に入れるため別で管理
       let debugLang: any = null;
       if (this.dKeyPressed) {
         debugLang = {
@@ -166,7 +175,7 @@ export class LangSelector extends LitElement {
 
       this.languageList = finalList;
     } catch (err) {
-      console.error("言語リストの読み込みに失敗しました:", err);
+      console.error("Failed to load language list:", err);
     }
   }
 
@@ -221,7 +230,7 @@ export class LangSelector extends LitElement {
       if (text) {
         element.innerHTML = text;
       } else {
-        console.warn(`翻訳キーが見つかりません: ${key}`);
+        console.warn(`Translation key not found: ${key}`);
       }
     });
 

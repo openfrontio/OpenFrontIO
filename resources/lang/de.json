@@ -135,6 +135,7 @@
   },
   "host_modal": {
     "title": "Private Lobby",
+    "mode": "Modus",
     "options_title": "Optionen",
     "bots": "Bots:",
     "bots_disabled": "Deaktiviert",
