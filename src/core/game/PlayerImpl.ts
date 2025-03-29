@@ -743,10 +743,12 @@ export class PlayerImpl implements Player {
   nukeSpawn(tile: TileRef): TileRef | false {
     const spawns = this.units(UnitType.MissileSilo)
       .map((u) => u as Unit)
+      .filter((u) => !u.isMissileSiloCooldown())
       .sort(distSortUnit(this.mg, tile));
     if (spawns.length == 0) {
       return false;
     }
+
     return spawns[0].tile();
   }
 

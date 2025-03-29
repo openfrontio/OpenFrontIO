@@ -19,6 +19,8 @@ export class UnitImpl implements Unit {
 
   private _constructionType: UnitType = undefined;
 
+  private _lastMissileLaunchedTicks: number = -1;
+  private _isMissileSiloCooldown: boolean = false;
   private _isSamCooldown: boolean = false;
   private _dstPort: Unit | null = null; // Only for trade ships
   private _detonationDst: TileRef | null = null; // Only for nukes
@@ -62,6 +64,7 @@ export class UnitImpl implements Unit {
       warshipTargetId: warshipTarget ? warshipTarget.id() : null,
       detonationDst: this.detonationDst(),
       isSamCooldown: this.isSamCooldown() ? this.isSamCooldown() : null,
+      isSiloMissileCooldown: this.isMissileSiloCooldown() ?? null,
     };
   }
 
@@ -181,6 +184,23 @@ export class UnitImpl implements Unit {
 
   dstPort(): Unit {
     return this._dstPort;
+  }
+
+  missileSiloShoots(): void {
+    this._lastMissileLaunchedTicks = this.mg.ticks();
+  }
+
+  lastMissileLaunchedTicks(): number {
+    return this._lastMissileLaunchedTicks;
+  }
+
+  setMissileSiloCooldown(cooldown: boolean): void {
+    this._isMissileSiloCooldown = cooldown;
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  isMissileSiloCooldown(): boolean {
+    return this._isMissileSiloCooldown;
   }
 
   setSamCooldown(cooldown: boolean): void {

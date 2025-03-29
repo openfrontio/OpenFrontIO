@@ -253,6 +253,12 @@ export interface Unit {
   setWarshipTarget(target: Unit): void; // warship only
   warshipTarget(): Unit;
 
+  // Only for missile silos
+  missileSiloShoots(): void;
+  lastMissileLaunchedTicks(): number;
+  setMissileSiloCooldown(isCoolingDown: boolean): void;
+  isMissileSiloCooldown(): boolean;
+
   setSamCooldown(isCoolingDown: boolean): void; // Only for sam
   isSamCooldown(): boolean;
   setDstPort(dstPort: Unit): void;

@@ -76,6 +76,7 @@ export interface UnitUpdate {
   health?: number;
   constructionType?: UnitType;
   isSamCooldown?: boolean;
+  isSiloMissileCooldown?: boolean;
 }
 
 export interface AttackUpdate {

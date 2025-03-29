@@ -113,8 +113,17 @@ export class UnitView {
     }
     return this.data.warshipTargetId;
   }
-  isSamCooldown(): boolean {
-    return this.data.isSamCooldown;
+  isReloading(): boolean {
+    if (this.type() == UnitType.SAMLauncher && this.data.isSamCooldown) {
+      return true;
+    }
+    if (
+      this.type() == UnitType.MissileSilo &&
+      this.data.isSiloMissileCooldown
+    ) {
+      return true;
+    }
+    return false;
   }
 }
 

@@ -93,6 +93,10 @@ export class DefaultConfig implements Config {
     return 0.8;
   }
 
+  missileSiloCooldown(): Tick {
+    return 100;
+  }
+
   samCooldown(): Tick {
     return 100;
   }

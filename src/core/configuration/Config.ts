@@ -47,6 +47,7 @@ export interface ServerConfig {
 
 export interface Config {
   samHittingChance(): number;
+  missileSiloCooldown(): Tick;
   samCooldown(): Tick;
   spawnImmunityDuration(): Tick;
   serverConfig(): ServerConfig;

@@ -47,6 +47,20 @@ export class MissileSiloExecution implements Execution {
         this.player = this.silo.owner();
       }
     }
+
+    const cooldown =
+      this.silo.lastMissileLaunchedTicks() != -1 &&
+      this.silo.lastMissileLaunchedTicks() +
+        this.mg.config().missileSiloCooldown() >=
+        this.mg.ticks();
+    console.log(
+      `MissileSiloExecution: cooldown=${cooldown} , lastMissileLaunchedTicks=${this.silo.lastMissileLaunchedTicks()}, , ticks=${this.mg.ticks()}`,
+    );
+    // PERF: we only call setMissileSiloCooldown if the state has changed to avoid
+    // useless UI refresh.
+    if (cooldown != this.silo.isMissileSiloCooldown()) {
+      this.silo.setMissileSiloCooldown(cooldown);
+    }
   }
 
   isActive(): boolean {

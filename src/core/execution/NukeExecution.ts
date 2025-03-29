@@ -55,6 +55,18 @@ export class NukeExecution implements Execution {
         this.active = false;
         return;
       }
+      const silo = this.player
+        .units(UnitType.MissileSilo)
+        .filter((u) => u.tile() == spawn);
+      if (silo.length > 0) {
+        silo[0].missileSiloShoots();
+        this.mg.displayMessage(
+          `Missile launched. Missile silo will be unavailable for ${this.mg.config().missileSiloCooldown() / 10} seconds.`,
+          MessageType.INFO,
+          this.player.id(),
+        );
+      }
+
       this.nuke = this.player.buildUnit(this.type, 0, spawn, {
         detonationDst: this.dst,
       });

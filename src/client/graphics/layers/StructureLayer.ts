@@ -6,7 +6,6 @@ import { EventBus } from "../../../core/EventBus";
 import anchorIcon from "../../../../resources/images/buildings/port1.png";
 import missileSiloIcon from "../../../../resources/images/buildings/silo1.png";
 import SAMMissileIcon from "../../../../resources/images/buildings/silo4.png";
-import SAMMissileReloadingIcon from "../../../../resources/images/buildings/silo4-reloading.png";
 import shieldIcon from "../../../../resources/images/buildings/fortAlt2.png";
 import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
 import { GameView, UnitView } from "../../../core/game/GameView";
@@ -84,12 +83,6 @@ export class StructureLayer implements Layer {
   ) {
     this.theme = game.config().theme();
     this.loadIconData();
-    this.loadIcon("reloadingSam", {
-      icon: SAMMissileReloadingIcon,
-      borderRadius: 8.525,
-      territoryRadius: 6.525,
-      borderType: UnitBorderType.Square,
-    });
   }
 
   private loadIcon(unitType: string, config: UnitRenderConfig) {
@@ -213,13 +206,7 @@ export class StructureLayer implements Layer {
     if (!this.isUnitTypeSupported(unitType)) return;
 
     const config = this.unitConfigs[unitType];
-    let icon: ImageData;
-
-    if (unitType == UnitType.SAMLauncher && unit.isSamCooldown()) {
-      icon = this.unitIcons.get("reloadingSam");
-    } else {
-      icon = this.unitIcons.get(iconType);
-    }
+    const icon = this.unitIcons.get(iconType);
 
     if (!config || !icon) return;
 
@@ -235,7 +222,7 @@ export class StructureLayer implements Layer {
     if (!unit.isActive()) return;
 
     let borderColor = this.theme.borderColor(unit.owner());
-    if (unitType == UnitType.SAMLauncher && unit.isSamCooldown()) {
+    if (unit.isReloading()) {
       borderColor = reloadingColor;
     } else if (unit.type() == UnitType.Construction) {
       borderColor = underConstructionColor;
