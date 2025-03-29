@@ -163,5 +163,9 @@
     "en": "German",
     "native": "Deutsch",
     "svg": "de"
+  },
+  "game_mode": {
+    "ffa": "Free for All",
+    "teams": "Teams"
   }
 }
