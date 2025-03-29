@@ -17,6 +17,7 @@ export class UnitImpl implements Unit {
   private _health: bigint;
   private _lastTile: TileRef;
   private _moveTarget: TileRef | null = null;
+  private _retreating: boolean = false;
   private _targetedBySAM = false;
   private _safeFromPiratesCooldown: number; // Only for trade ships
   private _lastSetSafeFromPirates: number; // Only for trade ships
@@ -81,6 +82,7 @@ export class UnitImpl implements Unit {
       ownerID: this._owner.smallID(),
       lastOwnerID: this._lastOwner?.smallID(),
       isActive: this._active,
+      retreating: this._retreating,
       pos: this._tile,
       lastPos: this._lastTile,
       health: this.hasHealth() ? Number(this._health) : undefined,
@@ -178,6 +180,14 @@ export class UnitImpl implements Unit {
   }
   isActive(): boolean {
     return this._active;
+  }
+
+  retreating(): boolean {
+    return this._retreating;
+  }
+
+  orderBoatRetreat() {
+    this._retreating = true;
   }
 
   constructionType(): UnitType | null {

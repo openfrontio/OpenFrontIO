@@ -165,6 +165,10 @@ export class TransportShipExecution implements Execution {
     }
     this.lastMove = ticks;
 
+    if (this.boat.retreating()) {
+      this.dst = this.src;
+    }
+
     const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
     switch (result.type) {
       case PathFindResultType.Completed:

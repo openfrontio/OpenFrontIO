@@ -132,6 +132,13 @@ export class CancelAttackIntentEvent implements GameEvent {
   ) {}
 }
 
+export class CancelBoatIntentEvent implements GameEvent {
+  constructor(
+    public readonly playerID: PlayerID,
+    public readonly targetID: number,
+  ) {}
+}
+
 export class SendSetTargetTroopRatioEvent implements GameEvent {
   constructor(public readonly ratio: number) {}
 }
@@ -221,6 +228,10 @@ export class Transport {
     this.eventBus.on(CancelAttackIntentEvent, (e) =>
       this.onCancelAttackIntentEvent(e),
     );
+    this.eventBus.on(CancelBoatIntentEvent, (e) =>
+      this.onCancelBoatIntentEvent(e),
+    );
+
     this.eventBus.on(MoveWarshipIntentEvent, (e) => {
       this.onMoveWarshipEvent(e);
     });
@@ -565,6 +576,15 @@ export class Transport {
       type: "cancel_attack",
       clientID: this.lobbyConfig.clientID,
       attackID: event.attackID,
+    });
+  }
+
+  private onCancelBoatIntentEvent(event: CancelBoatIntentEvent) {
+    this.sendIntent({
+      type: "cancel_boat",
+      clientID: this.lobbyConfig.clientID,
+      playerID: event.playerID,
+      targetID: event.targetID,
     });
   }
 
