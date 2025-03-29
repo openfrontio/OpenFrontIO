@@ -1,9 +1,4 @@
 {
-  "lang": {
-    "en": "Dutch",
-    "native": "Nederlands",
-    "svg": "nl"
-  },
   "main": {
     "join_discord": "Word lid van de Discord!",
     "create_lobby": "Lobby aanmaken",
@@ -26,7 +21,7 @@
     "action_ratio_change": "Aanvalsverhouding verlagen/verhogen",
     "action_reset_gfx": "Grafische instellingen herstellen",
     "ui_section": "Spel-UI",
-    "ui_leaderboard": "Leaderboard (leidersbord)",
+    "ui_leaderboard": "Leidersbord",
     "ui_leaderboard_desc": "Toont de topspelers van het spel en hun namen, % bezette land en goud.",
     "ui_control": "Controlepaneel",
     "ui_control_desc": "Het controlepaneel bevat de volgende elementen:",
@@ -98,7 +93,6 @@
     "start": "Start Spel"
   },
   "map": {
-    "map": "Kaart",
     "world": "Wereld",
     "europe": "Europa",
     "mena": "MENA",
@@ -114,7 +108,8 @@
     "australia": "Australië",
     "random": "Willekeurig",
     "iceland": "IJsland",
-    "pangaea": "Pangea"
+    "pangaea": "Pangea",
+    "map": "Kaart"
   },
   "private_lobby": {
     "title": "Privélobby toetreden",
@@ -151,17 +146,27 @@
     "player": "Speler",
     "players": "Spelers",
     "waiting": "Wachten op spelers...",
-    "start": "Start Spel"
+    "start": "Start Spel",
+    "mode": "Modus"
   },
   "difficulty": {
-    "difficulty": "Moeilijkheidsgraad",
     "Relaxed": "Ontspannen",
     "Balanced": "Gebalanceerd",
     "Intense": "Intens",
-    "Impossible": "Onmogelijk"
+    "Impossible": "Onmogelijk",
+    "difficulty": "Moeilijkheidsgraad"
   },
   "game_starting_modal": {
     "title": "Spel gaat starten...",
     "desc": "Voorbereiden op het starten van de lobby. Even geduld."
+  },
+  "lang": {
+    "en": "Dutch",
+    "native": "Nederlands",
+    "svg": "nl"
+  },
+  "mode": {
+    "ffa": "Iedereen tegen iedereen (FFA)",
+    "team": "Teams"
   }
 }
