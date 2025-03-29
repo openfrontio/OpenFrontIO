@@ -8,6 +8,7 @@ import {
   PlayerProfile,
   TeamName,
 } from "./Game";
+// import { displayNameMap } from "../execution/PlayerExecution";
 import { AttackUpdate, PlayerUpdate } from "./GameUpdates";
 import { UnitUpdate } from "./GameUpdates";
 import { NameViewData } from "./Game";
@@ -33,6 +34,15 @@ import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdateViewData } from "./GameUpdates";
 import { UnitGrid } from "./UnitGrid";
 import { consolex } from "../Consolex";
+import { simpleHash, createRandomName } from "../Util";
+
+import {
+  BOT_NAME_PREFIXES,
+  BOT_NAME_SUFFIXES,
+} from "../execution/utils/BotNames";
+
+const displayNameMap: Record<PlayerID, string> = {};
+const usedNames = new Set<string>();
 import { SAMLauncherExecution } from "../execution/SAMLauncherExecution";
 
 export class UnitView {
@@ -158,10 +168,48 @@ export class PlayerView {
     return this.data.flag;
   }
   name(): string {
-    return this.data.name;
+    let randomName = createRandomName(this.data);
+    if (!displayNameMap[this.data.name] && randomName !== "") {
+      displayNameMap[this.data.name] = randomName;
+    }
+    return localStorage.getItem("settings.randomname") === "true" &&
+      displayNameMap[this.data.displayName]
+      ? displayNameMap[this.data.displayName]
+      : this.data.playerType === "HUMAN"
+        ? `<b>${this.data.name}</b>`
+        : `<i>${this.data.name}</i>`;
+  }
+  name_notag(): string {
+    let randomName = createRandomName(this.data);
+    if (!displayNameMap[this.data.name] && randomName !== "") {
+      displayNameMap[this.data.name] = randomName;
+    }
+    return localStorage.getItem("settings.randomname") === "true" &&
+      displayNameMap[this.data.displayName]
+      ? displayNameMap[this.data.displayName]
+      : this.data.name;
   }
   displayName(): string {
-    return this.data.displayName;
+    let randomName = createRandomName(this.data);
+    if (!displayNameMap[this.data.name] && randomName !== "") {
+      displayNameMap[this.data.name] = randomName;
+    }
+    return localStorage.getItem("settings.randomname") === "true" &&
+      displayNameMap[this.data.displayName]
+      ? displayNameMap[this.data.displayName]
+      : this.data.playerType === "HUMAN"
+        ? `<b>${this.data.displayName}</b>`
+        : `<i>${this.data.displayName}</i>`;
+  }
+  displayName_notag(): string {
+    let randomName = createRandomName(this.data);
+    if (!displayNameMap[this.data.name] && randomName !== "") {
+      displayNameMap[this.data.name] = randomName;
+    }
+    return localStorage.getItem("settings.randomname") === "true" &&
+      displayNameMap[this.data.displayName]
+      ? displayNameMap[this.data.displayName]
+      : this.data.displayName;
   }
   clientID(): ClientID {
     return this.data.clientID;

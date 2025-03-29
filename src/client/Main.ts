@@ -20,6 +20,8 @@ import { PublicLobby } from "./PublicLobby";
 import { UserSettings } from "../core/game/UserSettings";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
+import "./RandomNameButton";
+import { RandomNameButton } from "./RandomNameButton";
 import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
 import { GameType } from "../core/game/Game";
@@ -44,6 +46,7 @@ class Client {
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
   private darkModeButton: DarkModeButton | null = null;
+  private randomNameButton: RandomNameButton | null = null;
 
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
@@ -70,6 +73,13 @@ class Client {
     ) as DarkModeButton;
     if (!this.darkModeButton) {
       consolex.warn("Dark mode button element not found");
+    }
+
+    this.randomNameButton = document.querySelector(
+      "random-name-button",
+    ) as RandomNameButton;
+    if (!this.randomNameButton) {
+      consolex.warn("Random name button element not found");
     }
 
     this.usernameInput = document.querySelector(
