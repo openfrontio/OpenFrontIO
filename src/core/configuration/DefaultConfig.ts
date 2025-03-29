@@ -586,4 +586,8 @@ export class DefaultConfig implements Config {
     }
     return adjustment;
   }
+
+  donationTax(initialDonateAmount: number): number {
+    return 0.1;
+  }
 }
