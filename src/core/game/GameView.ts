@@ -120,11 +120,17 @@ export class UnitView {
     return this.data.isSamCooldown;
   }
 
-  orderRetreat() {
+  orderTransportShipRetreat() {
+    if (this.type() != UnitType.TransportShip) {
+      throw Error("Must be a transportship");
+    }
     this._retreating = true;
   }
 
-  retreating(): boolean {
+  transportShipIsRetreating(): boolean {
+    if (this.type() != UnitType.TransportShip) {
+      throw Error("Must be a transportship");
+    }
     return this._retreating;
   }
 }

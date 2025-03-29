@@ -488,9 +488,9 @@ export class EventsDisplay extends LitElement implements Layer {
                     >
                       Boat: ${renderTroops(boat.troops())}
                     </button>
-                    ${!boat.retreating()
+                    ${!boat.transportShipIsRetreating()
                       ? html`<button
-                          ${boat.retreating() ? "disabled" : ""}
+                          ${boat.transportShipIsRetreating() ? "disabled" : ""}
                           @click=${() => {
                             this.emitBoatCancelIntent(boat.id());
                           }}
