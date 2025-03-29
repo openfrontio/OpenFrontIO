@@ -253,7 +253,7 @@ export interface Unit {
   setWarshipTarget(target: Unit): void; // warship only
   warshipTarget(): Unit;
 
-  setCooldown(triggerCooldown: boolean): void; // Only for sam
+  setCooldown(triggerCooldown: boolean): void;
   ticksLeftInCooldown(cooldownDuration: number): Tick;
   isCooldown(): boolean;
   setDstPort(dstPort: Unit): void;
