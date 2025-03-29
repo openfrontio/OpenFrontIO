@@ -268,6 +268,17 @@ export class PlayerImpl implements Player {
     }
     attack[0].orderRetreat();
   }
+
+  orderBoatRetreat(id: number) {
+    const unit = this.units().filter((unit) => unit.id() == id);
+
+    if (!unit || !unit[0]) {
+      consolex.warn(`Didn't find outgoing boat with id ${id}`);
+      return;
+    }
+
+    unit[0].orderBoatRetreat();
+  }
   executeRetreat(id: string): void {
     const attack = this._outgoingAttacks.filter((attack) => attack.id() == id);
     // Execution is delayed so it's not an error that the attack does not exist.
@@ -984,7 +995,7 @@ export class PlayerImpl implements Player {
   // It's a probability list, so if an element appears twice it's because it's
   // twice more likely to be picked later.
   tradingPorts(port: Unit): Unit[] {
-    let ports = this.mg
+    const ports = this.mg
       .players()
       .filter((p) => p != port.owner() && p.canTrade(port.owner()))
       .flatMap((p) => p.units(UnitType.Port))
