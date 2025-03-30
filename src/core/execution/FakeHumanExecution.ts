@@ -319,6 +319,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   private maybeSendBoatAttack(other: Player) {
+    if (this.player.isOnSameTeam(other)) return;
     const closest = closestTwoTiles(
       this.mg,
       Array.from(this.player.borderTiles()).filter((t) =>
@@ -584,6 +585,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   sendAttack(toAttack: Player | TerraNullius) {
+    if (toAttack.isPlayer() && this.player.isOnSameTeam(toAttack)) return;
     this.mg.addExecution(
       new AttackExecution(
         this.player.troops() / 5,
