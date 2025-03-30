@@ -40,7 +40,6 @@ export class DonateExecution implements Execution {
       const afterTax = this.troops - taxAmount;
       this.sender.donate(this.recipient, afterTax);
       this.recipient.updateRelation(this.sender, 50);
-      this.sender.removeTroops(taxAmount);
     } else {
       consolex.warn(
         `cannot send troops from ${this.sender} to ${this.recipient}`,
