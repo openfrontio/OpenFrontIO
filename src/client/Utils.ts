@@ -4,6 +4,10 @@ export function renderTroops(troops: number): string {
   return renderNumber(troops / 10);
 }
 
+export function renderGold(gold: number): string {
+  return renderNumber(gold / 10);
+}
+
 export function renderNumber(num: number): string {
   num = Math.max(num, 0);
 

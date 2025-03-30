@@ -96,7 +96,15 @@ export class SendEmojiIntentEvent implements GameEvent {
   ) {}
 }
 
-export class SendDonateIntentEvent implements GameEvent {
+export class SendDonateGoldIntentEvent implements GameEvent {
+  constructor(
+    public readonly sender: PlayerView,
+    public readonly recipient: PlayerView,
+    public readonly gold: number | null,
+  ) {}
+}
+
+export class SendDonateTroopIntentEvent implements GameEvent {
   constructor(
     public readonly sender: PlayerView,
     public readonly recipient: PlayerView,
@@ -187,7 +195,12 @@ export class Transport {
       this.onSendTargetPlayerIntent(e),
     );
     this.eventBus.on(SendEmojiIntentEvent, (e) => this.onSendEmojiIntent(e));
-    this.eventBus.on(SendDonateIntentEvent, (e) => this.onSendDonateIntent(e));
+    this.eventBus.on(SendDonateGoldIntentEvent, (e) =>
+      this.onSendDonateGoldIntent(e),
+    );
+    this.eventBus.on(SendDonateTroopIntentEvent, (e) =>
+      this.onSendDonateTroopIntent(e),
+    );
     this.eventBus.on(SendEmbargoIntentEvent, (e) =>
       this.onSendEmbargoIntent(e),
     );
@@ -433,9 +446,19 @@ export class Transport {
     });
   }
 
-  private onSendDonateIntent(event: SendDonateIntentEvent) {
+  private onSendDonateGoldIntent(event: SendDonateGoldIntentEvent) {
     this.sendIntent({
-      type: "donate",
+      type: "donate_gold",
+      clientID: this.lobbyConfig.clientID,
+      playerID: event.sender.id(),
+      recipient: event.recipient.id(),
+      gold: event.gold,
+    });
+  }
+
+  private onSendDonateTroopIntent(event: SendDonateTroopIntentEvent) {
+    this.sendIntent({
+      type: "donate_troop",
       clientID: this.lobbyConfig.clientID,
       playerID: event.sender.id(),
       recipient: event.recipient.id(),

@@ -39,7 +39,7 @@ import {
 import { CellString, GameImpl } from "./GameImpl";
 import { UnitImpl } from "./UnitImpl";
 import { MessageType } from "./Game";
-import { renderTroops } from "../../client/Utils";
+import { renderTroops, renderGold, renderNumber } from "../../client/Utils";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
 import { AttackImpl } from "./AttackImpl";
@@ -519,7 +519,7 @@ export class PlayerImpl implements Player {
     return true;
   }
 
-  donate(recipient: Player, troops: number): void {
+  donatetroops(recipient: Player, troops: number): void {
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     recipient.addTroops(this.removeTroops(troops));
     this.mg.displayMessage(
@@ -529,6 +529,20 @@ export class PlayerImpl implements Player {
     );
     this.mg.displayMessage(
       `Recieved ${renderTroops(troops)} troops from ${this.name()}`,
+      MessageType.SUCCESS,
+      recipient.id(),
+    );
+  }
+  donategold(recipient: Player, gold: number): void {
+    this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
+    recipient.addGold(this.removeGold(gold));
+    this.mg.displayMessage(
+      `Sent ${renderNumber(gold)} golds to ${recipient.name()}`,
+      MessageType.INFO,
+      this.id(),
+    );
+    this.mg.displayMessage(
+      `Recieved ${renderNumber(gold)} golds from ${this.name()}`,
       MessageType.SUCCESS,
       recipient.id(),
     );
@@ -584,13 +598,14 @@ export class PlayerImpl implements Player {
     this._gold += toInt(toAdd);
   }
 
-  removeGold(toRemove: Gold): void {
+  removeGold(toRemove: Gold): number {
     if (toRemove > this._gold) {
       throw Error(
-        `Player ${this} does not enough gold (${toRemove} vs ${this._gold}))`,
+        `Player ${this} does not enough gold (${toRemove} vs ${this._gold}`,
       );
     }
     this._gold -= toInt(toRemove);
+    return Number(toRemove);
   }
 
   population(): number {
