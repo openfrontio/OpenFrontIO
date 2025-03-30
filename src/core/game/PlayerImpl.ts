@@ -519,7 +519,7 @@ export class PlayerImpl implements Player {
     return true;
   }
 
-  donatetroops(recipient: Player, troops: number): void {
+  donateTroops(recipient: Player, troops: number): void {
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     recipient.addTroops(this.removeTroops(troops));
     this.mg.displayMessage(
@@ -533,7 +533,7 @@ export class PlayerImpl implements Player {
       recipient.id(),
     );
   }
-  donategold(recipient: Player, gold: number): void {
+  donateGold(recipient: Player, gold: number): void {
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     recipient.addGold(this.removeGold(gold));
     this.mg.displayMessage(

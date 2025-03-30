@@ -15,7 +15,7 @@ import { TileRef } from "../../../core/game/GameMap";
 import { renderNumber, renderTroops } from "../../Utils";
 import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
-import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite_2.svg";
+import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.svg";
 import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
@@ -23,7 +23,7 @@ import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
   SendDonateGoldIntentEvent,
-  SendDonateTroopIntentEvent,
+  SendDonateTroopsIntentEvent,
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
   SendEmbargoIntentEvent,
@@ -85,7 +85,7 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendDonateTroopIntentEvent(myPlayer, other, null));
+    this.eventBus.emit(new SendDonateTroopsIntentEvent(myPlayer, other, null));
     this.hide();
   }
 

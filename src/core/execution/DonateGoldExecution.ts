@@ -34,7 +34,7 @@ export class DonateGoldExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.sender.canDonate(this.recipient)) {
-      this.sender.donategold(this.recipient, this.gold);
+      this.sender.donateGold(this.recipient, this.gold);
       this.recipient.updateRelation(this.sender, 50);
     } else {
       consolex.warn(

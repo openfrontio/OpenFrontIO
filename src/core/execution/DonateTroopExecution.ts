@@ -1,7 +1,7 @@
 import { consolex } from "../Consolex";
 import { Execution, Game, Player, PlayerID, Gold } from "../game/Game";
 
-export class DonateTroopExecution implements Execution {
+export class DonateTroopsExecution implements Execution {
   private sender: Player;
   private recipient: Player;
 
@@ -34,7 +34,7 @@ export class DonateTroopExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.sender.canDonate(this.recipient)) {
-      this.sender.donatetroops(this.recipient, this.troops);
+      this.sender.donateTroops(this.recipient, this.troops);
       this.recipient.updateRelation(this.sender, 50);
     } else {
       consolex.warn(

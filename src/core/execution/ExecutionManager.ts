@@ -29,7 +29,7 @@ import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyEx
 import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { EmojiExecution } from "./EmojiExecution";
-import { DonateTroopExecution } from "./DonateTroopExecution";
+import { DonateTroopsExecution } from "./DonateTroopExecution";
 import { DonateGoldExecution } from "./DonateGoldExecution";
 import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
 import { ConstructionExecution } from "./ConstructionExecution";
@@ -126,8 +126,8 @@ export class Executor {
           intent.recipient,
           intent.emoji,
         );
-      case "donate_troop":
-        return new DonateTroopExecution(
+      case "donate_troops":
+        return new DonateTroopsExecution(
           intent.playerID,
           intent.recipient,
           intent.troops,

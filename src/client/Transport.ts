@@ -104,7 +104,7 @@ export class SendDonateGoldIntentEvent implements GameEvent {
   ) {}
 }
 
-export class SendDonateTroopIntentEvent implements GameEvent {
+export class SendDonateTroopsIntentEvent implements GameEvent {
   constructor(
     public readonly sender: PlayerView,
     public readonly recipient: PlayerView,
@@ -198,7 +198,7 @@ export class Transport {
     this.eventBus.on(SendDonateGoldIntentEvent, (e) =>
       this.onSendDonateGoldIntent(e),
     );
-    this.eventBus.on(SendDonateTroopIntentEvent, (e) =>
+    this.eventBus.on(SendDonateTroopsIntentEvent, (e) =>
       this.onSendDonateTroopIntent(e),
     );
     this.eventBus.on(SendEmbargoIntentEvent, (e) =>
@@ -456,9 +456,9 @@ export class Transport {
     });
   }
 
-  private onSendDonateTroopIntent(event: SendDonateTroopIntentEvent) {
+  private onSendDonateTroopIntent(event: SendDonateTroopsIntentEvent) {
     this.sendIntent({
-      type: "donate_troop",
+      type: "donate_troops",
       clientID: this.lobbyConfig.clientID,
       playerID: event.sender.id(),
       recipient: event.recipient.id(),

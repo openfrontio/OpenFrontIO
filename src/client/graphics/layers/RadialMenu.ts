@@ -18,7 +18,7 @@ import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendBreakAllianceIntentEvent,
-  SendDonateTroopIntentEvent,
+  SendDonateTroopsIntentEvent,
   SendDonateGoldIntentEvent,
   SendEmojiIntentEvent,
   SendSpawnIntentEvent,

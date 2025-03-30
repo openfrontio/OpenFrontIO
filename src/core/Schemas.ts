@@ -251,7 +251,7 @@ export const DonateGoldIntentSchema = BaseIntentSchema.extend({
 });
 
 export const DonateTroopIntentSchema = BaseIntentSchema.extend({
-  type: z.literal("donate_troop"),
+  type: z.literal("donate_troops"),
   playerID: ID,
   recipient: ID,
   troops: z.number().nullable(),
