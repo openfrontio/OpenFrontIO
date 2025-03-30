@@ -54,10 +54,10 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
     end_time: new Date(gameRecord.endTimestampMS).toISOString(),
     duration_seconds: gameRecord.durationSeconds,
     number_turns: gameRecord.num_turns,
-    game_mode: gameRecord.gameConfig.gameType,
+    game_mode: gameRecord.gameStartInfo.config.gameType,
     winner: gameRecord.winner,
-    difficulty: gameRecord.gameConfig.difficulty,
-    mapType: gameRecord.gameConfig.gameMap,
+    difficulty: gameRecord.gameStartInfo.config.difficulty,
+    mapType: gameRecord.gameStartInfo.config.gameMap,
     players: gameRecord.players.map((p) => ({
       username: p.username,
       ip: p.ip,

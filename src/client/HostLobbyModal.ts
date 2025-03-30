@@ -317,6 +317,7 @@ export class HostLobbyModal extends LitElement {
           new CustomEvent("join-lobby", {
             detail: {
               gameID: this.lobbyId,
+              clientID: generateID(),
             } as JoinLobbyEvent,
             bubbles: true,
             composed: true,

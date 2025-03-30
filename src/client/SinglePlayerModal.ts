@@ -324,22 +324,35 @@ export class SinglePlayerModal extends LitElement {
     consolex.log(
       `Starting single player game with map: ${GameMapType[this.selectedMap]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
+    const clientID = generateID();
+    const gameID = generateID();
 
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
-          gameID: generateID(),
-          gameConfig: {
-            gameMap: this.selectedMap,
-            gameType: GameType.Singleplayer,
-            gameMode: this.gameMode,
-            difficulty: this.selectedDifficulty,
-            disableNPCs: this.disableNPCs,
-            disableNukes: this.disableNukes,
-            bots: this.bots,
-            infiniteGold: this.infiniteGold,
-            infiniteTroops: this.infiniteTroops,
-            instantBuild: this.instantBuild,
+          clientID: clientID,
+          gameID: gameID,
+          gameStartInfo: {
+            gameID: gameID,
+            players: [
+              {
+                playerID: generateID(),
+                clientID,
+                username: "PLACEHOLDER",
+              },
+            ],
+            config: {
+              gameMap: this.selectedMap,
+              gameType: GameType.Singleplayer,
+              gameMode: this.gameMode,
+              difficulty: this.selectedDifficulty,
+              disableNPCs: this.disableNPCs,
+              disableNukes: this.disableNukes,
+              bots: this.bots,
+              infiniteGold: this.infiniteGold,
+              infiniteTroops: this.infiniteTroops,
+              instantBuild: this.instantBuild,
+            },
           },
         } as JoinLobbyEvent,
         bubbles: true,

@@ -5,6 +5,8 @@ import { consolex } from "../core/Consolex";
 import { getMapsImage } from "./utilities/Maps";
 import { GameID, GameInfo } from "../core/Schemas";
 import { translateText } from "../client/Utils";
+import { JoinLobbyEvent } from "./Main";
+import { generateID } from "../core/Util";
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {
@@ -166,7 +168,10 @@ export class PublicLobby extends LitElement {
       this.currLobby = lobby;
       this.dispatchEvent(
         new CustomEvent("join-lobby", {
-          detail: lobby,
+          detail: {
+            gameID: lobby.gameID,
+            clientID: generateID(),
+          } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
         }),

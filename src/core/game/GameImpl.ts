@@ -39,12 +39,13 @@ import { Stats } from "./Stats";
 import { simpleHash } from "../Util";
 
 export function createGame(
+  humans: PlayerInfo[],
   gameMap: GameMap,
   miniGameMap: GameMap,
   nationMap: NationMap,
   config: Config,
 ): Game {
-  return new GameImpl(gameMap, miniGameMap, nationMap, config);
+  return new GameImpl(humans, gameMap, miniGameMap, nationMap, config);
 }
 
 export type CellString = string;
@@ -82,11 +83,13 @@ export class GameImpl implements Game {
   private botTeam: Team = { name: TeamName.Bot };
 
   constructor(
+    private _humans: PlayerInfo[],
     private _map: GameMap,
     private miniGameMap: GameMap,
     nationMap: NationMap,
     private _config: Config,
   ) {
+    this._humans.forEach((p) => this.addPlayer(p, 100));
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();
