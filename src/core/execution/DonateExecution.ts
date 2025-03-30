@@ -36,9 +36,7 @@ export class DonateExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.sender.canDonate(this.recipient)) {
-      const taxAmount = this.troops * this.mg.config().donationTax(this.troops);
-      const afterTax = this.troops - taxAmount;
-      this.sender.donate(this.recipient, afterTax);
+      this.sender.donate(this.recipient, this.troops);
       this.recipient.updateRelation(this.sender, 50);
     } else {
       consolex.warn(

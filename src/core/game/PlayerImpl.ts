@@ -521,7 +521,10 @@ export class PlayerImpl implements Player {
 
   donate(recipient: Player, troops: number): void {
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
-    recipient.addTroops(this.removeTroops(troops));
+    const taxAmount = troops * this.mg.config().donationTax(troops);
+    const afterTax = troops - taxAmount;
+    recipient.addTroops(afterTax);
+    this.removeTroops(troops);
     this.mg.displayMessage(
       `Sent ${renderTroops(troops)} troops to ${recipient.name()}`,
       MessageType.INFO,
