@@ -166,6 +166,7 @@ export class ClientGameRunner {
   private lastMousePosition: { x: number; y: number } | null = null;
   private mouseHoverTimer: number | null = null;
   private readonly HOVER_DELAY = 200;
+  private userSettings = new UserSettings();
 
   constructor(
     private lobby: LobbyConfig,
@@ -371,6 +372,10 @@ export class ClientGameRunner {
   }
 
   private checkTileUnderCursor() {
+    if (!this.userSettings.playerHighlighting()) {
+      this.gameView.setFocusedPlayer(null);
+      return;
+    }
     if (!this.lastMousePosition || !this.renderer.transformHandler) return;
 
     const cell = this.renderer.transformHandler.screenToWorldCoordinates(

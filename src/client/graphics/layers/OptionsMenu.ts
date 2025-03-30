@@ -110,6 +110,10 @@ export class OptionsMenu extends LitElement implements Layer {
     this.userSettings.toggleLeftClickOpenMenu();
   }
 
+  private onTogglePlayerHighlightingButtonClick() {
+    this.userSettings.togglePlayerHighlighting();
+  }
+
   init() {
     console.log("init called from OptionsMenu");
     this.showPauseButton =
@@ -199,6 +203,12 @@ export class OptionsMenu extends LitElement implements Layer {
               (this.userSettings.leftClickOpensMenu()
                 ? "Opens menu"
                 : "Attack"),
+          })}
+          ${button({
+            onClick: this.onTogglePlayerHighlightingButtonClick,
+            title: "Player Highlighting",
+            children:
+              "✴️: " + (this.userSettings.playerHighlighting() ? "On" : "Off"),
           })}
         </div>
       </div>

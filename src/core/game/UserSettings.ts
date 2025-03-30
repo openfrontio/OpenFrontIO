@@ -24,6 +24,10 @@ export class UserSettings {
     return this.get("settings.leftClickOpensMenu", false);
   }
 
+  playerHighlighting() {
+    return this.get("settings.playerHighlighting", true);
+  }
+
   toggleLeftClickOpenMenu() {
     this.set("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
   }
@@ -39,5 +43,9 @@ export class UserSettings {
     } else {
       document.documentElement.classList.remove("dark");
     }
+  }
+
+  togglePlayerHighlighting() {
+    this.set("settings.playerHighlighting", !this.playerHighlighting());
   }
 }
