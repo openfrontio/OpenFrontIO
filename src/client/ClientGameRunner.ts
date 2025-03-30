@@ -372,10 +372,6 @@ export class ClientGameRunner {
   }
 
   private checkTileUnderCursor() {
-    if (!this.userSettings.playerHighlighting()) {
-      this.gameView.setFocusedPlayer(null);
-      return;
-    }
     if (!this.lastMousePosition || !this.renderer.transformHandler) return;
 
     const cell = this.renderer.transformHandler.screenToWorldCoordinates(
