@@ -29,7 +29,8 @@ import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyEx
 import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { EmojiExecution } from "./EmojiExecution";
-import { DonateTroopExecution, DonateGoldExecution } from "./DonateExecution";
+import { DonateTroopExecution } from "./DonateTroopExecution";
+import { DonateGoldExecution } from "./DonateGoldExecution";
 import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { fixProfaneUsername, isProfaneUsername } from "../validations/username";

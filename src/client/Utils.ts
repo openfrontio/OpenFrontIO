@@ -5,7 +5,7 @@ export function renderTroops(troops: number): string {
 }
 
 export function renderGold(gold: number): string {
-  return renderNumber(gold / 10);
+  return renderNumber(gold);
 }
 
 export function renderNumber(num: number): string {
