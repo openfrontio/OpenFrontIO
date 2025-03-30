@@ -28,6 +28,7 @@ import GoogleAdElement from "./GoogleAdElement";
 import { GameConfig, GameInfo, GameRecord } from "../core/Schemas";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
+import { UserSettingModal } from "./UserSettingModal";
 
 export interface JoinLobbyEvent {
   // Multiplayer games only have gameID, gameConfig is not known until game starts.
@@ -109,6 +110,14 @@ class Client {
     hlpModal instanceof HelpModal;
     document.getElementById("help-button").addEventListener("click", () => {
       hlpModal.open();
+    });
+
+    const userModal = document.querySelector(
+      "user-setting",
+    ) as UserSettingModal;
+    userModal instanceof UserSettingModal;
+    document.getElementById("settings-button").addEventListener("click", () => {
+      userModal.open();
     });
 
     const hostModal = document.querySelector(
