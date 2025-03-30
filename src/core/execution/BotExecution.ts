@@ -93,7 +93,7 @@ export class BotExecution implements Execution {
           return;
         }
       }
-      if (this.bot.team() == owner.team() && this.bot.team()) {
+      if (this.bot.isOnSameTeam(owner)) {
         return;
       }
     }

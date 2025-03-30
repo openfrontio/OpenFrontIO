@@ -192,7 +192,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   private shouldAttack(other: Player): boolean {
-    if (this.isInSameTeam(other)) {
+    if (this.player.isOnSameTeam(other)) {
       return false;
     }
     if (this.player.isFriendly(other)) {
@@ -294,7 +294,7 @@ export class FakeHumanExecution implements Execution {
       this.player.units(UnitType.MissileSilo).length == 0 ||
       this.player.gold() <
         this.mg.config().unitInfo(UnitType.AtomBomb).cost(this.player) ||
-      this.isInSameTeam(other)
+      this.player.isOnSameTeam(other)
     ) {
       return;
     }
@@ -591,12 +591,6 @@ export class FakeHumanExecution implements Execution {
         toAttack.isPlayer() ? toAttack.id() : null,
       ),
     );
-  }
-
-  isInSameTeam(other: Player): boolean {
-    if (!this.player.team()) return false;
-    if (this.player.team() == other.team()) return true;
-    return false;
   }
 
   isSmallIsland(tile: TileRef): boolean {
