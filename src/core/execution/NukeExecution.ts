@@ -174,7 +174,8 @@ export class NukeExecution implements Execution {
       if (owner.isPlayer()) {
         const mp = this.mg.player(owner.id());
         mp.relinquish(tile);
-        mp.removeTroops((5 * mp.population()) / mp.numTilesOwned());
+        mp.removeTroops((5 * mp.removeTroops((5 * mp.troops())) / mp.numTilesOwned());
+mp.removeWorkers((5 * mp.workers())) / mp.numTilesOwned());
         if (!attacked.has(mp)) {
           attacked.set(mp, 0);
         }
