@@ -258,6 +258,7 @@ export interface Unit {
   // State
   isActive(): boolean;
   hasHealth(): boolean;
+  retreating(): boolean;
   health(): number;
   modifyHealth(delta: number): void;
 
@@ -347,6 +348,7 @@ export interface Player {
     unitSpecificInfos?: UnitSpecificInfos,
   ): Unit;
   captureUnit(unit: Unit): void;
+  orderBoatRetreat(targetID: number): void;
 
   // Relations & Diplomacy
   neighbors(): (Player | TerraNullius)[];
