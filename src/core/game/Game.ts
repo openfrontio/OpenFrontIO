@@ -497,4 +497,5 @@ export interface NameViewData {
   x: number;
   y: number;
   size: number;
+  rotation: number;
 }

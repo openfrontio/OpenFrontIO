@@ -14,6 +14,59 @@ export interface Rectangle {
   height: number;
 }
 
+function calculateRotation(player: Player, game: Game): number {
+  const totalTiles = player.numTilesOwned();
+  if (totalTiles === 0) return 0;
+
+  const step = Math.max(1, Math.floor(totalTiles / 100));
+
+  let sumX = 0;
+  let sumY = 0;
+  let sampleCount = 0;
+
+  for (const tile of player.tiles()) {
+    if (sampleCount % step === 0) {
+      const cell = game.cell(tile);
+      sumX += cell.x;
+      sumY += cell.y;
+      sampleCount++;
+    }
+  }
+
+  if (sampleCount === 0) return 0;
+
+  const centerX = sumX / sampleCount;
+  const centerY = sumY / sampleCount;
+
+  let sumXX = 0;
+  let sumYY = 0;
+  let sumXY = 0;
+
+  sampleCount = 0;
+  for (const tile of player.tiles()) {
+    if (sampleCount % step === 0) {
+      const cell = game.cell(tile);
+      const x = cell.x - centerX;
+      const y = cell.y - centerY;
+
+      sumXX += x * x;
+      sumYY += y * y;
+      sumXY += x * y;
+      sampleCount++;
+    }
+  }
+
+  if (sumXX + sumYY < 1) return 0;
+
+  const damp = 0.1;
+  const theta = (damp * Math.atan2(2 * sumXY, sumXX - sumYY)) / 2;
+
+  const rotationDeg = theta * (180 / Math.PI);
+
+  const maxRotation = 30;
+  return Math.max(-maxRotation, Math.min(maxRotation, rotationDeg));
+}
+
 export function placeName(game: Game, player: Player): NameViewData {
   const boundingBox =
     player.largestClusterBoundingBox ??
@@ -56,10 +109,13 @@ export function placeName(game: Game, player: Player): NameViewData {
   const fontSize = calculateFontSize(largestRectangle, player.name());
   center = new Cell(center.x, center.y - fontSize / 3);
 
+  const rotation = calculateRotation(player, game);
+
   return {
     x: Math.ceil(center.x),
     y: Math.ceil(center.y),
     size: fontSize,
+    rotation: rotation,
   };
 }
 

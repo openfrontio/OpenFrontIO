@@ -467,7 +467,8 @@ export class NameLayer implements Layer {
     // Position element with scale
     if (render.location && render.location != oldLocation) {
       const scale = Math.min(baseSize * 0.25, 3);
-      render.element.style.transform = `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) scale(${scale})`;
+      const rotation = render.player.nameLocation().rotation || 0;
+      render.element.style.transform = `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) scale(${scale}) rotate(${rotation}deg)`;
     }
   }
 
