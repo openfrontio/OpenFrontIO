@@ -166,7 +166,7 @@ export class ClientGameRunner {
   private lastMousePosition: { x: number; y: number } | null = null;
   private mouseHoverTimer: number | null = null;
   private readonly HOVER_DELAY = 200;
-  private userSettings = new UserSettings();
+  private userSettings = this.gameView.config().userSettings();
 
   constructor(
     private lobby: LobbyConfig,
