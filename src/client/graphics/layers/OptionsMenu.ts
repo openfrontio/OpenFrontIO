@@ -208,7 +208,7 @@ export class OptionsMenu extends LitElement implements Layer {
             onClick: this.onTogglePlayerHighlightingButtonClick,
             title: "Player Highlighting",
             children:
-              "✴️: " + (this.userSettings.playerHighlighting() ? "On" : "Off"),
+              "🔳: " + (this.userSettings.playerHighlighting() ? "On" : "Off"),
           })}
         </div>
       </div>
