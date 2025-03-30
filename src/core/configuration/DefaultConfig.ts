@@ -135,6 +135,10 @@ export class DefaultConfig implements Config {
     return 0.8;
   }
 
+  samWarheadHittingChance(): number {
+    return 0.5;
+  }
+
   traitorDefenseDebuff(): number {
     return 0.8;
   }
