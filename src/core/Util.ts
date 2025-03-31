@@ -8,6 +8,7 @@ import {
   GameConfig,
   GameID,
   GameRecord,
+  GameStartInfo,
   PlayerRecord,
   PlayerStats,
   Turn,
@@ -249,7 +250,7 @@ export function onlyImages(html: string) {
 
 export function createGameRecord(
   id: GameID,
-  gameConfig: GameConfig,
+  gameStart: GameStartInfo,
   // username does not need to be set.
   players: PlayerRecord[],
   turns: Turn[],
@@ -261,7 +262,7 @@ export function createGameRecord(
 ): GameRecord {
   const record: GameRecord = {
     id: id,
-    gameConfig: gameConfig,
+    gameStartInfo: gameStart,
     startTimestampMS: start,
     endTimestampMS: end,
     date: new Date().toISOString().split("T")[0],

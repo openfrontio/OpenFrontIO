@@ -16,14 +16,12 @@ import { PseudoRandom } from "../PseudoRandom";
 export class SAMLauncherExecution implements Execution {
   private player: Player;
   private mg: Game;
-  private post: Unit;
+  private sam: Unit;
   private active: boolean = true;
 
   private target: Unit = null;
 
   private searchRangeRadius = 75;
-
-  private lastMissileAttack = 0;
 
   private pseudoRandom: PseudoRandom;
 
@@ -43,30 +41,32 @@ export class SAMLauncherExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.post == null) {
+    if (this.sam == null) {
       const spawnTile = this.player.canBuild(UnitType.SAMLauncher, this.tile);
       if (spawnTile == false) {
         consolex.warn("cannot build SAM Launcher");
         this.active = false;
         return;
       }
-      this.post = this.player.buildUnit(UnitType.SAMLauncher, 0, spawnTile);
+      this.sam = this.player.buildUnit(UnitType.SAMLauncher, 0, spawnTile, {
+        cooldownDuration: this.mg.config().SAMCooldown(),
+      });
     }
-    if (!this.post.isActive()) {
+    if (!this.sam.isActive()) {
       this.active = false;
       return;
     }
 
-    if (this.player != this.post.owner()) {
-      this.player = this.post.owner();
+    if (this.player != this.sam.owner()) {
+      this.player = this.sam.owner();
     }
 
     if (!this.pseudoRandom) {
-      this.pseudoRandom = new PseudoRandom(this.post.id());
+      this.pseudoRandom = new PseudoRandom(this.sam.id());
     }
 
     const nukes = this.mg
-      .nearbyUnits(this.post.tile(), this.searchRangeRadius, [
+      .nearbyUnits(this.sam.tile(), this.searchRangeRadius, [
         UnitType.AtomBomb,
         UnitType.HydrogenBomb,
       ])
@@ -96,39 +96,30 @@ export class SAMLauncherExecution implements Execution {
         return distA - distB;
       })[0]?.unit ?? null;
 
-    const cooldown =
-      this.lastMissileAttack != 0 &&
-      this.mg.ticks() - this.lastMissileAttack <=
-        this.mg.config().samCooldown();
-
-    if (this.post.isSamCooldown() && !cooldown) {
-      this.post.setSamCooldown(false);
+    if (
+      this.sam.isCooldown() &&
+      this.sam.ticksLeftInCooldown(this.mg.config().SAMCooldown()) == 0
+    ) {
+      this.sam.setCooldown(false);
     }
 
-    if (
-      this.target &&
-      !this.post.isSamCooldown() &&
-      !this.target.targetedBySAM()
-    ) {
-      this.lastMissileAttack = this.mg.ticks();
-      this.post.setSamCooldown(true);
+    if (this.target && !this.sam.isCooldown() && !this.target.targetedBySAM()) {
+      this.sam.setCooldown(true);
       const random = this.pseudoRandom.next();
       const hit = random < this.mg.config().samHittingChance();
-
-      this.lastMissileAttack = this.mg.ticks();
       if (!hit) {
         this.mg.displayMessage(
           `Missile failed to intercept ${this.target.type()}`,
           MessageType.ERROR,
-          this.post.owner().id(),
+          this.sam.owner().id(),
         );
       } else {
         this.target.setTargetedBySAM(true);
         this.mg.addExecution(
           new SAMMissileExecution(
-            this.post.tile(),
-            this.post.owner(),
-            this.post,
+            this.sam.tile(),
+            this.sam.owner(),
+            this.sam,
             this.target,
           ),
         );

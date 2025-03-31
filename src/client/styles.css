@@ -427,9 +427,11 @@ label.option-card:hover {
 .lobby-id-box input {
   flex-grow: 1;
   max-width: 200px;
+  outline: 0;
   padding: 10px;
   font-size: 16px;
   border: 1px solid #ccc;
+  color: #202020;
   border-radius: 8px;
 }
 

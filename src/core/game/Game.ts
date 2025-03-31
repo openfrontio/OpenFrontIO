@@ -211,6 +211,8 @@ export interface MutableAlliance extends Alliance {
 }
 
 export class PlayerInfo {
+  public readonly clan: string | null;
+
   constructor(
     public readonly flag: string,
     public readonly name: string,
@@ -220,7 +222,15 @@ export class PlayerInfo {
     // TODO: make player id the small id
     public readonly id: PlayerID,
     public readonly nation?: Nation | null,
-  ) {}
+  ) {
+    // Compute clan from name
+    if (!name.startsWith("[") || !name.includes("]")) {
+      this.clan = null;
+    } else {
+      const clanMatch = name.match(/^\[([A-Z]{2,5})\]/);
+      this.clan = clanMatch ? clanMatch[1] : null;
+    }
+  }
 }
 
 // Some units have info specific to them
@@ -228,6 +238,7 @@ export interface UnitSpecificInfos {
   dstPort?: Unit; // Only for trade ships
   detonationDst?: TileRef; // Only for nukes
   warshipTarget?: Unit;
+  cooldownDuration?: number;
 }
 
 export interface Unit {
@@ -253,8 +264,9 @@ export interface Unit {
   setWarshipTarget(target: Unit): void; // warship only
   warshipTarget(): Unit;
 
-  setSamCooldown(isCoolingDown: boolean): void; // Only for sam
-  isSamCooldown(): boolean;
+  setCooldown(triggerCooldown: boolean): void;
+  ticksLeftInCooldown(cooldownDuration: number): Tick;
+  isCooldown(): boolean;
   setDstPort(dstPort: Unit): void;
   dstPort(): Unit; // Only for trade ships
   detonationDst(): TileRef; // Only for nukes
@@ -347,6 +359,7 @@ export interface Player {
   // Either allied or on same team.
   isFriendly(other: Player): boolean;
   team(): Team | null;
+  clan(): string | null;
   incomingAllianceRequests(): AllianceRequest[];
   outgoingAllianceRequests(): AllianceRequest[];
   alliances(): MutableAlliance[];
@@ -469,6 +482,10 @@ export interface BuildableUnit {
 export interface PlayerProfile {
   relations: Record<number, Relation>;
   alliances: number[];
+}
+
+export interface PlayerBorderTiles {
+  borderTiles: ReadonlySet<TileRef>;
 }
 
 export interface PlayerInteraction {

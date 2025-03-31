@@ -194,6 +194,10 @@ export class PlayerImpl implements Player {
     return this.playerInfo.playerType;
   }
 
+  clan(): string | null {
+    return this.playerInfo.clan;
+  }
+
   units(...types: UnitType[]): UnitImpl[] {
     if (types.length == 0) {
       return this._units;
@@ -583,7 +587,7 @@ export class PlayerImpl implements Player {
     if (this.team() == null || other.team() == null) {
       return false;
     }
-    return this._team == other.team();
+    return this._team.name == other.team().name;
   }
 
   isFriendly(other: Player): boolean {
@@ -755,8 +759,12 @@ export class PlayerImpl implements Player {
   }
 
   nukeSpawn(tile: TileRef): TileRef | false {
+    // only get missilesilos that are not on cooldown
     const spawns = this.units(UnitType.MissileSilo)
       .map((u) => u as Unit)
+      .filter((silo) => {
+        return !silo.isCooldown();
+      })
       .sort(distSortUnit(this.mg, tile));
     if (spawns.length == 0) {
       return false;

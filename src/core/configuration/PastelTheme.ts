@@ -85,6 +85,13 @@ export const pastelTheme = new (class implements Theme {
     });
   }
 
+  focusedBorderColor(): Colord {
+    return colord({ r: 255, g: 255, b: 255 });
+  }
+  focusedDefendedBorderColor(): Colord {
+    return colord({ r: 215, g: 215, b: 215 });
+  }
+
   terrainColor(gm: GameMap, tile: TileRef): Colord {
     const mag = gm.magnitude(tile);
     if (gm.isShore(tile)) {

@@ -47,7 +47,6 @@ export interface ServerConfig {
 
 export interface Config {
   samHittingChance(): number;
-  samCooldown(): Tick;
   spawnImmunityDuration(): Tick;
   serverConfig(): ServerConfig;
   gameConfig(): GameConfig;
@@ -92,6 +91,7 @@ export interface Config {
   maxPopulation(player: Player | PlayerView): number;
   cityPopulationIncrease(): number;
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number;
+  warshipShellLifetime(): number;
   boatMaxNumber(): number;
   allianceDuration(): Tick;
   allianceRequestCooldown(): Tick;
@@ -105,6 +105,8 @@ export interface Config {
   tradeShipGold(dist: number): Gold;
   tradeShipSpawnRate(numberOfPorts: number): number;
   defensePostRange(): number;
+  SAMCooldown(): number;
+  SiloCooldown(): number;
   defensePostDefenseBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
@@ -117,6 +119,8 @@ export interface Theme {
   specialBuildingColor(playerInfo: PlayerView): Colord;
   borderColor(playerInfo: PlayerView): Colord;
   defendedBorderColor(playerInfo: PlayerView): Colord;
+  focusedBorderColor(): Colord;
+  focusedDefendedBorderColor(): Colord;
   terrainColor(gm: GameMap, tile: TileRef): Colord;
   backgroundColor(): Colord;
   falloutColor(): Colord;

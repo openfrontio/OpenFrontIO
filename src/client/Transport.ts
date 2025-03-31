@@ -173,7 +173,7 @@ export class Transport {
     // For multiplayer games, GameConfig is not known until game starts.
     this.isLocal =
       lobbyConfig.gameRecord != null ||
-      lobbyConfig.gameConfig?.gameType == GameType.Singleplayer;
+      lobbyConfig.gameStartInfo?.config.gameType == GameType.Singleplayer;
 
     this.eventBus.on(SendAllianceRequestIntentEvent, (e) =>
       this.onSendAllianceRequest(e),
@@ -338,7 +338,7 @@ export class Transport {
           clientID: this.lobbyConfig.clientID,
           lastTurn: numTurns,
           persistentID: this.lobbyConfig.persistentID,
-          username: this.lobbyConfig.playerName(),
+          username: this.lobbyConfig.playerName,
         }),
       ),
     );
@@ -367,7 +367,6 @@ export class Transport {
     this.sendIntent({
       type: "allianceRequest",
       clientID: this.lobbyConfig.clientID,
-      playerID: event.requestor.id(),
       recipient: event.recipient.id(),
     });
   }
@@ -377,7 +376,6 @@ export class Transport {
       type: "allianceRequestReply",
       clientID: this.lobbyConfig.clientID,
       requestor: event.requestor.id(),
-      playerID: event.recipient.id(),
       accept: event.accepted,
     });
   }
@@ -386,7 +384,6 @@ export class Transport {
     this.sendIntent({
       type: "breakAlliance",
       clientID: this.lobbyConfig.clientID,
-      playerID: event.requestor.id(),
       recipient: event.recipient.id(),
     });
   }
@@ -395,9 +392,8 @@ export class Transport {
     this.sendIntent({
       type: "spawn",
       clientID: this.lobbyConfig.clientID,
-      playerID: this.lobbyConfig.playerID,
-      flag: this.lobbyConfig.flag(),
-      name: this.lobbyConfig.playerName(),
+      flag: this.lobbyConfig.flag,
+      name: this.lobbyConfig.playerName,
       playerType: PlayerType.Human,
       x: event.cell.x,
       y: event.cell.y,
@@ -408,7 +404,6 @@ export class Transport {
     this.sendIntent({
       type: "attack",
       clientID: this.lobbyConfig.clientID,
-      playerID: this.lobbyConfig.playerID,
       targetID: event.targetID,
       troops: event.troops,
     });
@@ -418,7 +413,6 @@ export class Transport {
     this.sendIntent({
       type: "boat",
       clientID: this.lobbyConfig.clientID,
-      playerID: this.lobbyConfig.playerID,
       targetID: event.targetID,
       troops: event.troops,
       x: event.cell.x,
@@ -430,7 +424,6 @@ export class Transport {
     this.sendIntent({
       type: "targetPlayer",
       clientID: this.lobbyConfig.clientID,
-      playerID: this.lobbyConfig.playerID,
       target: event.targetID,
     });
   }
@@ -439,7 +432,6 @@ export class Transport {
     this.sendIntent({
       type: "emoji",
       clientID: this.lobbyConfig.clientID,
-      playerID: this.lobbyConfig.playerID,
       recipient:
         event.recipient == AllPlayers ? AllPlayers : event.recipient.id(),
       emoji: event.emoji,
@@ -460,7 +452,6 @@ export class Transport {
     this.sendIntent({
       type: "donate_troops",
       clientID: this.lobbyConfig.clientID,
-      playerID: event.sender.id(),
       recipient: event.recipient.id(),
       troops: event.troops,
     });
@@ -470,7 +461,6 @@ export class Transport {
     this.sendIntent({
       type: "embargo",
       clientID: this.lobbyConfig.clientID,
-      playerID: this.lobbyConfig.playerID,
       targetID: event.target.id(),
       action: event.action,
     });
@@ -480,7 +470,6 @@ export class Transport {
     this.sendIntent({
       type: "troop_ratio",
       clientID: this.lobbyConfig.clientID,
-      playerID: this.lobbyConfig.playerID,
       ratio: event.ratio,
     });
   }
@@ -489,7 +478,6 @@ export class Transport {
     this.sendIntent({
       type: "build_unit",
       clientID: this.lobbyConfig.clientID,
-      playerID: this.lobbyConfig.playerID,
       unit: event.unit,
       x: event.cell.x,
       y: event.cell.y,
@@ -553,7 +541,6 @@ export class Transport {
     this.sendIntent({
       type: "cancel_attack",
       clientID: this.lobbyConfig.clientID,
-      playerID: event.playerID,
       attackID: event.attackID,
     });
   }
@@ -562,7 +549,6 @@ export class Transport {
     this.sendIntent({
       type: "move_warship",
       clientID: this.lobbyConfig.clientID,
-      playerID: this.lobbyConfig.playerID,
       unitId: event.unitId,
       tile: event.tile,
     });

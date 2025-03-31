@@ -288,6 +288,7 @@ function getNextMap(): GameMapType {
     Mars: 2,
     Britannia: 2,
     GatewayToTheAtlantic: 2,
+    Australia: 2,
     Iceland: 2,
   };
 

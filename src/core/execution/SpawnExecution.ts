@@ -17,7 +17,7 @@ export class SpawnExecution implements Execution {
 
   constructor(
     private playerInfo: PlayerInfo,
-    private tile: TileRef,
+    public readonly tile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number) {

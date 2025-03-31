@@ -93,10 +93,6 @@ export class DefaultConfig implements Config {
     return 0.8;
   }
 
-  samCooldown(): Tick {
-    return 100;
-  }
-
   traitorDefenseDebuff(): number {
     return 0.8;
   }
@@ -137,6 +133,12 @@ export class DefaultConfig implements Config {
     // falloutRatio is between 0 and 1
     // So defense modifier is between [5, 2.5]
     return 5 - falloutRatio * 2;
+  }
+  SAMCooldown(): number {
+    return 75;
+  }
+  SiloCooldown(): number {
+    return 75;
   }
 
   defensePostRange(): number {
@@ -472,6 +474,10 @@ export class DefaultConfig implements Config {
 
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number {
     return Math.floor(attacker.troops() / 5);
+  }
+
+  warshipShellLifetime(): number {
+    return 20; // in ticks (one tick is 100ms)
   }
 
   radiusPortSpawn() {

@@ -1,14 +1,15 @@
 import { consolex } from "../Consolex";
-import { Cell, Game, PlayerType } from "../game/Game";
+import { Cell, Game, PlayerInfo, PlayerType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID, SpawnIntent } from "../Schemas";
 import { simpleHash } from "../Util";
+import { SpawnExecution } from "./SpawnExecution";
 import { BOT_NAME_PREFIXES, BOT_NAME_SUFFIXES } from "./utils/BotNames";
 
 export class BotSpawner {
   private random: PseudoRandom;
-  private bots: SpawnIntent[] = [];
+  private bots: SpawnExecution[] = [];
 
   constructor(
     private gs: Game,
@@ -17,7 +18,7 @@ export class BotSpawner {
     this.random = new PseudoRandom(simpleHash(gameID));
   }
 
-  spawnBots(numBots: number): SpawnIntent[] {
+  spawnBots(numBots: number): SpawnExecution[] {
     let tries = 0;
     while (this.bots.length < numBots) {
       if (tries > 10000) {
@@ -35,24 +36,20 @@ export class BotSpawner {
     return this.bots;
   }
 
-  spawnBot(botName: string): SpawnIntent | null {
+  spawnBot(botName: string): SpawnExecution | null {
     const tile = this.randTile();
     if (!this.gs.isLand(tile)) {
       return null;
     }
     for (const spawn of this.bots) {
-      if (this.gs.manhattanDist(this.gs.ref(spawn.x, spawn.y), tile) < 30) {
+      if (this.gs.manhattanDist(spawn.tile, tile) < 30) {
         return null;
       }
     }
-    return {
-      type: "spawn",
-      playerID: this.random.nextID(),
-      name: botName,
-      playerType: PlayerType.Bot,
-      x: this.gs.x(tile),
-      y: this.gs.y(tile),
-    };
+    return new SpawnExecution(
+      new PlayerInfo("", botName, PlayerType.Bot, null, this.random.nextID()),
+      tile,
+    );
   }
 
   private randomBotName(): string {

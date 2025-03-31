@@ -7,34 +7,43 @@ import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
   BuildableUnit,
-  Cell,
   Game,
   GameUpdates,
-  MessageType,
   Player,
   PlayerActions,
   PlayerID,
   PlayerProfile,
+  PlayerBorderTiles,
   PlayerType,
   UnitType,
+  PlayerInfo,
 } from "./game/Game";
-import { DisplayMessageUpdate, ErrorUpdate } from "./game/GameUpdates";
+import { ErrorUpdate } from "./game/GameUpdates";
 import { NameViewData } from "./game/Game";
 import { GameUpdateType } from "./game/GameUpdates";
 import { createGame } from "./game/GameImpl";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
-import { ClientID, GameConfig, Turn } from "./Schemas";
+import { ClientID, GameStartInfo, Turn } from "./Schemas";
 import { GameUpdateViewData } from "./game/GameUpdates";
 
 export async function createGameRunner(
-  gameID: string,
-  gameConfig: GameConfig,
+  gameStart: GameStartInfo,
   clientID: ClientID,
   callBack: (gu: GameUpdateViewData) => void,
 ): Promise<GameRunner> {
-  const config = await getConfig(gameConfig, null);
-  const gameMap = await loadGameMap(gameConfig.gameMap);
+  const config = await getConfig(gameStart.config, null);
+  const gameMap = await loadGameMap(gameStart.config.gameMap);
   const game = createGame(
+    gameStart.players.map(
+      (p) =>
+        new PlayerInfo(
+          p.flag,
+          p.username,
+          PlayerType.Human,
+          p.clientID,
+          p.playerID,
+        ),
+    ),
     gameMap.gameMap,
     gameMap.miniGameMap,
     gameMap.nationMap,
@@ -42,7 +51,7 @@ export async function createGameRunner(
   );
   const gr = new GameRunner(
     game as Game,
-    new Executor(game, gameID, clientID),
+    new Executor(game, gameStart.gameID, clientID),
     callBack,
   );
   gr.init();
@@ -179,5 +188,14 @@ export class GameRunner {
       throw new Error(`player with id ${playerID} not found`);
     }
     return player.playerProfile();
+  }
+  public playerBorderTiles(playerID: PlayerID): PlayerBorderTiles {
+    const player = this.game.player(playerID);
+    if (!player.isPlayer()) {
+      throw new Error(`player with id ${playerID} not found`);
+    }
+    return {
+      borderTiles: player.borderTiles(),
+    } as PlayerBorderTiles;
   }
 }

@@ -6,6 +6,7 @@ import {
   Player,
   PlayerActions,
   PlayerProfile,
+  PlayerBorderTiles,
   TeamName,
 } from "./Game";
 import { AttackUpdate, PlayerUpdate } from "./GameUpdates";
@@ -113,8 +114,11 @@ export class UnitView {
     }
     return this.data.warshipTargetId;
   }
-  isSamCooldown(): boolean {
-    return this.data.isSamCooldown;
+  ticksLeftInCooldown(): Tick {
+    return this.data.ticksLeftInCooldown;
+  }
+  isCooldown(): boolean {
+    return this.data.ticksLeftInCooldown > 0;
   }
 }
 
@@ -131,6 +135,10 @@ export class PlayerView {
       this.game.x(tile),
       this.game.y(tile),
     );
+  }
+
+  async borderTiles(): Promise<PlayerBorderTiles> {
+    return this.game.worker.playerBorderTiles(this.id());
   }
 
   outgoingAttacks(): AttackUpdate[] {
@@ -268,6 +276,7 @@ export class GameView implements GameMap {
   private updatedTiles: TileRef[] = [];
 
   private _myPlayer: PlayerView | null = null;
+  private _focusedPlayer: PlayerView | null = null;
 
   private unitGrid: UnitGrid;
 
@@ -533,5 +542,12 @@ export class GameView implements GameMap {
   }
   gameID(): GameID {
     return this._gameID;
+  }
+
+  focusedPlayer(): PlayerView | null {
+    return this._focusedPlayer;
+  }
+  setFocusedPlayer(player: PlayerView | null): void {
+    this._focusedPlayer = player;
   }
 }

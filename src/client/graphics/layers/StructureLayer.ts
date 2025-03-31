@@ -7,6 +7,7 @@ import anchorIcon from "../../../../resources/images/buildings/port1.png";
 import missileSiloIcon from "../../../../resources/images/buildings/silo1.png";
 import SAMMissileIcon from "../../../../resources/images/buildings/silo4.png";
 import SAMMissileReloadingIcon from "../../../../resources/images/buildings/silo4-reloading.png";
+import MissileSiloReloadingIcon from "../../../../resources/images/buildings/silo1-reloading.png";
 import shieldIcon from "../../../../resources/images/buildings/fortAlt2.png";
 import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
 import { GameView, UnitView } from "../../../core/game/GameView";
@@ -86,6 +87,12 @@ export class StructureLayer implements Layer {
     this.loadIconData();
     this.loadIcon("reloadingSam", {
       icon: SAMMissileReloadingIcon,
+      borderRadius: 8.525,
+      territoryRadius: 6.525,
+      borderType: UnitBorderType.Square,
+    });
+    this.loadIcon("reloadingSilo", {
+      icon: MissileSiloReloadingIcon,
       borderRadius: 8.525,
       territoryRadius: 6.525,
       borderType: UnitBorderType.Square,
@@ -215,8 +222,14 @@ export class StructureLayer implements Layer {
     const config = this.unitConfigs[unitType];
     let icon: ImageData;
 
-    if (unitType == UnitType.SAMLauncher && unit.isSamCooldown()) {
+    if (unitType == UnitType.SAMLauncher && unit.isCooldown()) {
       icon = this.unitIcons.get("reloadingSam");
+    } else {
+      icon = this.unitIcons.get(iconType);
+    }
+
+    if (unitType == UnitType.MissileSilo && unit.isCooldown()) {
+      icon = this.unitIcons.get("reloadingSilo");
     } else {
       icon = this.unitIcons.get(iconType);
     }
@@ -235,7 +248,13 @@ export class StructureLayer implements Layer {
     if (!unit.isActive()) return;
 
     let borderColor = this.theme.borderColor(unit.owner());
-    if (unitType == UnitType.SAMLauncher && unit.isSamCooldown()) {
+    if (unitType == UnitType.SAMLauncher && unit.isCooldown()) {
+      borderColor = reloadingColor;
+    } else if (unit.type() == UnitType.Construction) {
+      borderColor = underConstructionColor;
+    }
+
+    if (unitType == UnitType.MissileSilo && unit.isCooldown()) {
       borderColor = reloadingColor;
     } else if (unit.type() == UnitType.Construction) {
       borderColor = underConstructionColor;
