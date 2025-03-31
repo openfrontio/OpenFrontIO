@@ -44,6 +44,7 @@ export class TerritoryLayer implements Layer {
   private highlightContext: CanvasRenderingContext2D;
 
   private alternativeView = false;
+  private playerHighlighting = true;
   private lastDragTime = 0;
   private nodrawDragDuration = 200;
 
@@ -84,6 +85,11 @@ export class TerritoryLayer implements Layer {
           });
       }
     });
+
+    this.playerHighlighting = this.game
+      .config()
+      .userSettings()
+      .playerHighlighting();
 
     const focusedPlayer = this.game.focusedPlayer();
     if (focusedPlayer !== this.lastFocusedPlayer) {
@@ -253,10 +259,6 @@ export class TerritoryLayer implements Layer {
     const owner = this.game.owner(tile) as PlayerView;
     if (this.game.isBorder(tile)) {
       const playerIsFocused = owner && this.game.focusedPlayer() == owner;
-      const playerHighlightingEnabled = this.game
-        .config()
-        .userSettings()
-        .playerHighlighting();
       if (
         this.game
           .nearbyUnits(
@@ -267,7 +269,7 @@ export class TerritoryLayer implements Layer {
           .filter((u) => u.unit.owner() == owner).length > 0
       ) {
         const useDefendedBorderColor =
-          playerIsFocused && playerHighlightingEnabled
+          playerIsFocused && this.playerHighlighting
             ? this.theme.focusedDefendedBorderColor()
             : this.theme.defendedBorderColor(owner);
         this.paintCell(
@@ -278,7 +280,7 @@ export class TerritoryLayer implements Layer {
         );
       } else {
         const useBorderColor =
-          playerIsFocused && playerHighlightingEnabled
+          playerIsFocused && this.playerHighlighting
             ? this.theme.focusedBorderColor()
             : this.theme.borderColor(owner);
         this.paintCell(
