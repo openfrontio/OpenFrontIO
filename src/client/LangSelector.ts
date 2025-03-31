@@ -2,14 +2,16 @@ import { LitElement, html, css } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import "./LanguageModal";
 
-import en from "../../resources/lang/en.json";
-import ja from "../../resources/lang/ja.json";
-import fr from "../../resources/lang/fr.json";
 import bg from "../../resources/lang/bg.json";
-import nl from "../../resources/lang/nl.json";
-import ru from "../../resources/lang/ru.json";
-import ua from "../../resources/lang/ua.json";
 import de from "../../resources/lang/de.json";
+import en from "../../resources/lang/en.json";
+import es from "../../resources/lang/es.json";
+import fr from "../../resources/lang/fr.json";
+import ja from "../../resources/lang/ja.json";
+import nl from "../../resources/lang/nl.json";
+import pl from "../../resources/lang/pl.json";
+import ru from "../../resources/lang/ru.json";
+import uk from "../../resources/lang/uk.json";
 
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
@@ -23,14 +25,16 @@ export class LangSelector extends LitElement {
   private dKeyPressed: boolean = false;
 
   private languageMap: Record<string, any> = {
-    en,
-    ja,
-    fr,
     bg,
-    nl,
-    ru,
-    ua,
     de,
+    en,
+    es,
+    fr,
+    ja,
+    nl,
+    pl,
+    ru,
+    uk,
   };
 
   static styles = css`
