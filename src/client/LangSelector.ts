@@ -2,13 +2,13 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 
 // Import language files
-import enTranslations from "../../resources/lang/en.json";
 import bgTranslations from "../../resources/lang/bg.json";
-import jaTranslations from "../../resources/lang/ja.json";
-import frTranslations from "../../resources/lang/fr.json";
-import nlTranslations from "../../resources/lang/nl.json";
 import deTranslations from "../../resources/lang/de.json";
+import enTranslations from "../../resources/lang/en.json";
 import esTranslations from "../../resources/lang/es.json";
+import frTranslations from "../../resources/lang/fr.json";
+import jaTranslations from "../../resources/lang/ja.json";
+import nlTranslations from "../../resources/lang/nl.json";
 
 const translations = {
   en: enTranslations,

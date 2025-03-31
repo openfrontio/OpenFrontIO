@@ -1,29 +1,18 @@
 import { PriorityQueue } from "@datastructures-js/priority-queue";
-import {
-  Cell,
-  Game,
-  Player,
-  PlayerType,
-  Unit,
-  UnitType,
-} from "../../../core/game/Game";
-import { GameUpdateType, UnitUpdate } from "../../../core/game/GameUpdates";
-import { PseudoRandom } from "../../../core/PseudoRandom";
-import { colord, Colord } from "colord";
+import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
-import { Layer } from "./Layer";
 import { EventBus } from "../../../core/EventBus";
-import {
-  AlternateViewEvent,
-  DragEvent,
-  MouseDownEvent,
-} from "../../InputHandler";
-import { GameView, PlayerView } from "../../../core/game/GameView";
+import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
 import {
   euclDistFN,
   manhattanDistFN,
   TileRef,
 } from "../../../core/game/GameMap";
+import { GameUpdateType, UnitUpdate } from "../../../core/game/GameUpdates";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { PseudoRandom } from "../../../core/PseudoRandom";
+import { AlternateViewEvent, DragEvent } from "../../InputHandler";
+import { Layer } from "./Layer";
 
 export class TerritoryLayer implements Layer {
   private canvas: HTMLCanvasElement;
@@ -63,6 +52,14 @@ export class TerritoryLayer implements Layer {
     return true;
   }
 
+  paintPlayerBorder(player: PlayerView) {
+    player.borderTiles().then((playerBorderTiles) => {
+      playerBorderTiles.borderTiles.forEach((tile: TileRef) => {
+        this.paintTerritory(tile); // Immediately paint the tile instead of enqueueing
+      });
+    });
+  }
+
   tick() {
     this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
     this.game.updatesSinceLastTick()[GameUpdateType.Unit].forEach((u) => {
@@ -88,10 +85,10 @@ export class TerritoryLayer implements Layer {
     const focusedPlayer = this.game.focusedPlayer();
     if (focusedPlayer !== this.lastFocusedPlayer) {
       if (this.lastFocusedPlayer) {
-        this.enqueuePlayerBorder(this.lastFocusedPlayer);
+        this.paintPlayerBorder(this.lastFocusedPlayer);
       }
       if (focusedPlayer) {
-        this.enqueuePlayerBorder(focusedPlayer);
+        this.paintPlayerBorder(focusedPlayer);
       }
       this.lastFocusedPlayer = focusedPlayer;
     }

@@ -1,3 +1,4 @@
+import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import {
   Game,
   Player,
@@ -5,7 +6,6 @@ import {
   PlayerType,
   UnitType,
 } from "../src/core/game/Game";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import { setup } from "./util/Setup";
 import { constructionExecution } from "./util/utils";
 

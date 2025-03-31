@@ -1,7 +1,7 @@
 import { consolex } from "../Consolex";
 import { Execution, Game, Player, PlayerID } from "../game/Game";
 
-export class DonateExecution implements Execution {
+export class DonateGoldExecution implements Execution {
   private sender: Player;
   private recipient: Player;
 
@@ -10,7 +10,7 @@ export class DonateExecution implements Execution {
   constructor(
     private senderID: PlayerID,
     private recipientID: PlayerID,
-    private troops: number | null,
+    private gold: number | null,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -27,18 +27,18 @@ export class DonateExecution implements Execution {
 
     this.sender = mg.player(this.senderID);
     this.recipient = mg.player(this.recipientID);
-    if (this.troops == null) {
-      this.troops = mg.config().defaultDonationAmount(this.sender);
+    if (this.gold == null) {
+      this.gold = Math.round(this.sender.gold() / 3);
     }
   }
 
   tick(ticks: number): void {
     if (this.sender.canDonate(this.recipient)) {
-      this.sender.donate(this.recipient, this.troops);
+      this.sender.donateGold(this.recipient, this.gold);
       this.recipient.updateRelation(this.sender, 50);
     } else {
       consolex.warn(
-        `cannot send tropps from ${this.sender} to ${this.recipient}`,
+        `cannot send gold from ${this.sender.name()} to ${this.recipient.name()}`,
       );
     }
     this.active = false;

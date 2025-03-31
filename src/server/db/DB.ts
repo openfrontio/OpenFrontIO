@@ -1,4 +1,4 @@
-import { Pool, PoolConfig } from "pg";
+import { Pool } from "pg";
 
 export interface SessionData {
   discord_id: string;

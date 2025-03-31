@@ -1,5 +1,4 @@
-import { Cell, GameMapType, TerrainType } from "./Game";
-import { consolex } from "../Consolex";
+import { GameMapType } from "./Game";
 import { NationMap } from "./TerrainMapLoader";
 
 interface MapData {
@@ -39,6 +38,7 @@ const MAP_FILE_NAMES: Record<GameMapType, string> = {
   [GameMapType.GatewayToTheAtlantic]: "GatewayToTheAtlantic",
   [GameMapType.Australia]: "Australia",
   [GameMapType.Iceland]: "Iceland",
+  [GameMapType.Japan]: "Japan",
 };
 
 class GameMapLoader {

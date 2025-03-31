@@ -1,11 +1,11 @@
-import { GameUpdateViewData } from "../game/GameUpdates";
-import { ClientID, GameConfig, GameID, Turn } from "../Schemas";
 import {
   PlayerActions,
+  PlayerBorderTiles,
   PlayerID,
   PlayerProfile,
-  PlayerBorderTiles,
 } from "../game/Game";
+import { GameUpdateViewData } from "../game/GameUpdates";
+import { ClientID, GameStartInfo, Turn } from "../Schemas";
 
 export type WorkerMessageType =
   | "heartbeat"
@@ -33,8 +33,7 @@ export interface HeartbeatMessage extends BaseWorkerMessage {
 // Messages from main thread to worker
 export interface InitMessage extends BaseWorkerMessage {
   type: "init";
-  gameID: GameID;
-  gameConfig: GameConfig;
+  gameStartInfo: GameStartInfo;
   clientID: ClientID;
 }
 

@@ -1,4 +1,4 @@
-import { RateLimiterMemory } from "rate-limiter-flexible";
+import { Logger } from "winston";
 import WebSocket from "ws";
 import {
   AllPlayersStats,
@@ -8,6 +8,8 @@ import {
   ClientSendWinnerMessage,
   GameConfig,
   GameInfo,
+  GameStartInfo,
+  GameStartInfoSchema,
   Intent,
   PlayerRecord,
   ServerDesyncSchema,
@@ -20,9 +22,8 @@ import { ServerConfig } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import { archive } from "./Archive";
 import { Client } from "./Client";
-import { slog } from "./StructuredLog";
 import { gatekeeper } from "./Gatekeeper";
-import { Logger } from "winston";
+import { slog } from "./StructuredLog";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -49,6 +50,8 @@ export class GameServer {
   private winner: ClientSendWinnerMessage = null;
   // This field is currently only filled at victory
   private allPlayersStats: AllPlayersStats = {};
+
+  private gameStartInfo: GameStartInfo;
 
   private log: Logger;
 
@@ -223,6 +226,16 @@ export class GameServer {
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
 
+    this.gameStartInfo = GameStartInfoSchema.parse({
+      gameID: this.id,
+      config: this.gameConfig,
+      players: this.activeClients.map((c) => ({
+        playerID: c.playerID,
+        username: c.username,
+        clientID: c.clientID,
+      })),
+    });
+
     this.endTurnIntervalID = setInterval(
       () => this.endTurn(),
       this.config.turnIntervalMs(),
@@ -244,7 +257,7 @@ export class GameServer {
           ServerStartGameMessageSchema.parse({
             type: "start",
             turns: this.turns.slice(lastTurn),
-            config: this.gameConfig,
+            gameStartInfo: this.gameStartInfo,
           }),
         ),
       );
@@ -317,7 +330,7 @@ export class GameServer {
         archive(
           createGameRecord(
             this.id,
-            this.gameConfig,
+            this.gameStartInfo,
             playerRecords,
             this.turns,
             this._startTime,

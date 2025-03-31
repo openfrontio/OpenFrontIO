@@ -360,8 +360,8 @@ label.option-card:hover {
 }
 
 #helpModal .donate-icon {
-  mask: url("../../resources/images/DonateIconWhite.svg") no-repeat center /
-    cover;
+  mask: url("../../resources/images/DonateTroopIconWhite.svg") no-repeat
+    center / cover;
 }
 
 #helpModal .build-icon {
