@@ -2,7 +2,8 @@
   "lang": {
     "en": "Japanese",
     "native": "日本語",
-    "svg": "jp"
+    "svg": "jp",
+    "lang_code": "ja"
   },
   "main": {
     "join_discord": "Discordサーバーに参加！",

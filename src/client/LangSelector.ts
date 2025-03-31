@@ -2,6 +2,15 @@ import { LitElement, html, css } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import "./LanguageModal";
 
+import en from "../../resources/lang/en.json";
+import ja from "../../resources/lang/ja.json";
+import fr from "../../resources/lang/fr.json";
+import bg from "../../resources/lang/bg.json";
+import nl from "../../resources/lang/nl.json";
+import ru from "../../resources/lang/ru.json";
+import ua from "../../resources/lang/ua.json";
+import de from "../../resources/lang/de.json";
+
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
   @state() public translations: any = {};
@@ -12,6 +21,17 @@ export class LangSelector extends LitElement {
   @state() private debugMode: boolean = false;
 
   private dKeyPressed: boolean = false;
+
+  private languageMap: Record<string, any> = {
+    en,
+    ja,
+    fr,
+    bg,
+    nl,
+    ru,
+    ua,
+    de,
+  };
 
   static styles = css`
     .modal {
@@ -75,10 +95,10 @@ export class LangSelector extends LitElement {
 
   private setupDebugKey() {
     window.addEventListener("keydown", (e) => {
-      if (e.key.toLowerCase() === "d") this.dKeyPressed = true;
+      if (e.key.toLowerCase() === "t") this.dKeyPressed = true;
     });
     window.addEventListener("keyup", (e) => {
-      if (e.key.toLowerCase() === "d") this.dKeyPressed = false;
+      if (e.key.toLowerCase() === "t") this.dKeyPressed = false;
     });
   }
 
@@ -95,33 +115,26 @@ export class LangSelector extends LitElement {
     this.applyTranslation(this.translations);
   }
 
-  private async loadLanguage(lang: string) {
-    try {
-      const response = await fetch(`/lang/${lang}.json`);
-      if (!response.ok) throw new Error(`Missing language: ${lang}`);
-      return await response.json();
-    } catch (err) {
-      console.error("Language load failed:", err);
-      return {};
-    }
+  private async loadLanguage(lang: string): Promise<any> {
+    return Promise.resolve(this.languageMap[lang] || {});
   }
 
   private async loadLanguageList() {
     try {
-      const res = await fetch("/lang/index.json");
-      const data = await res.json();
+      const data = this.languageMap;
       let list: any[] = [];
 
       const browserLang = new Intl.Locale(navigator.language).language;
 
-      for (const langCode of data.languages) {
-        const langData = await this.loadLanguage(langCode);
-        if (!langData?.lang) continue;
+      for (const langCode of Object.keys(data)) {
+        const langData = data[langCode].lang;
+        if (!langData) continue;
+
         list.push({
-          code: langCode,
-          native: langData.lang.native ?? langCode,
-          en: langData.lang.en ?? langCode,
-          svg: langData.lang.svg ?? langCode,
+          code: langData.lang_code ?? langCode,
+          native: langData.native ?? langCode,
+          en: langData.en ?? langCode,
+          svg: langData.svg ?? langCode,
         });
       }
 

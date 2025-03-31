@@ -163,7 +163,8 @@
   "lang": {
     "en": "Ukrainian",
     "native": "Українська",
-    "svg": "ua"
+    "svg": "ua",
+    "lang_code": "ua"
   },
   "mode": {
     "ffa": "Вільна гра (FFA)",

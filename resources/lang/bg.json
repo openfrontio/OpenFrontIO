@@ -163,7 +163,8 @@
   "lang": {
     "en": "Bulgarian",
     "native": "Български",
-    "svg": "bg"
+    "svg": "bg",
+    "lang_code": "bg"
   },
   "mode": {
     "ffa": "Свободна игра (FFA)",

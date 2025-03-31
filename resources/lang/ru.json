@@ -163,7 +163,8 @@
   "lang": {
     "en": "Russian",
     "native": "Русский",
-    "svg": "ru"
+    "svg": "ru",
+    "lang_code": "ru"
   },
   "mode": {
     "ffa": "Свободная игра (FFA)",

@@ -2,7 +2,8 @@
   "lang": {
     "en": "English",
     "native": "English",
-    "svg": "xx"
+    "svg": "xx",
+    "lang_code": "en"
   },
   "main": {
     "join_discord": "Join the Discord!",

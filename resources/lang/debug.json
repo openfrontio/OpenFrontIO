@@ -2,7 +2,8 @@
   "lang": {
     "en": "debug",
     "native": "debug",
-    "svg": "xx"
+    "svg": "xx",
+    "lang_code": "debug"
   },
   "main": {
     "join_discord": "main.join_discord",

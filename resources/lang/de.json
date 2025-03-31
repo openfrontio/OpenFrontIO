@@ -163,7 +163,8 @@
   "lang": {
     "en": "German",
     "native": "Deutsch",
-    "svg": "de"
+    "svg": "de",
+    "lang_code": "de"
   },
   "game_mode": {
     "ffa": "Free for All",

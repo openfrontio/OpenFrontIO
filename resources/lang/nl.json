@@ -163,7 +163,8 @@
   "lang": {
     "en": "Dutch",
     "native": "Nederlands",
-    "svg": "nl"
+    "svg": "nl",
+    "lang_code": "nl"
   },
   "mode": {
     "ffa": "Iedereen tegen iedereen (FFA)",
