@@ -207,6 +207,7 @@ export class ClientGameRunner {
   public start() {
     consolex.log("starting client game");
     console.log("Closing modals");
+    document.getElementById("settings-button").classList.add("hidden");
     [
       "single-player-modal",
       "host-lobby-modal",
