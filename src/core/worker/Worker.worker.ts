@@ -33,8 +33,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
     case "init":
       try {
         gameRunner = createGameRunner(
-          message.gameID,
-          message.gameConfig,
+          message.gameStartInfo,
           message.clientID,
           gameUpdate,
         ).then((gr) => {

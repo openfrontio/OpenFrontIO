@@ -283,11 +283,12 @@ function getNextMap(): GameMapType {
     NorthAmerica: 3,
     BlackSea: 2,
     Pangaea: 2,
-    Africa: 3,
+    Africa: 2,
     Asia: 1,
     Mars: 1,
     Britannia: 2,
     GatewayToTheAtlantic: 3,
+    Australia: 2,
     Iceland: 2,
     SouthAmerica: 3,
   };
