@@ -110,6 +110,18 @@
       "name": "Mount Fuji",
       "strength": 3,
       "flag": "jp"
+    },
+    {
+      "coordinates": [1500, 420],
+      "name": "Shiretoko Peninsula",
+      "strength": 3,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [490, 1530],
+      "name": "Sakurajima",
+      "strength": 3,
+      "flag": "jp"
     }
   ]
 }
