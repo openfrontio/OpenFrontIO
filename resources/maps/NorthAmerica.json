@@ -1,298 +1,298 @@
 {
   "name": "NorthAmerica",
-  "width": 3000,
-  "height": 1500,
+  "width": 2800,
+  "height": 1448,
   "nations": [
     {
-      "coordinates": [1814, 1083],
+      "coordinates": [1693, 1045],
       "name": "Florida",
       "strength": 3,
       "flag": "Florida"
     },
     {
-      "coordinates": [1072, 442],
+      "coordinates": [1001, 427],
       "name": "Canada",
       "strength": 2,
       "flag": "ca"
     },
     {
-      "coordinates": [1461, 1221],
+      "coordinates": [1364, 1179],
       "name": "Mexico",
       "strength": 2,
       "flag": "mx"
     },
     {
-      "coordinates": [1667, 1341],
+      "coordinates": [1556, 1295],
       "name": "Guatemala",
       "strength": 1,
       "flag": "gt"
     },
     {
-      "coordinates": [1727, 1335],
+      "coordinates": [1612, 1289],
       "name": "Honduras",
       "strength": 1,
       "flag": "hn"
     },
     {
-      "coordinates": [1759, 1396],
+      "coordinates": [1642, 1348],
       "name": "Nicaragua",
       "strength": 1,
       "flag": "ni"
     },
     {
-      "coordinates": [1858, 1453],
+      "coordinates": [1734, 1403],
       "name": "Panama",
       "strength": 1,
       "flag": "pa"
     },
     {
-      "coordinates": [1951, 1445],
+      "coordinates": [1821, 1395],
       "name": "Colombia",
       "strength": 1,
       "flag": "co"
     },
     {
-      "coordinates": [2031, 1429],
+      "coordinates": [1896, 1379],
       "name": "Venezuela",
       "strength": 1,
       "flag": "ve"
     },
     {
-      "coordinates": [1902, 1226],
+      "coordinates": [1775, 1183],
       "name": "Cuba",
       "strength": 1,
       "flag": "cu"
     },
     {
-      "coordinates": [500, 345],
+      "coordinates": [467, 333],
       "name": "Alaska",
       "strength": 1,
-      "flag": "Alaskaa"
+      "flag": "Alaska"
     },
     {
-      "coordinates": [1236, 947],
+      "coordinates": [1154, 914],
       "name": "Arizona",
       "strength": 1,
       "flag": "Arizona"
     },
     {
-      "coordinates": [1082, 896],
+      "coordinates": [1010, 865],
       "name": "California",
       "strength": 1,
       "flag": "California"
     },
     {
-      "coordinates": [1400, 894],
+      "coordinates": [1307, 863],
       "name": "Colorado",
       "strength": 1,
       "flag": "Colorado"
     },
     {
-      "coordinates": [1793, 1000],
+      "coordinates": [1673, 965],
       "name": "Georgia",
       "strength": 1,
       "flag": "Georgia_US"
     },
     {
-      "coordinates": [450, 1252],
+      "coordinates": [420, 1209],
       "name": "Hawaii",
       "strength": 1,
       "flag": "Hawaii"
     },
     {
-      "coordinates": [1200, 787],
+      "coordinates": [1120, 760],
       "name": "Idaho",
       "strength": 1,
       "flag": "Idaho"
     },
     {
-      "coordinates": [1662, 842],
+      "coordinates": [1551, 813],
       "name": "Illinois",
       "strength": 1,
       "flag": "Illinois"
     },
     {
-      "coordinates": [1513, 904],
+      "coordinates": [1412, 873],
       "name": "Kansas",
       "strength": 1,
       "flag": "Kansas"
     },
     {
-      "coordinates": [1769, 912],
+      "coordinates": [1651, 880],
       "name": "Kentucky",
       "strength": 1,
       "flag": "Kentucky"
     },
     {
-      "coordinates": [1622, 1043],
+      "coordinates": [1514, 1007],
       "name": "Louisiana",
       "strength": 1,
       "flag": "Louisiana"
     },
     {
-      "coordinates": [2019, 761],
+      "coordinates": [1884, 735],
       "name": "Maine",
       "strength": 1,
       "flag": "Maine"
     },
     {
-      "coordinates": [1751, 791],
+      "coordinates": [1634, 764],
       "name": "Michigan",
       "strength": 1,
       "flag": "Michigan"
     },
     {
-      "coordinates": [1667, 1000],
+      "coordinates": [1556, 965],
       "name": "Mississippi",
       "strength": 1,
       "flag": "Mississippi"
     },
     {
-      "coordinates": [1636, 754],
+      "coordinates": [1527, 728],
       "name": "Minnesota",
       "strength": 1,
       "flag": "Minnesota"
     },
     {
-      "coordinates": [1638, 912],
+      "coordinates": [1529, 880],
       "name": "Missouri",
       "strength": 1,
       "flag": "Missouri"
     },
     {
-      "coordinates": [1313, 781],
+      "coordinates": [1225, 754],
       "name": "Montana",
       "strength": 1,
       "flag": "Montana"
     },
     {
-      "coordinates": [1514, 817],
+      "coordinates": [1413, 789],
       "name": "Nebraska",
       "strength": 1,
       "flag": "Nebraska"
     },
     {
-      "coordinates": [1168, 883],
+      "coordinates": [1090, 852],
       "name": "Nevada",
       "strength": 1,
       "flag": "Nevada"
     },
     {
-      "coordinates": [1342, 967],
+      "coordinates": [1253, 933],
       "name": "New Mexico",
       "strength": 1,
       "flag": "New_Mexico"
     },
     {
-      "coordinates": [1964, 820],
+      "coordinates": [1833, 792],
       "name": "New York",
       "strength": 1,
       "flag": "New_York"
     },
     {
-      "coordinates": [1547, 742],
+      "coordinates": [1444, 716],
       "name": "North Dakota",
       "strength": 1,
       "flag": "North_Dakota"
     },
     {
-      "coordinates": [1826, 841],
+      "coordinates": [1704, 812],
       "name": "Ohio",
       "strength": 1,
       "flag": "Ohio"
     },
     {
-      "coordinates": [1497, 954],
+      "coordinates": [1397, 921],
       "name": "Oklahoma",
       "strength": 1,
       "flag": "Oklahoma"
     },
     {
-      "coordinates": [1046, 781],
+      "coordinates": [976, 754],
       "name": "Oregon",
       "strength": 1,
       "flag": "Oregon"
     },
     {
-      "coordinates": [1877, 742],
+      "coordinates": [1752, 716],
       "name": "Pennsylvania",
       "strength": 1,
       "flag": "Pennsylvania"
     },
     {
-      "coordinates": [1839, 971],
+      "coordinates": [1716, 937],
       "name": "South Carolina",
       "strength": 1,
       "flag": "South_Carolina"
     },
     {
-      "coordinates": [1520, 780],
+      "coordinates": [1419, 753],
       "name": "South Dakota",
       "strength": 1,
       "flag": "South_Dakota"
     },
     {
-      "coordinates": [1766, 705],
+      "coordinates": [1648, 981],
       "name": "Tennessee",
       "strength": 1,
       "flag": "Tennessee"
     },
     {
-      "coordinates": [1507, 1041],
+      "coordinates": [1407, 1005],
       "name": "Texas",
       "strength": 1,
       "flag": "Texas"
     },
     {
-      "coordinates": [1958, 769],
+      "coordinates": [1827, 742],
       "name": "Vermont",
       "strength": 1,
       "flag": "Vermont"
     },
     {
-      "coordinates": [1893, 888],
+      "coordinates": [1767, 857],
       "name": "Virginia",
       "strength": 1,
       "flag": "Virginia"
     },
     {
-      "coordinates": [1065, 725],
+      "coordinates": [994, 700],
       "name": "Washington",
       "strength": 1,
       "flag": "Washington"
     },
     {
-      "coordinates": [1351, 786],
+      "coordinates": [1261, 759],
       "name": "Wyoming",
       "strength": 1,
       "flag": "Wyoming"
     },
     {
-      "coordinates": [2000, 581],
+      "coordinates": [1867, 561],
       "name": "Quebec",
       "strength": 1,
       "flag": "Quebec"
     },
     {
-      "coordinates": [1862, 83],
+      "coordinates": [1738, 80],
       "name": "Santa Claus",
       "strength": 3,
-      "flag": ""
+      "flag": "santa_claus"
     },
     {
-      "coordinates": [1274, 249],
+      "coordinates": [1189, 240],
       "name": "Polar Bears",
       "strength": 3,
-      "flag": ""
+      "flag": "polar_bear"
     },
     {
-      "coordinates": [1586, 355],
+      "coordinates": [1480, 343],
       "name": "Frost Giants",
       "strength": 3,
-      "flag": ""
+      "flag": "frost_giant"
     },
     {
-      "coordinates": [2570, 177],
+      "coordinates": [2399, 171],
       "name": "Greenland",
       "strength": 3,
       "flag": "gl"
