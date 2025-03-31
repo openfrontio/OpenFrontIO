@@ -60,6 +60,7 @@ export enum GameMapType {
   GatewayToTheAtlantic = "Gateway to the Atlantic",
   Australia = "Australia",
   Iceland = "Iceland",
+  Japan = "Japan",
 }
 
 export enum GameType {

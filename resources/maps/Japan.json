@@ -1,0 +1,73 @@
+{
+  "name": "Iceland",
+  "width": 2000,
+  "height": 1500,
+  "nations": [
+    {
+      "coordinates": [1340, 468],
+      "name": "Hokkaido",
+      "strength": 3,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1220, 830],
+      "name": "Tohoku",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1000, 1150],
+      "name": "Chubu",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1150, 1170],
+      "name": "Kanto",
+      "strength": 3,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [860, 1260],
+      "name": "Kinki",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [670, 1250],
+      "name": "Chugoku",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [700, 1350],
+      "name": "Shikoku",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [510, 1440],
+      "name": "Kyushu",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [300, 1150],
+      "name": "South Korea",
+      "strength": 2,
+      "flag": "kr"
+    },
+    {
+      "coordinates": [220, 880],
+      "name": "North Korea",
+      "strength": 2,
+      "flag": "kp"
+    },
+    {
+      "coordinates": [50, 50],
+      "name": "China",
+      "strength": 1,
+      "flag": "cn"
+    }
+  ]
+}

@@ -13,6 +13,7 @@ import britannia from "../../../resources/maps/BritanniaThumb.webp";
 import gatewayToTheAtlantic from "../../../resources/maps/GatewayToTheAtlanticThumb.webp";
 import australia from "../../../resources/maps/AustraliaThumb.webp";
 import iceland from "../../../resources/maps/IcelandThumb.webp";
+import japan from "../../../resources/maps/JapanThumb.webp";
 
 import { GameMapType } from "../../core/game/Game";
 
@@ -48,6 +49,8 @@ export function getMapsImage(map: GameMapType): string {
       return australia;
     case GameMapType.Iceland:
       return iceland;
+    case GameMapType.Japan:
+      return japan;
     default:
       return "";
   }
