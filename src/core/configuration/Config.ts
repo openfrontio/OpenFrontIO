@@ -47,6 +47,7 @@ export interface ServerConfig {
 
 export interface Config {
   samHittingChance(): number;
+  samWarheadHittingChance(): number;
   spawnImmunityDuration(): Tick;
   serverConfig(): ServerConfig;
   gameConfig(): GameConfig;

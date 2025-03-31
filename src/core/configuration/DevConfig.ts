@@ -24,6 +24,14 @@ export class DevServerConfig extends DefaultServerConfig {
     return Math.random() < 0.5 ? 2 : 3;
   }
 
+  samWarheadHittingChance(): number {
+    return 1;
+  }
+
+  samHittingChance(): number {
+    return 1;
+  }
+
   discordRedirectURI(): string {
     return "http://localhost:3000/auth/callback";
   }

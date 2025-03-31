@@ -70,6 +70,7 @@ export class UnitGrid {
 
     const rangeSquared = searchRange * searchRange;
     const typeSet = Array.isArray(types) ? new Set(types) : new Set([types]);
+    let i = 0;
 
     for (let cy = startGridY; cy <= endGridY; cy++) {
       for (let cx = startGridX; cx <= endGridX; cx++) {
