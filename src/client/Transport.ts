@@ -452,6 +452,7 @@ export class Transport {
     this.sendIntent({
       type: "donate_troops",
       clientID: this.lobbyConfig.clientID,
+      playerID: event.sender.id(),
       recipient: event.recipient.id(),
       troops: event.troops,
     });

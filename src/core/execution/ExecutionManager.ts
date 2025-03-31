@@ -111,23 +111,15 @@ export class Executor {
       case "targetPlayer":
         return new TargetPlayerExecution(playerID, intent.target);
       case "emoji":
-        return new EmojiExecution(
-          intent.playerID,
-          intent.recipient,
-          intent.emoji,
-        );
+        return new EmojiExecution(playerID, intent.recipient, intent.emoji);
       case "donate_troops":
         return new DonateTroopsExecution(
-          intent.playerID,
+          playerID,
           intent.recipient,
           intent.troops,
         );
       case "donate_gold":
-        return new DonateGoldExecution(
-          intent.playerID,
-          intent.recipient,
-          intent.gold,
-        );
+        return new DonateGoldExecution(playerID, intent.recipient, intent.gold);
       case "troop_ratio":
         return new SetTargetTroopRatioExecution(playerID, intent.ratio);
       case "embargo":
