@@ -1,50 +1,51 @@
 import { Config } from "../configuration/Config";
+import { consolex } from "../Consolex";
+import { AllPlayersStats, ClientID } from "../Schemas";
+import { simpleHash } from "../Util";
+import { AllianceImpl } from "./AllianceImpl";
+import { AllianceRequestImpl } from "./AllianceRequestImpl";
 import {
+  Alliance,
+  AllianceRequest,
   Cell,
+  EmojiMessage,
   Execution,
   Game,
+  GameMode,
+  GameUpdates,
+  MessageType,
+  Nation,
+  Player,
   PlayerID,
   PlayerInfo,
-  Player,
+  PlayerType,
+  Team,
+  TeamName,
+  TerrainType,
   TerraNullius,
   Unit,
-  AllianceRequest,
-  Alliance,
-  Nation,
-  UnitType,
   UnitInfo,
-  GameUpdates,
-  TerrainType,
-  EmojiMessage,
-  Team,
-  GameMode,
-  TeamName,
-  PlayerType,
+  UnitType,
 } from "./Game";
-import { GameUpdate } from "./GameUpdates";
-import { GameUpdateType } from "./GameUpdates";
-import { NationMap } from "./TerrainMapLoader";
+import { GameMap, TileRef, TileUpdate } from "./GameMap";
+import { GameUpdate, GameUpdateType } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
-import { TerraNulliusImpl } from "./TerraNulliusImpl";
-import { AllianceRequestImpl } from "./AllianceRequestImpl";
-import { AllianceImpl } from "./AllianceImpl";
-import { ClientID, AllPlayersStats } from "../Schemas";
-import { MessageType } from "./Game";
-import { UnitImpl } from "./UnitImpl";
-import { consolex } from "../Consolex";
-import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
-import { UnitGrid } from "./UnitGrid";
-import { StatsImpl } from "./StatsImpl";
 import { Stats } from "./Stats";
-import { simpleHash } from "../Util";
+import { StatsImpl } from "./StatsImpl";
+import { assignTeams } from "./TeamAssignment";
+import { NationMap } from "./TerrainMapLoader";
+import { TerraNulliusImpl } from "./TerraNulliusImpl";
+import { UnitGrid } from "./UnitGrid";
+import { UnitImpl } from "./UnitImpl";
 
 export function createGame(
+  humans: PlayerInfo[],
   gameMap: GameMap,
   miniGameMap: GameMap,
   nationMap: NationMap,
   config: Config,
 ): Game {
-  return new GameImpl(gameMap, miniGameMap, nationMap, config);
+  return new GameImpl(humans, gameMap, miniGameMap, nationMap, config);
 }
 
 export type CellString = string;
@@ -82,11 +83,13 @@ export class GameImpl implements Game {
   private botTeam: Team = { name: TeamName.Bot };
 
   constructor(
+    private _humans: PlayerInfo[],
     private _map: GameMap,
     private miniGameMap: GameMap,
     nationMap: NationMap,
     private _config: Config,
   ) {
+    this.addHumans();
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();
@@ -101,6 +104,22 @@ export class GameImpl implements Game {
     );
     this.unitGrid = new UnitGrid(this._map);
   }
+
+  private addHumans() {
+    if (this.config().gameConfig().gameMode != GameMode.Team) {
+      this._humans.forEach((p) => this.addPlayer(p, 0));
+      return;
+    }
+    const playerToTeam = assignTeams(this._humans);
+    for (const [playerInfo, team] of playerToTeam.entries()) {
+      if (team == "kicked") {
+        console.warn(`Player ${playerInfo.name} was kicked from team`);
+        continue;
+      }
+      this.addPlayer(playerInfo, 0, team);
+    }
+  }
+
   isOnEdgeOfMap(ref: TileRef): boolean {
     return this._map.isOnEdgeOfMap(ref);
   }
@@ -327,13 +346,17 @@ export class GameImpl implements Game {
     return this.player(id);
   }
 
-  addPlayer(playerInfo: PlayerInfo, manpower: number): Player {
+  addPlayer(
+    playerInfo: PlayerInfo,
+    manpower: number,
+    team: Team = null,
+  ): Player {
     const player = new PlayerImpl(
       this,
       this.nextPlayerID,
       playerInfo,
       manpower,
-      this.maybeAssignTeam(playerInfo),
+      team ?? this.maybeAssignTeam(playerInfo),
     );
     this._playersBySmallID.push(player);
     this.nextPlayerID++;

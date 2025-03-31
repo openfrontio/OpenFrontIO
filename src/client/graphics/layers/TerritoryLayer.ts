@@ -1,29 +1,18 @@
 import { PriorityQueue } from "@datastructures-js/priority-queue";
-import {
-  Cell,
-  Game,
-  Player,
-  PlayerType,
-  Unit,
-  UnitType,
-} from "../../../core/game/Game";
-import { GameUpdateType, UnitUpdate } from "../../../core/game/GameUpdates";
-import { PseudoRandom } from "../../../core/PseudoRandom";
-import { colord, Colord } from "colord";
+import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
-import { Layer } from "./Layer";
 import { EventBus } from "../../../core/EventBus";
-import {
-  AlternateViewEvent,
-  DragEvent,
-  MouseDownEvent,
-} from "../../InputHandler";
-import { GameView, PlayerView } from "../../../core/game/GameView";
+import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
 import {
   euclDistFN,
   manhattanDistFN,
   TileRef,
 } from "../../../core/game/GameMap";
+import { GameUpdateType, UnitUpdate } from "../../../core/game/GameUpdates";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { PseudoRandom } from "../../../core/PseudoRandom";
+import { AlternateViewEvent, DragEvent } from "../../InputHandler";
+import { Layer } from "./Layer";
 
 export class TerritoryLayer implements Layer {
   private canvas: HTMLCanvasElement;
@@ -50,6 +39,8 @@ export class TerritoryLayer implements Layer {
   private refreshRate = 50;
   private lastRefresh = 0;
 
+  private lastFocusedPlayer: PlayerView | null = null;
+
   constructor(
     private game: GameView,
     private eventBus: EventBus,
@@ -59,6 +50,14 @@ export class TerritoryLayer implements Layer {
 
   shouldTransform(): boolean {
     return true;
+  }
+
+  paintPlayerBorder(player: PlayerView) {
+    player.borderTiles().then((playerBorderTiles) => {
+      playerBorderTiles.borderTiles.forEach((tile: TileRef) => {
+        this.paintTerritory(tile); // Immediately paint the tile instead of enqueueing
+      });
+    });
   }
 
   tick() {
@@ -82,6 +81,17 @@ export class TerritoryLayer implements Layer {
           });
       }
     });
+
+    const focusedPlayer = this.game.focusedPlayer();
+    if (focusedPlayer !== this.lastFocusedPlayer) {
+      if (this.lastFocusedPlayer) {
+        this.paintPlayerBorder(this.lastFocusedPlayer);
+      }
+      if (focusedPlayer) {
+        this.paintPlayerBorder(focusedPlayer);
+      }
+      this.lastFocusedPlayer = focusedPlayer;
+    }
 
     if (!this.game.inSpawnPhase()) {
       return;
@@ -239,6 +249,7 @@ export class TerritoryLayer implements Layer {
     }
     const owner = this.game.owner(tile) as PlayerView;
     if (this.game.isBorder(tile)) {
+      const playerIsFocused = owner && this.game.focusedPlayer() == owner;
       if (
         this.game
           .nearbyUnits(
@@ -248,17 +259,23 @@ export class TerritoryLayer implements Layer {
           )
           .filter((u) => u.unit.owner() == owner).length > 0
       ) {
+        const useDefendedBorderColor = playerIsFocused
+          ? this.theme.focusedDefendedBorderColor()
+          : this.theme.defendedBorderColor(owner);
         this.paintCell(
           this.game.x(tile),
           this.game.y(tile),
-          this.theme.defendedBorderColor(owner),
+          useDefendedBorderColor,
           255,
         );
       } else {
+        const useBorderColor = playerIsFocused
+          ? this.theme.focusedBorderColor()
+          : this.theme.borderColor(owner);
         this.paintCell(
           this.game.x(tile),
           this.game.y(tile),
-          this.theme.borderColor(owner),
+          useBorderColor,
           255,
         );
       }
@@ -291,6 +308,13 @@ export class TerritoryLayer implements Layer {
     this.tileToRenderQueue.push({
       tile: tile,
       lastUpdate: this.game.ticks() + this.random.nextFloat(0, 0.5),
+    });
+  }
+
+  async enqueuePlayerBorder(player: PlayerView) {
+    const playerBorderTiles = await player.borderTiles();
+    playerBorderTiles.borderTiles.forEach((tile: TileRef) => {
+      this.enqueueTile(tile);
     });
   }
 

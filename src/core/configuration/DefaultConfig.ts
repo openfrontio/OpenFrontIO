@@ -13,12 +13,12 @@ import {
   UnitInfo,
   UnitType,
 } from "../game/Game";
-import { GameMap, TileRef } from "../game/GameMap";
+import { TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID } from "../Schemas";
 import { assertNever, simpleHash, within } from "../Util";
-import { Config, GameEnv, ServerConfig, Theme } from "./Config";
+import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { pastelTheme } from "./PastelTheme";
 import { pastelThemeDark } from "./PastelThemeDark";
 
@@ -93,10 +93,6 @@ export class DefaultConfig implements Config {
     return 0.8;
   }
 
-  samCooldown(): Tick {
-    return 100;
-  }
-
   traitorDefenseDebuff(): number {
     return 0.8;
   }
@@ -137,6 +133,12 @@ export class DefaultConfig implements Config {
     // falloutRatio is between 0 and 1
     // So defense modifier is between [5, 2.5]
     return 5 - falloutRatio * 2;
+  }
+  SAMCooldown(): number {
+    return 75;
+  }
+  SiloCooldown(): number {
+    return 75;
   }
 
   defensePostRange(): number {
@@ -474,6 +476,10 @@ export class DefaultConfig implements Config {
     return Math.floor(attacker.troops() / 5);
   }
 
+  warshipShellLifetime(): number {
+    return 20; // in ticks (one tick is 100ms)
+  }
+
   radiusPortSpawn() {
     return 20;
   }
@@ -585,5 +591,25 @@ export class DefaultConfig implements Config {
       return adjustment * 5;
     }
     return adjustment;
+  }
+
+  nukeMagnitudes(unitType: UnitType): NukeMagnitude {
+    switch (unitType) {
+      case UnitType.MIRVWarhead:
+        return { inner: 25, outer: 30 };
+      case UnitType.AtomBomb:
+        return { inner: 12, outer: 30 };
+      case UnitType.HydrogenBomb:
+        return { inner: 80, outer: 100 };
+    }
+  }
+
+  defaultNukeSpeed(): number {
+    return 4;
+  }
+
+  // Humans can be population, soldiers attacking, soldiers in boat etc.
+  nukeDeathFactor(humans: number, tilesOwned: number): number {
+    return (5 * humans) / Math.max(1, tilesOwned);
   }
 }

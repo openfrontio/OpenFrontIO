@@ -1,8 +1,7 @@
-import { Colord, colord, random } from "colord";
-import { PlayerType, TeamName, TerrainType } from "../game/Game";
-import { Theme } from "./Config";
+import { Colord, colord } from "colord";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
+import { PlayerType, TeamName, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import {
@@ -13,6 +12,7 @@ import {
   red,
   territoryColors,
 } from "./Colors";
+import { Theme } from "./Config";
 
 export const pastelTheme = new (class implements Theme {
   private rand = new PseudoRandom(123);
@@ -83,6 +83,13 @@ export const pastelTheme = new (class implements Theme {
       g: Math.max(bc.g - 40, 0),
       b: Math.max(bc.b - 40, 0),
     });
+  }
+
+  focusedBorderColor(): Colord {
+    return colord({ r: 230, g: 230, b: 230 });
+  }
+  focusedDefendedBorderColor(): Colord {
+    return colord({ r: 200, g: 200, b: 200 });
   }
 
   terrainColor(gm: GameMap, tile: TileRef): Colord {

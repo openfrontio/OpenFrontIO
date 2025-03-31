@@ -1,5 +1,7 @@
-import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { DirectiveResult } from "lit/directive.js";
+import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
@@ -9,27 +11,25 @@ import {
   UnitType,
 } from "../../../core/game/Game";
 import {
+  AllianceExpiredUpdate,
+  AllianceRequestReplyUpdate,
+  AllianceRequestUpdate,
   AttackUpdate,
+  BrokeAllianceUpdate,
   DisplayMessageUpdate,
+  EmojiUpdate,
+  GameUpdateType,
+  TargetPlayerUpdate,
 } from "../../../core/game/GameUpdates";
-import { EmojiUpdate } from "../../../core/game/GameUpdates";
-import { TargetPlayerUpdate } from "../../../core/game/GameUpdates";
-import { AllianceExpiredUpdate } from "../../../core/game/GameUpdates";
-import { BrokeAllianceUpdate } from "../../../core/game/GameUpdates";
-import { AllianceRequestReplyUpdate } from "../../../core/game/GameUpdates";
-import { AllianceRequestUpdate } from "../../../core/game/GameUpdates";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { ClientID } from "../../../core/Schemas";
-import { Layer } from "./Layer";
 import {
   CancelAttackIntentEvent,
   SendAllianceReplyIntentEvent,
 } from "../../Transport";
-import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
-import { DirectiveResult } from "lit/directive.js";
+import { Layer } from "./Layer";
 
-import { onlyImages, sanitize } from "../../../core/Util";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { onlyImages } from "../../../core/Util";
 import { renderTroops } from "../../Utils";
 import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
 
@@ -261,8 +261,13 @@ export class EventsDisplay extends LitElement implements Layer {
     const traitor = this.game.playerBySmallID(update.traitorID) as PlayerView;
 
     if (!betrayed.isTraitor() && traitor === myPlayer) {
+      const malusPercent = Math.round(
+        (1 - this.game.config().traitorDefenseDebuff()) * 100,
+      );
       this.addEvent({
-        description: `You broke your alliance with ${betrayed.name()}, making you a TRAITOR`,
+        description:
+          `You broke your alliance with ${betrayed.name()}, making you a TRAITOR ` +
+          `(${malusPercent}% defense debuff)`,
         type: MessageType.ERROR,
         highlight: true,
         createdAt: this.game.ticks(),

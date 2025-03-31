@@ -1,6 +1,6 @@
 import promClient from "prom-client";
-import { GameManager } from "./GameManager";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { GameManager } from "./GameManager";
 
 const config = getServerConfigFromServer();
 const region = config.region();

@@ -1,4 +1,4 @@
-import { Execution, Game, Player, PlayerID } from "../game/Game";
+import { Execution, Game } from "../game/Game";
 
 const cancelDelay = 2;
 

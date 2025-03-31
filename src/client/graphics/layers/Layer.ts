@@ -1,5 +1,3 @@
-import { Game } from "../../../core/game/Game";
-
 export interface Layer {
   init?();
   tick?();

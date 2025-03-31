@@ -1,4 +1,4 @@
-import { LitElement, html, css } from "lit";
+import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 
 const emojiTable: string[][] = [

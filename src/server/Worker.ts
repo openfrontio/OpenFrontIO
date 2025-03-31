@@ -1,22 +1,20 @@
-import express, { Request, Response, NextFunction } from "express";
+import express, { NextFunction, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
 import http from "http";
-import { WebSocketServer } from "ws";
 import path from "path";
 import { fileURLToPath } from "url";
-import { GameManager } from "./GameManager";
+import { WebSocket, WebSocketServer } from "ws";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { WebSocket } from "ws";
-import { Client } from "./Client";
-import rateLimit from "express-rate-limit";
-import { RateLimiterMemory } from "rate-limiter-flexible";
-import { GameConfig, GameRecord, LogSeverity } from "../core/Schemas";
-import { slog } from "./StructuredLog";
 import { GameType } from "../core/game/Game";
+import { GameConfig, GameRecord, LogSeverity } from "../core/Schemas";
 import { archive, readGameRecord } from "./Archive";
+import { Client } from "./Client";
+import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
-import { metrics } from "./WorkerMetrics";
 import { logger } from "./Logger";
+import { slog } from "./StructuredLog";
+import { metrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
 
@@ -187,7 +185,7 @@ export function startWorker() {
       const game = gm.game(req.params.id);
       if (game == null) {
         log.info(`lobby ${req.params.id} not found`);
-        return res.status(404);
+        return res.status(404).json({ error: "Game not found" });
       }
       res.json(game.gameInfo());
     }),

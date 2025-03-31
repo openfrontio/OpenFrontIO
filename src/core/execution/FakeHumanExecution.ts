@@ -1,3 +1,4 @@
+import { consolex } from "../Consolex";
 import {
   AllianceRequest,
   Cell,
@@ -14,20 +15,18 @@ import {
   Tick,
   UnitType,
 } from "../game/Game";
-import { PseudoRandom } from "../PseudoRandom";
-import { AttackExecution } from "./AttackExecution";
-import { TransportShipExecution } from "./TransportShipExecution";
-import { SpawnExecution } from "./SpawnExecution";
-import { GameID } from "../Schemas";
-import { consolex } from "../Consolex";
-import { NukeExecution } from "./NukeExecution";
-import { EmojiExecution } from "./EmojiExecution";
-import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
-import { closestTwoTiles } from "./Util";
-import { calculateBoundingBox, simpleHash } from "../Util";
 import { andFN, manhattanDistFN, TileRef } from "../game/GameMap";
+import { PseudoRandom } from "../PseudoRandom";
+import { GameID } from "../Schemas";
+import { calculateBoundingBox, simpleHash } from "../Util";
+import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
+import { AttackExecution } from "./AttackExecution";
 import { ConstructionExecution } from "./ConstructionExecution";
-import { renderTroops } from "../../client/Utils";
+import { EmojiExecution } from "./EmojiExecution";
+import { NukeExecution } from "./NukeExecution";
+import { SpawnExecution } from "./SpawnExecution";
+import { TransportShipExecution } from "./TransportShipExecution";
+import { closestTwoTiles } from "./Util";
 
 export class FakeHumanExecution implements Execution {
   private firstMove = true;
@@ -192,6 +191,9 @@ export class FakeHumanExecution implements Execution {
   }
 
   private shouldAttack(other: Player): boolean {
+    if (this.player.isOnSameTeam(other)) {
+      return false;
+    }
     if (this.player.isFriendly(other)) {
       if (this.shouldDiscourageAttack(other)) {
         return this.random.chance(200);
@@ -290,7 +292,8 @@ export class FakeHumanExecution implements Execution {
     if (
       this.player.units(UnitType.MissileSilo).length == 0 ||
       this.player.gold() <
-        this.mg.config().unitInfo(UnitType.AtomBomb).cost(this.player)
+        this.mg.config().unitInfo(UnitType.AtomBomb).cost(this.player) ||
+      this.player.isOnSameTeam(other)
     ) {
       return;
     }
@@ -315,6 +318,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   private maybeSendBoatAttack(other: Player) {
+    if (this.player.isOnSameTeam(other)) return;
     const closest = closestTwoTiles(
       this.mg,
       Array.from(this.player.borderTiles()).filter((t) =>
@@ -580,6 +584,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   sendAttack(toAttack: Player | TerraNullius) {
+    if (toAttack.isPlayer() && this.player.isOnSameTeam(toAttack)) return;
     this.mg.addExecution(
       new AttackExecution(
         this.player.troops() / 5,
