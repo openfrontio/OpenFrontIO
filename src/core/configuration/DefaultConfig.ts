@@ -611,6 +611,6 @@ export class DefaultConfig implements Config {
 
   // Humans can be population, soldiers attacking, soldiers in boat etc.
   nukeDeathFactor(humans: number, tilesOwned: number): number {
-    return (5 * humans) / tilesOwned;
+    return (5 * humans) / Math.max(1, tilesOwned);
   }
 }
