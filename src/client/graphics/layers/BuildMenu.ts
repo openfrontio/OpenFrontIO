@@ -17,6 +17,7 @@ import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
 import portIcon from "../../../../resources/images/PortIcon.svg";
 import mirvIcon from "../../../../resources/images/MIRVIcon.svg";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
+import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import samlauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import { renderNumber } from "../../Utils";
@@ -86,6 +87,12 @@ const buildTable: BuildItemDisplay[][] = [
       unitType: UnitType.City,
       icon: cityIcon,
       description: "Increase max population",
+      countable: true,
+    },
+    {
+      unitType: UnitType.Factory,
+      icon: factoryIcon,
+      description: "Increases income from workers",
       countable: true,
     },
   ],

@@ -10,6 +10,7 @@ import SAMMissileReloadingIcon from "../../../../resources/images/buildings/silo
 import MissileSiloReloadingIcon from "../../../../resources/images/buildings/silo1-reloading.png";
 import shieldIcon from "../../../../resources/images/buildings/fortAlt2.png";
 import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
+import factoryIcon from "../../../../resources/images/buildings/factory.png";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { Cell, UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
@@ -17,7 +18,7 @@ import {
   euclDistFN,
   manhattanDistFN,
   rectDistFN,
-  hexDistFN,
+  octDistFN,
 } from "../../../core/game/GameMap";
 
 const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
@@ -29,7 +30,7 @@ enum UnitBorderType {
   Round,
   Diamond,
   Square,
-  Hexagon,
+  Octagon,
 }
 
 interface UnitRenderConfig {
@@ -59,6 +60,12 @@ export class StructureLayer implements Layer {
       territoryRadius: 6.525,
       borderType: UnitBorderType.Round,
     },
+    [UnitType.Factory]: {
+      icon: factoryIcon,
+      borderRadius: 8.525,
+      territoryRadius: 6.525,
+      borderType: UnitBorderType.Round,
+    },
     [UnitType.MissileSilo]: {
       icon: missileSiloIcon,
       borderRadius: 8.525,
@@ -69,7 +76,7 @@ export class StructureLayer implements Layer {
       icon: shieldIcon,
       borderRadius: 8.525,
       territoryRadius: 6.525,
-      borderType: UnitBorderType.Hexagon,
+      borderType: UnitBorderType.Octagon,
     },
     [UnitType.SAMLauncher]: {
       icon: SAMMissileIcon,
@@ -209,8 +216,8 @@ export class StructureLayer implements Layer {
         return manhattanDistFN;
       case UnitBorderType.Square:
         return rectDistFN;
-      case UnitBorderType.Hexagon:
-        return hexDistFN;
+      case UnitBorderType.Octagon:
+        return octDistFN;
     }
   }
 
