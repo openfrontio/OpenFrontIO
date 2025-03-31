@@ -24,7 +24,7 @@ export type Intent =
   | TargetPlayerIntent
   | EmojiIntent
   | DonateGoldIntent
-  | DonateTroopIntent
+  | DonateTroopsIntent
   | TargetTroopRatioIntent
   | BuildUnitIntent
   | EmbargoIntent
@@ -42,7 +42,7 @@ export type BreakAllianceIntent = z.infer<typeof BreakAllianceIntentSchema>;
 export type TargetPlayerIntent = z.infer<typeof TargetPlayerIntentSchema>;
 export type EmojiIntent = z.infer<typeof EmojiIntentSchema>;
 export type DonateGoldIntent = z.infer<typeof DonateGoldIntentSchema>;
-export type DonateTroopIntent = z.infer<typeof DonateTroopIntentSchema>;
+export type DonateTroopsIntent = z.infer<typeof DonateTroopIntentSchema>;
 export type EmbargoIntent = z.infer<typeof EmbargoIntentSchema>;
 export type TargetTroopRatioIntent = z.infer<
   typeof TargetTroopRatioIntentSchema
@@ -236,14 +236,12 @@ export const EmbargoIntentSchema = BaseIntentSchema.extend({
 
 export const DonateGoldIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate_gold"),
-  playerID: ID,
   recipient: ID,
   gold: z.number().nullable(),
 });
 
 export const DonateTroopIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate_troops"),
-  playerID: ID,
   recipient: ID,
   troops: z.number().nullable(),
 });

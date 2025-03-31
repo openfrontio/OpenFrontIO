@@ -39,7 +39,7 @@ import {
 import { CellString, GameImpl } from "./GameImpl";
 import { UnitImpl } from "./UnitImpl";
 import { MessageType } from "./Game";
-import { renderTroops, renderGold, renderNumber } from "../../client/Utils";
+import { renderTroops, renderNumber } from "../../client/Utils";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
 import { AttackImpl } from "./AttackImpl";

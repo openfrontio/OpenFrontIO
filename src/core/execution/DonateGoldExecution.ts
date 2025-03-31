@@ -38,7 +38,7 @@ export class DonateGoldExecution implements Execution {
       this.recipient.updateRelation(this.sender, 50);
     } else {
       consolex.warn(
-        `cannot send golds from ${this.sender} to ${this.recipient}`,
+        `cannot send gold from ${this.sender.name()} to ${this.recipient.name()}`,
       );
     }
     this.active = false;
