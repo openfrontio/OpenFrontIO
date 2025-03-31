@@ -37,6 +37,7 @@ import { UnitGrid } from "./UnitGrid";
 import { StatsImpl } from "./StatsImpl";
 import { Stats } from "./Stats";
 import { simpleHash } from "../Util";
+import { assignTeams } from "./TeamAssignment";
 
 export function createGame(
   humans: PlayerInfo[],
@@ -89,7 +90,7 @@ export class GameImpl implements Game {
     nationMap: NationMap,
     private _config: Config,
   ) {
-    this._humans.forEach((p) => this.addPlayer(p, 100));
+    this.addHumans();
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();
@@ -104,6 +105,22 @@ export class GameImpl implements Game {
     );
     this.unitGrid = new UnitGrid(this._map);
   }
+
+  private addHumans() {
+    if (this.config().gameConfig().gameMode != GameMode.Team) {
+      this._humans.forEach((p) => this.addPlayer(p, 0));
+      return;
+    }
+    const playerToTeam = assignTeams(this._humans);
+    for (const [playerInfo, team] of playerToTeam.entries()) {
+      if (team == "kicked") {
+        console.warn(`Player ${playerInfo.name} was kicked from team`);
+        continue;
+      }
+      this.addPlayer(playerInfo, 0, team);
+    }
+  }
+
   isOnEdgeOfMap(ref: TileRef): boolean {
     return this._map.isOnEdgeOfMap(ref);
   }
@@ -330,13 +347,17 @@ export class GameImpl implements Game {
     return this.player(id);
   }
 
-  addPlayer(playerInfo: PlayerInfo, manpower: number): Player {
+  addPlayer(
+    playerInfo: PlayerInfo,
+    manpower: number,
+    team: Team = null,
+  ): Player {
     const player = new PlayerImpl(
       this,
       this.nextPlayerID,
       playerInfo,
       manpower,
-      this.maybeAssignTeam(playerInfo),
+      team ?? this.maybeAssignTeam(playerInfo),
     );
     this._playersBySmallID.push(player);
     this.nextPlayerID++;
