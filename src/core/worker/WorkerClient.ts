@@ -1,12 +1,11 @@
 import {
   PlayerActions,
   PlayerID,
-  PlayerInfo,
   PlayerProfile,
   PlayerBorderTiles,
 } from "../game/Game";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
-import { ClientID, GameConfig, GameID, Turn } from "../Schemas";
+import { ClientID, GameStartInfo, Turn } from "../Schemas";
 import { generateID } from "../Util";
 import { WorkerMessage } from "./WorkerMessages";
 
@@ -19,8 +18,7 @@ export class WorkerClient {
   ) => void;
 
   constructor(
-    private gameID: GameID,
-    private gameConfig: GameConfig,
+    private gameStartInfo: GameStartInfo,
     private clientID: ClientID,
   ) {
     this.worker = new Worker(new URL("./Worker.worker.ts", import.meta.url));
@@ -68,8 +66,7 @@ export class WorkerClient {
       this.worker.postMessage({
         type: "init",
         id: messageId,
-        gameID: this.gameID,
-        gameConfig: this.gameConfig,
+        gameStartInfo: this.gameStartInfo,
         clientID: this.clientID,
       });
 

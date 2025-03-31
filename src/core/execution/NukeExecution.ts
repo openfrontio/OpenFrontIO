@@ -88,7 +88,9 @@ export class NukeExecution implements Execution {
       const silo = this.player
         .units(UnitType.MissileSilo)
         .find((silo) => silo.tile() === spawn);
-      silo.setCooldown(true);
+      if (silo) {
+        silo.setCooldown(true);
+      }
     }
 
     // make the nuke unactive if it was intercepted

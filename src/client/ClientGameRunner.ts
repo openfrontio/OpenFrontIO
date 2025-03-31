@@ -1,22 +1,14 @@
-import {
-  PlayerID,
-  GameMapType,
-  Difficulty,
-  GameType,
-  Unit,
-  UnitType,
-  TeamName,
-} from "../core/game/Game";
+import { Unit, UnitType, TeamName } from "../core/game/Game";
 import { EventBus } from "../core/EventBus";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { InputHandler, MouseUpEvent, MouseMoveEvent } from "./InputHandler";
 import {
   ClientID,
-  GameConfig,
   GameID,
   ServerMessage,
   PlayerRecord,
   GameRecord,
+  GameStartInfo,
 } from "../core/Schemas";
 import { loadTerrainMap } from "../core/game/TerrainMapLoader";
 import {
@@ -54,14 +46,13 @@ function distSortUnitWorld(tile: TileRef, game: GameView) {
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
-  flag: () => string;
-  playerName: () => string;
+  flag: string;
+  playerName: string;
   clientID: ClientID;
-  playerID: PlayerID;
-  persistentID: string;
   gameID: GameID;
-  // GameConfig only exists when playing a singleplayer game.
-  gameConfig?: GameConfig;
+  persistentID: string;
+  // GameStartInfo only exists when playing a singleplayer game.
+  gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
 }
@@ -74,14 +65,13 @@ export function joinLobby(
   initRemoteSender(eventBus);
 
   consolex.log(
-    `joinging lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}, persistentID: ${lobbyConfig.persistentID}`,
+    `joinging lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}, persistentID: ${lobbyConfig.persistentID.slice(0, 5)}`,
   );
 
   const userSettings: UserSettings = new UserSettings();
   LocalPersistantStats.startGame(
     lobbyConfig.gameID,
-    lobbyConfig.playerID,
-    lobbyConfig.gameConfig,
+    lobbyConfig.gameStartInfo?.config,
   );
 
   const transport = new Transport(lobbyConfig, eventBus);
@@ -92,10 +82,10 @@ export function joinLobby(
   };
   const onmessage = (message: ServerMessage) => {
     if (message.type == "start") {
-      consolex.log("lobby: game started");
+      consolex.log(`lobby: game started: ${JSON.stringify(message)}`);
       onjoin();
-      // For multiplayer games, GameConfig is not known until game starts.
-      lobbyConfig.gameConfig = message.config;
+      // For multiplayer games, GameStartInfo is not known until game starts.
+      lobbyConfig.gameStartInfo = message.gameStartInfo;
       createClientGame(lobbyConfig, eventBus, transport, userSettings).then(
         (r) => r.start(),
       );
@@ -114,12 +104,16 @@ export async function createClientGame(
   transport: Transport,
   userSettings: UserSettings,
 ): Promise<ClientGameRunner> {
-  const config = await getConfig(lobbyConfig.gameConfig, userSettings);
+  const config = await getConfig(
+    lobbyConfig.gameStartInfo.config,
+    userSettings,
+  );
 
-  const gameMap = await loadTerrainMap(lobbyConfig.gameConfig.gameMap);
+  const gameMap = await loadTerrainMap(
+    lobbyConfig.gameStartInfo.config.gameMap,
+  );
   const worker = new WorkerClient(
-    lobbyConfig.gameID,
-    lobbyConfig.gameConfig,
+    lobbyConfig.gameStartInfo,
     lobbyConfig.clientID,
   );
   await worker.initialize();
@@ -128,7 +122,7 @@ export async function createClientGame(
     config,
     gameMap.gameMap,
     lobbyConfig.clientID,
-    lobbyConfig.gameID,
+    lobbyConfig.gameStartInfo.gameID,
   );
 
   consolex.log("going to init path finder");
@@ -142,7 +136,7 @@ export async function createClientGame(
   );
 
   consolex.log(
-    `creating private game got difficulty: ${lobbyConfig.gameConfig.difficulty}`,
+    `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
   );
 
   return new ClientGameRunner(
@@ -182,7 +176,7 @@ export class ClientGameRunner {
       {
         ip: null,
         persistentID: getPersistentIDFromCookie(),
-        username: this.lobby.playerName(),
+        username: this.lobby.playerName,
         clientID: this.lobby.clientID,
       },
     ];
@@ -196,8 +190,8 @@ export class ClientGameRunner {
     }
 
     const record = createGameRecord(
-      this.lobby.gameID,
-      this.lobby.gameConfig,
+      this.lobby.gameStartInfo.gameID,
+      this.lobby.gameStartInfo,
       players,
       // Not saving turns locally
       [],
@@ -223,7 +217,7 @@ export class ClientGameRunner {
         showErrorModal(
           gu.errMsg,
           gu.stack,
-          this.lobby.gameID,
+          this.lobby.gameStartInfo.gameID,
           this.lobby.clientID,
         );
         this.stop(true);
@@ -274,7 +268,7 @@ export class ClientGameRunner {
         showErrorModal(
           `desync from server: ${JSON.stringify(message)}`,
           "",
-          this.lobby.gameID,
+          this.lobby.gameStartInfo.gameID,
           this.lobby.clientID,
           true,
           "You are desynced from other players. What you see might differ from other players.",

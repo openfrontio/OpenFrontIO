@@ -7,7 +7,7 @@ import { JoinLobbyEvent } from "./Main";
 import { translateText } from "../client/Utils";
 import "./components/baseComponents/Modal";
 import "./components/baseComponents/Button";
-
+import { generateID } from "../core/Util";
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
@@ -187,7 +187,10 @@ export class JoinPrivateLobbyModal extends LitElement {
 
       this.dispatchEvent(
         new CustomEvent("join-lobby", {
-          detail: { gameID: lobbyId } as JoinLobbyEvent,
+          detail: {
+            gameID: lobbyId,
+            clientID: generateID(),
+          } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
         }),
@@ -232,6 +235,7 @@ export class JoinPrivateLobbyModal extends LitElement {
           detail: {
             gameID: lobbyId,
             gameRecord: gameRecord,
+            clientID: generateID(),
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,

@@ -573,7 +573,7 @@ export class PlayerImpl implements Player {
     if (this.team() == null || other.team() == null) {
       return false;
     }
-    return this._team == other.team();
+    return this._team.name == other.team().name;
   }
 
   isFriendly(other: Player): boolean {
