@@ -356,18 +356,7 @@ export class ClientGameRunner {
 
   private onMouseMove(event: MouseMoveEvent) {
     this.lastMousePosition = { x: event.x, y: event.y };
-    this.clearHoverTimer();
-
-    this.mouseHoverTimer = window.setTimeout(() => {
-      this.checkTileUnderCursor();
-    }, this.HOVER_DELAY);
-  }
-
-  private clearHoverTimer() {
-    if (this.mouseHoverTimer !== null) {
-      clearTimeout(this.mouseHoverTimer);
-      this.mouseHoverTimer = null;
-    }
+    this.checkTileUnderCursor();
   }
 
   private checkTileUnderCursor() {
@@ -391,9 +380,14 @@ export class ClientGameRunner {
       }
     } else {
       const units = this.gameView
-        .units(UnitType.Warship, UnitType.TradeShip, UnitType.TransportShip)
-        .filter((u) => this.gameView.euclideanDist(tile, u.tile()) < 50)
-        .sort(distSortUnitWorld(tile, this.gameView));
+        .nearbyUnits(tile, 50, [
+          UnitType.Warship,
+          UnitType.TradeShip,
+          UnitType.TransportShip,
+        ])
+        .sort((a, b) => a.distSquared - b.distSquared)
+        .map((u) => u.unit);
+
       if (units.length > 0) {
         this.gameView.setFocusedPlayer(units[0].owner() as PlayerView);
       }

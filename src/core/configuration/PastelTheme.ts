@@ -86,10 +86,10 @@ export const pastelTheme = new (class implements Theme {
   }
 
   focusedBorderColor(): Colord {
-    return colord({ r: 255, g: 255, b: 255 });
+    return colord({ r: 230, g: 230, b: 230 });
   }
   focusedDefendedBorderColor(): Colord {
-    return colord({ r: 215, g: 215, b: 215 });
+    return colord({ r: 200, g: 200, b: 200 });
   }
 
   terrainColor(gm: GameMap, tile: TileRef): Colord {

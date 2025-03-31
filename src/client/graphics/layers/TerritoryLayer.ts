@@ -63,6 +63,14 @@ export class TerritoryLayer implements Layer {
     return true;
   }
 
+  paintPlayerBorder(player: PlayerView) {
+    player.borderTiles().then((playerBorderTiles) => {
+      playerBorderTiles.borderTiles.forEach((tile: TileRef) => {
+        this.paintTerritory(tile); // Immediately paint the tile instead of enqueueing
+      });
+    });
+  }
+
   tick() {
     this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
     this.game.updatesSinceLastTick()[GameUpdateType.Unit].forEach((u) => {
@@ -88,10 +96,10 @@ export class TerritoryLayer implements Layer {
     const focusedPlayer = this.game.focusedPlayer();
     if (focusedPlayer !== this.lastFocusedPlayer) {
       if (this.lastFocusedPlayer) {
-        this.enqueuePlayerBorder(this.lastFocusedPlayer);
+        this.paintPlayerBorder(this.lastFocusedPlayer);
       }
       if (focusedPlayer) {
-        this.enqueuePlayerBorder(focusedPlayer);
+        this.paintPlayerBorder(focusedPlayer);
       }
       this.lastFocusedPlayer = focusedPlayer;
     }
