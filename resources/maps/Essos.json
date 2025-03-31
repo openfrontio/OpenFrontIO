@@ -1,0 +1,167 @@
+{
+  "name": "Essos",
+  "width": 1500,
+  "height": 750,
+  "nations": [
+    {
+      "coordinates": [68, 118],
+      "name": "Free City of Braavos",
+      "strength": 3
+    },
+    {
+      "coordinates": [153, 128],
+      "name": "Free City of Lorath",
+      "strength": 1
+    },
+    {
+      "coordinates": [68, 290],
+      "name": "Free City of Pentos",
+      "strength": 2
+    },
+    {
+      "coordinates": [107, 403],
+      "name": "Free City of Myr",
+      "strength": 2
+    },
+    {
+      "coordinates": [27, 413],
+      "name": "Free City of Tyrosh",
+      "strength": 2
+    },
+    {
+      "coordinates": [256, 503],
+      "name": "Free City of Volantis",
+      "strength": 3
+    },
+    {
+      "coordinates": [79, 509],
+      "name": "Free City of Lys",
+      "strength": 2
+    },
+    {
+      "coordinates": [184, 224],
+      "name": "Free City of Norvos",
+      "strength": 2
+    },
+    {
+      "coordinates": [288, 284],
+      "name": "Free City of Qohor",
+      "strength": 2
+    },
+    {
+      "coordinates": [402, 497],
+      "name": "Mantarys",
+      "strength": 2
+    },
+    {
+      "coordinates": [548, 547],
+      "name": "Astapor",
+      "strength": 2
+    },
+    {
+      "coordinates": [537, 144],
+      "name": "Omber",
+      "strength": 1
+    },
+    {
+      "coordinates": [780, 26],
+      "name": "New Ibbish",
+      "strength": 2
+    },
+    {
+      "coordinates": [582, 451],
+      "name": "Meereen",
+      "strength": 2
+    },
+    {
+      "coordinates": [563, 475],
+      "name": "Yunkai",
+      "strength": 2
+    },
+    {
+      "coordinates": [445, 505],
+      "name": "Tolos",
+      "strength": 2
+    },
+    {
+      "coordinates": [573, 665],
+      "name": "New Ghis",
+      "strength": 2
+    },
+    {
+      "coordinates": [856, 737],
+      "name": "Vahar",
+      "strength": 2
+    },
+    {
+      "coordinates": [870, 675],
+      "name": "Faros",
+      "strength": 2
+    },
+    {
+      "coordinates": [1203, 712],
+      "name": "Leng",
+      "strength": 3
+    },
+    {
+      "coordinates": [1425, 128],
+      "name": "Mossovy",
+      "strength": 1
+    },
+    {
+      "coordinates": [1108, 613],
+      "name": "Yi Ti",
+      "strength": 3
+    },
+    {
+      "coordinates": [886, 600],
+      "name": "Qarth",
+      "strength": 3
+    },
+    {
+      "coordinates": [928, 429],
+      "name": "Zabhad",
+      "strength": 3
+    },
+    {
+      "coordinates": [1294, 243],
+      "name": "N’Ghai",
+      "strength": 2
+    },
+    {
+      "coordinates": [1450, 340],
+      "name": "Jogos Nhai",
+      "strength": 3
+    },
+    {
+      "coordinates": [417, 221],
+      "name": "Sarnor",
+      "strength": 1
+    },
+    {
+      "coordinates": [747, 604],
+      "name": "Port Yhos",
+      "strength": 1
+    },
+    {
+      "coordinates": [715, 470],
+      "name": "Lhazar",
+      "strength": 1
+    },
+    {
+      "coordinates": [740, 234],
+      "name": "Vaes Dothrak",
+      "strength": 3
+    },
+    {
+      "coordinates": [1421, 717],
+      "name": "Shadow Lands",
+      "strength": 2
+    },
+    {
+      "coordinates": [1246, 644],
+      "name": "Jinqi",
+      "strength": 2
+    }
+  ]
+}

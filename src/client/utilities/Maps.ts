@@ -13,6 +13,8 @@ import britannia from "../../../resources/maps/BritanniaThumb.webp";
 import gatewayToTheAtlantic from "../../../resources/maps/GatewayToTheAtlanticThumb.webp";
 import australia from "../../../resources/maps/AustraliaThumb.webp";
 import iceland from "../../../resources/maps/IcelandThumb.webp";
+import essos from "../../../resources/maps/EssosThumb.webp";
+import westeros from "../../../resources/maps/WesterosThumb.webp";
 
 import { GameMapType } from "../../core/game/Game";
 
@@ -48,6 +50,10 @@ export function getMapsImage(map: GameMapType): string {
       return australia;
     case GameMapType.Iceland:
       return iceland;
+    case GameMapType.Essos:
+      return essos;
+    case GameMapType.Westeros:
+      return westeros;
     default:
       return "";
   }

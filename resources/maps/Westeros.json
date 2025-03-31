@@ -1,0 +1,202 @@
+{
+  "name": "Westeros",
+  "width": 750,
+  "height": 1500,
+  "nations": [
+    {
+      "coordinates": [550, 680],
+      "name": "House Arryn",
+      "strength": 2
+    },
+    {
+      "coordinates": [530, 720],
+      "name": "House Royce",
+      "strength": 2
+    },
+    {
+      "coordinates": [472, 257],
+      "name": "House Umber",
+      "strength": 1
+    },
+    {
+      "coordinates": [625, 302],
+      "name": "House Karstark",
+      "strength": 1
+    },
+    {
+      "coordinates": [496, 372],
+      "name": "House Bolton",
+      "strength": 2
+    },
+    {
+      "coordinates": [343, 406],
+      "name": "House Stark",
+      "strength": 3
+    },
+    {
+      "coordinates": [208, 214],
+      "name": "House Mormont",
+      "strength": 1
+    },
+    {
+      "coordinates": [438, 124],
+      "name": "Night's Watch",
+      "strength": 2
+    },
+    {
+      "coordinates": [371, 63],
+      "name": "Free Folk",
+      "strength": 2
+    },
+    {
+      "coordinates": [302, 614],
+      "name": "House Reed",
+      "strength": 1
+    },
+    {
+      "coordinates": [321, 730],
+      "name": "House Frey",
+      "strength": 2
+    },
+    {
+      "coordinates": [299, 877],
+      "name": "House Tully",
+      "strength": 2
+    },
+    {
+      "coordinates": [404, 907],
+      "name": "Harrenhal",
+      "strength": 1
+    },
+    {
+      "coordinates": [476, 1041],
+      "name": "King's Landing",
+      "strength": 3
+    },
+    {
+      "coordinates": [594, 975],
+      "name": "Dragonstone",
+      "strength": 3
+    },
+    {
+      "coordinates": [200, 1216],
+      "name": "House Tyrell",
+      "strength": 3
+    },
+    {
+      "coordinates": [133, 1319],
+      "name": "House Hightower",
+      "strength": 2
+    },
+    {
+      "coordinates": [215, 1261],
+      "name": "House Tarly",
+      "strength": 1
+    },
+    {
+      "coordinates": [231, 1395],
+      "name": "House Dayne",
+      "strength": 1
+    },
+    {
+      "coordinates": [434, 1366],
+      "name": "House Yronwood",
+      "strength": 2
+    },
+    {
+      "coordinates": [566, 1169],
+      "name": "House Baratheon",
+      "strength": 3
+    },
+    {
+      "coordinates": [658, 1153],
+      "name": "House Tarth",
+      "strength": 1
+    },
+    {
+      "coordinates": [117, 986],
+      "name": "House Lannister",
+      "strength": 3
+    },
+    {
+      "coordinates": [219, 970],
+      "name": "House Brax",
+      "strength": 1
+    },
+    {
+      "coordinates": [154, 855],
+      "name": "House Banefort",
+      "strength": 1
+    },
+    {
+      "coordinates": [85, 1076],
+      "name": "House Craekham",
+      "strength": 1
+    },
+    {
+      "coordinates": [237, 1112],
+      "name": "House Rowan",
+      "strength": 1
+    },
+    {
+      "coordinates": [402, 1093],
+      "name": "House Meadows",
+      "strength": 1
+    },
+    {
+      "coordinates": [145, 647],
+      "name": "House Flint's Finger",
+      "strength": 1
+    },
+    {
+      "coordinates": [127, 452],
+      "name": "House Ryswell",
+      "strength": 1
+    },
+    {
+      "coordinates": [675, 814],
+      "name": "House Royce",
+      "strength": 1
+    },
+    {
+      "coordinates": [575, 858],
+      "name": "House Redfort",
+      "strength": 1
+    },
+    {
+      "coordinates": [330, 1403],
+      "name": "House Qorgyle",
+      "strength": 1
+    },
+    {
+      "coordinates": [379, 1236],
+      "name": "House Selmy",
+      "strength": 1
+    },
+    {
+      "coordinates": [467, 559],
+      "name": "House locke",
+      "strength": 1
+    },
+    {
+      "coordinates": [95, 819],
+      "name": "House Greyjoy",
+      "strength": 2
+    },
+    {
+      "coordinates": [639, 165],
+      "name": "House Magnar",
+      "strength": 1
+    },
+    {
+      "coordinates": [653, 1401],
+      "name": "House Martell",
+      "strength": 3
+    },
+    {
+      "coordinates": [504, 1443],
+      "name": "House Vaith",
+      "strength": 1
+    }
+  ]
+}

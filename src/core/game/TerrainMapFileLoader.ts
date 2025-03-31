@@ -39,6 +39,8 @@ const MAP_FILE_NAMES: Record<GameMapType, string> = {
   [GameMapType.GatewayToTheAtlantic]: "GatewayToTheAtlantic",
   [GameMapType.Australia]: "Australia",
   [GameMapType.Iceland]: "Iceland",
+  [GameMapType.Essos]: "Essos",
+  [GameMapType.Westeros]: "Westeros",
 };
 
 class GameMapLoader {

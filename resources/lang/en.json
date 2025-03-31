@@ -110,7 +110,9 @@
     "australia": "Australia",
     "random": "Random",
     "iceland": "Iceland",
-    "pangaea": "Pangaea"
+    "pangaea": "Pangaea",
+    "westeros": "Westeros",
+    "essos": "Essos"
   },
   "private_lobby": {
     "title": "Join Private Lobby",
