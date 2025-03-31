@@ -12,13 +12,13 @@
     {
       "coordinates": [1220, 830],
       "name": "Tohoku",
-      "strength": 2,
+      "strength": 3,
       "flag": "jp"
     },
     {
       "coordinates": [1000, 1150],
       "name": "Chubu",
-      "strength": 2,
+      "strength": 3,
       "flag": "jp"
     },
     {
@@ -30,25 +30,25 @@
     {
       "coordinates": [860, 1260],
       "name": "Kinki",
-      "strength": 2,
+      "strength": 3,
       "flag": "jp"
     },
     {
       "coordinates": [670, 1250],
       "name": "Chugoku",
-      "strength": 2,
+      "strength": 3,
       "flag": "jp"
     },
     {
       "coordinates": [700, 1350],
       "name": "Shikoku",
-      "strength": 2,
+      "strength": 3,
       "flag": "jp"
     },
     {
       "coordinates": [510, 1440],
       "name": "Kyushu",
-      "strength": 2,
+      "strength": 3,
       "flag": "jp"
     },
     {
@@ -66,8 +66,50 @@
     {
       "coordinates": [50, 50],
       "name": "China",
-      "strength": 1,
+      "strength": 2,
       "flag": "cn"
+    },
+    {
+      "coordinates": [900, 200],
+      "name": "Russia",
+      "strength": 2,
+      "flag": "ru"
+    },
+    {
+      "coordinates": [1030, 970],
+      "name": "Sado Island",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [670, 1130],
+      "name": "Oki Islands",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [300, 1930],
+      "name": "Okinawa",
+      "strength": 3,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1190, 680],
+      "name": "Tsugaru Strait",
+      "strength": 3,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1130, 1190],
+      "name": "Tokyo",
+      "strength": 3,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1060, 1190],
+      "name": "Mount Fuji",
+      "strength": 3,
+      "flag": "jp"
     }
   ]
 }
