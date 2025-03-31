@@ -371,6 +371,8 @@ export class ClientGameRunner {
       const owner = this.gameView.owner(tile);
       if (owner.isPlayer()) {
         this.gameView.setFocusedPlayer(owner as PlayerView);
+      } else {
+        this.gameView.setFocusedPlayer(null);
       }
     } else {
       const units = this.gameView
