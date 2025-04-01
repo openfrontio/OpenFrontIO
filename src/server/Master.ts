@@ -346,7 +346,7 @@ function getFrequency(playlistType: PlaylistType) {
         GatewayToTheAtlantic: 2,
         Australia: 1,
         Iceland: 1,
-        SouthAmerica: 1,
+        SouthAmerica: 3,
       };
     case PlaylistType.SmallMaps:
       return {
