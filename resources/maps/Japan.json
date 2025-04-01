@@ -1,10 +1,10 @@
 {
   "name": "Japan",
   "width": 1562,
-  "height": 1538,
+  "height": 1646,
   "nations": [
     {
-      "coordinates": [1151, 601],
+      "coordinates": [1151, 709],
       "name": "Hokkaido",
       "strength": 1,
       "flag": "jp"
@@ -77,8 +77,8 @@
     },
     {
       "coordinates": [898, 923],
-      "name": "1",
-      "strength": 2,
+      "name": "Sado Island",
+      "strength": 1,
       "flag": "jp"
     },
     {
@@ -97,7 +97,7 @@
       "coordinates": [219, 972],
       "name": "Seoul",
       "strength": 3,
-      "flag": "jp"
+      "flag": "kr"
     },
     {
       "coordinates": [976, 1073],
@@ -121,6 +121,12 @@
       "coordinates": [435, 1311],
       "name": "Sakurajima",
       "strength": 1,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [275, 1614],
+      "name": "Okinawa",
+      "strength": 3,
       "flag": "jp"
     }
   ]
