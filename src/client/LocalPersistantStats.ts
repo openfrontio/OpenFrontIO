@@ -4,7 +4,6 @@ import { GameConfig, GameID, GameRecord } from "../core/Schemas";
 
 export interface LocalStatsData {
   [key: GameID]: {
-    playerId: PlayerID;
     lobby: GameConfig;
     // Only once the game is over
     gameRecord?: GameRecord;
@@ -29,14 +28,14 @@ export namespace LocalPersistantStats {
 
   // The user can quit the game anytime so better save the lobby as soon as the
   // game starts.
-  export function startGame(id: GameID, playerId: PlayerID, lobby: GameConfig) {
+  export function startGame(id: GameID, lobby: GameConfig) {
     if (typeof localStorage === "undefined") {
       return;
     }
 
     _startTime = Date.now();
     const stats = getStats();
-    stats[id] = { playerId, lobby };
+    stats[id] = { lobby };
     save(stats);
   }
 

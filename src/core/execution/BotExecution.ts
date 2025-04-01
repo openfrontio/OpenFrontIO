@@ -98,6 +98,7 @@ export class BotExecution implements Execution {
   }
 
   sendAttack(toAttack: Player | TerraNullius) {
+    if (toAttack.isPlayer() && this.bot.isOnSameTeam(toAttack)) return;
     this.mg.addExecution(
       new AttackExecution(
         this.bot.troops() / 20,

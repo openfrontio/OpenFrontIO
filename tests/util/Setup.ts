@@ -36,5 +36,5 @@ export async function setup(mapName: string, _gameConfig: GameConfig = {}) {
   const config = new TestConfig(serverConfig, gameConfig, new UserSettings());
 
   // Create and return the game
-  return createGame(gameMap, miniGameMap, nationMap, config);
+  return createGame([], gameMap, miniGameMap, nationMap, config); // TODO: !!!
 }

@@ -192,6 +192,9 @@ export class FakeHumanExecution implements Execution {
   }
 
   private shouldAttack(other: Player): boolean {
+    if (this.player.isOnSameTeam(other)) {
+      return false;
+    }
     if (this.player.isFriendly(other)) {
       if (this.shouldDiscourageAttack(other)) {
         return this.random.chance(200);
@@ -290,7 +293,8 @@ export class FakeHumanExecution implements Execution {
     if (
       this.player.units(UnitType.MissileSilo).length == 0 ||
       this.player.gold() <
-        this.mg.config().unitInfo(UnitType.AtomBomb).cost(this.player)
+        this.mg.config().unitInfo(UnitType.AtomBomb).cost(this.player) ||
+      this.player.isOnSameTeam(other)
     ) {
       return;
     }
@@ -315,6 +319,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   private maybeSendBoatAttack(other: Player) {
+    if (this.player.isOnSameTeam(other)) return;
     const closest = closestTwoTiles(
       this.mg,
       Array.from(this.player.borderTiles()).filter((t) =>
@@ -580,6 +585,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   sendAttack(toAttack: Player | TerraNullius) {
+    if (toAttack.isPlayer() && this.player.isOnSameTeam(toAttack)) return;
     this.mg.addExecution(
       new AttackExecution(
         this.player.troops() / 5,

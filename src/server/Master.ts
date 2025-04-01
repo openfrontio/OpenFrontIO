@@ -282,7 +282,7 @@ function getNextMap(): GameMapType {
     Mena: 2,
     TwoSeas: 3,
     Pangaea: 2,
-    Africa: 3,
+    Africa: 2,
     Asia: 1,
     Mars: 1,
     Britannia: 2,
