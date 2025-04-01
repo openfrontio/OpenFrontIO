@@ -339,25 +339,24 @@ function getFrequency(playlistType: PlaylistType) {
     // Big Maps are those larger than ~2.5 mil pixels
     case PlaylistType.BigMaps:
       return {
-        Europe: 2,
-        NorthAmerica: 1,
-        Africa: 1,
+        Europe: 3,
+        NorthAmerica: 2,
+        Africa: 2,
         Britannia: 1,
-        GatewayToTheAtlantic: 1,
+        GatewayToTheAtlantic: 2,
         Australia: 1,
         Iceland: 1,
         SouthAmerica: 1,
-        Japan: 1,
       };
     case PlaylistType.SmallMaps:
       return {
         World: 1,
         Mena: 2,
-        BlackSea: 1,
         Pangaea: 1,
         Asia: 1,
         Mars: 1,
-        TwoSeas: 1,
+        TwoSeas: 3,
+        Japan: 3,
       };
   }
 }
