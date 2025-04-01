@@ -13,8 +13,8 @@ import northAmerica from "../../../resources/maps/NorthAmericaThumb.webp";
 import oceania from "../../../resources/maps/OceaniaThumb.webp";
 import pangaea from "../../../resources/maps/PangaeaThumb.webp";
 import southAmerica from "../../../resources/maps/SouthAmericaThumb.webp";
-import world from "../../../resources/maps/WorldMapThumb.webp";
 import twoSeas from "../../../resources/maps/TwoSeasThumb.webp";
+import world from "../../../resources/maps/WorldMapThumb.webp";
 
 import { GameMapType } from "../../core/game/Game";
 
