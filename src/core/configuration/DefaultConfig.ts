@@ -58,15 +58,54 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return 60 * 1000;
   }
   lobbyMaxPlayers(map: GameMapType): number {
-    if (map == GameMapType.World) {
-      return Math.random() < 0.3 ? 150 : 60;
-    }
+    // Maps with ~4 mil pixels
     if (
-      [GameMapType.Mars, GameMapType.Africa, GameMapType.BlackSea].includes(map)
+      [
+        GameMapType.GatewayToTheAtlantic,
+        GameMapType.SouthAmerica,
+        GameMapType.NorthAmerica,
+        GameMapType.Africa,
+        GameMapType.Europe,
+      ].includes(map)
     ) {
-      return Math.random() < 0.3 ? 70 : 50;
+      return Math.random() < 0.2 ? 150 : 70;
     }
-    return Math.random() < 0.3 ? 60 : 40;
+    // Maps with ~2.5 - ~3.5 mil pixels
+    if (
+      [
+        GameMapType.Australia,
+        GameMapType.Iceland,
+        GameMapType.Britannia,
+        GameMapType.Asia,
+      ].includes(map)
+    ) {
+      return Math.random() < 0.2 ? 100 : 50;
+    }
+    // Maps with ~2 mil pixels
+    if (
+      [
+        GameMapType.Mena,
+        GameMapType.Mars,
+        GameMapType.Oceania,
+        GameMapType.Japan, // Japan at this level because its 2/3 water
+      ].includes(map)
+    ) {
+      return Math.random() < 0.2 ? 70 : 40;
+    }
+    // Maps smaller than ~2 mil pixels
+    if (
+      [GameMapType.TwoSeas, GameMapType.BlackSea, GameMapType.Pangaea].includes(
+        map,
+      )
+    ) {
+      return Math.random() < 0.2 ? 60 : 35;
+    }
+    // world belongs with the ~2 mils, but these amounts never made sense so I assume the insanity is intended.
+    if (map == GameMapType.World) {
+      return Math.random() < 0.2 ? 150 : 60;
+    }
+    // default return for non specified map
+    return Math.random() < 0.2 ? 85 : 45;
   }
   workerIndex(gameID: GameID): number {
     return simpleHash(gameID) % this.numWorkers();
