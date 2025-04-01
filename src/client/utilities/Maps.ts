@@ -14,6 +14,7 @@ import oceania from "../../../resources/maps/OceaniaThumb.webp";
 import pangaea from "../../../resources/maps/PangaeaThumb.webp";
 import southAmerica from "../../../resources/maps/SouthAmericaThumb.webp";
 import world from "../../../resources/maps/WorldMapThumb.webp";
+import twoSeas from "../../../resources/maps/TwoSeasThumb.webp";
 
 import { GameMapType } from "../../core/game/Game";
 
@@ -51,6 +52,8 @@ export function getMapsImage(map: GameMapType): string {
       return iceland;
     case GameMapType.Japan:
       return japan;
+    case GameMapType.TwoSeas:
+      return twoSeas;
     default:
       return "";
   }

@@ -357,6 +357,7 @@ function getFrequency(playlistType: PlaylistType) {
         Pangaea: 1,
         Asia: 1,
         Mars: 1,
+        TwoSeas: 1,
       };
   }
 }
