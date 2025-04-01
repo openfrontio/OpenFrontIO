@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import { Execution, Game, Player, PlayerID } from "../game/Game";
 
 export class EmbargoExecution implements Execution {

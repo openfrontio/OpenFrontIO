@@ -1,17 +1,16 @@
 import { consolex } from "../Consolex";
 import {
-  Cell,
   Execution,
   Game,
-  Player,
-  Unit,
-  PlayerID,
-  UnitType,
   MessageType,
+  Player,
+  PlayerID,
+  Unit,
+  UnitType,
 } from "../game/Game";
-import { manhattanDistFN, TileRef } from "../game/GameMap";
-import { SAMMissileExecution } from "./SAMMissileExecution";
+import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
+import { SAMMissileExecution } from "./SAMMissileExecution";
 
 export class SAMLauncherExecution implements Execution {
   private player: Player;

@@ -1,7 +1,6 @@
 import { EventBus, GameEvent } from "../core/EventBus";
-import { UserSettings } from "../core/game/UserSettings";
-import { Game } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
+import { UserSettings } from "../core/game/UserSettings";
 
 export class MouseUpEvent implements GameEvent {
   constructor(

@@ -1,40 +1,37 @@
-import {
-  GameUpdates,
-  MapPos,
-  MessageType,
-  nukeTypes,
-  Player,
-  PlayerActions,
-  PlayerProfile,
-  PlayerBorderTiles,
-  TeamName,
-} from "./Game";
-import { AttackUpdate, PlayerUpdate } from "./GameUpdates";
-import { UnitUpdate } from "./GameUpdates";
-import { NameViewData } from "./Game";
-import { GameUpdateType } from "./GameUpdates";
 import { Config } from "../configuration/Config";
+import { ClientID, GameID, PlayerStats } from "../Schemas";
+import { WorkerClient } from "../worker/WorkerClient";
 import {
   Cell,
   EmojiMessage,
+  GameUpdates,
   Gold,
+  NameViewData,
+  nukeTypes,
+  Player,
+  PlayerActions,
+  PlayerBorderTiles,
   PlayerID,
   PlayerInfo,
+  PlayerProfile,
   PlayerType,
+  TeamName,
   TerrainType,
   TerraNullius,
   Tick,
   UnitInfo,
   UnitType,
 } from "./Game";
-import { ClientID, GameID, PlayerStats } from "../Schemas";
+import { GameMap, TileRef, TileUpdate } from "./GameMap";
+import {
+  AttackUpdate,
+  GameUpdateType,
+  GameUpdateViewData,
+  PlayerUpdate,
+  UnitUpdate,
+} from "./GameUpdates";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
-import { WorkerClient } from "../worker/WorkerClient";
-import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
-import { GameUpdateViewData } from "./GameUpdates";
 import { UnitGrid } from "./UnitGrid";
-import { consolex } from "../Consolex";
-import { SAMLauncherExecution } from "../execution/SAMLauncherExecution";
 
 export class UnitView {
   public _wasUpdated = true;

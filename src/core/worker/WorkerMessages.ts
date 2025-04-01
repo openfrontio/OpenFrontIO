@@ -1,16 +1,11 @@
-import { GameUpdateViewData } from "../game/GameUpdates";
-import {
-  ClientID,
-  Turn,
-  ServerStartGameMessage,
-  GameStartInfo,
-} from "../Schemas";
 import {
   PlayerActions,
+  PlayerBorderTiles,
   PlayerID,
   PlayerProfile,
-  PlayerBorderTiles,
 } from "../game/Game";
+import { GameUpdateViewData } from "../game/GameUpdates";
+import { ClientID, GameStartInfo, Turn } from "../Schemas";
 
 export type WorkerMessageType =
   | "heartbeat"

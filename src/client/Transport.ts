@@ -1,36 +1,31 @@
-import { Config, ServerConfig } from "../core/configuration/Config";
 import { SendLogEvent } from "../core/Consolex";
 import { EventBus, GameEvent } from "../core/EventBus";
 import {
-  AllianceRequest,
   AllPlayers,
   Cell,
   GameType,
-  Player,
   PlayerID,
   PlayerType,
   TeamName,
   Tick,
   UnitType,
 } from "../core/game/Game";
+import { PlayerView } from "../core/game/GameView";
 import {
+  AllPlayersStats,
   ClientID,
   ClientIntentMessageSchema,
   ClientJoinMessageSchema,
-  GameID,
+  ClientLogMessageSchema,
+  ClientMessageSchema,
+  ClientPingMessageSchema,
+  ClientSendWinnerSchema,
   Intent,
   ServerMessage,
   ServerMessageSchema,
-  ClientPingMessageSchema,
-  GameConfig,
-  ClientLogMessageSchema,
-  ClientSendWinnerSchema,
-  ClientMessageSchema,
-  AllPlayersStats,
 } from "../core/Schemas";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
-import { PlayerView } from "../core/game/GameView";
 
 export class PauseGameEvent implements GameEvent {
   constructor(public readonly paused: boolean) {}

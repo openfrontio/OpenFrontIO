@@ -1,4 +1,4 @@
-import { Player, PlayerInfo, Team, TeamName } from "./Game";
+import { PlayerInfo, Team, TeamName } from "./Game";
 
 export function assignTeams(
   players: PlayerInfo[],

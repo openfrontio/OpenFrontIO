@@ -1,16 +1,32 @@
-import { Unit, UnitType, TeamName } from "../core/game/Game";
+import { consolex, initRemoteSender } from "../core/Consolex";
 import { EventBus } from "../core/EventBus";
-import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
-import { InputHandler, MouseUpEvent, MouseMoveEvent } from "./InputHandler";
 import {
   ClientID,
   GameID,
-  ServerMessage,
-  PlayerRecord,
   GameRecord,
   GameStartInfo,
+  PlayerRecord,
+  ServerMessage,
 } from "../core/Schemas";
+import { createGameRecord } from "../core/Util";
+import { ServerConfig } from "../core/configuration/Config";
+import { getConfig } from "../core/configuration/ConfigLoader";
+import { TeamName, Unit, UnitType } from "../core/game/Game";
+import { TileRef } from "../core/game/GameMap";
+import {
+  ErrorUpdate,
+  GameUpdateType,
+  GameUpdateViewData,
+  HashUpdate,
+  WinUpdate,
+} from "../core/game/GameUpdates";
+import { GameView, PlayerView, UnitView } from "../core/game/GameView";
 import { loadTerrainMap } from "../core/game/TerrainMapLoader";
+import { UserSettings } from "../core/game/UserSettings";
+import { WorkerClient } from "../core/worker/WorkerClient";
+import { InputHandler, MouseMoveEvent, MouseUpEvent } from "./InputHandler";
+import { LocalPersistantStats } from "./LocalPersistantStats";
+import { getPersistentIDFromCookie } from "./Main";
 import {
   SendAttackIntentEvent,
   SendHashEvent,
@@ -18,23 +34,7 @@ import {
   Transport,
 } from "./Transport";
 import { createCanvas } from "./Utils";
-import {
-  ErrorUpdate,
-  GameUpdateType,
-  HashUpdate,
-  WinUpdate,
-} from "../core/game/GameUpdates";
-import { WorkerClient } from "../core/worker/WorkerClient";
-import { consolex, initRemoteSender } from "../core/Consolex";
-import { ServerConfig } from "../core/configuration/Config";
-import { getConfig } from "../core/configuration/ConfigLoader";
-import { GameView, PlayerView, UnitView } from "../core/game/GameView";
-import { GameUpdateViewData } from "../core/game/GameUpdates";
-import { UserSettings } from "../core/game/UserSettings";
-import { LocalPersistantStats } from "./LocalPersistantStats";
-import { createGameRecord } from "../core/Util";
-import { getPersistentIDFromCookie } from "./Main";
-import { TileRef } from "../core/game/GameMap";
+import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 
 function distSortUnitWorld(tile: TileRef, game: GameView) {
   return (a: Unit | UnitView, b: Unit | UnitView) => {

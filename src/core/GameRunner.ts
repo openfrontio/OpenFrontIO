@@ -1,7 +1,5 @@
-import { utcDay } from "d3";
 import { placeName } from "../client/graphics/NameBoxCalculator";
 import { getConfig } from "./configuration/ConfigLoader";
-import { EventBus } from "./EventBus";
 import { Executor } from "./execution/ExecutionManager";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
@@ -9,22 +7,24 @@ import {
   BuildableUnit,
   Game,
   GameUpdates,
+  NameViewData,
   Player,
   PlayerActions,
-  PlayerID,
-  PlayerProfile,
   PlayerBorderTiles,
+  PlayerID,
+  PlayerInfo,
+  PlayerProfile,
   PlayerType,
   UnitType,
-  PlayerInfo,
 } from "./game/Game";
-import { ErrorUpdate } from "./game/GameUpdates";
-import { NameViewData } from "./game/Game";
-import { GameUpdateType } from "./game/GameUpdates";
 import { createGame } from "./game/GameImpl";
+import {
+  ErrorUpdate,
+  GameUpdateType,
+  GameUpdateViewData,
+} from "./game/GameUpdates";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
-import { GameUpdateViewData } from "./game/GameUpdates";
 
 export async function createGameRunner(
   gameStart: GameStartInfo,

@@ -6,7 +6,6 @@ import {
   Player,
   PlayerID,
   PlayerType,
-  UnitType,
 } from "../game/Game";
 
 export class EmojiExecution implements Execution {

@@ -1,19 +1,16 @@
+import { consolex } from "../Consolex";
 import {
-  AllPlayers,
-  Cell,
   Execution,
   Game,
   Player,
-  Unit,
   PlayerID,
-  TerrainType,
+  Unit,
   UnitType,
 } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import { PathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { TradeShipExecution } from "./TradeShipExecution";
-import { consolex } from "../Consolex";
-import { manhattanDistFN, TileRef } from "../game/GameMap";
 
 export class PortExecution implements Execution {
   private active = true;

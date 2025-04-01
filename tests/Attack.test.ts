@@ -1,3 +1,6 @@
+import { AttackExecution } from "../src/core/execution/AttackExecution";
+import { SpawnExecution } from "../src/core/execution/SpawnExecution";
+import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
 import {
   Game,
   Player,
@@ -5,13 +8,10 @@ import {
   PlayerType,
   UnitType,
 } from "../src/core/game/Game";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { setup } from "./util/Setup";
-import { constructionExecution } from "./util/utils";
-import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
 import { TileRef } from "../src/core/game/GameMap";
-import { AttackExecution } from "../src/core/execution/AttackExecution";
+import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";
+import { constructionExecution } from "./util/utils";
 
 let game: Game;
 let attacker: Player;

@@ -1,5 +1,5 @@
 import { consolex } from "../Consolex";
-import { Execution, Game, Player, PlayerID, Gold } from "../game/Game";
+import { Execution, Game, Player, PlayerID } from "../game/Game";
 
 export class DonateTroopsExecution implements Execution {
   private sender: Player;

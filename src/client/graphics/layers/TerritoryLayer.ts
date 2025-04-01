@@ -1,29 +1,18 @@
 import { PriorityQueue } from "@datastructures-js/priority-queue";
-import {
-  Cell,
-  Game,
-  Player,
-  PlayerType,
-  Unit,
-  UnitType,
-} from "../../../core/game/Game";
-import { GameUpdateType, UnitUpdate } from "../../../core/game/GameUpdates";
-import { PseudoRandom } from "../../../core/PseudoRandom";
-import { colord, Colord } from "colord";
+import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
-import { Layer } from "./Layer";
 import { EventBus } from "../../../core/EventBus";
-import {
-  AlternateViewEvent,
-  DragEvent,
-  MouseDownEvent,
-} from "../../InputHandler";
-import { GameView, PlayerView } from "../../../core/game/GameView";
+import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
 import {
   euclDistFN,
   manhattanDistFN,
   TileRef,
 } from "../../../core/game/GameMap";
+import { GameUpdateType, UnitUpdate } from "../../../core/game/GameUpdates";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { PseudoRandom } from "../../../core/PseudoRandom";
+import { AlternateViewEvent, DragEvent } from "../../InputHandler";
+import { Layer } from "./Layer";
 
 export class TerritoryLayer implements Layer {
   private canvas: HTMLCanvasElement;

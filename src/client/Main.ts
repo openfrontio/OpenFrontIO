@@ -1,38 +1,32 @@
-import { ClientGameRunner, joinLobby } from "./ClientGameRunner";
-import favicon from "../../resources/images/Favicon.svg";
-import "./PublicLobby";
-import "./components/baseComponents/Button";
-import "./components/baseComponents/Modal";
-import "./UsernameInput";
-import "./styles.css";
-import { UsernameInput } from "./UsernameInput";
-import { SinglePlayerModal } from "./SinglePlayerModal";
-import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
-import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
-import { GameStartingModal } from "./gameStartingModal";
-import { generateID } from "../core/Util";
-import { generateCryptoRandomUUID } from "./Utils";
-import { consolex } from "../core/Consolex";
-import "./FlagInput";
-import { FlagInput } from "./FlagInput";
 import page from "page";
-import { PublicLobby } from "./PublicLobby";
+import favicon from "../../resources/images/Favicon.svg";
+import { consolex } from "../core/Consolex";
+import { GameRecord, GameStartInfo } from "../core/Schemas";
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
+import { joinLobby } from "./ClientGameRunner";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
+import "./FlagInput";
+import { FlagInput } from "./FlagInput";
 import "./GoogleAdElement";
-import { HelpModal } from "./HelpModal";
-import { GameType } from "../core/game/Game";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import GoogleAdElement from "./GoogleAdElement";
-import {
-  GameConfig,
-  GameInfo,
-  GameRecord,
-  GameStartInfo,
-} from "../core/Schemas";
+import { HelpModal } from "./HelpModal";
+import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
+import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
+import "./PublicLobby";
+import { PublicLobby } from "./PublicLobby";
+import { SinglePlayerModal } from "./SinglePlayerModal";
+import "./UsernameInput";
+import { UsernameInput } from "./UsernameInput";
+import { generateCryptoRandomUUID } from "./Utils";
+import "./components/baseComponents/Button";
+import "./components/baseComponents/Modal";
+import { GameStartingModal } from "./gameStartingModal";
+import "./styles.css";
 
 export interface JoinLobbyEvent {
   clientID: string;

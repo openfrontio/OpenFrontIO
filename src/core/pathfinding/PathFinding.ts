@@ -1,9 +1,8 @@
-import { Cell, Game } from "../game/Game";
-import { AStar, PathFindResultType, TileResult } from "./AStar";
-import { SerialAStar } from "./SerialAStar";
-import { MiniAStar } from "./MiniAStar";
 import { consolex } from "../Consolex";
+import { Game } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { AStar, PathFindResultType, TileResult } from "./AStar";
+import { MiniAStar } from "./MiniAStar";
 
 export class PathFinder {
   private curr: TileRef = null;
