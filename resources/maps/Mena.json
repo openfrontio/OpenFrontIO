@@ -83,8 +83,8 @@
     },
     {
       "coordinates": [1729, 534],
-      "name": "3",
-      "strength": 1,
+      "name": "Saudi Arabia",
+      "strength": 3,
       "flag": "sa"
     },
     {
@@ -125,14 +125,14 @@
     },
     {
       "coordinates": [776, 39],
-      "name": "Greece",
+      "name": "Italy",
       "strength": 2,
       "flag": "it"
     },
     {
       "coordinates": [1087, 145],
-      "name": "2",
-      "strength": 1,
+      "name": "Greece",
+      "strength": 2,
       "flag": "gr"
     },
     {
@@ -161,8 +161,8 @@
     },
     {
       "coordinates": [767, 734],
-      "name": "2",
-      "strength": 1,
+      "name": "Niger",
+      "strength": 2,
       "flag": "ne"
     },
     {
