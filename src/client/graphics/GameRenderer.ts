@@ -7,6 +7,7 @@ import { GameStartingModal } from "../gameStartingModal";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { BuildMenu } from "./layers/BuildMenu";
+import { BuildingsStatsOverlay } from "./layers/BuildingsStatsOverlay";
 import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
@@ -93,6 +94,15 @@ export function createRenderer(
   playerInfo.transform = transformHandler;
   playerInfo.game = game;
 
+  const buildingsStats = document.querySelector(
+    "buildings-stats-overlay",
+  ) as BuildingsStatsOverlay;
+  if (!(buildingsStats instanceof BuildingsStatsOverlay)) {
+    consolex.error("buildings stats overlay not found");
+  }
+  buildingsStats.clientID = clientID;
+  buildingsStats.game = game;
+
   const winModel = document.querySelector("win-modal") as WinModal;
   if (!(winModel instanceof WinModal)) {
     console.error("win modal not found");
@@ -145,6 +155,7 @@ export function createRenderer(
     leaderboard,
     controlPanel,
     playerInfo,
+    buildingsStats,
     winModel,
     optionsMenu,
     topBar,
