@@ -132,7 +132,6 @@ function processDistToLand(shorelineWaters: Coord[], map: Terrain[][]) {
   );
   const queue: { x: number; y: number; dist: number }[] = [];
 
-  // 海岸線水タイルを初期状態にセット
   for (const { x, y } of shorelineWaters) {
     queue.push({ x, y, dist: 0 });
     visited[x][y] = true;
