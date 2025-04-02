@@ -201,7 +201,32 @@ class Client {
         gameRecord: lobby.gameRecord,
       },
       () => {
-        this.joinModal.close();
+        console.log("Closing modals");
+        document.getElementById("settings-button").classList.add("hidden");
+        [
+          "single-player-modal",
+          "host-lobby-modal",
+          "join-private-lobby-modal",
+          "emoji-table",
+          "leader-board",
+          "build-menu",
+          "win-modal",
+          "game-starting-modal",
+          "top-bar",
+          "player-panel",
+          "help-modal",
+          "user-setting",
+        ].forEach((tag) => {
+          const modal = document.querySelector(tag) as HTMLElement & {
+            close?: () => void;
+            isModalOpen?: boolean;
+          };
+          if (modal?.close) {
+            modal.close();
+          } else if ("isModalOpen" in modal) {
+            modal.isModalOpen = false;
+          }
+        });
         this.publicLobby.stop();
         document.querySelectorAll(".ad").forEach((ad) => {
           (ad as HTMLElement).style.display = "none";
