@@ -5,7 +5,7 @@ import { GameView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
 import { AttackRatioEvent } from "../../InputHandler";
 import { SendSetTargetTroopRatioEvent } from "../../Transport";
-import { renderNumber, renderTroops } from "../../Utils";
+import { renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
@@ -29,12 +29,6 @@ export class ControlPanel extends LitElement implements Layer {
   private _population: number;
 
   @state()
-  private _maxPopulation: number;
-
-  @state()
-  private popRate: number;
-
-  @state()
   private _troops: number;
 
   @state()
@@ -45,16 +39,6 @@ export class ControlPanel extends LitElement implements Layer {
 
   @state()
   private _manpower: number = 0;
-
-  @state()
-  private _gold: number;
-
-  @state()
-  private _goldPerSecond: number;
-
-  private _lastPopulationIncreaseRate: number;
-
-  private _popRateIsIncreasing: boolean = true;
 
   private init_: boolean = false;
 
@@ -112,20 +96,9 @@ export class ControlPanel extends LitElement implements Layer {
       return;
     }
 
-    const popIncreaseRate = player.population() - this._population;
-    if (this.game.ticks() % 5 == 0) {
-      this._popRateIsIncreasing =
-        popIncreaseRate >= this._lastPopulationIncreaseRate;
-      this._lastPopulationIncreaseRate = popIncreaseRate;
-    }
-
     this._population = player.population();
-    this._maxPopulation = this.game.config().maxPopulation(player);
-    this._gold = player.gold();
     this._troops = player.troops();
     this._workers = player.workers();
-    this.popRate = this.game.config().populationIncreaseRate(player) * 10;
-    this._goldPerSecond = this.game.config().goldAdditionRate(player) * 10;
 
     this.currentTroopRatio = player.troops() / player.population();
     this.requestUpdate();
@@ -208,36 +181,19 @@ export class ControlPanel extends LitElement implements Layer {
           : "hidden"}"
         @contextmenu=${(e) => e.preventDefault()}
       >
-        <div class="hidden lg:block bg-black/30 text-white mb-4 p-2 rounded">
-          <div class="flex justify-between mb-1">
-            <span class="font-bold">Pop:</span>
-            <span translate="no"
-              >${renderTroops(this._population)} /
-              ${renderTroops(this._maxPopulation)}
-              <span
-                class="${this._popRateIsIncreasing
-                  ? "text-green-500"
-                  : "text-yellow-500"}"
-                translate="no"
-                >(+${renderTroops(this.popRate)})</span
-              ></span
-            >
-          </div>
-          <div class="flex justify-between">
-            <span class="font-bold">Gold:</span>
-            <span translate="no"
-              >${renderNumber(this._gold)}
-              (+${renderNumber(this._goldPerSecond)})</span
-            >
-          </div>
-        </div>
-
         <div class="relative mb-4 lg:mb-4">
-          <label class="block text-white mb-1" translate="no"
-            >Troops: <span translate="no">${renderTroops(this._troops)}</span> |
-            Workers:
-            <span translate="no">${renderTroops(this._workers)}</span></label
+          <label
+            class="flex flex-row justify-between text-white mb-1"
+            translate="no"
           >
+            <span translate="no"
+              >Troops: ${(this.currentTroopRatio * 100).toFixed(0)}%</span
+            >
+            <span translate="no"
+              >Workers:
+              ${((1 - this.currentTroopRatio) * 100).toFixed(0)}%</span
+            >
+          </label>
           <div class="relative h-8">
             <!-- Background track -->
             <div

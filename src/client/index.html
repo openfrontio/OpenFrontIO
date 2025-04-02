@@ -300,7 +300,9 @@
     <div id="app"></div>
     <div id="radialMenu" class="radial-menu"></div>
     <div class="flex gap-2 flex-row fixed right-[10px] top-[10px] z-50">
-      <buildings-stats-overlay></buildings-stats-overlay>
+      <div style="pointer-events: none">
+        <buildings-stats-overlay></buildings-stats-overlay>
+      </div>
       <div class="flex flex-col gap-2 w-32 sm:w-32 lg:w-48">
         <options-menu></options-menu>
         <player-info-overlay></player-info-overlay>
@@ -317,8 +319,11 @@
       >
         <events-display></events-display>
       </div>
-      <div class="w-full sm:w-1/3 md:max-w-72" style="pointer-events: auto">
-        <control-panel></control-panel>
+      <div class="flex flex-col gap-2 w-full md:max-w-72">
+        <country-stats-overlay></country-stats-overlay>
+        <div class="sm:w-1/3" style="pointer-events: auto">
+          <control-panel></control-panel>
+        </div>
       </div>
     </div>
 

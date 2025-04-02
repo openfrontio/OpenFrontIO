@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { UnitType } from "../../../core/game/Game";
-import { GameView, PlayerView } from "../../../core/game/GameView";
+import { GameView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
 import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
@@ -13,7 +13,6 @@ import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.s
 import portIcon from "../../../../resources/images/PortIcon.svg";
 import samLauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
-import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 
 @customElement("buildings-stats-overlay")
 export class BuildingsStatsOverlay extends LitElement implements Layer {
@@ -23,30 +22,67 @@ export class BuildingsStatsOverlay extends LitElement implements Layer {
   @property({ type: String })
   public clientID!: ClientID;
 
-  private _isActive = false;
+  @state()
+  private _isVisible = false;
 
-  init() {
-    this._isActive = true;
-  }
+  @state()
+  private _gold: number;
+
+  @state()
+  private _goldPerSecond: number;
+
+  @state()
+  private _warships: number;
+
+  @state()
+  private _ports: number;
+
+  @state()
+  private _cities: number;
+
+  @state()
+  private _defensePosts: number;
+
+  @state()
+  private _samLaunchers: number;
+
+  @state()
+  private _missileSilos: number;
+
+  init() {}
 
   tick() {
+    if (!this._isVisible && !this.game.inSpawnPhase()) {
+      this.setVisibile(true);
+    }
+
+    const player = this.game.myPlayer();
+    if (player == null || !player.isAlive()) {
+      this.setVisibile(false);
+      return;
+    }
+
+    this._gold = player.gold();
+    this._goldPerSecond = this.game.config().goldAdditionRate(player) * 10;
+    this._warships = player.units(UnitType.Warship).length;
+    this._ports = player.units(UnitType.Port).length;
+    this._cities = player.units(UnitType.City).length;
+    this._defensePosts = player.units(UnitType.DefensePost).length;
+    this._samLaunchers = player.units(UnitType.SAMLauncher).length;
+    this._missileSilos = player.units(UnitType.MissileSilo).length;
+
     this.requestUpdate();
   }
 
-  renderLayer(context: CanvasRenderingContext2D) {
-    // Implementation for Layer interface
-  }
+  renderLayer(context: CanvasRenderingContext2D) {}
 
   shouldTransform(): boolean {
     return false;
   }
 
-  private myPlayer(): PlayerView | null {
-    return this.game && this.game.playerByClientID(this.clientID);
-  }
-
-  private playing(): boolean {
-    return !!this.myPlayer();
+  setVisibile(visible: boolean) {
+    this._isVisible = visible;
+    this.requestUpdate();
   }
 
   private renderIcon(src: string) {
@@ -63,37 +99,35 @@ export class BuildingsStatsOverlay extends LitElement implements Layer {
     `;
   }
 
-  private renderUnitCount(icon: string, unit: UnitType) {
-    const player = this.myPlayer();
-    return this.renderResourceCount(icon, player.units(unit).length);
-  }
-
-  private renderPlayerInfo() {
-    const player = this.myPlayer();
-    return html`
-      <div class="p-2 flex flex-row">
-        ${this.renderResourceCount(goldCoinIcon, player.gold())}
-        ${this.renderResourceCount(swordIcon, player.troops() / 10)}
-        ${this.renderUnitCount(warshipIcon, UnitType.Warship)}
-        ${this.renderUnitCount(portIcon, UnitType.Port)}
-        ${this.renderUnitCount(cityIcon, UnitType.City)}
-        ${this.renderUnitCount(shieldIcon, UnitType.DefensePost)}
-        ${this.renderUnitCount(samLauncherIcon, UnitType.SAMLauncher)}
-        ${this.renderUnitCount(missileSiloIcon, UnitType.MissileSilo)}
-      </div>
-    `;
-  }
-
   render() {
-    if (!this._isActive || !this.playing()) {
-      return html``;
-    }
+    if (!this._isVisible) return html``;
+
     return html`
-      <div class="w-full z-50 hidden lg:block">
+      <div
+        class="w-full z-50 hidden lg:block"
+        @contextmenu=${(e) => e.preventDefault()}
+      >
         <div
-          class="bg-opacity-60 bg-gray-900 rounded-lg shadow-lg backdrop-blur-sm transition-all duration-300  text-white text-lg md:text-base opacity-100 visible"
+          class="bg-opacity-60 bg-gray-900 rounded-lg shadow-lg backdrop-blur-sm  text-white text-lg md:text-base"
         >
-          ${this.renderPlayerInfo()}
+          <div class="p-2 flex flex-row">
+            <div
+              class="flex flex-row items-center gap-2 opacity-80"
+              translate="no"
+            >
+              ${this.renderIcon(goldCoinIcon)}
+              <span class="py-2 pr-2"
+                >${renderNumber(this._gold)}
+                (+${renderNumber(this._goldPerSecond)})</span
+              >
+            </div>
+            ${this.renderResourceCount(warshipIcon, this._warships)}
+            ${this.renderResourceCount(portIcon, this._ports)}
+            ${this.renderResourceCount(cityIcon, this._cities)}
+            ${this.renderResourceCount(shieldIcon, this._defensePosts)}
+            ${this.renderResourceCount(samLauncherIcon, this._samLaunchers)}
+            ${this.renderResourceCount(missileSiloIcon, this._missileSilos)}
+          </div>
         </div>
       </div>
     `;

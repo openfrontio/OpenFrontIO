@@ -26,6 +26,7 @@ import { TopBar } from "./layers/TopBar";
 import { UILayer } from "./layers/UILayer";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
+import { CountryStatsOverlay } from "./layers/countryStatsOverlay";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,
@@ -107,6 +108,15 @@ export function createRenderer(
   buildingsStats.clientID = clientID;
   buildingsStats.game = game;
 
+  const countryStats = document.querySelector(
+    "country-stats-overlay",
+  ) as CountryStatsOverlay;
+  if (!(countryStats instanceof CountryStatsOverlay)) {
+    consolex.error("country stats overlay not found");
+  }
+  countryStats.clientID = clientID;
+  countryStats.game = game;
+
   const winModel = document.querySelector("win-modal") as WinModal;
   if (!(winModel instanceof WinModal)) {
     console.error("win modal not found");
@@ -160,6 +170,7 @@ export function createRenderer(
     controlPanel,
     playerInfo,
     buildingsStats,
+    countryStats,
     winModel,
     optionsMenu,
     topBar,
