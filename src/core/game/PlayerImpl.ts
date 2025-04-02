@@ -92,6 +92,7 @@ export class PlayerImpl implements Player {
 
   public _incomingAttacks: Attack[] = [];
   public _outgoingAttacks: Attack[] = [];
+  public _outgoingLandAttacks: Attack[] = [];
 
   constructor(
     private mg: GameImpl,

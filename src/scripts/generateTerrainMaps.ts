@@ -21,6 +21,7 @@ const maps = [
   "Iceland",
   "TwoSeas",
   "Japan",
+  "KnownWorld",
 ];
 
 const removeSmall = true;
