@@ -52,10 +52,10 @@ export class NukeExecution implements Execution {
   private tilesToDestroy(): Set<TileRef> {
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const rand = new PseudoRandom(this.mg.ticks());
+    const inner2 = magnitude.inner * magnitude.inner;
+    const outer2 = magnitude.outer * magnitude.outer;
     return this.mg.bfs(this.dst, (_, n: TileRef) => {
       const d2 = this.mg.euclideanDistSquared(this.dst, n);
-      const inner2 = magnitude.inner * magnitude.inner;
-      const outer2 = magnitude.outer * magnitude.outer;
       return d2 <= outer2 && (d2 <= inner2 || rand.chance(2));
     });
   }
