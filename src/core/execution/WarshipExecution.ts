@@ -1,18 +1,16 @@
+import { consolex } from "../Consolex";
 import {
-  Cell,
   Execution,
   Game,
   Player,
-  Unit,
   PlayerID,
-  TerrainType,
+  Unit,
   UnitType,
 } from "../game/Game";
-import { PathFinder } from "../pathfinding/PathFinding";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PseudoRandom } from "../PseudoRandom";
-import { consolex } from "../Consolex";
 import { TileRef } from "../game/GameMap";
+import { PathFindResultType } from "../pathfinding/AStar";
+import { PathFinder } from "../pathfinding/PathFinding";
+import { PseudoRandom } from "../PseudoRandom";
 import { ShellExecution } from "./ShellExecution";
 
 export class WarshipExecution implements Execution {

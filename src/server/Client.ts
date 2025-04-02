@@ -1,6 +1,6 @@
 import WebSocket from "ws";
-import { ClientID } from "../core/Schemas";
 import { PlayerID, Tick } from "../core/game/Game";
+import { ClientID } from "../core/Schemas";
 import { generateID } from "../core/Util";
 
 export class Client {

@@ -1,14 +1,13 @@
 import { Config } from "../configuration/Config";
-import { GameEvent } from "../EventBus";
-import { PlayerView } from "./GameView";
-import { ClientID, GameConfig, GameID, AllPlayersStats } from "../Schemas";
-import { GameMap, GameMapImpl, TileRef } from "./GameMap";
+import { AllPlayersStats, ClientID } from "../Schemas";
+import { GameMap, TileRef } from "./GameMap";
 import {
   GameUpdate,
   GameUpdateType,
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
+import { PlayerView } from "./GameView";
 import { Stats } from "./Stats";
 
 export type PlayerID = string;
@@ -60,6 +59,9 @@ export enum GameMapType {
   GatewayToTheAtlantic = "Gateway to the Atlantic",
   Australia = "Australia",
   Iceland = "Iceland",
+  Japan = "Japan",
+  TwoSeas = "Between Two Seas",
+  KnownWorld = "Known World",
 }
 
 export enum GameType {
@@ -383,7 +385,8 @@ export interface Player {
 
   // Donation
   canDonate(recipient: Player): boolean;
-  donate(recipient: Player, troops: number): void;
+  donateTroops(recipient: Player, troops: number): void;
+  donateGold(recipient: Player, gold: number): void;
 
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;

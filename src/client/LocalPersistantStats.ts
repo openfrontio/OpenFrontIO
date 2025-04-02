@@ -1,5 +1,4 @@
 import { consolex } from "../core/Consolex";
-import { PlayerID } from "../core/game/Game";
 import { GameConfig, GameID, GameRecord } from "../core/Schemas";
 
 export interface LocalStatsData {

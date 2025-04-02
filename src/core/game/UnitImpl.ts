@@ -1,12 +1,17 @@
-import { MessageType, Tick, UnitSpecificInfos } from "./Game";
-import { UnitUpdate } from "./GameUpdates";
-import { GameUpdateType } from "./GameUpdates";
-import { simpleHash, toInt, within, withinInt } from "../Util";
-import { Unit, TerraNullius, UnitType, Player, UnitInfo } from "./Game";
+import { simpleHash, toInt, withinInt } from "../Util";
+import {
+  MessageType,
+  Player,
+  Tick,
+  Unit,
+  UnitInfo,
+  UnitSpecificInfos,
+  UnitType,
+} from "./Game";
 import { GameImpl } from "./GameImpl";
-import { PlayerImpl } from "./PlayerImpl";
 import { TileRef } from "./GameMap";
-import { consolex } from "../Consolex";
+import { GameUpdateType, UnitUpdate } from "./GameUpdates";
+import { PlayerImpl } from "./PlayerImpl";
 
 export class UnitImpl implements Unit {
   private _active = true;

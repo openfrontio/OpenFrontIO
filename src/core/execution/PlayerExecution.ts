@@ -1,18 +1,17 @@
+import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
+import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
   MessageType,
   Player,
   PlayerID,
-  TerraNullius,
   UnitType,
 } from "../game/Game";
-import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 import { GameImpl } from "../game/GameImpl";
-import { consolex } from "../Consolex";
-import { GameMap, TileRef } from "../game/GameMap";
-import { renderNumber } from "../../client/Utils";
+import { TileRef } from "../game/GameMap";
+import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 
 export class PlayerExecution implements Execution {
   private readonly ticksPerClusterCalc = 20;

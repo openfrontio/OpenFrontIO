@@ -1,17 +1,17 @@
 import cluster from "cluster";
-import http from "http";
 import express from "express";
-import { GameMapType, GameType, Difficulty } from "../core/game/Game";
-import { generateID } from "../core/Util";
-import { PseudoRandom } from "../core/PseudoRandom";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameConfig, GameInfo } from "../core/Schemas";
-import path from "path";
 import rateLimit from "express-rate-limit";
+import http from "http";
+import path from "path";
 import { fileURLToPath } from "url";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { Difficulty, GameMapType, GameType } from "../core/game/Game";
+import { PseudoRandom } from "../core/PseudoRandom";
+import { GameConfig, GameInfo } from "../core/Schemas";
+import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
-import { setupMetricsServer } from "./MasterMetrics";
 import { logger } from "./Logger";
+import { setupMetricsServer } from "./MasterMetrics";
 
 const config = getServerConfigFromServer();
 const readyWorkers = new Set();
@@ -172,9 +172,12 @@ async function fetchLobbies(): Promise<number> {
   const fetchPromises = [];
 
   for (const gameID of publicLobbyIDs) {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 5000); // 5 second timeout
     const port = config.workerPort(gameID);
     const promise = fetch(`http://localhost:${port}/api/game/${gameID}`, {
       headers: { [config.adminHeader()]: config.adminToken() },
+      signal: controller.signal,
     })
       .then((resp) => resp.json())
       .then((json) => {
@@ -277,19 +280,22 @@ function getNextMap(): GameMapType {
   }
 
   const frequency = {
-    World: 3,
+    World: 1,
     Europe: 3,
     Mena: 2,
     NorthAmerica: 2,
-    BlackSea: 2,
-    Pangaea: 2,
+    BlackSea: 1,
+    Pangaea: 1,
     Africa: 2,
-    Asia: 2,
-    Mars: 2,
+    Asia: 1,
+    Mars: 1,
     Britannia: 2,
     GatewayToTheAtlantic: 2,
     Australia: 2,
     Iceland: 2,
+    SouthAmerica: 3,
+    Japan: 3,
+    TwoSeas: 3,
   };
 
   Object.keys(GameMapType).forEach((key) => {

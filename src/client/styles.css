@@ -327,6 +327,11 @@ label.option-card:hover {
     center / cover;
 }
 
+#helpModal .sam-launcher-icon {
+  mask: url("../../resources/images/SamLauncherIconWhite.svg") no-repeat
+    center / cover;
+}
+
 #helpModal .atom-bomb-icon {
   mask: url("../../resources/images/NukeIconWhite.svg") no-repeat center / cover;
 }
@@ -360,8 +365,8 @@ label.option-card:hover {
 }
 
 #helpModal .donate-icon {
-  mask: url("../../resources/images/DonateIconWhite.svg") no-repeat center /
-    cover;
+  mask: url("../../resources/images/DonateTroopIconWhite.svg") no-repeat
+    center / cover;
 }
 
 #helpModal .build-icon {

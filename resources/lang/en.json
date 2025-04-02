@@ -110,7 +110,10 @@
     "australia": "Australia",
     "random": "Random",
     "iceland": "Iceland",
-    "pangaea": "Pangaea"
+    "pangaea": "Pangaea",
+    "japan": "Japan and Neighbors",
+    "twoseas": "Between Two Seas",
+    "knownworld": "Known World"
   },
   "private_lobby": {
     "title": "Join Private Lobby",

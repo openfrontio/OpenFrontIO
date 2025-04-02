@@ -1,4 +1,4 @@
-import { LitElement, html, css } from "lit";
+import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { GameMapType } from "../../core/game/Game";
 import { getMapsImage } from "../utilities/Maps";
@@ -20,6 +20,9 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   GatewayToTheAtlantic: "Gateway to the Atlantic",
   Australia: "Australia",
   Iceland: "Iceland",
+  Japan: "Japan",
+  TwoSeas: "Between Two Seas",
+  KnownWorld: "Known World",
 };
 
 @customElement("map-display")

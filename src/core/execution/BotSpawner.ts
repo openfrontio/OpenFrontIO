@@ -1,8 +1,8 @@
 import { consolex } from "../Consolex";
-import { Cell, Game, PlayerInfo, PlayerType } from "../game/Game";
+import { Game, PlayerInfo, PlayerType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
-import { GameID, SpawnIntent } from "../Schemas";
+import { GameID } from "../Schemas";
 import { simpleHash } from "../Util";
 import { SpawnExecution } from "./SpawnExecution";
 import { BOT_NAME_PREFIXES, BOT_NAME_SUFFIXES } from "./utils/BotNames";

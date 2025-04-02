@@ -13,12 +13,12 @@ import {
   UnitInfo,
   UnitType,
 } from "../game/Game";
-import { GameMap, TileRef } from "../game/GameMap";
+import { TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID } from "../Schemas";
 import { assertNever, simpleHash, within } from "../Util";
-import { Config, GameEnv, ServerConfig, Theme } from "./Config";
+import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { pastelTheme } from "./PastelTheme";
 import { pastelThemeDark } from "./PastelThemeDark";
 
@@ -58,15 +58,54 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return 60 * 1000;
   }
   lobbyMaxPlayers(map: GameMapType): number {
-    if (map == GameMapType.World) {
-      return Math.random() < 0.3 ? 150 : 60;
-    }
+    // Maps with ~4 mil pixels
     if (
-      [GameMapType.Mars, GameMapType.Africa, GameMapType.BlackSea].includes(map)
+      [
+        GameMapType.GatewayToTheAtlantic,
+        GameMapType.SouthAmerica,
+        GameMapType.NorthAmerica,
+        GameMapType.Africa,
+        GameMapType.Europe,
+      ].includes(map)
     ) {
-      return Math.random() < 0.3 ? 70 : 50;
+      return Math.random() < 0.2 ? 150 : 70;
     }
-    return Math.random() < 0.3 ? 60 : 40;
+    // Maps with ~2.5 - ~3.5 mil pixels
+    if (
+      [
+        GameMapType.Australia,
+        GameMapType.Iceland,
+        GameMapType.Britannia,
+        GameMapType.Asia,
+      ].includes(map)
+    ) {
+      return Math.random() < 0.2 ? 100 : 50;
+    }
+    // Maps with ~2 mil pixels
+    if (
+      [
+        GameMapType.Mena,
+        GameMapType.Mars,
+        GameMapType.Oceania,
+        GameMapType.Japan, // Japan at this level because its 2/3 water
+      ].includes(map)
+    ) {
+      return Math.random() < 0.2 ? 70 : 40;
+    }
+    // Maps smaller than ~2 mil pixels
+    if (
+      [GameMapType.TwoSeas, GameMapType.BlackSea, GameMapType.Pangaea].includes(
+        map,
+      )
+    ) {
+      return Math.random() < 0.2 ? 60 : 35;
+    }
+    // world belongs with the ~2 mils, but these amounts never made sense so I assume the insanity is intended.
+    if (map == GameMapType.World) {
+      return Math.random() < 0.2 ? 150 : 60;
+    }
+    // default return for non specified map
+    return Math.random() < 0.2 ? 85 : 45;
   }
   workerIndex(gameID: GameID): number {
     return simpleHash(gameID) % this.numWorkers();
@@ -591,5 +630,25 @@ export class DefaultConfig implements Config {
       return adjustment * 5;
     }
     return adjustment;
+  }
+
+  nukeMagnitudes(unitType: UnitType): NukeMagnitude {
+    switch (unitType) {
+      case UnitType.MIRVWarhead:
+        return { inner: 25, outer: 30 };
+      case UnitType.AtomBomb:
+        return { inner: 12, outer: 30 };
+      case UnitType.HydrogenBomb:
+        return { inner: 80, outer: 100 };
+    }
+  }
+
+  defaultNukeSpeed(): number {
+    return 4;
+  }
+
+  // Humans can be population, soldiers attacking, soldiers in boat etc.
+  nukeDeathFactor(humans: number, tilesOwned: number): number {
+    return (5 * humans) / Math.max(1, tilesOwned);
   }
 }

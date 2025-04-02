@@ -1,7 +1,7 @@
+import fs from "fs/promises";
+import path from "path";
 import sharp from "sharp";
 import { generateMap } from "./TerrainMapGenerator.js";
-import path from "path";
-import fs from "fs/promises";
 
 const maps = [
   "Africa",
@@ -19,6 +19,9 @@ const maps = [
   "Australia",
   "Pangaea",
   "Iceland",
+  "TwoSeas",
+  "Japan",
+  "KnownWorld",
 ];
 
 const removeSmall = true;

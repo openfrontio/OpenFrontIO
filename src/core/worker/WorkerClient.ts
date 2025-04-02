@@ -1,8 +1,8 @@
 import {
   PlayerActions,
+  PlayerBorderTiles,
   PlayerID,
   PlayerProfile,
-  PlayerBorderTiles,
 } from "../game/Game";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";

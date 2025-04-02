@@ -1,4 +1,4 @@
-import { TeamName, PlayerType, PlayerInfo } from "../src/core/game/Game";
+import { PlayerInfo, PlayerType, TeamName } from "../src/core/game/Game";
 import { assignTeams } from "../src/core/game/TeamAssignment";
 
 describe("assignTeams", () => {

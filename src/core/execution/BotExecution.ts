@@ -1,5 +1,4 @@
 import {
-  Cell,
   Execution,
   Game,
   Player,

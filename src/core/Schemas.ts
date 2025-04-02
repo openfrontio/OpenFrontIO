@@ -23,7 +23,8 @@ export type Intent =
   | BreakAllianceIntent
   | TargetPlayerIntent
   | EmojiIntent
-  | DonateIntent
+  | DonateGoldIntent
+  | DonateTroopsIntent
   | TargetTroopRatioIntent
   | BuildUnitIntent
   | EmbargoIntent
@@ -40,7 +41,8 @@ export type AllianceRequestReplyIntent = z.infer<
 export type BreakAllianceIntent = z.infer<typeof BreakAllianceIntentSchema>;
 export type TargetPlayerIntent = z.infer<typeof TargetPlayerIntentSchema>;
 export type EmojiIntent = z.infer<typeof EmojiIntentSchema>;
-export type DonateIntent = z.infer<typeof DonateIntentSchema>;
+export type DonateGoldIntent = z.infer<typeof DonateGoldIntentSchema>;
+export type DonateTroopsIntent = z.infer<typeof DonateTroopIntentSchema>;
 export type EmbargoIntent = z.infer<typeof EmbargoIntentSchema>;
 export type TargetTroopRatioIntent = z.infer<
   typeof TargetTroopRatioIntentSchema
@@ -232,8 +234,14 @@ export const EmbargoIntentSchema = BaseIntentSchema.extend({
   action: z.union([z.literal("start"), z.literal("stop")]),
 });
 
-export const DonateIntentSchema = BaseIntentSchema.extend({
-  type: z.literal("donate"),
+export const DonateGoldIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("donate_gold"),
+  recipient: ID,
+  gold: z.number().nullable(),
+});
+
+export const DonateTroopIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("donate_troops"),
   recipient: ID,
   troops: z.number().nullable(),
 });
@@ -271,7 +279,8 @@ const IntentSchema = z.union([
   BreakAllianceIntentSchema,
   TargetPlayerIntentSchema,
   EmojiIntentSchema,
-  DonateIntentSchema,
+  DonateGoldIntentSchema,
+  DonateTroopIntentSchema,
   TargetTroopRatioIntentSchema,
   BuildUnitIntentSchema,
   EmbargoIntentSchema,

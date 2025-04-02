@@ -1,12 +1,12 @@
 import { createGameRunner, GameRunner } from "../GameRunner";
 import { GameUpdateViewData } from "../game/GameUpdates";
 import {
-  MainThreadMessage,
-  WorkerMessage,
   InitializedMessage,
+  MainThreadMessage,
   PlayerActionsResultMessage,
-  PlayerProfileResultMessage,
   PlayerBorderTilesResultMessage,
+  PlayerProfileResultMessage,
+  WorkerMessage,
 } from "./WorkerMessages";
 
 const ctx: Worker = self as any;

@@ -1,12 +1,11 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { Difficulty, GameMapType, GameType } from "../core/game/Game";
-import { consolex } from "../core/Consolex";
-import { getMapsImage } from "./utilities/Maps";
-import { GameID, GameInfo } from "../core/Schemas";
 import { translateText } from "../client/Utils";
-import { JoinLobbyEvent } from "./Main";
+import { consolex } from "../core/Consolex";
+import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import { JoinLobbyEvent } from "./Main";
+import { getMapsImage } from "./utilities/Maps";
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {

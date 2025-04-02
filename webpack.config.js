@@ -1,8 +1,9 @@
+import CopyPlugin from "copy-webpack-plugin";
+import ESLintPlugin from "eslint-webpack-plugin";
+import HtmlWebpackPlugin from "html-webpack-plugin";
 import path from "path";
 import { fileURLToPath } from "url";
-import HtmlWebpackPlugin from "html-webpack-plugin";
 import webpack from "webpack";
-import CopyPlugin from "copy-webpack-plugin";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -128,6 +129,9 @@ export default async (env, argv) => {
           },
         ],
         options: { concurrency: 100 },
+      }),
+      new ESLintPlugin({
+        context: __dirname,
       }),
     ],
     optimization: {
