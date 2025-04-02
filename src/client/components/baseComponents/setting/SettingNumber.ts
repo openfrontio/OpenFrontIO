@@ -11,7 +11,7 @@ export class SettingNumber extends LitElement {
   @property({ type: Boolean }) easter = false;
 
   createRenderRoot() {
-    return this; // グローバルCSS使用のため
+    return this;
   }
 
   private handleInput(e: Event) {

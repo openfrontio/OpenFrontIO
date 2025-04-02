@@ -1,9 +1,9 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { UserSettings } from "../core/game/UserSettings";
-import "./components/baseComponents/setting/setting-number";
-import "./components/baseComponents/setting/setting-slider";
-import "./components/baseComponents/setting/setting-toggle";
+import "./components/baseComponents/setting/SettingNumber";
+import "./components/baseComponents/setting/SettingSlider";
+import "./components/baseComponents/setting/SettingToggle";
 
 @customElement("user-setting")
 export class UserSettingModal extends LitElement {

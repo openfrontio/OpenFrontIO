@@ -10,7 +10,7 @@ export class SettingToggle extends LitElement {
   @property({ type: Boolean }) easter = false;
 
   createRenderRoot() {
-    return this; // ← シャドウDOM使わないことで外部CSSを適用！
+    return this;
   }
 
   private handleChange(e: Event) {

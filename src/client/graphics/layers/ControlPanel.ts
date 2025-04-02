@@ -99,6 +99,7 @@ export class ControlPanel extends LitElement implements Layer {
       this.eventBus.emit(
         new SendSetTargetTroopRatioEvent(this.targetTroopRatio),
       );
+      this.init_ = false;
     }
 
     if (!this._isVisible && !this.game.inSpawnPhase()) {
