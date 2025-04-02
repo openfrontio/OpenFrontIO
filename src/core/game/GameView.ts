@@ -1,5 +1,6 @@
 import { Config } from "../configuration/Config";
 import { ClientID, GameID, PlayerStats } from "../Schemas";
+import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
   Cell,
@@ -32,17 +33,9 @@ import {
 } from "./GameUpdates";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid } from "./UnitGrid";
-import { consolex } from "../Consolex";
-import { simpleHash, createRandomName } from "../Util";
-
-import {
-  BOT_NAME_PREFIXES,
-  BOT_NAME_SUFFIXES,
-} from "../execution/utils/BotNames";
 
 const displayNameMap: Record<PlayerID, string> = {};
 const usedNames = new Set<string>();
-import { SAMLauncherExecution } from "../execution/SAMLauncherExecution";
 
 export class UnitView {
   public _wasUpdated = true;
