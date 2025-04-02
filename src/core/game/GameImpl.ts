@@ -684,8 +684,8 @@ export class GameImpl implements Game {
   manhattanDist(c1: TileRef, c2: TileRef): number {
     return this._map.manhattanDist(c1, c2);
   }
-  euclideanDist(c1: TileRef, c2: TileRef): number {
-    return this._map.euclideanDist(c1, c2);
+  euclideanDistSquared(c1: TileRef, c2: TileRef): number {
+    return this._map.euclideanDistSquared(c1, c2);
   }
   bfs(
     tile: TileRef,

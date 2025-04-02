@@ -53,11 +53,10 @@ export class NukeExecution implements Execution {
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const rand = new PseudoRandom(this.mg.ticks());
     return this.mg.bfs(this.dst, (_, n: TileRef) => {
-      const d = this.mg.euclideanDist(this.dst, n);
-      if (d > magnitude.outer) {
-        return false;
-      }
-      return d <= magnitude.inner || rand.chance(2);
+      const d2 = this.mg.euclideanDistSquared(this.dst, n);
+      const inner2 = magnitude.inner * magnitude.inner;
+      const outer2 = magnitude.outer * magnitude.outer;
+      return d2 <= outer2 && (d2 <= inner2 || rand.chance(2));
     });
   }
 
@@ -239,7 +238,8 @@ export class NukeExecution implements Execution {
         unit.type() != UnitType.MIRVWarhead &&
         unit.type() != UnitType.MIRV
       ) {
-        if (this.mg.euclideanDist(this.dst, unit.tile()) < magnitude.outer) {
+        const outer2 = magnitude.outer * magnitude.outer;
+        if (this.mg.euclideanDistSquared(this.dst, unit.tile()) < outer2) {
           unit.delete();
         }
       }

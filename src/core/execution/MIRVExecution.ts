@@ -174,7 +174,8 @@ export class MirvExecution implements Execution {
       if (!this.mg.isLand(tile)) {
         continue;
       }
-      if (this.mg.euclideanDist(tile, ref) > this.mirvRange) {
+      const mirvRange2 = this.mirvRange * this.mirvRange;
+      if (this.mg.euclideanDistSquared(tile, ref) > mirvRange2) {
         continue;
       }
       if (this.mg.owner(tile) != this.targetPlayer) {

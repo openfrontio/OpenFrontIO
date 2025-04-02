@@ -11,8 +11,7 @@ import {
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { TeamName, Unit, UnitType } from "../core/game/Game";
-import { TileRef } from "../core/game/GameMap";
+import { TeamName, UnitType } from "../core/game/Game";
 import {
   ErrorUpdate,
   GameUpdateType,
@@ -20,7 +19,7 @@ import {
   HashUpdate,
   WinUpdate,
 } from "../core/game/GameUpdates";
-import { GameView, PlayerView, UnitView } from "../core/game/GameView";
+import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
@@ -35,15 +34,6 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
-
-export // Is this function needed?
-function distSortUnitWorld(tile: TileRef, game: GameView) {
-  return (a: Unit | UnitView, b: Unit | UnitView) => {
-    return (
-      game.euclideanDist(tile, a.tile()) - game.euclideanDist(tile, b.tile())
-    );
-  };
-}
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
