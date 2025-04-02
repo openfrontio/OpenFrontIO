@@ -1,8 +1,7 @@
 import { PriorityQueue } from "@datastructures-js/priority-queue";
-import { AStar } from "./AStar";
-import { PathFindResultType } from "./AStar";
 import { consolex } from "../Consolex";
-import { GameMap, GameMapImpl, TileRef } from "../game/GameMap";
+import { GameMap, TileRef } from "../game/GameMap";
+import { AStar, PathFindResultType } from "./AStar";
 
 export class SerialAStar implements AStar {
   private fwdOpenSet: PriorityQueue<{ tile: TileRef; fScore: number }>;

@@ -1,11 +1,4 @@
-import {
-  Cell,
-  Execution,
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-} from "../game/Game";
+import { Execution, Game, Player, PlayerInfo, PlayerType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { BotExecution } from "./BotExecution";
 import { PlayerExecution } from "./PlayerExecution";
@@ -17,7 +10,7 @@ export class SpawnExecution implements Execution {
 
   constructor(
     private playerInfo: PlayerInfo,
-    private tile: TileRef,
+    public readonly tile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number) {

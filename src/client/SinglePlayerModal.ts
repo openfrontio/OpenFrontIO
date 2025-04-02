@@ -1,17 +1,16 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { Difficulty, GameMapType, GameMode, GameType } from "../core/game/Game";
-import { generateID as generateID } from "../core/Util";
+import randomMap from "../../resources/images/RandomMap.webp";
+import { translateText } from "../client/Utils";
 import { consolex } from "../core/Consolex";
-import "./components/Difficulties";
-import "./components/baseComponents/Modal";
+import { Difficulty, GameMapType, GameMode, GameType } from "../core/game/Game";
+import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
+import "./components/baseComponents/Modal";
+import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
-import randomMap from "../../resources/images/RandomMap.webp";
-import { GameInfo } from "../core/Schemas";
 import { JoinLobbyEvent } from "./Main";
-import { translateText } from "../client/Utils";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
@@ -324,22 +323,35 @@ export class SinglePlayerModal extends LitElement {
     consolex.log(
       `Starting single player game with map: ${GameMapType[this.selectedMap]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
+    const clientID = generateID();
+    const gameID = generateID();
 
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
-          gameID: generateID(),
-          gameConfig: {
-            gameMap: this.selectedMap,
-            gameType: GameType.Singleplayer,
-            gameMode: this.gameMode,
-            difficulty: this.selectedDifficulty,
-            disableNPCs: this.disableNPCs,
-            disableNukes: this.disableNukes,
-            bots: this.bots,
-            infiniteGold: this.infiniteGold,
-            infiniteTroops: this.infiniteTroops,
-            instantBuild: this.instantBuild,
+          clientID: clientID,
+          gameID: gameID,
+          gameStartInfo: {
+            gameID: gameID,
+            players: [
+              {
+                playerID: generateID(),
+                clientID,
+                username: "PLACEHOLDER",
+              },
+            ],
+            config: {
+              gameMap: this.selectedMap,
+              gameType: GameType.Singleplayer,
+              gameMode: this.gameMode,
+              difficulty: this.selectedDifficulty,
+              disableNPCs: this.disableNPCs,
+              disableNukes: this.disableNukes,
+              bots: this.bots,
+              infiniteGold: this.infiniteGold,
+              infiniteTroops: this.infiniteTroops,
+              instantBuild: this.instantBuild,
+            },
           },
         } as JoinLobbyEvent,
         bubbles: true,

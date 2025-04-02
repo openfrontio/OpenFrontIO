@@ -1,19 +1,17 @@
-import { v4 as uuidv4 } from "uuid";
-import twemoji from "twemoji";
 import DOMPurify from "dompurify";
+import { customAlphabet } from "nanoid";
+import twemoji from "twemoji";
 import { Cell, Game, Player, TeamName, Unit } from "./game/Game";
+import { andFN, GameMap, manhattanDistFN, TileRef } from "./game/GameMap";
 import {
   AllPlayersStats,
   ClientID,
-  GameConfig,
   GameID,
   GameRecord,
+  GameStartInfo,
   PlayerRecord,
-  PlayerStats,
   Turn,
 } from "./Schemas";
-import { customAlphabet, nanoid } from "nanoid";
-import { andFN, GameMap, manhattanDistFN, TileRef } from "./game/GameMap";
 
 import {
   BOT_NAME_PREFIXES,
@@ -254,7 +252,7 @@ export function onlyImages(html: string) {
 
 export function createGameRecord(
   id: GameID,
-  gameConfig: GameConfig,
+  gameStart: GameStartInfo,
   // username does not need to be set.
   players: PlayerRecord[],
   turns: Turn[],
@@ -266,7 +264,7 @@ export function createGameRecord(
 ): GameRecord {
   const record: GameRecord = {
     id: id,
-    gameConfig: gameConfig,
+    gameStartInfo: gameStart,
     startTimestampMS: start,
     endTimestampMS: end,
     date: new Date().toISOString().split("T")[0],

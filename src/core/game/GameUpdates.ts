@@ -1,9 +1,7 @@
-import { ClientID, PlayerStats, AllPlayersStats } from "../Schemas";
+import { AllPlayersStats, ClientID, PlayerStats } from "../Schemas";
 import {
-  AllianceRequest,
   EmojiMessage,
   GameUpdates,
-  MapPos,
   MessageType,
   NameViewData,
   PlayerID,
@@ -75,7 +73,7 @@ export interface UnitUpdate {
   warshipTargetId?: number;
   health?: number;
   constructionType?: UnitType;
-  isSamCooldown?: boolean;
+  ticksLeftInCooldown?: Tick;
 }
 
 export interface AttackUpdate {
