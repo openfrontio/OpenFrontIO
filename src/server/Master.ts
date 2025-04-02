@@ -270,94 +270,47 @@ async function schedulePublicGame() {
 }
 
 // Map rotation management (moved from GameManager)
+const mapsPlaylist: GameMapType[] = [];
 const random = new PseudoRandom(123);
 
 // Get the next map in rotation
 function getNextMap(): GameMapType {
-  const playlistType: PlaylistType = getNextPlaylistType();
-  const mapsPlaylist: GameMapType[] = getNextMapsPlayList(playlistType);
-  return mapsPlaylist.shift()!;
-}
+  if (mapsPlaylist.length > 0) {
+    return mapsPlaylist.shift()!;
+  }
 
-function fillMapsPlaylist(
-  playlistType: PlaylistType,
-  mapsPlaylist: GameMapType[],
-): void {
-  const frequency = getFrequency(playlistType);
+  const frequency = {
+    World: 1,
+    Europe: 3,
+    Mena: 2,
+    NorthAmerica: 2,
+    Pangaea: 1,
+    Africa: 2,
+    Asia: 1,
+    Mars: 1,
+    Britannia: 2,
+    GatewayToTheAtlantic: 2,
+    Australia: 2,
+    Iceland: 2,
+    SouthAmerica: 3,
+    Japan: 3,
+    TwoSeas: 3,
+  };
+
   Object.keys(GameMapType).forEach((key) => {
     let count = parseInt(frequency[key]);
+
     while (count > 0) {
       mapsPlaylist.push(GameMapType[key]);
       count--;
     }
   });
-  while (!allNonConsecutive(mapsPlaylist)) {
+
+  while (true) {
     random.shuffleArray(mapsPlaylist);
-  }
-}
-
-// Map Playlist Rotation management. Separate Playlists for each bucket.
-enum PlaylistType {
-  BigMaps,
-  SmallMaps,
-}
-const mapsPlaylistBig: GameMapType[] = [];
-const mapsPlaylistSmall: GameMapType[] = [];
-
-// Specifically controls how the playlists rotate.
-let currentPlaylistCounter = 0;
-function getNextPlaylistType(): PlaylistType {
-  switch (currentPlaylistCounter) {
-    case 0:
-    case 1:
-      currentPlaylistCounter++;
-      return PlaylistType.BigMaps;
-    case 2:
-      currentPlaylistCounter = 0;
-      return PlaylistType.SmallMaps;
-  }
-}
-
-function getNextMapsPlayList(playlistType: PlaylistType): GameMapType[] {
-  switch (playlistType) {
-    case PlaylistType.BigMaps:
-      if (!(mapsPlaylistBig.length > 0)) {
-        fillMapsPlaylist(playlistType, mapsPlaylistBig);
-      }
-      return mapsPlaylistBig;
-    case PlaylistType.SmallMaps:
-      if (!(mapsPlaylistSmall.length > 0)) {
-        fillMapsPlaylist(playlistType, mapsPlaylistSmall);
-      }
-      return mapsPlaylistSmall;
-  }
-}
-
-// Define per map frequency per PlaylistType
-function getFrequency(playlistType: PlaylistType) {
-  switch (playlistType) {
-    // Big Maps are those larger than ~2.5 mil pixels
-    case PlaylistType.BigMaps:
-      return {
-        Europe: 3,
-        NorthAmerica: 2,
-        Africa: 2,
-        Britannia: 1,
-        GatewayToTheAtlantic: 2,
-        Australia: 1,
-        Iceland: 1,
-        SouthAmerica: 3,
-      };
-    case PlaylistType.SmallMaps:
-      return {
-        World: 1,
-        Mena: 2,
-        Pangaea: 1,
-        Asia: 1,
-        Mars: 1,
-        TwoSeas: 3,
-        Japan: 3,
-      };
+    if (allNonConsecutive(mapsPlaylist)) {
+      return mapsPlaylist.shift()!;
+    }
   }
 }
 
