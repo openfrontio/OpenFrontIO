@@ -154,6 +154,10 @@ export function startWorker() {
         log.warn(`cannot update public game ${game.id}, ip: ${clientIP}`);
         return res.status(400);
       }
+      if (game.hasStarted()) {
+        log.warn(`cannot update game ${game.id} after it has started`);
+        return res.status(400);
+      }
       game.updateGameConfig({
         gameMap: req.body.gameMap,
         difficulty: req.body.difficulty,

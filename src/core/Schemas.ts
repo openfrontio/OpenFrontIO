@@ -64,7 +64,8 @@ export type ServerMessage =
   | ServerSyncMessage
   | ServerStartGameMessage
   | ServerPingMessage
-  | ServerDesyncMessage;
+  | ServerDesyncMessage
+  | ServerPrestartMessage;
 
 export type ServerSyncMessage = z.infer<typeof ServerTurnMessageSchema>;
 export type ServerStartGameMessage = z.infer<
@@ -72,7 +73,7 @@ export type ServerStartGameMessage = z.infer<
 >;
 export type ServerPingMessage = z.infer<typeof ServerPingMessageSchema>;
 export type ServerDesyncMessage = z.infer<typeof ServerDesyncSchema>;
-
+export type ServerPrestartMessage = z.infer<typeof ServerPrestartMessageSchema>;
 export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
 export type ClientPingMessage = z.infer<typeof ClientPingMessageSchema>;
 export type ClientIntentMessage = z.infer<typeof ClientIntentMessageSchema>;
@@ -298,7 +299,7 @@ export const TurnSchema = z.object({
 // Server
 
 const ServerBaseMessageSchema = z.object({
-  type: z.enum(["turn", "ping", "start", "desync"]),
+  type: z.enum(["turn", "ping", "prestart", "start", "desync"]),
 });
 
 export const ServerTurnMessageSchema = ServerBaseMessageSchema.extend({
@@ -308,6 +309,11 @@ export const ServerTurnMessageSchema = ServerBaseMessageSchema.extend({
 
 export const ServerPingMessageSchema = ServerBaseMessageSchema.extend({
   type: z.literal("ping"),
+});
+
+export const ServerPrestartMessageSchema = ServerBaseMessageSchema.extend({
+  type: z.literal("prestart"),
+  gameMap: z.nativeEnum(GameMapType),
 });
 
 export const PlayerSchema = z.object({
@@ -341,6 +347,7 @@ export const ServerDesyncSchema = ServerBaseMessageSchema.extend({
 
 export const ServerMessageSchema = z.union([
   ServerTurnMessageSchema,
+  ServerPrestartMessageSchema,
   ServerStartGameMessageSchema,
   ServerPingMessageSchema,
   ServerDesyncSchema,

@@ -64,11 +64,16 @@ export class GameManager {
       const phase = game.phase();
       if (phase == GamePhase.Active) {
         if (!game.hasStarted()) {
-          try {
-            game.start();
-          } catch (error) {
-            this.log.error(`error starting game ${id}: ${error}`);
-          }
+          // Prestart tells clients to start loading the game.
+          game.prestart();
+          // Start game on delay to allow time for clients to connect.
+          setTimeout(() => {
+            try {
+              game.start();
+            } catch (error) {
+              this.log.error(`error starting game ${id}: ${error}`);
+            }
+          }, 2000);
         }
       }
 
