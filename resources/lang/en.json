@@ -55,7 +55,7 @@
     "info_emoji": "Send an emoji to the player.",
     "info_ally_panel": "Ally info panel",
     "info_ally_desc": "When you ally with a player, the following new icons become available:",
-    "ally_betray": "Betray your ally, ending the alliance. You will now have a permanent icon stuck next to your name unless the other nation was a traitor themselves. Attacks against you will incur less losses for the attacker until the end of the game, bots are less likely to ally with you and players will think twice before doing so.",
+    "ally_betray": "Betray your ally, ending the alliance. You will now have a permanent icon stuck next to your name, unless the other nation was a traitor themselves. Attacks against you will incur less losses for the attacker until the end of the game, bots are less likely to ally with you and players will think twice before doing so.",
     "ally_donate": "Donate some of your troops to your ally. Used when they're low on troops and are being attacked, or when they need that extra power to crush an enemy.",
     "build_menu_title": "Build menu",
     "build_name": "Name",
