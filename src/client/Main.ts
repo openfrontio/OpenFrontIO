@@ -10,7 +10,7 @@ import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
-import { GameStartingModal } from "./GameStartingModal";
+import { GameStartingModal } from "./gameStartingModal";
 import "./GoogleAdElement";
 import GoogleAdElement from "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
