@@ -170,7 +170,7 @@ export class PlayerView {
     return this.data.flag;
   }
   name(): string {
-    let randomName = createRandomName(this.data);
+    const randomName = createRandomName(this.data);
     if (!displayNameMap[this.data.name] && randomName !== "") {
       displayNameMap[this.data.name] = randomName;
     }
@@ -182,7 +182,7 @@ export class PlayerView {
         : `<i>${this.data.name}</i>`;
   }
   name_notag(): string {
-    let randomName = createRandomName(this.data);
+    const randomName = createRandomName(this.data);
     if (!displayNameMap[this.data.name] && randomName !== "") {
       displayNameMap[this.data.name] = randomName;
     }
@@ -192,7 +192,7 @@ export class PlayerView {
       : this.data.name;
   }
   displayName(): string {
-    let randomName = createRandomName(this.data);
+    const randomName = createRandomName(this.data);
     if (!displayNameMap[this.data.name] && randomName !== "") {
       displayNameMap[this.data.name] = randomName;
     }
@@ -204,7 +204,7 @@ export class PlayerView {
         : `<i>${this.data.displayName}</i>`;
   }
   displayName_notag(): string {
-    let randomName = createRandomName(this.data);
+    const randomName = createRandomName(this.data);
     if (!displayNameMap[this.data.name] && randomName !== "") {
       displayNameMap[this.data.name] = randomName;
     }
