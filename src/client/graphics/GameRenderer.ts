@@ -2,7 +2,7 @@ import { consolex } from "../../core/Consolex";
 import { EventBus } from "../../core/EventBus";
 import { ClientID } from "../../core/Schemas";
 import { GameView } from "../../core/game/GameView";
-import { GameStartingModal } from "../GameStartingModal";
+import { GameStartingModal } from "../gameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
