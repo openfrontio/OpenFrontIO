@@ -456,17 +456,12 @@ export class GameServer {
 
     const lastHashTurn = this.turns.length - 10;
 
-    let { mostCommonHash, outOfSyncClients } =
+    const { mostCommonHash, outOfSyncClients } =
       this.findOutOfSyncClients(lastHashTurn);
 
     if (outOfSyncClients.length == 0) {
       this.turns[lastHashTurn].hash = mostCommonHash;
       return;
-    }
-
-    if (outOfSyncClients.length >= Math.floor(this.activeClients.length / 2)) {
-      // If half clients out of sync assume all are out of sync.
-      outOfSyncClients = this.activeClients;
     }
 
     const serverDesync = ServerDesyncSchema.safeParse({
@@ -519,7 +514,7 @@ export class GameServer {
     }
 
     // Create a list of clients whose hash doesn't match the most common one
-    const outOfSyncClients: Client[] = [];
+    let outOfSyncClients: Client[] = [];
 
     for (const client of this.activeClients) {
       if (client.hashes.has(turnNumber)) {
@@ -528,6 +523,11 @@ export class GameServer {
           outOfSyncClients.push(client);
         }
       }
+    }
+
+    // If half clients out of sync assume all are out of sync.
+    if (outOfSyncClients.length >= Math.floor(this.activeClients.length / 2)) {
+      outOfSyncClients = this.activeClients;
     }
 
     return {

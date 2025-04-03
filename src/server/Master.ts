@@ -5,7 +5,7 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { Difficulty, GameMapType, GameType } from "../core/game/Game";
+import { Difficulty, GameMapType, GameMode, GameType } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
 import { GameConfig, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
@@ -237,6 +237,7 @@ async function schedulePublicGame() {
     instantBuild: false,
     disableNPCs: false,
     disableNukes: false,
+    gameMode: Math.random() < 0.7 ? GameMode.FFA : GameMode.Team,
     bots: 400,
   } as GameConfig;
 
@@ -280,20 +281,22 @@ function getNextMap(): GameMapType {
   }
 
   const frequency = {
-    World: 2,
+    World: 1,
     Europe: 3,
     Mena: 2,
-    NorthAmerica: 3,
-    BlackSea: 2,
-    Pangaea: 2,
+    NorthAmerica: 2,
+    BlackSea: 1,
+    Pangaea: 1,
     Africa: 2,
     Asia: 1,
     Mars: 1,
     Britannia: 2,
-    GatewayToTheAtlantic: 3,
+    GatewayToTheAtlantic: 2,
     Australia: 2,
     Iceland: 2,
     SouthAmerica: 3,
+    Japan: 3,
+    TwoSeas: 3,
   };
 
   Object.keys(GameMapType).forEach((key) => {

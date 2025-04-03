@@ -40,7 +40,6 @@ export function createRenderer(
   const startingModal = document.querySelector(
     "game-starting-modal",
   ) as GameStartingModal;
-  startingModal instanceof GameStartingModal;
   startingModal.hide();
 
   // TODO maybe append this to dcoument instead of querying for them?

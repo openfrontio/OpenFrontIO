@@ -432,6 +432,7 @@ export class HostLobbyModal extends LitElement {
         } as GameConfig),
       },
     );
+    return response;
   }
 
   private getRandomMap(): GameMapType {
@@ -460,6 +461,7 @@ export class HostLobbyModal extends LitElement {
         },
       },
     );
+    return response;
   }
 
   private async copyToClipboard() {

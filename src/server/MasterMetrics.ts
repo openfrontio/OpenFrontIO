@@ -50,7 +50,7 @@ export function setupMetricsServer() {
         } else if (line.trim() && !line.startsWith("#")) {
           // Add worker label to each metric line and collect for later
           const processedLine = line.replace(
-            /^([a-z][a-z0-9_]*)(?:{([^}]*)})?(\s+[0-9\.e+-]+.*)/,
+            /^([a-z][a-z0-9_]*)(?:{([^}]*)})?(\s+[0-9.e+-]+.*)/,
             (match, metricName, existingLabels, valueAndRest) => {
               if (existingLabels) {
                 return `${metricName}{${existingLabels},worker="master"}${valueAndRest}`;
@@ -108,7 +108,7 @@ export function setupMetricsServer() {
               // Process and collect actual metric values
               try {
                 const processedLine = line.replace(
-                  /^([a-z][a-z0-9_]*)(?:{([^}]*)})?(\s+[0-9\.e+-]+.*)/,
+                  /^([a-z][a-z0-9_]*)(?:{([^}]*)})?(\s+[0-9.e+-]+.*)/,
                   (match, metricName, existingLabels, valueAndRest) => {
                     if (existingLabels) {
                       return `${metricName}{${existingLabels},worker="worker-${i}"}${valueAndRest}`;
@@ -122,7 +122,7 @@ export function setupMetricsServer() {
                 if (processedLine !== line) {
                   allMetricValues.push(processedLine);
                 } else if (
-                  line.match(/^[a-z][a-z0-9_]*(?:{[^}]*})?\s+[0-9\.e+-]+.*/)
+                  line.match(/^[a-z][a-z0-9_]*(?:{[^}]*})?\s+[0-9.e+-]+.*/)
                 ) {
                   // This looks like a metric line but didn't match our regex, try a more general approach
                   const parts = line.split(/({|\s+)/);
