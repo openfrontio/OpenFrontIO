@@ -65,14 +65,12 @@ export class UILayer implements Layer {
       const cell = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
 
       if (!this.game.isValidCoord(cell.x, cell.y)) {
-        console.log("invalid cord");
         return;
       }
 
       const tile = this.game.ref(cell.x, cell.y);
 
       if (!this.game.hasOwner(tile)) {
-        console.log("no owner");
         return;
       }
 
@@ -80,7 +78,6 @@ export class UILayer implements Layer {
 
       // maybe redundant due to owner check but better safe than sorry
       if (targetPlayer instanceof TerraNulliusImpl) {
-        console.log("empty tile");
         return;
       }
 
