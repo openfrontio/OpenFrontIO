@@ -5,12 +5,12 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { Difficulty, GameMapType, GameType } from "../core/game/Game";
-import { PseudoRandom } from "../core/PseudoRandom";
+import { Difficulty, GameType } from "../core/game/Game";
 import { GameConfig, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
+import { MapPlaylist } from "./MapPlaylist";
 import { setupMetricsServer } from "./MasterMetrics";
 
 const config = getServerConfigFromServer();
@@ -88,6 +88,8 @@ export async function startMaster() {
     log.info(`Started worker ${i} (PID: ${worker.process.pid})`);
   }
 
+  const playlist = new MapPlaylist();
+
   cluster.on("message", (worker, message) => {
     if (message.type === "WORKER_READY") {
       const workerId = message.workerId;
@@ -100,7 +102,7 @@ export async function startMaster() {
         log.info("All workers ready, starting game scheduling");
 
         const scheduleLobbies = () => {
-          schedulePublicGame().catch((error) => {
+          schedulePublicGame(playlist).catch((error) => {
             log.error("Error scheduling public game:", error);
           });
         };
@@ -222,9 +224,9 @@ async function fetchLobbies(): Promise<number> {
 }
 
 // Function to schedule a new public game
-async function schedulePublicGame() {
+async function schedulePublicGame(playlist: MapPlaylist) {
   const gameID = generateID();
-  const map = getNextMap();
+  const map = playlist.getNextMap();
   publicLobbyIDs.add(gameID);
   // Create the default public game config (from your GameManager)
   const defaultGameConfig = {
@@ -267,108 +269,6 @@ async function schedulePublicGame() {
     log.error(`Failed to schedule public game on worker ${workerPath}:`, error);
     throw error;
   }
-}
-
-// Map rotation management (moved from GameManager)
-const random = new PseudoRandom(123);
-
-// Get the next map in rotation
-function getNextMap(): GameMapType {
-  const playlistType: PlaylistType = getNextPlaylistType();
-  const mapsPlaylist: GameMapType[] = getNextMapsPlayList(playlistType);
-  return mapsPlaylist.shift()!;
-}
-
-function fillMapsPlaylist(
-  playlistType: PlaylistType,
-  mapsPlaylist: GameMapType[],
-): void {
-  const frequency = getFrequency(playlistType);
-  Object.keys(GameMapType).forEach((key) => {
-    let count = parseInt(frequency[key]);
-    while (count > 0) {
-      mapsPlaylist.push(GameMapType[key]);
-      count--;
-    }
-  });
-  while (!allNonConsecutive(mapsPlaylist)) {
-    random.shuffleArray(mapsPlaylist);
-  }
-}
-
-// Map Playlist Rotation management. Separate Playlists for each bucket.
-enum PlaylistType {
-  BigMaps,
-  SmallMaps,
-}
-const mapsPlaylistBig: GameMapType[] = [];
-const mapsPlaylistSmall: GameMapType[] = [];
-
-// Specifically controls how the playlists rotate.
-let currentPlaylistCounter = 0;
-function getNextPlaylistType(): PlaylistType {
-  switch (currentPlaylistCounter) {
-    case 0:
-    case 1:
-      currentPlaylistCounter++;
-      return PlaylistType.BigMaps;
-    case 2:
-      currentPlaylistCounter = 0;
-      return PlaylistType.SmallMaps;
-  }
-}
-
-function getNextMapsPlayList(playlistType: PlaylistType): GameMapType[] {
-  switch (playlistType) {
-    case PlaylistType.BigMaps:
-      if (!(mapsPlaylistBig.length > 0)) {
-        fillMapsPlaylist(playlistType, mapsPlaylistBig);
-      }
-      return mapsPlaylistBig;
-    case PlaylistType.SmallMaps:
-      if (!(mapsPlaylistSmall.length > 0)) {
-        fillMapsPlaylist(playlistType, mapsPlaylistSmall);
-      }
-      return mapsPlaylistSmall;
-  }
-}
-
-// Define per map frequency per PlaylistType
-function getFrequency(playlistType: PlaylistType) {
-  switch (playlistType) {
-    // Big Maps are those larger than ~2.5 mil pixels
-    case PlaylistType.BigMaps:
-      return {
-        Europe: 3,
-        NorthAmerica: 2,
-        Africa: 2,
-        Britannia: 1,
-        GatewayToTheAtlantic: 2,
-        Australia: 1,
-        Iceland: 1,
-        SouthAmerica: 3,
-      };
-    case PlaylistType.SmallMaps:
-      return {
-        World: 1,
-        Mena: 2,
-        Pangaea: 1,
-        Asia: 1,
-        Mars: 1,
-        TwoSeas: 3,
-        Japan: 3,
-      };
-  }
-}
-
-// Check for consecutive duplicates in the maps array
-function allNonConsecutive(maps: GameMapType[]): boolean {
-  for (let i = 0; i < maps.length - 1; i++) {
-    if (maps[i] === maps[i + 1]) {
-      return false;
-    }
-  }
-  return true;
 }
 
 function sleep(ms: number): Promise<void> {
