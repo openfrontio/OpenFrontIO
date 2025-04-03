@@ -68,7 +68,7 @@
     "build_port": "Port",
     "build_port_desc": "Automatically sends trade ships between ports of your country and other countries (except if you clicked \"stop trade\" on them or they clicked \"stop trade on you\"), giving gold to both sides. Allows building Battleships. Can only be built near water.",
     "build_warship": "Warship",
-    "build_warship_desc": "Patrols in an area, capturing trade ships and destroying enemy Warships and Boats. Spawns from the nearest Port and patrols the area you first clicked to build it. You can control warships by attack-clicking on them and then attack-clicking the new area you want them to move to.",
+    "build_warship_desc": "Patrols in an area, capturing trade ships and destroying enemy Warships and Boats. Spawns from the nearest Port and patrols the area you first clicked to build it. You can control Warships by attack-clicking on them and then attack-clicking the new area you want them to move to.",
     "build_silo": "Missile Silo",
     "build_silo_desc": "Allows launching missiles.",
     "build_sam": "SAM Launcher",
