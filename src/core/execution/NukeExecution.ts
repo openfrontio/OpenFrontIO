@@ -231,6 +231,7 @@ export class NukeExecution implements Execution {
       }
     }
 
+    const outer2 = magnitude.outer * magnitude.outer;
     for (const unit of this.mg.units()) {
       if (
         unit.type() != UnitType.AtomBomb &&
@@ -238,7 +239,6 @@ export class NukeExecution implements Execution {
         unit.type() != UnitType.MIRVWarhead &&
         unit.type() != UnitType.MIRV
       ) {
-        const outer2 = magnitude.outer * magnitude.outer;
         if (this.mg.euclideanDistSquared(this.dst, unit.tile()) < outer2) {
           unit.delete();
         }
