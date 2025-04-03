@@ -7,12 +7,14 @@ import europe from "../../../resources/maps/EuropeThumb.webp";
 import gatewayToTheAtlantic from "../../../resources/maps/GatewayToTheAtlanticThumb.webp";
 import iceland from "../../../resources/maps/IcelandThumb.webp";
 import japan from "../../../resources/maps/JapanThumb.webp";
+import knownworld from "../../../resources/maps/KnownWorldThumb.webp";
 import mars from "../../../resources/maps/MarsThumb.webp";
 import mena from "../../../resources/maps/MenaThumb.webp";
 import northAmerica from "../../../resources/maps/NorthAmericaThumb.webp";
 import oceania from "../../../resources/maps/OceaniaThumb.webp";
 import pangaea from "../../../resources/maps/PangaeaThumb.webp";
 import southAmerica from "../../../resources/maps/SouthAmericaThumb.webp";
+import twoSeas from "../../../resources/maps/TwoSeasThumb.webp";
 import world from "../../../resources/maps/WorldMapThumb.webp";
 
 import { GameMapType } from "../../core/game/Game";
@@ -51,6 +53,10 @@ export function getMapsImage(map: GameMapType): string {
       return iceland;
     case GameMapType.Japan:
       return japan;
+    case GameMapType.TwoSeas:
+      return twoSeas;
+    case GameMapType.KnownWorld:
+      return knownworld;
     default:
       return "";
   }

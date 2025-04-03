@@ -33,6 +33,9 @@ import {
 } from "./GameUpdates";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid } from "./UnitGrid";
+import { UserSettings } from "./UserSettings";
+
+const userSettings: UserSettings = new UserSettings();
 
 const displayNameMap: Record<PlayerID, string> = {};
 const usedNames = new Set<string>();
@@ -426,6 +429,10 @@ export class GameView implements GameMap {
     throw Error(`player id ${id} not found`);
   }
 
+  players(): PlayerView[] {
+    return Array.from(this._players.values());
+  }
+
   playerBySmallID(id: number): PlayerView | TerraNullius {
     if (id == 0) {
       return new TerraNulliusImpl();
@@ -584,6 +591,7 @@ export class GameView implements GameMap {
   }
 
   focusedPlayer(): PlayerView | null {
+    if (userSettings.focusLocked()) return this.myPlayer();
     return this._focusedPlayer;
   }
   setFocusedPlayer(player: PlayerView | null): void {

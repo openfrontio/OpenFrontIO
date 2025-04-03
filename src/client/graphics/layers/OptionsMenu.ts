@@ -114,6 +114,10 @@ export class OptionsMenu extends LitElement implements Layer {
     } else {
       console.warn("requestUpdate() not available");
     }
+        this.requestUpdate();
+  }
+  private onToggleFocusLockedButtonClick() {
+    this.userSettings.toggleFocusLocked();
     this.requestUpdate();
   }
 
@@ -215,6 +219,15 @@ export class OptionsMenu extends LitElement implements Layer {
               (this.userSettings.leftClickOpensMenu()
                 ? "Opens menu"
                 : "Attack"),
+          })}
+          ${button({
+            onClick: this.onToggleFocusLockedButtonClick,
+            title: "Lock Focus",
+            children:
+              "🗺: " +
+              (this.userSettings.focusLocked()
+                ? "Focus locked"
+                : "Hover focus"),
           })}
         </div>
       </div>

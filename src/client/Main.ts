@@ -94,7 +94,7 @@ class Client {
       "google-ad",
     ) as NodeListOf<GoogleAdElement>;
 
-    window.addEventListener("beforeunload", (event) => {
+    window.addEventListener("beforeunload", () => {
       consolex.log("Browser is closing");
       if (this.gameStop != null) {
         this.gameStop();
@@ -223,7 +223,7 @@ class Client {
     );
   }
 
-  private async handleLeaveLobby(event: CustomEvent) {
+  private async handleLeaveLobby(/* event: CustomEvent */) {
     if (this.gameStop == null) {
       return;
     }
