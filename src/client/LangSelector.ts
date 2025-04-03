@@ -20,10 +20,12 @@ const translations = {
   es: esTranslations,
 };
 
+type Translation = Partial<(typeof translations)[keyof typeof translations]>;
+
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
-  @state() public translations: any = {};
-  @state() private defaultTranslations: any = {};
+  @state() public translations: Translation = {};
+  @state() private defaultTranslations = {};
   @state() private currentLang: string = "en";
 
   createRenderRoot() {
@@ -44,10 +46,10 @@ export class LangSelector extends LitElement {
     this.translations = await this.loadLanguage(userLang);
     this.currentLang = userLang;
 
-    this.applyTranslation(this.translations);
+    this.applyTranslation();
   }
 
-  private async loadLanguage(lang: string): Promise<any> {
+  private async loadLanguage(lang: string): Promise<Translation> {
     try {
       const translation = translations[lang as keyof typeof translations];
       if (!translation) throw new Error(`Language file not found: ${lang}`);
@@ -58,7 +60,7 @@ export class LangSelector extends LitElement {
     }
   }
 
-  private applyTranslation(translations: any) {
+  private applyTranslation() {
     const components = [
       "single-player-modal",
       "host-lobby-modal",
@@ -75,24 +77,14 @@ export class LangSelector extends LitElement {
       "public-lobby",
     ];
 
-    document.title = translations.main?.title || document.title;
+    const main = this.translations.main;
+    if (main && "title" in main) {
+      document.title = main.title;
+    }
 
     document.querySelectorAll("[data-i18n]").forEach((element) => {
       const key = element.getAttribute("data-i18n");
-      const keys = key.split(".");
-      let text = translations;
-      for (const k of keys) {
-        text = text?.[k];
-        if (!text) break;
-      }
-      if (!text && this.defaultTranslations) {
-        let fallback = this.defaultTranslations;
-        for (const k of keys) {
-          fallback = fallback?.[k];
-          if (!fallback) break;
-        }
-        text = fallback;
-      }
+      const text = this.translateText(key);
       if (text) {
         element.innerHTML = text;
       } else {
@@ -101,7 +93,7 @@ export class LangSelector extends LitElement {
     });
 
     components.forEach((tagName) => {
-      const el = document.querySelector(tagName) as any;
+      const el = document.querySelector(tagName) as LitElement;
       if (el && typeof el.requestUpdate === "function") {
         el.requestUpdate();
       } else {
@@ -117,19 +109,13 @@ export class LangSelector extends LitElement {
     params: Record<string, string | number> = {},
   ): string {
     const keys = key.split(".");
-    let text: any = this.translations;
-
-    for (const k of keys) {
-      text = text?.[k];
-      if (!text) break;
+    let text = findTranslation(keys, this.translations);
+    if (!text && this.defaultTranslations) {
+      text = findTranslation(keys, this.defaultTranslations);
     }
 
-    if (!text && this.defaultTranslations) {
-      text = this.defaultTranslations;
-      for (const k of keys) {
-        text = text?.[k];
-        if (!text) return key;
-      }
+    if (text == null || typeof text !== "string") {
+      return null;
     }
 
     for (const [param, value] of Object.entries(params)) {
@@ -143,7 +129,7 @@ export class LangSelector extends LitElement {
     localStorage.setItem("lang", lang);
     this.translations = await this.loadLanguage(lang);
     this.currentLang = lang;
-    this.applyTranslation(this.translations);
+    this.applyTranslation();
   }
 
   render() {
@@ -176,5 +162,21 @@ export class LangSelector extends LitElement {
         </option>
       </select>
     `;
+  }
+}
+
+function findTranslation(
+  keys: string[],
+  translations: Translation,
+): string | null {
+  let ptr: unknown = translations;
+  for (const k of keys) {
+    ptr = ptr?.[k];
+    if (!ptr) break;
+  }
+  if (ptr && typeof ptr === "string") {
+    return ptr;
+  } else {
+    return null;
   }
 }

@@ -120,19 +120,49 @@ function processShore(map: Terrain[][]): Coord[] {
 }
 
 function processDistToLand(shorelineWaters: Coord[], map: Terrain[][]) {
-  console.log("Setting Water tiles magnitude = distance from land");
-  for (let x = 0; x < map.length; x++) {
-    for (let y = 0; y < map[0].length; y++) {
-      const tile = map[x][y];
-      if (tile.type == TerrainType.Water) {
-        if (shorelineWaters.some((coord) => coord.x == x && coord.y == y)) {
-          tile.magnitude = 0;
-        } else {
-          const dist = shorelineWaters.map(
-            (coord) => Math.abs(x - coord.x) + Math.abs(y - coord.y),
-          );
-          tile.magnitude = Math.min(...dist);
-        }
+  console.log(
+    "Setting Water tiles magnitude = Manhattan distance from nearest land",
+  );
+
+  const width = map.length;
+  const height = map[0].length;
+
+  const visited = Array.from({ length: width }, () =>
+    Array(height).fill(false),
+  );
+  const queue: { x: number; y: number; dist: number }[] = [];
+
+  for (const { x, y } of shorelineWaters) {
+    queue.push({ x, y, dist: 0 });
+    visited[x][y] = true;
+    map[x][y].magnitude = 0;
+  }
+
+  const directions = [
+    { dx: 0, dy: 1 },
+    { dx: 1, dy: 0 },
+    { dx: 0, dy: -1 },
+    { dx: -1, dy: 0 },
+  ];
+
+  while (queue.length > 0) {
+    const { x, y, dist } = queue.shift()!;
+
+    for (const { dx, dy } of directions) {
+      const nx = x + dx;
+      const ny = y + dy;
+
+      if (
+        nx >= 0 &&
+        ny >= 0 &&
+        nx < width &&
+        ny < height &&
+        !visited[nx][ny] &&
+        map[nx][ny].type === TerrainType.Water
+      ) {
+        visited[nx][ny] = true;
+        map[nx][ny].magnitude = dist + 1;
+        queue.push({ x: nx, y: ny, dist: dist + 1 });
       }
     }
   }

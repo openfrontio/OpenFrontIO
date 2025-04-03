@@ -2,6 +2,7 @@ import {
   Difficulty,
   Game,
   GameMapType,
+  GameMode,
   GameType,
   Gold,
   Player,
@@ -279,7 +280,7 @@ export class DefaultConfig implements Config {
           cost: (p: Player) =>
             p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
-              : 20_000_000,
+              : 25_000_000,
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -333,7 +334,7 @@ export class DefaultConfig implements Config {
             p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
-                  1_000_000,
+                  2_000_000,
                   Math.pow(
                     2,
                     p.unitsIncludingConstruction(UnitType.City).length,
@@ -376,6 +377,9 @@ export class DefaultConfig implements Config {
     return 600 * 10; // 10 minutes.
   }
   percentageTilesOwnedToWin(): number {
+    if (this._gameConfig.gameMode == GameMode.Team) {
+      return 95;
+    }
     return 80;
   }
   boatMaxNumber(): number {

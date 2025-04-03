@@ -61,6 +61,7 @@ export enum GameMapType {
   Iceland = "Iceland",
   Japan = "Japan",
   TwoSeas = "Between Two Seas",
+  KnownWorld = "Known World",
 }
 
 export enum GameType {
@@ -136,8 +137,8 @@ export class Cell {
   private strRepr: string;
 
   constructor(
-    public readonly x,
-    public readonly y,
+    public readonly x: number,
+    public readonly y: number,
   ) {
     this.strRepr = `Cell[${this.x},${this.y}]`;
   }

@@ -22,6 +22,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Iceland: "Iceland",
   Japan: "Japan",
   TwoSeas: "Between Two Seas",
+  KnownWorld: "Known World",
 };
 
 @customElement("map-display")
