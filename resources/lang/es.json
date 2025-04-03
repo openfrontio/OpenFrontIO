@@ -116,7 +116,10 @@
     "australia": "Australia",
     "random": "Aleatorio",
     "iceland": "Islandia",
-    "pangaea": "Pangea"
+    "pangaea": "Pangea",
+    "japan": "Japón y Alrededores",
+    "betweentwoseas": "Entre dos Mares",
+    "knownworld": "Mundo Conocido"
   },
   "private_lobby": {
     "title": "Unirse a Partida Privada",
@@ -142,6 +145,7 @@
   },
   "host_modal": {
     "title": "Partida Privada",
+    "mode": "Modo",
     "map": "Mapa",
     "difficulty": "Difficultad",
     "options_title": "Opciones",
@@ -158,9 +162,14 @@
     "start": "Iniciar Partida"
   },
   "difficulty": {
-    "Relaxed": "Relajadoa",
+    "difficulty": "Dificultad",
+    "Relaxed": "Relajada",
     "Balanced": "Balanceada",
     "Intense": "Intensa",
     "Impossible": "Imposible"
+  },
+  "game_mode": {
+    "ffa": "Todos contra Todos",
+    "teams": "Equipos"
   }
 }
