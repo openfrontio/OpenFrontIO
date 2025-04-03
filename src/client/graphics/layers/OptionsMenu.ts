@@ -114,8 +114,8 @@ export class OptionsMenu extends LitElement implements Layer {
     } else {
       console.warn("requestUpdate() not available");
     }
-        this.requestUpdate();
   }
+
   private onToggleFocusLockedButtonClick() {
     this.userSettings.toggleFocusLocked();
     this.requestUpdate();
