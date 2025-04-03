@@ -168,6 +168,6 @@
   },
   "game_mode": {
     "ffa": "Iedereen tegen iedereen (FFA)",
-    "team": "Teams"
+    "teams": "Teams"
   }
 }

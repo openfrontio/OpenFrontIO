@@ -170,6 +170,6 @@
   },
   "game_mode": {
     "ffa": "Free for All",
-    "team": "Teams"
+    "teams": "Teams"
   }
 }

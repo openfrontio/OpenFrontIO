@@ -168,6 +168,6 @@
   },
   "game_mode": {
     "ffa": "Darmowe dla wszystkich",
-    "team": "Drużyny"
+    "teams": "Drużyny"
   }
 }
