@@ -12,11 +12,12 @@ import { Layer } from "./Layer";
 // Add this at the top of your file
 declare global {
   interface Window {
-    adsbygoogle: any[];
+    adsbygoogle: unknown[];
   }
 }
+
 // Add this at the top of your file
-declare let adsbygoogle: any[];
+declare let adsbygoogle: unknown[];
 
 @customElement("win-modal")
 export class WinModal extends LitElement implements Layer {
@@ -257,7 +258,7 @@ export class WinModal extends LitElement implements Layer {
     });
   }
 
-  renderLayer(context: CanvasRenderingContext2D) {}
+  renderLayer(/* context: CanvasRenderingContext2D */) {}
 
   shouldTransform(): boolean {
     return false;

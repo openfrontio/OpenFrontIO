@@ -141,7 +141,7 @@ export class GameImpl implements Game {
   }
 
   addUpdate(update: GameUpdate) {
-    (this.updates[update.type] as any[]).push(update);
+    (this.updates[update.type] as GameUpdate[]).push(update);
   }
 
   nextUnitID(): number {
@@ -383,7 +383,7 @@ export class GameImpl implements Game {
   }
 
   playerByClientID(id: ClientID): Player | null {
-    for (const [pID, player] of this._players) {
+    for (const [, player] of this._players) {
       if (player.clientID() == id) {
         return player;
       }

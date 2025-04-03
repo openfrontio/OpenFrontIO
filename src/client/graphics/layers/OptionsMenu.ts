@@ -106,6 +106,11 @@ export class OptionsMenu extends LitElement implements Layer {
     this.eventBus.emit(new RefreshGraphicsEvent());
   }
 
+  private onToggleFocusLockedButtonClick() {
+    this.userSettings.toggleFocusLocked();
+    this.requestUpdate();
+  }
+
   private onToggleLeftClickOpensMenu() {
     this.userSettings.toggleLeftClickOpenMenu();
   }
@@ -199,6 +204,15 @@ export class OptionsMenu extends LitElement implements Layer {
               (this.userSettings.leftClickOpensMenu()
                 ? "Opens menu"
                 : "Attack"),
+          })}
+          ${button({
+            onClick: this.onToggleFocusLockedButtonClick,
+            title: "Lock Focus",
+            children:
+              "🗺: " +
+              (this.userSettings.focusLocked()
+                ? "Focus locked"
+                : "Hover focus"),
           })}
         </div>
       </div>

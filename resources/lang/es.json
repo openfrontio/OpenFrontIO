@@ -2,7 +2,8 @@
   "lang": {
     "en": "Spanish",
     "native": "Español",
-    "svg": "es"
+    "svg": "es",
+    "lang_code": "es"
   },
   "main": {
     "join_discord": "¡Únete al Discord!",

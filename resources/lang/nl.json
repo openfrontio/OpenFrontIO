@@ -2,10 +2,10 @@
   "main": {
     "join_discord": "Word lid van de Discord!",
     "create_lobby": "Lobby aanmaken",
-    "join_lobby": "Toetreden lobby",
-    "single_player": "Enkele speler",
+    "join_lobby": "Lobby toetreden",
+    "single_player": "Eén Speler",
     "instructions": "Instructies",
-    "how_to_play": "Hoe te spelen",
+    "how_to_play": "Hoe spelen?",
     "wiki": "Wiki"
   },
   "help_modal": {
@@ -21,8 +21,8 @@
     "action_ratio_change": "Aanvalsverhouding verlagen/verhogen",
     "action_reset_gfx": "Grafische instellingen herstellen",
     "ui_section": "Spel-UI",
-    "ui_leaderboard": "Leaderboard (leidersbord)",
-    "ui_leaderboard_desc": "Toont de top spelers van het spel en hun namen, % bezette land en goud.",
+    "ui_leaderboard": "Leidersbord",
+    "ui_leaderboard_desc": "Toont de topspelers van het spel en hun namen, % bezette land en goud.",
     "ui_control": "Controlepaneel",
     "ui_control_desc": "Het controlepaneel bevat de volgende elementen:",
     "ui_pop": "Pop - Jouw totale bevolking, jouw maximale bevolking en de snelheid waarmee je ze verwerft.",
@@ -31,7 +31,7 @@
     "ui_attack_ratio": "Aanvalsverhouding - Het aantal troepen dat wordt gebruikt bij een aanval. Je kunt de aanvalsverhouding aanpassen met de schuifbalk.",
     "ui_options": "Opties",
     "ui_options_desc": "De volgende elementen zijn hierin te vinden:",
-    "option_pause": "Spel pauzeren/hervatten - Alleen beschikbaar in enkele-speler modus.",
+    "option_pause": "Spel pauzeren/hervatten - Alleen beschikbaar in het speltype voor één speler.",
     "option_timer": "Timer - Tijd verstreken sinds het begin van het spel.",
     "option_exit": "Afsluitknop.",
     "option_settings": "Instellingen - Open het instellingenmenu. Daarin kun je de Alternatieve weergave, Donkere modus, Emoji's en actie bij linkermuisknop in- of uitschakelen.",
@@ -67,28 +67,26 @@
     "build_sam": "Luchtdoelraket (SAM)-lanceerder",
     "build_sam_desc": "Heeft 75% kans om vijandelijke raketten binnen een straal van 100 pixels te onderscheppen. De SAM heeft een afkoeltijd van 7,5 seconden en kan geen MIRV's onderscheppen.",
     "build_atom": "Atoombom",
-    "build_atom_desc": "Kleine explosieve bom die gebied, gebouwen, schepen en boten vernietigt. Spawnt vanuit de dichtstbijzijnde Raketsilo en landt in het gebied waar je klikte om het te bouwen.",
+    "build_atom_desc": "Kleine explosieve bom die gebied, gebouwen, schepen en boten vernietigt. Komt vanuit de dichtstbijzijnde Raketsilo en landt op de plek waar je hebt geklikt om het te bouwen.",
     "build_hydrogen": "Waterstofbom",
-    "build_hydrogen_desc": "Grote explosieve bom. Spawnt vanuit de dichtstbijzijnde Raketsilo en landt in het gebied waar je klikte om het te bouwen.",
+    "build_hydrogen_desc": "Grote explosieve bom. Komt vanuit de dichtstbijzijnde Raketsilo en landt op de plek waar je hebt geklikt om het te bouwen.",
     "build_mirv": "MIRV",
-    "build_mirv_desc": "De krachtigste bom in het spel. Splitst zich op in kleinere bommen die een enorm gebied dekken. Schaadt alleen de speler waarop je klikte om de bom te bouwen. Spawnt vanuit de dichtstbijzijnde Raketsilo en landt in het gebied waar je klikte om het te bouwen.",
+    "build_mirv_desc": "De krachtigste bom in het spel. Splitst zich op in kleinere bommen die een enorm gebied dekken. Schaadt alleen de speler waarop je klikte om de bom te bouwen. Komt vanuit de dichtstbijzijnde Raketsilo en landt in al het gebied dat de speler had toen je de bom bouwde, en nog steeds heeft.",
     "player_icons": "Spelersiconen",
     "icon_desc": "Voorbeelden van enkele iconen die je in het spel zult tegenkomen en wat ze betekenen:",
-    "icon_crown": "Kroon - Dit is de nummer 1 speler op de leaderboard",
+    "icon_crown": "Kroon - Dit is de nummer 1 speler op de leaderboard.",
     "icon_traitor": "Gekruiste zwaarden - Verrader. Deze speler heeft een bondgenoot aangevallen.",
     "icon_ally": "Handdruk - Bondgenoot. Deze speler is je bondgenoot.",
     "info_enemy_panel": "Infopaneel vijand"
   },
   "single_modal": {
-    "title": "Enkele speler",
-    "map": "Kaart",
-    "difficulty": "Moeilijkheidsgraad",
+    "title": "Eén speler",
     "allow_alliances": "Bondgenootschappen toestaan",
     "options_title": "Opties",
     "bots": "Bots:",
     "bots_disabled": "Uitgeschakeld",
     "disable_nations": "Naties uitschakelen",
-    "instant_build": "Bouw wachttijd afschaffen",
+    "instant_build": "Bouwwachttijd uitschakelen",
     "infinite_gold": "Oneindig goud",
     "infinite_troops": "Oneindige troepen",
     "disable_nukes": "Kernwapens uitschakelen",
@@ -110,21 +108,22 @@
     "australia": "Australië",
     "random": "Willekeurig",
     "iceland": "IJsland",
-    "pangaea": "Pangea"
+    "pangaea": "Pangea",
+    "map": "Kaart"
   },
   "private_lobby": {
-    "title": "Toedreden privé-lobby",
+    "title": "Privélobby toetreden",
     "enter_id": "Voer Lobby-ID in",
     "player": "Speler",
     "players": "Spelers",
-    "join_lobby": "Toedreden lobby",
+    "join_lobby": "Lobby toetreden",
     "checking": "Lobby controleren...",
     "not_found": "Lobby niet gevonden. Controleer het ID en probeer het opnieuw.",
     "error": "Er is een fout opgetreden. Probeer het opnieuw.",
     "joined_waiting": "Succesvol toegetreden! Wachten tot het spel begint..."
   },
   "public_lobby": {
-    "join": "Volgende spel toetreden",
+    "join": "Deelnemen aan volgende Spel",
     "waiting": "spelers wachten"
   },
   "username": {
@@ -135,26 +134,40 @@
     "invalid_chars": "Gebruikersnaam mag alleen letters, cijfers, spaties, underscores en [vierkante haakjes] bevatten."
   },
   "host_modal": {
-    "title": "Privé lobby",
-    "map": "Kaart",
-    "difficulty": "Moeilijkheidsgraad",
+    "title": "Privélobby",
     "options_title": "Opties",
     "bots": "Bots:",
     "bots_disabled": "Uitgeschakeld",
     "disable_nations": "Naties uitschakelen",
-    "instant_build": "Bouw wachttijd afschaffen",
+    "instant_build": "Bouwwachttijd uitschakelen",
     "infinite_gold": "Oneindig goud",
     "infinite_troops": "Oneindige troepen",
     "disable_nukes": "Kernwapens uitschakelen",
     "player": "Speler",
     "players": "Spelers",
     "waiting": "Wachten op spelers...",
-    "start": "Start Spel"
+    "start": "Start Spel",
+    "mode": "Modus"
   },
   "difficulty": {
     "Relaxed": "Ontspannen",
     "Balanced": "Gebalanceerd",
     "Intense": "Intens",
-    "Impossible": "Onmogelijk"
+    "Impossible": "Onmogelijk",
+    "difficulty": "Moeilijkheidsgraad"
+  },
+  "game_starting_modal": {
+    "title": "Spel gaat starten...",
+    "desc": "Voorbereiden op het starten van de lobby. Even geduld."
+  },
+  "lang": {
+    "en": "Dutch",
+    "native": "Nederlands",
+    "svg": "nl",
+    "lang_code": "nl"
+  },
+  "game_mode": {
+    "ffa": "Iedereen tegen iedereen (FFA)",
+    "teams": "Teams"
   }
 }

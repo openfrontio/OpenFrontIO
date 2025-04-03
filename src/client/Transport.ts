@@ -158,8 +158,7 @@ export class Transport {
   private onmessage: (msg: ServerMessage) => void;
 
   private pingInterval: number | null = null;
-  private isLocal: boolean;
-
+  public readonly isLocal: boolean;
   constructor(
     private lobbyConfig: LobbyConfig,
     private eventBus: EventBus,
@@ -267,7 +266,7 @@ export class Transport {
     onmessage: (message: ServerMessage) => void,
   ) {
     this.startPing();
-    this.maybeKillSocket();
+    this.killExistingSocket();
     const wsHost = window.location.host;
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const workerPath = this.lobbyConfig.serverConfig.workerPath(
@@ -304,9 +303,13 @@ export class Transport {
       );
       if (event.code != 1000) {
         console.log(`reconnecting`);
-        this.connect(onconnect, onmessage);
+        this.reconnect();
       }
     };
+  }
+
+  public reconnect() {
+    this.connect(this.onconnect, this.onmessage);
   }
 
   private onSendLogEvent(event: SendLogEvent) {
@@ -586,7 +589,7 @@ export class Transport {
     }
   }
 
-  private maybeKillSocket(): void {
+  private killExistingSocket(): void {
     if (this.socket == null) {
       return;
     }
