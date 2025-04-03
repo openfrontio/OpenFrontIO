@@ -1,4 +1,4 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import "./LanguageModal";
 
@@ -36,56 +36,6 @@ export class LangSelector extends LitElement {
     ru,
     uk,
   };
-
-  static styles = css`
-    .modal {
-      position: fixed;
-      inset: 0;
-      background-color: rgba(0, 0, 0, 0.5);
-      z-index: 50;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    .modal.hidden {
-      display: none;
-    }
-    .modal-content {
-      background-color: white;
-      border-radius: 0.5rem;
-      box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
-      padding: 1.5rem;
-      width: 24rem;
-      max-width: 100%;
-    }
-    .lang-button {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem;
-      border-radius: 0.375rem;
-      transition: background-color 0.3s;
-    }
-    .lang-button:hover {
-      background-color: #ebf8ff;
-    }
-    .lang-button.active {
-      background-color: #bee3f8;
-    }
-    .close-button {
-      margin-top: 1rem;
-      width: 100%;
-      background-color: #3182ce;
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 0.375rem;
-      cursor: pointer;
-    }
-    .close-button:hover {
-      background-color: #2b6cb0;
-    }
-  `;
 
   createRenderRoot() {
     return this; // Use Light DOM if you prefer this
