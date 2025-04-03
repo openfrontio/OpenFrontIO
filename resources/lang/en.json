@@ -116,7 +116,9 @@
     "random": "Random",
     "iceland": "Iceland",
     "pangaea": "Pangaea",
-    "japan": "Japan and Neighbors"
+    "japan": "Japan and Neighbors",
+    "twoseas": "Between Two Seas",
+    "knownworld": "Known World"
   },
   "private_lobby": {
     "title": "Join Private Lobby",

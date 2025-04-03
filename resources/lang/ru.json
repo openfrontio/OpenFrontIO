@@ -109,7 +109,9 @@
     "random": "Случайно",
     "iceland": "Исландия",
     "pangaea": "Пангея",
-    "map": "Карта"
+    "map": "Карта",
+    "betweentwoseas": "Между двух морей",
+    "japanandneighbors": "Япония и соседи"
   },
   "private_lobby": {
     "title": "Присоединиться к приватному лобби",
@@ -166,7 +168,7 @@
     "svg": "ru",
     "lang_code": "ru"
   },
-  "mode": {
+  "game_mode": {
     "ffa": "Свободная игра (FFA)",
     "team": "Команды"
   }

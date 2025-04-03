@@ -109,7 +109,9 @@
     "random": "Произволна",
     "iceland": "Исландия",
     "pangaea": "Пангея",
-    "map": "Карта"
+    "map": "Карта",
+    "betweentwoseas": "Между Две Морета",
+    "japanandneighbors": "Япония и съседи"
   },
   "private_lobby": {
     "title": "Присъединяване към частна игра",
@@ -166,7 +168,7 @@
     "svg": "bg",
     "lang_code": "bg"
   },
-  "mode": {
+  "game_mode": {
     "ffa": "Свободна игра (FFA)",
     "team": "Отбори"
   }

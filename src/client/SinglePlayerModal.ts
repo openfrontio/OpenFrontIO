@@ -160,13 +160,13 @@ export class SinglePlayerModal extends LitElement {
               </label>
 
               <label
-                for="host-modal-disable-npcs"
+                for="singleplayer-modal-disable-npcs"
                 class="option-card ${this.disableNPCs ? "selected" : ""}"
               >
                 <div class="checkbox-icon"></div>
                 <input
                   type="checkbox"
-                  id="host-modal-disable-npcs"
+                  id="singleplayer-modal-disable-npcs"
                   @change=${this.handleDisableNPCsChange}
                   .checked=${this.disableNPCs}
                 />
@@ -175,13 +175,13 @@ export class SinglePlayerModal extends LitElement {
                 </div>
               </label>
               <label
-                for="host-modal-instant-build"
+                for="singleplayer-modal-instant-build"
                 class="option-card ${this.instantBuild ? "selected" : ""}"
               >
                 <div class="checkbox-icon"></div>
                 <input
                   type="checkbox"
-                  id="host-modal-instant-build"
+                  id="singleplayer-modal-instant-build"
                   @change=${this.handleInstantBuildChange}
                   .checked=${this.instantBuild}
                 />
@@ -191,13 +191,13 @@ export class SinglePlayerModal extends LitElement {
               </label>
 
               <label
-                for="host-modal-infinite-gold"
+                for="singleplayer-modal-infinite-gold"
                 class="option-card ${this.infiniteGold ? "selected" : ""}"
               >
                 <div class="checkbox-icon"></div>
                 <input
                   type="checkbox"
-                  id="host-modal-infinite-gold"
+                  id="singleplayer-modal-infinite-gold"
                   @change=${this.handleInfiniteGoldChange}
                   .checked=${this.infiniteGold}
                 />
@@ -207,13 +207,13 @@ export class SinglePlayerModal extends LitElement {
               </label>
 
               <label
-                for="host-modal-infinite-troops"
+                for="singleplayer-modal-infinite-troops"
                 class="option-card ${this.infiniteTroops ? "selected" : ""}"
               >
                 <div class="checkbox-icon"></div>
                 <input
                   type="checkbox"
-                  id="host-modal-infinite-troops"
+                  id="singleplayer-modal-infinite-troops"
                   @change=${this.handleInfiniteTroopsChange}
                   .checked=${this.infiniteTroops}
                 />
@@ -223,13 +223,13 @@ export class SinglePlayerModal extends LitElement {
               </label>
 
               <label
-                for="host-modal-disable-nukes"
+                for="singleplayer-modal-disable-nukes"
                 class="option-card ${this.disableNukes ? "selected" : ""}"
               >
                 <div class="checkbox-icon"></div>
                 <input
                   type="checkbox"
-                  id="host-modal-disable-nukes"
+                  id="singleplayer-modal-disable-nukes"
                   @change=${this.handleDisableNukesChange}
                   .checked=${this.disableNukes}
                 />

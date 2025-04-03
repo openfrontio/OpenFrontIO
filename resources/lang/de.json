@@ -86,7 +86,7 @@
     "bots": "Bots: ",
     "bots_disabled": "Deaktiviert",
     "disable_nations": "Nationen deaktivieren",
-    "instant_build": "Schnelles Bauen",
+    "instant_build": "Sofortiges Bauen",
     "infinite_gold": "Unendlich Gold",
     "infinite_troops": "Unendlich Truppen",
     "disable_nukes": "Atomwaffen deaktivieren",
@@ -109,7 +109,9 @@
     "random": "Zufällig",
     "iceland": "Island",
     "pangaea": "Pangaea",
-    "map": "Karte"
+    "map": "Karte",
+    "betweentwoseas": "Zwischen zwei Meeren",
+    "japanandneighbors": "Japan und Nachbarländer"
   },
   "private_lobby": {
     "title": "Privater Lobby beitreten",
@@ -135,19 +137,19 @@
   },
   "host_modal": {
     "title": "Private Lobby",
-    "mode": "Modus",
     "options_title": "Optionen",
     "bots": "Bots:",
     "bots_disabled": "Deaktiviert",
     "disable_nations": "Nationen deaktivieren",
-    "instant_build": "Schnelles Bauen",
+    "instant_build": "Sofortiges Bauen",
     "infinite_gold": "Unendlich Gold",
     "infinite_troops": "Unendlich Truppen",
     "disable_nukes": "Atomwaffen deaktivieren",
     "player": "Spieler",
     "players": "Spieler",
     "waiting": "Warte auf Spieler...",
-    "start": "Spiel starten"
+    "start": "Spiel starten",
+    "mode": "Modus"
   },
   "difficulty": {
     "Relaxed": "Entspannt",
@@ -168,6 +170,6 @@
   },
   "game_mode": {
     "ffa": "Free for All",
-    "teams": "Teams"
+    "team": "Teams"
   }
 }

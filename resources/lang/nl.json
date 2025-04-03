@@ -166,7 +166,7 @@
     "svg": "nl",
     "lang_code": "nl"
   },
-  "mode": {
+  "game_mode": {
     "ffa": "Iedereen tegen iedereen (FFA)",
     "team": "Teams"
   }
