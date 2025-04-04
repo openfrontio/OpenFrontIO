@@ -4,6 +4,8 @@ export const red: Colord = colord({ r: 235, g: 53, b: 53 }); // Bright Red
 export const blue: Colord = colord({ r: 41, g: 98, b: 255 }); // Royal Blue
 export const botColor: Colord = colord({ r: 210, g: 206, b: 200 }); // Muted Beige Gray
 
+export const defendedTerritoryDarkenPercent: number = 0.075;
+
 export const territoryColors: Colord[] = [
   colord({ r: 230, g: 100, b: 100 }), // Bright Red
   colord({ r: 100, g: 180, b: 230 }), // Sky Blue
