@@ -35,43 +35,43 @@ export class HelpModal extends LitElement {
             </thead>
             <tbody class="text-left">
               <tr>
-                <td>Space</td>
+                <td>Space <img src="/images/helpModal/Space.webp"/></td>
                 <td>${translateText("help_modal.action_alt_view")}</td>
               </tr>
               <tr>
-                <td>Shift + left click</td>
+                <td>Shift + left click <img src="/images/helpModal/ShiftLeftClick.webp"/></td>
                 <td>${translateText("help_modal.action_attack_altclick")}</td>
               </tr>
               <tr>
-                <td>Ctrl + left click</td>
+                <td>Ctrl + left click <img src="/images/helpModal/CtrlLeftClick.webp"/></td>
                 <td>${translateText("help_modal.action_build")}</td>
               </tr>
               <tr>
-                <td>Alt + left click</td>
+                <td>Alt + left click <img src="/images/helpModal/AltLeftClick.webp"/></td>
                 <td>${translateText("help_modal.action_emote")}</td>
               </tr>
               <tr>
-                <td>C</td>
+                <td>C <img src="/images/helpModal/C.webp"/></td>
                 <td>${translateText("help_modal.action_center")}</td>
               </tr>
               <tr>
-                <td>Q / E</td>
+                <td>Q / E <img src="/images/helpModal/QSlashE.webp"/></td>
                 <td>${translateText("help_modal.action_zoom")}</td>
               </tr>
               <tr>
-                <td>W / A / S / D</td>
+                <td>W / A / S / D <img src="/images/helpModal/WASD.webp"/></td>
                 <td>${translateText("help_modal.action_move_camera")}</td>
               </tr>
               <tr>
-                <td>1 / 2</td>
+                <td>1 / 2 <img src="/images/helpModal/1Slash2.webp"/></td>
                 <td>${translateText("help_modal.action_ratio_change")}</td>
               </tr>
               <tr>
-                <td>Shift + scroll down / scroll up</td>
+                <td>Shift + scroll down / scroll up <img src="/images/helpModal/ShiftMiddleButton.webp"/></td>
                 <td>${translateText("help_modal.action_ratio_change")}</td>
               </tr>
               <tr>
-                <td>ALT + R</td>
+                <td>ALT + R <img src="/images/helpModal/AltR.webp"/></td>
                 <td>${translateText("help_modal.action_reset_gfx")}</td>
               </tr>
             </tbody>
