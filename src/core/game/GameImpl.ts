@@ -118,7 +118,7 @@ export class GameImpl implements Game {
         console.warn(`Player ${playerInfo.name} was kicked from team`);
         continue;
       }
-      this.addPlayer(playerInfo, 0, team);
+      this.addPlayer(playerInfo, 2500, team);
     }
   }
 
