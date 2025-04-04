@@ -3,11 +3,19 @@ import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
-import { euclDistFN, TileRef } from "../../../core/game/GameMap";
+import {
+  euclDistFN,
+  manhattanDistFN,
+  TileRef,
+} from "../../../core/game/GameMap";
 import { GameUpdateType, UnitUpdate } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { PseudoRandom } from "../../../core/PseudoRandom";
-import { AlternateViewEvent, DragEvent } from "../../InputHandler";
+import {
+  AlternateViewEvent,
+  DragEvent,
+  ShowDefensePostRangeEvent,
+} from "../../InputHandler";
 import { Layer } from "./Layer";
 
 export class TerritoryLayer implements Layer {
@@ -62,14 +70,22 @@ export class TerritoryLayer implements Layer {
       const update = u as UnitUpdate;
       if (update.unitType == UnitType.DefensePost && update.isActive) {
         const tile = update.pos;
-        // TODO setting
-        this.game
-          .bfs(tile, euclDistFN(tile, this.game.config().defensePostRange()))
-          .forEach((t) => {
-            if (this.game.ownerID(t) == update.ownerID) {
-              this.enqueueTile(t);
-            }
-          });
+        const config = this.game.config();
+        const defensePostRange = config.defensePostRange();
+        const showDefensePostRange = config
+          .userSettings()
+          .showDefensePostRange();
+        const distanceFN = showDefensePostRange
+          ? euclDistFN(tile, defensePostRange)
+          : manhattanDistFN(tile, defensePostRange);
+
+        this.game.bfs(tile, distanceFN).forEach((t) => {
+          // either update for border tiles or all in range when setting is on
+          const filter = showDefensePostRange || this.game.isBorder(t);
+          if (filter && this.game.ownerID(t) == update.ownerID) {
+            this.enqueueTile(t);
+          }
+        });
       }
     });
 
@@ -132,6 +148,15 @@ export class TerritoryLayer implements Layer {
     this.eventBus.on(DragEvent, (e) => {
       // TODO: consider re-enabling this on mobile or low end devices for smoother dragging.
       // this.lastDragTime = Date.now();
+    });
+    this.eventBus.on(ShowDefensePostRangeEvent, () => {
+      const defensePostRange = this.game.config().defensePostRange();
+      this.game.units(UnitType.DefensePost).forEach((unit) => {
+        const tile = unit.tile();
+        this.game
+          .bfs(tile, euclDistFN(tile, defensePostRange))
+          .forEach((tile) => this.enqueueTile(tile));
+      });
     });
     this.redraw();
   }
@@ -269,9 +294,11 @@ export class TerritoryLayer implements Layer {
         );
       }
     } else {
-      const color = tileInDefensePostRange
-        ? this.theme.defendedTerritoryColor(owner)
-        : this.theme.territoryColor(owner);
+      const color =
+        tileInDefensePostRange &&
+        this.game.config().userSettings().showDefensePostRange()
+          ? this.theme.defendedTerritoryColor(owner)
+          : this.theme.territoryColor(owner);
 
       this.paintCell(this.game.x(tile), this.game.y(tile), color, 150);
     }
