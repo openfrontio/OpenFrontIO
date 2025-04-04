@@ -1,4 +1,4 @@
-import { html, LitElement } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
