@@ -10,7 +10,6 @@ import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
-import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
 import GoogleAdElement from "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
@@ -27,6 +26,7 @@ import { UsernameInput } from "./UsernameInput";
 import { generateCryptoRandomUUID } from "./Utils";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import { GameStartingModal } from "./gameStartingModal";
 import "./styles.css";
 
 export interface JoinLobbyEvent {
