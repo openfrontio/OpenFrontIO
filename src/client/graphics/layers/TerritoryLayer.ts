@@ -80,9 +80,9 @@ export class TerritoryLayer implements Layer {
           : manhattanDistFN(tile, defensePostRange);
 
         this.game.bfs(tile, distanceFN).forEach((t) => {
-          // either update for border tiles or all in range when setting is on
-          const filter = showDefensePostRange || this.game.isBorder(t);
-          if (filter && this.game.ownerID(t) == update.ownerID) {
+          if (this.game.isBorder(t) && this.game.ownerID(t) == update.ownerID) {
+            this.enqueueTile(t);
+          } else if (showDefensePostRange) {
             this.enqueueTile(t);
           }
         });
