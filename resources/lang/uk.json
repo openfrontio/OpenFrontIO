@@ -111,7 +111,8 @@
     "pangaea": "Пангея",
     "map": "Мапа",
     "betweentwoseas": "Поміж двох морів",
-    "japanandneighbors": "Японія та сусіди"
+    "japan": "Японія та сусіди",
+    "knownworld": "Відомий світ"
   },
   "private_lobby": {
     "title": "Приєднатися до приватного лобі",

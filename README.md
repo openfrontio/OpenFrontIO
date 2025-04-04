@@ -121,6 +121,15 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin amazing-feature`)
 5. Open a Pull Request
 
+## 🌐 Translation
+
+Translators are welcome! Please feel free to help translate into your language.
+How to help?
+1. Go to the project's Crowdin translation page: [https://crowdin.com/project/openfrontio](https://crowdin.com/project/openfrontio)
+2. Login if you already have an account/ Sign up if you don't have one
+3. Select the language you want to translate in/ If your language isn't on the list, create a new topic in "Discussions" about adding the language
+4. Translate the strings
+
 ### Project Governance
 
 - The project maintainer ([evan](https://github.com/evanpelle)) has final authority on all code changes and design decisions

@@ -111,7 +111,8 @@
     "pangaea": "Пангея",
     "map": "Карта",
     "betweentwoseas": "Между Две Морета",
-    "japanandneighbors": "Япония и съседи"
+    "japan": "Япония и съседи",
+    "knownworld": "Познат Свят"
   },
   "private_lobby": {
     "title": "Присъединяване към частна игра",
@@ -169,7 +170,7 @@
     "lang_code": "bg"
   },
   "game_mode": {
-    "ffa": "Свободна игра (FFA)",
+    "ffa": "Всеки срещу всеки (FFA)",
     "teams": "Отбори"
   }
 }
