@@ -152,9 +152,8 @@ export class TerritoryLayer implements Layer {
     this.eventBus.on(ToggleShowDefensePostRangeEvent, () => {
       const defensePostRange = this.game.config().defensePostRange();
       this.game.units(UnitType.DefensePost).forEach((unit) => {
-        const tile = unit.tile();
         this.game
-          .bfs(tile, euclDistFN(tile, defensePostRange))
+          .bfs(unit.tile(), euclDistFN(unit.tile(), defensePostRange))
           .forEach((tile) => this.enqueueTile(tile));
       });
     });
