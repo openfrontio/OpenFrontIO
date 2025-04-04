@@ -121,8 +121,7 @@ export class OptionsMenu extends LitElement implements Layer {
 
   private onToggleShowDefensePostRange() {
     this.userSettings.toggleShowDefensePostRange();
-    const currentSetting = this.userSettings.showDefensePostRange();
-    this.eventBus.emit(new ToggleShowDefensePostRangeEvent(currentSetting));
+    this.eventBus.emit(new ToggleShowDefensePostRangeEvent());
   }
 
   init() {

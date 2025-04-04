@@ -58,9 +58,8 @@ export class DragEvent implements GameEvent {
 export class AlternateViewEvent implements GameEvent {
   constructor(public readonly alternateView: boolean) {}
 }
-export class ToggleShowDefensePostRangeEvent implements GameEvent {
-  constructor(public readonly show: boolean) {}
-}
+
+export class ToggleShowDefensePostRangeEvent implements GameEvent {}
 
 export class CloseViewEvent implements GameEvent {}
 
