@@ -29,7 +29,7 @@ export class UserSettings {
   }
 
   showDefensePostRange() {
-    return this.get("settings.showDefensePostRange", true);
+    return this.get("settings.showDefensePostRange", false);
   }
 
   toggleLeftClickOpenMenu() {
