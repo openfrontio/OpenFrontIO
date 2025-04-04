@@ -2,8 +2,8 @@ import { consolex } from "../../core/Consolex";
 import { EventBus } from "../../core/EventBus";
 import { ClientID } from "../../core/Schemas";
 import { GameView } from "../../core/game/GameView";
-import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
+import { GameStartingModal } from "../gameStartingModal";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { BuildMenu } from "./layers/BuildMenu";
@@ -47,6 +47,11 @@ export function createRenderer(
   if (!emojiTable || !(emojiTable instanceof EmojiTable)) {
     consolex.error("EmojiTable element not found in the DOM");
   }
+  emojiTable.eventBus = eventBus;
+  emojiTable.transformHandler = transformHandler;
+  emojiTable.game = game;
+  emojiTable.initEventBus();
+
   const buildMenu = document.querySelector("build-menu") as BuildMenu;
   if (!buildMenu || !(buildMenu instanceof BuildMenu)) {
     consolex.error("BuildMenu element not found in the DOM");

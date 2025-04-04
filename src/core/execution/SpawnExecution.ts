@@ -29,10 +29,7 @@ export class SpawnExecution implements Execution {
     if (this.mg.hasPlayer(this.playerInfo.id)) {
       player = this.mg.player(this.playerInfo.id);
     } else {
-      player = this.mg.addPlayer(
-        this.playerInfo,
-        this.mg.config().startManpower(this.playerInfo),
-      );
+      player = this.mg.addPlayer(this.playerInfo);
     }
 
     player.tiles().forEach((t) => player.relinquish(t));
