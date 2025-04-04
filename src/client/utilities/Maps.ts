@@ -1,6 +1,7 @@
 import africa from "../../../resources/maps/AfricaThumb.webp";
 import asia from "../../../resources/maps/AsiaThumb.webp";
 import australia from "../../../resources/maps/AustraliaThumb.webp";
+import baikal from "../../../resources/maps/BaikalThumb.webp";
 import blackSea from "../../../resources/maps/BlackSeaThumb.webp";
 import britannia from "../../../resources/maps/BritanniaThumb.webp";
 import europe from "../../../resources/maps/EuropeThumb.webp";
@@ -57,6 +58,8 @@ export function getMapsImage(map: GameMapType): string {
       return twoSeas;
     case GameMapType.KnownWorld:
       return knownworld;
+    case GameMapType.Baikal:
+      return baikal;
     default:
       return "";
   }

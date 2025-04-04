@@ -41,6 +41,7 @@ const MAP_FILE_NAMES: Record<GameMapType, string> = {
   [GameMapType.Japan]: "Japan",
   [GameMapType.TwoSeas]: "TwoSeas",
   [GameMapType.KnownWorld]: "KnownWorld",
+  [GameMapType.Baikal]: "Baikal",
 };
 
 class GameMapLoader {
