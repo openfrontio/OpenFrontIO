@@ -254,22 +254,6 @@ export class FakeHumanExecution implements Execution {
       if (mostHated != null && mostHated.relation == Relation.Hostile) {
         this.enemy = mostHated.player;
         this.lastEnemyUpdateTick = this.mg.ticks();
-        if (this.enemy.type() == PlayerType.Human) {
-          let lastSent = -300;
-          if (this.lastEmojiSent.has(this.enemy)) {
-            lastSent = this.lastEmojiSent.get(this.enemy);
-            this.lastEmojiSent.set(this.enemy, this.mg.ticks());
-          }
-          if (this.mg.ticks() - lastSent > 300) {
-            this.mg.addExecution(
-              new EmojiExecution(
-                this.player.id(),
-                this.enemy.id(),
-                this.random.randElement(["🤡", "😡"]),
-              ),
-            );
-          }
-        }
       }
     }
 
@@ -278,6 +262,7 @@ export class FakeHumanExecution implements Execution {
         this.enemy = null;
         return;
       }
+      this.maybeSendEmoji();
       this.maybeSendNuke(this.enemy);
       if (this.player.sharesBorderWith(this.enemy)) {
         this.sendAttack(this.enemy);
@@ -286,6 +271,20 @@ export class FakeHumanExecution implements Execution {
       }
       return;
     }
+  }
+
+  private maybeSendEmoji() {
+    if (this.enemy.type() != PlayerType.Human) return;
+    const lastSent = this.lastEmojiSent.get(this.enemy) ?? -300;
+    if (this.mg.ticks() - lastSent <= 300) return;
+    this.lastEmojiSent.set(this.enemy, this.mg.ticks());
+    this.mg.addExecution(
+      new EmojiExecution(
+        this.player.id(),
+        this.enemy.id(),
+        this.random.randElement(["🤡", "😡"]),
+      ),
+    );
   }
 
   private maybeSendNuke(other: Player) {

@@ -3,10 +3,13 @@ import { GameMapType } from "./Game";
 import { GameMap, GameMapImpl } from "./GameMap";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
-const loadedMaps = new Map<
-  GameMapType,
-  { nationMap: NationMap; gameMap: GameMap; miniGameMap: GameMap }
->();
+export type TerrainMapData = {
+  nationMap: NationMap;
+  gameMap: GameMap;
+  miniGameMap: GameMap;
+};
+
+const loadedMaps = new Map<GameMapType, TerrainMapData>();
 
 export interface NationMap {
   nations: Nation[];
@@ -21,7 +24,7 @@ export interface Nation {
 
 export async function loadTerrainMap(
   map: GameMapType,
-): Promise<{ nationMap: NationMap; gameMap: GameMap; miniGameMap: GameMap }> {
+): Promise<TerrainMapData> {
   if (loadedMaps.has(map)) {
     return loadedMaps.get(map);
   }

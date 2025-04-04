@@ -285,18 +285,21 @@ export class HostLobbyModal extends LitElement {
             )}
           </div>
         </div>
+
+        <div class="start-game-button-container">
+          <button
+            @click=${this.startGame}
+            ?disabled=${this.players.length < 2}
+            class="start-game-button"
+          >
+            ${
+              this.players.length === 1
+                ? translateText("host_modal.waiting")
+                : translateText("host_modal.start")
+            }
+          </button>
+        </div>
 					
-        <button
-          @click=${this.startGame}
-          ?disabled=${this.players.length < 2}
-          class="start-game-button"
-        >
-          ${
-            this.players.length === 1
-              ? translateText("host_modal.waiting")
-              : translateText("host_modal.start")
-          }
-        </button>
       </div>
     </o-modal>
     `;

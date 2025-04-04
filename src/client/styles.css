@@ -394,6 +394,13 @@ label.option-card:hover {
   }
 }
 
+.start-game-button-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 20px;
+}
+
 .message-area {
   margin-top: 10px;
   padding: 10px;

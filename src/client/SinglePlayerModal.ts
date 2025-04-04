@@ -11,6 +11,7 @@ import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";
+import { UsernameInput } from "./UsernameInput";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
@@ -326,6 +327,13 @@ export class SinglePlayerModal extends LitElement {
     const clientID = generateID();
     const gameID = generateID();
 
+    const usernameInput = document.querySelector(
+      "username-input",
+    ) as UsernameInput;
+    if (!usernameInput) {
+      consolex.warn("Username input element not found");
+    }
+
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
@@ -337,7 +345,7 @@ export class SinglePlayerModal extends LitElement {
               {
                 playerID: generateID(),
                 clientID,
-                username: "PLACEHOLDER",
+                username: usernameInput.getCurrentUsername(),
               },
             ],
             config: {

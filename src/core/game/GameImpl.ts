@@ -107,7 +107,9 @@ export class GameImpl implements Game {
 
   private addHumans() {
     if (this.config().gameConfig().gameMode != GameMode.Team) {
-      this._humans.forEach((p) => this.addPlayer(p, 0));
+      this._humans.forEach((p) =>
+        this.addPlayer(p, this.config().startManpower(p)),
+      );
       return;
     }
     const playerToTeam = assignTeams(this._humans);

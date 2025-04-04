@@ -316,6 +316,9 @@ export interface Player {
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
   lastTileChange(): Tick;
 
+  hasSpawned(): boolean;
+  setHasSpawned(hasSpawned: boolean): void;
+
   // Territory
   tiles(): ReadonlySet<TileRef>;
   borderTiles(): ReadonlySet<TileRef>;

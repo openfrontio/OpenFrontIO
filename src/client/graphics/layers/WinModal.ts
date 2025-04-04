@@ -215,7 +215,8 @@ export class WinModal extends LitElement implements Layer {
       !this.hasShownDeathModal &&
       myPlayer &&
       !myPlayer.isAlive() &&
-      !this.game.inSpawnPhase()
+      !this.game.inSpawnPhase() &&
+      myPlayer.hasSpawned()
     ) {
       this.hasShownDeathModal = true;
       this._title = "You died";

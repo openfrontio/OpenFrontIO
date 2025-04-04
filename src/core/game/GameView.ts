@@ -266,6 +266,9 @@ export class PlayerView {
   stats(): PlayerStats {
     return this.data.stats;
   }
+  hasSpawned(): boolean {
+    return this.data.hasSpawned;
+  }
 }
 
 export class GameView implements GameMap {
