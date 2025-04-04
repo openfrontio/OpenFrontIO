@@ -123,6 +123,7 @@ export interface Config {
 
 export interface Theme {
   territoryColor(playerInfo: PlayerView): Colord;
+  defendedTerritoryColor(playerInfo: PlayerView): Colord;
   specialBuildingColor(playerInfo: PlayerView): Colord;
   borderColor(playerInfo: PlayerView): Colord;
   defendedBorderColor(playerInfo: PlayerView): Colord;

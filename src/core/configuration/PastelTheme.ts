@@ -54,6 +54,9 @@ export const pastelTheme = new (class implements Theme {
     }
     return territoryColors[simpleHash(player.id()) % territoryColors.length];
   }
+  defendedTerritoryColor(player: PlayerView): Colord {
+    return this.territoryColor(player).darken(0.05);
+  }
 
   textColor(player: PlayerView): string {
     return player.info().playerType == PlayerType.Human ? "#000000" : "#4D4D4D";

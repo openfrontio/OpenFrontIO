@@ -3,11 +3,7 @@ import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
-import {
-  euclDistFN,
-  manhattanDistFN,
-  TileRef,
-} from "../../../core/game/GameMap";
+import { euclDistFN, TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType, UnitUpdate } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { PseudoRandom } from "../../../core/PseudoRandom";
@@ -66,16 +62,11 @@ export class TerritoryLayer implements Layer {
       const update = u as UnitUpdate;
       if (update.unitType == UnitType.DefensePost && update.isActive) {
         const tile = update.pos;
+        // TODO setting
         this.game
-          .bfs(
-            tile,
-            manhattanDistFN(tile, this.game.config().defensePostRange()),
-          )
+          .bfs(tile, euclDistFN(tile, this.game.config().defensePostRange()))
           .forEach((t) => {
-            if (
-              this.game.isBorder(t) &&
-              this.game.ownerID(t) == update.ownerID
-            ) {
+            if (this.game.ownerID(t) == update.ownerID) {
               this.enqueueTile(t);
             }
           });
@@ -247,18 +238,16 @@ export class TerritoryLayer implements Layer {
       this.clearCell(new Cell(this.game.x(tile), this.game.y(tile)));
       return;
     }
+
     const owner = this.game.owner(tile) as PlayerView;
+    const defensePostRange = this.game.config().defensePostRange();
+    const tileInDefensePostRange =
+      this.game
+        .nearbyUnits(tile, defensePostRange, UnitType.DefensePost)
+        .filter((u) => u.unit.owner() == owner).length > 0;
     if (this.game.isBorder(tile)) {
       const playerIsFocused = owner && this.game.focusedPlayer() == owner;
-      if (
-        this.game
-          .nearbyUnits(
-            tile,
-            this.game.config().defensePostRange(),
-            UnitType.DefensePost,
-          )
-          .filter((u) => u.unit.owner() == owner).length > 0
-      ) {
+      if (tileInDefensePostRange) {
         const useDefendedBorderColor = playerIsFocused
           ? this.theme.focusedDefendedBorderColor()
           : this.theme.defendedBorderColor(owner);
@@ -280,12 +269,11 @@ export class TerritoryLayer implements Layer {
         );
       }
     } else {
-      this.paintCell(
-        this.game.x(tile),
-        this.game.y(tile),
-        this.theme.territoryColor(owner),
-        150,
-      );
+      const color = tileInDefensePostRange
+        ? this.theme.defendedTerritoryColor(owner)
+        : this.theme.territoryColor(owner);
+
+      this.paintCell(this.game.x(tile), this.game.y(tile), color, 150);
     }
   }
 
