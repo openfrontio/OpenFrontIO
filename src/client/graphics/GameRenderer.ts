@@ -47,6 +47,11 @@ export function createRenderer(
   if (!emojiTable || !(emojiTable instanceof EmojiTable)) {
     consolex.error("EmojiTable element not found in the DOM");
   }
+  emojiTable.eventBus = eventBus;
+  emojiTable.transformHandler = transformHandler;
+  emojiTable.game = game;
+  emojiTable.initEventBus();
+
   const buildMenu = document.querySelector("build-menu") as BuildMenu;
   if (!buildMenu || !(buildMenu instanceof BuildMenu)) {
     consolex.error("BuildMenu element not found in the DOM");

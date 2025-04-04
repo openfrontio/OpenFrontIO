@@ -22,6 +22,7 @@
     "action_alt_view": "Alternate view (terrain/countries)",
     "action_attack_altclick": "Attack (when left click is set to open menu)",
     "action_build": "Open build menu",
+    "action_emote": "Open emote menu",
     "action_center": "Center camera on player",
     "action_zoom": "Zoom out/in",
     "action_move_camera": "Move camera",
