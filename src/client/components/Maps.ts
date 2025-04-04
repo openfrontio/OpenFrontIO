@@ -21,7 +21,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Australia: "Australia",
   Iceland: "Iceland",
   Japan: "Japan",
-  TwoSeas: "Between Two Seas",
+  BetweenTwoSeas: "Between Two Seas",
   KnownWorld: "Known World",
 };
 
