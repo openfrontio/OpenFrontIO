@@ -1,17 +1,24 @@
+// src/scripts/generateFullMap.ts
 import fs from "fs/promises";
 import path from "path";
 import sharp from "sharp";
 import { generateMap as generateTerrainMapData } from "./TerrainMapGenerator.js";
+// import { generateNationData } from './NationMapGenerator.js';
 
 function toCamelCase(str: string): string {
   return str.charAt(0).toLowerCase() + str.slice(1);
 }
 
+// Keep PascalCase for filenames and Enum keys
 function toPascalCase(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+// Generate lowercase version for import/variable names and JSON keys
 function toLowerCaseName(str: string): string {
+  // Handle potential multi-word inputs for cleaner lowercase keys if needed in future
+  // Example: "TwoSeas" -> "twoseas"
+  // This simple lowercase works for single words like "MiddleEarth" -> "middleearth"
   return str.toLowerCase();
 }
 
@@ -84,6 +91,7 @@ async function insertIntoFile(
         insertionIndex = lineStartIndex;
       }
     } else {
+      // RegExp
       const match = fileContent.match(insertionPointMarker);
       if (match && match.index !== undefined) {
         insertionIndex = match.index;
@@ -183,6 +191,7 @@ async function insertIntoFile(
             insertionIndex = fileContent.length;
           }
         } else {
+          // Non-block 'before' with regex
           const lineStartIndex =
             fileContent.lastIndexOf("\n", match.index - 1) + 1;
           insertionIndex = lineStartIndex;
@@ -224,7 +233,10 @@ async function insertIntoFile(
     }
 
     const checkContent = contentToInsert;
-    if (fileContent.includes(checkContent)) {
+    // A slightly more robust duplicate check that ignores leading/trailing whitespace differences
+    if (
+      fileContent.replace(/\r/g, "").includes(checkContent.replace(/\r/g, ""))
+    ) {
       console.log(
         `    Content already exists in ${filePath}. Skipping insertion.`,
       );
@@ -249,8 +261,8 @@ async function generateMapFiles(mapName: string, removeSmall = true) {
   console.log(`[${mapName}] Starting full map generation...`);
   const startTime = performance.now();
   const mapNamePascal = toPascalCase(mapName);
-  const mapNameCamel = toCamelCase(mapName);
-  const mapNameLower = toLowerCaseName(mapNamePascal);
+  // const mapNameCamel = toCamelCase(mapName); // No longer needed for JSON key
+  const mapNameLower = toLowerCaseName(mapNamePascal); // Used for JSON key and import variable
 
   const resourcesPath = path.resolve(process.cwd(), "resources", "maps");
   const mapPngPath = path.resolve(resourcesPath, `${mapNamePascal}.png`);
@@ -266,6 +278,7 @@ async function generateMapFiles(mapName: string, removeSmall = true) {
   const mapJsonPath = path.resolve(resourcesPath, `${mapNamePascal}.json`);
 
   try {
+    // ... (PNG check, Terrain Gen, Nation Gen remain the same) ...
     console.log(`[${mapName}] Checking for input PNG: ${mapPngPath}`);
     try {
       await fs.access(mapPngPath);
@@ -333,15 +346,18 @@ async function generateMapFiles(mapName: string, removeSmall = true) {
     const updateStartTime = performance.now();
     let allUpdatesSuccessful = true;
 
+    // --- Prepare display name and JSON key ---
     const displayName = mapNamePascal.replace(/([A-Z])/g, " $1").trim();
-    const jsonMapKey = mapNameCamel;
+    const jsonMapKey = mapNameLower; // Use lowercase for the key inside the "map" object <<< CORRECTED
 
+    // --- en.json (Add to nested "map" object, no sorting) ---
     const enJsonPath = "resources/lang/en.json";
     try {
       const enJsonContent = JSON.parse(
         await fs.readFile(path.resolve(process.cwd(), enJsonPath), "utf-8"),
       );
 
+      // Ensure the "map" object exists
       if (!enJsonContent.map || typeof enJsonContent.map !== "object") {
         console.warn(
           `    Warning: "map" object not found or not an object in ${enJsonPath}. Creating it.`,
@@ -349,10 +365,13 @@ async function generateMapFiles(mapName: string, removeSmall = true) {
         enJsonContent.map = {};
       }
 
+      // Check if the key already exists within the "map" object
       if (!(jsonMapKey in enJsonContent.map)) {
         console.log(`  Updating ${path.basename(enJsonPath)}...`);
+        // Add the new key-value pair directly to the "map" object
         enJsonContent.map[jsonMapKey] = displayName;
 
+        // No sorting here - write as is to append
         await fs.writeFile(
           path.resolve(process.cwd(), enJsonPath),
           JSON.stringify(enJsonContent, null, 2) + "\n",
@@ -360,8 +379,9 @@ async function generateMapFiles(mapName: string, removeSmall = true) {
         );
         console.log(`    ${path.basename(enJsonPath)} updated successfully.`);
       } else {
+        // Adjusted log message to reflect the actual key structure
         console.log(
-          `    Key 'map.${jsonMapKey}' already exists in ${path.basename(enJsonPath)}. Skipping.`,
+          `    Key '${jsonMapKey}' already exists in the "map" object of ${path.basename(enJsonPath)}. Skipping.`,
         );
       }
     } catch (e) {
@@ -369,10 +389,11 @@ async function generateMapFiles(mapName: string, removeSmall = true) {
       allUpdatesSuccessful = false;
     }
 
+    // --- components/Maps.ts (Use display name) ---
     const mapsComponentPath = "src/client/components/Maps.ts";
     const mapDescMarker =
       /export const MapDescription: Record<keyof typeof GameMapType, string> = \{((?:.|\n)*?)\n\};/m;
-    const mapDescEntry = `${mapNamePascal}: "${displayName}",`;
+    const mapDescEntry = `${mapNamePascal}: "${displayName}",`; // Use displayName
     allUpdatesSuccessful &&= await insertIntoFile(
       mapsComponentPath,
       mapDescMarker,
@@ -383,10 +404,11 @@ async function generateMapFiles(mapName: string, removeSmall = true) {
       true,
     );
 
+    // --- utilities/Maps.ts (Import with lowercase name) ---
     const mapsUtilPath = "src/client/utilities/Maps.ts";
     const mapUtilImportMarker =
       /import .*Thumb\.webp";\s*\n\s*import { GameMapType }/m;
-    const mapUtilImport = `import ${mapNameLower} from "../../../resources/maps/${mapNamePascal}Thumb.webp";`;
+    const mapUtilImport = `import ${mapNameLower} from "../../../resources/maps/${mapNamePascal}Thumb.webp";`; // Use mapNameLower
     allUpdatesSuccessful &&= await insertIntoFile(
       mapsUtilPath,
       mapUtilImportMarker,
@@ -397,8 +419,9 @@ async function generateMapFiles(mapName: string, removeSmall = true) {
       false,
     );
 
+    // --- utilities/Maps.ts (Switch Case with lowercase name) ---
     const mapUtilCaseMarker = /^\s+default:\s*return "";/m;
-    const mapUtilCase = `    case GameMapType.${mapNamePascal}:\n      return ${mapNameLower};\n`;
+    const mapUtilCase = `    case GameMapType.${mapNamePascal}:\n      return ${mapNameLower};\n`; // Use mapNameLower
     allUpdatesSuccessful &&= await insertIntoFile(
       mapsUtilPath,
       mapUtilCaseMarker,
@@ -409,9 +432,10 @@ async function generateMapFiles(mapName: string, removeSmall = true) {
       false,
     );
 
+    // --- core/Game.ts (Enum with display name as value) ---
     const gameTsPath = "src/core/game/Game.ts";
     const gameEnumMarker = /enum GameMapType \{((?:.|\n)*?)\n\}/m;
-    const gameEnumEntry = `${mapNamePascal} = "${displayName}",`;
+    const gameEnumEntry = `${mapNamePascal} = "${displayName}",`; // Use displayName as value
     allUpdatesSuccessful &&= await insertIntoFile(
       gameTsPath,
       gameEnumMarker,
@@ -422,10 +446,11 @@ async function generateMapFiles(mapName: string, removeSmall = true) {
       true,
     );
 
+    // --- core/TerrainMapFileLoader.ts (No change needed here) ---
     const loaderPath = "src/core/game/TerrainMapFileLoader.ts";
     const loaderMarker =
       /const MAP_FILE_NAMES: Record<GameMapType, string> = \{((?:.|\n)*?)\n\};/m;
-    const loaderEntry = `[GameMapType.${mapNamePascal}]: "${mapNamePascal}",`;
+    const loaderEntry = `[GameMapType.${mapNamePascal}]: "${mapNamePascal}",`; // Keep PascalCase value here
     allUpdatesSuccessful &&= await insertIntoFile(
       loaderPath,
       loaderMarker,
@@ -483,7 +508,7 @@ async function main() {
     process.exit(1);
   }
 
-  const mapName = toPascalCase(mapNameArg);
+  const mapName = toPascalCase(mapNameArg); // Keep original PascalCase input
 
   await generateMapFiles(mapName);
 }
