@@ -296,7 +296,7 @@ function getNextMap(): GameMapType {
     Iceland: 2,
     SouthAmerica: 3,
     Japan: 3,
-    TwoSeas: 3,
+    BetweenTwoSeas: 3,
   };
 
   Object.keys(GameMapType).forEach((key) => {
