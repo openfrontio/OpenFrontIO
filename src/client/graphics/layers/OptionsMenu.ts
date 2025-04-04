@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
@@ -8,7 +8,7 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import {
   AlternateViewEvent,
   RefreshGraphicsEvent,
-  ShowDefensePostRangeEvent,
+  ToggleShowDefensePostRangeEvent,
 } from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
 import { Layer } from "./Layer";
@@ -122,7 +122,7 @@ export class OptionsMenu extends LitElement implements Layer {
   private onToggleShowDefensePostRange() {
     this.userSettings.toggleShowDefensePostRange();
     const currentSetting = this.userSettings.showDefensePostRange();
-    this.eventBus.emit(new ShowDefensePostRangeEvent(currentSetting));
+    this.eventBus.emit(new ToggleShowDefensePostRangeEvent(currentSetting));
   }
 
   init() {

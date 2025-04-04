@@ -14,7 +14,7 @@ import { PseudoRandom } from "../../../core/PseudoRandom";
 import {
   AlternateViewEvent,
   DragEvent,
-  ShowDefensePostRangeEvent,
+  ToggleShowDefensePostRangeEvent,
 } from "../../InputHandler";
 import { Layer } from "./Layer";
 
@@ -149,7 +149,7 @@ export class TerritoryLayer implements Layer {
       // TODO: consider re-enabling this on mobile or low end devices for smoother dragging.
       // this.lastDragTime = Date.now();
     });
-    this.eventBus.on(ShowDefensePostRangeEvent, () => {
+    this.eventBus.on(ToggleShowDefensePostRangeEvent, () => {
       const defensePostRange = this.game.config().defensePostRange();
       this.game.units(UnitType.DefensePost).forEach((unit) => {
         const tile = unit.tile();
@@ -266,13 +266,13 @@ export class TerritoryLayer implements Layer {
 
     const owner = this.game.owner(tile) as PlayerView;
     const defensePostRange = this.game.config().defensePostRange();
-    const tileInDefensePostRange =
+    const tileIsInDefensePostRange =
       this.game
         .nearbyUnits(tile, defensePostRange, UnitType.DefensePost)
         .filter((u) => u.unit.owner() == owner).length > 0;
     if (this.game.isBorder(tile)) {
       const playerIsFocused = owner && this.game.focusedPlayer() == owner;
-      if (tileInDefensePostRange) {
+      if (tileIsInDefensePostRange) {
         const useDefendedBorderColor = playerIsFocused
           ? this.theme.focusedDefendedBorderColor()
           : this.theme.defendedBorderColor(owner);
@@ -295,7 +295,7 @@ export class TerritoryLayer implements Layer {
       }
     } else {
       const color =
-        tileInDefensePostRange &&
+        tileIsInDefensePostRange &&
         this.game.config().userSettings().showDefensePostRange()
           ? this.theme.defendedTerritoryColor(owner)
           : this.theme.territoryColor(owner);
