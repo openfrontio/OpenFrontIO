@@ -130,7 +130,7 @@ export function createRenderer(
     new TerritoryLayer(game, eventBus),
     new StructureLayer(game, eventBus),
     new UnitLayer(game, eventBus, clientID, transformHandler),
-    new UILayer(game, eventBus, clientID, emojiTable, transformHandler),
+    new UILayer(game, eventBus, clientID, transformHandler),
     new NameLayer(game, transformHandler, clientID),
     eventsDisplay,
     buildMenu,

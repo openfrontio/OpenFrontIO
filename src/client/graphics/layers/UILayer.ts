@@ -6,7 +6,6 @@ import { UnitType } from "../../../core/game/Game";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { UnitSelectionEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
-import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
 
 /**
@@ -37,7 +36,6 @@ export class UILayer implements Layer {
     private game: GameView,
     private eventBus: EventBus,
     private clientID: ClientID,
-    private emojiTable: EmojiTable,
     private transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
