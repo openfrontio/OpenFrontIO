@@ -2,11 +2,9 @@ import { Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
 import { ClientID } from "../../../core/Schemas";
 import { Theme } from "../../../core/configuration/Config";
-import { AllPlayers, UnitType } from "../../../core/game/Game";
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { TerraNulliusImpl } from "../../../core/game/TerraNulliusImpl";
-import { ShowEmojiMenuEvent, UnitSelectionEvent } from "../../InputHandler";
-import { SendEmojiIntentEvent } from "../../Transport";
+import { UnitType } from "../../../core/game/Game";
+import { GameView, UnitView } from "../../../core/game/GameView";
+import { UnitSelectionEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
@@ -61,35 +59,6 @@ export class UILayer implements Layer {
 
   init() {
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelection(e));
-    this.eventBus.on(ShowEmojiMenuEvent, (e) => {
-      const cell = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
-
-      if (!this.game.isValidCoord(cell.x, cell.y)) {
-        return;
-      }
-
-      const tile = this.game.ref(cell.x, cell.y);
-
-      if (!this.game.hasOwner(tile)) {
-        return;
-      }
-
-      const targetPlayer = this.game.owner(tile);
-
-      // maybe redundant due to owner check but better safe than sorry
-      if (targetPlayer instanceof TerraNulliusImpl) {
-        return;
-      }
-
-      this.emojiTable.showTable((emoji) => {
-        const recipient =
-          targetPlayer == this.game.myPlayer()
-            ? AllPlayers
-            : (targetPlayer as PlayerView);
-        this.eventBus.emit(new SendEmojiIntentEvent(recipient, emoji));
-        this.emojiTable.hideTable();
-      });
-    });
     this.redraw();
   }
 
