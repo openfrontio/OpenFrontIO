@@ -8,6 +8,7 @@ import {
   blue,
   botColor,
   botColors,
+  defendedTerritoryDarkenPercent,
   humanColors,
   red,
   territoryColors,
@@ -53,6 +54,9 @@ export const pastelTheme = new (class implements Theme {
       return botColors[simpleHash(player.id()) % botColors.length];
     }
     return territoryColors[simpleHash(player.id()) % territoryColors.length];
+  }
+  defendedTerritoryColor(player: PlayerView): Colord {
+    return this.territoryColor(player).darken(defendedTerritoryDarkenPercent);
   }
 
   textColor(player: PlayerView): string {
