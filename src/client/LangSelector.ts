@@ -5,6 +5,7 @@ import "./LanguageModal";
 import bg from "../../resources/lang/bg.json";
 import de from "../../resources/lang/de.json";
 import en from "../../resources/lang/en.json";
+import eo from "../../resources/lang/eo.json";
 import es from "../../resources/lang/es.json";
 import fr from "../../resources/lang/fr.json";
 import ja from "../../resources/lang/ja.json";
@@ -35,6 +36,7 @@ export class LangSelector extends LitElement {
     pl,
     ru,
     uk,
+    eo,
   };
 
   createRenderRoot() {

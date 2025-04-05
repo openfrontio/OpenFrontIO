@@ -46,20 +46,20 @@
     "radial_build": "Malfermi la konstrumenuon.",
     "radial_info": "Malfermi la informmenuon.",
     "radial_boat": "Sendi boaton por ataki ĉe la elektita loko (disponebla nur se vi havas aliron al akvo).",
-    "radial_close": "Fermi la menuon."
+    "radial_close": "Fermi la menuon.",
     "info_title": "Informmenuo",
     "info_enemy_desc": "Enhavas informojn kiel la nomon de la elektita ludanto, la oron, la trupojn, kaj ĉu la ludanto estas perfidulo. Perfidulo estas ludanto, kiu perfidis kaj atakis alian ludanton kun kiu li estis en alianco. La subaj piktogramoj reprezentas la jenajn interagojn:",
     "info_target": "Meti celmarkon sur la ludanton, videblan por ĉiuj aliancanoj, uzata por kunordigi atakojn.",
     "info_alliance": "Sendi aliancpeton al la ludanto. Aliancanoj povas dividi rimedojn kaj trupojn, sed ne povas ataki unu la alian.",
-    "info_emoji": "Sendi emoji al la ludanto."
+    "info_emoji": "Sendi emoji al la ludanto.",
     "info_ally_panel": "Aliancana informpanelo",
     "info_ally_desc": "Kiam vi alianciĝas kun ludanto, la jenaj novaj piktogramoj fariĝas disponeblaj:",
     "ally_betray": "Perfidi aliancanon, finante la aliancon. Vi tiam havos konstantan ikonon apud via nomo. La robotoj malpli verŝajne alianciĝos kun vi, kaj ludantoj, al kiuj vi petos aliancon, pli atente pripensos.",
-    "ally_donate": "Doni parton de viaj trupoj al aliancano. Uzata kiam ili mankas da trupoj kaj estas atakataj, aŭ kiam ili bezonas kroman potencon por venki malamikon."
+    "ally_donate": "Doni parton de viaj trupoj al aliancano. Uzata kiam ili mankas da trupoj kaj estas atakataj, aŭ kiam ili bezonas kroman potencon por venki malamikon.",
     "build_menu_title": "Konstrua menuo",
     "build_name": "Nomo",
     "build_icon": "Ikono",
-    "build_desc": "Priskribo"
+    "build_desc": "Priskribo",
     "build_city": "Urbo",
     "build_city_desc": "Utila kiam vi ne povas pligrandigi vian teritorion aŭ kiam vi atingas vian loĝlimon.",
     "build_defense": "Defenda posteno",
@@ -77,7 +77,7 @@
     "build_hydrogen": "Hidrogenbombo",
     "build_hydrogen_desc": "Granda eksploda bombo. Aperas el la plej proksima Misila silo kaj atingas la elektitan areon.",
     "build_mirv": "MIRV",
-    "build_mirv_desc": "La plej potenca bombo en la ludo. Dividiĝas en pli malgrandajn bombojn kiuj kovros vastan teritorion. Damaĝas nur la ludanton, kontraŭ kiu vi celis ĝin. Aperas el la plej proksima Misila silo kaj atingas la elektitan areon."
+    "build_mirv_desc": "La plej potenca bombo en la ludo. Dividiĝas en pli malgrandajn bombojn kiuj kovros vastan teritorion. Damaĝas nur la ludanton, kontraŭ kiu vi celis ĝin. Aperas el la plej proksima Misila silo kaj atingas la elektitan areon.",
     "player_icons": "Ludantaj Ikonoj",
     "icon_desc": "Ekzemploj de iuj ludikonoj, kiujn vi renkontos, kaj ilia signifo:",
     "icon_crown": "Krono - Ĉi tiu ludanto estas numero 1 en la ranglisto.",
