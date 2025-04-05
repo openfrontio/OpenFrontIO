@@ -1,5 +1,6 @@
 import { Config } from "../configuration/Config";
 import { ClientID, GameID, PlayerStats } from "../Schemas";
+import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
   Cell,
@@ -35,6 +36,9 @@ import { UnitGrid } from "./UnitGrid";
 import { UserSettings } from "./UserSettings";
 
 const userSettings: UserSettings = new UserSettings();
+
+const displayNameMap: Record<PlayerID, string> = {};
+const usedNames = new Set<string>();
 
 export class UnitView {
   public _wasUpdated = true;
@@ -166,10 +170,48 @@ export class PlayerView {
     return this.data.flag;
   }
   name(): string {
-    return this.data.name;
+    const randomName = createRandomName(this.data);
+    if (!displayNameMap[this.data.name] && randomName !== "") {
+      displayNameMap[this.data.name] = randomName;
+    }
+    return localStorage.getItem("settings.randomname") === "true" &&
+      displayNameMap[this.data.displayName]
+      ? displayNameMap[this.data.displayName]
+      : this.data.playerType === "HUMAN"
+        ? `<b>${this.data.name}</b>`
+        : `<i>${this.data.name}</i>`;
+  }
+  name_notag(): string {
+    const randomName = createRandomName(this.data);
+    if (!displayNameMap[this.data.name] && randomName !== "") {
+      displayNameMap[this.data.name] = randomName;
+    }
+    return localStorage.getItem("settings.randomname") === "true" &&
+      displayNameMap[this.data.displayName]
+      ? displayNameMap[this.data.displayName]
+      : this.data.name;
   }
   displayName(): string {
-    return this.data.displayName;
+    const randomName = createRandomName(this.data);
+    if (!displayNameMap[this.data.name] && randomName !== "") {
+      displayNameMap[this.data.name] = randomName;
+    }
+    return localStorage.getItem("settings.randomname") === "true" &&
+      displayNameMap[this.data.displayName]
+      ? displayNameMap[this.data.displayName]
+      : this.data.playerType === "HUMAN"
+        ? `<b>${this.data.displayName}</b>`
+        : `<i>${this.data.displayName}</i>`;
+  }
+  displayName_notag(): string {
+    const randomName = createRandomName(this.data);
+    if (!displayNameMap[this.data.name] && randomName !== "") {
+      displayNameMap[this.data.name] = randomName;
+    }
+    return localStorage.getItem("settings.randomname") === "true" &&
+      displayNameMap[this.data.displayName]
+      ? displayNameMap[this.data.displayName]
+      : this.data.displayName;
   }
   clientID(): ClientID {
     return this.data.clientID;
