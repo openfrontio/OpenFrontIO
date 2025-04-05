@@ -10,7 +10,7 @@ export class BotExecution implements Execution {
   private mg: Game;
   private neighborsTerraNullius = true;
 
-  private behavior: BotBehavior;
+  private behavior: BotBehavior | null = null;
 
   constructor(private bot: Player) {
     this.random = new PseudoRandom(simpleHash(bot.id()));

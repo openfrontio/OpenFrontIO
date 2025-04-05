@@ -45,25 +45,22 @@ export class BotBehavior {
 
     // Assist allies
     if (this.assistAllies) {
-      const target =
-        this.player
-          .allies()
-          .filter((ally) => this.player.relation(ally) == Relation.Friendly)
-          .filter((ally) => ally.targets().length > 0)
-          .map((ally) => ({ ally: ally, t: ally.targets()[0] }))[0] ?? null;
-
-      if (
-        target != null &&
-        target.t != this.player &&
-        !this.player.isAlliedWith(target.t)
-      ) {
-        this.player.updateRelation(target.ally, -20);
-        this.enemy = target.t;
-        this.lastEnemyUpdateTick = this.game.ticks();
-        if (target.ally.type() == PlayerType.Human) {
-          this.game.addExecution(
-            new EmojiExecution(this.player.id(), target.ally.id(), "👍"),
-          );
+      outer: for (const ally of this.player.allies()) {
+        if (this.player.relation(ally) < Relation.Friendly) continue;
+        if (ally.targets().length === 0) continue;
+        for (const target of ally.targets()) {
+          if (target === this.player) continue;
+          if (this.player.isAlliedWith(target)) continue;
+          // All checks passed, assist them
+          this.player.updateRelation(ally, -20);
+          this.enemy = target;
+          this.lastEnemyUpdateTick = this.game.ticks();
+          if (ally.type() == PlayerType.Human) {
+            this.game.addExecution(
+              new EmojiExecution(this.player.id(), ally.id(), "👍"),
+            );
+          }
+          break outer;
         }
       }
     }
