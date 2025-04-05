@@ -369,8 +369,8 @@ export class GameServer {
             this.turns,
             this._startTime,
             Date.now(),
-            this.winner.winner,
-            this.winner.winnerType,
+            this.winner?.winner,
+            this.winner?.winnerType,
             this.allPlayersStats,
           ),
         );

@@ -240,28 +240,53 @@ label.option-card:hover {
 #private-lobby-bots-count {
   width: 80%;
   height: 16px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   appearance: none;
 }
 
+/* Firefox */
+#bots-count::-moz-range-track,
+#private-lobby-bots-count::-moz-range-track {
+  height: 8px;
+  background: white;
+}
+
+#bots-count::-moz-range-progress,
+#private-lobby-bots-count::-moz-range-progress {
+  height: 8px;
+  background-color: #0075ff;
+}
+
+#bots-count::-moz-range-thumb,
+#private-lobby-bots-count::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  background: #0075ff;
+  border: none;
+  border-radius: 50%;
+}
+
+/* Chrome */
 #bots-count::-webkit-slider-runnable-track,
 #private-lobby-bots-count::-webkit-slider-runnable-track {
-  appearance: none;
+  height: 8px;
   background: linear-gradient(
     to right,
     #0075ff var(--progress, 0%),
     white var(--progress, 0%)
   );
-  height: 8px;
 }
 
 #bots-count::-webkit-slider-thumb,
 #private-lobby-bots-count::-webkit-slider-thumb {
   -webkit-appearance: none;
-  appearance: none;
+  height: 16px;
+  width: 16px;
   background: #0075ff;
-  border-color: #0075ff;
-  position: relative;
-  top: -3px;
+  border: none;
+  border-radius: 50%;
+  margin-top: -4px;
 }
 
 .random-map {

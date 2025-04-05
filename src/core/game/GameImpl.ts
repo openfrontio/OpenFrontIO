@@ -107,9 +107,7 @@ export class GameImpl implements Game {
 
   private addHumans() {
     if (this.config().gameConfig().gameMode != GameMode.Team) {
-      this._humans.forEach((p) =>
-        this.addPlayer(p, this.config().startManpower(p)),
-      );
+      this._humans.forEach((p) => this.addPlayer(p));
       return;
     }
     const playerToTeam = assignTeams(this._humans);
@@ -118,7 +116,7 @@ export class GameImpl implements Game {
         console.warn(`Player ${playerInfo.name} was kicked from team`);
         continue;
       }
-      this.addPlayer(playerInfo, 0, team);
+      this.addPlayer(playerInfo, team);
     }
   }
 
@@ -348,16 +346,12 @@ export class GameImpl implements Game {
     return this.player(id);
   }
 
-  addPlayer(
-    playerInfo: PlayerInfo,
-    manpower: number,
-    team: Team = null,
-  ): Player {
+  addPlayer(playerInfo: PlayerInfo, team: Team = null): Player {
     const player = new PlayerImpl(
       this,
       this.nextPlayerID,
       playerInfo,
-      manpower,
+      this.config().startManpower(playerInfo),
       team ?? this.maybeAssignTeam(playerInfo),
     );
     this._playersBySmallID.push(player);

@@ -96,9 +96,11 @@ export abstract class DefaultServerConfig implements ServerConfig {
     }
     // Maps smaller than ~2 mil pixels
     if (
-      [GameMapType.TwoSeas, GameMapType.BlackSea, GameMapType.Pangaea].includes(
-        map,
-      )
+      [
+        GameMapType.BetweenTwoSeas,
+        GameMapType.BlackSea,
+        GameMapType.Pangaea,
+      ].includes(map)
     ) {
       return Math.random() < 0.2 ? 60 : 35;
     }
@@ -267,7 +269,7 @@ export class DefaultConfig implements Config {
       case UnitType.AtomBomb:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.infiniteGold() ? 0 : 750_000,
+            p.type() == PlayerType.Human && this.infiniteGold() ? 0 : 500_000,
           territoryBound: false,
         };
       case UnitType.HydrogenBomb:

@@ -47,6 +47,10 @@ export class HelpModal extends LitElement {
                 <td>${translateText("help_modal.action_build")}</td>
               </tr>
               <tr>
+                <td>Alt + left click</td>
+                <td>${translateText("help_modal.action_emote")}</td>
+              </tr>
+              <tr>
                 <td>C</td>
                 <td>${translateText("help_modal.action_center")}</td>
               </tr>
