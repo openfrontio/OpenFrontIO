@@ -1,5 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { translateText } from "../client/Utils";
 
 @customElement("language-modal")
 export class LanguageModal extends LitElement {
@@ -160,7 +161,7 @@ export class LanguageModal extends LitElement {
       <aside class="c-modal">
         <div class="c-modal__wrapper">
           <header class="c-modal__header">
-            Select Language
+            ${translateText("select_lang.title")}
             <div class="c-modal__close" @click=${this.close}>X</div>
           </header>
 
