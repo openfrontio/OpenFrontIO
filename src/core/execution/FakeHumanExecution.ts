@@ -34,8 +34,6 @@ export class FakeHumanExecution implements Execution {
   private mg: Game;
   private player: Player = null;
 
-  private enemy: Player | null = null;
-
   private lastEmojiSent = new Map<Player, Tick>();
   private embargoMalusApplied = new Set<PlayerID>();
 
@@ -48,7 +46,7 @@ export class FakeHumanExecution implements Execution {
     );
   }
 
-  init(mg: Game, ticks: number) {
+  init(mg: Game) {
     this.mg = mg;
     if (this.random.chance(10)) {
       // this.isTraitor = true
