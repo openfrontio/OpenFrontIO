@@ -1,8 +1,7 @@
 import { Execution, Game, PlayerInfo, PlayerType } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
-import { sanitize, simpleHash } from "../Util";
-import { fixProfaneUsername } from "../validations/username";
+import { simpleHash } from "../Util";
 import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
 import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
@@ -62,16 +61,7 @@ export class Executor {
         return new MoveWarshipExecution(intent.unitId, intent.tile);
       case "spawn":
         return new SpawnExecution(
-          new PlayerInfo(
-            intent.flag,
-            // Players see their original name, others see a sanitized version
-            intent.clientID == this.clientID
-              ? sanitize(intent.name)
-              : fixProfaneUsername(sanitize(intent.name)),
-            PlayerType.Human,
-            intent.clientID,
-            playerID,
-          ),
+          player.info(),
           this.mg.ref(intent.x, intent.y),
         );
       case "boat":

@@ -109,7 +109,10 @@
     "random": "Losowe",
     "iceland": "Islandia",
     "pangaea": "Pangea",
-    "map": "Mapa"
+    "map": "Mapa",
+    "betweentwoseas": "Między dwoma morzami",
+    "japan": "Japonia i sąsiedzi",
+    "knownworld": "Znany Świat"
   },
   "private_lobby": {
     "title": "Dołącz do prywatnego Lobby",
@@ -167,7 +170,7 @@
     "lang_code": "pl"
   },
   "game_mode": {
-    "ffa": "Darmowe dla wszystkich",
+    "ffa": "Każdy na Każdego",
     "teams": "Drużyny"
   }
 }

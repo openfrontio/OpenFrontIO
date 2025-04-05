@@ -19,7 +19,7 @@ const maps = [
   "Australia",
   "Pangaea",
   "Iceland",
-  "TwoSeas",
+  "BetweenTwoSeas",
   "Japan",
   "KnownWorld",
 ];

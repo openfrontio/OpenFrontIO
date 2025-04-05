@@ -38,7 +38,7 @@ describe("MissileSilo", () => {
       null,
       "attacker_id",
     );
-    game.addPlayer(attacker_info, 1000);
+    game.addPlayer(attacker_info);
 
     game.addExecution(
       new SpawnExecution(game.player(attacker_info.id).info(), game.ref(1, 1)),

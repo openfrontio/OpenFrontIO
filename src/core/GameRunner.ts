@@ -25,6 +25,8 @@ import {
 } from "./game/GameUpdates";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
+import { sanitize } from "./Util";
+import { fixProfaneUsername } from "./validations/username";
 
 export async function createGameRunner(
   gameStart: GameStartInfo,
@@ -38,7 +40,9 @@ export async function createGameRunner(
       (p) =>
         new PlayerInfo(
           p.flag,
-          p.username,
+          p.clientID == clientID
+            ? sanitize(p.username)
+            : fixProfaneUsername(sanitize(p.username)),
           PlayerType.Human,
           p.clientID,
           p.playerID,

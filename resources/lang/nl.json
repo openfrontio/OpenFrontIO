@@ -109,7 +109,10 @@
     "random": "Willekeurig",
     "iceland": "IJsland",
     "pangaea": "Pangea",
-    "map": "Kaart"
+    "map": "Kaart",
+    "betweentwoseas": "Tussen twee zeeën",
+    "japan": "Japan en buren",
+    "knownworld": "Bekende Wereld"
   },
   "private_lobby": {
     "title": "Privélobby toetreden",

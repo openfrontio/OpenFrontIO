@@ -69,6 +69,12 @@ export class ShowBuildMenuEvent implements GameEvent {
     public readonly y: number,
   ) {}
 }
+export class ShowEmojiMenuEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
 
 export class AttackRatioEvent implements GameEvent {
   constructor(public readonly attackRatio: number) {}
@@ -290,6 +296,10 @@ export class InputHandler {
 
     if (event.ctrlKey) {
       this.eventBus.emit(new ShowBuildMenuEvent(event.clientX, event.clientY));
+      return;
+    }
+    if (event.altKey) {
+      this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
       return;
     }
 

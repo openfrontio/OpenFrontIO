@@ -88,7 +88,7 @@ export class MapPlaylist {
           Pangaea: 1,
           Asia: 1,
           Mars: 1,
-          TwoSeas: 3,
+          BetweenTwoSeas: 3,
           Japan: 3,
           BlackSea: 1,
         };

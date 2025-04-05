@@ -111,7 +111,8 @@
     "pangaea": "Pangaea",
     "map": "Karte",
     "betweentwoseas": "Zwischen zwei Meeren",
-    "japanandneighbors": "Japan und Nachbarländer"
+    "japan": "Japan und Nachbarländer",
+    "knownworld": "Bekannte Welt"
   },
   "private_lobby": {
     "title": "Privater Lobby beitreten",
