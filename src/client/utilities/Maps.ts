@@ -1,7 +1,6 @@
 import africa from "../../../resources/maps/AfricaThumb.webp";
 import asia from "../../../resources/maps/AsiaThumb.webp";
 import australia from "../../../resources/maps/AustraliaThumb.webp";
-import betweenTwoSeas from "../../../resources/maps/BetweenTwoSeasThumb.webp";
 import blackSea from "../../../resources/maps/BlackSeaThumb.webp";
 import britannia from "../../../resources/maps/BritanniaThumb.webp";
 import europe from "../../../resources/maps/EuropeThumb.webp";
@@ -15,6 +14,8 @@ import northAmerica from "../../../resources/maps/NorthAmericaThumb.webp";
 import oceania from "../../../resources/maps/OceaniaThumb.webp";
 import pangaea from "../../../resources/maps/PangaeaThumb.webp";
 import southAmerica from "../../../resources/maps/SouthAmericaThumb.webp";
+import betweenTwoSeas from "../../../resources/maps/BetweenTwoSeasThumb.webp";
+import baikal from "../../../resources/maps/BaikalThumb.webp";
 import world from "../../../resources/maps/WorldMapThumb.webp";
 
 import { GameMapType } from "../../core/game/Game";
@@ -57,6 +58,8 @@ export function getMapsImage(map: GameMapType): string {
       return betweenTwoSeas;
     case GameMapType.KnownWorld:
       return knownworld;
+    case GameMapType.Baikal:
+      return baikal;
     default:
       return "";
   }

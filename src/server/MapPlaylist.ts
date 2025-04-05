@@ -80,6 +80,7 @@ export class MapPlaylist {
           Iceland: 1,
           SouthAmerica: 3,
           KnownWorld: 2,
+          Baikal: 2,
         };
       case PlaylistType.SmallMaps:
         return {

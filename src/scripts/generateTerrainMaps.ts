@@ -22,6 +22,7 @@ const maps = [
   "BetweenTwoSeas",
   "Japan",
   "KnownWorld",
+  "Baikal",
 ];
 
 const removeSmall = true;
