@@ -125,6 +125,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 Translators are welcome! Please feel free to help translate into your language.
 How to help?
+
 1. Go to the project's Crowdin translation page: [https://crowdin.com/project/openfrontio](https://crowdin.com/project/openfrontio)
 2. Login if you already have an account/ Sign up if you don't have one
 3. Select the language you want to translate in/ If your language isn't on the list, create a new topic in "Discussions" about adding the language
