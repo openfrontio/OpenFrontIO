@@ -111,6 +111,7 @@ export interface PlayerUpdate {
   incomingAttacks: AttackUpdate[];
   outgoingAllianceRequests: PlayerID[];
   stats: PlayerStats;
+  hasSpawned: boolean;
 }
 
 export interface AllianceRequestUpdate {

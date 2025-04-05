@@ -216,7 +216,7 @@ export class StructureLayer implements Layer {
 
   private handleUnitRendering(unit: UnitView) {
     const unitType = unit.constructionType() ?? unit.type();
-    let iconType = unitType;
+    const iconType = unitType;
     if (!this.isUnitTypeSupported(unitType)) return;
 
     const config = this.unitConfigs[unitType];

@@ -11,6 +11,7 @@ import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";
+import { UsernameInput } from "./UsernameInput";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
@@ -35,7 +36,7 @@ export class SinglePlayerModal extends LitElement {
         <div class="options-layout">
           <!-- Map Selection -->
           <div class="options-section">
-            <div class="option-title">${translateText("single_modal.map")}</div>
+            <div class="option-title">${translateText("map.map")}</div>
             <div class="option-cards">
               ${Object.entries(GameMapType)
                 .filter(([key]) => isNaN(Number(key)))
@@ -80,7 +81,7 @@ export class SinglePlayerModal extends LitElement {
           <!-- Difficulty Selection -->
           <div class="options-section">
             <div class="option-title">
-              ${translateText("single_modal.difficulty")}
+              ${translateText("difficulty.difficulty")}
             </div>
             <div class="option-cards">
               ${Object.entries(Difficulty)
@@ -160,13 +161,13 @@ export class SinglePlayerModal extends LitElement {
               </label>
 
               <label
-                for="disable-npcs"
+                for="singleplayer-modal-disable-npcs"
                 class="option-card ${this.disableNPCs ? "selected" : ""}"
               >
                 <div class="checkbox-icon"></div>
                 <input
                   type="checkbox"
-                  id="disable-npcs"
+                  id="singleplayer-modal-disable-npcs"
                   @change=${this.handleDisableNPCsChange}
                   .checked=${this.disableNPCs}
                 />
@@ -175,13 +176,13 @@ export class SinglePlayerModal extends LitElement {
                 </div>
               </label>
               <label
-                for="instant-build"
+                for="singleplayer-modal-instant-build"
                 class="option-card ${this.instantBuild ? "selected" : ""}"
               >
                 <div class="checkbox-icon"></div>
                 <input
                   type="checkbox"
-                  id="instant-build"
+                  id="singleplayer-modal-instant-build"
                   @change=${this.handleInstantBuildChange}
                   .checked=${this.instantBuild}
                 />
@@ -191,13 +192,13 @@ export class SinglePlayerModal extends LitElement {
               </label>
 
               <label
-                for="infinite-gold"
+                for="singleplayer-modal-infinite-gold"
                 class="option-card ${this.infiniteGold ? "selected" : ""}"
               >
                 <div class="checkbox-icon"></div>
                 <input
                   type="checkbox"
-                  id="infinite-gold"
+                  id="singleplayer-modal-infinite-gold"
                   @change=${this.handleInfiniteGoldChange}
                   .checked=${this.infiniteGold}
                 />
@@ -207,13 +208,13 @@ export class SinglePlayerModal extends LitElement {
               </label>
 
               <label
-                for="infinite-troops"
+                for="singleplayer-modal-infinite-troops"
                 class="option-card ${this.infiniteTroops ? "selected" : ""}"
               >
                 <div class="checkbox-icon"></div>
                 <input
                   type="checkbox"
-                  id="infinite-troops"
+                  id="singleplayer-modal-infinite-troops"
                   @change=${this.handleInfiniteTroopsChange}
                   .checked=${this.infiniteTroops}
                 />
@@ -223,13 +224,13 @@ export class SinglePlayerModal extends LitElement {
               </label>
 
               <label
-                for="disable-nukes"
+                for="singleplayer-modal-disable-nukes"
                 class="option-card ${this.disableNukes ? "selected" : ""}"
               >
                 <div class="checkbox-icon"></div>
                 <input
                   type="checkbox"
-                  id="disable-nukes"
+                  id="singleplayer-modal-disable-nukes"
                   @change=${this.handleDisableNukesChange}
                   .checked=${this.disableNukes}
                 />
@@ -326,6 +327,13 @@ export class SinglePlayerModal extends LitElement {
     const clientID = generateID();
     const gameID = generateID();
 
+    const usernameInput = document.querySelector(
+      "username-input",
+    ) as UsernameInput;
+    if (!usernameInput) {
+      consolex.warn("Username input element not found");
+    }
+
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
@@ -337,7 +345,7 @@ export class SinglePlayerModal extends LitElement {
               {
                 playerID: generateID(),
                 clientID,
-                username: "PLACEHOLDER",
+                username: usernameInput.getCurrentUsername(),
               },
             ],
             config: {

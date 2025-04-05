@@ -39,7 +39,7 @@ describe("Attack", () => {
       null,
       "attacker_id",
     );
-    game.addPlayer(attackerInfo, 1000);
+    game.addPlayer(attackerInfo);
     const defenderInfo = new PlayerInfo(
       "us",
       "defender dude",
@@ -47,7 +47,7 @@ describe("Attack", () => {
       null,
       "defender_id",
     );
-    game.addPlayer(defenderInfo, 1000);
+    game.addPlayer(defenderInfo);
 
     defenderSpawn = game.ref(0, 15);
     attackerSpawn = game.ref(0, 10);

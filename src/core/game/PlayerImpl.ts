@@ -92,13 +92,16 @@ export class PlayerImpl implements Player {
 
   public _incomingAttacks: Attack[] = [];
   public _outgoingAttacks: Attack[] = [];
+  public _outgoingLandAttacks: Attack[] = [];
+
+  private _hasSpawned = false;
 
   constructor(
     private mg: GameImpl,
     private _smallID: number,
     private readonly playerInfo: PlayerInfo,
     startTroops: number,
-    private _team: Team | null,
+    private readonly _team: Team | null,
   ) {
     this._flag = playerInfo.flag;
     this._name = sanitizeUsername(playerInfo.name);
@@ -161,6 +164,7 @@ export class PlayerImpl implements Player {
       ),
       outgoingAllianceRequests: outgoingAllianceRequests,
       stats: this.mg.stats().getPlayerStats(this.id()),
+      hasSpawned: this.hasSpawned(),
     };
   }
 
@@ -288,6 +292,14 @@ export class PlayerImpl implements Player {
   }
   isAlive(): boolean {
     return this._tiles.size > 0;
+  }
+
+  hasSpawned(): boolean {
+    return this._hasSpawned;
+  }
+
+  setHasSpawned(hasSpawned: boolean): void {
+    this._hasSpawned = hasSpawned;
   }
 
   incomingAllianceRequests(): AllianceRequest[] {
@@ -1003,7 +1015,7 @@ export class PlayerImpl implements Player {
   // It's a probability list, so if an element appears twice it's because it's
   // twice more likely to be picked later.
   tradingPorts(port: Unit): Unit[] {
-    let ports = this.mg
+    const ports = this.mg
       .players()
       .filter((p) => p != port.owner() && p.canTrade(port.owner()))
       .flatMap((p) => p.units(UnitType.Port))

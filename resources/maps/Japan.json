@@ -1,126 +1,138 @@
 {
   "name": "Japan",
-  "width": 2000,
-  "height": 2000,
+  "width": 1562,
+  "height": 1646,
   "nations": [
     {
-      "coordinates": [1340, 468],
+      "coordinates": [1151, 709],
       "name": "Hokkaido",
-      "strength": 3,
+      "strength": 1,
       "flag": "jp"
     },
     {
-      "coordinates": [1220, 830],
+      "coordinates": [1005, 843],
       "name": "Tohoku",
-      "strength": 3,
+      "strength": 1,
       "flag": "jp"
     },
     {
-      "coordinates": [1000, 1150],
+      "coordinates": [858, 1045],
       "name": "Chubu",
-      "strength": 3,
+      "strength": 1,
       "flag": "jp"
     },
     {
-      "coordinates": [1150, 1170],
+      "coordinates": [948, 1037],
       "name": "Kanto",
-      "strength": 3,
+      "strength": 1,
       "flag": "jp"
     },
     {
-      "coordinates": [860, 1260],
-      "name": "Kinki",
-      "strength": 3,
-      "flag": "jp"
-    },
-    {
-      "coordinates": [670, 1250],
-      "name": "Chugoku",
-      "strength": 3,
-      "flag": "jp"
-    },
-    {
-      "coordinates": [700, 1350],
-      "name": "Shikoku",
-      "strength": 3,
-      "flag": "jp"
-    },
-    {
-      "coordinates": [510, 1440],
-      "name": "Kyushu",
-      "strength": 3,
-      "flag": "jp"
-    },
-    {
-      "coordinates": [300, 1150],
-      "name": "South Korea",
+      "coordinates": [1162, 154],
+      "name": "Sakhalin",
       "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [571, 1116],
+      "name": "Chugoku",
+      "strength": 1,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [8612, 1183],
+      "name": "Shikoku",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [450, 1234],
+      "name": "Kyushu",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [274, 1058],
+      "name": "South Korea",
+      "strength": 3,
       "flag": "kr"
     },
     {
-      "coordinates": [220, 880],
+      "coordinates": [160, 841],
       "name": "North Korea",
-      "strength": 2,
+      "strength": 1,
       "flag": "kp"
     },
     {
-      "coordinates": [50, 50],
+      "coordinates": [15, 795],
       "name": "China",
-      "strength": 2,
+      "strength": 3,
       "flag": "cn"
     },
     {
-      "coordinates": [900, 200],
+      "coordinates": [230, 75],
       "name": "Russia",
-      "strength": 2,
+      "strength": 3,
       "flag": "ru"
     },
     {
-      "coordinates": [1030, 970],
+      "coordinates": [898, 923],
       "name": "Sado Island",
-      "strength": 2,
+      "strength": 1,
       "flag": "jp"
     },
     {
-      "coordinates": [670, 1130],
+      "coordinates": [592, 1031],
       "name": "Oki Islands",
-      "strength": 2,
+      "strength": 1,
       "flag": "jp"
     },
     {
-      "coordinates": [300, 1930],
-      "name": "Okinawa",
+      "coordinates": [741, 1108],
+      "name": "Kyoto",
       "strength": 3,
       "flag": "jp"
     },
     {
-      "coordinates": [1190, 680],
-      "name": "Tsugaru Strait",
+      "coordinates": [219, 972],
+      "name": "Seoul",
       "strength": 3,
-      "flag": "jp"
+      "flag": "kr"
     },
     {
-      "coordinates": [1130, 1190],
+      "coordinates": [976, 1073],
       "name": "Tokyo",
       "strength": 3,
       "flag": "jp"
     },
     {
-      "coordinates": [1060, 1190],
+      "coordinates": [911, 1079],
       "name": "Mount Fuji",
       "strength": 3,
       "flag": "jp"
     },
     {
-      "coordinates": [1500, 420],
+      "coordinates": [1298, 564],
       "name": "Shiretoko Peninsula",
+      "strength": 1,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [435, 1311],
+      "name": "Sakurajima",
+      "strength": 1,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [275, 1614],
+      "name": "Okinawa",
       "strength": 3,
       "flag": "jp"
     },
     {
-      "coordinates": [490, 1530],
-      "name": "Sakurajima",
-      "strength": 3,
+      "coordinates": [731, 1115],
+      "name": "Kinki",
+      "strength": 1,
       "flag": "jp"
     }
   ]

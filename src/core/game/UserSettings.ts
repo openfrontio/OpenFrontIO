@@ -24,8 +24,16 @@ export class UserSettings {
     return this.get("settings.leftClickOpensMenu", false);
   }
 
+  focusLocked() {
+    return this.get("settings.focusLocked", false);
+  }
+
   toggleLeftClickOpenMenu() {
     this.set("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
+  }
+
+  toggleFocusLocked() {
+    this.set("settings.focusLocked", !this.focusLocked());
   }
 
   toggleEmojis() {

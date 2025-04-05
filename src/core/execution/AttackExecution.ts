@@ -190,7 +190,11 @@ export class AttackExecution implements Execution {
 
   tick(ticks: number) {
     if (this.attack.retreated()) {
-      this.retreat(malusForRetreat);
+      if (this.attack.target().isPlayer()) {
+        this.retreat(malusForRetreat);
+      } else {
+        this.retreat();
+      }
       this.active = false;
       return;
     }

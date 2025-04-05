@@ -2,6 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { consolex } from "../core/Consolex";
+import { GameMode } from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { JoinLobbyEvent } from "./Main";
@@ -115,26 +116,26 @@ export class PublicLobby extends LitElement {
             style="border: 1px solid rgba(255, 255, 255, 0.5)"
           />
           <div
-            class="w-full flex flex-col md:flex-row items-center justify-center gap-4"
+            class="w-full flex flex-col md:flex-row items-center justify-center md:justify-evenly"
           >
-            <div class="flex flex-col items-start">
-              <div class="text-md font-medium text-blue-100">
+            <div class="flex flex-col items-center">
+              <div class="text-md font-medium text-blue-100 mb-4">
                 <!-- ${lobby.gameConfig.gameMap} -->
                 ${translateText(
                   `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/\s+/g, "")}`,
                 )}
               </div>
-            </div>
-            <div class="flex flex-col items-start">
               <div class="text-md font-medium text-blue-100">
-                ${lobby.numClients} / ${lobby.gameConfig.maxPlayers}
-                ${translateText("public_lobby.waiting")}
+                ${lobby.gameConfig.gameMode == GameMode.Team
+                  ? translateText("game_mode.teams")
+                  : translateText("game_mode.ffa")}
               </div>
             </div>
-            <div class="flex items-center">
-              <div
-                class="min-w-20 text-sm font-medium px-2 py-1 bg-white/10 rounded-xl text-blue-100 text-center"
-              >
+            <div class="flex flex-col items-center">
+              <div class="text-md font-medium text-blue-100 mb-2">
+                ${lobby.numClients} / ${lobby.gameConfig.maxPlayers}
+              </div>
+              <div class="text-md font-medium text-blue-100">
                 ${timeDisplay}
               </div>
             </div>

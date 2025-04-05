@@ -16,7 +16,7 @@ export interface Gatekeeper {
   // The wrapper for request handlers with optional rate limiting
   httpHandler: (
     limiterType: LimiterType,
-    fn: (req: Request, res: Response, next: NextFunction) => Promise<any>,
+    fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>,
   ) => (req: Request, res: Response, next: NextFunction) => Promise<void>;
 
   // The wrapper for WebSocket message handlers with rate limiting
@@ -67,8 +67,8 @@ async function getGatekeeper(): Promise<Gatekeeper> {
       // Use dynamic import for ES modules
       // Using a type assertion to avoid TypeScript errors for optional modules
       const module = await import(
-        "./gatekeeper/RealGatekeeper.js" as any
-      ).catch(() => import("./gatekeeper/RealGatekeeper.js" as any));
+        "./gatekeeper/RealGatekeeper.js" as string
+      ).catch(() => import("./gatekeeper/RealGatekeeper.js" as string));
 
       if (!module || !module.RealGatekeeper) {
         console.log(
@@ -95,7 +95,7 @@ export class GatekeeperWrapper implements Gatekeeper {
 
   httpHandler(
     limiterType: LimiterType,
-    fn: (req: Request, res: Response, next: NextFunction) => Promise<any>,
+    fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>,
   ) {
     return async (req: Request, res: Response, next: NextFunction) => {
       try {
@@ -129,7 +129,7 @@ export class NoOpGatekeeper implements Gatekeeper {
   // Simple pass-through with no rate limiting
   httpHandler(
     limiterType: LimiterType,
-    fn: (req: Request, res: Response, next: NextFunction) => Promise<any>,
+    fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>,
   ) {
     return async (req: Request, res: Response, next: NextFunction) => {
       try {

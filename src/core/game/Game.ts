@@ -60,6 +60,8 @@ export enum GameMapType {
   Australia = "Australia",
   Iceland = "Iceland",
   Japan = "Japan",
+  BetweenTwoSeas = "Between Two Seas",
+  KnownWorld = "Known World",
 }
 
 export enum GameType {
@@ -135,8 +137,8 @@ export class Cell {
   private strRepr: string;
 
   constructor(
-    public readonly x,
-    public readonly y,
+    public readonly x: number,
+    public readonly y: number,
   ) {
     this.strRepr = `Cell[${this.x},${this.y}]`;
   }
@@ -314,6 +316,9 @@ export interface Player {
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
   lastTileChange(): Tick;
 
+  hasSpawned(): boolean;
+  setHasSpawned(hasSpawned: boolean): void;
+
   // Territory
   tiles(): ReadonlySet<TileRef>;
   borderTiles(): ReadonlySet<TileRef>;
@@ -428,7 +433,7 @@ export interface Game extends GameMap {
   playerByClientID(id: ClientID): Player | null;
   playerBySmallID(id: number): Player | TerraNullius;
   hasPlayer(id: PlayerID): boolean;
-  addPlayer(playerInfo: PlayerInfo, manpower: number): Player;
+  addPlayer(playerInfo: PlayerInfo): Player;
   terraNullius(): TerraNullius;
   owner(ref: TileRef): Player | TerraNullius;
 
