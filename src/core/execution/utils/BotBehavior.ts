@@ -37,6 +37,13 @@ export class BotBehavior {
     }
   }
 
+  private emoji(player: Player, emoji: string) {
+    if (player.type() !== PlayerType.Human) return;
+    this.game.addExecution(
+      new EmojiExecution(this.player.id(), player.id(), emoji),
+    );
+  }
+
   selectEnemy(): Player | null {
     // Forget old enemies
     if (this.game.ticks() - this.lastEnemyUpdateTick > 100) {
@@ -46,20 +53,25 @@ export class BotBehavior {
     // Assist allies
     if (this.assistAllies) {
       outer: for (const ally of this.player.allies()) {
-        if (this.player.relation(ally) < Relation.Friendly) continue;
         if (ally.targets().length === 0) continue;
+        if (this.player.relation(ally) < Relation.Friendly) {
+          this.emoji(ally, "🤦");
+          continue;
+        }
         for (const target of ally.targets()) {
-          if (target === this.player) continue;
-          if (this.player.isAlliedWith(target)) continue;
+          if (target === this.player) {
+            this.emoji(ally, "💀");
+            continue;
+          }
+          if (this.player.isAlliedWith(target)) {
+            this.emoji(ally, "👎");
+            continue;
+          }
           // All checks passed, assist them
           this.player.updateRelation(ally, -20);
           this.enemy = target;
           this.lastEnemyUpdateTick = this.game.ticks();
-          if (ally.type() == PlayerType.Human) {
-            this.game.addExecution(
-              new EmojiExecution(this.player.id(), ally.id(), "👍"),
-            );
-          }
+          this.emoji(ally, "👍");
           break outer;
         }
       }
@@ -74,7 +86,7 @@ export class BotBehavior {
       }
     }
 
-    // Sanity check, don't attack allies our teammates
+    // Sanity check, don't attack our allies or teammates
     if (this.enemy && this.player.isFriendly(this.enemy)) {
       this.enemy = null;
     }
