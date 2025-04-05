@@ -35,43 +35,84 @@ export class HelpModal extends LitElement {
             </thead>
             <tbody class="text-left">
               <tr>
-                <td>Space</td>
+                <td><span class="key">Space</span></td>
                 <td>${translateText("help_modal.action_alt_view")}</td>
               </tr>
               <tr>
-                <td>Shift + left click</td>
+                <td>
+                  <div class="scroll-combo-horizontal">
+                    <span class="key">Shift</span>
+                    <span class="plus">+</span>
+                    <div class="mouse-shell alt-left-click">
+                      <div class="mouse-left-corner"></div>
+                      <div class="mouse-wheel"></div>
+                    </div>
+                  </div>
+                </td>
                 <td>${translateText("help_modal.action_attack_altclick")}</td>
               </tr>
               <tr>
-                <td>Ctrl + left click</td>
+                <td>
+                  <div class="scroll-combo-horizontal">
+                    <span class="key">Ctrl</span>
+                    <span class="plus">+</span>
+                    <div class="mouse-shell alt-left-click">
+                      <div class="mouse-left-corner"></div>
+                      <div class="mouse-wheel"></div>
+                    </div>
+                  </div>
+                </td>
                 <td>${translateText("help_modal.action_build")}</td>
               </tr>
               <tr>
-                <td>Alt + left click</td>
+                <td>
+                  <div class="scroll-combo-horizontal">
+                    <span class="key">Alt</span>
+                    <span class="plus">+</span>
+                    <div class="mouse-shell alt-left-click">
+                      <div class="mouse-left-corner"></div>
+                      <div class="mouse-wheel"></div>
+                    </div>
+                  </div>
+                </td>
                 <td>${translateText("help_modal.action_emote")}</td>
               </tr>
               <tr>
-                <td>C</td>
+                <td><span class="key">C</span></td>
                 <td>${translateText("help_modal.action_center")}</td>
               </tr>
               <tr>
-                <td>Q / E</td>
+                <td><span class="key">Q</span> / <span class="key">E</span></td>
                 <td>${translateText("help_modal.action_zoom")}</td>
               </tr>
               <tr>
-                <td>W / A / S / D</td>
+                <td><span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span></td>
                 <td>${translateText("help_modal.action_move_camera")}</td>
               </tr>
               <tr>
-                <td>1 / 2</td>
+                <td><span class="key">1</span> / <span class="key">2</span></td>
                 <td>${translateText("help_modal.action_ratio_change")}</td>
               </tr>
               <tr>
-                <td>Shift + scroll down / scroll up</td>
+                <td>
+                  <div class="scroll-combo-horizontal">
+                    <span class="key">Shift</span>
+                    <span class="plus">+</span>
+                    <div class="mouse-with-arrows">
+                      <div class="mouse-shell">
+                        <div class="mouse-wheel" id="highlighted-wheel"></div>
+                      </div>
+                      <div class="mouse-arrows-side">
+                        <div class="arrow">↑</div>
+                        <div class="arrow">↓</div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td>${translateText("help_modal.action_ratio_change")}</td>
               </tr>
               <tr>
-                <td>ALT + R</td>
+                <td><span class="key">ALT</span> + <span class="key">R</span></td>
                 <td>${translateText("help_modal.action_reset_gfx")}</td>
               </tr>
             </tbody>
