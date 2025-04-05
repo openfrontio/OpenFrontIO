@@ -255,6 +255,7 @@ export class FakeHumanExecution implements Execution {
       this.player.units(UnitType.MissileSilo).length == 0 ||
       this.player.gold() <
         this.mg.config().unitInfo(UnitType.AtomBomb).cost(this.player) ||
+      other.type() == PlayerType.Bot ||
       this.player.isOnSameTeam(other)
     ) {
       return;
