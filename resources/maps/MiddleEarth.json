@@ -1,0 +1,162 @@
+{
+  "name": "Middle Earth",
+  "width": 2000,
+  "height": 1500,
+  "nations": [
+    {
+      "coordinates": [1226, 110],
+      "name": "Cold Drakes",
+      "strength": 1
+    },
+    {
+      "coordinates": [471, 221],
+      "name": "Numeriador",
+      "strength": 1
+    },
+    {
+      "coordinates": [655, 271],
+      "name": "Arthedain",
+      "strength": 2
+    },
+    {
+      "coordinates": [767, 460],
+      "name": "Cardolan",
+      "strength": 1
+    },
+    {
+      "coordinates": [857, 397],
+      "name": "Rhudaur",
+      "strength": 1
+    },
+    {
+      "coordinates": [971, 158],
+      "name": "Orcs",
+      "strength": 2
+    },
+    {
+      "coordinates": [1084, 290],
+      "name": "Beornings",
+      "strength": 1
+    },
+    {
+      "coordinates": [1160, 258],
+      "name": "Wood Elves",
+      "strength": 2
+    },
+    {
+      "coordinates": [1245, 255],
+      "name": "Dale",
+      "strength": 2
+    },
+    {
+      "coordinates": [1688, 120],
+      "name": "Ironhill Dwarfs",
+      "strength": 2
+    },
+    {
+      "coordinates": [1264, 459],
+      "name": "Kingdom of Rhovanion",
+      "strength": 1
+    },
+    {
+      "coordinates": [841, 528],
+      "name": "Dunaeferan",
+      "strength": 1
+    },
+    {
+      "coordinates": [1041, 707],
+      "name": "Kingdom of Rohan",
+      "strength": 2
+    },
+    {
+      "coordinates": [1176, 849],
+      "name": "Kingdom of Gondor",
+      "strength": 2
+    },
+    {
+      "coordinates": [1703, 602],
+      "name": "Asdriag Horde",
+      "strength": 2
+    },
+    {
+      "coordinates": [1876, 408],
+      "name": "Umali Tribes",
+      "strength": 1
+    },
+    {
+      "coordinates": [1702, 1002],
+      "name": "Khanate of Khand",
+      "strength": 2
+    },
+    {
+      "coordinates": [1971, 896],
+      "name": "Khanate of Nurad",
+      "strength": 2
+    },
+    {
+      "coordinates": [1578, 1256],
+      "name": "Troll-men",
+      "strength": 2
+    },
+    {
+      "coordinates": [1081, 1344],
+      "name": "Corsairs of Umbar",
+      "strength": 2
+    },
+    {
+      "coordinates": [1994, 1450],
+      "name": "Shahdom of Chy",
+      "strength": 1
+    },
+    {
+      "coordinates": [925, 800],
+      "name": "Helms Deep",
+      "strength": 2
+    },
+    {
+      "coordinates": [1086, 830],
+      "name": "Minas Thirith",
+      "strength": 2
+    },
+    {
+      "coordinates": [1330, 863],
+      "name": "Forces of Mordor",
+      "strength": 2
+    },
+    {
+      "coordinates": [860, 618],
+      "name": "Ents",
+      "strength": 1
+    },
+    {
+      "coordinates": [579, 329],
+      "name": "Hobbits",
+      "strength": 1
+    },
+    {
+      "coordinates": [557, 120],
+      "name": "Lossoth Tribes",
+      "strength": 1
+    },
+    {
+      "coordinates": [458, 329],
+      "name": "Mithlond",
+      "strength": 1
+    },
+    {
+      "coordinates": [631, 627],
+      "name": "Kingdom of Saralain",
+      "strength": 1
+    },
+    {
+      "coordinates": [1309, 1177],
+      "name": "Haradrim",
+      "strength": 1
+    },
+    {
+      "coordinates": [1494, 468],
+      "name": "Doriath",
+      "strength": 1
+    }
+  ]
+}
