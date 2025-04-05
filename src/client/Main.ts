@@ -119,12 +119,12 @@ class Client {
       hlpModal.open();
     });
 
-    const userModal = document.querySelector(
+    const settingsModal = document.querySelector(
       "user-setting",
     ) as UserSettingModal;
-    userModal instanceof UserSettingModal;
+    settingsModal instanceof UserSettingModal;
     document.getElementById("settings-button").addEventListener("click", () => {
-      userModal.open();
+      settingsModal.open();
     });
 
     const hostModal = document.querySelector(
@@ -215,13 +215,8 @@ class Client {
           "single-player-modal",
           "host-lobby-modal",
           "join-private-lobby-modal",
-          "emoji-table",
-          "leader-board",
-          "build-menu",
-          "win-modal",
           "game-starting-modal",
           "top-bar",
-          "player-panel",
           "help-modal",
           "user-setting",
         ].forEach((tag) => {
