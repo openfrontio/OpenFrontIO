@@ -1,4 +1,3 @@
-import { shuffle } from "d3";
 import {
   AllianceRequest,
   Game,
@@ -103,7 +102,8 @@ export class BotBehavior {
   }
 
   selectRandomEnemy(): Player | TerraNullius | null {
-    for (const neighbor of shuffle(this.player.neighbors())) {
+    const neighbors = this.player.neighbors();
+    for (const neighbor of this.random.shuffleArray(neighbors)) {
       if (neighbor.isPlayer()) {
         if (this.player.isFriendly(neighbor)) continue;
         if (neighbor.type() == PlayerType.FakeHuman) {
