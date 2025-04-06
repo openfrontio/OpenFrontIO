@@ -75,7 +75,7 @@ export class BotBehavior {
     if (this.enemy === null) {
       const bots = this.player
         .neighbors()
-        .filter((n) => n.isPlayer() && n.type() == PlayerType.Bot) as Player[];
+        .filter((n) => n.isPlayer() && n.type() === PlayerType.Bot) as Player[];
       if (bots.length > 0) {
         const density = (p: Player) => p.troops() / p.numTilesOwned();
         this.enemy = bots.sort((a, b) => density(a) - density(b))[0];
@@ -83,7 +83,7 @@ export class BotBehavior {
       }
     }
 
-    // Select the most hated player to be an enemy
+    // Select the most hated player
     if (this.enemy === null) {
       const mostHated = this.player.allRelationsSorted()[0] ?? null;
       if (mostHated != null && mostHated.relation === Relation.Hostile) {
