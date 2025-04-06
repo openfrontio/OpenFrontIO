@@ -16,8 +16,8 @@ import {
   CloseViewEvent,
   ContextMenuEvent,
   MouseUpEvent,
-  ShowBuildMenuEvent,
   SendBoatEvent,
+  ShowBuildMenuEvent,
 } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,

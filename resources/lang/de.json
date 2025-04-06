@@ -19,7 +19,7 @@
     "action_zoom": "Ansicht vergrößern/verkleinern",
     "action_move_camera": "Karte verschieben",
     "action_ratio_change": "Ändere das Angriffsverhältnis",
-    "action_ratio_increasedecrease": "Angriffsrate verringern/erhöhen",
+    "action_ratio_increasedecrease": " Angriffsrate verringern/erhöhen",
     "action_send_boat": "Boot zur Cursorposition senden",
     "action_reset_gfx": "Grafik zurücksetzen",
     "ui_section": "Spieloberfläche",
