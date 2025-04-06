@@ -1,4 +1,4 @@
-import { Execution, Game, Player, PlayerType } from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
 import { BotBehavior } from "./utils/BotBehavior";
@@ -37,7 +37,13 @@ export class BotExecution implements Execution {
     }
 
     if (this.behavior === null) {
-      this.behavior = new BotBehavior(this.mg, this.bot, 1 / 20, false);
+      this.behavior = new BotBehavior(
+        this.random,
+        this.mg,
+        this.bot,
+        1 / 20,
+        false,
+      );
     }
 
     this.behavior.handleAllianceRequests();
@@ -65,28 +71,9 @@ export class BotExecution implements Execution {
       this.neighborsTerraNullius = false;
     }
 
-    const border = Array.from(this.bot.borderTiles())
-      .flatMap((t) => this.mg.neighbors(t))
-      .filter((t) => this.mg.hasOwner(t) && this.mg.owner(t) != this.bot);
-
-    if (border.length == 0) {
-      return;
-    }
-
-    const toAttack = border[this.random.nextInt(0, border.length)];
-    const owner = this.mg.owner(toAttack);
-
-    if (owner.isPlayer()) {
-      if (this.bot.isFriendly(owner)) {
-        return;
-      }
-      if (owner.type() == PlayerType.FakeHuman) {
-        if (!this.random.chance(2)) {
-          return;
-        }
-      }
-    }
-    this.behavior.sendAttack(owner);
+    const enemy = this.behavior.selectRandomEnemy();
+    if (!enemy) return;
+    this.behavior.sendAttack(enemy);
   }
 
   owner(): Player {

@@ -1,3 +1,4 @@
+import { shuffle } from "d3";
 import {
   AllianceRequest,
   Game,
@@ -7,6 +8,7 @@ import {
   TerraNullius,
   Tick,
 } from "../../game/Game";
+import { PseudoRandom } from "../../PseudoRandom";
 import { AttackExecution } from "../AttackExecution";
 import { EmojiExecution } from "../EmojiExecution";
 
@@ -15,6 +17,7 @@ export class BotBehavior {
   private enemyUpdated: Tick;
 
   constructor(
+    private random: PseudoRandom,
     private game: Game,
     private player: Player,
     private attackRatio: number,
@@ -97,6 +100,21 @@ export class BotBehavior {
       this.enemy = null;
     }
     return this.enemy;
+  }
+
+  selectRandomEnemy(): Player | TerraNullius | null {
+    for (const neighbor of shuffle(this.player.neighbors())) {
+      if (neighbor.isPlayer()) {
+        if (this.player.isFriendly(neighbor)) continue;
+        if (neighbor.type() == PlayerType.FakeHuman) {
+          if (this.random.chance(2)) {
+            continue;
+          }
+        }
+      }
+      return neighbor;
+    }
+    return null;
   }
 
   sendAttack(target: Player | TerraNullius) {
