@@ -36,7 +36,7 @@ export class TerritoryLayer implements Layer {
   private lastDragTime = 0;
   private nodrawDragDuration = 200;
 
-  private refreshRate = 50;
+  private refreshRate = 10;
   private lastRefresh = 0;
 
   private lastFocusedPlayer: PlayerView | null = null;
@@ -215,7 +215,7 @@ export class TerritoryLayer implements Layer {
   }
 
   renderTerritory() {
-    let numToRender = Math.floor(this.tileToRenderQueue.size() / 5);
+    let numToRender = Math.floor(this.tileToRenderQueue.size() / 10);
     if (numToRender == 0 || this.game.inSpawnPhase()) {
       numToRender = this.tileToRenderQueue.size();
     }
