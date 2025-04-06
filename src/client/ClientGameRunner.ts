@@ -11,7 +11,7 @@ import {
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { TeamName, UnitType } from "../core/game/Game";
+import { Team, UnitType } from "../core/game/Game";
 import {
   ErrorUpdate,
   GameUpdateType,
@@ -189,13 +189,13 @@ export class ClientGameRunner {
         clientID: this.lobby.clientID,
       },
     ];
-    let winner: ClientID | TeamName | null = null;
+    let winner: ClientID | Team | null = null;
     if (update.winnerType == "player") {
       winner = this.gameView
         .playerBySmallID(update.winner as number)
         .clientID();
     } else {
-      winner = update.winner as TeamName;
+      winner = update.winner as Team;
     }
 
     const record = createGameRecord(

@@ -268,7 +268,7 @@ export class DefaultConfig implements Config {
       case UnitType.AtomBomb:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.infiniteGold() ? 0 : 500_000,
+            p.type() == PlayerType.Human && this.infiniteGold() ? 0 : 750_000,
           territoryBound: false,
         };
       case UnitType.HydrogenBomb:

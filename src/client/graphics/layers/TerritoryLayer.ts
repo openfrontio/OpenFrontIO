@@ -55,7 +55,7 @@ export class TerritoryLayer implements Layer {
   paintPlayerBorder(player: PlayerView) {
     player.borderTiles().then((playerBorderTiles) => {
       playerBorderTiles.borderTiles.forEach((tile: TileRef) => {
-        this.paintTerritory(tile); // Immediately paint the tile instead of enqueueing
+        this.paintTerritory(tile, true); // Immediately paint the tile instead of enqueueing
       });
     });
   }

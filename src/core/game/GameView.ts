@@ -15,7 +15,7 @@ import {
   PlayerInfo,
   PlayerProfile,
   PlayerType,
-  TeamName,
+  Team,
   TerrainType,
   TerraNullius,
   Tick,
@@ -177,8 +177,8 @@ export class PlayerView {
   id(): PlayerID {
     return this.data.id;
   }
-  teamName(): TeamName {
-    return this.data.teamName;
+  team(): Team | null {
+    return this.data.team;
   }
   type(): PlayerType {
     return this.data.playerType;
@@ -223,9 +223,7 @@ export class PlayerView {
   }
 
   isOnSameTeam(other: PlayerView): boolean {
-    return (
-      this.data.teamName != null && this.data.teamName == other.data.teamName
-    );
+    return this.data.team != null && this.data.team == other.data.team;
   }
 
   isFriendly(other: PlayerView): boolean {

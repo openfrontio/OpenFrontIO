@@ -37,7 +37,7 @@ export enum Difficulty {
   Impossible = "Impossible",
 }
 
-export enum TeamName {
+export enum Team {
   Red = "Red",
   Blue = "Blue",
   Bot = "Bot",
@@ -73,10 +73,6 @@ export enum GameType {
 export enum GameMode {
   FFA = "Free For All",
   Team = "Team",
-}
-
-export interface Team {
-  name: TeamName;
 }
 
 export interface UnitInfo {
@@ -443,7 +439,7 @@ export interface Game extends GameMap {
   ticks(): Tick;
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
-  setWinner(winner: Player | TeamName, allPlayersStats: AllPlayersStats): void;
+  setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
   config(): Config;
 
   // Units

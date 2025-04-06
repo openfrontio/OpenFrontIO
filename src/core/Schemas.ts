@@ -6,7 +6,7 @@ import {
   GameMode,
   GameType,
   PlayerType,
-  TeamName,
+  Team,
   UnitType,
 } from "./game/Game";
 
@@ -364,7 +364,7 @@ const ClientBaseMessageSchema = z.object({
 
 export const ClientSendWinnerSchema = ClientBaseMessageSchema.extend({
   type: z.literal("winner"),
-  winner: ID.or(z.nativeEnum(TeamName)).nullable(),
+  winner: ID.or(z.nativeEnum(Team)).nullable(),
   allPlayersStats: AllPlayersStatsSchema,
   winnerType: z.enum(["player", "team"]),
 });
@@ -396,6 +396,7 @@ export const ClientJoinMessageSchema = ClientBaseMessageSchema.extend({
   type: z.literal("join"),
   lastTurn: z.number(), // The last turn the client saw.
   username: SafeString,
+  flag: SafeString.nullable().optional(),
 });
 
 export const ClientMessageSchema = z.union([
@@ -425,7 +426,7 @@ export const GameRecordSchema = z.object({
   num_turns: z.number(),
   turns: z.array(TurnSchema),
   winner: z
-    .union([ID, z.nativeEnum(TeamName)])
+    .union([ID, z.nativeEnum(Team)])
     .nullable()
     .optional(),
   winnerType: z.enum(["player", "team"]).nullable().optional(),

@@ -267,6 +267,7 @@ export class GameServer {
         playerID: c.playerID,
         username: c.username,
         clientID: c.clientID,
+        flag: c.flag,
       })),
     });
 

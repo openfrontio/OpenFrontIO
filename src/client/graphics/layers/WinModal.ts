@@ -1,7 +1,7 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { TeamName } from "../../../core/game/Game";
+import { Team } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { PseudoRandom } from "../../../core/PseudoRandom";
@@ -226,13 +226,9 @@ export class WinModal extends LitElement implements Layer {
     this.game.updatesSinceLastTick()[GameUpdateType.Win].forEach((wu) => {
       if (wu.winnerType === "team") {
         this.eventBus.emit(
-          new SendWinnerEvent(
-            wu.winner as TeamName,
-            wu.allPlayersStats,
-            "team",
-          ),
+          new SendWinnerEvent(wu.winner as Team, wu.allPlayersStats, "team"),
         );
-        if (wu.winner == this.game.myPlayer()?.teamName()) {
+        if (wu.winner == this.game.myPlayer()?.team()) {
           this._title = "Your team won!";
           this.won = true;
         } else {

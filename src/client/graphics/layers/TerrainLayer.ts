@@ -58,7 +58,6 @@ export class TerrainLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
-    console.log(this.transformHandler.scale);
     if (this.transformHandler.scale < 1) {
       context.imageSmoothingEnabled = true;
       context.imageSmoothingQuality = "low";
