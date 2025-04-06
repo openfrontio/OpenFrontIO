@@ -1,4 +1,5 @@
 import {
+  AllianceRequest,
   Game,
   Player,
   PlayerType,
@@ -11,7 +12,7 @@ import { EmojiExecution } from "../EmojiExecution";
 
 export class BotBehavior {
   private enemy: Player | null = null;
-  private lastEnemyUpdateTick: Tick;
+  private enemyUpdated: Tick;
 
   constructor(
     private game: Game,
@@ -22,14 +23,7 @@ export class BotBehavior {
 
   handleAllianceRequests() {
     for (const req of this.player.incomingAllianceRequests()) {
-      const notTraitor = !req.requestor().isTraitor();
-      const noMalice =
-        this.player.relation(req.requestor()) >= Relation.Neutral;
-      const requestorIsMuchLarger =
-        req.requestor().numTilesOwned() > this.player.numTilesOwned() * 3;
-      const notTooManyAlliances =
-        requestorIsMuchLarger || req.requestor().alliances().length < 3;
-      if (notTraitor && noMalice && notTooManyAlliances) {
+      if (shouldAcceptAllianceRequest(this.player, req)) {
         req.accept();
       } else {
         req.reject();
@@ -46,7 +40,7 @@ export class BotBehavior {
 
   selectEnemy(): Player | null {
     // Forget old enemies
-    if (this.game.ticks() - this.lastEnemyUpdateTick > 100) {
+    if (this.game.ticks() - this.enemyUpdated > 100) {
       this.enemy = null;
     }
 
@@ -70,7 +64,7 @@ export class BotBehavior {
           // All checks passed, assist them
           this.player.updateRelation(ally, -20);
           this.enemy = target;
-          this.lastEnemyUpdateTick = this.game.ticks();
+          this.enemyUpdated = this.game.ticks();
           this.emoji(ally, "👍");
           break outer;
         }
@@ -85,7 +79,7 @@ export class BotBehavior {
       if (bots.length > 0) {
         const density = (p: Player) => p.troops() / p.numTilesOwned();
         this.enemy = bots.sort((a, b) => density(a) - density(b))[0];
-        this.lastEnemyUpdateTick = this.game.ticks();
+        this.enemyUpdated = this.game.ticks();
       }
     }
 
@@ -94,7 +88,7 @@ export class BotBehavior {
       const mostHated = this.player.allRelationsSorted()[0] ?? null;
       if (mostHated != null && mostHated.relation === Relation.Hostile) {
         this.enemy = mostHated.player;
-        this.lastEnemyUpdateTick = this.game.ticks();
+        this.enemyUpdated = this.game.ticks();
       }
     }
 
@@ -117,4 +111,14 @@ export class BotBehavior {
       ),
     );
   }
+}
+
+function shouldAcceptAllianceRequest(player: Player, request: AllianceRequest) {
+  const notTraitor = !request.requestor().isTraitor();
+  const noMalice = player.relation(request.requestor()) >= Relation.Neutral;
+  const requestorIsMuchLarger =
+    request.requestor().numTilesOwned() > player.numTilesOwned() * 3;
+  const notTooManyAlliances =
+    requestorIsMuchLarger || request.requestor().alliances().length < 3;
+  return notTraitor && noMalice && notTooManyAlliances;
 }
