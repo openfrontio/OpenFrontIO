@@ -37,13 +37,7 @@ export class BotExecution implements Execution {
     }
 
     if (this.behavior === null) {
-      this.behavior = new BotBehavior(
-        this.random,
-        this.mg,
-        this.bot,
-        1 / 20,
-        false,
-      );
+      this.behavior = new BotBehavior(this.random, this.mg, this.bot, 1 / 20);
     }
 
     this.behavior.handleAllianceRequests();

@@ -20,7 +20,6 @@ export class BotBehavior {
     private game: Game,
     private player: Player,
     private attackRatio: number,
-    private assistAllies: boolean,
   ) {}
 
   handleAllianceRequests() {
@@ -40,37 +39,36 @@ export class BotBehavior {
     );
   }
 
+  assistAllies() {
+    outer: for (const ally of this.player.allies()) {
+      if (ally.targets().length === 0) continue;
+      if (this.player.relation(ally) < Relation.Friendly) {
+        // this.emoji(ally, "🤦");
+        continue;
+      }
+      for (const target of ally.targets()) {
+        if (target === this.player) {
+          // this.emoji(ally, "💀");
+          continue;
+        }
+        if (this.player.isAlliedWith(target)) {
+          // this.emoji(ally, "👎");
+          continue;
+        }
+        // All checks passed, assist them
+        this.player.updateRelation(ally, -20);
+        this.enemy = target;
+        this.enemyUpdated = this.game.ticks();
+        this.emoji(ally, "👍");
+        break outer;
+      }
+    }
+  }
+
   selectEnemy(): Player | null {
     // Forget old enemies
     if (this.game.ticks() - this.enemyUpdated > 100) {
       this.enemy = null;
-    }
-
-    // Assist allies
-    if (this.assistAllies) {
-      outer: for (const ally of this.player.allies()) {
-        if (ally.targets().length === 0) continue;
-        if (this.player.relation(ally) < Relation.Friendly) {
-          // this.emoji(ally, "🤦");
-          continue;
-        }
-        for (const target of ally.targets()) {
-          if (target === this.player) {
-            // this.emoji(ally, "💀");
-            continue;
-          }
-          if (this.player.isAlliedWith(target)) {
-            // this.emoji(ally, "👎");
-            continue;
-          }
-          // All checks passed, assist them
-          this.player.updateRelation(ally, -20);
-          this.enemy = target;
-          this.enemyUpdated = this.game.ticks();
-          this.emoji(ally, "👍");
-          break outer;
-        }
-      }
     }
 
     // Prefer neighboring bots
