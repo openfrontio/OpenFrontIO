@@ -1,28 +1,6 @@
-import {
-  Player,
-  PlayerInfo,
-  PlayerID,
-  PlayerType,
-  TerraNullius,
-  Cell,
-  Execution,
-  AllianceRequest,
-  MutableAlliance,
-  Alliance,
-  Tick,
-  AllPlayers,
-  Gold,
-  UnitType,
-  Unit,
-  Relation,
-  EmojiMessage,
-  PlayerProfile,
-  Attack,
-  UnitSpecificInfos,
-  Team,
-} from "./Game";
-import { AttackUpdate, PlayerUpdate } from "./GameUpdates";
-import { GameUpdateType } from "./GameUpdates";
+import { renderNumber, renderTroops } from "../../client/Utils";
+import { consolex } from "../Consolex";
+import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
   assertNever,
@@ -31,21 +9,40 @@ import {
   maxInt,
   minInt,
   simpleHash,
-  sourceDstOceanShore,
   targetTransportTile,
   toInt,
   within,
 } from "../Util";
-import { CellString, GameImpl } from "./GameImpl";
-import { UnitImpl } from "./UnitImpl";
-import { MessageType } from "./Game";
-import { renderTroops } from "../../client/Utils";
-import { TerraNulliusImpl } from "./TerraNulliusImpl";
-import { andFN, manhattanDistFN, TileRef } from "./GameMap";
-import { AttackImpl } from "./AttackImpl";
-import { PseudoRandom } from "../PseudoRandom";
-import { consolex } from "../Consolex";
 import { sanitizeUsername } from "../validations/username";
+import { AttackImpl } from "./AttackImpl";
+import {
+  Alliance,
+  AllianceRequest,
+  AllPlayers,
+  Attack,
+  Cell,
+  EmojiMessage,
+  Gold,
+  MessageType,
+  MutableAlliance,
+  Player,
+  PlayerID,
+  PlayerInfo,
+  PlayerProfile,
+  PlayerType,
+  Relation,
+  Team,
+  TerraNullius,
+  Tick,
+  Unit,
+  UnitSpecificInfos,
+  UnitType,
+} from "./Game";
+import { GameImpl } from "./GameImpl";
+import { andFN, manhattanDistFN, TileRef } from "./GameMap";
+import { AttackUpdate, GameUpdateType, PlayerUpdate } from "./GameUpdates";
+import { TerraNulliusImpl } from "./TerraNulliusImpl";
+import { UnitImpl } from "./UnitImpl";
 
 interface Target {
   tick: Tick;
@@ -95,13 +92,16 @@ export class PlayerImpl implements Player {
 
   public _incomingAttacks: Attack[] = [];
   public _outgoingAttacks: Attack[] = [];
+  public _outgoingLandAttacks: Attack[] = [];
+
+  private _hasSpawned = false;
 
   constructor(
     private mg: GameImpl,
     private _smallID: number,
     private readonly playerInfo: PlayerInfo,
     startTroops: number,
-    private _team: Team | null,
+    private readonly _team: Team | null,
   ) {
     this._flag = playerInfo.flag;
     this._name = sanitizeUsername(playerInfo.name);
@@ -127,7 +127,7 @@ export class PlayerImpl implements Player {
       name: this.name(),
       displayName: this.displayName(),
       id: this.id(),
-      teamName: this.team()?.name,
+      team: this.team(),
       smallID: this.smallID(),
       playerType: this.type(),
       isAlive: this.isAlive(),
@@ -164,6 +164,7 @@ export class PlayerImpl implements Player {
       ),
       outgoingAllianceRequests: outgoingAllianceRequests,
       stats: this.mg.stats().getPlayerStats(this.id()),
+      hasSpawned: this.hasSpawned(),
     };
   }
 
@@ -192,6 +193,10 @@ export class PlayerImpl implements Player {
 
   type(): PlayerType {
     return this.playerInfo.playerType;
+  }
+
+  clan(): string | null {
+    return this.playerInfo.clan;
   }
 
   units(...types: UnitType[]): UnitImpl[] {
@@ -287,6 +292,14 @@ export class PlayerImpl implements Player {
   }
   isAlive(): boolean {
     return this._tiles.size > 0;
+  }
+
+  hasSpawned(): boolean {
+    return this._hasSpawned;
+  }
+
+  setHasSpawned(hasSpawned: boolean): void {
+    this._hasSpawned = hasSpawned;
   }
 
   incomingAllianceRequests(): AllianceRequest[] {
@@ -519,7 +532,7 @@ export class PlayerImpl implements Player {
     return true;
   }
 
-  donate(recipient: Player, troops: number): void {
+  donateTroops(recipient: Player, troops: number): void {
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     recipient.addTroops(this.removeTroops(troops));
     this.mg.displayMessage(
@@ -529,6 +542,20 @@ export class PlayerImpl implements Player {
     );
     this.mg.displayMessage(
       `Recieved ${renderTroops(troops)} troops from ${this.name()}`,
+      MessageType.SUCCESS,
+      recipient.id(),
+    );
+  }
+  donateGold(recipient: Player, gold: number): void {
+    this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
+    recipient.addGold(this.removeGold(gold));
+    this.mg.displayMessage(
+      `Sent ${renderNumber(gold)} gold to ${recipient.name()}`,
+      MessageType.INFO,
+      this.id(),
+    );
+    this.mg.displayMessage(
+      `Recieved ${renderNumber(gold)} gold from ${this.name()}`,
       MessageType.SUCCESS,
       recipient.id(),
     );
@@ -584,13 +611,13 @@ export class PlayerImpl implements Player {
     this._gold += toInt(toAdd);
   }
 
-  removeGold(toRemove: Gold): void {
-    if (toRemove > this._gold) {
-      throw Error(
-        `Player ${this} does not enough gold (${toRemove} vs ${this._gold}))`,
-      );
+  removeGold(toRemove: Gold): number {
+    if (toRemove <= 1) {
+      return 0;
     }
-    this._gold -= toInt(toRemove);
+    const actualRemoved = minInt(this._gold, toInt(toRemove));
+    this._gold -= actualRemoved;
+    return Number(actualRemoved);
   }
 
   population(): number {
@@ -741,8 +768,18 @@ export class PlayerImpl implements Player {
   }
 
   nukeSpawn(tile: TileRef): TileRef | false {
+    const owner = this.mg.owner(tile);
+    if (owner.isPlayer()) {
+      if (this.isOnSameTeam(owner)) {
+        return false;
+      }
+    }
+    // only get missilesilos that are not on cooldown
     const spawns = this.units(UnitType.MissileSilo)
       .map((u) => u as Unit)
+      .filter((silo) => {
+        return !silo.isCooldown();
+      })
       .sort(distSortUnit(this.mg, tile));
     if (spawns.length == 0) {
       return false;
@@ -984,7 +1021,7 @@ export class PlayerImpl implements Player {
   // It's a probability list, so if an element appears twice it's because it's
   // twice more likely to be picked later.
   tradingPorts(port: Unit): Unit[] {
-    let ports = this.mg
+    const ports = this.mg
       .players()
       .filter((p) => p != port.owner() && p.canTrade(port.owner()))
       .flatMap((p) => p.units(UnitType.Port))

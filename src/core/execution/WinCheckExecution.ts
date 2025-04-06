@@ -1,4 +1,4 @@
-import { EventBus, GameEvent } from "../EventBus";
+import { GameEvent } from "../EventBus";
 import { Execution, Game, GameMode, Player, Team } from "../game/Game";
 
 export class WinEvent implements GameEvent {
@@ -66,8 +66,9 @@ export class WinCheckExecution implements Execution {
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
     const percentage = (max[1] / numTilesWithoutFallout) * 100;
     if (percentage > this.mg.config().percentageTilesOwnedToWin()) {
-      this.mg.setWinner(max[0].name, this.mg.stats().stats());
-      console.log(`${max[0].name} has won the game`);
+      if (max[0] == Team.Bot) return;
+      this.mg.setWinner(max[0], this.mg.stats().stats());
+      console.log(`${max[0]} has won the game`);
       this.active = false;
     }
   }

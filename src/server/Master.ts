@@ -1,19 +1,20 @@
 import cluster from "cluster";
-import http from "http";
 import express from "express";
-import { GameMapType, GameType, Difficulty } from "../core/game/Game";
-import { generateID } from "../core/Util";
-import { PseudoRandom } from "../core/PseudoRandom";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameConfig, GameInfo } from "../core/Schemas";
-import path from "path";
 import rateLimit from "express-rate-limit";
+import http from "http";
+import path from "path";
 import { fileURLToPath } from "url";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { Difficulty, GameMode, GameType } from "../core/game/Game";
+import { GameConfig, GameInfo } from "../core/Schemas";
+import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
-import { setupMetricsServer } from "./MasterMetrics";
 import { logger } from "./Logger";
+import { MapPlaylist } from "./MapPlaylist";
+import { setupMetricsServer } from "./MasterMetrics";
 
 const config = getServerConfigFromServer();
+const playlist = new MapPlaylist();
 const readyWorkers = new Set();
 
 const app = express();
@@ -100,7 +101,7 @@ export async function startMaster() {
         log.info("All workers ready, starting game scheduling");
 
         const scheduleLobbies = () => {
-          schedulePublicGame().catch((error) => {
+          schedulePublicGame(playlist).catch((error) => {
             log.error("Error scheduling public game:", error);
           });
         };
@@ -172,9 +173,12 @@ async function fetchLobbies(): Promise<number> {
   const fetchPromises = [];
 
   for (const gameID of publicLobbyIDs) {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 5000); // 5 second timeout
     const port = config.workerPort(gameID);
     const promise = fetch(`http://localhost:${port}/api/game/${gameID}`, {
       headers: { [config.adminHeader()]: config.adminToken() },
+      signal: controller.signal,
     })
       .then((resp) => resp.json())
       .then((json) => {
@@ -219,9 +223,9 @@ async function fetchLobbies(): Promise<number> {
 }
 
 // Function to schedule a new public game
-async function schedulePublicGame() {
+async function schedulePublicGame(playlist: MapPlaylist) {
   const gameID = generateID();
-  const map = getNextMap();
+  const map = playlist.getNextMap();
   publicLobbyIDs.add(gameID);
   // Create the default public game config (from your GameManager)
   const defaultGameConfig = {
@@ -234,6 +238,7 @@ async function schedulePublicGame() {
     instantBuild: false,
     disableNPCs: false,
     disableNukes: false,
+    gameMode: Math.random() < 0.7 ? GameMode.FFA : GameMode.Team,
     bots: 400,
   } as GameConfig;
 
@@ -264,58 +269,6 @@ async function schedulePublicGame() {
     log.error(`Failed to schedule public game on worker ${workerPath}:`, error);
     throw error;
   }
-}
-
-// Map rotation management (moved from GameManager)
-const mapsPlaylist: GameMapType[] = [];
-const random = new PseudoRandom(123);
-
-// Get the next map in rotation
-function getNextMap(): GameMapType {
-  if (mapsPlaylist.length > 0) {
-    return mapsPlaylist.shift()!;
-  }
-
-  const frequency = {
-    World: 3,
-    Europe: 3,
-    Mena: 2,
-    NorthAmerica: 2,
-    BlackSea: 2,
-    Pangaea: 2,
-    Africa: 2,
-    Asia: 2,
-    Mars: 2,
-    Britannia: 2,
-    GatewayToTheAtlantic: 2,
-    Iceland: 2,
-  };
-
-  Object.keys(GameMapType).forEach((key) => {
-    let count = parseInt(frequency[key]);
-
-    while (count > 0) {
-      mapsPlaylist.push(GameMapType[key]);
-      count--;
-    }
-  });
-
-  while (true) {
-    random.shuffleArray(mapsPlaylist);
-    if (allNonConsecutive(mapsPlaylist)) {
-      return mapsPlaylist.shift()!;
-    }
-  }
-}
-
-// Check for consecutive duplicates in the maps array
-function allNonConsecutive(maps: GameMapType[]): boolean {
-  for (let i = 0; i < maps.length - 1; i++) {
-    if (maps[i] === maps[i + 1]) {
-      return false;
-    }
-  }
-  return true;
 }
 
 function sleep(ms: number): Promise<void> {

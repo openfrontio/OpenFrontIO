@@ -1,49 +1,50 @@
 import { Config } from "../configuration/Config";
+import { consolex } from "../Consolex";
+import { AllPlayersStats, ClientID } from "../Schemas";
+import { simpleHash } from "../Util";
+import { AllianceImpl } from "./AllianceImpl";
+import { AllianceRequestImpl } from "./AllianceRequestImpl";
 import {
+  Alliance,
+  AllianceRequest,
   Cell,
+  EmojiMessage,
   Execution,
   Game,
+  GameMode,
+  GameUpdates,
+  MessageType,
+  Nation,
+  Player,
   PlayerID,
   PlayerInfo,
-  Player,
+  PlayerType,
+  Team,
+  TerrainType,
   TerraNullius,
   Unit,
-  AllianceRequest,
-  Alliance,
-  Nation,
-  UnitType,
   UnitInfo,
-  GameUpdates,
-  TerrainType,
-  EmojiMessage,
-  Team,
-  GameMode,
-  TeamName,
+  UnitType,
 } from "./Game";
-import { GameUpdate } from "./GameUpdates";
-import { GameUpdateType } from "./GameUpdates";
-import { NationMap } from "./TerrainMapLoader";
+import { GameMap, TileRef, TileUpdate } from "./GameMap";
+import { GameUpdate, GameUpdateType } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
-import { TerraNulliusImpl } from "./TerraNulliusImpl";
-import { AllianceRequestImpl } from "./AllianceRequestImpl";
-import { AllianceImpl } from "./AllianceImpl";
-import { ClientID, AllPlayersStats } from "../Schemas";
-import { MessageType } from "./Game";
-import { UnitImpl } from "./UnitImpl";
-import { consolex } from "../Consolex";
-import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
-import { UnitGrid } from "./UnitGrid";
-import { StatsImpl } from "./StatsImpl";
 import { Stats } from "./Stats";
-import { simpleHash } from "../Util";
+import { StatsImpl } from "./StatsImpl";
+import { assignTeams } from "./TeamAssignment";
+import { NationMap } from "./TerrainMapLoader";
+import { TerraNulliusImpl } from "./TerraNulliusImpl";
+import { UnitGrid } from "./UnitGrid";
+import { UnitImpl } from "./UnitImpl";
 
 export function createGame(
+  humans: PlayerInfo[],
   gameMap: GameMap,
   miniGameMap: GameMap,
   nationMap: NationMap,
   config: Config,
 ): Game {
-  return new GameImpl(gameMap, miniGameMap, nationMap, config);
+  return new GameImpl(humans, gameMap, miniGameMap, nationMap, config);
 }
 
 export type CellString = string;
@@ -74,14 +75,17 @@ export class GameImpl implements Game {
 
   private _stats: StatsImpl = new StatsImpl();
 
-  private teams_: Team[] = [];
+  private playerTeams: Team[] = [Team.Red, Team.Blue];
+  private botTeam: Team = Team.Bot;
 
   constructor(
+    private _humans: PlayerInfo[],
     private _map: GameMap,
     private miniGameMap: GameMap,
     nationMap: NationMap,
     private _config: Config,
   ) {
+    this.addHumans();
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();
@@ -95,10 +99,23 @@ export class GameImpl implements Game {
         ),
     );
     this.unitGrid = new UnitGrid(this._map);
-    if (this._config.gameConfig().gameMode == GameMode.Team) {
-      this.teams_ = [{ name: TeamName.Red }, { name: TeamName.Blue }];
+  }
+
+  private addHumans() {
+    if (this.config().gameConfig().gameMode != GameMode.Team) {
+      this._humans.forEach((p) => this.addPlayer(p));
+      return;
+    }
+    const playerToTeam = assignTeams(this._humans);
+    for (const [playerInfo, team] of playerToTeam.entries()) {
+      if (team == "kicked") {
+        console.warn(`Player ${playerInfo.name} was kicked from team`);
+        continue;
+      }
+      this.addPlayer(playerInfo, team);
     }
   }
+
   isOnEdgeOfMap(ref: TileRef): boolean {
     return this._map.isOnEdgeOfMap(ref);
   }
@@ -120,7 +137,7 @@ export class GameImpl implements Game {
   }
 
   addUpdate(update: GameUpdate) {
-    (this.updates[update.type] as any[]).push(update);
+    (this.updates[update.type] as GameUpdate[]).push(update);
   }
 
   nextUnitID(): number {
@@ -325,13 +342,13 @@ export class GameImpl implements Game {
     return this.player(id);
   }
 
-  addPlayer(playerInfo: PlayerInfo, manpower: number): Player {
+  addPlayer(playerInfo: PlayerInfo, team: Team = null): Player {
     const player = new PlayerImpl(
       this,
       this.nextPlayerID,
       playerInfo,
-      manpower,
-      this.maybeAssignTeam(playerInfo),
+      this.config().startManpower(playerInfo),
+      team ?? this.maybeAssignTeam(playerInfo),
     );
     this._playersBySmallID.push(player);
     this.nextPlayerID++;
@@ -343,8 +360,11 @@ export class GameImpl implements Game {
     if (this._config.gameConfig().gameMode != GameMode.Team) {
       return null;
     }
+    if (player.playerType == PlayerType.Bot) {
+      return this.botTeam;
+    }
     const rand = simpleHash(player.id);
-    return this.teams_[rand % this.teams_.length];
+    return this.playerTeams[rand % this.playerTeams.length];
   }
 
   player(id: PlayerID | null): Player {
@@ -355,7 +375,7 @@ export class GameImpl implements Game {
   }
 
   playerByClientID(id: ClientID): Player | null {
-    for (const [pID, player] of this._players) {
+    for (const [, player] of this._players) {
       if (player.clientID() == id) {
         return player;
       }
@@ -531,7 +551,7 @@ export class GameImpl implements Game {
     });
   }
 
-  setWinner(winner: Player | TeamName, allPlayersStats: AllPlayersStats): void {
+  setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
     this.addUpdate({
       type: GameUpdateType.Win,
       winner: typeof winner === "string" ? winner : winner.smallID(),
@@ -541,7 +561,10 @@ export class GameImpl implements Game {
   }
 
   teams(): Team[] {
-    return this.teams_;
+    if (this._config.gameConfig().gameMode != GameMode.Team) {
+      return [];
+    }
+    return [this.botTeam, ...this.playerTeams];
   }
 
   displayMessage(
@@ -657,8 +680,8 @@ export class GameImpl implements Game {
   manhattanDist(c1: TileRef, c2: TileRef): number {
     return this._map.manhattanDist(c1, c2);
   }
-  euclideanDist(c1: TileRef, c2: TileRef): number {
-    return this._map.euclideanDist(c1, c2);
+  euclideanDistSquared(c1: TileRef, c2: TileRef): number {
+    return this._map.euclideanDistSquared(c1, c2);
   }
   bfs(
     tile: TileRef,

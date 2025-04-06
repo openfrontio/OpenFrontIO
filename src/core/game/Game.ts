@@ -1,14 +1,13 @@
 import { Config } from "../configuration/Config";
-import { GameEvent } from "../EventBus";
-import { PlayerView } from "./GameView";
-import { ClientID, GameConfig, GameID, AllPlayersStats } from "../Schemas";
-import { GameMap, GameMapImpl, TileRef } from "./GameMap";
+import { AllPlayersStats, ClientID } from "../Schemas";
+import { GameMap, TileRef } from "./GameMap";
 import {
   GameUpdate,
   GameUpdateType,
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
+import { PlayerView } from "./GameView";
 import { Stats } from "./Stats";
 
 export type PlayerID = string;
@@ -38,9 +37,10 @@ export enum Difficulty {
   Impossible = "Impossible",
 }
 
-export enum TeamName {
+export enum Team {
   Red = "Red",
   Blue = "Blue",
+  Bot = "Bot",
 }
 
 export enum GameMapType {
@@ -59,6 +59,9 @@ export enum GameMapType {
   GatewayToTheAtlantic = "Gateway to the Atlantic",
   Australia = "Australia",
   Iceland = "Iceland",
+  Japan = "Japan",
+  BetweenTwoSeas = "Between Two Seas",
+  KnownWorld = "Known World",
 }
 
 export enum GameType {
@@ -70,10 +73,6 @@ export enum GameType {
 export enum GameMode {
   FFA = "Free For All",
   Team = "Team",
-}
-
-export interface Team {
-  name: TeamName;
 }
 
 export interface UnitInfo {
@@ -134,8 +133,8 @@ export class Cell {
   private strRepr: string;
 
   constructor(
-    public readonly x,
-    public readonly y,
+    public readonly x: number,
+    public readonly y: number,
   ) {
     this.strRepr = `Cell[${this.x},${this.y}]`;
   }
@@ -210,6 +209,8 @@ export interface MutableAlliance extends Alliance {
 }
 
 export class PlayerInfo {
+  public readonly clan: string | null;
+
   constructor(
     public readonly flag: string,
     public readonly name: string,
@@ -219,7 +220,15 @@ export class PlayerInfo {
     // TODO: make player id the small id
     public readonly id: PlayerID,
     public readonly nation?: Nation | null,
-  ) {}
+  ) {
+    // Compute clan from name
+    if (!name.startsWith("[") || !name.includes("]")) {
+      this.clan = null;
+    } else {
+      const clanMatch = name.match(/^\[([A-Z]{2,5})\]/);
+      this.clan = clanMatch ? clanMatch[1] : null;
+    }
+  }
 }
 
 // Some units have info specific to them
@@ -227,6 +236,7 @@ export interface UnitSpecificInfos {
   dstPort?: Unit; // Only for trade ships
   detonationDst?: TileRef; // Only for nukes
   warshipTarget?: Unit;
+  cooldownDuration?: number;
 }
 
 export interface Unit {
@@ -252,8 +262,9 @@ export interface Unit {
   setWarshipTarget(target: Unit): void; // warship only
   warshipTarget(): Unit;
 
-  setSamCooldown(isCoolingDown: boolean): void; // Only for sam
-  isSamCooldown(): boolean;
+  setCooldown(triggerCooldown: boolean): void;
+  ticksLeftInCooldown(cooldownDuration: number): Tick;
+  isCooldown(): boolean;
   setDstPort(dstPort: Unit): void;
   dstPort(): Unit; // Only for trade ships
   detonationDst(): TileRef; // Only for nukes
@@ -301,6 +312,9 @@ export interface Player {
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
   lastTileChange(): Tick;
 
+  hasSpawned(): boolean;
+  setHasSpawned(hasSpawned: boolean): void;
+
   // Territory
   tiles(): ReadonlySet<TileRef>;
   borderTiles(): ReadonlySet<TileRef>;
@@ -346,6 +360,7 @@ export interface Player {
   // Either allied or on same team.
   isFriendly(other: Player): boolean;
   team(): Team | null;
+  clan(): string | null;
   incomingAllianceRequests(): AllianceRequest[];
   outgoingAllianceRequests(): AllianceRequest[];
   alliances(): MutableAlliance[];
@@ -369,7 +384,8 @@ export interface Player {
 
   // Donation
   canDonate(recipient: Player): boolean;
-  donate(recipient: Player, troops: number): void;
+  donateTroops(recipient: Player, troops: number): void;
+  donateGold(recipient: Player, gold: number): void;
 
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;
@@ -413,7 +429,7 @@ export interface Game extends GameMap {
   playerByClientID(id: ClientID): Player | null;
   playerBySmallID(id: number): Player | TerraNullius;
   hasPlayer(id: PlayerID): boolean;
-  addPlayer(playerInfo: PlayerInfo, manpower: number): Player;
+  addPlayer(playerInfo: PlayerInfo): Player;
   terraNullius(): TerraNullius;
   owner(ref: TileRef): Player | TerraNullius;
 
@@ -423,7 +439,7 @@ export interface Game extends GameMap {
   ticks(): Tick;
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
-  setWinner(winner: Player | TeamName, allPlayersStats: AllPlayersStats): void;
+  setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
   config(): Config;
 
   // Units
@@ -467,6 +483,10 @@ export interface BuildableUnit {
 export interface PlayerProfile {
   relations: Record<number, Relation>;
   alliances: number[];
+}
+
+export interface PlayerBorderTiles {
+  borderTiles: ReadonlySet<TileRef>;
 }
 
 export interface PlayerInteraction {

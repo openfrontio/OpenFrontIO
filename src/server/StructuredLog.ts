@@ -3,7 +3,13 @@ import { ClientID, GameID, LogSeverity } from "../core/Schemas";
 export interface slogMsg {
   logKey: string;
   msg: string;
-  data?: any;
+  data?: {
+    stack?: unknown;
+    clientID?: unknown;
+    clientIP?: unknown;
+    gameID?: unknown;
+    isRejoin?: unknown;
+  };
   severity?: LogSeverity;
   gameID?: GameID;
   clientID?: ClientID;

@@ -1,8 +1,8 @@
 import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement } from "lit/decorators.js";
 import { GameView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
 import { renderNumber, renderTroops } from "../../Utils";
+import { Layer } from "./Layer";
 
 @customElement("top-bar")
 export class TopBar extends LitElement implements Layer {

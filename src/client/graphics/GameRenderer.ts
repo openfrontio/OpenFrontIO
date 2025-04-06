@@ -1,31 +1,30 @@
-import { Game, PlayerInfo } from "../../core/game/Game";
-import { NameLayer } from "./layers/NameLayer";
-import { TerrainLayer } from "./layers/TerrainLayer";
-import { TerritoryLayer } from "./layers/TerritoryLayer";
-import { ClientID } from "../../core/Schemas";
+import { consolex } from "../../core/Consolex";
 import { EventBus } from "../../core/EventBus";
+import { ClientID } from "../../core/Schemas";
+import { GameView } from "../../core/game/GameView";
+import { GameStartingModal } from "../GameStartingModal";
+import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { TransformHandler } from "./TransformHandler";
-import { Layer } from "./layers/Layer";
-import { EventsDisplay } from "./layers/EventsDisplay";
-import { RadialMenu } from "./layers/RadialMenu";
-import { EmojiTable } from "./layers/EmojiTable";
-import { Leaderboard } from "./layers/Leaderboard";
-import { ControlPanel } from "./layers/ControlPanel";
 import { UIState } from "./UIState";
 import { BuildMenu } from "./layers/BuildMenu";
-import { UnitLayer } from "./layers/UnitLayer";
-import { UILayer } from "./layers/UILayer";
-import { StructureLayer } from "./layers/StructureLayer";
-import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
-import { consolex } from "../../core/Consolex";
-import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
-import { GameView } from "../../core/game/GameView";
-import { WinModal } from "./layers/WinModal";
-import { SpawnTimer } from "./layers/SpawnTimer";
+import { ControlPanel } from "./layers/ControlPanel";
+import { EmojiTable } from "./layers/EmojiTable";
+import { EventsDisplay } from "./layers/EventsDisplay";
+import { Layer } from "./layers/Layer";
+import { Leaderboard } from "./layers/Leaderboard";
+import { NameLayer } from "./layers/NameLayer";
 import { OptionsMenu } from "./layers/OptionsMenu";
-import { TopBar } from "./layers/TopBar";
+import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
-import { GameStartingModal } from "../gameStartingModal";
+import { RadialMenu } from "./layers/RadialMenu";
+import { SpawnTimer } from "./layers/SpawnTimer";
+import { StructureLayer } from "./layers/StructureLayer";
+import { TerrainLayer } from "./layers/TerrainLayer";
+import { TerritoryLayer } from "./layers/TerritoryLayer";
+import { TopBar } from "./layers/TopBar";
+import { UILayer } from "./layers/UILayer";
+import { UnitLayer } from "./layers/UnitLayer";
+import { WinModal } from "./layers/WinModal";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,
@@ -41,7 +40,6 @@ export function createRenderer(
   const startingModal = document.querySelector(
     "game-starting-modal",
   ) as GameStartingModal;
-  startingModal instanceof GameStartingModal;
   startingModal.hide();
 
   // TODO maybe append this to dcoument instead of querying for them?
@@ -49,6 +47,11 @@ export function createRenderer(
   if (!emojiTable || !(emojiTable instanceof EmojiTable)) {
     consolex.error("EmojiTable element not found in the DOM");
   }
+  emojiTable.eventBus = eventBus;
+  emojiTable.transformHandler = transformHandler;
+  emojiTable.game = game;
+  emojiTable.initEventBus();
+
   const buildMenu = document.querySelector("build-menu") as BuildMenu;
   if (!buildMenu || !(buildMenu instanceof BuildMenu)) {
     consolex.error("BuildMenu element not found in the DOM");
@@ -123,7 +126,7 @@ export function createRenderer(
   playerPanel.emojiTable = emojiTable;
 
   const layers: Layer[] = [
-    new TerrainLayer(game),
+    new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus),
     new StructureLayer(game, eventBus),
     new UnitLayer(game, eventBus, clientID, transformHandler),

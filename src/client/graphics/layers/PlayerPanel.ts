@@ -1,32 +1,33 @@
 import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
+import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
+import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
+import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.svg";
+import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
+import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
+import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
-import { MouseUpEvent } from "../../InputHandler";
 import {
   AllPlayers,
-  Player,
   PlayerActions,
   PlayerID,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
-import { renderNumber, renderTroops } from "../../Utils";
-import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
-import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
-import donateIcon from "../../../../resources/images/DonateIconWhite.svg";
-import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
-import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { MouseUpEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
-  SendDonateIntentEvent,
+  SendDonateGoldIntentEvent,
+  SendDonateTroopsIntentEvent,
+  SendEmbargoIntentEvent,
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
-  SendEmbargoIntentEvent,
 } from "../../Transport";
+import { renderNumber, renderTroops } from "../../Utils";
 import { EmojiTable } from "./EmojiTable";
+import { Layer } from "./Layer";
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {
@@ -77,9 +78,23 @@ export class PlayerPanel extends LitElement implements Layer {
     this.hide();
   }
 
-  private handleDonateClick(e: Event, myPlayer: PlayerView, other: PlayerView) {
+  private handleDonateTroopClick(
+    e: Event,
+    myPlayer: PlayerView,
+    other: PlayerView,
+  ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendDonateIntentEvent(myPlayer, other, null));
+    this.eventBus.emit(new SendDonateTroopsIntentEvent(myPlayer, other, null));
+    this.hide();
+  }
+
+  private handleDonateGoldClick(
+    e: Event,
+    myPlayer: PlayerView,
+    other: PlayerView,
+  ) {
+    e.stopPropagation();
+    this.eventBus.emit(new SendDonateGoldIntentEvent(myPlayer, other, null));
     this.hide();
   }
 
@@ -302,12 +317,24 @@ export class PlayerPanel extends LitElement implements Layer {
                 : ""}
               ${canDonate
                 ? html`<button
-                    @click=${(e) => this.handleDonateClick(e, myPlayer, other)}
+                    @click=${(e) =>
+                      this.handleDonateTroopClick(e, myPlayer, other)}
                     class="w-10 h-10 flex items-center justify-center
                            bg-opacity-50 bg-gray-700 hover:bg-opacity-70
                            text-white rounded-lg transition-colors"
                   >
-                    <img src=${donateIcon} alt="Donate" class="w-6 h-6" />
+                    <img src=${donateTroopIcon} alt="Donate" class="w-6 h-6" />
+                  </button>`
+                : ""}
+              ${canDonate
+                ? html`<button
+                    @click=${(e) =>
+                      this.handleDonateGoldClick(e, myPlayer, other)}
+                    class="w-10 h-10 flex items-center justify-center
+                          bg-opacity-50 bg-gray-700 hover:bg-opacity-70
+                          text-white rounded-lg transition-colors"
+                  >
+                    <img src=${donateGoldIcon} alt="Donate" class="w-6 h-6" />
                   </button>`
                 : ""}
               ${canSendEmoji

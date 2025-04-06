@@ -1,11 +1,4 @@
-import {
-  Cell,
-  Execution,
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-} from "../game/Game";
+import { Execution, Game, Player, PlayerInfo, PlayerType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { BotExecution } from "./BotExecution";
 import { PlayerExecution } from "./PlayerExecution";
@@ -17,7 +10,7 @@ export class SpawnExecution implements Execution {
 
   constructor(
     private playerInfo: PlayerInfo,
-    private tile: TileRef,
+    public readonly tile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number) {
@@ -32,28 +25,25 @@ export class SpawnExecution implements Execution {
       return;
     }
 
-    const existing = this.mg
-      .players()
-      .find((p) => p.id() == this.playerInfo.id);
-    if (existing) {
-      existing.tiles().forEach((t) => existing.relinquish(t));
-      getSpawnTiles(this.mg, this.tile).forEach((t) => {
-        existing.conquer(t);
-      });
-      return;
+    let player: Player = null;
+    if (this.mg.hasPlayer(this.playerInfo.id)) {
+      player = this.mg.player(this.playerInfo.id);
+    } else {
+      player = this.mg.addPlayer(this.playerInfo);
     }
 
-    const player = this.mg.addPlayer(
-      this.playerInfo,
-      this.mg.config().startManpower(this.playerInfo),
-    );
+    player.tiles().forEach((t) => player.relinquish(t));
     getSpawnTiles(this.mg, this.tile).forEach((t) => {
       player.conquer(t);
     });
-    this.mg.addExecution(new PlayerExecution(player.id()));
-    if (player.type() == PlayerType.Bot) {
-      this.mg.addExecution(new BotExecution(player));
+
+    if (!player.hasSpawned()) {
+      this.mg.addExecution(new PlayerExecution(player.id()));
+      if (player.type() == PlayerType.Bot) {
+        this.mg.addExecution(new BotExecution(player));
+      }
     }
+    player.setHasSpawned(true);
   }
 
   owner(): Player {

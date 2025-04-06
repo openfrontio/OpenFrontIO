@@ -1,7 +1,6 @@
-import { GameRecord, GameID, GameRecordSchema } from "../core/Schemas";
 import { S3 } from "@aws-sdk/client-s3";
-import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { GameID, GameRecord } from "../core/Schemas";
 import { logger } from "./Logger";
 
 const config = getServerConfigFromServer();
@@ -11,10 +10,10 @@ const log = logger.child({ component: "Archive" });
 // R2 client configuration
 const r2 = new S3({
   region: "auto", // R2 ignores region, but it's required by the SDK
-  endpoint: config.r2Endpoint(), // You'll need to add this to your config
+  endpoint: config.r2Endpoint(),
   credentials: {
-    accessKeyId: config.r2AccessKey(), // You'll need to add these
-    secretAccessKey: config.r2SecretKey(), // credential methods to your config
+    accessKeyId: config.r2AccessKey(),
+    secretAccessKey: config.r2SecretKey(),
   },
 });
 
@@ -54,10 +53,10 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
     end_time: new Date(gameRecord.endTimestampMS).toISOString(),
     duration_seconds: gameRecord.durationSeconds,
     number_turns: gameRecord.num_turns,
-    game_mode: gameRecord.gameConfig.gameType,
+    game_mode: gameRecord.gameStartInfo.config.gameType,
     winner: gameRecord.winner,
-    difficulty: gameRecord.gameConfig.difficulty,
-    mapType: gameRecord.gameConfig.gameMap,
+    difficulty: gameRecord.gameStartInfo.config.difficulty,
+    mapType: gameRecord.gameStartInfo.config.gameMap,
     players: gameRecord.players.map((p) => ({
       username: p.username,
       ip: p.ip,
