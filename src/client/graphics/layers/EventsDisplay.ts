@@ -282,7 +282,7 @@ export class EventsDisplay extends LitElement implements Layer {
       });
     } else if (betrayed === myPlayer) {
       this.addEvent({
-        description: `${traitor.name()}, broke their alliance with you`,
+        description: `${traitor.name()} broke their alliance with you`,
         type: MessageType.ERROR,
         highlight: true,
         createdAt: this.game.ticks(),
