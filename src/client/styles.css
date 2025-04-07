@@ -214,6 +214,8 @@ label.option-card:hover {
   font-size: 14px;
   color: #fff;
   text-align: center;
+  font-family: monospace;
+  font-weight: 600;
 }
 
 .players-list {
