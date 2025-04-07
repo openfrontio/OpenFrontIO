@@ -243,4 +243,13 @@ export const BOT_NAME_SUFFIXES = [
   "Dictatorship",
   "Country",
   "Oligarchy",
+  "Monkdom",
+  "Throng",
+  "Host",
+  "Area",
+  "District",
+  "Fief",
+  "Colony",
+  "Wilderness",
+  "Settlement",
 ];
