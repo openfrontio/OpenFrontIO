@@ -171,6 +171,15 @@ export const BOT_NAME_PREFIXES = [
   "Baloch",
   "Afghan",
   "Persian",
+  "Kenyan",
+  "Ugandan",
+  "Bhutanese",
+  "Latin",
+  "Etruscan",
+  "Aryan",
+  "Moldovan",
+  "Militant",
+  "Spartan",
 ];
 export const BOT_NAME_SUFFIXES = [
   "Empire",
@@ -225,8 +234,12 @@ export const BOT_NAME_SUFFIXES = [
   "Supremacy",
   "Province",
   "Kingdoms",
+  "Queendoms",
   "Tribes",
   "Dominion",
   "Assembly",
   "Republics",
+  "Army",
+  "Dictatorship",
+  "Country",
 ];
