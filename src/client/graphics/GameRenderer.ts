@@ -126,7 +126,7 @@ export function createRenderer(
   playerPanel.emojiTable = emojiTable;
 
   const layers: Layer[] = [
-    new TerrainLayer(game),
+    new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus),
     new StructureLayer(game, eventBus),
     new UnitLayer(game, eventBus, clientID, transformHandler),

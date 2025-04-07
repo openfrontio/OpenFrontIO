@@ -267,6 +267,7 @@ export class GameServer {
         playerID: c.playerID,
         username: c.username,
         clientID: c.clientID,
+        flag: c.flag,
       })),
     });
 
@@ -369,8 +370,8 @@ export class GameServer {
             this.turns,
             this._startTime,
             Date.now(),
-            this.winner.winner,
-            this.winner.winnerType,
+            this.winner?.winner,
+            this.winner?.winnerType,
             this.allPlayersStats,
           ),
         );

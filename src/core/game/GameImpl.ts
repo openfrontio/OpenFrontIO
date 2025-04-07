@@ -20,7 +20,6 @@ import {
   PlayerInfo,
   PlayerType,
   Team,
-  TeamName,
   TerrainType,
   TerraNullius,
   Unit,
@@ -76,11 +75,8 @@ export class GameImpl implements Game {
 
   private _stats: StatsImpl = new StatsImpl();
 
-  private playerTeams: Team[] = [
-    { name: TeamName.Red },
-    { name: TeamName.Blue },
-  ];
-  private botTeam: Team = { name: TeamName.Bot };
+  private playerTeams: Team[] = [Team.Red, Team.Blue];
+  private botTeam: Team = Team.Bot;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -555,7 +551,7 @@ export class GameImpl implements Game {
     });
   }
 
-  setWinner(winner: Player | TeamName, allPlayersStats: AllPlayersStats): void {
+  setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
     this.addUpdate({
       type: GameUpdateType.Win,
       winner: typeof winner === "string" ? winner : winner.smallID(),
@@ -684,8 +680,8 @@ export class GameImpl implements Game {
   manhattanDist(c1: TileRef, c2: TileRef): number {
     return this._map.manhattanDist(c1, c2);
   }
-  euclideanDist(c1: TileRef, c2: TileRef): number {
-    return this._map.euclideanDist(c1, c2);
+  euclideanDistSquared(c1: TileRef, c2: TileRef): number {
+    return this._map.euclideanDistSquared(c1, c2);
   }
   bfs(
     tile: TileRef,

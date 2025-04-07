@@ -1,5 +1,5 @@
 import { blue, red } from "../../../core/configuration/Colors";
-import { GameMode, TeamName } from "../../../core/game/Game";
+import { GameMode, Team } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -28,12 +28,12 @@ export class SpawnTimer implements Layer {
 
     const numBlueTiles = this.game
       .players()
-      .filter((p) => p.teamName() == TeamName.Blue)
+      .filter((p) => p.team() == Team.Blue)
       .reduce((acc, p) => acc + p.numTilesOwned(), 0);
 
     const numRedTiles = this.game
       .players()
-      .filter((p) => p.teamName() == TeamName.Red)
+      .filter((p) => p.team() == Team.Red)
       .reduce((acc, p) => acc + p.numTilesOwned(), 0);
 
     this.ratio = numBlueTiles / (numBlueTiles + numRedTiles);

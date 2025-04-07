@@ -238,7 +238,7 @@ async function schedulePublicGame(playlist: MapPlaylist) {
     instantBuild: false,
     disableNPCs: false,
     disableNukes: false,
-    gameMode: Math.random() < 0.7 ? GameMode.FFA : GameMode.Team,
+    gameMode: Math.random() < 0.5 ? GameMode.FFA : GameMode.Team,
     bots: 400,
   } as GameConfig;
 
