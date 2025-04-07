@@ -242,4 +242,5 @@ export const BOT_NAME_SUFFIXES = [
   "Army",
   "Dictatorship",
   "Country",
+  "Oligarchy",
 ];
