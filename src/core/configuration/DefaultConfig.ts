@@ -78,6 +78,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
         GameMapType.Iceland,
         GameMapType.Britannia,
         GameMapType.Asia,
+        GameMapType.Baikal,
       ].includes(map)
     ) {
       return Math.random() < 0.2 ? 100 : 50;
