@@ -70,16 +70,16 @@ export class LanguageModal extends LitElement {
       border-radius: 0.375rem;
       transition: background-color 0.3s;
       border: 1px solid #aaa;
-      background-color: #505050; /* 通常グレー */
-      color: #fff; /* ← 白文字に変更 */
+      background-color: #505050;
+      color: #fff;
     }
 
     .lang-button:hover {
-      background-color: #969696; /* ← hover時少しだけ濃く */
+      background-color: #969696;
     }
 
     .lang-button.active {
-      background-color: #aaaaaa; /* ← 白が混ざった明るいグレー */
+      background-color: #aaaaaa;
       border-color: #bbb;
       color: #000;
     }
