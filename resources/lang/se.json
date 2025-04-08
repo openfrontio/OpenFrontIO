@@ -16,7 +16,7 @@
     "wiki": "Wiki"
   },
   "help_modal": {
-    "hotkeys": "Moha and Nour were here | Kortkommandon",
+    "hotkeys": "Kortkommandon",
     "table_key": "Tangent",
     "table_action": "Åtgärd",
     "action_alt_view": "Alternativ vy (Terräng / Länder)",
@@ -162,7 +162,7 @@
   },
   "game_starting_modal": {
     "title": "Spelet startar...",
-    "desc": "Free Palestine"
+    "desc": "Förbereder lobby. Vänligen vänta."
   },
   "difficulty": {
     "difficulty": "Svårighetsgrad",
