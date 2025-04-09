@@ -50,7 +50,12 @@ export class UILayer implements Layer {
     this.selectionAnimTime = (this.selectionAnimTime + 1) % 60;
 
     // If there's a selected warship, redraw to update the selection box animation
-    if (this.selectedUnit && this.selectedUnit.type() === UnitType.Warship) {
+    if (
+      this.selectedUnit &&
+      (this.selectedUnit.type() === UnitType.Warship ||
+        this.selectedUnit.type() === UnitType.NuclearWarship ||
+        this.selectedUnit.type() === UnitType.SAMWarship)
+    ) {
       this.drawSelectionBox(this.selectedUnit);
     }
   }
@@ -84,7 +89,12 @@ export class UILayer implements Layer {
   private onUnitSelection(event: UnitSelectionEvent) {
     if (event.isSelected) {
       this.selectedUnit = event.unit;
-      if (event.unit && event.unit.type() === UnitType.Warship) {
+      if (
+        event.unit &&
+        (event.unit.type() === UnitType.Warship ||
+          event.unit.type() === UnitType.NuclearWarship ||
+          event.unit.type() === UnitType.SAMWarship)
+      ) {
         this.drawSelectionBox(event.unit);
       }
     } else {

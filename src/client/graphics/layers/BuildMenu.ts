@@ -52,6 +52,18 @@ const buildTable: BuildItemDisplay[][] = [
       countable: true,
     },
     {
+      unitType: UnitType.NuclearWarship,
+      icon: warshipIcon,
+      description: "Captures trade ships, destroys ships, boats and send nukes",
+      countable: true,
+    },
+    {
+      unitType: UnitType.SAMWarship,
+      icon: warshipIcon,
+      description: "TEST",
+      countable: true,
+    },
+    {
       unitType: UnitType.Port,
       icon: portIcon,
       description: "Sends trade ships to allies to generate gold",
@@ -417,6 +429,7 @@ export class BuildMenu extends LitElement implements Layer {
               UnitType.AtomBomb,
               UnitType.MIRV,
               UnitType.HydrogenBomb,
+              UnitType.NuclearWarship,
               UnitType.MissileSilo,
               UnitType.SAMLauncher,
             ].includes(item.unitType),

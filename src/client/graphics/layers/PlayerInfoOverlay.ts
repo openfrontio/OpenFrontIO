@@ -108,7 +108,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       this.setVisible(true);
     } else if (!this.game.isLand(tile)) {
       const units = this.game
-        .units(UnitType.Warship, UnitType.TradeShip, UnitType.TransportShip)
+        .units(
+          UnitType.Warship,
+          UnitType.TradeShip,
+          UnitType.TransportShip,
+          UnitType.NuclearWarship,
+          UnitType.SAMWarship,
+        )
         .filter((u) => euclideanDistWorld(worldCoord, u.tile(), this.game) < 50)
         .sort(distSortUnitWorld(worldCoord, this.game));
 

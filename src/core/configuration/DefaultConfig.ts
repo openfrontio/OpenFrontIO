@@ -239,6 +239,30 @@ export class DefaultConfig implements Config {
           territoryBound: false,
           maxHealth: 1000,
         };
+      case UnitType.NuclearWarship:
+        return {
+          cost: (p: Player) =>
+            p.type() == PlayerType.Human && this.infiniteGold()
+              ? 0
+              : Math.min(
+                  12_000_000,
+                  (p.unitsIncludingConstruction(UnitType.NuclearWarship)
+                    .length +
+                    1) *
+                    3_000_000 +
+                    p.unitsIncludingConstruction(UnitType.MissileSilo).length *
+                      1_000_000,
+                ),
+          territoryBound: false,
+          maxHealth: 500,
+        };
+      case UnitType.SAMWarship:
+        return {
+          cost: (p: Player) =>
+            p.type() == PlayerType.Human && this.infiniteGold() ? 0 : 1,
+          territoryBound: false,
+          maxHealth: 500,
+        };
       case UnitType.Shell:
         return {
           cost: () => 0,
