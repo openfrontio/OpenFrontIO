@@ -15,7 +15,7 @@ import {
   Tick,
   UnitType,
 } from "../game/Game";
-import { andFN, manhattanDistFN, TileRef } from "../game/GameMap";
+import { manhattanDistFN, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { calculateBoundingBox, simpleHash } from "../Util";
@@ -150,13 +150,13 @@ export class FakeHumanExecution implements Execution {
       );
 
     if (enemyborder.length == 0) {
-      if (this.random.chance(5)) {
-        this.sendBoat();
+      if (this.random.chance(10)) {
+        this.sendBoatRandomly();
       }
       return;
     }
-    if (this.random.chance(10)) {
-      this.sendBoat();
+    if (this.random.chance(20)) {
+      this.sendBoatRandomly();
       return;
     }
 
@@ -254,22 +254,6 @@ export class FakeHumanExecution implements Execution {
       if (mostHated != null && mostHated.relation == Relation.Hostile) {
         this.enemy = mostHated.player;
         this.lastEnemyUpdateTick = this.mg.ticks();
-        if (this.enemy.type() == PlayerType.Human) {
-          let lastSent = -300;
-          if (this.lastEmojiSent.has(this.enemy)) {
-            lastSent = this.lastEmojiSent.get(this.enemy);
-            this.lastEmojiSent.set(this.enemy, this.mg.ticks());
-          }
-          if (this.mg.ticks() - lastSent > 300) {
-            this.mg.addExecution(
-              new EmojiExecution(
-                this.player.id(),
-                this.enemy.id(),
-                this.random.randElement(["🤡", "😡"]),
-              ),
-            );
-          }
-        }
       }
     }
 
@@ -278,6 +262,7 @@ export class FakeHumanExecution implements Execution {
         this.enemy = null;
         return;
       }
+      this.maybeSendEmoji();
       this.maybeSendNuke(this.enemy);
       if (this.player.sharesBorderWith(this.enemy)) {
         this.sendAttack(this.enemy);
@@ -286,6 +271,20 @@ export class FakeHumanExecution implements Execution {
       }
       return;
     }
+  }
+
+  private maybeSendEmoji() {
+    if (this.enemy.type() != PlayerType.Human) return;
+    const lastSent = this.lastEmojiSent.get(this.enemy) ?? -300;
+    if (this.mg.ticks() - lastSent <= 300) return;
+    this.lastEmojiSent.set(this.enemy, this.mg.ticks());
+    this.mg.addExecution(
+      new EmojiExecution(
+        this.player.id(),
+        this.enemy.id(),
+        this.random.randElement(["🤡", "😡"]),
+      ),
+    );
   }
 
   private maybeSendNuke(other: Player) {
@@ -504,58 +503,30 @@ export class FakeHumanExecution implements Execution {
     );
   }
 
-  sendBoat(tries: number = 0, oceanShore: TileRef[] = null) {
-    if (tries > 10) {
-      return;
-    }
-
-    if (oceanShore == null) {
-      oceanShore = Array.from(this.player.borderTiles()).filter((t) =>
-        this.mg.isOceanShore(t),
-      );
-    }
+  sendBoatRandomly() {
+    const oceanShore = Array.from(this.player.borderTiles()).filter((t) =>
+      this.mg.isOceanShore(t),
+    );
     if (oceanShore.length == 0) {
       return;
     }
 
     const src = this.random.randElement(oceanShore);
-    const otherShore = Array.from(
-      this.mg.bfs(
-        src,
-        andFN(
-          (gm, t) => gm.isOcean(t) || gm.isOceanShore(t),
-          manhattanDistFN(src, 200),
-        ),
+
+    const dst = this.randOceanShoreTile(src, 150);
+    if (dst == null) {
+      return;
+    }
+
+    this.mg.addExecution(
+      new TransportShipExecution(
+        this.player.id(),
+        this.mg.owner(dst).id(),
+        dst,
+        this.player.troops() / 5,
       ),
-    ).filter((t) => this.mg.isOceanShore(t) && this.mg.owner(t) != this.player);
-
-    if (otherShore.length == 0) {
-      return;
-    }
-
-    for (let i = 0; i < 20; i++) {
-      const dst = this.random.randElement(otherShore);
-      if (this.isSmallIsland(dst)) {
-        continue;
-      }
-      if (
-        this.mg.owner(dst).isPlayer() &&
-        this.player.isFriendly(this.mg.owner(dst) as Player)
-      ) {
-        continue;
-      }
-
-      this.mg.addExecution(
-        new TransportShipExecution(
-          this.player.id(),
-          this.mg.hasOwner(dst) ? this.mg.owner(dst).id() : null,
-          dst,
-          this.player.troops() / 5,
-        ),
-      );
-      return;
-    }
-    this.sendBoat(tries + 1, oceanShore);
+    );
+    return;
   }
 
   randomLand(): TileRef | null {
@@ -594,13 +565,28 @@ export class FakeHumanExecution implements Execution {
     );
   }
 
-  isSmallIsland(tile: TileRef): boolean {
-    return (
-      this.mg.bfs(
-        tile,
-        andFN((gm, t) => gm.isLand(t), manhattanDistFN(tile, 10)),
-      ).size < 50
-    );
+  private randOceanShoreTile(tile: TileRef, dist: number): TileRef | null {
+    const x = this.mg.x(tile);
+    const y = this.mg.y(tile);
+    for (let i = 0; i < 500; i++) {
+      const randX = this.random.nextInt(x - dist, x + dist);
+      const randY = this.random.nextInt(y - dist, y + dist);
+      if (!this.mg.isValidCoord(randX, randY)) {
+        continue;
+      }
+      const randTile = this.mg.ref(randX, randY);
+      if (!this.mg.isOceanShore(randTile)) {
+        continue;
+      }
+      const owner = this.mg.owner(randTile);
+      if (!owner.isPlayer()) {
+        return randTile;
+      }
+      if (!owner.isFriendly(this.player)) {
+        return randTile;
+      }
+    }
+    return null;
   }
 
   owner(): Player {

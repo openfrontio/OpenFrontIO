@@ -1,5 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { translateText } from "../../Utils";
 
 @customElement("o-modal")
 export class OModal extends LitElement {
@@ -74,11 +75,10 @@ export class OModal extends LitElement {
         ? html`
             <aside class="c-modal">
               <div class="c-modal__wrapper">
-                <header
-                  class="c-modal__header"
-                  data-i18n="${this.translationKey}"
-                >
-                  ${this.title}
+                <header class="c-modal__header">
+                  ${`${this.translationKey}` === ""
+                    ? `${this.title}`
+                    : `${translateText(this.translationKey)}`}
                   <div class="c-modal__close" @click=${this.close}>X</div>
                 </header>
                 <section class="c-modal__content">

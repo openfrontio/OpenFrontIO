@@ -58,9 +58,11 @@ export class EventsDisplay extends LitElement implements Layer {
   public game: GameView;
   public clientID: ClientID;
 
+  private active: boolean = false;
   private events: Event[] = [];
   @state() private incomingAttacks: AttackUpdate[] = [];
   @state() private outgoingAttacks: AttackUpdate[] = [];
+  @state() private outgoingLandAttacks: AttackUpdate[] = [];
   @state() private outgoingBoats: UnitView[] = [];
   @state() private _hidden: boolean = false;
   @state() private newEvents: number = 0;
@@ -96,6 +98,7 @@ export class EventsDisplay extends LitElement implements Layer {
   init() {}
 
   tick() {
+    this.active = true;
     const updates = this.game.updatesSinceLastTick();
     for (const [ut, fn] of this.updateMap) {
       updates[ut]?.forEach((u) => fn(u));
@@ -133,6 +136,10 @@ export class EventsDisplay extends LitElement implements Layer {
     this.outgoingAttacks = myPlayer
       .outgoingAttacks()
       .filter((a) => a.targetID != 0);
+
+    this.outgoingLandAttacks = myPlayer
+      .outgoingAttacks()
+      .filter((a) => a.targetID == 0);
 
     this.outgoingBoats = myPlayer
       .units()
@@ -396,14 +403,7 @@ export class EventsDisplay extends LitElement implements Layer {
       : event.description;
   }
 
-  private renderAttacks() {
-    if (
-      this.incomingAttacks.length === 0 &&
-      this.outgoingAttacks.length === 0
-    ) {
-      return html``;
-    }
-
+  private renderIncomingAttacks() {
     return html`
       ${this.incomingAttacks.length > 0
         ? html`
@@ -431,6 +431,11 @@ export class EventsDisplay extends LitElement implements Layer {
             </tr>
           `
         : ""}
+    `;
+  }
+
+  private renderOutgoingAttacks() {
+    return html`
       ${this.outgoingAttacks.length > 0
         ? html`
             <tr class="border-t border-gray-700">
@@ -453,6 +458,37 @@ export class EventsDisplay extends LitElement implements Layer {
                           ${attack.retreating ? "disabled" : ""}
                           @click=${() => {
                             this.emitCancelAttackIntent(attack.id);
+                          }}
+                        >
+                          ❌
+                        </button>`
+                      : "(retreating...)"}
+                  `,
+                )}
+              </td>
+            </tr>
+          `
+        : ""}
+    `;
+  }
+
+  private renderOutgoingLandAttacks() {
+    return html`
+      ${this.outgoingLandAttacks.length > 0
+        ? html`
+            <tr class="border-t border-gray-700">
+              <td class="lg:p-3 p-1 text-left text-gray-400">
+                ${this.outgoingLandAttacks.map(
+                  (landAttack) => html`
+                    <button translate="no" class="ml-2">
+                      ${renderTroops(landAttack.troops)} Wilderness
+                    </button>
+
+                    ${!landAttack.retreating
+                      ? html`<button
+                          ${landAttack.retreating ? "disabled" : ""}
+                          @click=${() => {
+                            this.emitCancelAttackIntent(landAttack.id);
                           }}
                         >
                           ❌
@@ -497,14 +533,10 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   render() {
-    if (
-      this.events.length === 0 &&
-      this.incomingAttacks.length === 0 &&
-      this.outgoingAttacks.length === 0 &&
-      this.outgoingBoats.length === 0
-    ) {
+    if (!this.active) {
       return html``;
     }
+
     this.events.sort((a, b) => {
       const aPrior = a.priority ?? 100000;
       const bPrior = b.priority ?? 100000;
@@ -602,7 +634,8 @@ export class EventsDisplay extends LitElement implements Layer {
                   </tr>
                 `,
               )}
-              ${this.renderAttacks()} ${this.renderBoats()}
+              ${this.renderIncomingAttacks()} ${this.renderOutgoingAttacks()}
+              ${this.renderOutgoingLandAttacks()} ${this.renderBoats()}
             </tbody>
           </table>
         </div>

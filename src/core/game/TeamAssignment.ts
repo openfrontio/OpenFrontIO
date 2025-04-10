@@ -1,4 +1,4 @@
-import { PlayerInfo, Team, TeamName } from "./Game";
+import { PlayerInfo, Team } from "./Game";
 
 export function assignTeams(
   players: PlayerInfo[],
@@ -38,7 +38,7 @@ export function assignTeams(
       for (const player of clanPlayers) {
         if (redTeamCount < maxTeamSize) {
           redTeamCount++;
-          result.set(player, { name: TeamName.Red });
+          result.set(player, Team.Red);
         } else {
           result.set(player, "kicked");
         }
@@ -48,7 +48,7 @@ export function assignTeams(
       for (const player of clanPlayers) {
         if (blueTeamCount < maxTeamSize) {
           blueTeamCount++;
-          result.set(player, { name: TeamName.Blue });
+          result.set(player, Team.Blue);
         } else {
           result.set(player, "kicked");
         }
@@ -60,10 +60,10 @@ export function assignTeams(
   for (const player of noClanPlayers) {
     if (redTeamCount <= blueTeamCount) {
       redTeamCount++;
-      result.set(player, { name: TeamName.Red });
+      result.set(player, Team.Red);
     } else {
       blueTeamCount++;
-      result.set(player, { name: TeamName.Blue });
+      result.set(player, Team.Blue);
     }
   }
 

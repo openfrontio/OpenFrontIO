@@ -7,7 +7,6 @@ describe("Territory management", () => {
     const game = await setup("Plains");
     game.addPlayer(
       new PlayerInfo("us", "test_player", PlayerType.Human, null, "test_id"),
-      1000,
     );
     const spawnTile = game.map().ref(50, 50);
     game.addExecution(

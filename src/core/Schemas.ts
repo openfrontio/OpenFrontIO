@@ -6,7 +6,7 @@ import {
   GameMode,
   GameType,
   PlayerType,
-  TeamName,
+  Team,
   UnitType,
 } from "./game/Game";
 
@@ -64,7 +64,8 @@ export type ServerMessage =
   | ServerSyncMessage
   | ServerStartGameMessage
   | ServerPingMessage
-  | ServerDesyncMessage;
+  | ServerDesyncMessage
+  | ServerPrestartMessage;
 
 export type ServerSyncMessage = z.infer<typeof ServerTurnMessageSchema>;
 export type ServerStartGameMessage = z.infer<
@@ -72,7 +73,7 @@ export type ServerStartGameMessage = z.infer<
 >;
 export type ServerPingMessage = z.infer<typeof ServerPingMessageSchema>;
 export type ServerDesyncMessage = z.infer<typeof ServerDesyncSchema>;
-
+export type ServerPrestartMessage = z.infer<typeof ServerPrestartMessageSchema>;
 export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
 export type ClientPingMessage = z.infer<typeof ClientPingMessageSchema>;
 export type ClientIntentMessage = z.infer<typeof ClientIntentMessageSchema>;
@@ -124,12 +125,9 @@ const GameConfigSchema = z.object({
 
 const SafeString = z
   .string()
-  // Remove common dangerous characters and patterns
-  // The weird \u stuff is to allow emojis
   .regex(
-    /^[a-zA-Z0-9\s.,!?@#$%&*()-_+=\[\]{}|;:"'\/\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|üÜ]+$/,
+    /^([a-zA-Z0-9\s.,!?@#$%&*()-_+=\[\]{}|;:"'\/\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|üÜ])*$/,
   )
-  // Reasonable max length to prevent DOS
   .max(1000);
 
 const EmojiSchema = z.string().refine(
@@ -298,7 +296,7 @@ export const TurnSchema = z.object({
 // Server
 
 const ServerBaseMessageSchema = z.object({
-  type: z.enum(["turn", "ping", "start", "desync"]),
+  type: z.enum(["turn", "ping", "prestart", "start", "desync"]),
 });
 
 export const ServerTurnMessageSchema = ServerBaseMessageSchema.extend({
@@ -308,6 +306,11 @@ export const ServerTurnMessageSchema = ServerBaseMessageSchema.extend({
 
 export const ServerPingMessageSchema = ServerBaseMessageSchema.extend({
   type: z.literal("ping"),
+});
+
+export const ServerPrestartMessageSchema = ServerBaseMessageSchema.extend({
+  type: z.literal("prestart"),
+  gameMap: z.nativeEnum(GameMapType),
 });
 
 export const PlayerSchema = z.object({
@@ -341,6 +344,7 @@ export const ServerDesyncSchema = ServerBaseMessageSchema.extend({
 
 export const ServerMessageSchema = z.union([
   ServerTurnMessageSchema,
+  ServerPrestartMessageSchema,
   ServerStartGameMessageSchema,
   ServerPingMessageSchema,
   ServerDesyncSchema,
@@ -357,7 +361,7 @@ const ClientBaseMessageSchema = z.object({
 
 export const ClientSendWinnerSchema = ClientBaseMessageSchema.extend({
   type: z.literal("winner"),
-  winner: ID.or(z.nativeEnum(TeamName)).nullable(),
+  winner: ID.or(z.nativeEnum(Team)).nullable(),
   allPlayersStats: AllPlayersStatsSchema,
   winnerType: z.enum(["player", "team"]),
 });
@@ -389,6 +393,7 @@ export const ClientJoinMessageSchema = ClientBaseMessageSchema.extend({
   type: z.literal("join"),
   lastTurn: z.number(), // The last turn the client saw.
   username: SafeString,
+  flag: SafeString.nullable().optional(),
 });
 
 export const ClientMessageSchema = z.union([
@@ -418,7 +423,7 @@ export const GameRecordSchema = z.object({
   num_turns: z.number(),
   turns: z.array(TurnSchema),
   winner: z
-    .union([ID, z.nativeEnum(TeamName)])
+    .union([ID, z.nativeEnum(Team)])
     .nullable()
     .optional(),
   winnerType: z.enum(["player", "team"]).nullable().optional(),

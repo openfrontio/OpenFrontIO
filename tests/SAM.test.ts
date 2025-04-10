@@ -50,8 +50,8 @@ describe("SAM", () => {
       null,
       "attacker_id",
     );
-    game.addPlayer(defender_info, 1000);
-    game.addPlayer(attacker_info, 1000);
+    game.addPlayer(defender_info);
+    game.addPlayer(attacker_info);
 
     game.addExecution(
       new SpawnExecution(game.player(defender_info.id).info(), game.ref(1, 1)),
