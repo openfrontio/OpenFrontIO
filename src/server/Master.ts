@@ -238,12 +238,10 @@ async function schedulePublicGame(playlist: MapPlaylist) {
 
   const gameMode = playlist.getNextGameMode();
   const numPlayerTeams =
-    gameMode === GameMode.Team
-      ? 2 + Math.floor(Math.random() * 5)
-      : undefined;
+    gameMode === GameMode.Team ? 2 + Math.floor(Math.random() * 5) : undefined;
 
   // Create the default public game config (from your GameManager)
-  const defaultGameConfig = {
+  const defaultGameConfig: GameConfig = {
     gameMap: map,
     maxPlayers: config.lobbyMaxPlayers(map),
     gameType: GameType.Public,
@@ -256,7 +254,7 @@ async function schedulePublicGame(playlist: MapPlaylist) {
     gameMode,
     numPlayerTeams,
     bots: 400,
-  } as GameConfig;
+  };
 
   const workerPath = config.workerPath(gameID);
 

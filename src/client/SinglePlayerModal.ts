@@ -391,8 +391,7 @@ export class SinglePlayerModal extends LitElement {
               gameMap: this.selectedMap,
               gameType: GameType.Singleplayer,
               gameMode: this.gameMode,
-              teamCount:
-                this.gameMode === GameMode.Team ? this.teamCount : undefined,
+              numPlayerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,
               disableNPCs: this.disableNPCs,
               disableNukes: this.disableNukes,

@@ -31,10 +31,6 @@ export class SpawnTimer implements Layer {
     const teamTiles: Map<Team, number> = new Map();
     for (const player of this.game.players()) {
       const team = player.team();
-      if (team === null) {
-        // TODO: Why is team null here?
-        throw new Error(`null team for ${player.name()}`);
-      }
       const tiles = teamTiles.get(team) ?? 0;
       const sum = tiles + player.numTilesOwned();
       teamTiles.set(team, sum);
@@ -63,20 +59,17 @@ export class SpawnTimer implements Layer {
     const barHeight = 10;
     const barWidth = this.transformHandler.width();
 
-    const ratios =
-      this.ratios.reduce((acc, r) => acc + r, 0) < 1 &&
-      this.colors.length > this.ratios.length
-        ? [...this.ratios, 1 - this.ratios.reduce((acc, r) => acc + r, 0)]
-        : this.ratios;
-
     let x = 0;
-    const filledRatio = 0;
-    for (let i = 0; i < this.colors.length; i++) {
-      const ratio = i < this.ratios.length ? 1 - filledRatio : this.ratios[i];
+    let filledRatio = 0;
+    for (let i = 0; i < this.ratios.length && i < this.colors.length; i++) {
+      const ratio = this.ratios[i];
       const segmentWidth = barWidth * ratio;
+
       context.fillStyle = this.colors[i];
       context.fillRect(x, 0, segmentWidth, barHeight);
+
       x += segmentWidth;
+      filledRatio += ratio;
     }
   }
 }

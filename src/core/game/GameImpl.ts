@@ -75,7 +75,7 @@ export class GameImpl implements Game {
 
   private _stats: StatsImpl = new StatsImpl();
 
-  private playerTeams: Team[] = [];
+  private playerTeams: Team[] = [Team.Red, Team.Blue];
   private botTeam: Team = Team.Bot;
 
   constructor(
@@ -102,14 +102,13 @@ export class GameImpl implements Game {
 
     if (_config.gameConfig().gameMode === GameMode.Team) {
       const numPlayerTeams = _config.numPlayerTeams();
-      if (numPlayerTeams >= 1) this.playerTeams.push(Team.Red);
-      if (numPlayerTeams >= 2) this.playerTeams.push(Team.Blue);
+      if (numPlayerTeams < 2) throw new Error("Too few teams!");
       if (numPlayerTeams >= 3) this.playerTeams.push(Team.Teal);
       if (numPlayerTeams >= 4) this.playerTeams.push(Team.Purple);
       if (numPlayerTeams >= 5) this.playerTeams.push(Team.Yellow);
       if (numPlayerTeams >= 6) this.playerTeams.push(Team.Orange);
       if (numPlayerTeams >= 7) this.playerTeams.push(Team.Green);
-      if (numPlayerTeams >= 8) throw new Error("Too many teams");
+      if (numPlayerTeams >= 8) throw new Error("Too many teams!");
     }
   }
 
