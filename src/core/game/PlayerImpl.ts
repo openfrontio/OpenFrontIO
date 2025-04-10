@@ -530,7 +530,7 @@ export class PlayerImpl implements Player {
       this.id(),
     );
     this.mg.displayMessage(
-      `Recieved ${renderTroops(troops)} troops from ${this.name()}`,
+      `Received ${renderTroops(troops)} troops from ${this.name()}`,
       MessageType.SUCCESS,
       recipient.id(),
     );
