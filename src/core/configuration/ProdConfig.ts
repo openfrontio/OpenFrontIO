@@ -3,7 +3,7 @@ import { DefaultServerConfig } from "./DefaultConfig";
 
 export const prodConfig = new (class extends DefaultServerConfig {
   r2Bucket(): string {
-    return "openfront-prod";
+    return "openfront-staging";
   }
   numWorkers(): number {
     return 6;
