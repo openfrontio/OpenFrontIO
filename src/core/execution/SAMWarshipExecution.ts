@@ -31,11 +31,6 @@ export class SAMWarshipExecution implements Execution {
   // TODO: put in config
   private searchRange = 100;
 
-  private shellAttackRate = 5;
-  private lastShellAttack = 0;
-
-  private alreadySentShell = new Set<Unit>();
-
   constructor(
     private playerID: PlayerID,
     private patrolCenterTile: TileRef,
@@ -74,26 +69,23 @@ export class SAMWarshipExecution implements Execution {
   }
 
   private patrol() {
-    this.SAMWarship.setWarshipTarget(this.target);
-    if (this.target == null) {
-      const result = this.pathfinder.nextTile(
-        this.SAMWarship.tile(),
-        this.patrolTile,
-      );
-      switch (result.type) {
-        case PathFindResultType.Completed:
-          this.patrolTile = this.randomTile();
-          break;
-        case PathFindResultType.NextTile:
-          this.SAMWarship.move(result.tile);
-          break;
-        case PathFindResultType.Pending:
-          return;
-        case PathFindResultType.PathNotFound:
-          consolex.log(`path not found to patrol tile`);
-          this.patrolTile = this.randomTile();
-          break;
-      }
+    const result = this.pathfinder.nextTile(
+      this.SAMWarship.tile(),
+      this.patrolTile,
+    );
+    switch (result.type) {
+      case PathFindResultType.Completed:
+        this.patrolTile = this.randomTile();
+        break;
+      case PathFindResultType.NextTile:
+        this.SAMWarship.move(result.tile);
+        break;
+      case PathFindResultType.Pending:
+        return;
+      case PathFindResultType.PathNotFound:
+        consolex.log(`path not found to patrol tile`);
+        this.patrolTile = this.randomTile();
+        break;
     }
   }
 
@@ -126,7 +118,7 @@ export class SAMWarshipExecution implements Execution {
       ])
       .filter(
         ({ unit }) =>
-          unit.owner() !== this.player && !this.player.isFriendly(unit.owner()),
+          unit.owner() === this.player && !this.player.isFriendly(unit.owner()),
       );
 
     this.target =
@@ -161,25 +153,15 @@ export class SAMWarshipExecution implements Execution {
       this.goToMoveTarget(this.SAMWarship.moveTarget());
       // If we have a "move target" then we cannot target trade ships as it
       // requires moving.
-      if (this.SAMWarship && this.target.type() == UnitType.TradeShip) {
-        this.SAMWarship = null;
-      }
-    } else if (!this.SAMWarship || this.target.type() != UnitType.TradeShip) {
+    } else {
       this.patrol();
     }
 
-    this.SAMWarship.setWarshipTarget(this.target);
-
-    // If we have a move target we do not want to go after trading ships
     if (!this.target) {
       return;
     }
 
-    if (
-      this.target &&
-      !this.SAMWarship.isCooldown() &&
-      !this.target.targetedBySAM()
-    ) {
+    if (!this.SAMWarship.isCooldown() && !this.target.targetedBySAM()) {
       this.SAMWarship.setCooldown(true);
       const random = this.pseudoRandom.next();
       const hit = random < this.mg.config().samHittingChance();
@@ -199,29 +181,6 @@ export class SAMWarshipExecution implements Execution {
             this.target,
           ),
         );
-      }
-    }
-
-    for (let i = 0; i < 2; i++) {
-      // target is trade ship so capture it.
-      const result = this.pathfinder.nextTile(
-        this.SAMWarship.tile(),
-        this.target.tile(),
-        5,
-      );
-      switch (result.type) {
-        case PathFindResultType.Completed:
-          this.player.captureUnit(this.target);
-          this.target = null;
-          return;
-        case PathFindResultType.NextTile:
-          this.SAMWarship.move(result.tile);
-          break;
-        case PathFindResultType.Pending:
-          break;
-        case PathFindResultType.PathNotFound:
-          consolex.log(`path not found to target`);
-          break;
       }
     }
   }
