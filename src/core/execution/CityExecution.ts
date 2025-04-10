@@ -3,8 +3,8 @@ import {
   Execution,
   Game,
   Player,
-  Unit,
   PlayerID,
+  Unit,
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
@@ -44,10 +44,10 @@ export class CityExecution implements Execution {
       this.active = false;
       return;
     }
-  }
 
-  owner(): Player {
-    return null;
+    if (this.player != this.city.owner()) {
+      this.player = this.city.owner();
+    }
   }
 
   isActive(): boolean {

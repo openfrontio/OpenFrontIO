@@ -1,17 +1,18 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { Difficulty, GameMapType, GameType } from "../core/game/Game";
-import { generateID as generateID } from "../core/Util";
+import randomMap from "../../resources/images/RandomMap.webp";
+import { translateText } from "../client/Utils";
 import { consolex } from "../core/Consolex";
-import "./components/Difficulties";
-import "./components/baseComponents/Modal";
+import { Difficulty, GameMapType, GameMode, GameType } from "../core/game/Game";
+import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
+import "./components/baseComponents/Modal";
+import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
-import randomMap from "../../resources/images/RandomMap.png";
-import { GameInfo } from "../core/Schemas";
+import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
-import { translateText } from "../client/Utils";
+import { UsernameInput } from "./UsernameInput";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
@@ -28,6 +29,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private infiniteTroops: boolean = false;
   @state() private instantBuild: boolean = false;
   @state() private useRandomMap: boolean = false;
+  @state() private gameMode: GameMode = GameMode.FFA;
 
   render() {
     return html`
@@ -35,7 +37,7 @@ export class SinglePlayerModal extends LitElement {
         <div class="options-layout">
           <!-- Map Selection -->
           <div class="options-section">
-            <div class="option-title">${translateText("single_modal.map")}</div>
+            <div class="option-title">${translateText("map.map")}</div>
             <div class="option-cards">
               ${Object.entries(GameMapType)
                 .filter(([key]) => isNaN(Number(key)))
@@ -80,7 +82,7 @@ export class SinglePlayerModal extends LitElement {
           <!-- Difficulty Selection -->
           <div class="options-section">
             <div class="option-title">
-              ${translateText("single_modal.difficulty")}
+              ${translateText("difficulty.difficulty")}
             </div>
             <div class="option-cards">
               ${Object.entries(Difficulty)
@@ -107,6 +109,33 @@ export class SinglePlayerModal extends LitElement {
             </div>
           </div>
 
+          <!-- Game Mode Selection -->
+          <div class="options-section">
+            <div class="option-title">${translateText("host_modal.mode")}</div>
+            <div class="option-cards">
+              <div
+                class="option-card ${this.gameMode === GameMode.FFA
+                  ? "selected"
+                  : ""}"
+                @click=${() => this.handleGameModeSelection(GameMode.FFA)}
+              >
+                <div class="option-card-title">
+                  ${translateText("game_mode.ffa")}
+                </div>
+              </div>
+              <div
+                class="option-card ${this.gameMode === GameMode.Team
+                  ? "selected"
+                  : ""}"
+                @click=${() => this.handleGameModeSelection(GameMode.Team)}
+              >
+                <div class="option-card-title">
+                  ${translateText("game_mode.teams")}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Game Options -->
           <div class="options-section">
             <div class="option-title">
@@ -122,7 +151,7 @@ export class SinglePlayerModal extends LitElement {
                   step="1"
                   @input=${this.handleBotsChange}
                   @change=${this.handleBotsChange}
-                  .value="${this.bots}"
+                  .value="${String(this.bots)}"
                 />
                 <div class="option-card-title">
                   <span>${translateText("single_modal.bots")}</span>${this
@@ -133,13 +162,13 @@ export class SinglePlayerModal extends LitElement {
               </label>
 
               <label
-                for="disable-npcs"
+                for="singleplayer-modal-disable-npcs"
                 class="option-card ${this.disableNPCs ? "selected" : ""}"
               >
                 <div class="checkbox-icon"></div>
                 <input
                   type="checkbox"
-                  id="disable-npcs"
+                  id="singleplayer-modal-disable-npcs"
                   @change=${this.handleDisableNPCsChange}
                   .checked=${this.disableNPCs}
                 />
@@ -148,13 +177,13 @@ export class SinglePlayerModal extends LitElement {
                 </div>
               </label>
               <label
-                for="instant-build"
+                for="singleplayer-modal-instant-build"
                 class="option-card ${this.instantBuild ? "selected" : ""}"
               >
                 <div class="checkbox-icon"></div>
                 <input
                   type="checkbox"
-                  id="instant-build"
+                  id="singleplayer-modal-instant-build"
                   @change=${this.handleInstantBuildChange}
                   .checked=${this.instantBuild}
                 />
@@ -164,13 +193,13 @@ export class SinglePlayerModal extends LitElement {
               </label>
 
               <label
-                for="infinite-gold"
+                for="singleplayer-modal-infinite-gold"
                 class="option-card ${this.infiniteGold ? "selected" : ""}"
               >
                 <div class="checkbox-icon"></div>
                 <input
                   type="checkbox"
-                  id="infinite-gold"
+                  id="singleplayer-modal-infinite-gold"
                   @change=${this.handleInfiniteGoldChange}
                   .checked=${this.infiniteGold}
                 />
@@ -180,13 +209,13 @@ export class SinglePlayerModal extends LitElement {
               </label>
 
               <label
-                for="infinite-troops"
+                for="singleplayer-modal-infinite-troops"
                 class="option-card ${this.infiniteTroops ? "selected" : ""}"
               >
                 <div class="checkbox-icon"></div>
                 <input
                   type="checkbox"
-                  id="infinite-troops"
+                  id="singleplayer-modal-infinite-troops"
                   @change=${this.handleInfiniteTroopsChange}
                   .checked=${this.infiniteTroops}
                 />
@@ -196,13 +225,13 @@ export class SinglePlayerModal extends LitElement {
               </label>
 
               <label
-                for="disable-nukes"
+                for="singleplayer-modal-disable-nukes"
                 class="option-card ${this.disableNukes ? "selected" : ""}"
               >
                 <div class="checkbox-icon"></div>
                 <input
                   type="checkbox"
-                  id="disable-nukes"
+                  id="singleplayer-modal-disable-nukes"
                   @change=${this.handleDisableNukesChange}
                   .checked=${this.disableNukes}
                 />
@@ -277,6 +306,10 @@ export class SinglePlayerModal extends LitElement {
     this.disableNukes = Boolean((e.target as HTMLInputElement).checked);
   }
 
+  private handleGameModeSelection(value: GameMode) {
+    this.gameMode = value;
+  }
+
   private getRandomMap(): GameMapType {
     const maps = Object.values(GameMapType);
     const randIdx = Math.floor(Math.random() * maps.length);
@@ -292,21 +325,50 @@ export class SinglePlayerModal extends LitElement {
     consolex.log(
       `Starting single player game with map: ${GameMapType[this.selectedMap]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
+    const clientID = generateID();
+    const gameID = generateID();
 
+    const usernameInput = document.querySelector(
+      "username-input",
+    ) as UsernameInput;
+    if (!usernameInput) {
+      consolex.warn("Username input element not found");
+    }
+
+    const flagInput = document.querySelector("flag-input") as FlagInput;
+    if (!flagInput) {
+      consolex.warn("Flag input element not found");
+    }
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
-          gameID: generateID(),
-          gameConfig: {
-            gameMap: this.selectedMap,
-            gameType: GameType.Singleplayer,
-            difficulty: this.selectedDifficulty,
-            disableNPCs: this.disableNPCs,
-            disableNukes: this.disableNukes,
-            bots: this.bots,
-            infiniteGold: this.infiniteGold,
-            infiniteTroops: this.infiniteTroops,
-            instantBuild: this.instantBuild,
+          clientID: clientID,
+          gameID: gameID,
+          gameStartInfo: {
+            gameID: gameID,
+            players: [
+              {
+                playerID: generateID(),
+                clientID,
+                username: usernameInput.getCurrentUsername(),
+                flag:
+                  flagInput.getCurrentFlag() == "xx"
+                    ? ""
+                    : flagInput.getCurrentFlag(),
+              },
+            ],
+            config: {
+              gameMap: this.selectedMap,
+              gameType: GameType.Singleplayer,
+              gameMode: this.gameMode,
+              difficulty: this.selectedDifficulty,
+              disableNPCs: this.disableNPCs,
+              disableNukes: this.disableNukes,
+              bots: this.bots,
+              infiniteGold: this.infiniteGold,
+              infiniteTroops: this.infiniteTroops,
+              instantBuild: this.instantBuild,
+            },
           },
         } as JoinLobbyEvent,
         bubbles: true,

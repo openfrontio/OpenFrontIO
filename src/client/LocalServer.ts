@@ -1,26 +1,17 @@
-import { Config, GameEnv, ServerConfig } from "../core/configuration/Config";
 import { consolex } from "../core/Consolex";
-import { GameEvent } from "../core/EventBus";
 import {
   AllPlayersStats,
-  ClientID,
   ClientMessage,
   ClientMessageSchema,
-  GameConfig,
-  GameID,
+  ClientSendWinnerMessage,
   GameRecordSchema,
   Intent,
   PlayerRecord,
   ServerMessage,
   ServerStartGameMessageSchema,
-  ServerTurnMessageSchema,
   Turn,
 } from "../core/Schemas";
-import {
-  createGameRecord,
-  decompressGameRecord,
-  generateID,
-} from "../core/Util";
+import { createGameRecord, decompressGameRecord } from "../core/Util";
 import { LobbyConfig } from "./ClientGameRunner";
 import { getPersistentIDFromCookie } from "./Main";
 
@@ -33,7 +24,7 @@ export class LocalServer {
 
   private paused = false;
 
-  private winner: ClientID | null = null;
+  private winner: ClientSendWinnerMessage = null;
   private allPlayersStats: AllPlayersStats = {};
 
   constructor(
@@ -58,7 +49,8 @@ export class LocalServer {
     this.clientMessage(
       ServerStartGameMessageSchema.parse({
         type: "start",
-        config: this.lobbyConfig.gameConfig,
+        gameID: this.lobbyConfig.gameStartInfo.gameID,
+        gameStartInfo: this.lobbyConfig.gameStartInfo,
         turns: this.turns,
       }),
     );
@@ -124,7 +116,7 @@ export class LocalServer {
       }
     }
     if (clientMsg.type == "winner") {
-      this.winner = clientMsg.winner;
+      this.winner = clientMsg;
       this.allPlayersStats = clientMsg.allPlayersStats;
     }
   }
@@ -135,7 +127,7 @@ export class LocalServer {
     }
     const pastTurn: Turn = {
       turnNumber: this.turns.length,
-      gameID: this.lobbyConfig.gameID,
+      gameID: this.lobbyConfig.gameStartInfo.gameID,
       intents: this.intents,
     };
     this.turns.push(pastTurn);
@@ -153,18 +145,19 @@ export class LocalServer {
       {
         ip: null,
         persistentID: getPersistentIDFromCookie(),
-        username: this.lobbyConfig.playerName(),
+        username: this.lobbyConfig.playerName,
         clientID: this.lobbyConfig.clientID,
       },
     ];
     const record = createGameRecord(
-      this.lobbyConfig.gameID,
-      this.lobbyConfig.gameConfig,
+      this.lobbyConfig.gameStartInfo.gameID,
+      this.lobbyConfig.gameStartInfo,
       players,
       this.turns,
       this.startedAt,
       Date.now(),
-      this.winner,
+      this.winner?.winner,
+      this.winner?.winnerType,
       this.allPlayersStats,
     );
     if (!saveFullGame) {
@@ -176,7 +169,7 @@ export class LocalServer {
       type: "application/json",
     });
     const workerPath = this.lobbyConfig.serverConfig.workerPath(
-      this.lobbyConfig.gameID,
+      this.lobbyConfig.gameStartInfo.gameID,
     );
     navigator.sendBeacon(`/${workerPath}/api/archive_singleplayer_game`, blob);
   }

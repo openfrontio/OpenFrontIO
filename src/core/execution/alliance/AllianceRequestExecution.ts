@@ -1,11 +1,5 @@
 import { consolex } from "../../Consolex";
-import {
-  AllianceRequest,
-  Execution,
-  Game,
-  Player,
-  PlayerID,
-} from "../../game/Game";
+import { Execution, Game, Player, PlayerID } from "../../game/Game";
 
 export class AllianceRequestExecution implements Execution {
   private active = true;
@@ -40,7 +34,7 @@ export class AllianceRequestExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.requestor.isAlliedWith(this.recipient)) {
+    if (this.requestor.isFriendly(this.recipient)) {
       consolex.warn("already allied");
     } else if (!this.requestor.canSendAllianceRequest(this.recipient)) {
       consolex.warn("recent or pending alliance request");

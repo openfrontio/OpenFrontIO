@@ -1,4 +1,4 @@
-import { Execution, Game, Player, PlayerID } from "../game/Game";
+import { Execution, Game } from "../game/Game";
 
 const cancelDelay = 2;
 
@@ -23,11 +23,6 @@ export class MoveWarshipExecution implements Execution {
     }
     warship.setMoveTarget(this.position);
     this.active = false;
-  }
-
-  owner(): Player {
-    const warship = this.mg.units().find((u) => u.id() == this.unitId);
-    return warship ? warship.owner() : null;
   }
 
   isActive(): boolean {

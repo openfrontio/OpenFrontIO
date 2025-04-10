@@ -1,23 +1,20 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { Layer } from "./Layer";
+import { EventBus } from "../../../core/EventBus";
 import {
-  Game,
-  GameType,
-  Player,
   PlayerProfile,
   PlayerType,
   Relation,
   Unit,
   UnitType,
 } from "../../../core/game/Game";
-import { ClientID } from "../../../core/Schemas";
-import { EventBus } from "../../../core/EventBus";
-import { TransformHandler } from "../TransformHandler";
-import { MouseMoveEvent } from "../../InputHandler";
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { TileRef } from "../../../core/game/GameMap";
+import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { ClientID } from "../../../core/Schemas";
+import { MouseMoveEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
+import { TransformHandler } from "../TransformHandler";
+import { Layer } from "./Layer";
 
 function euclideanDistWorld(
   coord: { x: number; y: number },
@@ -163,7 +160,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
   private renderPlayerInfo(player: PlayerView) {
     const myPlayer = this.myPlayer();
-    const isAlly = myPlayer?.isAlliedWith(player);
+    const isFriendly = myPlayer?.isFriendly(player);
     let relationHtml = null;
     const attackingTroops = player
       .outgoingAttacks()
@@ -198,7 +195,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     return html`
       <div class="p-2">
         <div
-          class="text-bold text-sm lg:text-lg font-bold mb-1 inline-flex ${isAlly
+          class="text-bold text-sm lg:text-lg font-bold mb-1 inline-flex ${isFriendly
             ? "text-green-500"
             : "text-white"}"
         >
@@ -244,7 +241,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   private renderUnitInfo(unit: UnitView) {
     const isAlly =
       (unit.owner() == this.myPlayer() ||
-        this.myPlayer()?.isAlliedWith(unit.owner())) ??
+        this.myPlayer()?.isFriendly(unit.owner())) ??
       false;
 
     return html`

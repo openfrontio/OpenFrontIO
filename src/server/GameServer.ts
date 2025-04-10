@@ -1,15 +1,19 @@
-import { RateLimiterMemory } from "rate-limiter-flexible";
+import { Logger } from "winston";
 import WebSocket from "ws";
 import {
   AllPlayersStats,
   ClientID,
   ClientMessage,
   ClientMessageSchema,
+  ClientSendWinnerMessage,
   GameConfig,
   GameInfo,
+  GameStartInfo,
+  GameStartInfoSchema,
   Intent,
   PlayerRecord,
   ServerDesyncSchema,
+  ServerPrestartMessageSchema,
   ServerStartGameMessageSchema,
   ServerTurnMessageSchema,
   Turn,
@@ -19,9 +23,8 @@ import { ServerConfig } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import { archive } from "./Archive";
 import { Client } from "./Client";
-import { slog } from "./StructuredLog";
 import { gatekeeper } from "./Gatekeeper";
-import { Logger } from "winston";
+import { slog } from "./StructuredLog";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -45,11 +48,15 @@ export class GameServer {
 
   private lastPingUpdate = 0;
 
-  private winner: ClientID | null = null;
+  private winner: ClientSendWinnerMessage = null;
   // This field is currently only filled at victory
   private allPlayersStats: AllPlayersStats = {};
 
+  private gameStartInfo: GameStartInfo;
+
   private log: Logger;
+
+  private _hasPrestarted = false;
 
   constructor(
     public readonly id: string,
@@ -85,6 +92,9 @@ export class GameServer {
     }
     if (gameConfig.instantBuild != null) {
       this.gameConfig.instantBuild = gameConfig.instantBuild;
+    }
+    if (gameConfig.gameMode != null) {
+      this.gameConfig.gameMode = gameConfig.gameMode;
     }
   }
 
@@ -171,7 +181,7 @@ export class GameServer {
             client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
           }
           if (clientMsg.type == "winner") {
-            this.winner = clientMsg.winner;
+            this.winner = clientMsg;
             this.allPlayersStats = clientMsg.allPlayersStats;
           }
         } catch (error) {
@@ -212,12 +222,54 @@ export class GameServer {
     }
   }
 
+  public prestart() {
+    if (this.hasStarted()) {
+      return;
+    }
+    this._hasPrestarted = true;
+
+    const prestartMsg = ServerPrestartMessageSchema.safeParse({
+      type: "prestart",
+      gameMap: this.gameConfig.gameMap,
+    });
+
+    if (!prestartMsg.success) {
+      console.error(
+        `error creating prestart message for game ${this.id}, ${prestartMsg.error}`.substring(
+          0,
+          250,
+        ),
+      );
+      return;
+    }
+
+    const msg = JSON.stringify(prestartMsg.data);
+    this.activeClients.forEach((c) => {
+      this.log.info(`${this.id}: sending prestart message to ${c.clientID}`);
+      c.ws.send(msg);
+    });
+  }
+
   public start() {
+    if (this._hasStarted) {
+      return;
+    }
     this._hasStarted = true;
     this._startTime = Date.now();
     // Set last ping to start so we don't immediately stop the game
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
+
+    this.gameStartInfo = GameStartInfoSchema.parse({
+      gameID: this.id,
+      config: this.gameConfig,
+      players: this.activeClients.map((c) => ({
+        playerID: c.playerID,
+        username: c.username,
+        clientID: c.clientID,
+        flag: c.flag,
+      })),
+    });
 
     this.endTurnIntervalID = setInterval(
       () => this.endTurn(),
@@ -240,7 +292,7 @@ export class GameServer {
           ServerStartGameMessageSchema.parse({
             type: "start",
             turns: this.turns.slice(lastTurn),
-            config: this.gameConfig,
+            gameStartInfo: this.gameStartInfo,
           }),
         ),
       );
@@ -313,12 +365,13 @@ export class GameServer {
         archive(
           createGameRecord(
             this.id,
-            this.gameConfig,
+            this.gameStartInfo,
             playerRecords,
             this.turns,
             this._startTime,
             Date.now(),
-            this.winner,
+            this.winner?.winner,
+            this.winner?.winnerType,
             this.allPlayersStats,
           ),
         );
@@ -406,7 +459,7 @@ export class GameServer {
   }
 
   hasStarted(): boolean {
-    return this._hasStarted;
+    return this._hasStarted || this._hasPrestarted;
   }
 
   public gameInfo(): GameInfo {
@@ -428,7 +481,7 @@ export class GameServer {
   }
 
   private handleSynchronization() {
-    if (this.activeClients.length < 1) {
+    if (this.activeClients.length <= 1) {
       return;
     }
     if (this.turns.length % 10 != 0 || this.turns.length < 10) {
@@ -438,17 +491,12 @@ export class GameServer {
 
     const lastHashTurn = this.turns.length - 10;
 
-    let { mostCommonHash, outOfSyncClients } =
+    const { mostCommonHash, outOfSyncClients } =
       this.findOutOfSyncClients(lastHashTurn);
 
     if (outOfSyncClients.length == 0) {
       this.turns[lastHashTurn].hash = mostCommonHash;
       return;
-    }
-
-    if (outOfSyncClients.length >= Math.floor(this.activeClients.length / 2)) {
-      // If half clients out of sync assume all are out of sync.
-      outOfSyncClients = this.activeClients;
     }
 
     const serverDesync = ServerDesyncSchema.safeParse({
@@ -501,7 +549,7 @@ export class GameServer {
     }
 
     // Create a list of clients whose hash doesn't match the most common one
-    const outOfSyncClients: Client[] = [];
+    let outOfSyncClients: Client[] = [];
 
     for (const client of this.activeClients) {
       if (client.hashes.has(turnNumber)) {
@@ -510,6 +558,11 @@ export class GameServer {
           outOfSyncClients.push(client);
         }
       }
+    }
+
+    // If half clients out of sync assume all are out of sync.
+    if (outOfSyncClients.length >= Math.floor(this.activeClients.length / 2)) {
+      outOfSyncClients = this.activeClients;
     }
 
     return {

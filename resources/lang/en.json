@@ -1,5 +1,12 @@
 {
+  "lang": {
+    "en": "English",
+    "native": "English",
+    "svg": "uk_us_flag",
+    "lang_code": "en"
+  },
   "main": {
+    "title": "OpenFront (ALPHA)",
     "join_discord": "Join the Discord!",
     "create_lobby": "Create Lobby",
     "join_lobby": "Join Lobby",
@@ -10,20 +17,17 @@
   },
   "help_modal": {
     "hotkeys": "Hotkeys",
-
     "table_key": "Key",
-
     "table_action": "Action",
-
     "action_alt_view": "Alternate view (terrain/countries)",
     "action_attack_altclick": "Attack (when left click is set to open menu)",
     "action_build": "Open build menu",
+    "action_emote": "Open emote menu",
     "action_center": "Center camera on player",
     "action_zoom": "Zoom out/in",
     "action_move_camera": "Move camera",
     "action_ratio_change": "Decrease/Increase attack ratio",
     "action_reset_gfx": "Reset graphics",
-
     "ui_section": "Game UI",
     "ui_leaderboard": "Leaderboard",
     "ui_leaderboard_desc": "Shows the top players of the game and their names, % owned land and gold.",
@@ -32,38 +36,32 @@
     "ui_pop": "Pop - The amount of units you have, your max population and the rate at which you gain them.",
     "ui_gold": "Gold - The amount of gold you have and the rate at which you gain it.",
     "ui_troops_workers": "Troops and Workers - The amount of allocated troops and workers. Troops are used to attack or defend against attacks. Workers are used to generate gold. You can adjust the number of troops and workers using the slider.",
-    "ui_attack_ratio": "Attack ratio - The amount of troops that will be used when you attack. You can adjust the attack ratio using the slider.",
-
+    "ui_attack_ratio": "Attack ratio - The amount of troops that will be used when you attack. You can adjust the attack ratio using the slider. Having more attacking troops than defending troops will make you lose fewer troops in the attack, while having less will increase the damage dealt to your attacking troops. The effect doesn't go beyond ratios of 2:1.",
     "ui_options": "Options",
     "ui_options_desc": "The following elements can be found inside:",
     "option_pause": "Pause/Unpause the game - Only available in single player mode.",
     "option_timer": "Timer - Time passed since the start of the game.",
     "option_exit": "Exit button.",
     "option_settings": "Settings - Open the settings menu. Inside you can toggle the Alternate View, Dark Mode, Emojis and action on left click.",
-
     "radial_title": "Radial menu",
     "radial_desc": "Right clicking (or touch on mobile) opens the radial menu. From there you can:",
     "radial_build": "Open the build menu.",
     "radial_info": "Open the Info menu.",
     "radial_boat": "Send a boat to attack at the selected location (only available if you have access to water).",
     "radial_close": "Close the menu.",
-
     "info_title": "Info menu",
     "info_enemy_desc": "Contains information such for the selected player name, gold, troops, and if the player is a traitor.Traitor is a player who betrayed and attacked a player who was in an alliance with them. The icons below represent the following interactions:",
     "info_target": "Place a target mark on the player, marking it for all allies, used to coordinate attacks.",
     "info_alliance": "Send an alliance request to the player. Allies can share resources and troops, but can't attack each other.",
     "info_emoji": "Send an emoji to the player.",
-
     "info_ally_panel": "Ally info panel",
     "info_ally_desc": "When you ally with a player, the following new icons become available:",
-    "ally_betray": "Betray your ally, ending the alliance. You will now have a permanent icon stuck next to your name. Bots are less likely to ally with you and players will think twice before doing so.",
+    "ally_betray": "Betray your ally, ending the alliance. You will now have a permanent icon stuck next to your name, unless the other nation was a traitor themselves. Attacks against you will incur less losses for the attacker until the end of the game, bots are less likely to ally with you and players will think twice before doing so.",
     "ally_donate": "Donate some of your troops to your ally. Used when they're low on troops and are being attacked, or when they need that extra power to crush an enemy.",
-
     "build_menu_title": "Build menu",
     "build_name": "Name",
     "build_icon": "Icon",
     "build_desc": "Description",
-
     "build_city": "City",
     "build_city_desc": "Increases your max population. Useful when you can't expand your territory or you're about to hit your population limit.",
     "build_defense": "Defense Post",
@@ -71,7 +69,7 @@
     "build_port": "Port",
     "build_port_desc": "Automatically sends trade ships between ports of your country and other countries (except if you clicked \"stop trade\" on them or they clicked \"stop trade on you\"), giving gold to both sides. Allows building Battleships. Can only be built near water.",
     "build_warship": "Warship",
-    "build_warship_desc": "Patrols in an area, capturing trade ships and destroying enemy Warships and Boats. Spawns from the nearest Port and patrols the area you first clicked to build it.",
+    "build_warship_desc": "Patrols in an area, capturing trade ships and destroying enemy Warships and Boats. Spawns from the nearest Port and patrols the area you first clicked to build it. You can control Warships by attack-clicking on them and then attack-clicking the new area you want them to move to.",
     "build_silo": "Missile Silo",
     "build_silo_desc": "Allows launching missiles.",
     "build_sam": "SAM Launcher",
@@ -82,17 +80,15 @@
     "build_hydrogen_desc": "Large explosive bomb. Spawns from the nearest Missile Silo and lands in the area you first clicked to build it.",
     "build_mirv": "MIRV",
     "build_mirv_desc": "The most powerful bomb in the game. Splits up into smaller bombs that will cover a huge range of territory. Only damages the player that you first clicked on to build it. Spawns from the nearest Missile Silo and lands in the area you first clicked to build it.",
-
     "player_icons": "Player icons",
     "icon_desc": "Examples of some of the ingame icons you will encounter and what they mean:",
     "icon_crown": "Crown - This is the number 1 player in the leaderboard",
     "icon_traitor": "Crossed swords - Traitor. This player attacked an ally.",
-    "icon_ally": "Handshake - Ally. This player is your ally."
+    "icon_ally": "Handshake - Ally. This player is your ally.",
+    "info_enemy_panel": "Enemy info panel"
   },
   "single_modal": {
     "title": "Single Player",
-    "map": "Map",
-    "difficulty": "difficulty",
     "allow_alliances": "Allow alliances",
     "options_title": "Options",
     "bots": "Bots: ",
@@ -105,6 +101,7 @@
     "start": "Start Game"
   },
   "map": {
+    "map": "Map",
     "world": "World",
     "europe": "Europe",
     "mena": "MENA",
@@ -118,8 +115,12 @@
     "britannia": "Britannia",
     "gatewaytotheatlantic": "Gateway to the Atlantic",
     "australia": "Australia",
+    "random": "Random",
     "iceland": "Iceland",
-    "random": "Random"
+    "pangaea": "Pangaea",
+    "japan": "Japan and Neighbors",
+    "betweentwoseas": "Between Two Seas",
+    "knownworld": "Known World"
   },
   "private_lobby": {
     "title": "Join Private Lobby",
@@ -145,8 +146,7 @@
   },
   "host_modal": {
     "title": "Private Lobby",
-    "map": "Map",
-    "difficulty": "Difficulty",
+    "mode": "Mode",
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
@@ -160,10 +160,19 @@
     "waiting": "Waiting for players...",
     "start": "Start Game"
   },
+  "game_starting_modal": {
+    "title": "Game is Starting...",
+    "desc": "Preparing for the lobby to start. Please wait."
+  },
   "difficulty": {
+    "difficulty": "Difficulty",
     "Relaxed": "Relaxed",
     "Balanced": "Balanced",
     "Intense": "Intense",
     "Impossible": "Impossible"
+  },
+  "game_mode": {
+    "ffa": "Free for All",
+    "teams": "Teams"
   }
 }

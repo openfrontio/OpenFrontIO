@@ -1,19 +1,18 @@
 import { PriorityQueue } from "@datastructures-js/priority-queue";
+import { renderNumber, renderTroops } from "../../client/Utils";
 import {
   Attack,
-  Cell,
   Execution,
   Game,
+  MessageType,
   Player,
   PlayerID,
   PlayerType,
   TerrainType,
   TerraNullius,
 } from "../game/Game";
-import { PseudoRandom } from "../PseudoRandom";
-import { MessageType } from "../game/Game";
-import { renderNumber, renderTroops } from "../../client/Utils";
 import { TileRef } from "../game/GameMap";
+import { PseudoRandom } from "../PseudoRandom";
 
 const malusForRetreat = 25;
 
@@ -80,6 +79,17 @@ export class AttackExecution implements Execution {
       this._targetID == this.mg.terraNullius().id()
         ? mg.terraNullius()
         : mg.player(this._targetID);
+
+    if (this.target && this.target.isPlayer()) {
+      const targetPlayer = this.target as Player;
+      if (
+        targetPlayer.type() != PlayerType.Bot &&
+        this._owner.type() != PlayerType.Bot
+      ) {
+        // Don't let bots embargo since they can't trade anyways.
+        targetPlayer.addEmbargo(this._owner.id());
+      }
+    }
 
     if (this._owner == this.target) {
       console.error(`Player ${this._owner} cannot attack itself`);
@@ -180,7 +190,11 @@ export class AttackExecution implements Execution {
 
   tick(ticks: number) {
     if (this.attack.retreated()) {
-      this.retreat(malusForRetreat);
+      if (this.attack.target().isPlayer()) {
+        this.retreat(malusForRetreat);
+      } else {
+        this.retreat();
+      }
       this.active = false;
       return;
     }

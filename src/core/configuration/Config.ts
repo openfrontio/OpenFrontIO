@@ -1,18 +1,17 @@
+import { Colord } from "colord";
+import { GameConfig, GameID } from "../Schemas";
 import {
   Difficulty,
   Game,
   GameMapType,
   Gold,
   Player,
-  PlayerID,
   PlayerInfo,
   TerraNullius,
   Tick,
   UnitInfo,
   UnitType,
 } from "../game/Game";
-import { Colord, colord } from "colord";
-import { GameConfig, GameID } from "../Schemas";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
@@ -45,9 +44,13 @@ export interface ServerConfig {
   r2SecretKey(): string;
 }
 
+export interface NukeMagnitude {
+  inner: number;
+  outer: number;
+}
+
 export interface Config {
   samHittingChance(): number;
-  samCooldown(): Tick;
   spawnImmunityDuration(): Tick;
   serverConfig(): ServerConfig;
   gameConfig(): GameConfig;
@@ -85,9 +88,14 @@ export interface Config {
     tilesPerTickUsed: number;
   };
   attackAmount(attacker: Player, defender: Player | TerraNullius): number;
+  radiusPortSpawn(): number;
+  // When computing likelihood of trading for any given port, the X closest port
+  // are twice more likely to be selected. X is determined below.
+  proximityBonusPortsNb(totalPorts: number): number;
   maxPopulation(player: Player | PlayerView): number;
   cityPopulationIncrease(): number;
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number;
+  warshipShellLifetime(): number;
   boatMaxNumber(): number;
   allianceDuration(): Tick;
   allianceRequestCooldown(): Tick;
@@ -101,23 +109,30 @@ export interface Config {
   tradeShipGold(dist: number): Gold;
   tradeShipSpawnRate(numberOfPorts: number): number;
   defensePostRange(): number;
+  SAMCooldown(): number;
+  SiloCooldown(): number;
   defensePostDefenseBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
   // 0-1
   traitorDefenseDebuff(): number;
+  nukeMagnitudes(unitType: UnitType): NukeMagnitude;
+  defaultNukeSpeed(): number;
+  nukeDeathFactor(humans: number, tilesOwned: number): number;
 }
 
 export interface Theme {
-  territoryColor(playerInfo: PlayerInfo): Colord;
-  specialBuildingColor(playerInfo: PlayerInfo): Colord;
-  borderColor(playerInfo: PlayerInfo): Colord;
-  defendedBorderColor(playerInfo: PlayerInfo): Colord;
+  territoryColor(playerInfo: PlayerView): Colord;
+  specialBuildingColor(playerInfo: PlayerView): Colord;
+  borderColor(playerInfo: PlayerView): Colord;
+  defendedBorderColor(playerInfo: PlayerView): Colord;
+  focusedBorderColor(): Colord;
+  focusedDefendedBorderColor(): Colord;
   terrainColor(gm: GameMap, tile: TileRef): Colord;
   backgroundColor(): Colord;
   falloutColor(): Colord;
   font(): string;
-  textColor(playerInfo: PlayerInfo): string;
+  textColor(playerInfo: PlayerView): string;
   // unit color for alternate view
   selfColor(): Colord;
   allyColor(): Colord;

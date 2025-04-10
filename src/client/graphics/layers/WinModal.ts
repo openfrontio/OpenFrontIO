@@ -1,23 +1,23 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { Player } from "../../../core/game/Game";
-import { ClientID } from "../../../core/Schemas";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
+import { LitElement, css, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { EventBus } from "../../../core/EventBus";
+import { Team } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { GameView, PlayerView } from "../../../core/game/GameView";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { simpleHash } from "../../../core/Util";
-import { EventBus } from "../../../core/EventBus";
 import { SendWinnerEvent } from "../../Transport";
+import { Layer } from "./Layer";
 
 // Add this at the top of your file
 declare global {
   interface Window {
-    adsbygoogle: any[];
+    adsbygoogle: unknown[];
   }
 }
+
 // Add this at the top of your file
-declare let adsbygoogle: any[];
+declare let adsbygoogle: unknown[];
 
 @customElement("win-modal")
 export class WinModal extends LitElement implements Layer {
@@ -149,7 +149,7 @@ export class WinModal extends LitElement implements Layer {
     return html`
       <div class="win-modal ${this.isVisible ? "visible" : ""}">
         <h2>${this._title || ""}</h2>
-        ${this.supportHTML()}
+        ${this.innerHtml()}
         <div class="button-container">
           <button @click=${this._handleExit}>Exit Game</button>
           <button @click=${this.hide}>Keep Playing</button>
@@ -158,34 +158,31 @@ export class WinModal extends LitElement implements Layer {
     `;
   }
 
-  updated(changedProperties) {
-    super.updated(changedProperties);
-    // Initialize ads if modal is visible and showing ads
-    if (changedProperties.has("isVisible") && this.isVisible && !this.won) {
-      try {
-        setTimeout(() => {
-          (adsbygoogle = window.adsbygoogle || []).push({});
-        }, 0);
-      } catch (error) {
-        console.error("Error initializing ad:", error);
-      }
-    }
-  }
-
-  supportHTML() {
+  innerHtml() {
     return html`
-      <div style="text-align: center; margin: 15px 0;">
+      <div style="text-align: center; margin: 15px 0; line-height: 1.5;">
         <p>
-          Like the game? Help make this my full-time project!
-          <a
-            href="https://discord.gg/k22YrnAzGp"
-            target="_blank"
-            rel="noopener noreferrer"
-            style="color: #0096ff; text-decoration: underline; display: block; margin-top: 5px;"
-          >
-            Support the game!
-          </a>
+          <span style="color: red;">Time's running out!</span> <br />
+          I need your support to continue working on OpenFront full-time. Please
+          donate now to keep the updates, new features, and improvements coming.
         </p>
+        <a
+          href="https://patreon.com/OpenFront"
+          target="_blank"
+          rel="noopener noreferrer"
+          style="
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #FF424D;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+          "
+        >
+          Support on Patreon
+        </a>
       </div>
     `;
   }
@@ -211,29 +208,51 @@ export class WinModal extends LitElement implements Layer {
 
   tick() {
     const myPlayer = this.game.myPlayer();
-    if (!this.hasShownDeathModal && myPlayer && !myPlayer.isAlive()) {
+    if (
+      !this.hasShownDeathModal &&
+      myPlayer &&
+      !myPlayer.isAlive() &&
+      !this.game.inSpawnPhase() &&
+      myPlayer.hasSpawned()
+    ) {
       this.hasShownDeathModal = true;
       this._title = "You died";
       this.won = false;
       this.show();
     }
     this.game.updatesSinceLastTick()[GameUpdateType.Win].forEach((wu) => {
-      const winner = this.game.playerBySmallID(wu.winnerID) as PlayerView;
-      this.eventBus.emit(
-        new SendWinnerEvent(winner.clientID(), wu.allPlayersStats),
-      );
-      if (winner == this.game.myPlayer()) {
-        this._title = "You Won!";
-        this.won = true;
+      if (wu.winnerType === "team") {
+        this.eventBus.emit(
+          new SendWinnerEvent(wu.winner as Team, wu.allPlayersStats, "team"),
+        );
+        if (wu.winner == this.game.myPlayer()?.team()) {
+          this._title = "Your team won!";
+          this.won = true;
+        } else {
+          this._title = `${wu.winner} team has won!`;
+          this.won = false;
+        }
+        this.show();
       } else {
-        this._title = `${winner.name()} has won!`;
-        this.won = false;
+        const winner = this.game.playerBySmallID(
+          wu.winner as number,
+        ) as PlayerView;
+        this.eventBus.emit(
+          new SendWinnerEvent(winner.clientID(), wu.allPlayersStats, "player"),
+        );
+        if (winner == this.game.myPlayer()) {
+          this._title = "You Won!";
+          this.won = true;
+        } else {
+          this._title = `${winner.name()} has won!`;
+          this.won = false;
+        }
+        this.show();
       }
-      this.show();
     });
   }
 
-  renderLayer(context: CanvasRenderingContext2D) {}
+  renderLayer(/* context: CanvasRenderingContext2D */) {}
 
   shouldTransform(): boolean {
     return false;

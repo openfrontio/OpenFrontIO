@@ -1409,7 +1409,7 @@
     "name": "Alabama"
   },
   {
-    "code": "Alaskaa",
+    "code": "Alaska",
     "name": "Alaska"
   },
   {
@@ -1591,5 +1591,260 @@
   {
     "code": "Wyoming",
     "name": "Wyoming"
+  },
+  {
+    "code": "northern_ireland",
+    "continent": "Europe",
+    "name": "Northern Ireland"
+  },
+  {
+    "code": "austria_hungary",
+    "continent": "Europe",
+    "name": "Austria-Hungary"
+  },
+  {
+    "code": "kurdistan",
+    "continent": "Asia",
+    "name": "Kurdistan"
+  },
+  {
+    "code": "west_germany",
+    "continent": "Europe",
+    "name": "West Germany"
+  },
+  {
+    "code": "east_germany",
+    "continent": "Europe",
+    "name": "East Germany"
+  },
+  {
+    "code": "ussr",
+    "continent": "Europe",
+    "name": "USSR"
+  },
+  {
+    "code": "tibet",
+    "continent": "Asia",
+    "name": "Tibet"
+  },
+  {
+    "code": "prussia",
+    "continent": "Europe",
+    "name": "Prussia"
+  },
+  {
+    "code": "venice",
+    "continent": "Europe",
+    "name": "Venice"
+  },
+  {
+    "code": "yugoslavia",
+    "continent": "Europe",
+    "name": "Yugoslavia"
+  },
+  {
+    "code": "spanish_empire",
+    "continent": "Europe",
+    "name": "Spanish Empire"
+  },
+  {
+    "code": "amazonas",
+    "continent": "South America",
+    "name": "Amazonas"
+  },
+  {
+    "code": "bahia",
+    "continent": "South America",
+    "name": "Bahia"
+  },
+  {
+    "code": "buenos_aires",
+    "continent": "South America",
+    "name": "Buenos Aires"
+  },
+  {
+    "code": "catamarca",
+    "continent": "South America",
+    "name": "Catamarca"
+  },
+  {
+    "code": "ceara",
+    "continent": "South America",
+    "name": "Ceará"
+  },
+  {
+    "code": "galapagos",
+    "continent": "South America",
+    "name": "Galápagos"
+  },
+  {
+    "code": "minas_gerais",
+    "continent": "South America",
+    "name": "Minas Gerais"
+  },
+  {
+    "code": "para",
+    "continent": "South America",
+    "name": "Pará"
+  },
+  {
+    "code": "rio_de_janeiro",
+    "continent": "South America",
+    "name": "Rio de Janeiro"
+  },
+  {
+    "code": "santa_cruz",
+    "continent": "South America",
+    "name": "Santa Cruz"
+  },
+  {
+    "code": "sao_paulo",
+    "continent": "South America",
+    "name": "São Paulo"
+  },
+  {
+    "code": "antipope",
+    "continent": "Europe",
+    "name": "Anti-Pope"
+  },
+  {
+    "code": "aquitaine",
+    "continent": "Europe",
+    "name": "Aquitaine"
+  },
+  {
+    "code": "armagnac",
+    "continent": "Europe",
+    "name": "Armagnac"
+  },
+  {
+    "code": "asturias",
+    "continent": "Europe",
+    "name": "Asturias"
+  },
+  {
+    "code": "baguette",
+    "continent": "",
+    "name": "Baguettes"
+  },
+  {
+    "code": "britanny",
+    "continent": "Europe",
+    "name": "Britanny"
+  },
+  {
+    "code": "burgundy",
+    "continent": "Europe",
+    "name": "Burgundy"
+  },
+  {
+    "code": "castille",
+    "continent": "Europe",
+    "name": "Castille"
+  },
+  {
+    "code": "cordoba",
+    "continent": "Europe",
+    "name": "Cordoba"
+  },
+  {
+    "code": "cthulhu_republic",
+    "continent": "",
+    "name": "Republic of Cthulhu"
+  },
+  {
+    "code": "french_foreign_legion",
+    "continent": "",
+    "name": "French Foreign Legion"
+  },
+  {
+    "code": "frost_giant",
+    "continent": "",
+    "name": "Frost Giant"
+  },
+  {
+    "code": "leon",
+    "continent": "Europe",
+    "name": "Leon"
+  },
+  {
+    "code": "nuragic",
+    "continent": "Europe",
+    "name": "Nuragic Tribes"
+  },
+  {
+    "code": "normandy",
+    "continent": "Europe",
+    "name": "Normandy"
+  },
+  {
+    "code": "paris",
+    "continent": "Europe",
+    "name": "Paris"
+  },
+  {
+    "code": "polar_bear",
+    "continent": "",
+    "name": "Polar Bear"
+  },
+  {
+    "code": "provence",
+    "continent": "Europe",
+    "name": "Provence"
+  },
+  {
+    "code": "santa_claus",
+    "continent": "",
+    "name": "Santa Claus"
+  },
+  {
+    "code": "sardines",
+    "continent": "",
+    "name": "Sardines"
+  },
+  {
+    "code": "valencia",
+    "continent": "Europe",
+    "name": "Valencia"
+  },
+  {
+    "code": "scotland",
+    "continent": "",
+    "name": "Scotland"
+  },
+  {
+    "code": "wales",
+    "continent": "",
+    "name": "Wales"
+  },
+  {
+    "code": "england",
+    "continent": "Europe",
+    "name": "England"
+  },
+  {
+    "code": "basque",
+    "continent": "",
+    "name": "The Basque"
+  },
+  {
+    "code": "catalonia",
+    "continent": "",
+    "name": "Catalonia"
+  },
+  {
+    "code": "galicia",
+    "continent": "Europe",
+    "name": "Galicia"
+  },
+  {
+    "code": "granada",
+    "continent": "",
+    "name": "Emirate of Granada"
+  },
+  {
+    "code": "seville",
+    "continent": "",
+    "name": "Seville"
   }
 ]

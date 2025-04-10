@@ -1,21 +1,19 @@
+import { consolex } from "../Consolex";
 import {
-  Unit,
-  Cell,
   Execution,
   Game,
+  MessageType,
   Player,
   PlayerID,
   TerraNullius,
+  Unit,
   UnitType,
-  TerrainType,
 } from "../game/Game";
-import { AttackExecution } from "./AttackExecution";
-import { MessageType } from "../game/Game";
-import { PathFinder } from "../pathfinding/PathFinding";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { consolex } from "../Consolex";
 import { TileRef } from "../game/GameMap";
+import { PathFindResultType } from "../pathfinding/AStar";
+import { PathFinder } from "../pathfinding/PathFinding";
 import { targetTransportTile } from "../Util";
+import { AttackExecution } from "./AttackExecution";
 
 export class TransportShipExecution implements Execution {
   private lastMove: number;
@@ -152,7 +150,7 @@ export class TransportShipExecution implements Execution {
           this.active = false;
           return;
         }
-        if (this.target.isPlayer() && this.attacker.isAlliedWith(this.target)) {
+        if (this.target.isPlayer() && this.attacker.isFriendly(this.target)) {
           this.target.addTroops(this.troops);
         } else {
           this.attacker.conquer(this.dst);

@@ -1,11 +1,1 @@
-<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
-  <g id="color">
-    <rect x="5" y="17" width="62" height="38" fill="#fcea2b"/>
-    <rect x="5" y="42" width="62" height="13" fill="#61b2e4"/>
-    <rect x="5" y="17" width="62" height="13" fill="#61b2e4"/>
-    <polyline points="5 17 26 36 5 55"/>
-  </g>
-  <g id="line">
-    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72"><path fill="#fcea2b" d="M5 17h62v38H5z"/><path fill="#61b2e4" d="M5 42h62v13H5zM5 17h62v13H5z"/><path d="m5 17 21 19L5 55"/><path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 17h62v38H5z"/></svg>

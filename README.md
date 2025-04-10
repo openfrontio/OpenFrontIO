@@ -14,6 +14,13 @@ OpenFront is an online real-time strategy game focused on territorial control an
 
 This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 
+# OpenFront - Licensing
+
+This project uses a dual-licensing approach:
+
+- Code in the `server/` and `core/` directory is licensed under MIT
+- Client code (in the `client/` directory) is licensed under GPL v3
+
 ## 🌟 Features
 
 - **Real-time Strategy Gameplay**: Expand your territory and engage in strategic battles
@@ -113,6 +120,16 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin amazing-feature`)
 5. Open a Pull Request
+
+## 🌐 Translation
+
+Translators are welcome! Please feel free to help translate into your language.
+How to help?
+
+1. Go to the project's Crowdin translation page: [https://crowdin.com/project/openfrontio](https://crowdin.com/project/openfrontio)
+2. Login if you already have an account/ Sign up if you don't have one
+3. Select the language you want to translate in/ If your language isn't on the list, create a new topic in "Discussions" about adding the language
+4. Translate the strings
 
 ### Project Governance
 

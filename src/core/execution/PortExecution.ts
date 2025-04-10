@@ -1,25 +1,23 @@
+import { consolex } from "../Consolex";
 import {
-  AllPlayers,
-  Cell,
   Execution,
   Game,
   Player,
-  Unit,
   PlayerID,
-  TerrainType,
+  Unit,
   UnitType,
 } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import { PathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { TradeShipExecution } from "./TradeShipExecution";
-import { consolex } from "../Consolex";
-import { manhattanDistFN, TileRef } from "../game/GameMap";
 
 export class PortExecution implements Execution {
   private active = true;
   private mg: Game;
   private port: Unit;
   private random: PseudoRandom;
+  private checkOffset: number;
 
   constructor(
     private _owner: PlayerID,
@@ -34,35 +32,33 @@ export class PortExecution implements Execution {
     }
     this.mg = mg;
     this.random = new PseudoRandom(mg.ticks());
+    this.checkOffset = mg.ticks() % 10;
   }
 
   tick(ticks: number): void {
     if (this.port == null) {
-      // TODO: use canBuild
       const tile = this.tile;
       const player = this.mg.player(this._owner);
-      if (!player.canBuild(UnitType.Port, tile)) {
+      const spawn = player.canBuild(UnitType.Port, tile);
+      if (spawn === false) {
         consolex.warn(`player ${player} cannot build port at ${this.tile}`);
         this.active = false;
         return;
       }
-      const spawns = Array.from(this.mg.bfs(tile, manhattanDistFN(tile, 20)))
-        .filter((t) => this.mg.isOceanShore(t) && this.mg.owner(t) == player)
-        .sort(
-          (a, b) =>
-            this.mg.manhattanDist(a, tile) - this.mg.manhattanDist(b, tile),
-        );
-
-      if (spawns.length == 0) {
-        consolex.warn(`cannot find spawn for port`);
-        this.active = false;
-        return;
-      }
-      this.port = player.buildUnit(UnitType.Port, 0, spawns[0]);
+      this.port = player.buildUnit(UnitType.Port, 0, spawn);
     }
 
     if (!this.port.isActive()) {
       this.active = false;
+      return;
+    }
+
+    if (this._owner != this.port.owner().id()) {
+      this._owner = this.port.owner().id();
+    }
+
+    // Only check every 10 ticks for performance.
+    if ((this.mg.ticks() + this.checkOffset) % 10 != 0) {
       return;
     }
 
@@ -73,10 +69,8 @@ export class PortExecution implements Execution {
       return;
     }
 
-    const ports = this.mg
-      .players()
-      .filter((p) => p != this.port.owner() && p.canTrade(this.port.owner()))
-      .flatMap((p) => p.units(UnitType.Port));
+    const ports = this.player().tradingPorts(this.port);
+
     if (ports.length == 0) {
       return;
     }
@@ -86,10 +80,6 @@ export class PortExecution implements Execution {
     this.mg.addExecution(
       new TradeShipExecution(this.player().id(), this.port, port, pf),
     );
-  }
-
-  owner(): Player {
-    return null;
   }
 
   isActive(): boolean {
