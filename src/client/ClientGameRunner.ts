@@ -11,8 +11,7 @@ import {
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { TeamName, Unit, UnitType } from "../core/game/Game";
-import { TileRef } from "../core/game/GameMap";
+import { Team, UnitType } from "../core/game/Game";
 import {
   ErrorUpdate,
   GameUpdateType,
@@ -20,12 +19,12 @@ import {
   HashUpdate,
   WinUpdate,
 } from "../core/game/GameUpdates";
-import { GameView, PlayerView, UnitView } from "../core/game/GameView";
-import { loadTerrainMap } from "../core/game/TerrainMapLoader";
+import { GameView, PlayerView } from "../core/game/GameView";
+import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { InputHandler, MouseMoveEvent, MouseUpEvent } from "./InputHandler";
-import { LocalPersistantStats } from "./LocalPersistantStats";
+import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentIDFromCookie } from "./Main";
 import {
   SendAttackIntentEvent,
@@ -35,14 +34,6 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
-
-function distSortUnitWorld(tile: TileRef, game: GameView) {
-  return (a: Unit | UnitView, b: Unit | UnitView) => {
-    return (
-      game.euclideanDist(tile, a.tile()) - game.euclideanDist(tile, b.tile())
-    );
-  };
-}
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -59,7 +50,8 @@ export interface LobbyConfig {
 
 export function joinLobby(
   lobbyConfig: LobbyConfig,
-  onjoin: () => void,
+  onPrestart: () => void,
+  onJoin: () => void,
 ): () => void {
   const eventBus = new EventBus();
   initRemoteSender(eventBus);
@@ -69,10 +61,7 @@ export function joinLobby(
   );
 
   const userSettings: UserSettings = new UserSettings();
-  LocalPersistantStats.startGame(
-    lobbyConfig.gameID,
-    lobbyConfig.gameStartInfo?.config,
-  );
+  startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config);
 
   const transport = new Transport(lobbyConfig, eventBus);
 
@@ -80,15 +69,28 @@ export function joinLobby(
     consolex.log(`Joined game lobby ${lobbyConfig.gameID}`);
     transport.joinGame(0);
   };
+  let terrainLoad: Promise<TerrainMapData> | null = null;
+
   const onmessage = (message: ServerMessage) => {
+    if (message.type == "prestart") {
+      consolex.log(`lobby: game prestarting: ${JSON.stringify(message)}`);
+      terrainLoad = loadTerrainMap(message.gameMap);
+      onPrestart();
+    }
     if (message.type == "start") {
+      // Trigger prestart for singleplayer games
+      onPrestart();
       consolex.log(`lobby: game started: ${JSON.stringify(message)}`);
-      onjoin();
+      onJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
       lobbyConfig.gameStartInfo = message.gameStartInfo;
-      createClientGame(lobbyConfig, eventBus, transport, userSettings).then(
-        (r) => r.start(),
-      );
+      createClientGame(
+        lobbyConfig,
+        eventBus,
+        transport,
+        userSettings,
+        terrainLoad,
+      ).then((r) => r.start());
     }
   };
   transport.connect(onconnect, onmessage);
@@ -103,15 +105,19 @@ export async function createClientGame(
   eventBus: EventBus,
   transport: Transport,
   userSettings: UserSettings,
+  terrainLoad: Promise<TerrainMapData> | null,
 ): Promise<ClientGameRunner> {
   const config = await getConfig(
     lobbyConfig.gameStartInfo.config,
     userSettings,
   );
+  let gameMap: TerrainMapData | null = null;
 
-  const gameMap = await loadTerrainMap(
-    lobbyConfig.gameStartInfo.config.gameMap,
-  );
+  if (terrainLoad) {
+    gameMap = await terrainLoad;
+  } else {
+    gameMap = await loadTerrainMap(lobbyConfig.gameStartInfo.config.gameMap);
+  }
   const worker = new WorkerClient(
     lobbyConfig.gameStartInfo,
     lobbyConfig.clientID,
@@ -158,8 +164,9 @@ export class ClientGameRunner {
   private hasJoined = false;
 
   private lastMousePosition: { x: number; y: number } | null = null;
-  private mouseHoverTimer: number | null = null;
-  private readonly HOVER_DELAY = 200;
+
+  private lastMessageTime: number = 0;
+  private connectionCheckInterval: NodeJS.Timeout | null = null;
 
   constructor(
     private lobby: LobbyConfig,
@@ -169,7 +176,9 @@ export class ClientGameRunner {
     private transport: Transport,
     private worker: WorkerClient,
     private gameView: GameView,
-  ) {}
+  ) {
+    this.lastMessageTime = Date.now();
+  }
 
   private saveGame(update: WinUpdate) {
     const players: PlayerRecord[] = [
@@ -180,13 +189,13 @@ export class ClientGameRunner {
         clientID: this.lobby.clientID,
       },
     ];
-    let winner: ClientID | TeamName | null = null;
+    let winner: ClientID | Team | null = null;
     if (update.winnerType == "player") {
       winner = this.gameView
         .playerBySmallID(update.winner as number)
         .clientID();
     } else {
-      winner = update.winner as TeamName;
+      winner = update.winner as Team;
     }
 
     const record = createGameRecord(
@@ -195,18 +204,25 @@ export class ClientGameRunner {
       players,
       // Not saving turns locally
       [],
-      LocalPersistantStats.startTime(),
+      startTime(),
       Date.now(),
       winner,
       update.winnerType,
       update.allPlayersStats,
     );
-    LocalPersistantStats.endGame(record);
+    endGame(record);
   }
 
   public start() {
     consolex.log("starting client game");
     this.isActive = true;
+    this.lastMessageTime = Date.now();
+    setTimeout(() => {
+      this.connectionCheckInterval = setInterval(
+        () => this.onConnectionCheck(),
+        1000,
+      );
+    }, 20000);
     this.eventBus.on(MouseUpEvent, (e) => this.inputEvent(e));
     this.eventBus.on(MouseMoveEvent, (e) => this.onMouseMove(e));
 
@@ -245,6 +261,7 @@ export class ClientGameRunner {
       this.transport.joinGame(this.turnsSeen);
     };
     const onmessage = (message: ServerMessage) => {
+      this.lastMessageTime = Date.now();
       if (message.type == "start") {
         this.hasJoined = true;
         consolex.log("starting game!");
@@ -296,6 +313,10 @@ export class ClientGameRunner {
     this.worker.cleanup();
     this.isActive = false;
     this.transport.leaveGame(saveFullGame);
+    if (this.connectionCheckInterval) {
+      clearInterval(this.connectionCheckInterval);
+      this.connectionCheckInterval = null;
+    }
   }
 
   private inputEvent(event: MouseUpEvent) {
@@ -389,6 +410,20 @@ export class ClientGameRunner {
       } else {
         this.gameView.setFocusedPlayer(null);
       }
+    }
+  }
+
+  private onConnectionCheck() {
+    if (this.transport.isLocal) {
+      return;
+    }
+    const timeSinceLastMessage = Date.now() - this.lastMessageTime;
+    if (timeSinceLastMessage > 5000) {
+      console.log(
+        `No message from server for ${timeSinceLastMessage} ms, reconnecting`,
+      );
+      this.lastMessageTime = Date.now();
+      this.transport.reconnect();
     }
   }
 }

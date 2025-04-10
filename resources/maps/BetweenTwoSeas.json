@@ -1,0 +1,91 @@
+{
+  "name": "BetweenTwoSeas",
+  "width": 1778,
+  "height": 1062,
+  "nations": [
+    {
+      "coordinates": [40, 674],
+      "name": "Bulgaria",
+      "strength": 2,
+      "flag": "bg"
+    },
+    {
+      "coordinates": [354, 820],
+      "name": "Republic of Turkiye",
+      "strength": 3,
+      "flag": "tr"
+    },
+    {
+      "coordinates": [105, 474],
+      "name": "Romania",
+      "strength": 2,
+      "flag": "ro"
+    },
+    {
+      "coordinates": [172, 382],
+      "name": "Moldova",
+      "strength": 2,
+      "flag": "md"
+    },
+    {
+      "coordinates": [465, 296],
+      "name": "Ukraine",
+      "strength": 3,
+      "flag": "ua"
+    },
+    {
+      "coordinates": [980, 24],
+      "name": "Russian Federation",
+      "strength": 3,
+      "flag": "ru"
+    },
+    {
+      "coordinates": [1003, 674],
+      "name": "Georgia",
+      "strength": 1,
+      "flag": "ge"
+    },
+    {
+      "coordinates": [1131, 804],
+      "name": "Republic of Armenia",
+      "strength": 1,
+      "flag": "am"
+    },
+    {
+      "coordinates": [856, 1044],
+      "name": "Syrian Arab Republic",
+      "strength": 2,
+      "flag": "sy"
+    },
+    {
+      "coordinates": [1355, 1022],
+      "name": "Islamic Republic of Iran",
+      "strength": 3,
+      "flag": "ir"
+    },
+    {
+      "coordinates": [1355, 18],
+      "name": "Republic of Azerbaijan",
+      "strength": 1,
+      "flag": "az"
+    },
+    {
+      "coordinates": [334, 18],
+      "name": "Belarus",
+      "strength": 1,
+      "flag": "by"
+    },
+    {
+      "coordinates": [1689, 467],
+      "name": "Kazakhstan",
+      "strength": 1,
+      "flag": "kz"
+    },
+    {
+      "coordinates": [1727, 831],
+      "name": "Turkmenistan",
+      "strength": 1,
+      "flag": "tm"
+    }
+  ]
+}
