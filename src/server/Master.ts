@@ -237,6 +237,10 @@ async function schedulePublicGame(playlist: MapPlaylist) {
   }
 
   const gameMode = playlist.getNextGameMode();
+  const numPlayerTeams =
+    gameMode === GameMode.Team
+      ? 2 + Math.floor(Math.random() * 5)
+      : undefined;
 
   // Create the default public game config (from your GameManager)
   const defaultGameConfig = {
@@ -249,7 +253,8 @@ async function schedulePublicGame(playlist: MapPlaylist) {
     instantBuild: false,
     disableNPCs: gameMode == GameMode.Team,
     disableNukes: false,
-    gameMode: gameMode,
+    gameMode,
+    numPlayerTeams,
     bots: 400,
   } as GameConfig;
 

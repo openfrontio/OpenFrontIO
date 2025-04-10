@@ -1,6 +1,8 @@
 import { PlayerInfo, PlayerType, Team } from "../src/core/game/Game";
 import { assignTeams } from "../src/core/game/TeamAssignment";
 
+const teams = [Team.Red, Team.Blue];
+
 describe("assignTeams", () => {
   const createPlayer = (id: string, clan?: string): PlayerInfo => {
     const name = clan ? `[${clan}]Player ${id}` : `Player ${id}`;
@@ -22,7 +24,7 @@ describe("assignTeams", () => {
       createPlayer("4"),
     ];
 
-    const result = assignTeams(players);
+    const result = assignTeams(players, teams);
 
     // Check that players are assigned alternately
     expect(result.get(players[0])).toEqual(Team.Red);
@@ -39,7 +41,7 @@ describe("assignTeams", () => {
       createPlayer("4", "CLANB"),
     ];
 
-    const result = assignTeams(players);
+    const result = assignTeams(players, teams);
 
     // Check that clan members are on the same team
     expect(result.get(players[0])).toEqual(Team.Red);
@@ -56,7 +58,7 @@ describe("assignTeams", () => {
       createPlayer("4"),
     ];
 
-    const result = assignTeams(players);
+    const result = assignTeams(players, teams);
 
     // Check that clan members are together and non-clan players balance teams
     expect(result.get(players[0])).toEqual(Team.Red);
@@ -75,7 +77,7 @@ describe("assignTeams", () => {
       createPlayer("6", "CLANB"),
     ];
 
-    const result = assignTeams(players);
+    const result = assignTeams(players, teams);
 
     // Check that players are kicked when teams are full
     expect(result.get(players[0])).toEqual(Team.Red);
@@ -89,13 +91,13 @@ describe("assignTeams", () => {
   });
 
   it("should handle empty player list", () => {
-    const result = assignTeams([]);
+    const result = assignTeams([], teams);
     expect(result.size).toBe(0);
   });
 
   it("should handle single player", () => {
     const players = [createPlayer("1")];
-    const result = assignTeams(players);
+    const result = assignTeams(players, teams);
     expect(result.get(players[0])).toEqual(Team.Red);
   });
 
@@ -109,7 +111,7 @@ describe("assignTeams", () => {
       createPlayer("6", "CLANC"),
     ];
 
-    const result = assignTeams(players);
+    const result = assignTeams(players, teams);
 
     // Check that larger clans are assigned first
     expect(result.get(players[0])).toEqual(Team.Red);

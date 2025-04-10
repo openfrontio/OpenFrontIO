@@ -75,7 +75,7 @@ export class GameImpl implements Game {
 
   private _stats: StatsImpl = new StatsImpl();
 
-  private playerTeams: Team[] = [Team.Red, Team.Blue];
+  private playerTeams: Team[] = [];
   private botTeam: Team = Team.Bot;
 
   constructor(
@@ -99,6 +99,18 @@ export class GameImpl implements Game {
         ),
     );
     this.unitGrid = new UnitGrid(this._map);
+
+    if (_config.gameConfig().gameMode === GameMode.Team) {
+      const numPlayerTeams = _config.numPlayerTeams();
+      if (numPlayerTeams >= 1) this.playerTeams.push(Team.Red);
+      if (numPlayerTeams >= 2) this.playerTeams.push(Team.Blue);
+      if (numPlayerTeams >= 3) this.playerTeams.push(Team.Teal);
+      if (numPlayerTeams >= 4) this.playerTeams.push(Team.Purple);
+      if (numPlayerTeams >= 5) this.playerTeams.push(Team.Yellow);
+      if (numPlayerTeams >= 6) this.playerTeams.push(Team.Orange);
+      if (numPlayerTeams >= 7) this.playerTeams.push(Team.Green);
+      if (numPlayerTeams >= 8) throw new Error("Too many teams");
+    }
   }
 
   private addHumans() {
@@ -106,7 +118,7 @@ export class GameImpl implements Game {
       this._humans.forEach((p) => this.addPlayer(p));
       return;
     }
-    const playerToTeam = assignTeams(this._humans);
+    const playerToTeam = assignTeams(this._humans, this.playerTeams);
     for (const [playerInfo, team] of playerToTeam.entries()) {
       if (team == "kicked") {
         console.warn(`Player ${playerInfo.name} was kicked from team`);
