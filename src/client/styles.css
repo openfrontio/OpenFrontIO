@@ -211,6 +211,7 @@ label.option-card:hover {
 }
 
 .lobby-id {
+  font-family: "Consolas", monospace;
   font-size: 14px;
   color: #fff;
   text-align: center;
