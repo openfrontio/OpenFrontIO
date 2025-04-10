@@ -550,6 +550,10 @@ export class DefaultConfig implements Config {
     const ratio = 1 - player.population() / max;
     toAdd *= ratio;
 
+    if (this.infiniteTroops()) {
+      toAdd *= 10;
+    }
+
     if (player.type() == PlayerType.Bot) {
       toAdd *= 0.7;
     }
