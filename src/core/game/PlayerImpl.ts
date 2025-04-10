@@ -555,7 +555,7 @@ export class PlayerImpl implements Player {
       this.id(),
     );
     this.mg.displayMessage(
-      `Recieved ${renderNumber(gold)} gold from ${this.name()}`,
+      `Received ${renderNumber(gold)} gold from ${this.name()}`,
       MessageType.SUCCESS,
       recipient.id(),
     );
