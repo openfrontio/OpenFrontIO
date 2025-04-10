@@ -289,7 +289,8 @@ export class FakeHumanExecution implements Execution {
 
   private maybeSendNuke(other: Player) {
     if (
-      this.player.units(UnitType.MissileSilo).length == 0 ||
+      this.player.units(UnitType.MissileSilo, UnitType.NuclearWarship).length ==
+        0 ||
       this.player.gold() <
         this.mg.config().unitInfo(UnitType.AtomBomb).cost(this.player) ||
       this.player.isOnSameTeam(other)
@@ -400,7 +401,11 @@ export class FakeHumanExecution implements Execution {
       return false;
     }
     const ports = this.player.units(UnitType.Port);
-    const ships = this.player.units(UnitType.Warship);
+    const ships = this.player.units(
+      UnitType.Warship,
+      UnitType.NuclearWarship,
+      UnitType.SAMWarship,
+    );
     if (
       ports.length > 0 &&
       ships.length == 0 &&

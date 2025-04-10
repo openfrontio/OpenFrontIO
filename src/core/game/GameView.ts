@@ -109,7 +109,11 @@ export class UnitView {
     return this.data.detonationDst;
   }
   warshipTargetId(): number {
-    if (this.type() != UnitType.Warship) {
+    if (
+      this.type() != UnitType.Warship &&
+      this.type() != UnitType.NuclearWarship &&
+      this.type() != UnitType.SAMWarship
+    ) {
       throw Error("Must be a warship");
     }
     return this.data.warshipTargetId;

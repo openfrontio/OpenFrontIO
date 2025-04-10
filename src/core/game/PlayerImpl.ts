@@ -719,10 +719,12 @@ export class PlayerImpl implements Player {
     if (this.mg.config().disableNukes()) {
       if (
         unitType === UnitType.MissileSilo ||
+        unitType === UnitType.NuclearWarship ||
         unitType === UnitType.MIRV ||
         unitType === UnitType.AtomBomb ||
         unitType === UnitType.HydrogenBomb ||
         unitType === UnitType.SAMLauncher ||
+        unitType === UnitType.SAMWarship ||
         unitType === UnitType.SAMMissile ||
         unitType === UnitType.MIRVWarhead
       ) {
@@ -748,6 +750,8 @@ export class PlayerImpl implements Player {
       case UnitType.Port:
         return this.portSpawn(targetTile);
       case UnitType.Warship:
+      case UnitType.NuclearWarship:
+      case UnitType.SAMWarship:
         return this.warshipSpawn(targetTile);
       case UnitType.Shell:
       case UnitType.SAMMissile:
@@ -775,7 +779,7 @@ export class PlayerImpl implements Player {
       }
     }
     // only get missilesilos that are not on cooldown
-    const spawns = this.units(UnitType.MissileSilo)
+    const spawns = this.units(UnitType.MissileSilo, UnitType.NuclearWarship)
       .map((u) => u as Unit)
       .filter((silo) => {
         return !silo.isCooldown();

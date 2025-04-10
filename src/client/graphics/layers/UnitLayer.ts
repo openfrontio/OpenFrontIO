@@ -98,7 +98,7 @@ export class UnitLayer implements Layer {
 
     // Only select warships owned by the player
     return this.game
-      .units(UnitType.Warship)
+      .units(UnitType.Warship, UnitType.NuclearWarship, UnitType.SAMWarship)
       .filter(
         (unit) =>
           unit.isActive() &&
@@ -224,6 +224,8 @@ export class UnitLayer implements Layer {
       case UnitType.TransportShip:
         this.handleBoatEvent(unit);
         break;
+      case UnitType.SAMWarship:
+      case UnitType.NuclearWarship:
       case UnitType.Warship:
         this.handleWarShipEvent(unit);
         break;
@@ -281,6 +283,21 @@ export class UnitLayer implements Layer {
       this.paintCell(this.game.x(t), this.game.y(t), rel, outerColor, 255);
     }
 
+    if (unit.type() == UnitType.NuclearWarship) {
+      for (const t of this.game.bfs(
+        unit.tile(),
+        manhattanDistFN(unit.tile(), 5),
+      )) {
+        this.paintCell(
+          this.game.x(t),
+          this.game.y(t),
+          rel,
+          colord({ r: 0, b: 0, g: 255 }),
+          255,
+        );
+      }
+    }
+
     // Paint border
     for (const t of this.game.bfs(
       unit.tile(),
@@ -290,7 +307,9 @@ export class UnitLayer implements Layer {
         this.game.x(t),
         this.game.y(t),
         rel,
-        this.theme.borderColor(unit.owner()),
+        unit.isCooldown()
+          ? this.theme.borderColor(unit.owner()).darken(0.4)
+          : this.theme.borderColor(unit.owner()),
         255,
       );
     }
