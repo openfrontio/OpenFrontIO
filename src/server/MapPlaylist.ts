@@ -101,6 +101,7 @@ export class MapPlaylist {
           BetweenTwoSeas: 3,
           Japan: 3,
           BlackSea: 1,
+          FaroeIslands: 2,
         };
     }
   }
