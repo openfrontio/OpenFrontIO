@@ -53,7 +53,6 @@ export class SinglePlayerModal extends LitElement {
   @state() private instantBuild: boolean = false;
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
-  private mapCategories = mapCategories;
 
   render() {
     return html`
@@ -63,7 +62,7 @@ export class SinglePlayerModal extends LitElement {
           <div class="options-section">
             <div class="option-title">${translateText("map.map")}</div>
             <div class="option-cards flex-col">
-              ${Object.entries(this.mapCategories).map(
+              ${Object.entries(mapCategories).map(
                 ([categoryKey, maps]) => html`
                   <div class="w-full mb-4">
                     <h3
