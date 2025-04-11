@@ -8,6 +8,7 @@ const maps = [
   "Asia",
   "WorldMap",
   "BlackSea",
+  "Baikal",
   "Europe",
   "Mars",
   "Mena",
