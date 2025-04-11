@@ -14,6 +14,29 @@ import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
 
+const mapCategories: Record<string, GameMapType[]> = {
+  continental: [
+    GameMapType.World,
+    GameMapType.NorthAmerica,
+    GameMapType.SouthAmerica,
+    GameMapType.Europe,
+    GameMapType.Asia,
+    GameMapType.Africa,
+    GameMapType.Oceania,
+  ],
+  regional: [
+    GameMapType.BlackSea,
+    GameMapType.Britannia,
+    GameMapType.GatewayToTheAtlantic,
+    GameMapType.BetweenTwoSeas,
+    GameMapType.Iceland,
+    GameMapType.Japan,
+    GameMapType.Mena,
+    GameMapType.Australia,
+  ],
+  fantasy: [GameMapType.Pangaea, GameMapType.Mars, GameMapType.KnownWorld],
+};
+
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
@@ -30,6 +53,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private instantBuild: boolean = false;
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
+  @state() private mapCategories = mapCategories;
 
   render() {
     return html`
@@ -38,27 +62,39 @@ export class SinglePlayerModal extends LitElement {
           <!-- Map Selection -->
           <div class="options-section">
             <div class="option-title">${translateText("map.map")}</div>
-            <div class="option-cards">
-              ${Object.entries(GameMapType)
-                .filter(([key]) => isNaN(Number(key)))
-                .map(
-                  ([key, value]) => html`
-                    <div
-                      @click=${function () {
-                        this.handleMapSelection(value);
-                      }}
+            <div class="option-cards flex-col">
+              ${Object.entries(this.mapCategories).map(
+                ([categoryKey, maps]) => html`
+                  <div class="w-full mb-4">
+                    <h3
+                      class="text-lg font-semibold mb-2 text-center text-gray-300"
                     >
-                      <map-display
-                        .mapKey=${key}
-                        .selected=${!this.useRandomMap &&
-                        this.selectedMap === value}
-                        .translation=${translateText(
-                          `map.${key.toLowerCase()}`,
-                        )}
-                      ></map-display>
+                      ${translateText(`map_categories.${categoryKey}`)}
+                    </h3>
+                    <div class="flex flex-row flex-wrap justify-center gap-4">
+                      ${maps.map((mapValue) => {
+                        const mapKey = Object.keys(GameMapType).find(
+                          (key) => GameMapType[key] === mapValue,
+                        );
+                        return html`
+                          <div
+                            @click=${() => this.handleMapSelection(mapValue)}
+                          >
+                            <map-display
+                              .mapKey=${mapKey}
+                              .selected=${!this.useRandomMap &&
+                              this.selectedMap === mapValue}
+                              .translation=${translateText(
+                                `map.${mapKey.toLowerCase()}`,
+                              )}
+                            ></map-display>
+                          </div>
+                        `;
+                      })}
                     </div>
-                  `,
-                )}
+                  </div>
+                `,
+              )}
               <div
                 class="option-card random-map ${this.useRandomMap
                   ? "selected"
