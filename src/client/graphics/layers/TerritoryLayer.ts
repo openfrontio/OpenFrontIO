@@ -11,7 +11,11 @@ import {
 import { GameUpdateType, UnitUpdate } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { PseudoRandom } from "../../../core/PseudoRandom";
-import { AlternateViewEvent, DragEvent } from "../../InputHandler";
+import {
+  AlternateViewEvent,
+  DragEvent,
+  ToggleShowDefensePostRangeEvent,
+} from "../../InputHandler";
 import { Layer } from "./Layer";
 
 export class TerritoryLayer implements Layer {
@@ -66,19 +70,22 @@ export class TerritoryLayer implements Layer {
       const update = u as UnitUpdate;
       if (update.unitType == UnitType.DefensePost && update.isActive) {
         const tile = update.pos;
-        this.game
-          .bfs(
-            tile,
-            manhattanDistFN(tile, this.game.config().defensePostRange()),
-          )
-          .forEach((t) => {
-            if (
-              this.game.isBorder(t) &&
-              this.game.ownerID(t) == update.ownerID
-            ) {
-              this.enqueueTile(t);
-            }
-          });
+        const config = this.game.config();
+        const defensePostRange = config.defensePostRange();
+        const showDefensePostRange = config
+          .userSettings()
+          .showDefensePostRange();
+        const distanceFN = showDefensePostRange
+          ? euclDistFN(tile, defensePostRange)
+          : manhattanDistFN(tile, defensePostRange);
+
+        this.game.bfs(tile, distanceFN).forEach((t) => {
+          if (this.game.isBorder(t) && this.game.ownerID(t) == update.ownerID) {
+            this.enqueueTile(t);
+          } else if (showDefensePostRange) {
+            this.enqueueTile(t);
+          }
+        });
       }
     });
 
@@ -141,6 +148,14 @@ export class TerritoryLayer implements Layer {
     this.eventBus.on(DragEvent, (e) => {
       // TODO: consider re-enabling this on mobile or low end devices for smoother dragging.
       // this.lastDragTime = Date.now();
+    });
+    this.eventBus.on(ToggleShowDefensePostRangeEvent, () => {
+      const defensePostRange = this.game.config().defensePostRange();
+      this.game.units(UnitType.DefensePost).forEach((unit) => {
+        this.game
+          .bfs(unit.tile(), euclDistFN(unit.tile(), defensePostRange))
+          .forEach((tile) => this.enqueueTile(tile));
+      });
     });
     this.redraw();
   }
@@ -247,18 +262,16 @@ export class TerritoryLayer implements Layer {
       this.clearCell(new Cell(this.game.x(tile), this.game.y(tile)));
       return;
     }
+
     const owner = this.game.owner(tile) as PlayerView;
+    const defensePostRange = this.game.config().defensePostRange();
+    const tileIsInDefensePostRange =
+      this.game
+        .nearbyUnits(tile, defensePostRange, UnitType.DefensePost)
+        .filter((u) => u.unit.owner() == owner).length > 0;
     if (this.game.isBorder(tile)) {
       const playerIsFocused = owner && this.game.focusedPlayer() == owner;
-      if (
-        this.game
-          .nearbyUnits(
-            tile,
-            this.game.config().defensePostRange(),
-            UnitType.DefensePost,
-          )
-          .filter((u) => u.unit.owner() == owner).length > 0
-      ) {
+      if (tileIsInDefensePostRange) {
         const useDefendedBorderColor = playerIsFocused
           ? this.theme.focusedDefendedBorderColor()
           : this.theme.defendedBorderColor(owner);
@@ -280,12 +293,13 @@ export class TerritoryLayer implements Layer {
         );
       }
     } else {
-      this.paintCell(
-        this.game.x(tile),
-        this.game.y(tile),
-        this.theme.territoryColor(owner),
-        150,
-      );
+      const color =
+        tileIsInDefensePostRange &&
+        this.game.config().userSettings().showDefensePostRange()
+          ? this.theme.defendedTerritoryColor(owner)
+          : this.theme.territoryColor(owner);
+
+      this.paintCell(this.game.x(tile), this.game.y(tile), color, 150);
     }
   }
 
