@@ -53,7 +53,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private instantBuild: boolean = false;
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
-  @state() private mapCategories = mapCategories;
+  private mapCategories = mapCategories;
 
   render() {
     return html`
