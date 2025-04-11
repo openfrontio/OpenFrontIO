@@ -7,6 +7,7 @@ import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { BuildMenu } from "./layers/BuildMenu";
+import { BuildingsStatsOverlay } from "./layers/BuildingsStatsOverlay";
 import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
@@ -25,6 +26,7 @@ import { TopBar } from "./layers/TopBar";
 import { UILayer } from "./layers/UILayer";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
+import { CountryStatsOverlay } from "./layers/countryStatsOverlay";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,
@@ -97,6 +99,24 @@ export function createRenderer(
   playerInfo.transform = transformHandler;
   playerInfo.game = game;
 
+  const buildingsStats = document.querySelector(
+    "buildings-stats-overlay",
+  ) as BuildingsStatsOverlay;
+  if (!(buildingsStats instanceof BuildingsStatsOverlay)) {
+    consolex.error("buildings stats overlay not found");
+  }
+  buildingsStats.clientID = clientID;
+  buildingsStats.game = game;
+
+  const countryStats = document.querySelector(
+    "country-stats-overlay",
+  ) as CountryStatsOverlay;
+  if (!(countryStats instanceof CountryStatsOverlay)) {
+    consolex.error("country stats overlay not found");
+  }
+  countryStats.clientID = clientID;
+  countryStats.game = game;
+
   const winModel = document.querySelector("win-modal") as WinModal;
   if (!(winModel instanceof WinModal)) {
     console.error("win modal not found");
@@ -149,6 +169,8 @@ export function createRenderer(
     leaderboard,
     controlPanel,
     playerInfo,
+    buildingsStats,
+    countryStats,
     winModel,
     optionsMenu,
     topBar,
