@@ -34,11 +34,7 @@ const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Mena,
     GameMapType.Australia,
   ],
-  fantasy: [
-    GameMapType.Pangaea, 
-    GameMapType.Mars, 
-    GameMapType.KnownWorld,
-  ],
+  fantasy: [GameMapType.Pangaea, GameMapType.Mars, GameMapType.KnownWorld],
 };
 
 @customElement("single-player-modal")
