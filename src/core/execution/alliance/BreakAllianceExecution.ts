@@ -39,6 +39,11 @@ export class BreakAllianceExecution implements Execution {
     } else {
       this.requestor.breakAlliance(alliance);
       this.recipient.updateRelation(this.requestor, -200);
+      this.recipient.addTroops(this.requestor.troops() / 20);
+      this.requestor.removeTroops(this.requestor.troops() / 10);
+      this.recipient.addGold(this.requestor.gold() / 20);
+      this.requestor.removeGold(this.requestor.gold() / 10);
+      console.log(this.requestor);
       for (const player of this.mg.players()) {
         if (player != this.requestor) {
           player.updateRelation(this.requestor, -40);
