@@ -106,6 +106,16 @@ export class OptionsMenu extends LitElement implements Layer {
     this.eventBus.emit(new RefreshGraphicsEvent());
   }
 
+  private onToggleRandomNameModeButtonClick() {
+    this.userSettings.toggleRandomName();
+    const el = document.querySelector("leader-board") as LitElement | null;
+    if (el && typeof el.requestUpdate === "function") {
+      el.requestUpdate();
+    } else {
+      console.warn("requestUpdate() not available");
+    }
+  }
+
   private onToggleFocusLockedButtonClick() {
     this.userSettings.toggleFocusLocked();
     this.requestUpdate();
@@ -195,6 +205,11 @@ export class OptionsMenu extends LitElement implements Layer {
             onClick: this.onToggleDarkModeButtonClick,
             title: "Dark Mode",
             children: "🌙: " + (this.userSettings.darkMode() ? "On" : "Off"),
+          })}
+          ${button({
+            onClick: this.onToggleRandomNameModeButtonClick,
+            title: "Random name mode",
+            children: "🥷: " + (this.userSettings.randomName() ? "On" : "Off"),
           })}
           ${button({
             onClick: this.onToggleLeftClickOpensMenu,

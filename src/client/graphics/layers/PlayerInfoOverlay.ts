@@ -205,7 +205,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                 src=${"/flags/" + player.flag() + ".svg"}
               />`
             : ""}
-          ${player.name()}
+          ${player.name_notag()}
         </div>
         <div class="text-sm opacity-80">Type: ${playerType}</div>
         ${player.troops() >= 1
