@@ -56,8 +56,16 @@ export class ControlPanel extends LitElement implements Layer {
 
   private _popRateIsIncreasing: boolean = true;
 
+  private init_: boolean = false;
+
   init() {
-    this.attackRatio = 0.2;
+    this.attackRatio = Number(
+      localStorage.getItem("settings.attackRatio") ?? "0.2",
+    );
+    this.targetTroopRatio = Number(
+      localStorage.getItem("settings.troopRatio") ?? "0.95",
+    );
+    this.init_ = true;
     this.uiState.attackRatio = this.attackRatio;
     this.currentTroopRatio = this.targetTroopRatio;
     this.eventBus.on(AttackRatioEvent, (event) => {
@@ -87,6 +95,13 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   tick() {
+    if (this.init_) {
+      this.eventBus.emit(
+        new SendSetTargetTroopRatioEvent(this.targetTroopRatio),
+      );
+      this.init_ = false;
+    }
+
     if (!this._isVisible && !this.game.inSpawnPhase()) {
       this.setVisibile(true);
     }
