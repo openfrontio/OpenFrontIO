@@ -13,9 +13,10 @@ import {
   TerrainType,
   TerraNullius,
   Tick,
+  Unit,
   UnitType,
 } from "../game/Game";
-import { manhattanDistFN, TileRef } from "../game/GameMap";
+import { euclDistFN, manhattanDistFN, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { calculateBoundingBox, simpleHash } from "../Util";
@@ -40,6 +41,7 @@ export class FakeHumanExecution implements Execution {
 
   private lastEnemyUpdateTick: number = 0;
   private lastEmojiSent = new Map<Player, Tick>();
+  private lastNukeSent: [Tick, TileRef][] = [];
   private embargoMalusApplied = new Set<PlayerID>();
 
   constructor(
@@ -288,32 +290,108 @@ export class FakeHumanExecution implements Execution {
   }
 
   private maybeSendNuke(other: Player) {
+    const silos = this.player.units(UnitType.MissileSilo);
     if (
-      this.player.units(UnitType.MissileSilo).length == 0 ||
+      silos.length == 0 ||
       this.player.gold() <
         this.mg.config().unitInfo(UnitType.AtomBomb).cost(this.player) ||
       this.player.isOnSameTeam(other)
     ) {
       return;
     }
-    outer: for (let i = 0; i < 10; i++) {
-      const tile = this.randTerritoryTile(other);
-      if (tile == null) {
-        return;
-      }
+
+    const structures = other.units(
+      UnitType.City,
+      UnitType.DefensePost,
+      UnitType.MissileSilo,
+      UnitType.Port,
+      UnitType.SAMLauncher,
+    );
+    const structureTiles = structures.map((u) => u.tile());
+    const randomTiles: TileRef[] = new Array(10);
+    for (let i = 0; i < randomTiles.length; i++) {
+      randomTiles[i] = this.randTerritoryTile(other);
+    }
+    const allTiles = randomTiles.concat(structureTiles);
+
+    let bestTile = null;
+    let bestValue = 0;
+    this.removeOldNukeEvents();
+    outer: for (const tile of new Set(allTiles)) {
+      if (tile == null) continue;
       for (const t of this.mg.bfs(tile, manhattanDistFN(tile, 15))) {
         // Make sure we nuke at least 15 tiles in border
         if (this.mg.owner(t) != other) {
           continue outer;
         }
       }
-      if (this.player.canBuild(UnitType.AtomBomb, tile)) {
-        this.mg.addExecution(
-          new NukeExecution(UnitType.AtomBomb, this.player.id(), tile),
-        );
-        return;
+      if (!this.player.canBuild(UnitType.AtomBomb, tile)) continue;
+      const value = this.nukeTileScore(tile, silos, structures);
+      if (value > bestTile) {
+        bestTile = tile;
+        bestValue = value;
       }
     }
+    if (bestTile != null) {
+      this.sendNuke(bestTile);
+    }
+  }
+
+  private removeOldNukeEvents() {
+    const maxAge = 500;
+    const tick = this.mg.ticks();
+    while (
+      this.lastNukeSent.length > 0 &&
+      this.lastNukeSent[0][0] + maxAge < tick
+    ) {
+      this.lastNukeSent.shift();
+    }
+  }
+
+  private sendNuke(tile: TileRef) {
+    const tick = this.mg.ticks();
+    this.lastNukeSent.push([tick, tile]);
+    this.mg.addExecution(
+      new NukeExecution(UnitType.AtomBomb, this.player.id(), tile),
+    );
+  }
+
+  private nukeTileScore(tile: TileRef, silos: Unit[], targets: Unit[]): number {
+    // Potential damage in a 25-tile radius
+    const dist = euclDistFN(tile, 25, false);
+    let tileValue = targets
+      .filter((unit) => dist(this.mg, unit.tile()))
+      .map((unit) => {
+        switch (unit.type()) {
+          case UnitType.City:
+            return 25_000;
+          case UnitType.DefensePost:
+            return 5_000;
+          case UnitType.MissileSilo:
+            return 50_000;
+          case UnitType.Port:
+            return 10_000;
+          case UnitType.SAMLauncher:
+            return 5_000;
+          default:
+            return 0;
+        }
+      })
+      .reduce((prev, cur) => prev + cur, 0);
+
+    // Prefer tiles that are closer to a silo
+    const siloTiles = silos.map((u) => u.tile());
+    const { x: closestSilo } = closestTwoTiles(this.mg, siloTiles, [tile]);
+    const distanceToClosestSilo = this.mg.euclideanDist(tile, closestSilo);
+    tileValue -= distanceToClosestSilo * 30;
+
+    // Don't target near recent targets
+    tileValue -= this.lastNukeSent
+      .filter(([_tick, tile]) => dist(this.mg, tile))
+      .map((_) => 1_000_000)
+      .reduce((prev, cur) => prev + cur, 0);
+
+    return tileValue;
   }
 
   private maybeSendBoatAttack(other: Player) {
