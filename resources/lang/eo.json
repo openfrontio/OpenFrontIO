@@ -1,88 +1,83 @@
 {
-  "lang": {
-    "en": "Esperanto",
-    "native": "Esperanto",
-    "svg": "eo",
-    "lang_code": "eo"
-  },
   "main": {
     "join_discord": "Kunigu la Discord-servilon !",
     "create_lobby": "Krei salonon",
     "join_lobby": "Kunigi salonon",
-    "single_player": "Ludi solan",
-    "instructions": "Instruadoj",
-    "how_to_play": "Kiel ludi ?",
+    "single_player": "Sola Ludanto",
+    "instructions": "Instrukcioj",
+    "how_to_play": "Kiel ludi",
     "wiki": "Vikio"
   },
   "help_modal": {
-    "hotkeys": "Agklavoj",
+    "hotkeys": "Rapidklavoj",
     "table_key": "Klavo",
     "table_action": "Influo",
     "action_alt_view": "Alternativa vido (tereno/lando)",
     "action_attack_altclick": "Ataki (kiam la maldekstra klako estas formi por malfermi la menuon)",
     "action_build": "Malfermi la konstruan menuon",
-    "action_center": "Reenfokusigi la fotilon",
+    "action_center": "Recentrigi la kameraon sur la ludanto",
     "action_zoom": "Zomi",
-    "action_move_camera": "Movi la fotilon",
+    "action_move_camera": "Moviĝi kameraon",
     "action_ratio_change": "Malgrandigi/Pligrandigi la atakan kvocienton",
     "action_reset_gfx": "Restarigi la grafismoj",
     "ui_section": "Ludo uzantinterfaco",
-    "ui_leaderboard": "Ordigo",
+    "ui_leaderboard": "Ĉampionejo",
     "ui_leaderboard_desc": "Afiŝas la plej bonajn ludantojn kun iliaj nomoj, la % de la poseda teritorio kaj la oro.",
     "ui_control": "Kontrolpanelo",
-    "ui_control_desc": "La kontrolpanelo enhavas la sekvajn elementojn :",
-    "ui_pop": "Pop - La nombro de trupunoj ke vi havas, via maximuma populado kaj la procento kun kiu vi recivas ilin.",
-    "ui_gold": "Oro - La kvanto da oro ke vi havas kaj la procento kun kiu vi recivas ilin.",
+    "ui_control_desc": "La kontrolpanelo enhavas la sekvajn elementojn:",
+    "ui_pop": "Pop - La nombro de trupunoj ke vi havas, via maksimuma populacio kaj la procento kun kiu vi ricevas ilin.",
+    "ui_gold": "La kvanto da oro ke vi havas kaj la procento kun kiu vi ricevas ilin.",
     "ui_troops_workers": "Trupoj kaj Laboristoj - La nombro da soldatoj kaj laboristoj asignitaj. Trupoj kutimas ataki aŭ defendi. Laboristoj kutimas generi oron. Vi povas ĝustigi la nombron da trupoj kaj laboristoj uzante la glitilon.",
-    "ui_attack_ratio": "Ataka kvociento - La nombro da uzaj soldatoj kiam vi atakas. Vi povas ĝustigi la atakan kvocienton uzante la glitilon",
+    "ui_attack_ratio": "Ataka kvociento - La nombro da uzaj soldatoj kiam vi atakas. Vi povas ĝustigi la atakan kvocienton uzante la glitilon. Havi pli da atakaj trupoj ol la defendaj trupoj malpliigos la perdojn dum atako, dum havi malpli multe pliigos la damaĝon ricevitajn de viaj atakaj trupoj. La efiko ne superas rilatumon de 2:1.",
     "ui_options": "Opcioj",
-    "ui_options_desc": "La sekvaj elementoj povas esti trovigita interne :",
-    "option_pause": "Paŭzigi/Rekomenci la ludon - Nur elbla en la solan modo",
-    "option_timer": "Kronometro - Pasinta tempo écoulé ekde la luda komenco.",
+    "ui_options_desc": "La sekvaj elementoj povas esti trovigita interne:",
+    "option_pause": "Paŭzigi/Rekomenci la ludon - Nur ebla en la solan modo.",
+    "option_timer": "Kronometro - Pasinta tempo ekde la luda komenco.",
     "option_exit": "Elira butono",
-    "option_settings": "Parametroj - Malfermi la parametran menuon. Vi povas aktivi la ous pouvez y eblegi la alterna vido, la malhela reĝimo, la emoĝioj kaj la maldekstra alklaku ago.",
+    "option_settings": "Parametroj - Malfermi la parametran menuon. Vi povas aktivi la alterna vido, la malhela reĝimo, la emoĝioj kaj la maldekstra alklako.",
     "radial_title": "Radia menuo",
     "radial_desc": "Dekstra klako (aŭ tuŝo sur poŝtelefono) malfermas la radian menuon. De tie, vi povas:",
     "radial_build": "Malfermi la konstrumenuon.",
     "radial_info": "Malfermi la informmenuon.",
     "radial_boat": "Sendi boaton por ataki ĉe la elektita loko (disponebla nur se vi havas aliron al akvo).",
-    "radial_close": "Fermi la menuon."
+    "radial_close": "Fermi la menuon.",
     "info_title": "Informmenuo",
     "info_enemy_desc": "Enhavas informojn kiel la nomon de la elektita ludanto, la oron, la trupojn, kaj ĉu la ludanto estas perfidulo. Perfidulo estas ludanto, kiu perfidis kaj atakis alian ludanton kun kiu li estis en alianco. La subaj piktogramoj reprezentas la jenajn interagojn:",
     "info_target": "Meti celmarkon sur la ludanton, videblan por ĉiuj aliancanoj, uzata por kunordigi atakojn.",
     "info_alliance": "Sendi aliancpeton al la ludanto. Aliancanoj povas dividi rimedojn kaj trupojn, sed ne povas ataki unu la alian.",
-    "info_emoji": "Sendi emoji al la ludanto."
+    "info_emoji": "Sendi emoĝioj al la ludanto.",
     "info_ally_panel": "Aliancana informpanelo",
     "info_ally_desc": "Kiam vi alianciĝas kun ludanto, la jenaj novaj piktogramoj fariĝas disponeblaj:",
-    "ally_betray": "Perfidi aliancanon, finante la aliancon. Vi tiam havos konstantan ikonon apud via nomo. La robotoj malpli verŝajne alianciĝos kun vi, kaj ludantoj, al kiuj vi petos aliancon, pli atente pripensos.",
-    "ally_donate": "Doni parton de viaj trupoj al aliancano. Uzata kiam ili mankas da trupoj kaj estas atakataj, aŭ kiam ili bezonas kroman potencon por venki malamikon."
+    "ally_betray": "Kronometro - Pasinta tempo ekde la luda komenco.",
+    "ally_donate": "Doni parton de viaj trupoj al aliancano. Uzata kiam ili mankas da trupoj kaj estas atakataj, aŭ kiam ili bezonas kroman potencon por venki malamikon.",
     "build_menu_title": "Konstrua menuo",
     "build_name": "Nomo",
     "build_icon": "Ikono",
-    "build_desc": "Priskribo"
+    "build_desc": "Priskribo",
     "build_city": "Urbo",
-    "build_city_desc": "Utila kiam vi ne povas pligrandigi vian teritorion aŭ kiam vi atingas vian loĝlimon.",
+    "build_city_desc": "Utila kiam vi ne povas pligrandigi vian teritorion aŭ kiam vi atingas vian loĝantlimon.",
     "build_defense": "Defenda posteno",
     "build_defense_desc": "Plifortigas la defendojn ĉirkaŭ proksimaj limoj. Malamikaj atakoj fariĝas pli malrapidaj kaj kaŭzas pli da perdoj.",
     "build_port": "Haveno",
-    "build_port_desc": "Aŭtomate sendas komercajn ŝipojn de viaj havenoj al aliaj landoj (krom se vi elektis 'ĉesi komercon' kun ludanto, aŭ se ili faris same kun vi), donante oron al ambaŭ flankoj. Permesas konstrui militŝipojn. Povas esti konstruita nur proksime de akvo.",
+    "build_port_desc": "Aŭtomate sendas komercŝipojn inter la havenoj de via lando kaj aliaj landoj (krom se vi alklakis \"ĉesi komerco\" kun ili aŭ ili alklakis \"ĉesi komerco\" kun vi), donante oron al ambaŭ flankoj. Permesas konstrui batalŝipojn. Eblas konstrui nur proksime de akvo.",
     "build_warship": "Militŝipo",
-    "build_warship_desc": "Patrolas en areo, kaptante komercajn ŝipojn kaj detruante militŝipojn kaj malamikajn boatojn. Aperas en la plej proksima haveno kaj patrolas la elektitan areon.",
+    "build_warship_desc": "Patroloj en areo, kaptante komercajn ŝipojn kaj detruante militŝipojn kaj malamikajn boatojn. Aperas en la plej proksima haveno kaj patrolas la elektita areo.",
     "build_silo": "Misila silo",
     "build_silo_desc": "Ebligas lanĉi misilojn.",
     "build_sam": "SAM-lanĉilo",
-    "build_sam_desc": "Havas 75 % da ŝanco interkapti malamikajn misilojn ene de sia 100-piksela atingo. La SAM havas reŝarĝotempon de 7,5 sekundoj kaj ne povas interkapti MIRV-ojn.",
+    "build_sam_desc": "Havas 75 % da ŝanco interkapti malamikajn misilojn ene de sia 100-piksela atingo. La SAM havas reŝarĝa tempon de 7,5 sekundoj kaj ne povas interkapti MIRV-ojn.",
     "build_atom": "Atombombo",
     "build_atom_desc": "Eta eksploda bombo kiu detruas teritorion, konstruaĵojn, ŝipojn kaj boatojn. Aperas el la plej proksima Misila silo kaj atingas la elektitan areon.",
     "build_hydrogen": "Hidrogenbombo",
     "build_hydrogen_desc": "Granda eksploda bombo. Aperas el la plej proksima Misila silo kaj atingas la elektitan areon.",
     "build_mirv": "MIRV",
-    "build_mirv_desc": "La plej potenca bombo en la ludo. Dividiĝas en pli malgrandajn bombojn kiuj kovros vastan teritorion. Damaĝas nur la ludanton, kontraŭ kiu vi celis ĝin. Aperas el la plej proksima Misila silo kaj atingas la elektitan areon."
+    "build_mirv_desc": "La plej potenca bombo en la ludo. Dividiĝas en pli malgrandajn bombojn kiuj kovros vastan teritorion. Damaĝas nur la ludanton, kontraŭ kiu vi celis ĝin. Aperas el la plej proksima Misila silo kaj atingas la elektitan areon.",
     "player_icons": "Ludantaj Ikonoj",
-    "icon_desc": "Ekzemploj de iuj ludikonoj, kiujn vi renkontos, kaj ilia signifo:",
-    "icon_crown": "Krono - Ĉi tiu ludanto estas numero 1 en la ranglisto.",
+    "icon_desc": "Ekzemploj de iuj ludaj ikonoj, kiujn vi renkontos, kaj ilia signifo:",
+    "icon_crown": "Krono - Ĉi tiu ludanto estas numero 1 en la ranglisto",
     "icon_traitor": "Krucitaj glavoj - Perfida. Ĉi tiu ludanto atakis aliancanon.",
-    "icon_ally": "Manpremo - Aliancano. Ĉi tiu ludanto estas via aliancano."
+    "icon_ally": "Manpremo - Aliancano. Ĉi tiu ludanto estas via aliancano.",
+    "info_enemy_panel": "Malamiko informpanelo"
   },
   "single_modal": {
     "title": "Sola Ludanto",
@@ -98,10 +93,9 @@
     "start": "Komenci la ludon"
   },
   "map": {
-    "map": "Mapo",
     "world": "Mondo",
     "europe": "Eŭropo",
-    "mena": "MENA",
+    "mena": "Mezoriento kaj Nordafriko",
     "northamerica": "Nordameriko",
     "oceania": "Oceanio",
     "blacksea": "Nigra Maro",
@@ -112,8 +106,13 @@
     "britannia": "Granda Britio",
     "gatewaytotheatlantic": "Pordo al Atlantiko",
     "australia": "Aŭstralio",
+    "random": "Hazarda",
     "iceland": "Islando",
-    "random": "Hazarda"
+    "pangaea": "Pangeo",
+    "map": "Karto",
+    "betweentwoseas": "Inter du maroj",
+    "japan": "Japanio kaj najbaroj",
+    "knownworld": "Konata Mondo"
   },
   "private_lobby": {
     "title": "Aliĝi al privata salono",
@@ -124,11 +123,11 @@
     "checking": "Kontrolado de la salono...",
     "not_found": "Salono ne trovita. Bonvolu kontroli la ID kaj reprovi.",
     "error": "Eraro okazis. Bonvolu reprovi.",
-    "joined_waiting": "Sukcese aliĝite! Atendante la komencon de la ludo..."
+    "joined_waiting": "Sukcese aliĝis! Atendante la komencon de la ludo..."
   },
   "public_lobby": {
-    "join": "Kunigi la baldaŭa ludo",
-    "waiting": "Atendante ludantoj"
+    "join": "Kunigi la baldaŭan ludon",
+    "waiting": "atendante ludantoj"
   },
   "username": {
     "enter_username": "Enigu vian uzantnomon",
@@ -143,20 +142,39 @@
     "bots": "Robotoj :",
     "bots_disabled": "Malŝaltita",
     "disable_nations": "Malŝalti naciojn",
-    "instant_build": "Imposta Konstruado",
+    "instant_build": "Tujkonstruaĵo",
     "infinite_gold": "Senfina oro",
     "infinite_troops": "Senfinaj trupoj",
     "disable_nukes": "Malŝalti nukleajn armilojn",
     "player": "Ludanto",
     "players": "Ludantoj",
     "waiting": "Atendante ludantojn...",
-    "start": "Komenci la ludon"
+    "start": "Komenci la ludon",
+    "mode": "Reĝimo",
+    "action_emote": "Malfermi miensimbolan menuon"
   },
   "difficulty": {
-    "difficulty": "Malfacileco",
-    "Relaxed": "Relaksa",
+    "Relaxed": "Senstreĉa",
     "Balanced": "Ekvilibriga",
     "Intense": "Intensa",
-    "Impossible": "Neebla"
+    "Impossible": "Neebla",
+    "difficulty": "Malfacileco"
+  },
+  "game_starting_modal": {
+    "title": "Ludo komenciĝas...",
+    "desc": "Preparante por komenci la salonon. Bonvolu atendi."
+  },
+  "lang": {
+    "en": "Esperanto",
+    "native": "Esperanto",
+    "svg": "eo",
+    "lang_code": "eo"
+  },
+  "game_mode": {
+    "ffa": "Senpaga por ĉiuj",
+    "teams": "Teamoj"
+  },
+  "select_lang": {
+    "title": "Elekti lingvon"
   }
 }
