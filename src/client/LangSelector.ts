@@ -2,6 +2,8 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import "./LanguageModal";
 
+import ar from "../../resources/lang/ar.json";
+import se from "../../resources/lang/se.json";
 import bg from "../../resources/lang/bg.json";
 import de from "../../resources/lang/de.json";
 import en from "../../resources/lang/en.json";
@@ -25,6 +27,8 @@ export class LangSelector extends LitElement {
   private dKeyPressed: boolean = false;
 
   private languageMap: Record<string, any> = {
+    ar,
+    se,
     bg,
     de,
     en,
