@@ -603,7 +603,7 @@ export class DefaultConfig implements Config {
     toAdd *= ratio;
 
     if (this.infiniteTroops()) {
-      toAdd *= 10;
+      toAdd *= 100;
     }
 
     if (player.type() == PlayerType.Bot) {
