@@ -63,12 +63,16 @@ export class HelpModal extends LitElement {
                 <td>${translateText("help_modal.action_move_camera")}</td>
               </tr>
               <tr>
-                <td>1 / 2</td>
+                <td>1 / 2 / 3 / .. / 0</td>
                 <td>${translateText("help_modal.action_ratio_change")}</td>
               </tr>
               <tr>
                 <td>Shift + scroll down / scroll up</td>
-                <td>${translateText("help_modal.action_ratio_change")}</td>
+                <td>${translateText("help_modal.action_ratio_increasedecrease")}</td>
+              </tr>
+              <tr>
+                <td>B</td>
+                <td>${translateText("help_modal.action_send_boat")}</td>
               </tr>
               <tr>
                 <td>ALT + R</td>
