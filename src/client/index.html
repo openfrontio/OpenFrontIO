@@ -299,12 +299,15 @@
     </div>
     <div id="app"></div>
     <div id="radialMenu" class="radial-menu"></div>
-    <div class="flex gap-2 flex-row fixed right-[10px] top-[10px] z-50">
-      <div style="pointer-events: none">
-        <buildings-stats-overlay></buildings-stats-overlay>
-      </div>
+    <div
+      class="flex gap-2 flex-row fixed right-[10px] top-[10px] z-50"
+      style="pointer-events: none"
+    >
+      <buildings-stats-overlay></buildings-stats-overlay>
       <div class="flex flex-col gap-2 w-32 sm:w-32 lg:w-48">
-        <options-menu></options-menu>
+        <div style="pointer-events: auto">
+          <options-menu></options-menu>
+        </div>
         <player-info-overlay></player-info-overlay>
       </div>
     </div>
