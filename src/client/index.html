@@ -300,12 +300,11 @@
     <div id="app"></div>
     <div id="radialMenu" class="radial-menu"></div>
     <div
-      class="flex gap-2 flex-row fixed right-[10px] top-[10px] z-50"
-      style="pointer-events: none"
+      class="flex gap-2 flex-row fixed right-[10px] top-[10px] z-50 pointer-events-none"
     >
       <buildings-stats-overlay></buildings-stats-overlay>
       <div class="flex flex-col gap-2 w-32 sm:w-32 lg:w-48">
-        <div style="pointer-events: auto">
+        <div class="pointer-events-auto">
           <options-menu></options-menu>
         </div>
         <player-info-overlay></player-info-overlay>
@@ -313,18 +312,17 @@
     </div>
 
     <div
-      class="bottom-0 w-full flex-col-reverse sm:flex-row z-50"
-      style="position: fixed; pointer-events: none"
+      class="bottom-0 w-full flex-col-reverse sm:flex-row z-50 pointer-events-none"
+      style="position: fixed"
     >
       <div
-        class="w-full sm:w-2/3 sm:fixed sm:right-0 sm:bottom-0 sm:flex justify-end"
-        style="pointer-events: none"
+        class="w-full sm:w-2/3 sm:fixed sm:right-0 sm:bottom-0 sm:flex justify-end pointer-events-none"
       >
         <events-display></events-display>
       </div>
       <div class="flex flex-col gap-2 w-full md:max-w-72">
         <country-stats-overlay></country-stats-overlay>
-        <div class="sm:w-1/3" style="pointer-events: auto">
+        <div class="sm:w-1/3 pointer-events-auto">
           <control-panel></control-panel>
         </div>
       </div>
