@@ -5,12 +5,17 @@ import "./LanguageModal";
 import bg from "../../resources/lang/bg.json";
 import de from "../../resources/lang/de.json";
 import en from "../../resources/lang/en.json";
+import eo from "../../resources/lang/eo.json";
 import es from "../../resources/lang/es.json";
 import fr from "../../resources/lang/fr.json";
+import it from "../../resources/lang/it.json";
 import ja from "../../resources/lang/ja.json";
 import nl from "../../resources/lang/nl.json";
 import pl from "../../resources/lang/pl.json";
+import pt_br from "../../resources/lang/pt_br.json";
 import ru from "../../resources/lang/ru.json";
+import sh from "../../resources/lang/sh.json";
+import tr from "../../resources/lang/tr.json";
 import uk from "../../resources/lang/uk.json";
 
 @customElement("lang-selector")
@@ -29,11 +34,16 @@ export class LangSelector extends LitElement {
     de,
     en,
     es,
+    eo,
     fr,
+    it,
     ja,
     nl,
     pl,
+    pt_br,
     ru,
+    sh,
+    tr,
     uk,
   };
 
