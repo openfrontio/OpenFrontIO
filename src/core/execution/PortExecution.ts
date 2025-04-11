@@ -17,6 +17,7 @@ export class PortExecution implements Execution {
   private mg: Game;
   private port: Unit;
   private random: PseudoRandom;
+  private checkOffset: number;
 
   constructor(
     private _owner: PlayerID,
@@ -31,6 +32,7 @@ export class PortExecution implements Execution {
     }
     this.mg = mg;
     this.random = new PseudoRandom(mg.ticks());
+    this.checkOffset = mg.ticks() % 10;
   }
 
   tick(ticks: number): void {
@@ -53,6 +55,11 @@ export class PortExecution implements Execution {
 
     if (this._owner != this.port.owner().id()) {
       this._owner = this.port.owner().id();
+    }
+
+    // Only check every 10 ticks for performance.
+    if ((this.mg.ticks() + this.checkOffset) % 10 != 0) {
+      return;
     }
 
     const totalNbOfPorts = this.mg.units(UnitType.Port).length;

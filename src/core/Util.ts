@@ -1,7 +1,7 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
 import twemoji from "twemoji";
-import { Cell, Game, Player, TeamName, Unit } from "./game/Game";
+import { Cell, Game, Player, Team, Unit } from "./game/Game";
 import { andFN, GameMap, manhattanDistFN, TileRef } from "./game/GameMap";
 import {
   AllPlayersStats,
@@ -253,7 +253,7 @@ export function createGameRecord(
   turns: Turn[],
   start: number,
   end: number,
-  winner: ClientID | TeamName | null,
+  winner: ClientID | Team | null,
   winnerType: "player" | "team" | null,
   allPlayersStats: AllPlayersStats,
 ): GameRecord {

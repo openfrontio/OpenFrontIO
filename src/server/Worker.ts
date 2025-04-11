@@ -303,6 +303,7 @@ export function startWorker() {
               ip,
               clientMsg.username,
               ws,
+              clientMsg.flag,
             );
 
             const wasFound = gm.addClient(

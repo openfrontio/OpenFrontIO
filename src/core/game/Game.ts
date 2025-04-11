@@ -37,7 +37,7 @@ export enum Difficulty {
   Impossible = "Impossible",
 }
 
-export enum TeamName {
+export enum Team {
   Red = "Red",
   Blue = "Blue",
   Bot = "Bot",
@@ -60,7 +60,7 @@ export enum GameMapType {
   Australia = "Australia",
   Iceland = "Iceland",
   Japan = "Japan",
-  TwoSeas = "Between Two Seas",
+  BetweenTwoSeas = "Between Two Seas",
   KnownWorld = "Known World",
 }
 
@@ -73,10 +73,6 @@ export enum GameType {
 export enum GameMode {
   FFA = "Free For All",
   Team = "Team",
-}
-
-export interface Team {
-  name: TeamName;
 }
 
 export interface UnitInfo {
@@ -433,7 +429,7 @@ export interface Game extends GameMap {
   playerByClientID(id: ClientID): Player | null;
   playerBySmallID(id: number): Player | TerraNullius;
   hasPlayer(id: PlayerID): boolean;
-  addPlayer(playerInfo: PlayerInfo, manpower: number): Player;
+  addPlayer(playerInfo: PlayerInfo): Player;
   terraNullius(): TerraNullius;
   owner(ref: TileRef): Player | TerraNullius;
 
@@ -443,7 +439,7 @@ export interface Game extends GameMap {
   ticks(): Tick;
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
-  setWinner(winner: Player | TeamName, allPlayersStats: AllPlayersStats): void;
+  setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
   config(): Config;
 
   // Units

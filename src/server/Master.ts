@@ -222,11 +222,22 @@ async function fetchLobbies(): Promise<number> {
   return publicLobbyIDs.size;
 }
 
+let lastGameMode: GameMode = GameMode.FFA;
+
 // Function to schedule a new public game
 async function schedulePublicGame(playlist: MapPlaylist) {
   const gameID = generateID();
   const map = playlist.getNextMap();
   publicLobbyIDs.add(gameID);
+
+  if (lastGameMode == GameMode.FFA) {
+    lastGameMode = GameMode.Team;
+  } else {
+    lastGameMode = GameMode.FFA;
+  }
+
+  const gameMode = playlist.getNextGameMode();
+
   // Create the default public game config (from your GameManager)
   const defaultGameConfig = {
     gameMap: map,
@@ -236,9 +247,9 @@ async function schedulePublicGame(playlist: MapPlaylist) {
     infiniteGold: false,
     infiniteTroops: false,
     instantBuild: false,
-    disableNPCs: false,
+    disableNPCs: gameMode == GameMode.Team,
     disableNukes: false,
-    gameMode: Math.random() < 0.7 ? GameMode.FFA : GameMode.Team,
+    gameMode: gameMode,
     bots: 400,
   } as GameConfig;
 

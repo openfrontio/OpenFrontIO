@@ -105,7 +105,10 @@ export class SAMLauncherExecution implements Execution {
     if (this.target && !this.sam.isCooldown() && !this.target.targetedBySAM()) {
       this.sam.setCooldown(true);
       const random = this.pseudoRandom.next();
-      const hit = random < this.mg.config().samHittingChance();
+      let hit = true;
+      if (this.target.type() != UnitType.AtomBomb) {
+        hit = random < this.mg.config().samHittingChance();
+      }
       if (!hit) {
         this.mg.displayMessage(
           `Missile failed to intercept ${this.target.type()}`,
