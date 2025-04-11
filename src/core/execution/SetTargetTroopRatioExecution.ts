@@ -31,10 +31,6 @@ export class SetTargetTroopRatioExecution implements Execution {
     this.active = false;
   }
 
-  owner(): Player {
-    return null;
-  }
-
   isActive(): boolean {
     return this.active;
   }

@@ -70,7 +70,7 @@ export class MapPlaylist {
       case 1:
         this.currentPlaylistCounter++;
         return PlaylistType.BigMaps;
-      case 2:
+      default:
         this.currentPlaylistCounter = 0;
         return PlaylistType.SmallMaps;
     }

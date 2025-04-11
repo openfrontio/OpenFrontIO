@@ -46,7 +46,16 @@ export class RadialMenu implements Layer {
 
   private menuElement: d3.Selection<HTMLDivElement, unknown, null, undefined>;
   private isVisible: boolean = false;
-  private readonly menuItems = new Map([
+  private readonly menuItems: Map<
+    Slot,
+    {
+      name: string;
+      disabled: boolean;
+      action: () => void;
+      color?: string | null;
+      icon?: string | null;
+    }
+  > = new Map([
     [
       Slot.Boat,
       {
@@ -363,6 +372,7 @@ export class RadialMenu implements Layer {
     }
     if (actions.canBoat) {
       this.activateMenuElement(Slot.Boat, "#3f6ab1", boatIcon, () => {
+        if (this.clickedCell === null) return;
         this.eventBus.emit(
           new SendBoatAttackIntentEvent(
             this.g.owner(tile).id(),
@@ -412,6 +422,7 @@ export class RadialMenu implements Layer {
       return;
     }
     consolex.log("Center button clicked");
+    if (this.clickedCell === null) return;
     const clicked = this.g.ref(this.clickedCell.x, this.clickedCell.y);
     if (this.g.inSpawnPhase()) {
       this.eventBus.emit(new SendSpawnIntentEvent(this.clickedCell));
@@ -436,6 +447,7 @@ export class RadialMenu implements Layer {
     action: () => void,
   ) {
     const menuItem = this.menuItems.get(slot);
+    if (typeof menuItem === "undefined") return;
     menuItem.action = action;
     menuItem.disabled = false;
     menuItem.color = color;

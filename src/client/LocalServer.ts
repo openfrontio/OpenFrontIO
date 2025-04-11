@@ -20,11 +20,11 @@ export class LocalServer {
   private intents: Intent[] = [];
   private startedAt: number;
 
-  private endTurnIntervalID;
+  private endTurnIntervalID: NodeJS.Timeout;
 
   private paused = false;
 
-  private winner: ClientSendWinnerMessage = null;
+  private winner: ClientSendWinnerMessage | null = null;
   private allPlayersStats: AllPlayersStats = {};
 
   constructor(
@@ -45,6 +45,9 @@ export class LocalServer {
     if (this.lobbyConfig.gameRecord) {
       this.turns = decompressGameRecord(this.lobbyConfig.gameRecord).turns;
       console.log(`loaded turns: ${JSON.stringify(this.turns)}`);
+    }
+    if (typeof this.lobbyConfig.gameStartInfo === "undefined") {
+      throw new Error("missing gameStartInfo");
     }
     this.clientMessage(
       ServerStartGameMessageSchema.parse({
@@ -125,6 +128,9 @@ export class LocalServer {
     if (this.paused) {
       return;
     }
+    if (typeof this.lobbyConfig.gameStartInfo === "undefined") {
+      throw new Error("missing gameStartInfo");
+    }
     const pastTurn: Turn = {
       turnNumber: this.turns.length,
       gameID: this.lobbyConfig.gameStartInfo.gameID,
@@ -149,6 +155,9 @@ export class LocalServer {
         clientID: this.lobbyConfig.clientID,
       },
     ];
+    if (typeof this.lobbyConfig.gameStartInfo === "undefined") {
+      throw new Error("missing gameStartInfo");
+    }
     const record = createGameRecord(
       this.lobbyConfig.gameStartInfo.gameID,
       this.lobbyConfig.gameStartInfo,
@@ -156,8 +165,8 @@ export class LocalServer {
       this.turns,
       this.startedAt,
       Date.now(),
-      this.winner?.winner,
-      this.winner?.winnerType,
+      this.winner?.winner ?? null,
+      this.winner?.winnerType ?? null,
       this.allPlayersStats,
     );
     if (!saveFullGame) {

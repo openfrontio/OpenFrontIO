@@ -116,8 +116,10 @@ export class GameRunner {
           errMsg: error.message,
           stack: error.stack,
         } as ErrorUpdate);
-        return;
+      } else {
+        console.error("Game tick error:", error);
       }
+      return;
     }
 
     if (this.game.inSpawnPhase() && this.game.ticks() % 2 == 0) {

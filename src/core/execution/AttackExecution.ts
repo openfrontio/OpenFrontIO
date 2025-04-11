@@ -39,7 +39,7 @@ export class AttackExecution implements Execution {
 
   private border = new Set<TileRef>();
 
-  private attack: Attack = null;
+  private attack: Attack | null = null;
 
   constructor(
     private startTroops: number | null = null,
@@ -49,7 +49,7 @@ export class AttackExecution implements Execution {
     private removeTroops: boolean = true,
   ) {}
 
-  public targetID(): PlayerID {
+  public targetID(): PlayerID | null {
     return this._targetID;
   }
 
@@ -175,6 +175,10 @@ export class AttackExecution implements Execution {
   }
 
   private retreat(malusPercent = 0) {
+    if (this.attack === null) {
+      throw new Error("Attack not initialized");
+    }
+
     const deaths = this.attack.troops() * (malusPercent / 100);
     if (deaths) {
       this.mg.displayMessage(
@@ -189,6 +193,10 @@ export class AttackExecution implements Execution {
   }
 
   tick(ticks: number) {
+    if (this.attack === null) {
+      throw new Error("Attack not initialized");
+    }
+
     if (this.attack.retreated()) {
       if (this.attack.target().isPlayer()) {
         this.retreat(malusForRetreat);

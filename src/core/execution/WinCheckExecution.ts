@@ -50,9 +50,12 @@ export class WinCheckExecution implements Execution {
   checkWinnerTeam(): void {
     const teamToTiles = new Map<Team, number>();
     for (const player of this.mg.players()) {
+      const team = player.team();
+      // Sanity check, team should not be null here
+      if (team === null) continue;
       teamToTiles.set(
-        player.team(),
-        (teamToTiles.get(player.team()) ?? 0) + player.numTilesOwned(),
+        team,
+        (teamToTiles.get(team) ?? 0) + player.numTilesOwned(),
       );
     }
     const sorted = Array.from(teamToTiles.entries()).sort(
@@ -71,9 +74,6 @@ export class WinCheckExecution implements Execution {
       console.log(`${max[0]} has won the game`);
       this.active = false;
     }
-  }
-  owner(): Player {
-    return null;
   }
 
   isActive(): boolean {

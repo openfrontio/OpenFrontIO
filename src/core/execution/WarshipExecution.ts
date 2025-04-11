@@ -18,10 +18,10 @@ export class WarshipExecution implements Execution {
 
   private _owner: Player;
   private active = true;
-  private warship: Unit = null;
-  private mg: Game = null;
+  private warship: Unit | null = null;
+  private mg: Game | null = null;
 
-  private target: Unit = null;
+  private target: Unit | null = null;
   private pathfinder: PathFinder;
 
   private patrolTile: TileRef;
@@ -53,7 +53,8 @@ export class WarshipExecution implements Execution {
   }
 
   // Only for warships with "moveTarget" set
-  goToMoveTarget(target: TileRef): boolean {
+  goToMoveTarget(target: TileRef) {
+    if (this.warship === null) throw new Error("Warship not initialized");
     // Patrol unless we are hunting down a tradeship
     const result = this.pathfinder.nextTile(this.warship.tile(), target);
     switch (result.type) {
@@ -72,6 +73,9 @@ export class WarshipExecution implements Execution {
   }
 
   private shoot() {
+    if (this.mg === null) throw new Error("Game not initialized");
+    if (this.warship === null) throw new Error("Warship not initialized");
+    if (this.target === null) throw new Error("Target not initialized");
     if (this.mg.ticks() - this.lastShellAttack > this.shellAttackRate) {
       this.lastShellAttack = this.mg.ticks();
       this.mg.addExecution(
@@ -92,6 +96,7 @@ export class WarshipExecution implements Execution {
   }
 
   private patrol() {
+    if (this.warship === null) throw new Error("Warship not initialized");
     this.warship.setWarshipTarget(this.target);
     if (this.target == null || this.target.type() != UnitType.TradeShip) {
       // Patrol unless we are hunting down a tradeship
@@ -134,17 +139,20 @@ export class WarshipExecution implements Execution {
       this.target = null;
     }
     const hasPort = this._owner.units(UnitType.Port).length > 0;
+    if (this.mg === null) throw new Error("Game not initialized");
+    const warship = this.warship;
+    if (warship === null) throw new Error("Warship not initialized");
     const ships = this.mg
       .nearbyUnits(
-        this.warship.tile(),
+        warship.tile(),
         130, // Search range
         [UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip],
       )
       .filter(
         ({ unit }) =>
-          unit.owner() !== this.warship.owner() &&
-          unit !== this.warship &&
-          !unit.owner().isFriendly(this.warship.owner()) &&
+          unit.owner() !== warship.owner() &&
+          unit !== warship &&
+          !unit.owner().isFriendly(warship.owner()) &&
           !this.alreadySentShell.has(unit) &&
           (unit.type() !== UnitType.TradeShip || hasPort) &&
           (unit.type() !== UnitType.TradeShip ||
@@ -184,8 +192,9 @@ export class WarshipExecution implements Execution {
         return distA - distB;
       })[0]?.unit ?? null;
 
-    if (this.warship.moveTarget()) {
-      this.goToMoveTarget(this.warship.moveTarget());
+    const moveTarget = this.warship.moveTarget();
+    if (moveTarget) {
+      this.goToMoveTarget(moveTarget);
       // If we have a "move target" then we cannot target trade ships as it
       // requires moving.
       if (this.target && this.target.type() == UnitType.TradeShip) {
@@ -250,6 +259,7 @@ export class WarshipExecution implements Execution {
   }
 
   randomTile(): TileRef {
+    if (this.mg === null) throw new Error("Game not initialized");
     while (true) {
       const x =
         this.mg.x(this.patrolCenterTile) +

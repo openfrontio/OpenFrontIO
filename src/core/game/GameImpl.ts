@@ -57,7 +57,7 @@ export class GameImpl implements Game {
   private nations_: Nation[] = [];
 
   _players: Map<PlayerID, PlayerImpl> = new Map<PlayerID, PlayerImpl>();
-  _playersBySmallID = [];
+  _playersBySmallID: Player[] = [];
 
   private execs: Execution[] = [];
   private _width: number;
@@ -170,10 +170,13 @@ export class GameImpl implements Game {
     return this.nations_;
   }
 
-  createAllianceRequest(requestor: Player, recipient: Player): AllianceRequest {
+  createAllianceRequest(
+    requestor: Player,
+    recipient: Player,
+  ): AllianceRequest | null {
     if (requestor.isAlliedWith(recipient)) {
       consolex.log("cannot request alliance, already allied");
-      return;
+      return null;
     }
     if (
       recipient
@@ -181,7 +184,7 @@ export class GameImpl implements Game {
         .find((ar) => ar.requestor() == requestor) != null
     ) {
       consolex.log(`duplicate alliance request from ${requestor.name()}`);
-      return;
+      return null;
     }
     const correspondingReq = requestor
       .incomingAllianceRequests()
@@ -189,7 +192,7 @@ export class GameImpl implements Game {
     if (correspondingReq != null) {
       consolex.log(`got corresponding alliance requests, accepting`);
       correspondingReq.accept();
-      return;
+      return null;
     }
     const ar = new AllianceRequestImpl(requestor, recipient, this._ticks, this);
     this.allianceRequests.push(ar);
@@ -342,7 +345,7 @@ export class GameImpl implements Game {
     return this.player(id);
   }
 
-  addPlayer(playerInfo: PlayerInfo, team: Team = null): Player {
+  addPlayer(playerInfo: PlayerInfo, team: Team | null = null): Player {
     const player = new PlayerImpl(
       this,
       this.nextPlayerID,
@@ -367,11 +370,12 @@ export class GameImpl implements Game {
     return this.playerTeams[rand % this.playerTeams.length];
   }
 
-  player(id: PlayerID | null): Player {
-    if (!this._players.has(id)) {
+  player(id: PlayerID): Player {
+    const player = this._players.get(id);
+    if (typeof player === "undefined") {
       throw new Error(`Player with id ${id} not found`);
     }
-    return this._players.get(id);
+    return player;
   }
 
   playerByClientID(id: ClientID): Player | null {
@@ -495,7 +499,7 @@ export class GameImpl implements Game {
   }
 
   public breakAlliance(breaker: Player, alliance: Alliance) {
-    let other: Player = null;
+    let other: Player;
     if (alliance.requestor() == breaker) {
       other = alliance.recipient();
     } else {
@@ -572,7 +576,7 @@ export class GameImpl implements Game {
     type: MessageType,
     playerID: PlayerID | null,
   ): void {
-    let id = null;
+    let id: number | null = null;
     if (playerID != null) {
       id = this.player(playerID).smallID();
     }

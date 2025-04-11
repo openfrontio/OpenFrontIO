@@ -42,13 +42,13 @@ export class GameServer {
   // Used for record record keeping
   private allClients: Map<ClientID, Client> = new Map();
   private _hasStarted = false;
-  private _startTime: number = null;
+  private _startTime: number | null = null;
 
   private endTurnIntervalID;
 
   private lastPingUpdate = 0;
 
-  private winner: ClientSendWinnerMessage = null;
+  private winner: ClientSendWinnerMessage | null = null;
   // This field is currently only filled at victory
   private allPlayersStats: AllPlayersStats = {};
 
@@ -68,32 +68,32 @@ export class GameServer {
     this.log = log_.child({ gameID: id });
   }
 
-  public updateGameConfig(gameConfig: GameConfig): void {
-    if (gameConfig.gameMap != null) {
+  public updateGameConfig(gameConfig: Partial<GameConfig>): void {
+    if (typeof gameConfig.gameMap !== "undefined") {
       this.gameConfig.gameMap = gameConfig.gameMap;
     }
-    if (gameConfig.difficulty != null) {
+    if (typeof gameConfig.difficulty !== "undefined") {
       this.gameConfig.difficulty = gameConfig.difficulty;
     }
-    if (gameConfig.disableNPCs != null) {
+    if (typeof gameConfig.disableNPCs !== "undefined") {
       this.gameConfig.disableNPCs = gameConfig.disableNPCs;
     }
-    if (gameConfig.disableNukes != null) {
+    if (typeof gameConfig.disableNukes !== "undefined") {
       this.gameConfig.disableNukes = gameConfig.disableNukes;
     }
-    if (gameConfig.bots != null) {
+    if (typeof gameConfig.bots !== "undefined") {
       this.gameConfig.bots = gameConfig.bots;
     }
-    if (gameConfig.infiniteGold != null) {
+    if (typeof gameConfig.infiniteGold !== "undefined") {
       this.gameConfig.infiniteGold = gameConfig.infiniteGold;
     }
-    if (gameConfig.infiniteTroops != null) {
+    if (typeof gameConfig.infiniteTroops !== "undefined") {
       this.gameConfig.infiniteTroops = gameConfig.infiniteTroops;
     }
-    if (gameConfig.instantBuild != null) {
+    if (typeof gameConfig.instantBuild !== "undefined") {
       this.gameConfig.instantBuild = gameConfig.instantBuild;
     }
-    if (gameConfig.gameMode != null) {
+    if (typeof gameConfig.gameMode !== "undefined") {
       this.gameConfig.gameMode = gameConfig.gameMode;
     }
   }
@@ -145,17 +145,17 @@ export class GameServer {
       "message",
       gatekeeper.wsHandler(client.ip, async (message: string) => {
         try {
-          let clientMsg: ClientMessage = null;
+          let clientMsg: ClientMessage | null = null;
           try {
             clientMsg = ClientMessageSchema.parse(JSON.parse(message));
           } catch (error) {
             throw Error(`error parsing schema for ${client.ip}`);
           }
-          if (this.allClients.has(clientMsg.clientID)) {
-            const client = this.allClients.get(clientMsg.clientID);
-            if (client.persistentID != clientMsg.persistentID) {
+          const c = this.allClients.get(clientMsg.clientID);
+          if (typeof c !== "undefined") {
+            if (c.persistentID != clientMsg.persistentID) {
               this.log.warn(
-                `Client ID ${clientMsg.clientID} sent incorrect id ${clientMsg.persistentID}, does not match persistent id ${client.persistentID}`,
+                `Client ID ${clientMsg.clientID} sent incorrect id ${clientMsg.persistentID}, does not match persistent id ${c.persistentID}`,
               );
               return;
             }
@@ -214,7 +214,7 @@ export class GameServer {
   }
 
   public startTime(): number {
-    if (this._startTime > 0) {
+    if (this._startTime !== null && this._startTime > 0) {
       return this._startTime;
     } else {
       //game hasn't started yet, only works for public games
@@ -368,10 +368,10 @@ export class GameServer {
             this.gameStartInfo,
             playerRecords,
             this.turns,
-            this._startTime,
+            this._startTime ?? 0,
             Date.now(),
-            this.winner?.winner,
-            this.winner?.winnerType,
+            this.winner?.winner ?? null,
+            this.winner?.winnerType ?? null,
             this.allPlayersStats,
           ),
         );
@@ -405,7 +405,7 @@ export class GameServer {
 
   phase(): GamePhase {
     const now = Date.now();
-    const alive = [];
+    const alive: Client[] = [];
     for (const client of this.activeClients) {
       if (now - client.lastPing > 60_000) {
         this.log.info(

@@ -21,7 +21,7 @@ class RenderInfo {
   constructor(
     public player: PlayerView,
     public lastRenderCalc: number,
-    public location: Cell,
+    public location: Cell | null,
     public fontSize: number,
     public fontColor: string,
     public element: HTMLElement,
@@ -372,7 +372,7 @@ export class NameLayer implements Layer {
           emoji.recipientID == myPlayer?.smallID(),
       );
 
-    if (this.game.config().userSettings().emojis() && emojis.length > 0) {
+    if (this.game.config().userSettings()?.emojis() && emojis.length > 0) {
       if (!existingEmoji) {
         const emojiDiv = document.createElement("div");
         emojiDiv.setAttribute("data-icon", "emoji");
@@ -418,8 +418,9 @@ export class NameLayer implements Layer {
     });
     const isMyPlayerTarget = nukesSentByOtherPlayer.find((unit) => {
       const detonationDst = unit.detonationDst();
+      if (typeof detonationDst === "undefined") return false;
       const targetId = this.game.owner(detonationDst).id();
-      return myPlayer && targetId == this.myPlayer.id();
+      return myPlayer && targetId == myPlayer.id();
     });
     const existingNuke = iconsDiv.querySelector(
       '[data-icon="nuke"]',
@@ -484,9 +485,9 @@ export class NameLayer implements Layer {
     if (this.myPlayer != null) {
       return this.myPlayer;
     }
-    this.myPlayer = this.game
-      .playerViews()
-      .find((p) => p.clientID() == this.clientID);
+    this.myPlayer =
+      this.game.playerViews().find((p) => p.clientID() == this.clientID) ??
+      null;
     return this.myPlayer;
   }
 }

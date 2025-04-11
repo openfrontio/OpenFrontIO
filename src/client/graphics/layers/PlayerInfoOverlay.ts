@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, TemplateResult, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import {
@@ -161,7 +161,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   private renderPlayerInfo(player: PlayerView) {
     const myPlayer = this.myPlayer();
     const isFriendly = myPlayer?.isFriendly(player);
-    let relationHtml = null;
+    let relationHtml: TemplateResult | null = null;
     const attackingTroops = player
       .outgoingAttacks()
       .map((a) => a.troops)

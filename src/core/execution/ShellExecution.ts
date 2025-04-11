@@ -55,7 +55,7 @@ export class ShellExecution implements Execution {
       switch (result.type) {
         case PathFindResultType.Completed:
           this.active = false;
-          this.target.modifyHealth(-this.shell.info().damage);
+          this.target.modifyHealth(-(this.shell.info().damage ?? 0));
           this.shell.delete(false);
           return;
         case PathFindResultType.NextTile:

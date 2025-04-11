@@ -398,7 +398,7 @@ export class BuildMenu extends LitElement implements Layer {
   private refresh() {
     this.game
       .myPlayer()
-      .actions(this.clickedTile)
+      ?.actions(this.clickedTile)
       .then((actions) => {
         this.playerActions = actions;
         this.requestUpdate();

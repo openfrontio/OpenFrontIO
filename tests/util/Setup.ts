@@ -1,6 +1,11 @@
 import fs from "fs/promises";
 import path from "path";
-import { Difficulty, GameType } from "../../src/core/game/Game";
+import {
+  Difficulty,
+  GameMapType,
+  GameMode,
+  GameType,
+} from "../../src/core/game/Game";
 import { createGame } from "../../src/core/game/GameImpl";
 import { genTerrainFromBin } from "../../src/core/game/TerrainMapLoader";
 import { UserSettings } from "../../src/core/game/UserSettings";
@@ -9,7 +14,10 @@ import { generateMap } from "../../src/scripts/TerrainMapGenerator";
 import { TestConfig } from "./TestConfig";
 import { TestServerConfig } from "./TestServerConfig";
 
-export async function setup(mapName: string, _gameConfig: GameConfig = {}) {
+export async function setup(
+  mapName: string,
+  _gameConfig: Partial<GameConfig> = {},
+) {
   // Load the specified map
   const mapPath = path.join(__dirname, "..", "testdata", `${mapName}.png`);
   const imageBuffer = await fs.readFile(mapPath);
@@ -22,11 +30,13 @@ export async function setup(mapName: string, _gameConfig: GameConfig = {}) {
 
   // Configure the game
   const serverConfig = new TestServerConfig();
-  const gameConfig = {
-    gameMap: null,
+  const gameConfig: GameConfig = {
+    gameMap: GameMapType.Asia,
+    gameMode: GameMode.FFA,
     gameType: GameType.Singleplayer,
     difficulty: Difficulty.Medium,
     disableNPCs: false,
+    disableNukes: false,
     bots: 0,
     infiniteGold: false,
     infiniteTroops: false,

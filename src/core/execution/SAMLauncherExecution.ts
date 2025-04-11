@@ -18,7 +18,7 @@ export class SAMLauncherExecution implements Execution {
   private sam: Unit;
   private active: boolean = true;
 
-  private target: Unit = null;
+  private target: Unit | null = null;
 
   private searchRangeRadius = 75;
 

@@ -25,7 +25,7 @@ export class SpawnExecution implements Execution {
       return;
     }
 
-    let player: Player = null;
+    let player: Player | null = null;
     if (this.mg.hasPlayer(this.playerInfo.id)) {
       player = this.mg.player(this.playerInfo.id);
     } else {
@@ -46,9 +46,6 @@ export class SpawnExecution implements Execution {
     player.setHasSpawned(true);
   }
 
-  owner(): Player {
-    return null;
-  }
   isActive(): boolean {
     return this.active;
   }

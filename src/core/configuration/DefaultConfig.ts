@@ -28,26 +28,26 @@ export abstract class DefaultServerConfig implements ServerConfig {
     if (this.env() == GameEnv.Dev) {
       return "dev";
     }
-    return process.env.REGION;
+    return process.env.REGION ?? "undefined";
   }
   gitCommit(): string {
-    return process.env.GIT_COMMIT;
+    return process.env.GIT_COMMIT ?? "undefined";
   }
   r2Endpoint(): string {
-    return process.env.R2_ENDPOINT;
+    return process.env.R2_ENDPOINT ?? "undefined";
   }
   r2AccessKey(): string {
-    return process.env.R2_ACCESS_KEY;
+    return process.env.R2_ACCESS_KEY ?? "undefined";
   }
   r2SecretKey(): string {
-    return process.env.R2_SECRET_KEY;
+    return process.env.R2_SECRET_KEY ?? "undefined";
   }
   abstract r2Bucket(): string;
   adminHeader(): string {
     return "x-admin-key";
   }
   adminToken(): string {
-    return process.env.ADMIN_TOKEN;
+    return process.env.ADMIN_TOKEN ?? "undefined";
   }
   abstract numWorkers(): number;
   abstract env(): GameEnv;
@@ -128,7 +128,7 @@ export class DefaultConfig implements Config {
   constructor(
     private _serverConfig: ServerConfig,
     private _gameConfig: GameConfig,
-    private _userSettings: UserSettings,
+    private _userSettings: UserSettings | null,
   ) {}
 
   samHittingChance(): number {
@@ -394,7 +394,7 @@ export class DefaultConfig implements Config {
     return this.bots();
   }
   theme(): Theme {
-    return this.userSettings().darkMode() ? pastelThemeDark : pastelTheme;
+    return this.userSettings()?.darkMode() ? pastelThemeDark : pastelTheme;
   }
 
   attackLogic(
@@ -655,6 +655,7 @@ export class DefaultConfig implements Config {
       case UnitType.HydrogenBomb:
         return { inner: 80, outer: 100 };
     }
+    throw new Error(`Unknown nuke type: ${unitType}`);
   }
 
   defaultNukeSpeed(): number {

@@ -35,8 +35,8 @@ export class PlayerPanel extends LitElement implements Layer {
   public eventBus: EventBus;
   public emojiTable: EmojiTable;
 
-  private actions: PlayerActions = null;
-  private tile: TileRef = null;
+  private actions: PlayerActions | null = null;
+  private tile: TileRef | null = null;
 
   @state()
   private isVisible: boolean = false;
@@ -155,7 +155,11 @@ export class PlayerPanel extends LitElement implements Layer {
       return 0;
     }
     let sum = 0;
-    const nukes = stats.sentNukes[this.g.myPlayer().id()];
+    const player = this.g.myPlayer();
+    if (player === null) {
+      return 0;
+    }
+    const nukes = stats.sentNukes[player.id()];
     if (!nukes) {
       return 0;
     }
@@ -172,26 +176,24 @@ export class PlayerPanel extends LitElement implements Layer {
       return html``;
     }
     const myPlayer = this.g.myPlayer();
-    if (myPlayer == null) {
-      return;
-    }
-
+    if (myPlayer == null) return;
+    if (this.tile === null) return;
     let other = this.g.owner(this.tile);
     if (!other.isPlayer()) {
       throw new Error("Tile is not owned by a player");
     }
     other = other as PlayerView;
 
-    const canDonate = this.actions.interaction?.canDonate;
+    const canDonate = this.actions?.interaction?.canDonate;
     const canSendAllianceRequest =
-      this.actions.interaction?.canSendAllianceRequest;
+      this.actions?.interaction?.canSendAllianceRequest;
     const canSendEmoji =
       other == myPlayer
-        ? this.actions.canSendEmojiAllPlayers
-        : this.actions.interaction?.canSendEmoji;
-    const canBreakAlliance = this.actions.interaction?.canBreakAlliance;
-    const canTarget = this.actions.interaction?.canTarget;
-    const canEmbargo = this.actions.interaction?.canEmbargo;
+        ? this.actions?.canSendEmojiAllPlayers
+        : this.actions?.interaction?.canSendEmoji;
+    const canBreakAlliance = this.actions?.interaction?.canBreakAlliance;
+    const canTarget = this.actions?.interaction?.canTarget;
+    const canEmbargo = this.actions?.interaction?.canEmbargo;
 
     return html`
       <div

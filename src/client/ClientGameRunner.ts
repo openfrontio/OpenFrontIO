@@ -61,7 +61,7 @@ export function joinLobby(
   );
 
   const userSettings: UserSettings = new UserSettings();
-  startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config);
+  startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
 
   const transport = new Transport(lobbyConfig, eventBus);
 
@@ -107,6 +107,9 @@ export async function createClientGame(
   userSettings: UserSettings,
   terrainLoad: Promise<TerrainMapData> | null,
 ): Promise<ClientGameRunner> {
+  if (typeof lobbyConfig.gameStartInfo === "undefined") {
+    throw new Error("missing gameStartInfo");
+  }
   const config = await getConfig(
     lobbyConfig.gameStartInfo.config,
     userSettings,
@@ -198,6 +201,9 @@ export class ClientGameRunner {
       winner = update.winner as Team;
     }
 
+    if (typeof this.lobby.gameStartInfo === "undefined") {
+      throw new Error("missing gameStartInfo");
+    }
     const record = createGameRecord(
       this.lobby.gameStartInfo.gameID,
       this.lobby.gameStartInfo,
@@ -229,16 +235,20 @@ export class ClientGameRunner {
     this.renderer.initialize();
     this.input.initialize();
     this.worker.start((gu: GameUpdateViewData | ErrorUpdate) => {
+      if (typeof this.lobby.gameStartInfo === "undefined") {
+        throw new Error("missing gameStartInfo");
+      }
       if ("errMsg" in gu) {
         showErrorModal(
           gu.errMsg,
-          gu.stack,
+          gu.stack ?? "missing",
           this.lobby.gameStartInfo.gameID,
           this.lobby.clientID,
         );
         this.stop(true);
         return;
       }
+      if (gu.updates === null) return;
       gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
@@ -282,6 +292,9 @@ export class ClientGameRunner {
         }
       }
       if (message.type == "desync") {
+        if (typeof this.lobby.gameStartInfo === "undefined") {
+          throw new Error("missing gameStartInfo");
+        }
         showErrorModal(
           `desync from server: ${JSON.stringify(message)}`,
           "",
@@ -344,10 +357,9 @@ export class ClientGameRunner {
       return;
     }
     if (this.myPlayer == null) {
-      this.myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
-      if (this.myPlayer == null) {
-        return;
-      }
+      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
     }
     this.myPlayer.actions(tile).then((actions) => {
       console.log(`got actions: ${JSON.stringify(actions)}`);

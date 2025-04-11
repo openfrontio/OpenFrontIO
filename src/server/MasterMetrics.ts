@@ -29,8 +29,8 @@ export function setupMetricsServer() {
 
       // Track seen metric names to avoid duplicate metadata
       const seenMetrics = new Set();
-      const processedLines = [];
-      const allMetricValues = [];
+      const processedLines: string[] = [];
+      const allMetricValues: string[] = [];
 
       // Process all metadata information in the master metrics first
       const masterLines = masterMetrics.split("\n");

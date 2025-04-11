@@ -100,8 +100,10 @@ export class EventsDisplay extends LitElement implements Layer {
   tick() {
     this.active = true;
     const updates = this.game.updatesSinceLastTick();
-    for (const [ut, fn] of this.updateMap) {
-      updates[ut]?.forEach((u) => fn(u));
+    if (updates) {
+      for (const [ut, fn] of this.updateMap) {
+        updates[ut]?.forEach(fn);
+      }
     }
 
     let remainingEvents = this.events.filter((event) => {
@@ -301,6 +303,7 @@ export class EventsDisplay extends LitElement implements Layer {
         : update.player2ID === myPlayer.smallID()
           ? update.player1ID
           : null;
+    if (otherID === null) return;
     const other = this.game.playerBySmallID(otherID) as PlayerView;
     if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
 
@@ -414,8 +417,10 @@ export class EventsDisplay extends LitElement implements Layer {
                     <button
                       translate="no"
                       class="ml-2"
-                      @click=${() =>
-                        this.emitGoToPlayerEvent(attack.attackerID)}
+                      @click=${() => {
+                        attack.attackerID &&
+                          this.emitGoToPlayerEvent(attack.attackerID);
+                      }}
                     >
                       ${renderTroops(attack.troops)}
                       ${(
@@ -597,7 +602,8 @@ export class EventsDisplay extends LitElement implements Layer {
                       ${event.focusID
                         ? html`<button
                             @click=${() => {
-                              this.emitGoToPlayerEvent(event.focusID);
+                              event.focusID &&
+                                this.emitGoToPlayerEvent(event.focusID);
                             }}
                           >
                             ${this.getEventDescription(event)}

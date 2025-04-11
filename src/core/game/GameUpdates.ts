@@ -14,7 +14,7 @@ import { TileRef, TileUpdate } from "./GameMap";
 
 export interface GameUpdateViewData {
   tick: number;
-  updates: GameUpdates;
+  updates: GameUpdates | null;
   packedTileUpdates: BigUint64Array;
   playerNameViewData: Record<number, NameViewData>;
 }
@@ -87,8 +87,8 @@ export interface AttackUpdate {
 export interface PlayerUpdate {
   type: GameUpdateType.Player;
   nameViewData?: NameViewData;
-  clientID: ClientID;
-  flag: string;
+  clientID: ClientID | null;
+  flag: string | undefined;
   name: string;
   displayName: string;
   id: PlayerID;

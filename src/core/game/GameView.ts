@@ -96,28 +96,29 @@ export class UnitView {
   constructionType(): UnitType | undefined {
     return this.data.constructionType;
   }
-  dstPortId(): number {
+  dstPortId(): number | undefined {
     if (this.type() != UnitType.TradeShip) {
       throw Error("Must be a trade ship");
     }
     return this.data.dstPortId;
   }
-  detonationDst(): TileRef {
+  detonationDst(): TileRef | undefined {
     if (!nukeTypes.includes(this.type())) {
       throw Error("Must be a nuke");
     }
     return this.data.detonationDst;
   }
-  warshipTargetId(): number {
+  warshipTargetId(): number | undefined {
     if (this.type() != UnitType.Warship) {
       throw Error("Must be a warship");
     }
     return this.data.warshipTargetId;
   }
-  ticksLeftInCooldown(): Tick {
+  ticksLeftInCooldown(): Tick | undefined {
     return this.data.ticksLeftInCooldown;
   }
   isCooldown(): boolean {
+    if (typeof this.data.ticksLeftInCooldown === "undefined") return false;
     return this.data.ticksLeftInCooldown > 0;
   }
 }
@@ -162,7 +163,7 @@ export class PlayerView {
   smallID(): number {
     return this.data.smallID;
   }
-  flag(): string {
+  flag(): string | undefined {
     return this.data.flag;
   }
   name(): string {
@@ -171,13 +172,13 @@ export class PlayerView {
   displayName(): string {
     return this.data.displayName;
   }
-  clientID(): ClientID {
+  clientID(): ClientID | null {
     return this.data.clientID;
   }
   id(): PlayerID {
     return this.data.id;
   }
-  team(): Team | null {
+  team(): Team | undefined {
     return this.data.team;
   }
   type(): PlayerType {
@@ -303,7 +304,7 @@ export class GameView implements GameMap {
     return this._map.isOnEdgeOfMap(ref);
   }
 
-  public updatesSinceLastTick(): GameUpdates {
+  public updatesSinceLastTick(): GameUpdates | null {
     return this.lastUpdate.updates;
   }
 
@@ -318,11 +319,15 @@ export class GameView implements GameMap {
       this.updatedTiles.push(this.updateTile(tu));
     });
 
+    if (gu.updates === null) {
+      throw new Error("lastUpdate.updates not initialized");
+    }
     gu.updates[GameUpdateType.Player].forEach((pu) => {
       this.smallIDToID.set(pu.smallID, pu.id);
-      if (this._players.has(pu.id)) {
-        this._players.get(pu.id).data = pu;
-        this._players.get(pu.id).nameData = gu.playerNameViewData[pu.id];
+      const player = this._players.get(pu.id);
+      if (typeof player !== "undefined") {
+        player.data = pu;
+        player.nameData = gu.playerNameViewData[pu.id];
       } else {
         this._players.set(
           pu.id,
@@ -335,9 +340,8 @@ export class GameView implements GameMap {
       unit.lastPos = unit.lastPos.slice(-1);
     }
     gu.updates[GameUpdateType.Unit].forEach((update) => {
-      let unit: UnitView = null;
-      if (this._units.has(update.id)) {
-        unit = this._units.get(update.id);
+      let unit = this._units.get(update.id);
+      if (typeof unit !== "undefined") {
         unit.update(update);
       } else {
         unit = new UnitView(this, update);
@@ -382,10 +386,11 @@ export class GameView implements GameMap {
   }
 
   player(id: PlayerID): PlayerView {
-    if (this._players.has(id)) {
-      return this._players.get(id);
+    const player = this._players.get(id);
+    if (typeof player === "undefined") {
+      throw Error(`player id ${id} not found`);
     }
-    throw Error(`player id ${id} not found`);
+    return player;
   }
 
   players(): PlayerView[] {
@@ -396,10 +401,11 @@ export class GameView implements GameMap {
     if (id == 0) {
       return new TerraNulliusImpl();
     }
-    if (!this.smallIDToID.has(id)) {
+    const playerId = this.smallIDToID.get(id);
+    if (typeof playerId === "undefined") {
       throw new Error(`small id ${id} not found`);
     }
-    return this.player(this.smallIDToID.get(id));
+    return this.player(playerId);
   }
 
   playerByClientID(id: ClientID): PlayerView | null {
@@ -439,7 +445,7 @@ export class GameView implements GameMap {
       (u) => u.isActive() && types.includes(u.type()),
     );
   }
-  unit(id: number): UnitView {
+  unit(id: number): UnitView | undefined {
     return this._units.get(id);
   }
   unitInfo(type: UnitType): UnitInfo {

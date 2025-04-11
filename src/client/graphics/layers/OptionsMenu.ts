@@ -124,9 +124,10 @@ export class OptionsMenu extends LitElement implements Layer {
   }
 
   tick() {
-    this.hasWinner =
-      this.hasWinner ||
-      this.game.updatesSinceLastTick()[GameUpdateType.Win].length > 0;
+    const updates = this.game.updatesSinceLastTick();
+    if (updates) {
+      this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;
+    }
     if (this.game.inSpawnPhase()) {
       this.timer = 0;
     } else if (!this.hasWinner && this.game.ticks() % 10 == 0) {

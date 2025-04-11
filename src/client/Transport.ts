@@ -60,14 +60,14 @@ export class SendSpawnIntentEvent implements GameEvent {
 
 export class SendAttackIntentEvent implements GameEvent {
   constructor(
-    public readonly targetID: PlayerID,
+    public readonly targetID: PlayerID | null,
     public readonly troops: number,
   ) {}
 }
 
 export class SendBoatAttackIntentEvent implements GameEvent {
   constructor(
-    public readonly targetID: PlayerID,
+    public readonly targetID: PlayerID | null,
     public readonly cell: Cell,
     public readonly troops: number,
   ) {}
@@ -148,7 +148,7 @@ export class MoveWarshipIntentEvent implements GameEvent {
 }
 
 export class Transport {
-  private socket: WebSocket;
+  private socket: WebSocket | null;
 
   private localServer: LocalServer;
 
@@ -279,7 +279,12 @@ export class Transport {
       console.log("Connected to game server!");
       while (this.buffer.length > 0) {
         console.log("sending dropped message");
-        this.sendMsg(this.buffer.pop());
+        const msg = this.buffer.pop();
+        if (typeof msg === "undefined") {
+          console.warn("msg is undefined");
+          continue;
+        }
+        this.sendMsg(msg);
       }
       onconnect();
     };
@@ -295,6 +300,7 @@ export class Transport {
     };
     this.socket.onerror = (err) => {
       console.error("Socket encountered error: ", err, "Closing socket");
+      if (this.socket === null) return;
       this.socket.close();
     };
     this.socket.onclose = (event: CloseEvent) => {
@@ -349,6 +355,7 @@ export class Transport {
       return;
     }
     this.stopPing();
+    if (this.socket === null) return;
     if (this.socket.readyState === WebSocket.OPEN) {
       console.log("on stop: leaving game");
       this.socket.close();
@@ -495,6 +502,7 @@ export class Transport {
   }
 
   private onSendWinnerEvent(event: SendWinnerEvent) {
+    if (this.socket === null) return;
     if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
       const msg = ClientSendWinnerSchema.parse({
         type: "winner",
@@ -516,6 +524,7 @@ export class Transport {
   }
 
   private onSendHashEvent(event: SendHashEvent) {
+    if (this.socket === null) return;
     if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
       const msg = ClientMessageSchema.parse({
         type: "hash",
@@ -553,6 +562,7 @@ export class Transport {
   }
 
   private sendIntent(intent: Intent) {
+    if (this.socket === null) return;
     if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
       const msg = ClientIntentMessageSchema.parse({
         type: "intent",
@@ -575,6 +585,7 @@ export class Transport {
     if (this.isLocal) {
       this.localServer.onMessage(msg);
     } else {
+      if (this.socket === null) return;
       if (
         this.socket.readyState == WebSocket.CLOSED ||
         this.socket.readyState == WebSocket.CLOSED

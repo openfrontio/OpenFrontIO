@@ -99,7 +99,7 @@ export class InputHandler {
 
   private alternateView = false;
 
-  private moveInterval: NodeJS.Timeout = null;
+  private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
 
   private readonly PAN_SPEED = 5;
@@ -392,7 +392,9 @@ export class InputHandler {
   }
 
   destroy() {
-    clearInterval(this.moveInterval);
+    if (this.moveInterval !== null) {
+      clearInterval(this.moveInterval);
+    }
     this.activeKeys.clear();
   }
 }

@@ -8,7 +8,7 @@ import {
   manhattanDistFN,
   TileRef,
 } from "../../../core/game/GameMap";
-import { GameUpdateType, UnitUpdate } from "../../../core/game/GameUpdates";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { AlternateViewEvent, DragEvent } from "../../InputHandler";
@@ -26,7 +26,7 @@ export class TerritoryLayer implements Layer {
     return a.lastUpdate - b.lastUpdate;
   });
   private random = new PseudoRandom(123);
-  private theme: Theme = null;
+  private theme: Theme;
 
   // Used for spawn highlighting
   private highlightCanvas: HTMLCanvasElement;
@@ -62,8 +62,9 @@ export class TerritoryLayer implements Layer {
 
   tick() {
     this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
-    this.game.updatesSinceLastTick()[GameUpdateType.Unit].forEach((u) => {
-      const update = u as UnitUpdate;
+    const updates = this.game.updatesSinceLastTick();
+    const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
+    unitUpdates.forEach((update) => {
       if (update.unitType == UnitType.DefensePost && update.isActive) {
         const tile = update.pos;
         this.game
@@ -148,7 +149,9 @@ export class TerritoryLayer implements Layer {
   redraw() {
     console.log("redrew territory layer");
     this.canvas = document.createElement("canvas");
-    this.context = this.canvas.getContext("2d");
+    const context = this.canvas.getContext("2d");
+    if (context === null) throw new Error("2d context not supported");
+    this.context = context;
 
     this.imageData = this.context.getImageData(
       0,
@@ -163,9 +166,11 @@ export class TerritoryLayer implements Layer {
 
     // Add a second canvas for highlights
     this.highlightCanvas = document.createElement("canvas");
-    this.highlightContext = this.highlightCanvas.getContext("2d", {
+    const highlightContext = this.highlightCanvas.getContext("2d", {
       alpha: true,
     });
+    if (highlightContext === null) throw new Error("2d context not supported");
+    this.highlightContext = highlightContext;
     this.highlightCanvas.width = this.game.width();
     this.highlightCanvas.height = this.game.height();
 

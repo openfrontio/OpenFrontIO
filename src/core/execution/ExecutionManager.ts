@@ -23,7 +23,7 @@ import { TransportShipExecution } from "./TransportShipExecution";
 
 export class Executor {
   // private random = new PseudoRandom(999)
-  private random: PseudoRandom = null;
+  private random: PseudoRandom;
 
   constructor(
     private mg: Game,
@@ -113,7 +113,7 @@ export class Executor {
   }
 
   fakeHumanExecutions(): Execution[] {
-    const execs = [];
+    const execs: Execution[] = [];
     for (const nation of this.mg.nations()) {
       execs.push(
         new FakeHumanExecution(

@@ -14,7 +14,7 @@ export class PublicLobby extends LitElement {
   @state() public isLobbyHighlighted: boolean = false;
   @state() private isButtonDebounced: boolean = false;
   private lobbiesInterval: number | null = null;
-  private currLobby: GameInfo = null;
+  private currLobby: GameInfo | null = null;
   private debounceDelay: number = 750;
   private lobbyIDToStart = new Map<GameID, number>();
 
@@ -46,7 +46,8 @@ export class PublicLobby extends LitElement {
         // Store the start time on first fetch because endpoint is cached, causing
         // the time to appear irregular.
         if (!this.lobbyIDToStart.has(l.gameID)) {
-          this.lobbyIDToStart.set(l.gameID, l.msUntilStart + Date.now());
+          const msUntilStart = l.msUntilStart ?? 0;
+          this.lobbyIDToStart.set(l.gameID, msUntilStart + Date.now());
         }
       });
     } catch (error) {
@@ -82,17 +83,13 @@ export class PublicLobby extends LitElement {
     if (!lobby?.gameConfig) {
       return;
     }
-    const timeRemaining = Math.max(
-      0,
-      Math.floor((this.lobbyIDToStart.get(lobby.gameID) - Date.now()) / 1000),
-    );
+    const start = this.lobbyIDToStart.get(lobby.gameID) ?? 0;
+    const timeRemaining = Math.max(0, Math.floor((start - Date.now()) / 1000));
 
     // Format time to show minutes and seconds
     const minutes = Math.floor(timeRemaining / 60);
     const seconds = timeRemaining % 60;
     const timeDisplay = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-    const playersRemainingBeforeMax =
-      lobby.gameConfig.maxPlayers - lobby.numClients;
 
     return html`
       <button

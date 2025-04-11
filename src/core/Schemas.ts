@@ -194,7 +194,7 @@ export const SpawnIntentSchema = BaseIntentSchema.extend({
 export const BoatAttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("boat"),
   targetID: ID.nullable(),
-  troops: z.number().nullable(),
+  troops: z.number(),
   x: z.number(),
   y: z.number(),
 });

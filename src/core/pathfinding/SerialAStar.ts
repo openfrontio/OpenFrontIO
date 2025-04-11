@@ -119,8 +119,9 @@ export class SerialAStar implements AStar {
         1.1 * Math.abs(this.gameMap.x(a) - this.gameMap.x(b)) +
         Math.abs(this.gameMap.y(a) - this.gameMap.y(b))
       );
-    } catch {
-      consolex.log("uh oh");
+    } catch (e) {
+      consolex.log("uh oh", e);
+      return 0;
     }
   }
 
