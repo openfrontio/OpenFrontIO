@@ -2,6 +2,11 @@ import { colord, Colord } from "colord";
 
 export const red: Colord = colord({ r: 235, g: 53, b: 53 }); // Bright Red
 export const blue: Colord = colord({ r: 41, g: 98, b: 255 }); // Royal Blue
+export const teal = colord({ h: 172, s: 66, l: 50 });
+export const purple = colord({ h: 271, s: 81, l: 56 });
+export const yellow = colord({ h: 45, s: 93, l: 47 });
+export const orange = colord({ h: 25, s: 95, l: 53 });
+export const green = colord({ h: 128, s: 49, l: 50 });
 export const botColor: Colord = colord({ r: 210, g: 206, b: 200 }); // Muted Beige Gray
 
 export const territoryColors: Colord[] = [

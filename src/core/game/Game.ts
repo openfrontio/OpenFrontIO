@@ -40,6 +40,11 @@ export enum Difficulty {
 export enum Team {
   Red = "Red",
   Blue = "Blue",
+  Teal = "Teal",
+  Purple = "Purple",
+  Yellow = "Yellow",
+  Orange = "Orange",
+  Green = "Green",
   Bot = "Bot",
 }
 

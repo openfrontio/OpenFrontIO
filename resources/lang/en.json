@@ -147,6 +147,7 @@
   "host_modal": {
     "title": "Private Lobby",
     "mode": "Mode",
+    "team_count": "Number of Teams",
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",

@@ -189,6 +189,9 @@ export class DefaultConfig implements Config {
   defensePostDefenseBonus(): number {
     return 5;
   }
+  numPlayerTeams(): number {
+    return this._gameConfig.numPlayerTeams ?? 0;
+  }
   spawnNPCs(): boolean {
     return !this._gameConfig.disableNPCs;
   }

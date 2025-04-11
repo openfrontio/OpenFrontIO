@@ -178,7 +178,7 @@ export class PlayerView {
     return this.data.id;
   }
   team(): Team | null {
-    return this.data.team;
+    return this.data.team ?? null;
   }
   type(): PlayerType {
     return this.data.playerType;

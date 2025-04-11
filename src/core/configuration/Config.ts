@@ -7,6 +7,7 @@ import {
   Gold,
   Player,
   PlayerInfo,
+  Team,
   TerraNullius,
   Tick,
   UnitInfo,
@@ -65,6 +66,7 @@ export interface Config {
   instantBuild(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
+  numPlayerTeams(): number;
 
   startManpower(playerInfo: PlayerInfo): number;
   populationIncreaseRate(player: Player | PlayerView): number;
@@ -122,6 +124,7 @@ export interface Config {
 }
 
 export interface Theme {
+  teamColor(team: Team): Colord;
   territoryColor(playerInfo: PlayerView): Colord;
   specialBuildingColor(playerInfo: PlayerView): Colord;
   borderColor(playerInfo: PlayerView): Colord;
