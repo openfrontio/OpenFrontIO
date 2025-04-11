@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { GameView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
@@ -88,14 +88,13 @@ export class CountryStatsOverlay extends LitElement implements Layer {
     return html`<img class="p-2 w-10 h-10" src="${src}" />`;
   }
 
-  private renderBadge(icon: string, text: string, size: number | string = 36) {
+  private renderBadge(children: TemplateResult) {
     return html`
       <div
-        class="flex flex-row items-center justify-between gap-2 w-${size} p-2 bg-opacity-60 bg-gray-900 rounded-lg shadow-lg backdrop-blur-sm  text-white text-lg md:text-base"
+        class="flex flex-row items-center justify-between gap-2 w-full p-2 bg-opacity-60 bg-gray-900 rounded-lg shadow-lg backdrop-blur-sm  text-white text-lg md:text-base"
         translate="no"
       >
-        ${this.renderIcon(icon)}
-        <span class="py-2 pr-2"> ${text} </span>
+        ${children}
       </div>
     `;
   }
@@ -111,26 +110,29 @@ export class CountryStatsOverlay extends LitElement implements Layer {
       >
         <div class="flex flex-col gap-2">
           <div class="flex flex-row gap-2">
-            <div
-              class="flex flex-row items-center justify-between gap-2 w-72 p-2 bg-opacity-60 bg-gray-900 rounded-lg shadow-lg backdrop-blur-sm  text-white text-lg md:text-base"
-              translate="no"
-            >
+            ${this.renderBadge(html`
               ${this.renderIcon(emojisIcon)}
               <span>
                 ${renderTroops(this._population)} /
                 ${renderTroops(this._maxPopulation)}
               </span>
               <span
-                class="${this._popRateIsIncreasing
+                class="pr-2 ${this._popRateIsIncreasing
                   ? "text-green-500"
                   : "text-yellow-500"}"
                 >(+${renderTroops(this.popRate)})</span
               >
-            </div>
+            `)}
           </div>
           <div class="flex flex-row gap-2">
-            ${this.renderBadge(swordIcon, renderTroops(this._troops))}
-            ${this.renderBadge(buildIcon, renderTroops(this._workers))}
+            ${this.renderBadge(html`
+              ${this.renderIcon(swordIcon)}
+              <span class="py-2 pr-2"> ${renderTroops(this._troops)} </span>
+            `)}
+            ${this.renderBadge(html`
+              ${this.renderIcon(buildIcon)}
+              <span class="py-2 pr-2"> ${renderTroops(this._workers)} </span>
+            `)}
           </div>
         </div>
       </div>
