@@ -3,7 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
-import { AttackRatioEvent } from "../../InputHandler";
+import { AttackRatioEvent, AttackSetRatioEvent } from "../../InputHandler";
 import { SendSetTargetTroopRatioEvent } from "../../Transport";
 import { renderNumber, renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
@@ -61,28 +61,18 @@ export class ControlPanel extends LitElement implements Layer {
     this.uiState.attackRatio = this.attackRatio;
     this.currentTroopRatio = this.targetTroopRatio;
     this.eventBus.on(AttackRatioEvent, (event) => {
-      let newAttackRatio =
+      const newAttackRatio =
         (parseInt(
           (document.getElementById("attack-ratio") as HTMLInputElement).value,
         ) +
           event.attackRatio) /
         100;
 
-      if (newAttackRatio < 0.01) {
-        newAttackRatio = 0.01;
-      }
+      this.onAttackRatioChange(newAttackRatio);
+    });
 
-      if (newAttackRatio > 1) {
-        newAttackRatio = 1;
-      }
-
-      if (newAttackRatio == 0.11 && this.attackRatio == 0.01) {
-        // If we're changing the ratio from 1%, then set it to 10% instead of 11% to keep a consistency
-        newAttackRatio = 0.1;
-      }
-
-      this.attackRatio = newAttackRatio;
-      this.onAttackRatioChange(this.attackRatio);
+    this.eventBus.on(AttackSetRatioEvent, (event) => {
+      this.onAttackRatioChange(event.attackRatio / 100);
     });
   }
 
@@ -117,6 +107,20 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   onAttackRatioChange(newRatio: number) {
+    if (newRatio < 0.01) {
+      newRatio = 0.01;
+    }
+
+    if (newRatio > 1) {
+      newRatio = 1;
+    }
+
+    if (newRatio == 0.11 && this.attackRatio == 0.01) {
+      // If we're changing the ratio from 1%, then set it to 10% instead of 11% to keep a consistency
+      newRatio = 0.1;
+    }
+
+    this.attackRatio = newRatio;
     this.uiState.attackRatio = newRatio;
   }
 
@@ -274,9 +278,9 @@ export class ControlPanel extends LitElement implements Layer {
               max="100"
               .value=${(this.attackRatio * 100).toString()}
               @input=${(e: Event) => {
-                this.attackRatio =
-                  parseInt((e.target as HTMLInputElement).value) / 100;
-                this.onAttackRatioChange(this.attackRatio);
+                this.onAttackRatioChange(
+                  parseInt((e.target as HTMLInputElement).value) / 100,
+                );
               }}
               class="absolute left-0 right-0 top-2 m-0 h-4 cursor-pointer attackRatio"
             />
