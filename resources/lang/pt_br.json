@@ -77,7 +77,8 @@
     "icon_crown": "Coroa - Este é o jogador número 1 da classificação",
     "icon_traitor": "Espadas cruzadas - Traidor. Este jogador atacou um aliado.",
     "icon_ally": "Aperto de Mãos - Aliado. Esse jogador é seu aliado.",
-    "info_enemy_panel": "Painel de informações Inimigo"
+    "info_enemy_panel": "Painel de informações Inimigo",
+    "action_emote": "Abrir menu de emotes"
   },
   "single_modal": {
     "title": "Um Jogador",
@@ -150,8 +151,7 @@
     "players": "Jogadores",
     "waiting": "Aguardando jogadores...",
     "start": "Iniciar o Jogo",
-    "mode": "Modo",
-    "action_emote": "Abrir menu de emotes"
+    "mode": "Modo"
   },
   "difficulty": {
     "Relaxed": "Relaxado",

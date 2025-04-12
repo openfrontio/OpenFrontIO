@@ -77,7 +77,8 @@
     "icon_crown": "Taç - Bu, skor tablosundaki 1 numaralı oyuncudur",
     "icon_traitor": "Çapraz kılıçlar - Hain. Bu oyuncu bir müttefike saldırdı.",
     "icon_ally": "El sıkışma - Müttefik. Bu oyuncu sizin müttefikinizdir.",
-    "info_enemy_panel": "Düşman bilgi paneli"
+    "info_enemy_panel": "Düşman bilgi paneli",
+    "action_emote": "İfade menüsünü aç"
   },
   "single_modal": {
     "title": "Tek Oyunculu",
@@ -150,8 +151,7 @@
     "players": "Oyuncular",
     "waiting": "Oyuncular bekleniyor...",
     "start": "Oyunu Başlat",
-    "mode": "Mod",
-    "action_emote": "İfade menüsünü aç"
+    "mode": "Mod"
   },
   "difficulty": {
     "Relaxed": "Rahat",

@@ -77,7 +77,8 @@
     "icon_crown": "Corona - Questo è il giocatore numero uno della classifica",
     "icon_traitor": "Spade incrociate - Traditore. Questo giocatore ha attaccato un alleato.",
     "icon_ally": "Stretta di mano - Alleato, Questo giocatore è un tuo alleato",
-    "info_enemy_panel": "Pannello informazioni nemico"
+    "info_enemy_panel": "Pannello informazioni nemico",
+    "action_emote": "Apri menu emote"
   },
   "single_modal": {
     "title": "Giocatore Singolo",
@@ -150,8 +151,7 @@
     "players": "Giocatori",
     "waiting": "In attesa dei giocatori...",
     "start": "Avvia Partita",
-    "mode": "Modalità",
-    "action_emote": "Apri menu emote"
+    "mode": "Modalità"
   },
   "difficulty": {
     "Relaxed": "Tranquillo",

@@ -77,7 +77,8 @@
     "icon_crown": "Kroon - Dit is de nummer 1 speler op de leaderboard.",
     "icon_traitor": "Gekruiste zwaarden - Verrader. Deze speler heeft een bondgenoot aangevallen.",
     "icon_ally": "Handdruk - Bondgenoot. Deze speler is je bondgenoot.",
-    "info_enemy_panel": "Infopaneel vijand"
+    "info_enemy_panel": "Infopaneel vijand",
+    "action_emote": "Open emoji-menu"
   },
   "single_modal": {
     "title": "Eén speler",
@@ -150,8 +151,7 @@
     "players": "Spelers",
     "waiting": "Wachten op spelers...",
     "start": "Start Spel",
-    "mode": "Modus",
-    "action_emote": "Open emoji-menu"
+    "mode": "Modus"
   },
   "difficulty": {
     "Relaxed": "Ontspannen",

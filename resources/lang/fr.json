@@ -77,7 +77,8 @@
     "icon_crown": "Couronne - Ce joueur est le numéro 1 du classement",
     "icon_traitor": "Épées croisées - Traître. Ce joueur a attaqué un allié.",
     "icon_ally": "Poignée de main - Allié. Ce joueur est votre allié.",
-    "info_enemy_panel": "Panneau d'information de l'ennemi"
+    "info_enemy_panel": "Panneau d'information de l'ennemi",
+    "action_emote": "Ouvrir le menu des émojis"
   },
   "single_modal": {
     "title": "Joueur seul",
@@ -150,8 +151,7 @@
     "players": "Joueurs",
     "waiting": "En attente de joueurs...",
     "start": "Commencer la partie",
-    "mode": "Mode",
-    "action_emote": "Ouvrir le menu des émojis"
+    "mode": "Mode"
   },
   "difficulty": {
     "Relaxed": "Détendu",

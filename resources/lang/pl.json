@@ -77,7 +77,8 @@
     "icon_crown": "Korona — Jest to gracz numer 1 w rankingu",
     "icon_traitor": "Skrzyżowane miecze — Zdrajca. Ten gracz atakował sojusznika.",
     "icon_ally": "Uścisk dłoni — Sojusznik. Ten gracz jest twoim sojusznikiem.",
-    "info_enemy_panel": "Panel informacji o wrogu"
+    "info_enemy_panel": "Panel informacji o wrogu",
+    "action_emote": "Otwórz menu emoji"
   },
   "single_modal": {
     "title": "Gra jednoosobowa",
@@ -150,8 +151,7 @@
     "players": "Gracze",
     "waiting": "Oczekiwanie na graczy...",
     "start": "Rozpocznij grę",
-    "mode": "Tryb",
-    "action_emote": "Otwórz menu emoji"
+    "mode": "Tryb"
   },
   "difficulty": {
     "Relaxed": "Zrelaksowany",

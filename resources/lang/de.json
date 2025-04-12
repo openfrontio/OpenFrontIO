@@ -77,7 +77,8 @@
     "icon_crown": "Krone - Dieser Spieler ist auf Platz 1 der Bestenliste.",
     "icon_traitor": "Gekreuzte Schwerter - Verräter. Dieser Spieler hat einen Verbündeten verraten und angegriffen.",
     "icon_ally": "Handschlag - Verbündeter. Dieser Spieler ist ein Verbündeter.",
-    "info_enemy_panel": "Gegner-Infobereich"
+    "info_enemy_panel": "Gegner-Infobereich",
+    "action_emote": "Emote-Menü öffnen"
   },
   "single_modal": {
     "title": "Einzelspieler",
@@ -150,8 +151,7 @@
     "players": "Spieler",
     "waiting": "Warte auf Spieler...",
     "start": "Spiel starten",
-    "mode": "Modus",
-    "action_emote": "Emote-Menü öffnen"
+    "mode": "Modus"
   },
   "difficulty": {
     "Relaxed": "Entspannt",

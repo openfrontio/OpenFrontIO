@@ -77,7 +77,8 @@
     "icon_crown": "Kruna - Ovo je igrač broj 1 na ljestvici",
     "icon_traitor": "Ukršteni mačevi - Izdajica. Ovaj igrač je napao saveznika.",
     "icon_ally": "Rukovanje - Saveznik. Ovaj igrač ti je saveznik.",
-    "info_enemy_panel": "Informacije o neprijatelju"
+    "info_enemy_panel": "Informacije o neprijatelju",
+    "action_emote": "Otvori izbornik emotikona"
   },
   "single_modal": {
     "title": "Igraj sam",
@@ -150,8 +151,7 @@
     "players": "Igrači",
     "waiting": "Čekamo igrače...",
     "start": "Započni partiju",
-    "mode": "Tip igre",
-    "action_emote": "Otvori izbornik emotikona"
+    "mode": "Tip igre"
   },
   "difficulty": {
     "Relaxed": "Bleja",
