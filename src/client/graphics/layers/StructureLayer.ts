@@ -5,6 +5,7 @@ import { Layer } from "./Layer";
 
 import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
 import shieldIcon from "../../../../resources/images/buildings/fortAlt2.png";
+import laboratoryIcon from "../../../../resources/images/buildings/laboratory.png";
 import anchorIcon from "../../../../resources/images/buildings/port1.png";
 import MissileSiloReloadingIcon from "../../../../resources/images/buildings/silo1-reloading.png";
 import missileSiloIcon from "../../../../resources/images/buildings/silo1.png";
@@ -16,6 +17,7 @@ import {
   hexDistFN,
   manhattanDistFN,
   rectDistFN,
+  rhombusDistFN,
 } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
@@ -30,6 +32,7 @@ enum UnitBorderType {
   Diamond,
   Square,
   Hexagon,
+  Rhombus,
 }
 
 interface UnitRenderConfig {
@@ -58,6 +61,12 @@ export class StructureLayer implements Layer {
       borderRadius: 8.525,
       territoryRadius: 6.525,
       borderType: UnitBorderType.Round,
+    },
+    [UnitType.Laboratory]: {
+      icon: laboratoryIcon,
+      borderRadius: 8.525,
+      territoryRadius: 6.525,
+      borderType: UnitBorderType.Rhombus,
     },
     [UnitType.MissileSilo]: {
       icon: missileSiloIcon,
@@ -211,6 +220,8 @@ export class StructureLayer implements Layer {
         return rectDistFN;
       case UnitBorderType.Hexagon:
         return hexDistFN;
+      case UnitBorderType.Rhombus:
+        return rhombusDistFN;
     }
   }
 
