@@ -129,7 +129,7 @@ How to help?
 
 1. Go to the project's Crowdin translation page: [https://crowdin.com/project/openfront-mls](https://crowdin.com/project/openfront-mls)
 2. Login if you already have an account/ Sign up if you don't have one
-3. Select the language you want to translate in/ If your language isn't on the list, create a new topic in "Discussions" about adding the language
+3. Select the language you want to translate in/ If your language isn't on the list, click the "Request New Language" button and enter the language you want added there.
 4. Translate the strings
 
 ### Project Governance
