@@ -2,6 +2,7 @@ import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
+  MessageType,
   Player,
   PlayerID,
   Unit,
@@ -11,17 +12,20 @@ import { TileRef } from "../game/GameMap";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
+import { SAMMissileExecution } from "./SAMMissileExecution";
 import { ShellExecution } from "./ShellExecution";
 
 export class SAMWarshipExecution implements Execution {
   private random: PseudoRandom;
 
   private player: Player;
-  private active = true;
-  private nuclearWarship: Unit = null;
+  private active: boolean = true;
+  private SAMWarship: Unit = null;
   private mg: Game = null;
 
-  private target: Unit = null;
+  private warship_target: Unit = null;
+  private SAM_target: Unit = null;
+  private pseudoRandom: PseudoRandom;
   private pathfinder: PathFinder;
 
   private patrolTile: TileRef;
@@ -41,7 +45,7 @@ export class SAMWarshipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     if (!mg.hasPlayer(this.playerID)) {
-      console.log(`NuclearWarshipExecution: player ${this.playerID} not found`);
+      console.log(`SAMWarshipExecution: player ${this.playerID} not found`);
       this.active = false;
       return;
     }
@@ -52,16 +56,14 @@ export class SAMWarshipExecution implements Execution {
     this.random = new PseudoRandom(mg.ticks());
   }
 
-  // Only for warships with "moveTarget" set
   goToMoveTarget(target: TileRef): boolean {
-    // Patrol unless we are hunting down a tradeship
-    const result = this.pathfinder.nextTile(this.nuclearWarship.tile(), target);
+    const result = this.pathfinder.nextTile(this.SAMWarship.tile(), target);
     switch (result.type) {
       case PathFindResultType.Completed:
-        this.nuclearWarship.setMoveTarget(null);
+        this.SAMWarship.setMoveTarget(null);
         return;
       case PathFindResultType.NextTile:
-        this.nuclearWarship.move(result.tile);
+        this.SAMWarship.move(result.tile);
         break;
       case PathFindResultType.Pending:
         break;
@@ -76,27 +78,25 @@ export class SAMWarshipExecution implements Execution {
       this.lastShellAttack = this.mg.ticks();
       this.mg.addExecution(
         new ShellExecution(
-          this.nuclearWarship.tile(),
-          this.nuclearWarship.owner(),
-          this.nuclearWarship,
-          this.target,
+          this.SAMWarship.tile(),
+          this.SAMWarship.owner(),
+          this.SAMWarship,
+          this.warship_target,
         ),
       );
-      if (!this.target.hasHealth()) {
-        // Don't send multiple shells to target that can be oneshotted
-        this.alreadySentShell.add(this.target);
-        this.target = null;
+      if (!this.warship_target.hasHealth()) {
+        this.alreadySentShell.add(this.warship_target);
+        this.warship_target = null;
         return;
       }
     }
   }
 
   private patrol() {
-    this.nuclearWarship.setWarshipTarget(this.target);
-    if (this.target == null || this.target.type() != UnitType.TradeShip) {
-      // Patrol unless we are hunting down a tradeship
+    this.SAMWarship.setWarshipTarget(this.SAM_target);
+    if (this.SAM_target == null) {
       const result = this.pathfinder.nextTile(
-        this.nuclearWarship.tile(),
+        this.SAMWarship.tile(),
         this.patrolTile,
       );
       switch (result.type) {
@@ -104,7 +104,7 @@ export class SAMWarshipExecution implements Execution {
           this.patrolTile = this.randomTile();
           break;
         case PathFindResultType.NextTile:
-          this.nuclearWarship.move(result.tile);
+          this.SAMWarship.move(result.tile);
           break;
         case PathFindResultType.Pending:
           return;
@@ -116,157 +116,158 @@ export class SAMWarshipExecution implements Execution {
     }
   }
 
-  tick(ticks: number): void {
-    if (this.nuclearWarship == null) {
-      const spawn = this.player.canBuild(
-        UnitType.NuclearWarship,
-        this.patrolTile,
-      );
-      if (spawn == false) {
-        this.active = false;
-        return;
-      }
-      this.nuclearWarship = this.player.buildUnit(
-        UnitType.NuclearWarship,
-        0,
-        spawn,
-        {
-          cooldownDuration: this.mg.config().SiloCooldown(),
-        },
-      );
-      return;
-    }
-    if (!this.nuclearWarship.isActive()) {
-      this.active = false;
-      return;
-    }
-    if (this.target != null && !this.target.isActive()) {
-      this.target = null;
-    }
+  private handleWarshipTargeting(): void {
     const hasPort = this.player.units(UnitType.Port).length > 0;
+
     const ships = this.mg
-      .nearbyUnits(
-        this.nuclearWarship.tile(),
-        130, // Search range
-        [UnitType.TransportShip, UnitType.NuclearWarship, UnitType.TradeShip],
-      )
+      .nearbyUnits(this.SAMWarship.tile(), 130, [
+        UnitType.TransportShip,
+        UnitType.Warship,
+        UnitType.TradeShip,
+        UnitType.SAMWarship,
+        UnitType.NuclearWarship,
+      ])
       .filter(
         ({ unit }) =>
-          unit.owner() !== this.nuclearWarship.owner() &&
-          unit !== this.nuclearWarship &&
-          !unit.owner().isFriendly(this.nuclearWarship.owner()) &&
+          unit.owner() !== this.player &&
+          unit !== this.SAMWarship &&
+          !unit.owner().isFriendly(this.player) &&
           !this.alreadySentShell.has(unit) &&
           (unit.type() !== UnitType.TradeShip || hasPort) &&
           (unit.type() !== UnitType.TradeShip ||
             unit.dstPort()?.owner() !== this.player),
       );
-    console.log(this.nuclearWarship.isCooldown());
-    if (
-      this.nuclearWarship.isCooldown() &&
-      this.nuclearWarship.ticksLeftInCooldown(
-        this.mg.config().SiloCooldown(),
-      ) == 0
-    ) {
-      this.nuclearWarship.setCooldown(false);
-    }
-    this.target =
+
+    this.warship_target =
       ships.sort((a, b) => {
-        const { unit: unitA, distSquared: distA } = a;
-        const { unit: unitB, distSquared: distB } = b;
+        const priority = (unit: Unit): number => {
+          if (
+            [
+              UnitType.Warship,
+              UnitType.NuclearWarship,
+              UnitType.SAMWarship,
+            ].includes(unit.type())
+          )
+            return 0;
+          if (unit.type() === UnitType.TransportShip) return 1;
+          return 2;
+        };
 
-        // Prioritize Nuclear Warships
-        if (
-          unitA.type() === UnitType.NuclearWarship &&
-          unitB.type() !== UnitType.NuclearWarship
-        )
-          return -1;
-        if (
-          unitA.type() !== UnitType.NuclearWarship &&
-          unitB.type() === UnitType.NuclearWarship
-        )
-          return 1;
+        const aScore = priority(a.unit);
+        const bScore = priority(b.unit);
 
-        // Prioritize Warships
-        if (
-          unitA.type() === UnitType.Warship &&
-          unitB.type() !== UnitType.Warship
-        )
-          return -1;
-        if (
-          unitA.type() !== UnitType.Warship &&
-          unitB.type() === UnitType.Warship
-        )
-          return 1;
-
-        // Then favor Transport Ships over Trade Ships
-        if (
-          unitA.type() === UnitType.TransportShip &&
-          unitB.type() !== UnitType.TransportShip
-        )
-          return -1;
-        if (
-          unitA.type() !== UnitType.TransportShip &&
-          unitB.type() === UnitType.TransportShip
-        )
-          return 1;
-
-        // If both are the same type, sort by distance (lower `distSquared` means closer)
-        return distA - distB;
+        if (aScore !== bScore) return aScore - bScore;
+        return a.distSquared - b.distSquared;
       })[0]?.unit ?? null;
+  }
 
-    if (this.nuclearWarship.moveTarget()) {
-      this.goToMoveTarget(this.nuclearWarship.moveTarget());
-      // If we have a "move target" then we cannot target trade ships as it
-      // requires moving.
-      if (this.target && this.target.type() == UnitType.TradeShip) {
-        this.target = null;
+  private handleSAMTargeting(): void {
+    if (!this.pseudoRandom) {
+      this.pseudoRandom = new PseudoRandom(this.SAMWarship.id());
+    }
+
+    const nukes = this.mg
+      .nearbyUnits(this.SAMWarship.tile(), this.searchRange, [
+        UnitType.AtomBomb,
+        UnitType.HydrogenBomb,
+      ])
+      .filter(
+        ({ unit }) =>
+          unit.owner() !== this.player && !this.player.isFriendly(unit.owner()),
+      );
+
+    this.SAM_target =
+      nukes.sort((a, b) => {
+        if (
+          a.unit.type() === UnitType.HydrogenBomb &&
+          b.unit.type() !== UnitType.HydrogenBomb
+        )
+          return -1;
+        if (
+          a.unit.type() !== UnitType.HydrogenBomb &&
+          b.unit.type() === UnitType.HydrogenBomb
+        )
+          return 1;
+        return a.distSquared - b.distSquared;
+      })[0]?.unit ?? null;
+  }
+
+  tick(ticks: number): void {
+    // If not built yet, try spawning the SAM warship
+    if (!this.SAMWarship) {
+      const spawn = this.player.canBuild(UnitType.SAMWarship, this.patrolTile);
+      if (!spawn) {
+        this.active = false;
+        return;
       }
-    } else if (!this.target || this.target.type() != UnitType.TradeShip) {
+      this.SAMWarship = this.player.buildUnit(UnitType.SAMWarship, 0, spawn, {
+        cooldownDuration: this.mg.config().SAMCooldown(),
+      });
+      return;
+    }
+
+    // If unit destroyed
+    if (!this.SAMWarship.isActive()) {
+      this.active = false;
+      return;
+    }
+
+    // Reset invalid targets
+    if (this.warship_target && !this.warship_target.isActive()) {
+      this.warship_target = null;
+    }
+    if (this.warship_target?.owner() === this.player) {
+      this.warship_target = null;
+    }
+
+    this.handleWarshipTargeting();
+    this.handleSAMTargeting();
+
+    if (this.SAMWarship.moveTarget()) {
+      this.goToMoveTarget(this.SAMWarship.moveTarget());
+
+      if (this.SAM_target?.type() === UnitType.TradeShip) {
+        this.SAMWarship = null;
+        return;
+      }
+    } else if (this.SAM_target?.type() !== UnitType.TradeShip) {
       this.patrol();
     }
 
+    this.SAMWarship.setWarshipTarget(this.SAM_target);
+
     if (
-      this.target == null ||
-      !this.target.isActive() ||
-      this.target.owner() == this.player
+      this.warship_target &&
+      this.warship_target.type() !== UnitType.TradeShip
     ) {
-      // In case another destroyer captured or destroyed target
-      this.target = null;
-      return;
-    }
-
-    this.nuclearWarship.setWarshipTarget(this.target);
-
-    // If we have a move target we do not want to go after trading ships
-    if (!this.target) {
-      return;
-    }
-
-    if (this.target.type() != UnitType.TradeShip) {
       this.shoot();
-      return;
     }
 
-    for (let i = 0; i < 2; i++) {
-      // target is trade ship so capture it.
-      const result = this.pathfinder.nextTile(
-        this.nuclearWarship.tile(),
-        this.target.tile(),
-        5,
-      );
-      switch (result.type) {
-        case PathFindResultType.Completed:
-          this.player.captureUnit(this.target);
-          this.target = null;
-          return;
-        case PathFindResultType.NextTile:
-          this.nuclearWarship.move(result.tile);
-          break;
-        case PathFindResultType.Pending:
-          break;
-        case PathFindResultType.PathNotFound:
-          consolex.log(`path not found to target`);
-          break;
+    if (
+      this.SAM_target &&
+      !this.SAMWarship.isCooldown() &&
+      !this.SAM_target.targetedBySAM()
+    ) {
+      this.SAMWarship.setCooldown(true);
+      const hit =
+        this.pseudoRandom.next() < this.mg.config().samHittingChance();
+
+      if (!hit) {
+        this.mg.displayMessage(
+          `Missile failed to intercept ${this.SAM_target.type()}`,
+          MessageType.ERROR,
+          this.SAMWarship.owner().id(),
+        );
+      } else {
+        this.SAM_target.setTargetedBySAM(true);
+        this.mg.addExecution(
+          new SAMMissileExecution(
+            this.SAMWarship.tile(),
+            this.SAMWarship.owner(),
+            this.SAMWarship,
+            this.SAM_target,
+          ),
+        );
       }
     }
   }

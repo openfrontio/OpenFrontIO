@@ -254,14 +254,23 @@ export class DefaultConfig implements Config {
                       1_000_000,
                 ),
           territoryBound: false,
-          maxHealth: 500,
+          maxHealth: 1000,
         };
       case UnitType.SAMWarship:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.infiniteGold() ? 0 : 1,
+            p.type() == PlayerType.Human && this.infiniteGold()
+              ? 0
+              : Math.min(
+                  12_000_000,
+                  (p.unitsIncludingConstruction(UnitType.SAMWarship).length +
+                    1) *
+                    3_000_000 +
+                    p.unitsIncludingConstruction(UnitType.SAMLauncher).length *
+                      1_000_000,
+                ),
           territoryBound: false,
-          maxHealth: 500,
+          maxHealth: 1000,
         };
       case UnitType.Shell:
         return {
@@ -366,6 +375,16 @@ export class DefaultConfig implements Config {
                     p.unitsIncludingConstruction(UnitType.City).length,
                   ) * 125_000,
                 ),
+          territoryBound: true,
+          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+        };
+      case UnitType.Laboratory:
+        return {
+          cost: (p: Player) =>
+            p.type() == PlayerType.Human && this.infiniteGold()
+              ? 0
+              : (p.unitsIncludingConstruction(UnitType.Laboratory).length + 1) *
+                500_000,
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
         };

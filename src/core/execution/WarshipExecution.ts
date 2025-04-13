@@ -138,7 +138,13 @@ export class WarshipExecution implements Execution {
       .nearbyUnits(
         this.warship.tile(),
         130, // Search range
-        [UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip],
+        [
+          UnitType.TransportShip,
+          UnitType.Warship,
+          UnitType.TradeShip,
+          UnitType.SAMWarship,
+          UnitType.NuclearWarship,
+        ],
       )
       .filter(
         ({ unit }) =>
@@ -158,13 +164,21 @@ export class WarshipExecution implements Execution {
 
         // Prioritize Warships
         if (
-          unitA.type() === UnitType.Warship &&
-          unitB.type() !== UnitType.Warship
+          unitA.type() ===
+            (UnitType.Warship ||
+              UnitType.NuclearWarship ||
+              UnitType.SAMWarship) &&
+          unitB.type() !==
+            (UnitType.Warship || UnitType.NuclearWarship || UnitType.SAMWarship)
         )
           return -1;
         if (
-          unitA.type() !== UnitType.Warship &&
-          unitB.type() === UnitType.Warship
+          unitA.type() !==
+            (UnitType.Warship ||
+              UnitType.NuclearWarship ||
+              UnitType.SAMWarship) &&
+          unitB.type() ===
+            (UnitType.Warship || UnitType.NuclearWarship || UnitType.SAMWarship)
         )
           return 1;
 

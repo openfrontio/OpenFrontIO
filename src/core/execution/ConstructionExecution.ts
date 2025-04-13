@@ -11,12 +11,14 @@ import {
 import { TileRef } from "../game/GameMap";
 import { CityExecution } from "./CityExecution";
 import { DefensePostExecution } from "./DefensePostExecution";
+import { LaboratoryExecution } from "./LaboratoyExecution";
 import { MirvExecution } from "./MIRVExecution";
 import { MissileSiloExecution } from "./MissileSiloExecution";
 import { NuclearWarshipExecution } from "./NuclearWarshipExecution";
 import { NukeExecution } from "./NukeExecution";
 import { PortExecution } from "./PortExecution";
 import { SAMLauncherExecution } from "./SAMLauncherExecution";
+import { SAMWarshipExecution } from "./SAMWarshipExecution";
 import { WarshipExecution } from "./WarshipExecution";
 
 export class ConstructionExecution implements Execution {
@@ -122,15 +124,16 @@ export class ConstructionExecution implements Execution {
       case UnitType.City:
         this.mg.addExecution(new CityExecution(player.id(), this.tile));
         break;
+      case UnitType.Laboratory:
+        this.mg.addExecution(new LaboratoryExecution(player.id(), this.tile));
+        break;
       case UnitType.NuclearWarship:
         this.mg.addExecution(
           new NuclearWarshipExecution(player.id(), this.tile),
         );
         break;
       case UnitType.SAMWarship:
-        this.mg.addExecution(
-          new NuclearWarshipExecution(player.id(), this.tile),
-        );
+        this.mg.addExecution(new SAMWarshipExecution(player.id(), this.tile));
         break;
       default:
         throw Error(`unit type ${this.constructionType} not supported`);

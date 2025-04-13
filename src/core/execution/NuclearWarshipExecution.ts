@@ -145,22 +145,24 @@ export class NuclearWarshipExecution implements Execution {
     }
     const hasPort = this.player.units(UnitType.Port).length > 0;
     const ships = this.mg
-      .nearbyUnits(
-        this.nuclearWarship.tile(),
-        130, // Search range
-        [UnitType.TransportShip, UnitType.NuclearWarship, UnitType.TradeShip],
-      )
+      .nearbyUnits(this.nuclearWarship.tile(), 130, [
+        UnitType.TransportShip,
+        UnitType.Warship,
+        UnitType.TradeShip,
+        UnitType.SAMWarship,
+        UnitType.NuclearWarship,
+      ])
       .filter(
         ({ unit }) =>
-          unit.owner() !== this.nuclearWarship.owner() &&
+          unit.owner() !== this.player &&
           unit !== this.nuclearWarship &&
-          !unit.owner().isFriendly(this.nuclearWarship.owner()) &&
+          !unit.owner().isFriendly(this.player) &&
           !this.alreadySentShell.has(unit) &&
           (unit.type() !== UnitType.TradeShip || hasPort) &&
           (unit.type() !== UnitType.TradeShip ||
             unit.dstPort()?.owner() !== this.player),
       );
-    console.log(this.nuclearWarship.isCooldown());
+
     if (
       this.nuclearWarship.isCooldown() &&
       this.nuclearWarship.ticksLeftInCooldown(
@@ -171,47 +173,24 @@ export class NuclearWarshipExecution implements Execution {
     }
     this.target =
       ships.sort((a, b) => {
-        const { unit: unitA, distSquared: distA } = a;
-        const { unit: unitB, distSquared: distB } = b;
+        const priority = (unit: Unit): number => {
+          if (
+            [
+              UnitType.Warship,
+              UnitType.NuclearWarship,
+              UnitType.SAMWarship,
+            ].includes(unit.type())
+          )
+            return 0;
+          if (unit.type() === UnitType.TransportShip) return 1;
+          return 2;
+        };
 
-        // Prioritize Nuclear Warships
-        if (
-          unitA.type() === UnitType.NuclearWarship &&
-          unitB.type() !== UnitType.NuclearWarship
-        )
-          return -1;
-        if (
-          unitA.type() !== UnitType.NuclearWarship &&
-          unitB.type() === UnitType.NuclearWarship
-        )
-          return 1;
+        const aScore = priority(a.unit);
+        const bScore = priority(b.unit);
 
-        // Prioritize Warships
-        if (
-          unitA.type() === UnitType.Warship &&
-          unitB.type() !== UnitType.Warship
-        )
-          return -1;
-        if (
-          unitA.type() !== UnitType.Warship &&
-          unitB.type() === UnitType.Warship
-        )
-          return 1;
-
-        // Then favor Transport Ships over Trade Ships
-        if (
-          unitA.type() === UnitType.TransportShip &&
-          unitB.type() !== UnitType.TransportShip
-        )
-          return -1;
-        if (
-          unitA.type() !== UnitType.TransportShip &&
-          unitB.type() === UnitType.TransportShip
-        )
-          return 1;
-
-        // If both are the same type, sort by distance (lower `distSquared` means closer)
-        return distA - distB;
+        if (aScore !== bScore) return aScore - bScore;
+        return a.distSquared - b.distSquared;
       })[0]?.unit ?? null;
 
     if (this.nuclearWarship.moveTarget()) {

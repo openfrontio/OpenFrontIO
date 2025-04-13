@@ -715,6 +715,16 @@ export class PlayerImpl implements Player {
   }
 
   canBuild(unitType: UnitType, targetTile: TileRef): TileRef | false {
+    // prevent the building of nukes if not having enough labs
+    if (
+      (this.units(UnitType.Laboratory).length < 1 &&
+        unitType == UnitType.AtomBomb) ||
+      (this.units(UnitType.Laboratory).length < 2 &&
+        unitType == UnitType.HydrogenBomb) ||
+      (this.units(UnitType.Laboratory).length < 3 && unitType == UnitType.MIRV)
+    ) {
+      return false;
+    }
     // prevent the building of nukes and nuke related buildings
     if (this.mg.config().disableNukes()) {
       if (
@@ -726,7 +736,8 @@ export class PlayerImpl implements Player {
         unitType === UnitType.SAMLauncher ||
         unitType === UnitType.SAMWarship ||
         unitType === UnitType.SAMMissile ||
-        unitType === UnitType.MIRVWarhead
+        unitType === UnitType.MIRVWarhead ||
+        unitType === UnitType.Laboratory
       ) {
         return false;
       }
@@ -764,6 +775,7 @@ export class PlayerImpl implements Player {
       case UnitType.DefensePost:
       case UnitType.SAMLauncher:
       case UnitType.City:
+      case UnitType.Laboratory:
       case UnitType.Construction:
         return this.landBasedStructureSpawn(targetTile);
       default:
