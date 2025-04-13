@@ -11,6 +11,7 @@ import {
 import { TileRef } from "../game/GameMap";
 import { CityExecution } from "./CityExecution";
 import { DefensePostExecution } from "./DefensePostExecution";
+import { LaboratoryExecution } from "./LaboratoyExecution";
 import { MirvExecution } from "./MIRVExecution";
 import { MissileSiloExecution } from "./MissileSiloExecution";
 import { NuclearWarshipExecution } from "./NuclearWarshipExecution";
@@ -122,6 +123,9 @@ export class ConstructionExecution implements Execution {
         break;
       case UnitType.City:
         this.mg.addExecution(new CityExecution(player.id(), this.tile));
+        break;
+      case UnitType.Laboratory:
+        this.mg.addExecution(new LaboratoryExecution(player.id(), this.tile));
         break;
       case UnitType.NuclearWarship:
         this.mg.addExecution(
