@@ -401,6 +401,25 @@ export function hexDistFN(
   }
 }
 
+export function rhombusDistFN(
+  root: TileRef,
+  dist: number,
+  center: boolean = false,
+): (gm: GameMap, tile: TileRef) => boolean {
+  const dist2 = dist * dist;
+  const k = Math.SQRT2 - 1; // ≈ 0.414, pour adoucir les coins (octogone régulier)
+
+  return (gm: GameMap, n: TileRef) => {
+    const rootX = center ? gm.x(root) - 0.5 : gm.x(root);
+    const rootY = center ? gm.y(root) - 0.5 : gm.y(root);
+    const dx = Math.abs(gm.x(n) - rootX);
+    const dy = Math.abs(gm.y(n) - rootY);
+
+    // Forme en octogone : base diagonale + lissage circulaire dans les coins
+    return dx + dy <= dist * (1 + k) || dx * dx + dy * dy <= dist2;
+  };
+}
+
 export function andFN(
   x: (gm: GameMap, tile: TileRef) => boolean,
   y: (gm: GameMap, tile: TileRef) => boolean,
