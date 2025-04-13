@@ -98,6 +98,7 @@ export enum UnitType {
   SAMLauncher = "SAM Launcher",
   SAMWarship = "SAM Warship",
   City = "City",
+  Laboratory = "Laboratory",
   NuclearWarship = "Nuclear Warship",
   MIRV = "MIRV",
   MIRVWarhead = "MIRV Warhead",
