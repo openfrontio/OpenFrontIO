@@ -8,12 +8,22 @@
   "main": {
     "title": "OpenFront (ALPHA)",
     "join_discord": "Join the Discord!",
+    "support_us": "Support Us!",
     "create_lobby": "Create Lobby",
     "join_lobby": "Join Lobby",
     "single_player": "Single Player",
     "instructions": "Instructions",
     "how_to_play": "How to Play",
     "wiki": "Wiki"
+  },
+  "support": {
+    "title": "Support OpenFront",
+    "greeting": "Hey OpenFront community,",
+    "p1": "I need your help to keep <strong>OpenFront</strong> alive. An NFT game studio approached me with an offer to acquire the game, which I felt would shift it toward a <strong>pay-to-win</strong> model. I said no because I’m committed to keeping OpenFront <strong>free, fair, and true</strong> to what we all value. Now, they’ve forked my open-source code and are working on their own version of the game.",
+    "p2": "For the last 6 weeks, I’ve been working 7 days a week, using up all my vacation time to fight for OpenFront. My vacation’s over, and I’m out of time—without support, I’ll have to return to my day job. But <strong>with your help, I can quit my job and work on this full-time.</strong> It’s the only way I can keep up with a fully funded studio and make OpenFront the game we all want.",
+    "p3": "I’ve launched a <strong>Patreon</strong> to secure OpenFront’s future. If you believe in a game that’s <strong>free, fair, and community-driven</strong>—not a pay-to-win alternative—please consider supporting me there. Every bit helps me keep going and proves what our community stands for.",
+    "closing": "Let’s protect OpenFront together.<br />Thank you for standing with me!",
+    "button": "Support on Patreon"
   },
   "help_modal": {
     "hotkeys": "Hotkeys",

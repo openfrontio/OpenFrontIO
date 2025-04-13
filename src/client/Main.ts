@@ -22,6 +22,7 @@ import { LanguageModal } from "./LanguageModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import { SupportUsModal } from "./SupportUsModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import { generateCryptoRandomUUID } from "./Utils";
@@ -117,6 +118,16 @@ class Client {
     document.getElementById("help-button").addEventListener("click", () => {
       hlpModal.open();
     });
+
+    const supportUsModal = document.querySelector(
+      "support-us-modal",
+    ) as SupportUsModal;
+    supportUsModal instanceof SupportUsModal;
+    document
+      .getElementById("support-us-button")
+      .addEventListener("click", () => {
+        supportUsModal.open();
+      });
 
     const hostModal = document.querySelector(
       "host-lobby-modal",
