@@ -269,7 +269,9 @@ export class RadialMenu implements Layer {
   tick() {
     // Only update when menu is visible
     if (this.isVisible && this.clickedCell) {
-      const myPlayer = this.g.playerViews().find((p) => p.clientID() == this.clientID);
+      const myPlayer = this.g
+        .playerViews()
+        .find((p) => p.clientID() == this.clientID);
       if (myPlayer && myPlayer.isAlive()) {
         const tile = this.g.ref(this.clickedCell.x, this.clickedCell.y);
         myPlayer.actions(tile).then((actions) => {
