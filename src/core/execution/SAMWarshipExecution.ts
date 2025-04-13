@@ -249,9 +249,10 @@ export class SAMWarshipExecution implements Execution {
       !this.SAM_target.targetedBySAM()
     ) {
       this.SAMWarship.setCooldown(true);
-      const hit =
-        this.pseudoRandom.next() < this.mg.config().samHittingChance();
-
+      let hit = true;
+      if (this.SAM_target.type() != UnitType.AtomBomb) {
+        hit = this.pseudoRandom.next() < this.mg.config().samHittingChance();
+      }
       if (!hit) {
         this.mg.displayMessage(
           `Missile failed to intercept ${this.SAM_target.type()}`,
