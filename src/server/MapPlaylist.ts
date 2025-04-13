@@ -1,4 +1,4 @@
-import { GameMapType } from "../core/game/Game";
+import { GameMapType, GameMode } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
 
 enum PlaylistType {
@@ -9,6 +9,9 @@ enum PlaylistType {
 const random = new PseudoRandom(123);
 
 export class MapPlaylist {
+  private gameModeRotation = [GameMode.FFA, GameMode.FFA, GameMode.Team];
+  private currentGameModeIndex = 0;
+
   private mapsPlaylistBig: GameMapType[] = [];
   private mapsPlaylistSmall: GameMapType[] = [];
   private currentPlaylistCounter = 0;
@@ -18,6 +21,13 @@ export class MapPlaylist {
     const playlistType: PlaylistType = this.getNextPlaylistType();
     const mapsPlaylist: GameMapType[] = this.getNextMapsPlayList(playlistType);
     return mapsPlaylist.shift()!;
+  }
+
+  public getNextGameMode(): GameMode {
+    const nextGameMode = this.gameModeRotation[this.currentGameModeIndex];
+    this.currentGameModeIndex =
+      (this.currentGameModeIndex + 1) % this.gameModeRotation.length;
+    return nextGameMode;
   }
 
   private getNextMapsPlayList(playlistType: PlaylistType): GameMapType[] {

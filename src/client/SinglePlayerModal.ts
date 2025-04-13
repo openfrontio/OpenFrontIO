@@ -10,6 +10,7 @@ import "./components/baseComponents/Modal";
 import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
+import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
 
@@ -334,6 +335,10 @@ export class SinglePlayerModal extends LitElement {
       consolex.warn("Username input element not found");
     }
 
+    const flagInput = document.querySelector("flag-input") as FlagInput;
+    if (!flagInput) {
+      consolex.warn("Flag input element not found");
+    }
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
@@ -346,6 +351,10 @@ export class SinglePlayerModal extends LitElement {
                 playerID: generateID(),
                 clientID,
                 username: usernameInput.getCurrentUsername(),
+                flag:
+                  flagInput.getCurrentFlag() == "xx"
+                    ? ""
+                    : flagInput.getCurrentFlag(),
               },
             ],
             config: {

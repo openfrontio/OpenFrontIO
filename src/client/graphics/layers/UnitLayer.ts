@@ -28,8 +28,10 @@ enum Relationship {
 export class UnitLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
+  private transportShipTrailCanvas: HTMLCanvasElement;
+  private transportShipTrailContext: CanvasRenderingContext2D;
 
-  private boatToTrail = new Map<UnitView, Set<TileRef>>();
+  private boatToTrail = new Map<UnitView, TileRef[]>();
 
   private theme: Theme = null;
 
@@ -161,6 +163,13 @@ export class UnitLayer implements Layer {
 
   renderLayer(context: CanvasRenderingContext2D) {
     context.drawImage(
+      this.transportShipTrailCanvas,
+      -this.game.width() / 2,
+      -this.game.height() / 2,
+      this.game.width(),
+      this.game.height(),
+    );
+    context.drawImage(
       this.canvas,
       -this.game.width() / 2,
       -this.game.height() / 2,
@@ -177,9 +186,14 @@ export class UnitLayer implements Layer {
   redraw() {
     this.canvas = document.createElement("canvas");
     this.context = this.canvas.getContext("2d");
+    this.transportShipTrailCanvas = document.createElement("canvas");
+    this.transportShipTrailContext =
+      this.transportShipTrailCanvas.getContext("2d");
 
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
+    this.transportShipTrailCanvas.width = this.game.width();
+    this.transportShipTrailCanvas.height = this.game.height();
     this.game
       ?.updatesSinceLastTick()
       ?.[GameUpdateType.Unit]?.forEach((unit) => {
@@ -478,32 +492,32 @@ export class UnitLayer implements Layer {
     const rel = this.relationship(unit);
 
     if (!this.boatToTrail.has(unit)) {
-      this.boatToTrail.set(unit, new Set<TileRef>());
+      this.boatToTrail.set(unit, []);
     }
     const trail = this.boatToTrail.get(unit);
-    trail.add(unit.lastTile());
+    trail.push(unit.lastTile());
 
     // Clear previous area
     for (const t of this.game.bfs(
       unit.lastTile(),
-      manhattanDistFN(unit.lastTile(), 3),
+      manhattanDistFN(unit.lastTile(), 2),
     )) {
       this.clearCell(this.game.x(t), this.game.y(t));
     }
 
     if (unit.isActive()) {
       // Paint trail
-      for (const t of trail) {
+      for (const t of trail.slice(-1)) {
         this.paintCell(
           this.game.x(t),
           this.game.y(t),
           rel,
           this.theme.territoryColor(unit.owner()),
           150,
+          this.transportShipTrailContext,
         );
       }
 
-      // Paint border
       for (const t of this.game.bfs(
         unit.tile(),
         manhattanDistFN(unit.tile(), 2),
@@ -517,7 +531,6 @@ export class UnitLayer implements Layer {
         );
       }
 
-      // Paint territory
       for (const t of this.game.bfs(
         unit.tile(),
         manhattanDistFN(unit.tile(), 1),
@@ -532,9 +545,30 @@ export class UnitLayer implements Layer {
       }
     } else {
       for (const t of trail) {
-        this.clearCell(this.game.x(t), this.game.y(t));
+        this.clearCell(
+          this.game.x(t),
+          this.game.y(t),
+          this.transportShipTrailContext,
+        );
       }
       this.boatToTrail.delete(unit);
+
+      // Repaint overlapping trails
+      const trailSet = new Set(trail);
+      for (const [other, trail] of this.boatToTrail) {
+        for (const t of trail) {
+          if (trailSet.has(t)) {
+            this.paintCell(
+              this.game.x(t),
+              this.game.y(t),
+              rel,
+              this.theme.territoryColor(other.owner()),
+              150,
+              this.transportShipTrailContext,
+            );
+          }
+        }
+      }
     }
   }
 
@@ -544,27 +578,32 @@ export class UnitLayer implements Layer {
     relationship: Relationship,
     color: Colord,
     alpha: number,
+    context: CanvasRenderingContext2D = this.context,
   ) {
-    this.clearCell(x, y);
+    this.clearCell(x, y, context);
     if (this.alternateView) {
       switch (relationship) {
         case Relationship.Self:
-          this.context.fillStyle = this.theme.selfColor().toRgbString();
+          context.fillStyle = this.theme.selfColor().toRgbString();
           break;
         case Relationship.Ally:
-          this.context.fillStyle = this.theme.allyColor().toRgbString();
+          context.fillStyle = this.theme.allyColor().toRgbString();
           break;
         case Relationship.Enemy:
-          this.context.fillStyle = this.theme.enemyColor().toRgbString();
+          context.fillStyle = this.theme.enemyColor().toRgbString();
           break;
       }
     } else {
-      this.context.fillStyle = color.alpha(alpha / 255).toRgbString();
+      context.fillStyle = color.alpha(alpha / 255).toRgbString();
     }
-    this.context.fillRect(x, y, 1, 1);
+    context.fillRect(x, y, 1, 1);
   }
 
-  clearCell(x: number, y: number) {
-    this.context.clearRect(x, y, 1, 1);
+  clearCell(
+    x: number,
+    y: number,
+    context: CanvasRenderingContext2D = this.context,
+  ) {
+    context.clearRect(x, y, 1, 1);
   }
 }

@@ -11,11 +11,7 @@ import {
   ServerStartGameMessageSchema,
   Turn,
 } from "../core/Schemas";
-import {
-  createGameRecord,
-  decompressGameRecord,
-  generateID,
-} from "../core/Util";
+import { createGameRecord, decompressGameRecord } from "../core/Util";
 import { LobbyConfig } from "./ClientGameRunner";
 import { getPersistentIDFromCookie } from "./Main";
 
@@ -56,14 +52,6 @@ export class LocalServer {
         gameID: this.lobbyConfig.gameStartInfo.gameID,
         gameStartInfo: this.lobbyConfig.gameStartInfo,
         turns: this.turns,
-        players: [
-          {
-            flag: this.lobbyConfig.flag,
-            playerID: generateID(),
-            clientID: this.lobbyConfig.clientID,
-            username: this.lobbyConfig.playerName,
-          },
-        ],
       }),
     );
   }
