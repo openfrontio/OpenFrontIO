@@ -234,10 +234,12 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           Cities: ${player.units(UnitType.City).length}
         </div>
         <div class="text-sm opacity-80" translate="no">
-          Missile launchers: ${player.units(UnitType.MissileSilo).length}
+          Missile launchers:
+          ${player.units(UnitType.MissileSilo, UnitType.NuclearWarship).length}
         </div>
         <div class="text-sm opacity-80" translate="no">
-          SAMs: ${player.units(UnitType.SAMLauncher).length}
+          SAMs:
+          ${player.units(UnitType.SAMLauncher, UnitType.SAMWarship).length}
         </div>
         ${relationHtml}
       </div>
