@@ -24,7 +24,7 @@ const server = http.createServer(app);
 const metricsApp = express();
 const metricsServer = http.createServer(metricsApp);
 
-const log = logger.child({ component: "Master" });
+const log = logger.child({ comp: "m" });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

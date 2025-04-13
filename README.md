@@ -9,6 +9,7 @@
 </p>
 
 ![Prettier Check](https://github.com/openfrontio/OpenFrontIO/actions/workflows/prettier.yml/badge.svg)
+[![Crowdin](https://badges.crowdin.net/openfront-mls/localized.svg)](https://crowdin.com/project/openfront-mls)
 
 OpenFront is an online real-time strategy game focused on territorial control and alliance building. Players compete to expand their territory, build structures, and form strategic alliances in various maps based on real-world geography.
 
@@ -126,9 +127,9 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 Translators are welcome! Please feel free to help translate into your language.
 How to help?
 
-1. Go to the project's Crowdin translation page: [https://crowdin.com/project/openfrontio](https://crowdin.com/project/openfrontio)
+1. Go to the project's Crowdin translation page: [https://crowdin.com/project/openfront-mls](https://crowdin.com/project/openfront-mls)
 2. Login if you already have an account/ Sign up if you don't have one
-3. Select the language you want to translate in/ If your language isn't on the list, create a new topic in "Discussions" about adding the language
+3. Select the language you want to translate in/ If your language isn't on the list, click the "Request New Language" button and enter the language you want added there.
 4. Translate the strings
 
 ### Project Governance

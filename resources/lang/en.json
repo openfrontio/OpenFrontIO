@@ -175,5 +175,8 @@
   "game_mode": {
     "ffa": "Free for All",
     "teams": "Teams"
+  },
+  "select_lang": {
+    "title": "Select Language"
   }
 }
