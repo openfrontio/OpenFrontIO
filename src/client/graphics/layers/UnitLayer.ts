@@ -249,6 +249,10 @@ export class UnitLayer implements Layer {
     }
   }
 
+  private randomInt(min: number, max: number): number {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
   private handleWarShipEvent(unit: UnitView) {
     const rel = this.relationship(unit);
 
@@ -292,7 +296,21 @@ export class UnitLayer implements Layer {
           this.game.x(t),
           this.game.y(t),
           rel,
-          colord({ r: 0, b: 0, g: 255 }),
+          colord({ r: this.randomInt(100, 255), b: 0, g: 0 }),
+          255,
+        );
+      }
+    } else if (unit.type() == UnitType.SAMWarship) {
+      for (const t of this.game.bfs(
+        unit.tile(),
+        manhattanDistFN(unit.tile(), 5),
+      )) {
+        const random = this.randomInt(0, 255);
+        this.paintCell(
+          this.game.x(t),
+          this.game.y(t),
+          rel,
+          colord({ r: 0, b: random, g: 255 - random }),
           255,
         );
       }
