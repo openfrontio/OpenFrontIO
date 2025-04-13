@@ -1,5 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { translateText } from "../client/Utils";
 
 @customElement("language-modal")
 export class LanguageModal extends LitElement {
@@ -8,35 +9,55 @@ export class LanguageModal extends LitElement {
   @property({ type: String }) currentLang = "en";
 
   static styles = css`
-    .modal {
+    .c-modal {
       position: fixed;
-      inset: 0;
+      padding: 1rem;
+      z-index: 1000;
+      left: 0;
+      bottom: 0;
+      right: 0;
+      top: 0;
       background-color: rgba(0, 0, 0, 0.5);
-      z-index: 50;
+      overflow-y: auto;
       display: flex;
-      justify-content: center;
       align-items: center;
-    }
-    .hidden {
-      display: none;
-    }
-    .modal-content {
-      background: white;
-      border-radius: 0.5rem;
-      box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
-      padding: 1.5rem;
-      width: 24rem;
-      max-width: 100%;
-      max-height: 90vh;
-      display: flex;
-      flex-direction: column;
+      justify-content: center;
     }
 
-    .language-list {
+    .c-modal__wrapper {
+      background: #23232382;
+      border-radius: 8px;
+      min-width: 340px;
+      max-width: 480px;
+      width: 100%;
+    }
+
+    .c-modal__header {
+      position: relative;
+      border-top-left-radius: 4px;
+      border-top-right-radius: 4px;
+      font-size: 18px;
+      background: #000000a1;
+      text-align: center;
+      color: #fff;
+      padding: 1rem 2.4rem 1rem 1.4rem;
+    }
+
+    .c-modal__close {
+      cursor: pointer;
+      position: absolute;
+      right: 1rem;
+      top: 1rem;
+      font-weight: bold;
+    }
+
+    .c-modal__content {
+      position: relative;
+      color: #fff;
+      padding: 1.4rem;
+      max-height: 60dvh;
       overflow-y: auto;
-      flex: 1;
-      min-height: 0;
-      margin-bottom: 1rem;
+      backdrop-filter: blur(8px);
     }
 
     .lang-button {
@@ -44,19 +65,23 @@ export class LanguageModal extends LitElement {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      padding: 0.5rem;
+      padding: 0.5rem 1rem;
+      margin-bottom: 0.5rem;
       border-radius: 0.375rem;
       transition: background-color 0.3s;
-      border: 1px solid #ccc;
-      background-color: #f8f8f8;
+      border: 1px solid #aaa;
+      background-color: #505050;
+      color: #fff;
     }
 
     .lang-button:hover {
-      background-color: #ebf8ff;
+      background-color: #969696;
     }
 
     .lang-button.active {
-      background-color: #bee3f8;
+      background-color: #aaaaaa;
+      border-color: #bbb;
+      color: #000;
     }
 
     .flag-icon {
@@ -65,30 +90,44 @@ export class LanguageModal extends LitElement {
       object-fit: contain;
     }
 
-    .close-button {
-      background-color: #3182ce;
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 0.375rem;
-      cursor: pointer;
-      font-weight: bold;
-      border: none;
+    @keyframes rainbow {
+      0% {
+        background-color: #990033;
+      }
+      20% {
+        background-color: #996600;
+      }
+      40% {
+        background-color: #336600;
+      }
+      60% {
+        background-color: #008080;
+      }
+      80% {
+        background-color: #1c3f99;
+      }
+      100% {
+        background-color: #5e0099;
+      }
     }
 
-    .close-button:hover {
-      background-color: #2b6cb0;
+    .lang-button.debug {
+      animation: rainbow 10s infinite;
+      font-weight: bold;
+      color: #fff;
+      border: 2px dashed aqua;
+      box-shadow: 0 0 4px aqua;
     }
   `;
 
-  private selectLanguage(lang: string) {
+  private close = () => {
     this.dispatchEvent(
-      new CustomEvent("language-selected", {
-        detail: { lang },
+      new CustomEvent("close-modal", {
         bubbles: true,
         composed: true,
       }),
     );
-  }
+  };
 
   updated(changedProps: Map<string, unknown>) {
     if (changedProps.has("visible")) {
@@ -105,18 +144,36 @@ export class LanguageModal extends LitElement {
     document.body.style.overflow = "auto";
   }
 
-  render() {
-    return html`
-      <div class="modal ${this.visible ? "" : "hidden"}">
-        <div class="modal-content">
-          <h2 class="text-xl font-semibold mb-4">Select Language</h2>
+  private selectLanguage = (lang: string) => {
+    this.dispatchEvent(
+      new CustomEvent("language-selected", {
+        detail: { lang },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  };
 
-          <div class="language-list">
+  render() {
+    if (!this.visible) return null;
+
+    return html`
+      <aside class="c-modal">
+        <div class="c-modal__wrapper">
+          <header class="c-modal__header">
+            ${translateText("select_lang.title")}
+            <div class="c-modal__close" @click=${this.close}>X</div>
+          </header>
+
+          <section class="c-modal__content">
             ${this.languageList.map((lang) => {
               const isActive = this.currentLang === lang.code;
               return html`
                 <button
-                  class="lang-button ${isActive ? "active" : ""}"
+                  class="lang-button ${isActive ? "active" : ""} ${lang.code ===
+                  "debug"
+                    ? "debug"
+                    : ""}"
                   @click=${() => this.selectLanguage(lang.code)}
                 >
                   <img
@@ -128,22 +185,9 @@ export class LanguageModal extends LitElement {
                 </button>
               `;
             })}
-          </div>
-
-          <button
-            class="close-button"
-            @click=${() =>
-              this.dispatchEvent(
-                new CustomEvent("close-modal", {
-                  bubbles: true,
-                  composed: true,
-                }),
-              )}
-          >
-            Close
-          </button>
+          </section>
         </div>
-      </div>
+      </aside>
     `;
   }
 }
