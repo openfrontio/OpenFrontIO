@@ -173,5 +173,8 @@
   "game_mode": {
     "ffa": "バトルロワイヤル",
     "teams": "チーム戦"
+  },
+  "select_lang": {
+    "title": "言語を選択"
   }
 }

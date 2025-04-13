@@ -1,6 +1,4 @@
 export class UserSettings {
-  private focusedLocked_: boolean | null = null;
-
   get(key: string, defaultValue: boolean) {
     const value = localStorage.getItem(key);
     if (!value) return defaultValue;
@@ -27,10 +25,9 @@ export class UserSettings {
   }
 
   focusLocked() {
-    if (this.focusedLocked_ === null) {
-      this.focusedLocked_ = this.get("settings.focusLocked", true);
-    }
-    return this.focusedLocked_;
+    return false;
+    // TODO: renable when performance issues are fixed.
+    this.get("settings.focusLocked", true);
   }
 
   toggleLeftClickOpenMenu() {
@@ -38,7 +35,6 @@ export class UserSettings {
   }
 
   toggleFocusLocked() {
-    this.focusLocked = null;
     this.set("settings.focusLocked", !this.focusLocked());
   }
 
