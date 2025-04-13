@@ -267,7 +267,34 @@ export class RadialMenu implements Layer {
   }
 
   tick() {
-    // Update logic if needed
+    // Only update when menu is visible
+    if (this.isVisible && this.clickedCell) {
+      const myPlayer = this.g.playerViews().find((p) => p.clientID() == this.clientID);
+      if (myPlayer && myPlayer.isAlive()) {
+        const tile = this.g.ref(this.clickedCell.x, this.clickedCell.y);
+        myPlayer.actions(tile).then((actions) => {
+          // Only update the boat option to avoid unnecessary processing
+          if (actions.canBoat) {
+            this.activateMenuElement(Slot.Boat, "#3f6ab1", boatIcon, () => {
+              this.eventBus.emit(
+                new SendBoatAttackIntentEvent(
+                  this.g.owner(tile).id(),
+                  this.clickedCell,
+                  this.uiState.attackRatio * myPlayer.troops(),
+                ),
+              );
+            });
+          } else {
+            // Disable the boat option if no longer available
+            const menuItem = this.menuItems.get(Slot.Boat);
+            menuItem.disabled = true;
+            menuItem.color = null;
+            menuItem.icon = null;
+            this.updateMenuItemState(menuItem);
+          }
+        });
+      }
+    }
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
