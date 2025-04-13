@@ -184,7 +184,6 @@
   color: #aaa;
 }
 
-/* 数値入力 */
 .setting-input.number {
   width: 80px;
   padding: 6px 8px;
@@ -194,7 +193,6 @@
   color: #000000;
 }
 
-/* スイッチ全体 */
 .switch {
   position: relative;
   display: inline-block;
