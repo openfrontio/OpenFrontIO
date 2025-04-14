@@ -154,6 +154,7 @@ const NukeStatsSchema = z.record(NukesEnum, z.number());
 
 export const PlayerStatsSchema = z.object({
   sentNukes: z.record(ID, NukeStatsSchema),
+  numberOfBetrayals: z.number(),
 });
 
 export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
