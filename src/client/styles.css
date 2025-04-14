@@ -8,6 +8,7 @@
 @import url("./styles/layout/container.css");
 @import url("./styles/components/button.css");
 @import url("./styles/components/modal.css");
+@import url("./styles/components/setting.css");
 @import url("./styles/components/controls.css");
 * {
   -webkit-box-sizing: border-box;
