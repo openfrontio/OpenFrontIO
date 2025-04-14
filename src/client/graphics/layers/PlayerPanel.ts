@@ -145,14 +145,12 @@ export class PlayerPanel extends LitElement implements Layer {
     this.eventBus.on(MouseUpEvent, (e: MouseEvent) => this.hide());
   }
 
-  tick() {
+  async tick() {
     if (this.isVisible && this.tile) {
       const myPlayer = this.g.myPlayer();
-      if (myPlayer && myPlayer.isAlive()) {
-        myPlayer.actions(this.tile).then((actions) => {
-          this.actions = actions;
-          this.requestUpdate();
-        });
+      if (myPlayer !== null && myPlayer.isAlive()) {
+        this.actions = await myPlayer.actions(this.tile);
+        this.requestUpdate();
       }
     }
   }
