@@ -531,3 +531,16 @@ label.option-card:hover {
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
+
+@keyframes shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.animate-shimmer {
+  background-size: 300% 100%;
+  animation: shimmer 2s linear infinite;
+}

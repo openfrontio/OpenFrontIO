@@ -19,6 +19,7 @@ import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
+import { PlayerInfoModal } from "./PlayerInfoModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
@@ -117,6 +118,16 @@ class Client {
     document.getElementById("help-button").addEventListener("click", () => {
       hlpModal.open();
     });
+
+    const piModal = document.querySelector(
+      "player-info-modal",
+    ) as PlayerInfoModal;
+    piModal instanceof PlayerInfoModal;
+    document
+      .getElementById("player-info-button")
+      .addEventListener("click", () => {
+        piModal.open();
+      });
 
     const hostModal = document.querySelector(
       "host-lobby-modal",
