@@ -30,7 +30,6 @@ export class PlayerInfoModal extends LitElement {
   }
 
   private getAllRolesSorted(): Record<string, any> {
-    // 優先度順で全役職を返す（UI表示用）
     const allRoles = [
       "owner",
       "admin",
