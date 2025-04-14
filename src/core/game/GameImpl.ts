@@ -548,6 +548,7 @@ export class GameImpl implements Game {
     }
     if (!other.isTraitor()) {
       breaker.markTraitor();
+      this.stats().increaseBetrayalCount(breaker.id());
     }
 
     const breakerSet = new Set(breaker.alliances());

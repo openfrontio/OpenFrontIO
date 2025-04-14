@@ -197,6 +197,11 @@ export class PlayerPanel extends LitElement implements Layer {
     return sum;
   }
 
+  numberOfBetrayals(otherId: PlayerID) {
+    const stats = this.g.player(otherId).stats();
+    return stats ? stats.numberOfBetrayals : 0;
+  }
+
   render() {
     if (!this.isVisible) {
       return html``;
@@ -287,9 +292,7 @@ export class PlayerPanel extends LitElement implements Layer {
                 ${translateText("player_panel.traitor")}
               </div>
               <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
-                ${other.isTraitor()
-                  ? translateText("player_panel.yes")
-                  : translateText("player_panel.no")}
+                ${this.numberOfBetrayals(other.id())}
               </div>
             </div>
 
