@@ -104,7 +104,7 @@ export interface PlayerUpdate {
   targetTroopRatio: number;
   allies: number[];
   embargoes: Set<PlayerID>;
-  isTraitor: boolean;
+  nbOfBetrayals: number;
   targets: number[];
   outgoingEmojis: EmojiMessage[];
   outgoingAttacks: AttackUpdate[];

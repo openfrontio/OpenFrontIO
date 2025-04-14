@@ -41,7 +41,7 @@ export class BotExecution implements Execution {
     }
 
     this.bot.incomingAllianceRequests().forEach((ar) => {
-      if (ar.requestor().isTraitor()) {
+      if (ar.requestor().nbOfBetrayals() > 0) {
         ar.reject();
       } else {
         ar.accept();
@@ -50,7 +50,7 @@ export class BotExecution implements Execution {
 
     const traitors = this.bot
       .neighbors()
-      .filter((n) => n.isPlayer() && n.isTraitor()) as Player[];
+      .filter((n) => n.isPlayer() && n.nbOfBetrayals() > 0) as Player[];
     if (traitors.length > 0) {
       const toAttack = this.random.randElement(traitors);
       const odds = this.bot.isFriendly(toAttack) ? 6 : 3;

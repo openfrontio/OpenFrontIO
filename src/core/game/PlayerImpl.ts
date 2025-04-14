@@ -67,7 +67,7 @@ export class PlayerImpl implements Player {
   // 0 to 100
   private _targetTroopRatio: bigint;
 
-  isTraitor_ = false;
+  _nbOfBetrayals = 0;
 
   private embargoes: Set<PlayerID> = new Set();
 
@@ -139,7 +139,7 @@ export class PlayerImpl implements Player {
       targetTroopRatio: this.targetTroopRatio(),
       allies: this.alliances().map((a) => a.other(this).smallID()),
       embargoes: this.embargoes,
-      isTraitor: this.isTraitor(),
+      nbOfBetrayals: this.nbOfBetrayals(),
       targets: this.targets().map((p) => p.smallID()),
       outgoingEmojis: this.outgoingEmojis(),
       outgoingAttacks: this._outgoingAttacks.map(
@@ -371,8 +371,8 @@ export class PlayerImpl implements Player {
     this.mg.breakAlliance(this, alliance);
   }
 
-  isTraitor(): boolean {
-    return this.isTraitor_;
+  nbOfBetrayals(): number {
+    return this._nbOfBetrayals;
   }
 
   createAllianceRequest(recipient: Player): AllianceRequest {

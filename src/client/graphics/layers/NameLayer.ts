@@ -295,8 +295,16 @@ export class NameLayer implements Layer {
 
     // Traitor icon
     const existingTraitor = iconsDiv.querySelector('[data-icon="traitor"]');
-    if (render.player.isTraitor()) {
+    console.log(render.player.nbOfBetrayals());
+    if (render.player.nbOfBetrayals() > 0) {
       if (!existingTraitor) {
+        iconsDiv.appendChild(
+          this.createTextElement(
+            render.player.nbOfBetrayals().toString(),
+            iconSize,
+            "traitor",
+          ),
+        );
         iconsDiv.appendChild(
           this.createIconElement(
             this.traitorIconImage.src,
@@ -459,6 +467,16 @@ export class NameLayer implements Layer {
       const scale = Math.min(baseSize * 0.25, 3);
       render.element.style.transform = `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) scale(${scale})`;
     }
+  }
+
+  private createTextElement(text: string, size: number, id: string) {
+    const element = document.createElement("div");
+    element.textContent = text;
+    element.style.fontSize = `${size}px`;
+    element.setAttribute("data-icon", id);
+    element.style.marginRight = "-4px";
+    element.style.marginBottom = "1px";
+    return element;
   }
 
   private createIconElement(

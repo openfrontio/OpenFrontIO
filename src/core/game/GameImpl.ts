@@ -506,8 +506,9 @@ export class GameImpl implements Game {
         `${breaker} not allied with ${other}, cannot break alliance`,
       );
     }
-    if (!other.isTraitor()) {
-      (breaker as PlayerImpl).isTraitor_ = true;
+
+    if (other.nbOfBetrayals() == 0) {
+      (breaker as PlayerImpl)._nbOfBetrayals++;
     }
 
     const breakerSet = new Set(breaker.alliances());

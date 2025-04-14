@@ -208,7 +208,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   shouldDiscourageAttack(other: Player) {
-    if (other.isTraitor()) {
+    if (other.nbOfBetrayals() > 0) {
       return false;
     }
     const difficulty = this.mg.config().gameConfig().difficulty;
@@ -475,7 +475,7 @@ export class FakeHumanExecution implements Execution {
 
   handleAllianceRequests() {
     for (const req of this.player.incomingAllianceRequests()) {
-      if (req.requestor().isTraitor()) {
+      if (req.requestor().nbOfBetrayals() > 0) {
         this.replyToAllianceRequest(req, false);
         continue;
       }

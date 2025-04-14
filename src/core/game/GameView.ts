@@ -246,8 +246,8 @@ export class PlayerView {
     return [...this.targets(), ...this.allies().flatMap((p) => p.targets())];
   }
 
-  isTraitor(): boolean {
-    return this.data.isTraitor;
+  nbOfBetrayals(): number {
+    return this.data.nbOfBetrayals;
   }
   outgoingEmojis(): EmojiMessage[] {
     return this.data.outgoingEmojis;

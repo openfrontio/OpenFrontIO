@@ -115,7 +115,7 @@ export interface Config {
   falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
   // 0-1
-  traitorDefenseDebuff(): number;
+  traitorDefenseDebuff(betrayals: number): number;
   nukeMagnitudes(unitType: UnitType): NukeMagnitude;
   defaultNukeSpeed(): number;
   nukeDeathFactor(humans: number, tilesOwned: number): number;

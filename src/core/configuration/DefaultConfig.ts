@@ -135,9 +135,10 @@ export class DefaultConfig implements Config {
     return 0.8;
   }
 
-  traitorDefenseDebuff(): number {
-    return 0.8;
+  traitorDefenseDebuff(betrayals: number): number {
+    return within(1 - betrayals * 0.15, 0.6, 1);
   }
+
   spawnImmunityDuration(): Tick {
     return 5 * 10;
   }
@@ -489,7 +490,7 @@ export class DefaultConfig implements Config {
           ratio *
           mag *
           largeLossModifier *
-          (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
+          this.traitorDefenseDebuff(defender.nbOfBetrayals()),
         defenderTroopLoss: defender.population() / defender.numTilesOwned(),
         tilesPerTickUsed: Math.floor(speedRatio * speed * largeSpeedMalus),
       };

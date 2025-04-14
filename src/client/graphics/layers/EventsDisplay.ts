@@ -267,14 +267,16 @@ export class EventsDisplay extends LitElement implements Layer {
     const betrayed = this.game.playerBySmallID(update.betrayedID) as PlayerView;
     const traitor = this.game.playerBySmallID(update.traitorID) as PlayerView;
 
-    if (!betrayed.isTraitor() && traitor === myPlayer) {
+    if (betrayed.nbOfBetrayals() == 0 && traitor === myPlayer) {
       const malusPercent = Math.round(
-        (1 - this.game.config().traitorDefenseDebuff()) * 100,
+        (1 -
+          this.game.config().traitorDefenseDebuff(myPlayer.nbOfBetrayals())) *
+          100,
       );
       this.addEvent({
         description:
-          `You broke your alliance with ${betrayed.name()}, making you a TRAITOR ` +
-          `(${malusPercent}% defense debuff)`,
+          `You betrayed ${betrayed.name()}. You betrayed ${myPlayer.nbOfBetrayals()} times ` +
+          `so you have a ${malusPercent}% defense malus.`,
         type: MessageType.ERROR,
         highlight: true,
         createdAt: this.game.ticks(),
