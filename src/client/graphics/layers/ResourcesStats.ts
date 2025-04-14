@@ -17,8 +17,8 @@ import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import chevronLeftIcon from "../../../../resources/images/ChevronLeftWhite.svg";
 import chevronRightIcon from "../../../../resources/images/ChevronRightWhite.svg";
 
-@customElement("buildings-stats-overlay")
-export class BuildingsStatsOverlay extends LitElement implements Layer {
+@customElement("resources-stats")
+export class ResourcesStats extends LitElement implements Layer {
   @property({ type: Object })
   public game!: GameView;
 

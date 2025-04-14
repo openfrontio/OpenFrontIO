@@ -7,7 +7,6 @@ import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { BuildMenu } from "./layers/BuildMenu";
-import { BuildingsStatsOverlay } from "./layers/BuildingsStatsOverlay";
 import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
@@ -18,6 +17,7 @@ import { OptionsMenu } from "./layers/OptionsMenu";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RadialMenu } from "./layers/RadialMenu";
+import { ResourcesStats } from "./layers/ResourcesStats";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TerrainLayer } from "./layers/TerrainLayer";
@@ -100,9 +100,9 @@ export function createRenderer(
   playerInfo.game = game;
 
   const buildingsStats = document.querySelector(
-    "buildings-stats-overlay",
-  ) as BuildingsStatsOverlay;
-  if (!(buildingsStats instanceof BuildingsStatsOverlay)) {
+    "resources-stats",
+  ) as ResourcesStats;
+  if (!(buildingsStats instanceof ResourcesStats)) {
     consolex.error("buildings stats overlay not found");
   }
   buildingsStats.clientID = clientID;
