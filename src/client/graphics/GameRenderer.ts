@@ -99,14 +99,25 @@ export function createRenderer(
   playerInfo.transform = transformHandler;
   playerInfo.game = game;
 
+  const goldStats = document.querySelector(
+    "resources-stats#gold-stats",
+  ) as ResourcesStats;
+  if (!(goldStats instanceof ResourcesStats)) {
+    consolex.error("gold stats not found");
+  }
+  goldStats.game = game;
+  goldStats.showBuildingStats = false;
+
   const buildingsStats = document.querySelector(
-    "resources-stats",
+    "resources-stats#buildings-stats",
   ) as ResourcesStats;
   if (!(buildingsStats instanceof ResourcesStats)) {
-    consolex.error("buildings stats overlay not found");
+    consolex.error("buildings stats not found");
   }
-  buildingsStats.clientID = clientID;
   buildingsStats.game = game;
+  buildingsStats.disposition = "col";
+  buildingsStats.showGoldStats = false;
+  buildingsStats.defaultState = "expanded";
 
   const countryStats = document.querySelector(
     "country-stats-overlay",
@@ -114,7 +125,6 @@ export function createRenderer(
   if (!(countryStats instanceof CountryStatsOverlay)) {
     consolex.error("country stats overlay not found");
   }
-  countryStats.clientID = clientID;
   countryStats.game = game;
 
   const winModel = document.querySelector("win-modal") as WinModal;
@@ -169,6 +179,7 @@ export function createRenderer(
     leaderboard,
     controlPanel,
     playerInfo,
+    goldStats,
     buildingsStats,
     countryStats,
     winModel,

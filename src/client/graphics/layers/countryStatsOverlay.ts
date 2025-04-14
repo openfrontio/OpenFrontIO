@@ -1,7 +1,6 @@
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { GameView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
 import { renderTroops } from "../../Utils";
 import { Layer } from "./Layer";
 
@@ -13,9 +12,6 @@ import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 export class CountryStatsOverlay extends LitElement implements Layer {
   @property({ type: Object })
   public game!: GameView;
-
-  @property({ type: String })
-  public clientID!: ClientID;
 
   @state()
   private currentTroopRatio = 0.95;
