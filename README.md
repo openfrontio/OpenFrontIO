@@ -1,5 +1,10 @@
 # OpenFrontIO
 
+## This is my custom version of OpenFront.
+
+I added nuclear warships, SAM warships and a laboratory (new building) that unlocks the nukes during the game.
+I use this version to have fun with my friends at school.
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="resources/images/OpenFrontLogoDark.svg">
