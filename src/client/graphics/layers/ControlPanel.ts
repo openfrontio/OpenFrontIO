@@ -26,15 +26,6 @@ export class ControlPanel extends LitElement implements Layer {
   private currentTroopRatio = 0.95;
 
   @state()
-  private _population: number;
-
-  @state()
-  private _troops: number;
-
-  @state()
-  private _workers: number;
-
-  @state()
   private _isVisible = false;
 
   @state()
@@ -96,10 +87,6 @@ export class ControlPanel extends LitElement implements Layer {
       return;
     }
 
-    this._population = player.population();
-    this._troops = player.troops();
-    this._workers = player.workers();
-
     this.currentTroopRatio = player.troops() / player.population();
     this.requestUpdate();
   }
@@ -121,17 +108,8 @@ export class ControlPanel extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  targetTroops(): number {
-    return this._manpower * this.targetTroopRatio;
-  }
-
   onTroopChange(newRatio: number) {
     this.eventBus.emit(new SendSetTargetTroopRatioEvent(newRatio));
-  }
-
-  delta(): number {
-    const d = this._population - this.targetTroops();
-    return d;
   }
 
   render() {
