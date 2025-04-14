@@ -8,8 +8,8 @@ import buildIcon from "../../../../resources/images/BuildIconWhite.svg";
 import emojisIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 
-@customElement("country-stats-overlay")
-export class CountryStatsOverlay extends LitElement implements Layer {
+@customElement("country-stats")
+export class CountryStats extends LitElement implements Layer {
   @property({ type: Object })
   public game!: GameView;
 

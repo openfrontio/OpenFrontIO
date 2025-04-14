@@ -8,6 +8,7 @@ import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ControlPanel } from "./layers/ControlPanel";
+import { CountryStats } from "./layers/CountryStats";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { Layer } from "./layers/Layer";
@@ -26,7 +27,6 @@ import { TopBar } from "./layers/TopBar";
 import { UILayer } from "./layers/UILayer";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
-import { CountryStatsOverlay } from "./layers/countryStatsOverlay";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,
@@ -119,11 +119,9 @@ export function createRenderer(
   buildingsStats.showGoldStats = false;
   buildingsStats.defaultState = "expanded";
 
-  const countryStats = document.querySelector(
-    "country-stats-overlay",
-  ) as CountryStatsOverlay;
-  if (!(countryStats instanceof CountryStatsOverlay)) {
-    consolex.error("country stats overlay not found");
+  const countryStats = document.querySelector("country-stats") as CountryStats;
+  if (!(countryStats instanceof CountryStats)) {
+    consolex.error("country stats not found");
   }
   countryStats.game = game;
 
