@@ -41,6 +41,12 @@ export class SettingKeybind extends LitElement {
               >
                 Reset
               </button>
+              <button
+                class="text-xs text-gray-400 hover:text-white border border-gray-500 px-2 py-0.5 rounded transition"
+                @click=${this.unbindKey}
+              >
+                Unbind
+              </button>
             </div>
           </div>
         </div>
@@ -92,5 +98,17 @@ export class SettingKeybind extends LitElement {
         composed: true,
       }),
     );
+  }
+
+  private unbindKey() {
+    this.value = "";
+    this.dispatchEvent(
+      new CustomEvent("change", {
+        detail: { action: this.action, value: "Null" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    this.requestUpdate();
   }
 }

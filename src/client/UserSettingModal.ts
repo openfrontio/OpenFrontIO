@@ -141,7 +141,7 @@ export class UserSettingModal extends LitElement {
     const values = Object.entries(this.keybinds)
       .filter(([k]) => k !== action)
       .map(([, v]) => v);
-    if (values.includes(value)) {
+    if (values.includes(value) && value !== "Null") {
       const popup = document.createElement("div");
       popup.className = "setting-popup";
       popup.textContent = `The key "${value}" is already assigned to another action.`;
