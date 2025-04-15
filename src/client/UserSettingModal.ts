@@ -3,6 +3,7 @@ import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
+import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
@@ -135,7 +136,25 @@ export class UserSettingModal extends LitElement {
     e: CustomEvent<{ action: string; value: string }>,
   ) {
     const { action, value } = e.detail;
+    const prevValue = this.keybinds[action] ?? "";
 
+    const values = Object.entries(this.keybinds)
+      .filter(([k]) => k !== action)
+      .map(([, v]) => v);
+    if (values.includes(value)) {
+      const popup = document.createElement("div");
+      popup.className = "setting-popup";
+      popup.textContent = `The key "${value}" is already assigned to another action.`;
+      document.body.appendChild(popup);
+      const element = this.renderRoot.querySelector(
+        `setting-keybind[action="${action}"]`,
+      ) as SettingKeybind;
+      if (element) {
+        element.value = prevValue;
+        element.requestUpdate();
+      }
+      return;
+    }
     this.keybinds = { ...this.keybinds, [action]: value };
     localStorage.setItem("settings.keybinds", JSON.stringify(this.keybinds));
   }

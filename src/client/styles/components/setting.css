@@ -68,6 +68,20 @@
   z-index: 9999;
 }
 
+.setting-popup {
+  position: fixed;
+  top: 40px;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  padding: 16px 24px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  font-size: 20px;
+  border-radius: 12px;
+  animation: fadePop_2 10s ease-out forwards;
+  z-index: 9999;
+}
+
 @keyframes fadePop {
   0% {
     opacity: 0;
@@ -79,6 +93,25 @@
   }
   70% {
     transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+}
+
+@keyframes fadePop_2 {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  5% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+  95% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
   }
   100% {
     opacity: 0;

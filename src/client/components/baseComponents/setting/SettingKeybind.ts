@@ -5,7 +5,7 @@ import { customElement, property } from "lit/decorators.js";
 export class SettingKeybind extends LitElement {
   @property() label = "Setting";
   @property() description = "";
-  @property({ type: String }) action = "";
+  @property({ type: String, reflect: true }) action = "";
   @property({ type: String }) defaultKey = "";
   @property({ type: String }) value = "";
   @property({ type: Boolean }) easter = false;
