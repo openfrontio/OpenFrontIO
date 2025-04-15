@@ -97,6 +97,10 @@ export class TransformHandler {
   }
 
   screenBoundingRect(): [Cell, Cell] {
+    const canvasRect = this.boundingRect();
+    const canvasWidth = canvasRect.width;
+    const canvasHeight = canvasRect.height;
+
     const LeftX = -this.game.width() / 2 / this.scale + this.offsetX;
     const TopY = -this.game.height() / 2 / this.scale + this.offsetY;
 
@@ -104,12 +108,12 @@ export class TransformHandler {
     const gameTopY = TopY + this.game.height() / 2;
 
     const rightX =
-      (screen.width - this.game.width() / 2) / this.scale + this.offsetX;
-    const rightY =
-      (screen.height - this.game.height() / 2) / this.scale + this.offsetY;
+      (canvasWidth - this.game.width() / 2) / this.scale + this.offsetX;
+    const bottomY =
+      (canvasHeight - this.game.height() / 2) / this.scale + this.offsetY;
 
     const gameRightX = rightX + this.game.width() / 2;
-    const gameBottomY = rightY + this.game.height() / 2;
+    const gameBottomY = bottomY + this.game.height() / 2;
 
     return [
       new Cell(Math.floor(gameLeftX), Math.floor(gameTopY)),

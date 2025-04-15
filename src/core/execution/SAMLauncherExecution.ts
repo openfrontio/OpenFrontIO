@@ -104,9 +104,10 @@ export class SAMLauncherExecution implements Execution {
 
     if (this.target && !this.sam.isCooldown() && !this.target.targetedBySAM()) {
       this.sam.setCooldown(true);
+      const random = this.pseudoRandom.next();
       let hit = true;
       if (this.target.type() != UnitType.AtomBomb) {
-        hit = this.pseudoRandom.next() < this.mg.config().samHittingChance();
+        hit = random < this.mg.config().samHittingChance();
       }
       if (!hit) {
         this.mg.displayMessage(
