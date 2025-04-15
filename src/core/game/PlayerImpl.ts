@@ -5,6 +5,7 @@ import { ClientID } from "../Schemas";
 import {
   assertNever,
   bestShoreDeploymentSource,
+  closestShoreFromPlayer,
   distSortUnit,
   maxInt,
   minInt,
@@ -831,7 +832,13 @@ export class PlayerImpl implements Player {
     if (!this.mg.isShore(targetTile)) {
       return false;
     }
-    const spawn = bestShoreDeploymentSource(this.mg, this, targetTile);
+    let spawn = null;
+    if (this.playerInfo.playerType == PlayerType.Human) {
+      spawn = bestShoreDeploymentSource(this.mg, this, targetTile);
+    } else {
+      spawn = closestShoreFromPlayer(this.mg, this, targetTile);
+    }
+
     if (spawn == null) {
       return false;
     }
