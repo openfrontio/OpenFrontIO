@@ -4,7 +4,7 @@ import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
   assertNever,
-  closestShoreFromPlayer,
+  bestShoreDeploymentSource,
   distSortUnit,
   maxInt,
   minInt,
@@ -831,7 +831,7 @@ export class PlayerImpl implements Player {
     if (!this.mg.isShore(targetTile)) {
       return false;
     }
-    const spawn = closestShoreFromPlayer(this.mg, this, targetTile);
+    const spawn = bestShoreDeploymentSource(this.mg, this, targetTile);
     if (spawn == null) {
       return false;
     }

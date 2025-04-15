@@ -12,7 +12,7 @@ import {
 import { TileRef } from "../game/GameMap";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
-import { bestShoreDeploymentSource, targetTransportTile } from "../Util";
+import { targetTransportTile } from "../Util";
 import { AttackExecution } from "./AttackExecution";
 
 export class TransportShipExecution implements Execution {
@@ -112,14 +112,14 @@ export class TransportShipExecution implements Execution {
       this.active = false;
       return;
     }
-    const canBuild = this.attacker.canBuild(UnitType.TransportShip, this.dst);
-    if (canBuild == false) {
+    const src = this.attacker.canBuild(UnitType.TransportShip, this.dst);
+    if (src == false) {
       consolex.warn(`can't build transport ship`);
       this.active = false;
       return;
     }
 
-    this.src = bestShoreDeploymentSource(this.mg, this.attacker, this.dst);
+    this.src = src;
 
     this.boat = this.attacker.buildUnit(
       UnitType.TransportShip,
