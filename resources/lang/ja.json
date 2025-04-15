@@ -176,5 +176,24 @@
   },
   "select_lang": {
     "title": "言語を選択"
+  },
+  "user_setting": {
+    "title": "ユーザー設定",
+    "tab_basic": "基本設定",
+    "tab_keybinds": "キー設定",
+    "dark_mode_label": "🌙 ダークモード",
+    "dark_mode_desc": "ダークモードを切り替えます。",
+    "emojis_label": "😊 絵文字",
+    "emojis_desc": "ゲーム内での絵文字を表示します。",
+    "left_click_label": "🖱️ 左クリックでメニューを開く",
+    "left_click_desc": "オンにすると左クリックでメニューを開き、剣ボタンで攻撃します。オフにすると右クリックで直接攻撃します。",
+    "attack_ratio_label": "⚔️ 攻撃比率",
+    "attack_ratio_desc": "攻撃時に出す兵力の割合を設定します（1〜100％）",
+    "troop_ratio_label": "🪖🛠️ 兵士と労働者の比率",
+    "troop_ratio_desc": "戦闘用の兵士と金生産用の労働者のバランスを調整します（1〜100％）",
+    "easter_writing_speed_label": "書くスピード倍率",
+    "easter_writing_speed_desc": "どれくらい爆速でコードを書いてるフリをするか（×1〜×100）",
+    "easter_bug_count_label": "バグのカウント！",
+    "easter_bug_count_desc": "どれくらいのバグなら精神的に許せるか（0〜1000）"
   }
 }

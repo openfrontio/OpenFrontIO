@@ -159,6 +159,7 @@ export class LangSelector extends LitElement {
       "help-modal",
       "username-input",
       "public-lobby",
+      "user-setting",
       "o-modal",
       "o-button",
     ];

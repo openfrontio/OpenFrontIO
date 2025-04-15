@@ -177,5 +177,24 @@
   },
   "select_lang": {
     "title": "Select Language"
+  },
+  "user_setting": {
+    "title": "User Settings",
+    "tab_basic": "Basic Settings",
+    "tab_keybinds": "Keybinds",
+    "dark_mode_label": "🌙 Dark Mode",
+    "dark_mode_desc": "Toggle the site’s appearance between light and dark themes",
+    "emojis_label": "😊 Emojis",
+    "emojis_desc": "Toggle whether emojis are shown in game",
+    "left_click_label": "🖱️ Left Click to Open Menu",
+    "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, right-click attacks directly.",
+    "attack_ratio_label": "⚔️ Attack Ratio",
+    "attack_ratio_desc": "What percentage of your troops to send in an attack (1–100%)",
+    "troop_ratio_label": "🪖🛠️ Troops and Workers Ratio",
+    "troop_ratio_desc": "Adjust the balance between troops (for combat) and workers (for gold production) (1–100%)",
+    "easter_writing_speed_label": "Writing Speed Multiplier",
+    "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
+    "easter_bug_count_label": "Bug Count",
+    "easter_bug_count_desc": "How many bugs you're okay with (0–1000, emotionally)"
   }
 }

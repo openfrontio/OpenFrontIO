@@ -22,6 +22,10 @@
   gap: 12px;
 }
 
+.setting-item.column {
+  flex-direction: column;
+}
+
 @keyframes rainbow-background {
   0% {
     background-position: 0% 50%;
@@ -254,4 +258,39 @@
   margin-top: 2px;
   white-space: normal;
   word-break: break-word;
+}
+
+.setting-keybind-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.setting-keybind-description {
+  flex: 1;
+  font-size: 0.75rem;
+  color: #e5e5e5;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+.setting-key {
+  background-color: black;
+  color: white;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 0 #444;
+  white-space: nowrap;
+  user-select: none;
+  outline: none;
+}
+
+.setting-key:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
 }
