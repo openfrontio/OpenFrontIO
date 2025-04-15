@@ -80,7 +80,6 @@ export class UnitLayer implements Layer {
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelectionChange(e));
     this.redraw();
 
-    // idk if this is the right place to do this
     loadAllSprites();
   }
 
