@@ -30,6 +30,7 @@ import {
 } from "../../Transport";
 import { renderNumber, renderTroops } from "../../Utils";
 import { ChatModal } from "./ChatModal";
+import { UIState } from "../UIState";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
 
@@ -38,6 +39,7 @@ export class PlayerPanel extends LitElement implements Layer {
   public g: GameView;
   public eventBus: EventBus;
   public emojiTable: EmojiTable;
+  public uiState: UIState;
 
   private actions: PlayerActions | null = null;
   private tile: TileRef | null = null;
@@ -91,7 +93,13 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendDonateTroopsIntentEvent(myPlayer, other, null));
+    this.eventBus.emit(
+      new SendDonateTroopsIntentEvent(
+        myPlayer,
+        other,
+        myPlayer.troops() * this.uiState.attackRatio,
+      ),
+    );
     this.hide();
   }
 
