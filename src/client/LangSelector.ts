@@ -246,7 +246,7 @@ export class LangSelector extends LitElement {
         : {
             native: "English",
             en: "English",
-            svg: "xx",
+            svg: "uk_us_flag",
           });
 
     return html`
