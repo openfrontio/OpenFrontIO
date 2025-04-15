@@ -1,19 +1,19 @@
-import { GameRecord, GameID, GameRecordSchema } from "../core/Schemas";
 import { S3 } from "@aws-sdk/client-s3";
-import {
-  GameEnv,
-  getServerConfigFromServer,
-} from "../core/configuration/Config";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { GameID, GameRecord } from "../core/Schemas";
+import { logger } from "./Logger";
 
 const config = getServerConfigFromServer();
+
+const log = logger.child({ component: "Archive" });
 
 // R2 client configuration
 const r2 = new S3({
   region: "auto", // R2 ignores region, but it's required by the SDK
-  endpoint: config.r2Endpoint(), // You'll need to add this to your config
+  endpoint: config.r2Endpoint(),
   credentials: {
-    accessKeyId: config.r2AccessKey(), // You'll need to add these
-    secretAccessKey: config.r2SecretKey(), // credential methods to your config
+    accessKeyId: config.r2AccessKey(),
+    secretAccessKey: config.r2SecretKey(),
   },
 });
 
@@ -29,13 +29,13 @@ export async function archive(gameRecord: GameRecord) {
 
     // Archive full game if there are turns
     if (gameRecord.turns.length > 0) {
-      console.log(
+      log.info(
         `${gameRecord.id}: game has more than zero turns, attempting to write to full game to R2`,
       );
       await archiveFullGameToR2(gameRecord);
     }
   } catch (error) {
-    console.error(`${gameRecord.id}: Final archive error: ${error}`, {
+    log.error(`${gameRecord.id}: Final archive error: ${error}`, {
       message: error?.message || error,
       stack: error?.stack,
       name: error?.name,
@@ -53,10 +53,10 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
     end_time: new Date(gameRecord.endTimestampMS).toISOString(),
     duration_seconds: gameRecord.durationSeconds,
     number_turns: gameRecord.num_turns,
-    game_mode: gameRecord.gameConfig.gameType,
+    game_mode: gameRecord.gameStartInfo.config.gameType,
     winner: gameRecord.winner,
-    difficulty: gameRecord.gameConfig.difficulty,
-    mapType: gameRecord.gameConfig.gameMap,
+    difficulty: gameRecord.gameStartInfo.config.difficulty,
+    mapType: gameRecord.gameStartInfo.config.gameMap,
     players: gameRecord.players.map((p) => ({
       username: p.username,
       ip: p.ip,
@@ -76,9 +76,9 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
       ContentType: "application/json",
     });
 
-    console.log(`${gameRecord.id}: successfully wrote game analytics to R2`);
+    log.info(`${gameRecord.id}: successfully wrote game analytics to R2`);
   } catch (error) {
-    console.error(
+    log.error(
       `${gameRecord.id}: Error writing game analytics to R2: ${error}`,
       {
         message: error?.message || error,
@@ -109,11 +109,11 @@ async function archiveFullGameToR2(gameRecord: GameRecord) {
       ContentType: "application/json",
     });
   } catch (error) {
-    console.log(`error saving game ${gameRecord.id}`);
+    log.error(`error saving game ${gameRecord.id}`);
     throw error;
   }
 
-  console.log(`${gameRecord.id}: game record successfully written to R2`);
+  log.info(`${gameRecord.id}: game record successfully written to R2`);
 }
 
 export async function readGameRecord(
@@ -130,7 +130,7 @@ export async function readGameRecord(
     return JSON.parse(bodyContents) as GameRecord;
   } catch (error) {
     // Log the error for monitoring purposes
-    console.error(`${gameId}: Error reading game record from R2: ${error}`, {
+    log.error(`${gameId}: Error reading game record from R2: ${error}`, {
       message: error?.message || error,
       stack: error?.stack,
       name: error?.name,
@@ -153,7 +153,7 @@ export async function gameRecordExists(gameId: GameID): Promise<boolean> {
     if (error.name === "NotFound") {
       return false;
     }
-    console.error(`${gameId}: Error checking archive existence: ${error}`, {
+    log.error(`${gameId}: Error checking archive existence: ${error}`, {
       message: error?.message || error,
       stack: error?.stack,
       name: error?.name,

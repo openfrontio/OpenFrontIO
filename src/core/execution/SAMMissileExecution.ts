@@ -1,3 +1,4 @@
+import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -6,29 +7,27 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { PathFinder } from "../pathfinding/PathFinding";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { consolex } from "../Consolex";
 import { TileRef } from "../game/GameMap";
+import { PathFindResultType } from "../pathfinding/AStar";
+import { PathFinder } from "../pathfinding/PathFinding";
 
 export class SAMMissileExecution implements Execution {
   private active = true;
   private pathFinder: PathFinder;
   private SAMMissile: Unit;
+  private mg: Game;
 
   constructor(
     private spawn: TileRef,
     private _owner: Player,
     private ownerUnit: Unit,
     private target: Unit,
-    private mg: Game,
-    private pseudoRandom: number,
-    private speed: number = 6,
-    private hittingChance: number = 0.75,
+    private speed: number = 12,
   ) {}
 
   init(mg: Game, ticks: number): void {
     this.pathFinder = PathFinder.Mini(mg, 2000, true, 10);
+    this.mg = mg;
   }
 
   tick(ticks: number): void {
@@ -43,10 +42,13 @@ export class SAMMissileExecution implements Execution {
       this.active = false;
       return;
     }
+    // Mirv warheads are too fast, and mirv shouldn't be stopped ever
+    const nukesWhitelist = [UnitType.AtomBomb, UnitType.HydrogenBomb];
     if (
       !this.target.isActive() ||
       !this.ownerUnit.isActive() ||
-      this.target.owner() == this.SAMMissile.owner()
+      this.target.owner() == this.SAMMissile.owner() ||
+      !nukesWhitelist.includes(this.target.type())
     ) {
       this.SAMMissile.delete(false);
       this.active = false;
@@ -60,22 +62,13 @@ export class SAMMissileExecution implements Execution {
       );
       switch (result.type) {
         case PathFindResultType.Completed:
+          this.mg.displayMessage(
+            `Missile intercepted ${this.target.type()}`,
+            MessageType.SUCCESS,
+            this._owner.id(),
+          );
           this.active = false;
-          if (this.pseudoRandom < this.hittingChance) {
-            this.target.delete();
-
-            this.mg.displayMessage(
-              `Missile succesfully intercepted ${this.target.type()}`,
-              MessageType.SUCCESS,
-              this._owner.id(),
-            );
-          } else {
-            this.mg.displayMessage(
-              `Missile failed to intercept ${this.target.type()}`,
-              MessageType.ERROR,
-              this._owner.id(),
-            );
-          }
+          this.target.delete();
           this.SAMMissile.delete(false);
           return;
         case PathFindResultType.NextTile:
@@ -92,9 +85,6 @@ export class SAMMissileExecution implements Execution {
     }
   }
 
-  owner(): Player {
-    return null;
-  }
   isActive(): boolean {
     return this.active;
   }

@@ -1,17 +1,1 @@
-<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
-  <g id="color">
-    <rect x="5" y="17" width="62" height="38" fill="#d22f27"/>
-    <polygon fill="#f1b31c" points="15 17 5 17 36 36 36 34 15 17"/>
-    <polygon fill="#f1b31c" points="15 55 5 55 36 36 36 38 15 55"/>
-    <polygon fill="#f1b31c" points="57 17 67 17 36 36 36 34 57 17"/>
-    <polygon fill="#f1b31c" points="57 55 67 55 36 36 36 38 57 55"/>
-    <polygon fill="#f1b31c" points="33 55 39 55 37 36 35 36 33 55"/>
-    <polygon fill="#f1b31c" points="67 39 67 33 36 35 36 37 67 39"/>
-    <polygon fill="#f1b31c" points="5 39 5 33 36 35 36 37 5 39"/>
-    <polygon fill="#f1b31c" points="33 17 39 17 37 36 35 36 33 17"/>
-    <circle cx="36" cy="36" r="7" fill="#f1b31c" stroke="#d22f27" stroke-miterlimit="10"/>
-  </g>
-  <g id="line">
-    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72"><path fill="#d22f27" d="M5 17h62v38H5z"/><path fill="#f1b31c" d="M15 17H5l31 19v-2L15 17zM15 55H5l31-19v2L15 55zM57 17h10L36 36v-2l21-17zM57 55h10L36 36v2l21 17z"/><path fill="#f1b31c" d="M33 55h6l-2-19h-2l-2 19z"/><path fill="#f1b31c" d="M67 39v-6l-31 2v2l31 2zM5 39v-6l31 2v2L5 39z"/><path fill="#f1b31c" d="M33 17h6l-2 19h-2l-2-19z"/><circle cx="36" cy="36" r="7" fill="#f1b31c" stroke="#d22f27" stroke-miterlimit="10"/><path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 17h62v38H5z"/></svg>

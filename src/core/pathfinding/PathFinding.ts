@@ -1,9 +1,8 @@
-import { Cell, Game } from "../game/Game";
-import { AStar, PathFindResultType, TileResult } from "./AStar";
-import { SerialAStar } from "./SerialAStar";
-import { MiniAStar } from "./MiniAStar";
 import { consolex } from "../Consolex";
+import { Game } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { AStar, PathFindResultType, TileResult } from "./AStar";
+import { MiniAStar } from "./MiniAStar";
 
 export class PathFinder {
   private curr: TileRef = null;
@@ -11,8 +10,6 @@ export class PathFinder {
   private path: TileRef[];
   private aStar: AStar;
   private computeFinished = true;
-
-  private pathCache: Map<number, TileRef[]> = new Map();
 
   private constructor(
     private game: Game,
@@ -57,15 +54,6 @@ export class PathFinder {
       return { type: PathFindResultType.Completed, tile: curr };
     }
 
-    // make key the same between port a -> b and b -> a
-    const key = curr < dst ? curr * 1_000_000 + dst : dst * 1_000_000 + curr;
-
-    // get the cached path
-    if (this.pathCache.has(key)) {
-      this.path = this.pathCache.get(key)!;
-      return { type: PathFindResultType.NextTile, tile: this.path.shift() };
-    }
-
     if (this.computeFinished) {
       if (this.shouldRecompute(curr, dst)) {
         this.curr = curr;
@@ -86,8 +74,6 @@ export class PathFinder {
         // Remove the start tile
         this.path.shift();
 
-        // save the path in the cache
-        this.pathCache.set(key, [...this.path]);
         return this.nextTile(curr, dst);
       case PathFindResultType.Pending:
         return { type: PathFindResultType.Pending };

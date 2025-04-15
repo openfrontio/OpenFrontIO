@@ -1,14 +1,21 @@
-import world from "../../../resources/maps/WorldMap.png";
-import oceania from "../../../resources/maps/Oceania.png";
-import europe from "../../../resources/maps/Europe.png";
-import mena from "../../../resources/maps/Mena.png";
-import northAmerica from "../../../resources/maps/NorthAmerica.png";
-import southAmerica from "../../../resources/maps/SouthAmerica.png";
-import blackSea from "../../../resources/maps/BlackSea.png";
-import africa from "../../../resources/maps/Africa.png";
-import asia from "../../../resources/maps/Asia.png";
-import mars from "../../../resources/maps/Mars.png";
-import britannia from "../../../resources/maps/Britannia.png";
+import africa from "../../../resources/maps/AfricaThumb.webp";
+import asia from "../../../resources/maps/AsiaThumb.webp";
+import australia from "../../../resources/maps/AustraliaThumb.webp";
+import betweenTwoSeas from "../../../resources/maps/BetweenTwoSeasThumb.webp";
+import blackSea from "../../../resources/maps/BlackSeaThumb.webp";
+import britannia from "../../../resources/maps/BritanniaThumb.webp";
+import europe from "../../../resources/maps/EuropeThumb.webp";
+import gatewayToTheAtlantic from "../../../resources/maps/GatewayToTheAtlanticThumb.webp";
+import iceland from "../../../resources/maps/IcelandThumb.webp";
+import japan from "../../../resources/maps/JapanThumb.webp";
+import knownworld from "../../../resources/maps/KnownWorldThumb.webp";
+import mars from "../../../resources/maps/MarsThumb.webp";
+import mena from "../../../resources/maps/MenaThumb.webp";
+import northAmerica from "../../../resources/maps/NorthAmericaThumb.webp";
+import oceania from "../../../resources/maps/OceaniaThumb.webp";
+import pangaea from "../../../resources/maps/PangaeaThumb.webp";
+import southAmerica from "../../../resources/maps/SouthAmericaThumb.webp";
+import world from "../../../resources/maps/WorldMapThumb.webp";
 
 import { GameMapType } from "../../core/game/Game";
 
@@ -30,12 +37,26 @@ export function getMapsImage(map: GameMapType): string {
       return blackSea;
     case GameMapType.Africa:
       return africa;
+    case GameMapType.Pangaea:
+      return pangaea;
     case GameMapType.Asia:
       return asia;
     case GameMapType.Mars:
       return mars;
     case GameMapType.Britannia:
       return britannia;
+    case GameMapType.GatewayToTheAtlantic:
+      return gatewayToTheAtlantic;
+    case GameMapType.Australia:
+      return australia;
+    case GameMapType.Iceland:
+      return iceland;
+    case GameMapType.Japan:
+      return japan;
+    case GameMapType.BetweenTwoSeas:
+      return betweenTwoSeas;
+    case GameMapType.KnownWorld:
+      return knownworld;
     default:
       return "";
   }

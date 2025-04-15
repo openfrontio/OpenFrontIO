@@ -1,9 +1,12 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { Difficulty, GameMapType, GameType } from "../core/game/Game";
+import { translateText } from "../client/Utils";
 import { consolex } from "../core/Consolex";
-import { getMapsImage } from "./utilities/Maps";
+import { GameMode } from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
+import { generateID } from "../core/Util";
+import { JoinLobbyEvent } from "./Main";
+import { getMapsImage } from "./utilities/Maps";
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {
@@ -102,7 +105,9 @@ export class PublicLobby extends LitElement {
           ? "opacity-70 cursor-not-allowed"
           : ""}"
       >
-        <div class="text-lg md:text-2xl font-semibold mb-2">Join next Game</div>
+        <div class="text-lg md:text-2xl font-semibold mb-2">
+          ${translateText("public_lobby.join")}
+        </div>
         <div class="flex">
           <img
             src="${getMapsImage(lobby.gameConfig.gameMap)}"
@@ -111,23 +116,26 @@ export class PublicLobby extends LitElement {
             style="border: 1px solid rgba(255, 255, 255, 0.5)"
           />
           <div
-            class="w-full flex flex-col md:flex-row items-center justify-center gap-4"
+            class="w-full flex flex-col md:flex-row items-center justify-center md:justify-evenly"
           >
-            <div class="flex flex-col items-start">
+            <div class="flex flex-col items-center">
+              <div class="text-md font-medium text-blue-100 mb-4">
+                <!-- ${lobby.gameConfig.gameMap} -->
+                ${translateText(
+                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/\s+/g, "")}`,
+                )}
+              </div>
               <div class="text-md font-medium text-blue-100">
-                ${lobby.gameConfig.gameMap}
+                ${lobby.gameConfig.gameMode == GameMode.Team
+                  ? translateText("game_mode.teams")
+                  : translateText("game_mode.ffa")}
               </div>
             </div>
-            <div class="flex flex-col items-start">
-              <div class="text-md font-medium text-blue-100">
-                ${lobby.numClients} / ${lobby.gameConfig.maxPlayers} players
-                waiting
+            <div class="flex flex-col items-center">
+              <div class="text-md font-medium text-blue-100 mb-2">
+                ${lobby.numClients} / ${lobby.gameConfig.maxPlayers}
               </div>
-            </div>
-            <div class="flex items-center">
-              <div
-                class="min-w-20 text-sm font-medium px-2 py-1 bg-white/10 rounded-xl text-blue-100 text-center"
-              >
+              <div class="text-md font-medium text-blue-100">
                 ${timeDisplay}
               </div>
             </div>
@@ -160,7 +168,10 @@ export class PublicLobby extends LitElement {
       this.currLobby = lobby;
       this.dispatchEvent(
         new CustomEvent("join-lobby", {
-          detail: lobby,
+          detail: {
+            gameID: lobby.gameID,
+            clientID: generateID(),
+          } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
         }),

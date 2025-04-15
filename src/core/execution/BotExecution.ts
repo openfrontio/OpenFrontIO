@@ -1,5 +1,4 @@
 import {
-  Cell,
   Execution,
   Game,
   Player,
@@ -54,7 +53,7 @@ export class BotExecution implements Execution {
       .filter((n) => n.isPlayer() && n.isTraitor()) as Player[];
     if (traitors.length > 0) {
       const toAttack = this.random.randElement(traitors);
-      const odds = this.bot.isAlliedWith(toAttack) ? 6 : 3;
+      const odds = this.bot.isFriendly(toAttack) ? 6 : 3;
       if (this.random.chance(odds)) {
         this.sendAttack(toAttack);
         return;
@@ -85,7 +84,7 @@ export class BotExecution implements Execution {
     const owner = this.mg.owner(toAttack);
 
     if (owner.isPlayer()) {
-      if (this.bot.isAlliedWith(owner)) {
+      if (this.bot.isFriendly(owner)) {
         return;
       }
       if (owner.type() == PlayerType.FakeHuman) {
@@ -98,6 +97,7 @@ export class BotExecution implements Execution {
   }
 
   sendAttack(toAttack: Player | TerraNullius) {
+    if (toAttack.isPlayer() && this.bot.isOnSameTeam(toAttack)) return;
     this.mg.addExecution(
       new AttackExecution(
         this.bot.troops() / 20,

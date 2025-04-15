@@ -1,3 +1,5 @@
+import { LangSelector } from "./LangSelector";
+
 export function renderTroops(troops: number): string {
   return renderNumber(troops / 10);
 }
@@ -70,3 +72,25 @@ export function generateCryptoRandomUUID(): string {
     },
   );
 }
+
+// Re-export translateText from LangSelector
+export const translateText = (
+  key: string,
+  params: Record<string, string | number> = {},
+): string => {
+  const langSelector = document.querySelector("lang-selector") as LangSelector;
+  if (!langSelector) {
+    console.warn("LangSelector not found in DOM");
+    return key;
+  }
+
+  // Wait for translations to be loaded
+  if (
+    !langSelector.translations ||
+    Object.keys(langSelector.translations).length === 0
+  ) {
+    return key;
+  }
+
+  return langSelector.translateText(key, params);
+};

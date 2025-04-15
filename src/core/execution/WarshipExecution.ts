@@ -1,19 +1,16 @@
+import { consolex } from "../Consolex";
 import {
-  Cell,
   Execution,
   Game,
   Player,
-  Unit,
   PlayerID,
-  TerrainType,
+  Unit,
   UnitType,
 } from "../game/Game";
-import { PathFinder } from "../pathfinding/PathFinding";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PseudoRandom } from "../PseudoRandom";
-import { distSort, distSortUnit } from "../Util";
-import { consolex } from "../Consolex";
 import { TileRef } from "../game/GameMap";
+import { PathFindResultType } from "../pathfinding/AStar";
+import { PathFinder } from "../pathfinding/PathFinding";
+import { PseudoRandom } from "../PseudoRandom";
 import { ShellExecution } from "./ShellExecution";
 
 export class WarshipExecution implements Execution {
@@ -55,61 +52,46 @@ export class WarshipExecution implements Execution {
     this.random = new PseudoRandom(mg.ticks());
   }
 
-  tick(ticks: number): void {
-    if (this.warship == null) {
-      const spawn = this._owner.canBuild(UnitType.Warship, this.patrolTile);
-      if (spawn == false) {
-        this.active = false;
+  // Only for warships with "moveTarget" set
+  goToMoveTarget(target: TileRef): boolean {
+    // Patrol unless we are hunting down a tradeship
+    const result = this.pathfinder.nextTile(this.warship.tile(), target);
+    switch (result.type) {
+      case PathFindResultType.Completed:
+        this.warship.setMoveTarget(null);
+        return;
+      case PathFindResultType.NextTile:
+        this.warship.move(result.tile);
+        break;
+      case PathFindResultType.Pending:
+        break;
+      case PathFindResultType.PathNotFound:
+        consolex.log(`path not found to target`);
+        break;
+    }
+  }
+
+  private shoot() {
+    if (this.mg.ticks() - this.lastShellAttack > this.shellAttackRate) {
+      this.lastShellAttack = this.mg.ticks();
+      this.mg.addExecution(
+        new ShellExecution(
+          this.warship.tile(),
+          this.warship.owner(),
+          this.warship,
+          this.target,
+        ),
+      );
+      if (!this.target.hasHealth()) {
+        // Don't send multiple shells to target that can be oneshotted
+        this.alreadySentShell.add(this.target);
+        this.target = null;
         return;
       }
-      this.warship = this._owner.buildUnit(UnitType.Warship, 0, spawn);
-      return;
     }
-    if (!this.warship.isActive()) {
-      this.active = false;
-      return;
-    }
-    if (this.target != null && !this.target.isActive()) {
-      this.target = null;
-    }
-    const ships = this.mg
-      .units(UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip)
-      .filter((u) => this.mg.manhattanDist(u.tile(), this.warship.tile()) < 130)
-      .filter((u) => u.owner() != this.warship.owner())
-      .filter((u) => u != this.warship)
-      .filter((u) => !u.owner().isAlliedWith(this.warship.owner()))
-      .filter((u) => !this.alreadySentShell.has(u))
-      .filter((u) => {
-        const portOwner = u.dstPort() ? u.dstPort().owner() : null;
-        return u.type() != UnitType.TradeShip || portOwner != this.owner();
-      });
+  }
 
-    this.target =
-      ships.sort((a, b) => {
-        // First compare by Warship type
-        if (a.type() === UnitType.Warship && b.type() !== UnitType.Warship) {
-          return -1;
-        }
-        if (a.type() !== UnitType.Warship && b.type() === UnitType.Warship) {
-          return 1;
-        }
-        // Then favor transport ship
-        if (
-          a.type() === UnitType.TransportShip &&
-          b.type() !== UnitType.TransportShip
-        ) {
-          return -1;
-        }
-        if (
-          a.type() !== UnitType.TransportShip &&
-          b.type() === UnitType.TransportShip
-        ) {
-          return 1;
-        }
-        // If both are same type, sort by distance
-        return distSortUnit(this.mg, this.warship)(a, b);
-      })[0] ?? null;
-
+  private patrol() {
     this.warship.setWarshipTarget(this.target);
     if (this.target == null || this.target.type() != UnitType.TradeShip) {
       // Patrol unless we are hunting down a tradeship
@@ -132,6 +114,87 @@ export class WarshipExecution implements Execution {
           break;
       }
     }
+  }
+
+  tick(ticks: number): void {
+    if (this.warship == null) {
+      const spawn = this._owner.canBuild(UnitType.Warship, this.patrolTile);
+      if (spawn == false) {
+        this.active = false;
+        return;
+      }
+      this.warship = this._owner.buildUnit(UnitType.Warship, 0, spawn);
+      return;
+    }
+    if (!this.warship.isActive()) {
+      this.active = false;
+      return;
+    }
+    if (this.target != null && !this.target.isActive()) {
+      this.target = null;
+    }
+    const hasPort = this._owner.units(UnitType.Port).length > 0;
+    const ships = this.mg
+      .nearbyUnits(
+        this.warship.tile(),
+        130, // Search range
+        [UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip],
+      )
+      .filter(
+        ({ unit }) =>
+          unit.owner() !== this.warship.owner() &&
+          unit !== this.warship &&
+          !unit.owner().isFriendly(this.warship.owner()) &&
+          !this.alreadySentShell.has(unit) &&
+          (unit.type() !== UnitType.TradeShip || hasPort) &&
+          (unit.type() !== UnitType.TradeShip ||
+            unit.dstPort()?.owner() !== this._owner),
+      );
+
+    this.target =
+      ships.sort((a, b) => {
+        const { unit: unitA, distSquared: distA } = a;
+        const { unit: unitB, distSquared: distB } = b;
+
+        // Prioritize Warships
+        if (
+          unitA.type() === UnitType.Warship &&
+          unitB.type() !== UnitType.Warship
+        )
+          return -1;
+        if (
+          unitA.type() !== UnitType.Warship &&
+          unitB.type() === UnitType.Warship
+        )
+          return 1;
+
+        // Then favor Transport Ships over Trade Ships
+        if (
+          unitA.type() === UnitType.TransportShip &&
+          unitB.type() !== UnitType.TransportShip
+        )
+          return -1;
+        if (
+          unitA.type() !== UnitType.TransportShip &&
+          unitB.type() === UnitType.TransportShip
+        )
+          return 1;
+
+        // If both are the same type, sort by distance (lower `distSquared` means closer)
+        return distA - distB;
+      })[0]?.unit ?? null;
+
+    if (this.warship.moveTarget()) {
+      this.goToMoveTarget(this.warship.moveTarget());
+      // If we have a "move target" then we cannot target trade ships as it
+      // requires moving.
+      if (this.target && this.target.type() == UnitType.TradeShip) {
+        this.target = null;
+      }
+    } else if (!this.target || this.target.type() != UnitType.TradeShip) {
+      this.patrol();
+    }
+
     if (
       this.target == null ||
       !this.target.isActive() ||
@@ -141,25 +204,16 @@ export class WarshipExecution implements Execution {
       this.target = null;
       return;
     }
+
+    this.warship.setWarshipTarget(this.target);
+
+    // If we have a move target we do not want to go after trading ships
+    if (!this.target) {
+      return;
+    }
+
     if (this.target.type() != UnitType.TradeShip) {
-      if (this.mg.ticks() - this.lastShellAttack > this.shellAttackRate) {
-        this.lastShellAttack = this.mg.ticks();
-        this.mg.addExecution(
-          new ShellExecution(
-            this.warship.tile(),
-            this.warship.owner(),
-            this.warship,
-            this.target,
-          ),
-        );
-        if (!this.target.hasHealth()) {
-          // Don't send multiple shells to target that can be oneshotted
-          this.alreadySentShell.add(this.target);
-          this.target = null;
-          return;
-        }
-      }
-      // Only hunt down tradeships
+      this.shoot();
       return;
     }
 
@@ -172,7 +226,7 @@ export class WarshipExecution implements Execution {
       );
       switch (result.type) {
         case PathFindResultType.Completed:
-          this.owner().captureUnit(this.target);
+          this._owner.captureUnit(this.target);
           this.target = null;
           return;
         case PathFindResultType.NextTile:
@@ -185,10 +239,6 @@ export class WarshipExecution implements Execution {
           break;
       }
     }
-  }
-
-  owner(): Player {
-    return this._owner;
   }
 
   isActive(): boolean {

@@ -1,5 +1,7 @@
-import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { DirectiveResult } from "lit/directive.js";
+import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
@@ -9,27 +11,25 @@ import {
   UnitType,
 } from "../../../core/game/Game";
 import {
+  AllianceExpiredUpdate,
+  AllianceRequestReplyUpdate,
+  AllianceRequestUpdate,
   AttackUpdate,
+  BrokeAllianceUpdate,
   DisplayMessageUpdate,
+  EmojiUpdate,
+  GameUpdateType,
+  TargetPlayerUpdate,
 } from "../../../core/game/GameUpdates";
-import { EmojiUpdate } from "../../../core/game/GameUpdates";
-import { TargetPlayerUpdate } from "../../../core/game/GameUpdates";
-import { AllianceExpiredUpdate } from "../../../core/game/GameUpdates";
-import { BrokeAllianceUpdate } from "../../../core/game/GameUpdates";
-import { AllianceRequestReplyUpdate } from "../../../core/game/GameUpdates";
-import { AllianceRequestUpdate } from "../../../core/game/GameUpdates";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { ClientID } from "../../../core/Schemas";
-import { Layer } from "./Layer";
 import {
   CancelAttackIntentEvent,
   SendAllianceReplyIntentEvent,
 } from "../../Transport";
-import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
-import { DirectiveResult } from "lit/directive.js";
+import { Layer } from "./Layer";
 
-import { onlyImages, sanitize } from "../../../core/Util";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { onlyImages } from "../../../core/Util";
 import { renderTroops } from "../../Utils";
 import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
 
@@ -58,9 +58,11 @@ export class EventsDisplay extends LitElement implements Layer {
   public game: GameView;
   public clientID: ClientID;
 
+  private active: boolean = false;
   private events: Event[] = [];
   @state() private incomingAttacks: AttackUpdate[] = [];
   @state() private outgoingAttacks: AttackUpdate[] = [];
+  @state() private outgoingLandAttacks: AttackUpdate[] = [];
   @state() private outgoingBoats: UnitView[] = [];
   @state() private _hidden: boolean = false;
   @state() private newEvents: number = 0;
@@ -96,6 +98,7 @@ export class EventsDisplay extends LitElement implements Layer {
   init() {}
 
   tick() {
+    this.active = true;
     const updates = this.game.updatesSinceLastTick();
     for (const [ut, fn] of this.updateMap) {
       updates[ut]?.forEach((u) => fn(u));
@@ -133,6 +136,10 @@ export class EventsDisplay extends LitElement implements Layer {
     this.outgoingAttacks = myPlayer
       .outgoingAttacks()
       .filter((a) => a.targetID != 0);
+
+    this.outgoingLandAttacks = myPlayer
+      .outgoingAttacks()
+      .filter((a) => a.targetID == 0);
 
     this.outgoingBoats = myPlayer
       .units()
@@ -261,8 +268,13 @@ export class EventsDisplay extends LitElement implements Layer {
     const traitor = this.game.playerBySmallID(update.traitorID) as PlayerView;
 
     if (!betrayed.isTraitor() && traitor === myPlayer) {
+      const malusPercent = Math.round(
+        (1 - this.game.config().traitorDefenseDebuff()) * 100,
+      );
       this.addEvent({
-        description: `You broke your alliance with ${betrayed.name()}, making you a TRAITOR`,
+        description:
+          `You broke your alliance with ${betrayed.name()}, making you a TRAITOR ` +
+          `(${malusPercent}% defense debuff)`,
         type: MessageType.ERROR,
         highlight: true,
         createdAt: this.game.ticks(),
@@ -304,7 +316,7 @@ export class EventsDisplay extends LitElement implements Layer {
   onTargetPlayerEvent(event: TargetPlayerUpdate) {
     const other = this.game.playerBySmallID(event.playerID) as PlayerView;
     const myPlayer = this.game.playerByClientID(this.clientID) as PlayerView;
-    if (!myPlayer || !myPlayer.isAlliedWith(other)) return;
+    if (!myPlayer || !myPlayer.isFriendly(other)) return;
 
     const target = this.game.playerBySmallID(event.targetID) as PlayerView;
 
@@ -391,14 +403,7 @@ export class EventsDisplay extends LitElement implements Layer {
       : event.description;
   }
 
-  private renderAttacks() {
-    if (
-      this.incomingAttacks.length === 0 &&
-      this.outgoingAttacks.length === 0
-    ) {
-      return html``;
-    }
-
+  private renderIncomingAttacks() {
     return html`
       ${this.incomingAttacks.length > 0
         ? html`
@@ -426,6 +431,11 @@ export class EventsDisplay extends LitElement implements Layer {
             </tr>
           `
         : ""}
+    `;
+  }
+
+  private renderOutgoingAttacks() {
+    return html`
       ${this.outgoingAttacks.length > 0
         ? html`
             <tr class="border-t border-gray-700">
@@ -448,6 +458,37 @@ export class EventsDisplay extends LitElement implements Layer {
                           ${attack.retreating ? "disabled" : ""}
                           @click=${() => {
                             this.emitCancelAttackIntent(attack.id);
+                          }}
+                        >
+                          ❌
+                        </button>`
+                      : "(retreating...)"}
+                  `,
+                )}
+              </td>
+            </tr>
+          `
+        : ""}
+    `;
+  }
+
+  private renderOutgoingLandAttacks() {
+    return html`
+      ${this.outgoingLandAttacks.length > 0
+        ? html`
+            <tr class="border-t border-gray-700">
+              <td class="lg:p-3 p-1 text-left text-gray-400">
+                ${this.outgoingLandAttacks.map(
+                  (landAttack) => html`
+                    <button translate="no" class="ml-2">
+                      ${renderTroops(landAttack.troops)} Wilderness
+                    </button>
+
+                    ${!landAttack.retreating
+                      ? html`<button
+                          ${landAttack.retreating ? "disabled" : ""}
+                          @click=${() => {
+                            this.emitCancelAttackIntent(landAttack.id);
                           }}
                         >
                           ❌
@@ -492,14 +533,10 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   render() {
-    if (
-      this.events.length === 0 &&
-      this.incomingAttacks.length === 0 &&
-      this.outgoingAttacks.length === 0 &&
-      this.outgoingBoats.length === 0
-    ) {
+    if (!this.active) {
       return html``;
     }
+
     this.events.sort((a, b) => {
       const aPrior = a.priority ?? 100000;
       const bPrior = b.priority ?? 100000;
@@ -597,7 +634,8 @@ export class EventsDisplay extends LitElement implements Layer {
                   </tr>
                 `,
               )}
-              ${this.renderAttacks()} ${this.renderBoats()}
+              ${this.renderIncomingAttacks()} ${this.renderOutgoingAttacks()}
+              ${this.renderOutgoingLandAttacks()} ${this.renderBoats()}
             </tbody>
           </table>
         </div>

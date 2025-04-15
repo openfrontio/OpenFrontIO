@@ -1,37 +1,40 @@
-import {
-  GameUpdates,
-  MapPos,
-  MessageType,
-  nukeTypes,
-  Player,
-  PlayerActions,
-  PlayerProfile,
-} from "./Game";
-import { AttackUpdate, PlayerUpdate } from "./GameUpdates";
-import { UnitUpdate } from "./GameUpdates";
-import { NameViewData } from "./Game";
-import { GameUpdateType } from "./GameUpdates";
 import { Config } from "../configuration/Config";
+import { ClientID, GameID, PlayerStats } from "../Schemas";
+import { WorkerClient } from "../worker/WorkerClient";
 import {
   Cell,
   EmojiMessage,
+  GameUpdates,
   Gold,
+  NameViewData,
+  nukeTypes,
+  Player,
+  PlayerActions,
+  PlayerBorderTiles,
   PlayerID,
   PlayerInfo,
+  PlayerProfile,
   PlayerType,
+  Team,
   TerrainType,
   TerraNullius,
   Tick,
   UnitInfo,
   UnitType,
 } from "./Game";
-import { ClientID, GameID, PlayerStats } from "../Schemas";
+import { GameMap, TileRef, TileUpdate } from "./GameMap";
+import {
+  AttackUpdate,
+  GameUpdateType,
+  GameUpdateViewData,
+  PlayerUpdate,
+  UnitUpdate,
+} from "./GameUpdates";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
-import { WorkerClient } from "../worker/WorkerClient";
-import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
-import { GameUpdateViewData } from "./GameUpdates";
-import { DefenseGrid } from "./DefensePostGrid";
-import { consolex } from "../Consolex";
+import { UnitGrid } from "./UnitGrid";
+import { UserSettings } from "./UserSettings";
+
+const userSettings: UserSettings = new UserSettings();
 
 export class UnitView {
   public _wasUpdated = true;
@@ -111,6 +114,12 @@ export class UnitView {
     }
     return this.data.warshipTargetId;
   }
+  ticksLeftInCooldown(): Tick {
+    return this.data.ticksLeftInCooldown;
+  }
+  isCooldown(): boolean {
+    return this.data.ticksLeftInCooldown > 0;
+  }
 }
 
 export class PlayerView {
@@ -126,6 +135,10 @@ export class PlayerView {
       this.game.x(tile),
       this.game.y(tile),
     );
+  }
+
+  async borderTiles(): Promise<PlayerBorderTiles> {
+    return this.game.worker.playerBorderTiles(this.id());
   }
 
   outgoingAttacks(): AttackUpdate[] {
@@ -163,6 +176,9 @@ export class PlayerView {
   }
   id(): PlayerID {
     return this.data.id;
+  }
+  team(): Team | null {
+    return this.data.team;
   }
   type(): PlayerType {
     return this.data.playerType;
@@ -206,6 +222,14 @@ export class PlayerView {
     return this.data.allies.some((n) => other.smallID() == n);
   }
 
+  isOnSameTeam(other: PlayerView): boolean {
+    return this.data.team != null && this.data.team == other.data.team;
+  }
+
+  isFriendly(other: PlayerView): boolean {
+    return this.isAlliedWith(other) || this.isOnSameTeam(other);
+  }
+
   isRequestingAllianceWith(other: PlayerView) {
     return this.data.outgoingAllianceRequests.some((id) => other.id() == id);
   }
@@ -240,6 +264,9 @@ export class PlayerView {
   stats(): PlayerStats {
     return this.data.stats;
   }
+  hasSpawned(): boolean {
+    return this.data.hasSpawned;
+  }
 }
 
 export class GameView implements GameMap {
@@ -250,8 +277,9 @@ export class GameView implements GameMap {
   private updatedTiles: TileRef[] = [];
 
   private _myPlayer: PlayerView | null = null;
+  private _focusedPlayer: PlayerView | null = null;
 
-  private defensePostGrid: DefenseGrid;
+  private unitGrid: UnitGrid;
 
   private toDelete = new Set<number>();
 
@@ -269,7 +297,7 @@ export class GameView implements GameMap {
       updates: null,
       playerNameViewData: {},
     };
-    this.defensePostGrid = new DefenseGrid(_map, _config.defensePostRange());
+    this.unitGrid = new UnitGrid(_map);
   }
   isOnEdgeOfMap(ref: TileRef): boolean {
     return this._map.isOnEdgeOfMap(ref);
@@ -315,12 +343,10 @@ export class GameView implements GameMap {
         unit = new UnitView(this, update);
         this._units.set(update.id, unit);
       }
-      if (update.unitType == UnitType.DefensePost) {
-        if (update.isActive) {
-          this.defensePostGrid.addDefense(unit);
-        } else {
-          this.defensePostGrid.removeDefense(unit);
-        }
+      if (update.isActive) {
+        this.unitGrid.addUnit(unit);
+      } else {
+        this.unitGrid.removeUnit(unit);
       }
       if (!unit.isActive()) {
         // Wait until next tick to delete the unit.
@@ -333,8 +359,15 @@ export class GameView implements GameMap {
     return this.updatedTiles;
   }
 
-  nearbyDefenses(tile: TileRef): UnitView[] {
-    return this.defensePostGrid.nearbyDefenses(tile) as UnitView[];
+  nearbyUnits(
+    tile: TileRef,
+    searchRange: number,
+    types: UnitType | UnitType[],
+  ): Array<{ unit: UnitView; distSquared: number }> {
+    return this.unitGrid.nearbyUnits(tile, searchRange, types) as Array<{
+      unit: UnitView;
+      distSquared: number;
+    }>;
   }
 
   myClientID(): ClientID {
@@ -353,6 +386,10 @@ export class GameView implements GameMap {
       return this._players.get(id);
     }
     throw Error(`player id ${id} not found`);
+  }
+
+  players(): PlayerView[] {
+    return Array.from(this._players.values());
   }
 
   playerBySmallID(id: number): PlayerView | TerraNullius {
@@ -490,8 +527,8 @@ export class GameView implements GameMap {
   manhattanDist(c1: TileRef, c2: TileRef): number {
     return this._map.manhattanDist(c1, c2);
   }
-  euclideanDist(c1: TileRef, c2: TileRef): number {
-    return this._map.euclideanDist(c1, c2);
+  euclideanDistSquared(c1: TileRef, c2: TileRef): number {
+    return this._map.euclideanDistSquared(c1, c2);
   }
   bfs(
     tile: TileRef,
@@ -510,5 +547,15 @@ export class GameView implements GameMap {
   }
   gameID(): GameID {
     return this._gameID;
+  }
+
+  focusedPlayer(): PlayerView | null {
+    // TODO: renable when performance issues are fixed.
+    return this.myPlayer();
+    if (userSettings.focusLocked()) return this.myPlayer();
+    return this._focusedPlayer;
+  }
+  setFocusedPlayer(player: PlayerView | null): void {
+    this._focusedPlayer = player;
   }
 }

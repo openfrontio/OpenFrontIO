@@ -1,6 +1,9 @@
 import cluster from "cluster";
+import * as dotenv from "dotenv";
 import { startMaster } from "./Master";
 import { startWorker } from "./Worker";
+
+dotenv.config();
 
 // Main entry point of the application
 async function main() {

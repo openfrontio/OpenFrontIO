@@ -1,0 +1,187 @@
+{
+  "name": "GatewayToTheAtlantic",
+  "width": 2216,
+  "height": 1968,
+  "nations": [
+    {
+      "coordinates": [2144, 344],
+      "name": "Swiss Confederation",
+      "strength": 2,
+      "flag": "ch"
+    },
+    {
+      "coordinates": [1964, 371],
+      "name": "Kingdom of Burgundy",
+      "strength": 2,
+      "flag": "burgundy"
+    },
+    {
+      "coordinates": [1334, 537],
+      "name": "Duchy of Aquitaine",
+      "strength": 2,
+      "flag": "aquitane"
+    },
+    {
+      "coordinates": [2115, 684],
+      "name": "County of Provence",
+      "strength": 2,
+      "flag": "provence"
+    },
+    {
+      "coordinates": [1207, 763],
+      "name": "The Basque",
+      "strength": 3,
+      "flag": ""
+    },
+    {
+      "coordinates": [1281, 1142],
+      "name": "Kingdom of Valencia",
+      "strength": 2,
+      "flag": "valencia"
+    },
+    {
+      "coordinates": [1660, 891],
+      "name": "Catalonia",
+      "strength": 2,
+      "flag": "catalonia"
+    },
+    {
+      "coordinates": [561, 764],
+      "name": "Kingdom of Galicia",
+      "strength": 2,
+      "flag": "galicia"
+    },
+    {
+      "coordinates": [1004, 1436],
+      "name": "Emirate of Granada",
+      "strength": 2,
+      "flag": "granada"
+    },
+    {
+      "coordinates": [431, 1197],
+      "name": "Portuguese Republic",
+      "strength": 2,
+      "flag": "pt"
+    },
+    {
+      "coordinates": [560, 1894],
+      "name": "Kingdom of Morocco",
+      "strength": 2,
+      "flag": "ma"
+    },
+    {
+      "coordinates": [1609, 1837],
+      "name": "People's Republic of Algeria'",
+      "strength": 2,
+      "flag": "dz"
+    },
+    {
+      "coordinates": [1733, 622],
+      "name": "County of Armagnac",
+      "strength": 2,
+      "flag": "armagnac"
+    },
+    {
+      "coordinates": [896, 1240],
+      "name": "City of Cordoba",
+      "strength": 2,
+      "flag": "cordoba"
+    },
+    {
+      "coordinates": [636, 1781],
+      "name": "City of Seville",
+      "strength": 2,
+      "flag": "seville"
+    },
+    {
+      "coordinates": [750, 873],
+      "name": "Kingdom of Leon",
+      "strength": 2,
+      "flag": "leon"
+    },
+    {
+      "coordinates": [1001, 882],
+      "name": "Kingdom of Castille",
+      "strength": 2,
+      "flag": "castille"
+    },
+    {
+      "coordinates": [775, 724],
+      "name": "Principality of Asturias",
+      "strength": 2,
+      "flag": "asturias"
+    },
+    {
+      "coordinates": [1755, 1130],
+      "name": "The Old Ones",
+      "strength": 3,
+      "flag": "nuragic"
+    },
+    {
+      "coordinates": [2097, 1670],
+      "name": "Jesuit Monks",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [979, 1013],
+      "name": "Kingdom of Spain",
+      "strength": 2,
+      "flag": "es"
+    },
+    {
+      "coordinates": [468, 930],
+      "name": "Sardines",
+      "strength": 3,
+      "flag": "sardines"
+    },
+    {
+      "coordinates": [1667, 96],
+      "name": "City of Paris",
+      "strength": 2,
+      "flag": "paris"
+    },
+    {
+      "coordinates": [1716, 296],
+      "name": "Baguettes",
+      "strength": 3,
+      "flag": "baguette"
+    },
+    {
+      "coordinates": [1017, 180],
+      "name": "Kingdom of Brittany",
+      "strength": 2,
+      "flag": "britanny"
+    },
+    {
+      "coordinates": [2072, 567],
+      "name": "An Anti-Pope",
+      "strength": 3,
+      "flag": "antipope"
+    },
+    {
+      "coordinates": [1355, 76],
+      "name": "Duchy of Normandy",
+      "strength": 2,
+      "flag": "normandy"
+    },
+    {
+      "coordinates": [1402, 529],
+      "name": "Wine",
+      "strength": 1,
+      "flag": ""
+    },
+    {
+      "coordinates": [1475, 1657],
+      "name": "French Foreign Legion",
+      "strength": 3,
+      "flag": "french_foreign_legion"
+    },
+    {
+      "coordinates": [1685, 417],
+      "name": "French Republic",
+      "strength": 3,
+      "flag": "fr"
+    }
+  ]
+}

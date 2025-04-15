@@ -1,10 +1,1 @@
-<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
-  <g id="color">
-    <rect x="5" y="17" width="62" height="38" fill="#1e50a0"/>
-    <rect x="5" y="35" width="62" height="2" fill="#f1b31c"/>
-    <polygon fill="#fff" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" points="16.296 44.896 18 42.536 16.808 45.192 19.464 44 17.104 45.704 20 46 17.104 46.296 19.464 48 16.808 46.808 18 49.464 16.296 47.104 16 50 15.704 47.104 14 49.464 15.192 46.808 12.536 48 14.896 46.296 12 46 14.896 45.704 12.536 44 15.192 45.192 14 42.536 15.704 44.896 16 42 16.296 44.896"/>
-  </g>
-  <g id="line">
-    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72"><path fill="#1e50a0" d="M5 17h62v38H5z"/><path fill="#f1b31c" d="M5 35h62v2H5z"/><path fill="#fff" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" d="M16.296 44.896 18 42.536l-1.192 2.656L19.464 44l-2.36 1.704L20 46l-2.896.296L19.464 48l-2.656-1.192L18 49.464l-1.704-2.36L16 50l-.296-2.896L14 49.464l1.192-2.656L12.536 48l2.36-1.704L12 46l2.896-.296L12.536 44l2.656 1.192L14 42.536l1.704 2.36L16 42l.296 2.896z"/><path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 17h62v38H5z"/></svg>

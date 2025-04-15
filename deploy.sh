@@ -21,38 +21,38 @@ if [ -f .env ]; then
 fi
 
 # Check command line argument
-if [ $# -ne 1 ] || ([ "$1" != "staging" ] && [ "$1" != "prod" ] && [ "$1" != "alt" ]); then
-    echo "Error: Please specify environment (staging, prod, or alt)"
-    echo "Usage: $0 [staging|prod|alt]"
+if [ $# -ne 1 ] || ([ "$1" != "staging" ] && [ "$1" != "eu" ] && [ "$1" != "us" ]); then
+    echo "Error: Please specify environment (staging, eu, or us)"
+    echo "Usage: $0 [staging|eu|us]"
     exit 1
 fi
 
-# TODO: fix this - need to build before creating the image
-bun run build-prod
-
-ENV=$1
+REGION=$1
 VERSION_TAG="latest"
 DOCKER_REPO=""
+ENV=""
 
 # Set environment-specific variables
-if [ "$ENV" == "staging" ]; then
+if [ "$REGION" == "staging" ]; then
     print_header "DEPLOYING TO STAGING ENVIRONMENT"
     SERVER_HOST=$SERVER_HOST_STAGING
     DOCKER_REPO=$DOCKER_REPO_STAGING
-elif [ "$ENV" == "alt" ]; then
-    print_header "DEPLOYING TO ALT ENVIRONMENT"
-    SERVER_HOST=$SERVER_HOST_ALT
+    ENV="staging"
+elif [ "$REGION" == "us" ]; then
+    print_header "DEPLOYING TO US ENVIRONMENT"
+    SERVER_HOST=$SERVER_HOST_US
     DOCKER_REPO=$DOCKER_REPO_PROD  # Uses prod Docker repo for alt environment
     ENV="prod"
 else
-    print_header "DEPLOYING TO PRODUCTION ENVIRONMENT"
-    SERVER_HOST=$SERVER_HOST_PROD
+    print_header "DEPLOYING TO EU ENVIRONMENT"
+    SERVER_HOST=$SERVER_HOST_EU
     DOCKER_REPO=$DOCKER_REPO_PROD
+    ENV="prod"
 fi
 
 # Check required environment variables
 if [ -z "$SERVER_HOST" ]; then
-    echo "Error: SERVER_HOST_${ENV^^} not defined in .env file or environment"
+    echo "Error: SERVER_HOST_${REGION^^} not defined in .env file or environment"
     exit 1
 fi
 
@@ -70,7 +70,7 @@ fi
 
 # Step 1: Build and upload Docker image to Docker Hub
 print_header "STEP 1: Building and uploading Docker image to Docker Hub"
-echo "Environment: ${ENV}"
+echo "Region: ${REGION}"
 echo "Using version tag: $VERSION_TAG"
 echo "Docker repository: $DOCKER_REPO"
 
@@ -79,7 +79,6 @@ GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
 echo "Git commit: $GIT_COMMIT"
 
 docker buildx build \
-  --no-cache \
   --platform linux/amd64 \
   --build-arg GIT_COMMIT=$GIT_COMMIT \
   -t $DOCKER_USERNAME/$DOCKER_REPO:$VERSION_TAG \
@@ -126,7 +125,7 @@ echo "✅ Update script successfully copied to server."
 print_header "STEP 3: Executing update script on server"
 
 # Make the script executable on the remote server and execute it with the environment parameter
-ssh -i $SSH_KEY $SERVER_HOST "chmod +x $REMOTE_UPDATE_SCRIPT && $REMOTE_UPDATE_SCRIPT $ENV $DOCKER_USERNAME $DOCKER_REPO"
+ssh -i $SSH_KEY $SERVER_HOST "chmod +x $REMOTE_UPDATE_SCRIPT && $REMOTE_UPDATE_SCRIPT $REGION $DOCKER_USERNAME $DOCKER_REPO"
 
 if [ $? -ne 0 ]; then
     echo "❌ Failed to execute update script on server."
@@ -134,6 +133,6 @@ if [ $? -ne 0 ]; then
 fi
 
 print_header "DEPLOYMENT COMPLETED SUCCESSFULLY"
-echo "✅ New version deployed to ${ENV} environment!"
-echo "🌐 Check your ${ENV} server to verify the deployment."
+echo "✅ New version deployed to ${REGION} environment!"
+echo "🌐 Check your ${REGION} server to verify the deployment."
 echo "======================================================="

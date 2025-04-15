@@ -9,10 +9,18 @@
 </p>
 
 ![Prettier Check](https://github.com/openfrontio/OpenFrontIO/actions/workflows/prettier.yml/badge.svg)
+[![Crowdin](https://badges.crowdin.net/openfront-mls/localized.svg)](https://crowdin.com/project/openfront-mls)
 
 OpenFront is an online real-time strategy game focused on territorial control and alliance building. Players compete to expand their territory, build structures, and form strategic alliances in various maps based on real-world geography.
 
 This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
+
+# OpenFront - Licensing
+
+This project uses a dual-licensing approach:
+
+- Code in the `server/` and `core/` directory is licensed under MIT
+- Client code (in the `client/` directory) is licensed under GPL v3
 
 ## 🌟 Features
 
@@ -24,7 +32,7 @@ This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 
 ## 📋 Prerequisites
 
-- [Bun.js](https://bun.sh/) (v1.2.4 or higher)
+- [npm](https://www.npmjs.com/) (v10.9.2 or higher)
 - A modern web browser (Chrome, Firefox, Edge, etc.)
 
 ## 🚀 Installation
@@ -39,7 +47,7 @@ This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 2. **Install dependencies**
 
    ```bash
-   bun i
+   npm i
    ```
 
 ## 🎮 Running the Game
@@ -49,7 +57,7 @@ This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 Run both the client and server in development mode with live reloading:
 
 ```bash
-bun run dev
+npm run dev
 ```
 
 This will:
@@ -63,7 +71,7 @@ This will:
 To run just the client with hot reloading:
 
 ```bash
-bun run start:client
+npm run start:client
 ```
 
 ### Server Only
@@ -71,7 +79,7 @@ bun run start:client
 To run just the server with development settings:
 
 ```bash
-bun run start:server-dev
+npm run start:server-dev
 ```
 
 ## 🛠️ Development Tools
@@ -79,7 +87,7 @@ bun run start:server-dev
 - **Format code**:
 
   ```bash
-  bun run format
+  npm run format
   ```
 
 - **Lint code**:
@@ -113,3 +121,72 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin amazing-feature`)
 5. Open a Pull Request
+
+## 🌐 Translation
+
+Translators are welcome! Please feel free to help translate into your language.
+How to help?
+
+1. Go to the project's Crowdin translation page: [https://crowdin.com/project/openfront-mls](https://crowdin.com/project/openfront-mls)
+2. Login if you already have an account/ Sign up if you don't have one
+3. Select the language you want to translate in/ If your language isn't on the list, click the "Request New Language" button and enter the language you want added there.
+4. Translate the strings
+
+### Project Governance
+
+- The project maintainer ([evan](https://github.com/evanpelle)) has final authority on all code changes and design decisions
+- All pull requests require maintainer approval before merging
+- The maintainer reserves the right to reject contributions that don't align with the project's vision or quality standards
+
+### Contribution Path for New Contributors
+
+To ensure code quality and project stability, we use a progressive contribution system:
+
+1. **New Contributors**: Limited to UI improvements and small bug fixes only
+
+   - This helps you become familiar with the codebase
+   - UI changes are easier to review and less likely to break core functionality
+   - Small, focused PRs have a higher chance of being accepted
+
+2. **Established Contributors**: After several successful PRs and demonstrating understanding of the codebase, you may work on more complex features
+
+3. **Core Contributors**: Only those with extensive experience with the project may modify critical game systems
+
+### How to Contribute Successfully
+
+1. **Before Starting Work**:
+
+   - Open an issue describing what you want to contribute
+   - Wait for maintainer feedback before investing significant time
+   - Small improvements can proceed directly to PR stage
+
+2. **Code Quality Requirements**:
+
+   - All code must be well-commented and follow existing style patterns
+   - New features should not break existing functionality
+   - Code should be thoroughly tested before submission
+   - All code changes in src/core _MUST_ be tested.
+
+3. **Pull Request Process**:
+
+   - Keep PRs focused on a single feature or bug fix
+   - Include screenshots for UI changes
+   - Describe what testing you've performed
+   - Be responsive to feedback and requested changes
+
+4. **Testing Requirements**:
+   - Verify your changes work as expected
+   - Test on multiple systems/browsers if applicable
+   - Document your testing process in the PR
+
+### Communication
+
+- Be respectful and constructive in all project interactions
+- Questions are welcome, but please search existing issues first
+- For major changes, discuss in an issue before starting work
+
+### Final Notes
+
+Remember that maintaining this project requires significant effort. The maintainer appreciates your contributions but must prioritize long-term project health and stability. Not all contributions will be accepted, and that's okay.
+
+Thank you for helping make OpenFront better!

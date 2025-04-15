@@ -1,29 +1,19 @@
-import {
-  AllPlayers,
-  Cell,
-  Game,
-  NukeType,
-  nukeTypes,
-  Player,
-  PlayerType,
-  UnitType,
-} from "../../../core/game/Game";
-import { PseudoRandom } from "../../../core/PseudoRandom";
-import { Theme } from "../../../core/configuration/Config";
-import { Layer } from "./Layer";
-import { TransformHandler } from "../TransformHandler";
-import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
 import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
 import allianceRequestIcon from "../../../../resources/images/AllianceRequestIcon.svg";
 import crownIcon from "../../../../resources/images/CrownIcon.svg";
-import targetIcon from "../../../../resources/images/TargetIcon.svg";
 import embargoIcon from "../../../../resources/images/EmbargoIcon.svg";
-import nukeWhiteIcon from "../../../../resources/images/NukeIconWhite.svg";
 import nukeRedIcon from "../../../../resources/images/NukeIconRed.svg";
+import nukeWhiteIcon from "../../../../resources/images/NukeIconWhite.svg";
+import targetIcon from "../../../../resources/images/TargetIcon.svg";
+import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
+import { PseudoRandom } from "../../../core/PseudoRandom";
 import { ClientID } from "../../../core/Schemas";
+import { Theme } from "../../../core/configuration/Config";
+import { AllPlayers, Cell, nukeTypes } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { createCanvas, renderTroops } from "../../Utils";
-import { sanitize } from "../../../core/Util";
+import { TransformHandler } from "../TransformHandler";
+import { Layer } from "./Layer";
 
 class RenderInfo {
   public icons: Map<string, HTMLImageElement> = new Map(); // Track icon elements
@@ -195,7 +185,7 @@ export class NameLayer implements Layer {
       nameDiv.appendChild(flagImg);
     }
     nameDiv.classList.add("player-name");
-    nameDiv.style.color = this.theme.textColor(player.info());
+    nameDiv.style.color = this.theme.textColor(player);
     nameDiv.style.fontFamily = this.theme.font();
     nameDiv.style.whiteSpace = "nowrap";
     nameDiv.style.textOverflow = "ellipsis";
@@ -213,7 +203,7 @@ export class NameLayer implements Layer {
     troopsDiv.classList.add("player-troops");
     troopsDiv.setAttribute("translate", "no");
     troopsDiv.textContent = renderTroops(player.troops());
-    troopsDiv.style.color = this.theme.textColor(player.info());
+    troopsDiv.style.color = this.theme.textColor(player);
     troopsDiv.style.fontFamily = this.theme.font();
     troopsDiv.style.zIndex = "3";
     troopsDiv.style.marginTop = "-5%";
@@ -242,7 +232,7 @@ export class NameLayer implements Layer {
     // Calculate base size and scale
     const baseSize = Math.max(1, Math.floor(render.player.nameLocation().size));
     render.fontSize = Math.max(4, Math.floor(baseSize * 0.4));
-    render.fontColor = this.theme.textColor(render.player.info());
+    render.fontColor = this.theme.textColor(render.player);
 
     // Screen space calculations
     const size = this.transformHandler.scale * baseSize;

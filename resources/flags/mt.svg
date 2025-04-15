@@ -1,10 +1,1 @@
-<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
-  <g id="color">
-    <rect x="5" y="17" width="62" height="38" fill="#d22f27"/>
-    <rect x="5" y="17" width="31" height="38" fill="#fff"/>
-    <polygon fill="#d0cfce" stroke="#d22f27" stroke-linecap="round" stroke-linejoin="round" points="14 22.035 11.965 22.035 11.965 20 10.035 20 10.035 22.035 8 22.035 8 23.965 10.035 23.965 10.035 26 11.965 26 11.965 23.965 14 23.965 14 22.035"/>
-  </g>
-  <g id="line">
-    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72"><path fill="#d22f27" d="M5 17h62v38H5z"/><path fill="#fff" d="M5 17h31v38H5z"/><path fill="#d0cfce" stroke="#d22f27" stroke-linecap="round" stroke-linejoin="round" d="M14 22.035h-2.035V20h-1.93v2.035H8v1.93h2.035V26h1.93v-2.035H14v-1.93z"/><path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 17h62v38H5z"/></svg>

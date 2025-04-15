@@ -1,6 +1,7 @@
-import { Layer } from "./Layer";
-import { GameView } from "../../../core/game/GameView";
 import { Theme } from "../../../core/configuration/Config";
+import { GameView } from "../../../core/game/GameView";
+import { TransformHandler } from "../TransformHandler";
+import { Layer } from "./Layer";
 
 export class TerrainLayer implements Layer {
   private canvas: HTMLCanvasElement;
@@ -8,7 +9,10 @@ export class TerrainLayer implements Layer {
   private imageData: ImageData;
   private theme: Theme;
 
-  constructor(private game: GameView) {}
+  constructor(
+    private game: GameView,
+    private transformHandler: TransformHandler,
+  ) {}
   shouldTransform(): boolean {
     return true;
   }
@@ -54,6 +58,12 @@ export class TerrainLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
+    if (this.transformHandler.scale < 1) {
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "low";
+    } else {
+      context.imageSmoothingEnabled = false;
+    }
     context.drawImage(
       this.canvas,
       -this.game.width() / 2,

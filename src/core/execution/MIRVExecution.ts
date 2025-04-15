@@ -1,20 +1,18 @@
-import { nextTick } from "process";
+import { consolex } from "../Consolex";
 import {
-  Cell,
   Execution,
   Game,
+  MessageType,
   Player,
   PlayerID,
+  TerraNullius,
   Unit,
   UnitType,
-  TerraNullius,
-  MessageType,
 } from "../game/Game";
-import { PathFinder } from "../pathfinding/PathFinding";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PseudoRandom } from "../PseudoRandom";
-import { consolex } from "../Consolex";
 import { TileRef } from "../game/GameMap";
+import { PathFindResultType } from "../pathfinding/AStar";
+import { PathFinder } from "../pathfinding/PathFinding";
+import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
 import { NukeExecution } from "./NukeExecution";
 
@@ -158,6 +156,7 @@ export class MirvExecution implements Execution {
 
   randomLand(ref: TileRef, taken: TileRef[]): TileRef | null {
     let tries = 0;
+    const mirvRange2 = this.mirvRange * this.mirvRange;
     while (tries < 100) {
       tries++;
       const x = this.random.nextInt(
@@ -176,7 +175,7 @@ export class MirvExecution implements Execution {
       if (!this.mg.isLand(tile)) {
         continue;
       }
-      if (this.mg.euclideanDist(tile, ref) > this.mirvRange) {
+      if (this.mg.euclideanDistSquared(tile, ref) > mirvRange2) {
         continue;
       }
       if (this.mg.owner(tile) != this.targetPlayer) {

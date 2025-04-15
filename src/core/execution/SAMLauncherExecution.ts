@@ -1,29 +1,26 @@
 import { consolex } from "../Consolex";
 import {
-  Cell,
   Execution,
   Game,
+  MessageType,
   Player,
-  Unit,
   PlayerID,
+  Unit,
   UnitType,
 } from "../game/Game";
-import { manhattanDistFN, TileRef } from "../game/GameMap";
-import { SAMMissileExecution } from "./SAMMissileExecution";
+import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
+import { SAMMissileExecution } from "./SAMMissileExecution";
 
 export class SAMLauncherExecution implements Execution {
   private player: Player;
   private mg: Game;
-  private post: Unit;
+  private sam: Unit;
   private active: boolean = true;
 
   private target: Unit = null;
 
-  private searchRange = 100;
-
-  private missileAttackRate = 50;
-  private lastMissileAttack = 0;
+  private searchRangeRadius = 75;
 
   private pseudoRandom: PseudoRandom;
 
@@ -43,74 +40,93 @@ export class SAMLauncherExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.post == null) {
+    if (this.sam == null) {
       const spawnTile = this.player.canBuild(UnitType.SAMLauncher, this.tile);
       if (spawnTile == false) {
         consolex.warn("cannot build SAM Launcher");
         this.active = false;
         return;
       }
-      this.post = this.player.buildUnit(UnitType.SAMLauncher, 0, spawnTile);
+      this.sam = this.player.buildUnit(UnitType.SAMLauncher, 0, spawnTile, {
+        cooldownDuration: this.mg.config().SAMCooldown(),
+      });
     }
-    if (!this.post.isActive()) {
+    if (!this.sam.isActive()) {
       this.active = false;
       return;
     }
 
+    if (this.player != this.sam.owner()) {
+      this.player = this.sam.owner();
+    }
+
     if (!this.pseudoRandom) {
-      this.pseudoRandom = new PseudoRandom(this.post.id());
+      this.pseudoRandom = new PseudoRandom(this.sam.id());
     }
 
     const nukes = this.mg
-      .units(UnitType.AtomBomb, UnitType.HydrogenBomb)
+      .nearbyUnits(this.sam.tile(), this.searchRangeRadius, [
+        UnitType.AtomBomb,
+        UnitType.HydrogenBomb,
+      ])
       .filter(
-        (u) =>
-          this.mg.manhattanDist(u.tile(), this.post.tile()) < this.searchRange,
-      )
-      .filter((u) => u.owner() !== this.player)
-      .filter((u) => !u.owner().isAlliedWith(this.player));
+        ({ unit }) =>
+          unit.owner() !== this.player && !this.player.isFriendly(unit.owner()),
+      );
 
     this.target =
       nukes.sort((a, b) => {
-        // Prioritize HydrogenBombs first
-        if (
-          a.type() === UnitType.HydrogenBomb &&
-          b.type() !== UnitType.HydrogenBomb
-        ) {
-          return -1;
-        }
-        if (
-          a.type() !== UnitType.HydrogenBomb &&
-          b.type() === UnitType.HydrogenBomb
-        ) {
-          return 1;
-        }
-        // If both are the same type, sort by distance
-        return (
-          this.mg.manhattanDist(this.post.tile(), a.tile()) -
-          this.mg.manhattanDist(this.post.tile(), b.tile())
-        );
-      })[0] ?? null;
+        const { unit: unitA, distSquared: distA } = a;
+        const { unit: unitB, distSquared: distB } = b;
 
-    if (this.target != null) {
-      if (this.mg.ticks() - this.lastMissileAttack > this.missileAttackRate) {
-        this.lastMissileAttack = this.mg.ticks();
+        // Prioritize Hydrogen Bombs
+        if (
+          unitA.type() === UnitType.HydrogenBomb &&
+          unitB.type() !== UnitType.HydrogenBomb
+        )
+          return -1;
+        if (
+          unitA.type() !== UnitType.HydrogenBomb &&
+          unitB.type() === UnitType.HydrogenBomb
+        )
+          return 1;
+
+        // If both are the same type, sort by distance (lower `distSquared` means closer)
+        return distA - distB;
+      })[0]?.unit ?? null;
+
+    if (
+      this.sam.isCooldown() &&
+      this.sam.ticksLeftInCooldown(this.mg.config().SAMCooldown()) == 0
+    ) {
+      this.sam.setCooldown(false);
+    }
+
+    if (this.target && !this.sam.isCooldown() && !this.target.targetedBySAM()) {
+      this.sam.setCooldown(true);
+      const random = this.pseudoRandom.next();
+      let hit = true;
+      if (this.target.type() != UnitType.AtomBomb) {
+        hit = random < this.mg.config().samHittingChance();
+      }
+      if (!hit) {
+        this.mg.displayMessage(
+          `Missile failed to intercept ${this.target.type()}`,
+          MessageType.ERROR,
+          this.sam.owner().id(),
+        );
+      } else {
+        this.target.setTargetedBySAM(true);
         this.mg.addExecution(
           new SAMMissileExecution(
-            this.post.tile(),
-            this.post.owner(),
-            this.post,
+            this.sam.tile(),
+            this.sam.owner(),
+            this.sam,
             this.target,
-            this.mg,
-            this.pseudoRandom.next(),
           ),
         );
       }
     }
-  }
-
-  owner(): Player {
-    return null;
   }
 
   isActive(): boolean {

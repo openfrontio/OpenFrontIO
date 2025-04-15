@@ -1,6 +1,11 @@
+import {
+  PlayerActions,
+  PlayerBorderTiles,
+  PlayerID,
+  PlayerProfile,
+} from "../game/Game";
 import { GameUpdateViewData } from "../game/GameUpdates";
-import { ClientID, GameConfig, GameID, Turn } from "../Schemas";
-import { PlayerActions, PlayerID, PlayerProfile } from "../game/Game";
+import { ClientID, GameStartInfo, Turn } from "../Schemas";
 
 export type WorkerMessageType =
   | "heartbeat"
@@ -11,7 +16,9 @@ export type WorkerMessageType =
   | "player_actions"
   | "player_actions_result"
   | "player_profile"
-  | "player_profile_result";
+  | "player_profile_result"
+  | "player_border_tiles"
+  | "player_border_tiles_result";
 
 // Base interface for all messages
 interface BaseWorkerMessage {
@@ -26,8 +33,7 @@ export interface HeartbeatMessage extends BaseWorkerMessage {
 // Messages from main thread to worker
 export interface InitMessage extends BaseWorkerMessage {
   type: "init";
-  gameID: GameID;
-  gameConfig: GameConfig;
+  gameStartInfo: GameStartInfo;
   clientID: ClientID;
 }
 
@@ -68,17 +74,29 @@ export interface PlayerProfileResultMessage extends BaseWorkerMessage {
   result: PlayerProfile;
 }
 
+export interface PlayerBorderTilesMessage extends BaseWorkerMessage {
+  type: "player_border_tiles";
+  playerID: PlayerID;
+}
+
+export interface PlayerBorderTilesResultMessage extends BaseWorkerMessage {
+  type: "player_border_tiles_result";
+  result: PlayerBorderTiles;
+}
+
 // Union types for type safety
 export type MainThreadMessage =
   | HeartbeatMessage
   | InitMessage
   | TurnMessage
   | PlayerActionsMessage
-  | PlayerProfileMessage;
+  | PlayerProfileMessage
+  | PlayerBorderTilesMessage;
 
 // Message send from worker
 export type WorkerMessage =
   | InitializedMessage
   | GameUpdateMessage
   | PlayerActionsResultMessage
-  | PlayerProfileResultMessage;
+  | PlayerProfileResultMessage
+  | PlayerBorderTilesResultMessage;
