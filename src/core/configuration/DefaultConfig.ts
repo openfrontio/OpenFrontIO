@@ -386,7 +386,7 @@ export class DefaultConfig implements Config {
               : (p.unitsIncludingConstruction(UnitType.Laboratory).length + 1) *
                 500_000,
           territoryBound: true,
-          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+          constructionDuration: this.instantBuild() ? 0 : 5 * 10,
         };
       case UnitType.Construction:
         return {
