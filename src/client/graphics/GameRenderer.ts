@@ -124,6 +124,7 @@ export function createRenderer(
   playerPanel.g = game;
   playerPanel.eventBus = eventBus;
   playerPanel.emojiTable = emojiTable;
+  playerPanel.uiState = uiState;
 
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
