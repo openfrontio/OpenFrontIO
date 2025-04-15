@@ -93,8 +93,8 @@ export class SAMWarshipExecution implements Execution {
   }
 
   private patrol() {
-    this.SAMWarship.setWarshipTarget(this.SAM_target);
-    if (this.SAM_target == null) {
+    this.SAMWarship.setWarshipTarget(this.warship_target);
+    if (this.warship_target == null) {
       const result = this.pathfinder.nextTile(
         this.SAMWarship.tile(),
         this.patrolTile,
@@ -220,27 +220,34 @@ export class SAMWarshipExecution implements Execution {
       this.warship_target = null;
     }
 
+    if (this.SAM_target && !this.SAM_target.isActive()) {
+      this.SAM_target = null;
+    }
+    if (this.SAM_target?.owner() === this.player) {
+      this.SAM_target = null;
+    }
+
     this.handleWarshipTargeting();
     this.handleSAMTargeting();
 
     if (this.SAMWarship.moveTarget()) {
       this.goToMoveTarget(this.SAMWarship.moveTarget());
-
-      if (this.SAM_target?.type() === UnitType.TradeShip) {
-        this.SAMWarship = null;
-        return;
-      }
-    } else if (this.SAM_target?.type() !== UnitType.TradeShip) {
+    } else {
       this.patrol();
     }
-
-    this.SAMWarship.setWarshipTarget(this.SAM_target);
 
     if (
       this.warship_target &&
       this.warship_target.type() !== UnitType.TradeShip
     ) {
       this.shoot();
+    }
+
+    if (
+      this.SAMWarship.isCooldown() &&
+      this.SAMWarship.ticksLeftInCooldown(this.mg.config().SAMCooldown()) == 0
+    ) {
+      this.SAMWarship.setCooldown(false);
     }
 
     if (
