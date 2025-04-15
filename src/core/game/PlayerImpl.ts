@@ -718,8 +718,6 @@ export class PlayerImpl implements Player {
     // prevent the building of nukes if not having enough labs
     if (
       (this.units(UnitType.Laboratory).length < 1 &&
-        unitType == UnitType.AtomBomb) ||
-      (this.units(UnitType.Laboratory).length < 2 &&
         unitType == UnitType.HydrogenBomb) ||
       (this.units(UnitType.Laboratory).length < 3 && unitType == UnitType.MIRV)
     ) {
