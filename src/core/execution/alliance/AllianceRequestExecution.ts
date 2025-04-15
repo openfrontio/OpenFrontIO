@@ -3,7 +3,6 @@ import { Execution, Game, Player, PlayerID } from "../../game/Game";
 
 export class AllianceRequestExecution implements Execution {
   private active = true;
-  private mg: Game = null;
   private requestor: Player;
   private recipient: Player;
 
@@ -28,7 +27,6 @@ export class AllianceRequestExecution implements Execution {
       return;
     }
 
-    this.mg = mg;
     this.requestor = mg.player(this.requestorID);
     this.recipient = mg.player(this.recipientID);
   }
@@ -42,10 +40,6 @@ export class AllianceRequestExecution implements Execution {
       this.requestor.createAllianceRequest(this.recipient);
     }
     this.active = false;
-  }
-
-  owner(): Player {
-    return null;
   }
 
   isActive(): boolean {

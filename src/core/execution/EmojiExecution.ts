@@ -26,7 +26,7 @@ export class EmojiExecution implements Execution {
       this.active = false;
       return;
     }
-    if (this.recipientID != AllPlayers && !mg.hasPlayer(this.recipientID)) {
+    if (this.recipientID !== AllPlayers && !mg.hasPlayer(this.recipientID)) {
       console.warn(`EmojiExecution: recipient ${this.recipientID} not found`);
       this.active = false;
       return;
@@ -34,16 +34,18 @@ export class EmojiExecution implements Execution {
 
     this.requestor = mg.player(this.senderID);
     this.recipient =
-      this.recipientID == AllPlayers ? AllPlayers : mg.player(this.recipientID);
+      this.recipientID === AllPlayers
+        ? AllPlayers
+        : mg.player(this.recipientID);
   }
 
   tick(ticks: number): void {
     if (this.requestor.canSendEmoji(this.recipient)) {
       this.requestor.sendEmoji(this.recipient, this.emoji);
       if (
-        this.emoji == "🖕" &&
-        this.recipient != AllPlayers &&
-        this.recipient.type() == PlayerType.FakeHuman
+        this.emoji === "🖕" &&
+        this.recipient !== AllPlayers &&
+        this.recipient.type() === PlayerType.FakeHuman
       ) {
         this.recipient.updateRelation(this.requestor, -100);
       }
@@ -53,10 +55,6 @@ export class EmojiExecution implements Execution {
       );
     }
     this.active = false;
-  }
-
-  owner(): Player {
-    return null;
   }
 
   isActive(): boolean {

@@ -20,11 +20,11 @@ export class LocalServer {
   private intents: Intent[] = [];
   private startedAt: number;
 
-  private endTurnIntervalID;
+  private endTurnIntervalID: NodeJS.Timeout;
 
   private paused = false;
 
-  private winner: ClientSendWinnerMessage = null;
+  private winner: ClientSendWinnerMessage | null = null;
   private allPlayersStats: AllPlayersStats = {};
 
   constructor(
@@ -45,6 +45,9 @@ export class LocalServer {
     if (this.lobbyConfig.gameRecord) {
       this.turns = decompressGameRecord(this.lobbyConfig.gameRecord).turns;
       console.log(`loaded turns: ${JSON.stringify(this.turns)}`);
+    }
+    if (typeof this.lobbyConfig.gameStartInfo === "undefined") {
+      throw new Error("missing gameStartInfo");
     }
     this.clientMessage(
       ServerStartGameMessageSchema.parse({
@@ -68,13 +71,13 @@ export class LocalServer {
     const clientMsg: ClientMessage = ClientMessageSchema.parse(
       JSON.parse(message),
     );
-    if (clientMsg.type == "intent") {
+    if (clientMsg.type === "intent") {
       if (this.lobbyConfig.gameRecord) {
         // If we are replaying a game, we don't want to process intents
         return;
       }
       if (this.paused) {
-        if (clientMsg.intent.type == "troop_ratio") {
+        if (clientMsg.intent.type === "troop_ratio") {
           // Store troop change events because otherwise they are
           // not registered when game is paused.
           this.intents.push(clientMsg.intent);
@@ -83,7 +86,7 @@ export class LocalServer {
       }
       this.intents.push(clientMsg.intent);
     }
-    if (clientMsg.type == "hash") {
+    if (clientMsg.type === "hash") {
       if (!this.lobbyConfig.gameRecord) {
         // If we are playing a singleplayer then store hash.
         this.turns[clientMsg.turnNumber].hash = clientMsg.hash;
@@ -97,7 +100,7 @@ export class LocalServer {
         );
         return;
       }
-      if (archivedHash != clientMsg.hash) {
+      if (archivedHash !== clientMsg.hash) {
         console.error(
           `desync detected on turn ${clientMsg.turnNumber}, client hash: ${clientMsg.hash}, server hash: ${archivedHash}`,
         );
@@ -115,7 +118,7 @@ export class LocalServer {
         );
       }
     }
-    if (clientMsg.type == "winner") {
+    if (clientMsg.type === "winner") {
       this.winner = clientMsg;
       this.allPlayersStats = clientMsg.allPlayersStats;
     }
@@ -124,6 +127,9 @@ export class LocalServer {
   private endTurn() {
     if (this.paused) {
       return;
+    }
+    if (typeof this.lobbyConfig.gameStartInfo === "undefined") {
+      throw new Error("missing gameStartInfo");
     }
     const pastTurn: Turn = {
       turnNumber: this.turns.length,
@@ -149,6 +155,9 @@ export class LocalServer {
         clientID: this.lobbyConfig.clientID,
       },
     ];
+    if (typeof this.lobbyConfig.gameStartInfo === "undefined") {
+      throw new Error("missing gameStartInfo");
+    }
     const record = createGameRecord(
       this.lobbyConfig.gameStartInfo.gameID,
       this.lobbyConfig.gameStartInfo,
@@ -156,8 +165,8 @@ export class LocalServer {
       this.turns,
       this.startedAt,
       Date.now(),
-      this.winner?.winner,
-      this.winner?.winnerType,
+      this.winner?.winner ?? null,
+      this.winner?.winnerType ?? null,
       this.allPlayersStats,
     );
     if (!saveFullGame) {

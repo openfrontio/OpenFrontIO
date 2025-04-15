@@ -27,12 +27,13 @@ export class DonateGoldExecution implements Execution {
 
     this.sender = mg.player(this.senderID);
     this.recipient = mg.player(this.recipientID);
-    if (this.gold == null) {
+    if (this.gold === null) {
       this.gold = Math.round(this.sender.gold() / 3);
     }
   }
 
   tick(ticks: number): void {
+    if (this.gold === null) throw new Error("not initialized");
     if (this.sender.canDonate(this.recipient)) {
       this.sender.donateGold(this.recipient, this.gold);
       this.recipient.updateRelation(this.sender, 50);
@@ -42,10 +43,6 @@ export class DonateGoldExecution implements Execution {
       );
     }
     this.active = false;
-  }
-
-  owner(): Player {
-    return null;
   }
 
   isActive(): boolean {

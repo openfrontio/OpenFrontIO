@@ -1,11 +1,13 @@
 export class UserSettings {
-  get(key: string, defaultValue: boolean) {
+  get(key: string, defaultValue: boolean): boolean {
     const value = localStorage.getItem(key);
     if (!value) return defaultValue;
 
     if (value === "true") return true;
 
     if (value === "false") return false;
+
+    return defaultValue;
   }
 
   set(key: string, value: boolean) {

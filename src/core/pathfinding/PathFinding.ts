@@ -5,9 +5,9 @@ import { AStar, PathFindResultType, TileResult } from "./AStar";
 import { MiniAStar } from "./MiniAStar";
 
 export class PathFinder {
-  private curr: TileRef = null;
-  private dst: TileRef = null;
-  private path: TileRef[];
+  private curr: TileRef | null = null;
+  private dst: TileRef | null = null;
+  private path: TileRef[] | null = null;
   private aStar: AStar;
   private computeFinished = true;
 
@@ -63,7 +63,11 @@ export class PathFinder {
         this.computeFinished = false;
         return this.nextTile(curr, dst);
       } else {
-        return { type: PathFindResultType.NextTile, tile: this.path.shift() };
+        const tile = this.path?.shift();
+        if (typeof tile === "undefined") {
+          throw new Error("missing tile");
+        }
+        return { type: PathFindResultType.NextTile, tile };
       }
     }
 
@@ -79,6 +83,8 @@ export class PathFinder {
         return { type: PathFindResultType.Pending };
       case PathFindResultType.PathNotFound:
         return { type: PathFindResultType.PathNotFound };
+      default:
+        throw new Error("unexpected compute result");
     }
   }
 

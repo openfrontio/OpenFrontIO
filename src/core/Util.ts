@@ -93,7 +93,7 @@ export function closestShoreFromPlayer(
   const shoreTiles = Array.from(player.borderTiles()).filter((t) =>
     gm.isShore(t),
   );
-  if (shoreTiles.length == 0) {
+  if (shoreTiles.length === 0) {
     return null;
   }
 
@@ -108,7 +108,7 @@ function closestShoreTN(
   gm: GameMap,
   tile: TileRef,
   searchDist: number,
-): TileRef {
+): TileRef | null {
   const tn = Array.from(
     gm.bfs(
       tile,
@@ -117,7 +117,7 @@ function closestShoreTN(
   )
     .filter((t) => gm.isShore(t))
     .sort((a, b) => gm.manhattanDist(tile, a) - gm.manhattanDist(tile, b));
-  if (tn.length == 0) {
+  if (tn.length === 0) {
     return null;
   }
   return tn[0];
@@ -260,21 +260,26 @@ export function createGameRecord(
   const record: GameRecord = {
     id: id,
     gameStartInfo: gameStart,
+    players,
     startTimestampMS: start,
     endTimestampMS: end,
+    durationSeconds: Math.floor((end - start) / 1000),
     date: new Date().toISOString().split("T")[0],
+    num_turns: 0,
     turns: [],
     allPlayersStats,
     version: "v0.0.1",
+    winner,
+    winnerType,
   };
 
   for (const turn of turns) {
-    if (turn.intents.length != 0 || turn.hash != undefined) {
+    if (turn.intents.length !== 0 || turn.hash !== undefined) {
       record.turns.push(turn);
       for (const intent of turn.intents) {
-        if (intent.type == "spawn") {
+        if (intent.type === "spawn") {
           for (const playerRecord of players) {
-            if (playerRecord.clientID == intent.clientID) {
+            if (playerRecord.clientID === intent.clientID) {
               playerRecord.username = intent.name;
             }
           }
@@ -282,18 +287,12 @@ export function createGameRecord(
       }
     }
   }
-  record.players = players;
-  record.durationSeconds = Math.floor(
-    (record.endTimestampMS - record.startTimestampMS) / 1000,
-  );
   record.num_turns = turns.length;
-  record.winner = winner;
-  record.winnerType = winnerType;
   return record;
 }
 
 export function decompressGameRecord(gameRecord: GameRecord) {
-  const turns = [];
+  const turns: Turn[] = [];
   let lastTurnNum = -1;
   for (const turn of gameRecord.turns) {
     while (lastTurnNum < turn.turnNumber - 1) {

@@ -58,6 +58,10 @@ describe("Warship", () => {
 
   test("Warship heals only if player has port", async () => {
     const maxHealth = game.config().unitInfo(UnitType.Warship).maxHealth;
+    if (typeof maxHealth !== "number") {
+      expect(typeof maxHealth).toBe("number");
+      throw new Error("unreachable");
+    }
 
     const port = player1.buildUnit(UnitType.Port, 0, game.ref(coastX, 10));
     const warship = player1.buildUnit(

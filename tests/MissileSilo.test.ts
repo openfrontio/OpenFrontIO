@@ -15,7 +15,7 @@ let game: Game;
 let attacker: Player;
 
 function attackerBuildsNuke(
-  source: TileRef,
+  source: TileRef | null,
   target: TileRef,
   initialize = true,
 ) {

@@ -36,7 +36,7 @@ export class DevServerConfig extends DefaultServerConfig {
 }
 
 export class DevConfig extends DefaultConfig {
-  constructor(sc: ServerConfig, gc: GameConfig, us: UserSettings) {
+  constructor(sc: ServerConfig, gc: GameConfig, us: UserSettings | null) {
     super(sc, gc, us);
   }
 

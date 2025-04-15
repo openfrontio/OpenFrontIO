@@ -37,26 +37,28 @@ export const pastelTheme = new (class implements Theme {
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
 
   territoryColor(player: PlayerView): Colord {
-    if (player.team() == Team.Bot) {
+    if (player.team() === Team.Bot) {
       return botColor;
     }
-    if (player.team() == Team.Red) {
+    if (player.team() === Team.Red) {
       return red;
     }
-    if (player.team() == Team.Blue) {
+    if (player.team() === Team.Blue) {
       return blue;
     }
-    if (player.info().playerType == PlayerType.Human) {
+    if (player.info().playerType === PlayerType.Human) {
       return humanColors[simpleHash(player.id()) % humanColors.length];
     }
-    if (player.info().playerType == PlayerType.Bot) {
+    if (player.info().playerType === PlayerType.Bot) {
       return botColors[simpleHash(player.id()) % botColors.length];
     }
     return territoryColors[simpleHash(player.id()) % territoryColors.length];
   }
 
   textColor(player: PlayerView): string {
-    return player.info().playerType == PlayerType.Human ? "#000000" : "#4D4D4D";
+    return player.info().playerType === PlayerType.Human
+      ? "#000000"
+      : "#4D4D4D";
   }
 
   specialBuildingColor(player: PlayerView): Colord {

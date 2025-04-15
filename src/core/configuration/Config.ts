@@ -64,7 +64,7 @@ export interface Config {
   infiniteTroops(): boolean;
   instantBuild(): boolean;
   numSpawnPhaseTurns(): number;
-  userSettings(): UserSettings;
+  userSettings(): UserSettings | null;
 
   startManpower(playerInfo: PlayerInfo): number;
   populationIncreaseRate(player: Player | PlayerView): number;

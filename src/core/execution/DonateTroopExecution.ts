@@ -27,12 +27,13 @@ export class DonateTroopsExecution implements Execution {
 
     this.sender = mg.player(this.senderID);
     this.recipient = mg.player(this.recipientID);
-    if (this.troops == null) {
+    if (this.troops === null) {
       this.troops = mg.config().defaultDonationAmount(this.sender);
     }
   }
 
   tick(ticks: number): void {
+    if (this.troops === null) throw new Error("not initialized");
     if (this.sender.canDonate(this.recipient)) {
       this.sender.donateTroops(this.recipient, this.troops);
       this.recipient.updateRelation(this.sender, 50);
@@ -42,10 +43,6 @@ export class DonateTroopsExecution implements Execution {
       );
     }
     this.active = false;
-  }
-
-  owner(): Player {
-    return null;
   }
 
   isActive(): boolean {

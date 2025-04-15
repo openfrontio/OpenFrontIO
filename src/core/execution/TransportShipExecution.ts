@@ -40,7 +40,7 @@ export class TransportShipExecution implements Execution {
     private attackerID: PlayerID,
     private targetID: PlayerID | null,
     private ref: TileRef,
-    private troops: number | null,
+    private troops: number,
   ) {}
 
   activeDuringSpawnPhase(): boolean {
@@ -129,6 +129,10 @@ export class TransportShipExecution implements Execution {
   }
 
   tick(ticks: number) {
+    if (this.dst == null) {
+      this.active = false;
+      return;
+    }
     if (!this.active) {
       return;
     }

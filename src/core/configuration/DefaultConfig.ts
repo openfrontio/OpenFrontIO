@@ -25,29 +25,29 @@ import { pastelThemeDark } from "./PastelThemeDark";
 
 export abstract class DefaultServerConfig implements ServerConfig {
   region(): string {
-    if (this.env() == GameEnv.Dev) {
+    if (this.env() === GameEnv.Dev) {
       return "dev";
     }
-    return process.env.REGION;
+    return process.env.REGION ?? "undefined";
   }
   gitCommit(): string {
-    return process.env.GIT_COMMIT;
+    return process.env.GIT_COMMIT ?? "undefined";
   }
   r2Endpoint(): string {
-    return process.env.R2_ENDPOINT;
+    return process.env.R2_ENDPOINT ?? "undefined";
   }
   r2AccessKey(): string {
-    return process.env.R2_ACCESS_KEY;
+    return process.env.R2_ACCESS_KEY ?? "undefined";
   }
   r2SecretKey(): string {
-    return process.env.R2_SECRET_KEY;
+    return process.env.R2_SECRET_KEY ?? "undefined";
   }
   abstract r2Bucket(): string;
   adminHeader(): string {
     return "x-admin-key";
   }
   adminToken(): string {
-    return process.env.ADMIN_TOKEN;
+    return process.env.ADMIN_TOKEN ?? "undefined";
   }
   abstract numWorkers(): number;
   abstract env(): GameEnv;
@@ -104,7 +104,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
       return Math.random() < 0.2 ? 60 : 35;
     }
     // world belongs with the ~2 mils, but these amounts never made sense so I assume the insanity is intended.
-    if (map == GameMapType.World) {
+    if (map === GameMapType.World) {
       return Math.random() < 0.2 ? 150 : 60;
     }
     // default return for non specified map
@@ -128,7 +128,7 @@ export class DefaultConfig implements Config {
   constructor(
     private _serverConfig: ServerConfig,
     private _gameConfig: GameConfig,
-    private _userSettings: UserSettings,
+    private _userSettings: UserSettings | null,
   ) {}
 
   samHittingChance(): number {
@@ -229,7 +229,7 @@ export class DefaultConfig implements Config {
       case UnitType.Warship:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.infiniteGold()
+            p.type() === PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
                   1_000_000,
@@ -253,7 +253,7 @@ export class DefaultConfig implements Config {
       case UnitType.Port:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.infiniteGold()
+            p.type() === PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
                   1_000_000,
@@ -268,19 +268,21 @@ export class DefaultConfig implements Config {
       case UnitType.AtomBomb:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.infiniteGold() ? 0 : 750_000,
+            p.type() === PlayerType.Human && this.infiniteGold() ? 0 : 750_000,
           territoryBound: false,
         };
       case UnitType.HydrogenBomb:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.infiniteGold() ? 0 : 5_000_000,
+            p.type() === PlayerType.Human && this.infiniteGold()
+              ? 0
+              : 5_000_000,
           territoryBound: false,
         };
       case UnitType.MIRV:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.infiniteGold()
+            p.type() === PlayerType.Human && this.infiniteGold()
               ? 0
               : 25_000_000,
           territoryBound: false,
@@ -298,14 +300,16 @@ export class DefaultConfig implements Config {
       case UnitType.MissileSilo:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.infiniteGold() ? 0 : 1_000_000,
+            p.type() === PlayerType.Human && this.infiniteGold()
+              ? 0
+              : 1_000_000,
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 10 * 10,
         };
       case UnitType.DefensePost:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.infiniteGold()
+            p.type() === PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
                   250_000,
@@ -319,7 +323,7 @@ export class DefaultConfig implements Config {
       case UnitType.SAMLauncher:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.infiniteGold()
+            p.type() === PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
                   1_500_000 * 3,
@@ -333,7 +337,7 @@ export class DefaultConfig implements Config {
       case UnitType.City:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.infiniteGold()
+            p.type() === PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
                   1_000_000,
@@ -379,7 +383,7 @@ export class DefaultConfig implements Config {
     return 600 * 10; // 10 minutes.
   }
   percentageTilesOwnedToWin(): number {
-    if (this._gameConfig.gameMode == GameMode.Team) {
+    if (this._gameConfig.gameMode === GameMode.Team) {
       return 95;
     }
     return 80;
@@ -388,13 +392,13 @@ export class DefaultConfig implements Config {
     return 3;
   }
   numSpawnPhaseTurns(): number {
-    return this._gameConfig.gameType == GameType.Singleplayer ? 100 : 300;
+    return this._gameConfig.gameType === GameType.Singleplayer ? 100 : 300;
   }
   numBots(): number {
     return this.bots();
   }
   theme(): Theme {
-    return this.userSettings().darkMode() ? pastelThemeDark : pastelTheme;
+    return this.userSettings()?.darkMode() ? pastelThemeDark : pastelTheme;
   }
 
   attackLogic(
@@ -433,7 +437,7 @@ export class DefaultConfig implements Config {
         gm.config().defensePostRange(),
         UnitType.DefensePost,
       )) {
-        if (dp.unit.owner() == defender) {
+        if (dp.unit.owner() === defender) {
           mag *= this.defensePostDefenseBonus();
           speed *= this.defensePostDefenseBonus();
           break;
@@ -449,14 +453,14 @@ export class DefaultConfig implements Config {
 
     if (attacker.isPlayer() && defender.isPlayer()) {
       if (
-        attacker.type() == PlayerType.Human &&
-        defender.type() == PlayerType.Bot
+        attacker.type() === PlayerType.Human &&
+        defender.type() === PlayerType.Bot
       ) {
         mag *= 0.8;
       }
       if (
-        attacker.type() == PlayerType.FakeHuman &&
-        defender.type() == PlayerType.Bot
+        attacker.type() === PlayerType.FakeHuman &&
+        defender.type() === PlayerType.Bot
       ) {
         mag *= 0.8;
       }
@@ -496,7 +500,7 @@ export class DefaultConfig implements Config {
     } else {
       return {
         attackerTroopLoss:
-          attacker.type() == PlayerType.Bot ? mag / 10 : mag / 5,
+          attacker.type() === PlayerType.Bot ? mag / 10 : mag / 5,
         defenderTroopLoss: 0,
         tilesPerTickUsed: within(
           (2000 * Math.max(10, speed)) / attackTroops,
@@ -541,7 +545,7 @@ export class DefaultConfig implements Config {
   }
 
   attackAmount(attacker: Player, defender: Player | TerraNullius) {
-    if (attacker.type() == PlayerType.Bot) {
+    if (attacker.type() === PlayerType.Bot) {
       return attacker.troops() / 20;
     } else {
       return attacker.troops() / 5;
@@ -549,10 +553,10 @@ export class DefaultConfig implements Config {
   }
 
   startManpower(playerInfo: PlayerInfo): number {
-    if (playerInfo.playerType == PlayerType.Bot) {
+    if (playerInfo.playerType === PlayerType.Bot) {
       return 10_000;
     }
-    if (playerInfo.playerType == PlayerType.FakeHuman) {
+    if (playerInfo.playerType === PlayerType.FakeHuman) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
           return 2_500 * (playerInfo?.nation?.strength ?? 1);
@@ -569,16 +573,16 @@ export class DefaultConfig implements Config {
 
   maxPopulation(player: Player | PlayerView): number {
     const maxPop =
-      player.type() == PlayerType.Human && this.infiniteTroops()
+      player.type() === PlayerType.Human && this.infiniteTroops()
         ? 1_000_000_000
         : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
           player.units(UnitType.City).length * this.cityPopulationIncrease();
 
-    if (player.type() == PlayerType.Bot) {
+    if (player.type() === PlayerType.Bot) {
       return maxPop / 2;
     }
 
-    if (player.type() == PlayerType.Human) {
+    if (player.type() === PlayerType.Human) {
       return maxPop;
     }
 
@@ -602,11 +606,11 @@ export class DefaultConfig implements Config {
     const ratio = 1 - player.population() / max;
     toAdd *= ratio;
 
-    if (player.type() == PlayerType.Bot) {
+    if (player.type() === PlayerType.Bot) {
       toAdd *= 0.7;
     }
 
-    if (player.type() == PlayerType.FakeHuman) {
+    if (player.type() === PlayerType.FakeHuman) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
           toAdd *= 0.9;
@@ -655,6 +659,7 @@ export class DefaultConfig implements Config {
       case UnitType.HydrogenBomb:
         return { inner: 80, outer: 100 };
     }
+    throw new Error(`Unknown nuke type: ${unitType}`);
   }
 
   defaultNukeSpeed(): number {

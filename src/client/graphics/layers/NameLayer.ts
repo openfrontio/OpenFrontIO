@@ -21,7 +21,7 @@ class RenderInfo {
   constructor(
     public player: PlayerView,
     public lastRenderCalc: number,
-    public location: Cell,
+    public location: Cell | null,
     public fontSize: number,
     public fontColor: string,
     public element: HTMLElement,
@@ -100,7 +100,7 @@ export class NameLayer implements Layer {
   }
 
   public tick() {
-    if (this.game.ticks() % 10 != 0) {
+    if (this.game.ticks() % 10 !== 0) {
       return;
     }
     const sorted = this.game
@@ -218,7 +218,7 @@ export class NameLayer implements Layer {
 
   renderPlayerInfo(render: RenderInfo) {
     if (!render.player.nameLocation() || !render.player.isAlive()) {
-      this.renders = this.renders.filter((r) => r != render);
+      this.renders = this.renders.filter((r) => r !== render);
       render.element.remove();
       return;
     }
@@ -311,7 +311,7 @@ export class NameLayer implements Layer {
 
     // Alliance icon
     const existingAlliance = iconsDiv.querySelector('[data-icon="alliance"]');
-    if (myPlayer != null && myPlayer.isAlliedWith(render.player)) {
+    if (myPlayer !== null && myPlayer.isAlliedWith(render.player)) {
       if (!existingAlliance) {
         iconsDiv.appendChild(
           this.createIconElement(
@@ -328,7 +328,7 @@ export class NameLayer implements Layer {
     // Alliance request icon
     const data = '[data-icon="alliance-request"]';
     const existingRequestAlliance = iconsDiv.querySelector(data);
-    if (myPlayer != null && render.player.isRequestingAllianceWith(myPlayer)) {
+    if (myPlayer !== null && render.player.isRequestingAllianceWith(myPlayer)) {
       if (!existingRequestAlliance) {
         iconsDiv.appendChild(
           this.createIconElement(
@@ -345,7 +345,7 @@ export class NameLayer implements Layer {
     // Target icon
     const existingTarget = iconsDiv.querySelector('[data-icon="target"]');
     if (
-      myPlayer != null &&
+      myPlayer !== null &&
       new Set(myPlayer.transitiveTargets()).has(render.player)
     ) {
       if (!existingTarget) {
@@ -368,11 +368,11 @@ export class NameLayer implements Layer {
       .outgoingEmojis()
       .filter(
         (emoji) =>
-          emoji.recipientID == AllPlayers ||
-          emoji.recipientID == myPlayer?.smallID(),
+          emoji.recipientID === AllPlayers ||
+          emoji.recipientID === myPlayer?.smallID(),
       );
 
-    if (this.game.config().userSettings().emojis() && emojis.length > 0) {
+    if (this.game.config().userSettings()?.emojis() && emojis.length > 0) {
       if (!existingEmoji) {
         const emojiDiv = document.createElement("div");
         emojiDiv.setAttribute("data-icon", "emoji");
@@ -407,8 +407,8 @@ export class NameLayer implements Layer {
     }
 
     const nukesSentByOtherPlayer = this.game.units().filter((unit) => {
-      const isSendingNuke = render.player.id() == unit.owner().id();
-      const notMyPlayer = !myPlayer || unit.owner().id() != myPlayer.id();
+      const isSendingNuke = render.player.id() === unit.owner().id();
+      const notMyPlayer = !myPlayer || unit.owner().id() !== myPlayer.id();
       return (
         nukeTypes.includes(unit.type()) &&
         isSendingNuke &&
@@ -418,24 +418,25 @@ export class NameLayer implements Layer {
     });
     const isMyPlayerTarget = nukesSentByOtherPlayer.find((unit) => {
       const detonationDst = unit.detonationDst();
+      if (typeof detonationDst === "undefined") return false;
       const targetId = this.game.owner(detonationDst).id();
-      return myPlayer && targetId == this.myPlayer.id();
+      return myPlayer && targetId === myPlayer.id();
     });
     const existingNuke = iconsDiv.querySelector(
       '[data-icon="nuke"]',
     ) as HTMLImageElement;
 
     if (existingNuke) {
-      if (nukesSentByOtherPlayer.length == 0) {
+      if (nukesSentByOtherPlayer.length === 0) {
         existingNuke.remove();
       } else if (
         isMyPlayerTarget &&
-        existingNuke.src != this.nukeRedIconImage.src
+        existingNuke.src !== this.nukeRedIconImage.src
       ) {
         existingNuke.src = this.nukeRedIconImage.src;
       } else if (
         !isMyPlayerTarget &&
-        existingNuke.src != this.nukeWhiteIconImage.src
+        existingNuke.src !== this.nukeWhiteIconImage.src
       ) {
         existingNuke.src = this.nukeWhiteIconImage.src;
       }
@@ -455,7 +456,7 @@ export class NameLayer implements Layer {
     }
 
     // Position element with scale
-    if (render.location && render.location != oldLocation) {
+    if (render.location && render.location !== oldLocation) {
       const scale = Math.min(baseSize * 0.25, 3);
       render.element.style.transform = `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) scale(${scale})`;
     }
@@ -481,12 +482,12 @@ export class NameLayer implements Layer {
   }
 
   private getPlayer(): PlayerView | null {
-    if (this.myPlayer != null) {
+    if (this.myPlayer !== null) {
       return this.myPlayer;
     }
-    this.myPlayer = this.game
-      .playerViews()
-      .find((p) => p.clientID() == this.clientID);
+    this.myPlayer =
+      this.game.playerViews().find((p) => p.clientID() === this.clientID) ??
+      null;
     return this.myPlayer;
   }
 }

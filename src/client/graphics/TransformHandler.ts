@@ -9,8 +9,8 @@ export class TransformHandler {
   private offsetX: number = -350;
   private offsetY: number = -200;
 
-  private target: Cell;
-  private intervalID = null;
+  private target: Cell | null;
+  private intervalID: NodeJS.Timeout | null = null;
   private changed = false;
 
   constructor(
@@ -170,6 +170,8 @@ export class TransformHandler {
     const { screenX, screenY } = this.screenCenter();
     const screenMapCenter = new Cell(screenX, screenY);
 
+    if (this.target === null) throw new Error("null target");
+
     if (
       this.game.manhattanDist(
         this.game.ref(screenX, screenY),
@@ -234,7 +236,7 @@ export class TransformHandler {
   }
 
   private clearTarget() {
-    if (this.intervalID != null) {
+    if (this.intervalID !== null) {
       clearInterval(this.intervalID);
       this.intervalID = null;
     }

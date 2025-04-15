@@ -127,7 +127,7 @@ export class EmojiTable extends LitElement {
 
       this.showTable((emoji) => {
         const recipient =
-          targetPlayer == this.game.myPlayer()
+          targetPlayer === this.game.myPlayer()
             ? AllPlayers
             : (targetPlayer as PlayerView);
         this.eventBus.emit(new SendEmojiIntentEvent(recipient, emoji));

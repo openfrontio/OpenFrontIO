@@ -419,33 +419,32 @@ function getThumbnailColor(t: Terrain): {
     return { r: 204, g: 203, b: 158, a: 255 };
   }
   let adjRGB: number;
-  switch (true) {
-    //plains
-    case t.magnitude < 10:
-      adjRGB = 220 - 2 * t.magnitude;
-      return {
-        r: 190,
-        g: adjRGB,
-        b: 138,
-        a: 255,
-      };
-    //highlands
-    case t.magnitude < 20:
-      adjRGB = 2 * t.magnitude;
-      return {
-        r: 200 + adjRGB,
-        g: 183 + adjRGB,
-        b: 138 + adjRGB,
-        a: 255,
-      };
-    //mountains
-    case t.magnitude >= 20:
-      adjRGB = Math.floor(230 + t.magnitude / 2);
-      return {
-        r: adjRGB,
-        g: adjRGB,
-        b: adjRGB,
-        a: 255,
-      };
+  if (t.magnitude < 10) {
+    // Plains
+    adjRGB = 220 - 2 * t.magnitude;
+    return {
+      r: 190,
+      g: adjRGB,
+      b: 138,
+      a: 255,
+    };
+  } else if (t.magnitude < 20) {
+    // Highlands
+    adjRGB = 2 * t.magnitude;
+    return {
+      r: 200 + adjRGB,
+      g: 183 + adjRGB,
+      b: 138 + adjRGB,
+      a: 255,
+    };
+  } else {
+    // Mountains
+    adjRGB = Math.floor(230 + t.magnitude / 2);
+    return {
+      r: adjRGB,
+      g: adjRGB,
+      b: adjRGB,
+      a: 255,
+    };
   }
 }

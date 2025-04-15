@@ -23,7 +23,7 @@ export class MirvExecution implements Execution {
 
   private mg: Game;
 
-  private nuke: Unit;
+  private nuke: Unit | null = null;
 
   private mirvRange = 1500;
   private warheadCount = 350;
@@ -64,9 +64,9 @@ export class MirvExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.nuke == null) {
+    if (this.nuke === null) {
       const spawn = this.player.canBuild(UnitType.MIRV, this.dst);
-      if (spawn == false) {
+      if (spawn === false) {
         consolex.warn(`cannot build MIRV`);
         this.active = false;
         return;
@@ -112,12 +112,13 @@ export class MirvExecution implements Execution {
   }
 
   private separate() {
+    if (this.nuke === null) throw new Error("uninitialized");
     const dsts: TileRef[] = [this.dst];
     let attempts = 1000;
     while (attempts > 0 && dsts.length < this.warheadCount) {
       attempts--;
       const potential = this.randomLand(this.dst, dsts);
-      if (potential == null) {
+      if (potential === null) {
         continue;
       }
       dsts.push(potential);
@@ -144,10 +145,10 @@ export class MirvExecution implements Execution {
     }
     if (this.targetPlayer.isPlayer()) {
       const alliance = this.player.allianceWith(this.targetPlayer);
-      if (alliance != null) {
+      if (alliance !== null) {
         this.player.breakAlliance(alliance);
       }
-      if (this.targetPlayer != this.player) {
+      if (this.targetPlayer !== this.player) {
         this.targetPlayer.updateRelation(this.player, -100);
       }
     }
@@ -178,7 +179,7 @@ export class MirvExecution implements Execution {
       if (this.mg.euclideanDistSquared(tile, ref) > mirvRange2) {
         continue;
       }
-      if (this.mg.owner(tile) != this.targetPlayer) {
+      if (this.mg.owner(tile) !== this.targetPlayer) {
         continue;
       }
       for (const t of taken) {

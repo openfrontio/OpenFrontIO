@@ -292,13 +292,12 @@ export class BuildMenu extends LitElement implements Layer {
   private _hidden = true;
 
   private canBuild(item: BuildItemDisplay): boolean {
-    if (this.game?.myPlayer() == null || this.playerActions == null) {
+    if (this.game?.myPlayer() === null || this.playerActions === null) {
       return false;
     }
-    const unit = this.playerActions.buildableUnits.filter(
-      (u) => u.type == item.unitType,
-    );
-    if (!unit) {
+    const buildableUnits = this.playerActions?.buildableUnits ?? [];
+    const unit = buildableUnits.filter((u) => u.type === item.unitType);
+    if (unit.length === 0) {
       return false;
     }
     return unit[0].canBuild;
@@ -306,7 +305,7 @@ export class BuildMenu extends LitElement implements Layer {
 
   private cost(item: BuildItemDisplay): number {
     for (const bu of this.playerActions?.buildableUnits ?? []) {
-      if (bu.type == item.unitType) {
+      if (bu.type === item.unitType) {
         return bu.cost;
       }
     }
@@ -398,7 +397,7 @@ export class BuildMenu extends LitElement implements Layer {
   private refresh() {
     this.game
       .myPlayer()
-      .actions(this.clickedTile)
+      ?.actions(this.clickedTile)
       .then((actions) => {
         this.playerActions = actions;
         this.requestUpdate();

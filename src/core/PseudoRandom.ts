@@ -38,14 +38,14 @@ export class PseudoRandom {
   }
 
   randElement<T>(arr: T[]): T {
-    if (arr.length == 0) {
+    if (arr.length === 0) {
       throw new Error("array must not be empty");
     }
     return arr[this.nextInt(0, arr.length)];
   }
 
   chance(odds: number): boolean {
-    return this.nextInt(0, odds) == 0;
+    return this.nextInt(0, odds) === 0;
   }
 
   shuffleArray(array: any[]) {

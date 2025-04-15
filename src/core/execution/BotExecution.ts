@@ -36,7 +36,7 @@ export class BotExecution implements Execution {
       return;
     }
 
-    if (ticks % this.attackRate != 0) {
+    if (ticks % this.attackRate !== 0) {
       return;
     }
 
@@ -74,9 +74,9 @@ export class BotExecution implements Execution {
 
     const border = Array.from(this.bot.borderTiles())
       .flatMap((t) => this.mg.neighbors(t))
-      .filter((t) => this.mg.hasOwner(t) && this.mg.owner(t) != this.bot);
+      .filter((t) => this.mg.hasOwner(t) && this.mg.owner(t) !== this.bot);
 
-    if (border.length == 0) {
+    if (border.length === 0) {
       return;
     }
 
@@ -87,7 +87,7 @@ export class BotExecution implements Execution {
       if (this.bot.isFriendly(owner)) {
         return;
       }
-      if (owner.type() == PlayerType.FakeHuman) {
+      if (owner.type() === PlayerType.FakeHuman) {
         if (!this.random.chance(2)) {
           return;
         }

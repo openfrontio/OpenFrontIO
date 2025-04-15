@@ -25,9 +25,8 @@ export interface Nation {
 export async function loadTerrainMap(
   map: GameMapType,
 ): Promise<TerrainMapData> {
-  if (loadedMaps.has(map)) {
-    return loadedMaps.get(map);
-  }
+  const cached = loadedMaps.get(map);
+  if (typeof cached !== "undefined") return cached;
   const mapFiles = await terrainMapFileLoader.getMapData(map);
 
   const gameMap = await genTerrainFromBin(mapFiles.mapBin);

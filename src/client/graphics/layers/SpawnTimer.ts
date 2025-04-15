@@ -21,19 +21,19 @@ export class SpawnTimer implements Layer {
       this.ratio = this.game.ticks() / this.game.config().numSpawnPhaseTurns();
       return;
     }
-    if (this.game.config().gameConfig().gameMode != GameMode.Team) {
+    if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
       this.ratio = 0;
       return;
     }
 
     const numBlueTiles = this.game
       .players()
-      .filter((p) => p.team() == Team.Blue)
+      .filter((p) => p.team() === Team.Blue)
       .reduce((acc, p) => acc + p.numTilesOwned(), 0);
 
     const numRedTiles = this.game
       .players()
-      .filter((p) => p.team() == Team.Red)
+      .filter((p) => p.team() === Team.Red)
       .reduce((acc, p) => acc + p.numTilesOwned(), 0);
 
     this.ratio = numBlueTiles / (numBlueTiles + numRedTiles);
@@ -46,7 +46,7 @@ export class SpawnTimer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
-    if (this.ratio == 0) {
+    if (this.ratio === 0) {
       return;
     }
 

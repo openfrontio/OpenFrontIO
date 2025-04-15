@@ -115,6 +115,7 @@ export class PlayerExecution implements Execution {
     clusters.sort((a, b) => b.size - a.size);
 
     const main = clusters.shift();
+    if (typeof main === "undefined") throw new Error("No clusters");
     this.player.largestClusterBoundingBox = calculateBoundingBox(this.mg, main);
     const surroundedBy = this.surroundedBySamePlayer(main);
     if (surroundedBy && !this.player.isFriendly(surroundedBy)) {
@@ -276,6 +277,7 @@ export class PlayerExecution implements Execution {
       seen.add(tile);
       while (queue.length > 0) {
         const curr = queue.shift();
+        if (typeof curr === "undefined") throw new Error("curr is undefined");
         cluster.add(curr);
 
         const neighbors = (this.mg as GameImpl).neighborsWithDiag(curr);
