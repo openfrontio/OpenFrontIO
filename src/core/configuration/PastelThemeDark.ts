@@ -11,6 +11,7 @@ import {
   green,
   humanColors,
   orange,
+  purple,
   red,
   teal,
   territoryColors,
@@ -49,7 +50,7 @@ export const pastelThemeDark = new (class implements Theme {
       case Team.Teal:
         return teal;
       case Team.Purple:
-        return teal;
+        return purple;
       case Team.Yellow:
         return yellow;
       case Team.Orange:
