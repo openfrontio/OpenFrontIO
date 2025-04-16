@@ -95,7 +95,7 @@ export interface Config {
   maxPopulation(player: Player | PlayerView): number;
   cityPopulationIncrease(): number;
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number;
-  warshipShellLifetime(): number;
+  shellLifetime(): number;
   boatMaxNumber(): number;
   allianceDuration(): Tick;
   allianceRequestCooldown(): Tick;
@@ -114,6 +114,9 @@ export interface Config {
   defensePostDefenseBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
+  warshipPatrolRange(): number;
+  warshipShellAttackRate(): number;
+  defensePostShellAttackRate(): number;
   // 0-1
   traitorDefenseDebuff(): number;
   nukeMagnitudes(unitType: UnitType): NukeMagnitude;

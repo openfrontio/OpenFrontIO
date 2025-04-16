@@ -26,12 +26,7 @@ export class WarshipExecution implements Execution {
 
   private patrolTile: TileRef;
 
-  // TODO: put in config
-  private searchRange = 100;
-
-  private shellAttackRate = 5;
   private lastShellAttack = 0;
-
   private alreadySentShell = new Set<Unit>();
 
   constructor(
@@ -72,7 +67,8 @@ export class WarshipExecution implements Execution {
   }
 
   private shoot() {
-    if (this.mg.ticks() - this.lastShellAttack > this.shellAttackRate) {
+    const shellAttackRate = this.mg.config().warshipShellAttackRate();
+    if (this.mg.ticks() - this.lastShellAttack > shellAttackRate) {
       this.lastShellAttack = this.mg.ticks();
       this.mg.addExecution(
         new ShellExecution(
@@ -253,13 +249,14 @@ export class WarshipExecution implements Execution {
   }
 
   randomTile(): TileRef {
+    const warshipPatrolRange = this.mg.config().warshipPatrolRange();
     while (true) {
       const x =
         this.mg.x(this.patrolCenterTile) +
-        this.random.nextInt(-this.searchRange / 2, this.searchRange / 2);
+        this.random.nextInt(-warshipPatrolRange / 2, warshipPatrolRange / 2);
       const y =
         this.mg.y(this.patrolCenterTile) +
-        this.random.nextInt(-this.searchRange / 2, this.searchRange / 2);
+        this.random.nextInt(-warshipPatrolRange / 2, warshipPatrolRange / 2);
       if (!this.mg.isValidCoord(x, y)) {
         continue;
       }

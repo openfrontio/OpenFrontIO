@@ -42,8 +42,7 @@ export class ShellExecution implements Execution {
     }
 
     if (this.destroyAtTick == -1 && !this.ownerUnit.isActive()) {
-      this.destroyAtTick =
-        this.mg.ticks() + this.mg.config().warshipShellLifetime();
+      this.destroyAtTick = this.mg.ticks() + this.mg.config().shellLifetime();
     }
 
     for (let i = 0; i < 3; i++) {

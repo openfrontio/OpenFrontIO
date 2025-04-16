@@ -131,63 +131,28 @@ export class DefaultConfig implements Config {
     private _userSettings: UserSettings,
   ) {}
 
-  samHittingChance(): number {
-    return 0.8;
-  }
-
-  traitorDefenseDebuff(): number {
-    return 0.8;
-  }
-  spawnImmunityDuration(): Tick {
-    return 5 * 10;
-  }
-
   gameConfig(): GameConfig {
     return this._gameConfig;
   }
-
   serverConfig(): ServerConfig {
     return this._serverConfig;
   }
-
   userSettings(): UserSettings | null {
     return this._userSettings;
   }
 
-  difficultyModifier(difficulty: Difficulty): number {
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return 1;
-      case Difficulty.Medium:
-        return 3;
-      case Difficulty.Hard:
-        return 9;
-      case Difficulty.Impossible:
-        return 18;
-    }
+  // Game Settings
+  numSpawnPhaseTurns(): number {
+    return this._gameConfig.gameType == GameType.Singleplayer ? 100 : 300;
   }
-
-  cityPopulationIncrease(): number {
-    return 250_000;
+  spawnImmunityDuration(): Tick {
+    return 5 * 10;
   }
-
-  falloutDefenseModifier(falloutRatio: number): number {
-    // falloutRatio is between 0 and 1
-    // So defense modifier is between [5, 2.5]
-    return 5 - falloutRatio * 2;
+  numBots(): number {
+    return this.bots();
   }
-  SAMCooldown(): number {
-    return 75;
-  }
-  SiloCooldown(): number {
-    return 75;
-  }
-
-  defensePostRange(): number {
-    return 30;
-  }
-  defensePostDefenseBonus(): number {
-    return 5;
+  theme(): Theme {
+    return this.userSettings().darkMode() ? pastelThemeDark : pastelTheme;
   }
   spawnNPCs(): boolean {
     return !this._gameConfig.disableNPCs;
@@ -206,6 +171,55 @@ export class DefaultConfig implements Config {
   }
   infiniteTroops(): boolean {
     return this._gameConfig.infiniteTroops;
+  }
+  percentageTilesOwnedToWin(): number {
+    if (this._gameConfig.gameMode == GameMode.Team) {
+      return 95;
+    }
+    return 80;
+  }
+  difficultyModifier(difficulty: Difficulty): number {
+    switch (difficulty) {
+      case Difficulty.Easy:
+        return 1;
+      case Difficulty.Medium:
+        return 3;
+      case Difficulty.Hard:
+        return 9;
+      case Difficulty.Impossible:
+        return 18;
+    }
+  }
+
+  // UNITS - Buildings
+  cityPopulationIncrease(): number {
+    return 250_000;
+  }
+  SAMCooldown(): number {
+    return 75;
+  }
+  SiloCooldown(): number {
+    return 75;
+  }
+  defensePostRange(): number {
+    return 30;
+  }
+  defensePostDefenseBonus(): number {
+    return 5;
+  }
+  defensePostShellAttackRate(): number {
+    return 80; // interval in ticks between attcks
+  }
+
+  //UNITS - Ships
+  warshipPatrolRange(): number {
+    return 100; // was previously WarshipExecution.searchRange
+  }
+  warshipShellAttackRate(): number {
+    return 5; // interval in ticks between attcks
+  }
+  boatMaxNumber(): number {
+    return 9; // max concurrent trade ships
   }
   tradeShipGold(dist: number): Gold {
     return 10000 + 150 * Math.pow(dist, 1.1);
@@ -243,7 +257,7 @@ export class DefaultConfig implements Config {
         return {
           cost: () => 0,
           territoryBound: false,
-          damage: 250,
+          damage: 115,
         };
       case UnitType.SAMMissile:
         return {
@@ -354,6 +368,8 @@ export class DefaultConfig implements Config {
         assertNever(type);
     }
   }
+
+  // Player Interactions
   defaultDonationAmount(sender: Player): number {
     return Math.floor(sender.troops() / 3);
   }
@@ -378,23 +394,18 @@ export class DefaultConfig implements Config {
   allianceDuration(): Tick {
     return 600 * 10; // 10 minutes.
   }
-  percentageTilesOwnedToWin(): number {
-    if (this._gameConfig.gameMode == GameMode.Team) {
-      return 95;
+
+  // Attacks
+  traitorDefenseDebuff(): number {
+    return 0.8;
+  }
+
+  attackAmount(attacker: Player, defender: Player | TerraNullius) {
+    if (attacker.type() == PlayerType.Bot) {
+      return attacker.troops() / 20;
+    } else {
+      return attacker.troops() / 5;
     }
-    return 80;
-  }
-  boatMaxNumber(): number {
-    return 3;
-  }
-  numSpawnPhaseTurns(): number {
-    return this._gameConfig.gameType == GameType.Singleplayer ? 100 : 300;
-  }
-  numBots(): number {
-    return this.bots();
-  }
-  theme(): Theme {
-    return this.userSettings().darkMode() ? pastelThemeDark : pastelTheme;
   }
 
   attackLogic(
@@ -528,8 +539,34 @@ export class DefaultConfig implements Config {
     return Math.floor(attacker.troops() / 5);
   }
 
-  warshipShellLifetime(): number {
+  // munitions
+  samHittingChance(): number {
+    return 0.8;
+  }
+  shellLifetime(): number {
     return 20; // in ticks (one tick is 100ms)
+  }
+  nukeMagnitudes(unitType: UnitType): NukeMagnitude {
+    switch (unitType) {
+      case UnitType.MIRVWarhead:
+        return { inner: 25, outer: 30 };
+      case UnitType.AtomBomb:
+        return { inner: 12, outer: 30 };
+      case UnitType.HydrogenBomb:
+        return { inner: 80, outer: 100 };
+    }
+  }
+  defaultNukeSpeed(): number {
+    return 4;
+  }
+  // Humans can be population, soldiers attacking, soldiers in boat etc.
+  nukeDeathFactor(humans: number, tilesOwned: number): number {
+    return (5 * humans) / Math.max(1, tilesOwned);
+  }
+  falloutDefenseModifier(falloutRatio: number): number {
+    // falloutRatio is between 0 and 1
+    // So defense modifier is between [5, 2.5]
+    return 5 - falloutRatio * 2;
   }
 
   radiusPortSpawn() {
@@ -540,14 +577,7 @@ export class DefaultConfig implements Config {
     return within(totalPorts / 3, 4, totalPorts);
   }
 
-  attackAmount(attacker: Player, defender: Player | TerraNullius) {
-    if (attacker.type() == PlayerType.Bot) {
-      return attacker.troops() / 20;
-    } else {
-      return attacker.troops() / 5;
-    }
-  }
-
+  // Population and Economy
   startManpower(playerInfo: PlayerInfo): number {
     if (playerInfo.playerType == PlayerType.Bot) {
       return 10_000;
@@ -644,25 +674,5 @@ export class DefaultConfig implements Config {
       return adjustment * 5;
     }
     return adjustment;
-  }
-
-  nukeMagnitudes(unitType: UnitType): NukeMagnitude {
-    switch (unitType) {
-      case UnitType.MIRVWarhead:
-        return { inner: 25, outer: 30 };
-      case UnitType.AtomBomb:
-        return { inner: 12, outer: 30 };
-      case UnitType.HydrogenBomb:
-        return { inner: 80, outer: 100 };
-    }
-  }
-
-  defaultNukeSpeed(): number {
-    return 4;
-  }
-
-  // Humans can be population, soldiers attacking, soldiers in boat etc.
-  nukeDeathFactor(humans: number, tilesOwned: number): number {
-    return (5 * humans) / Math.max(1, tilesOwned);
   }
 }
