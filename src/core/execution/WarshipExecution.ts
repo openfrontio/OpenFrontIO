@@ -146,9 +146,11 @@ export class WarshipExecution implements Execution {
           unit !== this.warship &&
           !unit.owner().isFriendly(this.warship.owner()) &&
           !this.alreadySentShell.has(unit) &&
-          (unit.type() !== UnitType.TradeShip || hasPort) &&
           (unit.type() !== UnitType.TradeShip ||
-            unit.dstPort()?.owner() !== this._owner),
+            (hasPort &&
+              unit.dstPort()?.owner() !== this.warship.owner() &&
+              !unit.dstPort()?.owner().isFriendly(this.warship.owner()) &&
+              unit.safeFromPirates() !== true)),
       );
 
     this.target =
@@ -198,9 +200,10 @@ export class WarshipExecution implements Execution {
     if (
       this.target == null ||
       !this.target.isActive() ||
-      this.target.owner() == this._owner
+      this.target.owner() == this._owner ||
+      this.target.safeFromPirates() == true
     ) {
-      // In case another destroyer captured or destroyed target
+      // In case another warship captured or destroyed target, or the target escaped into safe waters
       this.target = null;
       return;
     }
@@ -261,7 +264,7 @@ export class WarshipExecution implements Execution {
         continue;
       }
       const tile = this.mg.ref(x, y);
-      if (!this.mg.isOcean(tile)) {
+      if (!this.mg.isOcean(tile) || this.mg.isShoreline(tile)) {
         continue;
       }
       return tile;
