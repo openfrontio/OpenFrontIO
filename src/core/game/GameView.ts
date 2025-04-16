@@ -90,6 +90,9 @@ export class UnitView {
   hasHealth(): boolean {
     return this.data.health != undefined;
   }
+  hasdstPortId(): boolean {
+    return this.data.dstPortId != undefined;
+  }
   health(): number {
     return this.data.health ?? 0;
   }
