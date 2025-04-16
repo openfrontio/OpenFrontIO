@@ -45,7 +45,6 @@ body:
     validations:
       required: false
 
-
   - type: textarea 
     attributes:
       label: "Additional Context"
