@@ -27,7 +27,7 @@ describe("Warship", () => {
       null,
       "player_1_id",
     );
-    game.addPlayer(player_1_info, 1000);
+    game.addPlayer(player_1_info);
     const player_2_info = new PlayerInfo(
       "us",
       "boat dude",
@@ -35,7 +35,7 @@ describe("Warship", () => {
       null,
       "player_2_id",
     );
-    game.addPlayer(player_2_info, 1000);
+    game.addPlayer(player_2_info);
 
     game.addExecution(
       new SpawnExecution(

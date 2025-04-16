@@ -6,7 +6,7 @@ import {
   GameType,
   PlayerID,
   PlayerType,
-  TeamName,
+  Team,
   Tick,
   UnitType,
 } from "../core/game/Game";
@@ -128,7 +128,7 @@ export class SendSetTargetTroopRatioEvent implements GameEvent {
 
 export class SendWinnerEvent implements GameEvent {
   constructor(
-    public readonly winner: ClientID | TeamName,
+    public readonly winner: ClientID | Team,
     public readonly allPlayersStats: AllPlayersStats,
     public readonly winnerType: "player" | "team",
   ) {}
@@ -337,6 +337,7 @@ export class Transport {
           lastTurn: numTurns,
           persistentID: this.lobbyConfig.persistentID,
           username: this.lobbyConfig.playerName,
+          flag: this.lobbyConfig.flag,
         }),
       ),
     );

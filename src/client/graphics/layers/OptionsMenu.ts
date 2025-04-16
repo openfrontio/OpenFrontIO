@@ -220,7 +220,7 @@ export class OptionsMenu extends LitElement implements Layer {
                 ? "Opens menu"
                 : "Attack"),
           })}
-          ${button({
+          <!-- ${button({
             onClick: this.onToggleFocusLockedButtonClick,
             title: "Lock Focus",
             children:
@@ -228,7 +228,7 @@ export class OptionsMenu extends LitElement implements Layer {
               (this.userSettings.focusLocked()
                 ? "Focus locked"
                 : "Hover focus"),
-          })}
+          })} -->
         </div>
       </div>
     `;

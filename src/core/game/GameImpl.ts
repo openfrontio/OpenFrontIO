@@ -20,7 +20,6 @@ import {
   PlayerInfo,
   PlayerType,
   Team,
-  TeamName,
   TerrainType,
   TerraNullius,
   Unit,
@@ -76,11 +75,8 @@ export class GameImpl implements Game {
 
   private _stats: StatsImpl = new StatsImpl();
 
-  private playerTeams: Team[] = [
-    { name: TeamName.Red },
-    { name: TeamName.Blue },
-  ];
-  private botTeam: Team = { name: TeamName.Bot };
+  private playerTeams: Team[] = [Team.Red, Team.Blue];
+  private botTeam: Team = Team.Bot;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -107,7 +103,7 @@ export class GameImpl implements Game {
 
   private addHumans() {
     if (this.config().gameConfig().gameMode != GameMode.Team) {
-      this._humans.forEach((p) => this.addPlayer(p, 0));
+      this._humans.forEach((p) => this.addPlayer(p));
       return;
     }
     const playerToTeam = assignTeams(this._humans);
@@ -116,7 +112,7 @@ export class GameImpl implements Game {
         console.warn(`Player ${playerInfo.name} was kicked from team`);
         continue;
       }
-      this.addPlayer(playerInfo, 0, team);
+      this.addPlayer(playerInfo, team);
     }
   }
 
@@ -346,16 +342,12 @@ export class GameImpl implements Game {
     return this.player(id);
   }
 
-  addPlayer(
-    playerInfo: PlayerInfo,
-    manpower: number,
-    team: Team = null,
-  ): Player {
+  addPlayer(playerInfo: PlayerInfo, team: Team = null): Player {
     const player = new PlayerImpl(
       this,
       this.nextPlayerID,
       playerInfo,
-      manpower,
+      this.config().startManpower(playerInfo),
       team ?? this.maybeAssignTeam(playerInfo),
     );
     this._playersBySmallID.push(player);
@@ -559,7 +551,7 @@ export class GameImpl implements Game {
     });
   }
 
-  setWinner(winner: Player | TeamName, allPlayersStats: AllPlayersStats): void {
+  setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
     this.addUpdate({
       type: GameUpdateType.Win,
       winner: typeof winner === "string" ? winner : winner.smallID(),
@@ -688,8 +680,8 @@ export class GameImpl implements Game {
   manhattanDist(c1: TileRef, c2: TileRef): number {
     return this._map.manhattanDist(c1, c2);
   }
-  euclideanDist(c1: TileRef, c2: TileRef): number {
-    return this._map.euclideanDist(c1, c2);
+  euclideanDistSquared(c1: TileRef, c2: TileRef): number {
+    return this._map.euclideanDistSquared(c1, c2);
   }
   bfs(
     tile: TileRef,

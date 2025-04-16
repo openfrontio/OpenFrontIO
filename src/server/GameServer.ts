@@ -13,6 +13,7 @@ import {
   Intent,
   PlayerRecord,
   ServerDesyncSchema,
+  ServerPrestartMessageSchema,
   ServerStartGameMessageSchema,
   ServerTurnMessageSchema,
   Turn,
@@ -23,7 +24,6 @@ import { GameType } from "../core/game/Game";
 import { archive } from "./Archive";
 import { Client } from "./Client";
 import { gatekeeper } from "./Gatekeeper";
-import { slog } from "./StructuredLog";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -54,6 +54,8 @@ export class GameServer {
   private gameStartInfo: GameStartInfo;
 
   private log: Logger;
+
+  private _hasPrestarted = false;
 
   constructor(
     public readonly id: string,
@@ -96,19 +98,11 @@ export class GameServer {
   }
 
   public addClient(client: Client, lastTurn: number) {
-    this.log.info(`adding client ${client.clientID}`);
-    slog({
-      logKey: "client_joined_game",
-      msg: `client ${client.clientID} (re)joining game ${this.id}`,
-      data: {
-        clientID: client.clientID,
-        clientIP: client.ip,
-        gameID: this.id,
-        isRejoin: lastTurn > 0,
-      },
+    this.log.info("client (re)joining game", {
       clientID: client.clientID,
       persistentID: client.persistentID,
-      gameID: this.id,
+      clientIP: client.ip,
+      isRejoin: lastTurn > 0,
     });
 
     if (
@@ -117,9 +111,10 @@ export class GameServer {
         (c) => c.ip == client.ip && c.clientID != client.clientID,
       ).length >= 3
     ) {
-      this.log.info(
-        `cannot add client ${client.clientID}, already have 3 ips (${client.ip})`,
-      );
+      this.log.warn("cannot add client, already have 3 ips", {
+        clientID: client.clientID,
+        clientIP: client.ip,
+      });
       return;
     }
 
@@ -153,6 +148,10 @@ export class GameServer {
             if (client.persistentID != clientMsg.persistentID) {
               this.log.warn(
                 `Client ID ${clientMsg.clientID} sent incorrect id ${clientMsg.persistentID}, does not match persistent id ${client.persistentID}`,
+                {
+                  clientID: clientMsg.clientID,
+                  persistentID: clientMsg.persistentID,
+                },
               );
               return;
             }
@@ -165,9 +164,10 @@ export class GameServer {
             if (clientMsg.gameID == this.id) {
               this.addIntent(clientMsg.intent);
             } else {
-              this.log.warn(
-                `${this.id}: client ${clientMsg.clientID} sent to wrong game`,
-              );
+              this.log.warn("client sent to wrong game", {
+                clientID: clientMsg.clientID,
+                persistentID: clientMsg.persistentID,
+              });
             }
           }
           if (clientMsg.type == "ping") {
@@ -184,12 +184,18 @@ export class GameServer {
         } catch (error) {
           this.log.info(
             `error handline websocket request in game server: ${error}`,
+            {
+              clientID: client.clientID,
+            },
           );
         }
       }),
     );
     client.ws.on("close", () => {
-      this.log.info(`${this.id}: client ${client.clientID} disconnected`);
+      this.log.info("client disconnected", {
+        clientID: client.clientID,
+        persistentID: client.persistentID,
+      });
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID != client.clientID,
       );
@@ -219,7 +225,41 @@ export class GameServer {
     }
   }
 
+  public prestart() {
+    if (this.hasStarted()) {
+      return;
+    }
+    this._hasPrestarted = true;
+
+    const prestartMsg = ServerPrestartMessageSchema.safeParse({
+      type: "prestart",
+      gameMap: this.gameConfig.gameMap,
+    });
+
+    if (!prestartMsg.success) {
+      console.error(
+        `error creating prestart message for game ${this.id}, ${prestartMsg.error}`.substring(
+          0,
+          250,
+        ),
+      );
+      return;
+    }
+
+    const msg = JSON.stringify(prestartMsg.data);
+    this.activeClients.forEach((c) => {
+      this.log.info("sending prestart message", {
+        clientID: c.clientID,
+        persistentID: c.persistentID,
+      });
+      c.ws.send(msg);
+    });
+  }
+
   public start() {
+    if (this._hasStarted) {
+      return;
+    }
     this._hasStarted = true;
     this._startTime = Date.now();
     // Set last ping to start so we don't immediately stop the game
@@ -233,6 +273,7 @@ export class GameServer {
         playerID: c.playerID,
         username: c.username,
         clientID: c.clientID,
+        flag: c.flag,
       })),
     });
 
@@ -241,7 +282,10 @@ export class GameServer {
       this.config.turnIntervalMs(),
     );
     this.activeClients.forEach((c) => {
-      this.log.info(`${this.id}: sending start message to ${c.clientID}`);
+      this.log.info("sending start message", {
+        clientID: c.clientID,
+        persistentID: c.persistentID,
+      });
       this.sendStartGameMsg(c.ws, 0);
     });
   }
@@ -292,10 +336,8 @@ export class GameServer {
       );
     } catch (error) {
       this.log.info(
-        `error sending message for game ${this.id}, error ${error}`.substring(
-          0,
-          250,
-        ),
+        `error sending message for game: ${error.substring(0, 250)}`,
+        {},
       );
       return;
     }
@@ -314,9 +356,11 @@ export class GameServer {
         client.ws.close(1000, "game has ended");
       }
     });
-    this.log.info(
-      `${this.id}: ending game ${this.id} with ${this.turns.length} turns`,
-    );
+    if (!this._hasPrestarted || !this._hasStarted) {
+      this.log.info(`game not started, not archiving game`);
+      return;
+    }
+    this.log.info(`ending game with ${this.turns.length} turns`);
     try {
       if (this.allClients.size > 0) {
         const playerRecords: PlayerRecord[] = Array.from(
@@ -335,13 +379,15 @@ export class GameServer {
             this.turns,
             this._startTime,
             Date.now(),
-            this.winner.winner,
-            this.winner.winnerType,
+            this.winner?.winner,
+            this.winner?.winnerType,
             this.allPlayersStats,
           ),
         );
       } else {
-        this.log.info(`${this.id}: no clients joined, not archiving game`);
+        this.log.info("no clients joined, not archiving game", {
+          gameID: this.id,
+        });
       }
     } catch (error) {
       let errorDetails;
@@ -373,9 +419,10 @@ export class GameServer {
     const alive = [];
     for (const client of this.activeClients) {
       if (now - client.lastPing > 60_000) {
-        this.log.info(
-          `${this.id}: no pings from ${client.clientID}, terminating connection`,
-        );
+        this.log.info("no pings received, terminating connection", {
+          clientID: client.clientID,
+          persistentID: client.persistentID,
+        });
         if (client.ws.readyState === WebSocket.OPEN) {
           client.ws.close(1000, "no heartbeats received, closing connection");
         }
@@ -385,7 +432,9 @@ export class GameServer {
     }
     this.activeClients = alive;
     if (now > this.createdAt + this.maxGameDuration) {
-      this.log.warn(`${this.id}: game past max duration ${this.id}`);
+      this.log.warn("game past max duration", {
+        gameID: this.id,
+      });
       return GamePhase.Finished;
     }
 
@@ -395,7 +444,9 @@ export class GameServer {
     if (this.gameConfig.gameType != GameType.Public) {
       if (this._hasStarted) {
         if (noActive && noRecentPings) {
-          this.log.info(`${this.id}: private game: ${this.id} complete`);
+          this.log.info("private game complete", {
+            gameID: this.id,
+          });
           return GamePhase.Finished;
         } else {
           return GamePhase.Active;
@@ -424,7 +475,7 @@ export class GameServer {
   }
 
   hasStarted(): boolean {
-    return this._hasStarted;
+    return this._hasStarted || this._hasPrestarted;
   }
 
   public gameInfo(): GameInfo {
@@ -446,7 +497,7 @@ export class GameServer {
   }
 
   private handleSynchronization() {
-    if (this.activeClients.length < 1) {
+    if (this.activeClients.length <= 1) {
       return;
     }
     if (this.turns.length % 10 != 0 || this.turns.length < 10) {
@@ -473,7 +524,10 @@ export class GameServer {
       totalActiveClients: this.activeClients.length,
     });
     if (!serverDesync.success) {
-      this.log.warn(`failed to create desync message ${serverDesync.error}`);
+      this.log.warn("failed to create desync message", {
+        gameID: this.id,
+        error: serverDesync.error,
+      });
       return;
     }
 
@@ -483,7 +537,11 @@ export class GameServer {
         continue;
       }
       this.sentDesyncMessageClients.add(c.clientID);
-      this.log.info(`game: ${this.id}: sending desync to client ${c.clientID}`);
+      this.log.info("sending desync to client", {
+        gameID: this.id,
+        clientID: c.clientID,
+        persistentID: c.persistentID,
+      });
       c.ws.send(desyncMsg);
     }
   }

@@ -16,7 +16,7 @@ import {
   PlayerInfo,
   PlayerProfile,
   PlayerType,
-  TeamName,
+  Team,
   TerrainType,
   TerraNullius,
   Tick,
@@ -219,8 +219,8 @@ export class PlayerView {
   id(): PlayerID {
     return this.data.id;
   }
-  teamName(): TeamName {
-    return this.data.teamName;
+  team(): Team | null {
+    return this.data.team;
   }
   type(): PlayerType {
     return this.data.playerType;
@@ -265,9 +265,7 @@ export class PlayerView {
   }
 
   isOnSameTeam(other: PlayerView): boolean {
-    return (
-      this.data.teamName != null && this.data.teamName == other.data.teamName
-    );
+    return this.data.team != null && this.data.team == other.data.team;
   }
 
   isFriendly(other: PlayerView): boolean {
@@ -307,6 +305,9 @@ export class PlayerView {
   }
   stats(): PlayerStats {
     return this.data.stats;
+  }
+  hasSpawned(): boolean {
+    return this.data.hasSpawned;
   }
 }
 
@@ -568,8 +569,8 @@ export class GameView implements GameMap {
   manhattanDist(c1: TileRef, c2: TileRef): number {
     return this._map.manhattanDist(c1, c2);
   }
-  euclideanDist(c1: TileRef, c2: TileRef): number {
-    return this._map.euclideanDist(c1, c2);
+  euclideanDistSquared(c1: TileRef, c2: TileRef): number {
+    return this._map.euclideanDistSquared(c1, c2);
   }
   bfs(
     tile: TileRef,
@@ -591,6 +592,8 @@ export class GameView implements GameMap {
   }
 
   focusedPlayer(): PlayerView | null {
+    // TODO: renable when performance issues are fixed.
+    return this.myPlayer();
     if (userSettings.focusLocked()) return this.myPlayer();
     return this._focusedPlayer;
   }

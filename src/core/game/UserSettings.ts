@@ -28,7 +28,9 @@ export class UserSettings {
   }
 
   focusLocked() {
-    return this.get("settings.focusLocked", false);
+    return false;
+    // TODO: renable when performance issues are fixed.
+    this.get("settings.focusLocked", true);
   }
 
   toggleLeftClickOpenMenu() {

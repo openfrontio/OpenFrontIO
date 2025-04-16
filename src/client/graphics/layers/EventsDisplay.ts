@@ -58,6 +58,7 @@ export class EventsDisplay extends LitElement implements Layer {
   public game: GameView;
   public clientID: ClientID;
 
+  private active: boolean = false;
   private events: Event[] = [];
   @state() private incomingAttacks: AttackUpdate[] = [];
   @state() private outgoingAttacks: AttackUpdate[] = [];
@@ -97,6 +98,7 @@ export class EventsDisplay extends LitElement implements Layer {
   init() {}
 
   tick() {
+    this.active = true;
     const updates = this.game.updatesSinceLastTick();
     for (const [ut, fn] of this.updateMap) {
       updates[ut]?.forEach((u) => fn(u));
@@ -280,7 +282,7 @@ export class EventsDisplay extends LitElement implements Layer {
       });
     } else if (betrayed === myPlayer) {
       this.addEvent({
-        description: `${traitor.name_notag()}, broke their alliance with you`,
+        description: `${traitor.name()} broke their alliance with you`,
         type: MessageType.ERROR,
         highlight: true,
         createdAt: this.game.ticks(),
@@ -531,6 +533,10 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   render() {
+    if (!this.active) {
+      return html``;
+    }
+
     this.events.sort((a, b) => {
       const aPrior = a.priority ?? 100000;
       const bPrior = b.priority ?? 100000;

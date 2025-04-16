@@ -94,12 +94,14 @@ export class PlayerImpl implements Player {
   public _outgoingAttacks: Attack[] = [];
   public _outgoingLandAttacks: Attack[] = [];
 
+  private _hasSpawned = false;
+
   constructor(
     private mg: GameImpl,
     private _smallID: number,
     private readonly playerInfo: PlayerInfo,
     startTroops: number,
-    private _team: Team | null,
+    private readonly _team: Team | null,
   ) {
     this._flag = playerInfo.flag;
     this._name = sanitizeUsername(playerInfo.name);
@@ -125,7 +127,7 @@ export class PlayerImpl implements Player {
       name: this.name(),
       displayName: this.displayName(),
       id: this.id(),
-      teamName: this.team()?.name,
+      team: this.team(),
       smallID: this.smallID(),
       playerType: this.type(),
       isAlive: this.isAlive(),
@@ -162,6 +164,7 @@ export class PlayerImpl implements Player {
       ),
       outgoingAllianceRequests: outgoingAllianceRequests,
       stats: this.mg.stats().getPlayerStats(this.id()),
+      hasSpawned: this.hasSpawned(),
     };
   }
 
@@ -289,6 +292,14 @@ export class PlayerImpl implements Player {
   }
   isAlive(): boolean {
     return this._tiles.size > 0;
+  }
+
+  hasSpawned(): boolean {
+    return this._hasSpawned;
+  }
+
+  setHasSpawned(hasSpawned: boolean): void {
+    this._hasSpawned = hasSpawned;
   }
 
   incomingAllianceRequests(): AllianceRequest[] {
@@ -585,7 +596,7 @@ export class PlayerImpl implements Player {
     if (this.team() == null || other.team() == null) {
       return false;
     }
-    return this._team.name == other.team().name;
+    return this._team == other.team();
   }
 
   isFriendly(other: Player): boolean {
@@ -757,6 +768,12 @@ export class PlayerImpl implements Player {
   }
 
   nukeSpawn(tile: TileRef): TileRef | false {
+    const owner = this.mg.owner(tile);
+    if (owner.isPlayer()) {
+      if (this.isOnSameTeam(owner)) {
+        return false;
+      }
+    }
     // only get missilesilos that are not on cooldown
     const spawns = this.units(UnitType.MissileSilo)
       .map((u) => u as Unit)

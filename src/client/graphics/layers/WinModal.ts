@@ -1,7 +1,7 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { TeamName } from "../../../core/game/Game";
+import { Team } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { PseudoRandom } from "../../../core/PseudoRandom";
@@ -149,7 +149,7 @@ export class WinModal extends LitElement implements Layer {
     return html`
       <div class="win-modal ${this.isVisible ? "visible" : ""}">
         <h2>${this._title || ""}</h2>
-        ${this.supportHTML()}
+        ${this.innerHtml()}
         <div class="button-container">
           <button @click=${this._handleExit}>Exit Game</button>
           <button @click=${this.hide}>Keep Playing</button>
@@ -158,34 +158,31 @@ export class WinModal extends LitElement implements Layer {
     `;
   }
 
-  updated(changedProperties) {
-    super.updated(changedProperties);
-    // Initialize ads if modal is visible and showing ads
-    if (changedProperties.has("isVisible") && this.isVisible && !this.won) {
-      try {
-        setTimeout(() => {
-          (adsbygoogle = window.adsbygoogle || []).push({});
-        }, 0);
-      } catch (error) {
-        console.error("Error initializing ad:", error);
-      }
-    }
-  }
-
-  supportHTML() {
+  innerHtml() {
     return html`
-      <div style="text-align: center; margin: 15px 0;">
+      <div style="text-align: center; margin: 15px 0; line-height: 1.5;">
         <p>
-          Like the game? Help make this my full-time project!
-          <a
-            href="https://discord.gg/k22YrnAzGp"
-            target="_blank"
-            rel="noopener noreferrer"
-            style="color: #0096ff; text-decoration: underline; display: block; margin-top: 5px;"
-          >
-            Support the game!
-          </a>
+          <span style="color: red;">Time's running out!</span> <br />
+          I need your support to continue working on OpenFront full-time. Please
+          donate now to keep the updates, new features, and improvements coming.
         </p>
+        <a
+          href="https://patreon.com/OpenFront"
+          target="_blank"
+          rel="noopener noreferrer"
+          style="
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #FF424D;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+          "
+        >
+          Support on Patreon
+        </a>
       </div>
     `;
   }
@@ -215,7 +212,8 @@ export class WinModal extends LitElement implements Layer {
       !this.hasShownDeathModal &&
       myPlayer &&
       !myPlayer.isAlive() &&
-      !this.game.inSpawnPhase()
+      !this.game.inSpawnPhase() &&
+      myPlayer.hasSpawned()
     ) {
       this.hasShownDeathModal = true;
       this._title = "You died";
@@ -225,13 +223,9 @@ export class WinModal extends LitElement implements Layer {
     this.game.updatesSinceLastTick()[GameUpdateType.Win].forEach((wu) => {
       if (wu.winnerType === "team") {
         this.eventBus.emit(
-          new SendWinnerEvent(
-            wu.winner as TeamName,
-            wu.allPlayersStats,
-            "team",
-          ),
+          new SendWinnerEvent(wu.winner as Team, wu.allPlayersStats, "team"),
         );
-        if (wu.winner == this.game.myPlayer()?.teamName()) {
+        if (wu.winner == this.game.myPlayer()?.team()) {
           this._title = "Your team won!";
           this.won = true;
         } else {

@@ -1,7 +1,7 @@
 import { Colord, colord } from "colord";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
-import { PlayerType, TeamName, TerrainType } from "../game/Game";
+import { PlayerType, Team, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import {
@@ -37,13 +37,13 @@ export const pastelThemeDark = new (class implements Theme {
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
 
   territoryColor(player: PlayerView): Colord {
-    if (player.teamName() == TeamName.Bot) {
+    if (player.team() == Team.Bot) {
       return botColor;
     }
-    if (player.teamName() == TeamName.Red) {
+    if (player.team() == Team.Red) {
       return red;
     }
-    if (player.teamName() == TeamName.Blue) {
+    if (player.team() == Team.Blue) {
       return blue;
     }
     if (player.info().playerType == PlayerType.Human) {

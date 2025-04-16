@@ -11,8 +11,7 @@ import {
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { TeamName, Unit, UnitType } from "../core/game/Game";
-import { TileRef } from "../core/game/GameMap";
+import { Team, UnitType } from "../core/game/Game";
 import {
   ErrorUpdate,
   GameUpdateType,
@@ -20,8 +19,8 @@ import {
   HashUpdate,
   WinUpdate,
 } from "../core/game/GameUpdates";
-import { GameView, PlayerView, UnitView } from "../core/game/GameView";
-import { loadTerrainMap } from "../core/game/TerrainMapLoader";
+import { GameView, PlayerView } from "../core/game/GameView";
+import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { InputHandler, MouseMoveEvent, MouseUpEvent } from "./InputHandler";
@@ -35,15 +34,6 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
-
-export // Is this function needed?
-function distSortUnitWorld(tile: TileRef, game: GameView) {
-  return (a: Unit | UnitView, b: Unit | UnitView) => {
-    return (
-      game.euclideanDist(tile, a.tile()) - game.euclideanDist(tile, b.tile())
-    );
-  };
-}
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -60,7 +50,8 @@ export interface LobbyConfig {
 
 export function joinLobby(
   lobbyConfig: LobbyConfig,
-  onjoin: () => void,
+  onPrestart: () => void,
+  onJoin: () => void,
 ): () => void {
   const eventBus = new EventBus();
   initRemoteSender(eventBus);
@@ -78,15 +69,28 @@ export function joinLobby(
     consolex.log(`Joined game lobby ${lobbyConfig.gameID}`);
     transport.joinGame(0);
   };
+  let terrainLoad: Promise<TerrainMapData> | null = null;
+
   const onmessage = (message: ServerMessage) => {
+    if (message.type == "prestart") {
+      consolex.log(`lobby: game prestarting: ${JSON.stringify(message)}`);
+      terrainLoad = loadTerrainMap(message.gameMap);
+      onPrestart();
+    }
     if (message.type == "start") {
+      // Trigger prestart for singleplayer games
+      onPrestart();
       consolex.log(`lobby: game started: ${JSON.stringify(message)}`);
-      onjoin();
+      onJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
       lobbyConfig.gameStartInfo = message.gameStartInfo;
-      createClientGame(lobbyConfig, eventBus, transport, userSettings).then(
-        (r) => r.start(),
-      );
+      createClientGame(
+        lobbyConfig,
+        eventBus,
+        transport,
+        userSettings,
+        terrainLoad,
+      ).then((r) => r.start());
     }
   };
   transport.connect(onconnect, onmessage);
@@ -101,15 +105,19 @@ export async function createClientGame(
   eventBus: EventBus,
   transport: Transport,
   userSettings: UserSettings,
+  terrainLoad: Promise<TerrainMapData> | null,
 ): Promise<ClientGameRunner> {
   const config = await getConfig(
     lobbyConfig.gameStartInfo.config,
     userSettings,
   );
+  let gameMap: TerrainMapData | null = null;
 
-  const gameMap = await loadTerrainMap(
-    lobbyConfig.gameStartInfo.config.gameMap,
-  );
+  if (terrainLoad) {
+    gameMap = await terrainLoad;
+  } else {
+    gameMap = await loadTerrainMap(lobbyConfig.gameStartInfo.config.gameMap);
+  }
   const worker = new WorkerClient(
     lobbyConfig.gameStartInfo,
     lobbyConfig.clientID,
@@ -181,13 +189,13 @@ export class ClientGameRunner {
         clientID: this.lobby.clientID,
       },
     ];
-    let winner: ClientID | TeamName | null = null;
+    let winner: ClientID | Team | null = null;
     if (update.winnerType == "player") {
       winner = this.gameView
         .playerBySmallID(update.winner as number)
         .clientID();
     } else {
-      winner = update.winner as TeamName;
+      winner = update.winner as Team;
     }
 
     const record = createGameRecord(
@@ -207,6 +215,7 @@ export class ClientGameRunner {
 
   public start() {
     consolex.log("starting client game");
+
     this.isActive = true;
     this.lastMessageTime = Date.now();
     setTimeout(() => {

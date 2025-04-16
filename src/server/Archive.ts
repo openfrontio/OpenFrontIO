@@ -10,10 +10,10 @@ const log = logger.child({ component: "Archive" });
 // R2 client configuration
 const r2 = new S3({
   region: "auto", // R2 ignores region, but it's required by the SDK
-  endpoint: config.r2Endpoint(), // You'll need to add this to your config
+  endpoint: config.r2Endpoint(),
   credentials: {
-    accessKeyId: config.r2AccessKey(), // You'll need to add these
-    secretAccessKey: config.r2SecretKey(), // credential methods to your config
+    accessKeyId: config.r2AccessKey(),
+    secretAccessKey: config.r2SecretKey(),
   },
 });
 
