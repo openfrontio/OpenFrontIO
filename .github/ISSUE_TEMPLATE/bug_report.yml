@@ -12,7 +12,11 @@ body:
   - type: textarea
     attributes:
       label: "Steps to Reproduce"
-      placeholder: "1. Go to '...' 2. Click on '....' 3. Scroll down to '....' 4. See error"
+      placeholder: |
+        "1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error"
     validations:
       required: false
   
@@ -33,7 +37,7 @@ body:
   - type: textarea
     attributes:
       label: "Browser and OS Information"
-      placeholder: 
+      placeholder: |
         "- OS: [e.g. iOS]
         - Browser [e.g. chrome, safari]
         - Version [e.g. 22]
