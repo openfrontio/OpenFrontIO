@@ -1,6 +1,5 @@
 import { Config } from "../configuration/Config";
 import { ClientID, GameID, PlayerStats } from "../Schemas";
-import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
   Cell,
@@ -170,49 +169,37 @@ export class PlayerView {
     return this.data.flag;
   }
   name(): string {
-    const randomName = createRandomName(this.data);
-    if (!displayNameMap[this.data.name] && randomName !== "") {
-      displayNameMap[this.data.name] = randomName;
-    }
-    return localStorage.getItem("settings.randomname") === "true" &&
-      displayNameMap[this.data.displayName]
-      ? displayNameMap[this.data.displayName]
-      : this.data.playerType === "HUMAN"
-        ? `<b>${this.data.name}</b>`
-        : `<i>${this.data.name}</i>`;
+    const baseName = this.data.name;
+    const styledName =
+      this.data.playerType === "HUMAN"
+        ? `<b>${baseName}</b>`
+        : `<i>${baseName}</i>`;
+
+    return isAnonymous && this.anonymousName != null
+      ? this.anonymousName
+      : styledName;
   }
-  name_notag(): string {
-    const randomName = createRandomName(this.data);
-    if (!displayNameMap[this.data.name] && randomName !== "") {
-      displayNameMap[this.data.name] = randomName;
-    }
-    return localStorage.getItem("settings.randomname") === "true" &&
-      displayNameMap[this.data.displayName]
-      ? displayNameMap[this.data.displayName]
+  nameNotag(): string {
+    return isAnonymous === true && this.anonymousName !== null
+      ? this.anonymousName
       : this.data.name;
   }
 
   displayName(): string {
-    const randomName = createRandomName(this.data);
-    if (!displayNameMap[this.data.name] && randomName !== "") {
-      displayNameMap[this.data.name] = randomName;
-    }
-    return localStorage.getItem("settings.randomname") === "true" &&
-      displayNameMap[this.data.displayName]
-      ? displayNameMap[this.data.displayName]
-      : this.data.playerType === "HUMAN"
-        ? `<b>${this.data.displayName}</b>`
-        : `<i>${this.data.displayName}</i>`;
+    const baseName = this.data.displayName;
+    const styledName =
+      this.data.playerType === "HUMAN"
+        ? `<b>${baseName}</b>`
+        : `<i>${baseName}</i>`;
+
+    return isAnonymous && this.anonymousName != null
+      ? this.anonymousName
+      : styledName;
   }
-  displayName_notag(): string {
-    const randomName = createRandomName(this.data);
-    if (!displayNameMap[this.data.name] && randomName !== "") {
-      displayNameMap[this.data.name] = randomName;
-    }
-    return localStorage.getItem("settings.randomname") === "true" &&
-      displayNameMap[this.data.displayName]
-      ? displayNameMap[this.data.displayName]
-      : this.data.displayName;
+  displayNameNotag(): string {
+    return isAnonymous === true && this.anonymousName !== null
+      ? this.anonymousName
+      : this.data.name;
   }
 
   clientID(): ClientID {
