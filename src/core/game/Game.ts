@@ -168,6 +168,7 @@ export interface UnitParamsMap {
 
   [UnitType.TradeShip]: {
     dstPort: Unit;
+    srcPort: Unit;
     lastSetSafeFromPirates?: number;
   };
 
@@ -350,6 +351,7 @@ export interface Unit {
   isCooldown(): boolean;
   setDstPort(dstPort: Unit): void;
   dstPort(): Unit | null; // Only for trade ships
+  srcPort(): Unit | null; // Only for trade ships
   setSafeFromPirates(): void; // Only for trade ships
   isSafeFromPirates(): boolean; // Only for trade ships
   detonationDst(): TileRef | null; // Only for nukes
