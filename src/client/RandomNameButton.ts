@@ -5,7 +5,7 @@ import { UserSettings } from "../core/game/UserSettings";
 @customElement("random-name-button")
 export class RandomNameButton extends LitElement {
   private userSettings: UserSettings = new UserSettings();
-  @state() private randomName: boolean = this.userSettings.randomName();
+  @state() private randomName: boolean = this.userSettings.anonymousNames();
 
   createRenderRoot() {
     return this;
@@ -13,11 +13,10 @@ export class RandomNameButton extends LitElement {
 
   toggleRandomName() {
     this.userSettings.toggleRandomName();
-    this.randomName = this.userSettings.randomName();
+    this.randomName = this.userSettings.anonymousNames();
   }
 
   render() {
-    console.log("rendering");
     return html`
       <button
         title="Random Name"

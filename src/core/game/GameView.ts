@@ -36,9 +36,7 @@ import { UnitGrid } from "./UnitGrid";
 import { UserSettings } from "./UserSettings";
 
 const userSettings: UserSettings = new UserSettings();
-
-const displayNameMap: Record<PlayerID, string> = {};
-const usedNames = new Set<string>();
+const isAnonymous: boolean = userSettings.anonymousNames();
 
 export class UnitView {
   public _wasUpdated = true;
@@ -127,11 +125,15 @@ export class UnitView {
 }
 
 export class PlayerView {
+  public anonymousName: string;
+
   constructor(
     private game: GameView,
     public data: PlayerUpdate,
     public nameData: NameViewData,
-  ) {}
+  ) {
+    this.anonymousName = createRandomName(data);
+  }
 
   async actions(tile: TileRef): Promise<PlayerActions> {
     return this.game.worker.playerInteraction(
@@ -170,49 +172,34 @@ export class PlayerView {
     return this.data.flag;
   }
   name(): string {
-    const randomName = createRandomName(this.data);
-    if (!displayNameMap[this.data.name] && randomName !== "") {
-      displayNameMap[this.data.name] = randomName;
-    }
-    return localStorage.getItem("settings.randomname") === "true" &&
-      displayNameMap[this.data.displayName]
-      ? displayNameMap[this.data.displayName]
+    return isAnonymous === true && this.anonymousName !== ""
+      ? this.anonymousName
       : this.data.playerType === "HUMAN"
         ? `<b>${this.data.name}</b>`
         : `<i>${this.data.name}</i>`;
   }
+
   name_notag(): string {
-    const randomName = createRandomName(this.data);
-    if (!displayNameMap[this.data.name] && randomName !== "") {
-      displayNameMap[this.data.name] = randomName;
-    }
     return localStorage.getItem("settings.randomname") === "true" &&
-      displayNameMap[this.data.displayName]
-      ? displayNameMap[this.data.displayName]
+      this.anonymousName !== ""
+      ? this.anonymousName
       : this.data.name;
   }
+
   displayName(): string {
-    const randomName = createRandomName(this.data);
-    if (!displayNameMap[this.data.name] && randomName !== "") {
-      displayNameMap[this.data.name] = randomName;
-    }
-    return localStorage.getItem("settings.randomname") === "true" &&
-      displayNameMap[this.data.displayName]
-      ? displayNameMap[this.data.displayName]
+    return isAnonymous === true && this.anonymousName !== ""
+      ? this.anonymousName
       : this.data.playerType === "HUMAN"
         ? `<b>${this.data.displayName}</b>`
         : `<i>${this.data.displayName}</i>`;
   }
+
   displayName_notag(): string {
-    const randomName = createRandomName(this.data);
-    if (!displayNameMap[this.data.name] && randomName !== "") {
-      displayNameMap[this.data.name] = randomName;
-    }
-    return localStorage.getItem("settings.randomname") === "true" &&
-      displayNameMap[this.data.displayName]
-      ? displayNameMap[this.data.displayName]
+    return isAnonymous === true && this.anonymousName !== ""
+      ? this.anonymousName
       : this.data.displayName;
   }
+
   clientID(): ClientID {
     return this.data.clientID;
   }
