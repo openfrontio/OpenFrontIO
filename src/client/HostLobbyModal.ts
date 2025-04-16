@@ -23,6 +23,7 @@ export class HostLobbyModal extends LitElement {
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs = false;
   @state() private gameMode: GameMode = GameMode.FFA;
+  @state() private teamCount: number = 2;
   @state() private disableNukes: boolean = false;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
@@ -158,6 +159,33 @@ export class HostLobbyModal extends LitElement {
               </div>
             </div>
           </div>
+
+          ${
+            this.gameMode === GameMode.FFA
+              ? ""
+              : html`
+                  <!-- Team Count Selection -->
+                  <div class="options-section">
+                    <div class="option-title">
+                      ${translateText("host_modal.team_count")}
+                    </div>
+                    <div class="option-cards">
+                      ${[2, 3, 4, 5, 6, 7].map(
+                        (o) => html`
+                          <div
+                            class="option-card ${this.teamCount === o
+                              ? "selected"
+                              : ""}"
+                            @click=${() => this.handleTeamCountSelection(o)}
+                          >
+                            <div class="option-card-title">${o}</div>
+                          </div>
+                        `,
+                      )}
+                    </div>
+                  </div>
+                `
+          }
 
           <!-- Game Options -->
           <div class="options-section">
@@ -413,6 +441,11 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
+  private async handleTeamCountSelection(value: number) {
+    this.teamCount = value;
+    this.putGameConfig();
+  }
+
   private async putGameConfig() {
     const config = await getServerConfigFromClient();
     const response = await fetch(
@@ -432,6 +465,7 @@ export class HostLobbyModal extends LitElement {
           infiniteTroops: this.infiniteTroops,
           instantBuild: this.instantBuild,
           gameMode: this.gameMode,
+          numPlayerTeams: this.teamCount,
         } as GameConfig),
       },
     );

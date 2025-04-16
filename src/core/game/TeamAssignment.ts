@@ -2,10 +2,10 @@ import { PlayerInfo, Team } from "./Game";
 
 export function assignTeams(
   players: PlayerInfo[],
+  teams: Team[],
 ): Map<PlayerInfo, Team | "kicked"> {
   const result = new Map<PlayerInfo, Team | "kicked">();
-  let redTeamCount = 0;
-  let blueTeamCount = 0;
+  const teamPlayerCount = new Map<Team, number>();
 
   // Group players by clan
   const clanGroups = new Map<string, PlayerInfo[]>();
@@ -23,7 +23,7 @@ export function assignTeams(
     }
   }
 
-  const maxTeamSize = Math.ceil(players.length / 2);
+  const maxTeamSize = Math.ceil(players.length / teams.length);
 
   // Sort clans by size (largest first)
   const sortedClans = Array.from(clanGroups.entries()).sort(
@@ -33,38 +33,38 @@ export function assignTeams(
   // First, assign clan players
   for (const [_, clanPlayers] of sortedClans) {
     // Try to keep the clan together on the team with fewer players
-    if (redTeamCount <= blueTeamCount) {
-      // Assign to red team
-      for (const player of clanPlayers) {
-        if (redTeamCount < maxTeamSize) {
-          redTeamCount++;
-          result.set(player, Team.Red);
-        } else {
-          result.set(player, "kicked");
-        }
-      }
-    } else {
-      // Assign to blue team
-      for (const player of clanPlayers) {
-        if (blueTeamCount < maxTeamSize) {
-          blueTeamCount++;
-          result.set(player, Team.Blue);
-        } else {
-          result.set(player, "kicked");
-        }
+    let team: Team | null = null;
+    let teamSize = 0;
+    for (const t of teams) {
+      const p = teamPlayerCount.get(t) ?? 0;
+      if (team !== null && teamSize <= p) continue;
+      teamSize = p;
+      team = t;
+    }
+
+    for (const player of clanPlayers) {
+      if (teamSize < maxTeamSize) {
+        teamSize++;
+        result.set(player, team);
+      } else {
+        result.set(player, "kicked");
       }
     }
+    teamPlayerCount.set(team, teamSize);
   }
 
   // Then, assign non-clan players to balance teams
   for (const player of noClanPlayers) {
-    if (redTeamCount <= blueTeamCount) {
-      redTeamCount++;
-      result.set(player, Team.Red);
-    } else {
-      blueTeamCount++;
-      result.set(player, Team.Blue);
+    let team: Team | null = null;
+    let teamSize = 0;
+    for (const t of teams) {
+      const p = teamPlayerCount.get(t) ?? 0;
+      if (team !== null && teamSize <= p) continue;
+      teamSize = p;
+      team = t;
     }
+    teamPlayerCount.set(team, teamSize + 1);
+    result.set(player, team);
   }
 
   return result;

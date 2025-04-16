@@ -131,9 +131,7 @@ export class PlayerView {
     private game: GameView,
     public data: PlayerUpdate,
     public nameData: NameViewData,
-  ) {
-    this.anonymousName = createRandomName(this.data.name, this.data.playerType);
-  }
+  ) {}
 
   async actions(tile: TileRef): Promise<PlayerActions> {
     return this.game.worker.playerInteraction(
@@ -172,38 +170,48 @@ export class PlayerView {
     return this.data.flag;
   }
   name(): string {
-    const baseName = this.data.name;
-    const styledName =
-      this.data.playerType === "HUMAN"
-        ? `<b>${baseName}</b>`
-        : `<i>${baseName}</i>`;
-
-    return isAnonymous && this.anonymousName != null
-      ? this.anonymousName
-      : styledName;
+    const randomName = createRandomName(this.data);
+    if (!displayNameMap[this.data.name] && randomName !== "") {
+      displayNameMap[this.data.name] = randomName;
+    }
+    return localStorage.getItem("settings.randomname") === "true" &&
+      displayNameMap[this.data.displayName]
+      ? displayNameMap[this.data.displayName]
+      : this.data.playerType === "HUMAN"
+        ? `<b>${this.data.name}</b>`
+        : `<i>${this.data.name}</i>`;
   }
-
-  nameNotag(): string {
-    return isAnonymous === true && this.anonymousName !== null
-      ? this.anonymousName
+  name_notag(): string {
+    const randomName = createRandomName(this.data);
+    if (!displayNameMap[this.data.name] && randomName !== "") {
+      displayNameMap[this.data.name] = randomName;
+    }
+    return localStorage.getItem("settings.randomname") === "true" &&
+      displayNameMap[this.data.displayName]
+      ? displayNameMap[this.data.displayName]
       : this.data.name;
   }
 
   displayName(): string {
-    const baseName = this.data.displayName;
-    const styledName =
-      this.data.playerType === "HUMAN"
-        ? `<b>${baseName}</b>`
-        : `<i>${baseName}</i>`;
-
-    return isAnonymous && this.anonymousName != null
-      ? this.anonymousName
-      : styledName;
+    const randomName = createRandomName(this.data);
+    if (!displayNameMap[this.data.name] && randomName !== "") {
+      displayNameMap[this.data.name] = randomName;
+    }
+    return localStorage.getItem("settings.randomname") === "true" &&
+      displayNameMap[this.data.displayName]
+      ? displayNameMap[this.data.displayName]
+      : this.data.playerType === "HUMAN"
+        ? `<b>${this.data.displayName}</b>`
+        : `<i>${this.data.displayName}</i>`;
   }
-
-  displayNameNotag(): string {
-    return isAnonymous === true && this.anonymousName !== null
-      ? this.anonymousName
+  displayName_notag(): string {
+    const randomName = createRandomName(this.data);
+    if (!displayNameMap[this.data.name] && randomName !== "") {
+      displayNameMap[this.data.name] = randomName;
+    }
+    return localStorage.getItem("settings.randomname") === "true" &&
+      displayNameMap[this.data.displayName]
+      ? displayNameMap[this.data.displayName]
       : this.data.displayName;
   }
 
@@ -214,7 +222,7 @@ export class PlayerView {
     return this.data.id;
   }
   team(): Team | null {
-    return this.data.team;
+    return this.data.team ?? null;
   }
   type(): PlayerType {
     return this.data.playerType;

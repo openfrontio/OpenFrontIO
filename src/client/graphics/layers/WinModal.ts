@@ -160,30 +160,7 @@ export class WinModal extends LitElement implements Layer {
 
   innerHtml() {
     return html`
-      <div style="text-align: center; margin: 15px 0; line-height: 1.5;">
-        <p>
-          <span style="color: red;">Time's running out!</span> <br />
-          I need your support to continue working on OpenFront full-time. Please
-          donate now to keep the updates, new features, and improvements coming.
-        </p>
-        <a
-          href="https://patreon.com/OpenFront"
-          target="_blank"
-          rel="noopener noreferrer"
-          style="
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: #FF424D;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-weight: bold;
-            transition: background-color 0.2s;
-          "
-        >
-          Support on Patreon
-        </a>
-      </div>
+      <div style="text-align: center; margin: 15px 0; line-height: 1.5;"></div>
     `;
   }
 
