@@ -187,7 +187,7 @@
     "emojis_label": "😊 Emojis",
     "emojis_desc": "Toggle whether emojis are shown in game",
     "left_click_label": "🖱️ Left Click to Open Menu",
-    "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, right-click attacks directly.",
+    "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
     "attack_ratio_label": "⚔️ Attack Ratio",
     "attack_ratio_desc": "What percentage of your troops to send in an attack (1–100%)",
     "troop_ratio_label": "🪖🛠️ Troops and Workers Ratio",
