@@ -211,7 +211,7 @@ export class DefaultConfig implements Config {
     return 100; // interval in ticks between attcks
   }
   defensePostTargettingRange(): number {
-    return 50;
+    return 75;
   }
 
   //UNITS - Ships
@@ -222,7 +222,7 @@ export class DefaultConfig implements Config {
     return 20; // interval in ticks between attcks
   }
   warshipTargettingRange(): number {
-    return 200;
+    return 130;
   }
   boatMaxNumber(): number {
     return 9; // max concurrent trade ships
@@ -239,7 +239,7 @@ export class DefaultConfig implements Config {
     return 50;
   }
   safeFromPiratesCooldownMax(): number {
-    return 15;
+    return 20;
   }
 
   unitInfo(type: UnitType): UnitInfo {
@@ -266,7 +266,7 @@ export class DefaultConfig implements Config {
         return {
           cost: () => 0,
           territoryBound: false,
-          damage: 115,
+          damage: 250,
         };
       case UnitType.SAMMissile:
         return {
