@@ -11,8 +11,7 @@ import {
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { TeamName, Unit, UnitType } from "../core/game/Game";
-import { TileRef } from "../core/game/GameMap";
+import { Team, UnitType } from "../core/game/Game";
 import {
   ErrorUpdate,
   GameUpdateType,
@@ -20,7 +19,7 @@ import {
   HashUpdate,
   WinUpdate,
 } from "../core/game/GameUpdates";
-import { GameView, PlayerView, UnitView } from "../core/game/GameView";
+import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
@@ -35,15 +34,6 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
-
-export // Is this function needed?
-function distSortUnitWorld(tile: TileRef, game: GameView) {
-  return (a: Unit | UnitView, b: Unit | UnitView) => {
-    return (
-      game.euclideanDist(tile, a.tile()) - game.euclideanDist(tile, b.tile())
-    );
-  };
-}
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -199,13 +189,13 @@ export class ClientGameRunner {
         clientID: this.lobby.clientID,
       },
     ];
-    let winner: ClientID | TeamName | null = null;
+    let winner: ClientID | Team | null = null;
     if (update.winnerType == "player") {
       winner = this.gameView
         .playerBySmallID(update.winner as number)
         .clientID();
     } else {
-      winner = update.winner as TeamName;
+      winner = update.winner as Team;
     }
 
     const record = createGameRecord(
@@ -225,6 +215,7 @@ export class ClientGameRunner {
 
   public start() {
     consolex.log("starting client game");
+
     this.isActive = true;
     this.lastMessageTime = Date.now();
     setTimeout(() => {

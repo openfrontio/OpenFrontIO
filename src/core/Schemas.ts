@@ -6,7 +6,7 @@ import {
   GameMode,
   GameType,
   PlayerType,
-  TeamName,
+  Team,
   UnitType,
 } from "./game/Game";
 
@@ -121,16 +121,14 @@ const GameConfigSchema = z.object({
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
   maxPlayers: z.number().optional(),
+  numPlayerTeams: z.number().optional(),
 });
 
 const SafeString = z
   .string()
-  // Remove common dangerous characters and patterns
-  // The weird \u stuff is to allow emojis
   .regex(
-    /^[a-zA-Z0-9\s.,!?@#$%&*()-_+=\[\]{}|;:"'\/\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|üÜ]+$/,
+    /^([a-zA-Z0-9\s.,!?@#$%&*()-_+=\[\]{}|;:"'\/\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|üÜ])*$/,
   )
-  // Reasonable max length to prevent DOS
   .max(1000);
 
 const EmojiSchema = z.string().refine(
@@ -364,7 +362,7 @@ const ClientBaseMessageSchema = z.object({
 
 export const ClientSendWinnerSchema = ClientBaseMessageSchema.extend({
   type: z.literal("winner"),
-  winner: ID.or(z.nativeEnum(TeamName)).nullable(),
+  winner: ID.or(z.nativeEnum(Team)).nullable(),
   allPlayersStats: AllPlayersStatsSchema,
   winnerType: z.enum(["player", "team"]),
 });
@@ -396,6 +394,7 @@ export const ClientJoinMessageSchema = ClientBaseMessageSchema.extend({
   type: z.literal("join"),
   lastTurn: z.number(), // The last turn the client saw.
   username: SafeString,
+  flag: SafeString.nullable().optional(),
 });
 
 export const ClientMessageSchema = z.union([
@@ -425,7 +424,7 @@ export const GameRecordSchema = z.object({
   num_turns: z.number(),
   turns: z.array(TurnSchema),
   winner: z
-    .union([ID, z.nativeEnum(TeamName)])
+    .union([ID, z.nativeEnum(Team)])
     .nullable()
     .optional(),
   winnerType: z.enum(["player", "team"]).nullable().optional(),

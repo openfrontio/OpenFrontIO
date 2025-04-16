@@ -20,7 +20,6 @@ import {
   PlayerInfo,
   PlayerType,
   Team,
-  TeamName,
   TerrainType,
   TerraNullius,
   Unit,
@@ -76,11 +75,8 @@ export class GameImpl implements Game {
 
   private _stats: StatsImpl = new StatsImpl();
 
-  private playerTeams: Team[] = [
-    { name: TeamName.Red },
-    { name: TeamName.Blue },
-  ];
-  private botTeam: Team = { name: TeamName.Bot };
+  private playerTeams: Team[] = [Team.Red, Team.Blue];
+  private botTeam: Team = Team.Bot;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -103,6 +99,17 @@ export class GameImpl implements Game {
         ),
     );
     this.unitGrid = new UnitGrid(this._map);
+
+    if (_config.gameConfig().gameMode === GameMode.Team) {
+      const numPlayerTeams = _config.numPlayerTeams();
+      if (numPlayerTeams < 2) throw new Error("Too few teams!");
+      if (numPlayerTeams >= 3) this.playerTeams.push(Team.Teal);
+      if (numPlayerTeams >= 4) this.playerTeams.push(Team.Purple);
+      if (numPlayerTeams >= 5) this.playerTeams.push(Team.Yellow);
+      if (numPlayerTeams >= 6) this.playerTeams.push(Team.Orange);
+      if (numPlayerTeams >= 7) this.playerTeams.push(Team.Green);
+      if (numPlayerTeams >= 8) throw new Error("Too many teams!");
+    }
   }
 
   private addHumans() {
@@ -110,7 +117,7 @@ export class GameImpl implements Game {
       this._humans.forEach((p) => this.addPlayer(p));
       return;
     }
-    const playerToTeam = assignTeams(this._humans);
+    const playerToTeam = assignTeams(this._humans, this.playerTeams);
     for (const [playerInfo, team] of playerToTeam.entries()) {
       if (team == "kicked") {
         console.warn(`Player ${playerInfo.name} was kicked from team`);
@@ -555,7 +562,7 @@ export class GameImpl implements Game {
     });
   }
 
-  setWinner(winner: Player | TeamName, allPlayersStats: AllPlayersStats): void {
+  setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
     this.addUpdate({
       type: GameUpdateType.Win,
       winner: typeof winner === "string" ? winner : winner.smallID(),
@@ -684,8 +691,8 @@ export class GameImpl implements Game {
   manhattanDist(c1: TileRef, c2: TileRef): number {
     return this._map.manhattanDist(c1, c2);
   }
-  euclideanDist(c1: TileRef, c2: TileRef): number {
-    return this._map.euclideanDist(c1, c2);
+  euclideanDistSquared(c1: TileRef, c2: TileRef): number {
+    return this._map.euclideanDistSquared(c1, c2);
   }
   bfs(
     tile: TileRef,

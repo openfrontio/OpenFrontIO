@@ -127,7 +127,7 @@ export class PlayerImpl implements Player {
       name: this.name(),
       displayName: this.displayName(),
       id: this.id(),
-      teamName: this.team()?.name,
+      team: this.team(),
       smallID: this.smallID(),
       playerType: this.type(),
       isAlive: this.isAlive(),
@@ -596,7 +596,7 @@ export class PlayerImpl implements Player {
     if (this.team() == null || other.team() == null) {
       return false;
     }
-    return this._team.name == other.team().name;
+    return this._team == other.team();
   }
 
   isFriendly(other: Player): boolean {
@@ -768,6 +768,12 @@ export class PlayerImpl implements Player {
   }
 
   nukeSpawn(tile: TileRef): TileRef | false {
+    const owner = this.mg.owner(tile);
+    if (owner.isPlayer()) {
+      if (this.isOnSameTeam(owner)) {
+        return false;
+      }
+    }
     // only get missilesilos that are not on cooldown
     const spawns = this.units(UnitType.MissileSilo)
       .map((u) => u as Unit)

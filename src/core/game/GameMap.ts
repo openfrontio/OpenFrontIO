@@ -38,7 +38,7 @@ export interface GameMap {
   forEachTile(fn: (tile: TileRef) => void): void;
 
   manhattanDist(c1: TileRef, c2: TileRef): number;
-  euclideanDist(c1: TileRef, c2: TileRef): number;
+  euclideanDistSquared(c1: TileRef, c2: TileRef): number;
   bfs(
     tile: TileRef,
     filter: (gm: GameMap, tile: TileRef) => boolean,
@@ -266,11 +266,10 @@ export class GameMapImpl implements GameMap {
       Math.abs(this.x(c1) - this.x(c2)) + Math.abs(this.y(c1) - this.y(c2))
     );
   }
-  euclideanDist(c1: TileRef, c2: TileRef): number {
-    return Math.sqrt(
-      Math.pow(this.x(c1) - this.x(c2), 2) +
-        Math.pow(this.y(c1) - this.y(c2), 2),
-    );
+  euclideanDistSquared(c1: TileRef, c2: TileRef): number {
+    const x = this.x(c1) - this.x(c2);
+    const y = this.y(c1) - this.y(c2);
+    return x * x + y * y;
   }
   bfs(
     tile: TileRef,
@@ -322,8 +321,10 @@ export function euclDistFN(
   dist: number,
   center: boolean = false,
 ): (gm: GameMap, tile: TileRef) => boolean {
+  const dist2 = dist * dist;
   if (!center) {
-    return (gm: GameMap, n: TileRef) => gm.euclideanDist(root, n) <= dist;
+    return (gm: GameMap, n: TileRef) =>
+      gm.euclideanDistSquared(root, n) <= dist2;
   } else {
     return (gm: GameMap, n: TileRef) => {
       // shifts the root tile’s coordinates by -0.5 so that its “center”
@@ -333,7 +334,7 @@ export function euclDistFN(
       const rootY = gm.y(root) - 0.5;
       const dx = gm.x(n) - rootX;
       const dy = gm.y(n) - rootY;
-      return Math.sqrt(dx * dx + dy * dy) <= dist;
+      return dx * dx + dy * dy <= dist2;
     };
   }
 }

@@ -10,6 +10,7 @@ import "./components/baseComponents/Modal";
 import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
+import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
 
@@ -29,6 +30,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private instantBuild: boolean = false;
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
+  @state() private teamCount: number = 2;
 
   render() {
     return html`
@@ -134,6 +136,31 @@ export class SinglePlayerModal extends LitElement {
               </div>
             </div>
           </div>
+
+          ${this.gameMode === GameMode.FFA
+            ? ""
+            : html`
+                <!-- Team Count Selection -->
+                <div class="options-section">
+                  <div class="option-title">
+                    ${translateText("host_modal.team_count")}
+                  </div>
+                  <div class="option-cards">
+                    ${[2, 3, 4, 5, 6, 7].map(
+                      (o) => html`
+                        <div
+                          class="option-card ${this.teamCount === o
+                            ? "selected"
+                            : ""}"
+                          @click=${() => this.handleTeamCountSelection(o)}
+                        >
+                          <div class="option-card-title">${o}</div>
+                        </div>
+                      `,
+                    )}
+                  </div>
+                </div>
+              `}
 
           <!-- Game Options -->
           <div class="options-section">
@@ -309,6 +336,10 @@ export class SinglePlayerModal extends LitElement {
     this.gameMode = value;
   }
 
+  private handleTeamCountSelection(value: number) {
+    this.teamCount = value;
+  }
+
   private getRandomMap(): GameMapType {
     const maps = Object.values(GameMapType);
     const randIdx = Math.floor(Math.random() * maps.length);
@@ -334,6 +365,10 @@ export class SinglePlayerModal extends LitElement {
       consolex.warn("Username input element not found");
     }
 
+    const flagInput = document.querySelector("flag-input") as FlagInput;
+    if (!flagInput) {
+      consolex.warn("Flag input element not found");
+    }
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
@@ -346,12 +381,17 @@ export class SinglePlayerModal extends LitElement {
                 playerID: generateID(),
                 clientID,
                 username: usernameInput.getCurrentUsername(),
+                flag:
+                  flagInput.getCurrentFlag() == "xx"
+                    ? ""
+                    : flagInput.getCurrentFlag(),
               },
             ],
             config: {
               gameMap: this.selectedMap,
               gameType: GameType.Singleplayer,
               gameMode: this.gameMode,
+              numPlayerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,
               disableNPCs: this.disableNPCs,
               disableNukes: this.disableNukes,

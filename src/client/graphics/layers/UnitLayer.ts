@@ -19,6 +19,8 @@ import { MoveWarshipIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
+import { getColoredSprite, loadAllSprites } from "../SpriteLoader";
+
 enum Relationship {
   Self,
   Ally,
@@ -28,8 +30,10 @@ enum Relationship {
 export class UnitLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
+  private transportShipTrailCanvas: HTMLCanvasElement;
+  private transportShipTrailContext: CanvasRenderingContext2D;
 
-  private boatToTrail = new Map<UnitView, Set<TileRef>>();
+  private boatToTrail = new Map<UnitView, TileRef[]>();
 
   private theme: Theme = null;
 
@@ -75,6 +79,8 @@ export class UnitLayer implements Layer {
     this.eventBus.on(MouseUpEvent, (e) => this.onMouseUp(e));
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelectionChange(e));
     this.redraw();
+
+    loadAllSprites();
   }
 
   /**
@@ -161,6 +167,13 @@ export class UnitLayer implements Layer {
 
   renderLayer(context: CanvasRenderingContext2D) {
     context.drawImage(
+      this.transportShipTrailCanvas,
+      -this.game.width() / 2,
+      -this.game.height() / 2,
+      this.game.width(),
+      this.game.height(),
+    );
+    context.drawImage(
       this.canvas,
       -this.game.width() / 2,
       -this.game.height() / 2,
@@ -177,9 +190,14 @@ export class UnitLayer implements Layer {
   redraw() {
     this.canvas = document.createElement("canvas");
     this.context = this.canvas.getContext("2d");
+    this.transportShipTrailCanvas = document.createElement("canvas");
+    this.transportShipTrailContext =
+      this.transportShipTrailCanvas.getContext("2d");
 
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
+    this.transportShipTrailCanvas.width = this.game.width();
+    this.transportShipTrailCanvas.height = this.game.height();
     this.game
       ?.updatesSinceLastTick()
       ?.[GameUpdateType.Unit]?.forEach((unit) => {
@@ -244,55 +262,12 @@ export class UnitLayer implements Layer {
       this.clearCell(this.game.x(t), this.game.y(t));
     }
 
-    if (!unit.isActive()) {
-      return;
-    }
-
-    let outerColor = this.theme.territoryColor(unit.owner());
-    if (unit.warshipTargetId()) {
-      const targetOwner = this.game
-        .units()
-        .find((u) => u.id() == unit.warshipTargetId())
-        ?.owner();
-      if (targetOwner == this.myPlayer) {
-        outerColor = colord({ r: 200, b: 0, g: 0 });
+    if (unit.isActive()) {
+      if (unit.warshipTargetId()) {
+        this.drawSprite(unit, colord({ r: 200, b: 0, g: 0 }));
+      } else {
+        this.drawSprite(unit);
       }
-    }
-
-    // Paint outer territory
-    for (const t of this.game.bfs(
-      unit.tile(),
-      euclDistFN(unit.tile(), 5, false),
-    )) {
-      this.paintCell(this.game.x(t), this.game.y(t), rel, outerColor, 255);
-    }
-
-    // Paint border
-    for (const t of this.game.bfs(
-      unit.tile(),
-      manhattanDistFN(unit.tile(), 4),
-    )) {
-      this.paintCell(
-        this.game.x(t),
-        this.game.y(t),
-        rel,
-        this.theme.borderColor(unit.owner()),
-        255,
-      );
-    }
-
-    // Paint inner territory
-    for (const t of this.game.bfs(
-      unit.tile(),
-      euclDistFN(unit.tile(), 1, false),
-    )) {
-      this.paintCell(
-        this.game.x(t),
-        this.game.y(t),
-        rel,
-        this.theme.territoryColor(unit.owner()),
-        255,
-      );
     }
   }
 
@@ -341,32 +316,13 @@ export class UnitLayer implements Layer {
     }
 
     if (unit.isActive()) {
-      for (const t of this.game.bfs(
-        unit.tile(),
-        euclDistFN(unit.tile(), range, false),
-      )) {
-        this.paintCell(
-          this.game.x(t),
-          this.game.y(t),
-          rel,
-          this.theme.spawnHighlightColor(),
-          255,
-        );
-      }
-
-      this.paintCell(
-        this.game.x(unit.tile()),
-        this.game.y(unit.tile()),
-        rel,
-        this.theme.borderColor(unit.owner()),
-        255,
-      );
+      this.drawSprite(unit);
     }
   }
 
   private handleNuke(unit: UnitView) {
-    const rel = this.relationship(unit);
     let range = 0;
+
     switch (unit.type()) {
       case UnitType.AtomBomb:
         range = 4;
@@ -379,7 +335,6 @@ export class UnitLayer implements Layer {
         break;
     }
 
-    // Clear previous area
     for (const t of this.game.bfs(
       unit.lastTile(),
       euclDistFN(unit.lastTile(), range, false),
@@ -388,30 +343,7 @@ export class UnitLayer implements Layer {
     }
 
     if (unit.isActive()) {
-      for (const t of this.game.bfs(
-        unit.tile(),
-        euclDistFN(unit.tile(), range, false),
-      )) {
-        this.paintCell(
-          this.game.x(t),
-          this.game.y(t),
-          rel,
-          this.theme.spawnHighlightColor(),
-          255,
-        );
-      }
-      for (const t of this.game.bfs(
-        unit.tile(),
-        euclDistFN(unit.tile(), 2, false),
-      )) {
-        this.paintCell(
-          this.game.x(t),
-          this.game.y(t),
-          rel,
-          this.theme.borderColor(unit.owner()),
-          255,
-        );
-      }
+      this.drawSprite(unit);
     }
   }
 
@@ -444,33 +376,7 @@ export class UnitLayer implements Layer {
     }
 
     if (unit.isActive()) {
-      // Paint territory
-      for (const t of this.game.bfs(
-        unit.tile(),
-        manhattanDistFN(unit.tile(), 2),
-      )) {
-        this.paintCell(
-          this.game.x(t),
-          this.game.y(t),
-          rel,
-          this.theme.territoryColor(unit.owner()),
-          255,
-        );
-      }
-
-      // Paint border
-      for (const t of this.game.bfs(
-        unit.tile(),
-        manhattanDistFN(unit.tile(), 1),
-      )) {
-        this.paintCell(
-          this.game.x(t),
-          this.game.y(t),
-          rel,
-          this.theme.borderColor(unit.owner()),
-          255,
-        );
-      }
+      this.drawSprite(unit);
     }
   }
 
@@ -478,63 +384,59 @@ export class UnitLayer implements Layer {
     const rel = this.relationship(unit);
 
     if (!this.boatToTrail.has(unit)) {
-      this.boatToTrail.set(unit, new Set<TileRef>());
+      this.boatToTrail.set(unit, []);
     }
     const trail = this.boatToTrail.get(unit);
-    trail.add(unit.lastTile());
+    trail.push(unit.lastTile());
 
     // Clear previous area
     for (const t of this.game.bfs(
       unit.lastTile(),
-      manhattanDistFN(unit.lastTile(), 3),
+      manhattanDistFN(unit.lastTile(), 4),
     )) {
       this.clearCell(this.game.x(t), this.game.y(t));
     }
 
     if (unit.isActive()) {
       // Paint trail
-      for (const t of trail) {
+      for (const t of trail.slice(-1)) {
         this.paintCell(
           this.game.x(t),
           this.game.y(t),
           rel,
           this.theme.territoryColor(unit.owner()),
           150,
+          this.transportShipTrailContext,
         );
       }
 
-      // Paint border
-      for (const t of this.game.bfs(
-        unit.tile(),
-        manhattanDistFN(unit.tile(), 2),
-      )) {
-        this.paintCell(
-          this.game.x(t),
-          this.game.y(t),
-          rel,
-          this.theme.borderColor(unit.owner()),
-          255,
-        );
-      }
-
-      // Paint territory
-      for (const t of this.game.bfs(
-        unit.tile(),
-        manhattanDistFN(unit.tile(), 1),
-      )) {
-        this.paintCell(
-          this.game.x(t),
-          this.game.y(t),
-          rel,
-          this.theme.territoryColor(unit.owner()),
-          255,
-        );
-      }
+      this.drawSprite(unit);
     } else {
       for (const t of trail) {
-        this.clearCell(this.game.x(t), this.game.y(t));
+        this.clearCell(
+          this.game.x(t),
+          this.game.y(t),
+          this.transportShipTrailContext,
+        );
       }
       this.boatToTrail.delete(unit);
+
+      // Repaint overlapping trails
+      const trailSet = new Set(trail);
+      for (const [other, trail] of this.boatToTrail) {
+        for (const t of trail) {
+          if (trailSet.has(t)) {
+            this.paintCell(
+              this.game.x(t),
+              this.game.y(t),
+              rel,
+              this.theme.territoryColor(other.owner()),
+              150,
+              this.transportShipTrailContext,
+            );
+          }
+        }
+      }
     }
   }
 
@@ -544,27 +446,47 @@ export class UnitLayer implements Layer {
     relationship: Relationship,
     color: Colord,
     alpha: number,
+    context: CanvasRenderingContext2D = this.context,
   ) {
-    this.clearCell(x, y);
+    this.clearCell(x, y, context);
     if (this.alternateView) {
       switch (relationship) {
         case Relationship.Self:
-          this.context.fillStyle = this.theme.selfColor().toRgbString();
+          context.fillStyle = this.theme.selfColor().toRgbString();
           break;
         case Relationship.Ally:
-          this.context.fillStyle = this.theme.allyColor().toRgbString();
+          context.fillStyle = this.theme.allyColor().toRgbString();
           break;
         case Relationship.Enemy:
-          this.context.fillStyle = this.theme.enemyColor().toRgbString();
+          context.fillStyle = this.theme.enemyColor().toRgbString();
           break;
       }
     } else {
-      this.context.fillStyle = color.alpha(alpha / 255).toRgbString();
+      context.fillStyle = color.alpha(alpha / 255).toRgbString();
     }
-    this.context.fillRect(x, y, 1, 1);
+    context.fillRect(x, y, 1, 1);
   }
 
-  clearCell(x: number, y: number) {
-    this.context.clearRect(x, y, 1, 1);
+  clearCell(
+    x: number,
+    y: number,
+    context: CanvasRenderingContext2D = this.context,
+  ) {
+    context.clearRect(x, y, 1, 1);
+  }
+
+  drawSprite(unit: UnitView, customTerritoryColor?: Colord) {
+    const x = this.game.x(unit.tile());
+    const y = this.game.y(unit.tile());
+
+    const sprite = getColoredSprite(unit, this.theme, customTerritoryColor);
+
+    this.context.drawImage(
+      sprite,
+      Math.round(x - sprite.width / 2),
+      Math.round(y - sprite.height / 2),
+      sprite.width,
+      sprite.width,
+    );
   }
 }

@@ -1,0 +1,38 @@
+name: Deploy to Remote
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "Deployment Environment"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - production
+          - staging
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.target_environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target_environment }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+          cat >.env <<EOF
+          SERVER_HOST_STAGING=${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }}
+          DOCKER_REPO_STAGING=${{ vars.DOCKERHUB_REPO }}
+          DOCKER_USERNAME=${{ vars.DOCKERHUB_USERNAME }}
+          EOF
+          ./deploy.sh ${{ inputs.target_environment }}
