@@ -22,6 +22,7 @@ import { LanguageModal } from "./LanguageModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import { generateCryptoRandomUUID } from "./Utils";
@@ -118,6 +119,14 @@ class Client {
       hlpModal.open();
     });
 
+    const settingsModal = document.querySelector(
+      "user-setting",
+    ) as UserSettingModal;
+    settingsModal instanceof UserSettingModal;
+    document.getElementById("settings-button").addEventListener("click", () => {
+      settingsModal.open();
+    });
+
     const hostModal = document.querySelector(
       "host-lobby-modal",
     ) as HostPrivateLobbyModal;
@@ -200,6 +209,33 @@ class Client {
         gameRecord: lobby.gameRecord,
       },
       () => {
+        console.log("Closing modals");
+        document.getElementById("settings-button").classList.add("hidden");
+        [
+          "single-player-modal",
+          "host-lobby-modal",
+          "join-private-lobby-modal",
+          "game-starting-modal",
+          "top-bar",
+          "help-modal",
+          "user-setting",
+        ].forEach((tag) => {
+          const modal = document.querySelector(tag) as HTMLElement & {
+            close?: () => void;
+            isModalOpen?: boolean;
+          };
+          if (modal?.close) {
+            modal.close();
+          } else if ("isModalOpen" in modal) {
+            modal.isModalOpen = false;
+          }
+        });
+        this.publicLobby.stop();
+        document.querySelectorAll(".ad").forEach((ad) => {
+          (ad as HTMLElement).style.display = "none";
+        });
+
+        // show when the game loads
         const startingModal = document.querySelector(
           "game-starting-modal",
         ) as GameStartingModal;

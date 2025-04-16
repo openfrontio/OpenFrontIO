@@ -149,7 +149,7 @@ export class WinModal extends LitElement implements Layer {
     return html`
       <div class="win-modal ${this.isVisible ? "visible" : ""}">
         <h2>${this._title || ""}</h2>
-        ${this.supportHTML()}
+        ${this.innerHtml()}
         <div class="button-container">
           <button @click=${this._handleExit}>Exit Game</button>
           <button @click=${this.hide}>Keep Playing</button>
@@ -158,35 +158,9 @@ export class WinModal extends LitElement implements Layer {
     `;
   }
 
-  updated(changedProperties) {
-    super.updated(changedProperties);
-    // Initialize ads if modal is visible and showing ads
-    if (changedProperties.has("isVisible") && this.isVisible && !this.won) {
-      try {
-        setTimeout(() => {
-          (adsbygoogle = window.adsbygoogle || []).push({});
-        }, 0);
-      } catch (error) {
-        console.error("Error initializing ad:", error);
-      }
-    }
-  }
-
-  supportHTML() {
+  innerHtml() {
     return html`
-      <div style="text-align: center; margin: 15px 0;">
-        <p>
-          Like the game? Help make this my full-time project!
-          <a
-            href="https://discord.gg/k22YrnAzGp"
-            target="_blank"
-            rel="noopener noreferrer"
-            style="color: #0096ff; text-decoration: underline; display: block; margin-top: 5px;"
-          >
-            Support the game!
-          </a>
-        </p>
-      </div>
+      <div style="text-align: center; margin: 15px 0; line-height: 1.5;"></div>
     `;
   }
 
