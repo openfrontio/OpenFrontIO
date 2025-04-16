@@ -12,7 +12,6 @@ body:
   - type: textarea
     attributes:
       label: "Steps to Reproduce"
-      description: "How to reproduce the bug"
       placeholder:
         "1. Go to '...'
         2. Click on '....'
@@ -24,26 +23,16 @@ body:
   - type: textarea
     attributes:
       label: "Expected Behavior"
-      description: "What you expected to happen"
-      placeholder: "Please describe what you expected to happen."
+      placeholder: "What was expected to happen?"
     validations:
       required: true
 
   - type: textarea
     attributes:
       label: "Actual Behavior"
-      description: "What actually happened"
-      placeholder: "Please describe what actually happened."
+      placeholder: "What actually happened?"
     validations:
       required: true
-
-  - type: textarea
-    attributes:
-      label: "Screenshots"
-      description: "If applicable, add screenshots to help explain your problem."
-      placeholder: "Please attach any relevant screenshots."
-    validations:
-      required: false
 
   - type: textarea
     attributes:
@@ -69,7 +58,6 @@ body:
   - type: textarea 
     attributes:
       label: "Additional Context"
-      description: "Add any other context about the problem here."
-      placeholder: "Please provide any additional context."
+      placeholder: "Screenshots or Other Relevant Information"
     validations:
       required: false
