@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { translateText } from "../../../../client/Utils";
 
 @customElement("setting-keybind")
 export class SettingKeybind extends LitElement {
@@ -39,13 +40,13 @@ export class SettingKeybind extends LitElement {
                 class="text-xs text-gray-400 hover:text-white border border-gray-500 px-2 py-0.5 rounded transition"
                 @click=${this.resetToDefault}
               >
-                Reset
+                ${translateText("user_setting.reset")}
               </button>
               <button
                 class="text-xs text-gray-400 hover:text-white border border-gray-500 px-2 py-0.5 rounded transition"
                 @click=${this.unbindKey}
               >
-                Unbind
+                ${translateText("user_setting.unbind")}
               </button>
             </div>
           </div>

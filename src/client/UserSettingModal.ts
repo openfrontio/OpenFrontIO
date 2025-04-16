@@ -306,13 +306,15 @@ export class UserSettingModal extends LitElement {
                     <div
                       class="text-center text-white text-base font-semibold mt-5 mb-2"
                     >
-                      View Options
+                      ${translateText("user_setting.view_options")}
                     </div>
 
                     <setting-keybind
                       action="toggleView"
-                      label="Toggle View"
-                      description="Alternate view (terrain/countries)"
+                      label=${translateText("user_setting.toggle_view")}
+                      description=${translateText(
+                        "user_setting.toggle_view_desc",
+                      )}
                       defaultKey="Space"
                       .value=${this.keybinds["toggleView"] ?? ""}
                       @change=${this.handleKeybindChange}
@@ -321,13 +323,13 @@ export class UserSettingModal extends LitElement {
                     <div
                       class="text-center text-white text-base font-semibold mt-5 mb-2"
                     >
-                      Zoom Controls
+                      ${translateText("user_setting.zoom_controls")}
                     </div>
 
                     <setting-keybind
                       action="zoomOut"
-                      label="Zoom Out"
-                      description="Zoom out the map"
+                      label=${translateText("user_setting.zoom_out")}
+                      description=${translateText("user_setting.zoom_out_desc")}
                       defaultKey="KeyQ"
                       .value=${this.keybinds["zoomOut"] ?? ""}
                       @change=${this.handleKeybindChange}
@@ -335,8 +337,8 @@ export class UserSettingModal extends LitElement {
 
                     <setting-keybind
                       action="zoomIn"
-                      label="Zoom In"
-                      description="Zoom in the map"
+                      label=${translateText("user_setting.zoom_in")}
+                      description=${translateText("user_setting.zoom_in_desc")}
                       defaultKey="KeyE"
                       .value=${this.keybinds["zoomIn"] ?? ""}
                       @change=${this.handleKeybindChange}
@@ -345,13 +347,15 @@ export class UserSettingModal extends LitElement {
                     <div
                       class="text-center text-white text-base font-semibold mt-5 mb-2"
                     >
-                      Camera Movement
+                      ${translateText("user_setting.camera_movement")}
                     </div>
 
                     <setting-keybind
                       action="centerCamera"
-                      label="Center Camera"
-                      description="Center camera on player"
+                      label=${translateText("user_setting.center_camera")}
+                      description=${translateText(
+                        "user_setting.center_camera_desc",
+                      )}
                       defaultKey="KeyC"
                       .value=${this.keybinds["centerCamera"] ?? ""}
                       @change=${this.handleKeybindChange}
@@ -359,8 +363,8 @@ export class UserSettingModal extends LitElement {
 
                     <setting-keybind
                       action="moveUp"
-                      label="Move Camera Up"
-                      description="Move the camera upward"
+                      label=${translateText("user_setting.move_up")}
+                      description=${translateText("user_setting.move_up_desc")}
                       defaultKey="KeyW"
                       .value=${this.keybinds["moveUp"] ?? ""}
                       @change=${this.handleKeybindChange}
@@ -368,8 +372,10 @@ export class UserSettingModal extends LitElement {
 
                     <setting-keybind
                       action="moveLeft"
-                      label="Move Camera Left"
-                      description="Move the camera to the left"
+                      label=${translateText("user_setting.move_left")}
+                      description=${translateText(
+                        "user_setting.move_left_desc",
+                      )}
                       defaultKey="KeyA"
                       .value=${this.keybinds["moveLeft"] ?? ""}
                       @change=${this.handleKeybindChange}
@@ -377,8 +383,10 @@ export class UserSettingModal extends LitElement {
 
                     <setting-keybind
                       action="moveDown"
-                      label="Move Camera Down"
-                      description="Move the camera downward"
+                      label=${translateText("user_setting.move_down")}
+                      description=${translateText(
+                        "user_setting.move_down_desc",
+                      )}
                       defaultKey="KeyS"
                       .value=${this.keybinds["moveDown"] ?? ""}
                       @change=${this.handleKeybindChange}
@@ -386,8 +394,10 @@ export class UserSettingModal extends LitElement {
 
                     <setting-keybind
                       action="moveRight"
-                      label="Move Camera Right"
-                      description="Move the camera to the right"
+                      label=${translateText("user_setting.move_right")}
+                      description=${translateText(
+                        "user_setting.move_right_desc",
+                      )}
                       defaultKey="KeyD"
                       .value=${this.keybinds["moveRight"] ?? ""}
                       @change=${this.handleKeybindChange}

@@ -195,6 +195,27 @@
     "easter_writing_speed_label": "Writing Speed Multiplier",
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
     "easter_bug_count_label": "Bug Count",
-    "easter_bug_count_desc": "How many bugs you're okay with (0–1000, emotionally)"
+    "easter_bug_count_desc": "How many bugs you're okay with (0–1000, emotionally)",
+    "view_options": "View Options",
+    "toggle_view": "Toggle View",
+    "toggle_view_desc": "Alternate view (terrain/countries)",
+    "zoom_controls": "Zoom Controls",
+    "zoom_out": "Zoom Out",
+    "zoom_out_desc": "Zoom out the map",
+    "zoom_in": "Zoom In",
+    "zoom_in_desc": "Zoom in the map",
+    "camera_movement": "Camera Movement",
+    "center_camera": "Center Camera",
+    "center_camera_desc": "Center camera on player",
+    "move_up": "Move Camera Up",
+    "move_up_desc": "Move the camera upward",
+    "move_left": "Move Camera Left",
+    "move_left_desc": "Move the camera to the left",
+    "move_down": "Move Camera Down",
+    "move_down_desc": "Move the camera downward",
+    "move_right": "Move Camera Right",
+    "move_right_desc": "Move the camera to the right",
+    "reset": "Reset",
+    "unbind": "Unbind"
   }
 }
