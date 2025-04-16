@@ -44,7 +44,7 @@ export class RadialMenu implements Layer {
   private clickedCell: Cell | null = null;
   private lastClosed: number = 0;
 
-  private originalTileOwner: PlayerView | TerraNullius | null = null;
+  private originalTileOwner: PlayerView | TerraNullius;
   private menuElement: d3.Selection<HTMLDivElement, unknown, null, undefined>;
   private isVisible: boolean = false;
   private readonly menuItems = new Map([
