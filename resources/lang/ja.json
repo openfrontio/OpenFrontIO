@@ -194,6 +194,27 @@
     "easter_writing_speed_label": "書くスピード倍率",
     "easter_writing_speed_desc": "どれくらい爆速でコードを書いてるフリをするか（×1〜×100）",
     "easter_bug_count_label": "バグのカウント！",
-    "easter_bug_count_desc": "どれくらいのバグなら精神的に許せるか（0〜1000）"
+    "easter_bug_count_desc": "どれくらいのバグなら精神的に許せるか（0〜1000）",
+    "view_options": "表示オプション",
+    "toggle_view": "表示切替",
+    "toggle_view_desc": "地形ビューと国境ビューを切り替えます",
+    "zoom_controls": "ズーム操作",
+    "zoom_out": "ズームアウト",
+    "zoom_out_desc": "マップを縮小します",
+    "zoom_in": "ズームイン",
+    "zoom_in_desc": "マップを拡大します",
+    "camera_movement": "カメラ移動",
+    "center_camera": "カメラ中央配置",
+    "center_camera_desc": "プレイヤーにカメラを中央合わせします",
+    "move_up": "カメラを上に移動",
+    "move_up_desc": "カメラを上方向に移動します",
+    "move_left": "カメラを左に移動",
+    "move_left_desc": "カメラを左方向に移動します",
+    "move_down": "カメラを下に移動",
+    "move_down_desc": "カメラを下方向に移動します",
+    "move_right": "カメラを右に移動",
+    "move_right_desc": "カメラを右方向に移動します",
+    "reset": "リセット",
+    "unbind": "解除"
   }
 }
