@@ -358,13 +358,13 @@ export function withinInt(num: bigint, min: bigint, max: bigint): bigint {
   return minInt(atLeastMin, max);
 }
 
-export function createRandomName(data) {
+export function createRandomName(
+  name: string,
+  playerType: string,
+): string | null {
   let randomName = null;
-  if (
-    data.playerType === "HUMAN" &&
-    localStorage.getItem("username") !== data.name
-  ) {
-    const hash = simpleHash(data.name);
+  if (playerType === "HUMAN" && localStorage.getItem("username") !== name) {
+    const hash = simpleHash(name);
     const prefixIndex = hash % BOT_NAME_PREFIXES.length;
     const suffixIndex =
       Math.floor(hash / BOT_NAME_PREFIXES.length) % BOT_NAME_SUFFIXES.length;

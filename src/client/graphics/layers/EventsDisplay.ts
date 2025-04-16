@@ -201,7 +201,7 @@ export class EventsDisplay extends LitElement implements Layer {
     ) as PlayerView;
 
     this.addEvent({
-      description: `${requestor.name_notag()} requests an alliance!`,
+      description: `${requestor.nameNotag()} requests an alliance!`,
       buttons: [
         {
           text: "Focus",
@@ -250,7 +250,7 @@ export class EventsDisplay extends LitElement implements Layer {
     ) as PlayerView;
 
     this.addEvent({
-      description: `${recipient.name_notag()} ${
+      description: `${recipient.nameNotag()} ${
         update.accepted ? "accepted" : "rejected"
       } your alliance request`,
       type: update.accepted ? MessageType.SUCCESS : MessageType.ERROR,
@@ -273,7 +273,7 @@ export class EventsDisplay extends LitElement implements Layer {
       );
       this.addEvent({
         description:
-          `You broke your alliance with ${betrayed.name_notag()}, making you a TRAITOR ` +
+          `You broke your alliance with ${betrayed.nameNotag()}, making you a TRAITOR ` +
           `(${malusPercent}% defense debuff)`,
         type: MessageType.ERROR,
         highlight: true,
@@ -305,7 +305,7 @@ export class EventsDisplay extends LitElement implements Layer {
     if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
 
     this.addEvent({
-      description: `Your alliance with ${other.name_notag()} expired`,
+      description: `Your alliance with ${other.nameNotag()} expired`,
       type: MessageType.WARN,
       highlight: true,
       createdAt: this.game.ticks(),
@@ -321,7 +321,7 @@ export class EventsDisplay extends LitElement implements Layer {
     const target = this.game.playerBySmallID(event.targetID) as PlayerView;
 
     this.addEvent({
-      description: `${other.name_notag()} requests you attack ${target.name_notag()}`,
+      description: `${other.nameNotag()} requests you attack ${target.nameNotag()}`,
       type: MessageType.INFO,
       highlight: true,
       createdAt: this.game.ticks(),
@@ -359,7 +359,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
     if (recipient == myPlayer) {
       this.addEvent({
-        description: `${sender.displayName_notag()}:${update.emoji.message}`,
+        description: `${sender.displayNameNotag()}:${update.emoji.message}`,
         unsafeDescription: true,
         type: MessageType.INFO,
         highlight: true,
@@ -368,7 +368,7 @@ export class EventsDisplay extends LitElement implements Layer {
       });
     } else if (sender === myPlayer && recipient !== AllPlayers) {
       this.addEvent({
-        description: `Sent ${(recipient as PlayerView).displayName_notag()}: ${
+        description: `Sent ${(recipient as PlayerView).displayNameNotag()}: ${
           update.emoji.message
         }`,
         unsafeDescription: true,
@@ -422,7 +422,7 @@ export class EventsDisplay extends LitElement implements Layer {
                         this.game.playerBySmallID(
                           attack.attackerID,
                         ) as PlayerView
-                      )?.name_notag()}
+                      )?.nameNotag()}
                     </button>
                     ${attack.retreating ? "(retreating...)" : ""}
                   `,
@@ -450,7 +450,7 @@ export class EventsDisplay extends LitElement implements Layer {
                       ${renderTroops(attack.troops)}
                       ${(
                         this.game.playerBySmallID(attack.targetID) as PlayerView
-                      )?.name_notag()}
+                      )?.nameNotag()}
                     </button>
 
                     ${!attack.retreating

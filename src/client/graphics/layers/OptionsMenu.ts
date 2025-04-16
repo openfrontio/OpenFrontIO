@@ -209,7 +209,8 @@ export class OptionsMenu extends LitElement implements Layer {
           ${button({
             onClick: this.onToggleRandomNameModeButtonClick,
             title: "Random name mode",
-            children: "🥷: " + (this.userSettings.randomName() ? "On" : "Off"),
+            children:
+              "🥷: " + (this.userSettings.anonymousNames() ? "On" : "Off"),
           })}
           ${button({
             onClick: this.onToggleLeftClickOpensMenu,

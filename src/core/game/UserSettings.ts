@@ -15,7 +15,7 @@ export class UserSettings {
   emojis() {
     return this.get("settings.emojis", true);
   }
-  randomName() {
+  anonymousNames() {
     return this.get("settings.randomname", false);
   }
 
@@ -46,7 +46,7 @@ export class UserSettings {
   }
 
   toggleRandomName() {
-    this.set("settings.randomname", !this.randomName());
+    this.set("settings.randomname", !this.anonymousNames());
   }
 
   toggleDarkMode() {
