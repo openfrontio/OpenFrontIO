@@ -115,6 +115,7 @@ export class InputHandler {
   initialize() {
     const keybinds = {
       toggleView: "Space",
+      centerCamera: "KeyC",
       moveUp: "KeyW",
       moveDown: "KeyS",
       moveLeft: "KeyA",
@@ -219,7 +220,7 @@ export class InputHandler {
           "Equal",
           "Digit1",
           "Digit2",
-          "KeyC",
+          keybinds.centerCamera,
           "ControlLeft",
           "ControlRight",
         ].includes(e.code)
@@ -227,7 +228,6 @@ export class InputHandler {
         this.activeKeys.add(e.code);
       }
     });
-
     window.addEventListener("keyup", (e) => {
       if (e.code === keybinds.toggleView) {
         e.preventDefault();
@@ -250,7 +250,7 @@ export class InputHandler {
         this.eventBus.emit(new AttackRatioEvent(10));
       }
 
-      if (e.code === "KeyC") {
+      if (e.code === keybinds.centerCamera) {
         e.preventDefault();
         this.eventBus.emit(new CenterCameraEvent());
       }

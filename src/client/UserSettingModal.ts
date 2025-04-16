@@ -306,6 +306,21 @@ export class UserSettingModal extends LitElement {
                     <div
                       class="text-center text-white text-base font-semibold mt-5 mb-2"
                     >
+                      View Options
+                    </div>
+
+                    <setting-keybind
+                      action="toggleView"
+                      label="Toggle View"
+                      description="Alternate view (terrain/countries)"
+                      defaultKey="Space"
+                      .value=${this.keybinds["toggleView"] ?? ""}
+                      @change=${this.handleKeybindChange}
+                    ></setting-keybind>
+
+                    <div
+                      class="text-center text-white text-base font-semibold mt-5 mb-2"
+                    >
                       Zoom Controls
                     </div>
 
@@ -332,6 +347,15 @@ export class UserSettingModal extends LitElement {
                     >
                       Camera Movement
                     </div>
+
+                    <setting-keybind
+                      action="centerCamera"
+                      label="Center Camera"
+                      description="Center camera on player"
+                      defaultKey="KeyC"
+                      .value=${this.keybinds["centerCamera"] ?? ""}
+                      @change=${this.handleKeybindChange}
+                    ></setting-keybind>
 
                     <setting-keybind
                       action="moveUp"
@@ -377,6 +401,7 @@ export class UserSettingModal extends LitElement {
   }
 
   public open() {
+    this.requestUpdate();
     this.modalEl?.open();
   }
 
