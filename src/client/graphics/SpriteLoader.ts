@@ -76,10 +76,11 @@ export const getColoredSprite = (
   unit: UnitView,
   theme: Theme,
   customTerritoryColor?: Colord,
+  customBorderColor?: Colord,
 ): HTMLCanvasElement => {
   const owner = unit.owner();
   const territoryColor = customTerritoryColor ?? theme.territoryColor(owner);
-  const borderColor = theme.borderColor(owner);
+  const borderColor = customBorderColor ?? theme.borderColor(owner);
   const spawnHighlightColor = theme.spawnHighlightColor();
   const colorKey = customTerritoryColor
     ? customTerritoryColor.toRgbString()
