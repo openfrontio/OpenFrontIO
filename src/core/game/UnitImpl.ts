@@ -13,8 +13,6 @@ import { TileRef } from "./GameMap";
 import { GameUpdateType, UnitUpdate } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
 
-const maxSafeFromPiratesCooldown = 15;
-
 export class UnitImpl implements Unit {
   private _active = true;
   private _health: bigint;
@@ -22,7 +20,7 @@ export class UnitImpl implements Unit {
   private _target: Unit = null;
   private _moveTarget: TileRef = null;
   private _targetedBySAM = false;
-  private _safeFromPiratesCooldown = maxSafeFromPiratesCooldown;
+  private _safeFromPiratesCooldown: number;
   private _constructionType: UnitType = undefined;
 
   private _cooldownTick: Tick | null = null;
@@ -48,6 +46,9 @@ export class UnitImpl implements Unit {
     this._detonationDst = unitsSpecificInfos.detonationDst;
     this._warshipTarget = unitsSpecificInfos.warshipTarget;
     this._cooldownDuration = unitsSpecificInfos.cooldownDuration;
+    this._safeFromPiratesCooldown = this.mg
+      .config()
+      .safeFromPiratesCooldownMax();
   }
 
   id() {
@@ -240,7 +241,9 @@ export class UnitImpl implements Unit {
   setSafeFromPirates(safeFromPirates: boolean): void {
     if (safeFromPirates) {
       this._safeFromPirates = safeFromPirates;
-      this._safeFromPiratesCooldown = maxSafeFromPiratesCooldown;
+      this._safeFromPiratesCooldown = this.mg
+        .config()
+        .safeFromPiratesCooldownMax();
     }
     if (!safeFromPirates) {
       if (this._safeFromPiratesCooldown <= 0) {

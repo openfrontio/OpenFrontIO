@@ -28,6 +28,7 @@ import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentIDFromCookie } from "./Main";
 import {
   SendAttackIntentEvent,
+  SendBoatAttackIntentEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
   Transport,
@@ -356,6 +357,14 @@ export class ClientGameRunner {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
+            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+          ),
+        );
+      } else if (actions.canBoat) {
+        this.eventBus.emit(
+          new SendBoatAttackIntentEvent(
+            this.gameView.owner(tile).id(),
+            cell,
             this.myPlayer.troops() * this.renderer.uiState.attackRatio,
           ),
         );

@@ -83,7 +83,7 @@ export class DefensePostExecution implements Execution {
     const ships = this.mg
       .nearbyUnits(
         this.post.tile(),
-        75, // Search range
+        this.mg.config().defensePostTargettingRange(),
         [UnitType.TransportShip, UnitType.Warship],
       )
       .filter(

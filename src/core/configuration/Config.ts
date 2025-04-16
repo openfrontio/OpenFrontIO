@@ -108,6 +108,7 @@ export interface Config {
   unitInfo(type: UnitType): UnitInfo;
   tradeShipGold(dist: number): Gold;
   tradeShipSpawnRate(numberOfPorts: number): number;
+  safeFromPiratesCooldownMax(): number;
   defensePostRange(): number;
   SAMCooldown(): number;
   SiloCooldown(): number;
@@ -116,7 +117,9 @@ export interface Config {
   difficultyModifier(difficulty: Difficulty): number;
   warshipPatrolRange(): number;
   warshipShellAttackRate(): number;
+  warshipTargettingRange(): number;
   defensePostShellAttackRate(): number;
+  defensePostTargettingRange(): number;
   // 0-1
   traitorDefenseDebuff(): number;
   nukeMagnitudes(unitType: UnitType): NukeMagnitude;

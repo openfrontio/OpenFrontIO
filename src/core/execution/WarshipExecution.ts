@@ -133,7 +133,7 @@ export class WarshipExecution implements Execution {
     const ships = this.mg
       .nearbyUnits(
         this.warship.tile(),
-        130, // Search range
+        this.mg.config().warshipTargettingRange(),
         [UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip],
       )
       .filter(

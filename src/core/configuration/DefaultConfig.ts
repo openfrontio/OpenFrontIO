@@ -208,7 +208,10 @@ export class DefaultConfig implements Config {
     return 5;
   }
   defensePostShellAttackRate(): number {
-    return 80; // interval in ticks between attcks
+    return 100; // interval in ticks between attcks
+  }
+  defensePostTargettingRange(): number {
+    return 50;
   }
 
   //UNITS - Ships
@@ -216,7 +219,10 @@ export class DefaultConfig implements Config {
     return 100; // was previously WarshipExecution.searchRange
   }
   warshipShellAttackRate(): number {
-    return 5; // interval in ticks between attcks
+    return 20; // interval in ticks between attcks
+  }
+  warshipTargettingRange(): number {
+    return 200;
   }
   boatMaxNumber(): number {
     return 9; // max concurrent trade ships
@@ -231,6 +237,9 @@ export class DefaultConfig implements Config {
     if (numberOfPorts <= 10) return 40;
     if (numberOfPorts <= 12) return 45;
     return 50;
+  }
+  safeFromPiratesCooldownMax(): number {
+    return 15;
   }
 
   unitInfo(type: UnitType): UnitInfo {
@@ -559,6 +568,7 @@ export class DefaultConfig implements Config {
   defaultNukeSpeed(): number {
     return 4;
   }
+
   // Humans can be population, soldiers attacking, soldiers in boat etc.
   nukeDeathFactor(humans: number, tilesOwned: number): number {
     return (5 * humans) / Math.max(1, tilesOwned);
@@ -572,7 +582,6 @@ export class DefaultConfig implements Config {
   radiusPortSpawn() {
     return 20;
   }
-
   proximityBonusPortsNb(totalPorts: number) {
     return within(totalPorts / 3, 4, totalPorts);
   }
