@@ -117,7 +117,7 @@ export class FakeHumanExecution implements Execution {
       return;
     }
 
-    if (this.behavior == null) {
+    if (this.behavior === null) {
       // Player is unavailable during init()
       this.behavior = new BotBehavior(this.random, this.mg, this.player, 1 / 5);
     }
