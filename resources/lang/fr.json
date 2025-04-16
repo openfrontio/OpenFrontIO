@@ -1,83 +1,67 @@
 {
-  "lang": {
-    "en": "French",
-    "native": "Français",
-    "svg": "fr",
-    "lang_code": "fr"
-  },
   "main": {
-    "join_discord": "Rejoignez le Discord !",
-    "create_lobby": "Créer un Salon",
-    "join_lobby": "Rejoindre un Salon",
-    "single_player": "Jouer seul",
+    "join_discord": "Rejoignez le Discord!",
+    "create_lobby": "Créer un salon",
+    "join_lobby": "Rejoindre un salon",
+    "single_player": "Mode solo",
     "instructions": "Instructions",
     "how_to_play": "Comment jouer ?",
     "wiki": "Wiki"
   },
   "help_modal": {
     "hotkeys": "Raccourcis clavier",
-
     "table_key": "Touche",
-
     "table_action": "Action",
-
     "action_alt_view": "Vue alternative (terrain/pays)",
     "action_attack_altclick": "Attaquer (quand le clic gauche est configuré pour ouvrir le menu)",
     "action_build": "Ouvrir le menu de construction",
     "action_center": "Recentrer la caméra",
-    "action_zoom": "Zoom avant/arrière",
+    "action_zoom": "Zoomer/Dézoomer",
     "action_move_camera": "Déplacer la caméra",
     "action_ratio_change": "Diminuer/Augmenter le ratio d'attaque",
     "action_reset_gfx": "Réinitialiser les graphismes",
-
-    "ui_section": "Interface utilisateur du jeu",
+    "ui_section": "IU du jeu",
     "ui_leaderboard": "Classement",
-    "ui_leaderboard_desc": "Affiche les meilleurs joueurs du jeu avec leurs noms, le % de territoire possédé et l'or.",
+    "ui_leaderboard_desc": "Montre les meilleurs joueurs de la partie, % de territoire possédé et or.",
     "ui_control": "Panneau de contrôle",
     "ui_control_desc": "Le panneau de contrôle contient les éléments suivants :",
-    "ui_pop": "Pop - Le nombre d'unités que vous avez, votre population maximale et le taux auquel vous les obtenez.",
-    "ui_gold": "Or - La quantité d'or que vous avez et le taux auquel vous l'obtenez.",
-    "ui_troops_workers": "Troupes et Ouvriers - Le nombre de troupes et d'ouvriers alloués. Les troupes sont utilisées pour attaquer ou se défendre. Les ouvriers sont utilisés pour générer de l'or. Vous pouvez ajuster le nombre de troupes et d'ouvriers en utilisant le curseur.",
-    "ui_attack_ratio": "Ratio d'attaque - Le nombre de troupes qui seront utilisées lorsque vous attaquez. Vous pouvez ajuster le ratio d'attaque en utilisant le curseur.",
-
+    "ui_pop": "Pop - Le nombre d'unités que vous avez, votre population max et la vitesse à laquelle vous les gagnez.",
+    "ui_gold": "Or - La quantité d'or que vous avez et la vitesse à laquelle vous en gagnez.",
+    "ui_troops_workers": "Troupes et Travailleurs - Le nombre de troupes et de travailleurs alloués. Les troupes sont utilisées pour attaquer ou défendre contre les attaques. Les travailleurs sont utilisés pour générer de l'or. Vous pouvez ajuster le nombre de troupes et de travailleurs en utilisant le curseur.",
+    "ui_attack_ratio": "Ratio d'attaque - La quantité de troupes qui seront utilisées lors de votre attaque. Vous pouvez ajuster le ratio d'attaque en utilisant le curseur. Avoir plus de troupes attaquantes que défensives vous fera perdre moins de troupes dans l'attaque, quand en avoir moins va augmenter les dommages infligés à vos troupes attaquantes. L'effet ne dépasse pas le ratio de 2:1.",
     "ui_options": "Options",
     "ui_options_desc": "Les éléments suivants peuvent être trouvés à l'intérieur :",
-    "option_pause": "Mettre en pause/Reprendre le jeu - Disponible uniquement en mode solo.",
+    "option_pause": "Mettre en pause/Continuer la partie - Disponible uniquement dans le mode solo.",
     "option_timer": "Chronomètre - Temps écoulé depuis le début du jeu.",
     "option_exit": "Bouton de sortie.",
-    "option_settings": "Paramètres - Ouvrir le menu des paramètres. Vous pouvez y activer la Vue Alternative, le Mode Sombre, les Emojis et l'action sur le clic gauche.",
-
+    "option_settings": "Paramètres - Ouvrir le menu des paramètres. Vous pouvez y activer la Vue Alternative, le Mode Sombre, les Émojis et l'action sur le clic gauche.",
     "radial_title": "Menu radial",
-    "radial_desc": "Un clic droit (ou un toucher sur mobile) ouvre le menu radial. De là, vous pouvez :",
+    "radial_desc": "Un clic droit (ou un appui sur mobile) ouvre le menu radial. De là, vous pouvez :",
     "radial_build": "Ouvrir le menu de construction.",
     "radial_info": "Ouvrir le menu d'informations.",
     "radial_boat": "Envoyer un bateau pour attaquer à l'emplacement sélectionné (disponible uniquement si vous avez accès à l'eau).",
     "radial_close": "Fermer le menu.",
-
     "info_title": "Menu d'informations",
-    "info_enemy_desc": "Contient des informations telles que le nom du joueur sélectionné, l'or, les troupes, et si le joueur est un traître. Un traître est un joueur qui a trahi et attaqué un joueur qui était en alliance avec lui. Les icônes ci-dessous représentent les interactions suivantes :",
+    "info_enemy_desc": "Contient des informations telles que le nom du joueur sélectionné, l'or, les troupes et si le joueur est un traître. Un traître est un joueur qui a trahi et attaqué un joueur allié. Les icônes ci-dessous représentent les interactions suivantes :",
     "info_target": "Placer une marque cible sur le joueur, le marquant pour tous les alliés, utilisée pour coordonner les attaques.",
     "info_alliance": "Envoyer une demande d'alliance au joueur. Les alliés peuvent partager des ressources et des troupes, mais ne peuvent pas s'attaquer entre eux.",
-    "info_emoji": "Envoyer un emoji au joueur.",
-
+    "info_emoji": "Envoyer un émoji au joueur.",
     "info_ally_panel": "Panneau d'informations des alliés",
-    "info_ally_desc": "Lorsque vous vous alliez avec un joueur, les nouvelles icônes suivantes deviennent disponibles :",
-    "ally_betray": "Trahir un allié, mettant fin à l'alliance. Vous aurez alors une icône permanente à côté de votre nom. Les bots seront moins susceptibles de s'allier avec vous et les joueurs, à qui vous demanderez alliance feront plus attention.",
+    "info_ally_desc": "Lorsque vous vous alliez à un joueur, les nouvelles icônes suivantes deviennent disponibles :",
+    "ally_betray": "Trahir son allié, mettant fin à l'alliance. Vous aurez désormais une icône permanente apposée à votre nom, à moins que l'autre nation soit aussi un traître. Les attaques contre vous entraîneront moins de pertes pour l'attaquant jusqu'à la fin de la partie, les bots sont moins susceptibles de s'allier à vous et les joueurs y réfléchirons à deux fois.",
     "ally_donate": "Donner une partie de vos troupes à un allié. Utilisé lorsqu'ils manquent de troupes et sont attaqués, ou lorsqu'ils ont besoin de puissance supplémentaire pour écraser un ennemi.",
-
     "build_menu_title": "Menu de construction",
     "build_name": "Nom",
     "build_icon": "Icône",
     "build_desc": "Description",
-
     "build_city": "Ville",
-    "build_city_desc": "Utile quand vous ne pouvez pas agrandir votre territoire ou quand vous atteignez votre limite de population.",
+    "build_city_desc": "Utile quand vous ne pouvez agrandir votre territoire ou quand vous atteignez votre limite de population.",
     "build_defense": "Poste de défense",
     "build_defense_desc": "Augmente les défenses autour des frontières proches. Les attaques des ennemis sont plus lentes et causent plus de pertes.",
     "build_port": "Port",
     "build_port_desc": "Envoie automatiquement des navires marchands en partant de vos ports vers d'autres pays (sauf si vous avez cliqué sur \"arrêter le commerce\" sur un joueur, ou s'ils ont cliqué sur \"arrêter le commerce\" sur vous), donnant de l'or aux deux côtés. Permet de construire des navires de guerre. Ne peut être construit qu'à proximité de l'eau.",
     "build_warship": "Navire de guerre",
-    "build_warship_desc": "Patrouille dans une zone, capturant des navires marchands et détruisant des navires de guerre et des bateaux ennemis. Apparaît dans le port le plus proche et patrouille dans la zone cliquée.",
+    "build_warship_desc": "Patrouille dans une zone, capturant des navires commerciaux et détruisant des navires de guerre et des bateaux ennemis. Fait apparaître depuis le Port le plus proche et patrouille la zone que vous avez cliquée pour le construire. Vous pouvez contrôler les vaisseaux de guerre en cliquant sur eux, puis en cliquant sur la nouvelle zone dans laquelle vous voulez les déplacer.",
     "build_silo": "Silo à missiles",
     "build_silo_desc": "Permet de lancer des missiles.",
     "build_sam": "Lanceur SAM",
@@ -85,15 +69,16 @@
     "build_atom": "Bombe atomique",
     "build_atom_desc": "Petite bombe explosive qui détruit le territoire, les bâtiments, les navires et les bateaux. Apparaît depuis le Silo à missiles le plus proche et atterrit dans la zone cliquée.",
     "build_hydrogen": "Bombe à hydrogène",
-    "build_hydrogen_desc": "Grande bombe explosive. Apparaît depuis le Silo à missiles le plus proche et atterrit dans la zone cliquée.",
+    "build_hydrogen_desc": "Grande bombe explosive. Apparaît depuis le Silo à Missiles le plus proche et atterrit dans la zone cliquée.",
     "build_mirv": "MIRV",
-    "build_mirv_desc": "La bombe la plus puissante du jeu. Se divise en plus petites bombes qui couvriront une vaste zone de territoire. Ne fait des dégâts qu'au joueur sur lequel vous avez cliqué pour la construire. Apparaît depuis le Silo à missiles le plus proche et atterrit dans la zone cliquée.",
-
+    "build_mirv_desc": "La bombe la plus puissante du jeu. Se divise en plus petites bombes qui couvriront une vaste zone du territoire. Ne fait des dégâts qu'au joueur sur lequel vous avez cliqué pour la construire. Apparaît depuis le Silo à missiles le plus proche et atterrit dans la zone cliquée.",
     "player_icons": "Icônes des joueurs",
     "icon_desc": "Exemples de certaines icônes du jeu que vous rencontrerez et leur signification :",
     "icon_crown": "Couronne - Ce joueur est le numéro 1 du classement",
     "icon_traitor": "Épées croisées - Traître. Ce joueur a attaqué un allié.",
-    "icon_ally": "Poignée de main - Allié. Ce joueur est votre allié."
+    "icon_ally": "Poignée de main - Allié. Ce joueur est votre allié.",
+    "info_enemy_panel": "Panneau d'information de l'ennemi",
+    "action_emote": "Ouvrir le menu des émojis"
   },
   "single_modal": {
     "title": "Joueur seul",
@@ -109,10 +94,9 @@
     "start": "Commencer la partie"
   },
   "map": {
-    "map": "Carte",
     "world": "Monde",
     "europe": "Europe",
-    "mena": "MENA",
+    "mena": "MOAN",
     "northamerica": "Amérique du Nord",
     "oceania": "Océanie",
     "blacksea": "Mer Noire",
@@ -120,11 +104,16 @@
     "asia": "Asie",
     "mars": "Mars",
     "southamerica": "Amérique du Sud",
-    "britannia": " Grande-Bretagne",
+    "britannia": "Grande-Bretagne",
     "gatewaytotheatlantic": "Porte de l'Atlantique",
     "australia": "Australie",
+    "random": "Aléatoire",
     "iceland": "Islande",
-    "random": "Aléatoire"
+    "pangaea": "Pangée",
+    "map": "Carte",
+    "betweentwoseas": "Entre deux mers",
+    "japan": "Japon et pays voisins",
+    "knownworld": "Monde connu"
   },
   "private_lobby": {
     "title": "Rejoindre un salon privé",
@@ -150,7 +139,7 @@
   },
   "host_modal": {
     "title": "Salon privé",
-    "options_title": "Options",
+    "options_title": "Paramètres",
     "bots": "Bots : ",
     "bots_disabled": "Désactivé",
     "disable_nations": "Désactiver les nations",
@@ -161,13 +150,31 @@
     "player": "Joueur",
     "players": "Joueurs",
     "waiting": "En attente de joueurs...",
-    "start": "Commencer la partie"
+    "start": "Commencer la partie",
+    "mode": "Mode"
   },
   "difficulty": {
-    "difficulty": "Difficulté",
     "Relaxed": "Détendu",
     "Balanced": "Équilibré",
     "Intense": "Intense",
-    "Impossible": "Impossible"
+    "Impossible": "Impossible",
+    "difficulty": "Difficulté"
+  },
+  "game_starting_modal": {
+    "title": "La partie est en train de commencer...",
+    "desc": "Préparation du salon. Veuillez patienter."
+  },
+  "lang": {
+    "en": "French",
+    "native": "Français",
+    "svg": "fr",
+    "lang_code": "fr"
+  },
+  "game_mode": {
+    "ffa": "Chacun pour soi",
+    "teams": "Équipes"
+  },
+  "select_lang": {
+    "title": "Sélectionner une langue"
   }
 }

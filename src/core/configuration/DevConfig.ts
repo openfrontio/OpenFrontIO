@@ -1,4 +1,4 @@
-import { GameType, UnitInfo, UnitType } from "../game/Game";
+import { UnitInfo, UnitType } from "../game/Game";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
 import { GameEnv, ServerConfig } from "./Config";
@@ -40,10 +40,10 @@ export class DevConfig extends DefaultConfig {
     super(sc, gc, us);
   }
 
-  numSpawnPhaseTurns(): number {
-    return this.gameConfig().gameType == GameType.Singleplayer ? 70 : 100;
-    // return 100
-  }
+  // numSpawnPhaseTurns(): number {
+  //   return this.gameConfig().gameType == GameType.Singleplayer ? 70 : 100;
+  //   // return 100
+  // }
 
   unitInfo(type: UnitType): UnitInfo {
     const info = super.unitInfo(type);

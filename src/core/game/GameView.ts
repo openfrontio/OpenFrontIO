@@ -178,7 +178,7 @@ export class PlayerView {
     return this.data.id;
   }
   team(): Team | null {
-    return this.data.team;
+    return this.data.team ?? null;
   }
   type(): PlayerType {
     return this.data.playerType;
@@ -550,6 +550,8 @@ export class GameView implements GameMap {
   }
 
   focusedPlayer(): PlayerView | null {
+    // TODO: renable when performance issues are fixed.
+    return this.myPlayer();
     if (userSettings.focusLocked()) return this.myPlayer();
     return this._focusedPlayer;
   }

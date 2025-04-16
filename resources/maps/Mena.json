@@ -53,7 +53,7 @@
     },
     {
       "coordinates": [1409, 372],
-      "name": "Palestinian Territory, Occupied",
+      "name": "Palestinian Territory",
       "strength": 1,
       "flag": "ps"
     },
@@ -173,7 +173,7 @@
     },
     {
       "coordinates": [98, 55],
-      "name": "2",
+      "name": "Mauritania",
       "strength": 1,
       "flag": "mr"
     },
