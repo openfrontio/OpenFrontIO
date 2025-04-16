@@ -343,6 +343,9 @@ export class PlayerImpl implements Player {
     if (this.isFriendly(other)) {
       return false;
     }
+    if (other.info().playerType == PlayerType.Bot) {
+      return false;
+    }
 
     const hasPending =
       this.incomingAllianceRequests().find((ar) => ar.requestor() == other) !=
