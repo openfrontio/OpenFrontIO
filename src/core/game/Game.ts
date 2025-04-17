@@ -240,6 +240,7 @@ export class PlayerInfo {
 // Some units have info specific to them
 export interface UnitSpecificInfos {
   dstPort?: Unit; // Only for trade ships
+  srcPort?: Unit; // Only for trade ships
   detonationDst?: TileRef; // Only for nukes
   warshipTarget?: Unit;
   cooldownDuration?: number;

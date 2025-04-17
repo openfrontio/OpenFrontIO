@@ -251,6 +251,9 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         </div>
         <div class="mt-1">
           <div class="text-sm opacity-80">${unit.type()}</div>
+          ${unit.hasDstPortId() && unit.hasSrcPortId()
+            ? html` <div class="text-sm opacity-80">Gold: ${unit.gold()}</div> `
+            : ""}
           ${unit.hasHealth()
             ? html`
                 <div class="text-sm opacity-80">Health: ${unit.health()}</div>

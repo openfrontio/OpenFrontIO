@@ -26,6 +26,7 @@ export class UnitImpl implements Unit {
 
   private _cooldownTick: Tick | null = null;
   private _dstPort: Unit | null = null; // Only for trade ships
+  private _srcPort: Unit | null = null; // Only for trade ships
   private _detonationDst: TileRef | null = null; // Only for nukes
   private _warshipTarget: Unit | null = null;
   private _cooldownDuration: number | null = null;
@@ -42,6 +43,7 @@ export class UnitImpl implements Unit {
     this._health = toInt(this.mg.unitInfo(_type).maxHealth ?? 1);
     this._lastTile = _tile;
     this._dstPort = unitsSpecificInfos.dstPort;
+    this._srcPort = unitsSpecificInfos.srcPort;
     this._detonationDst = unitsSpecificInfos.detonationDst;
     this._warshipTarget = unitsSpecificInfos.warshipTarget;
     this._cooldownDuration = unitsSpecificInfos.cooldownDuration;
@@ -54,6 +56,7 @@ export class UnitImpl implements Unit {
   toUpdate(): UnitUpdate {
     const warshipTarget = this.warshipTarget();
     const dstPort = this.dstPort();
+    const srcPort = this.srcPort();
     return {
       type: GameUpdateType.Unit,
       unitType: this._type,
@@ -66,6 +69,7 @@ export class UnitImpl implements Unit {
       health: this.hasHealth() ? Number(this._health) : undefined,
       constructionType: this._constructionType,
       dstPortId: dstPort ? dstPort.id() : null,
+      srcPortId: srcPort ? srcPort.id() : null,
       warshipTargetId: warshipTarget ? warshipTarget.id() : null,
       detonationDst: this.detonationDst(),
       ticksLeftInCooldown: this.ticksLeftInCooldown(this._cooldownDuration),
@@ -192,6 +196,10 @@ export class UnitImpl implements Unit {
     return this._dstPort;
   }
 
+  srcPort(): Unit {
+    return this._srcPort;
+  }
+
   // set the cooldown to the current tick or remove it
   setCooldown(triggerCooldown: boolean): void {
     if (triggerCooldown) {
@@ -216,6 +224,10 @@ export class UnitImpl implements Unit {
 
   setDstPort(dstPort: Unit): void {
     this._dstPort = dstPort;
+  }
+
+  setSrcPort(srcPort: Unit): void {
+    this._srcPort = srcPort;
   }
 
   setMoveTarget(moveTarget: TileRef) {
