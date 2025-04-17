@@ -154,6 +154,9 @@ export class DefaultConfig implements Config {
   theme(): Theme {
     return this.userSettings().darkMode() ? pastelThemeDark : pastelTheme;
   }
+  numPlayerTeams(): number {
+    return this._gameConfig.numPlayerTeams ?? 0;
+  }
   spawnNPCs(): boolean {
     return !this._gameConfig.disableNPCs;
   }

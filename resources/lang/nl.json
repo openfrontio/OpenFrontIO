@@ -28,7 +28,7 @@
     "ui_pop": "Pop - Jouw totale bevolking, jouw maximale bevolking en de snelheid waarmee je ze verwerft.",
     "ui_gold": "Goud - Het goud dat je hebt en de snelheid waarmee je het verwerft.",
     "ui_troops_workers": "Troepen en Werkers - Het aantal toegewezen troepen en werkers. Troepen worden gebruikt om aan te vallen of verdedigen. Werkers worden gebruikt om goud te genereren. Je kunt het aantal troepen en werkers aanpassen met de schuifbalk.",
-    "ui_attack_ratio": "Aanvalsverhouding - Het aantal troepen dat wordt gebruikt bij een aanval. Je kunt de aanvalsverhouding aanpassen met de schuifbalk.",
+    "ui_attack_ratio": "Aanvalsverhouding - Het aantal troepen dat wordt gebruikt wanneer je aanvalt. Je kunt de aanvalsverhouding aanpassen met de schuifbalk. Heb je meer aanvallende dan verdedigende troepen dan verlies je er minder bij de aanval, heb je er minder dan lopen je aanvallende troepen meer schade op. Dit effect gaat niet verder dan verhoudingen van 2:1.",
     "ui_options": "Opties",
     "ui_options_desc": "De volgende elementen zijn hierin te vinden:",
     "option_pause": "Spel pauzeren/hervatten - Alleen beschikbaar in het speltype voor één speler.",
@@ -48,7 +48,7 @@
     "info_emoji": "Stuur een emoji naar de speler.",
     "info_ally_panel": "Infopaneel bondgenoot",
     "info_ally_desc": "Wanneer je een bondgenootschap sluit met een speler, worden de volgende nieuwe iconen beschikbaar:",
-    "ally_betray": "Verraad je bondgenoot en beëindig het bondgenootschap. Je krijgt dan een permanent icoon naast je naam. Bots zijn minder geneigd om met je een bondgenootschap aan te gaan en spelers zullen er tweemaal over nadenken.",
+    "ally_betray": "Verraad je bondgenoot, beëindig het bondgenootschap. Je krijgt nu een permanent icoon naast je naam, behalve als het andere land zelf een verrader was. Aanvallen tegen jou leiden tot het einde van het spel tot minder verliezen voor de aanvaller, bots zullen minder snel een bondgenootschap met je sluiten en spelers zullen zich wel tweemaal bedenken voor ze dat doen.\"",
     "ally_donate": "Geef een deel van je troepen aan je bondgenoot. Gebruikt wanneer ze weinig troepen hebben en worden aangevallen, of wanneer ze die extra kracht nodig hebben om een ​​vijand te verpletteren.",
     "build_menu_title": "Bouwmenu",
     "build_name": "Naam",
@@ -61,7 +61,7 @@
     "build_port": "Haven",
     "build_port_desc": "Stuurt automatisch handelsschepen tussen havens van jouw land en andere landen (behalve als jij bij hen op \"stop handel\" hebt geklikt of zij bij jou), wat goud oplevert voor beide partijen. Maakt het bouwen van Oorlogsschepen mogelijk. Kan alleen bij water worden gebouwd.",
     "build_warship": "Oorlogsschip",
-    "build_warship_desc": "Patrouilleert in een gebied, vangt handelsschepen en vernietigt vijandelijke Oorlogsschepen en Boten. Spawnt vanuit de dichtstbijzijnde Haven en patrouilleert in het gebied waar je klikte om het te bouwen.",
+    "build_warship_desc": "Patrouilleert in een gebied, vangt handelsschepen en vernietigt vijandelijke Oorlogsschepen en Boten. Komt vanuit de dichtstbijzijnde Haven en patrouilleert in het gebied waar je hebt geklikt om het te bouwen. Je kunt Oorlogsschepen besturen door op ze te klikken (of shift+klik als linkermuisknop is ingesteld op menu openen) en daarna op de plek waar je ze naartoe wilt laten gaan.",
     "build_silo": "Raketsilo",
     "build_silo_desc": "Maakt het lanceren van raketten mogelijk.",
     "build_sam": "Luchtdoelraket (SAM)-lanceerder",
@@ -77,7 +77,8 @@
     "icon_crown": "Kroon - Dit is de nummer 1 speler op de leaderboard.",
     "icon_traitor": "Gekruiste zwaarden - Verrader. Deze speler heeft een bondgenoot aangevallen.",
     "icon_ally": "Handdruk - Bondgenoot. Deze speler is je bondgenoot.",
-    "info_enemy_panel": "Infopaneel vijand"
+    "info_enemy_panel": "Infopaneel vijand",
+    "action_emote": "Open emoji-menu"
   },
   "single_modal": {
     "title": "Eén speler",
@@ -172,5 +173,8 @@
   "game_mode": {
     "ffa": "Iedereen tegen iedereen (FFA)",
     "teams": "Teams"
+  },
+  "select_lang": {
+    "title": "Kies taal"
   }
 }

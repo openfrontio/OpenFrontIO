@@ -138,6 +138,7 @@ export class RadialMenu implements Layer {
       .style("touch-action", "none")
       .on("contextmenu", (e) => {
         e.preventDefault();
+        this.hideRadialMenu();
       });
 
     const svg = this.menuElement

@@ -12,6 +12,7 @@ import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
 import { Team, UnitType } from "../core/game/Game";
+import { TileRef } from "../core/game/GameMap";
 import {
   ErrorUpdate,
   GameUpdateType,
@@ -360,7 +361,11 @@ export class ClientGameRunner {
             this.myPlayer.troops() * this.renderer.uiState.attackRatio,
           ),
         );
-      } else if (actions.canBoat) {
+      } else if (
+        actions.canBoat &&
+        this.shouldBoat(tile, actions.canBoat) &&
+        this.gameView.isLand(tile)
+      ) {
         this.eventBus.emit(
           new SendBoatAttackIntentEvent(
             this.gameView.owner(tile).id(),
@@ -377,6 +382,18 @@ export class ClientGameRunner {
         this.gameView.setFocusedPlayer(null);
       }
     });
+  }
+
+  private shouldBoat(tile: TileRef, src: TileRef) {
+    // TODO: Global enable flag
+    // TODO: Global limit autoboat to nearby shore flag
+    // if (!enableAutoBoat) return false;
+    // if (!limitAutoBoatNear) return true;
+    const distanceSquared = this.gameView.euclideanDistSquared(tile, src);
+    const limit = 100;
+    const limitSquared = limit * limit;
+    if (distanceSquared > limitSquared) return false;
+    return true;
   }
 
   private onMouseMove(event: MouseMoveEvent) {
