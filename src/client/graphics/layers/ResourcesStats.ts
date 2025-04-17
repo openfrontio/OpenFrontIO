@@ -7,7 +7,6 @@ import { Layer } from "./Layer";
 
 import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
-import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
 import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
 import portIcon from "../../../../resources/images/PortIcon.svg";
 import samLauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
@@ -27,12 +26,6 @@ export class ResourcesStats extends LitElement implements Layer {
   public disposition: "row" | "col" = "row";
 
   @property({ type: Boolean })
-  public showBuildingStats: boolean = true;
-
-  @property({ type: Boolean })
-  public showGoldStats: boolean = true;
-
-  @property({ type: Boolean })
   public defaultState: "collapsed" | "expanded" = "collapsed";
 
   @state()
@@ -40,12 +33,6 @@ export class ResourcesStats extends LitElement implements Layer {
 
   @state()
   private _state = "collapsed";
-
-  @state()
-  private _gold: number;
-
-  @state()
-  private _goldPerSecond: number;
 
   @state()
   private _warships: number;
@@ -80,8 +67,6 @@ export class ResourcesStats extends LitElement implements Layer {
       return;
     }
 
-    this._gold = player.gold();
-    this._goldPerSecond = this.game.config().goldAdditionRate(player) * 10;
     this._warships = player.units(UnitType.Warship).length;
     this._ports = player.units(UnitType.Port).length;
     this._cities = player.units(UnitType.City).length;
@@ -124,25 +109,7 @@ export class ResourcesStats extends LitElement implements Layer {
     `;
   }
 
-  private renderGoldStats() {
-    if (!this.showGoldStats) return html``;
-
-    return html`
-      <div
-        class="flex flex-row justify-between items-center gap-2 opacity-80"
-        translate="no"
-      >
-        ${this.renderIcon(goldCoinIcon)}
-        <span class="py-2 pr-2">
-          ${renderNumber(this._gold)} (+${renderNumber(this._goldPerSecond)})
-        </span>
-      </div>
-    `;
-  }
-
   private renderChevron() {
-    if (!this.showBuildingStats) return html``;
-
     const iconCollapsing =
       this.disposition === "col" ? chevronDownIcon : chevronLeftIcon;
     const iconExpanding =
@@ -167,8 +134,6 @@ export class ResourcesStats extends LitElement implements Layer {
   }
 
   private renderBuildingStats() {
-    if (!this.showBuildingStats) return html``;
-
     const containerClasses =
       this._state === "expanded"
         ? "opacity-100 visible"
@@ -193,9 +158,7 @@ export class ResourcesStats extends LitElement implements Layer {
   render() {
     if (!this._isVisible) return html``;
 
-    let containerSize = "w-full";
-    if (this.disposition === "col")
-      containerSize = this.showGoldStats ? "w-48" : "w-32";
+    const containerSize = this.disposition === "col" ? "w-32" : "w-full";
 
     return html`
       <div
@@ -203,18 +166,11 @@ export class ResourcesStats extends LitElement implements Layer {
         @contextmenu=${(e) => e.preventDefault()}
       >
         <div
-          class="bg-opacity-60 bg-gray-900 rounded-lg shadow-lg backdrop-blur-sm  text-white text-lg md:text-base"
+          class="flex flex-${this.disposition === "col"
+            ? "col-reverse"
+            : "row"} p-2 bg-opacity-60 bg-gray-900 rounded-lg shadow-lg backdrop-blur-sm  text-white text-lg md:text-base"
         >
-          <div
-            class="p-2 flex flex-${this.disposition === "col"
-              ? "col-reverse"
-              : "row"}"
-          >
-            ${this.disposition === "row" ? this.renderGoldStats() : ""}
-            ${this.renderBuildingStats()}
-            ${this.disposition === "col" ? this.renderGoldStats() : ""}
-            ${this.renderChevron()}
-          </div>
+          ${this.renderBuildingStats()} ${this.renderChevron()}
         </div>
       </div>
     `;

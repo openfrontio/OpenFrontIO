@@ -198,7 +198,7 @@ export class ControlPanel extends LitElement implements Layer {
           </div>
         </div>
 
-        <div class="relative mb-0 lg:mb-4">
+        <div class="relative">
           <label class="block text-white mb-1" translate="no"
             >Attack Ratio: ${(this.attackRatio * 100).toFixed(0)}%
             (${renderTroops(

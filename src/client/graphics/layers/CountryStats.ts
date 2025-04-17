@@ -1,9 +1,10 @@
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { GameView } from "../../../core/game/GameView";
-import { renderTroops } from "../../Utils";
+import { renderNumber, renderTroops } from "../../Utils";
 import { Layer } from "./Layer";
 
+import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
 import emojisIcon from "../../../../resources/images/PopulationIconWhite.svg";
 import swordIcon from "../../../../resources/images/TroupIconWhite.svg";
 import buildIcon from "../../../../resources/images/WorkerIconWhite.svg";
@@ -12,6 +13,12 @@ import buildIcon from "../../../../resources/images/WorkerIconWhite.svg";
 export class CountryStats extends LitElement implements Layer {
   @property({ type: Object })
   public game!: GameView;
+
+  @state()
+  private _gold: number;
+
+  @state()
+  private _goldPerSecond: number;
 
   @state()
   private _population: number;
@@ -47,6 +54,9 @@ export class CountryStats extends LitElement implements Layer {
       this.setVisibile(false);
       return;
     }
+
+    this._gold = player.gold();
+    this._goldPerSecond = this.game.config().goldAdditionRate(player) * 10;
 
     const popIncreaseRate = player.population() - this._population;
     if (this.game.ticks() % 5 == 0) {
@@ -102,6 +112,15 @@ export class CountryStats extends LitElement implements Layer {
         <div class="flex flex-col gap-2">
           <div class="flex flex-row gap-2">
             ${this.renderBadge(html`
+              ${this.renderIcon(goldCoinIcon)}
+              <span> ${renderNumber(this._gold)} </span>
+              <span class="pr-2">
+                ( +${renderNumber(this._goldPerSecond)} )
+              </span>
+            `)}
+          </div>
+          <div class="flex flex-row gap-2">
+            ${this.renderBadge(html`
               ${this.renderIcon(emojisIcon)}
               <span>
                 ${renderTroops(this._population)} /
@@ -111,8 +130,9 @@ export class CountryStats extends LitElement implements Layer {
                 class="pr-2 ${this._popRateIsIncreasing
                   ? "text-green-500"
                   : "text-yellow-500"}"
-                >(+${renderTroops(this.popRate)})</span
               >
+                ( +${renderTroops(this.popRate)} )
+              </span>
             `)}
           </div>
           <div class="flex flex-row gap-2">

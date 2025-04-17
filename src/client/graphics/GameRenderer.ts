@@ -99,24 +99,14 @@ export function createRenderer(
   playerInfo.transform = transformHandler;
   playerInfo.game = game;
 
-  const goldStats = document.querySelector(
-    "resources-stats#gold-stats",
-  ) as ResourcesStats;
-  if (!(goldStats instanceof ResourcesStats)) {
-    consolex.error("gold stats not found");
-  }
-  goldStats.game = game;
-  goldStats.showBuildingStats = false;
-
   const buildingsStats = document.querySelector(
-    "resources-stats#buildings-stats",
+    "resources-stats",
   ) as ResourcesStats;
   if (!(buildingsStats instanceof ResourcesStats)) {
     consolex.error("buildings stats not found");
   }
   buildingsStats.game = game;
   buildingsStats.disposition = "col";
-  buildingsStats.showGoldStats = false;
   buildingsStats.defaultState = "expanded";
 
   const countryStats = document.querySelector("country-stats") as CountryStats;
@@ -177,7 +167,6 @@ export function createRenderer(
     leaderboard,
     controlPanel,
     playerInfo,
-    goldStats,
     buildingsStats,
     countryStats,
     winModel,
