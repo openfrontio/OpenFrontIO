@@ -70,6 +70,8 @@ export class SendBoatAttackIntentEvent implements GameEvent {
     public readonly targetID: PlayerID,
     public readonly cell: Cell,
     public readonly troops: number,
+    public readonly sourceX: number,
+    public readonly sourceY: number,
   ) {}
 }
 
@@ -416,6 +418,8 @@ export class Transport {
       troops: event.troops,
       x: event.cell.x,
       y: event.cell.y,
+      sourceX: event.sourceX,
+      sourceY: event.sourceY,
     });
   }
 

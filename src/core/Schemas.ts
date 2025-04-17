@@ -197,6 +197,8 @@ export const BoatAttackIntentSchema = BaseIntentSchema.extend({
   troops: z.number().nullable(),
   x: z.number(),
   y: z.number(),
+  sourceX: z.number(),
+  sourceY: z.number(),
 });
 
 export const AllianceRequestIntentSchema = BaseIntentSchema.extend({

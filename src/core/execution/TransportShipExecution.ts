@@ -29,7 +29,6 @@ export class TransportShipExecution implements Execution {
 
   // TODO make private
   public path: TileRef[];
-  private src: TileRef | null;
   private dst: TileRef | null;
 
   private boat: Unit;
@@ -41,6 +40,7 @@ export class TransportShipExecution implements Execution {
     private targetID: PlayerID | null,
     private ref: TileRef,
     private troops: number | null,
+    private source?: TileRef,
   ) {}
 
   activeDuringSpawnPhase(): boolean {
@@ -112,19 +112,21 @@ export class TransportShipExecution implements Execution {
       this.active = false;
       return;
     }
-    const src = this.attacker.canBuild(UnitType.TransportShip, this.dst);
-    if (src == false) {
-      consolex.warn(`can't build transport ship`);
-      this.active = false;
-      return;
-    }
 
-    this.src = src;
+    if (!this.source) {
+      const src = this.attacker.canBuild(UnitType.TransportShip, this.dst);
+      if (src == false) {
+        consolex.warn(`can't build transport ship`);
+        this.active = false;
+        return;
+      }
+      this.source = src;
+    }
 
     this.boat = this.attacker.buildUnit(
       UnitType.TransportShip,
       this.troops,
-      this.src,
+      this.source,
     );
   }
 

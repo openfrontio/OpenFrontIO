@@ -368,6 +368,8 @@ export class RadialMenu implements Layer {
             this.g.owner(tile).id(),
             this.clickedCell,
             this.uiState.attackRatio * myPlayer.troops(),
+            this.g.cell(actions.canBoat as TileRef).x,
+            this.g.cell(actions.canBoat as TileRef).y,
           ),
         );
       });

@@ -885,7 +885,7 @@ export class PlayerImpl implements Player {
     return rel;
   }
 
-  public canBoat(tile: TileRef): boolean {
+  public canBoat(tile: TileRef): false | TileRef {
     if (
       this.units(UnitType.TransportShip).length >=
       this.mg.config().boatMaxNumber()
@@ -928,7 +928,7 @@ export class PlayerImpl implements Player {
       }
 
       if (myPlayerBordersOcean && otherPlayerBordersOcean) {
-        return this.canBuild(UnitType.TransportShip, dst) != false;
+        return this.canBuild(UnitType.TransportShip, dst);
       } else {
         return false;
       }
@@ -951,7 +951,7 @@ export class PlayerImpl implements Player {
 
     for (const t of sorted) {
       if (this.mg.owner(t) == this) {
-        return this.canBuild(UnitType.TransportShip, dst) != false;
+        return this.canBuild(UnitType.TransportShip, dst);
       }
     }
     return false;

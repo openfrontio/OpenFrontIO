@@ -524,6 +524,7 @@ export class FakeHumanExecution implements Execution {
         this.mg.owner(dst).id(),
         dst,
         this.player.troops() / 5,
+        src,
       ),
     );
     return;
