@@ -22,6 +22,7 @@ import {
   Attack,
   Cell,
   EmojiMessage,
+  GameMode,
   Gold,
   MessageType,
   MutableAlliance,
@@ -516,6 +517,13 @@ export class PlayerImpl implements Player {
   }
 
   canDonate(recipient: Player): boolean {
+    if (
+      recipient.type() == PlayerType.Human &&
+      this.mg.config().gameConfig().gameMode == GameMode.FFA
+    ) {
+      return false;
+    }
+
     if (!this.isFriendly(recipient)) {
       return false;
     }
