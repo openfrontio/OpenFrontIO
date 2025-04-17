@@ -20,13 +20,12 @@ export class UnitImpl implements Unit {
   private _target: Unit = null;
   private _moveTarget: TileRef = null;
   private _targetedBySAM = false;
-  private _safeFromPiratesCooldown: number;
-  private _lastSetSafeFromPirates: number;
+  private _safeFromPiratesCooldown: number; // Only for trade ships
+  private _lastSetSafeFromPirates: number; // Only for trade ships
   private _constructionType: UnitType = undefined;
 
   private _cooldownTick: Tick | null = null;
   private _dstPort: Unit | null = null; // Only for trade ships
-  private _isSafeFromPirates: boolean | null = null; // Only for trade ships
   private _detonationDst: TileRef | null = null; // Only for nukes
   private _warshipTarget: Unit | null = null;
   private _cooldownDuration: number | null = null;
@@ -46,6 +45,7 @@ export class UnitImpl implements Unit {
     this._detonationDst = unitsSpecificInfos.detonationDst;
     this._warshipTarget = unitsSpecificInfos.warshipTarget;
     this._cooldownDuration = unitsSpecificInfos.cooldownDuration;
+    this._lastSetSafeFromPirates = unitsSpecificInfos.lastSetSafeFromPirates;
     this._safeFromPiratesCooldown = this.mg
       .config()
       .safeFromPiratesCooldownMax();
