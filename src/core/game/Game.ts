@@ -62,6 +62,7 @@ export enum GameMapType {
   Japan = "Japan",
   BetweenTwoSeas = "Between Two Seas",
   KnownWorld = "Known World",
+  Antarctica = "Antarctica",
 }
 
 export enum GameType {

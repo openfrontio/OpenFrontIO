@@ -1,4 +1,5 @@
 import africa from "../../../resources/maps/AfricaThumb.webp";
+import antarctica from "../../../resources/maps/AntarcticaThumb.webp";
 import asia from "../../../resources/maps/AsiaThumb.webp";
 import australia from "../../../resources/maps/AustraliaThumb.webp";
 import betweenTwoSeas from "../../../resources/maps/BetweenTwoSeasThumb.webp";
@@ -57,6 +58,8 @@ export function getMapsImage(map: GameMapType): string {
       return betweenTwoSeas;
     case GameMapType.KnownWorld:
       return knownworld;
+    case GameMapType.Antarctica:
+      return antarctica;
     default:
       return "";
   }
