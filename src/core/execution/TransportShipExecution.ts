@@ -5,6 +5,7 @@ import {
   MessageType,
   Player,
   PlayerID,
+  Speed,
   TerraNullius,
   Unit,
   UnitType,
@@ -18,15 +19,14 @@ import { AttackExecution } from "./AttackExecution";
 export class TransportShipExecution implements Execution {
   private lastMove: number;
 
-  // TODO: make this configurable
-  private ticksPerMove = 1;
+  private speed: Speed;
 
   private active = true;
 
   private mg: Game;
   private attacker: Player;
   private target: Player | TerraNullius;
-  private embarkDelay = 10;
+  private embarkDelay: number;
 
   // TODO make private
   public path: TileRef[];
@@ -65,8 +65,11 @@ export class TransportShipExecution implements Execution {
     this.lastMove = ticks;
     this.mg = mg;
     this.pathFinder = PathFinder.Mini(mg, 10_000, false, 10);
-
     this.attacker = mg.player(this.attackerID);
+    this.speed = this.mg.config().unitInfo(UnitType.TransportShip).speed;
+    this.embarkDelay = this.mg
+      .config()
+      .unitInfo(UnitType.TransportShip).embarkDelay;
 
     // Notify the target player about the incoming naval invasion
     if (this.targetID && this.targetID !== mg.terraNullius().id()) {
@@ -141,7 +144,7 @@ export class TransportShipExecution implements Execution {
       this.embarkDelay--;
       return;
     }
-    if (ticks - this.lastMove < this.ticksPerMove) {
+    if (ticks - this.lastMove < this.speed.ticksPerTile) {
       return;
     }
     this.lastMove = ticks;

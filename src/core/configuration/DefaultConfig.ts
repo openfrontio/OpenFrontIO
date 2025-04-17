@@ -5,6 +5,7 @@ import {
   GameMode,
   GameType,
   Gold,
+  NukeMagnitude,
   Player,
   PlayerInfo,
   PlayerType,
@@ -19,7 +20,7 @@ import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID } from "../Schemas";
 import { assertNever, simpleHash, within } from "../Util";
-import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
+import { Config, GameEnv, ServerConfig, Theme } from "./Config";
 import { pastelTheme } from "./PastelTheme";
 import { pastelThemeDark } from "./PastelThemeDark";
 
@@ -219,17 +220,8 @@ export class DefaultConfig implements Config {
   }
 
   //UNITS - Ships
-  warshipPatrolRange(): number {
-    return 100; // was previously WarshipExecution.searchRange
-  }
-  warshipShellAttackRate(): number {
-    return 20; // interval in ticks between attcks
-  }
-  warshipTargettingRange(): number {
-    return 130;
-  }
   boatMaxNumber(): number {
-    return 9; // max concurrent trade ships
+    return 9; // max concurrent transport ships
   }
   tradeShipGold(dist: number): Gold {
     return 10000 + 150 * Math.pow(dist, 1.1);
@@ -252,6 +244,8 @@ export class DefaultConfig implements Config {
         return {
           cost: () => 0,
           territoryBound: false,
+          speed: { ticksPerTile: 1 },
+          embarkDelay: 10,
         };
       case UnitType.Warship:
         return {
@@ -265,12 +259,21 @@ export class DefaultConfig implements Config {
                 ),
           territoryBound: false,
           maxHealth: 1000,
+          speed: { tilesPerTick: 2 },
+          atTargetDist: 5,
+          fireRate: 20, // interval in ticks between attcks
+          fireRange: 130,
+          patrolRange: 100,
         };
       case UnitType.Shell:
         return {
           cost: () => 0,
           territoryBound: false,
+          maxHealth: 40, // lifetime in ticks; *(speed+1)=range
+          speed: { tilesPerTick: 3 },
+          atTargetDist: 3,
           damage: 250,
+          damageVariation: 25,
         };
       case UnitType.SAMMissile:
         return {
@@ -555,9 +558,6 @@ export class DefaultConfig implements Config {
   // munitions
   samHittingChance(): number {
     return 0.8;
-  }
-  shellLifetime(): number {
-    return 20; // in ticks (one tick is 100ms)
   }
   nukeMagnitudes(unitType: UnitType): NukeMagnitude {
     switch (unitType) {

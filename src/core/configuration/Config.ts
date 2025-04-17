@@ -5,6 +5,7 @@ import {
   Game,
   GameMapType,
   Gold,
+  NukeMagnitude,
   Player,
   PlayerInfo,
   Team,
@@ -43,11 +44,6 @@ export interface ServerConfig {
   r2Endpoint(): string;
   r2AccessKey(): string;
   r2SecretKey(): string;
-}
-
-export interface NukeMagnitude {
-  inner: number;
-  outer: number;
 }
 
 export interface Config {
@@ -97,7 +93,6 @@ export interface Config {
   maxPopulation(player: Player | PlayerView): number;
   cityPopulationIncrease(): number;
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number;
-  shellLifetime(): number;
   boatMaxNumber(): number;
   allianceDuration(): Tick;
   allianceRequestCooldown(): Tick;
@@ -117,11 +112,6 @@ export interface Config {
   defensePostDefenseBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
-  warshipPatrolRange(): number;
-  warshipShellAttackRate(): number;
-  warshipTargettingRange(): number;
-  defensePostShellAttackRate(): number;
-  defensePostTargettingRange(): number;
   // 0-1
   traitorDefenseDebuff(): number;
   nukeMagnitudes(unitType: UnitType): NukeMagnitude;

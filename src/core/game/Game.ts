@@ -81,13 +81,30 @@ export enum GameMode {
   Team = "Team",
 }
 
+export interface NukeMagnitude {
+  inner: number;
+  outer: number;
+}
+
+export interface Speed {
+  tilesPerTick?: number;
+  ticksPerTile?: number;
+}
+
 export interface UnitInfo {
   cost: (player: Player | PlayerView) => Gold;
   // Determines if its owner changes when its tile is conquered.
   territoryBound: boolean;
   maxHealth?: number;
   damage?: number;
+  damageVariation?: number;
   constructionDuration?: number;
+  speed?: Speed;
+  fireRate?: number;
+  fireRange?: number;
+  patrolRange?: number;
+  atTargetDist?: number;
+  embarkDelay?: number;
 }
 
 export enum UnitType {
