@@ -4,17 +4,14 @@ import { GameView } from "../../../core/game/GameView";
 import { renderTroops } from "../../Utils";
 import { Layer } from "./Layer";
 
-import buildIcon from "../../../../resources/images/BuildIconWhite.svg";
-import emojisIcon from "../../../../resources/images/EmojiIconWhite.svg";
-import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
+import emojisIcon from "../../../../resources/images/PopulationIconWhite.svg";
+import swordIcon from "../../../../resources/images/TroupIconWhite.svg";
+import buildIcon from "../../../../resources/images/WorkerIconWhite.svg";
 
 @customElement("country-stats")
 export class CountryStats extends LitElement implements Layer {
   @property({ type: Object })
   public game!: GameView;
-
-  @state()
-  private currentTroopRatio = 0.95;
 
   @state()
   private _population: number;
@@ -63,8 +60,6 @@ export class CountryStats extends LitElement implements Layer {
     this._troops = player.troops();
     this._workers = player.workers();
     this.popRate = this.game.config().populationIncreaseRate(player) * 10;
-
-    this.currentTroopRatio = player.troops() / player.population();
 
     this.requestUpdate();
   }
