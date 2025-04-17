@@ -28,7 +28,7 @@
     "ui_pop": "Populacja – Liczba posiadanych jednostek, maksymalna liczba ludności oraz tempo, w jakim ją zdobywasz.",
     "ui_gold": "Złoto – Liczba posiadanego złota oraz tempo jego przyrostu.",
     "ui_troops_workers": "Wojsko i Pracownicy – Liczba przydzielonych jednostek wojskowych i pracowników. Wojsko służy do ataku oraz obrony przed wrogimi atakami, a pracownicy są wykorzystywani do generowania złota. Możesz regulować ich liczbę za pomocą suwaka.",
-    "ui_attack_ratio": "Współczynnik ataku – Liczba wojsk wykorzystywanych podczas ataku. Możesz dostosować ten współczynnik za pomocą suwaka.",
+    "ui_attack_ratio": "Współczynnik ataku - ilość jednostek, która będzie użyta podczas ataku. Możesz dostosować współczynnik ataku używając suwaka. Posiadanie większej ilości atakujących jednostek niż jednostek obronnych wroga sprawi, że stracisz mniej jednostek podczas ataku, natomiast gdy będziesz miał mniej, zwiększy się ilość obrażeń zadanym twoim jednostkom. Efekt nie wykracza poza stosunek 2:1.",
     "ui_options": "Opcje",
     "ui_options_desc": "Wewnątrz można znaleźć następujące elementy:",
     "option_pause": "Wstrzymaj/Wznów grę – dostępne tylko w trybie jednoosobowym.",
@@ -48,7 +48,7 @@
     "info_emoji": "Wyślij emotkę do gracza.",
     "info_ally_panel": "Panel informacji sojusznika",
     "info_ally_desc": "Po nawiązaniu sojuszu z graczem dostępne stają się następujące nowe ikony:",
-    "ally_betray": "Zdradzając swojego sojusznika — kończysz z nim sojusz. Od tego momentu do końca gry posiadasz ikonę zdrajcy obok twojej nazwy użytkownika. Boty będą mniej skłonne do zawierania sojuszy z tobą, a gracze dwa razy się zastanowią, zanim to zrobią.",
+    "ally_betray": "Zdradź swojego sojusznika, kończąc sojusz. Będziesz teraz mieć stałą ikonę obok swojej nazwy, chyba że ten naród sam był zdrajcą. Ataki przeciwko tobie spowodują mniejsze straty dla atakującego do końca gry, boty będą mniej przychylne do sprzymierzenia się z tobą, a gracze zastanowią się dwukrotnie, zanim to zrobią.",
     "ally_donate": "Przekaż część swoich wojsk swojemu sojusznikowi. Używane, gdy brakuje mu wojsk i jest atakowany, lub gdy potrzebuje dodatkowej siły, aby pokonać wroga.",
     "build_menu_title": "Menu budowy",
     "build_name": "Nazwa",
@@ -61,7 +61,7 @@
     "build_port": "Port",
     "build_port_desc": "Automatycznie wysyła statki handlowe między portami twojego kraju a innymi krajami (chyba że klikniesz „zatrzymaj handel” lub inny gracz zrobi to względem ciebie), przynosząc złoto obu stronom. Umożliwia budowanie okrętów wojennych. Może być budowane tylko w pobliżu wody.",
     "build_warship": "Okręt wojenny",
-    "build_warship_desc": "Patroluje wyznaczony obszar, przechwytując statki handlowe i niszcząc wrogie okręty wojenne oraz statki z wojskiem. Pojawia się przy porcie, który ma najbliższą drogę do obszaru wyznaczonego do patrolu.",
+    "build_warship_desc": "Patroluje dany obszar, przechwytuje statki handlowe oraz niszczy okręty wojenne i transporty wroga. Pojawia się z najbliższego portu i patroluje obszar, który po raz pierwszy zaznaczyłeś, budując go. Możesz kontrolować okręty wojenne klikając na nie, a następnie klikając na nowy obszar, do którego chcesz by się udały.",
     "build_silo": "Silos rakietowy",
     "build_silo_desc": "Umożliwia odpalenie rakiet.",
     "build_sam": "Wyrzutnia SAM",
@@ -77,7 +77,8 @@
     "icon_crown": "Korona — Jest to gracz numer 1 w rankingu",
     "icon_traitor": "Skrzyżowane miecze — Zdrajca. Ten gracz atakował sojusznika.",
     "icon_ally": "Uścisk dłoni — Sojusznik. Ten gracz jest twoim sojusznikiem.",
-    "info_enemy_panel": "Panel informacji o wrogu"
+    "info_enemy_panel": "Panel informacji o wrogu",
+    "action_emote": "Otwórz menu emoji"
   },
   "single_modal": {
     "title": "Gra jednoosobowa",
@@ -172,5 +173,8 @@
   "game_mode": {
     "ffa": "Każdy na Każdego",
     "teams": "Drużyny"
+  },
+  "select_lang": {
+    "title": "Wybierz język"
   }
 }

@@ -356,7 +356,11 @@ export class GameServer {
         client.ws.close(1000, "game has ended");
       }
     });
-    this.log.info("ending game", { gameID: this.id, turns: this.turns.length });
+    if (!this._hasPrestarted || !this._hasStarted) {
+      this.log.info(`game not started, not archiving game`);
+      return;
+    }
+    this.log.info(`ending game with ${this.turns.length} turns`);
     try {
       if (this.allClients.size > 0) {
         const playerRecords: PlayerRecord[] = Array.from(

@@ -22,6 +22,7 @@ import {
   Attack,
   Cell,
   EmojiMessage,
+  GameMode,
   Gold,
   MessageType,
   MutableAlliance,
@@ -516,6 +517,13 @@ export class PlayerImpl implements Player {
   }
 
   canDonate(recipient: Player): boolean {
+    if (
+      recipient.type() == PlayerType.Human &&
+      this.mg.config().gameConfig().gameMode == GameMode.FFA
+    ) {
+      return false;
+    }
+
     if (!this.isFriendly(recipient)) {
       return false;
     }
@@ -541,7 +549,7 @@ export class PlayerImpl implements Player {
       this.id(),
     );
     this.mg.displayMessage(
-      `Recieved ${renderTroops(troops)} troops from ${this.name()}`,
+      `Received ${renderTroops(troops)} troops from ${this.name()}`,
       MessageType.SUCCESS,
       recipient.id(),
     );
@@ -555,7 +563,7 @@ export class PlayerImpl implements Player {
       this.id(),
     );
     this.mg.displayMessage(
-      `Recieved ${renderNumber(gold)} gold from ${this.name()}`,
+      `Received ${renderNumber(gold)} gold from ${this.name()}`,
       MessageType.SUCCESS,
       recipient.id(),
     );
@@ -878,7 +886,7 @@ export class PlayerImpl implements Player {
     return rel;
   }
 
-  public canBoat(tile: TileRef): boolean {
+  public canBoat(tile: TileRef): TileRef | false {
     if (
       this.units(UnitType.TransportShip).length >=
       this.mg.config().boatMaxNumber()
@@ -921,7 +929,7 @@ export class PlayerImpl implements Player {
       }
 
       if (myPlayerBordersOcean && otherPlayerBordersOcean) {
-        return this.canBuild(UnitType.TransportShip, dst) != false;
+        return this.canBuild(UnitType.TransportShip, dst);
       } else {
         return false;
       }
@@ -944,7 +952,7 @@ export class PlayerImpl implements Player {
 
     for (const t of sorted) {
       if (this.mg.owner(t) == this) {
-        return this.canBuild(UnitType.TransportShip, dst) != false;
+        return this.canBuild(UnitType.TransportShip, dst);
       }
     }
     return false;
