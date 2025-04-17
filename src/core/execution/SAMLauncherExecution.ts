@@ -20,7 +20,7 @@ export class SAMLauncherExecution implements Execution {
 
   private target: Unit = null;
 
-  private searchRangeRadius = 100;
+  private searchRangeRadius = 80;
 
   private pseudoRandom: PseudoRandom;
 
