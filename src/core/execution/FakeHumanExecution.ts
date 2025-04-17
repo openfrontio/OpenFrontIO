@@ -382,7 +382,8 @@ export class FakeHumanExecution implements Execution {
     // Prefer tiles that are closer to a silo
     const siloTiles = silos.map((u) => u.tile());
     const { x: closestSilo } = closestTwoTiles(this.mg, siloTiles, [tile]);
-    const distanceToClosestSilo = this.mg.euclideanDist(tile, closestSilo);
+    const distanceSquared = this.mg.euclideanDistSquared(tile, closestSilo);
+    const distanceToClosestSilo = Math.sqrt(distanceSquared);
     tileValue -= distanceToClosestSilo * 30;
 
     // Don't target near recent targets
