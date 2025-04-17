@@ -11,6 +11,7 @@ import japan from "../../../resources/maps/JapanThumb.webp";
 import knownworld from "../../../resources/maps/KnownWorldThumb.webp";
 import mars from "../../../resources/maps/MarsThumb.webp";
 import mena from "../../../resources/maps/MenaThumb.webp";
+import middleearth from "../../../resources/maps/MiddleEarthThumb.webp";
 import northAmerica from "../../../resources/maps/NorthAmericaThumb.webp";
 import oceania from "../../../resources/maps/OceaniaThumb.webp";
 import pangaea from "../../../resources/maps/PangaeaThumb.webp";
@@ -57,6 +58,8 @@ export function getMapsImage(map: GameMapType): string {
       return betweenTwoSeas;
     case GameMapType.KnownWorld:
       return knownworld;
+    case GameMapType.MiddleEarth:
+      return middleearth;
     default:
       return "";
   }
