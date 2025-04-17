@@ -59,7 +59,7 @@ export function getMapsImage(map: GameMapType): string {
       return betweenTwoSeas;
     case GameMapType.KnownWorld:
       return knownworld;
-     case GameMapType.FaroeIslands:
+    case GameMapType.FaroeIslands:
       return faroeislands;
     case GameMapType.Antarctica:
       return antarctica;
