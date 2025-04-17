@@ -77,7 +77,8 @@
     "icon_crown": "Krono - Ĉi tiu ludanto estas numero 1 en la ranglisto",
     "icon_traitor": "Krucitaj glavoj - Perfida. Ĉi tiu ludanto atakis aliancanon.",
     "icon_ally": "Manpremo - Aliancano. Ĉi tiu ludanto estas via aliancano.",
-    "info_enemy_panel": "Malamiko informpanelo"
+    "info_enemy_panel": "Malamiko informpanelo",
+    "action_emote": "Malfermi miensimbolan menuon"
   },
   "single_modal": {
     "title": "Sola Ludanto",
@@ -150,8 +151,7 @@
     "players": "Ludantoj",
     "waiting": "Atendante ludantojn...",
     "start": "Komenci la ludon",
-    "mode": "Reĝimo",
-    "action_emote": "Malfermi miensimbolan menuon"
+    "mode": "Reĝimo"
   },
   "difficulty": {
     "Relaxed": "Senstreĉa",
