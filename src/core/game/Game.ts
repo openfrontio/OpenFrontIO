@@ -414,7 +414,7 @@ export interface Player {
   // Misc
   toUpdate(): PlayerUpdate;
   playerProfile(): PlayerProfile;
-  canBoat(tile: TileRef): boolean;
+  canBoat(tile: TileRef): TileRef | false;
   tradingPorts(port: Unit): Unit[];
 }
 
@@ -472,7 +472,7 @@ export interface Game extends GameMap {
 }
 
 export interface PlayerActions {
-  canBoat: boolean;
+  canBoat: TileRef | false;
   canAttack: boolean;
   buildableUnits: BuildableUnit[];
   canSendEmojiAllPlayers: boolean;
