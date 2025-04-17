@@ -215,12 +215,7 @@ export class DefaultConfig implements Config {
     return 10000 + 150 * Math.pow(dist, 1.1);
   }
   tradeShipSpawnRate(numberOfPorts: number): number {
-    if (numberOfPorts <= 3) return 18;
-    if (numberOfPorts <= 5) return 25;
-    if (numberOfPorts <= 8) return 35;
-    if (numberOfPorts <= 10) return 40;
-    if (numberOfPorts <= 12) return 45;
-    return 50;
+    return Math.round(10 * Math.pow(numberOfPorts, 0.6));
   }
 
   unitInfo(type: UnitType): UnitInfo {
