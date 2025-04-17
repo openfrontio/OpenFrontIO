@@ -270,9 +270,7 @@ export class RadialMenu implements Layer {
   async tick() {
     // Only update when menu is visible
     if (!this.isVisible || this.clickedCell === null) return;
-    const myPlayer = this.g
-      .playerViews()
-      .find((p) => p.clientID() == this.clientID);
+    const myPlayer = this.g.myPlayer();
     if (myPlayer === undefined || !myPlayer.isAlive()) return;
     const tile = this.g.ref(this.clickedCell.x, this.clickedCell.y);
     if (this.originalTileOwner.isPlayer()) {
@@ -328,9 +326,7 @@ export class RadialMenu implements Layer {
       return;
     }
 
-    const myPlayer = this.g
-      .playerViews()
-      .find((p) => p.clientID() == this.clientID);
+    const myPlayer = this.g.myPlayer();
     if (!myPlayer) {
       consolex.warn("my player not found");
       return;
