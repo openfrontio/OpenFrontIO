@@ -362,7 +362,7 @@ export class ClientGameRunner {
           ),
         );
       } else if (
-        actions.canBoat &&
+        actions.canBoat !== false &&
         this.shouldBoat(tile, actions.canBoat) &&
         this.gameView.isLand(tile)
       ) {

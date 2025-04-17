@@ -34,7 +34,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return process.env.GIT_COMMIT;
   }
   r2Endpoint(): string {
-    return process.env.R2_ENDPOINT;
+    return `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
   }
   r2AccessKey(): string {
     return process.env.R2_ACCESS_KEY;
@@ -89,6 +89,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
         GameMapType.Mars,
         GameMapType.Oceania,
         GameMapType.Japan, // Japan at this level because its 2/3 water
+        GameMapType.FaroeIslands,
       ].includes(map)
     ) {
       return Math.random() < 0.2 ? 70 : 40;

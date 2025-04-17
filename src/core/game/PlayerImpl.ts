@@ -22,6 +22,7 @@ import {
   Attack,
   Cell,
   EmojiMessage,
+  GameMode,
   Gold,
   MessageType,
   MutableAlliance,
@@ -516,6 +517,13 @@ export class PlayerImpl implements Player {
   }
 
   canDonate(recipient: Player): boolean {
+    if (
+      recipient.type() == PlayerType.Human &&
+      this.mg.config().gameConfig().gameMode == GameMode.FFA
+    ) {
+      return false;
+    }
+
     if (!this.isFriendly(recipient)) {
       return false;
     }
@@ -541,7 +549,7 @@ export class PlayerImpl implements Player {
       this.id(),
     );
     this.mg.displayMessage(
-      `Recieved ${renderTroops(troops)} troops from ${this.name()}`,
+      `Received ${renderTroops(troops)} troops from ${this.name()}`,
       MessageType.SUCCESS,
       recipient.id(),
     );
@@ -555,7 +563,7 @@ export class PlayerImpl implements Player {
       this.id(),
     );
     this.mg.displayMessage(
-      `Recieved ${renderNumber(gold)} gold from ${this.name()}`,
+      `Received ${renderNumber(gold)} gold from ${this.name()}`,
       MessageType.SUCCESS,
       recipient.id(),
     );
