@@ -26,12 +26,7 @@ export class WarshipExecution implements Execution {
 
   private patrolTile: TileRef;
 
-  // TODO: put in config
-  private searchRange = 100;
-
-  private shellAttackRate = 5;
   private lastShellAttack = 0;
-
   private alreadySentShell = new Set<Unit>();
 
   constructor(
@@ -72,7 +67,8 @@ export class WarshipExecution implements Execution {
   }
 
   private shoot() {
-    if (this.mg.ticks() - this.lastShellAttack > this.shellAttackRate) {
+    const shellAttackRate = this.mg.config().warshipShellAttackRate();
+    if (this.mg.ticks() - this.lastShellAttack > shellAttackRate) {
       this.lastShellAttack = this.mg.ticks();
       this.mg.addExecution(
         new ShellExecution(
@@ -137,7 +133,7 @@ export class WarshipExecution implements Execution {
     const ships = this.mg
       .nearbyUnits(
         this.warship.tile(),
-        130, // Search range
+        this.mg.config().warshipTargettingRange(),
         [UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip],
       )
       .filter(
@@ -146,9 +142,11 @@ export class WarshipExecution implements Execution {
           unit !== this.warship &&
           !unit.owner().isFriendly(this.warship.owner()) &&
           !this.alreadySentShell.has(unit) &&
-          (unit.type() !== UnitType.TradeShip || hasPort) &&
           (unit.type() !== UnitType.TradeShip ||
-            unit.dstPort()?.owner() !== this._owner),
+            (hasPort &&
+              unit.dstPort()?.owner() !== this.warship.owner() &&
+              !unit.dstPort()?.owner().isFriendly(this.warship.owner()) &&
+              unit.safeFromPirates() !== true)),
       );
 
     this.target =
@@ -198,9 +196,10 @@ export class WarshipExecution implements Execution {
     if (
       this.target == null ||
       !this.target.isActive() ||
-      this.target.owner() == this._owner
+      this.target.owner() == this._owner ||
+      this.target.safeFromPirates() == true
     ) {
-      // In case another destroyer captured or destroyed target
+      // In case another warship captured or destroyed target, or the target escaped into safe waters
       this.target = null;
       return;
     }
@@ -250,18 +249,19 @@ export class WarshipExecution implements Execution {
   }
 
   randomTile(): TileRef {
+    const warshipPatrolRange = this.mg.config().warshipPatrolRange();
     while (true) {
       const x =
         this.mg.x(this.patrolCenterTile) +
-        this.random.nextInt(-this.searchRange / 2, this.searchRange / 2);
+        this.random.nextInt(-warshipPatrolRange / 2, warshipPatrolRange / 2);
       const y =
         this.mg.y(this.patrolCenterTile) +
-        this.random.nextInt(-this.searchRange / 2, this.searchRange / 2);
+        this.random.nextInt(-warshipPatrolRange / 2, warshipPatrolRange / 2);
       if (!this.mg.isValidCoord(x, y)) {
         continue;
       }
       const tile = this.mg.ref(x, y);
-      if (!this.mg.isOcean(tile)) {
+      if (!this.mg.isOcean(tile) || this.mg.isShoreline(tile)) {
         continue;
       }
       return tile;
