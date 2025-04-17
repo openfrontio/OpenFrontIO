@@ -3,6 +3,8 @@ import { customAlphabet } from "nanoid";
 import twemoji from "twemoji";
 import { Cell, Game, Player, Team, Unit } from "./game/Game";
 import { andFN, GameMap, manhattanDistFN, TileRef } from "./game/GameMap";
+import { PathFindResultType } from "./pathfinding/AStar";
+import { PathFinder } from "./pathfinding/PathFinding";
 import {
   AllPlayersStats,
   ClientID,
@@ -102,6 +104,119 @@ export function closestShoreFromPlayer(
     const currentDistance = gm.manhattanDist(target, current);
     return currentDistance < closestDistance ? current : closest;
   });
+}
+
+/**
+ * Finds the best shore tile for deployment among the player's shore tiles for the shortest route.
+ * Calculates paths from 4 extremum tiles and the Manhattan-closest tile.
+ */
+export function bestShoreDeploymentSource(
+  gm: Game,
+  player: Player,
+  target: TileRef,
+): TileRef | null {
+  let closestManhattanDistance = Infinity;
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
+
+  let bestByManhattan: TileRef = null;
+  const extremumTiles: Record<string, TileRef> = {
+    minX: null,
+    minY: null,
+    maxX: null,
+    maxY: null,
+  };
+
+  for (const tile of player.borderTiles()) {
+    if (!gm.isShore(tile)) continue;
+
+    const distance = gm.manhattanDist(tile, target);
+    const cell = gm.cell(tile);
+
+    // Manhattan-closest tile
+    if (distance < closestManhattanDistance) {
+      closestManhattanDistance = distance;
+      bestByManhattan = tile;
+    }
+
+    // Extremum tiles
+    if (cell.x < minX) {
+      minX = cell.x;
+      extremumTiles.minX = tile;
+    } else if (cell.y < minY) {
+      minY = cell.y;
+      extremumTiles.minY = tile;
+    } else if (cell.x > maxX) {
+      maxX = cell.x;
+      extremumTiles.maxX = tile;
+    } else if (cell.y > maxY) {
+      maxY = cell.y;
+      extremumTiles.maxY = tile;
+    }
+  }
+
+  const candidates = [
+    bestByManhattan,
+    extremumTiles.minX,
+    extremumTiles.minY,
+    extremumTiles.maxX,
+    extremumTiles.maxY,
+  ].filter(Boolean);
+
+  if (!candidates.length) {
+    return null;
+  }
+
+  // Find the shortest actual path distance
+  let closestShoreTile: TileRef | null = null;
+  let closestDistance = Infinity;
+
+  for (const shoreTile of candidates) {
+    const pathDistance = calculatePathDistance(gm, shoreTile, target);
+
+    if (pathDistance !== null && pathDistance < closestDistance) {
+      closestDistance = pathDistance;
+      closestShoreTile = shoreTile;
+    }
+  }
+
+  // Fall back to the Manhattan-closest tile if no path was found
+  return closestShoreTile || bestByManhattan;
+}
+
+/**
+ * Calculates the distance between two tiles using A*
+ * Returns null if no path is found
+ */
+function calculatePathDistance(
+  gm: Game,
+  start: TileRef,
+  target: TileRef,
+): number | null {
+  let currentTile = start;
+  let tileDistance = 0;
+  const pathFinder = PathFinder.Mini(gm, 20_000, false);
+
+  while (true) {
+    const result = pathFinder.nextTile(currentTile, target);
+
+    if (result.type === PathFindResultType.Completed) {
+      return tileDistance;
+    } else if (result.type === PathFindResultType.NextTile) {
+      currentTile = result.tile;
+      tileDistance++;
+    } else if (
+      result.type === PathFindResultType.PathNotFound ||
+      result.type === PathFindResultType.Pending
+    ) {
+      return null;
+    } else {
+      // @ts-expect-error type is never
+      throw new Error(`Unexpected pathfinding result type: ${result.type}`);
+    }
+  }
 }
 
 function closestShoreTN(

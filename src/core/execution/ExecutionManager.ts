@@ -70,6 +70,7 @@ export class Executor {
           intent.targetID,
           this.mg.ref(intent.x, intent.y),
           intent.troops,
+          this.mg.ref(intent.sourceX, intent.sourceY),
         );
       case "allianceRequest":
         return new AllianceRequestExecution(playerID, intent.recipient);

@@ -4,6 +4,7 @@ import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
   assertNever,
+  bestShoreDeploymentSource,
   closestShoreFromPlayer,
   distSortUnit,
   maxInt,
@@ -839,7 +840,13 @@ export class PlayerImpl implements Player {
     if (!this.mg.isShore(targetTile)) {
       return false;
     }
-    const spawn = closestShoreFromPlayer(this.mg, this, targetTile);
+    let spawn = null;
+    if (this.playerInfo.playerType == PlayerType.Human) {
+      spawn = bestShoreDeploymentSource(this.mg, this, targetTile);
+    } else {
+      spawn = closestShoreFromPlayer(this.mg, this, targetTile);
+    }
+
     if (spawn == null) {
       return false;
     }
@@ -886,7 +893,7 @@ export class PlayerImpl implements Player {
     return rel;
   }
 
-  public canBoat(tile: TileRef): boolean {
+  public canBoat(tile: TileRef): false | TileRef {
     if (
       this.units(UnitType.TransportShip).length >=
       this.mg.config().boatMaxNumber()
@@ -929,7 +936,7 @@ export class PlayerImpl implements Player {
       }
 
       if (myPlayerBordersOcean && otherPlayerBordersOcean) {
-        return this.canBuild(UnitType.TransportShip, dst) != false;
+        return this.canBuild(UnitType.TransportShip, dst);
       } else {
         return false;
       }
@@ -952,7 +959,7 @@ export class PlayerImpl implements Player {
 
     for (const t of sorted) {
       if (this.mg.owner(t) == this) {
-        return this.canBuild(UnitType.TransportShip, dst) != false;
+        return this.canBuild(UnitType.TransportShip, dst);
       }
     }
     return false;

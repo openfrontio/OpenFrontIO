@@ -19,9 +19,9 @@ let defender: Player;
 let defenderSpawn: TileRef;
 let attackerSpawn: TileRef;
 
-function sendBoat(target: TileRef, troops: number) {
+function sendBoat(target: TileRef, source: TileRef, troops: number) {
   game.addExecution(
-    new TransportShipExecution(defender.id(), null, target, troops),
+    new TransportShipExecution(defender.id(), null, target, troops, source),
   );
 }
 
@@ -97,7 +97,7 @@ describe("Attack", () => {
     constructionExecution(game, defender.id(), 1, 1, UnitType.MissileSilo);
     expect(defender.units(UnitType.MissileSilo)).toHaveLength(1);
 
-    sendBoat(game.ref(15, 8), 100);
+    sendBoat(game.ref(15, 8), game.ref(10, 5), 100);
 
     constructionExecution(game, defender.id(), 0, 15, UnitType.AtomBomb, 3);
     const nuke = defender.units(UnitType.AtomBomb)[0];
