@@ -55,7 +55,7 @@ export class ShellExecution implements Execution {
       switch (result.type) {
         case PathFindResultType.Completed:
           this.active = false;
-          this.target.modifyHealth(-this.effectOnTarget);
+          this.target.modifyHealth(-this.effectOnTarget());
           this.shell.delete(false);
           return;
         case PathFindResultType.NextTile:
@@ -73,11 +73,12 @@ export class ShellExecution implements Execution {
   }
 
   private effectOnTarget(): number {
-    const baseDamage = this.mg.config().unitInfo(UnitType.Shell).damage;
+    const baseDamage: number = this.mg.config().unitInfo(UnitType.Shell).damage;
 
     console.log(baseDamage);
-    const damageMod: number = Math.floor(baseDamage * 0.1);
+    const damageMod: number = 25;
     console.log(damageMod);
+    return baseDamage;
     const pseudoRandom = new PseudoRandom(123);
     switch (pseudoRandom.nextInt(1, 6)) {
       case 1:
