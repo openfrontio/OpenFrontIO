@@ -327,7 +327,7 @@ export class RadialMenu implements Layer {
     }
 
     const myPlayer = this.g.myPlayer();
-    if (!myPlayer) {
+    if (myPlayer === null) {
       consolex.warn("my player not found");
       return;
     }
