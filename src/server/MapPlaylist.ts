@@ -86,8 +86,8 @@ export class MapPlaylist {
           Africa: 2,
           Britannia: 1,
           GatewayToTheAtlantic: 2,
-          Australia: 1,
-          Iceland: 1,
+          Australia: 2,
+          Iceland: 2,
           SouthAmerica: 3,
           KnownWorld: 2,
         };
