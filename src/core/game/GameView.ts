@@ -87,11 +87,30 @@ export class UnitView {
   isActive(): boolean {
     return this.data.isActive;
   }
+  hasDstPortId(): boolean {
+    return this.data.dstPortId != undefined;
+  }
+  hasSrcPortId(): boolean {
+    return this.data.srcPortId != undefined;
+  }
   hasHealth(): boolean {
     return this.data.health != undefined;
   }
-  hasdstPortId(): boolean {
-    return this.data.dstPortId != undefined;
+  gold(): string {
+    if (this.type() != UnitType.TradeShip) {
+      throw Error("Must be a trade ship");
+    }
+    return this.gameView
+      .config()
+      .tradeShipGold(
+        this.gameView.manhattanDist(
+          this.gameView.unit(this.srcPortId()).tile(),
+          this.gameView.unit(this.dstPortId()).tile(),
+        ),
+      )
+      .toLocaleString("en-US", {
+        maximumFractionDigits: 0,
+      });
   }
   health(): number {
     return this.data.health ?? 0;
@@ -104,6 +123,12 @@ export class UnitView {
       throw Error("Must be a trade ship");
     }
     return this.data.dstPortId;
+  }
+  srcPortId(): number {
+    if (this.type() != UnitType.TradeShip) {
+      throw Error("Must be a trade ship");
+    }
+    return this.data.srcPortId;
   }
   detonationDst(): TileRef {
     if (!nukeTypes.includes(this.type())) {
