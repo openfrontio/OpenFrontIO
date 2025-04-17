@@ -146,7 +146,7 @@ export class WarshipExecution implements Execution {
             (hasPort &&
               unit.dstPort()?.owner() !== this.warship.owner() &&
               !unit.dstPort()?.owner().isFriendly(this.warship.owner()) &&
-              unit.safeFromPirates() !== true)),
+              unit.isSafeFromPirates() !== true)),
       );
 
     this.target =
@@ -197,7 +197,7 @@ export class WarshipExecution implements Execution {
       this.target == null ||
       !this.target.isActive() ||
       this.target.owner() == this._owner ||
-      this.target.safeFromPirates() == true
+      this.target.isSafeFromPirates() == true
     ) {
       // In case another warship captured or destroyed target, or the target escaped into safe waters
       this.target = null;
@@ -249,7 +249,9 @@ export class WarshipExecution implements Execution {
   }
 
   randomTile(): TileRef {
-    const warshipPatrolRange = this.mg.config().warshipPatrolRange();
+    let warshipPatrolRange = this.mg.config().warshipPatrolRange();
+    const maxAttemptBeforeExpand: number = warshipPatrolRange * 2;
+    let attemptCount: number = 0;
     while (true) {
       const x =
         this.mg.x(this.patrolCenterTile) +
@@ -262,6 +264,12 @@ export class WarshipExecution implements Execution {
       }
       const tile = this.mg.ref(x, y);
       if (!this.mg.isOcean(tile) || this.mg.isShoreline(tile)) {
+        attemptCount++;
+        if (attemptCount === maxAttemptBeforeExpand) {
+          attemptCount = 0;
+          warshipPatrolRange =
+            warshipPatrolRange + Math.floor(warshipPatrolRange / 2);
+        }
         continue;
       }
       return tile;

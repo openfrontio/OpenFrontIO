@@ -47,7 +47,7 @@ export class TradeShipExecution implements Execution {
       }
       this.tradeShip = this.origOwner.buildUnit(UnitType.TradeShip, 0, spawn, {
         dstPort: this._dstPort,
-        safeFromPirates: true,
+        isSafeFromPirates: true,
       });
     }
 
@@ -109,9 +109,9 @@ export class TradeShipExecution implements Execution {
         break;
       case PathFindResultType.NextTile:
         // Update safeFromPirates status
-        const safeFromPirates =
-          this.mg.isWater(result.tile) && this.mg.isShoreline(result.tile);
-        this.tradeShip.setSafeFromPirates(safeFromPirates);
+        if (this.mg.isWater(result.tile) && this.mg.isShoreline(result.tile)) {
+          this.tradeShip.setSafeFromPirates();
+        }
         this.tradeShip.move(result.tile);
         break;
       case PathFindResultType.PathNotFound:
@@ -167,9 +167,5 @@ export class TradeShipExecution implements Execution {
 
   dstPort(): TileRef {
     return this._dstPort.tile();
-  }
-
-  safeFromPirates(): boolean {
-    return this.tradeShip.safeFromPirates();
   }
 }

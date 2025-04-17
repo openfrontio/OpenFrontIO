@@ -21,11 +21,12 @@ export class UnitImpl implements Unit {
   private _moveTarget: TileRef = null;
   private _targetedBySAM = false;
   private _safeFromPiratesCooldown: number;
+  private _lastSetSafeFromPirates: number;
   private _constructionType: UnitType = undefined;
 
   private _cooldownTick: Tick | null = null;
   private _dstPort: Unit | null = null; // Only for trade ships
-  private _safeFromPirates: boolean | null = null; // Only for trade ships
+  private _isSafeFromPirates: boolean | null = null; // Only for trade ships
   private _detonationDst: TileRef | null = null; // Only for nukes
   private _warshipTarget: Unit | null = null;
   private _cooldownDuration: number | null = null;
@@ -42,7 +43,6 @@ export class UnitImpl implements Unit {
     this._health = toInt(this.mg.unitInfo(_type).maxHealth ?? 1);
     this._lastTile = _tile;
     this._dstPort = unitsSpecificInfos.dstPort;
-    this._safeFromPirates = unitsSpecificInfos.safeFromPirates;
     this._detonationDst = unitsSpecificInfos.detonationDst;
     this._warshipTarget = unitsSpecificInfos.warshipTarget;
     this._cooldownDuration = unitsSpecificInfos.cooldownDuration;
@@ -238,23 +238,14 @@ export class UnitImpl implements Unit {
     return this._targetedBySAM;
   }
 
-  setSafeFromPirates(safeFromPirates: boolean): void {
-    if (safeFromPirates) {
-      this._safeFromPirates = safeFromPirates;
-      this._safeFromPiratesCooldown = this.mg
-        .config()
-        .safeFromPiratesCooldownMax();
-    }
-    if (!safeFromPirates) {
-      if (this._safeFromPiratesCooldown <= 0) {
-        this._safeFromPirates = safeFromPirates;
-      } else {
-        this._safeFromPiratesCooldown--;
-      }
-    }
+  setSafeFromPirates(): void {
+    this._lastSetSafeFromPirates = this.mg.ticks();
   }
 
-  safeFromPirates(): boolean {
-    return this._safeFromPirates;
+  isSafeFromPirates(): boolean {
+    return (
+      this.mg.ticks() - this._lastSetSafeFromPirates <
+      this._safeFromPiratesCooldown
+    );
   }
 }

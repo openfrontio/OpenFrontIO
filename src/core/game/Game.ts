@@ -239,7 +239,7 @@ export class PlayerInfo {
 // Some units have info specific to them
 export interface UnitSpecificInfos {
   dstPort?: Unit; // Only for trade ships
-  safeFromPirates?: boolean; // Only for trade ships
+  isSafeFromPirates?: boolean; // Only for trade ships
   detonationDst?: TileRef; // Only for nukes
   warshipTarget?: Unit;
   cooldownDuration?: number;
@@ -273,8 +273,8 @@ export interface Unit {
   isCooldown(): boolean;
   setDstPort(dstPort: Unit): void;
   dstPort(): Unit; // Only for trade ships
-  setSafeFromPirates(safeFromPirates: boolean): void; // Only for trade ships
-  safeFromPirates(): boolean; // Only for trade ships
+  setSafeFromPirates(): void; // Only for trade ships
+  isSafeFromPirates(): boolean; // Only for trade ships
   detonationDst(): TileRef; // Only for nukes
 
   setMoveTarget(cell: TileRef): void;

@@ -3,7 +3,6 @@ import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
-import { PseudoRandom } from "../PseudoRandom";
 
 export class ShellExecution implements Execution {
   private active = true;
@@ -74,24 +73,7 @@ export class ShellExecution implements Execution {
 
   private effectOnTarget(): number {
     const baseDamage: number = this.mg.config().unitInfo(UnitType.Shell).damage;
-
-    console.log(baseDamage);
-    const damageMod: number = 25;
-    console.log(damageMod);
     return baseDamage;
-    const pseudoRandom = new PseudoRandom(123);
-    switch (pseudoRandom.nextInt(1, 6)) {
-      case 1:
-        return baseDamage - damageMod * 2;
-      case 2:
-        return baseDamage - damageMod;
-      case 3:
-        return baseDamage;
-      case 4:
-        return baseDamage + damageMod;
-      case 5:
-        return baseDamage + damageMod * 2;
-    }
   }
 
   isActive(): boolean {
