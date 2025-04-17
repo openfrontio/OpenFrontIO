@@ -361,7 +361,11 @@ export class ClientGameRunner {
             this.myPlayer.troops() * this.renderer.uiState.attackRatio,
           ),
         );
-      } else if (actions.canBoat && this.shouldBoat(tile, actions.canBoat)) {
+      } else if (
+        actions.canBoat &&
+        this.shouldBoat(tile, actions.canBoat) &&
+        this.gameView.isLand(tile)
+      ) {
         this.eventBus.emit(
           new SendBoatAttackIntentEvent(
             this.gameView.owner(tile).id(),
@@ -382,8 +386,9 @@ export class ClientGameRunner {
 
   private shouldBoat(tile: TileRef, src: TileRef) {
     // TODO: Global enable flag
+    // TODO: Global limit autoboat to nearby shore flag
     // if (!enableAutoBoat) return false;
-
+    // if (!limitAutoBoatNear) return true;
     const distanceSquared = this.gameView.euclideanDistSquared(tile, src);
     const limit = 100;
     const limitSquared = limit * limit;
