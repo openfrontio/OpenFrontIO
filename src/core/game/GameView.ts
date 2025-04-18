@@ -171,35 +171,11 @@ export class PlayerView {
     return this.data.flag;
   }
   name(): string {
-    const baseName =
-      userSettings.anonymousNames() && this.anonymousName != null
-        ? this.anonymousName
-        : this.data.name;
-    const styledName =
-      this.data.playerType === "HUMAN"
-        ? `<b>${baseName}</b>`
-        : `<i>${baseName}</i>`;
-
-    return styledName;
-  }
-  nameNotag(): string {
     return userSettings.anonymousNames() && this.anonymousName !== null
       ? this.anonymousName
       : this.data.name;
   }
-
   displayName(): string {
-    const baseName =
-      userSettings.anonymousNames() && this.anonymousName != null
-        ? this.anonymousName
-        : this.data.displayName;
-    const styledName =
-      this.data.playerType === "HUMAN"
-        ? `<b>${baseName}</b>`
-        : `<i>${baseName}</i>`;
-    return styledName;
-  }
-  displayNameNotag(): string {
     return userSettings.anonymousNames() && this.anonymousName !== null
       ? this.anonymousName
       : this.data.name;
