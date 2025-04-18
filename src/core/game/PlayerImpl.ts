@@ -22,6 +22,7 @@ import {
   Attack,
   Cell,
   EmojiMessage,
+  GameMode,
   Gold,
   MessageType,
   MutableAlliance,
@@ -67,7 +68,7 @@ export class PlayerImpl implements Player {
   // 0 to 100
   private _targetTroopRatio: bigint;
 
-  isTraitor_ = false;
+  markedTraitorTick = -1;
 
   private embargoes: Set<PlayerID> = new Set();
 
@@ -243,7 +244,7 @@ export class PlayerImpl implements Player {
     const ns: Set<Player | TerraNullius> = new Set();
     for (const border of this.borderTiles()) {
       for (const neighbor of this.mg.map().neighbors(border)) {
-        if (this.mg.map().isLake(neighbor)) {
+        if (this.mg.map().isLand(neighbor)) {
           const owner = this.mg.map().ownerID(neighbor);
           if (owner != this.smallID()) {
             ns.add(
@@ -372,7 +373,14 @@ export class PlayerImpl implements Player {
   }
 
   isTraitor(): boolean {
-    return this.isTraitor_;
+    return (
+      this.markedTraitorTick >= 0 &&
+      this.mg.ticks() - this.markedTraitorTick <
+        this.mg.config().traitorDuration()
+    );
+  }
+  markTraitor(): void {
+    this.markedTraitorTick = this.mg.ticks();
   }
 
   createAllianceRequest(recipient: Player): AllianceRequest {
@@ -516,6 +524,13 @@ export class PlayerImpl implements Player {
   }
 
   canDonate(recipient: Player): boolean {
+    if (
+      recipient.type() == PlayerType.Human &&
+      this.mg.config().gameConfig().gameMode == GameMode.FFA
+    ) {
+      return false;
+    }
+
     if (!this.isFriendly(recipient)) {
       return false;
     }
@@ -541,7 +556,7 @@ export class PlayerImpl implements Player {
       this.id(),
     );
     this.mg.displayMessage(
-      `Recieved ${renderTroops(troops)} troops from ${this.name()}`,
+      `Received ${renderTroops(troops)} troops from ${this.name()}`,
       MessageType.SUCCESS,
       recipient.id(),
     );
@@ -555,7 +570,7 @@ export class PlayerImpl implements Player {
       this.id(),
     );
     this.mg.displayMessage(
-      `Recieved ${renderNumber(gold)} gold from ${this.name()}`,
+      `Received ${renderNumber(gold)} gold from ${this.name()}`,
       MessageType.SUCCESS,
       recipient.id(),
     );
@@ -892,7 +907,7 @@ export class PlayerImpl implements Player {
     return rel;
   }
 
-  public canBoat(tile: TileRef): boolean {
+  public canBoat(tile: TileRef): TileRef | false {
     if (
       this.units(UnitType.TransportShip).length >=
       this.mg.config().boatMaxNumber()
@@ -935,7 +950,7 @@ export class PlayerImpl implements Player {
       }
 
       if (myPlayerBordersOcean && otherPlayerBordersOcean) {
-        return this.canBuild(UnitType.TransportShip, dst) != false;
+        return this.canBuild(UnitType.TransportShip, dst);
       } else {
         return false;
       }
@@ -958,7 +973,7 @@ export class PlayerImpl implements Player {
 
     for (const t of sorted) {
       if (this.mg.owner(t) == this) {
-        return this.canBuild(UnitType.TransportShip, dst) != false;
+        return this.canBuild(UnitType.TransportShip, dst);
       }
     }
     return false;

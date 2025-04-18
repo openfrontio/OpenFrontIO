@@ -7,6 +7,7 @@ import {
   Gold,
   Player,
   PlayerInfo,
+  Team,
   TerraNullius,
   Tick,
   UnitInfo,
@@ -51,6 +52,7 @@ export interface NukeMagnitude {
 
 export interface Config {
   samHittingChance(): number;
+  samWarheadHittingChance(): number;
   spawnImmunityDuration(): Tick;
   serverConfig(): ServerConfig;
   gameConfig(): GameConfig;
@@ -65,6 +67,7 @@ export interface Config {
   instantBuild(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
+  numPlayerTeams(): number;
 
   startManpower(playerInfo: PlayerInfo): number;
   populationIncreaseRate(player: Player | PlayerView): number;
@@ -116,12 +119,14 @@ export interface Config {
   difficultyModifier(difficulty: Difficulty): number;
   // 0-1
   traitorDefenseDebuff(): number;
+  traitorDuration(): number;
   nukeMagnitudes(unitType: UnitType): NukeMagnitude;
   defaultNukeSpeed(): number;
   nukeDeathFactor(humans: number, tilesOwned: number): number;
 }
 
 export interface Theme {
+  teamColor(team: Team): Colord;
   territoryColor(playerInfo: PlayerView): Colord;
   specialBuildingColor(playerInfo: PlayerView): Colord;
   borderColor(playerInfo: PlayerView): Colord;

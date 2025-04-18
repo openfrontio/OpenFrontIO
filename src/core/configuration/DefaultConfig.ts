@@ -34,7 +34,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return process.env.GIT_COMMIT;
   }
   r2Endpoint(): string {
-    return process.env.R2_ENDPOINT;
+    return `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
   }
   r2AccessKey(): string {
     return process.env.R2_ACCESS_KEY;
@@ -89,6 +89,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
         GameMapType.Mars,
         GameMapType.Oceania,
         GameMapType.Japan, // Japan at this level because its 2/3 water
+        GameMapType.FaroeIslands,
       ].includes(map)
     ) {
       return Math.random() < 0.2 ? 70 : 40;
@@ -135,8 +136,15 @@ export class DefaultConfig implements Config {
     return 0.8;
   }
 
+  samWarheadHittingChance(): number {
+    return 0.5;
+  }
+
   traitorDefenseDebuff(): number {
-    return 0.8;
+    return 0.5;
+  }
+  traitorDuration(): number {
+    return 30 * 10; // 30 seconds
   }
   spawnImmunityDuration(): Tick {
     return 5 * 10;
@@ -188,6 +196,9 @@ export class DefaultConfig implements Config {
   }
   defensePostDefenseBonus(): number {
     return 5;
+  }
+  numPlayerTeams(): number {
+    return this._gameConfig.numPlayerTeams ?? 0;
   }
   spawnNPCs(): boolean {
     return !this._gameConfig.disableNPCs;
@@ -355,7 +366,7 @@ export class DefaultConfig implements Config {
             p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
-                  1_500_000 * 3,
+                  3_000_000,
                   (p.unitsIncludingConstruction(UnitType.SAMLauncher).length +
                     1) *
                     1_500_000,

@@ -482,7 +482,29 @@ export class UnitLayer implements Layer {
     const x = this.game.x(unit.tile());
     const y = this.game.y(unit.tile());
 
-    const sprite = getColoredSprite(unit, this.theme, customTerritoryColor);
+    let alternateViewColor = null;
+
+    if (this.alternateView) {
+      const rel = this.relationship(unit);
+      switch (rel) {
+        case Relationship.Self:
+          alternateViewColor = this.theme.selfColor();
+          break;
+        case Relationship.Ally:
+          alternateViewColor = this.theme.allyColor();
+          break;
+        case Relationship.Enemy:
+          alternateViewColor = this.theme.enemyColor();
+          break;
+      }
+    }
+
+    const sprite = getColoredSprite(
+      unit,
+      this.theme,
+      alternateViewColor ?? customTerritoryColor,
+      alternateViewColor,
+    );
 
     this.context.drawImage(
       sprite,
