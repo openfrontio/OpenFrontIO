@@ -39,12 +39,14 @@ const userSettings: UserSettings = new UserSettings();
 export class UnitView {
   public _wasUpdated = true;
   public lastPos: TileRef[] = [];
+  private _retreating: boolean = false;
 
   constructor(
     private gameView: GameView,
     private data: UnitUpdate,
   ) {
     this.lastPos.push(data.pos);
+    this._retreating = data.retreating;
   }
 
   wasUpdated(): boolean {
@@ -64,6 +66,7 @@ export class UnitView {
 
   update(data: UnitUpdate) {
     this.lastPos.push(data.pos);
+    this._retreating = data.retreating;
     this._wasUpdated = true;
     this.data = data;
   }
@@ -119,6 +122,13 @@ export class UnitView {
   }
   isCooldown(): boolean {
     return this.data.ticksLeftInCooldown > 0;
+  }
+
+  transportShipIsRetreating(): boolean {
+    if (this.type() != UnitType.TransportShip) {
+      throw Error("Must be a transportship");
+    }
+    return this._retreating;
   }
 }
 
