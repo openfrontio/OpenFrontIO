@@ -132,6 +132,21 @@ export class DefaultConfig implements Config {
     private _userSettings: UserSettings,
   ) {}
 
+  samHittingChance(): number {
+    return 0.8;
+  }
+
+  samWarheadHittingChance(): number {
+    return 0.5;
+  }
+
+  traitorDefenseDebuff(): number {
+    return 0.8;
+  }
+  spawnImmunityDuration(): Tick {
+    return 5 * 10;
+  }
+  
   gameConfig(): GameConfig {
     return this._gameConfig;
   }

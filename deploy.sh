@@ -31,6 +31,7 @@ REGION=$1
 VERSION_TAG="latest"
 DOCKER_REPO=""
 ENV=""
+SSH_KEY=""
 
 # Set environment-specific variables
 if [ "$REGION" == "staging" ]; then
@@ -38,15 +39,18 @@ if [ "$REGION" == "staging" ]; then
     SERVER_HOST=$SERVER_HOST_STAGING
     DOCKER_REPO=$DOCKER_REPO_STAGING
     ENV="staging"
+    SSH_KEY=$SSH_KEY_STAGING
 elif [ "$REGION" == "us" ]; then
     print_header "DEPLOYING TO US ENVIRONMENT"
     SERVER_HOST=$SERVER_HOST_US
     DOCKER_REPO=$DOCKER_REPO_PROD  # Uses prod Docker repo for alt environment
+    SSH_KEY=$SSH_KEY_PROD
     ENV="prod"
 else
     print_header "DEPLOYING TO EU ENVIRONMENT"
     SERVER_HOST=$SERVER_HOST_EU
     DOCKER_REPO=$DOCKER_REPO_PROD
+    SSH_KEY=$SSH_KEY_PROD
     ENV="prod"
 fi
 
@@ -57,10 +61,11 @@ if [ -z "$SERVER_HOST" ]; then
 fi
 
 # Configuration
-SSH_KEY=${SSH_KEY:-"~/.ssh/id_rsa"}      # Use default or override from .env
 DOCKER_USERNAME=${DOCKER_USERNAME} # Docker Hub username
 UPDATE_SCRIPT="./update.sh"                    # Path to your update script
-REMOTE_UPDATE_SCRIPT="/root/update-openfront.sh"  # Where to place the script on server
+REMOTE_USER="openfront"                        
+REMOTE_UPDATE_PATH="/home/$REMOTE_USER"        
+REMOTE_UPDATE_SCRIPT="$REMOTE_UPDATE_PATH/update-openfront.sh"  # Where to place the script on server
 
 # Check if update script exists
 if [ ! -f "$UPDATE_SCRIPT" ]; then
@@ -90,28 +95,23 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-if [ $? -ne 0 ]; then
-    echo "❌ Failed to push image to Docker Hub. Stopping deployment."
-    exit 1
-fi
-
 echo "✅ Docker image built and pushed successfully."
 
 # Step 2: Copy update script to Hetzner server
 print_header "STEP 2: Copying update script to server"
-echo "Target: $SERVER_HOST"
+echo "Target: $REMOTE_USER@$SERVER_HOST"
 
 # Make sure the update script is executable
 chmod +x $UPDATE_SCRIPT
 
 # Copy the update script to the server
-scp -i $SSH_KEY $UPDATE_SCRIPT $SERVER_HOST:$REMOTE_UPDATE_SCRIPT
+scp -i $SSH_KEY $UPDATE_SCRIPT $REMOTE_USER@$SERVER_HOST:$REMOTE_UPDATE_SCRIPT
 
 # Copy environment variables if needed
 if [ -f .env ]; then
-    scp -i $SSH_KEY .env $SERVER_HOST:/root/.env
+    scp -i $SSH_KEY .env $REMOTE_USER@$SERVER_HOST:$REMOTE_UPDATE_PATH/.env
     # Secure the .env file
-    ssh -i $SSH_KEY $SERVER_HOST "chmod 600 /root/.env"
+    ssh -i $SSH_KEY $REMOTE_USER@$SERVER_HOST "chmod 600 $REMOTE_UPDATE_PATH/.env"
 fi
 
 if [ $? -ne 0 ]; then
@@ -125,7 +125,7 @@ echo "✅ Update script successfully copied to server."
 print_header "STEP 3: Executing update script on server"
 
 # Make the script executable on the remote server and execute it with the environment parameter
-ssh -i $SSH_KEY $SERVER_HOST "chmod +x $REMOTE_UPDATE_SCRIPT && $REMOTE_UPDATE_SCRIPT $REGION $DOCKER_USERNAME $DOCKER_REPO"
+ssh -i $SSH_KEY $REMOTE_USER@$SERVER_HOST "chmod +x $REMOTE_UPDATE_SCRIPT && $REMOTE_UPDATE_SCRIPT $REGION $DOCKER_USERNAME $DOCKER_REPO"
 
 if [ $? -ne 0 ]; then
     echo "❌ Failed to execute update script on server."
