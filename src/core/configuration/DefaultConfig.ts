@@ -131,7 +131,7 @@ export class DefaultConfig implements Config {
     private _gameConfig: GameConfig,
     private _userSettings: UserSettings,
   ) {}
-  
+
   gameConfig(): GameConfig {
     return this._gameConfig;
   }
