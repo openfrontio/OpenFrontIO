@@ -2,6 +2,7 @@ import {
   Difficulty,
   Game,
   GameMapType,
+  GameMode,
   GameType,
   Gold,
   Player,
@@ -13,12 +14,12 @@ import {
   UnitInfo,
   UnitType,
 } from "../game/Game";
-import { GameMap, TileRef } from "../game/GameMap";
+import { TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID } from "../Schemas";
 import { assertNever, simpleHash, within } from "../Util";
-import { Config, GameEnv, ServerConfig, Theme } from "./Config";
+import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { pastelTheme } from "./PastelTheme";
 import { pastelThemeDark } from "./PastelThemeDark";
 
@@ -33,7 +34,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return process.env.GIT_COMMIT;
   }
   r2Endpoint(): string {
-    return process.env.R2_ENDPOINT;
+    return `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
   }
   r2AccessKey(): string {
     return process.env.R2_ACCESS_KEY;
@@ -58,15 +59,57 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return 60 * 1000;
   }
   lobbyMaxPlayers(map: GameMapType): number {
-    if (map == GameMapType.World) {
-      return Math.random() < 0.3 ? 150 : 60;
-    }
+    // Maps with ~4 mil pixels
     if (
-      [GameMapType.Mars, GameMapType.Africa, GameMapType.BlackSea].includes(map)
+      [
+        GameMapType.GatewayToTheAtlantic,
+        GameMapType.SouthAmerica,
+        GameMapType.NorthAmerica,
+        GameMapType.Africa,
+        GameMapType.Europe,
+      ].includes(map)
     ) {
-      return Math.random() < 0.3 ? 70 : 50;
+      return Math.random() < 0.2 ? 150 : 70;
     }
-    return Math.random() < 0.3 ? 60 : 40;
+    // Maps with ~2.5 - ~3.5 mil pixels
+    if (
+      [
+        GameMapType.Australia,
+        GameMapType.Iceland,
+        GameMapType.Britannia,
+        GameMapType.Asia,
+      ].includes(map)
+    ) {
+      return Math.random() < 0.2 ? 100 : 50;
+    }
+    // Maps with ~2 mil pixels
+    if (
+      [
+        GameMapType.Mena,
+        GameMapType.Mars,
+        GameMapType.Oceania,
+        GameMapType.Japan, // Japan at this level because its 2/3 water
+        GameMapType.FaroeIslands,
+      ].includes(map)
+    ) {
+      return Math.random() < 0.2 ? 70 : 40;
+    }
+    // Maps smaller than ~2 mil pixels
+    if (
+      [
+        GameMapType.BetweenTwoSeas,
+        GameMapType.BlackSea,
+        GameMapType.Pangaea,
+      ].includes(map)
+    ) {
+      return Math.random() < 0.2 ? 60 : 35;
+    }
+    // world belongs with the ~2 mils, but these amounts never made sense so I assume the insanity is intended.
+    if (map == GameMapType.World) {
+      return Math.random() < 0.2 ? 150 : 60;
+    }
+    // default return for non specified map
+    return Math.random() < 0.2 ? 85 : 45;
   }
   workerIndex(gameID: GameID): number {
     return simpleHash(gameID) % this.numWorkers();
@@ -93,12 +136,15 @@ export class DefaultConfig implements Config {
     return 0.8;
   }
 
-  samCooldown(): Tick {
-    return 100;
+  samWarheadHittingChance(): number {
+    return 0.5;
   }
 
   traitorDefenseDebuff(): number {
-    return 0.8;
+    return 0.5;
+  }
+  traitorDuration(): number {
+    return 30 * 10; // 30 seconds
   }
   spawnImmunityDuration(): Tick {
     return 5 * 10;
@@ -138,12 +184,21 @@ export class DefaultConfig implements Config {
     // So defense modifier is between [5, 2.5]
     return 5 - falloutRatio * 2;
   }
+  SAMCooldown(): number {
+    return 75;
+  }
+  SiloCooldown(): number {
+    return 75;
+  }
 
   defensePostRange(): number {
     return 30;
   }
   defensePostDefenseBonus(): number {
     return 5;
+  }
+  numPlayerTeams(): number {
+    return this._gameConfig.numPlayerTeams ?? 0;
   }
   spawnNPCs(): boolean {
     return !this._gameConfig.disableNPCs;
@@ -167,12 +222,12 @@ export class DefaultConfig implements Config {
     return 10000 + 150 * Math.pow(dist, 1.1);
   }
   tradeShipSpawnRate(numberOfPorts: number): number {
-    if (numberOfPorts <= 3) return 180;
-    if (numberOfPorts <= 5) return 250;
-    if (numberOfPorts <= 8) return 350;
-    if (numberOfPorts <= 10) return 400;
-    if (numberOfPorts <= 12) return 450;
-    return 500;
+    if (numberOfPorts <= 3) return 18;
+    if (numberOfPorts <= 5) return 25;
+    if (numberOfPorts <= 8) return 35;
+    if (numberOfPorts <= 10) return 40;
+    if (numberOfPorts <= 12) return 45;
+    return 50;
   }
 
   unitInfo(type: UnitType): UnitInfo {
@@ -238,7 +293,7 @@ export class DefaultConfig implements Config {
           cost: (p: Player) =>
             p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
-              : 20_000_000,
+              : 25_000_000,
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -278,7 +333,7 @@ export class DefaultConfig implements Config {
             p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
-                  1_500_000 * 3,
+                  3_000_000,
                   (p.unitsIncludingConstruction(UnitType.SAMLauncher).length +
                     1) *
                     1_500_000,
@@ -335,6 +390,9 @@ export class DefaultConfig implements Config {
     return 600 * 10; // 10 minutes.
   }
   percentageTilesOwnedToWin(): number {
+    if (this._gameConfig.gameMode == GameMode.Team) {
+      return 95;
+    }
     return 80;
   }
   boatMaxNumber(): number {
@@ -426,18 +484,25 @@ export class DefaultConfig implements Config {
     }
 
     if (defender.isPlayer()) {
+      const ratio = within(
+        Math.pow(defender.troops() / attackTroops, 0.4),
+        0.1,
+        10,
+      );
+      const speedRatio = within(
+        defender.troops() / (5 * attackTroops),
+        0.1,
+        10,
+      );
+
       return {
         attackerTroopLoss:
-          within(defender.troops() / attackTroops, 0.6, 2) *
+          ratio *
           mag *
-          0.8 *
           largeLossModifier *
           (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
-        defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
-        tilesPerTickUsed:
-          within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
-          speed *
-          largeSpeedMalus,
+        defenderTroopLoss: defender.population() / defender.numTilesOwned(),
+        tilesPerTickUsed: Math.floor(speedRatio * speed * largeSpeedMalus),
       };
     } else {
       return {
@@ -472,6 +537,10 @@ export class DefaultConfig implements Config {
 
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number {
     return Math.floor(attacker.troops() / 5);
+  }
+
+  warshipShellLifetime(): number {
+    return 20; // in ticks (one tick is 100ms)
   }
 
   radiusPortSpawn() {
@@ -569,7 +638,8 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): number {
-    return Math.sqrt(player.workers() * player.numTilesOwned()) / 200;
+    const ratio = Math.pow(player.workers() / player.population(), 1.3);
+    return Math.floor(Math.sqrt(player.workers()) * ratio * 5);
   }
 
   troopAdjustmentRate(player: Player): number {
@@ -585,5 +655,25 @@ export class DefaultConfig implements Config {
       return adjustment * 5;
     }
     return adjustment;
+  }
+
+  nukeMagnitudes(unitType: UnitType): NukeMagnitude {
+    switch (unitType) {
+      case UnitType.MIRVWarhead:
+        return { inner: 25, outer: 30 };
+      case UnitType.AtomBomb:
+        return { inner: 12, outer: 30 };
+      case UnitType.HydrogenBomb:
+        return { inner: 80, outer: 100 };
+    }
+  }
+
+  defaultNukeSpeed(): number {
+    return 4;
+  }
+
+  // Humans can be population, soldiers attacking, soldiers in boat etc.
+  nukeDeathFactor(humans: number, tilesOwned: number): number {
+    return (5 * humans) / Math.max(1, tilesOwned);
   }
 }

@@ -1,11 +1,11 @@
-import { LitElement, html, css } from "lit";
+import { LitElement, css, html } from "lit";
+import { customElement, property } from "lit/decorators.js";
 
 declare global {
   interface Window {
-    adsbygoogle: any[];
+    adsbygoogle: unknown[];
   }
 }
-import { customElement, property } from "lit/decorators.js";
 
 /**
  * Google AdSense integration component
@@ -89,7 +89,7 @@ const isElectron = () => {
   if (
     typeof window !== "undefined" &&
     typeof window.process === "object" &&
-    // @ts-ignore
+    // @ts-expect-error hidden
     window.process.type === "renderer"
   ) {
     return true;

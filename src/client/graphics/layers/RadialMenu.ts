@@ -1,11 +1,16 @@
+import * as d3 from "d3";
+import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
+import boatIcon from "../../../../resources/images/BoatIconWhite.svg";
+import buildIcon from "../../../../resources/images/BuildIconWhite.svg";
+import disabledIcon from "../../../../resources/images/DisabledIcon.svg";
+import infoIcon from "../../../../resources/images/InfoIcon.svg";
+import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
+import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
+import { consolex } from "../../../core/Consolex";
 import { EventBus } from "../../../core/EventBus";
-import {
-  AllPlayers,
-  Cell,
-  Game,
-  Player,
-  PlayerActions,
-} from "../../../core/game/Game";
+import { Cell, PlayerActions, TerraNullius } from "../../../core/game/Game";
+import { TileRef } from "../../../core/game/GameMap";
+import { GameView, PlayerView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
 import {
   CloseViewEvent,
@@ -18,31 +23,13 @@ import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendBreakAllianceIntentEvent,
-  SendDonateIntentEvent,
-  SendEmojiIntentEvent,
   SendSpawnIntentEvent,
-  SendTargetPlayerIntentEvent,
 } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
-import * as d3 from "d3";
-import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
-import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
-import boatIcon from "../../../../resources/images/BoatIconWhite.svg";
-import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
-import infoIcon from "../../../../resources/images/InfoIcon.svg";
-import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
-import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
-import disabledIcon from "../../../../resources/images/DisabledIcon.svg";
-import xIcon from "../../../../resources/images/XIcon.svg";
-import donateIcon from "../../../../resources/images/DonateIconWhite.svg";
-import buildIcon from "../../../../resources/images/BuildIconWhite.svg";
-import { EmojiTable } from "./EmojiTable";
 import { UIState } from "../UIState";
 import { BuildMenu } from "./BuildMenu";
-import { consolex } from "../../../core/Consolex";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { TileRef } from "../../../core/game/GameMap";
+import { EmojiTable } from "./EmojiTable";
+import { Layer } from "./Layer";
 import { PlayerInfoOverlay } from "./PlayerInfoOverlay";
 import { PlayerPanel } from "./PlayerPanel";
 
@@ -50,13 +37,14 @@ enum Slot {
   Info,
   Boat,
   Build,
-  Close,
+  Ally,
 }
 
 export class RadialMenu implements Layer {
   private clickedCell: Cell | null = null;
   private lastClosed: number = 0;
 
+  private originalTileOwner: PlayerView | TerraNullius;
   private menuElement: d3.Selection<HTMLDivElement, unknown, null, undefined>;
   private isVisible: boolean = false;
   private readonly menuItems = new Map([
@@ -70,7 +58,7 @@ export class RadialMenu implements Layer {
         icon: null,
       },
     ],
-    [Slot.Close, { name: "close", disabled: true, action: () => {} }],
+    [Slot.Ally, { name: "ally", disabled: true, action: () => {} }],
     [Slot.Build, { name: "build", disabled: true, action: () => {} }],
     [
       Slot.Info,
@@ -151,6 +139,7 @@ export class RadialMenu implements Layer {
       .style("touch-action", "none")
       .on("contextmenu", (e) => {
         e.preventDefault();
+        this.hideRadialMenu();
       });
 
     const svg = this.menuElement
@@ -279,8 +268,26 @@ export class RadialMenu implements Layer {
       .style("pointer-events", "none");
   }
 
-  tick() {
-    // Update logic if needed
+  async tick() {
+    // Only update when menu is visible
+    if (!this.isVisible || this.clickedCell === null) return;
+    const myPlayer = this.g.myPlayer();
+    if (myPlayer === null || !myPlayer.isAlive()) return;
+    const tile = this.g.ref(this.clickedCell.x, this.clickedCell.y);
+    if (this.originalTileOwner.isPlayer()) {
+      if (this.g.owner(tile) != this.originalTileOwner) {
+        this.closeMenu();
+        return;
+      }
+    } else {
+      if (this.g.owner(tile).isPlayer() || this.g.owner(tile) == myPlayer) {
+        this.closeMenu();
+        return;
+      }
+    }
+    const actions = await myPlayer.actions(tile);
+    this.disableAllButtons();
+    this.handlePlayerActions(myPlayer, actions, tile);
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
@@ -303,12 +310,7 @@ export class RadialMenu implements Layer {
     } else {
       this.showRadialMenu(event.x, event.y);
     }
-    this.enableCenterButton(false);
-    for (const item of this.menuItems.values()) {
-      item.disabled = true;
-      this.updateMenuItemState(item);
-    }
-
+    this.disableAllButtons();
     this.clickedCell = this.transformHandler.screenToWorldCoordinates(
       event.x,
       event.y,
@@ -317,7 +319,7 @@ export class RadialMenu implements Layer {
       return;
     }
     const tile = this.g.ref(this.clickedCell.x, this.clickedCell.y);
-
+    this.originalTileOwner = this.g.owner(tile);
     if (this.g.inSpawnPhase()) {
       if (this.g.isLand(tile) && !this.g.hasOwner(tile)) {
         this.enableCenterButton(true);
@@ -325,10 +327,8 @@ export class RadialMenu implements Layer {
       return;
     }
 
-    const myPlayer = this.g
-      .playerViews()
-      .find((p) => p.clientID() == this.clientID);
-    if (!myPlayer) {
+    const myPlayer = this.g.myPlayer();
+    if (myPlayer === null) {
       consolex.warn("my player not found");
       return;
     }
@@ -353,8 +353,27 @@ export class RadialMenu implements Layer {
         this.playerPanel.show(actions, tile);
       });
     }
-    this.activateMenuElement(Slot.Close, "#DC2626", xIcon, () => {});
 
+    if (actions?.interaction?.canSendAllianceRequest) {
+      this.activateMenuElement(Slot.Ally, "#53ac75", allianceIcon, () => {
+        this.eventBus.emit(
+          new SendAllianceRequestIntentEvent(
+            myPlayer,
+            this.g.owner(tile) as PlayerView,
+          ),
+        );
+      });
+    }
+    if (actions?.interaction?.canBreakAlliance) {
+      this.activateMenuElement(Slot.Ally, "#c74848", traitorIcon, () => {
+        this.eventBus.emit(
+          new SendBreakAllianceIntentEvent(
+            myPlayer,
+            this.g.owner(tile) as PlayerView,
+          ),
+        );
+      });
+    }
     if (actions.canBoat) {
       this.activateMenuElement(Slot.Boat, "#3f6ab1", boatIcon, () => {
         this.eventBus.emit(
@@ -421,6 +440,14 @@ export class RadialMenu implements Layer {
       }
     }
     this.hideRadialMenu();
+  }
+
+  private disableAllButtons() {
+    this.enableCenterButton(false);
+    for (const item of this.menuItems.values()) {
+      item.disabled = true;
+      this.updateMenuItemState(item);
+    }
   }
 
   private activateMenuElement(

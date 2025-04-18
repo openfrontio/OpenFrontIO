@@ -1,18 +1,18 @@
+import { Colord } from "colord";
+import { GameConfig, GameID } from "../Schemas";
 import {
   Difficulty,
   Game,
   GameMapType,
   Gold,
   Player,
-  PlayerID,
   PlayerInfo,
+  Team,
   TerraNullius,
   Tick,
   UnitInfo,
   UnitType,
 } from "../game/Game";
-import { Colord, colord } from "colord";
-import { GameConfig, GameID } from "../Schemas";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
@@ -45,9 +45,14 @@ export interface ServerConfig {
   r2SecretKey(): string;
 }
 
+export interface NukeMagnitude {
+  inner: number;
+  outer: number;
+}
+
 export interface Config {
   samHittingChance(): number;
-  samCooldown(): Tick;
+  samWarheadHittingChance(): number;
   spawnImmunityDuration(): Tick;
   serverConfig(): ServerConfig;
   gameConfig(): GameConfig;
@@ -62,6 +67,7 @@ export interface Config {
   instantBuild(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
+  numPlayerTeams(): number;
 
   startManpower(playerInfo: PlayerInfo): number;
   populationIncreaseRate(player: Player | PlayerView): number;
@@ -92,6 +98,7 @@ export interface Config {
   maxPopulation(player: Player | PlayerView): number;
   cityPopulationIncrease(): number;
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number;
+  warshipShellLifetime(): number;
   boatMaxNumber(): number;
   allianceDuration(): Tick;
   allianceRequestCooldown(): Tick;
@@ -105,18 +112,27 @@ export interface Config {
   tradeShipGold(dist: number): Gold;
   tradeShipSpawnRate(numberOfPorts: number): number;
   defensePostRange(): number;
+  SAMCooldown(): number;
+  SiloCooldown(): number;
   defensePostDefenseBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
   // 0-1
   traitorDefenseDebuff(): number;
+  traitorDuration(): number;
+  nukeMagnitudes(unitType: UnitType): NukeMagnitude;
+  defaultNukeSpeed(): number;
+  nukeDeathFactor(humans: number, tilesOwned: number): number;
 }
 
 export interface Theme {
+  teamColor(team: Team): Colord;
   territoryColor(playerInfo: PlayerView): Colord;
   specialBuildingColor(playerInfo: PlayerView): Colord;
   borderColor(playerInfo: PlayerView): Colord;
   defendedBorderColor(playerInfo: PlayerView): Colord;
+  focusedBorderColor(): Colord;
+  focusedDefendedBorderColor(): Colord;
   terrainColor(gm: GameMap, tile: TileRef): Colord;
   backgroundColor(): Colord;
   falloutColor(): Colord;

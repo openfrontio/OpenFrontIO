@@ -1,14 +1,8 @@
-import { colord } from "colord";
 import { EventBus } from "../../core/EventBus";
-import { Cell, Game, Player } from "../../core/game/Game";
-import {
-  calculateBoundingBox,
-  calculateBoundingBoxCenter,
-} from "../../core/Util";
-import { ZoomEvent, DragEvent, CenterCameraEvent } from "../InputHandler";
-import { GoToPlayerEvent, GoToUnitEvent } from "./layers/Leaderboard";
-import { placeName } from "./NameBoxCalculator";
+import { Cell } from "../../core/game/Game";
 import { GameView } from "../../core/game/GameView";
+import { CenterCameraEvent, DragEvent, ZoomEvent } from "../InputHandler";
+import { GoToPlayerEvent, GoToUnitEvent } from "./layers/Leaderboard";
 
 export class TransformHandler {
   public scale: number = 1.8;
@@ -103,6 +97,10 @@ export class TransformHandler {
   }
 
   screenBoundingRect(): [Cell, Cell] {
+    const canvasRect = this.boundingRect();
+    const canvasWidth = canvasRect.width;
+    const canvasHeight = canvasRect.height;
+
     const LeftX = -this.game.width() / 2 / this.scale + this.offsetX;
     const TopY = -this.game.height() / 2 / this.scale + this.offsetY;
 
@@ -110,12 +108,12 @@ export class TransformHandler {
     const gameTopY = TopY + this.game.height() / 2;
 
     const rightX =
-      (screen.width - this.game.width() / 2) / this.scale + this.offsetX;
-    const rightY =
-      (screen.height - this.game.height() / 2) / this.scale + this.offsetY;
+      (canvasWidth - this.game.width() / 2) / this.scale + this.offsetX;
+    const bottomY =
+      (canvasHeight - this.game.height() / 2) / this.scale + this.offsetY;
 
     const gameRightX = rightX + this.game.width() / 2;
-    const gameBottomY = rightY + this.game.height() / 2;
+    const gameBottomY = bottomY + this.game.height() / 2;
 
     return [
       new Cell(Math.floor(gameLeftX), Math.floor(gameTopY)),
@@ -142,6 +140,7 @@ export class TransformHandler {
   }
 
   onGoToPlayer(event: GoToPlayerEvent) {
+    this.game.setFocusedPlayer(event.player);
     this.clearTarget();
     this.target = new Cell(
       event.player.nameLocation().x,

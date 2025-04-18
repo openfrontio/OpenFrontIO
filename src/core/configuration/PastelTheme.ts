@@ -1,18 +1,23 @@
-import { Colord, colord, random } from "colord";
-import { PlayerType, TeamName, TerrainType } from "../game/Game";
-import { Theme } from "./Config";
+import { Colord, colord } from "colord";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
+import { PlayerType, Team, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import {
   blue,
   botColor,
   botColors,
+  green,
   humanColors,
+  orange,
+  purple,
   red,
+  teal,
   territoryColors,
+  yellow,
 } from "./Colors";
+import { Theme } from "./Config";
 
 export const pastelTheme = new (class implements Theme {
   private rand = new PseudoRandom(123);
@@ -36,15 +41,31 @@ export const pastelTheme = new (class implements Theme {
 
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
 
+  teamColor(team: Team): Colord {
+    switch (team) {
+      case Team.Blue:
+        return blue;
+      case Team.Red:
+        return red;
+      case Team.Teal:
+        return teal;
+      case Team.Purple:
+        return purple;
+      case Team.Yellow:
+        return yellow;
+      case Team.Orange:
+        return orange;
+      case Team.Green:
+        return green;
+      case Team.Bot:
+        return botColor;
+    }
+    throw new Error(`Missing color for ${team}`);
+  }
+
   territoryColor(player: PlayerView): Colord {
-    if (player.teamName() == TeamName.Bot) {
-      return botColor;
-    }
-    if (player.teamName() == TeamName.Red) {
-      return red;
-    }
-    if (player.teamName() == TeamName.Blue) {
-      return blue;
+    if (player.team() !== null) {
+      return this.teamColor(player.team());
     }
     if (player.info().playerType == PlayerType.Human) {
       return humanColors[simpleHash(player.id()) % humanColors.length];
@@ -83,6 +104,13 @@ export const pastelTheme = new (class implements Theme {
       g: Math.max(bc.g - 40, 0),
       b: Math.max(bc.b - 40, 0),
     });
+  }
+
+  focusedBorderColor(): Colord {
+    return colord({ r: 230, g: 230, b: 230 });
+  }
+  focusedDefendedBorderColor(): Colord {
+    return colord({ r: 200, g: 200, b: 200 });
   }
 
   terrainColor(gm: GameMap, tile: TileRef): Colord {

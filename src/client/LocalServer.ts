@@ -1,27 +1,17 @@
-import { Config, GameEnv, ServerConfig } from "../core/configuration/Config";
 import { consolex } from "../core/Consolex";
-import { GameEvent } from "../core/EventBus";
 import {
   AllPlayersStats,
-  ClientID,
   ClientMessage,
   ClientMessageSchema,
   ClientSendWinnerMessage,
-  GameConfig,
-  GameID,
   GameRecordSchema,
   Intent,
   PlayerRecord,
   ServerMessage,
   ServerStartGameMessageSchema,
-  ServerTurnMessageSchema,
   Turn,
 } from "../core/Schemas";
-import {
-  createGameRecord,
-  decompressGameRecord,
-  generateID,
-} from "../core/Util";
+import { createGameRecord, decompressGameRecord } from "../core/Util";
 import { LobbyConfig } from "./ClientGameRunner";
 import { getPersistentIDFromCookie } from "./Main";
 
@@ -59,7 +49,8 @@ export class LocalServer {
     this.clientMessage(
       ServerStartGameMessageSchema.parse({
         type: "start",
-        config: this.lobbyConfig.gameConfig,
+        gameID: this.lobbyConfig.gameStartInfo.gameID,
+        gameStartInfo: this.lobbyConfig.gameStartInfo,
         turns: this.turns,
       }),
     );
@@ -136,7 +127,7 @@ export class LocalServer {
     }
     const pastTurn: Turn = {
       turnNumber: this.turns.length,
-      gameID: this.lobbyConfig.gameID,
+      gameID: this.lobbyConfig.gameStartInfo.gameID,
       intents: this.intents,
     };
     this.turns.push(pastTurn);
@@ -154,13 +145,13 @@ export class LocalServer {
       {
         ip: null,
         persistentID: getPersistentIDFromCookie(),
-        username: this.lobbyConfig.playerName(),
+        username: this.lobbyConfig.playerName,
         clientID: this.lobbyConfig.clientID,
       },
     ];
     const record = createGameRecord(
-      this.lobbyConfig.gameID,
-      this.lobbyConfig.gameConfig,
+      this.lobbyConfig.gameStartInfo.gameID,
+      this.lobbyConfig.gameStartInfo,
       players,
       this.turns,
       this.startedAt,
@@ -178,7 +169,7 @@ export class LocalServer {
       type: "application/json",
     });
     const workerPath = this.lobbyConfig.serverConfig.workerPath(
-      this.lobbyConfig.gameID,
+      this.lobbyConfig.gameStartInfo.gameID,
     );
     navigator.sendBeacon(`/${workerPath}/api/archive_singleplayer_game`, blob);
   }

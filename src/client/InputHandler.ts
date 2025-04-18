@@ -1,7 +1,6 @@
 import { EventBus, GameEvent } from "../core/EventBus";
-import { UserSettings } from "../core/game/UserSettings";
-import { Game } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
+import { UserSettings } from "../core/game/UserSettings";
 
 export class MouseUpEvent implements GameEvent {
   constructor(
@@ -70,6 +69,12 @@ export class ShowBuildMenuEvent implements GameEvent {
     public readonly y: number,
   ) {}
 }
+export class ShowEmojiMenuEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
 
 export class AttackRatioEvent implements GameEvent {
   constructor(public readonly attackRatio: number) {}
@@ -94,7 +99,7 @@ export class InputHandler {
 
   private alternateView = false;
 
-  private moveInterval: any = null;
+  private moveInterval: NodeJS.Timeout = null;
   private activeKeys = new Set<string>();
 
   private readonly PAN_SPEED = 5;
@@ -291,6 +296,10 @@ export class InputHandler {
 
     if (event.ctrlKey) {
       this.eventBus.emit(new ShowBuildMenuEvent(event.clientX, event.clientY));
+      return;
+    }
+    if (event.altKey) {
+      this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
       return;
     }
 

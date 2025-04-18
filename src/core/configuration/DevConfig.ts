@@ -1,4 +1,4 @@
-import { GameType, UnitInfo, UnitType } from "../game/Game";
+import { UnitInfo, UnitType } from "../game/Game";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
 import { GameEnv, ServerConfig } from "./Config";
@@ -24,6 +24,14 @@ export class DevServerConfig extends DefaultServerConfig {
     return Math.random() < 0.5 ? 2 : 3;
   }
 
+  samWarheadHittingChance(): number {
+    return 1;
+  }
+
+  samHittingChance(): number {
+    return 1;
+  }
+
   discordRedirectURI(): string {
     return "http://localhost:3000/auth/callback";
   }
@@ -40,10 +48,10 @@ export class DevConfig extends DefaultConfig {
     super(sc, gc, us);
   }
 
-  numSpawnPhaseTurns(): number {
-    return this.gameConfig().gameType == GameType.Singleplayer ? 40 : 100;
-    // return 100
-  }
+  // numSpawnPhaseTurns(): number {
+  //   return this.gameConfig().gameType == GameType.Singleplayer ? 70 : 100;
+  //   // return 100
+  // }
 
   unitInfo(type: UnitType): UnitInfo {
     const info = super.unitInfo(type);

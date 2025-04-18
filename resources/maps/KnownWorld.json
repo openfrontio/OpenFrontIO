@@ -1,0 +1,362 @@
+{
+  "name": "Known_World",
+  "width": 2652,
+  "height": 1522,
+  "nations": [
+    {
+      "coordinates": [297, 84],
+      "name": "Free Folk",
+      "strength": 2
+    },
+    {
+      "coordinates": [352, 160],
+      "name": "Nights Watch",
+      "strength": 2
+    },
+    {
+      "coordinates": [174, 227],
+      "name": "House Mormont",
+      "strength": 1
+    },
+    {
+      "coordinates": [504, 186],
+      "name": "House Magnar",
+      "strength": 1
+    },
+    {
+      "coordinates": [381, 249],
+      "name": "House Umber",
+      "strength": 1
+    },
+    {
+      "coordinates": [494, 295],
+      "name": "House Karstark",
+      "strength": 1
+    },
+    {
+      "coordinates": [383, 343],
+      "name": "House Bolton",
+      "strength": 2
+    },
+    {
+      "coordinates": [374, 495],
+      "name": "House locke",
+      "strength": 2
+    },
+    {
+      "coordinates": [275, 377],
+      "name": "House Stark",
+      "strength": 3
+    },
+    {
+      "coordinates": [113, 411],
+      "name": "House Ryswell",
+      "strength": 1
+    },
+    {
+      "coordinates": [248, 546],
+      "name": "House Reed",
+      "strength": 1
+    },
+    {
+      "coordinates": [116, 570],
+      "name": "House Flint's Finger",
+      "strength": 1
+    },
+    {
+      "coordinates": [256, 628],
+      "name": "House Frey",
+      "strength": 2
+    },
+    {
+      "coordinates": [535, 700],
+      "name": "House Royce",
+      "strength": 1
+    },
+    {
+      "coordinates": [396, 687],
+      "name": "House Arryn",
+      "strength": 3
+    },
+    {
+      "coordinates": [416, 623],
+      "name": "House Corbray",
+      "strength": 2
+    },
+    {
+      "coordinates": [246, 746],
+      "name": "House Tully",
+      "strength": 3
+    },
+    {
+      "coordinates": [104, 830],
+      "name": "House Lannister",
+      "strength": 3
+    },
+    {
+      "coordinates": [89, 697],
+      "name": "House Greyjoy",
+      "strength": 2
+    },
+    {
+      "coordinates": [128, 729],
+      "name": "House Banefort",
+      "strength": 1
+    },
+    {
+      "coordinates": [325, 767],
+      "name": "Harrenhall",
+      "strength": 1
+    },
+    {
+      "coordinates": [190, 927],
+      "name": "House Rowan",
+      "strength": 1
+    },
+    {
+      "coordinates": [383, 864],
+      "name": "Kings Landing",
+      "strength": 3
+    },
+    {
+      "coordinates": [475, 820],
+      "name": "Dragonstone",
+      "strength": 2
+    },
+    {
+      "coordinates": [333, 902],
+      "name": "House Meadows",
+      "strength": 2
+    },
+    {
+      "coordinates": [169, 1006],
+      "name": "House Tyrell",
+      "strength": 3
+    },
+    {
+      "coordinates": [301, 1030],
+      "name": "House Selmy",
+      "strength": 1
+    },
+    {
+      "coordinates": [456, 975],
+      "name": "House Baratheon",
+      "strength": 3
+    },
+    {
+      "coordinates": [523, 963],
+      "name": "House Tarth",
+      "strength": 1
+    },
+    {
+      "coordinates": [514, 1156],
+      "name": "House Martell",
+      "strength": 3
+    },
+    {
+      "coordinates": [403, 1189],
+      "name": "House Vaith",
+      "strength": 1
+    },
+    {
+      "coordinates": [330, 1122],
+      "name": "House Yronwood",
+      "strength": 2
+    },
+    {
+      "coordinates": [251, 1158],
+      "name": "House Qorgyle",
+      "strength": 1
+    },
+    {
+      "coordinates": [188, 1148],
+      "name": "House Dayne",
+      "strength": 1
+    },
+    {
+      "coordinates": [108, 1090],
+      "name": "House Hightower",
+      "strength": 2
+    },
+    {
+      "coordinates": [176, 1045],
+      "name": "House Tarly",
+      "strength": 1
+    },
+    {
+      "coordinates": [80, 900],
+      "name": "House Craekham",
+      "strength": 1
+    },
+    {
+      "coordinates": [183, 808],
+      "name": "House Brax",
+      "strength": 1
+    },
+    {
+      "coordinates": [460, 748],
+      "name": "House Redfort",
+      "strength": 1
+    },
+    {
+      "coordinates": [651, 630],
+      "name": "Free City Of Bravos",
+      "strength": 3
+    },
+    {
+      "coordinates": [658, 871],
+      "name": "Free City Of Pentos",
+      "strength": 2
+    },
+    {
+      "coordinates": [702, 1049],
+      "name": "Free City Of Myr",
+      "strength": 2
+    },
+    {
+      "coordinates": [603, 1042],
+      "name": "Free City Of Tyrosh",
+      "strength": 2
+    },
+    {
+      "coordinates": [933, 1177],
+      "name": "Free City Of Volantis",
+      "strength": 3
+    },
+    {
+      "coordinates": [974, 871],
+      "name": "Free City Of Qohor",
+      "strength": 2
+    },
+    {
+      "coordinates": [894, 779],
+      "name": "Free City Of Norvos",
+      "strength": 2
+    },
+    {
+      "coordinates": [1157, 770],
+      "name": "Samor",
+      "strength": 1
+    },
+    {
+      "coordinates": [1119, 1163],
+      "name": "Mantarys",
+      "strength": 2
+    },
+    {
+      "coordinates": [1184, 1170],
+      "name": "Tolos",
+      "strength": 2
+    },
+    {
+      "coordinates": [1312, 664],
+      "name": "Omber",
+      "strength": 1
+    },
+    {
+      "coordinates": [1610, 779],
+      "name": "Vaes Dothrak",
+      "strength": 3
+    },
+    {
+      "coordinates": [1651, 500],
+      "name": "New Ibbish",
+      "strength": 2
+    },
+    {
+      "coordinates": [1381, 1093],
+      "name": "Meereen",
+      "strength": 2
+    },
+    {
+      "coordinates": [1343, 1134],
+      "name": "Yunkai",
+      "strength": 2
+    },
+    {
+      "coordinates": [1319, 1230],
+      "name": "Astaphor",
+      "strength": 2
+    },
+    {
+      "coordinates": [1606, 1310],
+      "name": "Port Yhos",
+      "strength": 1
+    },
+    {
+      "coordinates": [1555, 1110],
+      "name": "Lhazar",
+      "strength": 1
+    },
+    {
+      "coordinates": [1832, 1054],
+      "name": "Zabhad",
+      "strength": 3
+    },
+    {
+      "coordinates": [1796, 1300],
+      "name": "Qarth",
+      "strength": 3
+    },
+    {
+      "coordinates": [1753, 1483],
+      "name": "Vahar",
+      "strength": 2
+    },
+    {
+      "coordinates": [1779, 1414],
+      "name": "Faros",
+      "strength": 2
+    },
+    {
+      "coordinates": [2107, 1315],
+      "name": "Yi Ti",
+      "strength": 3
+    },
+    {
+      "coordinates": [2233, 1462],
+      "name": "Leng",
+      "strength": 2
+    },
+    {
+      "coordinates": [2312, 1363],
+      "name": "Jinqi",
+      "strength": 2
+    },
+    {
+      "coordinates": [2563, 1474],
+      "name": "Shadow Lands",
+      "strength": 2
+    },
+    {
+      "coordinates": [2536, 647],
+      "name": "Mossovy",
+      "strength": 2
+    },
+    {
+      "coordinates": [2151, 847],
+      "name": "Jogos Nhai",
+      "strength": 3
+    },
+    {
+      "coordinates": [1415, 1348],
+      "name": "Ghis",
+      "strength": 2
+    },
+    {
+      "coordinates": [1362, 1397],
+      "name": "Ghaen",
+      "strength": 2
+    },
+    {
+      "coordinates": [1849, 1450],
+      "name": "Great Moraq",
+      "strength": 3
+    },
+    {
+      "coordinates": [2351, 782],
+      "name": "N'Ghai",
+      "strength": 2
+    }
+  ]
+}

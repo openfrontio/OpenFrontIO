@@ -1,5 +1,12 @@
 {
+  "lang": {
+    "en": "English",
+    "native": "English",
+    "svg": "uk_us_flag",
+    "lang_code": "en"
+  },
   "main": {
+    "title": "OpenFront (ALPHA)",
     "join_discord": "Join the Discord!",
     "create_lobby": "Create Lobby",
     "join_lobby": "Join Lobby",
@@ -15,6 +22,7 @@
     "action_alt_view": "Alternate view (terrain/countries)",
     "action_attack_altclick": "Attack (when left click is set to open menu)",
     "action_build": "Open build menu",
+    "action_emote": "Open emote menu",
     "action_center": "Center camera on player",
     "action_zoom": "Zoom out/in",
     "action_move_camera": "Move camera",
@@ -28,7 +36,7 @@
     "ui_pop": "Pop - The amount of units you have, your max population and the rate at which you gain them.",
     "ui_gold": "Gold - The amount of gold you have and the rate at which you gain it.",
     "ui_troops_workers": "Troops and Workers - The amount of allocated troops and workers. Troops are used to attack or defend against attacks. Workers are used to generate gold. You can adjust the number of troops and workers using the slider.",
-    "ui_attack_ratio": "Attack ratio - The amount of troops that will be used when you attack. You can adjust the attack ratio using the slider.",
+    "ui_attack_ratio": "Attack ratio - The amount of troops that will be used when you attack. You can adjust the attack ratio using the slider. Having more attacking troops than defending troops will make you lose fewer troops in the attack, while having less will increase the damage dealt to your attacking troops. The effect doesn't go beyond ratios of 2:1.",
     "ui_options": "Options",
     "ui_options_desc": "The following elements can be found inside:",
     "option_pause": "Pause/Unpause the game - Only available in single player mode.",
@@ -48,7 +56,7 @@
     "info_emoji": "Send an emoji to the player.",
     "info_ally_panel": "Ally info panel",
     "info_ally_desc": "When you ally with a player, the following new icons become available:",
-    "ally_betray": "Betray your ally, ending the alliance. You will now have a permanent icon stuck next to your name. Bots are less likely to ally with you and players will think twice before doing so.",
+    "ally_betray": "Betray your ally, ending the alliance. You will now have a permanent icon stuck next to your name, unless the other nation was a traitor themselves. Attacks against you will incur less losses for the attacker until the end of the game, bots are less likely to ally with you and players will think twice before doing so.",
     "ally_donate": "Donate some of your troops to your ally. Used when they're low on troops and are being attacked, or when they need that extra power to crush an enemy.",
     "build_menu_title": "Build menu",
     "build_name": "Name",
@@ -61,7 +69,7 @@
     "build_port": "Port",
     "build_port_desc": "Automatically sends trade ships between ports of your country and other countries (except if you clicked \"stop trade\" on them or they clicked \"stop trade on you\"), giving gold to both sides. Allows building Battleships. Can only be built near water.",
     "build_warship": "Warship",
-    "build_warship_desc": "Patrols in an area, capturing trade ships and destroying enemy Warships and Boats. Spawns from the nearest Port and patrols the area you first clicked to build it.",
+    "build_warship_desc": "Patrols in an area, capturing trade ships and destroying enemy Warships and Boats. Spawns from the nearest Port and patrols the area you first clicked to build it. You can control Warships by attack-clicking on them and then attack-clicking the new area you want them to move to.",
     "build_silo": "Missile Silo",
     "build_silo_desc": "Allows launching missiles.",
     "build_sam": "SAM Launcher",
@@ -81,8 +89,6 @@
   },
   "single_modal": {
     "title": "Single Player",
-    "map": "Map",
-    "difficulty": "Difficulty",
     "allow_alliances": "Allow alliances",
     "options_title": "Options",
     "bots": "Bots: ",
@@ -95,6 +101,7 @@
     "start": "Start Game"
   },
   "map": {
+    "map": "Map",
     "world": "World",
     "europe": "Europe",
     "mena": "MENA",
@@ -110,7 +117,11 @@
     "australia": "Australia",
     "random": "Random",
     "iceland": "Iceland",
-    "pangaea": "Pangaea"
+    "pangaea": "Pangaea",
+    "japan": "Japan and Neighbors",
+    "betweentwoseas": "Between Two Seas",
+    "knownworld": "Known World",
+    "faroeislands": "Faroe Islands"
   },
   "private_lobby": {
     "title": "Join Private Lobby",
@@ -136,9 +147,8 @@
   },
   "host_modal": {
     "title": "Private Lobby",
-    "map": "Map",
-    "difficulty": "Difficulty",
     "mode": "Mode",
+    "team_count": "Number of Teams",
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
@@ -152,7 +162,12 @@
     "waiting": "Waiting for players...",
     "start": "Start Game"
   },
+  "game_starting_modal": {
+    "title": "Game is Starting...",
+    "desc": "Preparing for the lobby to start. Please wait."
+  },
   "difficulty": {
+    "difficulty": "Difficulty",
     "Relaxed": "Relaxed",
     "Balanced": "Balanced",
     "Intense": "Intense",
@@ -161,5 +176,8 @@
   "game_mode": {
     "ffa": "Free for All",
     "teams": "Teams"
+  },
+  "select_lang": {
+    "title": "Select Language"
   }
 }

@@ -1,14 +1,13 @@
 import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { Layer } from "./Layer";
-import { Game } from "../../../core/game/Game";
-import { ClientID } from "../../../core/Schemas";
-import { renderNumber, renderTroops } from "../../Utils";
+import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { UIState } from "../UIState";
-import { SendSetTargetTroopRatioEvent } from "../../Transport";
 import { GameView } from "../../../core/game/GameView";
+import { ClientID } from "../../../core/Schemas";
 import { AttackRatioEvent } from "../../InputHandler";
+import { SendSetTargetTroopRatioEvent } from "../../Transport";
+import { renderNumber, renderTroops } from "../../Utils";
+import { UIState } from "../UIState";
+import { Layer } from "./Layer";
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Layer {
@@ -57,8 +56,16 @@ export class ControlPanel extends LitElement implements Layer {
 
   private _popRateIsIncreasing: boolean = true;
 
+  private init_: boolean = false;
+
   init() {
-    this.attackRatio = 0.2;
+    this.attackRatio = Number(
+      localStorage.getItem("settings.attackRatio") ?? "0.2",
+    );
+    this.targetTroopRatio = Number(
+      localStorage.getItem("settings.troopRatio") ?? "0.95",
+    );
+    this.init_ = true;
     this.uiState.attackRatio = this.attackRatio;
     this.currentTroopRatio = this.targetTroopRatio;
     this.eventBus.on(AttackRatioEvent, (event) => {
@@ -88,6 +95,13 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   tick() {
+    if (this.init_) {
+      this.eventBus.emit(
+        new SendSetTargetTroopRatioEvent(this.targetTroopRatio),
+      );
+      this.init_ = false;
+    }
+
     if (!this._isVisible && !this.game.inSpawnPhase()) {
       this.setVisibile(true);
     }

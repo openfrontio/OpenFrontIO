@@ -26,10 +26,12 @@ echo "Container name: ${CONTAINER_NAME}"
 echo "Docker image: ${FULL_IMAGE_NAME}"
 
 # Load environment variables if .env exists
-if [ -f /root/.env ]; then
+if [ -f /home/openfront/.env ]; then
   echo "Loading environment variables from .env file..."
-  export $(grep -v '^#' /root/.env | xargs)
+  export $(grep -v '^#' /home/openfront/.env | xargs)
 fi
+
+docker login -u $DOCKER_USERNAME -p $DOCKER_TOKEN
 
 # Install Loki Docker plugin if not already installed
 if ! docker plugin ls | grep -q "loki"; then
@@ -99,7 +101,7 @@ docker run -d -p 80:80 -p 127.0.0.1:9090:9090 \
   --log-opt loki-external-labels="job=docker,environment=${ENV},host=${REGION},region=${REGION}" \
   --env GAME_ENV=${ENV} \
   --env REGION=${REGION} \
-  --env-file /root/.env \
+  --env-file /home/openfront/.env \
   --name ${CONTAINER_NAME} \
   $FULL_IMAGE_NAME
 

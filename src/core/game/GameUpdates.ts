@@ -1,14 +1,12 @@
-import { ClientID, PlayerStats, AllPlayersStats } from "../Schemas";
+import { AllPlayersStats, ClientID, PlayerStats } from "../Schemas";
 import {
-  AllianceRequest,
   EmojiMessage,
   GameUpdates,
-  MapPos,
   MessageType,
   NameViewData,
   PlayerID,
   PlayerType,
-  TeamName,
+  Team,
   Tick,
   UnitType,
 } from "./Game";
@@ -76,7 +74,7 @@ export interface UnitUpdate {
   warshipTargetId?: number;
   health?: number;
   constructionType?: UnitType;
-  isSamCooldown?: boolean;
+  ticksLeftInCooldown?: Tick;
 }
 
 export interface AttackUpdate {
@@ -95,7 +93,7 @@ export interface PlayerUpdate {
   name: string;
   displayName: string;
   id: PlayerID;
-  teamName?: TeamName;
+  team?: Team;
   smallID: number;
   playerType: PlayerType;
   isAlive: boolean;
@@ -114,6 +112,7 @@ export interface PlayerUpdate {
   incomingAttacks: AttackUpdate[];
   outgoingAllianceRequests: PlayerID[];
   stats: PlayerStats;
+  hasSpawned: boolean;
 }
 
 export interface AllianceRequestUpdate {
@@ -163,7 +162,7 @@ export interface WinUpdate {
   type: GameUpdateType.Win;
   allPlayersStats: AllPlayersStats;
   // Player id or team name.
-  winner: number | TeamName;
+  winner: number | Team;
   winnerType: "player" | "team";
 }
 
