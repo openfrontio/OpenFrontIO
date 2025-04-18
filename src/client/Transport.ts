@@ -558,7 +558,6 @@ export class Transport {
     this.sendIntent({
       type: "cancel_boat",
       clientID: this.lobbyConfig.clientID,
-      playerID: event.playerID,
       unitID: event.unitID,
     });
   }

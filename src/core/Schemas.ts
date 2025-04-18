@@ -267,7 +267,6 @@ export const CancelAttackIntentSchema = BaseIntentSchema.extend({
 
 export const CancelBoatIntentSchema = BaseIntentSchema.extend({
   type: z.literal("cancel_boat"),
-  playerID: ID,
   unitID: z.number(),
 });
 
