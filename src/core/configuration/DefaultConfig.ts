@@ -132,22 +132,8 @@ export class DefaultConfig implements Config {
     private _userSettings: UserSettings,
   ) {}
 
-  samHittingChance(): number {
-    return 0.8;
-  }
-
-  samWarheadHittingChance(): number {
-    return 0.5;
-  }
-
-  traitorDefenseDebuff(): number {
-    return 0.5;
-  }
   traitorDuration(): number {
     return 30 * 10; // 30 seconds
-  }
-  spawnImmunityDuration(): Tick {
-    return 5 * 10;
   }
 
   gameConfig(): GameConfig {
@@ -428,7 +414,7 @@ export class DefaultConfig implements Config {
 
   // Attacks
   traitorDefenseDebuff(): number {
-    return 0.8;
+    return 0.5;
   }
 
   attackAmount(attacker: Player, defender: Player | TerraNullius) {
