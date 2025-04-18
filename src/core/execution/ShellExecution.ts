@@ -3,6 +3,7 @@ import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
+import { PseudoRandom } from "../PseudoRandom";
 
 export class ShellExecution implements Execution {
   private active = true;
@@ -54,7 +55,7 @@ export class ShellExecution implements Execution {
       switch (result.type) {
         case PathFindResultType.Completed:
           this.active = false;
-          this.target.modifyHealth(-this.effectOnTarget());
+          this.target.modifyHealth(-this.effectOnTarget(ticks));
           this.shell.delete(false);
           return;
         case PathFindResultType.NextTile:
@@ -71,9 +72,22 @@ export class ShellExecution implements Execution {
     }
   }
 
-  private effectOnTarget(): number {
+  private effectOnTarget(ticks: number): number {
     const baseDamage: number = this.mg.config().unitInfo(UnitType.Shell).damage;
-    return baseDamage;
+    const damageMod: number = 25;
+    const pseudoRandom = new PseudoRandom(ticks);
+    switch (pseudoRandom.nextInt(1, 6)) {
+      case 1:
+        return baseDamage - damageMod * 2;
+      case 2:
+        return baseDamage - damageMod;
+      case 3:
+        return baseDamage;
+      case 4:
+        return baseDamage + damageMod;
+      case 5:
+        return baseDamage + damageMod * 2;
+    }
   }
 
   isActive(): boolean {
