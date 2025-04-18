@@ -23,10 +23,17 @@ import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
-import { InputHandler, MouseMoveEvent, MouseUpEvent } from "./InputHandler";
+import {
+  AutoMouseUpEvent,
+  InputHandler,
+  MouseMoveEvent,
+  MouseUpEvent,
+} from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentIDFromCookie } from "./Main";
 import {
+  BuildUnitIntentEvent,
+  LastSelectedBuildableEvent,
   SendAttackIntentEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
@@ -164,6 +171,7 @@ export class ClientGameRunner {
   private hasJoined = false;
 
   private lastMousePosition: { x: number; y: number } | null = null;
+  private lastSelectedBuildableUnit: UnitType | null = null;
 
   private lastMessageTime: number = 0;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
@@ -225,6 +233,10 @@ export class ClientGameRunner {
       );
     }, 20000);
     this.eventBus.on(MouseUpEvent, (e) => this.inputEvent(e));
+    this.eventBus.on(AutoMouseUpEvent, (e) => this.autoInputEvent(e));
+    this.eventBus.on(LastSelectedBuildableEvent, (e) =>
+      this.lastSelectedBuildableEvent(e),
+    );
     this.eventBus.on(MouseMoveEvent, (e) => this.onMouseMove(e));
 
     this.renderer.initialize();
@@ -317,6 +329,50 @@ export class ClientGameRunner {
     if (this.connectionCheckInterval) {
       clearInterval(this.connectionCheckInterval);
       this.connectionCheckInterval = null;
+    }
+  }
+
+  private autoInputEvent(event: AutoMouseUpEvent) {
+    if (!this.isActive) {
+      return;
+    }
+    if (this.myPlayer == null) {
+      this.myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      if (this.myPlayer == null) {
+        return;
+      }
+    }
+    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
+      event.x,
+      event.y,
+    );
+    if (!this.gameView.isValidCoord(cell.x, cell.y)) {
+      return;
+    }
+    const tile = this.gameView.ref(cell.x, cell.y);
+    this.myPlayer.actions(tile).then((actions) => {
+      console.log(`got actions: ${JSON.stringify(actions)}`);
+      const unit = actions.buildableUnits.find(
+        (u) => u.type == this.lastSelectedBuildableUnit,
+      );
+      if (unit && unit.canBuild) {
+        this.eventBus.emit(
+          new BuildUnitIntentEvent(this.lastSelectedBuildableUnit, cell),
+        );
+      } else {
+        this.eventBus.emit(new MouseUpEvent(event.x, event.y));
+        this.lastSelectedBuildableUnit = null;
+        document.body.style.cursor = "default";
+      }
+    });
+  }
+
+  private lastSelectedBuildableEvent(event: LastSelectedBuildableEvent) {
+    this.lastSelectedBuildableUnit = event.unit;
+    if (event.icon) {
+      document.body.style.cursor = `url("${event.icon}") 16 16, pointer`;
+    } else {
+      document.body.style.cursor = "default";
     }
   }
 
