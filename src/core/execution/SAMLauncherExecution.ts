@@ -21,11 +21,9 @@ export class SAMLauncherExecution implements Execution {
   private target: Unit = null;
   private warheadTargets: Unit[] = [];
 
-
   private searchRangeRadius = 80;
   private MIRVWarheadSearchRadius = 400;
   private MIRVWarheadProtectionRadius = 50;
-
 
   private pseudoRandom: PseudoRandom;
 
