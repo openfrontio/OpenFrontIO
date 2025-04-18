@@ -124,13 +124,6 @@ export class UnitView {
     return this.data.ticksLeftInCooldown > 0;
   }
 
-  orderTransportShipRetreat() {
-    if (this.type() != UnitType.TransportShip) {
-      throw Error("Must be a transportship");
-    }
-    this._retreating = true;
-  }
-
   transportShipIsRetreating(): boolean {
     if (this.type() != UnitType.TransportShip) {
       throw Error("Must be a transportship");
