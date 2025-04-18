@@ -21,7 +21,7 @@ import {
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
-import { archive } from "./Archive";
+import { getArchive } from "./Archive";
 import { Client } from "./Client";
 import { gatekeeper } from "./Gatekeeper";
 export enum GamePhase {
@@ -29,6 +29,8 @@ export enum GamePhase {
   Active = "ACTIVE",
   Finished = "FINISHED",
 }
+
+const archive = getArchive();
 
 export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
@@ -371,7 +373,7 @@ export class GameServer {
           username: client.username,
           persistentID: client.persistentID,
         }));
-        archive(
+        archive.archive(
           createGameRecord(
             this.id,
             this.gameStartInfo,
