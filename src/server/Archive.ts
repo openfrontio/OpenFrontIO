@@ -3,6 +3,12 @@ import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameID, GameRecord } from "../core/Schemas";
 import { logger } from "./Logger";
 
+export interface Archive {
+  archive(gameRecord: GameRecord): Promise<void>;
+  readGameRecord(gameId: GameID): Promise<GameRecord | null>;
+  gameRecordExists(gameId: GameID): Promise<boolean>;
+}
+
 const config = getServerConfigFromServer();
 
 const log = logger.child({ component: "Archive" });
