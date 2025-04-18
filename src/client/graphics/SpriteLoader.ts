@@ -82,12 +82,11 @@ export const getColoredSprite = (
   const territoryColor = customTerritoryColor ?? theme.territoryColor(owner);
   const borderColor = customBorderColor ?? theme.borderColor(owner);
   const spawnHighlightColor = theme.spawnHighlightColor();
-  const colorKey = customTerritoryColor
-    ? customTerritoryColor.toRgbString()
-    : "";
-  const key = owner.id() + unit.type() + colorKey;
+  const colorKey = territoryColor.toRgbString() + borderColor.toRgbString();
+  const key = unit.type() + colorKey;
 
   if (coloredSpriteCache.has(key)) {
+    console.log(key);
     return coloredSpriteCache.get(key)!;
   }
 
