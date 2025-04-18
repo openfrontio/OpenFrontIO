@@ -252,7 +252,8 @@ export class WarshipExecution implements Execution {
     let warshipPatrolRange = this.mg.config().warshipPatrolRange();
     const maxAttemptBeforeExpand: number = warshipPatrolRange * 2;
     let attemptCount: number = 0;
-    while (true) {
+    let expandCount: number = 0;
+    while (expandCount < 3) {
       const x =
         this.mg.x(this.patrolCenterTile) +
         this.random.nextInt(-warshipPatrolRange / 2, warshipPatrolRange / 2);
@@ -266,6 +267,7 @@ export class WarshipExecution implements Execution {
       if (!this.mg.isOcean(tile) || this.mg.isShoreline(tile)) {
         attemptCount++;
         if (attemptCount === maxAttemptBeforeExpand) {
+          expandCount++;
           attemptCount = 0;
           warshipPatrolRange =
             warshipPatrolRange + Math.floor(warshipPatrolRange / 2);
