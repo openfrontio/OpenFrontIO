@@ -2,7 +2,6 @@ import { Execution, Game, Player, PlayerID } from "../game/Game";
 
 export class BoatRetreatExecution implements Execution {
   private active = true;
-  private retreatBoatOrdered = false;
   private player: Player;
   private startTick: number;
   private mg: Game;
@@ -24,11 +23,8 @@ export class BoatRetreatExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (!this.retreatBoatOrdered) {
-      this.player.orderBoatRetreat(this.unitID);
-      this.retreatBoatOrdered = true;
-      this.active = false;
-    }
+    this.player.orderBoatRetreat(this.unitID);
+    this.active = false;
   }
 
   owner(): Player {
