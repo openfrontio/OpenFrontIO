@@ -4,7 +4,12 @@ import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { consolex } from "../core/Consolex";
-import { Difficulty, GameMapType, GameMode } from "../core/game/Game";
+import {
+  Difficulty,
+  GameMapType,
+  GameMode,
+  mapCategories,
+} from "../core/game/Game";
 import { GameConfig, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
@@ -12,29 +17,6 @@ import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";
-
-const mapCategories: Record<string, GameMapType[]> = {
-  continental: [
-    GameMapType.World,
-    GameMapType.NorthAmerica,
-    GameMapType.SouthAmerica,
-    GameMapType.Europe,
-    GameMapType.Asia,
-    GameMapType.Africa,
-    GameMapType.Oceania,
-  ],
-  regional: [
-    GameMapType.BlackSea,
-    GameMapType.Britannia,
-    GameMapType.GatewayToTheAtlantic,
-    GameMapType.BetweenTwoSeas,
-    GameMapType.Iceland,
-    GameMapType.Japan,
-    GameMapType.Mena,
-    GameMapType.Australia,
-  ],
-  fantasy: [GameMapType.Pangaea, GameMapType.Mars, GameMapType.KnownWorld],
-};
 
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
@@ -97,6 +79,7 @@ export class HostLobbyModal extends LitElement {
           <div class="options-section">
             <div class="option-title">${translateText("map.map")}</div>
             <div class="option-cards flex-col">
+              <!-- Use the imported mapCategories -->
               ${Object.entries(mapCategories).map(
                 ([categoryKey, maps]) => html`
                   <div class="w-full mb-4">

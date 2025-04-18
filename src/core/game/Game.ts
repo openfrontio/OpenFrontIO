@@ -64,6 +64,29 @@ export enum GameMapType {
   KnownWorld = "Known World",
 }
 
+export const mapCategories: Record<string, GameMapType[]> = {
+  continental: [
+    GameMapType.World,
+    GameMapType.NorthAmerica,
+    GameMapType.SouthAmerica,
+    GameMapType.Europe,
+    GameMapType.Asia,
+    GameMapType.Africa,
+    GameMapType.Oceania,
+  ],
+  regional: [
+    GameMapType.BlackSea,
+    GameMapType.Britannia,
+    GameMapType.GatewayToTheAtlantic,
+    GameMapType.BetweenTwoSeas,
+    GameMapType.Iceland,
+    GameMapType.Japan,
+    GameMapType.Mena,
+    GameMapType.Australia,
+  ],
+  fantasy: [GameMapType.Pangaea, GameMapType.Mars, GameMapType.KnownWorld],
+};
+
 export enum GameType {
   Singleplayer = "Singleplayer",
   Public = "Public",

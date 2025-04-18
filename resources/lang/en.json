@@ -125,7 +125,7 @@
   "map_categories": {
     "continental": "Continental",
     "regional": "Regional",
-    "fantasy": "Fantasy"
+    "fantasy": "Other"
   },
   "private_lobby": {
     "title": "Join Private Lobby",

@@ -3,7 +3,13 @@ import { customElement, query, state } from "lit/decorators.js";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import { consolex } from "../core/Consolex";
-import { Difficulty, GameMapType, GameMode, GameType } from "../core/game/Game";
+import {
+  Difficulty,
+  GameMapType,
+  GameMode,
+  GameType,
+  mapCategories,
+} from "../core/game/Game";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
@@ -13,29 +19,6 @@ import "./components/Maps";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
-
-const mapCategories: Record<string, GameMapType[]> = {
-  continental: [
-    GameMapType.World,
-    GameMapType.NorthAmerica,
-    GameMapType.SouthAmerica,
-    GameMapType.Europe,
-    GameMapType.Asia,
-    GameMapType.Africa,
-    GameMapType.Oceania,
-  ],
-  regional: [
-    GameMapType.BlackSea,
-    GameMapType.Britannia,
-    GameMapType.GatewayToTheAtlantic,
-    GameMapType.BetweenTwoSeas,
-    GameMapType.Iceland,
-    GameMapType.Japan,
-    GameMapType.Mena,
-    GameMapType.Australia,
-  ],
-  fantasy: [GameMapType.Pangaea, GameMapType.Mars, GameMapType.KnownWorld],
-};
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
@@ -62,6 +45,7 @@ export class SinglePlayerModal extends LitElement {
           <div class="options-section">
             <div class="option-title">${translateText("map.map")}</div>
             <div class="option-cards flex-col">
+              <!-- Use the imported mapCategories -->
               ${Object.entries(mapCategories).map(
                 ([categoryKey, maps]) => html`
                   <div class="w-full mb-4">
