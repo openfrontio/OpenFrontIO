@@ -364,7 +364,7 @@ export class DefaultConfig implements Config {
             p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
-                  1_500_000 * 3,
+                  3_000_000,
                   (p.unitsIncludingConstruction(UnitType.SAMLauncher).length +
                     1) *
                     1_500_000,
