@@ -1,5 +1,6 @@
 import { Config } from "../configuration/Config";
 import { ClientID, GameID, PlayerStats } from "../Schemas";
+import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
   Cell,
@@ -35,7 +36,6 @@ import { UnitGrid } from "./UnitGrid";
 import { UserSettings } from "./UserSettings";
 
 const userSettings: UserSettings = new UserSettings();
-const isAnonymous: boolean = userSettings.anonymousNames();
 
 export class UnitView {
   public _wasUpdated = true;
@@ -130,7 +130,9 @@ export class PlayerView {
     private game: GameView,
     public data: PlayerUpdate,
     public nameData: NameViewData,
-  ) {}
+  ) {
+    this.anonymousName = createRandomName(this.data.name, this.data.playerType);
+  }
 
   async actions(tile: TileRef): Promise<PlayerActions> {
     return this.game.worker.playerInteraction(
@@ -169,35 +171,36 @@ export class PlayerView {
     return this.data.flag;
   }
   name(): string {
-    const baseName = this.data.name;
+    const baseName =
+      userSettings.anonymousNames() && this.anonymousName != null
+        ? this.anonymousName
+        : this.data.name;
     const styledName =
       this.data.playerType === "HUMAN"
         ? `<b>${baseName}</b>`
         : `<i>${baseName}</i>`;
 
-    return isAnonymous && this.anonymousName != null
-      ? this.anonymousName
-      : styledName;
+    return styledName;
   }
   nameNotag(): string {
-    return isAnonymous === true && this.anonymousName !== null
+    return userSettings.anonymousNames() && this.anonymousName !== null
       ? this.anonymousName
       : this.data.name;
   }
 
   displayName(): string {
-    const baseName = this.data.displayName;
+    const baseName =
+      userSettings.anonymousNames() && this.anonymousName != null
+        ? this.anonymousName
+        : this.data.displayName;
     const styledName =
       this.data.playerType === "HUMAN"
         ? `<b>${baseName}</b>`
         : `<i>${baseName}</i>`;
-
-    return isAnonymous && this.anonymousName != null
-      ? this.anonymousName
-      : styledName;
+    return styledName;
   }
   displayNameNotag(): string {
-    return isAnonymous === true && this.anonymousName !== null
+    return userSettings.anonymousNames() && this.anonymousName !== null
       ? this.anonymousName
       : this.data.name;
   }

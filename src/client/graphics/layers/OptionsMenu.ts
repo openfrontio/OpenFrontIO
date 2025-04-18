@@ -108,12 +108,6 @@ export class OptionsMenu extends LitElement implements Layer {
 
   private onToggleRandomNameModeButtonClick() {
     this.userSettings.toggleRandomName();
-    const el = document.querySelector("leader-board") as LitElement | null;
-    if (el && typeof el.requestUpdate === "function") {
-      el.requestUpdate();
-    } else {
-      console.warn("requestUpdate() not available");
-    }
   }
 
   private onToggleFocusLockedButtonClick() {
