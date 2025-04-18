@@ -132,6 +132,20 @@ export class DefaultConfig implements Config {
     private _userSettings: UserSettings,
   ) {}
 
+  samHittingChance(): number {
+    return 0.8;
+  }
+
+  samWarheadHittingChance(): number {
+    return 0.5;
+  }
+
+  traitorDefenseDebuff(): number {
+    return 0.8;
+  }
+  spawnImmunityDuration(): Tick {
+    return 5 * 10;
+  }
   gameConfig(): GameConfig {
     return this._gameConfig;
   }
@@ -349,7 +363,7 @@ export class DefaultConfig implements Config {
             p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
-                  1_500_000 * 3,
+                  3_000_000,
                   (p.unitsIncludingConstruction(UnitType.SAMLauncher).length +
                     1) *
                     1_500_000,

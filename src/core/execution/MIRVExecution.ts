@@ -170,7 +170,6 @@ export class MirvExecution implements Execution {
       if (!this.mg.isValidCoord(x, y)) {
         continue;
       }
-      console.log(`got coord ${x}, ${y}`);
       const tile = this.mg.ref(x, y);
       if (!this.mg.isLand(tile)) {
         continue;
