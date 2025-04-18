@@ -125,9 +125,11 @@ export interface Config {
   defensePostTargettingRange(): number;
   // 0-1
   traitorDefenseDebuff(): number;
+  traitorDuration(): number;
   nukeMagnitudes(unitType: UnitType): NukeMagnitude;
   defaultNukeSpeed(): number;
   nukeDeathFactor(humans: number, tilesOwned: number): number;
+  structureMinDist(): number;
 }
 
 export interface Theme {
