@@ -2,7 +2,7 @@
   "lang": {
     "en": "Japanese",
     "native": "日本語",
-    "svg": "ja",
+    "svg": "jp",
     "lang_code": "ja"
   },
   "main": {
@@ -25,7 +25,7 @@
     "action_emote": "エモートメニューを表示",
     "action_center": "カメラをプレイヤーに寄せる",
     "action_zoom": "ズームアウト/イン",
-    "action_move_camera": "ズームアウト/イン",
+    "action_move_camera": "カメラ移動",
     "action_ratio_change": "攻撃比率を増減",
     "action_reset_gfx": "グラフィックをリセット",
     "ui_section": "ゲームUI",
@@ -45,7 +45,7 @@
     "option_settings": "設定メニュー - 設定メニューを開きます。左クリックでオルタネート表示、ダークモード、絵文字、アクションを切り替えることができます。",
     "radial_title": "ラジアルメニュー",
     "radial_desc": "右クリックまたはタップでメニューを開きます：",
-    "radial_build": "右クリックまたはタップでメニューを開きます：",
+    "radial_build": "建設メニューを開く。",
     "radial_info": "情報メニューを開く。",
     "radial_boat": "ボートを送る（海にアクセスできる場合）。",
     "radial_close": "メニューを閉じる。",
@@ -64,7 +64,7 @@
     "build_desc": "説明",
     "build_city": "都市",
     "build_city_desc": "最大人口を増加します。領土を拡張できない時や人口上限に近い時に有効です。",
-    "build_defense": "ターゲットマークを付ける（攻撃協調用）。",
+    "build_defense": "防衛ポスト",
     "build_defense_desc": "国境の防御力を上げます。敵の攻撃が遅くなり、敵の被害が増加します。",
     "build_port": "港",
     "build_port_desc": "自国と他国の港の間で自動的に貿易船を送ります（相手か自分が貿易停止していない場合）。両者にゴールドをもたらします。バトルシップの建造も可能。水辺にのみ建設可能です。",
@@ -91,7 +91,7 @@
     "title": "シングルプレイヤー",
     "allow_alliances": "同盟を許可",
     "options_title": "オプション",
-    "bots": "ボット数:",
+    "bots": "ボット数: ",
     "bots_disabled": "無効",
     "disable_nations": "国家を無効化",
     "instant_build": "即時建設",
@@ -163,8 +163,8 @@
     "start": "ゲーム開始"
   },
   "game_starting_modal": {
-    "title": "ゲームを開始しています…",
-    "desc": "ロビーを開始する準備をしています。しばらくお待ちください。"
+    "title": "ゲーム開始中...",
+    "desc": "スタートのためにロビー準備中... ちょっとまってね!"
   },
   "difficulty": {
     "difficulty": "難易度",
@@ -174,7 +174,7 @@
     "Impossible": "不可能"
   },
   "game_mode": {
-    "ffa": "フリーフォーオール",
+    "ffa": "バトルロワイヤル",
     "teams": "チーム"
   },
   "select_lang": {
