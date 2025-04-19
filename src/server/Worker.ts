@@ -8,17 +8,19 @@ import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { GameConfig, GameRecord } from "../core/Schemas";
-import { archive, readGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
+import { getArchive } from "./ServerUtil";
 import { metrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
 
 const workerId = parseInt(process.env.WORKER_ID || "0");
 const log = logger.child({ comp: `w_${workerId}` });
+
+const archive = getArchive();
 
 // Worker setup
 export function startWorker() {
@@ -195,7 +197,7 @@ export function startWorker() {
   app.get(
     "/api/archived_game/:id",
     gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
-      const gameRecord = await readGameRecord(req.params.id);
+      const gameRecord = await archive.readGameRecord(req.params.id);
 
       if (!gameRecord) {
         return res.status(404).json({
@@ -243,7 +245,7 @@ export function startWorker() {
         return;
       }
       gameRecord.players.forEach((p) => (p.ip = clientIP));
-      archive(gameRecord);
+      archive.archive(gameRecord);
       res.json({
         success: true,
       });
