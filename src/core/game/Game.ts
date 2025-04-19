@@ -422,6 +422,7 @@ export interface Player {
   playerProfile(): PlayerProfile;
   canBoat(tile: TileRef): TileRef | false;
   tradingPorts(port: Unit): Unit[];
+  displayQuickChat(sender: Player, recipient: Player, message: string);
 }
 
 export interface Game extends GameMap {
@@ -522,6 +523,7 @@ export enum MessageType {
   INFO,
   WARN,
   ERROR,
+  CHAT,
 }
 
 export interface NameViewData {

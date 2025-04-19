@@ -1,0 +1,81 @@
+{
+  "help": [
+    {
+      "key": "troops",
+      "text": "Please give me troops!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "gold",
+      "text": "Please give me golds!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "no_attack",
+      "text": "Please don't attack me!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "sorry_attack",
+      "text": "Sorry, I didn’t mean to attack.",
+      "requiresPlayer": false
+    },
+    {
+      "key": "alliance",
+      "text": "Alliance?",
+      "requiresPlayer": false
+    }
+  ],
+  "attack": [
+    { "key": "attack", "text": "Attack [P1]!", "requiresPlayer": true },
+    { "key": "mirv", "text": "Launch a MIRV at [P1]!", "requiresPlayer": true },
+    { "key": "focus", "text": "Focus fire on [P1]!", "requiresPlayer": true },
+    {
+      "key": "finish",
+      "text": "Let's finish off [P1]!",
+      "requiresPlayer": true
+    }
+  ],
+  "defend": [
+    {
+      "key": "defend",
+      "text": "Defend [P1]!",
+      "requiresPlayer": true
+    },
+    {
+      "key": "dont_attack",
+      "text": "Don’t attack [P1]!",
+      "requiresPlayer": true
+    },
+    {
+      "key": "ally",
+      "text": "[P1] is my ally!",
+      "requiresPlayer": true
+    }
+  ],
+  "greet": [
+    { "key": "hello", "text": "Hello!", "requiresPlayer": false },
+    { "key": "good_luck", "text": "Good luck!", "requiresPlayer": false },
+    { "key": "have_fun", "text": "Have fun!", "requiresPlayer": false },
+    { "key": "gg", "text": "GG!", "requiresPlayer": false },
+    {
+      "key": "nice_to_meet",
+      "text": "Nice to meet you!",
+      "requiresPlayer": false
+    },
+    { "key": "well_played", "text": "Well played!", "requiresPlayer": false },
+    { "key": "hi_again", "text": "Hi again!", "requiresPlayer": false },
+    { "key": "bye", "text": "Bye!", "requiresPlayer": false },
+    { "key": "thanks", "text": "Thanks!", "requiresPlayer": false }
+  ],
+  "misc": [
+    { "key": "go", "text": "Let’s go!", "requiresPlayer": false },
+    { "key": "strategy", "text": "Nice strategy!", "requiresPlayer": false },
+    { "key": "fun", "text": "This game is fun!", "requiresPlayer": false },
+    {
+      "key": "pr",
+      "text": "When will my PR finally get merged...?",
+      "requiresPlayer": false
+    }
+  ]
+}
