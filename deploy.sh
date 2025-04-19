@@ -54,6 +54,10 @@ else
     ENV="prod"
 fi
 
+if [ -z "$SSH_KEY" ]; then
+  SSH_KEY="~/.ssh/id_rsa"
+fi
+
 # Check required environment variables
 if [ -z "$SERVER_HOST" ]; then
     echo "Error: SERVER_HOST_${REGION^^} not defined in .env file or environment"
