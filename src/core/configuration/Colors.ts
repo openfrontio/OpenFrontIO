@@ -9,6 +9,8 @@ export const orange = colord({ h: 25, s: 95, l: 53 });
 export const green = colord({ h: 128, s: 49, l: 50 });
 export const botColor: Colord = colord({ r: 210, g: 206, b: 200 }); // Muted Beige Gray
 
+export const defendedTerritoryDarkenPercent: number = 0.075;
+
 export const territoryColors: Colord[] = [
   colord({ r: 230, g: 100, b: 100 }), // Bright Red
   colord({ r: 100, g: 180, b: 230 }), // Sky Blue
