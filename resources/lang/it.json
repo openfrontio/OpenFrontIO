@@ -1,12 +1,5 @@
 {
-  "lang": {
-    "en": "Italian",
-    "native": "Italiano",
-    "svg": "it",
-    "lang_code": "it"
-  },
   "main": {
-    "title": "OpenFront (ALPHA)",
     "join_discord": "Unisciti al nostro Discord!",
     "create_lobby": "Crea lobby",
     "join_lobby": "Unisciti a una Lobby",
@@ -22,7 +15,6 @@
     "action_alt_view": "Vista alternata (terreno/paesi)",
     "action_attack_altclick": "Attacco (quando il clic sinistro è impostato per aprire il menu)",
     "action_build": "Apri il menu di costruzione",
-    "action_emote": "Apri menu emote",
     "action_center": "Centra camera sul giocatore",
     "action_zoom": "Zoom avanti/indietro",
     "action_move_camera": "Muovi la camera",
@@ -85,7 +77,8 @@
     "icon_crown": "Corona - Questo è il giocatore numero uno della classifica",
     "icon_traitor": "Spade incrociate - Traditore. Questo giocatore ha attaccato un alleato.",
     "icon_ally": "Stretta di mano - Alleato, Questo giocatore è un tuo alleato",
-    "info_enemy_panel": "Pannello informazioni nemico"
+    "info_enemy_panel": "Pannello informazioni nemico",
+    "action_emote": "Apri menu emote"
   },
   "single_modal": {
     "title": "Giocatore Singolo",
@@ -101,7 +94,6 @@
     "start": "Inizia partita"
   },
   "map": {
-    "map": "Mappa",
     "world": "Mondo",
     "europe": "Europa",
     "mena": "MENA",
@@ -118,10 +110,10 @@
     "random": "Casuale",
     "iceland": "Islanda",
     "pangaea": "Pangea",
-    "japan": "Giappone e paesi confinanti",
+    "map": "Mappa",
     "betweentwoseas": "Tra I Due Mari",
-    "knownworld": "Mondo Conosciuto",
-    "faroeislands": ""
+    "japan": "Giappone e paesi confinanti",
+    "knownworld": "Mondo Conosciuto"
   },
   "private_lobby": {
     "title": "Partecipa ad una Lobby Privata",
@@ -147,8 +139,6 @@
   },
   "host_modal": {
     "title": "Lobby privata",
-    "mode": "Modalità",
-    "team_count": "Numero di Squadre",
     "options_title": "Opzioni",
     "bots": "Bot: ",
     "bots_disabled": "Disabilitato",
@@ -160,18 +150,25 @@
     "player": "Giocatore",
     "players": "Giocatori",
     "waiting": "In attesa dei giocatori...",
-    "start": "Avvia Partita"
+    "start": "Avvia Partita",
+    "mode": "Modalità"
+  },
+  "difficulty": {
+    "Relaxed": "Tranquillo",
+    "Balanced": "Bilanciato",
+    "Intense": "Intenso",
+    "Impossible": "Impossibile",
+    "difficulty": "Difficoltà"
   },
   "game_starting_modal": {
     "title": "La partita sta iniziando...",
     "desc": "Preparazione per l'avvio della lobby. Attendere prego."
   },
-  "difficulty": {
-    "difficulty": "Difficoltà",
-    "Relaxed": "Tranquillo",
-    "Balanced": "Bilanciato",
-    "Intense": "Intenso",
-    "Impossible": "Impossibile"
+  "lang": {
+    "en": "Italian",
+    "native": "Italiano",
+    "svg": "it",
+    "lang_code": "it"
   },
   "game_mode": {
     "ffa": "Tutti contro tutti",
