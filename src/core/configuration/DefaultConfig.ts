@@ -90,6 +90,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
         GameMapType.Oceania,
         GameMapType.Japan, // Japan at this level because its 2/3 water
         GameMapType.FaroeIslands,
+        GameMapType.Antarctica,
       ].includes(map)
     ) {
       return Math.random() < 0.3 ? 50 : 25;

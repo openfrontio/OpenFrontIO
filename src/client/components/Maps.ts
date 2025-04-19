@@ -24,6 +24,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   BetweenTwoSeas: "Between Two Seas",
   KnownWorld: "Known World",
   FaroeIslands: "Faroe Islands",
+  Antarctica: "Antarctica",
 };
 
 @customElement("map-display")

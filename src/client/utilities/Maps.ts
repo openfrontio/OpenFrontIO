@@ -1,4 +1,5 @@
 import africa from "../../../resources/maps/AfricaThumb.webp";
+import antarctica from "../../../resources/maps/AntarcticaThumb.webp";
 import asia from "../../../resources/maps/AsiaThumb.webp";
 import australia from "../../../resources/maps/AustraliaThumb.webp";
 import betweenTwoSeas from "../../../resources/maps/BetweenTwoSeasThumb.webp";
@@ -60,6 +61,8 @@ export function getMapsImage(map: GameMapType): string {
       return knownworld;
     case GameMapType.FaroeIslands:
       return faroeislands;
+    case GameMapType.Antarctica:
+      return antarctica;
     default:
       return "";
   }
