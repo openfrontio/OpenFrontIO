@@ -43,6 +43,29 @@ describe("GameplayStats", () => {
     expect(gameRecordFromArchive).not.toBeNull();
     expect(gameRecordFromArchive?.id).toEqual(gameRecord.id);
 
-    await last24HoursStats(archive);
+    const records = await last24HoursStats(archive);
+    expect(records.length).toEqual(1);
+
+    // old game record
+    const oldGameRecord = createGameRecord(
+      "game2",
+      null,
+      null,
+      [],
+      Date.now() - 1000 * 60 * 60 * 25,
+      Date.now() - 1000 * 60 * 60 * 24,
+      "",
+      "player",
+      null,
+    );
+    archive.archive(oldGameRecord);
+    const oldGameRecordFromArchive = await archive.readGameRecord(
+      oldGameRecord.id,
+    );
+    expect(oldGameRecordFromArchive).not.toBeNull();
+
+    const oldRecords = await last24HoursStats(archive);
+    expect(oldRecords.length).toEqual(1);
+    expect(oldRecords[0].id).toEqual(gameRecord.id); // "old" game record should not be included
   });
 });

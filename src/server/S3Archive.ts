@@ -166,4 +166,11 @@ export class S3Archive extends Archive {
   async indexRecord(gameRecord: GameRecord) {
     // No-op for S3
   }
+
+  async findRecords(
+    fn: (metadata: GameRecord) => boolean,
+  ): Promise<GameRecord[]> {
+    // No-op for S3
+    return [];
+  }
 }

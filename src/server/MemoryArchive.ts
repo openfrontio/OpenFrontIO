@@ -22,5 +22,30 @@ export class MemoryArchive extends Archive {
     return this.map.has(gameId);
   }
 
-  async indexRecord(gameRecord: GameRecord) {}
+  async indexRecord(gameRecord: GameRecord) {
+    const metadata: GameRecordMetadata = {
+      id: gameRecord.id,
+      startTimestampMS: gameRecord.startTimestampMS,
+      endTimestampMS: gameRecord.endTimestampMS,
+      version: gameRecord.version,
+      gitCommit: gameRecord.gitCommit,
+    };
+
+    this.indices.set(gameRecord.id, metadata);
+  }
+
+  async findRecords(
+    fn: (metadata: GameRecordMetadata) => boolean,
+  ): Promise<GameRecord[]> {
+    const records: GameRecord[] = [];
+    for (const [gameId, metadata] of this.indices.entries()) {
+      if (fn(metadata)) {
+        const record = await this.readGameRecord(gameId);
+        if (record) {
+          records.push(record);
+        }
+      }
+    }
+    return records;
+  }
 }
