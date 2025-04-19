@@ -1,9 +1,11 @@
-import { GameID, GameRecord } from "../core/Schemas";
+import { GameID, GameRecord, GameRecordMetadata } from "../core/Schemas";
+import { Archive } from "./Archive";
 
-export class MemoryArchive {
+export class MemoryArchive extends Archive {
+  private indices: Map<GameID, GameRecordMetadata> = new Map();
   private map: Map<GameID, GameRecord> = new Map();
 
-  async archive(gameRecord: GameRecord) {
+  async archiveRecord(gameRecord: GameRecord) {
     this.map.set(gameRecord.id, gameRecord);
   }
 
@@ -19,4 +21,6 @@ export class MemoryArchive {
   async gameRecordExists(gameId: GameID): Promise<boolean> {
     return this.map.has(gameId);
   }
+
+  async indexRecord(gameRecord: GameRecord) {}
 }

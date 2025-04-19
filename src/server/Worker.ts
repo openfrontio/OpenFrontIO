@@ -8,11 +8,11 @@ import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { GameConfig, GameRecord } from "../core/Schemas";
-import { getArchive } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
+import { getArchive } from "./ServerUtil";
 import { metrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();

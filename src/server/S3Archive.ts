@@ -22,8 +22,8 @@ const bucket = config.r2Bucket();
 const gameFolder = "games";
 const analyticsFolder = "analytics";
 
-export class S3Archive implements Archive {
-  async archive(gameRecord: GameRecord) {
+export class S3Archive extends Archive {
+  async archiveRecord(gameRecord: GameRecord) {
     try {
       gameRecord.gitCommit = config.gitCommit();
       // Archive to R2
@@ -161,5 +161,9 @@ export class S3Archive implements Archive {
       });
       return false;
     }
+  }
+
+  async indexRecord(gameRecord: GameRecord) {
+    // No-op for S3
   }
 }

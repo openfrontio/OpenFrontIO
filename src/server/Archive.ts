@@ -1,20 +1,15 @@
 import { GameID, GameRecord } from "../core/Schemas";
-import { GameEnv } from "../core/configuration/Config";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { MemoryArchive } from "./MemoryArchive";
-import { S3Archive } from "./S3Archive";
 
-export interface Archive {
-  archive(gameRecord: GameRecord): Promise<void>;
-  readGameRecord(gameId: GameID): Promise<GameRecord | null>;
-  gameRecordExists(gameId: GameID): Promise<boolean>;
+export abstract class ArchiveBase {
+  abstract readGameRecord(gameId: GameID): Promise<GameRecord | null>;
+  abstract gameRecordExists(gameId: GameID): Promise<boolean>;
+  abstract archiveRecord(gameRecord: GameRecord): Promise<void>;
+  abstract indexRecord(gameRecord: GameRecord): Promise<void>;
 }
 
-export function getArchive(): Archive {
-  const config = getServerConfigFromServer();
-  if (config.env() == GameEnv.Dev) {
-    return new MemoryArchive();
-  } else {
-    return new S3Archive();
+export abstract class Archive extends ArchiveBase {
+  async archive(gameRecord: GameRecord) {
+    await this.archiveRecord(gameRecord);
+    await this.indexRecord(gameRecord);
   }
 }

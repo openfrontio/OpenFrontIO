@@ -83,6 +83,7 @@ export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
 
 export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;
 export type GameRecord = z.infer<typeof GameRecordSchema>;
+export type GameRecordMetadata = z.infer<typeof GameRecordMetadataSchema>;
 
 export type AllPlayersStats = z.infer<typeof AllPlayersStatsSchema>;
 export type PlayerStats = z.infer<typeof PlayerStatsSchema>;
@@ -429,6 +430,14 @@ export const GameRecordSchema = z.object({
     .optional(),
   winnerType: z.enum(["player", "team"]).nullable().optional(),
   allPlayersStats: z.record(ID, PlayerStatsSchema),
+  version: z.enum(["v0.0.1"]),
+  gitCommit: z.string().nullable().optional(),
+});
+
+export const GameRecordMetadataSchema = z.object({
+  id: ID,
+  startTimestampMS: z.number(),
+  endTimestampMS: z.number(),
   version: z.enum(["v0.0.1"]),
   gitCommit: z.string().nullable().optional(),
 });
