@@ -164,13 +164,28 @@ export class S3Archive extends Archive {
   }
 
   async indexRecord(gameRecord: GameRecord) {
-    // No-op for S3
+    // No-op for S3. Therefore, we need to look at all records when searching.
+    // We could consider using a database for indexing in the future.
   }
 
   async findRecords(
     fn: (metadata: GameRecord) => boolean,
   ): Promise<GameRecord[]> {
-    // No-op for S3
-    return [];
+    // slow: consider using index (see MemoryArchive)
+    const objs = await r2.listObjects({
+      Bucket: bucket,
+      Prefix: `${gameFolder}/`,
+    });
+    const gameRecords: GameRecord[] = [];
+    for (const obj of objs.Contents || []) {
+      const gameId = obj.Key?.split("/").pop();
+      if (gameId) {
+        const record = await this.readGameRecord(gameId);
+        if (record && fn(record)) {
+          gameRecords.push(record);
+        }
+      }
+    }
+    return gameRecords;
   }
 }

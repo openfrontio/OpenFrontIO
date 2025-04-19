@@ -5,6 +5,7 @@ export class MemoryArchive extends Archive {
   private indices: Map<GameID, GameRecordMetadata> = new Map();
   private map: Map<GameID, GameRecord> = new Map();
 
+  // warning: this is not a persistent archive
   async archiveRecord(gameRecord: GameRecord) {
     this.map.set(gameRecord.id, gameRecord);
   }
