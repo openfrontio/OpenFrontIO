@@ -194,6 +194,11 @@ label.option-card:hover {
   margin: 8px 0px 0px 0px;
 }
 
+#lobbyIdInput {
+  font-family: monospace;
+  font-weight: 600;
+}
+
 .lobby-id-button {
   display: flex;
   align-items: center;
