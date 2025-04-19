@@ -195,17 +195,14 @@
   cursor: pointer;
 }
 
-.setting-input.slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #fff;
-  border: 2px solid #2196f3;
-  cursor: pointer;
+.setting-input.slider::-moz-range-track {
+  background-color: #444;
+  height: 10px;
+  border-radius: 5px;
 }
 
-.setting-input.slider::-moz-range-track {
-  background: linear-gradient(to right, #2196f3 50%, #444 50%);
+.setting-input.slider::-moz-range-progress {
+  background-color: #2196f3;
   height: 10px;
   border-radius: 5px;
 }
