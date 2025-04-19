@@ -277,24 +277,33 @@
     <div id="app"></div>
     <div id="radialMenu" class="radial-menu"></div>
     <div
-      class="flex flex-column gap-2 fixed right-[10px] top-[10px] z-50 flex flex-col w-32 sm:w-32 lg:w-48"
+      class="flex gap-2 flex-col w-32 sm:w-32 lg:w-48 fixed right-[10px] top-[10px] z-50 pointer-events-none"
     >
-      <options-menu></options-menu>
+      <div class="pointer-events-auto">
+        <options-menu></options-menu>
+      </div>
       <player-info-overlay></player-info-overlay>
     </div>
 
     <div
-      class="bottom-0 w-full flex-col-reverse sm:flex-row z-50"
-      style="position: fixed; pointer-events: none"
+      class="bottom-0 w-full flex-col-reverse sm:flex-row z-50 pointer-events-none"
+      style="position: fixed"
     >
       <div
-        class="w-full sm:w-2/3 sm:fixed sm:right-0 sm:bottom-0 sm:flex justify-end"
-        style="pointer-events: none"
+        class="w-full sm:w-2/3 sm:fixed sm:right-0 sm:bottom-0 sm:flex justify-end pointer-events-none"
       >
         <events-display></events-display>
       </div>
-      <div class="w-full sm:w-1/3 md:max-w-72" style="pointer-events: auto">
-        <control-panel></control-panel>
+      <div class="flex flex-row gap-2">
+        <div class="flex flex-col justify-end gap-2 w-full md:max-w-72">
+          <country-stats></country-stats>
+          <div class="sm:w-1/3 pointer-events-auto">
+            <control-panel></control-panel>
+          </div>
+        </div>
+        <div class="flex items-end">
+          <resources-stats></resources-stats>
+        </div>
       </div>
     </div>
 
