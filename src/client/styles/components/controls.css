@@ -78,3 +78,14 @@
   font-size: 14px;
   color: #ccc;
 }
+
+.setting-input.keybind:hover .key,
+.setting-input.keybind:focus .key {
+  background-color: #333;
+  box-shadow: 0 2px 0 #222;
+}
+
+.setting-input.keybind.listening .key {
+  background-color: #1d4ed8; /* blue-700 */
+  box-shadow: 0 2px 0 #0f172a; /* darker blue */
+}
