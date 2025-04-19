@@ -1,12 +1,5 @@
 {
-  "lang": {
-    "en": "Dutch",
-    "native": "Nederlands",
-    "svg": "nl",
-    "lang_code": "nl"
-  },
   "main": {
-    "title": "OpenFront (ALFA)",
     "join_discord": "Word lid van de Discord!",
     "create_lobby": "Lobby aanmaken",
     "join_lobby": "Lobby toetreden",
@@ -17,12 +10,11 @@
   },
   "help_modal": {
     "hotkeys": "Sneltoetsen",
-    "table_key": "Sneltoets",
+    "table_key": "Toets",
     "table_action": "Actie",
     "action_alt_view": "Alternatieve weergave (terrein/landen)",
     "action_attack_altclick": "Aanvallen (als linkermuisknop is ingesteld op menu openen)",
     "action_build": "Open bouwmenu",
-    "action_emote": "Open emoji-menu",
     "action_center": "Camera centreren op speler",
     "action_zoom": "In-/uitzoomen",
     "action_move_camera": "Camera bewegen",
@@ -36,7 +28,7 @@
     "ui_pop": "Pop - Jouw totale bevolking, jouw maximale bevolking en de snelheid waarmee je ze verwerft.",
     "ui_gold": "Goud - Het goud dat je hebt en de snelheid waarmee je het verwerft.",
     "ui_troops_workers": "Troepen en Werkers - Het aantal toegewezen troepen en werkers. Troepen worden gebruikt om aan te vallen of verdedigen. Werkers worden gebruikt om goud te genereren. Je kunt het aantal troepen en werkers aanpassen met de schuifbalk.",
-    "ui_attack_ratio": "Aanvalsverhouding - Het aantal troepen dat wordt gebruikt wanneer je aanvalt. Je kunt de aanvalsverhouding aanpassen met de schuifbalk. Gebruik je bij een aanval meer aanvallende troepen dan er verdedigende troepen zijn, dan verlies je er minder dan wanneer je met minder troepen aanvalt. Dit effect gaat niet verder dan verhoudingen van 2:1.",
+    "ui_attack_ratio": "Aanvalsverhouding - Het aantal troepen dat wordt gebruikt wanneer je aanvalt. Je kunt de aanvalsverhouding aanpassen met de schuifbalk. Heb je meer aanvallende dan verdedigende troepen dan verlies je er minder bij de aanval, heb je er minder dan lopen je aanvallende troepen meer schade op. Dit effect gaat niet verder dan verhoudingen van 2:1.",
     "ui_options": "Opties",
     "ui_options_desc": "De volgende elementen zijn hierin te vinden:",
     "option_pause": "Spel pauzeren/hervatten - Alleen beschikbaar in het speltype voor één speler.",
@@ -85,7 +77,8 @@
     "icon_crown": "Kroon - Dit is de nummer 1 speler op de leaderboard.",
     "icon_traitor": "Gekruiste zwaarden - Verrader. Deze speler heeft een bondgenoot aangevallen.",
     "icon_ally": "Handdruk - Bondgenoot. Deze speler is je bondgenoot.",
-    "info_enemy_panel": "Infopaneel vijand"
+    "info_enemy_panel": "Infopaneel vijand",
+    "action_emote": "Open emoji-menu"
   },
   "single_modal": {
     "title": "Eén speler",
@@ -101,7 +94,6 @@
     "start": "Start Spel"
   },
   "map": {
-    "map": "Kaart",
     "world": "Wereld",
     "europe": "Europa",
     "mena": "MENA",
@@ -118,10 +110,10 @@
     "random": "Willekeurig",
     "iceland": "IJsland",
     "pangaea": "Pangea",
-    "japan": "Japan en buren",
+    "map": "Kaart",
     "betweentwoseas": "Tussen twee zeeën",
-    "knownworld": "Bekende Wereld",
-    "faroeislands": "Faeröer eilanden"
+    "japan": "Japan en buren",
+    "knownworld": "Bekende Wereld"
   },
   "private_lobby": {
     "title": "Privélobby toetreden",
@@ -147,8 +139,6 @@
   },
   "host_modal": {
     "title": "Privélobby",
-    "mode": "Modus",
-    "team_count": "Aantal teams",
     "options_title": "Opties",
     "bots": "Bots:",
     "bots_disabled": "Uitgeschakeld",
@@ -160,18 +150,25 @@
     "player": "Speler",
     "players": "Spelers",
     "waiting": "Wachten op spelers...",
-    "start": "Start Spel"
+    "start": "Start Spel",
+    "mode": "Modus"
+  },
+  "difficulty": {
+    "Relaxed": "Ontspannen",
+    "Balanced": "Gebalanceerd",
+    "Intense": "Intens",
+    "Impossible": "Onmogelijk",
+    "difficulty": "Moeilijkheidsgraad"
   },
   "game_starting_modal": {
     "title": "Spel gaat starten...",
     "desc": "Voorbereiden op het starten van de lobby. Even geduld."
   },
-  "difficulty": {
-    "difficulty": "Moeilijkheidsgraad",
-    "Relaxed": "Ontspannen",
-    "Balanced": "Gebalanceerd",
-    "Intense": "Intens",
-    "Impossible": "Onmogelijk"
+  "lang": {
+    "en": "Dutch",
+    "native": "Nederlands",
+    "svg": "nl",
+    "lang_code": "nl"
   },
   "game_mode": {
     "ffa": "Iedereen tegen iedereen (FFA)",
