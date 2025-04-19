@@ -19,7 +19,7 @@ describe("GameplayStats", () => {
     });
   });
 
-  it("can access game record", async () => {
+  it("can search game records", async () => {
     let i = 0;
     while (i < 5) {
       game.executeNextTick();
