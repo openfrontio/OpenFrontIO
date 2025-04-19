@@ -11,6 +11,7 @@
     "join_lobby": "main.join_lobby",
     "single_player": "main.single_player",
     "instructions": "main.instructions",
+    "settings": "main.settings",
     "how_to_play": "main.how_to_play",
     "wiki": "main.wiki"
   },

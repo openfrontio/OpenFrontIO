@@ -39,14 +39,21 @@ export class OModal extends LitElement {
       background: #000000a1;
       text-align: center;
       color: #fff;
-      padding: 1rem 2.4rem 1rem 1.4rem;
+      padding: 0.6rem 2.4rem 0.6rem 1.4rem;
+
+      @media (min-width: 1024px) {
+        padding: 1rem 2.4rem 1rem 1.4rem;
+      }
     }
 
     .c-modal__close {
       cursor: pointer;
       position: absolute;
       right: 1rem;
-      top: 1rem;
+      top: 0.6rem;
+      @media (min-width: 1024px) {
+        top: 1rem;
+      }
     }
 
     .c-modal__content {

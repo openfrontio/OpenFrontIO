@@ -16,18 +16,16 @@ import GoogleAdElement from "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
-import "./LangSelector";
-import { LangSelector } from "./LangSelector";
-import { LanguageModal } from "./LanguageModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
-import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import { generateCryptoRandomUUID } from "./Utils";
+import { UserSettingModal } from "./components/UserSettingModal";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import "./components/baseComponents/Select";
 import "./styles.css";
 
 export interface JoinLobbyEvent {
@@ -55,19 +53,6 @@ class Client {
   constructor() {}
 
   initialize(): void {
-    const langSelector = document.querySelector(
-      "lang-selector",
-    ) as LangSelector;
-    const LanguageModal = document.querySelector(
-      "lang-selector",
-    ) as LanguageModal;
-    if (!langSelector) {
-      consolex.warn("Lang selector element not found");
-    }
-    if (!LanguageModal) {
-      consolex.warn("Language modal element not found");
-    }
-
     this.flagInput = document.querySelector("flag-input") as FlagInput;
     if (!this.flagInput) {
       consolex.warn("Flag input element not found");

@@ -1,4 +1,4 @@
-import { LangSelector } from "./LangSelector";
+import { UserSettingModal } from "./components/UserSettingModal";
 
 export function renderTroops(troops: number): string {
   return renderNumber(troops / 10);
@@ -78,7 +78,9 @@ export const translateText = (
   key: string,
   params: Record<string, string | number> = {},
 ): string => {
-  const langSelector = document.querySelector("lang-selector") as LangSelector;
+  const langSelector = document.querySelector(
+    "user-setting",
+  ) as UserSettingModal;
   if (!langSelector) {
     console.warn("LangSelector not found in DOM");
     return key;

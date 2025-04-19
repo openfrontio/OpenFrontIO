@@ -3,17 +3,38 @@
   --breakPoint-tablet: 800px;
   --breakPoint-Desktop: 1024px;
   --blur-md: 4px;
-  --boxBackgroundColor: #111827cc;
-  --fontColor: #202020;
+  --borderRadius--md: 0px;
+  --borderRadius--lg: 2px;
+  --inputBackgroundColor: #fefefe;
+  --boxBackgroundColor: #2434574f;
+  --secondaryBoxBackgroundColor: #3a4d766e;
+  --boxShadow: inset 0px 0px 4px 2px rgba(0, 175, 255, 0.2);
+  --boxShadowBorder: inset 0px 0px 4px 2px rgba(0, 175, 255, 0.2);
+  --fontColor: #1e293b;
   --fontColorLight: #fff;
   --primaryColor: #2563eb;
-  --primaryColorHover: #1d4ed8;
+  --primaryColorHover: color-mix(in srgb, var(--primaryColor) 80%, transparent);
   --primaryColorDisabled: linear-gradient(
     to right,
     rgb(74, 74, 74),
     rgb(61, 61, 61)
   );
   --secondaryColor: #dbeafe;
-  --secondaryColorHover: #bfdbfe;
+  --secondaryColorHover: color-mix(
+    in srgb,
+    var(--secondaryColor) 80%,
+    transparent
+  );
+  --errorColor: #f0572d;
+  --errorColorTransparent: #ff005529;
+  --successColor: #17eb14;
+  --successColorBackground: #00b37a;
+  --borderColor: #0000004d;
+  --secondaryBorderColor: #333;
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --space-xs: 6px;
+  --space-sm: 8px;
+  --space-md: 10px;
+  --space-lg: 12px;
+  --space-xl: 14px;
 }

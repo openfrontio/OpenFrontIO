@@ -14,9 +14,6 @@
   border: 1px solid #333;
   border-radius: 10px;
   padding: 12px 20px;
-  width: 360px !important;
-  max-width: 360px !important;
-  min-width: 360px !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
   transition: background 0.3s ease;
   gap: 12px;
