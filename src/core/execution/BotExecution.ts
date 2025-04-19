@@ -6,15 +6,21 @@ import { BotBehavior } from "./utils/BotBehavior";
 export class BotExecution implements Execution {
   private active = true;
   private random: PseudoRandom;
-  private attackRate: number;
   private mg: Game;
   private neighborsTerraNullius = true;
 
   private behavior: BotBehavior | null = null;
+  private attackRate: number;
+  private attackTick: number;
+  private triggerRatio: number;
+  private reserveRatio: number;
 
   constructor(private bot: Player) {
     this.random = new PseudoRandom(simpleHash(bot.id()));
-    this.attackRate = this.random.nextInt(10, 50);
+    this.attackRate = this.random.nextInt(40, 80);
+    this.attackTick = this.random.nextInt(0, this.attackRate);
+    this.triggerRatio = this.random.nextInt(60, 90) / 100;
+    this.reserveRatio = this.random.nextInt(30, 60) / 100;
   }
 
   activeDuringSpawnPhase(): boolean {
@@ -27,17 +33,21 @@ export class BotExecution implements Execution {
   }
 
   tick(ticks: number) {
+    if (ticks % this.attackRate != this.attackTick) return;
+
     if (!this.bot.isAlive()) {
       this.active = false;
       return;
     }
 
-    if (ticks % this.attackRate != 0) {
-      return;
-    }
-
     if (this.behavior === null) {
-      this.behavior = new BotBehavior(this.random, this.mg, this.bot, 1 / 20);
+      this.behavior = new BotBehavior(
+        this.random,
+        this.mg,
+        this.bot,
+        this.triggerRatio,
+        this.reserveRatio,
+      );
     }
 
     this.behavior.handleAllianceRequests();
@@ -65,13 +75,12 @@ export class BotExecution implements Execution {
       this.neighborsTerraNullius = false;
     }
 
+    this.behavior.forgetOldEnemies();
+    this.behavior.checkIncomingAttacks();
     const enemy = this.behavior.selectRandomEnemy();
     if (!enemy) return;
+    if (!this.bot.sharesBorderWith(enemy)) return;
     this.behavior.sendAttack(enemy);
-  }
-
-  owner(): Player {
-    return this.bot;
   }
 
   isActive(): boolean {
