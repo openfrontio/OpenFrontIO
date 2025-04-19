@@ -14,7 +14,10 @@ import { EventBus } from "../../../core/EventBus";
 import { Cell, PlayerActions, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
-import { BuildUnitIntentEvent } from "../../Transport";
+import {
+  BuildUnitIntentEvent,
+  LastSelectedBuildableEvent,
+} from "../../Transport";
 import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
 
@@ -328,6 +331,9 @@ export class BuildMenu extends LitElement implements Layer {
         item.unitType,
         new Cell(this.game.x(this.clickedTile), this.game.y(this.clickedTile)),
       ),
+    );
+    this.eventBus.emit(
+      new LastSelectedBuildableEvent(item.unitType, item.icon),
     );
     this.hideMenu();
   };

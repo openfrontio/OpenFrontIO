@@ -1,8 +1,16 @@
+import { LastSelectedBuildableEvent } from "../client/Transport";
 import { EventBus, GameEvent } from "../core/EventBus";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 
 export class MouseUpEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
+export class AutoMouseUpEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
@@ -184,6 +192,7 @@ export class InputHandler {
 
       if (e.code === "Escape") {
         e.preventDefault();
+        this.eventBus.emit(new LastSelectedBuildableEvent(null, ""));
         this.eventBus.emit(new CloseViewEvent());
       }
 
@@ -314,7 +323,7 @@ export class InputHandler {
       }
 
       if (!this.userSettings.leftClickOpensMenu() || event.shiftKey) {
-        this.eventBus.emit(new MouseUpEvent(event.x, event.y));
+        this.eventBus.emit(new AutoMouseUpEvent(event.x, event.y));
       } else {
         this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
       }
