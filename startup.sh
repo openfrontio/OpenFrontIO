@@ -8,12 +8,17 @@ if [ -z "$CF_API_TOKEN" ] || [ -z "$CF_ACCOUNT_ID" ] || [ -z "$SUBDOMAIN" ] || [
   exit 1
 fi
 
+# Generate a unique tunnel name using timestamp
+TIMESTAMP=$(date +%Y%m%d%H%M%S)
+TUNNEL_NAME="${SUBDOMAIN}-tunnel-${TIMESTAMP}"
+echo "Using unique tunnel name: ${TUNNEL_NAME}"
+
 # Create a new tunnel
 echo "Creating Cloudflare tunnel for subdomain ${SUBDOMAIN}..."
 TUNNEL_RESPONSE=$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/cfd_tunnel" \
   -H "Authorization: Bearer ${CF_API_TOKEN}" \
   -H "Content-Type: application/json" \
-  --data "{\"name\":\"${SUBDOMAIN}-tunnel\"}")
+  --data "{\"name\":\"${TUNNEL_NAME}\"}")
 
 # Extract tunnel ID and token
 TUNNEL_ID=$(echo $TUNNEL_RESPONSE | jq -r '.result.id')
@@ -34,11 +39,52 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/c
   -H "Content-Type: application/json" \
   --data "{\"config\":{\"ingress\":[{\"hostname\":\"${SUBDOMAIN}.${DOMAIN}\",\"service\":\"http://localhost:80\"},{\"service\":\"http_status:404\"}]}}"
 
-# Export the tunnel token for supervisord
-echo "CLOUDFLARE_TUNNEL_TOKEN=${TUNNEL_TOKEN}" > /etc/supervisor/conf.d/cloudflared_env.conf
+# Update DNS record to point to the new tunnel
+echo "Updating DNS record to point to the new tunnel..."
+
+# First check if DNS record exists
+DNS_RECORDS=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=${DOMAIN}" \
+  -H "Authorization: Bearer ${CF_API_TOKEN}" \
+  -H "Content-Type: application/json")
+
+ZONE_ID=$(echo $DNS_RECORDS | jq -r '.result[0].id')
+
+if [ -z "$ZONE_ID" ] || [ "$ZONE_ID" == "null" ]; then
+  echo "Could not find zone ID for domain ${DOMAIN}"
+  exit 1
+fi
+
+# Check for existing record
+EXISTING_RECORDS=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?name=${SUBDOMAIN}.${DOMAIN}" \
+  -H "Authorization: Bearer ${CF_API_TOKEN}" \
+  -H "Content-Type: application/json")
+
+RECORD_ID=$(echo $EXISTING_RECORDS | jq -r '.result[0].id')
+
+# Create or update the DNS record
+if [ -z "$RECORD_ID" ] || [ "$RECORD_ID" == "null" ]; then
+  # Create new record
+  echo "Creating new DNS record..."
+  DNS_RESPONSE=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records" \
+    -H "Authorization: Bearer ${CF_API_TOKEN}" \
+    -H "Content-Type: application/json" \
+    --data "{\"type\":\"CNAME\",\"name\":\"${SUBDOMAIN}\",\"content\":\"${TUNNEL_ID}.cfargotunnel.com\",\"ttl\":1,\"proxied\":true}")
+else
+  # Update existing record
+  echo "Updating existing DNS record..."
+  DNS_RESPONSE=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records/${RECORD_ID}" \
+    -H "Authorization: Bearer ${CF_API_TOKEN}" \
+    -H "Content-Type: application/json" \
+    --data "{\"type\":\"CNAME\",\"name\":\"${SUBDOMAIN}\",\"content\":\"${TUNNEL_ID}.cfargotunnel.com\",\"ttl\":1,\"proxied\":true}")
+fi
+
 
 # Log the tunnel information
 echo "Tunnel is set up! Site will be available at: https://${SUBDOMAIN}.${DOMAIN}"
+
+
+# Export the tunnel token for supervisord
+export CLOUDFLARE_TUNNEL_TOKEN=${TUNNEL_TOKEN}
 
 # Start supervisord
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

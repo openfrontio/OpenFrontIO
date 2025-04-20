@@ -16,7 +16,7 @@ DOCKER_IMAGE=$3
 DOCKER_TOKEN=$4
 
 # Container and image configuration
-CONTAINER_NAME="openfront-${REGION}"
+CONTAINER_NAME="openfront-${ENV}-${SUBDOMAIN}"
 
 
 echo "======================================================"
@@ -81,7 +81,7 @@ if [ -n "$PORT_CHECK" ]; then
 fi
 
 echo "Starting new container for ${REGION} environment..."
-docker run -d -p 80:80 -p 127.0.0.1:9090:9090 \
+docker run -d \
   --restart=always \
   $VOLUME_MOUNTS \
   --log-driver=loki \

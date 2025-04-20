@@ -34,7 +34,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return process.env.GIT_COMMIT;
   }
   r2Endpoint(): string {
-    return `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+    return `https://${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`;
   }
   r2AccessKey(): string {
     return process.env.R2_ACCESS_KEY;
