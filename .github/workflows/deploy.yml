@@ -1,4 +1,4 @@
-name: Deploy to Remote
+name: 🚀 Deploy
 
 on:
   workflow_dispatch:
@@ -9,8 +9,22 @@ on:
         default: "staging"
         type: choice
         options:
-          - production
+          - prod
           - staging
+      target_host:
+        description: "Deployment Host"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - eu
+          - us
+          - staging
+      target_subdomain:
+        description: "Deployment Subdomain"
+        required: false
+        default: ""
+        type: string
 
 jobs:
   deploy:
@@ -29,10 +43,23 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
-          cat >.env <<EOF
-          SERVER_HOST_STAGING=${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }}
-          DOCKER_REPO_STAGING=${{ vars.DOCKERHUB_REPO }}
+          ssh-keyscan -H ${{ secrets.SERVER_HOST_STAGING }} >> ~/.ssh/known_hosts
+          cat >.env.${{ inputs.target_environment }} <<EOF
+          ADMIN_TOKEN=${{ secrets.ADMIN_TOKEN }}
+          CF_ACCOUNT_ID=${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN=${{ secrets.CF_API_TOKEN }}
+          DOCKER_REPO=${{ vars.DOCKERHUB_REPO }}
           DOCKER_USERNAME=${{ vars.DOCKERHUB_USERNAME }}
+          DOMAIN=${{ vars.DOMAIN }}
+          MON_PASSWORD=${{ secrets.MON_PASSWORD }}
+          MON_USERNAME=${{ secrets.MON_USERNAME }}
+          R2_ACCESS_KEY=${{ secrets.R2_ACCESS_KEY }}
+          R2_BUCKET=${{ secrets.R2_BUCKET }}
+          R2_SECRET_KEY=${{ secrets.R2_SECRET_KEY }}
+          SERVER_HOST_STAGING=${{ secrets.SERVER_HOST_STAGING }}
+          SERVER_HOST_US=${{ secrets.SERVER_HOST_US }}
+          SERVER_HOST_EU=${{ secrets.SERVER_HOST_EU }}
+          SSH_KEY=~/.ssh/id_rsa
+          VERSION_TAG="latest"
           EOF
-          ./deploy.sh ${{ inputs.target_environment }}
+          ./deploy.sh ${{ inputs.target_environment }} ${{ inputs.target_host }} ${{ inputs.target_subdomain }}
