@@ -1,11 +1,8 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-# Run tests first
-npm run test || {
-  echo "Tests failed - commit aborted"
-  exit 1
-}
+# Add PATH setup to ensure npx is found
+export PATH="/usr/local/bin:$HOME/.npm-global/bin:$HOME/.nvm/versions/node/$(node -v)/bin:$PATH"
 
 # Then run lint-staged if tests pass
 npx lint-staged

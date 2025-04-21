@@ -3,14 +3,21 @@ FROM node:18
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT=$GIT_COMMIT
 
-# Install Nginx, Supervisor, Git, jq, and curl for API requests
+# Install Nginx, Supervisor, Git, jq, curl, and Node Exporter dependencies
 RUN apt-get update && apt-get install -y \
     nginx \
     supervisor \
     git \
     curl \
     jq \
+    wget \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Node Exporter
+RUN mkdir -p /opt/node_exporter && \
+    wget -qO- https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz | \
+    tar xvz --strip-components=1 -C /opt/node_exporter && \
+    ln -s /opt/node_exporter/node_exporter /usr/local/bin/
 
 # Install cloudflared
 RUN curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb > cloudflared.deb \
@@ -45,9 +52,6 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # Copy and make executable the startup script
 COPY startup.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/startup.sh
-
-# Expose only the Nginx port
-EXPOSE 80 443
 
 # Use the startup script as the entrypoint
 ENTRYPOINT ["/usr/local/bin/startup.sh"]

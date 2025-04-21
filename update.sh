@@ -2,28 +2,19 @@
 # update.sh - Script to update Docker container on Hetzner server
 # Called by deploy.sh after uploading Docker image to Docker Hub
 
-# Check if environment parameter is provided
-if [ $# -lt 3 ]; then
-  echo "Error: Required parameters missing"
-  echo "Usage: $0 <REGION> <docker_username> <docker_repo>"
-  exit 1
+# Load environment variables if .env exists
+if [ -f /home/openfront/.env ]; then
+  echo "Loading environment variables from .env file..."
+  export $(grep -v '^#' /home/openfront/.env | xargs)
 fi
 
-# Set parameters
-ENV=$1
-REGION=$2
-DOCKER_IMAGE=$3
-DOCKER_TOKEN=$4
+echo "======================================================"
+echo "🔄 UPDATING SERVER: ${HOST} ENVIRONMENT"
+echo "======================================================"
+
 
 # Container and image configuration
 CONTAINER_NAME="openfront-${ENV}-${SUBDOMAIN}"
-
-
-echo "======================================================"
-echo "🔄 UPDATING SERVER: ${REGION} ENVIRONMENT"
-echo "======================================================"
-echo "Container name: ${CONTAINER_NAME}"
-echo "Docker image: ${FULL_IMAGE_NAME}"
 
 docker login -u $DOCKER_USERNAME -p $DOCKER_TOKEN
 
@@ -80,20 +71,20 @@ if [ -n "$PORT_CHECK" ]; then
   echo "Attempting to proceed anyway..."
 fi
 
-echo "Starting new container for ${REGION} environment..."
+echo "Starting new container for ${HOST} environment..."
 docker run -d \
   --restart=always \
   $VOLUME_MOUNTS \
   --log-driver=loki \
-  --log-opt loki-url="http://localhost:3100/loki/api/v1/push" \
+  --log-opt loki-url="https://${MON_USERNAME}:${MON_PASSWORD}@mon.openfront.io/loki/loki/api/v1/push" \
   --log-opt loki-batch-size="400" \
-  --log-opt loki-external-labels="job=docker,environment=${ENV},host=${REGION},region=${REGION}" \
+  --log-opt loki-external-labels="job=docker,environment=${ENV},host=${HOST},subdomain=${SUBDOMAIN}" \
   --env-file /home/openfront/.env \
   --name ${CONTAINER_NAME} \
   $DOCKER_IMAGE
 
 if [ $? -eq 0 ]; then
-  echo "Update complete! New ${REGION} container is running."
+  echo "Update complete! New ${CONTAINER_NAME} container is running."
   
   # Final cleanup after successful deployment
   echo "Performing final cleanup of unused Docker resources..."

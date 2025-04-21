@@ -9,7 +9,7 @@ set -e  # Exit immediately if a command exits with a non-zero status
 
 # Check command line arguments
 if [ $# -lt 2 ] || [ $# -gt 3 ]; then
-    echo "Error: Please specify environment and region, with optional subdomain"
+    echo "Error: Please specify environment and host, with optional subdomain"
     echo "Usage: $0 [prod|staging] [eu|us|staging] [subdomain]"
     exit 1
 fi
@@ -21,7 +21,7 @@ if [ "$1" != "prod" ] && [ "$1" != "staging" ]; then
     exit 1
 fi
 
-# Validate second argument (region)
+# Validate second argument (host)
 if [ "$2" != "eu" ] && [ "$2" != "us" ] && [ "$2" != "staging" ]; then
     echo "Error: Second argument must be either 'eu', 'us', or 'staging'"
     echo "Usage: $0 [prod|staging] [eu|us|staging] [subdomain]"
@@ -36,15 +36,15 @@ print_header() {
 }
 
 ENV=$1
-REGION=$2
+HOST=$2
 SUBDOMAIN=$3  # Optional third argument for custom subdomain
 
 # Set subdomain - use the custom subdomain if provided, otherwise use REGION
 if [ -n "$SUBDOMAIN" ]; then
     echo "Using custom subdomain: $SUBDOMAIN"
 else
-    SUBDOMAIN=$REGION
-    echo "Using region as subdomain: $SUBDOMAIN"
+    SUBDOMAIN=$HOST
+    echo "Using host as subdomain: $SUBDOMAIN"
 fi
 
 # Load common environment variables first
@@ -62,20 +62,20 @@ else
     exit 1
 fi
 
-if [ "$REGION" == "staging" ]; then
-    print_header "DEPLOYING TO STAGING REGION"
+if [ "$HOST" == "staging" ]; then
+    print_header "DEPLOYING TO STAGING HOST"
     SERVER_HOST=$SERVER_HOST_STAGING
-elif [ "$REGION" == "us" ]; then
-    print_header "DEPLOYING TO US REGION"
+elif [ "$HOST" == "us" ]; then
+    print_header "DEPLOYING TO US HOST"
     SERVER_HOST=$SERVER_HOST_US
 else
-    print_header "DEPLOYING TO EU REGION"
+    print_header "DEPLOYING TO EU HOST"
     SERVER_HOST=$SERVER_HOST_EU
 fi
 
 # Check required environment variables
 if [ -z "$SERVER_HOST" ]; then
-    echo "Error: SERVER_HOST_${REGION^^} not defined in .env file or environment"
+    echo "Error: ${HOST} not defined in .env file or environment"
     exit 1
 fi
 
@@ -86,7 +86,7 @@ REMOTE_UPDATE_PATH="/home/$REMOTE_USER"
 REMOTE_UPDATE_SCRIPT="$REMOTE_UPDATE_PATH/update-openfront.sh"  # Where to place the script on server
 
 IMAGE_NAME="${DOCKER_USERNAME}/${DOCKER_REPO}"
-FULL_IMAGE_NAME="${IMAGE_NAME}:${VERSION_TAG}"
+DOCKER_IMAGE="${IMAGE_NAME}:${VERSION_TAG}"
 
 # Check if update script exists
 if [ ! -f "$UPDATE_SCRIPT" ]; then
@@ -97,8 +97,8 @@ fi
 # Step 1: Build and upload Docker image to Docker Hub
 print_header "STEP 1: Building and uploading Docker image to Docker Hub"
 echo "Environment: ${ENV}"
-echo "Region: ${REGION}"
-echo "Subdomain: ${SUBDOMAIN_TO_USE}"
+echo "Host: ${HOST}"
+echo "Subdomain: ${SUBDOMAIN}"
 echo "Using version tag: $VERSION_TAG"
 echo "Docker repository: $DOCKER_REPO"
 
@@ -138,7 +138,11 @@ fi
 ssh -i $SSH_KEY $REMOTE_USER@$SERVER_HOST "chmod +x $REMOTE_UPDATE_SCRIPT && \
 cat > $REMOTE_UPDATE_PATH/.env << 'EOL'
 GAME_ENV=$ENV
-REGION=$REGION
+ENV=$ENV
+HOST=$HOST
+SUBDOMAIN=$SUBDOMAIN
+DOCKER_IMAGE=$DOCKER_IMAGE
+DOCKER_TOKEN=$DOCKER_TOKEN
 ADMIN_TOKEN=$ADMIN_TOKEN
 CF_ACCOUNT_ID=$CF_ACCOUNT_ID
 R2_ACCESS_KEY=$R2_ACCESS_KEY
@@ -147,9 +151,11 @@ R2_BUCKET=$R2_BUCKET
 CF_API_TOKEN=$CF_API_TOKEN
 DOMAIN=$DOMAIN
 SUBDOMAIN=$SUBDOMAIN
+MON_USERNAME=$MON_USERNAME
+MON_PASSWORD=$MON_PASSWORD
 EOL
 chmod 600 $REMOTE_UPDATE_PATH/.env && \
-$REMOTE_UPDATE_SCRIPT $ENV $REGION $FULL_IMAGE_NAME $DOCKER_TOKEN"
+$REMOTE_UPDATE_SCRIPT"
 
 if [ $? -ne 0 ]; then
     echo "❌ Failed to execute update script on server."
@@ -157,6 +163,6 @@ if [ $? -ne 0 ]; then
 fi
 
 print_header "DEPLOYMENT COMPLETED SUCCESSFULLY"
-echo "✅ New version deployed to ${ENV} environment in ${REGION} region with subdomain ${SUBDOMAIN_TO_USE}!"
+echo "✅ New version deployed to ${ENV} environment in ${HOST} with subdomain ${SUBDOMAIN}!"
 echo "🌐 Check your server to verify the deployment."
 echo "======================================================="
