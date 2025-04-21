@@ -285,6 +285,15 @@ export class Transport {
     };
     this.socket.onmessage = (event: MessageEvent) => {
       try {
+        const rawMessage = JSON.parse(event.data);
+        if (
+          rawMessage.type === "join_rejected" &&
+          rawMessage.reason === "duplicate_client"
+        ) {
+          alert(rawMessage.message);
+          window.location.href = "/";
+          return;
+        }
         const serverMsg = ServerMessageSchema.parse(JSON.parse(event.data));
         this.onmessage(serverMsg);
       } catch (error) {
