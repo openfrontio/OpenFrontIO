@@ -1,5 +1,5 @@
 ownerdomain=openfront.io
-managerdomain=venatus.com
+managerdomain=adinplay.com
 #V 01.04.2025 VH
 #V
 
@@ -995,3 +995,5 @@ smartadserver.com, 3490, DIRECT
 ##################################
 # AdinPlay.com ads.txt - 2025-04-16
 ##################################
+
+venatus.com, OFI, DIRECT

@@ -4,7 +4,12 @@ import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { consolex } from "../core/Consolex";
-import { Difficulty, GameMapType, GameMode } from "../core/game/Game";
+import {
+  Difficulty,
+  GameMapType,
+  GameMode,
+  mapCategories,
+} from "../core/game/Game";
 import { GameConfig, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
@@ -74,23 +79,40 @@ export class HostLobbyModal extends LitElement {
           <!-- Map Selection -->
           <div class="options-section">
             <div class="option-title">${translateText("map.map")}</div>
-            <div class="option-cards">
-              ${Object.entries(GameMapType)
-                .filter(([key]) => isNaN(Number(key)))
-                .map(
-                  ([key, value]) => html`
-                    <div @click=${() => this.handleMapSelection(value)}>
-                      <map-display
-                        .mapKey=${key}
-                        .selected=${!this.useRandomMap &&
-                        this.selectedMap === value}
-                        .translation=${translateText(
-                          `map.${key.toLowerCase()}`,
-                        )}
-                      ></map-display>
+            <div class="option-cards flex-col">
+              <!-- Use the imported mapCategories -->
+              ${Object.entries(mapCategories).map(
+                ([categoryKey, maps]) => html`
+                  <div class="w-full mb-4">
+                    <h3
+                      class="text-lg font-semibold mb-2 text-center text-gray-300"
+                    >
+                      ${translateText(`map_categories.${categoryKey}`)}
+                    </h3>
+                    <div class="flex flex-row flex-wrap justify-center gap-4">
+                      ${maps.map((mapValue) => {
+                        const mapKey = Object.keys(GameMapType).find(
+                          (key) => GameMapType[key] === mapValue,
+                        );
+                        return html`
+                          <div
+                            @click=${() => this.handleMapSelection(mapValue)}
+                          >
+                            <map-display
+                              .mapKey=${mapKey}
+                              .selected=${!this.useRandomMap &&
+                              this.selectedMap === mapValue}
+                              .translation=${translateText(
+                                `map.${mapKey.toLowerCase()}`,
+                              )}
+                            ></map-display>
+                          </div>
+                        `;
+                      })}
                     </div>
-                  `,
-                )}
+                  </div>
+                `,
+              )}
               <div
                 class="option-card random-map ${
                   this.useRandomMap ? "selected" : ""
@@ -104,7 +126,9 @@ export class HostLobbyModal extends LitElement {
                     style="width:100%; aspect-ratio: 4/2; object-fit:cover; border-radius:8px;"
                   />
                 </div>
-                <div class="option-card-title">${translateText("map.random")}</div>
+                <div class="option-card-title">
+                  ${translateText("map.random")}
+                </div>
               </div>
             </div>
           </div>

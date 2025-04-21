@@ -3,7 +3,13 @@ import { customElement, query, state } from "lit/decorators.js";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import { consolex } from "../core/Consolex";
-import { Difficulty, GameMapType, GameMode, GameType } from "../core/game/Game";
+import {
+  Difficulty,
+  GameMapType,
+  GameMode,
+  GameType,
+  mapCategories,
+} from "../core/game/Game";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
@@ -39,27 +45,40 @@ export class SinglePlayerModal extends LitElement {
           <!-- Map Selection -->
           <div class="options-section">
             <div class="option-title">${translateText("map.map")}</div>
-            <div class="option-cards">
-              ${Object.entries(GameMapType)
-                .filter(([key]) => isNaN(Number(key)))
-                .map(
-                  ([key, value]) => html`
-                    <div
-                      @click=${function () {
-                        this.handleMapSelection(value);
-                      }}
+            <div class="option-cards flex-col">
+              <!-- Use the imported mapCategories -->
+              ${Object.entries(mapCategories).map(
+                ([categoryKey, maps]) => html`
+                  <div class="w-full mb-4">
+                    <h3
+                      class="text-lg font-semibold mb-2 text-center text-gray-300"
                     >
-                      <map-display
-                        .mapKey=${key}
-                        .selected=${!this.useRandomMap &&
-                        this.selectedMap === value}
-                        .translation=${translateText(
-                          `map.${key.toLowerCase()}`,
-                        )}
-                      ></map-display>
+                      ${translateText(`map_categories.${categoryKey}`)}
+                    </h3>
+                    <div class="flex flex-row flex-wrap justify-center gap-4">
+                      ${maps.map((mapValue) => {
+                        const mapKey = Object.keys(GameMapType).find(
+                          (key) => GameMapType[key] === mapValue,
+                        );
+                        return html`
+                          <div
+                            @click=${() => this.handleMapSelection(mapValue)}
+                          >
+                            <map-display
+                              .mapKey=${mapKey}
+                              .selected=${!this.useRandomMap &&
+                              this.selectedMap === mapValue}
+                              .translation=${translateText(
+                                `map.${mapKey.toLowerCase()}`,
+                              )}
+                            ></map-display>
+                          </div>
+                        `;
+                      })}
                     </div>
-                  `,
-                )}
+                  </div>
+                `,
+              )}
               <div
                 class="option-card random-map ${this.useRandomMap
                   ? "selected"

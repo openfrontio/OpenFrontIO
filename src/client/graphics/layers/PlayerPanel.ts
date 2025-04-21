@@ -145,8 +145,14 @@ export class PlayerPanel extends LitElement implements Layer {
     this.eventBus.on(MouseUpEvent, (e: MouseEvent) => this.hide());
   }
 
-  tick() {
-    this.requestUpdate();
+  async tick() {
+    if (this.isVisible && this.tile) {
+      const myPlayer = this.g.myPlayer();
+      if (myPlayer !== null && myPlayer.isAlive()) {
+        this.actions = await myPlayer.actions(this.tile);
+        this.requestUpdate();
+      }
+    }
   }
 
   getTotalNukesSent(otherId: PlayerID): number {

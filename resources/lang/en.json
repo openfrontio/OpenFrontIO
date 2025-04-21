@@ -124,6 +124,11 @@
     "faroeislands": "Faroe Islands",
     "antarctica": "Antarctica"
   },
+  "map_categories": {
+    "continental": "Continental",
+    "regional": "Regional",
+    "fantasy": "Other"
+  },
   "private_lobby": {
     "title": "Join Private Lobby",
     "enter_id": "Enter Lobby ID",
