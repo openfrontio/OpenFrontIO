@@ -1,8 +1,14 @@
 {
-  "name": "Antarctica",
+  "name": "Deglaciated Antarctica",
   "width": 2300,
   "height": 1840,
   "nations": [
+    {
+      "coordinates": [1545, 785],
+      "name": "Pinguin Empire",
+      "strength": 2,
+      "flag": "an_pe"
+    },
     {
       "coordinates": [1270, 440],
       "name": "Norwegian Claim",

@@ -90,7 +90,7 @@ export class MapPlaylist {
           Iceland: 2,
           SouthAmerica: 1,
           KnownWorld: 2,
-          Antarctica: 2,
+          DeglaciatedAntarctica: 2,
         };
       case PlaylistType.SmallMaps:
         return {
