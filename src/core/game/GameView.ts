@@ -131,7 +131,14 @@ export class PlayerView {
     public data: PlayerUpdate,
     public nameData: NameViewData,
   ) {
-    this.anonymousName = createRandomName(this.data.name, this.data.playerType);
+    if (data.clientID == game.myClientID()) {
+      this.anonymousName = this.data.name;
+    } else {
+      this.anonymousName = createRandomName(
+        this.data.name,
+        this.data.playerType,
+      );
+    }
   }
 
   async actions(tile: TileRef): Promise<PlayerActions> {

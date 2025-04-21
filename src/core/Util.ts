@@ -363,7 +363,7 @@ export function createRandomName(
   playerType: string,
 ): string | null {
   let randomName = null;
-  if (playerType === "HUMAN" && localStorage.getItem("username") !== name) {
+  if (playerType === "HUMAN") {
     const hash = simpleHash(name);
     const prefixIndex = hash % BOT_NAME_PREFIXES.length;
     const suffixIndex =
