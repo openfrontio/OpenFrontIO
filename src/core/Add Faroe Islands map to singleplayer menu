@@ -89,6 +89,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Japan,
     GameMapType.Mena,
     GameMapType.Australia,
+    GameMapType.FaroeIslands,
   ],
   fantasy: [GameMapType.Pangaea, GameMapType.Mars, GameMapType.KnownWorld],
 };
