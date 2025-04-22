@@ -387,7 +387,7 @@ export class RadialMenu implements Layer {
         // BestTransportShipSpawn is an expensive operation, so
         // we calculate it here and send the spawn tile to other clients.
         myPlayer.bestTransportShipSpawn(tile).then((spawn) => {
-          if (spawn == false) {
+          if (spawn === false) {
             return;
           }
 

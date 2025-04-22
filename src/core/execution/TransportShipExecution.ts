@@ -127,15 +127,16 @@ export class TransportShipExecution implements Execution {
     if (this.src == null) {
       // Only update the src if it's not already set
       // because we assume that the src is set to the best spawn tile
+      this.src = closestTileSrc;
+    } else {
       if (
         this.mg.owner(this.src) == this.attacker &&
         this.mg.isShore(this.src)
       ) {
-        this.src = closestTileSrc;
-      } else {
         console.warn(
           `src is not a shore tile or not owned by: ${this.attacker.name()}`,
         );
+        this.src = closestTileSrc;
       }
     }
 
