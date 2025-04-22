@@ -1,16 +1,18 @@
 name: 🚀 Deploy
 
 on:
+  # Allow contributors to schedule manual deployments.
+  # Note that permissions are managed by environment configuration.
   workflow_dispatch:
     inputs:
-      target_environment:
-        description: "Deployment Environment"
+      target_domain:
+        description: "Deployment Domain"
         required: true
-        default: "staging"
+        default: "openfront.dev"
         type: choice
         options:
-          - prod
-          - staging
+          - openfront.io
+          - openfront.dev
       target_host:
         description: "Deployment Host"
         required: true
@@ -25,6 +27,8 @@ on:
         required: false
         default: ""
         type: string
+
+  #  Automatic deployment when pushing to main
   push:
     branches:
       - main
@@ -34,7 +38,7 @@ jobs:
     # Use different logic based on event type
     name: Deploy to ${{ github.event_name == 'workflow_dispatch' && inputs.target_environment || 'staging' }}
     runs-on: ubuntu-latest
-    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.target_environment || 'staging' }}
+    environment: ${{ inputs.subdomain && format('{0}.{1}', inputs.subdomain, inputs.target_domain) || inputs.target_domain }}
 
     steps:
       - uses: actions/checkout@v4
@@ -43,35 +47,33 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - run: |
+      - env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
+          DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOMAIN: ${{ inputs.target_domain }}
+          ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.target_environment || 'staging' }}
+          HOST: ${{ github.event_name == 'workflow_dispatch' && inputs.target_host || 'staging' }}
+          MON_PASSWORD: ${{ secrets.MON_PASSWORD }}
+          MON_USERNAME: ${{ secrets.MON_USERNAME }}
+          R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
+          SERVER_HOST_EU: ${{ secrets.SERVER_HOST_EU }}
+          SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
+          SERVER_HOST_US: ${{ secrets.SERVER_HOST_US }}
+          SSH_KEY: ~/.ssh/id_rsa
+          SUBDOMAIN: ${{ github.event_name == 'workflow_dispatch' && inputs.target_subdomain || 'main' }}
+          VERSION_TAG: latest
+        run: |
+          set -euxo pipefail
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SERVER_HOST_STAGING }} >> ~/.ssh/known_hosts
 
-          # Determine environment based on trigger type
-          TARGET_ENV="${{ github.event_name == 'workflow_dispatch' && inputs.target_environment || 'staging' }}"
-          TARGET_HOST="${{ github.event_name == 'workflow_dispatch' && inputs.target_host || 'staging' }}"
-          TARGET_SUBDOMAIN="${{ github.event_name == 'workflow_dispatch' && inputs.target_subdomain || 'main' }}"
-
-          cat >.env.$TARGET_ENV <<EOF
-          ADMIN_TOKEN=${{ secrets.ADMIN_TOKEN }}
-          CF_ACCOUNT_ID=${{ secrets.CF_ACCOUNT_ID }}
-          CF_API_TOKEN=${{ secrets.CF_API_TOKEN }}
-          DOCKER_REPO=${{ vars.DOCKERHUB_REPO }}
-          DOCKER_USERNAME=${{ vars.DOCKERHUB_USERNAME }}
-          DOMAIN=${{ vars.DOMAIN }}
-          MON_PASSWORD=${{ secrets.MON_PASSWORD }}
-          MON_USERNAME=${{ secrets.MON_USERNAME }}
-          R2_ACCESS_KEY=${{ secrets.R2_ACCESS_KEY }}
-          R2_BUCKET=${{ secrets.R2_BUCKET }}
-          R2_SECRET_KEY=${{ secrets.R2_SECRET_KEY }}
-          SERVER_HOST_STAGING=${{ secrets.SERVER_HOST_STAGING }}
-          SERVER_HOST_US=${{ secrets.SERVER_HOST_US }}
-          SERVER_HOST_EU=${{ secrets.SERVER_HOST_EU }}
-          SSH_KEY=~/.ssh/id_rsa
-          VERSION_TAG="latest"
-          EOF
-
-          ./deploy.sh $TARGET_ENV $TARGET_HOST $TARGET_SUBDOMAIN
-          echo "Deployed to $TARGET_ENV environment on $TARGET_HOST host with subdomain $TARGET_SUBDOMAIN"
+          echo "::group::deploy.sh"
+          ./deploy.sh "$ENV" "$HOST" "$SUBDOMAIN"
+          echo "::endgroup::"
+          echo "Deployed to $ENV environment on $HOST host with subdomain $SUBDOMAIN"
