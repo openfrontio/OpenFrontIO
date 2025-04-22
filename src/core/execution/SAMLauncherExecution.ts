@@ -15,7 +15,6 @@ import { SAMMissileExecution } from "./SAMMissileExecution";
 export class SAMLauncherExecution implements Execution {
   private player: Player;
   private mg: Game;
-  private sam: Unit;
   private active: boolean = true;
 
   private target: Unit = null;
@@ -32,7 +31,12 @@ export class SAMLauncherExecution implements Execution {
   constructor(
     private ownerId: PlayerID,
     private tile: TileRef,
-  ) {}
+    private sam: Unit | null = null,
+  ) {
+    if (sam != null) {
+      this.tile = sam.tile();
+    }
+  }
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;

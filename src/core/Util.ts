@@ -1,8 +1,8 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
 import twemoji from "twemoji";
-import { Cell, Game, Player, Team, Unit } from "./game/Game";
-import { andFN, GameMap, manhattanDistFN, TileRef } from "./game/GameMap";
+import { Cell, Team, Unit } from "./game/Game";
+import { GameMap, TileRef } from "./game/GameMap";
 import {
   AllPlayersStats,
   ClientID,
@@ -55,72 +55,6 @@ export function distSortUnit(
       gm.manhattanDist(b.tile(), targetRef)
     );
   };
-}
-
-// TODO: refactor to new file
-export function sourceDstOceanShore(
-  gm: Game,
-  src: Player,
-  tile: TileRef,
-): [TileRef | null, TileRef | null] {
-  const dst = gm.owner(tile);
-  const srcTile = closestShoreFromPlayer(gm, src, tile);
-  let dstTile: TileRef | null = null;
-  if (dst.isPlayer()) {
-    dstTile = closestShoreFromPlayer(gm, dst as Player, tile);
-  } else {
-    dstTile = closestShoreTN(gm, tile, 50);
-  }
-  return [srcTile, dstTile];
-}
-
-export function targetTransportTile(gm: Game, tile: TileRef): TileRef | null {
-  const dst = gm.playerBySmallID(gm.ownerID(tile));
-  let dstTile: TileRef | null = null;
-  if (dst.isPlayer()) {
-    dstTile = closestShoreFromPlayer(gm, dst as Player, tile);
-  } else {
-    dstTile = closestShoreTN(gm, tile, 50);
-  }
-  return dstTile;
-}
-
-export function closestShoreFromPlayer(
-  gm: GameMap,
-  player: Player,
-  target: TileRef,
-): TileRef | null {
-  const shoreTiles = Array.from(player.borderTiles()).filter((t) =>
-    gm.isShore(t),
-  );
-  if (shoreTiles.length == 0) {
-    return null;
-  }
-
-  return shoreTiles.reduce((closest, current) => {
-    const closestDistance = gm.manhattanDist(target, closest);
-    const currentDistance = gm.manhattanDist(target, current);
-    return currentDistance < closestDistance ? current : closest;
-  });
-}
-
-function closestShoreTN(
-  gm: GameMap,
-  tile: TileRef,
-  searchDist: number,
-): TileRef {
-  const tn = Array.from(
-    gm.bfs(
-      tile,
-      andFN((_, t) => !gm.hasOwner(t), manhattanDistFN(tile, searchDist)),
-    ),
-  )
-    .filter((t) => gm.isShore(t))
-    .sort((a, b) => gm.manhattanDist(tile, a) - gm.manhattanDist(tile, b));
-  if (tn.length == 0) {
-    return null;
-  }
-  return tn[0];
 }
 
 export function simpleHash(str: string): number {

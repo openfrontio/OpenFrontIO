@@ -242,6 +242,10 @@ export class PlayerView {
     return this.game.worker.playerProfile(this.smallID());
   }
 
+  bestTransportShipSpawn(targetTile: TileRef): Promise<TileRef | false> {
+    return this.game.worker.transportShipSpawn(this.id(), targetTile);
+  }
+
   transitiveTargets(): PlayerView[] {
     return [...this.targets(), ...this.allies().flatMap((p) => p.targets())];
   }

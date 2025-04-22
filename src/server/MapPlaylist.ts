@@ -81,25 +81,25 @@ export class MapPlaylist {
       // Big Maps are those larger than ~2.5 mil pixels
       case PlaylistType.BigMaps:
         return {
-          Europe: 3,
-          NorthAmerica: 2,
+          Europe: 2,
+          NorthAmerica: 1,
           Africa: 2,
           Britannia: 1,
           GatewayToTheAtlantic: 2,
           Australia: 2,
           Iceland: 2,
-          SouthAmerica: 3,
+          SouthAmerica: 1,
           KnownWorld: 2,
         };
       case PlaylistType.SmallMaps:
         return {
-          World: 1,
+          World: 4,
           Mena: 2,
           Pangaea: 1,
           Asia: 1,
           Mars: 1,
-          BetweenTwoSeas: 3,
-          Japan: 3,
+          BetweenTwoSeas: 2,
+          Japan: 2,
           BlackSea: 1,
           FaroeIslands: 2,
         };

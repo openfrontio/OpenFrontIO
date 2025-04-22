@@ -47,6 +47,7 @@ export class TradeShipExecution implements Execution {
       }
       this.tradeShip = this.origOwner.buildUnit(UnitType.TradeShip, 0, spawn, {
         dstPort: this._dstPort,
+        lastSetSafeFromPirates: ticks,
       });
     }
 
@@ -56,11 +57,11 @@ export class TradeShipExecution implements Execution {
     }
 
     if (this.origOwner != this.tradeShip.owner()) {
-      // Store as vairable in case ship is recaptured by previous owner
+      // Store as variable in case ship is recaptured by previous owner
       this.wasCaptured = true;
     }
 
-    // If a player captures an other player's port while trading we should delete
+    // If a player captures another player's port while trading we should delete
     // the ship.
     if (this._dstPort.owner().id() == this.srcPort.owner().id()) {
       this.tradeShip.delete(false);
@@ -107,6 +108,10 @@ export class TradeShipExecution implements Execution {
         this.tradeShip.move(this.tradeShip.tile());
         break;
       case PathFindResultType.NextTile:
+        // Update safeFromPirates status
+        if (this.mg.isWater(result.tile) && this.mg.isShoreline(result.tile)) {
+          this.tradeShip.setSafeFromPirates();
+        }
         this.tradeShip.move(result.tile);
         break;
       case PathFindResultType.PathNotFound:

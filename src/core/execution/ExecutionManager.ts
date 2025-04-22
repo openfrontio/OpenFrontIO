@@ -68,8 +68,9 @@ export class Executor {
         return new TransportShipExecution(
           playerID,
           intent.targetID,
-          this.mg.ref(intent.x, intent.y),
+          this.mg.ref(intent.dstX, intent.dstY),
           intent.troops,
+          this.mg.ref(intent.srcX, intent.srcY),
         );
       case "allianceRequest":
         return new AllianceRequestExecution(playerID, intent.recipient);

@@ -42,8 +42,7 @@ export class ShellExecution implements Execution {
     }
 
     if (this.destroyAtTick == -1 && !this.ownerUnit.isActive()) {
-      this.destroyAtTick =
-        this.mg.ticks() + this.mg.config().warshipShellLifetime();
+      this.destroyAtTick = this.mg.ticks() + this.mg.config().shellLifetime();
     }
 
     for (let i = 0; i < 3; i++) {
@@ -55,7 +54,7 @@ export class ShellExecution implements Execution {
       switch (result.type) {
         case PathFindResultType.Completed:
           this.active = false;
-          this.target.modifyHealth(-this.shell.info().damage);
+          this.target.modifyHealth(-this.effectOnTarget());
           this.shell.delete(false);
           return;
         case PathFindResultType.NextTile:
@@ -70,6 +69,11 @@ export class ShellExecution implements Execution {
           return;
       }
     }
+  }
+
+  private effectOnTarget(): number {
+    const baseDamage: number = this.mg.config().unitInfo(UnitType.Shell).damage;
+    return baseDamage;
   }
 
   isActive(): boolean {

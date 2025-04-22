@@ -2,34 +2,19 @@
 # update.sh - Script to update Docker container on Hetzner server
 # Called by deploy.sh after uploading Docker image to Docker Hub
 
-# Check if environment parameter is provided
-if [ $# -lt 3 ]; then
-  echo "Error: Required parameters missing"
-  echo "Usage: $0 <REGION> <docker_username> <docker_repo>"
-  exit 1
-fi
-
-# Set parameters
-REGION=$1
-DOCKER_USERNAME=$2
-DOCKER_REPO=$3
-
-# Container and image configuration
-CONTAINER_NAME="openfront-${REGION}"
-IMAGE_NAME="${DOCKER_USERNAME}/${DOCKER_REPO}"
-FULL_IMAGE_NAME="${IMAGE_NAME}:latest"
-
-echo "======================================================"
-echo "🔄 UPDATING SERVER: ${REGION} ENVIRONMENT"
-echo "======================================================"
-echo "Container name: ${CONTAINER_NAME}"
-echo "Docker image: ${FULL_IMAGE_NAME}"
-
 # Load environment variables if .env exists
 if [ -f /home/openfront/.env ]; then
   echo "Loading environment variables from .env file..."
   export $(grep -v '^#' /home/openfront/.env | xargs)
 fi
+
+echo "======================================================"
+echo "🔄 UPDATING SERVER: ${HOST} ENVIRONMENT"
+echo "======================================================"
+
+
+# Container and image configuration
+CONTAINER_NAME="openfront-${ENV}-${SUBDOMAIN}"
 
 docker login -u $DOCKER_USERNAME -p $DOCKER_TOKEN
 
@@ -46,8 +31,8 @@ else
   echo "Loki Docker plugin already installed."
 fi
 
-echo "Pulling latest image from Docker Hub..."
-docker pull $FULL_IMAGE_NAME
+echo "Pulling ${DOCKER_IMAGE} from Docker Hub..."
+docker pull $DOCKER_IMAGE
 
 echo "Checking for existing container..."
 # Check for running container
@@ -86,27 +71,20 @@ if [ -n "$PORT_CHECK" ]; then
   echo "Attempting to proceed anyway..."
 fi
 
-ENV="prod"
-if [ "$REGION" == "staging" ]; then
-  ENV="staging"
-fi
-
-echo "Starting new container for ${REGION} environment..."
-docker run -d -p 80:80 -p 127.0.0.1:9090:9090 \
+echo "Starting new container for ${HOST} environment..."
+docker run -d \
   --restart=always \
   $VOLUME_MOUNTS \
   --log-driver=loki \
-  --log-opt loki-url="http://localhost:3100/loki/api/v1/push" \
+  --log-opt loki-url="https://${MON_USERNAME}:${MON_PASSWORD}@mon.openfront.io/loki/loki/api/v1/push" \
   --log-opt loki-batch-size="400" \
-  --log-opt loki-external-labels="job=docker,environment=${ENV},host=${REGION},region=${REGION}" \
-  --env GAME_ENV=${ENV} \
-  --env REGION=${REGION} \
+  --log-opt loki-external-labels="job=docker,environment=${ENV},host=${HOST},subdomain=${SUBDOMAIN}" \
   --env-file /home/openfront/.env \
   --name ${CONTAINER_NAME} \
-  $FULL_IMAGE_NAME
+  $DOCKER_IMAGE
 
 if [ $? -eq 0 ]; then
-  echo "Update complete! New ${REGION} container is running."
+  echo "Update complete! New ${CONTAINER_NAME} container is running."
   
   # Final cleanup after successful deployment
   echo "Performing final cleanup of unused Docker resources..."
