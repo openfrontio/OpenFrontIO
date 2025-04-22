@@ -16,6 +16,9 @@ export class MultiTabDetector {
     this.startPenaltyCallback = startPenalty;
     this.acquireLock();
 
+    // Store an invisible lock element to track lock status
+    this.createInvisibleLockElement();
+
     this.heartbeatTimer = setInterval(() => {
       const lock = this.readLock();
       if (!lock) {
@@ -50,6 +53,9 @@ export class MultiTabDetector {
     if (lock?.owner === this.tabId) {
       localStorage.removeItem(this.lockKey);
     }
+
+    // Remove the invisible lock element
+    this.removeInvisibleLockElement();
   }
 
   private acquireLock(): void {
@@ -99,5 +105,23 @@ export class MultiTabDetector {
     setTimeout(() => {
       this.isPunished = false;
     }, delay);
+  }
+
+  // Create an invisible lock element in the DOM that cannot be easily removed
+  private createInvisibleLockElement(): void {
+    if (!document.getElementById("invisible-lock")) {
+      const lockElement = document.createElement("div");
+      lockElement.id = "invisible-lock";
+      lockElement.style.display = "none"; // Hidden but still in the DOM
+      document.body.appendChild(lockElement);
+    }
+  }
+
+  // Remove the invisible lock element from the DOM
+  private removeInvisibleLockElement(): void {
+    const lockElement = document.getElementById("invisible-lock");
+    if (lockElement) {
+      lockElement.remove();
+    }
   }
 }
