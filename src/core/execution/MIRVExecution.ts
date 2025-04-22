@@ -50,7 +50,7 @@ export class MirvExecution implements Execution {
 
     this.random = new PseudoRandom(mg.ticks() + simpleHash(this.senderID));
     this.mg = mg;
-    this.pathFinder = PathFinder.Mini(mg, 10_000, true);
+    this.pathFinder = PathFinder.Mini(mg, 10_000);
     this.player = mg.player(this.senderID);
     this.targetPlayer = this.mg.owner(this.dst);
 

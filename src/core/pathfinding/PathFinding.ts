@@ -16,24 +16,13 @@ export class PathFinder {
     private newAStar: (curr: TileRef, dst: TileRef) => AStar,
   ) {}
 
-  public static Mini(
-    game: Game,
-    iterations: number,
-    canMoveOnLand: boolean,
-    maxTries: number = 20,
-  ) {
+  public static Mini(game: Game, iterations: number, maxTries: number = 20) {
     return new PathFinder(game, (curr: TileRef, dst: TileRef) => {
       return new MiniAStar(
         game.map(),
         game.miniMap(),
         curr,
         dst,
-        (tr: TileRef): boolean => {
-          if (canMoveOnLand) {
-            return true;
-          }
-          return game.miniMap().isWater(tr);
-        },
         iterations,
         maxTries,
       );

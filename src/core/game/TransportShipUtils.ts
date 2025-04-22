@@ -1,4 +1,5 @@
 import { PathFindResultType } from "../pathfinding/AStar";
+import { MiniAStar } from "../pathfinding/MiniAStar";
 import { PathFinder } from "../pathfinding/PathFinding";
 import { Game, Player, UnitType } from "./Game";
 import { andFN, GameMap, manhattanDistFN, TileRef } from "./GameMap";
@@ -139,11 +140,164 @@ export function closestShoreFromPlayer(
   });
 }
 
+export function bestShoreDeploymentSource(
+  gm: Game,
+  player: Player,
+  target: TileRef,
+): TileRef | null {
+  target = targetTransportTile(gm, target);
+  if (target == null) {
+    return null;
+  }
+  console.log(`is shore tile: ${gm.isShore(target)}`);
+  const aStar = new MiniAStar(
+    gm,
+    gm.miniMap(),
+    Array.from(player.borderTiles()),
+    target,
+    1_000_000,
+    1,
+  );
+
+  const oldStart = performance.now();
+  const oldResult = bestShoreDeploymentSource2(gm, player, target);
+  const oldEnd = performance.now();
+  console.log(`old time: ${oldEnd - oldStart}`);
+
+  const { candidates, bestByManhattan } = candidateShoreTiles(
+    gm,
+    player,
+    target,
+  );
+  const singleTileAStar = new MiniAStar(
+    gm,
+    gm.miniMap(),
+    bestByManhattan,
+    target,
+    1_000_000,
+    1,
+  );
+
+  const singleTileAStarOld = new MiniAStar(
+    gm,
+    gm.miniMap(),
+    bestByManhattan,
+    target,
+    1_000_000,
+    1,
+    true,
+  );
+
+  const oldAStarStart = performance.now();
+  const oldAStarResult = singleTileAStarOld.compute();
+  const oldAStarEnd = performance.now();
+  console.log(`old astar time: ${oldAStarEnd - oldAStarStart}`);
+
+  console.log(`candidates: ${candidates.length}`);
+  const sampleStart = performance.now();
+  const sampleResult = new MiniAStar(
+    gm,
+    gm.miniMap(),
+    candidates,
+    target,
+    1_000_000,
+    1,
+  ).compute();
+  const sampleEnd = performance.now();
+  console.log(`sample time: ${sampleEnd - sampleStart}`);
+
+  const singleTileStart = performance.now();
+  const singleTileResult = singleTileAStar.compute();
+  const singleTileEnd = performance.now();
+  console.log(`single tile time: ${singleTileEnd - singleTileStart}`);
+
+  const start = performance.now();
+  const result = aStar.compute();
+  const end = performance.now();
+  console.log(`time: ${end - start}`);
+  if (result != PathFindResultType.Completed) {
+    console.log(`path not found: ${result}`);
+    return null;
+  }
+  const path = aStar.reconstructPath();
+  return path[0];
+}
+
+export function candidateShoreTiles(
+  gm: Game,
+  player: Player,
+  target: TileRef,
+): { candidates: TileRef[]; bestByManhattan: TileRef } {
+  let closestManhattanDistance = Infinity;
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
+
+  let bestByManhattan: TileRef = null;
+  const extremumTiles: Record<string, TileRef> = {
+    minX: null,
+    minY: null,
+    maxX: null,
+    maxY: null,
+  };
+
+  const borderShoreTiles = Array.from(player.borderTiles()).filter((t) =>
+    gm.isShore(t),
+  );
+
+  for (const tile of borderShoreTiles) {
+    const distance = gm.manhattanDist(tile, target);
+    const cell = gm.cell(tile);
+
+    // Manhattan-closest tile
+    if (distance < closestManhattanDistance) {
+      closestManhattanDistance = distance;
+      bestByManhattan = tile;
+    }
+
+    // Extremum tiles
+    if (cell.x < minX) {
+      minX = cell.x;
+      extremumTiles.minX = tile;
+    } else if (cell.y < minY) {
+      minY = cell.y;
+      extremumTiles.minY = tile;
+    } else if (cell.x > maxX) {
+      maxX = cell.x;
+      extremumTiles.maxX = tile;
+    } else if (cell.y > maxY) {
+      maxY = cell.y;
+      extremumTiles.maxY = tile;
+    }
+  }
+
+  // Calculate sampling interval to ensure we get at most 50 tiles
+  const samplingInterval = Math.max(
+    10,
+    Math.ceil(borderShoreTiles.length / 50),
+  );
+  const sampledTiles = borderShoreTiles.filter(
+    (_, index) => index % samplingInterval === 0,
+  );
+
+  const candidates = [
+    bestByManhattan,
+    extremumTiles.minX,
+    extremumTiles.minY,
+    extremumTiles.maxX,
+    extremumTiles.maxY,
+    ...sampledTiles,
+  ].filter(Boolean);
+
+  return { candidates, bestByManhattan };
+}
+
 /**
  * Finds the best shore tile for deployment among the player's shore tiles for the shortest route.
  * Calculates paths from 4 extremum tiles and the Manhattan-closest tile.
  */
-export function bestShoreDeploymentSource(
+export function bestShoreDeploymentSource2(
   gm: Game,
   player: Player,
   target: TileRef,
@@ -234,7 +388,7 @@ function calculatePathDistance(
 ): number | null {
   let currentTile = start;
   let tileDistance = 0;
-  const pathFinder = PathFinder.Mini(gm, 20_000, false);
+  const pathFinder = PathFinder.Mini(gm, 20000_000);
 
   while (true) {
     const result = pathFinder.nextTile(currentTile, target);

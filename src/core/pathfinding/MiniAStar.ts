@@ -2,36 +2,52 @@ import { Cell } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { AStar, PathFindResultType } from "./AStar";
 import { SerialAStar } from "./SerialAStar";
+import { SerialAStarOld } from "./SerialAStarOld";
 
-// TODO: test this, get it work
 export class MiniAStar implements AStar {
-  private aStar: SerialAStar;
+  private aStar: AStar;
 
   constructor(
     private gameMap: GameMap,
     private miniMap: GameMap,
-    private src: TileRef,
+    src: TileRef | TileRef[],
     private dst: TileRef,
-    private canMove: (t: TileRef) => boolean,
-    private iterations: number,
-    private maxTries: number,
+    iterations: number,
+    maxTries: number,
+    useOld: boolean = false,
   ) {
-    const miniSrc = this.miniMap.ref(
-      Math.floor(gameMap.x(src) / 2),
-      Math.floor(gameMap.y(src) / 2),
-    );
+    let miniSrc: TileRef | TileRef[];
+
+    if (Array.isArray(src)) {
+      // Handle multiple source points
+      miniSrc = src.map((srcPoint) =>
+        this.miniMap.ref(
+          Math.floor(gameMap.x(srcPoint) / 2),
+          Math.floor(gameMap.y(srcPoint) / 2),
+        ),
+      );
+    } else {
+      // Handle single source point
+      miniSrc = this.miniMap.ref(
+        Math.floor(gameMap.x(src) / 2),
+        Math.floor(gameMap.y(src) / 2),
+      );
+    }
+
     const miniDst = this.miniMap.ref(
       Math.floor(gameMap.x(dst) / 2),
       Math.floor(gameMap.y(dst) / 2),
     );
-    this.aStar = new SerialAStar(
-      miniSrc,
-      miniDst,
-      canMove,
-      iterations,
-      maxTries,
-      this.miniMap,
-    );
+
+    this.aStar = useOld
+      ? new SerialAStarOld(
+          miniSrc as TileRef,
+          miniDst,
+          iterations,
+          maxTries,
+          this.miniMap,
+        )
+      : new SerialAStar(miniSrc, miniDst, iterations, maxTries, this.miniMap);
   }
 
   compute(): PathFindResultType {

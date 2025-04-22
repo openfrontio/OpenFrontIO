@@ -26,7 +26,7 @@ export class SAMMissileExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
-    this.pathFinder = PathFinder.Mini(mg, 2000, true, 10);
+    this.pathFinder = PathFinder.Mini(mg, 2000, 10);
     this.mg = mg;
   }
 
