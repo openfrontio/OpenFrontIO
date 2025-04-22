@@ -4,12 +4,10 @@ import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
   assertNever,
-  closestShoreFromPlayer,
   distSortUnit,
   maxInt,
   minInt,
   simpleHash,
-  targetTransportTile,
   toInt,
   within,
 } from "../Util";
@@ -44,6 +42,10 @@ import { GameImpl } from "./GameImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
 import { AttackUpdate, GameUpdateType, PlayerUpdate } from "./GameUpdates";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
+import {
+  bestShoreDeploymentSource as bestTranpsortShipSpawn,
+  canBuildTransportShip,
+} from "./TransportShipUtils";
 import { UnitImpl } from "./UnitImpl";
 
 interface Target {
@@ -735,7 +737,7 @@ export class PlayerImpl implements Player {
     return Object.values(UnitType).map((u) => {
       return {
         type: u,
-        canBuild: this.canBuild(u, tile, validTiles) != false,
+        canBuild: this.canBuild(u, tile, validTiles),
         cost: this.mg.config().unitInfo(u).cost(this),
       } as BuildableUnit;
     });
@@ -784,7 +786,7 @@ export class PlayerImpl implements Player {
       case UnitType.SAMMissile:
         return targetTile;
       case UnitType.TransportShip:
-        return this.transportShipSpawn(targetTile);
+        return canBuildTransportShip(this.mg, this, targetTile);
       case UnitType.TradeShip:
         return this.tradeShipSpawn(targetTile);
       case UnitType.MissileSilo:
@@ -906,17 +908,6 @@ export class PlayerImpl implements Player {
     return valid;
   }
 
-  transportShipSpawn(targetTile: TileRef): TileRef | false {
-    if (!this.mg.isShore(targetTile)) {
-      return false;
-    }
-    const spawn = closestShoreFromPlayer(this.mg, this, targetTile);
-    if (spawn == null) {
-      return false;
-    }
-    return spawn;
-  }
-
   tradeShipSpawn(targetTile: TileRef): TileRef | false {
     const spawns = this.units(UnitType.Port).filter(
       (u) => u.tile() == targetTile,
@@ -955,78 +946,6 @@ export class PlayerImpl implements Player {
       alliances: this.alliances().map((a) => a.other(this).smallID()),
     };
     return rel;
-  }
-
-  public canBoat(tile: TileRef): TileRef | false {
-    if (
-      this.units(UnitType.TransportShip).length >=
-      this.mg.config().boatMaxNumber()
-    ) {
-      return false;
-    }
-
-    const dst = targetTransportTile(this.mg, tile);
-    if (dst == null) {
-      return false;
-    }
-
-    const other = this.mg.owner(tile);
-    if (other == this) {
-      return false;
-    }
-    if (other.isPlayer() && this.isFriendly(other)) {
-      return false;
-    }
-
-    if (this.mg.isOceanShore(dst)) {
-      let myPlayerBordersOcean = false;
-      for (const bt of this.borderTiles()) {
-        if (this.mg.isOceanShore(bt)) {
-          myPlayerBordersOcean = true;
-          break;
-        }
-      }
-
-      let otherPlayerBordersOcean = false;
-      if (!this.mg.hasOwner(tile)) {
-        otherPlayerBordersOcean = true;
-      } else {
-        for (const bt of (other as Player).borderTiles()) {
-          if (this.mg.isOceanShore(bt)) {
-            otherPlayerBordersOcean = true;
-            break;
-          }
-        }
-      }
-
-      if (myPlayerBordersOcean && otherPlayerBordersOcean) {
-        return this.canBuild(UnitType.TransportShip, dst);
-      } else {
-        return false;
-      }
-    }
-
-    // Now we are boating in a lake, so do a bfs from target until we find
-    // a border tile owned by the player
-
-    const tiles = this.mg.bfs(
-      dst,
-      andFN(
-        manhattanDistFN(dst, 300),
-        (_, t: TileRef) => this.mg.isLake(t) || this.mg.isShore(t),
-      ),
-    );
-
-    const sorted = Array.from(tiles).sort(
-      (a, b) => this.mg.manhattanDist(dst, a) - this.mg.manhattanDist(dst, b),
-    );
-
-    for (const t of sorted) {
-      if (this.mg.owner(t) == this) {
-        return this.canBuild(UnitType.TransportShip, dst);
-      }
-    }
-    return false;
   }
 
   createAttack(
@@ -1095,6 +1014,10 @@ export class PlayerImpl implements Player {
       }
       return false;
     }
+  }
+
+  bestTransportShipSpawn(targetTile: TileRef): TileRef | false {
+    return bestTranpsortShipSpawn(this.mg, this, targetTile);
   }
 
   // It's a probability list, so if an element appears twice it's because it's

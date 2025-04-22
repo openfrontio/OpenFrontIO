@@ -444,8 +444,9 @@ export interface Player {
   // Misc
   toUpdate(): PlayerUpdate;
   playerProfile(): PlayerProfile;
-  canBoat(tile: TileRef): TileRef | false;
   tradingPorts(port: Unit): Unit[];
+  // WARNING: this operation is expensive.
+  bestTransportShipSpawn(tile: TileRef): TileRef | false;
 }
 
 export interface Game extends GameMap {
@@ -502,7 +503,6 @@ export interface Game extends GameMap {
 }
 
 export interface PlayerActions {
-  canBoat: TileRef | false;
   canAttack: boolean;
   buildableUnits: BuildableUnit[];
   canSendEmojiAllPlayers: boolean;
@@ -510,7 +510,7 @@ export interface PlayerActions {
 }
 
 export interface BuildableUnit {
-  canBuild: boolean;
+  canBuild: TileRef | false;
   type: UnitType;
   cost: number;
 }

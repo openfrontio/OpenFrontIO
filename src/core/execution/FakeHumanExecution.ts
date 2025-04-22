@@ -378,6 +378,7 @@ export class FakeHumanExecution implements Execution {
         other.id(),
         closest.y,
         this.player.troops() / 5,
+        null,
       ),
     );
   }
@@ -538,6 +539,7 @@ export class FakeHumanExecution implements Execution {
         this.mg.owner(dst).id(),
         dst,
         this.player.troops() / 5,
+        null,
       ),
     );
     return;

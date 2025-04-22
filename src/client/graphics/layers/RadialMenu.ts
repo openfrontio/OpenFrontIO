@@ -8,7 +8,12 @@ import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import { consolex } from "../../../core/Consolex";
 import { EventBus } from "../../../core/EventBus";
-import { Cell, PlayerActions, TerraNullius } from "../../../core/game/Game";
+import {
+  Cell,
+  PlayerActions,
+  TerraNullius,
+  UnitType,
+} from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
@@ -374,15 +379,26 @@ export class RadialMenu implements Layer {
         );
       });
     }
-    if (actions.canBoat) {
+    if (
+      actions.buildableUnits.some((bu) => bu.type == UnitType.TransportShip)
+    ) {
       this.activateMenuElement(Slot.Boat, "#3f6ab1", boatIcon, () => {
-        this.eventBus.emit(
-          new SendBoatAttackIntentEvent(
-            this.g.owner(tile).id(),
-            this.clickedCell,
-            this.uiState.attackRatio * myPlayer.troops(),
-          ),
-        );
+        // BestTransportShipSpawn is an expensive operation, so
+        // we calculate it here and send the spawn tile to other clients.
+        myPlayer.bestTransportShipSpawn(tile).then((spawn) => {
+          if (spawn == false) {
+            return;
+          }
+
+          this.eventBus.emit(
+            new SendBoatAttackIntentEvent(
+              this.g.owner(tile).id(),
+              this.clickedCell,
+              this.uiState.attackRatio * myPlayer.troops(),
+              new Cell(this.g.x(spawn), this.g.y(spawn)),
+            ),
+          );
+        });
       });
     }
     if (actions.canAttack) {
