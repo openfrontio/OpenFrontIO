@@ -5,7 +5,7 @@
   "nations": [
     {
       "coordinates": [1545, 785],
-      "name": "Pinguin Empire",
+      "name": "Penguin Empire",
       "strength": 2,
       "flag": "an_pe"
     },
@@ -41,7 +41,7 @@
     },
     {
       "coordinates": [1060, 935],
-      "name": "Chile Claim",
+      "name": "Chilean Claim",
       "strength": 2,
       "flag": "cl"
     },
@@ -53,7 +53,7 @@
     },
     {
       "coordinates": [1590, 1120],
-      "name": "France Claim",
+      "name": "French Claim",
       "strength": 2,
       "flag": "fr"
     }
