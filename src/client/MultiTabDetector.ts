@@ -1,119 +1,103 @@
 export class MultiTabDetector {
-  private readonly lockKey: string = "openfront_tab_lock";
-  private readonly lockTimeout: number = 3000; 
-  private readonly heartbeatInterval: number = 1000; 
-  private tabId: string = crypto.randomUUID();
-  private lockIntervalId: number | null = null;
-
-  private readonly punishmentDelays: number[] = [
-    5000, 6000, 7000, 10000, 30000, 60000,
-  ];
-  private isPunished: boolean = false;
-  private isMonitoring: boolean = false;
+  private readonly tabId: string = `${Date.now()}-${Math.random()}`;
+  private readonly lockKey = "openfront-tab-lock";
+  private readonly heartbeatInterval = 1000;
+  private readonly staleThreshold = 3000;
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private unloadHandler: (() => void) | null = null;
+  private isPunished = false;
   private startPenaltyCallback?: (duration: number) => void;
   private numPunishmentsGiven = 0;
+  private readonly punishmentDelays: number[] = [
+    2000, 3000, 5000, 10000, 30000, 60000,
+  ];
 
   public startMonitoring(startPenalty: (duration: number) => void): void {
-    if (this.isMonitoring) return;
-    this.isMonitoring = true;
     this.startPenaltyCallback = startPenalty;
+    this.acquireLock();
 
-    this.claimLock();
-    this.lockIntervalId = window.setInterval(() => this.heartbeat(), this.heartbeatInterval);
+    this.heartbeatTimer = setInterval(() => {
+      const lock = this.readLock();
+      if (!lock) {
+        this.acquireLock();
+        return;
+      }
 
-    window.addEventListener("beforeunload", this.releaseLock);
-    window.addEventListener("unload", this.releaseLock);
-    window.addEventListener("storage", this.handleStorageChange);
+      if (lock.owner === this.tabId || Date.now() - lock.timestamp > this.staleThreshold) {
+        this.writeLock();
+        this.isPunished = false;
+        return;
+      }
+
+      if (!this.isPunished) {
+        this.applyPunishment();
+      }
+    }, this.heartbeatInterval);
   }
 
   public stopMonitoring(): void {
-    if (!this.isMonitoring) return;
-    this.isMonitoring = false;
-
-    if (this.lockIntervalId !== null) {
-      clearInterval(this.lockIntervalId);
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
     }
 
-    this.releaseLock();
+    if (this.unloadHandler) {
+      window.removeEventListener("beforeunload", this.unloadHandler);
+      this.unloadHandler = null;
+    }
 
-    window.removeEventListener("beforeunload", this.releaseLock);
-    window.removeEventListener("unload", this.releaseLock);
-    window.removeEventListener("storage", this.handleStorageChange);
-  }
-
-  private claimLock(): void {
     const lock = this.readLock();
-    const now = Date.now();
-
-    if (!lock || now - lock.timestamp > this.lockTimeout) {
-      this.writeLock();
-    } else if (lock.tabId !== this.tabId) {
-      this.applyPunishment();
+    if (lock?.owner === this.tabId) {
+      localStorage.removeItem(this.lockKey);
     }
   }
 
-  private heartbeat(): void {
-    const lock = this.readLock();
-    const now = Date.now();
+  private acquireLock(): void {
+    this.writeLock();
 
-    if (!lock || lock.tabId === this.tabId || now - lock.timestamp > this.lockTimeout) {
-      this.writeLock();
-    } else if (lock.tabId !== this.tabId) {
-      this.applyPunishment();
-    }
+    this.unloadHandler = () => {
+      const lock = this.readLock();
+      if (lock?.owner === this.tabId) {
+        localStorage.removeItem(this.lockKey);
+      }
+    };
+
+    window.addEventListener("beforeunload", this.unloadHandler);
   }
 
-  private readLock(): { tabId: string; timestamp: number } | null {
+  private writeLock(): void {
+    localStorage.setItem(
+      this.lockKey,
+      JSON.stringify({ owner: this.tabId, timestamp: Date.now() }),
+    );
+  }
+
+  private readLock(): { owner: string; timestamp: number } | null {
     try {
-      const value = localStorage.getItem(this.lockKey);
-      return value ? JSON.parse(value) : null;
+      const raw = localStorage.getItem(this.lockKey);
+      if (!raw) return null;
+      return JSON.parse(raw);
     } catch {
       return null;
     }
   }
 
-  private writeLock(): void {
-    try {
-      localStorage.setItem(
-        this.lockKey,
-        JSON.stringify({ tabId: this.tabId, timestamp: Date.now() })
-      );
-    } catch {
-      // ignore
-    }
-  }
-
-  private releaseLock = (): void => {
-    const lock = this.readLock();
-    if (lock && lock.tabId === this.tabId) {
-      localStorage.removeItem(this.lockKey);
-    }
-  };
-
-  private handleStorageChange = (event: StorageEvent): void => {
-    if (event.key === this.lockKey) {
-      const lock = this.readLock();
-      if (lock && lock.tabId !== this.tabId) {
-        this.applyPunishment();
-      }
-    }
-  };
-
   private applyPunishment(): void {
-    if (this.isPunished) return;
     this.isPunished = true;
 
-    let punishmentDelay = this.punishmentDelays[
-      Math.min(this.numPunishmentsGiven, this.punishmentDelays.length - 1)
-    ];
+    const delay =
+      this.numPunishmentsGiven >= this.punishmentDelays.length
+        ? this.punishmentDelays[this.punishmentDelays.length - 1]
+        : this.punishmentDelays[this.numPunishmentsGiven];
+
     this.numPunishmentsGiven++;
 
     if (this.startPenaltyCallback) {
-      this.startPenaltyCallback(punishmentDelay);
+      this.startPenaltyCallback(delay);
     }
 
     setTimeout(() => {
       this.isPunished = false;
-    }, punishmentDelay);
+    }, delay);
   }
 }
