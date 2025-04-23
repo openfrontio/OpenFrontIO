@@ -310,64 +310,50 @@ export class HostLobbyModal extends LitElement {
                   </div>
                 </label>
 
-                <!-- <label
-                  for="disable-nukes"
-                  class="option-card ${this.disableNukes ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="disable-nukes"
-                    @change=${this.handleDisableNukesChange}
-                    .checked=${this.disableNukes}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.disable_nukes")}
-                  </div>
-                </label> -->
-
                 <hr style="width: 100%; border-top: 1px solid #444; margin: 16px 0;" />
 
                 <!-- Individual disables for structures/weapons -->
-                <div>
-                  <div style="margin: 8px 0 12px 0; font-weight: bold; color: #ccc; text-align: center;">Disable Settings</div>
-                  <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;">
-                    ${[
-                      ["disableCity", "City"],
-                      ["disableDefensePost", "Defense Post"],
-                      ["disablePort", "Port"],
-                      ["disableWarship", "Warship"],
-                      ["disableMissileSilo", "Missile Silo"],
-                      ["disableSAMLauncher", "SAM Launcher"],
-                      ["disableAtomBomb", "Atom Bomb"],
-                      ["disableHydrogenBomb", "Hydrogen Bomb"],
-                      ["disableMIRV", "MIRV"],
-                    ].map(
-                      ([key, label]) => html`
-                        <label
-                          class="option-card ${this[key] ? "selected" : ""}"
-                          style="width: 140px;"
+                <div
+                  style="margin: 8px 0 12px 0; font-weight: bold; color: #ccc; text-align: center;"
+                >
+                  ${translateText("host_modal.disables_title")}
+                </div>
+                <div
+                  style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"
+                >
+                  ${[
+                    ["disableCity", "unit_type.city"],
+                    ["disableDefensePost", "unit_type.defense_post"],
+                    ["disablePort", "unit_type.port"],
+                    ["disableWarship", "unit_type.warship"],
+                    ["disableMissileSilo", "unit_type.missile_silo"],
+                    ["disableSAMLauncher", "unit_type.sam_launcher"],
+                    ["disableAtomBomb", "unit_type.atom_bomb"],
+                    ["disableHydrogenBomb", "unit_type.hydrogen_bomb"],
+                    ["disableMIRV", "unit_type.mirv"],
+                  ].map(
+                    ([key, translationKey]) => html`
+                      <label
+                        class="option-card ${this[key] ? "selected" : ""}"
+                        style="width: 140px;"
+                      >
+                        <div class="checkbox-icon"></div>
+                        <input
+                          type="checkbox"
+                          @change=${(e: Event) => {
+                            this[key] = (e.target as HTMLInputElement).checked;
+                          }}
+                          .checked=${this[key]}
+                        />
+                        <div
+                          class="option-card-title"
+                          style="text-align: center;"
                         >
-                          <div class="checkbox-icon"></div>
-                          <input
-                            type="checkbox"
-                            @change=${(e: Event) => {
-                              this[key] = (
-                                e.target as HTMLInputElement
-                              ).checked;
-                              this.putGameConfig();
-                            }}
-                            .checked=${this[key]}
-                          />
-                          <div
-                            class="option-card-title"
-                            style="text-align: center;"
-                          >
-                            ${label}
-                          </div>
-                        </label>
-                      `,
-                    )}
+                          ${translateText(translationKey)}
+                        </div>
+                      </label>
+                    `,
+                  )}
                   </div>
                 </div>
               </div>

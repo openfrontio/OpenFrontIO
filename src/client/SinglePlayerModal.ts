@@ -278,46 +278,31 @@ export class SinglePlayerModal extends LitElement {
                   ${translateText("single_modal.infinite_troops")}
                 </div>
               </label>
-
-              <label
-                for="singleplayer-modal-disable-nukes"
-                class="option-card ${this.disableNukes ? "selected" : ""}"
-              >
-                <div class="checkbox-icon"></div>
-                <input
-                  type="checkbox"
-                  id="singleplayer-modal-disable-nukes"
-                  @change=${this.handleDisableNukesChange}
-                  .checked=${this.disableNukes}
-                />
-                <div class="option-card-title">
-                  ${translateText("single_modal.disable_nukes")}
-                </div>
-              </label>
             </div>
+
             <hr
               style="width: 100%; border-top: 1px solid #444; margin: 16px 0;"
             />
             <div
               style="margin: 8px 0 12px 0; font-weight: bold; color: #ccc; text-align: center;"
             >
-              Disable Settings
+              ${translateText("single_modal.disables_title")}
             </div>
             <div
               style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"
             >
               ${[
-                ["disableCity", "City"],
-                ["disableDefensePost", "Defense Post"],
-                ["disablePort", "Port"],
-                ["disableWarship", "Warship"],
-                ["disableMissileSilo", "Missile Silo"],
-                ["disableSAMLauncher", "SAM Launcher"],
-                ["disableAtomBomb", "Atom Bomb"],
-                ["disableHydrogenBomb", "Hydrogen Bomb"],
-                ["disableMIRV", "MIRV"],
+                ["disableCity", "unit_type.city"],
+                ["disableDefensePost", "unit_type.defense_post"],
+                ["disablePort", "unit_type.port"],
+                ["disableWarship", "unit_type.warship"],
+                ["disableMissileSilo", "unit_type.missile_silo"],
+                ["disableSAMLauncher", "unit_type.sam_launcher"],
+                ["disableAtomBomb", "unit_type.atom_bomb"],
+                ["disableHydrogenBomb", "unit_type.hydrogen_bomb"],
+                ["disableMIRV", "unit_type.mirv"],
               ].map(
-                ([key, label]) => html`
+                ([key, translationKey]) => html`
                   <label
                     class="option-card ${this[key] ? "selected" : ""}"
                     style="width: 140px;"
@@ -331,7 +316,7 @@ export class SinglePlayerModal extends LitElement {
                       .checked=${this[key]}
                     />
                     <div class="option-card-title" style="text-align: center;">
-                      ${label}
+                      ${translateText(translationKey)}
                     </div>
                   </label>
                 `,

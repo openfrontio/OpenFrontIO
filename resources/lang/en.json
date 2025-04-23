@@ -98,6 +98,7 @@
     "infinite_gold": "Infinite gold",
     "infinite_troops": "Infinite troops",
     "disable_nukes": "Disable Nukes",
+    "disables_title": "Disable Settings",
     "start": "Start Game"
   },
   "map": {
@@ -161,7 +162,7 @@
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
     "infinite_troops": "Infinite troops",
-    "disable_nukes": "Disable Nukes",
+    "disables_title": "Disable Settings",
     "player": "Player",
     "players": "Players",
     "waiting": "Waiting for players...",
@@ -184,5 +185,16 @@
   },
   "select_lang": {
     "title": "Select Language"
+  },
+  "unit_type": {
+    "city": "City",
+    "defense_post": "Defense Post",
+    "port": "Port",
+    "warship": "Warship",
+    "missile_silo": "Missile Silo",
+    "sam_launcher": "SAM Launcher",
+    "atom_bomb": "Atom Bomb",
+    "hydrogen_bomb": "Hydrogen Bomb",
+    "mirv": "MIRV"
   }
 }

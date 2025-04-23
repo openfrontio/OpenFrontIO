@@ -97,7 +97,7 @@
     "instant_build": "即時建設",
     "infinite_gold": "資金無限",
     "infinite_troops": "兵士無限",
-    "disable_nukes": "核兵器使用禁止",
+    "disables_title": "無効化設定",
     "start": "ゲーム開始"
   },
   "map": {
@@ -153,7 +153,7 @@
     "instant_build": "即時建設",
     "infinite_gold": "資金無限",
     "infinite_troops": "兵士無限",
-    "disable_nukes": "核兵器使用禁止",
+    "disables_title": "無効化設定",
     "player": "プレイヤー",
     "players": "プレイヤー",
     "waiting": "他のプレイヤーの参加を待っています...",
@@ -176,5 +176,16 @@
   },
   "select_lang": {
     "title": "言語を選択"
+  },
+  "unit_type": {
+    "city": "都市",
+    "defense_post": "防衛ポスト",
+    "port": "港",
+    "warship": "戦艦",
+    "missile_silo": "ミサイル格納庫",
+    "sam_launcher": "SAMランチャー",
+    "atom_bomb": "原子爆弾",
+    "hydrogen_bomb": "水素爆弾",
+    "mirv": "MIRV"
   }
 }
