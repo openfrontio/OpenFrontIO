@@ -100,7 +100,7 @@ export class SerialAStar implements AStar {
         return PathFindResultType.Completed;
       }
 
-      this.expandFwdTileRef(fwdCurrent);
+      this.expandTileRef(fwdCurrent, true);
 
       // Process backward search
       const bwdCurrent = this.bwdOpenSet.dequeue()!.tile;
@@ -112,7 +112,7 @@ export class SerialAStar implements AStar {
         return PathFindResultType.Completed;
       }
 
-      this.expandBwdTileRef(bwdCurrent);
+      this.expandTileRef(bwdCurrent, false);
     }
 
     return this.completed
@@ -120,51 +120,28 @@ export class SerialAStar implements AStar {
       : PathFindResultType.PathNotFound;
   }
 
-  private expandFwdTileRef(current: TileRef) {
+  private expandTileRef(current: TileRef, isForward: boolean) {
     for (const neighbor of this.gameMap.neighbors(current)) {
-      if (neighbor !== this.dst && !this.gameMap.isWater(neighbor)) continue;
+      if (
+        neighbor != (isForward ? this.dst : this.closestSource) &&
+        !this.gameMap.isWater(neighbor)
+      )
+        continue;
+
+      const gScore = isForward ? this.fwdGScore : this.bwdGScore;
+      const openSet = isForward ? this.fwdOpenSet : this.bwdOpenSet;
+      const cameFrom = isForward ? this.fwdCameFrom : this.bwdCameFrom;
 
       const tentativeGScore =
-        this.fwdGScore.get(current)! + this.gameMap.cost(neighbor);
+        gScore.get(current)! + this.gameMap.cost(neighbor);
 
-      if (
-        !this.fwdGScore.has(neighbor) ||
-        tentativeGScore < this.fwdGScore.get(neighbor)!
-      ) {
-        this.fwdCameFrom.set(neighbor, current);
-        this.fwdGScore.set(neighbor, tentativeGScore);
-
-        const fScore = tentativeGScore + this.heuristic(neighbor, this.dst);
-        this.fwdOpenSet.enqueue({
-          tile: neighbor,
-          fScore: fScore,
-        });
-      }
-    }
-  }
-
-  private expandBwdTileRef(current: TileRef) {
-    for (const neighbor of this.gameMap.neighbors(current)) {
-      if (!this.gameMap.isWater(neighbor)) continue;
-
-      const tentativeGScore =
-        this.bwdGScore.get(current)! + this.gameMap.cost(neighbor);
-
-      if (
-        !this.bwdGScore.has(neighbor) ||
-        tentativeGScore < this.bwdGScore.get(neighbor)!
-      ) {
-        this.bwdCameFrom.set(neighbor, current);
-        this.bwdGScore.set(neighbor, tentativeGScore);
-
-        // Find closest source for better heuristic
+      if (!gScore.has(neighbor) || tentativeGScore < gScore.get(neighbor)!) {
+        cameFrom.set(neighbor, current);
+        gScore.set(neighbor, tentativeGScore);
         const fScore =
-          tentativeGScore + this.heuristic(neighbor, this.closestSource);
-
-        this.bwdOpenSet.enqueue({
-          tile: neighbor,
-          fScore: fScore,
-        });
+          tentativeGScore +
+          this.heuristic(neighbor, isForward ? this.dst : this.closestSource);
+        openSet.enqueue({ tile: neighbor, fScore: fScore });
       }
     }
   }
@@ -172,8 +149,9 @@ export class SerialAStar implements AStar {
   private heuristic(a: TileRef, b: TileRef): number {
     try {
       return (
-        1.1 * Math.abs(this.gameMap.x(a) - this.gameMap.x(b)) +
-        Math.abs(this.gameMap.y(a) - this.gameMap.y(b))
+        1.1 *
+        (Math.abs(this.gameMap.x(a) - this.gameMap.x(b)) +
+          Math.abs(this.gameMap.y(a) - this.gameMap.y(b)))
       );
     } catch {
       consolex.log("uh oh");

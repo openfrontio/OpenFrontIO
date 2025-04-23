@@ -375,20 +375,21 @@ export class ClientGameRunner {
         this.myPlayer
           .bestTransportShipSpawn(this.gameView.ref(cell.x, cell.y))
           .then((spawn: number | false) => {
+            let spawnCell = null;
             if (spawn !== false) {
-              const spawnCell = new Cell(
+              spawnCell = new Cell(
                 this.gameView.x(spawn),
                 this.gameView.y(spawn),
               );
-              this.eventBus.emit(
-                new SendBoatAttackIntentEvent(
-                  this.gameView.owner(tile).id(),
-                  cell,
-                  this.myPlayer.troops() * this.renderer.uiState.attackRatio,
-                  spawnCell,
-                ),
-              );
             }
+            this.eventBus.emit(
+              new SendBoatAttackIntentEvent(
+                this.gameView.owner(tile).id(),
+                cell,
+                this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+                spawnCell,
+              ),
+            );
           });
       }
 

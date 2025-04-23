@@ -151,10 +151,7 @@ export function bestShoreDeploymentSource(
 
   const candidates = candidateShoreTiles(gm, player, target);
   const aStar = new MiniAStar(gm, gm.miniMap(), candidates, target, 500_000, 1);
-  const start = performance.now();
   const result = aStar.compute();
-  const end = performance.now();
-  console.log(`bestShoreDeploymentSource: ${end - start}ms`);
   if (result != PathFindResultType.Completed) {
     console.warn(`bestShoreDeploymentSource: path not found: ${result}`);
     return false;
@@ -165,7 +162,7 @@ export function bestShoreDeploymentSource(
   }
   const potential = path[0];
   // Since mini a* downscales the map, we need to check the neighbors
-  // of the potential tile to ensure it's a valid deployment point
+  // of the potential tile to find a valid deployment point
   const neighbors = gm
     .neighbors(potential)
     .filter((n) => gm.isShore(n) && gm.owner(n) == player);
