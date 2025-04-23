@@ -195,6 +195,7 @@ export class NameLayer implements Layer {
     nameDiv.style.alignItems = "center";
 
     const nameSpan = document.createElement("span");
+    nameSpan.className = "player-name-span";
     nameSpan.innerHTML = player.name();
     nameDiv.appendChild(nameSpan);
     element.appendChild(nameDiv);
@@ -262,6 +263,10 @@ export class NameLayer implements Layer {
     nameDiv.style.fontSize = `${render.fontSize}px`;
     nameDiv.style.lineHeight = `${render.fontSize}px`;
     nameDiv.style.color = render.fontColor;
+    const span = nameDiv.querySelector(".player-name-span");
+    if (span) {
+      span.innerHTML = render.player.name();
+    }
     if (flagDiv) {
       flagDiv.style.height = `${render.fontSize}px`;
     }

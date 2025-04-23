@@ -3,11 +3,7 @@ import { EventBus } from "../../../core/EventBus";
 import { ClientID } from "../../../core/Schemas";
 import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
-import {
-  euclDistFN,
-  manhattanDistFN,
-  TileRef,
-} from "../../../core/game/GameMap";
+import { TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import {
@@ -264,22 +260,10 @@ export class UnitLayer implements Layer {
   }
 
   private handleWarShipEvent(unit: UnitView) {
-    const rel = this.relationship(unit);
-
-    // Clear previous area
-    for (const t of this.game.bfs(
-      unit.lastTile(),
-      euclDistFN(unit.lastTile(), 6, false),
-    )) {
-      this.clearCell(this.game.x(t), this.game.y(t));
-    }
-
-    if (unit.isActive()) {
-      if (unit.warshipTargetId()) {
-        this.drawSprite(unit, colord({ r: 200, b: 0, g: 0 }));
-      } else {
-        this.drawSprite(unit);
-      }
+    if (unit.warshipTargetId()) {
+      this.drawSprite(unit, colord({ r: 200, b: 0, g: 0 }));
+    } else {
+      this.drawSprite(unit);
     }
   }
 
@@ -317,46 +301,11 @@ export class UnitLayer implements Layer {
 
   // interception missle from SAM
   private handleMissileEvent(unit: UnitView) {
-    const rel = this.relationship(unit);
-    const range = 2;
-
-    for (const t of this.game.bfs(
-      unit.lastTile(),
-      euclDistFN(unit.lastTile(), range, false),
-    )) {
-      this.clearCell(this.game.x(t), this.game.y(t));
-    }
-
-    if (unit.isActive()) {
-      this.drawSprite(unit);
-    }
+    this.drawSprite(unit);
   }
 
   private handleNuke(unit: UnitView) {
-    let range = 0;
-
-    switch (unit.type()) {
-      case UnitType.AtomBomb:
-        range = 4;
-        break;
-      case UnitType.HydrogenBomb:
-        range = 6;
-        break;
-      case UnitType.MIRV:
-        range = 9;
-        break;
-    }
-
-    for (const t of this.game.bfs(
-      unit.lastTile(),
-      euclDistFN(unit.lastTile(), range, false),
-    )) {
-      this.clearCell(this.game.x(t), this.game.y(t));
-    }
-
-    if (unit.isActive()) {
-      this.drawSprite(unit);
-    }
+    this.drawSprite(unit);
   }
 
   private handleMIRVWarhead(unit: UnitView) {
@@ -377,17 +326,7 @@ export class UnitLayer implements Layer {
   }
 
   private handleTradeShipEvent(unit: UnitView) {
-    // Clear previous area
-    for (const t of this.game.bfs(
-      unit.lastTile(),
-      euclDistFN(unit.lastTile(), 3, false),
-    )) {
-      this.clearCell(this.game.x(t), this.game.y(t));
-    }
-
-    if (unit.isActive()) {
-      this.drawSprite(unit);
-    }
+    this.drawSprite(unit);
   }
 
   private handleBoatEvent(unit: UnitView) {
@@ -399,29 +338,21 @@ export class UnitLayer implements Layer {
     const trail = this.boatToTrail.get(unit);
     trail.push(unit.lastTile());
 
-    // Clear previous area
-    for (const t of this.game.bfs(
-      unit.lastTile(),
-      manhattanDistFN(unit.lastTile(), 4),
-    )) {
-      this.clearCell(this.game.x(t), this.game.y(t));
+    // Paint trail
+    for (const t of trail.slice(-1)) {
+      this.paintCell(
+        this.game.x(t),
+        this.game.y(t),
+        rel,
+        this.theme.territoryColor(unit.owner()),
+        150,
+        this.transportShipTrailContext,
+      );
     }
 
-    if (unit.isActive()) {
-      // Paint trail
-      for (const t of trail.slice(-1)) {
-        this.paintCell(
-          this.game.x(t),
-          this.game.y(t),
-          rel,
-          this.theme.territoryColor(unit.owner()),
-          150,
-          this.transportShipTrailContext,
-        );
-      }
+    this.drawSprite(unit);
 
-      this.drawSprite(unit);
-    } else {
+    if (!unit.isActive()) {
       for (const t of trail) {
         this.clearCell(
           this.game.x(t),
@@ -488,6 +419,8 @@ export class UnitLayer implements Layer {
   drawSprite(unit: UnitView, customTerritoryColor?: Colord) {
     const x = this.game.x(unit.tile());
     const y = this.game.y(unit.tile());
+    const lastX = this.game.x(unit.lastTile());
+    const lastY = this.game.y(unit.lastTile());
 
     let alternateViewColor = null;
 
@@ -513,12 +446,23 @@ export class UnitLayer implements Layer {
       alternateViewColor,
     );
 
-    this.context.drawImage(
-      sprite,
-      Math.round(x - sprite.width / 2),
-      Math.round(y - sprite.height / 2),
-      sprite.width,
-      sprite.width,
+    const clearsize = sprite.width + 1;
+
+    this.context.clearRect(
+      lastX - clearsize / 2,
+      lastY - clearsize / 2,
+      clearsize,
+      clearsize,
     );
+
+    if (unit.isActive()) {
+      this.context.drawImage(
+        sprite,
+        Math.round(x - sprite.width / 2),
+        Math.round(y - sprite.height / 2),
+        sprite.width,
+        sprite.width,
+      );
+    }
   }
 }

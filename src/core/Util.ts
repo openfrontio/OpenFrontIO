@@ -13,6 +13,11 @@ import {
   Turn,
 } from "./Schemas";
 
+import {
+  BOT_NAME_PREFIXES,
+  BOT_NAME_SUFFIXES,
+} from "./execution/utils/BotNames";
+
 export function manhattanDistWrapped(
   c1: Cell,
   c2: Cell,
@@ -285,4 +290,20 @@ export function minInt(a: bigint, b: bigint): bigint {
 export function withinInt(num: bigint, min: bigint, max: bigint): bigint {
   const atLeastMin = maxInt(num, min);
   return minInt(atLeastMin, max);
+}
+
+export function createRandomName(
+  name: string,
+  playerType: string,
+): string | null {
+  let randomName = null;
+  if (playerType === "HUMAN") {
+    const hash = simpleHash(name);
+    const prefixIndex = hash % BOT_NAME_PREFIXES.length;
+    const suffixIndex =
+      Math.floor(hash / BOT_NAME_PREFIXES.length) % BOT_NAME_SUFFIXES.length;
+
+    randomName = `👤 ${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
+  }
+  return randomName;
 }
