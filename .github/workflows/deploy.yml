@@ -2,7 +2,7 @@ name: 🚀 Deploy
 
 on:
   # Allow contributors to schedule manual deployments.
-  # Note that permissions are managed by environment configuration.
+  # Permission to deploy can be restricted by requiring approval in environment configuration.
   workflow_dispatch:
     inputs:
       target_domain:
