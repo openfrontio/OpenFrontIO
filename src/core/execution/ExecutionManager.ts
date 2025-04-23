@@ -65,12 +65,16 @@ export class Executor {
           this.mg.ref(intent.x, intent.y),
         );
       case "boat":
+        let src = null;
+        if (intent.srcX != null || intent.srcY != null) {
+          src = this.mg.ref(intent.srcX, intent.srcY);
+        }
         return new TransportShipExecution(
           playerID,
           intent.targetID,
           this.mg.ref(intent.dstX, intent.dstY),
           intent.troops,
-          this.mg.ref(intent.srcX, intent.srcY),
+          src,
         );
       case "allianceRequest":
         return new AllianceRequestExecution(playerID, intent.recipient);

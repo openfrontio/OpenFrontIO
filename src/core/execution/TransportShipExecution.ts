@@ -130,8 +130,8 @@ export class TransportShipExecution implements Execution {
       this.src = closestTileSrc;
     } else {
       if (
-        this.mg.owner(this.src) == this.attacker &&
-        this.mg.isShore(this.src)
+        this.mg.owner(this.src) != this.attacker ||
+        !this.mg.isShore(this.src)
       ) {
         console.warn(
           `src is not a shore tile or not owned by: ${this.attacker.name()}`,

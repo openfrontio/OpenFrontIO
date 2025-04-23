@@ -143,21 +143,36 @@ export function bestShoreDeploymentSource(
   gm: Game,
   player: Player,
   target: TileRef,
-): TileRef | null {
+): TileRef | false {
   target = targetTransportTile(gm, target);
   if (target == null) {
-    return null;
+    return false;
   }
 
   const candidates = candidateShoreTiles(gm, player, target);
-  const aStar = new MiniAStar(gm, gm.miniMap(), candidates, target, 1_000, 1);
+  const aStar = new MiniAStar(gm, gm.miniMap(), candidates, target, 500_000, 1);
+  const start = performance.now();
   const result = aStar.compute();
+  const end = performance.now();
+  console.log(`bestShoreDeploymentSource: ${end - start}ms`);
   if (result != PathFindResultType.Completed) {
-    console.warn(`path not found: ${result}`);
-    return null;
+    console.warn(`bestShoreDeploymentSource: path not found: ${result}`);
+    return false;
   }
   const path = aStar.reconstructPath();
-  return path[0];
+  if (path.length == 0) {
+    return false;
+  }
+  const potential = path[0];
+  // Since mini a* downscales the map, we need to check the neighbors
+  // of the potential tile to ensure it's a valid deployment point
+  const neighbors = gm
+    .neighbors(potential)
+    .filter((n) => gm.isShore(n) && gm.owner(n) == player);
+  if (neighbors.length == 0) {
+    return false;
+  }
+  return neighbors[0];
 }
 
 export function candidateShoreTiles(
