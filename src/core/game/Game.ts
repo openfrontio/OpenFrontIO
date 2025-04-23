@@ -147,6 +147,12 @@ export enum Relation {
   Friendly = 3,
 }
 
+export enum showRangeMode {
+  None,
+  All,
+  OnlyMouse,
+}
+
 export class Nation {
   constructor(
     public readonly flag: string,

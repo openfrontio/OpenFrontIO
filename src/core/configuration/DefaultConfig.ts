@@ -194,6 +194,9 @@ export class DefaultConfig implements Config {
   defensePostRange(): number {
     return 30;
   }
+  samSearchRange(): number {
+    return 80;
+  }
   defensePostDefenseBonus(): number {
     return 5;
   }

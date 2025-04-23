@@ -40,6 +40,7 @@ export class SAMLauncherExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
+    this.searchRangeRadius = this.mg.config().samSearchRange();
     if (!mg.hasPlayer(this.ownerId)) {
       console.warn(`SAMLauncherExecution: owner ${this.ownerId} not found`);
       this.active = false;

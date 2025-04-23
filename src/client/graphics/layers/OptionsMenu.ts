@@ -1,11 +1,15 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { GameType } from "../../../core/game/Game";
+import { GameType, showRangeMode } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
-import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
+import {
+  AlternateViewEvent,
+  RefreshGraphicsEvent,
+  ShowUnitRangeEvent,
+} from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -65,9 +69,23 @@ export class OptionsMenu extends LitElement implements Layer {
   @state()
   private alternateView: boolean = false;
 
+  @state()
+  private showRangeView: showRangeMode = showRangeMode.None;
+
   private onTerrainButtonClick() {
     this.alternateView = !this.alternateView;
     this.eventBus.emit(new AlternateViewEvent(this.alternateView));
+    this.requestUpdate();
+  }
+
+  private onShowRangeButtonClick() {
+    this.showRangeView =
+      this.showRangeView == showRangeMode.None
+        ? showRangeMode.OnlyMouse
+        : this.showRangeView == showRangeMode.OnlyMouse
+          ? showRangeMode.All
+          : showRangeMode.None;
+    this.eventBus.emit(new ShowUnitRangeEvent(this.showRangeView));
     this.requestUpdate();
   }
 
@@ -204,6 +222,17 @@ export class OptionsMenu extends LitElement implements Layer {
               (this.userSettings.leftClickOpensMenu()
                 ? "Opens menu"
                 : "Attack"),
+          })}
+          ${button({
+            onClick: this.onShowRangeButtonClick,
+            title: "Show Range",
+            children:
+              "🛡️: " +
+              (this.showRangeView == showRangeMode.None
+                ? "Off"
+                : this.showRangeView == showRangeMode.OnlyMouse
+                  ? "Only mouse"
+                  : "All"),
           })}
           <!-- ${button({
             onClick: this.onToggleFocusLockedButtonClick,
