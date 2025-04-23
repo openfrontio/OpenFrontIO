@@ -115,13 +115,22 @@ const GameConfigSchema = z.object({
   gameType: z.nativeEnum(GameType),
   gameMode: z.nativeEnum(GameMode),
   disableNPCs: z.boolean(),
-  disableNukes: z.boolean(),
   bots: z.number().int().min(0).max(400),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
   maxPlayers: z.number().optional(),
   numPlayerTeams: z.number().optional(),
+  disableBuilding: z.boolean().optional(),
+  disableCity: z.boolean().optional(),
+  disableDefensePost: z.boolean().optional(),
+  disablePort: z.boolean().optional(),
+  disableWarship: z.boolean().optional(),
+  disableMissileSilo: z.boolean().optional(),
+  disableSAMLauncher: z.boolean().optional(),
+  disableAtomBomb: z.boolean().optional(),
+  disableHydrogenBomb: z.boolean().optional(),
+  disableMIRV: z.boolean().optional(),
 });
 
 const SafeString = z

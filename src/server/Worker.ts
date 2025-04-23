@@ -163,7 +163,15 @@ export function startWorker() {
         instantBuild: req.body.instantBuild,
         bots: req.body.bots,
         disableNPCs: req.body.disableNPCs,
-        disableNukes: req.body.disableNukes,
+        disableCity: req.body.disableCity,
+        disableDefensePost: req.body.disableDefensePost,
+        disablePort: req.body.disablePort,
+        disableWarship: req.body.disableWarship,
+        disableMissileSilo: req.body.disableMissileSilo,
+        disableSAMLauncher: req.body.disableSAMLauncher,
+        disableAtomBomb: req.body.disableAtomBomb,
+        disableHydrogenBomb: req.body.disableHydrogenBomb,
+        disableMIRV: req.body.disableMIRV,
         gameMode: req.body.gameMode,
       });
       res.status(200).json({ success: true });

@@ -38,6 +38,16 @@ export class SinglePlayerModal extends LitElement {
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: number = 2;
 
+  @state() private disableCity: boolean = false;
+  @state() private disableDefensePost: boolean = false;
+  @state() private disablePort: boolean = false;
+  @state() private disableWarship: boolean = false;
+  @state() private disableMissileSilo: boolean = false;
+  @state() private disableSAMLauncher: boolean = false;
+  @state() private disableAtomBomb: boolean = false;
+  @state() private disableHydrogenBomb: boolean = false;
+  @state() private disableMIRV: boolean = false;
+
   render() {
     return html`
       <o-modal title=${translateText("single_modal.title")}>
@@ -285,6 +295,48 @@ export class SinglePlayerModal extends LitElement {
                 </div>
               </label>
             </div>
+            <hr
+              style="width: 100%; border-top: 1px solid #444; margin: 16px 0;"
+            />
+            <div
+              style="margin: 8px 0 12px 0; font-weight: bold; color: #ccc; text-align: center;"
+            >
+              Disable Settings
+            </div>
+            <div
+              style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"
+            >
+              ${[
+                ["disableCity", "City"],
+                ["disableDefensePost", "Defense Post"],
+                ["disablePort", "Port"],
+                ["disableWarship", "Warship"],
+                ["disableMissileSilo", "Missile Silo"],
+                ["disableSAMLauncher", "SAM Launcher"],
+                ["disableAtomBomb", "Atom Bomb"],
+                ["disableHydrogenBomb", "Hydrogen Bomb"],
+                ["disableMIRV", "MIRV"],
+              ].map(
+                ([key, label]) => html`
+                  <label
+                    class="option-card ${this[key] ? "selected" : ""}"
+                    style="width: 140px;"
+                  >
+                    <div class="checkbox-icon"></div>
+                    <input
+                      type="checkbox"
+                      @change=${(e: Event) => {
+                        this[key] = (e.target as HTMLInputElement).checked;
+                      }}
+                      .checked=${this[key]}
+                    />
+                    <div class="option-card-title" style="text-align: center;">
+                      ${label}
+                    </div>
+                  </label>
+                `,
+              )}
+            </div>
           </div>
         </div>
 
@@ -418,6 +470,15 @@ export class SinglePlayerModal extends LitElement {
               infiniteGold: this.infiniteGold,
               infiniteTroops: this.infiniteTroops,
               instantBuild: this.instantBuild,
+              disableCity: this.disableCity,
+              disableDefensePost: this.disableDefensePost,
+              disablePort: this.disablePort,
+              disableWarship: this.disableWarship,
+              disableMissileSilo: this.disableMissileSilo,
+              disableSAMLauncher: this.disableSAMLauncher,
+              disableAtomBomb: this.disableAtomBomb,
+              disableHydrogenBomb: this.disableHydrogenBomb,
+              disableMIRV: this.disableMIRV,
             },
           },
         } as JoinLobbyEvent,

@@ -748,19 +748,25 @@ export class PlayerImpl implements Player {
     targetTile: TileRef,
     validTiles: TileRef[] | null = null,
   ): TileRef | false {
-    // prevent the building of nukes and nuke related buildings
-    if (this.mg.config().disableNukes()) {
-      if (
-        unitType === UnitType.MissileSilo ||
-        unitType === UnitType.MIRV ||
-        unitType === UnitType.AtomBomb ||
-        unitType === UnitType.HydrogenBomb ||
-        unitType === UnitType.SAMLauncher ||
-        unitType === UnitType.SAMMissile ||
-        unitType === UnitType.MIRVWarhead
-      ) {
-        return false;
-      }
+    if (
+      (unitType === UnitType.MissileSilo &&
+        this.mg.config().disableMissileSilo()) ||
+      (unitType === UnitType.MIRV && this.mg.config().disableMIRV()) ||
+      (unitType === UnitType.AtomBomb && this.mg.config().disableAtomBomb()) ||
+      (unitType === UnitType.HydrogenBomb &&
+        this.mg.config().disableHydrogenBomb()) ||
+      (unitType === UnitType.SAMLauncher &&
+        this.mg.config().disableSAMLauncher()) ||
+      (unitType === UnitType.SAMMissile &&
+        this.mg.config().disableSAMLauncher()) ||
+      (unitType === UnitType.MIRVWarhead && this.mg.config().disableMIRV()) ||
+      (unitType === UnitType.City && this.mg.config().disableCity()) ||
+      (unitType === UnitType.DefensePost &&
+        this.mg.config().disableDefensePost()) ||
+      (unitType === UnitType.Port && this.mg.config().disablePort()) ||
+      (unitType === UnitType.Warship && this.mg.config().disableWarship())
+    ) {
+      return false;
     }
 
     const cost = this.mg.unitInfo(unitType).cost(this);

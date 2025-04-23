@@ -254,6 +254,9 @@ export class FakeHumanExecution implements Execution {
   }
 
   private maybeSendNuke(other: Player) {
+    if (this.mg.config().disableAtomBomb()) {
+      return;
+    }
     const silos = this.player.units(UnitType.MissileSilo);
     if (
       silos.length == 0 ||
@@ -385,7 +388,11 @@ export class FakeHumanExecution implements Execution {
 
   private handleUnits() {
     const ports = this.player.units(UnitType.Port);
-    if (ports.length == 0 && this.player.gold() > this.cost(UnitType.Port)) {
+    if (
+      !this.mg.config().disablePort() &&
+      ports.length == 0 &&
+      this.player.gold() > this.cost(UnitType.Port)
+    ) {
       const oceanTiles = Array.from(this.player.borderTiles()).filter((t) =>
         this.mg.isOceanShore(t),
       );
@@ -397,15 +404,20 @@ export class FakeHumanExecution implements Execution {
       }
       return;
     }
-    this.maybeSpawnStructure(
-      UnitType.City,
-      2,
-      (t) => new ConstructionExecution(this.player.id(), t, UnitType.City),
-    );
-    if (this.maybeSpawnWarship()) {
+
+    if (!this.mg.config().disableCity()) {
+      this.maybeSpawnStructure(
+        UnitType.City,
+        2,
+        (t) => new ConstructionExecution(this.player.id(), t, UnitType.City),
+      );
+    }
+
+    if (!this.mg.config().disableWarship() && this.maybeSpawnWarship()) {
       return;
     }
-    if (!this.mg.config().disableNukes()) {
+
+    if (!this.mg.config().disableMissileSilo()) {
       this.maybeSpawnStructure(
         UnitType.MissileSilo,
         1,

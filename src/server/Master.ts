@@ -250,10 +250,18 @@ async function schedulePublicGame(playlist: MapPlaylist) {
     infiniteTroops: false,
     instantBuild: false,
     disableNPCs: gameMode == GameMode.Team,
-    disableNukes: false,
     gameMode,
     numPlayerTeams,
     bots: 400,
+    disableCity: false,
+    disableDefensePost: false,
+    disablePort: false,
+    disableWarship: false,
+    disableMissileSilo: false,
+    disableSAMLauncher: false,
+    disableAtomBomb: false,
+    disableHydrogenBomb: false,
+    disableMIRV: false,
   };
 
   const workerPath = config.workerPath(gameID);

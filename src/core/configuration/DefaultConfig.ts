@@ -203,9 +203,35 @@ export class DefaultConfig implements Config {
   spawnNPCs(): boolean {
     return !this._gameConfig.disableNPCs;
   }
-  disableNukes(): boolean {
-    return this._gameConfig.disableNukes;
+
+  disableCity(): boolean {
+    return this._gameConfig.disableCity ?? false;
   }
+  disableDefensePost(): boolean {
+    return this._gameConfig.disableDefensePost ?? false;
+  }
+  disablePort(): boolean {
+    return this._gameConfig.disablePort ?? false;
+  }
+  disableWarship(): boolean {
+    return this._gameConfig.disableWarship ?? false;
+  }
+  disableMissileSilo(): boolean {
+    return this._gameConfig.disableMissileSilo ?? false;
+  }
+  disableSAMLauncher(): boolean {
+    return this._gameConfig.disableSAMLauncher ?? false;
+  }
+  disableAtomBomb(): boolean {
+    return this._gameConfig.disableAtomBomb ?? false;
+  }
+  disableHydrogenBomb(): boolean {
+    return this._gameConfig.disableHydrogenBomb ?? false;
+  }
+  disableMIRV(): boolean {
+    return this._gameConfig.disableMIRV ?? false;
+  }
+
   bots(): number {
     return this._gameConfig.bots;
   }
