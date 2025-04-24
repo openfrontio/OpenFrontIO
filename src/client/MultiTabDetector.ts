@@ -9,35 +9,26 @@ export class MultiTabDetector {
   private punishmentCount = 0;
   private startPenaltyCallback: (duration: number) => void = () => {};
 
-  private readonly punishmentDelays = [2_000, 3_000, 5_000, 10_000, 30_000, 60_000];
-
   constructor() {
-    
     window.addEventListener("storage", this.onStorageEvent.bind(this));
-    
     window.addEventListener("beforeunload", this.onBeforeUnload.bind(this));
   }
 
- 
   public startMonitoring(startPenalty: (duration: number) => void): void {
     this.startPenaltyCallback = startPenalty;
-    
     this.writeLock();
-
-    
     this.heartbeatTimer = window.setInterval(
       () => this.heartbeat(),
-      this.heartbeatIntervalMs
+      this.heartbeatIntervalMs,
     );
   }
 
- 
   public stopMonitoring(): void {
     if (this.heartbeatTimer !== null) {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
-  
+
     const lock = this.readLock();
     if (lock?.owner === this.tabId) {
       localStorage.removeItem(this.lockKey);
@@ -46,12 +37,10 @@ export class MultiTabDetector {
     window.removeEventListener("beforeunload", this.onBeforeUnload.bind(this));
   }
 
- 
   private heartbeat(): void {
     const now = Date.now();
     const lock = this.readLock();
 
-    
     if (
       !lock ||
       lock.owner === this.tabId ||
@@ -62,27 +51,26 @@ export class MultiTabDetector {
       return;
     }
 
-    
     if (!this.isPunished) {
       this.applyPunishment();
     }
   }
 
- 
   private onStorageEvent(e: StorageEvent): void {
     if (e.key === this.lockKey && e.newValue) {
+      let other: { owner: string; timestamp: number };
       try {
-        const other = JSON.parse(e.newValue);
-        if (other.owner !== this.tabId) {
-          this.applyPunishment();
-        }
-      } catch {
-        
+        other = JSON.parse(e.newValue);
+      } catch (e) {
+        console.error("Failed to parse lock", e);
+        return;
+      }
+      if (other.owner !== this.tabId && !this.isPunished) {
+        this.applyPunishment();
       }
     }
   }
 
-  
   private onBeforeUnload(): void {
     const lock = this.readLock();
     if (lock?.owner === this.tabId) {
@@ -90,14 +78,11 @@ export class MultiTabDetector {
     }
   }
 
-
   private applyPunishment(): void {
     this.isPunished = true;
-    const idx = Math.min(this.punishmentCount, this.punishmentDelays.length - 1);
-    const delay = this.punishmentDelays[idx];
     this.punishmentCount++;
+    const delay = 10_000;
     this.startPenaltyCallback(delay);
-
     setTimeout(() => {
       this.isPunished = false;
     }, delay);
@@ -106,7 +91,7 @@ export class MultiTabDetector {
   private writeLock(): void {
     localStorage.setItem(
       this.lockKey,
-      JSON.stringify({ owner: this.tabId, timestamp: Date.now() })
+      JSON.stringify({ owner: this.tabId, timestamp: Date.now() }),
     );
   }
 
@@ -115,7 +100,8 @@ export class MultiTabDetector {
     if (!raw) return null;
     try {
       return JSON.parse(raw);
-    } catch {
+    } catch (e) {
+      console.error("Failed to parse lock", raw, e);
       return null;
     }
   }
