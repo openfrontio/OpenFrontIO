@@ -16,6 +16,8 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
+import { getMapDefinition } from "../game/MapRegistry";
+import { LobbySizeGroup } from "../game/MapRegistryTypes"; // Import necessary types
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID } from "../Schemas";
 import { assertNever, simpleHash, within } from "../Util";
@@ -59,54 +61,25 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return 60 * 1000;
   }
   lobbyMaxPlayers(map: GameMapType): number {
-    // Maps with ~4 mil pixels
-    if (
-      [
-        GameMapType.GatewayToTheAtlantic,
-        GameMapType.SouthAmerica,
-        GameMapType.NorthAmerica,
-        GameMapType.Africa,
-        GameMapType.Europe,
-      ].includes(map)
-    ) {
-      return Math.random() < 0.2 ? 100 : 50;
+    const definition = getMapDefinition(map);
+    if (!definition) {
+      console.warn(
+        `Could not find map definition for ${map} in lobbyMaxPlayers. Defaulting size.`,
+      );
+      return Math.random() < 0.2 ? 50 : 20;
     }
-    // Maps with ~2.5 - ~3.5 mil pixels
-    if (
-      [
-        GameMapType.Australia,
-        GameMapType.Iceland,
-        GameMapType.Britannia,
-        GameMapType.Asia,
-      ].includes(map)
-    ) {
-      return Math.random() < 0.3 ? 50 : 25;
-    }
-    // Maps with ~2 mil pixels
-    if (
-      [
-        GameMapType.Mena,
-        GameMapType.Mars,
-        GameMapType.Oceania,
-        GameMapType.Japan, // Japan at this level because its 2/3 water
-        GameMapType.FaroeIslands,
-      ].includes(map)
-    ) {
-      return Math.random() < 0.3 ? 50 : 25;
-    }
-    // Maps smaller than ~2 mil pixels
-    if (
-      [
-        GameMapType.BetweenTwoSeas,
-        GameMapType.BlackSea,
-        GameMapType.Pangaea,
-      ].includes(map)
-    ) {
-      return Math.random() < 0.5 ? 30 : 15;
-    }
-    // world belongs with the ~2 mils, but these amounts never made sense so I assume the insanity is intended.
-    if (map == GameMapType.World) {
-      return Math.random() < 0.2 ? 150 : 50;
+
+    switch (definition.lobbySizeGroup) {
+      case LobbySizeGroup.Group4M:
+        return Math.random() < 0.2 ? 100 : 50;
+      case LobbySizeGroup.Group3M:
+        return Math.random() < 0.3 ? 50 : 25;
+      case LobbySizeGroup.Group2M:
+        return Math.random() < 0.3 ? 50 : 25;
+      case LobbySizeGroup.GroupSmall:
+        return Math.random() < 0.5 ? 30 : 15;
+      case LobbySizeGroup.World:
+        return Math.random() < 0.2 ? 150 : 50;
     }
     // default return for non specified map
     return Math.random() < 0.2 ? 50 : 20;

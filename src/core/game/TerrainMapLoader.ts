@@ -1,7 +1,7 @@
 import { consolex } from "../Consolex";
 import { GameMapType } from "./Game";
 import { GameMap, GameMapImpl } from "./GameMap";
-import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { terrainMapFileLoaderInstance } from "./TerrainMapFileLoader";
 
 export type TerrainMapData = {
   nationMap: NationMap;
@@ -28,7 +28,7 @@ export async function loadTerrainMap(
   if (loadedMaps.has(map)) {
     return loadedMaps.get(map);
   }
-  const mapFiles = await terrainMapFileLoader.getMapData(map);
+  const mapFiles = await terrainMapFileLoaderInstance.getMapData(map);
 
   const gameMap = await genTerrainFromBin(mapFiles.mapBin);
   const miniGameMap = await genTerrainFromBin(mapFiles.miniMapBin);

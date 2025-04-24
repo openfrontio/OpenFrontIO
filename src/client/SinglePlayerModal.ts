@@ -3,13 +3,9 @@ import { customElement, query, state } from "lit/decorators.js";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import { consolex } from "../core/Consolex";
-import {
-  Difficulty,
-  GameMapType,
-  GameMode,
-  GameType,
-  mapCategories,
-} from "../core/game/Game";
+import { Difficulty, GameMapType, GameMode, GameType } from "../core/game/Game";
+import { MAP_DEFINITIONS } from "../core/game/MapRegistry";
+import { MapCategory, MapDefinition } from "../core/game/MapRegistryTypes";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
@@ -38,7 +34,31 @@ export class SinglePlayerModal extends LitElement {
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: number = 2;
 
+  private get groupedMaps() {
+    const groups = MAP_DEFINITIONS.reduce(
+      (acc, def) => {
+        const categoryKey = def.category.toString();
+        if (!acc[categoryKey]) {
+          acc[categoryKey] = [];
+        }
+        acc[categoryKey].push(def);
+        return acc;
+      },
+      {} as Record<string, MapDefinition[]>,
+    );
+    for (const key in groups) {
+      groups[key].sort((a, b) => a.identifier.localeCompare(b.identifier));
+    }
+    return groups;
+  }
+
   render() {
+    const categoryOrder = [
+      MapCategory.Continental,
+      MapCategory.Regional,
+      MapCategory.Fantasy,
+    ];
+
     return html`
       <o-modal title=${translateText("single_modal.title")}>
         <div class="options-layout">
@@ -46,9 +66,10 @@ export class SinglePlayerModal extends LitElement {
           <div class="options-section">
             <div class="option-title">${translateText("map.map")}</div>
             <div class="option-cards flex-col">
-              <!-- Use the imported mapCategories -->
-              ${Object.entries(mapCategories).map(
-                ([categoryKey, maps]) => html`
+              ${categoryOrder.map((categoryKey) => {
+                const mapsInCategory = this.groupedMaps[categoryKey];
+                if (!mapsInCategory || mapsInCategory.length === 0) return null;
+                return html`
                   <div class="w-full mb-4">
                     <h3
                       class="text-lg font-semibold mb-2 text-center text-gray-300"
@@ -56,20 +77,19 @@ export class SinglePlayerModal extends LitElement {
                       ${translateText(`map_categories.${categoryKey}`)}
                     </h3>
                     <div class="flex flex-row flex-wrap justify-center gap-4">
-                      ${maps.map((mapValue) => {
-                        const mapKey = Object.keys(GameMapType).find(
-                          (key) => GameMapType[key] === mapValue,
-                        );
+                      ${mapsInCategory.map((def) => {
+                        const mapValue = GameMapType[def.identifier];
+                        if (mapValue === undefined) return null;
                         return html`
                           <div
                             @click=${() => this.handleMapSelection(mapValue)}
                           >
                             <map-display
-                              .mapKey=${mapKey}
+                              .mapKey=${def.identifier}
                               .selected=${!this.useRandomMap &&
                               this.selectedMap === mapValue}
                               .translation=${translateText(
-                                `map.${mapKey.toLowerCase()}`,
+                                `map.${def.identifier.toLowerCase()}`,
                               )}
                             ></map-display>
                           </div>
@@ -77,8 +97,8 @@ export class SinglePlayerModal extends LitElement {
                       })}
                     </div>
                   </div>
-                `,
-              )}
+                `;
+              })}
               <div
                 class="option-card random-map ${this.useRandomMap
                   ? "selected"
