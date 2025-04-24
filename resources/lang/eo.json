@@ -1,5 +1,12 @@
 {
+  "lang": {
+    "en": "Esperanto",
+    "native": "Esperanto",
+    "svg": "eo",
+    "lang_code": "eo"
+  },
   "main": {
+    "title": "OpenFront (ALFA)",
     "join_discord": "Kunigu la Discord-servilon !",
     "create_lobby": "Krei salonon",
     "join_lobby": "Kunigi salonon",
@@ -15,6 +22,7 @@
     "action_alt_view": "Alternativa vido (tereno/lando)",
     "action_attack_altclick": "Ataki (kiam la maldekstra klako estas formi por malfermi la menuon)",
     "action_build": "Malfermi la konstruan menuon",
+    "action_emote": "Malfermi miensimbolan menuon",
     "action_center": "Recentrigi la kameraon sur la ludanto",
     "action_zoom": "Zomi",
     "action_move_camera": "Moviĝi kameraon",
@@ -77,8 +85,7 @@
     "icon_crown": "Krono - Ĉi tiu ludanto estas numero 1 en la ranglisto",
     "icon_traitor": "Krucitaj glavoj - Perfida. Ĉi tiu ludanto atakis aliancanon.",
     "icon_ally": "Manpremo - Aliancano. Ĉi tiu ludanto estas via aliancano.",
-    "info_enemy_panel": "Malamiko informpanelo",
-    "action_emote": "Malfermi miensimbolan menuon"
+    "info_enemy_panel": "Malamiko informpanelo"
   },
   "single_modal": {
     "title": "Sola Ludanto",
@@ -94,6 +101,7 @@
     "start": "Komenci la ludon"
   },
   "map": {
+    "map": "Karto",
     "world": "Mondo",
     "europe": "Eŭropo",
     "mena": "Mezoriento kaj Nordafriko",
@@ -110,10 +118,10 @@
     "random": "Hazarda",
     "iceland": "Islando",
     "pangaea": "Pangeo",
-    "map": "Karto",
-    "betweentwoseas": "Inter du maroj",
     "japan": "Japanio kaj najbaroj",
-    "knownworld": "Konata Mondo"
+    "betweentwoseas": "Inter du maroj",
+    "knownworld": "Konata Mondo",
+    "faroeislands": "Ferooj"
   },
   "private_lobby": {
     "title": "Aliĝi al privata salono",
@@ -139,6 +147,8 @@
   },
   "host_modal": {
     "title": "Privata Salono",
+    "mode": "Reĝimo",
+    "team_count": "Nombro de teamoj",
     "options_title": "Opcioj",
     "bots": "Robotoj :",
     "bots_disabled": "Malŝaltita",
@@ -150,25 +160,18 @@
     "player": "Ludanto",
     "players": "Ludantoj",
     "waiting": "Atendante ludantojn...",
-    "start": "Komenci la ludon",
-    "mode": "Reĝimo"
-  },
-  "difficulty": {
-    "Relaxed": "Senstreĉa",
-    "Balanced": "Ekvilibriga",
-    "Intense": "Intensa",
-    "Impossible": "Neebla",
-    "difficulty": "Malfacileco"
+    "start": "Komenci la ludon"
   },
   "game_starting_modal": {
     "title": "Ludo komenciĝas...",
     "desc": "Preparante por komenci la salonon. Bonvolu atendi."
   },
-  "lang": {
-    "en": "Esperanto",
-    "native": "Esperanto",
-    "svg": "eo",
-    "lang_code": "eo"
+  "difficulty": {
+    "difficulty": "Malfacileco",
+    "Relaxed": "Senstreĉa",
+    "Balanced": "Ekvilibriga",
+    "Intense": "Intensa",
+    "Impossible": "Neebla"
   },
   "game_mode": {
     "ffa": "Senpaga por ĉiuj",
@@ -176,5 +179,50 @@
   },
   "select_lang": {
     "title": "Elekti lingvon"
+  },
+  "user_setting": {
+    "title": "Uzantparametroj",
+    "tab_basic": "Bazaj parametroj",
+    "tab_keybinds": "Fulmoklavoj",
+    "dark_mode_label": "🌙 Malhela Modo",
+    "dark_mode_desc": "Baskuli la retpaĝa aspekto inter hela kaj malhela temo",
+    "emojis_label": "😊 Emoĝioj",
+    "emojis_desc": "Montri/Maski la emoĝiojn en la ludo",
+    "left_click_label": "🖱️Maldekstra alklako por malfermi menuon",
+    "left_click_desc": "Kiam aktiviga, maldekstra alklako malfermas menuon kaj glava atakbutono. Kiam malaktiviga, maldekstra alklako atakas direkten.",
+    "attack_ratio_label": "⚔️ Atakkvociento",
+    "attack_ratio_desc": "Kian procenton de viaj trupoj sendi en atako (1–100%)",
+    "troop_ratio_label": "🪖🛠️ Trupoj kaj Laboristoj kvociento",
+    "troop_ratio_desc": "Alĝustigu la ekvilibron inter soldatoj (por batalo) kaj laboristoj (por orproduktado) (1–100%)",
+    "easter_writing_speed_label": "Rapidskriba multiganto",
+    "easter_writing_speed_desc": "Alĝustigu kiom rapide vi ŝajnigas kodi (x1–x100)",
+    "easter_bug_count_label": "Nombro da cimoj",
+    "easter_bug_count_desc": "Kiom da cimoj vi bonfartas (0–1000, emocie)",
+    "view_options": "Vidi opciojn",
+    "toggle_view": "Baskuli vido",
+    "toggle_view_desc": "Alterna vido (tereno/landoj)",
+    "zoom_controls": "Zomaj kontroloj",
+    "zoom_out": "Malzomi",
+    "zoom_out_desc": "Malzomi la mapon",
+    "zoom_in": "Zomi",
+    "zoom_in_desc": "Zomi en la mapon",
+    "camera_movement": "Fotila movado",
+    "center_camera": "Centriĝi la fotilon",
+    "center_camera_desc": "Centriĝi la fotilon sur la ludanto",
+    "move_up": "Movi Fotilon Supren",
+    "move_up_desc": "Movi la fotilon supren",
+    "move_left": "Movi Fotilon Maldekstren",
+    "move_left_desc": "Movi la fotilon maldekstren",
+    "move_down": "Movi Fotilon Malsupren",
+    "move_down_desc": "Movi la fotilon malsupren",
+    "move_right": "Movi Fotilon Dekstren",
+    "move_right_desc": "Movi la fotilon dekstren",
+    "reset": "Rekomencigi",
+    "unbind": "Senligi"
+  },
+  "map_categories": {
+    "continental": "Kontinenta",
+    "regional": "Regiona",
+    "fantasy": "Alia"
   }
 }

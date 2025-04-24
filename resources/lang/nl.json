@@ -1,5 +1,12 @@
 {
+  "lang": {
+    "en": "Dutch",
+    "native": "Nederlands",
+    "svg": "nl",
+    "lang_code": "nl"
+  },
   "main": {
+    "title": "OpenFront (ALFA)",
     "join_discord": "Word lid van de Discord!",
     "create_lobby": "Lobby aanmaken",
     "join_lobby": "Lobby toetreden",
@@ -10,11 +17,12 @@
   },
   "help_modal": {
     "hotkeys": "Sneltoetsen",
-    "table_key": "Toets",
+    "table_key": "Sneltoets",
     "table_action": "Actie",
     "action_alt_view": "Alternatieve weergave (terrein/landen)",
     "action_attack_altclick": "Aanvallen (als linkermuisknop is ingesteld op menu openen)",
     "action_build": "Open bouwmenu",
+    "action_emote": "Open emoji-menu",
     "action_center": "Camera centreren op speler",
     "action_zoom": "In-/uitzoomen",
     "action_move_camera": "Camera bewegen",
@@ -28,7 +36,7 @@
     "ui_pop": "Pop - Jouw totale bevolking, jouw maximale bevolking en de snelheid waarmee je ze verwerft.",
     "ui_gold": "Goud - Het goud dat je hebt en de snelheid waarmee je het verwerft.",
     "ui_troops_workers": "Troepen en Werkers - Het aantal toegewezen troepen en werkers. Troepen worden gebruikt om aan te vallen of verdedigen. Werkers worden gebruikt om goud te genereren. Je kunt het aantal troepen en werkers aanpassen met de schuifbalk.",
-    "ui_attack_ratio": "Aanvalsverhouding - Het aantal troepen dat wordt gebruikt wanneer je aanvalt. Je kunt de aanvalsverhouding aanpassen met de schuifbalk. Heb je meer aanvallende dan verdedigende troepen dan verlies je er minder bij de aanval, heb je er minder dan lopen je aanvallende troepen meer schade op. Dit effect gaat niet verder dan verhoudingen van 2:1.",
+    "ui_attack_ratio": "Aanvalsverhouding - Het aantal troepen dat wordt gebruikt wanneer je aanvalt. Je kunt de aanvalsverhouding aanpassen met de schuifbalk. Gebruik je bij een aanval meer aanvallende troepen dan er verdedigende troepen zijn, dan verlies je er minder dan wanneer je met minder troepen aanvalt. Dit effect gaat niet verder dan verhoudingen van 2:1.",
     "ui_options": "Opties",
     "ui_options_desc": "De volgende elementen zijn hierin te vinden:",
     "option_pause": "Spel pauzeren/hervatten - Alleen beschikbaar in het speltype voor één speler.",
@@ -77,8 +85,7 @@
     "icon_crown": "Kroon - Dit is de nummer 1 speler op de leaderboard.",
     "icon_traitor": "Gekruiste zwaarden - Verrader. Deze speler heeft een bondgenoot aangevallen.",
     "icon_ally": "Handdruk - Bondgenoot. Deze speler is je bondgenoot.",
-    "info_enemy_panel": "Infopaneel vijand",
-    "action_emote": "Open emoji-menu"
+    "info_enemy_panel": "Infopaneel vijand"
   },
   "single_modal": {
     "title": "Eén speler",
@@ -94,6 +101,7 @@
     "start": "Start Spel"
   },
   "map": {
+    "map": "Kaart",
     "world": "Wereld",
     "europe": "Europa",
     "mena": "MENA",
@@ -110,10 +118,10 @@
     "random": "Willekeurig",
     "iceland": "IJsland",
     "pangaea": "Pangea",
-    "map": "Kaart",
-    "betweentwoseas": "Tussen twee zeeën",
     "japan": "Japan en buren",
-    "knownworld": "Bekende Wereld"
+    "betweentwoseas": "Tussen twee zeeën",
+    "knownworld": "Bekende Wereld",
+    "faroeislands": "Faeröer eilanden"
   },
   "private_lobby": {
     "title": "Privélobby toetreden",
@@ -139,6 +147,8 @@
   },
   "host_modal": {
     "title": "Privélobby",
+    "mode": "Modus",
+    "team_count": "Aantal teams",
     "options_title": "Opties",
     "bots": "Bots:",
     "bots_disabled": "Uitgeschakeld",
@@ -150,25 +160,18 @@
     "player": "Speler",
     "players": "Spelers",
     "waiting": "Wachten op spelers...",
-    "start": "Start Spel",
-    "mode": "Modus"
-  },
-  "difficulty": {
-    "Relaxed": "Ontspannen",
-    "Balanced": "Gebalanceerd",
-    "Intense": "Intens",
-    "Impossible": "Onmogelijk",
-    "difficulty": "Moeilijkheidsgraad"
+    "start": "Start Spel"
   },
   "game_starting_modal": {
     "title": "Spel gaat starten...",
     "desc": "Voorbereiden op het starten van de lobby. Even geduld."
   },
-  "lang": {
-    "en": "Dutch",
-    "native": "Nederlands",
-    "svg": "nl",
-    "lang_code": "nl"
+  "difficulty": {
+    "difficulty": "Moeilijkheidsgraad",
+    "Relaxed": "Ontspannen",
+    "Balanced": "Gebalanceerd",
+    "Intense": "Intens",
+    "Impossible": "Onmogelijk"
   },
   "game_mode": {
     "ffa": "Iedereen tegen iedereen (FFA)",
@@ -176,5 +179,50 @@
   },
   "select_lang": {
     "title": "Kies taal"
+  },
+  "user_setting": {
+    "title": "Gebruikersinstellingen",
+    "tab_basic": "Basisinstellingen",
+    "tab_keybinds": "Sneltoetsen",
+    "dark_mode_label": "🌙 Donkere modus",
+    "dark_mode_desc": "Schakel tussen lichte en donkere thema's voor de site",
+    "emojis_label": "😊 Emoji's",
+    "emojis_desc": "Schakel het tonen van emoji's in de game uit/aan ",
+    "left_click_label": "🖱️ Linkermuisknop voor openen menu",
+    "left_click_desc": "AAN: linkermuisknop opent het radiale menu met zwaard-aanvalsknop. UIT: linkermuisklik valt direct aan.",
+    "attack_ratio_label": "⚔️ Aanvalsverhouding",
+    "attack_ratio_desc": "Welk percentage van je troepen je bij een aanval stuurt (1-100%)",
+    "troop_ratio_label": "🪖🛠️ Troepen en Werkers-verhouding",
+    "troop_ratio_desc": "De balans tussen troepen (voor gevechten) en werkers (voor goudproductie) aanpassen (1-100%)",
+    "easter_writing_speed_label": "Schrijfsnelheidsvermenigvuldiger",
+    "easter_writing_speed_desc": "Pas aan hoe snel je pretendeert te coderen (x1-x100)",
+    "easter_bug_count_label": "Aantal bugs",
+    "easter_bug_count_desc": "Hoeveel bugs je oké vindt (0-1000, gevoelsmatig)",
+    "view_options": "Weergave-opties",
+    "toggle_view": "Weergave wisselen",
+    "toggle_view_desc": "Alternatieve weergave (terrein/landen)",
+    "zoom_controls": "Zoombediening",
+    "zoom_out": "Uitzoomen",
+    "zoom_out_desc": "Kaart uitzoomen",
+    "zoom_in": "Inzoomen",
+    "zoom_in_desc": "Kaart inzoomen",
+    "camera_movement": "Camerabediening",
+    "center_camera": "Camera centreren",
+    "center_camera_desc": "Camera op speler centreren",
+    "move_up": "Camera omhoog",
+    "move_up_desc": "Beweeg de camera naar boven",
+    "move_left": "Camera naar links",
+    "move_left_desc": "Beweeg de camera naar links",
+    "move_down": "Camera omlaag",
+    "move_down_desc": "Beweeg de camera naar beneden",
+    "move_right": "Camera naar rechts",
+    "move_right_desc": "Beweeg de camera naar rechts",
+    "reset": "Resetten",
+    "unbind": "Loskoppelen"
+  },
+  "map_categories": {
+    "continental": "Continent",
+    "regional": "Regio",
+    "fantasy": "Overig"
   }
 }

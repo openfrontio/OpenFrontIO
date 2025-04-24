@@ -1,5 +1,12 @@
 {
+  "lang": {
+    "en": "Serbo-Croatian",
+    "native": "Srpsko-Hrvatski",
+    "svg": "sh_yugo",
+    "lang_code": "sh"
+  },
   "main": {
+    "title": "OpenFront (ALFA)",
     "join_discord": "Pridruži se Diskordu!",
     "create_lobby": "Napravi čekaonicu",
     "join_lobby": "Pridruži se čekaonici",
@@ -15,6 +22,7 @@
     "action_alt_view": "Alternativni prikaz (teren / države)",
     "action_attack_altclick": "Napad (ukoliko je levi klik podešen da otvara izbornik)",
     "action_build": "Otvara izbornik za izgradnju",
+    "action_emote": "Otvori izbornik emotikona",
     "action_center": "Centrira kameru na igrača",
     "action_zoom": "Približi / udalji",
     "action_move_camera": "Pomera kameru",
@@ -77,8 +85,7 @@
     "icon_crown": "Kruna - Ovo je igrač broj 1 na ljestvici",
     "icon_traitor": "Ukršteni mačevi - Izdajica. Ovaj igrač je napao saveznika.",
     "icon_ally": "Rukovanje - Saveznik. Ovaj igrač ti je saveznik.",
-    "info_enemy_panel": "Informacije o neprijatelju",
-    "action_emote": "Otvori izbornik emotikona"
+    "info_enemy_panel": "Informacije o neprijatelju"
   },
   "single_modal": {
     "title": "Igraj sam",
@@ -94,6 +101,7 @@
     "start": "Započni partiju"
   },
   "map": {
+    "map": "Mapa",
     "world": "Svijet",
     "europe": "Evropa",
     "mena": "BISA",
@@ -110,10 +118,10 @@
     "random": "Nasumična",
     "iceland": "Island",
     "pangaea": "Pangea",
-    "map": "Mapa",
-    "betweentwoseas": "Između dva mora",
     "japan": "Japan i susjedi",
-    "knownworld": "Poznati svijet"
+    "betweentwoseas": "Između dva mora",
+    "knownworld": "Poznati svijet",
+    "faroeislands": "Farska ostrva"
   },
   "private_lobby": {
     "title": "Pridruži se privatnoj čekaonici",
@@ -139,6 +147,8 @@
   },
   "host_modal": {
     "title": "Privatna čekaonica",
+    "mode": "Tip igre",
+    "team_count": "Broj timova",
     "options_title": "Opcije",
     "bots": "Botovi: ",
     "bots_disabled": "Onemogućeni",
@@ -150,25 +160,18 @@
     "player": "Igrač",
     "players": "Igrači",
     "waiting": "Čekamo igrače...",
-    "start": "Započni partiju",
-    "mode": "Tip igre"
-  },
-  "difficulty": {
-    "Relaxed": "Bleja",
-    "Balanced": "Fer",
-    "Intense": "Napeto",
-    "Impossible": "Nemoguće",
-    "difficulty": "Težina"
+    "start": "Započni partiju"
   },
   "game_starting_modal": {
     "title": "Partija počinje...",
     "desc": "Čekaonica se priprema za start. Ček' malo."
   },
-  "lang": {
-    "en": "Serbo-Croatian",
-    "native": "Srpsko-Hrvatski",
-    "svg": "sh_yugo",
-    "lang_code": "sh"
+  "difficulty": {
+    "difficulty": "Težina",
+    "Relaxed": "Bleja",
+    "Balanced": "Fer",
+    "Intense": "Napeto",
+    "Impossible": "Nemoguće"
   },
   "game_mode": {
     "ffa": "Svako za sebe",
@@ -176,5 +179,50 @@
   },
   "select_lang": {
     "title": "Odaberi jezik"
+  },
+  "user_setting": {
+    "title": "Podješavanja",
+    "tab_basic": "Osnovna podješavanja",
+    "tab_keybinds": "Prečice",
+    "dark_mode_label": "Tamni mod",
+    "dark_mode_desc": "Promeni izgled stranice sa svetlog na tamni mod",
+    "emojis_label": "Emotikoni",
+    "emojis_desc": "Uključi ili isključi prikazivanje emotikona",
+    "left_click_label": "Otvori meni na lijevi klik",
+    "left_click_desc": "Kada je UKLJUČEN, lijevi klik otvara meni, a dugme sa mačem napada. Kada je ISKLJUČEN, desni klik napada direktno.",
+    "attack_ratio_label": "Razmjer napada",
+    "attack_ratio_desc": "Procena vojnika koje ćeš poslati u napad (1-100%)",
+    "troop_ratio_label": "Razmjer vojnika i radnika",
+    "troop_ratio_desc": "Prilagođava odnos između vojnika (za borbu) i radnika (za proizvodnju zlata) (1-100%)",
+    "easter_writing_speed_label": "Brzina pisanja",
+    "easter_writing_speed_desc": "Prilagođava koliko brzo se pretvaraš da kodiraš (1x-100x)",
+    "easter_bug_count_label": "Broj bagova",
+    "easter_bug_count_desc": "Koliko bagova možeš da izdržiš (0-1000, emotivno)",
+    "view_options": "Opcije za prikaz",
+    "toggle_view": "Promeni prikaz",
+    "toggle_view_desc": "Alternativni prikaz (teren / države)",
+    "zoom_controls": "Kontrole daljine",
+    "zoom_out": "Udalji",
+    "zoom_out_desc": "Udaljava te od mape",
+    "zoom_in": "Približi",
+    "zoom_in_desc": "Približava te mapi",
+    "camera_movement": "Kretanje kamere",
+    "center_camera": "Centriraj kameru",
+    "center_camera_desc": "Centrira kameru na igrača",
+    "move_up": "Pomeri kameru na nagore",
+    "move_up_desc": "Pomera kameru nagore",
+    "move_left": "Pomeri kameru ulevo",
+    "move_left_desc": "Pomera kameru ulevo",
+    "move_down": "Pomeri kameru nadole",
+    "move_down_desc": "Pomera kameru nadole",
+    "move_right": "Pomeri kameru udesno",
+    "move_right_desc": "Pomera kameru udesno",
+    "reset": "Resetuj",
+    "unbind": "Obriši prečicu"
+  },
+  "map_categories": {
+    "continental": "Kontinentalne",
+    "regional": "Regionalne",
+    "fantasy": "Druge"
   }
 }

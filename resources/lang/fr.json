@@ -1,5 +1,12 @@
 {
+  "lang": {
+    "en": "French",
+    "native": "Français",
+    "svg": "fr",
+    "lang_code": "fr"
+  },
   "main": {
+    "title": "OpenFront (ALPHA)",
     "join_discord": "Rejoignez le Discord!",
     "create_lobby": "Créer un salon",
     "join_lobby": "Rejoindre un salon",
@@ -15,6 +22,7 @@
     "action_alt_view": "Vue alternative (terrain/pays)",
     "action_attack_altclick": "Attaquer (quand le clic gauche est configuré pour ouvrir le menu)",
     "action_build": "Ouvrir le menu de construction",
+    "action_emote": "Ouvrir le menu des émojis",
     "action_center": "Recentrer la caméra",
     "action_zoom": "Zoomer/Dézoomer",
     "action_move_camera": "Déplacer la caméra",
@@ -77,8 +85,7 @@
     "icon_crown": "Couronne - Ce joueur est le numéro 1 du classement",
     "icon_traitor": "Épées croisées - Traître. Ce joueur a attaqué un allié.",
     "icon_ally": "Poignée de main - Allié. Ce joueur est votre allié.",
-    "info_enemy_panel": "Panneau d'information de l'ennemi",
-    "action_emote": "Ouvrir le menu des émojis"
+    "info_enemy_panel": "Panneau d'information de l'ennemi"
   },
   "single_modal": {
     "title": "Joueur seul",
@@ -94,6 +101,7 @@
     "start": "Commencer la partie"
   },
   "map": {
+    "map": "Carte",
     "world": "Monde",
     "europe": "Europe",
     "mena": "MOAN",
@@ -110,10 +118,10 @@
     "random": "Aléatoire",
     "iceland": "Islande",
     "pangaea": "Pangée",
-    "map": "Carte",
-    "betweentwoseas": "Entre deux mers",
     "japan": "Japon et pays voisins",
-    "knownworld": "Monde connu"
+    "betweentwoseas": "Entre deux mers",
+    "knownworld": "Monde connu",
+    "faroeislands": "Îles Féroé"
   },
   "private_lobby": {
     "title": "Rejoindre un salon privé",
@@ -139,6 +147,8 @@
   },
   "host_modal": {
     "title": "Salon privé",
+    "mode": "Mode",
+    "team_count": "Nombre d'équipes",
     "options_title": "Paramètres",
     "bots": "Bots : ",
     "bots_disabled": "Désactivé",
@@ -150,25 +160,18 @@
     "player": "Joueur",
     "players": "Joueurs",
     "waiting": "En attente de joueurs...",
-    "start": "Commencer la partie",
-    "mode": "Mode"
-  },
-  "difficulty": {
-    "Relaxed": "Détendu",
-    "Balanced": "Équilibré",
-    "Intense": "Intense",
-    "Impossible": "Impossible",
-    "difficulty": "Difficulté"
+    "start": "Commencer la partie"
   },
   "game_starting_modal": {
     "title": "La partie est en train de commencer...",
     "desc": "Préparation du salon. Veuillez patienter."
   },
-  "lang": {
-    "en": "French",
-    "native": "Français",
-    "svg": "fr",
-    "lang_code": "fr"
+  "difficulty": {
+    "difficulty": "Difficulté",
+    "Relaxed": "Détendu",
+    "Balanced": "Équilibré",
+    "Intense": "Intense",
+    "Impossible": "Impossible"
   },
   "game_mode": {
     "ffa": "Chacun pour soi",
@@ -176,5 +179,50 @@
   },
   "select_lang": {
     "title": "Sélectionner une langue"
+  },
+  "user_setting": {
+    "title": "Paramètres utilisateur",
+    "tab_basic": "Réglages de base",
+    "tab_keybinds": "Raccourcis clavier",
+    "dark_mode_label": "🌙 Mode nuit",
+    "dark_mode_desc": "Basculer l'apparence du site entre les thèmes clairs et sombres",
+    "emojis_label": "😊 Émojis",
+    "emojis_desc": "Afficher/Masquer les émoticônes dans le jeu",
+    "left_click_label": "🖱️ Clic gauche pour ouvrir le menu",
+    "left_click_desc": "Activé, un clic gauche ouvre le menu et le bouton épée d'attaque. Désactivé, un clic gauche attaque directement.",
+    "attack_ratio_label": "⚔️ Ratio d'attaque",
+    "attack_ratio_desc": "Quel pourcentage de vos troupes envoyer dans une attaque (1–100%)",
+    "troop_ratio_label": "🪖🛠️ Ratio des troupes et des ouvriers",
+    "troop_ratio_desc": "Ajuster l'équilibre entre les troupes (pour le combat) et les ouvriers (pour la production d'or) (1–100%)",
+    "easter_writing_speed_label": "Multiplicateur de vitesse d'écriture",
+    "easter_writing_speed_desc": "Ajuster la vitesse à laquelle vous prétendez coder (x1–x100)",
+    "easter_bug_count_label": "Nombre de bugs",
+    "easter_bug_count_desc": "Combien de bugs vous acceptez (0-1000, émotionnellement)",
+    "view_options": "Options d'affichage",
+    "toggle_view": "Activer/désactiver l'affichage",
+    "toggle_view_desc": "Vue alternative (terrain/pays)",
+    "zoom_controls": "Contrôles de zoom",
+    "zoom_out": "Zoom arrière",
+    "zoom_out_desc": "Dézoom de la carte",
+    "zoom_in": "Zoom avant",
+    "zoom_in_desc": "Zoom sur la carte",
+    "camera_movement": "Mouvement de la caméra",
+    "center_camera": "Centrer la caméra",
+    "center_camera_desc": "Centrer la caméra sur le joueur",
+    "move_up": "Caméra Haut",
+    "move_up_desc": "Déplacer la caméra vers le haut",
+    "move_left": "Caméra Gauche",
+    "move_left_desc": "Déplacer la caméra vers la gauche",
+    "move_down": "Caméra Bas",
+    "move_down_desc": "Déplacer la caméra vers le bas",
+    "move_right": "Caméra Droite",
+    "move_right_desc": "Déplacer la caméra vers la droite",
+    "reset": "Réinitialiser",
+    "unbind": "Détacher"
+  },
+  "map_categories": {
+    "continental": "Continental",
+    "regional": "Régional",
+    "fantasy": "Autre"
   }
 }

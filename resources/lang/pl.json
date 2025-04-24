@@ -1,5 +1,12 @@
 {
+  "lang": {
+    "en": "Polish",
+    "native": "Polski",
+    "svg": "pl",
+    "lang_code": "pl"
+  },
   "main": {
+    "title": "OpenFront (ALPHA)",
     "join_discord": "Dołącz do Discord'a!",
     "create_lobby": "Utwórz lobby",
     "join_lobby": "Dołącz do lobby",
@@ -15,6 +22,7 @@
     "action_alt_view": "Alternatywny widok (teren/państwa)",
     "action_attack_altclick": "Atak (gdy lewy przycisk myszy jest ustawiony na otwieranie menu).",
     "action_build": "Otwórz menu budowy",
+    "action_emote": "Otwórz menu emoji",
     "action_center": "Wyśrodkuj kamerę na graczu",
     "action_zoom": "Oddal/Przybliż",
     "action_move_camera": "Przesuń kamerę",
@@ -77,8 +85,7 @@
     "icon_crown": "Korona — Jest to gracz numer 1 w rankingu",
     "icon_traitor": "Skrzyżowane miecze — Zdrajca. Ten gracz atakował sojusznika.",
     "icon_ally": "Uścisk dłoni — Sojusznik. Ten gracz jest twoim sojusznikiem.",
-    "info_enemy_panel": "Panel informacji o wrogu",
-    "action_emote": "Otwórz menu emoji"
+    "info_enemy_panel": "Panel informacji o wrogu"
   },
   "single_modal": {
     "title": "Gra jednoosobowa",
@@ -94,6 +101,7 @@
     "start": "Rozpocznij Grę"
   },
   "map": {
+    "map": "Mapa",
     "world": "Świat",
     "europe": "Europa",
     "mena": "MENA",
@@ -110,10 +118,10 @@
     "random": "Losowe",
     "iceland": "Islandia",
     "pangaea": "Pangea",
-    "map": "Mapa",
-    "betweentwoseas": "Między dwoma morzami",
     "japan": "Japonia i sąsiedzi",
-    "knownworld": "Znany Świat"
+    "betweentwoseas": "Między dwoma morzami",
+    "knownworld": "Znany Świat",
+    "faroeislands": "Wyspy Owcze"
   },
   "private_lobby": {
     "title": "Dołącz do prywatnego Lobby",
@@ -139,6 +147,8 @@
   },
   "host_modal": {
     "title": "Prywatne lobby",
+    "mode": "Tryb",
+    "team_count": "Liczba drużyn",
     "options_title": "Opcje",
     "bots": "Boty: ",
     "bots_disabled": "Wyłączone",
@@ -150,25 +160,18 @@
     "player": "Gracz",
     "players": "Gracze",
     "waiting": "Oczekiwanie na graczy...",
-    "start": "Rozpocznij grę",
-    "mode": "Tryb"
-  },
-  "difficulty": {
-    "Relaxed": "Zrelaksowany",
-    "Balanced": "Zbalansowany",
-    "Intense": "Intensywny",
-    "Impossible": "Niemożliwy",
-    "difficulty": "Poziom trudności"
+    "start": "Rozpocznij grę"
   },
   "game_starting_modal": {
     "title": "Gra się rozpoczyna...",
     "desc": "Przygotowanie do uruchomienia lobby. Proszę czekać."
   },
-  "lang": {
-    "en": "Polish",
-    "native": "Polski",
-    "svg": "pl",
-    "lang_code": "pl"
+  "difficulty": {
+    "difficulty": "Poziom trudności",
+    "Relaxed": "Zrelaksowany",
+    "Balanced": "Zbalansowany",
+    "Intense": "Intensywny",
+    "Impossible": "Niemożliwy"
   },
   "game_mode": {
     "ffa": "Każdy na Każdego",
@@ -176,5 +179,50 @@
   },
   "select_lang": {
     "title": "Wybierz język"
+  },
+  "user_setting": {
+    "title": "Ustawienia użytkownika",
+    "tab_basic": "Podstawowe ustawienia",
+    "tab_keybinds": "Skróty klawiszowe",
+    "dark_mode_label": "🌙 Tryb ciemny",
+    "dark_mode_desc": "Przełącz wygląd strony pomiędzy jasnym a ciemnym trybem",
+    "emojis_label": "😊 Emotki",
+    "emojis_desc": "Przełącz, czy emotki mają być wyświetlane w grze",
+    "left_click_label": "🖱️ Kliknij lewym przyciskiem myszy aby otworzyć Menu",
+    "left_click_desc": "Gdy WŁĄCZONE, lewy przycisk myszy otwiera menu, a przycisk z mieczem atakuje. Gdy WYŁĄCZONE, lewy przycisk myszy atakuje bezpośrednio.",
+    "attack_ratio_label": "⚔️ Współczynnik ataku",
+    "attack_ratio_desc": "Jaki procent swoich żołnierzy chcesz wysłać do ataku (1–100%)",
+    "troop_ratio_label": "🛠️ Stosunek żołnierzy do pracowników",
+    "troop_ratio_desc": "Dostosuj balans między żołnierzami (do walki) a pracownikami (do produkcji złota) (1–100%)",
+    "easter_writing_speed_label": "Mnożnik prędkości pisania",
+    "easter_writing_speed_desc": "Dostosuj, jak szybko udajesz, że programujesz (x1–x100)",
+    "easter_bug_count_label": "Liczba błędów",
+    "easter_bug_count_desc": "Ile błędów jesteś w stanie zaakceptować (0–1000)",
+    "view_options": "Opcje widoku",
+    "toggle_view": "Przełącz widok",
+    "toggle_view_desc": "Alternatywny widok (teren/państwa)",
+    "zoom_controls": "Sterowanie przybliżeniem",
+    "zoom_out": "Oddal",
+    "zoom_out_desc": "Oddala widok mapy",
+    "zoom_in": "Przybliż",
+    "zoom_in_desc": "Przybliż mapę",
+    "camera_movement": "Ruch kamery",
+    "center_camera": "Wyśrodkuj kamerę",
+    "center_camera_desc": "Wyśrodkowuje kamerę na graczu",
+    "move_up": "Przesuń kamerę w górę",
+    "move_up_desc": "Przesuwa kamerę w górę",
+    "move_left": "Przesuń kamerę w lewo",
+    "move_left_desc": "Przesuwa kamerę w lewo",
+    "move_down": "Przesuń kamerę w dół",
+    "move_down_desc": "Przesuwa kamerę w dół",
+    "move_right": "Przesuń kamerę w prawo",
+    "move_right_desc": "Przesuwa kamerę w prawo",
+    "reset": "Zresetuj",
+    "unbind": "Odbinduj"
+  },
+  "map_categories": {
+    "continental": "Kontynentalny",
+    "regional": "Lokalny",
+    "fantasy": "Pozostałe"
   }
 }
