@@ -97,7 +97,7 @@
     "instant_build": "即時建設",
     "infinite_gold": "資金無限",
     "infinite_troops": "兵士無限",
-    "disables_title": "無効化設定",
+    "enables_title": "有効化設定",
     "start": "ゲーム開始"
   },
   "map": {
@@ -153,7 +153,7 @@
     "instant_build": "即時建設",
     "infinite_gold": "資金無限",
     "infinite_troops": "兵士無限",
-    "disables_title": "無効化設定",
+    "enables_title": "有効化設定",
     "player": "プレイヤー",
     "players": "プレイヤー",
     "waiting": "他のプレイヤーの参加を待っています...",

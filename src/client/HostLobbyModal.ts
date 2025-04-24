@@ -316,7 +316,7 @@ export class HostLobbyModal extends LitElement {
                 <div
                   style="margin: 8px 0 12px 0; font-weight: bold; color: #ccc; text-align: center;"
                 >
-                  ${translateText("host_modal.disables_title")}
+                  ${translateText("host_modal.enables_title")}
                 </div>
                 <div
                   style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"
@@ -334,16 +334,16 @@ export class HostLobbyModal extends LitElement {
                   ].map(
                     ([key, translationKey]) => html`
                       <label
-                        class="option-card ${this[key] ? "selected" : ""}"
+                        class="option-card ${!this[key] ? "selected" : ""}"
                         style="width: 140px;"
                       >
                         <div class="checkbox-icon"></div>
                         <input
                           type="checkbox"
                           @change=${(e: Event) => {
-                            this[key] = (e.target as HTMLInputElement).checked;
+                            this[key] = !(e.target as HTMLInputElement).checked;
                           }}
-                          .checked=${this[key]}
+                          .checked=${!this[key]}
                         />
                         <div
                           class="option-card-title"
