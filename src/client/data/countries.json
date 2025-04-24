@@ -1848,8 +1848,8 @@
     "name": "Seville"
   },
   {
-    "id": "spqr",
-    "name": "SPQR",
-    "flag": "SPQR.svg"
+    "code": "spqr",
+    "continent": "",
+    "name": "SPQR"
   }
 ]
