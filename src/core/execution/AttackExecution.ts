@@ -1,4 +1,3 @@
-import { PriorityQueue } from "@datastructures-js/priority-queue";
 import { renderNumber, renderTroops } from "../../client/Utils";
 import {
   Attack,
@@ -16,29 +15,30 @@ import { PseudoRandom } from "../PseudoRandom";
 
 const malusForRetreat = 25;
 
+// This class handles the lifecycle of an attack between one player and a target.
+// It determines what tiles to conquer, resolves combat logic, and manages retreat/end conditions.
 export class AttackExecution implements Execution {
   private breakAlliance = false;
   private active: boolean = true;
-  private toConquer: PriorityQueue<TileContainer> =
-    new PriorityQueue<TileContainer>((a: TileContainer, b: TileContainer) => {
-      if (a.priority == b.priority) {
-        if (a.tick == b.tick) {
-          return 0;
-          // return this.random.nextInt(-1, 1)
-        }
-        return a.tick - b.tick;
-      }
-      return a.priority - b.priority;
-    });
+
+  // These are the tiles we are considering conquering
+  private toConquerList: TileRef[] = []; // ordered list for random selection
+  private toConquerSet = new Set<TileRef>(); // fast presence checks
+  private toConquerIndex = new Map<TileRef, number>(); // O(1) removal from list
+  private validTileList: TileRef[] = []; // subset of list that is currently on the front line
+
   private random = new PseudoRandom(123);
+
+  // Map of each tile to its combat weight and adjacency info
+  private tileWeights: Map<
+    TileRef,
+    { weight: number; ownedCount: number; valid: boolean }
+  > = new Map();
 
   private _owner: Player;
   private target: Player | TerraNullius;
-
   private mg: Game;
-
   private border = new Set<TileRef>();
-
   private attack: Attack = null;
 
   constructor(
@@ -57,10 +57,9 @@ export class AttackExecution implements Execution {
     return false;
   }
 
+  // Initializes the attack object and prepares the first batch of tiles to conquer
   init(mg: Game, ticks: number) {
-    if (!this.active) {
-      return;
-    }
+    if (!this.active) return;
     this.mg = mg;
 
     if (!mg.hasPlayer(this._ownerID)) {
@@ -68,6 +67,7 @@ export class AttackExecution implements Execution {
       this.active = false;
       return;
     }
+
     if (this._targetID != null && !mg.hasPlayer(this._targetID)) {
       console.warn(`target ${this._targetID} not found`);
       this.active = false;
@@ -76,17 +76,17 @@ export class AttackExecution implements Execution {
 
     this._owner = mg.player(this._ownerID);
     this.target =
-      this._targetID == this.mg.terraNullius().id()
+      this._targetID === this.mg.terraNullius().id()
         ? mg.terraNullius()
         : mg.player(this._targetID);
 
-    if (this.target && this.target.isPlayer()) {
+    // Embargo if non-bots are fighting
+    if (this.target.isPlayer()) {
       const targetPlayer = this.target as Player;
       if (
         targetPlayer.type() != PlayerType.Bot &&
         this._owner.type() != PlayerType.Bot
       ) {
-        // Don't let bots embargo since they can't trade anyways.
         targetPlayer.addEmbargo(this._owner.id());
       }
     }
@@ -97,6 +97,7 @@ export class AttackExecution implements Execution {
       return;
     }
 
+    // Prevent attacks during spawn protection
     if (
       this.target.isPlayer() &&
       this.mg.config().numSpawnPhaseTurns() +
@@ -108,24 +109,27 @@ export class AttackExecution implements Execution {
       return;
     }
 
+    // Determine troop count
     if (this.startTroops == null) {
       this.startTroops = this.mg
         .config()
         .attackAmount(this._owner, this.target);
     }
+
     if (this.removeTroops) {
       this.startTroops = Math.min(this._owner.troops(), this.startTroops);
       this._owner.removeTroops(this.startTroops);
     }
+
     this.attack = this._owner.createAttack(
       this.target,
       this.startTroops,
       this.sourceTile,
     );
 
+    // Cancel out opposing incoming attacks
     for (const incoming of this._owner.incomingAttacks()) {
       if (incoming.attacker() == this.target) {
-        // Target has opposing attack, cancel them out
         if (incoming.troops() > this.attack.troops()) {
           incoming.setTroops(incoming.troops() - this.attack.troops());
           this.attack.delete();
@@ -137,13 +141,14 @@ export class AttackExecution implements Execution {
         }
       }
     }
+
+    // Combine with duplicate outgoing attack
     for (const outgoing of this._owner.outgoingAttacks()) {
       if (
         outgoing != this.attack &&
         outgoing.target() == this.attack.target() &&
         outgoing.sourceTile() == this.attack.sourceTile()
       ) {
-        // Existing attack on same target, add troops
         outgoing.setTroops(outgoing.troops() + this.attack.troops());
         this.active = false;
         this.attack.delete();
@@ -151,6 +156,7 @@ export class AttackExecution implements Execution {
       }
     }
 
+    // Start conquest from source tile or full border
     if (this.sourceTile != null) {
       this.addNeighbors(this.sourceTile);
     } else {
@@ -159,21 +165,27 @@ export class AttackExecution implements Execution {
 
     if (this.target.isPlayer()) {
       if (this._owner.isAlliedWith(this.target)) {
-        // No updates should happen in init.
         this.breakAlliance = true;
       }
       this.target.updateRelation(this._owner, -80);
     }
   }
 
+  // Rebuilds the list of tiles to conquer from scratch
   private refreshToConquer() {
-    this.toConquer.clear();
+    this.toConquerList = [];
+    this.toConquerSet.clear();
+    this.toConquerIndex.clear();
     this.border.clear();
+    this.tileWeights.forEach((entry) => (entry.valid = false));
+    this.validTileList = [];
+
     for (const tile of this._owner.borderTiles()) {
       this.addNeighbors(tile);
     }
   }
 
+  // Retreats from battle, possibly killing some troops
   private retreat(malusPercent = 0) {
     const deaths = this.attack.troops() * (malusPercent / 100);
     if (deaths) {
@@ -188,19 +200,16 @@ export class AttackExecution implements Execution {
     this.active = false;
   }
 
+  // Runs attack logic every game tick: conquers tiles, calculates losses, refreshes conquest front
   tick(ticks: number) {
     if (this.attack.retreated()) {
-      if (this.attack.target().isPlayer()) {
-        this.retreat(malusForRetreat);
-      } else {
-        this.retreat();
-      }
+      this.retreat(this.attack.target().isPlayer() ? malusForRetreat : 0);
       this.active = false;
       return;
     }
 
     if (this.attack.retreating()) {
-      return;
+      return; // Keep waiting for retreat flag to become "retreated"
     }
 
     if (!this.attack.isActive()) {
@@ -208,13 +217,14 @@ export class AttackExecution implements Execution {
       return;
     }
 
+    // Break alliance if needed
     const alliance = this._owner.allianceWith(this.target as Player);
-    if (this.breakAlliance && alliance != null) {
+    if (this.breakAlliance && alliance) {
       this.breakAlliance = false;
       this._owner.breakAlliance(alliance);
     }
+
     if (this.target.isPlayer() && this._owner.isAlliedWith(this.target)) {
-      // In this case a new alliance was created AFTER the attack started.
       this.retreat();
       return;
     }
@@ -227,8 +237,6 @@ export class AttackExecution implements Execution {
         this.target,
         this.border.size + this.random.nextInt(0, 5),
       );
-    // consolex.log(`num tiles per tick: ${numTilesPerTick}`)
-    // consolex.log(`num execs: ${this.mg.executions().length}`)
 
     while (numTilesPerTick > 0) {
       if (this.attack.troops() < 1) {
@@ -237,23 +245,97 @@ export class AttackExecution implements Execution {
         return;
       }
 
-      if (this.toConquer.size() == 0) {
+      if (this.toConquerList.length === 0) {
         this.refreshToConquer();
         this.retreat();
         return;
       }
 
-      const tileToConquer = this.toConquer.dequeue().tile;
+      const validTiles = this.validTileList;
+      if (validTiles.length === 0) {
+        this.retreat();
+        return;
+      }
+
+      // Prioritize tiles touching 3+ owned neighbors
+      const priorityTiles: { tile: TileRef; weight: number }[] = [];
+      const fallbackTiles: { tile: TileRef; weight: number }[] = [];
+
+      for (const tile of validTiles) {
+        const meta = this.tileWeights.get(tile);
+        if (!meta) continue;
+        const { weight, ownedCount } = meta;
+        if (ownedCount >= 3) {
+          priorityTiles.push({ tile, weight });
+        } else {
+          fallbackTiles.push({ tile, weight });
+        }
+      }
+
+      const candidates =
+        priorityTiles.length > 0 ? priorityTiles : fallbackTiles;
+      if (candidates.length === 0) {
+        this.retreat();
+        return;
+      }
+
+      // Weighted random selection
+      const cumulativeWeights: number[] = [];
+      let runningTotal = 0;
+      for (const { weight } of candidates) {
+        runningTotal += weight;
+        cumulativeWeights.push(runningTotal);
+      }
+
+      if (runningTotal === 0) {
+        this.retreat();
+        return;
+      }
+
+      const r = (this.random.nextInt(0, 10000) / 10000) * runningTotal;
+      let low = 0;
+      let high = cumulativeWeights.length - 1;
+      while (low < high) {
+        const mid = Math.floor((low + high) / 2);
+        if (r < cumulativeWeights[mid]) {
+          high = mid;
+        } else {
+          low = mid + 1;
+        }
+      }
+
+      const tileToConquer = candidates[low].tile;
+
+      // Remove tile from list/set/index after selection
+      const index = this.toConquerIndex.get(tileToConquer);
+      if (index !== undefined) {
+        const last = this.toConquerList.length - 1;
+        const lastTile = this.toConquerList[last];
+        this.toConquerList[index] = lastTile;
+        this.toConquerIndex.set(lastTile, index);
+        this.toConquerList.pop();
+        this.toConquerSet.delete(tileToConquer);
+        this.toConquerIndex.delete(tileToConquer);
+      }
+
+      const meta = this.tileWeights.get(tileToConquer);
+      if (meta) {
+        meta.valid = false;
+        this.validTileList = this.validTileList.filter(
+          (t) => t !== tileToConquer,
+        );
+      }
+
       this.border.delete(tileToConquer);
 
-      const onBorder =
-        this.mg
-          .neighbors(tileToConquer)
-          .filter((t) => this.mg.owner(t) == this._owner).length > 0;
-      if (this.mg.owner(tileToConquer) != this.target || !onBorder) {
-        continue;
-      }
+      // Make sure tile still borders friendly land
+      const onBorder = this.mg
+        .neighbors(tileToConquer)
+        .some((t) => this.mg.owner(t) == this._owner);
+      if (this.mg.owner(tileToConquer) != this.target || !onBorder) continue;
+
       this.addNeighbors(tileToConquer);
+
       const { attackerTroopLoss, defenderTroopLoss, tilesPerTickUsed } = this.mg
         .config()
         .attackLogic(
@@ -263,59 +345,74 @@ export class AttackExecution implements Execution {
           this.target,
           tileToConquer,
         );
+
       numTilesPerTick -= tilesPerTickUsed;
       this.attack.setTroops(this.attack.troops() - attackerTroopLoss);
-      if (this.target.isPlayer()) {
-        this.target.removeTroops(defenderTroopLoss);
-      }
+      if (this.target.isPlayer()) this.target.removeTroops(defenderTroopLoss);
       this._owner.conquer(tileToConquer);
+
+      // Update border and validity of neighbor tiles
+      for (const neighbor of this.mg.neighbors(tileToConquer)) {
+        if (this.toConquerSet.has(neighbor)) {
+          const onBorder = this.mg
+            .neighbors(neighbor)
+            .some((t) => this.mg.owner(t) === this._owner);
+          const meta = this.tileWeights.get(neighbor);
+          if (meta) {
+            meta.valid = onBorder;
+            if (onBorder && !this.validTileList.includes(neighbor)) {
+              this.validTileList.push(neighbor);
+            } else if (!onBorder) {
+              this.validTileList = this.validTileList.filter(
+                (t) => t !== neighbor,
+              );
+            }
+          }
+          this.updateTileWeight(neighbor);
+        }
+      }
+
       this.handleDeadDefender();
     }
   }
 
+  // Adds enemy neighbors of a tile to the conquest frontier
   private addNeighbors(tile: TileRef) {
     for (const neighbor of this.mg.neighbors(tile)) {
-      if (this.mg.isWater(neighbor) || this.mg.owner(neighbor) != this.target) {
+      if (this.mg.isWater(neighbor) || this.mg.owner(neighbor) != this.target)
         continue;
-      }
+
       this.border.add(neighbor);
-      let numOwnedByMe = this.mg
+
+      if (!this.toConquerSet.has(neighbor)) {
+        this.toConquerSet.add(neighbor);
+        this.toConquerIndex.set(neighbor, this.toConquerList.length);
+        this.toConquerList.push(neighbor);
+        this.updateTileWeight(neighbor);
+      }
+
+      const onBorder = this.mg
         .neighbors(neighbor)
-        .filter((t) => this.mg.owner(t) == this._owner).length;
-      const dist = 0;
-      if (numOwnedByMe > 2) {
-        numOwnedByMe = 10;
+        .some((t) => this.mg.owner(t) === this._owner);
+      const meta = this.tileWeights.get(neighbor);
+      if (meta) {
+        meta.valid = onBorder;
+        if (onBorder && !this.validTileList.includes(neighbor)) {
+          this.validTileList.push(neighbor);
+        } else if (!onBorder) {
+          this.validTileList = this.validTileList.filter((t) => t !== neighbor);
+        }
       }
-      let mag = 0;
-      switch (this.mg.terrainType(tile)) {
-        case TerrainType.Plains:
-          mag = 1;
-          break;
-        case TerrainType.Highland:
-          mag = 1.5;
-          break;
-        case TerrainType.Mountain:
-          mag = 2;
-          break;
-      }
-      this.toConquer.enqueue(
-        new TileContainer(
-          neighbor,
-          dist / 100 + this.random.nextInt(0, 2) - numOwnedByMe + mag,
-          this.mg.ticks(),
-        ),
-      );
     }
   }
 
+  // If defender collapses (few tiles left), conquer everything and transfer gold
   private handleDeadDefender() {
     if (!(this.target.isPlayer() && this.target.numTilesOwned() < 100)) return;
 
     const gold = this.target.gold();
     this.mg.displayMessage(
-      `Conquered ${this.target.displayName()} received ${renderNumber(
-        gold,
-      )} gold`,
+      `Conquered ${this.target.displayName()} received ${renderNumber(gold)} gold`,
       MessageType.SUCCESS,
       this._owner.id(),
     );
@@ -342,19 +439,40 @@ export class AttackExecution implements Execution {
     }
   }
 
+  // Recomputes how desirable a tile is to conquer, based on terrain and neighbor ownership
+  private updateTileWeight(tile: TileRef) {
+    const neighbors = this.mg.neighbors(tile);
+    const ownedCount = neighbors.filter(
+      (t) => this.mg.owner(t) === this._owner,
+    ).length;
+
+    let weight = 1.0;
+    switch (this.mg.terrainType(tile)) {
+      case TerrainType.Plains:
+        weight = 3.0;
+        break;
+      case TerrainType.Highland:
+        weight = 0.5;
+        break;
+      case TerrainType.Mountain:
+        weight = 0.25;
+        break;
+    }
+
+    if (ownedCount === 2) weight *= 8;
+
+    const existing = this.tileWeights.get(tile);
+    const valid = existing?.valid ?? false;
+    this.tileWeights.set(tile, { weight, ownedCount, valid });
+  }
+
+  // Returns the player who owns this attack
   owner(): Player {
     return this._owner;
   }
 
+  // Indicates whether the attack is still in progress
   isActive(): boolean {
     return this.active;
   }
-}
-
-class TileContainer {
-  constructor(
-    public readonly tile: TileRef,
-    public readonly priority: number,
-    public readonly tick: number,
-  ) {}
 }
