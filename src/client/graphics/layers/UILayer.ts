@@ -4,7 +4,8 @@ import { ClientID } from "../../../core/Schemas";
 import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
 import { GameView, UnitView } from "../../../core/game/GameView";
-import { UnitSelectionEvent } from "../../InputHandler";
+import { MouseMoveEvent, UnitSelectionEvent } from "../../InputHandler";
+import { LastSelectedBuildableEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -21,6 +22,10 @@ export class UILayer implements Layer {
 
   // Keep track of currently selected unit
   private selectedUnit: UnitView | null = null;
+  private lastSelectedBuildIcon: HTMLImageElement | null = null;
+  private lastSelectedBuildableUnit: UnitType | null = null;
+  private lastMousePosition: { x: number; y: number } | null = null;
+  private canBuildLastSelectedBuildableUnit: boolean = false;
 
   // Keep track of previous selection box position for cleanup
   private lastSelectionBoxCenter: {
@@ -31,6 +36,7 @@ export class UILayer implements Layer {
 
   // Visual settings for selection
   private readonly SELECTION_BOX_SIZE = 6; // Size of the selection box (should be larger than the warship)
+  private lastMouseUpdate: number = 0;
 
   constructor(
     private game: GameView,
@@ -49,13 +55,24 @@ export class UILayer implements Layer {
     // Update the selection animation time
     this.selectionAnimTime = (this.selectionAnimTime + 1) % 60;
 
+    // Clear the canvas for redrawing
+    this.context?.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
     // If there's a selected warship, redraw to update the selection box animation
     if (this.selectedUnit && this.selectedUnit.type() === UnitType.Warship) {
       this.drawSelectionBox(this.selectedUnit);
     }
+    // Draw the last selected build icon
+    this.drawBuildIcon();
   }
 
   init() {
+    this.eventBus.on(MouseMoveEvent, (e) => {
+      this.onMouseEvent(e);
+    });
+    this.eventBus.on(LastSelectedBuildableEvent, (e) =>
+      this.onlastSelectedBuild(e),
+    );
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelection(e));
     this.redraw();
   }
@@ -76,6 +93,76 @@ export class UILayer implements Layer {
 
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
+  }
+
+  /**
+   * Handle mouse movement events
+   * @param event The mouse move event
+   */
+  private onMouseEvent(event: MouseMoveEvent) {
+    const now = Date.now();
+    if (now - this.lastMouseUpdate < 1000 / 60) {
+      return;
+    }
+    this.setLastMousePosition(event.x, event.y);
+    this.lastMouseUpdate = now;
+  }
+
+  /**
+   * Set the last mouse position in world coordinates
+   * @param x The X coordinate of the mouse
+   * @param y The Y coordinate of the mouse
+   * This method converts the screen coordinates to world coordinates
+   * and updates the lastMousePosition property.
+   * It also checks if the coordinates are valid in the game world.
+   * If the coordinates are not valid, it does nothing.
+   */
+  public setLastMousePosition(x: number, y: number) {
+    const worldCoord = this.transformHandler.screenToWorldCoordinates(x, y);
+    if (!this.game.isValidCoord(worldCoord.x, worldCoord.y)) {
+      return;
+    }
+    this.lastMousePosition = worldCoord;
+
+    const tile = this.game.ref(
+      this.lastMousePosition.x,
+      this.lastMousePosition.y,
+    );
+
+    this.game
+      .myPlayer()
+      ?.actions(tile)
+      ?.then((actions) => {
+        const unit = actions.buildableUnits.find(
+          (u) => u.type === this.lastSelectedBuildableUnit,
+        );
+        if (unit && unit.canBuild !== false) {
+          this.canBuildLastSelectedBuildableUnit = true;
+        } else {
+          this.canBuildLastSelectedBuildableUnit = false;
+        }
+      });
+  }
+
+  /**
+   * Handle the last selected buildable event
+   */
+  private onlastSelectedBuild(event: LastSelectedBuildableEvent) {
+    if (event.icon) {
+      const icon = new Image();
+      icon.src = event.icon;
+      icon.onload = () => {
+        this.lastSelectedBuildIcon = icon;
+        this.lastSelectedBuildableUnit = event.unit;
+      };
+      icon.onerror = () => {
+        console.error("Failed to load build icon:", event.icon);
+        this.lastSelectedBuildIcon = null;
+      };
+    } else {
+      this.lastSelectedBuildIcon = null;
+      this.lastSelectedBuildableUnit = null;
+    }
   }
 
   /**
@@ -115,6 +202,45 @@ export class UILayer implements Layer {
           this.clearCell(px, py);
         }
       }
+    }
+  }
+
+  /**
+   * Draw the build icon at the last mouse position
+   */
+  public drawBuildIcon() {
+    const icon = this.lastSelectedBuildIcon;
+    if (!icon || !this.lastMousePosition || !this.context) {
+      return;
+    }
+    if (!this.canBuildLastSelectedBuildableUnit) {
+      // Draw the icon with a red overlay
+      this.context.save();
+      this.context.drawImage(
+        icon,
+        this.lastMousePosition.x - 8,
+        this.lastMousePosition.y - 8,
+        16,
+        16,
+      );
+      this.context.globalCompositeOperation = "source-atop";
+      this.context.fillStyle = "rgba(255, 0, 0, 0.5)";
+      this.context.fillRect(
+        this.lastMousePosition.x - 8,
+        this.lastMousePosition.y - 8,
+        16,
+        16,
+      );
+      this.context.restore();
+    } else {
+      // Draw the icon normally
+      this.context.drawImage(
+        icon,
+        this.lastMousePosition.x - 8,
+        this.lastMousePosition.y - 8,
+        16,
+        16,
+      );
     }
   }
 

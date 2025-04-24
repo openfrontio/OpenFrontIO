@@ -24,10 +24,17 @@ import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
-import { InputHandler, MouseMoveEvent, MouseUpEvent } from "./InputHandler";
+import {
+  AutoMouseUpEvent,
+  InputHandler,
+  MouseMoveEvent,
+  MouseUpEvent,
+} from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentIDFromCookie } from "./Main";
 import {
+  BuildUnitIntentEvent,
+  LastSelectedBuildableEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendHashEvent,
@@ -170,6 +177,7 @@ export class ClientGameRunner {
   private hasJoined = false;
 
   private lastMousePosition: { x: number; y: number } | null = null;
+  private lastSelectedBuildableUnit: UnitType | null = null;
 
   private lastMessageTime: number = 0;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
@@ -234,6 +242,10 @@ export class ClientGameRunner {
       );
     }, 20000);
     this.eventBus.on(MouseUpEvent, (e) => this.inputEvent(e));
+    this.eventBus.on(AutoMouseUpEvent, (e) => this.autoInputEvent(e));
+    this.eventBus.on(LastSelectedBuildableEvent, (e) =>
+      this.lastSelectedBuildableEvent(e),
+    );
     this.eventBus.on(MouseMoveEvent, (e) => this.onMouseMove(e));
 
     this.renderer.initialize();
@@ -334,6 +346,45 @@ export class ClientGameRunner {
       clearInterval(this.connectionCheckInterval);
       this.connectionCheckInterval = null;
     }
+  }
+
+  private autoInputEvent(event: AutoMouseUpEvent) {
+    if (!this.isActive) {
+      return;
+    }
+    if (this.myPlayer === null) {
+      this.myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      if (this.myPlayer === null) {
+        return;
+      }
+    }
+    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
+      event.x,
+      event.y,
+    );
+    if (!this.gameView.isValidCoord(cell.x, cell.y)) {
+      return;
+    }
+    const tile = this.gameView.ref(cell.x, cell.y);
+    this.myPlayer.actions(tile).then((actions) => {
+      if (this.lastSelectedBuildableUnit !== null) {
+        const unit = actions.buildableUnits.find(
+          (u) => u.type === this.lastSelectedBuildableUnit,
+        );
+        if (unit && unit.canBuild !== false) {
+          this.eventBus.emit(
+            new BuildUnitIntentEvent(this.lastSelectedBuildableUnit, cell),
+          );
+          return;
+        }
+      }
+      this.eventBus.emit(new MouseUpEvent(event.x, event.y));
+      this.eventBus.emit(new LastSelectedBuildableEvent(null, ""));
+    });
+  }
+
+  private lastSelectedBuildableEvent(event: LastSelectedBuildableEvent) {
+    this.lastSelectedBuildableUnit = event.unit;
   }
 
   private inputEvent(event: MouseUpEvent) {
