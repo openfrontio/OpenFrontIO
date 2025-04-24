@@ -4,12 +4,9 @@ import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { consolex } from "../core/Consolex";
-import {
-  Difficulty,
-  GameMapType,
-  GameMode,
-  mapCategories,
-} from "../core/game/Game";
+import { Difficulty, GameMapType, GameMode } from "../core/game/Game";
+import { MAP_DEFINITIONS } from "../core/game/MapRegistry";
+import { MapCategory, MapDefinition } from "../core/game/MapRegistryTypes";
 import { GameConfig, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
@@ -43,10 +40,34 @@ export class HostLobbyModal extends LitElement {
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
 
+  private get groupedMaps() {
+    const groups = MAP_DEFINITIONS.reduce(
+      (acc, def) => {
+        const categoryKey = def.category.toString();
+        if (!acc[categoryKey]) {
+          acc[categoryKey] = [];
+        }
+        acc[categoryKey].push(def);
+        return acc;
+      },
+      {} as Record<string, MapDefinition[]>,
+    );
+    for (const key in groups) {
+      groups[key].sort((a, b) => a.identifier.localeCompare(b.identifier));
+    }
+    return groups;
+  }
+
   render() {
+    const categoryOrder = [
+      MapCategory.Continental,
+      MapCategory.Regional,
+      MapCategory.Fantasy,
+    ]; // Removed 'Other'
+
     return html`
       <o-modal title=${translateText("host_modal.title")}>
-        <div class="lobby-id-box">
+         <div class="lobby-id-box">
           <button
             class="lobby-id-button"
             @click=${this.copyToClipboard}
@@ -73,288 +94,284 @@ export class HostLobbyModal extends LitElement {
                     </svg>
                   `
             }
-          </button>
-        </div>
+           </button>
+         </div>
         <div class="options-layout">
           <!-- Map Selection -->
           <div class="options-section">
             <div class="option-title">${translateText("map.map")}</div>
             <div class="option-cards flex-col">
-              <!-- Use the imported mapCategories -->
-              ${Object.entries(mapCategories).map(
-                ([categoryKey, maps]) => html`
-                  <div class="w-full mb-4">
-                    <h3
-                      class="text-lg font-semibold mb-2 text-center text-gray-300"
-                    >
-                      ${translateText(`map_categories.${categoryKey}`)}
-                    </h3>
-                    <div class="flex flex-row flex-wrap justify-center gap-4">
-                      ${maps.map((mapValue) => {
-                        const mapKey = Object.keys(GameMapType).find(
-                          (key) => GameMapType[key] === mapValue,
-                        );
-                        return html`
-                          <div
-                            @click=${() => this.handleMapSelection(mapValue)}
-                          >
-                            <map-display
-                              .mapKey=${mapKey}
-                              .selected=${!this.useRandomMap &&
-                              this.selectedMap === mapValue}
-                              .translation=${translateText(
-                                `map.${mapKey.toLowerCase()}`,
-                              )}
-                            ></map-display>
-                          </div>
-                        `;
-                      })}
-                    </div>
+              ${categoryOrder.map((categoryKey) => {
+                const mapsInCategory = this.groupedMaps[categoryKey];
+                if (!mapsInCategory || mapsInCategory.length === 0) return null;
+                return html` <div class="w-full mb-4">
+                  <h3
+                    class="text-lg font-semibold mb-2 text-center text-gray-300"
+                  >
+                    ${translateText(`map_categories.${categoryKey}`)}
+                  </h3>
+                  <div class="flex flex-row flex-wrap justify-center gap-4">
+                    ${mapsInCategory.map((def) => {
+                      const mapValue = GameMapType[def.identifier]; // Access enum value via identifier key
+                      if (mapValue === undefined) return null;
+                      return html` <div
+                        @click=${() => this.handleMapSelection(mapValue)}
+                      >
+                        <map-display
+                          .mapKey=${def.identifier}
+                          .selected=${!this.useRandomMap &&
+                          this.selectedMap === mapValue}
+                          .translation=${translateText(
+                            `map.${def.identifier.toLowerCase()}`,
+                          )}
+                        ></map-display>
+                      </div>`;
+                    })}
                   </div>
-                `,
-              )}
-              <div
-                class="option-card random-map ${
-                  this.useRandomMap ? "selected" : ""
-                }"
-                @click=${this.handleRandomMapToggle}
-              >
-                <div class="option-image">
-                  <img
-                    src=${randomMap}
-                    alt="Random Map"
-                    style="width:100%; aspect-ratio: 4/2; object-fit:cover; border-radius:8px;"
-                  />
-                </div>
-                <div class="option-card-title">
-                  ${translateText("map.random")}
+                </div>`;
+              })}
+                <div
+                  class="option-card random-map ${
+                    this.useRandomMap ? "selected" : ""
+                  }"
+                  @click=${this.handleRandomMapToggle}
+                >
+                  <div class="option-image">
+                    <img
+                      src=${randomMap}
+                      alt="Random Map"
+                      style="width:100%; aspect-ratio: 4/2; object-fit:cover; border-radius:8px;"
+                    />
+                  </div>
+                  <div class="option-card-title">
+                    ${translateText("map.random")}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-
-          <!-- Difficulty Selection -->
-          <div class="options-section">
-            <div class="option-title">${translateText("difficulty.difficulty")}</div>
-            <div class="option-cards">
-              ${Object.entries(Difficulty)
-                .filter(([key]) => isNaN(Number(key)))
-                .map(
-                  ([key, value]) => html`
-                    <div
-                      class="option-card ${this.selectedDifficulty === value
-                        ? "selected"
-                        : ""}"
-                      @click=${() => this.handleDifficultySelection(value)}
-                    >
-                      <difficulty-display
-                        .difficultyKey=${key}
-                      ></difficulty-display>
-                      <p class="option-card-title">
-                        ${translateText(
-                          `difficulty.${DifficultyDescription[key]}`,
+  
+            <!-- Difficulty Selection -->
+            <div class="options-section">
+              <div class="option-title">${translateText("difficulty.difficulty")}</div>
+              <div class="option-cards">
+                ${Object.entries(Difficulty)
+                  .filter(([key]) => isNaN(Number(key)))
+                  .map(
+                    ([key, value]) => html`
+                      <div
+                        class="option-card ${this.selectedDifficulty === value
+                          ? "selected"
+                          : ""}"
+                        @click=${() => this.handleDifficultySelection(value)}
+                      >
+                        <difficulty-display
+                          .difficultyKey=${key}
+                        ></difficulty-display>
+                        <p class="option-card-title">
+                          ${translateText(
+                            `difficulty.${DifficultyDescription[key]}`,
+                          )}
+                        </p>
+                      </div>
+                    `,
+                  )}
+              </div>
+            </div>
+  
+            <!-- Game Mode Selection -->
+            <div class="options-section">
+              <div class="option-title">${translateText("host_modal.mode")}</div>
+              <div class="option-cards">
+                <div
+                  class="option-card ${this.gameMode === GameMode.FFA ? "selected" : ""}"
+                  @click=${() => this.handleGameModeSelection(GameMode.FFA)}
+                >
+                  <div class="option-card-title">
+                    ${translateText("game_mode.ffa")}
+                  </div>
+                </div>
+                <div
+                  class="option-card ${this.gameMode === GameMode.Team ? "selected" : ""}"
+                  @click=${() => this.handleGameModeSelection(GameMode.Team)}
+                >
+                  <div class="option-card-title">
+                    ${translateText("game_mode.teams")}
+                  </div>
+                </div>
+              </div>
+            </div>
+  
+            ${
+              this.gameMode === GameMode.FFA
+                ? ""
+                : html`
+                    <!-- Team Count Selection -->
+                    <div class="options-section">
+                      <div class="option-title">
+                        ${translateText("host_modal.team_count")}
+                      </div>
+                      <div class="option-cards">
+                        ${[2, 3, 4, 5, 6, 7].map(
+                          (o) => html`
+                            <div
+                              class="option-card ${this.teamCount === o
+                                ? "selected"
+                                : ""}"
+                              @click=${() => this.handleTeamCountSelection(o)}
+                            >
+                              <div class="option-card-title">${o}</div>
+                            </div>
+                          `,
                         )}
-                      </p>
+                      </div>
                     </div>
-                  `,
-                )}
-            </div>
-          </div>
-
-          <!-- Game Mode Selection -->
-          <div class="options-section">
-            <div class="option-title">${translateText("host_modal.mode")}</div>
-            <div class="option-cards">
-              <div
-                class="option-card ${this.gameMode === GameMode.FFA ? "selected" : ""}"
-                @click=${() => this.handleGameModeSelection(GameMode.FFA)}
-              >
-                <div class="option-card-title">
-                  ${translateText("game_mode.ffa")}
-                </div>
+                  `
+            }
+  
+            <!-- Game Options -->
+            <div class="options-section">
+              <div class="option-title">
+                ${translateText("host_modal.options_title")}
               </div>
-              <div
-                class="option-card ${this.gameMode === GameMode.Team ? "selected" : ""}"
-                @click=${() => this.handleGameModeSelection(GameMode.Team)}
-              >
-                <div class="option-card-title">
-                  ${translateText("game_mode.teams")}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          ${
-            this.gameMode === GameMode.FFA
-              ? ""
-              : html`
-                  <!-- Team Count Selection -->
-                  <div class="options-section">
-                    <div class="option-title">
-                      ${translateText("host_modal.team_count")}
-                    </div>
-                    <div class="option-cards">
-                      ${[2, 3, 4, 5, 6, 7].map(
-                        (o) => html`
-                          <div
-                            class="option-card ${this.teamCount === o
-                              ? "selected"
-                              : ""}"
-                            @click=${() => this.handleTeamCountSelection(o)}
-                          >
-                            <div class="option-card-title">${o}</div>
-                          </div>
-                        `,
-                      )}
-                    </div>
+              <div class="option-cards">
+                <label for="bots-count" class="option-card">
+                  <input
+                    type="range"
+                    id="bots-count"
+                    min="0"
+                    max="400"
+                    step="1"
+                    @input=${this.handleBotsChange}
+                    @change=${this.handleBotsChange}
+                    .value="${String(this.bots)}"
+                  />
+                  <div class="option-card-title">
+                    <span>${translateText("host_modal.bots")}</span>${
+                      this.bots == 0
+                        ? translateText("host_modal.bots_disabled")
+                        : this.bots
+                    }
                   </div>
-                `
-          }
-
-          <!-- Game Options -->
+                </label>
+  
+                  <label
+                    for="disable-npcs"
+                    class="option-card ${this.disableNPCs ? "selected" : ""}"
+                  >
+                    <div class="checkbox-icon"></div>
+                    <input
+                      type="checkbox"
+                      id="disable-npcs"
+                      @change=${this.handleDisableNPCsChange}
+                      .checked=${this.disableNPCs}
+                    />
+                    <div class="option-card-title">
+                      ${translateText("host_modal.disable_nations")}
+                    </div>
+                  </label>
+  
+                  <label
+                    for="instant-build"
+                    class="option-card ${this.instantBuild ? "selected" : ""}"
+                  >
+                    <div class="checkbox-icon"></div>
+                    <input
+                      type="checkbox"
+                      id="instant-build"
+                      @change=${this.handleInstantBuildChange}
+                      .checked=${this.instantBuild}
+                    />
+                    <div class="option-card-title">
+                      ${translateText("host_modal.instant_build")}
+                    </div>
+                  </label>
+  
+                  <label
+                    for="infinite-gold"
+                    class="option-card ${this.infiniteGold ? "selected" : ""}"
+                  >
+                    <div class="checkbox-icon"></div>
+                    <input
+                      type="checkbox"
+                      id="infinite-gold"
+                      @change=${this.handleInfiniteGoldChange}
+                      .checked=${this.infiniteGold}
+                    />
+                    <div class="option-card-title">
+                      ${translateText("host_modal.infinite_gold")}
+                    </div>
+                  </label>
+  
+                  <label
+                    for="infinite-troops"
+                    class="option-card ${this.infiniteTroops ? "selected" : ""}"
+                  >
+                    <div class="checkbox-icon"></div>
+                    <input
+                      type="checkbox"
+                      id="infinite-troops"
+                      @change=${this.handleInfiniteTroopsChange}
+                      .checked=${this.infiniteTroops}
+                    />
+                    <div class="option-card-title">
+                      ${translateText("host_modal.infinite_troops")}
+                    </div>
+                  </label>
+  
+                  <label
+                    for="disable-nukes"
+                    class="option-card ${this.disableNukes ? "selected" : ""}"
+                  >
+                    <div class="checkbox-icon"></div>
+                    <input
+                      type="checkbox"
+                      id="disable-nukes"
+                      @change=${this.handleDisableNukesChange}
+                      .checked=${this.disableNukes}
+                    />
+                    <div class="option-card-title">
+                      ${translateText("host_modal.disable_nukes")}
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+  
+          <!-- Lobby Selection -->
           <div class="options-section">
             <div class="option-title">
-              ${translateText("host_modal.options_title")}
+              ${this.players.length}
+              ${
+                this.players.length === 1
+                  ? translateText("host_modal.player")
+                  : translateText("host_modal.players")
+              }
             </div>
-            <div class="option-cards">
-              <label for="bots-count" class="option-card">
-                <input
-                  type="range"
-                  id="bots-count"
-                  min="0"
-                  max="400"
-                  step="1"
-                  @input=${this.handleBotsChange}
-                  @change=${this.handleBotsChange}
-                  .value="${String(this.bots)}"
-                />
-                <div class="option-card-title">
-                  <span>${translateText("host_modal.bots")}</span>${
-                    this.bots == 0
-                      ? translateText("host_modal.bots_disabled")
-                      : this.bots
-                  }
-                </div>
-              </label>
-
-                <label
-                  for="disable-npcs"
-                  class="option-card ${this.disableNPCs ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="disable-npcs"
-                    @change=${this.handleDisableNPCsChange}
-                    .checked=${this.disableNPCs}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.disable_nations")}
-                  </div>
-                </label>
-
-                <label
-                  for="instant-build"
-                  class="option-card ${this.instantBuild ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="instant-build"
-                    @change=${this.handleInstantBuildChange}
-                    .checked=${this.instantBuild}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.instant_build")}
-                  </div>
-                </label>
-
-                <label
-                  for="infinite-gold"
-                  class="option-card ${this.infiniteGold ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="infinite-gold"
-                    @change=${this.handleInfiniteGoldChange}
-                    .checked=${this.infiniteGold}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.infinite_gold")}
-                  </div>
-                </label>
-
-                <label
-                  for="infinite-troops"
-                  class="option-card ${this.infiniteTroops ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="infinite-troops"
-                    @change=${this.handleInfiniteTroopsChange}
-                    .checked=${this.infiniteTroops}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.infinite_troops")}
-                  </div>
-                </label>
-
-                <label
-                  for="disable-nukes"
-                  class="option-card ${this.disableNukes ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="disable-nukes"
-                    @change=${this.handleDisableNukesChange}
-                    .checked=${this.disableNukes}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.disable_nukes")}
-                  </div>
-                </label>
-              </div>
+  
+            <div class="players-list">
+              ${this.players.map(
+                (player) => html`<span class="player-tag">${player}</span>`,
+              )}
             </div>
           </div>
-
-        <!-- Lobby Selection -->
-        <div class="options-section">
-          <div class="option-title">
-            ${this.players.length}
-            ${
-              this.players.length === 1
-                ? translateText("host_modal.player")
-                : translateText("host_modal.players")
-            }
+  
+          <div class="start-game-button-container">
+            <button
+              @click=${this.startGame}
+              ?disabled=${this.players.length < 2}
+              class="start-game-button"
+            >
+              ${
+                this.players.length === 1
+                  ? translateText("host_modal.waiting")
+                  : translateText("host_modal.start")
+              }
+            </button>
           </div>
-
-          <div class="players-list">
-            ${this.players.map(
-              (player) => html`<span class="player-tag">${player}</span>`,
-            )}
-          </div>
+            
         </div>
-
-        <div class="start-game-button-container">
-          <button
-            @click=${this.startGame}
-            ?disabled=${this.players.length < 2}
-            class="start-game-button"
-          >
-            ${
-              this.players.length === 1
-                ? translateText("host_modal.waiting")
-                : translateText("host_modal.start")
-            }
-          </button>
-        </div>
-					
-      </div>
-    </o-modal>
-    `;
+      </o-modal>
+      `;
   }
 
   createRenderRoot() {

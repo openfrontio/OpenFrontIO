@@ -3,29 +3,6 @@ import { customElement, property } from "lit/decorators.js";
 import { GameMapType } from "../../core/game/Game";
 import { getMapsImage } from "../utilities/Maps";
 
-// Add map descriptions
-export const MapDescription: Record<keyof typeof GameMapType, string> = {
-  World: "World",
-  Europe: "Europe",
-  Mena: "MENA",
-  NorthAmerica: "North America",
-  Oceania: "Oceania",
-  BlackSea: "Black Sea",
-  Africa: "Africa",
-  Pangaea: "Pangaea",
-  Asia: "Asia",
-  Mars: "Mars",
-  SouthAmerica: "South America",
-  Britannia: "Britannia",
-  GatewayToTheAtlantic: "Gateway to the Atlantic",
-  Australia: "Australia",
-  Iceland: "Iceland",
-  Japan: "Japan",
-  BetweenTwoSeas: "Between Two Seas",
-  KnownWorld: "Known World",
-  FaroeIslands: "Faroe Islands",
-};
-
 @customElement("map-display")
 export class MapDisplay extends LitElement {
   @property({ type: String }) mapKey = "";
@@ -95,11 +72,7 @@ export class MapDisplay extends LitElement {
           : html`<div class="option-image">
               <p>${this.mapKey}</p>
             </div>`}
-        <div class="option-card-title">
-          <!-- ${MapDescription[this.mapKey as keyof typeof GameMapType]}-->
-          ${this.translation ||
-          MapDescription[this.mapKey as keyof typeof GameMapType]}
-        </div>
+        <div class="option-card-title">${this.translation || this.mapKey}</div>
       </div>
     `;
   }

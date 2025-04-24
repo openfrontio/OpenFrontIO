@@ -1,5 +1,25 @@
 import { GameMapType } from "./Game";
-import { NationMap } from "./TerrainMapLoader";
+import { GameMap, GameMapImpl } from "./GameMap";
+import { getMapFileName } from "./MapRegistry";
+
+export type TerrainMapData = {
+  nationMap: NationMap;
+  gameMap: GameMap;
+  miniGameMap: GameMap;
+};
+
+const loadedMapsCache = new Map<GameMapType, TerrainMapData>();
+
+export interface NationMap {
+  nations: Nation[];
+}
+
+export interface Nation {
+  coordinates: [number, number];
+  flag: string;
+  name: string;
+  strength: number;
+}
 
 interface MapData {
   mapBin: string;
@@ -20,29 +40,6 @@ interface BinModule {
 interface NationMapModule {
   default: NationMap;
 }
-
-// Mapping from GameMap enum values to file names
-const MAP_FILE_NAMES: Record<GameMapType, string> = {
-  [GameMapType.World]: "WorldMap",
-  [GameMapType.Europe]: "Europe",
-  [GameMapType.Mena]: "Mena",
-  [GameMapType.NorthAmerica]: "NorthAmerica",
-  [GameMapType.Oceania]: "Oceania",
-  [GameMapType.BlackSea]: "BlackSea",
-  [GameMapType.Africa]: "Africa",
-  [GameMapType.Pangaea]: "Pangaea",
-  [GameMapType.Asia]: "Asia",
-  [GameMapType.Mars]: "Mars",
-  [GameMapType.SouthAmerica]: "SouthAmerica",
-  [GameMapType.Britannia]: "Britannia",
-  [GameMapType.GatewayToTheAtlantic]: "GatewayToTheAtlantic",
-  [GameMapType.Australia]: "Australia",
-  [GameMapType.Iceland]: "Iceland",
-  [GameMapType.Japan]: "Japan",
-  [GameMapType.BetweenTwoSeas]: "BetweenTwoSeas",
-  [GameMapType.KnownWorld]: "KnownWorld",
-  [GameMapType.FaroeIslands]: "FaroeIslands",
-};
 
 class GameMapLoader {
   private maps: Map<GameMapType, MapCache>;
@@ -69,7 +66,7 @@ class GameMapLoader {
   }
 
   private async loadMapData(map: GameMapType): Promise<MapData> {
-    const fileName = MAP_FILE_NAMES[map];
+    const fileName = getMapFileName(map); // Use helper function to get correct filename
     if (!fileName) {
       throw new Error(`No file name mapping found for map: ${map}`);
     }
@@ -95,7 +92,7 @@ class GameMapLoader {
 
   public isMapLoaded(map: GameMapType): boolean {
     const mapData = this.maps.get(map);
-    return !!mapData?.bin && !!mapData?.nationMap;
+    return !!mapData?.bin && !!mapData?.nationMap && !!mapData?.miniMapBin;
   }
 
   public getLoadedMaps(): GameMapType[] {
@@ -103,4 +100,63 @@ class GameMapLoader {
   }
 }
 
-export const terrainMapFileLoader = new GameMapLoader();
+export const terrainMapFileLoaderInstance = new GameMapLoader();
+
+export async function loadTerrainMap(
+  map: GameMapType,
+): Promise<TerrainMapData> {
+  if (loadedMapsCache.has(map)) {
+    return loadedMapsCache.get(map)!;
+  }
+
+  if (!terrainMapFileLoaderInstance) {
+    throw new Error(
+      "Internal Error: terrainMapFileLoaderInstance is not initialized!",
+    );
+  }
+  const mapFiles = await terrainMapFileLoaderInstance.getMapData(map);
+
+  const gameMap = await genTerrainFromBin(mapFiles.mapBin);
+  const miniGameMap = await genTerrainFromBin(mapFiles.miniMapBin);
+  const result = {
+    nationMap: mapFiles.nationMap,
+    gameMap: gameMap,
+    miniGameMap: miniGameMap,
+  };
+  loadedMapsCache.set(map, result);
+  return result;
+}
+
+export async function genTerrainFromBin(data: string): Promise<GameMap> {
+  const width = (data.charCodeAt(1) << 8) | data.charCodeAt(0);
+  const height = (data.charCodeAt(3) << 8) | data.charCodeAt(2);
+
+  const expectedLength = width * height + 4;
+  if (data.length !== expectedLength) {
+    console.error(
+      `Data length mismatch: expected ${expectedLength}, got ${data.length} for ${width}x${height}`,
+    );
+    throw new Error(
+      `Invalid data: buffer size ${data.length} incorrect for ${width}x${height} terrain plus 4 bytes for dimensions.`,
+    );
+  }
+
+  const rawData = new Uint8Array(width * height);
+  let numLand = 0;
+
+  for (let i = 0; i < width * height; i++) {
+    const packedByte = data.charCodeAt(i + 4);
+    if (isNaN(packedByte)) {
+      console.error(
+        `NaN encountered at index ${i + 4} when reading char code.`,
+      );
+      throw new Error(`Invalid character data encountered at index ${i + 4}`);
+    }
+    rawData[i] = packedByte;
+    if ((packedByte & 0b10000000) !== 0) {
+      numLand++;
+    }
+  }
+
+  return new GameMapImpl(width, height, rawData, numLand);
+}

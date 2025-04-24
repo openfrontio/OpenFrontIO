@@ -8,6 +8,7 @@ import {
   UnitUpdate,
 } from "./GameUpdates";
 import { PlayerView } from "./GameView";
+import { MAP_DEFINITIONS } from "./MapRegistry";
 import { Stats } from "./Stats";
 
 export type PlayerID = string;
@@ -48,51 +49,32 @@ export enum Team {
   Bot = "Bot",
 }
 
-export enum GameMapType {
-  World = "World",
-  Europe = "Europe",
-  Mena = "Mena",
-  NorthAmerica = "North America",
-  SouthAmerica = "South America",
-  Oceania = "Oceania",
-  BlackSea = "Black Sea",
-  Africa = "Africa",
-  Pangaea = "Pangaea",
-  Asia = "Asia",
-  Mars = "Mars",
-  Britannia = "Britannia",
-  GatewayToTheAtlantic = "Gateway to the Atlantic",
-  Australia = "Australia",
-  Iceland = "Iceland",
-  Japan = "Japan",
-  BetweenTwoSeas = "Between Two Seas",
-  KnownWorld = "Known World",
-  FaroeIslands = "FaroeIslands",
-}
+// --- Dynamically generate GameMapType ---
+const gameMapTypeMembers: { [key: string]: string } = {};
+MAP_DEFINITIONS.forEach((def) => {
+  gameMapTypeMembers[def.identifier] = def.identifier;
+});
 
-export const mapCategories: Record<string, GameMapType[]> = {
-  continental: [
-    GameMapType.World,
-    GameMapType.NorthAmerica,
-    GameMapType.SouthAmerica,
-    GameMapType.Europe,
-    GameMapType.Asia,
-    GameMapType.Africa,
-    GameMapType.Oceania,
-  ],
-  regional: [
-    GameMapType.BlackSea,
-    GameMapType.Britannia,
-    GameMapType.GatewayToTheAtlantic,
-    GameMapType.BetweenTwoSeas,
-    GameMapType.Iceland,
-    GameMapType.Japan,
-    GameMapType.Mena,
-    GameMapType.Australia,
-    GameMapType.FaroeIslands,
-  ],
-  fantasy: [GameMapType.Pangaea, GameMapType.Mars, GameMapType.KnownWorld],
+export const GameMapType = gameMapTypeMembers as {
+  [K in (typeof MAP_DEFINITIONS)[number]["identifier"]]: K;
 };
+
+export type GameMapType = (typeof GameMapType)[keyof typeof GameMapType];
+export const mapCategories: Record<string, GameMapType[]> = {};
+for (const def of MAP_DEFINITIONS) {
+  const categoryKey = def.category.toString();
+  const enumMember = GameMapType[def.identifier];
+  if (enumMember !== undefined) {
+    if (!mapCategories[categoryKey]) {
+      mapCategories[categoryKey] = [];
+    }
+    mapCategories[categoryKey].push(enumMember);
+  } else {
+    console.error(
+      `Could not find enum member for map identifier: ${def.identifier}`,
+    );
+  }
+}
 
 export enum GameType {
   Singleplayer = "Singleplayer",
