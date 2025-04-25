@@ -270,16 +270,9 @@ export class AttackExecution implements Execution {
         continue;
       }
       this.border.add(neighbor);
-      let numOwnedByMe = this.mg
+      const numOwnedByMe = this.mg
         .neighbors(neighbor)
         .filter((t) => this.mg.owner(t) == this._owner).length;
-      const dist = 0;
-      if (numOwnedByMe > 1) {
-        // numOwnedByMe = 4;
-      }
-      if (numOwnedByMe > 2) {
-        numOwnedByMe = 100;
-      }
       let mag = 0;
       switch (this.mg.terrainType(tile)) {
         case TerrainType.Plains:
@@ -292,11 +285,12 @@ export class AttackExecution implements Execution {
           mag = 2;
           break;
       }
+      // numOwnedByMe = 0;
       this.toConquer.enqueue(
         new TileContainer(
           neighbor,
           (this.random.nextInt(0, 7) + 10) *
-            (1 + dist / 100 - numOwnedByMe * 0.5 + mag / 2) +
+            (1 - numOwnedByMe * 0.5 + mag / 2) +
             this.mg.ticks(),
         ),
       );
