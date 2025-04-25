@@ -285,7 +285,6 @@ export class AttackExecution implements Execution {
           mag = 2;
           break;
       }
-      // numOwnedByMe = 0;
       this.toConquer.enqueue(
         new TileContainer(
           neighbor,
