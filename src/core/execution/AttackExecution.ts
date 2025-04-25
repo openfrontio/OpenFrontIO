@@ -275,7 +275,7 @@ export class AttackExecution implements Execution {
         .filter((t) => this.mg.owner(t) == this._owner).length;
       const dist = 0;
       if (numOwnedByMe > 1) {
-        numOwnedByMe = 4;
+        // numOwnedByMe = 4;
       }
       if (numOwnedByMe > 2) {
         numOwnedByMe = 100;
@@ -295,7 +295,7 @@ export class AttackExecution implements Execution {
       this.toConquer.enqueue(
         new TileContainer(
           neighbor,
-          (this.random.nextInt(0, 10) + 10) *
+          (this.random.nextInt(0, 7) + 10) *
             (1 + dist / 100 - numOwnedByMe * 0.5 + mag / 2) +
             this.mg.ticks(),
         ),
