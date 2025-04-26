@@ -115,13 +115,14 @@
     "britannia": "ブリタニア",
     "gatewaytotheatlantic": "西ヨーロッパ",
     "australia": "オーストラリア",
-    "random": "アイスランド",
+    "random": "ランダム",
     "iceland": "アイスランド",
     "pangaea": "パンゲア",
     "japan": "日本とその隣国",
     "betweentwoseas": "2つの海の間",
     "knownworld": "知られてる世界",
-    "faroeislands": "フェロー諸島"
+    "faroeislands": "フェロー諸島",
+    "europeclassic": "ヨーロッパ (クラシック)"
   },
   "private_lobby": {
     "title": "ランダム",
