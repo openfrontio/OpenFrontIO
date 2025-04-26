@@ -14,7 +14,7 @@ export class PlayerTeamLabel extends LitElement implements Layer {
   public clientID: ClientID;
 
   @state()
-  private isTeamsGameMode: boolean = true;
+  private isTeamsGameMode: boolean = false;
 
   private isVisible = false;
 
@@ -28,7 +28,7 @@ export class PlayerTeamLabel extends LitElement implements Layer {
 
   init() {
     this.isTeamsGameMode =
-      this.game.config().gameConfig().gameMode == GameMode.Team;
+      this.game.config().gameConfig().gameMode === GameMode.Team;
 
     if (this.isTeamsGameMode) {
       this.isVisible = true;
@@ -37,7 +37,7 @@ export class PlayerTeamLabel extends LitElement implements Layer {
   }
 
   tick() {
-    if (!this.playerTeam) {
+    if (this.isTeamsGameMode && !this.playerTeam) {
       this.playerTeam = this.game.myPlayer()?.team();
       this.playerColor = this.game.config().theme().teamColor(this.playerTeam);
       this.requestUpdate();
@@ -56,7 +56,7 @@ export class PlayerTeamLabel extends LitElement implements Layer {
 
     return html`
       <div
-        class="top-0 lg:top-4 left-0 lg:left-4  bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-es-sm lg:rounded-lg backdrop-blur-md text-white"
+        class="flex items-center w-full justify-evenly h-8 lg:h-10 top-0 lg:top-4 left-0 lg:left-4 bg-opacity-60 bg-gray-900 rounded-es-sm lg:rounded-lg backdrop-blur-md text-white py-1 lg:p-2"
         @contextmenu=${(e) => e.preventDefault()}
       >
         Your team:
