@@ -58,6 +58,21 @@ class Client {
   constructor() {}
 
   initialize(): void {
+    const { hash } = window.location;
+    if (hash.startsWith("#")) {
+      const params = new URLSearchParams(hash.slice(1));
+      const token = params.get("token");
+      if (token) {
+        localStorage.setItem("token", token);
+      }
+      // Clean the URL
+      history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    }
+
     const langSelector = document.querySelector(
       "lang-selector",
     ) as LangSelector;
@@ -88,6 +103,14 @@ class Client {
     ) as RandomNameButton;
     if (!this.randomNameButton) {
       consolex.warn("Random name button element not found");
+    }
+
+    const loginDiscordButton = document.getElementById("login-discord");
+    const loggedIn = false;
+    if (loggedIn) {
+      // ...
+    } else {
+      loginDiscordButton.addEventListener("click", discordLogin);
     }
 
     this.usernameInput = document.querySelector(
@@ -315,4 +338,15 @@ export function getPersistentIDFromCookie(): string {
   ].join(";");
 
   return newID;
+}
+
+function discordLogin() {
+  const { href } = window.location;
+  const { hostname } = new URL(href);
+  const domainname = hostname.split(".").slice(-2).join(".");
+  const api_base =
+    domainname === "localhost"
+      ? "http://localhost:8787"
+      : `https://api.${domainname}`;
+  window.location.href = `${api_base}/login/discord?redirect_uri=${href}`;
 }
