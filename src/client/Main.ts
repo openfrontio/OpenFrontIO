@@ -5,6 +5,7 @@ import { GameRecord, GameStartInfo } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
+import { UserMeResponse, UserMeResponseSchema } from "./ApiSchemas";
 import { joinLobby } from "./ClientGameRunner";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
@@ -106,12 +107,18 @@ class Client {
     }
 
     const loginDiscordButton = document.getElementById("login-discord");
-    const loggedIn = false;
-    if (loggedIn) {
-      // ...
-    } else {
-      loginDiscordButton.addEventListener("click", discordLogin);
-    }
+    isLoggedIn().then((loggedIn) => {
+      if (loggedIn !== false) {
+        console.log("Logged in", JSON.stringify(loggedIn, null, 2));
+        const { user } = loggedIn;
+        const { id, avatar } = user;
+        const avatarUrl = `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`;
+        // TODO: Update the page for logged in user
+      } else {
+        localStorage.removeItem("token");
+        loginDiscordButton.addEventListener("click", discordLogin);
+      }
+    });
 
     this.usernameInput = document.querySelector(
       "username-input",
@@ -306,6 +313,32 @@ document.addEventListener("DOMContentLoaded", () => {
   new Client().initialize();
 });
 
+async function isLoggedIn(): Promise<UserMeResponse | false> {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return false;
+    const response = await fetch(getApiBase() + "/users/@me", {
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+    if (response.status !== 200) return false;
+    const body = await response.json();
+    const result = UserMeResponseSchema.safeParse(body);
+    if (!result.success) {
+      console.error(
+        "Invalid response",
+        JSON.stringify(body),
+        JSON.stringify(result.error),
+      );
+      return false;
+    }
+    return result.data;
+  } catch (e) {
+    return false;
+  }
+}
+
 function setFavicon(): void {
   const link = document.createElement("link");
   link.type = "image/x-icon";
@@ -340,13 +373,14 @@ export function getPersistentIDFromCookie(): string {
   return newID;
 }
 
-function discordLogin() {
-  const { href } = window.location;
-  const { hostname } = new URL(href);
+function getApiBase() {
+  const { hostname } = new URL(window.location.href);
   const domainname = hostname.split(".").slice(-2).join(".");
-  const api_base =
-    domainname === "localhost"
-      ? "http://localhost:8787"
-      : `https://api.${domainname}`;
-  window.location.href = `${api_base}/login/discord?redirect_uri=${href}`;
+  return domainname === "localhost"
+    ? "http://localhost:8787"
+    : `https://api.${domainname}`;
+}
+
+function discordLogin() {
+  window.location.href = `${getApiBase()}/login/discord?redirect_uri=${window.location.href}`;
 }
