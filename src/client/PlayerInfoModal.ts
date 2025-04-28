@@ -54,6 +54,11 @@ export class PlayerInfoModal extends LitElement {
     return storedFlag || "";
   }
 
+  private getStoredName(): string {
+    const storedName = localStorage.getItem("username");
+    return storedName || "";
+  }
+
   private getRoleStyle(role: string) {
     const roleStyles: Record<
       string,
@@ -172,8 +177,11 @@ export class PlayerInfoModal extends LitElement {
   }
 
   render() {
-    const playerName = "Aotumuri";
+    const playerName = this.getStoredName();
     const flag = this.getStoredFlag();
+    const discordUserName = "DiscordName"; // test name
+    const discordAvatarUrl =
+      "https://cdn.discordapp.com/avatars/212760412582707200/06a64cee00dfb078269181f59a153ae3"; // test link
 
     const highestRole = this.getHighestRole(this.roles);
     const { flagWrapper, nameText } = this.getRoleStyle(highestRole);
@@ -190,6 +198,15 @@ export class PlayerInfoModal extends LitElement {
               />
             </div>
             <div class="${nameText}">${playerName}</div>
+            <span>|</span>
+            <div class="${nameText}">${discordUserName}</div>
+            <div class="${flagWrapper}">
+              <img
+                class="size-[48px] rounded-full block"
+                src="${discordAvatarUrl}"
+                alt="Discord Avatar"
+              />
+            </div>
           </div>
 
           <hr class="w-2/3 border-gray-600 my-2" />
