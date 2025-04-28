@@ -58,9 +58,9 @@ export class MapPlaylist {
         count--;
       }
     });
-    while (!this.allNonConsecutive(mapsPlaylist)) {
+    do {
       random.shuffleArray(mapsPlaylist);
-    }
+    } while (!this.allNonConsecutive(mapsPlaylist));
   }
 
   // Specifically controls how the playlists rotate.
