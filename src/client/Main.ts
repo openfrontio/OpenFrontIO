@@ -111,8 +111,10 @@ class Client {
       if (loggedIn !== false) {
         console.log("Logged in", JSON.stringify(loggedIn, null, 2));
         const { user } = loggedIn;
-        const { id, avatar } = user;
-        const avatarUrl = `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`;
+        const { id, avatar, username, global_name, discriminator } = user;
+        const avatarUrl = avatar
+          ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.${avatar.startsWith("a_") ? "gif" : "png"}`
+          : `https://cdn.discordapp.com/embed/avatars/${Number(discriminator) % 5}.png`;
         // TODO: Update the page for logged in user
       } else {
         localStorage.removeItem("token");
