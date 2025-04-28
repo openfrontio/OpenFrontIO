@@ -7,6 +7,7 @@ import { getMapsImage } from "../utilities/Maps";
 export const MapDescription: Record<keyof typeof GameMapType, string> = {
   World: "World",
   Europe: "Europe",
+  EuropeClassic: "Europe Classic",
   Mena: "MENA",
   NorthAmerica: "North America",
   Oceania: "Oceania",

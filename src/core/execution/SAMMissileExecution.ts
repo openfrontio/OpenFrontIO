@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -8,12 +7,12 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PathFinder } from "../pathfinding/PathFinding";
+import { AirPathFinder } from "../pathfinding/PathFinding";
+import { PseudoRandom } from "../PseudoRandom";
 
 export class SAMMissileExecution implements Execution {
   private active = true;
-  private pathFinder: PathFinder;
+  private pathFinder: AirPathFinder;
   private SAMMissile: Unit;
   private mg: Game;
 
@@ -26,7 +25,7 @@ export class SAMMissileExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
-    this.pathFinder = PathFinder.Mini(mg, 2000, true, 10);
+    this.pathFinder = new AirPathFinder(mg, new PseudoRandom(mg.ticks()));
     this.mg = mg;
   }
 
@@ -58,29 +57,19 @@ export class SAMMissileExecution implements Execution {
       const result = this.pathFinder.nextTile(
         this.SAMMissile.tile(),
         this.target.tile(),
-        3,
       );
-      switch (result.type) {
-        case PathFindResultType.Completed:
-          this.mg.displayMessage(
-            `Missile intercepted ${this.target.type()}`,
-            MessageType.SUCCESS,
-            this._owner.id(),
-          );
-          this.active = false;
-          this.target.delete();
-          this.SAMMissile.delete(false);
-          return;
-        case PathFindResultType.NextTile:
-          this.SAMMissile.move(result.tile);
-          break;
-        case PathFindResultType.Pending:
-          return;
-        case PathFindResultType.PathNotFound:
-          consolex.log(`Missile ${this.SAMMissile} could not find target`);
-          this.active = false;
-          this.SAMMissile.delete(false);
-          return;
+      if (result === true) {
+        this.mg.displayMessage(
+          `Missile intercepted ${this.target.type()}`,
+          MessageType.SUCCESS,
+          this._owner.id(),
+        );
+        this.active = false;
+        this.target.delete();
+        this.SAMMissile.delete(false);
+        return;
+      } else {
+        this.SAMMissile.move(result);
       }
     }
   }

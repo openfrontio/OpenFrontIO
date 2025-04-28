@@ -16,6 +16,7 @@ import {
   PlayerType,
 } from "./game/Game";
 import { createGame } from "./game/GameImpl";
+import { TileRef } from "./game/GameMap";
 import {
   ErrorUpdate,
   GameUpdateType,
@@ -157,7 +158,6 @@ export class GameRunner {
     const player = this.game.player(playerID);
     const tile = this.game.ref(x, y);
     const actions = {
-      canBoat: player.canBoat(tile),
       canAttack: player.canAttack(tile),
       buildableUnits: player.buildableUnits(tile),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
@@ -193,5 +193,15 @@ export class GameRunner {
     return {
       borderTiles: player.borderTiles(),
     } as PlayerBorderTiles;
+  }
+  public bestTransportShipSpawn(
+    playerID: PlayerID,
+    targetTile: TileRef,
+  ): TileRef | false {
+    const player = this.game.player(playerID);
+    if (!player.isPlayer()) {
+      throw new Error(`player with id ${playerID} not found`);
+    }
+    return player.bestTransportShipSpawn(targetTile);
   }
 }

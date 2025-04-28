@@ -91,6 +91,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
         GameMapType.Japan, // Japan at this level because its 2/3 water
         GameMapType.FaroeIslands,
         GameMapType.DeglaciatedAntarctica,
+        GameMapType.EuropeClassic,
       ].includes(map)
     ) {
       return Math.random() < 0.3 ? 50 : 25;
@@ -397,7 +398,7 @@ export class DefaultConfig implements Config {
     return 80;
   }
   boatMaxNumber(): number {
-    return 9;
+    return 3;
   }
   numSpawnPhaseTurns(): number {
     return this._gameConfig.gameType == GameType.Singleplayer ? 100 : 300;
@@ -485,25 +486,18 @@ export class DefaultConfig implements Config {
     }
 
     if (defender.isPlayer()) {
-      const ratio = within(
-        Math.pow(defender.troops() / attackTroops, 0.4),
-        0.1,
-        10,
-      );
-      const speedRatio = within(
-        defender.troops() / (5 * attackTroops),
-        0.1,
-        10,
-      );
-
       return {
         attackerTroopLoss:
-          ratio *
+          within(defender.troops() / attackTroops, 0.6, 2) *
           mag *
+          0.8 *
           largeLossModifier *
           (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
-        defenderTroopLoss: defender.population() / defender.numTilesOwned(),
-        tilesPerTickUsed: Math.floor(speedRatio * speed * largeSpeedMalus),
+        defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
+        tilesPerTickUsed:
+          within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
+          speed *
+          largeSpeedMalus,
       };
     } else {
       return {
@@ -639,8 +633,7 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): number {
-    const ratio = Math.pow(player.workers() / player.population(), 1.3);
-    return Math.floor(Math.sqrt(player.workers()) * ratio * 5);
+    return Math.sqrt(player.workers() * player.numTilesOwned()) / 200;
   }
 
   troopAdjustmentRate(player: Player): number {
@@ -679,7 +672,7 @@ export class DefaultConfig implements Config {
   }
 
   structureMinDist(): number {
-    return 18;
+    return 12;
   }
 
   shellLifetime(): number {

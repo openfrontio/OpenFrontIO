@@ -80,6 +80,9 @@ export class DefensePostExecution implements Execution {
       this.target = null;
     }
 
+    // TODO: Reconsider how/if defense posts target ships.
+    return;
+
     const ships = this.mg
       .nearbyUnits(
         this.post.tile(),

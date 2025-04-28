@@ -85,7 +85,6 @@ export class GameImpl implements Game {
     nationMap: NationMap,
     private _config: Config,
   ) {
-    this.addHumans();
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();
@@ -102,14 +101,17 @@ export class GameImpl implements Game {
 
     if (_config.gameConfig().gameMode === GameMode.Team) {
       const numPlayerTeams = _config.numPlayerTeams();
-      if (numPlayerTeams < 2) throw new Error("Too few teams!");
+      if (numPlayerTeams < 2)
+        throw new Error(`Too few teams: ${numPlayerTeams}`);
       if (numPlayerTeams >= 3) this.playerTeams.push(Team.Teal);
       if (numPlayerTeams >= 4) this.playerTeams.push(Team.Purple);
       if (numPlayerTeams >= 5) this.playerTeams.push(Team.Yellow);
       if (numPlayerTeams >= 6) this.playerTeams.push(Team.Orange);
       if (numPlayerTeams >= 7) this.playerTeams.push(Team.Green);
-      if (numPlayerTeams >= 8) throw new Error("Too many teams!");
+      if (numPlayerTeams >= 8)
+        throw new Error(`Too many teams: ${numPlayerTeams}`);
     }
+    this.addHumans();
   }
 
   private addHumans() {

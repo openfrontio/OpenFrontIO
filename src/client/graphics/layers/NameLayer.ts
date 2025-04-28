@@ -4,6 +4,7 @@ import crownIcon from "../../../../resources/images/CrownIcon.svg";
 import embargoIcon from "../../../../resources/images/EmbargoIcon.svg";
 import nukeRedIcon from "../../../../resources/images/NukeIconRed.svg";
 import nukeWhiteIcon from "../../../../resources/images/NukeIconWhite.svg";
+import shieldIcon from "../../../../resources/images/ShieldIconBlack.svg";
 import targetIcon from "../../../../resources/images/TargetIcon.svg";
 import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
 import { PseudoRandom } from "../../../core/PseudoRandom";
@@ -44,6 +45,7 @@ export class NameLayer implements Layer {
   private embargoIconImage: HTMLImageElement;
   private nukeWhiteIconImage: HTMLImageElement;
   private nukeRedIconImage: HTMLImageElement;
+  private shieldIconImage: HTMLImageElement;
   private container: HTMLDivElement;
   private myPlayer: PlayerView | null = null;
   private firstPlace: PlayerView | null = null;
@@ -70,6 +72,8 @@ export class NameLayer implements Layer {
     this.nukeWhiteIconImage.src = nukeWhiteIcon;
     this.nukeRedIconImage = new Image();
     this.nukeRedIconImage.src = nukeRedIcon;
+    this.shieldIconImage = new Image();
+    this.shieldIconImage.src = shieldIcon;
   }
 
   resizeCanvas() {
@@ -195,6 +199,7 @@ export class NameLayer implements Layer {
     nameDiv.style.alignItems = "center";
 
     const nameSpan = document.createElement("span");
+    nameSpan.className = "player-name-span";
     nameSpan.innerHTML = player.name();
     nameDiv.appendChild(nameSpan);
     element.appendChild(nameDiv);
@@ -208,6 +213,21 @@ export class NameLayer implements Layer {
     troopsDiv.style.zIndex = "3";
     troopsDiv.style.marginTop = "-5%";
     element.appendChild(troopsDiv);
+
+    // TODO: enable this for new meta.
+
+    // const shieldDiv = document.createElement("div");
+    // shieldDiv.classList.add("player-shield");
+    // shieldDiv.style.zIndex = "3";
+    // shieldDiv.style.marginTop = "-5%";
+    // shieldDiv.style.display = "flex";
+    // shieldDiv.style.alignItems = "center";
+    // shieldDiv.style.gap = "0px";
+    // shieldDiv.innerHTML = `
+    //   <img src="${this.shieldIconImage.src}" style="width: 16px; height: 16px;" />
+    //   <span style="color: black; font-size: 10px; margin-top: -2px;">0</span>
+    // `;
+    // element.appendChild(shieldDiv);
 
     // Start off invisible so it doesn't flash at 0,0
     element.style.display = "none";
@@ -262,12 +282,36 @@ export class NameLayer implements Layer {
     nameDiv.style.fontSize = `${render.fontSize}px`;
     nameDiv.style.lineHeight = `${render.fontSize}px`;
     nameDiv.style.color = render.fontColor;
+    const span = nameDiv.querySelector(".player-name-span");
+    if (span) {
+      span.innerHTML = render.player.name();
+    }
     if (flagDiv) {
       flagDiv.style.height = `${render.fontSize}px`;
     }
     troopsDiv.style.fontSize = `${render.fontSize}px`;
     troopsDiv.style.color = render.fontColor;
     troopsDiv.textContent = renderTroops(render.player.troops());
+
+    // TODO: enable this for new meta.
+
+    // const density = renderNumber(
+    //   render.player.troops() / render.player.numTilesOwned(),
+    // );
+    // const shieldDiv = render.element.querySelector(
+    //   ".player-shield",
+    // ) as HTMLDivElement;
+    // const shieldImg = shieldDiv.querySelector("img");
+    // const shieldNumber = shieldDiv.querySelector("span");
+    // if (shieldImg) {
+    //   shieldImg.style.width = `${render.fontSize * 0.8}px`;
+    //   shieldImg.style.height = `${render.fontSize * 0.8}px`;
+    // }
+    // if (shieldNumber) {
+    //   shieldNumber.style.fontSize = `${render.fontSize * 0.6}px`;
+    //   shieldNumber.style.marginTop = `${-render.fontSize * 0.1}px`;
+    //   shieldNumber.textContent = density;
+    // }
 
     // Handle icons
     const iconsDiv = render.element.querySelector(

@@ -21,6 +21,8 @@ import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
+import "./RandomNameButton";
+import { RandomNameButton } from "./RandomNameButton";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
@@ -46,6 +48,7 @@ class Client {
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
   private darkModeButton: DarkModeButton | null = null;
+  private randomNameButton: RandomNameButton | null = null;
 
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
@@ -78,6 +81,13 @@ class Client {
     ) as DarkModeButton;
     if (!this.darkModeButton) {
       consolex.warn("Dark mode button element not found");
+    }
+
+    this.randomNameButton = document.querySelector(
+      "random-name-button",
+    ) as RandomNameButton;
+    if (!this.randomNameButton) {
+      consolex.warn("Random name button element not found");
     }
 
     this.usernameInput = document.querySelector(

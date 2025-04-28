@@ -17,9 +17,6 @@ export class SAMLauncherExecution implements Execution {
   private mg: Game;
   private active: boolean = true;
 
-  private target: Unit = null;
-  private warheadTargets: Unit[] = [];
-
   private searchRangeRadius = 80;
   // As MIRV go very fast we have to detect them very early but we only
   // shoot the one targeting very close (MIRVWarheadProtectionRadius)
@@ -119,7 +116,7 @@ export class SAMLauncherExecution implements Execution {
       this.pseudoRandom = new PseudoRandom(this.sam.id());
     }
 
-    this.warheadTargets = this.mg
+    const mirvWarheadTargets = this.mg
       .nearbyUnits(
         this.sam.tile(),
         this.MIRVWarheadSearchRadius,
@@ -136,8 +133,9 @@ export class SAMLauncherExecution implements Execution {
           this.MIRVWarheadProtectionRadius,
       );
 
-    if (this.warheadTargets.length == 0) {
-      this.target = this.getSingleTarget();
+    let target: Unit | null = null;
+    if (mirvWarheadTargets.length == 0) {
+      target = this.getSingleTarget();
     }
 
     if (
@@ -147,16 +145,14 @@ export class SAMLauncherExecution implements Execution {
       this.sam.setCooldown(false);
     }
 
-    const isSingleTarget = this.target && !this.target.targetedBySAM();
+    const isSingleTarget = target && !target.targetedBySAM();
     if (
-      (isSingleTarget || this.warheadTargets.length > 0) &&
+      (isSingleTarget || mirvWarheadTargets.length > 0) &&
       !this.sam.isCooldown()
     ) {
       this.sam.setCooldown(true);
       const type =
-        this.warheadTargets.length > 0
-          ? UnitType.MIRVWarhead
-          : this.target.type();
+        mirvWarheadTargets.length > 0 ? UnitType.MIRVWarhead : target.type();
       const random = this.pseudoRandom.next();
       const hit = this.isHit(type, random);
       if (!hit) {
@@ -166,26 +162,25 @@ export class SAMLauncherExecution implements Execution {
           this.sam.owner().id(),
         );
       } else {
-        if (this.warheadTargets.length > 0) {
+        if (mirvWarheadTargets.length > 0) {
           // Message
           this.mg.displayMessage(
-            `${this.warheadTargets.length} MIRV warheads intercepted`,
+            `${mirvWarheadTargets.length} MIRV warheads intercepted`,
             MessageType.SUCCESS,
             this.sam.owner().id(),
           );
           // Delete warheads
-          this.warheadTargets.forEach((u) => u.delete());
+          mirvWarheadTargets.forEach((u) => u.delete());
         } else {
-          this.target.setTargetedBySAM(true);
+          target.setTargetedBySAM(true);
           this.mg.addExecution(
             new SAMMissileExecution(
               this.sam.tile(),
               this.sam.owner(),
               this.sam,
-              this.target,
+              target,
             ),
           );
-          this.warheadTargets = [];
         }
       }
     }

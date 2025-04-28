@@ -9,6 +9,7 @@ const maps = [
   "WorldMap",
   "BlackSea",
   "Europe",
+  "EuropeClassic",
   "Mars",
   "Mena",
   "Oceania",

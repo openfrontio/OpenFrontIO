@@ -95,6 +95,7 @@ export class MapPlaylist {
       case PlaylistType.SmallMaps:
         return {
           World: 4,
+          EuropeClassic: 3,
           Mena: 2,
           Pangaea: 1,
           Asia: 1,

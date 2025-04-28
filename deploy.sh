@@ -57,9 +57,6 @@ fi
 if [ -f .env.$ENV ]; then
     echo "Loading $ENV-specific configuration from .env.$ENV file..."
     export $(grep -v '^#' .env.$ENV | xargs)
-else
-    echo "Error: Environment file .env.$ENV not found"
-    exit 1
 fi
 
 if [ "$HOST" == "staging" ]; then
@@ -140,7 +137,6 @@ cat > $REMOTE_UPDATE_PATH/.env << 'EOL'
 GAME_ENV=$ENV
 ENV=$ENV
 HOST=$HOST
-SUBDOMAIN=$SUBDOMAIN
 DOCKER_IMAGE=$DOCKER_IMAGE
 DOCKER_TOKEN=$DOCKER_TOKEN
 ADMIN_TOKEN=$ADMIN_TOKEN
