@@ -104,6 +104,7 @@ export class MapPlaylist {
           Japan: 2,
           BlackSea: 1,
           FaroeIslands: 2,
+          VaticanCity: 1,
         };
     }
   }

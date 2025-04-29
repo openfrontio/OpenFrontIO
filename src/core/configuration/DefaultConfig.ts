@@ -96,6 +96,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
         GameMapType.FaroeIslands,
         GameMapType.DeglaciatedAntarctica,
         GameMapType.EuropeClassic,
+        GameMapType.VaticanCity,
       ].includes(map)
     ) {
       return Math.random() < 0.3 ? 50 : 25;

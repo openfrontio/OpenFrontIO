@@ -1,0 +1,357 @@
+{
+  "name": "Vatican_City",
+  "width": 1386,
+  "height": 1070,
+  "nations": [
+    {
+      "coordinates": [1211, 744],
+      "name": "St Peter's Square",
+      "strength": 2
+    },
+    {
+      "coordinates": [987, 952],
+      "name": "Paul VI Audience Hall",
+      "strength": 2
+    },
+    {
+      "coordinates": [873, 877],
+      "name": "Sacristy",
+      "strength": 2
+    },
+    {
+      "coordinates": [243, 837],
+      "name": "St John's Tower",
+      "strength": 2
+    },
+    {
+      "coordinates": [1070, 554],
+      "name": "Apostolic Palace",
+      "strength": 2
+    },
+    {
+      "coordinates": [935, 660],
+      "name": "Sistine Chapel",
+      "strength": 2
+    },
+    {
+      "coordinates": [866, 753],
+      "name": "St Peter's Basilica",
+      "strength": 3
+    },
+    {
+      "coordinates": [1000, 331],
+      "name": "Vatican Museum",
+      "strength": 1
+    },
+    {
+      "coordinates": [1109, 973],
+      "name": "Church of St Peter in Borgo",
+      "strength": 1
+    },
+    {
+      "coordinates": [1072, 893],
+      "name": "Palace of the Hold Office",
+      "strength": 1
+    },
+    {
+      "coordinates": [983, 862],
+      "name": "Church of Santa Maria della Pieta",
+      "strength": 1
+    },
+    {
+      "coordinates": [931, 861],
+      "name": "Teutonic Cemetary",
+      "strength": 1
+    },
+    {
+      "coordinates": [928, 826],
+      "name": "Square of the Roman Protomartyrs",
+      "strength": 1
+    },
+    {
+      "coordinates": [874, 922],
+      "name": "Palace of the Canonicate",
+      "strength": 1
+    },
+    {
+      "coordinates": [821, 953],
+      "name": "St Martha's House",
+      "strength": 1
+    },
+    {
+      "coordinates": [755, 882],
+      "name": "St Martha's Square",
+      "strength": 1
+    },
+    {
+      "coordinates": [736, 933],
+      "name": "Palace of St Charles",
+      "strength": 1
+    },
+    {
+      "coordinates": [734, 807],
+      "name": "St Stephen's Square",
+      "strength": 1
+    },
+    {
+      "coordinates": [705, 871],
+      "name": "Palace of the Tribunal",
+      "strength": 1
+    },
+    {
+      "coordinates": [684, 939],
+      "name": "Residence of the Archpriest",
+      "strength": 1
+    },
+    {
+      "coordinates": [604, 916],
+      "name": "Railway Station",
+      "strength": 1
+    },
+    {
+      "coordinates": [504, 875],
+      "name": "Shell Fountain",
+      "strength": 1
+    },
+    {
+      "coordinates": [611, 731],
+      "name": "Palace of the Governatorate",
+      "strength": 1
+    },
+    {
+      "coordinates": [573, 727],
+      "name": "Church of St Mary Queen of the Family",
+      "strength": 1
+    },
+    {
+      "coordinates": [670, 670],
+      "name": "St Joseph's Fountain",
+      "strength": 1
+    },
+    {
+      "coordinates": [871, 633],
+      "name": "Courtyard of the Sentinel",
+      "strength": 1
+    },
+    {
+      "coordinates": [899, 596],
+      "name": "Square of the Furnace",
+      "strength": 1
+    },
+    {
+      "coordinates": [935, 585],
+      "name": "Borgia Tower",
+      "strength": 1
+    },
+    {
+      "coordinates": [961, 623],
+      "name": "Borgia Courtyard",
+      "strength": 1
+    },
+    {
+      "coordinates": [997, 624],
+      "name": "Courtyard of the Parrots",
+      "strength": 1
+    },
+    {
+      "coordinates": [960, 495],
+      "name": "Belvedere Courtyard",
+      "strength": 1
+    },
+    {
+      "coordinates": [1064, 612],
+      "name": "Courtyard of St Damaso",
+      "strength": 1
+    },
+    {
+      "coordinates": [1205, 600],
+      "name": "Gate of St Pellegrino",
+      "strength": 1
+    },
+    {
+      "coordinates": [1224, 552],
+      "name": "Barracks of the Swiss Guards",
+      "strength": 1
+    },
+    {
+      "coordinates": [1153, 535],
+      "name": "Tower of Nicolas V",
+      "strength": 1
+    },
+    {
+      "coordinates": [1109, 471],
+      "name": "Central Post Office",
+      "strength": 1
+    },
+    {
+      "coordinates": [1171, 478],
+      "name": "Vatican Press",
+      "strength": 1
+    },
+    {
+      "coordinates": [1238, 478],
+      "name": "Church of St Anne of the Pontifical Grooms",
+      "strength": 1
+    },
+    {
+      "coordinates": [1245, 511],
+      "name": "Gate of St Anna",
+      "strength": 1
+    },
+    {
+      "coordinates": [1193, 377],
+      "name": "Church of St Peregrin",
+      "strength": 1
+    },
+    {
+      "coordinates": [1115, 399],
+      "name": "Belvedere Palace",
+      "strength": 1
+    },
+    {
+      "coordinates": [1117, 314],
+      "name": "Vatican Media",
+      "strength": 1
+    },
+    {
+      "coordinates": [1191, 328],
+      "name": "The Roman Observer",
+      "strength": 1
+    },
+    {
+      "coordinates": [1235, 351],
+      "name": "Barracks of Papal Gendarmes",
+      "strength": 1
+    },
+    {
+      "coordinates": [1000, 194],
+      "name": "Fountain of the Galley",
+      "strength": 1
+    },
+    {
+      "coordinates": [946, 277],
+      "name": "Pigna Courtyard",
+      "strength": 1
+    },
+    {
+      "coordinates": [954, 373],
+      "name": "Courtyard of the Library",
+      "strength": 1
+    },
+    {
+      "coordinates": [908, 346],
+      "name": "Tower of the Winds",
+      "strength": 1
+    },
+    {
+      "coordinates": [955, 412],
+      "name": "Apostolic Library",
+      "strength": 1
+    },
+    {
+      "coordinates": [955, 143],
+      "name": "Belvedere Casino",
+      "strength": 1
+    },
+    {
+      "coordinates": [766, 268],
+      "name": "Art Gallery",
+      "strength": 1
+    },
+    {
+      "coordinates": [771, 328],
+      "name": "Square Garden",
+      "strength": 1
+    },
+    {
+      "coordinates": [604, 276],
+      "name": "Greenhouses",
+      "strength": 1
+    },
+    {
+      "coordinates": [550, 290],
+      "name": "Gallinaro Tower",
+      "strength": 1
+    },
+    {
+      "coordinates": [594, 449],
+      "name": "English Garden",
+      "strength": 1
+    },
+    {
+      "coordinates": [747, 485],
+      "name": "Casina Pio IV",
+      "strength": 1
+    },
+    {
+      "coordinates": [838, 582],
+      "name": "Fountain of the Sacrament",
+      "strength": 1
+    },
+    {
+      "coordinates": [693, 574],
+      "name": "St Peter Memorial",
+      "strength": 1
+    },
+    {
+      "coordinates": [694, 623],
+      "name": "Gardener's Lodge",
+      "strength": 1
+    },
+    {
+      "coordinates": [624, 564],
+      "name": "Kitchen Garden",
+      "strength": 1
+    },
+    {
+      "coordinates": [648, 520],
+      "name": "Eagle Fountain",
+      "strength": 1
+    },
+    {
+      "coordinates": [581, 535],
+      "name": "Mater Ecclesiae Convent",
+      "strength": 1
+    },
+    {
+      "coordinates": [367, 629],
+      "name": "Lourdes Grotto Square",
+      "strength": 1
+    },
+    {
+      "coordinates": [337, 676],
+      "name": "Lourdes Grotto",
+      "strength": 1
+    },
+    {
+      "coordinates": [457, 718],
+      "name": "Pontifical Ethiopian College",
+      "strength": 1
+    },
+    {
+      "coordinates": [378, 763],
+      "name": "Italian Garden",
+      "strength": 1
+    },
+    {
+      "coordinates": [495, 523],
+      "name": "Vatican Radio Administration",
+      "strength": 1
+    },
+    {
+      "coordinates": [339, 808],
+      "name": "Vatican Radio Transmission Centre",
+      "strength": 1
+    },
+    {
+      "coordinates": [219, 761],
+      "name": "American Garden",
+      "strength": 1
+    },
+    {
+      "coordinates": [132, 781],
+      "name": "Heliport",
+      "strength": 1
+    }
+  ]
+}
