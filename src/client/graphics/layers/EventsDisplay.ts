@@ -263,23 +263,25 @@ export class EventsDisplay extends LitElement implements Layer {
   onBrokeAllianceEvent(update: BrokeAllianceUpdate) {
     const myPlayer = this.game.playerByClientID(this.clientID);
     if (!myPlayer) return;
-  
+
     const betrayed = this.game.playerBySmallID(update.betrayedID) as PlayerView;
     const traitor = this.game.playerBySmallID(update.traitorID) as PlayerView;
-  
+
     if (!betrayed.isTraitor() && traitor === myPlayer) {
       const malusPercent = Math.round(
         (1 - this.game.config().traitorDefenseDebuff()) * 100,
       );
-      const traitorDurationRaw = Number(this.game.config().traitorDuration) / 10;
+      const traitorDurationRaw =
+        Number(this.game.config().traitorDuration) / 10;
       const traitorDurationSeconds = Math.floor(traitorDurationRaw);
-  
-      const durationText = traitorDurationSeconds === 1
-        ? '1 second'
-        : `${traitorDurationSeconds} seconds`;
-  
+
+      const durationText =
+        traitorDurationSeconds === 1
+          ? "1 second"
+          : `${traitorDurationSeconds} seconds`;
+
       this.addEvent({
-        description: 
+        description:
           `You broke your alliance with ${betrayed.name()}, making you a TRAITOR ` +
           `(${malusPercent}% defense debuff for ${durationText})`,
         type: MessageType.ERROR,
@@ -287,7 +289,6 @@ export class EventsDisplay extends LitElement implements Layer {
         createdAt: this.game.ticks(),
         focusID: update.betrayedID,
       });
-  
     } else if (betrayed === myPlayer) {
       this.addEvent({
         description: `${traitor.name()} broke their alliance with you`,
@@ -298,9 +299,6 @@ export class EventsDisplay extends LitElement implements Layer {
       });
     }
   }
-  
-  
-  
 
   onAllianceExpiredEvent(update: AllianceExpiredUpdate) {
     const myPlayer = this.game.playerByClientID(this.clientID);
