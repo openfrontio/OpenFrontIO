@@ -143,11 +143,11 @@ describe("assignTeams", () => {
     const result = assignTeams(players, [
       Team.Red,
       Team.Blue,
-      Team.Teal,
-      Team.Purple,
       Team.Yellow,
-      Team.Orange,
       Team.Green,
+      Team.Teal,
+      Team.Orange,
+      Team.Purple,
     ]);
 
     expect(result.get(players[0])).toEqual(Team.Red);
@@ -155,14 +155,14 @@ describe("assignTeams", () => {
     expect(result.get(players[2])).toEqual("kicked");
     expect(result.get(players[3])).toEqual(Team.Blue);
     expect(result.get(players[4])).toEqual(Team.Blue);
-    expect(result.get(players[5])).toEqual(Team.Teal);
-    expect(result.get(players[6])).toEqual(Team.Purple);
-    expect(result.get(players[7])).toEqual(Team.Yellow);
+    expect(result.get(players[5])).toEqual(Team.Yellow);
+    expect(result.get(players[6])).toEqual(Team.Green);
+    expect(result.get(players[7])).toEqual(Team.Teal);
     expect(result.get(players[8])).toEqual(Team.Orange);
-    expect(result.get(players[9])).toEqual(Team.Green);
-    expect(result.get(players[10])).toEqual(Team.Teal);
-    expect(result.get(players[11])).toEqual(Team.Purple);
-    expect(result.get(players[12])).toEqual(Team.Yellow);
+    expect(result.get(players[9])).toEqual(Team.Purple);
+    expect(result.get(players[10])).toEqual(Team.Yellow);
+    expect(result.get(players[11])).toEqual(Team.Green);
+    expect(result.get(players[12])).toEqual(Team.Teal);
     expect(result.get(players[13])).toEqual(Team.Orange);
   });
 });
