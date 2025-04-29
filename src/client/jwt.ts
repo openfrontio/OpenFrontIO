@@ -1,5 +1,10 @@
-import { decodeJwt, JWTPayload } from "jose";
-import { UserMeResponse, UserMeResponseSchema } from "./ApiSchemas";
+import { decodeJwt } from "jose";
+import {
+  TokenPayload,
+  TokenPayloadSchema,
+  UserMeResponse,
+  UserMeResponseSchema,
+} from "./ApiSchemas";
 
 function getAudience() {
   const { hostname } = new URL(window.location.href);
@@ -36,7 +41,7 @@ export function discordLogin() {
   window.location.href = `${getApiBase()}/login/discord?redirect_uri=${window.location.href}`;
 }
 
-export async function isLoggedIn(): Promise<JWTPayload | false> {
+export async function isLoggedIn(): Promise<TokenPayload | false> {
   try {
     const token = getToken();
     if (!token) {
@@ -90,7 +95,18 @@ export async function isLoggedIn(): Promise<JWTPayload | false> {
     //   // TODO: Refresh token...
     // }
 
-    return payload;
+    const result = TokenPayloadSchema.safeParse(payload);
+    if (!result.success) {
+      // Invalid response
+      console.error(
+        "Invalid payload",
+        JSON.stringify(payload),
+        JSON.stringify(result.error),
+      );
+      return false;
+    }
+
+    return result.data;
   } catch (e) {
     console.log(e);
     return false;

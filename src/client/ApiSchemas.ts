@@ -1,5 +1,18 @@
 import { z } from "zod";
 
+export const TokenPayloadSchema = z
+  .object({
+    sub: z.string(),
+    state: z.string(),
+    "discord:roles": z.string().array(),
+    iat: z.number(),
+    iss: z.string(),
+    aud: z.string(),
+    exp: z.number(),
+  })
+  .strict();
+export type TokenPayload = z.infer<typeof TokenPayloadSchema>;
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     id: z.string(),

@@ -30,7 +30,7 @@ import { UsernameInput } from "./UsernameInput";
 import { generateCryptoRandomUUID } from "./Utils";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import { discordLogin, getUserMe, isLoggedIn } from "./jwt";
+import { discordLogin, isLoggedIn } from "./jwt";
 import "./styles.css";
 
 export interface JoinLobbyEvent {
@@ -94,25 +94,25 @@ class Client {
     const loginDiscordButton = document.getElementById("login-discord");
     isLoggedIn().then(async (claims) => {
       if (claims === false) {
-        console.log("No claims");
-        // localStorage.removeItem("token");
+        // Not logged in
         loginDiscordButton.addEventListener("click", discordLogin);
         return;
       }
       console.log("Logged in", JSON.stringify(claims, null, 2));
-      const loggedIn = await getUserMe();
-      if (loggedIn === false) {
-        console.log("Not logged in");
-        // localStorage.removeItem("token");
-        loginDiscordButton.addEventListener("click", discordLogin);
-        return;
-      }
-      const { user } = loggedIn;
-      console.log("Logged in", JSON.stringify(user, null, 2));
-      const { id, avatar, username, global_name, discriminator } = user;
-      const avatarUrl = avatar
-        ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.${avatar.startsWith("a_") ? "gif" : "png"}`
-        : `https://cdn.discordapp.com/embed/avatars/${Number(discriminator) % 5}.png`;
+      const { sub, "discord:roles": roles } = claims;
+      // const loggedIn = await getUserMe();
+      // if (loggedIn === false) {
+      //   // Not logged in
+      //   loginDiscordButton.addEventListener("click", discordLogin);
+      //   return;
+      // }
+      // Logged in
+      // const { user } = loggedIn;
+      // console.log("Logged in", JSON.stringify(user, null, 2));
+      // const { id, avatar, username, global_name, discriminator } = user;
+      // const avatarUrl = avatar
+      //   ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.${avatar.startsWith("a_") ? "gif" : "png"}`
+      //   : `https://cdn.discordapp.com/embed/avatars/${Number(discriminator) % 5}.png`;
       // TODO: Update the page for logged in user
     });
 
