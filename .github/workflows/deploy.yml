@@ -60,13 +60,16 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Create SSH private key
         env:
+          SERVER_HOST_EU: ${{ secrets.SERVER_HOST_EU }}
+          SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
+          SERVER_HOST_US: ${{ secrets.SERVER_HOST_US }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-          ssh-keyscan -H $SERVER_HOST_STAGING >> ~/.ssh/known_hosts
-          ssh-keyscan -H $SERVER_HOST_US >> ~/.ssh/known_hosts
-          ssh-keyscan -H $SERVER_HOST_EU >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$SERVER_HOST_STAGING" >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$SERVER_HOST_US" >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$SERVER_HOST_EU" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - name: Deploy
         env:
