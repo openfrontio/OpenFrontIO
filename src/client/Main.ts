@@ -102,22 +102,10 @@ class Client {
       loginDiscordButton.translationKey = "main.login_discord";
       loginDiscordButton.addEventListener("click", discordLogin);
     } else {
-      console.log("Logged in", JSON.stringify(claims, null, 2));
-      // const { "discord:roles": roles } = claims;
-
+      // Logged in
       loginDiscordButton.disable = true;
       loginDiscordButton.translationKey = "main.logged_in";
-
-      // const loggedIn = await getUserMe();
-      // if (loggedIn === false) {
-      //   // Not logged in
-      //   loginDiscordButton.addEventListener("click", discordLogin);
-      //   return;
-      // }
-      // Logged in
-      // const { user } = loggedIn;
-      // console.log("Logged in", JSON.stringify(user, null, 2));
-      // const { id, avatar, username, global_name, discriminator } = user;
+      // const { "discord:roles": roles } = claims;
       // const avatarUrl = avatar
       //   ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.${avatar.startsWith("a_") ? "gif" : "png"}`
       //   : `https://cdn.discordapp.com/embed/avatars/${Number(discriminator) % 5}.png`;
