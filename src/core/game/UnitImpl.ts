@@ -18,11 +18,10 @@ export class UnitImpl implements Unit {
   private _health: bigint;
   private _lastTile: TileRef = null;
   private _retreating: boolean = false;
-  // Currently only warship use it
-  private _target: Unit = null;
   private _moveTarget: TileRef = null;
   private _targetedBySAM = false;
-
+  private _safeFromPiratesCooldown: number; // Only for trade ships
+  private _lastSetSafeFromPirates: number; // Only for trade ships
   private _constructionType: UnitType = undefined;
 
   private _cooldownTick: Tick | null = null;
@@ -46,6 +45,10 @@ export class UnitImpl implements Unit {
     this._detonationDst = unitsSpecificInfos.detonationDst;
     this._warshipTarget = unitsSpecificInfos.warshipTarget;
     this._cooldownDuration = unitsSpecificInfos.cooldownDuration;
+    this._lastSetSafeFromPirates = unitsSpecificInfos.lastSetSafeFromPirates;
+    this._safeFromPiratesCooldown = this.mg
+      .config()
+      .safeFromPiratesCooldownMax();
   }
 
   id() {
@@ -86,9 +89,9 @@ export class UnitImpl implements Unit {
     if (tile == null) {
       throw new Error("tile cannot be null");
     }
+    this.mg.removeUnit(this);
     this._lastTile = this._tile;
     this._tile = tile;
-    this.mg.removeUnit(this);
     this.mg.addUnit(this);
     this.mg.addUpdate(this.toUpdate());
   }
@@ -242,5 +245,16 @@ export class UnitImpl implements Unit {
 
   targetedBySAM(): boolean {
     return this._targetedBySAM;
+  }
+
+  setSafeFromPirates(): void {
+    this._lastSetSafeFromPirates = this.mg.ticks();
+  }
+
+  isSafeFromPirates(): boolean {
+    return (
+      this.mg.ticks() - this._lastSetSafeFromPirates <
+      this._safeFromPiratesCooldown
+    );
   }
 }

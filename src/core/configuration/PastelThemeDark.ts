@@ -1,7 +1,7 @@
 import { Colord, colord } from "colord";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
-import { PlayerType, Team, TerrainType } from "../game/Game";
+import { ColoredTeams, PlayerType, Team, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import {
@@ -43,24 +43,25 @@ export const pastelThemeDark = new (class implements Theme {
 
   teamColor(team: Team): Colord {
     switch (team) {
-      case Team.Blue:
+      case ColoredTeams.Blue:
         return blue;
-      case Team.Red:
+      case ColoredTeams.Red:
         return red;
-      case Team.Teal:
+      case ColoredTeams.Teal:
         return teal;
-      case Team.Purple:
+      case ColoredTeams.Purple:
         return purple;
-      case Team.Yellow:
+      case ColoredTeams.Yellow:
         return yellow;
-      case Team.Orange:
+      case ColoredTeams.Orange:
         return orange;
-      case Team.Green:
+      case ColoredTeams.Green:
         return green;
-      case Team.Bot:
+      case ColoredTeams.Bot:
         return botColor;
+      default:
+        return humanColors[simpleHash(team) % humanColors.length];
     }
-    throw new Error(`Missing color for ${team}`);
   }
 
   territoryColor(player: PlayerView): Colord {

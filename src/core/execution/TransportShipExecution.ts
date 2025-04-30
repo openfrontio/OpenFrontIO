@@ -10,9 +10,9 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { targetTransportTile } from "../game/TransportShipUtils";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
-import { targetTransportTile } from "../Util";
 import { AttackExecution } from "./AttackExecution";
 
 export class TransportShipExecution implements Execution {
@@ -29,7 +29,6 @@ export class TransportShipExecution implements Execution {
 
   // TODO make private
   public path: TileRef[];
-  private src: TileRef | null;
   private dst: TileRef | null;
 
   private boat: Unit;
@@ -41,6 +40,7 @@ export class TransportShipExecution implements Execution {
     private targetID: PlayerID | null,
     private ref: TileRef,
     private troops: number | null,
+    private src: TileRef | null,
   ) {}
 
   activeDuringSpawnPhase(): boolean {
@@ -63,7 +63,7 @@ export class TransportShipExecution implements Execution {
 
     this.lastMove = ticks;
     this.mg = mg;
-    this.pathFinder = PathFinder.Mini(mg, 10_000, false, 10);
+    this.pathFinder = PathFinder.Mini(mg, 10_000, 10);
 
     this.attacker = mg.player(this.attackerID);
 
@@ -112,14 +112,32 @@ export class TransportShipExecution implements Execution {
       this.active = false;
       return;
     }
-    const src = this.attacker.canBuild(UnitType.TransportShip, this.dst);
-    if (src == false) {
+
+    const closestTileSrc = this.attacker.canBuild(
+      UnitType.TransportShip,
+      this.dst,
+    );
+    if (closestTileSrc == false) {
       consolex.warn(`can't build transport ship`);
       this.active = false;
       return;
     }
 
-    this.src = src;
+    if (this.src == null) {
+      // Only update the src if it's not already set
+      // because we assume that the src is set to the best spawn tile
+      this.src = closestTileSrc;
+    } else {
+      if (
+        this.mg.owner(this.src) != this.attacker ||
+        !this.mg.isShore(this.src)
+      ) {
+        console.warn(
+          `src is not a shore tile or not owned by: ${this.attacker.name()}`,
+        );
+        this.src = closestTileSrc;
+      }
+    }
 
     this.boat = this.attacker.buildUnit(
       UnitType.TransportShip,
