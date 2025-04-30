@@ -4,7 +4,6 @@ export const TokenPayloadSchema = z
   .object({
     sub: z.string().uuid(),
     state: z.string(),
-    "discord:roles": z.string().array(),
     iat: z.number(),
     iss: z.string(),
     aud: z.string(),

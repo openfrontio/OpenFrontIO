@@ -105,7 +105,6 @@ class Client {
       // Logged in
       loginDiscordButton.disable = true;
       loginDiscordButton.translationKey = "main.logged_in";
-      // const { "discord:roles": roles } = claims;
       // const avatarUrl = avatar
       //   ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.${avatar.startsWith("a_") ? "gif" : "png"}`
       //   : `https://cdn.discordapp.com/embed/avatars/${Number(discriminator) % 5}.png`;
