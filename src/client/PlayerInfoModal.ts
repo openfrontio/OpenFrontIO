@@ -8,7 +8,7 @@ export class PlayerInfoModal extends LitElement {
     close: () => void;
   };
 
-  @state() private roles: string[] = ["user", "support"];
+  @state() private roles: string[] = ["supporter"];
 
   @state() private wins: number = 12;
   @state() private playTimeSeconds: number = 5 * 3600 + 33 * 60;
@@ -45,7 +45,7 @@ export class PlayerInfoModal extends LitElement {
     const allRoles = [
       "admin", // Admin
       "og", // OG
-      "creator",
+      "creator", // owner
       "bot", // Bots
       "challenger", // Challenger
       "og100", // OG100
@@ -57,10 +57,10 @@ export class PlayerInfoModal extends LitElement {
       "supporter", // Early Access Supporter
       "mod", // Mod
       "staff", // Support Staff
+      "choco", // Choco
       "devchat", // DevChatAccess
       "active", // Active Contributor
       "adminasst", // Admin Assistant
-      "member", // Member
       "user", // Default Player Role
     ];
     return Object.fromEntries(allRoles.map((r) => [r, this.getRoleStyle(r)]));
@@ -137,6 +137,14 @@ export class PlayerInfoModal extends LitElement {
         badgeBg: "bg-yellow-300/20 border-yellow-300/30",
         priority: 5,
       },
+      choco: {
+        label: "Chocolate!",
+        flagWrapper: "choco-flag-wrapper",
+        nameText: "choco-name-text",
+        roleText: "choco-role-text",
+        badgeBg: "choco-badge-bg",
+        priority: 6,
+      },
       active: {
         label: "Active Contributor",
         flagWrapper:
@@ -144,7 +152,7 @@ export class PlayerInfoModal extends LitElement {
         nameText: "text-2xl font-bold text-green-300 drop-shadow",
         roleText: "text-green-300 font-semibold",
         badgeBg: "bg-green-500/20 border-green-400/30",
-        priority: 6,
+        priority: 7,
       },
       contrib: {
         label: "Contributor",
@@ -153,7 +161,7 @@ export class PlayerInfoModal extends LitElement {
         nameText: "text-2xl font-bold text-green-300 drop-shadow",
         roleText: "text-green-300 font-semibold",
         badgeBg: "bg-green-500/20 border-green-300/30",
-        priority: 7,
+        priority: 8,
       },
       content: {
         label: "Content Creator",
@@ -162,7 +170,7 @@ export class PlayerInfoModal extends LitElement {
         nameText: "text-2xl font-bold text-orange-300 drop-shadow",
         roleText: "text-orange-300 font-semibold",
         badgeBg: "bg-orange-500/20 border-orange-400/30",
-        priority: 8,
+        priority: 9,
       },
       beta: {
         label: "Beta Tester",
@@ -171,7 +179,7 @@ export class PlayerInfoModal extends LitElement {
         nameText: "text-2xl font-bold text-teal-300 drop-shadow",
         roleText: "text-teal-300 font-semibold",
         badgeBg: "bg-teal-500/20 border-teal-400/30",
-        priority: 9,
+        priority: 10,
       },
       devchat: {
         label: "Dev Chat Access",
@@ -180,7 +188,7 @@ export class PlayerInfoModal extends LitElement {
         nameText: "text-2xl font-bold text-purple-300 drop-shadow",
         roleText: "text-purple-300 font-semibold",
         badgeBg: "bg-purple-500/20 border-purple-400/30",
-        priority: 10,
+        priority: 11,
       },
       supporter: {
         label: "Early Access Supporter",
@@ -189,7 +197,7 @@ export class PlayerInfoModal extends LitElement {
         nameText: "text-2xl font-bold text-yellow-400 drop-shadow",
         roleText: "text-yellow-400 font-semibold",
         badgeBg: "bg-yellow-400/20 border-yellow-300/30",
-        priority: 11,
+        priority: 12,
       },
       booster: {
         label: "Server Booster",
@@ -198,7 +206,7 @@ export class PlayerInfoModal extends LitElement {
         nameText: "text-2xl font-bold text-pink-300 drop-shadow",
         roleText: "text-pink-300 font-semibold",
         badgeBg: "bg-pink-500/20 border-pink-400/30",
-        priority: 12,
+        priority: 13,
       },
       og: {
         label: "OG",
@@ -207,7 +215,7 @@ export class PlayerInfoModal extends LitElement {
         nameText: "text-2xl font-bold text-yellow-300 drop-shadow",
         roleText: "text-yellow-300 font-semibold",
         badgeBg: "bg-yellow-200/20 border-yellow-300/30",
-        priority: 13,
+        priority: 14,
       },
       og100: {
         label: "OG100",
@@ -216,7 +224,7 @@ export class PlayerInfoModal extends LitElement {
         nameText: "text-2xl font-bold text-lime-300 drop-shadow",
         roleText: "text-lime-300 font-semibold",
         badgeBg: "bg-lime-300/20 border-lime-300/30",
-        priority: 14,
+        priority: 15,
       },
       challenger: {
         label: "Challenger",
@@ -225,7 +233,7 @@ export class PlayerInfoModal extends LitElement {
         nameText: "text-2xl font-bold text-blue-300 drop-shadow",
         roleText: "text-blue-300 font-semibold",
         badgeBg: "bg-blue-500/20 border-blue-400/30",
-        priority: 15,
+        priority: 16,
       },
       ping: {
         label: "Ping",
@@ -233,7 +241,7 @@ export class PlayerInfoModal extends LitElement {
         nameText: "text-2xl font-bold text-gray-300 drop-shadow",
         roleText: "text-gray-300 font-semibold",
         badgeBg: "bg-gray-400/20 border-gray-300/30",
-        priority: 16,
+        priority: 17,
       },
       bot: {
         label: "Bot",
@@ -241,7 +249,7 @@ export class PlayerInfoModal extends LitElement {
         nameText: "text-2xl font-bold text-gray-300 drop-shadow",
         roleText: "text-gray-300 font-semibold",
         badgeBg: "bg-gray-400/20 border-gray-300/30",
-        priority: 17,
+        priority: 18,
       },
       member: {
         label: "Member",
@@ -249,7 +257,7 @@ export class PlayerInfoModal extends LitElement {
         nameText: "text-2xl font-bold text-gray-300 drop-shadow",
         roleText: "text-gray-300 font-semibold",
         badgeBg: "bg-gray-400/20 border-gray-300/30",
-        priority: 18,
+        priority: 19,
       },
     };
 

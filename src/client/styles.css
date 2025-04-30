@@ -541,7 +541,36 @@ label.option-card:hover {
     background-position: 200% 0;
   }
 }
+
 .animate-shimmer {
   background-size: 300% 100%;
   animation: shimmer 2s linear infinite;
+}
+.choco-flag-wrapper {
+  padding: 3px;
+  border-radius: 9999px;
+  background: linear-gradient(to right, #8b4513, #a0522d, #8b4513);
+  background-size: 300% 100%;
+  animation: shimmer 1.5s linear infinite;
+  box-shadow:
+    0 0 10px 2px rgba(255, 215, 0, 0.6),
+    0 0 20px 4px rgba(255, 215, 0, 0.4),
+    0 0 30px 6px rgba(255, 215, 0, 0.2);
+}
+
+.choco-name-text {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #d2a679;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.choco-role-text {
+  font-weight: 600;
+  color: #d2a679;
+}
+
+.choco-badge-bg {
+  background-color: rgba(218, 165, 32, 0.2);
+  border: 1px solid rgba(218, 165, 32, 0.3);
 }
