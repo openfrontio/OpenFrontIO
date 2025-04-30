@@ -38,15 +38,15 @@ jobs:
     # Don't deploy on push if this is a fork
     if: ${{ github.event_name == 'workflow_dispatch' || github.repository == 'openfrontio/OpenFrontIO' }}
     # Use different logic based on event type
-    name: Deploy to ${{ inputs.target_subdomain && format('{0}.{1}', inputs.target_subdomain, inputs.target_domain) || inputs.target_domain }}
+    name: Deploy to ${{ inputs.target_subdomain && format('{0}.{1}', inputs.target_subdomain, inputs.target_domain) || inputs.target_domain || 'openfront.dev' }}
     runs-on: ubuntu-latest
-    environment: ${{ inputs.target_subdomain && format('{0}.{1}', inputs.target_subdomain, inputs.target_domain) || inputs.target_domain }}
+    environment: ${{ inputs.target_subdomain && format('{0}.{1}', inputs.target_subdomain, inputs.target_domain) || inputs.target_domain || 'openfront.dev' }}
 
     steps:
       - uses: actions/checkout@v4
       - name: Update deployment status
         env:
-          FQDN: ${{ inputs.target_subdomain && format('{0}.{1}', inputs.target_subdomain, inputs.target_domain) || inputs.target_domain }}
+          FQDN: ${{ inputs.target_subdomain && format('{0}.{1}', inputs.target_subdomain, inputs.target_domain) || inputs.target_domain || 'openfront.dev' }}
         run: |
           cat <<EOF >> $GITHUB_STEP_SUMMARY
           ### In progress :ship:
@@ -80,7 +80,7 @@ jobs:
           DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           DOMAIN: ${{ inputs.target_domain }}
-          ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.target_environment || 'staging' }}
+          ENV: staging
           HOST: ${{ github.event_name == 'workflow_dispatch' && inputs.target_host || 'staging' }}
           MON_PASSWORD: ${{ secrets.MON_PASSWORD }}
           MON_USERNAME: ${{ secrets.MON_USERNAME }}
@@ -91,7 +91,7 @@ jobs:
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SERVER_HOST_US: ${{ secrets.SERVER_HOST_US }}
           SSH_KEY: ~/.ssh/id_rsa
-          SUBDOMAIN: ${{ github.event_name == 'workflow_dispatch' && inputs.target_subdomain || 'main' }}
+          SUBDOMAIN: ${{ inputs.target_subdomain || 'main' }}
           VERSION_TAG: latest
         run: |
           echo "::group::deploy.sh"
@@ -100,7 +100,7 @@ jobs:
       - name: Update deployment status ✅
         if: success()
         env:
-          FQDN: ${{ inputs.target_subdomain && format('{0}.{1}', inputs.target_subdomain, inputs.target_domain) || inputs.target_domain }}
+          FQDN: ${{ inputs.target_subdomain && format('{0}.{1}', inputs.target_subdomain, inputs.target_domain) || inputs.target_domain || 'openfront.dev' }}
         run: |
           cat <<EOF >> $GITHUB_STEP_SUMMARY
           ### Success! :rocket:
@@ -110,7 +110,7 @@ jobs:
       - name: Update deployment status ❌
         if: failure()
         env:
-          FQDN: ${{ inputs.target_subdomain && format('{0}.{1}', inputs.target_subdomain, inputs.target_domain) || inputs.target_domain }}
+          FQDN: ${{ inputs.target_subdomain && format('{0}.{1}', inputs.target_subdomain, inputs.target_domain) || inputs.target_domain || 'openfront.dev' }}
         run: |
           cat <<EOF >> $GITHUB_STEP_SUMMARY
           ### Failure! :fire:
