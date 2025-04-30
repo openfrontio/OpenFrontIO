@@ -103,7 +103,7 @@ class Client {
       loginDiscordButton.addEventListener("click", discordLogin);
     } else {
       console.log("Logged in", JSON.stringify(claims, null, 2));
-      const { sub, "discord:roles": roles } = claims;
+      // const { "discord:roles": roles } = claims;
 
       loginDiscordButton.disable = true;
       loginDiscordButton.translationKey = "main.logged_in";
@@ -330,7 +330,7 @@ export function getPersistentIDFromCookie(): string {
   const claims = isLoggedIn();
   if (claims !== false) {
     const { sub } = claims;
-    console.log("Found JWT Subject", sub);
+    // console.log("Found JWT Subject", sub);
     return sub;
   }
 
