@@ -22,9 +22,9 @@ export class PlayerInfoModal extends LitElement {
     warship: { built: 0, destroyed: 0, finalCount: 0 },
     silo: { built: 0, destroyed: 0, finalCount: 0 },
     sam: { built: 0, destroyed: 0, finalCount: 0 },
-    atom: { built: 0, destroyed: 0, finalCount: 0 },
-    hydrogen: { built: 0, destroyed: 0, finalCount: 0 },
-    mirv: { built: 0, destroyed: 0, finalCount: 0 },
+    atom: { built: "x", destroyed: "x", finalCount: 0 },
+    hydrogen: { built: "x", destroyed: "x", finalCount: 0 },
+    mirv: { built: "x", destroyed: "x", finalCount: 0 },
   };
 
   @state() private achievements = [
@@ -427,8 +427,16 @@ export class PlayerInfoModal extends LitElement {
                   ([building, stats]) => html`
                     <tr>
                       <td>${this.getBuildingName(building)}</td>
-                      <td class="text-right">${stats.built}</td>
-                      <td class="text-right">${stats.destroyed}</td>
+                      <td class="text-right">
+                        ${stats.built === "x"
+                          ? html`<span class="text-gray-500 italic">N/A</span>`
+                          : stats.built}
+                      </td>
+                      <td class="text-right">
+                        ${stats.destroyed === "x"
+                          ? html`<span class="text-gray-500 italic">N/A</span>`
+                          : stats.destroyed}
+                      </td>
                       <td class="text-right">${stats.finalCount}</td>
                     </tr>
                   `,
