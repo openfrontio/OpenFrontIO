@@ -8,7 +8,7 @@ export class PlayerInfoModal extends LitElement {
     close: () => void;
   };
 
-  @state() private roles: string[] = ["supporter"];
+  @state() private roles: string[] = ["choco"];
 
   @state() private wins: number = 12;
   @state() private playTimeSeconds: number = 5 * 3600 + 33 * 60;
@@ -26,6 +26,33 @@ export class PlayerInfoModal extends LitElement {
     hydrogen: { built: 0, destroyed: 0, finalCount: 0 },
     mirv: { built: 0, destroyed: 0, finalCount: 0 },
   };
+
+  @state() private achievements = [
+    {
+      title: "Builder",
+      description: "Build 10 structures",
+      unlocked: false,
+      difficulty: "easy",
+    },
+    {
+      title: "First Win",
+      description: "Win your first public game",
+      unlocked: false,
+      difficulty: "medium",
+    },
+    {
+      title: "5 Win Streak",
+      description: "Win 5 games in a row",
+      unlocked: false,
+      difficulty: "hard",
+    },
+    {
+      title: "Chocolate!",
+      description: "Get chocolate role!",
+      unlocked: true,
+      difficulty: "medium",
+    },
+  ];
 
   private formatPlayTime(seconds: number): string {
     const h = Math.floor(seconds / 3600);
@@ -408,6 +435,85 @@ export class PlayerInfoModal extends LitElement {
                 )}
               </tbody>
             </table>
+          </div>
+
+          <hr class="w-2/3 border-gray-600 my-2" />
+
+          <div class="mt-4 w-full max-w-md">
+            <div class="text-sm text-gray-400 font-semibold mb-1">
+              🏅 Achievements
+            </div>
+            <div
+              class="flex gap-4 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900"
+            >
+              ${this.achievements.map((achievement) => {
+                const difficultyStyles = {
+                  easy: "border-green-500 bg-green-500/10 shadow-green-500/30",
+                  medium:
+                    "border-yellow-500 bg-yellow-500/10 shadow-yellow-500/30",
+                  hard: "border-red-500 bg-red-500/10 shadow-red-500/30",
+                };
+
+                const lockedStyle = {
+                  easy: "border-green-500 bg-green-500/5 shadow-green-500/10",
+                  medium:
+                    "border-yellow-500 bg-yellow-500/5 shadow-yellow-500/10",
+                  hard: "border-red-500 bg-red-500/5 shadow-red-500/10",
+                };
+
+                const difficultyStyle = achievement.unlocked
+                  ? difficultyStyles[achievement.difficulty]
+                  : lockedStyle[achievement.difficulty];
+
+                return html`
+                  <div
+                    class="flex-shrink-0 w-48 p-4 rounded-lg border transition-transform duration-300 hover:scale-105 ${difficultyStyle}"
+                    style="transform: scale(0.9);"
+                    @mouseover=${(e: Event) =>
+                      ((e.currentTarget as HTMLElement).style.transform =
+                        "scale(0.95)")}
+                    @mouseout=${(e: Event) =>
+                      ((e.currentTarget as HTMLElement).style.transform =
+                        "scale(0.9)")}
+                  >
+                    <span
+                      class="text-2xl ${achievement.unlocked
+                        ? "text-white"
+                        : "text-gray-400"}"
+                    >
+                      ${achievement.unlocked ? "✅" : "🔒"}
+                    </span>
+                    <div
+                      class="mt-2 font-semibold ${achievement.unlocked
+                        ? "text-white"
+                        : "text-gray-400"} text-lg"
+                    >
+                      ${achievement.title}
+                    </div>
+                    <div
+                      class="text-xs ${achievement.unlocked
+                        ? "text-gray-300"
+                        : "text-gray-500"}"
+                    >
+                      ${achievement.description}
+                    </div>
+                    <div
+                      class="text-xs mt-1 ${achievement.unlocked
+                        ? "text-gray-400"
+                        : `text-${
+                            achievement.difficulty === "easy"
+                              ? "green-400"
+                              : achievement.difficulty === "medium"
+                                ? "yellow-400"
+                                : "red-400"
+                          }`}"
+                    >
+                      Difficulty: ${achievement.difficulty}
+                    </div>
+                  </div>
+                `;
+              })}
+            </div>
           </div>
 
           <hr class="w-2/3 border-gray-600 my-2" />
