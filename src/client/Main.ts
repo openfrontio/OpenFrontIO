@@ -315,7 +315,7 @@ function setFavicon(): void {
 // WARNING: DO NOT EXPOSE THIS ID
 export function getPersistentIDFromCookie(): string {
   const claims = isLoggedIn();
-  if (claims !== false) {
+  if (claims !== false && claims.sub) {
     return claims.sub;
   }
 
