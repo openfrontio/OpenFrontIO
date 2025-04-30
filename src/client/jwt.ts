@@ -73,7 +73,7 @@ export function _isLoggedIn(): TokenPayload | false {
       // JWT was not issued by the correct server
       console.error(
         'unexpected "iss" claim value',
-        JSON.stringify(payload, null, 2),
+        // JSON.stringify(payload, null, 2),
       );
       localStorage.removeItem("token");
       return false;
@@ -82,7 +82,7 @@ export function _isLoggedIn(): TokenPayload | false {
       // JWT was not issued for this website
       console.error(
         'unexpected "aud" claim value',
-        JSON.stringify(payload, null, 2),
+        // JSON.stringify(payload, null, 2),
       );
       localStorage.removeItem("token");
       return false;
@@ -92,7 +92,7 @@ export function _isLoggedIn(): TokenPayload | false {
       // JWT expired
       console.error(
         'after "exp" claim value',
-        JSON.stringify(payload, null, 2),
+        // JSON.stringify(payload, null, 2),
       );
       localStorage.removeItem("token");
       return false;
@@ -107,7 +107,7 @@ export function _isLoggedIn(): TokenPayload | false {
       // Invalid response
       console.error(
         "Invalid payload",
-        JSON.stringify(payload),
+        // JSON.stringify(payload),
         JSON.stringify(result.error),
       );
       return false;
