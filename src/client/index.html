@@ -48,8 +48,10 @@
       .left-gutter-ad {
         position: fixed;
         left: 0;
-        top: 200px; /* Changed from top: 50% */
-        transform: none; /* Removed translateY(-50%) since we don't need to center anymore */
+        top: 200px;
+        /* Changed from top: 50% */
+        transform: none;
+        /* Removed translateY(-50%) since we don't need to center anymore */
         z-index: 40;
         width: 300px;
         height: 600px;
@@ -68,8 +70,10 @@
       .right-gutter-ad {
         position: fixed;
         right: 0;
-        top: 200px; /* Changed from top: 50% */
-        transform: none; /* Removed translateY(-50%) since we don't need to center anymore */
+        top: 200px;
+        /* Changed from top: 50% */
+        transform: none;
+        /* Removed translateY(-50%) since we don't need to center anymore */
         z-index: 40;
         width: 300px;
         height: 600px;
@@ -122,7 +126,22 @@
       src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7035513310742290"
       crossorigin="anonymous"
     ></script>
+    <!-- Google tag (gtag.js) -->
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-WQGQQ8RDN4"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "G-WQGQQ8RDN4");
+    </script>
   </head>
+
   <body
     class="h-full select-none font-sans min-h-screen bg-opacity-0 bg-cover bg-center bg-fixed transition-opacity duration-300 ease-in-out flex flex-col"
   >
@@ -184,47 +203,27 @@
             />
           </g>
         </svg>
-        <div class="l-header__highlightText">v21.0</div>
+        <div class="l-header__highlightText">v22.0</div>
       </div>
     </header>
     <div class="bg-image"></div>
-    <!-- Left gutter ad placement - full height, no empty space -->
-    <div class="left-gutter-ad ad">
-      <google-ad
-        adSlot="5220834834"
-        adFormat="vertical"
-        fullWidthResponsive="false"
-      ></google-ad>
-    </div>
-    <div class="right-gutter-ad ad">
-      <google-ad
-        adSlot="1814331462"
-        adFormat="vertical"
-        fullWidthResponsive="false"
-      ></google-ad>
-    </div>
 
+    <dark-mode-button></dark-mode-button>
     <!-- Main container with responsive padding -->
-    <main class="flex justify-center items-center flex-grow">
-      <div class="container">
+    <main class="flex justify-center flex-grow">
+      <div class="container pt-12">
+        <o-button
+          id="login-discord"
+          title="Login"
+          translationKey="main.login_discord"
+          block
+        ></o-button>
+
         <div class="container__row">
           <flag-input class="w-[20%] md:w-[15%]"></flag-input>
           <username-input class="w-full"></username-input>
         </div>
-        <div>
-          <a
-            target="_blank"
-            href="https://discord.gg/openfront"
-            class="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white p-3 sm:p-4 lg:p-5 font-medium text-lg sm:text-xl lg:text-2xl rounded-lg border-none cursor-pointer transition-colors duration-300 flex justify-center items-center gap-5"
-          >
-            <img
-              style="height: 50px; width: 50px"
-              alt="Discord"
-              src="../../resources/icons/discord.svg"
-            />
-            <span data-i18n="main.join_discord"> Join the Discord! </span>
-          </a>
-        </div>
+        <div></div>
         <div>
           <button
             id="support-us-button"
@@ -272,6 +271,20 @@
         </div>
       </div>
     </main>
+
+    <!-- User Setting -->
+    <button
+      id="settings-button"
+      title="Settings"
+      class="fixed bottom-4 right-4 z-50 rounded-full p-2 shadow-lg transition-colors duration-300 flex items-center justify-center"
+      style="width: 80px; height: 80px; background-color: #0075ff"
+    >
+      <img
+        src="../../resources/images/SettingIconWhite.svg"
+        alt="Settings"
+        style="width: 72px; height: 72px"
+      />
+    </button>
 
     <!-- Game components -->
     <div id="customMenu" class="mt-4 sm:mt-6 lg:mt-8">
@@ -321,6 +334,13 @@
           >
             Wiki
           </a>
+          <a
+            target="_blank"
+            href="https://discord.gg/jRpxXvG42t"
+            class="t-link"
+          >
+            <span data-i18n="main.join_discord"> Join the Discord! </span>
+          </a>
         </div>
         <div class="l-footer__col t-text-white">
           © 2025
@@ -329,7 +349,7 @@
             class="t-link"
             target="_blank"
           >
-            OpenFront.io
+            OpenFront™
           </a>
         </div>
       </div>
@@ -348,6 +368,8 @@
     <help-modal></help-modal>
     <support-us-modal></support-us-modal>
     <dark-mode-button></dark-mode-button>
+    <user-setting></user-setting>
+    <multi-tab-modal></multi-tab-modal>
     <div
       id="language-modal"
       class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center"

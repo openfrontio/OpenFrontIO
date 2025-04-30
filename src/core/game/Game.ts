@@ -40,12 +40,18 @@ export enum Difficulty {
 export enum Team {
   Red = "Red",
   Blue = "Blue",
+  Teal = "Teal",
+  Purple = "Purple",
+  Yellow = "Yellow",
+  Orange = "Orange",
+  Green = "Green",
   Bot = "Bot",
 }
 
 export enum GameMapType {
   World = "World",
   Europe = "Europe",
+  EuropeClassic = "Europe Classic",
   Mena = "Mena",
   NorthAmerica = "North America",
   SouthAmerica = "South America",
@@ -62,7 +68,39 @@ export enum GameMapType {
   Japan = "Japan",
   BetweenTwoSeas = "Between Two Seas",
   KnownWorld = "Known World",
+  FaroeIslands = "FaroeIslands",
+  DeglaciatedAntarctica = "Deglaciated Antarctica",
 }
+
+export const mapCategories: Record<string, GameMapType[]> = {
+  continental: [
+    GameMapType.World,
+    GameMapType.NorthAmerica,
+    GameMapType.SouthAmerica,
+    GameMapType.Europe,
+    GameMapType.EuropeClassic,
+    GameMapType.Asia,
+    GameMapType.Africa,
+    GameMapType.Oceania,
+  ],
+  regional: [
+    GameMapType.BlackSea,
+    GameMapType.Britannia,
+    GameMapType.GatewayToTheAtlantic,
+    GameMapType.BetweenTwoSeas,
+    GameMapType.Iceland,
+    GameMapType.Japan,
+    GameMapType.Mena,
+    GameMapType.Australia,
+    GameMapType.FaroeIslands,
+  ],
+  fantasy: [
+    GameMapType.Pangaea,
+    GameMapType.Mars,
+    GameMapType.KnownWorld,
+    GameMapType.DeglaciatedAntarctica,
+  ],
+};
 
 export enum GameType {
   Singleplayer = "Singleplayer",
@@ -234,6 +272,7 @@ export class PlayerInfo {
 // Some units have info specific to them
 export interface UnitSpecificInfos {
   dstPort?: Unit; // Only for trade ships
+  lastSetSafeFromPirates?: number; // Only for trade ships
   detonationDst?: TileRef; // Only for nukes
   warshipTarget?: Unit;
   cooldownDuration?: number;
@@ -267,6 +306,8 @@ export interface Unit {
   isCooldown(): boolean;
   setDstPort(dstPort: Unit): void;
   dstPort(): Unit; // Only for trade ships
+  setSafeFromPirates(): void; // Only for trade ships
+  isSafeFromPirates(): boolean; // Only for trade ships
   detonationDst(): TileRef; // Only for nukes
 
   setMoveTarget(cell: TileRef): void;
@@ -309,6 +350,7 @@ export interface Player {
   // State & Properties
   isAlive(): boolean;
   isTraitor(): boolean;
+  markTraitor(): void;
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
   lastTileChange(): Tick;
 
@@ -340,6 +382,7 @@ export interface Player {
   // Units
   units(...types: UnitType[]): Unit[];
   unitsIncludingConstruction(type: UnitType): Unit[];
+  buildableUnits(tile: TileRef): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
   buildUnit(
     type: UnitType,
@@ -409,8 +452,9 @@ export interface Player {
   // Misc
   toUpdate(): PlayerUpdate;
   playerProfile(): PlayerProfile;
-  canBoat(tile: TileRef): boolean;
   tradingPorts(port: Unit): Unit[];
+  // WARNING: this operation is expensive.
+  bestTransportShipSpawn(tile: TileRef): TileRef | false;
 }
 
 export interface Game extends GameMap {
@@ -467,7 +511,6 @@ export interface Game extends GameMap {
 }
 
 export interface PlayerActions {
-  canBoat: boolean;
   canAttack: boolean;
   buildableUnits: BuildableUnit[];
   canSendEmojiAllPlayers: boolean;
@@ -475,7 +518,7 @@ export interface PlayerActions {
 }
 
 export interface BuildableUnit {
-  canBuild: boolean;
+  canBuild: TileRef | false;
   type: UnitType;
   cost: number;
 }

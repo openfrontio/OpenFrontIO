@@ -121,6 +121,7 @@ const GameConfigSchema = z.object({
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
   maxPlayers: z.number().optional(),
+  numPlayerTeams: z.number().optional(),
 });
 
 const SafeString = z
@@ -195,8 +196,10 @@ export const BoatAttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("boat"),
   targetID: ID.nullable(),
   troops: z.number().nullable(),
-  x: z.number(),
-  y: z.number(),
+  dstX: z.number(),
+  dstY: z.number(),
+  srcX: z.number().nullable().optional(),
+  srcY: z.number().nullable().optional(),
 });
 
 export const AllianceRequestIntentSchema = BaseIntentSchema.extend({

@@ -11,6 +11,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { AirPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 
 export class NukeExecution implements Execution {
@@ -20,6 +21,7 @@ export class NukeExecution implements Execution {
   private nuke: Unit;
 
   private random: PseudoRandom;
+  private pathFinder: AirPathFinder;
 
   constructor(
     private type: NukeType,
@@ -43,6 +45,7 @@ export class NukeExecution implements Execution {
     if (this.speed == -1) {
       this.speed = this.mg.config().defaultNukeSpeed();
     }
+    this.pathFinder = new AirPathFinder(mg, this.random);
   }
 
   public target(): Player | TerraNullius {
@@ -143,45 +146,14 @@ export class NukeExecution implements Execution {
       return;
     }
 
-    const r = (this.mg.y(this.dst) * this.mg.x(this.dst)) % 10;
-    const s = this.speed + (this.mg.ticks() % r);
-
     for (let i = 0; i < this.speed; i++) {
-      const x = this.mg.x(this.nuke.tile());
-      const y = this.mg.y(this.nuke.tile());
-      const dstX = this.mg.x(this.dst);
-      const dstY = this.mg.y(this.dst);
-
-      // If we've reached the destination, detonate
-      if (x === dstX && y === dstY) {
+      // Move to next tile
+      const nextTile = this.pathFinder.nextTile(this.nuke.tile(), this.dst);
+      if (nextTile === true) {
         this.detonate();
         return;
-      }
-
-      // Calculate next position
-      let nextX = x;
-      let nextY = y;
-
-      const ratio = Math.floor(
-        1 + Math.abs(dstY - y) / (Math.abs(dstX - x) + 1),
-      );
-
-      if (this.random.chance(ratio) && x != dstX) {
-        if (x < dstX) nextX++;
-        else if (x > dstX) nextX--;
       } else {
-        if (y < dstY) nextY++;
-        else if (y > dstY) nextY--;
-      }
-
-      // Move to next tile
-      const nextTile = this.mg.ref(nextX, nextY);
-      if (nextTile !== undefined) {
         this.nuke.move(nextTile);
-      } else {
-        consolex.warn(`invalid tile position ${nextX},${nextY}`);
-        this.active = false;
-        return;
       }
     }
   }

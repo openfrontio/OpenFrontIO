@@ -1,0 +1,43 @@
+{
+  "name": "Faroe Islands",
+  "width": 1600,
+  "height": 2000,
+  "nations": [
+    {
+      "coordinates": [920, 1780],
+      "name": "Suduroy Region",
+      "strength": 2,
+      "flag": "fo"
+    },
+    {
+      "coordinates": [880, 1070],
+      "name": "Sandoy Region",
+      "strength": 2,
+      "flag": "fo"
+    },
+    {
+      "coordinates": [480, 630],
+      "name": "Vagar Region",
+      "strength": 1,
+      "flag": "fo"
+    },
+    {
+      "coordinates": [735, 580],
+      "name": "Streymoy Region",
+      "strength": 2,
+      "flag": "fo"
+    },
+    {
+      "coordinates": [815, 375],
+      "name": "Eysturoy Region",
+      "strength": 2,
+      "flag": "fo"
+    },
+    {
+      "coordinates": [1115, 265],
+      "name": "Nordoyar Region",
+      "strength": 2,
+      "flag": "fo"
+    }
+  ]
+}
