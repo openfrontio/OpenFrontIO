@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const TokenPayloadSchema = z
   .object({
-    sub: z.string(),
+    sub: z.string().uuid(),
     state: z.string(),
     "discord:roles": z.string().array(),
     iat: z.number(),

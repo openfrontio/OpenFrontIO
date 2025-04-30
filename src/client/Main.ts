@@ -29,6 +29,7 @@ import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import { generateCryptoRandomUUID } from "./Utils";
 import "./components/baseComponents/Button";
+import { OButton } from "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { discordLogin, isLoggedIn } from "./jwt";
 import "./styles.css";
@@ -91,15 +92,22 @@ class Client {
       consolex.warn("Random name button element not found");
     }
 
-    const loginDiscordButton = document.getElementById("login-discord");
-    isLoggedIn().then(async (claims) => {
-      if (claims === false) {
-        // Not logged in
-        loginDiscordButton.addEventListener("click", discordLogin);
-        return;
-      }
+    const loginDiscordButton = document.getElementById(
+      "login-discord",
+    ) as OButton;
+    const claims = isLoggedIn();
+    if (claims === false) {
+      // Not logged in
+      loginDiscordButton.disable = false;
+      loginDiscordButton.translationKey = "main.login_discord";
+      loginDiscordButton.addEventListener("click", discordLogin);
+    } else {
       console.log("Logged in", JSON.stringify(claims, null, 2));
       const { sub, "discord:roles": roles } = claims;
+
+      loginDiscordButton.disable = true;
+      loginDiscordButton.translationKey = "main.logged_in";
+
       // const loggedIn = await getUserMe();
       // if (loggedIn === false) {
       //   // Not logged in
@@ -114,7 +122,7 @@ class Client {
       //   ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.${avatar.startsWith("a_") ? "gif" : "png"}`
       //   : `https://cdn.discordapp.com/embed/avatars/${Number(discriminator) % 5}.png`;
       // TODO: Update the page for logged in user
-    });
+    }
 
     this.usernameInput = document.querySelector(
       "username-input",
@@ -319,6 +327,13 @@ function setFavicon(): void {
 
 // WARNING: DO NOT EXPOSE THIS ID
 export function getPersistentIDFromCookie(): string {
+  const claims = isLoggedIn();
+  if (claims !== false) {
+    const { sub } = claims;
+    console.log("Found JWT Subject", sub);
+    return sub;
+  }
+
   const COOKIE_NAME = "player_persistent_id";
 
   // Try to get existing cookie

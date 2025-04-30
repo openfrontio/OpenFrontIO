@@ -41,7 +41,14 @@ export function discordLogin() {
   window.location.href = `${getApiBase()}/login/discord?redirect_uri=${window.location.href}`;
 }
 
-export async function isLoggedIn(): Promise<TokenPayload | false> {
+let __isLoggedIn: TokenPayload | false | undefined = undefined;
+export function isLoggedIn(): TokenPayload | false {
+  if (__isLoggedIn === undefined) {
+    __isLoggedIn = _isLoggedIn();
+  }
+  return __isLoggedIn;
+}
+export function _isLoggedIn(): TokenPayload | false {
   try {
     const token = getToken();
     if (!token) {
