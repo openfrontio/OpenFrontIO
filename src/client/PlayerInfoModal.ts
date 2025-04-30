@@ -15,6 +15,18 @@ export class PlayerInfoModal extends LitElement {
   @state() private progressPercent: number = 62;
   @state() private nextRank: string = "Well-Known Player";
 
+  @state() private buildingStats = {
+    city: { built: 0, destroyed: 0, finalCount: 0 },
+    defense: { built: 0, destroyed: 0, finalCount: 0 },
+    port: { built: 0, destroyed: 0, finalCount: 0 },
+    warship: { built: 0, destroyed: 0, finalCount: 0 },
+    silo: { built: 0, destroyed: 0, finalCount: 0 },
+    sam: { built: 0, destroyed: 0, finalCount: 0 },
+    atom: { built: 0, destroyed: 0, finalCount: 0 },
+    hydrogen: { built: 0, destroyed: 0, finalCount: 0 },
+    mirv: { built: 0, destroyed: 0, finalCount: 0 },
+  };
+
   private formatPlayTime(seconds: number): string {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -101,10 +113,10 @@ export class PlayerInfoModal extends LitElement {
       adminasst: {
         label: "Admin Assistant",
         flagWrapper:
-          "p-[3px] rounded-full bg-gradient-to-r from-orange-200 via-orange-300 to-orange-200 animate-shimmer", // Admin と同じアニメーション
-        nameText: "text-2xl font-bold text-orange-300 drop-shadow", // 肌色系の色
-        roleText: "text-orange-300 font-semibold", // 肌色系の色
-        badgeBg: "bg-orange-200/20 border-orange-300/30", // 肌色系の背景
+          "p-[3px] rounded-full bg-gradient-to-r from-orange-200 via-orange-300 to-orange-200 animate-shimmer",
+        nameText: "text-2xl font-bold text-orange-300 drop-shadow",
+        roleText: "text-orange-300 font-semibold",
+        badgeBg: "bg-orange-200/20 border-orange-300/30",
         priority: 3,
       },
       mod: {
@@ -255,6 +267,21 @@ export class PlayerInfoModal extends LitElement {
     );
   }
 
+  private getBuildingName(building: string): string {
+    const buildingNames: Record<string, string> = {
+      city: "City",
+      defense: "Defense",
+      port: "Port",
+      warship: "Warship",
+      silo: "Silo",
+      sam: "SAM",
+      atom: "Atom",
+      hydrogen: "Hydrogen",
+      mirv: "MIRV",
+    };
+    return buildingNames[building] || building;
+  }
+
   render() {
     const playerName = this.getStoredName();
     const flag = this.getStoredFlag();
@@ -343,6 +370,36 @@ export class PlayerInfoModal extends LitElement {
 
           <div class="w-2/3 text-right text-xs text-gray-400 italic">
             Next rank: ${this.nextRank ?? "???"}
+          </div>
+
+          <hr class="w-2/3 border-gray-600 my-2" />
+
+          <div class="mt-4 w-full max-w-md">
+            <div class="text-sm text-gray-400 font-semibold mb-1">
+              🏗️ Building Statistics
+            </div>
+            <table class="w-full text-sm text-gray-300 border-collapse">
+              <thead>
+                <tr class="border-b border-gray-600">
+                  <th class="text-left">Building</th>
+                  <th class="text-right">Built</th>
+                  <th class="text-right">Destroyed</th>
+                  <th class="text-right">Final Count</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${Object.entries(this.buildingStats).map(
+                  ([building, stats]) => html`
+                    <tr>
+                      <td>${this.getBuildingName(building)}</td>
+                      <td class="text-right">${stats.built}</td>
+                      <td class="text-right">${stats.destroyed}</td>
+                      <td class="text-right">${stats.finalCount}</td>
+                    </tr>
+                  `,
+                )}
+              </tbody>
+            </table>
           </div>
 
           <hr class="w-2/3 border-gray-600 my-2" />
