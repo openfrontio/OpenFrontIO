@@ -316,9 +316,7 @@ function setFavicon(): void {
 export function getPersistentIDFromCookie(): string {
   const claims = isLoggedIn();
   if (claims !== false) {
-    const { sub } = claims;
-    // console.log("Found JWT Subject", sub);
-    return sub;
+    return claims.sub;
   }
 
   const COOKIE_NAME = "player_persistent_id";
