@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 export const TokenPayloadSchema = z.object({
+  jti: z.string(),
   sub: z.string().uuid(),
-  state: z.string(),
   iat: z.number(),
   iss: z.string(),
   aud: z.string(),
