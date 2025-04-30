@@ -1,5 +1,5 @@
 ---
-name: "📝 Backend/DB Feature Request"
+name: "📝 API/DB Feature Request"
 about: Suggest a new backend API or database feature
 title: "[Feature] <short description here>"
 labels: [feature, backend]
