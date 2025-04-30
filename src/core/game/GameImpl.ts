@@ -8,6 +8,8 @@ import {
   Alliance,
   AllianceRequest,
   Cell,
+  ColoredTeams,
+  Duos,
   EmojiMessage,
   Execution,
   Game,
@@ -32,19 +34,18 @@ import { PlayerImpl } from "./PlayerImpl";
 import { Stats } from "./Stats";
 import { StatsImpl } from "./StatsImpl";
 import { assignTeams } from "./TeamAssignment";
-import { NationMap } from "./TerrainMapLoader";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid } from "./UnitGrid";
 import { UnitImpl } from "./UnitImpl";
 
 export function createGame(
   humans: PlayerInfo[],
+  nations: Nation[],
   gameMap: GameMap,
   miniGameMap: GameMap,
-  nationMap: NationMap,
   config: Config,
 ): Game {
-  return new GameImpl(humans, gameMap, miniGameMap, nationMap, config);
+  return new GameImpl(humans, nations, gameMap, miniGameMap, config);
 }
 
 export type CellString = string;
@@ -53,8 +54,6 @@ export class GameImpl implements Game {
   private _ticks = 0;
 
   private unInitExecs: Execution[] = [];
-
-  private nations_: Nation[] = [];
 
   _players: Map<PlayerID, PlayerImpl> = new Map<PlayerID, PlayerImpl>();
   _playersBySmallID = [];
@@ -75,51 +74,62 @@ export class GameImpl implements Game {
 
   private _stats: StatsImpl = new StatsImpl();
 
-  private playerTeams: Team[] = [Team.Red, Team.Blue];
-  private botTeam: Team = Team.Bot;
+  private playerTeams: Team[] = [ColoredTeams.Red, ColoredTeams.Blue];
+  private botTeam: Team = ColoredTeams.Bot;
 
   constructor(
     private _humans: PlayerInfo[],
+    private _nations: Nation[],
     private _map: GameMap,
     private miniGameMap: GameMap,
-    nationMap: NationMap,
     private _config: Config,
   ) {
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();
-    this.nations_ = nationMap.nations.map(
-      (n) =>
-        new Nation(
-          n.flag || "",
-          n.name,
-          new Cell(n.coordinates[0], n.coordinates[1]),
-          n.strength,
-        ),
-    );
     this.unitGrid = new UnitGrid(this._map);
 
     if (_config.gameConfig().gameMode === GameMode.Team) {
-      const numPlayerTeams = _config.numPlayerTeams();
+      this.populateTeams();
+    }
+    this.addPlayers();
+  }
+
+  private populateTeams() {
+    if (this._config.playerTeams() === Duos) {
+      this.playerTeams = [];
+      const numTeams = Math.ceil(
+        (this._humans.length + this._nations.length) / 2,
+      );
+      for (let i = 0; i < numTeams; i++) {
+        this.playerTeams.push("Team " + (i + 1));
+      }
+    } else {
+      const numPlayerTeams = this._config.playerTeams() as number;
       if (numPlayerTeams < 2)
         throw new Error(`Too few teams: ${numPlayerTeams}`);
-      if (numPlayerTeams >= 3) this.playerTeams.push(Team.Teal);
-      if (numPlayerTeams >= 4) this.playerTeams.push(Team.Purple);
-      if (numPlayerTeams >= 5) this.playerTeams.push(Team.Yellow);
-      if (numPlayerTeams >= 6) this.playerTeams.push(Team.Orange);
-      if (numPlayerTeams >= 7) this.playerTeams.push(Team.Green);
+      if (numPlayerTeams >= 3) this.playerTeams.push(ColoredTeams.Teal);
+      if (numPlayerTeams >= 4) this.playerTeams.push(ColoredTeams.Purple);
+      if (numPlayerTeams >= 5) this.playerTeams.push(ColoredTeams.Yellow);
+      if (numPlayerTeams >= 6) this.playerTeams.push(ColoredTeams.Orange);
+      if (numPlayerTeams >= 7) this.playerTeams.push(ColoredTeams.Green);
       if (numPlayerTeams >= 8)
         throw new Error(`Too many teams: ${numPlayerTeams}`);
     }
-    this.addHumans();
   }
 
-  private addHumans() {
+  private addPlayers() {
     if (this.config().gameConfig().gameMode != GameMode.Team) {
       this._humans.forEach((p) => this.addPlayer(p));
+      this._nations.forEach((n) => this.addPlayer(n.playerInfo));
       return;
     }
-    const playerToTeam = assignTeams(this._humans, this.playerTeams);
+    const isDuos = this.config().gameConfig().playerTeams === Duos;
+    const allPlayers = [
+      ...this._humans,
+      ...this._nations.map((n) => n.playerInfo),
+    ];
+    const playerToTeam = assignTeams(allPlayers, this.playerTeams);
     for (const [playerInfo, team] of playerToTeam.entries()) {
       if (team == "kicked") {
         console.warn(`Player ${playerInfo.name} was kicked from team`);
@@ -180,7 +190,7 @@ export class GameImpl implements Game {
     return this.config().unitInfo(type);
   }
   nations(): Nation[] {
-    return this.nations_;
+    return this._nations;
   }
 
   createAllianceRequest(requestor: Player, recipient: Player): AllianceRequest {

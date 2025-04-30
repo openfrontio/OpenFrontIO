@@ -1,7 +1,7 @@
-import { PlayerInfo, PlayerType, Team } from "../src/core/game/Game";
+import { ColoredTeams, PlayerInfo, PlayerType } from "../src/core/game/Game";
 import { assignTeams } from "../src/core/game/TeamAssignment";
 
-const teams = [Team.Red, Team.Blue];
+const teams = [ColoredTeams.Red, ColoredTeams.Blue];
 
 describe("assignTeams", () => {
   const createPlayer = (id: string, clan?: string): PlayerInfo => {
@@ -27,10 +27,10 @@ describe("assignTeams", () => {
     const result = assignTeams(players, teams);
 
     // Check that players are assigned alternately
-    expect(result.get(players[0])).toEqual(Team.Red);
-    expect(result.get(players[1])).toEqual(Team.Blue);
-    expect(result.get(players[2])).toEqual(Team.Red);
-    expect(result.get(players[3])).toEqual(Team.Blue);
+    expect(result.get(players[0])).toEqual(ColoredTeams.Red);
+    expect(result.get(players[1])).toEqual(ColoredTeams.Blue);
+    expect(result.get(players[2])).toEqual(ColoredTeams.Red);
+    expect(result.get(players[3])).toEqual(ColoredTeams.Blue);
   });
 
   it("should keep clan members together on the same team", () => {
@@ -44,10 +44,10 @@ describe("assignTeams", () => {
     const result = assignTeams(players, teams);
 
     // Check that clan members are on the same team
-    expect(result.get(players[0])).toEqual(Team.Red);
-    expect(result.get(players[1])).toEqual(Team.Red);
-    expect(result.get(players[2])).toEqual(Team.Blue);
-    expect(result.get(players[3])).toEqual(Team.Blue);
+    expect(result.get(players[0])).toEqual(ColoredTeams.Red);
+    expect(result.get(players[1])).toEqual(ColoredTeams.Red);
+    expect(result.get(players[2])).toEqual(ColoredTeams.Blue);
+    expect(result.get(players[3])).toEqual(ColoredTeams.Blue);
   });
 
   it("should handle mixed clan and non-clan players", () => {
@@ -61,10 +61,10 @@ describe("assignTeams", () => {
     const result = assignTeams(players, teams);
 
     // Check that clan members are together and non-clan players balance teams
-    expect(result.get(players[0])).toEqual(Team.Red);
-    expect(result.get(players[1])).toEqual(Team.Red);
-    expect(result.get(players[2])).toEqual(Team.Blue);
-    expect(result.get(players[3])).toEqual(Team.Blue);
+    expect(result.get(players[0])).toEqual(ColoredTeams.Red);
+    expect(result.get(players[1])).toEqual(ColoredTeams.Red);
+    expect(result.get(players[2])).toEqual(ColoredTeams.Blue);
+    expect(result.get(players[3])).toEqual(ColoredTeams.Blue);
   });
 
   it("should kick players when teams are full", () => {
@@ -80,14 +80,14 @@ describe("assignTeams", () => {
     const result = assignTeams(players, teams);
 
     // Check that players are kicked when teams are full
-    expect(result.get(players[0])).toEqual(Team.Red);
-    expect(result.get(players[1])).toEqual(Team.Red);
-    expect(result.get(players[2])).toEqual(Team.Red);
+    expect(result.get(players[0])).toEqual(ColoredTeams.Red);
+    expect(result.get(players[1])).toEqual(ColoredTeams.Red);
+    expect(result.get(players[2])).toEqual(ColoredTeams.Red);
 
     expect(result.get(players[3])).toEqual("kicked");
 
-    expect(result.get(players[4])).toEqual(Team.Blue);
-    expect(result.get(players[5])).toEqual(Team.Blue);
+    expect(result.get(players[4])).toEqual(ColoredTeams.Blue);
+    expect(result.get(players[5])).toEqual(ColoredTeams.Blue);
   });
 
   it("should handle empty player list", () => {
@@ -98,7 +98,7 @@ describe("assignTeams", () => {
   it("should handle single player", () => {
     const players = [createPlayer("1")];
     const result = assignTeams(players, teams);
-    expect(result.get(players[0])).toEqual(Team.Red);
+    expect(result.get(players[0])).toEqual(ColoredTeams.Red);
   });
 
   it("should handle multiple clans with different sizes", () => {
@@ -114,12 +114,12 @@ describe("assignTeams", () => {
     const result = assignTeams(players, teams);
 
     // Check that larger clans are assigned first
-    expect(result.get(players[0])).toEqual(Team.Red);
-    expect(result.get(players[1])).toEqual(Team.Red);
-    expect(result.get(players[2])).toEqual(Team.Red);
-    expect(result.get(players[3])).toEqual(Team.Blue);
-    expect(result.get(players[4])).toEqual(Team.Blue);
-    expect(result.get(players[5])).toEqual(Team.Blue);
+    expect(result.get(players[0])).toEqual(ColoredTeams.Red);
+    expect(result.get(players[1])).toEqual(ColoredTeams.Red);
+    expect(result.get(players[2])).toEqual(ColoredTeams.Red);
+    expect(result.get(players[3])).toEqual(ColoredTeams.Blue);
+    expect(result.get(players[4])).toEqual(ColoredTeams.Blue);
+    expect(result.get(players[5])).toEqual(ColoredTeams.Blue);
   });
 
   it("should distribute players among a larger number of teams", () => {
@@ -141,28 +141,28 @@ describe("assignTeams", () => {
     ];
 
     const result = assignTeams(players, [
-      Team.Red,
-      Team.Blue,
-      Team.Teal,
-      Team.Purple,
-      Team.Yellow,
-      Team.Orange,
-      Team.Green,
+      ColoredTeams.Red,
+      ColoredTeams.Blue,
+      ColoredTeams.Teal,
+      ColoredTeams.Purple,
+      ColoredTeams.Yellow,
+      ColoredTeams.Orange,
+      ColoredTeams.Green,
     ]);
 
-    expect(result.get(players[0])).toEqual(Team.Red);
-    expect(result.get(players[1])).toEqual(Team.Red);
+    expect(result.get(players[0])).toEqual(ColoredTeams.Red);
+    expect(result.get(players[1])).toEqual(ColoredTeams.Red);
     expect(result.get(players[2])).toEqual("kicked");
-    expect(result.get(players[3])).toEqual(Team.Blue);
-    expect(result.get(players[4])).toEqual(Team.Blue);
-    expect(result.get(players[5])).toEqual(Team.Teal);
-    expect(result.get(players[6])).toEqual(Team.Purple);
-    expect(result.get(players[7])).toEqual(Team.Yellow);
-    expect(result.get(players[8])).toEqual(Team.Orange);
-    expect(result.get(players[9])).toEqual(Team.Green);
-    expect(result.get(players[10])).toEqual(Team.Teal);
-    expect(result.get(players[11])).toEqual(Team.Purple);
-    expect(result.get(players[12])).toEqual(Team.Yellow);
-    expect(result.get(players[13])).toEqual(Team.Orange);
+    expect(result.get(players[3])).toEqual(ColoredTeams.Blue);
+    expect(result.get(players[4])).toEqual(ColoredTeams.Blue);
+    expect(result.get(players[5])).toEqual(ColoredTeams.Teal);
+    expect(result.get(players[6])).toEqual(ColoredTeams.Purple);
+    expect(result.get(players[7])).toEqual(ColoredTeams.Yellow);
+    expect(result.get(players[8])).toEqual(ColoredTeams.Orange);
+    expect(result.get(players[9])).toEqual(ColoredTeams.Green);
+    expect(result.get(players[10])).toEqual(ColoredTeams.Teal);
+    expect(result.get(players[11])).toEqual(ColoredTeams.Purple);
+    expect(result.get(players[12])).toEqual(ColoredTeams.Yellow);
+    expect(result.get(players[13])).toEqual(ColoredTeams.Orange);
   });
 });

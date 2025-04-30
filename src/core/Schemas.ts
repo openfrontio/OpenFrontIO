@@ -2,11 +2,11 @@ import { z } from "zod";
 import {
   AllPlayers,
   Difficulty,
+  Duos,
   GameMapType,
   GameMode,
   GameType,
   PlayerType,
-  Team,
   UnitType,
 } from "./game/Game";
 
@@ -121,8 +121,10 @@ const GameConfigSchema = z.object({
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
   maxPlayers: z.number().optional(),
-  numPlayerTeams: z.number().optional(),
+  playerTeams: z.union([z.number().optional(), z.literal(Duos)]),
 });
+
+export const TeamSchema = z.string();
 
 const SafeString = z
   .string()
@@ -364,7 +366,7 @@ const ClientBaseMessageSchema = z.object({
 
 export const ClientSendWinnerSchema = ClientBaseMessageSchema.extend({
   type: z.literal("winner"),
-  winner: ID.or(z.nativeEnum(Team)).nullable(),
+  winner: z.union([ID, TeamSchema]).nullable(),
   allPlayersStats: AllPlayersStatsSchema,
   winnerType: z.enum(["player", "team"]),
 });
@@ -425,10 +427,7 @@ export const GameRecordSchema = z.object({
   date: SafeString,
   num_turns: z.number(),
   turns: z.array(TurnSchema),
-  winner: z
-    .union([ID, z.nativeEnum(Team)])
-    .nullable()
-    .optional(),
+  winner: z.union([ID, SafeString]).nullable().optional(),
   winnerType: z.enum(["player", "team"]).nullable().optional(),
   allPlayersStats: z.record(ID, PlayerStatsSchema),
   version: z.enum(["v0.0.1"]),

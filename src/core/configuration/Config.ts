@@ -2,6 +2,7 @@ import { Colord } from "colord";
 import { GameConfig, GameID } from "../Schemas";
 import {
   Difficulty,
+  Duos,
   Game,
   GameMapType,
   Gold,
@@ -67,7 +68,7 @@ export interface Config {
   instantBuild(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
-  numPlayerTeams(): number;
+  playerTeams(): number | typeof Duos;
 
   startManpower(playerInfo: PlayerInfo): number;
   populationIncreaseRate(player: Player | PlayerView): number;
