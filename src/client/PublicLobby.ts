@@ -118,14 +118,14 @@ export class PublicLobby extends LitElement {
           <img
             src="${getMapsImage(lobby.gameConfig.gameMap)}"
             alt="${lobby.gameConfig.gameMap}"
-            class="w-1/3 md:w-1/5 md:h-[80px] object-cover rounded-lg"
+            class="w-1/3 md:w-1/5 md:h-[80px]"
             style="border: 1px solid rgba(255, 255, 255, 0.5)"
           />
           <div
             class="w-full flex flex-col md:flex-row items-center justify-center md:justify-evenly"
           >
-            <div class="flex flex-col items-center text-center">
-              <div class="text-md font-medium text-blue-100 mb-1 md:mb-4">
+            <div class="flex flex-col items-center">
+              <div class="text-md font-medium text-blue-100 mb-4">
                 <!-- ${lobby.gameConfig.gameMap} -->
                 ${translateText(
                   `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/\s+/g, "")}`,
@@ -135,8 +135,8 @@ export class PublicLobby extends LitElement {
                 ${gameModeText}${teamCountText}
               </div>
             </div>
-            <div class="flex flex-col items-center mt-2 md:mt-0">
-              <div class="text-md font-medium text-blue-100 mb-1 md:mb-2">
+            <div class="flex flex-col items-center">
+              <div class="text-md font-medium text-blue-100 mb-2">
                 ${lobby.numClients} / ${lobby.gameConfig.maxPlayers}
               </div>
               <div class="text-md font-medium text-blue-100">
