@@ -105,9 +105,9 @@ export class GameImpl implements Game {
         throw new Error(`Too few teams: ${numPlayerTeams}`);
       if (numPlayerTeams >= 3) this.playerTeams.push(Team.Yellow);
       if (numPlayerTeams >= 4) this.playerTeams.push(Team.Green);
-      if (numPlayerTeams >= 5) this.playerTeams.push(Team.Teal);
+      if (numPlayerTeams >= 5) this.playerTeams.push(Team.Purple);
       if (numPlayerTeams >= 6) this.playerTeams.push(Team.Orange);
-      if (numPlayerTeams >= 7) this.playerTeams.push(Team.Purple);
+      if (numPlayerTeams >= 7) this.playerTeams.push(Team.Teal);
       if (numPlayerTeams >= 8)
         throw new Error(`Too many teams: ${numPlayerTeams}`);
     }

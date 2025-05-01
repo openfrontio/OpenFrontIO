@@ -47,16 +47,16 @@ export const pastelTheme = new (class implements Theme {
         return blue;
       case Team.Red:
         return red;
-      case Team.Yellow:
-        return yellow;
-      case Team.Green:
-        return green;
       case Team.Teal:
         return teal;
-      case Team.Orange:
-        return orange;
       case Team.Purple:
         return purple;
+      case Team.Yellow:
+        return yellow;
+      case Team.Orange:
+        return orange;
+      case Team.Green:
+        return green;
       case Team.Bot:
         return botColor;
     }
