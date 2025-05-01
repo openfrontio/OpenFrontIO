@@ -42,8 +42,8 @@ export enum Team {
   Blue = "Blue",
   Teal = "Teal",
   Purple = "Purple",
-  Orange = "Orange",
   Yellow = "Yellow",
+  Orange = "Orange",
   Green = "Green",
   Bot = "Bot",
 }
