@@ -25,6 +25,20 @@ import { pastelTheme } from "./PastelTheme";
 import { pastelThemeDark } from "./PastelThemeDark";
 
 export abstract class DefaultServerConfig implements ServerConfig {
+  otelEnabled(): boolean {
+    return Boolean(
+      this.otelEndpoint() && this.otelUsername() && this.otelPassword(),
+    );
+  }
+  otelEndpoint(): string {
+    return process.env.OTEL_ENDPOINT;
+  }
+  otelUsername(): string {
+    return process.env.OTEL_USERNAME;
+  }
+  otelPassword(): string {
+    return process.env.OTEL_PASSWORD;
+  }
   region(): string {
     if (this.env() == GameEnv.Dev) {
       return "dev";

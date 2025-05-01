@@ -11,7 +11,7 @@ import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
-import { setupMetricsServer } from "./MasterMetrics";
+import { setupMasterMetrics } from "./MasterMetrics";
 
 const config = getServerConfigFromServer();
 const playlist = new MapPlaylist();
@@ -20,11 +20,12 @@ const readyWorkers = new Set();
 const app = express();
 const server = http.createServer(app);
 
-// Create a separate metrics server on port 9090
-const metricsApp = express();
-const metricsServer = http.createServer(metricsApp);
-
 const log = logger.child({ comp: "m" });
+
+if (config.otelEnabled()) {
+  console.log("setting up master metrics");
+  setupMasterMetrics();
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -146,9 +147,6 @@ export async function startMaster() {
   server.listen(PORT, () => {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });
-
-  // Setup the metrics server
-  setupMetricsServer();
 }
 
 app.get(

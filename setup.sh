@@ -71,20 +71,6 @@ else
     echo "UDP buffer sizes configured and applied"
 fi
 
-# Check if node-exporter container already exists
-if docker ps -a | grep -q "node-exporter"; then
-    echo "Node Exporter is already installed"
-else
-    echo "🔄 Installing Node Exporter..."
-    docker run -d --name node-exporter --restart=unless-stopped \
-      --net="host" \
-      --pid="host" \
-      -v "/:/host:ro,rslave" \
-      prom/node-exporter:latest \
-      --path.rootfs=/host
-    echo "Node Exporter installed successfully"
-fi
-
 # Set proper ownership for openfront's home directory
 chown -R openfront:openfront /home/openfront
 echo "Set proper ownership for openfront's home directory"

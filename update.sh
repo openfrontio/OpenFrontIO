@@ -16,19 +16,6 @@ echo "======================================================"
 # Container and image configuration
 CONTAINER_NAME="openfront-${ENV}-${SUBDOMAIN}"
 
-# Install Loki Docker plugin if not already installed
-if ! docker plugin ls | grep -q "loki"; then
-  echo "Installing Loki Docker plugin..."
-  docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
-  if [ $? -ne 0 ]; then
-    echo "Failed to install Loki Docker plugin. Continuing anyway..."
-  else
-    echo "Loki Docker plugin installed successfully."
-  fi
-else
-  echo "Loki Docker plugin already installed."
-fi
-
 echo "Pulling ${DOCKER_IMAGE} from Docker Hub..."
 docker pull $DOCKER_IMAGE
 
@@ -52,31 +39,10 @@ if [ -n "$STOPPED_CONTAINER" ]; then
   echo "Container $STOPPED_CONTAINER removed."
 fi
 
-# Check if port 80 is still in use
-echo "Checking if port 80 is still in use..."
-if command -v lsof >/dev/null 2>&1; then
-  PORT_CHECK=$(lsof -i :80 | grep LISTEN)
-elif command -v netstat >/dev/null 2>&1; then
-  PORT_CHECK=$(netstat -tuln | grep ":80 ")
-else
-  PORT_CHECK=""
-  echo "Warning: Cannot check if port is in use (neither lsof nor netstat found)"
-fi
-
-if [ -n "$PORT_CHECK" ]; then
-  echo "Warning: Port 80 is still in use by another process:"
-  echo "$PORT_CHECK"
-  echo "Attempting to proceed anyway..."
-fi
-
 echo "Starting new container for ${HOST} environment..."
 docker run -d \
   --restart=always \
   $VOLUME_MOUNTS \
-  --log-driver=loki \
-  --log-opt loki-url="https://${MON_USERNAME}:${MON_PASSWORD}@mon.openfront.io/loki/loki/api/v1/push" \
-  --log-opt loki-batch-size="400" \
-  --log-opt loki-external-labels="job=docker,environment=${ENV},host=${HOST},subdomain=${SUBDOMAIN}" \
   --env-file /home/openfront/.env \
   --name ${CONTAINER_NAME} \
   $DOCKER_IMAGE
@@ -99,5 +65,4 @@ echo "======================================================"
 echo "✅ SERVER UPDATE COMPLETED SUCCESSFULLY"
 echo "Container name: ${CONTAINER_NAME}"
 echo "Image: ${FULL_IMAGE_NAME}"
-echo "Logs: Configured to send to Loki on port 3100"
 echo "======================================================"

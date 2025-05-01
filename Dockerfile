@@ -13,12 +13,6 @@ RUN apt-get update && apt-get install -y \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node Exporter
-RUN mkdir -p /opt/node_exporter && \
-    wget -qO- https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz | \
-    tar xvz --strip-components=1 -C /opt/node_exporter && \
-    ln -s /opt/node_exporter/node_exporter /usr/local/bin/
-
 # Install cloudflared
 RUN curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb > cloudflared.deb \
     && dpkg -i cloudflared.deb \
