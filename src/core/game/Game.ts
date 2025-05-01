@@ -78,14 +78,14 @@ export enum GameMapType {
 
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
-    GameMapType.World,
-    GameMapType.NorthAmerica,
-    GameMapType.SouthAmerica,
-    GameMapType.Europe,
-    GameMapType.EuropeClassic,
-    GameMapType.Asia,
-    GameMapType.Africa,
-    GameMapType.Oceania,
+    // GameMapType.World,
+    // GameMapType.NorthAmerica,
+    // GameMapType.SouthAmerica,
+    // GameMapType.Europe,
+    // GameMapType.EuropeClassic,
+    // GameMapType.Asia,
+    // GameMapType.Africa,
+    // GameMapType.Oceania,
   ],
   regional: [
     // GameMapType.BlackSea, - the heightmap is reversed cant make it into terrain for now i have to remake it from scratch
@@ -99,10 +99,10 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.FaroeIslands,
   ],
   fantasy: [
-    GameMapType.Pangaea,
-    GameMapType.Mars,
-    GameMapType.KnownWorld,
-    GameMapType.DeglaciatedAntarctica,
+    // GameMapType.Pangaea,
+    // GameMapType.Mars,
+    // GameMapType.KnownWorld,
+    // GameMapType.DeglaciatedAntarctica,
   ],
 };
 
