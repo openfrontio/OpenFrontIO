@@ -1,5 +1,6 @@
 import {
   Difficulty,
+  Duos,
   Game,
   GameMapType,
   GameMode,
@@ -203,12 +204,14 @@ export class DefaultConfig implements Config {
   defensePostDefenseBonus(): number {
     return 5;
   }
-  numPlayerTeams(): number {
-    return this._gameConfig.numPlayerTeams ?? 0;
+  playerTeams(): number | typeof Duos {
+    return this._gameConfig.playerTeams ?? 0;
   }
+
   spawnNPCs(): boolean {
     return !this._gameConfig.disableNPCs;
   }
+
   disableNukes(): boolean {
     return this._gameConfig.disableNukes;
   }

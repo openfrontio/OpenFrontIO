@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+export const TokenPayloadSchema = z.object({
+  jti: z.string(),
+  sub: z.string().uuid(),
+  iat: z.number(),
+  iss: z.string(),
+  aud: z.string(),
+  exp: z.number(),
+});
+export type TokenPayload = z.infer<typeof TokenPayloadSchema>;
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     id: z.string(),

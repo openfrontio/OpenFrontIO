@@ -16,8 +16,6 @@ echo "======================================================"
 # Container and image configuration
 CONTAINER_NAME="openfront-${ENV}-${SUBDOMAIN}"
 
-docker login -u $DOCKER_USERNAME -p $DOCKER_TOKEN
-
 # Install Loki Docker plugin if not already installed
 if ! docker plugin ls | grep -q "loki"; then
   echo "Installing Loki Docker plugin..."

@@ -4,9 +4,9 @@ import {
   Difficulty,
   Execution,
   Game,
+  Nation,
   Player,
   PlayerID,
-  PlayerInfo,
   PlayerType,
   Relation,
   TerrainType,
@@ -46,10 +46,10 @@ export class FakeHumanExecution implements Execution {
 
   constructor(
     gameID: GameID,
-    private playerInfo: PlayerInfo,
+    private nation: Nation,
   ) {
     this.random = new PseudoRandom(
-      simpleHash(playerInfo.id) + simpleHash(gameID),
+      simpleHash(nation.playerInfo.id) + simpleHash(gameID),
     );
     this.attackRate = this.random.nextInt(40, 80);
     this.attackTick = this.random.nextInt(0, this.attackRate);
@@ -110,15 +110,17 @@ export class FakeHumanExecution implements Execution {
     if (this.mg.inSpawnPhase()) {
       const rl = this.randomLand();
       if (rl == null) {
-        consolex.warn(`cannot spawn ${this.playerInfo.name}`);
+        consolex.warn(`cannot spawn ${this.nation.playerInfo.name}`);
         return;
       }
-      this.mg.addExecution(new SpawnExecution(this.playerInfo, rl));
+      this.mg.addExecution(new SpawnExecution(this.nation.playerInfo, rl));
       return;
     }
 
     if (this.player == null) {
-      this.player = this.mg.players().find((p) => p.id() == this.playerInfo.id);
+      this.player = this.mg
+        .players()
+        .find((p) => p.id() == this.nation.playerInfo.id);
       if (this.player == null) {
         return;
       }
@@ -553,7 +555,7 @@ export class FakeHumanExecution implements Execution {
     let tries = 0;
     while (tries < 50) {
       tries++;
-      const cell = this.playerInfo.nation.cell;
+      const cell = this.nation.spawnCell;
       const x = this.random.nextInt(cell.x - delta, cell.x + delta);
       const y = this.random.nextInt(cell.y - delta, cell.y + delta);
       if (!this.mg.isValidCoord(x, y)) {

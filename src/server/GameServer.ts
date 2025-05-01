@@ -95,8 +95,8 @@ export class GameServer {
     if (gameConfig.gameMode != null) {
       this.gameConfig.gameMode = gameConfig.gameMode;
     }
-    if (gameConfig.numPlayerTeams != null) {
-      this.gameConfig.numPlayerTeams = gameConfig.numPlayerTeams;
+    if (gameConfig.playerTeams != null) {
+      this.gameConfig.playerTeams = gameConfig.playerTeams;
     }
   }
 
