@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
 
+export const RefreshResponseSchema = z.object({
+  token: z.string(),
+});
+export type RefreshResponse = z.infer<typeof RefreshResponseSchema>;
+
 export const TokenPayloadSchema = z.object({
   jti: z.string(),
   sub: z
