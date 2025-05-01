@@ -1,4 +1,4 @@
-import { GameMapType } from "../core/game/Game";
+import { GameMapType, GameMode } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
 
 enum PlaylistType {
@@ -9,6 +9,9 @@ enum PlaylistType {
 const random = new PseudoRandom(123);
 
 export class MapPlaylist {
+  private gameModeRotation = [GameMode.FFA, GameMode.FFA, GameMode.Team];
+  private currentGameModeIndex = 0;
+
   private mapsPlaylistBig: GameMapType[] = [];
   private mapsPlaylistSmall: GameMapType[] = [];
   private currentPlaylistCounter = 0;
@@ -18,6 +21,13 @@ export class MapPlaylist {
     const playlistType: PlaylistType = this.getNextPlaylistType();
     const mapsPlaylist: GameMapType[] = this.getNextMapsPlayList(playlistType);
     return mapsPlaylist.shift()!;
+  }
+
+  public getNextGameMode(): GameMode {
+    const nextGameMode = this.gameModeRotation[this.currentGameModeIndex];
+    this.currentGameModeIndex =
+      (this.currentGameModeIndex + 1) % this.gameModeRotation.length;
+    return nextGameMode;
   }
 
   private getNextMapsPlayList(playlistType: PlaylistType): GameMapType[] {
@@ -48,9 +58,9 @@ export class MapPlaylist {
         count--;
       }
     });
-    while (!this.allNonConsecutive(mapsPlaylist)) {
+    do {
       random.shuffleArray(mapsPlaylist);
-    }
+    } while (!this.allNonConsecutive(mapsPlaylist));
   }
 
   // Specifically controls how the playlists rotate.
@@ -71,26 +81,29 @@ export class MapPlaylist {
       // Big Maps are those larger than ~2.5 mil pixels
       case PlaylistType.BigMaps:
         return {
-          Europe: 3,
-          NorthAmerica: 2,
+          Europe: 2,
+          NorthAmerica: 1,
           Africa: 2,
           Britannia: 1,
           GatewayToTheAtlantic: 2,
-          Australia: 1,
-          Iceland: 1,
-          SouthAmerica: 3,
+          Australia: 2,
+          Iceland: 2,
+          SouthAmerica: 1,
           KnownWorld: 2,
+          DeglaciatedAntarctica: 2,
         };
       case PlaylistType.SmallMaps:
         return {
-          World: 1,
+          World: 4,
+          EuropeClassic: 3,
           Mena: 2,
           Pangaea: 1,
           Asia: 1,
           Mars: 1,
-          BetweenTwoSeas: 3,
-          Japan: 3,
+          BetweenTwoSeas: 2,
+          Japan: 2,
           BlackSea: 1,
+          FaroeIslands: 2,
         };
     }
   }

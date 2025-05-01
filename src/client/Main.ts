@@ -21,12 +21,17 @@ import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
+import "./RandomNameButton";
+import { RandomNameButton } from "./RandomNameButton";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import { generateCryptoRandomUUID } from "./Utils";
 import "./components/baseComponents/Button";
+import { OButton } from "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import { discordLogin, isLoggedIn } from "./jwt";
 import "./styles.css";
 
 export interface JoinLobbyEvent {
@@ -45,6 +50,7 @@ class Client {
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
   private darkModeButton: DarkModeButton | null = null;
+  private randomNameButton: RandomNameButton | null = null;
 
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
@@ -77,6 +83,32 @@ class Client {
     ) as DarkModeButton;
     if (!this.darkModeButton) {
       consolex.warn("Dark mode button element not found");
+    }
+
+    this.randomNameButton = document.querySelector(
+      "random-name-button",
+    ) as RandomNameButton;
+    if (!this.randomNameButton) {
+      consolex.warn("Random name button element not found");
+    }
+
+    const loginDiscordButton = document.getElementById(
+      "login-discord",
+    ) as OButton;
+    const claims = isLoggedIn();
+    if (claims === false) {
+      // Not logged in
+      loginDiscordButton.disable = false;
+      loginDiscordButton.translationKey = "main.login_discord";
+      loginDiscordButton.addEventListener("click", discordLogin);
+    } else {
+      // Logged in
+      loginDiscordButton.disable = true;
+      loginDiscordButton.translationKey = "main.logged_in";
+      // const avatarUrl = avatar
+      //   ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.${avatar.startsWith("a_") ? "gif" : "png"}`
+      //   : `https://cdn.discordapp.com/embed/avatars/${Number(discriminator) % 5}.png`;
+      // TODO: Update the page for logged in user
     }
 
     this.usernameInput = document.querySelector(
@@ -116,6 +148,14 @@ class Client {
     hlpModal instanceof HelpModal;
     document.getElementById("help-button").addEventListener("click", () => {
       hlpModal.open();
+    });
+
+    const settingsModal = document.querySelector(
+      "user-setting",
+    ) as UserSettingModal;
+    settingsModal instanceof UserSettingModal;
+    document.getElementById("settings-button").addEventListener("click", () => {
+      settingsModal.open();
     });
 
     const hostModal = document.querySelector(
@@ -200,6 +240,33 @@ class Client {
         gameRecord: lobby.gameRecord,
       },
       () => {
+        console.log("Closing modals");
+        document.getElementById("settings-button").classList.add("hidden");
+        [
+          "single-player-modal",
+          "host-lobby-modal",
+          "join-private-lobby-modal",
+          "game-starting-modal",
+          "top-bar",
+          "help-modal",
+          "user-setting",
+        ].forEach((tag) => {
+          const modal = document.querySelector(tag) as HTMLElement & {
+            close?: () => void;
+            isModalOpen?: boolean;
+          };
+          if (modal?.close) {
+            modal.close();
+          } else if ("isModalOpen" in modal) {
+            modal.isModalOpen = false;
+          }
+        });
+        this.publicLobby.stop();
+        document.querySelectorAll(".ad").forEach((ad) => {
+          (ad as HTMLElement).style.display = "none";
+        });
+
+        // show when the game loads
         const startingModal = document.querySelector(
           "game-starting-modal",
         ) as GameStartingModal;
@@ -247,6 +314,11 @@ function setFavicon(): void {
 
 // WARNING: DO NOT EXPOSE THIS ID
 export function getPersistentIDFromCookie(): string {
+  const claims = isLoggedIn();
+  if (claims !== false && claims.sub) {
+    return claims.sub;
+  }
+
   const COOKIE_NAME = "player_persistent_id";
 
   // Try to get existing cookie

@@ -1,8 +1,45 @@
 import { consolex } from "../Consolex";
 import { Game } from "../game/Game";
-import { TileRef } from "../game/GameMap";
+import { GameMap, TileRef } from "../game/GameMap";
+import { PseudoRandom } from "../PseudoRandom";
 import { AStar, PathFindResultType, TileResult } from "./AStar";
 import { MiniAStar } from "./MiniAStar";
+
+export class AirPathFinder {
+  constructor(
+    private mg: GameMap,
+    private random: PseudoRandom,
+  ) {}
+
+  nextTile(tile: TileRef, dst: TileRef): TileRef | true {
+    const x = this.mg.x(tile);
+    const y = this.mg.y(tile);
+    const dstX = this.mg.x(dst);
+    const dstY = this.mg.y(dst);
+
+    if (x === dstX && y === dstY) {
+      return true;
+    }
+
+    // Calculate next position
+    let nextX = x;
+    let nextY = y;
+
+    const ratio = Math.floor(1 + Math.abs(dstY - y) / (Math.abs(dstX - x) + 1));
+
+    if (this.random.chance(ratio) && x != dstX) {
+      if (x < dstX) nextX++;
+      else if (x > dstX) nextX--;
+    } else {
+      if (y < dstY) nextY++;
+      else if (y > dstY) nextY--;
+    }
+    if (nextX == x && nextY == y) {
+      return true;
+    }
+    return this.mg.ref(nextX, nextY);
+  }
+}
 
 export class PathFinder {
   private curr: TileRef = null;
@@ -16,24 +53,13 @@ export class PathFinder {
     private newAStar: (curr: TileRef, dst: TileRef) => AStar,
   ) {}
 
-  public static Mini(
-    game: Game,
-    iterations: number,
-    canMoveOnLand: boolean,
-    maxTries: number = 20,
-  ) {
+  public static Mini(game: Game, iterations: number, maxTries: number = 20) {
     return new PathFinder(game, (curr: TileRef, dst: TileRef) => {
       return new MiniAStar(
         game.map(),
         game.miniMap(),
         curr,
         dst,
-        (tr: TileRef): boolean => {
-          if (canMoveOnLand) {
-            return true;
-          }
-          return game.miniMap().isWater(tr);
-        },
         iterations,
         maxTries,
       );

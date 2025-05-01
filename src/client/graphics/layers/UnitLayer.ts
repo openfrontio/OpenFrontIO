@@ -3,11 +3,7 @@ import { EventBus } from "../../../core/EventBus";
 import { ClientID } from "../../../core/Schemas";
 import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
-import {
-  euclDistFN,
-  manhattanDistFN,
-  TileRef,
-} from "../../../core/game/GameMap";
+import { TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import {
@@ -18,6 +14,8 @@ import {
 import { MoveWarshipIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+
+import { getColoredSprite, loadAllSprites } from "../SpriteLoader";
 
 enum Relationship {
   Self,
@@ -77,6 +75,8 @@ export class UnitLayer implements Layer {
     this.eventBus.on(MouseUpEvent, (e) => this.onMouseUp(e));
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelectionChange(e));
     this.redraw();
+
+    loadAllSprites();
   }
 
   /**
@@ -199,6 +199,18 @@ export class UnitLayer implements Layer {
       ?.[GameUpdateType.Unit]?.forEach((unit) => {
         this.onUnitEvent(this.game.unit(unit.id));
       });
+    this.boatToTrail.forEach((trail, unit) => {
+      for (const t of trail) {
+        this.paintCell(
+          this.game.x(t),
+          this.game.y(t),
+          this.relationship(unit),
+          this.theme.territoryColor(unit.owner()),
+          150,
+          this.transportShipTrailContext,
+        );
+      }
+    });
   }
 
   private relationship(unit: UnitView): Relationship {
@@ -248,65 +260,10 @@ export class UnitLayer implements Layer {
   }
 
   private handleWarShipEvent(unit: UnitView) {
-    const rel = this.relationship(unit);
-
-    // Clear previous area
-    for (const t of this.game.bfs(
-      unit.lastTile(),
-      euclDistFN(unit.lastTile(), 6, false),
-    )) {
-      this.clearCell(this.game.x(t), this.game.y(t));
-    }
-
-    if (!unit.isActive()) {
-      return;
-    }
-
-    let outerColor = this.theme.territoryColor(unit.owner());
     if (unit.warshipTargetId()) {
-      const targetOwner = this.game
-        .units()
-        .find((u) => u.id() == unit.warshipTargetId())
-        ?.owner();
-      if (targetOwner == this.myPlayer) {
-        outerColor = colord({ r: 200, b: 0, g: 0 });
-      }
-    }
-
-    // Paint outer territory
-    for (const t of this.game.bfs(
-      unit.tile(),
-      euclDistFN(unit.tile(), 5, false),
-    )) {
-      this.paintCell(this.game.x(t), this.game.y(t), rel, outerColor, 255);
-    }
-
-    // Paint border
-    for (const t of this.game.bfs(
-      unit.tile(),
-      manhattanDistFN(unit.tile(), 4),
-    )) {
-      this.paintCell(
-        this.game.x(t),
-        this.game.y(t),
-        rel,
-        this.theme.borderColor(unit.owner()),
-        255,
-      );
-    }
-
-    // Paint inner territory
-    for (const t of this.game.bfs(
-      unit.tile(),
-      euclDistFN(unit.tile(), 1, false),
-    )) {
-      this.paintCell(
-        this.game.x(t),
-        this.game.y(t),
-        rel,
-        this.theme.territoryColor(unit.owner()),
-        255,
-      );
+      this.drawSprite(unit, colord({ r: 200, b: 0, g: 0 }));
+    } else {
+      this.drawSprite(unit);
     }
   }
 
@@ -344,89 +301,11 @@ export class UnitLayer implements Layer {
 
   // interception missle from SAM
   private handleMissileEvent(unit: UnitView) {
-    const rel = this.relationship(unit);
-    const range = 2;
-
-    for (const t of this.game.bfs(
-      unit.lastTile(),
-      euclDistFN(unit.lastTile(), range, false),
-    )) {
-      this.clearCell(this.game.x(t), this.game.y(t));
-    }
-
-    if (unit.isActive()) {
-      for (const t of this.game.bfs(
-        unit.tile(),
-        euclDistFN(unit.tile(), range, false),
-      )) {
-        this.paintCell(
-          this.game.x(t),
-          this.game.y(t),
-          rel,
-          this.theme.spawnHighlightColor(),
-          255,
-        );
-      }
-
-      this.paintCell(
-        this.game.x(unit.tile()),
-        this.game.y(unit.tile()),
-        rel,
-        this.theme.borderColor(unit.owner()),
-        255,
-      );
-    }
+    this.drawSprite(unit);
   }
 
   private handleNuke(unit: UnitView) {
-    const rel = this.relationship(unit);
-    let range = 0;
-    switch (unit.type()) {
-      case UnitType.AtomBomb:
-        range = 4;
-        break;
-      case UnitType.HydrogenBomb:
-        range = 6;
-        break;
-      case UnitType.MIRV:
-        range = 9;
-        break;
-    }
-
-    // Clear previous area
-    for (const t of this.game.bfs(
-      unit.lastTile(),
-      euclDistFN(unit.lastTile(), range, false),
-    )) {
-      this.clearCell(this.game.x(t), this.game.y(t));
-    }
-
-    if (unit.isActive()) {
-      for (const t of this.game.bfs(
-        unit.tile(),
-        euclDistFN(unit.tile(), range, false),
-      )) {
-        this.paintCell(
-          this.game.x(t),
-          this.game.y(t),
-          rel,
-          this.theme.spawnHighlightColor(),
-          255,
-        );
-      }
-      for (const t of this.game.bfs(
-        unit.tile(),
-        euclDistFN(unit.tile(), 2, false),
-      )) {
-        this.paintCell(
-          this.game.x(t),
-          this.game.y(t),
-          rel,
-          this.theme.borderColor(unit.owner()),
-          255,
-        );
-      }
-    }
+    this.drawSprite(unit);
   }
 
   private handleMIRVWarhead(unit: UnitView) {
@@ -447,45 +326,7 @@ export class UnitLayer implements Layer {
   }
 
   private handleTradeShipEvent(unit: UnitView) {
-    const rel = this.relationship(unit);
-
-    // Clear previous area
-    for (const t of this.game.bfs(
-      unit.lastTile(),
-      euclDistFN(unit.lastTile(), 3, false),
-    )) {
-      this.clearCell(this.game.x(t), this.game.y(t));
-    }
-
-    if (unit.isActive()) {
-      // Paint territory
-      for (const t of this.game.bfs(
-        unit.tile(),
-        manhattanDistFN(unit.tile(), 2),
-      )) {
-        this.paintCell(
-          this.game.x(t),
-          this.game.y(t),
-          rel,
-          this.theme.territoryColor(unit.owner()),
-          255,
-        );
-      }
-
-      // Paint border
-      for (const t of this.game.bfs(
-        unit.tile(),
-        manhattanDistFN(unit.tile(), 1),
-      )) {
-        this.paintCell(
-          this.game.x(t),
-          this.game.y(t),
-          rel,
-          this.theme.borderColor(unit.owner()),
-          255,
-        );
-      }
-    }
+    this.drawSprite(unit);
   }
 
   private handleBoatEvent(unit: UnitView) {
@@ -497,53 +338,21 @@ export class UnitLayer implements Layer {
     const trail = this.boatToTrail.get(unit);
     trail.push(unit.lastTile());
 
-    // Clear previous area
-    for (const t of this.game.bfs(
-      unit.lastTile(),
-      manhattanDistFN(unit.lastTile(), 2),
-    )) {
-      this.clearCell(this.game.x(t), this.game.y(t));
+    // Paint trail
+    for (const t of trail.slice(-1)) {
+      this.paintCell(
+        this.game.x(t),
+        this.game.y(t),
+        rel,
+        this.theme.territoryColor(unit.owner()),
+        150,
+        this.transportShipTrailContext,
+      );
     }
 
-    if (unit.isActive()) {
-      // Paint trail
-      for (const t of trail.slice(-1)) {
-        this.paintCell(
-          this.game.x(t),
-          this.game.y(t),
-          rel,
-          this.theme.territoryColor(unit.owner()),
-          150,
-          this.transportShipTrailContext,
-        );
-      }
+    this.drawSprite(unit);
 
-      for (const t of this.game.bfs(
-        unit.tile(),
-        manhattanDistFN(unit.tile(), 2),
-      )) {
-        this.paintCell(
-          this.game.x(t),
-          this.game.y(t),
-          rel,
-          this.theme.borderColor(unit.owner()),
-          255,
-        );
-      }
-
-      for (const t of this.game.bfs(
-        unit.tile(),
-        manhattanDistFN(unit.tile(), 1),
-      )) {
-        this.paintCell(
-          this.game.x(t),
-          this.game.y(t),
-          rel,
-          this.theme.territoryColor(unit.owner()),
-          255,
-        );
-      }
-    } else {
+    if (!unit.isActive()) {
       for (const t of trail) {
         this.clearCell(
           this.game.x(t),
@@ -605,5 +414,66 @@ export class UnitLayer implements Layer {
     context: CanvasRenderingContext2D = this.context,
   ) {
     context.clearRect(x, y, 1, 1);
+  }
+
+  drawSprite(unit: UnitView, customTerritoryColor?: Colord) {
+    const x = this.game.x(unit.tile());
+    const y = this.game.y(unit.tile());
+    const lastX = this.game.x(unit.lastTile());
+    const lastY = this.game.y(unit.lastTile());
+
+    let alternateViewColor = null;
+
+    if (this.alternateView) {
+      let rel = this.relationship(unit);
+      if (unit.type() == UnitType.TradeShip && unit.dstPortId() != null) {
+        const target = this.game.unit(unit.dstPortId())?.owner();
+        const myPlayer = this.game.myPlayer();
+        if (myPlayer != null && target != null) {
+          if (myPlayer == target) {
+            rel = Relationship.Self;
+          } else if (myPlayer.isFriendly(target)) {
+            rel = Relationship.Ally;
+          }
+        }
+      }
+      switch (rel) {
+        case Relationship.Self:
+          alternateViewColor = this.theme.selfColor();
+          break;
+        case Relationship.Ally:
+          alternateViewColor = this.theme.allyColor();
+          break;
+        case Relationship.Enemy:
+          alternateViewColor = this.theme.enemyColor();
+          break;
+      }
+    }
+
+    const sprite = getColoredSprite(
+      unit,
+      this.theme,
+      alternateViewColor ?? customTerritoryColor,
+      alternateViewColor,
+    );
+
+    const clearsize = sprite.width + 1;
+
+    this.context.clearRect(
+      lastX - clearsize / 2,
+      lastY - clearsize / 2,
+      clearsize,
+      clearsize,
+    );
+
+    if (unit.isActive()) {
+      this.context.drawImage(
+        sprite,
+        Math.round(x - sprite.width / 2),
+        Math.round(y - sprite.height / 2),
+        sprite.width,
+        sprite.width,
+      );
+    }
   }
 }

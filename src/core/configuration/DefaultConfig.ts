@@ -1,5 +1,6 @@
 import {
   Difficulty,
+  Duos,
   Game,
   GameMapType,
   GameMode,
@@ -34,7 +35,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return process.env.GIT_COMMIT;
   }
   r2Endpoint(): string {
-    return process.env.R2_ENDPOINT;
+    return `https://${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`;
   }
   r2AccessKey(): string {
     return process.env.R2_ACCESS_KEY;
@@ -42,7 +43,11 @@ export abstract class DefaultServerConfig implements ServerConfig {
   r2SecretKey(): string {
     return process.env.R2_SECRET_KEY;
   }
-  abstract r2Bucket(): string;
+
+  r2Bucket(): string {
+    return process.env.R2_BUCKET;
+  }
+
   adminHeader(): string {
     return "x-admin-key";
   }
@@ -69,7 +74,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
         GameMapType.Europe,
       ].includes(map)
     ) {
-      return Math.random() < 0.2 ? 150 : 70;
+      return Math.random() < 0.2 ? 100 : 50;
     }
     // Maps with ~2.5 - ~3.5 mil pixels
     if (
@@ -80,7 +85,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
         GameMapType.Asia,
       ].includes(map)
     ) {
-      return Math.random() < 0.2 ? 100 : 50;
+      return Math.random() < 0.3 ? 50 : 25;
     }
     // Maps with ~2 mil pixels
     if (
@@ -89,9 +94,12 @@ export abstract class DefaultServerConfig implements ServerConfig {
         GameMapType.Mars,
         GameMapType.Oceania,
         GameMapType.Japan, // Japan at this level because its 2/3 water
+        GameMapType.FaroeIslands,
+        GameMapType.DeglaciatedAntarctica,
+        GameMapType.EuropeClassic,
       ].includes(map)
     ) {
-      return Math.random() < 0.2 ? 70 : 40;
+      return Math.random() < 0.3 ? 50 : 25;
     }
     // Maps smaller than ~2 mil pixels
     if (
@@ -101,14 +109,14 @@ export abstract class DefaultServerConfig implements ServerConfig {
         GameMapType.Pangaea,
       ].includes(map)
     ) {
-      return Math.random() < 0.2 ? 60 : 35;
+      return Math.random() < 0.5 ? 30 : 15;
     }
     // world belongs with the ~2 mils, but these amounts never made sense so I assume the insanity is intended.
     if (map == GameMapType.World) {
-      return Math.random() < 0.2 ? 150 : 60;
+      return Math.random() < 0.2 ? 150 : 50;
     }
     // default return for non specified map
-    return Math.random() < 0.2 ? 85 : 45;
+    return Math.random() < 0.2 ? 50 : 20;
   }
   workerIndex(gameID: GameID): number {
     return simpleHash(gameID) % this.numWorkers();
@@ -135,8 +143,15 @@ export class DefaultConfig implements Config {
     return 0.8;
   }
 
+  samWarheadHittingChance(): number {
+    return 0.5;
+  }
+
   traitorDefenseDebuff(): number {
-    return 0.8;
+    return 0.5;
+  }
+  traitorDuration(): number {
+    return 30 * 10; // 30 seconds
   }
   spawnImmunityDuration(): Tick {
     return 5 * 10;
@@ -189,9 +204,14 @@ export class DefaultConfig implements Config {
   defensePostDefenseBonus(): number {
     return 5;
   }
+  playerTeams(): number | typeof Duos {
+    return this._gameConfig.playerTeams ?? 0;
+  }
+
   spawnNPCs(): boolean {
     return !this._gameConfig.disableNPCs;
   }
+
   disableNukes(): boolean {
     return this._gameConfig.disableNukes;
   }
@@ -322,7 +342,7 @@ export class DefaultConfig implements Config {
             p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
-                  1_500_000 * 3,
+                  3_000_000,
                   (p.unitsIncludingConstruction(UnitType.SAMLauncher).length +
                     1) *
                     1_500_000,
@@ -336,7 +356,7 @@ export class DefaultConfig implements Config {
             p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
-                  2_000_000,
+                  1_000_000,
                   Math.pow(
                     2,
                     p.unitsIncludingConstruction(UnitType.City).length,
@@ -656,5 +676,38 @@ export class DefaultConfig implements Config {
   // Humans can be population, soldiers attacking, soldiers in boat etc.
   nukeDeathFactor(humans: number, tilesOwned: number): number {
     return (5 * humans) / Math.max(1, tilesOwned);
+  }
+
+  structureMinDist(): number {
+    // TODO: Increase this to ~15 once upgradable structures are implemented.
+    return 1;
+  }
+
+  shellLifetime(): number {
+    return 50;
+  }
+
+  warshipPatrolRange(): number {
+    return 100;
+  }
+
+  warshipTargettingRange(): number {
+    return 130;
+  }
+
+  warshipShellAttackRate(): number {
+    return 20;
+  }
+
+  defensePostShellAttackRate(): number {
+    return 100;
+  }
+
+  safeFromPiratesCooldownMax(): number {
+    return 20;
+  }
+
+  defensePostTargettingRange(): number {
+    return 75;
   }
 }
