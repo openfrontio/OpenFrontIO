@@ -8,7 +8,7 @@ export class PlayerInfoModal extends LitElement {
     close: () => void;
   };
 
-  @state() private roles: string[] = ["choco"];
+  @state() private roles: string[] = ["cho"];
 
   @state() private wins: number = 12;
   @state() private playTimeSeconds: number = 5 * 3600 + 33 * 60;
@@ -70,25 +70,28 @@ export class PlayerInfoModal extends LitElement {
 
   private getAllRolesSorted(): Record<string, any> {
     const allRoles = [
-      "admin", // Admin
-      "og", // OG
-      "creator", // owner
+      "adm", // Admin
+      "og0", // OG
+      "cre", // Creator
       "bot", // Bots
-      "challenger", // Challenger
-      "og100", // OG100
-      "contrib", // Contributor
-      "ping", // Ping
-      "booster", // Server Booster
-      "content", // Content Creator
-      "beta", // Beta Tester
-      "supporter", // Early Access Supporter
+      "cha", // Challenger
+      "og1", // OG100
+      "ctr", // Contributor
+      "pin", // Ping
+      "bst", // Server Booster
+      "ccr", // Content Creator
+      "bet", // Beta Tester
+      "eas", // Early Access Supporter
       "mod", // Mod
-      "staff", // Support Staff
-      "choco", // Choco
-      "devchat", // DevChatAccess
-      "active", // Active Contributor
-      "adminasst", // Admin Assistant
-      "user", // Default Player Role
+      "sta", // Support Staff
+      "dca", // DevChatAccess
+      "mem", // Member
+      "act", // Active Contributor
+      "ass", // Admin Assistant
+      "tra", // Translator
+      "trd", // Translator Dev
+      "trh", // Translator Helper
+      "cho", // Chocolate!
     ];
     return Object.fromEntries(allRoles.map((r) => [r, this.getRoleStyle(r)]));
   }
@@ -119,7 +122,7 @@ export class PlayerInfoModal extends LitElement {
         priority: number;
       }
     > = {
-      creator: {
+      cre: {
         label: "Creator",
         flagWrapper:
           "p-[3px] rounded-full bg-gradient-to-r from-yellow-200 via-yellow-300 to-yellow-200 animate-shimmer",
@@ -128,7 +131,7 @@ export class PlayerInfoModal extends LitElement {
         badgeBg: "bg-yellow-100/20 border-yellow-200/30",
         priority: 1,
       },
-      admin: {
+      adm: {
         label: "Admin",
         flagWrapper:
           "p-[3px] rounded-full bg-gradient-to-r from-red-500 via-red-600 to-red-500 animate-shimmer",
@@ -137,7 +140,7 @@ export class PlayerInfoModal extends LitElement {
         badgeBg: "bg-red-500/20 border-red-400/30",
         priority: 2,
       },
-      adminasst: {
+      ass: {
         label: "Admin Assistant",
         flagWrapper:
           "p-[3px] rounded-full bg-gradient-to-r from-orange-200 via-orange-300 to-orange-200 animate-shimmer",
@@ -155,7 +158,7 @@ export class PlayerInfoModal extends LitElement {
         badgeBg: "bg-orange-400/20 border-orange-300/30",
         priority: 4,
       },
-      staff: {
+      sta: {
         label: "Support Staff",
         flagWrapper:
           "p-[3px] rounded-full bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-300 animate-shimmer",
@@ -164,7 +167,7 @@ export class PlayerInfoModal extends LitElement {
         badgeBg: "bg-yellow-300/20 border-yellow-300/30",
         priority: 5,
       },
-      choco: {
+      cho: {
         label: "Chocolate!",
         flagWrapper: "choco-flag-wrapper",
         nameText: "choco-name-text",
@@ -172,7 +175,7 @@ export class PlayerInfoModal extends LitElement {
         badgeBg: "choco-badge-bg",
         priority: 6,
       },
-      active: {
+      act: {
         label: "Active Contributor",
         flagWrapper:
           "p-[3px] rounded-full bg-gradient-to-r from-green-500 to-green-700 animate-shimmer",
@@ -181,7 +184,7 @@ export class PlayerInfoModal extends LitElement {
         badgeBg: "bg-green-500/20 border-green-400/30",
         priority: 7,
       },
-      contrib: {
+      ctr: {
         label: "Contributor",
         flagWrapper:
           "p-[3px] rounded-full bg-gradient-to-r from-green-400 to-green-600 animate-shimmer",
@@ -190,85 +193,112 @@ export class PlayerInfoModal extends LitElement {
         badgeBg: "bg-green-500/20 border-green-300/30",
         priority: 8,
       },
-      content: {
+      trd: {
+        label: "Translator Dev",
+        flagWrapper:
+          "p-[3px] rounded-full bg-gradient-to-r from-purple-400 to-purple-600 animate-shimmer",
+        nameText: "text-2xl font-bold text-purple-300 drop-shadow",
+        roleText: "text-purple-300 font-semibold",
+        badgeBg: "bg-purple-500/20 border-purple-400/30",
+        priority: 9,
+      },
+      trh: {
+        label: "Translator Helper",
+        flagWrapper:
+          "p-[3px] rounded-full bg-gradient-to-r from-teal-400 to-teal-600 animate-shimmer",
+        nameText: "text-2xl font-bold text-teal-300 drop-shadow",
+        roleText: "text-teal-300 font-semibold",
+        badgeBg: "bg-teal-500/20 border-teal-400/30",
+        priority: 10,
+      },
+      tra: {
+        label: "Translator",
+        flagWrapper:
+          "p-[3px] rounded-full bg-gradient-to-r from-blue-400 to-blue-600 animate-shimmer",
+        nameText: "text-2xl font-bold text-blue-300 drop-shadow",
+        roleText: "text-blue-300 font-semibold",
+        badgeBg: "bg-blue-500/20 border-blue-400/30",
+        priority: 11,
+      },
+      ccr: {
         label: "Content Creator",
         flagWrapper:
           "p-[3px] rounded-full bg-gradient-to-r from-orange-500 to-orange-700 animate-shimmer",
         nameText: "text-2xl font-bold text-orange-300 drop-shadow",
         roleText: "text-orange-300 font-semibold",
         badgeBg: "bg-orange-500/20 border-orange-400/30",
-        priority: 9,
+        priority: 12,
       },
-      beta: {
+      bet: {
         label: "Beta Tester",
         flagWrapper:
           "p-[3px] rounded-full bg-gradient-to-r from-teal-500 to-teal-700 animate-shimmer",
         nameText: "text-2xl font-bold text-teal-300 drop-shadow",
         roleText: "text-teal-300 font-semibold",
         badgeBg: "bg-teal-500/20 border-teal-400/30",
-        priority: 10,
+        priority: 13,
       },
-      devchat: {
+      dca: {
         label: "Dev Chat Access",
         flagWrapper:
           "p-[3px] rounded-full bg-gradient-to-r from-purple-500 to-purple-700 animate-shimmer",
         nameText: "text-2xl font-bold text-purple-300 drop-shadow",
         roleText: "text-purple-300 font-semibold",
         badgeBg: "bg-purple-500/20 border-purple-400/30",
-        priority: 11,
+        priority: 14,
       },
-      supporter: {
+      eas: {
         label: "Early Access Supporter",
         flagWrapper:
           "p-[3px] rounded-full bg-gradient-to-r from-yellow-500 to-yellow-400 animate-shimmer",
         nameText: "text-2xl font-bold text-yellow-400 drop-shadow",
         roleText: "text-yellow-400 font-semibold",
         badgeBg: "bg-yellow-400/20 border-yellow-300/30",
-        priority: 12,
+        priority: 15,
       },
-      booster: {
+      bst: {
         label: "Server Booster",
         flagWrapper:
           "p-[3px] rounded-full bg-gradient-to-r from-pink-500 to-pink-700 animate-shimmer",
         nameText: "text-2xl font-bold text-pink-300 drop-shadow",
         roleText: "text-pink-300 font-semibold",
         badgeBg: "bg-pink-500/20 border-pink-400/30",
-        priority: 13,
+        priority: 16,
       },
-      og: {
+      og0: {
         label: "OG",
         flagWrapper:
           "p-[3px] rounded-full bg-gradient-to-r from-yellow-300 to-yellow-200 animate-shimmer",
         nameText: "text-2xl font-bold text-yellow-300 drop-shadow",
         roleText: "text-yellow-300 font-semibold",
         badgeBg: "bg-yellow-200/20 border-yellow-300/30",
-        priority: 14,
+        priority: 17,
       },
-      og100: {
+      og1: {
         label: "OG100",
         flagWrapper:
           "p-[3px] rounded-full bg-gradient-to-r from-lime-300 to-lime-500 animate-shimmer",
         nameText: "text-2xl font-bold text-lime-300 drop-shadow",
         roleText: "text-lime-300 font-semibold",
         badgeBg: "bg-lime-300/20 border-lime-300/30",
-        priority: 15,
+        priority: 18,
       },
-      challenger: {
+      cha: {
         label: "Challenger",
         flagWrapper:
           "p-[3px] rounded-full bg-gradient-to-r from-blue-500 to-blue-700",
         nameText: "text-2xl font-bold text-blue-300 drop-shadow",
         roleText: "text-blue-300 font-semibold",
         badgeBg: "bg-blue-500/20 border-blue-400/30",
-        priority: 16,
+        priority: 19,
       },
-      ping: {
+      pin: {
         label: "Ping",
         flagWrapper: "p-[3px] rounded-full bg-gray-400",
         nameText: "text-2xl font-bold text-gray-300 drop-shadow",
         roleText: "text-gray-300 font-semibold",
         badgeBg: "bg-gray-400/20 border-gray-300/30",
-        priority: 17,
+        priority: 20,
       },
       bot: {
         label: "Bot",
@@ -276,15 +306,15 @@ export class PlayerInfoModal extends LitElement {
         nameText: "text-2xl font-bold text-gray-300 drop-shadow",
         roleText: "text-gray-300 font-semibold",
         badgeBg: "bg-gray-400/20 border-gray-300/30",
-        priority: 18,
+        priority: 21,
       },
-      member: {
+      mem: {
         label: "Member",
         flagWrapper: "p-[3px] rounded-full bg-gray-400",
         nameText: "text-2xl font-bold text-gray-300 drop-shadow",
         roleText: "text-gray-300 font-semibold",
         badgeBg: "bg-gray-400/20 border-gray-300/30",
-        priority: 19,
+        priority: 22,
       },
     };
 
@@ -361,7 +391,7 @@ export class PlayerInfoModal extends LitElement {
               .sort((a, b) => a.priority - b.priority)
               .map(({ role }) => {
                 const { label, roleText, badgeBg } = this.getRoleStyle(role);
-                const isOwner = role === "creator";
+                const isOwner = role === "cre";
                 return html`
                   <span
                     class="${roleText} ${badgeBg} ${isOwner
