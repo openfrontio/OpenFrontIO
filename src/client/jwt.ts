@@ -98,7 +98,7 @@ export function _isLoggedIn(): TokenPayload | false {
       localStorage.removeItem("token");
       return false;
     }
-    const refreshAge: number = 3600; // 1 hour
+    const refreshAge: number = 6 * 3600; // 6 hours
     if (iat !== undefined && now >= iat + refreshAge) {
       console.log("Refreshing access token...");
       postRefresh().then((success) => {
