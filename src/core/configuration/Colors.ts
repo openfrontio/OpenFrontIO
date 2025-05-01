@@ -5,7 +5,7 @@ export const blue: Colord = colord({ r: 41, g: 98, b: 255 }); // Royal Blue
 export const teal = colord({ r: 43, g: 212, b: 189 });
 export const purple = colord({ r: 146, g: 52, b: 234 });
 export const yellow = colord({ r: 231, g: 176, b: 8 });
-export const orange = colord({ r: 249, s: 116, l: 21 });
+export const orange = colord({ r: 249, g: 116, b: 21 });
 export const green = colord({ r: 65, g: 190, b: 82 });
 export const botColor: Colord = colord({ r: 210, g: 206, b: 200 }); // Muted Beige Gray
 
