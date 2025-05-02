@@ -110,7 +110,17 @@ export class PlayerInfoModal extends LitElement {
       "trh", // Translator Helper
       "cho", // Chocolate!
     ];
-    return Object.fromEntries(allRoles.map((r) => [r, this.getRoleStyle(r)]));
+
+    const sortedRoles = allRoles
+      .map((role) => ({
+        role,
+        priority: this.getRoleStyle(role).priority,
+      }))
+      .sort((a, b) => a.priority - b.priority);
+
+    return Object.fromEntries(
+      sortedRoles.map(({ role }) => [role, this.getRoleStyle(role)]),
+    );
   }
 
   createRenderRoot() {
