@@ -574,3 +574,55 @@ label.option-card:hover {
   background-color: rgba(218, 165, 32, 0.2);
   border: 1px solid rgba(218, 165, 32, 0.3);
 }
+
+.progress-bar {
+  position: relative;
+  height: 100%;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.progress-bar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 150%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0.6),
+    rgba(255, 255, 255, 0)
+  );
+  animation: shimmer_2 2s infinite;
+}
+
+@keyframes shimmer_2 {
+  0% {
+    left: -150%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.glow-effect {
+  position: relative;
+  animation: glow 2s infinite alternate;
+}
+
+@keyframes glow {
+  0% {
+    box-shadow:
+      0 0 5px rgba(255, 255, 255, 0.5),
+      0 0 10px rgba(255, 255, 255, 0.4),
+      0 0 15px rgba(255, 255, 255, 0.3);
+  }
+  100% {
+    box-shadow:
+      0 0 10px rgba(255, 255, 255, 0.8),
+      0 0 20px rgba(255, 255, 255, 0.6),
+      0 0 30px rgba(255, 255, 255, 0.4);
+  }
+}

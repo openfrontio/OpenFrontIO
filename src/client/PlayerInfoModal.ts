@@ -10,10 +10,27 @@ export class PlayerInfoModal extends LitElement {
 
   @state() private roles: string[] = ["cho"];
 
+  @state() private currentRank: string = "New Player";
+  @state() private rankList: string[] = [
+    "New Player",
+    "Logged-in Player",
+    "Seen Player",
+    "Known Player",
+    "Well-Known Player",
+    "Best-Known Player",
+    "Legend",
+  ];
+
+  private getNextRank(): string {
+    const currentIndex = this.rankList.indexOf(this.currentRank);
+    return this.rankList[currentIndex + 1] || "Max Rank Achieved";
+  }
+
+  @state() private isDebugMode: boolean = true;
+
   @state() private wins: number = 12;
   @state() private playTimeSeconds: number = 5 * 3600 + 33 * 60;
   @state() private progressPercent: number = 62;
-  @state() private nextRank: string = "Well-Known Player";
 
   @state() private buildingStats = {
     city: { built: 0, destroyed: 0, finalCount: 0 },
@@ -321,6 +338,91 @@ export class PlayerInfoModal extends LitElement {
     return roleStyles[role] || roleStyles["member"];
   }
 
+  private getRankStyle(rank: string): {
+    bg: string;
+    border: string;
+    text: string;
+    glow?: boolean;
+    flagWrapper: string;
+    nameText: string;
+  } {
+    const rankStyles: Record<
+      string,
+      {
+        bg: string;
+        border: string;
+        text: string;
+        glow?: boolean;
+        flagWrapper: string;
+        nameText: string;
+      }
+    > = {
+      "New Player": {
+        bg: "bg-gray-500/20",
+        border: "border-gray-400/30",
+        text: "text-gray-300",
+        flagWrapper: "p-[3px] rounded-full bg-gray-500",
+        nameText: "text-xl font-bold text-gray-300",
+      },
+      "Logged-in Player": {
+        bg: "bg-blue-500/20",
+        border: "border-blue-400/30",
+        text: "text-blue-300",
+        flagWrapper: "p-[3px] rounded-full bg-blue-500",
+        nameText: "text-xl font-bold text-blue-300",
+      },
+      "Seen Player": {
+        bg: "bg-green-500/20",
+        border: "border-green-400/30",
+        text: "text-green-300",
+        flagWrapper: "p-[3px] rounded-full bg-green-500",
+        nameText: "text-xl font-bold text-green-300",
+      },
+      "Known Player": {
+        bg: "bg-yellow-500/20",
+        border: "border-yellow-400/30",
+        text: "text-yellow-300",
+        flagWrapper: "p-[3px] rounded-full bg-yellow-500",
+        nameText: "text-xl font-bold text-yellow-300",
+      },
+      "Well-Known Player": {
+        bg: "bg-orange-500/20",
+        border: "border-orange-400/30",
+        text: "text-orange-300",
+        flagWrapper: "p-[3px] rounded-full bg-orange-500",
+        nameText: "text-xl font-bold text-orange-300",
+      },
+      "Best-Known Player": {
+        bg: "bg-red-500/20",
+        border: "border-red-400/30",
+        text: "text-red-300",
+        glow: true,
+        flagWrapper:
+          "p-[3px] rounded-full bg-gradient-to-r from-red-500 via-red-600 to-red-500 animate-shimmer",
+        nameText: "text-2xl font-bold text-red-300 drop-shadow",
+      },
+      Legend: {
+        bg: "bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-400",
+        border: "border-yellow-300",
+        text: "text-yellow-200",
+        glow: true,
+        flagWrapper:
+          "p-[3px] rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-400 animate-shimmer",
+        nameText: "text-2xl font-bold text-yellow-200 drop-shadow",
+      },
+    };
+
+    return (
+      rankStyles[rank] || {
+        bg: "bg-gray-500/20",
+        border: "border-gray-400/30",
+        text: "text-gray-300",
+        flagWrapper: "p-[3px] rounded-full bg-gray-500",
+        nameText: "text-xl font-bold text-gray-300",
+      }
+    );
+  }
+
   private getHighestRole(roles: string[]): string {
     return (
       roles
@@ -347,6 +449,23 @@ export class PlayerInfoModal extends LitElement {
     return buildingNames[building] || building;
   }
 
+  private getProgressBarColor(progress: number): string {
+    if (progress >= 80) {
+      return "rgba(34, 197, 94, 1)";
+    } else if (progress >= 50) {
+      return "rgba(234, 179, 8, 1)";
+    } else {
+      return "rgba(239, 68, 68, 1)";
+    }
+  }
+
+  private advanceRank(): void {
+    const currentIndex = this.rankList.indexOf(this.currentRank);
+    if (currentIndex < this.rankList.length - 1) {
+      this.currentRank = this.rankList[currentIndex + 1];
+    }
+  }
+
   render() {
     const playerName = this.getStoredName();
     const flag = this.getStoredFlag();
@@ -361,14 +480,16 @@ export class PlayerInfoModal extends LitElement {
       <o-modal id="playerInfoModal" title="Player Info">
         <div class="flex flex-col items-center mt-2 mb-4">
           <div class="flex justify-center items-center gap-3">
-            <div class="${flagWrapper}">
+            <div class="${this.getRankStyle(this.currentRank).flagWrapper}">
               <img
                 class="size-[48px] rounded-full block"
                 src="/flags/${flag || "xx"}.svg"
                 alt="Flag"
               />
             </div>
-            <div class="${nameText}">${playerName}</div>
+            <div class="${this.getRankStyle(this.currentRank).nameText}">
+              ${playerName}
+            </div>
             <span>|</span>
             <div class="${nameText}">${discordUserName}</div>
             <div class="${flagWrapper}">
@@ -378,6 +499,22 @@ export class PlayerInfoModal extends LitElement {
                 alt="Discord Avatar"
               />
             </div>
+          </div>
+
+          <hr class="w-2/3 border-gray-600 my-2" />
+
+          <div class="flex flex-wrap justify-center gap-2 mb-2">
+            <span
+              class="text-sm border px-2 py-1 rounded-full flex items-center gap-1 ${this.getRankStyle(
+                this.currentRank,
+              ).bg} ${this.getRankStyle(this.currentRank)
+                .border} ${this.getRankStyle(this.currentRank)
+                .text} ${this.getRankStyle(this.currentRank).glow
+                ? "glow-effect"
+                : ""}"
+            >
+              ${this.currentRank}
+            </span>
           </div>
 
           <hr class="w-2/3 border-gray-600 my-2" />
@@ -425,16 +562,19 @@ export class PlayerInfoModal extends LitElement {
           </div>
 
           <div
-            class="w-2/3 bg-white/10 h-3 rounded-full overflow-hidden mb-1 relative"
+            class="progress-bar-container w-2/3 bg-white/10 h-3 rounded-full overflow-hidden mb-1 relative"
           >
             <div
-              class="bg-green-400 h-full transition-all duration-300"
-              style="width: ${this.progressPercent ?? 0}%;"
+              class="progress-bar h-full"
+              style="
+    width: ${this.progressPercent ?? 0}%;
+    background-color: ${this.getProgressBarColor(this.progressPercent)};
+  "
             ></div>
           </div>
 
           <div class="w-2/3 text-right text-xs text-gray-400 italic">
-            Next rank: ${this.nextRank ?? "???"}
+            Next rank: ${this.getNextRank() ?? "???"}
           </div>
 
           <hr class="w-2/3 border-gray-600 my-2" />
@@ -556,33 +696,61 @@ export class PlayerInfoModal extends LitElement {
 
           <hr class="w-2/3 border-gray-600 my-2" />
 
-          <div class="mt-4 w-full max-w-md">
-            <div class="text-sm text-gray-400 font-semibold mb-1">
-              🛠️ Debug: Set Roles
-            </div>
-            <div class="flex flex-wrap gap-2">
-              ${Object.keys(this.getAllRolesSorted()).map((role) => {
-                const isSelected = this.roles.includes(role);
-                return html`
-                  <label
-                    class="flex items-center gap-1 text-xs bg-white/5 px-2 py-1 rounded border border-white/10 cursor-pointer"
-                  >
+          ${this.isDebugMode
+            ? html`
+                <div class="mt-4 w-full max-w-md">
+                  <div class="text-sm text-gray-400 font-semibold mb-1">
+                    🛠️ Debug: Set Roles
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    ${Object.keys(this.getAllRolesSorted()).map((role) => {
+                      const isSelected = this.roles.includes(role);
+                      return html`
+                        <label
+                          class="flex items-center gap-1 text-xs bg-white/5 px-2 py-1 rounded border border-white/10 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            class="accent-white"
+                            .checked=${isSelected}
+                            @change=${(e: Event) =>
+                              this.toggleRole(
+                                role,
+                                (e.target as HTMLInputElement).checked,
+                              )}
+                          />
+                          ${this.getRoleStyle(role).label}
+                        </label>
+                      `;
+                    })}
+                  </div>
+                  <div class="flex items-center gap-2">
                     <input
-                      type="checkbox"
-                      class="accent-white"
-                      .checked=${isSelected}
-                      @change=${(e: Event) =>
-                        this.toggleRole(
-                          role,
-                          (e.target as HTMLInputElement).checked,
-                        )}
+                      type="range"
+                      min="0"
+                      max="100"
+                      .value=${this.progressPercent}
+                      @input=${(e: Event) =>
+                        (this.progressPercent = Number(
+                          (e.target as HTMLInputElement).value,
+                        ))}
+                      class="w-full"
                     />
-                    ${this.getRoleStyle(role).label}
-                  </label>
-                `;
-              })}
-            </div>
-          </div>
+                    <span class="text-sm text-gray-300"
+                      >${this.progressPercent}%</span
+                    >
+                  </div>
+                </div>
+                <div class="mt-4 w-full max-w-md">
+                  <button
+                    class="text-sm text-gray-300 bg-gray-700 px-3 py-1 rounded"
+                    @click=${this.advanceRank}
+                  >
+                    Advance Rank
+                  </button>
+                </div>
+              `
+            : null}
         </div>
       </o-modal>
     `;
