@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
+import { getUserMe, isLoggedIn } from "./jwt";
 
 @customElement("player-info-modal")
 export class PlayerInfoModal extends LitElement {
@@ -7,6 +8,14 @@ export class PlayerInfoModal extends LitElement {
     open: () => void;
     close: () => void;
   };
+
+  @state() private discordUserName: string = "";
+  @state() private discordAvatarUrl: string = "";
+  @state() private playerName: string = "";
+  @state() private flag: string = "";
+  @state() private highestRole: string = "";
+  @state() private flagWrapper: string = "";
+  @state() private nameText: string = "";
 
   @state() private roles: string[] = ["cho"];
 
@@ -476,16 +485,43 @@ export class PlayerInfoModal extends LitElement {
     }
   }
 
+  private async getUserInfo(): Promise<void> {
+    const claims = isLoggedIn();
+
+    if (claims === false) {
+      this.discordUserName = ".w.";
+      this.discordAvatarUrl = "https://cdn.discordapp.com/embed/avatars/1.png";
+      this.roles = [];
+    } else {
+      const { rol } = claims;
+      this.roles = rol;
+
+      const userMeResponse = await getUserMe();
+      if (userMeResponse && typeof userMeResponse === "object") {
+        const { user } = userMeResponse;
+        const { username, id, avatar } = user;
+        this.discordUserName = username;
+        this.discordAvatarUrl = avatar
+          ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.${avatar.startsWith("a_") ? "gif" : "png"}`
+          : `https://cdn.discordapp.com/embed/avatars/${Number(user.discriminator) % 5}.png`;
+      } else {
+        this.discordUserName = ".w."; // test name
+        this.discordAvatarUrl =
+          "https://cdn.discordapp.com/avatars/1198183481545592893/3daf014eddd85cf4dc9c72b86c3d2c57"; // test avatar
+      }
+    }
+
+    this.playerName = this.getStoredName();
+    this.flag = this.getStoredFlag();
+    this.highestRole = this.getHighestRole(this.roles);
+    const { flagWrapper, nameText } = this.getRoleStyle(this.highestRole);
+    this.flagWrapper = flagWrapper;
+    this.nameText = nameText;
+
+    this.requestUpdate();
+  }
+
   render() {
-    const playerName = this.getStoredName();
-    const flag = this.getStoredFlag();
-    const discordUserName = "DiscordName"; // test name
-    const discordAvatarUrl =
-      "https://cdn.discordapp.com/avatars/212760412582707200/06a64cee00dfb078269181f59a153ae3"; // test link
-
-    const highestRole = this.getHighestRole(this.roles);
-    const { flagWrapper, nameText } = this.getRoleStyle(highestRole);
-
     return html`
       <o-modal id="playerInfoModal" title="Player Info">
         <div class="flex flex-col items-center mt-2 mb-4">
@@ -493,19 +529,19 @@ export class PlayerInfoModal extends LitElement {
             <div class="${this.getRankStyle(this.currentRank).flagWrapper}">
               <img
                 class="size-[48px] rounded-full block"
-                src="/flags/${flag || "xx"}.svg"
+                src="/flags/${this.flag || "xx"}.svg"
                 alt="Flag"
               />
             </div>
             <div class="${this.getRankStyle(this.currentRank).nameText}">
-              ${playerName}
+              ${this.playerName}
             </div>
             <span>|</span>
-            <div class="${nameText}">${discordUserName}</div>
-            <div class="${flagWrapper}">
+            <div class="${this.nameText}">${this.discordUserName}</div>
+            <div class="${this.flagWrapper}">
               <img
                 class="size-[48px] rounded-full block"
-                src="${discordAvatarUrl}"
+                src="${this.discordAvatarUrl}"
                 alt="Discord Avatar"
               />
             </div>
@@ -773,5 +809,10 @@ export class PlayerInfoModal extends LitElement {
 
   public close() {
     this.modalEl?.close();
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.getUserInfo();
   }
 }
