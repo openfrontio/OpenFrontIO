@@ -57,9 +57,11 @@ export class GameMapImpl implements GameMap {
   private readonly state: Uint16Array; // Mutable game state
   private readonly width_: number;
   private readonly height_: number;
-  private readonly toX: number[];
-  private readonly toY: number[];
-  private readonly fromY: number[];
+
+  // Lookup tables (LUTs) contain pre-computed values to avoid performing division at runtime
+  private readonly refToX: number[];
+  private readonly refToY: number[];
+  private readonly yToRef: number[];
 
   // Terrain bits (Uint8Array)
   private static readonly IS_LAND_BIT = 7;
@@ -90,15 +92,16 @@ export class GameMapImpl implements GameMap {
     this.height_ = height;
     this.terrain = terrainData;
     this.state = new Uint16Array(width * height);
+    // Precompute the LUTs
     let ref = 0;
-    this.toX = new Array(width * height);
-    this.toY = new Array(width * height);
-    this.fromY = new Array(height);
+    this.refToX = new Array(width * height);
+    this.refToY = new Array(width * height);
+    this.yToRef = new Array(height);
     for (let y = 0; y < height; y++) {
-      this.fromY[0] = ref;
+      this.yToRef[0] = ref;
       for (let x = 0; x < width; x++) {
-        this.toX[ref] = x;
-        this.toY[ref] = y;
+        this.refToX[ref] = x;
+        this.refToY[ref] = y;
         ref++;
       }
     }
@@ -111,15 +114,15 @@ export class GameMapImpl implements GameMap {
     if (!this.isValidCoord(x, y)) {
       throw new Error(`Invalid coordinates: ${x},${y}`);
     }
-    return this.fromY[y] + x;
+    return this.yToRef[y] + x;
   }
 
   x(ref: TileRef): number {
-    return this.toX[ref];
+    return this.refToX[ref];
   }
 
   y(ref: TileRef): number {
-    return this.toY[ref];
+    return this.refToX[ref];
   }
 
   cell(ref: TileRef): Cell {
@@ -255,7 +258,7 @@ export class GameMapImpl implements GameMap {
   neighbors(ref: TileRef): TileRef[] {
     const neighbors: TileRef[] = [];
     const w = this.width_;
-    const x = this.toX[ref];
+    const x = this.refToX[ref];
 
     if (ref >= w) neighbors.push(ref - w);
     if (ref < (this.height_ - 1) * w) neighbors.push(ref + w);
@@ -266,10 +269,8 @@ export class GameMapImpl implements GameMap {
   }
 
   forEachTile(fn: (tile: TileRef) => void): void {
-    for (let x = 0; x < this.width_; x++) {
-      for (let y = 0; y < this.height_; y++) {
-        fn(this.ref(x, y));
-      }
+    for (let ref: TileRef = 0; ref < this.width_ * this.height_; ref++) {
+      fn(ref);
     }
   }
 
