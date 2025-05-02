@@ -1,12 +1,25 @@
 # Use an official Node runtime as the base image
 FROM node:18
-
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT=$GIT_COMMIT
 
-# Install Nginx, Supervisor and Git (for Husky)
-RUN apt-get update && apt-get install -y nginx supervisor git && \
-    rm -rf /var/lib/apt/lists/*
+# Install Nginx, Supervisor, Git, jq, curl, and Node Exporter dependencies
+RUN apt-get update && apt-get install -y \
+    nginx \
+    supervisor \
+    git \
+    curl \
+    jq \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install cloudflared
+RUN curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb > cloudflared.deb \
+    && dpkg -i cloudflared.deb \
+    && rm cloudflared.deb
+
+# Install apache2-utils
+RUN apt-get update && apt-get install -y apache2-utils
 
 # Set the working directory in the container
 WORKDIR /usr/src/app
@@ -33,8 +46,9 @@ RUN rm -f /etc/nginx/sites-enabled/default
 RUN mkdir -p /var/log/supervisor
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Expose only the Nginx port
-EXPOSE 80 443
+# Copy and make executable the startup script
+COPY startup.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/startup.sh
 
-# Start Supervisor to manage both Node.js and Nginx
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Use the startup script as the entrypoint
+ENTRYPOINT ["/usr/local/bin/startup.sh"]

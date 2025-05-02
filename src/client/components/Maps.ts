@@ -7,6 +7,7 @@ import { getMapsImage } from "../utilities/Maps";
 export const MapDescription: Record<keyof typeof GameMapType, string> = {
   World: "World",
   Europe: "Europe",
+  EuropeClassic: "Europe Classic",
   Mena: "MENA",
   NorthAmerica: "North America",
   Oceania: "Oceania",
@@ -23,6 +24,8 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Japan: "Japan",
   BetweenTwoSeas: "Between Two Seas",
   KnownWorld: "Known World",
+  FaroeIslands: "Faroe Islands",
+  DeglaciatedAntarctica: "Deglaciated Antarctica",
 };
 
 @customElement("map-display")

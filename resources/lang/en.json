@@ -8,6 +8,8 @@
   "main": {
     "title": "OpenFront (ALPHA)",
     "join_discord": "Join the Discord!",
+    "login_discord": "Login with Discord",
+    "logged_in": "Logged in!",
     "create_lobby": "Create Lobby",
     "join_lobby": "Join Lobby",
     "single_player": "Single Player",
@@ -120,7 +122,15 @@
     "pangaea": "Pangaea",
     "japan": "Japan and Neighbors",
     "betweentwoseas": "Between Two Seas",
-    "knownworld": "Known World"
+    "knownworld": "Known World",
+    "faroeislands": "Faroe Islands",
+    "deglaciatedantarctica": "Deglaciated Antarctica",
+    "europeclassic": "Europe (classic)"
+  },
+  "map_categories": {
+    "continental": "Continental",
+    "regional": "Regional",
+    "fantasy": "Other"
   },
   "private_lobby": {
     "title": "Join Private Lobby",
@@ -147,6 +157,7 @@
   "host_modal": {
     "title": "Private Lobby",
     "mode": "Mode",
+    "team_count": "Number of Teams",
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",

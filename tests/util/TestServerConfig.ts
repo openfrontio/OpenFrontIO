@@ -3,6 +3,18 @@ import { GameMapType } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
+  otelEnabled(): boolean {
+    throw new Error("Method not implemented.");
+  }
+  otelEndpoint(): string {
+    throw new Error("Method not implemented.");
+  }
+  otelUsername(): string {
+    throw new Error("Method not implemented.");
+  }
+  otelPassword(): string {
+    throw new Error("Method not implemented.");
+  }
   region(): string {
     return "test";
   }

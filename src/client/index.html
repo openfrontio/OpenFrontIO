@@ -48,8 +48,10 @@
       .left-gutter-ad {
         position: fixed;
         left: 0;
-        top: 200px; /* Changed from top: 50% */
-        transform: none; /* Removed translateY(-50%) since we don't need to center anymore */
+        top: 200px;
+        /* Changed from top: 50% */
+        transform: none;
+        /* Removed translateY(-50%) since we don't need to center anymore */
         z-index: 40;
         width: 300px;
         height: 600px;
@@ -68,8 +70,10 @@
       .right-gutter-ad {
         position: fixed;
         right: 0;
-        top: 200px; /* Changed from top: 50% */
-        transform: none; /* Removed translateY(-50%) since we don't need to center anymore */
+        top: 200px;
+        /* Changed from top: 50% */
+        transform: none;
+        /* Removed translateY(-50%) since we don't need to center anymore */
         z-index: 40;
         width: 300px;
         height: 600px;
@@ -137,6 +141,7 @@
       gtag("config", "G-WQGQQ8RDN4");
     </script>
   </head>
+
   <body
     class="h-full select-none font-sans min-h-screen bg-opacity-0 bg-cover bg-center bg-fixed transition-opacity duration-300 ease-in-out flex flex-col"
   >
@@ -198,29 +203,22 @@
             />
           </g>
         </svg>
-        <div class="l-header__highlightText">v21.2</div>
+        <div class="l-header__highlightText">v22.0</div>
       </div>
     </header>
     <div class="bg-image"></div>
-    <!-- Left gutter ad placement - full height, no empty space -->
-    <div class="left-gutter-ad ad">
-      <google-ad
-        adSlot="5220834834"
-        adFormat="vertical"
-        fullWidthResponsive="false"
-      ></google-ad>
-    </div>
-    <div class="right-gutter-ad ad">
-      <google-ad
-        adSlot="1814331462"
-        adFormat="vertical"
-        fullWidthResponsive="false"
-      ></google-ad>
-    </div>
 
+    <dark-mode-button></dark-mode-button>
     <!-- Main container with responsive padding -->
-    <main class="flex justify-center items-center flex-grow">
-      <div class="container">
+    <main class="flex justify-center flex-grow">
+      <div class="container pt-12">
+        <o-button
+          id="login-discord"
+          title="Initializing..."
+          disable="true"
+          block
+        ></o-button>
+
         <div class="container__row">
           <flag-input class="w-[20%] md:w-[15%]"></flag-input>
           <username-input class="w-full"></username-input>
@@ -232,20 +230,7 @@
             ⚙️
           </button>
         </div>
-        <div>
-          <a
-            target="_blank"
-            href="https://discord.gg/openfront"
-            class="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white p-3 sm:p-4 lg:p-5 font-medium text-lg sm:text-xl lg:text-2xl rounded-lg border-none cursor-pointer transition-colors duration-300 flex justify-center items-center gap-5"
-          >
-            <img
-              style="height: 50px; width: 50px"
-              alt="Discord"
-              src="../../resources/icons/discord.svg"
-            />
-            <span data-i18n="main.join_discord"> Join the Discord! </span>
-          </a>
-        </div>
+        <div></div>
         <div>
           <public-lobby class="w-full"></public-lobby>
         </div>
@@ -348,6 +333,13 @@
           >
             Wiki
           </a>
+          <a
+            target="_blank"
+            href="https://discord.gg/jRpxXvG42t"
+            class="t-link"
+          >
+            <span data-i18n="main.join_discord"> Join the Discord! </span>
+          </a>
         </div>
         <div class="l-footer__col t-text-white">
           © 2025
@@ -356,7 +348,7 @@
             class="t-link"
             target="_blank"
           >
-            OpenFront.io
+            OpenFront™
           </a>
         </div>
       </div>
@@ -376,6 +368,7 @@
     <dark-mode-button></dark-mode-button>
     <player-info-modal></player-info-modal>
     <user-setting></user-setting>
+    <multi-tab-modal></multi-tab-modal>
     <div
       id="language-modal"
       class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center"

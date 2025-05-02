@@ -1,12 +1,11 @@
-import { consolex } from "../Consolex";
 import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PathFinder } from "../pathfinding/PathFinding";
+import { AirPathFinder } from "../pathfinding/PathFinding";
+import { PseudoRandom } from "../PseudoRandom";
 
 export class ShellExecution implements Execution {
   private active = true;
-  private pathFinder: PathFinder;
+  private pathFinder: AirPathFinder;
   private shell: Unit;
   private mg: Game;
   private destroyAtTick: number = -1;
@@ -19,7 +18,7 @@ export class ShellExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
-    this.pathFinder = PathFinder.Mini(mg, 2000, true, 10);
+    this.pathFinder = new AirPathFinder(mg, new PseudoRandom(mg.ticks()));
     this.mg = mg;
   }
 
@@ -42,34 +41,28 @@ export class ShellExecution implements Execution {
     }
 
     if (this.destroyAtTick == -1 && !this.ownerUnit.isActive()) {
-      this.destroyAtTick =
-        this.mg.ticks() + this.mg.config().warshipShellLifetime();
+      this.destroyAtTick = this.mg.ticks() + this.mg.config().shellLifetime();
     }
 
     for (let i = 0; i < 3; i++) {
       const result = this.pathFinder.nextTile(
         this.shell.tile(),
         this.target.tile(),
-        3,
       );
-      switch (result.type) {
-        case PathFindResultType.Completed:
-          this.active = false;
-          this.target.modifyHealth(-this.shell.info().damage);
-          this.shell.delete(false);
-          return;
-        case PathFindResultType.NextTile:
-          this.shell.move(result.tile);
-          break;
-        case PathFindResultType.Pending:
-          return;
-        case PathFindResultType.PathNotFound:
-          consolex.log(`Shell ${this.shell} could not find target`);
-          this.active = false;
-          this.shell.delete(false);
-          return;
+      if (result === true) {
+        this.active = false;
+        this.target.modifyHealth(-this.effectOnTarget());
+        this.shell.delete(false);
+        return;
+      } else {
+        this.shell.move(result);
       }
     }
+  }
+
+  private effectOnTarget(): number {
+    const baseDamage: number = this.mg.config().unitInfo(UnitType.Shell).damage;
+    return baseDamage;
   }
 
   isActive(): boolean {

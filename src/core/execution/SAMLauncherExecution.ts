@@ -15,19 +15,25 @@ import { SAMMissileExecution } from "./SAMMissileExecution";
 export class SAMLauncherExecution implements Execution {
   private player: Player;
   private mg: Game;
-  private sam: Unit;
   private active: boolean = true;
 
-  private target: Unit = null;
-
-  private searchRangeRadius = 75;
+  private searchRangeRadius = 80;
+  // As MIRV go very fast we have to detect them very early but we only
+  // shoot the one targeting very close (MIRVWarheadProtectionRadius)
+  private MIRVWarheadSearchRadius = 400;
+  private MIRVWarheadProtectionRadius = 50;
 
   private pseudoRandom: PseudoRandom;
 
   constructor(
     private ownerId: PlayerID,
     private tile: TileRef,
-  ) {}
+    private sam: Unit | null = null,
+  ) {
+    if (sam != null) {
+      this.tile = sam.tile();
+    }
+  }
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
@@ -37,6 +43,52 @@ export class SAMLauncherExecution implements Execution {
       return;
     }
     this.player = mg.player(this.ownerId);
+  }
+
+  private getSingleTarget(): Unit | null {
+    const nukes = this.mg
+      .nearbyUnits(this.sam.tile(), this.searchRangeRadius, [
+        UnitType.AtomBomb,
+        UnitType.HydrogenBomb,
+      ])
+      .filter(
+        ({ unit }) =>
+          unit.owner() !== this.player && !this.player.isFriendly(unit.owner()),
+      );
+
+    return (
+      nukes.sort((a, b) => {
+        const { unit: unitA, distSquared: distA } = a;
+        const { unit: unitB, distSquared: distB } = b;
+
+        // Prioritize Hydrogen Bombs
+        if (
+          unitA.type() === UnitType.HydrogenBomb &&
+          unitB.type() !== UnitType.HydrogenBomb
+        )
+          return -1;
+        if (
+          unitA.type() !== UnitType.HydrogenBomb &&
+          unitB.type() === UnitType.HydrogenBomb
+        )
+          return 1;
+
+        // If both are the same type, sort by distance (lower `distSquared` means closer)
+        return distA - distB;
+      })[0]?.unit ?? null
+    );
+  }
+
+  private isHit(type: UnitType, random: number): boolean {
+    if (type == UnitType.AtomBomb) {
+      return true;
+    }
+
+    if (type == UnitType.MIRVWarhead) {
+      return random < this.mg.config().samWarheadHittingChance();
+    }
+
+    return random < this.mg.config().samHittingChance();
   }
 
   tick(ticks: number): void {
@@ -64,36 +116,27 @@ export class SAMLauncherExecution implements Execution {
       this.pseudoRandom = new PseudoRandom(this.sam.id());
     }
 
-    const nukes = this.mg
-      .nearbyUnits(this.sam.tile(), this.searchRangeRadius, [
-        UnitType.AtomBomb,
-        UnitType.HydrogenBomb,
-      ])
+    const mirvWarheadTargets = this.mg
+      .nearbyUnits(
+        this.sam.tile(),
+        this.MIRVWarheadSearchRadius,
+        UnitType.MIRVWarhead,
+      )
+      .map(({ unit }) => unit)
       .filter(
-        ({ unit }) =>
+        (unit) =>
           unit.owner() !== this.player && !this.player.isFriendly(unit.owner()),
+      )
+      .filter(
+        (unit) =>
+          this.mg.manhattanDist(unit.detonationDst(), this.sam.tile()) <
+          this.MIRVWarheadProtectionRadius,
       );
 
-    this.target =
-      nukes.sort((a, b) => {
-        const { unit: unitA, distSquared: distA } = a;
-        const { unit: unitB, distSquared: distB } = b;
-
-        // Prioritize Hydrogen Bombs
-        if (
-          unitA.type() === UnitType.HydrogenBomb &&
-          unitB.type() !== UnitType.HydrogenBomb
-        )
-          return -1;
-        if (
-          unitA.type() !== UnitType.HydrogenBomb &&
-          unitB.type() === UnitType.HydrogenBomb
-        )
-          return 1;
-
-        // If both are the same type, sort by distance (lower `distSquared` means closer)
-        return distA - distB;
-      })[0]?.unit ?? null;
+    let target: Unit | null = null;
+    if (mirvWarheadTargets.length == 0) {
+      target = this.getSingleTarget();
+    }
 
     if (
       this.sam.isCooldown() &&
@@ -102,29 +145,43 @@ export class SAMLauncherExecution implements Execution {
       this.sam.setCooldown(false);
     }
 
-    if (this.target && !this.sam.isCooldown() && !this.target.targetedBySAM()) {
+    const isSingleTarget = target && !target.targetedBySAM();
+    if (
+      (isSingleTarget || mirvWarheadTargets.length > 0) &&
+      !this.sam.isCooldown()
+    ) {
       this.sam.setCooldown(true);
+      const type =
+        mirvWarheadTargets.length > 0 ? UnitType.MIRVWarhead : target.type();
       const random = this.pseudoRandom.next();
-      let hit = true;
-      if (this.target.type() != UnitType.AtomBomb) {
-        hit = random < this.mg.config().samHittingChance();
-      }
+      const hit = this.isHit(type, random);
       if (!hit) {
         this.mg.displayMessage(
-          `Missile failed to intercept ${this.target.type()}`,
+          `Missile failed to intercept ${type}`,
           MessageType.ERROR,
           this.sam.owner().id(),
         );
       } else {
-        this.target.setTargetedBySAM(true);
-        this.mg.addExecution(
-          new SAMMissileExecution(
-            this.sam.tile(),
-            this.sam.owner(),
-            this.sam,
-            this.target,
-          ),
-        );
+        if (mirvWarheadTargets.length > 0) {
+          // Message
+          this.mg.displayMessage(
+            `${mirvWarheadTargets.length} MIRV warheads intercepted`,
+            MessageType.SUCCESS,
+            this.sam.owner().id(),
+          );
+          // Delete warheads
+          mirvWarheadTargets.forEach((u) => u.delete());
+        } else {
+          target.setTargetedBySAM(true);
+          this.mg.addExecution(
+            new SAMMissileExecution(
+              this.sam.tile(),
+              this.sam.owner(),
+              this.sam,
+              target,
+            ),
+          );
+        }
       }
     }
   }

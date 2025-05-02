@@ -41,6 +41,9 @@ const MAP_FILE_NAMES: Record<GameMapType, string> = {
   [GameMapType.Japan]: "Japan",
   [GameMapType.BetweenTwoSeas]: "BetweenTwoSeas",
   [GameMapType.KnownWorld]: "KnownWorld",
+  [GameMapType.FaroeIslands]: "FaroeIslands",
+  [GameMapType.DeglaciatedAntarctica]: "DeglaciatedAntarctica",
+  [GameMapType.EuropeClassic]: "EuropeClassic",
 };
 
 class GameMapLoader {

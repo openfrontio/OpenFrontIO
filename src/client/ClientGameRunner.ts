@@ -11,7 +11,8 @@ import {
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { Team, UnitType } from "../core/game/Game";
+import { Cell, Team, UnitType } from "../core/game/Game";
+import { TileRef } from "../core/game/GameMap";
 import {
   ErrorUpdate,
   GameUpdateType,
@@ -28,6 +29,7 @@ import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentIDFromCookie } from "./Main";
 import {
   SendAttackIntentEvent,
+  SendBoatAttackIntentEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
   Transport,
@@ -351,7 +353,13 @@ export class ClientGameRunner {
       }
     }
     this.myPlayer.actions(tile).then((actions) => {
-      console.log(`got actions: ${JSON.stringify(actions)}`);
+      const bu = actions.buildableUnits.find(
+        (bu) => bu.type == UnitType.TransportShip,
+      );
+      if (bu == null) {
+        console.warn(`no transport ship buildable units`);
+        return;
+      }
       if (actions.canAttack) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
@@ -359,6 +367,30 @@ export class ClientGameRunner {
             this.myPlayer.troops() * this.renderer.uiState.attackRatio,
           ),
         );
+      } else if (
+        bu.canBuild !== false &&
+        this.shouldBoat(tile, bu.canBuild) &&
+        this.gameView.isLand(tile)
+      ) {
+        this.myPlayer
+          .bestTransportShipSpawn(this.gameView.ref(cell.x, cell.y))
+          .then((spawn: number | false) => {
+            let spawnCell = null;
+            if (spawn !== false) {
+              spawnCell = new Cell(
+                this.gameView.x(spawn),
+                this.gameView.y(spawn),
+              );
+            }
+            this.eventBus.emit(
+              new SendBoatAttackIntentEvent(
+                this.gameView.owner(tile).id(),
+                cell,
+                this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+                spawnCell,
+              ),
+            );
+          });
       }
 
       const owner = this.gameView.owner(tile);
@@ -368,6 +400,18 @@ export class ClientGameRunner {
         this.gameView.setFocusedPlayer(null);
       }
     });
+  }
+
+  private shouldBoat(tile: TileRef, src: TileRef) {
+    // TODO: Global enable flag
+    // TODO: Global limit autoboat to nearby shore flag
+    // if (!enableAutoBoat) return false;
+    // if (!limitAutoBoatNear) return true;
+    const distanceSquared = this.gameView.euclideanDistSquared(tile, src);
+    const limit = 100;
+    const limitSquared = limit * limit;
+    if (distanceSquared > limitSquared) return false;
+    return true;
   }
 
   private onMouseMove(event: MouseMoveEvent) {
