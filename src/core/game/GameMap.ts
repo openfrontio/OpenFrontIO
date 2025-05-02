@@ -122,7 +122,7 @@ export class GameMapImpl implements GameMap {
   }
 
   y(ref: TileRef): number {
-    return this.refToX[ref];
+    return this.refToY[ref];
   }
 
   cell(ref: TileRef): Cell {
