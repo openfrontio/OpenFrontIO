@@ -57,6 +57,9 @@ export class GameMapImpl implements GameMap {
   private readonly state: Uint16Array; // Mutable game state
   private readonly width_: number;
   private readonly height_: number;
+  private readonly toX: number[];
+  private readonly toY: number[];
+  private readonly fromY: number[];
 
   // Terrain bits (Uint8Array)
   private static readonly IS_LAND_BIT = 7;
@@ -87,6 +90,18 @@ export class GameMapImpl implements GameMap {
     this.height_ = height;
     this.terrain = terrainData;
     this.state = new Uint16Array(width * height);
+    let ref = 0;
+    this.toX = new Array(width * height);
+    this.toY = new Array(width * height);
+    this.fromY = new Array(height);
+    for (let y = 0; y < height; y++) {
+      this.fromY[0] = ref;
+      for (let x = 0; x < width; x++) {
+        this.toX[ref] = x;
+        this.toY[ref] = y;
+        ref++;
+      }
+    }
   }
   numTilesWithFallout(): number {
     return this._numTilesWithFallout;
@@ -96,15 +111,15 @@ export class GameMapImpl implements GameMap {
     if (!this.isValidCoord(x, y)) {
       throw new Error(`Invalid coordinates: ${x},${y}`);
     }
-    return y * this.width_ + x;
+    return this.fromY[y] + x;
   }
 
   x(ref: TileRef): number {
-    return ref % this.width_;
+    return this.toX[ref];
   }
 
   y(ref: TileRef): number {
-    return Math.floor(ref / this.width_);
+    return this.toY[ref];
   }
 
   cell(ref: TileRef): Cell {
@@ -240,15 +255,12 @@ export class GameMapImpl implements GameMap {
   neighbors(ref: TileRef): TileRef[] {
     const neighbors: TileRef[] = [];
     const w = this.width_;
+    const x = this.toX[ref];
 
     if (ref >= w) neighbors.push(ref - w);
     if (ref < (this.height_ - 1) * w) neighbors.push(ref + w);
-    if (ref % w !== 0) neighbors.push(ref - 1);
-    if (ref % w !== w - 1) neighbors.push(ref + 1);
-
-    for (const n of neighbors) {
-      this.ref(this.x(n), this.y(n));
-    }
+    if (x !== 0) neighbors.push(ref - 1);
+    if (x !== w - 1) neighbors.push(ref + 1);
 
     return neighbors;
   }
