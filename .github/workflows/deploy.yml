@@ -113,8 +113,6 @@ jobs:
 
       - name: Notify PR 🚀
         if: ${{ success() && github.event_name == 'push' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euxo pipefail
 
