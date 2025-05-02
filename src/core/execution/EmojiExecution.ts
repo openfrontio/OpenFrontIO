@@ -39,9 +39,9 @@ export class EmojiExecution implements Execution {
 
   tick(ticks: number): void {
     // prevent longer text than just one emoji
-    if (this.emoji.length > 1) {
+    if (this.emoji.length > 2) {
       consolex.warn(
-        `prevented emoji string with length longer than 1, from client: ${this.requestor}`,
+        `prevented emoji string with length longer than 2, from client: ${this.requestor}`,
       );
       this.active = false;
       return;
