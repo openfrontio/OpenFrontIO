@@ -98,7 +98,7 @@ export class GameMapImpl implements GameMap {
     this.refToY = new Array(width * height);
     this.yToRef = new Array(height);
     for (let y = 0; y < height; y++) {
-      this.yToRef[0] = ref;
+      this.yToRef[y] = ref;
       for (let x = 0; x < width; x++) {
         this.refToX[ref] = x;
         this.refToY[ref] = y;
