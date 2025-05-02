@@ -7,6 +7,7 @@ import {
   PlayerID,
   PlayerType,
 } from "../game/Game";
+import { flattenedEmojiTable } from "../Util";
 
 export class EmojiExecution implements Execution {
   private requestor: Player;
@@ -17,7 +18,7 @@ export class EmojiExecution implements Execution {
   constructor(
     private senderID: PlayerID,
     private recipientID: PlayerID | typeof AllPlayers,
-    private emoji: string,
+    private emoji: number,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -38,19 +39,12 @@ export class EmojiExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    // prevent longer text than just one emoji
-    if (this.emoji.length > 2) {
-      consolex.warn(
-        `prevented emoji string with length longer than 2, from client: ${this.requestor}`,
-      );
-      this.active = false;
-      return;
-    }
+    const emojiString = flattenedEmojiTable.at(this.emoji);
 
     if (this.requestor.canSendEmoji(this.recipient)) {
-      this.requestor.sendEmoji(this.recipient, this.emoji);
+      this.requestor.sendEmoji(this.recipient, emojiString);
       if (
-        this.emoji == "🖕" &&
+        emojiString == "🖕" &&
         this.recipient != AllPlayers &&
         this.recipient.type() == PlayerType.FakeHuman
       ) {

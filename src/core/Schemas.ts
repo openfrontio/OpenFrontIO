@@ -131,14 +131,7 @@ const SafeString = z
   )
   .max(1000);
 
-const EmojiSchema = z.string().refine(
-  (val) => {
-    return /\p{Emoji}/u.test(val);
-  },
-  {
-    message: "Must contain at least one emoji character",
-  },
-);
+const EmojiSchema = z.number();
 const ID = z
   .string()
   .regex(/^[a-zA-Z0-9]+$/)

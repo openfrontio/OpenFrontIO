@@ -8,6 +8,7 @@ import {
   Tick,
 } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
+import { flattenedEmojiTable } from "../../Util";
 import { AttackExecution } from "../AttackExecution";
 import { EmojiExecution } from "../EmojiExecution";
 
@@ -36,7 +37,11 @@ export class BotBehavior {
   private emoji(player: Player, emoji: string) {
     if (player.type() !== PlayerType.Human) return;
     this.game.addExecution(
-      new EmojiExecution(this.player.id(), player.id(), emoji),
+      new EmojiExecution(
+        this.player.id(),
+        player.id(),
+        flattenedEmojiTable.indexOf(emoji),
+      ),
     );
   }
 

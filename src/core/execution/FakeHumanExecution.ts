@@ -17,7 +17,7 @@ import {
 import { euclDistFN, manhattanDistFN, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
-import { calculateBoundingBox, simpleHash } from "../Util";
+import { calculateBoundingBox, flattenedEmojiTable, simpleHash } from "../Util";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { NukeExecution } from "./NukeExecution";
@@ -265,7 +265,7 @@ export class FakeHumanExecution implements Execution {
       new EmojiExecution(
         this.player.id(),
         enemy.id(),
-        this.random.randElement(["🤡", "😡"]),
+        flattenedEmojiTable.indexOf(this.random.randElement(["🤡", "😡"])),
       ),
     );
   }
