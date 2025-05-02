@@ -92,6 +92,17 @@ export class PlayerInfoModal extends LitElement {
     } else if (!checked) {
       this.roles = this.roles.filter((r) => r !== role);
     }
+
+    this.updateRoleStyles();
+  }
+
+  private updateRoleStyles(): void {
+    this.highestRole = this.getHighestRole(this.roles);
+    const { flagWrapper, nameText } = this.getRoleStyle(this.highestRole);
+    this.flagWrapper = flagWrapper;
+    this.nameText = nameText;
+
+    this.requestUpdate();
   }
 
   private getAllRolesSorted(): Record<string, any> {
