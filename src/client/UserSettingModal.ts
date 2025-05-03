@@ -187,226 +187,198 @@ export class UserSettingModal extends LitElement {
 
             <div class="settings-list">
               ${this.settingsMode === "basic"
-                ? html`
-                    <!-- 🌙 Dark Mode -->
-                    <setting-toggle
-                      label="${translateText("user_setting.dark_mode_label")}"
-                      description="${translateText(
-                        "user_setting.dark_mode_desc",
-                      )}"
-                      id="dark-mode-toggle"
-                      .checked=${this.userSettings.darkMode()}
-                      @change=${(e: CustomEvent<{ checked: boolean }>) =>
-                        this.toggleDarkMode(e)}
-                    ></setting-toggle>
-
-                    <!-- 😊 Emojis -->
-                    <setting-toggle
-                      label="${translateText("user_setting.emojis_label")}"
-                      description="${translateText("user_setting.emojis_desc")}"
-                      id="emoji-toggle"
-                      .checked=${this.userSettings.emojis()}
-                      @change=${this.toggleEmojis}
-                    ></setting-toggle>
-
-                    <!-- 🖱️ Left Click Menu -->
-                    <setting-toggle
-                      label="${translateText("user_setting.left_click_label")}"
-                      description="${translateText(
-                        "user_setting.left_click_desc",
-                      )}"
-                      id="left-click-toggle"
-                      .checked=${this.userSettings.leftClickOpensMenu()}
-                      @change=${this.toggleLeftClickOpensMenu}
-                    ></setting-toggle>
-
-                    <!-- ⚔️ Attack Ratio -->
-                    <setting-slider
-                      label="${translateText(
-                        "user_setting.attack_ratio_label",
-                      )}"
-                      description="${translateText(
-                        "user_setting.attack_ratio_desc",
-                      )}"
-                      min="1"
-                      max="100"
-                      .value=${Number(
-                        localStorage.getItem("settings.attackRatio") ?? "0.2",
-                      ) * 100}
-                      @change=${this.sliderAttackRatio}
-                    ></setting-slider>
-
-                    <!-- 🪖🛠️ Troop Ratio -->
-                    <setting-slider
-                      label="${translateText("user_setting.troop_ratio_label")}"
-                      description="${translateText(
-                        "user_setting.troop_ratio_desc",
-                      )}"
-                      min="1"
-                      max="100"
-                      .value=${Number(
-                        localStorage.getItem("settings.troopRatio") ?? "0.95",
-                      ) * 100}
-                      @change=${this.sliderTroopRatio}
-                    ></setting-slider>
-
-                    ${this.showEasterEggSettings
-                      ? html`
-                          <setting-slider
-                            label="${translateText(
-                              "user_setting.easter_writing_speed_label",
-                            )}"
-                            description="${translateText(
-                              "user_setting.easter_writing_speed_desc",
-                            )}"
-                            min="0"
-                            max="100"
-                            value="40"
-                            easter="true"
-                            @change=${(e: CustomEvent) => {
-                              const value = e.detail?.value;
-                              if (typeof value !== "undefined") {
-                                console.log("Changed:", value);
-                              } else {
-                                console.warn(
-                                  "Slider event missing detail.value",
-                                  e,
-                                );
-                              }
-                            }}
-                          ></setting-slider>
-
-                          <setting-number
-                            label="${translateText(
-                              "user_setting.easter_bug_count_label",
-                            )}"
-                            description="${translateText(
-                              "user_setting.easter_bug_count_desc",
-                            )}"
-                            value="100"
-                            min="0"
-                            max="1000"
-                            easter="true"
-                            @change=${(e: CustomEvent) => {
-                              const value = e.detail?.value;
-                              if (typeof value !== "undefined") {
-                                console.log("Changed:", value);
-                              } else {
-                                console.warn(
-                                  "Slider event missing detail.value",
-                                  e,
-                                );
-                              }
-                            }}
-                          ></setting-number>
-                        `
-                      : null}
-                  `
-                : html`
-                    <div
-                      class="text-center text-white text-base font-semibold mt-5 mb-2"
-                    >
-                      ${translateText("user_setting.view_options")}
-                    </div>
-
-                    <setting-keybind
-                      action="toggleView"
-                      label=${translateText("user_setting.toggle_view")}
-                      description=${translateText(
-                        "user_setting.toggle_view_desc",
-                      )}
-                      defaultKey="Space"
-                      .value=${this.keybinds["toggleView"] ?? ""}
-                      @change=${this.handleKeybindChange}
-                    ></setting-keybind>
-
-                    <div
-                      class="text-center text-white text-base font-semibold mt-5 mb-2"
-                    >
-                      ${translateText("user_setting.zoom_controls")}
-                    </div>
-
-                    <setting-keybind
-                      action="zoomOut"
-                      label=${translateText("user_setting.zoom_out")}
-                      description=${translateText("user_setting.zoom_out_desc")}
-                      defaultKey="KeyQ"
-                      .value=${this.keybinds["zoomOut"] ?? ""}
-                      @change=${this.handleKeybindChange}
-                    ></setting-keybind>
-
-                    <setting-keybind
-                      action="zoomIn"
-                      label=${translateText("user_setting.zoom_in")}
-                      description=${translateText("user_setting.zoom_in_desc")}
-                      defaultKey="KeyE"
-                      .value=${this.keybinds["zoomIn"] ?? ""}
-                      @change=${this.handleKeybindChange}
-                    ></setting-keybind>
-
-                    <div
-                      class="text-center text-white text-base font-semibold mt-5 mb-2"
-                    >
-                      ${translateText("user_setting.camera_movement")}
-                    </div>
-
-                    <setting-keybind
-                      action="centerCamera"
-                      label=${translateText("user_setting.center_camera")}
-                      description=${translateText(
-                        "user_setting.center_camera_desc",
-                      )}
-                      defaultKey="KeyC"
-                      .value=${this.keybinds["centerCamera"] ?? ""}
-                      @change=${this.handleKeybindChange}
-                    ></setting-keybind>
-
-                    <setting-keybind
-                      action="moveUp"
-                      label=${translateText("user_setting.move_up")}
-                      description=${translateText("user_setting.move_up_desc")}
-                      defaultKey="KeyW"
-                      .value=${this.keybinds["moveUp"] ?? ""}
-                      @change=${this.handleKeybindChange}
-                    ></setting-keybind>
-
-                    <setting-keybind
-                      action="moveLeft"
-                      label=${translateText("user_setting.move_left")}
-                      description=${translateText(
-                        "user_setting.move_left_desc",
-                      )}
-                      defaultKey="KeyA"
-                      .value=${this.keybinds["moveLeft"] ?? ""}
-                      @change=${this.handleKeybindChange}
-                    ></setting-keybind>
-
-                    <setting-keybind
-                      action="moveDown"
-                      label=${translateText("user_setting.move_down")}
-                      description=${translateText(
-                        "user_setting.move_down_desc",
-                      )}
-                      defaultKey="KeyS"
-                      .value=${this.keybinds["moveDown"] ?? ""}
-                      @change=${this.handleKeybindChange}
-                    ></setting-keybind>
-
-                    <setting-keybind
-                      action="moveRight"
-                      label=${translateText("user_setting.move_right")}
-                      description=${translateText(
-                        "user_setting.move_right_desc",
-                      )}
-                      defaultKey="KeyD"
-                      .value=${this.keybinds["moveRight"] ?? ""}
-                      @change=${this.handleKeybindChange}
-                    ></setting-keybind>
-                  `}
+                ? this.renderBasicSettings()
+                : this.renderKeybindSettings()}
             </div>
           </div>
         </div>
       </o-modal>
+    `;
+  }
+
+  private renderBasicSettings() {
+    return html`
+      <!-- 🌙 Dark Mode -->
+      <setting-toggle
+        label="${translateText("user_setting.dark_mode_label")}"
+        description="${translateText("user_setting.dark_mode_desc")}"
+        id="dark-mode-toggle"
+        .checked=${this.userSettings.darkMode()}
+        @change=${(e: CustomEvent<{ checked: boolean }>) =>
+          this.toggleDarkMode(e)}
+      ></setting-toggle>
+
+      <!-- 😊 Emojis -->
+      <setting-toggle
+        label="${translateText("user_setting.emojis_label")}"
+        description="${translateText("user_setting.emojis_desc")}"
+        id="emoji-toggle"
+        .checked=${this.userSettings.emojis()}
+        @change=${this.toggleEmojis}
+      ></setting-toggle>
+
+      <!-- 🖱️ Left Click Menu -->
+      <setting-toggle
+        label="${translateText("user_setting.left_click_label")}"
+        description="${translateText("user_setting.left_click_desc")}"
+        id="left-click-toggle"
+        .checked=${this.userSettings.leftClickOpensMenu()}
+        @change=${this.toggleLeftClickOpensMenu}
+      ></setting-toggle>
+
+      <!-- ⚔️ Attack Ratio -->
+      <setting-slider
+        label="${translateText("user_setting.attack_ratio_label")}"
+        description="${translateText("user_setting.attack_ratio_desc")}"
+        min="1"
+        max="100"
+        .value=${Number(localStorage.getItem("settings.attackRatio") ?? "0.2") *
+        100}
+        @change=${this.sliderAttackRatio}
+      ></setting-slider>
+
+      <!-- 🪖🛠️ Troop Ratio -->
+      <setting-slider
+        label="${translateText("user_setting.troop_ratio_label")}"
+        description="${translateText("user_setting.troop_ratio_desc")}"
+        min="1"
+        max="100"
+        .value=${Number(localStorage.getItem("settings.troopRatio") ?? "0.95") *
+        100}
+        @change=${this.sliderTroopRatio}
+      ></setting-slider>
+
+      ${this.showEasterEggSettings
+        ? html`
+            <setting-slider
+              label="${translateText(
+                "user_setting.easter_writing_speed_label",
+              )}"
+              description="${translateText(
+                "user_setting.easter_writing_speed_desc",
+              )}"
+              min="0"
+              max="100"
+              value="40"
+              easter="true"
+              @change=${(e: CustomEvent) => {
+                const value = e.detail?.value;
+                if (typeof value !== "undefined") {
+                  console.log("Changed:", value);
+                } else {
+                  console.warn("Slider event missing detail.value", e);
+                }
+              }}
+            ></setting-slider>
+
+            <setting-number
+              label="${translateText("user_setting.easter_bug_count_label")}"
+              description="${translateText(
+                "user_setting.easter_bug_count_desc",
+              )}"
+              value="100"
+              min="0"
+              max="1000"
+              easter="true"
+              @change=${(e: CustomEvent) => {
+                const value = e.detail?.value;
+                if (typeof value !== "undefined") {
+                  console.log("Changed:", value);
+                } else {
+                  console.warn("Slider event missing detail.value", e);
+                }
+              }}
+            ></setting-number>
+          `
+        : null}
+    `;
+  }
+
+  private renderKeybindSettings() {
+    return html`
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.view_options")}
+      </div>
+
+      <setting-keybind
+        action="toggleView"
+        label=${translateText("user_setting.toggle_view")}
+        description=${translateText("user_setting.toggle_view_desc")}
+        defaultKey="Space"
+        .value=${this.keybinds["toggleView"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.zoom_controls")}
+      </div>
+
+      <setting-keybind
+        action="zoomOut"
+        label=${translateText("user_setting.zoom_out")}
+        description=${translateText("user_setting.zoom_out_desc")}
+        defaultKey="KeyQ"
+        .value=${this.keybinds["zoomOut"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="zoomIn"
+        label=${translateText("user_setting.zoom_in")}
+        description=${translateText("user_setting.zoom_in_desc")}
+        defaultKey="KeyE"
+        .value=${this.keybinds["zoomIn"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.camera_movement")}
+      </div>
+
+      <setting-keybind
+        action="centerCamera"
+        label=${translateText("user_setting.center_camera")}
+        description=${translateText("user_setting.center_camera_desc")}
+        defaultKey="KeyC"
+        .value=${this.keybinds["centerCamera"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="moveUp"
+        label=${translateText("user_setting.move_up")}
+        description=${translateText("user_setting.move_up_desc")}
+        defaultKey="KeyW"
+        .value=${this.keybinds["moveUp"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="moveLeft"
+        label=${translateText("user_setting.move_left")}
+        description=${translateText("user_setting.move_left_desc")}
+        defaultKey="KeyA"
+        .value=${this.keybinds["moveLeft"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="moveDown"
+        label=${translateText("user_setting.move_down")}
+        description=${translateText("user_setting.move_down_desc")}
+        defaultKey="KeyS"
+        .value=${this.keybinds["moveDown"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="moveRight"
+        label=${translateText("user_setting.move_right")}
+        description=${translateText("user_setting.move_right_desc")}
+        defaultKey="KeyD"
+        .value=${this.keybinds["moveRight"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
     `;
   }
 
