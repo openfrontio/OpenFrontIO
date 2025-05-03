@@ -729,7 +729,9 @@ export class PlayerImpl implements Player {
     return Object.values(UnitType).map((u) => {
       return {
         type: u,
-        canBuild: this.canBuild(u, tile, validTiles),
+        canBuild: this.mg.inSpawnPhase()
+          ? false
+          : this.canBuild(u, tile, validTiles),
         cost: this.mg.config().unitInfo(u).cost(this),
       } as BuildableUnit;
     });

@@ -17,7 +17,7 @@ import {
 import { euclDistFN, manhattanDistFN, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
-import { calculateBoundingBox, simpleHash } from "../Util";
+import { calculateBoundingBox, flattenedEmojiTable, simpleHash } from "../Util";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { NukeExecution } from "./NukeExecution";
@@ -43,6 +43,7 @@ export class FakeHumanExecution implements Execution {
   private lastEmojiSent = new Map<Player, Tick>();
   private lastNukeSent: [Tick, TileRef][] = [];
   private embargoMalusApplied = new Set<PlayerID>();
+  private heckleEmoji: number[];
 
   constructor(
     gameID: GameID,
@@ -55,6 +56,7 @@ export class FakeHumanExecution implements Execution {
     this.attackTick = this.random.nextInt(0, this.attackRate);
     this.triggerRatio = this.random.nextInt(60, 90) / 100;
     this.reserveRatio = this.random.nextInt(30, 60) / 100;
+    this.heckleEmoji = ["🤡", "😡"].map((e) => flattenedEmojiTable.indexOf(e));
   }
 
   init(mg: Game) {
@@ -267,7 +269,7 @@ export class FakeHumanExecution implements Execution {
       new EmojiExecution(
         this.player.id(),
         enemy.id(),
-        this.random.randElement(["🤡", "😡"]),
+        this.random.randElement(this.heckleEmoji),
       ),
     );
   }

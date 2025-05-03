@@ -1,5 +1,6 @@
 import { decodeJwt } from "jose";
 import {
+  RefreshResponseSchema,
   TokenPayload,
   TokenPayloadSchema,
   UserMeResponse,
@@ -97,10 +98,17 @@ export function _isLoggedIn(): TokenPayload | false {
       localStorage.removeItem("token");
       return false;
     }
-    // const maxAge: number | undefined = undefined;
-    // if (iat !== undefined && maxAge !== undefined && now >= iat + maxAge) {
-    //   // TODO: Refresh token...
-    // }
+    const refreshAge: number = 6 * 3600; // 6 hours
+    if (iat !== undefined && now >= iat + refreshAge) {
+      console.log("Refreshing access token...");
+      postRefresh().then((success) => {
+        if (success) {
+          console.log("Refreshed access token successfully.");
+        } else {
+          console.error("Failed to refresh access token.");
+        }
+      });
+    }
 
     const result = TokenPayloadSchema.safeParse(payload);
     if (!result.success) {
@@ -116,6 +124,36 @@ export function _isLoggedIn(): TokenPayload | false {
     return result.data;
   } catch (e) {
     console.log(e);
+    return false;
+  }
+}
+
+export async function postRefresh(): Promise<boolean> {
+  try {
+    const token = getToken();
+    if (!token) return false;
+
+    // Refresh the JWT
+    const response = await fetch(getApiBase() + "/refresh", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+    if (response.status !== 200) return false;
+    const body = await response.json();
+    const result = RefreshResponseSchema.safeParse(body);
+    if (!result.success) {
+      console.error(
+        "Invalid response",
+        JSON.stringify(body),
+        JSON.stringify(result.error),
+      );
+      return false;
+    }
+    localStorage.setItem("token", result.data.token);
+    return true;
+  } catch (e) {
     return false;
   }
 }

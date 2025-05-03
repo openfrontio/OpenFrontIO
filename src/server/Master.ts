@@ -11,7 +11,6 @@ import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
-import { setupMasterMetrics } from "./MasterMetrics";
 
 const config = getServerConfigFromServer();
 const playlist = new MapPlaylist();
@@ -21,11 +20,6 @@ const app = express();
 const server = http.createServer(app);
 
 const log = logger.child({ comp: "m" });
-
-if (config.otelEnabled()) {
-  console.log("setting up master metrics");
-  setupMasterMetrics();
-}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

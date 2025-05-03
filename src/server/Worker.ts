@@ -13,7 +13,7 @@ import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
-import { metrics } from "./WorkerMetrics";
+import { initWorkerMetrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
 
@@ -33,11 +33,8 @@ export function startWorker() {
 
   const gm = new GameManager(config, log);
 
-  if (config.otelEnabled()) {
-    // Set up periodic metrics updates
-    setInterval(() => {
-      metrics.updateGameMetrics(gm);
-    }, 15000); // Update every 15 seconds
+  if (config.env() == GameEnv.Prod && config.otelEnabled()) {
+    initWorkerMetrics(gm);
   }
 
   // Middleware to handle /wX path prefix

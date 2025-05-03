@@ -9,6 +9,7 @@ import {
   PlayerType,
   UnitType,
 } from "./game/Game";
+import { flattenedEmojiTable } from "./Util";
 
 export type GameID = string;
 export type ClientID = string;
@@ -133,14 +134,10 @@ const SafeString = z
   )
   .max(1000);
 
-const EmojiSchema = z.string().refine(
-  (val) => {
-    return /\p{Emoji}/u.test(val);
-  },
-  {
-    message: "Must contain at least one emoji character",
-  },
-);
+const EmojiSchema = z
+  .number()
+  .nonnegative()
+  .max(flattenedEmojiTable.length - 1);
 const ID = z
   .string()
   .regex(/^[a-zA-Z0-9]+$/)
