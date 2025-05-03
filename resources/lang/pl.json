@@ -1,5 +1,12 @@
 {
+  "lang": {
+    "en": "Polish",
+    "native": "Polski",
+    "svg": "pl",
+    "lang_code": "pl"
+  },
   "main": {
+    "title": "OpenFront (ALPHA)",
     "join_discord": "Dołącz do Discord'a!",
     "create_lobby": "Utwórz lobby",
     "join_lobby": "Dołącz do lobby",
@@ -15,6 +22,7 @@
     "action_alt_view": "Alternatywny widok (teren/państwa)",
     "action_attack_altclick": "Atak (gdy lewy przycisk myszy jest ustawiony na otwieranie menu).",
     "action_build": "Otwórz menu budowy",
+    "action_emote": "Otwórz menu emoji",
     "action_center": "Wyśrodkuj kamerę na graczu",
     "action_zoom": "Oddal/Przybliż",
     "action_move_camera": "Przesuń kamerę",
@@ -77,8 +85,7 @@
     "icon_crown": "Korona — Jest to gracz numer 1 w rankingu",
     "icon_traitor": "Skrzyżowane miecze — Zdrajca. Ten gracz atakował sojusznika.",
     "icon_ally": "Uścisk dłoni — Sojusznik. Ten gracz jest twoim sojusznikiem.",
-    "info_enemy_panel": "Panel informacji o wrogu",
-    "action_emote": "Otwórz menu emoji"
+    "info_enemy_panel": "Panel informacji o wrogu"
   },
   "single_modal": {
     "title": "Gra jednoosobowa",
@@ -94,6 +101,7 @@
     "start": "Rozpocznij Grę"
   },
   "map": {
+    "map": "Mapa",
     "world": "Świat",
     "europe": "Europa",
     "mena": "MENA",
@@ -110,10 +118,11 @@
     "random": "Losowe",
     "iceland": "Islandia",
     "pangaea": "Pangea",
-    "map": "Mapa",
-    "betweentwoseas": "Między dwoma morzami",
     "japan": "Japonia i sąsiedzi",
-    "knownworld": "Znany Świat"
+    "betweentwoseas": "Między dwoma morzami",
+    "knownworld": "Znany Świat",
+    "faroeislands": "Wyspy Owcze",
+    "europeclassic": ""
   },
   "private_lobby": {
     "title": "Dołącz do prywatnego Lobby",
@@ -139,6 +148,8 @@
   },
   "host_modal": {
     "title": "Prywatne lobby",
+    "mode": "Tryb",
+    "team_count": "Liczba drużyn",
     "options_title": "Opcje",
     "bots": "Boty: ",
     "bots_disabled": "Wyłączone",
@@ -150,25 +161,18 @@
     "player": "Gracz",
     "players": "Gracze",
     "waiting": "Oczekiwanie na graczy...",
-    "start": "Rozpocznij grę",
-    "mode": "Tryb"
-  },
-  "difficulty": {
-    "Relaxed": "Zrelaksowany",
-    "Balanced": "Zbalansowany",
-    "Intense": "Intensywny",
-    "Impossible": "Niemożliwy",
-    "difficulty": "Poziom trudności"
+    "start": "Rozpocznij grę"
   },
   "game_starting_modal": {
     "title": "Gra się rozpoczyna...",
     "desc": "Przygotowanie do uruchomienia lobby. Proszę czekać."
   },
-  "lang": {
-    "en": "Polish",
-    "native": "Polski",
-    "svg": "pl",
-    "lang_code": "pl"
+  "difficulty": {
+    "difficulty": "Poziom trudności",
+    "Relaxed": "Zrelaksowany",
+    "Balanced": "Zbalansowany",
+    "Intense": "Intensywny",
+    "Impossible": "Niemożliwy"
   },
   "game_mode": {
     "ffa": "Każdy na Każdego",
@@ -216,5 +220,10 @@
     "move_right_desc": "Przesuwa kamerę w prawo",
     "reset": "Zresetuj",
     "unbind": "Odbinduj"
+  },
+  "map_categories": {
+    "continental": "Kontynentalny",
+    "regional": "Lokalny",
+    "fantasy": "Pozostałe"
   }
 }

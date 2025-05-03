@@ -9,6 +9,7 @@ const maps = [
   "WorldMap",
   "BlackSea",
   "Europe",
+  "EuropeClassic",
   "Mars",
   "Mena",
   "Oceania",
@@ -23,6 +24,7 @@ const maps = [
   "Japan",
   "KnownWorld",
   "FaroeIslands",
+  "DeglaciatedAntarctica",
 ];
 
 const removeSmall = true;

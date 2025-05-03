@@ -4,14 +4,44 @@
     "name": "None"
   },
   {
+    "code": "Abbasid Caliphate",
+    "continent": "Asia",
+    "name": "Abbasid Caliphate"
+  },
+  {
+    "code": "Achaemenid Empire",
+    "continent": "Asia",
+    "name": "Achaemenid Empire"
+  },
+  {
+    "code": "ae",
+    "continent": "Asia",
+    "name": "United Arab Emirates"
+  },
+  {
     "code": "af",
     "continent": "Asia",
     "name": "Afghanistan"
   },
   {
-    "code": "ax",
+    "code": "african union",
+    "continent": "Africa",
+    "name": "African Union"
+  },
+  {
+    "code": "ag",
+    "continent": "North America",
+    "name": "Antigua and Barbuda"
+  },
+  {
+    "code": "ai",
+    "continent": "North America",
+    "name": "Anguilla"
+  },
+  {
+    "code": "1_Airgialla",
     "continent": "Europe",
-    "name": "Aland Islands"
+    "name": "Airgialla"
   },
   {
     "code": "al",
@@ -19,14 +49,48 @@
     "name": "Albania"
   },
   {
+    "code": "Alabama",
+    "continent": "North America",
+    "name": "Alabama"
+  },
+  {
+    "code": "ax",
+    "continent": "Europe",
+    "name": "Aland Islands"
+  },
+  {
+    "code": "Alaska",
+    "continent": "North America",
+    "name": "Alaska"
+  },
+  {
     "code": "dz",
     "continent": "Africa",
     "name": "Algeria"
   },
   {
+    "code": "Amazigh flag",
+    "continent": "Africa",
+    "name": "Amazigh Flag"
+  },
+  {
+    "code": "amazonas",
+    "continent": "South America",
+    "name": "Amazonas"
+  },
+  {
     "code": "as",
     "continent": "Oceania",
     "name": "American Samoa"
+  },
+  {
+    "code": "am",
+    "continent": "Asia",
+    "name": "Armenia"
+  },
+  {
+    "code": "Anarchist flag",
+    "name": "Anarchist Flag"
   },
   {
     "code": "ad",
@@ -39,18 +103,18 @@
     "name": "Angola"
   },
   {
-    "code": "ai",
-    "continent": "North America",
-    "name": "Anguilla"
-  },
-  {
     "code": "aq",
     "name": "Antarctica"
   },
   {
-    "code": "ag",
-    "continent": "North America",
-    "name": "Antigua and Barbuda"
+    "code": "antipope",
+    "continent": "Europe",
+    "name": "Anti-Pope"
+  },
+  {
+    "code": "aquitaine",
+    "continent": "Europe",
+    "name": "Aquitaine"
   },
   {
     "code": "ar",
@@ -58,9 +122,29 @@
     "name": "Argentina"
   },
   {
-    "code": "am",
+    "code": "Aram Damascus",
     "continent": "Asia",
-    "name": "Armenia"
+    "name": "Aram Damascus"
+  },
+  {
+    "code": "Arabia",
+    "continent": "Asia",
+    "name": "Arabia"
+  },
+  {
+    "code": "Arizona",
+    "continent": "North America",
+    "name": "Arizona"
+  },
+  {
+    "code": "Arkansas",
+    "continent": "North America",
+    "name": "Arkansas"
+  },
+  {
+    "code": "armagnac",
+    "continent": "Europe",
+    "name": "Armagnac"
   },
   {
     "code": "aw",
@@ -73,9 +157,19 @@
     "name": "Ascension Island"
   },
   {
-    "code": "au",
-    "continent": "Oceania",
-    "name": "Australia"
+    "code": "Assyria",
+    "continent": "Asia",
+    "name": "Assyria"
+  },
+  {
+    "code": "asturias",
+    "continent": "Europe",
+    "name": "Asturias"
+  },
+  {
+    "code": "Athens",
+    "continent": "Europe",
+    "name": "Athens"
   },
   {
     "code": "at",
@@ -83,9 +177,24 @@
     "name": "Austria"
   },
   {
+    "code": "austria-hungary",
+    "continent": "Europe",
+    "name": "Austria-Hungary"
+  },
+  {
+    "code": "au",
+    "continent": "Oceania",
+    "name": "Australia"
+  },
+  {
     "code": "az",
     "continent": "Asia",
     "name": "Azerbaijan"
+  },
+  {
+    "code": "Aztec Empire",
+    "continent": "North America",
+    "name": "Aztec Empire"
   },
   {
     "code": "bs",
@@ -93,9 +202,18 @@
     "name": "Bahamas"
   },
   {
+    "code": "bahia",
+    "continent": "South America",
+    "name": "Bahia"
+  },
+  {
     "code": "bh",
     "continent": "Asia",
     "name": "Bahrain"
+  },
+  {
+    "code": "baguette",
+    "name": "Baguette"
   },
   {
     "code": "bd",
@@ -108,7 +226,13 @@
     "name": "Barbados"
   },
   {
+    "code": "Babylonia",
+    "continent": "Asia",
+    "name": "Babylonia"
+  },
+  {
     "code": "es-pv",
+    "continent": "Europe",
     "name": "Basque Country"
   },
   {
@@ -176,9 +300,19 @@
     "name": "British Indian Ocean Territory"
   },
   {
+    "code": "Brittany",
+    "continent": "Europe",
+    "name": "Brittany"
+  },
+  {
     "code": "bn",
     "continent": "Asia",
     "name": "Brunei Darussalam"
+  },
+  {
+    "code": "buenos_aires",
+    "continent": "South America",
+    "name": "Buenos Aires"
   },
   {
     "code": "bg",
@@ -191,14 +325,34 @@
     "name": "Burkina Faso"
   },
   {
+    "code": "burgundy",
+    "continent": "Europe",
+    "name": "Burgundy"
+  },
+  {
+    "code": "Burma",
+    "continent": "Asia",
+    "name": "Burma"
+  },
+  {
     "code": "bi",
     "continent": "Africa",
     "name": "Burundi"
   },
   {
+    "code": "Byzantine Empire",
+    "continent": "Europe",
+    "name": "Byzantine Empire"
+  },
+  {
     "code": "cv",
     "continent": "Africa",
     "name": "Cabo Verde"
+  },
+  {
+    "code": "California",
+    "continent": "North America",
+    "name": "California"
   },
   {
     "code": "kh",
@@ -217,16 +371,42 @@
   },
   {
     "code": "ic",
+    "continent": "Africa",
     "name": "Canary Islands"
   },
   {
+    "code": "Capybara",
+    "name": "Capybara"
+  },
+  {
+    "code": "Carthage",
+    "continent": "Africa",
+    "name": "Carthage"
+  },
+  {
+    "code": "castille",
+    "continent": "Europe",
+    "name": "Castille"
+  },
+  {
+    "code": "catamarca",
+    "continent": "South America",
+    "name": "Catamarca"
+  },
+  {
     "code": "es-ct",
+    "continent": "Europe",
     "name": "Catalonia"
   },
   {
     "code": "ky",
     "continent": "North America",
     "name": "Cayman Islands"
+  },
+  {
+    "code": "Ceará",
+    "continent": "South America",
+    "name": "Ceará"
   },
   {
     "code": "cf",
@@ -249,9 +429,19 @@
     "name": "China"
   },
   {
+    "code": "Chinook",
+    "continent": "North America",
+    "name": "Chinook"
+  },
+  {
     "code": "cx",
     "continent": "Asia",
     "name": "Christmas Island"
+  },
+  {
+    "code": "Chuvashia",
+    "continent": "Europe",
+    "name": "Chuvashia"
   },
   {
     "code": "cp",
@@ -263,9 +453,19 @@
     "name": "Cocos (Keeling) Islands"
   },
   {
+    "code": "Colchis",
+    "continent": "Asia",
+    "name": "Colchis"
+  },
+  {
     "code": "co",
     "continent": "South America",
     "name": "Colombia"
+  },
+  {
+    "code": "Colorado",
+    "continent": "North America",
+    "name": "Colorado"
   },
   {
     "code": "km",
@@ -273,9 +473,33 @@
     "name": "Comoros"
   },
   {
+    "code": "communist flag",
+    "name": "Communist Flag"
+  },
+  {
+    "code": "Confederate States",
+    "continent": "North America",
+    "name": "Confederate States"
+  },
+  {
+    "code": "1_Connacht",
+    "continent": "Europe",
+    "name": "Connacht"
+  },
+  {
     "code": "ck",
     "continent": "Oceania",
     "name": "Cook Islands"
+  },
+  {
+    "code": "cordoba",
+    "continent": "Europe",
+    "name": "Cordoba"
+  },
+  {
+    "code": "Corsica",
+    "continent": "Europe",
+    "name": "Corsica"
   },
   {
     "code": "cr",
@@ -291,6 +515,10 @@
     "code": "hr",
     "continent": "Europe",
     "name": "Croatia"
+  },
+  {
+    "code": "Cthulhu Republic",
+    "name": "Cthulhu Republic"
   },
   {
     "code": "cu",
@@ -313,9 +541,14 @@
     "name": "Czech Republic"
   },
   {
-    "code": "cd",
-    "continent": "Africa",
-    "name": "Democratic Republic of the Congo"
+    "code": "Danzig",
+    "continent": "Europe",
+    "name": "Danzig"
+  },
+  {
+    "code": "1_Dalriata",
+    "continent": "Europe",
+    "name": "Dál Riata"
   },
   {
     "code": "dk",
@@ -323,8 +556,19 @@
     "name": "Denmark"
   },
   {
+    "code": "cd",
+    "continent": "Africa",
+    "name": "Democratic Republic of the Congo"
+  },
+  {
     "code": "dg",
+    "continent": "Asia",
     "name": "Diego Garcia"
+  },
+  {
+    "code": "Dilmun",
+    "continent": "Asia",
+    "name": "Dilmun"
   },
   {
     "code": "dj",
@@ -342,6 +586,30 @@
     "name": "Dominican Republic"
   },
   {
+    "code": "1_Dumnonia",
+    "continent": "Europe",
+    "name": "Dumnonia"
+  },
+  {
+    "code": "Dutch East India Company",
+    "name": "Dutch East India Company"
+  },
+  {
+    "code": "1_Dyfed",
+    "continent": "Europe",
+    "name": "Dyfed"
+  },
+  {
+    "code": "1_East Anglia",
+    "continent": "Europe",
+    "name": "East Anglia"
+  },
+  {
+    "code": "east_germany",
+    "continent": "Europe",
+    "name": "East Germany"
+  },
+  {
     "code": "ec",
     "continent": "South America",
     "name": "Ecuador"
@@ -352,9 +620,29 @@
     "name": "Egypt"
   },
   {
+    "code": "Elam",
+    "continent": "Asia",
+    "name": "Elam"
+  },
+  {
     "code": "sv",
     "continent": "North America",
     "name": "El Salvador"
+  },
+  {
+    "code": "granada",
+    "continent": "Europe",
+    "name": "Emirate of Granada"
+  },
+  {
+    "code": "Empire of Japan",
+    "continent": "Asia",
+    "name": "Empire of Japan"
+  },
+  {
+    "code": "Empire of Japan1",
+    "continent": "Asia",
+    "name": "Empire of Japan"
   },
   {
     "code": "gb-eng",
@@ -370,6 +658,11 @@
     "code": "er",
     "continent": "Africa",
     "name": "Eritrea"
+  },
+  {
+    "code": "1_Essex",
+    "continent": "Europe",
+    "name": "Essex"
   },
   {
     "code": "ee",
@@ -388,6 +681,7 @@
   },
   {
     "code": "eu",
+    "continent": "Europe",
     "name": "Europe"
   },
   {
@@ -399,6 +693,11 @@
     "code": "fo",
     "continent": "Europe",
     "name": "Faroe Islands"
+  },
+  {
+    "code": "Fascist Spain",
+    "continent": "Europe",
+    "name": "Fascist Spain"
   },
   {
     "code": "fm",
@@ -416,9 +715,33 @@
     "name": "Finland"
   },
   {
+    "code": "Flanders",
+    "continent": "Europe",
+    "name": "Flanders"
+  },
+  {
+    "code": "Florida",
+    "continent": "North America",
+    "name": "Florida"
+  },
+  {
+    "code": "1_Fortriu",
+    "continent": "Europe",
+    "name": "Fortriu"
+  },
+  {
     "code": "fr",
     "continent": "Europe",
     "name": "France"
+  },
+  {
+    "code": "1_Franks",
+    "continent": "Europe",
+    "name": "Franks"
+  },
+  {
+    "code": "french foreign legion",
+    "name": "French Foreign Legion"
   },
   {
     "code": "gf",
@@ -431,6 +754,10 @@
     "name": "French Polynesia"
   },
   {
+    "code": "frost_giant",
+    "name": "Frost Giant"
+  },
+  {
     "code": "tf",
     "continent": "Africa",
     "name": "French Southern Territories"
@@ -441,7 +768,13 @@
     "name": "Gabon"
   },
   {
+    "code": "galapagos",
+    "continent": "South America",
+    "name": "Galápagos"
+  },
+  {
     "code": "es-ga",
+    "continent": "Europe",
     "name": "Galicia"
   },
   {
@@ -450,9 +783,24 @@
     "name": "Gambia"
   },
   {
+    "code": "Garamant",
+    "continent": "Africa",
+    "name": "Garamantes"
+  },
+  {
     "code": "ge",
     "continent": "Asia",
     "name": "Georgia"
+  },
+  {
+    "code": "Georgia_US",
+    "continent": "North America",
+    "name": "Georgia (US State)"
+  },
+  {
+    "code": "German Empire",
+    "continent": "Europe",
+    "name": "German Empire"
   },
   {
     "code": "de",
@@ -515,14 +863,34 @@
     "name": "Guinea-Bissau"
   },
   {
+    "code": "1_Gwent",
+    "continent": "Europe",
+    "name": "Gwent"
+  },
+  {
+    "code": "1_Gwynedd",
+    "continent": "Europe",
+    "name": "Gwynedd"
+  },
+  {
     "code": "gy",
     "continent": "South America",
     "name": "Guyana"
   },
   {
+    "code": "Habsburg Austria",
+    "continent": "Europe",
+    "name": "Habsburg Austria"
+  },
+  {
     "code": "ht",
     "continent": "North America",
     "name": "Haiti"
+  },
+  {
+    "code": "Hawaii",
+    "continent": "Oceania",
+    "name": "Hawaii"
   },
   {
     "code": "hm",
@@ -532,6 +900,11 @@
     "code": "va",
     "continent": "Europe",
     "name": "Holy See"
+  },
+  {
+    "code": "Holy Roman Empire",
+    "continent": "Europe",
+    "name": "Holy Roman Empire"
   },
   {
     "code": "hn",
@@ -549,9 +922,24 @@
     "name": "Hungary"
   },
   {
+    "code": "Hyrcania",
+    "continent": "Asia",
+    "name": "Hyrcania"
+  },
+  {
     "code": "is",
     "continent": "Europe",
     "name": "Iceland"
+  },
+  {
+    "code": "Idaho",
+    "continent": "North America",
+    "name": "Idaho"
+  },
+  {
+    "code": "Illinois",
+    "continent": "North America",
+    "name": "Illinois"
   },
   {
     "code": "in",
@@ -559,19 +947,29 @@
     "name": "India"
   },
   {
+    "code": "Indiana",
+    "continent": "North America",
+    "name": "Indiana"
+  },
+  {
     "code": "id",
     "continent": "Asia",
     "name": "Indonesia"
   },
   {
-    "code": "ir",
-    "continent": "Asia",
-    "name": "Iran"
+    "code": "Iowa",
+    "continent": "North America",
+    "name": "Iowa"
   },
   {
     "code": "iq",
     "continent": "Asia",
     "name": "Iraq"
+  },
+  {
+    "code": "ir",
+    "continent": "Asia",
+    "name": "Iran"
   },
   {
     "code": "ie",
@@ -594,6 +992,11 @@
     "name": "Italy"
   },
   {
+    "code": "italy",
+    "continent": "Europe",
+    "name": "Kingdom of Italy"
+  },
+  {
     "code": "jm",
     "continent": "North America",
     "name": "Jamaica"
@@ -614,9 +1017,19 @@
     "name": "Jordan"
   },
   {
+    "code": "Kansas",
+    "continent": "North America",
+    "name": "Kansas"
+  },
+  {
     "code": "kz",
     "continent": "Asia",
     "name": "Kazakhstan"
+  },
+  {
+    "code": "Kemet",
+    "continent": "Africa",
+    "name": "Kemet"
   },
   {
     "code": "ke",
@@ -624,14 +1037,63 @@
     "name": "Kenya"
   },
   {
+    "code": "1_Kent",
+    "continent": "Europe",
+    "name": "Kent"
+  },
+  {
+    "code": "Kentucky",
+    "continent": "North America",
+    "name": "Kentucky"
+  },
+  {
+    "code": "Khemet",
+    "continent": "Africa",
+    "name": "Khemet"
+  },
+  {
+    "code": "Kingdom of Egypt",
+    "continent": "Africa",
+    "name": "Kingdom of Egypt"
+  },
+  {
+    "code": "Kingdom of Iraq",
+    "continent": "Asia",
+    "name": "Kingdom of Iraq"
+  },
+  {
+    "code": "Kingdom of Jerusalem",
+    "continent": "Asia",
+    "name": "Kingdom of Jerusalem"
+  },
+  {
+    "code": "Kingdom of Judah",
+    "continent": "Asia",
+    "name": "Kingdom of Judah"
+  },
+  {
     "code": "ki",
     "continent": "Oceania",
     "name": "Kiribati"
   },
   {
+    "code": "Kiwi",
+    "name": "Kiwi"
+  },
+  {
     "code": "xk",
     "continent": "Europe",
     "name": "Kosovo"
+  },
+  {
+    "code": "kurdistan",
+    "continent": "Asia",
+    "name": "Kurdistan"
+  },
+  {
+    "code": "Kush",
+    "continent": "Africa",
+    "name": "Kush"
   },
   {
     "code": "kw",
@@ -644,6 +1106,11 @@
     "name": "Kyrgyzstan"
   },
   {
+    "code": "1_Laigin",
+    "continent": "Europe",
+    "name": "Laigin"
+  },
+  {
     "code": "la",
     "continent": "Asia",
     "name": "Laos"
@@ -654,9 +1121,23 @@
     "name": "Latvia"
   },
   {
+    "code": "League of Nations",
+    "name": "League of Nations"
+  },
+  {
     "code": "lb",
     "continent": "Asia",
     "name": "Lebanon"
+  },
+  {
+    "code": "Leinster",
+    "continent": "Europe",
+    "name": "Leinster"
+  },
+  {
+    "code": "leon",
+    "continent": "Europe",
+    "name": "León"
   },
   {
     "code": "ls",
@@ -669,6 +1150,15 @@
     "name": "Liberia"
   },
   {
+    "code": "Liberalism_flag",
+    "name": "Liberalism Flag"
+  },
+  {
+    "code": "Libyan Jamahiriya",
+    "continent": "Africa",
+    "name": "Libyan Jamahiriya"
+  },
+  {
     "code": "ly",
     "continent": "Africa",
     "name": "Libya"
@@ -679,14 +1169,33 @@
     "name": "Liechtenstein"
   },
   {
+    "code": "Listenbourg",
+    "name": "Listenbourg"
+  },
+  {
     "code": "lt",
     "continent": "Europe",
     "name": "Lithuania"
   },
   {
+    "code": "Louisiana",
+    "continent": "North America",
+    "name": "Louisiana"
+  },
+  {
     "code": "lu",
     "continent": "Europe",
     "name": "Luxembourg"
+  },
+  {
+    "code": "lydia",
+    "continent": "Asia",
+    "name": "Lydia"
+  },
+  {
+    "code": "Macedonia",
+    "continent": "Europe",
+    "name": "Macedonia"
   },
   {
     "code": "mo",
@@ -697,6 +1206,11 @@
     "code": "mg",
     "continent": "Africa",
     "name": "Madagascar"
+  },
+  {
+    "code": "Maine",
+    "continent": "North America",
+    "name": "Maine"
   },
   {
     "code": "mw",
@@ -724,6 +1238,11 @@
     "name": "Malta"
   },
   {
+    "code": "Māori Flag",
+    "continent": "Oceania",
+    "name": "Māori Flag"
+  },
+  {
     "code": "mh",
     "continent": "Oceania",
     "name": "Marshall Islands"
@@ -732,6 +1251,11 @@
     "code": "mq",
     "continent": "North America",
     "name": "Martinique"
+  },
+  {
+    "code": "Maryland",
+    "continent": "North America",
+    "name": "Maryland"
   },
   {
     "code": "mr",
@@ -749,9 +1273,44 @@
     "name": "Mayotte"
   },
   {
+    "code": "Median Empire",
+    "continent": "Asia",
+    "name": "Median Empire"
+  },
+  {
+    "code": "1_Mercia",
+    "continent": "Europe",
+    "name": "Mercia"
+  },
+  {
     "code": "mx",
     "continent": "North America",
     "name": "Mexico"
+  },
+  {
+    "code": "Michigan",
+    "continent": "North America",
+    "name": "Michigan"
+  },
+  {
+    "code": "minas_gerais",
+    "continent": "South America",
+    "name": "Minas Gerais"
+  },
+  {
+    "code": "Minnesota",
+    "continent": "North America",
+    "name": "Minnesota"
+  },
+  {
+    "code": "Mississippi",
+    "continent": "North America",
+    "name": "Mississippi"
+  },
+  {
+    "code": "Missouri",
+    "continent": "North America",
+    "name": "Missouri"
   },
   {
     "code": "md",
@@ -764,9 +1323,19 @@
     "name": "Monaco"
   },
   {
+    "code": "Mongol Empire",
+    "continent": "Asia",
+    "name": "Mongol Empire"
+  },
+  {
     "code": "mn",
     "continent": "Asia",
     "name": "Mongolia"
+  },
+  {
+    "code": "Montana",
+    "continent": "North America",
+    "name": "Montana"
   },
   {
     "code": "me",
@@ -789,6 +1358,11 @@
     "name": "Mozambique"
   },
   {
+    "code": "1_Munster",
+    "continent": "Europe",
+    "name": "Munster"
+  },
+  {
     "code": "mm",
     "continent": "Asia",
     "name": "Myanmar"
@@ -799,9 +1373,18 @@
     "name": "Namibia"
   },
   {
+    "code": "NATO",
+    "name": "NATO"
+  },
+  {
     "code": "nr",
     "continent": "Oceania",
     "name": "Nauru"
+  },
+  {
+    "code": "Nebraska",
+    "continent": "North America",
+    "name": "Nebraska"
   },
   {
     "code": "np",
@@ -814,9 +1397,38 @@
     "name": "Netherlands"
   },
   {
+    "code": "neuragic_empire",
+    "name": "Neuragic Empire"
+  },
+  {
+    "code": "Nevada",
+    "continent": "North America",
+    "name": "Nevada"
+  },
+  {
     "code": "nc",
     "continent": "Oceania",
     "name": "New Caledonia"
+  },
+  {
+    "code": "New_Hampshire",
+    "continent": "North America",
+    "name": "New Hampshire"
+  },
+  {
+    "code": "New_Jersey",
+    "continent": "North America",
+    "name": "New Jersey"
+  },
+  {
+    "code": "New_Mexico",
+    "continent": "North America",
+    "name": "New Mexico"
+  },
+  {
+    "code": "New_York",
+    "continent": "North America",
+    "name": "New York"
   },
   {
     "code": "nz",
@@ -849,6 +1461,26 @@
     "name": "Norfolk Island"
   },
   {
+    "code": "normandy",
+    "continent": "Europe",
+    "name": "Normandy"
+  },
+  {
+    "code": "North Karelia",
+    "continent": "Europe",
+    "name": "North Karelia"
+  },
+  {
+    "code": "North_Carolina",
+    "continent": "North America",
+    "name": "North Carolina"
+  },
+  {
+    "code": "North_Dakota",
+    "continent": "North America",
+    "name": "North Dakota"
+  },
+  {
     "code": "kp",
     "continent": "Asia",
     "name": "North Korea"
@@ -859,9 +1491,24 @@
     "name": "North Macedonia"
   },
   {
+    "code": "northern_ireland",
+    "continent": "Europe",
+    "name": "Northern Ireland"
+  },
+  {
     "code": "mp",
     "continent": "Oceania",
     "name": "Northern Mariana Islands"
+  },
+  {
+    "code": "1_Northern Uí Néill",
+    "continent": "Europe",
+    "name": "Northern Uí Néill"
+  },
+  {
+    "code": "1_Northumbria",
+    "continent": "Europe",
+    "name": "Northumbria"
   },
   {
     "code": "no",
@@ -869,9 +1516,29 @@
     "name": "Norway"
   },
   {
+    "code": "Ohio",
+    "continent": "North America",
+    "name": "Ohio"
+  },
+  {
+    "code": "Oklahoma",
+    "continent": "North America",
+    "name": "Oklahoma"
+  },
+  {
     "code": "om",
     "continent": "Asia",
     "name": "Oman"
+  },
+  {
+    "code": "Oregon",
+    "continent": "North America",
+    "name": "Oregon"
+  },
+  {
+    "code": "Ottoman Empire",
+    "continent": "Asia",
+    "name": "Ottoman Empire"
   },
   {
     "code": "pk",
@@ -884,6 +1551,11 @@
     "name": "Palau"
   },
   {
+    "code": "Palekh",
+    "continent": "Europe",
+    "name": "Palekh"
+  },
+  {
     "code": "pa",
     "continent": "North America",
     "name": "Panama"
@@ -894,9 +1566,24 @@
     "name": "Papua New Guinea"
   },
   {
+    "code": "Pará",
+    "continent": "South America",
+    "name": "Pará"
+  },
+  {
     "code": "py",
     "continent": "South America",
     "name": "Paraguay"
+  },
+  {
+    "code": "paris",
+    "continent": "Europe",
+    "name": "Paris"
+  },
+  {
+    "code": "Pennsylvania",
+    "continent": "North America",
+    "name": "Pennsylvania"
   },
   {
     "code": "pe",
@@ -904,9 +1591,19 @@
     "name": "Peru"
   },
   {
+    "code": "Persia",
+    "continent": "Asia",
+    "name": "Persia"
+  },
+  {
     "code": "ph",
     "continent": "Asia",
     "name": "Philippines"
+  },
+  {
+    "code": "Phrygia",
+    "continent": "Asia",
+    "name": "Phrygia"
   },
   {
     "code": "pn",
@@ -919,9 +1616,33 @@
     "name": "Poland"
   },
   {
+    "code": "polar_bears",
+    "name": "Polar Bears"
+  },
+  {
+    "code": "Polish–Lithuanian Commonwealth",
+    "continent": "Europe",
+    "name": "Polish–Lithuanian Commonwealth"
+  },
+  {
     "code": "pt",
     "continent": "Europe",
     "name": "Portugal"
+  },
+  {
+    "code": "1_Powys",
+    "continent": "Europe",
+    "name": "Powys"
+  },
+  {
+    "code": "provence",
+    "continent": "Europe",
+    "name": "Provence"
+  },
+  {
+    "code": "prussia",
+    "continent": "Europe",
+    "name": "Prussia"
   },
   {
     "code": "pr",
@@ -934,9 +1655,48 @@
     "name": "Qatar"
   },
   {
+    "code": "Qing Dynasty",
+    "continent": "Asia",
+    "name": "Qing Dynasty"
+  },
+  {
+    "code": "Quebec",
+    "continent": "North America",
+    "name": "Quebec"
+  },
+  {
+    "code": "Republic of China",
+    "continent": "Asia",
+    "name": "Republic of China"
+  },
+  {
     "code": "cg",
     "continent": "Africa",
     "name": "Republic of the Congo"
+  },
+  {
+    "code": "cthulhu_republic",
+    "name": "Republic of Cthulhu"
+  },
+  {
+    "code": "Republic of Egypt",
+    "continent": "Africa",
+    "name": "Republic of Egypt"
+  },
+  {
+    "code": "Republic of Formosa",
+    "continent": "Asia",
+    "name": "Republic of Formosa"
+  },
+  {
+    "code": "Republic of Korea",
+    "continent": "Asia",
+    "name": "Republic of Korea"
+  },
+  {
+    "code": "Republic of Pirates",
+    "continent": "North America",
+    "name": "Republic of Pirates"
   },
   {
     "code": "re",
@@ -944,9 +1704,28 @@
     "name": "Réunion"
   },
   {
+    "code": "Rhode_Island",
+    "continent": "North America",
+    "name": "Rhode Island"
+  },
+  {
+    "code": "rio_de_janeiro",
+    "continent": "South America",
+    "name": "Rio de Janeiro"
+  },
+  {
+    "code": "Romanov Russia",
+    "continent": "Europe",
+    "name": "Romanov Russia"
+  },
+  {
     "code": "ro",
     "continent": "Europe",
     "name": "Romania"
+  },
+  {
+    "code": "Ror Empire",
+    "name": "Ror Empire"
   },
   {
     "code": "ru",
@@ -959,6 +1738,11 @@
     "name": "Rwanda"
   },
   {
+    "code": "Saba kingdom",
+    "continent": "Asia",
+    "name": "Saba Kingdom"
+  },
+  {
     "code": "bl",
     "continent": "North America",
     "name": "Saint Barthélemy"
@@ -967,11 +1751,6 @@
     "code": "sh-hl",
     "continent": "Africa",
     "name": "Saint Helena"
-  },
-  {
-    "code": "sh",
-    "continent": "Africa",
-    "name": "Saint Helena, Ascension and Tristan da Cunha"
   },
   {
     "code": "kn",
@@ -999,6 +1778,11 @@
     "name": "Saint Vincent and the Grenadines"
   },
   {
+    "code": "Sami flag",
+    "continent": "Europe",
+    "name": "Sami Flag"
+  },
+  {
     "code": "ws",
     "continent": "Oceania",
     "name": "Samoa"
@@ -1009,9 +1793,32 @@
     "name": "San Marino"
   },
   {
+    "code": "Santa Cruz",
+    "continent": "South America",
+    "name": "Santa Cruz"
+  },
+  {
+    "code": "santa_claus",
+    "name": "Santa Claus"
+  },
+  {
     "code": "st",
     "continent": "Africa",
     "name": "Sao Tome and Principe"
+  },
+  {
+    "code": "São Paulo",
+    "continent": "South America",
+    "name": "São Paulo"
+  },
+  {
+    "code": "sardines",
+    "name": "Sardines"
+  },
+  {
+    "code": "Sassanid Empire",
+    "continent": "Asia",
+    "name": "Sassanid Empire"
   },
   {
     "code": "sa",
@@ -1024,6 +1831,16 @@
     "name": "Scotland"
   },
   {
+    "code": "Second Republic of Iraq",
+    "continent": "Asia",
+    "name": "Second Republic of Iraq"
+  },
+  {
+    "code": "Second Spanish Republic",
+    "continent": "Europe",
+    "name": "Second Spanish Republic"
+  },
+  {
     "code": "sn",
     "continent": "Africa",
     "name": "Senegal"
@@ -1034,9 +1851,29 @@
     "name": "Serbia"
   },
   {
+    "code": "seville",
+    "continent": "Europe",
+    "name": "Seville"
+  },
+  {
     "code": "sc",
     "continent": "Africa",
     "name": "Seychelles"
+  },
+  {
+    "code": "Siam",
+    "continent": "Asia",
+    "name": "Siam"
+  },
+  {
+    "code": "Siberia",
+    "continent": "Asia",
+    "name": "Siberia"
+  },
+  {
+    "code": "Sicily",
+    "continent": "Europe",
+    "name": "Sicily"
   },
   {
     "code": "sl",
@@ -1064,6 +1901,10 @@
     "name": "Slovenia"
   },
   {
+    "code": "Socialist_flag",
+    "name": "Socialist Flag"
+  },
+  {
     "code": "sb",
     "continent": "Oceania",
     "name": "Solomon Islands"
@@ -1077,6 +1918,16 @@
     "code": "za",
     "continent": "Africa",
     "name": "South Africa"
+  },
+  {
+    "code": "South_Carolina",
+    "continent": "North America",
+    "name": "South Carolina"
+  },
+  {
+    "code": "South_Dakota",
+    "continent": "North America",
+    "name": "South Dakota"
   },
   {
     "code": "gs",
@@ -1094,9 +1945,29 @@
     "name": "South Sudan"
   },
   {
+    "code": "1_Southern Uí Néill",
+    "continent": "Europe",
+    "name": "Southern Uí Néill"
+  },
+  {
     "code": "es",
     "continent": "Europe",
     "name": "Spain"
+  },
+  {
+    "code": "spanish_empire",
+    "continent": "Europe",
+    "name": "Spanish Empire"
+  },
+  {
+    "code": "Sparta",
+    "continent": "Europe",
+    "name": "Sparta"
+  },
+  {
+    "code": "SPQR",
+    "continent": "Europe",
+    "name": "SPQR"
   },
   {
     "code": "lk",
@@ -1109,14 +1980,29 @@
     "name": "State of Palestine"
   },
   {
+    "code": "1_Strathclyde",
+    "continent": "Europe",
+    "name": "Strathclyde"
+  },
+  {
     "code": "sd",
     "continent": "Africa",
     "name": "Sudan"
   },
   {
+    "code": "Sultanate of Nejd",
+    "continent": "Asia",
+    "name": "Sultanate of Nejd"
+  },
+  {
     "code": "sr",
     "continent": "South America",
     "name": "Suriname"
+  },
+  {
+    "code": "1_Sussex",
+    "continent": "Europe",
+    "name": "Sussex"
   },
   {
     "code": "sj",
@@ -1127,6 +2013,11 @@
     "code": "se",
     "continent": "Europe",
     "name": "Sweden"
+  },
+  {
+    "code": "Sweden Norway Union",
+    "continent": "Europe",
+    "name": "Sweden Norway Union"
   },
   {
     "code": "ch",
@@ -1154,9 +2045,24 @@
     "name": "Tanzania"
   },
   {
+    "code": "Tennessee",
+    "continent": "North America",
+    "name": "Tennessee"
+  },
+  {
+    "code": "Texas",
+    "continent": "North America",
+    "name": "Texas"
+  },
+  {
     "code": "th",
     "continent": "Asia",
     "name": "Thailand"
+  },
+  {
+    "code": "tibet",
+    "continent": "Asia",
+    "name": "Tibet"
   },
   {
     "code": "tl",
@@ -1189,6 +2095,11 @@
     "name": "Tristan da Cunha"
   },
   {
+    "code": "Trucial States",
+    "continent": "Asia",
+    "name": "Trucial States"
+  },
+  {
     "code": "tn",
     "continent": "Africa",
     "name": "Tunisia"
@@ -1214,6 +2125,16 @@
     "name": "Tuvalu"
   },
   {
+    "code": "USA 1776",
+    "continent": "North America",
+    "name": "USA 1776"
+  },
+  {
+    "code": "ussr",
+    "continent": "Europe",
+    "name": "USSR"
+  },
+  {
     "code": "ug",
     "continent": "Africa",
     "name": "Uganda"
@@ -1224,9 +2145,19 @@
     "name": "Ukraine"
   },
   {
-    "code": "ae",
+    "code": "1_Ulaid",
+    "continent": "Europe",
+    "name": "Ulaid"
+  },
+  {
+    "code": "Umayyad Caliphate",
     "continent": "Asia",
-    "name": "United Arab Emirates"
+    "name": "Umayyad Caliphate"
+  },
+  {
+    "code": "United Arab Republic",
+    "continent": "Asia",
+    "name": "United Arab Republic"
   },
   {
     "code": "gb",
@@ -1238,14 +2169,14 @@
     "name": "United Nations"
   },
   {
-    "code": "um",
-    "continent": "North America",
-    "name": "United States Minor Outlying Islands"
-  },
-  {
     "code": "us",
     "continent": "North America",
     "name": "United States of America"
+  },
+  {
+    "code": "Urartu",
+    "continent": "Asia",
+    "name": "Urartu"
   },
   {
     "code": "uy",
@@ -1253,9 +2184,19 @@
     "name": "Uruguay"
   },
   {
+    "code": "Utah",
+    "continent": "North America",
+    "name": "Utah"
+  },
+  {
     "code": "uz",
     "continent": "Asia",
     "name": "Uzbekistan"
+  },
+  {
+    "code": "valencia",
+    "continent": "Europe",
+    "name": "Valencia"
   },
   {
     "code": "vu",
@@ -1266,6 +2207,16 @@
     "code": "ve",
     "continent": "South America",
     "name": "Venezuela"
+  },
+  {
+    "code": "venice",
+    "continent": "Europe",
+    "name": "Venice"
+  },
+  {
+    "code": "Vermont",
+    "continent": "North America",
+    "name": "Vermont"
   },
   {
     "code": "vn",
@@ -1283,9 +2234,19 @@
     "name": "Virgin Islands (U.S.)"
   },
   {
+    "code": "Virginia",
+    "continent": "North America",
+    "name": "Virginia"
+  },
+  {
     "code": "gb-wls",
     "continent": "Europe",
     "name": "Wales"
+  },
+  {
+    "code": "Wallonia",
+    "continent": "Europe",
+    "name": "Wallonia"
   },
   {
     "code": "wf",
@@ -1293,319 +2254,14 @@
     "name": "Wallis and Futuna"
   },
   {
-    "code": "eh",
-    "continent": "Africa",
-    "name": "Western Sahara"
-  },
-  {
-    "code": "ye",
-    "continent": "Asia",
-    "name": "Yemen"
-  },
-  {
-    "code": "zm",
-    "continent": "Africa",
-    "name": "Zambia"
-  },
-  {
-    "code": "zw",
-    "continent": "Africa",
-    "name": "Zimbabwe"
-  },
-  {
-    "code": "1_Airgialla",
-    "name": "Airgialla"
-  },
-  {
-    "code": "1_Connacht",
-    "name": "Connacht"
-  },
-  {
-    "code": "1_Dalriata",
-    "name": "Dalriata"
-  },
-  {
-    "code": "1_Dumnonia",
-    "name": "Dumnonia"
-  },
-  {
-    "code": "1_Dyfed",
-    "name": "Dyfed"
-  },
-  {
-    "code": "1_East Anglia",
-    "name": "East Anglia"
-  },
-  {
-    "code": "1_Essex",
-    "name": "Essex"
-  },
-  {
-    "code": "1_Fortriu",
-    "name": "Fortriu"
-  },
-  {
-    "code": "1_Franks",
-    "name": "Franks"
-  },
-  {
-    "code": "1_Gwent",
-    "name": "Gwent"
-  },
-  {
-    "code": "1_Gwynedd",
-    "name": "Gwynedd"
-  },
-  {
-    "code": "1_Kent",
-    "name": "Kent"
-  },
-  {
-    "code": "1_Laigin",
-    "name": "Laigin"
-  },
-  {
-    "code": "1_Mercia",
-    "name": "Mercia"
-  },
-  {
-    "code": "1_Munster",
-    "name": "Munster"
-  },
-  {
-    "code": "1_Northern Uí Néill",
-    "name": "Northern Uí Néill"
-  },
-  {
-    "code": "1_Northumbria",
-    "name": "Northumbria"
-  },
-  {
-    "code": "1_Powys",
-    "name": "Powys"
-  },
-  {
-    "code": "1_Southern Uí Néill",
-    "name": "Southern Uí Néill"
-  },
-  {
-    "code": "1_Strathclyde",
-    "name": "Strathclyde"
-  },
-  {
-    "code": "1_Sussex",
-    "name": "Sussex"
-  },
-  {
-    "code": "1_Ulaid",
-    "name": "Ulaid"
-  },
-  {
-    "code": "1_Wessex",
-    "name": "Wessex"
-  },
-  {
-    "code": "Alabama",
-    "name": "Alabama"
-  },
-  {
-    "code": "Alaska",
-    "name": "Alaska"
-  },
-  {
-    "code": "Arizona",
-    "name": "Arizona"
-  },
-  {
-    "code": "Arkansas",
-    "name": "Arkansas"
-  },
-  {
-    "code": "California",
-    "name": "California"
-  },
-  {
-    "code": "Colorado",
-    "name": "Colorado"
-  },
-  {
-    "code": "Florida",
-    "name": "Florida"
-  },
-  {
-    "code": "Georgia_US",
-    "name": "Georgia"
-  },
-  {
-    "code": "Hawaii",
-    "name": "Hawaii"
-  },
-  {
-    "code": "Idaho",
-    "name": "Idaho"
-  },
-  {
-    "code": "Illinois",
-    "name": "Illinois"
-  },
-  {
-    "code": "Indiana",
-    "name": "Indiana"
-  },
-  {
-    "code": "Iowa",
-    "name": "Iowa"
-  },
-  {
-    "code": "Kansas",
-    "name": "Kansas"
-  },
-  {
-    "code": "Kentucky",
-    "name": "Kentucky"
-  },
-  {
-    "code": "Louisiana",
-    "name": "Louisiana"
-  },
-  {
-    "code": "Maine",
-    "name": "Maine"
-  },
-  {
-    "code": "Maryland",
-    "name": "Maryland"
-  },
-  {
-    "code": "Michigan",
-    "name": "Michigan"
-  },
-  {
-    "code": "Minnesota",
-    "name": "Minnesota"
-  },
-  {
-    "code": "Mississippi",
-    "name": "Mississippi"
-  },
-  {
-    "code": "Missouri",
-    "name": "Missouri"
-  },
-  {
-    "code": "Montana",
-    "name": "Montana"
-  },
-  {
-    "code": "Nebraska",
-    "name": "Nebraska"
-  },
-  {
-    "code": "Nevada",
-    "name": "Nevada"
-  },
-  {
-    "code": "New_Hampshire",
-    "name": "New Hampshire"
-  },
-  {
-    "code": "New_Jersey",
-    "name": "New Jersey"
-  },
-  {
-    "code": "New_Mexico",
-    "name": "New Mexico"
-  },
-  {
-    "code": "New_York",
-    "name": "New York"
-  },
-  {
-    "code": "North_Carolina",
-    "name": "North Carolina"
-  },
-  {
-    "code": "North_Dakota",
-    "name": "North Dakota"
-  },
-  {
-    "code": "Ohio",
-    "name": "Ohio"
-  },
-  {
-    "code": "Oklahoma",
-    "name": "Oklahoma"
-  },
-  {
-    "code": "Oregon",
-    "name": "Oregon"
-  },
-  {
-    "code": "Pennsylvania",
-    "name": "Pennsylvania"
-  },
-  {
-    "code": "Quebec",
-    "name": "Quebec"
-  },
-  {
-    "code": "Rhode_Island",
-    "name": "Rhode Island"
-  },
-  {
-    "code": "South_Carolina",
-    "name": "South Carolina"
-  },
-  {
-    "code": "South_Dakota",
-    "name": "South Dakota"
-  },
-  {
-    "code": "Tennessee",
-    "name": "Tennessee"
-  },
-  {
-    "code": "Texas",
-    "name": "Texas"
-  },
-  {
-    "code": "Vermont",
-    "name": "Vermont"
-  },
-  {
-    "code": "Virginia",
-    "name": "Virginia"
-  },
-  {
     "code": "Washington",
+    "continent": "North America",
     "name": "Washington"
   },
   {
-    "code": "West_Virginia",
-    "name": "West Virginia"
-  },
-  {
-    "code": "Wisconsin",
-    "name": "Wisconsin"
-  },
-  {
-    "code": "Wyoming",
-    "name": "Wyoming"
-  },
-  {
-    "code": "northern_ireland",
+    "code": "1_Wessex",
     "continent": "Europe",
-    "name": "Northern Ireland"
-  },
-  {
-    "code": "austria_hungary",
-    "continent": "Europe",
-    "name": "Austria-Hungary"
-  },
-  {
-    "code": "kurdistan",
-    "continent": "Asia",
-    "name": "Kurdistan"
+    "name": "Wessex"
   },
   {
     "code": "west_germany",
@@ -1613,29 +2269,38 @@
     "name": "West Germany"
   },
   {
-    "code": "east_germany",
+    "code": "West Roman Empire",
     "continent": "Europe",
-    "name": "East Germany"
+    "name": "West Roman Empire"
   },
   {
-    "code": "ussr",
-    "continent": "Europe",
-    "name": "USSR"
+    "code": "West_Virginia",
+    "continent": "North America",
+    "name": "West Virginia"
   },
   {
-    "code": "tibet",
+    "code": "eh",
+    "continent": "Africa",
+    "name": "Western Sahara"
+  },
+  {
+    "code": "Wisconsin",
+    "continent": "North America",
+    "name": "Wisconsin"
+  },
+  {
+    "code": "Wyoming",
+    "continent": "North America",
+    "name": "Wyoming"
+  },
+  {
+    "code": "Yellow_Flag",
+    "name": "Yellow Flag"
+  },
+  {
+    "code": "ye",
     "continent": "Asia",
-    "name": "Tibet"
-  },
-  {
-    "code": "prussia",
-    "continent": "Europe",
-    "name": "Prussia"
-  },
-  {
-    "code": "venice",
-    "continent": "Europe",
-    "name": "Venice"
+    "name": "Yemen"
   },
   {
     "code": "yugoslavia",
@@ -1643,208 +2308,23 @@
     "name": "Yugoslavia"
   },
   {
-    "code": "spanish_empire",
-    "continent": "Europe",
-    "name": "Spanish Empire"
+    "code": "Zaire",
+    "continent": "Africa",
+    "name": "Zaire"
   },
   {
-    "code": "amazonas",
-    "continent": "South America",
-    "name": "Amazonas"
+    "code": "zm",
+    "continent": "Africa",
+    "name": "Zambia"
   },
   {
-    "code": "bahia",
-    "continent": "South America",
-    "name": "Bahia"
+    "code": "Zheleznogorsk",
+    "continent": "Asia",
+    "name": "Zheleznogorsk"
   },
   {
-    "code": "buenos_aires",
-    "continent": "South America",
-    "name": "Buenos Aires"
-  },
-  {
-    "code": "catamarca",
-    "continent": "South America",
-    "name": "Catamarca"
-  },
-  {
-    "code": "ceara",
-    "continent": "South America",
-    "name": "Ceará"
-  },
-  {
-    "code": "galapagos",
-    "continent": "South America",
-    "name": "Galápagos"
-  },
-  {
-    "code": "minas_gerais",
-    "continent": "South America",
-    "name": "Minas Gerais"
-  },
-  {
-    "code": "para",
-    "continent": "South America",
-    "name": "Pará"
-  },
-  {
-    "code": "rio_de_janeiro",
-    "continent": "South America",
-    "name": "Rio de Janeiro"
-  },
-  {
-    "code": "santa_cruz",
-    "continent": "South America",
-    "name": "Santa Cruz"
-  },
-  {
-    "code": "sao_paulo",
-    "continent": "South America",
-    "name": "São Paulo"
-  },
-  {
-    "code": "antipope",
-    "continent": "Europe",
-    "name": "Anti-Pope"
-  },
-  {
-    "code": "aquitaine",
-    "continent": "Europe",
-    "name": "Aquitaine"
-  },
-  {
-    "code": "armagnac",
-    "continent": "Europe",
-    "name": "Armagnac"
-  },
-  {
-    "code": "asturias",
-    "continent": "Europe",
-    "name": "Asturias"
-  },
-  {
-    "code": "baguette",
-    "continent": "",
-    "name": "Baguettes"
-  },
-  {
-    "code": "britanny",
-    "continent": "Europe",
-    "name": "Britanny"
-  },
-  {
-    "code": "burgundy",
-    "continent": "Europe",
-    "name": "Burgundy"
-  },
-  {
-    "code": "castille",
-    "continent": "Europe",
-    "name": "Castille"
-  },
-  {
-    "code": "cordoba",
-    "continent": "Europe",
-    "name": "Cordoba"
-  },
-  {
-    "code": "cthulhu_republic",
-    "continent": "",
-    "name": "Republic of Cthulhu"
-  },
-  {
-    "code": "french_foreign_legion",
-    "continent": "",
-    "name": "French Foreign Legion"
-  },
-  {
-    "code": "frost_giant",
-    "continent": "",
-    "name": "Frost Giant"
-  },
-  {
-    "code": "leon",
-    "continent": "Europe",
-    "name": "Leon"
-  },
-  {
-    "code": "nuragic",
-    "continent": "Europe",
-    "name": "Nuragic Tribes"
-  },
-  {
-    "code": "normandy",
-    "continent": "Europe",
-    "name": "Normandy"
-  },
-  {
-    "code": "paris",
-    "continent": "Europe",
-    "name": "Paris"
-  },
-  {
-    "code": "polar_bear",
-    "continent": "",
-    "name": "Polar Bear"
-  },
-  {
-    "code": "provence",
-    "continent": "Europe",
-    "name": "Provence"
-  },
-  {
-    "code": "santa_claus",
-    "continent": "",
-    "name": "Santa Claus"
-  },
-  {
-    "code": "sardines",
-    "continent": "",
-    "name": "Sardines"
-  },
-  {
-    "code": "valencia",
-    "continent": "Europe",
-    "name": "Valencia"
-  },
-  {
-    "code": "scotland",
-    "continent": "",
-    "name": "Scotland"
-  },
-  {
-    "code": "wales",
-    "continent": "",
-    "name": "Wales"
-  },
-  {
-    "code": "england",
-    "continent": "Europe",
-    "name": "England"
-  },
-  {
-    "code": "basque",
-    "continent": "",
-    "name": "The Basque"
-  },
-  {
-    "code": "catalonia",
-    "continent": "",
-    "name": "Catalonia"
-  },
-  {
-    "code": "galicia",
-    "continent": "Europe",
-    "name": "Galicia"
-  },
-  {
-    "code": "granada",
-    "continent": "",
-    "name": "Emirate of Granada"
-  },
-  {
-    "code": "seville",
-    "continent": "",
-    "name": "Seville"
+    "code": "zw",
+    "continent": "Africa",
+    "name": "Zimbabwe"
   }
 ]

@@ -1,5 +1,12 @@
 {
+  "lang": {
+    "en": "Serbo-Croatian",
+    "native": "Srpsko-Hrvatski",
+    "svg": "sh_yugo",
+    "lang_code": "sh"
+  },
   "main": {
+    "title": "OpenFront (ALFA)",
     "join_discord": "Pridruži se Diskordu!",
     "create_lobby": "Napravi čekaonicu",
     "join_lobby": "Pridruži se čekaonici",
@@ -15,6 +22,7 @@
     "action_alt_view": "Alternativni prikaz (teren / države)",
     "action_attack_altclick": "Napad (ukoliko je levi klik podešen da otvara izbornik)",
     "action_build": "Otvara izbornik za izgradnju",
+    "action_emote": "Otvori izbornik emotikona",
     "action_center": "Centrira kameru na igrača",
     "action_zoom": "Približi / udalji",
     "action_move_camera": "Pomera kameru",
@@ -77,8 +85,7 @@
     "icon_crown": "Kruna - Ovo je igrač broj 1 na ljestvici",
     "icon_traitor": "Ukršteni mačevi - Izdajica. Ovaj igrač je napao saveznika.",
     "icon_ally": "Rukovanje - Saveznik. Ovaj igrač ti je saveznik.",
-    "info_enemy_panel": "Informacije o neprijatelju",
-    "action_emote": "Otvori izbornik emotikona"
+    "info_enemy_panel": "Informacije o neprijatelju"
   },
   "single_modal": {
     "title": "Igraj sam",
@@ -94,6 +101,7 @@
     "start": "Započni partiju"
   },
   "map": {
+    "map": "Mapa",
     "world": "Svijet",
     "europe": "Evropa",
     "mena": "BISA",
@@ -110,10 +118,11 @@
     "random": "Nasumična",
     "iceland": "Island",
     "pangaea": "Pangea",
-    "map": "Mapa",
-    "betweentwoseas": "Između dva mora",
     "japan": "Japan i susjedi",
-    "knownworld": "Poznati svijet"
+    "betweentwoseas": "Između dva mora",
+    "knownworld": "Poznati svijet",
+    "faroeislands": "Farska ostrva",
+    "europeclassic": "Evropa (klasika)"
   },
   "private_lobby": {
     "title": "Pridruži se privatnoj čekaonici",
@@ -139,6 +148,8 @@
   },
   "host_modal": {
     "title": "Privatna čekaonica",
+    "mode": "Tip igre",
+    "team_count": "Broj timova",
     "options_title": "Opcije",
     "bots": "Botovi: ",
     "bots_disabled": "Onemogućeni",
@@ -150,25 +161,18 @@
     "player": "Igrač",
     "players": "Igrači",
     "waiting": "Čekamo igrače...",
-    "start": "Započni partiju",
-    "mode": "Tip igre"
-  },
-  "difficulty": {
-    "Relaxed": "Bleja",
-    "Balanced": "Fer",
-    "Intense": "Napeto",
-    "Impossible": "Nemoguće",
-    "difficulty": "Težina"
+    "start": "Započni partiju"
   },
   "game_starting_modal": {
     "title": "Partija počinje...",
     "desc": "Čekaonica se priprema za start. Ček' malo."
   },
-  "lang": {
-    "en": "Serbo-Croatian",
-    "native": "Srpsko-Hrvatski",
-    "svg": "sh_yugo",
-    "lang_code": "sh"
+  "difficulty": {
+    "difficulty": "Težina",
+    "Relaxed": "Bleja",
+    "Balanced": "Fer",
+    "Intense": "Napeto",
+    "Impossible": "Nemoguće"
   },
   "game_mode": {
     "ffa": "Svako za sebe",
@@ -216,5 +220,10 @@
     "move_right_desc": "Pomera kameru udesno",
     "reset": "Resetuj",
     "unbind": "Obriši prečicu"
+  },
+  "map_categories": {
+    "continental": "Kontinentalne",
+    "regional": "Regionalne",
+    "fantasy": "Druge"
   }
 }

@@ -271,10 +271,19 @@ export class EventsDisplay extends LitElement implements Layer {
       const malusPercent = Math.round(
         (1 - this.game.config().traitorDefenseDebuff()) * 100,
       );
+      const traitorDurationRaw =
+        Number(this.game.config().traitorDuration) / 10;
+      const traitorDurationSeconds = Math.floor(traitorDurationRaw);
+
+      const durationText =
+        traitorDurationSeconds === 1
+          ? "1 second"
+          : `${traitorDurationSeconds} seconds`;
+
       this.addEvent({
         description:
           `You broke your alliance with ${betrayed.name()}, making you a TRAITOR ` +
-          `(${malusPercent}% defense debuff)`,
+          `(${malusPercent}% defense debuff for ${durationText})`,
         type: MessageType.ERROR,
         highlight: true,
         createdAt: this.game.ticks(),

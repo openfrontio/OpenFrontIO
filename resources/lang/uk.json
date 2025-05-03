@@ -1,5 +1,12 @@
 {
+  "lang": {
+    "en": "Ukrainian",
+    "native": "Українська",
+    "svg": "ua",
+    "lang_code": "uk"
+  },
   "main": {
+    "title": "OpenFront (АЛЬФА)",
     "join_discord": "Приєднуйтеся до Discord!",
     "create_lobby": "Створити лобі",
     "join_lobby": "Приєднатися до лобі",
@@ -13,8 +20,9 @@
     "table_key": "Клавіш",
     "table_action": "Дія",
     "action_alt_view": "Альтернативний вигляд (топогорафія/країни)",
-    "action_attack_altclick": "Атака (коли клацання лівою кнопкою миші призначено на відкриття меню)",
+    "action_attack_altclick": "Атака (коли лівий клац призначено на відкриття меню)",
     "action_build": "Відкрити меню будівництва",
+    "action_emote": "Відкрити меню емодзі",
     "action_center": "Відцентрувати камеру на гравцеві",
     "action_zoom": "Зменшити/Збільшити масштаб",
     "action_move_camera": "Перемістити камеру",
@@ -77,8 +85,7 @@
     "icon_crown": "Корона — Це гравець номер 1 у таблиці лідерів",
     "icon_traitor": "Перехрещені мечі — Зрадник. Цей гравець атакував союзника.",
     "icon_ally": "Рукостискання — Союзник. Цей гравець є вашим союзником.",
-    "info_enemy_panel": "Панель інформації ворога",
-    "action_emote": "Відкрити меню емодзі"
+    "info_enemy_panel": "Панель інформації ворога"
   },
   "single_modal": {
     "title": "Гра наодинці",
@@ -94,6 +101,7 @@
     "start": "Розпочати гру"
   },
   "map": {
+    "map": "Мапа",
     "world": "Світ",
     "europe": "Європа",
     "mena": "MENA",
@@ -110,10 +118,11 @@
     "random": "Випадково",
     "iceland": "Ісландія",
     "pangaea": "Пангея",
-    "map": "Мапа",
-    "betweentwoseas": "Поміж двох морів",
     "japan": "Японія та сусіди",
-    "knownworld": "Відомий світ"
+    "betweentwoseas": "Поміж двох морів",
+    "knownworld": "Відомий світ",
+    "faroeislands": "Фарерські острови",
+    "europeclassic": "Європа (класична)"
   },
   "private_lobby": {
     "title": "Приєднатися до приватного лобі",
@@ -139,6 +148,8 @@
   },
   "host_modal": {
     "title": "Приватне лобі",
+    "mode": "Режим",
+    "team_count": "Кількість команд",
     "options_title": "Налаштування",
     "bots": "Боти: ",
     "bots_disabled": "Відключено",
@@ -150,25 +161,18 @@
     "player": "Гравець",
     "players": "Гравці(в)",
     "waiting": "Очікування гравців...",
-    "start": "Розпочати гру",
-    "mode": "Режим"
-  },
-  "difficulty": {
-    "Relaxed": "Розслаблена",
-    "Balanced": "Збалансована",
-    "Intense": "Напружена",
-    "Impossible": "Неможлива",
-    "difficulty": "Складність"
+    "start": "Розпочати гру"
   },
   "game_starting_modal": {
     "title": "Гра починається...",
     "desc": "Підготовка до запуску лобі. Будь ласка, зачекайте."
   },
-  "lang": {
-    "en": "Ukrainian",
-    "native": "Українська",
-    "svg": "ua",
-    "lang_code": "uk"
+  "difficulty": {
+    "difficulty": "Складність",
+    "Relaxed": "Розслаблена",
+    "Balanced": "Збалансована",
+    "Intense": "Напружена",
+    "Impossible": "Неможлива"
   },
   "game_mode": {
     "ffa": "Всі проти всіх (FFA)",
@@ -216,5 +220,10 @@
     "move_right_desc": "Перемістити камеру праворуч",
     "reset": "Скинути",
     "unbind": "Звільнити"
+  },
+  "map_categories": {
+    "continental": "Континентальні",
+    "regional": "Регіональні",
+    "fantasy": "Інші"
   }
 }

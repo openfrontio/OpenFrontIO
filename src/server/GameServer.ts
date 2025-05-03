@@ -95,6 +95,9 @@ export class GameServer {
     if (gameConfig.gameMode != null) {
       this.gameConfig.gameMode = gameConfig.gameMode;
     }
+    if (gameConfig.playerTeams != null) {
+      this.gameConfig.playerTeams = gameConfig.playerTeams;
+    }
   }
 
   public addClient(client: Client, lastTurn: number) {
@@ -356,7 +359,7 @@ export class GameServer {
         client.ws.close(1000, "game has ended");
       }
     });
-    if (!this._hasPrestarted || !this._hasStarted) {
+    if (!this._hasPrestarted && !this._hasStarted) {
       this.log.info(`game not started, not archiving game`);
       return;
     }

@@ -203,32 +203,27 @@
             />
           </g>
         </svg>
-        <div class="l-header__highlightText">v21.2</div>
+        <div class="l-header__highlightText">v22.0</div>
       </div>
     </header>
     <div class="bg-image"></div>
 
+    <dark-mode-button></dark-mode-button>
     <!-- Main container with responsive padding -->
-    <main class="flex justify-center items-center flex-grow">
-      <div class="container">
+    <main class="flex justify-center flex-grow">
+      <div class="container pt-12">
+        <o-button
+          id="login-discord"
+          title="Initializing..."
+          disable="true"
+          block
+        ></o-button>
+
         <div class="container__row">
           <flag-input class="w-[20%] md:w-[15%]"></flag-input>
           <username-input class="w-full"></username-input>
         </div>
-        <div>
-          <a
-            target="_blank"
-            href="https://discord.gg/openfront"
-            class="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white p-3 sm:p-4 lg:p-5 font-medium text-lg sm:text-xl lg:text-2xl rounded-lg border-none cursor-pointer transition-colors duration-300 flex justify-center items-center gap-5"
-          >
-            <img
-              style="height: 50px; width: 50px"
-              alt="Discord"
-              src="../../resources/icons/discord.svg"
-            />
-            <span data-i18n="main.join_discord"> Join the Discord! </span>
-          </a>
-        </div>
+        <div></div>
         <div>
           <public-lobby class="w-full"></public-lobby>
         </div>
@@ -331,6 +326,13 @@
           >
             Wiki
           </a>
+          <a
+            target="_blank"
+            href="https://discord.gg/jRpxXvG42t"
+            class="t-link"
+          >
+            <span data-i18n="main.join_discord"> Join the Discord! </span>
+          </a>
         </div>
         <div class="l-footer__col t-text-white">
           © 2025
@@ -339,7 +341,7 @@
             class="t-link"
             target="_blank"
           >
-            OpenFront.io
+            OpenFront™
           </a>
         </div>
       </div>

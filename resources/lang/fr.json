@@ -1,5 +1,12 @@
 {
+  "lang": {
+    "en": "French",
+    "native": "Français",
+    "svg": "fr",
+    "lang_code": "fr"
+  },
   "main": {
+    "title": "OpenFront (ALPHA)",
     "join_discord": "Rejoignez le Discord!",
     "create_lobby": "Créer un salon",
     "join_lobby": "Rejoindre un salon",
@@ -15,6 +22,7 @@
     "action_alt_view": "Vue alternative (terrain/pays)",
     "action_attack_altclick": "Attaquer (quand le clic gauche est configuré pour ouvrir le menu)",
     "action_build": "Ouvrir le menu de construction",
+    "action_emote": "Ouvrir le menu des émojis",
     "action_center": "Recentrer la caméra",
     "action_zoom": "Zoomer/Dézoomer",
     "action_move_camera": "Déplacer la caméra",
@@ -77,8 +85,7 @@
     "icon_crown": "Couronne - Ce joueur est le numéro 1 du classement",
     "icon_traitor": "Épées croisées - Traître. Ce joueur a attaqué un allié.",
     "icon_ally": "Poignée de main - Allié. Ce joueur est votre allié.",
-    "info_enemy_panel": "Panneau d'information de l'ennemi",
-    "action_emote": "Ouvrir le menu des émojis"
+    "info_enemy_panel": "Panneau d'information de l'ennemi"
   },
   "single_modal": {
     "title": "Joueur seul",
@@ -94,6 +101,7 @@
     "start": "Commencer la partie"
   },
   "map": {
+    "map": "Carte",
     "world": "Monde",
     "europe": "Europe",
     "mena": "MOAN",
@@ -110,10 +118,11 @@
     "random": "Aléatoire",
     "iceland": "Islande",
     "pangaea": "Pangée",
-    "map": "Carte",
-    "betweentwoseas": "Entre deux mers",
     "japan": "Japon et pays voisins",
-    "knownworld": "Monde connu"
+    "betweentwoseas": "Entre deux mers",
+    "knownworld": "Monde connu",
+    "faroeislands": "Îles Féroé",
+    "europeclassic": "Europe (classique)"
   },
   "private_lobby": {
     "title": "Rejoindre un salon privé",
@@ -139,6 +148,8 @@
   },
   "host_modal": {
     "title": "Salon privé",
+    "mode": "Mode",
+    "team_count": "Nombre d'équipes",
     "options_title": "Paramètres",
     "bots": "Bots : ",
     "bots_disabled": "Désactivé",
@@ -150,25 +161,18 @@
     "player": "Joueur",
     "players": "Joueurs",
     "waiting": "En attente de joueurs...",
-    "start": "Commencer la partie",
-    "mode": "Mode"
-  },
-  "difficulty": {
-    "Relaxed": "Détendu",
-    "Balanced": "Équilibré",
-    "Intense": "Intense",
-    "Impossible": "Impossible",
-    "difficulty": "Difficulté"
+    "start": "Commencer la partie"
   },
   "game_starting_modal": {
     "title": "La partie est en train de commencer...",
     "desc": "Préparation du salon. Veuillez patienter."
   },
-  "lang": {
-    "en": "French",
-    "native": "Français",
-    "svg": "fr",
-    "lang_code": "fr"
+  "difficulty": {
+    "difficulty": "Difficulté",
+    "Relaxed": "Détendu",
+    "Balanced": "Équilibré",
+    "Intense": "Intense",
+    "Impossible": "Impossible"
   },
   "game_mode": {
     "ffa": "Chacun pour soi",
@@ -216,5 +220,10 @@
     "move_right_desc": "Déplacer la caméra vers la droite",
     "reset": "Réinitialiser",
     "unbind": "Détacher"
+  },
+  "map_categories": {
+    "continental": "Continental",
+    "regional": "Régional",
+    "fantasy": "Autre"
   }
 }
