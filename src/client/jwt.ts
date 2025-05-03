@@ -42,6 +42,26 @@ export function discordLogin() {
   window.location.href = `${getApiBase()}/login/discord?redirect_uri=${window.location.href}`;
 }
 
+export async function logOut() {
+  const token = localStorage.getItem("token");
+  if (token === null) return;
+  localStorage.removeItem("token");
+  __isLoggedIn = false;
+
+  const response = await fetch(getApiBase() + "/logout", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (response.ok === false) {
+    console.error("Logout failed", response);
+    return false;
+  }
+  return true;
+}
+
 let __isLoggedIn: TokenPayload | false | undefined = undefined;
 export function isLoggedIn(): TokenPayload | false {
   if (__isLoggedIn === undefined) {
@@ -76,7 +96,7 @@ export function _isLoggedIn(): TokenPayload | false {
         'unexpected "iss" claim value',
         // JSON.stringify(payload, null, 2),
       );
-      localStorage.removeItem("token");
+      logOut();
       return false;
     }
     if (aud !== getAudience()) {
@@ -85,7 +105,7 @@ export function _isLoggedIn(): TokenPayload | false {
         'unexpected "aud" claim value',
         // JSON.stringify(payload, null, 2),
       );
-      localStorage.removeItem("token");
+      logOut();
       return false;
     }
     const now = Math.floor(Date.now() / 1000);
@@ -95,7 +115,7 @@ export function _isLoggedIn(): TokenPayload | false {
         'after "exp" claim value',
         // JSON.stringify(payload, null, 2),
       );
-      localStorage.removeItem("token");
+      logOut();
       return false;
     }
     const refreshAge: number = 6 * 3600; // 6 hours
