@@ -165,7 +165,7 @@ export function startWorker() {
         disableNukes: req.body.disableNukes,
         gameMode: req.body.gameMode,
         playerTeams: req.body.playerTeams,
-        playerTeamsSelection: req.body.playerTeams,
+        playerTeamsSelection: req.body.playerTeamsSelection,
       });
       res.status(200).json({ success: true });
     }),

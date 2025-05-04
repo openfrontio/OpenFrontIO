@@ -121,7 +121,7 @@ export class GameImpl implements Game {
   private addPlayers() {
     const config = this.config().gameConfig();
     const gameMode = config.gameMode;
-    const playerTeamPrefs = config.playerTeams || {};
+    const playerTeamPrefs = config.playerTeamsSelection || {};
 
     if (gameMode !== GameMode.Team) {
       this._humans.forEach((p) => this.addPlayer(p));
