@@ -343,10 +343,11 @@ export class HostLobbyModal extends LitElement {
 
             const selectedTeam = player.preferredTeam;
             const isTeamMode = this.gameMode !== GameMode.FFA;
+            const isDuos = this.teamCount === Duos;
 
             return html`
               <div class="player-row">
-                ${isTeamMode
+                ${isTeamMode && !isDuos
                   ? html`
                       <select
                         @change=${(e: Event) =>
@@ -508,11 +509,11 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
-  private async handleTeamCountSelection(value: number) {
-    this.teamCount = value;
+  private async handleTeamCountSelection(value: number | typeof Duos) {
+    this.teamCount = value === Duos ? Duos : Number(value);
     this.putGameConfig();
   }
-  
+
   private async handleTeamSelect(username: string, value: string) {
     const team = value as Team;
     const player = this.lobbyPlayers.find((p) => p.username === username);
@@ -523,15 +524,16 @@ export class HostLobbyModal extends LitElement {
   }
 
   private getAvailableTeams(): Team[] {
-    const allTeams = Object.values(ColoredTeams).filter(team => team !== "Bot");
-    
+    const allTeams = Object.values(ColoredTeams).filter(
+      (team) => team !== "Bot",
+    );
+
     if (typeof this.teamCount === "number") {
       return allTeams.slice(0, this.teamCount);
     }
-  
+
     return allTeams;
   }
-  
 
   private lobbyPlayers: {
     username: string;
