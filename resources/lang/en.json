@@ -145,7 +145,8 @@
   },
   "public_lobby": {
     "join": "Join next Game",
-    "waiting": "players waiting"
+    "waiting": "players waiting",
+    "teams": "Team count:"
   },
   "username": {
     "enter_username": "Enter your username",

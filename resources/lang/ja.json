@@ -137,7 +137,8 @@
   },
   "public_lobby": {
     "join": "次のゲームに参加",
-    "waiting": "人が参加しています..."
+    "waiting": "人が参加しています...",
+    "teams": "チームの数:"
   },
   "username": {
     "enter_username": "ユーザー名を入力",
