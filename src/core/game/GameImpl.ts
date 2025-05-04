@@ -119,43 +119,39 @@ export class GameImpl implements Game {
   }
 
   private addPlayers() {
-    const gameMode = this.config().gameConfig().gameMode;
-    const playerTeamPrefs = this.config().gameConfig().playerTeams || {};
+    const config = this.config().gameConfig();
+    const gameMode = config.gameMode;
+    const playerTeamPrefs = config.playerTeams || {};
 
     if (gameMode !== GameMode.Team) {
       this._humans.forEach((p) => this.addPlayer(p));
       this._nations.forEach((n) => this.addPlayer(n.playerInfo));
       return;
     }
-    const isDuos = this.config().gameConfig().playerTeams === Duos;
-    const allPlayers = [
-      ...this._humans,
-      ...this._nations.map((n) => n.playerInfo),
-    ];
-    const playerToTeam = assignTeams(allPlayers, this.playerTeams);
     const manualAssignments = new Map<PlayerInfo, Team>();
     const unassigned: PlayerInfo[] = [];
-
     for (const p of this._humans) {
       const preferredTeam = playerTeamPrefs[p.name];
-      if (preferredTeam) {
+      if (preferredTeam && preferredTeam !== "") {
         manualAssignments.set(p, preferredTeam);
       } else {
         unassigned.push(p);
       }
     }
-
     const autoAssignments = assignTeams(unassigned, this.playerTeams);
-
-    for (const [p, t] of manualAssignments.entries()) {
-      this.addPlayer(p, t);
+    for (const [p, team] of manualAssignments.entries()) {
+      this.addPlayer(p, team);
     }
-    for (const [p, t] of autoAssignments.entries()) {
-      if (t === "kicked") {
+
+    for (const [p, team] of autoAssignments.entries()) {
+      if (team === "kicked") {
         console.warn(`Player ${p.name} was kicked from team`);
         continue;
       }
-      this.addPlayer(p, t);
+      this.addPlayer(p, team);
+    }
+    for (const nation of this._nations) {
+      this.addPlayer(nation.playerInfo);
     }
   }
 
