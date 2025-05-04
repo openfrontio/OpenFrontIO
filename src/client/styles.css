@@ -245,6 +245,30 @@ label.option-card:hover {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+.team-select {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px 16px;
+  border-radius: 16px;
+  font-size: 14px;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  appearance: none;
+  background-color: rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+.team-select option {
+  color: black;
+}
+
+.team-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
 #bots-count,
 #private-lobby-bots-count {
   width: 80%;

@@ -115,17 +115,37 @@ export class GameImpl implements Game {
   }
 
   private addHumans() {
-    if (this.config().gameConfig().gameMode != GameMode.Team) {
+    const gameMode = this.config().gameConfig().gameMode;
+    const playerTeamPrefs = this.config().gameConfig().playerTeams || {};
+
+    if (gameMode !== GameMode.Team) {
       this._humans.forEach((p) => this.addPlayer(p));
       return;
     }
-    const playerToTeam = assignTeams(this._humans, this.playerTeams);
-    for (const [playerInfo, team] of playerToTeam.entries()) {
-      if (team == "kicked") {
-        console.warn(`Player ${playerInfo.name} was kicked from team`);
+
+    const manualAssignments = new Map<PlayerInfo, Team>();
+    const unassigned: PlayerInfo[] = [];
+
+    for (const p of this._humans) {
+      const preferredTeam = playerTeamPrefs[p.name];
+      if (preferredTeam) {
+        manualAssignments.set(p, preferredTeam);
+      } else {
+        unassigned.push(p);
+      }
+    }
+
+    const autoAssignments = assignTeams(unassigned, this.playerTeams);
+
+    for (const [p, t] of manualAssignments.entries()) {
+      this.addPlayer(p, t);
+    }
+    for (const [p, t] of autoAssignments.entries()) {
+      if (t === "kicked") {
+        console.warn(`Player ${p.name} was kicked from team`);
         continue;
       }
-      this.addPlayer(playerInfo, team);
+      this.addPlayer(p, t);
     }
   }
 

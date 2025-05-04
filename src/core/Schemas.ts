@@ -122,6 +122,7 @@ const GameConfigSchema = z.object({
   instantBuild: z.boolean(),
   maxPlayers: z.number().optional(),
   numPlayerTeams: z.number().optional(),
+  playerTeams: z.record(z.string(), z.nativeEnum(Team)).optional(),
 });
 
 const SafeString = z

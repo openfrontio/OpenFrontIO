@@ -98,6 +98,9 @@ export class GameServer {
     if (gameConfig.numPlayerTeams != null) {
       this.gameConfig.numPlayerTeams = gameConfig.numPlayerTeams;
     }
+    if (gameConfig.playerTeams != null) {
+      this.gameConfig.playerTeams = gameConfig.playerTeams;
+    }
   }
 
   public addClient(client: Client, lastTurn: number) {
