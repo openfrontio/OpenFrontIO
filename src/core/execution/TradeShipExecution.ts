@@ -21,6 +21,7 @@ export class TradeShipExecution implements Execution {
   private tradeShip: Unit;
   private index = 0;
   private wasCaptured = false;
+  private tilesTraveled = 0;
 
   constructor(
     private _owner: PlayerID,
@@ -106,6 +107,7 @@ export class TradeShipExecution implements Execution {
       case PathFindResultType.Pending:
         // Fire unit event to rerender.
         this.tradeShip.move(this.tradeShip.tile());
+        this.tilesTraveled++;
         break;
       case PathFindResultType.NextTile:
         // Update safeFromPirates status
@@ -113,6 +115,7 @@ export class TradeShipExecution implements Execution {
           this.tradeShip.setSafeFromPirates();
         }
         this.tradeShip.move(result.tile);
+        this.tilesTraveled++;
         break;
       case PathFindResultType.PathNotFound:
         consolex.warn("captured trade ship cannot find route");
@@ -127,11 +130,7 @@ export class TradeShipExecution implements Execution {
   private complete() {
     this.active = false;
     this.tradeShip.delete(false);
-    const gold = this.mg
-      .config()
-      .tradeShipGold(
-        this.mg.manhattanDist(this.srcPort.tile(), this._dstPort.tile()),
-      );
+    const gold = this.mg.config().tradeShipGold(this.tilesTraveled);
 
     if (this.wasCaptured) {
       this.tradeShip.owner().addGold(gold);
