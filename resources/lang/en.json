@@ -8,6 +8,8 @@
   "main": {
     "title": "OpenFront (ALPHA)",
     "join_discord": "Join the Discord!",
+    "login_discord": "Login with Discord",
+    "logged_in": "Logged in!",
     "create_lobby": "Create Lobby",
     "join_lobby": "Join Lobby",
     "single_player": "Single Player",

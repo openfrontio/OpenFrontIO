@@ -8,6 +8,7 @@ import {
   Tick,
 } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
+import { flattenedEmojiTable } from "../../Util";
 import { AttackExecution } from "../AttackExecution";
 import { EmojiExecution } from "../EmojiExecution";
 
@@ -15,13 +16,17 @@ export class BotBehavior {
   private enemy: Player | null = null;
   private enemyUpdated: Tick;
 
+  private assistAcceptEmoji: number;
+
   constructor(
     private random: PseudoRandom,
     private game: Game,
     private player: Player,
     private triggerRatio: number,
     private reserveRatio: number,
-  ) {}
+  ) {
+    this.assistAcceptEmoji = flattenedEmojiTable.indexOf("👍");
+  }
 
   handleAllianceRequests() {
     for (const req of this.player.incomingAllianceRequests()) {
@@ -33,7 +38,7 @@ export class BotBehavior {
     }
   }
 
-  private emoji(player: Player, emoji: string) {
+  private emoji(player: Player, emoji: number) {
     if (player.type() !== PlayerType.Human) return;
     this.game.addExecution(
       new EmojiExecution(this.player.id(), player.id(), emoji),
@@ -78,7 +83,7 @@ export class BotBehavior {
         this.player.updateRelation(ally, -20);
         this.enemy = target;
         this.enemyUpdated = this.game.ticks();
-        this.emoji(ally, "👍");
+        this.emoji(ally, this.assistAcceptEmoji);
         break outer;
       }
     }

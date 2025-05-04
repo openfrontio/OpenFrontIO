@@ -1,4 +1,4 @@
-import { Execution, Game, PlayerInfo, PlayerType } from "../game/Game";
+import { Execution, Game } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -120,19 +120,7 @@ export class Executor {
   fakeHumanExecutions(): Execution[] {
     const execs = [];
     for (const nation of this.mg.nations()) {
-      execs.push(
-        new FakeHumanExecution(
-          this.gameID,
-          new PlayerInfo(
-            nation.flag || "",
-            nation.name,
-            PlayerType.FakeHuman,
-            null,
-            this.random.nextID(),
-            nation,
-          ),
-        ),
-      );
+      execs.push(new FakeHumanExecution(this.gameID, nation));
     }
     return execs;
   }

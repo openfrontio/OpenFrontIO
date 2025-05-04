@@ -1,5 +1,6 @@
 import {
   Difficulty,
+  Duos,
   Game,
   GameMapType,
   GameMode,
@@ -24,6 +25,20 @@ import { pastelTheme } from "./PastelTheme";
 import { pastelThemeDark } from "./PastelThemeDark";
 
 export abstract class DefaultServerConfig implements ServerConfig {
+  otelEnabled(): boolean {
+    return Boolean(
+      this.otelEndpoint() && this.otelUsername() && this.otelPassword(),
+    );
+  }
+  otelEndpoint(): string {
+    return process.env.OTEL_ENDPOINT;
+  }
+  otelUsername(): string {
+    return process.env.OTEL_USERNAME;
+  }
+  otelPassword(): string {
+    return process.env.OTEL_PASSWORD;
+  }
   region(): string {
     if (this.env() == GameEnv.Dev) {
       return "dev";
@@ -203,12 +218,14 @@ export class DefaultConfig implements Config {
   defensePostDefenseBonus(): number {
     return 5;
   }
-  numPlayerTeams(): number {
-    return this._gameConfig.numPlayerTeams ?? 0;
+  playerTeams(): number | typeof Duos {
+    return this._gameConfig.playerTeams ?? 0;
   }
+
   spawnNPCs(): boolean {
     return !this._gameConfig.disableNPCs;
   }
+
   disableNukes(): boolean {
     return this._gameConfig.disableNukes;
   }

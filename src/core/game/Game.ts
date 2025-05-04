@@ -37,16 +37,20 @@ export enum Difficulty {
   Impossible = "Impossible",
 }
 
-export enum Team {
-  Red = "Red",
-  Blue = "Blue",
-  Teal = "Teal",
-  Purple = "Purple",
-  Yellow = "Yellow",
-  Orange = "Orange",
-  Green = "Green",
-  Bot = "Bot",
-}
+export type Team = string;
+
+export const Duos = "Duos" as const;
+
+export const ColoredTeams: Record<string, Team> = {
+  Red: "Red",
+  Blue: "Blue",
+  Teal: "Teal",
+  Purple: "Purple",
+  Yellow: "Yellow",
+  Orange: "Orange",
+  Green: "Green",
+  Bot: "Bot",
+} as const;
 
 export enum GameMapType {
   World = "World",
@@ -158,10 +162,9 @@ export enum Relation {
 
 export class Nation {
   constructor(
-    public readonly flag: string,
-    public readonly name: string,
-    public readonly cell: Cell,
+    public readonly spawnCell: Cell,
     public readonly strength: number,
+    public readonly playerInfo: PlayerInfo,
   ) {}
 }
 

@@ -11,7 +11,6 @@ import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
-import { setupMetricsServer } from "./MasterMetrics";
 
 const config = getServerConfigFromServer();
 const playlist = new MapPlaylist();
@@ -19,10 +18,6 @@ const readyWorkers = new Set();
 
 const app = express();
 const server = http.createServer(app);
-
-// Create a separate metrics server on port 9090
-const metricsApp = express();
-const metricsServer = http.createServer(metricsApp);
 
 const log = logger.child({ comp: "m" });
 
@@ -146,9 +141,6 @@ export async function startMaster() {
   server.listen(PORT, () => {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });
-
-  // Setup the metrics server
-  setupMetricsServer();
 }
 
 app.get(
@@ -252,7 +244,7 @@ async function schedulePublicGame(playlist: MapPlaylist) {
     disableNPCs: gameMode == GameMode.Team,
     disableNukes: false,
     gameMode,
-    numPlayerTeams,
+    playerTeams: numPlayerTeams,
     bots: 400,
   };
 

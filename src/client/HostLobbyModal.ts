@@ -5,7 +5,9 @@ import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { consolex } from "../core/Consolex";
 import {
+  ColoredTeams,
   Difficulty,
+  Duos,
   GameMapType,
   GameMode,
   mapCategories,
@@ -29,7 +31,7 @@ export class HostLobbyModal extends LitElement {
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs = false;
   @state() private gameMode: GameMode = GameMode.FFA;
-  @state() private teamCount: number = 2;
+  @state() private teamCount: number | typeof Duos = 2;
   @state() private disableNukes: boolean = false;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
@@ -195,7 +197,7 @@ export class HostLobbyModal extends LitElement {
                       ${translateText("host_modal.team_count")}
                     </div>
                     <div class="option-cards">
-                      ${[2, 3, 4, 5, 6, 7].map(
+                      ${[Duos, 2, 3, 4, 5, 6, 7].map(
                         (o) => html`
                           <div
                             class="option-card ${this.teamCount === o
@@ -510,7 +512,7 @@ export class HostLobbyModal extends LitElement {
     this.teamCount = value;
     this.putGameConfig();
   }
-
+  
   private async handleTeamSelect(username: string, value: string) {
     const team = value as Team;
     const player = this.lobbyPlayers.find((p) => p.username === username);
@@ -521,10 +523,15 @@ export class HostLobbyModal extends LitElement {
   }
 
   private getAvailableTeams(): Team[] {
-    return Object.values(Team)
-      .filter((team) => team !== Team.Bot)
-      .slice(0, this.teamCount);
+    const allTeams = Object.values(ColoredTeams).filter(team => team !== "Bot");
+    
+    if (typeof this.teamCount === "number") {
+      return allTeams.slice(0, this.teamCount);
+    }
+  
+    return allTeams;
   }
+  
 
   private lobbyPlayers: {
     username: string;
@@ -551,8 +558,8 @@ export class HostLobbyModal extends LitElement {
           infiniteTroops: this.infiniteTroops,
           instantBuild: this.instantBuild,
           gameMode: this.gameMode,
-          numPlayerTeams: this.teamCount,
-          playerTeams: Object.fromEntries(
+          playerTeams: this.teamCount,
+          playerTeamsSelection: Object.fromEntries(
             this.lobbyPlayers
               .filter((p) => p.preferredTeam)
               .map((p) => [p.username, p.preferredTeam!]),

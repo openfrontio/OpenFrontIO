@@ -5,7 +5,6 @@ import { GameRecord, GameStartInfo } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
-import { UserMeResponse, UserMeResponseSchema } from "./ApiSchemas";
 import { joinLobby } from "./ClientGameRunner";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
@@ -30,7 +29,9 @@ import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import { generateCryptoRandomUUID } from "./Utils";
 import "./components/baseComponents/Button";
+import { OButton } from "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import { discordLogin, isLoggedIn } from "./jwt";
 import "./styles.css";
 
 export interface JoinLobbyEvent {
@@ -59,21 +60,6 @@ class Client {
   constructor() {}
 
   initialize(): void {
-    const { hash } = window.location;
-    if (hash.startsWith("#")) {
-      const params = new URLSearchParams(hash.slice(1));
-      const token = params.get("token");
-      if (token) {
-        localStorage.setItem("token", token);
-      }
-      // Clean the URL
-      history.replaceState(
-        null,
-        "",
-        window.location.pathname + window.location.search,
-      );
-    }
-
     const langSelector = document.querySelector(
       "lang-selector",
     ) as LangSelector;
@@ -106,21 +92,24 @@ class Client {
       consolex.warn("Random name button element not found");
     }
 
-    const loginDiscordButton = document.getElementById("login-discord");
-    isLoggedIn().then((loggedIn) => {
-      if (loggedIn !== false) {
-        console.log("Logged in", JSON.stringify(loggedIn, null, 2));
-        const { user } = loggedIn;
-        const { id, avatar, username, global_name, discriminator } = user;
-        const avatarUrl = avatar
-          ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.${avatar.startsWith("a_") ? "gif" : "png"}`
-          : `https://cdn.discordapp.com/embed/avatars/${Number(discriminator) % 5}.png`;
-        // TODO: Update the page for logged in user
-      } else {
-        localStorage.removeItem("token");
-        loginDiscordButton.addEventListener("click", discordLogin);
-      }
-    });
+    const loginDiscordButton = document.getElementById(
+      "login-discord",
+    ) as OButton;
+    const claims = isLoggedIn();
+    if (claims === false) {
+      // Not logged in
+      loginDiscordButton.disable = false;
+      loginDiscordButton.translationKey = "main.login_discord";
+      loginDiscordButton.addEventListener("click", discordLogin);
+    } else {
+      // Logged in
+      loginDiscordButton.disable = true;
+      loginDiscordButton.translationKey = "main.logged_in";
+      // const avatarUrl = avatar
+      //   ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.${avatar.startsWith("a_") ? "gif" : "png"}`
+      //   : `https://cdn.discordapp.com/embed/avatars/${Number(discriminator) % 5}.png`;
+      // TODO: Update the page for logged in user
+    }
 
     this.usernameInput = document.querySelector(
       "username-input",
@@ -315,32 +304,6 @@ document.addEventListener("DOMContentLoaded", () => {
   new Client().initialize();
 });
 
-async function isLoggedIn(): Promise<UserMeResponse | false> {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) return false;
-    const response = await fetch(getApiBase() + "/users/@me", {
-      headers: {
-        authorization: `Bearer ${token}`,
-      },
-    });
-    if (response.status !== 200) return false;
-    const body = await response.json();
-    const result = UserMeResponseSchema.safeParse(body);
-    if (!result.success) {
-      console.error(
-        "Invalid response",
-        JSON.stringify(body),
-        JSON.stringify(result.error),
-      );
-      return false;
-    }
-    return result.data;
-  } catch (e) {
-    return false;
-  }
-}
-
 function setFavicon(): void {
   const link = document.createElement("link");
   link.type = "image/x-icon";
@@ -351,6 +314,11 @@ function setFavicon(): void {
 
 // WARNING: DO NOT EXPOSE THIS ID
 export function getPersistentIDFromCookie(): string {
+  const claims = isLoggedIn();
+  if (claims !== false && claims.sub) {
+    return claims.sub;
+  }
+
   const COOKIE_NAME = "player_persistent_id";
 
   // Try to get existing cookie
@@ -373,16 +341,4 @@ export function getPersistentIDFromCookie(): string {
   ].join(";");
 
   return newID;
-}
-
-function getApiBase() {
-  const { hostname } = new URL(window.location.href);
-  const domainname = hostname.split(".").slice(-2).join(".");
-  return domainname === "localhost"
-    ? "http://localhost:8787"
-    : `https://api.${domainname}`;
-}
-
-function discordLogin() {
-  window.location.href = `${getApiBase()}/login/discord?redirect_uri=${window.location.href}`;
 }
