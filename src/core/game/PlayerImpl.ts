@@ -713,6 +713,12 @@ export class PlayerImpl implements Player {
     spawnTile: TileRef,
     unitSpecificInfos: UnitSpecificInfos = {},
   ): UnitImpl {
+    if (!this.canBuild(type, spawnTile)) {
+      throw new Error(
+        `Attempted to build invalid unit ${type} at tile ${spawnTile} by player ${this.name()}`,
+      );
+    }
+
     const cost = this.mg.unitInfo(type).cost(this);
     const b = new UnitImpl(
       type,
