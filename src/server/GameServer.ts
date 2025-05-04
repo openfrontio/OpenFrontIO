@@ -118,8 +118,9 @@ export class GameServer {
     }
     if (gameConfig.disableMIRV != null) {
       this.gameConfig.disableMIRV = gameConfig.disableMIRV;
-    if (gameConfig.playerTeams != null) {
-      this.gameConfig.playerTeams = gameConfig.playerTeams;
+      if (gameConfig.playerTeams != null) {
+        this.gameConfig.playerTeams = gameConfig.playerTeams;
+      }
     }
   }
 

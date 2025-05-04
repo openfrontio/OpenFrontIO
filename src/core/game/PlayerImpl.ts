@@ -705,9 +705,25 @@ export class PlayerImpl implements Player {
     spawnTile: TileRef,
     unitSpecificInfos: UnitSpecificInfos = {},
   ): UnitImpl {
-    if (!this.canBuild(type, spawnTile)) {
+    if (
+      (type === UnitType.MissileSilo &&
+        this.mg.config().disableMissileSilo()) ||
+      (type === UnitType.MIRV && this.mg.config().disableMIRV()) ||
+      (type === UnitType.AtomBomb && this.mg.config().disableAtomBomb()) ||
+      (type === UnitType.HydrogenBomb &&
+        this.mg.config().disableHydrogenBomb()) ||
+      (type === UnitType.SAMLauncher &&
+        this.mg.config().disableSAMLauncher()) ||
+      (type === UnitType.SAMMissile && this.mg.config().disableSAMLauncher()) ||
+      (type === UnitType.MIRVWarhead && this.mg.config().disableMIRV()) ||
+      (type === UnitType.City && this.mg.config().disableCity()) ||
+      (type === UnitType.DefensePost &&
+        this.mg.config().disableDefensePost()) ||
+      (type === UnitType.Port && this.mg.config().disablePort()) ||
+      (type === UnitType.Warship && this.mg.config().disableWarship())
+    ) {
       throw new Error(
-        `Attempted to build invalid unit ${type} at tile ${spawnTile} by player ${this.name()}`,
+        `Attempted to build disabled unit ${type} at tile ${spawnTile} by player ${this.name()}`,
       );
     }
 
