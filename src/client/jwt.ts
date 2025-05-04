@@ -42,18 +42,21 @@ export function discordLogin() {
   window.location.href = `${getApiBase()}/login/discord?redirect_uri=${window.location.href}`;
 }
 
-export async function logOut() {
+export async function logOut(allSessions: boolean = false) {
   const token = localStorage.getItem("token");
   if (token === null) return;
   localStorage.removeItem("token");
   __isLoggedIn = false;
 
-  const response = await fetch(getApiBase() + "/logout", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${token}`,
+  const response = await fetch(
+    getApiBase() + allSessions ? "/revoke" : "/logout",
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
     },
-  });
+  );
 
   if (response.ok === false) {
     console.error("Logout failed", response);
