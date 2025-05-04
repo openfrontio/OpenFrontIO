@@ -350,9 +350,12 @@ export class RadialMenu implements Layer {
     actions: PlayerActions,
     tile: TileRef,
   ) {
-    this.activateMenuElement(Slot.Build, "#ebe250", buildIcon, () => {
-      this.buildMenu.showMenu(tile);
-    });
+    if (!this.g.inSpawnPhase()) {
+      this.activateMenuElement(Slot.Build, "#ebe250", buildIcon, () => {
+        this.buildMenu.showMenu(tile);
+      });
+    }
+
     if (this.g.hasOwner(tile)) {
       this.activateMenuElement(Slot.Info, "#64748B", infoIcon, () => {
         this.playerPanel.show(actions, tile);
@@ -387,8 +390,9 @@ export class RadialMenu implements Layer {
         // BestTransportShipSpawn is an expensive operation, so
         // we calculate it here and send the spawn tile to other clients.
         myPlayer.bestTransportShipSpawn(tile).then((spawn) => {
-          if (spawn == false) {
-            return;
+          let spawnTile: Cell | null = null;
+          if (spawn !== false) {
+            spawnTile = new Cell(this.g.x(spawn), this.g.y(spawn));
           }
 
           this.eventBus.emit(
@@ -396,7 +400,7 @@ export class RadialMenu implements Layer {
               this.g.owner(tile).id(),
               this.clickedCell,
               this.uiState.attackRatio * myPlayer.troops(),
-              new Cell(this.g.x(spawn), this.g.y(spawn)),
+              spawnTile,
             ),
           );
         });

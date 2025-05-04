@@ -21,7 +21,6 @@ import {
   BuildableUnit,
   Cell,
   EmojiMessage,
-  GameMode,
   Gold,
   MessageType,
   MutableAlliance,
@@ -469,12 +468,12 @@ export class PlayerImpl implements Player {
     this.mg.target(this, other);
   }
 
-  targets(): PlayerImpl[] {
+  targets(): Player[] {
     return this.targets_
       .filter(
         (t) => this.mg.ticks() - t.tick < this.mg.config().targetDuration(),
       )
-      .map((t) => t.target as PlayerImpl);
+      .map((t) => t.target);
   }
 
   transitiveTargets(): Player[] {
@@ -527,13 +526,6 @@ export class PlayerImpl implements Player {
   }
 
   canDonate(recipient: Player): boolean {
-    if (
-      recipient.type() == PlayerType.Human &&
-      this.mg.config().gameConfig().gameMode == GameMode.FFA
-    ) {
-      return false;
-    }
-
     if (!this.isFriendly(recipient)) {
       return false;
     }
@@ -743,7 +735,9 @@ export class PlayerImpl implements Player {
     return Object.values(UnitType).map((u) => {
       return {
         type: u,
-        canBuild: this.canBuild(u, tile, validTiles),
+        canBuild: this.mg.inSpawnPhase()
+          ? false
+          : this.canBuild(u, tile, validTiles),
         cost: this.mg.config().unitInfo(u).cost(this),
       } as BuildableUnit;
     });
@@ -821,7 +815,6 @@ export class PlayerImpl implements Player {
     }
     // only get missilesilos that are not on cooldown
     const spawns = this.units(UnitType.MissileSilo)
-      .map((u) => u as Unit)
       .filter((silo) => {
         return !silo.isCooldown();
       })

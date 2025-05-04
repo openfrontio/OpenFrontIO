@@ -118,6 +118,8 @@ export class GameServer {
     }
     if (gameConfig.disableMIRV != null) {
       this.gameConfig.disableMIRV = gameConfig.disableMIRV;
+    if (gameConfig.playerTeams != null) {
+      this.gameConfig.playerTeams = gameConfig.playerTeams;
     }
   }
 
@@ -380,7 +382,7 @@ export class GameServer {
         client.ws.close(1000, "game has ended");
       }
     });
-    if (!this._hasPrestarted || !this._hasStarted) {
+    if (!this._hasPrestarted && !this._hasStarted) {
       this.log.info(`game not started, not archiving game`);
       return;
     }

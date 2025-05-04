@@ -1,16 +1,18 @@
 name: 🚀 Deploy
 
 on:
+  # Allow contributors to schedule manual deployments.
+  # Permission to deploy can be restricted by requiring approval in environment configuration.
   workflow_dispatch:
     inputs:
-      target_environment:
-        description: "Deployment Environment"
+      target_domain:
+        description: "Deployment Domain"
         required: true
-        default: "staging"
+        default: "openfront.dev"
         type: choice
         options:
-          - prod
-          - staging
+          - openfront.io
+          - openfront.dev
       target_host:
         description: "Deployment Host"
         required: true
@@ -25,53 +27,108 @@ on:
         required: false
         default: ""
         type: string
+
+  # Automatic deployment on push
+  # See https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#onpushpull_requestpull_request_targetpathspaths-ignore
   push:
     branches:
-      - main
+      - "*"
 
 jobs:
   deploy:
+    # Don't deploy on push if this is a fork
+    if: ${{ github.event_name == 'workflow_dispatch' || github.repository == 'openfrontio/OpenFrontIO' }}
     # Use different logic based on event type
-    name: Deploy to ${{ github.event_name == 'workflow_dispatch' && inputs.target_environment || 'staging' }}
+    name: Deploy to ${{
+      github.event_name == 'push'
+      && (github.ref_name == 'main' && 'openfront.dev'
+      || format('{0}.openfront.dev', github.ref_name))
+      || inputs.target_subdomain && format('{0}.{1}', inputs.target_subdomain, inputs.target_domain)
+      || inputs.target_domain
+      || 'openfront.dev'
+      }}
     runs-on: ubuntu-latest
-    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.target_environment || 'staging' }}
-
+    environment: ${{
+      github.event_name == 'push'
+      && (github.ref_name == 'main' && 'openfront.dev'
+      || format('{0}.openfront.dev', github.ref_name))
+      || inputs.target_subdomain && format('{0}.{1}', inputs.target_subdomain, inputs.target_domain)
+      || inputs.target_domain
+      || 'openfront.dev'
+      }}
+    env:
+      DOMAIN: ${{ inputs.target_domain || 'openfront.dev' }}
+      SUBDOMAIN: ${{ github.event_name == 'push' && github.ref_name || inputs.target_subdomain || 'main' }}
     steps:
       - uses: actions/checkout@v4
+      - name: Update deployment status
+        env:
+          FQDN: ${{ env.SUBDOMAIN && format('{0}.{1}', env.SUBDOMAIN, env.DOMAIN) || env.DOMAIN || 'openfront.dev' }}
+        run: |
+          echo "FQDN=$FQDN" >> $GITHUB_ENV
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          ### In progress :ship:
+
+          Deploying from $GITHUB_REF to $FQDN
+          EOF
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - run: |
+      - name: Create SSH private key
+        env:
+          SERVER_HOST_EU: ${{ secrets.SERVER_HOST_EU }}
+          SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
+          SERVER_HOST_US: ${{ secrets.SERVER_HOST_US }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euxo pipefail
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+          test -n "$SERVER_HOST_STAGING" && ssh-keyscan -H "$SERVER_HOST_STAGING" >> ~/.ssh/known_hosts
+          test -n "$SERVER_HOST_US" && ssh-keyscan -H "$SERVER_HOST_US" >> ~/.ssh/known_hosts
+          test -n "$SERVER_HOST_EU" && ssh-keyscan -H "$SERVER_HOST_EU" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SERVER_HOST_STAGING }} >> ~/.ssh/known_hosts
+      - name: Deploy
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
+          DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          ENV: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
+          HOST: ${{ github.event_name == 'workflow_dispatch' && inputs.target_host || 'staging' }}
+          MON_PASSWORD: ${{ secrets.MON_PASSWORD }}
+          MON_USERNAME: ${{ secrets.MON_USERNAME }}
+          OTEL_ENDPOINT: ${{ secrets.OTEL_ENDPOINT }}
+          OTEL_PASSWORD: ${{ secrets.OTEL_PASSWORD }}
+          OTEL_USERNAME: ${{ secrets.OTEL_USERNAME }}
+          R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
+          SERVER_HOST_EU: ${{ secrets.SERVER_HOST_EU }}
+          SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
+          SERVER_HOST_US: ${{ secrets.SERVER_HOST_US }}
+          SSH_KEY: ~/.ssh/id_rsa
+          VERSION_TAG: latest
+        run: |
+          echo "::group::deploy.sh"
+          ./deploy.sh "$ENV" "$HOST" "$SUBDOMAIN"
+          echo "::endgroup::"
+      - name: Update deployment status ✅
+        if: success()
+        run: |
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          ### Success! :rocket:
 
-          # Determine environment based on trigger type
-          TARGET_ENV="${{ github.event_name == 'workflow_dispatch' && inputs.target_environment || 'staging' }}"
-          TARGET_HOST="${{ github.event_name == 'workflow_dispatch' && inputs.target_host || 'staging' }}"
-          TARGET_SUBDOMAIN="${{ github.event_name == 'workflow_dispatch' && inputs.target_subdomain || 'main' }}"
-
-          cat >.env.$TARGET_ENV <<EOF
-          ADMIN_TOKEN=${{ secrets.ADMIN_TOKEN }}
-          CF_ACCOUNT_ID=${{ secrets.CF_ACCOUNT_ID }}
-          CF_API_TOKEN=${{ secrets.CF_API_TOKEN }}
-          DOCKER_REPO=${{ vars.DOCKERHUB_REPO }}
-          DOCKER_USERNAME=${{ vars.DOCKERHUB_USERNAME }}
-          DOMAIN=${{ vars.DOMAIN }}
-          MON_PASSWORD=${{ secrets.MON_PASSWORD }}
-          MON_USERNAME=${{ secrets.MON_USERNAME }}
-          R2_ACCESS_KEY=${{ secrets.R2_ACCESS_KEY }}
-          R2_BUCKET=${{ secrets.R2_BUCKET }}
-          R2_SECRET_KEY=${{ secrets.R2_SECRET_KEY }}
-          SERVER_HOST_STAGING=${{ secrets.SERVER_HOST_STAGING }}
-          SERVER_HOST_US=${{ secrets.SERVER_HOST_US }}
-          SERVER_HOST_EU=${{ secrets.SERVER_HOST_EU }}
-          SSH_KEY=~/.ssh/id_rsa
-          VERSION_TAG="latest"
+          Deployed from $GITHUB_REF to $FQDN
           EOF
+      - name: Update deployment status ❌
+        if: failure()
+        run: |
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          ### Failure! :fire:
 
-          ./deploy.sh $TARGET_ENV $TARGET_HOST $TARGET_SUBDOMAIN
-          echo "Deployed to $TARGET_ENV environment on $TARGET_HOST host with subdomain $TARGET_SUBDOMAIN"
+          Unable to deploy from $GITHUB_REF to $FQDN
+          EOF

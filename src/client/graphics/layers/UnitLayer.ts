@@ -425,7 +425,18 @@ export class UnitLayer implements Layer {
     let alternateViewColor = null;
 
     if (this.alternateView) {
-      const rel = this.relationship(unit);
+      let rel = this.relationship(unit);
+      if (unit.type() == UnitType.TradeShip && unit.dstPortId() != null) {
+        const target = this.game.unit(unit.dstPortId())?.owner();
+        const myPlayer = this.game.myPlayer();
+        if (myPlayer != null && target != null) {
+          if (myPlayer == target) {
+            rel = Relationship.Self;
+          } else if (myPlayer.isFriendly(target)) {
+            rel = Relationship.Ally;
+          }
+        }
+      }
       switch (rel) {
         case Relationship.Self:
           alternateViewColor = this.theme.selfColor();

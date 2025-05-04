@@ -1,5 +1,5 @@
 import { PathFindResultType } from "../pathfinding/AStar";
-import { PathFinder } from "../pathfinding/PathFinding";
+import { MiniAStar } from "../pathfinding/MiniAStar";
 import { Game, Player, UnitType } from "./Game";
 import { andFN, GameMap, manhattanDistFN, TileRef } from "./GameMap";
 
@@ -139,19 +139,44 @@ export function closestShoreFromPlayer(
   });
 }
 
-/**
- * Finds the best shore tile for deployment among the player's shore tiles for the shortest route.
- * Calculates paths from 4 extremum tiles and the Manhattan-closest tile.
- */
 export function bestShoreDeploymentSource(
   gm: Game,
   player: Player,
   target: TileRef,
-): TileRef | null {
+): TileRef | false {
   target = targetTransportTile(gm, target);
   if (target == null) {
-    return null;
+    return false;
   }
+
+  const candidates = candidateShoreTiles(gm, player, target);
+  const aStar = new MiniAStar(gm, gm.miniMap(), candidates, target, 500_000, 1);
+  const result = aStar.compute();
+  if (result != PathFindResultType.Completed) {
+    console.warn(`bestShoreDeploymentSource: path not found: ${result}`);
+    return false;
+  }
+  const path = aStar.reconstructPath();
+  if (path.length == 0) {
+    return false;
+  }
+  const potential = path[0];
+  // Since mini a* downscales the map, we need to check the neighbors
+  // of the potential tile to find a valid deployment point
+  const neighbors = gm
+    .neighbors(potential)
+    .filter((n) => gm.isShore(n) && gm.owner(n) == player);
+  if (neighbors.length == 0) {
+    return false;
+  }
+  return neighbors[0];
+}
+
+export function candidateShoreTiles(
+  gm: Game,
+  player: Player,
+  target: TileRef,
+): TileRef[] {
   let closestManhattanDistance = Infinity;
   let minX = Infinity,
     minY = Infinity,
@@ -166,9 +191,11 @@ export function bestShoreDeploymentSource(
     maxY: null,
   };
 
-  for (const tile of player.borderTiles()) {
-    if (!gm.isShore(tile)) continue;
+  const borderShoreTiles = Array.from(player.borderTiles()).filter((t) =>
+    gm.isShore(t),
+  );
 
+  for (const tile of borderShoreTiles) {
     const distance = gm.manhattanDist(tile, target);
     const cell = gm.cell(tile);
 
@@ -194,66 +221,25 @@ export function bestShoreDeploymentSource(
     }
   }
 
+  // Calculate sampling interval to ensure we get at most 50 tiles
+  const samplingInterval = Math.max(
+    10,
+    Math.ceil(borderShoreTiles.length / 50),
+  );
+  const sampledTiles = borderShoreTiles.filter(
+    (_, index) => index % samplingInterval === 0,
+  );
+
   const candidates = [
     bestByManhattan,
     extremumTiles.minX,
     extremumTiles.minY,
     extremumTiles.maxX,
     extremumTiles.maxY,
+    ...sampledTiles,
   ].filter(Boolean);
 
-  if (!candidates.length) {
-    return null;
-  }
-
-  // Find the shortest actual path distance
-  let closestShoreTile: TileRef | null = null;
-  let closestDistance = Infinity;
-
-  for (const shoreTile of candidates) {
-    const pathDistance = calculatePathDistance(gm, shoreTile, target);
-
-    if (pathDistance !== null && pathDistance < closestDistance) {
-      closestDistance = pathDistance;
-      closestShoreTile = shoreTile;
-    }
-  }
-
-  // Fall back to the Manhattan-closest tile if no path was found
-  return closestShoreTile || bestByManhattan;
-}
-
-/**
- * Calculates the distance between two tiles using A*
- * Returns null if no path is found
- */
-function calculatePathDistance(
-  gm: Game,
-  start: TileRef,
-  target: TileRef,
-): number | null {
-  let currentTile = start;
-  let tileDistance = 0;
-  const pathFinder = PathFinder.Mini(gm, 20_000, false);
-
-  while (true) {
-    const result = pathFinder.nextTile(currentTile, target);
-
-    if (result.type === PathFindResultType.Completed) {
-      return tileDistance;
-    } else if (result.type === PathFindResultType.NextTile) {
-      currentTile = result.tile;
-      tileDistance++;
-    } else if (
-      result.type === PathFindResultType.PathNotFound ||
-      result.type === PathFindResultType.Pending
-    ) {
-      return null;
-    } else {
-      // @ts-expect-error type is never
-      throw new Error(`Unexpected pathfinding result type: ${result.type}`);
-    }
-  }
+  return candidates;
 }
 
 function closestShoreTN(

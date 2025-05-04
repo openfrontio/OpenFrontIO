@@ -88,7 +88,7 @@ export class SendTargetPlayerIntentEvent implements GameEvent {
 export class SendEmojiIntentEvent implements GameEvent {
   constructor(
     public readonly recipient: PlayerView | typeof AllPlayers,
-    public readonly emoji: string,
+    public readonly emoji: number,
   ) {}
 }
 

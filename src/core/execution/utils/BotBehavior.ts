@@ -8,6 +8,7 @@ import {
   Tick,
 } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
+import { flattenedEmojiTable } from "../../Util";
 import { AttackExecution } from "../AttackExecution";
 import { EmojiExecution } from "../EmojiExecution";
 
@@ -15,12 +16,17 @@ export class BotBehavior {
   private enemy: Player | null = null;
   private enemyUpdated: Tick;
 
+  private assistAcceptEmoji: number;
+
   constructor(
     private random: PseudoRandom,
     private game: Game,
     private player: Player,
-    private attackRatio: number,
-  ) {}
+    private triggerRatio: number,
+    private reserveRatio: number,
+  ) {
+    this.assistAcceptEmoji = flattenedEmojiTable.indexOf("👍");
+  }
 
   handleAllianceRequests() {
     for (const req of this.player.incomingAllianceRequests()) {
@@ -32,11 +38,29 @@ export class BotBehavior {
     }
   }
 
-  private emoji(player: Player, emoji: string) {
+  private emoji(player: Player, emoji: number) {
     if (player.type() !== PlayerType.Human) return;
     this.game.addExecution(
       new EmojiExecution(this.player.id(), player.id(), emoji),
     );
+  }
+
+  forgetOldEnemies() {
+    // Forget old enemies
+    if (this.game.ticks() - this.enemyUpdated > 100) {
+      this.enemy = null;
+    }
+  }
+
+  checkIncomingAttacks() {
+    // Switch enemies if we're under attack
+    const incomingAttacks = this.player.incomingAttacks();
+    if (incomingAttacks.length > 0) {
+      this.enemy = incomingAttacks
+        .sort((a, b) => b.troops() - a.troops())[0]
+        .attacker();
+      this.enemyUpdated = this.game.ticks();
+    }
   }
 
   assistAllies() {
@@ -59,16 +83,18 @@ export class BotBehavior {
         this.player.updateRelation(ally, -20);
         this.enemy = target;
         this.enemyUpdated = this.game.ticks();
-        this.emoji(ally, "👍");
+        this.emoji(ally, this.assistAcceptEmoji);
         break outer;
       }
     }
   }
 
   selectEnemy(): Player | null {
-    // Forget old enemies
-    if (this.game.ticks() - this.enemyUpdated > 100) {
-      this.enemy = null;
+    if (this.enemy === null) {
+      // Save up troops until we reach the trigger ratio
+      const maxPop = this.game.config().maxPopulation(this.player);
+      const ratio = this.player.population() / maxPop;
+      if (ratio < this.triggerRatio) return null;
     }
 
     // Prefer neighboring bots
@@ -100,24 +126,53 @@ export class BotBehavior {
   }
 
   selectRandomEnemy(): Player | TerraNullius | null {
-    const neighbors = this.player.neighbors();
-    for (const neighbor of this.random.shuffleArray(neighbors)) {
-      if (neighbor.isPlayer()) {
+    if (this.enemy === null) {
+      // Save up troops until we reach the trigger ratio
+      const maxPop = this.game.config().maxPopulation(this.player);
+      const ratio = this.player.population() / maxPop;
+      if (ratio < this.triggerRatio) return null;
+
+      // Choose a new enemy randomly
+      const neighbors = this.player.neighbors();
+      for (const neighbor of this.random.shuffleArray(neighbors)) {
+        if (!neighbor.isPlayer()) continue;
         if (this.player.isFriendly(neighbor)) continue;
         if (neighbor.type() == PlayerType.FakeHuman) {
           if (this.random.chance(2)) {
             continue;
           }
         }
+        this.enemy = neighbor;
+        this.enemyUpdated = this.game.ticks();
       }
-      return neighbor;
+
+      // Select a traitor as an enemy
+      const traitors = this.player
+        .neighbors()
+        .filter((n) => n.isPlayer() && n.isTraitor()) as Player[];
+      if (traitors.length > 0) {
+        const toAttack = this.random.randElement(traitors);
+        const odds = this.player.isFriendly(toAttack) ? 6 : 3;
+        if (this.random.chance(odds)) {
+          this.enemy = toAttack;
+          this.enemyUpdated = this.game.ticks();
+        }
+      }
     }
-    return null;
+
+    // Sanity check, don't attack our allies or teammates
+    if (this.enemy && this.player.isFriendly(this.enemy)) {
+      this.enemy = null;
+    }
+    return this.enemy;
   }
 
   sendAttack(target: Player | TerraNullius) {
     if (target.isPlayer() && this.player.isOnSameTeam(target)) return;
-    const troops = this.player.troops() * this.attackRatio;
+    const maxPop = this.game.config().maxPopulation(this.player);
+    const maxTroops = maxPop * this.player.targetTroopRatio();
+    const targetTroops = maxTroops * this.reserveRatio;
+    const troops = this.player.troops() - targetTroops;
     if (troops < 1) return;
     this.game.addExecution(
       new AttackExecution(

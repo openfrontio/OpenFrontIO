@@ -26,7 +26,6 @@ export class TransportShipExecution implements Execution {
   private mg: Game;
   private attacker: Player;
   private target: Player | TerraNullius;
-  private embarkDelay = 10;
 
   // TODO make private
   public path: TileRef[];
@@ -64,7 +63,7 @@ export class TransportShipExecution implements Execution {
 
     this.lastMove = ticks;
     this.mg = mg;
-    this.pathFinder = PathFinder.Mini(mg, 10_000, false, 10);
+    this.pathFinder = PathFinder.Mini(mg, 10_000, 10);
 
     this.attacker = mg.player(this.attackerID);
 
@@ -128,6 +127,16 @@ export class TransportShipExecution implements Execution {
       // Only update the src if it's not already set
       // because we assume that the src is set to the best spawn tile
       this.src = closestTileSrc;
+    } else {
+      if (
+        this.mg.owner(this.src) != this.attacker ||
+        !this.mg.isShore(this.src)
+      ) {
+        console.warn(
+          `src is not a shore tile or not owned by: ${this.attacker.name()}`,
+        );
+        this.src = closestTileSrc;
+      }
     }
 
     this.boat = this.attacker.buildUnit(
@@ -143,10 +152,6 @@ export class TransportShipExecution implements Execution {
     }
     if (!this.boat.isActive()) {
       this.active = false;
-      return;
-    }
-    if (this.embarkDelay > 0) {
-      this.embarkDelay--;
       return;
     }
     if (ticks - this.lastMove < this.ticksPerMove) {

@@ -1,5 +1,12 @@
 {
+  "lang": {
+    "en": "Italian",
+    "native": "Italiano",
+    "svg": "it",
+    "lang_code": "it"
+  },
   "main": {
+    "title": "OpenFront (ALPHA)",
     "join_discord": "Unisciti al nostro Discord!",
     "create_lobby": "Crea lobby",
     "join_lobby": "Unisciti a una Lobby",
@@ -15,6 +22,7 @@
     "action_alt_view": "Vista alternata (terreno/paesi)",
     "action_attack_altclick": "Attacco (quando il clic sinistro è impostato per aprire il menu)",
     "action_build": "Apri il menu di costruzione",
+    "action_emote": "Apri menu emote",
     "action_center": "Centra camera sul giocatore",
     "action_zoom": "Zoom avanti/indietro",
     "action_move_camera": "Muovi la camera",
@@ -77,8 +85,7 @@
     "icon_crown": "Corona - Questo è il giocatore numero uno della classifica",
     "icon_traitor": "Spade incrociate - Traditore. Questo giocatore ha attaccato un alleato.",
     "icon_ally": "Stretta di mano - Alleato, Questo giocatore è un tuo alleato",
-    "info_enemy_panel": "Pannello informazioni nemico",
-    "action_emote": "Apri menu emote"
+    "info_enemy_panel": "Pannello informazioni nemico"
   },
   "single_modal": {
     "title": "Giocatore Singolo",
@@ -94,6 +101,7 @@
     "start": "Inizia partita"
   },
   "map": {
+    "map": "Mappa",
     "world": "Mondo",
     "europe": "Europa",
     "mena": "MENA",
@@ -110,10 +118,10 @@
     "random": "Casuale",
     "iceland": "Islanda",
     "pangaea": "Pangea",
-    "map": "Mappa",
-    "betweentwoseas": "Tra I Due Mari",
     "japan": "Giappone e paesi confinanti",
-    "knownworld": "Mondo Conosciuto"
+    "betweentwoseas": "Tra I Due Mari",
+    "knownworld": "Mondo Conosciuto",
+    "faroeislands": "Isole Faroe"
   },
   "private_lobby": {
     "title": "Partecipa ad una Lobby Privata",
@@ -139,6 +147,8 @@
   },
   "host_modal": {
     "title": "Lobby privata",
+    "mode": "Modalità",
+    "team_count": "Numero di Squadre",
     "options_title": "Opzioni",
     "bots": "Bot: ",
     "bots_disabled": "Disabilitato",
@@ -150,25 +160,18 @@
     "player": "Giocatore",
     "players": "Giocatori",
     "waiting": "In attesa dei giocatori...",
-    "start": "Avvia Partita",
-    "mode": "Modalità"
-  },
-  "difficulty": {
-    "Relaxed": "Tranquillo",
-    "Balanced": "Bilanciato",
-    "Intense": "Intenso",
-    "Impossible": "Impossibile",
-    "difficulty": "Difficoltà"
+    "start": "Avvia Partita"
   },
   "game_starting_modal": {
     "title": "La partita sta iniziando...",
     "desc": "Preparazione per l'avvio della lobby. Attendere prego."
   },
-  "lang": {
-    "en": "Italian",
-    "native": "Italiano",
-    "svg": "it",
-    "lang_code": "it"
+  "difficulty": {
+    "difficulty": "Difficoltà",
+    "Relaxed": "Tranquillo",
+    "Balanced": "Bilanciato",
+    "Intense": "Intenso",
+    "Impossible": "Impossibile"
   },
   "game_mode": {
     "ffa": "Tutti contro tutti",
@@ -176,5 +179,50 @@
   },
   "select_lang": {
     "title": "Seleziona Lingua"
+  },
+  "user_setting": {
+    "title": "Impostazioni Utente",
+    "tab_basic": "Impostazioni Di Base",
+    "tab_keybinds": "Tasti",
+    "dark_mode_label": "🌙 Modalità Scura",
+    "dark_mode_desc": "Attiva/disattiva l'aspetto del sito tra il tema chiaro e scuro",
+    "emojis_label": "😊 Emoji",
+    "emojis_desc": "Attiva o disattiva la visualizzazione delle emoji nel gioco",
+    "left_click_label": "🖱️ Clic sinistro per aprire il menu",
+    "left_click_desc": "Quando attivo, il clic sinistro apre il menu e il pulsante di attacco. Quando disattivo, fare clic con il tasto destro attaccherà direttamente.",
+    "attack_ratio_label": "⚔️ Rapporto Di Attacco",
+    "attack_ratio_desc": "Quale percentuale delle tue truppe inviare in attacco (1–100%)",
+    "troop_ratio_label": "🪖🛠️ Rapporto truppe e lavoratori",
+    "troop_ratio_desc": "Regola l'equilibrio tra truppe (per combattere) e lavoratori (per la produzione dell'oro) (1–100%)",
+    "easter_writing_speed_label": "Moltiplicatore Della Velocità Di Scrittura",
+    "easter_writing_speed_desc": "Regolare quanto velocemente si finge di programmare (x1–x100)",
+    "easter_bug_count_label": "Conteggio Bug",
+    "easter_bug_count_desc": "Quanti bug con cui stai bene (0–1000, emotivamente).",
+    "view_options": "Opzioni di Visualizzazione",
+    "toggle_view": "Attiva/Disattiva Vista",
+    "toggle_view_desc": "Vista alternativa (terreno/paesi)",
+    "zoom_controls": "Controllo Zoom",
+    "zoom_out": "Zoom Indietro",
+    "zoom_out_desc": "Riduce ingrandimento della mappa",
+    "zoom_in": "Zoom Avanti",
+    "zoom_in_desc": "Aumenta ingrandimento della mappa",
+    "camera_movement": "Movimento vista",
+    "center_camera": "Centra Vista",
+    "center_camera_desc": "Centra vista sul giocatore",
+    "move_up": "Sposta vista in alto",
+    "move_up_desc": "Sposta la vista verso l'alto",
+    "move_left": "Sposta vista a Sinistra",
+    "move_left_desc": "Sposta la vista a sinistra",
+    "move_down": "Sposta vista In Giù",
+    "move_down_desc": "Sposta la vista verso il basso",
+    "move_right": "Sposta vista a Destra",
+    "move_right_desc": "Sposta la vista a destra",
+    "reset": "Resetta",
+    "unbind": "Unbind (cancella assegnazione tasto)"
+  },
+  "map_categories": {
+    "continental": "Continentale",
+    "regional": "Regionale",
+    "fantasy": "Altro"
   }
 }

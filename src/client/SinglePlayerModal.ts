@@ -5,6 +5,7 @@ import { translateText } from "../client/Utils";
 import { consolex } from "../core/Consolex";
 import {
   Difficulty,
+  Duos,
   GameMapType,
   GameMode,
   GameType,
@@ -36,7 +37,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private instantBuild: boolean = false;
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
-  @state() private teamCount: number = 2;
+  @state() private teamCount: number | typeof Duos = 2;
 
   @state() private disableCity: boolean = false;
   @state() private disableDefensePost: boolean = false;
@@ -175,7 +176,7 @@ export class SinglePlayerModal extends LitElement {
                     ${translateText("host_modal.team_count")}
                   </div>
                   <div class="option-cards">
-                    ${[2, 3, 4, 5, 6, 7].map(
+                    ${["Duos", 2, 3, 4, 5, 6, 7].map(
                       (o) => html`
                         <div
                           class="option-card ${this.teamCount === o
@@ -392,8 +393,8 @@ export class SinglePlayerModal extends LitElement {
     this.gameMode = value;
   }
 
-  private handleTeamCountSelection(value: number) {
-    this.teamCount = value;
+  private handleTeamCountSelection(value: number | string) {
+    this.teamCount = value === "Duos" ? Duos : Number(value);
   }
 
   private getRandomMap(): GameMapType {
@@ -447,7 +448,7 @@ export class SinglePlayerModal extends LitElement {
               gameMap: this.selectedMap,
               gameType: GameType.Singleplayer,
               gameMode: this.gameMode,
-              numPlayerTeams: this.teamCount,
+              playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,
               disableNPCs: this.disableNPCs,
               disableNukes: this.disableNukes,

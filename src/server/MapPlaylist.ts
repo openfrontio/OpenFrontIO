@@ -58,9 +58,9 @@ export class MapPlaylist {
         count--;
       }
     });
-    while (!this.allNonConsecutive(mapsPlaylist)) {
+    do {
       random.shuffleArray(mapsPlaylist);
-    }
+    } while (!this.allNonConsecutive(mapsPlaylist));
   }
 
   // Specifically controls how the playlists rotate.
@@ -90,10 +90,12 @@ export class MapPlaylist {
           Iceland: 2,
           SouthAmerica: 1,
           KnownWorld: 2,
+          DeglaciatedAntarctica: 2,
         };
       case PlaylistType.SmallMaps:
         return {
           World: 4,
+          EuropeClassic: 3,
           Mena: 2,
           Pangaea: 1,
           Asia: 1,

@@ -11,7 +11,7 @@ import {
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { Team, UnitType } from "../core/game/Game";
+import { Cell, Team, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import {
   ErrorUpdate,
@@ -372,13 +372,25 @@ export class ClientGameRunner {
         this.shouldBoat(tile, bu.canBuild) &&
         this.gameView.isLand(tile)
       ) {
-        this.eventBus.emit(
-          new SendBoatAttackIntentEvent(
-            this.gameView.owner(tile).id(),
-            cell,
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
-          ),
-        );
+        this.myPlayer
+          .bestTransportShipSpawn(this.gameView.ref(cell.x, cell.y))
+          .then((spawn: number | false) => {
+            let spawnCell = null;
+            if (spawn !== false) {
+              spawnCell = new Cell(
+                this.gameView.x(spawn),
+                this.gameView.y(spawn),
+              );
+            }
+            this.eventBus.emit(
+              new SendBoatAttackIntentEvent(
+                this.gameView.owner(tile).id(),
+                cell,
+                this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+                spawnCell,
+              ),
+            );
+          });
       }
 
       const owner = this.gameView.owner(tile);
