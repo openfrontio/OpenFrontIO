@@ -8,7 +8,12 @@ import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import { consolex } from "../../../core/Consolex";
 import { EventBus } from "../../../core/EventBus";
-import { Cell, PlayerActions } from "../../../core/game/Game";
+import {
+  Cell,
+  PlayerActions,
+  TerraNullius,
+  UnitType,
+} from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
@@ -44,6 +49,7 @@ export class RadialMenu implements Layer {
   private clickedCell: Cell | null = null;
   private lastClosed: number = 0;
 
+  private originalTileOwner: PlayerView | TerraNullius;
   private menuElement: d3.Selection<HTMLDivElement, unknown, null, undefined>;
   private isVisible: boolean = false;
   private readonly menuItems = new Map([
@@ -267,8 +273,26 @@ export class RadialMenu implements Layer {
       .style("pointer-events", "none");
   }
 
-  tick() {
-    // Update logic if needed
+  async tick() {
+    // Only update when menu is visible
+    if (!this.isVisible || this.clickedCell === null) return;
+    const myPlayer = this.g.myPlayer();
+    if (myPlayer === null || !myPlayer.isAlive()) return;
+    const tile = this.g.ref(this.clickedCell.x, this.clickedCell.y);
+    if (this.originalTileOwner.isPlayer()) {
+      if (this.g.owner(tile) != this.originalTileOwner) {
+        this.closeMenu();
+        return;
+      }
+    } else {
+      if (this.g.owner(tile).isPlayer() || this.g.owner(tile) == myPlayer) {
+        this.closeMenu();
+        return;
+      }
+    }
+    const actions = await myPlayer.actions(tile);
+    this.disableAllButtons();
+    this.handlePlayerActions(myPlayer, actions, tile);
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
@@ -291,12 +315,7 @@ export class RadialMenu implements Layer {
     } else {
       this.showRadialMenu(event.x, event.y);
     }
-    this.enableCenterButton(false);
-    for (const item of this.menuItems.values()) {
-      item.disabled = true;
-      this.updateMenuItemState(item);
-    }
-
+    this.disableAllButtons();
     this.clickedCell = this.transformHandler.screenToWorldCoordinates(
       event.x,
       event.y,
@@ -305,7 +324,7 @@ export class RadialMenu implements Layer {
       return;
     }
     const tile = this.g.ref(this.clickedCell.x, this.clickedCell.y);
-
+    this.originalTileOwner = this.g.owner(tile);
     if (this.g.inSpawnPhase()) {
       if (this.g.isLand(tile) && !this.g.hasOwner(tile)) {
         this.enableCenterButton(true);
@@ -313,10 +332,8 @@ export class RadialMenu implements Layer {
       return;
     }
 
-    const myPlayer = this.g
-      .playerViews()
-      .find((p) => p.clientID() == this.clientID);
-    if (!myPlayer) {
+    const myPlayer = this.g.myPlayer();
+    if (myPlayer === null) {
       consolex.warn("my player not found");
       return;
     }
@@ -333,9 +350,12 @@ export class RadialMenu implements Layer {
     actions: PlayerActions,
     tile: TileRef,
   ) {
-    this.activateMenuElement(Slot.Build, "#ebe250", buildIcon, () => {
-      this.buildMenu.showMenu(tile);
-    });
+    if (!this.g.inSpawnPhase()) {
+      this.activateMenuElement(Slot.Build, "#ebe250", buildIcon, () => {
+        this.buildMenu.showMenu(tile);
+      });
+    }
+
     if (this.g.hasOwner(tile)) {
       this.activateMenuElement(Slot.Info, "#64748B", infoIcon, () => {
         this.playerPanel.show(actions, tile);
@@ -362,15 +382,28 @@ export class RadialMenu implements Layer {
         );
       });
     }
-    if (actions.canBoat) {
+    if (
+      actions.buildableUnits.find((bu) => bu.type == UnitType.TransportShip)
+        ?.canBuild
+    ) {
       this.activateMenuElement(Slot.Boat, "#3f6ab1", boatIcon, () => {
-        this.eventBus.emit(
-          new SendBoatAttackIntentEvent(
-            this.g.owner(tile).id(),
-            this.clickedCell,
-            this.uiState.attackRatio * myPlayer.troops(),
-          ),
-        );
+        // BestTransportShipSpawn is an expensive operation, so
+        // we calculate it here and send the spawn tile to other clients.
+        myPlayer.bestTransportShipSpawn(tile).then((spawn) => {
+          let spawnTile: Cell | null = null;
+          if (spawn !== false) {
+            spawnTile = new Cell(this.g.x(spawn), this.g.y(spawn));
+          }
+
+          this.eventBus.emit(
+            new SendBoatAttackIntentEvent(
+              this.g.owner(tile).id(),
+              this.clickedCell,
+              this.uiState.attackRatio * myPlayer.troops(),
+              spawnTile,
+            ),
+          );
+        });
       });
     }
     if (actions.canAttack) {
@@ -428,6 +461,14 @@ export class RadialMenu implements Layer {
       }
     }
     this.hideRadialMenu();
+  }
+
+  private disableAllButtons() {
+    this.enableCenterButton(false);
+    for (const item of this.menuItems.values()) {
+      item.disabled = true;
+      this.updateMenuItemState(item);
+    }
   }
 
   private activateMenuElement(

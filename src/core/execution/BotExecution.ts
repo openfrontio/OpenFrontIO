@@ -1,53 +1,60 @@
-import {
-  Execution,
-  Game,
-  Player,
-  PlayerType,
-  TerraNullius,
-} from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
-import { AttackExecution } from "./AttackExecution";
+import { BotBehavior } from "./utils/BotBehavior";
 
 export class BotExecution implements Execution {
   private active = true;
   private random: PseudoRandom;
-  private attackRate: number;
   private mg: Game;
   private neighborsTerraNullius = true;
 
+  private behavior: BotBehavior | null = null;
+  private attackRate: number;
+  private attackTick: number;
+  private triggerRatio: number;
+  private reserveRatio: number;
+
   constructor(private bot: Player) {
     this.random = new PseudoRandom(simpleHash(bot.id()));
-    this.attackRate = this.random.nextInt(10, 50);
+    this.attackRate = this.random.nextInt(40, 80);
+    this.attackTick = this.random.nextInt(0, this.attackRate);
+    this.triggerRatio = this.random.nextInt(60, 90) / 100;
+    this.reserveRatio = this.random.nextInt(30, 60) / 100;
   }
+
   activeDuringSpawnPhase(): boolean {
     return false;
   }
 
-  init(mg: Game, ticks: number) {
+  init(mg: Game) {
     this.mg = mg;
     this.bot.setTargetTroopRatio(0.7);
-    // this.neighborsTerra = this.bot.neighbors().filter(n => n == this.gs.terraNullius()).length > 0
   }
 
   tick(ticks: number) {
+    if (ticks % this.attackRate != this.attackTick) return;
+
     if (!this.bot.isAlive()) {
       this.active = false;
       return;
     }
 
-    if (ticks % this.attackRate != 0) {
-      return;
+    if (this.behavior === null) {
+      this.behavior = new BotBehavior(
+        this.random,
+        this.mg,
+        this.bot,
+        this.triggerRatio,
+        this.reserveRatio,
+      );
     }
 
-    this.bot.incomingAllianceRequests().forEach((ar) => {
-      if (ar.requestor().isTraitor()) {
-        ar.reject();
-      } else {
-        ar.accept();
-      }
-    });
+    this.behavior.handleAllianceRequests();
+    this.maybeAttack();
+  }
 
+  private maybeAttack() {
     const traitors = this.bot
       .neighbors()
       .filter((n) => n.isPlayer() && n.isTraitor()) as Player[];
@@ -55,60 +62,25 @@ export class BotExecution implements Execution {
       const toAttack = this.random.randElement(traitors);
       const odds = this.bot.isFriendly(toAttack) ? 6 : 3;
       if (this.random.chance(odds)) {
-        this.sendAttack(toAttack);
+        this.behavior.sendAttack(toAttack);
         return;
       }
     }
 
     if (this.neighborsTerraNullius) {
-      for (const b of this.bot.borderTiles()) {
-        for (const n of this.mg.neighbors(b)) {
-          if (!this.mg.hasOwner(n) && this.mg.isLand(n)) {
-            this.sendAttack(this.mg.terraNullius());
-            return;
-          }
-        }
+      if (this.bot.sharesBorderWith(this.mg.terraNullius())) {
+        this.behavior.sendAttack(this.mg.terraNullius());
+        return;
       }
       this.neighborsTerraNullius = false;
     }
 
-    const border = Array.from(this.bot.borderTiles())
-      .flatMap((t) => this.mg.neighbors(t))
-      .filter((t) => this.mg.hasOwner(t) && this.mg.owner(t) != this.bot);
-
-    if (border.length == 0) {
-      return;
-    }
-
-    const toAttack = border[this.random.nextInt(0, border.length)];
-    const owner = this.mg.owner(toAttack);
-
-    if (owner.isPlayer()) {
-      if (this.bot.isFriendly(owner)) {
-        return;
-      }
-      if (owner.type() == PlayerType.FakeHuman) {
-        if (!this.random.chance(2)) {
-          return;
-        }
-      }
-    }
-    this.sendAttack(owner);
-  }
-
-  sendAttack(toAttack: Player | TerraNullius) {
-    if (toAttack.isPlayer() && this.bot.isOnSameTeam(toAttack)) return;
-    this.mg.addExecution(
-      new AttackExecution(
-        this.bot.troops() / 20,
-        this.bot.id(),
-        toAttack.isPlayer() ? toAttack.id() : null,
-      ),
-    );
-  }
-
-  owner(): Player {
-    return this.bot;
+    this.behavior.forgetOldEnemies();
+    this.behavior.checkIncomingAttacks();
+    const enemy = this.behavior.selectRandomEnemy();
+    if (!enemy) return;
+    if (!this.bot.sharesBorderWith(enemy)) return;
+    this.behavior.sendAttack(enemy);
   }
 
   isActive(): boolean {

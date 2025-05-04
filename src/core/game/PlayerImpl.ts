@@ -4,12 +4,10 @@ import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
   assertNever,
-  closestShoreFromPlayer,
   distSortUnit,
   maxInt,
   minInt,
   simpleHash,
-  targetTransportTile,
   toInt,
   within,
 } from "../Util";
@@ -20,9 +18,9 @@ import {
   AllianceRequest,
   AllPlayers,
   Attack,
+  BuildableUnit,
   Cell,
   EmojiMessage,
-  GameMode,
   Gold,
   MessageType,
   MutableAlliance,
@@ -43,6 +41,10 @@ import { GameImpl } from "./GameImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
 import { AttackUpdate, GameUpdateType, PlayerUpdate } from "./GameUpdates";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
+import {
+  bestShoreDeploymentSource,
+  canBuildTransportShip,
+} from "./TransportShipUtils";
 import { UnitImpl } from "./UnitImpl";
 
 interface Target {
@@ -68,7 +70,7 @@ export class PlayerImpl implements Player {
   // 0 to 100
   private _targetTroopRatio: bigint;
 
-  isTraitor_ = false;
+  markedTraitorTick = -1;
 
   private embargoes: Set<PlayerID> = new Set();
 
@@ -244,7 +246,7 @@ export class PlayerImpl implements Player {
     const ns: Set<Player | TerraNullius> = new Set();
     for (const border of this.borderTiles()) {
       for (const neighbor of this.mg.map().neighbors(border)) {
-        if (this.mg.map().isLake(neighbor)) {
+        if (this.mg.map().isLand(neighbor)) {
           const owner = this.mg.map().ownerID(neighbor);
           if (owner != this.smallID()) {
             ns.add(
@@ -373,7 +375,14 @@ export class PlayerImpl implements Player {
   }
 
   isTraitor(): boolean {
-    return this.isTraitor_;
+    return (
+      this.markedTraitorTick >= 0 &&
+      this.mg.ticks() - this.markedTraitorTick <
+        this.mg.config().traitorDuration()
+    );
+  }
+  markTraitor(): void {
+    this.markedTraitorTick = this.mg.ticks();
   }
 
   createAllianceRequest(recipient: Player): AllianceRequest {
@@ -459,12 +468,12 @@ export class PlayerImpl implements Player {
     this.mg.target(this, other);
   }
 
-  targets(): PlayerImpl[] {
+  targets(): Player[] {
     return this.targets_
       .filter(
         (t) => this.mg.ticks() - t.tick < this.mg.config().targetDuration(),
       )
-      .map((t) => t.target as PlayerImpl);
+      .map((t) => t.target);
   }
 
   transitiveTargets(): Player[] {
@@ -517,13 +526,6 @@ export class PlayerImpl implements Player {
   }
 
   canDonate(recipient: Player): boolean {
-    if (
-      recipient.type() == PlayerType.Human &&
-      this.mg.config().gameConfig().gameMode == GameMode.FFA
-    ) {
-      return false;
-    }
-
     if (!this.isFriendly(recipient)) {
       return false;
     }
@@ -549,7 +551,7 @@ export class PlayerImpl implements Player {
       this.id(),
     );
     this.mg.displayMessage(
-      `Recieved ${renderTroops(troops)} troops from ${this.name()}`,
+      `Received ${renderTroops(troops)} troops from ${this.name()}`,
       MessageType.SUCCESS,
       recipient.id(),
     );
@@ -563,7 +565,7 @@ export class PlayerImpl implements Player {
       this.id(),
     );
     this.mg.displayMessage(
-      `Recieved ${renderNumber(gold)} gold from ${this.name()}`,
+      `Received ${renderNumber(gold)} gold from ${this.name()}`,
       MessageType.SUCCESS,
       recipient.id(),
     );
@@ -722,7 +724,24 @@ export class PlayerImpl implements Player {
     return b;
   }
 
-  canBuild(unitType: UnitType, targetTile: TileRef): TileRef | false {
+  public buildableUnits(tile: TileRef): BuildableUnit[] {
+    const validTiles = this.validStructureSpawnTiles(tile);
+    return Object.values(UnitType).map((u) => {
+      return {
+        type: u,
+        canBuild: this.mg.inSpawnPhase()
+          ? false
+          : this.canBuild(u, tile, validTiles),
+        cost: this.mg.config().unitInfo(u).cost(this),
+      } as BuildableUnit;
+    });
+  }
+
+  canBuild(
+    unitType: UnitType,
+    targetTile: TileRef,
+    validTiles: TileRef[] | null = null,
+  ): TileRef | false {
     // prevent the building of nukes and nuke related buildings
     if (this.mg.config().disableNukes()) {
       if (
@@ -754,14 +773,14 @@ export class PlayerImpl implements Player {
       case UnitType.MIRVWarhead:
         return targetTile;
       case UnitType.Port:
-        return this.portSpawn(targetTile);
+        return this.portSpawn(targetTile, validTiles);
       case UnitType.Warship:
         return this.warshipSpawn(targetTile);
       case UnitType.Shell:
       case UnitType.SAMMissile:
         return targetTile;
       case UnitType.TransportShip:
-        return this.transportShipSpawn(targetTile);
+        return canBuildTransportShip(this.mg, this, targetTile);
       case UnitType.TradeShip:
         return this.tradeShipSpawn(targetTile);
       case UnitType.MissileSilo:
@@ -769,7 +788,7 @@ export class PlayerImpl implements Player {
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Construction:
-        return this.landBasedStructureSpawn(targetTile);
+        return this.landBasedStructureSpawn(targetTile, validTiles);
       default:
         assertNever(unitType);
     }
@@ -784,7 +803,6 @@ export class PlayerImpl implements Player {
     }
     // only get missilesilos that are not on cooldown
     const spawns = this.units(UnitType.MissileSilo)
-      .map((u) => u as Unit)
       .filter((silo) => {
         return !silo.isCooldown();
       })
@@ -795,7 +813,7 @@ export class PlayerImpl implements Player {
     return spawns[0].tile();
   }
 
-  portSpawn(tile: TileRef): TileRef | false {
+  portSpawn(tile: TileRef, validTiles: TileRef[]): TileRef | false {
     const spawns = Array.from(
       this.mg.bfs(
         tile,
@@ -807,10 +825,15 @@ export class PlayerImpl implements Player {
         (a, b) =>
           this.mg.manhattanDist(a, tile) - this.mg.manhattanDist(b, tile),
       );
-    if (spawns.length == 0) {
-      return false;
+    const validTileSet = new Set(
+      validTiles ?? this.validStructureSpawnTiles(tile),
+    );
+    for (const t of spawns) {
+      if (validTileSet.has(t)) {
+        return t;
+      }
     }
-    return spawns[0];
+    return false;
   }
 
   warshipSpawn(tile: TileRef): TileRef | false {
@@ -828,22 +851,54 @@ export class PlayerImpl implements Player {
     return spawns[0].tile();
   }
 
-  landBasedStructureSpawn(tile: TileRef): TileRef | false {
-    if (this.mg.owner(tile) != this) {
+  landBasedStructureSpawn(
+    tile: TileRef,
+    validTiles: TileRef[] | null = null,
+  ): TileRef | false {
+    const tiles = validTiles ?? this.validStructureSpawnTiles(tile);
+    if (tiles.length == 0) {
       return false;
     }
-    return tile;
+    return tiles[0];
   }
 
-  transportShipSpawn(targetTile: TileRef): TileRef | false {
-    if (!this.mg.isShore(targetTile)) {
-      return false;
+  private validStructureSpawnTiles(tile: TileRef): TileRef[] {
+    if (this.mg.owner(tile) != this) {
+      return [];
     }
-    const spawn = closestShoreFromPlayer(this.mg, this, targetTile);
-    if (spawn == null) {
-      return false;
+    const searchRadius = 15;
+    const searchRadiusSquared = searchRadius ** 2;
+    const types = Object.values(UnitType).filter((unitTypeValue) => {
+      return this.mg.config().unitInfo(unitTypeValue).territoryBound;
+    });
+
+    const nearbyUnits = this.mg
+      .nearbyUnits(tile, searchRadius * 2, types)
+      .map((u) => u.unit);
+    const nearbyTiles = this.mg.bfs(tile, (gm, t) => {
+      return (
+        this.mg.euclideanDistSquared(tile, t) < searchRadiusSquared &&
+        gm.ownerID(t) == this.smallID()
+      );
+    });
+    const validSet: Set<TileRef> = new Set(nearbyTiles);
+
+    const minDistSquared = this.mg.config().structureMinDist() ** 2;
+    for (const t of nearbyTiles) {
+      for (const unit of nearbyUnits) {
+        if (this.mg.euclideanDistSquared(unit.tile(), t) < minDistSquared) {
+          validSet.delete(t);
+          break;
+        }
+      }
     }
-    return spawn;
+    const valid = Array.from(validSet);
+    valid.sort(
+      (a, b) =>
+        this.mg.euclideanDistSquared(a, tile) -
+        this.mg.euclideanDistSquared(b, tile),
+    );
+    return valid;
   }
 
   tradeShipSpawn(targetTile: TileRef): TileRef | false {
@@ -884,78 +939,6 @@ export class PlayerImpl implements Player {
       alliances: this.alliances().map((a) => a.other(this).smallID()),
     };
     return rel;
-  }
-
-  public canBoat(tile: TileRef): boolean {
-    if (
-      this.units(UnitType.TransportShip).length >=
-      this.mg.config().boatMaxNumber()
-    ) {
-      return false;
-    }
-
-    const dst = targetTransportTile(this.mg, tile);
-    if (dst == null) {
-      return false;
-    }
-
-    const other = this.mg.owner(tile);
-    if (other == this) {
-      return false;
-    }
-    if (other.isPlayer() && this.isFriendly(other)) {
-      return false;
-    }
-
-    if (this.mg.isOceanShore(dst)) {
-      let myPlayerBordersOcean = false;
-      for (const bt of this.borderTiles()) {
-        if (this.mg.isOceanShore(bt)) {
-          myPlayerBordersOcean = true;
-          break;
-        }
-      }
-
-      let otherPlayerBordersOcean = false;
-      if (!this.mg.hasOwner(tile)) {
-        otherPlayerBordersOcean = true;
-      } else {
-        for (const bt of (other as Player).borderTiles()) {
-          if (this.mg.isOceanShore(bt)) {
-            otherPlayerBordersOcean = true;
-            break;
-          }
-        }
-      }
-
-      if (myPlayerBordersOcean && otherPlayerBordersOcean) {
-        return this.canBuild(UnitType.TransportShip, dst) != false;
-      } else {
-        return false;
-      }
-    }
-
-    // Now we are boating in a lake, so do a bfs from target until we find
-    // a border tile owned by the player
-
-    const tiles = this.mg.bfs(
-      dst,
-      andFN(
-        manhattanDistFN(dst, 300),
-        (_, t: TileRef) => this.mg.isLake(t) || this.mg.isShore(t),
-      ),
-    );
-
-    const sorted = Array.from(tiles).sort(
-      (a, b) => this.mg.manhattanDist(dst, a) - this.mg.manhattanDist(dst, b),
-    );
-
-    for (const t of sorted) {
-      if (this.mg.owner(t) == this) {
-        return this.canBuild(UnitType.TransportShip, dst) != false;
-      }
-    }
-    return false;
   }
 
   createAttack(
@@ -1024,6 +1007,10 @@ export class PlayerImpl implements Player {
       }
       return false;
     }
+  }
+
+  bestTransportShipSpawn(targetTile: TileRef): TileRef | false {
+    return bestShoreDeploymentSource(this.mg, this, targetTile);
   }
 
   // It's a probability list, so if an element appears twice it's because it's
