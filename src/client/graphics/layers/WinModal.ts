@@ -25,7 +25,7 @@ export class WinModal extends LitElement implements Layer {
   }
 
   static styles = css`
-    /* Cold War-themed modal container */
+    /* Cold War-themed modal container, fully opaque with diagonal stripes */
     .win-modal {
       display: none;
       position: fixed;
@@ -34,23 +34,30 @@ export class WinModal extends LitElement implements Layer {
       transform: translate(-50%, -50%);
       background: linear-gradient(
         135deg,
-        rgba(40, 54, 24, 0.9) 0%, /* Olive drab military green */
-        rgba(28, 37, 44, 0.9) 100% /* Dark slate gray */
+        #283618 0%, /* Olive drab military green */
+        #1c252c 100% /* Dark slate gray */
       );
+      /* Diagonal stripe pattern filling the entire modal */
+      background-image: linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.1) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0.1) 75%,
+        transparent 75%,
+        transparent
+      );
+      background-size: 30px 30px; /* Larger stripes for bold impact */
       padding: 30px;
-      border: 3px solid #6b7280; /* Battleship gray */
+      border: 4px solid #6b7280; /* Thick battleship gray border */
       border-radius: 8px;
       z-index: 9999;
-      box-shadow:
-        0 0 15px rgba(0, 0, 0, 0.7),
-        inset 0 0 10px rgba(255, 255, 255, 0.1); /* Subtle metallic sheen */
-      backdrop-filter: blur(3px);
-      color: #e5e7eb; /* Light gray for text */
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.8); /* Strong shadow for depth */
+      color: #e5e7eb; /* Light gray text */
       width: 400px;
       max-width: 90%;
       font-family: "Courier New", monospace; /* Typewriter font */
-      background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='0' width='100' height='100' fill='none'/%3E%3Cpath d='M0 0h100v100H0z' fill='none'/%3E%3Cpath d='M10 10h80v80H10z' fill='none' stroke='%23FF0000' stroke-width='2' opacity='0.2'/%3E%3C/svg%3E"); /* Subtle red border pattern */
-      background-size: 50px;
       transition:
         opacity 0.5s ease-in-out,
         transform 0.5s ease-in-out;
@@ -61,7 +68,7 @@ export class WinModal extends LitElement implements Layer {
       animation: radarFlicker 0.6s ease-out;
     }
 
-    /* Flicker animation mimicking old radar screens */
+    /* Flicker animation for CRT/radar effect */
     @keyframes radarFlicker {
       0% {
         opacity: 0;
@@ -69,11 +76,11 @@ export class WinModal extends LitElement implements Layer {
         filter: brightness(0.8);
       }
       20% {
-        opacity: 0.4;
-        filter: brightness(1.2);
+        opacity: 0.6;
+        filter: brightness(1.3);
       }
       40% {
-        opacity: 0.2;
+        opacity: 0.3;
         filter: brightness(0.9);
       }
       100% {
@@ -83,26 +90,26 @@ export class WinModal extends LitElement implements Layer {
       }
     }
 
-    /* Title styling with stencil-like effect */
+    /* Title with stencil-like effect */
     .win-modal h2 {
       margin: 0 0 20px 0;
       font-size: 28px;
       font-weight: bold;
       text-align: center;
-      color: #dc2626; /* Soviet red for emphasis */
+      color: #dc2626; /* Soviet red */
       text-transform: uppercase;
       letter-spacing: 2px;
-      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-      font-family: "Impact", "Arial Narrow", sans-serif; /* Stencil-like font */
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6);
+      font-family: "Impact", "Arial Narrow", sans-serif; /* Stencil font */
     }
 
     /* Inner content area */
     .win-modal p {
       margin: 0 0 20px 0;
       text-align: center;
-      background: rgba(17, 24, 39, 0.8); /* Dark blue-gray */
+      background: #111827; /* Dark blue-gray, solid */
       padding: 12px;
-      border: 1px solid #4b5563; /* Gray border */
+      border: 2px solid #4b5563; /* Gray border */
       border-radius: 5px;
       font-size: 16px;
       line-height: 1.6;
@@ -114,33 +121,36 @@ export class WinModal extends LitElement implements Layer {
       text-align: center;
       margin: 15px 0;
       padding: 15px;
-      background: rgba(0, 0, 0, 0.85);
-      border: 2px solid #b91c1c; /* Dark red border */
+      background: #111827; /* Dark blue-gray */
+      border: 3px solid #b91c1c; /* Dark red border */
       border-radius: 6px;
+      font-size: 18px;
+      line-height: 1.5;
       position: relative;
       z-index: 1;
+      /* Subtle inner stripes for consistency */
       background-image: linear-gradient(
         45deg,
-        rgba(255, 255, 255, 0.05) 25%,
+        rgba(255, 255, 255, 0.15) 25%,
         transparent 25%,
         transparent 50%,
-        rgba(255, 255, 255, 0.05) 50%,
-        rgba(255, 255, 255, 0.05) 75%,
+        rgba(255, 255, 255, 0.15) 50%,
+        rgba(255, 255, 255, 0.15) 75%,
         transparent 75%,
         transparent
-      ); /* Diagonal stripe pattern */
+      );
       background-size: 20px 20px;
     }
 
     .promo-container a {
-      color: #60a5fa; /* Bright blue for links */
+      color: #60a5fa; /* CRT blue */
       font-weight: bold;
       text-decoration: none;
       transition: color 0.2s ease;
     }
 
     .promo-container a:hover {
-      color: #93c5fd; /* Lighter blue on hover */
+      color: #93c5fd; /* Lighter blue */
       text-decoration: underline;
     }
 
@@ -152,7 +162,7 @@ export class WinModal extends LitElement implements Layer {
       margin-top: 20px;
     }
 
-    /* Button styling with military aesthetic */
+    /* Buttons with military aesthetic */
     .win-modal button {
       flex: 1;
       padding: 12px;
@@ -161,11 +171,11 @@ export class WinModal extends LitElement implements Layer {
       cursor: pointer;
       background: linear-gradient(
         180deg,
-        #4b5563 0%, /* Gray top */
-        #374151 100% /* Darker gray bottom */
+        #4b5563 0%, /* Gray */
+        #374151 100% /* Darker gray */
       );
       color: #f3f4f6; /* Light gray text */
-      border: 2px solid #1f2937; /* Dark border */
+      border: 3px solid #1f2937; /* Dark border */
       border-radius: 6px;
       text-transform: uppercase;
       letter-spacing: 1px;
@@ -180,8 +190,8 @@ export class WinModal extends LitElement implements Layer {
     .win-modal button:hover {
       background: linear-gradient(
         180deg,
-        #dc2626 0%, /* Red top */
-        #b91c1c 100% /* Darker red bottom */
+        #dc2626 0%, /* Red */
+        #b91c1c 100% /* Darker red */
       );
       transform: translateY(-2px);
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
@@ -192,7 +202,7 @@ export class WinModal extends LitElement implements Layer {
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
-    /* Button pseudo-element for retro scanline effect */
+    /* Scanline effect on buttons */
     .win-modal button::before {
       content: "";
       position: absolute;
@@ -214,6 +224,7 @@ export class WinModal extends LitElement implements Layer {
         width: 90%;
         max-width: 320px;
         padding: 20px;
+        background-size: 20px 20px; /* Smaller stripes for mobile */
       }
 
       .win-modal h2 {
@@ -228,7 +239,8 @@ export class WinModal extends LitElement implements Layer {
 
       .promo-container {
         padding: 10px;
-        font-size: 14px;
+        font-size: 16px;
+        background-size: 15px 15px;
       }
 
       .win-modal button {
@@ -261,7 +273,7 @@ export class WinModal extends LitElement implements Layer {
   innerHtml() {
     return html`
       <div class="promo-container">
-        <div style="font-size: 18px; line-height: 1.5;">
+        <div>
           Watch the best compete in the
           <br />
           <a
