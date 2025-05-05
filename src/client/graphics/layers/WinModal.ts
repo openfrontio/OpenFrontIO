@@ -32,15 +32,16 @@ export class WinModal extends LitElement implements Layer {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
+      /* Solid background, no transparency */
       background: linear-gradient(
         135deg,
         #283618 0%, /* Olive drab military green */
         #1c252c 100% /* Dark slate gray */
       );
-      /* Diagonal stripe pattern filling the entire modal */
+      /* Diagonal stripes across the entire modal */
       background-image: linear-gradient(
         45deg,
-        rgba(255, 255, 255, 0.2) 25%, /* Slightly bolder stripes */
+        rgba(255, 255, 255, 0.2) 25%,
         transparent 25%,
         transparent 50%,
         rgba(255, 255, 255, 0.2) 50%,
@@ -117,19 +118,19 @@ export class WinModal extends LitElement implements Layer {
       color: #d1d5db; /* Light gray */
     }
 
-    /* Promotional content container */
+    /* Promotional content container with highlight effect */
     .promo-container {
       text-align: center;
       margin: 15px 0;
       padding: 15px;
-      background: #111827; /* Solid dark blue-gray */
-      border: 3px solid #b91c1c; /* Dark red border */
+      background: #1e293b; /* Slightly lighter blue-gray for contrast */
+      border: 3px solid #dc2626; /* Bright red border for emphasis */
       border-radius: 6px;
       font-size: 18px;
       line-height: 1.5;
       position: relative;
       z-index: 1;
-      /* Subtle stripes for consistency */
+      /* Subtle stripes */
       background-image: linear-gradient(
         45deg,
         rgba(255, 255, 255, 0.15) 25%,
@@ -141,6 +142,22 @@ export class WinModal extends LitElement implements Layer {
         transparent
       );
       background-size: 20px 20px;
+      /* Glowing effect */
+      box-shadow: 0 0 15px rgba(220, 38, 38, 0.5); /* Red glow */
+      animation: pulseGlow 2s infinite ease-in-out;
+    }
+
+    /* Pulsing glow animation for the promo container */
+    @keyframes pulseGlow {
+      0% {
+        box-shadow: 0 0 15px rgba(220, 38, 38, 0.5);
+      }
+      50% {
+        box-shadow: 0 0 25px rgba(220, 38, 38, 0.8);
+      }
+      100% {
+        box-shadow: 0 0 15px rgba(220, 38, 38, 0.5);
+      }
     }
 
     .promo-container a {
