@@ -26,6 +26,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   KnownWorld: "Known World",
   FaroeIslands: "Faroe Islands",
   DeglaciatedAntarctica: "Deglaciated Antarctica",
+  VaticanCity: "Vatican City",
 };
 
 @customElement("map-display")
