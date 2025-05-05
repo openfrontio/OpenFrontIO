@@ -40,20 +40,21 @@ export class WinModal extends LitElement implements Layer {
       /* Diagonal stripe pattern filling the entire modal */
       background-image: linear-gradient(
         45deg,
-        rgba(255, 255, 255, 0.1) 25%,
+        rgba(255, 255, 255, 0.2) 25%, /* Slightly bolder stripes */
         transparent 25%,
         transparent 50%,
-        rgba(255, 255, 255, 0.1) 50%,
-        rgba(255, 255, 255, 0.1) 75%,
+        rgba(255, 255, 255, 0.2) 50%,
+        rgba(255, 255, 255, 0.2) 75%,
         transparent 75%,
         transparent
       );
-      background-size: 30px 30px; /* Larger stripes for bold impact */
+      background-size: 30px 30px; /* Bold stripes */
+      opacity: 1; /* Fully opaque */
       padding: 30px;
       border: 4px solid #6b7280; /* Thick battleship gray border */
       border-radius: 8px;
       z-index: 9999;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.8); /* Strong shadow for depth */
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.8); /* Strong shadow */
       color: #e5e7eb; /* Light gray text */
       width: 400px;
       max-width: 90%;
@@ -107,7 +108,7 @@ export class WinModal extends LitElement implements Layer {
     .win-modal p {
       margin: 0 0 20px 0;
       text-align: center;
-      background: #111827; /* Dark blue-gray, solid */
+      background: #111827; /* Solid dark blue-gray */
       padding: 12px;
       border: 2px solid #4b5563; /* Gray border */
       border-radius: 5px;
@@ -121,14 +122,14 @@ export class WinModal extends LitElement implements Layer {
       text-align: center;
       margin: 15px 0;
       padding: 15px;
-      background: #111827; /* Dark blue-gray */
+      background: #111827; /* Solid dark blue-gray */
       border: 3px solid #b91c1c; /* Dark red border */
       border-radius: 6px;
       font-size: 18px;
       line-height: 1.5;
       position: relative;
       z-index: 1;
-      /* Subtle inner stripes for consistency */
+      /* Subtle stripes for consistency */
       background-image: linear-gradient(
         45deg,
         rgba(255, 255, 255, 0.15) 25%,
