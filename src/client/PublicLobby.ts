@@ -132,7 +132,7 @@ export class PublicLobby extends LitElement {
               </div>
               <div class="text-md font-medium text-blue-100">
                 ${lobby.gameConfig.gameMode == GameMode.Team
-                  ? `${translateText("game_mode.teams")}${teamCount !== null ? ` - ${translateText("public_lobby.teams")} ${teamCount}` : null}`
+                  ? translateText("public_lobby.teams", { num: teamCount })
                   : translateText("game_mode.ffa")}
               </div>
             </div>
