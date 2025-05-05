@@ -31,6 +31,7 @@ export class WinModal extends LitElement implements Layer {
       position: fixed;
       top: 50%;
       left: 50%;
+      opacity: 1;
       transform: translate(-50%, -50%);
       /* Solid background, no transparency */
       background: linear-gradient(
