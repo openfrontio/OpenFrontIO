@@ -16,7 +16,7 @@ function getAudience() {
 function getApiBase() {
   const domainname = getAudience();
   return domainname === "localhost"
-    ? "http://localhost:8787"
+    ? (localStorage.getItem("apiHost") ?? "http://localhost:8787")
     : `https://api.${domainname}`;
 }
 
