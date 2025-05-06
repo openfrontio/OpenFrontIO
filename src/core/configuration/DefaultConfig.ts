@@ -226,32 +226,8 @@ export class DefaultConfig implements Config {
     return !this._gameConfig.disableNPCs;
   }
 
-  disableCity(): boolean {
-    return this._gameConfig.disableCity ?? false;
-  }
-  disableDefensePost(): boolean {
-    return this._gameConfig.disableDefensePost ?? false;
-  }
-  disablePort(): boolean {
-    return this._gameConfig.disablePort ?? false;
-  }
-  disableWarship(): boolean {
-    return this._gameConfig.disableWarship ?? false;
-  }
-  disableMissileSilo(): boolean {
-    return this._gameConfig.disableMissileSilo ?? false;
-  }
-  disableSAMLauncher(): boolean {
-    return this._gameConfig.disableSAMLauncher ?? false;
-  }
-  disableAtomBomb(): boolean {
-    return this._gameConfig.disableAtomBomb ?? false;
-  }
-  disableHydrogenBomb(): boolean {
-    return this._gameConfig.disableHydrogenBomb ?? false;
-  }
-  disableMIRV(): boolean {
-    return this._gameConfig.disableMIRV ?? false;
+  isUnitDisabled(unitType: UnitType): boolean {
+    return this._gameConfig.disabledUnits?.includes(unitType) ?? false;
   }
 
   bots(): number {

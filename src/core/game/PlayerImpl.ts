@@ -705,23 +705,7 @@ export class PlayerImpl implements Player {
     spawnTile: TileRef,
     unitSpecificInfos: UnitSpecificInfos = {},
   ): UnitImpl {
-    if (
-      (type === UnitType.MissileSilo &&
-        this.mg.config().disableMissileSilo()) ||
-      (type === UnitType.MIRV && this.mg.config().disableMIRV()) ||
-      (type === UnitType.AtomBomb && this.mg.config().disableAtomBomb()) ||
-      (type === UnitType.HydrogenBomb &&
-        this.mg.config().disableHydrogenBomb()) ||
-      (type === UnitType.SAMLauncher &&
-        this.mg.config().disableSAMLauncher()) ||
-      (type === UnitType.SAMMissile && this.mg.config().disableSAMLauncher()) ||
-      (type === UnitType.MIRVWarhead && this.mg.config().disableMIRV()) ||
-      (type === UnitType.City && this.mg.config().disableCity()) ||
-      (type === UnitType.DefensePost &&
-        this.mg.config().disableDefensePost()) ||
-      (type === UnitType.Port && this.mg.config().disablePort()) ||
-      (type === UnitType.Warship && this.mg.config().disableWarship())
-    ) {
+    if (this.mg.config().isUnitDisabled(type)) {
       throw new Error(
         `Attempted to build disabled unit ${type} at tile ${spawnTile} by player ${this.name()}`,
       );
@@ -764,24 +748,7 @@ export class PlayerImpl implements Player {
     targetTile: TileRef,
     validTiles: TileRef[] | null = null,
   ): TileRef | false {
-    if (
-      (unitType === UnitType.MissileSilo &&
-        this.mg.config().disableMissileSilo()) ||
-      (unitType === UnitType.MIRV && this.mg.config().disableMIRV()) ||
-      (unitType === UnitType.AtomBomb && this.mg.config().disableAtomBomb()) ||
-      (unitType === UnitType.HydrogenBomb &&
-        this.mg.config().disableHydrogenBomb()) ||
-      (unitType === UnitType.SAMLauncher &&
-        this.mg.config().disableSAMLauncher()) ||
-      (unitType === UnitType.SAMMissile &&
-        this.mg.config().disableSAMLauncher()) ||
-      (unitType === UnitType.MIRVWarhead && this.mg.config().disableMIRV()) ||
-      (unitType === UnitType.City && this.mg.config().disableCity()) ||
-      (unitType === UnitType.DefensePost &&
-        this.mg.config().disableDefensePost()) ||
-      (unitType === UnitType.Port && this.mg.config().disablePort()) ||
-      (unitType === UnitType.Warship && this.mg.config().disableWarship())
-    ) {
+    if (this.mg.config().isUnitDisabled(unitType)) {
       return false;
     }
 

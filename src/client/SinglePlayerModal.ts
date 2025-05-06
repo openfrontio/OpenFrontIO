@@ -9,6 +9,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  UnitType,
   mapCategories,
 } from "../core/game/Game";
 import { generateID } from "../core/Util";
@@ -39,15 +40,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: number | typeof Duos = 2;
 
-  @state() private disableCity: boolean = false;
-  @state() private disableDefensePost: boolean = false;
-  @state() private disablePort: boolean = false;
-  @state() private disableWarship: boolean = false;
-  @state() private disableMissileSilo: boolean = false;
-  @state() private disableSAMLauncher: boolean = false;
-  @state() private disableAtomBomb: boolean = false;
-  @state() private disableHydrogenBomb: boolean = false;
-  @state() private disableMIRV: boolean = false;
+  @state() private disabledUnits: string[] = [];
 
   render() {
     return html`
@@ -293,28 +286,40 @@ export class SinglePlayerModal extends LitElement {
               style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"
             >
               ${[
-                ["disableCity", "unit_type.city"],
-                ["disableDefensePost", "unit_type.defense_post"],
-                ["disablePort", "unit_type.port"],
-                ["disableWarship", "unit_type.warship"],
-                ["disableMissileSilo", "unit_type.missile_silo"],
-                ["disableSAMLauncher", "unit_type.sam_launcher"],
-                ["disableAtomBomb", "unit_type.atom_bomb"],
-                ["disableHydrogenBomb", "unit_type.hydrogen_bomb"],
-                ["disableMIRV", "unit_type.mirv"],
+                [UnitType.City, "unit_type.city"],
+                [UnitType.DefensePost, "unit_type.defense_post"],
+                [UnitType.Port, "unit_type.port"],
+                [UnitType.Warship, "unit_type.warship"],
+                [UnitType.MissileSilo, "unit_type.missile_silo"],
+                [UnitType.SAMLauncher, "unit_type.sam_launcher"],
+                [UnitType.AtomBomb, "unit_type.atom_bomb"],
+                [UnitType.HydrogenBomb, "unit_type.hydrogen_bomb"],
+                [UnitType.MIRV, "unit_type.mirv"],
               ].map(
-                ([key, translationKey]) => html`
+                ([unitType, translationKey]) => html`
                   <label
-                    class="option-card ${!this[key] ? "selected" : ""}"
+                    class="option-card ${this.disabledUnits.includes(unitType)
+                      ? ""
+                      : "selected"}"
                     style="width: 140px;"
                   >
                     <div class="checkbox-icon"></div>
                     <input
                       type="checkbox"
                       @change=${(e: Event) => {
-                        this[key] = !(e.target as HTMLInputElement).checked;
+                        const checked = (e.target as HTMLInputElement).checked;
+                        if (checked) {
+                          this.disabledUnits = [
+                            ...this.disabledUnits,
+                            unitType,
+                          ];
+                        } else {
+                          this.disabledUnits = this.disabledUnits.filter(
+                            (u) => u !== unitType,
+                          );
+                        }
                       }}
-                      .checked=${!this[key]}
+                      .checked=${this.disabledUnits.includes(unitType)}
                     />
                     <div class="option-card-title" style="text-align: center;">
                       ${translateText(translationKey)}
@@ -456,15 +461,7 @@ export class SinglePlayerModal extends LitElement {
               infiniteGold: this.infiniteGold,
               infiniteTroops: this.infiniteTroops,
               instantBuild: this.instantBuild,
-              disableCity: this.disableCity,
-              disableDefensePost: this.disableDefensePost,
-              disablePort: this.disablePort,
-              disableWarship: this.disableWarship,
-              disableMissileSilo: this.disableMissileSilo,
-              disableSAMLauncher: this.disableSAMLauncher,
-              disableAtomBomb: this.disableAtomBomb,
-              disableHydrogenBomb: this.disableHydrogenBomb,
-              disableMIRV: this.disableMIRV,
+              disabledUnits: this.disabledUnits,
             },
           },
         } as JoinLobbyEvent,

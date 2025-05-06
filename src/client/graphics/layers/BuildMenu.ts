@@ -409,32 +409,8 @@ export class BuildMenu extends LitElement implements Layer {
   }
 
   private getBuildableUnits(): BuildItemDisplay[][] {
-    const config = this.game?.config();
     return buildTable.map((row) =>
-      row.filter((item) => {
-        switch (item.unitType) {
-          case UnitType.AtomBomb:
-            return !config?.disableAtomBomb();
-          case UnitType.MIRV:
-            return !config?.disableMIRV();
-          case UnitType.HydrogenBomb:
-            return !config?.disableHydrogenBomb();
-          case UnitType.MissileSilo:
-            return !config?.disableMissileSilo();
-          case UnitType.SAMLauncher:
-            return !config?.disableSAMLauncher();
-          case UnitType.Warship:
-            return !config?.disableWarship();
-          case UnitType.Port:
-            return !config?.disablePort();
-          case UnitType.DefensePost:
-            return !config?.disableDefensePost();
-          case UnitType.City:
-            return !config?.disableCity();
-          default:
-            return true;
-        }
-      }),
+      row.filter((item) => !this.game?.config()?.isUnitDisabled(item.unitType)),
     );
   }
 

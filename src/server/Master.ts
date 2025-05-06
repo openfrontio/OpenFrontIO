@@ -245,15 +245,7 @@ async function schedulePublicGame(playlist: MapPlaylist) {
     gameMode,
     playerTeams: numPlayerTeams,
     bots: 400,
-    disableCity: false,
-    disableDefensePost: false,
-    disablePort: false,
-    disableWarship: false,
-    disableMissileSilo: false,
-    disableSAMLauncher: false,
-    disableAtomBomb: false,
-    disableHydrogenBomb: false,
-    disableMIRV: false,
+    disabledUnits: [],
   };
 
   const workerPath = config.workerPath(gameID);

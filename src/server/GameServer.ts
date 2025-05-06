@@ -92,35 +92,13 @@ export class GameServer {
     if (gameConfig.gameMode != null) {
       this.gameConfig.gameMode = gameConfig.gameMode;
     }
-    if (gameConfig.disableCity != null) {
-      this.gameConfig.disableCity = gameConfig.disableCity;
+
+    if (gameConfig.disabledUnits != null) {
+      this.gameConfig.disabledUnits = gameConfig.disabledUnits;
     }
-    if (gameConfig.disableDefensePost != null) {
-      this.gameConfig.disableDefensePost = gameConfig.disableDefensePost;
-    }
-    if (gameConfig.disablePort != null) {
-      this.gameConfig.disablePort = gameConfig.disablePort;
-    }
-    if (gameConfig.disableWarship != null) {
-      this.gameConfig.disableWarship = gameConfig.disableWarship;
-    }
-    if (gameConfig.disableMissileSilo != null) {
-      this.gameConfig.disableMissileSilo = gameConfig.disableMissileSilo;
-    }
-    if (gameConfig.disableSAMLauncher != null) {
-      this.gameConfig.disableSAMLauncher = gameConfig.disableSAMLauncher;
-    }
-    if (gameConfig.disableAtomBomb != null) {
-      this.gameConfig.disableAtomBomb = gameConfig.disableAtomBomb;
-    }
-    if (gameConfig.disableHydrogenBomb != null) {
-      this.gameConfig.disableHydrogenBomb = gameConfig.disableHydrogenBomb;
-    }
-    if (gameConfig.disableMIRV != null) {
-      this.gameConfig.disableMIRV = gameConfig.disableMIRV;
-      if (gameConfig.playerTeams != null) {
-        this.gameConfig.playerTeams = gameConfig.playerTeams;
-      }
+
+    if (gameConfig.playerTeams != null) {
+      this.gameConfig.playerTeams = gameConfig.playerTeams;
     }
   }
 

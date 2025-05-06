@@ -39,15 +39,7 @@ export class GameManager {
       instantBuild: false,
       gameMode: GameMode.FFA,
       bots: 400,
-      disableCity: false,
-      disableDefensePost: false,
-      disablePort: false,
-      disableWarship: false,
-      disableMissileSilo: false,
-      disableSAMLauncher: false,
-      disableAtomBomb: false,
-      disableHydrogenBomb: false,
-      disableMIRV: false,
+      disabledUnits: [],
       ...gameConfig,
     });
     this.games.set(id, game);

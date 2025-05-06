@@ -123,15 +123,7 @@ const GameConfigSchema = z.object({
   maxPlayers: z.number().optional(),
   numPlayerTeams: z.number().optional(),
   disableBuilding: z.boolean().optional(),
-  disableCity: z.boolean().optional(),
-  disableDefensePost: z.boolean().optional(),
-  disablePort: z.boolean().optional(),
-  disableWarship: z.boolean().optional(),
-  disableMissileSilo: z.boolean().optional(),
-  disableSAMLauncher: z.boolean().optional(),
-  disableAtomBomb: z.boolean().optional(),
-  disableHydrogenBomb: z.boolean().optional(),
-  disableMIRV: z.boolean().optional(),
+  disabledUnits: z.array(z.nativeEnum(UnitType)).optional(),
   playerTeams: z.union([z.number().optional(), z.literal(Duos)]),
 });
 

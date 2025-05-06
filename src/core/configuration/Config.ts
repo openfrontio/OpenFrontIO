@@ -65,15 +65,7 @@ export interface Config {
   percentageTilesOwnedToWin(): number;
   numBots(): number;
   spawnNPCs(): boolean;
-  disableCity(): boolean;
-  disableDefensePost(): boolean;
-  disablePort(): boolean;
-  disableWarship(): boolean;
-  disableMissileSilo(): boolean;
-  disableSAMLauncher(): boolean;
-  disableAtomBomb(): boolean;
-  disableHydrogenBomb(): boolean;
-  disableMIRV(): boolean;
+  isUnitDisabled(unitType: UnitType): boolean;
   bots(): number;
   infiniteGold(): boolean;
   infiniteTroops(): boolean;
