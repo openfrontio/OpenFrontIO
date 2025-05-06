@@ -25,6 +25,7 @@ import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { TopBar } from "./layers/TopBar";
 import { UILayer } from "./layers/UILayer";
 import { UnitLayer } from "./layers/UnitLayer";
+import { WarningLayer } from "./layers/WarningLayer";
 import { WinModal } from "./layers/WinModal";
 
 export function createRenderer(
@@ -163,6 +164,7 @@ export function createRenderer(
     topBar,
     playerPanel,
     multiTabModal,
+    new WarningLayer(),
   ];
 
   return new GameRenderer(
