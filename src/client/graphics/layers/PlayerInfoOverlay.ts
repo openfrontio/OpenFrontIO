@@ -207,7 +207,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         >
           <div
             class="w-4 h-4 rounded-sm border border-black/30 mr-1"
-            style="background-color: ${player.playerColor().toRgbString()}"
+            style="background-color: ${player.playerColor()?.toRgbString()}"
           ></div>
           ${player.flag()
             ? html`<img
