@@ -706,9 +706,10 @@ export class PlayerImpl implements Player {
     unitSpecificInfos: UnitSpecificInfos = {},
   ): UnitImpl {
     if (this.mg.config().isUnitDisabled(type)) {
-      throw new Error(
-        `Attempted to build disabled unit ${type} at tile ${spawnTile} by player ${this.name()}`,
-      );
+      console.warn(
+        `Attempted to build disabled unit ${type} at tile ${spawnTile} by player ${this.name()}`
+    );
+return false;
     }
 
     const cost = this.mg.unitInfo(type).cost(this);
