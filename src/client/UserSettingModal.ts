@@ -1,6 +1,9 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
+import { translateText } from "../client/Utils";
 import { UserSettings } from "../core/game/UserSettings";
+import "./components/baseComponents/setting/SettingKeybind";
+import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
@@ -9,7 +12,8 @@ import "./components/baseComponents/setting/SettingToggle";
 export class UserSettingModal extends LitElement {
   private userSettings: UserSettings = new UserSettings();
 
-  @state() private darkMode: boolean = this.userSettings.darkMode();
+  @state() private settingsMode: "basic" | "keybinds" = "basic";
+  @state() private keybinds: Record<string, string> = {};
 
   @state() private keySequence: string[] = [];
   @state() private showEasterEggSettings = false;
@@ -17,6 +21,15 @@ export class UserSettingModal extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     window.addEventListener("keydown", this.handleKeyDown);
+
+    const savedKeybinds = localStorage.getItem("settings.keybinds");
+    if (savedKeybinds) {
+      try {
+        this.keybinds = JSON.parse(savedKeybinds);
+      } catch (e) {
+        console.warn("Invalid keybinds JSON:", e);
+      }
+    }
   }
 
   @query("o-modal") private modalEl!: HTMLElement & {
@@ -119,96 +132,63 @@ export class UserSettingModal extends LitElement {
     }
   }
 
+  private handleKeybindChange(
+    e: CustomEvent<{ action: string; value: string }>,
+  ) {
+    const { action, value } = e.detail;
+    const prevValue = this.keybinds[action] ?? "";
+
+    const values = Object.entries(this.keybinds)
+      .filter(([k]) => k !== action)
+      .map(([, v]) => v);
+    if (values.includes(value) && value !== "Null") {
+      const popup = document.createElement("div");
+      popup.className = "setting-popup";
+      popup.textContent = `The key "${value}" is already assigned to another action.`;
+      document.body.appendChild(popup);
+      const element = this.renderRoot.querySelector(
+        `setting-keybind[action="${action}"]`,
+      ) as SettingKeybind;
+      if (element) {
+        element.value = prevValue;
+        element.requestUpdate();
+      }
+      return;
+    }
+    this.keybinds = { ...this.keybinds, [action]: value };
+    localStorage.setItem("settings.keybinds", JSON.stringify(this.keybinds));
+  }
+
   render() {
     return html`
-      <o-modal title="User Settings">
+      <o-modal title="${translateText("user_setting.title")}">
         <div class="modal-overlay">
           <div class="modal-content user-setting-modal">
+            <div class="flex mb-4 w-full justify-center">
+              <button
+                class="w-1/2 text-center px-3 py-1 rounded-l 
+      ${this.settingsMode === "basic"
+                  ? "bg-white/10 text-white"
+                  : "bg-transparent text-gray-400"}"
+                @click=${() => (this.settingsMode = "basic")}
+              >
+                ${translateText("user_setting.tab_basic")}
+              </button>
+              <button
+                class="w-1/2 text-center px-3 py-1 rounded-r 
+      ${this.settingsMode === "keybinds"
+                  ? "bg-white/10 text-white"
+                  : "bg-transparent text-gray-400"}"
+                @click=${() => (this.settingsMode = "keybinds")}
+              >
+                ${translateText("user_setting.tab_keybinds")}
+              </button>
+            </div>
+
             <div class="settings-list">
-              <setting-toggle
-                label="🌙 Dark Mode"
-                description="Toggle the site’s appearance between light and dark themes"
-                id="dark-mode-toggle"
-                .checked=${this.userSettings.darkMode()}
-                @change=${(e: CustomEvent<{ checked: boolean }>) =>
-                  this.toggleDarkMode(e)}
-              ></setting-toggle>
-
-              <setting-toggle
-                label="😊 Emojis"
-                description="Toggle whether emojis are shown in game"
-                id="emoji-toggle"
-                .checked=${this.userSettings.emojis()}
-                @change=${this.toggleEmojis}
-              ></setting-toggle>
-
-              <setting-toggle
-                label="🖱️ Left Click to Open Menu"
-                description="When ON, left-click opens menu and sword button attacks. When OFF, right-click attacks directly."
-                id="left-click-toggle"
-                .checked=${this.userSettings.leftClickOpensMenu()}
-                @change=${this.toggleLeftClickOpensMenu}
-              ></setting-toggle>
-
-              <setting-slider
-                label="⚔️ Attack Ratio"
-                description="What percentage of your troops to send in an attack (1–100%)"
-                min="1"
-                max="100"
-                .value=${Number(
-                  localStorage.getItem("settings.attackRatio") ?? "0.2",
-                ) * 100}
-                @change=${this.sliderAttackRatio}
-              ></setting-slider>
-
-              <setting-slider
-                label="🪖🛠️ Troops and Workers Ratio"
-                description="Adjust the balance between troops (for combat) and workers (for gold production) (1–100%)"
-                min="1"
-                max="100"
-                .value=${Number(
-                  localStorage.getItem("settings.troopRatio") ?? "0.95",
-                ) * 100}
-                @change=${this.sliderTroopRatio}
-              ></setting-slider>
-
-              ${this.showEasterEggSettings
-                ? html`
-                    <setting-slider
-                      label="Writing Speed Multiplier"
-                      description="Adjust how fast you pretend to code (x1–x100)"
-                      min="0"
-                      max="100"
-                      value="40"
-                      easter="true"
-                      @change=${(e: CustomEvent) => {
-                        const value = e.detail?.value;
-                        if (typeof value !== "undefined") {
-                          console.log("Changed:", value);
-                        } else {
-                          console.warn("Slider event missing detail.value", e);
-                        }
-                      }}
-                    ></setting-slider>
-
-                    <setting-number
-                      label="Bug Count"
-                      description="How many bugs you're okay with (0–1000, emotionally)"
-                      value="100"
-                      min="0"
-                      max="1000"
-                      easter="true"
-                      @change=${(e: CustomEvent) => {
-                        const value = e.detail?.value;
-                        if (typeof value !== "undefined") {
-                          console.log("Changed:", value);
-                        } else {
-                          console.warn("Slider event missing detail.value", e);
-                        }
-                      }}
-                    ></setting-number>
-                  `
-                : null}
+              ${this.settingsMode === "basic"
+                ? this.renderBasicSettings()
+                : this.renderKeybindSettings()}
             </div>
           </div>
         </div>
@@ -216,7 +196,194 @@ export class UserSettingModal extends LitElement {
     `;
   }
 
+  private renderBasicSettings() {
+    return html`
+      <!-- 🌙 Dark Mode -->
+      <setting-toggle
+        label="${translateText("user_setting.dark_mode_label")}"
+        description="${translateText("user_setting.dark_mode_desc")}"
+        id="dark-mode-toggle"
+        .checked=${this.userSettings.darkMode()}
+        @change=${(e: CustomEvent<{ checked: boolean }>) =>
+          this.toggleDarkMode(e)}
+      ></setting-toggle>
+
+      <!-- 😊 Emojis -->
+      <setting-toggle
+        label="${translateText("user_setting.emojis_label")}"
+        description="${translateText("user_setting.emojis_desc")}"
+        id="emoji-toggle"
+        .checked=${this.userSettings.emojis()}
+        @change=${this.toggleEmojis}
+      ></setting-toggle>
+
+      <!-- 🖱️ Left Click Menu -->
+      <setting-toggle
+        label="${translateText("user_setting.left_click_label")}"
+        description="${translateText("user_setting.left_click_desc")}"
+        id="left-click-toggle"
+        .checked=${this.userSettings.leftClickOpensMenu()}
+        @change=${this.toggleLeftClickOpensMenu}
+      ></setting-toggle>
+
+      <!-- ⚔️ Attack Ratio -->
+      <setting-slider
+        label="${translateText("user_setting.attack_ratio_label")}"
+        description="${translateText("user_setting.attack_ratio_desc")}"
+        min="1"
+        max="100"
+        .value=${Number(localStorage.getItem("settings.attackRatio") ?? "0.2") *
+        100}
+        @change=${this.sliderAttackRatio}
+      ></setting-slider>
+
+      <!-- 🪖🛠️ Troop Ratio -->
+      <setting-slider
+        label="${translateText("user_setting.troop_ratio_label")}"
+        description="${translateText("user_setting.troop_ratio_desc")}"
+        min="1"
+        max="100"
+        .value=${Number(localStorage.getItem("settings.troopRatio") ?? "0.95") *
+        100}
+        @change=${this.sliderTroopRatio}
+      ></setting-slider>
+
+      ${this.showEasterEggSettings
+        ? html`
+            <setting-slider
+              label="${translateText(
+                "user_setting.easter_writing_speed_label",
+              )}"
+              description="${translateText(
+                "user_setting.easter_writing_speed_desc",
+              )}"
+              min="0"
+              max="100"
+              value="40"
+              easter="true"
+              @change=${(e: CustomEvent) => {
+                const value = e.detail?.value;
+                if (typeof value !== "undefined") {
+                  console.log("Changed:", value);
+                } else {
+                  console.warn("Slider event missing detail.value", e);
+                }
+              }}
+            ></setting-slider>
+
+            <setting-number
+              label="${translateText("user_setting.easter_bug_count_label")}"
+              description="${translateText(
+                "user_setting.easter_bug_count_desc",
+              )}"
+              value="100"
+              min="0"
+              max="1000"
+              easter="true"
+              @change=${(e: CustomEvent) => {
+                const value = e.detail?.value;
+                if (typeof value !== "undefined") {
+                  console.log("Changed:", value);
+                } else {
+                  console.warn("Slider event missing detail.value", e);
+                }
+              }}
+            ></setting-number>
+          `
+        : null}
+    `;
+  }
+
+  private renderKeybindSettings() {
+    return html`
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.view_options")}
+      </div>
+
+      <setting-keybind
+        action="toggleView"
+        label=${translateText("user_setting.toggle_view")}
+        description=${translateText("user_setting.toggle_view_desc")}
+        defaultKey="Space"
+        .value=${this.keybinds["toggleView"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.zoom_controls")}
+      </div>
+
+      <setting-keybind
+        action="zoomOut"
+        label=${translateText("user_setting.zoom_out")}
+        description=${translateText("user_setting.zoom_out_desc")}
+        defaultKey="KeyQ"
+        .value=${this.keybinds["zoomOut"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="zoomIn"
+        label=${translateText("user_setting.zoom_in")}
+        description=${translateText("user_setting.zoom_in_desc")}
+        defaultKey="KeyE"
+        .value=${this.keybinds["zoomIn"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.camera_movement")}
+      </div>
+
+      <setting-keybind
+        action="centerCamera"
+        label=${translateText("user_setting.center_camera")}
+        description=${translateText("user_setting.center_camera_desc")}
+        defaultKey="KeyC"
+        .value=${this.keybinds["centerCamera"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="moveUp"
+        label=${translateText("user_setting.move_up")}
+        description=${translateText("user_setting.move_up_desc")}
+        defaultKey="KeyW"
+        .value=${this.keybinds["moveUp"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="moveLeft"
+        label=${translateText("user_setting.move_left")}
+        description=${translateText("user_setting.move_left_desc")}
+        defaultKey="KeyA"
+        .value=${this.keybinds["moveLeft"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="moveDown"
+        label=${translateText("user_setting.move_down")}
+        description=${translateText("user_setting.move_down_desc")}
+        defaultKey="KeyS"
+        .value=${this.keybinds["moveDown"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="moveRight"
+        label=${translateText("user_setting.move_right")}
+        description=${translateText("user_setting.move_right_desc")}
+        defaultKey="KeyD"
+        .value=${this.keybinds["moveRight"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+    `;
+  }
+
   public open() {
+    this.requestUpdate();
     this.modalEl?.open();
   }
 

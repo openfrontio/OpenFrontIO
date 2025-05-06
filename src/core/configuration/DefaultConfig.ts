@@ -77,61 +77,66 @@ export abstract class DefaultServerConfig implements ServerConfig {
   gameCreationRate(): number {
     return 60 * 1000;
   }
-  lobbyMaxPlayers(map: GameMapType): number {
-    // Maps with ~4 mil pixels
-    if (
-      [
-        GameMapType.GatewayToTheAtlantic,
-        GameMapType.SouthAmerica,
-        GameMapType.NorthAmerica,
-        GameMapType.Africa,
-        GameMapType.Europe,
-      ].includes(map)
-    ) {
-      return Math.random() < 0.2 ? 100 : 50;
-    }
-    // Maps with ~2.5 - ~3.5 mil pixels
-    if (
-      [
-        GameMapType.Australia,
-        GameMapType.Iceland,
-        GameMapType.Britannia,
-        GameMapType.Asia,
-      ].includes(map)
-    ) {
-      return Math.random() < 0.3 ? 50 : 25;
-    }
-    // Maps with ~2 mil pixels
-    if (
-      [
-        GameMapType.Mena,
-        GameMapType.Mars,
-        GameMapType.Oceania,
-        GameMapType.Japan, // Japan at this level because its 2/3 water
-        GameMapType.FaroeIslands,
-        GameMapType.DeglaciatedAntarctica,
-        GameMapType.EuropeClassic,
-      ].includes(map)
-    ) {
-      return Math.random() < 0.3 ? 50 : 25;
-    }
-    // Maps smaller than ~2 mil pixels
-    if (
-      [
-        GameMapType.BetweenTwoSeas,
-        GameMapType.BlackSea,
-        GameMapType.Pangaea,
-      ].includes(map)
-    ) {
-      return Math.random() < 0.5 ? 30 : 15;
-    }
-    // world belongs with the ~2 mils, but these amounts never made sense so I assume the insanity is intended.
-    if (map == GameMapType.World) {
-      return Math.random() < 0.2 ? 150 : 50;
-    }
-    // default return for non specified map
-    return Math.random() < 0.2 ? 50 : 20;
+
+  lobbyMaxPlayers(map: GameMapType, mode: GameMode): number {
+    const numPlayers = () => {
+      // Maps with ~4 mil pixels
+      if (
+        [
+          GameMapType.GatewayToTheAtlantic,
+          GameMapType.SouthAmerica,
+          GameMapType.NorthAmerica,
+          GameMapType.Africa,
+          GameMapType.Europe,
+        ].includes(map)
+      ) {
+        return Math.random() < 0.2 ? 100 : 50;
+      }
+      // Maps with ~2.5 - ~3.5 mil pixels
+      if (
+        [
+          GameMapType.Australia,
+          GameMapType.Iceland,
+          GameMapType.Britannia,
+          GameMapType.Asia,
+        ].includes(map)
+      ) {
+        return Math.random() < 0.3 ? 50 : 25;
+      }
+      // Maps with ~2 mil pixels
+      if (
+        [
+          GameMapType.Mena,
+          GameMapType.Mars,
+          GameMapType.Oceania,
+          GameMapType.Japan, // Japan at this level because its 2/3 water
+          GameMapType.FaroeIslands,
+          GameMapType.DeglaciatedAntarctica,
+          GameMapType.EuropeClassic,
+        ].includes(map)
+      ) {
+        return Math.random() < 0.3 ? 50 : 25;
+      }
+      // Maps smaller than ~2 mil pixels
+      if (
+        [
+          GameMapType.BetweenTwoSeas,
+          GameMapType.BlackSea,
+          GameMapType.Pangaea,
+        ].includes(map)
+      ) {
+        return Math.random() < 0.5 ? 30 : 15;
+      }
+      // world belongs with the ~2 mils, but these amounts never made sense so I assume the insanity is intended.
+      if (map == GameMapType.World) {
+        return Math.random() < 0.2 ? 150 : 50;
+      }
+      // default return for non specified map
+      return Math.random() < 0.2 ? 50 : 20;
+    };
+    return Math.min(150, numPlayers() * (mode == GameMode.Team ? 2 : 1));
   }
+
   workerIndex(gameID: GameID): number {
     return simpleHash(gameID) % this.numWorkers();
   }
