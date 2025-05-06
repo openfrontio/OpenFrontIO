@@ -14,10 +14,10 @@ import { TradeShipExecution } from "./TradeShipExecution";
 
 export class PortExecution implements Execution {
   private active = true;
-  private mg: Game;
-  private port: Unit;
-  private random: PseudoRandom;
-  private checkOffset: number;
+  private mg: Game | null = null;
+  private port: Unit | null = null;
+  private random: PseudoRandom | null = null;
+  private checkOffset: number | null = null;
 
   constructor(
     private _owner: PlayerID,
@@ -36,7 +36,10 @@ export class PortExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.port == null) {
+    if (this.mg === null || this.random === null || this.checkOffset === null) {
+      throw new Error("Not initialized");
+    }
+    if (this.port === null) {
       const tile = this.tile;
       const player = this.mg.player(this._owner);
       const spawn = player.canBuild(UnitType.Port, tile);
@@ -53,12 +56,12 @@ export class PortExecution implements Execution {
       return;
     }
 
-    if (this._owner != this.port.owner().id()) {
+    if (this._owner !== this.port.owner().id()) {
       this._owner = this.port.owner().id();
     }
 
     // Only check every 10 ticks for performance.
-    if ((this.mg.ticks() + this.checkOffset) % 10 != 0) {
+    if ((this.mg.ticks() + this.checkOffset) % 10 !== 0) {
       return;
     }
 
@@ -71,7 +74,7 @@ export class PortExecution implements Execution {
 
     const ports = this.player().tradingPorts(this.port);
 
-    if (ports.length == 0) {
+    if (ports.length === 0) {
       return;
     }
 
@@ -91,6 +94,9 @@ export class PortExecution implements Execution {
   }
 
   player(): Player {
+    if (this.port === null) {
+      throw new Error("Not initialized");
+    }
     return this.port.owner();
   }
 }

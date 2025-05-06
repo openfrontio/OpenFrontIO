@@ -19,7 +19,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   @state() private hasJoined = false;
   @state() private players: string[] = [];
 
-  private playersInterval = null;
+  private playersInterval: NodeJS.Timeout | null = null;
 
   render() {
     return html`
@@ -98,7 +98,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   }
 
   public close() {
-    this.lobbyIdInput.value = null;
+    this.lobbyIdInput.value = "";
     this.modalEl?.close();
     if (this.playersInterval) {
       clearInterval(this.playersInterval);
@@ -263,7 +263,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     )
       .then((response) => response.json())
       .then((data: GameInfo) => {
-        this.players = data.clients.map((p) => p.username);
+        this.players = data.clients?.map((p) => p.username) ?? [];
       })
       .catch((error) => {
         consolex.error("Error polling players:", error);

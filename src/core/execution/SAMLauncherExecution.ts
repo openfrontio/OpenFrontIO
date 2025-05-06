@@ -92,9 +92,12 @@ export class SAMLauncherExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.sam == null) {
+    if (this.mg === null || this.player === null) {
+      throw new Error("Not initialized");
+    }
+    if (this.sam === null) {
       const spawnTile = this.player.canBuild(UnitType.SAMLauncher, this.tile);
-      if (spawnTile == false) {
+      if (spawnTile === false) {
         consolex.warn("cannot build SAM Launcher");
         this.active = false;
         return;
@@ -108,11 +111,11 @@ export class SAMLauncherExecution implements Execution {
       return;
     }
 
-    if (this.player != this.sam.owner()) {
+    if (this.player !== this.sam.owner()) {
       this.player = this.sam.owner();
     }
 
-    if (!this.pseudoRandom) {
+    if (this.pseudoRandom === null) {
       this.pseudoRandom = new PseudoRandom(this.sam.id());
     }
 
@@ -140,7 +143,7 @@ export class SAMLauncherExecution implements Execution {
 
     if (
       this.sam.isCooldown() &&
-      this.sam.ticksLeftInCooldown(this.mg.config().SAMCooldown()) == 0
+      this.sam.ticksLeftInCooldown(this.mg.config().SAMCooldown()) === 0
     ) {
       this.sam.setCooldown(false);
     }

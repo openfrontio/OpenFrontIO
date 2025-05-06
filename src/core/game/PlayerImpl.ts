@@ -80,7 +80,7 @@ export class PlayerImpl implements Player {
   public _units: UnitImpl[] = [];
   public _tiles: Set<TileRef> = new Set();
 
-  private _flag: string;
+  private _flag: string | undefined;
   private _name: string;
   private _displayName: string;
 
@@ -131,7 +131,7 @@ export class PlayerImpl implements Player {
       name: this.name(),
       displayName: this.displayName(),
       id: this.id(),
-      team: this.team(),
+      team: this.team() ?? undefined,
       smallID: this.smallID(),
       playerType: this.type(),
       isAlive: this.isAlive(),
@@ -176,7 +176,7 @@ export class PlayerImpl implements Player {
     return this._smallID;
   }
 
-  flag(): string {
+  flag(): string | undefined {
     return this._flag;
   }
 
@@ -187,7 +187,7 @@ export class PlayerImpl implements Player {
     return this._displayName;
   }
 
-  clientID(): ClientID {
+  clientID(): ClientID | null {
     return this.playerInfo.clientID;
   }
 
@@ -335,8 +335,10 @@ export class PlayerImpl implements Player {
     if (other == this) {
       return null;
     }
-    return this.alliances().find(
-      (a) => a.recipient() == other || a.requestor() == other,
+    return (
+      this.alliances().find(
+        (a) => a.recipient() == other || a.requestor() == other,
+      ) ?? null
     );
   }
 
@@ -386,7 +388,7 @@ export class PlayerImpl implements Player {
     this.markedTraitorTick = this.mg.ticks();
   }
 
-  createAllianceRequest(recipient: Player): AllianceRequest {
+  createAllianceRequest(recipient: Player): AllianceRequest | null {
     if (this.isAlliedWith(recipient)) {
       throw new Error(`cannot create alliance request, already allies`);
     }
@@ -397,10 +399,8 @@ export class PlayerImpl implements Player {
     if (other == this) {
       throw new Error(`cannot get relation with self: ${this}`);
     }
-    if (this.relations.has(other)) {
-      return this.relationFromValue(this.relations.get(other));
-    }
-    return Relation.Neutral;
+    const relation = this.relations.get(other) ?? 0;
+    return this.relationFromValue(relation);
   }
 
   private relationFromValue(relationValue: number): Relation {
@@ -429,10 +429,7 @@ export class PlayerImpl implements Player {
     if (other == this) {
       throw new Error(`cannot update relation with self: ${this}`);
     }
-    let relation = 0;
-    if (this.relations.has(other)) {
-      relation = this.relations.get(other);
-    }
+    const relation = this.relations.get(other) ?? 0;
     const newRelation = within(relation + delta, -100, 100);
     this.relations.set(other, newRelation);
   }
@@ -948,7 +945,7 @@ export class PlayerImpl implements Player {
   createAttack(
     target: Player | TerraNullius,
     troops: number,
-    sourceTile: TileRef,
+    sourceTile: TileRef | null,
   ): Attack {
     const attack = new AttackImpl(
       this._pseudo_random.nextID(),

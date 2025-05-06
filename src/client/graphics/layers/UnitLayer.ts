@@ -31,7 +31,7 @@ export class UnitLayer implements Layer {
 
   private boatToTrail = new Map<UnitView, TileRef[]>();
 
-  private theme: Theme = null;
+  private theme: Theme;
 
   private alternateView = false;
 
@@ -62,12 +62,16 @@ export class UnitLayer implements Layer {
   }
 
   tick() {
-    if (this.myPlayer == null) {
+    if (this.myPlayer === null) {
       this.myPlayer = this.game.playerByClientID(this.clientID);
     }
-    this.game.updatesSinceLastTick()?.[GameUpdateType.Unit]?.forEach((unit) => {
-      this.onUnitEvent(this.game.unit(unit.id));
-    });
+    const updates = this.game.updatesSinceLastTick();
+    const unitUpdates = updates?.[GameUpdateType.Unit] ?? [];
+    for (const u of unitUpdates) {
+      const unit = this.game.unit(u.id);
+      if (typeof unit === "undefined") continue;
+      this.onUnitEvent(unit);
+    }
   }
 
   init() {
@@ -92,7 +96,7 @@ export class UnitLayer implements Layer {
     const clickRef = this.game.ref(cell.x, cell.y);
 
     // Make sure we have the current player
-    if (this.myPlayer == null) {
+    if (this.myPlayer === null) {
       this.myPlayer = this.game.playerByClientID(this.clientID);
     }
 
@@ -185,10 +189,16 @@ export class UnitLayer implements Layer {
 
   redraw() {
     this.canvas = document.createElement("canvas");
-    this.context = this.canvas.getContext("2d");
+    const context = this.canvas.getContext("2d");
+    if (context === null) throw new Error("2d context not supported");
+    this.context = context;
     this.transportShipTrailCanvas = document.createElement("canvas");
-    this.transportShipTrailContext =
+    const transportShipTrailContext =
       this.transportShipTrailCanvas.getContext("2d");
+    if (transportShipTrailContext === null) {
+      throw new Error("2d context not supported");
+    }
+    this.transportShipTrailContext = transportShipTrailContext;
 
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
@@ -214,10 +224,10 @@ export class UnitLayer implements Layer {
   }
 
   private relationship(unit: UnitView): Relationship {
-    if (this.myPlayer == null) {
+    if (this.myPlayer === null) {
       return Relationship.Enemy;
     }
-    if (this.myPlayer == unit.owner()) {
+    if (this.myPlayer === unit.owner()) {
       return Relationship.Self;
     }
     if (this.myPlayer.isFriendly(unit.owner())) {
@@ -272,8 +282,8 @@ export class UnitLayer implements Layer {
 
     // Clear current and previous positions
     this.clearCell(this.game.x(unit.lastTile()), this.game.y(unit.lastTile()));
-    if (this.oldShellTile.has(unit)) {
-      const oldTile = this.oldShellTile.get(unit);
+    const oldTile = this.oldShellTile.get(unit);
+    if (typeof oldTile !== "undefined") {
       this.clearCell(this.game.x(oldTile), this.game.y(oldTile));
     }
 
@@ -336,6 +346,7 @@ export class UnitLayer implements Layer {
       this.boatToTrail.set(unit, []);
     }
     const trail = this.boatToTrail.get(unit);
+    if (typeof trail === "undefined") return;
     trail.push(unit.lastTile());
 
     // Paint trail

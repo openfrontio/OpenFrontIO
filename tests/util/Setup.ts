@@ -3,6 +3,8 @@ import path from "path";
 import {
   Difficulty,
   Game,
+  GameMapType,
+  GameMode,
   GameType,
   PlayerInfo,
   PlayerType,
@@ -31,11 +33,13 @@ export async function setup(
 
   // Configure the game
   const serverConfig = new TestServerConfig();
-  const gameConfig = {
-    gameMap: null,
+  const gameConfig: GameConfig = {
+    gameMap: GameMapType.Asia,
+    gameMode: GameMode.FFA,
     gameType: GameType.Singleplayer,
     difficulty: Difficulty.Medium,
     disableNPCs: false,
+    disableNukes: false,
     bots: 0,
     infiniteGold: false,
     infiniteTroops: false,

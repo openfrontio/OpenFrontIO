@@ -60,7 +60,7 @@ export class SendSpawnIntentEvent implements GameEvent {
 
 export class SendAttackIntentEvent implements GameEvent {
   constructor(
-    public readonly targetID: PlayerID,
+    public readonly targetID: PlayerID | null,
     public readonly troops: number,
   ) {}
 }
@@ -149,7 +149,7 @@ export class MoveWarshipIntentEvent implements GameEvent {
 }
 
 export class Transport {
-  private socket: WebSocket;
+  private socket: WebSocket | null = null;
 
   private localServer: LocalServer;
 
@@ -167,8 +167,8 @@ export class Transport {
     // If gameRecord is not null, we are replaying an archived game.
     // For multiplayer games, GameConfig is not known until game starts.
     this.isLocal =
-      lobbyConfig.gameRecord != null ||
-      lobbyConfig.gameStartInfo?.config.gameType == GameType.Singleplayer;
+      typeof lobbyConfig.gameRecord !== "undefined" ||
+      lobbyConfig.gameStartInfo?.config.gameType === GameType.Singleplayer;
 
     this.eventBus.on(SendAllianceRequestIntentEvent, (e) =>
       this.onSendAllianceRequest(e),
@@ -218,9 +218,9 @@ export class Transport {
 
   private startPing() {
     if (this.isLocal || this.pingInterval) return;
-    if (this.pingInterval == null) {
+    if (this.pingInterval === null) {
       this.pingInterval = window.setInterval(() => {
-        if (this.socket != null && this.socket.readyState === WebSocket.OPEN) {
+        if (this.socket !== null && this.socket.readyState === WebSocket.OPEN) {
           this.sendMsg(
             JSON.stringify(
               ClientPingMessageSchema.parse({
@@ -280,7 +280,12 @@ export class Transport {
       console.log("Connected to game server!");
       while (this.buffer.length > 0) {
         console.log("sending dropped message");
-        this.sendMsg(this.buffer.pop());
+        const msg = this.buffer.pop();
+        if (typeof msg === "undefined") {
+          console.warn("msg is undefined");
+          continue;
+        }
+        this.sendMsg(msg);
       }
       onconnect();
     };
@@ -296,13 +301,14 @@ export class Transport {
     };
     this.socket.onerror = (err) => {
       console.error("Socket encountered error: ", err, "Closing socket");
+      if (this.socket === null) return;
       this.socket.close();
     };
     this.socket.onclose = (event: CloseEvent) => {
       console.log(
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
-      if (event.code != 1000) {
+      if (event.code !== 1000) {
         console.log(`reconnecting`);
         this.reconnect();
       }
@@ -350,6 +356,7 @@ export class Transport {
       return;
     }
     this.stopPing();
+    if (this.socket === null) return;
     if (this.socket.readyState === WebSocket.OPEN) {
       console.log("on stop: leaving game");
       this.socket.close();
@@ -435,7 +442,7 @@ export class Transport {
       type: "emoji",
       clientID: this.lobbyConfig.clientID,
       recipient:
-        event.recipient == AllPlayers ? AllPlayers : event.recipient.id(),
+        event.recipient === AllPlayers ? AllPlayers : event.recipient.id(),
       emoji: event.emoji,
     });
   }
@@ -498,6 +505,7 @@ export class Transport {
   }
 
   private onSendWinnerEvent(event: SendWinnerEvent) {
+    if (this.socket === null) return;
     if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
       const msg = ClientSendWinnerSchema.parse({
         type: "winner",
@@ -519,6 +527,7 @@ export class Transport {
   }
 
   private onSendHashEvent(event: SendHashEvent) {
+    if (this.socket === null) return;
     if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
       const msg = ClientMessageSchema.parse({
         type: "hash",
@@ -556,6 +565,7 @@ export class Transport {
   }
 
   private sendIntent(intent: Intent) {
+    if (this.socket === null) return;
     if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
       const msg = ClientIntentMessageSchema.parse({
         type: "intent",
@@ -578,9 +588,10 @@ export class Transport {
     if (this.isLocal) {
       this.localServer.onMessage(msg);
     } else {
+      if (this.socket === null) return;
       if (
-        this.socket.readyState == WebSocket.CLOSED ||
-        this.socket.readyState == WebSocket.CLOSED
+        this.socket.readyState === WebSocket.CLOSED ||
+        this.socket.readyState === WebSocket.CLOSED
       ) {
         console.warn("socket not ready, closing and trying later");
         this.socket.close();
@@ -594,7 +605,7 @@ export class Transport {
   }
 
   private killExistingSocket(): void {
-    if (this.socket == null) {
+    if (this.socket === null) {
       return;
     }
     // Remove all event listeners

@@ -15,7 +15,7 @@ export class WinEvent implements GameEvent {
 export class WinCheckExecution implements Execution {
   private active = true;
 
-  private mg: Game;
+  private mg: Game | null = null;
 
   constructor() {}
 
@@ -24,10 +24,11 @@ export class WinCheckExecution implements Execution {
   }
 
   tick(ticks: number) {
-    if (ticks % 10 != 0) {
+    if (ticks % 10 !== 0) {
       return;
     }
-    if (this.mg.config().gameConfig().gameMode == GameMode.FFA) {
+    if (this.mg === null) throw new Error("Not initialized");
+    if (this.mg.config().gameConfig().gameMode === GameMode.FFA) {
       this.checkWinnerFFA();
     } else {
       this.checkWinnerTeam();
@@ -35,10 +36,11 @@ export class WinCheckExecution implements Execution {
   }
 
   checkWinnerFFA(): void {
+    if (this.mg === null) throw new Error("Not initialized");
     const sorted = this.mg
       .players()
       .sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
-    if (sorted.length == 0) {
+    if (sorted.length === 0) {
       return;
     }
     const max = sorted[0];
@@ -55,17 +57,21 @@ export class WinCheckExecution implements Execution {
   }
 
   checkWinnerTeam(): void {
+    if (this.mg === null) throw new Error("Not initialized");
     const teamToTiles = new Map<Team, number>();
     for (const player of this.mg.players()) {
+      const team = player.team();
+      // Sanity check, team should not be null here
+      if (team === null) continue;
       teamToTiles.set(
-        player.team(),
-        (teamToTiles.get(player.team()) ?? 0) + player.numTilesOwned(),
+        team,
+        (teamToTiles.get(team) ?? 0) + player.numTilesOwned(),
       );
     }
     const sorted = Array.from(teamToTiles.entries()).sort(
       (a, b) => b[1] - a[1],
     );
-    if (sorted.length == 0) {
+    if (sorted.length === 0) {
       return;
     }
     const max = sorted[0];
@@ -78,9 +84,6 @@ export class WinCheckExecution implements Execution {
       console.log(`${max[0]} has won the game`);
       this.active = false;
     }
-  }
-  owner(): Player {
-    return null;
   }
 
   isActive(): boolean {

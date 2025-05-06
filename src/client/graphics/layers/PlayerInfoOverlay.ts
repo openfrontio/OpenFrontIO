@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, TemplateResult, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import {
@@ -161,13 +161,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   private renderPlayerInfo(player: PlayerView) {
     const myPlayer = this.myPlayer();
     const isFriendly = myPlayer?.isFriendly(player);
-    let relationHtml = null;
+    let relationHtml: TemplateResult | null = null;
     const attackingTroops = player
       .outgoingAttacks()
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
 
-    if (player.type() == PlayerType.FakeHuman && myPlayer != null) {
+    if (player.type() === PlayerType.FakeHuman && myPlayer !== null) {
       const relation =
         this.playerProfile?.relations[myPlayer.smallID()] ?? Relation.Neutral;
       const relationClass = this.getRelationClass(relation);
@@ -243,7 +243,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
   private renderUnitInfo(unit: UnitView) {
     const isAlly =
-      (unit.owner() == this.myPlayer() ||
+      (unit.owner() === this.myPlayer() ||
         this.myPlayer()?.isFriendly(unit.owner())) ??
       false;
 
@@ -281,8 +281,8 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         <div
           class="bg-opacity-60 bg-gray-900 rounded-lg shadow-lg backdrop-blur-sm transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
         >
-          ${this.player != null ? this.renderPlayerInfo(this.player) : ""}
-          ${this.unit != null ? this.renderUnitInfo(this.unit) : ""}
+          ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
+          ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}
         </div>
       </div>
     `;

@@ -40,7 +40,7 @@ export class HostLobbyModal extends LitElement {
   @state() private players: string[] = [];
   @state() private useRandomMap: boolean = false;
 
-  private playersInterval = null;
+  private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
 
@@ -231,7 +231,7 @@ export class HostLobbyModal extends LitElement {
                 />
                 <div class="option-card-title">
                   <span>${translateText("host_modal.bots")}</span>${
-                    this.bots == 0
+                    this.bots === 0
                       ? translateText("host_modal.bots_disabled")
                       : this.bots
                   }
@@ -552,7 +552,7 @@ export class HostLobbyModal extends LitElement {
       .then((response) => response.json())
       .then((data: GameInfo) => {
         console.log(`got game info response: ${JSON.stringify(data)}`);
-        this.players = data.clients.map((p) => p.username);
+        this.players = data.clients?.map((p) => p.username) ?? [];
       });
   }
 }

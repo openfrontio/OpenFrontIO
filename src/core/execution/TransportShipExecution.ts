@@ -55,7 +55,7 @@ export class TransportShipExecution implements Execution {
       this.active = false;
       return;
     }
-    if (this.targetID != null && !mg.hasPlayer(this.targetID)) {
+    if (this.targetID !== null && !mg.hasPlayer(this.targetID)) {
       console.warn(`TransportShipExecution: target ${this.targetID} not found`);
       this.active = false;
       return;
@@ -90,13 +90,16 @@ export class TransportShipExecution implements Execution {
       return;
     }
 
-    if (this.targetID == null || this.targetID == this.mg.terraNullius().id()) {
+    if (
+      this.targetID === null ||
+      this.targetID === this.mg.terraNullius().id()
+    ) {
       this.target = mg.terraNullius();
     } else {
       this.target = mg.player(this.targetID);
     }
 
-    if (this.troops == null) {
+    if (this.troops === null) {
       this.troops = this.mg
         .config()
         .boatAttackAmount(this.attacker, this.target);
@@ -105,7 +108,7 @@ export class TransportShipExecution implements Execution {
     this.troops = Math.min(this.troops, this.attacker.troops());
 
     this.dst = targetTransportTile(this.mg, this.ref);
-    if (this.dst == null) {
+    if (this.dst === null) {
       consolex.warn(
         `${this.attacker} cannot send ship to ${this.target}, cannot find attack tile`,
       );
@@ -147,6 +150,10 @@ export class TransportShipExecution implements Execution {
   }
 
   tick(ticks: number) {
+    if (this.dst === null) {
+      this.active = false;
+      return;
+    }
     if (!this.active) {
       return;
     }
@@ -162,7 +169,7 @@ export class TransportShipExecution implements Execution {
     const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
     switch (result.type) {
       case PathFindResultType.Completed:
-        if (this.mg.owner(this.dst) == this.attacker) {
+        if (this.mg.owner(this.dst) === this.attacker) {
           this.attacker.addTroops(this.troops);
           this.boat.delete(false);
           this.active = false;

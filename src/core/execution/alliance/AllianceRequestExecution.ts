@@ -3,9 +3,8 @@ import { Execution, Game, Player, PlayerID } from "../../game/Game";
 
 export class AllianceRequestExecution implements Execution {
   private active = true;
-  private mg: Game = null;
-  private requestor: Player;
-  private recipient: Player;
+  private requestor: Player | null = null;
+  private recipient: Player | null = null;
 
   constructor(
     private requestorID: PlayerID,
@@ -28,12 +27,14 @@ export class AllianceRequestExecution implements Execution {
       return;
     }
 
-    this.mg = mg;
     this.requestor = mg.player(this.requestorID);
     this.recipient = mg.player(this.recipientID);
   }
 
   tick(ticks: number): void {
+    if (this.requestor === null || this.recipient === null) {
+      throw new Error("Not initialized");
+    }
     if (this.requestor.isFriendly(this.recipient)) {
       consolex.warn("already allied");
     } else if (!this.requestor.canSendAllianceRequest(this.recipient)) {
@@ -42,10 +43,6 @@ export class AllianceRequestExecution implements Execution {
       this.requestor.createAllianceRequest(this.recipient);
     }
     this.active = false;
-  }
-
-  owner(): Player {
-    return null;
   }
 
   isActive(): boolean {

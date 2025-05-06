@@ -64,7 +64,7 @@ export class UsernameInput extends LitElement {
       this.storeUsername(this.username);
       this.validationError = "";
     } else {
-      this.validationError = result.error;
+      this.validationError = result.error ?? "";
     }
   }
 

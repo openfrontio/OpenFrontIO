@@ -52,7 +52,16 @@ export class RadialMenu implements Layer {
   private originalTileOwner: PlayerView | TerraNullius;
   private menuElement: d3.Selection<HTMLDivElement, unknown, null, undefined>;
   private isVisible: boolean = false;
-  private readonly menuItems = new Map([
+  private readonly menuItems: Map<
+    Slot,
+    {
+      name: string;
+      disabled: boolean;
+      action: () => void;
+      color?: string | null;
+      icon?: string | null;
+    }
+  > = new Map([
     [
       Slot.Boat,
       {
@@ -105,7 +114,7 @@ export class RadialMenu implements Layer {
         e.x,
         e.y,
       );
-      if (clickedCell == null) {
+      if (clickedCell === null) {
         return;
       }
       if (!this.g.isValidCoord(clickedCell.x, clickedCell.y)) {
@@ -113,7 +122,7 @@ export class RadialMenu implements Layer {
       }
       const tile = this.g.ref(clickedCell.x, clickedCell.y);
       const p = this.g.playerByClientID(this.clientID);
-      if (p == null) {
+      if (p === null) {
         return;
       }
       this.buildMenu.showMenu(tile);
@@ -446,12 +455,13 @@ export class RadialMenu implements Layer {
       return;
     }
     consolex.log("Center button clicked");
+    if (this.clickedCell === null) return;
     const clicked = this.g.ref(this.clickedCell.x, this.clickedCell.y);
     if (this.g.inSpawnPhase()) {
       this.eventBus.emit(new SendSpawnIntentEvent(this.clickedCell));
     } else {
       const myPlayer = this.g.myPlayer();
-      if (myPlayer != null && this.g.owner(clicked) != myPlayer) {
+      if (myPlayer !== null && this.g.owner(clicked) !== myPlayer) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.g.owner(clicked).id(),
@@ -478,6 +488,7 @@ export class RadialMenu implements Layer {
     action: () => void,
   ) {
     const menuItem = this.menuItems.get(slot);
+    if (typeof menuItem === "undefined") return;
     menuItem.action = action;
     menuItem.disabled = false;
     menuItem.color = color;

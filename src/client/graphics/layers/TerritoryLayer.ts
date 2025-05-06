@@ -8,7 +8,7 @@ import {
   manhattanDistFN,
   TileRef,
 } from "../../../core/game/GameMap";
-import { GameUpdateType, UnitUpdate } from "../../../core/game/GameUpdates";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { AlternateViewEvent, DragEvent } from "../../InputHandler";
@@ -26,7 +26,7 @@ export class TerritoryLayer implements Layer {
     return a.lastUpdate - b.lastUpdate;
   });
   private random = new PseudoRandom(123);
-  private theme: Theme = null;
+  private theme: Theme;
 
   // Used for spawn highlighting
   private highlightCanvas: HTMLCanvasElement;
@@ -62,9 +62,10 @@ export class TerritoryLayer implements Layer {
 
   tick() {
     this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
-    this.game.updatesSinceLastTick()[GameUpdateType.Unit].forEach((u) => {
-      const update = u as UnitUpdate;
-      if (update.unitType == UnitType.DefensePost && update.isActive) {
+    const updates = this.game.updatesSinceLastTick();
+    const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
+    unitUpdates.forEach((update) => {
+      if (update.unitType === UnitType.DefensePost && update.isActive) {
         const tile = update.pos;
         this.game
           .bfs(
@@ -74,7 +75,7 @@ export class TerritoryLayer implements Layer {
           .forEach((t) => {
             if (
               this.game.isBorder(t) &&
-              this.game.ownerID(t) == update.ownerID
+              this.game.ownerID(t) === update.ownerID
             ) {
               this.enqueueTile(t);
             }
@@ -96,7 +97,7 @@ export class TerritoryLayer implements Layer {
     if (!this.game.inSpawnPhase()) {
       return;
     }
-    if (this.game.ticks() % 5 == 0) {
+    if (this.game.ticks() % 5 === 0) {
       return;
     }
 
@@ -108,7 +109,7 @@ export class TerritoryLayer implements Layer {
     );
     const humans = this.game
       .playerViews()
-      .filter((p) => p.type() == PlayerType.Human);
+      .filter((p) => p.type() === PlayerType.Human);
 
     for (const human of humans) {
       const center = human.nameLocation();
@@ -156,7 +157,9 @@ export class TerritoryLayer implements Layer {
   redraw() {
     console.log("redrew territory layer");
     this.canvas = document.createElement("canvas");
-    this.context = this.canvas.getContext("2d");
+    const context = this.canvas.getContext("2d");
+    if (context === null) throw new Error("2d context not supported");
+    this.context = context;
 
     this.imageData = this.context.getImageData(
       0,
@@ -171,9 +174,11 @@ export class TerritoryLayer implements Layer {
 
     // Add a second canvas for highlights
     this.highlightCanvas = document.createElement("canvas");
-    this.highlightContext = this.highlightCanvas.getContext("2d", {
+    const highlightContext = this.highlightCanvas.getContext("2d", {
       alpha: true,
     });
+    if (highlightContext === null) throw new Error("2d context not supported");
+    this.highlightContext = highlightContext;
     this.highlightCanvas.width = this.game.width();
     this.highlightCanvas.height = this.game.height();
 
@@ -224,7 +229,7 @@ export class TerritoryLayer implements Layer {
 
   renderTerritory() {
     let numToRender = Math.floor(this.tileToRenderQueue.size() / 10);
-    if (numToRender == 0 || this.game.inSpawnPhase()) {
+    if (numToRender === 0 || this.game.inSpawnPhase()) {
       numToRender = this.tileToRenderQueue.size();
     }
 
@@ -257,7 +262,7 @@ export class TerritoryLayer implements Layer {
     }
     const owner = this.game.owner(tile) as PlayerView;
     if (this.game.isBorder(tile)) {
-      const playerIsFocused = owner && this.game.focusedPlayer() == owner;
+      const playerIsFocused = owner && this.game.focusedPlayer() === owner;
       if (
         this.game
           .nearbyUnits(
@@ -265,7 +270,7 @@ export class TerritoryLayer implements Layer {
             this.game.config().defensePostRange(),
             UnitType.DefensePost,
           )
-          .filter((u) => u.unit.owner() == owner).length > 0
+          .filter((u) => u.unit.owner() === owner).length > 0
       ) {
         const useDefendedBorderColor = playerIsFocused
           ? this.theme.focusedDefendedBorderColor()

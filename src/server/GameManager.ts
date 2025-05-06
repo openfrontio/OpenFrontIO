@@ -16,7 +16,7 @@ export class GameManager {
   }
 
   public game(id: GameID): GameServer | null {
-    return this.games.get(id);
+    return this.games.get(id) ?? null;
   }
 
   addClient(client: Client, gameID: GameID, lastTurn: number): boolean {

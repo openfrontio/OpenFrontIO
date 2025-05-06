@@ -18,13 +18,13 @@ export class WarshipExecution implements Execution {
 
   private _owner: Player;
   private active = true;
-  private warship: Unit = null;
-  private mg: Game = null;
+  private warship: Unit | null = null;
+  private mg: Game | null = null;
 
-  private target: Unit = null;
-  private pathfinder: PathFinder;
+  private target: Unit | null = null;
+  private pathfinder: PathFinder | null = null;
 
-  private patrolTile: TileRef;
+  private patrolTile: TileRef | null = null;
 
   private lastShellAttack = 0;
   private alreadySentShell = new Set<Unit>();
@@ -48,7 +48,10 @@ export class WarshipExecution implements Execution {
   }
 
   // Only for warships with "moveTarget" set
-  goToMoveTarget(target: TileRef): boolean {
+  goToMoveTarget(target: TileRef) {
+    if (this.warship === null || this.pathfinder === null) {
+      throw new Error("Warship not initialized");
+    }
     // Patrol unless we are hunting down a tradeship
     const result = this.pathfinder.nextTile(this.warship.tile(), target);
     switch (result.type) {
@@ -88,8 +91,12 @@ export class WarshipExecution implements Execution {
   }
 
   private patrol() {
+    if (this.warship === null || this.pathfinder === null) {
+      throw new Error("Warship not initialized");
+    }
+    if (this.patrolTile === null) return;
     this.warship.setWarshipTarget(this.target);
-    if (this.target == null || this.target.type() != UnitType.TradeShip) {
+    if (this.target === null || this.target.type() !== UnitType.TradeShip) {
       // Patrol unless we are hunting down a tradeship
       const result = this.pathfinder.nextTile(
         this.warship.tile(),
@@ -113,9 +120,11 @@ export class WarshipExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.warship == null) {
+    if (this.pathfinder === null) throw new Error("Warship not initialized");
+    if (this.warship === null) {
+      if (this.patrolTile === null) return;
       const spawn = this._owner.canBuild(UnitType.Warship, this.patrolTile);
-      if (spawn == false) {
+      if (spawn === false) {
         this.active = false;
         return;
       }
@@ -126,10 +135,13 @@ export class WarshipExecution implements Execution {
       this.active = false;
       return;
     }
-    if (this.target != null && !this.target.isActive()) {
+    if (this.target !== null && !this.target.isActive()) {
       this.target = null;
     }
     const hasPort = this._owner.units(UnitType.Port).length > 0;
+    if (this.mg === null) throw new Error("Game not initialized");
+    const warship = this.warship;
+    if (warship === null) throw new Error("Warship not initialized");
     const ships = this.mg
       .nearbyUnits(
         this.warship.tile(),
@@ -138,9 +150,9 @@ export class WarshipExecution implements Execution {
       )
       .filter(
         ({ unit }) =>
-          unit.owner() !== this.warship.owner() &&
-          unit !== this.warship &&
-          !unit.owner().isFriendly(this.warship.owner()) &&
+          unit.owner() !== warship.owner() &&
+          unit !== warship &&
+          !unit.owner().isFriendly(warship.owner()) &&
           !this.alreadySentShell.has(unit) &&
           (unit.type() !== UnitType.TradeShip ||
             (hasPort &&
@@ -182,19 +194,20 @@ export class WarshipExecution implements Execution {
         return distA - distB;
       })[0]?.unit ?? null;
 
-    if (this.warship.moveTarget()) {
-      this.goToMoveTarget(this.warship.moveTarget());
+    const moveTarget = this.warship.moveTarget();
+    if (moveTarget) {
+      this.goToMoveTarget(moveTarget);
       // If we have a "move target" then we cannot target trade ships as it
       // requires moving.
-      if (this.target && this.target.type() == UnitType.TradeShip) {
+      if (this.target && this.target.type() === UnitType.TradeShip) {
         this.target = null;
       }
-    } else if (!this.target || this.target.type() != UnitType.TradeShip) {
+    } else if (!this.target || this.target.type() !== UnitType.TradeShip) {
       this.patrol();
     }
 
     if (
-      this.target == null ||
+      this.target === null ||
       !this.target.isActive() ||
       this.target.owner() == this._owner ||
       this.target.isSafeFromPirates() == true
@@ -211,7 +224,7 @@ export class WarshipExecution implements Execution {
       return;
     }
 
-    if (this.target.type() != UnitType.TradeShip) {
+    if (this.target.type() !== UnitType.TradeShip) {
       this.shoot();
       return;
     }
