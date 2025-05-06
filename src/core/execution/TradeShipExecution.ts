@@ -107,7 +107,6 @@ export class TradeShipExecution implements Execution {
       case PathFindResultType.Pending:
         // Fire unit event to rerender.
         this.tradeShip.move(this.tradeShip.tile());
-        this.tilesTraveled++;
         break;
       case PathFindResultType.NextTile:
         // Update safeFromPirates status
