@@ -16,7 +16,9 @@ export class BotBehavior {
   private enemy: Player | null = null;
   private enemyUpdated: Tick;
 
-  private assistAcceptEmoji: number;
+  private assistAcceptEmoji = flattenedEmojiTable.indexOf("👍");
+
+  private firstAttackSent = false;
 
   constructor(
     private random: PseudoRandom,
@@ -24,9 +26,7 @@ export class BotBehavior {
     private player: Player,
     private triggerRatio: number,
     private reserveRatio: number,
-  ) {
-    this.assistAcceptEmoji = flattenedEmojiTable.indexOf("👍");
-  }
+  ) {}
 
   handleAllianceRequests() {
     for (const req of this.player.incomingAllianceRequests()) {
@@ -172,8 +172,13 @@ export class BotBehavior {
     const maxPop = this.game.config().maxPopulation(this.player);
     const maxTroops = maxPop * this.player.targetTroopRatio();
     const targetTroops = maxTroops * this.reserveRatio;
-    const troops = this.player.troops() - targetTroops;
+    // Don't wait until it has sufficient reserves to send the first attack
+    // to prevent the bot from waiting too long at the start of the game.
+    const troops = this.firstAttackSent
+      ? this.player.troops() - targetTroops
+      : this.player.troops() / 5;
     if (troops < 1) return;
+    this.firstAttackSent = true;
     this.game.addExecution(
       new AttackExecution(
         troops,
