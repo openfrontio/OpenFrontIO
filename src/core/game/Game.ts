@@ -251,6 +251,7 @@ export interface MutableAlliance extends Alliance {
 
 export class PlayerInfo {
   public readonly clan: string | null;
+  public preferredTeam?: Team;
 
   constructor(
     public readonly flag: string,
@@ -261,6 +262,7 @@ export class PlayerInfo {
     // TODO: make player id the small id
     public readonly id: PlayerID,
     public readonly nation?: Nation | null,
+    preferredTeam?: Team,
   ) {
     // Compute clan from name
     if (!name.startsWith("[") || !name.includes("]")) {
@@ -268,6 +270,10 @@ export class PlayerInfo {
     } else {
       const clanMatch = name.match(/^\[([A-Z]{2,5})\]/);
       this.clan = clanMatch ? clanMatch[1] : null;
+    }
+
+    if (preferredTeam) {
+      this.preferredTeam = preferredTeam;
     }
   }
 }

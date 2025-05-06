@@ -1,17 +1,19 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { consolex } from "../core/Consolex";
 import {
+  ColoredTeams,
   Difficulty,
   Duos,
   GameMapType,
   GameMode,
   mapCategories,
+  Team,
 } from "../core/game/Game";
-import { GameConfig, GameInfo } from "../core/Schemas";
+import { ClientID, GameConfig, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
@@ -333,10 +335,51 @@ export class HostLobbyModal extends LitElement {
           </div>
 
           <div class="players-list">
-            ${this.players.map(
-              (player) => html`<span class="player-tag">${player}</span>`,
-            )}
-          </div>
+          ${this.players.map((username) => {
+            const player = this.lobbyPlayers.find(
+              (p) => p.username === username,
+            );
+            if (!player) return null;
+
+            const selectedTeam = player.preferredTeam;
+            const isTeamMode = this.gameMode !== GameMode.FFA;
+            const isDuos = this.teamCount === Duos;
+
+            return html`
+              <div class="player-row">
+                ${isTeamMode && !isDuos
+                  ? html`
+                      <select
+                        @change=${(e: Event) =>
+                          this.handleTeamSelect(
+                            username,
+                            (e.target as HTMLSelectElement).value,
+                          )}
+                        class="team-select"
+                      >
+                        <option value="" ?selected=${!selectedTeam}>
+                          ${username}
+                          (${translateText("host_modal.auto_assign")})
+                        </option>
+                        ${this.getAvailableTeams().map((team) => {
+                          const isSelected = selectedTeam === team;
+                          return html`
+                            <option value="${team}" ?selected=${isSelected}>
+                              ${username}
+                              (${translateText(`team.${team.toLowerCase()}`)})
+                            </option>
+                          `;
+                        })}
+                      </select>
+                    `
+                  : html`<span class="player-tag">${username}</span>`}
+              </div>
+            `;
+          })}
+        </div>
+        
+              
+        
         </div>
 
         <div class="start-game-button-container">
@@ -471,6 +514,33 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
+  private async handleTeamSelect(username: string, value: string) {
+    const team = value as Team;
+    const player = this.lobbyPlayers.find((p) => p.username === username);
+    if (player) {
+      player.preferredTeam = team || undefined;
+    }
+    this.putGameConfig();
+  }
+
+  private getAvailableTeams(): Team[] {
+    const allTeams = Object.values(ColoredTeams).filter(
+      (team) => team !== "Bot",
+    );
+
+    if (typeof this.teamCount === "number") {
+      return allTeams.slice(0, this.teamCount);
+    }
+
+    return allTeams;
+  }
+
+  private lobbyPlayers: {
+    username: string;
+    clientID: ClientID;
+    preferredTeam?: Team;
+  }[] = [];
+
   private async putGameConfig() {
     const config = await getServerConfigFromClient();
     const response = await fetch(
@@ -491,6 +561,11 @@ export class HostLobbyModal extends LitElement {
           instantBuild: this.instantBuild,
           gameMode: this.gameMode,
           playerTeams: this.teamCount,
+          playerTeamsSelection: Object.fromEntries(
+            this.lobbyPlayers
+              .filter((p) => p.preferredTeam)
+              .map((p) => [p.username, p.preferredTeam!]),
+          ),
         } as GameConfig),
       },
     );
@@ -553,6 +628,19 @@ export class HostLobbyModal extends LitElement {
       .then((data: GameInfo) => {
         console.log(`got game info response: ${JSON.stringify(data)}`);
         this.players = data.clients.map((p) => p.username);
+
+        const existingMap = new Map(
+          this.lobbyPlayers.map((p) => [p.username, p]),
+        );
+
+        this.lobbyPlayers = data.clients.map((client) => {
+          const existing = existingMap.get(client.username);
+          return {
+            username: client.username,
+            clientID: client.clientID,
+            preferredTeam: existing?.preferredTeam ?? undefined,
+          };
+        });
       });
   }
 }
