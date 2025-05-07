@@ -116,6 +116,37 @@ jobs:
           echo "::group::deploy.sh"
           ./deploy.sh "$ENV" "$HOST" "$SUBDOMAIN"
           echo "::endgroup::"
+      - name: Wait for deployment to start
+        run: |
+          echo "::group::Wait for deployment to start"
+          set -euxo pipefail
+          while [ "$(curl -s https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+            if [ "$SECONDS" -ge 300 ]; then
+              echo "Timeout: deployment did not start within 5 minutes"
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "::endgroup::"
+      - name: Notify PR 🚀
+        if: ${{ success() && github.event_name == 'push'
+          && github.repository != 'openfrontio/OpenFrontIO'
+          }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euxo pipefail
+          if [ -z "$GH_TOKEN" ]; then
+            echo "No GH_TOKEN found, skipping"
+            exit 0;
+          fi
+          echo "Checking for open PR from $GITHUB_HEAD_REF..."
+          pr_url=$(gh pr list --head "$GITHUB_HEAD_REF" --state open --json url -q '.[0].url')
+          if [ -z "$pr_url" ]; then
+            echo "No open PR found for branch $GITHUB_HEAD_REF"
+            exit 0;
+          fi
+          gh pr comment "$pr_url" --body "🚀 Deployed ${GITHUB_SHA} to [$FQDN](https://$FQDN)."
       - name: Update deployment status ✅
         if: success()
         run: |
