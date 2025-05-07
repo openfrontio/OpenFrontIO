@@ -40,6 +40,7 @@ export const pastelThemeDark = new (class implements Theme {
   private _enemyColor = colord({ r: 255, g: 0, b: 0 });
 
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
+  private _spawnHighlightColorFriendly = colord({ r: 166, g: 166, b: 166 })
 
   teamColor(team: Team): Colord {
     switch (team) {
@@ -179,5 +180,9 @@ export const pastelThemeDark = new (class implements Theme {
 
   spawnHighlightColor(): Colord {
     return this._spawnHighlightColor;
+  }
+
+  spawnHighlightColorFriendly(): Colord {
+    return this._spawnHighlightColorFriendly;
   }
 })();

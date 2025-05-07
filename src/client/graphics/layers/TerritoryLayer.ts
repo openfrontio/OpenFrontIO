@@ -13,6 +13,7 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { AlternateViewEvent, DragEvent } from "../../InputHandler";
 import { Layer } from "./Layer";
+import { red } from "../../../core/configuration/Colors";
 
 export class TerritoryLayer implements Layer {
   private canvas: HTMLCanvasElement;
@@ -120,6 +121,9 @@ export class TerritoryLayer implements Layer {
         continue;
       }
       let color = this.theme.spawnHighlightColor();
+      if (this.game.myPlayer().isFriendly(human) || this.game.myPlayer().id() == human.id()) {
+        color = this.theme.spawnHighlightColorFriendly();
+      }
       if (
         this.game.myPlayer() != null &&
         this.game.myPlayer() != human &&
