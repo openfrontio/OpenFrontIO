@@ -157,13 +157,6 @@ export class GameServer {
             throw Error(`error parsing schema for ${client.ip}`);
           }
           if (clientMsg.type == "intent") {
-            if (clientMsg.gameID != this.id) {
-              this.log.warn("client sent to wrong game", {
-                clientID: client.clientID,
-                persistentID: client.persistentID,
-              });
-              return;
-            }
             if (clientMsg.intent.clientID != client.clientID) {
               this.log.warn(
                 `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
@@ -320,7 +313,6 @@ export class GameServer {
   private endTurn() {
     const pastTurn: Turn = {
       turnNumber: this.turns.length,
-      gameID: this.id,
       intents: this.intents,
     };
     this.turns.push(pastTurn);

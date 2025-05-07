@@ -289,7 +289,6 @@ const IntentSchema = z.union([
 
 export const TurnSchema = z.object({
   turnNumber: z.number(),
-  gameID: ID,
   intents: z.array(IntentSchema),
   // The hash of the game state at the end of the turn.
   hash: z.number().nullable().optional(),
@@ -356,7 +355,6 @@ export const ServerMessageSchema = z.union([
 
 const ClientBaseMessageSchema = z.object({
   type: z.enum(["winner", "join", "intent", "ping", "log", "hash"]),
-  gameID: ID,
 });
 
 export const ClientSendWinnerSchema = ClientBaseMessageSchema.extend({
