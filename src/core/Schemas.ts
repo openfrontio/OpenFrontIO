@@ -356,8 +356,6 @@ export const ServerMessageSchema = z.union([
 
 const ClientBaseMessageSchema = z.object({
   type: z.enum(["winner", "join", "intent", "ping", "log", "hash"]),
-  clientID: ID,
-  persistentID: SafeString.nullable(), // WARNING: persistent id is private.
   gameID: ID,
 });
 

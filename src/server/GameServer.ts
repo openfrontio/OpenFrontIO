@@ -126,10 +126,14 @@ export class GameServer {
       (c) => c.clientID == client.clientID,
     );
     if (existing != null) {
-      if (client.persistentID != existing.persistentID) {
-        console.warn(
-          `client ${client.clientID} cannot rejoin game, persistent id mismatch: exist pid: ${existing.persistentID}, new pid: ${client.persistentID}`,
-        );
+      if (client.persistentID !== existing.persistentID) {
+        this.log.error("persistent ids do not match", {
+          clientID: client.clientID,
+          clientIP: client.ip,
+          clientPersistentID: client.persistentID,
+          existingIP: existing.ip,
+          existingPersistentID: existing.persistentID,
+        });
         return;
       }
       existing.ws.removeAllListeners("message");
@@ -152,34 +156,17 @@ export class GameServer {
           } catch (error) {
             throw Error(`error parsing schema for ${client.ip}`);
           }
-          if (this.allClients.has(clientMsg.clientID)) {
-            const client = this.allClients.get(clientMsg.clientID);
-            if (client.persistentID != clientMsg.persistentID) {
-              this.log.warn(
-                `Client ID ${clientMsg.clientID} sent incorrect id ${clientMsg.persistentID}, does not match persistent id ${client.persistentID}`,
-                {
-                  clientID: clientMsg.clientID,
-                  persistentID: clientMsg.persistentID,
-                },
-              );
-              return;
-            }
-          }
-
-          // Clear out persistent id to make sure it doesn't get sent to other clients.
-          clientMsg.persistentID = null;
-
           if (clientMsg.type == "intent") {
             if (clientMsg.gameID != this.id) {
               this.log.warn("client sent to wrong game", {
-                clientID: clientMsg.clientID,
-                persistentID: clientMsg.persistentID,
+                clientID: client.clientID,
+                persistentID: client.persistentID,
               });
               return;
             }
-            if (clientMsg.intent.clientID != clientMsg.clientID) {
+            if (clientMsg.intent.clientID != client.clientID) {
               this.log.warn(
-                `client id mismatch, client message: ${clientMsg.clientID}, intent client id ${clientMsg.intent.clientID}`,
+                `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
               );
               return;
             }
