@@ -5,57 +5,29 @@ import {
   Game,
   MessageType,
   Player,
-  PlayerID,
   Unit,
   UnitType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
 import { distSortUnit } from "../Util";
 
 export class TradeShipExecution implements Execution {
-  private active = true;
   private mg: Game;
-  private origOwner: Player;
-  private tradeShip: Unit;
   private index = 0;
   private wasCaptured = false;
+  private origOwner: Player;
 
-  constructor(
-    private _owner: PlayerID,
-    private srcPort: Unit,
-    private _dstPort: Unit,
-    private pathFinder: PathFinder,
-  ) {}
+  private pathFinder: PathFinder;
+
+  constructor(private tradeShip: Unit<UnitType.TradeShip>) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.origOwner = mg.player(this._owner);
+    this.pathFinder = PathFinder.Mini(mg, 10_000); // TODO: check iterations
   }
 
   tick(ticks: number): void {
-    if (this.tradeShip == null) {
-      const spawn = this.origOwner.canBuild(
-        UnitType.TradeShip,
-        this.srcPort.tile(),
-      );
-      if (spawn == false) {
-        consolex.warn(`cannot build trade ship`);
-        this.active = false;
-        return;
-      }
-      this.tradeShip = this.origOwner.buildUnit(UnitType.TradeShip, 0, spawn, {
-        dstPort: this._dstPort,
-        lastSetSafeFromPirates: ticks,
-      });
-    }
-
-    if (!this.tradeShip.isActive()) {
-      this.active = false;
-      return;
-    }
-
     if (this.origOwner != this.tradeShip.owner()) {
       // Store as variable in case ship is recaptured by previous owner
       this.wasCaptured = true;
@@ -63,19 +35,19 @@ export class TradeShipExecution implements Execution {
 
     // If a player captures another player's port while trading we should delete
     // the ship.
-    if (this._dstPort.owner().id() == this.srcPort.owner().id()) {
+    const dstPort = this.tradeShip.info().dstPort;
+    const srcPort = this.tradeShip.info().srcPort;
+    if (dstPort.owner().id() == srcPort.owner().id()) {
       this.tradeShip.delete(false);
-      this.active = false;
       return;
     }
 
     if (
       !this.wasCaptured &&
-      (!this._dstPort.isActive() ||
-        !this.tradeShip.owner().canTrade(this._dstPort.owner()))
+      (!this.tradeShip.info().dstPort.isActive() ||
+        !this.tradeShip.owner().canTrade(this.tradeShip.info().dstPort.owner()))
     ) {
       this.tradeShip.delete(false);
-      this.active = false;
       return;
     }
 
@@ -86,17 +58,15 @@ export class TradeShipExecution implements Execution {
         .sort(distSortUnit(this.mg, this.tradeShip));
       if (ports.length == 0) {
         this.tradeShip.delete(false);
-        this.active = false;
         return;
       } else {
-        this._dstPort = ports[0];
-        this.tradeShip.setDstPort(this._dstPort);
+        this.tradeShip.info().dstPort = ports[0];
       }
     }
 
     const result = this.pathFinder.nextTile(
       this.tradeShip.tile(),
-      this._dstPort.tile(),
+      this.tradeShip.info().dstPort.tile(),
     );
 
     switch (result.type) {
@@ -110,7 +80,7 @@ export class TradeShipExecution implements Execution {
       case PathFindResultType.NextTile:
         // Update safeFromPirates status
         if (this.mg.isWater(result.tile) && this.mg.isShoreline(result.tile)) {
-          this.tradeShip.setSafeFromPirates();
+          this.tradeShip.info().lastSetSafeFromPirates = this.mg.ticks();
         }
         this.tradeShip.move(result.tile);
         break;
@@ -119,18 +89,19 @@ export class TradeShipExecution implements Execution {
         if (this.tradeShip.isActive()) {
           this.tradeShip.delete(false);
         }
-        this.active = false;
         break;
     }
   }
 
   private complete() {
-    this.active = false;
     this.tradeShip.delete(false);
     const gold = this.mg
       .config()
       .tradeShipGold(
-        this.mg.manhattanDist(this.srcPort.tile(), this._dstPort.tile()),
+        this.mg.manhattanDist(
+          this.tradeShip.info().srcPort.tile(),
+          this.tradeShip.info().dstPort.tile(),
+        ),
       );
 
     if (this.wasCaptured) {
@@ -158,14 +129,10 @@ export class TradeShipExecution implements Execution {
   }
 
   isActive(): boolean {
-    return this.active;
+    return this.tradeShip.isActive();
   }
 
   activeDuringSpawnPhase(): boolean {
     return false;
-  }
-
-  dstPort(): TileRef {
-    return this._dstPort.tile();
   }
 }

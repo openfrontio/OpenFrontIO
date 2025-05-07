@@ -20,7 +20,7 @@ import {
   TerrainType,
   TerraNullius,
   Tick,
-  UnitInfo,
+  UnitAttrs,
   UnitType,
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
@@ -463,8 +463,8 @@ export class GameView implements GameMap {
   unit(id: number): UnitView {
     return this._units.get(id);
   }
-  unitInfo(type: UnitType): UnitInfo {
-    return this._config.unitInfo(type);
+  unitInfo(type: UnitType): UnitAttrs {
+    return this._config.unitTypeAttrs(type);
   }
 
   ref(x: number, y: number): TileRef {

@@ -8,6 +8,7 @@ import {
   PlayerType,
   Team,
   Tick,
+  UnitInfo,
   UnitType,
 } from "./Game";
 import { TileRef, TileUpdate } from "./GameMap";
@@ -61,19 +62,12 @@ export interface TileUpdateWrapper {
 export interface UnitUpdate {
   type: GameUpdateType.Unit;
   unitType: UnitType;
-  troops: number;
+  unitInfo: UnitInfo;
   id: number;
   ownerID: number;
-  // TODO: make these tilerefs
   pos: TileRef;
   lastPos: TileRef;
   isActive: boolean;
-  dstPortId?: number; // Only for trade ships
-  detonationDst?: TileRef; // Only for nukes
-  warshipTargetId?: number;
-  health?: number;
-  constructionType?: UnitType;
-  ticksLeftInCooldown?: Tick;
 }
 
 export interface AttackUpdate {

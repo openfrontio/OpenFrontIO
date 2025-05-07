@@ -1,21 +1,14 @@
-import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
-import { TileRef } from "../game/GameMap";
+import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { AirPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 
 export class ShellExecution implements Execution {
   private active = true;
   private pathFinder: AirPathFinder;
-  private shell: Unit;
   private mg: Game;
   private destroyAtTick: number = -1;
 
-  constructor(
-    private spawn: TileRef,
-    private _owner: Player,
-    private ownerUnit: Unit,
-    private target: Unit,
-  ) {}
+  constructor(private shell: Unit) {}
 
   init(mg: Game, ticks: number): void {
     this.pathFinder = new AirPathFinder(mg, new PseudoRandom(mg.ticks()));
@@ -23,9 +16,6 @@ export class ShellExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.shell == null) {
-      this.shell = this._owner.buildUnit(UnitType.Shell, 0, this.spawn);
-    }
     if (!this.shell.isActive()) {
       this.active = false;
       return;
@@ -61,7 +51,9 @@ export class ShellExecution implements Execution {
   }
 
   private effectOnTarget(): number {
-    const baseDamage: number = this.mg.config().unitInfo(UnitType.Shell).damage;
+    const baseDamage: number = this.mg
+      .config()
+      .unitTypeAttrs(UnitType.Shell).damage;
     return baseDamage;
   }
 

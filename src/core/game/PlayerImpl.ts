@@ -35,7 +35,7 @@ import {
   TerraNullius,
   Tick,
   Unit,
-  UnitSpecificInfos,
+  UnitArgs,
   UnitType,
 } from "./Game";
 import { GameImpl } from "./GameImpl";
@@ -705,26 +705,20 @@ export class PlayerImpl implements Player {
 
   buildUnit(
     type: UnitType,
-    troops: number,
     spawnTile: TileRef,
-    unitSpecificInfos: UnitSpecificInfos = {},
+    unitArgs: UnitArgs = {},
   ): UnitImpl {
-    const cost = this.mg.unitInfo(type).cost(this);
     const b = new UnitImpl(
       type,
       this.mg,
       spawnTile,
-      troops,
       this.mg.nextUnitID(),
       this,
-      unitSpecificInfos,
+      unitArgs,
     );
     this._units.push(b);
-    this.removeGold(cost);
-    this.removeTroops(troops);
     this.mg.addUpdate(b.toUpdate());
     this.mg.addUnit(b);
-
     return b;
   }
 
@@ -736,7 +730,7 @@ export class PlayerImpl implements Player {
         canBuild: this.mg.inSpawnPhase()
           ? false
           : this.canBuild(u, tile, validTiles),
-        cost: this.mg.config().unitInfo(u).cost(this),
+        cost: this.mg.config().unitTypeAttrs(u).cost(this),
       } as BuildableUnit;
     });
   }
@@ -873,7 +867,7 @@ export class PlayerImpl implements Player {
     const searchRadius = 15;
     const searchRadiusSquared = searchRadius ** 2;
     const types = Object.values(UnitType).filter((unitTypeValue) => {
-      return this.mg.config().unitInfo(unitTypeValue).territoryBound;
+      return this.mg.config().unitTypeAttrs(unitTypeValue).territoryBound;
     });
 
     const nearbyUnits = this.mg

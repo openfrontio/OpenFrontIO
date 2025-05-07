@@ -117,7 +117,7 @@ export enum GameMode {
   Team = "Team",
 }
 
-export interface UnitInfo {
+export interface UnitAttrs {
   cost: (player: Player | PlayerView) => Gold;
   // Determines if its owner changes when its tile is conquered.
   territoryBound: boolean;
@@ -272,62 +272,103 @@ export class PlayerInfo {
   }
 }
 
-// Some units have info specific to them
-export interface UnitSpecificInfos {
-  dstPort?: Unit; // Only for trade ships
-  lastSetSafeFromPirates?: number; // Only for trade ships
-  detonationDst?: TileRef; // Only for nukes
-  warshipTarget?: Unit;
-  cooldownDuration?: number;
+export type UnitInfo<T extends UnitType> = {
+  [UnitType.TransportShip]: TransportShipInfo;
+  [UnitType.Warship]: WarshipInfo;
+  [UnitType.Shell]: ShellInfo;
+  [UnitType.SAMMissile]: SAMMissileInfo;
+  [UnitType.Port]: PortInfo;
+  [UnitType.AtomBomb]: AtomBombInfo;
+  [UnitType.HydrogenBomb]: HydrogenBombInfo;
+  [UnitType.TradeShip]: TradeShipInfo;
+  [UnitType.MissileSilo]: MissileSiloInfo;
+  [UnitType.DefensePost]: DefensePostInfo;
+  [UnitType.SAMLauncher]: SAMLauncherInfo;
+  [UnitType.City]: CityInfo;
+  [UnitType.MIRV]: MIRVInfo;
+  [UnitType.MIRVWarhead]: MIRVWarheadInfo;
+  [UnitType.Construction]: ConstructionInfo;
+}[T];
+
+// Now we define each interface without the generic parameter
+export interface TransportShipInfo {
+  type: UnitType.TransportShip;
+  dst: TileRef;
 }
 
-export interface Unit {
+export interface WarshipInfo {
+  type: UnitType.Warship;
+  health: number;
+}
+
+export interface ShellInfo {
+  type: UnitType.Shell;
+}
+
+export interface SAMMissileInfo {
+  type: UnitType.SAMMissile;
+}
+
+export interface PortInfo {
+  type: UnitType.Port;
+}
+
+export interface AtomBombInfo {
+  type: UnitType.AtomBomb;
+}
+
+export interface HydrogenBombInfo {
+  type: UnitType.HydrogenBomb;
+}
+
+export interface TradeShipInfo {
+  type: UnitType.TradeShip;
+  srcPort: Unit<UnitType.Port>;
+  dstPort: Unit<UnitType.Port>;
+  lastSetSafeFromPirates: Tick;
+}
+
+export interface MissileSiloInfo {
+  type: UnitType.MissileSilo;
+  cooldownDuration: number;
+}
+
+export interface DefensePostInfo {
+  type: UnitType.DefensePost;
+}
+
+export interface SAMLauncherInfo {
+  type: UnitType.SAMLauncher;
+}
+
+export interface CityInfo {
+  type: UnitType.City;
+}
+
+export interface MIRVInfo {
+  type: UnitType.MIRV;
+}
+
+export interface MIRVWarheadInfo {
+  type: UnitType.MIRVWarhead;
+}
+
+export interface ConstructionInfo {
+  type: UnitType.Construction;
+}
+
+// This will work with your Unit interface
+export interface Unit<T extends UnitType> {
   id(): number;
-
-  // Properties
-  type(): UnitType;
-  troops(): number;
+  type: T;
   owner(): Player;
-  info(): UnitInfo;
-
-  // Location
+  info(): UnitInfo<T>;
+  attrs(): UnitAttrs;
   tile(): TileRef;
   lastTile(): TileRef;
   move(tile: TileRef): void;
-
-  // State
   isActive(): boolean;
-  hasHealth(): boolean;
-  health(): number;
-  modifyHealth(delta: number): void;
-
-  setWarshipTarget(target: Unit): void; // warship only
-  warshipTarget(): Unit;
-
-  setCooldown(triggerCooldown: boolean): void;
-  ticksLeftInCooldown(cooldownDuration: number): Tick;
-  isCooldown(): boolean;
-  setDstPort(dstPort: Unit): void;
-  dstPort(): Unit; // Only for trade ships
-  setSafeFromPirates(): void; // Only for trade ships
-  isSafeFromPirates(): boolean; // Only for trade ships
-  detonationDst(): TileRef; // Only for nukes
-
-  setMoveTarget(cell: TileRef): void;
-  moveTarget(): TileRef | null;
-
-  setTargetedBySAM(targeted: boolean): void;
-  targetedBySAM(): boolean;
-
-  // Mutations
-  setTroops(troops: number): void;
   delete(displayerMessage?: boolean): void;
-
-  // Only for Construction type
-  constructionType(): UnitType | null;
-  setConstructionType(type: UnitType): void;
-
-  // Updates
   toUpdate(): UnitUpdate;
 }
 
@@ -383,17 +424,16 @@ export interface Player {
   removeTroops(troops: number): number;
 
   // Units
-  units(...types: UnitType[]): Unit[];
-  unitsIncludingConstruction(type: UnitType): Unit[];
+  units<T extends UnitType>(...types: T[]): Unit<T>[];
+  unitsIncludingConstruction<T extends UnitType>(type: T): Unit<T>[];
   buildableUnits(tile: TileRef): BuildableUnit[];
-  canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
-  buildUnit(
-    type: UnitType,
-    troops: number,
+  canBuild<T extends UnitType>(type: T, targetTile: TileRef): TileRef | false;
+  buildUnit<T extends UnitType>(
+    type: T,
     tile: TileRef,
-    unitSpecificInfos?: UnitSpecificInfos,
-  ): Unit;
-  captureUnit(unit: Unit): void;
+    unitSpecificInfos?: UnitInfo<T>,
+  ): Unit<T>;
+  captureUnit<T extends UnitType>(unit: Unit<T>): void;
 
   // Relations & Diplomacy
   neighbors(): (Player | TerraNullius)[];
@@ -455,7 +495,7 @@ export interface Player {
   // Misc
   toUpdate(): PlayerUpdate;
   playerProfile(): PlayerProfile;
-  tradingPorts(port: Unit): Unit[];
+  tradingPorts(port: Unit<UnitType.Port>): Unit<UnitType.TradeShip>[];
   // WARNING: this operation is expensive.
   bestTransportShipSpawn(tile: TileRef): TileRef | false;
 }
@@ -490,13 +530,13 @@ export interface Game extends GameMap {
   config(): Config;
 
   // Units
-  units(...types: UnitType[]): Unit[];
-  unitInfo(type: UnitType): UnitInfo;
+  units<T extends UnitType>(...types: T[]): Unit<T>[];
+  unitInfo(type: UnitType): UnitAttrs;
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
     types: UnitType | UnitType[],
-  ): Array<{ unit: Unit; distSquared: number }>;
+  ): Array<{ unit: Unit<any>; distSquared: number }>;
 
   addExecution(...exec: Execution[]): void;
   displayMessage(

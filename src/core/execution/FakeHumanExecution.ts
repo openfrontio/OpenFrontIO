@@ -18,9 +18,8 @@ import { euclDistFN, manhattanDistFN, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { calculateBoundingBox, flattenedEmojiTable, simpleHash } from "../Util";
-import { ConstructionExecution } from "./ConstructionExecution";
+import { BuildExecution } from "./BuildExecution";
 import { EmojiExecution } from "./EmojiExecution";
-import { NukeExecution } from "./NukeExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { closestTwoTiles } from "./Util";
@@ -337,7 +336,7 @@ export class FakeHumanExecution implements Execution {
     const tick = this.mg.ticks();
     this.lastNukeSent.push([tick, tile]);
     this.mg.addExecution(
-      new NukeExecution(UnitType.AtomBomb, this.player.id(), tile),
+      new BuildExecution(this.player.id(), tile, UnitType.AtomBomb),
     );
   }
 
@@ -412,7 +411,7 @@ export class FakeHumanExecution implements Execution {
       if (oceanTiles.length > 0) {
         const buildTile = this.random.randElement(oceanTiles);
         this.mg.addExecution(
-          new ConstructionExecution(this.player.id(), buildTile, UnitType.Port),
+          new BuildExecution(this.player.id(), buildTile, UnitType.Port),
         );
       }
       return;
@@ -442,9 +441,7 @@ export class FakeHumanExecution implements Execution {
     if (canBuild == false) {
       return;
     }
-    this.mg.addExecution(
-      new ConstructionExecution(this.player.id(), tile, type),
-    );
+    this.mg.addExecution(new BuildExecution(this.player.id(), tile, type));
   }
 
   private maybeSpawnWarship(): boolean {
@@ -469,11 +466,7 @@ export class FakeHumanExecution implements Execution {
         return false;
       }
       this.mg.addExecution(
-        new ConstructionExecution(
-          this.player.id(),
-          targetTile,
-          UnitType.Warship,
-        ),
+        new BuildExecution(this.player.id(), targetTile, UnitType.Warship),
       );
       return true;
     }

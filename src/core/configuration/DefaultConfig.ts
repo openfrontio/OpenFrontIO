@@ -12,7 +12,7 @@ import {
   TerrainType,
   TerraNullius,
   Tick,
-  UnitInfo,
+  UnitAttrs,
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
@@ -258,7 +258,7 @@ export class DefaultConfig implements Config {
     return 50;
   }
 
-  unitInfo(type: UnitType): UnitInfo {
+  unitTypeAttrs(type: UnitType): UnitAttrs {
     switch (type) {
       case UnitType.TransportShip:
         return {

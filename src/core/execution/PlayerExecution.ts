@@ -53,7 +53,7 @@ export class PlayerExecution implements Execution {
         u.modifyHealth(1);
       }
       const tileOwner = this.mg.owner(u.tile());
-      if (u.info().territoryBound) {
+      if (u.attrs().territoryBound) {
         if (tileOwner.isPlayer()) {
           if (tileOwner != this.player) {
             this.mg.player(tileOwner.id()).captureUnit(u);

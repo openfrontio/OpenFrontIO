@@ -1,10 +1,8 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
   MessageType,
   Player,
-  PlayerID,
   TerraNullius,
   Unit,
   UnitType,
@@ -13,13 +11,9 @@ import { TileRef } from "../game/GameMap";
 import { AirPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
-import { NukeExecution } from "./NukeExecution";
+import { BuildExecution } from "./BuildExecution";
 
 export class MirvExecution implements Execution {
-  private player: Player;
-
-  private active = true;
-
   private mg: Game;
 
   private nuke: Unit;
@@ -35,55 +29,31 @@ export class MirvExecution implements Execution {
 
   private separateDst: TileRef;
 
-  constructor(
-    private senderID: PlayerID,
-    private dst: TileRef,
-  ) {}
+  constructor(private mirv: Unit) {}
 
   init(mg: Game, ticks: number): void {
-    if (!mg.hasPlayer(this.senderID)) {
-      console.warn(`MIRVExecution: player ${this.senderID} not found`);
-      this.active = false;
-      return;
-    }
-
-    this.random = new PseudoRandom(mg.ticks() + simpleHash(this.senderID));
+    this.random = new PseudoRandom(
+      mg.ticks() + simpleHash(this.mirv.owner().id()),
+    );
     this.mg = mg;
     this.pathFinder = new AirPathFinder(mg, this.random);
-    this.player = mg.player(this.senderID);
-    this.targetPlayer = this.mg.owner(this.dst);
+    this.targetPlayer = this.mg.owner(this.mirv.detonationDst());
 
     this.mg
       .stats()
       .increaseNukeCount(
-        this.player.id(),
+        this.mirv.owner().id(),
         this.targetPlayer.id(),
         UnitType.MIRV,
       );
+    this.mg.displayMessage(
+      `⚠️⚠️⚠️ ${this.mirv.owner().name()} - MIRV INBOUND ⚠️⚠️⚠️`,
+      MessageType.ERROR,
+      this.targetPlayer.id(),
+    );
   }
 
   tick(ticks: number): void {
-    if (this.nuke == null) {
-      const spawn = this.player.canBuild(UnitType.MIRV, this.dst);
-      if (spawn == false) {
-        consolex.warn(`cannot build MIRV`);
-        this.active = false;
-        return;
-      }
-      this.nuke = this.player.buildUnit(UnitType.MIRV, 0, spawn);
-      const x = Math.floor(
-        (this.mg.x(this.dst) + this.mg.x(this.mg.x(this.nuke.tile()))) / 2,
-      );
-      const y = Math.max(0, this.mg.y(this.dst) - 500) + 50;
-      this.separateDst = this.mg.ref(x, y);
-
-      this.mg.displayMessage(
-        `⚠️⚠️⚠️ ${this.player.name()} - MIRV INBOUND ⚠️⚠️⚠️`,
-        MessageType.ERROR,
-        this.targetPlayer.id(),
-      );
-    }
-
     for (let i = 0; i < 4; i++) {
       const result = this.pathFinder.nextTile(
         this.nuke.tile(),
@@ -91,7 +61,6 @@ export class MirvExecution implements Execution {
       );
       if (result === true) {
         this.separate();
-        this.active = false;
         return;
       } else {
         this.nuke.move(result);
@@ -100,43 +69,34 @@ export class MirvExecution implements Execution {
   }
 
   private separate() {
-    const dsts: TileRef[] = [this.dst];
+    const dsts: TileRef[] = [this.mirv.detonationDst()];
     let attempts = 1000;
     while (attempts > 0 && dsts.length < this.warheadCount) {
       attempts--;
-      const potential = this.randomLand(this.dst, dsts);
+      const potential = this.randomLand(this.mirv.detonationDst(), dsts);
       if (potential == null) {
         continue;
       }
       dsts.push(potential);
     }
-    console.log(`dsts: ${dsts.length}`);
     dsts.sort(
       (a, b) =>
-        this.mg.manhattanDist(b, this.dst) - this.mg.manhattanDist(a, this.dst),
+        this.mg.manhattanDist(b, this.mirv.detonationDst()) -
+        this.mg.manhattanDist(a, this.mirv.detonationDst()),
     );
-    console.log(`got ${dsts.length} dsts!!`);
 
     for (const [i, dst] of dsts.entries()) {
       this.mg.addExecution(
-        new NukeExecution(
-          UnitType.MIRVWarhead,
-          this.senderID,
-          dst,
-          this.nuke.tile(),
-          15 + Math.floor((i / this.warheadCount) * 5),
-          //   this.random.nextInt(5, 9),
-          this.random.nextInt(0, 15),
-        ),
+        new BuildExecution(this.mirv.owner().id(), dst, UnitType.MIRVWarhead),
       );
     }
     if (this.targetPlayer.isPlayer()) {
-      const alliance = this.player.allianceWith(this.targetPlayer);
+      const alliance = this.mirv.owner().allianceWith(this.targetPlayer);
       if (alliance != null) {
-        this.player.breakAlliance(alliance);
+        this.mirv.owner().breakAlliance(alliance);
       }
-      if (this.targetPlayer != this.player) {
-        this.targetPlayer.updateRelation(this.player, -100);
+      if (this.targetPlayer != this.mirv.owner()) {
+        this.targetPlayer.updateRelation(this.mirv.owner(), -100);
       }
     }
     this.nuke.delete(false);
@@ -179,12 +139,8 @@ export class MirvExecution implements Execution {
     return null;
   }
 
-  owner(): Player {
-    return this.player;
-  }
-
   isActive(): boolean {
-    return this.active;
+    return this.mirv.isActive();
   }
 
   activeDuringSpawnPhase(): boolean {

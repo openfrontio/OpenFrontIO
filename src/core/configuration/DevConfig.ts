@@ -1,4 +1,4 @@
-import { UnitInfo, UnitType } from "../game/Game";
+import { UnitAttrs, UnitType } from "../game/Game";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
 import { GameEnv, ServerConfig } from "./Config";
@@ -50,8 +50,8 @@ export class DevConfig extends DefaultConfig {
   //   // return 100
   // }
 
-  unitInfo(type: UnitType): UnitInfo {
-    const info = super.unitInfo(type);
+  unitTypeAttrs(type: UnitType): UnitAttrs {
+    const info = super.unitTypeAttrs(type);
     const oldCost = info.cost;
     // info.cost = (p: Player) => oldCost(p) / 1000000000;
     return info;

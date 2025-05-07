@@ -1,12 +1,5 @@
 import { consolex } from "../Consolex";
-import {
-  Execution,
-  Game,
-  Player,
-  PlayerID,
-  Unit,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
@@ -16,9 +9,6 @@ import { ShellExecution } from "./ShellExecution";
 export class WarshipExecution implements Execution {
   private random: PseudoRandom;
 
-  private _owner: Player;
-  private active = true;
-  private warship: Unit = null;
   private mg: Game = null;
 
   private target: Unit = null;
@@ -29,19 +19,10 @@ export class WarshipExecution implements Execution {
   private lastShellAttack = 0;
   private alreadySentShell = new Set<Unit>();
 
-  constructor(
-    private playerID: PlayerID,
-    private patrolCenterTile: TileRef,
-  ) {}
+  constructor(private warship: Unit) {}
 
   init(mg: Game, ticks: number): void {
-    if (!mg.hasPlayer(this.playerID)) {
-      console.log(`WarshipExecution: player ${this.playerID} not found`);
-      this.active = false;
-      return;
-    }
     this.pathfinder = PathFinder.Mini(mg, 5000);
-    this._owner = mg.player(this.playerID);
     this.mg = mg;
     this.patrolTile = this.patrolCenterTile;
     this.random = new PseudoRandom(mg.ticks());
@@ -113,23 +94,10 @@ export class WarshipExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.warship == null) {
-      const spawn = this._owner.canBuild(UnitType.Warship, this.patrolTile);
-      if (spawn == false) {
-        this.active = false;
-        return;
-      }
-      this.warship = this._owner.buildUnit(UnitType.Warship, 0, spawn);
-      return;
-    }
-    if (!this.warship.isActive()) {
-      this.active = false;
-      return;
-    }
     if (this.target != null && !this.target.isActive()) {
       this.target = null;
     }
-    const hasPort = this._owner.units(UnitType.Port).length > 0;
+    const hasPort = this.warship.owner().units(UnitType.Port).length > 0;
     const ships = this.mg
       .nearbyUnits(
         this.warship.tile(),
@@ -196,7 +164,7 @@ export class WarshipExecution implements Execution {
     if (
       this.target == null ||
       !this.target.isActive() ||
-      this.target.owner() == this._owner ||
+      this.target.owner() == this.warship.owner() ||
       this.target.isSafeFromPirates() == true
     ) {
       // In case another warship captured or destroyed target, or the target escaped into safe waters
@@ -225,7 +193,7 @@ export class WarshipExecution implements Execution {
       );
       switch (result.type) {
         case PathFindResultType.Completed:
-          this._owner.captureUnit(this.target);
+          this.warship.owner().captureUnit(this.target);
           this.target = null;
           return;
         case PathFindResultType.NextTile:
@@ -241,7 +209,7 @@ export class WarshipExecution implements Execution {
   }
 
   isActive(): boolean {
-    return this.active;
+    return this.warship.isActive();
   }
 
   activeDuringSpawnPhase(): boolean {

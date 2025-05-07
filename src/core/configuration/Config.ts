@@ -12,7 +12,7 @@ import {
   Team,
   TerraNullius,
   Tick,
-  UnitInfo,
+  UnitAttrs,
   UnitType,
 } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
@@ -114,7 +114,7 @@ export interface Config {
   emojiMessageDuration(): Tick;
   donateCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
-  unitInfo(type: UnitType): UnitInfo;
+  unitTypeAttrs(type: UnitType): UnitAttrs;
   tradeShipGold(dist: number): Gold;
   tradeShipSpawnRate(numberOfPorts: number): number;
   safeFromPiratesCooldownMax(): number;

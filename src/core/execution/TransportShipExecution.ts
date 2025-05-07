@@ -4,7 +4,6 @@ import {
   Game,
   MessageType,
   Player,
-  PlayerID,
   TerraNullius,
   Unit,
   UnitType,
@@ -31,17 +30,9 @@ export class TransportShipExecution implements Execution {
   public path: TileRef[];
   private dst: TileRef | null;
 
-  private boat: Unit;
-
   private pathFinder: PathFinder;
 
-  constructor(
-    private attackerID: PlayerID,
-    private targetID: PlayerID | null,
-    private ref: TileRef,
-    private troops: number | null,
-    private src: TileRef | null,
-  ) {}
+  constructor(private boat: Unit) {}
 
   activeDuringSpawnPhase(): boolean {
     return false;
@@ -138,12 +129,6 @@ export class TransportShipExecution implements Execution {
         this.src = closestTileSrc;
       }
     }
-
-    this.boat = this.attacker.buildUnit(
-      UnitType.TransportShip,
-      this.troops,
-      this.src,
-    );
   }
 
   tick(ticks: number) {

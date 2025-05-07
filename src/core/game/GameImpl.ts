@@ -25,7 +25,7 @@ import {
   TerrainType,
   TerraNullius,
   Unit,
-  UnitInfo,
+  UnitAttrs,
   UnitType,
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
@@ -185,8 +185,8 @@ export class GameImpl implements Game {
   units(...types: UnitType[]): UnitImpl[] {
     return Array.from(this._players.values()).flatMap((p) => p.units(...types));
   }
-  unitInfo(type: UnitType): UnitInfo {
-    return this.config().unitInfo(type);
+  unitInfo(type: UnitType): UnitAttrs {
+    return this.config().unitTypeAttrs(type);
   }
   nations(): Nation[] {
     return this._nations;

@@ -1,14 +1,11 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
   MessageType,
   Player,
-  PlayerID,
   Unit,
   UnitType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { SAMMissileExecution } from "./SAMMissileExecution";
 
@@ -25,24 +22,10 @@ export class SAMLauncherExecution implements Execution {
 
   private pseudoRandom: PseudoRandom;
 
-  constructor(
-    private ownerId: PlayerID,
-    private tile: TileRef,
-    private sam: Unit | null = null,
-  ) {
-    if (sam != null) {
-      this.tile = sam.tile();
-    }
-  }
+  constructor(private sam: Unit) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    if (!mg.hasPlayer(this.ownerId)) {
-      console.warn(`SAMLauncherExecution: owner ${this.ownerId} not found`);
-      this.active = false;
-      return;
-    }
-    this.player = mg.player(this.ownerId);
   }
 
   private getSingleTarget(): Unit | null {
@@ -92,17 +75,6 @@ export class SAMLauncherExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.sam == null) {
-      const spawnTile = this.player.canBuild(UnitType.SAMLauncher, this.tile);
-      if (spawnTile == false) {
-        consolex.warn("cannot build SAM Launcher");
-        this.active = false;
-        return;
-      }
-      this.sam = this.player.buildUnit(UnitType.SAMLauncher, 0, spawnTile, {
-        cooldownDuration: this.mg.config().SAMCooldown(),
-      });
-    }
     if (!this.sam.isActive()) {
       this.active = false;
       return;
@@ -173,14 +145,7 @@ export class SAMLauncherExecution implements Execution {
           mirvWarheadTargets.forEach((u) => u.delete());
         } else {
           target.setTargetedBySAM(true);
-          this.mg.addExecution(
-            new SAMMissileExecution(
-              this.sam.tile(),
-              this.sam.owner(),
-              this.sam,
-              target,
-            ),
-          );
+          this.mg.addExecution(new SAMMissileExecution(this.sam, target));
         }
       }
     }
