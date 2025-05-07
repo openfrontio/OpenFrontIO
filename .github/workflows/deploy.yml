@@ -39,7 +39,7 @@ jobs:
     # Don't deploy on push if this is a fork
     if: ${{ github.event_name == 'workflow_dispatch' || github.repository == 'openfrontio/OpenFrontIO' }}
     # Use different logic based on event type
-    name: Deploy to ${{
+    name: ${{
       github.event_name == 'push'
       && (github.ref_name == 'main' && 'openfront.dev'
       || format('{0}.openfront.dev', github.ref_name))
