@@ -13,7 +13,6 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { AlternateViewEvent, DragEvent } from "../../InputHandler";
 import { Layer } from "./Layer";
-import { red } from "../../../core/configuration/Colors";
 
 export class TerritoryLayer implements Layer {
   private canvas: HTMLCanvasElement;
