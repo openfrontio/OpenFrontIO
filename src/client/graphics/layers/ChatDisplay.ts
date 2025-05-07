@@ -80,7 +80,7 @@ export class ChatDisplay extends LitElement implements Layer {
   init() {}
 
   tick() {
-    this.active = true;
+    // this.active = true;
     const updates = this.game.updatesSinceLastTick();
     const messages = updates[GameUpdateType.DisplayEvent] as
       | DisplayMessageUpdate[]
@@ -136,7 +136,6 @@ export class ChatDisplay extends LitElement implements Layer {
         style="pointer-events: auto"
       >
         <div>
-          <!-- 上部固定バー -->
           <div class="w-full bg-black/80 sticky top-0 px-[10px]">
             <button
               class="text-white cursor-pointer pointer-events-auto ${this
@@ -149,7 +148,6 @@ export class ChatDisplay extends LitElement implements Layer {
             </button>
           </div>
 
-          <!-- 畳まれてるときの表示ボタン -->
           <button
             class="text-white cursor-pointer pointer-events-auto ${this._hidden
               ? ""
@@ -165,7 +163,6 @@ export class ChatDisplay extends LitElement implements Layer {
             >
           </button>
 
-          <!-- チャット本体（テーブル） -->
           <table
             class="w-full border-collapse text-white shadow-lg lg:text-xl text-xs ${this
               ._hidden
