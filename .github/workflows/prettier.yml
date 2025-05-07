@@ -1,4 +1,4 @@
-name: Prettier Check
+name: 🎨 Prettier
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 jobs:
-  prettier:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

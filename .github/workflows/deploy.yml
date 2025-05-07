@@ -61,7 +61,7 @@ jobs:
       SUBDOMAIN: ${{ github.event_name == 'push' && github.ref_name || inputs.target_subdomain || 'main' }}
     steps:
       - uses: actions/checkout@v4
-      - name: Update deployment status
+      - name: 📝 Update deployment status
         env:
           FQDN: ${{ env.SUBDOMAIN && format('{0}.{1}', env.SUBDOMAIN, env.DOMAIN) || env.DOMAIN || 'openfront.dev' }}
         run: |
@@ -71,12 +71,12 @@ jobs:
 
           Deploying from $GITHUB_REF to $FQDN
           EOF
-      - name: Log in to Docker Hub
+      - name: 🔗 Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Create SSH private key
+      - name: 🔑 Create SSH private key
         env:
           SERVER_HOST_EU: ${{ secrets.SERVER_HOST_EU }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
@@ -90,7 +90,7 @@ jobs:
           test -n "$SERVER_HOST_US" && ssh-keyscan -H "$SERVER_HOST_US" >> ~/.ssh/known_hosts
           test -n "$SERVER_HOST_EU" && ssh-keyscan -H "$SERVER_HOST_EU" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
-      - name: Deploy
+      - name: 🚢 Deploy
         env:
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
@@ -115,8 +115,9 @@ jobs:
         run: |
           echo "::group::deploy.sh"
           ./deploy.sh "$ENV" "$HOST" "$SUBDOMAIN"
+          echo "Deployment created in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
           echo "::endgroup::"
-      - name: Wait for deployment to start
+      - name: ⏳ Wait for deployment to start
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
@@ -127,8 +128,9 @@ jobs:
             fi
             sleep 10
           done
+          echo "Deployment started in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
           echo "::endgroup::"
-      - name: Notify PR 🚀
+      - name: 🚀 Notify PR
         if: ${{ success() && github.event_name == 'push'
           && github.repository != 'openfrontio/OpenFrontIO'
           }}
@@ -147,7 +149,7 @@ jobs:
             exit 0;
           fi
           gh pr comment "$pr_url" --body "🚀 Deployed ${GITHUB_SHA} to [$FQDN](https://$FQDN)."
-      - name: Update deployment status ✅
+      - name: ✅ Update deployment status
         if: success()
         run: |
           cat <<EOF >> $GITHUB_STEP_SUMMARY
@@ -155,7 +157,7 @@ jobs:
 
           Deployed from $GITHUB_REF to $FQDN
           EOF
-      - name: Update deployment status ❌
+      - name: ❌ Update deployment status
         if: failure()
         run: |
           cat <<EOF >> $GITHUB_STEP_SUMMARY
