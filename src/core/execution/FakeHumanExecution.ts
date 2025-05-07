@@ -275,9 +275,6 @@ export class FakeHumanExecution implements Execution {
   }
 
   private maybeSendNuke(other: Player) {
-    if (this.mg.config().isUnitDisabled(UnitType.AtomBomb)) {
-      return;
-    }
     const silos = this.player.units(UnitType.MissileSilo);
     if (
       silos.length == 0 ||
@@ -408,11 +405,7 @@ export class FakeHumanExecution implements Execution {
 
   private handleUnits() {
     const ports = this.player.units(UnitType.Port);
-    if (
-      !this.mg.config().isUnitDisabled(UnitType.Port) &&
-      ports.length == 0 &&
-      this.player.gold() > this.cost(UnitType.Port)
-    ) {
+    if (ports.length == 0 && this.player.gold() > this.cost(UnitType.Port)) {
       const oceanTiles = Array.from(this.player.borderTiles()).filter((t) =>
         this.mg.isOceanShore(t),
       );
@@ -424,21 +417,11 @@ export class FakeHumanExecution implements Execution {
       }
       return;
     }
-
-    if (!this.mg.config().isUnitDisabled(UnitType.City)) {
-      this.maybeSpawnStructure(UnitType.City, 2);
-    }
-
-    if (
-      !this.mg.config().isUnitDisabled(UnitType.Warship) &&
-      this.maybeSpawnWarship()
-    ) {
+    this.maybeSpawnStructure(UnitType.City, 2);
+    if (this.maybeSpawnWarship()) {
       return;
     }
-
-    if (!this.mg.config().isUnitDisabled(UnitType.MissileSilo)) {
-      this.maybeSpawnStructure(UnitType.MissileSilo, 1);
-    }
+    this.maybeSpawnStructure(UnitType.MissileSilo, 1);
   }
 
   private maybeSpawnStructure(type: UnitType, maxNum: number) {
@@ -463,10 +446,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   private maybeSpawnWarship(): boolean {
-    if (
-      !this.random.chance(50) ||
-      this.mg.config().isUnitDisabled(UnitType.Warship)
-    ) {
+    if (!this.random.chance(50)) {
       return false;
     }
     const ports = this.player.units(UnitType.Port);
