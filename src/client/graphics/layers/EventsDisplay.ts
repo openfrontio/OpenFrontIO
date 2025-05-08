@@ -395,6 +395,8 @@ export class EventsDisplay extends LitElement implements Layer {
         return "text-green-300";
       case MessageType.INFO:
         return "text-gray-200";
+      case MessageType.CHAT:
+        return "text-gray-200";
       case MessageType.WARN:
         return "text-yellow-300";
       case MessageType.ERROR:

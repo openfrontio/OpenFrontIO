@@ -219,6 +219,14 @@
           block
         ></o-button>
 
+        <o-button
+          id="logout-discord"
+          title="Log out"
+          translationKey="main.log_out"
+          visible="false"
+          block
+        ></o-button>
+
         <div class="container__row">
           <flag-input class="w-[20%] md:w-[15%]"></flag-input>
           <username-input class="w-full"></username-input>
@@ -242,6 +250,12 @@
             block
             secondary
           ></o-button>
+          <!-- <o-button
+            id="chat-button"
+            title="Chat Test"
+            block
+            secondary
+          ></o-button> -->
         </div>
 
         <o-button
@@ -299,6 +313,7 @@
         class="w-full sm:w-2/3 sm:fixed sm:right-0 sm:bottom-0 sm:flex justify-end"
         style="pointer-events: none"
       >
+        <chat-display></chat-display>
         <events-display></events-display>
       </div>
       <div class="w-full sm:w-1/3 md:max-w-72" style="pointer-events: auto">
@@ -364,6 +379,7 @@
     <player-panel></player-panel>
     <help-modal></help-modal>
     <dark-mode-button></dark-mode-button>
+    <chat-modal></chat-modal>
     <user-setting></user-setting>
     <multi-tab-modal></multi-tab-modal>
     <div

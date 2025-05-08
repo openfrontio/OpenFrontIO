@@ -124,7 +124,6 @@ export class GameImpl implements Game {
       this._nations.forEach((n) => this.addPlayer(n.playerInfo));
       return;
     }
-    const isDuos = this.config().gameConfig().playerTeams === Duos;
     const allPlayers = [
       ...this._humans,
       ...this._nations.map((n) => n.playerInfo),

@@ -5,8 +5,7 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { Difficulty, GameMode, GameType } from "../core/game/Game";
-import { GameConfig, GameInfo } from "../core/Schemas";
+import { GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
@@ -214,39 +213,10 @@ async function fetchLobbies(): Promise<number> {
   return publicLobbyIDs.size;
 }
 
-let lastGameMode: GameMode = GameMode.FFA;
-
 // Function to schedule a new public game
 async function schedulePublicGame(playlist: MapPlaylist) {
   const gameID = generateID();
-  const map = playlist.getNextMap();
   publicLobbyIDs.add(gameID);
-
-  if (lastGameMode == GameMode.FFA) {
-    lastGameMode = GameMode.Team;
-  } else {
-    lastGameMode = GameMode.FFA;
-  }
-
-  const gameMode = playlist.getNextGameMode();
-  const numPlayerTeams =
-    gameMode === GameMode.Team ? 2 + Math.floor(Math.random() * 5) : undefined;
-
-  // Create the default public game config (from your GameManager)
-  const defaultGameConfig: GameConfig = {
-    gameMap: map,
-    maxPlayers: config.lobbyMaxPlayers(map),
-    gameType: GameType.Public,
-    difficulty: Difficulty.Medium,
-    infiniteGold: false,
-    infiniteTroops: false,
-    instantBuild: false,
-    disableNPCs: gameMode == GameMode.Team,
-    disableNukes: false,
-    gameMode,
-    playerTeams: numPlayerTeams,
-    bots: 400,
-  };
 
   const workerPath = config.workerPath(gameID);
 
@@ -261,7 +231,7 @@ async function schedulePublicGame(playlist: MapPlaylist) {
           [config.adminHeader()]: config.adminToken(),
         },
         body: JSON.stringify({
-          gameConfig: defaultGameConfig,
+          gameConfig: playlist.gameConfig(),
         }),
       },
     );

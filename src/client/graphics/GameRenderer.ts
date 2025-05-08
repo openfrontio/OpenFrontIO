@@ -7,6 +7,8 @@ import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { BuildMenu } from "./layers/BuildMenu";
+import { ChatDisplay } from "./layers/ChatDisplay";
+import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
@@ -87,6 +89,14 @@ export function createRenderer(
   eventsDisplay.game = game;
   eventsDisplay.clientID = clientID;
 
+  const chatDisplay = document.querySelector("chat-display") as ChatDisplay;
+  if (!(chatDisplay instanceof ChatDisplay)) {
+    consolex.error("chat display not found");
+  }
+  chatDisplay.eventBus = eventBus;
+  chatDisplay.game = game;
+  chatDisplay.clientID = clientID;
+
   const playerInfo = document.querySelector(
     "player-info-overlay",
   ) as PlayerInfoOverlay;
@@ -126,6 +136,13 @@ export function createRenderer(
   playerPanel.eventBus = eventBus;
   playerPanel.emojiTable = emojiTable;
 
+  const chatModal = document.querySelector("chat-modal") as ChatModal;
+  if (!(chatModal instanceof ChatModal)) {
+    console.error("chat modal not found");
+  }
+  chatModal.g = game;
+  chatModal.eventBus = eventBus;
+
   const multiTabModal = document.querySelector(
     "multi-tab-modal",
   ) as MultiTabModal;
@@ -142,6 +159,7 @@ export function createRenderer(
     new UILayer(game, eventBus, clientID, transformHandler),
     new NameLayer(game, transformHandler, clientID),
     eventsDisplay,
+    chatDisplay,
     buildMenu,
     new RadialMenu(
       eventBus,

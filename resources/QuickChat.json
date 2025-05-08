@@ -1,0 +1,224 @@
+{
+  "help": [
+    {
+      "key": "troops",
+      "text": "Please give me troops!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "gold",
+      "text": "Please give me gold!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "no_attack",
+      "text": "Please don't attack me!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "sorry_attack",
+      "text": "Sorry, I didn’t mean to attack.",
+      "requiresPlayer": false
+    },
+    {
+      "key": "alliance",
+      "text": "Alliance?",
+      "requiresPlayer": false
+    },
+    {
+      "key": "help_defend",
+      "text": "Help me defend against [P1]!",
+      "requiresPlayer": true
+    },
+    {
+      "key": "team_up",
+      "text": "Let’s team up against [P1]!",
+      "requiresPlayer": true
+    }
+  ],
+  "attack": [
+    {
+      "key": "attack",
+      "text": "Attack [P1]!",
+      "requiresPlayer": true
+    },
+    {
+      "key": "mirv",
+      "text": "Launch a MIRV at [P1]!",
+      "requiresPlayer": true
+    },
+    {
+      "key": "focus",
+      "text": "Focus fire on [P1]!",
+      "requiresPlayer": true
+    },
+    {
+      "key": "finish",
+      "text": "Let's finish off [P1]!",
+      "requiresPlayer": true
+    }
+  ],
+  "defend": [
+    {
+      "key": "defend",
+      "text": "Defend [P1]!",
+      "requiresPlayer": true
+    },
+    {
+      "key": "dont_attack",
+      "text": "Don’t attack [P1]!",
+      "requiresPlayer": true
+    },
+    {
+      "key": "ally",
+      "text": "[P1] is my ally!",
+      "requiresPlayer": true
+    }
+  ],
+  "greet": [
+    {
+      "key": "hello",
+      "text": "Hello!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "good_luck",
+      "text": "Good luck!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "have_fun",
+      "text": "Have fun!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "gg",
+      "text": "GG!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "nice_to_meet",
+      "text": "Nice to meet you!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "well_played",
+      "text": "Well played!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "hi_again",
+      "text": "Hi again!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "bye",
+      "text": "Bye!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "thanks",
+      "text": "Thanks!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "oops",
+      "text": "Oops, wrong button!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "trust_me",
+      "text": "You can trust me. Promise!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "trust_broken",
+      "text": "I trusted you...",
+      "requiresPlayer": false
+    }
+  ],
+  "misc": [
+    {
+      "key": "go",
+      "text": "Let’s go!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "strategy",
+      "text": "Nice strategy!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "fun",
+      "text": "This game is fun!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "pr",
+      "text": "When will my PR finally get merged...?",
+      "requiresPlayer": false
+    }
+  ],
+  "warnings": [
+    {
+      "key": "strong",
+      "text": "[P1] is strong.",
+      "requiresPlayer": true
+    },
+    {
+      "key": "weak",
+      "text": "[P1] is weak.",
+      "requiresPlayer": true
+    },
+    {
+      "key": "mirv_soon",
+      "text": "[P1] can launch a MIRV soon!",
+      "requiresPlayer": true
+    },
+    {
+      "key": "number1_warning",
+      "text": "The #1 player will win soon unless we team up!",
+      "requiresPlayer": false
+    },
+    {
+      "key": "stalemate",
+      "text": "Let's make peace. This is a stalemate, we will both lose.",
+      "requiresPlayer": false
+    },
+    {
+      "key": "has_allies",
+      "text": "[P1] has many allies.",
+      "requiresPlayer": true
+    },
+    {
+      "key": "no_allies",
+      "text": "[P1] has no allies.",
+      "requiresPlayer": true
+    },
+    {
+      "key": "betrayed",
+      "text": "[P1] betrayed their ally!",
+      "requiresPlayer": true
+    },
+    {
+      "key": "getting_big",
+      "text": "[P1] is growing too fast!",
+      "requiresPlayer": true
+    },
+    {
+      "key": "danger_base",
+      "text": "[P1] is unprotected!",
+      "requiresPlayer": true
+    },
+    {
+      "key": "saving_for_mirv",
+      "text": "[P1] is saving up to launch a MIRV.",
+      "requiresPlayer": true
+    },
+    {
+      "key": "mirv_ready",
+      "text": "[P1] has enough gold to launch a MIRV!",
+      "requiresPlayer": true
+    }
+  ]
+}

@@ -20,6 +20,7 @@ import {
   Attack,
   BuildableUnit,
   Cell,
+  ColoredTeams,
   EmojiMessage,
   Gold,
   MessageType,
@@ -606,6 +607,9 @@ export class PlayerImpl implements Player {
     if (this.team() == null || other.team() == null) {
       return false;
     }
+    if (this.team() == ColoredTeams.Bot || other.team() == ColoredTeams.Bot) {
+      return false;
+    }
     return this._team == other.team();
   }
 
@@ -705,6 +709,12 @@ export class PlayerImpl implements Player {
     spawnTile: TileRef,
     unitSpecificInfos: UnitSpecificInfos = {},
   ): UnitImpl {
+    if (this.mg.config().isUnitDisabled(type)) {
+      throw new Error(
+        `Attempted to build disabled unit ${type} at tile ${spawnTile} by player ${this.name()}`,
+      );
+    }
+
     const cost = this.mg.unitInfo(type).cost(this);
     const b = new UnitImpl(
       type,
@@ -742,19 +752,8 @@ export class PlayerImpl implements Player {
     targetTile: TileRef,
     validTiles: TileRef[] | null = null,
   ): TileRef | false {
-    // prevent the building of nukes and nuke related buildings
-    if (this.mg.config().disableNukes()) {
-      if (
-        unitType === UnitType.MissileSilo ||
-        unitType === UnitType.MIRV ||
-        unitType === UnitType.AtomBomb ||
-        unitType === UnitType.HydrogenBomb ||
-        unitType === UnitType.SAMLauncher ||
-        unitType === UnitType.SAMMissile ||
-        unitType === UnitType.MIRVWarhead
-      ) {
-        return false;
-      }
+    if (this.mg.config().isUnitDisabled(unitType)) {
+      return false;
     }
 
     const cost = this.mg.unitInfo(unitType).cost(this);

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
 import {
   AllPlayers,
   Difficulty,
@@ -29,6 +30,7 @@ export type Intent =
   | TargetTroopRatioIntent
   | BuildUnitIntent
   | EmbargoIntent
+  | QuickChatIntent
   | MoveWarshipIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
@@ -50,6 +52,7 @@ export type TargetTroopRatioIntent = z.infer<
 >;
 export type BuildUnitIntent = z.infer<typeof BuildUnitIntentSchema>;
 export type MoveWarshipIntent = z.infer<typeof MoveWarshipIntentSchema>;
+export type QuickChatIntent = z.infer<typeof QuickChatIntentSchema>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -116,12 +119,13 @@ const GameConfigSchema = z.object({
   gameType: z.nativeEnum(GameType),
   gameMode: z.nativeEnum(GameMode),
   disableNPCs: z.boolean(),
-  disableNukes: z.boolean(),
   bots: z.number().int().min(0).max(400),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
   maxPlayers: z.number().optional(),
+  numPlayerTeams: z.number().optional(),
+  disabledUnits: z.array(z.nativeEnum(UnitType)).optional(),
   playerTeams: z.union([z.number().optional(), z.literal(Duos)]),
 });
 
@@ -269,6 +273,19 @@ export const MoveWarshipIntentSchema = BaseIntentSchema.extend({
   tile: z.number(),
 });
 
+export const QuickChatKeySchema = z.enum(
+  Object.entries(quickChatData).flatMap(([category, entries]) =>
+    entries.map((entry) => `${category}.${entry.key}`),
+  ) as [string, ...string[]],
+);
+
+export const QuickChatIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("quick_chat"),
+  recipient: ID,
+  quickChatKey: QuickChatKeySchema,
+  variables: z.record(SafeString).optional(),
+});
+
 const IntentSchema = z.union([
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -285,11 +302,11 @@ const IntentSchema = z.union([
   BuildUnitIntentSchema,
   EmbargoIntentSchema,
   MoveWarshipIntentSchema,
+  QuickChatIntentSchema,
 ]);
 
 export const TurnSchema = z.object({
   turnNumber: z.number(),
-  gameID: ID,
   intents: z.array(IntentSchema),
   // The hash of the game state at the end of the turn.
   hash: z.number().nullable().optional(),
@@ -356,9 +373,6 @@ export const ServerMessageSchema = z.union([
 
 const ClientBaseMessageSchema = z.object({
   type: z.enum(["winner", "join", "intent", "ping", "log", "hash"]),
-  clientID: ID,
-  persistentID: SafeString.nullable(), // WARNING: persistent id is private.
-  gameID: ID,
 });
 
 export const ClientSendWinnerSchema = ClientBaseMessageSchema.extend({

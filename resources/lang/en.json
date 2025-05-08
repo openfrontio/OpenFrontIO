@@ -10,6 +10,7 @@
     "join_discord": "Join the Discord!",
     "login_discord": "Login with Discord",
     "logged_in": "Logged in!",
+    "log_out": "Log out",
     "create_lobby": "Create Lobby",
     "join_lobby": "Join Lobby",
     "single_player": "Single Player",
@@ -100,6 +101,7 @@
     "infinite_gold": "Infinite gold",
     "infinite_troops": "Infinite troops",
     "disable_nukes": "Disable Nukes",
+    "enables_title": "Enable Settings",
     "start": "Start Game"
   },
   "map": {
@@ -166,7 +168,7 @@
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
     "infinite_troops": "Infinite troops",
-    "disable_nukes": "Disable Nukes",
+    "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
     "waiting": "Waiting for players...",
@@ -190,6 +192,17 @@
   "select_lang": {
     "title": "Select Language"
   },
+  "unit_type": {
+    "city": "City",
+    "defense_post": "Defense Post",
+    "port": "Port",
+    "warship": "Warship",
+    "missile_silo": "Missile Silo",
+    "sam_launcher": "SAM Launcher",
+    "atom_bomb": "Atom Bomb",
+    "hydrogen_bomb": "Hydrogen Bomb",
+    "mirv": "MIRV"
+  },
   "user_setting": {
     "title": "User Settings",
     "tab_basic": "Basic Settings",
@@ -198,6 +211,8 @@
     "dark_mode_desc": "Toggle the site’s appearance between light and dark themes",
     "emojis_label": "😊 Emojis",
     "emojis_desc": "Toggle whether emojis are shown in game",
+    "anonymous_names_label": "🥷 Hidden Names",
+    "anonymous_names_desc": "Hide real player names with random ones on your screen.",
     "left_click_label": "🖱️ Left Click to Open Menu",
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
     "attack_ratio_label": "⚔️ Attack Ratio",

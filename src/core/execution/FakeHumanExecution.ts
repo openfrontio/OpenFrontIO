@@ -421,9 +421,7 @@ export class FakeHumanExecution implements Execution {
     if (this.maybeSpawnWarship()) {
       return;
     }
-    if (!this.mg.config().disableNukes()) {
-      this.maybeSpawnStructure(UnitType.MissileSilo, 1);
-    }
+    this.maybeSpawnStructure(UnitType.MissileSilo, 1);
   }
 
   private maybeSpawnStructure(type: UnitType, maxNum: number) {

@@ -162,7 +162,7 @@ export function startWorker() {
         instantBuild: req.body.instantBuild,
         bots: req.body.bots,
         disableNPCs: req.body.disableNPCs,
-        disableNukes: req.body.disableNukes,
+        disabledUnits: req.body.disabledUnits,
         gameMode: req.body.gameMode,
         playerTeams: req.body.playerTeams,
       });

@@ -102,6 +102,15 @@ export class UserSettingModal extends LitElement {
     console.log("🤡 Emojis:", enabled ? "ON" : "OFF");
   }
 
+  private toggleAnonymousNames(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.anonymousNames", enabled);
+
+    console.log("🙈 Anonymous Names:", enabled ? "ON" : "OFF");
+  }
+
   private toggleLeftClickOpensMenu(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -224,6 +233,15 @@ export class UserSettingModal extends LitElement {
         id="left-click-toggle"
         .checked=${this.userSettings.leftClickOpensMenu()}
         @change=${this.toggleLeftClickOpensMenu}
+      ></setting-toggle>
+
+      <!-- 🙈 Anonymous Names -->
+      <setting-toggle
+        label="${translateText("user_setting.anonymous_names_label")}"
+        description="${translateText("user_setting.anonymous_names_desc")}"
+        id="anonymous-names-toggle"
+        .checked=${this.userSettings.anonymousNames()}
+        @change=${this.toggleAnonymousNames}
       ></setting-toggle>
 
       <!-- ⚔️ Attack Ratio -->

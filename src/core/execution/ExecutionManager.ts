@@ -15,6 +15,7 @@ import { EmojiExecution } from "./EmojiExecution";
 import { FakeHumanExecution } from "./FakeHumanExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NoOpExecution } from "./NoOpExecution";
+import { QuickChatExecution } from "./QuickChatExecution";
 import { RetreatExecution } from "./RetreatExecution";
 import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
 import { SpawnExecution } from "./SpawnExecution";
@@ -107,6 +108,13 @@ export class Executor {
           playerID,
           this.mg.ref(intent.x, intent.y),
           intent.unit,
+        );
+      case "quick_chat":
+        return new QuickChatExecution(
+          playerID,
+          intent.recipient,
+          intent.quickChatKey,
+          intent.variables ?? {},
         );
       default:
         throw new Error(`intent type ${intent} not found`);

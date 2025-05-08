@@ -21,8 +21,6 @@ import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
-import "./RandomNameButton";
-import { RandomNameButton } from "./RandomNameButton";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
@@ -31,7 +29,7 @@ import { generateCryptoRandomUUID } from "./Utils";
 import "./components/baseComponents/Button";
 import { OButton } from "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import { discordLogin, isLoggedIn } from "./jwt";
+import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
 import "./styles.css";
 
 export interface JoinLobbyEvent {
@@ -50,7 +48,6 @@ class Client {
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
   private darkModeButton: DarkModeButton | null = null;
-  private randomNameButton: RandomNameButton | null = null;
 
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
@@ -85,31 +82,12 @@ class Client {
       consolex.warn("Dark mode button element not found");
     }
 
-    this.randomNameButton = document.querySelector(
-      "random-name-button",
-    ) as RandomNameButton;
-    if (!this.randomNameButton) {
-      consolex.warn("Random name button element not found");
-    }
-
     const loginDiscordButton = document.getElementById(
       "login-discord",
     ) as OButton;
-    const claims = isLoggedIn();
-    if (claims === false) {
-      // Not logged in
-      loginDiscordButton.disable = false;
-      loginDiscordButton.translationKey = "main.login_discord";
-      loginDiscordButton.addEventListener("click", discordLogin);
-    } else {
-      // Logged in
-      loginDiscordButton.disable = true;
-      loginDiscordButton.translationKey = "main.logged_in";
-      // const avatarUrl = avatar
-      //   ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.${avatar.startsWith("a_") ? "gif" : "png"}`
-      //   : `https://cdn.discordapp.com/embed/avatars/${Number(discriminator) % 5}.png`;
-      // TODO: Update the page for logged in user
-    }
+    const logoutDiscordButton = document.getElementById(
+      "logout-discord",
+    ) as OButton;
 
     this.usernameInput = document.querySelector(
       "username-input",
@@ -144,11 +122,52 @@ class Client {
       }
     });
 
+    // const ctModal = document.querySelector("chat-modal") as ChatModal;
+    // ctModal instanceof ChatModal;
+    // document.getElementById("chat-button").addEventListener("click", () => {
+    //   ctModal.open();
+    // });
+
     const hlpModal = document.querySelector("help-modal") as HelpModal;
     hlpModal instanceof HelpModal;
     document.getElementById("help-button").addEventListener("click", () => {
       hlpModal.open();
     });
+
+    const claims = isLoggedIn();
+    if (claims === false) {
+      // Not logged in
+      loginDiscordButton.disable = false;
+      loginDiscordButton.translationKey = "main.login_discord";
+      loginDiscordButton.addEventListener("click", discordLogin);
+      logoutDiscordButton.hidden = true;
+    } else {
+      // JWT appears to be valid, assume we are logged in
+      loginDiscordButton.disable = true;
+      loginDiscordButton.translationKey = "main.logged_in";
+      logoutDiscordButton.hidden = false;
+      logoutDiscordButton.addEventListener("click", () => {
+        // Log out
+        logOut();
+        loginDiscordButton.disable = false;
+        loginDiscordButton.translationKey = "main.login_discord";
+        loginDiscordButton.addEventListener("click", discordLogin);
+        logoutDiscordButton.hidden = true;
+      });
+      // Look up the discord user object.
+      // TODO: Add caching
+      getUserMe().then((userMeResponse) => {
+        if (userMeResponse === false) {
+          // Not logged in
+          loginDiscordButton.disable = false;
+          loginDiscordButton.translationKey = "main.login_discord";
+          loginDiscordButton.addEventListener("click", discordLogin);
+          logoutDiscordButton.hidden = true;
+          return;
+        }
+        // TODO: Update the page for logged in user
+      });
+    }
 
     const settingsModal = document.querySelector(
       "user-setting",
