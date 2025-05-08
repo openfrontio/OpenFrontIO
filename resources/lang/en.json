@@ -127,7 +127,8 @@
     "knownworld": "Known World",
     "faroeislands": "Faroe Islands",
     "deglaciatedantarctica": "Deglaciated Antarctica",
-    "europeclassic": "Europe (classic)"
+    "europeclassic": "Europe (classic)",
+    "falklandislands": "Falkland Islands"
   },
   "map_categories": {
     "continental": "Continental",
