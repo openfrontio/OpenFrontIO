@@ -2,7 +2,6 @@ import * as d3 from "d3";
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
 import boatIcon from "../../../../resources/images/BoatIconWhite.svg";
 import buildIcon from "../../../../resources/images/BuildIconWhite.svg";
-import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
 import disabledIcon from "../../../../resources/images/DisabledIcon.svg";
 import infoIcon from "../../../../resources/images/InfoIcon.svg";
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
@@ -34,7 +33,6 @@ import {
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { BuildMenu } from "./BuildMenu";
-import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
 import { PlayerInfoOverlay } from "./PlayerInfoOverlay";
@@ -45,7 +43,6 @@ enum Slot {
   Boat,
   Build,
   Ally,
-  Chat,
 }
 
 export class RadialMenu implements Layer {
@@ -56,18 +53,6 @@ export class RadialMenu implements Layer {
   private menuElement: d3.Selection<HTMLDivElement, unknown, null, undefined>;
   private isVisible: boolean = false;
   private readonly menuItems = new Map([
-    [Slot.Ally, { name: "ally", disabled: true, action: () => {} }],
-    [Slot.Build, { name: "build", disabled: true, action: () => {} }],
-    [
-      Slot.Info,
-      {
-        name: "info",
-        disabled: true,
-        action: () => {},
-        color: null,
-        icon: null,
-      },
-    ],
     [
       Slot.Boat,
       {
@@ -78,10 +63,12 @@ export class RadialMenu implements Layer {
         icon: null,
       },
     ],
+    [Slot.Ally, { name: "ally", disabled: true, action: () => {} }],
+    [Slot.Build, { name: "build", disabled: true, action: () => {} }],
     [
-      Slot.Chat,
+      Slot.Info,
       {
-        name: "chat",
+        name: "info",
         disabled: true,
         action: () => {},
         color: null,
@@ -97,8 +84,6 @@ export class RadialMenu implements Layer {
   private readonly disabledColor = d3.rgb(128, 128, 128).toString();
 
   private isCenterButtonEnabled = false;
-
-  private ctModal;
 
   constructor(
     private eventBus: EventBus,
@@ -135,8 +120,6 @@ export class RadialMenu implements Layer {
     });
 
     this.eventBus.on(CloseViewEvent, () => this.closeMenu());
-
-    this.ctModal = document.querySelector("chat-modal") as ChatModal;
 
     this.createMenuElement();
   }
@@ -178,8 +161,8 @@ export class RadialMenu implements Layer {
       .pie<any>()
       .value(() => 1)
       .padAngle(0.03)
-      .startAngle(Math.PI)
-      .endAngle(4 * Math.PI);
+      .startAngle(Math.PI / 4) // Start at 45 degrees (π/4 radians)
+      .endAngle(2 * Math.PI + Math.PI / 4); // Complete the circle but shifted by 45 degrees
 
     const arc = d3
       .arc<any>()
@@ -426,14 +409,7 @@ export class RadialMenu implements Layer {
     if (actions.canAttack) {
       this.enableCenterButton(true);
     }
-    if (this.g.hasOwner(tile)) {
-      const owner = this.g.owner(tile);
-      if (owner.isPlayer() && myPlayer !== owner) {
-        this.activateMenuElement(Slot.Chat, "#7f8c8d", chatIcon, () => {
-          this.ctModal.open(myPlayer, owner as PlayerView);
-        });
-      }
-    }
+
     if (!this.g.hasOwner(tile)) {
       return;
     }
