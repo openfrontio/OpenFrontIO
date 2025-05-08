@@ -256,7 +256,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             : ""}
           ${unit.hasDstPortId()
             ? html`<div class="text-sm opacity-80">
-                DST Port Owner:
+                Destination:
                 ${this.game.unit(unit.dstPortId()).owner().name()}
               </div>`
             : ""}
