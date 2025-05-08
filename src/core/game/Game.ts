@@ -98,7 +98,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Mena,
     GameMapType.Australia,
     GameMapType.FaroeIslands,
-    Baikal = "Baikal",
+    GameMapType.Baikal,
   ],
   fantasy: [
     GameMapType.Pangaea,
