@@ -7,7 +7,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
-import { GameConfig, GameRecord } from "../core/Schemas";
+import { ClientMessageSchema, GameConfig, GameRecord } from "../core/Schemas";
 import { archive, readGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
@@ -263,7 +263,9 @@ export function startWorker() {
         try {
           // Process WebSocket messages as in your original code
           // Parse and handle client messages
-          const clientMsg = JSON.parse(message.toString());
+          const clientMsg = ClientMessageSchema.parse(
+            JSON.parse(message.toString()),
+          );
 
           if (clientMsg.type == "join") {
             // Verify this worker should handle this game
