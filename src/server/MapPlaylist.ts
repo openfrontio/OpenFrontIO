@@ -86,6 +86,7 @@ export class MapPlaylist {
     });
 
     const rand = new PseudoRandom(Date.now());
+    
     const ffa1: GameMapType[] = rand.shuffleArray([...maps]);
     const ffa2: GameMapType[] = rand.shuffleArray([...maps]);
     const ffa3: GameMapType[] = rand.shuffleArray([...maps]);
