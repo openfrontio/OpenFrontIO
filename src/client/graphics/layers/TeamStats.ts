@@ -105,6 +105,13 @@ export class TeamStats extends LitElement implements Layer {
       backdrop-filter: blur(5px);
     }
 
+    .teamStats-close-button {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -121,15 +128,6 @@ export class TeamStats extends LitElement implements Layer {
     th {
       background-color: rgb(31 41 55 / 0.5);
       color: white;
-    }
-
-    .myTeam {
-      font-weight: bold;
-      font-size: 1.2em;
-    }
-
-    .otherTeam {
-      font-size: 1em;
     }
 
     .hidden {
@@ -166,11 +164,10 @@ export class TeamStats extends LitElement implements Layer {
       >
         <button
           class="teamStats-close-button"
-          @click=${(e) => this.hideTeamStats()}
+          @click=${() => this.hideTeamStats()}
         >
           Hide
         </button>
-
         <table>
           <thead>
             <tr>
