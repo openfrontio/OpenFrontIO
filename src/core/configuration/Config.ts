@@ -2,11 +2,14 @@ import { Colord } from "colord";
 import { GameConfig, GameID } from "../Schemas";
 import {
   Difficulty,
+  Duos,
   Game,
   GameMapType,
+  GameMode,
   Gold,
   Player,
   PlayerInfo,
+  Team,
   TerraNullius,
   Tick,
   UnitInfo,
@@ -25,7 +28,7 @@ export enum GameEnv {
 export interface ServerConfig {
   turnIntervalMs(): number;
   gameCreationRate(): number;
-  lobbyMaxPlayers(map: GameMapType): number;
+  lobbyMaxPlayers(map: GameMapType, mode: GameMode): number;
   discordRedirectURI(): string;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
@@ -42,6 +45,10 @@ export interface ServerConfig {
   r2Endpoint(): string;
   r2AccessKey(): string;
   r2SecretKey(): string;
+  otelEndpoint(): string;
+  otelUsername(): string;
+  otelPassword(): string;
+  otelEnabled(): boolean;
 }
 
 export interface NukeMagnitude {
@@ -51,6 +58,7 @@ export interface NukeMagnitude {
 
 export interface Config {
   samHittingChance(): number;
+  samWarheadHittingChance(): number;
   spawnImmunityDuration(): Tick;
   serverConfig(): ServerConfig;
   gameConfig(): GameConfig;
@@ -58,13 +66,14 @@ export interface Config {
   percentageTilesOwnedToWin(): number;
   numBots(): number;
   spawnNPCs(): boolean;
-  disableNukes(): boolean;
+  isUnitDisabled(unitType: UnitType): boolean;
   bots(): number;
   infiniteGold(): boolean;
   infiniteTroops(): boolean;
   instantBuild(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
+  playerTeams(): number | typeof Duos;
 
   startManpower(playerInfo: PlayerInfo): number;
   populationIncreaseRate(player: Player | PlayerView): number;
@@ -95,7 +104,7 @@ export interface Config {
   maxPopulation(player: Player | PlayerView): number;
   cityPopulationIncrease(): number;
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number;
-  warshipShellLifetime(): number;
+  shellLifetime(): number;
   boatMaxNumber(): number;
   allianceDuration(): Tick;
   allianceRequestCooldown(): Tick;
@@ -108,20 +117,29 @@ export interface Config {
   unitInfo(type: UnitType): UnitInfo;
   tradeShipGold(dist: number): Gold;
   tradeShipSpawnRate(numberOfPorts: number): number;
+  safeFromPiratesCooldownMax(): number;
   defensePostRange(): number;
   SAMCooldown(): number;
   SiloCooldown(): number;
   defensePostDefenseBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
+  warshipPatrolRange(): number;
+  warshipShellAttackRate(): number;
+  warshipTargettingRange(): number;
+  defensePostShellAttackRate(): number;
+  defensePostTargettingRange(): number;
   // 0-1
   traitorDefenseDebuff(): number;
+  traitorDuration(): number;
   nukeMagnitudes(unitType: UnitType): NukeMagnitude;
   defaultNukeSpeed(): number;
   nukeDeathFactor(humans: number, tilesOwned: number): number;
+  structureMinDist(): number;
 }
 
 export interface Theme {
+  teamColor(team: Team): Colord;
   territoryColor(playerInfo: PlayerView): Colord;
   specialBuildingColor(playerInfo: PlayerView): Colord;
   borderColor(playerInfo: PlayerView): Colord;

@@ -8,6 +8,9 @@
 @import url("./styles/layout/container.css");
 @import url("./styles/components/button.css");
 @import url("./styles/components/modal.css");
+@import url("./styles/modal/chat.css");
+@import url("./styles/components/setting.css");
+@import url("./styles/components/controls.css");
 * {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
@@ -192,6 +195,11 @@ label.option-card:hover {
   margin: 8px 0px 0px 0px;
 }
 
+#lobbyIdInput {
+  font-family: monospace;
+  font-weight: 600;
+}
+
 .lobby-id-button {
   display: flex;
   align-items: center;
@@ -214,6 +222,8 @@ label.option-card:hover {
   font-size: 14px;
   color: #fff;
   text-align: center;
+  font-family: monospace;
+  font-weight: 600;
 }
 
 .players-list {

@@ -5,13 +5,11 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { Difficulty, GameMode, GameType } from "../core/game/Game";
-import { GameConfig, GameInfo } from "../core/Schemas";
+import { GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
-import { setupMetricsServer } from "./MasterMetrics";
 
 const config = getServerConfigFromServer();
 const playlist = new MapPlaylist();
@@ -20,11 +18,7 @@ const readyWorkers = new Set();
 const app = express();
 const server = http.createServer(app);
 
-// Create a separate metrics server on port 9090
-const metricsApp = express();
-const metricsServer = http.createServer(metricsApp);
-
-const log = logger.child({ component: "Master" });
+const log = logger.child({ comp: "m" });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -146,9 +140,6 @@ export async function startMaster() {
   server.listen(PORT, () => {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });
-
-  // Setup the metrics server
-  setupMetricsServer();
 }
 
 app.get(
@@ -225,22 +216,7 @@ async function fetchLobbies(): Promise<number> {
 // Function to schedule a new public game
 async function schedulePublicGame(playlist: MapPlaylist) {
   const gameID = generateID();
-  const map = playlist.getNextMap();
   publicLobbyIDs.add(gameID);
-  // Create the default public game config (from your GameManager)
-  const defaultGameConfig = {
-    gameMap: map,
-    maxPlayers: config.lobbyMaxPlayers(map),
-    gameType: GameType.Public,
-    difficulty: Difficulty.Medium,
-    infiniteGold: false,
-    infiniteTroops: false,
-    instantBuild: false,
-    disableNPCs: false,
-    disableNukes: false,
-    gameMode: Math.random() < 0.5 ? GameMode.FFA : GameMode.Team,
-    bots: 400,
-  } as GameConfig;
 
   const workerPath = config.workerPath(gameID);
 
@@ -255,7 +231,7 @@ async function schedulePublicGame(playlist: MapPlaylist) {
           [config.adminHeader()]: config.adminToken(),
         },
         body: JSON.stringify({
-          gameConfig: defaultGameConfig,
+          gameConfig: playlist.gameConfig(),
         }),
       },
     );

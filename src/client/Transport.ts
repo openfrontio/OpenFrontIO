@@ -68,8 +68,9 @@ export class SendAttackIntentEvent implements GameEvent {
 export class SendBoatAttackIntentEvent implements GameEvent {
   constructor(
     public readonly targetID: PlayerID,
-    public readonly cell: Cell,
+    public readonly dst: Cell,
     public readonly troops: number,
+    public readonly src: Cell | null = null,
   ) {}
 }
 
@@ -87,7 +88,7 @@ export class SendTargetPlayerIntentEvent implements GameEvent {
 export class SendEmojiIntentEvent implements GameEvent {
   constructor(
     public readonly recipient: PlayerView | typeof AllPlayers,
-    public readonly emoji: string,
+    public readonly emoji: number,
   ) {}
 }
 
@@ -104,6 +105,15 @@ export class SendDonateTroopsIntentEvent implements GameEvent {
     public readonly sender: PlayerView,
     public readonly recipient: PlayerView,
     public readonly troops: number | null,
+  ) {}
+}
+
+export class SendQuickChatEvent implements GameEvent {
+  constructor(
+    public readonly sender: PlayerView,
+    public readonly recipient: PlayerView,
+    public readonly quickChatKey: string,
+    public readonly variables: { [key: string]: string },
   ) {}
 }
 
@@ -195,6 +205,7 @@ export class Transport {
     this.eventBus.on(SendDonateTroopsIntentEvent, (e) =>
       this.onSendDonateTroopIntent(e),
     );
+    this.eventBus.on(SendQuickChatEvent, (e) => this.onSendQuickChatIntent(e));
     this.eventBus.on(SendEmbargoIntentEvent, (e) =>
       this.onSendEmbargoIntent(e),
     );
@@ -414,8 +425,10 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       targetID: event.targetID,
       troops: event.troops,
-      x: event.cell.x,
-      y: event.cell.y,
+      dstX: event.dst.x,
+      dstY: event.dst.y,
+      srcX: event.src?.x,
+      srcY: event.src?.y,
     });
   }
 
@@ -452,6 +465,16 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
       troops: event.troops,
+    });
+  }
+
+  private onSendQuickChatIntent(event: SendQuickChatEvent) {
+    this.sendIntent({
+      type: "quick_chat",
+      clientID: this.lobbyConfig.clientID,
+      recipient: event.recipient.id(),
+      quickChatKey: event.quickChatKey,
+      variables: event.variables,
     });
   }
 

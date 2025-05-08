@@ -22,11 +22,14 @@ import { LanguageModal } from "./LanguageModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import { generateCryptoRandomUUID } from "./Utils";
 import "./components/baseComponents/Button";
+import { OButton } from "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
 import "./styles.css";
 
 export interface JoinLobbyEvent {
@@ -79,6 +82,13 @@ class Client {
       consolex.warn("Dark mode button element not found");
     }
 
+    const loginDiscordButton = document.getElementById(
+      "login-discord",
+    ) as OButton;
+    const logoutDiscordButton = document.getElementById(
+      "logout-discord",
+    ) as OButton;
+
     this.usernameInput = document.querySelector(
       "username-input",
     ) as UsernameInput;
@@ -112,10 +122,59 @@ class Client {
       }
     });
 
+    // const ctModal = document.querySelector("chat-modal") as ChatModal;
+    // ctModal instanceof ChatModal;
+    // document.getElementById("chat-button").addEventListener("click", () => {
+    //   ctModal.open();
+    // });
+
     const hlpModal = document.querySelector("help-modal") as HelpModal;
     hlpModal instanceof HelpModal;
     document.getElementById("help-button").addEventListener("click", () => {
       hlpModal.open();
+    });
+
+    const claims = isLoggedIn();
+    if (claims === false) {
+      // Not logged in
+      loginDiscordButton.disable = false;
+      loginDiscordButton.translationKey = "main.login_discord";
+      loginDiscordButton.addEventListener("click", discordLogin);
+      logoutDiscordButton.hidden = true;
+    } else {
+      // JWT appears to be valid, assume we are logged in
+      loginDiscordButton.disable = true;
+      loginDiscordButton.translationKey = "main.logged_in";
+      logoutDiscordButton.hidden = false;
+      logoutDiscordButton.addEventListener("click", () => {
+        // Log out
+        logOut();
+        loginDiscordButton.disable = false;
+        loginDiscordButton.translationKey = "main.login_discord";
+        loginDiscordButton.addEventListener("click", discordLogin);
+        logoutDiscordButton.hidden = true;
+      });
+      // Look up the discord user object.
+      // TODO: Add caching
+      getUserMe().then((userMeResponse) => {
+        if (userMeResponse === false) {
+          // Not logged in
+          loginDiscordButton.disable = false;
+          loginDiscordButton.translationKey = "main.login_discord";
+          loginDiscordButton.addEventListener("click", discordLogin);
+          logoutDiscordButton.hidden = true;
+          return;
+        }
+        // TODO: Update the page for logged in user
+      });
+    }
+
+    const settingsModal = document.querySelector(
+      "user-setting",
+    ) as UserSettingModal;
+    settingsModal instanceof UserSettingModal;
+    document.getElementById("settings-button").addEventListener("click", () => {
+      settingsModal.open();
     });
 
     const hostModal = document.querySelector(
@@ -200,6 +259,33 @@ class Client {
         gameRecord: lobby.gameRecord,
       },
       () => {
+        console.log("Closing modals");
+        document.getElementById("settings-button").classList.add("hidden");
+        [
+          "single-player-modal",
+          "host-lobby-modal",
+          "join-private-lobby-modal",
+          "game-starting-modal",
+          "top-bar",
+          "help-modal",
+          "user-setting",
+        ].forEach((tag) => {
+          const modal = document.querySelector(tag) as HTMLElement & {
+            close?: () => void;
+            isModalOpen?: boolean;
+          };
+          if (modal?.close) {
+            modal.close();
+          } else if ("isModalOpen" in modal) {
+            modal.isModalOpen = false;
+          }
+        });
+        this.publicLobby.stop();
+        document.querySelectorAll(".ad").forEach((ad) => {
+          (ad as HTMLElement).style.display = "none";
+        });
+
+        // show when the game loads
         const startingModal = document.querySelector(
           "game-starting-modal",
         ) as GameStartingModal;
@@ -247,6 +333,11 @@ function setFavicon(): void {
 
 // WARNING: DO NOT EXPOSE THIS ID
 export function getPersistentIDFromCookie(): string {
+  const claims = isLoggedIn();
+  if (claims !== false && claims.sub) {
+    return claims.sub;
+  }
+
   const COOKIE_NAME = "player_persistent_id";
 
   // Try to get existing cookie

@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
+import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
 import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
 import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
@@ -15,6 +16,7 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { flattenedEmojiTable } from "../../../core/Util";
 import { MouseUpEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
@@ -26,6 +28,7 @@ import {
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
 import { renderNumber, renderTroops } from "../../Utils";
+import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
 
@@ -122,13 +125,25 @@ export class PlayerPanel extends LitElement implements Layer {
     e.stopPropagation();
     this.emojiTable.showTable((emoji: string) => {
       if (myPlayer == other) {
-        this.eventBus.emit(new SendEmojiIntentEvent(AllPlayers, emoji));
+        this.eventBus.emit(
+          new SendEmojiIntentEvent(
+            AllPlayers,
+            flattenedEmojiTable.indexOf(emoji),
+          ),
+        );
       } else {
-        this.eventBus.emit(new SendEmojiIntentEvent(other, emoji));
+        this.eventBus.emit(
+          new SendEmojiIntentEvent(other, flattenedEmojiTable.indexOf(emoji)),
+        );
       }
       this.emojiTable.hideTable();
       this.hide();
     });
+  }
+
+  private handleChat(e: Event, sender: PlayerView, other: PlayerView) {
+    this.ctModal.open(sender, other);
+    this.hide();
   }
 
   private handleTargetClick(e: Event, other: PlayerView) {
@@ -141,12 +156,22 @@ export class PlayerPanel extends LitElement implements Layer {
     return this;
   }
 
+  private ctModal;
+
   init() {
     this.eventBus.on(MouseUpEvent, (e: MouseEvent) => this.hide());
+
+    this.ctModal = document.querySelector("chat-modal") as ChatModal;
   }
 
-  tick() {
-    this.requestUpdate();
+  async tick() {
+    if (this.isVisible && this.tile) {
+      const myPlayer = this.g.myPlayer();
+      if (myPlayer !== null && myPlayer.isAlive()) {
+        this.actions = await myPlayer.actions(this.tile);
+        this.requestUpdate();
+      }
+    }
   }
 
   getTotalNukesSent(otherId: PlayerID): number {
@@ -178,7 +203,9 @@ export class PlayerPanel extends LitElement implements Layer {
 
     let other = this.g.owner(this.tile);
     if (!other.isPlayer()) {
-      throw new Error("Tile is not owned by a player");
+      this.hide();
+      console.warn("Tile is not owned by a player");
+      return;
     }
     other = other as PlayerView;
 
@@ -279,6 +306,14 @@ export class PlayerPanel extends LitElement implements Layer {
 
             <!-- Action buttons -->
             <div class="flex justify-center gap-2">
+              <button
+                @click=${(e) => this.handleChat(e, myPlayer, other)}
+                class="w-10 h-10 flex items-center justify-center
+                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70
+                           text-white rounded-lg transition-colors"
+              >
+                <img src=${chatIcon} alt="Target" class="w-6 h-6" />
+              </button>
               ${canTarget
                 ? html`<button
                     @click=${(e) => this.handleTargetClick(e, other)}

@@ -7,25 +7,22 @@ import { WebSocket, WebSocketServer } from "ws";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
-import { GameConfig, GameRecord, LogSeverity } from "../core/Schemas";
+import { GameConfig, GameRecord } from "../core/Schemas";
 import { archive, readGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
-import { slog } from "./StructuredLog";
-import { metrics } from "./WorkerMetrics";
+import { initWorkerMetrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
 
-let log = logger.child({ component: "Worker" });
+const workerId = parseInt(process.env.WORKER_ID || "0");
+const log = logger.child({ comp: `w_${workerId}` });
 
 // Worker setup
 export function startWorker() {
-  // Get worker ID from environment variable
-  const workerId = parseInt(process.env.WORKER_ID || "0");
-  log = log.child({ workerId: workerId });
-  log.info(`Worker ${workerId} starting...`);
+  log.info(`Worker starting...`);
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
@@ -36,10 +33,9 @@ export function startWorker() {
 
   const gm = new GameManager(config, log);
 
-  // Set up periodic metrics updates
-  setInterval(() => {
-    metrics.updateGameMetrics(gm);
-  }, 15000); // Update every 15 seconds
+  if (config.env() == GameEnv.Prod && config.otelEnabled()) {
+    initWorkerMetrics(gm);
+  }
 
   // Middleware to handle /wX path prefix
   app.use((req, res, next) => {
@@ -166,8 +162,9 @@ export function startWorker() {
         instantBuild: req.body.instantBuild,
         bots: req.body.bots,
         disableNPCs: req.body.disableNPCs,
-        disableNukes: req.body.disableNukes,
+        disabledUnits: req.body.disabledUnits,
         gameMode: req.body.gameMode,
+        playerTeams: req.body.playerTeams,
       });
       res.status(200).json({ success: true });
     }),
@@ -253,24 +250,6 @@ export function startWorker() {
     }),
   );
 
-  app.get(
-    "/metrics",
-    gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
-      if (req.headers[config.adminHeader()] !== config.adminToken()) {
-        return res.status(403).end("Access denied");
-      }
-      log.info(`metrics requested on worker ${workerId}`);
-
-      try {
-        const metricsData = await metrics.register.metrics();
-        res.set("Content-Type", metrics.register.contentType);
-        res.end(metricsData);
-      } catch (error) {
-        res.status(500).end(error.message);
-      }
-    }),
-  );
-
   // WebSocket handling
   wss.on("connection", (ws: WebSocket, req) => {
     ws.on(
@@ -342,7 +321,7 @@ export function startWorker() {
   // The load balancer will handle routing to this server based on path
   const PORT = config.workerPortByIndex(workerId);
   server.listen(PORT, () => {
-    log.info(`Worker ${workerId} running on http://localhost:${PORT}`);
+    log.info(`running on http://localhost:${PORT}`);
     log.info(`Handling requests with path prefix /w${workerId}/`);
     // Signal to the master process that this worker is ready
     if (process.send) {
@@ -350,44 +329,22 @@ export function startWorker() {
         type: "WORKER_READY",
         workerId: workerId,
       });
-      log.info(`Worker ${workerId} signaled ready state to master`);
+      log.info(`signaled ready state to master`);
     }
   });
 
   // Global error handler
   app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     log.error(`Error in ${req.method} ${req.path}:`, err);
-    slog({
-      logKey: "server_error",
-      msg: `Unhandled exception in ${req.method} ${req.path}: ${err.message}`,
-      severity: LogSeverity.Error,
-      stack: err.stack,
-    });
     res.status(500).json({ error: "An unexpected error occurred" });
   });
 
   // Process-level error handlers
   process.on("uncaughtException", (err) => {
-    log.error(`Worker ${workerId} uncaught exception:`, err);
-    slog({
-      logKey: "uncaught_exception",
-      msg: `Worker ${workerId} uncaught exception: ${err.message}`,
-      severity: LogSeverity.Error,
-      stack: err.stack,
-    });
+    log.error(`uncaught exception:`, err);
   });
 
   process.on("unhandledRejection", (reason, promise) => {
-    log.error(
-      `Worker ${workerId} unhandled rejection at:`,
-      promise,
-      "reason:",
-      reason,
-    );
-    slog({
-      logKey: "unhandled_rejection",
-      msg: `Worker ${workerId} unhandled promise rejection: ${reason}`,
-      severity: LogSeverity.Error,
-    });
+    log.error(`unhandled rejection at:`, promise, "reason:", reason);
   });
 }

@@ -1,4 +1,4 @@
-import { Execution, Game, PlayerInfo, PlayerType } from "../game/Game";
+import { Execution, Game } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -15,6 +15,7 @@ import { EmojiExecution } from "./EmojiExecution";
 import { FakeHumanExecution } from "./FakeHumanExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NoOpExecution } from "./NoOpExecution";
+import { QuickChatExecution } from "./QuickChatExecution";
 import { RetreatExecution } from "./RetreatExecution";
 import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
 import { SpawnExecution } from "./SpawnExecution";
@@ -65,11 +66,16 @@ export class Executor {
           this.mg.ref(intent.x, intent.y),
         );
       case "boat":
+        let src = null;
+        if (intent.srcX != null || intent.srcY != null) {
+          src = this.mg.ref(intent.srcX, intent.srcY);
+        }
         return new TransportShipExecution(
           playerID,
           intent.targetID,
-          this.mg.ref(intent.x, intent.y),
+          this.mg.ref(intent.dstX, intent.dstY),
           intent.troops,
+          src,
         );
       case "allianceRequest":
         return new AllianceRequestExecution(playerID, intent.recipient);
@@ -103,6 +109,13 @@ export class Executor {
           this.mg.ref(intent.x, intent.y),
           intent.unit,
         );
+      case "quick_chat":
+        return new QuickChatExecution(
+          playerID,
+          intent.recipient,
+          intent.quickChatKey,
+          intent.variables ?? {},
+        );
       default:
         throw new Error(`intent type ${intent} not found`);
     }
@@ -115,19 +128,7 @@ export class Executor {
   fakeHumanExecutions(): Execution[] {
     const execs = [];
     for (const nation of this.mg.nations()) {
-      execs.push(
-        new FakeHumanExecution(
-          this.gameID,
-          new PlayerInfo(
-            nation.flag || "",
-            nation.name,
-            PlayerType.FakeHuman,
-            null,
-            this.random.nextID(),
-            nation,
-          ),
-        ),
-      );
+      execs.push(new FakeHumanExecution(this.gameID, nation));
     }
     return execs;
   }

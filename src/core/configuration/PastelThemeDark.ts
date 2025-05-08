@@ -1,16 +1,21 @@
 import { Colord, colord } from "colord";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
-import { PlayerType, Team, TerrainType } from "../game/Game";
+import { ColoredTeams, PlayerType, Team, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import {
   blue,
   botColor,
   botColors,
+  green,
   humanColors,
+  orange,
+  purple,
   red,
+  teal,
   territoryColors,
+  yellow,
 } from "./Colors";
 import { Theme } from "./Config";
 
@@ -36,15 +41,32 @@ export const pastelThemeDark = new (class implements Theme {
 
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
 
+  teamColor(team: Team): Colord {
+    switch (team) {
+      case ColoredTeams.Blue:
+        return blue;
+      case ColoredTeams.Red:
+        return red;
+      case ColoredTeams.Teal:
+        return teal;
+      case ColoredTeams.Purple:
+        return purple;
+      case ColoredTeams.Yellow:
+        return yellow;
+      case ColoredTeams.Orange:
+        return orange;
+      case ColoredTeams.Green:
+        return green;
+      case ColoredTeams.Bot:
+        return botColor;
+      default:
+        return humanColors[simpleHash(team) % humanColors.length];
+    }
+  }
+
   territoryColor(player: PlayerView): Colord {
-    if (player.team() == Team.Bot) {
-      return botColor;
-    }
-    if (player.team() == Team.Red) {
-      return red;
-    }
-    if (player.team() == Team.Blue) {
-      return blue;
+    if (player.team() !== null) {
+      return this.teamColor(player.team());
     }
     if (player.info().playerType == PlayerType.Human) {
       return humanColors[simpleHash(player.id()) % humanColors.length];

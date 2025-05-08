@@ -9,6 +9,7 @@
 </p>
 
 ![Prettier Check](https://github.com/openfrontio/OpenFrontIO/actions/workflows/prettier.yml/badge.svg)
+[![Crowdin](https://badges.crowdin.net/openfront-mls/localized.svg)](https://crowdin.com/project/openfront-mls)
 
 OpenFront is an online real-time strategy game focused on territorial control and alliance building. Players compete to expand their territory, build structures, and form strategic alliances in various maps based on real-world geography.
 
@@ -115,21 +116,23 @@ This project is licensed under the terms found in the [LICENSE](LICENSE) file.
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+1. Request to join the development [Discord](https://discord.gg/K9zernJB5z).
 1. Fork the repository
-2. Create your feature branch (`git checkout -b amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin amazing-feature`)
-5. Open a Pull Request
+1. Create your feature branch (`git checkout -b amazing-feature`)
+1. Commit your changes (`git commit -m 'Add some amazing feature'`)
+1. Push to the branch (`git push origin amazing-feature`)
+1. Open a Pull Request
 
 ## 🌐 Translation
 
 Translators are welcome! Please feel free to help translate into your language.
 How to help?
 
-1. Go to the project's Crowdin translation page: [https://crowdin.com/project/openfrontio](https://crowdin.com/project/openfrontio)
-2. Login if you already have an account/ Sign up if you don't have one
-3. Select the language you want to translate in/ If your language isn't on the list, create a new topic in "Discussions" about adding the language
-4. Translate the strings
+1. Request to join the translation [Discord](https://discord.gg/rUukAnz4Ww)
+1. Go to the project's Crowdin translation page: [https://crowdin.com/project/openfront-mls](https://crowdin.com/project/openfront-mls)
+1. Login if you already have an account/ Sign up if you don't have one
+1. Select the language you want to translate in/ If your language isn't on the list, click the "Request New Language" button and enter the language you want added there.
+1. Translate the strings
 
 ### Project Governance
 

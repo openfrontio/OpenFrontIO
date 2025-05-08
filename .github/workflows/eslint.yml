@@ -1,4 +1,4 @@
-name: ESLint Check
+name: 🔍 ESLint
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 jobs:
-  eslint:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
