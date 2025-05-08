@@ -127,7 +127,6 @@ export class LocalServer {
     }
     const pastTurn: Turn = {
       turnNumber: this.turns.length,
-      gameID: this.lobbyConfig.gameStartInfo.gameID,
       intents: this.intents,
     };
     this.turns.push(pastTurn);

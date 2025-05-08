@@ -1,4 +1,4 @@
-import { Execution, Game, PlayerInfo, PlayerType } from "../game/Game";
+import { Execution, Game } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -65,11 +65,16 @@ export class Executor {
           this.mg.ref(intent.x, intent.y),
         );
       case "boat":
+        let src = null;
+        if (intent.srcX != null || intent.srcY != null) {
+          src = this.mg.ref(intent.srcX, intent.srcY);
+        }
         return new TransportShipExecution(
           playerID,
           intent.targetID,
-          this.mg.ref(intent.x, intent.y),
+          this.mg.ref(intent.dstX, intent.dstY),
           intent.troops,
+          src,
         );
       case "allianceRequest":
         return new AllianceRequestExecution(playerID, intent.recipient);
@@ -115,19 +120,7 @@ export class Executor {
   fakeHumanExecutions(): Execution[] {
     const execs = [];
     for (const nation of this.mg.nations()) {
-      execs.push(
-        new FakeHumanExecution(
-          this.gameID,
-          new PlayerInfo(
-            nation.flag || "",
-            nation.name,
-            PlayerType.FakeHuman,
-            null,
-            this.random.nextID(),
-            nation,
-          ),
-        ),
-      );
+      execs.push(new FakeHumanExecution(this.gameID, nation));
     }
     return execs;
   }
