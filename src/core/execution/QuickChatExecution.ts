@@ -1,10 +1,11 @@
 import quickChatData from "../../../resources/QuickChat.json";
 import { consolex } from "../Consolex";
-import { Execution, Game, Player, PlayerID } from "../game/Game";
+import { Execution, Game, MessageType, Player, PlayerID } from "../game/Game";
 
 export class QuickChatExecution implements Execution {
   private sender: Player;
   private recipient: Player;
+  private mg: Game;
 
   private active = true;
 
@@ -16,6 +17,7 @@ export class QuickChatExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
+    this.mg = mg;
     if (!mg.hasPlayer(this.senderID)) {
       consolex.warn(`QuickChatExecution: sender ${this.senderID} not found`);
       this.active = false;
@@ -36,7 +38,12 @@ export class QuickChatExecution implements Execution {
   tick(ticks: number): void {
     const message = this.getMessageFromKey(this.quickChatKey, this.variables);
 
-    this.sender.displayQuickChat(this.sender, this.recipient, message);
+    this.mg.displayMessage(
+      `${this.sender.name()}: ${message}`,
+      MessageType.CHAT,
+      this.recipient.id(),
+    );
+
     consolex.log(
       `[QuickChat] ${this.sender.name} → ${this.recipient.name}: ${message}`,
     );

@@ -282,7 +282,7 @@ export const QuickChatIntentSchema = BaseIntentSchema.extend({
   type: z.literal("quick_chat"),
   recipient: ID,
   quickChatKey: QuickChatKeySchema,
-  variables: z.record(z.string()).optional(),
+  variables: z.record(SafeString).optional(),
 });
 
 const IntentSchema = z.union([

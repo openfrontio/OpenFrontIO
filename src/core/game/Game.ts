@@ -456,7 +456,6 @@ export interface Player {
   toUpdate(): PlayerUpdate;
   playerProfile(): PlayerProfile;
   tradingPorts(port: Unit): Unit[];
-  displayQuickChat(sender: Player, recipient: Player, message: string);
   // WARNING: this operation is expensive.
   bestTransportShipSpawn(tile: TileRef): TileRef | false;
 }
