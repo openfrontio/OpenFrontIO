@@ -9,6 +9,7 @@ import { Layer } from "./Layer";
 
 interface TeamEntry {
   teamName: string;
+  totalScoreStr: string;
   totalGold: string;
   totalTroops: string;
   players: PlayerView[];
@@ -56,25 +57,33 @@ export class TeamStats extends LitElement implements Layer {
       grouped[team].push(player);
     }
 
-    this.teams = Object.entries(grouped).map(([teamStr, teamPlayers]) => {
-      const team = teamStr;
-      let totalGold = 0;
-      let totalTroops = 0;
+    this.teams = Object.entries(grouped)
+      .map(([teamStr, teamPlayers]) => {
+        let totalGold = 0;
+        let totalTroops = 0;
+        let totalScoreSort = 0;
 
-      for (const p of teamPlayers) {
-        totalGold += p.gold();
-        if (p.isAlive()) {
-          totalTroops += p.troops();
+        for (const p of teamPlayers) {
+          totalGold += p.gold();
+          if (p.isAlive()) {
+            totalTroops += p.troops();
+            totalGold += p.gold();
+            totalScoreSort += p.numTilesOwned();
+          }
         }
-      }
 
-      return {
-        teamName: teamStr,
-        totalGold: renderNumber(totalGold),
-        totalTroops: renderNumber(totalTroops / 10),
-        players: teamPlayers,
-      };
-    });
+        const totalScorePercent = totalScoreSort / this.game.numLandTiles();
+
+        return {
+          teamName: teamStr,
+          totalScoreStr: formatPercentage(totalScorePercent),
+          totalScoreSort,
+          totalGold: renderNumber(totalGold),
+          totalTroops: renderNumber(totalTroops / 10),
+          players: teamPlayers,
+        };
+      })
+      .sort((a, b) => b.totalScoreSort - a.totalScoreSort);
 
     this.requestUpdate();
   }
@@ -172,6 +181,7 @@ export class TeamStats extends LitElement implements Layer {
           <thead>
             <tr>
               <th>Team</th>
+              <th>Owned</th>
               <th>Gold</th>
               <th>Troops</th>
             </tr>
@@ -181,6 +191,7 @@ export class TeamStats extends LitElement implements Layer {
               (team) => html`
                 <tr class="">
                   <td>${team.teamName}</td>
+                  <td>${team.totalScoreStr}</td>
                   <td>${team.totalGold}</td>
                   <td>${team.totalTroops}</td>
                 </tr>
@@ -209,4 +220,18 @@ export class TeamStats extends LitElement implements Layer {
   get isVisible() {
     return !this._teamStatsHidden;
   }
+}
+
+function formatPercentage(value: number): string {
+  const perc = value * 100;
+  if (perc > 99.5) {
+    return "100%";
+  }
+  if (perc < 0.01) {
+    return "0%";
+  }
+  if (perc < 0.1) {
+    return perc.toPrecision(1) + "%";
+  }
+  return perc.toPrecision(2) + "%";
 }
