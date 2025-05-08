@@ -44,6 +44,12 @@ export class QuickChatExecution implements Execution {
       this.recipient.id(),
     );
 
+    this.mg.displayMessage(
+      `You sent to ${this.recipient.name()}: ${message}`,
+      MessageType.CHAT,
+      this.sender.id(),
+    );
+
     consolex.log(
       `[QuickChat] ${this.sender.name} → ${this.recipient.name}: ${message}`,
     );
