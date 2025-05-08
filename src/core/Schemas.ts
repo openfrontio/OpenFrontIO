@@ -371,42 +371,41 @@ export const ServerMessageSchema = z.union([
 
 // Client
 
-const ClientBaseMessageSchema = z.object({
-  type: z.enum(["winner", "join", "intent", "ping", "log", "hash"]),
-});
-
-export const ClientSendWinnerSchema = ClientBaseMessageSchema.extend({
+export const ClientSendWinnerSchema = z.object({
   type: z.literal("winner"),
   winner: z.union([ID, TeamSchema]).nullable(),
   allPlayersStats: AllPlayersStatsSchema,
   winnerType: z.enum(["player", "team"]),
 });
 
-export const ClientHashSchema = ClientBaseMessageSchema.extend({
+export const ClientHashSchema = z.object({
   type: z.literal("hash"),
   hash: z.number(),
   turnNumber: z.number(),
 });
 
-export const ClientLogMessageSchema = ClientBaseMessageSchema.extend({
+export const ClientLogMessageSchema = z.object({
   type: z.literal("log"),
   severity: z.nativeEnum(LogSeverity),
   log: ID,
   persistentID: SafeString,
 });
 
-export const ClientPingMessageSchema = ClientBaseMessageSchema.extend({
+export const ClientPingMessageSchema = z.object({
   type: z.literal("ping"),
 });
 
-export const ClientIntentMessageSchema = ClientBaseMessageSchema.extend({
+export const ClientIntentMessageSchema = z.object({
   type: z.literal("intent"),
   intent: IntentSchema,
 });
 
 // WARNING: never send this message to clients.
-export const ClientJoinMessageSchema = ClientBaseMessageSchema.extend({
+export const ClientJoinMessageSchema = z.object({
   type: z.literal("join"),
+  clientID: ID,
+  persistentID: SafeString, // WARNING: PII
+  gameID: ID,
   lastTurn: z.number(), // The last turn the client saw.
   username: SafeString,
   flag: SafeString.nullable().optional(),
