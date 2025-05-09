@@ -34,11 +34,6 @@ on:
     branches:
       - "*"
 
-  # FOR TESTING ONLY -- REMOVE BEFORE SUBMIT
-  pull_request:
-    branches:
-      - main
-
 jobs:
   deploy:
     # Don't deploy on push if this is a fork
@@ -153,11 +148,9 @@ jobs:
           echo "Deployment started in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
           echo "::endgroup::"
       - name: 🚀 Notify PR
-        if: ${{ success() && github.event_name == 'push'
-          && github.repository != 'openfrontio/OpenFrontIO'
-          }}
+        if: ${{ success() && github.event_name == 'push' }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
         run: |
           set -euxo pipefail
           if [ -z "$GH_TOKEN" ]; then
