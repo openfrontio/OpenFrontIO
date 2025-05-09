@@ -19,6 +19,7 @@ import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
+import { NewsModal } from "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
@@ -26,6 +27,8 @@ import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import { generateCryptoRandomUUID } from "./Utils";
+import "./components/NewsButton";
+import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
 import { OButton } from "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
@@ -57,6 +60,23 @@ class Client {
   constructor() {}
 
   initialize(): void {
+    const newsModal = document.querySelector("news-modal") as NewsModal;
+    if (!newsModal) {
+      consolex.warn("News modal element not found");
+    } else {
+      consolex.log("News modal element found");
+    }
+    newsModal instanceof NewsModal;
+    const newsButton = document.querySelector("news-button") as NewsButton;
+    if (!newsButton) {
+      consolex.warn("News button element not found");
+    } else {
+      consolex.log("News button element found");
+    }
+
+    // Comment out to show news button.
+    newsButton.hidden = true;
+
     const langSelector = document.querySelector(
       "lang-selector",
     ) as LangSelector;
