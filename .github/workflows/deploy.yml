@@ -62,13 +62,16 @@ jobs:
     steps:
       - uses: actions/create-github-app-token@v2
         id: generate-token
+        if: ${{ github.repository == 'openfrontio/OpenFrontIO' }}
         with:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-      - name: Use the token
+      - name: Export the token
+        if: ${{ github.repository == 'openfrontio/OpenFrontIO' }}
         env:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
         run: |
+          echo "GH_TOKEN=$GH_TOKEN" >> $GITHUB_ENV
           gh api octocat
       - uses: actions/checkout@v4
       - name: 📝 Update deployment status
@@ -149,14 +152,8 @@ jobs:
           echo "::endgroup::"
       - name: 🚀 Notify PR
         if: ${{ success() && github.event_name == 'push' }}
-        env:
-          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
         run: |
           set -euxo pipefail
-          if [ -z "$GH_TOKEN" ]; then
-            echo "No GH_TOKEN found, skipping"
-            exit 0;
-          fi
           echo "Checking for open PR from $GITHUB_HEAD_REF..."
           pr_url=$(gh pr list --head "$GITHUB_HEAD_REF" --state open --json url -q '.[0].url')
           if [ -z "$pr_url" ]; then
