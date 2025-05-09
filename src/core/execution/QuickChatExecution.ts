@@ -1,5 +1,5 @@
 import { consolex } from "../Consolex";
-import { Execution, Game, MessageType, Player, PlayerID } from "../game/Game";
+import { Execution, Game, Player, PlayerID } from "../game/Game";
 
 export class QuickChatExecution implements Execution {
   private sender: Player;
@@ -37,16 +37,22 @@ export class QuickChatExecution implements Execution {
   tick(ticks: number): void {
     const message = this.getMessageFromKey(this.quickChatKey, this.variables);
 
-    this.mg.displayMessage(
-      `chat.from-${message}-${this.sender.name()}`,
-      MessageType.CHAT,
+    this.mg.displayChat(
+      message[1],
+      message[0],
+      this.variables,
       this.recipient.id(),
+      true,
+      this.recipient.name(),
     );
 
-    this.mg.displayMessage(
-      `chat.to-${message}-${this.sender.name()}`,
-      MessageType.CHAT,
+    this.mg.displayChat(
+      message[1],
+      message[0],
+      this.variables,
       this.sender.id(),
+      false,
+      this.recipient.name(),
     );
 
     consolex.log(
@@ -71,14 +77,8 @@ export class QuickChatExecution implements Execution {
   private getMessageFromKey(
     fullKey: string,
     vars: Record<string, string>,
-  ): string {
-    let translated = `chat.${fullKey}`;
-    const suffix = Object.entries(vars)
-      .map(([k, v]) => `${k}=${v}`)
-      .join(":");
-    if (suffix) {
-      translated += `:${suffix}`;
-    }
+  ): string[] {
+    const translated = fullKey.split(".");
     return translated;
   }
 }

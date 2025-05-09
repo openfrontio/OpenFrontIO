@@ -16,6 +16,7 @@ import {
   AllianceRequestUpdate,
   AttackUpdate,
   BrokeAllianceUpdate,
+  DisplayChatMessageUpdate,
   DisplayMessageUpdate,
   EmojiUpdate,
   GameUpdateType,
@@ -79,6 +80,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
   private updateMap = new Map([
     [GameUpdateType.DisplayEvent, (u) => this.onDisplayMessageEvent(u)],
+    [GameUpdateType.DisplayChatEvent, (u) => this.onDisplayChatEvent(u)],
     [GameUpdateType.AllianceRequest, (u) => this.onAllianceRequestEvent(u)],
     [
       GameUpdateType.AllianceRequestReply,
@@ -180,39 +182,39 @@ export class EventsDisplay extends LitElement implements Layer {
       return;
     }
 
-    if (event.messageType === MessageType.CHAT) {
-      if (
-        event.message.startsWith("chat.to-") ||
-        event.message.startsWith("chat.from-")
-      ) {
-        const [prefix, rawMsg, user] = event.message.split("-");
-        let msg = rawMsg;
-        const vars: Record<string, string> = { user };
-
-        if (rawMsg.includes(":")) {
-          const [baseMsg, ...rest] = rawMsg.split(":");
-          msg = baseMsg;
-          for (const pair of rest) {
-            const [k, v] = pair.split("=");
-            if (k && v) vars[k] = v;
-          }
-        }
-
-        let translated_msg = translateText(msg);
-        translated_msg = translated_msg.replace(
-          /\[([^\]]+)\]/g,
-          (_, key) => vars[key] || `[${key}]`,
-        );
-        event.message = translateText(prefix, { ...vars, msg: translated_msg });
-      }
-    }
-
     this.addEvent({
       description: event.message,
       createdAt: this.game.ticks(),
       highlight: true,
       type: event.messageType,
       unsafeDescription: true,
+    });
+  }
+
+  onDisplayChatEvent(event: DisplayChatMessageUpdate) {
+    const myPlayer = this.game.playerByClientID(this.clientID);
+    if (
+      event.playerID != null &&
+      (!myPlayer || myPlayer.smallID() !== event.playerID)
+    ) {
+      return;
+    }
+
+    const baseMessage = translateText(`chat.${event.category}.${event.key}`);
+    const translatedMessage = baseMessage.replace(
+      /\[([^\]]+)\]/g,
+      (_, key) => event.variables?.[key] || `[${key}]`,
+    );
+
+    this.addEvent({
+      description: translateText(event.isFrom ? "chat.from" : "chat.to", {
+        user: event.recipient,
+        msg: translatedMessage,
+      }),
+      createdAt: this.game.ticks(),
+      highlight: true,
+      type: MessageType.CHAT,
+      unsafeDescription: false,
     });
   }
 
