@@ -109,9 +109,6 @@ export const pastelTheme = new (class implements Theme {
   focusedBorderColor(): Colord {
     return colord({ r: 230, g: 230, b: 230 });
   }
-  focusedDefendedBorderColor(): Colord {
-    return colord({ r: 200, g: 200, b: 200 });
-  }
 
   terrainColor(gm: GameMap, tile: TileRef): Colord {
     const mag = gm.magnitude(tile);
