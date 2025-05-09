@@ -33,6 +33,8 @@ import { onlyImages } from "../../../core/Util";
 import { renderTroops } from "../../Utils";
 import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
 
+import { translateText } from "../../Utils";
+
 interface Event {
   description: string;
   unsafeDescription?: boolean;
@@ -176,6 +178,33 @@ export class EventsDisplay extends LitElement implements Layer {
       (!myPlayer || myPlayer.smallID() !== event.playerID)
     ) {
       return;
+    }
+
+    if (event.messageType === MessageType.CHAT) {
+      if (
+        event.message.startsWith("chat.to-") ||
+        event.message.startsWith("chat.from-")
+      ) {
+        const [prefix, rawMsg, user] = event.message.split("-");
+        let msg = rawMsg;
+        const vars: Record<string, string> = { user };
+
+        if (rawMsg.includes(":")) {
+          const [baseMsg, ...rest] = rawMsg.split(":");
+          msg = baseMsg;
+          for (const pair of rest) {
+            const [k, v] = pair.split("=");
+            if (k && v) vars[k] = v;
+          }
+        }
+
+        let translated_msg = translateText(msg);
+        translated_msg = translated_msg.replace(
+          /\[([^\]]+)\]/g,
+          (_, key) => vars[key] || `[${key}]`,
+        );
+        event.message = translateText(prefix, { ...vars, msg: translated_msg });
+      }
     }
 
     this.addEvent({

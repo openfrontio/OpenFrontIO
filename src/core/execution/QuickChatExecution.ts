@@ -1,4 +1,3 @@
-import quickChatData from "../../../resources/QuickChat.json";
 import { consolex } from "../Consolex";
 import { Execution, Game, MessageType, Player, PlayerID } from "../game/Game";
 
@@ -39,13 +38,13 @@ export class QuickChatExecution implements Execution {
     const message = this.getMessageFromKey(this.quickChatKey, this.variables);
 
     this.mg.displayMessage(
-      `${this.sender.name()}: ${message}`,
+      `chat.to-${message}-${this.sender.name()}`,
       MessageType.CHAT,
       this.recipient.id(),
     );
 
     this.mg.displayMessage(
-      `You sent to ${this.recipient.name()}: ${message}`,
+      `chat.from-${message}-${this.sender.name()}`,
       MessageType.CHAT,
       this.sender.id(),
     );
@@ -73,26 +72,13 @@ export class QuickChatExecution implements Execution {
     fullKey: string,
     vars: Record<string, string>,
   ): string {
-    // Key for translation
-    const [category, key] = fullKey.split(".");
-    const phrases = quickChatData[category];
-
-    if (!phrases) {
-      consolex.warn(`QuickChat: Unknown category '${category}'`);
-      return `[${fullKey}]`;
+    let translated = `chat.${fullKey}`;
+    const suffix = Object.entries(vars)
+      .map(([k, v]) => `${k}=${v}`)
+      .join(":");
+    if (suffix) {
+      translated += `:${suffix}`;
     }
-
-    const phraseObj = phrases.find((p) => p.key === key);
-    if (!phraseObj) {
-      consolex.warn(
-        `QuickChat: Key '${key}' not found in category '${category}'`,
-      );
-      return `[${fullKey}]`;
-    }
-
-    return phraseObj.text.replace(
-      /\[(\w+)\]/g,
-      (_, p1) => vars[p1] || `[${p1}]`,
-    );
+    return translated;
   }
 }

@@ -7,10 +7,10 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import quickChatData from "../../../../resources/QuickChat.json";
 import { EventBus } from "../../../core/EventBus";
 import { SendQuickChatEvent } from "../../Transport";
+import { translateText } from "../../Utils";
 
 type QuickChatPhrase = {
   key: string;
-  text: string;
   requiresPlayer: boolean;
 };
 
@@ -58,12 +58,12 @@ export class ChatModal extends LitElement {
   };
 
   private categories = [
-    { id: "help", name: "Help" },
-    { id: "attack", name: "Attack" },
-    { id: "defend", name: "Defend" },
-    { id: "greet", name: "Greetings" },
-    { id: "misc", name: "Miscellaneous" },
-    { id: "warnings", name: "Warnings" },
+    { id: "help" },
+    { id: "attack" },
+    { id: "defend" },
+    { id: "greet" },
+    { id: "misc" },
+    { id: "warnings" },
   ];
 
   private getPhrasesForCategory(categoryId: string) {
@@ -83,10 +83,10 @@ export class ChatModal extends LitElement {
 
     const displayPlayers = [...filteredPlayers, ...otherPlayers];
     return html`
-      <o-modal title="Quick Chat">
+      <o-modal title="${translateText("chat.title")}">
         <div class="chat-columns">
           <div class="chat-column">
-            <div class="column-title">Category</div>
+            <div class="column-title">${translateText("chat.category")}</div>
             ${this.categories.map(
               (category) => html`
                 <button
@@ -96,7 +96,7 @@ export class ChatModal extends LitElement {
                     : ""}"
                   @click=${() => this.selectCategory(category.id)}
                 >
-                  ${category.name}
+                  ${translateText(`chat.cat.${category.id}`)}
                 </button>
               `,
             )}
@@ -105,13 +105,18 @@ export class ChatModal extends LitElement {
           ${this.selectedCategory
             ? html`
                 <div class="chat-column">
-                  <div class="column-title">Phrase</div>
+                  <div class="column-title">
+                    ${translateText("chat.phrase")}
+                  </div>
                   <div class="phrase-scroll-area">
                     ${this.getPhrasesForCategory(this.selectedCategory).map(
                       (phrase) => html`
                         <button
                           class="chat-option-button ${this
-                            .selectedPhraseText === phrase.text
+                            .selectedPhraseText ===
+                          translateText(
+                            `chat.${this.selectedCategory}.${phrase.key}`,
+                          )
                             ? "selected"
                             : ""}"
                           @click=${() => this.selectPhrase(phrase)}
@@ -127,12 +132,14 @@ export class ChatModal extends LitElement {
           ${this.requiresPlayerSelection || this.selectedPlayer
             ? html`
                 <div class="chat-column">
-                  <div class="column-title">Player</div>
+                  <div class="column-title">
+                    ${translateText("chat.player")}
+                  </div>
 
                   <input
                     class="player-search-input"
                     type="text"
-                    placeholder="Search player..."
+                    placeholder="${translateText("chat.search")}"
                     .value=${this.playerSearchQuery}
                     @input=${this.onPlayerSearchInput}
                   />
@@ -158,7 +165,9 @@ export class ChatModal extends LitElement {
         </div>
 
         <div class="chat-preview">
-          ${this.previewText || "Build your message..."}
+          ${this.previewText
+            ? translateText(this.previewText)
+            : translateText("chat.build")}
         </div>
         <div class="chat-send">
           <button
@@ -166,7 +175,7 @@ export class ChatModal extends LitElement {
             @click=${this.sendChatMessage}
             ?disabled=${!this.previewText}
           >
-            Send
+            ${translateText("chat.send")}
           </button>
         </div>
       </o-modal>
@@ -183,20 +192,24 @@ export class ChatModal extends LitElement {
   }
 
   private selectPhrase(phrase: QuickChatPhrase) {
-    this.selectedPhraseTemplate = phrase.text;
-    this.selectedPhraseText = phrase.text;
     this.selectedQuickChatKey = this.getFullQuickChatKey(
       this.selectedCategory!,
       phrase.key,
     );
-    this.previewText = phrase.text;
+    this.selectedPhraseTemplate = translateText(
+      `chat.${this.selectedCategory}.${phrase.key}`,
+    );
+    this.selectedPhraseText = translateText(
+      `chat.${this.selectedCategory}.${phrase.key}`,
+    );
+    this.previewText = `chat.${this.selectedCategory}.${phrase.key}`;
     this.requiresPlayerSelection = phrase.requiresPlayer;
     this.selectedPlayer = null;
     this.requestUpdate();
   }
 
-  private renderPhrasePreview(phrase: { text: string }) {
-    return phrase.text.replace("[P1]", "___"); // 仮表示
+  private renderPhrasePreview(phrase: { key: string }) {
+    return translateText(`chat.${this.selectedCategory}.${phrase.key}`);
   }
 
   private selectPlayer(player: string) {
@@ -270,6 +283,7 @@ export class ChatModal extends LitElement {
       this.recipient = recipient;
       this.sender = sender;
     }
+    this.requestUpdate();
     this.modalEl?.open();
   }
 

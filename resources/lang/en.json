@@ -244,5 +244,78 @@
     "move_right_desc": "Move the camera to the right",
     "reset": "Reset",
     "unbind": "Unbind"
+  },
+  "chat": {
+    "title": "Quick Chat",
+    "to": "Sent {user}: {msg}",
+    "from": "From {user}: {msg}",
+    "category": "Category",
+    "phrase": "Phrase",
+    "player": "Player",
+    "send": "Send",
+    "search": "Search player...",
+    "build": "Build your message...",
+    "cat": {
+      "help": "Help",
+      "attack": "Attack",
+      "defend": "Defend",
+      "greet": "Greetings",
+      "misc": "Miscellaneous",
+      "warnings": "Warnings"
+    },
+    "help": {
+      "troops": "Please give me troops!",
+      "gold": "Please give me gold!",
+      "no_attack": "Please don't attack me!",
+      "sorry_attack": "Sorry, I didn’t mean to attack.",
+      "alliance": "Alliance?",
+      "help_defend": "Help me defend against [P1]!",
+      "team_up": "Let’s team up against [P1]!"
+    },
+    "attack": {
+      "attack": "Attack [P1]!",
+      "mirv": "Launch a MIRV at [P1]!",
+      "focus": "Focus fire on [P1]!",
+      "finish": "Let's finish off [P1]!"
+    },
+    "defend": {
+      "defend": "Defend [P1]!",
+      "dont_attack": "Don’t attack [P1]!",
+      "ally": "[P1] is my ally!"
+    },
+    "greet": {
+      "hello": "Hello!",
+      "good_luck": "Good luck!",
+      "have_fun": "Have fun!",
+      "gg": "GG!",
+      "nice_to_meet": "Nice to meet you!",
+      "well_played": "Well played!",
+      "hi_again": "Hi again!",
+      "bye": "Bye!",
+      "thanks": "Thanks!",
+      "oops": "Oops, wrong button!",
+      "trust_me": "You can trust me. Promise!",
+      "trust_broken": "I trusted you..."
+    },
+    "misc": {
+      "go": "Let’s go!",
+      "strategy": "Nice strategy!",
+      "fun": "This game is fun!",
+      "pr": "When will my PR finally get merged...?"
+    },
+    "warnings": {
+      "strong": "[P1] is strong.",
+      "weak": "[P1] is weak.",
+      "mirv_soon": "[P1] can launch a MIRV soon!",
+      "number1_warning": "The #1 player will win soon unless we team up!",
+      "stalemate": "Let's make peace. This is a stalemate, we will both lose.",
+      "has_allies": "[P1] has many allies.",
+      "no_allies": "[P1] has no allies.",
+      "betrayed": "[P1] betrayed their ally!",
+      "getting_big": "[P1] is growing too fast!",
+      "danger_base": "[P1] is unprotected!",
+      "saving_for_mirv": "[P1] is saving up to launch a MIRV.",
+      "mirv_ready": "[P1] has enough gold to launch a MIRV!"
+    }
   }
 }
