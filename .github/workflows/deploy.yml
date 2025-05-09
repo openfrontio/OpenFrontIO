@@ -134,7 +134,7 @@ jobs:
           VERSION_TAG: latest
         run: |
           echo "::group::deploy.sh"
-          ./deploy.sh "$ENV" "$HOST" "$SUBDOMAIN"
+          # ./deploy.sh "$ENV" "$HOST" "$SUBDOMAIN"
           echo "Deployment created in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
           echo "::endgroup::"
       - name: ⏳ Wait for deployment to start
