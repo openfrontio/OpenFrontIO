@@ -152,13 +152,19 @@ jobs:
           echo "::endgroup::"
       - name: 🚀 Notify PR
         if: ${{ success() && github.event_name == 'push' }}
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           set -euxo pipefail
-          echo "Checking for open PR from $GITHUB_HEAD_REF..."
-          pr_url=$(gh pr list --head "$GITHUB_HEAD_REF" --state open --json url -q '.[0].url')
+          if [ -z "${HEAD_REF}" ]; then
+            echo "No HEAD ref found"
+            exit 0
+          fi
+          echo "Checking for open PR from $HEAD_REF..."
+          pr_url=$(gh pr list --head "$HEAD_REF" --state open --json url -q '.[0].url')
           if [ -z "$pr_url" ]; then
-            echo "No open PR found for branch $GITHUB_HEAD_REF"
-            exit 0;
+            echo "No open PR found for branch $HEAD_REF"
+            exit 0
           fi
           gh pr comment "$pr_url" --body "🚀 Deployed ${GITHUB_SHA} to [$FQDN](https://$FQDN)."
       - name: ✅ Update deployment status
