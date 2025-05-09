@@ -60,6 +60,17 @@ jobs:
       DOMAIN: ${{ inputs.target_domain || 'openfront.dev' }}
       SUBDOMAIN: ${{ github.event_name == 'push' && github.ref_name || inputs.target_subdomain || 'main' }}
     steps:
+      - uses: actions/checkout@v4
+      - name: 📝 Update job summary
+        env:
+          FQDN: ${{ env.SUBDOMAIN && format('{0}.{1}', env.SUBDOMAIN, env.DOMAIN) || env.DOMAIN || 'openfront.dev' }}
+        run: |
+          echo "FQDN=$FQDN" >> $GITHUB_ENV
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          ### In progress :ship:
+
+          Deploying from $GITHUB_REF to $FQDN
+          EOF
       - uses: actions/create-github-app-token@v2
         id: generate-token
         if: ${{ github.repository == 'openfrontio/OpenFrontIO' }}
@@ -73,17 +84,6 @@ jobs:
         run: |
           echo "GH_TOKEN=$GH_TOKEN" >> $GITHUB_ENV
           gh api octocat
-      - uses: actions/checkout@v4
-      - name: 📝 Update job summary
-        env:
-          FQDN: ${{ env.SUBDOMAIN && format('{0}.{1}', env.SUBDOMAIN, env.DOMAIN) || env.DOMAIN || 'openfront.dev' }}
-        run: |
-          echo "FQDN=$FQDN" >> $GITHUB_ENV
-          cat <<EOF >> $GITHUB_STEP_SUMMARY
-          ### In progress :ship:
-
-          Deploying from $GITHUB_REF to $FQDN
-          EOF
       - name: 📝 Create deployment
         uses: chrnorm/deployment-action@v2
         id: deployment
