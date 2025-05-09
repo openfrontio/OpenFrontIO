@@ -88,7 +88,7 @@ jobs:
         uses: chrnorm/deployment-action@v2
         id: deployment
         with:
-          token: ${{ github.token }}
+          token: ${{ steps.generate-token.outputs.token }}
           environment-url: https://${{ env.FQDN }}
           environment: ${{ env.FQDN }}
       - name: 🔗 Log in to Docker Hub
@@ -165,7 +165,7 @@ jobs:
         if: success()
         uses: chrnorm/deployment-status@v2
         with:
-          token: ${{ github.token }}
+          token: ${{ steps.generate-token.outputs.token }}
           environment-url: https://${{ env.FQDN }}
           state: success
           deployment-id: ${{ steps.deployment.outputs.deployment_id }}
@@ -181,7 +181,7 @@ jobs:
         if: failure()
         uses: chrnorm/deployment-status@v2
         with:
-          token: ${{ github.token }}
+          token: ${{ steps.generate-token.outputs.token }}
           environment-url: https://${{ env.FQDN }}
           state: failure
           deployment-id: ${{ steps.deployment.outputs.deployment_id }}
