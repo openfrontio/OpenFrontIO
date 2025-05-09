@@ -153,17 +153,17 @@ jobs:
       - name: 🚀 Notify PR
         if: ${{ success() && github.event_name == 'push' }}
         env:
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          BRANCH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
         run: |
           set -euxo pipefail
-          if [ -z "${HEAD_REF}" ]; then
-            echo "No HEAD ref found"
-            exit 0
+          if [ -z "${BRANCH}" ]; then
+            echo "Branch not found"
+            exit 1
           fi
-          echo "Checking for open PR from $HEAD_REF..."
-          pr_url=$(gh pr list --head "$HEAD_REF" --state open --json url -q '.[0].url')
+          echo "Checking for open PR from $BRANCH..."
+          pr_url=$(gh pr list --head "$BRANCH" --state open --json url -q '.[0].url')
           if [ -z "$pr_url" ]; then
-            echo "No open PR found for branch $HEAD_REF"
+            echo "No open PR found for branch $BRANCH"
             exit 0
           fi
           gh pr comment "$pr_url" --body "🚀 Deployed ${GITHUB_SHA} to [$FQDN](https://$FQDN)."
