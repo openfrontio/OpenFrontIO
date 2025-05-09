@@ -74,7 +74,7 @@ jobs:
           echo "GH_TOKEN=$GH_TOKEN" >> $GITHUB_ENV
           gh api octocat
       - uses: actions/checkout@v4
-      - name: 📝 Update deployment status
+      - name: 📝 Update job summary
         env:
           FQDN: ${{ env.SUBDOMAIN && format('{0}.{1}', env.SUBDOMAIN, env.DOMAIN) || env.DOMAIN || 'openfront.dev' }}
         run: |
@@ -84,7 +84,7 @@ jobs:
 
           Deploying from $GITHUB_REF to $FQDN
           EOF
-      - name: 📝 Create GitHub deployment
+      - name: 📝 Create deployment
         uses: chrnorm/deployment-action@v2
         id: deployment
         with:
