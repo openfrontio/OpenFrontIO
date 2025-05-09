@@ -7,13 +7,13 @@ import { WebSocket, WebSocketServer } from "ws";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
-import { GameConfig, GameRecord } from "../core/Schemas";
+import { ClientMessageSchema, GameConfig, GameRecord } from "../core/Schemas";
 import { archive, readGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
-import { metrics } from "./WorkerMetrics";
+import { initWorkerMetrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
 
@@ -33,10 +33,9 @@ export function startWorker() {
 
   const gm = new GameManager(config, log);
 
-  // Set up periodic metrics updates
-  setInterval(() => {
-    metrics.updateGameMetrics(gm);
-  }, 15000); // Update every 15 seconds
+  if (config.env() == GameEnv.Prod && config.otelEnabled()) {
+    initWorkerMetrics(gm);
+  }
 
   // Middleware to handle /wX path prefix
   app.use((req, res, next) => {
@@ -163,9 +162,9 @@ export function startWorker() {
         instantBuild: req.body.instantBuild,
         bots: req.body.bots,
         disableNPCs: req.body.disableNPCs,
-        disableNukes: req.body.disableNukes,
+        disabledUnits: req.body.disabledUnits,
         gameMode: req.body.gameMode,
-        numPlayerTeams: req.body.numPlayerTeams,
+        playerTeams: req.body.playerTeams,
       });
       res.status(200).json({ success: true });
     }),
@@ -251,24 +250,6 @@ export function startWorker() {
     }),
   );
 
-  app.get(
-    "/metrics",
-    gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
-      if (req.headers[config.adminHeader()] !== config.adminToken()) {
-        return res.status(403).end("Access denied");
-      }
-      log.info(`metrics requested on worker ${workerId}`);
-
-      try {
-        const metricsData = await metrics.register.metrics();
-        res.set("Content-Type", metrics.register.contentType);
-        res.end(metricsData);
-      } catch (error) {
-        res.status(500).end(error.message);
-      }
-    }),
-  );
-
   // WebSocket handling
   wss.on("connection", (ws: WebSocket, req) => {
     ws.on(
@@ -282,7 +263,9 @@ export function startWorker() {
         try {
           // Process WebSocket messages as in your original code
           // Parse and handle client messages
-          const clientMsg = JSON.parse(message.toString());
+          const clientMsg = ClientMessageSchema.parse(
+            JSON.parse(message.toString()),
+          );
 
           if (clientMsg.type == "join") {
             // Verify this worker should handle this game

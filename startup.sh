@@ -78,13 +78,30 @@ else
     --data "{\"type\":\"CNAME\",\"name\":\"${SUBDOMAIN}\",\"content\":\"${TUNNEL_ID}.cfargotunnel.com\",\"ttl\":1,\"proxied\":true}")
 fi
 
-
 # Log the tunnel information
 echo "Tunnel is set up! Site will be available at: https://${SUBDOMAIN}.${DOMAIN}"
 
-
 # Export the tunnel token for supervisord
 export CLOUDFLARE_TUNNEL_TOKEN=${TUNNEL_TOKEN}
+
+
+# Check if Basic Auth credentials are set
+if [ -z "$BASIC_AUTH_USER" ] || [ -z "$BASIC_AUTH_PASS" ]; then
+  echo "HTTP Basic Authentication will be disabled"
+else
+  # Create the htpasswd file
+  echo "Creating basic auth credentials for user: ${BASIC_AUTH_USER}"
+  # Ensure apache2-utils is installed for htpasswd
+  command -v htpasswd >/dev/null 2>&1 || { echo "htpasswd not found, installing apache2-utils..."; apt-get update && apt-get install -y apache2-utils; }
+  # Create the password file
+  htpasswd -bc /etc/nginx/.htpasswd ${BASIC_AUTH_USER} ${BASIC_AUTH_PASS}
+  
+  # Update Nginx configuration to enable Basic Auth
+  sed -i '1i auth_basic "Restricted Access";' /etc/nginx/conf.d/default.conf
+  sed -i '2i auth_basic_user_file /etc/nginx/.htpasswd;' /etc/nginx/conf.d/default.conf
+  
+  echo "HTTP Basic Authentication enabled for user: ${BASIC_AUTH_USER}"
+fi
 
 # Start supervisord
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

@@ -37,16 +37,20 @@ export enum Difficulty {
   Impossible = "Impossible",
 }
 
-export enum Team {
-  Red = "Red",
-  Blue = "Blue",
-  Teal = "Teal",
-  Purple = "Purple",
-  Yellow = "Yellow",
-  Orange = "Orange",
-  Green = "Green",
-  Bot = "Bot",
-}
+export type Team = string;
+
+export const Duos = "Duos" as const;
+
+export const ColoredTeams: Record<string, Team> = {
+  Red: "Red",
+  Blue: "Blue",
+  Teal: "Teal",
+  Purple: "Purple",
+  Yellow: "Yellow",
+  Orange: "Orange",
+  Green: "Green",
+  Bot: "Bot",
+} as const;
 
 export enum GameMapType {
   World = "World",
@@ -68,8 +72,9 @@ export enum GameMapType {
   Japan = "Japan",
   BetweenTwoSeas = "Between Two Seas",
   KnownWorld = "Known World",
-  FaroeIslands = "FaroeIslands",
+  FaroeIslands = "Faroe Islands",
   DeglaciatedAntarctica = "Deglaciated Antarctica",
+  FalklandIslands = "Falkland Islands",
 }
 
 export const mapCategories: Record<string, GameMapType[]> = {
@@ -93,6 +98,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Mena,
     GameMapType.Australia,
     GameMapType.FaroeIslands,
+    GameMapType.FalklandIslands,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -158,10 +164,9 @@ export enum Relation {
 
 export class Nation {
   constructor(
-    public readonly flag: string,
-    public readonly name: string,
-    public readonly cell: Cell,
+    public readonly spawnCell: Cell,
     public readonly strength: number,
+    public readonly playerInfo: PlayerInfo,
   ) {}
 }
 
@@ -554,6 +559,7 @@ export enum MessageType {
   INFO,
   WARN,
   ERROR,
+  CHAT,
 }
 
 export interface NameViewData {

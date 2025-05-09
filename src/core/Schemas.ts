@@ -1,14 +1,16 @@
 import { z } from "zod";
+import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
 import {
   AllPlayers,
   Difficulty,
+  Duos,
   GameMapType,
   GameMode,
   GameType,
   PlayerType,
-  Team,
   UnitType,
 } from "./game/Game";
+import { flattenedEmojiTable } from "./Util";
 
 export type GameID = string;
 export type ClientID = string;
@@ -28,6 +30,7 @@ export type Intent =
   | TargetTroopRatioIntent
   | BuildUnitIntent
   | EmbargoIntent
+  | QuickChatIntent
   | MoveWarshipIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
@@ -49,6 +52,7 @@ export type TargetTroopRatioIntent = z.infer<
 >;
 export type BuildUnitIntent = z.infer<typeof BuildUnitIntentSchema>;
 export type MoveWarshipIntent = z.infer<typeof MoveWarshipIntentSchema>;
+export type QuickChatIntent = z.infer<typeof QuickChatIntentSchema>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -115,14 +119,17 @@ const GameConfigSchema = z.object({
   gameType: z.nativeEnum(GameType),
   gameMode: z.nativeEnum(GameMode),
   disableNPCs: z.boolean(),
-  disableNukes: z.boolean(),
   bots: z.number().int().min(0).max(400),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
   maxPlayers: z.number().optional(),
   numPlayerTeams: z.number().optional(),
+  disabledUnits: z.array(z.nativeEnum(UnitType)).optional(),
+  playerTeams: z.union([z.number().optional(), z.literal(Duos)]),
 });
+
+export const TeamSchema = z.string();
 
 const SafeString = z
   .string()
@@ -131,14 +138,12 @@ const SafeString = z
   )
   .max(1000);
 
-const EmojiSchema = z.string().refine(
-  (val) => {
-    return /\p{Emoji}/u.test(val);
-  },
-  {
-    message: "Must contain at least one emoji character",
-  },
-);
+const PersistentIdSchema = z.string().uuid();
+
+const EmojiSchema = z
+  .number()
+  .nonnegative()
+  .max(flattenedEmojiTable.length - 1);
 const ID = z
   .string()
   .regex(/^[a-zA-Z0-9]+$/)
@@ -270,6 +275,19 @@ export const MoveWarshipIntentSchema = BaseIntentSchema.extend({
   tile: z.number(),
 });
 
+export const QuickChatKeySchema = z.enum(
+  Object.entries(quickChatData).flatMap(([category, entries]) =>
+    entries.map((entry) => `${category}.${entry.key}`),
+  ) as [string, ...string[]],
+);
+
+export const QuickChatIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("quick_chat"),
+  recipient: ID,
+  quickChatKey: QuickChatKeySchema,
+  variables: z.record(SafeString).optional(),
+});
+
 const IntentSchema = z.union([
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -286,11 +304,11 @@ const IntentSchema = z.union([
   BuildUnitIntentSchema,
   EmbargoIntentSchema,
   MoveWarshipIntentSchema,
+  QuickChatIntentSchema,
 ]);
 
 export const TurnSchema = z.object({
   turnNumber: z.number(),
-  gameID: ID,
   intents: z.array(IntentSchema),
   // The hash of the game state at the end of the turn.
   hash: z.number().nullable().optional(),
@@ -355,45 +373,41 @@ export const ServerMessageSchema = z.union([
 
 // Client
 
-const ClientBaseMessageSchema = z.object({
-  type: z.enum(["winner", "join", "intent", "ping", "log", "hash"]),
-  clientID: ID,
-  persistentID: SafeString.nullable(), // WARNING: persistent id is private.
-  gameID: ID,
-});
-
-export const ClientSendWinnerSchema = ClientBaseMessageSchema.extend({
+export const ClientSendWinnerSchema = z.object({
   type: z.literal("winner"),
-  winner: ID.or(z.nativeEnum(Team)).nullable(),
+  winner: z.union([ID, TeamSchema]).nullable(),
   allPlayersStats: AllPlayersStatsSchema,
   winnerType: z.enum(["player", "team"]),
 });
 
-export const ClientHashSchema = ClientBaseMessageSchema.extend({
+export const ClientHashSchema = z.object({
   type: z.literal("hash"),
   hash: z.number(),
   turnNumber: z.number(),
 });
 
-export const ClientLogMessageSchema = ClientBaseMessageSchema.extend({
+export const ClientLogMessageSchema = z.object({
   type: z.literal("log"),
   severity: z.nativeEnum(LogSeverity),
   log: ID,
-  persistentID: SafeString,
+  persistentID: PersistentIdSchema, // WARNING: PII
 });
 
-export const ClientPingMessageSchema = ClientBaseMessageSchema.extend({
+export const ClientPingMessageSchema = z.object({
   type: z.literal("ping"),
 });
 
-export const ClientIntentMessageSchema = ClientBaseMessageSchema.extend({
+export const ClientIntentMessageSchema = z.object({
   type: z.literal("intent"),
   intent: IntentSchema,
 });
 
 // WARNING: never send this message to clients.
-export const ClientJoinMessageSchema = ClientBaseMessageSchema.extend({
+export const ClientJoinMessageSchema = z.object({
   type: z.literal("join"),
+  clientID: ID,
+  persistentID: PersistentIdSchema, // WARNING: PII
+  gameID: ID,
   lastTurn: z.number(), // The last turn the client saw.
   username: SafeString,
   flag: SafeString.nullable().optional(),
@@ -412,7 +426,7 @@ export const PlayerRecordSchema = z.object({
   clientID: ID,
   username: SafeString,
   ip: SafeString.nullable(), // WARNING: PII
-  persistentID: SafeString, // WARNING: PII
+  persistentID: PersistentIdSchema, // WARNING: PII
 });
 
 export const GameRecordSchema = z.object({
@@ -425,10 +439,7 @@ export const GameRecordSchema = z.object({
   date: SafeString,
   num_turns: z.number(),
   turns: z.array(TurnSchema),
-  winner: z
-    .union([ID, z.nativeEnum(Team)])
-    .nullable()
-    .optional(),
+  winner: z.union([ID, SafeString]).nullable().optional(),
   winnerType: z.enum(["player", "team"]).nullable().optional(),
   allPlayersStats: z.record(ID, PlayerStatsSchema),
   version: z.enum(["v0.0.1"]),

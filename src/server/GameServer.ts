@@ -77,9 +77,6 @@ export class GameServer {
     if (gameConfig.disableNPCs != null) {
       this.gameConfig.disableNPCs = gameConfig.disableNPCs;
     }
-    if (gameConfig.disableNukes != null) {
-      this.gameConfig.disableNukes = gameConfig.disableNukes;
-    }
     if (gameConfig.bots != null) {
       this.gameConfig.bots = gameConfig.bots;
     }
@@ -95,8 +92,13 @@ export class GameServer {
     if (gameConfig.gameMode != null) {
       this.gameConfig.gameMode = gameConfig.gameMode;
     }
-    if (gameConfig.numPlayerTeams != null) {
-      this.gameConfig.numPlayerTeams = gameConfig.numPlayerTeams;
+
+    if (gameConfig.disabledUnits != null) {
+      this.gameConfig.disabledUnits = gameConfig.disabledUnits;
+    }
+
+    if (gameConfig.playerTeams != null) {
+      this.gameConfig.playerTeams = gameConfig.playerTeams;
     }
   }
 
@@ -126,11 +128,21 @@ export class GameServer {
       (c) => c.clientID == client.clientID,
     );
     if (existing != null) {
+      if (client.persistentID !== existing.persistentID) {
+        this.log.error("persistent ids do not match", {
+          clientID: client.clientID,
+          clientIP: client.ip,
+          clientPersistentID: client.persistentID,
+          existingIP: existing.ip,
+          existingPersistentID: existing.persistentID,
+        });
+        return;
+      }
       existing.ws.removeAllListeners("message");
+      this.activeClients = this.activeClients.filter(
+        (c) => c.clientID != client.clientID,
+      );
     }
-    this.activeClients = this.activeClients.filter(
-      (c) => c.clientID != client.clientID,
-    );
     this.activeClients.push(client);
     client.lastPing = Date.now();
 
@@ -146,32 +158,14 @@ export class GameServer {
           } catch (error) {
             throw Error(`error parsing schema for ${client.ip}`);
           }
-          if (this.allClients.has(clientMsg.clientID)) {
-            const client = this.allClients.get(clientMsg.clientID);
-            if (client.persistentID != clientMsg.persistentID) {
+          if (clientMsg.type == "intent") {
+            if (clientMsg.intent.clientID != client.clientID) {
               this.log.warn(
-                `Client ID ${clientMsg.clientID} sent incorrect id ${clientMsg.persistentID}, does not match persistent id ${client.persistentID}`,
-                {
-                  clientID: clientMsg.clientID,
-                  persistentID: clientMsg.persistentID,
-                },
+                `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
               );
               return;
             }
-          }
-
-          // Clear out persistent id to make sure it doesn't get sent to other clients.
-          clientMsg.persistentID = null;
-
-          if (clientMsg.type == "intent") {
-            if (clientMsg.gameID == this.id) {
-              this.addIntent(clientMsg.intent);
-            } else {
-              this.log.warn("client sent to wrong game", {
-                clientID: clientMsg.clientID,
-                persistentID: clientMsg.persistentID,
-              });
-            }
+            this.addIntent(clientMsg.intent);
           }
           if (clientMsg.type == "ping") {
             this.lastPingUpdate = Date.now();
@@ -321,7 +315,6 @@ export class GameServer {
   private endTurn() {
     const pastTurn: Turn = {
       turnNumber: this.turns.length,
-      gameID: this.id,
       intents: this.intents,
     };
     this.turns.push(pastTurn);

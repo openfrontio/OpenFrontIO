@@ -8,12 +8,17 @@ import {
   Tick,
 } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
+import { flattenedEmojiTable } from "../../Util";
 import { AttackExecution } from "../AttackExecution";
 import { EmojiExecution } from "../EmojiExecution";
 
 export class BotBehavior {
   private enemy: Player | null = null;
   private enemyUpdated: Tick;
+
+  private assistAcceptEmoji = flattenedEmojiTable.indexOf("👍");
+
+  private firstAttackSent = false;
 
   constructor(
     private random: PseudoRandom,
@@ -33,7 +38,7 @@ export class BotBehavior {
     }
   }
 
-  private emoji(player: Player, emoji: string) {
+  private emoji(player: Player, emoji: number) {
     if (player.type() !== PlayerType.Human) return;
     this.game.addExecution(
       new EmojiExecution(this.player.id(), player.id(), emoji),
@@ -78,7 +83,7 @@ export class BotBehavior {
         this.player.updateRelation(ally, -20);
         this.enemy = target;
         this.enemyUpdated = this.game.ticks();
-        this.emoji(ally, "👍");
+        this.emoji(ally, this.assistAcceptEmoji);
         break outer;
       }
     }
@@ -167,8 +172,13 @@ export class BotBehavior {
     const maxPop = this.game.config().maxPopulation(this.player);
     const maxTroops = maxPop * this.player.targetTroopRatio();
     const targetTroops = maxTroops * this.reserveRatio;
-    const troops = this.player.troops() - targetTroops;
+    // Don't wait until it has sufficient reserves to send the first attack
+    // to prevent the bot from waiting too long at the start of the game.
+    const troops = this.firstAttackSent
+      ? this.player.troops() - targetTroops
+      : this.player.troops() / 5;
     if (troops < 1) return;
+    this.firstAttackSent = true;
     this.game.addExecution(
       new AttackExecution(
         troops,

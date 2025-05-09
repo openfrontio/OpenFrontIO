@@ -275,7 +275,6 @@ export class ClientGameRunner {
           while (turn.turnNumber - 1 > this.turnsSeen) {
             this.worker.sendTurn({
               turnNumber: this.turnsSeen,
-              gameID: turn.gameID,
               intents: [],
             });
             this.turnsSeen++;

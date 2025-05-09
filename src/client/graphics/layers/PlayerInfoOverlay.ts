@@ -207,6 +207,9 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             : ""}
           ${player.name()}
         </div>
+        ${player.team() != null
+          ? html`<div class="text-sm opacity-80">Team: ${player.team()}</div>`
+          : ""}
         <div class="text-sm opacity-80">Type: ${playerType}</div>
         ${player.troops() >= 1
           ? html`<div class="text-sm opacity-80" translate="no">

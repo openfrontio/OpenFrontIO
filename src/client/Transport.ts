@@ -88,7 +88,7 @@ export class SendTargetPlayerIntentEvent implements GameEvent {
 export class SendEmojiIntentEvent implements GameEvent {
   constructor(
     public readonly recipient: PlayerView | typeof AllPlayers,
-    public readonly emoji: string,
+    public readonly emoji: number,
   ) {}
 }
 
@@ -105,6 +105,15 @@ export class SendDonateTroopsIntentEvent implements GameEvent {
     public readonly sender: PlayerView,
     public readonly recipient: PlayerView,
     public readonly troops: number | null,
+  ) {}
+}
+
+export class SendQuickChatEvent implements GameEvent {
+  constructor(
+    public readonly sender: PlayerView,
+    public readonly recipient: PlayerView,
+    public readonly quickChatKey: string,
+    public readonly variables: { [key: string]: string },
   ) {}
 }
 
@@ -196,6 +205,7 @@ export class Transport {
     this.eventBus.on(SendDonateTroopsIntentEvent, (e) =>
       this.onSendDonateTroopIntent(e),
     );
+    this.eventBus.on(SendQuickChatEvent, (e) => this.onSendQuickChatIntent(e));
     this.eventBus.on(SendEmbargoIntentEvent, (e) =>
       this.onSendEmbargoIntent(e),
     );
@@ -455,6 +465,16 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
       troops: event.troops,
+    });
+  }
+
+  private onSendQuickChatIntent(event: SendQuickChatEvent) {
+    this.sendIntent({
+      type: "quick_chat",
+      clientID: this.lobbyConfig.clientID,
+      recipient: event.recipient.id(),
+      quickChatKey: event.quickChatKey,
+      variables: event.variables,
     });
   }
 

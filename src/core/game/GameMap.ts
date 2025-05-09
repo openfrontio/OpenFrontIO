@@ -58,6 +58,11 @@ export class GameMapImpl implements GameMap {
   private readonly width_: number;
   private readonly height_: number;
 
+  // Lookup tables (LUTs) contain pre-computed values to avoid performing division at runtime
+  private readonly refToX: number[];
+  private readonly refToY: number[];
+  private readonly yToRef: number[];
+
   // Terrain bits (Uint8Array)
   private static readonly IS_LAND_BIT = 7;
   private static readonly SHORELINE_BIT = 6;
@@ -87,6 +92,19 @@ export class GameMapImpl implements GameMap {
     this.height_ = height;
     this.terrain = terrainData;
     this.state = new Uint16Array(width * height);
+    // Precompute the LUTs
+    let ref = 0;
+    this.refToX = new Array(width * height);
+    this.refToY = new Array(width * height);
+    this.yToRef = new Array(height);
+    for (let y = 0; y < height; y++) {
+      this.yToRef[y] = ref;
+      for (let x = 0; x < width; x++) {
+        this.refToX[ref] = x;
+        this.refToY[ref] = y;
+        ref++;
+      }
+    }
   }
   numTilesWithFallout(): number {
     return this._numTilesWithFallout;
@@ -96,15 +114,15 @@ export class GameMapImpl implements GameMap {
     if (!this.isValidCoord(x, y)) {
       throw new Error(`Invalid coordinates: ${x},${y}`);
     }
-    return y * this.width_ + x;
+    return this.yToRef[y] + x;
   }
 
   x(ref: TileRef): number {
-    return ref % this.width_;
+    return this.refToX[ref];
   }
 
   y(ref: TileRef): number {
-    return Math.floor(ref / this.width_);
+    return this.refToY[ref];
   }
 
   cell(ref: TileRef): Cell {
@@ -240,24 +258,19 @@ export class GameMapImpl implements GameMap {
   neighbors(ref: TileRef): TileRef[] {
     const neighbors: TileRef[] = [];
     const w = this.width_;
+    const x = this.refToX[ref];
 
     if (ref >= w) neighbors.push(ref - w);
     if (ref < (this.height_ - 1) * w) neighbors.push(ref + w);
-    if (ref % w !== 0) neighbors.push(ref - 1);
-    if (ref % w !== w - 1) neighbors.push(ref + 1);
-
-    for (const n of neighbors) {
-      this.ref(this.x(n), this.y(n));
-    }
+    if (x !== 0) neighbors.push(ref - 1);
+    if (x !== w - 1) neighbors.push(ref + 1);
 
     return neighbors;
   }
 
   forEachTile(fn: (tile: TileRef) => void): void {
-    for (let x = 0; x < this.width_; x++) {
-      for (let y = 0; y < this.height_; y++) {
-        fn(this.ref(x, y));
-      }
+    for (let ref: TileRef = 0; ref < this.width_ * this.height_; ref++) {
+      fn(ref);
     }
   }
 
