@@ -38,13 +38,13 @@ export class QuickChatExecution implements Execution {
     const message = this.getMessageFromKey(this.quickChatKey, this.variables);
 
     this.mg.displayMessage(
-      `chat.to-${message}-${this.sender.name()}`,
+      `chat.from-${message}-${this.sender.name()}`,
       MessageType.CHAT,
       this.recipient.id(),
     );
 
     this.mg.displayMessage(
-      `chat.from-${message}-${this.sender.name()}`,
+      `chat.to-${message}-${this.sender.name()}`,
       MessageType.CHAT,
       this.sender.id(),
     );
