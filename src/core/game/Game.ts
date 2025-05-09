@@ -75,6 +75,7 @@ export enum GameMapType {
   FaroeIslands = "Faroe Islands",
   DeglaciatedAntarctica = "Deglaciated Antarctica",
   FalklandIslands = "Falkland Islands",
+  Baikal = "Baikal",
 }
 
 export const mapCategories: Record<string, GameMapType[]> = {
@@ -99,6 +100,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Australia,
     GameMapType.FaroeIslands,
     GameMapType.FalklandIslands,
+    GameMapType.Baikal,
   ],
   fantasy: [
     GameMapType.Pangaea,
