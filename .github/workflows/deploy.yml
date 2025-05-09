@@ -134,20 +134,20 @@ jobs:
           VERSION_TAG: latest
         run: |
           echo "::group::deploy.sh"
-          # ./deploy.sh "$ENV" "$HOST" "$SUBDOMAIN"
+          ./deploy.sh "$ENV" "$HOST" "$SUBDOMAIN"
           echo "Deployment created in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
           echo "::endgroup::"
       - name: ⏳ Wait for deployment to start
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
-          # while [ "$(curl -s https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
-          #   if [ "$SECONDS" -ge 300 ]; then
-          #     echo "Timeout: deployment did not start within 5 minutes"
-          #     exit 1
-          #   fi
-          #   sleep 10
-          # done
+          while [ "$(curl -s https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+            if [ "$SECONDS" -ge 300 ]; then
+              echo "Timeout: deployment did not start within 5 minutes"
+              exit 1
+            fi
+            sleep 10
+          done
           echo "Deployment started in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
           echo "::endgroup::"
       - name: 🚀 Notify PR
