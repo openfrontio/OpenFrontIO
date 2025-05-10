@@ -119,13 +119,19 @@ export class TerritoryLayer implements Layer {
       if (!centerTile) {
         continue;
       }
-      let color = this.theme.spawnHighlightColor();
+      let color = this.theme.selfColor();
       if (
         this.game.myPlayer() != null &&
         this.game.myPlayer() != human &&
         this.game.myPlayer().isFriendly(human)
       ) {
-        color = this.theme.selfColor();
+        color = this.theme.allyColor();
+      } else if (
+        this.game.myPlayer() != null &&
+        this.game.myPlayer() != human &&
+        !this.game.myPlayer().isFriendly(human)
+      ) {
+        color = this.theme.enemyColor();
       }
       for (const tile of this.game.bfs(
         centerTile,
