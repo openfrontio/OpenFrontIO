@@ -133,20 +133,23 @@ export class GameServer {
     }
 
     // Prevent multiple clients from the same account
-    const conflicting = this.activeClients.find(
-      (c) =>
-        c.persistentID === client.persistentID &&
-        c.clientID !== client.clientID,
-    );
-    if (conflicting !== undefined) {
-      this.log.error("client ids do not match", {
-        clientID: client.clientID,
-        clientIP: ipAnonymize(client.ip),
-        clientPersistentID: client.persistentID,
-        existingIP: ipAnonymize(conflicting.ip),
-        existingPersistentID: conflicting.persistentID,
-      });
-      return;
+    const allowMultiTabbing = this.gameConfig.allowMultiTabbing;
+    if (!allowMultiTabbing) {
+      const conflicting = this.activeClients.find(
+        (c) =>
+          c.persistentID === client.persistentID &&
+          c.clientID !== client.clientID,
+      );
+      if (conflicting !== undefined) {
+        this.log.error("client ids do not match", {
+          clientID: client.clientID,
+          clientIP: ipAnonymize(client.ip),
+          clientPersistentID: client.persistentID,
+          existingIP: ipAnonymize(conflicting.ip),
+          existingPersistentID: conflicting.persistentID,
+        });
+        return;
+      }
     }
 
     // Remove stale client if this is a reconnect
@@ -171,6 +174,7 @@ export class GameServer {
     // Client connection accepted
     this.activeClients.push(client);
     client.lastPing = Date.now();
+
     this.allClients.set(client.clientID, client);
 
     client.ws.on(
