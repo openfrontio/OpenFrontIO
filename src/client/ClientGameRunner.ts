@@ -239,6 +239,7 @@ export class ClientGameRunner {
           this.lobby.gameStartInfo.gameID,
           this.lobby.clientID,
         );
+        console.error(gu.stack);
         this.stop(true);
         return;
       }
