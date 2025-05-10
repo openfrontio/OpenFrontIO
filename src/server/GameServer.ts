@@ -132,7 +132,7 @@ export class GameServer {
       return;
     }
 
-    // Prevent multiple clients from the same account
+    // Prevent multiple clients from using the same account
     const allowMultiTabbing = this.gameConfig.allowMultiTabbing;
     if (!allowMultiTabbing) {
       const conflicting = this.activeClients.find(
