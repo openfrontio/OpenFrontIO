@@ -83,6 +83,9 @@ export class GameServer {
     if (gameConfig.bots != null) {
       this.gameConfig.bots = gameConfig.bots;
     }
+    if (gameConfig.allianceBreakCooldown != null) {
+      this.gameConfig.allianceBreakCooldown = gameConfig.allianceBreakCooldown;
+    }
     if (gameConfig.infiniteGold != null) {
       this.gameConfig.infiniteGold = gameConfig.infiniteGold;
     }

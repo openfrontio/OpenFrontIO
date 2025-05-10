@@ -67,6 +67,7 @@ export interface Config {
   numBots(): number;
   spawnNPCs(): boolean;
   isUnitDisabled(unitType: UnitType): boolean;
+  allianceBreakCooldown(): number;
   bots(): number;
   infiniteGold(): boolean;
   infiniteTroops(): boolean;

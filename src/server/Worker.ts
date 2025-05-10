@@ -164,6 +164,7 @@ export function startWorker() {
         infiniteTroops: req.body.infiniteTroops,
         instantBuild: req.body.instantBuild,
         bots: req.body.bots,
+        allianceBreakCooldown: req.body.allianceBreakCooldown,
         disableNPCs: req.body.disableNPCs,
         disabledUnits: req.body.disabledUnits,
         gameMode: req.body.gameMode,

@@ -153,6 +153,7 @@
     "options_title": "Налаштування",
     "bots": "Боти: ",
     "bots_disabled": "Відключено",
+    "break_alliance_cooldown": "Час очікування перед розривом союзу (в секундах)",
     "disable_nations": "Відключити нації",
     "instant_build": "Миттєве будівництво",
     "infinite_gold": "Нескінченне золото",

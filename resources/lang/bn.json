@@ -152,6 +152,7 @@
     "options_title": "বিকল্পসমূহ",
     "bots": "বট: ",
     "bots_disabled": "নিষ্ক্রিয়",
+    "break_alliance_cooldown": "জোট ভাঙার কুলডাউন সময় (সেকেন্ডে)",
     "disable_nations": "জাতি নিষ্ক্রিয় করুন",
     "instant_build": "তাৎক্ষণিক নির্মাণ",
     "infinite_gold": "অসীম সোনা",

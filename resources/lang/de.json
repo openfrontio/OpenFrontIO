@@ -142,6 +142,7 @@
     "options_title": "Optionen",
     "bots": "Bots:",
     "bots_disabled": "Deaktiviert",
+    "break_alliance_cooldown": "Abklingzeit für das Beenden eines Bündnisses (in Sekunden)",
     "disable_nations": "Nationen deaktivieren",
     "instant_build": "Sofortiges Bauen",
     "infinite_gold": "Unendlich Gold",

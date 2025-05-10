@@ -153,6 +153,7 @@
     "options_title": "Opcje",
     "bots": "Boty: ",
     "bots_disabled": "Wyłączone",
+    "break_alliance_cooldown": "Czas odczekania przed zerwaniem sojuszu (w sekundach)",
     "disable_nations": "Wyłącz Państwa",
     "instant_build": "Natychmiastowa budowa",
     "infinite_gold": "Nieskończone złoto",

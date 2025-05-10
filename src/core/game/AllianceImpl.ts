@@ -32,4 +32,11 @@ export class AllianceImpl implements MutableAlliance {
   expire(): void {
     this.mg.expireAlliance(this);
   }
+
+  canBeBreak(): boolean {
+    const allianceBreakCooldown = this.mg.config().allianceBreakCooldown();
+    if (!allianceBreakCooldown) return true;
+    //Convert allianceBreakCooldown in tick * 10
+    return this.mg.ticks() - this.createdAt() >= allianceBreakCooldown * 10;
+  }
 }

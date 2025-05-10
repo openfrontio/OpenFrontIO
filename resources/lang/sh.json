@@ -153,6 +153,7 @@
     "options_title": "Opcije",
     "bots": "Botovi: ",
     "bots_disabled": "Onemogućeni",
+    "break_alliance_cooldown": "Vreme čekanja pre raskida saveza (u sekundama)",
     "disable_nations": "Onemogući nacije",
     "instant_build": "Neposredna izgradnja",
     "infinite_gold": "Beskrajno zlato",

@@ -153,6 +153,7 @@
     "options_title": "Opcioj",
     "bots": "Robotoj :",
     "bots_disabled": "Malŝaltita",
+    "break_alliance_cooldown": "Malvarmiĝtempo por rompi aliancon (en sekundoj)",
     "disable_nations": "Malŝalti naciojn",
     "instant_build": "Tujkonstruaĵo",
     "infinite_gold": "Senfina oro",

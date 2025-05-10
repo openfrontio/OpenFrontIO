@@ -153,6 +153,7 @@
     "options_title": "Paramètres",
     "bots": "Bots : ",
     "bots_disabled": "Désactivé",
+    "break_alliance_cooldown": "Délai avant rupture d'alliance (en secondes)",
     "disable_nations": "Désactiver les nations",
     "instant_build": "Construction instantanée",
     "infinite_gold": "Or infini",

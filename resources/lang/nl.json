@@ -153,6 +153,7 @@
     "options_title": "Opties",
     "bots": "Bots:",
     "bots_disabled": "Uitgeschakeld",
+    "break_alliance_cooldown": "Wachttijd om alliantie te verbreken (in seconden)",
     "disable_nations": "Naties uitschakelen",
     "instant_build": "Bouwwachttijd uitschakelen",
     "infinite_gold": "Oneindig goud",

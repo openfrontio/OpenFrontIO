@@ -40,6 +40,7 @@ export class GameManager {
       gameMode: GameMode.FFA,
       bots: 400,
       disabledUnits: [],
+      allianceBreakCooldown: 60,
       ...gameConfig,
     });
     this.games.set(id, game);

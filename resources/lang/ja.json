@@ -154,6 +154,7 @@
     "options_title": "オプション",
     "bots": "ボット数: ",
     "bots_disabled": "無効",
+    "break_alliance_cooldown": "同盟を解除するクールダウン時間（秒）",
     "disable_nations": "実在する国家を無効化",
     "instant_build": "実在する国家を無効化",
     "infinite_gold": "資金無限",

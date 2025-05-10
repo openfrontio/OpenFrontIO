@@ -152,6 +152,7 @@
     "options_title": "विकल्प",
     "bots": "बॉट: ",
     "bots_disabled": "निष्क्रिय",
+    "break_alliance_cooldown": "गठबंधन तोड़ने का कूलडाउन समय (सेकंड में)",
     "disable_nations": "राष्ट्र निष्क्रिय करें",
     "instant_build": "तुरंत निर्माण",
     "infinite_gold": "असीमित सोना",

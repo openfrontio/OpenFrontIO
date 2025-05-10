@@ -142,6 +142,7 @@
     "options_title": "Seçenekler",
     "bots": "Botları:",
     "bots_disabled": "Devre Dışı",
+    "break_alliance_cooldown": "İttifakı bozma bekleme süresi (saniye olarak)",
     "disable_nations": "Ulusları Devre Dışı Bırak",
     "instant_build": "Anında İnşa",
     "infinite_gold": "Sınırsız Altın",

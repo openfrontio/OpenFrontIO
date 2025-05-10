@@ -120,6 +120,7 @@ const GameConfigSchema = z.object({
   gameMode: z.nativeEnum(GameMode),
   disableNPCs: z.boolean(),
   bots: z.number().int().min(0).max(400),
+  allianceBreakCooldown: z.number().int().min(0).max(600),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),

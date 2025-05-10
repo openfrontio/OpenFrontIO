@@ -144,6 +144,7 @@
     "options_title": "host_modal.options_title",
     "bots": "host_modal.bots",
     "bots_disabled": "host_modal.bots_disabled",
+    "break_alliance_cooldown": "host_modal.break_alliance_cooldown",
     "disable_nations": "host_modal.disable_nations",
     "instant_build": "host_modal.instant_build",
     "infinite_gold": "host_modal.infinite_gold",

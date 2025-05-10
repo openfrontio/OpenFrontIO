@@ -33,6 +33,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private disableNPCs: boolean = false;
   @state() private disableNukes: boolean = false;
   @state() private bots: number = 400;
+  @state() private allianceBreakCooldown: number = 60;
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
   @state() private instantBuild: boolean = false;
@@ -209,7 +210,26 @@ export class SinglePlayerModal extends LitElement {
                     : this.bots}
                 </div>
               </label>
-
+              <label for="alliance-break-cooldown" class="option-card">
+                <input
+                  type="range"
+                  id="alliance-break-cooldown"
+                  min="0"
+                  max="600"
+                  step="10"
+                  @input=${this.handleAllianceBreakCooldownChange}
+                  @change=${this.handleAllianceBreakCooldownChange}
+                  .value="${String(this.allianceBreakCooldown)}"
+                />
+                <div class="option-card-title">
+                  <span
+                    >${translateText(
+                      "host_modal.break_alliance_cooldown",
+                    )}</span
+                  >
+                  ${this.allianceBreakCooldown}
+                </div>
+              </label>
               <label
                 for="singleplayer-modal-disable-npcs"
                 class="option-card ${this.disableNPCs ? "selected" : ""}"
@@ -373,6 +393,14 @@ export class SinglePlayerModal extends LitElement {
     }
     this.bots = value;
   }
+  private handleAllianceBreakCooldownChange(e: Event) {
+    const value = parseInt((e.target as HTMLInputElement).value);
+    if (isNaN(value) || value < 0 || value > 600) {
+      return;
+    }
+    // Update the display value immediately
+    this.allianceBreakCooldown = value;
+  }
 
   private handleInstantBuildChange(e: Event) {
     this.instantBuild = Boolean((e.target as HTMLInputElement).checked);
@@ -458,6 +486,7 @@ export class SinglePlayerModal extends LitElement {
               disableNPCs: this.disableNPCs,
               disableNukes: this.disableNukes,
               bots: this.bots,
+              allianceBreakCooldown: this.allianceBreakCooldown,
               infiniteGold: this.infiniteGold,
               infiniteTroops: this.infiniteTroops,
               instantBuild: this.instantBuild,

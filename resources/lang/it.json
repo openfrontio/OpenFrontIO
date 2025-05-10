@@ -152,6 +152,7 @@
     "options_title": "Opzioni",
     "bots": "Bot: ",
     "bots_disabled": "Disabilitato",
+    "break_alliance_cooldown": "Tempo di attesa per rompere l'alleanza (in secondi)",
     "disable_nations": "Disabilita Nazioni",
     "instant_build": "Costruzione Istantanea ",
     "infinite_gold": "Oro infinito",
