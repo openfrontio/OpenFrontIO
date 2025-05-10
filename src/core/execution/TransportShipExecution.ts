@@ -139,11 +139,9 @@ export class TransportShipExecution implements Execution {
       }
     }
 
-    this.boat = this.attacker.buildUnit(
-      UnitType.TransportShip,
-      this.troops,
-      this.src,
-    );
+    this.boat = this.attacker.buildUnit(UnitType.TransportShip, this.src, {
+      troops: this.troops,
+    });
   }
 
   tick(ticks: number) {
