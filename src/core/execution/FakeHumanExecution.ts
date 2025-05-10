@@ -563,8 +563,11 @@ export class FakeHumanExecution implements Execution {
       }
       const tile = this.mg.ref(x, y);
       if (this.mg.isLand(tile) && !this.mg.hasOwner(tile)) {
+        const terrainType = this.mg.terrainType(tile);
         if (
-          this.mg.terrainType(tile) == TerrainType.Mountain &&
+          (terrainType === TerrainType.MidMountain ||
+            terrainType === TerrainType.HighMountain ||
+            terrainType === TerrainType.SnowyHighMountain) &&
           this.random.chance(2)
         ) {
           continue;
