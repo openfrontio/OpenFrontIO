@@ -138,11 +138,6 @@ export class TransportShipExecution implements Execution {
 
     // Notify the target player about the incoming naval invasion
     if (this.targetID && this.targetID !== mg.terraNullius().id()) {
-      // mg.displayMessage(
-      //   `Naval invasion incoming from ${this.attacker.displayName()}`,
-      //   MessageType.WARN,
-      //   this.targetID,
-      // );
       mg.displayIncomingUnit(
         this.boat.id(),
         `Naval invasion incoming from ${this.attacker.displayName()}`,
