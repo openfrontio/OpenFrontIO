@@ -70,17 +70,7 @@ export class UnitLayer implements Layer {
       this.myPlayer = this.game.playerByClientID(this.clientID);
     }
 
-    const unitsToUpdate = this.game
-      .updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id));
-    unitsToUpdate
-      ?.filter((UnitView) => isSpriteReady(UnitView.type()))
-      .forEach((unitView) => {
-        this.clearUnitCells(unitView);
-      });
-    unitsToUpdate?.forEach((unitView) => {
-      this.onUnitEvent(unitView);
-    });
+    this.updateUnitsSprites();
   }
 
   init() {
@@ -208,17 +198,7 @@ export class UnitLayer implements Layer {
     this.transportShipTrailCanvas.width = this.game.width();
     this.transportShipTrailCanvas.height = this.game.height();
 
-    const unitsToUpdate = this.game
-      .updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id));
-    unitsToUpdate
-      ?.filter((UnitView) => isSpriteReady(UnitView.type()))
-      .forEach((unitView) => {
-        this.clearUnitCells(unitView);
-      });
-    unitsToUpdate?.forEach((unitView) => {
-      this.onUnitEvent(unitView);
-    });
+    this.updateUnitsSprites();
 
     this.boatToTrail.forEach((trail, unit) => {
       for (const t of trail) {
@@ -231,6 +211,20 @@ export class UnitLayer implements Layer {
           this.transportShipTrailContext,
         );
       }
+    });
+  }
+
+  updateUnitsSprites() {
+    const unitsToUpdate = this.game
+      .updatesSinceLastTick()
+      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id));
+    unitsToUpdate
+      ?.filter((UnitView) => isSpriteReady(UnitView.type()))
+      .forEach((unitView) => {
+        this.clearUnitCells(unitView);
+      });
+    unitsToUpdate?.forEach((unitView) => {
+      this.onUnitEvent(unitView);
     });
   }
 
