@@ -164,7 +164,7 @@ class Client {
       .addEventListener("click", () => {
         supportUsModal.open();
       });
-    
+
     const claims = isLoggedIn();
     if (claims === false) {
       // Not logged in
