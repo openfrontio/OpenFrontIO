@@ -22,6 +22,7 @@ import { PlayerPanel } from "./layers/PlayerPanel";
 import { RadialMenu } from "./layers/RadialMenu";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
+import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { TopBar } from "./layers/TopBar";
@@ -69,6 +70,14 @@ export function createRenderer(
   leaderboard.clientID = clientID;
   leaderboard.eventBus = eventBus;
   leaderboard.game = game;
+
+  const teamStats = document.querySelector("team-stats") as TeamStats;
+  if (!emojiTable || !(teamStats instanceof TeamStats)) {
+    consolex.error("EmojiTable element not found in the DOM");
+  }
+  teamStats.clientID = clientID;
+  teamStats.eventBus = eventBus;
+  teamStats.game = game;
 
   const controlPanel = document.querySelector("control-panel") as ControlPanel;
   if (!(controlPanel instanceof ControlPanel)) {
@@ -178,6 +187,7 @@ export function createRenderer(
     playerInfo,
     winModel,
     optionsMenu,
+    teamStats,
     topBar,
     playerPanel,
     multiTabModal,
