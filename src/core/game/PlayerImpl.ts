@@ -275,7 +275,6 @@ export class PlayerImpl implements Player {
     }
     attack[0].orderRetreat();
   }
-
   executeRetreat(id: string): void {
     const attack = this._outgoingAttacks.filter((attack) => attack.id() === id);
     // Execution is delayed so it's not an error that the attack does not exist.
