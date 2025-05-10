@@ -606,6 +606,28 @@ export class GameImpl implements Game {
     });
   }
 
+  displayChat(
+    message: string,
+    category: string,
+    variables: Record<string, string> = {},
+    playerID: PlayerID | null,
+    isFrom: boolean | null = null,
+    recipient: string,
+  ): void {
+    let id = null;
+    if (playerID != null) {
+      id = this.player(playerID).smallID();
+    }
+    this.addUpdate({
+      type: GameUpdateType.DisplayChatEvent,
+      key: message,
+      category: category,
+      variables: variables,
+      playerID: id,
+      isFrom: isFrom,
+      recipient: recipient,
+    });
+  }
   addUnit(u: Unit) {
     this.unitGrid.addUnit(u);
   }

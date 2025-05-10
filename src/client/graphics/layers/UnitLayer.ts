@@ -15,7 +15,11 @@ import { MoveWarshipIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
-import { getColoredSprite, loadAllSprites } from "../SpriteLoader";
+import {
+  getColoredSprite,
+  isSpriteReady,
+  loadAllSprites,
+} from "../SpriteLoader";
 
 enum Relationship {
   Self,
@@ -65,9 +69,8 @@ export class UnitLayer implements Layer {
     if (this.myPlayer == null) {
       this.myPlayer = this.game.playerByClientID(this.clientID);
     }
-    this.game.updatesSinceLastTick()?.[GameUpdateType.Unit]?.forEach((unit) => {
-      this.onUnitEvent(this.game.unit(unit.id));
-    });
+
+    this.updateUnitsSprites();
   }
 
   init() {
@@ -194,11 +197,9 @@ export class UnitLayer implements Layer {
     this.canvas.height = this.game.height();
     this.transportShipTrailCanvas.width = this.game.width();
     this.transportShipTrailCanvas.height = this.game.height();
-    this.game
-      ?.updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.forEach((unit) => {
-        this.onUnitEvent(this.game.unit(unit.id));
-      });
+
+    this.updateUnitsSprites();
+
     this.boatToTrail.forEach((trail, unit) => {
       for (const t of trail) {
         this.paintCell(
@@ -211,6 +212,34 @@ export class UnitLayer implements Layer {
         );
       }
     });
+  }
+
+  private updateUnitsSprites() {
+    const unitsToUpdate = this.game
+      .updatesSinceLastTick()
+      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id));
+    unitsToUpdate
+      ?.filter((UnitView) => isSpriteReady(UnitView.type()))
+      .forEach((unitView) => {
+        this.clearUnitCells(unitView);
+      });
+    unitsToUpdate?.forEach((unitView) => {
+      this.onUnitEvent(unitView);
+    });
+  }
+
+  private clearUnitCells(unit: UnitView) {
+    const sprite = getColoredSprite(unit, this.theme);
+    const clearsize = sprite.width + 1;
+
+    const lastX = this.game.x(unit.lastTile());
+    const lastY = this.game.y(unit.lastTile());
+    this.context.clearRect(
+      lastX - clearsize / 2,
+      lastY - clearsize / 2,
+      clearsize,
+      clearsize,
+    );
   }
 
   private relationship(unit: UnitView): Relationship {
@@ -419,8 +448,6 @@ export class UnitLayer implements Layer {
   drawSprite(unit: UnitView, customTerritoryColor?: Colord) {
     const x = this.game.x(unit.tile());
     const y = this.game.y(unit.tile());
-    const lastX = this.game.x(unit.lastTile());
-    const lastY = this.game.y(unit.lastTile());
 
     let alternateViewColor = null;
 
@@ -455,15 +482,6 @@ export class UnitLayer implements Layer {
       this.theme,
       alternateViewColor ?? customTerritoryColor,
       alternateViewColor,
-    );
-
-    const clearsize = sprite.width + 1;
-
-    this.context.clearRect(
-      lastX - clearsize / 2,
-      lastY - clearsize / 2,
-      clearsize,
-      clearsize,
     );
 
     if (unit.isActive()) {

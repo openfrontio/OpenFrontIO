@@ -140,6 +140,8 @@ const SafeString = z
   )
   .max(1000);
 
+const PersistentIdSchema = z.string().uuid();
+
 const EmojiSchema = z
   .number()
   .nonnegative()
@@ -398,7 +400,6 @@ export const ClientLogMessageSchema = z.object({
   type: z.literal("log"),
   severity: z.nativeEnum(LogSeverity),
   log: ID,
-  persistentID: SafeString,
 });
 
 export const ClientPingMessageSchema = z.object({
@@ -414,7 +415,7 @@ export const ClientIntentMessageSchema = z.object({
 export const ClientJoinMessageSchema = z.object({
   type: z.literal("join"),
   clientID: ID,
-  persistentID: SafeString, // WARNING: PII
+  persistentID: PersistentIdSchema, // WARNING: PII
   gameID: ID,
   lastTurn: z.number(), // The last turn the client saw.
   username: SafeString,
@@ -434,7 +435,7 @@ export const PlayerRecordSchema = z.object({
   clientID: ID,
   username: SafeString,
   ip: SafeString.nullable(), // WARNING: PII
-  persistentID: SafeString, // WARNING: PII
+  persistentID: PersistentIdSchema, // WARNING: PII
 });
 
 export const GameRecordSchema = z.object({
