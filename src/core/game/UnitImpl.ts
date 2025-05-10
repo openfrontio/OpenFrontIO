@@ -18,7 +18,6 @@ export class UnitImpl implements Unit {
   private _health: bigint;
   private _lastTile: TileRef = null;
   private _retreating: boolean = false;
-  // Currently only warship use it
   private _target: Unit = null;
   private _moveTarget: TileRef = null;
   private _targetedBySAM = false;
