@@ -96,7 +96,7 @@ export class FakeHumanExecution implements Execution {
         this.player.relation(other) <= Relation.Hostile &&
         !this.player.hasEmbargoAgainst(other)
       ) {
-        this.player.addEmbargo(other.id());
+        this.player.addEmbargo(other.id(), false);
       } else if (
         this.player.relation(other) >= Relation.Neutral &&
         this.player.hasEmbargoAgainst(other)

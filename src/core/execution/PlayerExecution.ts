@@ -97,6 +97,16 @@ export class PlayerExecution implements Execution {
       }
     }
 
+    const embargoes = this.player.getEmbargoes();
+    for (const embargo of embargoes) {
+      if (
+        embargo.willExpire &&
+        this.mg.ticks() - embargo.createdAt > this.mg.config().embargoDuration()
+      ) {
+        this.player.stopEmbargo(embargo.target);
+      }
+    }
+
     if (ticks - this.lastCalc > this.ticksPerClusterCalc) {
       if (this.player.lastTileChange() > this.lastCalc) {
         this.lastCalc = ticks;
