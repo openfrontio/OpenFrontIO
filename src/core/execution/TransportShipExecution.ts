@@ -67,15 +67,6 @@ export class TransportShipExecution implements Execution {
 
     this.attacker = mg.player(this.attackerID);
 
-    // Notify the target player about the incoming naval invasion
-    if (this.targetID && this.targetID !== mg.terraNullius().id()) {
-      mg.displayMessage(
-        `Naval invasion incoming from ${this.attacker.displayName()}`,
-        MessageType.WARN,
-        this.targetID,
-      );
-    }
-
     if (
       this.attacker.units(UnitType.TransportShip).length >=
       mg.config().boatMaxNumber()
@@ -144,6 +135,21 @@ export class TransportShipExecution implements Execution {
       this.troops,
       this.src,
     );
+
+    // Notify the target player about the incoming naval invasion
+    if (this.targetID && this.targetID !== mg.terraNullius().id()) {
+      // mg.displayMessage(
+      //   `Naval invasion incoming from ${this.attacker.displayName()}`,
+      //   MessageType.WARN,
+      //   this.targetID,
+      // );
+      mg.displayIncomingUnit(
+        this.boat.id(),
+        `Naval invasion incoming from ${this.attacker.displayName()}`,
+        MessageType.WARN,
+        this.targetID,
+      );
+    }
   }
 
   tick(ticks: number) {
