@@ -214,7 +214,7 @@ export class UnitLayer implements Layer {
     });
   }
 
-  updateUnitsSprites() {
+  private updateUnitsSprites() {
     const unitsToUpdate = this.game
       .updatesSinceLastTick()
       ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id));
@@ -228,7 +228,7 @@ export class UnitLayer implements Layer {
     });
   }
 
-  clearUnitCells(unit: UnitView) {
+  private clearUnitCells(unit: UnitView) {
     const sprite = getColoredSprite(unit, this.theme);
     const clearsize = sprite.width + 1;
 
