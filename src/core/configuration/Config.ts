@@ -29,6 +29,7 @@ export interface ServerConfig {
   turnIntervalMs(): number;
   gameCreationRate(): number;
   lobbyMaxPlayers(map: GameMapType, mode: GameMode): number;
+  lobbyMultiTabbing(map: GameMapType, mode: GameMode): boolean;
   discordRedirectURI(): string;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;

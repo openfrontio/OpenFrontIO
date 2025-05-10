@@ -61,6 +61,7 @@ export class MapPlaylist {
       gameMode: mode,
       playerTeams: numPlayerTeams,
       bots: 400,
+      allowMultiTabbing: config.lobbyMultiTabbing(map, mode),
     } as GameConfig;
   }
 
