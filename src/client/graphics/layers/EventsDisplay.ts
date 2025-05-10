@@ -194,8 +194,9 @@ export class EventsDisplay extends LitElement implements Layer {
   onDisplayChatEvent(event: DisplayChatMessageUpdate) {
     const myPlayer = this.game.playerByClientID(this.clientID);
     if (
-      event.playerID != null &&
-      (!myPlayer || myPlayer.smallID() !== event.playerID)
+      event.playerID === null ||
+      !myPlayer ||
+      myPlayer.smallID() !== event.playerID
     ) {
       return;
     }
