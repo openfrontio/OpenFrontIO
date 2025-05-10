@@ -20,9 +20,9 @@ import {
 import { Theme } from "./Config";
 
 type ColorCache = Map<string, Colord>;
-const borderColorCache: ColorCache = new Map<string, Colord>();
 
 export const pastelThemeDark = new (class implements Theme {
+  private borderColorCache: ColorCache = new Map<string, Colord>();
   private rand = new PseudoRandom(123);
 
   private background = colord({ r: 0, g: 0, b: 0 });
@@ -71,17 +71,17 @@ export const pastelThemeDark = new (class implements Theme {
     if (player.team() !== null) {
       return this.teamColor(player.team());
     }
-    if (player.info().playerType == PlayerType.Human) {
+    if (player.type() == PlayerType.Human) {
       return humanColors[simpleHash(player.id()) % humanColors.length];
     }
-    if (player.info().playerType == PlayerType.Bot) {
+    if (player.type() == PlayerType.Bot) {
       return botColors[simpleHash(player.id()) % botColors.length];
     }
     return territoryColors[simpleHash(player.id()) % territoryColors.length];
   }
 
   textColor(player: PlayerView): string {
-    return player.info().playerType == PlayerType.Human ? "#ffffff" : "#e6e6e6";
+    return player.type() == PlayerType.Human ? "#ffffff" : "#e6e6e6";
   }
 
   specialBuildingColor(player: PlayerView): Colord {
@@ -94,8 +94,8 @@ export const pastelThemeDark = new (class implements Theme {
   }
 
   borderColor(player: PlayerView): Colord {
-    if (borderColorCache.has(player.id())) {
-      return borderColorCache.get(player.id())!;
+    if (this.borderColorCache.has(player.id())) {
+      return this.borderColorCache.get(player.id())!;
     }
 
     const tc = this.territoryColor(player).rgba;
@@ -105,7 +105,7 @@ export const pastelThemeDark = new (class implements Theme {
       b: Math.max(tc.b - 40, 0),
     });
 
-    borderColorCache.set(player.id(), color);
+    this.borderColorCache.set(player.id(), color);
     return color;
   }
   defendedBorderColor(player: PlayerView): Colord {
