@@ -602,6 +602,13 @@ export class PlayerImpl implements Player {
     this.embargoes.delete(other);
   }
 
+  stopExpiringEmbargo(other: PlayerID): void {
+    if (this.embargoes.has(other) && !this.embargoes.get(other).willExpire)
+      return;
+
+    this.stopEmbargo(other);
+  }
+
   tradingPartners(): Player[] {
     return this.mg
       .players()

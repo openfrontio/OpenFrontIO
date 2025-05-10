@@ -449,6 +449,7 @@ export interface Player {
   addEmbargo(other: PlayerID, willExpire: boolean): void;
   getEmbargoes(): Embargo[];
   stopEmbargo(other: PlayerID): void;
+  stopExpiringEmbargo(other: PlayerID): void;
   canTrade(other: Player): boolean;
 
   // Attacking.
