@@ -20,6 +20,7 @@ import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
 import { NewsModal } from "./NewsModal";
+import { PlayerInfoModal } from "./PlayerInfoModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
@@ -154,6 +155,16 @@ class Client {
       hlpModal.open();
     });
 
+    const piModal = document.querySelector(
+      "player-info-modal",
+    ) as PlayerInfoModal;
+    piModal instanceof PlayerInfoModal;
+    document
+      .getElementById("player-info-button")
+      .addEventListener("click", () => {
+        piModal.open();
+      });
+
     const claims = isLoggedIn();
     if (claims === false) {
       // Not logged in
@@ -161,6 +172,7 @@ class Client {
       loginDiscordButton.translationKey = "main.login_discord";
       loginDiscordButton.addEventListener("click", discordLogin);
       logoutDiscordButton.hidden = true;
+      piModal.onLoggedOut();
     } else {
       // JWT appears to be valid, assume we are logged in
       loginDiscordButton.disable = true;
@@ -173,7 +185,9 @@ class Client {
         loginDiscordButton.translationKey = "main.login_discord";
         loginDiscordButton.addEventListener("click", discordLogin);
         logoutDiscordButton.hidden = true;
+        piModal.onLoggedOut();
       });
+      piModal.onLoggedIn(claims);
       // Look up the discord user object.
       // TODO: Add caching
       getUserMe().then((userMeResponse) => {
@@ -183,8 +197,10 @@ class Client {
           loginDiscordButton.translationKey = "main.login_discord";
           loginDiscordButton.addEventListener("click", discordLogin);
           logoutDiscordButton.hidden = true;
+          piModal.onLoggedOut();
           return;
         }
+        piModal.onUserMe(userMeResponse);
         // TODO: Update the page for logged in user
       });
     }
