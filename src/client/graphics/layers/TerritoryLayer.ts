@@ -267,15 +267,13 @@ export class TerritoryLayer implements Layer {
           )
           .filter((u) => u.unit.owner() == owner).length > 0
       ) {
-        const useDefendedBorderColor = playerIsFocused
-          ? this.theme.focusedDefendedBorderColor()
-          : this.theme.defendedBorderColor(owner);
-        this.paintCell(
-          this.game.x(tile),
-          this.game.y(tile),
-          useDefendedBorderColor,
-          255,
-        );
+        const borderColors = this.theme.defendedBorderColors(owner);
+        const x = this.game.x(tile);
+        const y = this.game.y(tile);
+        const lightTile =
+          (x % 2 == 0 && y % 2 == 0) || (y % 2 == 1 && x % 2 == 1);
+        const borderColor = lightTile ? borderColors.light : borderColors.dark;
+        this.paintCell(x, y, borderColor, 255);
       } else {
         const useBorderColor = playerIsFocused
           ? this.theme.focusedBorderColor()

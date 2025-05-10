@@ -160,6 +160,39 @@ app.get(
   }),
 );
 
+app.post(
+  "/api/kick_player/:gameID/:clientID",
+  gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
+    if (req.headers[config.adminHeader()] !== config.adminToken()) {
+      res.status(401).send("Unauthorized");
+      return;
+    }
+
+    const { gameID, clientID } = req.params;
+
+    try {
+      const response = await fetch(
+        `http://localhost:${config.workerPort(gameID)}/api/kick_player/${gameID}/${clientID}`,
+        {
+          method: "POST",
+          headers: {
+            [config.adminHeader()]: config.adminToken(),
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to kick player: ${response.statusText}`);
+      }
+
+      res.status(200).send("Player kicked successfully");
+    } catch (error) {
+      log.error(`Error kicking player from game ${gameID}:`, error);
+      res.status(500).send("Failed to kick player");
+    }
+  }),
+);
+
 async function fetchLobbies(): Promise<number> {
   const fetchPromises = [];
 

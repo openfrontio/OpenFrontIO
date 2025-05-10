@@ -390,7 +390,6 @@ export const ClientLogMessageSchema = z.object({
   type: z.literal("log"),
   severity: z.nativeEnum(LogSeverity),
   log: ID,
-  persistentID: PersistentIdSchema, // WARNING: PII
 });
 
 export const ClientPingMessageSchema = z.object({

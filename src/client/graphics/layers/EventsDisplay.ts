@@ -16,6 +16,7 @@ import {
   AllianceRequestUpdate,
   AttackUpdate,
   BrokeAllianceUpdate,
+  DisplayChatMessageUpdate,
   DisplayMessageUpdate,
   EmojiUpdate,
   GameUpdateType,
@@ -32,6 +33,8 @@ import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
 import { renderTroops } from "../../Utils";
 import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
+
+import { translateText } from "../../Utils";
 
 interface Event {
   description: string;
@@ -77,6 +80,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
   private updateMap = new Map([
     [GameUpdateType.DisplayEvent, (u) => this.onDisplayMessageEvent(u)],
+    [GameUpdateType.DisplayChatEvent, (u) => this.onDisplayChatEvent(u)],
     [GameUpdateType.AllianceRequest, (u) => this.onAllianceRequestEvent(u)],
     [
       GameUpdateType.AllianceRequestReply,
@@ -184,6 +188,34 @@ export class EventsDisplay extends LitElement implements Layer {
       highlight: true,
       type: event.messageType,
       unsafeDescription: true,
+    });
+  }
+
+  onDisplayChatEvent(event: DisplayChatMessageUpdate) {
+    const myPlayer = this.game.playerByClientID(this.clientID);
+    if (
+      event.playerID === null ||
+      !myPlayer ||
+      myPlayer.smallID() !== event.playerID
+    ) {
+      return;
+    }
+
+    const baseMessage = translateText(`chat.${event.category}.${event.key}`);
+    const translatedMessage = baseMessage.replace(
+      /\[([^\]]+)\]/g,
+      (_, key) => event.variables?.[key] || `[${key}]`,
+    );
+
+    this.addEvent({
+      description: translateText(event.isFrom ? "chat.from" : "chat.to", {
+        user: event.recipient,
+        msg: translatedMessage,
+      }),
+      createdAt: this.game.ticks(),
+      highlight: true,
+      type: MessageType.CHAT,
+      unsafeDescription: false,
     });
   }
 

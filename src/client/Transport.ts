@@ -13,13 +13,13 @@ import {
 import { PlayerView } from "../core/game/GameView";
 import {
   AllPlayersStats,
+  ClientHashMessage,
   ClientID,
-  ClientIntentMessageSchema,
-  ClientJoinMessageSchema,
-  ClientLogMessageSchema,
-  ClientMessageSchema,
-  ClientPingMessageSchema,
-  ClientSendWinnerSchema,
+  ClientIntentMessage,
+  ClientJoinMessage,
+  ClientLogMessage,
+  ClientPingMessage,
+  ClientSendWinnerMessage,
   Intent,
   ServerMessage,
   ServerMessageSchema,
@@ -232,14 +232,9 @@ export class Transport {
       this.pingInterval = window.setInterval(() => {
         if (this.socket != null && this.socket.readyState === WebSocket.OPEN) {
           this.sendMsg(
-            JSON.stringify(
-              ClientPingMessageSchema.parse({
-                type: "ping",
-                clientID: this.lobbyConfig.clientID,
-                persistentID: this.lobbyConfig.persistentID,
-                gameID: this.lobbyConfig.gameID,
-              }),
-            ),
+            JSON.stringify({
+              type: "ping",
+            } satisfies ClientPingMessage),
           );
         }
       }, 5 * 1000);
@@ -325,32 +320,25 @@ export class Transport {
 
   private onSendLogEvent(event: SendLogEvent) {
     this.sendMsg(
-      JSON.stringify(
-        ClientLogMessageSchema.parse({
-          type: "log",
-          gameID: this.lobbyConfig.gameID,
-          clientID: this.lobbyConfig.clientID,
-          persistentID: this.lobbyConfig.persistentID,
-          log: event.log,
-          severity: event.severity,
-        }),
-      ),
+      JSON.stringify({
+        type: "log",
+        log: event.log,
+        severity: event.severity,
+      } satisfies ClientLogMessage),
     );
   }
 
   joinGame(numTurns: number) {
     this.sendMsg(
-      JSON.stringify(
-        ClientJoinMessageSchema.parse({
-          type: "join",
-          gameID: this.lobbyConfig.gameID,
-          clientID: this.lobbyConfig.clientID,
-          lastTurn: numTurns,
-          persistentID: this.lobbyConfig.persistentID,
-          username: this.lobbyConfig.playerName,
-          flag: this.lobbyConfig.flag,
-        }),
-      ),
+      JSON.stringify({
+        type: "join",
+        gameID: this.lobbyConfig.gameID,
+        clientID: this.lobbyConfig.clientID,
+        lastTurn: numTurns,
+        persistentID: this.lobbyConfig.persistentID,
+        username: this.lobbyConfig.playerName,
+        flag: this.lobbyConfig.flag,
+      } satisfies ClientJoinMessage),
     );
   }
 
@@ -519,15 +507,12 @@ export class Transport {
 
   private onSendWinnerEvent(event: SendWinnerEvent) {
     if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
-      const msg = ClientSendWinnerSchema.parse({
+      const msg = {
         type: "winner",
-        clientID: this.lobbyConfig.clientID,
-        persistentID: this.lobbyConfig.persistentID,
-        gameID: this.lobbyConfig.gameID,
         winner: event.winner,
         allPlayersStats: event.allPlayersStats,
         winnerType: event.winnerType,
-      });
+      } satisfies ClientSendWinnerMessage;
       this.sendMsg(JSON.stringify(msg));
     } else {
       console.log(
@@ -540,15 +525,13 @@ export class Transport {
 
   private onSendHashEvent(event: SendHashEvent) {
     if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
-      const msg = ClientMessageSchema.parse({
-        type: "hash",
-        clientID: this.lobbyConfig.clientID,
-        persistentID: this.lobbyConfig.persistentID,
-        gameID: this.lobbyConfig.gameID,
-        turnNumber: event.tick,
-        hash: event.hash,
-      });
-      this.sendMsg(JSON.stringify(msg));
+      this.sendMsg(
+        JSON.stringify({
+          type: "hash",
+          turnNumber: event.tick,
+          hash: event.hash,
+        } satisfies ClientHashMessage),
+      );
     } else {
       console.log(
         "WebSocket is not open. Current state:",
@@ -577,13 +560,10 @@ export class Transport {
 
   private sendIntent(intent: Intent) {
     if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
-      const msg = ClientIntentMessageSchema.parse({
+      const msg = {
         type: "intent",
-        clientID: this.lobbyConfig.clientID,
-        persistentID: this.lobbyConfig.persistentID,
-        gameID: this.lobbyConfig.gameID,
         intent: intent,
-      });
+      } satisfies ClientIntentMessage;
       this.sendMsg(JSON.stringify(msg));
     } else {
       console.log(

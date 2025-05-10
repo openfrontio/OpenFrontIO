@@ -29,6 +29,7 @@ export enum GameUpdateType {
   Unit,
   Player,
   DisplayEvent,
+  DisplayChatEvent,
   AllianceRequest,
   AllianceRequestReply,
   BrokeAlliance,
@@ -48,6 +49,7 @@ export type GameUpdate =
   | BrokeAllianceUpdate
   | AllianceExpiredUpdate
   | DisplayMessageUpdate
+  | DisplayChatMessageUpdate
   | TargetPlayerUpdate
   | EmojiUpdate
   | WinUpdate
@@ -156,6 +158,16 @@ export interface DisplayMessageUpdate {
   messageType: MessageType;
   playerID: number | null;
 }
+
+export type DisplayChatMessageUpdate = {
+  type: GameUpdateType.DisplayChatEvent;
+  key: string;
+  category: string;
+  variables?: Record<string, string>;
+  playerID: number | null;
+  isFrom: boolean;
+  recipient: string;
+};
 
 export interface WinUpdate {
   type: GameUpdateType.Win;
