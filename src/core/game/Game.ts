@@ -342,6 +342,12 @@ export interface TerraNullius {
   smallID(): number;
 }
 
+export interface Embargo {
+  createdAt: Tick;
+  willExpire: boolean;
+  target: PlayerID;
+}
+
 export interface Player {
   // Basic Info
   smallID(): number;
@@ -440,7 +446,8 @@ export interface Player {
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;
   tradingPartners(): Player[];
-  addEmbargo(other: PlayerID): void;
+  addEmbargo(other: PlayerID, willExpire: boolean): void;
+  getEmbargoes(): Embargo[];
   stopEmbargo(other: PlayerID): void;
   canTrade(other: Player): boolean;
 

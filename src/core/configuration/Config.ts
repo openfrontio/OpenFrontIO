@@ -108,6 +108,7 @@ export interface Config {
   boatMaxNumber(): number;
   allianceDuration(): Tick;
   allianceRequestCooldown(): Tick;
+  embargoDuration(): Tick;
   targetDuration(): Tick;
   targetCooldown(): Tick;
   emojiMessageCooldown(): Tick;

@@ -79,8 +79,8 @@ export class AttackExecution implements Execution {
         targetPlayer.type() != PlayerType.Bot &&
         this._owner.type() != PlayerType.Bot
       ) {
-        // Don't let bots embargo since they can't trade anyways.
-        targetPlayer.addEmbargo(this._owner.id());
+        // Don't let bots embargo since they can't trade anyway.
+        targetPlayer.addEmbargo(this._owner.id(), true);
       }
     }
 

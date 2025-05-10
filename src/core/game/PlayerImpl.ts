@@ -21,6 +21,7 @@ import {
   BuildableUnit,
   Cell,
   ColoredTeams,
+  Embargo,
   EmojiMessage,
   Gold,
   MessageType,
@@ -73,7 +74,7 @@ export class PlayerImpl implements Player {
 
   markedTraitorTick = -1;
 
-  private embargoes: Set<PlayerID> = new Set();
+  private embargoes = new Map<PlayerID, Embargo>();
 
   public _borderTiles: Set<TileRef> = new Set();
 
@@ -142,7 +143,7 @@ export class PlayerImpl implements Player {
       troops: this.troops(),
       targetTroopRatio: this.targetTroopRatio(),
       allies: this.alliances().map((a) => a.other(this).smallID()),
-      embargoes: this.embargoes,
+      embargoes: new Set([...this.embargoes.keys()].map((p) => p.toString())),
       isTraitor: this.isTraitor(),
       targets: this.targets().map((p) => p.smallID()),
       outgoingEmojis: this.outgoingEmojis(),
@@ -582,8 +583,19 @@ export class PlayerImpl implements Player {
     return !embargo && other.id() != this.id();
   }
 
-  addEmbargo(other: PlayerID): void {
-    this.embargoes.add(other);
+  addEmbargo(other: PlayerID, willExpire: boolean): void {
+    if (this.embargoes.has(other) && !this.embargoes.get(other).willExpire)
+      return;
+
+    this.embargoes.set(other, {
+      createdAt: this.mg.ticks(),
+      willExpire: willExpire,
+      target: other,
+    });
+  }
+
+  getEmbargoes(): Embargo[] {
+    return [...this.embargoes.values()];
   }
 
   stopEmbargo(other: PlayerID): void {
