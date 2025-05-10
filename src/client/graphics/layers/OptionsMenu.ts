@@ -5,7 +5,11 @@ import { GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
-import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
+import {
+  AlternateViewEvent,
+  RefreshGraphicsEvent,
+  ToggleShowDefensePostRangeEvent,
+} from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -119,6 +123,11 @@ export class OptionsMenu extends LitElement implements Layer {
     this.userSettings.toggleLeftClickOpenMenu();
   }
 
+  private onToggleShowDefensePostRange() {
+    this.userSettings.toggleShowDefensePostRange();
+    this.eventBus.emit(new ToggleShowDefensePostRangeEvent());
+  }
+
   init() {
     console.log("init called from OptionsMenu");
     this.showPauseButton =
@@ -224,6 +233,13 @@ export class OptionsMenu extends LitElement implements Layer {
                 ? "Focus locked"
                 : "Hover focus"),
           })} -->
+          ${button({
+            onClick: this.onToggleShowDefensePostRange,
+            title: "Show Defense Post Range",
+            children:
+              "🛡️: " +
+              (this.userSettings.showDefensePostRange() ? "Show" : "Hide"),
+          })}
         </div>
       </div>
     `;

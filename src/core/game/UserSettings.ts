@@ -33,6 +33,10 @@ export class UserSettings {
     this.get("settings.focusLocked", true);
   }
 
+  showDefensePostRange() {
+    return this.get("settings.showDefensePostRange", false);
+  }
+
   toggleLeftClickOpenMenu() {
     this.set("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
   }
@@ -56,5 +60,9 @@ export class UserSettings {
     } else {
       document.documentElement.classList.remove("dark");
     }
+  }
+
+  toggleShowDefensePostRange() {
+    this.set("settings.showDefensePostRange", !this.showDefensePostRange());
   }
 }
