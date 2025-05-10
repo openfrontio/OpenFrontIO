@@ -17,6 +17,7 @@ export class UnitImpl implements Unit {
   private _active = true;
   private _health: bigint;
   private _lastTile: TileRef = null;
+  private _retreating: boolean = false;
   private _target: Unit = null;
   private _moveTarget: TileRef = null;
   private _targetedBySAM = false;
@@ -67,6 +68,7 @@ export class UnitImpl implements Unit {
       troops: this._troops,
       ownerID: this._owner.smallID(),
       isActive: this._active,
+      retreating: this._retreating,
       pos: this._tile,
       lastPos: this._lastTile,
       health: this.hasHealth() ? Number(this._health) : undefined,
@@ -157,6 +159,17 @@ export class UnitImpl implements Unit {
   }
   isActive(): boolean {
     return this._active;
+  }
+
+  retreating(): boolean {
+    return this._retreating;
+  }
+
+  orderBoatRetreat() {
+    if (this.type() != UnitType.TransportShip) {
+      throw new Error(`Cannot retreat ${this.type()}`);
+    }
+    this._retreating = true;
   }
 
   constructionType(): UnitType | null {
