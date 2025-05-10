@@ -21,6 +21,10 @@ export class GoToPlayerEvent implements GameEvent {
   constructor(public player: PlayerView) {}
 }
 
+export class ShowRadialMenuEvent implements GameEvent {
+  constructor() {}
+}
+
 export class GoToUnitEvent implements GameEvent {
   constructor(public unit: UnitView) {}
 }
@@ -122,6 +126,11 @@ export class Leaderboard extends LitElement implements Layer {
 
   private handleRowClickPlayer(player: PlayerView) {
     this.eventBus.emit(new GoToPlayerEvent(player));
+  }
+
+  private handleRowRightClickPlayer(e) {
+    if (e.button !== 2) return;
+    this.eventBus.emit(new ShowRadialMenuEvent());
   }
 
   renderLayer(context: CanvasRenderingContext2D) {}
@@ -279,6 +288,7 @@ export class Leaderboard extends LitElement implements Layer {
                 <tr
                   class="${player.isMyPlayer ? "myPlayer" : "otherPlayer"}"
                   @click=${() => this.handleRowClickPlayer(player.player)}
+                  @contextmenu=${(e) => this.handleRowRightClickPlayer(e)}
                 >
                   <td>${player.position}</td>
                   <td class="player-name">${unsafeHTML(player.name)}</td>

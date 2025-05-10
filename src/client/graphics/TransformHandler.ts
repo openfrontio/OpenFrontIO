@@ -1,8 +1,17 @@
 import { EventBus } from "../../core/EventBus";
 import { Cell } from "../../core/game/Game";
 import { GameView } from "../../core/game/GameView";
-import { CenterCameraEvent, DragEvent, ZoomEvent } from "../InputHandler";
-import { GoToPlayerEvent, GoToUnitEvent } from "./layers/Leaderboard";
+import {
+  CenterCameraEvent,
+  ContextMenuEvent,
+  DragEvent,
+  ZoomEvent,
+} from "../InputHandler";
+import {
+  GoToPlayerEvent,
+  GoToUnitEvent,
+  ShowRadialMenuEvent,
+} from "./layers/Leaderboard";
 
 export class TransformHandler {
   public scale: number = 1.8;
@@ -21,6 +30,7 @@ export class TransformHandler {
     this.eventBus.on(ZoomEvent, (e) => this.onZoom(e));
     this.eventBus.on(DragEvent, (e) => this.onMove(e));
     this.eventBus.on(GoToPlayerEvent, (e) => this.onGoToPlayer(e));
+    this.eventBus.on(ShowRadialMenuEvent, (e) => this.onShowRadialMenuEvent());
     this.eventBus.on(GoToUnitEvent, (e) => this.onGoToUnit(e));
     this.eventBus.on(CenterCameraEvent, () => this.centerCamera());
   }
@@ -142,11 +152,14 @@ export class TransformHandler {
   onGoToPlayer(event: GoToPlayerEvent) {
     this.game.setFocusedPlayer(event.player);
     this.clearTarget();
-    this.target = new Cell(
-      event.player.nameLocation().x,
-      event.player.nameLocation().y,
-    );
+    const playerLocation = event.player.nameLocation();
+    this.target = new Cell(playerLocation.x, playerLocation.y);
     this.intervalID = setInterval(() => this.goTo(), 1);
+  }
+
+  onShowRadialMenuEvent() {
+    this.clearTarget();
+    this.eventBus.emit(new ContextMenuEvent(400, 400)); // To appear next to the leaderboard
   }
 
   onGoToUnit(event: GoToUnitEvent) {
@@ -169,8 +182,11 @@ export class TransformHandler {
   private goTo() {
     const { screenX, screenY } = this.screenCenter();
     const screenMapCenter = new Cell(screenX, screenY);
-
+    const isValidCoordinate =
+      this.game.isValidCoord(screenX, screenY) &&
+      this.game.isValidCoord(this.target.x, this.target.y);
     if (
+      isValidCoordinate &&
       this.game.manhattanDist(
         this.game.ref(screenX, screenY),
         this.game.ref(this.target.x, this.target.y),
