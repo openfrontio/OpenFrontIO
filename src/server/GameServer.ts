@@ -152,6 +152,24 @@ export class GameServer {
         (c) => c.clientID != client.clientID,
       );
     }
+
+    // Check for duplicate persistentID
+    const isDuplicate = this.activeClients.some(
+      (c) => c.persistentID === client.persistentID,
+    );
+    if (isDuplicate) {
+      this.log.warn(`rejected client ${client.clientID} (duplicate)`);
+      client.ws.send(
+        JSON.stringify({
+          type: "join_rejected",
+          reason: "duplicate_client",
+          message: "You are already connected from another tab or device.",
+        }),
+      );
+      client.ws.close(1008, "duplicate client detected");
+      return;
+    }
+
     this.activeClients.push(client);
     client.lastPing = Date.now();
 
