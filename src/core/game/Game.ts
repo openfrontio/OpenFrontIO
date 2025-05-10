@@ -508,6 +508,12 @@ export interface Game extends GameMap {
     type: MessageType,
     playerID: PlayerID | null,
   ): void;
+  displayIncomingUnit(
+    unitID: number,
+    message: string,
+    type: MessageType,
+    playerID: PlayerID,
+  ): void;
 
   displayChat(
     message: string,

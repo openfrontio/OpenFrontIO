@@ -628,6 +628,24 @@ export class GameImpl implements Game {
       recipient: recipient,
     });
   }
+
+  displayIncomingUnit(
+    unitID: number,
+    message: string,
+    type: MessageType,
+    playerID: PlayerID,
+  ): void {
+    const id = this.player(playerID).smallID();
+
+    this.addUpdate({
+      type: GameUpdateType.UnitIncoming,
+      unitID: unitID,
+      message: message,
+      messageType: type,
+      playerID: id,
+    });
+  }
+
   addUnit(u: Unit) {
     this.unitGrid.addUnit(u);
   }

@@ -38,6 +38,7 @@ export enum GameUpdateType {
   Emoji,
   Win,
   Hash,
+  UnitIncoming,
 }
 
 export type GameUpdate =
@@ -53,7 +54,8 @@ export type GameUpdate =
   | TargetPlayerUpdate
   | EmojiUpdate
   | WinUpdate
-  | HashUpdate;
+  | HashUpdate
+  | UnitIncomingUpdate;
 
 export interface TileUpdateWrapper {
   type: GameUpdateType.Tile;
@@ -181,4 +183,12 @@ export interface HashUpdate {
   type: GameUpdateType.Hash;
   tick: Tick;
   hash: number;
+}
+
+export interface UnitIncomingUpdate {
+  type: GameUpdateType.UnitIncoming;
+  unitID: number;
+  message: string;
+  messageType: MessageType;
+  playerID: number;
 }
