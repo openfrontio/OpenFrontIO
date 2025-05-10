@@ -384,7 +384,7 @@ export class EventsDisplay extends LitElement implements Layer {
   emitBoatCancelIntent(id: number) {
     const myPlayer = this.game.playerByClientID(this.clientID);
     if (!myPlayer) return;
-    this.eventBus.emit(new CancelBoatIntentEvent(myPlayer.id(), id));
+    this.eventBus.emit(new CancelBoatIntentEvent(id));
   }
 
   emitGoToPlayerEvent(attackerID: number) {
