@@ -19,6 +19,9 @@ import {
 } from "./Colors";
 import { Theme } from "./Config";
 
+type ColorCache = Map<string, Colord>;
+const borderColorCache: ColorCache = new Map<string, Colord>();
+
 export const pastelTheme = new (class implements Theme {
   private rand = new PseudoRandom(123);
 
@@ -91,12 +94,19 @@ export const pastelTheme = new (class implements Theme {
   }
 
   borderColor(player: PlayerView): Colord {
+    if (borderColorCache.has(player.id())) {
+      return borderColorCache.get(player.id())!;
+    }
+
     const tc = this.territoryColor(player).rgba;
-    return colord({
+    const color = colord({
       r: Math.max(tc.r - 40, 0),
       g: Math.max(tc.g - 40, 0),
       b: Math.max(tc.b - 40, 0),
     });
+
+    borderColorCache.set(player.id(), color);
+    return color;
   }
   defendedBorderColor(player: PlayerView): Colord {
     const bc = this.borderColor(player).rgba;
