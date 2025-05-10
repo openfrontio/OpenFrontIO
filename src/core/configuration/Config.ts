@@ -119,6 +119,7 @@ export interface Config {
   tradeShipSpawnRate(numberOfPorts: number): number;
   safeFromPiratesCooldownMax(): number;
   defensePostRange(): number;
+  samSearchRange(): number;
   SAMCooldown(): number;
   SiloCooldown(): number;
   defensePostDefenseBonus(): number;
