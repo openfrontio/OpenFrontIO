@@ -1,11 +1,9 @@
-import { Execution, Game, Player, PlayerID } from "../game/Game";
+import { consolex } from "../Consolex";
+import { Execution, Game, Player, PlayerID, UnitType } from "../game/Game";
 
 export class BoatRetreatExecution implements Execution {
   private active = true;
-  private retreatBoatOrdered = false;
   private player: Player;
-  private startTick: number;
-  private mg: Game;
   constructor(
     private playerID: PlayerID,
     private unitID: number,
@@ -18,17 +16,24 @@ export class BoatRetreatExecution implements Execution {
       );
       return;
     }
-    this.mg = mg;
     this.player = mg.player(this.playerID);
-    this.startTick = mg.ticks();
   }
 
   tick(ticks: number): void {
-    if (!this.retreatBoatOrdered) {
-      this.player.orderBoatRetreat(this.unitID);
-      this.retreatBoatOrdered = true;
-      this.active = false;
+    const unit = this.player
+      .units()
+      .filter(
+        (unit) =>
+          unit.id() == this.unitID && unit.type() == UnitType.TransportShip,
+      );
+
+    if (!unit || !unit[0]) {
+      consolex.warn(`Didn't find outgoing boat with id ${this.unitID}`);
+      return;
     }
+
+    unit[0].orderBoatRetreat();
+    this.active = false;
   }
 
   owner(): Player {

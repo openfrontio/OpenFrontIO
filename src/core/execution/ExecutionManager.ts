@@ -6,6 +6,7 @@ import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
 import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
 import { AttackExecution } from "./AttackExecution";
+import { BoatRetreatExecution } from "./BoatRetreatExecution";
 import { BotSpawner } from "./BotSpawner";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { DonateGoldExecution } from "./DonateGoldExecution";
@@ -13,7 +14,6 @@ import { DonateTroopsExecution } from "./DonateTroopExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { FakeHumanExecution } from "./FakeHumanExecution";
-import { BoatRetreatExecution } from "./BoatRetreatExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NoOpExecution } from "./NoOpExecution";
 import { QuickChatExecution } from "./QuickChatExecution";
@@ -60,7 +60,7 @@ export class Executor {
       case "cancel_attack":
         return new RetreatExecution(playerID, intent.attackID);
       case "cancel_boat":
-        return new BoatRetreatExecution(intent.playerID, intent.unitID);
+        return new BoatRetreatExecution(playerID, intent.unitID);
       case "move_warship":
         return new MoveWarshipExecution(intent.unitId, intent.tile);
       case "spawn":

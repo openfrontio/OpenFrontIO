@@ -165,6 +165,9 @@ export class UnitImpl implements Unit {
   }
 
   orderBoatRetreat() {
+    if (this.type() != UnitType.TransportShip) {
+      throw new Error(`Cannot retreat ${this.type()}`);
+    }
     this._retreating = true;
   }
 
