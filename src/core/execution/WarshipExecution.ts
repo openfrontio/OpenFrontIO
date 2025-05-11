@@ -119,7 +119,7 @@ export class WarshipExecution implements Execution {
         this.active = false;
         return;
       }
-      this.warship = this._owner.buildUnit(UnitType.Warship, 0, spawn);
+      this.warship = this._owner.buildUnit(UnitType.Warship, spawn, {});
       return;
     }
     if (!this.warship.isActive()) {

@@ -45,7 +45,7 @@ export class PortExecution implements Execution {
         this.active = false;
         return;
       }
-      this.port = player.buildUnit(UnitType.Port, 0, spawn);
+      this.port = player.buildUnit(UnitType.Port, spawn, {});
     }
 
     if (!this.port.isActive()) {

@@ -65,7 +65,7 @@ export class DefensePostExecution implements Execution {
         this.active = false;
         return;
       }
-      this.post = this.player.buildUnit(UnitType.DefensePost, 0, spawnTile);
+      this.post = this.player.buildUnit(UnitType.DefensePost, spawnTile, {});
     }
     if (!this.post.isActive()) {
       this.active = false;

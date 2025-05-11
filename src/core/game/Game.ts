@@ -148,6 +148,51 @@ export enum UnitType {
   Construction = "Construction",
 }
 
+export interface UnitParamsMap {
+  [UnitType.TransportShip]: {
+    troops?: number;
+    destination?: TileRef;
+  };
+
+  [UnitType.Warship]: {};
+
+  [UnitType.Shell]: {};
+
+  [UnitType.SAMMissile]: {};
+
+  [UnitType.Port]: {};
+
+  [UnitType.AtomBomb]: {};
+
+  [UnitType.HydrogenBomb]: {};
+
+  [UnitType.TradeShip]: {
+    dstPort: Unit;
+    lastSetSafeFromPirates?: number;
+  };
+
+  [UnitType.MissileSilo]: {
+    cooldownDuration?: number;
+  };
+
+  [UnitType.DefensePost]: {};
+
+  [UnitType.SAMLauncher]: {};
+
+  [UnitType.City]: {};
+
+  [UnitType.MIRV]: {};
+
+  [UnitType.MIRVWarhead]: {};
+
+  [UnitType.Construction]: {};
+}
+
+// Type helper to get params type for a specific unit type
+export type UnitParams<T extends UnitType> = UnitParamsMap[T];
+
+export type AllUnitParams = UnitParamsMap[keyof UnitParamsMap];
+
 export const nukeTypes = [
   UnitType.AtomBomb,
   UnitType.HydrogenBomb,
@@ -276,15 +321,6 @@ export class PlayerInfo {
   }
 }
 
-// Some units have info specific to them
-export interface UnitSpecificInfos {
-  dstPort?: Unit; // Only for trade ships
-  lastSetSafeFromPirates?: number; // Only for trade ships
-  detonationDst?: TileRef; // Only for nukes
-  warshipTarget?: Unit;
-  cooldownDuration?: number;
-}
-
 export interface Unit {
   id(): number;
 
@@ -391,12 +427,12 @@ export interface Player {
   unitsIncludingConstruction(type: UnitType): Unit[];
   buildableUnits(tile: TileRef): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
-  buildUnit(
-    type: UnitType,
-    troops: number,
-    tile: TileRef,
-    unitSpecificInfos?: UnitSpecificInfos,
+  buildUnit<T extends UnitType>(
+    type: T,
+    spawnTile: TileRef,
+    params: UnitParams<T>,
   ): Unit;
+
   captureUnit(unit: Unit): void;
 
   // Relations & Diplomacy
