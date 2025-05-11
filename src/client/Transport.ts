@@ -263,7 +263,12 @@ export class Transport {
     onconnect: () => void,
     onmessage: (message: ServerMessage) => void,
   ) {
-    this.localServer = new LocalServer(this.lobbyConfig, onconnect, onmessage);
+    this.localServer = new LocalServer(
+      this.lobbyConfig,
+      onconnect,
+      onmessage,
+      this.lobbyConfig.gameRecord != null,
+    );
     this.localServer.start();
   }
 
@@ -316,6 +321,12 @@ export class Transport {
 
   public reconnect() {
     this.connect(this.onconnect, this.onmessage);
+  }
+
+  public turnComplete() {
+    if (this.isLocal) {
+      this.localServer.turnComplete();
+    }
   }
 
   private onSendLogEvent(event: SendLogEvent) {

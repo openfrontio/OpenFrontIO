@@ -158,7 +158,11 @@ export class DefaultConfig implements Config {
     private _serverConfig: ServerConfig,
     private _gameConfig: GameConfig,
     private _userSettings: UserSettings,
+    private _isReplay: boolean,
   ) {}
+  isReplay(): boolean {
+    return this._isReplay;
+  }
 
   samHittingChance(): number {
     return 0.8;
