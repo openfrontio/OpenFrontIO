@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { ref } from "lit/directives/ref.js";
 import { EventBus } from "../../../core/EventBus";
 import {
   PlayerProfile,
@@ -11,6 +12,7 @@ import {
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
+import { renderPlayerFlag } from "../../FlagInput";
 import { MouseMoveEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
@@ -200,10 +202,19 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             : "text-white"}"
         >
           ${player.flag()
-            ? html`<img
-                class="h-8 mr-1 aspect-[3/4]"
-                src=${"/flags/" + player.flag() + ".svg"}
-              />`
+            ? player.flag().startsWith("ctmfg")
+              ? html`<div
+                  class="h-8 mr-1 aspect-[3/4] player-flag"
+                  ${ref((el) => {
+                    if (el != null) {
+                      renderPlayerFlag(player.flag(), el as HTMLElement);
+                    }
+                  })}
+                ></div>`
+              : html`<img
+                  class="h-8 mr-1 aspect-[3/4]"
+                  src=${"/flags/" + player.flag() + ".svg"}
+                />`
             : ""}
           ${player.name()}
         </div>

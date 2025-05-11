@@ -12,6 +12,7 @@ import { ClientID } from "../../../core/Schemas";
 import { Theme } from "../../../core/configuration/Config";
 import { AllPlayers, Cell, nukeTypes } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { renderPlayerFlag } from "../../FlagInput";
 import { createCanvas, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -180,13 +181,26 @@ export class NameLayer implements Layer {
 
     const nameDiv = document.createElement("div");
     if (player.flag()) {
-      const flagImg = document.createElement("img");
-      flagImg.classList.add("player-flag");
-      flagImg.style.opacity = "0.8";
-      flagImg.src = "/flags/" + player.flag() + ".svg";
-      flagImg.style.zIndex = "1";
-      flagImg.style.aspectRatio = "3/4";
-      nameDiv.appendChild(flagImg);
+      const flagCode = player.flag();
+
+      if (flagCode.startsWith("ctmfg")) {
+        const flagWrapper = document.createElement("div");
+        flagWrapper.classList.add("player-flag");
+        flagWrapper.style.opacity = "0.8";
+        flagWrapper.style.zIndex = "1";
+        flagWrapper.style.aspectRatio = "3/4";
+
+        renderPlayerFlag(flagCode, flagWrapper);
+        nameDiv.appendChild(flagWrapper);
+      } else {
+        const flagImg = document.createElement("img");
+        flagImg.classList.add("player-flag");
+        flagImg.style.opacity = "0.8";
+        flagImg.style.zIndex = "1";
+        flagImg.style.aspectRatio = "3/4";
+        flagImg.src = "/flags/" + flagCode + ".svg";
+        nameDiv.appendChild(flagImg);
+      }
     }
     nameDiv.classList.add("player-name");
     nameDiv.style.color = this.theme.textColor(player);
