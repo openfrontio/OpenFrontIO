@@ -52,24 +52,16 @@ export class NukeExecution implements Execution {
     return this.mg.owner(this.dst);
   }
 
-  private tilesToDestroyPrediction(): Set<TileRef> {
-    const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
-    const inner2 = magnitude.inner * magnitude.inner;
-    const outer2 = magnitude.outer * magnitude.outer;
-    return this.mg.bfs(this.dst, (_, n: TileRef) => {
-      const d2 = this.mg.euclideanDistSquared(this.dst, n);
-      return d2 <= outer2 && d2 <= inner2;
-    });
-  }
-
-  private tilesToDestroy(): Set<TileRef> {
+  private tilesToDestroy(useRandomRange: boolean): Set<TileRef> {
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const rand = new PseudoRandom(this.mg.ticks());
     const inner2 = magnitude.inner * magnitude.inner;
     const outer2 = magnitude.outer * magnitude.outer;
     return this.mg.bfs(this.dst, (_, n: TileRef) => {
       const d2 = this.mg.euclideanDistSquared(this.dst, n);
-      return d2 <= outer2 && (d2 <= inner2 || rand.chance(2));
+      return (
+        d2 <= outer2 && (!useRandomRange || d2 <= inner2 || rand.chance(2))
+      );
     });
   }
 
@@ -108,7 +100,7 @@ export class NukeExecution implements Execution {
       this.nuke = this.player.buildUnit(this.type, spawn, {
         detonationDst: this.dst,
       });
-      this.breakAlliances(this.tilesToDestroyPrediction());
+      this.breakAlliances(this.tilesToDestroy(false));
       if (this.mg.hasOwner(this.dst)) {
         const target = this.mg.owner(this.dst) as Player;
         if (this.type == UnitType.AtomBomb) {
@@ -171,7 +163,7 @@ export class NukeExecution implements Execution {
 
   private detonate() {
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
-    const toDestroy = this.tilesToDestroy();
+    const toDestroy = this.tilesToDestroy(true);
     this.breakAlliances(toDestroy);
 
     for (const tile of toDestroy) {
