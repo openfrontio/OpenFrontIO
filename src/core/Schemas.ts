@@ -138,9 +138,36 @@ const SafeString = z
   )
   .max(1000);
 
+const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]*$/;
+// Copied from zod, modified to remove their erroneous `typ` header requirement
+function isValidJWT(jwt: string, alg?: string): boolean {
+  if (!jwtRegex.test(jwt)) return false;
+  try {
+    const [header] = jwt.split(".");
+    // Convert base64url to base64
+    const base64 = header
+      .replace(/-/g, "+")
+      .replace(/_/g, "/")
+      .padEnd(header.length + ((4 - (header.length % 4)) % 4), "=");
+    const decoded = JSON.parse(atob(base64));
+    if (typeof decoded !== "object" || decoded === null) return false;
+    if (!decoded.alg) return false;
+    if (alg && decoded.alg !== alg) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const PersistentIdSchema = z.string().uuid();
-const StringJwtSchema = z.string().jwt().max(500);
-const TokenSchema = z.union([PersistentIdSchema, StringJwtSchema]);
+const StringJwtSchema = z.string().max(400).refine(isValidJWT, {
+  message: "Invalid JWT format",
+});
+const TokenSchema = z
+  .string()
+  .refine((v) => PersistentIdSchema.safeParse(v).success || isValidJWT(v), {
+    message: "Token must be a valid UUID or JWT",
+  });
 
 const EmojiSchema = z
   .number()
