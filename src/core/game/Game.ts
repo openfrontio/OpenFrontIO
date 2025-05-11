@@ -148,44 +148,74 @@ export enum UnitType {
   Construction = "Construction",
 }
 
+export interface SpawnComp {
+  spawn: TileRef;
+}
+
+export interface TargetTileComp {
+  targetTile: TileRef;
+}
+
+export interface BaseUnitParams<T extends UnitType> {
+  type: T;
+}
+
 export interface UnitParamsMap {
-  [UnitType.TransportShip]: {
+  [UnitType.TransportShip]: BaseUnitParams<UnitType.TransportShip> & {
     troops?: number;
-    destination?: TileRef;
+    transportDstTile?: TileRef;
   };
 
-  [UnitType.Warship]: {};
+  [UnitType.Warship]: BaseUnitParams<UnitType.Warship> & {
+    warshipPatrolTile: TileRef;
+  };
 
-  [UnitType.Shell]: {};
+  [UnitType.Shell]: BaseUnitParams<UnitType.Shell> & {
+    targetUnit: Unit;
+    ownerUnit: Unit;
+  };
 
-  [UnitType.SAMMissile]: {};
+  [UnitType.SAMMissile]: BaseUnitParams<UnitType.SAMMissile> & {
+    destination?: TileRef;
+    targetUnit: Unit;
+    ownerUnit: Unit;
+  };
 
-  [UnitType.Port]: {};
+  [UnitType.Port]: BaseUnitParams<UnitType.Port>;
 
-  [UnitType.AtomBomb]: {};
+  [UnitType.AtomBomb]: BaseUnitParams<UnitType.AtomBomb> & {
+    detonationDst: TileRef;
+  };
 
-  [UnitType.HydrogenBomb]: {};
+  [UnitType.HydrogenBomb]: BaseUnitParams<UnitType.HydrogenBomb> & {
+    detonationDst: TileRef;
+  };
 
-  [UnitType.TradeShip]: {
-    dstPort: Unit;
+  [UnitType.TradeShip]: BaseUnitParams<UnitType.TradeShip> & {
+    ownerUnit: Unit;
+    targetUnit: Unit;
     lastSetSafeFromPirates?: number;
   };
 
-  [UnitType.MissileSilo]: {
+  [UnitType.MissileSilo]: BaseUnitParams<UnitType.MissileSilo> & {
     cooldownDuration?: number;
   };
 
-  [UnitType.DefensePost]: {};
+  [UnitType.DefensePost]: BaseUnitParams<UnitType.DefensePost>;
 
-  [UnitType.SAMLauncher]: {};
+  [UnitType.SAMLauncher]: BaseUnitParams<UnitType.SAMLauncher> & {
+    cooldownDuration?: number;
+  };
 
-  [UnitType.City]: {};
+  [UnitType.City]: BaseUnitParams<UnitType.City>;
 
-  [UnitType.MIRV]: {};
+  [UnitType.MIRV]: BaseUnitParams<UnitType.MIRV>;
 
-  [UnitType.MIRVWarhead]: {};
+  [UnitType.MIRVWarhead]: BaseUnitParams<UnitType.MIRVWarhead> & {
+    detonationDst: TileRef;
+  };
 
-  [UnitType.Construction]: {};
+  [UnitType.Construction]: BaseUnitParams<UnitType.Construction>;
 }
 
 // Type helper to get params type for a specific unit type
@@ -341,14 +371,14 @@ export interface Unit {
   health(): number;
   modifyHealth(delta: number): void;
 
-  setWarshipTarget(target: Unit): void; // warship only
-  warshipTarget(): Unit;
+  setTargetUnit(target: Unit): void;
+  targetUnit(): Unit;
+  ownerUnit(): Unit;
 
   setCooldown(triggerCooldown: boolean): void;
   ticksLeftInCooldown(cooldownDuration: number): Tick;
   isCooldown(): boolean;
   setDstPort(dstPort: Unit): void;
-  dstPort(): Unit; // Only for trade ships
   setSafeFromPirates(): void; // Only for trade ships
   isSafeFromPirates(): boolean; // Only for trade ships
   detonationDst(): TileRef; // Only for nukes
@@ -369,6 +399,9 @@ export interface Unit {
 
   // Updates
   toUpdate(): UnitUpdate;
+
+  warshipPatrolTile: TileRef | null;
+  transportDstTile: TileRef | null;
 }
 
 export interface TerraNullius {
@@ -427,12 +460,7 @@ export interface Player {
   unitsIncludingConstruction(type: UnitType): Unit[];
   buildableUnits(tile: TileRef): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
-  buildUnit<T extends UnitType>(
-    type: T,
-    spawnTile: TileRef,
-    params: UnitParams<T>,
-  ): Unit;
-
+  buildUnit<T extends UnitType>(params: UnitParams<T> & SpawnComp): Unit;
   captureUnit(unit: Unit): void;
 
   // Relations & Diplomacy

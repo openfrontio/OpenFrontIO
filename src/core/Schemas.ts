@@ -262,6 +262,9 @@ export const BuildUnitIntentSchema = BaseIntentSchema.extend({
   unit: z.nativeEnum(UnitType),
   x: z.number(),
   y: z.number(),
+  troops: z.number().nullable(),
+  transportDstTile: z.number().nullable(),
+  transportSpawnTile: z.number().nullable(),
 });
 
 export const CancelAttackIntentSchema = BaseIntentSchema.extend({

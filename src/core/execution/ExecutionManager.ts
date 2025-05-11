@@ -7,7 +7,7 @@ import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyEx
 import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
 import { AttackExecution } from "./AttackExecution";
 import { BotSpawner } from "./BotSpawner";
-import { ConstructionExecution } from "./ConstructionExecution";
+import { BuildExecution } from "./BuildExecution";
 import { DonateGoldExecution } from "./DonateGoldExecution";
 import { DonateTroopsExecution } from "./DonateTroopExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
@@ -104,11 +104,10 @@ export class Executor {
       case "embargo":
         return new EmbargoExecution(player, intent.targetID, intent.action);
       case "build_unit":
-        return new ConstructionExecution(
-          playerID,
-          this.mg.ref(intent.x, intent.y),
-          intent.unit,
-        );
+        return new BuildExecution(playerID, {
+          type: intent.unit,
+          dstTile: this.mg.ref(intent.x, intent.y),
+        });
       case "quick_chat":
         return new QuickChatExecution(
           playerID,

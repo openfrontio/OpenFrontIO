@@ -1,21 +1,13 @@
-import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
-import { TileRef } from "../game/GameMap";
+import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { AirPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 
 export class ShellExecution implements Execution {
-  private active = true;
   private pathFinder: AirPathFinder;
-  private shell: Unit;
   private mg: Game;
   private destroyAtTick: number = -1;
 
-  constructor(
-    private spawn: TileRef,
-    private _owner: Player,
-    private ownerUnit: Unit,
-    private target: Unit,
-  ) {}
+  constructor(private shell: Unit) {}
 
   init(mg: Game, ticks: number): void {
     this.pathFinder = new AirPathFinder(mg, new PseudoRandom(mg.ticks()));
@@ -23,35 +15,26 @@ export class ShellExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.shell == null) {
-      this.shell = this._owner.buildUnit(UnitType.Shell, this.spawn, {});
-    }
-    if (!this.shell.isActive()) {
-      this.active = false;
-      return;
-    }
     if (
-      !this.target.isActive() ||
-      this.target.owner() == this.shell.owner() ||
+      !this.shell.targetUnit().isActive() ||
+      this.shell.targetUnit().owner() == this.shell.owner() ||
       (this.destroyAtTick != -1 && this.mg.ticks() >= this.destroyAtTick)
     ) {
       this.shell.delete(false);
-      this.active = false;
       return;
     }
 
-    if (this.destroyAtTick == -1 && !this.ownerUnit.isActive()) {
+    if (this.destroyAtTick == -1 && !this.shell.ownerUnit().isActive()) {
       this.destroyAtTick = this.mg.ticks() + this.mg.config().shellLifetime();
     }
 
     for (let i = 0; i < 3; i++) {
       const result = this.pathFinder.nextTile(
         this.shell.tile(),
-        this.target.tile(),
+        this.shell.targetUnit().tile(),
       );
       if (result === true) {
-        this.active = false;
-        this.target.modifyHealth(-this.effectOnTarget());
+        this.shell.targetUnit().modifyHealth(-this.effectOnTarget());
         this.shell.delete(false);
         return;
       } else {
@@ -66,7 +49,7 @@ export class ShellExecution implements Execution {
   }
 
   isActive(): boolean {
-    return this.active;
+    return this.shell.isActive();
   }
   activeDuringSpawnPhase(): boolean {
     return false;
