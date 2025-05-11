@@ -139,6 +139,8 @@ const SafeString = z
   .max(1000);
 
 const PersistentIdSchema = z.string().uuid();
+const StringJwtSchema = z.string().jwt().max(500);
+const TokenSchema = z.union([PersistentIdSchema, StringJwtSchema]);
 
 const EmojiSchema = z
   .number()
@@ -405,7 +407,7 @@ export const ClientIntentMessageSchema = z.object({
 export const ClientJoinMessageSchema = z.object({
   type: z.literal("join"),
   clientID: ID,
-  persistentID: PersistentIdSchema, // WARNING: PII
+  token: TokenSchema, // WARNING: PII
   gameID: ID,
   lastTurn: z.number(), // The last turn the client saw.
   username: SafeString,

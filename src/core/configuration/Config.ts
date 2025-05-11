@@ -1,4 +1,5 @@
 import { Colord } from "colord";
+import { JWK } from "jose";
 import { GameConfig, GameID } from "../Schemas";
 import {
   Difficulty,
@@ -29,7 +30,6 @@ export interface ServerConfig {
   turnIntervalMs(): number;
   gameCreationRate(): number;
   lobbyMaxPlayers(map: GameMapType, mode: GameMode): number;
-  discordRedirectURI(): string;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
   workerPath(gameID: GameID): string;
@@ -49,6 +49,9 @@ export interface ServerConfig {
   otelUsername(): string;
   otelPassword(): string;
   otelEnabled(): boolean;
+  jwtAudience(): string;
+  jwtIssuer(): string;
+  jwkPublicKey(): Promise<JWK>;
 }
 
 export interface NukeMagnitude {

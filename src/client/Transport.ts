@@ -335,7 +335,7 @@ export class Transport {
         gameID: this.lobbyConfig.gameID,
         clientID: this.lobbyConfig.clientID,
         lastTurn: numTurns,
-        persistentID: this.lobbyConfig.persistentID,
+        token: this.lobbyConfig.token,
         username: this.lobbyConfig.playerName,
         flag: this.lobbyConfig.flag,
       } satisfies ClientJoinMessage),
