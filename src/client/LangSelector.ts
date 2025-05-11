@@ -176,6 +176,7 @@ export class LangSelector extends LitElement {
       "user-setting",
       "o-modal",
       "o-button",
+      "support-us-modal",
     ];
 
     document.title = translations.main?.title || document.title;
