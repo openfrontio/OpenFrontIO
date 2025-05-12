@@ -48,8 +48,8 @@ export class CubicBezierCurve {
     private p0: Point,
     private p3: Point,
   ) {
-    this.p2 = p0; // Init control point to both ends
-    this.p1 = p3;
+    this.p1 = p0;
+    this.p2 = p3;
   }
 
   private p1: Point;
