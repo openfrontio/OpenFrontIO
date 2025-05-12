@@ -466,6 +466,10 @@ export class DefaultConfig implements Config {
   theme(): Theme {
     return this.userSettings().darkMode() ? pastelThemeDark : pastelTheme;
   }
+  clearColorCaches() {
+    pastelThemeDark.clearColorCache();
+    pastelTheme.clearColorCache();
+  }
 
   attackLogic(
     gm: Game,

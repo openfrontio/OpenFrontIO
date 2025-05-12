@@ -186,4 +186,7 @@ export const pastelThemeDark = new (class implements Theme {
   spawnHighlightColor(): Colord {
     return this._spawnHighlightColor;
   }
+  clearColorCache() {
+    this.borderColorCache.clear();
+  }
 })();
