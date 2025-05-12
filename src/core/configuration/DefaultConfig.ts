@@ -80,76 +80,80 @@ export abstract class DefaultServerConfig implements ServerConfig {
 
   lobbyMaxPlayers(map: GameMapType, mode: GameMode): number {
     const numPlayers = () => {
-      if (GameMapType.GatewayToTheAtlantic.includes(map)) {
-        return Math.random() < 0.2 ? 80 : 50;
+      switch (map) {
+        case GameMapType.GatewayToTheAtlantic:
+          return Math.random() < 0.2 ? 80 : 50;
+          break;
+        case GameMapType.SouthAmerica:
+          return Math.random() < 0.2 ? 70 : 40;
+          break;
+        case GameMapType.NorthAmerica:
+          return Math.random() < 0.2 ? 80 : 50;
+          break;
+        case GameMapType.Africa:
+          return Math.random() < 0.2 ? 100 : 50;
+          break;
+        case GameMapType.Europe:
+          return Math.random() < 0.2 ? 80 : 50;
+          break;
+        case GameMapType.Australia:
+          return Math.random() < 0.2 ? 50 : 30;
+          break;
+        case GameMapType.Iceland:
+          return Math.random() < 0.2 ? 50 : 30;
+          break;
+        case GameMapType.Britannia:
+          return Math.random() < 0.2 ? 50 : 30;
+          break;
+        case GameMapType.Asia:
+          return Math.random() < 0.2 ? 60 : 30;
+          break;
+        case GameMapType.FalklandIslands:
+          return Math.random() < 0.2 ? 50 : 30;
+          break;
+        case GameMapType.Baikal:
+          return Math.random() < 0.2 ? 60 : 40;
+          break;
+        case GameMapType.Mena:
+          return Math.random() < 0.2 ? 60 : 30;
+          break;
+        case GameMapType.Mars:
+          return Math.random() < 0.2 ? 50 : 30;
+          break;
+        case GameMapType.Oceania:
+          return Math.random() < 0.2 ? 30 : 20;
+          break;
+        case GameMapType.Japan:
+          return Math.random() < 0.2 ? 50 : 30;
+          break;
+        case GameMapType.FaroeIslands:
+          return Math.random() < 0.2 ? 80 : 50;
+          break;
+        case GameMapType.DeglaciatedAntarctica:
+          return Math.random() < 0.2 ? 50 : 30;
+          break;
+        case GameMapType.EuropeClassic:
+          return Math.random() < 0.2 ? 80 : 50;
+          break;
+        case GameMapType.BetweenTwoSeas:
+          return Math.random() < 0.2 ? 40 : 30;
+          break;
+        case GameMapType.BlackSea:
+          return Math.random() < 0.2 ? 40 : 30;
+          break;
+        case GameMapType.Pangaea:
+          return Math.random() < 0.2 ? 40 : 30;
+          break;
+        case GameMapType.World:
+          return Math.random() < 0.2 ? 150 : 50;
+          break;
+        case GameMapType.KnownWorld:
+          return Math.random() < 0.2 ? 50 : 30;
+          break;
+        default:
+          return Math.random() < 0.2 ? 50 : 20;
+          break;
       }
-      if (GameMapType.SouthAmerica.includes(map)) {
-        return Math.random() < 0.2 ? 70 : 40;
-      }
-      if (GameMapType.NorthAmerica.includes(map)) {
-        return Math.random() < 0.2 ? 80 : 50;
-      }
-      if (GameMapType.Africa.includes(map)) {
-        return Math.random() < 0.2 ? 100 : 50;
-      }
-      if (GameMapType.Europe.includes(map)) {
-        return Math.random() < 0.2 ? 80 : 50;
-      }
-      if (GameMapType.Australia.includes(map)) {
-        return Math.random() < 0.2 ? 50 : 30;
-      }
-      if (GameMapType.Iceland.includes(map)) {
-        return Math.random() < 0.2 ? 50 : 30;
-      }
-      if (GameMapType.Britannia.includes(map)) {
-        return Math.random() < 0.2 ? 50 : 30;
-      }
-      if (GameMapType.Asia.includes(map)) {
-        return Math.random() < 0.2 ? 60 : 30;
-      }
-      if (GameMapType.FalklandIslands.includes(map)) {
-        return Math.random() < 0.2 ? 50 : 30;
-      }
-      if (GameMapType.Baikal.includes(map)) {
-        return Math.random() < 0.2 ? 60 : 40;
-      }
-      if (GameMapType.Mena.includes(map)) {
-        return Math.random() < 0.2 ? 60 : 30;
-      }
-      if (GameMapType.Mars.includes(map)) {
-        return Math.random() < 0.2 ? 50 : 30;
-      }
-      if (GameMapType.Oceania.includes(map)) {
-        return Math.random() < 0.2 ? 30 : 20;
-      }
-      if (GameMapType.Japan.includes(map)) {
-        return Math.random() < 0.2 ? 50 : 30;
-      }
-      if (GameMapType.FaroeIslands.includes(map)) {
-        return Math.random() < 0.2 ? 40 : 30;
-      }
-      if (GameMapType.DeglaciatedAntarctica.includes(map)) {
-        return Math.random() < 0.2 ? 50 : 30;
-      }
-      if (GameMapType.EuropeClassic.includes(map)) {
-        return Math.random() < 0.2 ? 80 : 50;
-      }
-      if (GameMapType.BetweenTwoSeas.includes(map)) {
-        return Math.random() < 0.2 ? 40 : 30;
-      }
-      if (GameMapType.BlackSea.includes(map)) {
-        return Math.random() < 0.2 ? 40 : 30;
-      }
-      if (GameMapType.Pangaea.includes(map)) {
-        return Math.random() < 0.2 ? 40 : 30;
-      }
-      if (GameMapType.World.includes(map)) {
-        return Math.random() < 0.2 ? 150 : 50;
-      }
-      if (GameMapType.KnownWorld.includes(map)) {
-        return Math.random() < 0.2 ? 50 : 30;
-      }
-      return Math.random() < 0.2 ? 50 : 20;
     };
     return Math.min(150, numPlayers() * (mode == GameMode.Team ? 1.5 : 1));
   }
