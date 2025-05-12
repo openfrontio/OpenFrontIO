@@ -1,11 +1,11 @@
 import { simpleHash, toInt, withinInt } from "../Util";
 import {
+  AllUnitParams,
   MessageType,
   Player,
   Tick,
   Unit,
   UnitInfo,
-  UnitSpecificInfos,
   UnitType,
 } from "./Game";
 import { GameImpl } from "./GameImpl";
@@ -17,13 +17,14 @@ export class UnitImpl implements Unit {
   private _active = true;
   private _health: bigint;
   private _lastTile: TileRef = null;
-  // Currently only warship use it
   private _target: Unit = null;
   private _moveTarget: TileRef = null;
   private _targetedBySAM = false;
-
+  private _safeFromPiratesCooldown: number; // Only for trade ships
+  private _lastSetSafeFromPirates: number; // Only for trade ships
   private _constructionType: UnitType = undefined;
 
+  private _troops: number;
   private _cooldownTick: Tick | null = null;
   private _dstPort: Unit | null = null; // Only for trade ships
   private _detonationDst: TileRef | null = null; // Only for nukes
@@ -34,17 +35,22 @@ export class UnitImpl implements Unit {
     private _type: UnitType,
     private mg: GameImpl,
     private _tile: TileRef,
-    private _troops: number,
     private _id: number,
     public _owner: PlayerImpl,
-    unitsSpecificInfos: UnitSpecificInfos = {},
+    params: AllUnitParams = {},
   ) {
-    this._health = toInt(this.mg.unitInfo(_type).maxHealth ?? 1);
     this._lastTile = _tile;
-    this._dstPort = unitsSpecificInfos.dstPort;
-    this._detonationDst = unitsSpecificInfos.detonationDst;
-    this._warshipTarget = unitsSpecificInfos.warshipTarget;
-    this._cooldownDuration = unitsSpecificInfos.cooldownDuration;
+    this._health = toInt(this.mg.unitInfo(_type).maxHealth ?? 1);
+    this._safeFromPiratesCooldown = this.mg
+      .config()
+      .safeFromPiratesCooldownMax();
+
+    this._troops = "troops" in params ? params.troops : 0;
+    this._dstPort = "dstPort" in params ? params.dstPort : null;
+    this._cooldownDuration =
+      "cooldownDuration" in params ? params.cooldownDuration : null;
+    this._lastSetSafeFromPirates =
+      "lastSetSafeFromPirates" in params ? params.lastSetSafeFromPirates : 0;
   }
 
   id() {
@@ -84,9 +90,9 @@ export class UnitImpl implements Unit {
     if (tile == null) {
       throw new Error("tile cannot be null");
     }
+    this.mg.removeUnit(this);
     this._lastTile = this._tile;
     this._tile = tile;
-    this.mg.removeUnit(this);
     this.mg.addUnit(this);
     this.mg.addUpdate(this.toUpdate());
   }
@@ -141,7 +147,7 @@ export class UnitImpl implements Unit {
     this._active = false;
     this.mg.addUpdate(this.toUpdate());
     this.mg.removeUnit(this);
-    if (displayMessage) {
+    if (displayMessage && this.type() != UnitType.MIRVWarhead) {
       this.mg.displayMessage(
         `Your ${this.type()} was destroyed`,
         MessageType.ERROR,
@@ -232,5 +238,16 @@ export class UnitImpl implements Unit {
 
   targetedBySAM(): boolean {
     return this._targetedBySAM;
+  }
+
+  setSafeFromPirates(): void {
+    this._lastSetSafeFromPirates = this.mg.ticks();
+  }
+
+  isSafeFromPirates(): boolean {
+    return (
+      this.mg.ticks() - this._lastSetSafeFromPirates <
+      this._safeFromPiratesCooldown
+    );
   }
 }

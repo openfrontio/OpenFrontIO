@@ -94,6 +94,11 @@ export class PublicLobby extends LitElement {
     const playersRemainingBeforeMax =
       lobby.gameConfig.maxPlayers - lobby.numClients;
 
+    const teamCount =
+      lobby.gameConfig.gameMode === GameMode.Team
+        ? lobby.gameConfig.playerTeams || 0
+        : null;
+
     return html`
       <button
         @click=${() => this.lobbyClicked(lobby)}
@@ -127,7 +132,7 @@ export class PublicLobby extends LitElement {
               </div>
               <div class="text-md font-medium text-blue-100">
                 ${lobby.gameConfig.gameMode == GameMode.Team
-                  ? translateText("game_mode.teams")
+                  ? translateText("public_lobby.teams", { num: teamCount })
                   : translateText("game_mode.ffa")}
               </div>
             </div>

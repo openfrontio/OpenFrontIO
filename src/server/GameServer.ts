@@ -1,3 +1,4 @@
+import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
 import {
@@ -57,6 +58,8 @@ export class GameServer {
 
   private _hasPrestarted = false;
 
+  private kickedClients: Set<ClientID> = new Set();
+
   constructor(
     public readonly id: string,
     readonly log_: Logger,
@@ -77,9 +80,6 @@ export class GameServer {
     if (gameConfig.disableNPCs != null) {
       this.gameConfig.disableNPCs = gameConfig.disableNPCs;
     }
-    if (gameConfig.disableNukes != null) {
-      this.gameConfig.disableNukes = gameConfig.disableNukes;
-    }
     if (gameConfig.bots != null) {
       this.gameConfig.bots = gameConfig.bots;
     }
@@ -95,13 +95,27 @@ export class GameServer {
     if (gameConfig.gameMode != null) {
       this.gameConfig.gameMode = gameConfig.gameMode;
     }
+
+    if (gameConfig.disabledUnits != null) {
+      this.gameConfig.disabledUnits = gameConfig.disabledUnits;
+    }
+
+    if (gameConfig.playerTeams != null) {
+      this.gameConfig.playerTeams = gameConfig.playerTeams;
+    }
   }
 
   public addClient(client: Client, lastTurn: number) {
+    if (this.kickedClients.has(client.clientID)) {
+      this.log.warn(`cannot add client, already kicked`, {
+        clientID: client.clientID,
+      });
+      return;
+    }
     this.log.info("client (re)joining game", {
       clientID: client.clientID,
       persistentID: client.persistentID,
-      clientIP: client.ip,
+      clientIP: ipAnonymize(client.ip),
       isRejoin: lastTurn > 0,
     });
 
@@ -113,7 +127,7 @@ export class GameServer {
     ) {
       this.log.warn("cannot add client, already have 3 ips", {
         clientID: client.clientID,
-        clientIP: client.ip,
+        clientIP: ipAnonymize(client.ip),
       });
       return;
     }
@@ -123,11 +137,21 @@ export class GameServer {
       (c) => c.clientID == client.clientID,
     );
     if (existing != null) {
+      if (client.persistentID !== existing.persistentID) {
+        this.log.error("persistent ids do not match", {
+          clientID: client.clientID,
+          clientIP: ipAnonymize(client.ip),
+          clientPersistentID: client.persistentID,
+          existingIP: ipAnonymize(existing.ip),
+          existingPersistentID: existing.persistentID,
+        });
+        return;
+      }
       existing.ws.removeAllListeners("message");
+      this.activeClients = this.activeClients.filter(
+        (c) => c.clientID != client.clientID,
+      );
     }
-    this.activeClients = this.activeClients.filter(
-      (c) => c.clientID != client.clientID,
-    );
     this.activeClients.push(client);
     client.lastPing = Date.now();
 
@@ -141,34 +165,16 @@ export class GameServer {
           try {
             clientMsg = ClientMessageSchema.parse(JSON.parse(message));
           } catch (error) {
-            throw Error(`error parsing schema for ${client.ip}`);
+            throw Error(`error parsing schema for ${ipAnonymize(client.ip)}`);
           }
-          if (this.allClients.has(clientMsg.clientID)) {
-            const client = this.allClients.get(clientMsg.clientID);
-            if (client.persistentID != clientMsg.persistentID) {
+          if (clientMsg.type == "intent") {
+            if (clientMsg.intent.clientID != client.clientID) {
               this.log.warn(
-                `Client ID ${clientMsg.clientID} sent incorrect id ${clientMsg.persistentID}, does not match persistent id ${client.persistentID}`,
-                {
-                  clientID: clientMsg.clientID,
-                  persistentID: clientMsg.persistentID,
-                },
+                `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
               );
               return;
             }
-          }
-
-          // Clear out persistent id to make sure it doesn't get sent to other clients.
-          clientMsg.persistentID = null;
-
-          if (clientMsg.type == "intent") {
-            if (clientMsg.gameID == this.id) {
-              this.addIntent(clientMsg.intent);
-            } else {
-              this.log.warn("client sent to wrong game", {
-                clientID: clientMsg.clientID,
-                persistentID: clientMsg.persistentID,
-              });
-            }
+            this.addIntent(clientMsg.intent);
           }
           if (clientMsg.type == "ping") {
             this.lastPingUpdate = Date.now();
@@ -318,7 +324,6 @@ export class GameServer {
   private endTurn() {
     const pastTurn: Turn = {
       turnNumber: this.turns.length,
-      gameID: this.id,
       intents: this.intents,
     };
     this.turns.push(pastTurn);
@@ -356,13 +361,17 @@ export class GameServer {
         client.ws.close(1000, "game has ended");
       }
     });
-    this.log.info("ending game", { gameID: this.id, turns: this.turns.length });
+    if (!this._hasPrestarted && !this._hasStarted) {
+      this.log.info(`game not started, not archiving game`);
+      return;
+    }
+    this.log.info(`ending game with ${this.turns.length} turns`);
     try {
       if (this.allClients.size > 0) {
         const playerRecords: PlayerRecord[] = Array.from(
           this.allClients.values(),
         ).map((client) => ({
-          ip: client.ip,
+          ip: ipAnonymize(client.ip),
           clientID: client.clientID,
           username: client.username,
           persistentID: client.persistentID,
@@ -490,6 +499,31 @@ export class GameServer {
 
   public isPublic(): boolean {
     return this.gameConfig.gameType == GameType.Public;
+  }
+
+  public kickClient(clientID: ClientID): void {
+    if (this.kickedClients.has(clientID)) {
+      this.log.warn(`cannot kick client, already kicked`, {
+        clientID,
+      });
+      return;
+    }
+    const client = this.activeClients.find((c) => c.clientID === clientID);
+    if (client) {
+      this.log.info("Kicking client from game", {
+        clientID: client.clientID,
+        persistentID: client.persistentID,
+      });
+      client.ws.close(1000, "Kicked from game");
+      this.activeClients = this.activeClients.filter(
+        (c) => c.clientID !== clientID,
+      );
+      this.kickedClients.add(clientID);
+    } else {
+      this.log.warn(`cannot kick client, not found in game`, {
+        clientID,
+      });
+    }
   }
 
   private handleSynchronization() {

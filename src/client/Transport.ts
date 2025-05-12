@@ -13,13 +13,13 @@ import {
 import { PlayerView } from "../core/game/GameView";
 import {
   AllPlayersStats,
+  ClientHashMessage,
   ClientID,
-  ClientIntentMessageSchema,
-  ClientJoinMessageSchema,
-  ClientLogMessageSchema,
-  ClientMessageSchema,
-  ClientPingMessageSchema,
-  ClientSendWinnerSchema,
+  ClientIntentMessage,
+  ClientJoinMessage,
+  ClientLogMessage,
+  ClientPingMessage,
+  ClientSendWinnerMessage,
   Intent,
   ServerMessage,
   ServerMessageSchema,
@@ -68,8 +68,9 @@ export class SendAttackIntentEvent implements GameEvent {
 export class SendBoatAttackIntentEvent implements GameEvent {
   constructor(
     public readonly targetID: PlayerID,
-    public readonly cell: Cell,
+    public readonly dst: Cell,
     public readonly troops: number,
+    public readonly src: Cell | null = null,
   ) {}
 }
 
@@ -87,7 +88,7 @@ export class SendTargetPlayerIntentEvent implements GameEvent {
 export class SendEmojiIntentEvent implements GameEvent {
   constructor(
     public readonly recipient: PlayerView | typeof AllPlayers,
-    public readonly emoji: string,
+    public readonly emoji: number,
   ) {}
 }
 
@@ -104,6 +105,15 @@ export class SendDonateTroopsIntentEvent implements GameEvent {
     public readonly sender: PlayerView,
     public readonly recipient: PlayerView,
     public readonly troops: number | null,
+  ) {}
+}
+
+export class SendQuickChatEvent implements GameEvent {
+  constructor(
+    public readonly sender: PlayerView,
+    public readonly recipient: PlayerView,
+    public readonly quickChatKey: string,
+    public readonly variables: { [key: string]: string },
   ) {}
 }
 
@@ -195,6 +205,7 @@ export class Transport {
     this.eventBus.on(SendDonateTroopsIntentEvent, (e) =>
       this.onSendDonateTroopIntent(e),
     );
+    this.eventBus.on(SendQuickChatEvent, (e) => this.onSendQuickChatIntent(e));
     this.eventBus.on(SendEmbargoIntentEvent, (e) =>
       this.onSendEmbargoIntent(e),
     );
@@ -221,14 +232,9 @@ export class Transport {
       this.pingInterval = window.setInterval(() => {
         if (this.socket != null && this.socket.readyState === WebSocket.OPEN) {
           this.sendMsg(
-            JSON.stringify(
-              ClientPingMessageSchema.parse({
-                type: "ping",
-                clientID: this.lobbyConfig.clientID,
-                persistentID: this.lobbyConfig.persistentID,
-                gameID: this.lobbyConfig.gameID,
-              }),
-            ),
+            JSON.stringify({
+              type: "ping",
+            } satisfies ClientPingMessage),
           );
         }
       }, 5 * 1000);
@@ -257,7 +263,12 @@ export class Transport {
     onconnect: () => void,
     onmessage: (message: ServerMessage) => void,
   ) {
-    this.localServer = new LocalServer(this.lobbyConfig, onconnect, onmessage);
+    this.localServer = new LocalServer(
+      this.lobbyConfig,
+      onconnect,
+      onmessage,
+      this.lobbyConfig.gameRecord != null,
+    );
     this.localServer.start();
   }
 
@@ -312,34 +323,33 @@ export class Transport {
     this.connect(this.onconnect, this.onmessage);
   }
 
+  public turnComplete() {
+    if (this.isLocal) {
+      this.localServer.turnComplete();
+    }
+  }
+
   private onSendLogEvent(event: SendLogEvent) {
     this.sendMsg(
-      JSON.stringify(
-        ClientLogMessageSchema.parse({
-          type: "log",
-          gameID: this.lobbyConfig.gameID,
-          clientID: this.lobbyConfig.clientID,
-          persistentID: this.lobbyConfig.persistentID,
-          log: event.log,
-          severity: event.severity,
-        }),
-      ),
+      JSON.stringify({
+        type: "log",
+        log: event.log,
+        severity: event.severity,
+      } satisfies ClientLogMessage),
     );
   }
 
   joinGame(numTurns: number) {
     this.sendMsg(
-      JSON.stringify(
-        ClientJoinMessageSchema.parse({
-          type: "join",
-          gameID: this.lobbyConfig.gameID,
-          clientID: this.lobbyConfig.clientID,
-          lastTurn: numTurns,
-          persistentID: this.lobbyConfig.persistentID,
-          username: this.lobbyConfig.playerName,
-          flag: this.lobbyConfig.flag,
-        }),
-      ),
+      JSON.stringify({
+        type: "join",
+        gameID: this.lobbyConfig.gameID,
+        clientID: this.lobbyConfig.clientID,
+        lastTurn: numTurns,
+        token: this.lobbyConfig.token,
+        username: this.lobbyConfig.playerName,
+        flag: this.lobbyConfig.flag,
+      } satisfies ClientJoinMessage),
     );
   }
 
@@ -414,8 +424,10 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       targetID: event.targetID,
       troops: event.troops,
-      x: event.cell.x,
-      y: event.cell.y,
+      dstX: event.dst.x,
+      dstY: event.dst.y,
+      srcX: event.src?.x,
+      srcY: event.src?.y,
     });
   }
 
@@ -452,6 +464,16 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
       troops: event.troops,
+    });
+  }
+
+  private onSendQuickChatIntent(event: SendQuickChatEvent) {
+    this.sendIntent({
+      type: "quick_chat",
+      clientID: this.lobbyConfig.clientID,
+      recipient: event.recipient.id(),
+      quickChatKey: event.quickChatKey,
+      variables: event.variables,
     });
   }
 
@@ -496,15 +518,12 @@ export class Transport {
 
   private onSendWinnerEvent(event: SendWinnerEvent) {
     if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
-      const msg = ClientSendWinnerSchema.parse({
+      const msg = {
         type: "winner",
-        clientID: this.lobbyConfig.clientID,
-        persistentID: this.lobbyConfig.persistentID,
-        gameID: this.lobbyConfig.gameID,
         winner: event.winner,
         allPlayersStats: event.allPlayersStats,
         winnerType: event.winnerType,
-      });
+      } satisfies ClientSendWinnerMessage;
       this.sendMsg(JSON.stringify(msg));
     } else {
       console.log(
@@ -517,15 +536,13 @@ export class Transport {
 
   private onSendHashEvent(event: SendHashEvent) {
     if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
-      const msg = ClientMessageSchema.parse({
-        type: "hash",
-        clientID: this.lobbyConfig.clientID,
-        persistentID: this.lobbyConfig.persistentID,
-        gameID: this.lobbyConfig.gameID,
-        turnNumber: event.tick,
-        hash: event.hash,
-      });
-      this.sendMsg(JSON.stringify(msg));
+      this.sendMsg(
+        JSON.stringify({
+          type: "hash",
+          turnNumber: event.tick,
+          hash: event.hash,
+        } satisfies ClientHashMessage),
+      );
     } else {
       console.log(
         "WebSocket is not open. Current state:",
@@ -554,13 +571,10 @@ export class Transport {
 
   private sendIntent(intent: Intent) {
     if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
-      const msg = ClientIntentMessageSchema.parse({
+      const msg = {
         type: "intent",
-        clientID: this.lobbyConfig.clientID,
-        persistentID: this.lobbyConfig.persistentID,
-        gameID: this.lobbyConfig.gameID,
         intent: intent,
-      });
+      } satisfies ClientIntentMessage;
       this.sendMsg(JSON.stringify(msg));
     } else {
       console.log(

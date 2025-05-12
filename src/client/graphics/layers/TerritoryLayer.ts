@@ -119,6 +119,14 @@ export class TerritoryLayer implements Layer {
       if (!centerTile) {
         continue;
       }
+      let color = this.theme.spawnHighlightColor();
+      if (
+        this.game.myPlayer() != null &&
+        this.game.myPlayer() != human &&
+        this.game.myPlayer().isFriendly(human)
+      ) {
+        color = this.theme.selfColor();
+      }
       for (const tile of this.game.bfs(
         centerTile,
         euclDistFN(centerTile, 9, true),
@@ -126,7 +134,7 @@ export class TerritoryLayer implements Layer {
         if (!this.game.hasOwner(tile)) {
           this.paintHighlightCell(
             new Cell(this.game.x(tile), this.game.y(tile)),
-            this.theme.spawnHighlightColor(),
+            color,
             255,
           );
         }
@@ -259,15 +267,13 @@ export class TerritoryLayer implements Layer {
           )
           .filter((u) => u.unit.owner() == owner).length > 0
       ) {
-        const useDefendedBorderColor = playerIsFocused
-          ? this.theme.focusedDefendedBorderColor()
-          : this.theme.defendedBorderColor(owner);
-        this.paintCell(
-          this.game.x(tile),
-          this.game.y(tile),
-          useDefendedBorderColor,
-          255,
-        );
+        const borderColors = this.theme.defendedBorderColors(owner);
+        const x = this.game.x(tile);
+        const y = this.game.y(tile);
+        const lightTile =
+          (x % 2 == 0 && y % 2 == 0) || (y % 2 == 1 && x % 2 == 1);
+        const borderColor = lightTile ? borderColors.light : borderColors.dark;
+        this.paintCell(x, y, borderColor, 255);
       } else {
         const useBorderColor = playerIsFocused
           ? this.theme.focusedBorderColor()

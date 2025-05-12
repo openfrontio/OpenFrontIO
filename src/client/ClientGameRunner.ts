@@ -11,7 +11,8 @@ import {
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { Team, UnitType } from "../core/game/Game";
+import { Cell, Team, UnitType } from "../core/game/Game";
+import { TileRef } from "../core/game/GameMap";
 import {
   ErrorUpdate,
   GameUpdateType,
@@ -28,6 +29,7 @@ import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentIDFromCookie } from "./Main";
 import {
   SendAttackIntentEvent,
+  SendBoatAttackIntentEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
   Transport,
@@ -41,7 +43,7 @@ export interface LobbyConfig {
   playerName: string;
   clientID: ClientID;
   gameID: GameID;
-  persistentID: string;
+  token: string;
   // GameStartInfo only exists when playing a singleplayer game.
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
@@ -57,7 +59,7 @@ export function joinLobby(
   initRemoteSender(eventBus);
 
   consolex.log(
-    `joinging lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}, persistentID: ${lobbyConfig.persistentID.slice(0, 5)}`,
+    `joinging lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
   );
 
   const userSettings: UserSettings = new UserSettings();
@@ -80,7 +82,7 @@ export function joinLobby(
     if (message.type == "start") {
       // Trigger prestart for singleplayer games
       onPrestart();
-      consolex.log(`lobby: game started: ${JSON.stringify(message)}`);
+      consolex.log(`lobby: game started: ${JSON.stringify(message, null, 2)}`);
       onJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
       lobbyConfig.gameStartInfo = message.gameStartInfo;
@@ -110,6 +112,7 @@ export async function createClientGame(
   const config = await getConfig(
     lobbyConfig.gameStartInfo.config,
     userSettings,
+    lobbyConfig.gameRecord != null,
   );
   let gameMap: TerrainMapData | null = null;
 
@@ -237,9 +240,11 @@ export class ClientGameRunner {
           this.lobby.gameStartInfo.gameID,
           this.lobby.clientID,
         );
+        console.error(gu.stack);
         this.stop(true);
         return;
       }
+      this.transport.turnComplete();
       gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
@@ -273,7 +278,6 @@ export class ClientGameRunner {
           while (turn.turnNumber - 1 > this.turnsSeen) {
             this.worker.sendTurn({
               turnNumber: this.turnsSeen,
-              gameID: turn.gameID,
               intents: [],
             });
             this.turnsSeen++;
@@ -351,7 +355,13 @@ export class ClientGameRunner {
       }
     }
     this.myPlayer.actions(tile).then((actions) => {
-      console.log(`got actions: ${JSON.stringify(actions)}`);
+      const bu = actions.buildableUnits.find(
+        (bu) => bu.type == UnitType.TransportShip,
+      );
+      if (bu == null) {
+        console.warn(`no transport ship buildable units`);
+        return;
+      }
       if (actions.canAttack) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
@@ -359,6 +369,30 @@ export class ClientGameRunner {
             this.myPlayer.troops() * this.renderer.uiState.attackRatio,
           ),
         );
+      } else if (
+        bu.canBuild !== false &&
+        this.shouldBoat(tile, bu.canBuild) &&
+        this.gameView.isLand(tile)
+      ) {
+        this.myPlayer
+          .bestTransportShipSpawn(this.gameView.ref(cell.x, cell.y))
+          .then((spawn: number | false) => {
+            let spawnCell = null;
+            if (spawn !== false) {
+              spawnCell = new Cell(
+                this.gameView.x(spawn),
+                this.gameView.y(spawn),
+              );
+            }
+            this.eventBus.emit(
+              new SendBoatAttackIntentEvent(
+                this.gameView.owner(tile).id(),
+                cell,
+                this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+                spawnCell,
+              ),
+            );
+          });
       }
 
       const owner = this.gameView.owner(tile);
@@ -368,6 +402,18 @@ export class ClientGameRunner {
         this.gameView.setFocusedPlayer(null);
       }
     });
+  }
+
+  private shouldBoat(tile: TileRef, src: TileRef) {
+    // TODO: Global enable flag
+    // TODO: Global limit autoboat to nearby shore flag
+    // if (!enableAutoBoat) return false;
+    // if (!limitAutoBoatNear) return true;
+    const distanceSquared = this.gameView.euclideanDistSquared(tile, src);
+    const limit = 100;
+    const limitSquared = limit * limit;
+    if (distanceSquared > limitSquared) return false;
+    return true;
   }
 
   private onMouseMove(event: MouseMoveEvent) {

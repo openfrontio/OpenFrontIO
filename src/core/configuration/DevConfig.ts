@@ -5,9 +5,6 @@ import { GameEnv, ServerConfig } from "./Config";
 import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
 
 export class DevServerConfig extends DefaultServerConfig {
-  r2Bucket(): string {
-    return "openfront-staging";
-  }
   adminToken(): string {
     return "WARNING_DEV_ADMIN_KEY_DO_NOT_USE_IN_PRODUCTION";
   }
@@ -24,11 +21,19 @@ export class DevServerConfig extends DefaultServerConfig {
     return Math.random() < 0.5 ? 2 : 3;
   }
 
-  discordRedirectURI(): string {
-    return "http://localhost:3000/auth/callback";
+  samWarheadHittingChance(): number {
+    return 1;
   }
+
+  samHittingChance(): number {
+    return 1;
+  }
+
   numWorkers(): number {
     return 2;
+  }
+  jwtAudience(): string {
+    return "localhost";
   }
   gitCommit(): string {
     return "DEV";
@@ -36,8 +41,13 @@ export class DevServerConfig extends DefaultServerConfig {
 }
 
 export class DevConfig extends DefaultConfig {
-  constructor(sc: ServerConfig, gc: GameConfig, us: UserSettings) {
-    super(sc, gc, us);
+  constructor(
+    sc: ServerConfig,
+    gc: GameConfig,
+    us: UserSettings,
+    isReplay: boolean,
+  ) {
+    super(sc, gc, us, isReplay);
   }
 
   // numSpawnPhaseTurns(): number {

@@ -301,7 +301,7 @@ export class BuildMenu extends LitElement implements Layer {
     if (!unit) {
       return false;
     }
-    return unit[0].canBuild;
+    return unit[0].canBuild !== false;
   }
 
   private cost(item: BuildItemDisplay): number {
@@ -409,21 +409,9 @@ export class BuildMenu extends LitElement implements Layer {
   }
 
   private getBuildableUnits(): BuildItemDisplay[][] {
-    if (this.game?.config()?.disableNukes()) {
-      return buildTable.map((row) =>
-        row.filter(
-          (item) =>
-            ![
-              UnitType.AtomBomb,
-              UnitType.MIRV,
-              UnitType.HydrogenBomb,
-              UnitType.MissileSilo,
-              UnitType.SAMLauncher,
-            ].includes(item.unitType),
-        ),
-      );
-    }
-    return buildTable;
+    return buildTable.map((row) =>
+      row.filter((item) => !this.game?.config()?.isUnitDisabled(item.unitType)),
+    );
   }
 
   get isVisible() {

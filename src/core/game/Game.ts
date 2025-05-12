@@ -37,15 +37,25 @@ export enum Difficulty {
   Impossible = "Impossible",
 }
 
-export enum Team {
-  Red = "Red",
-  Blue = "Blue",
-  Bot = "Bot",
-}
+export type Team = string;
+
+export const Duos = "Duos" as const;
+
+export const ColoredTeams: Record<string, Team> = {
+  Red: "Red",
+  Blue: "Blue",
+  Teal: "Teal",
+  Purple: "Purple",
+  Yellow: "Yellow",
+  Orange: "Orange",
+  Green: "Green",
+  Bot: "Bot",
+} as const;
 
 export enum GameMapType {
   World = "World",
   Europe = "Europe",
+  EuropeClassic = "Europe Classic",
   Mena = "Mena",
   NorthAmerica = "North America",
   SouthAmerica = "South America",
@@ -62,7 +72,43 @@ export enum GameMapType {
   Japan = "Japan",
   BetweenTwoSeas = "Between Two Seas",
   KnownWorld = "Known World",
+  FaroeIslands = "Faroe Islands",
+  DeglaciatedAntarctica = "Deglaciated Antarctica",
+  FalklandIslands = "Falkland Islands",
+  Baikal = "Baikal",
 }
+
+export const mapCategories: Record<string, GameMapType[]> = {
+  continental: [
+    GameMapType.World,
+    GameMapType.NorthAmerica,
+    GameMapType.SouthAmerica,
+    GameMapType.Europe,
+    GameMapType.EuropeClassic,
+    GameMapType.Asia,
+    GameMapType.Africa,
+    GameMapType.Oceania,
+  ],
+  regional: [
+    GameMapType.BlackSea,
+    GameMapType.Britannia,
+    GameMapType.GatewayToTheAtlantic,
+    GameMapType.BetweenTwoSeas,
+    GameMapType.Iceland,
+    GameMapType.Japan,
+    GameMapType.Mena,
+    GameMapType.Australia,
+    GameMapType.FaroeIslands,
+    GameMapType.FalklandIslands,
+    GameMapType.Baikal,
+  ],
+  fantasy: [
+    GameMapType.Pangaea,
+    GameMapType.Mars,
+    GameMapType.KnownWorld,
+    GameMapType.DeglaciatedAntarctica,
+  ],
+};
 
 export enum GameType {
   Singleplayer = "Singleplayer",
@@ -102,6 +148,51 @@ export enum UnitType {
   Construction = "Construction",
 }
 
+export interface UnitParamsMap {
+  [UnitType.TransportShip]: {
+    troops?: number;
+    destination?: TileRef;
+  };
+
+  [UnitType.Warship]: {};
+
+  [UnitType.Shell]: {};
+
+  [UnitType.SAMMissile]: {};
+
+  [UnitType.Port]: {};
+
+  [UnitType.AtomBomb]: {};
+
+  [UnitType.HydrogenBomb]: {};
+
+  [UnitType.TradeShip]: {
+    dstPort: Unit;
+    lastSetSafeFromPirates?: number;
+  };
+
+  [UnitType.MissileSilo]: {
+    cooldownDuration?: number;
+  };
+
+  [UnitType.DefensePost]: {};
+
+  [UnitType.SAMLauncher]: {};
+
+  [UnitType.City]: {};
+
+  [UnitType.MIRV]: {};
+
+  [UnitType.MIRVWarhead]: {};
+
+  [UnitType.Construction]: {};
+}
+
+// Type helper to get params type for a specific unit type
+export type UnitParams<T extends UnitType> = UnitParamsMap[T];
+
+export type AllUnitParams = UnitParamsMap[keyof UnitParamsMap];
+
 export const nukeTypes = [
   UnitType.AtomBomb,
   UnitType.HydrogenBomb,
@@ -120,10 +211,9 @@ export enum Relation {
 
 export class Nation {
   constructor(
-    public readonly flag: string,
-    public readonly name: string,
-    public readonly cell: Cell,
+    public readonly spawnCell: Cell,
     public readonly strength: number,
+    public readonly playerInfo: PlayerInfo,
   ) {}
 }
 
@@ -231,14 +321,6 @@ export class PlayerInfo {
   }
 }
 
-// Some units have info specific to them
-export interface UnitSpecificInfos {
-  dstPort?: Unit; // Only for trade ships
-  detonationDst?: TileRef; // Only for nukes
-  warshipTarget?: Unit;
-  cooldownDuration?: number;
-}
-
 export interface Unit {
   id(): number;
 
@@ -267,6 +349,8 @@ export interface Unit {
   isCooldown(): boolean;
   setDstPort(dstPort: Unit): void;
   dstPort(): Unit; // Only for trade ships
+  setSafeFromPirates(): void; // Only for trade ships
+  isSafeFromPirates(): boolean; // Only for trade ships
   detonationDst(): TileRef; // Only for nukes
 
   setMoveTarget(cell: TileRef): void;
@@ -309,6 +393,7 @@ export interface Player {
   // State & Properties
   isAlive(): boolean;
   isTraitor(): boolean;
+  markTraitor(): void;
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
   lastTileChange(): Tick;
 
@@ -340,13 +425,14 @@ export interface Player {
   // Units
   units(...types: UnitType[]): Unit[];
   unitsIncludingConstruction(type: UnitType): Unit[];
+  buildableUnits(tile: TileRef): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
-  buildUnit(
-    type: UnitType,
-    troops: number,
-    tile: TileRef,
-    unitSpecificInfos?: UnitSpecificInfos,
+  buildUnit<T extends UnitType>(
+    type: T,
+    spawnTile: TileRef,
+    params: UnitParams<T>,
   ): Unit;
+
   captureUnit(unit: Unit): void;
 
   // Relations & Diplomacy
@@ -409,8 +495,9 @@ export interface Player {
   // Misc
   toUpdate(): PlayerUpdate;
   playerProfile(): PlayerProfile;
-  canBoat(tile: TileRef): boolean;
   tradingPorts(port: Unit): Unit[];
+  // WARNING: this operation is expensive.
+  bestTransportShipSpawn(tile: TileRef): TileRef | false;
 }
 
 export interface Game extends GameMap {
@@ -458,6 +545,15 @@ export interface Game extends GameMap {
     playerID: PlayerID | null,
   ): void;
 
+  displayChat(
+    message: string,
+    category: string,
+    variables: Record<string, string>,
+    playerID: PlayerID | null,
+    isFrom: boolean,
+    recipient: string,
+  ): void;
+
   // Nations
   nations(): Nation[];
 
@@ -467,7 +563,6 @@ export interface Game extends GameMap {
 }
 
 export interface PlayerActions {
-  canBoat: boolean;
   canAttack: boolean;
   buildableUnits: BuildableUnit[];
   canSendEmojiAllPlayers: boolean;
@@ -475,7 +570,7 @@ export interface PlayerActions {
 }
 
 export interface BuildableUnit {
-  canBuild: boolean;
+  canBuild: TileRef | false;
   type: UnitType;
   cost: number;
 }
@@ -511,6 +606,7 @@ export enum MessageType {
   INFO,
   WARN,
   ERROR,
+  CHAT,
 }
 
 export interface NameViewData {

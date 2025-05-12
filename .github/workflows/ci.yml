@@ -1,4 +1,4 @@
-name: CI
+name: 🧪 CI
 on: [push, pull_request]
 jobs:
   build:
@@ -12,13 +12,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Setup npm
-        run: npm install
-      - name: Run tests
-        run: npm test
-      - name: Build
-        run: npm run build-prod
+      - run: npm ci
+      - run: npm run build-prod
       - uses: actions/upload-artifact@v4
         with:
           path: out/index.html
           retention-days: 1
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm test

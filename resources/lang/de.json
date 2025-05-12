@@ -17,7 +17,7 @@
     "action_build": "Baumenü öffnen",
     "action_center": "Karte auf Spieler zentrieren",
     "action_zoom": "Ansicht vergrößern/verkleinern",
-    "action_move_camera": "Karte verschieben",
+    "action_move_camera": "Kamera bewegen",
     "action_ratio_change": "Angriffsrate verringern/erhöhen",
     "action_reset_gfx": "Grafik zurücksetzen",
     "ui_section": "Spieloberfläche",
@@ -28,7 +28,7 @@
     "ui_pop": "Bevölkerung - Die Anzahl der aktuellen Einheiten, die maximale Bevölkerungszahl und die Geschwindigkeit  mit der man neue Einheiten bekommst.",
     "ui_gold": "Gold - Die aktuelle Menge an Gold, und die Geschwindigkeit mit der man Gold bekommt.",
     "ui_troops_workers": "Truppen und Arbeiter - Die Menge der zugewiesenen Truppen und Arbeiter. Truppen werden zum Angriff oder zur Verteidigung gegen Angriffe eingesetzt. Arbeiter erzeugen Gold. Die Anzahl der Truppen und Arbeiter kann mit dem Schieberegler eingestellt werden.",
-    "ui_attack_ratio": "Angriffsrate - Die Anzahl der Truppen welche für Angriffe verwendet werden. Die Angriffsrate kann über den Schieberegler eingestellt werden.",
+    "ui_attack_ratio": "Angriffsverhältnis - Die Anzahl der Truppen, die beim Angriff verwendet werden, kann mit dem Schieberegler angepasst werden. Je mehr Truppen beim Angriff verwendet werden desto geringer sind die eigenen Verluste. Während weniger Truppen zu größeren Verlusten führen.\nDieser Effekt geht nicht über das Verhältnis von 2:1 hinaus.",
     "ui_options": "Optionen",
     "ui_options_desc": "Die folgenden Schaltflächen sind in den Optionen verfügbar:",
     "option_pause": "Spiel pausieren/fortsetzen - Nur im Einzelspieler möglich.",
@@ -48,7 +48,7 @@
     "info_emoji": "Sendet ein Emoji an den Spieler.",
     "info_ally_panel": "Bündnis Infobereich",
     "info_ally_desc": "Wenn man sich mit einem Spieler verbündet werden die folgenden Icons sichtbar:",
-    "ally_betray": "Verrät den Verbündeten, was das Bündnis beendet. Hat eine permanente Markierung als Verräter zur Folge. Bots werden seltener Bündnisse mit Verrätern eingehen und menschliche Spieler sich es zweimal überlegen mit einem Verräter verbündet zu sein.",
+    "ally_betray": "Verrät den Verbündeten, was das Bündnis beendet. Hat eine permanente Markierung als Verräter zur Folge, wenn der Verbündete nicht bereits selbst ein Verräter war. Feindliche Angriffe werden bis zum Ende des Spiels größeren Schaden anrichten. Bots werden seltener Bündnisse mit Verrätern eingehen und menschliche Spieler sich es zweimal überlegen mit einem Verräter verbündet zu sein.",
     "ally_donate": "Teile einige Truppen mit dem verbündeten Spieler. Kann benutzt werden, um einen angegriffenen Verbündeten mit Truppen zu helfen oder diesem bei einem vernichtenden Schlag gegen einen Feind zu unterstützen.",
     "build_menu_title": "Baumenü",
     "build_name": "Name",
@@ -61,7 +61,7 @@
     "build_port": "Hafen",
     "build_port_desc": "Sendet automatisch Handelsschiffe zwischen eigenen Häfen und denen anderer Länder (außer es wurde bei oder von einem anderen Spieler \"Handel stoppen\" im Infobereich geklickt), welche Gold für beide Seiten einbringen. Ermöglicht den Bau von Kriegsschiffen. Kann nur in der Nähe von Wasser gebaut werden.",
     "build_warship": "Kriegsschiff",
-    "build_warship_desc": "Patrouilliert einen Bereich, kapert Handelsschiffe und zerstört befeindete Kriegsschiffe sowie Boote. Erscheint beim nächstgelegenen Hafen und patrouilliert anschließend um den Punkt wo es gebaut wurde.",
+    "build_warship_desc": "Patrouilliert in einem Gebiet und kapert Handelsschiffe, zerstört feindliche Kriegsschiffe und Transportschiffe. Erscheint beim nächstgelegenen Hafen und patrouilliert im Gebiet wo es gebaut wurde. Mit einem Klick auf das Kriegsschiff kann es gesteuert und mit einem weiteren Klick in ein anderes Gebiet geschickt werden.",
     "build_silo": "Raketensilo",
     "build_silo_desc": "Ermöglicht das Abfeuern von Raketen und Bomben.",
     "build_sam": "Flugabwehr",
@@ -77,7 +77,8 @@
     "icon_crown": "Krone - Dieser Spieler ist auf Platz 1 der Bestenliste.",
     "icon_traitor": "Gekreuzte Schwerter - Verräter. Dieser Spieler hat einen Verbündeten verraten und angegriffen.",
     "icon_ally": "Handschlag - Verbündeter. Dieser Spieler ist ein Verbündeter.",
-    "info_enemy_panel": "Gegner-Infobereich"
+    "info_enemy_panel": "Gegner-Infobereich",
+    "action_emote": "Emote-Menü öffnen"
   },
   "single_modal": {
     "title": "Einzelspieler",
@@ -172,5 +173,8 @@
   "game_mode": {
     "ffa": "Free for All",
     "teams": "Teams"
+  },
+  "select_lang": {
+    "title": "Sprache auswählen"
   }
 }

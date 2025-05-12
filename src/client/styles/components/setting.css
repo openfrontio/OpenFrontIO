@@ -22,6 +22,10 @@
   gap: 12px;
 }
 
+.setting-item.column {
+  flex-direction: column;
+}
+
 @keyframes rainbow-background {
   0% {
     background-position: 0% 50%;
@@ -64,6 +68,20 @@
   z-index: 9999;
 }
 
+.setting-popup {
+  position: fixed;
+  top: 40px;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  padding: 16px 24px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  font-size: 20px;
+  border-radius: 12px;
+  animation: fadePop_2 10s ease-out forwards;
+  z-index: 9999;
+}
+
 @keyframes fadePop {
   0% {
     opacity: 0;
@@ -75,6 +93,25 @@
   }
   70% {
     transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+}
+
+@keyframes fadePop_2 {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  5% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+  95% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
   }
   100% {
     opacity: 0;
@@ -158,17 +195,14 @@
   cursor: pointer;
 }
 
-.setting-input.slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #fff;
-  border: 2px solid #2196f3;
-  cursor: pointer;
+.setting-input.slider::-moz-range-track {
+  background-color: #444;
+  height: 10px;
+  border-radius: 5px;
 }
 
-.setting-input.slider::-moz-range-track {
-  background: linear-gradient(to right, #2196f3 50%, #444 50%);
+.setting-input.slider::-moz-range-progress {
+  background-color: #2196f3;
   height: 10px;
   border-radius: 5px;
 }
@@ -254,4 +288,39 @@
   margin-top: 2px;
   white-space: normal;
   word-break: break-word;
+}
+
+.setting-keybind-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.setting-keybind-description {
+  flex: 1;
+  font-size: 0.75rem;
+  color: #e5e5e5;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+.setting-key {
+  background-color: black;
+  color: white;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 0 #444;
+  white-space: nowrap;
+  user-select: none;
+  outline: none;
+}
+
+.setting-key:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
 }

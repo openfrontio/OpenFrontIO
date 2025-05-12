@@ -3,31 +3,33 @@ import { GameMap, TileRef } from "../game/GameMap";
 import { AStar, PathFindResultType } from "./AStar";
 import { SerialAStar } from "./SerialAStar";
 
-// TODO: test this, get it work
 export class MiniAStar implements AStar {
-  private aStar: SerialAStar;
+  private aStar: AStar;
 
   constructor(
     private gameMap: GameMap,
     private miniMap: GameMap,
-    private src: TileRef,
+    src: TileRef | TileRef[],
     private dst: TileRef,
-    private canMove: (t: TileRef) => boolean,
-    private iterations: number,
-    private maxTries: number,
+    iterations: number,
+    maxTries: number,
   ) {
-    const miniSrc = this.miniMap.ref(
-      Math.floor(gameMap.x(src) / 2),
-      Math.floor(gameMap.y(src) / 2),
+    const srcArray: TileRef[] = Array.isArray(src) ? src : [src];
+    const miniSrc = srcArray.map((srcPoint) =>
+      this.miniMap.ref(
+        Math.floor(gameMap.x(srcPoint) / 2),
+        Math.floor(gameMap.y(srcPoint) / 2),
+      ),
     );
+
     const miniDst = this.miniMap.ref(
       Math.floor(gameMap.x(dst) / 2),
       Math.floor(gameMap.y(dst) / 2),
     );
+
     this.aStar = new SerialAStar(
       miniSrc,
       miniDst,
-      canMove,
       iterations,
       maxTries,
       this.miniMap,

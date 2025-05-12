@@ -8,6 +8,9 @@
   "main": {
     "title": "OpenFront (ALPHA)",
     "join_discord": "Join the Discord!",
+    "login_discord": "Login with Discord",
+    "logged_in": "Logged in!",
+    "log_out": "Log out",
     "create_lobby": "Create Lobby",
     "join_lobby": "Join Lobby",
     "single_player": "Single Player",
@@ -98,6 +101,7 @@
     "infinite_gold": "Infinite gold",
     "infinite_troops": "Infinite troops",
     "disable_nukes": "Disable Nukes",
+    "enables_title": "Enable Settings",
     "start": "Start Game"
   },
   "map": {
@@ -120,7 +124,17 @@
     "pangaea": "Pangaea",
     "japan": "Japan and Neighbors",
     "betweentwoseas": "Between Two Seas",
-    "knownworld": "Known World"
+    "knownworld": "Known World",
+    "faroeislands": "Faroe Islands",
+    "deglaciatedantarctica": "Deglaciated Antarctica",
+    "europeclassic": "Europe (classic)",
+    "falklandislands": "Falkland Islands",
+    "baikal": "Baikal"
+  },
+  "map_categories": {
+    "continental": "Continental",
+    "regional": "Regional",
+    "fantasy": "Other"
   },
   "private_lobby": {
     "title": "Join Private Lobby",
@@ -135,7 +149,8 @@
   },
   "public_lobby": {
     "join": "Join next Game",
-    "waiting": "players waiting"
+    "waiting": "players waiting",
+    "teams": "{num} teams"
   },
   "username": {
     "enter_username": "Enter your username",
@@ -147,6 +162,7 @@
   "host_modal": {
     "title": "Private Lobby",
     "mode": "Mode",
+    "team_count": "Number of Teams",
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
@@ -154,7 +170,7 @@
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
     "infinite_troops": "Infinite troops",
-    "disable_nukes": "Disable Nukes",
+    "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
     "waiting": "Waiting for players...",
@@ -177,5 +193,131 @@
   },
   "select_lang": {
     "title": "Select Language"
+  },
+  "unit_type": {
+    "city": "City",
+    "defense_post": "Defense Post",
+    "port": "Port",
+    "warship": "Warship",
+    "missile_silo": "Missile Silo",
+    "sam_launcher": "SAM Launcher",
+    "atom_bomb": "Atom Bomb",
+    "hydrogen_bomb": "Hydrogen Bomb",
+    "mirv": "MIRV"
+  },
+  "user_setting": {
+    "title": "User Settings",
+    "tab_basic": "Basic Settings",
+    "tab_keybinds": "Keybinds",
+    "dark_mode_label": "🌙 Dark Mode",
+    "dark_mode_desc": "Toggle the site’s appearance between light and dark themes",
+    "emojis_label": "😊 Emojis",
+    "emojis_desc": "Toggle whether emojis are shown in game",
+    "anonymous_names_label": "🥷 Hidden Names",
+    "anonymous_names_desc": "Hide real player names with random ones on your screen.",
+    "left_click_label": "🖱️ Left Click to Open Menu",
+    "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
+    "attack_ratio_label": "⚔️ Attack Ratio",
+    "attack_ratio_desc": "What percentage of your troops to send in an attack (1–100%)",
+    "troop_ratio_label": "🪖🛠️ Troops and Workers Ratio",
+    "troop_ratio_desc": "Adjust the balance between troops (for combat) and workers (for gold production) (1–100%)",
+    "easter_writing_speed_label": "Writing Speed Multiplier",
+    "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
+    "easter_bug_count_label": "Bug Count",
+    "easter_bug_count_desc": "How many bugs you're okay with (0–1000, emotionally)",
+    "view_options": "View Options",
+    "toggle_view": "Toggle View",
+    "toggle_view_desc": "Alternate view (terrain/countries)",
+    "zoom_controls": "Zoom Controls",
+    "zoom_out": "Zoom Out",
+    "zoom_out_desc": "Zoom out the map",
+    "zoom_in": "Zoom In",
+    "zoom_in_desc": "Zoom in the map",
+    "camera_movement": "Camera Movement",
+    "center_camera": "Center Camera",
+    "center_camera_desc": "Center camera on player",
+    "move_up": "Move Camera Up",
+    "move_up_desc": "Move the camera upward",
+    "move_left": "Move Camera Left",
+    "move_left_desc": "Move the camera to the left",
+    "move_down": "Move Camera Down",
+    "move_down_desc": "Move the camera downward",
+    "move_right": "Move Camera Right",
+    "move_right_desc": "Move the camera to the right",
+    "reset": "Reset",
+    "unbind": "Unbind"
+  },
+  "chat": {
+    "title": "Quick Chat",
+    "to": "Sent {user}: {msg}",
+    "from": "From {user}: {msg}",
+    "category": "Category",
+    "phrase": "Phrase",
+    "player": "Player",
+    "send": "Send",
+    "search": "Search player...",
+    "build": "Build your message...",
+    "cat": {
+      "help": "Help",
+      "attack": "Attack",
+      "defend": "Defend",
+      "greet": "Greetings",
+      "misc": "Miscellaneous",
+      "warnings": "Warnings"
+    },
+    "help": {
+      "troops": "Please give me troops!",
+      "gold": "Please give me gold!",
+      "no_attack": "Please don't attack me!",
+      "sorry_attack": "Sorry, I didn’t mean to attack.",
+      "alliance": "Alliance?",
+      "help_defend": "Help me defend against [P1]!",
+      "team_up": "Let’s team up against [P1]!"
+    },
+    "attack": {
+      "attack": "Attack [P1]!",
+      "mirv": "Launch a MIRV at [P1]!",
+      "focus": "Focus fire on [P1]!",
+      "finish": "Let's finish off [P1]!"
+    },
+    "defend": {
+      "defend": "Defend [P1]!",
+      "dont_attack": "Don’t attack [P1]!",
+      "ally": "[P1] is my ally!"
+    },
+    "greet": {
+      "hello": "Hello!",
+      "good_luck": "Good luck!",
+      "have_fun": "Have fun!",
+      "gg": "GG!",
+      "nice_to_meet": "Nice to meet you!",
+      "well_played": "Well played!",
+      "hi_again": "Hi again!",
+      "bye": "Bye!",
+      "thanks": "Thanks!",
+      "oops": "Oops, wrong button!",
+      "trust_me": "You can trust me. Promise!",
+      "trust_broken": "I trusted you..."
+    },
+    "misc": {
+      "go": "Let’s go!",
+      "strategy": "Nice strategy!",
+      "fun": "This game is fun!",
+      "pr": "When will my PR finally get merged...?"
+    },
+    "warnings": {
+      "strong": "[P1] is strong.",
+      "weak": "[P1] is weak.",
+      "mirv_soon": "[P1] can launch a MIRV soon!",
+      "number1_warning": "The #1 player will win soon unless we team up!",
+      "stalemate": "Let's make peace. This is a stalemate, we will both lose.",
+      "has_allies": "[P1] has many allies.",
+      "no_allies": "[P1] has no allies.",
+      "betrayed": "[P1] betrayed their ally!",
+      "getting_big": "[P1] is growing too fast!",
+      "danger_base": "[P1] is unprotected!",
+      "saving_for_mirv": "[P1] is saving up to launch a MIRV.",
+      "mirv_ready": "[P1] has enough gold to launch a MIRV!"
+    }
   }
 }

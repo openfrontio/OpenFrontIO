@@ -45,7 +45,7 @@ export class PortExecution implements Execution {
         this.active = false;
         return;
       }
-      this.port = player.buildUnit(UnitType.Port, 0, spawn);
+      this.port = player.buildUnit(UnitType.Port, spawn, {});
     }
 
     if (!this.port.isActive()) {
@@ -76,7 +76,7 @@ export class PortExecution implements Execution {
     }
 
     const port = this.random.randElement(ports);
-    const pf = PathFinder.Mini(this.mg, 2500, false);
+    const pf = PathFinder.Mini(this.mg, 2500);
     this.mg.addExecution(
       new TradeShipExecution(this.player().id(), this.port, port, pf),
     );

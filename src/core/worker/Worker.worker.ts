@@ -6,6 +6,7 @@ import {
   PlayerActionsResultMessage,
   PlayerBorderTilesResultMessage,
   PlayerProfileResultMessage,
+  TransportShipSpawnResultMessage,
   WorkerMessage,
 } from "./WorkerMessages";
 
@@ -118,6 +119,25 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       } catch (error) {
         console.error("Failed to get border tiles:", error);
         throw error;
+      }
+      break;
+    case "transport_ship_spawn":
+      if (!gameRunner) {
+        throw new Error("Game runner not initialized");
+      }
+
+      try {
+        const spawnTile = (await gameRunner).bestTransportShipSpawn(
+          message.playerID,
+          message.targetTile,
+        );
+        sendMessage({
+          type: "transport_ship_spawn_result",
+          id: message.id,
+          result: spawnTile,
+        } as TransportShipSpawnResultMessage);
+      } catch (error) {
+        console.error("Failed to spawn transport ship:", error);
       }
       break;
     default:

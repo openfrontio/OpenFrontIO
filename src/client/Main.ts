@@ -19,6 +19,7 @@ import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
+import { NewsModal } from "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
@@ -26,8 +27,12 @@ import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import { generateCryptoRandomUUID } from "./Utils";
+import "./components/NewsButton";
+import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
+import { OButton } from "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
 import "./styles.css";
 
 export interface JoinLobbyEvent {
@@ -55,6 +60,23 @@ class Client {
   constructor() {}
 
   initialize(): void {
+    const newsModal = document.querySelector("news-modal") as NewsModal;
+    if (!newsModal) {
+      consolex.warn("News modal element not found");
+    } else {
+      consolex.log("News modal element found");
+    }
+    newsModal instanceof NewsModal;
+    const newsButton = document.querySelector("news-button") as NewsButton;
+    if (!newsButton) {
+      consolex.warn("News button element not found");
+    } else {
+      consolex.log("News button element found");
+    }
+
+    // Comment out to show news button.
+    newsButton.hidden = true;
+
     const langSelector = document.querySelector(
       "lang-selector",
     ) as LangSelector;
@@ -79,6 +101,13 @@ class Client {
     if (!this.darkModeButton) {
       consolex.warn("Dark mode button element not found");
     }
+
+    const loginDiscordButton = document.getElementById(
+      "login-discord",
+    ) as OButton;
+    const logoutDiscordButton = document.getElementById(
+      "logout-discord",
+    ) as OButton;
 
     this.usernameInput = document.querySelector(
       "username-input",
@@ -113,11 +142,52 @@ class Client {
       }
     });
 
+    // const ctModal = document.querySelector("chat-modal") as ChatModal;
+    // ctModal instanceof ChatModal;
+    // document.getElementById("chat-button").addEventListener("click", () => {
+    //   ctModal.open();
+    // });
+
     const hlpModal = document.querySelector("help-modal") as HelpModal;
     hlpModal instanceof HelpModal;
     document.getElementById("help-button").addEventListener("click", () => {
       hlpModal.open();
     });
+
+    const claims = isLoggedIn();
+    if (claims === false) {
+      // Not logged in
+      loginDiscordButton.disable = false;
+      loginDiscordButton.translationKey = "main.login_discord";
+      loginDiscordButton.addEventListener("click", discordLogin);
+      logoutDiscordButton.hidden = true;
+    } else {
+      // JWT appears to be valid, assume we are logged in
+      loginDiscordButton.disable = true;
+      loginDiscordButton.translationKey = "main.logged_in";
+      logoutDiscordButton.hidden = false;
+      logoutDiscordButton.addEventListener("click", () => {
+        // Log out
+        logOut();
+        loginDiscordButton.disable = false;
+        loginDiscordButton.translationKey = "main.login_discord";
+        loginDiscordButton.addEventListener("click", discordLogin);
+        logoutDiscordButton.hidden = true;
+      });
+      // Look up the discord user object.
+      // TODO: Add caching
+      getUserMe().then((userMeResponse) => {
+        if (userMeResponse === false) {
+          // Not logged in
+          loginDiscordButton.disable = false;
+          loginDiscordButton.translationKey = "main.login_discord";
+          loginDiscordButton.addEventListener("click", discordLogin);
+          logoutDiscordButton.hidden = true;
+          return;
+        }
+        // TODO: Update the page for logged in user
+      });
+    }
 
     const settingsModal = document.querySelector(
       "user-setting",
@@ -203,7 +273,7 @@ class Client {
             ? ""
             : this.flagInput.getCurrentFlag(),
         playerName: this.usernameInput.getCurrentUsername(),
-        persistentID: getPersistentIDFromCookie(),
+        token: localStorage.getItem("token") ?? getPersistentIDFromCookie(),
         clientID: lobby.clientID,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.gameStartInfo,
         gameRecord: lobby.gameRecord,
@@ -283,6 +353,11 @@ function setFavicon(): void {
 
 // WARNING: DO NOT EXPOSE THIS ID
 export function getPersistentIDFromCookie(): string {
+  const claims = isLoggedIn();
+  if (claims !== false && claims.sub) {
+    return claims.sub;
+  }
+
   const COOKIE_NAME = "player_persistent_id";
 
   // Try to get existing cookie

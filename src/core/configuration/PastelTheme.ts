@@ -1,16 +1,21 @@
 import { Colord, colord } from "colord";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
-import { PlayerType, Team, TerrainType } from "../game/Game";
+import { ColoredTeams, PlayerType, Team, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import {
   blue,
   botColor,
   botColors,
+  green,
   humanColors,
+  orange,
+  purple,
   red,
+  teal,
   territoryColors,
+  yellow,
 } from "./Colors";
 import { Theme } from "./Config";
 
@@ -36,15 +41,32 @@ export const pastelTheme = new (class implements Theme {
 
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
 
+  teamColor(team: Team): Colord {
+    switch (team) {
+      case ColoredTeams.Blue:
+        return blue;
+      case ColoredTeams.Red:
+        return red;
+      case ColoredTeams.Teal:
+        return teal;
+      case ColoredTeams.Purple:
+        return purple;
+      case ColoredTeams.Yellow:
+        return yellow;
+      case ColoredTeams.Orange:
+        return orange;
+      case ColoredTeams.Green:
+        return green;
+      case ColoredTeams.Bot:
+        return botColor;
+      default:
+        return humanColors[simpleHash(team) % humanColors.length];
+    }
+  }
+
   territoryColor(player: PlayerView): Colord {
-    if (player.team() == Team.Bot) {
-      return botColor;
-    }
-    if (player.team() == Team.Red) {
-      return red;
-    }
-    if (player.team() == Team.Blue) {
-      return blue;
+    if (player.team() !== null) {
+      return this.teamColor(player.team());
     }
     if (player.info().playerType == PlayerType.Human) {
       return humanColors[simpleHash(player.id()) % humanColors.length];
@@ -76,20 +98,16 @@ export const pastelTheme = new (class implements Theme {
       b: Math.max(tc.b - 40, 0),
     });
   }
-  defendedBorderColor(player: PlayerView): Colord {
-    const bc = this.borderColor(player).rgba;
-    return colord({
-      r: Math.max(bc.r - 40, 0),
-      g: Math.max(bc.g - 40, 0),
-      b: Math.max(bc.b - 40, 0),
-    });
+
+  defendedBorderColors(player: PlayerView): { light: Colord; dark: Colord } {
+    return {
+      light: this.territoryColor(player).darken(0.2),
+      dark: this.territoryColor(player).darken(0.4),
+    };
   }
 
   focusedBorderColor(): Colord {
     return colord({ r: 230, g: 230, b: 230 });
-  }
-  focusedDefendedBorderColor(): Colord {
-    return colord({ r: 200, g: 200, b: 200 });
   }
 
   terrainColor(gm: GameMap, tile: TileRef): Colord {

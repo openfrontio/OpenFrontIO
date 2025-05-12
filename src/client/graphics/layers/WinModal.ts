@@ -1,30 +1,17 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import mastersIcon from "../../../../resources/images/MastersIcon.png";
 import { EventBus } from "../../../core/EventBus";
 import { Team } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { PseudoRandom } from "../../../core/PseudoRandom";
-import { simpleHash } from "../../../core/Util";
 import { SendWinnerEvent } from "../../Transport";
 import { Layer } from "./Layer";
-
-// Add this at the top of your file
-declare global {
-  interface Window {
-    adsbygoogle: unknown[];
-  }
-}
-
-// Add this at the top of your file
-declare let adsbygoogle: unknown[];
 
 @customElement("win-modal")
 export class WinModal extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
-
-  private rand: PseudoRandom;
 
   private hasShownDeathModal = false;
 
@@ -32,7 +19,6 @@ export class WinModal extends LitElement implements Layer {
   isVisible = false;
 
   private _title: string;
-  private won: boolean;
 
   // Override to prevent shadow DOM creation
   createRenderRoot() {
@@ -53,7 +39,7 @@ export class WinModal extends LitElement implements Layer {
       box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
       backdrop-filter: blur(5px);
       color: white;
-      width: 300px;
+      width: 350px;
       transition:
         opacity 0.3s ease-in-out,
         visibility 0.3s ease-in-out;
@@ -77,7 +63,7 @@ export class WinModal extends LitElement implements Layer {
 
     .win-modal h2 {
       margin: 0 0 15px 0;
-      font-size: 24px;
+      font-size: 26px;
       text-align: center;
       color: white;
     }
@@ -127,7 +113,7 @@ export class WinModal extends LitElement implements Layer {
       }
 
       .win-modal h2 {
-        font-size: 20px;
+        font-size: 26px;
       }
 
       .win-modal button {
@@ -160,29 +146,40 @@ export class WinModal extends LitElement implements Layer {
 
   innerHtml() {
     return html`
-      <div style="text-align: center; margin: 15px 0; line-height: 1.5;">
-        <p>
-          <span style="color: red;">Time's running out!</span> <br />
-          I need your support to continue working on OpenFront full-time. Please
-          donate now to keep the updates, new features, and improvements coming.
-        </p>
-        <a
-          href="https://patreon.com/OpenFront"
-          target="_blank"
-          rel="noopener noreferrer"
+      <div
+        style="
+          text-align: center; 
+          margin: 10px 0; 
+          line-height: 1.5;
+          background-image: url(${mastersIcon});
+          background-size: 100px;
+          background-position: center;
+          background-repeat: no-repeat;
+          background-blend-mode: overlay;
+          position: relative;
+        "
+      >
+        <div
           style="
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: #FF424D;
-            color: white;
-            text-decoration: none;
+            margin: 10px 0; 
+            padding: 14px; 
+            background: rgba(0, 0, 0, 0.76); 
             border-radius: 5px;
-            font-weight: bold;
-            transition: background-color 0.2s;
+            position: relative;
+            z-index: 1;
+            font-size: 22px;
           "
         >
-          Support on Patreon
-        </a>
+          Watch the best compete in the
+          <br />
+          <a
+            href="https://openfrontmaster.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style="color: #00bfff; font-weight: bold; text-decoration: underline;"
+            >OpenFront Masters</a
+          >
+        </div>
       </div>
     `;
   }
@@ -202,9 +199,7 @@ export class WinModal extends LitElement implements Layer {
     window.location.href = "/";
   }
 
-  init() {
-    this.rand = new PseudoRandom(simpleHash(this.game.myClientID()));
-  }
+  init() {}
 
   tick() {
     const myPlayer = this.game.myPlayer();
@@ -217,7 +212,6 @@ export class WinModal extends LitElement implements Layer {
     ) {
       this.hasShownDeathModal = true;
       this._title = "You died";
-      this.won = false;
       this.show();
     }
     this.game.updatesSinceLastTick()[GameUpdateType.Win].forEach((wu) => {
@@ -227,10 +221,8 @@ export class WinModal extends LitElement implements Layer {
         );
         if (wu.winner == this.game.myPlayer()?.team()) {
           this._title = "Your team won!";
-          this.won = true;
         } else {
           this._title = `${wu.winner} team has won!`;
-          this.won = false;
         }
         this.show();
       } else {
@@ -242,10 +234,8 @@ export class WinModal extends LitElement implements Layer {
         );
         if (winner == this.game.myPlayer()) {
           this._title = "You Won!";
-          this.won = true;
         } else {
           this._title = `${winner.name()} has won!`;
-          this.won = false;
         }
         this.show();
       }

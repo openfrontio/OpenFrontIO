@@ -5,5 +5,5 @@ static/
 TODO.txt
 resources/images/.DS_Store
 resources/.DS_Store
-.env
+.env*
 .DS_Store

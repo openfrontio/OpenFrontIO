@@ -8,6 +8,7 @@
 @import url("./styles/layout/container.css");
 @import url("./styles/components/button.css");
 @import url("./styles/components/modal.css");
+@import url("./styles/modal/chat.css");
 @import url("./styles/components/setting.css");
 @import url("./styles/components/controls.css");
 * {
@@ -192,6 +193,11 @@ label.option-card:hover {
   justify-content: center;
   gap: 10px;
   margin: 8px 0px 0px 0px;
+}
+
+#lobbyIdInput {
+  font-family: monospace;
+  font-weight: 600;
 }
 
 .lobby-id-button {

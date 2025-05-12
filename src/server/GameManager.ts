@@ -34,12 +34,12 @@ export class GameManager {
       gameType: GameType.Private,
       difficulty: Difficulty.Medium,
       disableNPCs: false,
-      disableNukes: false,
       infiniteGold: false,
       infiniteTroops: false,
       instantBuild: false,
       gameMode: GameMode.FFA,
       bots: 400,
+      disabledUnits: [],
       ...gameConfig,
     });
     this.games.set(id, game);

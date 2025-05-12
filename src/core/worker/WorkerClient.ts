@@ -4,6 +4,7 @@ import {
   PlayerID,
   PlayerProfile,
 } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 import { generateID } from "../Util";
@@ -184,6 +185,36 @@ export class WorkerClient {
         playerID: playerID,
         x: x,
         y: y,
+      });
+    });
+  }
+
+  transportShipSpawn(
+    playerID: PlayerID,
+    targetTile: TileRef,
+  ): Promise<TileRef | false> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (
+          message.type === "transport_ship_spawn_result" &&
+          message.result !== undefined
+        ) {
+          resolve(message.result);
+        }
+      });
+
+      this.worker.postMessage({
+        type: "transport_ship_spawn",
+        id: messageId,
+        playerID: playerID,
+        targetTile: targetTile,
       });
     });
   }

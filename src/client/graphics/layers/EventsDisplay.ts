@@ -16,6 +16,7 @@ import {
   AllianceRequestUpdate,
   AttackUpdate,
   BrokeAllianceUpdate,
+  DisplayChatMessageUpdate,
   DisplayMessageUpdate,
   EmojiUpdate,
   GameUpdateType,
@@ -32,6 +33,8 @@ import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
 import { renderTroops } from "../../Utils";
 import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
+
+import { translateText } from "../../Utils";
 
 interface Event {
   description: string;
@@ -77,6 +80,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
   private updateMap = new Map([
     [GameUpdateType.DisplayEvent, (u) => this.onDisplayMessageEvent(u)],
+    [GameUpdateType.DisplayChatEvent, (u) => this.onDisplayChatEvent(u)],
     [GameUpdateType.AllianceRequest, (u) => this.onAllianceRequestEvent(u)],
     [
       GameUpdateType.AllianceRequestReply,
@@ -187,6 +191,34 @@ export class EventsDisplay extends LitElement implements Layer {
     });
   }
 
+  onDisplayChatEvent(event: DisplayChatMessageUpdate) {
+    const myPlayer = this.game.playerByClientID(this.clientID);
+    if (
+      event.playerID === null ||
+      !myPlayer ||
+      myPlayer.smallID() !== event.playerID
+    ) {
+      return;
+    }
+
+    const baseMessage = translateText(`chat.${event.category}.${event.key}`);
+    const translatedMessage = baseMessage.replace(
+      /\[([^\]]+)\]/g,
+      (_, key) => event.variables?.[key] || `[${key}]`,
+    );
+
+    this.addEvent({
+      description: translateText(event.isFrom ? "chat.from" : "chat.to", {
+        user: event.recipient,
+        msg: translatedMessage,
+      }),
+      createdAt: this.game.ticks(),
+      highlight: true,
+      type: MessageType.CHAT,
+      unsafeDescription: false,
+    });
+  }
+
   onAllianceRequestEvent(update: AllianceRequestUpdate) {
     const myPlayer = this.game.playerByClientID(this.clientID);
     if (!myPlayer || update.recipientID !== myPlayer.smallID()) {
@@ -271,10 +303,19 @@ export class EventsDisplay extends LitElement implements Layer {
       const malusPercent = Math.round(
         (1 - this.game.config().traitorDefenseDebuff()) * 100,
       );
+      const traitorDurationRaw =
+        Number(this.game.config().traitorDuration) / 10;
+      const traitorDurationSeconds = Math.floor(traitorDurationRaw);
+
+      const durationText =
+        traitorDurationSeconds === 1
+          ? "1 second"
+          : `${traitorDurationSeconds} seconds`;
+
       this.addEvent({
         description:
           `You broke your alliance with ${betrayed.name()}, making you a TRAITOR ` +
-          `(${malusPercent}% defense debuff)`,
+          `(${malusPercent}% defense debuff for ${durationText})`,
         type: MessageType.ERROR,
         highlight: true,
         createdAt: this.game.ticks(),
@@ -282,7 +323,7 @@ export class EventsDisplay extends LitElement implements Layer {
       });
     } else if (betrayed === myPlayer) {
       this.addEvent({
-        description: `${traitor.name()}, broke their alliance with you`,
+        description: `${traitor.name()} broke their alliance with you`,
         type: MessageType.ERROR,
         highlight: true,
         createdAt: this.game.ticks(),
@@ -385,6 +426,8 @@ export class EventsDisplay extends LitElement implements Layer {
       case MessageType.SUCCESS:
         return "text-green-300";
       case MessageType.INFO:
+        return "text-gray-200";
+      case MessageType.CHAT:
         return "text-gray-200";
       case MessageType.WARN:
         return "text-yellow-300";
