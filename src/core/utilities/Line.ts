@@ -99,7 +99,8 @@ export class DistanceBasedBezierCurve extends BezierCurve {
     this.totalDistance += distance;
     const targetDistance = Math.min(
       this.totalDistance,
-      this.distanceLUT[this.distanceLUT.length - 1]?.distance || 0,
+      this.distanceLUT[this.distanceLUT.length - 1]?.distance ||
+        this.totalDistance,
     );
     const t = this.computeTForDistance(targetDistance);
     if (t >= 1) {
