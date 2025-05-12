@@ -41,8 +41,13 @@ export class DevServerConfig extends DefaultServerConfig {
 }
 
 export class DevConfig extends DefaultConfig {
-  constructor(sc: ServerConfig, gc: GameConfig, us: UserSettings) {
-    super(sc, gc, us);
+  constructor(
+    sc: ServerConfig,
+    gc: GameConfig,
+    us: UserSettings,
+    isReplay: boolean,
+  ) {
+    super(sc, gc, us, isReplay);
   }
 
   // numSpawnPhaseTurns(): number {

@@ -112,6 +112,7 @@ export async function createClientGame(
   const config = await getConfig(
     lobbyConfig.gameStartInfo.config,
     userSettings,
+    lobbyConfig.gameRecord != null,
   );
   let gameMap: TerrainMapData | null = null;
 
@@ -243,6 +244,7 @@ export class ClientGameRunner {
         this.stop(true);
         return;
       }
+      this.transport.turnComplete();
       gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });

@@ -139,6 +139,7 @@ export interface Config {
   defaultNukeSpeed(): number;
   nukeDeathFactor(humans: number, tilesOwned: number): number;
   structureMinDist(): number;
+  isReplay(): boolean;
 }
 
 export interface Theme {
