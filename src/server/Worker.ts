@@ -13,6 +13,7 @@ import { archive, readGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
+import { verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
@@ -301,10 +302,16 @@ export function startWorker() {
               return;
             }
 
+            const { persistentId, claims } = await verifyClientToken(
+              clientMsg.token,
+              config,
+            );
+
             // Create client and add to game
             const client = new Client(
               clientMsg.clientID,
-              clientMsg.persistentID,
+              persistentId,
+              claims ?? null,
               ip,
               clientMsg.username,
               ws,

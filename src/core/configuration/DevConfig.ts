@@ -29,11 +29,11 @@ export class DevServerConfig extends DefaultServerConfig {
     return 1;
   }
 
-  discordRedirectURI(): string {
-    return "http://localhost:3000/auth/callback";
-  }
   numWorkers(): number {
     return 2;
+  }
+  jwtAudience(): string {
+    return "localhost";
   }
   gitCommit(): string {
     return "DEV";

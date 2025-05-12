@@ -273,7 +273,7 @@ class Client {
             ? ""
             : this.flagInput.getCurrentFlag(),
         playerName: this.usernameInput.getCurrentUsername(),
-        persistentID: getPersistentIDFromCookie(),
+        token: localStorage.getItem("token") ?? getPersistentIDFromCookie(),
         clientID: lobby.clientID,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.gameStartInfo,
         gameRecord: lobby.gameRecord,

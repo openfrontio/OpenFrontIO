@@ -1,3 +1,5 @@
+import { JWK } from "jose";
+import { z } from "zod";
 import {
   Difficulty,
   Duos,
@@ -24,7 +26,35 @@ import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { pastelTheme } from "./PastelTheme";
 import { pastelThemeDark } from "./PastelThemeDark";
 
+const JwksSchema = z.object({
+  keys: z
+    .object({
+      alg: z.literal("EdDSA"),
+      crv: z.literal("Ed25519"),
+      kty: z.literal("OKP"),
+      x: z.string(),
+    })
+    .array()
+    .min(1),
+});
+
 export abstract class DefaultServerConfig implements ServerConfig {
+  private publicKey: JWK;
+  abstract jwtAudience(): string;
+  jwtIssuer(): string {
+    const audience = this.jwtAudience();
+    return audience === "localhost"
+      ? "http://localhost:8787"
+      : `https://api.${audience}`;
+  }
+  async jwkPublicKey(): Promise<JWK> {
+    if (this.publicKey) return this.publicKey;
+    const jwksUrl = this.jwtIssuer() + "/.well-known/jwks.json";
+    const response = await fetch(jwksUrl);
+    const jwks = JwksSchema.parse(await response.json());
+    this.publicKey = jwks.keys[0];
+    return this.publicKey;
+  }
   otelEnabled(): boolean {
     return Boolean(
       this.otelEndpoint() && this.otelUsername() && this.otelPassword(),
@@ -70,7 +100,6 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   abstract numWorkers(): number;
   abstract env(): GameEnv;
-  abstract discordRedirectURI(): string;
   turnIntervalMs(): number {
     return 100;
   }
