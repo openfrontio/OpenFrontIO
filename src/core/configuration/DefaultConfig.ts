@@ -109,63 +109,82 @@ export abstract class DefaultServerConfig implements ServerConfig {
 
   lobbyMaxPlayers(map: GameMapType, mode: GameMode): number {
     const numPlayers = () => {
-      // Maps with ~4 mil pixels
-      if (
-        [
-          GameMapType.GatewayToTheAtlantic,
-          GameMapType.SouthAmerica,
-          GameMapType.NorthAmerica,
-          GameMapType.Africa,
-          GameMapType.Europe,
-        ].includes(map)
-      ) {
-        return Math.random() < 0.2 ? 100 : 50;
+      switch (map) {
+        case GameMapType.GatewayToTheAtlantic:
+          return Math.random() < 0.2 ? 80 : 50;
+          break;
+        case GameMapType.SouthAmerica:
+          return Math.random() < 0.2 ? 70 : 40;
+          break;
+        case GameMapType.NorthAmerica:
+          return Math.random() < 0.2 ? 80 : 50;
+          break;
+        case GameMapType.Africa:
+          return Math.random() < 0.2 ? 100 : 50;
+          break;
+        case GameMapType.Europe:
+          return Math.random() < 0.2 ? 80 : 50;
+          break;
+        case GameMapType.Australia:
+          return Math.random() < 0.2 ? 50 : 30;
+          break;
+        case GameMapType.Iceland:
+          return Math.random() < 0.2 ? 50 : 30;
+          break;
+        case GameMapType.Britannia:
+          return Math.random() < 0.2 ? 50 : 30;
+          break;
+        case GameMapType.Asia:
+          return Math.random() < 0.2 ? 60 : 30;
+          break;
+        case GameMapType.FalklandIslands:
+          return Math.random() < 0.2 ? 50 : 30;
+          break;
+        case GameMapType.Baikal:
+          return Math.random() < 0.2 ? 60 : 40;
+          break;
+        case GameMapType.Mena:
+          return Math.random() < 0.2 ? 60 : 30;
+          break;
+        case GameMapType.Mars:
+          return Math.random() < 0.2 ? 50 : 30;
+          break;
+        case GameMapType.Oceania:
+          return Math.random() < 0.2 ? 30 : 20;
+          break;
+        case GameMapType.Japan:
+          return Math.random() < 0.2 ? 50 : 30;
+          break;
+        case GameMapType.FaroeIslands:
+          return Math.random() < 0.2 ? 80 : 50;
+          break;
+        case GameMapType.DeglaciatedAntarctica:
+          return Math.random() < 0.2 ? 50 : 30;
+          break;
+        case GameMapType.EuropeClassic:
+          return Math.random() < 0.2 ? 80 : 50;
+          break;
+        case GameMapType.BetweenTwoSeas:
+          return Math.random() < 0.2 ? 40 : 30;
+          break;
+        case GameMapType.BlackSea:
+          return Math.random() < 0.2 ? 40 : 30;
+          break;
+        case GameMapType.Pangaea:
+          return Math.random() < 0.2 ? 40 : 30;
+          break;
+        case GameMapType.World:
+          return Math.random() < 0.2 ? 150 : 50;
+          break;
+        case GameMapType.KnownWorld:
+          return Math.random() < 0.2 ? 50 : 30;
+          break;
+        default:
+          return Math.random() < 0.2 ? 50 : 20;
+          break;
       }
-      // Maps with ~2.5 - ~3.5 mil pixels
-      if (
-        [
-          GameMapType.Australia,
-          GameMapType.Iceland,
-          GameMapType.Britannia,
-          GameMapType.Asia,
-          GameMapType.FalklandIslands,
-          GameMapType.Baikal,
-        ].includes(map)
-      ) {
-        return Math.random() < 0.3 ? 50 : 25;
-      }
-      // Maps with ~2 mil pixels
-      if (
-        [
-          GameMapType.Mena,
-          GameMapType.Mars,
-          GameMapType.Oceania,
-          GameMapType.Japan, // Japan at this level because its 2/3 water
-          GameMapType.FaroeIslands,
-          GameMapType.DeglaciatedAntarctica,
-          GameMapType.EuropeClassic,
-        ].includes(map)
-      ) {
-        return Math.random() < 0.3 ? 50 : 25;
-      }
-      // Maps smaller than ~2 mil pixels
-      if (
-        [
-          GameMapType.BetweenTwoSeas,
-          GameMapType.BlackSea,
-          GameMapType.Pangaea,
-        ].includes(map)
-      ) {
-        return Math.random() < 0.5 ? 30 : 15;
-      }
-      // world belongs with the ~2 mils, but these amounts never made sense so I assume the insanity is intended.
-      if (map == GameMapType.World) {
-        return Math.random() < 0.2 ? 150 : 50;
-      }
-      // default return for non specified map
-      return Math.random() < 0.2 ? 50 : 20;
     };
-    return Math.min(150, numPlayers() * (mode == GameMode.Team ? 2 : 1));
+    return Math.min(150, numPlayers() * (mode == GameMode.Team ? 1.5 : 1));
   }
 
   workerIndex(gameID: GameID): number {
