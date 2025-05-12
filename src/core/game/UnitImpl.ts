@@ -1,11 +1,11 @@
 import { simpleHash, toInt, withinInt } from "../Util";
 import {
+  AllUnitParams,
   MessageType,
   Player,
   Tick,
   Unit,
   UnitInfo,
-  UnitSpecificInfos,
   UnitType,
 } from "./Game";
 import { GameImpl } from "./GameImpl";
@@ -24,6 +24,7 @@ export class UnitImpl implements Unit {
   private _lastSetSafeFromPirates: number; // Only for trade ships
   private _constructionType: UnitType = undefined;
 
+  private _troops: number;
   private _cooldownTick: Tick | null = null;
   private _dstPort: Unit | null = null; // Only for trade ships
   private _detonationDst: TileRef | null = null; // Only for nukes
@@ -34,21 +35,22 @@ export class UnitImpl implements Unit {
     private _type: UnitType,
     private mg: GameImpl,
     private _tile: TileRef,
-    private _troops: number,
     private _id: number,
     public _owner: PlayerImpl,
-    unitsSpecificInfos: UnitSpecificInfos = {},
+    params: AllUnitParams = {},
   ) {
-    this._health = toInt(this.mg.unitInfo(_type).maxHealth ?? 1);
     this._lastTile = _tile;
-    this._dstPort = unitsSpecificInfos.dstPort;
-    this._detonationDst = unitsSpecificInfos.detonationDst;
-    this._warshipTarget = unitsSpecificInfos.warshipTarget;
-    this._cooldownDuration = unitsSpecificInfos.cooldownDuration;
-    this._lastSetSafeFromPirates = unitsSpecificInfos.lastSetSafeFromPirates;
+    this._health = toInt(this.mg.unitInfo(_type).maxHealth ?? 1);
     this._safeFromPiratesCooldown = this.mg
       .config()
       .safeFromPiratesCooldownMax();
+
+    this._troops = "troops" in params ? params.troops : 0;
+    this._dstPort = "dstPort" in params ? params.dstPort : null;
+    this._cooldownDuration =
+      "cooldownDuration" in params ? params.cooldownDuration : null;
+    this._lastSetSafeFromPirates =
+      "lastSetSafeFromPirates" in params ? params.lastSetSafeFromPirates : 0;
   }
 
   id() {

@@ -35,7 +35,7 @@ import {
   TerraNullius,
   Tick,
   Unit,
-  UnitSpecificInfos,
+  UnitParams,
   UnitType,
 } from "./Game";
 import { GameImpl } from "./GameImpl";
@@ -703,11 +703,10 @@ export class PlayerImpl implements Player {
     );
   }
 
-  buildUnit(
-    type: UnitType,
-    troops: number,
+  buildUnit<T extends UnitType>(
+    type: T,
     spawnTile: TileRef,
-    unitSpecificInfos: UnitSpecificInfos = {},
+    params: UnitParams<T>,
   ): UnitImpl {
     if (this.mg.config().isUnitDisabled(type)) {
       throw new Error(
@@ -720,14 +719,13 @@ export class PlayerImpl implements Player {
       type,
       this.mg,
       spawnTile,
-      troops,
       this.mg.nextUnitID(),
       this,
-      unitSpecificInfos,
+      params,
     );
     this._units.push(b);
     this.removeGold(cost);
-    this.removeTroops(troops);
+    this.removeTroops("troops" in params ? params.troops : 0);
     this.mg.addUpdate(b.toUpdate());
     this.mg.addUnit(b);
 

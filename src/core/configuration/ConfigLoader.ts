@@ -12,15 +12,16 @@ export let cachedSC: ServerConfig = null;
 export async function getConfig(
   gameConfig: GameConfig,
   userSettings: UserSettings | null = null,
+  isReplay: boolean = false,
 ): Promise<Config> {
   const sc = await getServerConfigFromClient();
   switch (sc.env()) {
     case GameEnv.Dev:
-      return new DevConfig(sc, gameConfig, userSettings);
+      return new DevConfig(sc, gameConfig, userSettings, isReplay);
     case GameEnv.Preprod:
     case GameEnv.Prod:
       consolex.log("using prod config");
-      return new DefaultConfig(sc, gameConfig, userSettings);
+      return new DefaultConfig(sc, gameConfig, userSettings, isReplay);
     default:
       throw Error(`unsupported server configuration: ${process.env.GAME_ENV}`);
   }

@@ -99,7 +99,7 @@ export class SAMLauncherExecution implements Execution {
         this.active = false;
         return;
       }
-      this.sam = this.player.buildUnit(UnitType.SAMLauncher, 0, spawnTile, {
+      this.sam = this.player.buildUnit(UnitType.SAMLauncher, spawnTile, {
         cooldownDuration: this.mg.config().SAMCooldown(),
       });
     }

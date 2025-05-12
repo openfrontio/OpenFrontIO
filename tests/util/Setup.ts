@@ -42,7 +42,12 @@ export async function setup(
     instantBuild: false,
     ..._gameConfig,
   };
-  const config = new TestConfig(serverConfig, gameConfig, new UserSettings());
+  const config = new TestConfig(
+    serverConfig,
+    gameConfig,
+    new UserSettings(),
+    false,
+  );
 
   // Create and return the game
   return createGame(humans, [], gameMap, miniGameMap, config);

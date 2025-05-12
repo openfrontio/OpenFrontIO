@@ -1,3 +1,4 @@
+import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
 import {
@@ -114,7 +115,7 @@ export class GameServer {
     this.log.info("client (re)joining game", {
       clientID: client.clientID,
       persistentID: client.persistentID,
-      clientIP: client.ip,
+      clientIP: ipAnonymize(client.ip),
       isRejoin: lastTurn > 0,
     });
 
@@ -126,7 +127,7 @@ export class GameServer {
     ) {
       this.log.warn("cannot add client, already have 3 ips", {
         clientID: client.clientID,
-        clientIP: client.ip,
+        clientIP: ipAnonymize(client.ip),
       });
       return;
     }
@@ -139,9 +140,9 @@ export class GameServer {
       if (client.persistentID !== existing.persistentID) {
         this.log.error("persistent ids do not match", {
           clientID: client.clientID,
-          clientIP: client.ip,
+          clientIP: ipAnonymize(client.ip),
           clientPersistentID: client.persistentID,
-          existingIP: existing.ip,
+          existingIP: ipAnonymize(existing.ip),
           existingPersistentID: existing.persistentID,
         });
         return;
@@ -164,7 +165,7 @@ export class GameServer {
           try {
             clientMsg = ClientMessageSchema.parse(JSON.parse(message));
           } catch (error) {
-            throw Error(`error parsing schema for ${client.ip}`);
+            throw Error(`error parsing schema for ${ipAnonymize(client.ip)}`);
           }
           if (clientMsg.type == "intent") {
             if (clientMsg.intent.clientID != client.clientID) {
@@ -370,7 +371,7 @@ export class GameServer {
         const playerRecords: PlayerRecord[] = Array.from(
           this.allClients.values(),
         ).map((client) => ({
-          ip: client.ip,
+          ip: ipAnonymize(client.ip),
           clientID: client.clientID,
           username: client.username,
           persistentID: client.persistentID,

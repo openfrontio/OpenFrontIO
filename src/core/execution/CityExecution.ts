@@ -38,7 +38,7 @@ export class CityExecution implements Execution {
         this.active = false;
         return;
       }
-      this.city = this.player.buildUnit(UnitType.City, 0, spawnTile);
+      this.city = this.player.buildUnit(UnitType.City, spawnTile, {});
     }
     if (!this.city.isActive()) {
       this.active = false;

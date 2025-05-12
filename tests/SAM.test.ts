@@ -50,9 +50,9 @@ describe("SAM", () => {
   });
 
   test("one sam should take down one nuke", async () => {
-    const sam = defender.buildUnit(UnitType.SAMLauncher, 0, game.ref(1, 1));
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
     game.addExecution(new SAMLauncherExecution(defender.id(), null, sam));
-    attacker.buildUnit(UnitType.AtomBomb, 0, game.ref(1, 1));
+    attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {});
 
     executeTicks(game, 3);
 
@@ -60,10 +60,14 @@ describe("SAM", () => {
   });
 
   test("sam should only get one nuke at a time", async () => {
-    const sam = defender.buildUnit(UnitType.SAMLauncher, 0, game.ref(1, 1));
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
     game.addExecution(new SAMLauncherExecution(defender.id(), null, sam));
-    attacker.buildUnit(UnitType.AtomBomb, 0, game.ref(2, 1));
-    attacker.buildUnit(UnitType.AtomBomb, 0, game.ref(1, 2));
+    attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 1), {
+      detonationDst: game.ref(2, 1),
+    });
+    attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
+      detonationDst: game.ref(1, 2),
+    });
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(2);
 
     executeTicks(game, 3);
@@ -72,10 +76,12 @@ describe("SAM", () => {
   });
 
   test("sam should cooldown as long as configured", async () => {
-    const sam = defender.buildUnit(UnitType.SAMLauncher, 0, game.ref(1, 1));
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
     game.addExecution(new SAMLauncherExecution(defender.id(), null, sam));
     expect(sam.isCooldown()).toBeFalsy();
-    const nuke = attacker.buildUnit(UnitType.AtomBomb, 0, game.ref(1, 2));
+    const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
+      detonationDst: game.ref(1, 2),
+    });
 
     executeTicks(game, 3);
 
@@ -91,11 +97,15 @@ describe("SAM", () => {
   });
 
   test("two sams should not target twice same nuke", async () => {
-    const sam1 = defender.buildUnit(UnitType.SAMLauncher, 0, game.ref(1, 1));
+    const sam1 = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {
+      cooldownDuration: 10,
+    });
     game.addExecution(new SAMLauncherExecution(defender.id(), null, sam1));
-    const sam2 = defender.buildUnit(UnitType.SAMLauncher, 0, game.ref(1, 2));
+    const sam2 = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 2), {});
     game.addExecution(new SAMLauncherExecution(defender.id(), null, sam2));
-    const nuke = attacker.buildUnit(UnitType.AtomBomb, 0, game.ref(2, 2));
+    const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 2), {
+      detonationDst: game.ref(2, 2),
+    });
 
     executeTicks(game, 3);
 

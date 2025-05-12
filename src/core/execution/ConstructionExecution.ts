@@ -60,8 +60,8 @@ export class ConstructionExecution implements Execution {
       }
       this.construction = this.player.buildUnit(
         UnitType.Construction,
-        0,
         spawnTile,
+        {},
       );
       this.cost = this.mg.unitInfo(this.constructionType).cost(this.player);
       this.player.removeGold(this.cost);

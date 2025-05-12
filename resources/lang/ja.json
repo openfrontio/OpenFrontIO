@@ -239,5 +239,78 @@
     "continental": "大陸",
     "regional": "地域",
     "fantasy": "その他"
+  },
+  "chat": {
+    "title": "クイックチャット",
+    "category": "カテゴリ",
+    "phrase": "フレーズ",
+    "player": "プレイヤー",
+    "to": "{user}に送信: {msg}",
+    "from": "{user}から着信: {msg}",
+    "send": "送信",
+    "search": "プレイヤーを検索...",
+    "build": "チャットを作成...",
+    "cat": {
+      "help": "支援要請",
+      "attack": "攻撃",
+      "defend": "防御",
+      "greet": "挨拶",
+      "misc": "その他",
+      "warnings": "警告"
+    },
+    "help": {
+      "troops": "援軍をください！",
+      "gold": "お金をください！",
+      "no_attack": "攻撃しないでください！",
+      "sorry_attack": "ごめん、攻撃するつもりはなかった。",
+      "alliance": "同盟を組みませんか？",
+      "help_defend": "[P1] からの防衛を手伝って！",
+      "team_up": "[P1] に対抗して協力しよう！"
+    },
+    "attack": {
+      "attack": "[P1] を攻撃しよう！",
+      "mirv": "[P1] にMIRVを撃とう！",
+      "focus": "[P1] に集中攻撃しよう！",
+      "finish": "[P1] を仕留めよう！"
+    },
+    "defend": {
+      "defend": "[P1] を守って！",
+      "dont_attack": "[P1] を攻撃しないで！",
+      "ally": "[P1] は味方だ！"
+    },
+    "greet": {
+      "hello": "こんにちは！",
+      "good_luck": "頑張って！",
+      "have_fun": "楽しもう！",
+      "gg": "GG！",
+      "nice_to_meet": "よろしく！",
+      "well_played": "ナイスプレイ！",
+      "hi_again": "また会ったね！",
+      "bye": "バイバイ！",
+      "thanks": "ありがとう！",
+      "oops": "あっ、間違えた！",
+      "trust_me": "信じてくれ、本当だ！",
+      "trust_broken": "信じてたのに..."
+    },
+    "misc": {
+      "go": "行こう！",
+      "strategy": "いい作戦だ！",
+      "fun": "このゲーム楽しい！",
+      "pr": "わたしのPRいつマージされるんだろう...？"
+    },
+    "warnings": {
+      "strong": "[P1] は強い。",
+      "weak": "[P1] は弱い。",
+      "mirv_soon": "[P1] がもうすぐMIRVを撃つぞ！",
+      "number1_warning": "1位のプレイヤーが勝ちそうだ、協力しよう！",
+      "stalemate": "和平しよう。膠着状態だ、両方負ける。",
+      "has_allies": "[P1] には味方が多い。",
+      "no_allies": "[P1] には味方がいない。",
+      "betrayed": "[P1] は味方を裏切った！",
+      "getting_big": "[P1] の勢力が急拡大中！",
+      "danger_base": "[P1] の本拠地が無防備だ！",
+      "saving_for_mirv": "[P1] はMIRVのために貯金してる。",
+      "mirv_ready": "[P1] はMIRVを撃てるだけの金を持ってる！"
+    }
   }
 }

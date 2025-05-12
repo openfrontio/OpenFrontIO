@@ -12,7 +12,7 @@ export class OModal extends LitElement {
     .c-modal {
       position: fixed;
       padding: 1rem;
-      z-index: 1000;
+      z-index: 9999;
       left: 0;
       bottom: 0;
       right: 0;

@@ -24,7 +24,7 @@ export class ShellExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.shell == null) {
-      this.shell = this._owner.buildUnit(UnitType.Shell, 0, this.spawn);
+      this.shell = this._owner.buildUnit(UnitType.Shell, this.spawn, {});
     }
     if (!this.shell.isActive()) {
       this.active = false;

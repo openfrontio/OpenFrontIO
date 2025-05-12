@@ -1,6 +1,7 @@
 import express, { NextFunction, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import http from "http";
+import ipAnonymize from "ip-anonymize";
 import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
@@ -88,7 +89,7 @@ export function startWorker() {
         req.headers[config.adminHeader()] !== config.adminToken()
       ) {
         log.warn(
-          `cannot create public game ${id}, ip ${clientIP} incorrect admin token`,
+          `cannot create public game ${id}, ip ${ipAnonymize(clientIP)} incorrect admin token`,
         );
         return res.status(400);
       }
@@ -105,7 +106,7 @@ export function startWorker() {
       const game = gm.createGame(id, gc);
 
       log.info(
-        `Worker ${workerId}: IP ${clientIP} creating game ${game.isPublic() ? "Public" : "Private"} with id ${id}`,
+        `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating game ${game.isPublic() ? "Public" : "Private"} with id ${id}`,
       );
       res.json(game.gameInfo());
     }),
@@ -123,7 +124,7 @@ export function startWorker() {
       if (game.isPublic()) {
         const clientIP = req.ip || req.socket.remoteAddress || "unknown";
         log.info(
-          `cannot start public game ${game.id}, game is public, ip: ${clientIP}`,
+          `cannot start public game ${game.id}, game is public, ip: ${ipAnonymize(clientIP)}`,
         );
         return;
       }
@@ -147,7 +148,9 @@ export function startWorker() {
       }
       if (game.isPublic()) {
         const clientIP = req.ip || req.socket.remoteAddress || "unknown";
-        log.warn(`cannot update public game ${game.id}, ip: ${clientIP}`);
+        log.warn(
+          `cannot update public game ${game.id}, ip: ${ipAnonymize(clientIP)}`,
+        );
         return res.status(400);
       }
       if (game.hasStarted()) {
@@ -325,7 +328,7 @@ export function startWorker() {
           // Handle other message types
         } catch (error) {
           log.warn(
-            `error handling websocket message for ${ip}: ${error}`.substring(
+            `error handling websocket message for ${ipAnonymize(ip)}: ${error}`.substring(
               0,
               250,
             ),

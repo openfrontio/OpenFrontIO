@@ -122,7 +122,8 @@ export class OptionsMenu extends LitElement implements Layer {
   init() {
     console.log("init called from OptionsMenu");
     this.showPauseButton =
-      this.game.config().gameConfig().gameType == GameType.Singleplayer;
+      this.game.config().gameConfig().gameType == GameType.Singleplayer ||
+      this.game.config().isReplay();
     this.isVisible = true;
     this.requestUpdate();
   }

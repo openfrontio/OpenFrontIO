@@ -26,6 +26,7 @@ const maps = [
   "FaroeIslands",
   "DeglaciatedAntarctica",
   "FalklandIslands",
+  "Baikal",
 ];
 
 const removeSmall = true;
