@@ -17,25 +17,27 @@ export class ParabolaPathFinder {
     dst: TileRef,
     distanceBasedHeight = true,
   ) {
-    const origX = this.mg.x(orig);
-    const origY = this.mg.y(orig);
-    const dstX = this.mg.x(dst);
-    const dstY = this.mg.y(dst);
-    this.curve = new DistanceBasedBezierCurve(origX, origY, dstX, dstY);
-    const dx = dstX - origX;
-    const dy = dstY - origY;
+    const p0 = { x: this.mg.x(orig), y: this.mg.y(orig) };
+    const p3 = { x: this.mg.x(dst), y: this.mg.y(dst) };
+    this.curve = new DistanceBasedBezierCurve(p0, p3);
+    const dx = p3.x - p0.x;
+    const dy = p3.y - p0.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     const maxHeight = distanceBasedHeight
       ? Math.max(distance / 3, parabolaMinHeight)
       : 0;
     // Use a bezier curve always pointing up
-    const x0 = origX + (dstX - origX) / 4;
-    const y0 = Math.max(origY + (dstY - origY) / 4 - maxHeight, 0);
-    const x1 = origX + ((dstX - origX) * 3) / 4;
-    const y1 = Math.max(origY + ((dstY - origY) * 3) / 4 - maxHeight, 0);
+    const p1 = {
+      x: p0.x + (p3.x - p0.x) / 4,
+      y: Math.max(p0.y + (p3.y - p0.y) / 4 - maxHeight, 0),
+    };
+    const p2 = {
+      x: p0.x + ((p3.x - p0.x) * 3) / 4,
+      y: Math.max(p0.y + ((p3.y - p0.y) * 3) / 4 - maxHeight, 0),
+    };
 
-    this.curve.setControlPoint0(x0, y0);
-    this.curve.setControlPoint1(x1, y1);
+    this.curve.setControlPoint1(p1);
+    this.curve.setControlPoint2(p2);
   }
 
   nextTile(speed: number): TileRef | true {

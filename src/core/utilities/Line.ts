@@ -1,14 +1,14 @@
+type Point = { x: number; y: number };
+
 export class BezenhamLine {
   constructor(
-    private x0: number,
-    private y0: number,
-    private x1: number,
-    private y1: number,
+    private p1: Point,
+    private p2: Point,
   ) {
-    this.dx = Math.abs(this.x1 - this.x0);
-    this.dy = Math.abs(this.y1 - this.y0);
-    this.sx = this.x0 < this.x1 ? 1 : -1;
-    this.sy = this.y0 < this.y1 ? 1 : -1;
+    this.dx = Math.abs(p2.x - p1.x);
+    this.dy = Math.abs(p2.y - p1.y);
+    this.sx = p1.x < p2.x ? 1 : -1;
+    this.sy = p1.y < p2.y ? 1 : -1;
     this.error = this.dx - this.dy;
   }
 
@@ -23,65 +23,57 @@ export class BezenhamLine {
   }
 
   // Increment either by 1 in x or y
-  increment(): { x: number; y: number } | true {
-    if (this.x0 === this.x1 && this.y0 === this.y1) {
+  increment(): Point | true {
+    if (this.p1.x === this.p2.x && this.p1.y === this.p2.y) {
       return true;
     }
-    const x = this.x0;
-    const y = this.y0;
+    const x = this.p1.x;
+    const y = this.p1.y;
     const err2 = 2 * this.error;
 
     if (err2 > -this.dy) {
       this.error -= this.dy;
-      this.x0 += this.sx;
+      this.p1.x += this.sx;
     }
     if (err2 < this.dx) {
       this.error += this.dx;
-      this.y0 += this.sy;
+      this.p1.y += this.sy;
     }
     return { x, y };
   }
 }
 
-export class BezierCurve {
+export class CubicBezierCurve {
   constructor(
-    private x0: number,
-    private y0: number,
-    private x1: number,
-    private y1: number,
+    private p0: Point,
+    private p3: Point,
   ) {
-    this.controlPoint0X = x0;
-    this.controlPoint0Y = y0;
-    this.controlPoint1X = x1;
-    this.controlPoint1Y = y1;
+    this.p2 = p0; // Init control point to both ends
+    this.p1 = p3;
   }
 
-  private controlPoint0X: number;
-  private controlPoint0Y: number;
-  private controlPoint1X: number;
-  private controlPoint1Y: number;
+  private p1: Point;
+  private p2: Point;
 
-  setControlPoint0(x, y) {
-    this.controlPoint0X = x;
-    this.controlPoint0Y = y;
+  setControlPoint1(p1: Point) {
+    this.p1 = p1;
   }
 
-  setControlPoint1(x, y) {
-    this.controlPoint1X = x;
-    this.controlPoint1Y = y;
+  setControlPoint2(p2: Point) {
+    this.p2 = p2;
   }
 
-  getPointAt(t: number): { x: number; y: number } {
+  getPointAt(t: number): Point {
     const x =
-      Math.pow(1 - t, 3) * this.x0 +
-      3 * Math.pow(1 - t, 2) * t * this.controlPoint0X +
-      3 * (1 - t) * Math.pow(t, 2) * this.controlPoint1X +
-      Math.pow(t, 3) * this.x1;
+      Math.pow(1 - t, 3) * this.p0.x +
+      3 * Math.pow(1 - t, 2) * t * this.p1.x +
+      3 * (1 - t) * Math.pow(t, 2) * this.p2.x +
+      Math.pow(t, 3) * this.p3.x;
     const y =
-      Math.pow(1 - t, 3) * this.y0 +
-      3 * Math.pow(1 - t, 2) * t * this.controlPoint0Y +
-      3 * (1 - t) * Math.pow(t, 2) * this.controlPoint1Y +
-      Math.pow(t, 3) * this.y1;
+      Math.pow(1 - t, 3) * this.p0.y +
+      3 * Math.pow(1 - t, 2) * t * this.p1.y +
+      3 * (1 - t) * Math.pow(t, 2) * this.p2.y +
+      Math.pow(t, 3) * this.p3.y;
     return { x, y };
   }
 }
@@ -90,12 +82,12 @@ export class BezierCurve {
  *  Use a cumulative distance LUT to approximate the traveled distance
  *  Useful to compute regular steps based on the curve rather than a t
  */
-export class DistanceBasedBezierCurve extends BezierCurve {
+export class DistanceBasedBezierCurve extends CubicBezierCurve {
   private totalDistance: number = 0;
   private distanceLUT: Array<{ t: number; distance: number }> = [];
   private lastFoundIndex: number = 0; // To keep track of the last found index
 
-  increment(distance: number): { x: number; y: number } {
+  increment(distance: number): Point {
     this.totalDistance += distance;
     const targetDistance = Math.min(
       this.totalDistance,

@@ -384,11 +384,15 @@ export class UnitLayer implements Layer {
     const trail = this.unitToTrail.get(unit);
     // It can move faster than 1 pixel, draw a line for the trail or else it will be dotted
     if (trail.length >= 1) {
-      const currentX = this.game.x(unit.lastTile());
-      const currentY = this.game.y(unit.lastTile());
-      const lastX = this.game.x(trail[trail.length - 1]);
-      const lastY = this.game.y(trail[trail.length - 1]);
-      const line = new BezenhamLine(lastX, lastY, currentX, currentY);
+      const cur = {
+        x: this.game.x(unit.lastTile()),
+        y: this.game.y(unit.lastTile()),
+      };
+      const prev = {
+        x: this.game.x(trail[trail.length - 1]),
+        y: this.game.y(trail[trail.length - 1]),
+      };
+      const line = new BezenhamLine(prev, cur);
       let point = line.increment();
       while (point !== true) {
         trail.push(this.game.ref(point.x, point.y));
