@@ -11,7 +11,6 @@ import {
 import { TileRef } from "../src/core/game/GameMap";
 import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";
-import { constructionExecution } from "./util/utils";
 
 let game: Game;
 let attacker: Player;
@@ -76,10 +75,17 @@ describe("Attack", () => {
   test("Nuke reduce attacking troop counts", async () => {
     // Not building exactly spawn to it's better protected from attacks (but still
     // on defender territory)
-    constructionExecution(game, defender.id(), 1, 1, UnitType.MissileSilo);
+    defender.buildUnit({
+      type: UnitType.MissileSilo,
+      dstTile: game.ref(1, 1),
+    });
     expect(defender.units(UnitType.MissileSilo)).toHaveLength(1);
     game.addExecution(new AttackExecution(100, attacker.id(), defender.id()));
-    constructionExecution(game, defender.id(), 0, 15, UnitType.AtomBomb, 3);
+    defender.buildUnit({
+      type: UnitType.AtomBomb,
+      dstTile: game.ref(0, 15),
+      detonationDst: game.ref(0, 15),
+    });
     const nuke = defender.units(UnitType.AtomBomb)[0];
     expect(nuke.isActive()).toBe(true);
 
@@ -94,12 +100,19 @@ describe("Attack", () => {
   });
 
   test("Nuke reduce attacking boat troop count", async () => {
-    constructionExecution(game, defender.id(), 1, 1, UnitType.MissileSilo);
+    defender.buildUnit({
+      type: UnitType.MissileSilo,
+      dstTile: game.ref(1, 1),
+    });
     expect(defender.units(UnitType.MissileSilo)).toHaveLength(1);
 
     sendBoat(game.ref(15, 8), game.ref(10, 5), 100);
 
-    constructionExecution(game, defender.id(), 0, 15, UnitType.AtomBomb, 3);
+    defender.buildUnit({
+      type: UnitType.AtomBomb,
+      dstTile: game.ref(0, 15),
+      detonationDst: game.ref(0, 15),
+    });
     const nuke = defender.units(UnitType.AtomBomb)[0];
     expect(nuke.isActive()).toBe(true);
 

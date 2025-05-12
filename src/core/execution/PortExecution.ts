@@ -1,60 +1,25 @@
-import { consolex } from "../Consolex";
-import {
-  Execution,
-  Game,
-  Player,
-  PlayerID,
-  Unit,
-  UnitType,
-} from "../game/Game";
-import { TileRef } from "../game/GameMap";
-import { PathFinder } from "../pathfinding/PathFinding";
+import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
-import { TradeShipExecution } from "./TradeShipExecution";
+import { BuildExecution } from "./BuildExecution";
 
 export class PortExecution implements Execution {
   private active = true;
   private mg: Game;
-  private port: Unit;
   private random: PseudoRandom;
   private checkOffset: number;
 
-  constructor(
-    private _owner: PlayerID,
-    private tile: TileRef,
-  ) {}
+  constructor(private port: Unit) {}
 
   init(mg: Game, ticks: number): void {
-    if (!mg.hasPlayer(this._owner)) {
-      console.warn(`PortExecution: player ${this._owner} not found`);
-      this.active = false;
-      return;
-    }
     this.mg = mg;
     this.random = new PseudoRandom(mg.ticks());
     this.checkOffset = mg.ticks() % 10;
   }
 
   tick(ticks: number): void {
-    if (this.port == null) {
-      const tile = this.tile;
-      const player = this.mg.player(this._owner);
-      const spawn = player.canBuild(UnitType.Port, tile);
-      if (spawn === false) {
-        consolex.warn(`player ${player} cannot build port at ${this.tile}`);
-        this.active = false;
-        return;
-      }
-      this.port = player.buildUnit(UnitType.Port, spawn, {});
-    }
-
     if (!this.port.isActive()) {
       this.active = false;
       return;
-    }
-
-    if (this._owner != this.port.owner().id()) {
-      this._owner = this.port.owner().id();
     }
 
     // Only check every 10 ticks for performance.
@@ -76,9 +41,13 @@ export class PortExecution implements Execution {
     }
 
     const port = this.random.randElement(ports);
-    const pf = PathFinder.Mini(this.mg, 2500);
     this.mg.addExecution(
-      new TradeShipExecution(this.player().id(), this.port, port, pf),
+      new BuildExecution(this.port.owner(), {
+        type: UnitType.TradeShip,
+        ownerUnit: this.port,
+        targetUnit: port,
+        targetTile: this.port.tile(),
+      }),
     );
   }
 

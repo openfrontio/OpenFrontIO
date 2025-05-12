@@ -5,8 +5,6 @@ import {
   MessageType,
   NukeType,
   Player,
-  PlayerID,
-  TerraNullius,
   Unit,
   UnitType,
 } from "../game/Game";
@@ -15,41 +13,60 @@ import { AirPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 
 export class NukeExecution implements Execution {
-  private player: Player;
-  private active = true;
   private mg: Game;
-  private nuke: Unit;
 
   private random: PseudoRandom;
   private pathFinder: AirPathFinder;
 
   constructor(
-    private type: NukeType,
-    private senderID: PlayerID,
-    private dst: TileRef,
-    private src?: TileRef,
+    private nuke: Unit,
     private speed: number = -1,
     private waitTicks = 0,
   ) {}
 
   init(mg: Game, ticks: number): void {
-    if (!mg.hasPlayer(this.senderID)) {
-      console.warn(`NukeExecution: sender ${this.senderID} not found`);
-      this.active = false;
-      return;
-    }
-
     this.mg = mg;
-    this.player = mg.player(this.senderID);
     this.random = new PseudoRandom(ticks);
     if (this.speed == -1) {
       this.speed = this.mg.config().defaultNukeSpeed();
     }
     this.pathFinder = new AirPathFinder(mg, this.random);
-  }
 
-  public target(): Player | TerraNullius {
-    return this.mg.owner(this.dst);
+    if (this.mg.hasOwner(this.nuke.detonationDst())) {
+      const target = this.mg.owner(this.nuke.detonationDst()) as Player;
+      if (this.nuke.type() == UnitType.AtomBomb) {
+        this.mg.displayMessage(
+          `${this.nuke.owner().name()} - atom bomb inbound`,
+          MessageType.ERROR,
+          target.id(),
+        );
+      }
+      if (this.nuke.type() == UnitType.HydrogenBomb) {
+        this.mg.displayMessage(
+          `${this.nuke.owner().name()} - hydrogen bomb inbound`,
+          MessageType.ERROR,
+          target.id(),
+        );
+      }
+
+      this.mg
+        .stats()
+        .increaseNukeCount(
+          this.nuke.owner().id(),
+          target.id(),
+          this.nuke.type() as NukeType,
+        );
+    }
+
+    // after sending an nuke set the missilesilo on cooldown
+    const silo = this.nuke
+      .owner()
+      .units(UnitType.MissileSilo)
+      .find((silo) => silo.tile() === this.nuke.tile());
+    if (silo) {
+      silo.setCooldown(true);
+    }
+    return;
   }
 
   private tilesToDestroy(): Set<TileRef> {
@@ -57,8 +74,8 @@ export class NukeExecution implements Execution {
     const rand = new PseudoRandom(this.mg.ticks());
     const inner2 = magnitude.inner * magnitude.inner;
     const outer2 = magnitude.outer * magnitude.outer;
-    return this.mg.bfs(this.dst, (_, n: TileRef) => {
-      const d2 = this.mg.euclideanDistSquared(this.dst, n);
+    return this.mg.bfs(this.nuke.detonationDst(), (_, n: TileRef) => {
+      const d2 = this.mg.euclideanDistSquared(this.nuke.detonationDst(), n);
       return d2 <= outer2 && (d2 <= inner2 || rand.chance(2));
     });
   }
@@ -76,68 +93,21 @@ export class NukeExecution implements Execution {
     for (const [other, tilesDestroyed] of attacked) {
       if (tilesDestroyed > 100 && this.nuke.type() != UnitType.MIRVWarhead) {
         // Mirv warheads shouldn't break alliances
-        const alliance = this.player.allianceWith(other);
+        const alliance = this.nuke.owner().allianceWith(other);
         if (alliance != null) {
-          this.player.breakAlliance(alliance);
+          this.nuke.owner().breakAlliance(alliance);
         }
-        if (other != this.player) {
-          other.updateRelation(this.player, -100);
+        if (other != this.nuke.owner()) {
+          other.updateRelation(this.nuke.owner(), -100);
         }
       }
     }
   }
 
   tick(ticks: number): void {
-    if (this.nuke == null) {
-      const spawn = this.src ?? this.player.canBuild(this.type, this.dst);
-      if (spawn == false) {
-        consolex.warn(`cannot build Nuke`);
-        this.active = false;
-        return;
-      }
-      this.nuke = this.player.buildUnit(this.type, spawn, {
-        detonationDst: this.dst,
-      });
-      if (this.mg.hasOwner(this.dst)) {
-        const target = this.mg.owner(this.dst) as Player;
-        if (this.type == UnitType.AtomBomb) {
-          this.mg.displayMessage(
-            `${this.player.name()} - atom bomb inbound`,
-            MessageType.ERROR,
-            target.id(),
-          );
-        }
-        if (this.type == UnitType.HydrogenBomb) {
-          this.mg.displayMessage(
-            `${this.player.name()} - hydrogen bomb inbound`,
-            MessageType.ERROR,
-            target.id(),
-          );
-        }
-
-        this.mg
-          .stats()
-          .increaseNukeCount(
-            this.senderID,
-            target.id(),
-            this.nuke.type() as NukeType,
-          );
-      }
-
-      // after sending an nuke set the missilesilo on cooldown
-      const silo = this.player
-        .units(UnitType.MissileSilo)
-        .find((silo) => silo.tile() === spawn);
-      if (silo) {
-        silo.setCooldown(true);
-      }
-      return;
-    }
-
     // make the nuke unactive if it was intercepted
     if (!this.nuke.isActive()) {
       consolex.log(`Nuke destroyed before reaching target`);
-      this.active = false;
       return;
     }
 
@@ -148,7 +118,10 @@ export class NukeExecution implements Execution {
 
     for (let i = 0; i < this.speed; i++) {
       // Move to next tile
-      const nextTile = this.pathFinder.nextTile(this.nuke.tile(), this.dst);
+      const nextTile = this.pathFinder.nextTile(
+        this.nuke.tile(),
+        this.nuke.detonationDst(),
+      );
       if (nextTile === true) {
         this.detonate();
         return;
@@ -204,21 +177,23 @@ export class NukeExecution implements Execution {
         unit.type() != UnitType.MIRVWarhead &&
         unit.type() != UnitType.MIRV
       ) {
-        if (this.mg.euclideanDistSquared(this.dst, unit.tile()) < outer2) {
+        if (
+          this.mg.euclideanDistSquared(this.nuke.detonationDst(), unit.tile()) <
+          outer2
+        ) {
           unit.delete();
         }
       }
     }
-    this.active = false;
     this.nuke.delete(false);
   }
 
   owner(): Player {
-    return this.player;
+    return this.nuke.owner();
   }
 
   isActive(): boolean {
-    return this.active;
+    return this.nuke.isActive();
   }
 
   activeDuringSpawnPhase(): boolean {

@@ -31,6 +31,7 @@ import {
   PlayerProfile,
   PlayerType,
   Relation,
+  SpawnComp,
   Team,
   TerraNullius,
   Tick,
@@ -703,26 +704,15 @@ export class PlayerImpl implements Player {
     );
   }
 
-  buildUnit<T extends UnitType>(
-    type: T,
-    spawnTile: TileRef,
-    params: UnitParams<T>,
-  ): UnitImpl {
-    if (this.mg.config().isUnitDisabled(type)) {
+  buildUnit<T extends UnitType>(params: UnitParams<T> & SpawnComp): UnitImpl {
+    if (this.mg.config().isUnitDisabled(params.type)) {
       throw new Error(
-        `Attempted to build disabled unit ${type} at tile ${spawnTile} by player ${this.name()}`,
+        `Attempted to build disabled unit ${params.type} at tile ${params.spawn} by player ${this.name()}`,
       );
     }
 
-    const cost = this.mg.unitInfo(type).cost(this);
-    const b = new UnitImpl(
-      type,
-      this.mg,
-      spawnTile,
-      this.mg.nextUnitID(),
-      this,
-      params,
-    );
+    const cost = this.mg.unitInfo(params.type).cost(this);
+    const b = new UnitImpl(this.mg, this.mg.nextUnitID(), this, params);
     this._units.push(b);
     this.removeGold(cost);
     this.removeTroops("troops" in params ? params.troops : 0);
