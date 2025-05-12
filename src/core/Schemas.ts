@@ -160,9 +160,6 @@ function isValidJWT(jwt: string, alg?: string): boolean {
 }
 
 const PersistentIdSchema = z.string().uuid();
-const StringJwtSchema = z.string().max(400).refine(isValidJWT, {
-  message: "Invalid JWT format",
-});
 const TokenSchema = z
   .string()
   .refine((v) => PersistentIdSchema.safeParse(v).success || isValidJWT(v), {
