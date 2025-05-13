@@ -10,6 +10,7 @@ import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
+import { CountryStats } from "./layers/CountryStats";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { Layer } from "./layers/Layer";
@@ -20,6 +21,7 @@ import { OptionsMenu } from "./layers/OptionsMenu";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RadialMenu } from "./layers/RadialMenu";
+import { ResourcesStats } from "./layers/ResourcesStats";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TerrainLayer } from "./layers/TerrainLayer";
@@ -108,6 +110,22 @@ export function createRenderer(
   playerInfo.transform = transformHandler;
   playerInfo.game = game;
 
+  const buildingsStats = document.querySelector(
+    "resources-stats",
+  ) as ResourcesStats;
+  if (!(buildingsStats instanceof ResourcesStats)) {
+    consolex.error("buildings stats not found");
+  }
+  buildingsStats.game = game;
+  buildingsStats.disposition = "col";
+  buildingsStats.defaultState = "expanded";
+
+  const countryStats = document.querySelector("country-stats") as CountryStats;
+  if (!(countryStats instanceof CountryStats)) {
+    consolex.error("country stats not found");
+  }
+  countryStats.game = game;
+
   const winModel = document.querySelector("win-modal") as WinModal;
   if (!(winModel instanceof WinModal)) {
     console.error("win modal not found");
@@ -176,6 +194,8 @@ export function createRenderer(
     leaderboard,
     controlPanel,
     playerInfo,
+    buildingsStats,
+    countryStats,
     winModel,
     optionsMenu,
     topBar,
