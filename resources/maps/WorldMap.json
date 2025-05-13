@@ -130,7 +130,7 @@
       "flag": "ro"
     },
     {
-      "coordinates": [1161, 274],
+      "coordinates": [1118, 271],
       "name": "Turkey",
       "strength": 1,
       "flag": "tr"
@@ -154,7 +154,7 @@
       "flag": "ua"
     },
     {
-      "coordinates": [1344, 136],
+      "coordinates": [1226, 142],
       "name": "Russia",
       "strength": 3,
       "flag": "ru"
@@ -204,7 +204,7 @@
     {
       "coordinates": [1890, 775],
       "name": "New Zealand",
-      "strength": 0.5,
+      "strength": 1,
       "flag": "nz"
     },
     {
@@ -252,7 +252,7 @@
     {
       "coordinates": [1075, 707],
       "name": "South Africa",
-      "strength": 1,
+      "strength": 1.5,
       "flag": "za"
     },
     {
@@ -266,6 +266,198 @@
       "name": "Chad",
       "strength": 1,
       "flag": "td"
+    },
+    {
+      "coordinates": [1190, 416],
+      "name": "Yemen",
+      "strength": 1,
+      "flag": "ye"
+    },
+    {
+      "coordinates": [1250, 383],
+      "name": "Oman",
+      "strength": 1,
+      "flag": "om"
+    },
+    {
+      "coordinates": [1243, 365],
+      "name": "United Arab Emirates",
+      "strength": 1,
+      "flag": "United Arab Republic"
+    },
+    {
+      "coordinates": [1631, 466],
+      "name": "Philippines",
+      "strength": 2,
+      "flag": "ph"
+    },
+    {
+      "coordinates": [1710, 291],
+      "name": "Japan",
+      "strength": 1,
+      "flag": "Empire of Japan"
+    },
+    {
+      "coordinates": [989, 169],
+      "name": "Denmark",
+      "strength": 1,
+      "flag": "denmark"
+    },
+    {
+      "coordinates": [1059, 278],
+      "name": "Greece",
+      "strength": 1,
+      "flag": "greece"
+    },
+    {
+      "coordinates": [496, 456],
+      "name": "Panama",
+      "strength": 1,
+      "flag": "pa"
+    },
+    {
+      "coordinates": [542, 718],
+      "name": "Chile",
+      "strength": 1,
+      "flag": "cl"
+    },
+    {
+      "coordinates": [1119, 299],
+      "name": "Cyprus",
+      "strength": 1,
+      "flag": "cy"
+    },
+    {
+      "coordinates": [1057, 260],
+      "name": "Serbia",
+      "strength": 1,
+      "flag": "rs"
+    },
+    {
+      "coordinates": [1048, 251],
+      "name": "Bulgaria",
+      "strength": 1,
+      "flag": "bg"
+    },
+    {
+      "coordinates": [1310, 323],
+      "name": "Pakistan",
+      "strength": 1,
+      "flag": "pk"
+    },
+    {
+      "coordinates": [1432, 336],
+      "name": "Bhutan",
+      "strength": 0.5,
+      "flag": "bt"
+    },
+    {
+      "coordinates": [1439, 367],
+      "name": "Bangladesh",
+      "strength": 0.5,
+      "flag": "bd"
+    },
+    {
+      "coordinates": [1534, 435],
+      "name": "Vietnam",
+      "strength": 2,
+      "flag": "vn"
+    },
+    {
+      "coordinates": [1738, 547],
+      "name": "Papua New Guinea",
+      "strength": 1,
+      "flag": "pg"
+    },
+    {
+      "coordinates": [1606, 368],
+      "name": "Taiwan",
+      "strength": 0.5,
+      "flag": "tw"
+    },
+    {
+      "coordinates": [1642, 297],
+      "name": "South Korea",
+      "strength": 1,
+      "flag": "Republic of Korea"
+    },
+    {
+      "coordinates": [1637, 276],
+      "name": "North Korea",
+      "strength": 0.5,
+      "flag": "kp"
+    },
+    {
+      "coordinates": [1018, 217],
+      "name": "Austria",
+      "strength": 0.7,
+      "flag": "at"
+    },
+    {
+      "coordinates": [1032, 222],
+      "name": "Hungary",
+      "strength": 0.7,
+      "flag": "hu"
+    },
+    {
+      "coordinates": [863, 350],
+      "name": "Morocco",
+      "strength": 1,
+      "flag": "ma"
+    },
+    {
+      "coordinates": [254, 66],
+      "name": "Polar Bears",
+      "strength": 0.5,
+      "flag": "polar_bears"
+    },
+    {
+      "coordinates": [1069, 645],
+      "name": "Zambia",
+      "strength": 0.5,
+      "flag": "zm"
+    },
+    {
+      "coordinates": [1069, 613],
+      "name": "Zimbabwe",
+      "strength": 0.5,
+      "flag": "zw"
+    },
+    {
+      "coordinates": [1213, 446],
+      "name": "Somalia",
+      "strength": 0.5,
+      "flag": "so"
+    },
+    {
+      "coordinates": [1384, 465],
+      "name": "Sri Lanka",
+      "strength": 0.5,
+      "flag": "lk"
+    },
+    {
+      "coordinates": [1284, 197],
+      "name": "Afghanistan",
+      "strength": 1,
+      "flag": "af"
+    },
+    {
+      "coordinates": [1536, 554],
+      "name": "Indonesia",
+      "strength": 1.5,
+      "flag": "id"
+    },
+    {
+      "coordinates": [1544, 504],
+      "name": "Malaysia",
+      "strength": 1,
+      "flag": "my"
+    },
+    {
+      "coordinates": [1826, 569],
+      "name": "Solomon Islands",
+      "strength": 0.5,
+      "flag": "sb"
     }
   ]
 }
