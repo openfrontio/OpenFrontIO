@@ -6,7 +6,8 @@ on:
     branches: [main]
 
 jobs:
-  check:
+  prettier:
+    name: Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
