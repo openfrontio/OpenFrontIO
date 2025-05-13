@@ -10,7 +10,7 @@ const parabolaMinHeight = 50;
 
 export class ParabolaPathFinder {
   constructor(private mg: GameMap) {}
-  private curve: DistanceBasedBezierCurve;
+  private curve: DistanceBasedBezierCurve | undefined;
 
   computeControlPoints(
     orig: TileRef,
@@ -19,7 +19,6 @@ export class ParabolaPathFinder {
   ) {
     const p0 = { x: this.mg.x(orig), y: this.mg.y(orig) };
     const p3 = { x: this.mg.x(dst), y: this.mg.y(dst) };
-    this.curve = new DistanceBasedBezierCurve(p0, p3);
     const dx = p3.x - p0.x;
     const dy = p3.y - p0.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
@@ -36,8 +35,7 @@ export class ParabolaPathFinder {
       y: Math.max(p0.y + ((p3.y - p0.y) * 3) / 4 - maxHeight, 0),
     };
 
-    this.curve.setControlPoint1(p1);
-    this.curve.setControlPoint2(p2);
+    this.curve = new DistanceBasedBezierCurve(p0, p1, p2, p3);
   }
 
   nextTile(speed: number): TileRef | true {

@@ -46,21 +46,10 @@ export class BezenhamLine {
 export class CubicBezierCurve {
   constructor(
     private p0: Point,
+    private p1: Point,
+    private p2: Point,
     private p3: Point,
   ) {
-    this.p1 = p0;
-    this.p2 = p3;
-  }
-
-  private p1: Point;
-  private p2: Point;
-
-  setControlPoint1(p1: Point) {
-    this.p1 = p1;
-  }
-
-  setControlPoint2(p2: Point) {
-    this.p2 = p2;
   }
 
   getPointAt(t: number): Point {
