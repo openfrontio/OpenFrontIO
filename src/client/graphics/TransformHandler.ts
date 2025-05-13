@@ -2,7 +2,11 @@ import { EventBus } from "../../core/EventBus";
 import { Cell } from "../../core/game/Game";
 import { GameView } from "../../core/game/GameView";
 import { CenterCameraEvent, DragEvent, ZoomEvent } from "../InputHandler";
-import { GoToPlayerEvent, GoToUnitEvent } from "./layers/Leaderboard";
+import {
+  GoToPlayerEvent,
+  GoToPositionEvent,
+  GoToUnitEvent,
+} from "./layers/Leaderboard";
 
 export class TransformHandler {
   public scale: number = 1.8;
@@ -21,6 +25,7 @@ export class TransformHandler {
     this.eventBus.on(ZoomEvent, (e) => this.onZoom(e));
     this.eventBus.on(DragEvent, (e) => this.onMove(e));
     this.eventBus.on(GoToPlayerEvent, (e) => this.onGoToPlayer(e));
+    this.eventBus.on(GoToPositionEvent, (e) => this.onGoToPosition(e));
     this.eventBus.on(GoToUnitEvent, (e) => this.onGoToUnit(e));
     this.eventBus.on(CenterCameraEvent, () => this.centerCamera());
   }
@@ -146,6 +151,12 @@ export class TransformHandler {
       event.player.nameLocation().x,
       event.player.nameLocation().y,
     );
+    this.intervalID = setInterval(() => this.goTo(), 1);
+  }
+
+  onGoToPosition(event: GoToPositionEvent) {
+    this.clearTarget();
+    this.target = new Cell(event.x, event.y);
     this.intervalID = setInterval(() => this.goTo(), 1);
   }
 
