@@ -243,7 +243,7 @@ export class DefaultConfig implements Config {
   falloutDefenseModifier(falloutRatio: number): number {
     // falloutRatio is between 0 and 1
     // So defense modifier is between [5, 2.5]
-    return 5 - falloutRatio * 2;
+    return 3 - falloutRatio * 2;
   }
   SAMCooldown(): number {
     return 75;
@@ -253,10 +253,13 @@ export class DefaultConfig implements Config {
   }
 
   defensePostRange(): number {
-    return 30;
+    return 40;
   }
-  defensePostDefenseBonus(): number {
-    return 5;
+  defensePostLossMultiplier(): number {
+    return 6;
+  }
+  defensePostSpeedMultiplier(): number {
+    return 3;
   }
   playerTeams(): number | typeof Duos {
     return this._gameConfig.playerTeams ?? 0;
@@ -478,34 +481,33 @@ export class DefaultConfig implements Config {
     defenderTroopLoss: number;
     tilesPerTickUsed: number;
   } {
-    let mag = 0;
-    let speed = 0;
+    const terrainModifiers = {
+      [TerrainType.Plains]: { mag: 0.85, speed: 0.8 },
+      [TerrainType.Highland]: { mag: 1, speed: 1 },
+      [TerrainType.Mountain]: { mag: 1.2, speed: 1.3 },
+    } as const;
+
     const type = gm.terrainType(tileToConquer);
-    switch (type) {
-      case TerrainType.Plains:
-        mag = 85;
-        speed = 16.5;
-        break;
-      case TerrainType.Highland:
-        mag = 100;
-        speed = 20;
-        break;
-      case TerrainType.Mountain:
-        mag = 120;
-        speed = 25;
-        break;
-      default:
-        throw new Error(`terrain type ${type} not supported`);
+    const mod = terrainModifiers[type];
+    if (!mod) {
+      throw new Error(`terrain type ${type} not supported`);
     }
-    if (defender.isPlayer()) {
+    let mag = mod.mag;
+    let speed = mod.speed;
+
+    const attackerType = attacker.type();
+    const defenderIsPlayer = defender.isPlayer();
+    const defenderType = defenderIsPlayer ? defender.type() : null;
+
+    if (defenderIsPlayer) {
       for (const dp of gm.nearbyUnits(
         tileToConquer,
         gm.config().defensePostRange(),
         UnitType.DefensePost,
       )) {
         if (dp.unit.owner() == defender) {
-          mag *= this.defensePostDefenseBonus();
-          speed *= this.defensePostDefenseBonus();
+          mag *= this.defensePostLossMultiplier();
+          speed *= this.defensePostSpeedMultiplier();
           break;
         }
       }
@@ -517,55 +519,44 @@ export class DefaultConfig implements Config {
       speed *= this.falloutDefenseModifier(falloutRatio);
     }
 
-    if (attacker.isPlayer() && defender.isPlayer()) {
-      if (
-        attacker.type() == PlayerType.Human &&
-        defender.type() == PlayerType.Bot
-      ) {
+    if (attacker.isPlayer() && defenderIsPlayer) {
+      if (attackerType == PlayerType.Human && defenderType == PlayerType.Bot) {
         mag *= 0.8;
       }
       if (
-        attacker.type() == PlayerType.FakeHuman &&
-        defender.type() == PlayerType.Bot
+        attackerType == PlayerType.FakeHuman &&
+        defenderType == PlayerType.Bot
       ) {
         mag *= 0.8;
       }
     }
-
-    let largeLossModifier = 1;
-    if (attacker.numTilesOwned() > 100_000) {
-      largeLossModifier = Math.sqrt(100_000 / attacker.numTilesOwned());
+    if (attackerType == PlayerType.Bot) {
+      speed *= 4; // slow bot attacks
     }
-    let largeSpeedMalus = 1;
-    if (attacker.numTilesOwned() > 75_000) {
-      // sqrt is only exponent 1/2 which doesn't slow enough huge players
-      largeSpeedMalus = (75_000 / attacker.numTilesOwned()) ** 0.6;
-    }
-
-    if (defender.isPlayer()) {
+    if (defenderIsPlayer) {
+      const defenderTroops = defender.troops();
+      const defenderTiles = defender.numTilesOwned();
+      const defenderdensity = defenderTroops / defenderTiles;
+      const attackratio = defenderTroops / attackTroops;
       return {
         attackerTroopLoss:
-          within(defender.troops() / attackTroops, 0.6, 2) *
-          mag *
-          0.8 *
-          largeLossModifier *
-          (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
-        defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
+          mag * 16 +
+          defenderdensity *
+            mag *
+            (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
+        defenderTroopLoss: defenderdensity,
         tilesPerTickUsed:
-          within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
+          23 *
+          within(defenderdensity, 3, 100) ** 0.2 *
+          (10_000 / attackTroops) ** 0.1 *
           speed *
-          largeSpeedMalus,
+          within(attackratio, 0.1, 20) ** 0.4,
       };
     } else {
       return {
-        attackerTroopLoss:
-          attacker.type() == PlayerType.Bot ? mag / 10 : mag / 5,
+        attackerTroopLoss: attackerType == PlayerType.Bot ? mag * 16 : mag * 16,
         defenderTroopLoss: 0,
-        tilesPerTickUsed: within(
-          (2000 * Math.max(10, speed)) / attackTroops,
-          5,
-          100,
-        ),
+        tilesPerTickUsed: 31 * speed, 
       };
     }
   }
@@ -577,13 +568,9 @@ export class DefaultConfig implements Config {
     numAdjacentTilesWithEnemy: number,
   ): number {
     if (defender.isPlayer()) {
-      return (
-        within(((5 * attackTroops) / defender.troops()) * 2, 0.01, 0.5) *
-        numAdjacentTilesWithEnemy *
-        3
-      );
+      return 10 * numAdjacentTilesWithEnemy;
     } else {
-      return numAdjacentTilesWithEnemy * 2;
+      return 12 * numAdjacentTilesWithEnemy;
     }
   }
 
@@ -613,28 +600,28 @@ export class DefaultConfig implements Config {
 
   startManpower(playerInfo: PlayerInfo): number {
     if (playerInfo.playerType == PlayerType.Bot) {
-      return 10_000;
+      return 6_000;
     }
     if (playerInfo.playerType == PlayerType.FakeHuman) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          return 2_500 * (playerInfo?.nation?.strength ?? 1);
+          return 2_500 + 1000 * (playerInfo?.nation?.strength ?? 1);
         case Difficulty.Medium:
-          return 5_000 * (playerInfo?.nation?.strength ?? 1);
+          return 6_000 + 2000 * (playerInfo?.nation?.strength ?? 1);
         case Difficulty.Hard:
-          return 20_000 * (playerInfo?.nation?.strength ?? 1);
+          return 20_000 + 4000 * (playerInfo?.nation?.strength ?? 1);
         case Difficulty.Impossible:
-          return 50_000 * (playerInfo?.nation?.strength ?? 1);
+          return 50_000 + 8000 * (playerInfo?.nation?.strength ?? 1);
       }
     }
-    return this.infiniteTroops() ? 1_000_000 : 25_000;
+    return this.infiniteTroops() ? 1_000_000 : 20_000;
   }
 
   maxPopulation(player: Player | PlayerView): number {
     const maxPop =
       player.type() == PlayerType.Human && this.infiniteTroops()
         ? 1_000_000_000
-        : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
+        : 1 * (player.numTilesOwned() * 30 + 50000) +
           player.units(UnitType.City).length * this.cityPopulationIncrease();
 
     if (player.type() == PlayerType.Bot) {
@@ -647,11 +634,11 @@ export class DefaultConfig implements Config {
 
     switch (this._gameConfig.difficulty) {
       case Difficulty.Easy:
-        return maxPop * 0.5;
+        return maxPop * 0.4;
       case Difficulty.Medium:
-        return maxPop * 1;
+        return maxPop * 0.7;
       case Difficulty.Hard:
-        return maxPop * 1.5;
+        return maxPop * 1;
       case Difficulty.Impossible:
         return maxPop * 2;
     }
@@ -660,9 +647,12 @@ export class DefaultConfig implements Config {
   populationIncreaseRate(player: Player): number {
     const max = this.maxPopulation(player);
 
-    let toAdd = 10 + Math.pow(player.population(), 0.73) / 4;
+    let toAdd =
+      10 +
+      (1300 / max + 1 / 140) * (0.8 * player.troops() + 1.2 * player.workers());
+    const adjustedPop = player.adjustedPopulation();
 
-    const ratio = 1 - player.population() / max;
+    const ratio = 1 - adjustedPop / max;
     toAdd *= ratio;
 
     if (player.type() == PlayerType.Bot) {
@@ -686,15 +676,43 @@ export class DefaultConfig implements Config {
       }
     }
 
-    return Math.min(player.population() + toAdd, max) - player.population();
+    return (
+      Math.min(player.adjustedPopulation() + toAdd, max) -
+      player.adjustedPopulation()
+    );
   }
 
+
   goldAdditionRate(player: Player): number {
-    return Math.sqrt(player.workers() * player.numTilesOwned()) / 200;
+    const numCities = player.units(UnitType.City).length;
+    const baseCityPopulation = numCities * this.cityPopulationIncrease();
+
+    const totalWorkers = player.workers() ?? 0;
+    const totalPopulation = player.population() ?? 0;
+    const maxPopulation = this.maxPopulation(player) ?? 0;
+    const numTiles = player.numTilesOwned() ?? 0;
+
+    if (totalWorkers <= 0 || totalPopulation <= 0 || maxPopulation <= 0) {
+      return 0;
+    }
+
+    const populationRatio = totalPopulation / maxPopulation;
+    const adjustedCityPopulation = baseCityPopulation * populationRatio;
+
+    const cityWorkers =
+      (adjustedCityPopulation * totalWorkers) / totalPopulation;
+    const ruralWorkers = totalWorkers - cityWorkers;
+
+    const cityGold = cityWorkers / 2000;
+    const tileGold = (ruralWorkers ** 0.5 * numTiles ** 0.5) / 600;
+
+    const totalGold = 8.5 * (cityGold + tileGold) ** 0.7;
+
+    return Number.isFinite(totalGold) ? totalGold : 0;
   }
 
   troopAdjustmentRate(player: Player): number {
-    const maxDiff = this.maxPopulation(player) / 1000;
+    const maxDiff = this.maxPopulation(player) / 500;
     const target = player.population() * player.targetTroopRatio();
     const diff = target - player.troops();
     if (Math.abs(diff) < maxDiff) {

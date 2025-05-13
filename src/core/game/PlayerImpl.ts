@@ -138,6 +138,7 @@ export class PlayerImpl implements Player {
       tilesOwned: this.numTilesOwned(),
       gold: Number(this._gold),
       population: this.population(),
+      adjustedPopulation: this.adjustedPopulation(),
       workers: this.workers(),
       troops: this.troops(),
       targetTroopRatio: this.targetTroopRatio(),
@@ -636,6 +637,24 @@ export class PlayerImpl implements Player {
 
   population(): number {
     return Number(this._troops + this._workers);
+  }
+  adjustedPopulation(): number {
+    return this.population() + this.boatTroops() + this.attackingTroops();
+  }
+  private attackingTroops(): number {
+    return this._outgoingAttacks
+      .filter((a) => a.isActive())
+      .reduce(
+        (sum, a) =>
+          sum + (a instanceof AttackImpl ? a.remainingTroops() : a.troops()),
+        0,
+      );
+  }
+
+  private boatTroops(): number {
+    return this.units(UnitType.TransportShip)
+      .map((u) => u.troops())
+      .reduce((sum, n) => sum + n, 0);
   }
   workers(): number {
     return Math.max(1, Number(this._workers));

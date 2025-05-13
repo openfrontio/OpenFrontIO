@@ -272,6 +272,8 @@ export interface Attack {
   attacker(): Player;
   troops(): number;
   setTroops(troops: number): void;
+  applyLosses(losses: number): void;
+  remainingTroops(): number;
   isActive(): boolean;
   delete(): void;
   // The tile the attack originated from, mostly used for boat attacks.
@@ -410,6 +412,7 @@ export interface Player {
   // Resources & Population
   gold(): Gold;
   population(): number;
+  adjustedPopulation(): number;
   workers(): number;
   troops(): number;
   targetTroopRatio(): number;

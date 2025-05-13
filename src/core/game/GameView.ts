@@ -225,6 +225,9 @@ export class PlayerView {
   population(): number {
     return this.data.population;
   }
+  adjustedPopulation(): number {
+    return this.data.adjustedPopulation;
+  }
   workers(): number {
     return this.data.workers;
   }

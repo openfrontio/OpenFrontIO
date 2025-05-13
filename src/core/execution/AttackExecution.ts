@@ -256,6 +256,7 @@ export class AttackExecution implements Execution {
         );
       numTilesPerTick -= tilesPerTickUsed;
       this.attack.setTroops(this.attack.troops() - attackerTroopLoss);
+      this.attack.applyLosses(attackerTroopLoss);
       if (this.target.isPlayer()) {
         this.target.removeTroops(defenderTroopLoss);
       }

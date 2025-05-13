@@ -124,7 +124,8 @@ export interface Config {
   defensePostRange(): number;
   SAMCooldown(): number;
   SiloCooldown(): number;
-  defensePostDefenseBonus(): number;
+  defensePostLossMultiplier(): number;
+  defensePostSpeedMultiplier(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
   warshipPatrolRange(): number;

@@ -7,13 +7,17 @@ export class AttackImpl implements Attack {
   public _retreating = false;
   public _retreated = false;
 
+  private _remainingTroops: number;
+
   constructor(
     private _id: string,
     private _target: Player | TerraNullius,
     private _attacker: Player,
     private _troops: number,
     private _sourceTile: TileRef | null,
-  ) {}
+  ) {
+    this._remainingTroops = _troops; // Start with full strength
+  }
 
   sourceTile(): TileRef | null {
     return this._sourceTile;
@@ -30,6 +34,14 @@ export class AttackImpl implements Attack {
   }
   setTroops(troops: number) {
     this._troops = troops;
+  }
+
+  remainingTroops(): number {
+    return this._remainingTroops;
+  }
+
+  applyLosses(losses: number): void {
+    this._remainingTroops = Math.max(0, this._remainingTroops - losses);
   }
 
   isActive() {
