@@ -4,7 +4,9 @@ import { AStar, PathFindResultType } from "./AStar";
 import { SerialAStar } from "./SerialAStar";
 
 export class MiniAStar implements AStar {
-  private aStar: AStar;
+  private aStar: AStar | null; 
+  private miniPath: TileRef[] | null = null;
+  private static pathCache: Map<string, TileRef[]> = new Map();
 
   constructor(
     private gameMap: GameMap,
@@ -27,24 +29,64 @@ export class MiniAStar implements AStar {
       Math.floor(gameMap.y(dst) / 2),
     );
 
-    this.aStar = new SerialAStar(
-      miniSrc,
-      miniDst,
-      iterations,
-      maxTries,
-      this.miniMap,
-    );
+    // Check cache for the first source to destination path
+    if (miniSrc.length > 0) {
+      const key = this.getCacheKey(miniSrc[0], miniDst);
+      if (MiniAStar.pathCache.has(key)) {
+        this.miniPath = MiniAStar.pathCache.get(key);
+        this.aStar = null; 
+      }
+    }
+
+  
+    if (this.miniPath == null) {
+      this.aStar = new SerialAStar(
+        miniSrc,
+        miniDst,
+        iterations,
+        maxTries,
+        this.miniMap,
+      );
+    }
+  }
+
+  
+  private getCacheKey(src: TileRef, dst: TileRef): string {
+    return `${this.miniMap.x(src)},${this.miniMap.y(src)}-${this.miniMap.x(dst)},${this.miniMap.y(dst)}`;
   }
 
   compute(): PathFindResultType {
-    return this.aStar.compute();
+   
+    if (this.miniPath != null) {
+      return PathFindResultType.Completed;
+    }
+
+   //safty checke
+    if (this.aStar == null) {
+      return PathFindResultType.PathNotFound;
+    }
+
+    // Compute incrementally with SerialAStar
+    const result = this.aStar.compute();
+    if (result === PathFindResultType.Completed) {
+      this.miniPath = this.aStar.reconstructPath();
+      // Cache the path using the first source
+      const miniSrc = (this.aStar as SerialAStar).reconstructPath()[0]; // Approximate source from path
+      const miniDst = this.miniMap.ref(
+        Math.floor(this.gameMap.x(this.dst) / 2),
+        Math.floor(this.gameMap.y(this.dst) / 2),
+      );
+      const key = this.getCacheKey(miniSrc, miniDst);
+      MiniAStar.pathCache.set(key, this.miniPath);
+    }
+    return result;
   }
 
   reconstructPath(): TileRef[] {
+  
+    const miniPath = this.miniPath || (this.aStar ? this.aStar.reconstructPath() : []);
     const upscaled = upscalePath(
-      this.aStar
-        .reconstructPath()
-        .map((tr) => new Cell(this.miniMap.x(tr), this.miniMap.y(tr))),
+      miniPath.map((tr) => new Cell(this.miniMap.x(tr), this.miniMap.y(tr))),
     );
     upscaled.push(new Cell(this.gameMap.x(this.dst), this.gameMap.y(this.dst)));
     return upscaled.map((c) => this.gameMap.ref(c.x, c.y));
