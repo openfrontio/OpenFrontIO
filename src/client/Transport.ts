@@ -263,7 +263,12 @@ export class Transport {
     onconnect: () => void,
     onmessage: (message: ServerMessage) => void,
   ) {
-    this.localServer = new LocalServer(this.lobbyConfig, onconnect, onmessage);
+    this.localServer = new LocalServer(
+      this.lobbyConfig,
+      onconnect,
+      onmessage,
+      this.lobbyConfig.gameRecord != null,
+    );
     this.localServer.start();
   }
 
@@ -318,6 +323,12 @@ export class Transport {
     this.connect(this.onconnect, this.onmessage);
   }
 
+  public turnComplete() {
+    if (this.isLocal) {
+      this.localServer.turnComplete();
+    }
+  }
+
   private onSendLogEvent(event: SendLogEvent) {
     this.sendMsg(
       JSON.stringify({
@@ -335,7 +346,7 @@ export class Transport {
         gameID: this.lobbyConfig.gameID,
         clientID: this.lobbyConfig.clientID,
         lastTurn: numTurns,
-        persistentID: this.lobbyConfig.persistentID,
+        token: this.lobbyConfig.token,
         username: this.lobbyConfig.playerName,
         flag: this.lobbyConfig.flag,
       } satisfies ClientJoinMessage),

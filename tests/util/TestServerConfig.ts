@@ -1,8 +1,18 @@
+import { JWK } from "jose";
 import { GameEnv, ServerConfig } from "../../src/core/configuration/Config";
 import { GameMapType } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
+  jwtAudience(): string {
+    throw new Error("Method not implemented.");
+  }
+  jwtIssuer(): string {
+    throw new Error("Method not implemented.");
+  }
+  jwkPublicKey(): Promise<JWK> {
+    throw new Error("Method not implemented.");
+  }
   otelEnabled(): boolean {
     throw new Error("Method not implemented.");
   }
@@ -25,9 +35,6 @@ export class TestServerConfig implements ServerConfig {
     throw new Error("Method not implemented.");
   }
   lobbyMaxPlayers(map: GameMapType): number {
-    throw new Error("Method not implemented.");
-  }
-  discordRedirectURI(): string {
     throw new Error("Method not implemented.");
   }
   numWorkers(): number {

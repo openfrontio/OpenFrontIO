@@ -1,6 +1,5 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import mastersIcon from "../../../../resources/images/MastersIcon.png";
 import { EventBus } from "../../../core/EventBus";
 import { Team } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
@@ -145,43 +144,7 @@ export class WinModal extends LitElement implements Layer {
   }
 
   innerHtml() {
-    return html`
-      <div
-        style="
-          text-align: center; 
-          margin: 10px 0; 
-          line-height: 1.5;
-          background-image: url(${mastersIcon});
-          background-size: 100px;
-          background-position: center;
-          background-repeat: no-repeat;
-          background-blend-mode: overlay;
-          position: relative;
-        "
-      >
-        <div
-          style="
-            margin: 10px 0; 
-            padding: 14px; 
-            background: rgba(0, 0, 0, 0.76); 
-            border-radius: 5px;
-            position: relative;
-            z-index: 1;
-            font-size: 22px;
-          "
-        >
-          Watch the best compete in the
-          <br />
-          <a
-            href="https://openfrontmaster.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            style="color: #00bfff; font-weight: bold; text-decoration: underline;"
-            >OpenFront Masters</a
-          >
-        </div>
-      </div>
-    `;
+    return html``;
   }
 
   show() {
