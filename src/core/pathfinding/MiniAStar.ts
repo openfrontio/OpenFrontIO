@@ -4,9 +4,10 @@ import { AStar, PathFindResultType } from "./AStar";
 import { SerialAStar } from "./SerialAStar";
 
 export class MiniAStar implements AStar {
-  private aStar: AStar | null; 
+  private aStar: AStar | null;
   private miniPath: TileRef[] | null = null;
   private static pathCache: Map<string, TileRef[]> = new Map();
+  private hasTested: boolean = false; // Flag to run test once per instance
 
   constructor(
     private gameMap: GameMap,
@@ -34,11 +35,11 @@ export class MiniAStar implements AStar {
       const key = this.getCacheKey(miniSrc[0], miniDst);
       if (MiniAStar.pathCache.has(key)) {
         this.miniPath = MiniAStar.pathCache.get(key);
-        this.aStar = null; 
+        this.aStar = null;
       }
     }
 
-  
+    // If no cached path, initialize SerialAStar
     if (this.miniPath == null) {
       this.aStar = new SerialAStar(
         miniSrc,
@@ -50,28 +51,78 @@ export class MiniAStar implements AStar {
     }
   }
 
-  
   private getCacheKey(src: TileRef, dst: TileRef): string {
     return `${this.miniMap.x(src)},${this.miniMap.y(src)}-${this.miniMap.x(dst)},${this.miniMap.y(dst)}`;
   }
 
+  // Compute path without cache for testing
+  private computeWithoutCache(
+    miniSrc: TileRef[],
+    miniDst: TileRef,
+    iterations: number,
+    maxTries: number,
+  ): PathFindResultType {
+    const tempAStar = new SerialAStar(
+      miniSrc,
+      miniDst,
+      iterations,
+      maxTries,
+      this.miniMap,
+    );
+    return tempAStar.compute();
+  }
+
   compute(): PathFindResultType {
-   
+    // Run performance test only once per instance
+    if (!this.hasTested && this.aStar != null) {
+      this.hasTested = true;
+
+      // Recompute miniSrc and miniDst for non-cached test
+      const srcArray = this.aStar
+        .reconstructPath()
+        .slice(0, 1); // Approximate source from aStar
+      const miniSrc = srcArray.map((srcPoint) =>
+        this.miniMap.ref(
+          Math.floor(this.gameMap.x(srcPoint) / 2),
+          Math.floor(this.gameMap.y(srcPoint) / 2),
+        ),
+      );
+      const miniDst = this.miniMap.ref(
+        Math.floor(this.gameMap.x(this.dst) / 2),
+        Math.floor(this.gameMap.y(this.dst) / 2),
+      );
+
+      // Time non-cached pathfinding
+      console.time("Pathfinding without cache");
+      this.computeWithoutCache(miniSrc, miniDst, this.aStar["iterations"], this.aStar["maxTries"]);
+      console.timeEnd("Pathfinding without cache");
+
+      // Time cached pathfinding (normal execution)
+      console.time("Pathfinding with cache");
+      const result = this.computeWithCache();
+      console.timeEnd("Pathfinding with cache");
+
+      return result;
+    }
+
+    // Normal execution (cached or incremental)
+    return this.computeWithCache();
+  }
+
+  // Normal compute logic extracted for clarity
+  private computeWithCache(): PathFindResultType {
     if (this.miniPath != null) {
       return PathFindResultType.Completed;
     }
 
-   //safty checke
     if (this.aStar == null) {
       return PathFindResultType.PathNotFound;
     }
 
-    // Compute incrementally with SerialAStar
     const result = this.aStar.compute();
     if (result === PathFindResultType.Completed) {
       this.miniPath = this.aStar.reconstructPath();
-      // Cache the path using the first source
-      const miniSrc = (this.aStar as SerialAStar).reconstructPath()[0]; // Approximate source from path
+      const miniSrc = this.aStar.reconstructPath()[0];
       const miniDst = this.miniMap.ref(
         Math.floor(this.gameMap.x(this.dst) / 2),
         Math.floor(this.gameMap.y(this.dst) / 2),
@@ -83,7 +134,6 @@ export class MiniAStar implements AStar {
   }
 
   reconstructPath(): TileRef[] {
-  
     const miniPath = this.miniPath || (this.aStar ? this.aStar.reconstructPath() : []);
     const upscaled = upscalePath(
       miniPath.map((tr) => new Cell(this.miniMap.x(tr), this.miniMap.y(tr))),
