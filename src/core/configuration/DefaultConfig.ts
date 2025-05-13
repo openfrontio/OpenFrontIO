@@ -109,78 +109,79 @@ export abstract class DefaultServerConfig implements ServerConfig {
 
   lobbyMaxPlayers(map: GameMapType, mode: GameMode): number {
     const numPlayers = () => {
+      const ranNumb = Math.random();
       switch (map) {
         case GameMapType.GatewayToTheAtlantic:
-          return Math.random() < 0.2 ? 80 : 50;
+          return ranNumb < 0.2 ? 80 : ranNumb < 0.3 ? 60 : 40;
           break;
         case GameMapType.SouthAmerica:
-          return Math.random() < 0.2 ? 70 : 40;
+          return ranNumb < 0.2 ? 70 : ranNumb < 0.3 ? 50 : 40;
           break;
         case GameMapType.NorthAmerica:
-          return Math.random() < 0.2 ? 80 : 50;
+          return ranNumb < 0.2 ? 80 : ranNumb < 0.3 ? 60 : 50;
           break;
         case GameMapType.Africa:
-          return Math.random() < 0.2 ? 100 : 50;
+          return ranNumb < 0.2 ? 100 : ranNumb < 0.3 ? 80 : 50;
           break;
         case GameMapType.Europe:
-          return Math.random() < 0.2 ? 80 : 50;
+          return ranNumb < 0.2 ? 80 : ranNumb < 0.3 ? 30 : 50;
           break;
         case GameMapType.Australia:
-          return Math.random() < 0.2 ? 50 : 30;
+          return ranNumb < 0.2 ? 50 : ranNumb < 0.3 ? 40 : 30;
           break;
         case GameMapType.Iceland:
-          return Math.random() < 0.2 ? 50 : 30;
+          return ranNumb < 0.2 ? 50 : ranNumb < 0.3 ? 40 : 30;
           break;
         case GameMapType.Britannia:
-          return Math.random() < 0.2 ? 50 : 30;
+          return ranNumb < 0.2 ? 50 : ranNumb < 0.3 ? 40 : 30;
           break;
         case GameMapType.Asia:
-          return Math.random() < 0.2 ? 60 : 30;
+          return ranNumb < 0.2 ? 60 : ranNumb < 0.3 ? 50 : 30;
           break;
         case GameMapType.FalklandIslands:
-          return Math.random() < 0.2 ? 50 : 30;
+          return ranNumb < 0.2 ? 80 : ranNumb < 0.3 ? 50 : 30;
           break;
         case GameMapType.Baikal:
-          return Math.random() < 0.2 ? 60 : 40;
+          return ranNumb < 0.2 ? 60 : ranNumb < 0.3 ? 50 : 40;
           break;
         case GameMapType.Mena:
-          return Math.random() < 0.2 ? 60 : 30;
+          return ranNumb < 0.2 ? 60 : ranNumb < 0.3 ? 50 : 30;
           break;
         case GameMapType.Mars:
-          return Math.random() < 0.2 ? 50 : 30;
+          return ranNumb < 0.2 ? 50 : ranNumb < 0.3 ? 40 : 30;
           break;
         case GameMapType.Oceania:
-          return Math.random() < 0.2 ? 30 : 20;
+          return ranNumb < 0.2 ? 30 : ranNumb < 0.3 ? 10 : 20;
           break;
         case GameMapType.Japan:
-          return Math.random() < 0.2 ? 50 : 30;
+          return ranNumb < 0.2 ? 50 : ranNumb < 0.3 ? 40 : 30;
           break;
         case GameMapType.FaroeIslands:
-          return Math.random() < 0.2 ? 80 : 50;
+          return ranNumb < 0.2 ? 50 : ranNumb < 0.3 ? 40 : 30;
           break;
         case GameMapType.DeglaciatedAntarctica:
-          return Math.random() < 0.2 ? 50 : 30;
+          return ranNumb < 0.2 ? 50 : ranNumb < 0.3 ? 40 : 30;
           break;
         case GameMapType.EuropeClassic:
-          return Math.random() < 0.2 ? 80 : 50;
+          return ranNumb < 0.2 ? 80 : ranNumb < 0.3 ? 30 : 50;
           break;
         case GameMapType.BetweenTwoSeas:
-          return Math.random() < 0.2 ? 40 : 30;
+          return ranNumb < 0.2 ? 40 : ranNumb < 0.3 ? 50 : 30;
           break;
         case GameMapType.BlackSea:
-          return Math.random() < 0.2 ? 40 : 30;
+          return ranNumb < 0.2 ? 40 : ranNumb < 0.3 ? 50 : 30;
           break;
         case GameMapType.Pangaea:
-          return Math.random() < 0.2 ? 40 : 30;
+          return ranNumb < 0.2 ? 40 : ranNumb < 0.3 ? 20 : 30;
           break;
         case GameMapType.World:
-          return Math.random() < 0.2 ? 150 : 50;
+          return ranNumb < 0.2 ? 150 : ranNumb < 0.3 ? 80 : 50;
           break;
         case GameMapType.KnownWorld:
-          return Math.random() < 0.2 ? 50 : 30;
+          return ranNumb < 0.2 ? 50 : ranNumb < 0.3 ? 40 : 30;
           break;
         default:
-          return Math.random() < 0.2 ? 50 : 20;
+          return ranNumb < 0.2 ? 50 : ranNumb < 0.3 ? 30 : 20;
           break;
       }
     };
