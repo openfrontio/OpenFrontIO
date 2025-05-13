@@ -80,9 +80,8 @@ export function startWorker() {
       const id = req.params.id;
       if (!id) {
         log.warn(`cannot create game, id not found`);
-        return;
+        return res.status(400).json({ error: "Game ID is required" });
       }
-      // TODO: if game is public make sure request came from localhohst!!!
       const clientIP = req.ip || req.socket.remoteAddress || "unknown";
       const gc = req.body?.gameConfig as GameConfig;
       if (
@@ -92,7 +91,9 @@ export function startWorker() {
         log.warn(
           `cannot create public game ${id}, ip ${ipAnonymize(clientIP)} incorrect admin token`,
         );
-        return res.status(400);
+        return res
+          .status(400)
+          .json({ error: "Invalid admin token for public game creation" });
       }
 
       // Double-check this worker should host this game
@@ -101,7 +102,7 @@ export function startWorker() {
         log.warn(
           `This game ${id} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
         );
-        return res.status(400);
+        return res.status(400).json({ error: "Worker, game id mismatch" });
       }
 
       const game = gm.createGame(id, gc);
@@ -141,22 +142,24 @@ export function startWorker() {
       const lobbyID = req.params.id;
       if (req.body.gameType == GameType.Public) {
         log.info(`cannot update game ${lobbyID} to public`);
-        return res.status(400);
+        return res.status(400).json({ error: "Cannot update public game" });
       }
       const game = gm.game(lobbyID);
       if (!game) {
-        return res.status(400);
+        return res.status(400).json({ error: "Game not found" });
       }
       if (game.isPublic()) {
         const clientIP = req.ip || req.socket.remoteAddress || "unknown";
         log.warn(
           `cannot update public game ${game.id}, ip: ${ipAnonymize(clientIP)}`,
         );
-        return res.status(400);
+        return res.status(400).json({ error: "Cannot update public game" });
       }
       if (game.hasStarted()) {
         log.warn(`cannot update game ${game.id} after it has started`);
-        return res.status(400);
+        return res
+          .status(400)
+          .json({ error: "Cannot update game after it has started" });
       }
       game.updateGameConfig({
         gameMap: req.body.gameMap,

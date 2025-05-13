@@ -2,8 +2,53 @@ import { consolex } from "../Consolex";
 import { Game } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
+import { DistanceBasedBezierCurve } from "../utilities/Line";
 import { AStar, PathFindResultType, TileResult } from "./AStar";
 import { MiniAStar } from "./MiniAStar";
+
+const parabolaMinHeight = 50;
+
+export class ParabolaPathFinder {
+  constructor(private mg: GameMap) {}
+  private curve: DistanceBasedBezierCurve | undefined;
+
+  computeControlPoints(
+    orig: TileRef,
+    dst: TileRef,
+    distanceBasedHeight = true,
+  ) {
+    const p0 = { x: this.mg.x(orig), y: this.mg.y(orig) };
+    const p3 = { x: this.mg.x(dst), y: this.mg.y(dst) };
+    const dx = p3.x - p0.x;
+    const dy = p3.y - p0.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const maxHeight = distanceBasedHeight
+      ? Math.max(distance / 3, parabolaMinHeight)
+      : 0;
+    // Use a bezier curve always pointing up
+    const p1 = {
+      x: p0.x + (p3.x - p0.x) / 4,
+      y: Math.max(p0.y + (p3.y - p0.y) / 4 - maxHeight, 0),
+    };
+    const p2 = {
+      x: p0.x + ((p3.x - p0.x) * 3) / 4,
+      y: Math.max(p0.y + ((p3.y - p0.y) * 3) / 4 - maxHeight, 0),
+    };
+
+    this.curve = new DistanceBasedBezierCurve(p0, p1, p2, p3);
+  }
+
+  nextTile(speed: number): TileRef | true {
+    if (!this.curve) {
+      return;
+    }
+    const nextPoint = this.curve.increment(speed);
+    if (!nextPoint) {
+      return true;
+    }
+    return this.mg.ref(Math.floor(nextPoint.x), Math.floor(nextPoint.y));
+  }
+}
 
 export class AirPathFinder {
   constructor(
