@@ -506,16 +506,6 @@ export class NameLayer implements Layer {
     }
   }
 
-  private createTextElement(text: string, size: number, id: string) {
-    const element = document.createElement("div");
-    element.textContent = text;
-    element.style.fontSize = `${size}px`;
-    element.setAttribute("data-icon", id);
-    element.style.marginRight = "-4px";
-    element.style.marginBottom = "1px";
-    return element;
-  }
-
   private createIconElement(
     src: string,
     size: number,
