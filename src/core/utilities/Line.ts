@@ -49,8 +49,7 @@ export class CubicBezierCurve {
     private p1: Point,
     private p2: Point,
     private p3: Point,
-  ) {
-  }
+  ) {}
   getPointAt(t: number): Point {
     const T = 1 - t;
     const TT = T * T;
