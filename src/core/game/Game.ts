@@ -1,4 +1,5 @@
 import { Config } from "../configuration/Config";
+import { AttackExecution } from "../execution/AttackExecution";
 import { AllPlayersStats, ClientID } from "../Schemas";
 import { GameMap, TileRef } from "./GameMap";
 import {
@@ -276,6 +277,7 @@ export interface Attack {
   delete(): void;
   // The tile the attack originated from, mostly used for boat attacks.
   sourceTile(): TileRef | null;
+  averagePosition(): Cell;
 }
 
 export interface AllianceRequest {
@@ -486,6 +488,7 @@ export interface Player {
     target: Player | TerraNullius,
     troops: number,
     sourceTile: TileRef,
+    exec: AttackExecution,
   ): Attack;
   outgoingAttacks(): Attack[];
   incomingAttacks(): Attack[];

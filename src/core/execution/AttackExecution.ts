@@ -2,6 +2,7 @@ import { PriorityQueue } from "@datastructures-js/priority-queue";
 import { renderNumber, renderTroops } from "../../client/Utils";
 import {
   Attack,
+  Cell,
   Execution,
   Game,
   MessageType,
@@ -114,6 +115,7 @@ export class AttackExecution implements Execution {
       this.target,
       this.startTroops,
       this.sourceTile,
+      this,
     );
 
     for (const incoming of this._owner.incomingAttacks()) {
@@ -336,6 +338,21 @@ export class AttackExecution implements Execution {
 
   isActive(): boolean {
     return this.active;
+  }
+
+  averagePosition(): Cell {
+    let averageX = 0;
+    let averageY = 0;
+
+    this.border.forEach((t) => {
+      averageX += this.mg.map().x(t);
+      averageY += this.mg.map().y(t);
+    });
+
+    averageX = averageX / this.border.size;
+    averageY = averageY / this.border.size;
+
+    return new Cell(averageX, averageY);
   }
 }
 

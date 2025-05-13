@@ -84,6 +84,8 @@ export interface AttackUpdate {
   troops: number;
   id: string;
   retreating: boolean;
+  averagePositionX: number;
+  averagePositionY: number;
 }
 
 export interface PlayerUpdate {
