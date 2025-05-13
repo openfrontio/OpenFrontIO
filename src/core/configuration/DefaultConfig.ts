@@ -109,79 +109,80 @@ export abstract class DefaultServerConfig implements ServerConfig {
 
   lobbyMaxPlayers(map: GameMapType, mode: GameMode): number {
     const numPlayers = () => {
-      const ranNumb = Math.random();
+      const ranNumb1 = Math.random();
+      const ranNumb2 = Math.random();
       switch (map) {
         case GameMapType.GatewayToTheAtlantic:
-          return ranNumb < 0.2 ? 80 : ranNumb < 0.3 ? 60 : 40;
+          return ranNumb1 < 0.3 ? 80 : ranNumb2 < 0.3 ? 60 : 40;
           break;
         case GameMapType.SouthAmerica:
-          return ranNumb < 0.2 ? 70 : ranNumb < 0.3 ? 50 : 40;
+          return ranNumb1 < 0.3 ? 70 : ranNumb2 < 0.3 ? 50 : 40;
           break;
         case GameMapType.NorthAmerica:
-          return ranNumb < 0.2 ? 80 : ranNumb < 0.3 ? 60 : 50;
+          return ranNumb1 < 0.3 ? 80 : ranNumb2 < 0.3 ? 60 : 50;
           break;
         case GameMapType.Africa:
-          return ranNumb < 0.2 ? 100 : ranNumb < 0.3 ? 80 : 50;
+          return ranNumb1 < 0.3 ? 100 : ranNumb2 < 0.3 ? 80 : 50;
           break;
         case GameMapType.Europe:
-          return ranNumb < 0.2 ? 80 : ranNumb < 0.3 ? 30 : 50;
+          return ranNumb1 < 0.3 ? 80 : ranNumb2 < 0.3 ? 30 : 50;
           break;
         case GameMapType.Australia:
-          return ranNumb < 0.2 ? 50 : ranNumb < 0.3 ? 40 : 30;
+          return ranNumb1 < 0.3 ? 50 : ranNumb2 < 0.3 ? 40 : 30;
           break;
         case GameMapType.Iceland:
-          return ranNumb < 0.2 ? 50 : ranNumb < 0.3 ? 40 : 30;
+          return ranNumb1 < 0.3 ? 50 : ranNumb2 < 0.3 ? 40 : 30;
           break;
         case GameMapType.Britannia:
-          return ranNumb < 0.2 ? 50 : ranNumb < 0.3 ? 40 : 30;
+          return ranNumb1 < 0.3 ? 50 : ranNumb2 < 0.3 ? 40 : 30;
           break;
         case GameMapType.Asia:
-          return ranNumb < 0.2 ? 60 : ranNumb < 0.3 ? 50 : 30;
+          return ranNumb1 < 0.3 ? 60 : ranNumb2 < 0.3 ? 50 : 30;
           break;
         case GameMapType.FalklandIslands:
-          return ranNumb < 0.2 ? 80 : ranNumb < 0.3 ? 50 : 30;
+          return ranNumb1 < 0.3 ? 80 : ranNumb2 < 0.3 ? 50 : 30;
           break;
         case GameMapType.Baikal:
-          return ranNumb < 0.2 ? 60 : ranNumb < 0.3 ? 50 : 40;
+          return ranNumb1 < 0.3 ? 60 : ranNumb2 < 0.3 ? 50 : 40;
           break;
         case GameMapType.Mena:
-          return ranNumb < 0.2 ? 60 : ranNumb < 0.3 ? 50 : 30;
+          return ranNumb1 < 0.3 ? 60 : ranNumb2 < 0.3 ? 50 : 30;
           break;
         case GameMapType.Mars:
-          return ranNumb < 0.2 ? 50 : ranNumb < 0.3 ? 40 : 30;
+          return ranNumb1 < 0.3 ? 50 : ranNumb2 < 0.3 ? 40 : 30;
           break;
         case GameMapType.Oceania:
-          return ranNumb < 0.2 ? 30 : ranNumb < 0.3 ? 10 : 20;
+          return ranNumb1 < 0.3 ? 30 : ranNumb2 < 0.3 ? 10 : 20;
           break;
         case GameMapType.Japan:
-          return ranNumb < 0.2 ? 50 : ranNumb < 0.3 ? 40 : 30;
+          return ranNumb1 < 0.3 ? 50 : ranNumb2 < 0.3 ? 40 : 30;
           break;
         case GameMapType.FaroeIslands:
-          return ranNumb < 0.2 ? 50 : ranNumb < 0.3 ? 40 : 30;
+          return ranNumb1 < 0.3 ? 50 : ranNumb2 < 0.3 ? 40 : 30;
           break;
         case GameMapType.DeglaciatedAntarctica:
-          return ranNumb < 0.2 ? 50 : ranNumb < 0.3 ? 40 : 30;
+          return ranNumb1 < 0.3 ? 50 : ranNumb2 < 0.3 ? 40 : 30;
           break;
         case GameMapType.EuropeClassic:
-          return ranNumb < 0.2 ? 80 : ranNumb < 0.3 ? 30 : 50;
+          return ranNumb1 < 0.3 ? 80 : ranNumb2 < 0.3 ? 30 : 50;
           break;
         case GameMapType.BetweenTwoSeas:
-          return ranNumb < 0.2 ? 40 : ranNumb < 0.3 ? 50 : 30;
+          return ranNumb1 < 0.3 ? 40 : ranNumb2 < 0.3 ? 50 : 30;
           break;
         case GameMapType.BlackSea:
-          return ranNumb < 0.2 ? 40 : ranNumb < 0.3 ? 50 : 30;
+          return ranNumb1 < 0.3 ? 40 : ranNumb2 < 0.3 ? 50 : 30;
           break;
         case GameMapType.Pangaea:
-          return ranNumb < 0.2 ? 40 : ranNumb < 0.3 ? 20 : 30;
+          return ranNumb1 < 0.3 ? 40 : ranNumb2 < 0.3 ? 20 : 30;
           break;
         case GameMapType.World:
-          return ranNumb < 0.2 ? 150 : ranNumb < 0.3 ? 80 : 50;
+          return ranNumb1 < 0.3 ? 150 : ranNumb2 < 0.3 ? 80 : 50;
           break;
         case GameMapType.KnownWorld:
-          return ranNumb < 0.2 ? 50 : ranNumb < 0.3 ? 40 : 30;
+          return ranNumb1 < 0.3 ? 50 : ranNumb2 < 0.3 ? 40 : 30;
           break;
         default:
-          return ranNumb < 0.2 ? 50 : ranNumb < 0.3 ? 30 : 20;
+          return ranNumb1 < 0.3 ? 50 : ranNumb2 < 0.3 ? 30 : 20;
           break;
       }
     };
