@@ -14,6 +14,7 @@ export class AttackImpl implements Attack {
     private _troops: number,
     private _sourceTile: TileRef | null,
   ) {}
+  
 
   sourceTile(): TileRef | null {
     return this._sourceTile;
