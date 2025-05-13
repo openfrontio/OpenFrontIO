@@ -62,18 +62,24 @@ export class CubicBezierCurve {
   setControlPoint2(p2: Point) {
     this.p2 = p2;
   }
-
   getPointAt(t: number): Point {
+    const T = 1 - t;
+    const TT = T * T;
+    const TTT = TT * T;
+    const tt = t * t;
+    const ttt = tt * t;
+
     const x =
-      Math.pow(1 - t, 3) * this.p0.x +
-      3 * Math.pow(1 - t, 2) * t * this.p1.x +
-      3 * (1 - t) * Math.pow(t, 2) * this.p2.x +
-      Math.pow(t, 3) * this.p3.x;
+      TTT * this.p0.x +
+      3 * TT * t * this.p1.x +
+      3 * T * tt * this.p2.x +
+      ttt * this.p3.x;
+
     const y =
-      Math.pow(1 - t, 3) * this.p0.y +
-      3 * Math.pow(1 - t, 2) * t * this.p1.y +
-      3 * (1 - t) * Math.pow(t, 2) * this.p2.y +
-      Math.pow(t, 3) * this.p3.y;
+      TTT * this.p0.y +
+      3 * TT * t * this.p1.y +
+      3 * T * tt * this.p2.y +
+      ttt * this.p3.y;
     return { x, y };
   }
 }
