@@ -342,13 +342,6 @@ export class NameLayer implements Layer {
     if (render.player.isTraitor()) {
       if (!existingTraitor) {
         iconsDiv.appendChild(
-          this.createTextElement(
-            render.player.stats().numberOfBetrayals.toString(),
-            iconSize,
-            "traitor",
-          ),
-        );
-        iconsDiv.appendChild(
           this.createIconElement(
             this.traitorIconImage.src,
             iconSize,
