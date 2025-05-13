@@ -319,5 +319,19 @@
       "saving_for_mirv": "[P1] is saving up to launch a MIRV.",
       "mirv_ready": "[P1] has enough gold to launch a MIRV!"
     }
+  },
+  "build_menu": {
+    "desc": {
+      "atom_bomb": "Small explosion",
+      "hydrogen_bomb": "Large explosion",
+      "mirv": "Huge explosion, only targets selected player",
+      "missile_silo": "Used to launch nukes",
+      "sam_launcher": "Defends against incoming nukes",
+      "warship": "Captures trade ships, destroys ships and boats",
+      "port": "Sends trade ships to allies to generate gold",
+      "defense_post": "Increase defenses of nearby borders",
+      "city": "Increase max population"
+    },
+    "not_enough_money": "Not enough money"
   }
 }

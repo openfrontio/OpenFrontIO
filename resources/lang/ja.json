@@ -312,5 +312,19 @@
       "saving_for_mirv": "[P1] はMIRVのために貯金してる。",
       "mirv_ready": "[P1] はMIRVを撃てるだけの金を持ってる！"
     }
+  },
+  "build_menu": {
+    "desc": {
+      "atom_bomb": "小規模な爆発",
+      "hydrogen_bomb": "大規模な爆発",
+      "mirv": "指定したプレイヤーのみを狙う超大規模な爆発。",
+      "missile_silo": "核ミサイルの発射に使用される",
+      "sam_launcher": "飛来する核ミサイルを迎撃する",
+      "warship": "貿易船を捕獲し、敵の船やボートを破壊する",
+      "port": "同盟国に貿易船を送り、ゴールドを生成する",
+      "defense_post": "近くの国境の防御を強化する",
+      "city": "最大人口を増加させる"
+    },
+    "not_enough_money": "資金不足"
   }
 }
