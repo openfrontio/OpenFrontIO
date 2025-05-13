@@ -4,7 +4,7 @@ import { DefaultServerConfig } from "./DefaultConfig";
 
 export const prodConfig = new (class extends DefaultServerConfig {
   numWorkers(): number {
-    return 6;
+    return 20;
   }
   env(): GameEnv {
     return GameEnv.Prod;
@@ -12,7 +12,7 @@ export const prodConfig = new (class extends DefaultServerConfig {
   lobbyMultiTabbing(map: GameMapType, mode: GameMode): boolean {
     return false;
   }
-  discordRedirectURI(): string {
-    return "https://openfront.io/auth/callback";
+  jwtAudience(): string {
+    return "openfront.io";
   }
 })();

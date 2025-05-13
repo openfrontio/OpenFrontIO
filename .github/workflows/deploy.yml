@@ -100,14 +100,12 @@ jobs:
         env:
           SERVER_HOST_EU: ${{ secrets.SERVER_HOST_EU }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
-          SERVER_HOST_US: ${{ secrets.SERVER_HOST_US }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           set -euxo pipefail
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
           test -n "$SERVER_HOST_STAGING" && ssh-keyscan -H "$SERVER_HOST_STAGING" >> ~/.ssh/known_hosts
-          test -n "$SERVER_HOST_US" && ssh-keyscan -H "$SERVER_HOST_US" >> ~/.ssh/known_hosts
           test -n "$SERVER_HOST_EU" && ssh-keyscan -H "$SERVER_HOST_EU" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - name: 🚢 Deploy
@@ -129,7 +127,6 @@ jobs:
           R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
           SERVER_HOST_EU: ${{ secrets.SERVER_HOST_EU }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
-          SERVER_HOST_US: ${{ secrets.SERVER_HOST_US }}
           SSH_KEY: ~/.ssh/id_rsa
           VERSION_TAG: latest
         run: |
