@@ -5,7 +5,7 @@
 # 2. Copies the update script to Hetzner server
 # 3. Executes the update script on the Hetzner server
 
-set -e  # Exit immediately if a command exits with a non-zero status
+set -e # Exit immediately if a command exits with a non-zero status
 
 # Initialize variables
 ENABLE_BASIC_AUTH=false
@@ -13,16 +13,16 @@ ENABLE_BASIC_AUTH=false
 # Parse command line arguments
 POSITIONAL_ARGS=()
 while [[ $# -gt 0 ]]; do
-  case $1 in
-    --enable_basic_auth)
-      ENABLE_BASIC_AUTH=true
-      shift
-      ;;
-    *)
-      POSITIONAL_ARGS+=("$1")
-      shift
-      ;;
-  esac
+    case $1 in
+        --enable_basic_auth)
+            ENABLE_BASIC_AUTH=true
+            shift
+            ;;
+        *)
+            POSITIONAL_ARGS+=("$1")
+            shift
+            ;;
+    esac
 done
 
 # Restore positional parameters
@@ -58,7 +58,7 @@ print_header() {
 
 ENV=$1
 HOST=$2
-SUBDOMAIN=$3  # Optional third argument for custom subdomain
+SUBDOMAIN=$3 # Optional third argument for custom subdomain
 
 # Set subdomain - use the custom subdomain if provided, otherwise use REGION
 if [ -n "$SUBDOMAIN" ]; then
@@ -116,10 +116,10 @@ else
 fi
 
 # Configuration
-UPDATE_SCRIPT="./update.sh"                    # Path to your update script
-REMOTE_USER="openfront"                        
-REMOTE_UPDATE_PATH="/home/$REMOTE_USER"        
-REMOTE_UPDATE_SCRIPT="$REMOTE_UPDATE_PATH/update-openfront.sh"  # Where to place the script on server
+UPDATE_SCRIPT="./update.sh" # Path to your update script
+REMOTE_USER="openfront"
+REMOTE_UPDATE_PATH="/home/$REMOTE_USER"
+REMOTE_UPDATE_SCRIPT="$REMOTE_UPDATE_PATH/update-openfront.sh" # Where to place the script on server
 
 VERSION_TAG=$(date +"%Y%m%d-%H%M%S")
 DOCKER_IMAGE="${DOCKER_USERNAME}/${DOCKER_REPO}:${VERSION_TAG}"
@@ -139,15 +139,15 @@ echo "Using version tag: $VERSION_TAG"
 echo "Docker repository: $DOCKER_REPO"
 
 # Get Git commit for build info
-GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+GIT_COMMIT=$(git rev-parse HEAD 2> /dev/null || echo "unknown")
 echo "Git commit: $GIT_COMMIT"
 
 docker buildx build \
-  --platform linux/amd64 \
-  --build-arg GIT_COMMIT=$GIT_COMMIT \
-  -t $DOCKER_IMAGE \
-  --push \
-  .
+    --platform linux/amd64 \
+    --build-arg GIT_COMMIT=$GIT_COMMIT \
+    -t $DOCKER_IMAGE \
+    --push \
+    .
 
 if [ $? -ne 0 ]; then
     echo "❌ Docker build failed. Stopping deployment."
