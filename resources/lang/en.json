@@ -342,5 +342,13 @@
     "other_won": "{player} has won!",
     "exit": "Exit Game",
     "keep": "Keep Playing"
+  },
+  "leaderboard": {
+    "hide": "Hide",
+    "rank": "Rank",
+    "player": "Player",
+    "owned": "Owned",
+    "gold": "Gold",
+    "troops": "Troops"
   }
 }
