@@ -7,7 +7,7 @@ export const preprodConfig = new (class extends DefaultServerConfig {
     return GameEnv.Preprod;
   }
   lobbyMultiTabbing(map: GameMapType, mode: GameMode): boolean {
-    return false;
+    return true;
   }
   numWorkers(): number {
     return 3;
