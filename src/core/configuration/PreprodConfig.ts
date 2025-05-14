@@ -6,6 +6,9 @@ export const preprodConfig = new (class extends DefaultServerConfig {
     return GameEnv.Preprod;
   }
   numWorkers(): number {
+    if (process.env.SUBDOMAIN !== "main") {
+      return 2;
+    }
     return 3;
   }
   jwtAudience(): string {
