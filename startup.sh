@@ -103,16 +103,9 @@ else
   echo "HTTP Basic Authentication enabled for user: ${BASIC_AUTH_USER}"
 fi
 
-if [ "$DOMAIN" = openfront.dev ] && [ "$SUBDOMAIN" != main ]; then
-  echo "Staging environment detected. Scheduling container shutdown in 24 hours..."
-  (
-    # sleep 86400
-    # echo "24 hours elapsed. Stopping supervisord (staging environment)..."
-    sleep 120
-    echo "2 minutes elapsed. Stopping supervisord (staging environment)..."
-    pkill -TERM supervisord
-  ) &
-fi
-
 # Start supervisord
-exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+if [ "$DOMAIN" = openfront.dev ] && [ "$SUBDOMAIN" != main ]; then
+    timeout 120s /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+else
+    exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+fi
