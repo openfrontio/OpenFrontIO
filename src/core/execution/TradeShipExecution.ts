@@ -57,12 +57,9 @@ export class TradeShipExecution implements Execution {
     }
 
     if (this.origOwner != this.tradeShip.owner()) {
-      // Store as variable in case ship is recaptured by previous owner
       this.wasCaptured = true;
     }
 
-    // If a player captures another player's port while trading we should delete
-    // the ship.
     if (this._dstPort.owner().id() == this.srcPort.owner().id()) {
       this.tradeShip.delete(false);
       this.active = false;
@@ -94,25 +91,46 @@ export class TradeShipExecution implements Execution {
       }
     }
 
-    const result = this.pathFinder.nextTile(
-      this.tradeShip.tile(),
-      this._dstPort.tile(),
-    );
+    const currentTile = this.tradeShip.tile();
+    const dstPort = this._dstPort;
+
+    
+    if (dstPort.data.pathCache) {
+      const key = `${this.mg.x(currentTile)},${this.mg.y(currentTile)}`;
+      const cachedNextTile = dstPort.data.pathCache.get(key);
+      if (cachedNextTile) {
+        
+        this.tradeShip.move(cachedNextTile);
+        if (this.mg.isWater(cachedNextTile) && this.mg.isShoreline(cachedNextTile)) {
+          this.tradeShip.setSafeFromPirates();
+        }
+        return;
+      }
+    }
+
+    
+    const result = this.pathFinder.nextTile(currentTile, dstPort.tile());
 
     switch (result.type) {
       case PathFindResultType.Completed:
         this.complete();
         break;
       case PathFindResultType.Pending:
-        // Fire unit event to rerender.
-        this.tradeShip.move(this.tradeShip.tile());
+        this.tradeShip.move(this.tradeShip.tile()); // Rerender
         break;
       case PathFindResultType.NextTile:
-        // Update safeFromPirates status
+        
+        if (!dstPort.data.pathCache) {
+          dstPort.data.pathCache = new Map<string, TileRef>();
+        }
+        
+        const key = `${this.mg.x(currentTile)},${this.mg.y(currentTile)}`;
+        dstPort.data.pathCache.set(key, result.tile);
+        
+        this.tradeShip.move(result.tile);
         if (this.mg.isWater(result.tile) && this.mg.isShoreline(result.tile)) {
           this.tradeShip.setSafeFromPirates();
         }
-        this.tradeShip.move(result.tile);
         break;
       case PathFindResultType.PathNotFound:
         consolex.warn("captured trade ship cannot find route");
@@ -154,7 +172,6 @@ export class TradeShipExecution implements Execution {
         this.srcPort.owner().id(),
       );
     }
-    return;
   }
 
   isActive(): boolean {
