@@ -312,7 +312,7 @@ export class FakeHumanExecution implements Execution {
       }
       if (!this.player.canBuild(UnitType.AtomBomb, tile)) continue;
       const value = this.nukeTileScore(tile, silos, structures);
-      if (value > bestTile) {
+      if (value > bestValue) {
         bestTile = tile;
         bestValue = value;
       }
