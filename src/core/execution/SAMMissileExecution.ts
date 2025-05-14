@@ -33,8 +33,8 @@ export class SAMMissileExecution implements Execution {
     if (this.SAMMissile == null) {
       this.SAMMissile = this._owner.buildUnit(
         UnitType.SAMMissile,
-        0,
         this.spawn,
+        {},
       );
     }
     if (!this.SAMMissile.isActive()) {

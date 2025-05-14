@@ -16,42 +16,58 @@ import { LobbyConfig } from "./ClientGameRunner";
 import { getPersistentIDFromCookie } from "./Main";
 
 export class LocalServer {
+  // All turns from the game record on replay.
+  private replayTurns: Turn[] = [];
+
   private turns: Turn[] = [];
+
   private intents: Intent[] = [];
   private startedAt: number;
-
-  private endTurnIntervalID;
 
   private paused = false;
 
   private winner: ClientSendWinnerMessage = null;
   private allPlayersStats: AllPlayersStats = {};
 
+  private turnsExecuted = 0;
+  private lastTurnCompletedTime = 0;
+
+  private turnCheckInterval: NodeJS.Timeout;
+
   constructor(
     private lobbyConfig: LobbyConfig,
     private clientConnect: () => void,
     private clientMessage: (message: ServerMessage) => void,
+    private isReplay: boolean,
   ) {}
 
   start() {
+    this.turnCheckInterval = setInterval(() => {
+      if (this.turnsExecuted == this.turns.length) {
+        if (
+          this.isReplay ||
+          Date.now() >
+            this.lastTurnCompletedTime +
+              this.lobbyConfig.serverConfig.turnIntervalMs()
+        ) {
+          this.endTurn();
+        }
+      }
+    }, 5);
+
     this.startedAt = Date.now();
-    if (!this.lobbyConfig.gameRecord) {
-      this.endTurnIntervalID = setInterval(
-        () => this.endTurn(),
-        this.lobbyConfig.serverConfig.turnIntervalMs(),
-      );
-    }
     this.clientConnect();
     if (this.lobbyConfig.gameRecord) {
-      this.turns = decompressGameRecord(this.lobbyConfig.gameRecord).turns;
-      console.log(`loaded turns: ${JSON.stringify(this.turns)}`);
+      this.replayTurns = decompressGameRecord(
+        this.lobbyConfig.gameRecord,
+      ).turns;
     }
     this.clientMessage(
       ServerStartGameMessageSchema.parse({
         type: "start",
         gameID: this.lobbyConfig.gameStartInfo.gameID,
         gameStartInfo: this.lobbyConfig.gameStartInfo,
-        turns: this.turns,
+        turns: [],
       }),
     );
   }
@@ -90,7 +106,7 @@ export class LocalServer {
         return;
       }
       // If we are replaying a game then verify hash.
-      const archivedHash = this.turns[clientMsg.turnNumber].hash;
+      const archivedHash = this.replayTurns[clientMsg.turnNumber].hash;
       if (!archivedHash) {
         console.warn(
           `no archived hash found for turn ${clientMsg.turnNumber}, client hash: ${clientMsg.hash}`,
@@ -121,9 +137,17 @@ export class LocalServer {
     }
   }
 
+  public turnComplete() {
+    this.turnsExecuted++;
+    this.lastTurnCompletedTime = Date.now();
+  }
+
   private endTurn() {
     if (this.paused) {
       return;
+    }
+    if (this.replayTurns.length > 0) {
+      this.intents = this.replayTurns[this.turns.length].intents;
     }
     const pastTurn: Turn = {
       turnNumber: this.turns.length,
@@ -139,7 +163,7 @@ export class LocalServer {
 
   public endGame(saveFullGame: boolean = false) {
     consolex.log("local server ending game");
-    clearInterval(this.endTurnIntervalID);
+    clearInterval(this.turnCheckInterval);
     const players: PlayerRecord[] = [
       {
         ip: null,

@@ -98,20 +98,16 @@ export const pastelTheme = new (class implements Theme {
       b: Math.max(tc.b - 40, 0),
     });
   }
-  defendedBorderColor(player: PlayerView): Colord {
-    const bc = this.borderColor(player).rgba;
-    return colord({
-      r: Math.max(bc.r - 40, 0),
-      g: Math.max(bc.g - 40, 0),
-      b: Math.max(bc.b - 40, 0),
-    });
+
+  defendedBorderColors(player: PlayerView): { light: Colord; dark: Colord } {
+    return {
+      light: this.territoryColor(player).darken(0.2),
+      dark: this.territoryColor(player).darken(0.4),
+    };
   }
 
   focusedBorderColor(): Colord {
     return colord({ r: 230, g: 230, b: 230 });
-  }
-  focusedDefendedBorderColor(): Colord {
-    return colord({ r: 200, g: 200, b: 200 });
   }
 
   terrainColor(gm: GameMap, tile: TileRef): Colord {
