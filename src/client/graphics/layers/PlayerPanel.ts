@@ -198,8 +198,7 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   numberOfBetrayals(otherId: PlayerID) {
-    const stats = this.g.player(otherId).stats();
-    return stats.numberOfBetrayals;
+    return this.g.player(otherId).stats().numberOfBetrayals;
   }
 
   render() {
