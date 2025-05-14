@@ -34,6 +34,8 @@ on:
     branches:
       - "*"
 
+permissions: {}
+
 jobs:
   deploy:
     # Don't deploy on push if this is a fork
