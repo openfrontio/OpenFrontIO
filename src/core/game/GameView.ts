@@ -391,6 +391,15 @@ export class GameView implements GameMap {
     }>;
   }
 
+  hasUnitNearby(
+    tile: TileRef,
+    searchRange: number,
+    type: UnitType,
+    owner: PlayerView,
+  ) {
+    return this.unitGrid.hasUnitNearby(tile, searchRange, type, owner);
+  }
+
   myClientID(): ClientID {
     return this._myClientID;
   }
