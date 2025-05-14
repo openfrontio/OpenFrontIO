@@ -337,6 +337,7 @@
     "keep": "観戦する"
   },
   "leaderboard": {
+    "title": "ランキング",
     "hide": "隠す",
     "rank": "順位",
     "player": "プレイヤー",

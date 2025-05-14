@@ -344,6 +344,7 @@
     "keep": "Keep Playing"
   },
   "leaderboard": {
+    "title": "Leaderboard",
     "hide": "Hide",
     "rank": "Rank",
     "player": "Player",

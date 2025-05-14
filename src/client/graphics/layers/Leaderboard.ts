@@ -243,7 +243,7 @@ export class Leaderboard extends LitElement implements Layer {
           ? ""
           : "hidden"}"
       >
-        Leaderboard
+        ${translateText("leaderboard.title")}
       </button>
       <div
         class="leaderboard ${this._leaderboardHidden ? "hidden" : ""}"
