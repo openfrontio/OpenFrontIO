@@ -2,6 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import "./LanguageModal";
 
+import ar from "../../resources/lang/ar.json";
 import bg from "../../resources/lang/bg.json";
 import bn from "../../resources/lang/bn.json";
 import de from "../../resources/lang/de.json";
@@ -17,6 +18,7 @@ import pl from "../../resources/lang/pl.json";
 import pt_br from "../../resources/lang/pt_br.json";
 import ru from "../../resources/lang/ru.json";
 import sh from "../../resources/lang/sh.json";
+import sv from "../../resources/lang/sv.json";
 import tr from "../../resources/lang/tr.json";
 import uk from "../../resources/lang/uk.json";
 
@@ -32,21 +34,23 @@ export class LangSelector extends LitElement {
   private dKeyPressed: boolean = false;
 
   private languageMap: Record<string, any> = {
+    ar,
     bg,
     bn,
     de,
     en,
-    es,
     eo,
+    es,
     fr,
-    it,
     hi,
+    it,
     ja,
     nl,
     pl,
     pt_br,
     ru,
     sh,
+    sv,
     tr,
     uk,
   };
