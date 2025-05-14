@@ -333,5 +333,14 @@
       "city": "Increase max population"
     },
     "not_enough_money": "Not enough money"
+  },
+  "win_modal": {
+    "died": "You died",
+    "your_team": "Your team won!",
+    "other_team": "{team} team has won!",
+    "you_won": "You Won!",
+    "other_won": "{player} has won!",
+    "exit": "Exit Game",
+    "keep": "Keep Playing"
   }
 }

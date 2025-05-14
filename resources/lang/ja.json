@@ -326,5 +326,14 @@
       "city": "最大人口を増加させる"
     },
     "not_enough_money": "資金不足"
+  },
+  "win_modal": {
+    "died": "あなたは死んでしまった",
+    "your_team": "あなたのチームの勝利！",
+    "other_team": "{team}チームが勝利しました。",
+    "you_won": "勝利！",
+    "other_won": "{player}の勝利!",
+    "exit": "ゲームから退出",
+    "keep": "観戦する"
   }
 }
