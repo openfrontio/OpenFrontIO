@@ -583,13 +583,13 @@ export class PlayerImpl implements Player {
     return !embargo && other.id() != this.id();
   }
 
-  addEmbargo(other: PlayerID, willExpire: boolean): void {
-    if (this.embargoes.has(other) && !this.embargoes.get(other).willExpire)
+  addEmbargo(other: PlayerID, isTemporary: boolean): void {
+    if (this.embargoes.has(other) && !this.embargoes.get(other).isTemporary)
       return;
 
     this.embargoes.set(other, {
       createdAt: this.mg.ticks(),
-      willExpire: willExpire,
+      isTemporary: isTemporary,
       target: other,
     });
   }
@@ -602,8 +602,8 @@ export class PlayerImpl implements Player {
     this.embargoes.delete(other);
   }
 
-  stopExpiringEmbargo(other: PlayerID): void {
-    if (this.embargoes.has(other) && !this.embargoes.get(other).willExpire)
+  endTemporaryEmbargo(other: PlayerID): void {
+    if (this.embargoes.has(other) && !this.embargoes.get(other).isTemporary)
       return;
 
     this.stopEmbargo(other);

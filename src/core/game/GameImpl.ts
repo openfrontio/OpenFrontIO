@@ -238,9 +238,9 @@ export class GameImpl implements Game {
 
     // Automatically remove embargoes only if they were automatically created
     if (requestor.hasEmbargoAgainst(recipient))
-      requestor.stopExpiringEmbargo(recipient.id());
+      requestor.endTemporaryEmbargo(recipient.id());
     if (recipient.hasEmbargoAgainst(requestor))
-      recipient.stopExpiringEmbargo(requestor.id());
+      recipient.endTemporaryEmbargo(requestor.id());
 
     this.addUpdate({
       type: GameUpdateType.AllianceRequestReply,

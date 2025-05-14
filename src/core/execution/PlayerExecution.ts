@@ -100,8 +100,9 @@ export class PlayerExecution implements Execution {
     const embargoes = this.player.getEmbargoes();
     for (const embargo of embargoes) {
       if (
-        embargo.willExpire &&
-        this.mg.ticks() - embargo.createdAt > this.mg.config().embargoDuration()
+        embargo.isTemporary &&
+        this.mg.ticks() - embargo.createdAt >
+          this.mg.config().temporaryEmbargoDuration()
       ) {
         this.player.stopEmbargo(embargo.target);
       }
