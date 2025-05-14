@@ -263,7 +263,7 @@ export class TerritoryLayer implements Layer {
           tile,
           this.game.config().defensePostRange(),
           UnitType.DefensePost,
-          owner,
+          owner.id(),
         )
       ) {
         const borderColors = this.theme.defendedBorderColors(owner);

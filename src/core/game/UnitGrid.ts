@@ -1,6 +1,6 @@
-import { Unit, UnitType } from "./Game";
+import { PlayerID, Unit, UnitType } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
-import { PlayerView, UnitView } from "./GameView";
+import { UnitView } from "./GameView";
 
 export class UnitGrid {
   private grid: Set<Unit | UnitView>[][];
@@ -109,7 +109,7 @@ export class UnitGrid {
         for (const unit of this.grid[cy][cx]) {
           if (typeSet.has(unit.type()) && unit.isActive()) {
             const distSquared = this.squaredDistanceFromTile(unit, tile);
-            if (distSquared < rangeSquared) {
+            if (distSquared <= rangeSquared) {
               nearby.push({ unit, distSquared });
             }
           }
@@ -124,7 +124,7 @@ export class UnitGrid {
     tile: TileRef,
     searchRange: number,
     type: UnitType,
-    owner: PlayerView,
+    playerId: PlayerID,
   ): boolean {
     const { startGridX, endGridX, startGridY, endGridY } = this.getCellsInRange(
       tile,
@@ -134,9 +134,13 @@ export class UnitGrid {
     for (let cy = startGridY; cy <= endGridY; cy++) {
       for (let cx = startGridX; cx <= endGridX; cx++) {
         for (const unit of this.grid[cy][cx]) {
-          if (unit.type() == type && unit.owner() == owner && unit.isActive()) {
+          if (
+            unit.type() == type &&
+            unit.owner().id() == playerId &&
+            unit.isActive()
+          ) {
             const distSquared = this.squaredDistanceFromTile(unit, tile);
-            if (distSquared < rangeSquared) {
+            if (distSquared <= rangeSquared) {
               return true;
             }
           }
