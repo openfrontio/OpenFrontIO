@@ -21,24 +21,19 @@ export class BoatRetreatExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.player === undefined) {
-      this.active = false;
-      return;
-    }
-
     const unit = this.player
       .units()
-      .filter(
+      .find(
         (unit) =>
           unit.id() == this.unitID && unit.type() == UnitType.TransportShip,
       );
 
-    if (!unit || !unit[0]) {
+    if (!unit) {
       consolex.warn(`Didn't find outgoing boat with id ${this.unitID}`);
       return;
     }
 
-    unit[0].orderBoatRetreat();
+    unit.orderBoatRetreat();
     this.active = false;
   }
 
