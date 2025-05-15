@@ -197,7 +197,7 @@ export class PlayerExecution implements Execution {
         .neighbors(tr)
         .filter(
           (n) =>
-            this.mg?.ownerID(n) !== 0 &&
+            this.mg?.owner(n).isPlayer() &&
             this.mg?.ownerID(n) !== this.player?.smallID(),
         )
         .forEach((n) => enemyTiles.add(n));
