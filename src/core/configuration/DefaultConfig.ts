@@ -652,7 +652,6 @@ export class DefaultConfig implements Config {
       10 +
       (1300 / max + 1 / 140) * (0.8 * player.troops() + 1.2 * player.workers());
     const totalPop = player.totalPopulation();
-    console.log(player.totalPopulation());
     const ratio = 1 - totalPop / max;
     toAdd *= ratio;
 
