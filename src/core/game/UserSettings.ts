@@ -1,14 +1,32 @@
 export class UserSettings {
-  get(key: string, defaultValue: boolean) {
-    const value = localStorage.getItem(key);
-    if (!value) return defaultValue;
+  private cache = new Map<string, boolean>();
 
-    if (value === "true") return true;
+  get(key: string, defaultValue: boolean): boolean {
+    // 1. Return cached value if present
+    if (this.cache.has(key)) {
+      return this.cache.get(key)!;
+    }
 
-    if (value === "false") return false;
+    // 2. Otherwise load from localStorage
+    const raw = localStorage.getItem(key);
+    let value = defaultValue;
+
+    if (raw === "true") {
+      value = true;
+    } else if (raw === "false") {
+      value = false;
+    }
+
+    // 3. Cache and return
+    this.cache.set(key, value);
+    return value;
   }
 
   set(key: string, value: boolean) {
+    // 1. Update cache
+    this.cache.set(key, value);
+
+    // 2. Persist outside the game loop
     localStorage.setItem(key, value ? "true" : "false");
   }
 
@@ -30,7 +48,7 @@ export class UserSettings {
   focusLocked() {
     return false;
     // TODO: renable when performance issues are fixed.
-    this.get("settings.focusLocked", true);
+    // return this.get("settings.focusLocked", true);
   }
 
   toggleLeftClickOpenMenu() {
