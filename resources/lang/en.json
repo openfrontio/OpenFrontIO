@@ -351,5 +351,28 @@
     "owned": "Owned",
     "gold": "Gold",
     "troops": "Troops"
+  },
+  "player_info_overlay": {
+    "type": "Type",
+    "bot": "Bot",
+    "nation": "Nation",
+    "player": "Player",
+    "team": "Team",
+    "d_troops": "Defending troops",
+    "a_troops": "Attacking troops",
+    "gold": "Gold",
+    "ports": "Ports",
+    "cities": "Cities",
+    "missile_launchers": "Missile launchers",
+    "sams": "SAMs",
+    "health": "Health",
+    "attitude": "Attitude"
+  },
+  "relation": {
+    "hostile": "Hostile",
+    "distrustful": "Distrustful",
+    "neutral": "Neutral",
+    "friendly": "Friendly",
+    "default": "Default"
   }
 }

@@ -344,5 +344,28 @@
     "owned": "領土",
     "gold": "ゴールド",
     "troops": "兵士"
+  },
+  "player_info_overlay": {
+    "type": "タイプ",
+    "bot": "ボット",
+    "nation": "国家",
+    "player": "プレイヤー",
+    "team": "チーム",
+    "d_troops": "防衛兵士数",
+    "a_troops": "攻撃兵士数",
+    "gold": "資金",
+    "ports": "港",
+    "cities": "都市",
+    "missile_launchers": "ミサイル格納庫",
+    "sams": "SAM",
+    "health": "体力",
+    "attitude": "態度"
+  },
+  "relation": {
+    "hostile": "敵対的",
+    "distrustful": "不信",
+    "neutral": "中立",
+    "friendly": "友好的",
+    "default": "デフォルト"
   }
 }
