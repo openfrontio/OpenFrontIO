@@ -66,9 +66,9 @@ export class TerritoryLayer implements Layer {
           .bfs(tile, euclDistFN(tile, this.game.config().defensePostRange()))
           .forEach((t) => {
             if (
-              (this.game.isBorder(t) &&
-                this.game.ownerID(t) == update.ownerID) ||
-              this.game.ownerID(t) == update.lastOwnerID
+              this.game.isBorder(t) &&
+              (this.game.ownerID(t) == update.ownerID ||
+                this.game.ownerID(t) == update.lastOwnerID)
             ) {
               this.enqueueTile(t);
             }
