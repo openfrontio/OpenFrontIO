@@ -24,7 +24,7 @@ export class UnitImpl implements Unit {
   private _lastSetSafeFromPirates: number; // Only for trade ships
   private _constructionType: UnitType = undefined;
 
-  private _troops: number;
+  private _transportTroops: number;
   private _cooldownTick: Tick | null = null;
   private _dstPort: Unit | null = null; // Only for trade ships
   private _detonationDst: TileRef | null = null; // Only for nukes
@@ -45,7 +45,7 @@ export class UnitImpl implements Unit {
       .config()
       .safeFromPiratesCooldownMax();
 
-    this._troops = "troops" in params ? params.troops : 0;
+    this._transportTroops = "transportTroops" in params ? params.transportTroops : 0;
     this._dstPort = "dstPort" in params ? params.dstPort : null;
     this._cooldownDuration =
       "cooldownDuration" in params ? params.cooldownDuration : null;
@@ -64,7 +64,7 @@ export class UnitImpl implements Unit {
       type: GameUpdateType.Unit,
       unitType: this._type,
       id: this._id,
-      troops: this._troops,
+      transportTroops: this._transportTroops,
       ownerID: this._owner.smallID(),
       isActive: this._active,
       pos: this._tile,
@@ -97,10 +97,10 @@ export class UnitImpl implements Unit {
     this.mg.addUpdate(this.toUpdate());
   }
   setTroops(troops: number): void {
-    this._troops = troops;
+    this._transportTroops = troops;
   }
-  troops(): number {
-    return this._troops;
+  transportTroops(): number {
+    return this._transportTroops;
   }
   health(): number {
     return Number(this._health);

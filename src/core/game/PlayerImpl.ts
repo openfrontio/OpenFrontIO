@@ -650,11 +650,11 @@ export class PlayerImpl implements Player {
         0,
       );
 
-    const boatTroops = this.units(UnitType.TransportShip)
-      .map((u) => u.troops())
+    const boatingTroops = this.units(UnitType.TransportShip)
+      .map((u) => u.transportTroops())
       .reduce((sum, n) => sum + n, 0);
 
-    return landAttackTroops + boatTroops;
+    return landAttackTroops + boatingTroops;
   }
 
   workers(): number {
@@ -745,7 +745,7 @@ export class PlayerImpl implements Player {
     );
     this._units.push(b);
     this.removeGold(cost);
-    this.removeTroops("troops" in params ? params.troops : 0);
+    this.removeTroops("transportTroops" in params ? params.transportTroops : 0);
     this.mg.addUpdate(b.toUpdate());
     this.mg.addUnit(b);
 

@@ -189,8 +189,8 @@ export class NukeExecution implements Execution {
         owner.units(UnitType.TransportShip).forEach((attack) => {
           const deaths = this.mg
             .config()
-            .nukeDeathFactor(attack.troops(), owner.numTilesOwned());
-          attack.setTroops(attack.troops() - deaths);
+            .nukeDeathFactor(attack.transportTroops(), owner.numTilesOwned());
+          attack.setTroops(attack.transportTroops() - deaths);
         });
       }
 

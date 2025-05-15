@@ -63,7 +63,7 @@ export interface TileUpdateWrapper {
 export interface UnitUpdate {
   type: GameUpdateType.Unit;
   unitType: UnitType;
-  troops: number;
+  transportTroops: number;
   id: number;
   ownerID: number;
   // TODO: make these tilerefs

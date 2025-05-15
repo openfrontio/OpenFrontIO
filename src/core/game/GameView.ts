@@ -77,7 +77,7 @@ export class UnitView {
     return this.data.unitType;
   }
   troops(): number {
-    return this.data.troops;
+    return this.data.transportTroops;
   }
   tile(): TileRef {
     return this.data.pos;

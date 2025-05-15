@@ -150,7 +150,7 @@ export enum UnitType {
 
 export interface UnitParamsMap {
   [UnitType.TransportShip]: {
-    troops?: number;
+    transportTroops?: number;
     destination?: TileRef;
   };
 
@@ -326,7 +326,7 @@ export interface Unit {
 
   // Properties
   type(): UnitType;
-  troops(): number;
+  transportTroops(): number;
   owner(): Player;
   info(): UnitInfo;
 

@@ -104,11 +104,11 @@ describe("Attack", () => {
     expect(nuke.isActive()).toBe(true);
 
     const ship = defender.units(UnitType.TransportShip)[0];
-    expect(ship.troops()).toBe(100);
+    expect(ship.transportTroops()).toBe(100);
 
     game.executeNextTick();
 
     expect(nuke.isActive()).toBe(false);
-    expect(defender.units(UnitType.TransportShip)[0].troops()).toBeLessThan(90);
+    expect(defender.units(UnitType.TransportShip)[0].transportTroops()).toBeLessThan(90);
   });
 });

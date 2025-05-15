@@ -39,7 +39,7 @@ export class TransportShipExecution implements Execution {
     private attackerID: PlayerID,
     private targetID: PlayerID | null,
     private ref: TileRef,
-    private troops: number | null,
+    private transportTroops: number | null,
     private src: TileRef | null,
   ) {}
 
@@ -86,7 +86,7 @@ export class TransportShipExecution implements Execution {
         this.attackerID,
       );
       this.active = false;
-      this.attacker.addTroops(this.troops);
+      this.attacker.addTroops(this.transportTroops);
       return;
     }
 
@@ -96,13 +96,13 @@ export class TransportShipExecution implements Execution {
       this.target = mg.player(this.targetID);
     }
 
-    if (this.troops == null) {
-      this.troops = this.mg
+    if (this.transportTroops == null) {
+      this.transportTroops = this.mg
         .config()
         .boatAttackAmount(this.attacker, this.target);
     }
 
-    this.troops = Math.min(this.troops, this.attacker.availableTroops());
+    this.transportTroops = Math.min(this.transportTroops, this.attacker.availableTroops());
 
     this.dst = targetTransportTile(this.mg, this.ref);
     if (this.dst == null) {
@@ -140,7 +140,7 @@ export class TransportShipExecution implements Execution {
     }
 
     this.boat = this.attacker.buildUnit(UnitType.TransportShip, this.src, {
-      troops: this.troops,
+      transportTroops: this.transportTroops,
     });
   }
 
@@ -161,18 +161,18 @@ export class TransportShipExecution implements Execution {
     switch (result.type) {
       case PathFindResultType.Completed:
         if (this.mg.owner(this.dst) == this.attacker) {
-          this.attacker.addTroops(this.troops);
+          this.attacker.addTroops(this.transportTroops);
           this.boat.delete(false);
           this.active = false;
           return;
         }
         if (this.target.isPlayer() && this.attacker.isFriendly(this.target)) {
-          this.target.addTroops(this.troops);
+          this.target.addTroops(this.transportTroops);
         } else {
           this.attacker.conquer(this.dst);
           this.mg.addExecution(
             new AttackExecution(
-              this.troops,
+              this.transportTroops,
               this.attacker.id(),
               this.targetID,
               this.dst,
