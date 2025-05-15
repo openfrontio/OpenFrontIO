@@ -374,5 +374,12 @@
     "neutral": "Neutral",
     "friendly": "Friendly",
     "default": "Default"
+  },
+  "control_panel": {
+    "pop": "Pop",
+    "gold": "Gold",
+    "troops": "Troops",
+    "workers": "Workers",
+    "attack_ratio": "Attack Ratio"
   }
 }

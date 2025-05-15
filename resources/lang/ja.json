@@ -367,5 +367,12 @@
     "neutral": "中立",
     "friendly": "友好的",
     "default": "デフォルト"
+  },
+  "control_panel": {
+    "pop": "人口",
+    "gold": "資金",
+    "troops": "兵士",
+    "workers": "労働者",
+    "attack_ratio": "攻撃比率"
   }
 }
