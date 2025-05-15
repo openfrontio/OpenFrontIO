@@ -381,5 +381,16 @@
     "troops": "Troops",
     "workers": "Workers",
     "attack_ratio": "Attack Ratio"
+  },
+  "player_panel": {
+    "gold": "Gold",
+    "troops": "Troops",
+    "traitor": "Traitor",
+    "embargo": "Embargo against you",
+    "nuke": "Nukes sent by them to you",
+    "start_trade": "Start trading",
+    "stop_trade": "Stop trading",
+    "yes": "Yes",
+    "no": "No"
   }
 }

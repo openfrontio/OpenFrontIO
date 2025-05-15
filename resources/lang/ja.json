@@ -374,5 +374,16 @@
     "troops": "兵士",
     "workers": "労働者",
     "attack_ratio": "攻撃比率"
+  },
+  "player_panel": {
+    "gold": "資金",
+    "troops": "兵士",
+    "traitor": "裏切り者かどうか",
+    "embargo": "あなたへの禁輸措置があるかどうか",
+    "nuke": "相手からあなたへの核攻撃数",
+    "start_trade": "貿易を開始",
+    "stop_trade": "貿易を停止",
+    "yes": "はい",
+    "no": "いいえ"
   }
 }

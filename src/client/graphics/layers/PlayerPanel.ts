@@ -7,6 +7,7 @@ import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.s
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
+import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
@@ -254,7 +255,9 @@ export class PlayerPanel extends LitElement implements Layer {
             <div class="grid grid-cols-2 gap-2">
               <div class="flex flex-col gap-1">
                 <!-- Gold -->
-                <div class="text-white text-opacity-80 text-sm px-2">Gold</div>
+                <div class="text-white text-opacity-80 text-sm px-2">
+                  ${translateText("player_panel.gold")}
+                </div>
                 <div
                   class="bg-opacity-50 bg-gray-700 rounded p-2 text-white"
                   translate="no"
@@ -265,7 +268,7 @@ export class PlayerPanel extends LitElement implements Layer {
               <div class="flex flex-col gap-1">
                 <!-- Troops -->
                 <div class="text-white text-opacity-80 text-sm px-2">
-                  Troops
+                  ${translateText("player_panel.troops")}
                 </div>
                 <div
                   class="bg-opacity-50 bg-gray-700 rounded p-2 text-white"
@@ -278,26 +281,32 @@ export class PlayerPanel extends LitElement implements Layer {
 
             <!-- Attitude section -->
             <div class="flex flex-col gap-1">
-              <div class="text-white text-opacity-80 text-sm px-2">Traitor</div>
+              <div class="text-white text-opacity-80 text-sm px-2">
+                ${translateText("player_panel.traitor")}
+              </div>
               <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
-                ${other.isTraitor() ? "Yes" : "No"}
+                ${other.isTraitor()
+                  ? translateText("player_panel.yes")
+                  : translateText("player_panel.no")}
               </div>
             </div>
 
             <!-- Embargo -->
             <div class="flex flex-col gap-1">
               <div class="text-white text-opacity-80 text-sm px-2">
-                Embargo against you
+                ${translateText("player_panel.embargo")}
               </div>
               <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
-                ${other.hasEmbargoAgainst(myPlayer) ? "Yes" : "No"}
+                ${other.hasEmbargoAgainst(myPlayer)
+                  ? translateText("player_panel.yes")
+                  : translateText("player_panel.no")}
               </div>
             </div>
 
             <!-- Stats -->
             <div class="flex flex-col gap-1">
               <div class="text-white text-opacity-80 text-sm px-2">
-                Nukes sent by them to you
+                ${translateText("player_panel.nuke")}
               </div>
               <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
                 ${this.getTotalNukesSent(other.id())}
@@ -390,7 +399,7 @@ export class PlayerPanel extends LitElement implements Layer {
                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70
                           text-white rounded-lg transition-colors"
                 >
-                  Stop trading
+                  ${translateText("player_panel.stop_trade")}
                 </button>`
               : ""}
             ${!canEmbargo && other != myPlayer
@@ -401,7 +410,7 @@ export class PlayerPanel extends LitElement implements Layer {
                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70
                           text-white rounded-lg transition-colors"
                 >
-                  Start trading
+                  ${translateText("player_panel.start_trade")}
                 </button>`
               : ""}
           </div>
