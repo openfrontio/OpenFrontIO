@@ -642,20 +642,20 @@ export class PlayerImpl implements Player {
     return this.population() + this.attackingTroops();
   }
   private attackingTroops(): number {
-  const landAttackTroops = this._outgoingAttacks
-    .filter((a) => a.isActive())
-    .reduce(
-      (sum, a) =>
-        sum + (a instanceof AttackImpl ? a.remainingTroops() : a.troops()),
-      0,
-    );
+    const landAttackTroops = this._outgoingAttacks
+      .filter((a) => a.isActive())
+      .reduce(
+        (sum, a) =>
+          sum + a.troops(),
+        0,
+      );
 
-  const boatTroops = this.units(UnitType.TransportShip)
-    .map((u) => u.troops())
-    .reduce((sum, n) => sum + n, 0);
+    const boatTroops = this.units(UnitType.TransportShip)
+      .map((u) => u.troops())
+      .reduce((sum, n) => sum + n, 0);
 
-  return landAttackTroops + boatTroops;
-}
+    return landAttackTroops + boatTroops;
+  }
 
   workers(): number {
     return Math.max(1, Number(this._workers));
