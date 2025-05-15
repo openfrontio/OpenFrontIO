@@ -160,4 +160,5 @@ export interface Theme {
   allyColor(): Colord;
   enemyColor(): Colord;
   spawnHighlightColor(): Colord;
+  clearColorCache();
 }
