@@ -684,7 +684,7 @@ export class PlayerImpl implements Player {
     if (unit.owner() == this) {
       throw new Error(`Cannot capture unit, ${this} already owns ${unit}`);
     }
-    (unit as UnitImpl).setOwner(this);
+    unit.setOwner(this);
   }
 
   buildUnit<T extends UnitType>(

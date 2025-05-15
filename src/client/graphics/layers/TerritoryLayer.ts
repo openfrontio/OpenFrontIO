@@ -3,11 +3,7 @@ import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
-import {
-  euclDistFN,
-  euclideanDistSquaredFN,
-  TileRef,
-} from "../../../core/game/GameMap";
+import { euclDistFN, TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType, UnitUpdate } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { PseudoRandom } from "../../../core/PseudoRandom";
@@ -67,10 +63,7 @@ export class TerritoryLayer implements Layer {
       if (update.unitType == UnitType.DefensePost) {
         const tile = update.pos;
         this.game
-          .bfs(
-            tile,
-            euclideanDistSquaredFN(tile, this.game.config().defensePostRange()),
-          )
+          .bfs(tile, euclDistFN(tile, this.game.config().defensePostRange()))
           .forEach((t) => {
             if (
               (this.game.isBorder(t) &&

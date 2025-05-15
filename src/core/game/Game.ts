@@ -344,6 +344,7 @@ export interface Unit {
   setWarshipTarget(target: Unit): void; // warship only
   warshipTarget(): Unit;
 
+  setOwner(owner: Player): void;
   setCooldown(triggerCooldown: boolean): void;
   ticksLeftInCooldown(cooldownDuration: number): Tick;
   isCooldown(): boolean;
