@@ -62,7 +62,7 @@ export class LocalServer {
         this.lobbyConfig.gameRecord,
       ).turns;
     }
-    if (typeof this.lobbyConfig.gameStartInfo === "undefined") {
+    if (this.lobbyConfig.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
     }
     this.clientMessage(
@@ -175,7 +175,7 @@ export class LocalServer {
         clientID: this.lobbyConfig.clientID,
       },
     ];
-    if (typeof this.lobbyConfig.gameStartInfo === "undefined") {
+    if (this.lobbyConfig.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
     }
     const record = createGameRecord(
