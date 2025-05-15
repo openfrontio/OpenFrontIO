@@ -374,6 +374,25 @@ export function manhattanDistFN(
   }
 }
 
+export function euclideanDistSquaredFN(
+  root: TileRef,
+  dist: number,
+  center: boolean = false,
+): (gm: GameMap, tile: TileRef) => boolean {
+  if (!center) {
+    return (gm: GameMap, n: TileRef) =>
+      gm.euclideanDistSquared(root, n) <= dist * dist;
+  } else {
+    return (gm: GameMap, n: TileRef) => {
+      const rootX = gm.x(root) - 0.5;
+      const rootY = gm.y(root) - 0.5;
+      const dx = Math.abs(gm.x(n) - rootX);
+      const dy = Math.abs(gm.y(n) - rootY);
+      return dx * dx + dy * dy <= dist * dist;
+    };
+  }
+}
+
 export function rectDistFN(
   root: TileRef,
   dist: number,

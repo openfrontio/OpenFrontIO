@@ -684,23 +684,7 @@ export class PlayerImpl implements Player {
     if (unit.owner() == this) {
       throw new Error(`Cannot capture unit, ${this} already owns ${unit}`);
     }
-    const prev = unit.owner();
-    (prev as PlayerImpl)._units = (prev as PlayerImpl)._units.filter(
-      (u) => u != unit,
-    );
-    (unit as UnitImpl)._owner = this;
-    this._units.push(unit as UnitImpl);
-    this.mg.addUpdate(unit.toUpdate());
-    this.mg.displayMessage(
-      `${unit.type()} captured by ${this.displayName()}`,
-      MessageType.ERROR,
-      prev.id(),
-    );
-    this.mg.displayMessage(
-      `Captured ${unit.type()} from ${prev.displayName()}`,
-      MessageType.SUCCESS,
-      this.id(),
-    );
+    (unit as UnitImpl).setOwner(this);
   }
 
   buildUnit<T extends UnitType>(

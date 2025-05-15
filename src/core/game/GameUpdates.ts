@@ -68,6 +68,7 @@ export interface UnitUpdate {
   troops: number;
   id: number;
   ownerID: number;
+  lastOwnerID?: number;
   // TODO: make these tilerefs
   pos: TileRef;
   lastPos: TileRef;
