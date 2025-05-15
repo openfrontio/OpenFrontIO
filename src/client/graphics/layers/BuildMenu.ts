@@ -367,9 +367,12 @@ export class BuildMenu extends LitElement implements Layer {
                       width="40"
                       height="40"
                     />
-                    <span class="build-name">${translateText(item.key)}</span>
+                    <span class="build-name"
+                      >${item.key && translateText(item.key)}</span
+                    >
                     <span class="build-description"
-                      >${translateText(item.description)}</span
+                      >${item.description &&
+                      translateText(item.description)}</span
                     >
                     <span class="build-cost" translate="no">
                       ${renderNumber(
