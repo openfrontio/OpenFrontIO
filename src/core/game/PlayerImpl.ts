@@ -65,7 +65,7 @@ export class PlayerImpl implements Player {
   public _pseudo_random: PseudoRandom;
 
   private _gold: bigint;
-  private _troops: bigint;
+  private _availableTroops: bigint;
   private _workers: bigint;
 
   // 0 to 100
@@ -110,7 +110,7 @@ export class PlayerImpl implements Player {
     this._flag = playerInfo.flag;
     this._name = sanitizeUsername(playerInfo.name);
     this._targetTroopRatio = 95n;
-    this._troops = toInt(startTroops);
+    this._availableTroops = toInt(startTroops);
     this._workers = 0n;
     this._gold = 0n;
     this._displayName = this._name; // processName(this._name)
@@ -137,7 +137,7 @@ export class PlayerImpl implements Player {
       isAlive: this.isAlive(),
       tilesOwned: this.numTilesOwned(),
       gold: Number(this._gold),
-      population: this.population(),
+      homePopulation: this.homePopulation(),
       totalPopulation: this.totalPopulation(),
       workers: this.workers(),
       availableTroops: this.availableTroops(),
@@ -265,7 +265,7 @@ export class PlayerImpl implements Player {
     return true as const;
   }
   setTroops(troops: number) {
-    this._troops = toInt(troops);
+    this._availableTroops = toInt(troops);
   }
   conquer(tile: TileRef) {
     this.mg.conquer(this, tile);
@@ -635,11 +635,11 @@ export class PlayerImpl implements Player {
     return Number(actualRemoved);
   }
 
-  population(): number {
-    return Number(this._troops + this._workers);
+  homePopulation(): number {
+    return Number(this._availableTroops + this._workers);
   }
   totalPopulation(): number {
-    return this.population() + this.attackingTroops();
+    return this.homePopulation() + this.attackingTroops();
   }
   private attackingTroops(): number {
     const landAttackTroops = this._outgoingAttacks
@@ -681,7 +681,7 @@ export class PlayerImpl implements Player {
   }
 
   availableTroops(): number {
-    return Number(this._troops);
+    return Number(this._availableTroops);
   }
 
   addTroops(troops: number): void {
@@ -689,14 +689,14 @@ export class PlayerImpl implements Player {
       this.removeTroops(-1 * troops);
       return;
     }
-    this._troops += toInt(troops);
+    this._availableTroops += toInt(troops);
   }
   removeTroops(troops: number): number {
     if (troops <= 1) {
       return 0;
     }
-    const toRemove = minInt(this._troops, toInt(troops));
-    this._troops -= toRemove;
+    const toRemove = minInt(this._availableTroops, toInt(troops));
+    this._availableTroops -= toRemove;
     return Number(toRemove);
   }
 
@@ -933,7 +933,7 @@ export class PlayerImpl implements Player {
 
   hash(): number {
     return (
-      simpleHash(this.id()) * (this.population() + this.numTilesOwned()) +
+      simpleHash(this.id()) * (this.homePopulation() + this.numTilesOwned()) +
       this._units.reduce((acc, unit) => acc + unit.hash(), 0)
     );
   }
@@ -941,7 +941,7 @@ export class PlayerImpl implements Player {
     return `Player:{name:${this.info().name},clientID:${
       this.info().clientID
     },isAlive:${this.isAlive()},troops:${
-      this._troops
+      this._availableTroops
     },numTileOwned:${this.numTilesOwned()}}]`;
   }
 

@@ -26,7 +26,7 @@ export class ControlPanel extends LitElement implements Layer {
   private currentTroopRatio = 0.95;
 
   @state()
-  private _population: number;
+  private _homePopulation: number;
 
   @state()
   private _maxPopulation: number;
@@ -112,14 +112,14 @@ export class ControlPanel extends LitElement implements Layer {
       return;
     }
 
-    const popIncreaseRate = player.population() - this._population;
+    const popIncreaseRate = player.homePopulation() - this._homePopulation;
     if (this.game.ticks() % 5 == 0) {
       this._popRateIsIncreasing =
         popIncreaseRate >= this._lastPopulationIncreaseRate;
       this._lastPopulationIncreaseRate = popIncreaseRate;
     }
 
-    this._population = player.population();
+    this._homePopulation = player.homePopulation();
     this._maxPopulation = this.game.config().maxPopulation(player);
     this._gold = player.gold();
     this._troops = player.availableTroops();
@@ -127,7 +127,7 @@ export class ControlPanel extends LitElement implements Layer {
     this.popRate = this.game.config().populationIncreaseRate(player) * 10;
     this._goldPerSecond = this.game.config().goldAdditionRate(player) * 10;
 
-    this.currentTroopRatio = player.availableTroops() / player.population();
+    this.currentTroopRatio = player.availableTroops() / player.homePopulation();
     this.requestUpdate();
   }
 
@@ -157,7 +157,7 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   delta(): number {
-    const d = this._population - this.targetTroops();
+    const d = this._homePopulation - this.targetTroops();
     return d;
   }
 
@@ -212,7 +212,7 @@ export class ControlPanel extends LitElement implements Layer {
           <div class="flex justify-between mb-1">
             <span class="font-bold">Pop:</span>
             <span translate="no"
-              >${renderTroops(this._population)} /
+              >${renderTroops(this._homePopulation)} /
               ${renderTroops(this._maxPopulation)}
               <span
                 class="${this._popRateIsIncreasing

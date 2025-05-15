@@ -93,7 +93,7 @@ export class BotBehavior {
     if (this.enemy === null) {
       // Save up troops until we reach the trigger ratio
       const maxPop = this.game.config().maxPopulation(this.player);
-      const ratio = this.player.population() / maxPop;
+      const ratio = this.player.homePopulation() / maxPop;
       if (ratio < this.triggerRatio) return null;
     }
 
@@ -129,7 +129,7 @@ export class BotBehavior {
     if (this.enemy === null) {
       // Save up troops until we reach the trigger ratio
       const maxPop = this.game.config().maxPopulation(this.player);
-      const ratio = this.player.population() / maxPop;
+      const ratio = this.player.homePopulation() / maxPop;
       if (ratio < this.triggerRatio) return null;
 
       // Choose a new enemy randomly

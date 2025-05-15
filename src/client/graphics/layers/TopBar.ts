@@ -24,7 +24,7 @@ export class TopBar extends LitElement implements Layer {
   tick() {
     if (this.game?.myPlayer() !== null) {
       const popIncreaseRate =
-        this.game.myPlayer().population() - this._population;
+        this.game.myPlayer().homePopulation() - this._population;
       if (this.game.ticks() % 5 == 0) {
         this._popRateIsIncreasing =
           popIncreaseRate >= this._lastPopulationIncreaseRate;
@@ -58,7 +58,7 @@ export class TopBar extends LitElement implements Layer {
         >
           <span class="font-bold shrink-0">Pop:</span>
           <span translate="no"
-            >${renderTroops(myPlayer.population())} /
+            >${renderTroops(myPlayer.homePopulation())} /
             ${renderTroops(maxPop)}</span
           >
           <span

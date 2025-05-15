@@ -100,7 +100,7 @@ export interface PlayerUpdate {
   isAlive: boolean;
   tilesOwned: number;
   gold: number;
-  population: number;
+  homePopulation: number;
   totalPopulation: number;
   workers: number;
   availableTroops: number;

@@ -689,7 +689,7 @@ export class DefaultConfig implements Config {
 
   troopAdjustmentRate(player: Player): number {
     const maxDiff = this.maxPopulation(player) / 500;
-    const target = player.population() * player.targetTroopRatio();
+    const target = player.homePopulation() * player.targetTroopRatio();
     const diff = target - player.availableTroops();
     if (Math.abs(diff) < maxDiff) {
       return diff;
