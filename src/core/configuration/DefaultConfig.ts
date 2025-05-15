@@ -677,8 +677,8 @@ export class DefaultConfig implements Config {
     }
 
     return (
-      Math.min(player.totalPopulation() + toAdd, max) -
-      player.totalPopulation()
+      Math.min(totalPop + toAdd, max) -
+      totalPop
     );
   }
 
