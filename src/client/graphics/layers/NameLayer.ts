@@ -207,7 +207,7 @@ export class NameLayer implements Layer {
     const troopsDiv = document.createElement("div");
     troopsDiv.classList.add("player-troops");
     troopsDiv.setAttribute("translate", "no");
-    troopsDiv.textContent = renderTroops(player.troops());
+    troopsDiv.textContent = renderTroops(player.availableTroops());
     troopsDiv.style.color = this.theme.textColor(player);
     troopsDiv.style.fontFamily = this.theme.font();
     troopsDiv.style.zIndex = "3";
@@ -291,7 +291,7 @@ export class NameLayer implements Layer {
     }
     troopsDiv.style.fontSize = `${render.fontSize}px`;
     troopsDiv.style.color = render.fontColor;
-    troopsDiv.textContent = renderTroops(render.player.troops());
+    troopsDiv.textContent = renderTroops(render.player.availableTroops());
 
     // TODO: enable this for new meta.
 

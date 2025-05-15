@@ -103,7 +103,7 @@ export class BotBehavior {
         .neighbors()
         .filter((n) => n.isPlayer() && n.type() === PlayerType.Bot) as Player[];
       if (bots.length > 0) {
-        const density = (p: Player) => p.troops() / p.numTilesOwned();
+        const density = (p: Player) => p.availableTroops() / p.numTilesOwned();
         this.enemy = bots.sort((a, b) => density(a) - density(b))[0];
         this.enemyUpdated = this.game.ticks();
       }
@@ -175,8 +175,8 @@ export class BotBehavior {
     // Don't wait until it has sufficient reserves to send the first attack
     // to prevent the bot from waiting too long at the start of the game.
     const troops = this.firstAttackSent
-      ? this.player.troops() - targetTroops
-      : this.player.troops() / 5;
+      ? this.player.availableTroops() - targetTroops
+      : this.player.availableTroops() / 5;
     if (troops < 1) return;
     this.firstAttackSent = true;
     this.game.addExecution(

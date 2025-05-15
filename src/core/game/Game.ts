@@ -412,7 +412,7 @@ export interface Player {
   population(): number;
   totalPopulation(): number;
   workers(): number;
-  troops(): number;
+  availableTroops(): number;
   targetTroopRatio(): number;
   addGold(toAdd: Gold): void;
   removeGold(toRemove: Gold): void;

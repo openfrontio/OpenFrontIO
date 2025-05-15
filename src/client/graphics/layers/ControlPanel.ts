@@ -122,12 +122,12 @@ export class ControlPanel extends LitElement implements Layer {
     this._population = player.population();
     this._maxPopulation = this.game.config().maxPopulation(player);
     this._gold = player.gold();
-    this._troops = player.troops();
+    this._troops = player.availableTroops();
     this._workers = player.workers();
     this.popRate = this.game.config().populationIncreaseRate(player) * 10;
     this._goldPerSecond = this.game.config().goldAdditionRate(player) * 10;
 
-    this.currentTroopRatio = player.troops() / player.population();
+    this.currentTroopRatio = player.availableTroops() / player.population();
     this.requestUpdate();
   }
 
@@ -268,7 +268,7 @@ export class ControlPanel extends LitElement implements Layer {
           <label class="block text-white mb-1" translate="no"
             >Attack Ratio: ${(this.attackRatio * 100).toFixed(0)}%
             (${renderTroops(
-              this.game?.myPlayer()?.troops() * this.attackRatio,
+              this.game?.myPlayer()?.availableTroops() * this.attackRatio,
             )})</label
           >
           <div class="relative h-8">

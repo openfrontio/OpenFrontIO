@@ -399,7 +399,7 @@ export class RadialMenu implements Layer {
             new SendBoatAttackIntentEvent(
               this.g.owner(tile).id(),
               this.clickedCell,
-              this.uiState.attackRatio * myPlayer.troops(),
+              this.uiState.attackRatio * myPlayer.availableTroops(),
               spawnTile,
             ),
           );
@@ -455,7 +455,7 @@ export class RadialMenu implements Layer {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.g.owner(clicked).id(),
-            this.uiState.attackRatio * myPlayer.troops(),
+            this.uiState.attackRatio * myPlayer.availableTroops(),
           ),
         );
       }

@@ -366,7 +366,7 @@ export class ClientGameRunner {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+            this.myPlayer.availableTroops() * this.renderer.uiState.attackRatio,
           ),
         );
       } else if (
@@ -388,7 +388,7 @@ export class ClientGameRunner {
               new SendBoatAttackIntentEvent(
                 this.gameView.owner(tile).id(),
                 cell,
-                this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+                this.myPlayer.availableTroops() * this.renderer.uiState.attackRatio,
                 spawnCell,
               ),
             );

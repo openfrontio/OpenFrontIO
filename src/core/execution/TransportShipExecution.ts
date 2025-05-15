@@ -102,7 +102,7 @@ export class TransportShipExecution implements Execution {
         .boatAttackAmount(this.attacker, this.target);
     }
 
-    this.troops = Math.min(this.troops, this.attacker.troops());
+    this.troops = Math.min(this.troops, this.attacker.availableTroops());
 
     this.dst = targetTransportTile(this.mg, this.ref);
     if (this.dst == null) {

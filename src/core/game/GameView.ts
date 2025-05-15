@@ -234,8 +234,8 @@ export class PlayerView {
   targetTroopRatio(): number {
     return this.data.targetTroopRatio;
   }
-  troops(): number {
-    return this.data.troops;
+  availableTroops(): number {
+    return this.data.availableTroops;
   }
 
   isAlliedWith(other: PlayerView): boolean {

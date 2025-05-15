@@ -173,7 +173,7 @@ export class NukeExecution implements Execution {
         owner.removeTroops(
           this.mg
             .config()
-            .nukeDeathFactor(owner.troops(), owner.numTilesOwned()),
+            .nukeDeathFactor(owner.availableTroops(), owner.numTilesOwned()),
         );
         owner.removeWorkers(
           this.mg

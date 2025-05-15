@@ -107,7 +107,7 @@ export class AttackExecution implements Execution {
         .attackAmount(this._owner, this.target);
     }
     if (this.removeTroops) {
-      this.startTroops = Math.min(this._owner.troops(), this.startTroops);
+      this.startTroops = Math.min(this._owner.availableTroops(), this.startTroops);
       this._owner.removeTroops(this.startTroops);
     }
     this.attack = this._owner.createAttack(

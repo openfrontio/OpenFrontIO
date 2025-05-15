@@ -140,7 +140,7 @@ export class PlayerImpl implements Player {
       population: this.population(),
       totalPopulation: this.totalPopulation(),
       workers: this.workers(),
-      troops: this.troops(),
+      availableTroops: this.availableTroops(),
       targetTroopRatio: this.targetTroopRatio(),
       allies: this.alliances().map((a) => a.other(this).smallID()),
       embargoes: this.embargoes,
@@ -680,7 +680,7 @@ export class PlayerImpl implements Player {
     this._targetTroopRatio = toInt(target * 100);
   }
 
-  troops(): number {
+  availableTroops(): number {
     return Number(this._troops);
   }
 

@@ -211,9 +211,9 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           ? html`<div class="text-sm opacity-80">Team: ${player.team()}</div>`
           : ""}
         <div class="text-sm opacity-80">Type: ${playerType}</div>
-        ${player.troops() >= 1
+        ${player.availableTroops() >= 1
           ? html`<div class="text-sm opacity-80" translate="no">
-              Defending troops: ${renderTroops(player.troops())}
+              Defending troops: ${renderTroops(player.availableTroops())}
             </div>`
           : ""}
         ${attackingTroops >= 1

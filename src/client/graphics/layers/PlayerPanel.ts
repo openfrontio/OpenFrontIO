@@ -271,7 +271,7 @@ export class PlayerPanel extends LitElement implements Layer {
                   class="bg-opacity-50 bg-gray-700 rounded p-2 text-white"
                   translate="no"
                 >
-                  ${renderTroops(other.troops() || 0)}
+                  ${renderTroops(other.availableTroops() || 0)}
                 </div>
               </div>
             </div>

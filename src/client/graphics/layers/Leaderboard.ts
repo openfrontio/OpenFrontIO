@@ -73,7 +73,7 @@ export class Leaderboard extends LitElement implements Layer {
     const playersToShow = this.showTopFive ? sorted.slice(0, 5) : sorted;
 
     this.players = playersToShow.map((player, index) => {
-      let troops = player.troops() / 10;
+      let troops = player.availableTroops() / 10;
       if (!player.isAlive()) {
         troops = 0;
       }
@@ -99,7 +99,7 @@ export class Leaderboard extends LitElement implements Layer {
         }
       }
 
-      let myPlayerTroops = myPlayer.troops() / 10;
+      let myPlayerTroops = myPlayer.availableTroops() / 10;
       if (!myPlayer.isAlive()) {
         myPlayerTroops = 0;
       }

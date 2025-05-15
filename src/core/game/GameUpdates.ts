@@ -103,7 +103,7 @@ export interface PlayerUpdate {
   population: number;
   totalPopulation: number;
   workers: number;
-  troops: number;
+  availableTroops: number;
   targetTroopRatio: number;
   allies: number[];
   embargoes: Set<PlayerID>;

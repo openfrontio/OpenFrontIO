@@ -428,7 +428,7 @@ export class DefaultConfig implements Config {
     }
   }
   defaultDonationAmount(sender: Player): number {
-    return Math.floor(sender.troops() / 3);
+    return Math.floor(sender.availableTroops() / 3);
   }
   donateCooldown(): Tick {
     return 10 * 10;
@@ -534,7 +534,7 @@ export class DefaultConfig implements Config {
       speed *= 4; // slow bot attacks
     }
     if (defenderIsPlayer) {
-      const defenderTroops = defender.troops();
+      const defenderTroops = defender.availableTroops();
       const defenderTiles = defender.numTilesOwned();
       const defenderdensity = defenderTroops / defenderTiles;
       const attackratio = defenderTroops / attackTroops;
@@ -575,7 +575,7 @@ export class DefaultConfig implements Config {
   }
 
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number {
-    return Math.floor(attacker.troops() / 5);
+    return Math.floor(attacker.availableTroops() / 5);
   }
 
   warshipShellLifetime(): number {
@@ -592,9 +592,9 @@ export class DefaultConfig implements Config {
 
   attackAmount(attacker: Player, defender: Player | TerraNullius) {
     if (attacker.type() == PlayerType.Bot) {
-      return attacker.troops() / 20;
+      return attacker.availableTroops() / 20;
     } else {
-      return attacker.troops() / 5;
+      return attacker.availableTroops() / 5;
     }
   }
 
@@ -650,7 +650,7 @@ export class DefaultConfig implements Config {
     // smaller countries recieve a boost to pop growth to speed up early game 
     let toAdd =
       10 +
-      (1300 / max + 1 / 140) * (0.8 * player.troops() + 1.2 * player.workers());
+      (1300 / max + 1 / 140) * (0.8 * player.availableTroops() + 1.2 * player.workers());
     const totalPop = player.totalPopulation();
     const ratio = 1 - totalPop / max;
     toAdd *= ratio;
@@ -690,7 +690,7 @@ export class DefaultConfig implements Config {
   troopAdjustmentRate(player: Player): number {
     const maxDiff = this.maxPopulation(player) / 500;
     const target = player.population() * player.targetTroopRatio();
-    const diff = target - player.troops();
+    const diff = target - player.availableTroops();
     if (Math.abs(diff) < maxDiff) {
       return diff;
     }

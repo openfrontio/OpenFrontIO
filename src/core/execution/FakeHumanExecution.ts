@@ -151,7 +151,7 @@ export class FakeHumanExecution implements Execution {
     }
 
     if (
-      this.player.troops() > 100_000 &&
+      this.player.availableTroops() > 100_000 &&
       this.player.targetTroopRatio() > 0.7
     ) {
       this.player.setTargetTroopRatio(0.7);
@@ -193,7 +193,7 @@ export class FakeHumanExecution implements Execution {
 
     const enemies = enemiesWithTN
       .filter((o) => o.isPlayer())
-      .sort((a, b) => a.troops() - b.troops());
+      .sort((a, b) => a.availableTroops() - b.availableTroops());
 
     // 5% chance to send a random alliance request
     if (this.random.chance(20)) {
@@ -397,7 +397,7 @@ export class FakeHumanExecution implements Execution {
         this.player.id(),
         other.id(),
         closest.y,
-        this.player.troops() / 5,
+        this.player.availableTroops() / 5,
         null,
       ),
     );
@@ -543,7 +543,7 @@ export class FakeHumanExecution implements Execution {
         this.player.id(),
         this.mg.owner(dst).id(),
         dst,
-        this.player.troops() / 5,
+        this.player.availableTroops() / 5,
         null,
       ),
     );
