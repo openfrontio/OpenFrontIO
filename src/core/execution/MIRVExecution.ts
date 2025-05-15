@@ -81,7 +81,8 @@ export class MirvExecution implements Execution {
       this.separateDst = this.mg.ref(x, y);
       this.pathFinder.computeControlPoints(spawn, this.separateDst);
 
-      this.mg.displayMessage(
+      this.mg.displayIncomingUnit(
+        this.nuke.id(),
         `⚠️⚠️⚠️ ${this.player.name()} - MIRV INBOUND ⚠️⚠️⚠️`,
         MessageType.ERROR,
         this.targetPlayer.id(),

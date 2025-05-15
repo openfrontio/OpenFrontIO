@@ -3,11 +3,7 @@ import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
-import {
-  euclDistFN,
-  manhattanDistFN,
-  TileRef,
-} from "../../../core/game/GameMap";
+import { euclDistFN, TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType, UnitUpdate } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { PseudoRandom } from "../../../core/PseudoRandom";
@@ -64,17 +60,15 @@ export class TerritoryLayer implements Layer {
     this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
     this.game.updatesSinceLastTick()[GameUpdateType.Unit].forEach((u) => {
       const update = u as UnitUpdate;
-      if (update.unitType == UnitType.DefensePost && update.isActive) {
+      if (update.unitType == UnitType.DefensePost) {
         const tile = update.pos;
         this.game
-          .bfs(
-            tile,
-            manhattanDistFN(tile, this.game.config().defensePostRange()),
-          )
+          .bfs(tile, euclDistFN(tile, this.game.config().defensePostRange()))
           .forEach((t) => {
             if (
               this.game.isBorder(t) &&
-              this.game.ownerID(t) == update.ownerID
+              (this.game.ownerID(t) == update.ownerID ||
+                this.game.ownerID(t) == update.lastOwnerID)
             ) {
               this.enqueueTile(t);
             }
@@ -259,13 +253,12 @@ export class TerritoryLayer implements Layer {
     if (this.game.isBorder(tile)) {
       const playerIsFocused = owner && this.game.focusedPlayer() == owner;
       if (
-        this.game
-          .nearbyUnits(
-            tile,
-            this.game.config().defensePostRange(),
-            UnitType.DefensePost,
-          )
-          .filter((u) => u.unit.owner() == owner).length > 0
+        this.game.hasUnitNearby(
+          tile,
+          this.game.config().defensePostRange(),
+          UnitType.DefensePost,
+          owner.id(),
+        )
       ) {
         const borderColors = this.theme.defendedBorderColors(owner);
         const x = this.game.x(tile);

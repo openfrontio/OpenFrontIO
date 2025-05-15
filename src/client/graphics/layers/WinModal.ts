@@ -1,5 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { Team } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
@@ -136,8 +137,12 @@ export class WinModal extends LitElement implements Layer {
         <h2>${this._title || ""}</h2>
         ${this.innerHtml()}
         <div class="button-container">
-          <button @click=${this._handleExit}>Exit Game</button>
-          <button @click=${this.hide}>Keep Playing</button>
+          <button @click=${this._handleExit}>
+            ${translateText("win_modal.exit")}
+          </button>
+          <button @click=${this.hide}>
+            ${translateText("win_modal.keep")}
+          </button>
         </div>
       </div>
     `;
@@ -174,7 +179,7 @@ export class WinModal extends LitElement implements Layer {
       myPlayer.hasSpawned()
     ) {
       this.hasShownDeathModal = true;
-      this._title = "You died";
+      this._title = translateText("win_modal.died");
       this.show();
     }
     this.game.updatesSinceLastTick()[GameUpdateType.Win].forEach((wu) => {
@@ -183,9 +188,11 @@ export class WinModal extends LitElement implements Layer {
           new SendWinnerEvent(wu.winner as Team, wu.allPlayersStats, "team"),
         );
         if (wu.winner == this.game.myPlayer()?.team()) {
-          this._title = "Your team won!";
+          this._title = translateText("win_modal.your_team");
         } else {
-          this._title = `${wu.winner} team has won!`;
+          this._title = translateText("win_modal.other_team", {
+            team: wu.winner,
+          });
         }
         this.show();
       } else {
@@ -196,9 +203,11 @@ export class WinModal extends LitElement implements Layer {
           new SendWinnerEvent(winner.clientID(), wu.allPlayersStats, "player"),
         );
         if (winner == this.game.myPlayer()) {
-          this._title = "You Won!";
+          this._title = translateText("win_modal.you_won");
         } else {
-          this._title = `${winner.name()} has won!`;
+          this._title = translateText("win_modal.you_won", {
+            player: winner.name(),
+          });
         }
         this.show();
       }

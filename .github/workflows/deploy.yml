@@ -34,6 +34,8 @@ on:
     branches:
       - "*"
 
+permissions: {}
+
 jobs:
   deploy:
     # Don't deploy on push if this is a fork
@@ -48,14 +50,6 @@ jobs:
       || 'openfront.dev'
       }}
     runs-on: ubuntu-latest
-    environment: ${{
-      github.event_name == 'push'
-      && (github.ref_name == 'main' && 'openfront.dev'
-      || format('{0}.openfront.dev', github.ref_name))
-      || inputs.target_subdomain && format('{0}.{1}', inputs.target_subdomain, inputs.target_domain)
-      || inputs.target_domain
-      || 'openfront.dev'
-      }}
     env:
       DOMAIN: ${{ inputs.target_domain || 'openfront.dev' }}
       SUBDOMAIN: ${{ github.event_name == 'push' && github.ref_name || inputs.target_subdomain || 'main' }}
@@ -147,23 +141,6 @@ jobs:
           done
           echo "Deployment started in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
           echo "::endgroup::"
-      - name: 🚀 Notify PR
-        if: ${{ success() && github.event_name == 'push' }}
-        env:
-          BRANCH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
-        run: |
-          set -euxo pipefail
-          if [ -z "${BRANCH}" ]; then
-            echo "Branch not found"
-            exit 1
-          fi
-          echo "Checking for open PR from $BRANCH..."
-          pr_url=$(gh pr list --head "$BRANCH" --state open --json url -q '.[0].url')
-          if [ -z "$pr_url" ]; then
-            echo "No open PR found for branch $BRANCH"
-            exit 0
-          fi
-          gh pr comment "$pr_url" --body "🚀 Deployed ${GITHUB_SHA} to [$FQDN](https://$FQDN)."
       - name: ✅ Update deployment status
         if: success()
         uses: chrnorm/deployment-status@v2

@@ -106,14 +106,16 @@ export class NukeExecution implements Execution {
       if (this.mg.hasOwner(this.dst)) {
         const target = this.mg.owner(this.dst) as Player;
         if (this.type == UnitType.AtomBomb) {
-          this.mg.displayMessage(
+          this.mg.displayIncomingUnit(
+            this.nuke.id(),
             `${this.player.name()} - atom bomb inbound`,
             MessageType.ERROR,
             target.id(),
           );
         }
         if (this.type == UnitType.HydrogenBomb) {
-          this.mg.displayMessage(
+          this.mg.displayIncomingUnit(
+            this.nuke.id(),
             `${this.player.name()} - hydrogen bomb inbound`,
             MessageType.ERROR,
             target.id(),
@@ -129,7 +131,7 @@ export class NukeExecution implements Execution {
           );
       }
 
-      // after sending an nuke set the missilesilo on cooldown
+      // after sending a nuke set the missilesilo on cooldown
       const silo = this.player
         .units(UnitType.MissileSilo)
         .find((silo) => silo.tile() === spawn);

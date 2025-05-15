@@ -221,16 +221,27 @@ export class GameImpl implements Game {
 
   acceptAllianceRequest(request: AllianceRequestImpl) {
     this.allianceRequests = this.allianceRequests.filter((ar) => ar != request);
+
+    const requestor = request.requestor();
+    const recipient = request.recipient();
+
     const alliance = new AllianceImpl(
       this,
-      request.requestor() as PlayerImpl,
-      request.recipient() as PlayerImpl,
+      requestor as PlayerImpl,
+      recipient as PlayerImpl,
       this._ticks,
     );
     this.alliances_.push(alliance);
     (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
       request,
     );
+
+    // Automatically remove embargoes only if they were automatically created
+    if (requestor.hasEmbargoAgainst(recipient))
+      requestor.endTemporaryEmbargo(recipient.id());
+    if (recipient.hasEmbargoAgainst(requestor))
+      recipient.endTemporaryEmbargo(requestor.id());
+
     this.addUpdate({
       type: GameUpdateType.AllianceRequestReply,
       request: request.toUpdate(),
@@ -628,6 +639,24 @@ export class GameImpl implements Game {
       recipient: recipient,
     });
   }
+
+  displayIncomingUnit(
+    unitID: number,
+    message: string,
+    type: MessageType,
+    playerID: PlayerID,
+  ): void {
+    const id = this.player(playerID).smallID();
+
+    this.addUpdate({
+      type: GameUpdateType.UnitIncoming,
+      unitID: unitID,
+      message: message,
+      messageType: type,
+      playerID: id,
+    });
+  }
+
   addUnit(u: Unit) {
     this.unitGrid.addUnit(u);
   }

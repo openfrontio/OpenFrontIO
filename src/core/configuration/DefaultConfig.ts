@@ -448,6 +448,10 @@ export class DefaultConfig implements Config {
   allianceDuration(): Tick {
     return 600 * 10; // 10 minutes.
   }
+  temporaryEmbargoDuration(): Tick {
+    return 300 * 10; // 5 minutes.
+  }
+
   percentageTilesOwnedToWin(): number {
     if (this._gameConfig.gameMode == GameMode.Team) {
       return 95;

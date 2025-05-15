@@ -1,6 +1,7 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { translateText } from "../../../client/Utils";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
@@ -242,7 +243,7 @@ export class Leaderboard extends LitElement implements Layer {
           ? ""
           : "hidden"}"
       >
-        Leaderboard
+        ${translateText("leaderboard.title")}
       </button>
       <div
         class="leaderboard ${this._leaderboardHidden ? "hidden" : ""}"
@@ -252,7 +253,7 @@ export class Leaderboard extends LitElement implements Layer {
           class="leaderboard-close-button"
           @click=${() => this.hideLeaderboard()}
         >
-          Hide
+          ${translateText("leaderboard.hide")}
         </button>
         <button
           class="leaderboard-top-five-button"
@@ -266,11 +267,11 @@ export class Leaderboard extends LitElement implements Layer {
         <table>
           <thead>
             <tr>
-              <th>Rank</th>
-              <th>Player</th>
-              <th>Owned</th>
-              <th>Gold</th>
-              <th>Troops</th>
+              <th>${translateText("leaderboard.rank")}</th>
+              <th>${translateText("leaderboard.player")}</th>
+              <th>${translateText("leaderboard.owned")}</th>
+              <th>${translateText("leaderboard.gold")}</th>
+              <th>${translateText("leaderboard.troops")}</th>
             </tr>
           </thead>
           <tbody>

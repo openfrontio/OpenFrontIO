@@ -344,6 +344,7 @@ export interface Unit {
   setWarshipTarget(target: Unit): void; // warship only
   warshipTarget(): Unit;
 
+  setOwner(owner: Player): void;
   setCooldown(triggerCooldown: boolean): void;
   ticksLeftInCooldown(cooldownDuration: number): Tick;
   isCooldown(): boolean;
@@ -376,6 +377,12 @@ export interface TerraNullius {
   id(): PlayerID; // always zero, maybe make it TerraNulliusID?
   clientID(): ClientID;
   smallID(): number;
+}
+
+export interface Embargo {
+  createdAt: Tick;
+  isTemporary: boolean;
+  target: PlayerID;
 }
 
 export interface Player {
@@ -476,8 +483,10 @@ export interface Player {
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;
   tradingPartners(): Player[];
-  addEmbargo(other: PlayerID): void;
+  addEmbargo(other: PlayerID, isTemporary: boolean): void;
+  getEmbargoes(): Embargo[];
   stopEmbargo(other: PlayerID): void;
+  endTemporaryEmbargo(other: PlayerID): void;
   canTrade(other: Player): boolean;
 
   // Attacking.
@@ -543,6 +552,12 @@ export interface Game extends GameMap {
     message: string,
     type: MessageType,
     playerID: PlayerID | null,
+  ): void;
+  displayIncomingUnit(
+    unitID: number,
+    message: string,
+    type: MessageType,
+    playerID: PlayerID,
   ): void;
 
   displayChat(

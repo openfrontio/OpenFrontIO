@@ -319,5 +319,78 @@
       "saving_for_mirv": "[P1] is saving up to launch a MIRV.",
       "mirv_ready": "[P1] has enough gold to launch a MIRV!"
     }
+  },
+  "build_menu": {
+    "desc": {
+      "atom_bomb": "Small explosion",
+      "hydrogen_bomb": "Large explosion",
+      "mirv": "Huge explosion, only targets selected player",
+      "missile_silo": "Used to launch nukes",
+      "sam_launcher": "Defends against incoming nukes",
+      "warship": "Captures trade ships, destroys ships and boats",
+      "port": "Sends trade ships to allies to generate gold",
+      "defense_post": "Increase defenses of nearby borders",
+      "city": "Increase max population"
+    },
+    "not_enough_money": "Not enough money"
+  },
+  "win_modal": {
+    "died": "You died",
+    "your_team": "Your team won!",
+    "other_team": "{team} team has won!",
+    "you_won": "You Won!",
+    "other_won": "{player} has won!",
+    "exit": "Exit Game",
+    "keep": "Keep Playing"
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "hide": "Hide",
+    "rank": "Rank",
+    "player": "Player",
+    "owned": "Owned",
+    "gold": "Gold",
+    "troops": "Troops"
+  },
+  "player_info_overlay": {
+    "type": "Type",
+    "bot": "Bot",
+    "nation": "Nation",
+    "player": "Player",
+    "team": "Team",
+    "d_troops": "Defending troops",
+    "a_troops": "Attacking troops",
+    "gold": "Gold",
+    "ports": "Ports",
+    "cities": "Cities",
+    "missile_launchers": "Missile launchers",
+    "sams": "SAMs",
+    "health": "Health",
+    "attitude": "Attitude"
+  },
+  "relation": {
+    "hostile": "Hostile",
+    "distrustful": "Distrustful",
+    "neutral": "Neutral",
+    "friendly": "Friendly",
+    "default": "Default"
+  },
+  "control_panel": {
+    "pop": "Pop",
+    "gold": "Gold",
+    "troops": "Troops",
+    "workers": "Workers",
+    "attack_ratio": "Attack Ratio"
+  },
+  "player_panel": {
+    "gold": "Gold",
+    "troops": "Troops",
+    "traitor": "Traitor",
+    "embargo": "Embargo against you",
+    "nuke": "Nukes sent by them to you",
+    "start_trade": "Start trading",
+    "stop_trade": "Stop trading",
+    "yes": "Yes",
+    "no": "No"
   }
 }

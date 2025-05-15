@@ -10,6 +10,7 @@ import atomBombIcon from "../../../../resources/images/NukeIconWhite.svg";
 import portIcon from "../../../../resources/images/PortIcon.svg";
 import samlauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
+import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { Cell, PlayerActions, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -22,6 +23,7 @@ interface BuildItemDisplay {
   unitType: UnitType;
   icon: string;
   description?: string;
+  key?: string;
   countable?: boolean;
 }
 
@@ -30,56 +32,65 @@ const buildTable: BuildItemDisplay[][] = [
     {
       unitType: UnitType.AtomBomb,
       icon: atomBombIcon,
-      description: "Small explosion",
+      description: "build_menu.desc.atom_bomb",
+      key: "unit_type.atom_bomb",
       countable: false,
     },
     {
       unitType: UnitType.MIRV,
       icon: mirvIcon,
-      description: "Huge explosion, only targets selected player",
+      description: "build_menu.desc.mirv",
+      key: "unit_type.mirv",
       countable: false,
     },
     {
       unitType: UnitType.HydrogenBomb,
       icon: hydrogenBombIcon,
-      description: "Large explosion",
+      description: "build_menu.desc.hydrogen_bomb",
+      key: "unit_type.hydrogen_bomb",
       countable: false,
     },
     {
       unitType: UnitType.Warship,
       icon: warshipIcon,
-      description: "Captures trade ships, destroys ships and boats",
+      description: "build_menu.desc.warship",
+      key: "unit_type.warship",
       countable: true,
     },
     {
       unitType: UnitType.Port,
       icon: portIcon,
-      description: "Sends trade ships to allies to generate gold",
+      description: "build_menu.desc.port",
+      key: "unit_type.port",
       countable: true,
     },
     {
       unitType: UnitType.MissileSilo,
       icon: missileSiloIcon,
-      description: "Used to launch nukes",
+      description: "build_menu.desc.missile_silo",
+      key: "unit_type.missile_silo",
       countable: true,
     },
     // needs new icon
     {
       unitType: UnitType.SAMLauncher,
       icon: samlauncherIcon,
-      description: "Defends against incoming nukes",
+      description: "build_menu.desc.sam_launcher",
+      key: "unit_type.sam_launcher",
       countable: true,
     },
     {
       unitType: UnitType.DefensePost,
       icon: shieldIcon,
-      description: "Increase defenses of nearby borders",
+      description: "build_menu.desc.defense_post",
+      key: "unit_type.defense_post",
       countable: true,
     },
     {
       unitType: UnitType.City,
       icon: cityIcon,
-      description: "Increase max population",
+      description: "build_menu.desc.city",
+      key: "unit_type.city",
       countable: true,
     },
   ],
@@ -347,7 +358,9 @@ export class BuildMenu extends LitElement implements Layer {
                     class="build-button"
                     @click=${() => this.onBuildSelected(item)}
                     ?disabled=${!this.canBuild(item)}
-                    title=${!this.canBuild(item) ? "Not enough money" : ""}
+                    title=${!this.canBuild(item)
+                      ? translateText("build_menu.not_enough_money")
+                      : ""}
                   >
                     <img
                       src=${item.icon}
@@ -355,8 +368,10 @@ export class BuildMenu extends LitElement implements Layer {
                       width="40"
                       height="40"
                     />
-                    <span class="build-name">${item.unitType}</span>
-                    <span class="build-description">${item.description}</span>
+                    <span class="build-name">${translateText(item.key)}</span>
+                    <span class="build-description"
+                      >${translateText(item.description)}</span
+                    >
                     <span class="build-cost" translate="no">
                       ${renderNumber(
                         this.game && this.game.myPlayer() ? this.cost(item) : 0,
