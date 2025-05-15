@@ -274,15 +274,36 @@ export class AttackExecution implements Execution {
         .neighbors(neighbor)
         .filter((t) => this.mg.owner(t) == this._owner).length;
       let mag = 0;
-      switch (this.mg.terrainType(tile)) {
+      const terrainType = this.mg.terrainType(tile);
+      switch (terrainType) {
         case TerrainType.Plains:
-          mag = 1;
+        case TerrainType.DesertTransition:
+        case TerrainType.ArcticPlains:
+        case TerrainType.JunglePlains:
+          mag = 1.0;
           break;
-        case TerrainType.Highland:
-          mag = 1.5;
+        case TerrainType.Beach:
+          mag = 0.8;
+          break; // Easier to take
+        case TerrainType.Forest:
+        case TerrainType.ArcticForest:
+          mag = 1.2;
           break;
-        case TerrainType.Mountain:
-          mag = 2;
+        case TerrainType.Desert:
+          mag = 1.3;
+          break; // Slightly harder than plains due to conditions
+        case TerrainType.Jungle:
+          mag = 1.8;
+          break; // Harder
+        case TerrainType.MidMountain:
+          mag = 2.0;
+          break;
+        case TerrainType.HighMountain:
+        case TerrainType.SnowyHighMountain:
+          mag = 2.5;
+          break;
+        default:
+          mag = 1.0;
           break;
       }
       this.toConquer.enqueue(

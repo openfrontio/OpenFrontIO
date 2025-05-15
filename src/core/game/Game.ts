@@ -80,17 +80,17 @@ export enum GameMapType {
 
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
-    GameMapType.World,
-    GameMapType.NorthAmerica,
-    GameMapType.SouthAmerica,
-    GameMapType.Europe,
-    GameMapType.EuropeClassic,
-    GameMapType.Asia,
-    GameMapType.Africa,
-    GameMapType.Oceania,
+    // GameMapType.World,
+    // GameMapType.NorthAmerica,
+    // GameMapType.SouthAmerica,
+    // GameMapType.Europe,
+    // GameMapType.EuropeClassic,
+    // GameMapType.Asia,
+    // GameMapType.Africa,
+    // GameMapType.Oceania,
   ],
   regional: [
-    GameMapType.BlackSea,
+    // GameMapType.BlackSea, - the heightmap is reversed cant make it into terrain for now i have to remake it from scratch
     GameMapType.Britannia,
     GameMapType.GatewayToTheAtlantic,
     GameMapType.BetweenTwoSeas,
@@ -103,10 +103,10 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Baikal,
   ],
   fantasy: [
-    GameMapType.Pangaea,
-    GameMapType.Mars,
-    GameMapType.KnownWorld,
-    GameMapType.DeglaciatedAntarctica,
+    // GameMapType.Pangaea,
+    // GameMapType.Mars,
+    // GameMapType.KnownWorld,
+    // GameMapType.DeglaciatedAntarctica,
   ],
 };
 
@@ -242,11 +242,20 @@ export class Cell {
 }
 
 export enum TerrainType {
-  Plains,
-  Highland,
-  Mountain,
-  Lake,
-  Ocean,
+  Ocean = 0,
+  Lake = 1,
+  Plains = 2,
+  Forest = 3,
+  Desert = 4,
+  DesertTransition = 5,
+  ArcticForest = 6, // Renamed from Arctic
+  Beach = 7, // Replaced LowMountain
+  MidMountain = 8,
+  HighMountain = 9,
+  Jungle = 10,
+  JunglePlains = 11,
+  ArcticPlains = 12, // New
+  SnowyHighMountain = 13, // New
 }
 
 export enum PlayerType {

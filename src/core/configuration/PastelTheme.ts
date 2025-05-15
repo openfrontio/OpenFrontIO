@@ -23,8 +23,6 @@ export const pastelTheme = new (class implements Theme {
   private rand = new PseudoRandom(123);
 
   private background = colord({ r: 60, g: 60, b: 60 });
-  private land = colord({ r: 194, g: 193, b: 148 });
-  private shore = colord({ r: 204, g: 203, b: 158 });
   private falloutColors = [
     colord({ r: 120, g: 255, b: 71 }), // Original color
     colord({ r: 130, g: 255, b: 85 }), // Slightly lighter
@@ -32,8 +30,8 @@ export const pastelTheme = new (class implements Theme {
     colord({ r: 125, g: 255, b: 75 }), // Warmer tint
     colord({ r: 115, g: 250, b: 68 }), // Cooler tint
   ];
-  private water = colord({ r: 70, g: 132, b: 180 });
-  private shorelineWater = colord({ r: 100, g: 143, b: 255 });
+  private water = colord({ r: 70, g: 122, b: 207 });
+  private shorelineWater = colord({ r: 84, g: 139, b: 226 });
 
   private _selfColor = colord({ r: 0, g: 255, b: 0 });
   private _allyColor = colord({ r: 255, g: 255, b: 0 });
@@ -111,41 +109,48 @@ export const pastelTheme = new (class implements Theme {
   }
 
   terrainColor(gm: GameMap, tile: TileRef): Colord {
-    const mag = gm.magnitude(tile);
-    if (gm.isShore(tile)) {
-      return this.shore;
-    }
-    switch (gm.terrainType(tile)) {
+    const type = gm.terrainType(tile);
+    const mag = gm.magnitude(tile); // Magnitude for water is distance/2
+
+    switch (type) {
       case TerrainType.Ocean:
       case TerrainType.Lake:
-        const w = this.water.rgba;
         if (gm.isShoreline(tile) && gm.isWater(tile)) {
           return this.shorelineWater;
         }
+        const baseWater = this.water.rgba;
+        const adjustment = 11 - Math.min(mag, 10); // Water magnitude influence
         return colord({
-          r: Math.max(w.r - 10 + (11 - Math.min(mag, 10)), 0),
-          g: Math.max(w.g - 10 + (11 - Math.min(mag, 10)), 0),
-          b: Math.max(w.b - 10 + (11 - Math.min(mag, 10)), 0),
+          r: Math.max(baseWater.r - 10 + adjustment, 0),
+          g: Math.max(baseWater.g - 10 + adjustment, 0),
+          b: Math.max(baseWater.b - 10 + adjustment, 0),
         });
-
       case TerrainType.Plains:
-        return colord({
-          r: 190,
-          g: 220 - 2 * mag,
-          b: 138,
-        });
-      case TerrainType.Highland:
-        return colord({
-          r: 200 + 2 * mag,
-          g: 183 + 2 * mag,
-          b: 138 + 2 * mag,
-        });
-      case TerrainType.Mountain:
-        return colord({
-          r: 230 + mag / 2,
-          g: 230 + mag / 2,
-          b: 230 + mag / 2,
-        });
+        return colord("#7CB25C");
+      case TerrainType.Forest:
+        return colord("#628144");
+      case TerrainType.Desert:
+        return colord("#e5d789");
+      case TerrainType.DesertTransition:
+        return colord("#e0b641");
+      case TerrainType.ArcticForest:
+        return colord("#98C0E0");
+      case TerrainType.Beach:
+        return colord("#dec470");
+      case TerrainType.MidMountain:
+        return colord("#5C615E");
+      case TerrainType.HighMountain:
+        return colord("#43484a");
+      case TerrainType.Jungle:
+        return colord("#22752d");
+      case TerrainType.JunglePlains:
+        return colord("#47a35d");
+      case TerrainType.ArcticPlains:
+        return colord("#adcfed");
+      case TerrainType.SnowyHighMountain:
+        return colord("#e7f5ff");
+      default:
+        return this.background; // Fallback
     }
   }
 

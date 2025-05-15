@@ -490,16 +490,57 @@ export class DefaultConfig implements Config {
         mag = 85;
         speed = 16.5;
         break;
-      case TerrainType.Highland:
+      case TerrainType.Forest:
+        mag = 95;
+        speed = 18;
+        break; // Forests slightly harder
+      case TerrainType.Desert:
+        mag = 75;
+        speed = 20;
+        break; // Deserts easier to defend, slower to cross
+      case TerrainType.DesertTransition:
+        mag = 80;
+        speed = 17;
+        break;
+      case TerrainType.ArcticForest:
+        mag = 90;
+        speed = 22;
+        break; // Renamed Arctic
+      case TerrainType.Beach:
+        mag = 70;
+        speed = 15;
+        break; // Easy to attack/cross
+      case TerrainType.MidMountain:
         mag = 100;
         speed = 20;
         break;
-      case TerrainType.Mountain:
+      case TerrainType.HighMountain:
         mag = 120;
         speed = 25;
         break;
+      case TerrainType.Jungle:
+        mag = 95;
+        speed = 20;
+        break; // Difficult terrain
+      case TerrainType.JunglePlains:
+        mag = 85;
+        speed = 18;
+        break; // Easier than pure jungle
+      case TerrainType.ArcticPlains:
+        mag = 85;
+        speed = 18;
+        break; // Similar to plains but maybe slightly slower
+      case TerrainType.SnowyHighMountain:
+        mag = 120;
+        speed = 25;
+        break; // Same as High Mountain
+      case TerrainType.Lake:
+      case TerrainType.Ocean:
+        throw new Error(
+          `Cannot calculate attack logic for water type: ${type}`,
+        );
       default:
-        throw new Error(`terrain type ${type} not supported`);
+        assertNever(type); // Ensure all types are handled
     }
     if (defender.isPlayer()) {
       for (const dp of gm.nearbyUnits(

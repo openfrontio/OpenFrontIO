@@ -3,6 +3,7 @@ import { Bitmap, decodePNGFromStream } from "pureimage";
 //import fs from "fs/promises";
 //import { createReadStream } from "fs";
 import { Readable } from "stream";
+import { TerrainType } from "../core/game/Game";
 
 const min_island_size = 30;
 const min_lake_size = 200;
@@ -12,7 +13,7 @@ interface Coord {
   y: number;
 }
 
-enum TerrainType {
+enum InternalTerrainType {
   Land,
   Water,
 }
@@ -21,7 +22,41 @@ class Terrain {
   public shoreline: boolean = false;
   public magnitude: number = 0;
   public ocean: boolean = false;
-  constructor(public type: TerrainType) {}
+  constructor(
+    public type: InternalTerrainType,
+    public specificType: TerrainType,
+  ) {}
+}
+
+const TARGET_COLORS: {
+  [key in TerrainType]?: { r: number; g: number; b: number };
+} = {
+  [TerrainType.Plains]: { r: 124, g: 178, b: 92 }, // #7cb25c - green (plains)
+  [TerrainType.Forest]: { r: 97, g: 133, b: 62 }, // #61853e - dark green (forest)
+  [TerrainType.Desert]: { r: 232, g: 219, b: 145 }, // #e8db91 - yellow (desert)
+  [TerrainType.DesertTransition]: { r: 229, g: 186, b: 69 }, // #e5ba45 - dark yellow (transition)
+  [TerrainType.ArcticForest]: { r: 152, g: 192, b: 224 }, // #98c0e0 - arctic blue (snowy arctic forest - OLD Arctic)
+  [TerrainType.Beach]: { r: 224, g: 200, b: 121 }, // #e0c879 - beach
+  [TerrainType.MidMountain]: { r: 92, g: 97, b: 94 }, // #5c615e - gray (middle mountain)
+  [TerrainType.HighMountain]: { r: 67, g: 72, b: 74 }, // #43484a - dark gray (mountain peaks)
+  [TerrainType.Jungle]: { r: 34, g: 117, b: 45 }, // #22752d - jungle
+  [TerrainType.JunglePlains]: { r: 71, g: 163, b: 93 }, // #47a35d - jungle plains
+  [TerrainType.ArcticPlains]: { r: 173, g: 207, b: 237 }, // #adcfed - arctic plains
+  [TerrainType.SnowyHighMountain]: { r: 231, g: 245, b: 255 }, // #e7f5ff - snowy high mountains
+};
+
+const OCEAN_COLOR = { r: 0, g: 0, b: 106 }; // #00006a
+
+const COLOR_TOLERANCE = 15; // Allow slight variations in color matching
+
+function colorDistanceSquared(
+  c1: { r: number; g: number; b: number },
+  c2: { r: number; g: number; b: number },
+): number {
+  const dr = c1.r - c2.r;
+  const dg = c1.g - c2.g;
+  const db = c1.b - c2.b;
+  return dr * dr + dg * dg + db * db;
 }
 
 export async function generateMap(
@@ -42,20 +77,73 @@ export async function generateMap(
 
   for (let x = 0; x < img.width; x++) {
     for (let y = 0; y < img.height; y++) {
-      const color = img.getPixelRGBA(x, y);
-      const alpha = color & 0xff;
-      const blue = (color >> 8) & 0xff;
+      const colorValue = img.getPixelRGBA(x, y);
+      const r = (colorValue >> 24) & 0xff;
+      const g = (colorValue >> 16) & 0xff;
+      const b = (colorValue >> 8) & 0xff;
+      const a = colorValue & 0xff;
+      const pixelColor = { r, g, b };
 
-      if (alpha < 20 || blue == 106) {
-        // transparent
-        terrain[x][y] = new Terrain(TerrainType.Water);
+      if (
+        a < 20 ||
+        colorDistanceSquared(pixelColor, OCEAN_COLOR) <=
+          COLOR_TOLERANCE * COLOR_TOLERANCE
+      ) {
+        terrain[x][y] = new Terrain(
+          InternalTerrainType.Water,
+          TerrainType.Ocean,
+        );
       } else {
-        terrain[x][y] = new Terrain(TerrainType.Land);
-        terrain[x][y].magnitude = 0;
+        let matchedType: TerrainType | null = null;
+        let minDistance = Infinity;
 
-        // 140 -> 200 = 60
-        const mag = Math.min(200, Math.max(140, blue)) - 140;
-        terrain[x][y].magnitude = mag / 2;
+        for (const typeStr in TARGET_COLORS) {
+          const type = parseInt(typeStr) as TerrainType;
+          const targetColor = TARGET_COLORS[type];
+          const distance = colorDistanceSquared(pixelColor, targetColor);
+
+          if (distance < minDistance) {
+            minDistance = distance;
+            matchedType = type;
+          }
+        }
+
+        if (minDistance <= COLOR_TOLERANCE * COLOR_TOLERANCE) {
+          terrain[x][y] = new Terrain(InternalTerrainType.Land, matchedType!);
+          switch (matchedType) {
+            case TerrainType.Plains:
+            case TerrainType.Desert:
+            case TerrainType.Beach:
+            case TerrainType.ArcticPlains:
+            case TerrainType.JunglePlains:
+              terrain[x][y].magnitude = 0;
+              break;
+            case TerrainType.Forest:
+            case TerrainType.DesertTransition:
+            case TerrainType.ArcticForest:
+            case TerrainType.Jungle:
+              terrain[x][y].magnitude = 5;
+              break;
+            case TerrainType.MidMountain:
+              terrain[x][y].magnitude = 20;
+              break;
+            case TerrainType.HighMountain:
+            case TerrainType.SnowyHighMountain:
+              terrain[x][y].magnitude = 30;
+              break;
+            default:
+              terrain[x][y].magnitude = 0;
+          }
+        } else {
+          console.warn(
+            `Color ${r},${g},${b} at ${x},${y} did not match any target, defaulting to Plains.`,
+          );
+          terrain[x][y] = new Terrain(
+            InternalTerrainType.Land,
+            TerrainType.Plains,
+          );
+          terrain[x][y].magnitude = 0;
+        }
       }
     }
   }
@@ -74,23 +162,63 @@ export async function generateMap(
 }
 
 async function createMiniMap(tm: Terrain[][]): Promise<Terrain[][]> {
-  // Create 2D array properly with correct dimensions
-  const miniMap: Terrain[][] = Array(Math.floor(tm.length / 2))
+  const miniMapWidth = Math.floor(tm.length / 2);
+  const miniMapHeight = Math.floor(tm[0].length / 2);
+  const miniMap: Terrain[][] = Array(miniMapWidth)
     .fill(null)
-    .map(() => Array(Math.floor(tm[0].length / 2)).fill(null));
+    .map(() => Array(miniMapHeight).fill(null));
 
-  for (let x = 0; x < tm.length; x++) {
-    for (let y = 0; y < tm[0].length; y++) {
-      const miniX = Math.floor(x / 2);
-      const miniY = Math.floor(y / 2);
+  for (let miniX = 0; miniX < miniMapWidth; miniX++) {
+    for (let miniY = 0; miniY < miniMapHeight; miniY++) {
+      const startX = miniX * 2;
+      const startY = miniY * 2;
+      let isWater = false;
+      let isOcean = false;
+      let isShoreline = false;
+      let totalMagnitude = 0;
+      let landCount = 0;
+      let waterCount = 0;
+      let lastLandType: TerrainType = TerrainType.Plains;
 
-      if (
-        miniMap[miniX][miniY] == null ||
-        miniMap[miniX][miniY].type != TerrainType.Water
-      ) {
-        // We shrink 4 tiles into 1 tile. If any of the 4 large tiles
-        // has water, then the mini tile is considered water.
-        miniMap[miniX][miniY] = tm[x][y];
+      for (let dx = 0; dx < 2; dx++) {
+        for (let dy = 0; dy < 2; dy++) {
+          const x = startX + dx;
+          const y = startY + dy;
+          if (x >= tm.length || y >= tm[0].length) continue;
+          const tile = tm[x][y];
+          if (tile.type === InternalTerrainType.Water) {
+            isWater = true;
+            waterCount++;
+            if (tile.ocean) isOcean = true;
+            if (tile.shoreline) isShoreline = true;
+            totalMagnitude += tile.magnitude;
+          } else {
+            landCount++;
+            totalMagnitude += tile.magnitude;
+            lastLandType = tile.specificType;
+            if (tile.shoreline) isShoreline = true;
+          }
+        }
+      }
+
+      if (isWater) {
+        const avgMagnitude = waterCount > 0 ? totalMagnitude / waterCount : 0;
+        const waterType = isOcean ? TerrainType.Ocean : TerrainType.Lake;
+        miniMap[miniX][miniY] = new Terrain(
+          InternalTerrainType.Water,
+          waterType,
+        );
+        miniMap[miniX][miniY].ocean = isOcean;
+        miniMap[miniX][miniY].magnitude = Math.round(avgMagnitude);
+        miniMap[miniX][miniY].shoreline = isShoreline;
+      } else {
+        const avgMagnitude = landCount > 0 ? totalMagnitude / landCount : 0;
+        miniMap[miniX][miniY] = new Terrain(
+          InternalTerrainType.Land,
+          lastLandType,
+        );
+        miniMap[miniX][miniY].magnitude = Math.round(avgMagnitude);
+        miniMap[miniX][miniY].shoreline = isShoreline;
       }
     }
   }
@@ -103,13 +231,14 @@ function processShore(map: Terrain[][]): Coord[] {
   for (let x = 0; x < map.length; x++) {
     for (let y = 0; y < map[0].length; y++) {
       const tile = map[x][y];
+      tile.shoreline = false;
       const ns = neighbors(x, y, map);
-      if (tile.type == TerrainType.Land) {
-        if (ns.filter((t) => t.type == TerrainType.Water).length > 0) {
+      if (tile.type == InternalTerrainType.Land) {
+        if (ns.some((t) => t.type == InternalTerrainType.Water)) {
           tile.shoreline = true;
         }
       } else {
-        if (ns.filter((t) => t.type == TerrainType.Land).length > 0) {
+        if (ns.some((t) => t.type == InternalTerrainType.Land)) {
           tile.shoreline = true;
           shorelineWaters.push({ x, y });
         }
@@ -158,7 +287,7 @@ function processDistToLand(shorelineWaters: Coord[], map: Terrain[][]) {
         nx < width &&
         ny < height &&
         !visited[nx][ny] &&
-        map[nx][ny].type === TerrainType.Water
+        map[nx][ny].type === InternalTerrainType.Water
       ) {
         visited[nx][ny] = true;
         map[nx][ny].magnitude = dist + 1;
@@ -182,10 +311,9 @@ function processWater(map: Terrain[][], removeSmall: boolean) {
   const visited = new Set<string>();
   const waterBodies: { coords: Coord[]; size: number }[] = [];
 
-  // Find all distinct water bodies
   for (let x = 0; x < map.length; x++) {
     for (let y = 0; y < map[0].length; y++) {
-      if (map[x][y].type === TerrainType.Water) {
+      if (map[x][y].type === InternalTerrainType.Water) {
         const key = `${x},${y}`;
         if (visited.has(key)) continue;
 
@@ -218,7 +346,8 @@ function processWater(map: Terrain[][], removeSmall: boolean) {
         if (waterBodies[w].size < min_lake_size) {
           smallLakes++;
           for (const coord of waterBodies[w].coords) {
-            map[coord.x][coord.y].type = TerrainType.Land;
+            map[coord.x][coord.y].type = InternalTerrainType.Land;
+            // map[coord.x][coord.y].specificType = TerrainType.Plains; // Default fill
             map[coord.x][coord.y].magnitude = 0;
           }
         }
@@ -256,7 +385,8 @@ function packTerrain(map: Terrain[][]): Uint8Array {
         throw new Error(`terrain null at ${x}:${y}`);
       }
 
-      if (tile.type === TerrainType.Land) {
+      const terrainTypeValue = tile.specificType;
+      if (tile.type === InternalTerrainType.Land) {
         packedByte |= 0b10000000;
       }
       if (tile.shoreline) {
@@ -265,10 +395,11 @@ function packTerrain(map: Terrain[][]): Uint8Array {
       if (tile.ocean) {
         packedByte |= 0b00100000;
       }
-      if (tile.type == TerrainType.Land) {
-        packedByte |= Math.min(Math.ceil(tile.magnitude), 31);
-      } else {
-        packedByte |= Math.min(Math.ceil(tile.magnitude / 2), 31);
+
+      packedByte |= terrainTypeValue & 0x1f;
+
+      if (tile.type === InternalTerrainType.Water) {
+        packedByte |= Math.min(Math.ceil(tile.magnitude / 2), 31) & 0x1f;
       }
 
       packedData[4 + y * width + x] = packedByte;
@@ -284,7 +415,7 @@ function getArea(
   map: Terrain[][],
   visited: Set<string>,
 ): Coord[] {
-  const targetType: TerrainType = map[x][y].type;
+  const targetType: InternalTerrainType = map[x][y].type;
   const area: Coord[] = [];
   const queue: Coord[] = [{ x, y }];
 
@@ -315,7 +446,7 @@ function removeSmallIslands(map: Terrain[][], removeSmall: boolean) {
   // Find all distinct land bodies
   for (let x = 0; x < map.length; x++) {
     for (let y = 0; y < map[0].length; y++) {
-      if (map[x][y].type === TerrainType.Land) {
+      if (map[x][y].type === InternalTerrainType.Land) {
         const key = `${x},${y}`;
         if (visited.has(key)) continue;
 
@@ -334,7 +465,8 @@ function removeSmallIslands(map: Terrain[][], removeSmall: boolean) {
     if (landBodies[b].size < min_island_size) {
       smallIslands++;
       for (const coord of landBodies[b].coords) {
-        map[coord.x][coord.y].type = TerrainType.Water;
+        map[coord.x][coord.y].type = InternalTerrainType.Water;
+        // map[coord.x][coord.y].specificType = TerrainType.Ocean;
         map[coord.x][coord.y].magnitude = 0;
       }
     }
@@ -402,50 +534,36 @@ function getThumbnailColor(t: Terrain): {
   b: number;
   a: number;
 } {
-  if (t.type === TerrainType.Water) {
-    // Shoreline water
-    if (t.shoreline) return { r: 100, g: 143, b: 255, a: 0 };
-    // All other water: adjust based on magnitude
-    const waterAdjRGB: number = 11 - Math.min(t.magnitude / 2, 10) - 10;
-    return {
-      r: Math.max(70 + waterAdjRGB, 0),
-      g: Math.max(132 + waterAdjRGB, 0),
-      b: Math.max(180 + waterAdjRGB, 0),
-      a: 0,
-    };
-  }
-  //shoreline land
-  if (t.shoreline) {
-    return { r: 204, g: 203, b: 158, a: 255 };
-  }
-  let adjRGB: number;
-  switch (true) {
-    //plains
-    case t.magnitude < 10:
-      adjRGB = 220 - 2 * t.magnitude;
-      return {
-        r: 190,
-        g: adjRGB,
-        b: 138,
-        a: 255,
-      };
-    //highlands
-    case t.magnitude < 20:
-      adjRGB = 2 * t.magnitude;
-      return {
-        r: 200 + adjRGB,
-        g: 183 + adjRGB,
-        b: 138 + adjRGB,
-        a: 255,
-      };
-    //mountains
-    case t.magnitude >= 20:
-      adjRGB = Math.floor(230 + t.magnitude / 2);
-      return {
-        r: adjRGB,
-        g: adjRGB,
-        b: adjRGB,
-        a: 255,
-      };
+  switch (t.specificType) {
+    case TerrainType.Ocean:
+      return { r: 0, g: 0, b: 106, a: 0 };
+    case TerrainType.Lake:
+      return { r: 70, g: 132, b: 180, a: 0 };
+    case TerrainType.Plains:
+      return { r: 124, g: 178, b: 92, a: 255 };
+    case TerrainType.Forest:
+      return { r: 97, g: 133, b: 62, a: 255 };
+    case TerrainType.Desert:
+      return { r: 232, g: 219, b: 145, a: 255 };
+    case TerrainType.DesertTransition:
+      return { r: 229, g: 186, b: 69, a: 255 };
+    case TerrainType.ArcticForest:
+      return { r: 152, g: 192, b: 224, a: 255 };
+    case TerrainType.Beach:
+      return { r: 224, g: 200, b: 121, a: 255 };
+    case TerrainType.MidMountain:
+      return { r: 92, g: 97, b: 94, a: 255 };
+    case TerrainType.HighMountain:
+      return { r: 67, g: 72, b: 74, a: 255 };
+    case TerrainType.Jungle:
+      return { r: 34, g: 117, b: 45, a: 255 };
+    case TerrainType.JunglePlains:
+      return { r: 71, g: 163, b: 93, a: 255 };
+    case TerrainType.ArcticPlains:
+      return { r: 173, g: 207, b: 237, a: 255 };
+    case TerrainType.SnowyHighMountain:
+      return { r: 231, g: 245, b: 255, a: 255 };
+    default:
+      return { r: 128, g: 128, b: 128, a: 255 };
   }
 }

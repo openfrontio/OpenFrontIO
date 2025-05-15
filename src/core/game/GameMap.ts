@@ -67,8 +67,7 @@ export class GameMapImpl implements GameMap {
   private static readonly IS_LAND_BIT = 7;
   private static readonly SHORELINE_BIT = 6;
   private static readonly OCEAN_BIT = 5;
-  private static readonly MAGNITUDE_OFFSET = 4; // Uses bits 3-7 (5 bits)
-  private static readonly MAGNITUDE_MASK = 0x1f; // 11111 in binary
+  private static readonly TERRAIN_TYPE_MASK = 0x1f; // Use bits 0-4 for TerrainType enum or water magnitude
 
   // State bits (Uint16Array)
   private static readonly PLAYER_ID_OFFSET = 0; // Uses bits 0-11 (12 bits)
@@ -163,10 +162,34 @@ export class GameMapImpl implements GameMap {
   }
 
   magnitude(ref: TileRef): number {
-    return this.terrain[ref] & GameMapImpl.MAGNITUDE_MASK;
+    if (this.isLand(ref)) {
+      const type = this.terrainType(ref);
+      switch (type) {
+        case TerrainType.Plains:
+        case TerrainType.Desert:
+        case TerrainType.ArcticPlains:
+        case TerrainType.Beach:
+        case TerrainType.JunglePlains:
+          return 0;
+        case TerrainType.Forest:
+        case TerrainType.DesertTransition:
+        case TerrainType.ArcticForest:
+        case TerrainType.Jungle:
+          return 5;
+        case TerrainType.MidMountain:
+          return 20;
+        case TerrainType.HighMountain:
+        case TerrainType.SnowyHighMountain: // Same magnitude
+          return 30;
+        default:
+          return 0;
+      }
+    } else {
+      const storedMag = this.terrain[ref] & GameMapImpl.TERRAIN_TYPE_MASK;
+      return storedMag * 2;
+    }
   }
 
-  // State getters and setters (mutable)
   ownerID(ref: TileRef): number {
     return this.state[ref] & GameMapImpl.PLAYER_ID_MASK;
   }
@@ -242,17 +265,55 @@ export class GameMapImpl implements GameMap {
   }
 
   cost(ref: TileRef): number {
-    return this.magnitude(ref) < 10 ? 2 : 1;
+    const type = this.terrainType(ref);
+    switch (type) {
+      case TerrainType.Plains:
+        return 2;
+      case TerrainType.Forest:
+        return 3;
+      case TerrainType.Desert:
+        return 3;
+      case TerrainType.DesertTransition:
+        return 2;
+      case TerrainType.ArcticForest:
+        return 4; // Renamed from Arctic
+      case TerrainType.Beach:
+        return 1; // Easy to cross
+      case TerrainType.MidMountain:
+        return 6;
+      case TerrainType.HighMountain:
+        return 8;
+      case TerrainType.Jungle:
+        return 5; // Difficult
+      case TerrainType.JunglePlains:
+        return 3; // Easier Jungle
+      case TerrainType.ArcticPlains:
+        return 3; // Like regular plains but colder?
+      case TerrainType.SnowyHighMountain:
+        return 8; // Same as HighMountain
+      case TerrainType.Lake:
+        return 1;
+      case TerrainType.Ocean:
+        return 1;
+      default:
+        return 1;
+    }
   }
 
   terrainType(ref: TileRef): TerrainType {
-    if (this.isLand(ref)) {
-      const magnitude = this.magnitude(ref);
-      if (magnitude < 10) return TerrainType.Plains;
-      if (magnitude < 20) return TerrainType.Highland;
-      return TerrainType.Mountain;
+    const packedByte = this.terrain[ref];
+    if (!this.isLand(ref)) {
+      return this.isOcean(ref) ? TerrainType.Ocean : TerrainType.Lake;
     }
-    return this.isOcean(ref) ? TerrainType.Ocean : TerrainType.Lake;
+    const typeValue = packedByte & GameMapImpl.TERRAIN_TYPE_MASK;
+    if (
+      typeValue >= TerrainType.Plains &&
+      typeValue <= TerrainType.SnowyHighMountain
+    ) {
+      return typeValue as TerrainType;
+    }
+    console.warn(`Unexpected terrain type value ${typeValue} at ref ${ref}`);
+    return TerrainType.Plains;
   }
 
   neighbors(ref: TileRef): TileRef[] {
