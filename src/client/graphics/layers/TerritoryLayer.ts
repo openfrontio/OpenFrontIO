@@ -186,11 +186,12 @@ export class TerritoryLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
+    const now = Date.now();
     if (
-      Date.now() > this.lastDragTime + this.nodrawDragDuration &&
-      Date.now() > this.lastRefresh + this.refreshRate
+      now > this.lastDragTime + this.nodrawDragDuration &&
+      now > this.lastRefresh + this.refreshRate
     ) {
-      this.lastRefresh = Date.now();
+      this.lastRefresh = now;
       this.renderTerritory();
       this.context.putImageData(this.imageData, 0, 0);
     }
