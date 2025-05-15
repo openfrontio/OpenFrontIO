@@ -59,11 +59,11 @@ describe("Warship", () => {
   test("Warship heals only if player has port", async () => {
     const maxHealth = game.config().unitInfo(UnitType.Warship).maxHealth;
 
-    const port = player1.buildUnit(UnitType.Port, 0, game.ref(coastX, 10));
+    const port = player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
     const warship = player1.buildUnit(
       UnitType.Warship,
-      0,
       game.ref(coastX + 1, 10),
+      {},
     );
 
     game.executeNextTick();
@@ -91,8 +91,10 @@ describe("Warship", () => {
     // we can obviously directly add it to the player)
     const tradeShip = player2.buildUnit(
       UnitType.TradeShip,
-      0,
       game.ref(coastX + 1, 7),
+      {
+        dstPort: null,
+      },
     );
 
     expect(tradeShip.owner().id()).toBe(player2.id());
@@ -113,8 +115,10 @@ describe("Warship", () => {
     // we can obviously directly add it to the player)
     const tradeShip = player2.buildUnit(
       UnitType.TradeShip,
-      0,
       game.ref(coastX + 1, 11),
+      {
+        dstPort: null,
+      },
     );
 
     expect(tradeShip.owner().id()).toBe(player2.id());

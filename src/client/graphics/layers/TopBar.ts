@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import { translateText } from "../../../client/Utils";
 import { GameView } from "../../../core/game/GameView";
 import { renderNumber, renderTroops } from "../../Utils";
 import { Layer } from "./Layer";
@@ -56,7 +57,9 @@ export class TopBar extends LitElement implements Layer {
         <div
           class="sm:col-span-1 flex items-center space-x-1 overflow-x-auto whitespace-nowrap"
         >
-          <span class="font-bold shrink-0">Pop:</span>
+          <span class="font-bold shrink-0"
+            >${translateText("control_panel.pop")}:</span
+          >
           <span translate="no"
             >${renderTroops(myPlayer.population())} /
             ${renderTroops(maxPop)}</span
@@ -73,7 +76,9 @@ export class TopBar extends LitElement implements Layer {
         <div
           class="flex items-center space-x-2 overflow-x-auto whitespace-nowrap"
         >
-          <span class="font-bold shrink-0">Gold:</span>
+          <span class="font-bold shrink-0"
+            >${translateText("control_panel.gold")}:</span
+          >
           <span translate="no"
             >${renderNumber(myPlayer.gold())}
             (+${renderNumber(goldPerSecond)})</span

@@ -10,7 +10,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { AirPathFinder } from "../pathfinding/PathFinding";
+import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
 import { NukeExecution } from "./NukeExecution";
@@ -29,11 +29,13 @@ export class MirvExecution implements Execution {
 
   private random: PseudoRandom;
 
-  private pathFinder: AirPathFinder;
+  private pathFinder: ParabolaPathFinder;
 
   private targetPlayer: Player | TerraNullius;
 
   private separateDst: TileRef;
+
+  private speed: number = -1;
 
   constructor(
     private senderID: PlayerID,
@@ -49,9 +51,10 @@ export class MirvExecution implements Execution {
 
     this.random = new PseudoRandom(mg.ticks() + simpleHash(this.senderID));
     this.mg = mg;
-    this.pathFinder = new AirPathFinder(mg, this.random);
+    this.pathFinder = new ParabolaPathFinder(mg);
     this.player = mg.player(this.senderID);
     this.targetPlayer = this.mg.owner(this.dst);
+    this.speed = this.mg.config().defaultNukeSpeed();
 
     this.mg
       .stats()
@@ -70,32 +73,29 @@ export class MirvExecution implements Execution {
         this.active = false;
         return;
       }
-      this.nuke = this.player.buildUnit(UnitType.MIRV, 0, spawn);
+      this.nuke = this.player.buildUnit(UnitType.MIRV, spawn, {});
       const x = Math.floor(
         (this.mg.x(this.dst) + this.mg.x(this.mg.x(this.nuke.tile()))) / 2,
       );
       const y = Math.max(0, this.mg.y(this.dst) - 500) + 50;
       this.separateDst = this.mg.ref(x, y);
+      this.pathFinder.computeControlPoints(spawn, this.separateDst);
 
-      this.mg.displayMessage(
+      this.mg.displayIncomingUnit(
+        this.nuke.id(),
         `⚠️⚠️⚠️ ${this.player.name()} - MIRV INBOUND ⚠️⚠️⚠️`,
         MessageType.ERROR,
         this.targetPlayer.id(),
       );
     }
 
-    for (let i = 0; i < 4; i++) {
-      const result = this.pathFinder.nextTile(
-        this.nuke.tile(),
-        this.separateDst,
-      );
-      if (result === true) {
-        this.separate();
-        this.active = false;
-        return;
-      } else {
-        this.nuke.move(result);
-      }
+    const result = this.pathFinder.nextTile(this.speed);
+    if (result === true) {
+      this.separate();
+      this.active = false;
+      return;
+    } else {
+      this.nuke.move(result);
     }
   }
 

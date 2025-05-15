@@ -54,11 +54,13 @@ export class WarshipExecution implements Execution {
     switch (result.type) {
       case PathFindResultType.Completed:
         this.warship.setMoveTarget(null);
+        this.warship.move(this.warship.tile());
         return;
       case PathFindResultType.NextTile:
         this.warship.move(result.tile);
         break;
       case PathFindResultType.Pending:
+        this.warship.move(this.warship.tile());
         break;
       case PathFindResultType.PathNotFound:
         consolex.log(`path not found to target`);
@@ -98,11 +100,13 @@ export class WarshipExecution implements Execution {
       switch (result.type) {
         case PathFindResultType.Completed:
           this.patrolTile = this.randomTile();
+          this.warship.move(this.warship.tile());
           break;
         case PathFindResultType.NextTile:
           this.warship.move(result.tile);
           break;
         case PathFindResultType.Pending:
+          this.warship.move(this.warship.tile());
           return;
         case PathFindResultType.PathNotFound:
           consolex.log(`path not found to patrol tile`);
@@ -119,7 +123,7 @@ export class WarshipExecution implements Execution {
         this.active = false;
         return;
       }
-      this.warship = this._owner.buildUnit(UnitType.Warship, 0, spawn);
+      this.warship = this._owner.buildUnit(UnitType.Warship, spawn, {});
       return;
     }
     if (!this.warship.isActive()) {
@@ -227,11 +231,13 @@ export class WarshipExecution implements Execution {
         case PathFindResultType.Completed:
           this._owner.captureUnit(this.target);
           this.target = null;
+          this.warship.move(this.warship.tile());
           return;
         case PathFindResultType.NextTile:
           this.warship.move(result.tile);
           break;
         case PathFindResultType.Pending:
+          this.warship.move(this.warship.tile());
           break;
         case PathFindResultType.PathNotFound:
           consolex.log(`path not found to target`);

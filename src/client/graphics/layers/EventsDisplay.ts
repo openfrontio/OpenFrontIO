@@ -21,6 +21,7 @@ import {
   EmojiUpdate,
   GameUpdateType,
   TargetPlayerUpdate,
+  UnitIncomingUpdate,
 } from "../../../core/game/GameUpdates";
 import { ClientID } from "../../../core/Schemas";
 import {
@@ -53,6 +54,7 @@ interface Event {
   priority?: number;
   duration?: Tick;
   focusID?: number;
+  unitView?: UnitView;
 }
 
 @customElement("events-display")
@@ -89,6 +91,7 @@ export class EventsDisplay extends LitElement implements Layer {
     [GameUpdateType.BrokeAlliance, (u) => this.onBrokeAllianceEvent(u)],
     [GameUpdateType.TargetPlayer, (u) => this.onTargetPlayerEvent(u)],
     [GameUpdateType.Emoji, (u) => this.onEmojiMessageEvent(u)],
+    [GameUpdateType.UnitIncoming, (u) => this.onUnitIncomingEvent(u)],
   ]);
 
   constructor() {
@@ -421,6 +424,28 @@ export class EventsDisplay extends LitElement implements Layer {
     }
   }
 
+  onUnitIncomingEvent(event: UnitIncomingUpdate) {
+    const myPlayer = this.game.playerByClientID(this.clientID);
+
+    if (
+      event.playerID != null &&
+      (!myPlayer || myPlayer.smallID() !== event.playerID)
+    ) {
+      return;
+    }
+
+    const unitView = this.game.unit(event.unitID);
+
+    this.addEvent({
+      description: event.message,
+      type: event.messageType,
+      unsafeDescription: false,
+      highlight: true,
+      createdAt: this.game.ticks(),
+      unitView: unitView,
+    });
+  }
+
   private getMessageTypeClasses(type: MessageType): string {
     switch (type) {
       case MessageType.SUCCESS:
@@ -645,7 +670,15 @@ export class EventsDisplay extends LitElement implements Layer {
                           >
                             ${this.getEventDescription(event)}
                           </button>`
-                        : this.getEventDescription(event)}
+                        : event.unitView
+                          ? html`<button
+                              @click=${() => {
+                                this.emitGoToUnitEvent(event.unitView);
+                              }}
+                            >
+                              ${this.getEventDescription(event)}
+                            </button>`
+                          : this.getEventDescription(event)}
                       ${event.buttons
                         ? html`
                             <div class="flex flex-wrap gap-1.5 mt-1">

@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { GameView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
@@ -210,7 +211,9 @@ export class ControlPanel extends LitElement implements Layer {
       >
         <div class="hidden lg:block bg-black/30 text-white mb-4 p-2 rounded">
           <div class="flex justify-between mb-1">
-            <span class="font-bold">Pop:</span>
+            <span class="font-bold"
+              >${translateText("control_panel.pop")}:</span
+            >
             <span translate="no"
               >${renderTroops(this._population)} /
               ${renderTroops(this._maxPopulation)}
@@ -224,7 +227,9 @@ export class ControlPanel extends LitElement implements Layer {
             >
           </div>
           <div class="flex justify-between">
-            <span class="font-bold">Gold:</span>
+            <span class="font-bold"
+              >${translateText("control_panel.gold")}:</span
+            >
             <span translate="no"
               >${renderNumber(this._gold)}
               (+${renderNumber(this._goldPerSecond)})</span
@@ -234,8 +239,9 @@ export class ControlPanel extends LitElement implements Layer {
 
         <div class="relative mb-4 lg:mb-4">
           <label class="block text-white mb-1" translate="no"
-            >Troops: <span translate="no">${renderTroops(this._troops)}</span> |
-            Workers:
+            >${translateText("control_panel.troops")}:
+            <span translate="no">${renderTroops(this._troops)}</span> |
+            ${translateText("control_panel.workers")}:
             <span translate="no">${renderTroops(this._workers)}</span></label
           >
           <div class="relative h-8">
@@ -266,7 +272,8 @@ export class ControlPanel extends LitElement implements Layer {
 
         <div class="relative mb-0 lg:mb-4">
           <label class="block text-white mb-1" translate="no"
-            >Attack Ratio: ${(this.attackRatio * 100).toFixed(0)}%
+            >${translateText("control_panel.attack_ratio")}:
+            ${(this.attackRatio * 100).toFixed(0)}%
             (${renderTroops(
               this.game?.myPlayer()?.troops() * this.attackRatio,
             )})</label

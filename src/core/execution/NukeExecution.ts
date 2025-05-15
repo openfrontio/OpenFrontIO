@@ -11,7 +11,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { AirPathFinder } from "../pathfinding/PathFinding";
+import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 
 export class NukeExecution implements Execution {
@@ -21,7 +21,7 @@ export class NukeExecution implements Execution {
   private nuke: Unit;
 
   private random: PseudoRandom;
-  private pathFinder: AirPathFinder;
+  private pathFinder: ParabolaPathFinder;
 
   constructor(
     private type: NukeType,
@@ -45,7 +45,7 @@ export class NukeExecution implements Execution {
     if (this.speed == -1) {
       this.speed = this.mg.config().defaultNukeSpeed();
     }
-    this.pathFinder = new AirPathFinder(mg, this.random);
+    this.pathFinder = new ParabolaPathFinder(mg);
   }
 
   public target(): Player | TerraNullius {
@@ -95,20 +95,27 @@ export class NukeExecution implements Execution {
         this.active = false;
         return;
       }
-      this.nuke = this.player.buildUnit(this.type, 0, spawn, {
+      this.pathFinder.computeControlPoints(
+        spawn,
+        this.dst,
+        this.type != UnitType.MIRVWarhead,
+      );
+      this.nuke = this.player.buildUnit(this.type, spawn, {
         detonationDst: this.dst,
       });
       if (this.mg.hasOwner(this.dst)) {
         const target = this.mg.owner(this.dst) as Player;
         if (this.type == UnitType.AtomBomb) {
-          this.mg.displayMessage(
+          this.mg.displayIncomingUnit(
+            this.nuke.id(),
             `${this.player.name()} - atom bomb inbound`,
             MessageType.ERROR,
             target.id(),
           );
         }
         if (this.type == UnitType.HydrogenBomb) {
-          this.mg.displayMessage(
+          this.mg.displayIncomingUnit(
+            this.nuke.id(),
             `${this.player.name()} - hydrogen bomb inbound`,
             MessageType.ERROR,
             target.id(),
@@ -124,7 +131,7 @@ export class NukeExecution implements Execution {
           );
       }
 
-      // after sending an nuke set the missilesilo on cooldown
+      // after sending a nuke set the missilesilo on cooldown
       const silo = this.player
         .units(UnitType.MissileSilo)
         .find((silo) => silo.tile() === spawn);
@@ -146,15 +153,13 @@ export class NukeExecution implements Execution {
       return;
     }
 
-    for (let i = 0; i < this.speed; i++) {
-      // Move to next tile
-      const nextTile = this.pathFinder.nextTile(this.nuke.tile(), this.dst);
-      if (nextTile === true) {
-        this.detonate();
-        return;
-      } else {
-        this.nuke.move(nextTile);
-      }
+    // Move to next tile
+    const nextTile = this.pathFinder.nextTile(this.speed);
+    if (nextTile === true) {
+      this.detonate();
+      return;
+    } else {
+      this.nuke.move(nextTile);
     }
   }
 
