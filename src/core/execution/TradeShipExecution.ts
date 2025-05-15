@@ -21,6 +21,7 @@ export class TradeShipExecution implements Execution {
   private tradeShip: Unit | null = null;
   private index = 0;
   private wasCaptured = false;
+  private tilesTraveled = 0;
 
   constructor(
     private _owner: PlayerID,
@@ -116,6 +117,7 @@ export class TradeShipExecution implements Execution {
           this.tradeShip.setSafeFromPirates();
         }
         this.tradeShip.move(result.tile);
+        this.tilesTraveled++;
         break;
       case PathFindResultType.PathNotFound:
         consolex.warn("captured trade ship cannot find route");
@@ -134,11 +136,7 @@ export class TradeShipExecution implements Execution {
     if (this.tradeShip === null) return;
     this.active = false;
     this.tradeShip.delete(false);
-    const gold = this.mg
-      .config()
-      .tradeShipGold(
-        this.mg.manhattanDist(this.srcPort.tile(), this._dstPort.tile()),
-      );
+    const gold = this.mg.config().tradeShipGold(this.tilesTraveled);
 
     if (this.wasCaptured) {
       this.tradeShip.owner().addGold(gold);

@@ -225,16 +225,27 @@ export class GameImpl implements Game {
     this.allianceRequests = this.allianceRequests.filter(
       (ar) => ar !== request,
     );
+
+    const requestor = request.requestor();
+    const recipient = request.recipient();
+
     const alliance = new AllianceImpl(
       this,
-      request.requestor() as PlayerImpl,
-      request.recipient() as PlayerImpl,
+      requestor as PlayerImpl,
+      recipient as PlayerImpl,
       this._ticks,
     );
     this.alliances_.push(alliance);
     (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
       request,
     );
+
+    // Automatically remove embargoes only if they were automatically created
+    if (requestor.hasEmbargoAgainst(recipient))
+      requestor.endTemporaryEmbargo(recipient.id());
+    if (recipient.hasEmbargoAgainst(requestor))
+      recipient.endTemporaryEmbargo(requestor.id());
+
     this.addUpdate({
       type: GameUpdateType.AllianceRequestReply,
       request: request.toUpdate(),

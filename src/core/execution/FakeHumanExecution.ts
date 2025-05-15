@@ -100,7 +100,7 @@ export class FakeHumanExecution implements Execution {
         player.relation(other) <= Relation.Hostile &&
         !player.hasEmbargoAgainst(other)
       ) {
-        player.addEmbargo(other.id());
+        player.addEmbargo(other.id(), false);
       } else if (
         player.relation(other) >= Relation.Neutral &&
         player.hasEmbargoAgainst(other)

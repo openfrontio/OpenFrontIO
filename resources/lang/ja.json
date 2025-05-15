@@ -319,5 +319,78 @@
       "saving_for_mirv": "[P1]はMIRVを発射するために貯金している。",
       "mirv_ready": "[P1]はMIRVを発射できるだけのお金を持っている！"
     }
+  },
+  "build_menu": {
+    "desc": {
+      "atom_bomb": "小規模な爆発",
+      "hydrogen_bomb": "大規模な爆発",
+      "mirv": "指定したプレイヤーのみを狙う超大規模な爆発",
+      "missile_silo": "核ミサイルの発射に使用される",
+      "sam_launcher": "飛来する核ミサイルを迎撃する",
+      "warship": "貿易船を捕獲し、敵の船やボートを破壊する",
+      "port": "同盟国に貿易船を送り、ゴールドを生成する",
+      "defense_post": "近くの国境の防御を強化する",
+      "city": "最大人口を増加させる"
+    },
+    "not_enough_money": "資金不足"
+  },
+  "win_modal": {
+    "died": "あなたは死んでしまった",
+    "your_team": "あなたのチームの勝利！",
+    "other_team": "{team}チームが勝利しました。",
+    "you_won": "勝利！",
+    "other_won": "{player}の勝利!",
+    "exit": "ゲームから退出",
+    "keep": "観戦する"
+  },
+  "leaderboard": {
+    "title": "ランキング",
+    "hide": "隠す",
+    "rank": "順位",
+    "player": "プレイヤー",
+    "owned": "領土",
+    "gold": "ゴールド",
+    "troops": "兵士"
+  },
+  "player_info_overlay": {
+    "type": "タイプ",
+    "bot": "ボット",
+    "nation": "国家",
+    "player": "プレイヤー",
+    "team": "チーム",
+    "d_troops": "防衛兵士数",
+    "a_troops": "攻撃兵士数",
+    "gold": "資金",
+    "ports": "港",
+    "cities": "都市",
+    "missile_launchers": "ミサイル格納庫",
+    "sams": "SAM",
+    "health": "体力",
+    "attitude": "態度"
+  },
+  "relation": {
+    "hostile": "敵対的",
+    "distrustful": "不信",
+    "neutral": "中立",
+    "friendly": "友好的",
+    "default": "デフォルト"
+  },
+  "control_panel": {
+    "pop": "人口",
+    "gold": "資金",
+    "troops": "兵士",
+    "workers": "労働者",
+    "attack_ratio": "攻撃比率"
+  },
+  "player_panel": {
+    "gold": "資金",
+    "troops": "兵士",
+    "traitor": "裏切り者かどうか",
+    "embargo": "あなたへの禁輸措置があるかどうか",
+    "nuke": "相手からあなたへの核攻撃数",
+    "start_trade": "貿易を開始",
+    "stop_trade": "貿易を停止",
+    "yes": "はい",
+    "no": "いいえ"
   }
 }

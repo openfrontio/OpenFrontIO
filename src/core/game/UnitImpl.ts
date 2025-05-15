@@ -2,7 +2,6 @@ import { simpleHash, toInt, withinInt } from "../Util";
 import {
   AllUnitParams,
   MessageType,
-  Player,
   Tick,
   Unit,
   UnitInfo,
@@ -22,7 +21,7 @@ export class UnitImpl implements Unit {
   private _safeFromPiratesCooldown: number; // Only for trade ships
   private _lastSetSafeFromPirates: number; // Only for trade ships
   private _constructionType: UnitType | undefined;
-
+  private _lastOwner: PlayerImpl | null = null;
   private _troops: number;
   private _cooldownTick: Tick | null = null;
   private _dstPort: Unit | undefined = undefined; // Only for trade ships
@@ -72,6 +71,7 @@ export class UnitImpl implements Unit {
       id: this._id,
       troops: this._troops,
       ownerID: this._owner.smallID(),
+      lastOwnerID: this._lastOwner?.smallID(),
       isActive: this._active,
       pos: this._tile,
       lastPos: this._lastTile,
@@ -126,15 +126,21 @@ export class UnitImpl implements Unit {
     return this.mg.unitInfo(this._type);
   }
 
-  setOwner(newOwner: Player): void {
-    const oldOwner = this._owner;
-    oldOwner._units = oldOwner._units.filter((u) => u !== this);
-    this._owner = newOwner as PlayerImpl;
+  setOwner(newOwner: PlayerImpl): void {
+    this._lastOwner = this._owner;
+    this._lastOwner._units = this._lastOwner._units.filter((u) => u !== this);
+    this._owner = newOwner;
+    this._owner._units.push(this);
     this.mg.addUpdate(this.toUpdate());
     this.mg.displayMessage(
       `Your ${this.type()} was captured by ${newOwner.displayName()}`,
       MessageType.ERROR,
-      oldOwner.id(),
+      this._lastOwner.id(),
+    );
+    this.mg.displayMessage(
+      `Captured ${this.type()} from ${this._lastOwner.displayName()}`,
+      MessageType.SUCCESS,
+      newOwner.id(),
     );
   }
 

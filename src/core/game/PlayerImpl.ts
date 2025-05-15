@@ -21,6 +21,7 @@ import {
   BuildableUnit,
   Cell,
   ColoredTeams,
+  Embargo,
   EmojiMessage,
   Gold,
   MessageType,
@@ -72,7 +73,7 @@ export class PlayerImpl implements Player {
 
   markedTraitorTick = -1;
 
-  private embargoes: Set<PlayerID> = new Set();
+  private embargoes = new Map<PlayerID, Embargo>();
 
   public _borderTiles: Set<TileRef> = new Set();
 
@@ -141,7 +142,7 @@ export class PlayerImpl implements Player {
       troops: this.troops(),
       targetTroopRatio: this.targetTroopRatio(),
       allies: this.alliances().map((a) => a.other(this).smallID()),
-      embargoes: this.embargoes,
+      embargoes: new Set([...this.embargoes.keys()].map((p) => p.toString())),
       isTraitor: this.isTraitor(),
       targets: this.targets().map((p) => p.smallID()),
       outgoingEmojis: this.outgoingEmojis(),
@@ -574,12 +575,30 @@ export class PlayerImpl implements Player {
     return !embargo && other.id() !== this.id();
   }
 
-  addEmbargo(other: PlayerID): void {
-    this.embargoes.add(other);
+  addEmbargo(other: PlayerID, isTemporary: boolean): void {
+    const embargo = this.embargoes.get(other);
+    if (embargo !== undefined && !embargo.isTemporary) return;
+
+    this.embargoes.set(other, {
+      createdAt: this.mg.ticks(),
+      isTemporary: isTemporary,
+      target: other,
+    });
+  }
+
+  getEmbargoes(): Embargo[] {
+    return [...this.embargoes.values()];
   }
 
   stopEmbargo(other: PlayerID): void {
     this.embargoes.delete(other);
+  }
+
+  endTemporaryEmbargo(other: PlayerID): void {
+    const embargo = this.embargoes.get(other);
+    if (embargo !== undefined && !embargo.isTemporary) return;
+
+    this.stopEmbargo(other);
   }
 
   tradingPartners(): Player[] {
@@ -676,23 +695,7 @@ export class PlayerImpl implements Player {
     if (unit.owner() === this) {
       throw new Error(`Cannot capture unit, ${this} already owns ${unit}`);
     }
-    const prev = unit.owner();
-    (prev as PlayerImpl)._units = (prev as PlayerImpl)._units.filter(
-      (u) => u !== unit,
-    );
-    (unit as UnitImpl)._owner = this;
-    this._units.push(unit);
-    this.mg.addUpdate(unit.toUpdate());
-    this.mg.displayMessage(
-      `${unit.type()} captured by ${this.displayName()}`,
-      MessageType.ERROR,
-      prev.id(),
-    );
-    this.mg.displayMessage(
-      `Captured ${unit.type()} from ${prev.displayName()}`,
-      MessageType.SUCCESS,
-      this.id(),
-    );
+    unit.setOwner(this);
   }
 
   buildUnit<T extends UnitType>(
