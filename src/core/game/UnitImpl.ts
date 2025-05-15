@@ -119,10 +119,6 @@ export class UnitImpl implements Unit {
     return this.mg.unitInfo(this._type);
   }
 
-  captured(): void {
-    this._lastOwner = this._owner;
-  }
-
   setOwner(newOwner: PlayerImpl): void {
     this._lastOwner = this._owner;
     this._lastOwner._units = this._lastOwner._units.filter((u) => u != this);
