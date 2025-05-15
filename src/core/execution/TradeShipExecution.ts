@@ -121,7 +121,7 @@ export class TradeShipExecution implements Execution {
       case PathFindResultType.NextTile:
         
         if (!dstPort.data.pathCache) {
-          dstPort.data.pathCache = new Map<string, TileRef>();
+          dstPort.data.pathCache = new Map<TileRef, TileRef>();
         }
         
         const key = `${this.mg.x(currentTile)},${this.mg.y(currentTile)}`;
