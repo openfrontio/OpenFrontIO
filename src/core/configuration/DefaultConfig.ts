@@ -636,23 +636,24 @@ export class DefaultConfig implements Config {
       case Difficulty.Easy:
         return maxPop * 0.4;
       case Difficulty.Medium:
-        return maxPop * 0.7;
+        return maxPop * 0.8;
       case Difficulty.Hard:
-        return maxPop * 1;
+        return maxPop * 1.4;
       case Difficulty.Impossible:
-        return maxPop * 2;
+        return maxPop * 1.8;
     }
   }
 
   populationIncreaseRate(player: Player): number {
     const max = this.maxPopulation(player);
-
+    //population grows proportional to current population with growth decreasing as it approaches max
+    // smaller countries recieve a boost to pop growth to speed up early game 
     let toAdd =
       10 +
       (1300 / max + 1 / 140) * (0.8 * player.troops() + 1.2 * player.workers());
-    const adjustedPop = player.adjustedPopulation();
+    const totalPop = player.totalPopulation();
 
-    const ratio = 1 - adjustedPop / max;
+    const ratio = 1 - totalPop / max;
     toAdd *= ratio;
 
     if (player.type() == PlayerType.Bot) {
@@ -677,8 +678,8 @@ export class DefaultConfig implements Config {
     }
 
     return (
-      Math.min(player.adjustedPopulation() + toAdd, max) -
-      player.adjustedPopulation()
+      Math.min(player.totalPopulation() + toAdd, max) -
+      player.totalPopulation()
     );
   }
 
