@@ -20,7 +20,7 @@ import {
   Turn,
 } from "../core/Schemas";
 import { createGameRecord } from "../core/Util";
-import { ServerConfig } from "../core/configuration/Config";
+import { GameEnv, ServerConfig } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import { archive } from "./Archive";
 import { Client } from "./Client";
@@ -132,9 +132,8 @@ export class GameServer {
       return;
     }
 
-    // Prevent multiple clients from using the same account
-    const allowMultiTabbing = this.gameConfig.allowMultiTabbing;
-    if (!allowMultiTabbing) {
+    if (this.config.env() === GameEnv.Prod) {
+      // Prevent multiple clients from using the same account in prod
       const conflicting = this.activeClients.find(
         (c) =>
           c.persistentID === client.persistentID &&

@@ -126,7 +126,6 @@ const GameConfigSchema = z.object({
   maxPlayers: z.number().optional(),
   disabledUnits: z.array(z.nativeEnum(UnitType)).optional(),
   playerTeams: z.union([z.number().optional(), z.literal(Duos)]),
-  allowMultiTabbing: z.boolean(),
 });
 
 export const TeamSchema = z.string();
