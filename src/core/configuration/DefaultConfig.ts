@@ -135,9 +135,10 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
 
   lobbyMaxPlayers(map: GameMapType, mode: GameMode): number {
-    const [l, m, s] = numPlayersConfig[map];
+    const [l, m, s] = numPlayersConfig[map] ?? [50, 30, 20];
     const r = Math.random();
-    return r < 0.3 ? l : r < 0.6 ? m : s;
+    const base = r < 0.3 ? l : r < 0.6 ? m : s;
+    return mode === GameMode.Team ? Math.ceil(base * 1.5) : base;
   }
 
   workerIndex(gameID: GameID): number {
