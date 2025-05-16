@@ -38,6 +38,32 @@ const JwksSchema = z.object({
     .min(1),
 });
 
+const numPlayersConfig = {
+  [GameMapType.GatewayToTheAtlantic]: [80, 60, 40],
+  [GameMapType.SouthAmerica]: [70, 50, 40],
+  [GameMapType.NorthAmerica]: [80, 60, 50],
+  [GameMapType.Africa]: [100, 80, 50],
+  [GameMapType.Europe]: [80, 30, 50],
+  [GameMapType.Australia]: [50, 40, 30],
+  [GameMapType.Iceland]: [50, 40, 30],
+  [GameMapType.Britannia]: [50, 40, 30],
+  [GameMapType.Asia]: [60, 50, 30],
+  [GameMapType.FalklandIslands]: [80, 50, 30],
+  [GameMapType.Baikal]: [60, 50, 40],
+  [GameMapType.Mena]: [60, 50, 30],
+  [GameMapType.Mars]: [50, 40, 30],
+  [GameMapType.Oceania]: [30, 10, 20],
+  [GameMapType.Japan]: [50, 40, 30],
+  [GameMapType.FaroeIslands]: [50, 40, 30],
+  [GameMapType.DeglaciatedAntarctica]: [50, 40, 30],
+  [GameMapType.EuropeClassic]: [80, 30, 50],
+  [GameMapType.BetweenTwoSeas]: [40, 50, 30],
+  [GameMapType.BlackSea]: [40, 50, 30],
+  [GameMapType.Pangaea]: [40, 20, 30],
+  [GameMapType.World]: [150, 80, 50],
+  [GameMapType.KnownWorld]: [50, 40, 30],
+} as const satisfies Record<GameMapType, [number, number, number]>;
+
 export abstract class DefaultServerConfig implements ServerConfig {
   private publicKey: JWK;
   abstract jwtAudience(): string;
@@ -109,85 +135,9 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
 
   lobbyMaxPlayers(map: GameMapType, mode: GameMode): number {
-    const numPlayers = () => {
-      const ranNumb1 = Math.random();
-      const ranNumb2 = Math.random();
-      switch (map) {
-        case GameMapType.GatewayToTheAtlantic:
-          return ranNumb1 < 0.3 ? 80 : ranNumb2 < 0.3 ? 60 : 40;
-          break;
-        case GameMapType.SouthAmerica:
-          return ranNumb1 < 0.3 ? 70 : ranNumb2 < 0.3 ? 50 : 40;
-          break;
-        case GameMapType.NorthAmerica:
-          return ranNumb1 < 0.3 ? 80 : ranNumb2 < 0.3 ? 60 : 50;
-          break;
-        case GameMapType.Africa:
-          return ranNumb1 < 0.3 ? 100 : ranNumb2 < 0.3 ? 80 : 50;
-          break;
-        case GameMapType.Europe:
-          return ranNumb1 < 0.3 ? 80 : ranNumb2 < 0.3 ? 30 : 50;
-          break;
-        case GameMapType.Australia:
-          return ranNumb1 < 0.3 ? 50 : ranNumb2 < 0.3 ? 40 : 30;
-          break;
-        case GameMapType.Iceland:
-          return ranNumb1 < 0.3 ? 50 : ranNumb2 < 0.3 ? 40 : 30;
-          break;
-        case GameMapType.Britannia:
-          return ranNumb1 < 0.3 ? 50 : ranNumb2 < 0.3 ? 40 : 30;
-          break;
-        case GameMapType.Asia:
-          return ranNumb1 < 0.3 ? 60 : ranNumb2 < 0.3 ? 50 : 30;
-          break;
-        case GameMapType.FalklandIslands:
-          return ranNumb1 < 0.3 ? 80 : ranNumb2 < 0.3 ? 50 : 30;
-          break;
-        case GameMapType.Baikal:
-          return ranNumb1 < 0.3 ? 60 : ranNumb2 < 0.3 ? 50 : 40;
-          break;
-        case GameMapType.Mena:
-          return ranNumb1 < 0.3 ? 60 : ranNumb2 < 0.3 ? 50 : 30;
-          break;
-        case GameMapType.Mars:
-          return ranNumb1 < 0.3 ? 50 : ranNumb2 < 0.3 ? 40 : 30;
-          break;
-        case GameMapType.Oceania:
-          return ranNumb1 < 0.3 ? 30 : ranNumb2 < 0.3 ? 10 : 20;
-          break;
-        case GameMapType.Japan:
-          return ranNumb1 < 0.3 ? 50 : ranNumb2 < 0.3 ? 40 : 30;
-          break;
-        case GameMapType.FaroeIslands:
-          return ranNumb1 < 0.3 ? 50 : ranNumb2 < 0.3 ? 40 : 30;
-          break;
-        case GameMapType.DeglaciatedAntarctica:
-          return ranNumb1 < 0.3 ? 50 : ranNumb2 < 0.3 ? 40 : 30;
-          break;
-        case GameMapType.EuropeClassic:
-          return ranNumb1 < 0.3 ? 80 : ranNumb2 < 0.3 ? 30 : 50;
-          break;
-        case GameMapType.BetweenTwoSeas:
-          return ranNumb1 < 0.3 ? 40 : ranNumb2 < 0.3 ? 50 : 30;
-          break;
-        case GameMapType.BlackSea:
-          return ranNumb1 < 0.3 ? 40 : ranNumb2 < 0.3 ? 50 : 30;
-          break;
-        case GameMapType.Pangaea:
-          return ranNumb1 < 0.3 ? 40 : ranNumb2 < 0.3 ? 20 : 30;
-          break;
-        case GameMapType.World:
-          return ranNumb1 < 0.3 ? 150 : ranNumb2 < 0.3 ? 80 : 50;
-          break;
-        case GameMapType.KnownWorld:
-          return ranNumb1 < 0.3 ? 50 : ranNumb2 < 0.3 ? 40 : 30;
-          break;
-        default:
-          return ranNumb1 < 0.3 ? 50 : ranNumb2 < 0.3 ? 30 : 20;
-          break;
-      }
-    };
-    return Math.min(150, numPlayers() * (mode === GameMode.Team ? 1.5 : 1));
+    const [l, m, s] = numPlayersConfig[map];
+    const r = Math.random();
+    return r < 0.3 ? l : r < 0.6 ? m : s;
   }
 
   workerIndex(gameID: GameID): number {
