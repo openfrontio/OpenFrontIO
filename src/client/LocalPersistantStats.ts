@@ -3,7 +3,7 @@ import { GameConfig, GameID, GameRecord } from "../core/Schemas";
 
 export interface LocalStatsData {
   [key: GameID]: {
-    lobby: GameConfig;
+    lobby: Partial<GameConfig>;
     // Only once the game is over
     gameRecord?: GameRecord;
   };
@@ -26,8 +26,8 @@ function save(stats: LocalStatsData) {
 
 // The user can quit the game anytime so better save the lobby as soon as the
 // game starts.
-export function startGame(id: GameID, lobby: GameConfig) {
-  if (typeof localStorage === "undefined") {
+export function startGame(id: GameID, lobby: Partial<GameConfig>) {
+  if (localStorage === undefined) {
     return;
   }
 
@@ -42,7 +42,7 @@ export function startTime() {
 }
 
 export function endGame(gameRecord: GameRecord) {
-  if (typeof localStorage === "undefined") {
+  if (localStorage === undefined) {
     return;
   }
 

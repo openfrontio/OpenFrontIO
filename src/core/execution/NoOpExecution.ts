@@ -1,4 +1,4 @@
-import { Execution, Game, Player } from "../game/Game";
+import { Execution, Game } from "../game/Game";
 
 export class NoOpExecution implements Execution {
   isActive(): boolean {
@@ -9,7 +9,4 @@ export class NoOpExecution implements Execution {
   }
   init(mg: Game, ticks: number): void {}
   tick(ticks: number): void {}
-  owner(): Player {
-    return null;
-  }
 }

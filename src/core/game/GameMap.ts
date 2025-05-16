@@ -172,7 +172,7 @@ export class GameMapImpl implements GameMap {
   }
 
   hasOwner(ref: TileRef): boolean {
-    return this.ownerID(ref) != 0;
+    return this.ownerID(ref) !== 0;
   }
 
   setOwnerID(ref: TileRef, playerId: number): void {
@@ -207,12 +207,14 @@ export class GameMapImpl implements GameMap {
   isOnEdgeOfMap(ref: TileRef): boolean {
     const x = this.x(ref);
     const y = this.y(ref);
-    return x == 0 || x == this.width() - 1 || y == 0 || y == this.height() - 1;
+    return (
+      x === 0 || x === this.width() - 1 || y === 0 || y === this.height() - 1
+    );
   }
 
   isBorder(ref: TileRef): boolean {
     return this.neighbors(ref).some(
-      (tr) => this.ownerID(tr) != this.ownerID(ref),
+      (tr) => this.ownerID(tr) !== this.ownerID(ref),
     );
   }
 
@@ -297,6 +299,7 @@ export class GameMapImpl implements GameMap {
 
     while (q.length > 0) {
       const curr = q.pop();
+      if (curr === undefined) continue;
       for (const n of this.neighbors(curr)) {
         if (!seen.has(n) && filter(this, n)) {
           seen.add(n);

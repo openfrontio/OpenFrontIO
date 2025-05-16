@@ -304,7 +304,7 @@ export class PlayerInfo {
   public readonly clan: string | null;
 
   constructor(
-    public readonly flag: string,
+    public readonly flag: string | undefined,
     public readonly name: string,
     public readonly playerType: PlayerType,
     // null if bot.
@@ -343,19 +343,20 @@ export interface Unit {
   health(): number;
   modifyHealth(delta: number): void;
 
-  setWarshipTarget(target: Unit): void; // warship only
-  warshipTarget(): Unit;
+  setWarshipTarget(target: Unit | null): void; // warship only
+  warshipTarget(): Unit | null;
 
+  setOwner(owner: Player): void;
   setCooldown(triggerCooldown: boolean): void;
   ticksLeftInCooldown(cooldownDuration: number): Tick;
   isCooldown(): boolean;
   setDstPort(dstPort: Unit): void;
-  dstPort(): Unit; // Only for trade ships
+  dstPort(): Unit | null; // Only for trade ships
   setSafeFromPirates(): void; // Only for trade ships
   isSafeFromPirates(): boolean; // Only for trade ships
-  detonationDst(): TileRef; // Only for nukes
+  detonationDst(): TileRef | null; // Only for nukes
 
-  setMoveTarget(cell: TileRef): void;
+  setMoveTarget(cell: TileRef | null): void;
   moveTarget(): TileRef | null;
 
   setTargetedBySAM(targeted: boolean): void;
@@ -371,13 +372,22 @@ export interface Unit {
 
   // Updates
   toUpdate(): UnitUpdate;
+
+  cachePut(from: TileRef, to: TileRef): void; // ports only
+  cacheGet(from: TileRef): TileRef | undefined; // ports only
 }
 
 export interface TerraNullius {
   isPlayer(): false;
-  id(): PlayerID; // always zero, maybe make it TerraNulliusID?
+  id(): null;
   clientID(): ClientID;
   smallID(): number;
+}
+
+export interface Embargo {
+  createdAt: Tick;
+  isTemporary: boolean;
+  target: PlayerID;
 }
 
 export interface Player {
@@ -386,7 +396,7 @@ export interface Player {
   info(): PlayerInfo;
   name(): string;
   displayName(): string;
-  clientID(): ClientID;
+  clientID(): ClientID | null;
   id(): PlayerID;
   type(): PlayerType;
   isPlayer(): this is Player;
@@ -457,7 +467,7 @@ export interface Player {
   allianceWith(other: Player): MutableAlliance | null;
   canSendAllianceRequest(other: Player): boolean;
   breakAlliance(alliance: Alliance): void;
-  createAllianceRequest(recipient: Player): AllianceRequest;
+  createAllianceRequest(recipient: Player): AllianceRequest | null;
 
   // Targeting
   canTarget(other: Player): boolean;
@@ -478,8 +488,10 @@ export interface Player {
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;
   tradingPartners(): Player[];
-  addEmbargo(other: PlayerID): void;
+  addEmbargo(other: PlayerID, isTemporary: boolean): void;
+  getEmbargoes(): Embargo[];
   stopEmbargo(other: PlayerID): void;
+  endTemporaryEmbargo(other: PlayerID): void;
   canTrade(other: Player): boolean;
 
   // Attacking.
@@ -504,6 +516,7 @@ export interface Player {
 }
 
 export interface Game extends GameMap {
+  expireAlliance(alliance: Alliance);
   // Map & Dimensions
   isOnMap(cell: Cell): boolean;
   width(): number;
@@ -543,6 +556,12 @@ export interface Game extends GameMap {
 
   addExecution(...exec: Execution[]): void;
   displayMessage(
+    message: string,
+    type: MessageType,
+    playerID: PlayerID | null,
+  ): void;
+  displayIncomingUnit(
+    unitID: number,
     message: string,
     type: MessageType,
     playerID: PlayerID | null,

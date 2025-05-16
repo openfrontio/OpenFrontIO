@@ -46,7 +46,7 @@ export async function generateMap(
       const alpha = color & 0xff;
       const blue = (color >> 8) & 0xff;
 
-      if (alpha < 20 || blue == 106) {
+      if (alpha < 20 || blue === 106) {
         // transparent
         terrain[x][y] = new Terrain(TerrainType.Water);
       } else {
@@ -85,8 +85,8 @@ async function createMiniMap(tm: Terrain[][]): Promise<Terrain[][]> {
       const miniY = Math.floor(y / 2);
 
       if (
-        miniMap[miniX][miniY] == null ||
-        miniMap[miniX][miniY].type != TerrainType.Water
+        miniMap[miniX][miniY] === null ||
+        miniMap[miniX][miniY].type !== TerrainType.Water
       ) {
         // We shrink 4 tiles into 1 tile. If any of the 4 large tiles
         // has water, then the mini tile is considered water.
@@ -104,12 +104,12 @@ function processShore(map: Terrain[][]): Coord[] {
     for (let y = 0; y < map[0].length; y++) {
       const tile = map[x][y];
       const ns = neighbors(x, y, map);
-      if (tile.type == TerrainType.Land) {
-        if (ns.filter((t) => t.type == TerrainType.Water).length > 0) {
+      if (tile.type === TerrainType.Land) {
+        if (ns.filter((t) => t.type === TerrainType.Water).length > 0) {
           tile.shoreline = true;
         }
       } else {
-        if (ns.filter((t) => t.type == TerrainType.Land).length > 0) {
+        if (ns.filter((t) => t.type === TerrainType.Land).length > 0) {
           tile.shoreline = true;
           shorelineWaters.push({ x, y });
         }
@@ -252,7 +252,7 @@ function packTerrain(map: Terrain[][]): Uint8Array {
     for (let y = 0; y < height; y++) {
       const tile = map[x][y];
       let packedByte = 0;
-      if (tile == null) {
+      if (tile === null) {
         throw new Error(`terrain null at ${x}:${y}`);
       }
 
@@ -265,7 +265,7 @@ function packTerrain(map: Terrain[][]): Uint8Array {
       if (tile.ocean) {
         packedByte |= 0b00100000;
       }
-      if (tile.type == TerrainType.Land) {
+      if (tile.type === TerrainType.Land) {
         packedByte |= Math.min(Math.ceil(tile.magnitude), 31);
       } else {
         packedByte |= Math.min(Math.ceil(tile.magnitude / 2), 31);
@@ -419,33 +419,32 @@ function getThumbnailColor(t: Terrain): {
     return { r: 204, g: 203, b: 158, a: 255 };
   }
   let adjRGB: number;
-  switch (true) {
-    //plains
-    case t.magnitude < 10:
-      adjRGB = 220 - 2 * t.magnitude;
-      return {
-        r: 190,
-        g: adjRGB,
-        b: 138,
-        a: 255,
-      };
-    //highlands
-    case t.magnitude < 20:
-      adjRGB = 2 * t.magnitude;
-      return {
-        r: 200 + adjRGB,
-        g: 183 + adjRGB,
-        b: 138 + adjRGB,
-        a: 255,
-      };
-    //mountains
-    case t.magnitude >= 20:
-      adjRGB = Math.floor(230 + t.magnitude / 2);
-      return {
-        r: adjRGB,
-        g: adjRGB,
-        b: adjRGB,
-        a: 255,
-      };
+  if (t.magnitude < 10) {
+    // Plains
+    adjRGB = 220 - 2 * t.magnitude;
+    return {
+      r: 190,
+      g: adjRGB,
+      b: 138,
+      a: 255,
+    };
+  } else if (t.magnitude < 20) {
+    // Highlands
+    adjRGB = 2 * t.magnitude;
+    return {
+      r: 200 + adjRGB,
+      g: 183 + adjRGB,
+      b: 138 + adjRGB,
+      a: 255,
+    };
+  } else {
+    // Mountains
+    adjRGB = Math.floor(230 + t.magnitude / 2);
+    return {
+      r: adjRGB,
+      g: adjRGB,
+      b: adjRGB,
+      a: 255,
+    };
   }
 }
