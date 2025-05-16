@@ -40,6 +40,7 @@ export class GameManager {
       gameMode: GameMode.FFA,
       bots: 400,
       disabledUnits: [],
+      allowMultiTabbing: true,
       ...gameConfig,
     });
     this.games.set(id, game);
