@@ -46,7 +46,7 @@ export interface JoinLobbyEvent {
 }
 
 class Client {
-  private gameStop: () => void;
+  private gameStop: (() => void) | null = null;
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
@@ -123,7 +123,7 @@ class Client {
 
     window.addEventListener("beforeunload", () => {
       consolex.log("Browser is closing");
-      if (this.gameStop != null) {
+      if (this.gameStop !== null) {
         this.gameStop();
       }
     });
@@ -136,8 +136,10 @@ class Client {
       "single-player-modal",
     ) as SinglePlayerModal;
     spModal instanceof SinglePlayerModal;
-    document.getElementById("single-player").addEventListener("click", () => {
-      if (this.usernameInput.isValid()) {
+    const singlePlayer = document.getElementById("single-player");
+    if (singlePlayer === null) throw new Error("Missing single-player");
+    singlePlayer.addEventListener("click", () => {
+      if (this.usernameInput?.isValid()) {
         spModal.open();
       }
     });
@@ -150,7 +152,9 @@ class Client {
 
     const hlpModal = document.querySelector("help-modal") as HelpModal;
     hlpModal instanceof HelpModal;
-    document.getElementById("help-button").addEventListener("click", () => {
+    const helpButton = document.getElementById("help-button");
+    if (helpButton === null) throw new Error("Missing help-button");
+    helpButton.addEventListener("click", () => {
       hlpModal.open();
     });
 
@@ -193,34 +197,39 @@ class Client {
       "user-setting",
     ) as UserSettingModal;
     settingsModal instanceof UserSettingModal;
-    document.getElementById("settings-button").addEventListener("click", () => {
-      settingsModal.open();
-    });
+    document
+      .getElementById("settings-button")
+      ?.addEventListener("click", () => {
+        settingsModal.open();
+      });
 
     const hostModal = document.querySelector(
       "host-lobby-modal",
     ) as HostPrivateLobbyModal;
     hostModal instanceof HostPrivateLobbyModal;
-    document
-      .getElementById("host-lobby-button")
-      .addEventListener("click", () => {
-        if (this.usernameInput.isValid()) {
-          hostModal.open();
-          this.publicLobby.leaveLobby();
-        }
-      });
+    const hostLobbyButton = document.getElementById("host-lobby-button");
+    if (hostLobbyButton === null) throw new Error("Missing host-lobby-button");
+    hostLobbyButton.addEventListener("click", () => {
+      if (this.usernameInput?.isValid()) {
+        hostModal.open();
+        this.publicLobby.leaveLobby();
+      }
+    });
 
     this.joinModal = document.querySelector(
       "join-private-lobby-modal",
     ) as JoinPrivateLobbyModal;
     this.joinModal instanceof JoinPrivateLobbyModal;
-    document
-      .getElementById("join-private-lobby-button")
-      .addEventListener("click", () => {
-        if (this.usernameInput.isValid()) {
-          this.joinModal.open();
-        }
-      });
+    const joinPrivateLobbyButton = document.getElementById(
+      "join-private-lobby-button",
+    );
+    if (joinPrivateLobbyButton === null)
+      throw new Error("Missing join-private-lobby-button");
+    joinPrivateLobbyButton.addEventListener("click", () => {
+      if (this.usernameInput?.isValid()) {
+        this.joinModal.open();
+      }
+    });
 
     if (this.userSettings.darkMode()) {
       document.documentElement.classList.add("dark");
@@ -258,7 +267,7 @@ class Client {
   private async handleJoinLobby(event: CustomEvent) {
     const lobby = event.detail as JoinLobbyEvent;
     consolex.log(`joining lobby ${lobby.gameID}`);
-    if (this.gameStop != null) {
+    if (this.gameStop !== null) {
       consolex.log("joining lobby, stopping existing game");
       this.gameStop();
     }
@@ -269,10 +278,10 @@ class Client {
         gameID: lobby.gameID,
         serverConfig: config,
         flag:
-          this.flagInput.getCurrentFlag() == "xx"
+          this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
             ? ""
             : this.flagInput.getCurrentFlag(),
-        playerName: this.usernameInput.getCurrentUsername(),
+        playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: localStorage.getItem("token") ?? getPersistentIDFromCookie(),
         clientID: lobby.clientID,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.gameStartInfo,
@@ -280,7 +289,7 @@ class Client {
       },
       () => {
         console.log("Closing modals");
-        document.getElementById("settings-button").classList.add("hidden");
+        document.getElementById("settings-button")?.classList.add("hidden");
         [
           "single-player-modal",
           "host-lobby-modal",
@@ -319,7 +328,7 @@ class Client {
           (ad as HTMLElement).style.display = "none";
         });
 
-        if (event.detail.gameConfig?.gameType != GameType.Singleplayer) {
+        if (event.detail.gameConfig?.gameType !== GameType.Singleplayer) {
           window.history.pushState({}, "", `/join/${lobby.gameID}`);
           sessionStorage.setItem("inLobby", "true");
         }
@@ -328,7 +337,7 @@ class Client {
   }
 
   private async handleLeaveLobby(/* event: CustomEvent */) {
-    if (this.gameStop == null) {
+    if (this.gameStop === null) {
       return;
     }
     consolex.log("leaving lobby, cancelling game");

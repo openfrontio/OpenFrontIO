@@ -124,7 +124,6 @@ const GameConfigSchema = z.object({
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
   maxPlayers: z.number().optional(),
-  numPlayerTeams: z.number().optional(),
   disabledUnits: z.array(z.nativeEnum(UnitType)).optional(),
   playerTeams: z.union([z.number().optional(), z.literal(Duos)]),
   allowMultiTabbing: z.boolean(),
@@ -227,11 +226,11 @@ export const SpawnIntentSchema = BaseIntentSchema.extend({
 export const BoatAttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("boat"),
   targetID: ID.nullable(),
-  troops: z.number().nullable(),
+  troops: z.number(),
   dstX: z.number(),
   dstY: z.number(),
-  srcX: z.number().nullable().optional(),
-  srcY: z.number().nullable().optional(),
+  srcX: z.number().nullable(),
+  srcY: z.number().nullable(),
 });
 
 export const AllianceRequestIntentSchema = BaseIntentSchema.extend({
@@ -436,7 +435,7 @@ export const ClientJoinMessageSchema = z.object({
   gameID: ID,
   lastTurn: z.number(), // The last turn the client saw.
   username: SafeString,
-  flag: SafeString.nullable().optional(),
+  flag: SafeString.nullable(),
 });
 
 export const ClientMessageSchema = z.union([

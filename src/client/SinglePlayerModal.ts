@@ -73,7 +73,7 @@ export class SinglePlayerModal extends LitElement {
                               .selected=${!this.useRandomMap &&
                               this.selectedMap === mapValue}
                               .translation=${translateText(
-                                `map.${mapKey.toLowerCase()}`,
+                                `map.${mapKey?.toLowerCase()}`,
                               )}
                             ></map-display>
                           </div>
@@ -204,7 +204,7 @@ export class SinglePlayerModal extends LitElement {
                 />
                 <div class="option-card-title">
                   <span>${translateText("single_modal.bots")}</span>${this
-                    .bots == 0
+                    .bots === 0
                     ? translateText("single_modal.bots_disabled")
                     : this.bots}
                 </div>
@@ -444,7 +444,7 @@ export class SinglePlayerModal extends LitElement {
                 clientID,
                 username: usernameInput.getCurrentUsername(),
                 flag:
-                  flagInput.getCurrentFlag() == "xx"
+                  flagInput.getCurrentFlag() === "xx"
                     ? ""
                     : flagInput.getCurrentFlag(),
               },

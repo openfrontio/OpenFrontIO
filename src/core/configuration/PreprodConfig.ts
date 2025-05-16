@@ -10,7 +10,7 @@ export const preprodConfig = new (class extends DefaultServerConfig {
     return true;
   }
   numWorkers(): number {
-    return 3;
+    return 2;
   }
   jwtAudience(): string {
     return "openfront.dev";

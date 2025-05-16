@@ -1,4 +1,5 @@
 import { Execution, Game } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -24,7 +25,7 @@ import { TransportShipExecution } from "./TransportShipExecution";
 
 export class Executor {
   // private random = new PseudoRandom(999)
-  private random: PseudoRandom = null;
+  private random: PseudoRandom;
 
   constructor(
     private mg: Game,
@@ -66,8 +67,8 @@ export class Executor {
           this.mg.ref(intent.x, intent.y),
         );
       case "boat":
-        let src = null;
-        if (intent.srcX != null || intent.srcY != null) {
+        let src: TileRef | null = null;
+        if (intent.srcX !== null && intent.srcY !== null) {
           src = this.mg.ref(intent.srcX, intent.srcY);
         }
         return new TransportShipExecution(
@@ -126,7 +127,7 @@ export class Executor {
   }
 
   fakeHumanExecutions(): Execution[] {
-    const execs = [];
+    const execs: Execution[] = [];
     for (const nation of this.mg.nations()) {
       execs.push(new FakeHumanExecution(this.gameID, nation));
     }

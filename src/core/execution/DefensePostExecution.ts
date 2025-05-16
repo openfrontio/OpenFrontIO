@@ -13,10 +13,10 @@ import { ShellExecution } from "./ShellExecution";
 export class DefensePostExecution implements Execution {
   private player: Player;
   private mg: Game;
-  private post: Unit;
+  private post: Unit | null = null;
   private active: boolean = true;
 
-  private target: Unit = null;
+  private target: Unit | null = null;
   private lastShellAttack = 0;
 
   private alreadySentShell = new Set<Unit>();
@@ -37,6 +37,8 @@ export class DefensePostExecution implements Execution {
   }
 
   private shoot() {
+    if (this.post === null) return;
+    if (this.target === null) return;
     const shellAttackRate = this.mg.config().defensePostShellAttackRate();
     if (this.mg.ticks() - this.lastShellAttack > shellAttackRate) {
       this.lastShellAttack = this.mg.ticks();
@@ -58,9 +60,9 @@ export class DefensePostExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.post == null) {
+    if (this.post === null) {
       const spawnTile = this.player.canBuild(UnitType.DefensePost, this.tile);
-      if (spawnTile == false) {
+      if (spawnTile === false) {
         consolex.warn("cannot build Defense Post");
         this.active = false;
         return;
@@ -72,58 +74,57 @@ export class DefensePostExecution implements Execution {
       return;
     }
 
-    if (this.player != this.post.owner()) {
+    if (this.player !== this.post.owner()) {
       this.player = this.post.owner();
     }
 
-    if (this.target != null && !this.target.isActive()) {
+    if (this.target !== null && !this.target.isActive()) {
       this.target = null;
     }
 
     // TODO: Reconsider how/if defense posts target ships.
-    return;
-
-    const ships = this.mg
-      .nearbyUnits(
-        this.post.tile(),
-        this.mg.config().defensePostTargettingRange(),
-        [UnitType.TransportShip, UnitType.Warship],
-      )
-      .filter(
-        ({ unit }) =>
-          unit.owner() !== this.post.owner() &&
-          !unit.owner().isFriendly(this.post.owner()) &&
-          !this.alreadySentShell.has(unit),
-      );
-
-    this.target =
-      ships.sort((a, b) => {
-        const { unit: unitA, distSquared: distA } = a;
-        const { unit: unitB, distSquared: distB } = b;
-
-        // Prioritize TransportShip
-        if (
-          unitA.type() === UnitType.TransportShip &&
-          unitB.type() !== UnitType.TransportShip
-        )
-          return -1;
-        if (
-          unitA.type() !== UnitType.TransportShip &&
-          unitB.type() === UnitType.TransportShip
-        )
-          return 1;
-
-        // If both are the same type, sort by distance (lower `distSquared` means closer)
-        return distA - distB;
-      })[0]?.unit ?? null;
-
-    if (this.target == null || !this.target.isActive()) {
-      this.target = null;
-      return;
-    } else {
-      this.shoot();
-      return;
-    }
+    // const ships = this.mg
+    //   .nearbyUnits(
+    //     this.post.tile(),
+    //     this.mg.config().defensePostTargettingRange(),
+    //     [UnitType.TransportShip, UnitType.Warship],
+    //   )
+    //   .filter(
+    //     ({ unit }) =>
+    //       this.post !== null &&
+    //       unit.owner() !== this.post.owner() &&
+    //       !unit.owner().isFriendly(this.post.owner()) &&
+    //       !this.alreadySentShell.has(unit),
+    //   );
+    //
+    // this.target =
+    //   ships.sort((a, b) => {
+    //     const { unit: unitA, distSquared: distA } = a;
+    //     const { unit: unitB, distSquared: distB } = b;
+    //
+    //     // Prioritize TransportShip
+    //     if (
+    //       unitA.type() === UnitType.TransportShip &&
+    //       unitB.type() !== UnitType.TransportShip
+    //     )
+    //       return -1;
+    //     if (
+    //       unitA.type() !== UnitType.TransportShip &&
+    //       unitB.type() === UnitType.TransportShip
+    //     )
+    //       return 1;
+    //
+    //     // If both are the same type, sort by distance (lower `distSquared` means closer)
+    //     return distA - distB;
+    //   })[0]?.unit ?? null;
+    //
+    // if (this.target === null || !this.target.isActive()) {
+    //   this.target = null;
+    //   return;
+    // } else {
+    //   this.shoot();
+    //   return;
+    // }
   }
 
   isActive(): boolean {
