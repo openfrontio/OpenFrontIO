@@ -333,6 +333,20 @@ label.option-card:hover {
   text-align: center;
 }
 
+#helpModal .info-panel-img {
+  width: 13rem;
+  max-width: 13rem;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+#helpModal .player-icon-img {
+  width: 9rem;
+  height: 9rem;
+  object-fit: contain;
+}
+
 #helpModal .icon {
   background-color: white;
   width: 32px;
@@ -380,6 +394,10 @@ label.option-card:hover {
   mask: url("../../resources/images/MIRVIcon.svg") no-repeat center / cover;
 }
 
+#helpModal .chat-icon {
+  mask: url("../../resources/images/ChatIconWhite.svg") no-repeat center / cover;
+}
+
 #helpModal .target-icon {
   mask: url("../../resources/images/TargetIcon.svg") no-repeat center / cover;
 }
@@ -402,6 +420,21 @@ label.option-card:hover {
 #helpModal .donate-icon {
   mask: url("../../resources/images/DonateTroopIconWhite.svg") no-repeat
     center / cover;
+}
+
+#helpModal .donate-gold-icon {
+  mask: url("../../resources/images/DonateGoldIconWhite.svg") no-repeat center /
+    cover;
+}
+
+#helpModal .emoji-icon {
+  mask: url("../../resources/images/EmojiIconWhite.svg") no-repeat center /
+    cover;
+}
+
+#helpModal .trade-icon {
+  mask: url("../../resources/images/helpModal/stoptradingbackgroundsquare.PNG")
+    no-repeat center / cover;
 }
 
 #helpModal .build-icon {
