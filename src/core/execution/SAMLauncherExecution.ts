@@ -135,10 +135,10 @@ export class SAMLauncherExecution implements Execution {
           unit.owner() !== this.player && !this.player.isFriendly(unit.owner()),
       )
       .filter((unit) => {
-        const dst = unit.detonationDst();
+        const dst = unit.targetTile();
         return (
           this.sam !== null &&
-          dst !== null &&
+          dst !== undefined &&
           this.mg.manhattanDist(dst, this.sam.tile()) <
             this.MIRVWarheadProtectionRadius
         );
@@ -149,19 +149,17 @@ export class SAMLauncherExecution implements Execution {
       target = this.getSingleTarget();
     }
 
-    if (
-      this.sam.isCooldown() &&
-      this.sam.ticksLeftInCooldown(this.mg.config().SAMCooldown()) === 0
-    ) {
-      this.sam.setCooldown(false);
+    if (this.sam.ticksLeftInCooldown() === 0) {
+      // Touch SAM to update sprite to show not in cooldown.
+      this.sam.touch();
     }
 
     const isSingleTarget = target && !target.targetedBySAM();
     if (
       (isSingleTarget || mirvWarheadTargets.length > 0) &&
-      !this.sam.isCooldown()
+      !this.sam.isInCooldown()
     ) {
-      this.sam.setCooldown(true);
+      this.sam.launch();
       const type =
         mirvWarheadTargets.length > 0 ? UnitType.MIRVWarhead : target?.type();
       if (type === undefined) throw new Error("Unknown unit type");
