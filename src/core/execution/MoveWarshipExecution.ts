@@ -4,7 +4,7 @@ const cancelDelay = 2;
 
 export class MoveWarshipExecution implements Execution {
   private active = true;
-  private mg: Game;
+  private mg: Game | null = null;
 
   constructor(
     public readonly unitId: number,
@@ -16,7 +16,10 @@ export class MoveWarshipExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    const warship = this.mg.units().find((u) => u.id() == this.unitId);
+    if (this.mg === null) {
+      throw new Error("Not initialized");
+    }
+    const warship = this.mg.units().find((u) => u.id() === this.unitId);
     if (!warship) {
       console.log("MoveWarshipExecution: warship is already dead");
       return;

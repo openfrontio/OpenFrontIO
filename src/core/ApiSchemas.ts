@@ -13,7 +13,7 @@ export const TokenPayloadSchema = z.object({
     .refine(
       (val) => {
         const uuid = base64urlToUuid(val);
-        return uuid != null;
+        return !!uuid;
       },
       {
         message: "Invalid base64-encoded UUID",
@@ -31,7 +31,7 @@ export const TokenPayloadSchema = z.object({
   rol: z
     .string()
     .optional()
-    .transform((val) => val.split(",")),
+    .transform((val) => (val ?? "").split(",")),
 });
 export type TokenPayload = z.infer<typeof TokenPayloadSchema>;
 

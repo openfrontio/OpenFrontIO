@@ -31,7 +31,6 @@ export class HostLobbyModal extends LitElement {
   @state() private disableNPCs = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: number | typeof Duos = 2;
-  @state() private disableNukes: boolean = false;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
@@ -40,9 +39,9 @@ export class HostLobbyModal extends LitElement {
   @state() private copySuccess = false;
   @state() private players: string[] = [];
   @state() private useRandomMap: boolean = false;
-  @state() private disabledUnits: string[] = [];
+  @state() private disabledUnits: UnitType[] = [];
 
-  private playersInterval = null;
+  private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
 
@@ -106,7 +105,7 @@ export class HostLobbyModal extends LitElement {
                               .selected=${!this.useRandomMap &&
                               this.selectedMap === mapValue}
                               .translation=${translateText(
-                                `map.${mapKey.toLowerCase()}`,
+                                `map.${mapKey?.toLowerCase()}`,
                               )}
                             ></map-display>
                           </div>
@@ -233,7 +232,7 @@ export class HostLobbyModal extends LitElement {
                 />
                 <div class="option-card-title">
                   <span>${translateText("host_modal.bots")}</span>${
-                    this.bots == 0
+                    this.bots === 0
                       ? translateText("host_modal.bots_disabled")
                       : this.bots
                   }
@@ -326,7 +325,7 @@ export class HostLobbyModal extends LitElement {
                     [UnitType.HydrogenBomb, "unit_type.hydrogen_bomb"],
                     [UnitType.MIRV, "unit_type.mirv"],
                   ].map(
-                    ([unitType, translationKey]) => html`
+                    ([unitType, translationKey]: [UnitType, string]) => html`
                       <label
                         class="option-card ${this.disabledUnits.includes(
                           unitType,
@@ -405,7 +404,7 @@ export class HostLobbyModal extends LitElement {
             }
           </button>
         </div>
-					
+
       </div>
     </o-modal>
     `;
@@ -503,10 +502,6 @@ export class HostLobbyModal extends LitElement {
     this.infiniteTroops = Boolean((e.target as HTMLInputElement).checked);
     this.putGameConfig();
   }
-  private handleDisableNukesChange(e: Event) {
-    this.disableNukes = Boolean((e.target as HTMLInputElement).checked);
-    this.putGameConfig();
-  }
 
   private async handleDisableNPCsChange(e: Event) {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
@@ -537,16 +532,14 @@ export class HostLobbyModal extends LitElement {
           gameMap: this.selectedMap,
           difficulty: this.selectedDifficulty,
           disableNPCs: this.disableNPCs,
-          disableNukes: this.disableNukes,
           bots: this.bots,
           infiniteGold: this.infiniteGold,
           infiniteTroops: this.infiniteTroops,
           instantBuild: this.instantBuild,
           gameMode: this.gameMode,
-          numPlayerTeams: this.teamCount,
           disabledUnits: this.disabledUnits,
           playerTeams: this.teamCount,
-        } as GameConfig),
+        } satisfies Partial<GameConfig>),
       },
     );
     return response;
@@ -607,7 +600,7 @@ export class HostLobbyModal extends LitElement {
       .then((response) => response.json())
       .then((data: GameInfo) => {
         console.log(`got game info response: ${JSON.stringify(data)}`);
-        this.players = data.clients.map((p) => p.username);
+        this.players = data.clients?.map((p) => p.username) ?? [];
       });
   }
 }

@@ -23,14 +23,14 @@ export class SAMLauncherExecution implements Execution {
   private MIRVWarheadSearchRadius = 400;
   private MIRVWarheadProtectionRadius = 50;
 
-  private pseudoRandom: PseudoRandom;
+  private pseudoRandom: PseudoRandom | undefined;
 
   constructor(
     private ownerId: PlayerID,
-    private tile: TileRef,
+    private tile: TileRef | null,
     private sam: Unit | null = null,
   ) {
-    if (sam != null) {
+    if (sam !== null) {
       this.tile = sam.tile();
     }
   }
@@ -46,6 +46,7 @@ export class SAMLauncherExecution implements Execution {
   }
 
   private getSingleTarget(): Unit | null {
+    if (this.sam === null) return null;
     const nukes = this.mg
       .nearbyUnits(this.sam.tile(), this.searchRangeRadius, [
         UnitType.AtomBomb,
@@ -80,11 +81,11 @@ export class SAMLauncherExecution implements Execution {
   }
 
   private isHit(type: UnitType, random: number): boolean {
-    if (type == UnitType.AtomBomb) {
+    if (type === UnitType.AtomBomb) {
       return true;
     }
 
-    if (type == UnitType.MIRVWarhead) {
+    if (type === UnitType.MIRVWarhead) {
       return random < this.mg.config().samWarheadHittingChance();
     }
 
@@ -92,9 +93,15 @@ export class SAMLauncherExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.sam == null) {
+    if (this.mg === null || this.player === null) {
+      throw new Error("Not initialized");
+    }
+    if (this.sam === null) {
+      if (this.tile === null) {
+        throw new Error("tile is null");
+      }
       const spawnTile = this.player.canBuild(UnitType.SAMLauncher, this.tile);
-      if (spawnTile == false) {
+      if (spawnTile === false) {
         consolex.warn("cannot build SAM Launcher");
         this.active = false;
         return;
@@ -108,11 +115,11 @@ export class SAMLauncherExecution implements Execution {
       return;
     }
 
-    if (this.player != this.sam.owner()) {
+    if (this.player !== this.sam.owner()) {
       this.player = this.sam.owner();
     }
 
-    if (!this.pseudoRandom) {
+    if (this.pseudoRandom === undefined) {
       this.pseudoRandom = new PseudoRandom(this.sam.id());
     }
 
@@ -127,20 +134,24 @@ export class SAMLauncherExecution implements Execution {
         (unit) =>
           unit.owner() !== this.player && !this.player.isFriendly(unit.owner()),
       )
-      .filter(
-        (unit) =>
-          this.mg.manhattanDist(unit.detonationDst(), this.sam.tile()) <
-          this.MIRVWarheadProtectionRadius,
-      );
+      .filter((unit) => {
+        const dst = unit.detonationDst();
+        return (
+          this.sam !== null &&
+          dst !== null &&
+          this.mg.manhattanDist(dst, this.sam.tile()) <
+            this.MIRVWarheadProtectionRadius
+        );
+      });
 
     let target: Unit | null = null;
-    if (mirvWarheadTargets.length == 0) {
+    if (mirvWarheadTargets.length === 0) {
       target = this.getSingleTarget();
     }
 
     if (
       this.sam.isCooldown() &&
-      this.sam.ticksLeftInCooldown(this.mg.config().SAMCooldown()) == 0
+      this.sam.ticksLeftInCooldown(this.mg.config().SAMCooldown()) === 0
     ) {
       this.sam.setCooldown(false);
     }
@@ -152,7 +163,8 @@ export class SAMLauncherExecution implements Execution {
     ) {
       this.sam.setCooldown(true);
       const type =
-        mirvWarheadTargets.length > 0 ? UnitType.MIRVWarhead : target.type();
+        mirvWarheadTargets.length > 0 ? UnitType.MIRVWarhead : target?.type();
+      if (type === undefined) throw new Error("Unknown unit type");
       const random = this.pseudoRandom.next();
       const hit = this.isHit(type, random);
       if (!hit) {
@@ -171,7 +183,7 @@ export class SAMLauncherExecution implements Execution {
           );
           // Delete warheads
           mirvWarheadTargets.forEach((u) => u.delete());
-        } else {
+        } else if (target !== null) {
           target.setTargetedBySAM(true);
           this.mg.addExecution(
             new SAMMissileExecution(
@@ -181,6 +193,8 @@ export class SAMLauncherExecution implements Execution {
               target,
             ),
           );
+        } else {
+          throw new Error("target is null");
         }
       }
     }

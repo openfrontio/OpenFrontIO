@@ -1,7 +1,11 @@
 name: 🧪 CI
 on: [push, pull_request]
+
+permissions: {}
+
 jobs:
   build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -19,6 +23,7 @@ jobs:
           path: out/index.html
           retention-days: 1
   test:
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

@@ -6,6 +6,7 @@ import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { BezenhamLine } from "../../../core/utilities/Line";
 import {
   AlternateViewEvent,
   MouseUpEvent,
@@ -31,11 +32,11 @@ export class UnitLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
   private transportShipTrailCanvas: HTMLCanvasElement;
-  private transportShipTrailContext: CanvasRenderingContext2D;
+  private unitTrailContext: CanvasRenderingContext2D;
 
-  private boatToTrail = new Map<UnitView, TileRef[]>();
+  private unitToTrail = new Map<UnitView, TileRef[]>();
 
-  private theme: Theme = null;
+  private theme: Theme;
 
   private alternateView = false;
 
@@ -66,7 +67,7 @@ export class UnitLayer implements Layer {
   }
 
   tick() {
-    if (this.myPlayer == null) {
+    if (this.myPlayer === null) {
       this.myPlayer = this.game.playerByClientID(this.clientID);
     }
 
@@ -95,7 +96,7 @@ export class UnitLayer implements Layer {
     const clickRef = this.game.ref(cell.x, cell.y);
 
     // Make sure we have the current player
-    if (this.myPlayer == null) {
+    if (this.myPlayer === null) {
       this.myPlayer = this.game.playerByClientID(this.clientID);
     }
 
@@ -188,10 +189,13 @@ export class UnitLayer implements Layer {
 
   redraw() {
     this.canvas = document.createElement("canvas");
-    this.context = this.canvas.getContext("2d");
+    const context = this.canvas.getContext("2d");
+    if (context === null) throw new Error("2d context not supported");
+    this.context = context;
     this.transportShipTrailCanvas = document.createElement("canvas");
-    this.transportShipTrailContext =
-      this.transportShipTrailCanvas.getContext("2d");
+    const trailContext = this.transportShipTrailCanvas.getContext("2d");
+    if (trailContext === null) throw new Error("2d context not supported");
+    this.unitTrailContext = trailContext;
 
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
@@ -200,7 +204,7 @@ export class UnitLayer implements Layer {
 
     this.updateUnitsSprites();
 
-    this.boatToTrail.forEach((trail, unit) => {
+    this.unitToTrail.forEach((trail, unit) => {
       for (const t of trail) {
         this.paintCell(
           this.game.x(t),
@@ -208,7 +212,7 @@ export class UnitLayer implements Layer {
           this.relationship(unit),
           this.theme.territoryColor(unit.owner()),
           150,
-          this.transportShipTrailContext,
+          this.unitTrailContext,
         );
       }
     });
@@ -217,15 +221,13 @@ export class UnitLayer implements Layer {
   private updateUnitsSprites() {
     const unitsToUpdate = this.game
       .updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id));
-    unitsToUpdate
-      ?.filter((UnitView) => isSpriteReady(UnitView.type()))
-      .forEach((unitView) => {
-        this.clearUnitCells(unitView);
+      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
+      ?.forEach((unitView) => {
+        if (unitView === undefined) return;
+        const ready = isSpriteReady(unitView.type());
+        if (ready) this.clearUnitCells(unitView);
+        this.onUnitEvent(unitView);
       });
-    unitsToUpdate?.forEach((unitView) => {
-      this.onUnitEvent(unitView);
-    });
   }
 
   private clearUnitCells(unit: UnitView) {
@@ -243,10 +245,10 @@ export class UnitLayer implements Layer {
   }
 
   private relationship(unit: UnitView): Relationship {
-    if (this.myPlayer == null) {
+    if (this.myPlayer === null) {
       return Relationship.Enemy;
     }
-    if (this.myPlayer == unit.owner()) {
+    if (this.myPlayer === unit.owner()) {
       return Relationship.Self;
     }
     if (this.myPlayer.isFriendly(unit.owner())) {
@@ -301,8 +303,8 @@ export class UnitLayer implements Layer {
 
     // Clear current and previous positions
     this.clearCell(this.game.x(unit.lastTile()), this.game.y(unit.lastTile()));
-    if (this.oldShellTile.has(unit)) {
-      const oldTile = this.oldShellTile.get(unit);
+    const oldTile = this.oldShellTile.get(unit);
+    if (oldTile !== undefined) {
       this.clearCell(this.game.x(oldTile), this.game.y(oldTile));
     }
 
@@ -333,8 +335,85 @@ export class UnitLayer implements Layer {
     this.drawSprite(unit);
   }
 
+  private drawTrail(trail: number[], color: Colord, rel: Relationship) {
+    // Paint new trail
+    for (const t of trail) {
+      this.paintCell(
+        this.game.x(t),
+        this.game.y(t),
+        rel,
+        color,
+        150,
+        this.unitTrailContext,
+      );
+    }
+  }
+
+  private clearTrail(unit: UnitView) {
+    const trail = this.unitToTrail.get(unit) ?? [];
+    const rel = this.relationship(unit);
+    for (const t of trail) {
+      this.clearCell(this.game.x(t), this.game.y(t), this.unitTrailContext);
+    }
+    this.unitToTrail.delete(unit);
+
+    // Repaint overlapping trails
+    const trailSet = new Set(trail);
+    for (const [other, trail] of this.unitToTrail) {
+      for (const t of trail) {
+        if (trailSet.has(t)) {
+          this.paintCell(
+            this.game.x(t),
+            this.game.y(t),
+            rel,
+            this.theme.territoryColor(other.owner()),
+            150,
+            this.unitTrailContext,
+          );
+        }
+      }
+    }
+  }
+
   private handleNuke(unit: UnitView) {
+    const rel = this.relationship(unit);
+
+    if (!this.unitToTrail.has(unit)) {
+      this.unitToTrail.set(unit, []);
+    }
+
+    let newTrailSize = 1;
+    const trail = this.unitToTrail.get(unit) ?? [];
+    // It can move faster than 1 pixel, draw a line for the trail or else it will be dotted
+    if (trail.length >= 1) {
+      const cur = {
+        x: this.game.x(unit.lastTile()),
+        y: this.game.y(unit.lastTile()),
+      };
+      const prev = {
+        x: this.game.x(trail[trail.length - 1]),
+        y: this.game.y(trail[trail.length - 1]),
+      };
+      const line = new BezenhamLine(prev, cur);
+      let point = line.increment();
+      while (point !== true) {
+        trail.push(this.game.ref(point.x, point.y));
+        point = line.increment();
+      }
+      newTrailSize = line.size();
+    } else {
+      trail.push(unit.lastTile());
+    }
+
+    this.drawTrail(
+      trail.slice(-newTrailSize),
+      this.theme.territoryColor(unit.owner()),
+      rel,
+    );
     this.drawSprite(unit);
+    if (!unit.isActive()) {
+      this.clearTrail(unit);
+    }
   }
 
   private handleMIRVWarhead(unit: UnitView) {
@@ -361,52 +440,22 @@ export class UnitLayer implements Layer {
   private handleBoatEvent(unit: UnitView) {
     const rel = this.relationship(unit);
 
-    if (!this.boatToTrail.has(unit)) {
-      this.boatToTrail.set(unit, []);
+    if (!this.unitToTrail.has(unit)) {
+      this.unitToTrail.set(unit, []);
     }
-    const trail = this.boatToTrail.get(unit);
+    const trail = this.unitToTrail.get(unit) ?? [];
     trail.push(unit.lastTile());
 
     // Paint trail
-    for (const t of trail.slice(-1)) {
-      this.paintCell(
-        this.game.x(t),
-        this.game.y(t),
-        rel,
-        this.theme.territoryColor(unit.owner()),
-        150,
-        this.transportShipTrailContext,
-      );
-    }
-
+    this.drawTrail(
+      trail.slice(-1),
+      this.theme.territoryColor(unit.owner()),
+      rel,
+    );
     this.drawSprite(unit);
 
     if (!unit.isActive()) {
-      for (const t of trail) {
-        this.clearCell(
-          this.game.x(t),
-          this.game.y(t),
-          this.transportShipTrailContext,
-        );
-      }
-      this.boatToTrail.delete(unit);
-
-      // Repaint overlapping trails
-      const trailSet = new Set(trail);
-      for (const [other, trail] of this.boatToTrail) {
-        for (const t of trail) {
-          if (trailSet.has(t)) {
-            this.paintCell(
-              this.game.x(t),
-              this.game.y(t),
-              rel,
-              this.theme.territoryColor(other.owner()),
-              150,
-              this.transportShipTrailContext,
-            );
-          }
-        }
-      }
+      this.clearTrail(unit);
     }
   }
 
@@ -449,15 +498,16 @@ export class UnitLayer implements Layer {
     const x = this.game.x(unit.tile());
     const y = this.game.y(unit.tile());
 
-    let alternateViewColor = null;
+    let alternateViewColor: Colord | null = null;
 
     if (this.alternateView) {
       let rel = this.relationship(unit);
-      if (unit.type() == UnitType.TradeShip && unit.dstPortId() != null) {
-        const target = this.game.unit(unit.dstPortId())?.owner();
+      const dstPortId = unit.dstPortId();
+      if (unit.type() === UnitType.TradeShip && dstPortId !== undefined) {
+        const target = this.game.unit(dstPortId)?.owner();
         const myPlayer = this.game.myPlayer();
-        if (myPlayer != null && target != null) {
-          if (myPlayer == target) {
+        if (myPlayer !== null && target !== undefined) {
+          if (myPlayer === target) {
             rel = Relationship.Self;
           } else if (myPlayer.isFriendly(target)) {
             rel = Relationship.Ally;
@@ -481,7 +531,7 @@ export class UnitLayer implements Layer {
       unit,
       this.theme,
       alternateViewColor ?? customTerritoryColor,
-      alternateViewColor,
+      alternateViewColor ?? undefined,
     );
 
     if (unit.isActive()) {

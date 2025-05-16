@@ -281,7 +281,7 @@ export class UserSettingModal extends LitElement {
               easter="true"
               @change=${(e: CustomEvent) => {
                 const value = e.detail?.value;
-                if (typeof value !== "undefined") {
+                if (value !== undefined) {
                   console.log("Changed:", value);
                 } else {
                   console.warn("Slider event missing detail.value", e);
@@ -300,7 +300,7 @@ export class UserSettingModal extends LitElement {
               easter="true"
               @change=${(e: CustomEvent) => {
                 const value = e.detail?.value;
-                if (typeof value !== "undefined") {
+                if (value !== undefined) {
                   console.log("Changed:", value);
                 } else {
                   console.warn("Slider event missing detail.value", e);
