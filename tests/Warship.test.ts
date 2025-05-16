@@ -58,6 +58,10 @@ describe("Warship", () => {
 
   test("Warship heals only if player has port", async () => {
     const maxHealth = game.config().unitInfo(UnitType.Warship).maxHealth;
+    if (typeof maxHealth !== "number") {
+      expect(typeof maxHealth).toBe("number");
+      throw new Error("unreachable");
+    }
 
     const port = player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
     const warship = player1.buildUnit(
@@ -86,6 +90,13 @@ describe("Warship", () => {
     // Warship need one more tick (for warship exec to actually build warship)
     game.executeNextTick();
     expect(player1.units(UnitType.Warship)).toHaveLength(1);
+    expect(player1.units(UnitType.Port)).toHaveLength(1);
+
+    const dstPort = player2.buildUnit(
+      UnitType.Port,
+      game.ref(coastX + 2, 10),
+      {},
+    );
 
     // Cannot buildExec with trade ship as it's not buildable (but
     // we can obviously directly add it to the player)
@@ -93,7 +104,7 @@ describe("Warship", () => {
       UnitType.TradeShip,
       game.ref(coastX + 1, 7),
       {
-        dstPort: null,
+        dstPort,
       },
     );
 
@@ -110,6 +121,8 @@ describe("Warship", () => {
     constructionExecution(game, player1.id(), coastX + 1, 10, UnitType.Warship);
     expect(player1.units(UnitType.Warship)).toHaveLength(1);
 
+    const [dstPort] = player1.units(UnitType.Port);
+
     player1.units(UnitType.Port)[0].delete();
     // Cannot buildExec with trade ship as it's not buildable (but
     // we can obviously directly add it to the player)
@@ -117,7 +130,7 @@ describe("Warship", () => {
       UnitType.TradeShip,
       game.ref(coastX + 1, 11),
       {
-        dstPort: null,
+        dstPort,
       },
     );
 

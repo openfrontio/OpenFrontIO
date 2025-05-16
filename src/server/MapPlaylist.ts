@@ -56,7 +56,7 @@ export class MapPlaylist {
       infiniteGold: false,
       infiniteTroops: false,
       instantBuild: false,
-      disableNPCs: mode == GameMode.Team,
+      disableNPCs: mode === GameMode.Team,
       disableNukes: false,
       gameMode: mode,
       playerTeams: numPlayerTeams,

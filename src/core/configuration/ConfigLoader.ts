@@ -7,11 +7,11 @@ import { DevConfig, DevServerConfig } from "./DevConfig";
 import { preprodConfig } from "./PreprodConfig";
 import { prodConfig } from "./ProdConfig";
 
-export let cachedSC: ServerConfig = null;
+export let cachedSC: ServerConfig | null = null;
 
 export async function getConfig(
   gameConfig: GameConfig,
-  userSettings: UserSettings | null = null,
+  userSettings: UserSettings | null,
   isReplay: boolean = false,
 ): Promise<Config> {
   const sc = await getServerConfigFromClient();
@@ -45,7 +45,7 @@ export async function getServerConfigFromClient(): Promise<ServerConfig> {
   return cachedSC;
 }
 export function getServerConfigFromServer(): ServerConfig {
-  const gameEnv = process.env.GAME_ENV;
+  const gameEnv = process.env.GAME_ENV ?? "dev";
   return getServerConfig(gameEnv);
 }
 export function getServerConfig(gameEnv: string) {

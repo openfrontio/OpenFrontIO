@@ -6,7 +6,7 @@ export const preprodConfig = new (class extends DefaultServerConfig {
     return GameEnv.Preprod;
   }
   numWorkers(): number {
-    return 3;
+    return 2;
   }
   jwtAudience(): string {
     return "openfront.dev";
