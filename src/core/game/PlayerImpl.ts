@@ -1,6 +1,5 @@
 import { renderNumber, renderTroops } from "../../client/Utils";
 import { consolex } from "../Consolex";
-import { AttackExecution } from "../execution/AttackExecution";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
@@ -947,7 +946,7 @@ export class PlayerImpl implements Player {
     target: Player | TerraNullius,
     troops: number,
     sourceTile: TileRef,
-    exec: AttackExecution,
+    averagePosition: Cell,
   ): Attack {
     const attack = new AttackImpl(
       this._pseudo_random.nextID(),
@@ -955,7 +954,7 @@ export class PlayerImpl implements Player {
       this,
       troops,
       sourceTile,
-      exec,
+      averagePosition,
     );
     this._outgoingAttacks.push(attack);
     if (target.isPlayer()) {

@@ -115,8 +115,14 @@ export class AttackExecution implements Execution {
       this.target,
       this.startTroops,
       this.sourceTile,
-      this,
+      this.averagePosition(),
     );
+
+    if (this.sourceTile != null) {
+      this.addNeighbors(this.sourceTile);
+    } else {
+      this.refreshToConquer();
+    }
 
     for (const incoming of this._owner.incomingAttacks()) {
       if (incoming.attacker() == this.target) {
@@ -144,12 +150,6 @@ export class AttackExecution implements Execution {
         this.attack.delete();
         return;
       }
-    }
-
-    if (this.sourceTile != null) {
-      this.addNeighbors(this.sourceTile);
-    } else {
-      this.refreshToConquer();
     }
 
     if (this.target.isPlayer()) {
@@ -296,6 +296,8 @@ export class AttackExecution implements Execution {
         ),
       );
     }
+
+    this.attack.updateAveragePosition(this.averagePosition());
   }
 
   private handleDeadDefender() {

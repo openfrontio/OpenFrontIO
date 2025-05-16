@@ -1,4 +1,3 @@
-import { AttackExecution } from "../execution/AttackExecution";
 import { Attack, Cell, Player, TerraNullius } from "./Game";
 import { TileRef } from "./GameMap";
 import { PlayerImpl } from "./PlayerImpl";
@@ -14,7 +13,7 @@ export class AttackImpl implements Attack {
     private _attacker: Player,
     private _troops: number,
     private _sourceTile: TileRef | null,
-    private _exec: AttackExecution,
+    private _averagePosition: Cell,
   ) {}
 
   sourceTile(): TileRef | null {
@@ -72,7 +71,11 @@ export class AttackImpl implements Attack {
     return this._retreated;
   }
 
+  updateAveragePosition(averagePosition: Cell): void {
+    this._averagePosition = averagePosition;
+  }
+
   averagePosition(): Cell {
-    return this._exec.averagePosition();
+    return this._averagePosition;
   }
 }
