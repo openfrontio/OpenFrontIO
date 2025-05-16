@@ -8,6 +8,9 @@
   "main": {
     "title": "OpenFront (ALFA)",
     "join_discord": "Word lid van de Discord!",
+    "login_discord": "Login met Discord",
+    "logged_in": "Ingelogd!",
+    "log_out": "Uitloggen",
     "create_lobby": "Lobby aanmaken",
     "join_lobby": "Lobby toetreden",
     "single_player": "Eén Speler",
@@ -98,6 +101,7 @@
     "infinite_gold": "Oneindig goud",
     "infinite_troops": "Oneindige troepen",
     "disable_nukes": "Kernwapens uitschakelen",
+    "enables_title": "Onderdelen inschakelen",
     "start": "Start Spel"
   },
   "map": {
@@ -122,7 +126,15 @@
     "betweentwoseas": "Tussen twee zeeën",
     "knownworld": "Bekende Wereld",
     "faroeislands": "Faeröer eilanden",
-    "europeclassic": "Europa (klassiek)"
+    "deglaciatedantarctica": "Ontdooid Antarctica",
+    "europeclassic": "Europa (klassiek)",
+    "falklandislands": "Falklandeilanden",
+    "baikal": "Baikalmeer"
+  },
+  "map_categories": {
+    "continental": "Continent",
+    "regional": "Regio",
+    "fantasy": "Overig"
   },
   "private_lobby": {
     "title": "Privélobby toetreden",
@@ -137,7 +149,8 @@
   },
   "public_lobby": {
     "join": "Deelnemen aan volgende Spel",
-    "waiting": "spelers wachten"
+    "waiting": "spelers wachten",
+    "teams": "{num} Teams"
   },
   "username": {
     "enter_username": "Voer je gebruikersnaam in",
@@ -157,7 +170,7 @@
     "instant_build": "Bouwwachttijd uitschakelen",
     "infinite_gold": "Oneindig goud",
     "infinite_troops": "Oneindige troepen",
-    "disable_nukes": "Kernwapens uitschakelen",
+    "enables_title": "Onderdelen inschakelen",
     "player": "Speler",
     "players": "Spelers",
     "waiting": "Wachten op spelers...",
@@ -181,6 +194,17 @@
   "select_lang": {
     "title": "Kies taal"
   },
+  "unit_type": {
+    "city": "Stad",
+    "defense_post": "Verdedigingspost",
+    "port": "Haven",
+    "warship": "Oorlogsschip",
+    "missile_silo": "Raketsilo",
+    "sam_launcher": "Luchtdoelraket (SAM)-lanceerder",
+    "atom_bomb": "Atoombom",
+    "hydrogen_bomb": "Waterstofbom",
+    "mirv": "MIRV"
+  },
   "user_setting": {
     "title": "Gebruikersinstellingen",
     "tab_basic": "Basisinstellingen",
@@ -188,7 +212,9 @@
     "dark_mode_label": "🌙 Donkere modus",
     "dark_mode_desc": "Schakel tussen lichte en donkere thema's voor de site",
     "emojis_label": "😊 Emoji's",
-    "emojis_desc": "Schakel het tonen van emoji's in de game uit/aan ",
+    "emojis_desc": "Schakel het tonen van emoji's in de game uit/aan",
+    "anonymous_names_label": "🥷 Verborgen namen",
+    "anonymous_names_desc": "Vervang echte spelersnamen door willekeurige namen op je scherm.",
     "left_click_label": "🖱️ Linkermuisknop voor openen menu",
     "left_click_desc": "AAN: linkermuisknop opent het radiale menu met zwaard-aanvalsknop. UIT: linkermuisklik valt direct aan.",
     "attack_ratio_label": "⚔️ Aanvalsverhouding",
@@ -196,7 +222,7 @@
     "troop_ratio_label": "🪖🛠️ Troepen en Werkers-verhouding",
     "troop_ratio_desc": "De balans tussen troepen (voor gevechten) en werkers (voor goudproductie) aanpassen (1-100%)",
     "easter_writing_speed_label": "Schrijfsnelheidsvermenigvuldiger",
-    "easter_writing_speed_desc": "Pas aan hoe snel je pretendeert te coderen (x1-x100)",
+    "easter_writing_speed_desc": "Pas aan hoe snel je pretendeert te programmeren (x1-x100)",
     "easter_bug_count_label": "Aantal bugs",
     "easter_bug_count_desc": "Hoeveel bugs je oké vindt (0-1000, gevoelsmatig)",
     "view_options": "Weergave-opties",
@@ -221,9 +247,77 @@
     "reset": "Resetten",
     "unbind": "Loskoppelen"
   },
-  "map_categories": {
-    "continental": "Continent",
-    "regional": "Regio",
-    "fantasy": "Overig"
+  "chat": {
+    "title": "Snelle Chat",
+    "to": "> Aan {user}: {msg}",
+    "from": "< Van {user}: {msg}",
+    "category": "Categorie",
+    "phrase": "Zin",
+    "player": "Speler",
+    "send": "Verzenden",
+    "search": "Zoek speler...",
+    "build": "Bouw je bericht op...",
+    "cat": {
+      "help": "Help",
+      "attack": "Val aan",
+      "defend": "Verdedig",
+      "greet": "Groet",
+      "misc": "Overig",
+      "warnings": "Waarschuw"
+    },
+    "help": {
+      "troops": "Geef me troepen alsjeblieft!",
+      "gold": "Geef me goud alsjeblieft!",
+      "no_attack": "Val me niet aan alsjeblieft!",
+      "sorry_attack": "Sorry, ik wilde je niet aanvallen.",
+      "alliance": "Bondgenoten worden?",
+      "help_defend": "Help me tegen [P1] te verdedigen!",
+      "team_up": "Laten we het opnemen tegen [P1]!"
+    },
+    "attack": {
+      "attack": "Val [P1] aan!",
+      "mirv": "Vuur een MIRV af op [P1]!",
+      "focus": "Vuur op [P1]!",
+      "finish": "Laten we [P1] uitschakelen!"
+    },
+    "defend": {
+      "defend": "Verdedig [P1]!",
+      "dont_attack": "Val [P1] niet aan!",
+      "ally": "[P1] is mijn bondgenoot!"
+    },
+    "greet": {
+      "hello": "Hoi",
+      "good_luck": "Succes!",
+      "have_fun": "Veel plezier!",
+      "gg": "GG!",
+      "nice_to_meet": "Leuk je te ontmoeten!",
+      "well_played": "Goed gespeeld!",
+      "hi_again": "Hoi weer!",
+      "bye": "Doei!",
+      "thanks": "Dank je!",
+      "oops": "Oeps, verkeerde knop!",
+      "trust_me": "Je kunt me vertrouwen. Echt!",
+      "trust_broken": "Ik vertrouwde je..."
+    },
+    "misc": {
+      "go": "Yes!",
+      "strategy": "Goeie strategie!",
+      "fun": "Dit spel is leuk!",
+      "pr": "Wanneer wordt mijn pull request eindelijk gemerged?"
+    },
+    "warnings": {
+      "strong": "[P1] is sterk.",
+      "weak": "[P1] is zwak.",
+      "mirv_soon": "[P1] kan bijna een MIRV lanceren!",
+      "number1_warning": "De #1 speler wint bijna als we niet samenwerken!",
+      "stalemate": "Vrede? Dit is een patstelling en anders verliezen we beide.",
+      "has_allies": "[P1] heeft veel bondgenoten.",
+      "no_allies": "[P1] heeft geen bondgenoten.",
+      "betrayed": "[P1] heeft een bondgenoot verraden!",
+      "getting_big": "[P1] wordt te snel groter!",
+      "danger_base": "[P1] is onbeschermd!",
+      "saving_for_mirv": "[P1] spaart voor een MIRV.",
+      "mirv_ready": "[P1] heeft genoeg goud om een MIRV te lanceren!"
+    }
   }
 }

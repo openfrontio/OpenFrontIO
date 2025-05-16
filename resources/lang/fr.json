@@ -7,7 +7,10 @@
   },
   "main": {
     "title": "OpenFront (ALPHA)",
-    "join_discord": "Rejoignez le Discord!",
+    "join_discord": "Rejoignez le Discord !",
+    "login_discord": "Se connecter avec Discord",
+    "logged_in": "Connecté !",
+    "log_out": "Se déconnecter",
     "create_lobby": "Créer un salon",
     "join_lobby": "Rejoindre un salon",
     "single_player": "Mode solo",
@@ -98,6 +101,7 @@
     "infinite_gold": "Or infini",
     "infinite_troops": "Troupes infinies",
     "disable_nukes": "Désactiver les armes nucléaires",
+    "enables_title": "Activer les paramètres",
     "start": "Commencer la partie"
   },
   "map": {
@@ -122,7 +126,15 @@
     "betweentwoseas": "Entre deux mers",
     "knownworld": "Monde connu",
     "faroeislands": "Îles Féroé",
-    "europeclassic": "Europe (classique)"
+    "deglaciatedantarctica": "Antarctique Déglacée",
+    "europeclassic": "Europe (classique)",
+    "falklandislands": "Îles Malouines",
+    "baikal": "Lac Baïkal"
+  },
+  "map_categories": {
+    "continental": "Continental",
+    "regional": "Régional",
+    "fantasy": "Autre"
   },
   "private_lobby": {
     "title": "Rejoindre un salon privé",
@@ -137,7 +149,8 @@
   },
   "public_lobby": {
     "join": "Rejoindre la prochaine partie",
-    "waiting": "joueurs en attente"
+    "waiting": "joueurs en attente",
+    "teams": "{num} équipes"
   },
   "username": {
     "enter_username": "Entrez votre nom d'utilisateur",
@@ -157,7 +170,7 @@
     "instant_build": "Construction instantanée",
     "infinite_gold": "Or infini",
     "infinite_troops": "Troupes infinies",
-    "disable_nukes": "Désactiver les armes nucléaires",
+    "enables_title": "Activer les paramètres",
     "player": "Joueur",
     "players": "Joueurs",
     "waiting": "En attente de joueurs...",
@@ -181,6 +194,17 @@
   "select_lang": {
     "title": "Sélectionner une langue"
   },
+  "unit_type": {
+    "city": "Ville",
+    "defense_post": "Poste de défense",
+    "port": "Port",
+    "warship": "Navire de guerre",
+    "missile_silo": "Silo à missiles",
+    "sam_launcher": "Lanceur de SAM",
+    "atom_bomb": "Bombe atomique",
+    "hydrogen_bomb": "Bombe à hydrogène",
+    "mirv": "MIRV"
+  },
   "user_setting": {
     "title": "Paramètres utilisateur",
     "tab_basic": "Réglages de base",
@@ -189,6 +213,8 @@
     "dark_mode_desc": "Basculer l'apparence du site entre les thèmes clairs et sombres",
     "emojis_label": "😊 Émojis",
     "emojis_desc": "Afficher/Masquer les émoticônes dans le jeu",
+    "anonymous_names_label": "🥷 Noms masqués",
+    "anonymous_names_desc": "Cacher le vrai nom des joueurs avec des noms aléatoires sur votre écran.",
     "left_click_label": "🖱️ Clic gauche pour ouvrir le menu",
     "left_click_desc": "Activé, un clic gauche ouvre le menu et le bouton épée d'attaque. Désactivé, un clic gauche attaque directement.",
     "attack_ratio_label": "⚔️ Ratio d'attaque",
@@ -221,9 +247,77 @@
     "reset": "Réinitialiser",
     "unbind": "Détacher"
   },
-  "map_categories": {
-    "continental": "Continental",
-    "regional": "Régional",
-    "fantasy": "Autre"
+  "chat": {
+    "title": "Discussion",
+    "to": "Envoyé à {user}: {msg}",
+    "from": "De {user}: {msg}",
+    "category": "Catégorie",
+    "phrase": "Phrase",
+    "player": "Joueur",
+    "send": "Envoyer",
+    "search": "Rechercher un joueur...",
+    "build": "Construire votre message...",
+    "cat": {
+      "help": "Aide",
+      "attack": "Attaque",
+      "defend": "Défense",
+      "greet": "Salutations",
+      "misc": "Divers",
+      "warnings": "Avertissements"
+    },
+    "help": {
+      "troops": "S'il te plaît, donne-moi des troupes !",
+      "gold": "S'il te plaît, donne-moi de l'or !",
+      "no_attack": "S'il te plaît, ne m'attaque pas !",
+      "sorry_attack": "Désolé, je ne voulais pas attaquer.",
+      "alliance": "Alliance ?",
+      "help_defend": "Aide-moi à me défendre contre [P1] !",
+      "team_up": "Faisons équipe contre [P1] !"
+    },
+    "attack": {
+      "attack": "Attaque [P1] !",
+      "mirv": "Lance un MIRV sur [P1] !",
+      "focus": "Concentre l'attaque sur [P1] !",
+      "finish": "Finissons [P1] !"
+    },
+    "defend": {
+      "defend": "Défend [P1] !",
+      "dont_attack": "N'attaque pas [P1] !",
+      "ally": "[P1] est mon allié !"
+    },
+    "greet": {
+      "hello": "Bonjour !",
+      "good_luck": "Bonne chance !",
+      "have_fun": "Amuse-toi bien !",
+      "gg": "GG !",
+      "nice_to_meet": "Enchanté·e !",
+      "well_played": "Bien joué !",
+      "hi_again": "Rebonjour !",
+      "bye": "Au revoir !",
+      "thanks": "Merci !",
+      "oops": "Oups, mauvais bouton !",
+      "trust_me": "Tu peux me faire confiance. Promis !",
+      "trust_broken": "Je t'ai fait confiance..."
+    },
+    "misc": {
+      "go": "C'est parti !",
+      "strategy": "Bonne stratégie !",
+      "fun": "Cette partie est amusante !",
+      "pr": "Quand est-ce que mon PR sera intégré...?"
+    },
+    "warnings": {
+      "strong": "[P1] est fort·e.",
+      "weak": "[P1] est faible.",
+      "mirv_soon": "[P1] peut bientôt lancer un MIRV !",
+      "number1_warning": "Le joueur #1 gagnera bientôt si nous ne faisons pas équipe !",
+      "stalemate": "Faisons la paix. C'est une impasse, nous perdrons tous les deux.",
+      "has_allies": "[P1] a beaucoup d'alliés.",
+      "no_allies": "[P1] n'a pas d'alliés.",
+      "betrayed": "[P1] a trahi son allié !",
+      "getting_big": "[P1] croît trop vite !",
+      "danger_base": "[P1] n'est pas protégé !",
+      "saving_for_mirv": "[P1] économise pour lancer un MIRV.",
+      "mirv_ready": "[P1] a assez d'or pour lancer un MIRV !"
+    }
   }
 }

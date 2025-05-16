@@ -16,7 +16,7 @@ export class GameManager {
   }
 
   public game(id: GameID): GameServer | null {
-    return this.games.get(id);
+    return this.games.get(id) ?? null;
   }
 
   addClient(client: Client, gameID: GameID, lastTurn: number): boolean {
@@ -62,7 +62,7 @@ export class GameManager {
     const active = new Map<GameID, GameServer>();
     for (const [id, game] of this.games) {
       const phase = game.phase();
-      if (phase == GamePhase.Active) {
+      if (phase === GamePhase.Active) {
         if (!game.hasStarted()) {
           // Prestart tells clients to start loading the game.
           game.prestart();
@@ -77,7 +77,7 @@ export class GameManager {
         }
       }
 
-      if (phase == GamePhase.Finished) {
+      if (phase === GamePhase.Finished) {
         try {
           game.end();
         } catch (error) {

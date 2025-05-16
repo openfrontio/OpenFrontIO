@@ -1,17 +1,19 @@
 import express, { NextFunction, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import http from "http";
+import ipAnonymize from "ip-anonymize";
 import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
-import { GameConfig, GameRecord } from "../core/Schemas";
+import { ClientMessageSchema, GameConfig, GameRecord } from "../core/Schemas";
 import { archive, readGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
+import { verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
@@ -33,7 +35,7 @@ export function startWorker() {
 
   const gm = new GameManager(config, log);
 
-  if (config.env() == GameEnv.Prod && config.otelEnabled()) {
+  if (config.env() === GameEnv.Prod && config.otelEnabled()) {
     initWorkerMetrics(gm);
   }
 
@@ -78,19 +80,20 @@ export function startWorker() {
       const id = req.params.id;
       if (!id) {
         log.warn(`cannot create game, id not found`);
-        return;
+        return res.status(400).json({ error: "Game ID is required" });
       }
-      // TODO: if game is public make sure request came from localhohst!!!
       const clientIP = req.ip || req.socket.remoteAddress || "unknown";
       const gc = req.body?.gameConfig as GameConfig;
       if (
-        gc?.gameType == GameType.Public &&
+        gc?.gameType === GameType.Public &&
         req.headers[config.adminHeader()] !== config.adminToken()
       ) {
         log.warn(
-          `cannot create public game ${id}, ip ${clientIP} incorrect admin token`,
+          `cannot create public game ${id}, ip ${ipAnonymize(clientIP)} incorrect admin token`,
         );
-        return res.status(400);
+        return res
+          .status(400)
+          .json({ error: "Invalid admin token for public game creation" });
       }
 
       // Double-check this worker should host this game
@@ -99,13 +102,13 @@ export function startWorker() {
         log.warn(
           `This game ${id} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
         );
-        return res.status(400);
+        return res.status(400).json({ error: "Worker, game id mismatch" });
       }
 
       const game = gm.createGame(id, gc);
 
       log.info(
-        `Worker ${workerId}: IP ${clientIP} creating game ${game.isPublic() ? "Public" : "Private"} with id ${id}`,
+        `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating game ${game.isPublic() ? "Public" : "Private"} with id ${id}`,
       );
       res.json(game.gameInfo());
     }),
@@ -123,7 +126,7 @@ export function startWorker() {
       if (game.isPublic()) {
         const clientIP = req.ip || req.socket.remoteAddress || "unknown";
         log.info(
-          `cannot start public game ${game.id}, game is public, ip: ${clientIP}`,
+          `cannot start public game ${game.id}, game is public, ip: ${ipAnonymize(clientIP)}`,
         );
         return;
       }
@@ -137,22 +140,26 @@ export function startWorker() {
     gatekeeper.httpHandler(LimiterType.Put, async (req, res) => {
       // TODO: only update public game if from local host
       const lobbyID = req.params.id;
-      if (req.body.gameType == GameType.Public) {
+      if (req.body.gameType === GameType.Public) {
         log.info(`cannot update game ${lobbyID} to public`);
-        return res.status(400);
+        return res.status(400).json({ error: "Cannot update public game" });
       }
       const game = gm.game(lobbyID);
       if (!game) {
-        return res.status(400);
+        return res.status(400).json({ error: "Game not found" });
       }
       if (game.isPublic()) {
         const clientIP = req.ip || req.socket.remoteAddress || "unknown";
-        log.warn(`cannot update public game ${game.id}, ip: ${clientIP}`);
-        return res.status(400);
+        log.warn(
+          `cannot update public game ${game.id}, ip: ${ipAnonymize(clientIP)}`,
+        );
+        return res.status(400).json({ error: "Cannot update public game" });
       }
       if (game.hasStarted()) {
         log.warn(`cannot update game ${game.id} after it has started`);
-        return res.status(400);
+        return res
+          .status(400)
+          .json({ error: "Cannot update game after it has started" });
       }
       game.updateGameConfig({
         gameMap: req.body.gameMap,
@@ -175,7 +182,7 @@ export function startWorker() {
     gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
       const lobbyId = req.params.id;
       res.json({
-        exists: gm.game(lobbyId) != null,
+        exists: gm.game(lobbyId) !== null,
       });
     }),
   );
@@ -184,7 +191,7 @@ export function startWorker() {
     "/api/game/:id",
     gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
       const game = gm.game(req.params.id);
-      if (game == null) {
+      if (game === null) {
         log.info(`lobby ${req.params.id} not found`);
         return res.status(404).json({ error: "Game not found" });
       }
@@ -206,8 +213,8 @@ export function startWorker() {
       }
 
       if (
-        config.env() != GameEnv.Dev &&
-        gameRecord.gitCommit != config.gitCommit()
+        config.env() !== GameEnv.Dev &&
+        gameRecord.gitCommit !== config.gitCommit()
       ) {
         log.warn(
           `git commit mismatch for game ${req.params.id}, expected ${config.gitCommit()}, got ${gameRecord.gitCommit}`,
@@ -250,6 +257,27 @@ export function startWorker() {
     }),
   );
 
+  app.post(
+    "/api/kick_player/:gameID/:clientID",
+    gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
+      if (req.headers[config.adminHeader()] !== config.adminToken()) {
+        res.status(401).send("Unauthorized");
+        return;
+      }
+
+      const { gameID, clientID } = req.params;
+
+      const game = gm.game(gameID);
+      if (!game) {
+        res.status(404).send("Game not found");
+        return;
+      }
+
+      game.kickClient(clientID);
+      res.status(200).send("Player kicked successfully");
+    }),
+  );
+
   // WebSocket handling
   wss.on("connection", (ws: WebSocket, req) => {
     ws.on(
@@ -263,9 +291,11 @@ export function startWorker() {
         try {
           // Process WebSocket messages as in your original code
           // Parse and handle client messages
-          const clientMsg = JSON.parse(message.toString());
+          const clientMsg = ClientMessageSchema.parse(
+            JSON.parse(message.toString()),
+          );
 
-          if (clientMsg.type == "join") {
+          if (clientMsg.type === "join") {
             // Verify this worker should handle this game
             const expectedWorkerId = config.workerIndex(clientMsg.gameID);
             if (expectedWorkerId !== workerId) {
@@ -275,10 +305,16 @@ export function startWorker() {
               return;
             }
 
+            const { persistentId, claims } = await verifyClientToken(
+              clientMsg.token,
+              config,
+            );
+
             // Create client and add to game
             const client = new Client(
               clientMsg.clientID,
-              clientMsg.persistentID,
+              persistentId,
+              claims ?? null,
               ip,
               clientMsg.username,
               ws,
@@ -302,7 +338,7 @@ export function startWorker() {
           // Handle other message types
         } catch (error) {
           log.warn(
-            `error handling websocket message for ${ip}: ${error}`.substring(
+            `error handling websocket message for ${ipAnonymize(ip)}: ${error}`.substring(
               0,
               250,
             ),

@@ -24,13 +24,14 @@ export class SpawnTimer implements Layer {
     this.ratios = [];
     this.colors = [];
 
-    if (this.game.config().gameConfig().gameMode != GameMode.Team) {
+    if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
       return;
     }
 
     const teamTiles: Map<Team, number> = new Map();
     for (const player of this.game.players()) {
       const team = player.team();
+      if (team === null) throw new Error("Team is null");
       const tiles = teamTiles.get(team) ?? 0;
       const sum = tiles + player.numTilesOwned();
       teamTiles.set(team, sum);

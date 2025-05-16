@@ -123,7 +123,7 @@ export class SerialAStar implements AStar {
   private expandTileRef(current: TileRef, isForward: boolean) {
     for (const neighbor of this.gameMap.neighbors(current)) {
       if (
-        neighbor != (isForward ? this.dst : this.closestSource) &&
+        neighbor !== (isForward ? this.dst : this.closestSource) &&
         !this.gameMap.isWater(neighbor)
       )
         continue;

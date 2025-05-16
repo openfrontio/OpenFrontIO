@@ -34,6 +34,8 @@ on:
     branches:
       - "*"
 
+permissions: {}
+
 jobs:
   deploy:
     # Don't deploy on push if this is a fork
@@ -48,20 +50,13 @@ jobs:
       || 'openfront.dev'
       }}
     runs-on: ubuntu-latest
-    environment: ${{
-      github.event_name == 'push'
-      && (github.ref_name == 'main' && 'openfront.dev'
-      || format('{0}.openfront.dev', github.ref_name))
-      || inputs.target_subdomain && format('{0}.{1}', inputs.target_subdomain, inputs.target_domain)
-      || inputs.target_domain
-      || 'openfront.dev'
-      }}
+    environment: ${{ inputs.target_domain == 'openfront.io' && 'prod' || '' }}
     env:
       DOMAIN: ${{ inputs.target_domain || 'openfront.dev' }}
       SUBDOMAIN: ${{ github.event_name == 'push' && github.ref_name || inputs.target_subdomain || 'main' }}
     steps:
       - uses: actions/checkout@v4
-      - name: 📝 Update deployment status
+      - name: 📝 Update job summary
         env:
           FQDN: ${{ env.SUBDOMAIN && format('{0}.{1}', env.SUBDOMAIN, env.DOMAIN) || env.DOMAIN || 'openfront.dev' }}
         run: |
@@ -71,6 +66,26 @@ jobs:
 
           Deploying from $GITHUB_REF to $FQDN
           EOF
+      - uses: actions/create-github-app-token@v2
+        id: generate-token
+        if: ${{ github.repository == 'openfrontio/OpenFrontIO' }}
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+      - name: Export the token
+        if: ${{ github.repository == 'openfrontio/OpenFrontIO' }}
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: |
+          echo "GH_TOKEN=$GH_TOKEN" >> $GITHUB_ENV
+          gh api octocat
+      - name: 📝 Create deployment
+        uses: chrnorm/deployment-action@v2
+        id: deployment
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+          environment-url: https://${{ env.FQDN }}
+          environment: ${{ env.FQDN }}
       - name: 🔗 Log in to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -80,14 +95,12 @@ jobs:
         env:
           SERVER_HOST_EU: ${{ secrets.SERVER_HOST_EU }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
-          SERVER_HOST_US: ${{ secrets.SERVER_HOST_US }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           set -euxo pipefail
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
           test -n "$SERVER_HOST_STAGING" && ssh-keyscan -H "$SERVER_HOST_STAGING" >> ~/.ssh/known_hosts
-          test -n "$SERVER_HOST_US" && ssh-keyscan -H "$SERVER_HOST_US" >> ~/.ssh/known_hosts
           test -n "$SERVER_HOST_EU" && ssh-keyscan -H "$SERVER_HOST_EU" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - name: 🚢 Deploy
@@ -109,7 +122,6 @@ jobs:
           R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
           SERVER_HOST_EU: ${{ secrets.SERVER_HOST_EU }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
-          SERVER_HOST_US: ${{ secrets.SERVER_HOST_US }}
           SSH_KEY: ~/.ssh/id_rsa
           VERSION_TAG: latest
         run: |
@@ -130,26 +142,15 @@ jobs:
           done
           echo "Deployment started in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
           echo "::endgroup::"
-      - name: 🚀 Notify PR
-        if: ${{ success() && github.event_name == 'push'
-          && github.repository != 'openfrontio/OpenFrontIO'
-          }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euxo pipefail
-          if [ -z "$GH_TOKEN" ]; then
-            echo "No GH_TOKEN found, skipping"
-            exit 0;
-          fi
-          echo "Checking for open PR from $GITHUB_HEAD_REF..."
-          pr_url=$(gh pr list --head "$GITHUB_HEAD_REF" --state open --json url -q '.[0].url')
-          if [ -z "$pr_url" ]; then
-            echo "No open PR found for branch $GITHUB_HEAD_REF"
-            exit 0;
-          fi
-          gh pr comment "$pr_url" --body "🚀 Deployed ${GITHUB_SHA} to [$FQDN](https://$FQDN)."
       - name: ✅ Update deployment status
+        if: success()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+          environment-url: https://${{ env.FQDN }}
+          state: success
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+      - name: ✅ Update job summary
         if: success()
         run: |
           cat <<EOF >> $GITHUB_STEP_SUMMARY
@@ -158,6 +159,14 @@ jobs:
           Deployed from $GITHUB_REF to $FQDN
           EOF
       - name: ❌ Update deployment status
+        if: failure()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+          environment-url: https://${{ env.FQDN }}
+          state: failure
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+      - name: ❌ Update job summary
         if: failure()
         run: |
           cat <<EOF >> $GITHUB_STEP_SUMMARY

@@ -1,12 +1,14 @@
 import africa from "../../../resources/maps/AfricaThumb.webp";
 import asia from "../../../resources/maps/AsiaThumb.webp";
 import australia from "../../../resources/maps/AustraliaThumb.webp";
+import baikal from "../../../resources/maps/BaikalThumb.webp";
 import betweenTwoSeas from "../../../resources/maps/BetweenTwoSeasThumb.webp";
 import blackSea from "../../../resources/maps/BlackSeaThumb.webp";
 import britannia from "../../../resources/maps/BritanniaThumb.webp";
 import deglaciatedAntarctica from "../../../resources/maps/DeglaciatedAntarcticaThumb.webp";
 import europeClassic from "../../../resources/maps/EuropeClassicThumb.webp";
 import europe from "../../../resources/maps/EuropeThumb.webp";
+import falklandislands from "../../../resources/maps/FalklandIslandsThumb.webp";
 import faroeislands from "../../../resources/maps/FaroeIslandsThumb.webp";
 import gatewayToTheAtlantic from "../../../resources/maps/GatewayToTheAtlanticThumb.webp";
 import iceland from "../../../resources/maps/IcelandThumb.webp";
@@ -66,6 +68,10 @@ export function getMapsImage(map: GameMapType): string {
       return faroeislands;
     case GameMapType.DeglaciatedAntarctica:
       return deglaciatedAntarctica;
+    case GameMapType.FalklandIslands:
+      return falklandislands;
+    case GameMapType.Baikal:
+      return baikal;
     default:
       return "";
   }

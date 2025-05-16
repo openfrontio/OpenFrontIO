@@ -103,7 +103,7 @@ export async function startMaster() {
         setInterval(
           () =>
             fetchLobbies().then((lobbies) => {
-              if (lobbies == 0) {
+              if (lobbies === 0) {
                 scheduleLobbies();
               }
             }),
@@ -160,8 +160,41 @@ app.get(
   }),
 );
 
+app.post(
+  "/api/kick_player/:gameID/:clientID",
+  gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
+    if (req.headers[config.adminHeader()] !== config.adminToken()) {
+      res.status(401).send("Unauthorized");
+      return;
+    }
+
+    const { gameID, clientID } = req.params;
+
+    try {
+      const response = await fetch(
+        `http://localhost:${config.workerPort(gameID)}/api/kick_player/${gameID}/${clientID}`,
+        {
+          method: "POST",
+          headers: {
+            [config.adminHeader()]: config.adminToken(),
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to kick player: ${response.statusText}`);
+      }
+
+      res.status(200).send("Player kicked successfully");
+    } catch (error) {
+      log.error(`Error kicking player from game ${gameID}:`, error);
+      res.status(500).send("Failed to kick player");
+    }
+  }),
+);
+
 async function fetchLobbies(): Promise<number> {
-  const fetchPromises = [];
+  const fetchPromises: Promise<GameInfo | null>[] = [];
 
   for (const gameID of publicLobbyIDs) {
     const controller = new AbortController();
@@ -200,8 +233,26 @@ async function fetchLobbies(): Promise<number> {
     });
 
   lobbyInfos.forEach((l) => {
-    if (l.msUntilStart <= 250 || l.gameConfig.maxPlayers <= l.numClients) {
+    if (
+      "msUntilStart" in l &&
+      l.msUntilStart !== undefined &&
+      l.msUntilStart <= 250
+    ) {
       publicLobbyIDs.delete(l.gameID);
+      return;
+    }
+
+    if (
+      "gameConfig" in l &&
+      l.gameConfig !== undefined &&
+      "maxPlayers" in l.gameConfig &&
+      l.gameConfig.maxPlayers !== undefined &&
+      "numClients" in l &&
+      l.numClients !== undefined &&
+      l.gameConfig.maxPlayers <= l.numClients
+    ) {
+      publicLobbyIDs.delete(l.gameID);
+      return;
     }
   });
 

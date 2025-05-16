@@ -44,6 +44,8 @@ const MAP_FILE_NAMES: Record<GameMapType, string> = {
   [GameMapType.FaroeIslands]: "FaroeIslands",
   [GameMapType.DeglaciatedAntarctica]: "DeglaciatedAntarctica",
   [GameMapType.EuropeClassic]: "EuropeClassic",
+  [GameMapType.FalklandIslands]: "FalklandIslands",
+  [GameMapType.Baikal]: "Baikal",
 };
 
 class GameMapLoader {

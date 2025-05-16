@@ -29,6 +29,7 @@ export enum GameUpdateType {
   Unit,
   Player,
   DisplayEvent,
+  DisplayChatEvent,
   AllianceRequest,
   AllianceRequestReply,
   BrokeAlliance,
@@ -37,6 +38,7 @@ export enum GameUpdateType {
   Emoji,
   Win,
   Hash,
+  UnitIncoming,
 }
 
 export type GameUpdate =
@@ -48,10 +50,12 @@ export type GameUpdate =
   | BrokeAllianceUpdate
   | AllianceExpiredUpdate
   | DisplayMessageUpdate
+  | DisplayChatMessageUpdate
   | TargetPlayerUpdate
   | EmojiUpdate
   | WinUpdate
-  | HashUpdate;
+  | HashUpdate
+  | UnitIncomingUpdate;
 
 export interface TileUpdateWrapper {
   type: GameUpdateType.Tile;
@@ -64,6 +68,7 @@ export interface UnitUpdate {
   troops: number;
   id: number;
   ownerID: number;
+  lastOwnerID?: number;
   // TODO: make these tilerefs
   pos: TileRef;
   lastPos: TileRef;
@@ -87,8 +92,8 @@ export interface AttackUpdate {
 export interface PlayerUpdate {
   type: GameUpdateType.Player;
   nameViewData?: NameViewData;
-  clientID: ClientID;
-  flag: string;
+  clientID: ClientID | null;
+  flag: string | undefined;
   name: string;
   displayName: string;
   id: PlayerID;
@@ -157,6 +162,16 @@ export interface DisplayMessageUpdate {
   playerID: number | null;
 }
 
+export type DisplayChatMessageUpdate = {
+  type: GameUpdateType.DisplayChatEvent;
+  key: string;
+  category: string;
+  variables?: Record<string, string>;
+  playerID: number | null;
+  isFrom: boolean;
+  recipient: string;
+};
+
 export interface WinUpdate {
   type: GameUpdateType.Win;
   allPlayersStats: AllPlayersStats;
@@ -169,4 +184,12 @@ export interface HashUpdate {
   type: GameUpdateType.Hash;
   tick: Tick;
   hash: number;
+}
+
+export interface UnitIncomingUpdate {
+  type: GameUpdateType.UnitIncoming;
+  unitID: number;
+  message: string;
+  messageType: MessageType;
+  playerID: number;
 }
