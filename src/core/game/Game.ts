@@ -63,6 +63,7 @@ export enum GameMapType {
   BlackSea = "Black Sea",
   Africa = "Africa",
   Pangaea = "Pangaea",
+  terrain_map = "Terrain Map",
   Asia = "Asia",
   Mars = "Mars",
   Britannia = "Britannia",
@@ -101,6 +102,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.FaroeIslands,
     GameMapType.FalklandIslands,
     GameMapType.Baikal,
+    GameMapType.terrain_map
   ],
   fantasy: [
     GameMapType.Pangaea,

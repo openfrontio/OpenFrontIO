@@ -21,6 +21,7 @@ import oceania from "../../../resources/maps/OceaniaThumb.webp";
 import pangaea from "../../../resources/maps/PangaeaThumb.webp";
 import southAmerica from "../../../resources/maps/SouthAmericaThumb.webp";
 import world from "../../../resources/maps/WorldMapThumb.webp";
+import terrain_map from "../../../resources/maps/terrain_mapThumb.webp";
 
 import { GameMapType } from "../../core/game/Game";
 
@@ -72,6 +73,8 @@ export function getMapsImage(map: GameMapType): string {
       return falklandislands;
     case GameMapType.Baikal:
       return baikal;
+      case GameMapType.terrain_map:
+      return terrain_map;
     default:
       return "";
   }

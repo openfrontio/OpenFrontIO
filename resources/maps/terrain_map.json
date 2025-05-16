@@ -1,0 +1,27 @@
+{
+  "name": "terrain_map",
+  "mapInfoState": {
+    "width": 2605,
+    "height": 1543,
+    "originalWidth": 0,
+    "originalHeight": 0,
+    "cropData": {
+      "isCropped": false,
+      "cropX": 0,
+      "cropY": 0,
+      "cropWidth": 0,
+      "cropHeight": 0,
+      "originalWidth": 0,
+      "originalHeight": 0
+    },
+    "colorMappings": []
+  },
+  "nations": [
+    {
+      "coordinates": [383, 562],
+      "name": "Abbasid Caliphate",
+      "strength": 1,
+      "flag": "library:Abbasid Caliphate"
+    }
+  ]
+}

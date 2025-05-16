@@ -14,6 +14,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   BlackSea: "Black Sea",
   Africa: "Africa",
   Pangaea: "Pangaea",
+  terrain_map: "Terrain Map",
   Asia: "Asia",
   Mars: "Mars",
   SouthAmerica: "South America",

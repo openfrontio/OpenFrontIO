@@ -75,10 +75,12 @@ export async function generateMap(
 
 async function createMiniMap(tm: Terrain[][]): Promise<Terrain[][]> {
   // Create 2D array properly with correct dimensions
-  const miniMap: Terrain[][] = Array(Math.floor(tm.length / 2))
-    .fill(null)
-    .map(() => Array(Math.floor(tm[0].length / 2)).fill(null));
+  const miniMap: Terrain[][] = Array.from({ length: Math.ceil(tm.length / 2) }, () =>
+  Array(Math.ceil(tm[0].length / 2)).fill(null),
+);
 
+
+  
   for (let x = 0; x < tm.length; x++) {
     for (let y = 0; y < tm[0].length; y++) {
       const miniX = Math.floor(x / 2);
