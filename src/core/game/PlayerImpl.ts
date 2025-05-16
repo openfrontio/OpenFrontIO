@@ -154,8 +154,8 @@ export class PlayerImpl implements Player {
           troops: a.troops(),
           id: a.id(),
           retreating: a.retreating(),
-          averagePositionX: averagePos.x,
-          averagePositionY: averagePos.y,
+          averagePositionX: averagePos?.x,
+          averagePositionY: averagePos?.y,
         } as AttackUpdate;
       }),
       incomingAttacks: this._incomingAttacks.map((a) => {
@@ -166,8 +166,8 @@ export class PlayerImpl implements Player {
           troops: a.troops(),
           id: a.id(),
           retreating: a.retreating(),
-          averagePositionX: averagePos.x,
-          averagePositionY: averagePos.y,
+          averagePositionX: averagePos ? averagePos.x : null,
+          averagePositionY: averagePos ? averagePos.y : null,
         } as AttackUpdate;
       }),
       outgoingAllianceRequests: outgoingAllianceRequests,
@@ -940,8 +940,8 @@ export class PlayerImpl implements Player {
   createAttack(
     target: Player | TerraNullius,
     troops: number,
-    sourceTile: TileRef,
-    averagePosition: Cell,
+    sourceTile: TileRef | null,
+    averagePosition: Cell | null,
   ): Attack {
     const attack = new AttackImpl(
       this._pseudo_random.nextID(),

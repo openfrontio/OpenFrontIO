@@ -13,7 +13,7 @@ export class AttackImpl implements Attack {
     private _attacker: Player,
     private _troops: number,
     private _sourceTile: TileRef | null,
-    private _averagePosition: Cell,
+    private _averagePosition: Cell | null,
   ) {}
 
   sourceTile(): TileRef | null {
@@ -71,11 +71,11 @@ export class AttackImpl implements Attack {
     return this._retreated;
   }
 
-  updateAveragePosition(averagePosition: Cell): void {
+  updateAveragePosition(averagePosition: Cell | null): void {
     this._averagePosition = averagePosition;
   }
 
-  averagePosition(): Cell {
+  averagePosition(): Cell | null {
     return this._averagePosition;
   }
 }

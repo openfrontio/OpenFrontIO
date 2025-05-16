@@ -490,11 +490,19 @@ export class EventsDisplay extends LitElement implements Layer {
                     <button
                       translate="no"
                       class="ml-2"
-                      @click=${() =>
-                        this.emitGoToPositionEvent(
-                          attack.averagePositionX,
-                          attack.averagePositionY,
-                        )}
+                      @click=${() => {
+                        if (
+                          attack.averagePositionX === null ||
+                          attack.averagePositionY === null
+                        ) {
+                          this.emitGoToPlayerEvent(attack.attackerID);
+                        } else {
+                          this.emitGoToPositionEvent(
+                            attack.averagePositionX,
+                            attack.averagePositionY,
+                          );
+                        }
+                      }}
                     >
                       ${renderTroops(attack.troops)}
                       ${(
@@ -524,11 +532,19 @@ export class EventsDisplay extends LitElement implements Layer {
                     <button
                       translate="no"
                       class="ml-2"
-                      @click=${() =>
-                        this.emitGoToPositionEvent(
-                          attack.averagePositionX,
-                          attack.averagePositionY,
-                        )}
+                      @click=${() => {
+                        if (
+                          attack.averagePositionX === null ||
+                          attack.averagePositionY === null
+                        ) {
+                          this.emitGoToPlayerEvent(attack.attackerID);
+                        } else {
+                          this.emitGoToPositionEvent(
+                            attack.averagePositionX,
+                            attack.averagePositionY,
+                          );
+                        }
+                      }}
                     >
                       ${renderTroops(attack.troops)}
                       ${(

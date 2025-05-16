@@ -118,7 +118,7 @@ export class AttackExecution implements Execution {
       this.averagePosition(),
     );
 
-    if (this.sourceTile != null) {
+    if (this.sourceTile !== null) {
       this.addNeighbors(this.sourceTile);
     } else {
       this.refreshToConquer();
@@ -151,7 +151,7 @@ export class AttackExecution implements Execution {
         return;
       }
     }
-    
+
     if (this.target.isPlayer()) {
       if (this._owner.isAlliedWith(this.target)) {
         // No updates should happen in init.
@@ -307,8 +307,9 @@ export class AttackExecution implements Execution {
         ),
       );
     }
-
-    this.attack.updateAveragePosition(this.averagePosition());
+    if (this.attack !== null) {
+      this.attack.updateAveragePosition(this.averagePosition());
+    }
   }
 
   private handleDeadDefender() {
@@ -353,7 +354,17 @@ export class AttackExecution implements Execution {
     return this.active;
   }
 
-  averagePosition(): Cell {
+  averagePosition(): Cell | null {
+    if (this.border.size === 0) {
+      if (this.sourceTile === null) {
+        // No border tiles and no source tile—return a default position or throw an error
+        return null;
+      }
+      // No border tiles yet—use the source tile's location
+      const tile = this.sourceTile!;
+      return new Cell(this.mg.map().x(tile), this.mg.map().y(tile));
+    }
+
     let averageX = 0;
     let averageY = 0;
 

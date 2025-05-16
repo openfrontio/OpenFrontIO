@@ -276,8 +276,10 @@ export interface Attack {
   delete(): void;
   // The tile the attack originated from, mostly used for boat attacks.
   sourceTile(): TileRef | null;
-  averagePosition(): Cell;
-  updateAveragePosition(averagePosition: Cell): void;
+
+  averagePosition(): Cell | null;
+
+  updateAveragePosition(averagePosition: Cell | null): void;
 }
 
 export interface AllianceRequest {
@@ -496,11 +498,12 @@ export interface Player {
 
   // Attacking.
   canAttack(tile: TileRef): boolean;
+
   createAttack(
     target: Player | TerraNullius,
     troops: number,
-    sourceTile: TileRef,
-    averagePosition: Cell,
+    sourceTile: TileRef | null,
+    averagePosition: Cell | null,
   ): Attack;
   outgoingAttacks(): Attack[];
   incomingAttacks(): Attack[];
