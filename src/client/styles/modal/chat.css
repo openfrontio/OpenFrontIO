@@ -57,7 +57,7 @@
   cursor: pointer;
 }
 
-.chat-send-button-disabled {
+.chat-send-button:disabled {
   background: #666;
   cursor: not-allowed;
 }
