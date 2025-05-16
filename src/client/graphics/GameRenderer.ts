@@ -214,7 +214,9 @@ export class GameRenderer {
     public uiState: UIState,
     private layers: Layer[],
   ) {
-    this.context = canvas.getContext("2d");
+    const context = canvas.getContext("2d");
+    if (context === null) throw new Error("2d context not supported");
+    this.context = context;
   }
 
   initialize() {

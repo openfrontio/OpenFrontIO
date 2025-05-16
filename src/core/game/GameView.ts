@@ -57,7 +57,7 @@ export class UnitView {
   }
 
   lastTile(): TileRef {
-    if (this.lastPos.length == 0) {
+    if (this.lastPos.length === 0) {
       return this.data.pos;
     }
     return this.lastPos[0];
@@ -89,7 +89,7 @@ export class UnitView {
     return this.data.isActive;
   }
   hasHealth(): boolean {
-    return this.data.health != undefined;
+    return this.data.health !== undefined;
   }
   health(): number {
     return this.data.health ?? 0;
@@ -97,28 +97,26 @@ export class UnitView {
   constructionType(): UnitType | undefined {
     return this.data.constructionType;
   }
-  dstPortId(): number {
-    if (this.type() != UnitType.TradeShip) {
-      throw Error("Must be a trade ship");
-    }
+  dstPortId(): number | undefined {
     return this.data.dstPortId;
   }
-  detonationDst(): TileRef {
+  detonationDst(): TileRef | undefined {
     if (!nukeTypes.includes(this.type())) {
       throw Error("Must be a nuke");
     }
     return this.data.detonationDst;
   }
-  warshipTargetId(): number {
-    if (this.type() != UnitType.Warship) {
+  warshipTargetId(): number | undefined {
+    if (this.type() !== UnitType.Warship) {
       throw Error("Must be a warship");
     }
     return this.data.warshipTargetId;
   }
-  ticksLeftInCooldown(): Tick {
+  ticksLeftInCooldown(): Tick | undefined {
     return this.data.ticksLeftInCooldown;
   }
   isCooldown(): boolean {
+    if (this.data.ticksLeftInCooldown === undefined) return false;
     return this.data.ticksLeftInCooldown > 0;
   }
 }
@@ -131,13 +129,11 @@ export class PlayerView {
     public data: PlayerUpdate,
     public nameData: NameViewData,
   ) {
-    if (data.clientID == game.myClientID()) {
+    if (data.clientID === game.myClientID()) {
       this.anonymousName = this.data.name;
     } else {
-      this.anonymousName = createRandomName(
-        this.data.name,
-        this.data.playerType,
-      );
+      this.anonymousName =
+        createRandomName(this.data.name, this.data.playerType) ?? "";
     }
   }
 
@@ -164,7 +160,7 @@ export class PlayerView {
   units(...types: UnitType[]): UnitView[] {
     return this.game
       .units(...types)
-      .filter((u) => u.owner().smallID() == this.smallID());
+      .filter((u) => u.owner().smallID() === this.smallID());
   }
 
   nameLocation(): NameViewData {
@@ -174,7 +170,7 @@ export class PlayerView {
   smallID(): number {
     return this.data.smallID;
   }
-  flag(): string {
+  flag(): string | undefined {
     return this.data.flag;
   }
   name(): string {
@@ -188,7 +184,7 @@ export class PlayerView {
       : this.data.name;
   }
 
-  clientID(): ClientID {
+  clientID(): ClientID | null {
     return this.data.clientID;
   }
   id(): PlayerID {
@@ -236,11 +232,11 @@ export class PlayerView {
   }
 
   isAlliedWith(other: PlayerView): boolean {
-    return this.data.allies.some((n) => other.smallID() == n);
+    return this.data.allies.some((n) => other.smallID() === n);
   }
 
   isOnSameTeam(other: PlayerView): boolean {
-    return this.data.team != null && this.data.team == other.data.team;
+    return this.data.team !== undefined && this.data.team === other.data.team;
   }
 
   isFriendly(other: PlayerView): boolean {
@@ -248,7 +244,7 @@ export class PlayerView {
   }
 
   isRequestingAllianceWith(other: PlayerView) {
-    return this.data.outgoingAllianceRequests.some((id) => other.id() == id);
+    return this.data.outgoingAllianceRequests.some((id) => other.id() === id);
   }
 
   hasEmbargoAgainst(other: PlayerView): boolean {
@@ -291,7 +287,7 @@ export class PlayerView {
 }
 
 export class GameView implements GameMap {
-  private lastUpdate: GameUpdateViewData;
+  private lastUpdate: GameUpdateViewData | null;
   private smallIDToID = new Map<number, PlayerID>();
   private _players = new Map<PlayerID, PlayerView>();
   private _units = new Map<number, UnitView>();
@@ -311,21 +307,15 @@ export class GameView implements GameMap {
     private _myClientID: ClientID,
     private _gameID: GameID,
   ) {
-    this.lastUpdate = {
-      tick: 0,
-      packedTileUpdates: new BigUint64Array([]),
-      // TODO: make this empty map instead of null?
-      updates: null,
-      playerNameViewData: {},
-    };
+    this.lastUpdate = null;
     this.unitGrid = new UnitGrid(_map);
   }
   isOnEdgeOfMap(ref: TileRef): boolean {
     return this._map.isOnEdgeOfMap(ref);
   }
 
-  public updatesSinceLastTick(): GameUpdates {
-    return this.lastUpdate.updates;
+  public updatesSinceLastTick(): GameUpdates | null {
+    return this.lastUpdate?.updates ?? null;
   }
 
   public update(gu: GameUpdateViewData) {
@@ -339,11 +329,15 @@ export class GameView implements GameMap {
       this.updatedTiles.push(this.updateTile(tu));
     });
 
+    if (gu.updates === null) {
+      throw new Error("lastUpdate.updates not initialized");
+    }
     gu.updates[GameUpdateType.Player].forEach((pu) => {
       this.smallIDToID.set(pu.smallID, pu.id);
-      if (this._players.has(pu.id)) {
-        this._players.get(pu.id).data = pu;
-        this._players.get(pu.id).nameData = gu.playerNameViewData[pu.id];
+      const player = this._players.get(pu.id);
+      if (player !== undefined) {
+        player.data = pu;
+        player.nameData = gu.playerNameViewData[pu.id];
       } else {
         this._players.set(
           pu.id,
@@ -356,9 +350,8 @@ export class GameView implements GameMap {
       unit.lastPos = unit.lastPos.slice(-1);
     }
     gu.updates[GameUpdateType.Unit].forEach((update) => {
-      let unit: UnitView = null;
-      if (this._units.has(update.id)) {
-        unit = this._units.get(update.id);
+      let unit = this._units.get(update.id);
+      if (unit !== undefined) {
         unit.update(update);
       } else {
         unit = new UnitView(this, update);
@@ -405,17 +398,18 @@ export class GameView implements GameMap {
   }
 
   myPlayer(): PlayerView | null {
-    if (this._myPlayer == null) {
+    if (this._myPlayer === null) {
       this._myPlayer = this.playerByClientID(this._myClientID);
     }
     return this._myPlayer;
   }
 
   player(id: PlayerID): PlayerView {
-    if (this._players.has(id)) {
-      return this._players.get(id);
+    const player = this._players.get(id);
+    if (player === undefined) {
+      throw Error(`player id ${id} not found`);
     }
-    throw Error(`player id ${id} not found`);
+    return player;
   }
 
   players(): PlayerView[] {
@@ -423,20 +417,22 @@ export class GameView implements GameMap {
   }
 
   playerBySmallID(id: number): PlayerView | TerraNullius {
-    if (id == 0) {
+    if (id === 0) {
       return new TerraNulliusImpl();
     }
-    if (!this.smallIDToID.has(id)) {
+    const playerId = this.smallIDToID.get(id);
+    if (playerId === undefined) {
       throw new Error(`small id ${id} not found`);
     }
-    return this.player(this.smallIDToID.get(id));
+    return this.player(playerId);
   }
 
   playerByClientID(id: ClientID): PlayerView | null {
     const player =
-      Array.from(this._players.values()).filter((p) => p.clientID() == id)[0] ??
-      null;
-    if (player == null) {
+      Array.from(this._players.values()).filter(
+        (p) => p.clientID() === id,
+      )[0] ?? null;
+    if (player === null) {
       return null;
     }
     return player;
@@ -453,23 +449,24 @@ export class GameView implements GameMap {
   }
 
   ticks(): Tick {
+    if (this.lastUpdate === null) return 0;
     return this.lastUpdate.tick;
   }
   inSpawnPhase(): boolean {
-    return this.lastUpdate.tick <= this._config.numSpawnPhaseTurns();
+    return this.ticks() <= this._config.numSpawnPhaseTurns();
   }
   config(): Config {
     return this._config;
   }
   units(...types: UnitType[]): UnitView[] {
-    if (types.length == 0) {
+    if (types.length === 0) {
       return Array.from(this._units.values()).filter((u) => u.isActive());
     }
     return Array.from(this._units.values()).filter(
       (u) => u.isActive() && types.includes(u.type()),
     );
   }
-  unit(id: number): UnitView {
+  unit(id: number): UnitView | undefined {
     return this._units.get(id);
   }
   unitInfo(type: UnitType): UnitInfo {
@@ -582,8 +579,6 @@ export class GameView implements GameMap {
   focusedPlayer(): PlayerView | null {
     // TODO: renable when performance issues are fixed.
     return this.myPlayer();
-    if (userSettings.focusLocked()) return this.myPlayer();
-    return this._focusedPlayer;
   }
   setFocusedPlayer(player: PlayerView | null): void {
     this._focusedPlayer = player;

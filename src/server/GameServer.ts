@@ -42,13 +42,13 @@ export class GameServer {
   // Used for record record keeping
   private allClients: Map<ClientID, Client> = new Map();
   private _hasStarted = false;
-  private _startTime: number = null;
+  private _startTime: number | null = null;
 
   private endTurnIntervalID;
 
   private lastPingUpdate = 0;
 
-  private winner: ClientSendWinnerMessage = null;
+  private winner: ClientSendWinnerMessage | null = null;
   // This field is currently only filled at victory
   private allPlayersStats: AllPlayersStats = {};
 
@@ -70,37 +70,37 @@ export class GameServer {
     this.log = log_.child({ gameID: id });
   }
 
-  public updateGameConfig(gameConfig: GameConfig): void {
-    if (gameConfig.gameMap != null) {
+  public updateGameConfig(gameConfig: Partial<GameConfig>): void {
+    if (gameConfig.gameMap !== undefined) {
       this.gameConfig.gameMap = gameConfig.gameMap;
     }
-    if (gameConfig.difficulty != null) {
+    if (gameConfig.difficulty !== undefined) {
       this.gameConfig.difficulty = gameConfig.difficulty;
     }
-    if (gameConfig.disableNPCs != null) {
+    if (gameConfig.disableNPCs !== undefined) {
       this.gameConfig.disableNPCs = gameConfig.disableNPCs;
     }
-    if (gameConfig.bots != null) {
+    if (gameConfig.bots !== undefined) {
       this.gameConfig.bots = gameConfig.bots;
     }
-    if (gameConfig.infiniteGold != null) {
+    if (gameConfig.infiniteGold !== undefined) {
       this.gameConfig.infiniteGold = gameConfig.infiniteGold;
     }
-    if (gameConfig.infiniteTroops != null) {
+    if (gameConfig.infiniteTroops !== undefined) {
       this.gameConfig.infiniteTroops = gameConfig.infiniteTroops;
     }
-    if (gameConfig.instantBuild != null) {
+    if (gameConfig.instantBuild !== undefined) {
       this.gameConfig.instantBuild = gameConfig.instantBuild;
     }
-    if (gameConfig.gameMode != null) {
+    if (gameConfig.gameMode !== undefined) {
       this.gameConfig.gameMode = gameConfig.gameMode;
     }
 
-    if (gameConfig.disabledUnits != null) {
+    if (gameConfig.disabledUnits !== undefined) {
       this.gameConfig.disabledUnits = gameConfig.disabledUnits;
     }
 
-    if (gameConfig.playerTeams != null) {
+    if (gameConfig.playerTeams !== undefined) {
       this.gameConfig.playerTeams = gameConfig.playerTeams;
     }
   }
@@ -120,9 +120,9 @@ export class GameServer {
     });
 
     if (
-      this.gameConfig.gameType == GameType.Public &&
+      this.gameConfig.gameType === GameType.Public &&
       this.activeClients.filter(
-        (c) => c.ip == client.ip && c.clientID != client.clientID,
+        (c) => c.ip === client.ip && c.clientID !== client.clientID,
       ).length >= 3
     ) {
       this.log.warn("cannot add client, already have 3 ips", {
@@ -134,9 +134,9 @@ export class GameServer {
 
     // Remove stale client if this is a reconnect
     const existing = this.activeClients.find(
-      (c) => c.clientID == client.clientID,
+      (c) => c.clientID === client.clientID,
     );
-    if (existing != null) {
+    if (existing !== undefined) {
       if (client.persistentID !== existing.persistentID) {
         this.log.error("persistent ids do not match", {
           clientID: client.clientID,
@@ -149,7 +149,7 @@ export class GameServer {
       }
       existing.ws.removeAllListeners("message");
       this.activeClients = this.activeClients.filter(
-        (c) => c.clientID != client.clientID,
+        (c) => c.clientID !== client.clientID,
       );
     }
     this.activeClients.push(client);
@@ -161,14 +161,14 @@ export class GameServer {
       "message",
       gatekeeper.wsHandler(client.ip, async (message: string) => {
         try {
-          let clientMsg: ClientMessage = null;
+          let clientMsg: ClientMessage | null = null;
           try {
             clientMsg = ClientMessageSchema.parse(JSON.parse(message));
           } catch (error) {
             throw Error(`error parsing schema for ${ipAnonymize(client.ip)}`);
           }
-          if (clientMsg.type == "intent") {
-            if (clientMsg.intent.clientID != client.clientID) {
+          if (clientMsg.type === "intent") {
+            if (clientMsg.intent.clientID !== client.clientID) {
               this.log.warn(
                 `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
               );
@@ -176,14 +176,14 @@ export class GameServer {
             }
             this.addIntent(clientMsg.intent);
           }
-          if (clientMsg.type == "ping") {
+          if (clientMsg.type === "ping") {
             this.lastPingUpdate = Date.now();
             client.lastPing = Date.now();
           }
-          if (clientMsg.type == "hash") {
+          if (clientMsg.type === "hash") {
             client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
           }
-          if (clientMsg.type == "winner") {
+          if (clientMsg.type === "winner") {
             this.winner = clientMsg;
             this.allPlayersStats = clientMsg.allPlayersStats;
           }
@@ -203,7 +203,7 @@ export class GameServer {
         persistentID: client.persistentID,
       });
       this.activeClients = this.activeClients.filter(
-        (c) => c.clientID != client.clientID,
+        (c) => c.clientID !== client.clientID,
       );
     });
     client.ws.on("error", (error: Error) => {
@@ -223,7 +223,7 @@ export class GameServer {
   }
 
   public startTime(): number {
-    if (this._startTime > 0) {
+    if (this._startTime !== null && this._startTime > 0) {
       return this._startTime;
     } else {
       //game hasn't started yet, only works for public games
@@ -382,10 +382,10 @@ export class GameServer {
             this.gameStartInfo,
             playerRecords,
             this.turns,
-            this._startTime,
+            this._startTime ?? 0,
             Date.now(),
-            this.winner?.winner,
-            this.winner?.winnerType,
+            this.winner?.winner ?? null,
+            this.winner?.winnerType ?? null,
             this.allPlayersStats,
           ),
         );
@@ -421,7 +421,7 @@ export class GameServer {
 
   phase(): GamePhase {
     const now = Date.now();
-    const alive = [];
+    const alive: Client[] = [];
     for (const client of this.activeClients) {
       if (now - client.lastPing > 60_000) {
         this.log.info("no pings received, terminating connection", {
@@ -444,9 +444,9 @@ export class GameServer {
     }
 
     const noRecentPings = now > this.lastPingUpdate + 20 * 1000;
-    const noActive = this.activeClients.length == 0;
+    const noActive = this.activeClients.length === 0;
 
-    if (this.gameConfig.gameType != GameType.Public) {
+    if (this.gameConfig.gameType !== GameType.Public) {
       if (this._hasStarted) {
         if (noActive && noRecentPings) {
           this.log.info("private game complete", {
@@ -464,7 +464,7 @@ export class GameServer {
     const msSinceCreation = now - this.createdAt;
     const lessThanLifetime = msSinceCreation < this.config.gameCreationRate();
     const notEnoughPlayers =
-      this.gameConfig.gameType == GameType.Public &&
+      this.gameConfig.gameType === GameType.Public &&
       this.gameConfig.maxPlayers &&
       this.activeClients.length < this.gameConfig.maxPlayers;
     if (lessThanLifetime && notEnoughPlayers) {
@@ -498,7 +498,7 @@ export class GameServer {
   }
 
   public isPublic(): boolean {
-    return this.gameConfig.gameType == GameType.Public;
+    return this.gameConfig.gameType === GameType.Public;
   }
 
   public kickClient(clientID: ClientID): void {
@@ -530,7 +530,7 @@ export class GameServer {
     if (this.activeClients.length <= 1) {
       return;
     }
-    if (this.turns.length % 10 != 0 || this.turns.length < 10) {
+    if (this.turns.length % 10 !== 0 || this.turns.length < 10) {
       // Check hashes every 10 turns
       return;
     }
@@ -540,7 +540,7 @@ export class GameServer {
     const { mostCommonHash, outOfSyncClients } =
       this.findOutOfSyncClients(lastHashTurn);
 
-    if (outOfSyncClients.length == 0) {
+    if (outOfSyncClients.length === 0) {
       this.turns[lastHashTurn].hash = mostCommonHash;
       return;
     }

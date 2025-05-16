@@ -23,16 +23,19 @@ export class TopBar extends LitElement implements Layer {
   }
 
   tick() {
-    if (this.game?.myPlayer() !== null) {
-      const popIncreaseRate =
-        this.game.myPlayer().population() - this._population;
-      if (this.game.ticks() % 5 == 0) {
-        this._popRateIsIncreasing =
-          popIncreaseRate >= this._lastPopulationIncreaseRate;
-        this._lastPopulationIncreaseRate = popIncreaseRate;
-      }
-    }
+    this.updatePopulationIncrease();
     this.requestUpdate();
+  }
+
+  private updatePopulationIncrease() {
+    const player = this.game?.myPlayer();
+    if (player === null) return;
+    const popIncreaseRate = player.population() - this._population;
+    if (this.game.ticks() % 5 === 0) {
+      this._popRateIsIncreasing =
+        popIncreaseRate >= this._lastPopulationIncreaseRate;
+      this._lastPopulationIncreaseRate = popIncreaseRate;
+    }
   }
 
   render() {

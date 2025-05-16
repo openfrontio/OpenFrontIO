@@ -14,9 +14,9 @@ import { Layer } from "./Layer";
  */
 export class UILayer implements Layer {
   private canvas: HTMLCanvasElement;
-  private context: CanvasRenderingContext2D;
+  private context: CanvasRenderingContext2D | null;
 
-  private theme: Theme = null;
+  private theme: Theme | null = null;
   private selectionAnimTime = 0;
 
   // Keep track of currently selected unit
@@ -136,6 +136,7 @@ export class UILayer implements Layer {
       baseOpacity + Math.sin(this.selectionAnimTime * 0.1) * pulseAmount;
 
     // Get the unit's owner color for the box
+    if (this.theme === null) throw new Error("missing theme");
     const ownerColor = this.theme.territoryColor(unit.owner());
 
     // Create a brighter version of the owner color for the selection
@@ -196,12 +197,14 @@ export class UILayer implements Layer {
   }
 
   paintCell(x: number, y: number, color: Colord, alpha: number) {
+    if (this.context === null) throw new Error("null context");
     this.clearCell(x, y);
     this.context.fillStyle = color.alpha(alpha / 255).toRgbString();
     this.context.fillRect(x, y, 1, 1);
   }
 
   clearCell(x: number, y: number) {
+    if (this.context === null) throw new Error("null context");
     this.context.clearRect(x, y, 1, 1);
   }
 }

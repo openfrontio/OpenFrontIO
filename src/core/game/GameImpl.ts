@@ -36,7 +36,6 @@ import { StatsImpl } from "./StatsImpl";
 import { assignTeams } from "./TeamAssignment";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid } from "./UnitGrid";
-import { UnitImpl } from "./UnitImpl";
 
 export function createGame(
   humans: PlayerInfo[],
@@ -56,7 +55,7 @@ export class GameImpl implements Game {
   private unInitExecs: Execution[] = [];
 
   _players: Map<PlayerID, PlayerImpl> = new Map<PlayerID, PlayerImpl>();
-  _playersBySmallID = [];
+  _playersBySmallID: Player[] = [];
 
   private execs: Execution[] = [];
   private _width: number;
@@ -119,7 +118,7 @@ export class GameImpl implements Game {
   }
 
   private addPlayers() {
-    if (this.config().gameConfig().gameMode != GameMode.Team) {
+    if (this.config().gameConfig().gameMode !== GameMode.Team) {
       this._humans.forEach((p) => this.addPlayer(p));
       this._nations.forEach((n) => this.addPlayer(n.playerInfo));
       return;
@@ -130,7 +129,7 @@ export class GameImpl implements Game {
     ];
     const playerToTeam = assignTeams(allPlayers, this.playerTeams);
     for (const [playerInfo, team] of playerToTeam.entries()) {
-      if (team == "kicked") {
+      if (team === "kicked") {
         console.warn(`Player ${playerInfo.name} was kicked from team`);
         continue;
       }
@@ -146,7 +145,7 @@ export class GameImpl implements Game {
     return this.playerBySmallID(this.ownerID(ref));
   }
   playerBySmallID(id: number): Player | TerraNullius {
-    if (id == 0) {
+    if (id === 0) {
       return this.terraNullius();
     }
     return this._playersBySmallID[id - 1];
@@ -182,7 +181,7 @@ export class GameImpl implements Game {
     });
   }
 
-  units(...types: UnitType[]): UnitImpl[] {
+  units(...types: UnitType[]): Unit[] {
     return Array.from(this._players.values()).flatMap((p) => p.units(...types));
   }
   unitInfo(type: UnitType): UnitInfo {
@@ -192,26 +191,29 @@ export class GameImpl implements Game {
     return this._nations;
   }
 
-  createAllianceRequest(requestor: Player, recipient: Player): AllianceRequest {
+  createAllianceRequest(
+    requestor: Player,
+    recipient: Player,
+  ): AllianceRequest | null {
     if (requestor.isAlliedWith(recipient)) {
       consolex.log("cannot request alliance, already allied");
-      return;
+      return null;
     }
     if (
       recipient
         .incomingAllianceRequests()
-        .find((ar) => ar.requestor() == requestor) != null
+        .find((ar) => ar.requestor() === requestor) !== undefined
     ) {
       consolex.log(`duplicate alliance request from ${requestor.name()}`);
-      return;
+      return null;
     }
     const correspondingReq = requestor
       .incomingAllianceRequests()
-      .find((ar) => ar.requestor() == recipient);
-    if (correspondingReq != null) {
+      .find((ar) => ar.requestor() === recipient);
+    if (correspondingReq !== undefined) {
       consolex.log(`got corresponding alliance requests, accepting`);
       correspondingReq.accept();
-      return;
+      return null;
     }
     const ar = new AllianceRequestImpl(requestor, recipient, this._ticks, this);
     this.allianceRequests.push(ar);
@@ -220,7 +222,9 @@ export class GameImpl implements Game {
   }
 
   acceptAllianceRequest(request: AllianceRequestImpl) {
-    this.allianceRequests = this.allianceRequests.filter((ar) => ar != request);
+    this.allianceRequests = this.allianceRequests.filter(
+      (ar) => ar !== request,
+    );
 
     const requestor = request.requestor();
     const recipient = request.recipient();
@@ -250,7 +254,9 @@ export class GameImpl implements Game {
   }
 
   rejectAllianceRequest(request: AllianceRequestImpl) {
-    this.allianceRequests = this.allianceRequests.filter((ar) => ar != request);
+    this.allianceRequests = this.allianceRequests.filter(
+      (ar) => ar !== request,
+    );
     (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
       request,
     );
@@ -305,7 +311,7 @@ export class GameImpl implements Game {
       // Players change each to so always add them
       this.addUpdate(player.toUpdate());
     }
-    if (this.ticks() % 10 == 0) {
+    if (this.ticks() % 10 === 0) {
       this.addUpdate({
         type: GameUpdateType.Hash,
         tick: this.ticks(),
@@ -375,7 +381,7 @@ export class GameImpl implements Game {
     return this.player(id);
   }
 
-  addPlayer(playerInfo: PlayerInfo, team: Team = null): Player {
+  addPlayer(playerInfo: PlayerInfo, team: Team | null = null): Player {
     const player = new PlayerImpl(
       this,
       this.nextPlayerID,
@@ -390,26 +396,27 @@ export class GameImpl implements Game {
   }
 
   private maybeAssignTeam(player: PlayerInfo): Team | null {
-    if (this._config.gameConfig().gameMode != GameMode.Team) {
+    if (this._config.gameConfig().gameMode !== GameMode.Team) {
       return null;
     }
-    if (player.playerType == PlayerType.Bot) {
+    if (player.playerType === PlayerType.Bot) {
       return this.botTeam;
     }
     const rand = simpleHash(player.id);
     return this.playerTeams[rand % this.playerTeams.length];
   }
 
-  player(id: PlayerID | null): Player {
-    if (!this._players.has(id)) {
+  player(id: PlayerID): Player {
+    const player = this._players.get(id);
+    if (player === undefined) {
       throw new Error(`Player with id ${id} not found`);
     }
-    return this._players.get(id);
+    return player;
   }
 
   playerByClientID(id: ClientID): Player | null {
     for (const [, player] of this._players) {
-      if (player.clientID() == id) {
+      if (player.clientID() === id) {
         return player;
       }
     }
@@ -511,7 +518,7 @@ export class GameImpl implements Game {
       return false;
     }
     for (const neighbor of this.neighbors(tile)) {
-      const bordersEnemy = this.owner(tile) != this.owner(neighbor);
+      const bordersEnemy = this.owner(tile) !== this.owner(neighbor);
       if (bordersEnemy) {
         return true;
       }
@@ -528,8 +535,8 @@ export class GameImpl implements Game {
   }
 
   public breakAlliance(breaker: Player, alliance: Alliance) {
-    let other: Player = null;
-    if (alliance.requestor() == breaker) {
+    let other: Player;
+    if (alliance.requestor() === breaker) {
       other = alliance.recipient();
     } else {
       other = alliance.requestor();
@@ -545,12 +552,12 @@ export class GameImpl implements Game {
 
     const breakerSet = new Set(breaker.alliances());
     const alliances = other.alliances().filter((a) => breakerSet.has(a));
-    if (alliances.length != 1) {
+    if (alliances.length !== 1) {
       throw new Error(
         `must have exactly one alliance, have ${alliances.length}`,
       );
     }
-    this.alliances_ = this.alliances_.filter((a) => a != alliances[0]);
+    this.alliances_ = this.alliances_.filter((a) => a !== alliances[0]);
     this.addUpdate({
       type: GameUpdateType.BrokeAlliance,
       traitorID: breaker.smallID(),
@@ -564,12 +571,12 @@ export class GameImpl implements Game {
       .requestor()
       .alliances()
       .filter((a) => p1Set.has(a));
-    if (alliances.length != 1) {
+    if (alliances.length !== 1) {
       throw new Error(
         `cannot expire alliance: must have exactly one alliance, have ${alliances.length}`,
       );
     }
-    this.alliances_ = this.alliances_.filter((a) => a != alliances[0]);
+    this.alliances_ = this.alliances_.filter((a) => a !== alliances[0]);
     this.addUpdate({
       type: GameUpdateType.AllianceExpired,
       player1ID: alliance.requestor().smallID(),
@@ -594,7 +601,7 @@ export class GameImpl implements Game {
   }
 
   teams(): Team[] {
-    if (this._config.gameConfig().gameMode != GameMode.Team) {
+    if (this._config.gameConfig().gameMode !== GameMode.Team) {
       return [];
     }
     return [this.botTeam, ...this.playerTeams];
@@ -605,8 +612,8 @@ export class GameImpl implements Game {
     type: MessageType,
     playerID: PlayerID | null,
   ): void {
-    let id = null;
-    if (playerID != null) {
+    let id: number | null = null;
+    if (playerID !== null) {
       id = this.player(playerID).smallID();
     }
     this.addUpdate({
@@ -622,11 +629,11 @@ export class GameImpl implements Game {
     category: string,
     variables: Record<string, string> = {},
     playerID: PlayerID | null,
-    isFrom: boolean | null = null,
+    isFrom: boolean,
     recipient: string,
   ): void {
-    let id = null;
-    if (playerID != null) {
+    let id: number | null = null;
+    if (playerID !== null) {
       id = this.player(playerID).smallID();
     }
     this.addUpdate({
@@ -635,7 +642,7 @@ export class GameImpl implements Game {
       category: category,
       variables: variables,
       playerID: id,
-      isFrom: isFrom,
+      isFrom,
       recipient: recipient,
     });
   }

@@ -23,14 +23,10 @@ export class EmbargoExecution implements Execution {
   }
 
   tick(_: number): void {
-    if (this.action == "start") this.player.addEmbargo(this.targetID, false);
+    if (this.action === "start") this.player.addEmbargo(this.targetID, false);
     else this.player.stopEmbargo(this.targetID);
 
     this.active = false;
-  }
-
-  owner(): Player {
-    return null;
   }
 
   isActive(): boolean {

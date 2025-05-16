@@ -135,8 +135,8 @@ export class UnitGrid {
       for (let cx = startGridX; cx <= endGridX; cx++) {
         for (const unit of this.grid[cy][cx]) {
           if (
-            unit.type() == type &&
-            unit.owner().id() == playerId &&
+            unit.type() === type &&
+            unit.owner().id() === playerId &&
             unit.isActive()
           ) {
             const distSquared = this.squaredDistanceFromTile(unit, tile);

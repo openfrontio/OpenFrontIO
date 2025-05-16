@@ -39,8 +39,8 @@ export class PlayerPanel extends LitElement implements Layer {
   public eventBus: EventBus;
   public emojiTable: EmojiTable;
 
-  private actions: PlayerActions = null;
-  private tile: TileRef = null;
+  private actions: PlayerActions | null = null;
+  private tile: TileRef | null = null;
 
   @state()
   private isVisible: boolean = false;
@@ -125,7 +125,7 @@ export class PlayerPanel extends LitElement implements Layer {
   private handleEmojiClick(e: Event, myPlayer: PlayerView, other: PlayerView) {
     e.stopPropagation();
     this.emojiTable.showTable((emoji: string) => {
-      if (myPlayer == other) {
+      if (myPlayer === other) {
         this.eventBus.emit(
           new SendEmojiIntentEvent(
             AllPlayers,
@@ -181,12 +181,16 @@ export class PlayerPanel extends LitElement implements Layer {
       return 0;
     }
     let sum = 0;
-    const nukes = stats.sentNukes[this.g.myPlayer().id()];
+    const player = this.g.myPlayer();
+    if (player === null) {
+      return 0;
+    }
+    const nukes = stats.sentNukes[player.id()];
     if (!nukes) {
       return 0;
     }
     for (const nukeType in nukes) {
-      if (nukeType != UnitType.MIRVWarhead) {
+      if (nukeType !== UnitType.MIRVWarhead) {
         sum += nukes[nukeType];
       }
     }
@@ -198,10 +202,8 @@ export class PlayerPanel extends LitElement implements Layer {
       return html``;
     }
     const myPlayer = this.g.myPlayer();
-    if (myPlayer == null) {
-      return;
-    }
-
+    if (myPlayer === null) return;
+    if (this.tile === null) return;
     let other = this.g.owner(this.tile);
     if (!other.isPlayer()) {
       this.hide();
@@ -210,16 +212,16 @@ export class PlayerPanel extends LitElement implements Layer {
     }
     other = other as PlayerView;
 
-    const canDonate = this.actions.interaction?.canDonate;
+    const canDonate = this.actions?.interaction?.canDonate;
     const canSendAllianceRequest =
-      this.actions.interaction?.canSendAllianceRequest;
+      this.actions?.interaction?.canSendAllianceRequest;
     const canSendEmoji =
-      other == myPlayer
-        ? this.actions.canSendEmojiAllPlayers
-        : this.actions.interaction?.canSendEmoji;
-    const canBreakAlliance = this.actions.interaction?.canBreakAlliance;
-    const canTarget = this.actions.interaction?.canTarget;
-    const canEmbargo = this.actions.interaction?.canEmbargo;
+      other === myPlayer
+        ? this.actions?.canSendEmojiAllPlayers
+        : this.actions?.interaction?.canSendEmoji;
+    const canBreakAlliance = this.actions?.interaction?.canBreakAlliance;
+    const canTarget = this.actions?.interaction?.canTarget;
+    const canEmbargo = this.actions?.interaction?.canEmbargo;
 
     return html`
       <div
@@ -392,7 +394,7 @@ export class PlayerPanel extends LitElement implements Layer {
                   </button>`
                 : ""}
             </div>
-            ${canEmbargo && other != myPlayer
+            ${canEmbargo && other !== myPlayer
               ? html`<button
                   @click=${(e) => this.handleEmbargoClick(e, myPlayer, other)}
                   class="w-100 h-10 flex items-center justify-center
@@ -402,7 +404,7 @@ export class PlayerPanel extends LitElement implements Layer {
                   ${translateText("player_panel.stop_trade")}
                 </button>`
               : ""}
-            ${!canEmbargo && other != myPlayer
+            ${!canEmbargo && other !== myPlayer
               ? html`<button
                   @click=${(e) =>
                     this.handleStopEmbargoClick(e, myPlayer, other)}

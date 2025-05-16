@@ -92,8 +92,8 @@ export interface AttackUpdate {
 export interface PlayerUpdate {
   type: GameUpdateType.Player;
   nameViewData?: NameViewData;
-  clientID: ClientID;
-  flag: string;
+  clientID: ClientID | null;
+  flag: string | undefined;
   name: string;
   displayName: string;
   id: PlayerID;

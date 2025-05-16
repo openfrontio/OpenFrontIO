@@ -85,7 +85,7 @@ export class ControlPanel extends LitElement implements Layer {
         newAttackRatio = 1;
       }
 
-      if (newAttackRatio == 0.11 && this.attackRatio == 0.01) {
+      if (newAttackRatio === 0.11 && this.attackRatio === 0.01) {
         // If we're changing the ratio from 1%, then set it to 10% instead of 11% to keep a consistency
         newAttackRatio = 0.1;
       }
@@ -108,13 +108,13 @@ export class ControlPanel extends LitElement implements Layer {
     }
 
     const player = this.game.myPlayer();
-    if (player == null || !player.isAlive()) {
+    if (player === null || !player.isAlive()) {
       this.setVisibile(false);
       return;
     }
 
     const popIncreaseRate = player.population() - this._population;
-    if (this.game.ticks() % 5 == 0) {
+    if (this.game.ticks() % 5 === 0) {
       this._popRateIsIncreasing =
         popIncreaseRate >= this._lastPopulationIncreaseRate;
       this._lastPopulationIncreaseRate = popIncreaseRate;
@@ -275,7 +275,7 @@ export class ControlPanel extends LitElement implements Layer {
             >${translateText("control_panel.attack_ratio")}:
             ${(this.attackRatio * 100).toFixed(0)}%
             (${renderTroops(
-              this.game?.myPlayer()?.troops() * this.attackRatio,
+              (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
             )})</label
           >
           <div class="relative h-8">

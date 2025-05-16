@@ -81,7 +81,7 @@ export class DistanceBasedBezierCurve extends CubicBezierCurve {
   private distanceLUT: Array<{ t: number; distance: number }> = [];
   private lastFoundIndex: number = 0; // To keep track of the last found index
 
-  increment(distance: number): Point {
+  increment(distance: number): Point | null {
     this.totalDistance += distance;
     const targetDistance = Math.min(
       this.totalDistance,

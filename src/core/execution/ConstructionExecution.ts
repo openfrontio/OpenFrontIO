@@ -20,7 +20,7 @@ import { WarshipExecution } from "./WarshipExecution";
 
 export class ConstructionExecution implements Execution {
   private player: Player;
-  private construction: Unit;
+  private construction: Unit | null = null;
   private active: boolean = true;
   private mg: Game;
 
@@ -45,15 +45,15 @@ export class ConstructionExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.construction == null) {
+    if (this.construction === null) {
       const info = this.mg.unitInfo(this.constructionType);
-      if (info.constructionDuration == null) {
+      if (info.constructionDuration === undefined) {
         this.completeConstruction();
         this.active = false;
         return;
       }
       const spawnTile = this.player.canBuild(this.constructionType, this.tile);
-      if (spawnTile == false) {
+      if (spawnTile === false) {
         consolex.warn(`cannot build ${this.constructionType}`);
         this.active = false;
         return;
@@ -75,11 +75,11 @@ export class ConstructionExecution implements Execution {
       return;
     }
 
-    if (this.player != this.construction.owner()) {
+    if (this.player !== this.construction.owner()) {
       this.player = this.construction.owner();
     }
 
-    if (this.ticksUntilComplete == 0) {
+    if (this.ticksUntilComplete === 0) {
       this.player = this.construction.owner();
       this.construction.delete(false);
       // refund the cost so player has the gold to build the unit

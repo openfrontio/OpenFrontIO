@@ -33,7 +33,7 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install dependencies while bypassing Husky hooks
-ENV HUSKY=0 
+ENV HUSKY=0
 ENV NPM_CONFIG_IGNORE_SCRIPTS=1
 RUN mkdir -p .git && npm install
 
