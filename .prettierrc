@@ -1,3 +1,11 @@
 {
+  "overrides": [
+    {
+      "files": "Dockerfile",
+      "options": {
+        "plugins": []
+      }
+    }
+  ],
   "plugins": ["prettier-plugin-organize-imports", "prettier-plugin-sh"]
 }
