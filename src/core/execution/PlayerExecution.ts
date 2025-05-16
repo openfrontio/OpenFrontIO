@@ -195,7 +195,11 @@ export class PlayerExecution implements Execution {
       }
       this.mg
         .neighbors(tr)
-        .filter((n) => this.mg?.ownerID(n) !== this.player?.smallID())
+        .filter(
+          (n) =>
+            this.mg?.owner(n).isPlayer() &&
+            this.mg?.ownerID(n) !== this.player?.smallID(),
+        )
         .forEach((n) => enemyTiles.add(n));
     }
     if (enemyTiles.size === 0) {
@@ -265,7 +269,7 @@ export class PlayerExecution implements Execution {
     let largestTroopCount: number = 0;
     for (const id of neighborsIDs) {
       const neighbor = this.mg.playerBySmallID(id);
-      if (!neighbor.isPlayer()) {
+      if (!neighbor.isPlayer() || this.player.isFriendly(neighbor)) {
         continue;
       }
       for (const attack of neighbor.outgoingAttacks()) {
