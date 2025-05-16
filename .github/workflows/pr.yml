@@ -4,6 +4,8 @@ on:
   pull_request:
     types: [opened, edited, synchronize]
 
+permissions: {}
+
 jobs:
   validate-description:
     runs-on: ubuntu-latest
@@ -17,7 +19,7 @@ jobs:
             const errors = [];
 
             // Check for ## Description section
-            const descMatch = body.match(/^## Description:\s*(.*?)^## Please complete the following:/);
+            const descMatch = body.match(/^## Description:\s*\n((?:(?!^#).*\n?)*)/m);
             if (!descMatch || descMatch[1].trim() === '') {
               errors.push('❌ Missing or empty `## Description:` section.');
             }
