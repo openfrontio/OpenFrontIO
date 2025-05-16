@@ -370,6 +370,9 @@ export interface Unit {
 
   // Updates
   toUpdate(): UnitUpdate;
+
+  cachePut(from: TileRef, to: TileRef): void; // ports only
+  cacheGet(from: TileRef): TileRef | undefined; // ports only
 }
 
 export interface TerraNullius {

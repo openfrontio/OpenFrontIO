@@ -28,6 +28,7 @@ export class UnitImpl implements Unit {
   private _detonationDst: TileRef | undefined = undefined; // Only for nukes
   private _warshipTarget: Unit | undefined = undefined;
   private _cooldownDuration: number | undefined = undefined;
+  private _pathCache: Map<TileRef, TileRef> = new Map();
 
   constructor(
     private _type: UnitType,
@@ -51,6 +52,13 @@ export class UnitImpl implements Unit {
       "lastSetSafeFromPirates" in params
         ? (params.lastSetSafeFromPirates ?? 0)
         : 0;
+  }
+
+  cachePut(from: TileRef, to: TileRef): void {
+    this._pathCache.set(from, to);
+  }
+  cacheGet(from: TileRef): TileRef | undefined {
+    return this._pathCache.get(from);
   }
 
   id() {

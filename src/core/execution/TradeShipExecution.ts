@@ -98,6 +98,19 @@ export class TradeShipExecution implements Execution {
       }
     }
 
+    const cachedNextTile = this._dstPort.cacheGet(this.tradeShip.tile());
+    if (cachedNextTile !== undefined) {
+      if (
+        this.mg.isWater(cachedNextTile) &&
+        this.mg.isShoreline(cachedNextTile)
+      ) {
+        this.tradeShip.setSafeFromPirates();
+      }
+      this.tradeShip.move(cachedNextTile);
+      this.tilesTraveled++;
+      return;
+    }
+
     const result = this.pathFinder.nextTile(
       this.tradeShip.tile(),
       this._dstPort.tile(),
@@ -112,6 +125,7 @@ export class TradeShipExecution implements Execution {
         this.tradeShip.move(this.tradeShip.tile());
         break;
       case PathFindResultType.NextTile:
+        this._dstPort.cachePut(this.tradeShip.tile(), result.tile);
         // Update safeFromPirates status
         if (this.mg.isWater(result.tile) && this.mg.isShoreline(result.tile)) {
           this.tradeShip.setSafeFromPirates();
