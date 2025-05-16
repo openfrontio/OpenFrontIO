@@ -22,7 +22,14 @@ import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID } from "../Schemas";
 import { assertNever, simpleHash, within } from "../Util";
-import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
+import {
+  Config,
+  GameEnv,
+  NukeMagnitude,
+  ServerConfig,
+  ServerPlayerConfig,
+  Theme,
+} from "./Config";
 import { pastelTheme } from "./PastelTheme";
 import { pastelThemeDark } from "./PastelThemeDark";
 
@@ -108,7 +115,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return 60 * 1000;
   }
 
-  lobbyMaxPlayers(map: GameMapType, mode: GameMode): number {
+  protected maxPlayersForMap(map: GameMapType): number {
     const numPlayers = () => {
       // Maps with ~4 mil pixels
       if (
@@ -166,7 +173,32 @@ export abstract class DefaultServerConfig implements ServerConfig {
       // default return for non specified map
       return Math.random() < 0.2 ? 50 : 20;
     };
-    return Math.min(150, numPlayers() * (mode === GameMode.Team ? 2 : 1));
+    return numPlayers();
+  }
+
+  calcPlayerConfig(map: GameMapType, mode: GameMode): ServerPlayerConfig {
+    const maxPlayerForMap = this.maxPlayersForMap(map);
+
+    switch (mode) {
+      case GameMode.FFA:
+        return {
+          maxPlayers: Math.min(150, maxPlayerForMap),
+          numPlayerTeams: undefined,
+        };
+
+      case GameMode.Team: {
+        // between 2 and 6 teams
+        const numPlayerTeams = 2 + Math.floor(Math.random() * 5);
+        const teamModeMaxPlayerCount = Math.min(150, maxPlayerForMap * 2);
+
+        const unevenPlayersPerTeam = teamModeMaxPlayerCount / numPlayerTeams;
+        const evenPlayersPerTeam = Math.floor(unevenPlayersPerTeam);
+
+        const maxPlayers = evenPlayersPerTeam * numPlayerTeams;
+
+        return { maxPlayers, numPlayerTeams };
+      }
+    }
   }
 
   workerIndex(gameID: GameID): number {

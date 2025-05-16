@@ -26,10 +26,15 @@ export enum GameEnv {
   Prod,
 }
 
+export type ServerPlayerConfig = {
+  maxPlayers: number;
+  numPlayerTeams: number | undefined;
+};
+
 export interface ServerConfig {
   turnIntervalMs(): number;
   gameCreationRate(): number;
-  lobbyMaxPlayers(map: GameMapType, mode: GameMode): number;
+  calcPlayerConfig(map: GameMapType, mode: GameMode): ServerPlayerConfig;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
   workerPath(gameID: GameID): string;
