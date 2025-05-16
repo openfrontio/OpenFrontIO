@@ -322,8 +322,6 @@ export const emojiTable: string[][] = [
 ];
 // 2d to 1d array
 
-export const flattenedEmojiTable: string[] = [].concat(...emojiTable);
-
 // Returns [lockedLayers, lockedColors, MAX_LAYER] for a given UserStatus (without lock reasons)
 export function getPermissionSummary(
   userStatus: UserStatus,
