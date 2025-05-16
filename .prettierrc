@@ -1,6 +1,12 @@
 {
   "overrides": [
     {
+      "files": ".husky/**",
+      "options": {
+        "plugins": []
+      }
+    },
+    {
       "files": "Dockerfile",
       "options": {
         "plugins": []
