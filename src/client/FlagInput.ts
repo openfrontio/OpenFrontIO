@@ -117,100 +117,100 @@ export const FlagMap: Record<string, string> = {
 };
 
 export const LayerShortNames: Record<string, string> = {
-  center_circle: "cc",
-  center_hline: "ch",
-  center_vline: "cv",
-  center_star: "cs",
-  center_flower: "cf",
-  flower_tl: "ftl",
-  flower_tc: "ftc",
-  flower_tr: "ftr",
-  diag_br: "dbr",
-  diag_bl: "dbl",
-  frame: "fr",
-  full: "fu",
-  triangle_tl: "ttl",
-  triangle_bl: "tbl",
-  triangle_tr: "ttr",
-  triangle_br: "tbr",
-  half_l: "hl",
-  half_r: "hr",
-  half_t: "ht",
-  half_b: "hb",
-  mini_tr_bl: "mtbl",
-  mini_tr_br: "mtbr",
-  mini_tr_tl: "mttl",
-  mini_tr_tr: "mttr",
-  triangle_t: "tt",
-  triangle_l: "tl",
-  triangle_b: "tb",
-  triangle_r: "tr",
-  tricolor_l: "tcl",
-  tricolor_c: "tcc",
-  tricolor_r: "tcr",
-  tricolor_t: "tct",
-  tricolor_m: "tcm",
-  tricolor_b: "tcb",
-  nato_emblem: "ne",
-  eu_star: "es",
-  laurel_wreath: "lw",
-  ofm_2025: "ofm25",
-  octagram: "oc",
-  octagram_2: "oc2",
-  og: "og",
-  og_plus: "ogp",
-  beta_tester: "bt",
-  beta_tester_circle: "btc",
-  rocket: "rc",
-  rocket_mini: "rcm",
-  translator: "tlr",
-  admin_shield: "as",
-  admin_shield_r: "asr",
-  admin_evan: "ae",
+  center_circle: "a",
+  center_hline: "b",
+  center_vline: "c",
+  center_star: "d",
+  center_flower: "e",
+  flower_tl: "f",
+  flower_tc: "g",
+  flower_tr: "h",
+  diag_br: "i",
+  diag_bl: "j",
+  frame: "k",
+  full: "l",
+  triangle_tl: "m",
+  triangle_bl: "n",
+  triangle_tr: "o",
+  triangle_br: "p",
+  half_l: "q",
+  half_r: "r",
+  half_t: "s",
+  half_b: "t",
+  mini_tr_bl: "u",
+  mini_tr_br: "v",
+  mini_tr_tl: "w",
+  mini_tr_tr: "x",
+  triangle_t: "y",
+  triangle_l: "z",
+  triangle_b: "aa",
+  triangle_r: "ab",
+  tricolor_l: "ac",
+  tricolor_c: "ad",
+  tricolor_r: "ae",
+  tricolor_t: "af",
+  tricolor_m: "ag",
+  tricolor_b: "ah",
+  nato_emblem: "ai",
+  eu_star: "aj",
+  laurel_wreath: "ak",
+  ofm_2025: "al",
+  octagram: "am",
+  octagram_2: "an",
+  og: "ao",
+  og_plus: "ap",
+  beta_tester: "aq",
+  beta_tester_circle: "ar",
+  rocket: "as",
+  rocket_mini: "at",
+  translator: "au",
+  admin_shield: "av",
+  admin_shield_r: "aw",
+  admin_evan: "ax",
 };
 
 export const ColorShortNames: Record<string, string> = {
-  "#ff0000": "r", // red
-  "#ffa500": "o", // orange
-  "#ffff00": "y", // yellow
-  "#008000": "g", // green
-  "#00ffff": "c", // cyan
-  "#0000ff": "b", // blue
-  "#000000": "bl", // black
-  "#ffffff": "w", // white
-  "#800080": "p", // purple
-  "#ff69b4": "h", // hotpink
-  "#a52a2a": "br", // brown
-  "#808080": "gr", // gray
-  "#20b2aa": "t", // teal
-  "#ff6347": "tm", // tomato
-  "#4682b4": "stb", // steelblue
-  "#90ee90": "lg", // lightgreen
-  "#8b0000": "dr", // darkred
-  "#191970": "nv", // navy
-  "#ffd700": "gd", // gold
-  "#add8e6": "lb", // lightblue
-  "#f5f5dc": "bc", // beige
-  "#ffb6c1": "pk", // lightpink
-  "#708090": "sl", // slategray
-  "#00ff7f": "sg", // springgreen
-  "#dc143c": "cr", // crimson
-  "#ffbf00": "am", // amber
-  "#3d9970": "ol", // olive green
-  "#87ceeb": "sb", // sky blue
-  "#6a5acd": "slb", // slate blue
-  "#ff66cc": "rp", // rose pink
-  "#36454f": "ch", // charcoal
-  "#fffff0": "iv", // ivory
+  "#ff0000": "a", // red
+  "#ffa500": "b", // orange
+  "#ffff00": "c", // yellow
+  "#008000": "d", // green
+  "#00ffff": "e", // cyan
+  "#0000ff": "f", // blue
+  "#000000": "g", // black
+  "#ffffff": "h", // white
+  "#800080": "i", // purple
+  "#ff69b4": "j", // hotpink
+  "#a52a2a": "k", // brown
+  "#808080": "l", // gray
+  "#20b2aa": "m", // teal
+  "#ff6347": "n", // tomato
+  "#4682b4": "o", // steelblue
+  "#90ee90": "p", // lightgreen
+  "#8b0000": "q", // darkred
+  "#191970": "r", // navy
+  "#ffd700": "s", // gold
+  "#add8e6": "t", // lightblue
+  "#f5f5dc": "u", // beige
+  "#ffb6c1": "v", // lightpink
+  "#708090": "w", // slategray
+  "#00ff7f": "x", // springgreen
+  "#dc143c": "y", // crimson
+  "#ffbf00": "z", // amber
+  "#3d9970": "0", // olive green
+  "#87ceeb": "1", // sky blue
+  "#6a5acd": "2", // slate blue
+  "#ff66cc": "3", // rose pink
+  "#36454f": "4", // charcoal
+  "#fffff0": "5", // ivory
 
-  rainbow: "rb", // dark rainbow animation
-  "bright-rainbow": "brb", // bright rainbow animation
-  "gold-glow": "gdg", // glowing gold animation
-  "silver-glow": "svg", // glowing silver animation
-  "copper-glow": "cpg", // glowing copper animation
-  neon: "nn", // neon green pulse animation
-  lava: "lf", // lava animation
-  water: "wt", // soft blue breathing animation
+  rainbow: "A", // dark rainbow animation
+  "bright-rainbow": "B", // bright rainbow animation
+  "gold-glow": "C", // glowing gold animation
+  "silver-glow": "D", // glowing silver animation
+  "copper-glow": "E", // glowing copper animation
+  neon: "F", // neon green pulse animation
+  lava: "G", // lava animation
+  water: "H", // soft blue breathing animation
 };
 
 export const userStatus = {
@@ -524,7 +524,7 @@ export class FlagInput extends LitElement {
   private decodeCustomFlag(code: string): { name: string; color: string }[] {
     if (!this.isCustomFlag(code)) return [];
 
-    const short = code.replace("ctmfg", "");
+    const short = code.slice("ctmfg".length);
     const reverseNameMap = Object.fromEntries(
       Object.entries(LayerShortNames).map(([k, v]) => [v, k]),
     );
@@ -596,7 +596,7 @@ export function renderPlayerFlag(flagCode: string, target: HTMLElement) {
 
   if (!flagCode.startsWith("ctmfg")) return;
 
-  const code = flagCode.replace("ctmfg", "");
+  const code = flagCode.slice("ctmfg".length);
   const layers = code.split("_").map((segment) => {
     const [shortName, shortColor] = segment.split("-");
     const name = reverseNameMap[shortName] || shortName;
@@ -663,7 +663,7 @@ export function analyzePlayerFlag(flagCode: string): {
     Object.entries(ColorShortNames).map(([k, v]) => [v, k]),
   );
 
-  const code = flagCode.replace("ctmfg", "");
+  const code = flagCode.slice("ctmfg".length);
   const segments = code.split("_");
 
   const layers: string[] = [];
