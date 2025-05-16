@@ -214,7 +214,8 @@ export class ChatModal extends LitElement {
 
   private selectPlayer(player: string) {
     if (this.previewText) {
-      this.previewText = this.selectedPhraseTemplate.replace("[P1]", player);
+      this.previewText =
+        this.selectedPhraseTemplate?.replace("[P1]", player) ?? null;
       this.selectedPlayer = player;
       this.requiresPlayerSelection = false;
       this.requestUpdate();
@@ -228,7 +229,9 @@ export class ChatModal extends LitElement {
     console.log("Key:", this.selectedQuickChatKey);
 
     if (this.sender && this.recipient && this.selectedQuickChatKey) {
-      const variables = this.selectedPlayer ? { P1: this.selectedPlayer } : {};
+      const variables: Record<string, string> = this.selectedPlayer
+        ? { P1: this.selectedPlayer }
+        : {};
 
       this.eventBus.emit(
         new SendQuickChatEvent(

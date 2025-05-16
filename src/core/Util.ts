@@ -201,21 +201,26 @@ export function createGameRecord(
   const record: GameRecord = {
     id: id,
     gameStartInfo: gameStart,
+    players,
     startTimestampMS: start,
     endTimestampMS: end,
+    durationSeconds: Math.floor((end - start) / 1000),
     date: new Date().toISOString().split("T")[0],
+    num_turns: 0,
     turns: [],
     allPlayersStats,
     version: "v0.0.1",
+    winner,
+    winnerType,
   };
 
   for (const turn of turns) {
-    if (turn.intents.length != 0 || turn.hash != undefined) {
+    if (turn.intents.length !== 0 || turn.hash !== undefined) {
       record.turns.push(turn);
       for (const intent of turn.intents) {
-        if (intent.type == "spawn") {
+        if (intent.type === "spawn") {
           for (const playerRecord of players) {
-            if (playerRecord.clientID == intent.clientID) {
+            if (playerRecord.clientID === intent.clientID) {
               playerRecord.username = intent.name;
             }
           }
@@ -223,24 +228,17 @@ export function createGameRecord(
       }
     }
   }
-  record.players = players;
-  record.durationSeconds = Math.floor(
-    (record.endTimestampMS - record.startTimestampMS) / 1000,
-  );
   record.num_turns = turns.length;
-  record.winner = winner;
-  record.winnerType = winnerType;
   return record;
 }
 
 export function decompressGameRecord(gameRecord: GameRecord) {
-  const turns = [];
+  const turns: Turn[] = [];
   let lastTurnNum = -1;
   for (const turn of gameRecord.turns) {
     while (lastTurnNum < turn.turnNumber - 1) {
       lastTurnNum++;
       turns.push({
-        gameID: gameRecord.id,
         turnNumber: lastTurnNum,
         intents: [],
       });
@@ -251,7 +249,6 @@ export function decompressGameRecord(gameRecord: GameRecord) {
   const turnLength = turns.length;
   for (let i = turnLength; i < gameRecord.num_turns; i++) {
     turns.push({
-      gameID: gameRecord.id,
       turnNumber: i,
       intents: [],
     });
@@ -298,7 +295,7 @@ export function createRandomName(
   name: string,
   playerType: string,
 ): string | null {
-  let randomName = null;
+  let randomName: string | null = null;
   if (playerType === "HUMAN") {
     const hash = simpleHash(name);
     const prefixIndex = hash % BOT_NAME_PREFIXES.length;
@@ -324,6 +321,7 @@ export const emojiTable: string[][] = [
   ["💰", "⚓", "⛵", "🏡", "🛡️"],
 ];
 // 2d to 1d array
+
 export const flattenedEmojiTable: string[] = [].concat(...emojiTable);
 
 // Returns [lockedLayers, lockedColors, MAX_LAYER] for a given UserStatus (without lock reasons)
@@ -490,3 +488,5 @@ export function getPermissionSummary(
 
   return [lockedLayers_, lockedColors_, maxLayer];
 }
+
+export const flattenedEmojiTable: string[] = emojiTable.flat();

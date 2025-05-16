@@ -11,9 +11,9 @@ import { TileRef } from "../game/GameMap";
 
 export class MissileSiloExecution implements Execution {
   private active = true;
-  private mg: Game;
-  private player: Player;
-  private silo: Unit;
+  private mg: Game | null = null;
+  private player: Player | null = null;
+  private silo: Unit | null = null;
 
   constructor(
     private _owner: PlayerID,
@@ -32,7 +32,10 @@ export class MissileSiloExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.silo == null) {
+    if (this.player === null || this.mg === null) {
+      throw new Error("Not initialized");
+    }
+    if (this.silo === null) {
       const spawn = this.player.canBuild(UnitType.MissileSilo, this.tile);
       if (spawn === false) {
         consolex.warn(
@@ -45,14 +48,14 @@ export class MissileSiloExecution implements Execution {
         cooldownDuration: this.mg.config().SiloCooldown(),
       });
 
-      if (this.player != this.silo.owner()) {
+      if (this.player !== this.silo.owner()) {
         this.player = this.silo.owner();
       }
     }
 
     if (
       this.silo.isCooldown() &&
-      this.silo.ticksLeftInCooldown(this.mg.config().SiloCooldown()) == 0
+      this.silo.ticksLeftInCooldown(this.mg.config().SiloCooldown()) === 0
     ) {
       this.silo.setCooldown(false);
     }

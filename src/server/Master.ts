@@ -103,7 +103,7 @@ export async function startMaster() {
         setInterval(
           () =>
             fetchLobbies().then((lobbies) => {
-              if (lobbies == 0) {
+              if (lobbies === 0) {
                 scheduleLobbies();
               }
             }),
@@ -194,7 +194,7 @@ app.post(
 );
 
 async function fetchLobbies(): Promise<number> {
-  const fetchPromises = [];
+  const fetchPromises: Promise<GameInfo | null>[] = [];
 
   for (const gameID of publicLobbyIDs) {
     const controller = new AbortController();
@@ -233,8 +233,26 @@ async function fetchLobbies(): Promise<number> {
     });
 
   lobbyInfos.forEach((l) => {
-    if (l.msUntilStart <= 250 || l.gameConfig.maxPlayers <= l.numClients) {
+    if (
+      "msUntilStart" in l &&
+      l.msUntilStart !== undefined &&
+      l.msUntilStart <= 250
+    ) {
       publicLobbyIDs.delete(l.gameID);
+      return;
+    }
+
+    if (
+      "gameConfig" in l &&
+      l.gameConfig !== undefined &&
+      "maxPlayers" in l.gameConfig &&
+      l.gameConfig.maxPlayers !== undefined &&
+      "numClients" in l &&
+      l.numClients !== undefined &&
+      l.gameConfig.maxPlayers <= l.numClients
+    ) {
+      publicLobbyIDs.delete(l.gameID);
+      return;
     }
   });
 

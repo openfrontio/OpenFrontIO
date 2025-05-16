@@ -65,20 +65,23 @@ export const pastelTheme = new (class implements Theme {
   }
 
   territoryColor(player: PlayerView): Colord {
-    if (player.team() !== null) {
-      return this.teamColor(player.team());
+    const team = player.team();
+    if (team !== null) {
+      return this.teamColor(team);
     }
-    if (player.info().playerType == PlayerType.Human) {
+    if (player.info().playerType === PlayerType.Human) {
       return humanColors[simpleHash(player.id()) % humanColors.length];
     }
-    if (player.info().playerType == PlayerType.Bot) {
+    if (player.info().playerType === PlayerType.Bot) {
       return botColors[simpleHash(player.id()) % botColors.length];
     }
     return territoryColors[simpleHash(player.id()) % territoryColors.length];
   }
 
   textColor(player: PlayerView): string {
-    return player.info().playerType == PlayerType.Human ? "#000000" : "#4D4D4D";
+    return player.info().playerType === PlayerType.Human
+      ? "#000000"
+      : "#4D4D4D";
   }
 
   specialBuildingColor(player: PlayerView): Colord {
