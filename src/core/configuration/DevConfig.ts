@@ -1,7 +1,7 @@
-import { UnitInfo, UnitType } from "../game/Game";
+import { GameMapType, GameMode, UnitInfo, UnitType } from "../game/Game";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
-import { GameEnv, ServerConfig } from "./Config";
+import { GameEnv, LobbyConfig, ServerConfig } from "./Config";
 import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
 
 export class DevServerConfig extends DefaultServerConfig {
@@ -17,8 +17,20 @@ export class DevServerConfig extends DefaultServerConfig {
     return 5 * 1000;
   }
 
-  lobbyMaxPlayers(): number {
-    return Math.random() < 0.5 ? 2 : 3;
+  calcLobbyConfig(map: GameMapType, mode: GameMode): LobbyConfig {
+    switch (mode) {
+      case GameMode.Team:
+        if (Math.random() < 0.5) {
+          return { maxPlayers: 6, numPlayerTeams: 3 };
+        } else {
+          return { maxPlayers: 4, numPlayerTeams: 2 };
+        }
+      case GameMode.FFA:
+        return {
+          maxPlayers: Math.random() < 0.5 ? 2 : 3,
+          numPlayerTeams: undefined,
+        };
+    }
   }
 
   samWarheadHittingChance(): number {

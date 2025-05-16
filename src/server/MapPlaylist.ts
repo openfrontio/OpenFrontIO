@@ -45,13 +45,12 @@ export class MapPlaylist {
   public gameConfig(): GameConfig {
     const { map, mode } = this.getNextMap();
 
-    const numPlayerTeams =
-      mode === GameMode.Team ? 2 + Math.floor(Math.random() * 5) : undefined;
+    const { maxPlayers, numPlayerTeams } = config.calcLobbyConfig(map, mode);
 
     // Create the default public game config (from your GameManager)
     return {
       gameMap: map,
-      maxPlayers: config.lobbyMaxPlayers(map, mode),
+      maxPlayers: maxPlayers,
       gameType: GameType.Public,
       difficulty: Difficulty.Medium,
       infiniteGold: false,

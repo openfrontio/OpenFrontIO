@@ -1,6 +1,10 @@
 import { JWK } from "jose";
-import { GameEnv, ServerConfig } from "../../src/core/configuration/Config";
-import { GameMapType } from "../../src/core/game/Game";
+import {
+  GameEnv,
+  LobbyConfig,
+  ServerConfig,
+} from "../../src/core/configuration/Config";
+import { GameMapType, GameMode } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
@@ -34,7 +38,7 @@ export class TestServerConfig implements ServerConfig {
   gameCreationRate(): number {
     throw new Error("Method not implemented.");
   }
-  lobbyMaxPlayers(map: GameMapType): number {
+  calcLobbyConfig(map: GameMapType, mode: GameMode): LobbyConfig {
     throw new Error("Method not implemented.");
   }
   numWorkers(): number {
