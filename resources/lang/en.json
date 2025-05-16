@@ -386,7 +386,7 @@
   "player_panel": {
     "gold": "Gold",
     "troops": "Troops",
-    "traitor": "Traitor",
+    "betrayals": "Number of betrayals",
     "embargo": "Embargo against you",
     "nuke": "Nukes sent by them to you",
     "start_trade": "Start trading",

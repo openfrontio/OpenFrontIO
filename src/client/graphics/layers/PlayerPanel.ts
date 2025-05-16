@@ -288,7 +288,7 @@ export class PlayerPanel extends LitElement implements Layer {
             <!-- Attitude section -->
             <div class="flex flex-col gap-1">
               <div class="text-white text-opacity-80 text-sm px-2">
-                ${translateText("player_panel.traitor")}
+                ${translateText("player_panel.betrayals")}
               </div>
               <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
                 ${this.numberOfBetrayals(other.id())}
