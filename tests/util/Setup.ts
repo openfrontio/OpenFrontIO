@@ -43,6 +43,7 @@ export async function setup(
     infiniteGold: false,
     infiniteTroops: false,
     instantBuild: false,
+    allowMultiTabbing: false,
     ..._gameConfig,
   };
   const config = new TestConfig(
