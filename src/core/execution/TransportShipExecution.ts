@@ -166,7 +166,7 @@ export class TransportShipExecution implements Execution {
     this.lastMove = ticks;
 
     if (this.boat.retreating()) {
-      this.dst = this.src;
+      this.dst = this.src!; // src is guaranteed to be set at this point
     }
 
     const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
@@ -179,7 +179,7 @@ export class TransportShipExecution implements Execution {
           return;
         }
         if (this.target.isPlayer() && this.attacker.isFriendly(this.target)) {
-          this.target.addTroops(this.troops);
+          this.attacker.conquer(this.dst);
         } else {
           this.attacker.conquer(this.dst);
           this.mg.addExecution(

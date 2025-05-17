@@ -3,7 +3,7 @@ import { Execution, Game, Player, PlayerID, UnitType } from "../game/Game";
 
 export class BoatRetreatExecution implements Execution {
   private active = true;
-  private player: Player | undefined;
+  private player: Player;
   constructor(
     private playerID: PlayerID,
     private unitID: number,
@@ -25,7 +25,7 @@ export class BoatRetreatExecution implements Execution {
       .units()
       .find(
         (unit) =>
-          unit.id() == this.unitID && unit.type() == UnitType.TransportShip,
+          unit.id() === this.unitID && unit.type() === UnitType.TransportShip,
       );
 
     if (!unit) {
