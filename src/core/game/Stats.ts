@@ -6,8 +6,12 @@ export interface Stats {
   getPlayerStats(player: PlayerID): PlayerStats;
   stats(): AllPlayersStats;
 
-  attack(outgoing: PlayerID, incoming: PlayerID, troops: number): void;
-  attackCancel(outgoing: PlayerID, incoming: PlayerID, troops: number): void;
+  attack(outgoing: PlayerID, incoming: PlayerID | null, troops: number): void;
+  attackCancel(
+    outgoing: PlayerID,
+    incoming: PlayerID | null,
+    troops: number,
+  ): void;
 
   betray(betraor: PlayerID): void;
 

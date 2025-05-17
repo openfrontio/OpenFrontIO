@@ -61,20 +61,24 @@ export class StatsImpl implements Stats {
     return this.data;
   }
 
-  // TODO: Call this function
-  attack(outgoing: PlayerID, incoming: PlayerID, troops: number): void {
+  attack(outgoing: PlayerID, incoming: PlayerID | null, troops: number): void {
     const o = this.getPlayerStats(outgoing);
-    const i = this.getPlayerStats(incoming);
     o.attacks[ATTACK_INDEX_OUTGOING] += troops;
+    if (incoming === null) return;
+    const i = this.getPlayerStats(incoming);
     i.attacks[ATTACK_INDEX_INCOMING] += troops;
   }
 
-  // TODO: Call this function
-  attackCancel(outgoing: PlayerID, incoming: PlayerID, troops: number): void {
+  attackCancel(
+    outgoing: PlayerID,
+    incoming: PlayerID | null,
+    troops: number,
+  ): void {
     const o = this.getPlayerStats(outgoing);
-    const i = this.getPlayerStats(incoming);
     o.attacks[ATTACK_INDEX_CANCELLED] += troops;
     o.attacks[ATTACK_INDEX_OUTGOING] -= troops;
+    if (incoming === null) return;
+    const i = this.getPlayerStats(incoming);
     i.attacks[ATTACK_INDEX_INCOMING] -= troops;
   }
 
