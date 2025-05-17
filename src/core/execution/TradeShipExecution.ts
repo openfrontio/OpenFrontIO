@@ -53,6 +53,9 @@ export class TradeShipExecution implements Execution {
         dstPort: this._dstPort,
         lastSetSafeFromPirates: ticks,
       });
+
+      // Record stats
+      this.mg.stats().boatSendTrade(this._owner, this._dstPort.owner().id());
     }
 
     if (!this.tradeShip.isActive()) {
@@ -70,6 +73,7 @@ export class TradeShipExecution implements Execution {
     if (this._dstPort.owner().id() === this.srcPort.owner().id()) {
       this.tradeShip.delete(false);
       this.active = false;
+      // TODO: Record stats?
       return;
     }
 
@@ -80,6 +84,7 @@ export class TradeShipExecution implements Execution {
     ) {
       this.tradeShip.delete(false);
       this.active = false;
+      // TODO: Record stats?
       return;
     }
 
@@ -91,6 +96,7 @@ export class TradeShipExecution implements Execution {
       if (ports.length === 0) {
         this.tradeShip.delete(false);
         this.active = false;
+        // TODO: Record stats?
         return;
       } else {
         this._dstPort = ports[0];
@@ -182,8 +188,7 @@ export class TradeShipExecution implements Execution {
       const stats = this.mg.stats();
       const si = this.srcPort.owner().id();
       const di = this._dstPort.owner().id();
-      stats.goldTrade(si, di, gold);
-      stats.goldTrade(di, si, gold);
+      stats.boatArriveTrade(si, di, gold);
     }
     return;
   }

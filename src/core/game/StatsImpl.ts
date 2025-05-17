@@ -5,7 +5,6 @@ import {
   BOAT_INDEX_ARRIVED,
   BOAT_INDEX_DESTROYED,
   BOAT_INDEX_SENT,
-  BoatType,
   BOMB_INDEX_INTERCEPTED,
   BOMB_INDEX_LANDED,
   BOMB_INDEX_LAUNCHED,
@@ -86,26 +85,58 @@ export class StatsImpl implements Stats {
     this.getPlayerStats(player).betrayals++;
   }
 
-  // TODO: Call this function
-  boatSend(player: PlayerID, type: BoatType): void {
+  boatSendTrade(player: PlayerID, target: PlayerID | null): void {
     const data = this.getPlayerStats(player);
-    const boats = data.boats[type];
+    const boats = data.boats[UnitType.TradeShip];
     if (boats === undefined) throw new Error();
     boats[BOAT_INDEX_SENT]++;
   }
 
-  // TODO: Call this function
-  boatArrive(player: PlayerID, type: BoatType): void {
+  boatArriveTrade(player: PlayerID, target: PlayerID, gold: number): void {
     const data = this.getPlayerStats(player);
-    const boats = data.boats[type];
+    const odat = this.getPlayerStats(target);
+    data.gold[GOLD_INDEX_TRADE] += gold;
+    odat.gold[GOLD_INDEX_TRADE] += gold;
+    const boats = data.boats[UnitType.TradeShip];
     if (boats === undefined) throw new Error();
     boats[BOAT_INDEX_ARRIVED]++;
   }
 
   // TODO: Call this function
-  boatDestroy(player: PlayerID, type: BoatType): void {
+  boatDestroyTrade(player: PlayerID, target: PlayerID, gold: number): void {
     const data = this.getPlayerStats(player);
-    const boats = data.boats[type];
+    const boats = data.boats[UnitType.TradeShip];
+    if (boats === undefined) throw new Error();
+    boats[BOAT_INDEX_DESTROYED]++;
+  }
+
+  boatSendTroops(
+    player: PlayerID,
+    target: PlayerID | null,
+    troops: number,
+  ): void {
+    const data = this.getPlayerStats(player);
+    const boats = data.boats[UnitType.TransportShip];
+    if (boats === undefined) throw new Error();
+    boats[BOAT_INDEX_SENT]++;
+  }
+
+  // TODO: Call this function
+  boatArriveTroops(
+    player: PlayerID,
+    target: PlayerID | null,
+    troops: number,
+  ): void {
+    const data = this.getPlayerStats(player);
+    const boats = data.boats[UnitType.TransportShip];
+    if (boats === undefined) throw new Error();
+    boats[BOAT_INDEX_ARRIVED]++;
+  }
+
+  // TODO: Call this function
+  boatDestroyTroops(player: PlayerID, target: PlayerID, troops: number): void {
+    const data = this.getPlayerStats(player);
+    const boats = data.boats[UnitType.TransportShip];
     if (boats === undefined) throw new Error();
     boats[BOAT_INDEX_DESTROYED]++;
   }
@@ -138,11 +169,6 @@ export class StatsImpl implements Stats {
   goldWork(player: PlayerID, gold: number): void {
     const data = this.getPlayerStats(player);
     data.gold[GOLD_INDEX_WORK] += gold;
-  }
-
-  goldTrade(player: PlayerID, other: PlayerID, gold: number): void {
-    const data = this.getPlayerStats(player);
-    data.gold[GOLD_INDEX_TRADE] += gold;
   }
 
   goldWar(player: PlayerID, captured: PlayerID, gold: number): void {

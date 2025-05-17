@@ -1,4 +1,4 @@
-import { BoatType, NukeType, OtherUnit } from "../AnalyticsSchemas";
+import { NukeType, OtherUnit } from "../AnalyticsSchemas";
 import { AllPlayersStats, PlayerStats } from "../Schemas";
 import { PlayerID } from "./Game";
 
@@ -15,16 +15,27 @@ export interface Stats {
 
   betray(betraor: PlayerID): void;
 
-  boatSend(player: PlayerID, type: BoatType): void;
-  boatArrive(player: PlayerID, type: BoatType): void;
-  boatDestroy(player: PlayerID, type: BoatType): void;
+  boatSendTrade(player: PlayerID, target: PlayerID): void;
+  boatArriveTrade(player: PlayerID, target: PlayerID, gold: number): void;
+  boatDestroyTrade(player: PlayerID, target: PlayerID, gold: number): void;
+
+  boatSendTroops(
+    player: PlayerID,
+    target: PlayerID | null,
+    troops: number,
+  ): void;
+  boatArriveTroops(
+    player: PlayerID,
+    target: PlayerID | null,
+    troops: number,
+  ): void;
+  boatDestroyTroops(player: PlayerID, target: PlayerID, troops: number): void;
 
   bombLaunch(player: PlayerID, target: PlayerID | null, type: NukeType): void;
   bombLand(player: PlayerID, target: PlayerID | null, type: NukeType): void;
   bombIntercept(player: PlayerID, interceptor: PlayerID, type: NukeType): void;
 
   goldWork(player: PlayerID, gold: number): void;
-  goldTrade(player: PlayerID, other: PlayerID, gold: number): void;
   goldWar(player: PlayerID, captured: PlayerID, gold: number): void;
 
   unitBuild(player: PlayerID, type: OtherUnit): void;

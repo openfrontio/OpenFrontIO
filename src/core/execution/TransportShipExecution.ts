@@ -146,6 +146,9 @@ export class TransportShipExecution implements Execution {
         this.targetID,
       );
     }
+
+    // Record stats
+    this.mg.stats().boatSendTroops(this.attackerID, this.targetID, this.troops);
   }
 
   tick(ticks: number) {
@@ -172,6 +175,7 @@ export class TransportShipExecution implements Execution {
           this.attacker.addTroops(this.troops);
           this.boat.delete(false);
           this.active = false;
+          // TODO: Record stats?
           return;
         }
         if (this.target.isPlayer() && this.attacker.isFriendly(this.target)) {
@@ -190,6 +194,7 @@ export class TransportShipExecution implements Execution {
         }
         this.boat.delete(false);
         this.active = false;
+        // TODO: Record stats?
         return;
       case PathFindResultType.NextTile:
         this.boat.move(result.tile);
@@ -201,6 +206,7 @@ export class TransportShipExecution implements Execution {
         consolex.warn(`path not found tot dst`);
         this.boat.delete(false);
         this.active = false;
+        // TODO: Record stats?
         return;
     }
   }
