@@ -52,7 +52,7 @@
     "option_pause": "Pause/Unpause the game - Only available in single player mode.",
     "option_timer": "Timer - Time passed since the start of the game.",
     "option_exit": "Exit button.",
-    "option_settings": "Settings - Open the settings menu. Inside you can toggle the Alternate view, Dark Mode, Emojis and action on left click.",
+    "option_settings": "Settings - Open the settings menu. Inside you can toggle the Alternate view, Emojis, Dark Mode, Ninja (anonymous/random names mode), and action on left click.",
     "radial_title": "Radial menu",
     "radial_desc": "Right clicking (or touch on mobile) opens the Radial menu. Right click outside it to close it. From the menu you can:",
     "radial_build": "Open the Build menu.",
