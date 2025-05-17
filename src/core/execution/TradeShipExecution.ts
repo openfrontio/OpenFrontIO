@@ -153,12 +153,17 @@ export class TradeShipExecution implements Execution {
     const gold = this.mg.config().tradeShipGold(this.tilesTraveled);
 
     if (this.wasCaptured) {
-      this.tradeShip.owner().addGold(gold);
+      const player = this.tradeShip.owner();
+      player.addGold(gold);
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
         MessageType.SUCCESS,
         this.tradeShip.owner().id(),
       );
+
+      // Record stats
+      // TODO: Track this separately from war?
+      this.mg.stats().goldWar(player.id(), this.origOwner.id(), gold);
     } else {
       this.srcPort.owner().addGold(gold);
       this._dstPort.owner().addGold(gold);
@@ -172,6 +177,13 @@ export class TradeShipExecution implements Execution {
         MessageType.SUCCESS,
         this.srcPort.owner().id(),
       );
+
+      // Record stats
+      const stats = this.mg.stats();
+      const si = this.srcPort.owner().id();
+      const di = this._dstPort.owner().id();
+      stats.goldTrade(si, di, gold);
+      stats.goldTrade(di, si, gold);
     }
     return;
   }

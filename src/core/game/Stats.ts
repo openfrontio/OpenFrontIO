@@ -24,8 +24,8 @@ export interface Stats {
   bombIntercept(player: PlayerID, interceptor: PlayerID, type: NukeType): void;
 
   goldWork(player: PlayerID, gold: number): void;
-  goldTrade(player: PlayerID, gold: number): void;
-  goldWar(player: PlayerID, gold: number): void;
+  goldTrade(player: PlayerID, other: PlayerID, gold: number): void;
+  goldWar(player: PlayerID, captured: PlayerID, gold: number): void;
 
   unitBuild(player: PlayerID, type: OtherUnit): void;
   unitLose(player: PlayerID, type: OtherUnit): void;

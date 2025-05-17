@@ -135,20 +135,17 @@ export class StatsImpl implements Stats {
     bomb[BOMB_INDEX_INTERCEPTED]++;
   }
 
-  // TODO: Call this function
   goldWork(player: PlayerID, gold: number): void {
     const data = this.getPlayerStats(player);
     data.gold[GOLD_INDEX_WORK] += gold;
   }
 
-  // TODO: Call this function
-  goldTrade(player: PlayerID, gold: number): void {
+  goldTrade(player: PlayerID, other: PlayerID, gold: number): void {
     const data = this.getPlayerStats(player);
     data.gold[GOLD_INDEX_TRADE] += gold;
   }
 
-  // TODO: Call this function
-  goldWar(player: PlayerID, gold: number): void {
+  goldWar(player: PlayerID, captured: PlayerID, gold: number): void {
     const data = this.getPlayerStats(player);
     data.gold[GOLD_INDEX_WAR] += gold;
   }
