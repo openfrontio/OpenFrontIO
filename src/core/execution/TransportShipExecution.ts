@@ -179,7 +179,7 @@ export class TransportShipExecution implements Execution {
           return;
         }
         if (this.target.isPlayer() && this.attacker.isFriendly(this.target)) {
-          this.attacker.conquer(this.dst);
+          this.attacker.addTroops(this.troops);
         } else {
           this.attacker.conquer(this.dst);
           this.mg.addExecution(
