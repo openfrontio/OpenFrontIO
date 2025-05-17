@@ -53,11 +53,15 @@ export class FlagInputModal extends LitElement {
     }
 
     const newLayer = { name, color: this.selectedColor };
-    this.customLayers = [
-      this.customLayers[0],
-      newLayer,
-      ...this.customLayers.slice(1),
-    ];
+    if (this.customLayers.length === 0) {
+      this.customLayers = [newLayer];
+    } else {
+      this.customLayers = [
+        this.customLayers[0],
+        newLayer,
+        ...this.customLayers.slice(1),
+      ];
+    }
   }
 
   private removeLayer(index: number) {
@@ -137,6 +141,7 @@ export class FlagInputModal extends LitElement {
       flag = "";
     }
     this.flag = flag;
+    this.dispatchFlagEvent();
     this.showModal = false;
     this.storeFlag(flag);
     const el = document.querySelector("flag-input") as FlagInput;
