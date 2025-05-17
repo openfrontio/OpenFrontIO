@@ -1,6 +1,7 @@
 import { consolex } from "../../core/Consolex";
 import { EventBus } from "../../core/EventBus";
 import { ClientID } from "../../core/Schemas";
+import { SoundManager } from "../../core/SoundManager";
 import { GameView } from "../../core/game/GameView";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
@@ -29,7 +30,6 @@ import { TopBar } from "./layers/TopBar";
 import { UILayer } from "./layers/UILayer";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
-
 export function createRenderer(
   canvas: HTMLCanvasElement,
   game: GameView,
@@ -37,8 +37,12 @@ export function createRenderer(
   clientID: ClientID,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, canvas);
-
   const uiState = { attackRatio: 20 };
+  const soundManager = new SoundManager();
+
+  Promise.all([soundManager.loadSound("click", "/sounds/click1.mp3")]).catch(
+    (e) => console.error("Failed to load sounds:", e),
+  );
 
   //hide when the game renders
   const startingModal = document.querySelector(
@@ -62,6 +66,7 @@ export function createRenderer(
   }
   buildMenu.game = game;
   buildMenu.eventBus = eventBus;
+  buildMenu.soundManager = soundManager; // Pass SoundManager
 
   const leaderboard = document.querySelector("leader-board") as Leaderboard;
   if (!emojiTable || !(leaderboard instanceof Leaderboard)) {
@@ -87,6 +92,7 @@ export function createRenderer(
   controlPanel.eventBus = eventBus;
   controlPanel.uiState = uiState;
   controlPanel.game = game;
+  controlPanel.soundManager = soundManager; // Pass SoundManager
 
   const eventsDisplay = document.querySelector(
     "events-display",
@@ -130,6 +136,7 @@ export function createRenderer(
   }
   optionsMenu.eventBus = eventBus;
   optionsMenu.game = game;
+  // optionsMenu.soundManager = soundManager; // Pass SoundManager
 
   const topBar = document.querySelector("top-bar") as TopBar;
   if (!(topBar instanceof TopBar)) {
@@ -144,6 +151,7 @@ export function createRenderer(
   playerPanel.g = game;
   playerPanel.eventBus = eventBus;
   playerPanel.emojiTable = emojiTable;
+  // playerPanel.soundManager = soundManager; // Pass SoundManager
 
   const chatModal = document.querySelector("chat-modal") as ChatModal;
   if (!(chatModal instanceof ChatModal)) {
@@ -151,6 +159,7 @@ export function createRenderer(
   }
   chatModal.g = game;
   chatModal.eventBus = eventBus;
+  // chatModal.soundManager = soundManager; // Pass SoundManager
 
   const multiTabModal = document.querySelector(
     "multi-tab-modal",
@@ -159,6 +168,20 @@ export function createRenderer(
     console.error("multi-tab modal not found");
   }
   multiTabModal.game = game;
+  // multiTabModal.soundManager = soundManager; // Pass SoundManager
+
+  const radialMenu = new RadialMenu(
+    eventBus,
+    game,
+    transformHandler,
+    clientID,
+    emojiTable as EmojiTable,
+    buildMenu,
+    uiState,
+    playerInfo,
+    playerPanel,
+    soundManager,
+  );
 
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
@@ -170,17 +193,7 @@ export function createRenderer(
     eventsDisplay,
     chatDisplay,
     buildMenu,
-    new RadialMenu(
-      eventBus,
-      game,
-      transformHandler,
-      clientID,
-      emojiTable as EmojiTable,
-      buildMenu,
-      uiState,
-      playerInfo,
-      playerPanel,
-    ),
+    radialMenu, // Use instantiated radialMenu
     new SpawnTimer(game, transformHandler),
     leaderboard,
     controlPanel,
@@ -200,6 +213,7 @@ export function createRenderer(
     transformHandler,
     uiState,
     layers,
+    soundManager, // Pass SoundManager
   );
 }
 
@@ -213,6 +227,7 @@ export class GameRenderer {
     public transformHandler: TransformHandler,
     public uiState: UIState,
     private layers: Layer[],
+    private soundManager: SoundManager, // Add SoundManager
   ) {
     const context = canvas.getContext("2d");
     if (context === null) throw new Error("2d context not supported");
