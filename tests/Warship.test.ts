@@ -105,7 +105,7 @@ describe("Warship", () => {
       game.ref(coastX + 1, 7),
       {
         dstPort,
-        srcPort: player1.units(UnitType.Port)[0],
+        tilesTraveled: 0,
       },
     );
 
@@ -132,7 +132,7 @@ describe("Warship", () => {
       game.ref(coastX + 1, 11),
       {
         dstPort,
-        srcPort: player1.units(UnitType.Port)[0],
+        tilesTraveled: 0,
       },
     );
 

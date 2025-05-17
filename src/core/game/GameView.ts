@@ -88,32 +88,31 @@ export class UnitView {
   isActive(): boolean {
     return this.data.isActive;
   }
-  hasDstPortId(): boolean {
-    return this.data.dstPortId !== undefined;
-  }
-  hasSrcPortId(): boolean {
-    return this.data.srcPortId !== undefined;
-  }
   hasHealth(): boolean {
     return this.data.health !== undefined;
   }
   gold(): string {
     if (this.type() !== UnitType.TradeShip) {
-      throw Error("Must be a trade ship");
+      return "";
     }
-    const srcPort = this.gameView?.unit(this.srcPortId() ?? 0);
-    const dstPort = this.gameView?.unit(this.dstPortId() ?? 0);
-    if (srcPort === undefined || dstPort === undefined) {
-      return "0";
-    }
+    const tilesTraveled = this.data.tilesTraveled ?? 0;
     return this.gameView
       .config()
-      .tradeShipGold(
-        this.gameView.manhattanDist(srcPort.tile(), dstPort.tile()),
-      )
+      .tradeShipGold(tilesTraveled)
       .toLocaleString("en-US", {
         maximumFractionDigits: 0,
       });
+  }
+  destination(): string {
+    const dstPortId = this.dstPortId();
+    if (dstPortId === undefined) {
+      return "";
+    }
+    const dstPort = this.gameView.unit(dstPortId);
+    if (dstPort === undefined) {
+      return "";
+    }
+    return dstPort.owner().name();
   }
   health(): number {
     return this.data.health ?? 0;
@@ -123,19 +122,6 @@ export class UnitView {
   }
   dstPortId(): number | undefined {
     return this.data.dstPortId;
-  }
-  destination(): string {
-    const dstPort = this.gameView.unit(this.dstPortId() ?? 0);
-    if (dstPort === undefined) {
-      return "";
-    }
-    return dstPort.owner().name();
-  }
-  srcPortId(): number | undefined {
-    if (this.type() !== UnitType.TradeShip) {
-      throw Error("Must be a trade ship");
-    }
-    return this.data.srcPortId;
   }
   detonationDst(): TileRef | undefined {
     if (!nukeTypes.includes(this.type())) {
