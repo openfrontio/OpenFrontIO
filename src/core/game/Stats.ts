@@ -7,6 +7,7 @@ export interface Stats {
     target: PlayerID | null,
     type: NukeType,
   ): void;
+  increaseBetrayalCount(player: PlayerID): void;
   getPlayerStats(player: PlayerID): PlayerStats;
   stats(): AllPlayersStats;
 }

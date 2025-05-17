@@ -7,7 +7,7 @@ export class StatsImpl implements Stats {
 
   _createUserData(sender: PlayerID, target: PlayerID): void {
     if (!this.data[sender]) {
-      this.data[sender] = { sentNukes: {} };
+      this.data[sender] = { sentNukes: {}, numberOfBetrayals: 0 };
     }
     if (!this.data[sender].sentNukes[target]) {
       this.data[sender].sentNukes[target] = {
@@ -22,6 +22,11 @@ export class StatsImpl implements Stats {
   increaseNukeCount(sender: PlayerID, target: PlayerID, type: NukeType): void {
     this._createUserData(sender, target);
     this.data[sender].sentNukes[target][type]++;
+  }
+
+  increaseBetrayalCount(player: PlayerID): void {
+    this._createUserData(player, player);
+    this.data[player].numberOfBetrayals++;
   }
 
   getPlayerStats(player: PlayerID): PlayerStats {

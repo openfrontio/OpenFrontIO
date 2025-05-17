@@ -197,6 +197,14 @@ export class PlayerPanel extends LitElement implements Layer {
     return sum;
   }
 
+  numberOfBetrayals(otherId: PlayerID) {
+    const stats = this.g.player(otherId).stats();
+    if (!stats) {
+      return 0;
+    }
+    return stats.numberOfBetrayals;
+  }
+
   render() {
     if (!this.isVisible) {
       return html``;
@@ -284,12 +292,10 @@ export class PlayerPanel extends LitElement implements Layer {
             <!-- Attitude section -->
             <div class="flex flex-col gap-1">
               <div class="text-white text-opacity-80 text-sm px-2">
-                ${translateText("player_panel.traitor")}
+                ${translateText("player_panel.betrayals")}
               </div>
               <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
-                ${other.isTraitor()
-                  ? translateText("player_panel.yes")
-                  : translateText("player_panel.no")}
+                ${this.numberOfBetrayals(other.id())}
               </div>
             </div>
 
