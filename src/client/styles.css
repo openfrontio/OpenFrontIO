@@ -309,11 +309,6 @@ label.option-card:hover {
   background: rgba(74, 158, 255, 0.1);
 }
 
-.radial-menu-image {
-  width: 211px;
-  height: 200px;
-}
-
 #helpModal table {
   border-collapse: collapse;
 }
@@ -333,17 +328,25 @@ label.option-card:hover {
   text-align: center;
 }
 
+#helpModal .default-image {
+  width: 12rem;
+  max-width: 12rem;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
 #helpModal .info-panel-img {
-  width: 13rem;
-  max-width: 13rem;
+  width: 12rem;
+  max-width: 12rem;
   height: auto;
   object-fit: contain;
   display: block;
 }
 
 #helpModal .player-icon-img {
-  width: 9rem;
-  height: 9rem;
+  width: 14rem;
+  height: 14rem;
   object-fit: contain;
 }
 
@@ -430,11 +433,6 @@ label.option-card:hover {
 #helpModal .emoji-icon {
   mask: url("../../resources/images/EmojiIconWhite.svg") no-repeat center /
     cover;
-}
-
-#helpModal .trade-icon {
-  mask: url("../../resources/images/helpModal/stoptradingbackgroundsquare.PNG")
-    no-repeat center / cover;
 }
 
 #helpModal .build-icon {
