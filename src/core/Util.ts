@@ -321,6 +321,7 @@ export const emojiTable: string[][] = [
   ["💰", "⚓", "⛵", "🏡", "🛡️"],
 ];
 // 2d to 1d array
+export const flattenedEmojiTable: string[] = emojiTable.flat();
 
 // Returns [lockedLayers, lockedColors, MAX_LAYER] for a given UserStatus (without lock reasons)
 export function getPermissionSummary(
@@ -486,5 +487,3 @@ export function getPermissionSummary(
 
   return [lockedLayers_, lockedColors_, maxLayer];
 }
-
-export const flattenedEmojiTable: string[] = emojiTable.flat();
