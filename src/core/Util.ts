@@ -18,6 +18,8 @@ import {
   BOT_NAME_SUFFIXES,
 } from "./execution/utils/BotNames";
 
+import { UserStatus } from "../client/FlagInput";
+
 export function manhattanDistWrapped(
   c1: Cell,
   c2: Cell,
@@ -320,3 +322,168 @@ export const emojiTable: string[][] = [
 ];
 // 2d to 1d array
 export const flattenedEmojiTable: string[] = emojiTable.flat();
+
+// Returns [lockedLayers, lockedColors, MAX_LAYER] for a given UserStatus (without lock reasons)
+export function getPermissionSummary(
+  userStatus: UserStatus,
+): [string[], string[], number] {
+  const lockedLayers_: string[] = [];
+  const lockedColors_: string[] = [];
+  let maxLayer = 50;
+
+  const lock = (list: string[]) => {
+    for (const item of list) {
+      lockedLayers_.push(item);
+    }
+  };
+
+  const lockColor = (list: string[]) => {
+    for (const color of list) {
+      lockedColors_.push(color);
+    }
+  };
+
+  if (userStatus.isEvan || userStatus.isDebug_) {
+    return [lockedLayers_, lockedColors_, 50];
+  }
+
+  if (!userStatus.isAdmin) {
+    lock(["admin_shield", "admin_shield_r"]);
+  }
+
+  if (userStatus.isAdmin) {
+    maxLayer = 45;
+  } else if (userStatus.isContributors || userStatus.isSupporters) {
+    maxLayer = 40;
+  } else if (
+    userStatus.isOg ||
+    userStatus.isOg100 ||
+    userStatus.isTranslator ||
+    userStatus.isBetaTester
+  ) {
+    maxLayer = 35;
+  } else if (userStatus.isWellKnownPlayer) {
+    maxLayer = 20;
+  } else if (userStatus.isKnownPlayer) {
+    maxLayer = 15;
+  } else if (userStatus.isSeenplayer) {
+    maxLayer = 10;
+  } else if (userStatus.isLoginPlayer) {
+    maxLayer = 5;
+  } else {
+    maxLayer = 3;
+  }
+
+  if (!userStatus.isContributors) {
+    lock(["admin_contributors"]);
+  }
+
+  if (!userStatus.isBetaTester) {
+    lock(["beta_tester", "beta_tester_circle"]);
+  }
+
+  if (!userStatus.ofm_2025_event) {
+    lock(["ofm_2025"]);
+  }
+
+  if (!userStatus.isSupporters) {
+    lock(["rocket_mini", "rocket"]);
+    lockColor([
+      "rainbow",
+      "bright-rainbow",
+      "gold-glow",
+      "silver-glow",
+      "copper-glow",
+      "neon",
+      "lava",
+      "water",
+    ]);
+  }
+
+  if (!userStatus.isOg) {
+    lock(["og_plus"]);
+  }
+
+  if (!userStatus.isOg100) {
+    lock(["og"]);
+  }
+
+  if (!userStatus.isTranslator) {
+    lock(["translator"]);
+  }
+
+  if (!userStatus.isWellKnownPlayer) {
+    lock([
+      "center_circle",
+      "center_star",
+      "center_flower",
+      "flower_tc",
+      "flower_tl",
+      "flower_tr",
+      "nato_emblem",
+      "eu_star",
+      "laurel_wreath",
+      "octagram",
+      "octagram_2",
+    ]);
+    lockColor([
+      "#ffd700",
+      "#add8e6",
+      "#f5f5dc",
+      "#ffb6c1",
+      "#708090",
+      "#00ff7f",
+      "#dc143c",
+      "#ffbf00",
+      "#3d9970",
+      "#87ceeb",
+      "#6a5acd",
+      "#ff66cc",
+      "#36454f",
+      "#fffff0",
+    ]);
+
+    if (!userStatus.isKnownPlayer) {
+      lock([
+        "tricolor_b",
+        "tricolor_c",
+        "tricolor_l",
+        "tricolor_m",
+        "tricolor_r",
+        "tricolor_t",
+        "triangle_t",
+        "triangle_l",
+        "triangle_b",
+        "triangle_r",
+        "mini_tr_tr",
+        "mini_tr_tl",
+        "mini_tr_br",
+        "mini_tr_bl",
+      ]);
+      lockColor([
+        "#800080",
+        "#ff69b4",
+        "#a52a2a",
+        "#808080",
+        "#20b2aa",
+        "#ff6347",
+        "#4682b4",
+        "#90ee90",
+        "#8b0000",
+        "#191970",
+      ]);
+
+      if (!userStatus.isSeenplayer) {
+        lock(["half_l", "half_r", "half_b", "half_t"]);
+        lockColor(["#ffa500", "#00ffff"]);
+
+        if (!userStatus.isLoginPlayer) {
+          lock(["triangle_br", "triangle_bl", "triangle_tr", "triangle_tl"]);
+          lockColor(["#ffff00", "#008000"]);
+        }
+      }
+    }
+  }
+
+  return [lockedLayers_, lockedColors_, maxLayer];
+}
