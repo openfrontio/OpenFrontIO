@@ -79,6 +79,12 @@ export class UnitView {
   troops(): number {
     return this.data.troops;
   }
+  retreating(): boolean {
+    if (this.type() != UnitType.TransportShip) {
+      throw Error("Must be a transport ship");
+    }
+    return this.data.retreating;
+  }
   tile(): TileRef {
     return this.data.pos;
   }

@@ -338,6 +338,8 @@ export interface Unit {
   // State
   isActive(): boolean;
   hasHealth(): boolean;
+  retreating(): boolean;
+  orderBoatRetreat(): void;
   health(): number;
   modifyHealth(delta: number): void;
 
