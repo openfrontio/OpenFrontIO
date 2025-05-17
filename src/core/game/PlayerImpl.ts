@@ -655,11 +655,7 @@ export class PlayerImpl implements Player {
   private attackingTroops(): number {
     const landAttackTroops = this._outgoingAttacks
       .filter((a) => a.isActive())
-      .reduce(
-        (sum, a) =>
-          sum + a.troops(),
-        0,
-      );
+      .reduce((sum, a) => sum + a.troops(), 0);
 
     const boatTroops = this.units(UnitType.TransportShip)
       .map((u) => u.troops())

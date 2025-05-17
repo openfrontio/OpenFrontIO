@@ -44,7 +44,6 @@ const TERRAIN_EFFECTS = {
   [TerrainType.Mountain]: { mag: 1.2, speed: 1.3 },
 } as const;
 
-
 export abstract class DefaultServerConfig implements ServerConfig {
   private publicKey: JWK;
   abstract jwtAudience(): string;
@@ -501,7 +500,6 @@ export class DefaultConfig implements Config {
     defenderTroopLoss: number;
     tilesPerTickUsed: number;
   } {
-
     const type = gm.terrainType(tileToConquer);
     const mod = TERRAIN_EFFECTS[type];
     if (!mod) {
@@ -535,7 +533,10 @@ export class DefaultConfig implements Config {
     }
 
     if (attacker.isPlayer() && defenderIsPlayer) {
-      if (attackerType === PlayerType.Human && defenderType === PlayerType.Bot) {
+      if (
+        attackerType === PlayerType.Human &&
+        defenderType === PlayerType.Bot
+      ) {
         mag *= 0.8;
       }
       if (
@@ -571,7 +572,7 @@ export class DefaultConfig implements Config {
       return {
         attackerTroopLoss: mag * 16,
         defenderTroopLoss: 0,
-        tilesPerTickUsed: 31 * speed, 
+        tilesPerTickUsed: 31 * speed,
       };
     }
   }
@@ -662,7 +663,7 @@ export class DefaultConfig implements Config {
   populationIncreaseRate(player: Player): number {
     const max = this.maxPopulation(player);
     //population grows proportional to current population with growth decreasing as it approaches max
-    // smaller countries recieve a boost to pop growth to speed up early game 
+    // smaller countries recieve a boost to pop growth to speed up early game
     let toAdd =
       10 +
       (1300 / max + 1 / 140) * (0.8 * player.troops() + 1.2 * player.workers());
@@ -691,12 +692,8 @@ export class DefaultConfig implements Config {
       }
     }
 
-    return (
-      Math.min(totalPop + toAdd, max) -
-      totalPop
-    );
+    return Math.min(totalPop + toAdd, max) - totalPop;
   }
-
 
   goldAdditionRate(player: Player): number {
     return Math.sqrt(player.workers() * player.numTilesOwned()) / 200;
