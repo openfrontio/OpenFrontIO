@@ -48,7 +48,7 @@
     "ui_options": "Options",
     "ui_options_desc": "The following elements can be found inside:",
     "ui_playeroverlay": "Player info overlay",
-    "ui_playeroverlay_desc": "When you hover over a country, the Player info overlay is displayed under Options. It shows the type of player: Human, Nation (smart bot), or Bot. A Nation's attitude towards you, ranging from Hostile to Friendly. And defending troops, gold, And defensive troops, gold, plus the number of Warships and various buildings the player has.",
+    "ui_playeroverlay_desc": "When you hover over a country, the Player info overlay is displayed under Options. It shows the type of player: Human, Nation (smart bot), or Bot. A Nation's attitude towards you, ranging from Hostile to Friendly. And defending troops, gold, plus the number of Warships and various buildings the player has.",
     "option_pause": "Pause/Unpause the game - Only available in single player mode.",
     "option_timer": "Timer - Time passed since the start of the game.",
     "option_exit": "Exit button.",
