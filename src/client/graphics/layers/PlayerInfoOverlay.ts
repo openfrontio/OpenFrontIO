@@ -278,6 +278,8 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       (unit.owner() === this.myPlayer() ||
         this.myPlayer()?.isFriendly(unit.owner())) ??
       false;
+    const gold = unit.gold();
+    const destination = unit.destination();
 
     return html`
       <div class="p-2">
@@ -286,6 +288,14 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         </div>
         <div class="mt-1">
           <div class="text-sm opacity-80">${unit.type()}</div>
+          ${gold !== ""
+            ? html` <div class="text-sm opacity-80">Gold: ${gold}</div> `
+            : ""}
+          ${destination !== ""
+            ? html`<div class="text-sm opacity-80">
+                Destination: ${destination}
+              </div>`
+            : ""}
           ${unit.hasHealth()
             ? html`
                 <div class="text-sm opacity-80">

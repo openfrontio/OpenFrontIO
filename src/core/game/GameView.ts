@@ -91,6 +91,29 @@ export class UnitView {
   hasHealth(): boolean {
     return this.data.health !== undefined;
   }
+  gold(): string {
+    if (this.type() !== UnitType.TradeShip) {
+      return "";
+    }
+    const tilesTraveled = this.data.tilesTraveled ?? 0;
+    return this.gameView
+      .config()
+      .tradeShipGold(tilesTraveled)
+      .toLocaleString("en-US", {
+        maximumFractionDigits: 0,
+      });
+  }
+  destination(): string {
+    const dstPortId = this.dstPortId();
+    if (dstPortId === undefined) {
+      return "";
+    }
+    const dstPort = this.gameView.unit(dstPortId);
+    if (dstPort === undefined) {
+      return "";
+    }
+    return dstPort.owner().name();
+  }
   health(): number {
     return this.data.health ?? 0;
   }

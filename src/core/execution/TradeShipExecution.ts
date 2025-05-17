@@ -51,6 +51,7 @@ export class TradeShipExecution implements Execution {
       }
       this.tradeShip = this.origOwner.buildUnit(UnitType.TradeShip, spawn, {
         dstPort: this._dstPort,
+        tilesTraveled: this.tilesTraveled,
         lastSetSafeFromPirates: ticks,
       });
     }
@@ -108,6 +109,7 @@ export class TradeShipExecution implements Execution {
       }
       this.tradeShip.move(cachedNextTile);
       this.tilesTraveled++;
+      this.tradeShip.setTilesTraveled(this.tilesTraveled);
       return;
     }
 
@@ -132,6 +134,7 @@ export class TradeShipExecution implements Execution {
         }
         this.tradeShip.move(result.tile);
         this.tilesTraveled++;
+        this.tradeShip.setTilesTraveled(this.tilesTraveled);
         break;
       case PathFindResultType.PathNotFound:
         consolex.warn("captured trade ship cannot find route");

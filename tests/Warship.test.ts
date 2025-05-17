@@ -105,6 +105,7 @@ describe("Warship", () => {
       game.ref(coastX + 1, 7),
       {
         dstPort,
+        tilesTraveled: 0,
       },
     );
 
@@ -131,6 +132,7 @@ describe("Warship", () => {
       game.ref(coastX + 1, 11),
       {
         dstPort,
+        tilesTraveled: 0,
       },
     );
 

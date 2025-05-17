@@ -25,6 +25,7 @@ export class UnitImpl implements Unit {
   private _troops: number;
   private _cooldownTick: Tick | null = null;
   private _dstPort: Unit | undefined = undefined; // Only for trade ships
+  private _tilesTraveled: number; // Only for trade ships
   private _detonationDst: TileRef | undefined = undefined; // Only for nukes
   private _warshipTarget: Unit | undefined = undefined;
   private _cooldownDuration: number | undefined = undefined;
@@ -46,6 +47,7 @@ export class UnitImpl implements Unit {
 
     this._troops = "troops" in params ? (params.troops ?? 0) : 0;
     this._dstPort = "dstPort" in params ? params.dstPort : undefined;
+    this._tilesTraveled = "tilesTraveled" in params ? params.tilesTraveled : 0;
     this._cooldownDuration =
       "cooldownDuration" in params ? params.cooldownDuration : undefined;
     this._lastSetSafeFromPirates =
@@ -86,6 +88,7 @@ export class UnitImpl implements Unit {
       health: this.hasHealth() ? Number(this._health) : undefined,
       constructionType: this._constructionType,
       dstPortId: dstPort?.id() ?? undefined,
+      tilesTraveled: this._tilesTraveled,
       warshipTargetId: warshipTarget?.id() ?? undefined,
       detonationDst: this.detonationDst() ?? undefined,
       ticksLeftInCooldown,
@@ -241,6 +244,10 @@ export class UnitImpl implements Unit {
 
   setDstPort(dstPort: Unit): void {
     this._dstPort = dstPort;
+  }
+
+  setTilesTraveled(tilesTraveled: number): void {
+    this._tilesTraveled = tilesTraveled;
   }
 
   setMoveTarget(moveTarget: TileRef) {
