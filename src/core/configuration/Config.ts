@@ -30,6 +30,7 @@ export interface ServerConfig {
   turnIntervalMs(): number;
   gameCreationRate(): number;
   lobbyMaxPlayers(map: GameMapType, mode: GameMode): number;
+  lobbyMultiTabbing(map: GameMapType, mode: GameMode): boolean;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
   workerPath(gameID: GameID): string;

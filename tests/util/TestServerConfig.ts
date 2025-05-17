@@ -1,6 +1,6 @@
 import { JWK } from "jose";
 import { GameEnv, ServerConfig } from "../../src/core/configuration/Config";
-import { GameMapType } from "../../src/core/game/Game";
+import { GameMapType, GameMode } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
@@ -35,6 +35,9 @@ export class TestServerConfig implements ServerConfig {
     throw new Error("Method not implemented.");
   }
   lobbyMaxPlayers(map: GameMapType): number {
+    throw new Error("Method not implemented.");
+  }
+  lobbyMultiTabbing(map: GameMapType, mode: GameMode): boolean {
     throw new Error("Method not implemented.");
   }
   numWorkers(): number {
