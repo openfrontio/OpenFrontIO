@@ -778,7 +778,7 @@ mask: url(${src}) center / contain no-repeat;
                                       return html`
                                         <button
                                           class="w-3 h-3 rounded-full border-2 relative
-          ${this.selectedColor === color ? "border-white" : "border-gray-400"}
+          ${arr[index].color === color ? "border-white" : "border-gray-400"}
           ${isLocked ? "opacity-40 cursor-not-allowed" : ""}
           ${colorClass}"
                                           style=${inlineStyle}
