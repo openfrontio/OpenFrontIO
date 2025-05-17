@@ -713,20 +713,6 @@ mask: url(${src}) center / contain no-repeat;
                               <div class="flex gap-1">
                                 ${!isFixed
                                   ? html`
-                                      ${index > 1 &&
-                                      this.customLayers[index - 1].name !==
-                                        "full"
-                                        ? html`
-                                            <button
-                                              @click=${() =>
-                                                this.moveLayerUp(index)}
-                                              title="Move Up"
-                                              class="text-sm px-2 py-1 bg-gray-600 rounded hover:bg-gray-500"
-                                            >
-                                              ↓
-                                            </button>
-                                          `
-                                        : ""}
                                       ${index < this.customLayers.length - 2 &&
                                       this.customLayers[index + 1].name !==
                                         "frame"
@@ -738,6 +724,20 @@ mask: url(${src}) center / contain no-repeat;
                                               class="text-sm px-2 py-1 bg-gray-600 rounded hover:bg-gray-500"
                                             >
                                               ↑
+                                            </button>
+                                          `
+                                        : ""}
+                                      ${index > 1 &&
+                                      this.customLayers[index - 1].name !==
+                                        "full"
+                                        ? html`
+                                            <button
+                                              @click=${() =>
+                                                this.moveLayerUp(index)}
+                                              title="Move Up"
+                                              class="text-sm px-2 py-1 bg-gray-600 rounded hover:bg-gray-500"
+                                            >
+                                              ↓
                                             </button>
                                           `
                                         : ""}
