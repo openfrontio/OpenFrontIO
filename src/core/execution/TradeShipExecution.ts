@@ -74,6 +74,7 @@ export class TradeShipExecution implements Execution {
       this.tradeShip.delete(false);
       this.active = false;
       // TODO: Record stats?
+      // this.mg.stats().boatDestroyTrade(...);
       return;
     }
 
@@ -85,6 +86,7 @@ export class TradeShipExecution implements Execution {
       this.tradeShip.delete(false);
       this.active = false;
       // TODO: Record stats?
+      // this.mg.stats().boatDestroyTrade(...);
       return;
     }
 
@@ -97,6 +99,7 @@ export class TradeShipExecution implements Execution {
         this.tradeShip.delete(false);
         this.active = false;
         // TODO: Record stats?
+        // this.mg.stats().boatDestroyTrade(...);
         return;
       } else {
         this._dstPort = ports[0];
