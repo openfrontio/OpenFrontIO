@@ -19,6 +19,7 @@ export class NukeExecution implements Execution {
   private player: Player | null = null;
   private mg: Game | null = null;
   private nuke: Unit | null = null;
+  private tilesToDestroyCache: Set<TileRef> | undefined;
 
   private random: PseudoRandom;
   private pathFinder: ParabolaPathFinder;
@@ -56,6 +57,9 @@ export class NukeExecution implements Execution {
   }
 
   private tilesToDestroy(): Set<TileRef> {
+    if (this.tilesToDestroyCache !== undefined) {
+      return this.tilesToDestroyCache;
+    }
     if (this.mg === null || this.nuke === null) {
       throw new Error("Not initialized");
     }
@@ -63,10 +67,11 @@ export class NukeExecution implements Execution {
     const rand = new PseudoRandom(this.mg.ticks());
     const inner2 = magnitude.inner * magnitude.inner;
     const outer2 = magnitude.outer * magnitude.outer;
-    return this.mg.bfs(this.dst, (_, n: TileRef) => {
+    this.tilesToDestroyCache = this.mg.bfs(this.dst, (_, n: TileRef) => {
       const d2 = this.mg?.euclideanDistSquared(this.dst, n) ?? 0;
       return d2 <= outer2 && (d2 <= inner2 || rand.chance(2));
     });
+    return this.tilesToDestroyCache;
   }
 
   private breakAlliances(toDestroy: Set<TileRef>) {
@@ -125,6 +130,7 @@ export class NukeExecution implements Execution {
             MessageType.ERROR,
             target.id(),
           );
+          this.breakAlliances(this.tilesToDestroy());
         }
         if (this.type === UnitType.HydrogenBomb) {
           this.mg.displayIncomingUnit(
@@ -133,6 +139,7 @@ export class NukeExecution implements Execution {
             MessageType.ERROR,
             target.id(),
           );
+          this.breakAlliances(this.tilesToDestroy());
         }
 
         this.mg

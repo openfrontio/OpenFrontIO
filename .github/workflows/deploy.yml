@@ -19,8 +19,8 @@ on:
         default: "staging"
         type: choice
         options:
-          - eu
-          - us
+          - masters
+          - nbg1
           - staging
       target_subdomain:
         description: "Deployment Subdomain"
@@ -93,15 +93,17 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: 🔑 Create SSH private key
         env:
-          SERVER_HOST_EU: ${{ secrets.SERVER_HOST_EU }}
+          SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
+          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           set -euxo pipefail
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+          test -n "$SERVER_HOST_MASTERS" && ssh-keyscan -H "$SERVER_HOST_MASTERS" >> ~/.ssh/known_hosts
+          test -n "$SERVER_HOST_NBG1" && ssh-keyscan -H "$SERVER_HOST_NBG1" >> ~/.ssh/known_hosts
           test -n "$SERVER_HOST_STAGING" && ssh-keyscan -H "$SERVER_HOST_STAGING" >> ~/.ssh/known_hosts
-          test -n "$SERVER_HOST_EU" && ssh-keyscan -H "$SERVER_HOST_EU" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - name: 🚢 Deploy
         env:
@@ -120,7 +122,8 @@ jobs:
           R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
-          SERVER_HOST_EU: ${{ secrets.SERVER_HOST_EU }}
+          SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
+          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SSH_KEY: ~/.ssh/id_rsa
           VERSION_TAG: latest

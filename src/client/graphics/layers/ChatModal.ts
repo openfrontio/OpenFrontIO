@@ -173,7 +173,8 @@ export class ChatModal extends LitElement {
           <button
             class="chat-send-button"
             @click=${this.sendChatMessage}
-            ?disabled=${!this.previewText}
+            ?disabled=${!this.previewText ||
+            (this.requiresPlayerSelection && !this.selectedPlayer)}
           >
             ${translateText("chat.send")}
           </button>
