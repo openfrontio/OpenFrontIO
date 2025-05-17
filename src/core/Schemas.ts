@@ -1,5 +1,6 @@
 import { z } from "zod";
 import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
+import { PlayerStatsSchema } from "./AnalyticsSchemas";
 import {
   AllPlayers,
   Difficulty,
@@ -173,19 +174,6 @@ const ID = z
   .string()
   .regex(/^[a-zA-Z0-9]+$/)
   .length(8);
-
-const NukesEnum = z.enum([
-  "Atom Bomb",
-  "Hydrogen Bomb",
-  "MIRV",
-  "MIRV Warhead",
-]);
-
-const NukeStatsSchema = z.record(NukesEnum, z.number());
-
-export const PlayerStatsSchema = z.object({
-  sentNukes: z.record(ID, NukeStatsSchema),
-});
 
 export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
@@ -451,6 +439,7 @@ export const PlayerRecordSchema = z.object({
   username: SafeString,
   ip: SafeString.nullable(), // WARNING: PII
   persistentID: PersistentIdSchema, // WARNING: PII
+  stats: PlayerStatsSchema,
 });
 
 export const GameRecordSchema = z.object({
@@ -465,7 +454,6 @@ export const GameRecordSchema = z.object({
   turns: z.array(TurnSchema),
   winner: z.union([ID, SafeString]).nullable().optional(),
   winnerType: z.enum(["player", "team"]).nullable().optional(),
-  allPlayersStats: z.record(ID, PlayerStatsSchema),
-  version: z.enum(["v0.0.1"]),
-  gitCommit: z.string().nullable().optional(),
+  version: z.literal("v0.0.2"),
+  gitCommit: z.string(),
 });

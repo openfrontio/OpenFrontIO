@@ -1,9 +1,9 @@
+import { NukeType } from "../AnalyticsSchemas";
 import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
   MessageType,
-  NukeType,
   Player,
   PlayerID,
   TerraNullius,
@@ -122,8 +122,10 @@ export class NukeExecution implements Execution {
         detonationDst: this.dst,
       });
       if (this.mg.hasOwner(this.dst)) {
-        const target = this.mg.owner(this.dst) as Player;
-        if (this.type === UnitType.AtomBomb) {
+        const target = this.mg.owner(this.dst);
+        if (!target.isPlayer()) {
+          // Ignore terra nullius
+        } else if (this.type === UnitType.AtomBomb) {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
             `${this.player.name()} - atom bomb inbound`,
@@ -131,8 +133,7 @@ export class NukeExecution implements Execution {
             target.id(),
           );
           this.breakAlliances(this.tilesToDestroy());
-        }
-        if (this.type === UnitType.HydrogenBomb) {
+        } else if (this.type === UnitType.HydrogenBomb) {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
             `${this.player.name()} - hydrogen bomb inbound`,
@@ -142,13 +143,10 @@ export class NukeExecution implements Execution {
           this.breakAlliances(this.tilesToDestroy());
         }
 
+        // Record stats
         this.mg
           .stats()
-          .increaseNukeCount(
-            this.senderID,
-            target.id(),
-            this.nuke.type() as NukeType,
-          );
+          .bombLaunch(this.senderID, target.id(), this.nuke.type() as NukeType);
       }
 
       // after sending a nuke set the missilesilo on cooldown
@@ -187,6 +185,7 @@ export class NukeExecution implements Execution {
     if (this.mg === null || this.nuke === null) {
       throw new Error("Not initialized");
     }
+
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const toDestroy = this.tilesToDestroy();
     this.breakAlliances(toDestroy);
@@ -241,6 +240,15 @@ export class NukeExecution implements Execution {
     }
     this.active = false;
     this.nuke.delete(false);
+
+    // Record stats
+    this.mg
+      .stats()
+      .bombLand(
+        this.senderID,
+        this.target().id(),
+        this.nuke.type() as NukeType,
+      );
   }
 
   owner(): Player {

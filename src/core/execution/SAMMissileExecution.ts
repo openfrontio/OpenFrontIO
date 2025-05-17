@@ -1,3 +1,4 @@
+import { NukeType } from "../AnalyticsSchemas";
 import {
   Execution,
   Game,
@@ -67,6 +68,15 @@ export class SAMMissileExecution implements Execution {
         this.active = false;
         this.target.delete();
         this.SAMMissile.delete(false);
+
+        // Record stats
+        this.mg
+          .stats()
+          .bombIntercept(
+            this.target.owner().id(),
+            this._owner.id(),
+            this.target.type() as NukeType,
+          );
         return;
       } else {
         this.SAMMissile.move(result);

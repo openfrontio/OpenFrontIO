@@ -101,7 +101,7 @@ export class UnitView {
     return this.data.dstPortId;
   }
   detonationDst(): TileRef | undefined {
-    if (!nukeTypes.includes(this.type())) {
+    if (!(nukeTypes as UnitType[]).includes(this.type())) {
       throw Error("Must be a nuke");
     }
     return this.data.detonationDst;

@@ -116,6 +116,9 @@ export class AttackExecution implements Execution {
       this.sourceTile,
     );
 
+    // Record stats
+    this.mg.stats().attack(this._ownerID, this._targetID, this.startTroops);
+
     for (const incoming of this._owner.incomingAttacks()) {
       if (incoming.attacker() === this.target) {
         // Target has opposing attack, cancel them out
@@ -180,9 +183,13 @@ export class AttackExecution implements Execution {
         this._owner.id(),
       );
     }
-    this._owner.addTroops(this.attack.troops() - deaths);
+    const survivors = this.attack.troops() - deaths;
+    this._owner.addTroops(survivors);
     this.attack.delete();
     this.active = false;
+
+    // Record stats
+    this.mg.stats().attackCancel(this._ownerID, this._targetID, survivors);
   }
 
   tick(ticks: number) {

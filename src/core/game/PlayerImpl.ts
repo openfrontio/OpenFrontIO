@@ -380,8 +380,12 @@ export class PlayerImpl implements Player {
         this.mg.config().traitorDuration()
     );
   }
+
   markTraitor(): void {
     this.markedTraitorTick = this.mg.ticks();
+
+    // Record stats
+    this.mg.stats().betray(this.id());
   }
 
   createAllianceRequest(recipient: Player): AllianceRequest | null {

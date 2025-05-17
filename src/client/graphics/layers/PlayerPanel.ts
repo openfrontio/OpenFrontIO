@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
 import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
@@ -11,9 +11,9 @@ import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
+  nukeTypes,
   PlayerActions,
   PlayerID,
-  UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
@@ -180,19 +180,16 @@ export class PlayerPanel extends LitElement implements Layer {
     if (!stats) {
       return 0;
     }
-    let sum = 0;
     const player = this.g.myPlayer();
     if (player === null) {
       return 0;
     }
-    const nukes = stats.sentNukes[player.id()];
-    if (!nukes) {
-      return 0;
-    }
-    for (const nukeType in nukes) {
-      if (nukeType !== UnitType.MIRVWarhead) {
-        sum += nukes[nukeType];
-      }
+    let sum = 0;
+    for (const nukeType of nukeTypes) {
+      const bombs = stats.bombs[nukeType];
+      if (bombs === undefined) continue;
+      const [launched] = bombs;
+      sum += launched;
     }
     return sum;
   }

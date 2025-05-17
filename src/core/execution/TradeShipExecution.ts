@@ -53,6 +53,9 @@ export class TradeShipExecution implements Execution {
         dstPort: this._dstPort,
         lastSetSafeFromPirates: ticks,
       });
+
+      // Record stats
+      this.mg.stats().boatSendTrade(this._owner, this._dstPort.owner().id());
     }
 
     if (!this.tradeShip.isActive()) {
@@ -70,6 +73,8 @@ export class TradeShipExecution implements Execution {
     if (this._dstPort.owner().id() === this.srcPort.owner().id()) {
       this.tradeShip.delete(false);
       this.active = false;
+      // TODO: Record stats?
+      // this.mg.stats().boatDestroyTrade(...);
       return;
     }
 
@@ -80,6 +85,8 @@ export class TradeShipExecution implements Execution {
     ) {
       this.tradeShip.delete(false);
       this.active = false;
+      // TODO: Record stats?
+      // this.mg.stats().boatDestroyTrade(...);
       return;
     }
 
@@ -91,6 +98,8 @@ export class TradeShipExecution implements Execution {
       if (ports.length === 0) {
         this.tradeShip.delete(false);
         this.active = false;
+        // TODO: Record stats?
+        // this.mg.stats().boatDestroyTrade(...);
         return;
       } else {
         this._dstPort = ports[0];
@@ -153,12 +162,17 @@ export class TradeShipExecution implements Execution {
     const gold = this.mg.config().tradeShipGold(this.tilesTraveled);
 
     if (this.wasCaptured) {
-      this.tradeShip.owner().addGold(gold);
+      const player = this.tradeShip.owner();
+      player.addGold(gold);
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
         MessageType.SUCCESS,
         this.tradeShip.owner().id(),
       );
+
+      // Record stats
+      // TODO: Track this separately from war?
+      this.mg.stats().goldWar(player.id(), this.origOwner.id(), gold);
     } else {
       this.srcPort.owner().addGold(gold);
       this._dstPort.owner().addGold(gold);
@@ -172,6 +186,12 @@ export class TradeShipExecution implements Execution {
         MessageType.SUCCESS,
         this.srcPort.owner().id(),
       );
+
+      // Record stats
+      const stats = this.mg.stats();
+      const si = this.srcPort.owner().id();
+      const di = this._dstPort.owner().id();
+      stats.boatArriveTrade(si, di, gold);
     }
     return;
   }

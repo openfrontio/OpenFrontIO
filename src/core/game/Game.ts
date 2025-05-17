@@ -200,8 +200,6 @@ export const nukeTypes = [
   UnitType.MIRV,
 ] as UnitType[];
 
-export type NukeType = (typeof nukeTypes)[number];
-
 export enum Relation {
   Hostile = 0,
   Distrustful = 1,
