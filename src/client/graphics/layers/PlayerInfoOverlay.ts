@@ -223,8 +223,10 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
               ? html`<div
                   class="h-8 mr-1 aspect-[3/4] player-flag"
                   ${ref((el) => {
-                    if (el !== null) {
-                      renderPlayerFlag(player.flag()!, el as HTMLElement);
+                    if (el instanceof HTMLElement) {
+                      requestAnimationFrame(() => {
+                        renderPlayerFlag(player.flag()!, el);
+                      });
                     }
                   })}
                 ></div>`

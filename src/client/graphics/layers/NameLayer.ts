@@ -180,28 +180,29 @@ export class NameLayer implements Layer {
     element.appendChild(iconsDiv);
 
     const nameDiv = document.createElement("div");
+
+    const applyFlagStyles = (element: HTMLElement): void => {
+      element.classList.add("player-flag");
+      element.style.opacity = "0.8";
+      element.style.zIndex = "1";
+      element.style.aspectRatio = "3/4";
+    };
+
     if (player.flag()) {
       const flagCode = player.flag();
-
-      if (flagCode && flagCode.startsWith("ctmfg")) {
+      if (flagCode?.startsWith("ctmfg")) {
         const flagWrapper = document.createElement("div");
-        flagWrapper.classList.add("player-flag");
-        flagWrapper.style.opacity = "0.8";
-        flagWrapper.style.zIndex = "1";
-        flagWrapper.style.aspectRatio = "3/4";
-
+        applyFlagStyles(flagWrapper);
         renderPlayerFlag(flagCode, flagWrapper);
         nameDiv.appendChild(flagWrapper);
       } else if (flagCode) {
         const flagImg = document.createElement("img");
-        flagImg.classList.add("player-flag");
-        flagImg.style.opacity = "0.8";
-        flagImg.style.zIndex = "1";
-        flagImg.style.aspectRatio = "3/4";
+        applyFlagStyles(flagImg);
         flagImg.src = "/flags/" + flagCode + ".svg";
         nameDiv.appendChild(flagImg);
       }
     }
+
     nameDiv.classList.add("player-name");
     nameDiv.style.color = this.theme.textColor(player);
     nameDiv.style.fontFamily = this.theme.font();
