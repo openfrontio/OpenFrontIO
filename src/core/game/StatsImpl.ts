@@ -121,7 +121,6 @@ export class StatsImpl implements Stats {
     boats[BOAT_INDEX_SENT]++;
   }
 
-  // TODO: Call this function
   boatArriveTroops(
     player: PlayerID,
     target: PlayerID | null,

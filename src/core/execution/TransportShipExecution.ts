@@ -175,7 +175,10 @@ export class TransportShipExecution implements Execution {
           this.attacker.addTroops(this.troops);
           this.boat.delete(false);
           this.active = false;
-          // TODO: Record stats?
+          // Record stats
+          this.mg
+            .stats()
+            .boatArriveTroops(this.attacker.id(), this.targetID, this.troops);
           return;
         }
         if (this.target.isPlayer() && this.attacker.isFriendly(this.target)) {
@@ -194,7 +197,11 @@ export class TransportShipExecution implements Execution {
         }
         this.boat.delete(false);
         this.active = false;
-        // TODO: Record stats?
+
+        // Record stats
+        this.mg
+          .stats()
+          .boatArriveTroops(this.attacker.id(), this.targetID, this.troops);
         return;
       case PathFindResultType.NextTile:
         this.boat.move(result.tile);
