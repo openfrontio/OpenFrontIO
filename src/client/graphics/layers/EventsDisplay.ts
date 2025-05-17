@@ -33,7 +33,11 @@ import { Layer } from "./Layer";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
 import { renderTroops } from "../../Utils";
-import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
+import {
+  GoToPlayerEvent,
+  GoToPositionEvent,
+  GoToUnitEvent,
+} from "./Leaderboard";
 
 import { translateText } from "../../Utils";
 
@@ -386,6 +390,10 @@ export class EventsDisplay extends LitElement implements Layer {
     this.eventBus.emit(new GoToPlayerEvent(attacker));
   }
 
+  emitGoToPositionEvent(x: number, y: number) {
+    this.eventBus.emit(new GoToPositionEvent(x, y));
+  }
+
   emitGoToUnitEvent(unit: UnitView) {
     this.eventBus.emit(new GoToUnitEvent(unit));
   }
@@ -481,8 +489,17 @@ export class EventsDisplay extends LitElement implements Layer {
                       translate="no"
                       class="ml-2"
                       @click=${() => {
-                        attack.attackerID &&
+                        if (
+                          attack.averagePositionX === null ||
+                          attack.averagePositionY === null
+                        ) {
                           this.emitGoToPlayerEvent(attack.attackerID);
+                        } else {
+                          this.emitGoToPositionEvent(
+                            attack.averagePositionX,
+                            attack.averagePositionY,
+                          );
+                        }
                       }}
                     >
                       ${renderTroops(attack.troops)}
@@ -513,7 +530,19 @@ export class EventsDisplay extends LitElement implements Layer {
                     <button
                       translate="no"
                       class="ml-2"
-                      @click=${() => this.emitGoToPlayerEvent(attack.targetID)}
+                      @click=${() => {
+                        if (
+                          attack.averagePositionX === null ||
+                          attack.averagePositionY === null
+                        ) {
+                          this.emitGoToPlayerEvent(attack.attackerID);
+                        } else {
+                          this.emitGoToPositionEvent(
+                            attack.averagePositionX,
+                            attack.averagePositionY,
+                          );
+                        }
+                      }}
                     >
                       ${renderTroops(attack.troops)}
                       ${(
