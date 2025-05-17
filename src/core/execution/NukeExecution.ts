@@ -156,7 +156,7 @@ export class NukeExecution implements Execution {
         .units(UnitType.MissileSilo)
         .find((silo) => silo.tile() === spawn);
       if (silo) {
-        silo.setCooldown(true);
+        silo.launch();
       }
       return;
     }

@@ -291,7 +291,7 @@ export class UnitLayer implements Layer {
   }
 
   private handleWarShipEvent(unit: UnitView) {
-    if (unit.warshipTargetId()) {
+    if (unit.targetUnitId()) {
       this.drawSprite(unit, colord({ r: 200, b: 0, g: 0 }));
     } else {
       this.drawSprite(unit);
@@ -502,7 +502,7 @@ export class UnitLayer implements Layer {
 
     if (this.alternateView) {
       let rel = this.relationship(unit);
-      const dstPortId = unit.dstPortId();
+      const dstPortId = unit.targetUnitId();
       if (unit.type() === UnitType.TradeShip && dstPortId !== undefined) {
         const target = this.game.unit(dstPortId)?.owner();
         const myPlayer = this.game.myPlayer();
