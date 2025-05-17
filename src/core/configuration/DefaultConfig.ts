@@ -254,7 +254,7 @@ export class DefaultConfig implements Config {
 
   falloutDefenseModifier(falloutRatio: number): number {
     // falloutRatio is between 0 and 1
-    // So defense modifier is between [5, 2.5]
+    // So defense modifier is between [3, 1]
     return 3 - falloutRatio * 2;
   }
   SAMCooldown(): number {
@@ -520,7 +520,7 @@ export class DefaultConfig implements Config {
         gm.config().defensePostRange(),
         UnitType.DefensePost,
       )) {
-        if (dp.unit.owner() == defender) {
+        if (dp.unit.owner() === defender) {
           mag *= this.defensePostLossMultiplier();
           speed *= this.defensePostSpeedMultiplier();
           break;
@@ -535,17 +535,17 @@ export class DefaultConfig implements Config {
     }
 
     if (attacker.isPlayer() && defenderIsPlayer) {
-      if (attackerType == PlayerType.Human && defenderType == PlayerType.Bot) {
+      if (attackerType === PlayerType.Human && defenderType === PlayerType.Bot) {
         mag *= 0.8;
       }
       if (
-        attackerType == PlayerType.FakeHuman &&
-        defenderType == PlayerType.Bot
+        attackerType === PlayerType.FakeHuman &&
+        defenderType === PlayerType.Bot
       ) {
         mag *= 0.8;
       }
     }
-    if (attackerType == PlayerType.Bot) {
+    if (attackerType === PlayerType.Bot) {
       speed *= 4; // slow bot attacks
     }
     if (defenderIsPlayer) {
@@ -569,7 +569,7 @@ export class DefaultConfig implements Config {
       };
     } else {
       return {
-        attackerTroopLoss: attackerType == PlayerType.Bot ? mag * 16 : mag * 16,
+        attackerTroopLoss: mag * 16,
         defenderTroopLoss: 0,
         tilesPerTickUsed: 31 * speed, 
       };
@@ -614,7 +614,7 @@ export class DefaultConfig implements Config {
   }
 
   startManpower(playerInfo: PlayerInfo): number {
-    if (playerInfo.playerType == PlayerType.Bot) {
+    if (playerInfo.playerType === PlayerType.Bot) {
       return 6_000;
     }
     if (playerInfo.playerType === PlayerType.FakeHuman) {
