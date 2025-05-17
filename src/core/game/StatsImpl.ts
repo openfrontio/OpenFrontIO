@@ -61,6 +61,7 @@ export class StatsImpl implements Stats {
     return this.data;
   }
 
+  // TODO: Call this function
   attack(outgoing: PlayerID, incoming: PlayerID, troops: number): void {
     const o = this.getPlayerStats(outgoing);
     const i = this.getPlayerStats(incoming);
@@ -68,6 +69,7 @@ export class StatsImpl implements Stats {
     i.attacks[ATTACK_INDEX_INCOMING] += troops;
   }
 
+  // TODO: Call this function
   attackCancel(outgoing: PlayerID, incoming: PlayerID, troops: number): void {
     const o = this.getPlayerStats(outgoing);
     const i = this.getPlayerStats(incoming);
@@ -80,6 +82,7 @@ export class StatsImpl implements Stats {
     this.getPlayerStats(player).betrayals++;
   }
 
+  // TODO: Call this function
   boatSend(player: PlayerID, type: BoatType): void {
     const data = this.getPlayerStats(player);
     const boats = data.boats[type];
@@ -87,6 +90,7 @@ export class StatsImpl implements Stats {
     boats[BOAT_INDEX_SENT]++;
   }
 
+  // TODO: Call this function
   boatArrive(player: PlayerID, type: BoatType): void {
     const data = this.getPlayerStats(player);
     const boats = data.boats[type];
@@ -94,6 +98,7 @@ export class StatsImpl implements Stats {
     boats[BOAT_INDEX_ARRIVED]++;
   }
 
+  // TODO: Call this function
   boatDestroy(player: PlayerID, type: BoatType): void {
     const data = this.getPlayerStats(player);
     const boats = data.boats[type];
@@ -126,21 +131,25 @@ export class StatsImpl implements Stats {
     bomb[BOMB_INDEX_INTERCEPTED]++;
   }
 
+  // TODO: Call this function
   goldWork(player: PlayerID, gold: number): void {
     const data = this.getPlayerStats(player);
     data.gold[GOLD_INDEX_WORK] += gold;
   }
 
+  // TODO: Call this function
   goldTrade(player: PlayerID, gold: number): void {
     const data = this.getPlayerStats(player);
     data.gold[GOLD_INDEX_TRADE] += gold;
   }
 
+  // TODO: Call this function
   goldWar(player: PlayerID, gold: number): void {
     const data = this.getPlayerStats(player);
     data.gold[GOLD_INDEX_WAR] += gold;
   }
 
+  // TODO: Call this function
   unitBuild(player: PlayerID, type: OtherUnit): void {
     const data = this.getPlayerStats(player);
     const unit = data.units[type];
@@ -148,6 +157,7 @@ export class StatsImpl implements Stats {
     unit[OTHER_INDEX_BUILT]++;
   }
 
+  // TODO: Call this function
   unitLose(player: PlayerID, type: OtherUnit): void {
     const data = this.getPlayerStats(player);
     const unit = data.units[type];
@@ -155,6 +165,7 @@ export class StatsImpl implements Stats {
     unit[OTHER_INDEX_LOST]++;
   }
 
+  // TODO: Call this function
   unitDestroy(player: PlayerID, type: OtherUnit): void {
     const data = this.getPlayerStats(player);
     const unit = data.units[type];
@@ -162,6 +173,7 @@ export class StatsImpl implements Stats {
     unit[OTHER_INDEX_DESTROYED]++;
   }
 
+  // TODO: Call this function
   unitCapture(player: PlayerID, type: OtherUnit): void {
     const data = this.getPlayerStats(player);
     const unit = data.units[type];
