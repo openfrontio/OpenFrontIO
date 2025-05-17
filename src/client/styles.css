@@ -430,11 +430,6 @@ label.option-card:hover {
     cover;
 }
 
-#helpModal .emoji-icon {
-  mask: url("../../resources/images/EmojiIconWhite.svg") no-repeat center /
-    cover;
-}
-
 #helpModal .build-icon {
   mask: url("../../resources/images/BuildIconWhite.svg") no-repeat center /
     cover;
