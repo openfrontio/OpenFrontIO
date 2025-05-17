@@ -4,6 +4,10 @@ export function renderTroops(troops: number): string {
   return renderNumber(troops / 10);
 }
 
+export function renderTiles(tiles: number): string {
+  return renderNumber(tiles);
+}
+
 export function renderNumber(num: number): string {
   num = Math.max(num, 0);
 
