@@ -185,26 +185,33 @@ export function onlyImages(html: string) {
 
 export function createGameRecord(
   id: GameID,
-  gameStart: GameStartInfo,
+  gameStartInfo: GameStartInfo,
   // username does not need to be set.
   players: PlayerRecord[],
   turns: Turn[],
-  start: number,
-  end: number,
+  startTimestampMS: number,
+  endTimestampMS: number,
   winner: ClientID | Team | null,
   winnerType: "player" | "team" | null,
 ): GameRecord {
+  const durationSeconds = Math.floor(
+    (endTimestampMS - startTimestampMS) / 1000,
+  );
+  const date = new Date().toISOString().split("T")[0];
+  const version = "v0.0.2";
+  const gitCommit = process.env.GIT_COMMIT ?? "unknown";
   const record: GameRecord = {
-    id: id,
-    gameStartInfo: gameStart,
+    gitCommit,
+    id,
+    gameStartInfo,
     players,
-    startTimestampMS: start,
-    endTimestampMS: end,
-    durationSeconds: Math.floor((end - start) / 1000),
-    date: new Date().toISOString().split("T")[0],
+    startTimestampMS,
+    endTimestampMS,
+    durationSeconds,
+    date,
     num_turns: 0,
     turns: [],
-    version: "v0.0.1",
+    version,
     winner,
     winnerType,
   };

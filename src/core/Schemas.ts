@@ -454,6 +454,6 @@ export const GameRecordSchema = z.object({
   turns: z.array(TurnSchema),
   winner: z.union([ID, SafeString]).nullable().optional(),
   winnerType: z.enum(["player", "team"]).nullable().optional(),
-  version: z.enum(["v0.0.1"]),
-  gitCommit: z.string().nullable().optional(),
+  version: z.literal("v0.0.2"),
+  gitCommit: z.string(),
 });
