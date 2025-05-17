@@ -21,6 +21,7 @@ describe("Warship", () => {
       instantBuild: true,
     });
     const player_1_info = new PlayerInfo(
+      null,
       "us",
       "boat dude",
       PlayerType.Human,
@@ -29,6 +30,7 @@ describe("Warship", () => {
     );
     game.addPlayer(player_1_info);
     const player_2_info = new PlayerInfo(
+      null,
       "us",
       "boat dude",
       PlayerType.Human,

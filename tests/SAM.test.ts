@@ -18,6 +18,7 @@ describe("SAM", () => {
   beforeEach(async () => {
     game = await setup("Plains", { infiniteGold: true, instantBuild: true });
     const defender_info = new PlayerInfo(
+      null,
       "us",
       "defender_id",
       PlayerType.Human,
@@ -25,6 +26,7 @@ describe("SAM", () => {
       "defender_id",
     );
     const attacker_info = new PlayerInfo(
+      null,
       "fr",
       "attacker_id",
       PlayerType.Human,

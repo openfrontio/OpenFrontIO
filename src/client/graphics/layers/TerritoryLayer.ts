@@ -1,5 +1,6 @@
 import { PriorityQueue } from "@datastructures-js/priority-queue";
 import { Colord } from "colord";
+import territory_patterns from "../../../../resources/territory_patterns.json";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
@@ -286,12 +287,31 @@ export class TerritoryLayer implements Layer {
         );
       }
     } else {
-      this.paintCell(
-        this.game.x(tile),
-        this.game.y(tile),
-        this.theme.territoryColor(owner),
-        150,
-      );
+      const patternName = owner.pattern();
+      if (!patternName) {
+        this.paintCell(
+          this.game.x(tile),
+          this.game.y(tile),
+          this.theme.territoryColor(owner),
+          150,
+        );
+      } else {
+        const x = this.game.x(tile);
+        const y = this.game.y(tile);
+        const baseColor = this.theme.territoryColor(owner);
+        const patternConfig = territory_patterns.patterns[patternName];
+
+        const { tileWidth, tileHeight, scale, pattern } = patternConfig;
+
+        const px = Math.floor(x / scale) % tileWidth;
+        const py = Math.floor(y / scale) % tileHeight;
+
+        const patternValue = pattern[py][px];
+
+        const colorToUse =
+          patternValue === 1 ? baseColor.darken(0.2) : baseColor;
+        this.paintCell(x, y, colorToUse, 150);
+      }
     }
   }
 

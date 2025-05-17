@@ -173,6 +173,11 @@ export class PlayerView {
   flag(): string | undefined {
     return this.data.flag;
   }
+
+  pattern(): string | undefined | null {
+    return this.data.pattern;
+  }
+
   name(): string {
     return userSettings.anonymousNames() && this.anonymousName !== null
       ? this.anonymousName
@@ -271,6 +276,7 @@ export class PlayerView {
   }
   info(): PlayerInfo {
     return new PlayerInfo(
+      this.pattern(),
       this.flag(),
       this.name(),
       this.type(),

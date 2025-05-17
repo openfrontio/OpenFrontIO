@@ -32,6 +32,7 @@ describe("MissileSilo", () => {
   beforeEach(async () => {
     game = await setup("Plains", { infiniteGold: true, instantBuild: true });
     const attacker_info = new PlayerInfo(
+      null,
       "fr",
       "attacker_id",
       PlayerType.Human,

@@ -319,6 +319,7 @@ export function startWorker() {
               clientMsg.username,
               ws,
               clientMsg.flag,
+              clientMsg.pattern,
             );
 
             const wasFound = gm.addClient(
