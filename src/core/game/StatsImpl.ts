@@ -101,21 +101,25 @@ export class StatsImpl implements Stats {
     boats[BOAT_INDEX_DESTROYED]++;
   }
 
-  bombLaunch(player: PlayerID, type: NukeType): void {
+  bombLaunch(player: PlayerID, target: PlayerID | null, type: NukeType): void {
     const data = this.getPlayerStats(player);
     const bomb = data.bombs[type];
     if (bomb === undefined) throw new Error();
     bomb[BOMB_INDEX_LAUNCHED]++;
   }
 
-  bombLand(player: PlayerID, type: NukeType): void {
+  bombLand(player: PlayerID, target: PlayerID | null, type: NukeType): void {
     const data = this.getPlayerStats(player);
     const bomb = data.bombs[type];
     if (bomb === undefined) throw new Error();
     bomb[BOMB_INDEX_LANDED]++;
   }
 
-  bombIntercept(player: PlayerID, type: NukeType): void {
+  bombIntercept(
+    player: PlayerID,
+    target: PlayerID | null,
+    type: NukeType,
+  ): void {
     const data = this.getPlayerStats(player);
     const bomb = data.bombs[type];
     if (bomb === undefined) throw new Error();
