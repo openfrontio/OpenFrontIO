@@ -24,7 +24,7 @@ export class WarshipExecution implements Execution {
   private target: Unit | null = null;
   private pathfinder: PathFinder | null = null;
 
-  private patrolTile: TileRef | null = null;
+  private patrolTile: TileRef | undefined;
 
   private lastShellAttack = 0;
   private alreadySentShell = new Set<Unit>();
@@ -99,7 +99,12 @@ export class WarshipExecution implements Execution {
     if (this.warship === null || this.pathfinder === null) {
       throw new Error("Warship not initialized");
     }
-    if (this.patrolTile === null) return;
+    if (this.patrolTile === undefined) {
+      this.patrolTile = this.randomTile();
+      if (this.patrolTile === undefined) {
+        return;
+      }
+    }
     this.warship.setWarshipTarget(this.target);
     if (this.target === null || this.target.type() !== UnitType.TradeShip) {
       // Patrol unless we are hunting down a tradeship
@@ -109,7 +114,7 @@ export class WarshipExecution implements Execution {
       );
       switch (result.type) {
         case PathFindResultType.Completed:
-          this.patrolTile = this.randomTile();
+          this.patrolTile = undefined;
           this.warship.move(this.warship.tile());
           break;
         case PathFindResultType.NextTile:
@@ -120,7 +125,7 @@ export class WarshipExecution implements Execution {
           return;
         case PathFindResultType.PathNotFound:
           consolex.log(`path not found to patrol tile`);
-          this.patrolTile = this.randomTile();
+          this.patrolTile = undefined;
           break;
       }
     }
@@ -129,7 +134,13 @@ export class WarshipExecution implements Execution {
   tick(ticks: number): void {
     if (this.pathfinder === null) throw new Error("Warship not initialized");
     if (this.warship === null) {
-      if (this.patrolTile === null) return;
+      if (this.patrolTile === undefined) {
+        console.log(
+          `WarshipExecution: no patrol tile for ${this._owner.name()}`,
+        );
+        this.active = false;
+        return;
+      }
       const spawn = this._owner.canBuild(UnitType.Warship, this.patrolTile);
       if (spawn === false) {
         this.active = false;
@@ -271,13 +282,13 @@ export class WarshipExecution implements Execution {
     return false;
   }
 
-  randomTile(): TileRef {
+  randomTile(allowShoreline: boolean = false): TileRef | undefined {
     if (this.mg === null) {
       throw new Error("Warship not initialized");
     }
     let warshipPatrolRange = this.mg.config().warshipPatrolRange();
-    const maxAttemptBeforeExpand: number = warshipPatrolRange * 2;
-    let attemptCount: number = 0;
+    const maxAttemptBeforeExpand: number = 500;
+    let attempts: number = 0;
     let expandCount: number = 0;
     while (expandCount < 3) {
       const x =
@@ -290,11 +301,14 @@ export class WarshipExecution implements Execution {
         continue;
       }
       const tile = this.mg.ref(x, y);
-      if (!this.mg.isOcean(tile) || this.mg.isShoreline(tile)) {
-        attemptCount++;
-        if (attemptCount === maxAttemptBeforeExpand) {
+      if (
+        !this.mg.isOcean(tile) ||
+        (!allowShoreline && this.mg.isShoreline(tile))
+      ) {
+        attempts++;
+        if (attempts === maxAttemptBeforeExpand) {
           expandCount++;
-          attemptCount = 0;
+          attempts = 0;
           warshipPatrolRange =
             warshipPatrolRange + Math.floor(warshipPatrolRange / 2);
         }
@@ -302,6 +316,13 @@ export class WarshipExecution implements Execution {
       }
       return tile;
     }
-    throw new Error("unreachable");
+    console.warn(
+      `Failed to find random tile for warship for ${this._owner.name()}`,
+    );
+    if (!allowShoreline) {
+      // If we failed to find a tile on the ocean, try again but allow shoreline
+      return this.randomTile(true);
+    }
+    return undefined;
   }
 }
