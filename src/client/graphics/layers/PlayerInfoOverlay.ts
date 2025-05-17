@@ -209,8 +209,6 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         break;
     }
 
-    // player.numTilesOwned()
-
     return html`
       <div class="p-2">
         <div
