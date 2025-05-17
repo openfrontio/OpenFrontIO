@@ -87,7 +87,7 @@
     "build_silo": "Missile Silo",
     "build_silo_desc": "Allows launching missiles.",
     "build_sam": "SAM Launcher",
-    "build_sam_desc": "Can intercept enemy missiles in its 100 pixel range. With 100% chance for Atom Bomb, 80% for Hydrogen Bomb and 50% for individual MIRV Warheads. The SAM has a 7.5 second cooldown.",
+    "build_sam_desc": "Can intercept enemy missiles in its 100 pixel range. With a 100% hit chance for Atom Bomb, 80% for Hydrogen Bomb and 50% for individual MIRV Warheads. The SAM has a 7.5 second cooldown.",
     "build_atom": "Atom Bomb",
     "build_atom_desc": "Small explosive bomb that destroys territory, buildings, ships and boats. Spawns from the nearest Missile Silo and lands in the area you first clicked to build it.",
     "build_hydrogen": "Hydrogen Bomb",
