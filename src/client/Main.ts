@@ -163,7 +163,9 @@ class Client {
       "flag-input-modal",
     ) as FlagInputModal;
     flagInputModal instanceof FlagInputModal;
-    document.getElementById("flag-input_").addEventListener("click", () => {
+    const flgInput = document.getElementById("flag-input_");
+    if (flgInput === null) throw new Error("Missing flag-input_");
+    flgInput.addEventListener("click", () => {
       flagInputModal.open();
     });
 
@@ -282,7 +284,7 @@ class Client {
     }
     const config = await getServerConfigFromClient();
 
-    let rawFlag = this.flagInput.getCurrentFlag();
+    let rawFlag = this.flagInput?.getCurrentFlag() ?? "xx";
     if (rawFlag.startsWith("ctmfg")) {
       const result = checkPermission();
       const lockedLayers = Array.isArray(result[0]) ? result[0] : [result[0]];
@@ -308,7 +310,7 @@ class Client {
         gameID: lobby.gameID,
         serverConfig: config,
         flag: flag,
-        playerName: this.usernameInput.getCurrentUsername(),
+        playerName: this.usernameInput?.getCurrentUsername() ?? "Guest",
         token: localStorage.getItem("token") ?? getPersistentIDFromCookie(),
         clientID: lobby.clientID,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.gameStartInfo,

@@ -219,20 +219,20 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             : "text-white"}"
         >
           ${player.flag()
-            ? player.flag().startsWith("ctmfg")
+            ? player.flag()!.startsWith("ctmfg")
               ? html`<div
                   class="h-8 mr-1 aspect-[3/4] player-flag"
                   ${ref((el) => {
-                    if (el != null) {
-                      renderPlayerFlag(player.flag(), el as HTMLElement);
+                    if (el !== null) {
+                      renderPlayerFlag(player.flag()!, el as HTMLElement);
                     }
                   })}
                 ></div>`
               : html`<img
                   class="h-8 mr-1 aspect-[3/4]"
-                  src=${"/flags/" + player.flag() + ".svg"}
+                  src=${"/flags/" + player.flag()! + ".svg"}
                 />`
-            : ""}
+            : html``}
           ${player.name()}
         </div>
         ${player.team() !== null

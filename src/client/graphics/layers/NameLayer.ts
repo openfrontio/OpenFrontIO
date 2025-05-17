@@ -183,7 +183,7 @@ export class NameLayer implements Layer {
     if (player.flag()) {
       const flagCode = player.flag();
 
-      if (flagCode.startsWith("ctmfg")) {
+      if (flagCode && flagCode.startsWith("ctmfg")) {
         const flagWrapper = document.createElement("div");
         flagWrapper.classList.add("player-flag");
         flagWrapper.style.opacity = "0.8";
@@ -192,7 +192,7 @@ export class NameLayer implements Layer {
 
         renderPlayerFlag(flagCode, flagWrapper);
         nameDiv.appendChild(flagWrapper);
-      } else {
+      } else if (flagCode) {
         const flagImg = document.createElement("img");
         flagImg.classList.add("player-flag");
         flagImg.style.opacity = "0.8";
