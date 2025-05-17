@@ -230,7 +230,7 @@ export class PlayerExecution implements Execution {
     }
 
     const firstTile = cluster.values().next().value;
-    const filter = (_, t: TileRef): boolean =>
+    const filter = (_: unknown, t: TileRef): boolean =>
       this.mg?.ownerID(t) === this.player?.smallID();
     const tiles = this.mg.bfs(firstTile, filter);
 

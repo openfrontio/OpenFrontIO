@@ -198,7 +198,7 @@ export const nukeTypes = [
   UnitType.HydrogenBomb,
   UnitType.MIRVWarhead,
   UnitType.MIRV,
-] as UnitType[];
+] as const satisfies UnitType[];
 
 export type NukeType = (typeof nukeTypes)[number];
 
@@ -513,7 +513,7 @@ export interface Player {
 }
 
 export interface Game extends GameMap {
-  expireAlliance(alliance: Alliance);
+  expireAlliance(alliance: Alliance): void;
   // Map & Dimensions
   isOnMap(cell: Cell): boolean;
   width(): number;

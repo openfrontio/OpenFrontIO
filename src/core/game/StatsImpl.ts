@@ -15,13 +15,15 @@ export class StatsImpl implements Stats {
         [UnitType.MIRVWarhead]: 0,
         [UnitType.AtomBomb]: 0,
         [UnitType.HydrogenBomb]: 0,
-      };
+      } satisfies Record<NukeType, number>;
     }
   }
 
   increaseNukeCount(sender: PlayerID, target: PlayerID, type: NukeType): void {
     this._createUserData(sender, target);
-    this.data[sender].sentNukes[target][type]++;
+    const d = this.data[sender].sentNukes[target];
+    const v = d[type] ?? 0;
+    d[type] = v + 1;
   }
 
   getPlayerStats(player: PlayerID): PlayerStats {
