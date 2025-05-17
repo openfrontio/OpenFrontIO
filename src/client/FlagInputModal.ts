@@ -133,7 +133,7 @@ export class FlagInputModal extends LitElement {
   }
 
   private setFlag(flag: string) {
-    if (flag == "xx") {
+    if (flag === "xx") {
       flag = "";
     }
     this.flag = flag;
