@@ -1,6 +1,6 @@
 import { LitElement, TemplateResult, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { translateText } from "../../../client/Utils";
+import { renderTiles, translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import {
   PlayerProfile,
@@ -209,6 +209,8 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         break;
     }
 
+    // player.numTilesOwned()
+
     return html`
       <div class="p-2">
         <div
@@ -232,6 +234,10 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         <div class="text-sm opacity-80">
           ${translateText("player_info_overlay.type")}: ${playerType}
         </div>
+        ${html`<div class="text-sm opacity-80">
+          ${translateText("player_info_overlay.tiles")}:
+          ${renderTiles(player.numTilesOwned())}
+        </div>`}
         ${player.troops() >= 1
           ? html`<div class="text-sm opacity-80" translate="no">
               ${translateText("player_info_overlay.d_troops")}:
