@@ -23,6 +23,7 @@ import { NewsModal } from "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import { SupportUsModal } from "./SupportUsModal";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
@@ -157,6 +158,16 @@ class Client {
     helpButton.addEventListener("click", () => {
       hlpModal.open();
     });
+
+    const supportUsModal = document.querySelector(
+      "support-us-modal",
+    ) as SupportUsModal;
+    supportUsModal instanceof SupportUsModal;
+    document
+      .getElementById("support-us-button")
+      .addEventListener("click", () => {
+        supportUsModal.open();
+      });
 
     const claims = isLoggedIn();
     if (claims === false) {
