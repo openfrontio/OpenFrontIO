@@ -383,6 +383,8 @@ export class PlayerImpl implements Player {
 
   markTraitor(): void {
     this.markedTraitorTick = this.mg.ticks();
+
+    // Record stats
     this.mg.stats().betray(this.id());
   }
 

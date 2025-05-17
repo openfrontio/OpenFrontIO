@@ -115,6 +115,8 @@ export class AttackExecution implements Execution {
       this.startTroops,
       this.sourceTile,
     );
+
+    // Record stats
     this.mg.stats().attack(this._ownerID, this._targetID, this.startTroops);
 
     for (const incoming of this._owner.incomingAttacks()) {
@@ -184,8 +186,10 @@ export class AttackExecution implements Execution {
     const survivors = this.attack.troops() - deaths;
     this._owner.addTroops(survivors);
     this.attack.delete();
-    this.mg.stats().attackCancel(this._ownerID, this._targetID, survivors);
     this.active = false;
+
+    // Record stats
+    this.mg.stats().attackCancel(this._ownerID, this._targetID, survivors);
   }
 
   tick(ticks: number) {

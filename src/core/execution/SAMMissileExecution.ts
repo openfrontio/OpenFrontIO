@@ -60,13 +60,6 @@ export class SAMMissileExecution implements Execution {
         this.target.tile(),
       );
       if (result === true) {
-        this.mg
-          .stats()
-          .bombIntercept(
-            this.target.owner().id(),
-            this._owner.id(),
-            this.target.type() as NukeType,
-          );
         this.mg.displayMessage(
           `Missile intercepted ${this.target.type()}`,
           MessageType.SUCCESS,
@@ -75,6 +68,15 @@ export class SAMMissileExecution implements Execution {
         this.active = false;
         this.target.delete();
         this.SAMMissile.delete(false);
+
+        // Record stats
+        this.mg
+          .stats()
+          .bombIntercept(
+            this.target.owner().id(),
+            this._owner.id(),
+            this.target.type() as NukeType,
+          );
         return;
       } else {
         this.SAMMissile.move(result);

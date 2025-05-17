@@ -143,6 +143,7 @@ export class NukeExecution implements Execution {
           this.breakAlliances(this.tilesToDestroy());
         }
 
+        // Record stats
         this.mg
           .stats()
           .bombLaunch(this.senderID, target.id(), this.nuke.type() as NukeType);
@@ -184,14 +185,6 @@ export class NukeExecution implements Execution {
     if (this.mg === null || this.nuke === null) {
       throw new Error("Not initialized");
     }
-
-    this.mg
-      .stats()
-      .bombLand(
-        this.senderID,
-        this.target().id(),
-        this.nuke.type() as NukeType,
-      );
 
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const toDestroy = this.tilesToDestroy();
@@ -247,6 +240,15 @@ export class NukeExecution implements Execution {
     }
     this.active = false;
     this.nuke.delete(false);
+
+    // Record stats
+    this.mg
+      .stats()
+      .bombLand(
+        this.senderID,
+        this.target().id(),
+        this.nuke.type() as NukeType,
+      );
   }
 
   owner(): Player {

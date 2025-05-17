@@ -56,6 +56,7 @@ export class MirvExecution implements Execution {
     this.targetPlayer = this.mg.owner(this.dst);
     this.speed = this.mg.config().defaultNukeSpeed();
 
+    // Record stats
     this.mg
       .stats()
       .bombLaunch(this.player.id(), this.targetPlayer.id(), UnitType.MIRV);
@@ -87,11 +88,12 @@ export class MirvExecution implements Execution {
 
     const result = this.pathFinder.nextTile(this.speed);
     if (result === true) {
+      this.separate();
+      this.active = false;
+      // Record stats
       this.mg
         .stats()
         .bombLand(this.player.id(), this.targetPlayer.id(), UnitType.MIRV);
-      this.separate();
-      this.active = false;
       return;
     } else {
       this.nuke.move(result);
