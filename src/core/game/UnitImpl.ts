@@ -250,8 +250,8 @@ export class UnitImpl implements Unit {
       case DeleteReason.Destroy:
         if (
           otherPlayersIDs === null ||
-          type === UnitType.Construction ||
           otherPlayersIDs.length === 0 ||
+          type === UnitType.Construction ||
           type === UnitType.Shell ||
           type === UnitType.MIRV ||
           type === UnitType.SAMMissile
