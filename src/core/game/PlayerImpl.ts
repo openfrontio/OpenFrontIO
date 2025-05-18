@@ -909,7 +909,7 @@ export class PlayerImpl implements Player {
   hash(): number {
     return (
       simpleHash(this.id()) * (this.population() + this.numTilesOwned()) +
-      this._units.reduce((acc, unit) => acc + (unit as UnitImpl).hash(), 0)
+      this._units.reduce((acc, unit) => acc + unit.hash(), 0)
     );
   }
   toString(): string {

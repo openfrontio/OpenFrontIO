@@ -324,6 +324,8 @@ export class PlayerInfo {
 }
 
 export interface Unit {
+  hash(): number;
+
   // Common properties.
   id(): number;
   type(): UnitType;
