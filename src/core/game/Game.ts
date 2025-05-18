@@ -319,6 +319,18 @@ export class PlayerInfo {
   }
 }
 
+export enum DeleteReason {
+  SimpleDelete = "Unexpected",
+  BuildingComplete = "BuildingComplete",
+  Destroy = "Killed",
+  BoatArriveTroops = "BoatArriveTroops",
+  BoatCaptured = "BoatCaptured",
+  BoatDestroyTrade = "BoatDestroyTrade",
+  BoatArriveTrade = "BoatArriveTrade",
+  BoatDestroyTroops = "BoatDestroyTroops",
+  Lose = "Lose",
+}
+
 export interface Unit {
   id(): number;
 
@@ -360,7 +372,12 @@ export interface Unit {
 
   // Mutations
   setTroops(troops: number): void;
-  delete(displayerMessage?: boolean): void;
+  setGold(gold: number): void;
+  delete(
+    deleteReason?: DeleteReason,
+    otherPlayersID?: PlayerID[] | null,
+    displayerMessage?: boolean,
+  ): void;
 
   // Only for Construction type
   constructionType(): UnitType | null;

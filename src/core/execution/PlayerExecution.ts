@@ -2,6 +2,7 @@ import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
 import { consolex } from "../Consolex";
 import {
+  DeleteReason,
   Execution,
   Game,
   MessageType,
@@ -76,7 +77,7 @@ export class PlayerExecution implements Execution {
           u.type() !== UnitType.MIRVWarhead &&
           u.type() !== UnitType.MIRV
         ) {
-          u.delete();
+          u.delete(DeleteReason.Lose);
         }
       });
       this.active = false;

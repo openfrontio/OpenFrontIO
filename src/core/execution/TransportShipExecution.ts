@@ -1,5 +1,6 @@
 import { consolex } from "../Consolex";
 import {
+  DeleteReason,
   Execution,
   Game,
   MessageType,
@@ -175,12 +176,8 @@ export class TransportShipExecution implements Execution {
       case PathFindResultType.Completed:
         if (this.mg.owner(this.dst) === this.attacker) {
           this.attacker.addTroops(this.troops);
-          this.boat.delete(false);
+          this.boat.delete(DeleteReason.BoatArriveTroops, null, false);
           this.active = false;
-          // Record stats
-          this.mg
-            .stats()
-            .boatArriveTroops(this.attacker.id(), this.targetID, this.troops);
           return;
         }
         if (this.target.isPlayer() && this.attacker.isFriendly(this.target)) {
@@ -197,13 +194,8 @@ export class TransportShipExecution implements Execution {
             ),
           );
         }
-        this.boat.delete(false);
+        this.boat.delete(DeleteReason.BoatArriveTroops, null, false);
         this.active = false;
-
-        // Record stats
-        this.mg
-          .stats()
-          .boatArriveTroops(this.attacker.id(), this.targetID, this.troops);
         return;
       case PathFindResultType.NextTile:
         this.boat.move(result.tile);
@@ -213,10 +205,8 @@ export class TransportShipExecution implements Execution {
       case PathFindResultType.PathNotFound:
         // TODO: add to poisoned port list
         consolex.warn(`path not found tot dst`);
-        this.boat.delete(false);
+        this.boat.delete(DeleteReason.SimpleDelete, null, false);
         this.active = false;
-        // TODO: Record stats?
-        // this.mg.stats().boatDestroyTroops();
         return;
     }
   }

@@ -1,5 +1,6 @@
 import { consolex } from "../Consolex";
 import {
+  DeleteReason,
   Execution,
   Game,
   MessageType,
@@ -182,7 +183,15 @@ export class SAMLauncherExecution implements Execution {
             this.sam.owner().id(),
           );
           // Delete warheads
-          mirvWarheadTargets.forEach((u) => u.delete());
+          const sam = this.sam;
+          if (sam === null) {
+            // has to check for null
+            mirvWarheadTargets.forEach((u) => u.delete());
+          } else {
+            mirvWarheadTargets.forEach((u) =>
+              u.delete(DeleteReason.Destroy, [sam.owner().id()]),
+            );
+          }
         } else if (target !== null) {
           target.setTargetedBySAM(true);
           this.mg.addExecution(

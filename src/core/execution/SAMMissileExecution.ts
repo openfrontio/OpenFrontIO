@@ -1,5 +1,5 @@
-import { NukeType } from "../AnalyticsSchemas";
 import {
+  DeleteReason,
   Execution,
   Game,
   MessageType,
@@ -50,7 +50,7 @@ export class SAMMissileExecution implements Execution {
       this.target.owner() === this.SAMMissile.owner() ||
       !nukesWhitelist.includes(this.target.type())
     ) {
-      this.SAMMissile.delete(false);
+      this.target.delete(DeleteReason.SimpleDelete, null, false);
       this.active = false;
       return;
     }
@@ -66,17 +66,9 @@ export class SAMMissileExecution implements Execution {
           this._owner.id(),
         );
         this.active = false;
-        this.target.delete();
-        this.SAMMissile.delete(false);
+        this.target.delete(DeleteReason.Destroy, [this.target.owner().id()]);
+        this.SAMMissile.delete(DeleteReason.SimpleDelete, null, false);
 
-        // Record stats
-        this.mg
-          .stats()
-          .bombIntercept(
-            this.target.owner().id(),
-            this._owner.id(),
-            this.target.type() as NukeType,
-          );
         return;
       } else {
         this.SAMMissile.move(result);

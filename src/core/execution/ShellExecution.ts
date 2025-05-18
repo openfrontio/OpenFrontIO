@@ -1,4 +1,11 @@
-import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
+import {
+  DeleteReason,
+  Execution,
+  Game,
+  Player,
+  Unit,
+  UnitType,
+} from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { AirPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
@@ -35,7 +42,7 @@ export class ShellExecution implements Execution {
       this.target.owner() === this.shell.owner() ||
       (this.destroyAtTick !== -1 && this.mg.ticks() >= this.destroyAtTick)
     ) {
-      this.shell.delete(false);
+      this.shell.delete(DeleteReason.SimpleDelete, null, false);
       this.active = false;
       return;
     }
@@ -52,7 +59,7 @@ export class ShellExecution implements Execution {
       if (result === true) {
         this.active = false;
         this.target.modifyHealth(-this.effectOnTarget());
-        this.shell.delete(false);
+        this.shell.delete(DeleteReason.SimpleDelete, null, false);
         return;
       } else {
         this.shell.move(result);

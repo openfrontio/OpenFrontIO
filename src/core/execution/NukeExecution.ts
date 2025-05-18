@@ -1,6 +1,7 @@
 import { NukeType } from "../AnalyticsSchemas";
 import { consolex } from "../Consolex";
 import {
+  DeleteReason,
   Execution,
   Game,
   MessageType,
@@ -234,12 +235,12 @@ export class NukeExecution implements Execution {
         unit.type() !== UnitType.MIRV
       ) {
         if (this.mg.euclideanDistSquared(this.dst, unit.tile()) < outer2) {
-          unit.delete();
+          unit.delete(DeleteReason.Destroy, [unit.owner().id()]);
         }
       }
     }
     this.active = false;
-    this.nuke.delete(false);
+    this.nuke.delete(DeleteReason.SimpleDelete, null, false);
 
     // Record stats
     this.mg

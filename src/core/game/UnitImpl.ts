@@ -1,7 +1,11 @@
+import { OtherUnit } from "../AnalyticsSchemas";
+import { consolex } from "../Consolex";
 import { simpleHash, toInt, withinInt } from "../Util";
 import {
   AllUnitParams,
+  DeleteReason,
   MessageType,
+  PlayerID,
   Tick,
   Unit,
   UnitInfo,
@@ -23,6 +27,7 @@ export class UnitImpl implements Unit {
   private _constructionType: UnitType | undefined;
   private _lastOwner: PlayerImpl | null = null;
   private _troops: number;
+  private _gold: number;
   private _cooldownTick: Tick | null = null;
   private _dstPort: Unit | undefined = undefined; // Only for trade ships
   private _detonationDst: TileRef | undefined = undefined; // Only for nukes
@@ -124,6 +129,9 @@ export class UnitImpl implements Unit {
   setTroops(troops: number): void {
     this._troops = troops;
   }
+  setGold(gold: number): void {
+    this._gold = gold;
+  }
   troops(): number {
     return this._troops;
   }
@@ -180,7 +188,11 @@ export class UnitImpl implements Unit {
     );
   }
 
-  delete(displayMessage: boolean = true): void {
+  delete(
+    deleteReason: DeleteReason = DeleteReason.SimpleDelete,
+    otherPlayersID: PlayerID[] | null = null,
+    displayMessage: boolean = true,
+  ): void {
     if (!this.isActive()) {
       throw new Error(`cannot delete ${this} not active`);
     }
@@ -195,7 +207,111 @@ export class UnitImpl implements Unit {
         this.owner().id(),
       );
     }
+
+    const type =
+      this.type() === UnitType.Construction
+        ? this.constructionType()
+        : this.type();
+    if (type !== null) {
+      this.updateStats(type, deleteReason, otherPlayersID);
+    }
   }
+
+  private isInstanceOfOtherUnit(object: any): object is OtherUnit {
+    const isInstance =
+      object === UnitType.City ||
+      object === UnitType.DefensePost ||
+      object === UnitType.Port ||
+      object === UnitType.Warship ||
+      object === UnitType.MissileSilo ||
+      object === UnitType.SAMLauncher;
+    return isInstance;
+  }
+
+  private updateStats(
+    type: UnitType,
+    deleteReason: DeleteReason,
+    otherPlayersIDs: PlayerID[] | null,
+  ): void {
+    consolex.log(type, deleteReason, otherPlayersIDs);
+    switch (deleteReason) {
+      case DeleteReason.SimpleDelete:
+      case DeleteReason.BuildingComplete:
+      case DeleteReason.BoatCaptured:
+        if (otherPlayersIDs !== null && otherPlayersIDs.length !== 0) {
+          this.mg
+            .stats()
+            .goldWar(this._owner.id(), otherPlayersIDs[0], this._gold);
+        }
+        return;
+      case DeleteReason.Lose:
+        if (this.isInstanceOfOtherUnit(type)) {
+          this.mg.stats().unitLose(this._owner.id(), type);
+        }
+        break;
+      case DeleteReason.Destroy:
+        if (
+          otherPlayersIDs === null ||
+          type === UnitType.Construction ||
+          otherPlayersIDs.length === 0 ||
+          type === UnitType.Shell ||
+          type === UnitType.MIRV ||
+          type === UnitType.SAMMissile
+        ) {
+          // no stats or unexpected behavior
+          return;
+        }
+        if (
+          type === UnitType.MIRVWarhead ||
+          type === UnitType.AtomBomb ||
+          type === UnitType.HydrogenBomb
+        ) {
+          this.mg
+            .stats()
+            .bombIntercept(otherPlayersIDs[0], this._owner.id(), type);
+        } else if (type === UnitType.TradeShip) {
+          this.mg
+            .stats()
+            .boatDestroyTrade(this._owner.id(), otherPlayersIDs[0], this._gold);
+        } else if (type === UnitType.TransportShip) {
+          this.mg
+            .stats()
+            .boatDestroyTroops(
+              this._owner.id(),
+              otherPlayersIDs[0],
+              this._troops,
+            );
+        } else {
+          this.mg.stats().unitDestroy(this._owner.id(), type);
+          this.mg.stats().unitLose(otherPlayersIDs[0], type);
+        }
+        break;
+      case DeleteReason.BoatArriveTroops:
+        this.mg
+          .stats()
+          .boatArriveTroops(
+            this._owner.id(),
+            otherPlayersIDs !== null && otherPlayersIDs.length > 0
+              ? otherPlayersIDs[0]
+              : null,
+            this._troops,
+          );
+
+        break;
+      case DeleteReason.BoatArriveTrade:
+        if (otherPlayersIDs === null || otherPlayersIDs.length < 2) {
+          throw new Error("otherPlayersIDs is required for trade");
+        }
+        this.mg
+          .stats()
+          .boatArriveTrade(
+            otherPlayersIDs[1],
+            otherPlayersIDs[1],
+            this._troops,
+          );
+    }
+  }
+
   isActive(): boolean {
     return this._active;
   }
