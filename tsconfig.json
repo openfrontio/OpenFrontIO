@@ -18,6 +18,7 @@
     "alwaysStrict": true,
     "esModuleInterop": true,
     "experimentalDecorators": true,
+    "noImplicitAny": true,
     "resolveJsonModule": true,
     "strictNullChecks": true,
     "useDefineForClassFields": false

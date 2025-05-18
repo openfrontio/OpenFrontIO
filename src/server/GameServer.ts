@@ -44,7 +44,7 @@ export class GameServer {
   private _hasStarted = false;
   private _startTime: number | null = null;
 
-  private endTurnIntervalID;
+  private endTurnIntervalID: NodeJS.Timeout | undefined;
 
   private lastPingUpdate = 0;
 
