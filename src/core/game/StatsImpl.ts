@@ -99,7 +99,7 @@ export class StatsImpl implements Stats {
     const odat = this.getPlayerStats(target);
     data.gold[GOLD_INDEX_TRADE] += gold;
     odat.gold[GOLD_INDEX_TRADE] += gold;
-    const boats = data.boats.trans;
+    const boats = data.boats.trade;
     if (boats === undefined) throw new Error();
     boats[BOAT_INDEX_ARRIVED]++;
   }
@@ -118,7 +118,7 @@ export class StatsImpl implements Stats {
     troops: number,
   ): void {
     const data = this.getPlayerStats(player);
-    const boats = data.boats.trade;
+    const boats = data.boats.trans;
     if (boats === undefined) throw new Error();
     boats[BOAT_INDEX_SENT]++;
   }
