@@ -12,6 +12,7 @@ import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
+import { FxLayer } from "./layers/FxLayer";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MultiTabModal } from "./layers/MultiTabModal";
@@ -165,6 +166,7 @@ export function createRenderer(
     new TerritoryLayer(game, eventBus),
     new StructureLayer(game, eventBus),
     new UnitLayer(game, eventBus, clientID, transformHandler),
+    new FxLayer(game),
     new UILayer(game, eventBus, clientID, transformHandler),
     new NameLayer(game, transformHandler, clientID),
     eventsDisplay,

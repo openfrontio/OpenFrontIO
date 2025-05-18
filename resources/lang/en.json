@@ -142,7 +142,8 @@
     "deglaciatedantarctica": "Deglaciated Antarctica",
     "europeclassic": "Europe (classic)",
     "falklandislands": "Falkland Islands",
-    "baikal": "Baikal"
+    "baikal": "Baikal",
+    "halkidiki": "Halkidiki"
   },
   "map_categories": {
     "continental": "Continental",
@@ -226,6 +227,8 @@
     "dark_mode_desc": "Toggle the site’s appearance between light and dark themes",
     "emojis_label": "😊 Emojis",
     "emojis_desc": "Toggle whether emojis are shown in game",
+    "special_effects_label": "💥 Special effects",
+    "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
     "anonymous_names_label": "🥷 Hidden Names",
     "anonymous_names_desc": "Hide real player names with random ones on your screen.",
     "left_click_label": "🖱️ Left Click to Open Menu",
