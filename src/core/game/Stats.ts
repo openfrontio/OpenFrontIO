@@ -6,25 +6,39 @@ export interface Stats {
   getPlayerStats(player: PlayerID): PlayerStats;
   stats(): AllPlayersStats;
 
+  // Player attacks target
   attack(player: PlayerID, target: PlayerID | null, troops: number): void;
+
+  // Player cancels attack on target
   attackCancel(player: PlayerID, target: PlayerID | null, troops: number): void;
 
+  // Player betrays another player
   betray(player: PlayerID): void;
 
+  // Player sends a trade ship to target
   boatSendTrade(player: PlayerID, target: PlayerID): void;
+
+  // Player's trade ship arrives at target, both players earn gold
   boatArriveTrade(player: PlayerID, target: PlayerID, gold: number): void;
+
+  // Player destroys target's trade ship
   boatDestroyTrade(player: PlayerID, target: PlayerID): void;
 
+  // Player sends a transport ship to target with troops
   boatSendTroops(
     player: PlayerID,
     target: PlayerID | null,
     troops: number,
   ): void;
+
+  // Player's transport ship arrives at target with troops
   boatArriveTroops(
     player: PlayerID,
     target: PlayerID | null,
     troops: number,
   ): void;
+
+  // Player destroys target's transport ship with troops
   boatDestroyTroops(player: PlayerID, target: PlayerID, troops: number): void;
 
   // Player launches bomb at target

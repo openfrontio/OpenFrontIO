@@ -175,6 +175,7 @@ export class TransportShipExecution implements Execution {
           this.attacker.addTroops(this.troops);
           this.boat.delete(false);
           this.active = false;
+
           // Record stats
           this.mg
             .stats()
