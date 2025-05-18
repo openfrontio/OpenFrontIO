@@ -11,9 +11,7 @@ export class BoatRetreatExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     if (!mg.hasPlayer(this.playerID)) {
-      console.warn(
-        `BoatRetreatExecution: Player ${this.player.id()} not found`,
-      );
+      console.warn(`BoatRetreatExecution: Player ${this.playerID} not found`);
       this.active = false;
       return;
     }
@@ -30,6 +28,7 @@ export class BoatRetreatExecution implements Execution {
 
     if (!unit) {
       consolex.warn(`Didn't find outgoing boat with id ${this.unitID}`);
+      this.active = false;
       return;
     }
 
@@ -38,6 +37,9 @@ export class BoatRetreatExecution implements Execution {
   }
 
   owner(): Player {
+    if (this.player === undefined) {
+      throw new Error("Not initialized");
+    }
     return this.player;
   }
 
