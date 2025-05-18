@@ -796,7 +796,7 @@ export class PlayerImpl implements Player {
     // only get missilesilos that are not on cooldown
     const spawns = this.units(UnitType.MissileSilo)
       .filter((silo) => {
-        return !silo.isCooldown();
+        return !silo.isInCooldown();
       })
       .sort(distSortUnit(this.mg, tile));
     if (spawns.length === 0) {

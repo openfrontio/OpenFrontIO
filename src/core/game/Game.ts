@@ -322,57 +322,55 @@ export class PlayerInfo {
 }
 
 export interface Unit {
+  // Common properties.
   id(): number;
-
-  // Properties
   type(): UnitType;
-  troops(): number;
   owner(): Player;
   info(): UnitInfo;
-
-  // Location
+  delete(displayerMessage?: boolean): void;
   tile(): TileRef;
   lastTile(): TileRef;
   move(tile: TileRef): void;
-
-  // State
   isActive(): boolean;
+  setOwner(owner: Player): void;
+  touch(): void;
+  toUpdate(): UnitUpdate;
+
+  // Targeting
+  setTargetTile(cell: TileRef | undefined): void;
+  targetTile(): TileRef | undefined;
+  setTargetUnit(unit: Unit | undefined): void;
+  targetUnit(): Unit | undefined;
+  setTargetedBySAM(targeted: boolean): void;
+  targetedBySAM(): boolean;
+
+  // Health
   hasHealth(): boolean;
   health(): number;
   modifyHealth(delta: number): void;
 
-  setWarshipTarget(target: Unit | null): void; // warship only
-  warshipTarget(): Unit | null;
+  // Troops
+  setTroops(troops: number): void;
+  troops(): number;
 
-  setOwner(owner: Player): void;
-  setCooldown(triggerCooldown: boolean): void;
-  ticksLeftInCooldown(cooldownDuration: number): Tick;
-  isCooldown(): boolean;
-  setDstPort(dstPort: Unit): void;
-  dstPort(): Unit | null; // Only for trade ships
+  // --- UNIT SPECIFIC ---
+
+  // SAMs & Missile Silos
+  launch(): void;
+  ticksLeftInCooldown(): Tick | undefined;
+  isInCooldown(): boolean;
+
+  // Trade Ships
   setSafeFromPirates(): void; // Only for trade ships
   isSafeFromPirates(): boolean; // Only for trade ships
-  detonationDst(): TileRef | null; // Only for nukes
 
-  setMoveTarget(cell: TileRef | null): void;
-  moveTarget(): TileRef | null;
-
-  setTargetedBySAM(targeted: boolean): void;
-  targetedBySAM(): boolean;
-
-  // Mutations
-  setTroops(troops: number): void;
-  delete(displayerMessage?: boolean): void;
-
-  // Only for Construction type
+  // Construction
   constructionType(): UnitType | null;
   setConstructionType(type: UnitType): void;
 
-  // Updates
-  toUpdate(): UnitUpdate;
-
-  cachePut(from: TileRef, to: TileRef): void; // ports only
-  cacheGet(from: TileRef): TileRef | undefined; // ports only
+  // Ports
+  cachePut(from: TileRef, to: TileRef): void;
+  cacheGet(from: TileRef): TileRef | undefined;
 }
 
 export interface TerraNullius {
