@@ -303,7 +303,7 @@ export class UnitImpl implements Unit {
         this.mg
           .stats()
           .boatArriveTrade(
-            otherPlayersIDs[1],
+            otherPlayersIDs[0],
             otherPlayersIDs[1],
             this._troops,
           );
