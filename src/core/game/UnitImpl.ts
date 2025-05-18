@@ -234,7 +234,6 @@ export class UnitImpl implements Unit {
   ): void {
     switch (deleteReason) {
       case DeleteReason.SimpleDelete:
-      case DeleteReason.BuildingComplete:
         return;
       case DeleteReason.BoatCaptured:
         if (otherPlayersIDs !== null && otherPlayersIDs.length !== 0) {
