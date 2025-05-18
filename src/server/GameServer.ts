@@ -103,7 +103,7 @@ export class GameServer {
     if (gameConfig.playerTeams !== undefined) {
       this.gameConfig.playerTeams = gameConfig.playerTeams;
     }
-    if (gameConfig.playerTeamsSelection != null) {
+    if (gameConfig.playerTeamsSelection !== null) {
       this.gameConfig.playerTeamsSelection = gameConfig.playerTeamsSelection;
     }
   }
