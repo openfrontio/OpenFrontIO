@@ -461,7 +461,7 @@ export class NameLayer implements Layer {
       );
     });
     const isMyPlayerTarget = nukesSentByOtherPlayer.find((unit) => {
-      const detonationDst = unit.detonationDst();
+      const detonationDst = unit.targetTile();
       if (detonationDst === undefined) return false;
       const targetId = this.game.owner(detonationDst).id();
       return myPlayer && targetId === myPlayer.id();
