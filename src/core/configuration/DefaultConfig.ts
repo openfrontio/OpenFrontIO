@@ -552,25 +552,28 @@ export class DefaultConfig implements Config {
     if (defenderIsPlayer) {
       const defenderTroops = defender.troops();
       const defenderTiles = defender.numTilesOwned();
-      const defenderdensity = defenderTroops / defenderTiles;
-      const attackratio = defenderTroops / attackTroops;
+      const defenderDensity = defenderTroops / defenderTiles;
+      const attackRatio = defenderTroops / attackTroops;
+      const traitorDebuff = defender.isTraitor()
+        ? this.traitorDefenseDebuff()
+        : 1;
+      const baseTroopLoss = 16;
+      const baseTileCost = 23;
+      const attackStandardSize = 10_000;
       return {
         attackerTroopLoss:
-          mag * 16 +
-          defenderdensity *
-            mag *
-            (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
-        defenderTroopLoss: defenderdensity,
+          mag * (baseTroopLoss + defenderDensity * traitorDebuff),
+        defenderTroopLoss: defenderDensity,
         tilesPerTickUsed:
-          23 *
-          within(defenderdensity, 3, 100) ** 0.2 *
-          (10_000 / attackTroops) ** 0.1 *
+          baseTileCost *
+          within(defenderDensity, 3, 100) ** 0.2 *
+          (attackStandardSize / attackTroops) ** 0.1 *
           speed *
-          within(attackratio, 0.1, 20) ** 0.4,
+          within(attackRatio, 0.1, 20) ** 0.4,
       };
     } else {
       return {
-        attackerTroopLoss: mag * 16,
+        attackerTroopLoss: 16 * mag,
         defenderTroopLoss: 0,
         tilesPerTickUsed: 31 * speed,
       };
@@ -664,9 +667,10 @@ export class DefaultConfig implements Config {
     const max = this.maxPopulation(player);
     //population grows proportional to current population with growth decreasing as it approaches max
     // smaller countries recieve a boost to pop growth to speed up early game
-    let toAdd =
-      10 +
-      (1300 / max + 1 / 140) * (0.8 * player.troops() + 1.2 * player.workers());
+    const baseAdditionRate = 10;
+    const basePopGrowthRate = 1300 / max + 1 / 140;
+    const reproductionPop = 0.8 * player.troops() + 1.2 * player.workers();
+    let toAdd = baseAdditionRate + basePopGrowthRate * reproductionPop;
     const totalPop = player.totalPopulation();
     const ratio = 1 - totalPop / max;
     toAdd *= ratio;
