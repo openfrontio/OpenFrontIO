@@ -76,6 +76,7 @@ export enum GameMapType {
   DeglaciatedAntarctica = "Deglaciated Antarctica",
   FalklandIslands = "Falkland Islands",
   Baikal = "Baikal",
+  Halkidiki = "Halkidiki",
 }
 
 export const mapCategories: Record<string, GameMapType[]> = {
@@ -101,6 +102,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.FaroeIslands,
     GameMapType.FalklandIslands,
     GameMapType.Baikal,
+    GameMapType.Halkidiki,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -346,6 +348,8 @@ export interface Unit {
 
   // Health
   hasHealth(): boolean;
+  retreating(): boolean;
+  orderBoatRetreat(): void;
   health(): number;
   modifyHealth(delta: number): void;
 

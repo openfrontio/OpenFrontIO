@@ -20,6 +20,7 @@ export type Intent =
   | AttackIntent
   | CancelAttackIntent
   | BoatAttackIntent
+  | CancelBoatIntent
   | AllianceRequestIntent
   | AllianceRequestReplyIntent
   | BreakAllianceIntent
@@ -37,6 +38,7 @@ export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
 export type SpawnIntent = z.infer<typeof SpawnIntentSchema>;
 export type BoatAttackIntent = z.infer<typeof BoatAttackIntentSchema>;
+export type CancelBoatIntent = z.infer<typeof CancelBoatIntentSchema>;
 export type AllianceRequestIntent = z.infer<typeof AllianceRequestIntentSchema>;
 export type AllianceRequestReplyIntent = z.infer<
   typeof AllianceRequestReplyIntentSchema
@@ -196,6 +198,7 @@ const BaseIntentSchema = z.object({
     "cancel_attack",
     "spawn",
     "boat",
+    "cancel_boat",
     "name",
     "targetPlayer",
     "emoji",
@@ -294,6 +297,11 @@ export const CancelAttackIntentSchema = BaseIntentSchema.extend({
   attackID: z.string(),
 });
 
+export const CancelBoatIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("cancel_boat"),
+  unitID: z.number(),
+});
+
 export const MoveWarshipIntentSchema = BaseIntentSchema.extend({
   type: z.literal("move_warship"),
   unitId: z.number(),
@@ -318,6 +326,7 @@ const IntentSchema = z.union([
   CancelAttackIntentSchema,
   SpawnIntentSchema,
   BoatAttackIntentSchema,
+  CancelBoatIntentSchema,
   AllianceRequestIntentSchema,
   AllianceRequestReplyIntentSchema,
   BreakAllianceIntentSchema,

@@ -131,6 +131,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
           GameMapType.Asia,
           GameMapType.FalklandIslands,
           GameMapType.Baikal,
+          GameMapType.Halkidiki,
         ].includes(map)
       ) {
         return Math.random() < 0.3 ? 50 : 25;
@@ -702,7 +703,7 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): number {
-    return Math.sqrt(player.workers() * player.numTilesOwned()) / 200;
+    return 0.045 * player.workers() ** 0.7;
   }
 
   troopAdjustmentRate(player: Player): number {
