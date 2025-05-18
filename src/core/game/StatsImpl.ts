@@ -214,14 +214,12 @@ export class StatsImpl implements Stats {
     throw new Error(`Unknown OtherUnit ${type}`);
   }
 
-  // TODO: Call this function
   unitBuild(player: PlayerID, type: OtherUnit): void {
     const unit = this._getOtherUnit(player, type);
     if (unit === undefined) throw new Error();
     unit[OTHER_INDEX_BUILT]++;
   }
 
-  // TODO: Call this function
   unitLose(player: PlayerID, type: OtherUnit): void {
     const unit = this._getOtherUnit(player, type);
     if (unit === undefined) throw new Error();
@@ -235,7 +233,6 @@ export class StatsImpl implements Stats {
     unit[OTHER_INDEX_DESTROYED]++;
   }
 
-  // TODO: Call this function
   unitCapture(player: PlayerID, type: OtherUnit): void {
     const unit = this._getOtherUnit(player, type);
     if (unit === undefined) throw new Error();
