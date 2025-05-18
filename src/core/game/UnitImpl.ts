@@ -1,5 +1,4 @@
 import { OtherUnit } from "../AnalyticsSchemas";
-import { consolex } from "../Consolex";
 import { simpleHash, toInt, withinInt } from "../Util";
 import {
   AllUnitParams,
@@ -233,7 +232,6 @@ export class UnitImpl implements Unit {
     deleteReason: DeleteReason,
     otherPlayersIDs: PlayerID[] | null,
   ): void {
-    consolex.log(type, deleteReason, otherPlayersIDs);
     switch (deleteReason) {
       case DeleteReason.SimpleDelete:
       case DeleteReason.BuildingComplete:
