@@ -703,7 +703,7 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): number {
-    return .045 * player.workers() ** .7;
+    return 0.045 * player.workers() ** 0.7;
   }
 
   troopAdjustmentRate(player: Player): number {
