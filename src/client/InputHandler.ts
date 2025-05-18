@@ -1,4 +1,5 @@
 import { EventBus, GameEvent } from "../core/EventBus";
+import { showRangeMode } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 
@@ -7,6 +8,14 @@ export class MouseUpEvent implements GameEvent {
     public readonly x: number,
     public readonly y: number,
   ) {}
+}
+
+/**
+ * Event emitted when the show range mode button is clicked
+ * Controls the visibility of unit range indicators in the game
+ */
+export class ShowUnitRangeEvent implements GameEvent {
+  constructor(public readonly showRangeMode: showRangeMode) {}
 }
 
 /**
