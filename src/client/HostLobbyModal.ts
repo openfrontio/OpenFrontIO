@@ -563,10 +563,11 @@ export class HostLobbyModal extends LitElement {
   }
 
   private async handleTeamSelect(username: string, value: string) {
-    const team = value as Team;
+    const team = value === "" ? undefined : (value as Team);
     const player = this.lobbyPlayers.find((p) => p.username === username);
     if (player) {
       player.preferredTeam = team || undefined;
+      this.lobbyPlayers = [...this.lobbyPlayers];
     }
     this.putGameConfig();
   }
@@ -583,7 +584,7 @@ export class HostLobbyModal extends LitElement {
     return allTeams;
   }
 
-  private lobbyPlayers: {
+  @state() private lobbyPlayers: {
     username: string;
     clientID: ClientID;
     preferredTeam?: Team;
@@ -609,10 +610,14 @@ export class HostLobbyModal extends LitElement {
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
           playerTeams: this.teamCount,
-          playerTeamsSelection: Object.fromEntries(
-            this.lobbyPlayers
-              .filter((p) => p.preferredTeam)
-              .map((p) => [p.username, p.preferredTeam!]),
+          playerTeamsSelection: this.lobbyPlayers.reduce(
+            (acc, player) => {
+              if (player.preferredTeam) {
+                acc[player.username] = player.preferredTeam;
+              }
+              return acc;
+            },
+            {} as Record<string, Team>,
           ),
         } satisfies Partial<GameConfig>),
       },
