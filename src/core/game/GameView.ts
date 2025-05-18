@@ -78,6 +78,12 @@ export class UnitView {
   troops(): number {
     return this.data.troops;
   }
+  retreating(): boolean {
+    if (this.type() !== UnitType.TransportShip) {
+      throw Error("Must be a transport ship");
+    }
+    return this.data.retreating;
+  }
   tile(): TileRef {
     return this.data.pos;
   }
@@ -112,7 +118,7 @@ export class UnitView {
 }
 
 export class PlayerView {
-  public anonymousName: string;
+  public anonymousName: string | null = null;
 
   constructor(
     private game: GameView,
@@ -122,8 +128,10 @@ export class PlayerView {
     if (data.clientID === game.myClientID()) {
       this.anonymousName = this.data.name;
     } else {
-      this.anonymousName =
-        createRandomName(this.data.name, this.data.playerType) ?? "";
+      this.anonymousName = createRandomName(
+        this.data.name,
+        this.data.playerType,
+      );
     }
   }
 
