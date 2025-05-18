@@ -173,9 +173,9 @@ export class TransportShipExecution implements Execution {
     const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
     switch (result.type) {
       case PathFindResultType.Completed:
+        this.boat.delete(null, false);
         if (this.mg.owner(this.dst) === this.attacker) {
           this.attacker.addTroops(this.troops);
-          this.boat.delete(false);
           this.active = false;
           // Record stats
           this.mg
@@ -197,7 +197,6 @@ export class TransportShipExecution implements Execution {
             ),
           );
         }
-        this.boat.delete(false);
         this.active = false;
 
         // Record stats
@@ -213,10 +212,8 @@ export class TransportShipExecution implements Execution {
       case PathFindResultType.PathNotFound:
         // TODO: add to poisoned port list
         consolex.warn(`path not found tot dst`);
-        this.boat.delete(false);
+        this.boat.delete(null, false);
         this.active = false;
-        // TODO: Record stats?
-        // this.mg.stats().boatDestroyTroops();
         return;
     }
   }

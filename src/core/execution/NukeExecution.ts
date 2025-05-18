@@ -234,12 +234,12 @@ export class NukeExecution implements Execution {
         unit.type() !== UnitType.MIRV
       ) {
         if (this.mg.euclideanDistSquared(this.dst, unit.tile()) < outer2) {
-          unit.delete();
+          unit.delete(this.senderID);
         }
       }
     }
     this.active = false;
-    this.nuke.delete(false);
+    this.nuke.delete(null, false);
 
     // Record stats
     this.mg

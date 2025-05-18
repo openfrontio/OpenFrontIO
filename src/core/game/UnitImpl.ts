@@ -2,6 +2,7 @@ import { simpleHash, toInt, withinInt } from "../Util";
 import {
   AllUnitParams,
   MessageType,
+  PlayerID,
   Tick,
   Unit,
   UnitInfo,
@@ -163,15 +164,18 @@ export class UnitImpl implements Unit {
     );
   }
 
-  modifyHealth(delta: number): void {
+  modifyHealth(delta: number, attacker?: PlayerID): void {
     this._health = withinInt(
       this._health + toInt(delta),
       0n,
       toInt(this.info().maxHealth ?? 1),
     );
+    if (this._health === 0n) {
+      this.delete(attacker ?? null);
+    }
   }
 
-  delete(displayMessage: boolean = true): void {
+  delete(destroyer: PlayerID | null, displayMessage?: boolean): void {
     if (!this.isActive()) {
       throw new Error(`cannot delete ${this} not active`);
     }
@@ -179,14 +183,36 @@ export class UnitImpl implements Unit {
     this._active = false;
     this.mg.addUpdate(this.toUpdate());
     this.mg.removeUnit(this);
-    if (displayMessage && this.type() !== UnitType.MIRVWarhead) {
+    if (displayMessage !== false && this._type !== UnitType.MIRVWarhead) {
       this.mg.displayMessage(
-        `Your ${this.type()} was destroyed`,
+        `Your ${this._type} was destroyed`,
         MessageType.ERROR,
         this.owner().id(),
       );
     }
+    if (destroyer !== null) {
+      switch (this._type) {
+        case UnitType.TransportShip:
+          this.mg
+            .stats()
+            .boatDestroyTroops(destroyer, this.owner().id(), this._troops);
+          break;
+        case UnitType.TradeShip:
+          this.mg.stats().boatDestroyTrade(destroyer, this.owner().id());
+          break;
+        case UnitType.City:
+        case UnitType.DefensePost:
+        case UnitType.MissileSilo:
+        case UnitType.Port:
+        case UnitType.SAMLauncher:
+        case UnitType.Warship:
+          this.mg.stats().unitDestroy(destroyer, this._type);
+          this.mg.stats().unitLose(this.owner().id(), this._type);
+          break;
+      }
+    }
   }
+
   isActive(): boolean {
     return this._active;
   }

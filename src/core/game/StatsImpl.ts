@@ -104,8 +104,7 @@ export class StatsImpl implements Stats {
     boats[BOAT_INDEX_ARRIVED]++;
   }
 
-  // TODO: Call this function
-  boatDestroyTrade(player: PlayerID, target: PlayerID, gold: number): void {
+  boatDestroyTrade(player: PlayerID, target: PlayerID): void {
     const data = this.getPlayerStats(player);
     const boats = data.boats.trade;
     if (boats === undefined) throw new Error();
@@ -134,7 +133,6 @@ export class StatsImpl implements Stats {
     boats[BOAT_INDEX_ARRIVED]++;
   }
 
-  // TODO: Call this function
   boatDestroyTroops(player: PlayerID, target: PlayerID, troops: number): void {
     const data = this.getPlayerStats(player);
     const boats = data.boats.trans;
@@ -220,22 +218,21 @@ export class StatsImpl implements Stats {
     unit[OTHER_INDEX_BUILT]++;
   }
 
-  unitLose(player: PlayerID, type: OtherUnit): void {
+  unitCapture(player: PlayerID, type: OtherUnit): void {
     const unit = this._getOtherUnit(player, type);
     if (unit === undefined) throw new Error();
-    unit[OTHER_INDEX_LOST]++;
+    unit[OTHER_INDEX_CAPTURED]++;
   }
 
-  // TODO: Call this function
   unitDestroy(player: PlayerID, type: OtherUnit): void {
     const unit = this._getOtherUnit(player, type);
     if (unit === undefined) throw new Error();
     unit[OTHER_INDEX_DESTROYED]++;
   }
 
-  unitCapture(player: PlayerID, type: OtherUnit): void {
+  unitLose(player: PlayerID, type: OtherUnit): void {
     const unit = this._getOtherUnit(player, type);
     if (unit === undefined) throw new Error();
-    unit[OTHER_INDEX_CAPTURED]++;
+    unit[OTHER_INDEX_LOST]++;
   }
 }

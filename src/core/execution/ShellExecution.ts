@@ -35,7 +35,7 @@ export class ShellExecution implements Execution {
       this.target.owner() === this.shell.owner() ||
       (this.destroyAtTick !== -1 && this.mg.ticks() >= this.destroyAtTick)
     ) {
-      this.shell.delete(false);
+      this.shell.delete(null, false);
       this.active = false;
       return;
     }
@@ -51,8 +51,8 @@ export class ShellExecution implements Execution {
       );
       if (result === true) {
         this.active = false;
-        this.target.modifyHealth(-this.effectOnTarget());
-        this.shell.delete(false);
+        this.target.modifyHealth(-this.effectOnTarget(), this._owner.id());
+        this.shell.delete(null, false);
         return;
       } else {
         this.shell.move(result);

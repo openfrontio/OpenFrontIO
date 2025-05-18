@@ -71,10 +71,8 @@ export class TradeShipExecution implements Execution {
     // If a player captures another player's port while trading we should delete
     // the ship.
     if (this._dstPort.owner().id() === this.srcPort.owner().id()) {
-      this.tradeShip.delete(false);
+      this.tradeShip.delete(null, false);
       this.active = false;
-      // TODO: Record stats?
-      // this.mg.stats().boatDestroyTrade(...);
       return;
     }
 
@@ -83,10 +81,8 @@ export class TradeShipExecution implements Execution {
       (!this._dstPort.isActive() ||
         !this.tradeShip.owner().canTrade(this._dstPort.owner()))
     ) {
-      this.tradeShip.delete(false);
+      this.tradeShip.delete(null, false);
       this.active = false;
-      // TODO: Record stats?
-      // this.mg.stats().boatDestroyTrade(...);
       return;
     }
 
@@ -96,10 +92,8 @@ export class TradeShipExecution implements Execution {
         .units(UnitType.Port)
         .sort(distSortUnit(this.mg, this.tradeShip));
       if (ports.length === 0) {
-        this.tradeShip.delete(false);
+        this.tradeShip.delete(null, false);
         this.active = false;
-        // TODO: Record stats?
-        // this.mg.stats().boatDestroyTrade(...);
         return;
       } else {
         this._dstPort = ports[0];
@@ -145,7 +139,7 @@ export class TradeShipExecution implements Execution {
       case PathFindResultType.PathNotFound:
         consolex.warn("captured trade ship cannot find route");
         if (this.tradeShip.isActive()) {
-          this.tradeShip.delete(false);
+          this.tradeShip.delete(null, false);
         }
         this.active = false;
         break;
@@ -158,7 +152,7 @@ export class TradeShipExecution implements Execution {
     }
     if (this.tradeShip === null) return;
     this.active = false;
-    this.tradeShip.delete(false);
+    this.tradeShip.delete(null, false);
     const gold = this.mg.config().tradeShipGold(this.tilesTraveled);
 
     if (this.wasCaptured) {

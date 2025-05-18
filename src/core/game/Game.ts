@@ -325,7 +325,7 @@ export interface Unit {
   type(): UnitType;
   owner(): Player;
   info(): UnitInfo;
-  delete(displayerMessage?: boolean): void;
+  delete(destroyer: PlayerID | null, displayMessage?: boolean): void;
   tile(): TileRef;
   lastTile(): TileRef;
   move(tile: TileRef): void;
@@ -345,7 +345,7 @@ export interface Unit {
   // Health
   hasHealth(): boolean;
   health(): number;
-  modifyHealth(delta: number): void;
+  modifyHealth(delta: number, attacker?: PlayerID): void;
 
   // Troops
   setTroops(troops: number): void;
@@ -361,6 +361,12 @@ export interface Unit {
   // Trade Ships
   setSafeFromPirates(): void; // Only for trade ships
   isSafeFromPirates(): boolean; // Only for trade ships
+
+  setTargetedBySAM(targeted: boolean): void;
+  targetedBySAM(): boolean;
+
+  // Mutations
+  setTroops(troops: number): void;
 
   // Construction
   constructionType(): UnitType | null;

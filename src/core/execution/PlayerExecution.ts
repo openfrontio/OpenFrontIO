@@ -48,10 +48,6 @@ export class PlayerExecution implements Execution {
     this.player.decayRelations();
     const hasPort = this.player.units(UnitType.Port).length > 0;
     this.player.units().forEach((u) => {
-      if (u.health() <= 0) {
-        u.delete();
-        return;
-      }
       if (hasPort && u.type() === UnitType.Warship) {
         u.modifyHealth(1);
       }
@@ -63,12 +59,14 @@ export class PlayerExecution implements Execution {
             this.mg.player(tileOwner.id()).captureUnit(u);
           }
         } else {
-          u.delete();
+          // todo: refactor how units are destroyed on nuke lands to work with stats
+          u.delete(null);
         }
       }
     });
 
     if (!this.player.isAlive()) {
+      // Player has no tiles, delete any remaining units
       this.player.units().forEach((u) => {
         if (
           u.type() !== UnitType.AtomBomb &&
@@ -76,7 +74,7 @@ export class PlayerExecution implements Execution {
           u.type() !== UnitType.MIRVWarhead &&
           u.type() !== UnitType.MIRV
         ) {
-          u.delete();
+          u.delete(null);
         }
       });
       this.active = false;

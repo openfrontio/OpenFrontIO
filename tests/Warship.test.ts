@@ -78,7 +78,7 @@ describe("Warship", () => {
     game.executeNextTick();
     expect(warship.health()).toBe(maxHealth - 9);
 
-    port.delete();
+    port.delete(null);
 
     game.executeNextTick();
     expect(warship.health()).toBe(maxHealth - 9);
@@ -123,7 +123,7 @@ describe("Warship", () => {
 
     const [dstPort] = player1.units(UnitType.Port);
 
-    player1.units(UnitType.Port)[0].delete();
+    player1.units(UnitType.Port)[0].delete(null);
     // Cannot buildExec with trade ship as it's not buildable (but
     // we can obviously directly add it to the player)
     const tradeShip = player2.buildUnit(
