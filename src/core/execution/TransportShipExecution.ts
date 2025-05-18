@@ -171,9 +171,9 @@ export class TransportShipExecution implements Execution {
     const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
     switch (result.type) {
       case PathFindResultType.Completed:
-        this.boat.delete(false);
         if (this.mg.owner(this.dst) === this.attacker) {
           this.attacker.addTroops(this.troops);
+          this.boat.delete(false);
           this.active = false;
           // Record stats
           this.mg
@@ -195,6 +195,7 @@ export class TransportShipExecution implements Execution {
             ),
           );
         }
+        this.boat.delete(false);
         this.active = false;
 
         // Record stats
