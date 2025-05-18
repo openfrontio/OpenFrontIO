@@ -20,7 +20,7 @@ import {
   Turn,
 } from "../core/Schemas";
 import { createGameRecord } from "../core/Util";
-import { ServerConfig } from "../core/configuration/Config";
+import { GameEnv, ServerConfig } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import { archive } from "./Archive";
 import { Client } from "./Client";
@@ -132,6 +132,25 @@ export class GameServer {
       return;
     }
 
+    if (this.config.env() === GameEnv.Prod) {
+      // Prevent multiple clients from using the same account in prod
+      const conflicting = this.activeClients.find(
+        (c) =>
+          c.persistentID === client.persistentID &&
+          c.clientID !== client.clientID,
+      );
+      if (conflicting !== undefined) {
+        this.log.error("client ids do not match", {
+          clientID: client.clientID,
+          clientIP: ipAnonymize(client.ip),
+          clientPersistentID: client.persistentID,
+          existingIP: ipAnonymize(conflicting.ip),
+          existingPersistentID: conflicting.persistentID,
+        });
+        return;
+      }
+    }
+
     // Remove stale client if this is a reconnect
     const existing = this.activeClients.find(
       (c) => c.clientID === client.clientID,
@@ -148,10 +167,10 @@ export class GameServer {
         return;
       }
       existing.ws.removeAllListeners("message");
-      this.activeClients = this.activeClients.filter(
-        (c) => c.clientID !== client.clientID,
-      );
+      this.activeClients = this.activeClients.filter((c) => c !== existing);
     }
+
+    // Client connection accepted
     this.activeClients.push(client);
     client.lastPing = Date.now();
 

@@ -94,7 +94,7 @@ export class TradeShipExecution implements Execution {
         return;
       } else {
         this._dstPort = ports[0];
-        this.tradeShip.setDstPort(this._dstPort);
+        this.tradeShip.setTargetUnit(this._dstPort);
       }
     }
 
@@ -122,7 +122,7 @@ export class TradeShipExecution implements Execution {
         break;
       case PathFindResultType.Pending:
         // Fire unit event to rerender.
-        this.tradeShip.move(this.tradeShip.tile());
+        this.tradeShip.touch();
         break;
       case PathFindResultType.NextTile:
         this._dstPort.cachePut(this.tradeShip.tile(), result.tile);

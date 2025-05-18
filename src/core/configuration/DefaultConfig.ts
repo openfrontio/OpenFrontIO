@@ -62,6 +62,7 @@ const numPlayersConfig = {
   [GameMapType.Pangaea]: [40, 20, 30],
   [GameMapType.World]: [150, 80, 50],
   [GameMapType.KnownWorld]: [50, 40, 30],
+  [GameMapType.Halkidiki]: [50, 40, 30],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
@@ -157,7 +158,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
 
 export class DefaultConfig implements Config {
   constructor(
-    private _serverConfig: ServerConfig,
+    private  ServerConfig,
     private _gameConfig: GameConfig,
     private _userSettings: UserSettings | null,
     private _isReplay: boolean,
