@@ -1,3 +1,5 @@
+import "@total-typescript/ts-reset";
+
 declare module "*.png" {
   const content: string;
   export default content;
