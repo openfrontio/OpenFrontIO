@@ -170,11 +170,7 @@ export class StatsImpl implements Stats {
     bomb[BOMB_INDEX_LANDED]++;
   }
 
-  bombIntercept(
-    player: PlayerID,
-    target: PlayerID | null,
-    type: NukeType,
-  ): void {
+  bombIntercept(player: PlayerID, target: PlayerID, type: NukeType): void {
     const bomb = this._getBomb(player, type);
     if (bomb === undefined) throw new Error();
     bomb[BOMB_INDEX_INTERCEPTED]++;
