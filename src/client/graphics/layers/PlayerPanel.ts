@@ -173,11 +173,10 @@ export class PlayerPanel extends LitElement implements Layer {
     if (this.isVisible && this.tile) {
       const myPlayer = this.g.myPlayer();
       if (myPlayer !== null && myPlayer.isAlive()) {
-        const currentActions = await myPlayer.actions(this.tile);
-        this.actions = currentActions;
+        this.actions = await myPlayer.actions(this.tile);
 
-        if (currentActions?.interaction?.allianceCreatedAtTick !== undefined) {
-            const createdAt = currentActions.interaction.allianceCreatedAtTick;
+        if (this.actions?.interaction?.allianceCreatedAtTick !== undefined) {
+            const createdAt = this.actions.interaction.allianceCreatedAtTick;
             const durationTicks = this.g.config().allianceDuration();
             const expiryTick = createdAt + durationTicks;
             const remainingTicks = expiryTick - this.g.ticks();
@@ -185,8 +184,6 @@ export class PlayerPanel extends LitElement implements Layer {
             if (remainingTicks > 0) {
                 const remainingSeconds = Math.max(0, Math.floor(remainingTicks / 10)); // 10 ticks per second
                 this.allianceExpiryText = this.formatDuration(remainingSeconds);
-            } else {
-                this.allianceExpiryText = translateText("player_panel.alliance_expired_status");
             }
         } else {
             this.allianceExpiryText = null;
