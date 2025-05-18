@@ -158,7 +158,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
 
 export class DefaultConfig implements Config {
   constructor(
-    private  ServerConfig,
+    private _serverConfig: ServerConfig,
     private _gameConfig: GameConfig,
     private _userSettings: UserSettings | null,
     private _isReplay: boolean,
