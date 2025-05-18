@@ -235,6 +235,7 @@ export class UnitImpl implements Unit {
     switch (deleteReason) {
       case DeleteReason.SimpleDelete:
       case DeleteReason.BuildingComplete:
+        return;
       case DeleteReason.BoatCaptured:
         if (otherPlayersIDs !== null && otherPlayersIDs.length !== 0) {
           this.mg
@@ -307,6 +308,9 @@ export class UnitImpl implements Unit {
             otherPlayersIDs[1],
             this._troops,
           );
+        break;
+      default:
+        return;
     }
   }
 
