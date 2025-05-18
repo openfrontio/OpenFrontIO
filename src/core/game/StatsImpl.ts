@@ -25,7 +25,7 @@ import { PlayerID, UnitType } from "./Game";
 import { Stats } from "./Stats";
 
 export class StatsImpl implements Stats {
-  data: AllPlayersStats = {};
+  private readonly data: AllPlayersStats = {};
 
   getPlayerStats(sender: PlayerID): PlayerStats {
     if (sender in this.data) {
