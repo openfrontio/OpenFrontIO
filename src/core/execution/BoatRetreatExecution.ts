@@ -3,7 +3,7 @@ import { Execution, Game, Player, PlayerID, UnitType } from "../game/Game";
 
 export class BoatRetreatExecution implements Execution {
   private active = true;
-  private player: Player;
+  private player: Player | undefined;
   constructor(
     private playerID: PlayerID,
     private unitID: number,
@@ -19,6 +19,12 @@ export class BoatRetreatExecution implements Execution {
   }
 
   tick(ticks: number): void {
+    if (!this.player) {
+      console.warn(`BoatRetreatExecution: Player ${this.playerID} not found`);
+      this.active = false;
+      return;
+    }
+
     const unit = this.player
       .units()
       .find(
