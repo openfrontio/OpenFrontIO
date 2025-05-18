@@ -182,10 +182,13 @@ export class TradeShipExecution implements Execution {
       );
 
       // Record stats
-      const stats = this.mg.stats();
-      const si = this.srcPort.owner().id();
-      const di = this._dstPort.owner().id();
-      stats.boatArriveTrade(si, di, gold);
+      this.mg
+        .stats()
+        .boatArriveTrade(
+          this.srcPort.owner().id(),
+          this._dstPort.owner().id(),
+          gold,
+        );
     }
     return;
   }
