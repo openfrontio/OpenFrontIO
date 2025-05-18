@@ -9,6 +9,25 @@
       "runtimeArgs": ["run-script", "test"],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Server",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--loader",
+        "ts-node/esm",
+        "--experimental-specifier-resolution=node",
+        "${workspaceFolder}/src/server/Server.ts"
+      ],
+      "env": {
+        "GAME_ENV": "dev"
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "sourceMaps": true,
+      "restart": true
     }
   ]
 }

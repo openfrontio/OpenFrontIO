@@ -1,12 +1,15 @@
-name: Prettier Check
+name: 🎨 Prettier
 
 on:
   pull_request:
   push:
     branches: [main]
 
+permissions: {}
+
 jobs:
   prettier:
+    name: Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

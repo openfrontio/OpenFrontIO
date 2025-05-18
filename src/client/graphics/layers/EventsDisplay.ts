@@ -16,10 +16,12 @@ import {
   AllianceRequestUpdate,
   AttackUpdate,
   BrokeAllianceUpdate,
+  DisplayChatMessageUpdate,
   DisplayMessageUpdate,
   EmojiUpdate,
   GameUpdateType,
   TargetPlayerUpdate,
+  UnitIncomingUpdate,
 } from "../../../core/game/GameUpdates";
 import { ClientID } from "../../../core/Schemas";
 import {
@@ -32,6 +34,8 @@ import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
 import { renderTroops } from "../../Utils";
 import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
+
+import { translateText } from "../../Utils";
 
 interface Event {
   description: string;
@@ -50,6 +54,7 @@ interface Event {
   priority?: number;
   duration?: Tick;
   focusID?: number;
+  unitView?: UnitView;
 }
 
 @customElement("events-display")
@@ -77,6 +82,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
   private updateMap = new Map([
     [GameUpdateType.DisplayEvent, (u) => this.onDisplayMessageEvent(u)],
+    [GameUpdateType.DisplayChatEvent, (u) => this.onDisplayChatEvent(u)],
     [GameUpdateType.AllianceRequest, (u) => this.onAllianceRequestEvent(u)],
     [
       GameUpdateType.AllianceRequestReply,
@@ -85,6 +91,7 @@ export class EventsDisplay extends LitElement implements Layer {
     [GameUpdateType.BrokeAlliance, (u) => this.onBrokeAllianceEvent(u)],
     [GameUpdateType.TargetPlayer, (u) => this.onTargetPlayerEvent(u)],
     [GameUpdateType.Emoji, (u) => this.onEmojiMessageEvent(u)],
+    [GameUpdateType.UnitIncoming, (u) => this.onUnitIncomingEvent(u)],
   ]);
 
   constructor() {
@@ -100,8 +107,10 @@ export class EventsDisplay extends LitElement implements Layer {
   tick() {
     this.active = true;
     const updates = this.game.updatesSinceLastTick();
-    for (const [ut, fn] of this.updateMap) {
-      updates[ut]?.forEach((u) => fn(u));
+    if (updates) {
+      for (const [ut, fn] of this.updateMap) {
+        updates[ut]?.forEach(fn);
+      }
     }
 
     let remainingEvents = this.events.filter((event) => {
@@ -130,16 +139,16 @@ export class EventsDisplay extends LitElement implements Layer {
     // Update attacks
     this.incomingAttacks = myPlayer.incomingAttacks().filter((a) => {
       const t = (this.game.playerBySmallID(a.attackerID) as PlayerView).type();
-      return t != PlayerType.Bot;
+      return t !== PlayerType.Bot;
     });
 
     this.outgoingAttacks = myPlayer
       .outgoingAttacks()
-      .filter((a) => a.targetID != 0);
+      .filter((a) => a.targetID !== 0);
 
     this.outgoingLandAttacks = myPlayer
       .outgoingAttacks()
-      .filter((a) => a.targetID == 0);
+      .filter((a) => a.targetID === 0);
 
     this.outgoingBoats = myPlayer
       .units()
@@ -150,7 +159,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
   private addEvent(event: Event) {
     this.events = [...this.events, event];
-    if (this._hidden == true) {
+    if (this._hidden === true) {
       this.newEvents++;
     }
     this.requestUpdate();
@@ -172,7 +181,7 @@ export class EventsDisplay extends LitElement implements Layer {
   onDisplayMessageEvent(event: DisplayMessageUpdate) {
     const myPlayer = this.game.playerByClientID(this.clientID);
     if (
-      event.playerID != null &&
+      event.playerID !== null &&
       (!myPlayer || myPlayer.smallID() !== event.playerID)
     ) {
       return;
@@ -184,6 +193,34 @@ export class EventsDisplay extends LitElement implements Layer {
       highlight: true,
       type: event.messageType,
       unsafeDescription: true,
+    });
+  }
+
+  onDisplayChatEvent(event: DisplayChatMessageUpdate) {
+    const myPlayer = this.game.playerByClientID(this.clientID);
+    if (
+      event.playerID === null ||
+      !myPlayer ||
+      myPlayer.smallID() !== event.playerID
+    ) {
+      return;
+    }
+
+    const baseMessage = translateText(`chat.${event.category}.${event.key}`);
+    const translatedMessage = baseMessage.replace(
+      /\[([^\]]+)\]/g,
+      (_, key) => event.variables?.[key] || `[${key}]`,
+    );
+
+    this.addEvent({
+      description: translateText(event.isFrom ? "chat.from" : "chat.to", {
+        user: event.recipient,
+        msg: translatedMessage,
+      }),
+      createdAt: this.game.ticks(),
+      highlight: true,
+      type: MessageType.CHAT,
+      unsafeDescription: false,
     });
   }
 
@@ -271,14 +308,12 @@ export class EventsDisplay extends LitElement implements Layer {
       const malusPercent = Math.round(
         (1 - this.game.config().traitorDefenseDebuff()) * 100,
       );
-      const traitorDurationRaw =
-        Number(this.game.config().traitorDuration) / 10;
-      const traitorDurationSeconds = Math.floor(traitorDurationRaw);
 
+      const traitorDuration = Math.floor(
+        this.game.config().traitorDuration() * 0.1,
+      );
       const durationText =
-        traitorDurationSeconds === 1
-          ? "1 second"
-          : `${traitorDurationSeconds} seconds`;
+        traitorDuration === 1 ? "1 second" : `${traitorDuration} seconds`;
 
       this.addEvent({
         description:
@@ -310,6 +345,7 @@ export class EventsDisplay extends LitElement implements Layer {
         : update.player2ID === myPlayer.smallID()
           ? update.player1ID
           : null;
+    if (otherID === null) return;
     const other = this.game.playerBySmallID(otherID) as PlayerView;
     if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
 
@@ -359,14 +395,14 @@ export class EventsDisplay extends LitElement implements Layer {
     if (!myPlayer) return;
 
     const recipient =
-      update.emoji.recipientID == AllPlayers
+      update.emoji.recipientID === AllPlayers
         ? AllPlayers
         : this.game.playerBySmallID(update.emoji.recipientID);
     const sender = this.game.playerBySmallID(
       update.emoji.senderID,
     ) as PlayerView;
 
-    if (recipient == myPlayer) {
+    if (recipient === myPlayer) {
       this.addEvent({
         description: `${sender.displayName()}:${update.emoji.message}`,
         unsafeDescription: true,
@@ -389,11 +425,32 @@ export class EventsDisplay extends LitElement implements Layer {
     }
   }
 
+  onUnitIncomingEvent(event: UnitIncomingUpdate) {
+    const myPlayer = this.game.playerByClientID(this.clientID);
+
+    if (!myPlayer || myPlayer.smallID() !== event.playerID) {
+      return;
+    }
+
+    const unitView = this.game.unit(event.unitID);
+
+    this.addEvent({
+      description: event.message,
+      type: event.messageType,
+      unsafeDescription: false,
+      highlight: true,
+      createdAt: this.game.ticks(),
+      unitView: unitView,
+    });
+  }
+
   private getMessageTypeClasses(type: MessageType): string {
     switch (type) {
       case MessageType.SUCCESS:
         return "text-green-300";
       case MessageType.INFO:
+        return "text-gray-200";
+      case MessageType.CHAT:
         return "text-gray-200";
       case MessageType.WARN:
         return "text-yellow-300";
@@ -423,8 +480,10 @@ export class EventsDisplay extends LitElement implements Layer {
                     <button
                       translate="no"
                       class="ml-2"
-                      @click=${() =>
-                        this.emitGoToPlayerEvent(attack.attackerID)}
+                      @click=${() => {
+                        attack.attackerID &&
+                          this.emitGoToPlayerEvent(attack.attackerID);
+                      }}
                     >
                       ${renderTroops(attack.troops)}
                       ${(
@@ -549,7 +608,7 @@ export class EventsDisplay extends LitElement implements Layer {
     this.events.sort((a, b) => {
       const aPrior = a.priority ?? 100000;
       const bPrior = b.priority ?? 100000;
-      if (aPrior == bPrior) {
+      if (aPrior === bPrior) {
         return a.createdAt - b.createdAt;
       }
       return bPrior - aPrior;
@@ -606,12 +665,22 @@ export class EventsDisplay extends LitElement implements Layer {
                       ${event.focusID
                         ? html`<button
                             @click=${() => {
-                              this.emitGoToPlayerEvent(event.focusID);
+                              event.focusID &&
+                                this.emitGoToPlayerEvent(event.focusID);
                             }}
                           >
                             ${this.getEventDescription(event)}
                           </button>`
-                        : this.getEventDescription(event)}
+                        : event.unitView
+                          ? html`<button
+                              @click=${() => {
+                                event.unitView &&
+                                  this.emitGoToUnitEvent(event.unitView);
+                              }}
+                            >
+                              ${this.getEventDescription(event)}
+                            </button>`
+                          : this.getEventDescription(event)}
                       ${event.buttons
                         ? html`
                             <div class="flex flex-wrap gap-1.5 mt-1">

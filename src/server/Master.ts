@@ -5,8 +5,7 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { Difficulty, GameMode, GameType } from "../core/game/Game";
-import { GameConfig, GameInfo } from "../core/Schemas";
+import { GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
@@ -104,7 +103,7 @@ export async function startMaster() {
         setInterval(
           () =>
             fetchLobbies().then((lobbies) => {
-              if (lobbies == 0) {
+              if (lobbies === 0) {
                 scheduleLobbies();
               }
             }),
@@ -161,8 +160,41 @@ app.get(
   }),
 );
 
+app.post(
+  "/api/kick_player/:gameID/:clientID",
+  gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
+    if (req.headers[config.adminHeader()] !== config.adminToken()) {
+      res.status(401).send("Unauthorized");
+      return;
+    }
+
+    const { gameID, clientID } = req.params;
+
+    try {
+      const response = await fetch(
+        `http://localhost:${config.workerPort(gameID)}/api/kick_player/${gameID}/${clientID}`,
+        {
+          method: "POST",
+          headers: {
+            [config.adminHeader()]: config.adminToken(),
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to kick player: ${response.statusText}`);
+      }
+
+      res.status(200).send("Player kicked successfully");
+    } catch (error) {
+      log.error(`Error kicking player from game ${gameID}:`, error);
+      res.status(500).send("Failed to kick player");
+    }
+  }),
+);
+
 async function fetchLobbies(): Promise<number> {
-  const fetchPromises = [];
+  const fetchPromises: Promise<GameInfo | null>[] = [];
 
   for (const gameID of publicLobbyIDs) {
     const controller = new AbortController();
@@ -201,8 +233,26 @@ async function fetchLobbies(): Promise<number> {
     });
 
   lobbyInfos.forEach((l) => {
-    if (l.msUntilStart <= 250 || l.gameConfig.maxPlayers <= l.numClients) {
+    if (
+      "msUntilStart" in l &&
+      l.msUntilStart !== undefined &&
+      l.msUntilStart <= 250
+    ) {
       publicLobbyIDs.delete(l.gameID);
+      return;
+    }
+
+    if (
+      "gameConfig" in l &&
+      l.gameConfig !== undefined &&
+      "maxPlayers" in l.gameConfig &&
+      l.gameConfig.maxPlayers !== undefined &&
+      "numClients" in l &&
+      l.numClients !== undefined &&
+      l.gameConfig.maxPlayers <= l.numClients
+    ) {
+      publicLobbyIDs.delete(l.gameID);
+      return;
     }
   });
 
@@ -214,39 +264,10 @@ async function fetchLobbies(): Promise<number> {
   return publicLobbyIDs.size;
 }
 
-let lastGameMode: GameMode = GameMode.FFA;
-
 // Function to schedule a new public game
 async function schedulePublicGame(playlist: MapPlaylist) {
   const gameID = generateID();
-  const map = playlist.getNextMap();
   publicLobbyIDs.add(gameID);
-
-  if (lastGameMode == GameMode.FFA) {
-    lastGameMode = GameMode.Team;
-  } else {
-    lastGameMode = GameMode.FFA;
-  }
-
-  const gameMode = playlist.getNextGameMode();
-  const numPlayerTeams =
-    gameMode === GameMode.Team ? 2 + Math.floor(Math.random() * 5) : undefined;
-
-  // Create the default public game config (from your GameManager)
-  const defaultGameConfig: GameConfig = {
-    gameMap: map,
-    maxPlayers: config.lobbyMaxPlayers(map),
-    gameType: GameType.Public,
-    difficulty: Difficulty.Medium,
-    infiniteGold: false,
-    infiniteTroops: false,
-    instantBuild: false,
-    disableNPCs: gameMode == GameMode.Team,
-    disableNukes: false,
-    gameMode,
-    playerTeams: numPlayerTeams,
-    bots: 400,
-  };
 
   const workerPath = config.workerPath(gameID);
 
@@ -261,7 +282,7 @@ async function schedulePublicGame(playlist: MapPlaylist) {
           [config.adminHeader()]: config.adminToken(),
         },
         body: JSON.stringify({
-          gameConfig: defaultGameConfig,
+          gameConfig: playlist.gameConfig(),
         }),
       },
     );

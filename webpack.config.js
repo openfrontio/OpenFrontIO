@@ -228,6 +228,7 @@ export default async (env, argv) => {
                 "/api/archive_singleplayer_game",
                 "/api/auth/callback",
                 "/api/auth/discord",
+                "/api/kick_player",
               ],
               target: "http://localhost:3000",
               secure: false,
