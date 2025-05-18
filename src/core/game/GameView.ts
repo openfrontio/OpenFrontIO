@@ -8,7 +8,6 @@ import {
   GameUpdates,
   Gold,
   NameViewData,
-  nukeTypes,
   Player,
   PlayerActions,
   PlayerBorderTiles,
@@ -83,7 +82,7 @@ export class UnitView {
     return this.data.pos;
   }
   owner(): PlayerView {
-    return this.gameView.playerBySmallID(this.data.ownerID) as PlayerView;
+    return this.gameView.playerBySmallID(this.data.ownerID)! as PlayerView;
   }
   isActive(): boolean {
     return this.data.isActive;
@@ -97,20 +96,11 @@ export class UnitView {
   constructionType(): UnitType | undefined {
     return this.data.constructionType;
   }
-  dstPortId(): number | undefined {
-    return this.data.dstPortId;
+  targetUnitId(): number | undefined {
+    return this.data.targetUnitId;
   }
-  detonationDst(): TileRef | undefined {
-    if (!nukeTypes.includes(this.type())) {
-      throw Error("Must be a nuke");
-    }
-    return this.data.detonationDst;
-  }
-  warshipTargetId(): number | undefined {
-    if (this.type() !== UnitType.Warship) {
-      throw Error("Must be a warship");
-    }
-    return this.data.warshipTargetId;
+  targetTile(): TileRef | undefined {
+    return this.data.targetTile;
   }
   ticksLeftInCooldown(): Tick | undefined {
     return this.data.ticksLeftInCooldown;

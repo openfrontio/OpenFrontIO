@@ -32,9 +32,9 @@ export async function generateMap(
   const stream = Readable.from(imageBuffer);
   const img = await decodePNGFromStream(stream);
 
-  console.log(`Processing Map: ${name}`);
-  console.log("Image loaded successfully");
-  console.log("Image dimensions:", img.width, "x", img.height);
+  console.debug(
+    `Processing Map: ${name}, dimensions: ${img.width}x${img.height}`,
+  );
 
   const terrain: Terrain[][] = Array(img.width)
     .fill(null)
@@ -98,7 +98,7 @@ async function createMiniMap(tm: Terrain[][]): Promise<Terrain[][]> {
 }
 
 function processShore(map: Terrain[][]): Coord[] {
-  console.log("Identifying shorelines");
+  console.debug("Identifying shorelines");
   const shorelineWaters: Coord[] = [];
   for (let x = 0; x < map.length; x++) {
     for (let y = 0; y < map[0].length; y++) {
@@ -120,7 +120,7 @@ function processShore(map: Terrain[][]): Coord[] {
 }
 
 function processDistToLand(shorelineWaters: Coord[], map: Terrain[][]) {
-  console.log(
+  console.debug(
     "Setting Water tiles magnitude = Manhattan distance from nearest land",
   );
 
@@ -178,7 +178,7 @@ function neighbors(x: number, y: number, map: Terrain[][]): Terrain[] {
 }
 
 function processWater(map: Terrain[][], removeSmall: boolean) {
-  console.log("Processing water bodies");
+  console.debug("Processing water bodies");
   const visited = new Set<string>();
   const waterBodies: { coords: Coord[]; size: number }[] = [];
 
@@ -209,11 +209,11 @@ function processWater(map: Terrain[][], removeSmall: boolean) {
     for (const coord of largestWaterBody.coords) {
       map[coord.x][coord.y].ocean = true;
     }
-    console.log(`Identified ocean with ${largestWaterBody.size} water tiles`);
+    console.debug(`Identified ocean with ${largestWaterBody.size} water tiles`);
 
     if (removeSmall) {
       // Assess size of the other water bodies and remove those smaller than min_lake_size
-      console.log("Searching for small water bodies for removal");
+      console.debug("Searching for small water bodies for removal");
       for (let w = 1; w < waterBodies.length; w++) {
         if (waterBodies[w].size < min_lake_size) {
           smallLakes++;
@@ -223,7 +223,7 @@ function processWater(map: Terrain[][], removeSmall: boolean) {
           }
         }
       }
-      console.log(
+      console.debug(
         `Identified and removed ${smallLakes} bodies of water smaller than ${min_lake_size} tiles`,
       );
     }
@@ -233,7 +233,7 @@ function processWater(map: Terrain[][], removeSmall: boolean) {
     //Adjust water tile magnitudes to reflect distance from land
     processDistToLand(shorelineWaters, map);
   } else {
-    console.log("No water bodies found in the map");
+    console.debug("No water bodies found in the map");
   }
 }
 
@@ -339,7 +339,7 @@ function removeSmallIslands(map: Terrain[][], removeSmall: boolean) {
       }
     }
   }
-  console.log(
+  console.debug(
     `Identified and removed ${smallIslands} islands smaller than ${min_island_size} tiles`,
   );
 }
@@ -348,7 +348,7 @@ function logBinaryAsBits(data: Uint8Array, length: number = 8) {
   const bits = Array.from(data.slice(0, length))
     .map((b) => b.toString(2).padStart(8, "0"))
     .join(" ");
-  console.log(`Binary data (bits):`, bits);
+  console.debug(`Binary data (bits):`, bits);
 }
 
 function getNeighborCoords(x: number, y: number, map: Terrain[][]): Coord[] {
@@ -372,7 +372,7 @@ async function createMapThumbnail(
   map: Terrain[][],
   quality: number = 0.5,
 ): Promise<Bitmap> {
-  console.log("creating thumbnail");
+  console.debug("creating thumbnail");
 
   const srcWidth = map.length;
   const srcHeight = map[0].length;

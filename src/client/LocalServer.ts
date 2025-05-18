@@ -150,6 +150,10 @@ export class LocalServer {
       return;
     }
     if (this.replayTurns.length > 0) {
+      if (this.turns.length >= this.replayTurns.length) {
+        this.endGame();
+        return;
+      }
       this.intents = this.replayTurns[this.turns.length].intents;
     }
     const pastTurn: Turn = {
@@ -167,6 +171,9 @@ export class LocalServer {
   public endGame(saveFullGame: boolean = false) {
     consolex.log("local server ending game");
     clearInterval(this.turnCheckInterval);
+    if (this.isReplay) {
+      return;
+    }
     const players: PlayerRecord[] = [
       {
         ip: null,
