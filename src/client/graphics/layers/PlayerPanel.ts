@@ -13,6 +13,7 @@ import {
   AllPlayers,
   PlayerActions,
   PlayerID,
+  Tick,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -44,6 +45,9 @@ export class PlayerPanel extends LitElement implements Layer {
 
   @state()
   private isVisible: boolean = false;
+
+  @state()
+  private allianceExpiryText: string | null = null;
 
   public show(actions: PlayerActions, tile: TileRef) {
     this.actions = actions;
@@ -169,10 +173,37 @@ export class PlayerPanel extends LitElement implements Layer {
     if (this.isVisible && this.tile) {
       const myPlayer = this.g.myPlayer();
       if (myPlayer !== null && myPlayer.isAlive()) {
-        this.actions = await myPlayer.actions(this.tile);
+        const currentActions = await myPlayer.actions(this.tile);
+        this.actions = currentActions;
+
+        if (currentActions?.interaction?.allianceCreatedAtTick !== undefined) {
+            const createdAt = currentActions.interaction.allianceCreatedAtTick;
+            const durationTicks = this.g.config().allianceDuration();
+            const expiryTick = createdAt + durationTicks;
+            const remainingTicks = expiryTick - this.g.ticks();
+
+            if (remainingTicks > 0) {
+                const remainingSeconds = Math.max(0, Math.floor(remainingTicks / 10)); // 10 ticks per second
+                this.allianceExpiryText = this.formatDuration(remainingSeconds);
+            } else {
+                this.allianceExpiryText = translateText("player_panel.alliance_expired_status");
+            }
+        } else {
+            this.allianceExpiryText = null;
+        }
         this.requestUpdate();
       }
     }
+  }
+
+  private formatDuration(totalSeconds: number): string {
+    if (totalSeconds <= 0) return "0s";
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    let time = "";
+    if (minutes > 0) time += `${minutes}m `;
+    time += `${seconds}s`;
+    return time.trim();
   }
 
   getTotalNukesSent(otherId: PlayerID): number {
@@ -305,6 +336,18 @@ export class PlayerPanel extends LitElement implements Layer {
               </div>
             </div>
 
+            ${this.allianceExpiryText !== null
+              ? html`
+                  <div class="flex flex-col gap-1">
+                    <div class="text-white text-opacity-80 text-sm px-2">
+                      ${translateText("player_panel.alliance_status")}
+                    </div>
+                    <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
+                      ${this.allianceExpiryText}
+                    </div>
+                  </div>
+                `
+              : ""}
             <!-- Stats -->
             <div class="flex flex-col gap-1">
               <div class="text-white text-opacity-80 text-sm px-2">
