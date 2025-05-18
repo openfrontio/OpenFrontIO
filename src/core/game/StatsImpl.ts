@@ -8,6 +8,7 @@ import {
   BOMB_INDEX_INTERCEPTED,
   BOMB_INDEX_LANDED,
   BOMB_INDEX_LAUNCHED,
+  BuiltLostDestroyedCaptured,
   GOLD_INDEX_TRADE,
   GOLD_INDEX_WAR,
   GOLD_INDEX_WORK,
@@ -191,34 +192,52 @@ export class StatsImpl implements Stats {
     data.gold[GOLD_INDEX_WAR] += gold;
   }
 
+  private _getOtherUnit(
+    player: PlayerID,
+    type: OtherUnit,
+  ): BuiltLostDestroyedCaptured | undefined {
+    const data = this.getPlayerStats(player);
+    switch (type) {
+      case UnitType.City:
+        return data.units.city;
+      case UnitType.DefensePost:
+        return data.units.defp;
+      case UnitType.MissileSilo:
+        return data.units.silo;
+      case UnitType.Port:
+        return data.units.port;
+      case UnitType.SAMLauncher:
+        return data.units.saml;
+      case UnitType.Warship:
+        return data.units.wshp;
+    }
+    throw new Error(`Unknown OtherUnit ${type}`);
+  }
+
   // TODO: Call this function
   unitBuild(player: PlayerID, type: OtherUnit): void {
-    const data = this.getPlayerStats(player);
-    const unit = data.units[type];
+    const unit = this._getOtherUnit(player, type);
     if (unit === undefined) throw new Error();
     unit[OTHER_INDEX_BUILT]++;
   }
 
   // TODO: Call this function
   unitLose(player: PlayerID, type: OtherUnit): void {
-    const data = this.getPlayerStats(player);
-    const unit = data.units[type];
+    const unit = this._getOtherUnit(player, type);
     if (unit === undefined) throw new Error();
     unit[OTHER_INDEX_LOST]++;
   }
 
   // TODO: Call this function
   unitDestroy(player: PlayerID, type: OtherUnit): void {
-    const data = this.getPlayerStats(player);
-    const unit = data.units[type];
+    const unit = this._getOtherUnit(player, type);
     if (unit === undefined) throw new Error();
     unit[OTHER_INDEX_DESTROYED]++;
   }
 
   // TODO: Call this function
   unitCapture(player: PlayerID, type: OtherUnit): void {
-    const data = this.getPlayerStats(player);
-    const unit = data.units[type];
+    const unit = this._getOtherUnit(player, type);
     if (unit === undefined) throw new Error();
     unit[OTHER_INDEX_CAPTURED]++;
   }

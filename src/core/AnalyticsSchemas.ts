@@ -86,6 +86,9 @@ export const BuiltLostDestroyedCapturedSchema = z.tuple([
   z.number().nonnegative(), // destroyed
   z.number().nonnegative(), // captured
 ]);
+export type BuiltLostDestroyedCaptured = z.infer<
+  typeof BuiltLostDestroyedCapturedSchema
+>;
 
 export const PlayerStatsSchema = z.object({
   attacks: IncomingOutgoingCancelledSchema,
