@@ -199,7 +199,7 @@ export function createGameRecord(
   );
   const date = new Date().toISOString().split("T")[0];
   const version = "v0.0.2";
-  const gitCommit = process.env.GIT_COMMIT ?? "unknown";
+  const gitCommit = "";
   const record: GameRecord = {
     gitCommit,
     id,
