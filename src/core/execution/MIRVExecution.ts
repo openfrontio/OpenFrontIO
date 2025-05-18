@@ -169,15 +169,22 @@ export class MirvExecution implements Execution {
       if (this.mg.owner(tile) !== this.targetPlayer) {
         continue;
       }
-      for (const t of taken) {
-        if (this.mg.manhattanDist(tile, t) < 25) {
-          continue;
-        }
+      if (this.proximityCheck(tile, taken)) {
+        continue;
       }
       return tile;
     }
     console.log("couldn't find place, giving up");
     return null;
+  }
+
+  private proximityCheck(tile: TileRef, taken: TileRef[]): boolean {
+    for (const t of taken) {
+      if (this.mg.manhattanDist(tile, t) < 25) {
+        return true;
+      }
+    }
+    return false;
   }
 
   owner(): Player {
