@@ -122,7 +122,7 @@ export class GameImpl implements Game {
     const gameMode = config.gameMode;
     const playerTeamPrefs = config.playerTeamsSelection || {};
 
-    if (this.config().gameConfig().gameMode !== GameMode.Team) {
+    if (gameMode !== GameMode.Team) {
       this._humans.forEach((p) => this.addPlayer(p));
       this._nations.forEach((n) => this.addPlayer(n.playerInfo));
       return;
