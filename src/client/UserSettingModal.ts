@@ -102,6 +102,15 @@ export class UserSettingModal extends LitElement {
     console.log("🤡 Emojis:", enabled ? "ON" : "OFF");
   }
 
+  private toggleFxLayer(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.specialEffects", enabled);
+
+    console.log("💥 Special effects:", enabled ? "ON" : "OFF");
+  }
+
   private toggleAnonymousNames(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -224,6 +233,15 @@ export class UserSettingModal extends LitElement {
         id="emoji-toggle"
         .checked=${this.userSettings.emojis()}
         @change=${this.toggleEmojis}
+      ></setting-toggle>
+
+      <!-- 💥 Special effects -->
+      <setting-toggle
+        label="${translateText("user_setting.special_effects_label")}"
+        description="${translateText("user_setting.special_effects_desc")}"
+        id="special-effect-toggle"
+        .checked=${this.userSettings.fxLayer()}
+        @change=${this.toggleFxLayer}
       ></setting-toggle>
 
       <!-- 🖱️ Left Click Menu -->
