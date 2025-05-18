@@ -10,9 +10,9 @@ import {
   Duos,
   GameMapType,
   GameMode,
-  UnitType,
   mapCategories,
   Team,
+  UnitType,
 } from "../core/game/Game";
 import { ClientID, GameConfig, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
@@ -681,7 +681,7 @@ export class HostLobbyModal extends LitElement {
           this.lobbyPlayers.map((p) => [p.username, p]),
         );
 
-        this.lobbyPlayers = data.clients.map((client) => {
+        this.lobbyPlayers = (data.clients ?? []).map((client) => {
           const existing = existingMap.get(client.username);
           return {
             username: client.username,
