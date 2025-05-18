@@ -59,7 +59,6 @@ export class PlayerExecution implements Execution {
             this.mg.player(tileOwner.id()).captureUnit(u);
           }
         } else {
-          // todo: refactor how units are destroyed on nuke lands to work with stats
           u.delete(null);
         }
       }
