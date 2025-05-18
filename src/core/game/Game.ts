@@ -321,7 +321,6 @@ export class PlayerInfo {
 
 export enum DeleteReason {
   SimpleDelete = "SimpleDelete",
-  BuildingComplete = "BuildingComplete",
   Destroy = "Destroy",
   BoatArriveTroops = "BoatArriveTroops",
   BoatCaptured = "BoatCaptured",
