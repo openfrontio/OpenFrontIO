@@ -135,6 +135,17 @@ export class UnitImpl implements Unit {
   }
 
   setOwner(newOwner: PlayerImpl): void {
+    if (
+      this._type === UnitType.Warship ||
+      this._type === UnitType.Port ||
+      this._type === UnitType.MissileSilo ||
+      this._type === UnitType.DefensePost ||
+      this._type === UnitType.SAMLauncher ||
+      this._type === UnitType.City
+    ) {
+      this.mg.stats().unitCapture(newOwner.id(), this._type);
+      this.mg.stats().unitLose(this.owner().id(), this._type);
+    }
     this._lastOwner = this._owner;
     this._lastOwner._units = this._lastOwner._units.filter((u) => u !== this);
     this._owner = newOwner;
