@@ -106,6 +106,13 @@ export class TradeShipExecution implements Execution {
       ) {
         this.tradeShip.setSafeFromPirates();
       }
+      // Update safeFromPirates status
+      if (
+        this.mg.isWater(cachedNextTile) &&
+        this.mg.isShoreline(cachedNextTile)
+      ) {
+        this.tradeShip.setSafeFromPirates();
+      }
       this.tradeShip.move(cachedNextTile);
       this.tilesTraveled++;
       return;
