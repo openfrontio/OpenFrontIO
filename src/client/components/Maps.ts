@@ -28,6 +28,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   DeglaciatedAntarctica: "Deglaciated Antarctica",
   FalklandIslands: "Falkland Islands",
   Baikal: "Baikal",
+  Halkidiki: "Halkidiki",
 };
 
 @customElement("map-display")
