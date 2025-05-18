@@ -169,10 +169,6 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return Math.min(150, numPlayers() * (mode === GameMode.Team ? 2 : 1));
   }
 
-  lobbyMultiTabbing(map: GameMapType, mode: GameMode): boolean {
-    return true;
-  }
-
   workerIndex(gameID: GameID): number {
     return simpleHash(gameID) % this.numWorkers();
   }
