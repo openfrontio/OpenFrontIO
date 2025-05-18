@@ -1,35 +1,18 @@
 export class AnimatedSprite {
-  private image: CanvasImageSource;
-  private frameWidth: number;
   private frameHeight: number;
-  private frameCount: number;
   private currentFrame: number = 0;
   private elapsedTime: number = 0;
-  private frameDuration: number;
-  private looping: boolean;
-
-  // Origin as ratio: 0 = left/top, 0.5 = center, 1 = right/bottom
-  private originX: number;
-  private originY: number;
-  private alive: boolean = true;
+  private active: boolean = true;
 
   constructor(
-    image: CanvasImageSource,
-    frameWidth: number,
-    frameCount: number,
-    frameDuration: number, // in milliseconds
-    looping: boolean = true,
-    originX: number,
-    originY: number,
+    private image: CanvasImageSource,
+    private frameWidth: number,
+    private frameCount: number,
+    private frameDuration: number, // in milliseconds
+    private looping: boolean = true,
+    private originX: number,
+    private originY: number,
   ) {
-    this.image = image;
-    this.frameWidth = frameWidth;
-    this.frameCount = frameCount;
-    this.frameDuration = frameDuration;
-    this.looping = looping;
-    this.originX = originX;
-    this.originY = originY;
-
     if ("height" in image) {
       this.frameHeight = (image as HTMLImageElement | HTMLCanvasElement).height;
     } else {
@@ -38,7 +21,7 @@ export class AnimatedSprite {
   }
 
   update(deltaTime: number) {
-    if (!this.alive) return;
+    if (!this.active) return;
     this.elapsedTime += deltaTime;
     if (this.elapsedTime >= this.frameDuration) {
       this.elapsedTime -= this.frameDuration;
@@ -49,14 +32,14 @@ export class AnimatedSprite {
           this.currentFrame = 0;
         } else {
           this.currentFrame = this.frameCount - 1;
-          this.alive = false;
+          this.active = false;
         }
       }
     }
   }
 
-  isAlive(): boolean {
-    return this.alive;
+  isActive(): boolean {
+    return this.active;
   }
 
   draw(ctx: CanvasRenderingContext2D, x: number, y: number) {

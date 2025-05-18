@@ -54,9 +54,14 @@ export class FxLayer implements Layer {
     }
   }
 
-  init() {
-    loadAllAnimatedSpriteImages();
+  async init() {
     this.redraw();
+    try {
+      await loadAllAnimatedSpriteImages();
+      console.log("FX sprites loaded successfully");
+    } catch (err) {
+      console.error("Failed to load FX sprites:", err);
+    }
   }
 
   redraw(): void {
@@ -96,7 +101,7 @@ export class FxLayer implements Layer {
 
   renderContextFx(duration: number) {
     for (let i = this.allFx.length - 1; i >= 0; i--) {
-      if (!this.allFx[i].tick(duration, this.context)) {
+      if (!this.allFx[i].renderTick(duration, this.context)) {
         this.allFx.splice(i, 1);
       }
     }

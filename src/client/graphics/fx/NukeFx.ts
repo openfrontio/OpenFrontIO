@@ -14,7 +14,7 @@ export class ShockwaveFx implements Fx {
     private maxRadius: number,
   ) {}
 
-  tick(frameTime: number, ctx: CanvasRenderingContext2D): boolean {
+  renderTick(frameTime: number, ctx: CanvasRenderingContext2D): boolean {
     this.lifeTime += frameTime;
     if (this.lifeTime >= this.duration) {
       return false;
@@ -44,17 +44,19 @@ export class NukeExplosionFx implements Fx {
     this.nukeExplosionSprite = createAnimatedSpriteForUnit(FxType.Nuke);
   }
 
-  tick(frameTime: number, ctx: CanvasRenderingContext2D): boolean {
+  renderTick(frameTime: number, ctx: CanvasRenderingContext2D): boolean {
     if (this.nukeExplosionSprite) {
       this.lifeTime += frameTime;
       if (this.lifeTime >= this.duration) {
         return false;
       }
-      if (this.nukeExplosionSprite.isAlive()) {
+      if (this.nukeExplosionSprite.isActive()) {
         this.nukeExplosionSprite.update(frameTime);
         this.nukeExplosionSprite.draw(ctx, this.x, this.y);
+        return true;
       }
+      return false;
     }
-    return true;
+    return false;
   }
 }
