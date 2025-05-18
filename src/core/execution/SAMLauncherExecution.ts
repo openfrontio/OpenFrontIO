@@ -180,7 +180,7 @@ export class SAMLauncherExecution implements Execution {
             this.sam.owner().id(),
           );
           // Delete warheads
-          mirvWarheadTargets.forEach((u) => u.delete(null));
+          mirvWarheadTargets.forEach((u) => u.delete());
         } else if (target !== null) {
           target.setTargetedBySAM(true);
           this.mg.addExecution(

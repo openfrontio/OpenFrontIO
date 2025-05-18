@@ -141,7 +141,7 @@ export class MirvExecution implements Execution {
         this.targetPlayer.updateRelation(this.player, -100);
       }
     }
-    this.nuke.delete(null, false);
+    this.nuke.delete(false);
   }
 
   randomLand(ref: TileRef, taken: TileRef[]): TileRef | null {

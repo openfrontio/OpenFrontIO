@@ -171,11 +171,11 @@ export class UnitImpl implements Unit {
       toInt(this.info().maxHealth ?? 1),
     );
     if (this._health === 0n) {
-      this.delete(attacker ?? null);
+      this.delete(true, attacker);
     }
   }
 
-  delete(destroyer: PlayerID | null, displayMessage?: boolean): void {
+  delete(displayMessage?: boolean, destroyer?: PlayerID): void {
     if (!this.isActive()) {
       throw new Error(`cannot delete ${this} not active`);
     }
@@ -190,7 +190,7 @@ export class UnitImpl implements Unit {
         this.owner().id(),
       );
     }
-    if (destroyer !== null) {
+    if (destroyer !== undefined) {
       switch (this._type) {
         case UnitType.TransportShip:
           this.mg

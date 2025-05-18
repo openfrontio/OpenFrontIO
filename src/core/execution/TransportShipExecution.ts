@@ -171,7 +171,7 @@ export class TransportShipExecution implements Execution {
     const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
     switch (result.type) {
       case PathFindResultType.Completed:
-        this.boat.delete(null, false);
+        this.boat.delete(false);
         if (this.mg.owner(this.dst) === this.attacker) {
           this.attacker.addTroops(this.troops);
           this.active = false;
@@ -210,7 +210,7 @@ export class TransportShipExecution implements Execution {
       case PathFindResultType.PathNotFound:
         // TODO: add to poisoned port list
         consolex.warn(`path not found tot dst`);
-        this.boat.delete(null, false);
+        this.boat.delete(false);
         this.active = false;
         return;
     }

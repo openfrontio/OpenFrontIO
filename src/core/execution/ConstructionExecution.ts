@@ -81,7 +81,7 @@ export class ConstructionExecution implements Execution {
 
     if (this.ticksUntilComplete === 0) {
       this.player = this.construction.owner();
-      this.construction.delete(null, false);
+      this.construction.delete(false);
       // refund the cost so player has the gold to build the unit
       this.player.addGold(this.cost);
       this.completeConstruction();

@@ -50,7 +50,7 @@ export class SAMMissileExecution implements Execution {
       this.target.owner() === this.SAMMissile.owner() ||
       !nukesWhitelist.includes(this.target.type())
     ) {
-      this.SAMMissile.delete(null, false);
+      this.SAMMissile.delete(false);
       this.active = false;
       return;
     }
@@ -66,8 +66,8 @@ export class SAMMissileExecution implements Execution {
           this._owner.id(),
         );
         this.active = false;
-        this.target.delete(this._owner.id());
-        this.SAMMissile.delete(null, false);
+        this.target.delete(true, this._owner.id());
+        this.SAMMissile.delete(false);
 
         // Record stats
         this.mg
