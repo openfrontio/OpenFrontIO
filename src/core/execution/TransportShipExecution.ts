@@ -161,8 +161,6 @@ export class TransportShipExecution implements Execution {
     }
     if (!this.boat.isActive()) {
       this.active = false;
-      // TODO: Record stats?
-      // this.mg.stats().boatDestroyTroops();
       return;
     }
     if (ticks - this.lastMove < this.ticksPerMove) {
