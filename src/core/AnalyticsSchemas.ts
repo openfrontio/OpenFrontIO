@@ -1,33 +1,36 @@
 import { z } from "zod";
 import { UnitType } from "./game/Game";
 
-// TODO: where to put these?
-// z.literal(UnitType.SAMMissile),
-// z.literal(UnitType.Shell),
-
 export const BombUnitSchema = z.union([
-  z.literal(UnitType.AtomBomb),
-  z.literal(UnitType.HydrogenBomb),
-  z.literal(UnitType.MIRV),
-  z.literal(UnitType.MIRVWarhead),
+  z.literal("abomb"),
+  z.literal("hbomb"),
+  z.literal("mirv"),
+  z.literal("mirvw"),
 ]);
-export type NukeType = z.infer<typeof BombUnitSchema>;
+export type NukeType =
+  | UnitType.AtomBomb
+  | UnitType.HydrogenBomb
+  | UnitType.MIRV
+  | UnitType.MIRVWarhead;
 
-export const BoatUnitSchema = z.union([
-  z.literal(UnitType.TradeShip),
-  z.literal(UnitType.TransportShip),
-]);
-export type BoatType = z.infer<typeof BoatUnitSchema>;
+export const BoatUnitSchema = z.union([z.literal("trade"), z.literal("trans")]);
+export type BoatType = UnitType.TradeShip | UnitType.TransportShip;
 
 export const OtherUnitSchema = z.union([
-  z.literal(UnitType.City),
-  z.literal(UnitType.DefensePost),
-  z.literal(UnitType.Port),
-  z.literal(UnitType.Warship),
-  z.literal(UnitType.MissileSilo),
-  z.literal(UnitType.SAMLauncher),
+  z.literal("city"),
+  z.literal("defp"),
+  z.literal("port"),
+  z.literal("wshp"),
+  z.literal("silo"),
+  z.literal("saml"),
 ]);
-export type OtherUnit = z.infer<typeof OtherUnitSchema>;
+export type OtherUnit =
+  | UnitType.City
+  | UnitType.DefensePost
+  | UnitType.MissileSilo
+  | UnitType.Port
+  | UnitType.SAMLauncher
+  | UnitType.Warship;
 
 // Attacks
 export const ATTACK_INDEX_INCOMING = 0;
@@ -58,6 +61,9 @@ export const LaunchedLandedInterceptedSchema = z.tuple([
   z.number().nonnegative(), // landed
   z.number().nonnegative(), // intercepted
 ]);
+export type LaunchedLandedIntercepted = z.infer<
+  typeof LaunchedLandedInterceptedSchema
+>;
 
 // Gold
 export const GOLD_INDEX_WORK = 0;

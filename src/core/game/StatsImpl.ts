@@ -11,6 +11,7 @@ import {
   GOLD_INDEX_TRADE,
   GOLD_INDEX_WAR,
   GOLD_INDEX_WORK,
+  LaunchedLandedIntercepted,
   NukeType,
   OTHER_INDEX_BUILT,
   OTHER_INDEX_CAPTURED,
@@ -32,22 +33,22 @@ export class StatsImpl implements Stats {
     const data = {
       betrayals: 0,
       boats: {
-        [UnitType.TransportShip]: [0, 0, 0],
-        [UnitType.TradeShip]: [0, 0, 0],
+        trade: [0, 0, 0],
+        trans: [0, 0, 0],
       },
       bombs: {
-        [UnitType.AtomBomb]: [0, 0, 0],
-        [UnitType.HydrogenBomb]: [0, 0, 0],
-        [UnitType.MIRVWarhead]: [0, 0, 0],
-        [UnitType.MIRV]: [0, 0, 0],
+        abomb: [0, 0, 0],
+        hbomb: [0, 0, 0],
+        mirvw: [0, 0, 0],
+        mirv: [0, 0, 0],
       },
       units: {
-        [UnitType.City]: [0, 0, 0, 0],
-        [UnitType.DefensePost]: [0, 0, 0, 0],
-        [UnitType.Port]: [0, 0, 0, 0],
-        [UnitType.Warship]: [0, 0, 0, 0],
-        [UnitType.MissileSilo]: [0, 0, 0, 0],
-        [UnitType.SAMLauncher]: [0, 0, 0, 0],
+        city: [0, 0, 0, 0],
+        defp: [0, 0, 0, 0],
+        port: [0, 0, 0, 0],
+        wshp: [0, 0, 0, 0],
+        silo: [0, 0, 0, 0],
+        saml: [0, 0, 0, 0],
       },
       attacks: [0, 0, 0],
       gold: [0, 0, 0],
@@ -87,7 +88,7 @@ export class StatsImpl implements Stats {
 
   boatSendTrade(player: PlayerID, target: PlayerID | null): void {
     const data = this.getPlayerStats(player);
-    const boats = data.boats[UnitType.TradeShip];
+    const boats = data.boats.trade;
     if (boats === undefined) throw new Error();
     boats[BOAT_INDEX_SENT]++;
   }
@@ -97,7 +98,7 @@ export class StatsImpl implements Stats {
     const odat = this.getPlayerStats(target);
     data.gold[GOLD_INDEX_TRADE] += gold;
     odat.gold[GOLD_INDEX_TRADE] += gold;
-    const boats = data.boats[UnitType.TradeShip];
+    const boats = data.boats.trans;
     if (boats === undefined) throw new Error();
     boats[BOAT_INDEX_ARRIVED]++;
   }
@@ -105,7 +106,7 @@ export class StatsImpl implements Stats {
   // TODO: Call this function
   boatDestroyTrade(player: PlayerID, target: PlayerID, gold: number): void {
     const data = this.getPlayerStats(player);
-    const boats = data.boats[UnitType.TradeShip];
+    const boats = data.boats.trade;
     if (boats === undefined) throw new Error();
     boats[BOAT_INDEX_DESTROYED]++;
   }
@@ -116,7 +117,7 @@ export class StatsImpl implements Stats {
     troops: number,
   ): void {
     const data = this.getPlayerStats(player);
-    const boats = data.boats[UnitType.TransportShip];
+    const boats = data.boats.trade;
     if (boats === undefined) throw new Error();
     boats[BOAT_INDEX_SENT]++;
   }
@@ -127,7 +128,7 @@ export class StatsImpl implements Stats {
     troops: number,
   ): void {
     const data = this.getPlayerStats(player);
-    const boats = data.boats[UnitType.TransportShip];
+    const boats = data.boats.trans;
     if (boats === undefined) throw new Error();
     boats[BOAT_INDEX_ARRIVED]++;
   }
@@ -135,21 +136,37 @@ export class StatsImpl implements Stats {
   // TODO: Call this function
   boatDestroyTroops(player: PlayerID, target: PlayerID, troops: number): void {
     const data = this.getPlayerStats(player);
-    const boats = data.boats[UnitType.TransportShip];
+    const boats = data.boats.trans;
     if (boats === undefined) throw new Error();
     boats[BOAT_INDEX_DESTROYED]++;
   }
 
-  bombLaunch(player: PlayerID, target: PlayerID | null, type: NukeType): void {
+  private _getBomb(
+    player: PlayerID,
+    type: NukeType,
+  ): LaunchedLandedIntercepted | undefined {
     const data = this.getPlayerStats(player);
-    const bomb = data.bombs[type];
+    switch (type) {
+      case UnitType.AtomBomb:
+        return data.bombs.abomb;
+      case UnitType.HydrogenBomb:
+        return data.bombs.hbomb;
+      case UnitType.MIRV:
+        return data.bombs.mirv;
+      case UnitType.MIRVWarhead:
+        return data.bombs.mirvw;
+    }
+    throw new Error(`Unknown NukeType ${type}`);
+  }
+
+  bombLaunch(player: PlayerID, target: PlayerID | null, type: NukeType): void {
+    const bomb = this._getBomb(player, type);
     if (bomb === undefined) throw new Error();
     bomb[BOMB_INDEX_LAUNCHED]++;
   }
 
   bombLand(player: PlayerID, target: PlayerID | null, type: NukeType): void {
-    const data = this.getPlayerStats(player);
-    const bomb = data.bombs[type];
+    const bomb = this._getBomb(player, type);
     if (bomb === undefined) throw new Error();
     bomb[BOMB_INDEX_LANDED]++;
   }
@@ -159,8 +176,7 @@ export class StatsImpl implements Stats {
     target: PlayerID | null,
     type: NukeType,
   ): void {
-    const data = this.getPlayerStats(player);
-    const bomb = data.bombs[type];
+    const bomb = this._getBomb(player, type);
     if (bomb === undefined) throw new Error();
     bomb[BOMB_INDEX_INTERCEPTED]++;
   }
