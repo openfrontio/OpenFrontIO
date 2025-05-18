@@ -320,9 +320,9 @@ export class PlayerInfo {
 }
 
 export enum DeleteReason {
-  SimpleDelete = "Unexpected",
+  SimpleDelete = "SimpleDelete",
   BuildingComplete = "BuildingComplete",
-  Destroy = "Killed",
+  Destroy = "Destroy",
   BoatArriveTroops = "BoatArriveTroops",
   BoatCaptured = "BoatCaptured",
   BoatDestroyTrade = "BoatDestroyTrade",
