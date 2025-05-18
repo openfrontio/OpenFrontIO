@@ -1,6 +1,5 @@
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import {
-  DeleteReason,
   Game,
   Player,
   PlayerInfo,
@@ -79,7 +78,7 @@ describe("Warship", () => {
     game.executeNextTick();
     expect(warship.health()).toBe(maxHealth - 9);
 
-    port.delete(DeleteReason.SimpleDelete, null);
+    port.delete();
 
     game.executeNextTick();
     expect(warship.health()).toBe(maxHealth - 9);
@@ -124,7 +123,7 @@ describe("Warship", () => {
 
     const [dstPort] = player1.units(UnitType.Port);
 
-    player1.units(UnitType.Port)[0].delete(DeleteReason.SimpleDelete, null);
+    player1.units(UnitType.Port)[0].delete();
     // Cannot buildExec with trade ship as it's not buildable (but
     // we can obviously directly add it to the player)
     const tradeShip = player2.buildUnit(
