@@ -139,7 +139,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           y: averagePosition ? averagePosition.y : null,
         } as AttackAveragePositionResultMessage);
       } catch (error) {
-        console.error("Failed to get border tiles:", error);
+        console.error("Failed to get attack average position:", error);
         throw error;
       }
       break;
