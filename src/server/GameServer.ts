@@ -386,7 +386,7 @@ export class GameServer {
         const playerRecords: PlayerRecord[] = Array.from(
           this.allClients.values(),
         ).map((client) => {
-          const stats = this.winner?.allPlayersStats[client.clientID];
+          const stats = this.winner?.allPlayersStats[client.playerID];
           if (stats === undefined) throw new Error();
           return {
             ip: ipAnonymize(client.ip),
