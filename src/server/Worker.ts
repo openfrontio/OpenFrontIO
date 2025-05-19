@@ -35,7 +35,7 @@ export function startWorker() {
 
   const gm = new GameManager(config, log);
 
-  if (config.env() === GameEnv.Prod && config.otelEnabled()) {
+  if (config.otelEnabled()) {
     initWorkerMetrics(gm);
   }
 
