@@ -71,7 +71,7 @@ export class GameImpl implements Game {
   private updates: GameUpdates = createGameUpdatesMap();
   private unitGrid: UnitGrid;
 
-  private _stats: StatsImpl = new StatsImpl();
+  private _stats: Stats;
 
   private playerTeams: Team[] = [ColoredTeams.Red, ColoredTeams.Blue];
   private botTeam: Team = ColoredTeams.Bot;
@@ -87,6 +87,7 @@ export class GameImpl implements Game {
     this._width = _map.width();
     this._height = _map.height();
     this.unitGrid = new UnitGrid(this._map);
+    this._stats = new StatsImpl(this._humans.map((pi) => pi.id));
 
     if (_config.gameConfig().gameMode === GameMode.Team) {
       this.populateTeams();
@@ -382,6 +383,7 @@ export class GameImpl implements Game {
   }
 
   addPlayer(playerInfo: PlayerInfo, team: Team | null = null): Player {
+    this._stats.getPlayerStats(playerInfo.id); // force the player record to be created
     const player = new PlayerImpl(
       this,
       this.nextPlayerID,
