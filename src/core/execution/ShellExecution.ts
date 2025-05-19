@@ -51,7 +51,7 @@ export class ShellExecution implements Execution {
       );
       if (result === true) {
         this.active = false;
-        this.target.modifyHealth(-this.effectOnTarget(), this._owner.id());
+        this.target.modifyHealth(-this.effectOnTarget(), this._owner);
         this.shell.delete(false);
         return;
       } else {

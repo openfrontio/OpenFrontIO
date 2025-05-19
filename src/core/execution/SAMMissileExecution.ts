@@ -66,15 +66,15 @@ export class SAMMissileExecution implements Execution {
           this._owner.id(),
         );
         this.active = false;
-        this.target.delete(true, this._owner.id());
+        this.target.delete(true, this._owner);
         this.SAMMissile.delete(false);
 
         // Record stats
         this.mg
           .stats()
           .bombIntercept(
-            this._owner.id(),
-            this.target.owner().id(),
+            this._owner,
+            this.target.owner(),
             this.target.type() as NukeType,
           );
         return;

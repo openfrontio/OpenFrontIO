@@ -2,7 +2,7 @@ import { simpleHash, toInt, withinInt } from "../Util";
 import {
   AllUnitParams,
   MessageType,
-  PlayerID,
+  Player,
   Tick,
   Unit,
   UnitInfo,
@@ -52,7 +52,7 @@ export class UnitImpl implements Unit {
       case UnitType.DefensePost:
       case UnitType.SAMLauncher:
       case UnitType.City:
-        this.mg.stats().unitBuild(_owner.id(), this._type);
+        this.mg.stats().unitBuild(_owner, this._type);
     }
   }
   touch(): void {
@@ -146,8 +146,8 @@ export class UnitImpl implements Unit {
       case UnitType.DefensePost:
       case UnitType.SAMLauncher:
       case UnitType.City:
-        this.mg.stats().unitCapture(newOwner.id(), this._type);
-        this.mg.stats().unitLose(this.owner().id(), this._type);
+        this.mg.stats().unitCapture(newOwner, this._type);
+        this.mg.stats().unitLose(this._owner, this._type);
     }
     this._lastOwner = this._owner;
     this._lastOwner._units = this._lastOwner._units.filter((u) => u !== this);
@@ -166,7 +166,7 @@ export class UnitImpl implements Unit {
     );
   }
 
-  modifyHealth(delta: number, attacker?: PlayerID): void {
+  modifyHealth(delta: number, attacker?: Player): void {
     this._health = withinInt(
       this._health + toInt(delta),
       0n,
@@ -177,7 +177,7 @@ export class UnitImpl implements Unit {
     }
   }
 
-  delete(displayMessage?: boolean, destroyer?: PlayerID): void {
+  delete(displayMessage?: boolean, destroyer?: Player): void {
     if (!this.isActive()) {
       throw new Error(`cannot delete ${this} not active`);
     }
@@ -197,10 +197,10 @@ export class UnitImpl implements Unit {
         case UnitType.TransportShip:
           this.mg
             .stats()
-            .boatDestroyTroops(destroyer, this.owner().id(), this._troops);
+            .boatDestroyTroops(destroyer, this._owner, this._troops);
           break;
         case UnitType.TradeShip:
-          this.mg.stats().boatDestroyTrade(destroyer, this.owner().id());
+          this.mg.stats().boatDestroyTrade(destroyer, this._owner);
           break;
         case UnitType.City:
         case UnitType.DefensePost:
@@ -209,7 +209,7 @@ export class UnitImpl implements Unit {
         case UnitType.SAMLauncher:
         case UnitType.Warship:
           this.mg.stats().unitDestroy(destroyer, this._type);
-          this.mg.stats().unitLose(this.owner().id(), this._type);
+          this.mg.stats().unitLose(this.owner(), this._type);
           break;
       }
     }

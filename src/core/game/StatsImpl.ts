@@ -21,15 +21,17 @@ import {
   OtherUnit,
 } from "../AnalyticsSchemas";
 import { AllPlayersStats, PlayerStats } from "../Schemas";
-import { PlayerID, UnitType } from "./Game";
+import { Player, TerraNullius, UnitType } from "./Game";
 import { Stats } from "./Stats";
 
 export class StatsImpl implements Stats {
   private readonly data: AllPlayersStats = {};
 
-  getPlayerStats(sender: PlayerID): PlayerStats {
-    if (sender in this.data) {
-      return this.data[sender];
+  getPlayerStats(sender: Player): PlayerStats {
+    const clientID = sender.clientID();
+    if (clientID === null) throw new Error(`Player's ClientID is null`);
+    if (clientID in this.data) {
+      return this.data[clientID];
     }
     const data = {
       betrayals: 0,
@@ -54,7 +56,7 @@ export class StatsImpl implements Stats {
       attacks: [0, 0, 0],
       gold: [0, 0, 0],
     } satisfies PlayerStats;
-    this.data[sender] = data;
+    this.data[clientID] = data;
     return data;
   }
 
@@ -62,39 +64,43 @@ export class StatsImpl implements Stats {
     return this.data;
   }
 
-  attack(outgoing: PlayerID, incoming: PlayerID | null, troops: number): void {
+  attack(
+    outgoing: Player,
+    incoming: Player | TerraNullius,
+    troops: number,
+  ): void {
     const o = this.getPlayerStats(outgoing);
     o.attacks[ATTACK_INDEX_OUTGOING] += troops;
-    if (incoming === null) return;
+    if (!incoming.isPlayer()) return;
     const i = this.getPlayerStats(incoming);
     i.attacks[ATTACK_INDEX_INCOMING] += troops;
   }
 
   attackCancel(
-    outgoing: PlayerID,
-    incoming: PlayerID | null,
+    outgoing: Player,
+    incoming: Player | TerraNullius,
     troops: number,
   ): void {
     const o = this.getPlayerStats(outgoing);
     o.attacks[ATTACK_INDEX_CANCELLED] += troops;
     o.attacks[ATTACK_INDEX_OUTGOING] -= troops;
-    if (incoming === null) return;
+    if (!incoming.isPlayer()) return;
     const i = this.getPlayerStats(incoming);
     i.attacks[ATTACK_INDEX_INCOMING] -= troops;
   }
 
-  betray(player: PlayerID): void {
+  betray(player: Player): void {
     this.getPlayerStats(player).betrayals++;
   }
 
-  boatSendTrade(player: PlayerID, target: PlayerID | null): void {
+  boatSendTrade(player: Player, target: Player | null): void {
     const data = this.getPlayerStats(player);
     const boats = data.boats.trade;
     if (boats === undefined) throw new Error();
     boats[BOAT_INDEX_SENT]++;
   }
 
-  boatArriveTrade(player: PlayerID, target: PlayerID, gold: number): void {
+  boatArriveTrade(player: Player, target: Player, gold: number): void {
     const data = this.getPlayerStats(player);
     const odat = this.getPlayerStats(target);
     data.gold[GOLD_INDEX_TRADE] += gold;
@@ -104,7 +110,7 @@ export class StatsImpl implements Stats {
     boats[BOAT_INDEX_ARRIVED]++;
   }
 
-  boatDestroyTrade(player: PlayerID, target: PlayerID): void {
+  boatDestroyTrade(player: Player, target: Player): void {
     const data = this.getPlayerStats(player);
     const boats = data.boats.trade;
     if (boats === undefined) throw new Error();
@@ -112,8 +118,8 @@ export class StatsImpl implements Stats {
   }
 
   boatSendTroops(
-    player: PlayerID,
-    target: PlayerID | null,
+    player: Player,
+    target: Player | TerraNullius,
     troops: number,
   ): void {
     const data = this.getPlayerStats(player);
@@ -123,8 +129,8 @@ export class StatsImpl implements Stats {
   }
 
   boatArriveTroops(
-    player: PlayerID,
-    target: PlayerID | null,
+    player: Player,
+    target: Player | TerraNullius,
     troops: number,
   ): void {
     const data = this.getPlayerStats(player);
@@ -133,7 +139,7 @@ export class StatsImpl implements Stats {
     boats[BOAT_INDEX_ARRIVED]++;
   }
 
-  boatDestroyTroops(player: PlayerID, target: PlayerID, troops: number): void {
+  boatDestroyTroops(player: Player, target: Player, troops: number): void {
     const data = this.getPlayerStats(player);
     const boats = data.boats.trans;
     if (boats === undefined) throw new Error();
@@ -141,7 +147,7 @@ export class StatsImpl implements Stats {
   }
 
   private _getBomb(
-    player: PlayerID,
+    player: Player,
     type: NukeType,
   ): LaunchedLandedIntercepted | undefined {
     const data = this.getPlayerStats(player);
@@ -158,36 +164,44 @@ export class StatsImpl implements Stats {
     throw new Error(`Unknown NukeType ${type}`);
   }
 
-  bombLaunch(player: PlayerID, target: PlayerID | null, type: NukeType): void {
+  bombLaunch(
+    player: Player,
+    target: Player | TerraNullius,
+    type: NukeType,
+  ): void {
     const bomb = this._getBomb(player, type);
     if (bomb === undefined) throw new Error();
     bomb[BOMB_INDEX_LAUNCHED]++;
   }
 
-  bombLand(player: PlayerID, target: PlayerID | null, type: NukeType): void {
+  bombLand(
+    player: Player,
+    target: Player | TerraNullius,
+    type: NukeType,
+  ): void {
     const bomb = this._getBomb(player, type);
     if (bomb === undefined) throw new Error();
     bomb[BOMB_INDEX_LANDED]++;
   }
 
-  bombIntercept(player: PlayerID, target: PlayerID, type: NukeType): void {
+  bombIntercept(player: Player, target: Player, type: NukeType): void {
     const bomb = this._getBomb(player, type);
     if (bomb === undefined) throw new Error();
     bomb[BOMB_INDEX_INTERCEPTED]++;
   }
 
-  goldWork(player: PlayerID, gold: number): void {
+  goldWork(player: Player, gold: number): void {
     const data = this.getPlayerStats(player);
     data.gold[GOLD_INDEX_WORK] += gold;
   }
 
-  goldWar(player: PlayerID, captured: PlayerID, gold: number): void {
+  goldWar(player: Player, captured: Player, gold: number): void {
     const data = this.getPlayerStats(player);
     data.gold[GOLD_INDEX_WAR] += gold;
   }
 
   private _getOtherUnit(
-    player: PlayerID,
+    player: Player,
     type: OtherUnit,
   ): BuiltDestroyedCapturedLost | undefined {
     const data = this.getPlayerStats(player);
@@ -208,25 +222,25 @@ export class StatsImpl implements Stats {
     throw new Error(`Unknown OtherUnit ${type}`);
   }
 
-  unitBuild(player: PlayerID, type: OtherUnit): void {
+  unitBuild(player: Player, type: OtherUnit): void {
     const unit = this._getOtherUnit(player, type);
     if (unit === undefined) throw new Error();
     unit[OTHER_INDEX_BUILT]++;
   }
 
-  unitCapture(player: PlayerID, type: OtherUnit): void {
+  unitCapture(player: Player, type: OtherUnit): void {
     const unit = this._getOtherUnit(player, type);
     if (unit === undefined) throw new Error();
     unit[OTHER_INDEX_CAPTURED]++;
   }
 
-  unitDestroy(player: PlayerID, type: OtherUnit): void {
+  unitDestroy(player: Player, type: OtherUnit): void {
     const unit = this._getOtherUnit(player, type);
     if (unit === undefined) throw new Error();
     unit[OTHER_INDEX_DESTROYED]++;
   }
 
-  unitLose(player: PlayerID, type: OtherUnit): void {
+  unitLose(player: Player, type: OtherUnit): void {
     const unit = this._getOtherUnit(player, type);
     if (unit === undefined) throw new Error();
     unit[OTHER_INDEX_LOST]++;

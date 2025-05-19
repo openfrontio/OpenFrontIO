@@ -24,6 +24,7 @@ import {
   GameUpdateType,
   GameUpdateViewData,
 } from "./game/GameUpdates";
+import { StatsImpl } from "./game/StatsImpl";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
@@ -69,12 +70,14 @@ export async function createGameRunner(
           ),
       );
 
+  const stats = new StatsImpl();
   const game: Game = createGame(
     humans,
     nations,
     gameMap.gameMap,
     gameMap.miniGameMap,
     config,
+    stats,
   );
 
   const gr = new GameRunner(

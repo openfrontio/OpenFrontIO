@@ -87,7 +87,7 @@ export class PlayerExecution implements Execution {
     this.player.addGold(goldFromWorkers);
 
     // Record stats
-    this.mg.stats().goldWork(this.playerID, goldFromWorkers);
+    this.mg.stats().goldWork(this.player, goldFromWorkers);
 
     const adjustRate = this.config.troopAdjustmentRate(this.player);
     this.player.addTroops(adjustRate);
@@ -249,7 +249,7 @@ export class PlayerExecution implements Execution {
       this.player.removeGold(gold);
 
       // Record stats
-      this.mg.stats().goldWar(capturing.id(), this.playerID, gold);
+      this.mg.stats().goldWar(capturing, this.player, gold);
     }
 
     for (const tile of tiles) {

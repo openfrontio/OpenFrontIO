@@ -167,7 +167,7 @@ export class PlayerImpl implements Player {
           }) as AttackUpdate,
       ),
       outgoingAllianceRequests: outgoingAllianceRequests,
-      stats: this.mg.stats().getPlayerStats(this.id()),
+      stats: this.mg.stats().getPlayerStats(this),
       hasSpawned: this.hasSpawned(),
     };
   }
@@ -385,7 +385,7 @@ export class PlayerImpl implements Player {
     this.markedTraitorTick = this.mg.ticks();
 
     // Record stats
-    this.mg.stats().betray(this.id());
+    this.mg.stats().betray(this);
   }
 
   createAllianceRequest(recipient: Player): AllianceRequest | null {

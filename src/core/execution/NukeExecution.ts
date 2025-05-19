@@ -146,7 +146,7 @@ export class NukeExecution implements Execution {
         // Record stats
         this.mg
           .stats()
-          .bombLaunch(this.senderID, target.id(), this.nuke.type() as NukeType);
+          .bombLaunch(this.player, target, this.nuke.type() as NukeType);
       }
 
       // after sending a nuke set the missilesilo on cooldown
@@ -182,7 +182,7 @@ export class NukeExecution implements Execution {
   }
 
   private detonate() {
-    if (this.mg === null || this.nuke === null) {
+    if (this.mg === null || this.nuke === null || this.player === null) {
       throw new Error("Not initialized");
     }
 
@@ -234,7 +234,7 @@ export class NukeExecution implements Execution {
         unit.type() !== UnitType.MIRV
       ) {
         if (this.mg.euclideanDistSquared(this.dst, unit.tile()) < outer2) {
-          unit.delete(true, this.senderID);
+          unit.delete(true, this.player);
         }
       }
     }
@@ -244,11 +244,7 @@ export class NukeExecution implements Execution {
     // Record stats
     this.mg
       .stats()
-      .bombLand(
-        this.senderID,
-        this.target().id(),
-        this.nuke.type() as NukeType,
-      );
+      .bombLand(this.player, this.target(), this.nuke.type() as NukeType);
   }
 
   owner(): Player {

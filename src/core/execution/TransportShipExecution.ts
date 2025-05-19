@@ -148,7 +148,7 @@ export class TransportShipExecution implements Execution {
     }
 
     // Record stats
-    this.mg.stats().boatSendTroops(this.attackerID, this.targetID, this.troops);
+    this.mg.stats().boatSendTroops(this.attacker, this.target, this.troops);
   }
 
   tick(ticks: number) {
@@ -183,7 +183,7 @@ export class TransportShipExecution implements Execution {
           // Record stats
           this.mg
             .stats()
-            .boatArriveTroops(this.attacker.id(), this.targetID, this.troops);
+            .boatArriveTroops(this.attacker, this.target, this.troops);
           return;
         }
         if (this.target.isPlayer() && this.attacker.isFriendly(this.target)) {
@@ -206,7 +206,7 @@ export class TransportShipExecution implements Execution {
         // Record stats
         this.mg
           .stats()
-          .boatArriveTroops(this.attacker.id(), this.targetID, this.troops);
+          .boatArriveTroops(this.attacker, this.target, this.troops);
         return;
       case PathFindResultType.NextTile:
         this.boat.move(result.tile);

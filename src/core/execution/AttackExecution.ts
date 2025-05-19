@@ -117,7 +117,7 @@ export class AttackExecution implements Execution {
     );
 
     // Record stats
-    this.mg.stats().attack(this._ownerID, this._targetID, this.startTroops);
+    this.mg.stats().attack(this._owner, this.target, this.startTroops);
 
     for (const incoming of this._owner.incomingAttacks()) {
       if (incoming.attacker() === this.target) {
@@ -189,7 +189,7 @@ export class AttackExecution implements Execution {
     this.active = false;
 
     // Record stats
-    this.mg.stats().attackCancel(this._ownerID, this._targetID, survivors);
+    this.mg.stats().attackCancel(this._owner, this.target, survivors);
   }
 
   tick(ticks: number) {
