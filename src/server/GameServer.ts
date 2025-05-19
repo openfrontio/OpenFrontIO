@@ -386,8 +386,17 @@ export class GameServer {
         const playerRecords: PlayerRecord[] = Array.from(
           this.allClients.values(),
         ).map((client) => {
-          const stats = this.winner?.allPlayersStats[client.clientID];
-          if (stats === undefined) throw new Error();
+          const stats = this.winner?.allPlayersStats[client.playerID];
+          if (stats === undefined) {
+            this.log.error("Unable to find stats for playerID", {
+              clientId: client.clientID,
+              playerId: client.playerID,
+              winner: this.winner,
+            });
+            throw new Error(
+              `Unable to find stats for playerID ${client.playerID}`,
+            );
+          }
           return {
             ip: ipAnonymize(client.ip),
             clientID: client.clientID,

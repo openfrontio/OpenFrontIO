@@ -337,6 +337,7 @@ export function startWorker() {
 
           // Handle other message types
         } catch (error) {
+          log.error(error.stack);
           log.warn(
             `error handling websocket message for ${ipAnonymize(ip)}: ${error}`.substring(
               0,
