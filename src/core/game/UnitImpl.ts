@@ -37,7 +37,10 @@ export class UnitImpl implements Unit {
   ) {
     this._lastTile = _tile;
     this._health = toInt(this.mg.unitInfo(_type).maxHealth ?? 1);
-
+    this._targetTile =
+      "detonationDst" in params
+        ? (params.detonationDst ?? undefined)
+        : undefined;
     this._troops = "troops" in params ? (params.troops ?? 0) : 0;
     this._lastSetSafeFromPirates =
       "lastSetSafeFromPirates" in params
