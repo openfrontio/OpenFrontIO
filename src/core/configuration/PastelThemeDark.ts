@@ -21,6 +21,7 @@ import { Theme } from "./Config";
 
 type ColorCache = Map<string, Colord>;
 
+// Since the game is instantiated through workers, the theme is unique with each new game
 export const pastelThemeDark = new (class implements Theme {
   private borderColorCache: ColorCache = new Map<string, Colord>();
   private rand = new PseudoRandom(123);
