@@ -57,47 +57,49 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return this.publicKey;
   }
   otelEnabled(): boolean {
-    return Boolean(
-      this.otelEndpoint() && this.otelUsername() && this.otelPassword(),
+    return (
+      Boolean(this.otelEndpoint()) &&
+      Boolean(this.otelUsername()) &&
+      Boolean(this.otelPassword())
     );
   }
   otelEndpoint(): string {
-    return process.env.OTEL_ENDPOINT ?? "undefined";
+    return process.env.OTEL_ENDPOINT ?? "";
   }
   otelUsername(): string {
-    return process.env.OTEL_USERNAME ?? "undefined";
+    return process.env.OTEL_USERNAME ?? "";
   }
   otelPassword(): string {
-    return process.env.OTEL_PASSWORD ?? "undefined";
+    return process.env.OTEL_PASSWORD ?? "";
   }
   region(): string {
     if (this.env() === GameEnv.Dev) {
       return "dev";
     }
-    return process.env.REGION ?? "undefined";
+    return process.env.REGION ?? "";
   }
   gitCommit(): string {
-    return process.env.GIT_COMMIT ?? "undefined";
+    return process.env.GIT_COMMIT ?? "";
   }
   r2Endpoint(): string {
     return `https://${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`;
   }
   r2AccessKey(): string {
-    return process.env.R2_ACCESS_KEY ?? "undefined";
+    return process.env.R2_ACCESS_KEY ?? "";
   }
   r2SecretKey(): string {
-    return process.env.R2_SECRET_KEY ?? "undefined";
+    return process.env.R2_SECRET_KEY ?? "";
   }
 
   r2Bucket(): string {
-    return process.env.R2_BUCKET ?? "undefined";
+    return process.env.R2_BUCKET ?? "";
   }
 
   adminHeader(): string {
     return "x-admin-key";
   }
   adminToken(): string {
-    return process.env.ADMIN_TOKEN ?? "undefined";
+    return process.env.ADMIN_TOKEN ?? "dummy-admin-token";
   }
   abstract numWorkers(): number;
   abstract env(): GameEnv;
