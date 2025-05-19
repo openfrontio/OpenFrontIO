@@ -1,5 +1,5 @@
 # Use an official Node runtime as the base image
-FROM node:latest AS base
+FROM node:slim AS base
 
 # Create dependency layer
 FROM base AS dependencies
