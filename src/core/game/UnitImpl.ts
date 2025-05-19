@@ -14,20 +14,17 @@ import { PlayerImpl } from "./PlayerImpl";
 
 export class UnitImpl implements Unit {
   private _active = true;
+  private _targetTile: TileRef | undefined;
+  private _targetUnit: Unit | undefined;
   private _health: bigint;
   private _lastTile: TileRef;
-  private _moveTarget: TileRef | null = null;
+  private _retreating: boolean = false;
   private _targetedBySAM = false;
-  private _safeFromPiratesCooldown: number; // Only for trade ships
   private _lastSetSafeFromPirates: number; // Only for trade ships
   private _constructionType: UnitType | undefined;
   private _lastOwner: PlayerImpl | null = null;
   private _troops: number;
-  private _cooldownTick: Tick | null = null;
-  private _dstPort: Unit | undefined = undefined; // Only for trade ships
-  private _detonationDst: TileRef | undefined = undefined; // Only for nukes
-  private _warshipTarget: Unit | undefined = undefined;
-  private _cooldownDuration: number | undefined = undefined;
+  private _cooldownStartTick: Tick | null = null;
   private _pathCache: Map<TileRef, TileRef> = new Map();
 
   constructor(
@@ -40,18 +37,21 @@ export class UnitImpl implements Unit {
   ) {
     this._lastTile = _tile;
     this._health = toInt(this.mg.unitInfo(_type).maxHealth ?? 1);
-    this._safeFromPiratesCooldown = this.mg
-      .config()
-      .safeFromPiratesCooldownMax();
 
     this._troops = "troops" in params ? (params.troops ?? 0) : 0;
-    this._dstPort = "dstPort" in params ? params.dstPort : undefined;
-    this._cooldownDuration =
-      "cooldownDuration" in params ? params.cooldownDuration : undefined;
     this._lastSetSafeFromPirates =
       "lastSetSafeFromPirates" in params
         ? (params.lastSetSafeFromPirates ?? 0)
         : 0;
+  }
+  touch(): void {
+    this.mg.addUpdate(this.toUpdate());
+  }
+  setTileTarget(tile: TileRef | undefined): void {
+    this._targetTile = tile;
+  }
+  tileTarget(): TileRef | undefined {
+    return this._targetTile;
   }
 
   cachePut(from: TileRef, to: TileRef): void {
@@ -66,13 +66,6 @@ export class UnitImpl implements Unit {
   }
 
   toUpdate(): UnitUpdate {
-    const warshipTarget = this.warshipTarget();
-    const dstPort = this.dstPort();
-    if (this._lastTile === null) throw new Error("null _lastTile");
-    const ticksLeftInCooldown =
-      this._cooldownDuration !== undefined
-        ? this.ticksLeftInCooldown(this._cooldownDuration)
-        : undefined;
     return {
       type: GameUpdateType.Unit,
       unitType: this._type,
@@ -81,14 +74,14 @@ export class UnitImpl implements Unit {
       ownerID: this._owner.smallID(),
       lastOwnerID: this._lastOwner?.smallID(),
       isActive: this._active,
+      retreating: this._retreating,
       pos: this._tile,
       lastPos: this._lastTile,
       health: this.hasHealth() ? Number(this._health) : undefined,
       constructionType: this._constructionType,
-      dstPortId: dstPort?.id() ?? undefined,
-      warshipTargetId: warshipTarget?.id() ?? undefined,
-      detonationDst: this.detonationDst() ?? undefined,
-      ticksLeftInCooldown,
+      targetUnitId: this._targetUnit?.id() ?? undefined,
+      targetTile: this.targetTile() ?? undefined,
+      ticksLeftInCooldown: this.ticksLeftInCooldown() ?? undefined,
     };
   }
 
@@ -97,7 +90,6 @@ export class UnitImpl implements Unit {
   }
 
   lastTile(): TileRef {
-    if (this._lastTile === null) throw new Error("null _lastTile");
     return this._lastTile;
   }
 
@@ -111,6 +103,7 @@ export class UnitImpl implements Unit {
     this.mg.addUnit(this);
     this.mg.addUpdate(this.toUpdate());
   }
+
   setTroops(troops: number): void {
     this._troops = troops;
   }
@@ -180,6 +173,17 @@ export class UnitImpl implements Unit {
     return this._active;
   }
 
+  retreating(): boolean {
+    return this._retreating;
+  }
+
+  orderBoatRetreat() {
+    if (this.type() !== UnitType.TransportShip) {
+      throw new Error(`Cannot retreat ${this.type()}`);
+    }
+    this._retreating = true;
+  }
+
   constructionType(): UnitType | null {
     if (this.type() !== UnitType.Construction) {
       throw new Error(`Cannot get construction type on ${this.type()}`);
@@ -203,52 +207,47 @@ export class UnitImpl implements Unit {
     return `Unit:${this._type},owner:${this.owner().name()}`;
   }
 
-  setWarshipTarget(target: Unit) {
-    this._warshipTarget = target;
+  launch(): void {
+    this._cooldownStartTick = this.mg.ticks();
+    this.mg.addUpdate(this.toUpdate());
   }
 
-  warshipTarget(): Unit | null {
-    return this._warshipTarget ?? null;
-  }
-
-  detonationDst(): TileRef | null {
-    return this._detonationDst ?? null;
-  }
-
-  dstPort(): Unit | null {
-    return this._dstPort ?? null;
-  }
-
-  // set the cooldown to the current tick or remove it
-  setCooldown(triggerCooldown: boolean): void {
-    if (triggerCooldown) {
-      this._cooldownTick = this.mg.ticks();
-      this.mg.addUpdate(this.toUpdate());
+  ticksLeftInCooldown(): Tick | undefined {
+    let cooldownDuration = 0;
+    if (this.type() === UnitType.SAMLauncher) {
+      cooldownDuration = this.mg.config().SAMCooldown();
+    } else if (this.type() === UnitType.MissileSilo) {
+      cooldownDuration = this.mg.config().SiloCooldown();
     } else {
-      this._cooldownTick = null;
-      this.mg.addUpdate(this.toUpdate());
+      return undefined;
     }
+
+    if (!this._cooldownStartTick) {
+      return undefined;
+    }
+
+    return cooldownDuration - (this.mg.ticks() - this._cooldownStartTick);
   }
 
-  ticksLeftInCooldown(cooldownDuration: number): Tick {
-    const cooldownTick = this._cooldownTick ?? 0;
-    return Math.max(0, cooldownDuration - (this.mg.ticks() - cooldownTick));
+  isInCooldown(): boolean {
+    const ticksLeft = this.ticksLeftInCooldown();
+    return ticksLeft !== undefined && ticksLeft > 0;
   }
 
-  isCooldown(): boolean {
-    return this._cooldownTick ? true : false;
+  setTargetTile(targetTile: TileRef | undefined) {
+    this._targetTile = targetTile;
   }
 
-  setDstPort(dstPort: Unit): void {
-    this._dstPort = dstPort;
+  targetTile(): TileRef | undefined {
+    return this._targetTile;
   }
 
-  setMoveTarget(moveTarget: TileRef) {
-    this._moveTarget = moveTarget;
+  setTargetUnit(target: Unit | undefined): void {
+    this._targetUnit = target;
   }
 
-  moveTarget(): TileRef | null {
-    return this._moveTarget;
+  targetUnit(): Unit | undefined {
+    return this._targetUnit;
   }
 
   setTargetedBySAM(targeted: boolean): void {
@@ -266,7 +265,7 @@ export class UnitImpl implements Unit {
   isSafeFromPirates(): boolean {
     return (
       this.mg.ticks() - this._lastSetSafeFromPirates <
-      this._safeFromPiratesCooldown
+      this.mg.config().safeFromPiratesCooldownMax()
     );
   }
 }

@@ -53,11 +53,8 @@ export class MissileSiloExecution implements Execution {
       }
     }
 
-    if (
-      this.silo.isCooldown() &&
-      this.silo.ticksLeftInCooldown(this.mg.config().SiloCooldown()) === 0
-    ) {
-      this.silo.setCooldown(false);
+    if (this.silo.ticksLeftInCooldown() === 0) {
+      this.silo.touch();
     }
   }
 

@@ -73,9 +73,9 @@ export interface UnitUpdate {
   pos: TileRef;
   lastPos: TileRef;
   isActive: boolean;
-  dstPortId?: number; // Only for trade ships
-  detonationDst?: TileRef; // Only for nukes
-  warshipTargetId?: number;
+  retreating: boolean;
+  targetUnitId?: number; // Only for trade ships
+  targetTile?: TileRef; // Only for nukes
   health?: number;
   constructionType?: UnitType;
   ticksLeftInCooldown?: Tick;
@@ -104,6 +104,7 @@ export interface PlayerUpdate {
   tilesOwned: number;
   gold: number;
   population: number;
+  totalPopulation: number;
   workers: number;
   troops: number;
   targetTroopRatio: number;
