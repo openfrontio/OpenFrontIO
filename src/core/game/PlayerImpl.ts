@@ -167,7 +167,6 @@ export class PlayerImpl implements Player {
           }) as AttackUpdate,
       ),
       outgoingAllianceRequests: outgoingAllianceRequests,
-      stats: this.mg.stats().getPlayerStats(this),
       hasSpawned: this.hasSpawned(),
     };
   }

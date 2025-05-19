@@ -9,7 +9,7 @@ import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import { AllPlayers, PlayerActions, PlayerID } from "../../../core/game/Game";
+import { AllPlayers, PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { flattenedEmojiTable } from "../../../core/Util";
@@ -170,22 +170,6 @@ export class PlayerPanel extends LitElement implements Layer {
     }
   }
 
-  getTotalNukesSent(otherId: PlayerID): number {
-    const stats = this.g.player(otherId).stats();
-    if (!stats) {
-      return 0;
-    }
-    const player = this.g.myPlayer();
-    if (player === null) {
-      return 0;
-    }
-    let sum = 0;
-    for (const [launched] of Object.values(stats.bombs)) {
-      sum += launched;
-    }
-    return sum;
-  }
-
   render() {
     if (!this.isVisible) {
       return html``;
@@ -295,16 +279,6 @@ export class PlayerPanel extends LitElement implements Layer {
                   ${other.hasEmbargoAgainst(myPlayer)
                     ? translateText("player_panel.yes")
                     : translateText("player_panel.no")}
-                </div>
-              </div>
-
-              <!-- Stats -->
-              <div class="flex flex-col gap-1">
-                <div class="text-white text-opacity-80 text-sm px-2">
-                  ${translateText("player_panel.nuke")}
-                </div>
-                <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
-                  ${this.getTotalNukesSent(other.id())}
                 </div>
               </div>
 

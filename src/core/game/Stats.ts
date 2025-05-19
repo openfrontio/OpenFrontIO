@@ -3,7 +3,7 @@ import { AllPlayersStats, PlayerStats } from "../Schemas";
 import { Player, TerraNullius } from "./Game";
 
 export interface Stats {
-  getPlayerStats(player: Player): PlayerStats;
+  getPlayerStats(player: Player): PlayerStats | null;
   stats(): AllPlayersStats;
 
   // Player attacks target

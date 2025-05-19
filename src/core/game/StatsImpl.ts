@@ -27,9 +27,9 @@ import { Stats } from "./Stats";
 export class StatsImpl implements Stats {
   private readonly data: AllPlayersStats = {};
 
-  getPlayerStats(sender: Player): PlayerStats {
+  getPlayerStats(sender: Player): PlayerStats | null {
     const clientID = sender.clientID();
-    if (clientID === null) throw new Error(`Player's ClientID is null`);
+    if (clientID === null) return null;
     if (clientID in this.data) {
       return this.data[clientID];
     }
@@ -70,10 +70,13 @@ export class StatsImpl implements Stats {
     troops: number,
   ): void {
     const o = this.getPlayerStats(outgoing);
-    o.attacks[ATTACK_INDEX_OUTGOING] += troops;
-    if (!incoming.isPlayer()) return;
-    const i = this.getPlayerStats(incoming);
-    i.attacks[ATTACK_INDEX_INCOMING] += troops;
+    if (o !== null) {
+      o.attacks[ATTACK_INDEX_OUTGOING] += troops;
+    }
+    const i = incoming.isPlayer() ? this.getPlayerStats(incoming) : null;
+    if (i !== null) {
+      i.attacks[ATTACK_INDEX_INCOMING] += troops;
+    }
   }
 
   attackCancel(
@@ -82,39 +85,53 @@ export class StatsImpl implements Stats {
     troops: number,
   ): void {
     const o = this.getPlayerStats(outgoing);
-    o.attacks[ATTACK_INDEX_CANCELLED] += troops;
-    o.attacks[ATTACK_INDEX_OUTGOING] -= troops;
-    if (!incoming.isPlayer()) return;
-    const i = this.getPlayerStats(incoming);
-    i.attacks[ATTACK_INDEX_INCOMING] -= troops;
+    if (o !== null) {
+      o.attacks[ATTACK_INDEX_CANCELLED] += troops;
+      o.attacks[ATTACK_INDEX_OUTGOING] -= troops;
+    }
+    const i = incoming.isPlayer() ? this.getPlayerStats(incoming) : null;
+    if (i !== null) {
+      i.attacks[ATTACK_INDEX_INCOMING] -= troops;
+    }
   }
 
   betray(player: Player): void {
-    this.getPlayerStats(player).betrayals++;
+    const p = this.getPlayerStats(player);
+    if (p !== null) {
+      p.betrayals++;
+    }
   }
 
   boatSendTrade(player: Player, target: Player | null): void {
     const data = this.getPlayerStats(player);
-    const boats = data.boats.trade;
-    if (boats === undefined) throw new Error();
-    boats[BOAT_INDEX_SENT]++;
+    if (data !== null) {
+      const boats = data.boats.trade;
+      if (boats === undefined) throw new Error();
+      boats[BOAT_INDEX_SENT]++;
+    }
   }
 
   boatArriveTrade(player: Player, target: Player, gold: number): void {
     const data = this.getPlayerStats(player);
+    if (data !== null) {
+      data.gold[GOLD_INDEX_TRADE] += gold;
+      const boats = data.boats.trade;
+      if (boats === undefined) throw new Error();
+      boats[BOAT_INDEX_ARRIVED]++;
+    }
     const odat = this.getPlayerStats(target);
-    data.gold[GOLD_INDEX_TRADE] += gold;
-    odat.gold[GOLD_INDEX_TRADE] += gold;
-    const boats = data.boats.trade;
-    if (boats === undefined) throw new Error();
-    boats[BOAT_INDEX_ARRIVED]++;
+    if (odat !== null) {
+      odat.gold[GOLD_INDEX_TRADE] += gold;
+    }
   }
 
   boatDestroyTrade(player: Player, target: Player): void {
     const data = this.getPlayerStats(player);
-    const boats = data.boats.trade;
-    if (boats === undefined) throw new Error();
-    boats[BOAT_INDEX_DESTROYED]++;
+    if (data !== null) {
+      const boats = data.boats.trade;
+      if (boats === undefined) throw new Error();
+      boats[BOAT_INDEX_DESTROYED]++;
+    }
   }
 
   boatSendTroops(
@@ -123,9 +140,11 @@ export class StatsImpl implements Stats {
     troops: number,
   ): void {
     const data = this.getPlayerStats(player);
-    const boats = data.boats.trans;
-    if (boats === undefined) throw new Error();
-    boats[BOAT_INDEX_SENT]++;
+    if (data !== null) {
+      const boats = data.boats.trans;
+      if (boats === undefined) throw new Error();
+      boats[BOAT_INDEX_SENT]++;
+    }
   }
 
   boatArriveTroops(
@@ -134,23 +153,26 @@ export class StatsImpl implements Stats {
     troops: number,
   ): void {
     const data = this.getPlayerStats(player);
-    const boats = data.boats.trans;
-    if (boats === undefined) throw new Error();
-    boats[BOAT_INDEX_ARRIVED]++;
+    if (data !== null) {
+      const boats = data.boats.trans;
+      if (boats === undefined) throw new Error();
+      boats[BOAT_INDEX_ARRIVED]++;
+    }
   }
 
   boatDestroyTroops(player: Player, target: Player, troops: number): void {
     const data = this.getPlayerStats(player);
-    const boats = data.boats.trans;
-    if (boats === undefined) throw new Error();
-    boats[BOAT_INDEX_DESTROYED]++;
+    if (data !== null) {
+      const boats = data.boats.trans;
+      if (boats === undefined) throw new Error();
+      boats[BOAT_INDEX_DESTROYED]++;
+    }
   }
 
   private _getBomb(
-    player: Player,
+    data: PlayerStats,
     type: NukeType,
   ): LaunchedLandedIntercepted | undefined {
-    const data = this.getPlayerStats(player);
     switch (type) {
       case UnitType.AtomBomb:
         return data.bombs.abomb;
@@ -169,9 +191,12 @@ export class StatsImpl implements Stats {
     target: Player | TerraNullius,
     type: NukeType,
   ): void {
-    const bomb = this._getBomb(player, type);
-    if (bomb === undefined) throw new Error();
-    bomb[BOMB_INDEX_LAUNCHED]++;
+    const data = this.getPlayerStats(player);
+    if (data !== null) {
+      const bomb = this._getBomb(data, type);
+      if (bomb === undefined) throw new Error();
+      bomb[BOMB_INDEX_LAUNCHED]++;
+    }
   }
 
   bombLand(
@@ -179,32 +204,41 @@ export class StatsImpl implements Stats {
     target: Player | TerraNullius,
     type: NukeType,
   ): void {
-    const bomb = this._getBomb(player, type);
-    if (bomb === undefined) throw new Error();
-    bomb[BOMB_INDEX_LANDED]++;
+    const data = this.getPlayerStats(player);
+    if (data !== null) {
+      const bomb = this._getBomb(data, type);
+      if (bomb === undefined) throw new Error();
+      bomb[BOMB_INDEX_LANDED]++;
+    }
   }
 
   bombIntercept(player: Player, target: Player, type: NukeType): void {
-    const bomb = this._getBomb(player, type);
-    if (bomb === undefined) throw new Error();
-    bomb[BOMB_INDEX_INTERCEPTED]++;
+    const data = this.getPlayerStats(player);
+    if (data !== null) {
+      const bomb = this._getBomb(data, type);
+      if (bomb === undefined) throw new Error();
+      bomb[BOMB_INDEX_INTERCEPTED]++;
+    }
   }
 
   goldWork(player: Player, gold: number): void {
     const data = this.getPlayerStats(player);
-    data.gold[GOLD_INDEX_WORK] += gold;
+    if (data !== null) {
+      data.gold[GOLD_INDEX_WORK] += gold;
+    }
   }
 
   goldWar(player: Player, captured: Player, gold: number): void {
     const data = this.getPlayerStats(player);
-    data.gold[GOLD_INDEX_WAR] += gold;
+    if (data !== null) {
+      data.gold[GOLD_INDEX_WAR] += gold;
+    }
   }
 
   private _getOtherUnit(
-    player: Player,
+    data: PlayerStats,
     type: OtherUnit,
   ): BuiltDestroyedCapturedLost | undefined {
-    const data = this.getPlayerStats(player);
     switch (type) {
       case UnitType.City:
         return data.units.city;
@@ -223,26 +257,38 @@ export class StatsImpl implements Stats {
   }
 
   unitBuild(player: Player, type: OtherUnit): void {
-    const unit = this._getOtherUnit(player, type);
-    if (unit === undefined) throw new Error();
-    unit[OTHER_INDEX_BUILT]++;
+    const data = this.getPlayerStats(player);
+    if (data !== null) {
+      const unit = this._getOtherUnit(data, type);
+      if (unit === undefined) throw new Error();
+      unit[OTHER_INDEX_BUILT]++;
+    }
   }
 
   unitCapture(player: Player, type: OtherUnit): void {
-    const unit = this._getOtherUnit(player, type);
-    if (unit === undefined) throw new Error();
-    unit[OTHER_INDEX_CAPTURED]++;
+    const data = this.getPlayerStats(player);
+    if (data !== null) {
+      const unit = this._getOtherUnit(data, type);
+      if (unit === undefined) throw new Error();
+      unit[OTHER_INDEX_CAPTURED]++;
+    }
   }
 
   unitDestroy(player: Player, type: OtherUnit): void {
-    const unit = this._getOtherUnit(player, type);
-    if (unit === undefined) throw new Error();
-    unit[OTHER_INDEX_DESTROYED]++;
+    const data = this.getPlayerStats(player);
+    if (data !== null) {
+      const unit = this._getOtherUnit(data, type);
+      if (unit === undefined) throw new Error();
+      unit[OTHER_INDEX_DESTROYED]++;
+    }
   }
 
   unitLose(player: Player, type: OtherUnit): void {
-    const unit = this._getOtherUnit(player, type);
-    if (unit === undefined) throw new Error();
-    unit[OTHER_INDEX_LOST]++;
+    const data = this.getPlayerStats(player);
+    if (data !== null) {
+      const unit = this._getOtherUnit(data, type);
+      if (unit === undefined) throw new Error();
+      unit[OTHER_INDEX_LOST]++;
+    }
   }
 }
