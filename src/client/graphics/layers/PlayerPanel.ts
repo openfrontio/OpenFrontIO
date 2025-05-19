@@ -9,12 +9,7 @@ import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import {
-  AllPlayers,
-  nukeTypes,
-  PlayerActions,
-  PlayerID,
-} from "../../../core/game/Game";
+import { AllPlayers, PlayerActions, PlayerID } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { flattenedEmojiTable } from "../../../core/Util";
@@ -185,10 +180,7 @@ export class PlayerPanel extends LitElement implements Layer {
       return 0;
     }
     let sum = 0;
-    for (const nukeType of nukeTypes) {
-      const bombs = stats.bombs[nukeType];
-      if (bombs === undefined) continue;
-      const [launched] = bombs;
+    for (const [launched] of Object.values(stats.bombs)) {
       sum += launched;
     }
     return sum;
