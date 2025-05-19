@@ -165,11 +165,11 @@ export interface UnitParamsMap {
   [UnitType.Port]: {};
 
   [UnitType.AtomBomb]: {
-    detonationDst?: number;
+    targetTile?: number;
   };
 
   [UnitType.HydrogenBomb]: {
-    detonationDst?: number;
+    targetTile?: number;
   };
 
   [UnitType.TradeShip]: {
@@ -190,7 +190,7 @@ export interface UnitParamsMap {
   [UnitType.MIRV]: {};
 
   [UnitType.MIRVWarhead]: {
-    detonationDst?: number;
+    targetTile?: number;
   };
 
   [UnitType.Construction]: {};
