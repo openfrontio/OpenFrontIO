@@ -8,7 +8,7 @@ import {
   BOMB_INDEX_INTERCEPTED,
   BOMB_INDEX_LANDED,
   BOMB_INDEX_LAUNCHED,
-  BuiltLostDestroyedCaptured,
+  BuiltDestroyedCapturedLost,
   GOLD_INDEX_TRADE,
   GOLD_INDEX_WAR,
   GOLD_INDEX_WORK,
@@ -189,7 +189,7 @@ export class StatsImpl implements Stats {
   private _getOtherUnit(
     player: PlayerID,
     type: OtherUnit,
-  ): BuiltLostDestroyedCaptured | undefined {
+  ): BuiltDestroyedCapturedLost | undefined {
     const data = this.getPlayerStats(player);
     switch (type) {
       case UnitType.City:

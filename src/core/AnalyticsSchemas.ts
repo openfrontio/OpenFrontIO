@@ -77,17 +77,17 @@ export const WorkersTradeWarSchema = z.tuple([
 
 // Other Units
 export const OTHER_INDEX_BUILT = 0;
-export const OTHER_INDEX_LOST = 1;
-export const OTHER_INDEX_DESTROYED = 2;
-export const OTHER_INDEX_CAPTURED = 3;
-export const BuiltLostDestroyedCapturedSchema = z.tuple([
+export const OTHER_INDEX_DESTROYED = 1;
+export const OTHER_INDEX_CAPTURED = 2;
+export const OTHER_INDEX_LOST = 3;
+export const BuiltDestroyedCapturedLostSchema = z.tuple([
   z.number().nonnegative(), // built
-  z.number().nonnegative(), // lost
   z.number().nonnegative(), // destroyed
   z.number().nonnegative(), // captured
+  z.number().nonnegative(), // lost
 ]);
-export type BuiltLostDestroyedCaptured = z.infer<
-  typeof BuiltLostDestroyedCapturedSchema
+export type BuiltDestroyedCapturedLost = z.infer<
+  typeof BuiltDestroyedCapturedLostSchema
 >;
 
 export const PlayerStatsSchema = z.object({
@@ -96,5 +96,5 @@ export const PlayerStatsSchema = z.object({
   boats: z.record(BoatUnitSchema, SentArrivedDestroyedSchema),
   bombs: z.record(BombUnitSchema, LaunchedLandedInterceptedSchema),
   gold: WorkersTradeWarSchema,
-  units: z.record(OtherUnitSchema, BuiltLostDestroyedCapturedSchema),
+  units: z.record(OtherUnitSchema, BuiltDestroyedCapturedLostSchema),
 });
