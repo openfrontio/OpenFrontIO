@@ -14,7 +14,6 @@ import { genTerrainFromBin } from "../../src/core/game/TerrainMapLoader";
 import { UserSettings } from "../../src/core/game/UserSettings";
 import { GameConfig } from "../../src/core/Schemas";
 import { generateMap } from "../../src/scripts/TerrainMapGenerator";
-import { MockStats } from "./MockStats";
 import { TestConfig } from "./TestConfig";
 import { TestServerConfig } from "./TestServerConfig";
 
@@ -55,10 +54,9 @@ export async function setup(
     new UserSettings(),
     false,
   );
-  const stats = new MockStats();
 
   // Create and return the game
-  return createGame(humans, [], gameMap, miniGameMap, config, stats);
+  return createGame(humans, [], gameMap, miniGameMap, config);
 }
 
 export function playerInfo(name: string, type: PlayerType): PlayerInfo {

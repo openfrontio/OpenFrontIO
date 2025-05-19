@@ -32,6 +32,7 @@ import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
 import { Stats } from "./Stats";
+import { StatsImpl } from "./StatsImpl";
 import { assignTeams } from "./TeamAssignment";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid } from "./UnitGrid";
@@ -42,8 +43,8 @@ export function createGame(
   gameMap: GameMap,
   miniGameMap: GameMap,
   config: Config,
-  stats: Stats,
 ): Game {
+  const stats = new StatsImpl();
   return new GameImpl(humans, nations, gameMap, miniGameMap, config, stats);
 }
 
