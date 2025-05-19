@@ -17,7 +17,7 @@ export class SAMLauncherExecution implements Execution {
   private mg: Game;
   private active: boolean = true;
 
-  private searchRangeRadius = 80;
+  private searchRangeRadius = 100;
   // As MIRV go very fast we have to detect them very early but we only
   // shoot the one targeting very close (MIRVWarheadProtectionRadius)
   private MIRVWarheadSearchRadius = 400;
