@@ -13,7 +13,6 @@ import {
   AllPlayers,
   PlayerActions,
   PlayerID,
-  Tick,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -176,17 +175,20 @@ export class PlayerPanel extends LitElement implements Layer {
         this.actions = await myPlayer.actions(this.tile);
 
         if (this.actions?.interaction?.allianceCreatedAtTick !== undefined) {
-            const createdAt = this.actions.interaction.allianceCreatedAtTick;
-            const durationTicks = this.g.config().allianceDuration();
-            const expiryTick = createdAt + durationTicks;
-            const remainingTicks = expiryTick - this.g.ticks();
+          const createdAt = this.actions.interaction.allianceCreatedAtTick;
+          const durationTicks = this.g.config().allianceDuration();
+          const expiryTick = createdAt + durationTicks;
+          const remainingTicks = expiryTick - this.g.ticks();
 
-            if (remainingTicks > 0) {
-                const remainingSeconds = Math.max(0, Math.floor(remainingTicks / 10)); // 10 ticks per second
-                this.allianceExpiryText = this.formatDuration(remainingSeconds);
-            }
+          if (remainingTicks > 0) {
+            const remainingSeconds = Math.max(
+              0,
+              Math.floor(remainingTicks / 10),
+            ); // 10 ticks per second
+            this.allianceExpiryText = this.formatDuration(remainingSeconds);
+          }
         } else {
-            this.allianceExpiryText = null;
+          this.allianceExpiryText = null;
         }
         this.requestUpdate();
       }
@@ -337,8 +339,7 @@ export class PlayerPanel extends LitElement implements Layer {
                 </div>
               </div>
 
-            ${
-              this.allianceExpiryText !== null
+              ${this.allianceExpiryText !== null
                 ? html`
                     <div class="flex flex-col gap-1">
                       <div class="text-white text-opacity-80 text-sm px-2">
@@ -351,8 +352,7 @@ export class PlayerPanel extends LitElement implements Layer {
                       </div>
                     </div>
                   `
-                : ""
-            }
+                : ""}
               <!-- Stats -->
               <div class="flex flex-col gap-1">
                 <div class="text-white text-opacity-80 text-sm px-2">
