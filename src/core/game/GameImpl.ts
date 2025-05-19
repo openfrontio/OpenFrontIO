@@ -592,6 +592,17 @@ export class GameImpl implements Game {
   }
 
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
+    // Convert PlayerID indexes to ClientIDs
+    allPlayersStats = Object.fromEntries(
+      Object.entries(allPlayersStats).map(([playerId, playerStats]) => {
+        const player = this._players.get(playerId);
+        if (player === undefined) {
+          throw new Error(`Unable to find ClientID for PlayerID ${playerId}`);
+        }
+        return [player.clientID, playerStats];
+      }),
+    );
+
     this.addUpdate({
       type: GameUpdateType.Win,
       winner: typeof winner === "string" ? winner : winner.smallID(),
