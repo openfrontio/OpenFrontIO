@@ -25,24 +25,13 @@ import { PlayerID, UnitType } from "./Game";
 import { Stats } from "./Stats";
 
 export class StatsImpl implements Stats {
-  private readonly data: AllPlayersStats;
-
-  constructor(_players: PlayerID[]) {
-    const template = this._emptyPlayeStats();
-    this.data = Object.fromEntries(
-      _players.map((pid) => [pid, structuredClone(template)]),
-    );
-  }
+  private readonly data: AllPlayersStats = {};
 
   getPlayerStats(sender: PlayerID): PlayerStats {
-    if (!(sender in this.data)) {
-      this.data[sender] = this._emptyPlayeStats();
+    if (sender in this.data) {
+      return this.data[sender];
     }
-    return this.data[sender];
-  }
-
-  private _emptyPlayeStats() {
-    return {
+    const data = {
       betrayals: 0,
       boats: {
         trade: [0, 0, 0],
@@ -65,6 +54,8 @@ export class StatsImpl implements Stats {
       attacks: [0, 0, 0],
       gold: [0, 0, 0],
     } satisfies PlayerStats;
+    this.data[sender] = data;
+    return data;
   }
 
   stats() {
