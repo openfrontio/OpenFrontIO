@@ -490,17 +490,29 @@ export class EventsDisplay extends LitElement implements Layer {
                     <button
                       translate="no"
                       class="ml-2"
-                      @click=${() => {
-                        if (
-                          attack.averagePositionX === null ||
-                          attack.averagePositionY === null
-                        ) {
-                          this.emitGoToPlayerEvent(attack.attackerID);
+                      @click=${async () => {
+                        const playerView = this.game.playerBySmallID(
+                          attack.attackerID,
+                        );
+                        if (playerView !== undefined) {
+                          if (playerView instanceof PlayerView) {
+                            const averagePosition =
+                              await playerView.attackAveragePosition(
+                                attack.attackerID,
+                                attack.id,
+                              );
+
+                            if (averagePosition === null) {
+                              this.emitGoToPlayerEvent(attack.attackerID);
+                            } else {
+                              this.emitGoToPositionEvent(
+                                averagePosition.x,
+                                averagePosition.y,
+                              );
+                            }
+                          }
                         } else {
-                          this.emitGoToPositionEvent(
-                            attack.averagePositionX,
-                            attack.averagePositionY,
-                          );
+                          this.emitGoToPlayerEvent(attack.attackerID);
                         }
                       }}
                     >
@@ -532,17 +544,29 @@ export class EventsDisplay extends LitElement implements Layer {
                     <button
                       translate="no"
                       class="ml-2"
-                      @click=${() => {
-                        if (
-                          attack.averagePositionX === null ||
-                          attack.averagePositionY === null
-                        ) {
-                          this.emitGoToPlayerEvent(attack.attackerID);
+                      @click=${async () => {
+                        const playerView = this.game.playerBySmallID(
+                          attack.attackerID,
+                        );
+                        if (playerView !== undefined) {
+                          if (playerView instanceof PlayerView) {
+                            const averagePosition =
+                              await playerView.attackAveragePosition(
+                                attack.targetID,
+                                attack.id,
+                              );
+
+                            if (averagePosition === null) {
+                              this.emitGoToPlayerEvent(attack.attackerID);
+                            } else {
+                              this.emitGoToPositionEvent(
+                                averagePosition.x,
+                                averagePosition.y,
+                              );
+                            }
+                          }
                         } else {
-                          this.emitGoToPositionEvent(
-                            attack.averagePositionX,
-                            attack.averagePositionY,
-                          );
+                          this.emitGoToPlayerEvent(attack.attackerID);
                         }
                       }}
                     >

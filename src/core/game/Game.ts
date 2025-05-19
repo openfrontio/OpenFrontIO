@@ -278,8 +278,7 @@ export interface Attack {
   sourceTile(): TileRef | null;
 
   averagePosition(): Cell | null;
-
-  updateAveragePosition(averagePosition: Cell | null): void;
+  updateBorder(border: Set<number>): void;
 }
 
 export interface AllianceRequest {
@@ -503,7 +502,7 @@ export interface Player {
     target: Player | TerraNullius,
     troops: number,
     sourceTile: TileRef | null,
-    averagePosition: Cell | null,
+    border: Set<number>,
   ): Attack;
   outgoingAttacks(): Attack[];
   incomingAttacks(): Attack[];

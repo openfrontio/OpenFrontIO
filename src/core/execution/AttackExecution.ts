@@ -2,7 +2,6 @@ import { PriorityQueue } from "@datastructures-js/priority-queue";
 import { renderNumber, renderTroops } from "../../client/Utils";
 import {
   Attack,
-  Cell,
   Execution,
   Game,
   MessageType,
@@ -115,7 +114,7 @@ export class AttackExecution implements Execution {
       this.target,
       this.startTroops,
       this.sourceTile,
-      this.averagePosition(),
+      this.border,
     );
 
     if (this.sourceTile !== null) {
@@ -308,7 +307,7 @@ export class AttackExecution implements Execution {
       );
     }
     if (this.attack !== null) {
-      this.attack.updateAveragePosition(this.averagePosition());
+      this.attack.updateBorder(this.border);
     }
   }
 
@@ -352,31 +351,6 @@ export class AttackExecution implements Execution {
 
   isActive(): boolean {
     return this.active;
-  }
-
-  averagePosition(): Cell | null {
-    if (this.border.size === 0) {
-      if (this.sourceTile === null) {
-        // No border tiles and no source tile—return a default position or throw an error
-        return null;
-      }
-      // No border tiles yet—use the source tile's location
-      const tile = this.sourceTile!;
-      return new Cell(this.mg.map().x(tile), this.mg.map().y(tile));
-    }
-
-    let averageX = 0;
-    let averageY = 0;
-
-    this.border.forEach((t) => {
-      averageX += this.mg.map().x(t);
-      averageY += this.mg.map().y(t);
-    });
-
-    averageX = averageX / this.border.size;
-    averageY = averageY / this.border.size;
-
-    return new Cell(averageX, averageY);
   }
 }
 

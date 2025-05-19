@@ -221,6 +221,23 @@ export class GameRunner {
       borderTiles: player.borderTiles(),
     } as PlayerBorderTiles;
   }
+  public attackAveragePosition(
+    playerID: number,
+    attackID: string,
+  ): Cell | null {
+    const player = this.game.playerBySmallID(playerID);
+    if (!player.isPlayer()) {
+      throw new Error(`player with id ${playerID} not found`);
+    }
+
+    const attacks = player.outgoingAttacks().concat(player.incomingAttacks());
+    const attack = attacks.find((a) => a.id() === attackID);
+    if (attack === undefined) {
+      return null;
+    }
+
+    return attack.averagePosition();
+  }
   public bestTransportShipSpawn(
     playerID: PlayerID,
     targetTile: TileRef,

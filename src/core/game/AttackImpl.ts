@@ -1,4 +1,5 @@
 import { Attack, Cell, Player, TerraNullius } from "./Game";
+import { GameImpl } from "./GameImpl";
 import { TileRef } from "./GameMap";
 import { PlayerImpl } from "./PlayerImpl";
 
@@ -13,7 +14,8 @@ export class AttackImpl implements Attack {
     private _attacker: Player,
     private _troops: number,
     private _sourceTile: TileRef | null,
-    private _averagePosition: Cell | null,
+    private _border: Set<number>,
+    private _mg: GameImpl,
   ) {}
 
   sourceTile(): TileRef | null {
@@ -71,11 +73,32 @@ export class AttackImpl implements Attack {
     return this._retreated;
   }
 
-  updateAveragePosition(averagePosition: Cell | null): void {
-    this._averagePosition = averagePosition;
+  updateBorder(border: Set<number>): void {
+    this._border = border;
   }
 
   averagePosition(): Cell | null {
-    return this._averagePosition;
+    if (this._border.size === 0) {
+      if (this.sourceTile() === null) {
+        // No border tiles and no source tile—return a default position or throw an error
+        return null;
+      }
+      // No border tiles yet—use the source tile's location
+      const tile: number = this.sourceTile()!;
+      return new Cell(this._mg.map().x(tile), this._mg.map().y(tile));
+    }
+
+    let averageX = 0;
+    let averageY = 0;
+
+    this._border.forEach((t) => {
+      averageX += this._mg.map().x(t);
+      averageY += this._mg.map().y(t);
+    });
+
+    averageX = averageX / this._border.size;
+    averageY = averageY / this._border.size;
+
+    return new Cell(averageX, averageY);
   }
 }
