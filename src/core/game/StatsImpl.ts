@@ -9,7 +9,6 @@ import {
   BOMB_INDEX_INTERCEPTED,
   BOMB_INDEX_LANDED,
   BOMB_INDEX_LAUNCHED,
-  BombUnit,
   GOLD_INDEX_TRADE,
   GOLD_INDEX_WAR,
   GOLD_INDEX_WORK,
@@ -18,12 +17,13 @@ import {
   OTHER_INDEX_CAPTURED,
   OTHER_INDEX_DESTROYED,
   OTHER_INDEX_LOST,
-  OtherUnit,
   OtherUnitType,
   PlayerStats,
+  unitTypeToBombUnit,
+  unitTypeToOtherUnit,
 } from "../AnalyticsSchemas";
 import { AllPlayersStats } from "../Schemas";
-import { Player, TerraNullius, UnitType } from "./Game";
+import { Player, TerraNullius } from "./Game";
 import { Stats } from "./Stats";
 
 export class StatsImpl implements Stats {
@@ -34,10 +34,7 @@ export class StatsImpl implements Stats {
   getPlayerStats(player: Player): PlayerStats {
     const clientID = player.clientID();
     if (clientID === null) return undefined;
-    if (clientID in this.data) {
-      return this.data[clientID];
-    }
-    return undefined;
+    return this.data[clientID];
   }
 
   stats() {
@@ -87,27 +84,13 @@ export class StatsImpl implements Stats {
     p.boats[type][index] += value;
   }
 
-  private _unitTypeToBombUnit(type: NukeType): BombUnit {
-    switch (type) {
-      case UnitType.AtomBomb:
-        return "abomb";
-      case UnitType.HydrogenBomb:
-        return "hbomb";
-      case UnitType.MIRV:
-        return "mirv";
-      case UnitType.MIRVWarhead:
-        return "mirvw";
-    }
-    throw new Error(`Unknown NukeType ${type}`);
-  }
-
   private _addBomb(
     player: Player,
     nukeType: NukeType,
     index: number,
     value: number,
   ): void {
-    const type = this._unitTypeToBombUnit(nukeType);
+    const type = unitTypeToBombUnit[nukeType];
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
     if (p.bombs === undefined) p.bombs = { [type]: [0] };
@@ -124,31 +107,13 @@ export class StatsImpl implements Stats {
     p.gold[index] += value;
   }
 
-  private _unitTypeToOtherUnit(type: OtherUnitType): OtherUnit {
-    switch (type) {
-      case UnitType.City:
-        return "city";
-      case UnitType.DefensePost:
-        return "defp";
-      case UnitType.MissileSilo:
-        return "silo";
-      case UnitType.Port:
-        return "port";
-      case UnitType.SAMLauncher:
-        return "saml";
-      case UnitType.Warship:
-        return "wshp";
-    }
-    throw new Error(`Unknown OtherUnit ${type}`);
-  }
-
   private _addOtherUnit(
     player: Player,
     otherUnitType: OtherUnitType,
     index: number,
     value: number,
   ) {
-    const type = this._unitTypeToOtherUnit(otherUnitType);
+    const type = unitTypeToOtherUnit[otherUnitType];
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
     if (p.units === undefined) p.units = { [type]: [0] };
@@ -230,7 +195,7 @@ export class StatsImpl implements Stats {
     this._addBomb(player, type, BOMB_INDEX_LANDED, 1);
   }
 
-  bombIntercept(player: Player, target: Player, type: NukeType): void {
+  bombIntercept(player: Player, attacker: Player, type: NukeType): void {
     this._addBomb(player, type, BOMB_INDEX_INTERCEPTED, 1);
   }
 

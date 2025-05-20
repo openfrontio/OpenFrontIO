@@ -14,9 +14,21 @@ export type NukeType =
   | UnitType.MIRV
   | UnitType.MIRVWarhead;
 
+export const unitTypeToBombUnit = {
+  [UnitType.AtomBomb]: "abomb",
+  [UnitType.HydrogenBomb]: "hbomb",
+  [UnitType.MIRV]: "mirv",
+  [UnitType.MIRVWarhead]: "mirvw",
+} as const satisfies Record<NukeType, BombUnit>;
+
 export const BoatUnitSchema = z.union([z.literal("trade"), z.literal("trans")]);
 export type BoatUnit = z.infer<typeof BoatUnitSchema>;
 export type BoatUnitType = UnitType.TradeShip | UnitType.TransportShip;
+
+// export const unitTypeToBoatUnit = {
+//   [UnitType.TradeShip]: "trade",
+//   [UnitType.TransportShip]: "trans",
+// } as const satisfies Record<BoatUnitType, BoatUnit>;
 
 export const OtherUnitSchema = z.union([
   z.literal("city"),
@@ -34,6 +46,15 @@ export type OtherUnitType =
   | UnitType.Port
   | UnitType.SAMLauncher
   | UnitType.Warship;
+
+export const unitTypeToOtherUnit = {
+  [UnitType.City]: "city",
+  [UnitType.DefensePost]: "defp",
+  [UnitType.MissileSilo]: "silo",
+  [UnitType.Port]: "port",
+  [UnitType.SAMLauncher]: "saml",
+  [UnitType.Warship]: "wshp",
+} as const satisfies Record<OtherUnitType, OtherUnit>;
 
 // Attacks
 export const ATTACK_INDEX_OUTGOING = 0;
