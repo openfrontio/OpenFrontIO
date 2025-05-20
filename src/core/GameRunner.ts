@@ -245,6 +245,7 @@ export class GameRunner {
 
     return attack.averagePosition();
   }
+
   public bestTransportShipSpawn(
     playerID: PlayerID,
     targetTile: TileRef,
