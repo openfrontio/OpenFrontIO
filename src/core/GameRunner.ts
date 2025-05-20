@@ -225,6 +225,7 @@ export class GameRunner {
       borderTiles: player.borderTiles(),
     } as PlayerBorderTiles;
   }
+
   public attackAveragePosition(
     playerID: number,
     attackID: string,
