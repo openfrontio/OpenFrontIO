@@ -2,7 +2,7 @@ import { Colord } from "colord";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { GameMode, Team } from "../../../core/game/Game";
+import { GameMode } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
 import { Layer } from "./Layer";
@@ -18,9 +18,9 @@ export class PlayerTeamLabel extends LitElement implements Layer {
 
   private isVisible = false;
 
-  private playerTeam: Team | null = null;
+  private playerTeam: string | null = null;
 
-  private playerColor: Colord | null = null;
+  private playerColor: Colord = new Colord("#FFFFFF");
 
   createRenderRoot() {
     return this;
@@ -37,10 +37,19 @@ export class PlayerTeamLabel extends LitElement implements Layer {
   }
 
   tick() {
-    if (this.isTeamsGameMode && !this.playerTeam) {
-      this.playerTeam = this.game.myPlayer()?.team();
-      this.playerColor = this.game.config().theme().teamColor(this.playerTeam);
-      this.requestUpdate();
+    if (
+      this.isTeamsGameMode &&
+      !this.playerTeam &&
+      this.game.myPlayer()?.team()
+    ) {
+      this.playerTeam = this.game.myPlayer()!.team();
+      if (this.playerTeam) {
+        this.playerColor = this.game
+          .config()
+          .theme()
+          .teamColor(this.playerTeam);
+        this.requestUpdate();
+      }
     }
 
     if (!this.game.inSpawnPhase() && this.isVisible) {
