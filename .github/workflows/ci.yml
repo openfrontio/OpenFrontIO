@@ -1,11 +1,15 @@
 name: 🧪 CI
-on: [push, pull_request]
+
+on:
+  pull_request:
+  push:
+    branches: [main]
 
 permissions: {}
 
 jobs:
   build:
-    name: Build
+    name: 🏗️ Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -23,7 +27,7 @@ jobs:
           path: out/index.html
           retention-days: 1
   test:
-    name: Test
+    name: 🔬 Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -36,3 +40,27 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npm test
+
+  eslint:
+    name: 🔍 ESLint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - run: npx eslint --format gha
+
+  prettier:
+    name: 🎨 Prettier
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - run: npx prettier --check .

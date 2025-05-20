@@ -322,6 +322,8 @@ export class PlayerInfo {
 }
 
 export interface Unit {
+  hash(): number;
+
   // Common properties.
   id(): number;
   type(): UnitType;
@@ -420,6 +422,7 @@ export interface Player {
   // Resources & Population
   gold(): Gold;
   population(): number;
+  totalPopulation(): number;
   workers(): number;
   troops(): number;
   targetTroopRatio(): number;
@@ -611,6 +614,7 @@ export interface PlayerInteraction {
   canTarget: boolean;
   canDonate: boolean;
   canEmbargo: boolean;
+  allianceCreatedAtTick?: Tick;
 }
 
 export interface EmojiMessage {
