@@ -4,7 +4,7 @@ import { GameView, UnitView } from "../../../core/game/GameView";
 import { loadAllAnimatedSpriteImages } from "../AnimatedSpriteLoader";
 import { Fx } from "../fx/Fx";
 import { NukeExplosionFx, ShockwaveFx } from "../fx/NukeFx";
-import { SAMExplosionFx } from "../fx/SAMInterceptionFx";
+import { SAMExplosionFx } from "../fx/SAMExplosionFx";
 import { Layer } from "./Layer";
 
 export class FxLayer implements Layer {
