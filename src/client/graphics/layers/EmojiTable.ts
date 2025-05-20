@@ -4,23 +4,10 @@ import { EventBus } from "../../../core/EventBus";
 import { AllPlayers } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { TerraNulliusImpl } from "../../../core/game/TerraNulliusImpl";
+import { emojiTable, flattenedEmojiTable } from "../../../core/Util";
 import { ShowEmojiMenuEvent } from "../../InputHandler";
 import { SendEmojiIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
-
-const emojiTable: string[][] = [
-  ["😀", "😊", "🥰", "😇", "😎"],
-  ["😞", "🥺", "😭", "😱", "😡"],
-  ["😈", "🤡", "🖕", "🥱", "🤦‍♂️"],
-  ["👋", "👏", "🤌", "💪", "🫡"],
-  ["👍", "👎", "❓", "🐔", "🐀"],
-  ["🤝", "🆘", "🕊️", "🏳️", "⏳"],
-  ["🔥", "💥", "💀", "☢️", "⚠️"],
-  ["↖️", "⬆️", "↗️", "👑", "🥇"],
-  ["⬅️", "🎯", "➡️", "🥈", "🥉"],
-  ["↙️", "⬇️", "↘️", "❤️", "💔"],
-  ["💰", "⚓", "⛵", "🏡", "🛡️"],
-];
 
 @customElement("emoji-table")
 export class EmojiTable extends LitElement {
@@ -127,10 +114,15 @@ export class EmojiTable extends LitElement {
 
       this.showTable((emoji) => {
         const recipient =
-          targetPlayer == this.game.myPlayer()
+          targetPlayer === this.game.myPlayer()
             ? AllPlayers
             : (targetPlayer as PlayerView);
-        this.eventBus.emit(new SendEmojiIntentEvent(recipient, emoji));
+        this.eventBus.emit(
+          new SendEmojiIntentEvent(
+            recipient,
+            flattenedEmojiTable.indexOf(emoji),
+          ),
+        );
         this.hideTable();
       });
     });

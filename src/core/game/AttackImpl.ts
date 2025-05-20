@@ -44,12 +44,12 @@ export class AttackImpl implements Attack {
     if (this._target.isPlayer()) {
       (this._target as PlayerImpl)._incomingAttacks = (
         this._target as PlayerImpl
-      )._incomingAttacks.filter((a) => a != this);
+      )._incomingAttacks.filter((a) => a !== this);
     }
 
     (this._attacker as PlayerImpl)._outgoingAttacks = (
       this._attacker as PlayerImpl
-    )._outgoingAttacks.filter((a) => a != this);
+    )._outgoingAttacks.filter((a) => a !== this);
 
     this._isActive = false;
   }

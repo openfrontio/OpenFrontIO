@@ -1,0 +1,79 @@
+{
+  "name": "Falkland Islands",
+  "width": 2100,
+  "height": 1400,
+  "nations": [
+    {
+      "coordinates": [484, 987],
+      "name": "Albermarle",
+      "strength": 2,
+      "flag": "fk"
+    },
+    {
+      "coordinates": [228, 804],
+      "name": "Weddell",
+      "strength": 1,
+      "flag": "fk"
+    },
+    {
+      "coordinates": [818, 873],
+      "name": "Fox Bay",
+      "strength": 1,
+      "flag": "fk"
+    },
+    {
+      "coordinates": [994, 541],
+      "name": "East Falkland",
+      "strength": 2,
+      "flag": "fk"
+    },
+    {
+      "coordinates": [633, 518],
+      "name": "Saunders and Dunbar",
+      "strength": 1,
+      "flag": "fk"
+    },
+    {
+      "coordinates": [1063, 1036],
+      "name": "South Lefonia",
+      "strength": 1,
+      "flag": "fk"
+    },
+    {
+      "coordinates": [1298, 860],
+      "name": "North Lefonia",
+      "strength": 2,
+      "flag": "fk"
+    },
+    {
+      "coordinates": [1587, 743],
+      "name": "Wickham and Fitzroy",
+      "strength": 1,
+      "flag": "fk"
+    },
+    {
+      "coordinates": [1831, 456],
+      "name": "Berkeley",
+      "strength": 1,
+      "flag": "fk"
+    },
+    {
+      "coordinates": [1984, 657],
+      "name": "Stanley",
+      "strength": 1,
+      "flag": "fk"
+    },
+    {
+      "coordinates": [1468, 398],
+      "name": "Concordia",
+      "strength": 2,
+      "flag": "fk"
+    },
+    {
+      "coordinates": [1381, 624],
+      "name": "San Carlos",
+      "strength": 1,
+      "flag": "fk"
+    }
+  ]
+}

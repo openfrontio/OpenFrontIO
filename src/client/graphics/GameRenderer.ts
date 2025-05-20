@@ -7,9 +7,12 @@ import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { BuildMenu } from "./layers/BuildMenu";
+import { ChatDisplay } from "./layers/ChatDisplay";
+import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
+import { FxLayer } from "./layers/FxLayer";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MultiTabModal } from "./layers/MultiTabModal";
@@ -20,6 +23,7 @@ import { PlayerPanel } from "./layers/PlayerPanel";
 import { RadialMenu } from "./layers/RadialMenu";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
+import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { TopBar } from "./layers/TopBar";
@@ -68,6 +72,14 @@ export function createRenderer(
   leaderboard.eventBus = eventBus;
   leaderboard.game = game;
 
+  const teamStats = document.querySelector("team-stats") as TeamStats;
+  if (!emojiTable || !(teamStats instanceof TeamStats)) {
+    consolex.error("EmojiTable element not found in the DOM");
+  }
+  teamStats.clientID = clientID;
+  teamStats.eventBus = eventBus;
+  teamStats.game = game;
+
   const controlPanel = document.querySelector("control-panel") as ControlPanel;
   if (!(controlPanel instanceof ControlPanel)) {
     consolex.error("ControlPanel element not found in the DOM");
@@ -86,6 +98,14 @@ export function createRenderer(
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
   eventsDisplay.clientID = clientID;
+
+  const chatDisplay = document.querySelector("chat-display") as ChatDisplay;
+  if (!(chatDisplay instanceof ChatDisplay)) {
+    consolex.error("chat display not found");
+  }
+  chatDisplay.eventBus = eventBus;
+  chatDisplay.game = game;
+  chatDisplay.clientID = clientID;
 
   const playerInfo = document.querySelector(
     "player-info-overlay",
@@ -126,6 +146,13 @@ export function createRenderer(
   playerPanel.eventBus = eventBus;
   playerPanel.emojiTable = emojiTable;
 
+  const chatModal = document.querySelector("chat-modal") as ChatModal;
+  if (!(chatModal instanceof ChatModal)) {
+    console.error("chat modal not found");
+  }
+  chatModal.g = game;
+  chatModal.eventBus = eventBus;
+
   const multiTabModal = document.querySelector(
     "multi-tab-modal",
   ) as MultiTabModal;
@@ -139,9 +166,11 @@ export function createRenderer(
     new TerritoryLayer(game, eventBus),
     new StructureLayer(game, eventBus),
     new UnitLayer(game, eventBus, clientID, transformHandler),
+    new FxLayer(game),
     new UILayer(game, eventBus, clientID, transformHandler),
     new NameLayer(game, transformHandler, clientID),
     eventsDisplay,
+    chatDisplay,
     buildMenu,
     new RadialMenu(
       eventBus,
@@ -160,6 +189,7 @@ export function createRenderer(
     playerInfo,
     winModel,
     optionsMenu,
+    teamStats,
     topBar,
     playerPanel,
     multiTabModal,
@@ -186,7 +216,9 @@ export class GameRenderer {
     public uiState: UIState,
     private layers: Layer[],
   ) {
-    this.context = canvas.getContext("2d");
+    const context = canvas.getContext("2d");
+    if (context === null) throw new Error("2d context not supported");
+    this.context = context;
   }
 
   initialize() {

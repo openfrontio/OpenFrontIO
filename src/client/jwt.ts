@@ -1,10 +1,11 @@
 import { decodeJwt } from "jose";
 import {
+  RefreshResponseSchema,
   TokenPayload,
   TokenPayloadSchema,
   UserMeResponse,
   UserMeResponseSchema,
-} from "./ApiSchemas";
+} from "../core/ApiSchemas";
 
 function getAudience() {
   const { hostname } = new URL(window.location.href);
@@ -15,7 +16,7 @@ function getAudience() {
 function getApiBase() {
   const domainname = getAudience();
   return domainname === "localhost"
-    ? "http://localhost:8787"
+    ? (localStorage.getItem("apiHost") ?? "http://localhost:8787")
     : `https://api.${domainname}`;
 }
 
@@ -39,6 +40,29 @@ function getToken(): string | null {
 
 export function discordLogin() {
   window.location.href = `${getApiBase()}/login/discord?redirect_uri=${window.location.href}`;
+}
+
+export async function logOut(allSessions: boolean = false) {
+  const token = localStorage.getItem("token");
+  if (token === null) return;
+  localStorage.removeItem("token");
+  __isLoggedIn = false;
+
+  const response = await fetch(
+    getApiBase() + allSessions ? "/revoke" : "/logout",
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (response.ok === false) {
+    console.error("Logout failed", response);
+    return false;
+  }
+  return true;
 }
 
 let __isLoggedIn: TokenPayload | false | undefined = undefined;
@@ -75,7 +99,7 @@ export function _isLoggedIn(): TokenPayload | false {
         'unexpected "iss" claim value',
         // JSON.stringify(payload, null, 2),
       );
-      localStorage.removeItem("token");
+      logOut();
       return false;
     }
     if (aud !== getAudience()) {
@@ -84,7 +108,7 @@ export function _isLoggedIn(): TokenPayload | false {
         'unexpected "aud" claim value',
         // JSON.stringify(payload, null, 2),
       );
-      localStorage.removeItem("token");
+      logOut();
       return false;
     }
     const now = Math.floor(Date.now() / 1000);
@@ -94,13 +118,20 @@ export function _isLoggedIn(): TokenPayload | false {
         'after "exp" claim value',
         // JSON.stringify(payload, null, 2),
       );
-      localStorage.removeItem("token");
+      logOut();
       return false;
     }
-    // const maxAge: number | undefined = undefined;
-    // if (iat !== undefined && maxAge !== undefined && now >= iat + maxAge) {
-    //   // TODO: Refresh token...
-    // }
+    const refreshAge: number = 6 * 3600; // 6 hours
+    if (iat !== undefined && now >= iat + refreshAge) {
+      console.log("Refreshing access token...");
+      postRefresh().then((success) => {
+        if (success) {
+          console.log("Refreshed access token successfully.");
+        } else {
+          console.error("Failed to refresh access token.");
+        }
+      });
+    }
 
     const result = TokenPayloadSchema.safeParse(payload);
     if (!result.success) {
@@ -116,6 +147,36 @@ export function _isLoggedIn(): TokenPayload | false {
     return result.data;
   } catch (e) {
     console.log(e);
+    return false;
+  }
+}
+
+export async function postRefresh(): Promise<boolean> {
+  try {
+    const token = getToken();
+    if (!token) return false;
+
+    // Refresh the JWT
+    const response = await fetch(getApiBase() + "/refresh", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+    if (response.status !== 200) return false;
+    const body = await response.json();
+    const result = RefreshResponseSchema.safeParse(body);
+    if (!result.success) {
+      console.error(
+        "Invalid response",
+        JSON.stringify(body),
+        JSON.stringify(result.error),
+      );
+      return false;
+    }
+    localStorage.setItem("token", result.data.token);
+    return true;
+  } catch (e) {
     return false;
   }
 }

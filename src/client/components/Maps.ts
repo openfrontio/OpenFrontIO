@@ -26,6 +26,9 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   KnownWorld: "Known World",
   FaroeIslands: "Faroe Islands",
   DeglaciatedAntarctica: "Deglaciated Antarctica",
+  FalklandIslands: "Falkland Islands",
+  Baikal: "Baikal",
+  Halkidiki: "Halkidiki",
 };
 
 @customElement("map-display")

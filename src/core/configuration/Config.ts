@@ -1,10 +1,12 @@
 import { Colord } from "colord";
+import { JWK } from "jose";
 import { GameConfig, GameID } from "../Schemas";
 import {
   Difficulty,
   Duos,
   Game,
   GameMapType,
+  GameMode,
   Gold,
   Player,
   PlayerInfo,
@@ -27,8 +29,7 @@ export enum GameEnv {
 export interface ServerConfig {
   turnIntervalMs(): number;
   gameCreationRate(): number;
-  lobbyMaxPlayers(map: GameMapType): number;
-  discordRedirectURI(): string;
+  lobbyMaxPlayers(map: GameMapType, mode: GameMode): number;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
   workerPath(gameID: GameID): string;
@@ -44,6 +45,13 @@ export interface ServerConfig {
   r2Endpoint(): string;
   r2AccessKey(): string;
   r2SecretKey(): string;
+  otelEndpoint(): string;
+  otelUsername(): string;
+  otelPassword(): string;
+  otelEnabled(): boolean;
+  jwtAudience(): string;
+  jwtIssuer(): string;
+  jwkPublicKey(): Promise<JWK>;
 }
 
 export interface NukeMagnitude {
@@ -61,7 +69,7 @@ export interface Config {
   percentageTilesOwnedToWin(): number;
   numBots(): number;
   spawnNPCs(): boolean;
-  disableNukes(): boolean;
+  isUnitDisabled(unitType: UnitType): boolean;
   bots(): number;
   infiniteGold(): boolean;
   infiniteTroops(): boolean;
@@ -103,6 +111,7 @@ export interface Config {
   boatMaxNumber(): number;
   allianceDuration(): Tick;
   allianceRequestCooldown(): Tick;
+  temporaryEmbargoDuration(): Tick;
   targetDuration(): Tick;
   targetCooldown(): Tick;
   emojiMessageCooldown(): Tick;
@@ -116,7 +125,8 @@ export interface Config {
   defensePostRange(): number;
   SAMCooldown(): number;
   SiloCooldown(): number;
-  defensePostDefenseBonus(): number;
+  defensePostLossMultiplier(): number;
+  defensePostSpeedMultiplier(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
   warshipPatrolRange(): number;
@@ -131,6 +141,7 @@ export interface Config {
   defaultNukeSpeed(): number;
   nukeDeathFactor(humans: number, tilesOwned: number): number;
   structureMinDist(): number;
+  isReplay(): boolean;
 }
 
 export interface Theme {
@@ -138,9 +149,8 @@ export interface Theme {
   territoryColor(playerInfo: PlayerView): Colord;
   specialBuildingColor(playerInfo: PlayerView): Colord;
   borderColor(playerInfo: PlayerView): Colord;
-  defendedBorderColor(playerInfo: PlayerView): Colord;
+  defendedBorderColors(playerInfo: PlayerView): { light: Colord; dark: Colord };
   focusedBorderColor(): Colord;
-  focusedDefendedBorderColor(): Colord;
   terrainColor(gm: GameMap, tile: TileRef): Colord;
   backgroundColor(): Colord;
   falloutColor(): Colord;
