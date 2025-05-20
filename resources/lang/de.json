@@ -113,7 +113,8 @@
     "map": "Karte",
     "betweentwoseas": "Zwischen zwei Meeren",
     "japan": "Japan und Nachbarländer",
-    "knownworld": "Bekannte Welt"
+    "knownworld": "Bekannte Welt",
+    "northernhemisphere": "Nordhalbkugel"
   },
   "private_lobby": {
     "title": "Privater Lobby beitreten",

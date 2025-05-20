@@ -28,6 +28,7 @@ const maps = [
   "FalklandIslands",
   "Baikal",
   "Halkidiki",
+  "NorthernHemisphere",
 ];
 
 const removeSmall = true;

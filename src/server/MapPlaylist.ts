@@ -32,6 +32,7 @@ const frequency = {
   FalklandIslands: 1,
   Baikal: 1,
   Halkidiki: 1,
+  NorthernHemisphere: 1,
 };
 
 interface MapWithMode {
