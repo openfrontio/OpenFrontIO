@@ -13,7 +13,7 @@ import { PseudoRandom } from "../PseudoRandom";
 export class SAMMissileExecution implements Execution {
   private active = true;
   private pathFinder: AirPathFinder;
-  private SAMMissile: Unit;
+  private SAMMissile: Unit | undefined;
   private mg: Game;
 
   constructor(
@@ -30,11 +30,11 @@ export class SAMMissileExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.SAMMissile == null) {
+    if (this.SAMMissile === undefined) {
       this.SAMMissile = this._owner.buildUnit(
         UnitType.SAMMissile,
-        0,
         this.spawn,
+        {},
       );
     }
     if (!this.SAMMissile.isActive()) {
@@ -46,7 +46,7 @@ export class SAMMissileExecution implements Execution {
     if (
       !this.target.isActive() ||
       !this.ownerUnit.isActive() ||
-      this.target.owner() == this.SAMMissile.owner() ||
+      this.target.owner() === this.SAMMissile.owner() ||
       !nukesWhitelist.includes(this.target.type())
     ) {
       this.SAMMissile.delete(false);

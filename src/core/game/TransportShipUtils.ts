@@ -15,12 +15,12 @@ export function canBuildTransportShip(
   }
 
   const dst = targetTransportTile(game, tile);
-  if (dst == null) {
+  if (dst === null) {
     return false;
   }
 
   const other = game.owner(tile);
-  if (other == player) {
+  if (other === player) {
     return false;
   }
   if (other.isPlayer() && player.isFriendly(other)) {
@@ -71,7 +71,7 @@ export function canBuildTransportShip(
   );
 
   for (const t of sorted) {
-    if (game.owner(t) == player) {
+    if (game.owner(t) === player) {
       return transportShipSpawn(game, player, t);
     }
   }
@@ -87,7 +87,7 @@ function transportShipSpawn(
     return false;
   }
   const spawn = closestShoreFromPlayer(game, player, targetTile);
-  if (spawn == null) {
+  if (spawn === null) {
     return false;
   }
   return spawn;
@@ -128,7 +128,7 @@ export function closestShoreFromPlayer(
   const shoreTiles = Array.from(player.borderTiles()).filter((t) =>
     gm.isShore(t),
   );
-  if (shoreTiles.length == 0) {
+  if (shoreTiles.length === 0) {
     return null;
   }
 
@@ -144,20 +144,18 @@ export function bestShoreDeploymentSource(
   player: Player,
   target: TileRef,
 ): TileRef | false {
-  target = targetTransportTile(gm, target);
-  if (target == null) {
-    return false;
-  }
+  const t = targetTransportTile(gm, target);
+  if (t === null) return false;
 
-  const candidates = candidateShoreTiles(gm, player, target);
-  const aStar = new MiniAStar(gm, gm.miniMap(), candidates, target, 500_000, 1);
+  const candidates = candidateShoreTiles(gm, player, t);
+  const aStar = new MiniAStar(gm, gm.miniMap(), candidates, t, 500_000, 1);
   const result = aStar.compute();
-  if (result != PathFindResultType.Completed) {
+  if (result !== PathFindResultType.Completed) {
     console.warn(`bestShoreDeploymentSource: path not found: ${result}`);
     return false;
   }
   const path = aStar.reconstructPath();
-  if (path.length == 0) {
+  if (path.length === 0) {
     return false;
   }
   const potential = path[0];
@@ -165,8 +163,8 @@ export function bestShoreDeploymentSource(
   // of the potential tile to find a valid deployment point
   const neighbors = gm
     .neighbors(potential)
-    .filter((n) => gm.isShore(n) && gm.owner(n) == player);
-  if (neighbors.length == 0) {
+    .filter((n) => gm.isShore(n) && gm.owner(n) === player);
+  if (neighbors.length === 0) {
     return false;
   }
   return neighbors[0];
@@ -183,8 +181,8 @@ export function candidateShoreTiles(
     maxX = -Infinity,
     maxY = -Infinity;
 
-  let bestByManhattan: TileRef = null;
-  const extremumTiles: Record<string, TileRef> = {
+  let bestByManhattan: TileRef | null = null;
+  const extremumTiles: Record<string, TileRef | null> = {
     minX: null,
     minY: null,
     maxX: null,
@@ -237,7 +235,7 @@ export function candidateShoreTiles(
     extremumTiles.maxX,
     extremumTiles.maxY,
     ...sampledTiles,
-  ].filter(Boolean);
+  ].filter(Boolean) as number[];
 
   return candidates;
 }
@@ -246,7 +244,7 @@ function closestShoreTN(
   gm: GameMap,
   tile: TileRef,
   searchDist: number,
-): TileRef {
+): TileRef | null {
   const tn = Array.from(
     gm.bfs(
       tile,
@@ -255,7 +253,7 @@ function closestShoreTN(
   )
     .filter((t) => gm.isShore(t))
     .sort((a, b) => gm.manhattanDist(tile, a) - gm.manhattanDist(tile, b));
-  if (tn.length == 0) {
+  if (tn.length === 0) {
     return null;
   }
   return tn[0];

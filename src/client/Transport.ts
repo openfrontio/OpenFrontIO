@@ -13,13 +13,13 @@ import {
 import { PlayerView } from "../core/game/GameView";
 import {
   AllPlayersStats,
+  ClientHashMessage,
   ClientID,
-  ClientIntentMessageSchema,
-  ClientJoinMessageSchema,
-  ClientLogMessageSchema,
-  ClientMessageSchema,
-  ClientPingMessageSchema,
-  ClientSendWinnerSchema,
+  ClientIntentMessage,
+  ClientJoinMessage,
+  ClientLogMessage,
+  ClientPingMessage,
+  ClientSendWinnerMessage,
   Intent,
   ServerMessage,
   ServerMessageSchema,
@@ -60,14 +60,14 @@ export class SendSpawnIntentEvent implements GameEvent {
 
 export class SendAttackIntentEvent implements GameEvent {
   constructor(
-    public readonly targetID: PlayerID,
+    public readonly targetID: PlayerID | null,
     public readonly troops: number,
   ) {}
 }
 
 export class SendBoatAttackIntentEvent implements GameEvent {
   constructor(
-    public readonly targetID: PlayerID,
+    public readonly targetID: PlayerID | null,
     public readonly dst: Cell,
     public readonly troops: number,
     public readonly src: Cell | null = null,
@@ -88,7 +88,7 @@ export class SendTargetPlayerIntentEvent implements GameEvent {
 export class SendEmojiIntentEvent implements GameEvent {
   constructor(
     public readonly recipient: PlayerView | typeof AllPlayers,
-    public readonly emoji: string,
+    public readonly emoji: number,
   ) {}
 }
 
@@ -108,6 +108,15 @@ export class SendDonateTroopsIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendQuickChatEvent implements GameEvent {
+  constructor(
+    public readonly sender: PlayerView,
+    public readonly recipient: PlayerView,
+    public readonly quickChatKey: string,
+    public readonly variables: { [key: string]: string },
+  ) {}
+}
+
 export class SendEmbargoIntentEvent implements GameEvent {
   constructor(
     public readonly sender: PlayerView,
@@ -121,6 +130,10 @@ export class CancelAttackIntentEvent implements GameEvent {
     public readonly playerID: PlayerID,
     public readonly attackID: string,
   ) {}
+}
+
+export class CancelBoatIntentEvent implements GameEvent {
+  constructor(public readonly unitID: number) {}
 }
 
 export class SendSetTargetTroopRatioEvent implements GameEvent {
@@ -149,7 +162,7 @@ export class MoveWarshipIntentEvent implements GameEvent {
 }
 
 export class Transport {
-  private socket: WebSocket;
+  private socket: WebSocket | null = null;
 
   private localServer: LocalServer;
 
@@ -167,8 +180,8 @@ export class Transport {
     // If gameRecord is not null, we are replaying an archived game.
     // For multiplayer games, GameConfig is not known until game starts.
     this.isLocal =
-      lobbyConfig.gameRecord != null ||
-      lobbyConfig.gameStartInfo?.config.gameType == GameType.Singleplayer;
+      lobbyConfig.gameRecord !== undefined ||
+      lobbyConfig.gameStartInfo?.config.gameType === GameType.Singleplayer;
 
     this.eventBus.on(SendAllianceRequestIntentEvent, (e) =>
       this.onSendAllianceRequest(e),
@@ -196,6 +209,7 @@ export class Transport {
     this.eventBus.on(SendDonateTroopsIntentEvent, (e) =>
       this.onSendDonateTroopIntent(e),
     );
+    this.eventBus.on(SendQuickChatEvent, (e) => this.onSendQuickChatIntent(e));
     this.eventBus.on(SendEmbargoIntentEvent, (e) =>
       this.onSendEmbargoIntent(e),
     );
@@ -211,6 +225,10 @@ export class Transport {
     this.eventBus.on(CancelAttackIntentEvent, (e) =>
       this.onCancelAttackIntentEvent(e),
     );
+    this.eventBus.on(CancelBoatIntentEvent, (e) =>
+      this.onCancelBoatIntentEvent(e),
+    );
+
     this.eventBus.on(MoveWarshipIntentEvent, (e) => {
       this.onMoveWarshipEvent(e);
     });
@@ -218,18 +236,13 @@ export class Transport {
 
   private startPing() {
     if (this.isLocal || this.pingInterval) return;
-    if (this.pingInterval == null) {
+    if (this.pingInterval === null) {
       this.pingInterval = window.setInterval(() => {
-        if (this.socket != null && this.socket.readyState === WebSocket.OPEN) {
+        if (this.socket !== null && this.socket.readyState === WebSocket.OPEN) {
           this.sendMsg(
-            JSON.stringify(
-              ClientPingMessageSchema.parse({
-                type: "ping",
-                clientID: this.lobbyConfig.clientID,
-                persistentID: this.lobbyConfig.persistentID,
-                gameID: this.lobbyConfig.gameID,
-              }),
-            ),
+            JSON.stringify({
+              type: "ping",
+            } satisfies ClientPingMessage),
           );
         }
       }, 5 * 1000);
@@ -258,7 +271,12 @@ export class Transport {
     onconnect: () => void,
     onmessage: (message: ServerMessage) => void,
   ) {
-    this.localServer = new LocalServer(this.lobbyConfig, onconnect, onmessage);
+    this.localServer = new LocalServer(
+      this.lobbyConfig,
+      onconnect,
+      onmessage,
+      this.lobbyConfig.gameRecord !== undefined,
+    );
     this.localServer.start();
   }
 
@@ -280,7 +298,12 @@ export class Transport {
       console.log("Connected to game server!");
       while (this.buffer.length > 0) {
         console.log("sending dropped message");
-        this.sendMsg(this.buffer.pop());
+        const msg = this.buffer.pop();
+        if (msg === undefined) {
+          console.warn("msg is undefined");
+          continue;
+        }
+        this.sendMsg(msg);
       }
       onconnect();
     };
@@ -296,13 +319,14 @@ export class Transport {
     };
     this.socket.onerror = (err) => {
       console.error("Socket encountered error: ", err, "Closing socket");
+      if (this.socket === null) return;
       this.socket.close();
     };
     this.socket.onclose = (event: CloseEvent) => {
       console.log(
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
-      if (event.code != 1000) {
+      if (event.code !== 1000) {
         console.log(`reconnecting`);
         this.reconnect();
       }
@@ -313,34 +337,33 @@ export class Transport {
     this.connect(this.onconnect, this.onmessage);
   }
 
+  public turnComplete() {
+    if (this.isLocal) {
+      this.localServer.turnComplete();
+    }
+  }
+
   private onSendLogEvent(event: SendLogEvent) {
     this.sendMsg(
-      JSON.stringify(
-        ClientLogMessageSchema.parse({
-          type: "log",
-          gameID: this.lobbyConfig.gameID,
-          clientID: this.lobbyConfig.clientID,
-          persistentID: this.lobbyConfig.persistentID,
-          log: event.log,
-          severity: event.severity,
-        }),
-      ),
+      JSON.stringify({
+        type: "log",
+        log: event.log,
+        severity: event.severity,
+      } satisfies ClientLogMessage),
     );
   }
 
   joinGame(numTurns: number) {
     this.sendMsg(
-      JSON.stringify(
-        ClientJoinMessageSchema.parse({
-          type: "join",
-          gameID: this.lobbyConfig.gameID,
-          clientID: this.lobbyConfig.clientID,
-          lastTurn: numTurns,
-          persistentID: this.lobbyConfig.persistentID,
-          username: this.lobbyConfig.playerName,
-          flag: this.lobbyConfig.flag,
-        }),
-      ),
+      JSON.stringify({
+        type: "join",
+        gameID: this.lobbyConfig.gameID,
+        clientID: this.lobbyConfig.clientID,
+        lastTurn: numTurns,
+        token: this.lobbyConfig.token,
+        username: this.lobbyConfig.playerName,
+        flag: this.lobbyConfig.flag,
+      } satisfies ClientJoinMessage),
     );
   }
 
@@ -350,6 +373,7 @@ export class Transport {
       return;
     }
     this.stopPing();
+    if (this.socket === null) return;
     if (this.socket.readyState === WebSocket.OPEN) {
       console.log("on stop: leaving game");
       this.socket.close();
@@ -417,8 +441,8 @@ export class Transport {
       troops: event.troops,
       dstX: event.dst.x,
       dstY: event.dst.y,
-      srcX: event.src?.x,
-      srcY: event.src?.y,
+      srcX: event.src?.x ?? null,
+      srcY: event.src?.y ?? null,
     });
   }
 
@@ -435,7 +459,7 @@ export class Transport {
       type: "emoji",
       clientID: this.lobbyConfig.clientID,
       recipient:
-        event.recipient == AllPlayers ? AllPlayers : event.recipient.id(),
+        event.recipient === AllPlayers ? AllPlayers : event.recipient.id(),
       emoji: event.emoji,
     });
   }
@@ -455,6 +479,16 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
       troops: event.troops,
+    });
+  }
+
+  private onSendQuickChatIntent(event: SendQuickChatEvent) {
+    this.sendIntent({
+      type: "quick_chat",
+      clientID: this.lobbyConfig.clientID,
+      recipient: event.recipient.id(),
+      quickChatKey: event.quickChatKey,
+      variables: event.variables,
     });
   }
 
@@ -498,37 +532,33 @@ export class Transport {
   }
 
   private onSendWinnerEvent(event: SendWinnerEvent) {
-    if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
-      const msg = ClientSendWinnerSchema.parse({
+    if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
+      const msg = {
         type: "winner",
-        clientID: this.lobbyConfig.clientID,
-        persistentID: this.lobbyConfig.persistentID,
-        gameID: this.lobbyConfig.gameID,
         winner: event.winner,
         allPlayersStats: event.allPlayersStats,
         winnerType: event.winnerType,
-      });
+      } satisfies ClientSendWinnerMessage;
       this.sendMsg(JSON.stringify(msg));
     } else {
       console.log(
         "WebSocket is not open. Current state:",
-        this.socket.readyState,
+        this.socket?.readyState,
       );
       console.log("attempting reconnect");
     }
   }
 
   private onSendHashEvent(event: SendHashEvent) {
+    if (this.socket === null) return;
     if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
-      const msg = ClientMessageSchema.parse({
-        type: "hash",
-        clientID: this.lobbyConfig.clientID,
-        persistentID: this.lobbyConfig.persistentID,
-        gameID: this.lobbyConfig.gameID,
-        turnNumber: event.tick,
-        hash: event.hash,
-      });
-      this.sendMsg(JSON.stringify(msg));
+      this.sendMsg(
+        JSON.stringify({
+          type: "hash",
+          turnNumber: event.tick,
+          hash: event.hash,
+        } satisfies ClientHashMessage),
+      );
     } else {
       console.log(
         "WebSocket is not open. Current state:",
@@ -546,6 +576,14 @@ export class Transport {
     });
   }
 
+  private onCancelBoatIntentEvent(event: CancelBoatIntentEvent) {
+    this.sendIntent({
+      type: "cancel_boat",
+      clientID: this.lobbyConfig.clientID,
+      unitID: event.unitID,
+    });
+  }
+
   private onMoveWarshipEvent(event: MoveWarshipIntentEvent) {
     this.sendIntent({
       type: "move_warship",
@@ -556,19 +594,16 @@ export class Transport {
   }
 
   private sendIntent(intent: Intent) {
-    if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
-      const msg = ClientIntentMessageSchema.parse({
+    if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
+      const msg = {
         type: "intent",
-        clientID: this.lobbyConfig.clientID,
-        persistentID: this.lobbyConfig.persistentID,
-        gameID: this.lobbyConfig.gameID,
         intent: intent,
-      });
+      } satisfies ClientIntentMessage;
       this.sendMsg(JSON.stringify(msg));
     } else {
       console.log(
         "WebSocket is not open. Current state:",
-        this.socket.readyState,
+        this.socket?.readyState,
       );
       console.log("attempting reconnect");
     }
@@ -578,9 +613,10 @@ export class Transport {
     if (this.isLocal) {
       this.localServer.onMessage(msg);
     } else {
+      if (this.socket === null) return;
       if (
-        this.socket.readyState == WebSocket.CLOSED ||
-        this.socket.readyState == WebSocket.CLOSED
+        this.socket.readyState === WebSocket.CLOSED ||
+        this.socket.readyState === WebSocket.CLOSED
       ) {
         console.warn("socket not ready, closing and trying later");
         this.socket.close();
@@ -594,7 +630,7 @@ export class Transport {
   }
 
   private killExistingSocket(): void {
-    if (this.socket == null) {
+    if (this.socket === null) {
       return;
     }
     // Remove all event listeners

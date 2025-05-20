@@ -1,7 +1,7 @@
 import { Colord, colord } from "colord";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
-import { PlayerType, Team, TerrainType } from "../game/Game";
+import { ColoredTeams, PlayerType, Team, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import {
@@ -43,41 +43,45 @@ export const pastelTheme = new (class implements Theme {
 
   teamColor(team: Team): Colord {
     switch (team) {
-      case Team.Blue:
+      case ColoredTeams.Blue:
         return blue;
-      case Team.Red:
+      case ColoredTeams.Red:
         return red;
-      case Team.Teal:
+      case ColoredTeams.Teal:
         return teal;
-      case Team.Purple:
+      case ColoredTeams.Purple:
         return purple;
-      case Team.Yellow:
+      case ColoredTeams.Yellow:
         return yellow;
-      case Team.Orange:
+      case ColoredTeams.Orange:
         return orange;
-      case Team.Green:
+      case ColoredTeams.Green:
         return green;
-      case Team.Bot:
+      case ColoredTeams.Bot:
         return botColor;
+      default:
+        return humanColors[simpleHash(team) % humanColors.length];
     }
-    throw new Error(`Missing color for ${team}`);
   }
 
   territoryColor(player: PlayerView): Colord {
-    if (player.team() !== null) {
-      return this.teamColor(player.team());
+    const team = player.team();
+    if (team !== null) {
+      return this.teamColor(team);
     }
-    if (player.info().playerType == PlayerType.Human) {
+    if (player.info().playerType === PlayerType.Human) {
       return humanColors[simpleHash(player.id()) % humanColors.length];
     }
-    if (player.info().playerType == PlayerType.Bot) {
+    if (player.info().playerType === PlayerType.Bot) {
       return botColors[simpleHash(player.id()) % botColors.length];
     }
     return territoryColors[simpleHash(player.id()) % territoryColors.length];
   }
 
   textColor(player: PlayerView): string {
-    return player.info().playerType == PlayerType.Human ? "#000000" : "#4D4D4D";
+    return player.info().playerType === PlayerType.Human
+      ? "#000000"
+      : "#4D4D4D";
   }
 
   specialBuildingColor(player: PlayerView): Colord {
@@ -97,20 +101,16 @@ export const pastelTheme = new (class implements Theme {
       b: Math.max(tc.b - 40, 0),
     });
   }
-  defendedBorderColor(player: PlayerView): Colord {
-    const bc = this.borderColor(player).rgba;
-    return colord({
-      r: Math.max(bc.r - 40, 0),
-      g: Math.max(bc.g - 40, 0),
-      b: Math.max(bc.b - 40, 0),
-    });
+
+  defendedBorderColors(player: PlayerView): { light: Colord; dark: Colord } {
+    return {
+      light: this.territoryColor(player).darken(0.2),
+      dark: this.territoryColor(player).darken(0.4),
+    };
   }
 
   focusedBorderColor(): Colord {
     return colord({ r: 230, g: 230, b: 230 });
-  }
-  focusedDefendedBorderColor(): Colord {
-    return colord({ r: 200, g: 200, b: 200 });
   }
 
   terrainColor(gm: GameMap, tile: TileRef): Colord {

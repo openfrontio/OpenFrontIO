@@ -1,45 +1,92 @@
-import promClient from "prom-client";
+import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
+import {
+  MeterProvider,
+  PeriodicExportingMetricReader,
+} from "@opentelemetry/sdk-metrics";
+import * as dotenv from "dotenv";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameManager } from "./GameManager";
+import { getOtelResource } from "./OtelResource";
 
-// Initialize the Prometheus registry
-const register = new promClient.Registry();
+dotenv.config();
 
-// Enable default Node.js metrics collection
-promClient.collectDefaultMetrics({ register });
+export function initWorkerMetrics(gameManager: GameManager): void {
+  // Get server configuration
+  const config = getServerConfigFromServer();
 
-// Add worker-specific metrics
-const activeGamesGauge = new promClient.Gauge({
-  name: "openfront_active_games_count",
-  help: "Number of active games on this worker",
-  registers: [register],
-});
+  // Create resource with worker information
+  const resource = getOtelResource();
 
-const connectedClientsGauge = new promClient.Gauge({
-  name: "openfront_connected_clients_count",
-  help: "Number of connected clients on this worker",
-  registers: [register],
-});
+  // Configure auth headers
+  const headers = {};
+  if (config.otelEnabled()) {
+    headers["Authorization"] =
+      "Basic " +
+      Buffer.from(`${config.otelUsername()}:${config.otelPassword()}`).toString(
+        "base64",
+      );
+  }
 
-const memoryUsageGauge = new promClient.Gauge({
-  name: "openfront_memory_usage_bytes",
-  help: "Current memory usage of the worker process in bytes",
-  registers: [register],
-});
+  // Create metrics exporter
+  const metricExporter = new OTLPMetricExporter({
+    url: `${config.otelEndpoint()}/v1/metrics`,
+    headers,
+  });
 
-// Export the metrics for use in the worker
-export const metrics = {
-  register,
-  activeGamesGauge,
-  connectedClientsGauge,
-  memoryUsageGauge,
+  // Configure the metric reader
+  const metricReader = new PeriodicExportingMetricReader({
+    exporter: metricExporter,
+    exportIntervalMillis: 15000, // Export metrics every 15 seconds
+  });
 
-  // Function to update game-related metrics
-  updateGameMetrics: (gameManager: GameManager) => {
-    activeGamesGauge.set(gameManager.activeGames());
-    connectedClientsGauge.set(gameManager.activeClients());
+  // Create a meter provider
+  const meterProvider = new MeterProvider({
+    resource,
+    readers: [metricReader],
+  });
 
-    // Update memory usage metrics
+  // Get meter for creating metrics
+  const meter = meterProvider.getMeter("worker-metrics");
+
+  // Create observable gauges
+  const activeGamesGauge = meter.createObservableGauge(
+    "openfront.active_games.gauge",
+    {
+      description: "Number of active games on this worker",
+    },
+  );
+
+  const connectedClientsGauge = meter.createObservableGauge(
+    "openfront.connected_clients.gauge",
+    {
+      description: "Number of connected clients on this worker",
+    },
+  );
+
+  const memoryUsageGauge = meter.createObservableGauge(
+    "openfront.memory_usage.bytes",
+    {
+      description: "Current memory usage of the worker process in bytes",
+    },
+  );
+
+  // Register callback for active games metric
+  activeGamesGauge.addCallback((result) => {
+    const count = gameManager.activeGames();
+    result.observe(count);
+  });
+
+  // Register callback for connected clients metric
+  connectedClientsGauge.addCallback((result) => {
+    const count = gameManager.activeClients();
+    result.observe(count);
+  });
+
+  // Register callback for memory usage metric
+  memoryUsageGauge.addCallback((result) => {
     const memoryUsage = process.memoryUsage();
-    memoryUsageGauge.set(memoryUsage.heapUsed);
-  },
-};
+    result.observe(memoryUsage.heapUsed);
+  });
+
+  console.log("Metrics initialized with GameManager");
+}
