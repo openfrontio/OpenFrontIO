@@ -79,8 +79,6 @@ export class FlatBinaryHeap {
     newPri.set(this.pri);
     this.pri = newPri;
 
-    const newTiles = new Array<TileRef>(newCap);
-    for (let i = 0; i < this.tiles.length; i++) newTiles[i] = this.tiles[i];
-    this.tiles = newTiles;
+    this.tiles.length = newCap;
   }
 }
