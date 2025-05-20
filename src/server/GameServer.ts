@@ -388,15 +388,7 @@ export class GameServer {
         ).map((client) => {
           const stats = this.winner?.allPlayersStats[client.clientID];
           if (stats === undefined) {
-            this.log.error(
-              `Unable to find stats for clientID ${client.clientID}`,
-              {
-                clientId: client.clientID,
-                playerId: client.playerID,
-                winner: this.winner,
-              },
-            );
-            throw new Error(
+            this.log.warn(
               `Unable to find stats for clientID ${client.clientID}`,
             );
           }

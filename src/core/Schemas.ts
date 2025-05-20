@@ -448,7 +448,7 @@ export const PlayerRecordSchema = z.object({
   username: SafeString,
   ip: SafeString.nullable(), // WARNING: PII
   persistentID: PersistentIdSchema, // WARNING: PII
-  stats: PlayerStatsSchema,
+  stats: PlayerStatsSchema.optional(),
 });
 
 export const GameRecordSchema = z.object({
