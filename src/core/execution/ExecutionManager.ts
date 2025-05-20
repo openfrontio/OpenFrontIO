@@ -1,4 +1,5 @@
-import { Execution, Game, PlayerInfo, PlayerType } from "../game/Game";
+import { Execution, Game } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -6,6 +7,7 @@ import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
 import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
 import { AttackExecution } from "./AttackExecution";
+import { BoatRetreatExecution } from "./BoatRetreatExecution";
 import { BotSpawner } from "./BotSpawner";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { DonateGoldExecution } from "./DonateGoldExecution";
@@ -15,6 +17,7 @@ import { EmojiExecution } from "./EmojiExecution";
 import { FakeHumanExecution } from "./FakeHumanExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NoOpExecution } from "./NoOpExecution";
+import { QuickChatExecution } from "./QuickChatExecution";
 import { RetreatExecution } from "./RetreatExecution";
 import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
 import { SpawnExecution } from "./SpawnExecution";
@@ -23,7 +26,7 @@ import { TransportShipExecution } from "./TransportShipExecution";
 
 export class Executor {
   // private random = new PseudoRandom(999)
-  private random: PseudoRandom = null;
+  private random: PseudoRandom;
 
   constructor(
     private mg: Game,
@@ -57,6 +60,8 @@ export class Executor {
       }
       case "cancel_attack":
         return new RetreatExecution(playerID, intent.attackID);
+      case "cancel_boat":
+        return new BoatRetreatExecution(playerID, intent.unitID);
       case "move_warship":
         return new MoveWarshipExecution(intent.unitId, intent.tile);
       case "spawn":
@@ -65,8 +70,8 @@ export class Executor {
           this.mg.ref(intent.x, intent.y),
         );
       case "boat":
-        let src = null;
-        if (intent.srcX != null || intent.srcY != null) {
+        let src: TileRef | null = null;
+        if (intent.srcX !== null && intent.srcY !== null) {
           src = this.mg.ref(intent.srcX, intent.srcY);
         }
         return new TransportShipExecution(
@@ -108,6 +113,13 @@ export class Executor {
           this.mg.ref(intent.x, intent.y),
           intent.unit,
         );
+      case "quick_chat":
+        return new QuickChatExecution(
+          playerID,
+          intent.recipient,
+          intent.quickChatKey,
+          intent.variables ?? {},
+        );
       default:
         throw new Error(`intent type ${intent} not found`);
     }
@@ -118,21 +130,9 @@ export class Executor {
   }
 
   fakeHumanExecutions(): Execution[] {
-    const execs = [];
+    const execs: Execution[] = [];
     for (const nation of this.mg.nations()) {
-      execs.push(
-        new FakeHumanExecution(
-          this.gameID,
-          new PlayerInfo(
-            nation.flag || "",
-            nation.name,
-            PlayerType.FakeHuman,
-            null,
-            this.random.nextID(),
-            nation,
-          ),
-        ),
-      );
+      execs.push(new FakeHumanExecution(this.gameID, nation));
     }
     return execs;
   }

@@ -17,23 +17,20 @@ export class SAMLauncherExecution implements Execution {
   private mg: Game;
   private active: boolean = true;
 
-  private target: Unit = null;
-  private warheadTargets: Unit[] = [];
-
   private searchRangeRadius = 80;
   // As MIRV go very fast we have to detect them very early but we only
   // shoot the one targeting very close (MIRVWarheadProtectionRadius)
   private MIRVWarheadSearchRadius = 400;
   private MIRVWarheadProtectionRadius = 50;
 
-  private pseudoRandom: PseudoRandom;
+  private pseudoRandom: PseudoRandom | undefined;
 
   constructor(
     private ownerId: PlayerID,
-    private tile: TileRef,
+    private tile: TileRef | null,
     private sam: Unit | null = null,
   ) {
-    if (sam != null) {
+    if (sam !== null) {
       this.tile = sam.tile();
     }
   }
@@ -49,6 +46,7 @@ export class SAMLauncherExecution implements Execution {
   }
 
   private getSingleTarget(): Unit | null {
+    if (this.sam === null) return null;
     const nukes = this.mg
       .nearbyUnits(this.sam.tile(), this.searchRangeRadius, [
         UnitType.AtomBomb,
@@ -83,11 +81,11 @@ export class SAMLauncherExecution implements Execution {
   }
 
   private isHit(type: UnitType, random: number): boolean {
-    if (type == UnitType.AtomBomb) {
+    if (type === UnitType.AtomBomb) {
       return true;
     }
 
-    if (type == UnitType.MIRVWarhead) {
+    if (type === UnitType.MIRVWarhead) {
       return random < this.mg.config().samWarheadHittingChance();
     }
 
@@ -95,14 +93,20 @@ export class SAMLauncherExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.sam == null) {
+    if (this.mg === null || this.player === null) {
+      throw new Error("Not initialized");
+    }
+    if (this.sam === null) {
+      if (this.tile === null) {
+        throw new Error("tile is null");
+      }
       const spawnTile = this.player.canBuild(UnitType.SAMLauncher, this.tile);
-      if (spawnTile == false) {
+      if (spawnTile === false) {
         consolex.warn("cannot build SAM Launcher");
         this.active = false;
         return;
       }
-      this.sam = this.player.buildUnit(UnitType.SAMLauncher, 0, spawnTile, {
+      this.sam = this.player.buildUnit(UnitType.SAMLauncher, spawnTile, {
         cooldownDuration: this.mg.config().SAMCooldown(),
       });
     }
@@ -111,15 +115,15 @@ export class SAMLauncherExecution implements Execution {
       return;
     }
 
-    if (this.player != this.sam.owner()) {
+    if (this.player !== this.sam.owner()) {
       this.player = this.sam.owner();
     }
 
-    if (!this.pseudoRandom) {
+    if (this.pseudoRandom === undefined) {
       this.pseudoRandom = new PseudoRandom(this.sam.id());
     }
 
-    this.warheadTargets = this.mg
+    const mirvWarheadTargets = this.mg
       .nearbyUnits(
         this.sam.tile(),
         this.MIRVWarheadSearchRadius,
@@ -130,33 +134,35 @@ export class SAMLauncherExecution implements Execution {
         (unit) =>
           unit.owner() !== this.player && !this.player.isFriendly(unit.owner()),
       )
-      .filter(
-        (unit) =>
-          this.mg.manhattanDist(unit.detonationDst(), this.sam.tile()) <
-          this.MIRVWarheadProtectionRadius,
-      );
+      .filter((unit) => {
+        const dst = unit.targetTile();
+        return (
+          this.sam !== null &&
+          dst !== undefined &&
+          this.mg.manhattanDist(dst, this.sam.tile()) <
+            this.MIRVWarheadProtectionRadius
+        );
+      });
 
-    if (this.warheadTargets.length == 0) {
-      this.target = this.getSingleTarget();
+    let target: Unit | null = null;
+    if (mirvWarheadTargets.length === 0) {
+      target = this.getSingleTarget();
     }
 
-    if (
-      this.sam.isCooldown() &&
-      this.sam.ticksLeftInCooldown(this.mg.config().SAMCooldown()) == 0
-    ) {
-      this.sam.setCooldown(false);
+    if (this.sam.ticksLeftInCooldown() === 0) {
+      // Touch SAM to update sprite to show not in cooldown.
+      this.sam.touch();
     }
 
-    const isSingleTarget = this.target && !this.target.targetedBySAM();
+    const isSingleTarget = target && !target.targetedBySAM();
     if (
-      (isSingleTarget || this.warheadTargets.length > 0) &&
-      !this.sam.isCooldown()
+      (isSingleTarget || mirvWarheadTargets.length > 0) &&
+      !this.sam.isInCooldown()
     ) {
-      this.sam.setCooldown(true);
+      this.sam.launch();
       const type =
-        this.warheadTargets.length > 0
-          ? UnitType.MIRVWarhead
-          : this.target.type();
+        mirvWarheadTargets.length > 0 ? UnitType.MIRVWarhead : target?.type();
+      if (type === undefined) throw new Error("Unknown unit type");
       const random = this.pseudoRandom.next();
       const hit = this.isHit(type, random);
       if (!hit) {
@@ -166,26 +172,27 @@ export class SAMLauncherExecution implements Execution {
           this.sam.owner().id(),
         );
       } else {
-        if (this.warheadTargets.length > 0) {
+        if (mirvWarheadTargets.length > 0) {
           // Message
           this.mg.displayMessage(
-            `${this.warheadTargets.length} MIRV warheads intercepted`,
+            `${mirvWarheadTargets.length} MIRV warheads intercepted`,
             MessageType.SUCCESS,
             this.sam.owner().id(),
           );
           // Delete warheads
-          this.warheadTargets.forEach((u) => u.delete());
-        } else {
-          this.target.setTargetedBySAM(true);
+          mirvWarheadTargets.forEach((u) => u.delete());
+        } else if (target !== null) {
+          target.setTargetedBySAM(true);
           this.mg.addExecution(
             new SAMMissileExecution(
               this.sam.tile(),
               this.sam.owner(),
               this.sam,
-              this.target,
+              target,
             ),
           );
-          this.warheadTargets = [];
+        } else {
+          throw new Error("target is null");
         }
       }
     }
