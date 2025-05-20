@@ -27,7 +27,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     url: SAMExplosion,
     frameWidth: 48,
     frameCount: 9,
-    frameDuration: 50,
+    frameDuration: 70,
     looping: false,
     originX: 23,
     originY: 19,
