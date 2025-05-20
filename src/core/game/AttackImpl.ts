@@ -14,7 +14,7 @@ export class AttackImpl implements Attack {
     private _attacker: Player,
     private _troops: number,
     private _sourceTile: TileRef | null,
-    private _border: Set<number>,
+    private _border_getter: () => Set<number>,
     private _mg: GameImpl,
   ) {}
 
@@ -73,12 +73,10 @@ export class AttackImpl implements Attack {
     return this._retreated;
   }
 
-  updateBorder(border: Set<number>): void {
-    this._border = border;
-  }
-
   averagePosition(): Cell | null {
-    if (this._border.size === 0) {
+    const border = this._border_getter();
+
+    if (border.size === 0) {
       if (this.sourceTile() === null) {
         // No border tiles and no source tile—return a default position or throw an error
         return null;
@@ -91,13 +89,13 @@ export class AttackImpl implements Attack {
     let averageX = 0;
     let averageY = 0;
 
-    this._border.forEach((t) => {
+    this._border_getter().forEach((t) => {
       averageX += this._mg.map().x(t);
       averageY += this._mg.map().y(t);
     });
 
-    averageX = averageX / this._border.size;
-    averageY = averageY / this._border.size;
+    averageX = averageX / border.size;
+    averageY = averageY / border.size;
 
     return new Cell(averageX, averageY);
   }

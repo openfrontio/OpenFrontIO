@@ -280,7 +280,6 @@ export interface Attack {
   sourceTile(): TileRef | null;
 
   averagePosition(): Cell | null;
-  updateBorder(border: Set<number>): void;
 }
 
 export interface AllianceRequest {
@@ -507,7 +506,7 @@ export interface Player {
     target: Player | TerraNullius,
     troops: number,
     sourceTile: TileRef | null,
-    border: Set<number>,
+    border_getter: () => Set<number>,
   ): Attack;
   outgoingAttacks(): Attack[];
   incomingAttacks(): Attack[];

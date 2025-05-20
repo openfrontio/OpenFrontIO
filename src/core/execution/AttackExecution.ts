@@ -114,7 +114,7 @@ export class AttackExecution implements Execution {
       this.target,
       this.startTroops,
       this.sourceTile,
-      this.border,
+      () => this.border,
     );
 
     if (this.sourceTile !== null) {
@@ -305,9 +305,6 @@ export class AttackExecution implements Execution {
             this.mg.ticks(),
         ),
       );
-    }
-    if (this.attack !== null) {
-      this.attack.updateBorder(this.border);
     }
   }
 
