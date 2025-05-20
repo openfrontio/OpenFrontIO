@@ -65,6 +65,7 @@ export class SAMMissileExecution implements Execution {
           this._owner.id(),
         );
         this.active = false;
+        this.target.wasInterceptedBySam();
         this.target.delete();
         this.SAMMissile.delete(false);
         return;
