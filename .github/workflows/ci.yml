@@ -1,4 +1,4 @@
-name: ⚙️ CI
+name: 🧪 CI
 
 on:
   pull_request:
@@ -27,7 +27,7 @@ jobs:
           path: out/index.html
           retention-days: 1
   test:
-    name: 🧪 Test
+    name: 🔬 Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
