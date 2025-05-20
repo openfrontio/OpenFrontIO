@@ -8,6 +8,8 @@ import {
   GoToUnitEvent,
 } from "./layers/Leaderboard";
 
+export const GOTO_INTERVAL_MS = 1;
+
 export class TransformHandler {
   public scale: number = 1.8;
   private offsetX: number = -350;
@@ -151,13 +153,13 @@ export class TransformHandler {
       event.player.nameLocation().x,
       event.player.nameLocation().y,
     );
-    this.intervalID = setInterval(() => this.goTo(), 1);
+    this.intervalID = setInterval(() => this.goTo(), GOTO_INTERVAL_MS);
   }
 
   onGoToPosition(event: GoToPositionEvent) {
     this.clearTarget();
     this.target = new Cell(event.x, event.y);
-    this.intervalID = setInterval(() => this.goTo(), 1);
+    this.intervalID = setInterval(() => this.goTo(), GOTO_INTERVAL_MS);
   }
 
   onGoToUnit(event: GoToUnitEvent) {
@@ -166,7 +168,7 @@ export class TransformHandler {
       this.game.x(event.unit.lastTile()),
       this.game.y(event.unit.lastTile()),
     );
-    this.intervalID = setInterval(() => this.goTo(), 1);
+    this.intervalID = setInterval(() => this.goTo(), GOTO_INTERVAL_MS);
   }
 
   centerCamera() {
@@ -174,7 +176,7 @@ export class TransformHandler {
     const player = this.game.myPlayer();
     if (!player || !player.nameLocation()) return;
     this.target = new Cell(player.nameLocation().x, player.nameLocation().y);
-    this.intervalID = setInterval(() => this.goTo(), 1);
+    this.intervalID = setInterval(() => this.goTo(), GOTO_INTERVAL_MS);
   }
 
   private goTo() {
