@@ -201,6 +201,10 @@ export class GameRunner {
         canDonate: player.canDonate(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
       };
+      const alliance = player.allianceWith(other as Player);
+      if (alliance) {
+        actions.interaction.allianceCreatedAtTick = alliance.createdAt();
+      }
     }
 
     return actions;
@@ -221,6 +225,7 @@ export class GameRunner {
       borderTiles: player.borderTiles(),
     } as PlayerBorderTiles;
   }
+
   public attackAveragePosition(
     playerID: number,
     attackID: string,
@@ -230,14 +235,17 @@ export class GameRunner {
       throw new Error(`player with id ${playerID} not found`);
     }
 
-    const attacks = player.outgoingAttacks().concat(player.incomingAttacks());
-    const attack = attacks.find((a) => a.id() === attackID);
+    const condition = ((a) => a.id() === attackID);
+    const attack =
+      player.outgoingAttacks().find(condition) ??
+      player.incomingAttacks().find(condition);
     if (attack === undefined) {
       return null;
     }
 
     return attack.averagePosition();
   }
+
   public bestTransportShipSpawn(
     playerID: PlayerID,
     targetTile: TileRef,
