@@ -23,8 +23,8 @@ import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID } from "../Schemas";
 import { assertNever, simpleHash, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
-import { pastelTheme } from "./PastelTheme";
-import { pastelThemeDark } from "./PastelThemeDark";
+import { PastelTheme } from "./PastelTheme";
+import { PastelThemeDark } from "./PastelThemeDark";
 
 const JwksSchema = z.object({
   keys: z
@@ -193,15 +193,14 @@ export abstract class DefaultServerConfig implements ServerConfig {
 }
 
 export class DefaultConfig implements Config {
+  private pastelTheme: PastelTheme = new PastelTheme();
+  private pastelThemeDark: PastelThemeDark = new PastelThemeDark();
   constructor(
     private _serverConfig: ServerConfig,
     private _gameConfig: GameConfig,
     private _userSettings: UserSettings | null,
     private _isReplay: boolean,
-  ) {
-    // Themes are singletons, so clear their caches even when creating a new config
-    this.clearThemeCaches();
-  }
+  ) {}
   isReplay(): boolean {
     return this._isReplay;
   }
@@ -491,11 +490,9 @@ export class DefaultConfig implements Config {
     return this.bots();
   }
   theme(): Theme {
-    return this.userSettings()?.darkMode() ? pastelThemeDark : pastelTheme;
-  }
-  clearThemeCaches() {
-    pastelTheme.clearColorCache();
-    pastelThemeDark.clearColorCache();
+    return this.userSettings()?.darkMode()
+      ? this.pastelThemeDark
+      : this.pastelTheme;
   }
 
   attackLogic(

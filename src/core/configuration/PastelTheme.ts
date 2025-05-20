@@ -21,7 +21,7 @@ import { Theme } from "./Config";
 
 type ColorCache = Map<string, Colord>;
 
-export const pastelTheme = new (class implements Theme {
+export class PastelTheme implements Theme {
   private borderColorCache: ColorCache = new Map<string, Colord>();
   private rand = new PseudoRandom(123);
 
@@ -184,8 +184,4 @@ export const pastelTheme = new (class implements Theme {
   spawnHighlightColor(): Colord {
     return this._spawnHighlightColor;
   }
-
-  clearColorCache() {
-    this.borderColorCache.clear();
-  }
-})();
+}

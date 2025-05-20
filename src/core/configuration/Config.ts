@@ -142,7 +142,6 @@ export interface Config {
   nukeDeathFactor(humans: number, tilesOwned: number): number;
   structureMinDist(): number;
   isReplay(): boolean;
-  clearThemeCaches();
 }
 
 export interface Theme {
@@ -162,5 +161,4 @@ export interface Theme {
   allyColor(): Colord;
   enemyColor(): Colord;
   spawnHighlightColor(): Colord;
-  clearColorCache();
 }
