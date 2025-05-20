@@ -9,6 +9,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  UnitType,
   mapCategories,
 } from "../core/game/Game";
 import { generateID } from "../core/Util";
@@ -30,7 +31,6 @@ export class SinglePlayerModal extends LitElement {
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs: boolean = false;
-  @state() private disableNukes: boolean = false;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
@@ -38,6 +38,8 @@ export class SinglePlayerModal extends LitElement {
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: number | typeof Duos = 2;
+
+  @state() private disabledUnits: string[] = [];
 
   render() {
     return html`
@@ -70,7 +72,7 @@ export class SinglePlayerModal extends LitElement {
                               .selected=${!this.useRandomMap &&
                               this.selectedMap === mapValue}
                               .translation=${translateText(
-                                `map.${mapKey.toLowerCase()}`,
+                                `map.${mapKey?.toLowerCase()}`,
                               )}
                             ></map-display>
                           </div>
@@ -201,7 +203,7 @@ export class SinglePlayerModal extends LitElement {
                 />
                 <div class="option-card-title">
                   <span>${translateText("single_modal.bots")}</span>${this
-                    .bots == 0
+                    .bots === 0
                     ? translateText("single_modal.bots_disabled")
                     : this.bots}
                 </div>
@@ -269,22 +271,61 @@ export class SinglePlayerModal extends LitElement {
                   ${translateText("single_modal.infinite_troops")}
                 </div>
               </label>
+            </div>
 
-              <label
-                for="singleplayer-modal-disable-nukes"
-                class="option-card ${this.disableNukes ? "selected" : ""}"
-              >
-                <div class="checkbox-icon"></div>
-                <input
-                  type="checkbox"
-                  id="singleplayer-modal-disable-nukes"
-                  @change=${this.handleDisableNukesChange}
-                  .checked=${this.disableNukes}
-                />
-                <div class="option-card-title">
-                  ${translateText("single_modal.disable_nukes")}
-                </div>
-              </label>
+            <hr
+              style="width: 100%; border-top: 1px solid #444; margin: 16px 0;"
+            />
+            <div
+              style="margin: 8px 0 12px 0; font-weight: bold; color: #ccc; text-align: center;"
+            >
+              ${translateText("single_modal.enables_title")}
+            </div>
+            <div
+              style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"
+            >
+              ${[
+                [UnitType.City, "unit_type.city"],
+                [UnitType.DefensePost, "unit_type.defense_post"],
+                [UnitType.Port, "unit_type.port"],
+                [UnitType.Warship, "unit_type.warship"],
+                [UnitType.MissileSilo, "unit_type.missile_silo"],
+                [UnitType.SAMLauncher, "unit_type.sam_launcher"],
+                [UnitType.AtomBomb, "unit_type.atom_bomb"],
+                [UnitType.HydrogenBomb, "unit_type.hydrogen_bomb"],
+                [UnitType.MIRV, "unit_type.mirv"],
+              ].map(
+                ([unitType, translationKey]) => html`
+                  <label
+                    class="option-card ${this.disabledUnits.includes(unitType)
+                      ? ""
+                      : "selected"}"
+                    style="width: 140px;"
+                  >
+                    <div class="checkbox-icon"></div>
+                    <input
+                      type="checkbox"
+                      @change=${(e: Event) => {
+                        const checked = (e.target as HTMLInputElement).checked;
+                        if (checked) {
+                          this.disabledUnits = [
+                            ...this.disabledUnits,
+                            unitType,
+                          ];
+                        } else {
+                          this.disabledUnits = this.disabledUnits.filter(
+                            (u) => u !== unitType,
+                          );
+                        }
+                      }}
+                      .checked=${this.disabledUnits.includes(unitType)}
+                    />
+                    <div class="option-card-title" style="text-align: center;">
+                      ${translateText(translationKey)}
+                    </div>
+                  </label>
+                `,
+              )}
             </div>
           </div>
         </div>
@@ -348,10 +389,6 @@ export class SinglePlayerModal extends LitElement {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
   }
 
-  private handleDisableNukesChange(e: Event) {
-    this.disableNukes = Boolean((e.target as HTMLInputElement).checked);
-  }
-
   private handleGameModeSelection(value: GameMode) {
     this.gameMode = value;
   }
@@ -402,7 +439,7 @@ export class SinglePlayerModal extends LitElement {
                 clientID,
                 username: usernameInput.getCurrentUsername(),
                 flag:
-                  flagInput.getCurrentFlag() == "xx"
+                  flagInput.getCurrentFlag() === "xx"
                     ? ""
                     : flagInput.getCurrentFlag(),
               },
@@ -414,14 +451,16 @@ export class SinglePlayerModal extends LitElement {
               playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,
               disableNPCs: this.disableNPCs,
-              disableNukes: this.disableNukes,
               bots: this.bots,
               infiniteGold: this.infiniteGold,
               infiniteTroops: this.infiniteTroops,
               instantBuild: this.instantBuild,
+              disabledUnits: this.disabledUnits
+                .map((u) => Object.values(UnitType).find((ut) => ut === u))
+                .filter((ut): ut is UnitType => ut !== undefined),
             },
           },
-        } as JoinLobbyEvent,
+        } satisfies JoinLobbyEvent,
         bubbles: true,
         composed: true,
       }),

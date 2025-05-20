@@ -8,6 +8,9 @@
   "main": {
     "title": "OpenFront (ALPHA)",
     "join_discord": "Unisciti al nostro Discord!",
+    "login_discord": "Accedi con Discord",
+    "logged_in": "Accesso effettuato!",
+    "log_out": "Esci",
     "create_lobby": "Crea lobby",
     "join_lobby": "Unisciti a una Lobby",
     "single_player": "Giocatore Singolo",
@@ -98,6 +101,7 @@
     "infinite_gold": "Oro infinito",
     "infinite_troops": "Truppe infinite",
     "disable_nukes": "Disabilita Bombe Nucleari",
+    "enables_title": "Abilita impostazioni",
     "start": "Inizia partita"
   },
   "map": {
@@ -121,7 +125,16 @@
     "japan": "Giappone e paesi confinanti",
     "betweentwoseas": "Tra I Due Mari",
     "knownworld": "Mondo Conosciuto",
-    "faroeislands": "Isole Faroe"
+    "faroeislands": "Isole Faroe",
+    "deglaciatedantarctica": "Antartide disghiacciata",
+    "europeclassic": "Europa (classica)",
+    "falklandislands": "Isole Falkland",
+    "baikal": "Lago Bajkal"
+  },
+  "map_categories": {
+    "continental": "Continentale",
+    "regional": "Regionale",
+    "fantasy": "Altro"
   },
   "private_lobby": {
     "title": "Partecipa ad una Lobby Privata",
@@ -136,7 +149,8 @@
   },
   "public_lobby": {
     "join": "Partecipa alla prossima Partita",
-    "waiting": "Giocatori in attesa"
+    "waiting": "Giocatori in attesa",
+    "teams": "{num} squadre"
   },
   "username": {
     "enter_username": "Inserisci il tuo username",
@@ -156,7 +170,7 @@
     "instant_build": "Costruzione Istantanea ",
     "infinite_gold": "Oro infinito",
     "infinite_troops": "Truppe infinite",
-    "disable_nukes": "Disabilita Bombe Nucleari",
+    "enables_title": "Abilita impostazioni",
     "player": "Giocatore",
     "players": "Giocatori",
     "waiting": "In attesa dei giocatori...",
@@ -180,6 +194,17 @@
   "select_lang": {
     "title": "Seleziona Lingua"
   },
+  "unit_type": {
+    "city": "Città",
+    "defense_post": "Fortificazione difensiva",
+    "port": "Porto",
+    "warship": "Nave da guerra",
+    "missile_silo": "Silo Missilistico",
+    "sam_launcher": "SAM Antimissile",
+    "atom_bomb": "Bomba atomica",
+    "hydrogen_bomb": "Bomba a idrogeno",
+    "mirv": "MIRV"
+  },
   "user_setting": {
     "title": "Impostazioni Utente",
     "tab_basic": "Impostazioni Di Base",
@@ -188,41 +213,111 @@
     "dark_mode_desc": "Attiva/disattiva l'aspetto del sito tra il tema chiaro e scuro",
     "emojis_label": "😊 Emoji",
     "emojis_desc": "Attiva o disattiva la visualizzazione delle emoji nel gioco",
+    "anonymous_names_label": "🥷 Nomi Nascosti",
+    "anonymous_names_desc": "Nascondi i nomi dei giocatori reali sullo schermo con nomi casuali.",
     "left_click_label": "🖱️ Clic sinistro per aprire il menu",
-    "left_click_desc": "Quando attivo, il clic sinistro apre il menu e il pulsante di attacco. Quando disattivo, fare clic con il tasto destro attaccherà direttamente.",
+    "left_click_desc": "Quando attivo, il clic sinistro apre il menu e il pulsante di attacco. Quando non attivo, fare clic con il tasto sinistro attaccherà direttamente.",
     "attack_ratio_label": "⚔️ Rapporto Di Attacco",
     "attack_ratio_desc": "Quale percentuale delle tue truppe inviare in attacco (1–100%)",
     "troop_ratio_label": "🪖🛠️ Rapporto truppe e lavoratori",
     "troop_ratio_desc": "Regola l'equilibrio tra truppe (per combattere) e lavoratori (per la produzione dell'oro) (1–100%)",
-    "easter_writing_speed_label": "Moltiplicatore Della Velocità Di Scrittura",
-    "easter_writing_speed_desc": "Regolare quanto velocemente si finge di programmare (x1–x100)",
+    "easter_writing_speed_label": "Moltiplicatore della velocità di scrittura",
+    "easter_writing_speed_desc": "Regolare quanto velocemente fingi di programmare (x1–x100)",
     "easter_bug_count_label": "Conteggio Bug",
-    "easter_bug_count_desc": "Quanti bug con cui stai bene (0–1000, emotivamente).",
-    "view_options": "Opzioni di Visualizzazione",
+    "easter_bug_count_desc": "Quanti bug per farti felice (0–1000, emotivamente)",
+    "view_options": "Opzioni di visualizzazione",
     "toggle_view": "Attiva/Disattiva Vista",
-    "toggle_view_desc": "Vista alternativa (terreno/paesi)",
-    "zoom_controls": "Controllo Zoom",
-    "zoom_out": "Zoom Indietro",
+    "toggle_view_desc": "Vista alternativa (terreno/nazioni)",
+    "zoom_controls": "Controlli dello zoom",
+    "zoom_out": "Zoom indietro",
     "zoom_out_desc": "Riduce ingrandimento della mappa",
-    "zoom_in": "Zoom Avanti",
+    "zoom_in": "Zoom avanti",
     "zoom_in_desc": "Aumenta ingrandimento della mappa",
     "camera_movement": "Movimento vista",
-    "center_camera": "Centra Vista",
+    "center_camera": "Centra vista",
     "center_camera_desc": "Centra vista sul giocatore",
     "move_up": "Sposta vista in alto",
     "move_up_desc": "Sposta la vista verso l'alto",
-    "move_left": "Sposta vista a Sinistra",
-    "move_left_desc": "Sposta la vista a sinistra",
-    "move_down": "Sposta vista In Giù",
+    "move_left": "Sposta vista a sinistra",
+    "move_left_desc": "Sposta vista a destra",
+    "move_down": "Sposta vista in basso",
     "move_down_desc": "Sposta la vista verso il basso",
-    "move_right": "Sposta vista a Destra",
-    "move_right_desc": "Sposta la vista a destra",
+    "move_right": "Sposta vista a destra",
+    "move_right_desc": "Sposta vista a sinistra",
     "reset": "Resetta",
     "unbind": "Unbind (cancella assegnazione tasto)"
   },
-  "map_categories": {
-    "continental": "Continentale",
-    "regional": "Regionale",
-    "fantasy": "Altro"
+  "chat": {
+    "title": "Chat rapida",
+    "to": "Inviato a {user}: {msg}",
+    "from": "Da {user}: {msg}",
+    "category": "Categoria",
+    "phrase": "Frase",
+    "player": "Giocatore",
+    "send": "Invia",
+    "search": "Ricerca giocatori...",
+    "build": "Genera il tuo messaggio...",
+    "cat": {
+      "help": "Aiuto",
+      "attack": "Attacco",
+      "defend": "Difendi",
+      "greet": "Saluti",
+      "misc": "Varie",
+      "warnings": "Avvisi"
+    },
+    "help": {
+      "troops": "Donami truppe, per favore!",
+      "gold": "Donami oro, per favore!",
+      "no_attack": "Per favore, non attaccarmi!",
+      "sorry_attack": "Scusa, non avevo intenzione di attaccare.",
+      "alliance": "Alleanza?",
+      "help_defend": "Aiutami a difendermi da [P1]!",
+      "team_up": "Facciamo squadra contro [P1]!"
+    },
+    "attack": {
+      "attack": "Attacca [P1]!",
+      "mirv": "Lancia una MIRV su [P1]!",
+      "focus": "Focalizziamoci su [P1]!",
+      "finish": "Finiamo [P1]!"
+    },
+    "defend": {
+      "defend": "Difendi [P1]!",
+      "dont_attack": "Non attaccare [P1]!",
+      "ally": "[P1] è mio alleato!"
+    },
+    "greet": {
+      "hello": "Salve!",
+      "good_luck": "Buona fortuna!",
+      "have_fun": "Buon divertimento!",
+      "gg": "GG!",
+      "nice_to_meet": "Piacere di conoscerti!",
+      "well_played": "Bella giocata!",
+      "hi_again": "Ciao di nuovo!",
+      "bye": "Arrivederci!",
+      "thanks": "Grazie!",
+      "oops": "Ops, pulsante sbagliato!",
+      "trust_me": "Puoi fidarti di me. Davvero!",
+      "trust_broken": "Mi fidavo di te..."
+    },
+    "misc": {
+      "go": "Andiamo!",
+      "strategy": "Bella strategia!",
+      "fun": "Questa partita è divertente!",
+      "pr": "Quando verranno inserite le mie PR...?"
+    },
+    "warnings": {
+      "strong": "[P1] è forte.",
+      "weak": "[P1] è debole.",
+      "mirv_soon": "[P1] potrà lanciare una MIRV a breve!",
+      "number1_warning": "Il giocatore #1 vincerà presto a meno che non ci alleiamo!",
+      "stalemate": "Facciamo la pace. Siamo in stallo, perderemmo entrambi.",
+      "has_allies": "[P1] ha molti alleati.",
+      "no_allies": "[P1] non ha alleati.",
+      "betrayed": "[P1] ha tradito un alleato!",
+      "getting_big": "[P1] sta crescendo troppo velocemente!",
+      "danger_base": "[P1] è indifeso!",
+      "saving_for_mirv": "[P1] sta risparmiando per lanciare una MIRV.",
+      "mirv_ready": "[P1] ha abbastanza oro per lanciare una MIRV!"
+    }
   }
 }

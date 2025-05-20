@@ -45,12 +45,12 @@ export function createCanvas(): HTMLCanvasElement {
  */
 export function generateCryptoRandomUUID(): string {
   // Type guard to check if randomUUID is available
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+  if (crypto !== undefined && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
 
   // Fallback using crypto.getRandomValues
-  if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
+  if (crypto !== undefined && "getRandomValues" in crypto) {
     return (([1e7] as any) + -1e3 + -4e3 + -8e3 + -1e11).replace(
       /[018]/g,
       (c: number): string =>

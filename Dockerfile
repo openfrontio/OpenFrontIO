@@ -1,5 +1,5 @@
 # Use an official Node runtime as the base image
-FROM node:18 AS base
+FROM node:24-slim AS base
 
 # Create dependency layer
 FROM base AS dependencies
@@ -33,7 +33,7 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install dependencies while bypassing Husky hooks
-ENV HUSKY=0 
+ENV HUSKY=0
 ENV NPM_CONFIG_IGNORE_SCRIPTS=1
 RUN mkdir -p .git && npm install
 

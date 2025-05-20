@@ -126,6 +126,7 @@ export async function readGameRecord(
       Key: `${gameFolder}/${gameId}`, // Fixed - needed to include gameFolder
     });
     // Parse the response body
+    if (response.Body === undefined) return null;
     const bodyContents = await response.Body.transformToString();
     return JSON.parse(bodyContents) as GameRecord;
   } catch (error) {

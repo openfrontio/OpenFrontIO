@@ -2,8 +2,53 @@ import { consolex } from "../Consolex";
 import { Game } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
+import { DistanceBasedBezierCurve } from "../utilities/Line";
 import { AStar, PathFindResultType, TileResult } from "./AStar";
 import { MiniAStar } from "./MiniAStar";
+
+const parabolaMinHeight = 50;
+
+export class ParabolaPathFinder {
+  constructor(private mg: GameMap) {}
+  private curve: DistanceBasedBezierCurve | undefined;
+
+  computeControlPoints(
+    orig: TileRef,
+    dst: TileRef,
+    distanceBasedHeight = true,
+  ) {
+    const p0 = { x: this.mg.x(orig), y: this.mg.y(orig) };
+    const p3 = { x: this.mg.x(dst), y: this.mg.y(dst) };
+    const dx = p3.x - p0.x;
+    const dy = p3.y - p0.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const maxHeight = distanceBasedHeight
+      ? Math.max(distance / 3, parabolaMinHeight)
+      : 0;
+    // Use a bezier curve always pointing up
+    const p1 = {
+      x: p0.x + (p3.x - p0.x) / 4,
+      y: Math.max(p0.y + (p3.y - p0.y) / 4 - maxHeight, 0),
+    };
+    const p2 = {
+      x: p0.x + ((p3.x - p0.x) * 3) / 4,
+      y: Math.max(p0.y + ((p3.y - p0.y) * 3) / 4 - maxHeight, 0),
+    };
+
+    this.curve = new DistanceBasedBezierCurve(p0, p1, p2, p3);
+  }
+
+  nextTile(speed: number): TileRef | true {
+    if (!this.curve) {
+      throw new Error("ParabolaPathFinder not initialized");
+    }
+    const nextPoint = this.curve.increment(speed);
+    if (!nextPoint) {
+      return true;
+    }
+    return this.mg.ref(Math.floor(nextPoint.x), Math.floor(nextPoint.y));
+  }
+}
 
 export class AirPathFinder {
   constructor(
@@ -27,14 +72,14 @@ export class AirPathFinder {
 
     const ratio = Math.floor(1 + Math.abs(dstY - y) / (Math.abs(dstX - x) + 1));
 
-    if (this.random.chance(ratio) && x != dstX) {
+    if (this.random.chance(ratio) && x !== dstX) {
       if (x < dstX) nextX++;
       else if (x > dstX) nextX--;
     } else {
       if (y < dstY) nextY++;
       else if (y > dstY) nextY--;
     }
-    if (nextX == x && nextY == y) {
+    if (nextX === x && nextY === y) {
       return true;
     }
     return this.mg.ref(nextX, nextY);
@@ -42,9 +87,9 @@ export class AirPathFinder {
 }
 
 export class PathFinder {
-  private curr: TileRef = null;
-  private dst: TileRef = null;
-  private path: TileRef[];
+  private curr: TileRef | null = null;
+  private dst: TileRef | null = null;
+  private path: TileRef[] | null = null;
   private aStar: AStar;
   private computeFinished = true;
 
@@ -66,12 +111,16 @@ export class PathFinder {
     });
   }
 
-  nextTile(curr: TileRef, dst: TileRef, dist: number = 1): TileResult {
-    if (curr == null) {
+  nextTile(
+    curr: TileRef | null,
+    dst: TileRef | null,
+    dist: number = 1,
+  ): TileResult {
+    if (curr === null) {
       consolex.error("curr is null");
       return { type: PathFindResultType.PathNotFound };
     }
-    if (dst == null) {
+    if (dst === null) {
       consolex.error("dst is null");
       return { type: PathFindResultType.PathNotFound };
     }
@@ -89,7 +138,11 @@ export class PathFinder {
         this.computeFinished = false;
         return this.nextTile(curr, dst);
       } else {
-        return { type: PathFindResultType.NextTile, tile: this.path.shift() };
+        const tile = this.path?.shift();
+        if (tile === undefined) {
+          throw new Error("missing tile");
+        }
+        return { type: PathFindResultType.NextTile, tile };
       }
     }
 
@@ -105,11 +158,13 @@ export class PathFinder {
         return { type: PathFindResultType.Pending };
       case PathFindResultType.PathNotFound:
         return { type: PathFindResultType.PathNotFound };
+      default:
+        throw new Error("unexpected compute result");
     }
   }
 
   private shouldRecompute(curr: TileRef, dst: TileRef) {
-    if (this.path == null || this.curr == null || this.dst == null) {
+    if (this.path === null || this.curr === null || this.dst === null) {
       return true;
     }
     const dist = this.game.manhattanDist(curr, dst);

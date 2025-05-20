@@ -65,20 +65,23 @@ export const pastelThemeDark = new (class implements Theme {
   }
 
   territoryColor(player: PlayerView): Colord {
-    if (player.team() !== null) {
-      return this.teamColor(player.team());
+    const team = player.team();
+    if (team !== null) {
+      return this.teamColor(team);
     }
-    if (player.info().playerType == PlayerType.Human) {
+    if (player.info().playerType === PlayerType.Human) {
       return humanColors[simpleHash(player.id()) % humanColors.length];
     }
-    if (player.info().playerType == PlayerType.Bot) {
+    if (player.info().playerType === PlayerType.Bot) {
       return botColors[simpleHash(player.id()) % botColors.length];
     }
     return territoryColors[simpleHash(player.id()) % territoryColors.length];
   }
 
   textColor(player: PlayerView): string {
-    return player.info().playerType == PlayerType.Human ? "#ffffff" : "#e6e6e6";
+    return player.info().playerType === PlayerType.Human
+      ? "#ffffff"
+      : "#e6e6e6";
   }
 
   specialBuildingColor(player: PlayerView): Colord {
@@ -98,20 +101,16 @@ export const pastelThemeDark = new (class implements Theme {
       b: Math.max(tc.b - 40, 0),
     });
   }
-  defendedBorderColor(player: PlayerView): Colord {
-    const bc = this.borderColor(player).rgba;
-    return colord({
-      r: Math.max(bc.r - 40, 0),
-      g: Math.max(bc.g - 40, 0),
-      b: Math.max(bc.b - 40, 0),
-    });
+
+  defendedBorderColors(player: PlayerView): { light: Colord; dark: Colord } {
+    return {
+      light: this.territoryColor(player).darken(0.2),
+      dark: this.territoryColor(player).darken(0.4),
+    };
   }
 
   focusedBorderColor(): Colord {
     return colord({ r: 255, g: 255, b: 255 });
-  }
-  focusedDefendedBorderColor(): Colord {
-    return colord({ r: 215, g: 215, b: 215 });
   }
 
   terrainColor(gm: GameMap, tile: TileRef): Colord {

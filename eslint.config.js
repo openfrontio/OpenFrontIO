@@ -31,4 +31,10 @@ export default [
       "no-useless-escape": "off",
     },
   },
+  {
+    rules: {
+      // Enable rules
+      eqeqeq: "error",
+    },
+  },
 ];

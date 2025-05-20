@@ -21,7 +21,7 @@ const loggerProvider = new LoggerProvider({
   resource,
 });
 
-if (config.env() == GameEnv.Prod && config.otelEnabled()) {
+if (config.env() === GameEnv.Prod && config.otelEnabled()) {
   console.log("OTEL enabled");
   // Configure OpenTelemetry endpoint with basic auth (if provided)
   const headers = {};

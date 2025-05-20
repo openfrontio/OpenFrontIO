@@ -31,7 +31,7 @@ fi
 
 echo "👤 Setting up openfront user..."
 # Create openfront user if it doesn't exist
-if id "openfront" &>/dev/null; then
+if id "openfront" &> /dev/null; then
     echo "User openfront already exists"
 else
     useradd -m -s /bin/bash openfront
@@ -72,7 +72,7 @@ else
     echo "# UDP buffer size settings for improved QUIC performance" >> /etc/sysctl.conf
     echo "net.core.rmem_max=7500000" >> /etc/sysctl.conf
     echo "net.core.wmem_max=7500000" >> /etc/sysctl.conf
-    
+
     # Apply the settings immediately
     sysctl -p
     echo "UDP buffer sizes configured and applied"
@@ -139,41 +139,41 @@ chown -R openfront:openfront "$OTEL_CONFIG_DIR"
 # Run Node Exporter
 echo "🚀 Starting Node Exporter..."
 docker pull prom/node-exporter:latest
-docker rm -f node-exporter 2>/dev/null || true
+docker rm -f node-exporter 2> /dev/null || true
 docker run -d \
-  --name=node-exporter \
-  --restart=unless-stopped \
-  --net="host" \
-  --pid="host" \
-  -v "/:/host:ro,rslave" \
-  prom/node-exporter:latest \
-  --path.rootfs=/host
+    --name=node-exporter \
+    --restart=unless-stopped \
+    --net="host" \
+    --pid="host" \
+    -v "/:/host:ro,rslave" \
+    prom/node-exporter:latest \
+    --path.rootfs=/host
 
 # Run OpenTelemetry Collector
 echo "🚀 Starting OpenTelemetry Collector..."
 docker pull otel/opentelemetry-collector-contrib:latest
-docker rm -f otel-collector 2>/dev/null || true
+docker rm -f otel-collector 2> /dev/null || true
 # Run OpenTelemetry Collector with appropriate permissions
 # Run OpenTelemetry Collector
 echo "🚀 Starting OpenTelemetry Collector..."
 docker pull otel/opentelemetry-collector-contrib:latest
-docker rm -f otel-collector 2>/dev/null || true
+docker rm -f otel-collector 2> /dev/null || true
 
 docker run -d \
-  --name=otel-collector \
-  --restart=unless-stopped \
-  --network=host \
-  --user=0 \
-  -v "$OTEL_CONFIG_DIR/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro" \
-  -e OTEL_ENDPOINT="${OTEL_ENDPOINT}" \
-  otel/opentelemetry-collector-contrib:latest
+    --name=otel-collector \
+    --restart=unless-stopped \
+    --network=host \
+    --user=0 \
+    -v "$OTEL_CONFIG_DIR/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro" \
+    -e OTEL_ENDPOINT="${OTEL_ENDPOINT}" \
+    otel/opentelemetry-collector-contrib:latest
 
 # Check if containers are running
 if docker ps | grep -q node-exporter && docker ps | grep -q otel-collector; then
-  echo "✅ Node Exporter and OpenTelemetry Collector started successfully!"
+    echo "✅ Node Exporter and OpenTelemetry Collector started successfully!"
 else
-  echo "❌ Failed to start containers. Check logs with: docker logs node-exporter or docker logs otel-collector"
-  exit 1
+    echo "❌ Failed to start containers. Check logs with: docker logs node-exporter or docker logs otel-collector"
+    exit 1
 fi
 
 echo "====================================================="

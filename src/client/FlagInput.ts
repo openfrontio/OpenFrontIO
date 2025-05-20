@@ -26,7 +26,7 @@ export class FlagInput extends LitElement {
   }
 
   private setFlag(flag: string) {
-    if (flag == "xx") {
+    if (flag === "xx") {
       flag = "";
     }
     this.flag = flag;

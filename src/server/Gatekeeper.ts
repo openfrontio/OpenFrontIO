@@ -26,10 +26,10 @@ export interface Gatekeeper {
   ) => (message: string) => Promise<void>;
 }
 
-let gk: Gatekeeper = null;
+let gk: Gatekeeper | null = null;
 
 async function getGatekeeperCached(): Promise<Gatekeeper> {
-  if (gk != null) {
+  if (gk !== null) {
     return gk;
   }
   return getGatekeeper().then((g) => {

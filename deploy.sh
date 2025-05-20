@@ -5,7 +5,7 @@
 # 2. Copies the update script to Hetzner server
 # 3. Executes the update script on the Hetzner server
 
-set -e  # Exit immediately if a command exits with a non-zero status
+set -e # Exit immediately if a command exits with a non-zero status
 
 # Initialize variables
 ENABLE_BASIC_AUTH=false
@@ -13,16 +13,16 @@ ENABLE_BASIC_AUTH=false
 # Parse command line arguments
 POSITIONAL_ARGS=()
 while [[ $# -gt 0 ]]; do
-  case $1 in
-    --enable_basic_auth)
-      ENABLE_BASIC_AUTH=true
-      shift
-      ;;
-    *)
-      POSITIONAL_ARGS+=("$1")
-      shift
-      ;;
-  esac
+    case $1 in
+        --enable_basic_auth)
+            ENABLE_BASIC_AUTH=true
+            shift
+            ;;
+        *)
+            POSITIONAL_ARGS+=("$1")
+            shift
+            ;;
+    esac
 done
 
 # Restore positional parameters
@@ -31,21 +31,21 @@ set -- "${POSITIONAL_ARGS[@]}"
 # Check command line arguments
 if [ $# -lt 2 ] || [ $# -gt 3 ]; then
     echo "Error: Please specify environment and host, with optional subdomain"
-    echo "Usage: $0 [prod|staging] [eu|us|staging|masters] [subdomain] [--enable_basic_auth]"
+    echo "Usage: $0 [prod|staging] [eu|nbg1|staging|masters] [subdomain] [--enable_basic_auth]"
     exit 1
 fi
 
 # Validate first argument (environment)
 if [ "$1" != "prod" ] && [ "$1" != "staging" ]; then
     echo "Error: First argument must be either 'prod' or 'staging'"
-    echo "Usage: $0 [prod|staging] [eu|us|staging|masters] [subdomain] [--enable_basic_auth]"
+    echo "Usage: $0 [prod|staging] [eu|nbg1|staging|masters] [subdomain] [--enable_basic_auth]"
     exit 1
 fi
 
 # Validate second argument (host)
-if [ "$2" != "eu" ] && [ "$2" != "us" ] && [ "$2" != "staging" ] && [ "$2" != "masters" ]; then
-    echo "Error: Second argument must be either 'eu', 'us', 'staging', or 'masters'"
-    echo "Usage: $0 [prod|staging] [eu|us|staging|masters] [subdomain] [--enable_basic_auth]"
+if [ "$2" != "eu" ] && [ "$2" != "nbg1" ] && [ "$2" != "staging" ] && [ "$2" != "masters" ]; then
+    echo "Error: Second argument must be either 'eu', 'nbg1', 'staging', or 'masters'"
+    echo "Usage: $0 [prod|staging] [eu|nbg1|staging|masters] [subdomain] [--enable_basic_auth]"
     exit 1
 fi
 
@@ -58,7 +58,7 @@ print_header() {
 
 ENV=$1
 HOST=$2
-SUBDOMAIN=$3  # Optional third argument for custom subdomain
+SUBDOMAIN=$3 # Optional third argument for custom subdomain
 
 # Set subdomain - use the custom subdomain if provided, otherwise use REGION
 if [ -n "$SUBDOMAIN" ]; then
@@ -83,9 +83,9 @@ fi
 if [ "$HOST" == "staging" ]; then
     print_header "DEPLOYING TO STAGING HOST"
     SERVER_HOST=$SERVER_HOST_STAGING
-elif [ "$HOST" == "us" ]; then
-    print_header "DEPLOYING TO US HOST"
-    SERVER_HOST=$SERVER_HOST_US
+elif [ "$HOST" == "nbg1" ]; then
+    print_header "DEPLOYING TO NBG1 HOST"
+    SERVER_HOST=$SERVER_HOST_NBG1
 elif [ "$HOST" == "masters" ]; then
     print_header "DEPLOYING TO MASTERS HOST"
     SERVER_HOST=$SERVER_HOST_MASTERS
@@ -116,10 +116,10 @@ else
 fi
 
 # Configuration
-UPDATE_SCRIPT="./update.sh"                    # Path to your update script
-REMOTE_USER="openfront"                        
-REMOTE_UPDATE_PATH="/home/$REMOTE_USER"        
-REMOTE_UPDATE_SCRIPT="$REMOTE_UPDATE_PATH/update-openfront.sh"  # Where to place the script on server
+UPDATE_SCRIPT="./update.sh" # Path to your update script
+REMOTE_USER="openfront"
+REMOTE_UPDATE_PATH="/home/$REMOTE_USER"
+REMOTE_UPDATE_SCRIPT="$REMOTE_UPDATE_PATH/update-openfront.sh" # Where to place the script on server
 
 VERSION_TAG=$(date +"%Y%m%d-%H%M%S")
 DOCKER_IMAGE="${DOCKER_USERNAME}/${DOCKER_REPO}:${VERSION_TAG}"
@@ -139,15 +139,15 @@ echo "Using version tag: $VERSION_TAG"
 echo "Docker repository: $DOCKER_REPO"
 
 # Get Git commit for build info
-GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+GIT_COMMIT=$(git rev-parse HEAD 2> /dev/null || echo "unknown")
 echo "Git commit: $GIT_COMMIT"
 
 docker buildx build \
-  --platform linux/amd64 \
-  --build-arg GIT_COMMIT=$GIT_COMMIT \
-  -t $DOCKER_IMAGE \
-  --push \
-  .
+    --platform linux/amd64 \
+    --build-arg GIT_COMMIT=$GIT_COMMIT \
+    -t $DOCKER_IMAGE \
+    --push \
+    .
 
 if [ $? -ne 0 ]; then
     echo "❌ Docker build failed. Stopping deployment."

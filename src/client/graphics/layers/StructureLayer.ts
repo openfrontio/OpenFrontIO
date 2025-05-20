@@ -43,7 +43,7 @@ export class StructureLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
   private unitIcons: Map<string, ImageData> = new Map();
-  private theme: Theme = null;
+  private theme: Theme;
 
   // Configuration for supported unit types only
   private readonly unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
@@ -106,6 +106,7 @@ export class StructureLayer implements Layer {
       // Create temporary canvas for icon processing
       const tempCanvas = document.createElement("canvas");
       const tempContext = tempCanvas.getContext("2d");
+      if (tempContext === null) throw new Error("2d context not supported");
       tempCanvas.width = image.width;
       tempCanvas.height = image.height;
 
@@ -135,11 +136,13 @@ export class StructureLayer implements Layer {
   }
 
   tick() {
-    this.game
-      .updatesSinceLastTick()
-      [
-        GameUpdateType.Unit
-      ].forEach((u) => this.handleUnitRendering(this.game.unit(u.id)));
+    const updates = this.game.updatesSinceLastTick();
+    const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
+    for (const u of unitUpdates) {
+      const unit = this.game.unit(u.id);
+      if (unit === undefined) continue;
+      this.handleUnitRendering(unit);
+    }
   }
 
   init() {
@@ -149,7 +152,9 @@ export class StructureLayer implements Layer {
   redraw() {
     console.log("structure layer redrawing");
     this.canvas = document.createElement("canvas");
-    this.context = this.canvas.getContext("2d", { alpha: true });
+    const context = this.canvas.getContext("2d", { alpha: true });
+    if (context === null) throw new Error("2d context not supported");
+    this.context = context;
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
     this.game.units().forEach((u) => this.handleUnitRendering(u));
@@ -193,7 +198,7 @@ export class StructureLayer implements Layer {
     )) {
       this.paintCell(
         new Cell(this.game.x(tile), this.game.y(tile)),
-        unit.type() == UnitType.Construction
+        unit.type() === UnitType.Construction
           ? underConstructionColor
           : this.theme.territoryColor(unit.owner()),
         130,
@@ -220,15 +225,15 @@ export class StructureLayer implements Layer {
     if (!this.isUnitTypeSupported(unitType)) return;
 
     const config = this.unitConfigs[unitType];
-    let icon: ImageData;
+    let icon: ImageData | undefined;
 
-    if (unitType == UnitType.SAMLauncher && unit.isCooldown()) {
+    if (unitType === UnitType.SAMLauncher && unit.isCooldown()) {
       icon = this.unitIcons.get("reloadingSam");
     } else {
       icon = this.unitIcons.get(iconType);
     }
 
-    if (unitType == UnitType.MissileSilo && unit.isCooldown()) {
+    if (unitType === UnitType.MissileSilo && unit.isCooldown()) {
       icon = this.unitIcons.get("reloadingSilo");
     } else {
       icon = this.unitIcons.get(iconType);
@@ -248,15 +253,15 @@ export class StructureLayer implements Layer {
     if (!unit.isActive()) return;
 
     let borderColor = this.theme.borderColor(unit.owner());
-    if (unitType == UnitType.SAMLauncher && unit.isCooldown()) {
+    if (unitType === UnitType.SAMLauncher && unit.isCooldown()) {
       borderColor = reloadingColor;
-    } else if (unit.type() == UnitType.Construction) {
+    } else if (unit.type() === UnitType.Construction) {
       borderColor = underConstructionColor;
     }
 
-    if (unitType == UnitType.MissileSilo && unit.isCooldown()) {
+    if (unitType === UnitType.MissileSilo && unit.isCooldown()) {
       borderColor = reloadingColor;
-    } else if (unit.type() == UnitType.Construction) {
+    } else if (unit.type() === UnitType.Construction) {
       borderColor = underConstructionColor;
     }
 
@@ -277,7 +282,7 @@ export class StructureLayer implements Layer {
     unit: UnitView,
   ) {
     let color = this.theme.borderColor(unit.owner());
-    if (unit.type() == UnitType.Construction) {
+    if (unit.type() === UnitType.Construction) {
       color = underConstructionColor;
     }
     for (let y = 0; y < height; y++) {

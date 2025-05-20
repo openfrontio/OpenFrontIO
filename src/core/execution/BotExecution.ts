@@ -33,7 +33,7 @@ export class BotExecution implements Execution {
   }
 
   tick(ticks: number) {
-    if (ticks % this.attackRate != this.attackTick) return;
+    if (ticks % this.attackRate !== this.attackTick) return;
 
     if (!this.bot.isAlive()) {
       this.active = false;
@@ -55,6 +55,9 @@ export class BotExecution implements Execution {
   }
 
   private maybeAttack() {
+    if (this.behavior === null) {
+      throw new Error("not initialized");
+    }
     const traitors = this.bot
       .neighbors()
       .filter((n) => n.isPlayer() && n.isTraitor()) as Player[];

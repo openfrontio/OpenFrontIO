@@ -1,17 +1,15 @@
-import { MutableAlliance, Player, Tick } from "./Game";
-import { GameImpl } from "./GameImpl";
-import { PlayerImpl } from "./PlayerImpl";
+import { Game, MutableAlliance, Player, Tick } from "./Game";
 
 export class AllianceImpl implements MutableAlliance {
   constructor(
-    private readonly mg: GameImpl,
-    readonly requestor_: PlayerImpl,
-    readonly recipient_: PlayerImpl,
+    private readonly mg: Game,
+    readonly requestor_: Player,
+    readonly recipient_: Player,
     readonly createdAtTick_: Tick,
   ) {}
 
-  other(player: Player): PlayerImpl {
-    if (this.requestor_ == player) {
+  other(player: Player): Player {
+    if (this.requestor_ === player) {
       return this.recipient_;
     }
     return this.requestor_;

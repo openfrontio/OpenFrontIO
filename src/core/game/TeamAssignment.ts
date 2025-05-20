@@ -42,6 +42,8 @@ export function assignTeams(
       team = t;
     }
 
+    if (team === null) continue;
+
     for (const player of clanPlayers) {
       if (teamSize < maxTeamSize) {
         teamSize++;
@@ -63,6 +65,7 @@ export function assignTeams(
       teamSize = p;
       team = t;
     }
+    if (team === null) continue;
     teamPlayerCount.set(team, teamSize + 1);
     result.set(player, team);
   }

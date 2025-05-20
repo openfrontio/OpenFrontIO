@@ -27,7 +27,7 @@ export class BotSpawner {
       }
       const botName = this.randomBotName();
       const spawn = this.spawnBot(botName);
-      if (spawn != null) {
+      if (spawn !== null) {
         this.bots.push(spawn);
       } else {
         tries++;
