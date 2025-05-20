@@ -234,8 +234,10 @@ export class GameRunner {
       throw new Error(`player with id ${playerID} not found`);
     }
 
-    const attacks = player.outgoingAttacks().concat(player.incomingAttacks());
-    const attack = attacks.find((a) => a.id() === attackID);
+    const condition = ((a) => a.id() === attackID);
+    const attack =
+      player.outgoingAttacks().find(condition) ??
+      player.incomingAttacks().find(condition);
     if (attack === undefined) {
       return null;
     }
