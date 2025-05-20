@@ -12,7 +12,6 @@ import {
   GameStartInfo,
   GameStartInfoSchema,
   Intent,
-  Player,
   PlayerRecord,
   ServerDesyncSchema,
   ServerPrestartMessageSchema,
@@ -295,15 +294,12 @@ export class GameServer {
     this.gameStartInfo = GameStartInfoSchema.parse({
       gameID: this.id,
       config: this.gameConfig,
-      players: this.activeClients.map(
-        (c) =>
-          ({
-            playerID: c.playerID,
-            username: c.username,
-            clientID: c.clientID,
-            flag: c.flag,
-          }) satisfies Player,
-      ),
+      players: this.activeClients.map((c) => ({
+        playerID: c.playerID,
+        username: c.username,
+        clientID: c.clientID,
+        flag: c.flag,
+      })),
     } satisfies GameStartInfo);
 
     this.endTurnIntervalID = setInterval(
