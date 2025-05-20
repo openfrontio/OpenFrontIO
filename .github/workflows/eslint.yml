@@ -9,7 +9,7 @@ permissions: {}
 
 jobs:
   eslint:
-    name: Check
+    name: ESLint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

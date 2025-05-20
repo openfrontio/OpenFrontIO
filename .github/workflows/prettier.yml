@@ -9,7 +9,7 @@ permissions: {}
 
 jobs:
   prettier:
-    name: Check
+    name: Prettier
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
