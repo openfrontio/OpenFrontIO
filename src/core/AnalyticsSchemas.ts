@@ -7,6 +7,7 @@ export const BombUnitSchema = z.union([
   z.literal("mirv"),
   z.literal("mirvw"),
 ]);
+export type BombUnit = z.infer<typeof BombUnitSchema>;
 export type NukeType =
   | UnitType.AtomBomb
   | UnitType.HydrogenBomb
@@ -14,7 +15,8 @@ export type NukeType =
   | UnitType.MIRVWarhead;
 
 export const BoatUnitSchema = z.union([z.literal("trade"), z.literal("trans")]);
-export type BoatType = UnitType.TradeShip | UnitType.TransportShip;
+export type BoatUnit = z.infer<typeof BoatUnitSchema>;
+export type BoatUnitType = UnitType.TradeShip | UnitType.TransportShip;
 
 export const OtherUnitSchema = z.union([
   z.literal("city"),
@@ -24,7 +26,8 @@ export const OtherUnitSchema = z.union([
   z.literal("silo"),
   z.literal("saml"),
 ]);
-export type OtherUnit =
+export type OtherUnit = z.infer<typeof OtherUnitSchema>;
+export type OtherUnitType =
   | UnitType.City
   | UnitType.DefensePost
   | UnitType.MissileSilo
@@ -33,68 +36,42 @@ export type OtherUnit =
   | UnitType.Warship;
 
 // Attacks
-export const ATTACK_INDEX_INCOMING = 0;
-export const ATTACK_INDEX_OUTGOING = 1;
+export const ATTACK_INDEX_OUTGOING = 0;
+export const ATTACK_INDEX_INCOMING = 1;
 export const ATTACK_INDEX_CANCELLED = 2;
-export const IncomingOutgoingCancelledSchema = z.tuple([
-  z.number().nonnegative(), // incoming
-  z.number().nonnegative(), // outgoing
-  z.number().nonnegative(), // cancelled
-]);
 
 // Boats
 export const BOAT_INDEX_SENT = 0;
 export const BOAT_INDEX_ARRIVED = 1;
 export const BOAT_INDEX_DESTROYED = 2;
-export const SentArrivedDestroyedSchema = z.tuple([
-  z.number().nonnegative(), // sent
-  z.number().nonnegative(), // arrived
-  z.number().nonnegative(), // destroyed
-]);
 
 // Bombs
 export const BOMB_INDEX_LAUNCHED = 0;
 export const BOMB_INDEX_LANDED = 1;
 export const BOMB_INDEX_INTERCEPTED = 2;
-export const LaunchedLandedInterceptedSchema = z.tuple([
-  z.number().nonnegative(), // launched
-  z.number().nonnegative(), // landed
-  z.number().nonnegative(), // intercepted
-]);
-export type LaunchedLandedIntercepted = z.infer<
-  typeof LaunchedLandedInterceptedSchema
->;
 
 // Gold
 export const GOLD_INDEX_WORK = 0;
 export const GOLD_INDEX_TRADE = 1;
 export const GOLD_INDEX_WAR = 2;
-export const WorkersTradeWarSchema = z.tuple([
-  z.number().nonnegative(), // workers
-  z.number().nonnegative(), // trade
-  z.number().nonnegative(), // war
-]);
 
 // Other Units
 export const OTHER_INDEX_BUILT = 0;
 export const OTHER_INDEX_DESTROYED = 1;
 export const OTHER_INDEX_CAPTURED = 2;
 export const OTHER_INDEX_LOST = 3;
-export const BuiltDestroyedCapturedLostSchema = z.tuple([
-  z.number().nonnegative(), // built
-  z.number().nonnegative(), // destroyed
-  z.number().nonnegative(), // captured
-  z.number().nonnegative(), // lost
-]);
-export type BuiltDestroyedCapturedLost = z.infer<
-  typeof BuiltDestroyedCapturedLostSchema
->;
 
-export const PlayerStatsSchema = z.object({
-  attacks: IncomingOutgoingCancelledSchema,
-  betrayals: z.number().nonnegative(),
-  boats: z.record(BoatUnitSchema, SentArrivedDestroyedSchema),
-  bombs: z.record(BombUnitSchema, LaunchedLandedInterceptedSchema),
-  gold: WorkersTradeWarSchema,
-  units: z.record(OtherUnitSchema, BuiltDestroyedCapturedLostSchema),
-});
+const AtLeastOneNumberSchema = z.number().array().min(1);
+export type AtLeastOneNumber = [number, ...number[]];
+
+export const PlayerStatsSchema = z
+  .object({
+    attacks: AtLeastOneNumberSchema.optional(),
+    betrayals: z.number().positive().optional(),
+    boats: z.record(BoatUnitSchema, AtLeastOneNumberSchema).optional(),
+    bombs: z.record(BombUnitSchema, AtLeastOneNumberSchema).optional(),
+    gold: AtLeastOneNumberSchema.optional(),
+    units: z.record(OtherUnitSchema, AtLeastOneNumberSchema).optional(),
+  })
+  .optional();
+export type PlayerStats = z.infer<typeof PlayerStatsSchema>;

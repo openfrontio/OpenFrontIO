@@ -1,5 +1,5 @@
-import { NukeType, OtherUnit } from "../AnalyticsSchemas";
-import { AllPlayersStats, PlayerStats } from "../Schemas";
+import { NukeType, OtherUnitType, PlayerStats } from "../AnalyticsSchemas";
+import { AllPlayersStats } from "../Schemas";
 import { Player, TerraNullius } from "./Game";
 
 export interface Stats {
@@ -65,14 +65,14 @@ export interface Stats {
   goldWork(player: Player, gold: number): void;
 
   // Player builds a unit of type
-  unitBuild(player: Player, type: OtherUnit): void;
+  unitBuild(player: Player, type: OtherUnitType): void;
 
   // Player captures a unit of type
-  unitCapture(player: Player, type: OtherUnit): void;
+  unitCapture(player: Player, type: OtherUnitType): void;
 
   // Player destroys a unit of type
-  unitDestroy(player: Player, type: OtherUnit): void;
+  unitDestroy(player: Player, type: OtherUnitType): void;
 
   // Player loses a unit of type
-  unitLose(player: Player, type: OtherUnit): void;
+  unitLose(player: Player, type: OtherUnitType): void;
 }

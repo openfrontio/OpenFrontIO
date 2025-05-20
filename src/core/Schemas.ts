@@ -92,7 +92,6 @@ export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;
 export type GameRecord = z.infer<typeof GameRecordSchema>;
 
 export type AllPlayersStats = z.infer<typeof AllPlayersStatsSchema>;
-export type PlayerStats = z.infer<typeof PlayerStatsSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 const PlayerTypeSchema = z.nativeEnum(PlayerType);
@@ -448,7 +447,7 @@ export const PlayerRecordSchema = z.object({
   username: SafeString,
   ip: SafeString.nullable(), // WARNING: PII
   persistentID: PersistentIdSchema, // WARNING: PII
-  stats: PlayerStatsSchema.optional(),
+  stats: PlayerStatsSchema,
 });
 
 export const GameRecordSchema = z.object({
