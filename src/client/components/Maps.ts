@@ -29,6 +29,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   FalklandIslands: "Falkland Islands",
   Baikal: "Baikal",
   Halkidiki: "Halkidiki",
+  NorthernHemisphere: "Northern Hemisphere",
 };
 
 @customElement("map-display")

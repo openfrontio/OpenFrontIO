@@ -126,6 +126,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
           GameMapType.NorthAmerica,
           GameMapType.Africa,
           GameMapType.Europe,
+          GameMapType.NorthernHemisphere,
         ].includes(map)
       ) {
         return Math.random() < 0.2 ? 100 : 50;

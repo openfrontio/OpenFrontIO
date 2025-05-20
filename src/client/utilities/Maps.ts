@@ -18,6 +18,7 @@ import knownworld from "../../../resources/maps/KnownWorldThumb.webp";
 import mars from "../../../resources/maps/MarsThumb.webp";
 import mena from "../../../resources/maps/MenaThumb.webp";
 import northAmerica from "../../../resources/maps/NorthAmericaThumb.webp";
+import northernHemisphere from "../../../resources/maps/NorthernHemisphereThumb.webp";
 import oceania from "../../../resources/maps/OceaniaThumb.webp";
 import pangaea from "../../../resources/maps/PangaeaThumb.webp";
 import southAmerica from "../../../resources/maps/SouthAmericaThumb.webp";
@@ -75,6 +76,8 @@ export function getMapsImage(map: GameMapType): string {
       return baikal;
     case GameMapType.Halkidiki:
       return halkidiki;
+    case GameMapType.NorthernHemisphere:
+      return northernHemisphere;
     default:
       return "";
   }

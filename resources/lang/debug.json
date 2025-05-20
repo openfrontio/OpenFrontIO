@@ -115,7 +115,8 @@
     "australia": "map.australia",
     "random": "map.random",
     "iceland": "map.iceland",
-    "pangaea": "map.pangaea"
+    "pangaea": "map.pangaea",
+    "northernhemisphere": "map.northernhemisphere"
   },
   "private_lobby": {
     "title": "private_lobby.title",
