@@ -1,6 +1,7 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { translateText } from "../../../client/Utils";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
@@ -27,9 +28,9 @@ export class GoToUnitEvent implements GameEvent {
 
 @customElement("leader-board")
 export class Leaderboard extends LitElement implements Layer {
-  public game: GameView;
-  public clientID: ClientID;
-  public eventBus: EventBus;
+  public game: GameView | null = null;
+  public clientID: ClientID | null = null;
+  public eventBus: EventBus | null = null;
 
   players: Entry[] = [];
 
@@ -41,6 +42,7 @@ export class Leaderboard extends LitElement implements Layer {
   init() {}
 
   tick() {
+    if (this.game === null) throw new Error("Not initialized");
     if (!this._shownOnInit && !this.game.inSpawnPhase()) {
       this._shownOnInit = true;
       this.showLeaderboard();
@@ -50,18 +52,19 @@ export class Leaderboard extends LitElement implements Layer {
       return;
     }
 
-    if (this.game.ticks() % 10 == 0) {
+    if (this.game.ticks() % 10 === 0) {
       this.updateLeaderboard();
     }
   }
 
   private updateLeaderboard() {
-    if (this.clientID == null) {
+    if (this.game === null) throw new Error("Not initialized");
+    if (this.clientID === null) {
       return;
     }
-    const myPlayer = this.game
-      .playerViews()
-      .find((p) => p.clientID() == this.clientID);
+    const myPlayer =
+      this.game.playerViews().find((p) => p.clientID() === this.clientID) ??
+      null;
 
     const sorted = this.game
       .playerViews()
@@ -85,16 +88,19 @@ export class Leaderboard extends LitElement implements Layer {
         ),
         gold: renderNumber(player.gold()),
         troops: renderNumber(troops),
-        isMyPlayer: player == myPlayer,
+        isMyPlayer: player === myPlayer,
         player: player,
       };
     });
 
-    if (myPlayer != null && this.players.find((p) => p.isMyPlayer) == null) {
+    if (
+      myPlayer !== null &&
+      this.players.find((p) => p.isMyPlayer) === undefined
+    ) {
       let place = 0;
       for (const p of sorted) {
         place++;
-        if (p == myPlayer) {
+        if (p === myPlayer) {
           break;
         }
       }
@@ -121,6 +127,7 @@ export class Leaderboard extends LitElement implements Layer {
   }
 
   private handleRowClickPlayer(player: PlayerView) {
+    if (this.eventBus === null) return;
     this.eventBus.emit(new GoToPlayerEvent(player));
   }
 
@@ -141,7 +148,7 @@ export class Leaderboard extends LitElement implements Layer {
       position: fixed;
       top: 10px;
       left: 10px;
-      z-index: 9999;
+      z-index: 9998;
       background-color: rgb(31 41 55 / 0.7);
       padding: 10px;
       padding-top: 0px;
@@ -192,7 +199,7 @@ export class Leaderboard extends LitElement implements Layer {
       position: fixed;
       left: 10px;
       top: 10px;
-      z-index: 9999;
+      z-index: 9998;
       background-color: rgb(31 41 55 / 0.7);
       color: white;
       border: none;
@@ -242,7 +249,7 @@ export class Leaderboard extends LitElement implements Layer {
           ? ""
           : "hidden"}"
       >
-        Leaderboard
+        ${translateText("leaderboard.title")}
       </button>
       <div
         class="leaderboard ${this._leaderboardHidden ? "hidden" : ""}"
@@ -252,7 +259,7 @@ export class Leaderboard extends LitElement implements Layer {
           class="leaderboard-close-button"
           @click=${() => this.hideLeaderboard()}
         >
-          Hide
+          ${translateText("leaderboard.hide")}
         </button>
         <button
           class="leaderboard-top-five-button"
@@ -266,11 +273,11 @@ export class Leaderboard extends LitElement implements Layer {
         <table>
           <thead>
             <tr>
-              <th>Rank</th>
-              <th>Player</th>
-              <th>Owned</th>
-              <th>Gold</th>
-              <th>Troops</th>
+              <th>${translateText("leaderboard.rank")}</th>
+              <th>${translateText("leaderboard.player")}</th>
+              <th>${translateText("leaderboard.owned")}</th>
+              <th>${translateText("leaderboard.gold")}</th>
+              <th>${translateText("leaderboard.troops")}</th>
             </tr>
           </thead>
           <tbody>

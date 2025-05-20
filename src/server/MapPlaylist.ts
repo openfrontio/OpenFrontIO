@@ -30,6 +30,8 @@ const frequency = {
   BlackSea: 1,
   FaroeIslands: 1,
   FalklandIslands: 1,
+  Baikal: 1,
+  Halkidiki: 1,
 };
 
 interface MapWithMode {
@@ -55,7 +57,7 @@ export class MapPlaylist {
       infiniteGold: false,
       infiniteTroops: false,
       instantBuild: false,
-      disableNPCs: mode == GameMode.Team,
+      disableNPCs: mode === GameMode.Team,
       disableNukes: false,
       gameMode: mode,
       playerTeams: numPlayerTeams,

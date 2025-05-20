@@ -1,6 +1,7 @@
 import africa from "../../../resources/maps/AfricaThumb.webp";
 import asia from "../../../resources/maps/AsiaThumb.webp";
 import australia from "../../../resources/maps/AustraliaThumb.webp";
+import baikal from "../../../resources/maps/BaikalThumb.webp";
 import betweenTwoSeas from "../../../resources/maps/BetweenTwoSeasThumb.webp";
 import blackSea from "../../../resources/maps/BlackSeaThumb.webp";
 import britannia from "../../../resources/maps/BritanniaThumb.webp";
@@ -10,6 +11,7 @@ import europe from "../../../resources/maps/EuropeThumb.webp";
 import falklandislands from "../../../resources/maps/FalklandIslandsThumb.webp";
 import faroeislands from "../../../resources/maps/FaroeIslandsThumb.webp";
 import gatewayToTheAtlantic from "../../../resources/maps/GatewayToTheAtlanticThumb.webp";
+import halkidiki from "../../../resources/maps/HalkidikiThumb.webp";
 import iceland from "../../../resources/maps/IcelandThumb.webp";
 import japan from "../../../resources/maps/JapanThumb.webp";
 import knownworld from "../../../resources/maps/KnownWorldThumb.webp";
@@ -69,6 +71,10 @@ export function getMapsImage(map: GameMapType): string {
       return deglaciatedAntarctica;
     case GameMapType.FalklandIslands:
       return falklandislands;
+    case GameMapType.Baikal:
+      return baikal;
+    case GameMapType.Halkidiki:
+      return halkidiki;
     default:
       return "";
   }

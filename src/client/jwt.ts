@@ -5,7 +5,7 @@ import {
   TokenPayloadSchema,
   UserMeResponse,
   UserMeResponseSchema,
-} from "./ApiSchemas";
+} from "../core/ApiSchemas";
 
 function getAudience() {
   const { hostname } = new URL(window.location.href);

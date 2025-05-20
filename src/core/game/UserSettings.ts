@@ -1,11 +1,13 @@
 export class UserSettings {
-  get(key: string, defaultValue: boolean) {
+  get(key: string, defaultValue: boolean): boolean {
     const value = localStorage.getItem(key);
     if (!value) return defaultValue;
 
     if (value === "true") return true;
 
     if (value === "false") return false;
+
+    return defaultValue;
   }
 
   set(key: string, value: boolean) {
@@ -17,6 +19,10 @@ export class UserSettings {
   }
   anonymousNames() {
     return this.get("settings.anonymousNames", false);
+  }
+
+  fxLayer() {
+    return this.get("settings.specialEffects", true);
   }
 
   darkMode() {
@@ -47,6 +53,10 @@ export class UserSettings {
 
   toggleRandomName() {
     this.set("settings.anonymousNames", !this.anonymousNames());
+  }
+
+  toggleFxLayer() {
+    this.set("settings.specialEffects", !this.fxLayer());
   }
 
   toggleDarkMode() {

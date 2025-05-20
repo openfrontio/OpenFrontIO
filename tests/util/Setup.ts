@@ -3,6 +3,8 @@ import path from "path";
 import {
   Difficulty,
   Game,
+  GameMapType,
+  GameMode,
   GameType,
   PlayerInfo,
   PlayerType,
@@ -17,9 +19,12 @@ import { TestServerConfig } from "./TestServerConfig";
 
 export async function setup(
   mapName: string,
-  _gameConfig: GameConfig = {},
+  _gameConfig: Partial<GameConfig> = {},
   humans: PlayerInfo[] = [],
 ): Promise<Game> {
+  // Suppress console.debug for tests.
+  console.debug = () => {};
+
   // Load the specified map
   const mapPath = path.join(__dirname, "..", "testdata", `${mapName}.png`);
   const imageBuffer = await fs.readFile(mapPath);
@@ -31,8 +36,9 @@ export async function setup(
 
   // Configure the game
   const serverConfig = new TestServerConfig();
-  const gameConfig = {
-    gameMap: null,
+  const gameConfig: GameConfig = {
+    gameMap: GameMapType.Asia,
+    gameMode: GameMode.FFA,
     gameType: GameType.Singleplayer,
     difficulty: Difficulty.Medium,
     disableNPCs: false,
@@ -42,7 +48,12 @@ export async function setup(
     instantBuild: false,
     ..._gameConfig,
   };
-  const config = new TestConfig(serverConfig, gameConfig, new UserSettings());
+  const config = new TestConfig(
+    serverConfig,
+    gameConfig,
+    new UserSettings(),
+    false,
+  );
 
   // Create and return the game
   return createGame(humans, [], gameMap, miniGameMap, config);

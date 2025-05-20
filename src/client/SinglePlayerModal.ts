@@ -31,7 +31,6 @@ export class SinglePlayerModal extends LitElement {
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs: boolean = false;
-  @state() private disableNukes: boolean = false;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
@@ -73,7 +72,7 @@ export class SinglePlayerModal extends LitElement {
                               .selected=${!this.useRandomMap &&
                               this.selectedMap === mapValue}
                               .translation=${translateText(
-                                `map.${mapKey.toLowerCase()}`,
+                                `map.${mapKey?.toLowerCase()}`,
                               )}
                             ></map-display>
                           </div>
@@ -204,7 +203,7 @@ export class SinglePlayerModal extends LitElement {
                 />
                 <div class="option-card-title">
                   <span>${translateText("single_modal.bots")}</span>${this
-                    .bots == 0
+                    .bots === 0
                     ? translateText("single_modal.bots_disabled")
                     : this.bots}
                 </div>
@@ -390,10 +389,6 @@ export class SinglePlayerModal extends LitElement {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
   }
 
-  private handleDisableNukesChange(e: Event) {
-    this.disableNukes = Boolean((e.target as HTMLInputElement).checked);
-  }
-
   private handleGameModeSelection(value: GameMode) {
     this.gameMode = value;
   }
@@ -444,7 +439,7 @@ export class SinglePlayerModal extends LitElement {
                 clientID,
                 username: usernameInput.getCurrentUsername(),
                 flag:
-                  flagInput.getCurrentFlag() == "xx"
+                  flagInput.getCurrentFlag() === "xx"
                     ? ""
                     : flagInput.getCurrentFlag(),
               },
@@ -456,15 +451,16 @@ export class SinglePlayerModal extends LitElement {
               playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,
               disableNPCs: this.disableNPCs,
-              disableNukes: this.disableNukes,
               bots: this.bots,
               infiniteGold: this.infiniteGold,
               infiniteTroops: this.infiniteTroops,
               instantBuild: this.instantBuild,
-              disabledUnits: this.disabledUnits,
+              disabledUnits: this.disabledUnits
+                .map((u) => Object.values(UnitType).find((ut) => ut === u))
+                .filter((ut): ut is UnitType => ut !== undefined),
             },
           },
-        } as JoinLobbyEvent,
+        } satisfies JoinLobbyEvent,
         bubbles: true,
         composed: true,
       }),
