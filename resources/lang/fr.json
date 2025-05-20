@@ -213,6 +213,8 @@
     "dark_mode_desc": "Basculer l'apparence du site entre les thèmes clairs et sombres",
     "emojis_label": "😊 Émojis",
     "emojis_desc": "Afficher/Masquer les émoticônes dans le jeu",
+    "special_effects_label": "💥 Effets spéciaux",
+    "special_effects_desc": "Affiche les effets spéciaux - Désactivez pour améliorer les performances",
     "anonymous_names_label": "🥷 Noms masqués",
     "anonymous_names_desc": "Cacher le vrai nom des joueurs avec des noms aléatoires sur votre écran.",
     "left_click_label": "🖱️ Clic gauche pour ouvrir le menu",

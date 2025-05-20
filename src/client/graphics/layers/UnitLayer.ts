@@ -222,26 +222,35 @@ export class UnitLayer implements Layer {
     const unitsToUpdate = this.game
       .updatesSinceLastTick()
       ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
-      ?.forEach((unitView) => {
-        if (unitView === undefined) return;
-        const ready = isSpriteReady(unitView.type());
-        if (ready) this.clearUnitCells(unitView);
-        this.onUnitEvent(unitView);
+      .filter((unit) => unit !== undefined);
+
+    if (unitsToUpdate) {
+      // the clearing and drawing of unit sprites need to be done in 2 passes
+      // otherwise the sprite of a unit can be drawn on top of another unit
+      this.clearUnitsCells(unitsToUpdate);
+      this.drawUnitsCells(unitsToUpdate);
+    }
+  }
+
+  private clearUnitsCells(unitViews: UnitView[]) {
+    unitViews
+      .filter((unitView) => isSpriteReady(unitView.type()))
+      .forEach((unitView) => {
+        const sprite = getColoredSprite(unitView, this.theme);
+        const clearsize = sprite.width + 1;
+        const lastX = this.game.x(unitView.lastTile());
+        const lastY = this.game.y(unitView.lastTile());
+        this.context.clearRect(
+          lastX - clearsize / 2,
+          lastY - clearsize / 2,
+          clearsize,
+          clearsize,
+        );
       });
   }
 
-  private clearUnitCells(unit: UnitView) {
-    const sprite = getColoredSprite(unit, this.theme);
-    const clearsize = sprite.width + 1;
-
-    const lastX = this.game.x(unit.lastTile());
-    const lastY = this.game.y(unit.lastTile());
-    this.context.clearRect(
-      lastX - clearsize / 2,
-      lastY - clearsize / 2,
-      clearsize,
-      clearsize,
-    );
+  private drawUnitsCells(unitViews: UnitView[]) {
+    unitViews.forEach((unitView) => this.onUnitEvent(unitView));
   }
 
   private relationship(unit: UnitView): Relationship {
@@ -291,7 +300,7 @@ export class UnitLayer implements Layer {
   }
 
   private handleWarShipEvent(unit: UnitView) {
-    if (unit.warshipTargetId()) {
+    if (unit.targetUnitId()) {
       this.drawSprite(unit, colord({ r: 200, b: 0, g: 0 }));
     } else {
       this.drawSprite(unit);
@@ -502,7 +511,7 @@ export class UnitLayer implements Layer {
 
     if (this.alternateView) {
       let rel = this.relationship(unit);
-      const dstPortId = unit.dstPortId();
+      const dstPortId = unit.targetUnitId();
       if (unit.type() === UnitType.TradeShip && dstPortId !== undefined) {
         const target = this.game.unit(dstPortId)?.owner();
         const myPlayer = this.game.myPlayer();

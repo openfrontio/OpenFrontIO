@@ -8,7 +8,6 @@ import {
   GameUpdates,
   Gold,
   NameViewData,
-  nukeTypes,
   Player,
   PlayerActions,
   PlayerBorderTiles,
@@ -79,11 +78,17 @@ export class UnitView {
   troops(): number {
     return this.data.troops;
   }
+  retreating(): boolean {
+    if (this.type() !== UnitType.TransportShip) {
+      throw Error("Must be a transport ship");
+    }
+    return this.data.retreating;
+  }
   tile(): TileRef {
     return this.data.pos;
   }
   owner(): PlayerView {
-    return this.gameView.playerBySmallID(this.data.ownerID) as PlayerView;
+    return this.gameView.playerBySmallID(this.data.ownerID)! as PlayerView;
   }
   isActive(): boolean {
     return this.data.isActive;
@@ -97,20 +102,11 @@ export class UnitView {
   constructionType(): UnitType | undefined {
     return this.data.constructionType;
   }
-  dstPortId(): number | undefined {
-    return this.data.dstPortId;
+  targetUnitId(): number | undefined {
+    return this.data.targetUnitId;
   }
-  detonationDst(): TileRef | undefined {
-    if (!nukeTypes.includes(this.type())) {
-      throw Error("Must be a nuke");
-    }
-    return this.data.detonationDst;
-  }
-  warshipTargetId(): number | undefined {
-    if (this.type() !== UnitType.Warship) {
-      throw Error("Must be a warship");
-    }
-    return this.data.warshipTargetId;
+  targetTile(): TileRef | undefined {
+    return this.data.targetTile;
   }
   ticksLeftInCooldown(): Tick | undefined {
     return this.data.ticksLeftInCooldown;
@@ -122,7 +118,7 @@ export class UnitView {
 }
 
 export class PlayerView {
-  public anonymousName: string;
+  public anonymousName: string | null = null;
 
   constructor(
     private game: GameView,
@@ -132,8 +128,10 @@ export class PlayerView {
     if (data.clientID === game.myClientID()) {
       this.anonymousName = this.data.name;
     } else {
-      this.anonymousName =
-        createRandomName(this.data.name, this.data.playerType) ?? "";
+      this.anonymousName = createRandomName(
+        this.data.name,
+        this.data.playerType,
+      );
     }
   }
 
@@ -220,6 +218,9 @@ export class PlayerView {
   }
   population(): number {
     return this.data.population;
+  }
+  totalPopulation(): number {
+    return this.data.totalPopulation;
   }
   workers(): number {
     return this.data.workers;

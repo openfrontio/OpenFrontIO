@@ -76,6 +76,7 @@ export enum GameMapType {
   DeglaciatedAntarctica = "Deglaciated Antarctica",
   FalklandIslands = "Falkland Islands",
   Baikal = "Baikal",
+  Halkidiki = "Halkidiki",
 }
 
 export const mapCategories: Record<string, GameMapType[]> = {
@@ -101,6 +102,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.FaroeIslands,
     GameMapType.FalklandIslands,
     GameMapType.Baikal,
+    GameMapType.Halkidiki,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -322,57 +324,59 @@ export class PlayerInfo {
 }
 
 export interface Unit {
-  id(): number;
+  hash(): number;
 
-  // Properties
+  // Common properties.
+  id(): number;
   type(): UnitType;
-  troops(): number;
   owner(): Player;
   info(): UnitInfo;
-
-  // Location
+  delete(displayerMessage?: boolean): void;
   tile(): TileRef;
   lastTile(): TileRef;
   move(tile: TileRef): void;
-
-  // State
   isActive(): boolean;
-  hasHealth(): boolean;
-  health(): number;
-  modifyHealth(delta: number): void;
-
-  setWarshipTarget(target: Unit | null): void; // warship only
-  warshipTarget(): Unit | null;
-
   setOwner(owner: Player): void;
-  setCooldown(triggerCooldown: boolean): void;
-  ticksLeftInCooldown(cooldownDuration: number): Tick;
-  isCooldown(): boolean;
-  setDstPort(dstPort: Unit): void;
-  dstPort(): Unit | null; // Only for trade ships
-  setSafeFromPirates(): void; // Only for trade ships
-  isSafeFromPirates(): boolean; // Only for trade ships
-  detonationDst(): TileRef | null; // Only for nukes
+  touch(): void;
+  toUpdate(): UnitUpdate;
 
-  setMoveTarget(cell: TileRef | null): void;
-  moveTarget(): TileRef | null;
-
+  // Targeting
+  setTargetTile(cell: TileRef | undefined): void;
+  targetTile(): TileRef | undefined;
+  setTargetUnit(unit: Unit | undefined): void;
+  targetUnit(): Unit | undefined;
   setTargetedBySAM(targeted: boolean): void;
   targetedBySAM(): boolean;
 
-  // Mutations
-  setTroops(troops: number): void;
-  delete(displayerMessage?: boolean): void;
+  // Health
+  hasHealth(): boolean;
+  retreating(): boolean;
+  orderBoatRetreat(): void;
+  health(): number;
+  modifyHealth(delta: number): void;
 
-  // Only for Construction type
+  // Troops
+  setTroops(troops: number): void;
+  troops(): number;
+
+  // --- UNIT SPECIFIC ---
+
+  // SAMs & Missile Silos
+  launch(): void;
+  ticksLeftInCooldown(): Tick | undefined;
+  isInCooldown(): boolean;
+
+  // Trade Ships
+  setSafeFromPirates(): void; // Only for trade ships
+  isSafeFromPirates(): boolean; // Only for trade ships
+
+  // Construction
   constructionType(): UnitType | null;
   setConstructionType(type: UnitType): void;
 
-  // Updates
-  toUpdate(): UnitUpdate;
-
-  cachePut(from: TileRef, to: TileRef): void; // ports only
-  cacheGet(from: TileRef): TileRef | undefined; // ports only
+  // Ports
+  cachePut(from: TileRef, to: TileRef): void;
+  cacheGet(from: TileRef): TileRef | undefined;
 }
 
 export interface TerraNullius {
@@ -420,6 +424,7 @@ export interface Player {
   // Resources & Population
   gold(): Gold;
   population(): number;
+  totalPopulation(): number;
   workers(): number;
   troops(): number;
   targetTroopRatio(): number;
@@ -611,6 +616,7 @@ export interface PlayerInteraction {
   canTarget: boolean;
   canDonate: boolean;
   canEmbargo: boolean;
+  allianceCreatedAtTick?: Tick;
 }
 
 export interface EmojiMessage {

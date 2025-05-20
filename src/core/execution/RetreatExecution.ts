@@ -15,7 +15,7 @@ export class RetreatExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     if (!mg.hasPlayer(this.playerID)) {
-      console.warn(`RetreatExecution: player ${this.player.id()} not found`);
+      console.warn(`RetreatExecution: player ${this.playerID} not found`);
       return;
     }
     this.mg = mg;
