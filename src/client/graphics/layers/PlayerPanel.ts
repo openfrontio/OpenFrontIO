@@ -29,8 +29,8 @@ import {
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
 import { renderNumber, renderTroops } from "../../Utils";
-import { ChatModal } from "./ChatModal";
 import { UIState } from "../UIState";
+import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
 
