@@ -1,5 +1,6 @@
-import { LitElement, html } from "lit";
+import { LitElement, TemplateResult, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import {
   PlayerProfile,
@@ -158,37 +159,53 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     }
   }
 
+  private getRelationName(relation: Relation): string {
+    switch (relation) {
+      case Relation.Hostile:
+        return translateText("relation.hostile");
+      case Relation.Distrustful:
+        return translateText("relation.distrustful");
+      case Relation.Neutral:
+        return translateText("relation.neutral");
+      case Relation.Friendly:
+        return translateText("relation.friendly");
+      default:
+        return translateText("relation.default");
+    }
+  }
+
   private renderPlayerInfo(player: PlayerView) {
     const myPlayer = this.myPlayer();
     const isFriendly = myPlayer?.isFriendly(player);
-    let relationHtml = null;
+    let relationHtml: TemplateResult | null = null;
     const attackingTroops = player
       .outgoingAttacks()
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
 
-    if (player.type() == PlayerType.FakeHuman && myPlayer != null) {
+    if (player.type() === PlayerType.FakeHuman && myPlayer !== null) {
       const relation =
         this.playerProfile?.relations[myPlayer.smallID()] ?? Relation.Neutral;
       const relationClass = this.getRelationClass(relation);
-      const relationName = Relation[relation];
+      const relationName = this.getRelationName(relation);
 
       relationHtml = html`
         <div class="text-sm opacity-80">
-          Attitude: <span class="${relationClass}">${relationName}</span>
+          ${translateText("player_info_overlay.attitude")}:
+          <span class="${relationClass}">${relationName}</span>
         </div>
       `;
     }
     let playerType = "";
     switch (player.type()) {
       case PlayerType.Bot:
-        playerType = "Bot";
+        playerType = translateText("player_info_overlay.bot");
         break;
       case PlayerType.FakeHuman:
-        playerType = "Nation";
+        playerType = translateText("player_info_overlay.nation");
         break;
       case PlayerType.Human:
-        playerType = "Player";
+        playerType = translateText("player_info_overlay.player");
         break;
     }
 
@@ -207,31 +224,49 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             : ""}
           ${player.name()}
         </div>
-        <div class="text-sm opacity-80">Type: ${playerType}</div>
+        ${player.team() !== null
+          ? html`<div class="text-sm opacity-80">
+              ${translateText("player_info_overlay.team")}: ${player.team()}
+            </div>`
+          : ""}
+        <div class="text-sm opacity-80">
+          ${translateText("player_info_overlay.type")}: ${playerType}
+        </div>
         ${player.troops() >= 1
           ? html`<div class="text-sm opacity-80" translate="no">
-              Defending troops: ${renderTroops(player.troops())}
+              ${translateText("player_info_overlay.d_troops")}:
+              ${renderTroops(player.troops())}
             </div>`
           : ""}
         ${attackingTroops >= 1
           ? html`<div class="text-sm opacity-80" translate="no">
-              Attacking troops: ${renderTroops(attackingTroops)}
+              ${translateText("player_info_overlay.a_troops")}:
+              ${renderTroops(attackingTroops)}
             </div>`
           : ""}
         <div class="text-sm opacity-80" translate="no">
-          Gold: ${renderNumber(player.gold())}
+          ${translateText("player_info_overlay.gold")}:
+          ${renderNumber(player.gold())}
         </div>
         <div class="text-sm opacity-80" translate="no">
-          Ports: ${player.units(UnitType.Port).length}
+          ${translateText("player_info_overlay.ports")}:
+          ${player.units(UnitType.Port).length}
         </div>
         <div class="text-sm opacity-80" translate="no">
-          Cities: ${player.units(UnitType.City).length}
+          ${translateText("player_info_overlay.cities")}:
+          ${player.units(UnitType.City).length}
         </div>
         <div class="text-sm opacity-80" translate="no">
-          Missile launchers: ${player.units(UnitType.MissileSilo).length}
+          ${translateText("player_info_overlay.missile_launchers")}:
+          ${player.units(UnitType.MissileSilo).length}
         </div>
         <div class="text-sm opacity-80" translate="no">
-          SAMs: ${player.units(UnitType.SAMLauncher).length}
+          ${translateText("player_info_overlay.sams")}:
+          ${player.units(UnitType.SAMLauncher).length}
+        </div>
+        <div class="text-sm opacity-80" translate="no">
+          ${translateText("player_info_overlay.warships")}:
+          ${player.units(UnitType.Warship).length}
         </div>
         ${relationHtml}
       </div>
@@ -240,7 +275,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
   private renderUnitInfo(unit: UnitView) {
     const isAlly =
-      (unit.owner() == this.myPlayer() ||
+      (unit.owner() === this.myPlayer() ||
         this.myPlayer()?.isFriendly(unit.owner())) ??
       false;
 
@@ -253,7 +288,10 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           <div class="text-sm opacity-80">${unit.type()}</div>
           ${unit.hasHealth()
             ? html`
-                <div class="text-sm opacity-80">Health: ${unit.health()}</div>
+                <div class="text-sm opacity-80">
+                  ${translateText("player_info_overlay.health")}:
+                  ${unit.health()}
+                </div>
               `
             : ""}
         </div>
@@ -278,8 +316,8 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         <div
           class="bg-opacity-60 bg-gray-900 rounded-lg shadow-lg backdrop-blur-sm transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
         >
-          ${this.player != null ? this.renderPlayerInfo(this.player) : ""}
-          ${this.unit != null ? this.renderUnitInfo(this.unit) : ""}
+          ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
+          ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}
         </div>
       </div>
     `;

@@ -19,17 +19,20 @@ import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
+import { NewsModal } from "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
-import "./RandomNameButton";
-import { RandomNameButton } from "./RandomNameButton";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import { generateCryptoRandomUUID } from "./Utils";
+import "./components/NewsButton";
+import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
+import { OButton } from "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
 import "./styles.css";
 
 export interface JoinLobbyEvent {
@@ -43,12 +46,11 @@ export interface JoinLobbyEvent {
 }
 
 class Client {
-  private gameStop: () => void;
+  private gameStop: (() => void) | null = null;
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
   private darkModeButton: DarkModeButton | null = null;
-  private randomNameButton: RandomNameButton | null = null;
 
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
@@ -58,6 +60,23 @@ class Client {
   constructor() {}
 
   initialize(): void {
+    const newsModal = document.querySelector("news-modal") as NewsModal;
+    if (!newsModal) {
+      consolex.warn("News modal element not found");
+    } else {
+      consolex.log("News modal element found");
+    }
+    newsModal instanceof NewsModal;
+    const newsButton = document.querySelector("news-button") as NewsButton;
+    if (!newsButton) {
+      consolex.warn("News button element not found");
+    } else {
+      consolex.log("News button element found");
+    }
+
+    // Comment out to show news button.
+    newsButton.hidden = true;
+
     const langSelector = document.querySelector(
       "lang-selector",
     ) as LangSelector;
@@ -83,12 +102,12 @@ class Client {
       consolex.warn("Dark mode button element not found");
     }
 
-    this.randomNameButton = document.querySelector(
-      "random-name-button",
-    ) as RandomNameButton;
-    if (!this.randomNameButton) {
-      consolex.warn("Random name button element not found");
-    }
+    const loginDiscordButton = document.getElementById(
+      "login-discord",
+    ) as OButton;
+    const logoutDiscordButton = document.getElementById(
+      "logout-discord",
+    ) as OButton;
 
     this.usernameInput = document.querySelector(
       "username-input",
@@ -104,7 +123,7 @@ class Client {
 
     window.addEventListener("beforeunload", () => {
       consolex.log("Browser is closing");
-      if (this.gameStop != null) {
+      if (this.gameStop !== null) {
         this.gameStop();
       }
     });
@@ -117,50 +136,100 @@ class Client {
       "single-player-modal",
     ) as SinglePlayerModal;
     spModal instanceof SinglePlayerModal;
-    document.getElementById("single-player").addEventListener("click", () => {
-      if (this.usernameInput.isValid()) {
+    const singlePlayer = document.getElementById("single-player");
+    if (singlePlayer === null) throw new Error("Missing single-player");
+    singlePlayer.addEventListener("click", () => {
+      if (this.usernameInput?.isValid()) {
         spModal.open();
       }
     });
 
+    // const ctModal = document.querySelector("chat-modal") as ChatModal;
+    // ctModal instanceof ChatModal;
+    // document.getElementById("chat-button").addEventListener("click", () => {
+    //   ctModal.open();
+    // });
+
     const hlpModal = document.querySelector("help-modal") as HelpModal;
     hlpModal instanceof HelpModal;
-    document.getElementById("help-button").addEventListener("click", () => {
+    const helpButton = document.getElementById("help-button");
+    if (helpButton === null) throw new Error("Missing help-button");
+    helpButton.addEventListener("click", () => {
       hlpModal.open();
     });
+
+    const claims = isLoggedIn();
+    if (claims === false) {
+      // Not logged in
+      loginDiscordButton.disable = false;
+      loginDiscordButton.translationKey = "main.login_discord";
+      loginDiscordButton.addEventListener("click", discordLogin);
+      logoutDiscordButton.hidden = true;
+    } else {
+      // JWT appears to be valid, assume we are logged in
+      loginDiscordButton.disable = true;
+      loginDiscordButton.translationKey = "main.logged_in";
+      logoutDiscordButton.hidden = false;
+      logoutDiscordButton.addEventListener("click", () => {
+        // Log out
+        logOut();
+        loginDiscordButton.disable = false;
+        loginDiscordButton.translationKey = "main.login_discord";
+        loginDiscordButton.addEventListener("click", discordLogin);
+        logoutDiscordButton.hidden = true;
+      });
+      // Look up the discord user object.
+      // TODO: Add caching
+      getUserMe().then((userMeResponse) => {
+        if (userMeResponse === false) {
+          // Not logged in
+          loginDiscordButton.disable = false;
+          loginDiscordButton.translationKey = "main.login_discord";
+          loginDiscordButton.addEventListener("click", discordLogin);
+          logoutDiscordButton.hidden = true;
+          return;
+        }
+        // TODO: Update the page for logged in user
+      });
+    }
 
     const settingsModal = document.querySelector(
       "user-setting",
     ) as UserSettingModal;
     settingsModal instanceof UserSettingModal;
-    document.getElementById("settings-button").addEventListener("click", () => {
-      settingsModal.open();
-    });
+    document
+      .getElementById("settings-button")
+      ?.addEventListener("click", () => {
+        settingsModal.open();
+      });
 
     const hostModal = document.querySelector(
       "host-lobby-modal",
     ) as HostPrivateLobbyModal;
     hostModal instanceof HostPrivateLobbyModal;
-    document
-      .getElementById("host-lobby-button")
-      .addEventListener("click", () => {
-        if (this.usernameInput.isValid()) {
-          hostModal.open();
-          this.publicLobby.leaveLobby();
-        }
-      });
+    const hostLobbyButton = document.getElementById("host-lobby-button");
+    if (hostLobbyButton === null) throw new Error("Missing host-lobby-button");
+    hostLobbyButton.addEventListener("click", () => {
+      if (this.usernameInput?.isValid()) {
+        hostModal.open();
+        this.publicLobby.leaveLobby();
+      }
+    });
 
     this.joinModal = document.querySelector(
       "join-private-lobby-modal",
     ) as JoinPrivateLobbyModal;
     this.joinModal instanceof JoinPrivateLobbyModal;
-    document
-      .getElementById("join-private-lobby-button")
-      .addEventListener("click", () => {
-        if (this.usernameInput.isValid()) {
-          this.joinModal.open();
-        }
-      });
+    const joinPrivateLobbyButton = document.getElementById(
+      "join-private-lobby-button",
+    );
+    if (joinPrivateLobbyButton === null)
+      throw new Error("Missing join-private-lobby-button");
+    joinPrivateLobbyButton.addEventListener("click", () => {
+      if (this.usernameInput?.isValid()) {
+        this.joinModal.open();
+      }
+    });
 
     if (this.userSettings.darkMode()) {
       document.documentElement.classList.add("dark");
@@ -174,6 +243,13 @@ class Client {
         return;
       }
       const lobbyId = ctx.params.lobbyId;
+
+      if (lobbyId?.endsWith("#")) {
+        // When the cookies button is pressed, '#' is added to the url
+        // causing the page to attempt to rejoin the lobby during game play.
+        console.error("Invalid lobby ID provided");
+        return;
+      }
 
       this.joinModal.open(lobbyId);
 
@@ -198,7 +274,7 @@ class Client {
   private async handleJoinLobby(event: CustomEvent) {
     const lobby = event.detail as JoinLobbyEvent;
     consolex.log(`joining lobby ${lobby.gameID}`);
-    if (this.gameStop != null) {
+    if (this.gameStop !== null) {
       consolex.log("joining lobby, stopping existing game");
       this.gameStop();
     }
@@ -209,18 +285,18 @@ class Client {
         gameID: lobby.gameID,
         serverConfig: config,
         flag:
-          this.flagInput.getCurrentFlag() == "xx"
+          this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
             ? ""
             : this.flagInput.getCurrentFlag(),
-        playerName: this.usernameInput.getCurrentUsername(),
-        persistentID: getPersistentIDFromCookie(),
+        playerName: this.usernameInput?.getCurrentUsername() ?? "",
+        token: localStorage.getItem("token") ?? getPersistentIDFromCookie(),
         clientID: lobby.clientID,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.gameStartInfo,
         gameRecord: lobby.gameRecord,
       },
       () => {
         console.log("Closing modals");
-        document.getElementById("settings-button").classList.add("hidden");
+        document.getElementById("settings-button")?.classList.add("hidden");
         [
           "single-player-modal",
           "host-lobby-modal",
@@ -259,7 +335,7 @@ class Client {
           (ad as HTMLElement).style.display = "none";
         });
 
-        if (event.detail.gameConfig?.gameType != GameType.Singleplayer) {
+        if (event.detail.gameConfig?.gameType !== GameType.Singleplayer) {
           window.history.pushState({}, "", `/join/${lobby.gameID}`);
           sessionStorage.setItem("inLobby", "true");
         }
@@ -268,7 +344,7 @@ class Client {
   }
 
   private async handleLeaveLobby(/* event: CustomEvent */) {
-    if (this.gameStop == null) {
+    if (this.gameStop === null) {
       return;
     }
     consolex.log("leaving lobby, cancelling game");
@@ -293,6 +369,11 @@ function setFavicon(): void {
 
 // WARNING: DO NOT EXPOSE THIS ID
 export function getPersistentIDFromCookie(): string {
+  const claims = isLoggedIn();
+  if (claims !== false && claims.sub) {
+    return claims.sub;
+  }
+
   const COOKIE_NAME = "player_persistent_id";
 
   // Try to get existing cookie

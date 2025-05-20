@@ -4,9 +4,11 @@ import { Executor } from "./execution/ExecutionManager";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
+  Cell,
   Game,
   GameUpdates,
   NameViewData,
+  Nation,
   Player,
   PlayerActions,
   PlayerBorderTiles,
@@ -23,8 +25,9 @@ import {
   GameUpdateViewData,
 } from "./game/GameUpdates";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
+import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
-import { sanitize } from "./Util";
+import { sanitize, simpleHash } from "./Util";
 import { fixProfaneUsername } from "./validations/username";
 
 export async function createGameRunner(
@@ -34,26 +37,48 @@ export async function createGameRunner(
 ): Promise<GameRunner> {
   const config = await getConfig(gameStart.config, null);
   const gameMap = await loadGameMap(gameStart.config.gameMap);
-  const game = createGame(
-    gameStart.players.map(
-      (p) =>
-        new PlayerInfo(
-          p.flag,
-          p.clientID == clientID
-            ? sanitize(p.username)
-            : fixProfaneUsername(sanitize(p.username)),
-          PlayerType.Human,
-          p.clientID,
-          p.playerID,
-        ),
-    ),
+  const random = new PseudoRandom(simpleHash(gameStart.gameID));
+
+  const humans = gameStart.players.map(
+    (p) =>
+      new PlayerInfo(
+        p.flag,
+        p.clientID === clientID
+          ? sanitize(p.username)
+          : fixProfaneUsername(sanitize(p.username)),
+        PlayerType.Human,
+        p.clientID,
+        p.playerID,
+      ),
+  );
+
+  const nations = gameStart.config.disableNPCs
+    ? []
+    : gameMap.nationMap.nations.map(
+        (n) =>
+          new Nation(
+            new Cell(n.coordinates[0], n.coordinates[1]),
+            n.strength,
+            new PlayerInfo(
+              n.flag || "",
+              n.name,
+              PlayerType.FakeHuman,
+              null,
+              random.nextID(),
+            ),
+          ),
+      );
+
+  const game: Game = createGame(
+    humans,
+    nations,
     gameMap.gameMap,
     gameMap.miniGameMap,
-    gameMap.nationMap,
     config,
   );
+
   const gr = new GameRunner(
-    game as Game,
+    game,
     new Executor(game, gameStart.gameID, clientID),
     callBack,
   );
@@ -115,23 +140,25 @@ export class GameRunner {
           errMsg: error.message,
           stack: error.stack,
         } as ErrorUpdate);
-        return;
+      } else {
+        console.error("Game tick error:", error);
       }
+      return;
     }
 
-    if (this.game.inSpawnPhase() && this.game.ticks() % 2 == 0) {
+    if (this.game.inSpawnPhase() && this.game.ticks() % 2 === 0) {
       this.game
         .players()
         .filter(
           (p) =>
-            p.type() == PlayerType.Human || p.type() == PlayerType.FakeHuman,
+            p.type() === PlayerType.Human || p.type() === PlayerType.FakeHuman,
         )
         .forEach(
           (p) => (this.playerViewData[p.id()] = placeName(this.game, p)),
         );
     }
 
-    if (this.game.ticks() < 3 || this.game.ticks() % 30 == 0) {
+    if (this.game.ticks() < 3 || this.game.ticks() % 30 === 0) {
       this.game.players().forEach((p) => {
         this.playerViewData[p.id()] = placeName(this.game, p);
       });
@@ -174,6 +201,10 @@ export class GameRunner {
         canDonate: player.canDonate(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
       };
+      const alliance = player.allianceWith(other as Player);
+      if (alliance) {
+        actions.interaction.allianceCreatedAtTick = alliance.createdAt();
+      }
     }
 
     return actions;
