@@ -201,6 +201,10 @@ export class GameRunner {
         canDonate: player.canDonate(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
       };
+      const alliance = player.allianceWith(other as Player);
+      if (alliance) {
+        actions.interaction.allianceCreatedAtTick = alliance.createdAt();
+      }
     }
 
     return actions;
