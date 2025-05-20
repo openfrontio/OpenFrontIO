@@ -235,7 +235,7 @@ export class GameRunner {
       throw new Error(`player with id ${playerID} not found`);
     }
 
-    const condition = ((a) => a.id() === attackID);
+    const condition = (a) => a.id() === attackID;
     const attack =
       player.outgoingAttacks().find(condition) ??
       player.incomingAttacks().find(condition);
