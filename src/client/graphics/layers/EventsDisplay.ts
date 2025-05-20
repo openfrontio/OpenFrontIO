@@ -484,6 +484,26 @@ export class EventsDisplay extends LitElement implements Layer {
       : event.description;
   }
 
+  private async attackWarningOnClick(attack: AttackUpdate) {
+    const playerView = this.game.playerBySmallID(attack.attackerID);
+    if (playerView !== undefined) {
+      if (playerView instanceof PlayerView) {
+        const averagePosition = await playerView.attackAveragePosition(
+          attack.attackerID,
+          attack.id,
+        );
+
+        if (averagePosition === null) {
+          this.emitGoToPlayerEvent(attack.attackerID);
+        } else {
+          this.emitGoToPositionEvent(averagePosition.x, averagePosition.y);
+        }
+      }
+    } else {
+      this.emitGoToPlayerEvent(attack.attackerID);
+    }
+  }
+
   private renderIncomingAttacks() {
     return html`
       ${this.incomingAttacks.length > 0
@@ -495,31 +515,7 @@ export class EventsDisplay extends LitElement implements Layer {
                     <button
                       translate="no"
                       class="ml-2"
-                      @click=${async () => {
-                        const playerView = this.game.playerBySmallID(
-                          attack.attackerID,
-                        );
-                        if (playerView !== undefined) {
-                          if (playerView instanceof PlayerView) {
-                            const averagePosition =
-                              await playerView.attackAveragePosition(
-                                attack.attackerID,
-                                attack.id,
-                              );
-
-                            if (averagePosition === null) {
-                              this.emitGoToPlayerEvent(attack.attackerID);
-                            } else {
-                              this.emitGoToPositionEvent(
-                                averagePosition.x,
-                                averagePosition.y,
-                              );
-                            }
-                          }
-                        } else {
-                          this.emitGoToPlayerEvent(attack.attackerID);
-                        }
-                      }}
+                      @click=${() => this.attackWarningOnClick(attack)}
                     >
                       ${renderTroops(attack.troops)}
                       ${(
@@ -549,31 +545,7 @@ export class EventsDisplay extends LitElement implements Layer {
                     <button
                       translate="no"
                       class="ml-2"
-                      @click=${async () => {
-                        const playerView = this.game.playerBySmallID(
-                          attack.attackerID,
-                        );
-                        if (playerView !== undefined) {
-                          if (playerView instanceof PlayerView) {
-                            const averagePosition =
-                              await playerView.attackAveragePosition(
-                                attack.targetID,
-                                attack.id,
-                              );
-
-                            if (averagePosition === null) {
-                              this.emitGoToPlayerEvent(attack.attackerID);
-                            } else {
-                              this.emitGoToPositionEvent(
-                                averagePosition.x,
-                                averagePosition.y,
-                              );
-                            }
-                          }
-                        } else {
-                          this.emitGoToPlayerEvent(attack.attackerID);
-                        }
-                      }}
+                      @click=${async () => this.attackWarningOnClick(attack)}
                     >
                       ${renderTroops(attack.troops)}
                       ${(
