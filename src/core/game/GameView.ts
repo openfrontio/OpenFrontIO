@@ -1,5 +1,5 @@
 import { Config } from "../configuration/Config";
-import { ClientID, GameID, PlayerStats } from "../Schemas";
+import { ClientID, GameID } from "../Schemas";
 import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
@@ -77,6 +77,12 @@ export class UnitView {
   }
   troops(): number {
     return this.data.troops;
+  }
+  retreating(): boolean {
+    if (this.type() !== UnitType.TransportShip) {
+      throw Error("Must be a transport ship");
+    }
+    return this.data.retreating;
   }
   tile(): TileRef {
     return this.data.pos;
@@ -213,6 +219,9 @@ export class PlayerView {
   population(): number {
     return this.data.population;
   }
+  totalPopulation(): number {
+    return this.data.totalPopulation;
+  }
   workers(): number {
     return this.data.workers;
   }
@@ -269,9 +278,6 @@ export class PlayerView {
       this.clientID(),
       this.id(),
     );
-  }
-  stats(): PlayerStats {
-    return this.data.stats;
   }
   hasSpawned(): boolean {
     return this.data.hasSpawned;

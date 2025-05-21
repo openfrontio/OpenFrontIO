@@ -138,6 +138,7 @@ export class PlayerImpl implements Player {
       tilesOwned: this.numTilesOwned(),
       gold: Number(this._gold),
       population: this.population(),
+      totalPopulation: this.totalPopulation(),
       workers: this.workers(),
       troops: this.troops(),
       targetTroopRatio: this.targetTroopRatio(),
@@ -167,7 +168,6 @@ export class PlayerImpl implements Player {
           }) as AttackUpdate,
       ),
       outgoingAllianceRequests: outgoingAllianceRequests,
-      stats: this.mg.stats().getPlayerStats(this.id()),
       hasSpawned: this.hasSpawned(),
     };
   }
@@ -380,8 +380,12 @@ export class PlayerImpl implements Player {
         this.mg.config().traitorDuration()
     );
   }
+
   markTraitor(): void {
     this.markedTraitorTick = this.mg.ticks();
+
+    // Record stats
+    this.mg.stats().betray(this);
   }
 
   createAllianceRequest(recipient: Player): AllianceRequest | null {
@@ -648,6 +652,21 @@ export class PlayerImpl implements Player {
   population(): number {
     return Number(this._troops + this._workers);
   }
+  totalPopulation(): number {
+    return this.population() + this.attackingTroops();
+  }
+  private attackingTroops(): number {
+    const landAttackTroops = this._outgoingAttacks
+      .filter((a) => a.isActive())
+      .reduce((sum, a) => sum + a.troops(), 0);
+
+    const boatTroops = this.units(UnitType.TransportShip)
+      .map((u) => u.troops())
+      .reduce((sum, n) => sum + n, 0);
+
+    return landAttackTroops + boatTroops;
+  }
+
   workers(): number {
     return Math.max(1, Number(this._workers));
   }
@@ -909,7 +928,7 @@ export class PlayerImpl implements Player {
   hash(): number {
     return (
       simpleHash(this.id()) * (this.population() + this.numTilesOwned()) +
-      this._units.reduce((acc, unit) => acc + (unit as UnitImpl).hash(), 0)
+      this._units.reduce((acc, unit) => acc + unit.hash(), 0)
     );
   }
   toString(): string {
