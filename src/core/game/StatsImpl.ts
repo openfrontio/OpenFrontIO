@@ -29,8 +29,6 @@ import { Stats } from "./Stats";
 export class StatsImpl implements Stats {
   private readonly data: AllPlayersStats = {};
 
-  constructor() {}
-
   getPlayerStats(player: Player): PlayerStats {
     const clientID = player.clientID();
     if (clientID === null) return undefined;
