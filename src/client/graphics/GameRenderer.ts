@@ -170,8 +170,6 @@ export function createRenderer(
     console.error("player team label not found");
   }
   playerTeamLabel.game = game;
-  playerTeamLabel.eventBus = eventBus;
-  playerTeamLabel.clientID = clientID;
 
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),

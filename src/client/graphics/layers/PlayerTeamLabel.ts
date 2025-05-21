@@ -1,17 +1,13 @@
 import { Colord } from "colord";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
 import { GameMode } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
 import { Layer } from "./Layer";
 
 @customElement("player-team-label")
 export class PlayerTeamLabel extends LitElement implements Layer {
   public game: GameView;
-  public eventBus: EventBus;
-  public clientID: ClientID;
 
   @state()
   private isTeamsGameMode: boolean = false;
