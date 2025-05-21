@@ -1,22 +1,23 @@
 import {
-  ATTACK_INDEX_CANCELLED,
+  ATTACK_INDEX_CANCEL,
   ATTACK_INDEX_RECV,
   ATTACK_INDEX_SENT,
-  BOAT_INDEX_ARRIVED,
-  BOAT_INDEX_DESTROYED,
+  BOAT_INDEX_ARRIVE,
+  BOAT_INDEX_CAPTURE,
+  BOAT_INDEX_DESTROY,
   BOAT_INDEX_SENT,
   BoatUnit,
-  BOMB_INDEX_INTERCEPTED,
-  BOMB_INDEX_LANDED,
-  BOMB_INDEX_LAUNCHED,
-  GOLD_INDEX_STOLE,
+  BOMB_INDEX_INTERCEPT,
+  BOMB_INDEX_LAND,
+  BOMB_INDEX_LAUNCH,
+  GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
   GOLD_INDEX_WAR,
   GOLD_INDEX_WORK,
   NukeType,
   OTHER_INDEX_BUILT,
-  OTHER_INDEX_CAPTURED,
-  OTHER_INDEX_DESTROYED,
+  OTHER_INDEX_CAPTURE,
+  OTHER_INDEX_DESTROY,
   OTHER_INDEX_LOST,
   OtherUnitType,
   PlayerStats,
@@ -133,7 +134,7 @@ export class StatsImpl implements Stats {
     target: Player | TerraNullius,
     troops: number,
   ): void {
-    this._addAttack(player, ATTACK_INDEX_CANCELLED, troops);
+    this._addAttack(player, ATTACK_INDEX_CANCEL, troops);
     this._addAttack(player, ATTACK_INDEX_SENT, -troops);
     if (target.isPlayer()) {
       this._addAttack(target, ATTACK_INDEX_RECV, -troops);
@@ -149,18 +150,18 @@ export class StatsImpl implements Stats {
   }
 
   boatArriveTrade(player: Player, target: Player, gold: number): void {
-    this._addBoat(player, "trade", BOAT_INDEX_ARRIVED, 1);
+    this._addBoat(player, "trade", BOAT_INDEX_ARRIVE, 1);
     this._addGold(player, GOLD_INDEX_TRADE, gold);
     this._addGold(target, GOLD_INDEX_TRADE, gold);
   }
 
   boatCapturedTrade(player: Player, target: Player, gold: number): void {
-    this._addBoat(player, "trade", BOAT_INDEX_ARRIVED, 1);
-    this._addGold(player, GOLD_INDEX_STOLE, gold);
+    this._addBoat(player, "trade", BOAT_INDEX_CAPTURE, 1);
+    this._addGold(player, GOLD_INDEX_STEAL, gold);
   }
 
   boatDestroyTrade(player: Player, target: Player): void {
-    this._addBoat(player, "trade", BOAT_INDEX_DESTROYED, 1);
+    this._addBoat(player, "trade", BOAT_INDEX_DESTROY, 1);
   }
 
   boatSendTroops(
@@ -176,11 +177,11 @@ export class StatsImpl implements Stats {
     target: Player | TerraNullius,
     troops: number,
   ): void {
-    this._addBoat(player, "trans", BOAT_INDEX_ARRIVED, 1);
+    this._addBoat(player, "trans", BOAT_INDEX_ARRIVE, 1);
   }
 
   boatDestroyTroops(player: Player, target: Player, troops: number): void {
-    this._addBoat(player, "trans", BOAT_INDEX_DESTROYED, 1);
+    this._addBoat(player, "trans", BOAT_INDEX_DESTROY, 1);
   }
 
   bombLaunch(
@@ -188,7 +189,7 @@ export class StatsImpl implements Stats {
     target: Player | TerraNullius,
     type: NukeType,
   ): void {
-    this._addBomb(player, type, BOMB_INDEX_LAUNCHED, 1);
+    this._addBomb(player, type, BOMB_INDEX_LAUNCH, 1);
   }
 
   bombLand(
@@ -196,11 +197,11 @@ export class StatsImpl implements Stats {
     target: Player | TerraNullius,
     type: NukeType,
   ): void {
-    this._addBomb(player, type, BOMB_INDEX_LANDED, 1);
+    this._addBomb(player, type, BOMB_INDEX_LAND, 1);
   }
 
   bombIntercept(player: Player, attacker: Player, type: NukeType): void {
-    this._addBomb(player, type, BOMB_INDEX_INTERCEPTED, 1);
+    this._addBomb(player, type, BOMB_INDEX_INTERCEPT, 1);
   }
 
   goldWork(player: Player, gold: number): void {
@@ -216,11 +217,11 @@ export class StatsImpl implements Stats {
   }
 
   unitCapture(player: Player, type: OtherUnitType): void {
-    this._addOtherUnit(player, type, OTHER_INDEX_CAPTURED, 1);
+    this._addOtherUnit(player, type, OTHER_INDEX_CAPTURE, 1);
   }
 
   unitDestroy(player: Player, type: OtherUnitType): void {
-    this._addOtherUnit(player, type, OTHER_INDEX_DESTROYED, 1);
+    this._addOtherUnit(player, type, OTHER_INDEX_DESTROY, 1);
   }
 
   unitLose(player: Player, type: OtherUnitType): void {

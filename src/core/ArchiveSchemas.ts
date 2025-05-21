@@ -57,31 +57,32 @@ export const unitTypeToOtherUnit = {
 } as const satisfies Record<OtherUnitType, OtherUnit>;
 
 // Attacks
-export const ATTACK_INDEX_SENT = 0;
-export const ATTACK_INDEX_RECV = 1;
-export const ATTACK_INDEX_CANCELLED = 2;
+export const ATTACK_INDEX_SENT = 0; // Outgoing attack troops
+export const ATTACK_INDEX_RECV = 1; // Incmoing attack troops
+export const ATTACK_INDEX_CANCEL = 2; // Cancelled attack troops
 
 // Boats
-export const BOAT_INDEX_SENT = 0;
-export const BOAT_INDEX_ARRIVED = 1;
-export const BOAT_INDEX_DESTROYED = 2;
+export const BOAT_INDEX_SENT = 0; // Boats launched
+export const BOAT_INDEX_ARRIVE = 1; // Boats arrived
+export const BOAT_INDEX_CAPTURE = 2; // Boats captured
+export const BOAT_INDEX_DESTROY = 3; // Boats destroyed
 
 // Bombs
-export const BOMB_INDEX_LAUNCHED = 0;
-export const BOMB_INDEX_LANDED = 1;
-export const BOMB_INDEX_INTERCEPTED = 2;
+export const BOMB_INDEX_LAUNCH = 0; // Bombs launched
+export const BOMB_INDEX_LAND = 1; // Bombs landed
+export const BOMB_INDEX_INTERCEPT = 2; // Bombs intercepted
 
 // Gold
 export const GOLD_INDEX_WORK = 0; // Gold earned by workers
 export const GOLD_INDEX_WAR = 1; // Gold earned by conquering players
 export const GOLD_INDEX_TRADE = 2; // Gold earned by trade ships
-export const GOLD_INDEX_STOLE = 3; // Gold earned by capturing trade ships
+export const GOLD_INDEX_STEAL = 3; // Gold earned by capturing trade ships
 
 // Other Units
-export const OTHER_INDEX_BUILT = 0;
-export const OTHER_INDEX_DESTROYED = 1;
-export const OTHER_INDEX_CAPTURED = 2;
-export const OTHER_INDEX_LOST = 3;
+export const OTHER_INDEX_BUILT = 0; // Structures and warships built
+export const OTHER_INDEX_DESTROY = 1; // Structures and warships destroyed
+export const OTHER_INDEX_CAPTURE = 2; // Structures captured
+export const OTHER_INDEX_LOST = 3; // Structures/warships destroyed/captured by others
 
 const AtLeastOneNumberSchema = z.number().array().min(1);
 export type AtLeastOneNumber = z.infer<typeof AtLeastOneNumberSchema>;
