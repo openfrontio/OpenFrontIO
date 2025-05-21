@@ -5,10 +5,10 @@ import { Cell, Team, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import {
   ClientID,
+  GameConfig,
   GameID,
-  GamePlayer,
   GameRecord,
-  GameStartInfo,
+  PlayerRecord,
   Turn,
 } from "./Schemas";
 
@@ -184,34 +184,34 @@ export function onlyImages(html: string) {
 }
 
 export function createGameRecord(
-  gameStartInfo: GameStartInfo,
+  id: GameID,
+  config: GameConfig,
   // username does not need to be set.
-  players: GamePlayer[],
+  players: PlayerRecord[],
   turns: Turn[],
-  startTimestampMS: number,
-  endTimestampMS: number,
+  start: number,
+  end: number,
   winner: ClientID | Team | null,
   winnerType: "player" | "team" | null,
 ): GameRecord {
-  const durationSeconds = Math.floor(
-    (endTimestampMS - startTimestampMS) / 1000,
-  );
-  const date = new Date().toISOString().split("T")[0];
+  const duration = Math.floor((end - start) / 1000);
   const version = "v0.0.2";
   const gitCommit = "";
   const record: GameRecord = {
-    gitCommit,
-    ...gameStartInfo,
-    players,
-    start: startTimestampMS,
-    end: endTimestampMS,
-    durationSeconds,
-    date,
-    num_turns: 0,
-    turns: [],
+    info: {
+      gameID: id,
+      config,
+      players,
+      num_turns: 0,
+      winner,
+      winnerType,
+    },
+    start,
+    end,
+    duration,
     version,
-    winner,
-    winnerType,
+    gitCommit,
+    turns: [],
   };
 
   for (const turn of turns) {
@@ -228,7 +228,7 @@ export function createGameRecord(
       }
     }
   }
-  record.num_turns = turns.length;
+  record.info.num_turns = turns.length;
   return record;
 }
 
@@ -247,7 +247,7 @@ export function decompressGameRecord(gameRecord: GameRecord) {
     lastTurnNum = turn.turnNumber;
   }
   const turnLength = turns.length;
-  for (let i = turnLength; i < gameRecord.num_turns; i++) {
+  for (let i = turnLength; i < gameRecord.info.num_turns; i++) {
     turns.push({
       turnNumber: i,
       intents: [],

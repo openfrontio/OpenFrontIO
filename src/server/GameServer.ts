@@ -8,12 +8,13 @@ import {
   ClientSendWinnerMessage,
   GameConfig,
   GameInfo,
-  GamePlayer,
   GameStartInfo,
+  GameStartInfoSchema,
   Intent,
+  PlayerRecord,
   ServerDesyncSchema,
   ServerPrestartMessageSchema,
-  ServerStartGameMessage,
+  ServerStartGameMessageSchema,
   ServerTurnMessageSchema,
   Turn,
 } from "../core/Schemas";
@@ -286,7 +287,7 @@ export class GameServer {
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
 
-    this.gameStartInfo = {
+    this.gameStartInfo = GameStartInfoSchema.parse({
       gameID: this.id,
       config: this.gameConfig,
       players: this.activeClients.map((c) => ({
@@ -295,7 +296,7 @@ export class GameServer {
         clientID: c.clientID,
         flag: c.flag,
       })),
-    } satisfies GameStartInfo;
+    } satisfies GameStartInfo);
 
     this.endTurnIntervalID = setInterval(
       () => this.endTurn(),
@@ -317,11 +318,13 @@ export class GameServer {
   private sendStartGameMsg(ws: WebSocket, lastTurn: number) {
     try {
       ws.send(
-        JSON.stringify({
-          type: "start",
-          turns: this.turns.slice(lastTurn),
-          gameStartInfo: this.gameStartInfo,
-        } satisfies ServerStartGameMessage),
+        JSON.stringify(
+          ServerStartGameMessageSchema.parse({
+            type: "start",
+            turns: this.turns.slice(lastTurn),
+            gameStartInfo: this.gameStartInfo,
+          }),
+        ),
       );
     } catch (error) {
       throw new Error(
@@ -380,7 +383,7 @@ export class GameServer {
     this.log.info(`ending game with ${this.turns.length} turns`);
     try {
       if (this.allClients.size > 0) {
-        const playerRecords: GamePlayer[] = Array.from(
+        const playerRecords: PlayerRecord[] = Array.from(
           this.allClients.values(),
         ).map((client) => {
           const stats = this.winner?.allPlayersStats[client.clientID];
@@ -395,11 +398,12 @@ export class GameServer {
             username: client.username,
             persistentID: client.persistentID,
             stats,
-          } satisfies GamePlayer;
+          } satisfies PlayerRecord;
         });
         archive(
           createGameRecord(
-            this.gameStartInfo,
+            this.id,
+            this.gameStartInfo.config,
             playerRecords,
             this.turns,
             this._startTime ?? 0,

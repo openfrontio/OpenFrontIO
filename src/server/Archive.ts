@@ -30,12 +30,12 @@ export async function archive(gameRecord: GameRecord) {
     // Archive full game if there are turns
     if (gameRecord.turns.length > 0) {
       log.info(
-        `${gameRecord.gameID}: game has more than zero turns, attempting to write to full game to R2`,
+        `${gameRecord.info.gameID}: game has more than zero turns, attempting to write to full game to R2`,
       );
       await archiveFullGameToR2(gameRecord);
     }
   } catch (error) {
-    log.error(`${gameRecord.gameID}: Final archive error: ${error}`, {
+    log.error(`${gameRecord.info.gameID}: Final archive error: ${error}`, {
       message: error?.message || error,
       stack: error?.stack,
       name: error?.name,
@@ -44,41 +44,21 @@ export async function archive(gameRecord: GameRecord) {
   }
 }
 
-function convertGameToAnalytics(gameRecord: GameRecord): AnalyticsRecord {
-  const {
-    gameID,
-    date,
-    config,
-    players,
+async function archiveAnalyticsToR2(gameRecord: GameRecord) {
+  // Create analytics data object
+  const { info, start, end, duration, version, gitCommit } = gameRecord;
+  const analyticsData: AnalyticsRecord = {
+    info,
     start,
     end,
-    durationSeconds,
-    num_turns,
-    version,
-    gitCommit,
-  } = gameRecord;
-  const result: AnalyticsRecord = {
-    gameID,
-    date,
-    config,
-    players,
-    start,
-    end,
-    durationSeconds,
-    num_turns,
+    duration,
     version,
     gitCommit,
   };
-  return result;
-}
-
-async function archiveAnalyticsToR2(gameRecord: GameRecord) {
-  // Create analytics data object
-  const analyticsData = convertGameToAnalytics(gameRecord);
 
   try {
     // Store analytics data using just the game ID as the key
-    const analyticsKey = `${gameRecord.id}.json`;
+    const analyticsKey = `${info.gameID}.json`;
 
     await r2.putObject({
       Bucket: bucket,
@@ -87,17 +67,14 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
       ContentType: "application/json",
     });
 
-    log.info(`${gameRecord.id}: successfully wrote game analytics to R2`);
+    log.info(`${info.gameID}: successfully wrote game analytics to R2`);
   } catch (error) {
-    log.error(
-      `${gameRecord.id}: Error writing game analytics to R2: ${error}`,
-      {
-        message: error?.message || error,
-        stack: error?.stack,
-        name: error?.name,
-        ...(error && typeof error === "object" ? error : {}),
-      },
-    );
+    log.error(`${info.gameID}: Error writing game analytics to R2: ${error}`, {
+      message: error?.message || error,
+      stack: error?.stack,
+      name: error?.name,
+      ...(error && typeof error === "object" ? error : {}),
+    });
     throw error;
   }
 }
@@ -120,11 +97,11 @@ async function archiveFullGameToR2(gameRecord: GameRecord) {
       ContentType: "application/json",
     });
   } catch (error) {
-    log.error(`error saving game ${gameRecord.id}`);
+    log.error(`error saving game ${gameRecord.info.gameID}`);
     throw error;
   }
 
-  log.info(`${gameRecord.id}: game record successfully written to R2`);
+  log.info(`${gameRecord.info.gameID}: game record successfully written to R2`);
 }
 
 export async function readGameRecord(

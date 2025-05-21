@@ -3,9 +3,9 @@ import { EventBus } from "../core/EventBus";
 import {
   ClientID,
   GameID,
-  GamePlayer,
   GameRecord,
   GameStartInfo,
+  PlayerRecord,
   ServerMessage,
 } from "../core/Schemas";
 import { createGameRecord } from "../core/Util";
@@ -187,8 +187,9 @@ export class ClientGameRunner {
   }
 
   private saveGame(update: WinUpdate) {
-    const players: GamePlayer[] = [
+    const players: PlayerRecord[] = [
       {
+        playerID: this.lobby.clientID, // hack?
         persistentID: getPersistentIDFromCookie(),
         username: this.lobby.playerName,
         clientID: this.lobby.clientID,
@@ -209,7 +210,7 @@ export class ClientGameRunner {
     }
     const record = createGameRecord(
       this.lobby.gameStartInfo.gameID,
-      this.lobby.gameStartInfo,
+      this.lobby.gameStartInfo.config,
       players,
       // Not saving turns locally
       [],
