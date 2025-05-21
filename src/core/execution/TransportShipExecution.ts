@@ -146,6 +146,9 @@ export class TransportShipExecution implements Execution {
         this.targetID,
       );
     }
+
+    // Record stats
+    this.mg.stats().boatSendTroops(this.attacker, this.target, this.troops);
   }
 
   tick(ticks: number) {
@@ -176,6 +179,11 @@ export class TransportShipExecution implements Execution {
           this.attacker.addTroops(this.troops);
           this.boat.delete(false);
           this.active = false;
+
+          // Record stats
+          this.mg
+            .stats()
+            .boatArriveTroops(this.attacker, this.target, this.troops);
           return;
         }
         this.attacker.conquer(this.dst);
@@ -194,6 +202,11 @@ export class TransportShipExecution implements Execution {
         }
         this.boat.delete(false);
         this.active = false;
+
+        // Record stats
+        this.mg
+          .stats()
+          .boatArriveTroops(this.attacker, this.target, this.troops);
         return;
       case PathFindResultType.NextTile:
         this.boat.move(result.tile);
