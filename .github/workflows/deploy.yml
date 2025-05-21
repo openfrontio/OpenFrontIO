@@ -78,7 +78,7 @@ jobs:
         with:
           token: ${{ steps.generate-token.outputs.token }}
           environment-url: https://${{ env.FQDN }}
-          environment: ${{ env.FQDN }}
+          environment: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
       - name: 🔗 Log in to Docker Hub
         uses: docker/login-action@v3
         with:
