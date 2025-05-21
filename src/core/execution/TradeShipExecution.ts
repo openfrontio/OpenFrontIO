@@ -28,6 +28,7 @@ export class TradeShipExecution implements Execution {
     private srcPort: Unit,
     private _dstPort: Unit,
     private pathFinder: PathFinder,
+    private moved: boolean = false,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -100,17 +101,26 @@ export class TradeShipExecution implements Execution {
 
     const cachedNextTile = this._dstPort.cacheGet(this.tradeShip.tile());
     if (cachedNextTile !== undefined) {
+      if (!this.moved) {
+        this.moved = true;
+        console.log("Has never moved and found a cached path, perf gain", this);
+      }
       if (
         this.mg.isWater(cachedNextTile) &&
         this.mg.isShoreline(cachedNextTile)
       ) {
         this.tradeShip.setSafeFromPirates();
       }
+      if (cachedNextTile === this._dstPort.tile()) {
+        this.complete();
+        return;
+      }
       this.tradeShip.move(cachedNextTile);
       this.tilesTraveled++;
       return;
     }
 
+    this.moved = true;
     const result = this.pathFinder.nextTile(
       this.tradeShip.tile(),
       this._dstPort.tile(),
@@ -125,7 +135,7 @@ export class TradeShipExecution implements Execution {
         this.tradeShip.touch();
         break;
       case PathFindResultType.NextTile:
-        this._dstPort.cachePut(this.tradeShip.tile(), result.tile);
+        this._dstPort.cachePut(this.pathFinder.getPath());
         // Update safeFromPirates status
         if (this.mg.isWater(result.tile) && this.mg.isShoreline(result.tile)) {
           this.tradeShip.setSafeFromPirates();

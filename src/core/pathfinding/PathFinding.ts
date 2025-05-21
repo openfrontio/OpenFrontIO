@@ -92,6 +92,7 @@ export class PathFinder {
   private path: TileRef[] | null = null;
   private aStar: AStar;
   private computeFinished = true;
+  computedPath: number[];
 
   private constructor(
     private game: Game,
@@ -109,6 +110,10 @@ export class PathFinder {
         maxTries,
       );
     });
+  }
+
+  getPath(): number[] {
+    return this.computedPath ?? [];
   }
 
   nextTile(
@@ -150,6 +155,16 @@ export class PathFinder {
       case PathFindResultType.Completed:
         this.computeFinished = true;
         this.path = this.aStar.reconstructPath();
+        const currIndex = this.path.indexOf(this.curr!);
+        if (currIndex === -1) {
+          // didnt find the current tile in the path (can happen with the mini aStar)
+          this.path.unshift(this.curr!);
+        } else if (currIndex !== 0) {
+          // found start tile but not at the start (can happen with the mini aStar)
+          // remove all tiles before the start tile
+          this.path = this.path.slice(currIndex);
+        }
+        this.computedPath = this.path.slice();
         // Remove the start tile
         this.path.shift();
 

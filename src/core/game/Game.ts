@@ -373,7 +373,7 @@ export interface Unit {
   setConstructionType(type: UnitType): void;
 
   // Ports
-  cachePut(from: TileRef, to: TileRef): void;
+  cachePut(path: TileRef[]): void;
   cacheGet(from: TileRef): TileRef | undefined;
 }
 
