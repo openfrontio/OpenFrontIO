@@ -2,7 +2,6 @@ import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
 import {
-  AllPlayersStats,
   ClientID,
   ClientMessage,
   ClientMessageSchema,
@@ -49,8 +48,6 @@ export class GameServer {
   private lastPingUpdate = 0;
 
   private winner: ClientSendWinnerMessage | null = null;
-  // This field is currently only filled at victory
-  private allPlayersStats: AllPlayersStats = {};
 
   private gameStartInfo: GameStartInfo;
 
@@ -204,7 +201,6 @@ export class GameServer {
           }
           if (clientMsg.type === "winner") {
             this.winner = clientMsg;
-            this.allPlayersStats = clientMsg.allPlayersStats;
           }
         } catch (error) {
           this.log.info(
@@ -389,12 +385,21 @@ export class GameServer {
       if (this.allClients.size > 0) {
         const playerRecords: PlayerRecord[] = Array.from(
           this.allClients.values(),
-        ).map((client) => ({
-          ip: ipAnonymize(client.ip),
-          clientID: client.clientID,
-          username: client.username,
-          persistentID: client.persistentID,
-        }));
+        ).map((client) => {
+          const stats = this.winner?.allPlayersStats[client.clientID];
+          if (stats === undefined) {
+            this.log.warn(
+              `Unable to find stats for clientID ${client.clientID}`,
+            );
+          }
+          return {
+            ip: ipAnonymize(client.ip),
+            clientID: client.clientID,
+            username: client.username,
+            persistentID: client.persistentID,
+            stats,
+          } satisfies PlayerRecord;
+        });
         archive(
           createGameRecord(
             this.id,
@@ -405,7 +410,6 @@ export class GameServer {
             Date.now(),
             this.winner?.winner ?? null,
             this.winner?.winnerType ?? null,
-            this.allPlayersStats,
           ),
         );
       } else {
