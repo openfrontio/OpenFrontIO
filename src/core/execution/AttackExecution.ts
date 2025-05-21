@@ -34,6 +34,8 @@ export class AttackExecution implements Execution {
 
   private attack: Attack | null = null;
 
+  private lastTroops: number = 0;
+
   constructor(
     private startTroops: number | null = null,
     private _ownerID: PlayerID,
@@ -119,6 +121,7 @@ export class AttackExecution implements Execution {
     // Record stats
     this.mg.stats().attack(this._owner, this.target, this.startTroops);
 
+    this.lastTroops = this.attack.troops();
     for (const incoming of this._owner.incomingAttacks()) {
       if (incoming.attacker() === this.target) {
         // Target has opposing attack, cancel them out
@@ -196,6 +199,12 @@ export class AttackExecution implements Execution {
     if (this.attack === null) {
       throw new Error("Attack not initialized");
     }
+    const currentTroops = this.attack.troops();
+    const prevTroops = this.lastTroops;
+    if (currentTroops > prevTroops) {
+      this.refreshToConquer(); // refresh the toConquer list if troops are added
+    }
+    this.lastTroops = currentTroops;
 
     if (this.attack.retreated()) {
       if (this.attack.target().isPlayer()) {
