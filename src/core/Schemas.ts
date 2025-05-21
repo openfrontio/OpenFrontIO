@@ -1,6 +1,6 @@
 import { z } from "zod";
 import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
-import { PlayerStatsSchema } from "./AnalyticsSchemas";
+import { PlayerStatsSchema } from "./ArchiveSchemas";
 import {
   AllPlayers,
   Difficulty,

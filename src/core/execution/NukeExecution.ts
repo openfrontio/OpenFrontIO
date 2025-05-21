@@ -1,4 +1,4 @@
-import { NukeType } from "../AnalyticsSchemas";
+import { NukeType } from "../ArchiveSchemas";
 import { consolex } from "../Consolex";
 import {
   Execution,

@@ -21,7 +21,7 @@ import {
   PlayerStats,
   unitTypeToBombUnit,
   unitTypeToOtherUnit,
-} from "../AnalyticsSchemas";
+} from "../ArchiveSchemas";
 import { AllPlayersStats } from "../Schemas";
 import { Player, TerraNullius } from "./Game";
 import { Stats } from "./Stats";

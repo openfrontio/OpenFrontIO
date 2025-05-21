@@ -83,7 +83,7 @@ export const OTHER_INDEX_CAPTURED = 2;
 export const OTHER_INDEX_LOST = 3;
 
 const AtLeastOneNumberSchema = z.number().array().min(1);
-export type AtLeastOneNumber = [number, ...number[]];
+export type AtLeastOneNumber = z.infer<typeof AtLeastOneNumberSchema>;
 
 export const PlayerStatsSchema = z
   .object({

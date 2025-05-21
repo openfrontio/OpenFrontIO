@@ -1,4 +1,4 @@
-import { NukeType, OtherUnitType, PlayerStats } from "../AnalyticsSchemas";
+import { NukeType, OtherUnitType, PlayerStats } from "../ArchiveSchemas";
 import { AllPlayersStats } from "../Schemas";
 import { Player, TerraNullius } from "./Game";
 

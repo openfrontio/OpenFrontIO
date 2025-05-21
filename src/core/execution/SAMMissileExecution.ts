@@ -1,4 +1,4 @@
-import { NukeType } from "../AnalyticsSchemas";
+import { NukeType } from "../ArchiveSchemas";
 import {
   Execution,
   Game,
