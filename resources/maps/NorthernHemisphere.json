@@ -40,22 +40,10 @@
       "flag": "California"
     },
     {
-      "coordinates": [647, 1899],
-      "name": "Ivory Coast",
-      "strength": 1,
-      "flag": "ci"
-    },
-    {
       "coordinates": [1598, 1010],
       "name": "China",
       "strength": 3,
       "flag": "cn"
-    },
-    {
-      "coordinates": [42, 938],
-      "name": "Colombia",
-      "strength": 1,
-      "flag": "co"
     },
     {
       "coordinates": [790, 1735],
@@ -106,28 +94,10 @@
       "flag": "gl"
     },
     {
-      "coordinates": [522, 1786],
-      "name": "Guinea",
-      "strength": 1,
-      "flag": "gn"
-    },
-    {
       "coordinates": [1608, 1374],
       "name": "India",
       "strength": 3,
       "flag": "in"
-    },
-    {
-      "coordinates": [1210, 1514],
-      "name": "Iraq",
-      "strength": 1,
-      "flag": "iq"
-    },
-    {
-      "coordinates": [1404, 1474],
-      "name": "Iran",
-      "strength": 1,
-      "flag": "ir"
     },
     {
       "coordinates": [849, 1185],
@@ -148,12 +118,6 @@
       "flag": "Kalmar_Union"
     },
     {
-      "coordinates": [1319, 1274],
-      "name": "Kazakhstan",
-      "strength": 1,
-      "flag": "kz"
-    },
-    {
       "coordinates": [1869, 1421],
       "name": "Sri Lanka",
       "strength": 1,
@@ -164,12 +128,6 @@
       "name": "Maghreb",
       "strength": 2,
       "flag": "Maghreb"
-    },
-    {
-      "coordinates": [1685, 1151],
-      "name": "Myanmar",
-      "strength": 1,
-      "flag": "mm"
     },
     {
       "coordinates": [1437, 1084],
@@ -220,12 +178,6 @@
       "flag": "Novosibirsk"
     },
     {
-      "coordinates": [1588, 1260],
-      "name": "Nepal",
-      "strength": 1,
-      "flag": "np"
-    },
-    {
       "coordinates": [778, 995],
       "name": "Nunavut",
       "strength": 1,
@@ -256,12 +208,6 @@
       "flag": "Pyatigorsk"
     },
     {
-      "coordinates": [610, 990],
-      "name": "Quebec",
-      "strength": 1,
-      "flag": "Quebec"
-    },
-    {
       "coordinates": [1098, 1413],
       "name": "Southern District",
       "strength": 1,
@@ -284,42 +230,6 @@
       "name": "Sudan",
       "strength": 1,
       "flag": "sd"
-    },
-    {
-      "coordinates": [570, 1650],
-      "name": "Senegal",
-      "strength": 1,
-      "flag": "sn"
-    },
-    {
-      "coordinates": [1374, 1896],
-      "name": "Somalia",
-      "strength": 1,
-      "flag": "so"
-    },
-    {
-      "coordinates": [951, 1753],
-      "name": "Chad",
-      "strength": 1,
-      "flag": "td"
-    },
-    {
-      "coordinates": [1793, 1123],
-      "name": "Thailand",
-      "strength": 1,
-      "flag": "th"
-    },
-    {
-      "coordinates": [1110, 1500],
-      "name": "Turkey",
-      "strength": 1,
-      "flag": "tr"
-    },
-    {
-      "coordinates": [866, 1340],
-      "name": "United Kingdom",
-      "strength": 1,
-      "flag": "uk"
     },
     {
       "coordinates": [1504, 844],
@@ -350,12 +260,6 @@
       "name": "Vietnam",
       "strength": 2,
       "flag": "vn"
-    },
-    {
-      "coordinates": [1377, 1735],
-      "name": "Yemen",
-      "strength": 1,
-      "flag": "ye"
     },
     {
       "coordinates": [1240, 1213],
