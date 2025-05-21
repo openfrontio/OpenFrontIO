@@ -107,7 +107,7 @@ fi
 
 # Start supervisord
 if [ "$DOMAIN" = openfront.dev ] && [ "$SUBDOMAIN" != main ]; then
-    timeout 24h /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+    exec timeout 2m /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
 else
     exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
 fi
