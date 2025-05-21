@@ -43,7 +43,7 @@ jobs:
     # Use different logic based on event type
     name: Deploy to ${{ inputs.target_domain || 'openfront.dev' }}
     runs-on: ubuntu-latest
-    environment: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
+    environment: ${{ inputs.target_domain == 'openfront.io' && 'prod' || '' }}
     env:
       DOMAIN: ${{ inputs.target_domain || 'openfront.dev' }}
       SUBDOMAIN: ${{ github.event_name == 'push' && github.ref_name || inputs.target_subdomain || 'main' }}
@@ -78,7 +78,7 @@ jobs:
         with:
           token: ${{ steps.generate-token.outputs.token }}
           environment-url: https://${{ env.FQDN }}
-          environment: ${{ env.FQDN }}
+          environment: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
       - name: 🔗 Log in to Docker Hub
         uses: docker/login-action@v3
         with:

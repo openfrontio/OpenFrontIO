@@ -38,6 +38,33 @@ const JwksSchema = z.object({
     .min(1),
 });
 
+const numPlayersConfig = {
+  [GameMapType.GatewayToTheAtlantic]: [80, 60, 40],
+  [GameMapType.SouthAmerica]: [70, 50, 40],
+  [GameMapType.NorthAmerica]: [80, 60, 50],
+  [GameMapType.Africa]: [100, 80, 50],
+  [GameMapType.Europe]: [80, 50, 30],
+  [GameMapType.Australia]: [50, 40, 30],
+  [GameMapType.Iceland]: [50, 40, 30],
+  [GameMapType.Britannia]: [50, 40, 30],
+  [GameMapType.Asia]: [60, 50, 30],
+  [GameMapType.FalklandIslands]: [80, 50, 30],
+  [GameMapType.Baikal]: [60, 50, 40],
+  [GameMapType.Mena]: [60, 50, 30],
+  [GameMapType.Mars]: [50, 40, 30],
+  [GameMapType.Oceania]: [30, 20, 10],
+  [GameMapType.Japan]: [50, 40, 30],
+  [GameMapType.FaroeIslands]: [50, 40, 30],
+  [GameMapType.DeglaciatedAntarctica]: [50, 40, 30],
+  [GameMapType.EuropeClassic]: [80, 30, 50],
+  [GameMapType.BetweenTwoSeas]: [40, 50, 30],
+  [GameMapType.BlackSea]: [40, 50, 30],
+  [GameMapType.Pangaea]: [40, 20, 30],
+  [GameMapType.World]: [150, 80, 50],
+  [GameMapType.KnownWorld]: [50, 40, 30],
+  [GameMapType.Halkidiki]: [50, 40, 30],
+} as const satisfies Record<GameMapType, [number, number, number]>;
+
 const TERRAIN_EFFECTS = {
   [TerrainType.Plains]: { mag: 0.85, speed: 0.8 },
   [TerrainType.Highland]: { mag: 1, speed: 1 },
@@ -117,65 +144,10 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
 
   lobbyMaxPlayers(map: GameMapType, mode: GameMode): number {
-    const numPlayers = () => {
-      // Maps with ~4 mil pixels
-      if (
-        [
-          GameMapType.GatewayToTheAtlantic,
-          GameMapType.SouthAmerica,
-          GameMapType.NorthAmerica,
-          GameMapType.Africa,
-          GameMapType.Europe,
-        ].includes(map)
-      ) {
-        return Math.random() < 0.2 ? 100 : 50;
-      }
-      // Maps with ~2.5 - ~3.5 mil pixels
-      if (
-        [
-          GameMapType.Australia,
-          GameMapType.Iceland,
-          GameMapType.Britannia,
-          GameMapType.Asia,
-          GameMapType.FalklandIslands,
-          GameMapType.Baikal,
-          GameMapType.Halkidiki,
-        ].includes(map)
-      ) {
-        return Math.random() < 0.3 ? 50 : 25;
-      }
-      // Maps with ~2 mil pixels
-      if (
-        [
-          GameMapType.Mena,
-          GameMapType.Mars,
-          GameMapType.Oceania,
-          GameMapType.Japan, // Japan at this level because its 2/3 water
-          GameMapType.FaroeIslands,
-          GameMapType.DeglaciatedAntarctica,
-          GameMapType.EuropeClassic,
-        ].includes(map)
-      ) {
-        return Math.random() < 0.3 ? 50 : 25;
-      }
-      // Maps smaller than ~2 mil pixels
-      if (
-        [
-          GameMapType.BetweenTwoSeas,
-          GameMapType.BlackSea,
-          GameMapType.Pangaea,
-        ].includes(map)
-      ) {
-        return Math.random() < 0.5 ? 30 : 15;
-      }
-      // world belongs with the ~2 mils, but these amounts never made sense so I assume the insanity is intended.
-      if (map === GameMapType.World) {
-        return Math.random() < 0.2 ? 150 : 50;
-      }
-      // default return for non specified map
-      return Math.random() < 0.2 ? 50 : 20;
-    };
-    return Math.min(150, numPlayers() * (mode === GameMode.Team ? 2 : 1));
+    const [l, m, s] = numPlayersConfig[map] ?? [50, 30, 20];
+    const r = Math.random();
+    const base = r < 0.3 ? l : r < 0.6 ? m : s;
+    return mode === GameMode.Team ? Math.ceil(base * 1.5) : base;
   }
 
   workerIndex(gameID: GameID): number {
