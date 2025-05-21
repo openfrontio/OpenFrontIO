@@ -44,5 +44,9 @@ export const UserMeResponseSchema = z.object({
     discriminator: z.string(),
     locale: z.string(),
   }),
+  player: z.object({
+    publicId: z.string(),
+    roles: z.string().array(),
+  }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
