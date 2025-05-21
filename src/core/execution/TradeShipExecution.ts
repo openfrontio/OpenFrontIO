@@ -165,8 +165,7 @@ export class TradeShipExecution implements Execution {
       );
 
       // Record stats
-      // TODO: Track this separately from war?
-      this.mg.stats().goldWar(player, this.origOwner, gold);
+      this.mg.stats().boatCapturedTrade(player, this.origOwner, gold);
     } else {
       this.srcPort.owner().addGold(gold);
       this._dstPort.owner().addGold(gold);
