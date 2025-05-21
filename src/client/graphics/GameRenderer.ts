@@ -20,6 +20,7 @@ import { NameLayer } from "./layers/NameLayer";
 import { OptionsMenu } from "./layers/OptionsMenu";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
+import { PlayerTeamLabel } from "./layers/PlayerTeamLabel";
 import { RadialMenu } from "./layers/RadialMenu";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
@@ -162,6 +163,14 @@ export function createRenderer(
   }
   multiTabModal.game = game;
 
+  const playerTeamLabel = document.querySelector(
+    "player-team-label",
+  ) as PlayerTeamLabel;
+  if (!(playerTeamLabel instanceof PlayerTeamLabel)) {
+    console.error("player team label not found");
+  }
+  playerTeamLabel.game = game;
+
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus),
@@ -193,6 +202,7 @@ export function createRenderer(
     teamStats,
     topBar,
     playerPanel,
+    playerTeamLabel,
     multiTabModal,
   ];
 
