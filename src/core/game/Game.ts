@@ -208,8 +208,6 @@ export const nukeTypes = [
   UnitType.MIRV,
 ] as UnitType[];
 
-export type NukeType = (typeof nukeTypes)[number];
-
 export enum Relation {
   Hostile = 0,
   Distrustful = 1,
@@ -337,7 +335,7 @@ export interface Unit {
   type(): UnitType;
   owner(): Player;
   info(): UnitInfo;
-  delete(displayerMessage?: boolean): void;
+  delete(displayMessage?: boolean, destroyer?: Player): void;
   tile(): TileRef;
   lastTile(): TileRef;
   move(tile: TileRef): void;
@@ -359,7 +357,7 @@ export interface Unit {
   retreating(): boolean;
   orderBoatRetreat(): void;
   health(): number;
-  modifyHealth(delta: number): void;
+  modifyHealth(delta: number, attacker?: Player): void;
 
   // Troops
   setTroops(troops: number): void;

@@ -62,6 +62,7 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
       ip: p.ip,
       persistentID: p.persistentID,
       clientID: p.clientID,
+      stats: p.stats,
     })),
   };
 
