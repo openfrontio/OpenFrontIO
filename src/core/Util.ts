@@ -6,9 +6,9 @@ import { GameMap, TileRef } from "./game/GameMap";
 import {
   ClientID,
   GameID,
+  GamePlayer,
   GameRecord,
   GameStartInfo,
-  PlayerRecord,
   Turn,
 } from "./Schemas";
 
@@ -184,10 +184,9 @@ export function onlyImages(html: string) {
 }
 
 export function createGameRecord(
-  id: GameID,
   gameStartInfo: GameStartInfo,
   // username does not need to be set.
-  players: PlayerRecord[],
+  players: GamePlayer[],
   turns: Turn[],
   startTimestampMS: number,
   endTimestampMS: number,
@@ -202,11 +201,10 @@ export function createGameRecord(
   const gitCommit = "";
   const record: GameRecord = {
     gitCommit,
-    id,
-    gameStartInfo,
+    ...gameStartInfo,
     players,
-    startTimestampMS,
-    endTimestampMS,
+    start: startTimestampMS,
+    end: endTimestampMS,
     durationSeconds,
     date,
     num_turns: 0,

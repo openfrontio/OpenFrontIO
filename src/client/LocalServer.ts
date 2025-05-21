@@ -4,9 +4,9 @@ import {
   ClientMessage,
   ClientMessageSchema,
   ClientSendWinnerMessage,
+  GamePlayer,
   GameRecordSchema,
   Intent,
-  PlayerRecord,
   ServerMessage,
   ServerStartGameMessageSchema,
   Turn,
@@ -174,9 +174,8 @@ export class LocalServer {
     if (this.isReplay) {
       return;
     }
-    const players: PlayerRecord[] = [
+    const players: GamePlayer[] = [
       {
-        ip: null,
         persistentID: getPersistentIDFromCookie(),
         username: this.lobbyConfig.playerName,
         clientID: this.lobbyConfig.clientID,
@@ -187,7 +186,6 @@ export class LocalServer {
       throw new Error("missing gameStartInfo");
     }
     const record = createGameRecord(
-      this.lobbyConfig.gameStartInfo.gameID,
       this.lobbyConfig.gameStartInfo,
       players,
       this.turns,

@@ -1,6 +1,6 @@
 import { S3 } from "@aws-sdk/client-s3";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameID, GameRecord } from "../core/Schemas";
+import { AnalyticsRecord, GameID, GameRecord } from "../core/Schemas";
 import { logger } from "./Logger";
 
 const config = getServerConfigFromServer();
@@ -30,12 +30,12 @@ export async function archive(gameRecord: GameRecord) {
     // Archive full game if there are turns
     if (gameRecord.turns.length > 0) {
       log.info(
-        `${gameRecord.id}: game has more than zero turns, attempting to write to full game to R2`,
+        `${gameRecord.gameID}: game has more than zero turns, attempting to write to full game to R2`,
       );
       await archiveFullGameToR2(gameRecord);
     }
   } catch (error) {
-    log.error(`${gameRecord.id}: Final archive error: ${error}`, {
+    log.error(`${gameRecord.gameID}: Final archive error: ${error}`, {
       message: error?.message || error,
       stack: error?.stack,
       name: error?.name,
@@ -44,27 +44,37 @@ export async function archive(gameRecord: GameRecord) {
   }
 }
 
+function convertGameToAnalytics(gameRecord: GameRecord): AnalyticsRecord {
+  const {
+    gameID,
+    date,
+    config,
+    players,
+    start,
+    end,
+    durationSeconds,
+    num_turns,
+    version,
+    gitCommit,
+  } = gameRecord;
+  const result: AnalyticsRecord = {
+    gameID,
+    date,
+    config,
+    players,
+    start,
+    end,
+    durationSeconds,
+    num_turns,
+    version,
+    gitCommit,
+  };
+  return result;
+}
+
 async function archiveAnalyticsToR2(gameRecord: GameRecord) {
   // Create analytics data object
-  const analyticsData = {
-    id: gameRecord.id,
-    env: config.env(),
-    start_time: new Date(gameRecord.startTimestampMS).toISOString(),
-    end_time: new Date(gameRecord.endTimestampMS).toISOString(),
-    duration_seconds: gameRecord.durationSeconds,
-    number_turns: gameRecord.num_turns,
-    game_mode: gameRecord.gameStartInfo.config.gameType,
-    winner: gameRecord.winner,
-    difficulty: gameRecord.gameStartInfo.config.difficulty,
-    mapType: gameRecord.gameStartInfo.config.gameMap,
-    players: gameRecord.players.map((p) => ({
-      username: p.username,
-      ip: p.ip,
-      persistentID: p.persistentID,
-      clientID: p.clientID,
-      stats: p.stats,
-    })),
-  };
+  const analyticsData = convertGameToAnalytics(gameRecord);
 
   try {
     // Store analytics data using just the game ID as the key

@@ -88,11 +88,7 @@ export type ClientJoinMessage = z.infer<typeof ClientJoinMessageSchema>;
 export type ClientLogMessage = z.infer<typeof ClientLogMessageSchema>;
 export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
 
-export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;
-export type GameRecord = z.infer<typeof GameRecordSchema>;
-
 export type AllPlayersStats = z.infer<typeof AllPlayersStatsSchema>;
-export type Player = z.infer<typeof PlayerSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 const PlayerTypeSchema = z.nativeEnum(PlayerType);
 
@@ -361,6 +357,7 @@ export const PlayerSchema = z.object({
   username: SafeString,
   flag: SafeString.optional(),
 });
+export type Player = z.infer<typeof PlayerSchema>;
 
 export const GameStartInfoSchema = z.object({
   gameID: ID,
@@ -442,26 +439,34 @@ export const ClientMessageSchema = z.union([
   ClientHashSchema,
 ]);
 
-export const PlayerRecordSchema = z.object({
-  clientID: ID,
-  username: SafeString,
-  ip: SafeString.nullable(), // WARNING: PII
-  persistentID: PersistentIdSchema, // WARNING: PII
+export const AnalyticsPlayerSchema = PlayerSchema.extend({
   stats: PlayerStatsSchema,
 });
+export type AnalyticsPlayer = z.infer<typeof AnalyticsPlayerSchema>;
 
-export const GameRecordSchema = z.object({
-  id: ID,
-  gameStartInfo: GameStartInfoSchema,
-  players: z.array(PlayerRecordSchema),
-  startTimestampMS: z.number(),
-  endTimestampMS: z.number(),
+export const GamePlayerSchema = AnalyticsPlayerSchema.extend({
+  persistentID: PersistentIdSchema, // WARNING: PII
+}).omit({
+  playerID: true,
+});
+export type GamePlayer = z.infer<typeof GamePlayerSchema>;
+
+export const AnalyticsRecordSchema = GameStartInfoSchema.extend({
+  players: AnalyticsPlayerSchema.array(),
+  start: z.number(),
+  end: z.number(),
   durationSeconds: z.number(),
   date: SafeString,
   num_turns: z.number(),
-  turns: z.array(TurnSchema),
   winner: z.union([ID, SafeString]).nullable().optional(),
   winnerType: z.enum(["player", "team"]).nullable().optional(),
   version: z.literal("v0.0.2"),
   gitCommit: z.string(),
 });
+export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;
+
+export const GameRecordSchema = AnalyticsRecordSchema.extend({
+  players: z.array(GamePlayerSchema),
+  turns: z.array(TurnSchema),
+});
+export type GameRecord = z.infer<typeof GameRecordSchema>;
