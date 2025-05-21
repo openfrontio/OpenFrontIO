@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
 import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
@@ -9,12 +9,7 @@ import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import {
-  AllPlayers,
-  PlayerActions,
-  PlayerID,
-  UnitType,
-} from "../../../core/game/Game";
+import { AllPlayers, PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { flattenedEmojiTable } from "../../../core/Util";
@@ -29,6 +24,7 @@ import {
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
 import { renderNumber, renderTroops } from "../../Utils";
+import { UIState } from "../UIState";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
@@ -38,12 +34,16 @@ export class PlayerPanel extends LitElement implements Layer {
   public g: GameView;
   public eventBus: EventBus;
   public emojiTable: EmojiTable;
+  public uiState: UIState;
 
   private actions: PlayerActions | null = null;
   private tile: TileRef | null = null;
 
   @state()
   private isVisible: boolean = false;
+
+  @state()
+  private allianceExpiryText: string | null = null;
 
   public show(actions: PlayerActions, tile: TileRef) {
     this.actions = actions;
@@ -88,7 +88,13 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendDonateTroopsIntentEvent(myPlayer, other, null));
+    this.eventBus.emit(
+      new SendDonateTroopsIntentEvent(
+        myPlayer,
+        other,
+        myPlayer.troops() * this.uiState.attackRatio,
+      ),
+    );
     this.hide();
   }
 
@@ -170,31 +176,36 @@ export class PlayerPanel extends LitElement implements Layer {
       const myPlayer = this.g.myPlayer();
       if (myPlayer !== null && myPlayer.isAlive()) {
         this.actions = await myPlayer.actions(this.tile);
+
+        if (this.actions?.interaction?.allianceCreatedAtTick !== undefined) {
+          const createdAt = this.actions.interaction.allianceCreatedAtTick;
+          const durationTicks = this.g.config().allianceDuration();
+          const expiryTick = createdAt + durationTicks;
+          const remainingTicks = expiryTick - this.g.ticks();
+
+          if (remainingTicks > 0) {
+            const remainingSeconds = Math.max(
+              0,
+              Math.floor(remainingTicks / 10),
+            ); // 10 ticks per second
+            this.allianceExpiryText = this.formatDuration(remainingSeconds);
+          }
+        } else {
+          this.allianceExpiryText = null;
+        }
         this.requestUpdate();
       }
     }
   }
 
-  getTotalNukesSent(otherId: PlayerID): number {
-    const stats = this.g.player(otherId).stats();
-    if (!stats) {
-      return 0;
-    }
-    let sum = 0;
-    const player = this.g.myPlayer();
-    if (player === null) {
-      return 0;
-    }
-    const nukes = stats.sentNukes[player.id()];
-    if (!nukes) {
-      return 0;
-    }
-    for (const nukeType in nukes) {
-      if (nukeType !== UnitType.MIRVWarhead) {
-        sum += nukes[nukeType];
-      }
-    }
-    return sum;
+  private formatDuration(totalSeconds: number): string {
+    if (totalSeconds <= 0) return "0s";
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    let time = "";
+    if (minutes > 0) time += `${minutes}m `;
+    time += `${seconds}s`;
+    return time.trim();
   }
 
   render() {
@@ -309,15 +320,20 @@ export class PlayerPanel extends LitElement implements Layer {
                 </div>
               </div>
 
-              <!-- Stats -->
-              <div class="flex flex-col gap-1">
-                <div class="text-white text-opacity-80 text-sm px-2">
-                  ${translateText("player_panel.nuke")}
-                </div>
-                <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
-                  ${this.getTotalNukesSent(other.id())}
-                </div>
-              </div>
+              ${this.allianceExpiryText !== null
+                ? html`
+                    <div class="flex flex-col gap-1">
+                      <div class="text-white text-opacity-80 text-sm px-2">
+                        ${translateText("player_panel.alliance_time_remaining")}
+                      </div>
+                      <div
+                        class="bg-opacity-50 bg-gray-700 rounded p-2 text-white"
+                      >
+                        ${this.allianceExpiryText}
+                      </div>
+                    </div>
+                  `
+                : ""}
 
               <!-- Action buttons -->
               <div class="flex justify-center gap-2">

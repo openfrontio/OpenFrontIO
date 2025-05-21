@@ -134,7 +134,7 @@ export class PublicLobby extends LitElement {
               </div>
             </div>
             <div class="flex flex-col items-center">
-              <div class="text-md font-medium text-blue-100 mb-2">
+              <div class="text-md font-medium text-blue-100 mb-4">
                 ${lobby.numClients} / ${lobby.gameConfig.maxPlayers}
               </div>
               <div class="text-md font-medium text-blue-100">

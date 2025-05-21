@@ -403,6 +403,7 @@
     "gold": "Gold",
     "troops": "Troops",
     "traitor": "Traitor",
+    "alliance_time_remaining": "Time Remaining",
     "embargo": "Stopped trading with you",
     "nuke": "Nukes sent by them to you",
     "start_trade": "Start trading",
