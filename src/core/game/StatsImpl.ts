@@ -1,7 +1,7 @@
 import {
   ATTACK_INDEX_CANCELLED,
-  ATTACK_INDEX_INCOMING,
-  ATTACK_INDEX_OUTGOING,
+  ATTACK_INDEX_RECV,
+  ATTACK_INDEX_SENT,
   BOAT_INDEX_ARRIVED,
   BOAT_INDEX_DESTROYED,
   BOAT_INDEX_SENT,
@@ -9,6 +9,7 @@ import {
   BOMB_INDEX_INTERCEPTED,
   BOMB_INDEX_LANDED,
   BOMB_INDEX_LAUNCHED,
+  GOLD_INDEX_STOLE,
   GOLD_INDEX_TRADE,
   GOLD_INDEX_WAR,
   GOLD_INDEX_WORK,
@@ -121,9 +122,9 @@ export class StatsImpl implements Stats {
   }
 
   attack(player: Player, target: Player | TerraNullius, troops: number): void {
-    this._addAttack(player, ATTACK_INDEX_OUTGOING, troops);
+    this._addAttack(player, ATTACK_INDEX_SENT, troops);
     if (target.isPlayer()) {
-      this._addAttack(target, ATTACK_INDEX_INCOMING, troops);
+      this._addAttack(target, ATTACK_INDEX_RECV, troops);
     }
   }
 
@@ -133,9 +134,9 @@ export class StatsImpl implements Stats {
     troops: number,
   ): void {
     this._addAttack(player, ATTACK_INDEX_CANCELLED, troops);
-    this._addAttack(player, ATTACK_INDEX_OUTGOING, -troops);
+    this._addAttack(player, ATTACK_INDEX_SENT, -troops);
     if (target.isPlayer()) {
-      this._addAttack(target, ATTACK_INDEX_INCOMING, -troops);
+      this._addAttack(target, ATTACK_INDEX_RECV, -troops);
     }
   }
 
@@ -155,7 +156,7 @@ export class StatsImpl implements Stats {
 
   boatCapturedTrade(player: Player, target: Player, gold: number): void {
     this._addBoat(player, "trade", BOAT_INDEX_ARRIVED, 1);
-    this._addGold(player, GOLD_INDEX_TRADE, gold);
+    this._addGold(player, GOLD_INDEX_STOLE, gold);
   }
 
   boatDestroyTrade(player: Player, target: Player): void {

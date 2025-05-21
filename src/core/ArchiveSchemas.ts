@@ -57,8 +57,8 @@ export const unitTypeToOtherUnit = {
 } as const satisfies Record<OtherUnitType, OtherUnit>;
 
 // Attacks
-export const ATTACK_INDEX_OUTGOING = 0;
-export const ATTACK_INDEX_INCOMING = 1;
+export const ATTACK_INDEX_SENT = 0;
+export const ATTACK_INDEX_RECV = 1;
 export const ATTACK_INDEX_CANCELLED = 2;
 
 // Boats
@@ -72,9 +72,10 @@ export const BOMB_INDEX_LANDED = 1;
 export const BOMB_INDEX_INTERCEPTED = 2;
 
 // Gold
-export const GOLD_INDEX_WORK = 0;
-export const GOLD_INDEX_TRADE = 1;
-export const GOLD_INDEX_WAR = 2;
+export const GOLD_INDEX_WORK = 0; // Gold earned by workers
+export const GOLD_INDEX_WAR = 1; // Gold earned by conquering players
+export const GOLD_INDEX_TRADE = 2; // Gold earned by trade ships
+export const GOLD_INDEX_STOLE = 3; // Gold earned by capturing trade ships
 
 // Other Units
 export const OTHER_INDEX_BUILT = 0;
