@@ -14,7 +14,14 @@ const matcher = new RegExpMatcher({
 export const MIN_USERNAME_LENGTH = 3;
 export const MAX_USERNAME_LENGTH = 27;
 
-const validPattern = /^[\w \[\]\p{Emoji}]+$/u;
+const validPattern = new RegExp(
+  '^' +
+  '(?!.*[\\p{Cc}\\p{Cf}\\p{Co}\\p{Cn}\\p{Zl}\\p{Zp}])' +
+  '(?=.*[\\p{L}\\p{N}_\\p{Emoji}])' +
+  '[\\w \\[\\]\\p{Emoji}]+' +
+  '$',
+  'u'
+);
 
 const shadowNames = [
   "NicePeopleOnly",
@@ -34,7 +41,12 @@ export function fixProfaneUsername(username: string): string {
 }
 
 export function isProfaneUsername(username: string): boolean {
-  return matcher.hasMatch(username) || username.toLowerCase().includes("nig");
+  if (typeof username !== 'string') return false;
+  const normalizedUsername = username.normalize('NFC');
+  return (
+    matcher.hasMatch(normalizedUsername) ||
+    normalizedUsername.toLowerCase().includes("nig")
+  );
 }
 
 export function validateUsername(username: string): {
@@ -45,7 +57,9 @@ export function validateUsername(username: string): {
     return { isValid: false, error: translateText("username.not_string") };
   }
 
-  if (username.length < MIN_USERNAME_LENGTH) {
+  const normalizedUsername = username.normalize('NFC');
+
+  if (normalizedUsername.length < MIN_USERNAME_LENGTH) {
     return {
       isValid: false,
       error: translateText("username.too_short", {
@@ -54,7 +68,7 @@ export function validateUsername(username: string): {
     };
   }
 
-  if (username.length > MAX_USERNAME_LENGTH) {
+  if (normalizedUsername.length > MAX_USERNAME_LENGTH) {
     return {
       isValid: false,
       error: translateText("username.too_long", {
@@ -63,22 +77,24 @@ export function validateUsername(username: string): {
     };
   }
 
-  if (!validPattern.test(username)) {
+  if (!validPattern.test(normalizedUsername)) {
     return {
       isValid: false,
-      error: translateText("username.invalid_chars", {
-        max: MAX_USERNAME_LENGTH,
-      }),
+      error: translateText("username.invalid_chars"),
     };
   }
-
   // All checks passed
   return { isValid: true };
 }
 
 export function sanitizeUsername(str: string): string {
-  const sanitized = str
-    .replace(/[^a-zA-Z0-9_\[\] 🐈🍀]/gu, "")
+  if (typeof str !== 'string') return '';
+
+  const normalizedStr = str.normalize('NFC');
+
+  const sanitized = normalizedStr
+    .replace(/[^\w \[\]\p{Emoji}]/gu, "")
     .slice(0, MAX_USERNAME_LENGTH);
+
   return sanitized.padEnd(MIN_USERNAME_LENGTH, "x");
 }
