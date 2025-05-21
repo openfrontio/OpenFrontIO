@@ -16,34 +16,40 @@ echo "======================================================"
 CONTAINER_NAME="openfront-${ENV}-${SUBDOMAIN}"
 
 echo "Pulling ${DOCKER_IMAGE} from Docker Hub..."
-docker pull $DOCKER_IMAGE
+docker pull "${DOCKER_IMAGE}"
 
 echo "Checking for existing container..."
 # Check for running container
-RUNNING_CONTAINER=$(docker ps | grep ${CONTAINER_NAME} | awk '{print $1}')
+RUNNING_CONTAINER="$(docker ps | grep ${CONTAINER_NAME} | awk '{print $1}')"
 if [ -n "$RUNNING_CONTAINER" ]; then
     echo "Stopping running container $RUNNING_CONTAINER..."
-    docker stop $RUNNING_CONTAINER
+    docker stop "$RUNNING_CONTAINER"
     echo "Waiting for container to fully stop and release resources..."
     sleep 5 # Add a 5-second delay
-    docker rm $RUNNING_CONTAINER
+    docker rm "$RUNNING_CONTAINER"
     echo "Container $RUNNING_CONTAINER stopped and removed."
 fi
 
 # Also check for stopped containers with the same name
-STOPPED_CONTAINER=$(docker ps -a | grep ${CONTAINER_NAME} | awk '{print $1}')
+STOPPED_CONTAINER="$(docker ps -a | grep ${CONTAINER_NAME} | awk '{print $1}')"
 if [ -n "$STOPPED_CONTAINER" ]; then
     echo "Removing stopped container $STOPPED_CONTAINER..."
-    docker rm $STOPPED_CONTAINER
+    docker rm "$STOPPED_CONTAINER"
     echo "Container $STOPPED_CONTAINER removed."
+fi
+
+if [ "${SUBDOMAIN}" = main ] || [ "${DOMAIN}" = openfront.io ]; then
+    RESTART=always
+else
+    RESTART=no
 fi
 
 echo "Starting new container for ${HOST} environment..."
 docker run -d \
-    --restart=always \
+    --restart="${RESTART}" \
     --env-file /home/openfront/.env \
-    --name ${CONTAINER_NAME} \
-    $DOCKER_IMAGE
+    --name "${CONTAINER_NAME}" \
+    "${DOCKER_IMAGE}"
 
 if [ $? -eq 0 ]; then
     echo "Update complete! New ${CONTAINER_NAME} container is running."
