@@ -1,4 +1,4 @@
-import { AllPlayersStats, ClientID, PlayerStats } from "../Schemas";
+import { AllPlayersStats, ClientID } from "../Schemas";
 import {
   EmojiMessage,
   GameUpdates,
@@ -116,7 +116,6 @@ export interface PlayerUpdate {
   outgoingAttacks: AttackUpdate[];
   incomingAttacks: AttackUpdate[];
   outgoingAllianceRequests: PlayerID[];
-  stats: PlayerStats;
   hasSpawned: boolean;
 }
 
