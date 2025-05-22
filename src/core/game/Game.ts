@@ -345,7 +345,7 @@ export interface Unit {
   targetUnit(): Unit | undefined;
   setTargetedBySAM(targeted: boolean): void;
   targetedBySAM(): boolean;
-  wasInterceptedBySam(): void;
+  setInterceptedBySam(): void;
   interceptedBySam(): boolean;
 
   // Health

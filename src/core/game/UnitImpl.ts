@@ -306,7 +306,7 @@ export class UnitImpl implements Unit {
     return this._targetedBySAM;
   }
 
-  wasInterceptedBySam(): void {
+  setInterceptedBySam(): void {
     this._interceptedBySAM = true;
   }
 
