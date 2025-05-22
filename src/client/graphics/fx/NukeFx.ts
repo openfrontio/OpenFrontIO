@@ -42,7 +42,8 @@ function addSpriteInCircle(
   result: Fx[],
   game: GameView,
 ) {
-  for (let i = 0; i < num; i++) {
+  const count = Math.max(0, Math.floor(num));
+  for (let i = 0; i < count; i++) {
     const angle = Math.random() * 2 * Math.PI;
     const distance = Math.random() * (radius / 2);
     const spawnX = Math.floor(x + Math.cos(angle) * distance);
@@ -75,26 +76,27 @@ export function nukeFxFactory(
   // Shockwave animation
   nukeFx.push(new ShockwaveFx(x, y, 1500, radius * 1.5));
   // Ruins and desolation sprites
-  // Arbitrary values that feels better
-  addSpriteInCircle(x, y, radius, radius / 25, FxType.MiniFire, nukeFx, game);
-  addSpriteInCircle(x, y, radius, radius / 28, FxType.MiniSmoke, nukeFx, game);
-  addSpriteInCircle(
-    x,
-    y,
-    radius * 0.9,
-    radius / 70,
-    FxType.MiniBigSmoke,
-    nukeFx,
-    game,
-  );
-  addSpriteInCircle(
-    x,
-    y,
-    radius * 0.9,
-    radius / 70,
-    FxType.MiniSmokeAndFire,
-    nukeFx,
-    game,
-  );
+  const debrisPlan: Array<{
+    type: FxType;
+    radiusFactor: number;
+    density: number;
+  }> = [
+    { type: FxType.MiniFire, radiusFactor: 1.0, density: 1 / 25 },
+    { type: FxType.MiniSmoke, radiusFactor: 1.0, density: 1 / 28 },
+    { type: FxType.MiniBigSmoke, radiusFactor: 0.9, density: 1 / 70 },
+    { type: FxType.MiniSmokeAndFire, radiusFactor: 0.9, density: 1 / 70 },
+  ];
+
+  for (const { type, radiusFactor, density } of debrisPlan) {
+    addSpriteInCircle(
+      x,
+      y,
+      radius * radiusFactor,
+      radius * density,
+      type,
+      nukeFx,
+      game,
+    );
+  }
   return nukeFx;
 }

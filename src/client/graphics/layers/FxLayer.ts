@@ -66,9 +66,9 @@ export class FxLayer implements Layer {
     const x = this.game.x(unit.lastTile());
     const y = this.game.y(unit.lastTile());
     const interception = new SAMExplosionFx(x, y, 1000);
-    this.allFx.push(interception as Fx);
+    this.allFx.push(interception);
     const shockwave = new ShockwaveFx(x, y, 800, 40);
-    this.allFx.push(shockwave as Fx);
+    this.allFx.push(shockwave);
   }
 
   async init() {
