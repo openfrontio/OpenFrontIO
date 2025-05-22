@@ -176,7 +176,7 @@ export class LocalServer {
     }
     const players: PlayerRecord[] = [
       {
-        ip: null,
+        playerID: this.lobbyConfig.clientID, // hack?
         persistentID: getPersistentIDFromCookie(),
         username: this.lobbyConfig.playerName,
         clientID: this.lobbyConfig.clientID,
@@ -188,7 +188,7 @@ export class LocalServer {
     }
     const record = createGameRecord(
       this.lobbyConfig.gameStartInfo.gameID,
-      this.lobbyConfig.gameStartInfo,
+      this.lobbyConfig.gameStartInfo.config,
       players,
       this.turns,
       this.startedAt,
