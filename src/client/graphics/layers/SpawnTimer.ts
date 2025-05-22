@@ -1,18 +1,15 @@
 import { GameMode, Team } from "../../../core/game/Game";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
+import { GameView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
 export class SpawnTimer implements Layer {
   private ratios = [0];
   private colors = ["rgba(0, 128, 255, 0.7)", "rgba(0, 0, 0, 0.5)"];
-  private player: PlayerView | undefined;
 
   constructor(
     private game: GameView,
     private transformHandler: TransformHandler,
-    private clientID: ClientID,
   ) {}
 
   init() {}
@@ -28,8 +25,8 @@ export class SpawnTimer implements Layer {
     this.colors = [];
 
     if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
-      const player = this.getPlayer();
-      if (player === undefined) return;
+      const player = this.game.myPlayer();
+      if (player === null) return;
       const max = this.game.config().maxPopulation(player);
       const troops = player.troops();
       const workers = player.workers();
@@ -90,16 +87,6 @@ export class SpawnTimer implements Layer {
       x += segmentWidth;
       filledRatio += ratio;
     }
-  }
-
-  private getPlayer(): PlayerView | undefined {
-    if (this.player !== undefined) {
-      return this.player;
-    }
-    this.player = this.game
-      .playerViews()
-      .find((p) => p.clientID() === this.clientID);
-    return this.player;
   }
 }
 
