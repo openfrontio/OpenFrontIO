@@ -187,9 +187,10 @@ export class ClientGameRunner {
   }
 
   private saveGame(update: WinUpdate) {
+    if (this.myPlayer === null) throw new Error("Not initialized");
     const players: PlayerRecord[] = [
       {
-        playerID: this.lobby.clientID, // hack?
+        playerID: this.myPlayer.id(),
         persistentID: getPersistentIDFromCookie(),
         username: this.lobby.playerName,
         clientID: this.lobby.clientID,
