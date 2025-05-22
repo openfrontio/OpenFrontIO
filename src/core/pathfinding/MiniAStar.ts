@@ -58,10 +58,10 @@ export class MiniAStar implements AStar {
       );
       const srcIndex = findCell(upscaled, cellSrc);
       if (srcIndex === -1) {
-        // didnt find the current tile in the path (can happen with the mini aStar)
+        // didnt find the start tile in the path
         upscaled.unshift(cellSrc);
       } else if (srcIndex !== 0) {
-        // found start tile but not at the start (can happen with the mini aStar)
+        // found start tile but not at the start
         // remove all tiles before the start tile
         upscaled = upscaled.slice(srcIndex);
       }
@@ -72,11 +72,11 @@ export class MiniAStar implements AStar {
     );
     const dstIndex = findCell(upscaled, cellDst);
     if (dstIndex === -1) {
-      // didnt find the dst tile in the path (can happen with the mini aStar)
+      // didnt find the dst tile in the path
       upscaled.push(cellDst);
     } else if (dstIndex !== upscaled.length - 1) {
-      // found dst tile but not at the end (can happen with the mini aStar)
-      // remove all tiles after the start tile
+      // found dst tile but not at the end
+      // remove all tiles after the dst tile
       upscaled = upscaled.slice(0, dstIndex + 1);
     }
     return upscaled;
