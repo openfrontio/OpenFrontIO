@@ -120,6 +120,7 @@
   "map": {
     "map": "Map",
     "world": "World",
+    "worldmapgiant": "World Map (Giant)",
     "europe": "Europe",
     "mena": "MENA",
     "northamerica": "North America",
