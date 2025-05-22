@@ -71,7 +71,7 @@ export class UnitImpl implements Unit {
     }
     for (let i = 0; i < path.length - 1; i++) {
       if (this._pathCache.has(path[i])) {
-        break;
+        continue;
       }
       const from = path[i];
       const to = path[i + 1];

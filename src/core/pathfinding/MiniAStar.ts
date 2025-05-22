@@ -9,7 +9,7 @@ export class MiniAStar implements AStar {
   constructor(
     private gameMap: GameMap,
     private miniMap: GameMap,
-    src: TileRef | TileRef[],
+    private src: TileRef | TileRef[],
     private dst: TileRef,
     iterations: number,
     maxTries: number,
@@ -41,13 +41,45 @@ export class MiniAStar implements AStar {
   }
 
   reconstructPath(): TileRef[] {
-    const upscaled = upscalePath(
+    let upscaled = upscalePath(
       this.aStar
         .reconstructPath()
         .map((tr) => new Cell(this.miniMap.x(tr), this.miniMap.y(tr))),
     );
-    upscaled.push(new Cell(this.gameMap.x(this.dst), this.gameMap.y(this.dst)));
+    upscaled = this.fixExtremes(upscaled);
     return upscaled.map((c) => this.gameMap.ref(c.x, c.y));
+  }
+
+  fixExtremes(upscaled: Cell[]): Cell[] {
+    if (!Array.isArray(this.src)) {
+      const cellSrc = new Cell(
+        this.gameMap.x(this.src),
+        this.gameMap.y(this.src),
+      );
+      const srcIndex = findCell(upscaled, cellSrc);
+      if (srcIndex === -1) {
+        // didnt find the current tile in the path (can happen with the mini aStar)
+        upscaled.unshift(cellSrc);
+      } else if (srcIndex !== 0) {
+        // found start tile but not at the start (can happen with the mini aStar)
+        // remove all tiles before the start tile
+        upscaled = upscaled.slice(srcIndex);
+      }
+    }
+    const cellDst = new Cell(
+      this.gameMap.x(this.dst),
+      this.gameMap.y(this.dst),
+    );
+    const dstIndex = findCell(upscaled, cellDst);
+    if (dstIndex === -1) {
+      // didnt find the dst tile in the path (can happen with the mini aStar)
+      upscaled.push(cellDst);
+    } else if (dstIndex !== upscaled.length - 1) {
+      // found dst tile but not at the end (can happen with the mini aStar)
+      // remove all tiles after the start tile
+      upscaled = upscaled.slice(0, dstIndex + 1);
+    }
+    return upscaled;
   }
 }
 
@@ -91,4 +123,13 @@ function upscalePath(path: Cell[], scaleFactor: number = 2): Cell[] {
   }
 
   return smoothPath;
+}
+
+function findCell(upscaled: Cell[], cellDst: Cell): number {
+  for (let i = 0; i < upscaled.length; i++) {
+    if (upscaled[i].x === cellDst.x && upscaled[i].y === cellDst.y) {
+      return i;
+    }
+  }
+  return -1;
 }

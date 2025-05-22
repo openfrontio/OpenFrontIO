@@ -10,8 +10,8 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PathFinder } from "../pathfinding/PathFinding";
+import { AStar, PathFindResultType } from "../pathfinding/AStar";
+import { MiniAStar } from "../pathfinding/MiniAStar";
 import { distSortUnit } from "../Util";
 
 export class TradeShipExecution implements Execution {
@@ -19,16 +19,15 @@ export class TradeShipExecution implements Execution {
   private mg: Game | null = null;
   private origOwner: Player | null = null;
   private tradeShip: Unit | null = null;
-  private index = 0;
   private wasCaptured = false;
   private tilesTraveled = 0;
+  private aStar: AStar | null = null;
+  private path: TileRef[];
 
   constructor(
     private _owner: PlayerID,
     private srcPort: Unit,
     private _dstPort: Unit,
-    private pathFinder: PathFinder,
-    private moved: boolean = false,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -104,56 +103,77 @@ export class TradeShipExecution implements Execution {
 
     const cachedNextTile = this._dstPort.cacheGet(this.tradeShip.tile());
     if (cachedNextTile !== undefined) {
-      if (!this.moved) {
-        this.moved = true;
-        console.log("Has never moved and found a cached path, perf gain", this);
-      }
-      if (
-        this.mg.isWater(cachedNextTile) &&
-        this.mg.isShoreline(cachedNextTile)
-      ) {
-        this.tradeShip.setSafeFromPirates();
-      }
-      if (cachedNextTile === this._dstPort.tile()) {
-        this.complete();
-        return;
-      }
-      this.tradeShip.move(cachedNextTile);
-      this.tilesTraveled++;
+      this.moveTradeShip(cachedNextTile);
       return;
     }
 
-    this.moved = true;
-    const result = this.pathFinder.nextTile(
-      this.tradeShip.tile(),
-      this._dstPort.tile(),
-    );
+    const result = this.computeNewPath();
 
-    switch (result.type) {
-      case PathFindResultType.Completed:
-        this.complete();
-        break;
+    switch (result) {
       case PathFindResultType.Pending:
         // Fire unit event to rerender.
         this.tradeShip.touch();
         break;
-      case PathFindResultType.NextTile:
-        this._dstPort.cachePut(this.pathFinder.getPath());
-        // Update safeFromPirates status
-        if (this.mg.isWater(result.tile) && this.mg.isShoreline(result.tile)) {
-          this.tradeShip.setSafeFromPirates();
+      case PathFindResultType.Completed:
+        this._dstPort.cachePut(this.path);
+        if (!this.wasCaptured) {
+          this.srcPort.cachePut(this.path.slice().reverse());
         }
-        this.tradeShip.move(result.tile);
-        this.tilesTraveled++;
+        this.moveTradeShip(this.path.shift());
         break;
       case PathFindResultType.PathNotFound:
-        consolex.warn("captured trade ship cannot find route");
+        consolex.warn("trade ship cannot find route");
         if (this.tradeShip.isActive()) {
           this.tradeShip.delete(false);
         }
         this.active = false;
         break;
+      default:
+        throw new Error("unexpected path finding compute result");
     }
+  }
+
+  private moveTradeShip(nextTile?: TileRef) {
+    if (nextTile === undefined) {
+      throw new Error("missing tile");
+    }
+
+    if (nextTile === this._dstPort.tile()) {
+      this.complete();
+      return;
+    }
+    // Update safeFromPirates status
+    if (this.mg!.isWater(nextTile) && this.mg!.isShoreline(nextTile)) {
+      this.tradeShip!.setSafeFromPirates();
+    }
+    this.tradeShip!.move(nextTile);
+    this.tilesTraveled++;
+  }
+
+  private computeNewPath(): PathFindResultType {
+    if (this.aStar === null) {
+      this.aStar = new MiniAStar(
+        this.mg!,
+        this.mg!.miniMap(),
+        this.tradeShip!.tile(),
+        this._dstPort.tile(),
+        2500,
+        20,
+      );
+    }
+    const pathFindResultType = this.aStar.compute();
+    switch (pathFindResultType) {
+      case PathFindResultType.Completed:
+        this.path = this.aStar.reconstructPath();
+        break;
+      case PathFindResultType.Pending:
+        break;
+      case PathFindResultType.PathNotFound:
+        break;
+      default:
+        break;
+    }
+    return pathFindResultType;
   }
 
   private complete() {
