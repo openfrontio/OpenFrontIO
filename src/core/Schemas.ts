@@ -1,6 +1,5 @@
 import { z } from "zod";
 import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
-import { PlayerStatsSchema } from "./ArchiveSchemas";
 import {
   AllPlayers,
   Difficulty,
@@ -11,6 +10,7 @@ import {
   PlayerType,
   UnitType,
 } from "./game/Game";
+import { PlayerStatsSchema } from "./StatsSchemas";
 import { flattenedEmojiTable } from "./Util";
 
 export type GameID = string;

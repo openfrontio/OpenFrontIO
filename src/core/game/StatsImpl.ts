@@ -1,3 +1,4 @@
+import { AllPlayersStats } from "../Schemas";
 import {
   ATTACK_INDEX_CANCEL,
   ATTACK_INDEX_RECV,
@@ -23,8 +24,7 @@ import {
   PlayerStats,
   unitTypeToBombUnit,
   unitTypeToOtherUnit,
-} from "../ArchiveSchemas";
-import { AllPlayersStats } from "../Schemas";
+} from "../StatsSchemas";
 import { Player, TerraNullius } from "./Game";
 import { Stats } from "./Stats";
 
