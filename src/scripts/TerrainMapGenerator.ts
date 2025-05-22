@@ -75,14 +75,35 @@ export async function generateMap(
 
 async function createMiniMap(tm: Terrain[][]): Promise<Terrain[][]> {
   // Create 2D array properly with correct dimensions
-  const miniMap: Terrain[][] = Array(Math.floor(tm.length / 2))
-    .fill(null)
-    .map(() => Array(Math.floor(tm[0].length / 2)).fill(null));
+ const miniWidth = Math.floor(tm.length / 2);
+const miniHeight = Math.floor(tm[0].length / 2);
+const miniMap: (Terrain | null)[][] = [];
+
+for (let x = 0; x < miniWidth; x++) {
+  miniMap[x] = new Array(miniHeight).fill(null);
+}
 
   for (let x = 0; x < tm.length; x++) {
     for (let y = 0; y < tm[0].length; y++) {
-      const miniX = Math.floor(x / 2);
-      const miniY = Math.floor(y / 2);
+      const miniX = Math.min(Math.floor(x / 2), miniWidth - 1);
+      const miniY = Math.min(Math.floor(y / 2), miniHeight - 1);
+
+      if (
+  miniMap[miniX] === undefined ||
+  miniMap[miniX][miniY] === undefined
+) {
+  console.error("💥 miniMap access failed at:", {
+    x,
+    y,
+    miniX,
+    miniY,
+    tmWidth: tm.length,
+    tmHeight: tm[0].length,
+    miniWidth,
+    miniHeight,
+  });
+  throw new Error("miniMap[miniX][miniY] is undefined");
+}
 
       if (
         miniMap[miniX][miniY] === null ||
@@ -94,7 +115,10 @@ async function createMiniMap(tm: Terrain[][]): Promise<Terrain[][]> {
       }
     }
   }
-  return miniMap;
+  return miniMap.map(row =>
+  row.map(cell => cell ?? new Terrain(TerrainType.Water))
+);
+
 }
 
 function processShore(map: Terrain[][]): Coord[] {
