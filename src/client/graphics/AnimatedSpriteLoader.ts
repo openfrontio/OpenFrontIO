@@ -1,4 +1,5 @@
 import nuke from "../../../resources/sprites/nukeExplosion.png";
+import SAMExplosion from "../../../resources/sprites/samExplosion.png";
 import { AnimatedSprite } from "./AnimatedSprite";
 import { FxType } from "./fx/Fx";
 
@@ -21,6 +22,15 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     looping: false,
     originX: 30,
     originY: 30,
+  },
+  [FxType.SAMExplosion]: {
+    url: SAMExplosion,
+    frameWidth: 48,
+    frameCount: 9,
+    frameDuration: 70,
+    looping: false,
+    originX: 23,
+    originY: 19,
   },
 };
 

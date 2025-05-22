@@ -187,9 +187,10 @@ export class ClientGameRunner {
   }
 
   private saveGame(update: WinUpdate) {
+    if (this.myPlayer === null) throw new Error("Not initialized");
     const players: PlayerRecord[] = [
       {
-        ip: null,
+        playerID: this.myPlayer.id(),
         persistentID: getPersistentIDFromCookie(),
         username: this.lobby.playerName,
         clientID: this.lobby.clientID,
@@ -210,7 +211,7 @@ export class ClientGameRunner {
     }
     const record = createGameRecord(
       this.lobby.gameStartInfo.gameID,
-      this.lobby.gameStartInfo,
+      this.lobby.gameStartInfo.config,
       players,
       // Not saving turns locally
       [],

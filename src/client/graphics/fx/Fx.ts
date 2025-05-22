@@ -4,4 +4,5 @@ export interface Fx {
 
 export enum FxType {
   Nuke = "Nuke",
+  SAMExplosion = "SAMExplosion",
 }
