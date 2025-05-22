@@ -3,6 +3,10 @@ export interface Fx {
 }
 
 export enum FxType {
+  MiniFire = "MiniFire",
+  MiniSmoke = "MiniSmoke",
+  MiniBigSmoke = "MiniBigSmoke",
+  MiniSmokeAndFire = "MiniSmokeAndFire",
   Nuke = "Nuke",
   SAMExplosion = "SAMExplosion",
 }
