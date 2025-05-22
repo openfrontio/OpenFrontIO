@@ -22,7 +22,7 @@ export class TradeShipExecution implements Execution {
   private wasCaptured = false;
   private tilesTraveled = 0;
   private aStar: AStar | null = null;
-  private path: TileRef[];
+  private path: TileRef[] | null = null;
 
   constructor(
     private _owner: PlayerID,
@@ -115,6 +115,9 @@ export class TradeShipExecution implements Execution {
         this.tradeShip.touch();
         break;
       case PathFindResultType.Completed:
+        if (this.path === null) {
+          throw new Error("missing path");
+        }
         this._dstPort.cachePut(this.path);
         if (!this.wasCaptured) {
           this.srcPort.cachePut(this.path.slice().reverse());
@@ -163,7 +166,12 @@ export class TradeShipExecution implements Execution {
     }
     const pathFindResultType = this.aStar.compute();
     if (pathFindResultType === PathFindResultType.Completed) {
-      this.path = this.aStar.reconstructPath();
+      const fullPath = this.aStar.reconstructPath();
+      if (fullPath.length === 0) {
+        consolex.warn("reconstructPath() returned 0 tiles");
+        return PathFindResultType.PathNotFound;
+      }
+      this.path = fullPath;
     }
     return pathFindResultType;
   }
