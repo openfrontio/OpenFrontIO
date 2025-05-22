@@ -154,6 +154,7 @@ export class TradeShipExecution implements Execution {
   }
 
   private computeNewPath(): PathFindResultType {
+    this.path = null;
     if (this.aStar === null) {
       this.aStar = new MiniAStar(
         this.mg!,
