@@ -1,0 +1,20 @@
+{
+  "name": "Giant_World_Map",
+  "mapInfoState": {
+    "width": 4109,
+    "height": 1947,
+    "originalWidth": 0,
+    "originalHeight": 0,
+    "cropData": {
+      "isCropped": false,
+      "cropX": 0,
+      "cropY": 0,
+      "cropWidth": 0,
+      "cropHeight": 0,
+      "originalWidth": 0,
+      "originalHeight": 0
+    },
+    "colorMappings": []
+  },
+  "nations": []
+}

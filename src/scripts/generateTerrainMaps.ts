@@ -4,30 +4,7 @@ import sharp from "sharp";
 import { generateMap } from "./TerrainMapGenerator.js";
 
 const maps = [
-  "Africa",
-  "Asia",
-  "WorldMap",
-  "BlackSea",
-  "Europe",
-  "EuropeClassic",
-  "Mars",
-  "Mena",
-  "Oceania",
-  "NorthAmerica",
-  "SouthAmerica",
-  "Britannia",
-  "GatewayToTheAtlantic",
-  "Australia",
-  "Pangaea",
-  "Iceland",
-  "BetweenTwoSeas",
-  "Japan",
-  "KnownWorld",
-  "FaroeIslands",
-  "DeglaciatedAntarctica",
-  "FalklandIslands",
-  "Baikal",
-  "Halkidiki",
+  "WorldMapGiant"
 ];
 
 const removeSmall = true;
