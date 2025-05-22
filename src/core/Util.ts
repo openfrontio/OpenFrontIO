@@ -184,11 +184,11 @@ export function onlyImages(html: string) {
 }
 
 export function createGameRecord(
-  id: GameID,
+  gameID: GameID,
   config: GameConfig,
   // username does not need to be set.
   players: PlayerRecord[],
-  turns: Turn[],
+  allTurns: Turn[],
   start: number,
   end: number,
   winner: ClientID | Team | null,
@@ -197,12 +197,16 @@ export function createGameRecord(
   const duration = Math.floor((end - start) / 1000);
   const version = "v0.0.2";
   const gitCommit = "";
+  const num_turns = allTurns.length;
+  const turns = allTurns.filter(
+    (t) => t.intents.length !== 0 || t.hash !== undefined,
+  );
   const record: GameRecord = {
     info: {
-      gameID: id,
+      gameID,
       config,
       players,
-      num_turns: 0,
+      num_turns,
       winner,
       winnerType,
     },
@@ -211,24 +215,8 @@ export function createGameRecord(
     duration,
     version,
     gitCommit,
-    turns: [],
+    turns,
   };
-
-  for (const turn of turns) {
-    if (turn.intents.length !== 0 || turn.hash !== undefined) {
-      record.turns.push(turn);
-      for (const intent of turn.intents) {
-        if (intent.type === "spawn") {
-          for (const playerRecord of players) {
-            if (playerRecord.clientID === intent.clientID) {
-              playerRecord.username = intent.name;
-            }
-          }
-        }
-      }
-    }
-  }
-  record.info.num_turns = turns.length;
   return record;
 }
 
