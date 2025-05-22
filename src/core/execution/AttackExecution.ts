@@ -27,8 +27,6 @@ export class AttackExecution implements Execution {
 
   private mg: Game;
 
-  private border = new Set<TileRef>();
-
   private attack: Attack | null = null;
 
   constructor(
@@ -111,7 +109,7 @@ export class AttackExecution implements Execution {
       this.target,
       this.startTroops,
       this.sourceTile,
-      () => this.border,
+      new Set<TileRef>(),
     );
 
     if (this.sourceTile !== null) {
@@ -161,8 +159,12 @@ export class AttackExecution implements Execution {
   }
 
   private refreshToConquer() {
+    if (this.attack === null) {
+      throw new Error("Attack not initialized");
+    }
+
     this.toConquer.clear();
-    this.border.clear();
+    this.attack.border().clear();
     for (const tile of this._owner.borderTiles()) {
       this.addNeighbors(tile);
     }
@@ -236,7 +238,7 @@ export class AttackExecution implements Execution {
         troopCount,
         this._owner,
         this.target,
-        this.border.size + this.random.nextInt(0, 5),
+        this.attack.border().size + this.random.nextInt(0, 5),
       );
 
     while (numTilesPerTick > 0) {
@@ -253,7 +255,7 @@ export class AttackExecution implements Execution {
       }
 
       const [tileToConquer] = this.toConquer.dequeue();
-      this.border.delete(tileToConquer);
+      this.attack.border().delete(tileToConquer);
 
       let onBorder = false;
       for (const n of this.mg.neighbors(tileToConquer)) {
@@ -287,6 +289,10 @@ export class AttackExecution implements Execution {
   }
 
   private addNeighbors(tile: TileRef) {
+    if (this.attack === null) {
+      throw new Error("Attack not initialized");
+    }
+
     const tickNow = this.mg.ticks(); // cache tick
 
     for (const neighbor of this.mg.neighbors(tile)) {
@@ -296,7 +302,7 @@ export class AttackExecution implements Execution {
       ) {
         continue;
       }
-      this.border.add(neighbor);
+      this.attack.border().add(neighbor);
       let numOwnedByMe = 0;
       for (const n of this.mg.neighbors(neighbor)) {
         if (this.mg.owner(n) === this._owner) {

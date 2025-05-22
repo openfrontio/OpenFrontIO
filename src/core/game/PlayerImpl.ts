@@ -954,7 +954,7 @@ export class PlayerImpl implements Player {
     target: Player | TerraNullius,
     troops: number,
     sourceTile: TileRef | null,
-    border_getter: () => Set<number>,
+    border: Set<number>,
   ): Attack {
     const attack = new AttackImpl(
       this._pseudo_random.nextID(),
@@ -962,7 +962,7 @@ export class PlayerImpl implements Player {
       this,
       troops,
       sourceTile,
-      border_getter,
+      border,
       this.mg,
     );
     this._outgoingAttacks.push(attack);

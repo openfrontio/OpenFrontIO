@@ -276,7 +276,7 @@ export interface Attack {
   delete(): void;
   // The tile the attack originated from, mostly used for boat attacks.
   sourceTile(): TileRef | null;
-
+  border(): Set<number>;
   averagePosition(): Cell | null;
 }
 
@@ -504,7 +504,7 @@ export interface Player {
     target: Player | TerraNullius,
     troops: number,
     sourceTile: TileRef | null,
-    border_getter: () => Set<number>,
+    border: Set<number>,
   ): Attack;
   outgoingAttacks(): Attack[];
   incomingAttacks(): Attack[];
