@@ -1,15 +1,18 @@
 import { GameMode, Team } from "../../../core/game/Game";
-import { GameView } from "../../../core/game/GameView";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { ClientID } from "../../../core/Schemas";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
 export class SpawnTimer implements Layer {
   private ratios = [0];
   private colors = ["rgba(0, 128, 255, 0.7)", "rgba(0, 0, 0, 0.5)"];
+  private player: PlayerView | undefined;
 
   constructor(
     private game: GameView,
     private transformHandler: TransformHandler,
+    private clientID: ClientID,
   ) {}
 
   init() {}
@@ -25,6 +28,21 @@ export class SpawnTimer implements Layer {
     this.colors = [];
 
     if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
+      const player = this.getPlayer();
+      if (player === undefined) return;
+      const max = this.game.config().maxPopulation(player);
+      const troops = player.troops();
+      const workers = player.workers();
+      const total = player.totalPopulation();
+      const attacking = total - troops - workers;
+
+      this.colors = [
+        "rgba(0, 128, 255, 0.7)",
+        "orange",
+        "red",
+        "rgba(0, 0, 0, 0.5)",
+      ];
+      this.ratios = [workers / max, troops / max, attacking / max];
       return;
     }
 
@@ -63,7 +81,7 @@ export class SpawnTimer implements Layer {
     let x = 0;
     let filledRatio = 0;
     for (let i = 0; i < this.ratios.length && i < this.colors.length; i++) {
-      const ratio = this.ratios[i];
+      const ratio = this.ratios[i] ?? 1 - filledRatio;
       const segmentWidth = barWidth * ratio;
 
       context.fillStyle = this.colors[i];
@@ -72,6 +90,16 @@ export class SpawnTimer implements Layer {
       x += segmentWidth;
       filledRatio += ratio;
     }
+  }
+
+  private getPlayer(): PlayerView | undefined {
+    if (this.player !== undefined) {
+      return this.player;
+    }
+    this.player = this.game
+      .playerViews()
+      .find((p) => p.clientID() === this.clientID);
+    return this.player;
   }
 }
 

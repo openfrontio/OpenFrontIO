@@ -193,7 +193,7 @@ export function createRenderer(
       playerInfo,
       playerPanel,
     ),
-    new SpawnTimer(game, transformHandler),
+    new SpawnTimer(game, transformHandler, clientID),
     leaderboard,
     controlPanel,
     playerInfo,
