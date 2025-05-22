@@ -53,6 +53,9 @@ export class TradeShipExecution implements Execution {
         dstPort: this._dstPort,
         lastSetSafeFromPirates: ticks,
       });
+
+      // Record stats
+      this.mg.stats().boatSendTrade(this.origOwner, this._dstPort.owner());
     }
 
     if (!this.tradeShip.isActive()) {
@@ -153,12 +156,16 @@ export class TradeShipExecution implements Execution {
     const gold = this.mg.config().tradeShipGold(this.tilesTraveled);
 
     if (this.wasCaptured) {
-      this.tradeShip.owner().addGold(gold);
+      const player = this.tradeShip.owner();
+      player.addGold(gold);
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
         MessageType.SUCCESS,
         this.tradeShip.owner().id(),
       );
+
+      // Record stats
+      this.mg.stats().boatCapturedTrade(player, this.origOwner, gold);
     } else {
       this.srcPort.owner().addGold(gold);
       this._dstPort.owner().addGold(gold);
@@ -172,6 +179,11 @@ export class TradeShipExecution implements Execution {
         MessageType.SUCCESS,
         this.srcPort.owner().id(),
       );
+
+      // Record stats
+      this.mg
+        .stats()
+        .boatArriveTrade(this.srcPort.owner(), this._dstPort.owner(), gold);
     }
     return;
   }
