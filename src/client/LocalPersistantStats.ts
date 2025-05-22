@@ -47,7 +47,7 @@ export function endGame(gameRecord: GameRecord) {
   }
 
   const stats = getStats();
-  const gameStat = stats[gameRecord.id];
+  const gameStat = stats[gameRecord.info.gameID];
 
   if (!gameStat) {
     consolex.log("LocalPersistantStats: game not found");
