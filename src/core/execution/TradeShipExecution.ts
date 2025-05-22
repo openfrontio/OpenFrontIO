@@ -162,16 +162,8 @@ export class TradeShipExecution implements Execution {
       );
     }
     const pathFindResultType = this.aStar.compute();
-    switch (pathFindResultType) {
-      case PathFindResultType.Completed:
-        this.path = this.aStar.reconstructPath();
-        break;
-      case PathFindResultType.Pending:
-        break;
-      case PathFindResultType.PathNotFound:
-        break;
-      default:
-        break;
+    if (pathFindResultType === PathFindResultType.Completed) {
+      this.path = this.aStar.reconstructPath();
     }
     return pathFindResultType;
   }
