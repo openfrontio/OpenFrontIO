@@ -27,7 +27,7 @@ export class UnitImpl implements Unit {
   private _troops: number;
   private _cooldownStartTick: Tick | null = null;
   private _pathCache: Map<TileRef, TileRef> = new Map();
-
+  private _patrolTile: TileRef | undefined;
   constructor(
     private _type: UnitType,
     private mg: GameImpl,
@@ -44,6 +44,10 @@ export class UnitImpl implements Unit {
       "lastSetSafeFromPirates" in params
         ? (params.lastSetSafeFromPirates ?? 0)
         : 0;
+    this._patrolTile =
+      "patrolTile" in params ? (params.patrolTile ?? undefined) : undefined;
+    this._targetUnit =
+      "targetUnit" in params ? (params.targetUnit ?? undefined) : undefined;
 
     switch (this._type) {
       case UnitType.Warship:
@@ -55,6 +59,19 @@ export class UnitImpl implements Unit {
         this.mg.stats().unitBuild(_owner, this._type);
     }
   }
+
+  setPatrolTile(tile: TileRef): void {
+    this._patrolTile = tile;
+  }
+
+  patrolTile(): TileRef | undefined {
+    return this._patrolTile;
+  }
+
+  isUnit(): this is Unit {
+    return true;
+  }
+
   touch(): void {
     this.mg.addUpdate(this.toUpdate());
   }

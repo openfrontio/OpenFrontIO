@@ -286,8 +286,8 @@ export class GameImpl implements Game {
     this.updates = createGameUpdatesMap();
     this.execs.forEach((e) => {
       if (
-        e.isActive() &&
-        (!this.inSpawnPhase() || e.activeDuringSpawnPhase())
+        (!this.inSpawnPhase() || e.activeDuringSpawnPhase()) &&
+        e.isActive()
       ) {
         e.tick(this._ticks);
       }
