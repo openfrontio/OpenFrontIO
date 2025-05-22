@@ -167,7 +167,7 @@ export class OptionsMenu extends LitElement implements Layer {
               children: this.isPaused ? "▶️" : "⏸",
             })}
             <div
-              class="w-15 h-8 lg:w-24 lg:h-10 flex items-center justify-center
+              class="w-15 h-8 lg:w-24 lg:h-10 flex items-center justify-center w-full
                               bg-opacity-50 bg-gray-700 text-opacity-90 text-white
                               rounded text-sm lg:text-xl"
             >
