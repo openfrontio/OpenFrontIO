@@ -447,6 +447,9 @@ export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;
 
 export const GameEndInfoSchema = GameStartInfoSchema.extend({
   players: z.array(PlayerRecordSchema),
+  start: z.number(),
+  end: z.number(),
+  duration: z.number().nonnegative(),
   num_turns: z.number(),
   winner: z.union([ID, SafeString]).nullable().optional(),
   winnerType: z.enum(["player", "team"]).nullable().optional(),
@@ -455,9 +458,6 @@ export type GameEndInfo = z.infer<typeof GameEndInfoSchema>;
 
 export const AnalyticsRecordSchema = z.object({
   info: GameEndInfoSchema,
-  start: z.number(),
-  end: z.number(),
-  duration: z.number().nonnegative(),
   version: z.literal("v0.0.2"),
   gitCommit: z.string(),
 });

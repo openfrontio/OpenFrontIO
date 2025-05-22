@@ -46,12 +46,9 @@ export async function archive(gameRecord: GameRecord) {
 
 async function archiveAnalyticsToR2(gameRecord: GameRecord) {
   // Create analytics data object
-  const { info, start, end, duration, version, gitCommit } = gameRecord;
+  const { info, version, gitCommit } = gameRecord;
   const analyticsData: AnalyticsRecord = {
     info,
-    start,
-    end,
-    duration,
     version,
     gitCommit,
   };
