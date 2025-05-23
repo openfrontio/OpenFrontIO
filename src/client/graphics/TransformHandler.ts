@@ -187,10 +187,8 @@ export class TransformHandler {
     if (this.target === null) throw new Error("null target");
 
     if (
-      this.game.manhattanDist(
-        this.game.ref(screenX, screenY),
-        this.game.ref(this.target.x, this.target.y),
-      ) < 2
+      Math.abs(this.target.x - screenX) + Math.abs(this.target.y - screenY) <
+      2
     ) {
       this.clearTarget();
       return;
