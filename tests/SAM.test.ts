@@ -63,10 +63,10 @@ describe("SAM", () => {
     const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
     game.addExecution(new SAMLauncherExecution(defender.id(), null, sam));
     attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 1), {
-      detonationDst: game.ref(2, 1),
+      targetTile: game.ref(2, 1),
     });
     attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
-      detonationDst: game.ref(1, 2),
+      targetTile: game.ref(1, 2),
     });
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(2);
 
@@ -80,7 +80,7 @@ describe("SAM", () => {
     game.addExecution(new SAMLauncherExecution(defender.id(), null, sam));
     expect(sam.isInCooldown()).toBeFalsy();
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
-      detonationDst: game.ref(1, 2),
+      targetTile: game.ref(1, 2),
     });
 
     executeTicks(game, 3);
@@ -104,7 +104,7 @@ describe("SAM", () => {
     const sam2 = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 2), {});
     game.addExecution(new SAMLauncherExecution(defender.id(), null, sam2));
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 2), {
-      detonationDst: game.ref(2, 2),
+      targetTile: game.ref(2, 2),
     });
 
     executeTicks(game, 3);
