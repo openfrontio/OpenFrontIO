@@ -107,10 +107,10 @@ export class AttackImpl implements Attack {
     let averageX = 0;
     let averageY = 0;
 
-    this._border.forEach((t) => {
+    for (const t of this._border) {
       averageX += this._mg.map().x(t);
       averageY += this._mg.map().y(t);
-    });
+    }
 
     averageX = averageX / this._borderSize;
     averageY = averageY / this._borderSize;
