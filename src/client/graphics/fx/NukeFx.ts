@@ -1,6 +1,6 @@
-import { AnimatedSprite } from "../AnimatedSprite";
-import { createAnimatedSpriteForUnit } from "../AnimatedSpriteLoader";
+import { GameView } from "../../../core/game/GameView";
 import { Fx, FxType } from "./Fx";
+import { SpriteFX } from "./SpriteFx";
 
 /**
  * Shockwave effect: draw a growing 1px white circle
@@ -31,32 +31,72 @@ export class ShockwaveFx implements Fx {
 }
 
 /**
- * Explosion effect: sprite animation of an explosion
+ * Spawn @p number of @p type animation within a perimeter
  */
-export class NukeExplosionFx implements Fx {
-  private lifeTime: number = 0;
-  private nukeExplosionSprite: AnimatedSprite | null;
-  constructor(
-    private x: number,
-    private y: number,
-    private duration: number,
-  ) {
-    this.nukeExplosionSprite = createAnimatedSpriteForUnit(FxType.Nuke);
-  }
-
-  renderTick(frameTime: number, ctx: CanvasRenderingContext2D): boolean {
-    if (this.nukeExplosionSprite) {
-      this.lifeTime += frameTime;
-      if (this.lifeTime >= this.duration) {
-        return false;
-      }
-      if (this.nukeExplosionSprite.isActive()) {
-        this.nukeExplosionSprite.update(frameTime);
-        this.nukeExplosionSprite.draw(ctx, this.x, this.y);
-        return true;
-      }
-      return false;
+function addSpriteInCircle(
+  x: number,
+  y: number,
+  radius: number,
+  num: number,
+  type: FxType,
+  result: Fx[],
+  game: GameView,
+) {
+  const count = Math.max(0, Math.floor(num));
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * 2 * Math.PI;
+    const distance = Math.random() * (radius / 2);
+    const spawnX = Math.floor(x + Math.cos(angle) * distance);
+    const spawnY = Math.floor(y + Math.sin(angle) * distance);
+    if (
+      game.isValidCoord(spawnX, spawnY) &&
+      game.isLand(game.ref(spawnX, spawnY))
+    ) {
+      const sprite = new SpriteFX(spawnX, spawnY, type, 6000, 0.1, 0.8);
+      result.push(sprite as Fx);
     }
-    return false;
   }
+}
+
+/**
+ * Explosion effect:
+ * - explosion animation
+ * - shockwave
+ * - ruins and desolation fx
+ */
+export function nukeFxFactory(
+  x: number,
+  y: number,
+  radius: number,
+  game: GameView,
+): Fx[] {
+  const nukeFx: Fx[] = [];
+  // Explosion animation
+  nukeFx.push(new SpriteFX(x, y, FxType.Nuke) as Fx);
+  // Shockwave animation
+  nukeFx.push(new ShockwaveFx(x, y, 1500, radius * 1.5));
+  // Ruins and desolation sprites
+  const debrisPlan: Array<{
+    type: FxType;
+    radiusFactor: number;
+    density: number;
+  }> = [
+    { type: FxType.MiniFire, radiusFactor: 1.0, density: 1 / 25 },
+    { type: FxType.MiniSmoke, radiusFactor: 1.0, density: 1 / 28 },
+    { type: FxType.MiniBigSmoke, radiusFactor: 0.9, density: 1 / 70 },
+    { type: FxType.MiniSmokeAndFire, radiusFactor: 0.9, density: 1 / 70 },
+  ];
+
+  for (const { type, radiusFactor, density } of debrisPlan) {
+    addSpriteInCircle(
+      x,
+      y,
+      radius * radiusFactor,
+      radius * density,
+      type,
+      nukeFx,
+      game,
+    );
+  }
+  return nukeFx;
 }

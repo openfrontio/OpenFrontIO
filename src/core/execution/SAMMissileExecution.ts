@@ -1,4 +1,3 @@
-import { NukeType } from "../ArchiveSchemas";
 import {
   Execution,
   Game,
@@ -10,6 +9,7 @@ import {
 import { TileRef } from "../game/GameMap";
 import { AirPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
+import { NukeType } from "../StatsSchemas";
 
 export class SAMMissileExecution implements Execution {
   private active = true;
@@ -66,6 +66,7 @@ export class SAMMissileExecution implements Execution {
           this._owner.id(),
         );
         this.active = false;
+        this.target.setInterceptedBySam();
         this.target.delete(true, this._owner);
         this.SAMMissile.delete(false);
 

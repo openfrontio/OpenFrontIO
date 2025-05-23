@@ -93,6 +93,9 @@ export class UnitView {
   isActive(): boolean {
     return this.data.isActive;
   }
+  wasInterceptedBySAM(): boolean {
+    return this.data.wasIntercepted;
+  }
   hasHealth(): boolean {
     return this.data.health !== undefined;
   }

@@ -402,6 +402,7 @@
   "player_panel": {
     "gold": "Gold",
     "troops": "Troops",
+    "betrayals": "Number of betrayals",
     "traitor": "Traitor",
     "alliance_time_remaining": "Time Remaining",
     "embargo": "Stopped trading with you",
