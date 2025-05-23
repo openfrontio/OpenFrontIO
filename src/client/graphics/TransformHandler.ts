@@ -9,6 +9,8 @@ import {
 } from "./layers/Leaderboard";
 
 export const GOTO_INTERVAL_MS = 16;
+export const CAMERA_MAX_SPEED = 10;
+export const CAMERA_SMOOTHING = 0.03;
 
 export class TransformHandler {
   public scale: number = 1.8;
@@ -181,7 +183,6 @@ export class TransformHandler {
 
   private goTo() {
     const { screenX, screenY } = this.screenCenter();
-    const screenMapCenter = new Cell(screenX, screenY);
 
     if (this.target === null) throw new Error("null target");
 
@@ -195,24 +196,11 @@ export class TransformHandler {
       return;
     }
 
-    const dX = Math.abs(screenMapCenter.x - this.target.x);
-    if (dX > 2) {
-      const offsetDx = Math.max(1, Math.floor(dX / 25));
-      if (screenMapCenter.x > this.target.x) {
-        this.offsetX -= offsetDx;
-      } else {
-        this.offsetX += offsetDx;
-      }
-    }
-    const dY = Math.abs(screenMapCenter.y - this.target.y);
-    if (dY > 2) {
-      const offsetDy = Math.max(1, Math.floor(dY / 25));
-      if (screenMapCenter.y > this.target.y) {
-        this.offsetY -= offsetDy;
-      } else {
-        this.offsetY += offsetDy;
-      }
-    }
+    const r = 1 - Math.pow(CAMERA_SMOOTHING, GOTO_INTERVAL_MS / 1000);
+
+    this.offsetX += Math.min((this.target.x - screenX) * r, CAMERA_MAX_SPEED);
+    this.offsetY += Math.min((this.target.y - screenY) * r, CAMERA_MAX_SPEED);
+
     this.changed = true;
   }
 
