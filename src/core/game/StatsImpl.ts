@@ -56,7 +56,7 @@ export class StatsImpl implements Stats {
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
     if (p.attacks === undefined) p.attacks = [0];
-    while (p.attacks.length < index) p.attacks.push(0);
+    while (p.attacks.length <= index) p.attacks.push(0);
     p.attacks[index] += value;
   }
 
@@ -80,7 +80,7 @@ export class StatsImpl implements Stats {
     if (p === undefined) return;
     if (p.boats === undefined) p.boats = { [type]: [0] };
     if (p.boats[type] === undefined) p.boats[type] = [0];
-    while (p.boats[type].length < index) p.boats[type].push(0);
+    while (p.boats[type].length <= index) p.boats[type].push(0);
     p.boats[type][index] += value;
   }
 
@@ -95,7 +95,7 @@ export class StatsImpl implements Stats {
     if (p === undefined) return;
     if (p.bombs === undefined) p.bombs = { [type]: [0] };
     if (p.bombs[type] === undefined) p.bombs[type] = [0];
-    while (p.bombs[type].length < index) p.bombs[type].push(0);
+    while (p.bombs[type].length <= index) p.bombs[type].push(0);
     p.bombs[type][index] += value;
   }
 
@@ -103,7 +103,7 @@ export class StatsImpl implements Stats {
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
     if (p.gold === undefined) p.gold = [0];
-    while (p.gold.length < index) p.gold.push(0);
+    while (p.gold.length <= index) p.gold.push(0);
     p.gold[index] += value;
   }
 
