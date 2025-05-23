@@ -34,6 +34,9 @@ export class StatsImpl implements Stats {
   _createUserData(sender: PlayerID, target: PlayerID): void {
     if (!this.data[sender]) {
       this.data[sender] = { sentNukes: {}, numberOfBetrayals: 0 };
+    }
+  }
+  
   getPlayerStats(player: Player): PlayerStats {
     const clientID = player.clientID();
     if (clientID === null) return undefined;
