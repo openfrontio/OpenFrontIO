@@ -56,6 +56,7 @@ export class GameServer {
   private _hasPrestarted = false;
 
   private kickedClients: Set<ClientID> = new Set();
+  private outOfSyncClients: Set<ClientID> = new Set();
 
   constructor(
     public readonly id: string,
@@ -200,7 +201,15 @@ export class GameServer {
             client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
           }
           if (clientMsg.type === "winner") {
+            if (
+              this.outOfSyncClients.has(client.clientID) ||
+              this.kickedClients.has(client.clientID) ||
+              this.winner !== null
+            ) {
+              return;
+            }
             this.winner = clientMsg;
+            this.archiveGame();
           }
         } catch (error) {
           this.log.info(
@@ -382,40 +391,16 @@ export class GameServer {
     }
     this.log.info(`ending game with ${this.turns.length} turns`);
     try {
-      if (this.allClients.size > 0) {
-        const playerRecords: PlayerRecord[] = Array.from(
-          this.allClients.values(),
-        ).map((client) => {
-          const stats = this.winner?.allPlayersStats[client.clientID];
-          if (stats === undefined) {
-            this.log.warn(
-              `Unable to find stats for clientID ${client.clientID}`,
-            );
-          }
-          return {
-            playerID: client.playerID,
-            clientID: client.clientID,
-            username: client.username,
-            persistentID: client.persistentID,
-            stats,
-          } satisfies PlayerRecord;
-        });
-        archive(
-          createGameRecord(
-            this.id,
-            this.gameStartInfo.config,
-            playerRecords,
-            this.turns,
-            this._startTime ?? 0,
-            Date.now(),
-            this.winner?.winner ?? null,
-            this.winner?.winnerType ?? null,
-          ),
-        );
-      } else {
+      if (this.allClients.size === 0) {
         this.log.info("no clients joined, not archiving game", {
           gameID: this.id,
         });
+      } else if (this.winner !== null) {
+        this.log.info("game already archived", {
+          gameID: this.id,
+        });
+      } else {
+        this.archiveGame();
       }
     } catch (error) {
       let errorDetails;
@@ -549,6 +534,40 @@ export class GameServer {
     }
   }
 
+  private archiveGame() {
+    this.log.info("archiving game", {
+      gameID: this.id,
+      winner: this.winner?.winner,
+    });
+    const playerRecords: PlayerRecord[] = Array.from(
+      this.allClients.values(),
+    ).map((client) => {
+      const stats = this.winner?.allPlayersStats[client.clientID];
+      if (stats === undefined) {
+        this.log.warn(`Unable to find stats for clientID ${client.clientID}`);
+      }
+      return {
+        playerID: client.playerID,
+        clientID: client.clientID,
+        username: client.username,
+        persistentID: client.persistentID,
+        stats,
+      } satisfies PlayerRecord;
+    });
+    archive(
+      createGameRecord(
+        this.id,
+        this.gameStartInfo.config,
+        playerRecords,
+        this.turns,
+        this._startTime ?? 0,
+        Date.now(),
+        this.winner?.winner ?? null,
+        this.winner?.winnerType ?? null,
+      ),
+    );
+  }
+
   private handleSynchronization() {
     if (this.activeClients.length <= 1) {
       return;
@@ -586,6 +605,7 @@ export class GameServer {
 
     const desyncMsg = JSON.stringify(serverDesync.data);
     for (const c of outOfSyncClients) {
+      this.outOfSyncClients.add(c.clientID);
       if (this.sentDesyncMessageClients.has(c.clientID)) {
         continue;
       }
