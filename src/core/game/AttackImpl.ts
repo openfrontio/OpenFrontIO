@@ -5,6 +5,7 @@ import { PlayerImpl } from "./PlayerImpl";
 
 export class AttackImpl implements Attack {
   private _isActive = true;
+  private _borderSize = 0;
   public _retreating = false;
   public _retreated = false;
 
@@ -74,23 +75,26 @@ export class AttackImpl implements Attack {
   }
 
   borderSize(): number {
-    return this._border.size;
+    return this._borderSize;
   }
 
   clearBorder(): void {
+    this._borderSize = 0;
     this._border.clear();
   }
 
   addBorderTile(tile: TileRef): void {
+    this._borderSize += 1;
     this._border.add(tile);
   }
 
   removeBorderTile(tile: TileRef): void {
+    this._borderSize = Math.max(0, this._borderSize - 1);
     this._border.delete(tile);
   }
 
   averagePosition(): Cell | null {
-    if (this._border.size === 0) {
+    if (this._borderSize === 0) {
       if (this.sourceTile() === null) {
         // No border tiles and no source tile—return a default position or throw an error
         return null;
@@ -108,8 +112,8 @@ export class AttackImpl implements Attack {
       averageY += this._mg.map().y(t);
     });
 
-    averageX = averageX / this._border.size;
-    averageY = averageY / this._border.size;
+    averageX = averageX / this._borderSize;
+    averageY = averageY / this._borderSize;
 
     return new Cell(averageX, averageY);
   }
