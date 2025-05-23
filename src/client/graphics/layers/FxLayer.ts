@@ -3,7 +3,8 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { loadAllAnimatedSpriteImages } from "../AnimatedSpriteLoader";
 import { Fx } from "../fx/Fx";
-import { NukeExplosionFx, ShockwaveFx } from "../fx/NukeFx";
+import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
+import { SAMExplosionFx } from "../fx/SAMExplosionFx";
 import { Layer } from "./Layer";
 
 export class FxLayer implements Layer {
@@ -35,23 +36,39 @@ export class FxLayer implements Layer {
     switch (unit.type()) {
       case UnitType.AtomBomb:
       case UnitType.MIRVWarhead:
-        this.handleNukeExplosion(unit, 70);
+        this.onNukeEvent(unit, 70);
         break;
       case UnitType.HydrogenBomb:
-        this.handleNukeExplosion(unit, 250);
+        this.onNukeEvent(unit, 160);
         break;
     }
   }
 
-  handleNukeExplosion(unit: UnitView, shockwaveRadius: number) {
+  onNukeEvent(unit: UnitView, radius: number) {
     if (!unit.isActive()) {
-      const x = this.game.x(unit.lastTile());
-      const y = this.game.y(unit.lastTile());
-      const nuke = new NukeExplosionFx(x, y, 1000);
-      this.allFx.push(nuke as Fx);
-      const shockwave = new ShockwaveFx(x, y, 1500, shockwaveRadius);
-      this.allFx.push(shockwave as Fx);
+      if (unit.wasInterceptedBySAM()) {
+        this.handleSAMInterception(unit);
+      } else {
+        // Kaboom
+        this.handleNukeExplosion(unit, radius);
+      }
     }
+  }
+
+  handleNukeExplosion(unit: UnitView, radius: number) {
+    const x = this.game.x(unit.lastTile());
+    const y = this.game.y(unit.lastTile());
+    const nukeFx = nukeFxFactory(x, y, radius, this.game);
+    this.allFx = this.allFx.concat(nukeFx);
+  }
+
+  handleSAMInterception(unit: UnitView) {
+    const x = this.game.x(unit.lastTile());
+    const y = this.game.y(unit.lastTile());
+    const interception = new SAMExplosionFx(x, y, 1000);
+    this.allFx.push(interception);
+    const shockwave = new ShockwaveFx(x, y, 800, 40);
+    this.allFx.push(shockwave);
   }
 
   async init() {
