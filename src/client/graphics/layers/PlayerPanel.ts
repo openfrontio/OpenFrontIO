@@ -314,8 +314,7 @@ export class PlayerPanel extends LitElement implements Layer {
                   ${translateText("player_panel.betrayals")}
                 </div>
                 <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
-                  // Need to be implemented
-                  
+                  ${other.data.betrayals ?? 0}
                 </div>
               </div>
 
