@@ -89,8 +89,10 @@ export class AttackImpl implements Attack {
   }
 
   removeBorderTile(tile: TileRef): void {
-    this._borderSize = Math.max(0, this._borderSize - 1);
-    this._border.delete(tile);
+    if (this._border.has(tile)) {
+      this._borderSize -= 1;
+      this._border.delete(tile);
+    }
   }
 
   averagePosition(): Cell | null {
