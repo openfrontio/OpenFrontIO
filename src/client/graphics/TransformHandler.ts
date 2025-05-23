@@ -9,13 +9,14 @@ import {
 } from "./layers/Leaderboard";
 
 export const GOTO_INTERVAL_MS = 16;
-export const CAMERA_MAX_SPEED = 10;
+export const CAMERA_MAX_SPEED = 15;
 export const CAMERA_SMOOTHING = 0.03;
 
 export class TransformHandler {
   public scale: number = 1.8;
   private offsetX: number = -350;
   private offsetY: number = -200;
+  private lastGoToCallTime: number | null = null;
 
   private target: Cell | null;
   private intervalID: NodeJS.Timeout | null = null;
@@ -194,10 +195,25 @@ export class TransformHandler {
       return;
     }
 
-    const r = 1 - Math.pow(CAMERA_SMOOTHING, GOTO_INTERVAL_MS / 1000);
+    let dt: number;
+    const now = window.performance.now();
+    if (this.lastGoToCallTime === null) {
+      dt = GOTO_INTERVAL_MS;
+    } else {
+      dt = now - this.lastGoToCallTime;
+    }
+    this.lastGoToCallTime = now;
 
-    this.offsetX += Math.min((this.target.x - screenX) * r, CAMERA_MAX_SPEED);
-    this.offsetY += Math.min((this.target.y - screenY) * r, CAMERA_MAX_SPEED);
+    const r = 1 - Math.pow(CAMERA_SMOOTHING, dt / 1000);
+
+    this.offsetX += Math.max(
+      Math.min((this.target.x - screenX) * r, CAMERA_MAX_SPEED),
+      -CAMERA_MAX_SPEED,
+    );
+    this.offsetY += Math.max(
+      Math.min((this.target.y - screenY) * r, CAMERA_MAX_SPEED),
+      -CAMERA_MAX_SPEED,
+    );
 
     this.changed = true;
   }
