@@ -1,4 +1,3 @@
-import { NukeType } from "../ArchiveSchemas";
 import { consolex } from "../Consolex";
 import {
   Execution,
@@ -13,6 +12,7 @@ import {
 import { TileRef } from "../game/GameMap";
 import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
+import { NukeType } from "../StatsSchemas";
 
 export class NukeExecution implements Execution {
   private active = true;
@@ -119,7 +119,7 @@ export class NukeExecution implements Execution {
         this.type !== UnitType.MIRVWarhead,
       );
       this.nuke = this.player.buildUnit(this.type, spawn, {
-        detonationDst: this.dst,
+        targetTile: this.dst,
       });
       if (this.mg.hasOwner(this.dst)) {
         const target = this.mg.owner(this.dst);
