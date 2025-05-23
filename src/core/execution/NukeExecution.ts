@@ -171,13 +171,15 @@ export class NukeExecution implements Execution {
       return;
     }
 
-    // Move to next tile
-    const nextTile = this.pathFinder.nextTile(this.speed);
-    if (nextTile === true) {
-      this.detonate();
-      return;
-    } else {
-      this.nuke.move(nextTile);
+    // Move to next tile, one at a time for a smoother animation
+    for (let i = 0; i < this.speed; i++) {
+      const nextTile = this.pathFinder.nextTile(1);
+      if (nextTile === true) {
+        this.detonate();
+        return;
+      } else {
+        this.nuke.move(nextTile);
+      }
     }
   }
 
