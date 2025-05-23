@@ -9,6 +9,7 @@ import {
 import { TileRef } from "../game/GameMap";
 import { AirPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
+import { NukeType } from "../StatsSchemas";
 
 export class SAMMissileExecution implements Execution {
   private active = true;
@@ -65,8 +66,18 @@ export class SAMMissileExecution implements Execution {
           this._owner.id(),
         );
         this.active = false;
-        this.target.delete();
+        this.target.setInterceptedBySam();
+        this.target.delete(true, this._owner);
         this.SAMMissile.delete(false);
+
+        // Record stats
+        this.mg
+          .stats()
+          .bombIntercept(
+            this._owner,
+            this.target.owner(),
+            this.target.type() as NukeType,
+          );
         return;
       } else {
         this.SAMMissile.move(result);

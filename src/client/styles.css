@@ -309,11 +309,6 @@ label.option-card:hover {
   background: rgba(74, 158, 255, 0.1);
 }
 
-.radial-menu-image {
-  width: 211px;
-  height: 200px;
-}
-
 #helpModal table {
   border-collapse: collapse;
 }
@@ -331,6 +326,28 @@ label.option-card:hover {
 
 #helpModal table td:first-of-type {
   text-align: center;
+}
+
+#helpModal .default-image {
+  width: 12rem;
+  max-width: 12rem;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+#helpModal .info-panel-img {
+  width: 12rem;
+  max-width: 12rem;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+#helpModal .player-icon-img {
+  width: 14rem;
+  height: 14rem;
+  object-fit: contain;
 }
 
 #helpModal .icon {
@@ -380,6 +397,10 @@ label.option-card:hover {
   mask: url("../../resources/images/MIRVIcon.svg") no-repeat center / cover;
 }
 
+#helpModal .chat-icon {
+  mask: url("../../resources/images/ChatIconWhite.svg") no-repeat center / cover;
+}
+
 #helpModal .target-icon {
   mask: url("../../resources/images/TargetIcon.svg") no-repeat center / cover;
 }
@@ -402,6 +423,11 @@ label.option-card:hover {
 #helpModal .donate-icon {
   mask: url("../../resources/images/DonateTroopIconWhite.svg") no-repeat
     center / cover;
+}
+
+#helpModal .donate-gold-icon {
+  mask: url("../../resources/images/DonateGoldIconWhite.svg") no-repeat center /
+    cover;
 }
 
 #helpModal .build-icon {

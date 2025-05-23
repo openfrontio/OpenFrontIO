@@ -44,7 +44,8 @@ export function createGame(
   miniGameMap: GameMap,
   config: Config,
 ): Game {
-  return new GameImpl(humans, nations, gameMap, miniGameMap, config);
+  const stats = new StatsImpl();
+  return new GameImpl(humans, nations, gameMap, miniGameMap, config, stats);
 }
 
 export type CellString = string;
@@ -71,8 +72,6 @@ export class GameImpl implements Game {
   private updates: GameUpdates = createGameUpdatesMap();
   private unitGrid: UnitGrid;
 
-  private _stats: StatsImpl = new StatsImpl();
-
   private playerTeams: Team[] = [ColoredTeams.Red, ColoredTeams.Blue];
   private botTeam: Team = ColoredTeams.Bot;
 
@@ -82,6 +81,7 @@ export class GameImpl implements Game {
     private _map: GameMap,
     private miniGameMap: GameMap,
     private _config: Config,
+    private _stats: Stats,
   ) {
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();

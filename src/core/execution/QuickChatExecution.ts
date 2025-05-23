@@ -43,7 +43,7 @@ export class QuickChatExecution implements Execution {
       this.variables,
       this.recipient.id(),
       true,
-      this.recipient.name(),
+      this.sender.name(),
     );
 
     this.mg.displayChat(

@@ -244,6 +244,13 @@ class Client {
       }
       const lobbyId = ctx.params.lobbyId;
 
+      if (lobbyId?.endsWith("#")) {
+        // When the cookies button is pressed, '#' is added to the url
+        // causing the page to attempt to rejoin the lobby during game play.
+        console.error("Invalid lobby ID provided");
+        return;
+      }
+
       this.joinModal.open(lobbyId);
 
       consolex.log(`joining lobby ${lobbyId}`);
@@ -284,7 +291,7 @@ class Client {
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: localStorage.getItem("token") ?? getPersistentIDFromCookie(),
         clientID: lobby.clientID,
-        gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.gameStartInfo,
+        gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
       },
       () => {

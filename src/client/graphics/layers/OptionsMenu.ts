@@ -100,6 +100,11 @@ export class OptionsMenu extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onToggleSpecialEffectsButtonClick() {
+    this.userSettings.toggleFxLayer();
+    this.requestUpdate();
+  }
+
   private onToggleDarkModeButtonClick() {
     this.userSettings.toggleDarkMode();
     this.requestUpdate();
@@ -162,7 +167,7 @@ export class OptionsMenu extends LitElement implements Layer {
               children: this.isPaused ? "▶️" : "⏸",
             })}
             <div
-              class="w-15 h-8 lg:w-24 lg:h-10 flex items-center justify-center
+              class="w-15 h-8 lg:w-24 lg:h-10 flex items-center justify-center w-full
                               bg-opacity-50 bg-gray-700 text-opacity-90 text-white
                               rounded text-sm lg:text-xl"
             >
@@ -196,6 +201,11 @@ export class OptionsMenu extends LitElement implements Layer {
             onClick: this.onToggleEmojisButtonClick,
             title: "Toggle Emojis",
             children: "🙂: " + (this.userSettings.emojis() ? "On" : "Off"),
+          })}
+          ${button({
+            onClick: this.onToggleSpecialEffectsButtonClick,
+            title: "Toggle Special effects",
+            children: "💥: " + (this.userSettings.fxLayer() ? "On" : "Off"),
           })}
           ${button({
             onClick: this.onToggleDarkModeButtonClick,
