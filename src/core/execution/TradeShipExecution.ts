@@ -22,7 +22,6 @@ export class TradeShipExecution implements Execution {
   private wasCaptured = false;
   private tilesTraveled = 0;
   private aStar: AStar | null = null;
-  private path: TileRef[] | null = null;
 
   constructor(
     private _owner: PlayerID,
@@ -107,33 +106,7 @@ export class TradeShipExecution implements Execution {
       return;
     }
 
-    const result = this.computeNewPath();
-
-    switch (result) {
-      case PathFindResultType.Pending:
-        // Fire unit event to rerender.
-        this.tradeShip.touch();
-        break;
-      case PathFindResultType.Completed:
-        if (this.path === null) {
-          throw new Error("missing path");
-        }
-        this.fillCachePath(this._dstPort, this.path);
-        if (!this.wasCaptured) {
-          this.fillCachePath(this.srcPort, this.path.slice().reverse());
-        }
-        this.moveTradeShip(this.path.shift());
-        break;
-      case PathFindResultType.PathNotFound:
-        consolex.warn("trade ship cannot find route");
-        if (this.tradeShip.isActive()) {
-          this.tradeShip.delete(false);
-        }
-        this.active = false;
-        break;
-      default:
-        throw new Error("unexpected path finding compute result");
-    }
+    this.computeNewPath();
   }
 
   private fillCachePath(port: Unit, path: TileRef[]): void {
@@ -167,8 +140,7 @@ export class TradeShipExecution implements Execution {
     this.tilesTraveled++;
   }
 
-  private computeNewPath(): PathFindResultType {
-    this.path = null;
+  private computeNewPath(): void {
     if (this.aStar === null) {
       this.aStar = new MiniAStar(
         this.mg!,
@@ -179,16 +151,36 @@ export class TradeShipExecution implements Execution {
         20,
       );
     }
-    const pathFindResultType = this.aStar.compute();
-    if (pathFindResultType === PathFindResultType.Completed) {
-      const fullPath = this.aStar.reconstructPath();
-      if (fullPath.length === 0) {
-        consolex.warn("reconstructPath() returned 0 tiles");
-        return PathFindResultType.PathNotFound;
-      }
-      this.path = fullPath;
+
+    switch (this.aStar.compute()) {
+      case PathFindResultType.Pending:
+        // Fire unit event to rerender.
+        this.tradeShip!.touch();
+        break;
+      case PathFindResultType.Completed:
+        const fullPath = this.aStar.reconstructPath();
+        if (fullPath.length === 0) {
+          throw new Error("missing path");
+        }
+        if (fullPath === null) {
+          throw new Error("missing path");
+        }
+        this.fillCachePath(this._dstPort, fullPath);
+        if (!this.wasCaptured) {
+          this.fillCachePath(this.srcPort, fullPath.slice().reverse());
+        }
+        this.moveTradeShip(fullPath.shift());
+        break;
+      case PathFindResultType.PathNotFound:
+        consolex.warn("trade ship cannot find route");
+        if (this.tradeShip!.isActive()) {
+          this.tradeShip!.delete(false);
+        }
+        this.active = false;
+        break;
+      default:
+        throw new Error("unexpected path finding compute result");
     }
-    return pathFindResultType;
   }
 
   private complete() {
