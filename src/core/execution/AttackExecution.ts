@@ -164,7 +164,7 @@ export class AttackExecution implements Execution {
     }
 
     this.toConquer.clear();
-    this.attack.border().clear();
+    this.attack.clearBorder();
     for (const tile of this._owner.borderTiles()) {
       this.addNeighbors(tile);
     }
@@ -238,7 +238,7 @@ export class AttackExecution implements Execution {
         troopCount,
         this._owner,
         this.target,
-        this.attack.border().size + this.random.nextInt(0, 5),
+        this.attack.borderSize() + this.random.nextInt(0, 5),
       );
 
     while (numTilesPerTick > 0) {
@@ -255,7 +255,7 @@ export class AttackExecution implements Execution {
       }
 
       const [tileToConquer] = this.toConquer.dequeue();
-      this.attack.border().delete(tileToConquer);
+      this.attack.removeBorderTile(tileToConquer);
 
       let onBorder = false;
       for (const n of this.mg.neighbors(tileToConquer)) {
@@ -302,7 +302,7 @@ export class AttackExecution implements Execution {
       ) {
         continue;
       }
-      this.attack.border().add(neighbor);
+      this.attack.addBorderTile(neighbor);
       let numOwnedByMe = 0;
       for (const n of this.mg.neighbors(neighbor)) {
         if (this.mg.owner(n) === this._owner) {

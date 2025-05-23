@@ -276,7 +276,10 @@ export interface Attack {
   delete(): void;
   // The tile the attack originated from, mostly used for boat attacks.
   sourceTile(): TileRef | null;
-  border(): Set<number>;
+  addBorderTile(tile: TileRef): void;
+  removeBorderTile(tile: TileRef): void;
+  clearBorder(): void;
+  borderSize(): number;
   averagePosition(): Cell | null;
 }
 

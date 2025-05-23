@@ -73,8 +73,20 @@ export class AttackImpl implements Attack {
     return this._retreated;
   }
 
-  border(): Set<number> {
-    return this._border;
+  borderSize(): number {
+    return this._border.size;
+  }
+
+  clearBorder(): void {
+    this._border.clear();
+  }
+
+  addBorderTile(tile: TileRef): void {
+    this._border.add(tile);
+  }
+
+  removeBorderTile(tile: TileRef): void {
+    this._border.delete(tile);
   }
 
   averagePosition(): Cell | null {

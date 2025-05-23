@@ -8,7 +8,7 @@ import {
   GoToUnitEvent,
 } from "./layers/Leaderboard";
 
-export const GOTO_INTERVAL_MS = 1;
+export const GOTO_INTERVAL_MS = 16;
 
 export class TransformHandler {
   public scale: number = 1.8;
