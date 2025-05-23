@@ -1,0 +1,52 @@
+{
+  "patterns": {
+    "stripes_v": {
+      "patternBase64": "AQACAAIACKA="
+    },
+    "stripes_h": {
+      "patternBase64": "AQACAAIACMA="
+    },
+    "checkerboard": {
+      "patternBase64": "AQACAAIACJA="
+    },
+    "diagonal": {
+      "patternBase64": "AQAQABAAAYAAQAAgABAACAAEAAIAAQAAgABAACAAEAAIAAQAAgAB"
+    },
+    "cross": {
+      "patternBase64": "AQAQABAAAYABQAIgBBAICBAEIAJAAYABgAJABCAIEBAIIARAAoAB"
+    },
+    "mini_cross": {
+      "patternBase64": "AQAQAAgAAcADMAwMMAPAA8AMMDAMwAM="
+    },
+    "horizontal_stripes": {
+      "patternBase64": "AQAQABAAAf//AAAAAAAAAAAAAAAAAAD//wAAAAAAAAAAAAAAAAAA"
+    },
+    "sparse_dots": {
+      "patternBase64": "AQAQABAAAYCAAAAAAAAAAAAAAAAAAACAgAAAAAAAAAAAAAAAAAAA"
+    },
+    "evan": {
+      "patternBase64": "AQAYAAcABQAAAHkjEkEkmnEnlkDEknjEkgAAAA=="
+    },
+    "diagonal_stripe": {
+      "patternBase64": "AQAQAAgAAYABQAIgBBAICBAEIAJAAYA="
+    },
+    "mountain_ridge": {
+      "patternBase64": "AQAQAAgAAQAAGBg8PH5+//9+fjw8GBg="
+    },
+    "scattered_dots": {
+      "patternBase64": "AQAQAAgAAQAAQAQAAAAAAAAAABAIAAA="
+    },
+    "circuit_board": {
+      "patternBase64": "AQAQAAgAAcPDw8MwMDAwDDAMMMPDw8M="
+    },
+    "vertical_bars": {
+      "patternBase64": "AQAQAAgAAZJJkkmSSZJJkkmSSZJJkkk="
+    },
+    ".w.": {
+      "patternBase64": "AQAQAAgAAQAAAAAAAEACQYIiRHQuaBY="
+    },
+    "openfront": {
+      "patternBase64": "AQBCAAoABQAAAAAAAAAAAAAAAAAAAAABw4+RD54cRfCJEgZCBEiZECJEgVCBEiVECJ48TDx4iTECJAgRCBQiRECJAgRCBIiREBxA+RCBEcREAAAAAAAAAAAA"
+    }
+  }
+}

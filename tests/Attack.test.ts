@@ -33,6 +33,7 @@ describe("Attack", () => {
       infiniteTroops: true,
     });
     const attackerInfo = new PlayerInfo(
+      undefined,
       "us",
       "attacker dude",
       PlayerType.Human,
@@ -41,6 +42,7 @@ describe("Attack", () => {
     );
     game.addPlayer(attackerInfo);
     const defenderInfo = new PlayerInfo(
+      undefined,
       "us",
       "defender dude",
       PlayerType.Human,

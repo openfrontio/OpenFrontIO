@@ -8,6 +8,7 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { AlternateViewEvent, DragEvent } from "../../InputHandler";
+import { territoryPatterns } from "../../TerritoryPatterns";
 import { Layer } from "./Layer";
 
 export class TerritoryLayer implements Layer {
@@ -286,12 +287,36 @@ export class TerritoryLayer implements Layer {
         );
       }
     } else {
-      this.paintCell(
-        this.game.x(tile),
-        this.game.y(tile),
-        this.theme.territoryColor(owner),
-        150,
-      );
+      const patternName = owner.pattern();
+      if (!patternName) {
+        this.paintCell(
+          this.game.x(tile),
+          this.game.y(tile),
+          this.theme.territoryColor(owner),
+          150,
+        );
+      } else {
+        const x = this.game.x(tile);
+        const y = this.game.y(tile);
+        const baseColor = this.theme.territoryColor(owner);
+        const patternConfig = territoryPatterns.patterns[patternName];
+
+        const {
+          tileWidth = 1,
+          tileHeight = 1,
+          scale = 1,
+          pattern,
+        } = patternConfig;
+
+        const px = Math.floor(x / scale) % tileWidth;
+        const py = Math.floor(y / scale) % tileHeight;
+
+        const patternValue = pattern ? pattern[py][px] : 0;
+
+        const colorToUse =
+          patternValue === 1 ? baseColor.darken(0.2) : baseColor;
+        this.paintCell(x, y, colorToUse, 150);
+      }
     }
   }
 

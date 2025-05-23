@@ -42,6 +42,7 @@ export async function createGameRunner(
   const humans = gameStart.players.map(
     (p) =>
       new PlayerInfo(
+        p.pattern,
         p.flag,
         p.clientID === clientID
           ? sanitize(p.username)
@@ -60,6 +61,7 @@ export async function createGameRunner(
             new Cell(n.coordinates[0], n.coordinates[1]),
             n.strength,
             new PlayerInfo(
+              undefined,
               n.flag || "",
               n.name,
               PlayerType.FakeHuman,

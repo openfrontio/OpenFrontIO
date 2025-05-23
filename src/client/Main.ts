@@ -23,6 +23,7 @@ import { NewsModal } from "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import { territoryPatternsModal } from "./TerritoryPatternsModal";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
@@ -158,6 +159,19 @@ class Client {
       hlpModal.open();
     });
 
+    const TerritoryModal = document.querySelector(
+      "territory-patterns-modal",
+    ) as territoryPatternsModal;
+    const tpButton = document.getElementById(
+      "territory-patterns-input-preview-button",
+    );
+    TerritoryModal instanceof territoryPatternsModal;
+    if (tpButton === null)
+      throw new Error("territory-patterns-input-preview-button");
+    tpButton.addEventListener("click", () => {
+      TerritoryModal.open();
+    });
+
     const claims = isLoggedIn();
     if (claims === false) {
       // Not logged in
@@ -279,11 +293,11 @@ class Client {
       this.gameStop();
     }
     const config = await getServerConfigFromClient();
-
     this.gameStop = joinLobby(
       {
         gameID: lobby.gameID,
         serverConfig: config,
+        pattern: localStorage.getItem("territoryPattern") ?? "",
         flag:
           this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
             ? ""

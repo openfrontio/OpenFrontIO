@@ -303,6 +303,7 @@ export class GameServer {
         playerID: c.playerID,
         username: c.username,
         clientID: c.clientID,
+        pattern: c.pattern,
         flag: c.flag,
       })),
     } satisfies GameStartInfo);
