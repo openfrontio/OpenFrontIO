@@ -21,6 +21,7 @@ export class UnitImpl implements Unit {
   private _lastTile: TileRef;
   private _retreating: boolean = false;
   private _targetedBySAM = false;
+  private _interceptedBySAM = false;
   private _lastSetSafeFromPirates: number; // Only for trade ships
   private _constructionType: UnitType | undefined;
   private _lastOwner: PlayerImpl | null = null;
@@ -86,6 +87,7 @@ export class UnitImpl implements Unit {
       ownerID: this._owner.smallID(),
       lastOwnerID: this._lastOwner?.smallID(),
       isActive: this._active,
+      wasIntercepted: this._interceptedBySAM,
       retreating: this._retreating,
       pos: this._tile,
       lastPos: this._lastTile,
@@ -303,6 +305,14 @@ export class UnitImpl implements Unit {
 
   targetedBySAM(): boolean {
     return this._targetedBySAM;
+  }
+
+  setInterceptedBySam(): void {
+    this._interceptedBySAM = true;
+  }
+
+  interceptedBySam(): boolean {
+    return this._interceptedBySAM;
   }
 
   setSafeFromPirates(): void {

@@ -9,7 +9,7 @@ export class AnimatedSprite {
     private frameWidth: number,
     private frameCount: number,
     private frameDuration: number, // in milliseconds
-    private looping: boolean = true,
+    private looping: boolean = false,
     private originX: number,
     private originY: number,
   ) {
@@ -40,6 +40,13 @@ export class AnimatedSprite {
 
   isActive(): boolean {
     return this.active;
+  }
+
+  lifeTime(): number | undefined {
+    if (this.looping) {
+      return undefined;
+    }
+    return this.frameDuration * this.frameCount;
   }
 
   draw(ctx: CanvasRenderingContext2D, x: number, y: number) {

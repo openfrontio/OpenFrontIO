@@ -291,7 +291,7 @@ class Client {
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: localStorage.getItem("token") ?? getPersistentIDFromCookie(),
         clientID: lobby.clientID,
-        gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.gameStartInfo,
+        gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
       },
       () => {

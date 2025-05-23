@@ -1,4 +1,3 @@
-import { NukeType } from "../ArchiveSchemas";
 import { consolex } from "../Consolex";
 import {
   Execution,
@@ -13,6 +12,7 @@ import {
 import { TileRef } from "../game/GameMap";
 import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
+import { NukeType } from "../StatsSchemas";
 
 export class NukeExecution implements Execution {
   private active = true;
