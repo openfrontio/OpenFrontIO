@@ -65,14 +65,17 @@ export async function logOut(allSessions: boolean = false) {
   return true;
 }
 
-let __isLoggedIn: TokenPayload | false | undefined = undefined;
-export function isLoggedIn(): TokenPayload | false {
+export type IsLoggedInResponse =
+  | { token: string; claims: TokenPayload }
+  | false;
+let __isLoggedIn: IsLoggedInResponse | undefined = undefined;
+export function isLoggedIn(): IsLoggedInResponse {
   if (__isLoggedIn === undefined) {
     __isLoggedIn = _isLoggedIn();
   }
   return __isLoggedIn;
 }
-export function _isLoggedIn(): TokenPayload | false {
+function _isLoggedIn(): IsLoggedInResponse {
   try {
     const token = getToken();
     if (!token) {
@@ -144,7 +147,8 @@ export function _isLoggedIn(): TokenPayload | false {
       return false;
     }
 
-    return result.data;
+    const claims = result.data;
+    return { token, claims };
   } catch (e) {
     console.log(e);
     return false;
@@ -177,6 +181,7 @@ export async function postRefresh(): Promise<boolean> {
     localStorage.setItem("token", result.data.token);
     return true;
   } catch (e) {
+    __isLoggedIn = false;
     return false;
   }
 }
@@ -205,6 +210,7 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
     }
     return result.data;
   } catch (e) {
+    __isLoggedIn = false;
     return false;
   }
 }
