@@ -66,18 +66,8 @@ export class UnitImpl implements Unit {
     return this._targetTile;
   }
 
-  cachePut(path: TileRef[]): void {
-    if (path.length < 2) {
-      throw new Error("path must have at least 2 points");
-    }
-    for (let i = 0; i < path.length - 1; i++) {
-      if (this._pathCache.has(path[i])) {
-        continue;
-      }
-      const from = path[i];
-      const to = path[i + 1];
-      this._pathCache.set(from, to);
-    }
+  cachePut(from: TileRef, to: TileRef): void {
+    this._pathCache.set(from, to);
   }
   cacheGet(from: TileRef): TileRef | undefined {
     return this._pathCache.get(from);

@@ -41,46 +41,50 @@ export class MiniAStar implements AStar {
   }
 
   reconstructPath(): TileRef[] {
-    let upscaled = upscalePath(
-      this.aStar
-        .reconstructPath()
-        .map((tr) => new Cell(this.miniMap.x(tr), this.miniMap.y(tr))),
-    );
-    upscaled = this.fixExtremes(upscaled);
-    return upscaled.map((c) => this.gameMap.ref(c.x, c.y));
-  }
-
-  fixExtremes(upscaled: Cell[]): Cell[] {
+    let cellSrc: Cell | undefined;
     if (!Array.isArray(this.src)) {
-      const cellSrc = new Cell(
-        this.gameMap.x(this.src),
-        this.gameMap.y(this.src),
-      );
-      const srcIndex = findCell(upscaled, cellSrc);
-      if (srcIndex === -1) {
-        // didnt find the start tile in the path
-        upscaled.unshift(cellSrc);
-      } else if (srcIndex !== 0) {
-        // found start tile but not at the start
-        // remove all tiles before the start tile
-        upscaled = upscaled.slice(srcIndex);
-      }
+      cellSrc = new Cell(this.gameMap.x(this.src), this.gameMap.y(this.src));
     }
     const cellDst = new Cell(
       this.gameMap.x(this.dst),
       this.gameMap.y(this.dst),
     );
-    const dstIndex = findCell(upscaled, cellDst);
-    if (dstIndex === -1) {
-      // didnt find the dst tile in the path
-      upscaled.push(cellDst);
-    } else if (dstIndex !== upscaled.length - 1) {
-      // found dst tile but not at the end
-      // remove all tiles after the dst tile
-      upscaled = upscaled.slice(0, dstIndex + 1);
-    }
-    return upscaled;
+    const upscaled = fixExtremes(
+      upscalePath(
+        this.aStar
+          .reconstructPath()
+          .map((tr) => new Cell(this.miniMap.x(tr), this.miniMap.y(tr))),
+      ),
+      cellDst,
+      cellSrc,
+    );
+    return upscaled.map((c) => this.gameMap.ref(c.x, c.y));
   }
+}
+
+function fixExtremes(upscaled: Cell[], cellDst: Cell, cellSrc?: Cell): Cell[] {
+  if (cellSrc !== undefined) {
+    const srcIndex = findCell(upscaled, cellSrc);
+    if (srcIndex === -1) {
+      // didnt find the start tile in the path
+      upscaled.unshift(cellSrc);
+    } else if (srcIndex !== 0) {
+      // found start tile but not at the start
+      // remove all tiles before the start tile
+      upscaled = upscaled.slice(srcIndex);
+    }
+  }
+
+  const dstIndex = findCell(upscaled, cellDst);
+  if (dstIndex === -1) {
+    // didnt find the dst tile in the path
+    upscaled.push(cellDst);
+  } else if (dstIndex !== upscaled.length - 1) {
+    // found dst tile but not at the end
+    // remove all tiles after the dst tile
+    upscaled = upscaled.slice(0, dstIndex + 1);
+  }
+  return upscaled;
 }
 
 function upscalePath(path: Cell[], scaleFactor: number = 2): Cell[] {

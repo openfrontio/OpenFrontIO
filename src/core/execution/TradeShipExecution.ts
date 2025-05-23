@@ -118,9 +118,9 @@ export class TradeShipExecution implements Execution {
         if (this.path === null) {
           throw new Error("missing path");
         }
-        this._dstPort.cachePut(this.path);
+        this.fillCachePath(this._dstPort, this.path);
         if (!this.wasCaptured) {
-          this.srcPort.cachePut(this.path.slice().reverse());
+          this.fillCachePath(this.srcPort, this.path.slice().reverse());
         }
         this.moveTradeShip(this.path.shift());
         break;
@@ -136,7 +136,21 @@ export class TradeShipExecution implements Execution {
     }
   }
 
-  private moveTradeShip(nextTile?: TileRef) {
+  private fillCachePath(port: Unit, path: TileRef[]): void {
+    if (path.length < 2) {
+      throw new Error("path must have at least 2 points");
+    }
+    for (let i = 0; i < path.length - 1; i++) {
+      if (port.cacheGet(path[i]) !== undefined) {
+        continue;
+      }
+      const from = path[i];
+      const to = path[i + 1];
+      port.cachePut(from, to);
+    }
+  }
+
+  private moveTradeShip(nextTile?: TileRef): void {
     if (nextTile === undefined) {
       throw new Error("missing tile");
     }
