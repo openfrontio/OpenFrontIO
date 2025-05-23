@@ -1,5 +1,5 @@
-import { NukeType, OtherUnitType, PlayerStats } from "../ArchiveSchemas";
 import { AllPlayersStats } from "../Schemas";
+import { NukeType, OtherUnitType, PlayerStats } from "../StatsSchemas";
 import { Player, TerraNullius } from "./Game";
 
 export interface Stats {
