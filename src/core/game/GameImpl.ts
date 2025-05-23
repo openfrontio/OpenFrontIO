@@ -118,22 +118,39 @@ export class GameImpl implements Game {
   }
 
   private addPlayers() {
-    if (this.config().gameConfig().gameMode !== GameMode.Team) {
+    const config = this.config().gameConfig();
+    const gameMode = config.gameMode;
+    const playerTeamPrefs = config.playerTeamsSelection || {};
+
+    if (gameMode !== GameMode.Team) {
       this._humans.forEach((p) => this.addPlayer(p));
       this._nations.forEach((n) => this.addPlayer(n.playerInfo));
       return;
     }
-    const allPlayers = [
-      ...this._humans,
-      ...this._nations.map((n) => n.playerInfo),
-    ];
-    const playerToTeam = assignTeams(allPlayers, this.playerTeams);
-    for (const [playerInfo, team] of playerToTeam.entries()) {
+    const manualAssignments = new Map<PlayerInfo, Team>();
+    const unassigned: PlayerInfo[] = [];
+    for (const p of this._humans) {
+      const preferredTeam = playerTeamPrefs[p.name];
+      if (preferredTeam && preferredTeam !== "") {
+        manualAssignments.set(p, preferredTeam);
+      } else {
+        unassigned.push(p);
+      }
+    }
+    const autoAssignments = assignTeams(unassigned, this.playerTeams);
+    for (const [p, team] of manualAssignments.entries()) {
+      this.addPlayer(p, team);
+    }
+
+    for (const [p, team] of autoAssignments.entries()) {
       if (team === "kicked") {
-        console.warn(`Player ${playerInfo.name} was kicked from team`);
+        console.warn(`Player ${p.name} was kicked from team`);
         continue;
       }
-      this.addPlayer(playerInfo, team);
+      this.addPlayer(p, team);
+    }
+    for (const nation of this._nations) {
+      this.addPlayer(nation.playerInfo);
     }
   }
 
