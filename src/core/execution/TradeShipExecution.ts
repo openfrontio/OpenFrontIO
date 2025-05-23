@@ -159,10 +159,7 @@ export class TradeShipExecution implements Execution {
         break;
       case PathFindResultType.Completed:
         const fullPath = this.aStar.reconstructPath();
-        if (fullPath.length === 0) {
-          throw new Error("missing path");
-        }
-        if (fullPath === null) {
+        if (fullPath === null || fullPath.length === 0) {
           throw new Error("missing path");
         }
         this.fillCachePath(this._dstPort, fullPath);
