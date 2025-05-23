@@ -10,7 +10,6 @@ const config = getServerConfigFromServer();
 
 const frequency = {
   World: 3,
-  WorldMapGiant: 1,
   Europe: 2,
   Africa: 2,
   Australia: 1,
