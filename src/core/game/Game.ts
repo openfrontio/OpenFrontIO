@@ -90,6 +90,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Asia,
     GameMapType.Africa,
     GameMapType.Oceania,
+    GameMapType.NorthernHemisphere,
   ],
   regional: [
     GameMapType.BlackSea,
@@ -104,7 +105,6 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.FalklandIslands,
     GameMapType.Baikal,
     GameMapType.Halkidiki,
-    GameMapType.NorthernHemisphere,
   ],
   fantasy: [
     GameMapType.Pangaea,
