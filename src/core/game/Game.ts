@@ -54,6 +54,7 @@ export const ColoredTeams: Record<string, Team> = {
 
 export enum GameMapType {
   World = "World",
+  WorldMapGiant = "Giant World Map",
   Europe = "Europe",
   EuropeClassic = "Europe Classic",
   Mena = "Mena",
@@ -82,6 +83,7 @@ export enum GameMapType {
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
     GameMapType.World,
+    GameMapType.WorldMapGiant,
     GameMapType.NorthAmerica,
     GameMapType.SouthAmerica,
     GameMapType.Europe,
@@ -170,9 +172,13 @@ export interface UnitParamsMap {
 
   [UnitType.Port]: {};
 
-  [UnitType.AtomBomb]: {};
+  [UnitType.AtomBomb]: {
+    targetTile?: number;
+  };
 
-  [UnitType.HydrogenBomb]: {};
+  [UnitType.HydrogenBomb]: {
+    targetTile?: number;
+  };
 
   [UnitType.TradeShip]: {
     targetUnit: Unit;
@@ -191,7 +197,9 @@ export interface UnitParamsMap {
 
   [UnitType.MIRV]: {};
 
-  [UnitType.MIRVWarhead]: {};
+  [UnitType.MIRVWarhead]: {
+    targetTile?: number;
+  };
 
   [UnitType.Construction]: {};
 }
@@ -282,6 +290,11 @@ export interface Attack {
   delete(): void;
   // The tile the attack originated from, mostly used for boat attacks.
   sourceTile(): TileRef | null;
+  addBorderTile(tile: TileRef): void;
+  removeBorderTile(tile: TileRef): void;
+  clearBorder(): void;
+  borderSize(): number;
+  averagePosition(): Cell | null;
 }
 
 export interface AllianceRequest {
@@ -356,6 +369,8 @@ export interface Unit {
   targetUnit(): Unit | undefined;
   setTargetedBySAM(targeted: boolean): void;
   targetedBySAM(): boolean;
+  setInterceptedBySam(): void;
+  interceptedBySam(): boolean;
 
   // Health
   hasHealth(): boolean;
@@ -512,10 +527,12 @@ export interface Player {
 
   // Attacking.
   canAttack(tile: TileRef): boolean;
+
   createAttack(
     target: Player | TerraNullius,
     troops: number,
     sourceTile: TileRef | null,
+    border: Set<number>,
   ): Attack;
   outgoingAttacks(): Attack[];
   incomingAttacks(): Attack[];

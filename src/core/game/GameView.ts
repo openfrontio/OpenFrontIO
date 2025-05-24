@@ -93,6 +93,9 @@ export class UnitView {
   isActive(): boolean {
     return this.data.isActive;
   }
+  wasInterceptedBySAM(): boolean {
+    return this.data.wasIntercepted;
+  }
   hasHealth(): boolean {
     return this.data.health !== undefined;
   }
@@ -153,6 +156,13 @@ export class PlayerView {
 
   incomingAttacks(): AttackUpdate[] {
     return this.data.incomingAttacks;
+  }
+
+  async attackAveragePosition(
+    playerID: number,
+    attackID: string,
+  ): Promise<Cell | null> {
+    return this.game.worker.attackAveragePosition(playerID, attackID);
   }
 
   units(...types: UnitType[]): UnitView[] {

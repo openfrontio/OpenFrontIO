@@ -13,7 +13,7 @@ import {
 } from "../core/Schemas";
 import { createGameRecord, decompressGameRecord } from "../core/Util";
 import { LobbyConfig } from "./ClientGameRunner";
-import { getPersistentIDFromCookie } from "./Main";
+import { getPersistentID } from "./Main";
 
 export class LocalServer {
   // All turns from the game record on replay.
@@ -176,8 +176,8 @@ export class LocalServer {
     }
     const players: PlayerRecord[] = [
       {
-        ip: null,
-        persistentID: getPersistentIDFromCookie(),
+        playerID: this.lobbyConfig.clientID, // hack?
+        persistentID: getPersistentID(),
         username: this.lobbyConfig.playerName,
         clientID: this.lobbyConfig.clientID,
         stats: this.allPlayersStats[this.lobbyConfig.clientID],
@@ -188,13 +188,12 @@ export class LocalServer {
     }
     const record = createGameRecord(
       this.lobbyConfig.gameStartInfo.gameID,
-      this.lobbyConfig.gameStartInfo,
+      this.lobbyConfig.gameStartInfo.config,
       players,
       this.turns,
       this.startedAt,
       Date.now(),
-      this.winner?.winner ?? null,
-      this.winner?.winnerType ?? null,
+      this.winner?.winner,
     );
     if (!saveFullGame) {
       // Clear turns because beacon only supports up to 64kb

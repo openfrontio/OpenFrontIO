@@ -2,12 +2,21 @@ import { EventBus } from "../../core/EventBus";
 import { Cell } from "../../core/game/Game";
 import { GameView } from "../../core/game/GameView";
 import { CenterCameraEvent, DragEvent, ZoomEvent } from "../InputHandler";
-import { GoToPlayerEvent, GoToUnitEvent } from "./layers/Leaderboard";
+import {
+  GoToPlayerEvent,
+  GoToPositionEvent,
+  GoToUnitEvent,
+} from "./layers/Leaderboard";
+
+export const GOTO_INTERVAL_MS = 16;
+export const CAMERA_MAX_SPEED = 15;
+export const CAMERA_SMOOTHING = 0.03;
 
 export class TransformHandler {
   public scale: number = 1.8;
   private offsetX: number = -350;
   private offsetY: number = -200;
+  private lastGoToCallTime: number | null = null;
 
   private target: Cell | null;
   private intervalID: NodeJS.Timeout | null = null;
@@ -21,6 +30,7 @@ export class TransformHandler {
     this.eventBus.on(ZoomEvent, (e) => this.onZoom(e));
     this.eventBus.on(DragEvent, (e) => this.onMove(e));
     this.eventBus.on(GoToPlayerEvent, (e) => this.onGoToPlayer(e));
+    this.eventBus.on(GoToPositionEvent, (e) => this.onGoToPosition(e));
     this.eventBus.on(GoToUnitEvent, (e) => this.onGoToUnit(e));
     this.eventBus.on(CenterCameraEvent, () => this.centerCamera());
   }
@@ -146,7 +156,13 @@ export class TransformHandler {
       event.player.nameLocation().x,
       event.player.nameLocation().y,
     );
-    this.intervalID = setInterval(() => this.goTo(), 1);
+    this.intervalID = setInterval(() => this.goTo(), GOTO_INTERVAL_MS);
+  }
+
+  onGoToPosition(event: GoToPositionEvent) {
+    this.clearTarget();
+    this.target = new Cell(event.x, event.y);
+    this.intervalID = setInterval(() => this.goTo(), GOTO_INTERVAL_MS);
   }
 
   onGoToUnit(event: GoToUnitEvent) {
@@ -155,7 +171,7 @@ export class TransformHandler {
       this.game.x(event.unit.lastTile()),
       this.game.y(event.unit.lastTile()),
     );
-    this.intervalID = setInterval(() => this.goTo(), 1);
+    this.intervalID = setInterval(() => this.goTo(), GOTO_INTERVAL_MS);
   }
 
   centerCamera() {
@@ -163,43 +179,42 @@ export class TransformHandler {
     const player = this.game.myPlayer();
     if (!player || !player.nameLocation()) return;
     this.target = new Cell(player.nameLocation().x, player.nameLocation().y);
-    this.intervalID = setInterval(() => this.goTo(), 1);
+    this.intervalID = setInterval(() => this.goTo(), GOTO_INTERVAL_MS);
   }
 
   private goTo() {
     const { screenX, screenY } = this.screenCenter();
-    const screenMapCenter = new Cell(screenX, screenY);
 
     if (this.target === null) throw new Error("null target");
 
     if (
-      this.game.manhattanDist(
-        this.game.ref(screenX, screenY),
-        this.game.ref(this.target.x, this.target.y),
-      ) < 2
+      Math.abs(this.target.x - screenX) + Math.abs(this.target.y - screenY) <
+      2
     ) {
       this.clearTarget();
       return;
     }
 
-    const dX = Math.abs(screenMapCenter.x - this.target.x);
-    if (dX > 2) {
-      const offsetDx = Math.max(1, Math.floor(dX / 25));
-      if (screenMapCenter.x > this.target.x) {
-        this.offsetX -= offsetDx;
-      } else {
-        this.offsetX += offsetDx;
-      }
+    let dt: number;
+    const now = window.performance.now();
+    if (this.lastGoToCallTime === null) {
+      dt = GOTO_INTERVAL_MS;
+    } else {
+      dt = now - this.lastGoToCallTime;
     }
-    const dY = Math.abs(screenMapCenter.y - this.target.y);
-    if (dY > 2) {
-      const offsetDy = Math.max(1, Math.floor(dY / 25));
-      if (screenMapCenter.y > this.target.y) {
-        this.offsetY -= offsetDy;
-      } else {
-        this.offsetY += offsetDy;
-      }
-    }
+    this.lastGoToCallTime = now;
+
+    const r = 1 - Math.pow(CAMERA_SMOOTHING, dt / 1000);
+
+    this.offsetX += Math.max(
+      Math.min((this.target.x - screenX) * r, CAMERA_MAX_SPEED),
+      -CAMERA_MAX_SPEED,
+    );
+    this.offsetY += Math.max(
+      Math.min((this.target.y - screenY) * r, CAMERA_MAX_SPEED),
+      -CAMERA_MAX_SPEED,
+    );
+
     this.changed = true;
   }
 

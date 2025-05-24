@@ -1,6 +1,5 @@
 import { z } from "zod";
 import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
-import { PlayerStatsSchema } from "./ArchiveSchemas";
 import {
   AllPlayers,
   Difficulty,
@@ -11,6 +10,7 @@ import {
   PlayerType,
   UnitType,
 } from "./game/Game";
+import { PlayerStatsSchema } from "./StatsSchemas";
 import { flattenedEmojiTable } from "./Util";
 
 export type GameID = string;
@@ -87,9 +87,6 @@ export type ClientIntentMessage = z.infer<typeof ClientIntentMessageSchema>;
 export type ClientJoinMessage = z.infer<typeof ClientJoinMessageSchema>;
 export type ClientLogMessage = z.infer<typeof ClientLogMessageSchema>;
 export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
-
-export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;
-export type GameRecord = z.infer<typeof GameRecordSchema>;
 
 export type AllPlayersStats = z.infer<typeof AllPlayersStatsSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
@@ -394,11 +391,18 @@ export const ServerMessageSchema = z.union([
 
 // Client
 
+export const WinnerSchema = z
+  .union([
+    z.tuple([z.literal("player"), ID]),
+    z.tuple([z.literal("team"), SafeString]),
+  ])
+  .optional();
+export type Winner = z.infer<typeof WinnerSchema>;
+
 export const ClientSendWinnerSchema = z.object({
   type: z.literal("winner"),
-  winner: z.union([ID, TeamSchema]).nullable(),
+  winner: WinnerSchema,
   allPlayersStats: AllPlayersStatsSchema,
-  winnerType: z.enum(["player", "team"]),
 });
 
 export const ClientHashSchema = z.object({
@@ -442,26 +446,30 @@ export const ClientMessageSchema = z.union([
   ClientHashSchema,
 ]);
 
-export const PlayerRecordSchema = z.object({
-  clientID: ID,
-  username: SafeString,
-  ip: SafeString.nullable(), // WARNING: PII
+export const PlayerRecordSchema = PlayerSchema.extend({
   persistentID: PersistentIdSchema, // WARNING: PII
   stats: PlayerStatsSchema,
 });
+export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;
 
-export const GameRecordSchema = z.object({
-  id: ID,
-  gameStartInfo: GameStartInfoSchema,
+export const GameEndInfoSchema = GameStartInfoSchema.extend({
   players: z.array(PlayerRecordSchema),
-  startTimestampMS: z.number(),
-  endTimestampMS: z.number(),
-  durationSeconds: z.number(),
-  date: SafeString,
+  start: z.number(),
+  end: z.number(),
+  duration: z.number().nonnegative(),
   num_turns: z.number(),
-  turns: z.array(TurnSchema),
-  winner: z.union([ID, SafeString]).nullable().optional(),
-  winnerType: z.enum(["player", "team"]).nullable().optional(),
+  winner: WinnerSchema,
+});
+export type GameEndInfo = z.infer<typeof GameEndInfoSchema>;
+
+export const AnalyticsRecordSchema = z.object({
+  info: GameEndInfoSchema,
   version: z.literal("v0.0.2"),
   gitCommit: z.string(),
 });
+export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;
+
+export const GameRecordSchema = AnalyticsRecordSchema.extend({
+  turns: z.array(TurnSchema),
+});
+export type GameRecord = z.infer<typeof GameRecordSchema>;

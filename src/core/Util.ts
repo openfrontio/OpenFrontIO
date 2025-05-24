@@ -1,15 +1,15 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
 import twemoji from "twemoji";
-import { Cell, Team, Unit } from "./game/Game";
+import { Cell, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import {
-  ClientID,
+  GameConfig,
   GameID,
   GameRecord,
-  GameStartInfo,
   PlayerRecord,
   Turn,
+  Winner,
 } from "./Schemas";
 
 import {
@@ -184,53 +184,37 @@ export function onlyImages(html: string) {
 }
 
 export function createGameRecord(
-  id: GameID,
-  gameStartInfo: GameStartInfo,
+  gameID: GameID,
+  config: GameConfig,
   // username does not need to be set.
   players: PlayerRecord[],
-  turns: Turn[],
-  startTimestampMS: number,
-  endTimestampMS: number,
-  winner: ClientID | Team | null,
-  winnerType: "player" | "team" | null,
+  allTurns: Turn[],
+  start: number,
+  end: number,
+  winner: Winner,
 ): GameRecord {
-  const durationSeconds = Math.floor(
-    (endTimestampMS - startTimestampMS) / 1000,
-  );
-  const date = new Date().toISOString().split("T")[0];
+  const duration = Math.floor((end - start) / 1000);
   const version = "v0.0.2";
   const gitCommit = "";
+  const num_turns = allTurns.length;
+  const turns = allTurns.filter(
+    (t) => t.intents.length !== 0 || t.hash !== undefined,
+  );
   const record: GameRecord = {
-    gitCommit,
-    id,
-    gameStartInfo,
-    players,
-    startTimestampMS,
-    endTimestampMS,
-    durationSeconds,
-    date,
-    num_turns: 0,
-    turns: [],
+    info: {
+      gameID,
+      config,
+      players,
+      start,
+      end,
+      duration,
+      num_turns,
+      winner,
+    },
     version,
-    winner,
-    winnerType,
+    gitCommit,
+    turns,
   };
-
-  for (const turn of turns) {
-    if (turn.intents.length !== 0 || turn.hash !== undefined) {
-      record.turns.push(turn);
-      for (const intent of turn.intents) {
-        if (intent.type === "spawn") {
-          for (const playerRecord of players) {
-            if (playerRecord.clientID === intent.clientID) {
-              playerRecord.username = intent.name;
-            }
-          }
-        }
-      }
-    }
-  }
-  record.num_turns = turns.length;
   return record;
 }
 
@@ -249,7 +233,7 @@ export function decompressGameRecord(gameRecord: GameRecord) {
     lastTurnNum = turn.turnNumber;
   }
   const turnLength = turns.length;
-  for (let i = turnLength; i < gameRecord.num_turns; i++) {
+  for (let i = turnLength; i < gameRecord.info.num_turns; i++) {
     turns.push({
       turnNumber: i,
       intents: [],

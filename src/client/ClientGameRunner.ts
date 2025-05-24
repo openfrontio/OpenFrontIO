@@ -7,11 +7,12 @@ import {
   GameStartInfo,
   PlayerRecord,
   ServerMessage,
+  Winner,
 } from "../core/Schemas";
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { Cell, Team, UnitType } from "../core/game/Game";
+import { Cell, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import {
   ErrorUpdate,
@@ -26,7 +27,7 @@ import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { InputHandler, MouseMoveEvent, MouseUpEvent } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
-import { getPersistentIDFromCookie } from "./Main";
+import { getPersistentID } from "./Main";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -186,38 +187,40 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
+  private getWinner(update: WinUpdate): Winner {
+    if (update.winner[0] !== "player") return update.winner;
+    const clientId = this.gameView.playerBySmallID(update.winner[1]).clientID();
+    if (clientId === null) return;
+    return ["player", clientId];
+  }
+
   private saveGame(update: WinUpdate) {
+    if (this.myPlayer === null) {
+      return;
+    }
     const players: PlayerRecord[] = [
       {
-        ip: null,
-        persistentID: getPersistentIDFromCookie(),
+        playerID: this.myPlayer.id(),
+        persistentID: getPersistentID(),
         username: this.lobby.playerName,
         clientID: this.lobby.clientID,
         stats: update.allPlayersStats[this.lobby.clientID],
       },
     ];
-    let winner: ClientID | Team | null = null;
-    if (update.winnerType === "player") {
-      winner = this.gameView
-        .playerBySmallID(update.winner as number)
-        .clientID();
-    } else {
-      winner = update.winner as Team;
-    }
+    const winner = this.getWinner(update);
 
     if (this.lobby.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
     }
     const record = createGameRecord(
       this.lobby.gameStartInfo.gameID,
-      this.lobby.gameStartInfo,
+      this.lobby.gameStartInfo.config,
       players,
       // Not saving turns locally
       [],
       startTime(),
       Date.now(),
       winner,
-      update.winnerType,
     );
     endGame(record);
   }
