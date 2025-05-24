@@ -505,12 +505,46 @@ function showErrorModal(
     return;
   }
 
+  if (!document.querySelector("#error-modal-style")) {
+    const style = document.createElement("style");
+    style.id = "error-modal-style";
+    style.textContent = `
+      #error-modal {
+        position: fixed;
+        padding: 20px;
+        background: white;
+        border: 1px solid black;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%,-50%);
+        z-index: 9999;
+        width: 87%;
+        box-sizing: border-box;
+      }
+      @media (max-width: 768px) {
+        #error-modal {
+          max-width: 5750px;
+        }
+      }
+      @media (max-width: 480px) {
+        #error-modal {
+          max-width: 350px;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   const modal = document.createElement("div");
+  modal.id = "error-modal";
+
   const content = `${heading}\n game id: ${gameID}, client id: ${clientID}\nPlease paste the following in your bug report in Discord:\n${errorText}`;
 
   // Create elements
   const pre = document.createElement("pre");
   pre.textContent = content;
+  pre.style.cssText =
+    "overflow-x: auto; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word;";
 
   const button = document.createElement("button");
   button.textContent = "Copy to clipboard";
@@ -532,8 +566,6 @@ function showErrorModal(
   });
 
   // Add to modal
-  modal.style.cssText =
-    "position:fixed; padding:20px; background:white; border:1px solid black; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999;";
   modal.appendChild(pre);
   modal.appendChild(button);
   modal.id = "error-modal";
