@@ -513,13 +513,10 @@ function showErrorModal(
   // Create elements
   const pre = document.createElement("pre");
   pre.textContent = content;
-  pre.style.cssText =
-    "overflow-x: auto; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word;";
 
   const button = document.createElement("button");
   button.textContent = "Copy to clipboard";
-  button.style.cssText =
-    "padding: 8px 16px; margin-top: 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;";
+  button.className = "copy-btn";
   button.addEventListener("click", () => {
     navigator.clipboard
       .writeText(content)
@@ -529,8 +526,7 @@ function showErrorModal(
 
   const closeButton = document.createElement("button");
   closeButton.textContent = "X";
-  closeButton.style.cssText =
-    "color: white;top: 0px;right: 0px;cursor: pointer;background: red;margin-right: 0px;position: fixed;width: 40px;";
+  closeButton.className = "close-btn";
   closeButton.addEventListener("click", () => {
     modal.style.display = "none";
   });
