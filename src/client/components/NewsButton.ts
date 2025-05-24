@@ -50,7 +50,7 @@ export class NewsButton extends LitElement {
 
   render() {
     return html`
-      <div class="text-center mb-0.5 ${this.hidden ? "hidden" : ""}">
+      <div class="text-center mb-0.5 ${this.hidden ? "parent-hidden" : ""}">
         <button class="news-button" @click=${this.handleClick}>
           <img src="${megaphone}" alt=${translateText("news.title")} />
         </button>
