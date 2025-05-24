@@ -1,6 +1,7 @@
 import { colord, Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
 import { ClientID } from "../../../core/Schemas";
+import { SoundManager } from "../../../core/SoundManager";
 import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -35,6 +36,7 @@ export class UnitLayer implements Layer {
   private unitTrailContext: CanvasRenderingContext2D;
 
   private unitToTrail = new Map<UnitView, TileRef[]>();
+  private mirvUnits = new Set<UnitView>();
 
   private theme: Theme;
 
@@ -57,6 +59,7 @@ export class UnitLayer implements Layer {
     private eventBus: EventBus,
     private clientID: ClientID,
     transformHandler: TransformHandler,
+    private soundManager: SoundManager, // Add SoundManager
   ) {
     this.theme = game.config().theme();
     this.transformHandler = transformHandler;
@@ -389,6 +392,12 @@ export class UnitLayer implements Layer {
 
     if (!this.unitToTrail.has(unit)) {
       this.unitToTrail.set(unit, []);
+      if (unit.type() === UnitType.MIRV) {
+        if (!this.mirvUnits.has(unit)) {
+          this.mirvUnits.add(unit);
+          this.soundManager.playSound("alarm");
+        }
+      }
     }
 
     let newTrailSize = 1;
@@ -422,6 +431,7 @@ export class UnitLayer implements Layer {
     this.drawSprite(unit);
     if (!unit.isActive()) {
       this.clearTrail(unit);
+      this.mirvUnits.delete(unit);
     }
   }
 
@@ -439,6 +449,8 @@ export class UnitLayer implements Layer {
         this.theme.borderColor(unit.owner()),
         255,
       );
+    } else {
+      this.soundManager.playSound("mirv");
     }
   }
 

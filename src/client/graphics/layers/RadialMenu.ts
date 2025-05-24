@@ -37,7 +37,7 @@ import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
 import { PlayerInfoOverlay } from "./PlayerInfoOverlay";
 import { PlayerPanel } from "./PlayerPanel";
-
+import { SoundManager } from "../../../core/SoundManager";
 enum Slot {
   Info,
   Boat,
@@ -104,6 +104,7 @@ export class RadialMenu implements Layer {
     private uiState: UIState,
     private playerInfoOverlay: PlayerInfoOverlay,
     private playerPanel: PlayerPanel,
+    private soundManager: SoundManager, 
   ) {}
 
   init() {
@@ -215,6 +216,7 @@ export class RadialMenu implements Layer {
       })
       .on("click", (event, d) => {
         if (!d.data.disabled) {
+          this.soundManager.playSound('click'); 
           d.data.action();
           this.hideRadialMenu();
         }
@@ -222,6 +224,7 @@ export class RadialMenu implements Layer {
       .on("touchstart", (event, d) => {
         event.preventDefault();
         if (!d.data.disabled) {
+          this.soundManager.playSound('click'); 
           d.data.action();
           this.hideRadialMenu();
         }
@@ -455,6 +458,7 @@ export class RadialMenu implements Layer {
     if (!this.isCenterButtonEnabled) {
       return;
     }
+    this.soundManager.playSound('click'); // Play click sound
     consolex.log("Center button clicked");
     if (this.clickedCell === null) return;
     const clicked = this.g.ref(this.clickedCell.x, this.clickedCell.y);
