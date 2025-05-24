@@ -35,7 +35,7 @@ export class HostLobbyModal extends LitElement {
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
   @state() private instantBuild: boolean = false;
-  @state() private disableAntiCheat: boolean = false;
+  @state() private allowMultiTab: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
   @state() private players: string[] = [];
@@ -305,18 +305,18 @@ export class HostLobbyModal extends LitElement {
                 </label>
 
                 <label
-                  for="disable-anti-cheat"
-                  class="option-card ${this.disableAntiCheat ? "selected" : ""}"
+                  for="allow-multi-tab"
+                  class="option-card ${this.allowMultiTab ? "selected" : ""}"
                 >
                   <div class="checkbox-icon"></div>
                   <input
                     type="checkbox"
-                    id="disable-anti-cheat"
-                    @change=${this.handleDisableAntiCheatChange}
-                    .checked=${this.disableAntiCheat}
+                    id="allow-multi-tab"
+                    @change=${this.handleAllowMultiTabChange}
+                    .checked=${this.allowMultiTab}
                   />
                   <div class="option-card-title">
-                    ${translateText("host_modal.disable_anti_cheat")}
+                    ${translateText("host_modal.allow_multi_tab")}
                   </div>
                 </label>
 
@@ -519,8 +519,8 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
-  private handleDisableAntiCheatChange(e: Event) {
-    this.disableAntiCheat = Boolean((e.target as HTMLInputElement).checked);
+  private handleAllowMultiTabChange(e: Event) {
+    this.allowMultiTab = Boolean((e.target as HTMLInputElement).checked);
     this.putGameConfig();
   }
 
@@ -557,7 +557,7 @@ export class HostLobbyModal extends LitElement {
           infiniteGold: this.infiniteGold,
           infiniteTroops: this.infiniteTroops,
           instantBuild: this.instantBuild,
-          disableAntiCheat: this.disableAntiCheat,
+          allowMultiTab: this.allowMultiTab,
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
           playerTeams: this.teamCount,

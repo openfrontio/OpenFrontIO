@@ -59,7 +59,7 @@ export class MapPlaylist {
       instantBuild: false,
       disableNPCs: mode === GameMode.Team,
       disableNukes: false,
-      disableAntiCheat: false,
+      allowMultiTab: false,
       gameMode: mode,
       playerTeams: numPlayerTeams,
       bots: 400,

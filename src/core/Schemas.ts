@@ -122,7 +122,7 @@ const GameConfigSchema = z.object({
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
-  disableAntiCheat: z.boolean().optional().default(false),
+  allowMultiTab: z.boolean().optional().default(false),
   maxPlayers: z.number().optional(),
   disabledUnits: z.array(z.nativeEnum(UnitType)).optional(),
   playerTeams: z.union([z.number().optional(), z.literal(Duos)]),
