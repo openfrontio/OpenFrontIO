@@ -35,6 +35,7 @@ export class HostLobbyModal extends LitElement {
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
   @state() private instantBuild: boolean = false;
+  @state() private disableAntiCheat: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
   @state() private players: string[] = [];
@@ -303,6 +304,22 @@ export class HostLobbyModal extends LitElement {
                   </div>
                 </label>
 
+                <label
+                  for="disable-anti-cheat"
+                  class="option-card ${this.disableAntiCheat ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="disable-anti-cheat"
+                    @change=${this.handleDisableAntiCheatChange}
+                    .checked=${this.disableAntiCheat}
+                  />
+                  <div class="option-card-title">
+                    ${translateText("host_modal.disable_anti_cheat")}
+                  </div>
+                </label>
+
                 <hr style="width: 100%; border-top: 1px solid #444; margin: 16px 0;" />
 
                 <!-- Individual disables for structures/weapons -->
@@ -371,7 +388,6 @@ export class HostLobbyModal extends LitElement {
                 </div>
               </div>
             </div>
-          </div>
 
         <!-- Lobby Selection -->
         <div class="options-section">
@@ -503,6 +519,11 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
+  private handleDisableAntiCheatChange(e: Event) {
+    this.disableAntiCheat = Boolean((e.target as HTMLInputElement).checked);
+    this.putGameConfig();
+  }
+
   private async handleDisableNPCsChange(e: Event) {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
     consolex.log(`updating disable npcs to ${this.disableNPCs}`);
@@ -536,6 +557,7 @@ export class HostLobbyModal extends LitElement {
           infiniteGold: this.infiniteGold,
           infiniteTroops: this.infiniteTroops,
           instantBuild: this.instantBuild,
+          disableAntiCheat: this.disableAntiCheat,
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
           playerTeams: this.teamCount,

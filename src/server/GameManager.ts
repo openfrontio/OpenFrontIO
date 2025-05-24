@@ -39,6 +39,7 @@ export class GameManager {
       instantBuild: false,
       gameMode: GameMode.FFA,
       bots: 400,
+      disableAntiCheat: false,
       disabledUnits: [],
       ...gameConfig,
     });
