@@ -80,13 +80,13 @@ class Client {
     const langSelector = document.querySelector(
       "lang-selector",
     ) as LangSelector;
-    const LanguageModal = document.querySelector(
-      "lang-selector",
+    const languageModal = document.querySelector(
+      "language-modal",
     ) as LanguageModal;
     if (!langSelector) {
       consolex.warn("Lang selector element not found");
     }
-    if (!LanguageModal) {
+    if (!languageModal) {
       consolex.warn("Language modal element not found");
     }
 
