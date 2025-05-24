@@ -1,15 +1,15 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
 import twemoji from "twemoji";
-import { Cell, Team, Unit } from "./game/Game";
+import { Cell, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import {
-  ClientID,
   GameConfig,
   GameID,
   GameRecord,
   PlayerRecord,
   Turn,
+  Winner,
 } from "./Schemas";
 
 import {
@@ -191,8 +191,7 @@ export function createGameRecord(
   allTurns: Turn[],
   start: number,
   end: number,
-  winner: ClientID | Team | null,
-  winnerType: "player" | "team" | null,
+  winner: Winner,
 ): GameRecord {
   const duration = Math.floor((end - start) / 1000);
   const version = "v0.0.2";
@@ -211,7 +210,6 @@ export function createGameRecord(
       duration,
       num_turns,
       winner,
-      winnerType,
     },
     version,
     gitCommit,

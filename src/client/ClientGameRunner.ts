@@ -8,11 +8,12 @@ import {
   GameStartInfo,
   PlayerRecord,
   ServerMessage,
+  Winner,
 } from "../core/Schemas";
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { Cell, Team, UnitType } from "../core/game/Game";
+import { Cell, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import {
   ErrorUpdate,
@@ -27,7 +28,7 @@ import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { InputHandler, MouseMoveEvent, MouseUpEvent } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
-import { getPersistentIDFromCookie } from "./Main";
+import { getPersistentID } from "./Main";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -187,25 +188,27 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
+  private getWinner(update: WinUpdate): Winner {
+    if (update.winner[0] !== "player") return update.winner;
+    const clientId = this.gameView.playerBySmallID(update.winner[1]).clientID();
+    if (clientId === null) return;
+    return ["player", clientId];
+  }
+
   private saveGame(update: WinUpdate) {
-    if (this.myPlayer === null) throw new Error("Not initialized");
+    if (this.myPlayer === null) {
+      return;
+    }
     const players: PlayerRecord[] = [
       {
         playerID: this.myPlayer.id(),
-        persistentID: getPersistentIDFromCookie(),
+        persistentID: getPersistentID(),
         username: this.lobby.playerName,
         clientID: this.lobby.clientID,
         stats: update.allPlayersStats[this.lobby.clientID],
       },
     ];
-    let winner: ClientID | Team | null = null;
-    if (update.winnerType === "player") {
-      winner = this.gameView
-        .playerBySmallID(update.winner as number)
-        .clientID();
-    } else {
-      winner = update.winner as Team;
-    }
+    const winner = this.getWinner(update);
 
     if (this.lobby.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
@@ -219,7 +222,6 @@ export class ClientGameRunner {
       startTime(),
       Date.now(),
       winner,
-      update.winnerType,
     );
     endGame(record);
   }
@@ -505,6 +507,9 @@ function showErrorModal(
   }
 
   const modal = document.createElement("div");
+
+  modal.id = "error-modal";
+
   const content = `${translateText(heading)}\n game id: ${gameID}, client id: ${clientID}\n${translateText("error_modal.paste_discord")}\n${errorText}`;
 
   // Create elements
@@ -513,8 +518,7 @@ function showErrorModal(
 
   const button = document.createElement("button");
   button.textContent = translateText("error_modal.copy_clipboard");
-  button.style.cssText =
-    "padding: 8px 16px; margin-top: 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;";
+  button.className = "copy-btn";
   button.addEventListener("click", () => {
     navigator.clipboard
       .writeText(content)
@@ -526,18 +530,14 @@ function showErrorModal(
 
   const closeButton = document.createElement("button");
   closeButton.textContent = "X";
-  closeButton.style.cssText =
-    "color: white;top: 0px;right: 0px;cursor: pointer;background: red;margin-right: 0px;position: fixed;width: 40px;";
+  closeButton.className = "close-btn";
   closeButton.addEventListener("click", () => {
     modal.style.display = "none";
   });
 
   // Add to modal
-  modal.style.cssText =
-    "position:fixed; padding:20px; background:white; border:1px solid black; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999;";
   modal.appendChild(pre);
   modal.appendChild(button);
-  modal.id = "error-modal";
   if (closable) {
     modal.appendChild(closeButton);
   }

@@ -391,11 +391,18 @@ export const ServerMessageSchema = z.union([
 
 // Client
 
+export const WinnerSchema = z
+  .union([
+    z.tuple([z.literal("player"), ID]),
+    z.tuple([z.literal("team"), SafeString]),
+  ])
+  .optional();
+export type Winner = z.infer<typeof WinnerSchema>;
+
 export const ClientSendWinnerSchema = z.object({
   type: z.literal("winner"),
-  winner: z.union([ID, TeamSchema]).nullable(),
+  winner: WinnerSchema,
   allPlayersStats: AllPlayersStatsSchema,
-  winnerType: z.enum(["player", "team"]),
 });
 
 export const ClientHashSchema = z.object({
@@ -451,8 +458,7 @@ export const GameEndInfoSchema = GameStartInfoSchema.extend({
   end: z.number(),
   duration: z.number().nonnegative(),
   num_turns: z.number(),
-  winner: z.union([ID, SafeString]).nullable().optional(),
-  winnerType: z.enum(["player", "team"]).nullable().optional(),
+  winner: WinnerSchema,
 });
 export type GameEndInfo = z.infer<typeof GameEndInfoSchema>;
 

@@ -7,6 +7,7 @@ const maps = [
   "Africa",
   "Asia",
   "WorldMap",
+  "WorldMapGiant",
   "BlackSea",
   "Europe",
   "EuropeClassic",

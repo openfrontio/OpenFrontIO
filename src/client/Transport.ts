@@ -6,7 +6,6 @@ import {
   GameType,
   PlayerID,
   PlayerType,
-  Team,
   Tick,
   UnitType,
 } from "../core/game/Game";
@@ -14,7 +13,6 @@ import { PlayerView } from "../core/game/GameView";
 import {
   AllPlayersStats,
   ClientHashMessage,
-  ClientID,
   ClientIntentMessage,
   ClientJoinMessage,
   ClientLogMessage,
@@ -23,6 +21,7 @@ import {
   Intent,
   ServerMessage,
   ServerMessageSchema,
+  Winner,
 } from "../core/Schemas";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
@@ -142,9 +141,8 @@ export class SendSetTargetTroopRatioEvent implements GameEvent {
 
 export class SendWinnerEvent implements GameEvent {
   constructor(
-    public readonly winner: ClientID | Team,
+    public readonly winner: Winner,
     public readonly allPlayersStats: AllPlayersStats,
-    public readonly winnerType: "player" | "team",
   ) {}
 }
 export class SendHashEvent implements GameEvent {
@@ -537,7 +535,6 @@ export class Transport {
         type: "winner",
         winner: event.winner,
         allPlayersStats: event.allPlayersStats,
-        winnerType: event.winnerType,
       } satisfies ClientSendWinnerMessage;
       this.sendMsg(JSON.stringify(msg));
     } else {
