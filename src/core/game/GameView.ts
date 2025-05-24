@@ -182,12 +182,12 @@ export class PlayerView {
     return this.data.flag;
   }
   name(): string {
-    return userSettings.anonymousNames() && this.anonymousName !== null
+    return this.anonymousName !== null && userSettings.anonymousNames()
       ? this.anonymousName
       : this.data.name;
   }
   displayName(): string {
-    return userSettings.anonymousNames() && this.anonymousName !== null
+    return this.anonymousName !== null && userSettings.anonymousNames()
       ? this.anonymousName
       : this.data.name;
   }
