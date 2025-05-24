@@ -186,7 +186,7 @@
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
     "infinite_troops": "Infinite troops",
-    "disable_anti_cheat": "Disable Anti-Cheat",
+    "allow_multi_tab": "Allow Multi-Tab",
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
@@ -361,6 +361,13 @@
     "other_won": "{player} has won!",
     "exit": "Exit Game",
     "keep": "Keep Playing"
+  },
+  "multi_tab": {
+    "warning": "Warning: Multiple Tabs Detected",
+    "detected": "Multiple game tabs detected. Playing in multiple tabs is not allowed for fair gameplay.",
+    "please_wait": "Please wait ",
+    "seconds": " seconds before continuing.",
+    "explanation": "Close other game tabs to avoid this penalty. This prevents unfair advantages from controlling multiple accounts simultaneously."
   },
   "leaderboard": {
     "title": "Leaderboard",
