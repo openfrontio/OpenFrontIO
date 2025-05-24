@@ -17,6 +17,8 @@ import { HelpModal } from "./HelpModal";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./LangSelector";
+import { LangSelector } from "./LangSelector";
+import { LanguageModal } from "./LanguageModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
@@ -77,11 +79,11 @@ class Client {
     }
 
     const langSelector = document.querySelector("lang-selector");
-    const languageModal = document.querySelector("language-modal");
-    if (!langSelector) {
+    if (!(langSelector instanceof LangSelector)) {
       consolex.warn("Lang selector element not found");
     }
-    if (!languageModal) {
+    const languageModal = document.querySelector("language-modal");
+    if (!(languageModal instanceof LanguageModal)) {
       consolex.warn("Language modal element not found");
     }
 
