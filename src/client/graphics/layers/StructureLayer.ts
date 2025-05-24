@@ -1,6 +1,8 @@
 import { colord, Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
+import { MouseUpEvent } from "../../InputHandler";
+import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
 import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
@@ -44,6 +46,8 @@ export class StructureLayer implements Layer {
   private context: CanvasRenderingContext2D;
   private unitIcons: Map<string, ImageData> = new Map();
   private theme: Theme;
+  private selectedStructureUnit: UnitView | null = null;
+  private transformHandler: TransformHandler;
 
   // Configuration for supported unit types only
   private readonly unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
@@ -82,6 +86,7 @@ export class StructureLayer implements Layer {
   constructor(
     private game: GameView,
     private eventBus: EventBus,
+    transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
     this.loadIconData();
@@ -97,6 +102,7 @@ export class StructureLayer implements Layer {
       territoryRadius: 6.525,
       borderType: UnitBorderType.Square,
     });
+    this.transformHandler = transformHandler;
   }
 
   private loadIcon(unitType: string, config: UnitRenderConfig) {
@@ -147,6 +153,7 @@ export class StructureLayer implements Layer {
 
   init() {
     this.redraw();
+    this.eventBus.on(MouseUpEvent, (e) => this.onMouseUp(e));
   }
 
   redraw() {
@@ -265,6 +272,10 @@ export class StructureLayer implements Layer {
       borderColor = underConstructionColor;
     }
 
+    if (this.selectedStructureUnit === unit) {
+      borderColor = colord("#00ffff"); // Cyan for selected unit
+    }
+
     this.drawBorder(unit, borderColor, config, drawFunction);
 
     const startX = this.game.x(unit.tile()) - Math.floor(icon.width / 2);
@@ -315,5 +326,47 @@ export class StructureLayer implements Layer {
 
   clearCell(cell: Cell) {
     this.context.clearRect(cell.x, cell.y, 1, 1);
+  }
+
+  private findStructureUnitAtCell(
+    cell: { x: number; y: number },
+    maxDistance: number = 10,
+  ): UnitView | null {
+    if (!this.game.isValidCoord(cell.x, cell.y)) return null;
+
+    const targetRef = this.game.ref(cell.x, cell.y);
+
+    let closest: UnitView | null = null;
+    let minDistance = Infinity;
+
+    for (const unit of this.game.units()) {
+      if (!unit.isActive()) continue;
+      if (!this.isUnitTypeSupported(unit.type())) continue;
+
+      const unitRef = unit.tile();
+      const distance = this.game.manhattanDist(unitRef, targetRef);
+
+      if (distance <= maxDistance && distance < minDistance) {
+        minDistance = distance;
+        closest = unit;
+      }
+    }
+
+    return closest;
+  }
+
+  private onMouseUp(event: MouseUpEvent) {
+    const cell = this.transformHandler.screenToWorldCoordinates(
+      event.x,
+      event.y,
+    );
+
+    const clickedUnit = this.findStructureUnitAtCell(cell);
+
+    if (clickedUnit) {
+      this.selectedStructureUnit =
+        this.selectedStructureUnit === clickedUnit ? null : clickedUnit;
+      this.redraw();
+    }
   }
 }
