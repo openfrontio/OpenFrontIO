@@ -1,6 +1,7 @@
 import { createGameRunner, GameRunner } from "../GameRunner";
 import { GameUpdateViewData } from "../game/GameUpdates";
 import {
+  AttackAveragePositionResultMessage,
   InitializedMessage,
   MainThreadMessage,
   PlayerActionsResultMessage,
@@ -118,6 +119,27 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         } as PlayerBorderTilesResultMessage);
       } catch (error) {
         console.error("Failed to get border tiles:", error);
+        throw error;
+      }
+      break;
+    case "attack_average_position":
+      if (!gameRunner) {
+        throw new Error("Game runner not initialized");
+      }
+
+      try {
+        const averagePosition = (await gameRunner).attackAveragePosition(
+          message.playerID,
+          message.attackID,
+        );
+        sendMessage({
+          type: "attack_average_position_result",
+          id: message.id,
+          x: averagePosition ? averagePosition.x : null,
+          y: averagePosition ? averagePosition.y : null,
+        } as AttackAveragePositionResultMessage);
+      } catch (error) {
+        console.error("Failed to get attack average position:", error);
         throw error;
       }
       break;

@@ -9,6 +9,7 @@
     "title": "OpenFront (ALPHA)",
     "join_discord": "Join the Discord!",
     "login_discord": "Login with Discord",
+    "checking_login": "Checking login...",
     "logged_in": "Logged in!",
     "log_out": "Log out",
     "create_lobby": "Create Lobby",

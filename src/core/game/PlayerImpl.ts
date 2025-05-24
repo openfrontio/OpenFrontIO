@@ -148,26 +148,24 @@ export class PlayerImpl implements Player {
       isTraitor: this.isTraitor(),
       targets: this.targets().map((p) => p.smallID()),
       outgoingEmojis: this.outgoingEmojis(),
-      outgoingAttacks: this._outgoingAttacks.map(
-        (a) =>
-          ({
-            attackerID: a.attacker().smallID(),
-            targetID: a.target().smallID(),
-            troops: a.troops(),
-            id: a.id(),
-            retreating: a.retreating(),
-          }) as AttackUpdate,
-      ),
-      incomingAttacks: this._incomingAttacks.map(
-        (a) =>
-          ({
-            attackerID: a.attacker().smallID(),
-            targetID: a.target().smallID(),
-            troops: a.troops(),
-            id: a.id(),
-            retreating: a.retreating(),
-          }) as AttackUpdate,
-      ),
+      outgoingAttacks: this._outgoingAttacks.map((a) => {
+        return {
+          attackerID: a.attacker().smallID(),
+          targetID: a.target().smallID(),
+          troops: a.troops(),
+          id: a.id(),
+          retreating: a.retreating(),
+        } as AttackUpdate;
+      }),
+      incomingAttacks: this._incomingAttacks.map((a) => {
+        return {
+          attackerID: a.attacker().smallID(),
+          targetID: a.target().smallID(),
+          troops: a.troops(),
+          id: a.id(),
+          retreating: a.retreating(),
+        } as AttackUpdate;
+      }),
       outgoingAllianceRequests: outgoingAllianceRequests,
       hasSpawned: this.hasSpawned(),
       betrayals: stats?.betrayals,
@@ -958,6 +956,7 @@ export class PlayerImpl implements Player {
     target: Player | TerraNullius,
     troops: number,
     sourceTile: TileRef | null,
+    border: Set<number>,
   ): Attack {
     const attack = new AttackImpl(
       this._pseudo_random.nextID(),
@@ -965,6 +964,8 @@ export class PlayerImpl implements Player {
       this,
       troops,
       sourceTile,
+      border,
+      this.mg,
     );
     this._outgoingAttacks.push(attack);
     if (target.isPlayer()) {
