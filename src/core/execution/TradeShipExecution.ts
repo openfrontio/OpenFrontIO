@@ -157,17 +157,18 @@ export class TradeShipExecution implements Execution {
         // Fire unit event to rerender.
         this.tradeShip!.touch();
         break;
-      case PathFindResultType.Completed:
-        const fullPath = this.aStar.reconstructPath();
-        if (fullPath === null || fullPath.length === 0) {
-          throw new Error("missing path");
+      case PathFindResultType.Completed: {
+          const fullPath = this.aStar.reconstructPath();
+          if (fullPath === null || fullPath.length === 0) {
+            throw new Error("missing path");
+          }
+          this.fillCachePath(this._dstPort, fullPath);
+          if (!this.wasCaptured) {
+            this.fillCachePath(this.srcPort, fullPath.slice().reverse());
+          }
+          this.moveTradeShip(fullPath.shift());
+          break;
         }
-        this.fillCachePath(this._dstPort, fullPath);
-        if (!this.wasCaptured) {
-          this.fillCachePath(this.srcPort, fullPath.slice().reverse());
-        }
-        this.moveTradeShip(fullPath.shift());
-        break;
       case PathFindResultType.PathNotFound:
         consolex.warn("trade ship cannot find route");
         if (this.tradeShip!.isActive()) {
