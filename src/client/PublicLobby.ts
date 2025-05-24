@@ -112,7 +112,7 @@ export class PublicLobby extends LitElement {
           src="${getMapsImage(lobby.gameConfig.gameMap)}"
           alt="${lobby.gameConfig.gameMap}"
           class="place-self-start col-span-full row-span-full h-full -z-10"
-          style="mask: linear-gradient(to left, transparent, #fff) alpha 0 0/100% 100%"
+          style="mask-image: linear-gradient(to left, transparent, #fff)"
         />
         <div
           class="flex flex-col justify-between h-full col-span-full row-span-full p-4 md:p-6 text-right z-0"
