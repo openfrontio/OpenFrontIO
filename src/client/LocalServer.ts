@@ -193,8 +193,7 @@ export class LocalServer {
       this.turns,
       this.startedAt,
       Date.now(),
-      this.winner?.winner ?? null,
-      this.winner?.winnerType ?? null,
+      this.winner?.winner,
     );
     if (!saveFullGame) {
       // Clear turns because beacon only supports up to 64kb

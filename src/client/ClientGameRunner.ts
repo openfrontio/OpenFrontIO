@@ -7,11 +7,12 @@ import {
   GameStartInfo,
   PlayerRecord,
   ServerMessage,
+  Winner,
 } from "../core/Schemas";
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { Cell, Team, UnitType } from "../core/game/Game";
+import { Cell, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import {
   ErrorUpdate,
@@ -186,6 +187,13 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
+  private getWinner(update: WinUpdate): Winner {
+    if (update.winner[0] !== "player") return update.winner;
+    const clientId = this.gameView.playerBySmallID(update.winner[1]).clientID();
+    if (clientId === null) return;
+    return ["player", clientId];
+  }
+
   private saveGame(update: WinUpdate) {
     if (this.myPlayer === null) {
       return;
@@ -199,14 +207,7 @@ export class ClientGameRunner {
         stats: update.allPlayersStats[this.lobby.clientID],
       },
     ];
-    let winner: ClientID | Team | null = null;
-    if (update.winnerType === "player") {
-      winner = this.gameView
-        .playerBySmallID(update.winner as number)
-        .clientID();
-    } else {
-      winner = update.winner as Team;
-    }
+    const winner = this.getWinner(update);
 
     if (this.lobby.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
@@ -220,7 +221,6 @@ export class ClientGameRunner {
       startTime(),
       Date.now(),
       winner,
-      update.winnerType,
     );
     endGame(record);
   }
