@@ -48,6 +48,8 @@ export class GameServer {
   private lastPingUpdate = 0;
 
   private winner: ClientSendWinnerMessage | null = null;
+  // Track winner votes by IP address - key is stringified winner, value is Set of IP addresses
+  private winnerVotes: Map<string, Set<string>> = new Map();
 
   private gameStartInfo: GameStartInfo;
 
@@ -208,8 +210,50 @@ export class GameServer {
             ) {
               return;
             }
-            this.winner = clientMsg;
-            this.archiveGame();
+
+            // Convert winner to a string for use as a map key
+            const winnerKey = JSON.stringify(clientMsg.winner);
+
+            // Record the vote for this winner
+            if (!this.winnerVotes.has(winnerKey)) {
+              this.winnerVotes.set(winnerKey, new Set());
+            }
+            this.winnerVotes.get(winnerKey)?.add(client.ip);
+
+            // Get all unique IPs from currently active clients
+            const activeUniqueIPs = this.getAllUniqueIPs();
+
+            // Log the current vote count
+            const ipsVotingForWinner =
+              this.winnerVotes.get(winnerKey)?.size || 0;
+            const percentVotes =
+              (ipsVotingForWinner / activeUniqueIPs.size) * 100;
+
+            this.log.info(
+              `Winner vote received: ${ipsVotingForWinner}/${activeUniqueIPs.size} active IPs (${percentVotes.toFixed(2)}%)`,
+              {
+                gameID: this.id,
+                winnerKey: winnerKey,
+              },
+            );
+
+            // Check if this winner has reached the majority threshold using helper method
+            if (this.hasWinnerWithMajority(winnerKey)) {
+              this.winner = clientMsg;
+              this.log.info(
+                `Winner determined by ${ipsVotingForWinner}/${activeUniqueIPs.size} active IPs (${percentVotes.toFixed(2)}%)`,
+                {
+                  gameID: this.id,
+                  winnerKey: winnerKey,
+                  winnerName: clientMsg.winner
+                    ? clientMsg.winner[0] === "player"
+                      ? clientMsg.winner[1]
+                      : clientMsg.winner[1]
+                    : "unknown",
+                },
+              );
+              this.archiveGame();
+            }
           }
         } catch (error) {
           this.log.info(
@@ -399,6 +443,14 @@ export class GameServer {
         this.log.info("game already archived", {
           gameID: this.id,
         });
+      } else if (this.getAllUniqueIPs().size < 2) {
+        this.log.info(
+          "not archiving game: requires at least two distinct active IP addresses",
+          {
+            gameID: this.id,
+            uniqueIPCount: this.getAllUniqueIPs().size,
+          },
+        );
       } else {
         this.archiveGame();
       }
@@ -534,10 +586,61 @@ export class GameServer {
     }
   }
 
+  private hasWinnerWithMajority(winnerKey: string): boolean {
+    // Get all unique IPs from currently active clients
+    const activeUniqueIPs = this.getAllUniqueIPs();
+
+    // Require at least two distinct IP addresses
+    if (activeUniqueIPs.size < 2) {
+      return false;
+    }
+
+    // Get IPs that voted for this winner
+    const ips = this.winnerVotes.get(winnerKey);
+    if (!ips) {
+      return false;
+    }
+
+    // Check if this winner has exactly 51% or more of votes from active unique IPs
+    const percentVotes = (ips.size / activeUniqueIPs.size) * 100;
+    return percentVotes >= 51;
+  }
+
+  /**
+   * Get a complete set of all unique IP addresses from currently active clients
+   * This ensures we properly calculate voting percentages based on active participants
+   */
+  private getAllUniqueIPs(): Set<string> {
+    const allIPs = new Set<string>();
+
+    // Include all IPs from currently active clients only
+    for (const client of this.activeClients) {
+      allIPs.add(client.ip);
+    }
+
+    return allIPs;
+  }
+
   private archiveGame() {
+    // Get all unique IPs from currently active clients
+    const activeUniqueIPs = this.getAllUniqueIPs();
+
+    // Final check to ensure we have at least two distinct IP addresses before recording stats
+    if (activeUniqueIPs.size < 2) {
+      this.log.warn(
+        "Not recording game stats: requires at least two distinct active IP addresses",
+        {
+          gameID: this.id,
+          uniqueIPCount: activeUniqueIPs.size,
+        },
+      );
+      return;
+    }
+
     this.log.info("archiving game", {
       gameID: this.id,
       winner: this.winner?.winner,
+      uniqueIPCount: activeUniqueIPs.size,
     });
     const playerRecords: PlayerRecord[] = Array.from(
       this.allClients.values(),
