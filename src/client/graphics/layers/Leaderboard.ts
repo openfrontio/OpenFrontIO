@@ -22,6 +22,13 @@ export class GoToPlayerEvent implements GameEvent {
   constructor(public player: PlayerView) {}
 }
 
+export class GoToPositionEvent implements GameEvent {
+  constructor(
+    public x: number,
+    public y: number,
+  ) {}
+}
+
 export class GoToUnitEvent implements GameEvent {
   constructor(public unit: UnitView) {}
 }

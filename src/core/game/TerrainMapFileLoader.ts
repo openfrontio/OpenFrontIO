@@ -24,6 +24,7 @@ interface NationMapModule {
 // Mapping from GameMap enum values to file names
 const MAP_FILE_NAMES: Record<GameMapType, string> = {
   [GameMapType.World]: "WorldMap",
+  [GameMapType.WorldMapGiant]: "WorldMapGiant",
   [GameMapType.Europe]: "Europe",
   [GameMapType.Mena]: "Mena",
   [GameMapType.NorthAmerica]: "NorthAmerica",
