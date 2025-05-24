@@ -366,7 +366,8 @@
     "missile_launchers": "ミサイル格納庫",
     "sams": "SAM",
     "health": "体力",
-    "attitude": "態度"
+    "attitude": "態度",
+    "tiles": "タイル"
   },
   "relation": {
     "hostile": "敵対的",
