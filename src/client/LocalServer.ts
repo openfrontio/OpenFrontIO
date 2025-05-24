@@ -102,14 +102,6 @@ export class LocalServer {
       }
       this.intents.push(clientMsg.intent);
     }
-    this.clientMessage({
-      type: "desync",
-      turn: 1600,
-      correctHash: 0,
-      clientsWithCorrectHash: 0,
-      totalActiveClients: 1,
-      yourHash: 0,
-    });
     if (clientMsg.type === "hash") {
       if (!this.lobbyConfig.gameRecord) {
         // If we are playing a singleplayer then store hash.
