@@ -505,36 +505,6 @@ function showErrorModal(
     return;
   }
 
-  if (!document.querySelector("#error-modal-style")) {
-    const style = document.createElement("style");
-    style.id = "error-modal-style";
-    style.textContent = `
-      #error-modal {
-        position: fixed;
-        padding: 20px;
-        background: white;
-        border: 1px solid black;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%,-50%);
-        z-index: 9999;
-        width: 87%;
-        box-sizing: border-box;
-      }
-      @media (max-width: 768px) {
-        #error-modal {
-          max-width: 575px;
-        }
-      }
-      @media (max-width: 480px) {
-        #error-modal {
-          max-width: 350px;
-        }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
   const modal = document.createElement("div");
   modal.id = "error-modal";
 
