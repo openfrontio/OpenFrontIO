@@ -523,7 +523,7 @@ function showErrorModal(
       }
       @media (max-width: 768px) {
         #error-modal {
-          max-width: 5750px;
+          max-width: 575px;
         }
       }
       @media (max-width: 480px) {
