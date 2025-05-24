@@ -17,9 +17,6 @@ import { HelpModal } from "./HelpModal";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./LangSelector";
-import { LangSelector } from "./LangSelector";
-import { LanguageModal } from "./LanguageModal";
-import { NewsModal } from "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
@@ -60,14 +57,14 @@ class Client {
   constructor() {}
 
   initialize(): void {
-    const newsModal = document.querySelector("news-modal") as NewsModal;
+    const newsModal = document.querySelector("news-modal");
     if (!newsModal) {
       consolex.warn("News modal element not found");
     } else {
       consolex.log("News modal element found");
     }
-    newsModal instanceof NewsModal;
-    const newsButton = document.querySelector("news-button") as NewsButton;
+
+    const newsButton = document.querySelector("news-button");
     if (!newsButton) {
       consolex.warn("News button element not found");
     } else {
@@ -75,14 +72,12 @@ class Client {
     }
 
     // Comment out to show news button.
-    newsButton.hidden = true;
+    if (newsButton instanceof NewsButton) {
+      newsButton.hidden = true;
+    }
 
-    const langSelector = document.querySelector(
-      "lang-selector",
-    ) as LangSelector;
-    const languageModal = document.querySelector(
-      "language-modal",
-    ) as LanguageModal;
+    const langSelector = document.querySelector("lang-selector");
+    const languageModal = document.querySelector("language-modal");
     if (!langSelector) {
       consolex.warn("Lang selector element not found");
     }
@@ -90,33 +85,32 @@ class Client {
       consolex.warn("Language modal element not found");
     }
 
-    this.flagInput = document.querySelector("flag-input") as FlagInput;
-    if (!this.flagInput) {
+    const _flagInput = document.querySelector("flag-input");
+    if (_flagInput instanceof FlagInput) {
+      this.flagInput = _flagInput;
+    } else {
       consolex.warn("Flag input element not found");
     }
 
-    this.darkModeButton = document.querySelector(
-      "dark-mode-button",
-    ) as DarkModeButton;
-    if (!this.darkModeButton) {
+    const _darkModeButton = document.querySelector("dark-mode-button");
+    if (_darkModeButton instanceof DarkModeButton) {
+      this.darkModeButton = _darkModeButton;
+    } else {
       consolex.warn("Dark mode button element not found");
     }
 
-    const loginDiscordButton = document.getElementById(
-      "login-discord",
-    ) as OButton;
-    const logoutDiscordButton = document.getElementById(
-      "logout-discord",
-    ) as OButton;
-
-    this.usernameInput = document.querySelector(
-      "username-input",
-    ) as UsernameInput;
-    if (!this.usernameInput) {
+    const _usernameInput = document.querySelector("username-input");
+    if (_usernameInput instanceof UsernameInput) {
+      this.usernameInput = _usernameInput;
+    } else {
       consolex.warn("Username input element not found");
     }
 
-    this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
+    const _publicLobby = document.querySelector("public-lobby");
+    if (_publicLobby instanceof PublicLobby) {
+      this.publicLobby = _publicLobby;
+    }
+
     this.googleAds = document.querySelectorAll(
       "google-ad",
     ) as NodeListOf<GoogleAdElement>;
@@ -132,12 +126,17 @@ class Client {
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
 
-    const spModal = document.querySelector(
-      "single-player-modal",
-    ) as SinglePlayerModal;
-    spModal instanceof SinglePlayerModal;
+    const spModal = document.querySelector("single-player-modal");
+
+    if (!(spModal instanceof SinglePlayerModal)) {
+      throw new Error("Missing single-player-modal");
+    }
+
     const singlePlayer = document.getElementById("single-player");
-    if (singlePlayer === null) throw new Error("Missing single-player");
+    if (singlePlayer === null) {
+      throw new Error("Missing single-player");
+    }
+
     singlePlayer.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
         spModal.open();
@@ -150,93 +149,110 @@ class Client {
     //   ctModal.open();
     // });
 
-    const hlpModal = document.querySelector("help-modal") as HelpModal;
-    hlpModal instanceof HelpModal;
+    const helpModal = document.querySelector("help-modal");
+    if (!(helpModal instanceof HelpModal)) {
+      throw new Error("Missing help-modal");
+    }
+
     const helpButton = document.getElementById("help-button");
-    if (helpButton === null) throw new Error("Missing help-button");
+    if (helpButton === null) {
+      throw new Error("Missing help-button");
+    }
+
     helpButton.addEventListener("click", () => {
-      hlpModal.open();
+      helpModal.open();
     });
 
-    if (isLoggedIn() === false) {
-      // Not logged in
-      loginDiscordButton.disable = false;
-      loginDiscordButton.translationKey = "main.login_discord";
-      loginDiscordButton.addEventListener("click", discordLogin);
-      logoutDiscordButton.hidden = true;
-    } else {
-      // JWT appears to be valid
-      loginDiscordButton.disable = true;
-      loginDiscordButton.translationKey = "main.checking_login";
-      logoutDiscordButton.hidden = false;
-      logoutDiscordButton.addEventListener("click", () => {
-        // Log out
-        logOut();
+    const loginDiscordButton = document.getElementById("login-discord");
+    const logoutDiscordButton = document.getElementById("logout-discord");
+
+    if (
+      loginDiscordButton instanceof OButton &&
+      logoutDiscordButton instanceof OButton
+    ) {
+      if (isLoggedIn() === false) {
+        // Not logged in
         loginDiscordButton.disable = false;
         loginDiscordButton.translationKey = "main.login_discord";
         loginDiscordButton.addEventListener("click", discordLogin);
         logoutDiscordButton.hidden = true;
-      });
-      // Look up the discord user object.
-      // TODO: Add caching
-      getUserMe().then((userMeResponse) => {
-        if (userMeResponse === false) {
-          // Not logged in
+      } else {
+        // JWT appears to be valid
+        loginDiscordButton.disable = true;
+        loginDiscordButton.translationKey = "main.checking_login";
+        logoutDiscordButton.hidden = false;
+        logoutDiscordButton.addEventListener("click", () => {
+          // Log out
+          logOut();
           loginDiscordButton.disable = false;
           loginDiscordButton.translationKey = "main.login_discord";
           loginDiscordButton.addEventListener("click", discordLogin);
           logoutDiscordButton.hidden = true;
-          return;
+        });
+        // Look up the discord user object.
+        // TODO: Add caching
+        getUserMe().then((userMeResponse) => {
+          if (userMeResponse === false) {
+            // Not logged in
+            loginDiscordButton.disable = false;
+            loginDiscordButton.translationKey = "main.login_discord";
+            loginDiscordButton.addEventListener("click", discordLogin);
+            logoutDiscordButton.hidden = true;
+            return;
+          }
+          // TODO: Update the page for logged in user
+          loginDiscordButton.translationKey = "main.logged_in";
+          const { user, player } = userMeResponse;
+        });
+      }
+    }
+
+    const settingsModal = document.querySelector("user-setting");
+    if (settingsModal instanceof UserSettingModal) {
+      document
+        .getElementById("settings-button")
+        ?.addEventListener("click", () => {
+          settingsModal.open();
+        });
+    }
+
+    const hostModal = document.querySelector("host-lobby-modal");
+    if (hostModal instanceof HostPrivateLobbyModal) {
+      const hostLobbyButton = document.getElementById("host-lobby-button");
+      if (hostLobbyButton === null)
+        throw new Error("Missing host-lobby-button");
+
+      hostLobbyButton.addEventListener("click", () => {
+        if (this.usernameInput?.isValid()) {
+          hostModal.open();
+          this.publicLobby.leaveLobby();
         }
-        // TODO: Update the page for logged in user
-        loginDiscordButton.translationKey = "main.logged_in";
-        const { user, player } = userMeResponse;
       });
     }
 
-    const settingsModal = document.querySelector(
-      "user-setting",
-    ) as UserSettingModal;
-    settingsModal instanceof UserSettingModal;
-    document
-      .getElementById("settings-button")
-      ?.addEventListener("click", () => {
-        settingsModal.open();
+    const _joinModal = document.querySelector("join-private-lobby-modal");
+    if (_joinModal instanceof JoinPrivateLobbyModal) {
+      this.joinModal = _joinModal;
+
+      const joinPrivateLobbyButton = document.getElementById(
+        "join-private-lobby-button",
+      );
+      if (joinPrivateLobbyButton === null)
+        throw new Error("Missing join-private-lobby-button");
+
+      joinPrivateLobbyButton.addEventListener("click", () => {
+        if (this.usernameInput?.isValid()) {
+          this.joinModal.open();
+        }
       });
-
-    const hostModal = document.querySelector(
-      "host-lobby-modal",
-    ) as HostPrivateLobbyModal;
-    hostModal instanceof HostPrivateLobbyModal;
-    const hostLobbyButton = document.getElementById("host-lobby-button");
-    if (hostLobbyButton === null) throw new Error("Missing host-lobby-button");
-    hostLobbyButton.addEventListener("click", () => {
-      if (this.usernameInput?.isValid()) {
-        hostModal.open();
-        this.publicLobby.leaveLobby();
-      }
-    });
-
-    this.joinModal = document.querySelector(
-      "join-private-lobby-modal",
-    ) as JoinPrivateLobbyModal;
-    this.joinModal instanceof JoinPrivateLobbyModal;
-    const joinPrivateLobbyButton = document.getElementById(
-      "join-private-lobby-button",
-    );
-    if (joinPrivateLobbyButton === null)
-      throw new Error("Missing join-private-lobby-button");
-    joinPrivateLobbyButton.addEventListener("click", () => {
-      if (this.usernameInput?.isValid()) {
-        this.joinModal.open();
-      }
-    });
+    }
 
     if (this.userSettings.darkMode()) {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
+
     page("/join/:lobbyId", (ctx) => {
       if (ctx.init && sessionStorage.getItem("inLobby")) {
         // On page reload, go back home
@@ -319,21 +335,24 @@ class Client {
         });
         this.publicLobby.stop();
         document.querySelectorAll(".ad").forEach((ad) => {
-          (ad as HTMLElement).style.display = "none";
+          if (ad instanceof HTMLElement) {
+            ad.style.display = "none";
+          }
         });
 
         // show when the game loads
-        const startingModal = document.querySelector(
-          "game-starting-modal",
-        ) as GameStartingModal;
-        startingModal instanceof GameStartingModal;
-        startingModal.show();
+        const startingModal = document.querySelector("game-starting-modal");
+        if (startingModal instanceof GameStartingModal) {
+          startingModal.show();
+        }
       },
       () => {
         this.joinModal.close();
         this.publicLobby.stop();
         document.querySelectorAll(".ad").forEach((ad) => {
-          (ad as HTMLElement).style.display = "none";
+          if (ad instanceof HTMLElement) {
+            ad.style.display = "none";
+          }
         });
 
         if (event.detail.gameConfig?.gameType !== GameType.Singleplayer) {
