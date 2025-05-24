@@ -118,6 +118,7 @@ export interface PlayerUpdate {
   incomingAttacks: AttackUpdate[];
   outgoingAllianceRequests: PlayerID[];
   hasSpawned: boolean;
+  betrayals?: number;
 }
 
 export interface AllianceRequestUpdate {

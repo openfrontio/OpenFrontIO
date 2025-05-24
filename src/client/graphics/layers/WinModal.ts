@@ -207,10 +207,13 @@ export class WinModal extends LitElement implements Layer {
             new SendWinnerEvent(winnerClient, wu.allPlayersStats, "player"),
           );
         }
-        if (winner === this.game.myPlayer()) {
+        if (
+          winnerClient !== null &&
+          winnerClient === this.game.myPlayer()?.clientID()
+        ) {
           this._title = translateText("win_modal.you_won");
         } else {
-          this._title = translateText("win_modal.you_won", {
+          this._title = translateText("win_modal.other_won", {
             player: winner.name(),
           });
         }

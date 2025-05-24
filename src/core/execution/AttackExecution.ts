@@ -87,15 +87,23 @@ export class AttackExecution implements Execution {
       return;
     }
 
-    if (
-      this.target.isPlayer() &&
-      this.mg.config().numSpawnPhaseTurns() +
-        this.mg.config().spawnImmunityDuration() >
+    if (this.target.isPlayer()) {
+      if (
+        this.mg.config().numSpawnPhaseTurns() +
+          this.mg.config().spawnImmunityDuration() >
         this.mg.ticks()
-    ) {
-      console.warn("cannot attack player during immunity phase");
-      this.active = false;
-      return;
+      ) {
+        console.warn("cannot attack player during immunity phase");
+        this.active = false;
+        return;
+      }
+      if (this._owner.isOnSameTeam(this.target)) {
+        console.warn(
+          `${this._owner.displayName()} cannot attack ${this.target.displayName()} because they are on the same team`,
+        );
+        this.active = false;
+        return;
+      }
     }
 
     if (this.startTroops === null) {
