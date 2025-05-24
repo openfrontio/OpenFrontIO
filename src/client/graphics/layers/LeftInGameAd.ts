@@ -23,7 +23,7 @@ const BREAKPOINT = {
   height: 800,
 };
 
-const AD_SIZE = "openfront-io_300x250_ingame";
+const AD_SIZE = "openfront-io_300x250_game";
 
 @customElement("left-in-game-ad")
 export class LeftInGameAd extends LitElement implements Layer {

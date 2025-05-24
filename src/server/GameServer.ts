@@ -562,8 +562,7 @@ export class GameServer {
         this.turns,
         this._startTime ?? 0,
         Date.now(),
-        this.winner?.winner ?? null,
-        this.winner?.winnerType ?? null,
+        this.winner?.winner,
       ),
     );
   }

@@ -118,6 +118,7 @@ export interface PlayerUpdate {
   incomingAttacks: AttackUpdate[];
   outgoingAllianceRequests: PlayerID[];
   hasSpawned: boolean;
+  betrayals?: number;
 }
 
 export interface AllianceRequestUpdate {
@@ -177,8 +178,7 @@ export interface WinUpdate {
   type: GameUpdateType.Win;
   allPlayersStats: AllPlayersStats;
   // Player id or team name.
-  winner: number | Team;
-  winnerType: "player" | "team";
+  winner: ["player", number] | ["team", Team];
 }
 
 export interface HashUpdate {
