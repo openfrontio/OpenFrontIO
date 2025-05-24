@@ -1,5 +1,5 @@
 import { AnimatedSprite } from "../AnimatedSprite";
-import { createAnimatedSpriteForUnit } from "../AnimatedSpriteLoader";
+import { createAnimatedSprite } from "../AnimatedSpriteLoader";
 import { Fx, FxType } from "./Fx";
 
 /**
@@ -13,7 +13,7 @@ export class SAMExplosionFx implements Fx {
     private y: number,
     private duration: number,
   ) {
-    this.explosionSprite = createAnimatedSpriteForUnit(FxType.SAMExplosion);
+    this.explosionSprite = createAnimatedSprite(FxType.SAMExplosion);
   }
 
   renderTick(frameTime: number, ctx: CanvasRenderingContext2D): boolean {
