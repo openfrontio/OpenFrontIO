@@ -103,6 +103,11 @@ export class StructureLayer implements Layer {
       borderType: UnitBorderType.Square,
     });
     this.transformHandler = transformHandler;
+
+    window.addEventListener("structure-modal-closed", () => {
+      this.selectedStructureUnit = null;
+      this.redraw();
+    });
   }
 
   private loadIcon(unitType: string, config: UnitRenderConfig) {
@@ -367,6 +372,23 @@ export class StructureLayer implements Layer {
       this.selectedStructureUnit =
         this.selectedStructureUnit === clickedUnit ? null : clickedUnit;
       this.redraw();
+      // Dispatch custom event to open modal if a structure unit is selected
+      if (this.selectedStructureUnit) {
+        const screenPos = this.transformHandler.worldToScreenCoordinates(cell);
+        const unitTile = this.selectedStructureUnit.tile();
+        const event = new CustomEvent("open-structure-modal", {
+          detail: {
+            unit: this.selectedStructureUnit,
+            x: screenPos.x,
+            y: screenPos.y,
+            tileX: this.game.x(unitTile),
+            tileY: this.game.y(unitTile),
+          },
+          bubbles: true,
+          composed: true,
+        });
+        window.dispatchEvent(event);
+      }
     }
   }
 }
