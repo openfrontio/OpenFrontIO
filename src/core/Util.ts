@@ -4,11 +4,10 @@ import twemoji from "twemoji";
 import { Cell, Team, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import {
-  AllPlayersStats,
   ClientID,
+  GameConfig,
   GameID,
   GameRecord,
-  GameStartInfo,
   PlayerRecord,
   Turn,
 } from "./Schemas";
@@ -185,60 +184,49 @@ export function onlyImages(html: string) {
 }
 
 export function createGameRecord(
-  id: GameID,
-  gameStart: GameStartInfo,
+  gameID: GameID,
+  config: GameConfig,
   // username does not need to be set.
   players: PlayerRecord[],
-  turns: Turn[],
+  allTurns: Turn[],
   start: number,
   end: number,
   winner: ClientID | Team | null,
   winnerType: "player" | "team" | null,
-  allPlayersStats: AllPlayersStats,
 ): GameRecord {
-  const record: GameRecord = {
-    id: id,
-    gameStartInfo: gameStart,
-    startTimestampMS: start,
-    endTimestampMS: end,
-    date: new Date().toISOString().split("T")[0],
-    turns: [],
-    allPlayersStats,
-    version: "v0.0.1",
-  };
-
-  for (const turn of turns) {
-    if (turn.intents.length != 0 || turn.hash != undefined) {
-      record.turns.push(turn);
-      for (const intent of turn.intents) {
-        if (intent.type == "spawn") {
-          for (const playerRecord of players) {
-            if (playerRecord.clientID == intent.clientID) {
-              playerRecord.username = intent.name;
-            }
-          }
-        }
-      }
-    }
-  }
-  record.players = players;
-  record.durationSeconds = Math.floor(
-    (record.endTimestampMS - record.startTimestampMS) / 1000,
+  const duration = Math.floor((end - start) / 1000);
+  const version = "v0.0.2";
+  const gitCommit = "";
+  const num_turns = allTurns.length;
+  const turns = allTurns.filter(
+    (t) => t.intents.length !== 0 || t.hash !== undefined,
   );
-  record.num_turns = turns.length;
-  record.winner = winner;
-  record.winnerType = winnerType;
+  const record: GameRecord = {
+    info: {
+      gameID,
+      config,
+      players,
+      start,
+      end,
+      duration,
+      num_turns,
+      winner,
+      winnerType,
+    },
+    version,
+    gitCommit,
+    turns,
+  };
   return record;
 }
 
 export function decompressGameRecord(gameRecord: GameRecord) {
-  const turns = [];
+  const turns: Turn[] = [];
   let lastTurnNum = -1;
   for (const turn of gameRecord.turns) {
     while (lastTurnNum < turn.turnNumber - 1) {
       lastTurnNum++;
       turns.push({
-        gameID: gameRecord.id,
         turnNumber: lastTurnNum,
         intents: [],
       });
@@ -247,9 +235,8 @@ export function decompressGameRecord(gameRecord: GameRecord) {
     lastTurnNum = turn.turnNumber;
   }
   const turnLength = turns.length;
-  for (let i = turnLength; i < gameRecord.num_turns; i++) {
+  for (let i = turnLength; i < gameRecord.info.num_turns; i++) {
     turns.push({
-      gameID: gameRecord.id,
       turnNumber: i,
       intents: [],
     });
@@ -296,7 +283,7 @@ export function createRandomName(
   name: string,
   playerType: string,
 ): string | null {
-  let randomName = null;
+  let randomName: string | null = null;
   if (playerType === "HUMAN") {
     const hash = simpleHash(name);
     const prefixIndex = hash % BOT_NAME_PREFIXES.length;
@@ -322,4 +309,4 @@ export const emojiTable: string[][] = [
   ["💰", "⚓", "⛵", "🏡", "🛡️"],
 ];
 // 2d to 1d array
-export const flattenedEmojiTable: string[] = [].concat(...emojiTable);
+export const flattenedEmojiTable: string[] = emojiTable.flat();

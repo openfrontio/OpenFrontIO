@@ -26,7 +26,7 @@ import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { InputHandler, MouseMoveEvent, MouseUpEvent } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
-import { getPersistentIDFromCookie } from "./Main";
+import { getPersistentID } from "./Main";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -43,7 +43,7 @@ export interface LobbyConfig {
   playerName: string;
   clientID: ClientID;
   gameID: GameID;
-  persistentID: string;
+  token: string;
   // GameStartInfo only exists when playing a singleplayer game.
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
@@ -59,11 +59,11 @@ export function joinLobby(
   initRemoteSender(eventBus);
 
   consolex.log(
-    `joinging lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}, persistentID: ${lobbyConfig.persistentID.slice(0, 5)}`,
+    `joinging lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
   );
 
   const userSettings: UserSettings = new UserSettings();
-  startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config);
+  startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
 
   const transport = new Transport(lobbyConfig, eventBus);
 
@@ -74,12 +74,12 @@ export function joinLobby(
   let terrainLoad: Promise<TerrainMapData> | null = null;
 
   const onmessage = (message: ServerMessage) => {
-    if (message.type == "prestart") {
+    if (message.type === "prestart") {
       consolex.log(`lobby: game prestarting: ${JSON.stringify(message)}`);
       terrainLoad = loadTerrainMap(message.gameMap);
       onPrestart();
     }
-    if (message.type == "start") {
+    if (message.type === "start") {
       // Trigger prestart for singleplayer games
       onPrestart();
       consolex.log(`lobby: game started: ${JSON.stringify(message, null, 2)}`);
@@ -109,9 +109,13 @@ export async function createClientGame(
   userSettings: UserSettings,
   terrainLoad: Promise<TerrainMapData> | null,
 ): Promise<ClientGameRunner> {
+  if (lobbyConfig.gameStartInfo === undefined) {
+    throw new Error("missing gameStartInfo");
+  }
   const config = await getConfig(
     lobbyConfig.gameStartInfo.config,
     userSettings,
+    lobbyConfig.gameRecord !== undefined,
   );
   let gameMap: TerrainMapData | null = null;
 
@@ -159,7 +163,7 @@ export async function createClientGame(
 }
 
 export class ClientGameRunner {
-  private myPlayer: PlayerView;
+  private myPlayer: PlayerView | null = null;
   private isActive = false;
 
   private turnsSeen = 0;
@@ -183,16 +187,20 @@ export class ClientGameRunner {
   }
 
   private saveGame(update: WinUpdate) {
+    if (this.myPlayer === null) {
+      return;
+    }
     const players: PlayerRecord[] = [
       {
-        ip: null,
-        persistentID: getPersistentIDFromCookie(),
+        playerID: this.myPlayer.id(),
+        persistentID: getPersistentID(),
         username: this.lobby.playerName,
         clientID: this.lobby.clientID,
+        stats: update.allPlayersStats[this.lobby.clientID],
       },
     ];
     let winner: ClientID | Team | null = null;
-    if (update.winnerType == "player") {
+    if (update.winnerType === "player") {
       winner = this.gameView
         .playerBySmallID(update.winner as number)
         .clientID();
@@ -200,9 +208,12 @@ export class ClientGameRunner {
       winner = update.winner as Team;
     }
 
+    if (this.lobby.gameStartInfo === undefined) {
+      throw new Error("missing gameStartInfo");
+    }
     const record = createGameRecord(
       this.lobby.gameStartInfo.gameID,
-      this.lobby.gameStartInfo,
+      this.lobby.gameStartInfo.config,
       players,
       // Not saving turns locally
       [],
@@ -210,7 +221,6 @@ export class ClientGameRunner {
       Date.now(),
       winner,
       update.winnerType,
-      update.allPlayersStats,
     );
     endGame(record);
   }
@@ -232,16 +242,21 @@ export class ClientGameRunner {
     this.renderer.initialize();
     this.input.initialize();
     this.worker.start((gu: GameUpdateViewData | ErrorUpdate) => {
+      if (this.lobby.gameStartInfo === undefined) {
+        throw new Error("missing gameStartInfo");
+      }
       if ("errMsg" in gu) {
         showErrorModal(
           gu.errMsg,
-          gu.stack,
+          gu.stack ?? "missing",
           this.lobby.gameStartInfo.gameID,
           this.lobby.clientID,
         );
+        console.error(gu.stack);
         this.stop(true);
         return;
       }
+      this.transport.turnComplete();
       gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
@@ -265,7 +280,7 @@ export class ClientGameRunner {
     };
     const onmessage = (message: ServerMessage) => {
       this.lastMessageTime = Date.now();
-      if (message.type == "start") {
+      if (message.type === "start") {
         this.hasJoined = true;
         consolex.log("starting game!");
         for (const turn of message.turns) {
@@ -283,7 +298,10 @@ export class ClientGameRunner {
           this.turnsSeen++;
         }
       }
-      if (message.type == "desync") {
+      if (message.type === "desync") {
+        if (this.lobby.gameStartInfo === undefined) {
+          throw new Error("missing gameStartInfo");
+        }
         showErrorModal(
           `desync from server: ${JSON.stringify(message)}`,
           "",
@@ -293,12 +311,12 @@ export class ClientGameRunner {
           "You are desynced from other players. What you see might differ from other players.",
         );
       }
-      if (message.type == "turn") {
+      if (message.type === "turn") {
         if (!this.hasJoined) {
           this.transport.joinGame(0);
           return;
         }
-        if (this.turnsSeen != message.turn.turnNumber) {
+        if (this.turnsSeen !== message.turn.turnNumber) {
           consolex.error(
             `got wrong turn have turns ${this.turnsSeen}, received turn ${message.turn.turnNumber}`,
           );
@@ -345,17 +363,17 @@ export class ClientGameRunner {
     if (this.gameView.inSpawnPhase()) {
       return;
     }
-    if (this.myPlayer == null) {
-      this.myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
-      if (this.myPlayer == null) {
-        return;
-      }
+    if (this.myPlayer === null) {
+      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
     }
     this.myPlayer.actions(tile).then((actions) => {
+      if (this.myPlayer === null) return;
       const bu = actions.buildableUnits.find(
-        (bu) => bu.type == UnitType.TransportShip,
+        (bu) => bu.type === UnitType.TransportShip,
       );
-      if (bu == null) {
+      if (bu === undefined) {
         console.warn(`no transport ship buildable units`);
         return;
       }
@@ -374,7 +392,8 @@ export class ClientGameRunner {
         this.myPlayer
           .bestTransportShipSpawn(this.gameView.ref(cell.x, cell.y))
           .then((spawn: number | false) => {
-            let spawnCell = null;
+            if (this.myPlayer === null) throw new Error("not initialized");
+            let spawnCell: Cell | null = null;
             if (spawn !== false) {
               spawnCell = new Cell(
                 this.gameView.x(spawn),

@@ -63,7 +63,7 @@ export class ChatDisplay extends LitElement implements Layer {
     if (event.messageType !== MessageType.CHAT) return;
     const myPlayer = this.game.playerByClientID(this.clientID);
     if (
-      event.playerID != null &&
+      event.playerID !== null &&
       (!myPlayer || myPlayer.smallID() !== event.playerID)
     ) {
       return;
@@ -82,6 +82,7 @@ export class ChatDisplay extends LitElement implements Layer {
   tick() {
     // this.active = true;
     const updates = this.game.updatesSinceLastTick();
+    if (updates === null) throw new Error("null updates");
     const messages = updates[GameUpdateType.DisplayEvent] as
       | DisplayMessageUpdate[]
       | undefined;
@@ -91,7 +92,7 @@ export class ChatDisplay extends LitElement implements Layer {
         if (msg.messageType === MessageType.CHAT) {
           const myPlayer = this.game.playerByClientID(this.clientID);
           if (
-            msg.playerID != null &&
+            msg.playerID !== null &&
             (!myPlayer || myPlayer.smallID() !== msg.playerID)
           ) {
             continue;

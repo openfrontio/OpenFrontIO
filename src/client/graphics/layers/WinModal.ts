@@ -1,6 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import mastersIcon from "../../../../resources/images/MastersIcon.png";
+import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { Team } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
@@ -137,51 +137,19 @@ export class WinModal extends LitElement implements Layer {
         <h2>${this._title || ""}</h2>
         ${this.innerHtml()}
         <div class="button-container">
-          <button @click=${this._handleExit}>Exit Game</button>
-          <button @click=${this.hide}>Keep Playing</button>
+          <button @click=${this._handleExit}>
+            ${translateText("win_modal.exit")}
+          </button>
+          <button @click=${this.hide}>
+            ${translateText("win_modal.keep")}
+          </button>
         </div>
       </div>
     `;
   }
 
   innerHtml() {
-    return html`
-      <div
-        style="
-          text-align: center; 
-          margin: 10px 0; 
-          line-height: 1.5;
-          background-image: url(${mastersIcon});
-          background-size: 100px;
-          background-position: center;
-          background-repeat: no-repeat;
-          background-blend-mode: overlay;
-          position: relative;
-        "
-      >
-        <div
-          style="
-            margin: 10px 0; 
-            padding: 14px; 
-            background: rgba(0, 0, 0, 0.76); 
-            border-radius: 5px;
-            position: relative;
-            z-index: 1;
-            font-size: 22px;
-          "
-        >
-          Watch the best compete in the
-          <br />
-          <a
-            href="https://openfrontmaster.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            style="color: #00bfff; font-weight: bold; text-decoration: underline;"
-            >OpenFront Masters</a
-          >
-        </div>
-      </div>
-    `;
+    return html``;
   }
 
   show() {
@@ -211,31 +179,43 @@ export class WinModal extends LitElement implements Layer {
       myPlayer.hasSpawned()
     ) {
       this.hasShownDeathModal = true;
-      this._title = "You died";
+      this._title = translateText("win_modal.died");
       this.show();
     }
-    this.game.updatesSinceLastTick()[GameUpdateType.Win].forEach((wu) => {
+    const updates = this.game.updatesSinceLastTick();
+    const winUpdates = updates !== null ? updates[GameUpdateType.Win] : [];
+    winUpdates.forEach((wu) => {
       if (wu.winnerType === "team") {
         this.eventBus.emit(
           new SendWinnerEvent(wu.winner as Team, wu.allPlayersStats, "team"),
         );
-        if (wu.winner == this.game.myPlayer()?.team()) {
-          this._title = "Your team won!";
+        if (wu.winner === this.game.myPlayer()?.team()) {
+          this._title = translateText("win_modal.your_team");
         } else {
-          this._title = `${wu.winner} team has won!`;
+          this._title = translateText("win_modal.other_team", {
+            team: wu.winner,
+          });
         }
         this.show();
       } else {
         const winner = this.game.playerBySmallID(
           wu.winner as number,
         ) as PlayerView;
-        this.eventBus.emit(
-          new SendWinnerEvent(winner.clientID(), wu.allPlayersStats, "player"),
-        );
-        if (winner == this.game.myPlayer()) {
-          this._title = "You Won!";
+        const winnerClient = winner.clientID();
+        if (winnerClient !== null) {
+          this.eventBus.emit(
+            new SendWinnerEvent(winnerClient, wu.allPlayersStats, "player"),
+          );
+        }
+        if (
+          winnerClient !== null &&
+          winnerClient === this.game.myPlayer()?.clientID()
+        ) {
+          this._title = translateText("win_modal.you_won");
         } else {
-          this._title = `${winner.name()} has won!`;
+          this._title = translateText("win_modal.other_won", {
+            player: winner.name(),
+          });
         }
         this.show();
       }

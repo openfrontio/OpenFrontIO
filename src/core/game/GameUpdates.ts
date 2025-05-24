@@ -1,4 +1,4 @@
-import { AllPlayersStats, ClientID, PlayerStats } from "../Schemas";
+import { AllPlayersStats, ClientID } from "../Schemas";
 import {
   EmojiMessage,
   GameUpdates,
@@ -38,6 +38,7 @@ export enum GameUpdateType {
   Emoji,
   Win,
   Hash,
+  UnitIncoming,
 }
 
 export type GameUpdate =
@@ -53,7 +54,8 @@ export type GameUpdate =
   | TargetPlayerUpdate
   | EmojiUpdate
   | WinUpdate
-  | HashUpdate;
+  | HashUpdate
+  | UnitIncomingUpdate;
 
 export interface TileUpdateWrapper {
   type: GameUpdateType.Tile;
@@ -66,13 +68,15 @@ export interface UnitUpdate {
   troops: number;
   id: number;
   ownerID: number;
+  lastOwnerID?: number;
   // TODO: make these tilerefs
   pos: TileRef;
   lastPos: TileRef;
   isActive: boolean;
-  dstPortId?: number; // Only for trade ships
-  detonationDst?: TileRef; // Only for nukes
-  warshipTargetId?: number;
+  wasIntercepted: boolean;
+  retreating: boolean;
+  targetUnitId?: number; // Only for trade ships
+  targetTile?: TileRef; // Only for nukes
   health?: number;
   constructionType?: UnitType;
   ticksLeftInCooldown?: Tick;
@@ -89,8 +93,8 @@ export interface AttackUpdate {
 export interface PlayerUpdate {
   type: GameUpdateType.Player;
   nameViewData?: NameViewData;
-  clientID: ClientID;
-  flag: string;
+  clientID: ClientID | null;
+  flag: string | undefined;
   name: string;
   displayName: string;
   id: PlayerID;
@@ -101,6 +105,7 @@ export interface PlayerUpdate {
   tilesOwned: number;
   gold: number;
   population: number;
+  totalPopulation: number;
   workers: number;
   troops: number;
   targetTroopRatio: number;
@@ -112,8 +117,8 @@ export interface PlayerUpdate {
   outgoingAttacks: AttackUpdate[];
   incomingAttacks: AttackUpdate[];
   outgoingAllianceRequests: PlayerID[];
-  stats: PlayerStats;
   hasSpawned: boolean;
+  betrayals?: number;
 }
 
 export interface AllianceRequestUpdate {
@@ -181,4 +186,12 @@ export interface HashUpdate {
   type: GameUpdateType.Hash;
   tick: Tick;
   hash: number;
+}
+
+export interface UnitIncomingUpdate {
+  type: GameUpdateType.UnitIncoming;
+  unitID: number;
+  message: string;
+  messageType: MessageType;
+  playerID: number;
 }

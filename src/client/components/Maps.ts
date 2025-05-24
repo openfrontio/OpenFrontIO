@@ -6,6 +6,7 @@ import { getMapsImage } from "../utilities/Maps";
 // Add map descriptions
 export const MapDescription: Record<keyof typeof GameMapType, string> = {
   World: "World",
+  WorldMapGiant: "Giant World Map",
   Europe: "Europe",
   EuropeClassic: "Europe Classic",
   Mena: "MENA",
@@ -28,6 +29,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   DeglaciatedAntarctica: "Deglaciated Antarctica",
   FalklandIslands: "Falkland Islands",
   Baikal: "Baikal",
+  Halkidiki: "Halkidiki",
 };
 
 @customElement("map-display")

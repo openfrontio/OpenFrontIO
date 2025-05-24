@@ -100,6 +100,11 @@ export class OptionsMenu extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onToggleSpecialEffectsButtonClick() {
+    this.userSettings.toggleFxLayer();
+    this.requestUpdate();
+  }
+
   private onToggleDarkModeButtonClick() {
     this.userSettings.toggleDarkMode();
     this.requestUpdate();
@@ -122,18 +127,20 @@ export class OptionsMenu extends LitElement implements Layer {
   init() {
     console.log("init called from OptionsMenu");
     this.showPauseButton =
-      this.game.config().gameConfig().gameType == GameType.Singleplayer;
+      this.game.config().gameConfig().gameType === GameType.Singleplayer ||
+      this.game.config().isReplay();
     this.isVisible = true;
     this.requestUpdate();
   }
 
   tick() {
-    this.hasWinner =
-      this.hasWinner ||
-      this.game.updatesSinceLastTick()[GameUpdateType.Win].length > 0;
+    const updates = this.game.updatesSinceLastTick();
+    if (updates) {
+      this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;
+    }
     if (this.game.inSpawnPhase()) {
       this.timer = 0;
-    } else if (!this.hasWinner && this.game.ticks() % 10 == 0) {
+    } else if (!this.hasWinner && this.game.ticks() % 10 === 0) {
       this.timer++;
     }
     this.isVisible = true;
@@ -160,7 +167,7 @@ export class OptionsMenu extends LitElement implements Layer {
               children: this.isPaused ? "▶️" : "⏸",
             })}
             <div
-              class="w-15 h-8 lg:w-24 lg:h-10 flex items-center justify-center
+              class="w-15 h-8 lg:w-24 lg:h-10 flex items-center justify-center w-full
                               bg-opacity-50 bg-gray-700 text-opacity-90 text-white
                               rounded text-sm lg:text-xl"
             >
@@ -194,6 +201,11 @@ export class OptionsMenu extends LitElement implements Layer {
             onClick: this.onToggleEmojisButtonClick,
             title: "Toggle Emojis",
             children: "🙂: " + (this.userSettings.emojis() ? "On" : "Off"),
+          })}
+          ${button({
+            onClick: this.onToggleSpecialEffectsButtonClick,
+            title: "Toggle Special effects",
+            children: "💥: " + (this.userSettings.fxLayer() ? "On" : "Off"),
           })}
           ${button({
             onClick: this.onToggleDarkModeButtonClick,

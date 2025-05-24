@@ -111,8 +111,8 @@ export class BotBehavior {
 
     // Select the most hated player
     if (this.enemy === null) {
-      const mostHated = this.player.allRelationsSorted()[0] ?? null;
-      if (mostHated != null && mostHated.relation === Relation.Hostile) {
+      const mostHated = this.player.allRelationsSorted()[0];
+      if (mostHated !== undefined && mostHated.relation === Relation.Hostile) {
         this.enemy = mostHated.player;
         this.enemyUpdated = this.game.ticks();
       }
@@ -137,7 +137,7 @@ export class BotBehavior {
       for (const neighbor of this.random.shuffleArray(neighbors)) {
         if (!neighbor.isPlayer()) continue;
         if (this.player.isFriendly(neighbor)) continue;
-        if (neighbor.type() == PlayerType.FakeHuman) {
+        if (neighbor.type() === PlayerType.FakeHuman) {
           if (this.random.chance(2)) {
             continue;
           }

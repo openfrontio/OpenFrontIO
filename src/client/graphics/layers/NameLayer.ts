@@ -10,9 +10,9 @@ import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { ClientID } from "../../../core/Schemas";
 import { Theme } from "../../../core/configuration/Config";
-import { AllPlayers, Cell, nukeTypes } from "../../../core/game/Game";
+import { AllPlayers, Cell, nukeTypes, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { createCanvas, renderTroops } from "../../Utils";
+import { createCanvas, renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -22,7 +22,7 @@ class RenderInfo {
   constructor(
     public player: PlayerView,
     public lastRenderCalc: number,
-    public location: Cell,
+    public location: Cell | null,
     public fontSize: number,
     public fontColor: string,
     public element: HTMLElement,
@@ -104,7 +104,7 @@ export class NameLayer implements Layer {
   }
 
   public tick() {
-    if (this.game.ticks() % 10 != 0) {
+    if (this.game.ticks() % 10 !== 0) {
       return;
     }
     const sorted = this.game
@@ -214,20 +214,18 @@ export class NameLayer implements Layer {
     troopsDiv.style.marginTop = "-5%";
     element.appendChild(troopsDiv);
 
-    // TODO: enable this for new meta.
-
-    // const shieldDiv = document.createElement("div");
-    // shieldDiv.classList.add("player-shield");
-    // shieldDiv.style.zIndex = "3";
-    // shieldDiv.style.marginTop = "-5%";
-    // shieldDiv.style.display = "flex";
-    // shieldDiv.style.alignItems = "center";
-    // shieldDiv.style.gap = "0px";
-    // shieldDiv.innerHTML = `
-    //   <img src="${this.shieldIconImage.src}" style="width: 16px; height: 16px;" />
-    //   <span style="color: black; font-size: 10px; margin-top: -2px;">0</span>
-    // `;
-    // element.appendChild(shieldDiv);
+    const shieldDiv = document.createElement("div");
+    shieldDiv.classList.add("player-shield");
+    shieldDiv.style.zIndex = "3";
+    shieldDiv.style.marginTop = "-5%";
+    shieldDiv.style.display = "flex";
+    shieldDiv.style.alignItems = "center";
+    shieldDiv.style.gap = "0px";
+    shieldDiv.innerHTML = `
+      <img src="${this.shieldIconImage.src}" style="width: 16px; height: 16px;" />
+      <span style="color: black; font-size: 10px; margin-top: -2px;">0</span>
+    `;
+    element.appendChild(shieldDiv);
 
     // Start off invisible so it doesn't flash at 0,0
     element.style.display = "none";
@@ -238,7 +236,7 @@ export class NameLayer implements Layer {
 
   renderPlayerInfo(render: RenderInfo) {
     if (!render.player.nameLocation() || !render.player.isAlive()) {
-      this.renders = this.renders.filter((r) => r != render);
+      this.renders = this.renders.filter((r) => r !== render);
       render.element.remove();
       return;
     }
@@ -293,25 +291,23 @@ export class NameLayer implements Layer {
     troopsDiv.style.color = render.fontColor;
     troopsDiv.textContent = renderTroops(render.player.troops());
 
-    // TODO: enable this for new meta.
-
-    // const density = renderNumber(
-    //   render.player.troops() / render.player.numTilesOwned(),
-    // );
-    // const shieldDiv = render.element.querySelector(
-    //   ".player-shield",
-    // ) as HTMLDivElement;
-    // const shieldImg = shieldDiv.querySelector("img");
-    // const shieldNumber = shieldDiv.querySelector("span");
-    // if (shieldImg) {
-    //   shieldImg.style.width = `${render.fontSize * 0.8}px`;
-    //   shieldImg.style.height = `${render.fontSize * 0.8}px`;
-    // }
-    // if (shieldNumber) {
-    //   shieldNumber.style.fontSize = `${render.fontSize * 0.6}px`;
-    //   shieldNumber.style.marginTop = `${-render.fontSize * 0.1}px`;
-    //   shieldNumber.textContent = density;
-    // }
+    const density = renderNumber(
+      render.player.troops() / render.player.numTilesOwned(),
+    );
+    const shieldDiv = render.element.querySelector(
+      ".player-shield",
+    ) as HTMLDivElement;
+    const shieldImg = shieldDiv.querySelector("img");
+    const shieldNumber = shieldDiv.querySelector("span");
+    if (shieldImg) {
+      shieldImg.style.width = `${render.fontSize * 0.8}px`;
+      shieldImg.style.height = `${render.fontSize * 0.8}px`;
+    }
+    if (shieldNumber) {
+      shieldNumber.style.fontSize = `${render.fontSize * 0.6}px`;
+      shieldNumber.style.marginTop = `${-render.fontSize * 0.1}px`;
+      shieldNumber.textContent = density;
+    }
 
     // Handle icons
     const iconsDiv = render.element.querySelector(
@@ -355,7 +351,7 @@ export class NameLayer implements Layer {
 
     // Alliance icon
     const existingAlliance = iconsDiv.querySelector('[data-icon="alliance"]');
-    if (myPlayer != null && myPlayer.isAlliedWith(render.player)) {
+    if (myPlayer !== null && myPlayer.isAlliedWith(render.player)) {
       if (!existingAlliance) {
         iconsDiv.appendChild(
           this.createIconElement(
@@ -372,7 +368,7 @@ export class NameLayer implements Layer {
     // Alliance request icon
     const data = '[data-icon="alliance-request"]';
     const existingRequestAlliance = iconsDiv.querySelector(data);
-    if (myPlayer != null && render.player.isRequestingAllianceWith(myPlayer)) {
+    if (myPlayer !== null && render.player.isRequestingAllianceWith(myPlayer)) {
       if (!existingRequestAlliance) {
         iconsDiv.appendChild(
           this.createIconElement(
@@ -389,7 +385,7 @@ export class NameLayer implements Layer {
     // Target icon
     const existingTarget = iconsDiv.querySelector('[data-icon="target"]');
     if (
-      myPlayer != null &&
+      myPlayer !== null &&
       new Set(myPlayer.transitiveTargets()).has(render.player)
     ) {
       if (!existingTarget) {
@@ -412,11 +408,11 @@ export class NameLayer implements Layer {
       .outgoingEmojis()
       .filter(
         (emoji) =>
-          emoji.recipientID == AllPlayers ||
-          emoji.recipientID == myPlayer?.smallID(),
+          emoji.recipientID === AllPlayers ||
+          emoji.recipientID === myPlayer?.smallID(),
       );
 
-    if (this.game.config().userSettings().emojis() && emojis.length > 0) {
+    if (this.game.config().userSettings()?.emojis() && emojis.length > 0) {
       if (!existingEmoji) {
         const emojiDiv = document.createElement("div");
         emojiDiv.setAttribute("data-icon", "emoji");
@@ -451,35 +447,36 @@ export class NameLayer implements Layer {
     }
 
     const nukesSentByOtherPlayer = this.game.units().filter((unit) => {
-      const isSendingNuke = render.player.id() == unit.owner().id();
-      const notMyPlayer = !myPlayer || unit.owner().id() != myPlayer.id();
+      const isSendingNuke = render.player.id() === unit.owner().id();
+      const notMyPlayer = !myPlayer || unit.owner().id() !== myPlayer.id();
       return (
-        nukeTypes.includes(unit.type()) &&
+        (nukeTypes as UnitType[]).includes(unit.type()) &&
         isSendingNuke &&
         notMyPlayer &&
         unit.isActive()
       );
     });
     const isMyPlayerTarget = nukesSentByOtherPlayer.find((unit) => {
-      const detonationDst = unit.detonationDst();
+      const detonationDst = unit.targetTile();
+      if (detonationDst === undefined) return false;
       const targetId = this.game.owner(detonationDst).id();
-      return myPlayer && targetId == this.myPlayer.id();
+      return myPlayer && targetId === myPlayer.id();
     });
     const existingNuke = iconsDiv.querySelector(
       '[data-icon="nuke"]',
     ) as HTMLImageElement;
 
     if (existingNuke) {
-      if (nukesSentByOtherPlayer.length == 0) {
+      if (nukesSentByOtherPlayer.length === 0) {
         existingNuke.remove();
       } else if (
         isMyPlayerTarget &&
-        existingNuke.src != this.nukeRedIconImage.src
+        existingNuke.src !== this.nukeRedIconImage.src
       ) {
         existingNuke.src = this.nukeRedIconImage.src;
       } else if (
         !isMyPlayerTarget &&
-        existingNuke.src != this.nukeWhiteIconImage.src
+        existingNuke.src !== this.nukeWhiteIconImage.src
       ) {
         existingNuke.src = this.nukeWhiteIconImage.src;
       }
@@ -499,7 +496,7 @@ export class NameLayer implements Layer {
     }
 
     // Position element with scale
-    if (render.location && render.location != oldLocation) {
+    if (render.location && render.location !== oldLocation) {
       const scale = Math.min(baseSize * 0.25, 3);
       render.element.style.transform = `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) scale(${scale})`;
     }
@@ -525,12 +522,12 @@ export class NameLayer implements Layer {
   }
 
   private getPlayer(): PlayerView | null {
-    if (this.myPlayer != null) {
+    if (this.myPlayer !== null) {
       return this.myPlayer;
     }
-    this.myPlayer = this.game
-      .playerViews()
-      .find((p) => p.clientID() == this.clientID);
+    this.myPlayer =
+      this.game.playerViews().find((p) => p.clientID() === this.clientID) ??
+      null;
     return this.myPlayer;
   }
 }
