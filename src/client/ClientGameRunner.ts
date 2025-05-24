@@ -568,7 +568,6 @@ function showErrorModal(
   // Add to modal
   modal.appendChild(pre);
   modal.appendChild(button);
-  modal.id = "error-modal";
   if (closable) {
     modal.appendChild(closeButton);
   }
