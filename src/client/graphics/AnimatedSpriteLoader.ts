@@ -107,7 +107,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
   },
 };
 
-const animatedSpriteImageMap: Map<FxType, CanvasImageSource> = new Map();
+const animatedSpriteImageMap: Map<FxType, HTMLCanvasElement> = new Map();
 
 export const loadAllAnimatedSpriteImages = async (): Promise<void> => {
   const entries = Object.entries(ANIMATED_SPRITE_CONFIG);

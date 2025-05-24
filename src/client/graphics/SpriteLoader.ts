@@ -75,14 +75,14 @@ const coloredSpriteCache: Map<string, HTMLCanvasElement> = new Map();
  * Load a canvas and replace grayscale with border colors
  */
 export const colorizeCanvas = (
-  source: CanvasImageSource,
+  source: CanvasImageSource & { width: number; height: number },
   colorA: Colord,
   colorB: Colord,
   colorC: Colord,
 ): HTMLCanvasElement => {
   const canvas = document.createElement("canvas");
-  canvas.width = (source as any).width;
-  canvas.height = (source as any).height;
+  canvas.width = source.width;
+  canvas.height = source.height;
 
   const ctx = canvas.getContext("2d")!;
   ctx.drawImage(source, 0, 0);
