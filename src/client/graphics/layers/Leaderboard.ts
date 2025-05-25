@@ -4,7 +4,6 @@ import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { translateText } from "../../../client/Utils";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
 import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
 
@@ -36,7 +35,6 @@ export class GoToUnitEvent implements GameEvent {
 @customElement("leader-board")
 export class Leaderboard extends LitElement implements Layer {
   public game: GameView | null = null;
-  public clientID: ClientID | null = null;
   public eventBus: EventBus | null = null;
 
   players: Entry[] = [];
@@ -66,12 +64,7 @@ export class Leaderboard extends LitElement implements Layer {
 
   private updateLeaderboard() {
     if (this.game === null) throw new Error("Not initialized");
-    if (this.clientID === null) {
-      return;
-    }
-    const myPlayer =
-      this.game.playerViews().find((p) => p.clientID() === this.clientID) ??
-      null;
+    const myPlayer = this.game.myPlayer();
 
     const sorted = this.game
       .playerViews()

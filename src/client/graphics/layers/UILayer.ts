@@ -1,6 +1,5 @@
 import { Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
-import { ClientID } from "../../../core/Schemas";
 import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
 import { GameView, UnitView } from "../../../core/game/GameView";
@@ -35,7 +34,6 @@ export class UILayer implements Layer {
   constructor(
     private game: GameView,
     private eventBus: EventBus,
-    private clientID: ClientID,
     private transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
