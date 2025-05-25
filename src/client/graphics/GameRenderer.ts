@@ -30,6 +30,7 @@ import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { TopBar } from "./layers/TopBar";
 import { UILayer } from "./layers/UILayer";
+import { UnitInfoModal } from "./layers/UnitInfoModal";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
 
@@ -172,6 +173,15 @@ export function createRenderer(
   }
   playerTeamLabel.game = game;
 
+  const unitInfoModal = document.querySelector(
+    "unit-info-modal",
+  ) as UnitInfoModal;
+  if (!(unitInfoModal instanceof UnitInfoModal)) {
+    console.error("unit info modal not found");
+  }
+  unitInfoModal.game = game;
+  // unitInfoModal.eventBus = eventBus;
+
   const leftInGameAd = document.querySelector(
     "left-in-game-ad",
   ) as LeftInGameAd;
@@ -183,7 +193,7 @@ export function createRenderer(
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus),
-    new StructureLayer(game, eventBus),
+    new StructureLayer(game, eventBus, transformHandler),
     new UnitLayer(game, eventBus, clientID, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, clientID, transformHandler),
@@ -212,6 +222,7 @@ export function createRenderer(
     topBar,
     playerPanel,
     playerTeamLabel,
+    unitInfoModal,
     multiTabModal,
     leftInGameAd,
   ];
