@@ -1,3 +1,4 @@
+import { translateText } from "../client/Utils";
 import { consolex, initRemoteSender } from "../core/Consolex";
 import { EventBus } from "../core/EventBus";
 import {
@@ -7,11 +8,12 @@ import {
   GameStartInfo,
   PlayerRecord,
   ServerMessage,
+  Winner,
 } from "../core/Schemas";
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { Cell, Team, UnitType } from "../core/game/Game";
+import { Cell, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import {
   ErrorUpdate,
@@ -26,7 +28,7 @@ import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { InputHandler, MouseMoveEvent, MouseUpEvent } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
-import { getPersistentIDFromCookie } from "./Main";
+import { getPersistentID } from "./Main";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -186,6 +188,13 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
+  private getWinner(update: WinUpdate): Winner {
+    if (update.winner[0] !== "player") return update.winner;
+    const clientId = this.gameView.playerBySmallID(update.winner[1]).clientID();
+    if (clientId === null) return;
+    return ["player", clientId];
+  }
+
   private saveGame(update: WinUpdate) {
     if (this.myPlayer === null) {
       return;
@@ -193,20 +202,13 @@ export class ClientGameRunner {
     const players: PlayerRecord[] = [
       {
         playerID: this.myPlayer.id(),
-        persistentID: getPersistentIDFromCookie(),
+        persistentID: getPersistentID(),
         username: this.lobby.playerName,
         clientID: this.lobby.clientID,
         stats: update.allPlayersStats[this.lobby.clientID],
       },
     ];
-    let winner: ClientID | Team | null = null;
-    if (update.winnerType === "player") {
-      winner = this.gameView
-        .playerBySmallID(update.winner as number)
-        .clientID();
-    } else {
-      winner = update.winner as Team;
-    }
+    const winner = this.getWinner(update);
 
     if (this.lobby.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
@@ -220,7 +222,6 @@ export class ClientGameRunner {
       startTime(),
       Date.now(),
       winner,
-      update.winnerType,
     );
     endGame(record);
   }
@@ -308,7 +309,7 @@ export class ClientGameRunner {
           this.lobby.gameStartInfo.gameID,
           this.lobby.clientID,
           true,
-          "You are desynced from other players. What you see might differ from other players.",
+          translateText("error_modal.desync_notice"),
         );
       }
       if (message.type === "turn") {
@@ -497,7 +498,7 @@ function showErrorModal(
   gameID: GameID,
   clientID: ClientID,
   closable = false,
-  heading = "Game crashed!",
+  heading = translateText("error_modal.crashed"),
 ) {
   const errorText = `Error: ${errMsg}\nStack: ${stack}`;
 
@@ -506,37 +507,37 @@ function showErrorModal(
   }
 
   const modal = document.createElement("div");
-  const content = `${heading}\n game id: ${gameID}, client id: ${clientID}\nPlease paste the following in your bug report in Discord:\n${errorText}`;
+
+  modal.id = "error-modal";
+
+  const content = `${translateText(heading)}\n game id: ${gameID}, client id: ${clientID}\n${translateText("error_modal.paste_discord")}\n${errorText}`;
 
   // Create elements
   const pre = document.createElement("pre");
   pre.textContent = content;
 
   const button = document.createElement("button");
-  button.textContent = "Copy to clipboard";
-  button.style.cssText =
-    "padding: 8px 16px; margin-top: 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;";
+  button.textContent = translateText("error_modal.copy_clipboard");
+  button.className = "copy-btn";
   button.addEventListener("click", () => {
     navigator.clipboard
       .writeText(content)
-      .then(() => (button.textContent = "Copied!"))
-      .catch(() => (button.textContent = "Failed to copy"));
+      .then(() => (button.textContent = translateText("error_modal.copied")))
+      .catch(
+        () => (button.textContent = translateText("error_modal.failed_copy")),
+      );
   });
 
   const closeButton = document.createElement("button");
   closeButton.textContent = "X";
-  closeButton.style.cssText =
-    "color: white;top: 0px;right: 0px;cursor: pointer;background: red;margin-right: 0px;position: fixed;width: 40px;";
+  closeButton.className = "close-btn";
   closeButton.addEventListener("click", () => {
     modal.style.display = "none";
   });
 
   // Add to modal
-  modal.style.cssText =
-    "position:fixed; padding:20px; background:white; border:1px solid black; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999;";
   modal.appendChild(pre);
   modal.appendChild(button);
-  modal.id = "error-modal";
   if (closable) {
     modal.appendChild(closeButton);
   }

@@ -50,7 +50,7 @@ export class TradeShipExecution implements Execution {
         return;
       }
       this.tradeShip = this.origOwner.buildUnit(UnitType.TradeShip, spawn, {
-        dstPort: this._dstPort,
+        targetUnit: this._dstPort,
         lastSetSafeFromPirates: ticks,
       });
 
