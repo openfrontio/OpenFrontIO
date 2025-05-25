@@ -47,7 +47,6 @@ export class StructureLayer implements Layer {
   private unitIcons: Map<string, ImageData> = new Map();
   private theme: Theme;
   private selectedStructureUnit: UnitView | null = null;
-  private transformHandler: TransformHandler;
 
   // Configuration for supported unit types only
   private readonly unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
@@ -86,7 +85,7 @@ export class StructureLayer implements Layer {
   constructor(
     private game: GameView,
     private eventBus: EventBus,
-    transformHandler: TransformHandler,
+    private transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
     this.loadIconData();
@@ -102,7 +101,6 @@ export class StructureLayer implements Layer {
       territoryRadius: 6.525,
       borderType: UnitBorderType.Square,
     });
-    this.transformHandler = transformHandler;
 
     window.addEventListener("structure-modal-closed", () => {
       this.selectedStructureUnit = null;
