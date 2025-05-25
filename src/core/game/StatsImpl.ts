@@ -52,7 +52,7 @@ export class StatsImpl implements Stats {
     return data;
   }
 
-  private _addAttack(player: Player, index: number, value: number) {
+  private _addAttack(player: Player, index: number, value: number | bigint) {
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
     if (p.attacks === undefined) p.attacks = [0n];
@@ -60,7 +60,7 @@ export class StatsImpl implements Stats {
     p.attacks[index] += BigInt(value);
   }
 
-  private _addBetrayal(player: Player, value: number) {
+  private _addBetrayal(player: Player, value: number | bigint) {
     const data = this._makePlayerStats(player);
     if (data === undefined) return;
     if (data.betrayals === undefined) {
@@ -74,7 +74,7 @@ export class StatsImpl implements Stats {
     player: Player,
     type: BoatUnit,
     index: number,
-    value: number,
+    value: number | bigint,
   ) {
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
@@ -88,7 +88,7 @@ export class StatsImpl implements Stats {
     player: Player,
     nukeType: NukeType,
     index: number,
-    value: number,
+    value: number | bigint,
   ): void {
     const type = unitTypeToBombUnit[nukeType];
     const p = this._makePlayerStats(player);
@@ -99,7 +99,7 @@ export class StatsImpl implements Stats {
     p.bombs[type][index] += BigInt(value);
   }
 
-  private _addGold(player: Player, index: number, value: number) {
+  private _addGold(player: Player, index: number, value: number | bigint) {
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
     if (p.gold === undefined) p.gold = [0n];
@@ -111,7 +111,7 @@ export class StatsImpl implements Stats {
     player: Player,
     otherUnitType: OtherUnitType,
     index: number,
-    value: number,
+    value: number | bigint,
   ) {
     const type = unitTypeToOtherUnit[otherUnitType];
     const p = this._makePlayerStats(player);
@@ -122,7 +122,11 @@ export class StatsImpl implements Stats {
     p.units[type][index] += BigInt(value);
   }
 
-  attack(player: Player, target: Player | TerraNullius, troops: number): void {
+  attack(
+    player: Player,
+    target: Player | TerraNullius,
+    troops: number | bigint,
+  ): void {
     this._addAttack(player, ATTACK_INDEX_SENT, troops);
     if (target.isPlayer()) {
       this._addAttack(target, ATTACK_INDEX_RECV, troops);
@@ -132,7 +136,7 @@ export class StatsImpl implements Stats {
   attackCancel(
     player: Player,
     target: Player | TerraNullius,
-    troops: number,
+    troops: number | bigint,
   ): void {
     this._addAttack(player, ATTACK_INDEX_CANCEL, troops);
     this._addAttack(player, ATTACK_INDEX_SENT, -troops);
@@ -149,13 +153,17 @@ export class StatsImpl implements Stats {
     this._addBoat(player, "trade", BOAT_INDEX_SENT, 1);
   }
 
-  boatArriveTrade(player: Player, target: Player, gold: number): void {
+  boatArriveTrade(player: Player, target: Player, gold: number | bigint): void {
     this._addBoat(player, "trade", BOAT_INDEX_ARRIVE, 1);
     this._addGold(player, GOLD_INDEX_TRADE, gold);
     this._addGold(target, GOLD_INDEX_TRADE, gold);
   }
 
-  boatCapturedTrade(player: Player, target: Player, gold: number): void {
+  boatCapturedTrade(
+    player: Player,
+    target: Player,
+    gold: number | bigint,
+  ): void {
     this._addBoat(player, "trade", BOAT_INDEX_CAPTURE, 1);
     this._addGold(player, GOLD_INDEX_STEAL, gold);
   }
@@ -167,7 +175,7 @@ export class StatsImpl implements Stats {
   boatSendTroops(
     player: Player,
     target: Player | TerraNullius,
-    troops: number,
+    troops: number | bigint,
   ): void {
     this._addBoat(player, "trans", BOAT_INDEX_SENT, 1);
   }
@@ -175,12 +183,16 @@ export class StatsImpl implements Stats {
   boatArriveTroops(
     player: Player,
     target: Player | TerraNullius,
-    troops: number,
+    troops: number | bigint,
   ): void {
     this._addBoat(player, "trans", BOAT_INDEX_ARRIVE, 1);
   }
 
-  boatDestroyTroops(player: Player, target: Player, troops: number): void {
+  boatDestroyTroops(
+    player: Player,
+    target: Player,
+    troops: number | bigint,
+  ): void {
     this._addBoat(player, "trans", BOAT_INDEX_DESTROY, 1);
   }
 
@@ -204,11 +216,11 @@ export class StatsImpl implements Stats {
     this._addBomb(player, type, BOMB_INDEX_INTERCEPT, 1);
   }
 
-  goldWork(player: Player, gold: number): void {
+  goldWork(player: Player, gold: number | bigint): void {
     this._addGold(player, GOLD_INDEX_WORK, gold);
   }
 
-  goldWar(player: Player, captured: Player, gold: number): void {
+  goldWar(player: Player, captured: Player, gold: number | bigint): void {
     this._addGold(player, GOLD_INDEX_WAR, gold);
   }
 

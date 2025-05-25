@@ -7,13 +7,17 @@ export interface Stats {
   stats(): AllPlayersStats;
 
   // Player attacks target
-  attack(player: Player, target: Player | TerraNullius, troops: number): void;
+  attack(
+    player: Player,
+    target: Player | TerraNullius,
+    troops: number | bigint,
+  ): void;
 
   // Player cancels attack on target
   attackCancel(
     player: Player,
     target: Player | TerraNullius,
-    troops: number,
+    troops: number | bigint,
   ): void;
 
   // Player betrays another player
@@ -23,10 +27,14 @@ export interface Stats {
   boatSendTrade(player: Player, target: Player): void;
 
   // Player's trade ship arrives at target, both players earn gold
-  boatArriveTrade(player: Player, target: Player, gold: number): void;
+  boatArriveTrade(player: Player, target: Player, gold: number | bigint): void;
 
   // Player's trade ship, captured from target, arrives. Player earns gold.
-  boatCapturedTrade(player: Player, target: Player, gold: number): void;
+  boatCapturedTrade(
+    player: Player,
+    target: Player,
+    gold: number | bigint,
+  ): void;
 
   // Player destroys target's trade ship
   boatDestroyTrade(player: Player, target: Player): void;
@@ -35,18 +43,22 @@ export interface Stats {
   boatSendTroops(
     player: Player,
     target: Player | TerraNullius,
-    troops: number,
+    troops: number | bigint,
   ): void;
 
   // Player's transport ship arrives at target with troops
   boatArriveTroops(
     player: Player,
     target: Player | TerraNullius,
-    troops: number,
+    troops: number | bigint,
   ): void;
 
   // Player destroys target's transport ship with troops
-  boatDestroyTroops(player: Player, target: Player, troops: number): void;
+  boatDestroyTroops(
+    player: Player,
+    target: Player,
+    troops: number | bigint,
+  ): void;
 
   // Player launches bomb at target
   bombLaunch(
@@ -62,10 +74,10 @@ export interface Stats {
   bombIntercept(player: Player, attacker: Player, type: NukeType): void;
 
   // Player earns gold from conquering tiles or trade ships from captured
-  goldWar(player: Player, captured: Player, gold: number): void;
+  goldWar(player: Player, captured: Player, gold: number | bigint): void;
 
   // Player earns gold from workers
-  goldWork(player: Player, gold: number): void;
+  goldWork(player: Player, gold: number | bigint): void;
 
   // Player builds a unit of type
   unitBuild(player: Player, type: OtherUnitType): void;
