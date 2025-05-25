@@ -46,6 +46,28 @@ describe("PlayerInfo", () => {
       expect(playerInfo.clan).toBe("ABCDE");
     });
 
+    test("should extract clan from name when format is [xxxxx]Name", () => {
+      const playerInfo = new PlayerInfo(
+        "fr",
+        "[abcde]PlayerName",
+        PlayerType.Human,
+        null,
+        "player_id",
+      );
+      expect(playerInfo.clan).toBe("abcde");
+    });
+
+    test("should extract clan from name when format is [XxXxX]Name", () => {
+      const playerInfo = new PlayerInfo(
+        "fr",
+        "[AbCdE]PlayerName",
+        PlayerType.Human,
+        null,
+        "player_id",
+      );
+      expect(playerInfo.clan).toBe("AbCdE");
+    });
+
     test("should return null when name doesn't start with [", () => {
       const playerInfo = new PlayerInfo(
         "fr",
@@ -79,10 +101,10 @@ describe("PlayerInfo", () => {
       expect(playerInfo.clan).toBeNull();
     });
 
-    test("should return null when clan tag contains non-uppercase letters", () => {
+    test("should return null when clan tag contains non alphanumeric characters", () => {
       const playerInfo = new PlayerInfo(
         "fr",
-        "[Abc]PlayerName",
+        "[A1c]PlayerName",
         PlayerType.Human,
         null,
         "player_id",
