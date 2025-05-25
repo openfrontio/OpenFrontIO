@@ -25,6 +25,7 @@ export class UnitInfoModal extends LitElement implements Layer {
   }
 
   private onOpenStructureModal = (event: Event) => {
+    if (!this.game) return;
     const customEvent = event as CustomEvent<{
       x: number;
       y: number;
