@@ -369,11 +369,13 @@ export class StructureLayer implements Layer {
     const clickedUnit = this.findStructureUnitAtCell(cell);
 
     if (clickedUnit) {
-      this.selectedStructureUnit =
-        this.selectedStructureUnit === clickedUnit ? null : clickedUnit;
+      const wasSelected = this.selectedStructureUnit === clickedUnit;
+      this.selectedStructureUnit = wasSelected ? null : clickedUnit;
       this.redraw();
-      // Dispatch custom event to open modal if a structure unit is selected
-      if (this.selectedStructureUnit) {
+
+      if (wasSelected) {
+        window.dispatchEvent(new CustomEvent("close-structure-modal"));
+      } else if (this.selectedStructureUnit) {
         const screenPos = this.transformHandler.worldToScreenCoordinates(cell);
         const unitTile = this.selectedStructureUnit.tile();
         const event = new CustomEvent("open-structure-modal", {
@@ -389,6 +391,10 @@ export class StructureLayer implements Layer {
         });
         window.dispatchEvent(event);
       }
+    } else {
+      this.selectedStructureUnit = null;
+      this.redraw();
+      window.dispatchEvent(new CustomEvent("close-structure-modal"));
     }
   }
 }

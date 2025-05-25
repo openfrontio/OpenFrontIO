@@ -57,19 +57,18 @@ export class UnitInfoModal extends LitElement implements Layer {
     this.open = this.unit !== null;
   };
 
-  private onDocumentClick = (event: MouseEvent) => {
-    const path = event.composedPath();
-    if (!path.includes(this)) {
-      this.open = false;
-      this.unit = null;
-      window.dispatchEvent(new CustomEvent("structure-modal-closed"));
-    }
+  private onCloseStructureModal = () => {
+    this.open = false;
+    this.unit = null;
   };
 
   connectedCallback() {
     super.connectedCallback();
     window.addEventListener("open-structure-modal", this.onOpenStructureModal);
-    document.addEventListener("mousedown", this.onDocumentClick);
+    window.addEventListener(
+      "close-structure-modal",
+      this.onCloseStructureModal,
+    );
   }
 
   disconnectedCallback() {
@@ -78,7 +77,10 @@ export class UnitInfoModal extends LitElement implements Layer {
       "open-structure-modal",
       this.onOpenStructureModal,
     );
-    document.removeEventListener("mousedown", this.onDocumentClick);
+    window.removeEventListener(
+      "close-structure-modal",
+      this.onCloseStructureModal,
+    );
   }
 
   static styles = css`
