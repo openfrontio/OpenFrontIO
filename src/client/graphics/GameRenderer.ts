@@ -187,7 +187,7 @@ export function createRenderer(
     new UnitLayer(game, eventBus, clientID, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, clientID, transformHandler),
-    new NameLayer(game, transformHandler, clientID),
+    new NameLayer(game, transformHandler),
     eventsDisplay,
     chatDisplay,
     buildMenu,

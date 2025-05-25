@@ -8,7 +8,6 @@ import shieldIcon from "../../../../resources/images/ShieldIconBlack.svg";
 import targetIcon from "../../../../resources/images/TargetIcon.svg";
 import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
 import { PseudoRandom } from "../../../core/PseudoRandom";
-import { ClientID } from "../../../core/Schemas";
 import { Theme } from "../../../core/configuration/Config";
 import { AllPlayers, Cell, nukeTypes, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
@@ -47,14 +46,12 @@ export class NameLayer implements Layer {
   private nukeRedIconImage: HTMLImageElement;
   private shieldIconImage: HTMLImageElement;
   private container: HTMLDivElement;
-  private myPlayer: PlayerView | null = null;
   private firstPlace: PlayerView | null = null;
   private theme: Theme = this.game.config().theme();
 
   constructor(
     private game: GameView,
     private transformHandler: TransformHandler,
-    private clientID: ClientID,
   ) {
     this.traitorIconImage = new Image();
     this.traitorIconImage.src = traitorIcon;
@@ -314,7 +311,7 @@ export class NameLayer implements Layer {
       ".player-icons",
     ) as HTMLDivElement;
     const iconSize = Math.min(render.fontSize * 1.5, 48);
-    const myPlayer = this.getPlayer();
+    const myPlayer = this.game.myPlayer();
 
     // Crown icon
     const existingCrown = iconsDiv.querySelector('[data-icon="crown"]');
@@ -519,15 +516,5 @@ export class NameLayer implements Layer {
       icon.style.transform = "translateY(-50%)";
     }
     return icon;
-  }
-
-  private getPlayer(): PlayerView | null {
-    if (this.myPlayer !== null) {
-      return this.myPlayer;
-    }
-    this.myPlayer =
-      this.game.playerViews().find((p) => p.clientID() === this.clientID) ??
-      null;
-    return this.myPlayer;
   }
 }
