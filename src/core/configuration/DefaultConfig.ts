@@ -263,13 +263,13 @@ export class DefaultConfig implements Config {
     return this._gameConfig.bots;
   }
   instantBuild(): boolean {
-    return this._gameConfig.instantBuild;
+    return this._gameConfig.instantBuild ?? false;
   }
   infiniteGold(): boolean {
-    return this._gameConfig.infiniteGold;
+    return this._gameConfig.infiniteGold ?? false;
   }
   infiniteTroops(): boolean {
-    return this._gameConfig.infiniteTroops;
+    return this._gameConfig.infiniteTroops ?? false;
   }
   tradeShipGold(dist: number): Gold {
     return 10000 + 150 * Math.pow(dist, 1.1);

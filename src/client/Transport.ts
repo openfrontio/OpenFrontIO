@@ -398,7 +398,7 @@ export class Transport {
       type: "allianceRequestReply",
       clientID: this.lobbyConfig.clientID,
       requestor: event.requestor.id(),
-      accept: event.accepted,
+      accept: event.accepted ? true : undefined,
     });
   }
 
