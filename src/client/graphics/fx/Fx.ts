@@ -7,6 +7,9 @@ export enum FxType {
   MiniSmoke = "MiniSmoke",
   MiniBigSmoke = "MiniBigSmoke",
   MiniSmokeAndFire = "MiniSmokeAndFire",
+  MiniExplosion = "MiniExplosion",
+  UnitExplosion = "UnitExplosion",
+  SinkingShip = "SinkingShip",
   Nuke = "Nuke",
   SAMExplosion = "SAMExplosion",
 }
