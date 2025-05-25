@@ -286,8 +286,8 @@ export class GameImpl implements Game {
     this.updates = createGameUpdatesMap();
     this.execs.forEach((e) => {
       if (
-        e.isActive() &&
-        (!this.inSpawnPhase() || e.activeDuringSpawnPhase())
+        (!this.inSpawnPhase() || e.activeDuringSpawnPhase()) &&
+        e.isActive()
       ) {
         e.tick(this._ticks);
       }
@@ -594,8 +594,10 @@ export class GameImpl implements Game {
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
     this.addUpdate({
       type: GameUpdateType.Win,
-      winner: typeof winner === "string" ? winner : winner.smallID(),
-      winnerType: typeof winner === "string" ? "team" : "player",
+      winner:
+        typeof winner === "string"
+          ? ["team", winner]
+          : ["player", winner.smallID()],
       allPlayersStats,
     });
   }

@@ -1,4 +1,5 @@
 import {
+  Cell,
   PlayerActions,
   PlayerBorderTiles,
   PlayerID,
@@ -185,6 +186,41 @@ export class WorkerClient {
         playerID: playerID,
         x: x,
         y: y,
+      });
+    });
+  }
+
+  attackAveragePosition(
+    playerID: number,
+    attackID: string,
+  ): Promise<Cell | null> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (
+          message.type === "attack_average_position_result" &&
+          message.x !== undefined &&
+          message.y !== undefined
+        ) {
+          if (message.x === null || message.y === null) {
+            resolve(null);
+          } else {
+            resolve(new Cell(message.x, message.y));
+          }
+        }
+      });
+
+      this.worker.postMessage({
+        type: "attack_average_position",
+        id: messageId,
+        playerID: playerID,
+        attackID: attackID,
       });
     });
   }

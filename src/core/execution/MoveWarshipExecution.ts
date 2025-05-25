@@ -24,7 +24,8 @@ export class MoveWarshipExecution implements Execution {
       console.log("MoveWarshipExecution: warship is already dead");
       return;
     }
-    warship.setTargetTile(this.position);
+    warship.setPatrolTile(this.position);
+    warship.setTargetTile(undefined);
     this.active = false;
   }
 

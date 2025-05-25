@@ -2,9 +2,8 @@ import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import { Team } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView, PlayerView } from "../../../core/game/GameView";
+import { GameView } from "../../../core/game/GameView";
 import { SendWinnerEvent } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -185,26 +184,23 @@ export class WinModal extends LitElement implements Layer {
     const updates = this.game.updatesSinceLastTick();
     const winUpdates = updates !== null ? updates[GameUpdateType.Win] : [];
     winUpdates.forEach((wu) => {
-      if (wu.winnerType === "team") {
-        this.eventBus.emit(
-          new SendWinnerEvent(wu.winner as Team, wu.allPlayersStats, "team"),
-        );
-        if (wu.winner === this.game.myPlayer()?.team()) {
+      if (wu.winner[0] === "team") {
+        this.eventBus.emit(new SendWinnerEvent(wu.winner, wu.allPlayersStats));
+        if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
         } else {
           this._title = translateText("win_modal.other_team", {
-            team: wu.winner,
+            team: wu.winner[1],
           });
         }
         this.show();
       } else {
-        const winner = this.game.playerBySmallID(
-          wu.winner as number,
-        ) as PlayerView;
+        const winner = this.game.playerBySmallID(wu.winner[1]);
+        if (!winner.isPlayer()) return;
         const winnerClient = winner.clientID();
         if (winnerClient !== null) {
           this.eventBus.emit(
-            new SendWinnerEvent(winnerClient, wu.allPlayersStats, "player"),
+            new SendWinnerEvent(["player", winnerClient], wu.allPlayersStats),
           );
         }
         if (
