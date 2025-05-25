@@ -1,4 +1,10 @@
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import {
+  Game,
+  Player,
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "../src/core/game/Game";
 import { Stats } from "../src/core/game/Stats";
 import { StatsImpl } from "../src/core/game/StatsImpl";
 import { setup } from "./util/Setup";
@@ -137,6 +143,81 @@ describe("Stats", () => {
     expect(stats.stats()).toStrictEqual({
       client1: {
         boats: { trans: [0n, 0n, 0n, 1n] },
+      },
+    });
+  });
+
+  test("bombLaunch", () => {
+    stats.bombLaunch(player1, player2, UnitType.AtomBomb);
+    expect(stats.stats()).toStrictEqual({
+      client1: { bombs: { abomb: [1n] } },
+    });
+  });
+
+  test("bombLand", () => {
+    stats.bombLand(player1, player2, UnitType.HydrogenBomb);
+    expect(stats.stats()).toStrictEqual({
+      client1: { bombs: { hbomb: [0n, 1n] } },
+    });
+  });
+
+  test("bombIntercept", () => {
+    stats.bombIntercept(player1, player2, UnitType.MIRVWarhead);
+    expect(stats.stats()).toStrictEqual({
+      client1: { bombs: { mirvw: [0n, 0n, 1n] } },
+    });
+  });
+
+  test("goldWar", () => {
+    stats.goldWar(player1, player2, 1);
+    expect(stats.stats()).toStrictEqual({
+      client1: { gold: [0n, 1n] },
+    });
+  });
+
+  test("goldWork", () => {
+    stats.goldWork(player1, 1);
+    expect(stats.stats()).toStrictEqual({
+      client1: { gold: [1n] },
+    });
+  });
+
+  test("unitBuild", () => {
+    stats.unitBuild(player1, UnitType.City);
+    expect(stats.stats()).toStrictEqual({
+      client1: { units: { city: [1n] } },
+    });
+  });
+
+  test("unitCapture", () => {
+    stats.unitCapture(player1, UnitType.DefensePost);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        units: {
+          defp: [0n, 0n, 1n],
+        },
+      },
+    });
+  });
+
+  test("unitDestroy", () => {
+    stats.unitDestroy(player1, UnitType.MissileSilo);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        units: {
+          silo: [0n, 1n],
+        },
+      },
+    });
+  });
+
+  test("unitLose", () => {
+    stats.unitLose(player1, UnitType.Port);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        units: {
+          port: [0n, 0n, 0n, 1n],
+        },
       },
     });
   });

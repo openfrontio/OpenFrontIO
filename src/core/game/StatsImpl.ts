@@ -118,7 +118,7 @@ export class StatsImpl implements Stats {
     if (p === undefined) return;
     if (p.units === undefined) p.units = { [type]: [0n] };
     if (p.units[type] === undefined) p.units[type] = [0n];
-    while (p.units[type].length < index) p.units[type].push(0n);
+    while (p.units[type].length <= index) p.units[type].push(0n);
     p.units[type][index] += BigInt(value);
   }
 
