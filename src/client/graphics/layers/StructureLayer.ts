@@ -24,6 +24,7 @@ import { GameView, UnitView } from "../../../core/game/GameView";
 
 const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
 const reloadingColor = colord({ r: 255, g: 0, b: 0 });
+const selectedUnitColor = colord({ r: 0, g: 255, b: 255 });
 
 type DistanceFunction = typeof euclDistFN;
 
@@ -276,7 +277,7 @@ export class StructureLayer implements Layer {
     }
 
     if (this.selectedStructureUnit === unit) {
-      borderColor = colord("#00ffff"); // Cyan for selected unit
+      borderColor = selectedUnitColor;
     }
 
     this.drawBorder(unit, borderColor, config, drawFunction);
