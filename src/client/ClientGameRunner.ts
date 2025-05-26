@@ -1,3 +1,4 @@
+import { translateText } from "../client/Utils";
 import { consolex, initRemoteSender } from "../core/Consolex";
 import { EventBus } from "../core/EventBus";
 import {
@@ -308,7 +309,7 @@ export class ClientGameRunner {
           this.lobby.gameStartInfo.gameID,
           this.lobby.clientID,
           true,
-          "You are desynced from other players. What you see might differ from other players.",
+          translateText("error_modal.desync_notice"),
         );
       }
       if (message.type === "turn") {
@@ -497,7 +498,7 @@ function showErrorModal(
   gameID: GameID,
   clientID: ClientID,
   closable = false,
-  heading = "Game crashed!",
+  heading = translateText("error_modal.crashed"),
 ) {
   const errorText = `Error: ${errMsg}\nStack: ${stack}`;
 
@@ -506,22 +507,25 @@ function showErrorModal(
   }
 
   const modal = document.createElement("div");
+
   modal.id = "error-modal";
 
-  const content = `${heading}\n game id: ${gameID}, client id: ${clientID}\nPlease paste the following in your bug report in Discord:\n${errorText}`;
+  const content = `${translateText(heading)}\n game id: ${gameID}, client id: ${clientID}\n${translateText("error_modal.paste_discord")}\n${errorText}`;
 
   // Create elements
   const pre = document.createElement("pre");
   pre.textContent = content;
 
   const button = document.createElement("button");
-  button.textContent = "Copy to clipboard";
+  button.textContent = translateText("error_modal.copy_clipboard");
   button.className = "copy-btn";
   button.addEventListener("click", () => {
     navigator.clipboard
       .writeText(content)
-      .then(() => (button.textContent = "Copied!"))
-      .catch(() => (button.textContent = "Failed to copy"));
+      .then(() => (button.textContent = translateText("error_modal.copied")))
+      .catch(
+        () => (button.textContent = translateText("error_modal.failed_copy")),
+      );
   });
 
   const closeButton = document.createElement("button");
