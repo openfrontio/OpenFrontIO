@@ -1,7 +1,7 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { GameMode } from "../../../core/game/Game";
+import { GameMode, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
 import { renderNumber } from "../../Utils";
@@ -12,6 +12,12 @@ interface TeamEntry {
   totalScoreStr: string;
   totalGold: string;
   totalTroops: string;
+
+  totalSams: string;
+  totalLaunchers: string;
+  totalWarShips: string;
+  totalCities: string;
+
   players: PlayerView[];
 }
 
@@ -26,6 +32,7 @@ export class TeamStats extends LitElement implements Layer {
   @state()
   private _teamStatsHidden = true;
   private _shownOnInit = false;
+  private showUnits = false;
 
   init() {}
 
@@ -48,6 +55,7 @@ export class TeamStats extends LitElement implements Layer {
   }
 
   private updateTeamStats() {
+    if (this.game === null) throw new Error("Not initialized");
     const players = this.game.playerViews();
 
     const grouped: Record<number, PlayerView[]> = {};
@@ -64,12 +72,21 @@ export class TeamStats extends LitElement implements Layer {
         let totalTroops = 0;
         let totalScoreSort = 0;
 
+        let totalSams = 0;
+        let totalLaunchers = 0;
+        let totalWarShips = 0;
+        let totalCities = 0;
+
         for (const p of teamPlayers) {
-          totalGold += p.gold();
           if (p.isAlive()) {
             totalTroops += p.troops();
             totalGold += p.gold();
             totalScoreSort += p.numTilesOwned();
+
+            totalLaunchers += p.units(UnitType.MissileSilo).length;
+            totalSams += p.units(UnitType.SAMLauncher).length;
+            totalWarShips += p.units(UnitType.Warship).length;
+            totalCities += p.units(UnitType.City).length;
           }
         }
 
@@ -82,6 +99,11 @@ export class TeamStats extends LitElement implements Layer {
           totalGold: renderNumber(totalGold),
           totalTroops: renderNumber(totalTroops / 10),
           players: teamPlayers,
+
+          totalLaunchers: renderNumber(totalLaunchers),
+          totalSams: renderNumber(totalSams),
+          totalWarShips: renderNumber(totalWarShips),
+          totalCities: renderNumber(totalCities),
         };
       })
       .sort((a, b) => b.totalScoreSort - a.totalScoreSort);
@@ -108,7 +130,7 @@ export class TeamStats extends LitElement implements Layer {
       padding-top: 0px;
       box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
       border-radius: 10px;
-      max-width: 250px;
+      max-width: 350px;
       max-height: 30vh;
       overflow-y: auto;
       width: 400px;
@@ -178,26 +200,56 @@ export class TeamStats extends LitElement implements Layer {
         >
           Hide
         </button>
+        <button
+          class="teamStats-close-button"
+          @click=${() => {
+            this.showUnits = !this.showUnits;
+            this.updateTeamStats();
+          }}
+        >
+          ${this.showUnits ? "Show Control" : "Show Units / Buildings"}
+        </button>
         <table>
           <thead>
             <tr>
               <th>Team</th>
-              <th>Owned</th>
-              <th>Gold</th>
-              <th>Troops</th>
+              ${this.showUnits
+                ? html`
+                    <th>Launchers</th>
+                    <th>SAMS</th>
+                    <th>Warships</th>
+                    <th>Cities</th>
+                  `
+                : html`
+                    <th>Owned</th>
+                    <th>Gold</th>
+                    <th>Troops</th>
+                  `}
             </tr>
           </thead>
           <tbody>
-            ${this.teams.map(
-              (team) => html`
-                <tr class="">
-                  <td>${team.teamName}</td>
-                  <td>${team.totalScoreStr}</td>
-                  <td>${team.totalGold}</td>
-                  <td>${team.totalTroops}</td>
-                </tr>
-              `,
-            )}
+            ${this.showUnits
+              ? this.teams.map(
+                  (team) => html`
+                    <tr>
+                      <td>${team.teamName}</td>
+                      <td>${team.totalLaunchers}</td>
+                      <td>${team.totalSams}</td>
+                      <td>${team.totalWarShips}</td>
+                      <td>${team.totalCities}</td>
+                    </tr>
+                  `,
+                )
+              : this.teams.map(
+                  (team) => html`
+                    <tr>
+                      <td>${team.teamName}</td>
+                      <td>${team.totalScoreStr}</td>
+                      <td>${team.totalGold}</td>
+                      <td>${team.totalTroops}</td>
+                    </tr>
+                  `,
+                )}
           </tbody>
         </table>
       </div>
@@ -209,11 +261,6 @@ export class TeamStats extends LitElement implements Layer {
   }
 
   hideTeamStats() {
-    this._teamStatsHidden = true;
-    this.requestUpdate();
-  }
-
-  showTeamStats() {
     this._teamStatsHidden = true;
     this.requestUpdate();
   }
