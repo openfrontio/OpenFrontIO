@@ -62,9 +62,6 @@ export class UnitInfoModal extends LitElement implements Layer {
   public onCloseStructureModal = () => {
     this.open = false;
     this.unit = null;
-    if (this.structureLayer) {
-      this.structureLayer.unSelectStructureUnit();
-    }
   };
 
   connectedCallback() {
@@ -148,7 +145,12 @@ export class UnitInfoModal extends LitElement implements Layer {
           : ""}
         <div style="margin-top: 14px; display: flex; justify-content: center;">
           <button
-            @click=${this.onCloseStructureModal}
+            @click=${() => {
+              this.onCloseStructureModal();
+              if (this.structureLayer) {
+                this.structureLayer.unSelectStructureUnit();
+              }
+            }}
             class="close-button"
             title="Close"
             style="width: 100px; height: 32px;"
