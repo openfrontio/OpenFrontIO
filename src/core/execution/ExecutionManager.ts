@@ -15,6 +15,7 @@ import { DonateTroopsExecution } from "./DonateTroopExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { FakeHumanExecution } from "./FakeHumanExecution";
+import { MarkAFKExecution } from "./MarkAFKExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NoOpExecution } from "./NoOpExecution";
 import { QuickChatExecution } from "./QuickChatExecution";
@@ -120,6 +121,8 @@ export class Executor {
           intent.quickChatKey,
           intent.variables ?? {},
         );
+      case "mark_afk":
+        return new MarkAFKExecution(playerID, intent.isAFK);
       default:
         throw new Error(`intent type ${intent} not found`);
     }

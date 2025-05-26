@@ -200,7 +200,11 @@ export class NameLayer implements Layer {
 
     const nameSpan = document.createElement("span");
     nameSpan.className = "player-name-span";
-    nameSpan.innerHTML = player.name();
+    if (player.isAFK()) {
+      nameSpan.innerHTML = `${player.name()} (AFK)`;
+    } else {
+      nameSpan.innerHTML = `${player.name()} (OK)`;
+    }
     nameDiv.appendChild(nameSpan);
     element.appendChild(nameDiv);
 

@@ -439,6 +439,9 @@ export interface Player {
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
   lastTileChange(): Tick;
 
+  isAFK(): boolean;
+  markAFK(isAFK: boolean): void;
+
   hasSpawned(): boolean;
   setHasSpawned(hasSpawned: boolean): void;
 

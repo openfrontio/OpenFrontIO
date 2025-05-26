@@ -35,6 +35,8 @@ export class GameServer {
 
   private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
 
+  private disconnectionTimeout = 1 * 60 * 1000; // 1 minute
+
   private turns: Turn[] = [];
   private intents: Intent[] = [];
   public activeClients: Client[] = [];
@@ -531,6 +533,19 @@ export class GameServer {
       this.log.warn(`cannot kick client, not found in game`, {
         clientID,
       });
+    }
+  }
+
+  private checkAFKStatus() {
+    const now = Date.now();
+    for (const [clientID, client] of this.allClients) {
+      if (now - client.lastPing > this.disconnectionTimeout) {
+        this.addIntent({
+          type: "mark_afk",
+          clientID: client.clientID,
+          isAFK: true,
+        });
+      }
     }
   }
 

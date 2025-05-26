@@ -292,6 +292,9 @@ export class PlayerView {
   hasSpawned(): boolean {
     return this.data.hasSpawned;
   }
+  isAFK(): boolean {
+    return this.data.isAFK;
+  }
 }
 
 export class GameView implements GameMap {
