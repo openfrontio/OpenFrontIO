@@ -215,7 +215,8 @@ export class TransportShipExecution implements Execution {
         break;
       case PathFindResultType.PathNotFound:
         // TODO: add to poisoned port list
-        consolex.warn(`path not found tot dst`);
+        consolex.warn(`path not found to dst`);
+        this.attacker.addTroops(this.troops);
         this.boat.delete(false);
         this.active = false;
         return;
