@@ -25,16 +25,20 @@ export class UnitInfoModal extends LitElement implements Layer {
     }
   }
 
-  private onOpenStructureModal = (event: Event) => {
+  public onOpenStructureModal = ({
+    unit,
+    x,
+    y,
+    tileX,
+    tileY,
+  }: {
+    unit: UnitView;
+    x: number;
+    y: number;
+    tileX: number;
+    tileY: number;
+  }) => {
     if (!this.game) return;
-    const customEvent = event as CustomEvent<{
-      x: number;
-      y: number;
-      unit: UnitView;
-      tileX: number;
-      tileY: number;
-    }>;
-    const { x, y, tileX, tileY } = customEvent.detail;
     this.x = x;
     this.y = y;
     const targetRef = this.game.ref(tileX, tileY);
@@ -53,30 +57,17 @@ export class UnitInfoModal extends LitElement implements Layer {
     this.open = this.unit !== null;
   };
 
-  private onCloseStructureModal = () => {
+  public onCloseStructureModal = () => {
     this.open = false;
     this.unit = null;
   };
 
   connectedCallback() {
     super.connectedCallback();
-    window.addEventListener("open-structure-modal", this.onOpenStructureModal);
-    window.addEventListener(
-      "close-structure-modal",
-      this.onCloseStructureModal,
-    );
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    window.removeEventListener(
-      "open-structure-modal",
-      this.onOpenStructureModal,
-    );
-    window.removeEventListener(
-      "close-structure-modal",
-      this.onCloseStructureModal,
-    );
   }
 
   static styles = css`

@@ -4,6 +4,7 @@ import { EventBus } from "../../../core/EventBus";
 import { MouseUpEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+import { UnitInfoModal } from "./UnitInfoModal";
 
 import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
 import shieldIcon from "../../../../resources/images/buildings/fortAlt2.png";
@@ -88,6 +89,7 @@ export class StructureLayer implements Layer {
     private game: GameView,
     private eventBus: EventBus,
     private transformHandler: TransformHandler,
+    private unitInfoModal: UnitInfoModal,
   ) {
     this.theme = game.config().theme();
     this.loadIconData();
@@ -363,7 +365,7 @@ export class StructureLayer implements Layer {
         if (this.previouslySelected) {
           this.handleUnitRendering(this.previouslySelected);
         }
-        window.dispatchEvent(new CustomEvent("close-structure-modal"));
+        this.unitInfoModal.onCloseStructureModal();
       } else {
         this.selectedStructureUnit = clickedUnit;
         if (
@@ -376,25 +378,20 @@ export class StructureLayer implements Layer {
 
         const screenPos = this.transformHandler.worldToScreenCoordinates(cell);
         const unitTile = clickedUnit.tile();
-        const event = new CustomEvent("open-structure-modal", {
-          detail: {
-            unit: clickedUnit,
-            x: screenPos.x,
-            y: screenPos.y,
-            tileX: this.game.x(unitTile),
-            tileY: this.game.y(unitTile),
-          },
-          bubbles: true,
-          composed: true,
+        this.unitInfoModal.onOpenStructureModal({
+          unit: clickedUnit,
+          x: screenPos.x,
+          y: screenPos.y,
+          tileX: this.game.x(unitTile),
+          tileY: this.game.y(unitTile),
         });
-        window.dispatchEvent(event);
       }
     } else {
       this.selectedStructureUnit = null;
       if (this.previouslySelected) {
         this.handleUnitRendering(this.previouslySelected);
       }
-      window.dispatchEvent(new CustomEvent("close-structure-modal"));
+      this.unitInfoModal.onCloseStructureModal();
     }
   }
 }
