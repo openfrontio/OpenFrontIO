@@ -89,8 +89,14 @@ export class StructureLayer implements Layer {
     private game: GameView,
     private eventBus: EventBus,
     private transformHandler: TransformHandler,
-    private unitInfoModal: UnitInfoModal,
+    private unitInfoModal: UnitInfoModal | null,
   ) {
+    if (!unitInfoModal) {
+      throw new Error(
+        "UnitInfoModal instance must be provided to StructureLayer.",
+      );
+    }
+    this.unitInfoModal = unitInfoModal;
     this.theme = game.config().theme();
     this.loadIconData();
     this.loadIcon("reloadingSam", {
@@ -365,7 +371,7 @@ export class StructureLayer implements Layer {
         if (this.previouslySelected) {
           this.handleUnitRendering(this.previouslySelected);
         }
-        this.unitInfoModal.onCloseStructureModal();
+        this.unitInfoModal?.onCloseStructureModal();
       } else {
         this.selectedStructureUnit = clickedUnit;
         if (
@@ -378,7 +384,7 @@ export class StructureLayer implements Layer {
 
         const screenPos = this.transformHandler.worldToScreenCoordinates(cell);
         const unitTile = clickedUnit.tile();
-        this.unitInfoModal.onOpenStructureModal({
+        this.unitInfoModal?.onOpenStructureModal({
           unit: clickedUnit,
           x: screenPos.x,
           y: screenPos.y,
@@ -391,7 +397,7 @@ export class StructureLayer implements Layer {
       if (this.previouslySelected) {
         this.handleUnitRendering(this.previouslySelected);
       }
-      this.unitInfoModal.onCloseStructureModal();
+      this.unitInfoModal?.onCloseStructureModal();
     }
   }
 
