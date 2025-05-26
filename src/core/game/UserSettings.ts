@@ -39,6 +39,10 @@ export class UserSettings {
     this.get("settings.focusLocked", true);
   }
 
+  soundEnabled() {
+    return this.get("settings.soundEnabled", true);
+  }
+
   toggleLeftClickOpenMenu() {
     this.set("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
   }
@@ -66,5 +70,9 @@ export class UserSettings {
     } else {
       document.documentElement.classList.remove("dark");
     }
+  }
+
+  toggleSound() {
+    this.set("settings.soundEnabled", !this.soundEnabled());
   }
 }

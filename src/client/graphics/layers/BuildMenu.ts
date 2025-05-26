@@ -15,6 +15,7 @@ import { EventBus } from "../../../core/EventBus";
 import { Cell, PlayerActions, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
+import { SoundManager } from "../../../core/SoundManager";
 import { BuildUnitIntentEvent } from "../../Transport";
 import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
@@ -100,6 +101,7 @@ const buildTable: BuildItemDisplay[][] = [
 export class BuildMenu extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
+  public soundManager: SoundManager;
   private clickedTile: TileRef;
   private playerActions: PlayerActions | null;
   private filteredBuildTable: BuildItemDisplay[][] = buildTable;
@@ -333,6 +335,7 @@ export class BuildMenu extends LitElement implements Layer {
   }
 
   public onBuildSelected = (item: BuildItemDisplay) => {
+    this.soundManager.playSound("click");
     this.eventBus.emit(
       new BuildUnitIntentEvent(
         item.unitType,

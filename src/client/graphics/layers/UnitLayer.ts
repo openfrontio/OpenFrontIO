@@ -1,6 +1,7 @@
 import { colord, Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
 import { ClientID } from "../../../core/Schemas";
+import { SoundManager } from "../../../core/SoundManager";
 import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -35,6 +36,7 @@ export class UnitLayer implements Layer {
   private unitTrailContext: CanvasRenderingContext2D;
 
   private unitToTrail = new Map<UnitView, TileRef[]>();
+  private nukeUnits = new Set<UnitView>();
 
   private theme: Theme;
 
@@ -57,6 +59,7 @@ export class UnitLayer implements Layer {
     private eventBus: EventBus,
     private clientID: ClientID,
     transformHandler: TransformHandler,
+    private soundManager: SoundManager,
   ) {
     this.theme = game.config().theme();
     this.transformHandler = transformHandler;
@@ -389,6 +392,21 @@ export class UnitLayer implements Layer {
 
     if (!this.unitToTrail.has(unit)) {
       this.unitToTrail.set(unit, []);
+      if (!this.nukeUnits.has(unit)) {
+        this.nukeUnits.add(unit);
+
+        switch (unit.type()) {
+          case UnitType.MIRV:
+            this.soundManager.playSound("alarm");
+            this.soundManager.playSound("prep");
+            break;
+          case UnitType.AtomBomb:
+            this.soundManager.playSound("atomlaunch");
+          case UnitType.HydrogenBomb:
+            this.soundManager.playSound("hydrolaunch");
+            break;
+        }
+      }
     }
 
     let newTrailSize = 1;
@@ -421,7 +439,16 @@ export class UnitLayer implements Layer {
     );
     this.drawSprite(unit);
     if (!unit.isActive()) {
+      switch (unit.type()) {
+        case UnitType.AtomBomb:
+          this.soundManager.playSound("atombomb");
+          break;
+        case UnitType.HydrogenBomb:
+          this.soundManager.playSound("hbomb");
+          break;
+      }
       this.clearTrail(unit);
+      this.nukeUnits.delete(unit);
     }
   }
 
@@ -439,6 +466,8 @@ export class UnitLayer implements Layer {
         this.theme.borderColor(unit.owner()),
         255,
       );
+    } else {
+      this.soundManager.playSound("mirv");
     }
   }
 

@@ -4,6 +4,7 @@ import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { GameView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
+import { SoundManager } from "../../../core/SoundManager";
 import { AttackRatioEvent } from "../../InputHandler";
 import { SendSetTargetTroopRatioEvent } from "../../Transport";
 import { renderNumber, renderTroops } from "../../Utils";
@@ -16,6 +17,7 @@ export class ControlPanel extends LitElement implements Layer {
   public clientID: ClientID;
   public eventBus: EventBus;
   public uiState: UIState;
+  public soundManager: SoundManager;
 
   @state()
   private attackRatio: number = 0.2;
@@ -261,6 +263,7 @@ export class ControlPanel extends LitElement implements Layer {
               max="100"
               .value=${(this.targetTroopRatio * 100).toString()}
               @input=${(e: Event) => {
+                this.soundManager.playSound("click"); // Play sound on slider input
                 this.targetTroopRatio =
                   parseInt((e.target as HTMLInputElement).value) / 100;
                 this.onTroopChange(this.targetTroopRatio);
@@ -296,6 +299,7 @@ export class ControlPanel extends LitElement implements Layer {
               max="100"
               .value=${(this.attackRatio * 100).toString()}
               @input=${(e: Event) => {
+                this.soundManager.playSound("click"); // Play sound on slider input
                 this.attackRatio =
                   parseInt((e.target as HTMLInputElement).value) / 100;
                 this.onAttackRatioChange(this.attackRatio);
