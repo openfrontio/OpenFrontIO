@@ -135,7 +135,7 @@ export const getColoredSprite = (
   }
 
   const sprite = getSpriteForUnit(unit.type());
-  if (!sprite) {
+  if (sprite === null) {
     throw new Error(`Failed to load sprite for ${unit.type()}`);
   }
 
