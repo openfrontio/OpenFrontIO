@@ -6,6 +6,8 @@ import { generateID } from "../core/Util";
 
 export class Client {
   public lastPing: number;
+  public lastAction: number;
+  public isAFK: boolean = false;
 
   public hashes: Map<Tick, number> = new Map();
 

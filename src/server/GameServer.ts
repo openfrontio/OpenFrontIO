@@ -36,6 +36,8 @@ export class GameServer {
   private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
 
   private disconnectionTimeout = 1 * 60 * 1000; // 1 minute
+  private inactivityTimeout = 3 * 60 * 1000; // 3 minute
+  private lastAction: Map<ClientID, Date> = new Map();
 
   private turns: Turn[] = [];
   private intents: Intent[] = [];
@@ -166,6 +168,12 @@ export class GameServer {
         });
         return;
       }
+
+      // Remove AFK status if reconnected after the timeout
+      if (existing.isAFK) {
+        this.markClientAFK(existing.clientID, false);
+      }
+
       existing.ws.removeAllListeners("message");
       this.activeClients = this.activeClients.filter((c) => c !== existing);
     }
@@ -193,6 +201,10 @@ export class GameServer {
               );
               return;
             }
+            if (client.isAFK) {
+              this.markClientAFK(client.clientID, false);
+            }
+            client.lastAction = Date.now();
             this.addIntent(clientMsg.intent);
           }
           if (clientMsg.type === "ping") {
@@ -356,6 +368,7 @@ export class GameServer {
     this.intents = [];
 
     this.handleSynchronization();
+    this.checkAFKStatus();
 
     let msg = "";
     try {
@@ -539,14 +552,23 @@ export class GameServer {
   private checkAFKStatus() {
     const now = Date.now();
     for (const [clientID, client] of this.allClients) {
-      if (now - client.lastPing > this.disconnectionTimeout) {
-        this.addIntent({
-          type: "mark_afk",
-          clientID: client.clientID,
-          isAFK: true,
-        });
+      if (
+        client.isAFK === false &&
+        (now - client.lastPing > this.disconnectionTimeout ||
+          now - client.lastAction > this.inactivityTimeout)
+      ) {
+        client.isAFK = true;
+        this.markClientAFK(clientID, true);
       }
     }
+  }
+
+  private markClientAFK(clientID: string, isAFK: boolean) {
+    this.addIntent({
+      type: "mark_afk",
+      clientID: clientID,
+      isAFK: isAFK,
+    });
   }
 
   private archiveGame() {

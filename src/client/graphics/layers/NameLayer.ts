@@ -286,7 +286,11 @@ export class NameLayer implements Layer {
     nameDiv.style.color = render.fontColor;
     const span = nameDiv.querySelector(".player-name-span");
     if (span) {
-      span.innerHTML = render.player.name();
+      if (render.player.isAFK()) {
+        span.innerHTML = `${render.player.name()} (AFK)`;
+      } else {
+        span.innerHTML = render.player.name();
+      }
     }
     if (flagDiv) {
       flagDiv.style.height = `${render.fontSize}px`;
