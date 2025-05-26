@@ -2,7 +2,7 @@ import { Theme } from "../../../core/configuration/Config";
 import { consolex } from "../../../core/Consolex";
 import { PlayerView } from "../../../core/game/GameView";
 import { AnimatedSprite } from "../AnimatedSprite";
-import { createAnimatedSprite } from "../AnimatedSpriteLoader";
+import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { Fx, FxType } from "./Fx";
 
 function fadeInOut(
@@ -48,6 +48,7 @@ export class SpriteFx implements Fx {
   protected elapsedTime = 0;
   protected duration = 1000;
   constructor(
+    animatedSpriteLoader: AnimatedSpriteLoader,
     protected x: number,
     protected y: number,
     fxType: FxType,
@@ -55,7 +56,11 @@ export class SpriteFx implements Fx {
     private owner?: PlayerView,
     private theme?: Theme,
   ) {
-    this.animatedSprite = createAnimatedSprite(fxType, owner, theme);
+    this.animatedSprite = animatedSpriteLoader.createAnimatedSprite(
+      fxType,
+      owner,
+      theme,
+    );
     if (!this.animatedSprite) {
       consolex.error("Could not load animated sprite", fxType);
     } else {

@@ -1,4 +1,5 @@
 import { GameView } from "../../../core/game/GameView";
+import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { Fx, FxType } from "./Fx";
 import { SpriteFx } from "./SpriteFx";
 import { Timeline } from "./Timeline";
@@ -11,6 +12,7 @@ export class UnitExplosionFx implements Fx {
   private explosions: Fx[] = [];
 
   constructor(
+    animatedSpriteLoader: AnimatedSpriteLoader,
     private x: number,
     private y: number,
     game: GameView,
@@ -23,7 +25,9 @@ export class UnitExplosionFx implements Fx {
     for (const { dx, dy, delay, type } of config) {
       this.timeline.add(delay, () => {
         if (game.isValidCoord(x + dx, y + dy)) {
-          this.explosions.push(new SpriteFx(x + dx, y + dy, type));
+          this.explosions.push(
+            new SpriteFx(animatedSpriteLoader, x + dx, y + dy, type),
+          );
         }
       });
     }
