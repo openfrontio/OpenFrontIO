@@ -169,7 +169,7 @@ const getColoredAnimatedSprite = (
   const territoryColor = theme.territoryColor(owner);
   const borderColor = theme.borderColor(owner);
   const spawnHighlightColor = theme.spawnHighlightColor();
-  const key = `${fxType}-${territoryColor.toRgbString()}-${borderColor.toRgbString()}`;
+  const key = `${fxType}-${owner.id()}`;
   let coloredCanvas: HTMLCanvasElement;
   if (coloredAnimatedSpriteCache.has(key)) {
     coloredCanvas = coloredAnimatedSpriteCache.get(key)!;
