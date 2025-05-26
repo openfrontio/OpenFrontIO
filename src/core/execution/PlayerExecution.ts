@@ -46,17 +46,12 @@ export class PlayerExecution implements Execution {
       throw new Error("Not initialized");
     }
     this.player.decayRelations();
-    const hasPort = this.player.units(UnitType.Port).length > 0;
     this.player.units().forEach((u) => {
-      if (hasPort && u.type() === UnitType.Warship) {
-        u.modifyHealth(1);
-      }
-      if (this.mg === null) return;
-      const tileOwner = this.mg.owner(u.tile());
+      const tileOwner = this.mg!.owner(u.tile());
       if (u.info().territoryBound) {
         if (tileOwner.isPlayer()) {
           if (tileOwner !== this.player) {
-            this.mg.player(tileOwner.id()).captureUnit(u);
+            this.mg!.player(tileOwner.id()).captureUnit(u);
           }
         } else {
           u.delete();
