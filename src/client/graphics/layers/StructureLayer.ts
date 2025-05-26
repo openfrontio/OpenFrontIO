@@ -336,27 +336,19 @@ export class StructureLayer implements Layer {
     cell: { x: number; y: number },
     maxDistance: number = 10,
   ): UnitView | null {
-    if (!this.game.isValidCoord(cell.x, cell.y)) return null;
-
     const targetRef = this.game.ref(cell.x, cell.y);
 
-    let closest: UnitView | null = null;
-    let minDistance = Infinity;
+    const allUnitTypes = Object.values(UnitType);
 
-    for (const unit of this.game.units()) {
-      if (!unit.isActive()) continue;
-      if (!this.isUnitTypeSupported(unit.type())) continue;
+    const nearby = this.game.nearbyUnits(targetRef, maxDistance, allUnitTypes);
 
-      const unitRef = unit.tile();
-      const distance = this.game.manhattanDist(unitRef, targetRef);
-
-      if (distance <= maxDistance && distance < minDistance) {
-        minDistance = distance;
-        closest = unit;
+    for (const { unit } of nearby) {
+      if (unit.isActive() && this.isUnitTypeSupported(unit.type())) {
+        return unit;
       }
     }
 
-    return closest;
+    return null;
   }
 
   private onMouseUp(event: MouseUpEvent) {

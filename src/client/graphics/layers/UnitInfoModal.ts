@@ -1,5 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { UnitType } from "../../../core/game/Game";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
 
@@ -38,22 +39,17 @@ export class UnitInfoModal extends LitElement implements Layer {
     this.y = y;
     const targetRef = this.game.ref(tileX, tileY);
 
-    let closest: UnitView | null = null;
-    let minDistance = Infinity;
+    const allUnitTypes = Object.values(UnitType);
+    const matchingUnits = this.game
+      .nearbyUnits(targetRef, 10, allUnitTypes)
+      .filter(({ unit }) => unit.isActive());
 
-    for (const unit of this.game.units()) {
-      if (!unit.isActive()) continue;
-
-      const unitRef = unit.tile();
-      const distance = this.game.manhattanDist(unitRef, targetRef);
-
-      if (distance <= 10 && distance < minDistance) {
-        minDistance = distance;
-        closest = unit;
-      }
+    if (matchingUnits.length > 0) {
+      matchingUnits.sort((a, b) => a.distSquared - b.distSquared);
+      this.unit = matchingUnits[0].unit;
+    } else {
+      this.unit = null;
     }
-
-    this.unit = closest;
     this.open = this.unit !== null;
   };
 
