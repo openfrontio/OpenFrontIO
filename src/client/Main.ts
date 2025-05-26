@@ -165,49 +165,7 @@ class Client {
       helpModal.open();
     });
 
-    const loginDiscordButton = document.getElementById("login-discord");
-    const logoutDiscordButton = document.getElementById("logout-discord");
-
-    if (
-      loginDiscordButton instanceof OButton &&
-      logoutDiscordButton instanceof OButton
-    ) {
-      if (isLoggedIn() === false) {
-        // Not logged in
-        loginDiscordButton.disable = false;
-        loginDiscordButton.translationKey = "main.login_discord";
-        loginDiscordButton.addEventListener("click", discordLogin);
-        logoutDiscordButton.hidden = true;
-      } else {
-        // JWT appears to be valid
-        loginDiscordButton.disable = true;
-        loginDiscordButton.translationKey = "main.checking_login";
-        logoutDiscordButton.hidden = false;
-        logoutDiscordButton.addEventListener("click", () => {
-          // Log out
-          logOut();
-          loginDiscordButton.disable = false;
-          loginDiscordButton.translationKey = "main.login_discord";
-          loginDiscordButton.addEventListener("click", discordLogin);
-          logoutDiscordButton.hidden = true;
-        });
-        // Look up the discord user object.
-        // TODO: Add caching
-        getUserMe().then((userMeResponse) => {
-          if (userMeResponse === false) {
-            // Not logged in
-            loginDiscordButton.disable = false;
-            loginDiscordButton.translationKey = "main.login_discord";
-            loginDiscordButton.addEventListener("click", discordLogin);
-            logoutDiscordButton.hidden = true;
-            return;
-          }
-          // TODO: Update the page for logged in user
-          loginDiscordButton.translationKey = "main.logged_in";
-          const { user, player } = userMeResponse;
-        });
-      }
-    }
+    setupDiscordLogButtons();
 
     const settingsModal = document.querySelector("user-setting");
     if (settingsModal instanceof UserSettingModal) {
@@ -427,4 +385,53 @@ function getPersistentIDFromCookie(): string {
   ].join(";");
 
   return newID;
+}
+
+function setupDiscordLogButtons() {
+  const loginDiscordButton = document.getElementById("login-discord");
+  const logoutDiscordButton = document.getElementById("logout-discord");
+
+  if (
+    !(
+      loginDiscordButton instanceof OButton &&
+      logoutDiscordButton instanceof OButton
+    )
+  ) {
+    return;
+  }
+
+  if (isLoggedIn() === false) {
+    loginDiscordButton.disable = false;
+    loginDiscordButton.translationKey = "main.login_discord";
+    loginDiscordButton.addEventListener("click", discordLogin);
+    logoutDiscordButton.hidden = true;
+    return;
+  }
+
+  // JWT appears to be valid
+  loginDiscordButton.disable = true;
+  loginDiscordButton.translationKey = "main.checking_login";
+  logoutDiscordButton.hidden = false;
+  logoutDiscordButton.addEventListener("click", () => {
+    logOut();
+    loginDiscordButton.disable = false;
+    loginDiscordButton.translationKey = "main.login_discord";
+    loginDiscordButton.addEventListener("click", discordLogin);
+    logoutDiscordButton.hidden = true;
+  });
+
+  // Look up the discord user object.
+  // TODO: Add caching
+  getUserMe().then((userMeResponse) => {
+    if (userMeResponse === false) {
+      loginDiscordButton.disable = false;
+      loginDiscordButton.translationKey = "main.login_discord";
+      loginDiscordButton.addEventListener("click", discordLogin);
+      logoutDiscordButton.hidden = true;
+      return;
+    }
+    // TODO: Update the page for logged in user
+    loginDiscordButton.translationKey = "main.logged_in";
+    const { user, player } = userMeResponse;
+  });
 }
