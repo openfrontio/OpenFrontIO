@@ -48,6 +48,7 @@ export class StructureLayer implements Layer {
   private unitIcons: Map<string, ImageData> = new Map();
   private theme: Theme;
   private selectedStructureUnit: UnitView | null = null;
+  private previouslySelected: UnitView | null = null;
 
   // Configuration for supported unit types only
   private readonly unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
@@ -101,11 +102,6 @@ export class StructureLayer implements Layer {
       borderRadius: 8.525,
       territoryRadius: 6.525,
       borderType: UnitBorderType.Square,
-    });
-
-    window.addEventListener("structure-modal-closed", () => {
-      this.selectedStructureUnit = null;
-      this.redraw();
     });
   }
 
@@ -358,20 +354,31 @@ export class StructureLayer implements Layer {
     );
 
     const clickedUnit = this.findStructureUnitAtCell(cell);
+    this.previouslySelected = this.selectedStructureUnit;
 
     if (clickedUnit) {
-      const wasSelected = this.selectedStructureUnit === clickedUnit;
-      this.selectedStructureUnit = wasSelected ? null : clickedUnit;
-      this.redraw();
-
+      const wasSelected = this.previouslySelected === clickedUnit;
       if (wasSelected) {
+        this.selectedStructureUnit = null;
+        if (this.previouslySelected) {
+          this.handleUnitRendering(this.previouslySelected);
+        }
         window.dispatchEvent(new CustomEvent("close-structure-modal"));
-      } else if (this.selectedStructureUnit) {
+      } else {
+        this.selectedStructureUnit = clickedUnit;
+        if (
+          this.previouslySelected &&
+          this.previouslySelected !== clickedUnit
+        ) {
+          this.handleUnitRendering(this.previouslySelected);
+        }
+        this.handleUnitRendering(clickedUnit);
+
         const screenPos = this.transformHandler.worldToScreenCoordinates(cell);
-        const unitTile = this.selectedStructureUnit.tile();
+        const unitTile = clickedUnit.tile();
         const event = new CustomEvent("open-structure-modal", {
           detail: {
-            unit: this.selectedStructureUnit,
+            unit: clickedUnit,
             x: screenPos.x,
             y: screenPos.y,
             tileX: this.game.x(unitTile),
@@ -384,7 +391,9 @@ export class StructureLayer implements Layer {
       }
     } else {
       this.selectedStructureUnit = null;
-      this.redraw();
+      if (this.previouslySelected) {
+        this.handleUnitRendering(this.previouslySelected);
+      }
       window.dispatchEvent(new CustomEvent("close-structure-modal"));
     }
   }
