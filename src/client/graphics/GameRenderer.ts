@@ -180,6 +180,13 @@ export function createRenderer(
     console.error("unit info modal not found");
   }
   unitInfoModal.game = game;
+  const structureLayer = new StructureLayer(
+    game,
+    eventBus,
+    transformHandler,
+    unitInfoModal,
+  );
+  unitInfoModal.structureLayer = structureLayer;
   // unitInfoModal.eventBus = eventBus;
 
   const leftInGameAd = document.querySelector(
@@ -193,7 +200,7 @@ export function createRenderer(
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus),
-    new StructureLayer(game, eventBus, transformHandler, unitInfoModal),
+    structureLayer,
     new UnitLayer(game, eventBus, clientID, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, clientID, transformHandler),

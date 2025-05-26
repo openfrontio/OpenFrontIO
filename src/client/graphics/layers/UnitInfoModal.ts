@@ -3,6 +3,7 @@ import { customElement, property } from "lit/decorators.js";
 import { UnitType } from "../../../core/game/Game";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
+import { StructureLayer } from "./StructureLayer";
 
 @customElement("unit-info-modal")
 export class UnitInfoModal extends LitElement implements Layer {
@@ -12,6 +13,7 @@ export class UnitInfoModal extends LitElement implements Layer {
   @property({ type: Object }) unit: UnitView | null = null;
 
   public game: GameView;
+  public structureLayer: StructureLayer | null = null;
 
   constructor() {
     super();
@@ -60,6 +62,9 @@ export class UnitInfoModal extends LitElement implements Layer {
   public onCloseStructureModal = () => {
     this.open = false;
     this.unit = null;
+    if (this.structureLayer) {
+      this.structureLayer.unSelectStructureUnit();
+    }
   };
 
   connectedCallback() {
@@ -91,10 +96,30 @@ export class UnitInfoModal extends LitElement implements Layer {
       font-size: 15px;
       line-height: 1.6;
       backdrop-filter: blur(6px);
+      position: relative;
     }
 
     .modal strong {
       color: #e0e0e0;
+    }
+
+    .close-button {
+      background: #d00;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      padding: 6px 12px;
+    }
+
+    .close-button:hover {
+      background: #a00;
     }
   `;
 
@@ -121,6 +146,16 @@ export class UnitInfoModal extends LitElement implements Layer {
               <strong>Cooldown:</strong> ${secondsLeft}s
             </div>`
           : ""}
+        <div style="margin-top: 14px; display: flex; justify-content: center;">
+          <button
+            @click=${this.onCloseStructureModal}
+            class="close-button"
+            title="Close"
+            style="width: 100px; height: 32px;"
+          >
+            CLOSE
+          </button>
+        </div>
       </div>
     `;
   }

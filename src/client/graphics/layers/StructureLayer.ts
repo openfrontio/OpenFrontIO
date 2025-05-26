@@ -394,4 +394,12 @@ export class StructureLayer implements Layer {
       this.unitInfoModal.onCloseStructureModal();
     }
   }
+
+  public unSelectStructureUnit() {
+    if (this.selectedStructureUnit) {
+      this.previouslySelected = this.selectedStructureUnit;
+      this.selectedStructureUnit = null;
+      this.handleUnitRendering(this.previouslySelected);
+    }
+  }
 }
