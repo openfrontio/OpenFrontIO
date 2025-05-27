@@ -37,7 +37,6 @@ export class GameServer {
 
   private disconnectionTimeout = 1 * 60 * 1000; // 1 minute
   private inactivityTimeout = 3 * 60 * 1000; // 3 minute
-  private lastAction: Map<ClientID, Date> = new Map();
 
   private turns: Turn[] = [];
   private intents: Intent[] = [];
@@ -171,7 +170,7 @@ export class GameServer {
 
       // Remove AFK status if reconnected after the timeout
       if (existing.isAFK) {
-        this.markClientAFK(existing.clientID, false);
+        //this.markClientAFK(existing.clientID, false);
       }
 
       existing.ws.removeAllListeners("message");
@@ -202,7 +201,7 @@ export class GameServer {
               return;
             }
             if (client.isAFK) {
-              this.markClientAFK(client.clientID, false);
+              //this.markClientAFK(client.clientID, false);
             }
             client.lastAction = Date.now();
             this.addIntent(clientMsg.intent);
@@ -557,16 +556,22 @@ export class GameServer {
         (now - client.lastPing > this.disconnectionTimeout ||
           now - client.lastAction > this.inactivityTimeout)
       ) {
-        client.isAFK = true;
-        this.markClientAFK(clientID, true);
+        this.markClientAFK(client, true);
+      } else if (
+        client.isAFK &&
+        now - client.lastPing < this.disconnectionTimeout &&
+        now - client.lastAction < this.inactivityTimeout
+      ) {
+        this.markClientAFK(client, false);
       }
     }
   }
 
-  private markClientAFK(clientID: string, isAFK: boolean) {
+  private markClientAFK(client: Client, isAFK: boolean) {
+    client.isAFK = isAFK;
     this.addIntent({
       type: "mark_afk",
-      clientID: clientID,
+      clientID: client.clientID,
       isAFK: isAFK,
     });
   }
