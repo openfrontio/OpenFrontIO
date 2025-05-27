@@ -33,7 +33,9 @@ export class DonateTroopsExecution implements Execution {
     const maxDonation =
       mg.config().maxPopulation(this.recipient) -
       this.recipient.totalPopulation();
-    if (this.troops > maxDonation) {
+    if (maxDonation <= 0) {
+      this.troops = 0;
+    } else if (this.troops > maxDonation) {
       this.troops = maxDonation;
     }
   }
