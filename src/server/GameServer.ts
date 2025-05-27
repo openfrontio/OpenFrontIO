@@ -168,10 +168,9 @@ export class GameServer {
         return;
       }
 
-      // Remove AFK status if reconnected after the timeout
-      if (existing.isAFK) {
-        //this.markClientAFK(existing.clientID, false);
-      }
+      client.isAFK = existing.isAFK;
+      client.lastAction = existing.lastAction;
+      client.lastPing = existing.lastPing;
 
       existing.ws.removeAllListeners("message");
       this.activeClients = this.activeClients.filter((c) => c !== existing);
