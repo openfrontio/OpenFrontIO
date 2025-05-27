@@ -46,7 +46,7 @@ export class DonateTroopsExecution implements Execution {
         this.recipient.updateRelation(this.sender, 50);
       } else {
         consolex.warn(
-          `cannot send tropps from ${this.sender} to ${this.recipient}`,
+          `cannot send troops from ${this.sender} to ${this.recipient}`,
         );
       }
     this.active = false;
