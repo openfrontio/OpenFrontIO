@@ -35,8 +35,7 @@ export class GameServer {
 
   private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
 
-  private disconnectionTimeout = 1 * 60 * 1000; // 1 minute
-  private inactivityTimeout = 3 * 60 * 1000; // 3 minute
+  private idleTimeout = 1 * 60 * 1000; // 1 minute
 
   private turns: Turn[] = [];
   private intents: Intent[] = [];
@@ -235,6 +234,7 @@ export class GameServer {
         clientID: client.clientID,
         persistentID: client.persistentID,
       });
+      this.markClientIdle(client, true);
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
@@ -553,14 +553,14 @@ export class GameServer {
     for (const [clientID, client] of this.allClients) {
       if (
         client.isIdle === false &&
-        (now - client.lastPing > this.disconnectionTimeout ||
-          now - client.lastAction > this.inactivityTimeout)
+        now - client.lastPing > this.idleTimeout &&
+        now - client.lastAction > this.idleTimeout
       ) {
         this.markClientIdle(client, true);
       } else if (
         client.isIdle &&
-        now - client.lastPing < this.disconnectionTimeout &&
-        now - client.lastAction < this.inactivityTimeout
+        now - client.lastPing < this.idleTimeout &&
+        now - client.lastAction < this.idleTimeout
       ) {
         this.markClientIdle(client, false);
       }
