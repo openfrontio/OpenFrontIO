@@ -99,6 +99,7 @@ export class PlayerImpl implements Player {
   public _outgoingLandAttacks: Attack[] = [];
 
   private _hasSpawned = false;
+  private _isIdle = false;
 
   constructor(
     private mg: GameImpl,
@@ -136,6 +137,7 @@ export class PlayerImpl implements Player {
       smallID: this.smallID(),
       playerType: this.type(),
       isAlive: this.isAlive(),
+      isIdle: this.isIdle(),
       tilesOwned: this.numTilesOwned(),
       gold: Number(this._gold),
       population: this.population(),
@@ -923,6 +925,14 @@ export class PlayerImpl implements Player {
   }
   lastTileChange(): Tick {
     return this._lastTileChange;
+  }
+
+  isIdle(): boolean {
+    return this._isIdle;
+  }
+
+  markIdle(isIdle: boolean): void {
+    this._isIdle = isIdle;
   }
 
   hash(): number {

@@ -292,6 +292,9 @@ export class PlayerView {
   hasSpawned(): boolean {
     return this.data.hasSpawned;
   }
+  isIdle(): boolean {
+    return this.data.isIdle;
+  }
 }
 
 export class GameView implements GameMap {

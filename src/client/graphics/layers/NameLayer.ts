@@ -12,7 +12,12 @@ import { ClientID } from "../../../core/Schemas";
 import { Theme } from "../../../core/configuration/Config";
 import { AllPlayers, Cell, nukeTypes, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { createCanvas, renderNumber, renderTroops } from "../../Utils";
+import {
+  createCanvas,
+  renderNumber,
+  renderTroops,
+  translateText,
+} from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -200,7 +205,7 @@ export class NameLayer implements Layer {
 
     const nameSpan = document.createElement("span");
     nameSpan.className = "player-name-span";
-    nameSpan.innerHTML = player.name();
+    nameSpan.innerText = this.formatPlayerName(player);
     nameDiv.appendChild(nameSpan);
     element.appendChild(nameDiv);
 
@@ -282,7 +287,7 @@ export class NameLayer implements Layer {
     nameDiv.style.color = render.fontColor;
     const span = nameDiv.querySelector(".player-name-span");
     if (span) {
-      span.innerHTML = render.player.name();
+      span.innerHTML = this.formatPlayerName(render.player);
     }
     if (flagDiv) {
       flagDiv.style.height = `${render.fontSize}px`;
@@ -529,5 +534,11 @@ export class NameLayer implements Layer {
       this.game.playerViews().find((p) => p.clientID() === this.clientID) ??
       null;
     return this.myPlayer;
+  }
+
+  private formatPlayerName(player: PlayerView): string {
+    return player.isIdle()
+      ? `${player.name()} (${translateText("player_info_overlay.idle")})`
+      : player.name();
   }
 }

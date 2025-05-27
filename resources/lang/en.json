@@ -385,7 +385,8 @@
     "sams": "SAMs",
     "warships": "Warships",
     "health": "Health",
-    "attitude": "Attitude"
+    "attitude": "Attitude",
+    "idle": "Idle"
   },
   "relation": {
     "hostile": "Hostile",

@@ -15,6 +15,7 @@ import { DonateTroopsExecution } from "./DonateTroopExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { FakeHumanExecution } from "./FakeHumanExecution";
+import { MarkIdleExecution } from "./MarkIdleExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NoOpExecution } from "./NoOpExecution";
 import { QuickChatExecution } from "./QuickChatExecution";
@@ -120,6 +121,8 @@ export class Executor {
           intent.quickChatKey,
           intent.variables ?? {},
         );
+      case "mark_idle":
+        return new MarkIdleExecution(playerID, intent.isIdle);
       default:
         throw new Error(`intent type ${intent} not found`);
     }
