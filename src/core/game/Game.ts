@@ -152,13 +152,19 @@ export enum UnitType {
   Construction = "Construction",
 }
 
+export interface OwnerComp {
+  owner: Player;
+}
+
 export interface UnitParamsMap {
   [UnitType.TransportShip]: {
     troops?: number;
     destination?: TileRef;
   };
 
-  [UnitType.Warship]: {};
+  [UnitType.Warship]: {
+    patrolTile: TileRef;
+  };
 
   [UnitType.Shell]: {};
 
@@ -175,7 +181,7 @@ export interface UnitParamsMap {
   };
 
   [UnitType.TradeShip]: {
-    dstPort: Unit;
+    targetUnit: Unit;
     lastSetSafeFromPirates?: number;
   };
 
@@ -328,14 +334,18 @@ export class PlayerInfo {
     if (!name.startsWith("[") || !name.includes("]")) {
       this.clan = null;
     } else {
-      const clanMatch = name.match(/^\[([A-Z]{2,5})\]/);
+      const clanMatch = name.match(/^\[([a-zA-Z]{2,5})\]/);
       this.clan = clanMatch ? clanMatch[1] : null;
     }
   }
 }
 
+export function isUnit(unit: Unit | UnitParams<UnitType>): unit is Unit {
+  return "isUnit" in unit && typeof unit.isUnit === "function" && unit.isUnit();
+}
+
 export interface Unit {
-  hash(): number;
+  isUnit(): this is Unit;
 
   // Common properties.
   id(): number;
@@ -349,6 +359,7 @@ export interface Unit {
   isActive(): boolean;
   setOwner(owner: Player): void;
   touch(): void;
+  hash(): number;
   toUpdate(): UnitUpdate;
 
   // Targeting
@@ -358,8 +369,8 @@ export interface Unit {
   targetUnit(): Unit | undefined;
   setTargetedBySAM(targeted: boolean): void;
   targetedBySAM(): boolean;
-  setInterceptedBySam(): void;
-  interceptedBySam(): boolean;
+  setReachedTarget(): void;
+  reachedTarget(): boolean;
 
   // Health
   hasHealth(): boolean;
@@ -386,6 +397,10 @@ export interface Unit {
   // Construction
   constructionType(): UnitType | null;
   setConstructionType(type: UnitType): void;
+
+  // Warships
+  setPatrolTile(tile: TileRef): void;
+  patrolTile(): TileRef | undefined;
 
   // Ports
   cachePut(from: TileRef, to: TileRef): void;
