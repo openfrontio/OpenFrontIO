@@ -33,9 +33,9 @@ export enum GamePhase {
 export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
 
-  private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
+  private readonly maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
 
-  private idleTimeout = 1 * 60 * 1000; // 1 minute
+  private readonly idleTimeout = 1 * 60 * 1000; // 1 minute
 
   private turns: Turn[] = [];
   private intents: Intent[] = [];
@@ -241,6 +241,7 @@ export class GameServer {
     });
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
+        this.markClientIdle(client, true);
         client.ws.close(1002);
       }
     });
@@ -550,9 +551,9 @@ export class GameServer {
     }
 
     const now = Date.now();
-    for (const [clientID, client] of this.allClients) {
+    for (const client of this.activeClients) {
       if (
-        client.isIdle === false &&
+        !client.isIdle &&
         now - client.lastPing > this.idleTimeout &&
         now - client.lastAction > this.idleTimeout
       ) {
