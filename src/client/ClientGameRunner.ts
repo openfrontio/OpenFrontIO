@@ -201,7 +201,6 @@ export class ClientGameRunner {
     }
     const players: PlayerRecord[] = [
       {
-        playerID: this.myPlayer.id(),
         persistentID: getPersistentID(),
         username: this.lobby.playerName,
         clientID: this.lobby.clientID,

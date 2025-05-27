@@ -78,18 +78,17 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
 
 async function archiveFullGameToR2(gameRecord: GameRecord) {
   // Create a deep copy to avoid modifying the original
-  const recordCopy = JSON.parse(JSON.stringify(gameRecord));
+  const recordCopy: GameRecord = JSON.parse(JSON.stringify(gameRecord));
 
   // Players may see this so make sure to clear PII
   recordCopy.info.players.forEach((p) => {
-    p.ip = "REDACTED";
     p.persistentID = "REDACTED";
   });
 
   try {
     await r2.putObject({
       Bucket: bucket,
-      Key: `${gameFolder}/${recordCopy.id}`,
+      Key: `${gameFolder}/${recordCopy.info.gameID}`,
       Body: JSON.stringify(recordCopy),
       ContentType: "application/json",
     });
