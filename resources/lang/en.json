@@ -406,12 +406,20 @@
     "troops": "Troops",
     "betrayals": "Number of betrayals",
     "traitor": "Traitor",
-    "alliance_time_remaining": "Time Remaining",
+    "alliance_time_remaining": "Alliance Expires In",
     "embargo": "Stopped trading with you",
     "nuke": "Nukes sent by them to you",
     "start_trade": "Start trading",
     "stop_trade": "Stop trading",
     "yes": "Yes",
     "no": "No"
+  },
+  "error_modal": {
+    "crashed": "Game crashed!",
+    "paste_discord": "Please paste the following in your bug report in Discord:",
+    "copy_clipboard": "Copy to clipboard",
+    "copied": "Copied!",
+    "failed_copy": "Failed to copy",
+    "desync_notice": "You are desynced from other players. What you see might differ from other players."
   }
 }

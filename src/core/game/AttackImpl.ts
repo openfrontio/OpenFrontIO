@@ -84,8 +84,10 @@ export class AttackImpl implements Attack {
   }
 
   addBorderTile(tile: TileRef): void {
-    this._borderSize += 1;
-    this._border.add(tile);
+    if (!this._border.has(tile)) {
+      this._borderSize += 1;
+      this._border.add(tile);
+    }
   }
 
   removeBorderTile(tile: TileRef): void {

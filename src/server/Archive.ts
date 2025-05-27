@@ -81,7 +81,7 @@ async function archiveFullGameToR2(gameRecord: GameRecord) {
   const recordCopy = JSON.parse(JSON.stringify(gameRecord));
 
   // Players may see this so make sure to clear PII
-  recordCopy.players.forEach((p) => {
+  recordCopy.info.players.forEach((p) => {
     p.ip = "REDACTED";
     p.persistentID = "REDACTED";
   });
