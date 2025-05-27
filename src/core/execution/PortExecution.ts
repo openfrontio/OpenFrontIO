@@ -8,7 +8,6 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { TradeShipExecution } from "./TradeShipExecution";
 
@@ -79,9 +78,8 @@ export class PortExecution implements Execution {
     }
 
     const port = this.random.randElement(ports);
-    const pf = PathFinder.Mini(this.mg, 2500);
     this.mg.addExecution(
-      new TradeShipExecution(this.player().id(), this.port, port, pf),
+      new TradeShipExecution(this.player().id(), this.port, port),
     );
   }
 

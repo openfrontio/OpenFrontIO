@@ -1,6 +1,8 @@
+import { Theme } from "../../../core/configuration/Config";
 import { consolex } from "../../../core/Consolex";
+import { PlayerView } from "../../../core/game/GameView";
 import { AnimatedSprite } from "../AnimatedSprite";
-import { createAnimatedSpriteForUnit } from "../AnimatedSpriteLoader";
+import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { Fx, FxType } from "./Fx";
 
 function fadeInOut(
@@ -18,51 +20,73 @@ function fadeInOut(
     return 1 - f * f;
   }
 }
+/**
+ * Fade in/out another FX
+ */
+export class FadeFx implements Fx {
+  constructor(
+    private fxToFade: SpriteFx,
+    private fadeIn: number,
+    private fadeOut: number,
+  ) {}
+
+  renderTick(duration: number, ctx: CanvasRenderingContext2D): boolean {
+    const t = this.fxToFade.getElapsedTime() / this.fxToFade.getDuration();
+    ctx.save();
+    ctx.globalAlpha = fadeInOut(t, this.fadeIn, this.fadeOut);
+    const result = this.fxToFade.renderTick(duration, ctx);
+    ctx.restore();
+    return result;
+  }
+}
 
 /**
- * A simple FX displaying an animated sprite
+ * Animated sprite. Can be colored if provided an owner/theme
  */
-export class SpriteFX implements Fx {
-  private lifeTime: number = 0;
-  private animatedSprite: AnimatedSprite | null;
-  private totalLifeTime: number = 0;
+export class SpriteFx implements Fx {
+  protected animatedSprite: AnimatedSprite | null;
+  protected elapsedTime = 0;
+  protected duration = 1000;
   constructor(
-    private x: number,
-    private y: number,
+    animatedSpriteLoader: AnimatedSpriteLoader,
+    protected x: number,
+    protected y: number,
     fxType: FxType,
     duration?: number,
-    private fadeIn?: number,
-    private fadeOut?: number,
+    private owner?: PlayerView,
+    private theme?: Theme,
   ) {
-    this.animatedSprite = createAnimatedSpriteForUnit(fxType);
+    this.animatedSprite = animatedSpriteLoader.createAnimatedSprite(
+      fxType,
+      owner,
+      theme,
+    );
     if (!this.animatedSprite) {
-      consolex.error("Could not load animated sprite ", fxType);
-      this.totalLifeTime = 0;
-    } else if (!duration) {
-      // When no duration set, rely on the sprite lifetime
-      this.totalLifeTime = this.animatedSprite.lifeTime() ?? 1000; // 1s by default
+      consolex.error("Could not load animated sprite", fxType);
     } else {
-      this.totalLifeTime = duration;
+      this.duration = duration ?? this.animatedSprite.lifeTime() ?? 1000;
     }
   }
 
   renderTick(frameTime: number, ctx: CanvasRenderingContext2D): boolean {
-    if (this.animatedSprite) {
-      this.lifeTime += frameTime;
-      if (this.lifeTime >= this.totalLifeTime) {
-        return false;
-      }
-      if (this.animatedSprite.isActive()) {
-        ctx.save();
-        const t = this.lifeTime / this.totalLifeTime;
-        ctx.globalAlpha = fadeInOut(t, this.fadeIn ?? 0, this.fadeOut ?? 0.7);
-        this.animatedSprite.update(frameTime);
-        this.animatedSprite.draw(ctx, this.x, this.y);
-        ctx.restore();
-        return true;
-      }
-      return false;
-    }
-    return false;
+    if (!this.animatedSprite) return false;
+
+    this.elapsedTime += frameTime;
+    if (this.elapsedTime >= this.duration) return false;
+
+    if (!this.animatedSprite.isActive()) return false;
+
+    const t = this.elapsedTime / this.duration;
+    this.animatedSprite.update(frameTime);
+    this.animatedSprite.draw(ctx, this.x, this.y);
+    return true;
+  }
+
+  getElapsedTime(): number {
+    return this.elapsedTime;
+  }
+
+  getDuration(): number {
+    return this.duration;
   }
 }

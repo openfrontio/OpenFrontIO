@@ -1,36 +1,33 @@
-import { Execution, Game } from "../game/Game";
-
-const cancelDelay = 2;
+import { Execution, Game, Player, UnitType } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 
 export class MoveWarshipExecution implements Execution {
-  private active = true;
-  private mg: Game | null = null;
-
   constructor(
-    public readonly unitId: number,
-    public readonly position: number,
+    private readonly owner: Player,
+    private readonly unitId: number,
+    private readonly position: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {
-    this.mg = mg;
-  }
-
-  tick(ticks: number): void {
-    if (this.mg === null) {
-      throw new Error("Not initialized");
-    }
-    const warship = this.mg.units().find((u) => u.id() === this.unitId);
+    const warship = this.owner
+      .units(UnitType.Warship)
+      .find((u) => u.id() === this.unitId);
     if (!warship) {
-      console.log("MoveWarshipExecution: warship is already dead");
+      console.warn("MoveWarshipExecution: warship not found");
+      return;
+    }
+    if (!warship.isActive()) {
+      console.warn("MoveWarshipExecution: warship is not active");
       return;
     }
     warship.setPatrolTile(this.position);
     warship.setTargetTile(undefined);
-    this.active = false;
   }
 
+  tick(ticks: number): void {}
+
   isActive(): boolean {
-    return this.active;
+    return false;
   }
 
   activeDuringSpawnPhase(): boolean {
