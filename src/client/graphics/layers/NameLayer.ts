@@ -2,6 +2,7 @@ import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
 import allianceRequestIcon from "../../../../resources/images/AllianceRequestIcon.svg";
 import crownIcon from "../../../../resources/images/CrownIcon.svg";
 import embargoIcon from "../../../../resources/images/EmbargoIcon.svg";
+import idleIcon from "../../../../resources/images/IdleIcon.svg";
 import nukeRedIcon from "../../../../resources/images/NukeIconRed.svg";
 import nukeWhiteIcon from "../../../../resources/images/NukeIconWhite.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconBlack.svg";
@@ -12,12 +13,7 @@ import { ClientID } from "../../../core/Schemas";
 import { Theme } from "../../../core/configuration/Config";
 import { AllPlayers, Cell, nukeTypes, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import {
-  createCanvas,
-  renderNumber,
-  renderTroops,
-  translateText,
-} from "../../Utils";
+import { createCanvas, renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -43,6 +39,7 @@ export class NameLayer implements Layer {
   private renders: RenderInfo[] = [];
   private seenPlayers: Set<PlayerView> = new Set();
   private traitorIconImage: HTMLImageElement;
+  private idleIconImage: HTMLImageElement;
   private allianceRequestIconImage: HTMLImageElement;
   private allianceIconImage: HTMLImageElement;
   private targetIconImage: HTMLImageElement;
@@ -63,6 +60,8 @@ export class NameLayer implements Layer {
   ) {
     this.traitorIconImage = new Image();
     this.traitorIconImage.src = traitorIcon;
+    this.idleIconImage = new Image();
+    this.idleIconImage.src = idleIcon;
     this.allianceIconImage = new Image();
     this.allianceIconImage.src = allianceIcon;
     this.allianceRequestIconImage = new Image();
@@ -205,7 +204,7 @@ export class NameLayer implements Layer {
 
     const nameSpan = document.createElement("span");
     nameSpan.className = "player-name-span";
-    nameSpan.innerText = this.formatPlayerName(player);
+    nameSpan.innerText = player.name();
     nameDiv.appendChild(nameSpan);
     element.appendChild(nameDiv);
 
@@ -287,7 +286,7 @@ export class NameLayer implements Layer {
     nameDiv.style.color = render.fontColor;
     const span = nameDiv.querySelector(".player-name-span");
     if (span) {
-      span.innerHTML = this.formatPlayerName(render.player);
+      span.innerHTML = render.player.name();
     }
     if (flagDiv) {
       flagDiv.style.height = `${render.fontSize}px`;
@@ -352,6 +351,18 @@ export class NameLayer implements Layer {
       }
     } else if (existingTraitor) {
       existingTraitor.remove();
+    }
+
+    // Idle icon
+    const existingIdle = iconsDiv.querySelector('[data-icon="idle"]');
+    if (render.player.isIdle()) {
+      if (!existingIdle) {
+        iconsDiv.appendChild(
+          this.createIconElement(this.idleIconImage.src, iconSize, "idle"),
+        );
+      }
+    } else if (existingIdle) {
+      existingIdle.remove();
     }
 
     // Alliance icon
@@ -534,11 +545,5 @@ export class NameLayer implements Layer {
       this.game.playerViews().find((p) => p.clientID() === this.clientID) ??
       null;
     return this.myPlayer;
-  }
-
-  private formatPlayerName(player: PlayerView): string {
-    return player.isIdle()
-      ? `${player.name()} (${translateText("player_info_overlay.idle")})`
-      : player.name();
   }
 }
