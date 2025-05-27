@@ -41,7 +41,7 @@ export class EmojiExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    const emojiString = flattenedEmojiTable.at(this.emoji);
+    const emojiString = flattenedEmojiTable[this.emoji];
     if (emojiString === undefined) {
       consolex.warn(
         `cannot send emoji ${this.emoji} from ${this.requestor} to ${this.recipient}`,
