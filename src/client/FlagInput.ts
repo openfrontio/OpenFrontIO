@@ -116,6 +116,29 @@ export const FlagMap: Record<string, string> = {
   full,
 };
 
+type FlagLayer = {
+  name: string;
+  show: boolean;
+  shortName?: string;
+  free?: boolean;
+  roles?: string[];
+  rank?: number;
+};
+const flagLayers = {
+  frame: {
+    name: frame,
+    show: false,
+    shortName: "k",
+    free: true,
+  },
+  center_hline: {
+    name: center_hline,
+    show: false,
+    shortName: "b",
+    free: true,
+  },
+} as const satisfies Record<string, FlagLayer>;
+
 export const LayerShortNames: Record<string, string> = {
   center_circle: "a",
   center_hline: "b",
