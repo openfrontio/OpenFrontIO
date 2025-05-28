@@ -48,7 +48,7 @@ export async function createGameRunner(
           : fixProfaneUsername(sanitize(p.username)),
         PlayerType.Human,
         p.clientID,
-        p.playerID,
+        random.nextID(),
       ),
   );
 
