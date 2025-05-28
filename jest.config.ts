@@ -17,14 +17,7 @@ export default {
   },
   transformIgnorePatterns: ["node_modules/(?!(node:)/)"],
   preset: "ts-jest/presets/default-esm",
-  collectCoverageFrom: [
-    "src/**/*.{js,jsx,ts,tsx}",
-    "!src/**/*.d.ts",
-    "!src/**/*.stories.{js,jsx,ts,tsx}",
-    "!src/**/*.test.{js,jsx,ts,tsx}",
-    "!src/**/index.{js,jsx,ts,tsx}",
-    "!src/types/**/*",
-  ],
+  collectCoverageFrom: ["src/**/*.ts", "!src/**/*.d.ts"],
   coverageThreshold: {
     global: {
       branches: 0,
