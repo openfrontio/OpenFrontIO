@@ -187,15 +187,7 @@ export function createRenderer(
   );
   unitInfoModal.structureLayer = structureLayer;
   // unitInfoModal.eventBus = eventBus;
-
-  const leftInGameAd = document.querySelector(
-    "left-in-game-ad",
-  ) as LeftInGameAd;
-  if (!(leftInGameAd instanceof LeftInGameAd)) {
-    console.error("left in game ad not found");
-  }
-  leftInGameAd.g = game;
-
+  
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus),
