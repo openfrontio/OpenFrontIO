@@ -85,7 +85,8 @@ export class PseudoRandom {
    * Generates a random integer between min (inclusive) and max (exclusive).
    */
   nextInt(min: number, max: number): number {
-    return this._nextFloat() * (max - min) + min;
+    // keep max exclusive, min inclusive – round down to get an int
+    return Math.floor(this._nextFloat() * (max - min)) + min;
   }
 
   /**
