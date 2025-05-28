@@ -23,8 +23,8 @@ import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID } from "../Schemas";
 import { assertNever, simpleHash, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
-import { pastelTheme } from "./PastelTheme";
-import { pastelThemeDark } from "./PastelThemeDark";
+import { PastelTheme } from "./PastelTheme";
+import { PastelThemeDark } from "./PastelThemeDark";
 
 const JwksSchema = z.object({
   keys: z
@@ -62,7 +62,6 @@ const numPlayersConfig = {
   [GameMapType.Pangaea]: [40, 20, 30],
   [GameMapType.World]: [150, 80, 50],
   [GameMapType.WorldMapGiant]: [150, 100, 60],
-  [GameMapType.KnownWorld]: [50, 40, 30],
   [GameMapType.Halkidiki]: [50, 40, 30],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
@@ -166,6 +165,8 @@ export abstract class DefaultServerConfig implements ServerConfig {
 }
 
 export class DefaultConfig implements Config {
+  private pastelTheme: PastelTheme = new PastelTheme();
+  private pastelThemeDark: PastelThemeDark = new PastelThemeDark();
   constructor(
     private _serverConfig: ServerConfig,
     private _gameConfig: GameConfig,
@@ -461,7 +462,9 @@ export class DefaultConfig implements Config {
     return this.bots();
   }
   theme(): Theme {
-    return this.userSettings()?.darkMode() ? pastelThemeDark : pastelTheme;
+    return this.userSettings()?.darkMode()
+      ? this.pastelThemeDark
+      : this.pastelTheme;
   }
 
   attackLogic(
