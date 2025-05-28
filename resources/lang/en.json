@@ -406,7 +406,7 @@
     "troops": "Troops",
     "betrayals": "Number of betrayals",
     "traitor": "Traitor",
-    "alliance_time_remaining": "Time Remaining",
+    "alliance_time_remaining": "Alliance Expires In",
     "embargo": "Stopped trading with you",
     "nuke": "Nukes sent by them to you",
     "start_trade": "Start trading",

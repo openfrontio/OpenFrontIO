@@ -334,7 +334,7 @@ export class PlayerInfo {
     if (!name.startsWith("[") || !name.includes("]")) {
       this.clan = null;
     } else {
-      const clanMatch = name.match(/^\[([A-Z]{2,5})\]/);
+      const clanMatch = name.match(/^\[([a-zA-Z]{2,5})\]/);
       this.clan = clanMatch ? clanMatch[1] : null;
     }
   }
@@ -369,8 +369,8 @@ export interface Unit {
   targetUnit(): Unit | undefined;
   setTargetedBySAM(targeted: boolean): void;
   targetedBySAM(): boolean;
-  setInterceptedBySam(): void;
-  interceptedBySam(): boolean;
+  setReachedTarget(): void;
+  reachedTarget(): boolean;
 
   // Health
   hasHealth(): boolean;

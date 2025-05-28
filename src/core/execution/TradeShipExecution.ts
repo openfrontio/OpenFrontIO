@@ -10,8 +10,8 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PathFinder } from "../pathfinding/PathFinding";
+import { AStar, PathFindResultType } from "../pathfinding/AStar";
+import { MiniAStar } from "../pathfinding/MiniAStar";
 import { distSortUnit } from "../Util";
 
 export class TradeShipExecution implements Execution {
@@ -19,15 +19,14 @@ export class TradeShipExecution implements Execution {
   private mg: Game | null = null;
   private origOwner: Player | null = null;
   private tradeShip: Unit | null = null;
-  private index = 0;
   private wasCaptured = false;
   private tilesTraveled = 0;
+  private aStar: AStar | null = null;
 
   constructor(
     private _owner: PlayerID,
     private srcPort: Unit,
     private _dstPort: Unit,
-    private pathFinder: PathFinder,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -103,46 +102,82 @@ export class TradeShipExecution implements Execution {
 
     const cachedNextTile = this._dstPort.cacheGet(this.tradeShip.tile());
     if (cachedNextTile !== undefined) {
-      if (
-        this.mg.isWater(cachedNextTile) &&
-        this.mg.isShoreline(cachedNextTile)
-      ) {
-        this.tradeShip.setSafeFromPirates();
-      }
-      this.tradeShip.move(cachedNextTile);
-      this.tilesTraveled++;
+      this.moveTradeShip(cachedNextTile);
       return;
     }
 
-    const result = this.pathFinder.nextTile(
-      this.tradeShip.tile(),
-      this._dstPort.tile(),
-    );
+    this.computeNewPath();
+  }
 
-    switch (result.type) {
-      case PathFindResultType.Completed:
-        this.complete();
-        break;
+  private fillCachePath(port: Unit, path: TileRef[]): void {
+    if (path.length < 2) {
+      throw new Error("path must have at least 2 points");
+    }
+    for (let i = 0; i < path.length - 1; i++) {
+      if (port.cacheGet(path[i]) !== undefined) {
+        continue;
+      }
+      const from = path[i];
+      const to = path[i + 1];
+      port.cachePut(from, to);
+    }
+  }
+
+  private moveTradeShip(nextTile?: TileRef): void {
+    if (nextTile === undefined) {
+      throw new Error("missing tile");
+    }
+
+    if (nextTile === this._dstPort.tile()) {
+      this.complete();
+      return;
+    }
+    // Update safeFromPirates status
+    if (this.mg!.isWater(nextTile) && this.mg!.isShoreline(nextTile)) {
+      this.tradeShip!.setSafeFromPirates();
+    }
+    this.tradeShip!.move(nextTile);
+    this.tilesTraveled++;
+  }
+
+  private computeNewPath(): void {
+    if (this.aStar === null) {
+      this.aStar = new MiniAStar(
+        this.mg!,
+        this.mg!.miniMap(),
+        this.tradeShip!.tile(),
+        this._dstPort.tile(),
+        2500,
+        20,
+      );
+    }
+
+    switch (this.aStar.compute()) {
       case PathFindResultType.Pending:
         // Fire unit event to rerender.
-        this.tradeShip.touch();
+        this.tradeShip!.touch();
         break;
-      case PathFindResultType.NextTile:
-        this._dstPort.cachePut(this.tradeShip.tile(), result.tile);
-        // Update safeFromPirates status
-        if (this.mg.isWater(result.tile) && this.mg.isShoreline(result.tile)) {
-          this.tradeShip.setSafeFromPirates();
+      case PathFindResultType.Completed: {
+        const fullPath = this.aStar.reconstructPath();
+        if (fullPath === null || fullPath.length === 0) {
+          throw new Error("missing path");
         }
-        this.tradeShip.move(result.tile);
-        this.tilesTraveled++;
+        this.fillCachePath(this._dstPort, fullPath);
+        if (!this.wasCaptured) {
+          this.fillCachePath(this.srcPort, fullPath.slice().reverse());
+        }
+        this.moveTradeShip(fullPath.shift());
         break;
+      }
       case PathFindResultType.PathNotFound:
-        consolex.warn("captured trade ship cannot find route");
-        if (this.tradeShip.isActive()) {
-          this.tradeShip.delete(false);
+        consolex.warn("trade ship cannot find route");
+        if (this.tradeShip!.isActive()) {
+          this.tradeShip!.delete(false);
         }
         this.active = false;
         break;
+      default:
+        throw new Error("unexpected path finding compute result");
     }
   }
 

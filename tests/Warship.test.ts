@@ -175,7 +175,7 @@ describe("Warship", () => {
     game.addExecution(new WarshipExecution(warship));
 
     game.addExecution(
-      new MoveWarshipExecution(warship.id(), game.ref(coastX + 5, 15)),
+      new MoveWarshipExecution(player1, warship.id(), game.ref(coastX + 5, 15)),
     );
 
     executeTicks(game, 10);
@@ -210,5 +210,53 @@ describe("Warship", () => {
 
     // Trade ship should not be captured
     expect(tradeShip.owner().id()).toBe(player2.id());
+  });
+
+  test("MoveWarshipExecution fails if player is not the owner", async () => {
+    const originalPatrolTile = game.ref(coastX + 1, 10);
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 5),
+      {
+        patrolTile: originalPatrolTile,
+      },
+    );
+    new MoveWarshipExecution(
+      player2,
+      warship.id(),
+      game.ref(coastX + 5, 15),
+    ).init(game, 0);
+    expect(warship.patrolTile()).toBe(originalPatrolTile);
+  });
+
+  test("MoveWarshipExecution fails if warship is not active", async () => {
+    const originalPatrolTile = game.ref(coastX + 1, 10);
+    const warship = player1.buildUnit(
+      UnitType.Warship,
+      game.ref(coastX + 1, 5),
+      {
+        patrolTile: originalPatrolTile,
+      },
+    );
+    warship.delete();
+    new MoveWarshipExecution(
+      player1,
+      warship.id(),
+      game.ref(coastX + 5, 15),
+    ).init(game, 0);
+    expect(warship.patrolTile()).toBe(originalPatrolTile);
+  });
+
+  test("MoveWarshipExecution fails gracefully if warship not found", async () => {
+    const exec = new MoveWarshipExecution(
+      player1,
+      123,
+      game.ref(coastX + 5, 15),
+    );
+
+    // Verify that no error is thrown.
+    exec.init(game, 0);
+
+    expect(exec.isActive()).toBe(false);
   });
 });
