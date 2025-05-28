@@ -7,6 +7,7 @@ import {
 } from "../src/core/game/Game";
 import { Stats } from "../src/core/game/Stats";
 import { StatsImpl } from "../src/core/game/StatsImpl";
+import { replacer } from "../src/server/Archive";
 import { setup } from "./util/Setup";
 
 let stats: Stats;
@@ -220,5 +221,12 @@ describe("Stats", () => {
         },
       },
     });
+  });
+
+  test("stringify", () => {
+    stats.unitLose(player1, UnitType.Port);
+    expect(JSON.stringify(stats.stats(), replacer)).toBe(
+      '{"client1":{"units":{"port":["0","0","0","1"]}}}',
+    );
   });
 });
