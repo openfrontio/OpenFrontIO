@@ -187,7 +187,7 @@ export function createRenderer(
   );
   unitInfoModal.structureLayer = structureLayer;
   // unitInfoModal.eventBus = eventBus;
-  
+
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus),
