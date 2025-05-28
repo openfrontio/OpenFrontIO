@@ -1,6 +1,7 @@
 import { GameView } from "../../../core/game/GameView";
+import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { Fx, FxType } from "./Fx";
-import { SpriteFX } from "./SpriteFx";
+import { FadeFx, SpriteFx } from "./SpriteFx";
 
 /**
  * Shockwave effect: draw a growing 1px white circle
@@ -34,6 +35,7 @@ export class ShockwaveFx implements Fx {
  * Spawn @p number of @p type animation within a perimeter
  */
 function addSpriteInCircle(
+  animatedSpriteLoader: AnimatedSpriteLoader,
   x: number,
   y: number,
   radius: number,
@@ -52,7 +54,11 @@ function addSpriteInCircle(
       game.isValidCoord(spawnX, spawnY) &&
       game.isLand(game.ref(spawnX, spawnY))
     ) {
-      const sprite = new SpriteFX(spawnX, spawnY, type, 6000, 0.1, 0.8);
+      const sprite = new FadeFx(
+        new SpriteFx(animatedSpriteLoader, spawnX, spawnY, type, 6000),
+        0.1,
+        0.8,
+      );
       result.push(sprite as Fx);
     }
   }
@@ -65,6 +71,7 @@ function addSpriteInCircle(
  * - ruins and desolation fx
  */
 export function nukeFxFactory(
+  animatedSpriteLoader: AnimatedSpriteLoader,
   x: number,
   y: number,
   radius: number,
@@ -72,7 +79,7 @@ export function nukeFxFactory(
 ): Fx[] {
   const nukeFx: Fx[] = [];
   // Explosion animation
-  nukeFx.push(new SpriteFX(x, y, FxType.Nuke) as Fx);
+  nukeFx.push(new SpriteFx(animatedSpriteLoader, x, y, FxType.Nuke));
   // Shockwave animation
   nukeFx.push(new ShockwaveFx(x, y, 1500, radius * 1.5));
   // Ruins and desolation sprites
@@ -89,6 +96,7 @@ export function nukeFxFactory(
 
   for (const { type, radiusFactor, density } of debrisPlan) {
     addSpriteInCircle(
+      animatedSpriteLoader,
       x,
       y,
       radius * radiusFactor,

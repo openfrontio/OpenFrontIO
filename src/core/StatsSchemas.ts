@@ -84,13 +84,13 @@ export const OTHER_INDEX_DESTROY = 1; // Structures and warships destroyed
 export const OTHER_INDEX_CAPTURE = 2; // Structures captured
 export const OTHER_INDEX_LOST = 3; // Structures/warships destroyed/captured by others
 
-const AtLeastOneNumberSchema = z.number().array().min(1);
+const AtLeastOneNumberSchema = z.bigint().array().min(1);
 export type AtLeastOneNumber = z.infer<typeof AtLeastOneNumberSchema>;
 
 export const PlayerStatsSchema = z
   .object({
     attacks: AtLeastOneNumberSchema.optional(),
-    betrayals: z.number().positive().optional(),
+    betrayals: z.bigint().positive().optional(),
     boats: z.record(BoatUnitSchema, AtLeastOneNumberSchema).optional(),
     bombs: z.record(BombUnitSchema, AtLeastOneNumberSchema).optional(),
     gold: AtLeastOneNumberSchema.optional(),
