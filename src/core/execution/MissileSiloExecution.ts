@@ -53,7 +53,8 @@ export class MissileSiloExecution implements Execution {
       }
     }
 
-    if (this.silo.ticksLeftInCooldown() === 0) {
+    const cooldown = this.silo.ticksLeftInCooldown();
+    if (typeof cooldown === "number" && cooldown >= 0) {
       this.silo.touch();
     }
   }

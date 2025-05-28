@@ -11,7 +11,7 @@ import {
   ServerStartGameMessageSchema,
   Turn,
 } from "../core/Schemas";
-import { createGameRecord, decompressGameRecord } from "../core/Util";
+import { createGameRecord, decompressGameRecord, replacer } from "../core/Util";
 import { LobbyConfig } from "./ClientGameRunner";
 import { getPersistentID } from "./Main";
 
@@ -199,9 +199,12 @@ export class LocalServer {
       record.turns = [];
     }
     // For unload events, sendBeacon is the only reliable method
-    const blob = new Blob([JSON.stringify(GameRecordSchema.parse(record))], {
-      type: "application/json",
-    });
+    const blob = new Blob(
+      [JSON.stringify(GameRecordSchema.parse(record), replacer)],
+      {
+        type: "application/json",
+      },
+    );
     const workerPath = this.lobbyConfig.serverConfig.workerPath(
       this.lobbyConfig.gameStartInfo.gameID,
     );
