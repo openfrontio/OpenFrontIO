@@ -13,6 +13,7 @@ import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { FxLayer } from "./layers/FxLayer";
+import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MultiTabModal } from "./layers/MultiTabModal";
@@ -171,6 +172,14 @@ export function createRenderer(
   }
   playerTeamLabel.game = game;
 
+  const headsUpMessage = document.querySelector(
+    "heads-up-message",
+  ) as HeadsUpMessage;
+  if (!(headsUpMessage instanceof HeadsUpMessage)) {
+    console.error("heads-up message not found");
+  }
+  headsUpMessage.game = game;
+
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus),
@@ -203,6 +212,7 @@ export function createRenderer(
     topBar,
     playerPanel,
     playerTeamLabel,
+    headsUpMessage,
     multiTabModal,
   ];
 
