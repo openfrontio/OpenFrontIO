@@ -41,10 +41,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+      - run: npm ci
       - name: Test coverage
         uses: ArtiomTr/jest-coverage-report-action@v2
-      - run: npm ci
-      - run: npm test
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   eslint:
     name: 🔍 ESLint
