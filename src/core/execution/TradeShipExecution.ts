@@ -171,9 +171,7 @@ export class TradeShipExecution implements Execution {
       }
       case PathFindResultType.PathNotFound:
         consolex.warn("trade ship cannot find route");
-        if (this.tradeShip!.isActive()) {
-          this.tradeShip!.delete(false);
-        }
+        this.tradeShip?.delete(false);
         this.active = false;
         break;
       default:
