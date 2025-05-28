@@ -72,7 +72,6 @@ export enum GameMapType {
   Iceland = "Iceland",
   Japan = "Japan",
   BetweenTwoSeas = "Between Two Seas",
-  KnownWorld = "Known World",
   FaroeIslands = "Faroe Islands",
   DeglaciatedAntarctica = "Deglaciated Antarctica",
   FalklandIslands = "Falkland Islands",
@@ -109,7 +108,6 @@ export const mapCategories: Record<string, GameMapType[]> = {
   fantasy: [
     GameMapType.Pangaea,
     GameMapType.Mars,
-    GameMapType.KnownWorld,
     GameMapType.DeglaciatedAntarctica,
   ],
 };

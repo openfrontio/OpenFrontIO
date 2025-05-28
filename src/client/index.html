@@ -99,6 +99,11 @@
           display: none;
         }
       }
+
+      /* display:none if child has class parent-hidden since we can't use shadow DOM in Lit due to Tailwind */
+      *:has(> .parent-hidden) {
+        display: none;
+      }
     </style>
 
     <!-- Immediate execution to prevent FOUC -->
@@ -223,12 +228,12 @@
 
         <div class="container__row">
           <flag-input class="w-[20%] md:w-[15%]"></flag-input>
-          <username-input class="w-full"></username-input>
-          <news-button class="mt-3"></news-button>
+          <username-input class="relative w-full"></username-input>
+          <news-button class="w-[20%] md:w-[15%]"></news-button>
         </div>
         <div></div>
         <div>
-          <public-lobby class="w-full"></public-lobby>
+          <public-lobby class="block"></public-lobby>
         </div>
         <div class="container__row container__row--equal">
           <o-button
