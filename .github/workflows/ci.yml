@@ -5,7 +5,10 @@ on:
   push:
     branches: [main]
 
-permissions: {}
+permissions:
+  contents: write
+  checks: write
+  pull-requests: write
 
 jobs:
   build:
@@ -38,6 +41,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Test coverage
+        uses: ArtiomTr/jest-coverage-report-action@v2
       - run: npm ci
       - run: npm test
 
