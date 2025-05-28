@@ -14,7 +14,6 @@ import { EventsDisplay } from "./layers/EventsDisplay";
 import { FxLayer } from "./layers/FxLayer";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
-import { LeftInGameAd } from "./layers/LeftInGameAd";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
 import { OptionsMenu } from "./layers/OptionsMenu";
@@ -29,6 +28,7 @@ import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { TopBar } from "./layers/TopBar";
 import { UILayer } from "./layers/UILayer";
+import { UnitInfoModal } from "./layers/UnitInfoModal";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
 
@@ -164,18 +164,26 @@ export function createRenderer(
   }
   playerTeamLabel.game = game;
 
-  const leftInGameAd = document.querySelector(
-    "left-in-game-ad",
-  ) as LeftInGameAd;
-  if (!(leftInGameAd instanceof LeftInGameAd)) {
-    console.error("left in game ad not found");
+  const unitInfoModal = document.querySelector(
+    "unit-info-modal",
+  ) as UnitInfoModal;
+  if (!(unitInfoModal instanceof UnitInfoModal)) {
+    console.error("unit info modal not found");
   }
-  leftInGameAd.g = game;
+  unitInfoModal.game = game;
+  const structureLayer = new StructureLayer(
+    game,
+    eventBus,
+    transformHandler,
+    unitInfoModal,
+  );
+  unitInfoModal.structureLayer = structureLayer;
+  // unitInfoModal.eventBus = eventBus;
 
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus),
-    new StructureLayer(game, eventBus),
+    structureLayer,
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, transformHandler),
@@ -203,8 +211,8 @@ export function createRenderer(
     topBar,
     playerPanel,
     playerTeamLabel,
+    unitInfoModal,
     multiTabModal,
-    leftInGameAd,
   ];
 
   return new GameRenderer(

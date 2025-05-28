@@ -1,7 +1,10 @@
 import { colord, Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
+import { MouseUpEvent } from "../../InputHandler";
+import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+import { UnitInfoModal } from "./UnitInfoModal";
 
 import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
 import shieldIcon from "../../../../resources/images/buildings/fortAlt2.png";
@@ -22,6 +25,7 @@ import { GameView, UnitView } from "../../../core/game/GameView";
 
 const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
 const reloadingColor = colord({ r: 255, g: 0, b: 0 });
+const selectedUnitColor = colord({ r: 0, g: 255, b: 255 });
 
 type DistanceFunction = typeof euclDistFN;
 
@@ -44,6 +48,8 @@ export class StructureLayer implements Layer {
   private context: CanvasRenderingContext2D;
   private unitIcons: Map<string, ImageData> = new Map();
   private theme: Theme;
+  private selectedStructureUnit: UnitView | null = null;
+  private previouslySelected: UnitView | null = null;
 
   // Configuration for supported unit types only
   private readonly unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
@@ -82,7 +88,15 @@ export class StructureLayer implements Layer {
   constructor(
     private game: GameView,
     private eventBus: EventBus,
+    private transformHandler: TransformHandler,
+    private unitInfoModal: UnitInfoModal | null,
   ) {
+    if (!unitInfoModal) {
+      throw new Error(
+        "UnitInfoModal instance must be provided to StructureLayer.",
+      );
+    }
+    this.unitInfoModal = unitInfoModal;
     this.theme = game.config().theme();
     this.loadIconData();
     this.loadIcon("reloadingSam", {
@@ -147,6 +161,7 @@ export class StructureLayer implements Layer {
 
   init() {
     this.redraw();
+    this.eventBus.on(MouseUpEvent, (e) => this.onMouseUp(e));
   }
 
   redraw() {
@@ -265,6 +280,10 @@ export class StructureLayer implements Layer {
       borderColor = underConstructionColor;
     }
 
+    if (this.selectedStructureUnit === unit) {
+      borderColor = selectedUnitColor;
+    }
+
     this.drawBorder(unit, borderColor, config, drawFunction);
 
     const startX = this.game.x(unit.tile()) - Math.floor(icon.width / 2);
@@ -315,5 +334,78 @@ export class StructureLayer implements Layer {
 
   clearCell(cell: Cell) {
     this.context.clearRect(cell.x, cell.y, 1, 1);
+  }
+
+  private findStructureUnitAtCell(
+    cell: { x: number; y: number },
+    maxDistance: number = 10,
+  ): UnitView | null {
+    const targetRef = this.game.ref(cell.x, cell.y);
+
+    const allUnitTypes = Object.values(UnitType);
+
+    const nearby = this.game.nearbyUnits(targetRef, maxDistance, allUnitTypes);
+
+    for (const { unit } of nearby) {
+      if (unit.isActive() && this.isUnitTypeSupported(unit.type())) {
+        return unit;
+      }
+    }
+
+    return null;
+  }
+
+  private onMouseUp(event: MouseUpEvent) {
+    const cell = this.transformHandler.screenToWorldCoordinates(
+      event.x,
+      event.y,
+    );
+
+    const clickedUnit = this.findStructureUnitAtCell(cell);
+    this.previouslySelected = this.selectedStructureUnit;
+
+    if (clickedUnit) {
+      const wasSelected = this.previouslySelected === clickedUnit;
+      if (wasSelected) {
+        this.selectedStructureUnit = null;
+        if (this.previouslySelected) {
+          this.handleUnitRendering(this.previouslySelected);
+        }
+        this.unitInfoModal?.onCloseStructureModal();
+      } else {
+        this.selectedStructureUnit = clickedUnit;
+        if (
+          this.previouslySelected &&
+          this.previouslySelected !== clickedUnit
+        ) {
+          this.handleUnitRendering(this.previouslySelected);
+        }
+        this.handleUnitRendering(clickedUnit);
+
+        const screenPos = this.transformHandler.worldToScreenCoordinates(cell);
+        const unitTile = clickedUnit.tile();
+        this.unitInfoModal?.onOpenStructureModal({
+          unit: clickedUnit,
+          x: screenPos.x,
+          y: screenPos.y,
+          tileX: this.game.x(unitTile),
+          tileY: this.game.y(unitTile),
+        });
+      }
+    } else {
+      this.selectedStructureUnit = null;
+      if (this.previouslySelected) {
+        this.handleUnitRendering(this.previouslySelected);
+      }
+      this.unitInfoModal?.onCloseStructureModal();
+    }
+  }
+
+  public unSelectStructureUnit() {
+    if (this.selectedStructureUnit) {
+      this.previouslySelected = this.selectedStructureUnit;
+      this.selectedStructureUnit = null;
+      this.handleUnitRendering(this.previouslySelected);
+    }
   }
 }

@@ -13,7 +13,7 @@
       "coordinates": [451, 785],
       "name": "England",
       "strength": 2,
-      "flag": "england"
+      "flag": "gb-eng"
     },
     {
       "coordinates": [285, 1253],
@@ -235,13 +235,13 @@
       "coordinates": [278, 742],
       "name": "Wales",
       "strength": 2,
-      "flag": "wales"
+      "flag": "gb-wls"
     },
     {
       "coordinates": [296, 601],
       "name": "Scotland",
       "strength": 1,
-      "flag": "scotland"
+      "flag": "gb-sct"
     },
     {
       "coordinates": [2239, 3215],

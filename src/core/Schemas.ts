@@ -338,7 +338,6 @@ export const ServerPrestartMessageSchema = ServerBaseMessageSchema.extend({
 });
 
 export const PlayerSchema = z.object({
-  playerID: ID,
   clientID: ID,
   username: SafeString,
   flag: SafeString.optional(),

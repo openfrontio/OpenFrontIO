@@ -25,21 +25,6 @@ export class SpawnTimer implements Layer {
     this.colors = [];
 
     if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
-      const player = this.game.myPlayer();
-      if (player === null) return;
-      const max = this.game.config().maxPopulation(player);
-      const troops = player.troops();
-      const workers = player.workers();
-      const total = player.totalPopulation();
-      const attacking = total - troops - workers;
-
-      this.colors = [
-        "rgba(0, 128, 255, 0.7)",
-        "orange",
-        "red",
-        "rgba(0, 0, 0, 0.5)",
-      ];
-      this.ratios = [workers / max, troops / max, attacking / max];
       return;
     }
 
