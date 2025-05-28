@@ -360,6 +360,9 @@ export class StructureLayer implements Layer {
       event.x,
       event.y,
     );
+    if (!this.game.isValidCoord(cell.x, cell.y)) {
+      return;
+    }
 
     const clickedUnit = this.findStructureUnitAtCell(cell);
     this.previouslySelected = this.selectedStructureUnit;
