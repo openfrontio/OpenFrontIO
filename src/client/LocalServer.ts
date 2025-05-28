@@ -176,7 +176,6 @@ export class LocalServer {
     }
     const players: PlayerRecord[] = [
       {
-        playerID: this.lobbyConfig.clientID, // hack?
         persistentID: getPersistentID(),
         username: this.lobbyConfig.playerName,
         clientID: this.lobbyConfig.clientID,

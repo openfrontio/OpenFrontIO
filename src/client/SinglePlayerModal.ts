@@ -435,7 +435,6 @@ export class SinglePlayerModal extends LitElement {
             gameID: gameID,
             players: [
               {
-                playerID: generateID(),
                 clientID,
                 username: usernameInput.getCurrentUsername(),
                 flag:

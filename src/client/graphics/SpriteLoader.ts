@@ -71,7 +71,53 @@ export const isSpriteReady = (unitType: UnitType): boolean => {
 
 const coloredSpriteCache: Map<string, HTMLCanvasElement> = new Map();
 
-// puts the sprite in an canvas colors it and caches the colored canvas
+/**
+ * Load a canvas and replace grayscale with border colors
+ */
+export const colorizeCanvas = (
+  source: CanvasImageSource & { width: number; height: number },
+  colorA: Colord,
+  colorB: Colord,
+  colorC: Colord,
+): HTMLCanvasElement => {
+  const canvas = document.createElement("canvas");
+  canvas.width = source.width;
+  canvas.height = source.height;
+
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(source, 0, 0);
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+
+  const colorARgb = colorA.toRgb();
+  const colorBRgb = colorB.toRgb();
+  const colorCRgb = colorC.toRgb();
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i],
+      g = data[i + 1],
+      b = data[i + 2];
+
+    if (r === 180 && g === 180 && b === 180) {
+      data[i] = colorARgb.r;
+      data[i + 1] = colorARgb.g;
+      data[i + 2] = colorARgb.b;
+    } else if (r === 70 && g === 70 && b === 70) {
+      data[i] = colorBRgb.r;
+      data[i + 1] = colorBRgb.g;
+      data[i + 2] = colorBRgb.b;
+    } else if (r === 130 && g === 130 && b === 130) {
+      data[i] = colorCRgb.r;
+      data[i + 1] = colorCRgb.g;
+      data[i + 2] = colorCRgb.b;
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+};
+
 export const getColoredSprite = (
   unit: UnitView,
   theme: Theme,
@@ -82,8 +128,7 @@ export const getColoredSprite = (
   const territoryColor = customTerritoryColor ?? theme.territoryColor(owner);
   const borderColor = customBorderColor ?? theme.borderColor(owner);
   const spawnHighlightColor = theme.spawnHighlightColor();
-  const colorKey = territoryColor.toRgbString() + borderColor.toRgbString();
-  const key = unit.type() + colorKey;
+  const key = `${unit.type()}-${owner.id()}`;
 
   if (coloredSpriteCache.has(key)) {
     return coloredSpriteCache.get(key)!;
@@ -94,45 +139,13 @@ export const getColoredSprite = (
     throw new Error(`Failed to load sprite for ${unit.type()}`);
   }
 
-  const territoryRgb = territoryColor.toRgb();
-  const borderRgb = borderColor.toRgb();
-  const spawnHighlightRgb = spawnHighlightColor.toRgb();
+  const coloredCanvas = colorizeCanvas(
+    sprite,
+    territoryColor,
+    borderColor,
+    spawnHighlightColor,
+  );
 
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d")!;
-  canvas.width = sprite.width;
-  canvas.height = sprite.height;
-
-  ctx.drawImage(sprite, 0, 0);
-
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData.data;
-
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-
-    if (r === 180 && g === 180 && b === 180) {
-      data[i] = territoryRgb.r;
-      data[i + 1] = territoryRgb.g;
-      data[i + 2] = territoryRgb.b;
-    }
-
-    if (r === 70 && g === 70 && b === 70) {
-      data[i] = borderRgb.r;
-      data[i + 1] = borderRgb.g;
-      data[i + 2] = borderRgb.b;
-    }
-
-    if (r === 130 && g === 130 && b === 130) {
-      data[i] = spawnHighlightRgb.r;
-      data[i + 1] = spawnHighlightRgb.g;
-      data[i + 2] = spawnHighlightRgb.b;
-    }
-  }
-
-  ctx.putImageData(imageData, 0.5, 0.5);
-  coloredSpriteCache.set(key, canvas);
-  return canvas;
+  coloredSpriteCache.set(key, coloredCanvas);
+  return coloredCanvas;
 };

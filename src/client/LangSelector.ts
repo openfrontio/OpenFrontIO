@@ -5,11 +5,13 @@ import "./LanguageModal";
 import ar from "../../resources/lang/ar.json";
 import bg from "../../resources/lang/bg.json";
 import bn from "../../resources/lang/bn.json";
+import cs from "../../resources/lang/cs.json";
 import de from "../../resources/lang/de.json";
 import en from "../../resources/lang/en.json";
 import eo from "../../resources/lang/eo.json";
 import es from "../../resources/lang/es.json";
 import fr from "../../resources/lang/fr.json";
+import he from "../../resources/lang/he.json";
 import hi from "../../resources/lang/hi.json";
 import it from "../../resources/lang/it.json";
 import ja from "../../resources/lang/ja.json";
@@ -53,6 +55,8 @@ export class LangSelector extends LitElement {
     tr,
     tp,
     uk,
+    cs,
+    he,
   };
 
   createRenderRoot() {
