@@ -308,3 +308,10 @@ export const emojiTable: string[][] = [
 ];
 // 2d to 1d array
 export const flattenedEmojiTable: string[] = emojiTable.flat();
+
+/**
+ * JSON.stringify replacer function that converts bigint values to strings.
+ */
+export function replacer(_key: string, value: any): any {
+  return typeof value === "bigint" ? value.toString() : value;
+}
