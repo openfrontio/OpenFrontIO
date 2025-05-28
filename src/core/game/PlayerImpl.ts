@@ -301,7 +301,7 @@ export class PlayerImpl implements Player {
 
   timeOfDeath(): number {
     if (!this.isAlive() && this._timeOfDeath === -1)
-      this._timeOfDeath = Date.now();
+      this._timeOfDeath = this.mg.ticks();
     return this._timeOfDeath;
   }
 

@@ -46,7 +46,7 @@ export class Leaderboard extends LitElement implements Layer {
   private _leaderboardHidden = true;
   private _shownOnInit = false;
   private showTopFive = true;
-  private readonly recentlyDeadTimeout = 10 * 1000; // 10 seconds
+  private readonly recentlyDeadTimeout = 10 * 10; // 10 seconds
 
   init() {}
 
@@ -135,13 +135,11 @@ export class Leaderboard extends LitElement implements Layer {
     this.recentlyDeadPlayers = sorted
       .filter(
         (player) =>
-          Date.now() - player.timeOfDeath() < this.recentlyDeadTimeout,
+          this.game &&
+          !player.isAlive() &&
+          this.game.ticks() - player.timeOfDeath() < this.recentlyDeadTimeout,
       )
-      .map((player, index) => {
-        const troops = player.troops() / 10;
-
-        return player.displayName();
-      });
+      .map((player, index) => player.displayName());
 
     this.requestUpdate();
   }
