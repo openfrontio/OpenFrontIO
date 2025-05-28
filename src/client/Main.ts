@@ -20,6 +20,7 @@ import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
 import { NewsModal } from "./NewsModal";
+import { PlayerInfoModal } from "./PlayerInfoModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
@@ -158,12 +159,24 @@ class Client {
       hlpModal.open();
     });
 
-    if (isLoggedIn() === false) {
+    const piModal = document.querySelector(
+      "player-info-modal",
+    ) as PlayerInfoModal;
+    piModal instanceof PlayerInfoModal;
+    document
+      .getElementById("player-info-button")
+      ?.addEventListener("click", () => {
+        piModal.open();
+      });
+
+    const loggedIn = isLoggedIn();
+    if (loggedIn === false) {
       // Not logged in
       loginDiscordButton.disable = false;
       loginDiscordButton.translationKey = "main.login_discord";
       loginDiscordButton.addEventListener("click", discordLogin);
       logoutDiscordButton.hidden = true;
+      piModal.onLoggedOut();
     } else {
       // JWT appears to be valid
       loginDiscordButton.disable = true;
@@ -176,7 +189,9 @@ class Client {
         loginDiscordButton.translationKey = "main.login_discord";
         loginDiscordButton.addEventListener("click", discordLogin);
         logoutDiscordButton.hidden = true;
+        piModal.onLoggedOut();
       });
+      piModal.onLoggedIn(loggedIn.claims);
       // Look up the discord user object.
       // TODO: Add caching
       getUserMe().then((userMeResponse) => {
@@ -186,11 +201,12 @@ class Client {
           loginDiscordButton.translationKey = "main.login_discord";
           loginDiscordButton.addEventListener("click", discordLogin);
           logoutDiscordButton.hidden = true;
+          piModal.onLoggedOut();
           return;
         }
+        piModal.onUserMe(userMeResponse);
         // TODO: Update the page for logged in user
         loginDiscordButton.translationKey = "main.logged_in";
-        const { user, player } = userMeResponse;
       });
     }
 
