@@ -15,7 +15,6 @@ import { EventsDisplay } from "./layers/EventsDisplay";
 import { FxLayer } from "./layers/FxLayer";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
-import { LeftInGameAd } from "./layers/LeftInGameAd";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
 import { OptionsMenu } from "./layers/OptionsMenu";
@@ -231,7 +230,6 @@ export function createRenderer(
     playerTeamLabel,
     unitInfoModal,
     multiTabModal,
-    leftInGameAd,
   ];
 
   return new GameRenderer(

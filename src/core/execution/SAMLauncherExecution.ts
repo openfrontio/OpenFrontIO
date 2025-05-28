@@ -181,7 +181,6 @@ export class SAMLauncherExecution implements Execution {
           );
           // Delete warheads
           mirvWarheadTargets.forEach((u) => {
-            u.setInterceptedBySam();
             u.delete();
           });
         } else if (target !== null) {
