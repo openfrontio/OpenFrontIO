@@ -1,5 +1,6 @@
 import { consolex } from "../core/Consolex";
 import { GameConfig, GameID, GameRecord } from "../core/Schemas";
+import { replacer } from "../core/Util";
 
 export interface LocalStatsData {
   [key: GameID]: {
@@ -19,7 +20,7 @@ function getStats(): LocalStatsData {
 function save(stats: LocalStatsData) {
   // To execute asynchronously
   setTimeout(
-    () => localStorage.setItem("game-records", JSON.stringify(stats)),
+    () => localStorage.setItem("game-records", JSON.stringify(stats, replacer)),
     0,
   );
 }
