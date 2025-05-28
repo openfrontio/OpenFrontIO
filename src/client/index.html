@@ -99,11 +99,6 @@
           display: none;
         }
       }
-
-      /* display:none if child has class parent-hidden since we can't use shadow DOM in Lit due to Tailwind */
-      *:has(> .parent-hidden) {
-        display: none;
-      }
     </style>
 
     <!-- Immediate execution to prevent FOUC -->
