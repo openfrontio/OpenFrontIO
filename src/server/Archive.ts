@@ -60,7 +60,7 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
     await r2.putObject({
       Bucket: bucket,
       Key: `${analyticsFolder}/${analyticsKey}`,
-      Body: JSON.stringify(analyticsData),
+      Body: JSON.stringify(analyticsData, replacer),
       ContentType: "application/json",
     });
 
@@ -78,7 +78,7 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
 
 async function archiveFullGameToR2(gameRecord: GameRecord) {
   // Create a deep copy to avoid modifying the original
-  const recordCopy: GameRecord = JSON.parse(JSON.stringify(gameRecord));
+  const recordCopy = structuredClone(gameRecord);
 
   // Players may see this so make sure to clear PII
   recordCopy.info.players.forEach((p) => {
@@ -89,7 +89,7 @@ async function archiveFullGameToR2(gameRecord: GameRecord) {
     await r2.putObject({
       Bucket: bucket,
       Key: `${gameFolder}/${recordCopy.info.gameID}`,
-      Body: JSON.stringify(recordCopy),
+      Body: JSON.stringify(recordCopy, replacer),
       ContentType: "application/json",
     });
   } catch (error) {
@@ -146,4 +146,11 @@ export async function gameRecordExists(gameId: GameID): Promise<boolean> {
     });
     return false;
   }
+}
+
+/**
+ * JSON.stringify replacer function that converts bigint values to strings.
+ */
+export function replacer(_key: string, value: any): any {
+  return typeof value === "bigint" ? value.toString() : value;
 }
