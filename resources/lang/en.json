@@ -367,7 +367,8 @@
     "player": "Player",
     "owned": "Owned",
     "gold": "Gold",
-    "troops": "Troops"
+    "troops": "Troops",
+    "dead_players": "Recently dead players"
   },
   "player_info_overlay": {
     "type": "Type",

@@ -318,7 +318,7 @@ export class Leaderboard extends LitElement implements Layer {
         <table>
           <thead>
             <tr>
-              <th>Recently dead players</th>
+              <th>${translateText("leaderboard.dead_players")}</th>
             </tr>
           </thead>
           <tbody>
