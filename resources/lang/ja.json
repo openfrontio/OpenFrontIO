@@ -383,7 +383,8 @@
     "sams": "SAM",
     "warships": "戦艦",
     "health": "体力",
-    "attitude": "態度"
+    "attitude": "態度",
+    "tiles": "タイル"
   },
   "relation": {
     "hostile": "敵対的",
