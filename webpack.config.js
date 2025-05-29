@@ -9,7 +9,8 @@ import webpack from "webpack";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const gitCommit = execSync("git rev-parse HEAD").toString().trim();
+const gitCommit =
+  process.env.GIT_COMMIT ?? execSync("git rev-parse HEAD").toString().trim();
 
 export default async (env, argv) => {
   const isProduction = argv.mode === "production";
