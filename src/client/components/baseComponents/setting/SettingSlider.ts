@@ -5,6 +5,7 @@ import { customElement, property } from "lit/decorators.js";
 export class SettingSlider extends LitElement {
   @property() label = "Setting";
   @property() description = "";
+  @property() id = "";
   @property({ type: Number }) value = 0;
   @property({ type: Number }) min = 0;
   @property({ type: Number }) max = 100;
@@ -62,7 +63,7 @@ export class SettingSlider extends LitElement {
         </div>
         <input
           type="range"
-          id="setting-slider-input"
+          id="${this.id}"
           class="setting-input slider full-width"
           min=${this.min}
           max=${this.max}

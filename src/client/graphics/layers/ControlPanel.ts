@@ -133,7 +133,7 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   onAttackRatioChange(newRatio: number) {
-    this.uiState.attackRatio = newRatio;
+    if (this.uiState) this.uiState.attackRatio = newRatio;
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
@@ -154,7 +154,7 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   onTroopChange(newRatio: number) {
-    this.eventBus.emit(new SendSetTargetTroopRatioEvent(newRatio));
+    this.eventBus?.emit(new SendSetTargetTroopRatioEvent(newRatio));
   }
 
   delta(): number {
