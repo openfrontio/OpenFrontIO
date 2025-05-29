@@ -1,4 +1,4 @@
-import { AllPlayersStats, ClientID, PlayerStats } from "../Schemas";
+import { AllPlayersStats, ClientID } from "../Schemas";
 import {
   EmojiMessage,
   GameUpdates,
@@ -73,6 +73,8 @@ export interface UnitUpdate {
   pos: TileRef;
   lastPos: TileRef;
   isActive: boolean;
+  reachedTarget: boolean;
+  retreating: boolean;
   targetUnitId?: number; // Only for trade ships
   targetTile?: TileRef; // Only for nukes
   health?: number;
@@ -103,6 +105,7 @@ export interface PlayerUpdate {
   tilesOwned: number;
   gold: number;
   population: number;
+  totalPopulation: number;
   workers: number;
   troops: number;
   targetTroopRatio: number;
@@ -114,8 +117,8 @@ export interface PlayerUpdate {
   outgoingAttacks: AttackUpdate[];
   incomingAttacks: AttackUpdate[];
   outgoingAllianceRequests: PlayerID[];
-  stats: PlayerStats;
   hasSpawned: boolean;
+  betrayals?: bigint;
 }
 
 export interface AllianceRequestUpdate {
@@ -175,8 +178,7 @@ export interface WinUpdate {
   type: GameUpdateType.Win;
   allPlayersStats: AllPlayersStats;
   // Player id or team name.
-  winner: number | Team;
-  winnerType: "player" | "team";
+  winner: ["player", number] | ["team", Team];
 }
 
 export interface HashUpdate {

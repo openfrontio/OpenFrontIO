@@ -123,6 +123,7 @@ export class PlayerImpl implements Player {
     const outgoingAllianceRequests = this.outgoingAllianceRequests().map((ar) =>
       ar.recipient().id(),
     );
+    const stats = this.mg.stats().getPlayerStats(this);
 
     return {
       type: GameUpdateType.Player,
@@ -138,6 +139,7 @@ export class PlayerImpl implements Player {
       tilesOwned: this.numTilesOwned(),
       gold: Number(this._gold),
       population: this.population(),
+      totalPopulation: this.totalPopulation(),
       workers: this.workers(),
       troops: this.troops(),
       targetTroopRatio: this.targetTroopRatio(),
@@ -146,29 +148,27 @@ export class PlayerImpl implements Player {
       isTraitor: this.isTraitor(),
       targets: this.targets().map((p) => p.smallID()),
       outgoingEmojis: this.outgoingEmojis(),
-      outgoingAttacks: this._outgoingAttacks.map(
-        (a) =>
-          ({
-            attackerID: a.attacker().smallID(),
-            targetID: a.target().smallID(),
-            troops: a.troops(),
-            id: a.id(),
-            retreating: a.retreating(),
-          }) as AttackUpdate,
-      ),
-      incomingAttacks: this._incomingAttacks.map(
-        (a) =>
-          ({
-            attackerID: a.attacker().smallID(),
-            targetID: a.target().smallID(),
-            troops: a.troops(),
-            id: a.id(),
-            retreating: a.retreating(),
-          }) as AttackUpdate,
-      ),
+      outgoingAttacks: this._outgoingAttacks.map((a) => {
+        return {
+          attackerID: a.attacker().smallID(),
+          targetID: a.target().smallID(),
+          troops: a.troops(),
+          id: a.id(),
+          retreating: a.retreating(),
+        } as AttackUpdate;
+      }),
+      incomingAttacks: this._incomingAttacks.map((a) => {
+        return {
+          attackerID: a.attacker().smallID(),
+          targetID: a.target().smallID(),
+          troops: a.troops(),
+          id: a.id(),
+          retreating: a.retreating(),
+        } as AttackUpdate;
+      }),
       outgoingAllianceRequests: outgoingAllianceRequests,
-      stats: this.mg.stats().getPlayerStats(this.id()),
       hasSpawned: this.hasSpawned(),
+      betrayals: stats?.betrayals,
     };
   }
 
@@ -380,8 +380,12 @@ export class PlayerImpl implements Player {
         this.mg.config().traitorDuration()
     );
   }
+
   markTraitor(): void {
     this.markedTraitorTick = this.mg.ticks();
+
+    // Record stats
+    this.mg.stats().betray(this);
   }
 
   createAllianceRequest(recipient: Player): AllianceRequest | null {
@@ -648,6 +652,21 @@ export class PlayerImpl implements Player {
   population(): number {
     return Number(this._troops + this._workers);
   }
+  totalPopulation(): number {
+    return this.population() + this.attackingTroops();
+  }
+  private attackingTroops(): number {
+    const landAttackTroops = this._outgoingAttacks
+      .filter((a) => a.isActive())
+      .reduce((sum, a) => sum + a.troops(), 0);
+
+    const boatTroops = this.units(UnitType.TransportShip)
+      .map((u) => u.troops())
+      .reduce((sum, n) => sum + n, 0);
+
+    return landAttackTroops + boatTroops;
+  }
+
   workers(): number {
     return Math.max(1, Number(this._workers));
   }
@@ -909,7 +928,7 @@ export class PlayerImpl implements Player {
   hash(): number {
     return (
       simpleHash(this.id()) * (this.population() + this.numTilesOwned()) +
-      this._units.reduce((acc, unit) => acc + (unit as UnitImpl).hash(), 0)
+      this._units.reduce((acc, unit) => acc + unit.hash(), 0)
     );
   }
   toString(): string {
@@ -937,6 +956,7 @@ export class PlayerImpl implements Player {
     target: Player | TerraNullius,
     troops: number,
     sourceTile: TileRef | null,
+    border: Set<number>,
   ): Attack {
     const attack = new AttackImpl(
       this._pseudo_random.nextID(),
@@ -944,6 +964,8 @@ export class PlayerImpl implements Player {
       this,
       troops,
       sourceTile,
+      border,
+      this.mg,
     );
     this._outgoingAttacks.push(attack);
     if (target.isPlayer()) {

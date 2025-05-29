@@ -242,14 +242,12 @@ export function startWorker() {
     "/api/archive_singleplayer_game",
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
       const gameRecord: GameRecord = req.body;
-      const clientIP = req.ip || req.socket.remoteAddress || "unknown";
 
       if (!gameRecord) {
         log.info("game record not found in request");
         res.status(404).json({ error: "Game record not found" });
         return;
       }
-      gameRecord.players.forEach((p) => (p.ip = clientIP));
       archive(gameRecord);
       res.json({
         success: true,

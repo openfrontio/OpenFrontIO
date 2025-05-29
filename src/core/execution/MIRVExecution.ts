@@ -56,13 +56,8 @@ export class MirvExecution implements Execution {
     this.targetPlayer = this.mg.owner(this.dst);
     this.speed = this.mg.config().defaultNukeSpeed();
 
-    this.mg
-      .stats()
-      .increaseNukeCount(
-        this.player.id(),
-        this.targetPlayer.id(),
-        UnitType.MIRV,
-      );
+    // Record stats
+    this.mg.stats().bombLaunch(this.player, this.targetPlayer, UnitType.MIRV);
   }
 
   tick(ticks: number): void {
@@ -93,6 +88,8 @@ export class MirvExecution implements Execution {
     if (result === true) {
       this.separate();
       this.active = false;
+      // Record stats
+      this.mg.stats().bombLand(this.player, this.targetPlayer, UnitType.MIRV);
       return;
     } else {
       this.nuke.move(result);
@@ -169,15 +166,22 @@ export class MirvExecution implements Execution {
       if (this.mg.owner(tile) !== this.targetPlayer) {
         continue;
       }
-      for (const t of taken) {
-        if (this.mg.manhattanDist(tile, t) < 25) {
-          continue;
-        }
+      if (this.proximityCheck(tile, taken)) {
+        continue;
       }
       return tile;
     }
     console.log("couldn't find place, giving up");
     return null;
+  }
+
+  private proximityCheck(tile: TileRef, taken: TileRef[]): boolean {
+    for (const t of taken) {
+      if (this.mg.manhattanDist(tile, t) < 25) {
+        return true;
+      }
+    }
+    return false;
   }
 
   owner(): Player {

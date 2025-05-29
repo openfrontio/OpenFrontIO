@@ -63,7 +63,7 @@ export class SpawnTimer implements Layer {
     let x = 0;
     let filledRatio = 0;
     for (let i = 0; i < this.ratios.length && i < this.colors.length; i++) {
-      const ratio = this.ratios[i];
+      const ratio = this.ratios[i] ?? 1 - filledRatio;
       const segmentWidth = barWidth * ratio;
 
       context.fillStyle = this.colors[i];

@@ -26,6 +26,7 @@ import {
 import { ClientID } from "../../../core/Schemas";
 import {
   CancelAttackIntentEvent,
+  CancelBoatIntentEvent,
   SendAllianceReplyIntentEvent,
 } from "../../Transport";
 import { Layer } from "./Layer";
@@ -33,7 +34,11 @@ import { Layer } from "./Layer";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
 import { renderTroops } from "../../Utils";
-import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
+import {
+  GoToPlayerEvent,
+  GoToPositionEvent,
+  GoToUnitEvent,
+} from "./Leaderboard";
 
 import { translateText } from "../../Utils";
 
@@ -380,10 +385,20 @@ export class EventsDisplay extends LitElement implements Layer {
     this.eventBus.emit(new CancelAttackIntentEvent(myPlayer.id(), id));
   }
 
+  emitBoatCancelIntent(id: number) {
+    const myPlayer = this.game.playerByClientID(this.clientID);
+    if (!myPlayer) return;
+    this.eventBus.emit(new CancelBoatIntentEvent(id));
+  }
+
   emitGoToPlayerEvent(attackerID: number) {
     const attacker = this.game.playerBySmallID(attackerID) as PlayerView;
     if (!attacker) return;
     this.eventBus.emit(new GoToPlayerEvent(attacker));
+  }
+
+  emitGoToPositionEvent(x: number, y: number) {
+    this.eventBus.emit(new GoToPositionEvent(x, y));
   }
 
   emitGoToUnitEvent(unit: UnitView) {
@@ -469,6 +484,26 @@ export class EventsDisplay extends LitElement implements Layer {
       : event.description;
   }
 
+  private async attackWarningOnClick(attack: AttackUpdate) {
+    const playerView = this.game.playerBySmallID(attack.attackerID);
+    if (playerView !== undefined) {
+      if (playerView instanceof PlayerView) {
+        const averagePosition = await playerView.attackAveragePosition(
+          attack.attackerID,
+          attack.id,
+        );
+
+        if (averagePosition === null) {
+          this.emitGoToPlayerEvent(attack.attackerID);
+        } else {
+          this.emitGoToPositionEvent(averagePosition.x, averagePosition.y);
+        }
+      }
+    } else {
+      this.emitGoToPlayerEvent(attack.attackerID);
+    }
+  }
+
   private renderIncomingAttacks() {
     return html`
       ${this.incomingAttacks.length > 0
@@ -480,10 +515,7 @@ export class EventsDisplay extends LitElement implements Layer {
                     <button
                       translate="no"
                       class="ml-2"
-                      @click=${() => {
-                        attack.attackerID &&
-                          this.emitGoToPlayerEvent(attack.attackerID);
-                      }}
+                      @click=${() => this.attackWarningOnClick(attack)}
                     >
                       ${renderTroops(attack.troops)}
                       ${(
@@ -513,7 +545,7 @@ export class EventsDisplay extends LitElement implements Layer {
                     <button
                       translate="no"
                       class="ml-2"
-                      @click=${() => this.emitGoToPlayerEvent(attack.targetID)}
+                      @click=${async () => this.attackWarningOnClick(attack)}
                     >
                       ${renderTroops(attack.troops)}
                       ${(
@@ -572,25 +604,29 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private renderBoats() {
-    if (this.outgoingBoats.length === 0) {
-      return html``;
-    }
-
     return html`
       ${this.outgoingBoats.length > 0
         ? html`
             <tr class="border-t border-gray-700">
-              <td
-                class="lg:p-3 p-1 text-left text-blue-400 grid grid-cols-3 gap-2"
-              >
+              <td class="lg:p-3 p-1 text-left text-blue-400">
                 ${this.outgoingBoats.map(
-                  (boats) => html`
+                  (boat) => html`
                     <button
                       translate="no"
-                      @click=${() => this.emitGoToUnitEvent(boats)}
+                      @click=${() => this.emitGoToUnitEvent(boat)}
                     >
-                      Boat: ${renderTroops(boats.troops())}
+                      Boat: ${renderTroops(boat.troops())}
                     </button>
+                    ${!boat.retreating()
+                      ? html`<button
+                          ${boat.retreating() ? "disabled" : ""}
+                          @click=${() => {
+                            this.emitBoatCancelIntent(boat.id());
+                          }}
+                        >
+                          ❌
+                        </button>`
+                      : "(retreating...)"}
                   `,
                 )}
               </td>

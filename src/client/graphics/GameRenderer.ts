@@ -12,6 +12,8 @@ import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
+import { FxLayer } from "./layers/FxLayer";
+import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MultiTabModal } from "./layers/MultiTabModal";
@@ -19,6 +21,7 @@ import { NameLayer } from "./layers/NameLayer";
 import { OptionsMenu } from "./layers/OptionsMenu";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
+import { PlayerTeamLabel } from "./layers/PlayerTeamLabel";
 import { RadialMenu } from "./layers/RadialMenu";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
@@ -27,6 +30,7 @@ import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { TopBar } from "./layers/TopBar";
 import { UILayer } from "./layers/UILayer";
+import { UnitInfoModal } from "./layers/UnitInfoModal";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
 
@@ -144,6 +148,7 @@ export function createRenderer(
   playerPanel.g = game;
   playerPanel.eventBus = eventBus;
   playerPanel.emojiTable = emojiTable;
+  playerPanel.uiState = uiState;
 
   const chatModal = document.querySelector("chat-modal") as ChatModal;
   if (!(chatModal instanceof ChatModal)) {
@@ -160,11 +165,44 @@ export function createRenderer(
   }
   multiTabModal.game = game;
 
+  const playerTeamLabel = document.querySelector(
+    "player-team-label",
+  ) as PlayerTeamLabel;
+  if (!(playerTeamLabel instanceof PlayerTeamLabel)) {
+    console.error("player team label not found");
+  }
+  playerTeamLabel.game = game;
+
+  const headsUpMessage = document.querySelector(
+    "heads-up-message",
+  ) as HeadsUpMessage;
+  if (!(headsUpMessage instanceof HeadsUpMessage)) {
+    console.error("heads-up message not found");
+  }
+  headsUpMessage.game = game;
+
+  const unitInfoModal = document.querySelector(
+    "unit-info-modal",
+  ) as UnitInfoModal;
+  if (!(unitInfoModal instanceof UnitInfoModal)) {
+    console.error("unit info modal not found");
+  }
+  unitInfoModal.game = game;
+  const structureLayer = new StructureLayer(
+    game,
+    eventBus,
+    transformHandler,
+    unitInfoModal,
+  );
+  unitInfoModal.structureLayer = structureLayer;
+  // unitInfoModal.eventBus = eventBus;
+
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus),
-    new StructureLayer(game, eventBus),
+    structureLayer,
     new UnitLayer(game, eventBus, clientID, transformHandler),
+    new FxLayer(game),
     new UILayer(game, eventBus, clientID, transformHandler),
     new NameLayer(game, transformHandler, clientID),
     eventsDisplay,
@@ -190,6 +228,9 @@ export function createRenderer(
     teamStats,
     topBar,
     playerPanel,
+    playerTeamLabel,
+    headsUpMessage,
+    unitInfoModal,
     multiTabModal,
   ];
 

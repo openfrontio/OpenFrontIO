@@ -54,6 +54,7 @@ export const ColoredTeams: Record<string, Team> = {
 
 export enum GameMapType {
   World = "World",
+  WorldMapGiant = "Giant World Map",
   Europe = "Europe",
   EuropeClassic = "Europe Classic",
   Mena = "Mena",
@@ -71,16 +72,17 @@ export enum GameMapType {
   Iceland = "Iceland",
   Japan = "Japan",
   BetweenTwoSeas = "Between Two Seas",
-  KnownWorld = "Known World",
   FaroeIslands = "Faroe Islands",
   DeglaciatedAntarctica = "Deglaciated Antarctica",
   FalklandIslands = "Falkland Islands",
   Baikal = "Baikal",
+  Halkidiki = "Halkidiki",
 }
 
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
     GameMapType.World,
+    GameMapType.WorldMapGiant,
     GameMapType.NorthAmerica,
     GameMapType.SouthAmerica,
     GameMapType.Europe,
@@ -101,11 +103,11 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.FaroeIslands,
     GameMapType.FalklandIslands,
     GameMapType.Baikal,
+    GameMapType.Halkidiki,
   ],
   fantasy: [
     GameMapType.Pangaea,
     GameMapType.Mars,
-    GameMapType.KnownWorld,
     GameMapType.DeglaciatedAntarctica,
   ],
 };
@@ -148,13 +150,19 @@ export enum UnitType {
   Construction = "Construction",
 }
 
+export interface OwnerComp {
+  owner: Player;
+}
+
 export interface UnitParamsMap {
   [UnitType.TransportShip]: {
     troops?: number;
     destination?: TileRef;
   };
 
-  [UnitType.Warship]: {};
+  [UnitType.Warship]: {
+    patrolTile: TileRef;
+  };
 
   [UnitType.Shell]: {};
 
@@ -162,12 +170,16 @@ export interface UnitParamsMap {
 
   [UnitType.Port]: {};
 
-  [UnitType.AtomBomb]: {};
+  [UnitType.AtomBomb]: {
+    targetTile?: number;
+  };
 
-  [UnitType.HydrogenBomb]: {};
+  [UnitType.HydrogenBomb]: {
+    targetTile?: number;
+  };
 
   [UnitType.TradeShip]: {
-    dstPort: Unit;
+    targetUnit: Unit;
     lastSetSafeFromPirates?: number;
   };
 
@@ -183,7 +195,9 @@ export interface UnitParamsMap {
 
   [UnitType.MIRV]: {};
 
-  [UnitType.MIRVWarhead]: {};
+  [UnitType.MIRVWarhead]: {
+    targetTile?: number;
+  };
 
   [UnitType.Construction]: {};
 }
@@ -199,8 +213,6 @@ export const nukeTypes = [
   UnitType.MIRVWarhead,
   UnitType.MIRV,
 ] as UnitType[];
-
-export type NukeType = (typeof nukeTypes)[number];
 
 export enum Relation {
   Hostile = 0,
@@ -276,6 +288,11 @@ export interface Attack {
   delete(): void;
   // The tile the attack originated from, mostly used for boat attacks.
   sourceTile(): TileRef | null;
+  addBorderTile(tile: TileRef): void;
+  removeBorderTile(tile: TileRef): void;
+  clearBorder(): void;
+  borderSize(): number;
+  averagePosition(): Cell | null;
 }
 
 export interface AllianceRequest {
@@ -315,25 +332,32 @@ export class PlayerInfo {
     if (!name.startsWith("[") || !name.includes("]")) {
       this.clan = null;
     } else {
-      const clanMatch = name.match(/^\[([A-Z]{2,5})\]/);
+      const clanMatch = name.match(/^\[([a-zA-Z]{2,5})\]/);
       this.clan = clanMatch ? clanMatch[1] : null;
     }
   }
 }
 
+export function isUnit(unit: Unit | UnitParams<UnitType>): unit is Unit {
+  return "isUnit" in unit && typeof unit.isUnit === "function" && unit.isUnit();
+}
+
 export interface Unit {
+  isUnit(): this is Unit;
+
   // Common properties.
   id(): number;
   type(): UnitType;
   owner(): Player;
   info(): UnitInfo;
-  delete(displayerMessage?: boolean): void;
+  delete(displayMessage?: boolean, destroyer?: Player): void;
   tile(): TileRef;
   lastTile(): TileRef;
   move(tile: TileRef): void;
   isActive(): boolean;
   setOwner(owner: Player): void;
   touch(): void;
+  hash(): number;
   toUpdate(): UnitUpdate;
 
   // Targeting
@@ -343,11 +367,15 @@ export interface Unit {
   targetUnit(): Unit | undefined;
   setTargetedBySAM(targeted: boolean): void;
   targetedBySAM(): boolean;
+  setReachedTarget(): void;
+  reachedTarget(): boolean;
 
   // Health
   hasHealth(): boolean;
+  retreating(): boolean;
+  orderBoatRetreat(): void;
   health(): number;
-  modifyHealth(delta: number): void;
+  modifyHealth(delta: number, attacker?: Player): void;
 
   // Troops
   setTroops(troops: number): void;
@@ -368,9 +396,9 @@ export interface Unit {
   constructionType(): UnitType | null;
   setConstructionType(type: UnitType): void;
 
-  // Ports
-  cachePut(from: TileRef, to: TileRef): void;
-  cacheGet(from: TileRef): TileRef | undefined;
+  // Warships
+  setPatrolTile(tile: TileRef): void;
+  patrolTile(): TileRef | undefined;
 }
 
 export interface TerraNullius {
@@ -418,6 +446,7 @@ export interface Player {
   // Resources & Population
   gold(): Gold;
   population(): number;
+  totalPopulation(): number;
   workers(): number;
   troops(): number;
   targetTroopRatio(): number;
@@ -492,10 +521,12 @@ export interface Player {
 
   // Attacking.
   canAttack(tile: TileRef): boolean;
+
   createAttack(
     target: Player | TerraNullius,
     troops: number,
     sourceTile: TileRef | null,
+    border: Set<number>,
   ): Attack;
   outgoingAttacks(): Attack[];
   incomingAttacks(): Attack[];
@@ -609,6 +640,7 @@ export interface PlayerInteraction {
   canTarget: boolean;
   canDonate: boolean;
   canEmbargo: boolean;
+  allianceCreatedAtTick?: Tick;
 }
 
 export interface EmojiMessage {

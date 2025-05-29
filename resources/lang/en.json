@@ -9,6 +9,7 @@
     "title": "OpenFront (ALPHA)",
     "join_discord": "Join the Discord!",
     "login_discord": "Login with Discord",
+    "checking_login": "Checking login...",
     "logged_in": "Logged in!",
     "log_out": "Log out",
     "create_lobby": "Create Lobby",
@@ -120,6 +121,7 @@
   "map": {
     "map": "Map",
     "world": "World",
+    "worldmapgiant": "Giant World Map",
     "europe": "Europe",
     "mena": "MENA",
     "northamerica": "North America",
@@ -137,12 +139,12 @@
     "pangaea": "Pangaea",
     "japan": "Japan and Neighbors",
     "betweentwoseas": "Between Two Seas",
-    "knownworld": "Known World",
     "faroeislands": "Faroe Islands",
     "deglaciatedantarctica": "Deglaciated Antarctica",
     "europeclassic": "Europe (classic)",
     "falklandislands": "Falkland Islands",
-    "baikal": "Baikal"
+    "baikal": "Baikal",
+    "halkidiki": "Halkidiki"
   },
   "map_categories": {
     "continental": "Continental",
@@ -226,6 +228,8 @@
     "dark_mode_desc": "Toggle the site’s appearance between light and dark themes",
     "emojis_label": "😊 Emojis",
     "emojis_desc": "Toggle whether emojis are shown in game",
+    "special_effects_label": "💥 Special effects",
+    "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
     "anonymous_names_label": "🥷 Hidden Names",
     "anonymous_names_desc": "Hide real player names with random ones on your screen.",
     "left_click_label": "🖱️ Left Click to Open Menu",
@@ -399,12 +403,22 @@
   "player_panel": {
     "gold": "Gold",
     "troops": "Troops",
+    "betrayals": "Number of betrayals",
     "traitor": "Traitor",
+    "alliance_time_remaining": "Alliance Expires In",
     "embargo": "Stopped trading with you",
     "nuke": "Nukes sent by them to you",
     "start_trade": "Start trading",
     "stop_trade": "Stop trading",
     "yes": "Yes",
     "no": "No"
+  },
+  "error_modal": {
+    "crashed": "Game crashed!",
+    "paste_discord": "Please paste the following in your bug report in Discord:",
+    "copy_clipboard": "Copy to clipboard",
+    "copied": "Copied!",
+    "failed_copy": "Failed to copy",
+    "desync_notice": "You are desynced from other players. What you see might differ from other players."
   }
 }

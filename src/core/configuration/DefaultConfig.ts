@@ -23,8 +23,8 @@ import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID } from "../Schemas";
 import { assertNever, simpleHash, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
-import { pastelTheme } from "./PastelTheme";
-import { pastelThemeDark } from "./PastelThemeDark";
+import { PastelTheme } from "./PastelTheme";
+import { PastelThemeDark } from "./PastelThemeDark";
 
 const JwksSchema = z.object({
   keys: z
@@ -37,6 +37,39 @@ const JwksSchema = z.object({
     .array()
     .min(1),
 });
+
+const numPlayersConfig = {
+  [GameMapType.GatewayToTheAtlantic]: [80, 60, 40],
+  [GameMapType.SouthAmerica]: [70, 50, 40],
+  [GameMapType.NorthAmerica]: [80, 60, 50],
+  [GameMapType.Africa]: [100, 80, 50],
+  [GameMapType.Europe]: [80, 50, 30],
+  [GameMapType.Australia]: [50, 40, 30],
+  [GameMapType.Iceland]: [50, 40, 30],
+  [GameMapType.Britannia]: [50, 40, 30],
+  [GameMapType.Asia]: [60, 50, 30],
+  [GameMapType.FalklandIslands]: [80, 50, 30],
+  [GameMapType.Baikal]: [60, 50, 40],
+  [GameMapType.Mena]: [60, 50, 30],
+  [GameMapType.Mars]: [50, 40, 30],
+  [GameMapType.Oceania]: [30, 20, 10],
+  [GameMapType.Japan]: [50, 40, 30],
+  [GameMapType.FaroeIslands]: [50, 40, 30],
+  [GameMapType.DeglaciatedAntarctica]: [50, 40, 30],
+  [GameMapType.EuropeClassic]: [80, 30, 50],
+  [GameMapType.BetweenTwoSeas]: [40, 50, 30],
+  [GameMapType.BlackSea]: [40, 50, 30],
+  [GameMapType.Pangaea]: [40, 20, 30],
+  [GameMapType.World]: [150, 80, 50],
+  [GameMapType.WorldMapGiant]: [150, 100, 60],
+  [GameMapType.Halkidiki]: [50, 40, 30],
+} as const satisfies Record<GameMapType, [number, number, number]>;
+
+const TERRAIN_EFFECTS = {
+  [TerrainType.Plains]: { mag: 0.9, speed: 0.8 },
+  [TerrainType.Highland]: { mag: 1.1, speed: 1 },
+  [TerrainType.Mountain]: { mag: 1.3, speed: 1.25 },
+} as const;
 
 export abstract class DefaultServerConfig implements ServerConfig {
   private publicKey: JWK;
@@ -57,47 +90,49 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return this.publicKey;
   }
   otelEnabled(): boolean {
-    return Boolean(
-      this.otelEndpoint() && this.otelUsername() && this.otelPassword(),
+    return (
+      Boolean(this.otelEndpoint()) &&
+      Boolean(this.otelUsername()) &&
+      Boolean(this.otelPassword())
     );
   }
   otelEndpoint(): string {
-    return process.env.OTEL_ENDPOINT ?? "undefined";
+    return process.env.OTEL_ENDPOINT ?? "";
   }
   otelUsername(): string {
-    return process.env.OTEL_USERNAME ?? "undefined";
+    return process.env.OTEL_USERNAME ?? "";
   }
   otelPassword(): string {
-    return process.env.OTEL_PASSWORD ?? "undefined";
+    return process.env.OTEL_PASSWORD ?? "";
   }
   region(): string {
     if (this.env() === GameEnv.Dev) {
       return "dev";
     }
-    return process.env.REGION ?? "undefined";
+    return process.env.REGION ?? "";
   }
   gitCommit(): string {
-    return process.env.GIT_COMMIT ?? "undefined";
+    return process.env.GIT_COMMIT ?? "";
   }
   r2Endpoint(): string {
     return `https://${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`;
   }
   r2AccessKey(): string {
-    return process.env.R2_ACCESS_KEY ?? "undefined";
+    return process.env.R2_ACCESS_KEY ?? "";
   }
   r2SecretKey(): string {
-    return process.env.R2_SECRET_KEY ?? "undefined";
+    return process.env.R2_SECRET_KEY ?? "";
   }
 
   r2Bucket(): string {
-    return process.env.R2_BUCKET ?? "undefined";
+    return process.env.R2_BUCKET ?? "";
   }
 
   adminHeader(): string {
     return "x-admin-key";
   }
   adminToken(): string {
-    return process.env.ADMIN_TOKEN ?? "undefined";
+    return process.env.ADMIN_TOKEN ?? "dummy-admin-token";
   }
   abstract numWorkers(): number;
   abstract env(): GameEnv;
@@ -109,64 +144,10 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
 
   lobbyMaxPlayers(map: GameMapType, mode: GameMode): number {
-    const numPlayers = () => {
-      // Maps with ~4 mil pixels
-      if (
-        [
-          GameMapType.GatewayToTheAtlantic,
-          GameMapType.SouthAmerica,
-          GameMapType.NorthAmerica,
-          GameMapType.Africa,
-          GameMapType.Europe,
-        ].includes(map)
-      ) {
-        return Math.random() < 0.2 ? 100 : 50;
-      }
-      // Maps with ~2.5 - ~3.5 mil pixels
-      if (
-        [
-          GameMapType.Australia,
-          GameMapType.Iceland,
-          GameMapType.Britannia,
-          GameMapType.Asia,
-          GameMapType.FalklandIslands,
-          GameMapType.Baikal,
-        ].includes(map)
-      ) {
-        return Math.random() < 0.3 ? 50 : 25;
-      }
-      // Maps with ~2 mil pixels
-      if (
-        [
-          GameMapType.Mena,
-          GameMapType.Mars,
-          GameMapType.Oceania,
-          GameMapType.Japan, // Japan at this level because its 2/3 water
-          GameMapType.FaroeIslands,
-          GameMapType.DeglaciatedAntarctica,
-          GameMapType.EuropeClassic,
-        ].includes(map)
-      ) {
-        return Math.random() < 0.3 ? 50 : 25;
-      }
-      // Maps smaller than ~2 mil pixels
-      if (
-        [
-          GameMapType.BetweenTwoSeas,
-          GameMapType.BlackSea,
-          GameMapType.Pangaea,
-        ].includes(map)
-      ) {
-        return Math.random() < 0.5 ? 30 : 15;
-      }
-      // world belongs with the ~2 mils, but these amounts never made sense so I assume the insanity is intended.
-      if (map === GameMapType.World) {
-        return Math.random() < 0.2 ? 150 : 50;
-      }
-      // default return for non specified map
-      return Math.random() < 0.2 ? 50 : 20;
-    };
-    return Math.min(150, numPlayers() * (mode === GameMode.Team ? 2 : 1));
+    const [l, m, s] = numPlayersConfig[map] ?? [50, 30, 20];
+    const r = Math.random();
+    const base = r < 0.3 ? l : r < 0.6 ? m : s;
+    return mode === GameMode.Team ? Math.ceil(base * 1.5) : base;
   }
 
   workerIndex(gameID: GameID): number {
@@ -184,6 +165,8 @@ export abstract class DefaultServerConfig implements ServerConfig {
 }
 
 export class DefaultConfig implements Config {
+  private pastelTheme: PastelTheme = new PastelTheme();
+  private pastelThemeDark: PastelThemeDark = new PastelThemeDark();
   constructor(
     private _serverConfig: ServerConfig,
     private _gameConfig: GameConfig,
@@ -246,8 +229,8 @@ export class DefaultConfig implements Config {
 
   falloutDefenseModifier(falloutRatio: number): number {
     // falloutRatio is between 0 and 1
-    // So defense modifier is between [5, 2.5]
-    return 5 - falloutRatio * 2;
+    // So defense modifier is between [3, 1]
+    return 3 - falloutRatio * 2;
   }
   SAMCooldown(): number {
     return 75;
@@ -257,10 +240,13 @@ export class DefaultConfig implements Config {
   }
 
   defensePostRange(): number {
-    return 30;
+    return 40;
   }
-  defensePostDefenseBonus(): number {
-    return 5;
+  defensePostLossMultiplier(): number {
+    return 6;
+  }
+  defensePostSpeedMultiplier(): number {
+    return 3;
   }
   playerTeams(): number | typeof Duos {
     return this._gameConfig.playerTeams ?? 0;
@@ -290,7 +276,7 @@ export class DefaultConfig implements Config {
     return 10000 + 150 * Math.pow(dist, 1.1);
   }
   tradeShipSpawnRate(numberOfPorts: number): number {
-    return Math.round(10 * Math.pow(numberOfPorts, 0.6));
+    return Math.round(10 * Math.pow(numberOfPorts, 0.5));
   }
 
   unitInfo(type: UnitType): UnitInfo {
@@ -476,7 +462,9 @@ export class DefaultConfig implements Config {
     return this.bots();
   }
   theme(): Theme {
-    return this.userSettings()?.darkMode() ? pastelThemeDark : pastelTheme;
+    return this.userSettings()?.darkMode()
+      ? this.pastelThemeDark
+      : this.pastelTheme;
   }
 
   attackLogic(
@@ -490,34 +478,27 @@ export class DefaultConfig implements Config {
     defenderTroopLoss: number;
     tilesPerTickUsed: number;
   } {
-    let mag = 0;
-    let speed = 0;
     const type = gm.terrainType(tileToConquer);
-    switch (type) {
-      case TerrainType.Plains:
-        mag = 85;
-        speed = 16.5;
-        break;
-      case TerrainType.Highland:
-        mag = 100;
-        speed = 20;
-        break;
-      case TerrainType.Mountain:
-        mag = 120;
-        speed = 25;
-        break;
-      default:
-        throw new Error(`terrain type ${type} not supported`);
+    const mod = TERRAIN_EFFECTS[type];
+    if (!mod) {
+      throw new Error(`terrain type ${type} not supported`);
     }
-    if (defender.isPlayer()) {
+    let mag = mod.mag;
+    let speed = mod.speed;
+
+    const attackerType = attacker.type();
+    const defenderIsPlayer = defender.isPlayer();
+    const defenderType = defenderIsPlayer ? defender.type() : null;
+
+    if (defenderIsPlayer) {
       for (const dp of gm.nearbyUnits(
         tileToConquer,
         gm.config().defensePostRange(),
         UnitType.DefensePost,
       )) {
         if (dp.unit.owner() === defender) {
-          mag *= this.defensePostDefenseBonus();
-          speed *= this.defensePostDefenseBonus();
+          mag *= this.defensePostLossMultiplier();
+          speed *= this.defensePostSpeedMultiplier();
           break;
         }
       }
@@ -529,55 +510,50 @@ export class DefaultConfig implements Config {
       speed *= this.falloutDefenseModifier(falloutRatio);
     }
 
-    if (attacker.isPlayer() && defender.isPlayer()) {
+    if (attacker.isPlayer() && defenderIsPlayer) {
       if (
-        attacker.type() === PlayerType.Human &&
-        defender.type() === PlayerType.Bot
+        attackerType === PlayerType.Human &&
+        defenderType === PlayerType.Bot
       ) {
         mag *= 0.8;
       }
       if (
-        attacker.type() === PlayerType.FakeHuman &&
-        defender.type() === PlayerType.Bot
+        attackerType === PlayerType.FakeHuman &&
+        defenderType === PlayerType.Bot
       ) {
         mag *= 0.8;
       }
     }
-
-    let largeLossModifier = 1;
-    if (attacker.numTilesOwned() > 100_000) {
-      largeLossModifier = Math.sqrt(100_000 / attacker.numTilesOwned());
+    if (attackerType === PlayerType.Bot) {
+      speed *= 4; // slow bot attacks
     }
-    let largeSpeedMalus = 1;
-    if (attacker.numTilesOwned() > 75_000) {
-      // sqrt is only exponent 1/2 which doesn't slow enough huge players
-      largeSpeedMalus = (75_000 / attacker.numTilesOwned()) ** 0.6;
-    }
-
-    if (defender.isPlayer()) {
+    if (defenderIsPlayer) {
+      const defenderTroops = defender.troops();
+      const defenderTiles = defender.numTilesOwned();
+      const defenderDensity = defenderTroops / defenderTiles;
+      const attackRatio = defenderTroops / attackTroops;
+      const traitorDebuff = defender.isTraitor()
+        ? this.traitorDefenseDebuff()
+        : 1;
+      const baseTroopLoss = 16;
+      const baseTileCost = 23;
+      const attackStandardSize = 10_000;
       return {
         attackerTroopLoss:
-          within(defender.troops() / attackTroops, 0.6, 2) *
-          mag *
-          0.8 *
-          largeLossModifier *
-          (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
-        defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
+          mag * (baseTroopLoss + defenderDensity * traitorDebuff),
+        defenderTroopLoss: defenderDensity,
         tilesPerTickUsed:
-          within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
+          baseTileCost *
+          within(defenderDensity, 3, 100) ** 0.2 *
+          (attackStandardSize / attackTroops) ** 0.1 *
           speed *
-          largeSpeedMalus,
+          within(attackRatio, 0.1, 20) ** 0.4,
       };
     } else {
       return {
-        attackerTroopLoss:
-          attacker.type() === PlayerType.Bot ? mag / 10 : mag / 5,
+        attackerTroopLoss: 16 * mag,
         defenderTroopLoss: 0,
-        tilesPerTickUsed: within(
-          (2000 * Math.max(10, speed)) / attackTroops,
-          5,
-          100,
-        ),
+        tilesPerTickUsed: 31 * speed,
       };
     }
   }
@@ -589,13 +565,9 @@ export class DefaultConfig implements Config {
     numAdjacentTilesWithEnemy: number,
   ): number {
     if (defender.isPlayer()) {
-      return (
-        within(((5 * attackTroops) / defender.troops()) * 2, 0.01, 0.5) *
-        numAdjacentTilesWithEnemy *
-        3
-      );
+      return 10 * numAdjacentTilesWithEnemy;
     } else {
-      return numAdjacentTilesWithEnemy * 2;
+      return 12 * numAdjacentTilesWithEnemy;
     }
   }
 
@@ -625,28 +597,28 @@ export class DefaultConfig implements Config {
 
   startManpower(playerInfo: PlayerInfo): number {
     if (playerInfo.playerType === PlayerType.Bot) {
-      return 10_000;
+      return 6_000;
     }
     if (playerInfo.playerType === PlayerType.FakeHuman) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          return 2_500 * (playerInfo?.nation?.strength ?? 1);
+          return 2_500 + 1000 * (playerInfo?.nation?.strength ?? 1);
         case Difficulty.Medium:
-          return 5_000 * (playerInfo?.nation?.strength ?? 1);
+          return 6_000 + 2000 * (playerInfo?.nation?.strength ?? 1);
         case Difficulty.Hard:
-          return 20_000 * (playerInfo?.nation?.strength ?? 1);
+          return 20_000 + 4000 * (playerInfo?.nation?.strength ?? 1);
         case Difficulty.Impossible:
-          return 50_000 * (playerInfo?.nation?.strength ?? 1);
+          return 50_000 + 8000 * (playerInfo?.nation?.strength ?? 1);
       }
     }
-    return this.infiniteTroops() ? 1_000_000 : 25_000;
+    return this.infiniteTroops() ? 1_000_000 : 20_000;
   }
 
   maxPopulation(player: Player | PlayerView): number {
     const maxPop =
       player.type() === PlayerType.Human && this.infiniteTroops()
         ? 1_000_000_000
-        : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
+        : 1 * (player.numTilesOwned() * 30 + 50000) +
           player.units(UnitType.City).length * this.cityPopulationIncrease();
 
     if (player.type() === PlayerType.Bot) {
@@ -659,22 +631,26 @@ export class DefaultConfig implements Config {
 
     switch (this._gameConfig.difficulty) {
       case Difficulty.Easy:
-        return maxPop * 0.5;
+        return maxPop * 0.4;
       case Difficulty.Medium:
-        return maxPop * 1;
+        return maxPop * 0.8;
       case Difficulty.Hard:
-        return maxPop * 1.5;
+        return maxPop * 1.4;
       case Difficulty.Impossible:
-        return maxPop * 2;
+        return maxPop * 1.8;
     }
   }
 
   populationIncreaseRate(player: Player): number {
     const max = this.maxPopulation(player);
-
-    let toAdd = 10 + Math.pow(player.population(), 0.73) / 4;
-
-    const ratio = 1 - player.population() / max;
+    //population grows proportional to current population with growth decreasing as it approaches max
+    // smaller countries recieve a boost to pop growth to speed up early game
+    const baseAdditionRate = 10;
+    const basePopGrowthRate = 1300 / max + 1 / 140;
+    const reproductionPop = 0.85 * player.troops() + 1.15 * player.workers();
+    let toAdd = baseAdditionRate + basePopGrowthRate * reproductionPop;
+    const totalPop = player.totalPopulation();
+    const ratio = 1 - totalPop / max;
     toAdd *= ratio;
 
     if (player.type() === PlayerType.Bot) {
@@ -698,15 +674,15 @@ export class DefaultConfig implements Config {
       }
     }
 
-    return Math.min(player.population() + toAdd, max) - player.population();
+    return Math.min(totalPop + toAdd, max) - totalPop;
   }
 
   goldAdditionRate(player: Player): number {
-    return Math.sqrt(player.workers() * player.numTilesOwned()) / 200;
+    return 0.045 * player.workers() ** 0.7;
   }
 
   troopAdjustmentRate(player: Player): number {
-    const maxDiff = this.maxPopulation(player) / 1000;
+    const maxDiff = this.maxPopulation(player) / 500;
     const target = player.population() * player.targetTroopRatio();
     const diff = target - player.troops();
     if (Math.abs(diff) < maxDiff) {

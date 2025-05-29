@@ -1,5 +1,5 @@
 import { Config } from "../configuration/Config";
-import { ClientID, GameID, PlayerStats } from "../Schemas";
+import { ClientID, GameID } from "../Schemas";
 import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
@@ -78,6 +78,12 @@ export class UnitView {
   troops(): number {
     return this.data.troops;
   }
+  retreating(): boolean {
+    if (this.type() !== UnitType.TransportShip) {
+      throw Error("Must be a transport ship");
+    }
+    return this.data.retreating;
+  }
   tile(): TileRef {
     return this.data.pos;
   }
@@ -86,6 +92,9 @@ export class UnitView {
   }
   isActive(): boolean {
     return this.data.isActive;
+  }
+  reachedTarget(): boolean {
+    return this.data.reachedTarget;
   }
   hasHealth(): boolean {
     return this.data.health !== undefined;
@@ -112,7 +121,7 @@ export class UnitView {
 }
 
 export class PlayerView {
-  public anonymousName: string;
+  public anonymousName: string | null = null;
 
   constructor(
     private game: GameView,
@@ -122,8 +131,10 @@ export class PlayerView {
     if (data.clientID === game.myClientID()) {
       this.anonymousName = this.data.name;
     } else {
-      this.anonymousName =
-        createRandomName(this.data.name, this.data.playerType) ?? "";
+      this.anonymousName = createRandomName(
+        this.data.name,
+        this.data.playerType,
+      );
     }
   }
 
@@ -147,6 +158,13 @@ export class PlayerView {
     return this.data.incomingAttacks;
   }
 
+  async attackAveragePosition(
+    playerID: number,
+    attackID: string,
+  ): Promise<Cell | null> {
+    return this.game.worker.attackAveragePosition(playerID, attackID);
+  }
+
   units(...types: UnitType[]): UnitView[] {
     return this.game
       .units(...types)
@@ -164,12 +182,12 @@ export class PlayerView {
     return this.data.flag;
   }
   name(): string {
-    return userSettings.anonymousNames() && this.anonymousName !== null
+    return this.anonymousName !== null && userSettings.anonymousNames()
       ? this.anonymousName
       : this.data.name;
   }
   displayName(): string {
-    return userSettings.anonymousNames() && this.anonymousName !== null
+    return this.anonymousName !== null && userSettings.anonymousNames()
       ? this.anonymousName
       : this.data.name;
   }
@@ -210,6 +228,9 @@ export class PlayerView {
   }
   population(): number {
     return this.data.population;
+  }
+  totalPopulation(): number {
+    return this.data.totalPopulation;
   }
   workers(): number {
     return this.data.workers;
@@ -267,9 +288,6 @@ export class PlayerView {
       this.clientID(),
       this.id(),
     );
-  }
-  stats(): PlayerStats {
-    return this.data.stats;
   }
   hasSpawned(): boolean {
     return this.data.hasSpawned;

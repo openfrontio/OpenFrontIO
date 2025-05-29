@@ -6,7 +6,6 @@ import {
   GameType,
   PlayerID,
   PlayerType,
-  Team,
   Tick,
   UnitType,
 } from "../core/game/Game";
@@ -14,7 +13,6 @@ import { PlayerView } from "../core/game/GameView";
 import {
   AllPlayersStats,
   ClientHashMessage,
-  ClientID,
   ClientIntentMessage,
   ClientJoinMessage,
   ClientLogMessage,
@@ -23,7 +21,9 @@ import {
   Intent,
   ServerMessage,
   ServerMessageSchema,
+  Winner,
 } from "../core/Schemas";
+import { replacer } from "../core/Util";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
 
@@ -132,15 +132,18 @@ export class CancelAttackIntentEvent implements GameEvent {
   ) {}
 }
 
+export class CancelBoatIntentEvent implements GameEvent {
+  constructor(public readonly unitID: number) {}
+}
+
 export class SendSetTargetTroopRatioEvent implements GameEvent {
   constructor(public readonly ratio: number) {}
 }
 
 export class SendWinnerEvent implements GameEvent {
   constructor(
-    public readonly winner: ClientID | Team,
+    public readonly winner: Winner,
     public readonly allPlayersStats: AllPlayersStats,
-    public readonly winnerType: "player" | "team",
   ) {}
 }
 export class SendHashEvent implements GameEvent {
@@ -221,6 +224,10 @@ export class Transport {
     this.eventBus.on(CancelAttackIntentEvent, (e) =>
       this.onCancelAttackIntentEvent(e),
     );
+    this.eventBus.on(CancelBoatIntentEvent, (e) =>
+      this.onCancelBoatIntentEvent(e),
+    );
+
     this.eventBus.on(MoveWarshipIntentEvent, (e) => {
       this.onMoveWarshipEvent(e);
     });
@@ -529,9 +536,8 @@ export class Transport {
         type: "winner",
         winner: event.winner,
         allPlayersStats: event.allPlayersStats,
-        winnerType: event.winnerType,
       } satisfies ClientSendWinnerMessage;
-      this.sendMsg(JSON.stringify(msg));
+      this.sendMsg(JSON.stringify(msg, replacer));
     } else {
       console.log(
         "WebSocket is not open. Current state:",
@@ -565,6 +571,14 @@ export class Transport {
       type: "cancel_attack",
       clientID: this.lobbyConfig.clientID,
       attackID: event.attackID,
+    });
+  }
+
+  private onCancelBoatIntentEvent(event: CancelBoatIntentEvent) {
+    this.sendIntent({
+      type: "cancel_boat",
+      clientID: this.lobbyConfig.clientID,
+      unitID: event.unitID,
     });
   }
 

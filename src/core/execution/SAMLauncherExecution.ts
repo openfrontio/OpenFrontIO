@@ -149,8 +149,8 @@ export class SAMLauncherExecution implements Execution {
       target = this.getSingleTarget();
     }
 
-    if (this.sam.ticksLeftInCooldown() === 0) {
-      // Touch SAM to update sprite to show not in cooldown.
+    const cooldown = this.sam.ticksLeftInCooldown();
+    if (typeof cooldown === "number" && cooldown >= 0) {
       this.sam.touch();
     }
 
@@ -180,7 +180,9 @@ export class SAMLauncherExecution implements Execution {
             this.sam.owner().id(),
           );
           // Delete warheads
-          mirvWarheadTargets.forEach((u) => u.delete());
+          mirvWarheadTargets.forEach((u) => {
+            u.delete();
+          });
         } else if (target !== null) {
           target.setTargetedBySAM(true);
           this.mg.addExecution(
