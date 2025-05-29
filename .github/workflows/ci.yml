@@ -5,7 +5,11 @@ on:
   push:
     branches: [main]
 
-permissions: {}
+permissions: 
+  contents: read
+  checks: write
+  pull-requests: write
+
 
 jobs:
   build:
@@ -29,10 +33,6 @@ jobs:
   test:
     name: 🔬 Test
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      checks: write
-      pull-requests: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -45,8 +45,6 @@ jobs:
       - run: npm ci
       - name: Test coverage
         uses: ArtiomTr/jest-coverage-report-action@v2
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   eslint:
     name: 🔍 ESLint
