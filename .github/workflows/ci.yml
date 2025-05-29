@@ -30,7 +30,7 @@ jobs:
     name: 🔬 Test
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       checks: write
       pull-requests: write
     steps:
