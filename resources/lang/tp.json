@@ -318,5 +318,8 @@
       "saving_for_mirv": "[P1] li awen tawa ilo pi pakala wawa mute.",
       "mirv_ready": "[P1] li jo e mani tawa ilo pi pakala wawa mute a!"
     }
+  },
+  "replay_panel": {
+    "replay_speed": "pali wawa"
   }
 }

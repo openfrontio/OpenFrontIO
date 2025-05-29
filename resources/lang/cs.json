@@ -398,6 +398,9 @@
     "workers": "Pracovníci",
     "attack_ratio": "Poměr útoku"
   },
+  "replay_panel": {
+    "replay_speed": "Rychlost přehrávání"
+  },
   "player_panel": {
     "gold": "Zlato",
     "troops": "Jednotky",

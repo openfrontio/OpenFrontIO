@@ -398,6 +398,9 @@
     "workers": "Werkers",
     "attack_ratio": "Aanvalsverhouding"
   },
+  "replay_panel": {
+    "replay_speed": "Afspeelsnelheid"
+  },
   "player_panel": {
     "gold": "Goud",
     "troops": "Troepen",

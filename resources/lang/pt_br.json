@@ -175,5 +175,8 @@
   },
   "select_lang": {
     "title": "Selecionar idioma"
+  },
+  "replay_panel": {
+    "replay_speed": "Velocidade de reprodução"
   }
 }

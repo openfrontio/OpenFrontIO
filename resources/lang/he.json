@@ -398,6 +398,9 @@
     "workers": "עובדים",
     "attack_ratio": "יחס תקיפה"
   },
+  "replay_panel": {
+    "replay_speed": "מהירות ניגון"
+  },
   "player_panel": {
     "gold": "זהב",
     "troops": "חיילים",

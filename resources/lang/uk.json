@@ -398,6 +398,9 @@
     "workers": "Робітники",
     "attack_ratio": "Співвідношення атаки"
   },
+  "replay_panel": {
+    "replay_speed": "Швидкість відтворення"
+  },
   "player_panel": {
     "gold": "Золото",
     "troops": "Війська",

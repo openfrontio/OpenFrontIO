@@ -223,5 +223,8 @@
     "continental": "মহাদেশীয়",
     "regional": "আঞ্চলিক",
     "fantasy": "অন্য"
+  },
+  "replay_panel": {
+    "replay_speed": "প্লেব্যাক গত"
   }
 }

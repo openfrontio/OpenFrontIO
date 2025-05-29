@@ -398,6 +398,9 @@
     "workers": "労働者",
     "attack_ratio": "攻撃比率"
   },
+  "replay_panel": {
+    "replay_speed": "再生速度"
+  },
   "player_panel": {
     "gold": "資金",
     "troops": "兵士",

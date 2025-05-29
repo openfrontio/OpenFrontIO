@@ -82,6 +82,10 @@ export class AttackRatioEvent implements GameEvent {
   constructor(public readonly attackRatio: number) {}
 }
 
+export class ReplayIntervalEvent implements GameEvent {
+  constructor(public readonly replayInterval: number) {}
+}
+
 export class CenterCameraEvent implements GameEvent {
   constructor() {}
 }

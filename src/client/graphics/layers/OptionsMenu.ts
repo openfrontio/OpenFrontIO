@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
@@ -8,6 +8,7 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
 import { Layer } from "./Layer";
+import { ReplayPanel } from "./ReplayPanel";
 
 const button = ({
   classes = "",
@@ -131,6 +132,17 @@ export class OptionsMenu extends LitElement implements Layer {
       this.game.config().isReplay();
     this.isVisible = true;
     this.requestUpdate();
+
+    // timeout to wait replay-panel init in dom
+    setTimeout(() => {
+      const replayPanel = document.querySelector("replay-panel");
+      if (!(replayPanel instanceof ReplayPanel)) {
+        console.error("ReplayPanel element not found in the DOM");
+      } else {
+        replayPanel.eventBus = this.eventBus;
+        replayPanel.game = this.game;
+      }
+    });
   }
 
   tick() {
@@ -184,6 +196,8 @@ export class OptionsMenu extends LitElement implements Layer {
               children: "⚙️",
             })}
           </div>
+
+          <replay-panel></replay-panel>
         </div>
 
         <div
