@@ -27,7 +27,6 @@ export class UnitImpl implements Unit {
   private _lastOwner: PlayerImpl | null = null;
   private _troops: number;
   private _cooldownStartTick: Tick | null = null;
-  private _pathCache: Map<TileRef, TileRef> = new Map();
   private _patrolTile: TileRef | undefined;
   constructor(
     private _type: UnitType,
@@ -82,13 +81,6 @@ export class UnitImpl implements Unit {
   }
   tileTarget(): TileRef | undefined {
     return this._targetTile;
-  }
-
-  cachePut(from: TileRef, to: TileRef): void {
-    this._pathCache.set(from, to);
-  }
-  cacheGet(from: TileRef): TileRef | undefined {
-    return this._pathCache.get(from);
   }
 
   id() {
