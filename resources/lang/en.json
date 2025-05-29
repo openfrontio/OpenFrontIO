@@ -17,6 +17,7 @@
     "single_player": "Single Player",
     "instructions": "Instructions",
     "how_to_play": "How to Play",
+    "advertise": "Advertise",
     "wiki": "Wiki"
   },
   "help_modal": {
@@ -358,7 +359,8 @@
     "you_won": "You Won!",
     "other_won": "{player} has won!",
     "exit": "Exit Game",
-    "keep": "Keep Playing"
+    "keep": "Keep Playing",
+    "wishlist": "Wishlist on Steam!"
   },
   "leaderboard": {
     "title": "Leaderboard",

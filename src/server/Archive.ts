@@ -1,6 +1,7 @@
 import { S3 } from "@aws-sdk/client-s3";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { AnalyticsRecord, GameID, GameRecord } from "../core/Schemas";
+import { replacer } from "../core/Util";
 import { logger } from "./Logger";
 
 const config = getServerConfigFromServer();
@@ -146,11 +147,4 @@ export async function gameRecordExists(gameId: GameID): Promise<boolean> {
     });
     return false;
   }
-}
-
-/**
- * JSON.stringify replacer function that converts bigint values to strings.
- */
-export function replacer(_key: string, value: any): any {
-  return typeof value === "bigint" ? value.toString() : value;
 }

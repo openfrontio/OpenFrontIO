@@ -399,10 +399,6 @@ export interface Unit {
   // Warships
   setPatrolTile(tile: TileRef): void;
   patrolTile(): TileRef | undefined;
-
-  // Ports
-  cachePut(from: TileRef, to: TileRef): void;
-  cacheGet(from: TileRef): TileRef | undefined;
 }
 
 export interface TerraNullius {
