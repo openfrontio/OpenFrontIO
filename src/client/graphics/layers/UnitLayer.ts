@@ -4,7 +4,6 @@ import { ClientID } from "../../../core/Schemas";
 import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { BezenhamLine } from "../../../core/utilities/Line";
 import {
@@ -16,6 +15,7 @@ import { MoveWarshipIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
+import { GameUpdateType } from "../../../core/game/GameUpdates";
 import {
   getColoredSprite,
   isSpriteReady,
@@ -70,8 +70,11 @@ export class UnitLayer implements Layer {
     if (this.myPlayer === null) {
       this.myPlayer = this.game.playerByClientID(this.clientID);
     }
+    const unitIds = this.game
+      .updatesSinceLastTick()
+      ?.[GameUpdateType.Unit]?.map((unit) => unit.id);
 
-    this.updateUnitsSprites();
+    this.updateUnitsSprites(unitIds ?? []);
   }
 
   init() {
@@ -202,7 +205,7 @@ export class UnitLayer implements Layer {
     this.transportShipTrailCanvas.width = this.game.width();
     this.transportShipTrailCanvas.height = this.game.height();
 
-    this.updateUnitsSprites();
+    this.updateUnitsSprites(this.game.units().map((unit) => unit.id()));
 
     this.unitToTrail.forEach((trail, unit) => {
       for (const t of trail) {
@@ -218,10 +221,9 @@ export class UnitLayer implements Layer {
     });
   }
 
-  private updateUnitsSprites() {
-    const unitsToUpdate = this.game
-      .updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
+  private updateUnitsSprites(unitIds: number[]) {
+    const unitsToUpdate = unitIds
+      ?.map((id) => this.game.unit(id))
       .filter((unit) => unit !== undefined);
 
     if (unitsToUpdate) {
