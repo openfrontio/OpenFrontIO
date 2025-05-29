@@ -57,7 +57,7 @@ export class TerritoryLayer implements Layer {
     });
   }
 
-  async tick() {
+  tick() {
     this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
     const updates = this.game.updatesSinceLastTick();
     const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
@@ -81,10 +81,10 @@ export class TerritoryLayer implements Layer {
     const focusedPlayer = this.game.focusedPlayer();
     if (focusedPlayer !== this.lastFocusedPlayer) {
       if (this.lastFocusedPlayer) {
-        await this.paintPlayerBorder(this.lastFocusedPlayer);
+        this.paintPlayerBorder(this.lastFocusedPlayer);
       }
       if (focusedPlayer) {
-        await this.paintPlayerBorder(focusedPlayer);
+        this.paintPlayerBorder(focusedPlayer);
       }
       this.lastFocusedPlayer = focusedPlayer;
     }
