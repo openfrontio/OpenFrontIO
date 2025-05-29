@@ -5,10 +5,16 @@ import ipAnonymize from "ip-anonymize";
 import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
+import { z } from "zod/v4";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
-import { ClientMessageSchema, GameConfig, GameRecord } from "../core/Schemas";
+import {
+  ClientMessageSchema,
+  GameConfig,
+  GameRecord,
+  GameRecordSchema,
+} from "../core/Schemas";
 import { archive, readGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
@@ -241,13 +247,15 @@ export function startWorker() {
   app.post(
     "/api/archive_singleplayer_game",
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
-      const gameRecord: GameRecord = req.body;
-
-      if (!gameRecord) {
-        log.info("game record not found in request");
-        res.status(404).json({ error: "Game record not found" });
+      const result = GameRecordSchema.safeParse(req.body);
+      if (!result.success) {
+        const error = z.prettifyError(result.error);
+        log.info(error);
+        res.status(400).json({ error });
         return;
       }
+
+      const gameRecord: GameRecord = result.data;
       archive(gameRecord);
       res.json({
         success: true,
