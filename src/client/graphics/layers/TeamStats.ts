@@ -12,12 +12,10 @@ interface TeamEntry {
   totalScoreStr: string;
   totalGold: string;
   totalTroops: string;
-
-  totalSams: string;
+  totalSAMs: string;
   totalLaunchers: string;
   totalWarShips: string;
   totalCities: string;
-
   players: PlayerView[];
 }
 
@@ -55,7 +53,7 @@ export class TeamStats extends LitElement implements Layer {
   }
 
   private updateTeamStats() {
-    if (this.game === null) throw new Error("Not initialized");
+    if (this.game === null) return;
     const players = this.game.playerViews();
 
     const grouped: Record<number, PlayerView[]> = {};
@@ -71,8 +69,7 @@ export class TeamStats extends LitElement implements Layer {
         let totalGold = 0;
         let totalTroops = 0;
         let totalScoreSort = 0;
-
-        let totalSams = 0;
+        let totalSAMs = 0;
         let totalLaunchers = 0;
         let totalWarShips = 0;
         let totalCities = 0;
@@ -82,9 +79,8 @@ export class TeamStats extends LitElement implements Layer {
             totalTroops += p.troops();
             totalGold += p.gold();
             totalScoreSort += p.numTilesOwned();
-
             totalLaunchers += p.units(UnitType.MissileSilo).length;
-            totalSams += p.units(UnitType.SAMLauncher).length;
+            totalSAMs += p.units(UnitType.SAMLauncher).length;
             totalWarShips += p.units(UnitType.Warship).length;
             totalCities += p.units(UnitType.City).length;
           }
@@ -101,7 +97,7 @@ export class TeamStats extends LitElement implements Layer {
           players: teamPlayers,
 
           totalLaunchers: renderNumber(totalLaunchers),
-          totalSams: renderNumber(totalSams),
+          totalSAMs: renderNumber(totalSAMs),
           totalWarShips: renderNumber(totalWarShips),
           totalCities: renderNumber(totalCities),
         };
@@ -204,10 +200,10 @@ export class TeamStats extends LitElement implements Layer {
           class="teamStats-close-button"
           @click=${() => {
             this.showUnits = !this.showUnits;
-            this.updateTeamStats();
+            this.requestUpdate();
           }}
         >
-          ${this.showUnits ? "Show Control" : "Show Units / Buildings"}
+          ${this.showUnits ? "Show Control" : "Show Buildings"}
         </button>
         <table>
           <thead>
@@ -234,7 +230,7 @@ export class TeamStats extends LitElement implements Layer {
                     <tr>
                       <td>${team.teamName}</td>
                       <td>${team.totalLaunchers}</td>
-                      <td>${team.totalSams}</td>
+                      <td>${team.totalSAMs}</td>
                       <td>${team.totalWarShips}</td>
                       <td>${team.totalCities}</td>
                     </tr>
