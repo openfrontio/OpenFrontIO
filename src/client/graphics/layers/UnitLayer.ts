@@ -1,10 +1,9 @@
 import { colord, Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
-import { ClientID } from "../../../core/Schemas";
 import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { GameView, UnitView } from "../../../core/game/GameView";
 import { BezenhamLine } from "../../../core/utilities/Line";
 import {
   AlternateViewEvent,
@@ -40,8 +39,6 @@ export class UnitLayer implements Layer {
 
   private alternateView = false;
 
-  private myPlayer: PlayerView | null = null;
-
   private oldShellTile = new Map<UnitView, TileRef>();
 
   private transformHandler: TransformHandler;
@@ -55,7 +52,6 @@ export class UnitLayer implements Layer {
   constructor(
     private game: GameView,
     private eventBus: EventBus,
-    private clientID: ClientID,
     transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
@@ -67,9 +63,6 @@ export class UnitLayer implements Layer {
   }
 
   tick() {
-    if (this.myPlayer === null) {
-      this.myPlayer = this.game.playerByClientID(this.clientID);
-    }
     const unitIds = this.game
       .updatesSinceLastTick()
       ?.[GameUpdateType.Unit]?.map((unit) => unit.id);
@@ -98,18 +91,13 @@ export class UnitLayer implements Layer {
     }
     const clickRef = this.game.ref(cell.x, cell.y);
 
-    // Make sure we have the current player
-    if (this.myPlayer === null) {
-      this.myPlayer = this.game.playerByClientID(this.clientID);
-    }
-
     // Only select warships owned by the player
     return this.game
       .units(UnitType.Warship)
       .filter(
         (unit) =>
           unit.isActive() &&
-          unit.owner() === this.myPlayer && // Only allow selecting own warships
+          unit.owner() === this.game.myPlayer() && // Only allow selecting own warships
           this.game.manhattanDist(unit.tile(), clickRef) <=
             this.WARSHIP_SELECTION_RADIUS,
       )
@@ -256,13 +244,14 @@ export class UnitLayer implements Layer {
   }
 
   private relationship(unit: UnitView): Relationship {
-    if (this.myPlayer === null) {
+    const myPlayer = this.game.myPlayer();
+    if (myPlayer === null) {
       return Relationship.Enemy;
     }
-    if (this.myPlayer === unit.owner()) {
+    if (myPlayer === unit.owner()) {
       return Relationship.Self;
     }
-    if (this.myPlayer.isFriendly(unit.owner())) {
+    if (myPlayer.isFriendly(unit.owner())) {
       return Relationship.Ally;
     }
     return Relationship.Enemy;

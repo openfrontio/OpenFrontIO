@@ -30,7 +30,7 @@ export class LocalServer {
   private allPlayersStats: AllPlayersStats = {};
 
   private turnsExecuted = 0;
-  private lastTurnCompletedTime = 0;
+  private turnStartTime = 0;
 
   private turnCheckInterval: NodeJS.Timeout;
 
@@ -47,9 +47,10 @@ export class LocalServer {
         if (
           this.isReplay ||
           Date.now() >
-            this.lastTurnCompletedTime +
-              this.lobbyConfig.serverConfig.turnIntervalMs()
+            this.turnStartTime + this.lobbyConfig.serverConfig.turnIntervalMs()
         ) {
+          this.turnStartTime = Date.now();
+          // End turn on the server means the client will start processing the turn.
           this.endTurn();
         }
       }
@@ -140,11 +141,13 @@ export class LocalServer {
     }
   }
 
+  // This is so the client can tell us when it finished processing the turn.
   public turnComplete() {
     this.turnsExecuted++;
-    this.lastTurnCompletedTime = Date.now();
   }
 
+  // endTurn in this context means the server has collected all the intents
+  // and will send the turn to the client.
   private endTurn() {
     if (this.paused) {
       return;
