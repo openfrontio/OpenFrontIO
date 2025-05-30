@@ -44,6 +44,9 @@ export class Leaderboard extends LitElement implements Layer {
   private _shownOnInit = false;
   private showTopFive = true;
 
+  @state()
+  private _sortKey: 'tiles' | 'gold' | 'troops' = 'tiles';
+
   init() {}
 
   tick() {
@@ -53,9 +56,7 @@ export class Leaderboard extends LitElement implements Layer {
       this.showLeaderboard();
       this.updateLeaderboard();
     }
-    if (this._leaderboardHidden) {
-      return;
-    }
+    if (this._leaderboardHidden) return;
 
     if (this.game.ticks() % 10 === 0) {
       this.updateLeaderboard();
@@ -66,9 +67,18 @@ export class Leaderboard extends LitElement implements Layer {
     if (this.game === null) throw new Error("Not initialized");
     const myPlayer = this.game.myPlayer();
 
-    const sorted = this.game
-      .playerViews()
-      .sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+    let sorted = this.game.playerViews();
+
+    switch (this._sortKey) {
+      case 'gold':
+        sorted = sorted.sort((a, b) => b.gold() - a.gold());
+        break;
+      case 'troops':
+        sorted = sorted.sort((a, b) => b.troops() - a.troops());
+        break;
+      default:
+        sorted = sorted.sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+    }
 
     const numTilesWithoutFallout =
       this.game.numLandTiles() - this.game.numTilesWithFallout();
@@ -100,9 +110,7 @@ export class Leaderboard extends LitElement implements Layer {
       let place = 0;
       for (const p of sorted) {
         place++;
-        if (p === myPlayer) {
-          break;
-        }
+        if (p === myPlayer) break;
       }
 
       let myPlayerTroops = myPlayer.troops() / 10;
@@ -129,6 +137,12 @@ export class Leaderboard extends LitElement implements Layer {
   private handleRowClickPlayer(player: PlayerView) {
     if (this.eventBus === null) return;
     this.eventBus.emit(new GoToPlayerEvent(player));
+  }
+
+  private setSort(key: 'tiles' | 'gold' | 'troops') {
+    if (this._sortKey === key) return;
+    this._sortKey = key;
+    this.updateLeaderboard();
   }
 
   renderLayer(context: CanvasRenderingContext2D) {}
@@ -174,6 +188,7 @@ export class Leaderboard extends LitElement implements Layer {
     th {
       background-color: rgb(31 41 55 / 0.5);
       color: white;
+      cursor: pointer;
     }
     .myPlayer {
       font-weight: bold;
@@ -275,9 +290,18 @@ export class Leaderboard extends LitElement implements Layer {
             <tr>
               <th>${translateText("leaderboard.rank")}</th>
               <th>${translateText("leaderboard.player")}</th>
-              <th>${translateText("leaderboard.owned")}</th>
-              <th>${translateText("leaderboard.gold")}</th>
-              <th>${translateText("leaderboard.troops")}</th>
+              <th @click=${() => this.setSort('tiles')}>
+                ${translateText("leaderboard.owned")}
+                ${this._sortKey === 'tiles' ? '⬇️' : ''}
+              </th>
+              <th @click=${() => this.setSort('gold')}>
+                ${translateText("leaderboard.gold")}
+                ${this._sortKey === 'gold' ? '⬇️' : ''}
+              </th>
+              <th @click=${() => this.setSort('troops')}>
+                ${translateText("leaderboard.troops")}
+                ${this._sortKey === 'troops' ? '⬇️' : ''}
+              </th>
             </tr>
           </thead>
           <tbody>
