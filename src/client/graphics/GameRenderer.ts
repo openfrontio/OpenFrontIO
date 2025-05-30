@@ -1,6 +1,5 @@
 import { consolex } from "../../core/Consolex";
 import { EventBus } from "../../core/EventBus";
-import { ClientID } from "../../core/Schemas";
 import { GameView } from "../../core/game/GameView";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
@@ -13,6 +12,7 @@ import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { FxLayer } from "./layers/FxLayer";
+import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MultiTabModal } from "./layers/MultiTabModal";
@@ -37,7 +37,6 @@ export function createRenderer(
   canvas: HTMLCanvasElement,
   game: GameView,
   eventBus: EventBus,
-  clientID: ClientID,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, canvas);
 
@@ -70,7 +69,6 @@ export function createRenderer(
   if (!emojiTable || !(leaderboard instanceof Leaderboard)) {
     consolex.error("EmojiTable element not found in the DOM");
   }
-  leaderboard.clientID = clientID;
   leaderboard.eventBus = eventBus;
   leaderboard.game = game;
 
@@ -78,7 +76,6 @@ export function createRenderer(
   if (!emojiTable || !(teamStats instanceof TeamStats)) {
     consolex.error("EmojiTable element not found in the DOM");
   }
-  teamStats.clientID = clientID;
   teamStats.eventBus = eventBus;
   teamStats.game = game;
 
@@ -86,7 +83,6 @@ export function createRenderer(
   if (!(controlPanel instanceof ControlPanel)) {
     consolex.error("ControlPanel element not found in the DOM");
   }
-  controlPanel.clientID = clientID;
   controlPanel.eventBus = eventBus;
   controlPanel.uiState = uiState;
   controlPanel.game = game;
@@ -99,7 +95,6 @@ export function createRenderer(
   }
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
-  eventsDisplay.clientID = clientID;
 
   const chatDisplay = document.querySelector("chat-display") as ChatDisplay;
   if (!(chatDisplay instanceof ChatDisplay)) {
@@ -107,7 +102,6 @@ export function createRenderer(
   }
   chatDisplay.eventBus = eventBus;
   chatDisplay.game = game;
-  chatDisplay.clientID = clientID;
 
   const playerInfo = document.querySelector(
     "player-info-overlay",
@@ -116,7 +110,6 @@ export function createRenderer(
     consolex.error("player info overlay not found");
   }
   playerInfo.eventBus = eventBus;
-  playerInfo.clientID = clientID;
   playerInfo.transform = transformHandler;
   playerInfo.game = game;
 
@@ -172,6 +165,14 @@ export function createRenderer(
   }
   playerTeamLabel.game = game;
 
+  const headsUpMessage = document.querySelector(
+    "heads-up-message",
+  ) as HeadsUpMessage;
+  if (!(headsUpMessage instanceof HeadsUpMessage)) {
+    console.error("heads-up message not found");
+  }
+  headsUpMessage.game = game;
+
   const unitInfoModal = document.querySelector(
     "unit-info-modal",
   ) as UnitInfoModal;
@@ -192,10 +193,10 @@ export function createRenderer(
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus),
     structureLayer,
-    new UnitLayer(game, eventBus, clientID, transformHandler),
+    new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
-    new UILayer(game, eventBus, clientID, transformHandler),
-    new NameLayer(game, transformHandler, clientID),
+    new UILayer(game, eventBus, transformHandler),
+    new NameLayer(game, transformHandler),
     eventsDisplay,
     chatDisplay,
     buildMenu,
@@ -203,7 +204,6 @@ export function createRenderer(
       eventBus,
       game,
       transformHandler,
-      clientID,
       emojiTable as EmojiTable,
       buildMenu,
       uiState,
@@ -220,6 +220,7 @@ export function createRenderer(
     topBar,
     playerPanel,
     playerTeamLabel,
+    headsUpMessage,
     unitInfoModal,
     multiTabModal,
   ];

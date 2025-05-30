@@ -5,6 +5,9 @@
     "svg": "uk_us_flag",
     "lang_code": "en"
   },
+  "common": {
+    "close": "Close"
+  },
   "main": {
     "title": "OpenFront (ALPHA)",
     "join_discord": "Join the Discord!",
@@ -17,7 +20,11 @@
     "single_player": "Single Player",
     "instructions": "Instructions",
     "how_to_play": "How to Play",
+    "advertise": "Advertise",
     "wiki": "Wiki"
+  },
+  "news": {
+    "title": "Version 23 released!"
   },
   "help_modal": {
     "hotkeys": "Hotkeys",
@@ -358,7 +365,8 @@
     "you_won": "You Won!",
     "other_won": "{player} has won!",
     "exit": "Exit Game",
-    "keep": "Keep Playing"
+    "keep": "Keep Playing",
+    "wishlist": "Wishlist on Steam!"
   },
   "leaderboard": {
     "title": "Leaderboard",
