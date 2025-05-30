@@ -72,6 +72,18 @@ const TERRAIN_EFFECTS = {
 } as const;
 
 export abstract class DefaultServerConfig implements ServerConfig {
+  domain(): string {
+    return process.env.DOMAIN ?? "";
+  }
+  subdomain(): string {
+    return process.env.SUBDOMAIN ?? "";
+  }
+  cloudflareAccountId(): string {
+    return process.env.CF_ACCOUNT_ID ?? "";
+  }
+  cloudflareApiToken(): string {
+    return process.env.CF_API_TOKEN ?? "";
+  }
   private publicKey: JWK;
   abstract jwtAudience(): string;
   jwtIssuer(): string {

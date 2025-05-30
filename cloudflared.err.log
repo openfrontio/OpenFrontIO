@@ -1,0 +1,929 @@
+2025-05-30T18:52:58Z INF Starting tunnel tunnelID=4d3eeea5-3da0-42d1-a454-3129444c7217
+2025-05-30T18:52:58Z INF Version 2025.4.2 (Checksum 36496e403afc14d3b0ca332a669de584f0dc4bb85f1443b853dd02265b82a444)
+2025-05-30T18:52:58Z INF GOOS: darwin, GOVersion: go1.22.5-devel-cf, GoArch: arm64
+2025-05-30T18:52:58Z INF Settings: map[token:*****]
+2025-05-30T18:52:58Z INF cloudflared will not automatically update if installed by a package manager.
+2025-05-30T18:52:58Z INF Generated Connector ID: d6e39495-92d7-4aa1-9f64-f2a8f95928b8
+2025-05-30T18:52:59Z INF Initial protocol quic
+2025-05-30T18:52:59Z INF ICMP proxy will use 192.168.1.107 as source for IPv4
+2025-05-30T18:52:59Z INF ICMP proxy will use fe80::81d:c246:5ec4:2b4d in zone en0 as source for IPv6
+2025-05-30T18:52:59Z INF Created ICMP proxy listening on 192.168.1.107:0
+2025-05-30T18:52:59Z INF ICMP proxy will use 192.168.1.107 as source for IPv4
+2025-05-30T18:52:59Z INF ICMP proxy will use fe80::81d:c246:5ec4:2b4d in zone en0 as source for IPv6
+2025-05-30T18:52:59Z INF Starting metrics server on 127.0.0.1:20242/metrics
+2025-05-30T18:52:59Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.113
+2025-05-30T18:52:59Z INF Registered tunnel connection connIndex=0 connection=f6560c2d-11f6-462c-996b-5403b18b6ac6 event=0 ip=198.41.200.113 location=sjc07 protocol=quic
+2025-05-30T18:52:59Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.7
+2025-05-30T18:52:59Z INF Updated to new configuration config="{\"ingress\":[{\"hostname\":\"test-tunnel.openfront.dev\",\"service\":\"http://localhost:80\"},{\"service\":\"http_status:404\"}]}" version=0
+2025-05-30T18:52:59Z INF Registered tunnel connection connIndex=1 connection=6c727992-1e01-4339-a81e-9f1159fd447a event=0 ip=198.41.192.7 location=sjc01 protocol=quic
+2025-05-30T18:53:00Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.73
+2025-05-30T18:53:00Z INF Registered tunnel connection connIndex=2 connection=c473b3fc-b981-4b35-9fa8-cbd996a058f1 event=0 ip=198.41.200.73 location=sjc07 protocol=quic
+2025-05-30T18:53:01Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.167
+2025-05-30T18:53:01Z INF Registered tunnel connection connIndex=3 connection=22ca1866-c9c2-413d-b4f4-d8c377dad270 event=0 ip=198.41.192.167 location=sjc06 protocol=quic
+2025-05-30T18:53:06Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:80: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:80
+2025-05-30T18:53:06Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:80: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/ event=0 ip=198.41.192.7 type=http
+2025-05-30T18:53:06Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:80: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:80
+2025-05-30T18:53:06Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:80: connect: connection refused" connIndex=2 dest=https://test-tunnel.openfront.dev/favicon.ico event=0 ip=198.41.200.73 type=http
+2025-05-30T18:53:09Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:80: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:80
+2025-05-30T18:53:09Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:80: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/ event=0 ip=198.41.192.7 type=http
+2025-05-30T18:53:09Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:80: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:80
+2025-05-30T18:53:09Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:80: connect: connection refused" connIndex=2 dest=https://test-tunnel.openfront.dev/favicon.ico event=0 ip=198.41.200.73 type=http
+2025-05-30T18:53:10Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:80: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:80
+2025-05-30T18:53:10Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:80: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/ event=0 ip=198.41.192.7 type=http
+2025-05-30T18:53:10Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:80: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:80
+2025-05-30T18:53:10Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:80: connect: connection refused" connIndex=2 dest=https://test-tunnel.openfront.dev/favicon.ico event=0 ip=198.41.200.73 type=http
+2025-05-30T18:54:22Z INF Starting tunnel tunnelID=3fe64ede-b631-404a-b849-a69e3df2003a
+2025-05-30T18:54:22Z INF Version 2025.4.2 (Checksum 36496e403afc14d3b0ca332a669de584f0dc4bb85f1443b853dd02265b82a444)
+2025-05-30T18:54:22Z INF GOOS: darwin, GOVersion: go1.22.5-devel-cf, GoArch: arm64
+2025-05-30T18:54:22Z INF Settings: map[token:*****]
+2025-05-30T18:54:22Z INF cloudflared will not automatically update if installed by a package manager.
+2025-05-30T18:54:22Z INF Generated Connector ID: 24cab1c0-9113-4050-b7cf-f0b9a227f23e
+2025-05-30T18:54:22Z INF Initial protocol quic
+2025-05-30T18:54:22Z INF ICMP proxy will use 192.168.1.107 as source for IPv4
+2025-05-30T18:54:22Z INF ICMP proxy will use fe80::81d:c246:5ec4:2b4d in zone en0 as source for IPv6
+2025-05-30T18:54:22Z INF Created ICMP proxy listening on 192.168.1.107:0
+2025-05-30T18:54:22Z INF ICMP proxy will use 192.168.1.107 as source for IPv4
+2025-05-30T18:54:22Z INF ICMP proxy will use fe80::81d:c246:5ec4:2b4d in zone en0 as source for IPv6
+2025-05-30T18:54:22Z INF Starting metrics server on 127.0.0.1:20243/metrics
+2025-05-30T18:54:22Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.192.167
+2025-05-30T18:54:22Z INF Registered tunnel connection connIndex=0 connection=8e9b7145-fcbc-4a24-9ac6-8f651e858c63 event=0 ip=198.41.192.167 location=sjc01 protocol=quic
+2025-05-30T18:54:22Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.200.13
+2025-05-30T18:54:22Z INF Updated to new configuration config="{\"ingress\":[{\"hostname\":\"test-tunnel.openfront.dev\",\"service\":\"http://localhost:3000\"},{\"service\":\"http_status:404\"}]}" version=0
+2025-05-30T18:54:23Z INF Registered tunnel connection connIndex=1 connection=71d6b32b-58de-4d9c-9e27-6cf1b23789ee event=0 ip=198.41.200.13 location=sjc08 protocol=quic
+2025-05-30T18:54:23Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.193
+2025-05-30T18:54:24Z INF Registered tunnel connection connIndex=2 connection=aef67f00-3e62-4599-b3b2-62515b3f9366 event=0 ip=198.41.200.193 location=sjc08 protocol=quic
+2025-05-30T18:54:24Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.47
+2025-05-30T18:54:24Z INF Registered tunnel connection connIndex=3 connection=1c95385b-9591-4cad-ad09-15780fbcd1bf event=0 ip=198.41.192.47 location=sjc01 protocol=quic
+2025-05-30T19:12:33Z WRN Failed to serve tunnel connection error="context canceled" connIndex=0 event=0 ip=198.41.200.113
+2025-05-30T19:12:33Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.113
+2025-05-30T19:12:33Z WRN Failed to serve tunnel connection error="INTERNAL_ERROR (local): write udp4 0.0.0.0:63576->198.41.192.167:7844: sendmsg: network is unreachable" connIndex=0 event=0 ip=198.41.192.167
+2025-05-30T19:12:33Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: INTERNAL_ERROR (local): write udp4 0.0.0.0:63193->198.41.192.47:7844: sendmsg: network is unreachable" connIndex=3 event=0 ip=198.41.192.47
+2025-05-30T19:12:33Z WRN Serve tunnel error error="INTERNAL_ERROR (local): write udp4 0.0.0.0:63576->198.41.192.167:7844: sendmsg: network is unreachable" connIndex=0 event=0 ip=198.41.192.167
+2025-05-30T19:12:33Z WRN Serve tunnel error error="failed to accept QUIC stream: INTERNAL_ERROR (local): write udp4 0.0.0.0:63193->198.41.192.47:7844: sendmsg: network is unreachable" connIndex=3 event=0 ip=198.41.192.47
+2025-05-30T19:12:33Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.192.167
+2025-05-30T19:12:33Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.192.47
+2025-05-30T19:12:34Z WRN Failed to serve tunnel connection error="INTERNAL_ERROR (local): write udp4 0.0.0.0:59035->198.41.200.73:7844: sendmsg: network is unreachable" connIndex=2 event=0 ip=198.41.200.73
+2025-05-30T19:12:34Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: INTERNAL_ERROR (local): write udp4 0.0.0.0:55298->198.41.192.7:7844: sendmsg: network is unreachable" connIndex=1 event=0 ip=198.41.192.7
+2025-05-30T19:12:34Z WRN Serve tunnel error error="INTERNAL_ERROR (local): write udp4 0.0.0.0:59035->198.41.200.73:7844: sendmsg: network is unreachable" connIndex=2 event=0 ip=198.41.200.73
+2025-05-30T19:12:34Z WRN Serve tunnel error error="failed to accept QUIC stream: INTERNAL_ERROR (local): write udp4 0.0.0.0:55298->198.41.192.7:7844: sendmsg: network is unreachable" connIndex=1 event=0 ip=198.41.192.7
+2025-05-30T19:12:34Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.200.73
+2025-05-30T19:12:34Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.192.7
+2025-05-30T19:12:34Z WRN Connection terminated error="failed to accept QUIC stream: INTERNAL_ERROR (local): write udp4 0.0.0.0:63193->198.41.192.47:7844: sendmsg: network is unreachable" connIndex=3
+2025-05-30T19:12:34Z WRN Failed to serve tunnel connection error="INTERNAL_ERROR (local): write udp4 0.0.0.0:57954->198.41.200.13:7844: sendmsg: network is unreachable" connIndex=1 event=0 ip=198.41.200.13
+2025-05-30T19:12:34Z WRN Serve tunnel error error="INTERNAL_ERROR (local): write udp4 0.0.0.0:57954->198.41.200.13:7844: sendmsg: network is unreachable" connIndex=1 event=0 ip=198.41.200.13
+2025-05-30T19:12:34Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.200.13
+2025-05-30T19:12:34Z ERR Failed to serve tunnel connection error="INTERNAL_ERROR (local): write udp4 0.0.0.0:54938->198.41.192.167:7844: sendmsg: network is unreachable" connIndex=3 event=0 ip=198.41.192.167
+2025-05-30T19:12:34Z ERR Serve tunnel error error="INTERNAL_ERROR (local): write udp4 0.0.0.0:54938->198.41.192.167:7844: sendmsg: network is unreachable" connIndex=3 event=0 ip=198.41.192.167
+2025-05-30T19:12:34Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.192.167
+2025-05-30T19:12:34Z ERR Failed to serve tunnel connection error="INTERNAL_ERROR (local): write udp4 0.0.0.0:49545->198.41.200.193:7844: sendmsg: network is unreachable" connIndex=2 event=0 ip=198.41.200.193
+2025-05-30T19:12:34Z ERR Serve tunnel error error="INTERNAL_ERROR (local): write udp4 0.0.0.0:49545->198.41.200.193:7844: sendmsg: network is unreachable" connIndex=2 event=0 ip=198.41.200.193
+2025-05-30T19:12:34Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.200.193
+2025-05-30T19:12:35Z ERR Connection terminated error="INTERNAL_ERROR (local): write udp4 0.0.0.0:54938->198.41.192.167:7844: sendmsg: network is unreachable" connIndex=3
+2025-05-30T19:12:35Z ERR Connection terminated error="INTERNAL_ERROR (local): write udp4 0.0.0.0:49545->198.41.200.193:7844: sendmsg: network is unreachable" connIndex=2
+2025-05-30T19:12:35Z ERR Connection terminated error="INTERNAL_ERROR (local): write udp4 0.0.0.0:57954->198.41.200.13:7844: sendmsg: network is unreachable" connIndex=1
+2025-05-30T19:12:35Z ERR Connection terminated error="failed to accept QUIC stream: INTERNAL_ERROR (local): write udp4 0.0.0.0:55298->198.41.192.7:7844: sendmsg: network is unreachable" connIndex=1
+2025-05-30T19:12:35Z ERR Connection terminated error="context canceled" connIndex=0
+2025-05-30T19:12:35Z ERR Connection terminated error="INTERNAL_ERROR (local): write udp4 0.0.0.0:59035->198.41.200.73:7844: sendmsg: network is unreachable" connIndex=2
+2025-05-30T19:12:35Z ERR Connection terminated error="INTERNAL_ERROR (local): write udp4 0.0.0.0:63576->198.41.192.167:7844: sendmsg: network is unreachable" connIndex=0
+2025-05-30T19:12:38Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.192.167
+2025-05-30T19:12:38Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.200.13
+2025-05-30T19:12:38Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.193
+2025-05-30T19:12:38Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.47
+2025-05-30T19:12:38Z ERR Failed to dial a quic connection error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:63193->198.41.192.47:7844: sendmsg: network is unreachable" connIndex=3 event=0 ip=198.41.192.47
+2025-05-30T19:12:38Z ERR Failed to dial a quic connection error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:63576->198.41.192.167:7844: sendmsg: network is unreachable" connIndex=0 event=0 ip=198.41.192.167
+2025-05-30T19:12:38Z ERR Failed to dial a quic connection error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:49545->198.41.200.193:7844: sendmsg: network is unreachable" connIndex=2 event=0 ip=198.41.200.193
+2025-05-30T19:12:38Z ERR Failed to dial a quic connection error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:57954->198.41.200.13:7844: sendmsg: network is unreachable" connIndex=1 event=0 ip=198.41.200.13
+2025-05-30T19:12:38Z INF Retrying connection in up to 4s connIndex=0 event=0 ip=198.41.192.167
+2025-05-30T19:12:38Z INF Retrying connection in up to 4s connIndex=3 event=0 ip=198.41.192.47
+2025-05-30T19:12:38Z INF Retrying connection in up to 4s connIndex=2 event=0 ip=198.41.200.193
+2025-05-30T19:12:38Z INF Retrying connection in up to 4s connIndex=1 event=0 ip=198.41.200.13
+2025-05-30T19:12:40Z ERR Connection terminated error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:49545->198.41.200.193:7844: sendmsg: network is unreachable" connIndex=2
+2025-05-30T19:12:41Z ERR Connection terminated error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:63193->198.41.192.47:7844: sendmsg: network is unreachable" connIndex=3
+2025-05-30T19:12:42Z ERR Connection terminated error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:57954->198.41.200.13:7844: sendmsg: network is unreachable" connIndex=1
+2025-05-30T19:12:42Z ERR Connection terminated error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:63576->198.41.192.167:7844: sendmsg: network is unreachable" connIndex=0
+2025-05-30T19:14:59Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.7
+2025-05-30T19:14:59Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.73
+2025-05-30T19:14:59Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.113
+2025-05-30T19:14:59Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.167
+2025-05-30T19:14:59Z ERR Failed to dial a quic connection error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:55298->198.41.192.7:7844: sendmsg: network is unreachable" connIndex=1 event=0 ip=198.41.192.7
+2025-05-30T19:14:59Z INF Retrying connection in up to 4s connIndex=1 event=0 ip=198.41.192.7
+2025-05-30T19:14:59Z ERR Failed to dial a quic connection error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:59035->198.41.200.73:7844: sendmsg: network is unreachable" connIndex=2 event=0 ip=198.41.200.73
+2025-05-30T19:14:59Z INF Retrying connection in up to 4s connIndex=2 event=0 ip=198.41.200.73
+2025-05-30T19:14:59Z ERR Failed to dial a quic connection error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:54938->198.41.192.167:7844: sendmsg: network is unreachable" connIndex=3 event=0 ip=198.41.192.167
+2025-05-30T19:14:59Z INF Retrying connection in up to 4s connIndex=3 event=0 ip=198.41.192.167
+2025-05-30T19:14:59Z ERR Failed to dial a quic connection error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:51729->198.41.200.113:7844: sendmsg: network is unreachable" connIndex=0 event=0 ip=198.41.200.113
+2025-05-30T19:14:59Z INF Retrying connection in up to 4s connIndex=0 event=0 ip=198.41.200.113
+2025-05-30T19:14:59Z ERR Connection terminated error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:54938->198.41.192.167:7844: sendmsg: network is unreachable" connIndex=3
+2025-05-30T19:15:00Z ERR Connection terminated error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:59035->198.41.200.73:7844: sendmsg: network is unreachable" connIndex=2
+2025-05-30T19:15:00Z ERR Connection terminated error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:51729->198.41.200.113:7844: sendmsg: network is unreachable" connIndex=0
+2025-05-30T19:15:02Z ERR Connection terminated error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:55298->198.41.192.7:7844: sendmsg: network is unreachable" connIndex=1
+2025-05-30T19:15:07Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.107
+2025-05-30T19:15:07Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.227
+2025-05-30T19:15:07Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.13
+2025-05-30T19:15:07Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.73
+2025-05-30T19:15:07Z ERR Failed to dial a quic connection error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:59035->198.41.200.13:7844: sendmsg: network is unreachable" connIndex=2 event=0 ip=198.41.200.13
+2025-05-30T19:15:07Z ERR Failed to dial a quic connection error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:54938->198.41.192.107:7844: sendmsg: network is unreachable" connIndex=3 event=0 ip=198.41.192.107
+2025-05-30T19:15:07Z ERR Failed to dial a quic connection error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:55298->198.41.192.227:7844: sendmsg: network is unreachable" connIndex=1 event=0 ip=198.41.192.227
+2025-05-30T19:15:07Z INF Retrying connection in up to 8s connIndex=2 event=0 ip=198.41.200.13
+2025-05-30T19:15:07Z ERR Failed to dial a quic connection error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:51729->198.41.200.73:7844: sendmsg: network is unreachable" connIndex=0 event=0 ip=198.41.200.73
+2025-05-30T19:15:07Z INF Retrying connection in up to 8s connIndex=3 event=0 ip=198.41.192.107
+2025-05-30T19:15:07Z INF Retrying connection in up to 8s connIndex=1 event=0 ip=198.41.192.227
+2025-05-30T19:15:07Z INF Retrying connection in up to 8s connIndex=0 event=0 ip=198.41.200.73
+2025-05-30T19:15:12Z ERR Connection terminated error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:54938->198.41.192.107:7844: sendmsg: network is unreachable" connIndex=3
+2025-05-30T19:15:12Z ERR Connection terminated error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:59035->198.41.200.13:7844: sendmsg: network is unreachable" connIndex=2
+2025-05-30T19:15:12Z ERR Connection terminated error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:55298->198.41.192.227:7844: sendmsg: network is unreachable" connIndex=1
+2025-05-30T19:15:12Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.192.27
+2025-05-30T19:15:12Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.7
+2025-05-30T19:15:12Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.233
+2025-05-30T19:15:12Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.200.53
+2025-05-30T19:15:12Z ERR Failed to dial a quic connection error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:63576->198.41.192.27:7844: sendmsg: network is unreachable" connIndex=0 event=0 ip=198.41.192.27
+2025-05-30T19:15:12Z INF Retrying connection in up to 8s connIndex=0 event=0 ip=198.41.192.27
+2025-05-30T19:15:12Z ERR Failed to dial a quic connection error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:63193->198.41.192.7:7844: sendmsg: network is unreachable" connIndex=3 event=0 ip=198.41.192.7
+2025-05-30T19:15:12Z ERR Failed to dial a quic connection error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:57954->198.41.200.53:7844: sendmsg: network is unreachable" connIndex=1 event=0 ip=198.41.200.53
+2025-05-30T19:15:12Z INF Retrying connection in up to 8s connIndex=3 event=0 ip=198.41.192.7
+2025-05-30T19:15:12Z INF Retrying connection in up to 8s connIndex=1 event=0 ip=198.41.200.53
+2025-05-30T19:15:12Z ERR Failed to dial a quic connection error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:49545->198.41.200.233:7844: sendmsg: network is unreachable" connIndex=2 event=0 ip=198.41.200.233
+2025-05-30T19:15:12Z INF Retrying connection in up to 8s connIndex=2 event=0 ip=198.41.200.233
+2025-05-30T19:15:13Z ERR Connection terminated error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:51729->198.41.200.73:7844: sendmsg: network is unreachable" connIndex=0
+2025-05-30T19:15:14Z ERR Connection terminated error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:63193->198.41.192.7:7844: sendmsg: network is unreachable" connIndex=3
+2025-05-30T19:15:14Z ERR Connection terminated error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:57954->198.41.200.53:7844: sendmsg: network is unreachable" connIndex=1
+2025-05-30T19:15:15Z ERR Connection terminated error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:63576->198.41.192.27:7844: sendmsg: network is unreachable" connIndex=0
+2025-05-30T19:15:46Z ERR Connection terminated error="failed to dial to edge with quic: INTERNAL_ERROR (local): write udp4 0.0.0.0:49545->198.41.200.233:7844: sendmsg: network is unreachable" connIndex=2
+2025-05-30T19:15:57Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.192.167
+2025-05-30T19:15:57Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.200.193
+2025-05-30T19:15:57Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.27
+2025-05-30T19:15:57Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.33
+2025-05-30T19:15:57Z INF Registered tunnel connection connIndex=0 connection=a17db02d-41b4-4307-8b78-d3327c8271ea event=0 ip=198.41.192.167 location=lax05 protocol=quic
+2025-05-30T19:15:57Z INF Registered tunnel connection connIndex=2 connection=cb04c3b4-f717-437f-9ee8-6ae468b46202 event=0 ip=198.41.200.33 location=lax01 protocol=quic
+2025-05-30T19:15:57Z INF Registered tunnel connection connIndex=1 connection=3cbba502-4f8d-409d-91bb-f467fd051662 event=0 ip=198.41.200.193 location=lax01 protocol=quic
+2025-05-30T19:15:58Z INF Registered tunnel connection connIndex=3 connection=ed511c59-1ef6-47d6-84ea-28defbd9a93b event=0 ip=198.41.192.27 location=lax08 protocol=quic
+2025-05-30T19:16:48Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.233
+2025-05-30T19:16:48Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.23
+2025-05-30T19:16:48Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.167
+2025-05-30T19:16:48Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.57
+2025-05-30T19:16:48Z INF Registered tunnel connection connIndex=2 connection=a326e8c6-97c9-4cfb-aa9d-071c7183f01f event=0 ip=198.41.200.233 location=lax01 protocol=quic
+2025-05-30T19:16:48Z INF Registered tunnel connection connIndex=0 connection=b28c2367-6988-4c5b-8029-1d72dd9116bf event=0 ip=198.41.200.23 location=lax01 protocol=quic
+2025-05-30T19:16:48Z INF Registered tunnel connection connIndex=1 connection=684d4efa-3d03-4a3e-ab18-23decad2ad97 event=0 ip=198.41.192.167 location=lax09 protocol=quic
+2025-05-30T19:16:48Z INF Registered tunnel connection connIndex=3 connection=805128ea-77f8-4621-8bf7-63bf16dc27b9 event=0 ip=198.41.192.57 location=lax09 protocol=quic
+2025-05-30T23:58:25Z INF Starting tunnel tunnelID=6aab8c75-352f-42e7-9222-912a4395ae0c
+2025-05-30T23:58:25Z INF Version 2025.4.2 (Checksum 36496e403afc14d3b0ca332a669de584f0dc4bb85f1443b853dd02265b82a444)
+2025-05-30T23:58:25Z INF GOOS: darwin, GOVersion: go1.22.5-devel-cf, GoArch: arm64
+2025-05-30T23:58:25Z INF Settings: map[token:*****]
+2025-05-30T23:58:25Z INF cloudflared will not automatically update if installed by a package manager.
+2025-05-30T23:58:25Z INF Generated Connector ID: e7d66ca0-2733-4f88-937c-2b786ea167af
+2025-05-30T23:58:25Z INF Initial protocol quic
+2025-05-30T23:58:25Z INF ICMP proxy will use 192.168.1.107 as source for IPv4
+2025-05-30T23:58:25Z INF ICMP proxy will use fe80::81d:c246:5ec4:2b4d in zone en0 as source for IPv6
+2025-05-30T23:58:25Z INF Created ICMP proxy listening on 192.168.1.107:0
+2025-05-30T23:58:25Z INF ICMP proxy will use 192.168.1.107 as source for IPv4
+2025-05-30T23:58:25Z INF ICMP proxy will use fe80::81d:c246:5ec4:2b4d in zone en0 as source for IPv6
+2025-05-30T23:58:25Z INF Starting metrics server on 127.0.0.1:20244/metrics
+2025-05-30T23:58:25Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.73
+2025-05-30T23:58:25Z INF Registered tunnel connection connIndex=0 connection=5d25223e-f7d8-4ed5-b2c4-9393da2f9782 event=0 ip=198.41.200.73 location=sjc05 protocol=quic
+2025-05-30T23:58:25Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.167
+2025-05-30T23:58:25Z INF Updated to new configuration config="{\"ingress\":[{\"hostname\":\"test-tunnel.openfront.dev\",\"service\":\"http://localhost:3000\"},{\"hostname\":\"worker-0-test-tunnel.openfront.dev\",\"service\":\"http://localhost:3001\"},{\"hostname\":\"worker-1-test-tunnel.openfront.dev\",\"service\":\"http://localhost:3002\"},{\"service\":\"http_status:404\"}]}" version=0
+2025-05-30T23:58:25Z INF Registered tunnel connection connIndex=1 connection=544aeeae-bf3b-420f-82c5-e2efc009d176 event=0 ip=198.41.192.167 location=sjc06 protocol=quic
+2025-05-30T23:58:26Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.192.77
+2025-05-30T23:58:26Z INF Registered tunnel connection connIndex=2 connection=0a7ee84f-e39c-454b-af7d-36403109ce57 event=0 ip=198.41.192.77 location=sjc01 protocol=quic
+2025-05-30T23:58:27Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.200.113
+2025-05-30T23:58:27Z INF Registered tunnel connection connIndex=3 connection=d7200d11-52ea-4879-a562-22729fd3a5a6 event=0 ip=198.41.200.113 location=sjc08 protocol=quic
+2025-05-30T23:59:04Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:04Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.113 type=http
+2025-05-30T23:59:05Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:05Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.113 type=http
+2025-05-30T23:59:06Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:06Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.167 type=http
+2025-05-30T23:59:07Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:07Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.167 type=http
+2025-05-30T23:59:08Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:08Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.167 type=http
+2025-05-30T23:59:09Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:09Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.167 type=http
+2025-05-30T23:59:10Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:10Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.167 type=http
+2025-05-30T23:59:11Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:11Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.167 type=http
+2025-05-30T23:59:12Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:12Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.77 type=http
+2025-05-30T23:59:13Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:13Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.77 type=http
+2025-05-30T23:59:14Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:14Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.77 type=http
+2025-05-30T23:59:15Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:15Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.77 type=http
+2025-05-30T23:59:16Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:16Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.77 type=http
+2025-05-30T23:59:17Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:17Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.77 type=http
+2025-05-30T23:59:18Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:18Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.77 type=http
+2025-05-30T23:59:19Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:19Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.77 type=http
+2025-05-30T23:59:20Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:20Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.77 type=http
+2025-05-30T23:59:21Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:21Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.77 type=http
+2025-05-30T23:59:22Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:22Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.77 type=http
+2025-05-30T23:59:23Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:23Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.77 type=http
+2025-05-30T23:59:24Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:24Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.113 type=http
+2025-05-30T23:59:25Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:25Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.113 type=http
+2025-05-30T23:59:26Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:26Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.113 type=http
+2025-05-30T23:59:27Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:27Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.113 type=http
+2025-05-30T23:59:28Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:28Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.113 type=http
+2025-05-30T23:59:29Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:29Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.113 type=http
+2025-05-30T23:59:30Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:30Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.113 type=http
+2025-05-30T23:59:31Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:31Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.113 type=http
+2025-05-30T23:59:32Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:32Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.113 type=http
+2025-05-30T23:59:33Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:33Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.113 type=http
+2025-05-30T23:59:34Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:34Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.113 type=http
+2025-05-30T23:59:35Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:35Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.113 type=http
+2025-05-30T23:59:36Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:36Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.167 type=http
+2025-05-30T23:59:37Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:37Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.167 type=http
+2025-05-30T23:59:38Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:38Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.167 type=http
+2025-05-30T23:59:39Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:39Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.167 type=http
+2025-05-30T23:59:40Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:40Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.167 type=http
+2025-05-30T23:59:41Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:41Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.167 type=http
+2025-05-30T23:59:42Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:42Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.167 type=http
+2025-05-30T23:59:43Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:43Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.167 type=http
+2025-05-30T23:59:44Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:44Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.167 type=http
+2025-05-30T23:59:45Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:45Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.167 type=http
+2025-05-30T23:59:46Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:46Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.167 type=http
+2025-05-30T23:59:47Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:47Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.73 type=http
+2025-05-30T23:59:48Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:48Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.73 type=http
+2025-05-30T23:59:49Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:49Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.73 type=http
+2025-05-30T23:59:50Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:50Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.73 type=http
+2025-05-30T23:59:51Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:51Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.73 type=http
+2025-05-30T23:59:52Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:52Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=0 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.200.73 type=http
+2025-05-30T23:59:53Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:53Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.77 type=http
+2025-05-30T23:59:54Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-30T23:59:54Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=2 dest=https://test-tunnel.openfront.dev/api/public_lobbies event=0 ip=198.41.192.77 type=http
+2025-05-31T00:00:32Z INF Starting tunnel tunnelID=4639f3e4-6f8a-46c3-bcdd-d172ec30c7b6
+2025-05-31T00:00:32Z INF Version 2025.4.2 (Checksum 36496e403afc14d3b0ca332a669de584f0dc4bb85f1443b853dd02265b82a444)
+2025-05-31T00:00:32Z INF GOOS: darwin, GOVersion: go1.22.5-devel-cf, GoArch: arm64
+2025-05-31T00:00:32Z INF Settings: map[token:*****]
+2025-05-31T00:00:32Z INF cloudflared will not automatically update if installed by a package manager.
+2025-05-31T00:00:32Z INF Generated Connector ID: d15a00ce-b3ae-45fe-8b46-54ea35219e17
+2025-05-31T00:00:32Z INF Initial protocol quic
+2025-05-31T00:00:32Z INF ICMP proxy will use 192.168.1.107 as source for IPv4
+2025-05-31T00:00:32Z INF ICMP proxy will use fe80::81d:c246:5ec4:2b4d in zone en0 as source for IPv6
+2025-05-31T00:00:32Z INF Created ICMP proxy listening on 192.168.1.107:0
+2025-05-31T00:00:32Z INF ICMP proxy will use 192.168.1.107 as source for IPv4
+2025-05-31T00:00:32Z INF ICMP proxy will use fe80::81d:c246:5ec4:2b4d in zone en0 as source for IPv6
+2025-05-31T00:00:32Z INF Starting metrics server on 127.0.0.1:20245/metrics
+2025-05-31T00:00:32Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.233
+2025-05-31T00:00:32Z INF Registered tunnel connection connIndex=0 connection=c588db1a-086b-4a02-b789-8a87520e290d event=0 ip=198.41.200.233 location=sjc08 protocol=quic
+2025-05-31T00:00:32Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.227
+2025-05-31T00:00:32Z INF Updated to new configuration config="{\"ingress\":[{\"hostname\":\"test-tunnel.openfront.dev\",\"service\":\"http://localhost:3000\"},{\"hostname\":\"w0-test-tunnel.openfront.dev\",\"service\":\"http://localhost:3001\"},{\"hostname\":\"w1-test-tunnel.openfront.dev\",\"service\":\"http://localhost:3002\"},{\"service\":\"http_status:404\"}]}" version=0
+2025-05-31T00:00:32Z INF Registered tunnel connection connIndex=1 connection=03caac5b-b437-4758-9482-bdaff6aa577b event=0 ip=198.41.192.227 location=sjc06 protocol=quic
+2025-05-31T00:00:33Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.63
+2025-05-31T00:00:33Z INF Registered tunnel connection connIndex=2 connection=1456cca3-395a-4470-874f-ba67e945b274 event=0 ip=198.41.200.63 location=sjc08 protocol=quic
+2025-05-31T00:00:34Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:00:34Z INF Registered tunnel connection connIndex=3 connection=5eeb740f-f2af-4048-96df-610cb0004eed event=0 ip=198.41.192.77 location=sjc01 protocol=quic
+2025-05-31T00:00:44Z INF Starting tunnel tunnelID=96c24c26-5e36-4d76-b844-18def5a27d90
+2025-05-31T00:00:44Z INF Version 2025.4.2 (Checksum 36496e403afc14d3b0ca332a669de584f0dc4bb85f1443b853dd02265b82a444)
+2025-05-31T00:00:44Z INF GOOS: darwin, GOVersion: go1.22.5-devel-cf, GoArch: arm64
+2025-05-31T00:00:44Z INF Settings: map[token:*****]
+2025-05-31T00:00:44Z INF cloudflared will not automatically update if installed by a package manager.
+2025-05-31T00:00:44Z INF Generated Connector ID: 83078b1e-ab05-4723-9cc4-471dcad6c0cb
+2025-05-31T00:00:44Z INF Initial protocol quic
+2025-05-31T00:00:44Z INF ICMP proxy will use 192.168.1.107 as source for IPv4
+2025-05-31T00:00:44Z INF ICMP proxy will use fe80::81d:c246:5ec4:2b4d in zone en0 as source for IPv6
+2025-05-31T00:00:44Z INF Created ICMP proxy listening on 192.168.1.107:0
+2025-05-31T00:00:44Z INF ICMP proxy will use 192.168.1.107 as source for IPv4
+2025-05-31T00:00:44Z INF ICMP proxy will use fe80::81d:c246:5ec4:2b4d in zone en0 as source for IPv6
+2025-05-31T00:00:44Z INF Starting metrics server on 127.0.0.1:54182/metrics
+2025-05-31T00:00:44Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.53
+2025-05-31T00:00:44Z INF Registered tunnel connection connIndex=0 connection=e1c41849-b5a7-4736-ba2b-2be41c56e882 event=0 ip=198.41.200.53 location=sjc07 protocol=quic
+2025-05-31T00:00:44Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.57
+2025-05-31T00:00:44Z INF Updated to new configuration config="{\"ingress\":[{\"hostname\":\"test-tunnel.openfront.dev\",\"service\":\"http://localhost:3000\"},{\"hostname\":\"w0-test-tunnel.openfront.dev\",\"service\":\"http://localhost:3001\"},{\"hostname\":\"w1-test-tunnel.openfront.dev\",\"service\":\"http://localhost:3002\"},{\"service\":\"http_status:404\"}]}" version=0
+2025-05-31T00:00:44Z INF Registered tunnel connection connIndex=1 connection=eec8d396-29b4-4cf2-b4b8-274594efa3be event=0 ip=198.41.192.57 location=sjc01 protocol=quic
+2025-05-31T00:00:45Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T00:00:46Z INF Registered tunnel connection connIndex=2 connection=60163abf-d09e-4ee6-ba50-a6ee5b83040e event=0 ip=198.41.200.113 location=sjc07 protocol=quic
+2025-05-31T00:00:46Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:00:46Z INF Registered tunnel connection connIndex=3 connection=e5461911-163d-4c3e-bfae-1e6e6dea8dcf event=0 ip=198.41.192.77 location=sjc01 protocol=quic
+2025-05-31T00:03:25Z INF Starting tunnel tunnelID=3f51b400-fc3e-4f23-bf86-080d12767dac
+2025-05-31T00:03:25Z INF Version 2025.4.2 (Checksum 36496e403afc14d3b0ca332a669de584f0dc4bb85f1443b853dd02265b82a444)
+2025-05-31T00:03:25Z INF GOOS: darwin, GOVersion: go1.22.5-devel-cf, GoArch: arm64
+2025-05-31T00:03:25Z INF Settings: map[token:*****]
+2025-05-31T00:03:25Z INF cloudflared will not automatically update if installed by a package manager.
+2025-05-31T00:03:25Z INF Generated Connector ID: f79fad4c-b3f0-46b9-a7da-5fea4f667fb1
+2025-05-31T00:03:25Z INF Initial protocol quic
+2025-05-31T00:03:25Z INF ICMP proxy will use 192.168.1.107 as source for IPv4
+2025-05-31T00:03:25Z INF ICMP proxy will use fe80::81d:c246:5ec4:2b4d in zone en0 as source for IPv6
+2025-05-31T00:03:25Z INF Created ICMP proxy listening on 192.168.1.107:0
+2025-05-31T00:03:25Z INF ICMP proxy will use 192.168.1.107 as source for IPv4
+2025-05-31T00:03:25Z INF ICMP proxy will use fe80::81d:c246:5ec4:2b4d in zone en0 as source for IPv6
+2025-05-31T00:03:25Z INF Starting metrics server on 127.0.0.1:54296/metrics
+2025-05-31T00:03:25Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.192.67
+2025-05-31T00:03:25Z INF Registered tunnel connection connIndex=0 connection=7052db0f-1ce6-4316-af5a-eff26467f9d0 event=0 ip=198.41.192.67 location=sjc01 protocol=quic
+2025-05-31T00:03:25Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.200.43
+2025-05-31T00:03:25Z INF Updated to new configuration config="{\"ingress\":[{\"hostname\":\"test2.openfront.dev\",\"service\":\"http://localhost:3000\"},{\"hostname\":\"w0-test2.openfront.dev\",\"service\":\"http://localhost:3001\"},{\"hostname\":\"w1-test2.openfront.dev\",\"service\":\"http://localhost:3002\"},{\"service\":\"http_status:404\"}]}" version=0
+2025-05-31T00:03:25Z INF Registered tunnel connection connIndex=1 connection=3ecda480-5b15-4282-b627-8290aaf181c1 event=0 ip=198.41.200.43 location=sjc05 protocol=quic
+2025-05-31T00:03:26Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.33
+2025-05-31T00:03:26Z INF Registered tunnel connection connIndex=2 connection=a66db8b0-6bee-440b-8dd2-7b54c52d652c event=0 ip=198.41.200.33 location=sjc08 protocol=quic
+2025-05-31T00:03:27Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.107
+2025-05-31T00:03:27Z INF Registered tunnel connection connIndex=3 connection=2d129474-736a-44a8-894b-95391d541ce9 event=0 ip=198.41.192.107 location=sjc06 protocol=quic
+2025-05-31T00:04:25Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-31T00:04:25Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test2.openfront.dev/api/public_lobbies event=0 ip=198.41.200.43 type=http
+2025-05-31T00:04:26Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-31T00:04:26Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test2.openfront.dev/api/public_lobbies event=0 ip=198.41.200.43 type=http
+2025-05-31T00:04:26Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-31T00:04:26Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=3 dest=https://test2.openfront.dev/ event=0 ip=198.41.192.107 type=http
+2025-05-31T00:04:26Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3000
+2025-05-31T00:04:26Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3000: connect: connection refused" connIndex=1 dest=https://test2.openfront.dev/favicon.ico event=0 ip=198.41.200.43 type=http
+2025-05-31T00:08:05Z INF Starting tunnel tunnelID=bcae2b3a-29e3-47fb-babc-1a07d12493c7
+2025-05-31T00:08:05Z INF Version 2025.4.2 (Checksum 36496e403afc14d3b0ca332a669de584f0dc4bb85f1443b853dd02265b82a444)
+2025-05-31T00:08:05Z INF GOOS: darwin, GOVersion: go1.22.5-devel-cf, GoArch: arm64
+2025-05-31T00:08:05Z INF Settings: map[token:*****]
+2025-05-31T00:08:05Z INF cloudflared will not automatically update if installed by a package manager.
+2025-05-31T00:08:05Z INF Generated Connector ID: ac31699f-3b4b-431d-905c-c2b087f6f830
+2025-05-31T00:08:05Z INF Initial protocol quic
+2025-05-31T00:08:05Z INF ICMP proxy will use 192.168.1.107 as source for IPv4
+2025-05-31T00:08:05Z INF ICMP proxy will use fe80::81d:c246:5ec4:2b4d in zone en0 as source for IPv6
+2025-05-31T00:08:05Z INF Created ICMP proxy listening on 192.168.1.107:0
+2025-05-31T00:08:05Z INF ICMP proxy will use 192.168.1.107 as source for IPv4
+2025-05-31T00:08:05Z INF ICMP proxy will use fe80::81d:c246:5ec4:2b4d in zone en0 as source for IPv6
+2025-05-31T00:08:05Z INF Starting metrics server on 127.0.0.1:54542/metrics
+2025-05-31T00:08:05Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.192.67
+2025-05-31T00:08:05Z INF Registered tunnel connection connIndex=0 connection=cbce7827-4e86-4bcb-a016-03832d7cc6af event=0 ip=198.41.192.67 location=sjc06 protocol=quic
+2025-05-31T00:08:05Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.200.73
+2025-05-31T00:08:05Z INF Updated to new configuration config="{\"ingress\":[{\"hostname\":\"test2.openfront.dev\",\"service\":\"http://localhost:3000\"},{\"hostname\":\"w0-test2.openfront.dev\",\"service\":\"http://localhost:3001\"},{\"hostname\":\"w1-test2.openfront.dev\",\"service\":\"http://localhost:3002\"},{\"service\":\"http_status:404\"}]}" version=0
+2025-05-31T00:08:06Z INF Registered tunnel connection connIndex=1 connection=f5bbf2f5-c5e5-4fe6-a4c6-554fe431aa49 event=0 ip=198.41.200.73 location=sjc08 protocol=quic
+2025-05-31T00:08:06Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T00:08:07Z INF Registered tunnel connection connIndex=2 connection=f780bc39-615c-4b5a-bb7d-1b42fbfccb6f event=0 ip=198.41.200.113 location=sjc07 protocol=quic
+2025-05-31T00:08:07Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:08:08Z INF Registered tunnel connection connIndex=3 connection=95ab342e-13ed-4d5f-a19d-05462c6cc4c7 event=0 ip=198.41.192.77 location=sjc01 protocol=quic
+2025-05-31T00:12:22Z INF Starting tunnel tunnelID=b9239240-838c-4cd4-b17b-4a99b3f59685
+2025-05-31T00:12:22Z INF Version 2025.4.2 (Checksum 36496e403afc14d3b0ca332a669de584f0dc4bb85f1443b853dd02265b82a444)
+2025-05-31T00:12:22Z INF GOOS: darwin, GOVersion: go1.22.5-devel-cf, GoArch: arm64
+2025-05-31T00:12:22Z INF Settings: map[token:*****]
+2025-05-31T00:12:22Z INF cloudflared will not automatically update if installed by a package manager.
+2025-05-31T00:12:22Z INF Generated Connector ID: 675ddb0d-ea94-4329-bf81-1c6d212d15f5
+2025-05-31T00:12:22Z INF Initial protocol quic
+2025-05-31T00:12:22Z INF ICMP proxy will use 192.168.1.107 as source for IPv4
+2025-05-31T00:12:22Z INF ICMP proxy will use fe80::81d:c246:5ec4:2b4d in zone en0 as source for IPv6
+2025-05-31T00:12:22Z INF Created ICMP proxy listening on 192.168.1.107:0
+2025-05-31T00:12:22Z INF ICMP proxy will use 192.168.1.107 as source for IPv4
+2025-05-31T00:12:22Z INF ICMP proxy will use fe80::81d:c246:5ec4:2b4d in zone en0 as source for IPv6
+2025-05-31T00:12:22Z INF Starting metrics server on 127.0.0.1:54727/metrics
+2025-05-31T00:12:22Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.63
+2025-05-31T00:12:22Z INF Registered tunnel connection connIndex=0 connection=99c11e57-037a-47ea-a1a1-578212500859 event=0 ip=198.41.200.63 location=sjc08 protocol=quic
+2025-05-31T00:12:22Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.67
+2025-05-31T00:12:22Z INF Updated to new configuration config="{\"ingress\":[{\"hostname\":\"test2.openfront.dev\",\"service\":\"http://localhost:3000\"},{\"hostname\":\"w0-test2.openfront.dev\",\"service\":\"http://localhost:3001\"},{\"hostname\":\"w1-test2.openfront.dev\",\"service\":\"http://localhost:3002\"},{\"service\":\"http_status:404\"}]}" version=0
+2025-05-31T00:12:22Z INF Registered tunnel connection connIndex=1 connection=f715c3c8-34cc-46f3-93d9-5b6e1279549a event=0 ip=198.41.192.67 location=sjc06 protocol=quic
+2025-05-31T00:12:23Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.192.37
+2025-05-31T00:12:23Z INF Registered tunnel connection connIndex=2 connection=28760a95-4e2f-4c96-9d41-cc215e7a4f42 event=0 ip=198.41.192.37 location=sjc06 protocol=quic
+2025-05-31T00:12:24Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.200.233
+2025-05-31T00:12:24Z INF Registered tunnel connection connIndex=3 connection=32c35463-2ed3-43bf-b181-617b39b24a95 event=0 ip=198.41.200.233 location=sjc08 protocol=quic
+2025-05-31T00:12:59Z INF Starting tunnel tunnelID=ab68ab0a-7a43-4669-b558-bd876d87ca67
+2025-05-31T00:12:59Z INF Version 2025.4.2 (Checksum 36496e403afc14d3b0ca332a669de584f0dc4bb85f1443b853dd02265b82a444)
+2025-05-31T00:12:59Z INF GOOS: darwin, GOVersion: go1.22.5-devel-cf, GoArch: arm64
+2025-05-31T00:12:59Z INF Settings: map[token:*****]
+2025-05-31T00:12:59Z INF cloudflared will not automatically update if installed by a package manager.
+2025-05-31T00:12:59Z INF Generated Connector ID: 0eed0ae8-0f66-43d8-90b9-908795dd24d3
+2025-05-31T00:12:59Z INF Initial protocol quic
+2025-05-31T00:12:59Z INF ICMP proxy will use 192.168.1.107 as source for IPv4
+2025-05-31T00:12:59Z INF ICMP proxy will use fe80::81d:c246:5ec4:2b4d in zone en0 as source for IPv6
+2025-05-31T00:12:59Z INF Created ICMP proxy listening on 192.168.1.107:0
+2025-05-31T00:12:59Z INF ICMP proxy will use 192.168.1.107 as source for IPv4
+2025-05-31T00:12:59Z INF ICMP proxy will use fe80::81d:c246:5ec4:2b4d in zone en0 as source for IPv6
+2025-05-31T00:12:59Z INF Starting metrics server on 127.0.0.1:54763/metrics
+2025-05-31T00:12:59Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T00:12:59Z INF Registered tunnel connection connIndex=0 connection=69422a61-1b9b-4cdd-aeef-a4292c548a04 event=0 ip=198.41.200.113 location=sjc05 protocol=quic
+2025-05-31T00:12:59Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.67
+2025-05-31T00:12:59Z INF Updated to new configuration config="{\"ingress\":[{\"hostname\":\"test2.openfront.dev\",\"service\":\"http://localhost:3000\"},{\"hostname\":\"w0-test2.openfront.dev\",\"service\":\"http://localhost:3001\"},{\"hostname\":\"w1-test2.openfront.dev\",\"service\":\"http://localhost:3002\"},{\"service\":\"http_status:404\"}]}" version=0
+2025-05-31T00:12:59Z INF Registered tunnel connection connIndex=1 connection=ebf354e7-2892-40bb-a5d7-30eea655091b event=0 ip=198.41.192.67 location=sjc01 protocol=quic
+2025-05-31T00:13:00Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.192.227
+2025-05-31T00:13:00Z INF Registered tunnel connection connIndex=2 connection=bc106ac7-a70a-48bf-85cc-f4eef96e3add event=0 ip=198.41.192.227 location=sjc01 protocol=quic
+2025-05-31T00:13:01Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.200.23
+2025-05-31T00:13:01Z INF Registered tunnel connection connIndex=3 connection=94fee596-269c-4854-9b03-9ac3e572bb4d event=0 ip=198.41.200.23 location=sjc05 protocol=quic
+2025-05-31T00:42:38Z WRN Failed to serve tunnel connection error="context canceled" connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:42:38Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:42:38Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.200.23
+2025-05-31T00:42:38Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.200.23
+2025-05-31T00:42:38Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.200.23
+2025-05-31T00:42:38Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.67
+2025-05-31T00:42:38Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.67
+2025-05-31T00:42:38Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.192.67
+2025-05-31T00:42:38Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.63
+2025-05-31T00:42:38Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.63
+2025-05-31T00:42:38Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.200.63
+2025-05-31T00:42:38Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.63
+2025-05-31T00:42:38Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.57
+2025-05-31T00:42:38Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.63
+2025-05-31T00:42:38Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.63
+2025-05-31T00:42:38Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.57
+2025-05-31T00:42:38Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.192.57
+2025-05-31T00:42:38Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.33
+2025-05-31T00:42:38Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.33
+2025-05-31T00:42:38Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.200.33
+2025-05-31T00:42:38Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.67
+2025-05-31T00:42:38Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.67
+2025-05-31T00:42:38Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.192.67
+2025-05-31T00:42:39Z WRN Connection terminated error="timeout: no recent network activity" connIndex=1
+2025-05-31T00:42:39Z WRN Connection terminated error="context canceled" connIndex=3
+2025-05-31T00:42:39Z ERR Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.227
+2025-05-31T00:42:39Z ERR Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.233
+2025-05-31T00:42:39Z ERR Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.233
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.233
+2025-05-31T00:42:39Z ERR Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.227
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.192.227
+2025-05-31T00:42:39Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.192.77
+2025-05-31T00:42:39Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T00:42:39Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.192.77
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.192.77
+2025-05-31T00:42:39Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T00:42:39Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:42:39Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:42:39Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.167
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:42:39Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.167
+2025-05-31T00:42:39Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1 event=0 ip=198.41.200.73
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.192.167
+2025-05-31T00:42:39Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1 event=0 ip=198.41.200.73
+2025-05-31T00:42:39Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.73
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.200.73
+2025-05-31T00:42:39Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.73
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.73
+2025-05-31T00:42:39Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.67
+2025-05-31T00:42:39Z ERR Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.200.113
+2025-05-31T00:42:39Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.200.233
+2025-05-31T00:42:39Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.67
+2025-05-31T00:42:39Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.200.233
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.192.67
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.200.233
+2025-05-31T00:42:39Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T00:42:39Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T00:42:39Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.192.227
+2025-05-31T00:42:39Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.192.227
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.192.227
+2025-05-31T00:42:39Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1 event=0 ip=198.41.200.43
+2025-05-31T00:42:39Z ERR Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.200.113
+2025-05-31T00:42:39Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1 event=0 ip=198.41.200.43
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.200.113
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.200.43
+2025-05-31T00:42:39Z ERR Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=2 event=0 ip=198.41.192.37
+2025-05-31T00:42:39Z ERR Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.107
+2025-05-31T00:42:39Z ERR Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.107
+2025-05-31T00:42:39Z ERR Serve tunnel error error="timeout: no recent network activity" connIndex=2 event=0 ip=198.41.192.37
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.192.107
+2025-05-31T00:42:39Z ERR Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.53
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.192.37
+2025-05-31T00:42:39Z ERR Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.53
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.53
+2025-05-31T00:42:39Z ERR Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T00:42:39Z ERR Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T00:42:39Z ERR Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.67
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T00:42:39Z ERR Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.67
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.192.67
+2025-05-31T00:42:39Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3
+2025-05-31T00:42:39Z ERR Connection terminated error="timeout: no recent network activity" connIndex=3
+2025-05-31T00:42:39Z ERR Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:42:39Z ERR Serve tunnel error error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:42:39Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:42:39Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0
+2025-05-31T00:42:39Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1
+2025-05-31T00:42:39Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0
+2025-05-31T00:42:39Z ERR Connection terminated error="timeout: no recent network activity" connIndex=2
+2025-05-31T00:42:40Z ERR Connection terminated error="timeout: no recent network activity" connIndex=2
+2025-05-31T00:42:40Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3
+2025-05-31T00:42:40Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3
+2025-05-31T00:42:40Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1
+2025-05-31T00:42:40Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1
+2025-05-31T00:42:40Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1
+2025-05-31T00:42:40Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2
+2025-05-31T00:42:40Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0
+2025-05-31T00:42:40Z ERR Connection terminated error="timeout: no recent network activity" connIndex=3
+2025-05-31T00:42:40Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0
+2025-05-31T00:42:40Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.192.37
+2025-05-31T00:42:40Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2
+2025-05-31T00:42:40Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1
+2025-05-31T00:42:40Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0
+2025-05-31T00:42:40Z INF Registered tunnel connection connIndex=0 connection=33f8d3d4-d521-4e61-8c9b-190d1351ec16 event=0 ip=198.41.192.37 location=sjc01 protocol=quic
+2025-05-31T00:42:40Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2
+2025-05-31T00:42:40Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2
+2025-05-31T00:42:41Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0
+2025-05-31T00:42:41Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3
+2025-05-31T00:42:41Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2
+2025-05-31T00:42:41Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1
+2025-05-31T00:42:44Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.67
+2025-05-31T00:42:44Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.192.227
+2025-05-31T00:42:44Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.200.73
+2025-05-31T00:42:44Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T00:42:44Z INF Registered tunnel connection connIndex=1 connection=d72276d4-e1ba-4dc3-95b3-a0c95ec0ae25 event=0 ip=198.41.192.67 location=sjc01 protocol=quic
+2025-05-31T00:42:44Z INF Registered tunnel connection connIndex=0 connection=21e927d8-3c2a-4f38-b293-fb7cd6655341 event=0 ip=198.41.200.113 location=sjc05 protocol=quic
+2025-05-31T00:42:44Z INF Registered tunnel connection connIndex=2 connection=616ad6d2-5e03-4c93-b89b-d65b1c4e1a0b event=0 ip=198.41.192.227 location=sjc01 protocol=quic
+2025-05-31T00:42:44Z INF Registered tunnel connection connIndex=3 connection=59dc059d-baed-4de2-ab0d-7964261fe3ce event=0 ip=198.41.200.73 location=sjc08 protocol=quic
+2025-05-31T00:42:47Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.192.67
+2025-05-31T00:42:47Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T00:42:47Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.200.73
+2025-05-31T00:42:47Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.7
+2025-05-31T00:42:47Z INF Registered tunnel connection connIndex=1 connection=8bd562a7-f1f0-4779-8061-20187282abbc event=0 ip=198.41.200.73 location=sjc08 protocol=quic
+2025-05-31T00:42:47Z INF Registered tunnel connection connIndex=0 connection=4ce66f2c-efa5-4e61-b9f8-0ccb915097fe event=0 ip=198.41.192.67 location=sjc06 protocol=quic
+2025-05-31T00:42:47Z INF Registered tunnel connection connIndex=3 connection=3c82bf78-e0bc-4051-9cf2-da66c13ce5e4 event=0 ip=198.41.192.7 location=sjc01 protocol=quic
+2025-05-31T00:42:47Z INF Registered tunnel connection connIndex=2 connection=cb0ed915-4d17-4893-9607-9a7114c89ab0 event=0 ip=198.41.200.113 location=sjc07 protocol=quic
+2025-05-31T00:42:47Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.63
+2025-05-31T00:42:47Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.57
+2025-05-31T00:42:47Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.200.233
+2025-05-31T00:42:47Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.192.7
+2025-05-31T00:42:48Z INF Registered tunnel connection connIndex=1 connection=4d4144fd-24bb-4cb8-bd7c-29d7989a2a74 event=0 ip=198.41.192.57 location=sjc06 protocol=quic
+2025-05-31T00:42:48Z INF Registered tunnel connection connIndex=2 connection=5f550e8a-0e9c-4574-83d2-dc8d2827d62c event=0 ip=198.41.192.7 location=sjc06 protocol=quic
+2025-05-31T00:42:48Z INF Registered tunnel connection connIndex=0 connection=83345bd3-c195-4a48-85cd-2d6bb5620c92 event=0 ip=198.41.200.63 location=sjc08 protocol=quic
+2025-05-31T00:42:48Z INF Registered tunnel connection connIndex=3 connection=a9eac062-63a2-4a0c-bda0-4385f63ceb2b event=0 ip=198.41.200.233 location=sjc08 protocol=quic
+2025-05-31T00:42:49Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.200.113
+2025-05-31T00:42:49Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.192.77
+2025-05-31T00:42:49Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.167
+2025-05-31T00:42:49Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.73
+2025-05-31T00:42:49Z INF Registered tunnel connection connIndex=0 connection=bc282f43-d705-46d2-a79b-575332fdb200 event=0 ip=198.41.200.73 location=sjc05 protocol=quic
+2025-05-31T00:42:49Z INF Registered tunnel connection connIndex=3 connection=bfc8cb27-468b-4f00-9163-d958f2b460f4 event=0 ip=198.41.200.113 location=sjc08 protocol=quic
+2025-05-31T00:42:49Z INF Registered tunnel connection connIndex=2 connection=067f4231-9630-43f5-a068-763d154dc773 event=0 ip=198.41.192.77 location=sjc01 protocol=quic
+2025-05-31T00:42:49Z INF Registered tunnel connection connIndex=1 connection=ba3e6878-655a-461c-84aa-0cc17138b3d0 event=0 ip=198.41.192.167 location=sjc06 protocol=quic
+2025-05-31T00:42:56Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.200.43
+2025-05-31T00:42:56Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.63
+2025-05-31T00:42:56Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.107
+2025-05-31T00:42:56Z INF Registered tunnel connection connIndex=1 connection=0ae6bf2e-d844-4dcd-a7e9-aaecc9e7d5bf event=0 ip=198.41.200.43 location=sjc05 protocol=quic
+2025-05-31T00:42:56Z INF Registered tunnel connection connIndex=3 connection=49e30c08-2f86-45f4-970a-569c6b2f8f04 event=0 ip=198.41.192.107 location=sjc06 protocol=quic
+2025-05-31T00:42:56Z INF Registered tunnel connection connIndex=2 connection=4b9c7d4e-b03a-4a3c-bbba-70ad8e7c3f7a event=0 ip=198.41.200.63 location=sjc08 protocol=quic
+2025-05-31T00:42:57Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.63
+2025-05-31T00:42:57Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.227
+2025-05-31T00:42:57Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:42:57Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.233
+2025-05-31T00:42:57Z INF Registered tunnel connection connIndex=1 connection=b4409811-18df-4419-8060-49ab4782da38 event=0 ip=198.41.192.227 location=sjc06 protocol=quic
+2025-05-31T00:42:57Z INF Registered tunnel connection connIndex=3 connection=3b36d06b-c318-4c8a-a08b-f389666f860a event=0 ip=198.41.192.77 location=sjc01 protocol=quic
+2025-05-31T00:42:57Z INF Registered tunnel connection connIndex=0 connection=9fe6a51b-bd19-4bea-944f-18bc8e87ceed event=0 ip=198.41.200.233 location=sjc08 protocol=quic
+2025-05-31T00:42:57Z INF Registered tunnel connection connIndex=2 connection=ebf00f14-6772-4916-85ac-e8c0c555d258 event=0 ip=198.41.200.63 location=sjc08 protocol=quic
+2025-05-31T00:42:59Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:42:59Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.53
+2025-05-31T00:42:59Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T00:42:59Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.57
+2025-05-31T00:42:59Z INF Registered tunnel connection connIndex=2 connection=b115c6b6-8d24-4ef7-ac51-d98b50ae7ef3 event=0 ip=198.41.200.113 location=sjc07 protocol=quic
+2025-05-31T00:42:59Z INF Registered tunnel connection connIndex=0 connection=0cc99e34-d219-4002-9b97-232f5760a227 event=0 ip=198.41.200.53 location=sjc07 protocol=quic
+2025-05-31T00:42:59Z INF Registered tunnel connection connIndex=3 connection=970d824d-9520-4c0b-bf5a-7855c37058f8 event=0 ip=198.41.192.77 location=sjc01 protocol=quic
+2025-05-31T00:42:59Z INF Registered tunnel connection connIndex=1 connection=1ee88a62-e231-4971-9533-e3d0bc135339 event=0 ip=198.41.192.57 location=sjc01 protocol=quic
+2025-05-31T00:45:35Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=2 event=0 ip=198.41.192.227
+2025-05-31T00:45:35Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=2 event=0 ip=198.41.192.227
+2025-05-31T00:45:35Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.192.227
+2025-05-31T00:45:35Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.57
+2025-05-31T00:45:35Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.57
+2025-05-31T00:45:35Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.192.57
+2025-05-31T00:45:35Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.200.233
+2025-05-31T00:45:35Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.200.233
+2025-05-31T00:45:35Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.200.233
+2025-05-31T00:45:35Z ERR Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.63
+2025-05-31T00:45:35Z ERR Serve tunnel error error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.63
+2025-05-31T00:45:35Z ERR Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=2 event=0 ip=198.41.192.7
+2025-05-31T00:45:35Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.63
+2025-05-31T00:45:35Z ERR Serve tunnel error error="timeout: no recent network activity" connIndex=2 event=0 ip=198.41.192.7
+2025-05-31T00:45:35Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.192.7
+2025-05-31T00:45:35Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.233
+2025-05-31T00:45:35Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.233
+2025-05-31T00:45:35Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.233
+2025-05-31T00:45:35Z ERR Connection terminated error="timeout: no recent network activity" connIndex=0
+2025-05-31T00:45:35Z WRN Failed to serve tunnel connection error="context canceled" connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T00:45:35Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T00:45:35Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.67
+2025-05-31T00:45:35Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.67
+2025-05-31T00:45:35Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.192.67
+2025-05-31T00:45:35Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.200.73
+2025-05-31T00:45:35Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.200.73
+2025-05-31T00:45:35Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.200.73
+2025-05-31T00:45:35Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:45:35Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:45:35Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:45:35Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.53
+2025-05-31T00:45:35Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.53
+2025-05-31T00:45:35Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.53
+2025-05-31T00:45:35Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.63
+2025-05-31T00:45:35Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.63
+2025-05-31T00:45:35Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.200.63
+2025-05-31T00:45:35Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:45:35Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:45:35Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:45:35Z ERR Connection terminated error="timeout: no recent network activity" connIndex=2
+2025-05-31T00:45:36Z WRN Connection terminated error="timeout: no recent network activity" connIndex=2
+2025-05-31T00:45:36Z ERR Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T00:45:36Z ERR Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T00:45:36Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T00:45:36Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.57
+2025-05-31T00:45:36Z ERR Serve tunnel error error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.57
+2025-05-31T00:45:36Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.192.57
+2025-05-31T00:45:36Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.67
+2025-05-31T00:45:36Z WRN Failed to serve tunnel connection error="context canceled" connIndex=0 event=0 ip=198.41.192.37
+2025-05-31T00:45:36Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.67
+2025-05-31T00:45:36Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.192.37
+2025-05-31T00:45:36Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.192.67
+2025-05-31T00:45:36Z ERR Connection terminated error="context canceled" connIndex=2
+2025-05-31T00:45:36Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.73
+2025-05-31T00:45:36Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.73
+2025-05-31T00:45:36Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.73
+2025-05-31T00:45:36Z ERR Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.227
+2025-05-31T00:45:36Z ERR Serve tunnel error error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.227
+2025-05-31T00:45:36Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.192.227
+2025-05-31T00:45:36Z ERR Connection terminated error="timeout: no recent network activity" connIndex=1
+2025-05-31T00:45:36Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1 event=0 ip=198.41.200.73
+2025-05-31T00:45:36Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1 event=0 ip=198.41.200.73
+2025-05-31T00:45:36Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.200.73
+2025-05-31T00:45:36Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T00:45:36Z ERR Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T00:45:36Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T00:45:36Z ERR Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.7
+2025-05-31T00:45:36Z ERR Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.7
+2025-05-31T00:45:36Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.192.7
+2025-05-31T00:45:36Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.167
+2025-05-31T00:45:36Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.167
+2025-05-31T00:45:36Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.192.167
+2025-05-31T00:45:36Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.63
+2025-05-31T00:45:36Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.63
+2025-05-31T00:45:36Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.200.63
+2025-05-31T00:45:36Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1 event=0 ip=198.41.200.43
+2025-05-31T00:45:36Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1 event=0 ip=198.41.200.43
+2025-05-31T00:45:36Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.200.43
+2025-05-31T00:45:36Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.107
+2025-05-31T00:45:36Z ERR Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.107
+2025-05-31T00:45:36Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.192.107
+2025-05-31T00:45:36Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3
+2025-05-31T00:45:36Z WRN Connection terminated error="timeout: no recent network activity" connIndex=0
+2025-05-31T00:45:36Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.200.113
+2025-05-31T00:45:36Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.200.113
+2025-05-31T00:45:36Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.200.113
+2025-05-31T00:45:36Z ERR Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.192.77
+2025-05-31T00:45:36Z ERR Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.192.77
+2025-05-31T00:45:36Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.192.77
+2025-05-31T00:45:36Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0
+2025-05-31T00:45:36Z ERR Connection terminated error="timeout: no recent network activity" connIndex=0
+2025-05-31T00:45:36Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2
+2025-05-31T00:45:36Z ERR Connection terminated error="timeout: no recent network activity" connIndex=1
+2025-05-31T00:45:36Z ERR Connection terminated error="timeout: no recent network activity" connIndex=3
+2025-05-31T00:45:36Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T00:45:36Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.53
+2025-05-31T00:45:36Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.7
+2025-05-31T00:45:36Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1
+2025-05-31T00:45:36Z INF Registered tunnel connection connIndex=0 connection=a8a65108-995f-424f-a915-dd63660be930 event=0 ip=198.41.200.53 location=sjc07 protocol=quic
+2025-05-31T00:45:36Z INF Registered tunnel connection connIndex=2 connection=e82b4574-c545-4c9b-91d1-09da917c8efe event=0 ip=198.41.200.113 location=sjc07 protocol=quic
+2025-05-31T00:45:36Z INF Registered tunnel connection connIndex=1 connection=aa519c96-f8ba-48d5-98a1-e723745a7915 event=0 ip=198.41.192.7 location=sjc06 protocol=quic
+2025-05-31T00:45:37Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2
+2025-05-31T00:45:37Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3
+2025-05-31T00:45:37Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3
+2025-05-31T00:45:37Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0
+2025-05-31T00:45:37Z WRN Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3
+2025-05-31T00:45:37Z ERR Connection terminated error="context canceled" connIndex=0
+2025-05-31T00:45:37Z ERR Connection terminated error="timeout: no recent network activity" connIndex=3
+2025-05-31T00:45:37Z ERR Connection terminated error="timeout: no recent network activity" connIndex=1
+2025-05-31T00:45:37Z ERR Connection terminated error="timeout: no recent network activity" connIndex=1
+2025-05-31T00:45:37Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1
+2025-05-31T00:45:37Z ERR Connection terminated error="timeout: no recent network activity" connIndex=1
+2025-05-31T00:45:37Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2
+2025-05-31T00:45:37Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=0
+2025-05-31T00:45:38Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3
+2025-05-31T00:45:38Z ERR Connection terminated error="timeout: no recent network activity" connIndex=2
+2025-05-31T00:45:39Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.233
+2025-05-31T00:45:39Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.192.77
+2025-05-31T00:45:39Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.200.113
+2025-05-31T00:45:39Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.7
+2025-05-31T00:45:39Z INF Registered tunnel connection connIndex=2 connection=322d6793-5e8d-4f22-8874-c8cf9eaec803 event=0 ip=198.41.192.77 location=sjc01 protocol=quic
+2025-05-31T00:45:39Z INF Registered tunnel connection connIndex=3 connection=c8a80f13-6fb1-4d9b-8da7-0b4cc9bc37f6 event=0 ip=198.41.200.113 location=sjc08 protocol=quic
+2025-05-31T00:45:39Z INF Registered tunnel connection connIndex=1 connection=e437f9f5-bed6-43da-9b5a-2de924e682c3 event=0 ip=198.41.192.7 location=sjc06 protocol=quic
+2025-05-31T00:45:39Z INF Registered tunnel connection connIndex=0 connection=4cbbb38c-1e6c-4ac6-9d58-ebca1c23ba1f event=0 ip=198.41.200.233 location=sjc07 protocol=quic
+2025-05-31T00:45:43Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T00:45:43Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:45:43Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.63
+2025-05-31T00:45:43Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.37
+2025-05-31T00:45:43Z INF Registered tunnel connection connIndex=1 connection=6cdb1271-3ffa-4c07-85a0-d47242aa0060 event=0 ip=198.41.192.37 location=sjc01 protocol=quic
+2025-05-31T00:45:43Z INF Registered tunnel connection connIndex=3 connection=fc4feaf9-86c5-4f19-85c4-a2950b46179f event=0 ip=198.41.192.77 location=sjc01 protocol=quic
+2025-05-31T00:45:43Z INF Registered tunnel connection connIndex=0 connection=30e1ef1a-da06-4b4e-97d2-c8747e0610f7 event=0 ip=198.41.200.113 location=sjc07 protocol=quic
+2025-05-31T00:45:43Z INF Registered tunnel connection connIndex=2 connection=1b1f39dd-8d1c-4418-bc7f-678dbac12245 event=0 ip=198.41.200.63 location=sjc08 protocol=quic
+2025-05-31T00:45:45Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.57
+2025-05-31T00:45:45Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.192.167
+2025-05-31T00:45:45Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T00:45:45Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.200.193
+2025-05-31T00:45:45Z INF Registered tunnel connection connIndex=0 connection=af60ad0c-22e1-42cb-8f70-0df1bcbe81cc event=0 ip=198.41.200.113 location=sjc05 protocol=quic
+2025-05-31T00:45:45Z INF Registered tunnel connection connIndex=3 connection=87431b44-aad2-4013-b4f6-3b792c6c82ba event=0 ip=198.41.200.193 location=sjc08 protocol=quic
+2025-05-31T00:45:45Z INF Registered tunnel connection connIndex=2 connection=fb158c04-18c4-4ad2-a5a8-5c0f9f64b200 event=0 ip=198.41.192.167 location=sjc01 protocol=quic
+2025-05-31T00:45:45Z INF Registered tunnel connection connIndex=1 connection=494daf41-39a3-49bb-8247-93776a3123c3 event=0 ip=198.41.192.57 location=sjc01 protocol=quic
+2025-05-31T00:45:47Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.107
+2025-05-31T00:45:47Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.192.37
+2025-05-31T00:45:47Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.53
+2025-05-31T00:45:47Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.200.43
+2025-05-31T00:45:47Z INF Registered tunnel connection connIndex=3 connection=0eaf6893-06a0-49b4-a30d-8fe6611c56bf event=0 ip=198.41.192.107 location=sjc06 protocol=quic
+2025-05-31T00:45:47Z INF Registered tunnel connection connIndex=2 connection=15d2da2e-1e31-4102-a4f2-3b00e5f31084 event=0 ip=198.41.200.53 location=sjc08 protocol=quic
+2025-05-31T00:45:47Z INF Registered tunnel connection connIndex=1 connection=8860cc94-609d-4570-a043-f463b9565407 event=0 ip=198.41.200.43 location=sjc05 protocol=quic
+2025-05-31T00:45:47Z INF Registered tunnel connection connIndex=0 connection=ae7e866c-2db1-4885-b82f-038444c78ac3 event=0 ip=198.41.192.37 location=sjc01 protocol=quic
+2025-05-31T00:45:55Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.200.73
+2025-05-31T00:45:55Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.192.57
+2025-05-31T00:45:55Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.37
+2025-05-31T00:45:55Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T00:45:55Z INF Registered tunnel connection connIndex=1 connection=d4a38b7a-d106-4af5-ac6a-b711ad64c51c event=0 ip=198.41.192.37 location=sjc06 protocol=quic
+2025-05-31T00:45:55Z INF Registered tunnel connection connIndex=3 connection=0d8ecb0b-1911-45bd-b8c1-a53507afdadf event=0 ip=198.41.200.73 location=sjc07 protocol=quic
+2025-05-31T00:45:55Z INF Registered tunnel connection connIndex=2 connection=b4b1c09b-a66c-4f44-b88d-e2fae2abd3a0 event=0 ip=198.41.192.57 location=sjc06 protocol=quic
+2025-05-31T00:45:55Z INF Registered tunnel connection connIndex=0 connection=d46736bb-7d5c-445e-a577-cf961e67fa89 event=0 ip=198.41.200.113 location=sjc05 protocol=quic
+2025-05-31T00:46:00Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T00:46:00Z INF Registered tunnel connection connIndex=3 connection=086d301d-80da-4654-8132-306eb0fa93a5 event=0 ip=198.41.192.77 location=sjc01 protocol=quic
+2025-05-31T00:46:15Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.192.67
+2025-05-31T00:46:15Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.7
+2025-05-31T00:46:15Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T00:46:15Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.200.73
+2025-05-31T00:46:15Z INF Registered tunnel connection connIndex=0 connection=3e5deb2c-4a2e-48f8-8deb-dd8e4e39fa31 event=0 ip=198.41.192.67 location=sjc06 protocol=quic
+2025-05-31T00:46:15Z INF Registered tunnel connection connIndex=1 connection=599e0636-1d08-4568-b9bb-c910e96d8a11 event=0 ip=198.41.200.73 location=sjc08 protocol=quic
+2025-05-31T00:46:15Z INF Registered tunnel connection connIndex=2 connection=fbe96bb4-94e0-462a-967b-e461504b6ad3 event=0 ip=198.41.200.113 location=sjc07 protocol=quic
+2025-05-31T00:46:15Z INF Registered tunnel connection connIndex=3 connection=f4cad2a6-364f-4282-af1e-5b7388a1cf75 event=0 ip=198.41.192.7 location=sjc01 protocol=quic
+2025-05-31T01:05:37Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.37
+2025-05-31T01:05:37Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.37
+2025-05-31T01:05:37Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.192.37
+2025-05-31T01:05:37Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.67
+2025-05-31T01:05:37Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.7
+2025-05-31T01:05:37Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.7
+2025-05-31T01:05:37Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.67
+2025-05-31T01:05:37Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1 event=0 ip=198.41.200.73
+2025-05-31T01:05:37Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.192.7
+2025-05-31T01:05:37Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1 event=0 ip=198.41.200.73
+2025-05-31T01:05:37Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.192.67
+2025-05-31T01:05:37Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.200.73
+2025-05-31T01:05:37Z WRN Failed to serve tunnel connection error="context canceled" connIndex=1 event=0 ip=198.41.192.37
+2025-05-31T01:05:37Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.192.37
+2025-05-31T01:05:37Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.200.193
+2025-05-31T01:05:37Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.200.193
+2025-05-31T01:05:37Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.200.193
+2025-05-31T01:05:37Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.37
+2025-05-31T01:05:37Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.192.37
+2025-05-31T01:05:37Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.192.37
+2025-05-31T01:05:37Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=2 event=0 ip=198.41.192.167
+2025-05-31T01:05:37Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.57
+2025-05-31T01:05:37Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=2 event=0 ip=198.41.192.167
+2025-05-31T01:05:37Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.57
+2025-05-31T01:05:37Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.192.167
+2025-05-31T01:05:37Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.192.57
+2025-05-31T01:05:37Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T01:05:37Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T01:05:37Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T01:05:38Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.53
+2025-05-31T01:05:38Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.192.57
+2025-05-31T01:05:38Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.192.57
+2025-05-31T01:05:38Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.53
+2025-05-31T01:05:38Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.192.57
+2025-05-31T01:05:38Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.200.53
+2025-05-31T01:05:38Z WRN Failed to serve tunnel connection error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.192.77
+2025-05-31T01:05:38Z WRN Serve tunnel error error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2 event=0 ip=198.41.192.77
+2025-05-31T01:05:38Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.192.77
+2025-05-31T01:05:38Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T01:05:38Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T01:05:38Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T01:05:38Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.63
+2025-05-31T01:05:38Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.63
+2025-05-31T01:05:38Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.200.63
+2025-05-31T01:05:38Z ERR Failed to serve tunnel connection error="context canceled" connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T01:05:38Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T01:05:38Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.200.113
+2025-05-31T01:05:38Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.200.113
+2025-05-31T01:05:38Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.200.113
+2025-05-31T01:05:38Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T01:05:38Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T01:05:38Z INF Retrying connection in up to 1s connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T01:05:38Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.7
+2025-05-31T01:05:38Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.7
+2025-05-31T01:05:38Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.192.7
+2025-05-31T01:05:38Z ERR Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.233
+2025-05-31T01:05:38Z ERR Serve tunnel error error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.233
+2025-05-31T01:05:38Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.233
+2025-05-31T01:05:38Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=1
+2025-05-31T01:05:38Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.53
+2025-05-31T01:05:38Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.53
+2025-05-31T01:05:38Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.53
+2025-05-31T01:05:38Z ERR Connection terminated error="timeout: no recent network activity" connIndex=1
+2025-05-31T01:05:38Z ERR Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.200.73
+2025-05-31T01:05:38Z ERR Serve tunnel error error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.200.73
+2025-05-31T01:05:38Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.200.73
+2025-05-31T01:05:38Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T01:05:38Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T01:05:38Z ERR Serve tunnel error error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T01:05:38Z ERR Serve tunnel error error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T01:05:38Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.192.77
+2025-05-31T01:05:38Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T01:05:38Z WRN Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.200.43
+2025-05-31T01:05:38Z WRN Serve tunnel error error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.200.43
+2025-05-31T01:05:38Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.200.43
+2025-05-31T01:05:38Z ERR Connection terminated error="timeout: no recent network activity" connIndex=0
+2025-05-31T01:05:38Z ERR Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.107
+2025-05-31T01:05:38Z ERR Serve tunnel error error="timeout: no recent network activity" connIndex=3 event=0 ip=198.41.192.107
+2025-05-31T01:05:38Z INF Retrying connection in up to 1s connIndex=3 event=0 ip=198.41.192.107
+2025-05-31T01:05:38Z WRN Connection terminated error="timeout: no recent network activity" connIndex=3
+2025-05-31T01:05:38Z ERR Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T01:05:38Z ERR Serve tunnel error error="timeout: no recent network activity" connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T01:05:38Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.113
+2025-05-31T01:05:38Z ERR Connection terminated error="timeout: no recent network activity" connIndex=2
+2025-05-31T01:05:38Z ERR Failed to serve tunnel connection error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.7
+2025-05-31T01:05:38Z ERR Serve tunnel error error="timeout: no recent network activity" connIndex=1 event=0 ip=198.41.192.7
+2025-05-31T01:05:38Z INF Retrying connection in up to 1s connIndex=1 event=0 ip=198.41.192.7
+2025-05-31T01:05:38Z ERR Connection terminated error="timeout: no recent network activity" connIndex=1
+2025-05-31T01:05:38Z ERR Connection terminated error="timeout: no recent network activity" connIndex=1
+2025-05-31T01:05:38Z ERR Connection terminated error="timeout: no recent network activity" connIndex=0
+2025-05-31T01:05:38Z ERR Connection terminated error="timeout: no recent network activity" connIndex=1
+2025-05-31T01:05:38Z ERR Connection terminated error="timeout: no recent network activity" connIndex=3
+2025-05-31T01:05:38Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2
+2025-05-31T01:05:39Z ERR Connection terminated error="timeout: no recent network activity" connIndex=3
+2025-05-31T01:05:39Z ERR Connection terminated error="timeout: no recent network activity" connIndex=1
+2025-05-31T01:05:39Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2
+2025-05-31T01:05:39Z ERR Connection terminated error="context canceled" connIndex=2
+2025-05-31T01:05:39Z ERR Connection terminated error="timeout: no recent network activity" connIndex=3
+2025-05-31T01:05:39Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=2
+2025-05-31T01:05:39Z ERR Connection terminated error="timeout: no recent network activity" connIndex=2
+2025-05-31T01:05:39Z ERR Connection terminated error="timeout: no recent network activity" connIndex=0
+2025-05-31T01:05:39Z ERR Connection terminated error="timeout: no recent network activity" connIndex=0
+2025-05-31T01:05:39Z ERR Connection terminated error="timeout: no recent network activity" connIndex=0
+2025-05-31T01:05:39Z ERR Connection terminated error="timeout: no recent network activity" connIndex=0
+2025-05-31T01:05:39Z ERR Connection terminated error="context canceled" connIndex=1
+2025-05-31T01:05:39Z ERR Connection terminated error="failed to accept QUIC stream: timeout: no recent network activity" connIndex=3
+2025-05-31T01:05:39Z ERR Connection terminated error="timeout: no recent network activity" connIndex=3
+2025-05-31T01:05:39Z ERR Connection terminated error="timeout: no recent network activity" connIndex=2
+2025-05-31T01:05:39Z ERR Connection terminated error="timeout: no recent network activity" connIndex=3
+2025-05-31T01:05:40Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.192.27
+2025-05-31T01:05:40Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.7
+2025-05-31T01:05:40Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.200.73
+2025-05-31T01:05:40Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.113
+2025-05-31T01:05:40Z INF Registered tunnel connection connIndex=3 connection=3e13649a-eca1-4952-9de4-f9774872ac75 event=0 ip=198.41.192.7 location=sjc01 protocol=quic
+2025-05-31T01:05:40Z INF Registered tunnel connection connIndex=2 connection=fbe56006-a715-4670-a328-48caef8195ab event=0 ip=198.41.200.113 location=sjc07 protocol=quic
+2025-05-31T01:05:40Z INF Registered tunnel connection connIndex=1 connection=a6796c0a-9765-412e-b6fe-0aaa8675f118 event=0 ip=198.41.200.73 location=sjc08 protocol=quic
+2025-05-31T01:05:40Z ERR Connection terminated error="timeout: no recent network activity" connIndex=0
+2025-05-31T01:05:40Z INF Registered tunnel connection connIndex=0 connection=22602065-2e78-4062-8694-a238e09efdf9 event=0 ip=198.41.192.27 location=sjc01 protocol=quic
+2025-05-31T01:05:41Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.53
+2025-05-31T01:05:41Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.7
+2025-05-31T01:05:41Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.227
+2025-05-31T01:05:41Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.193
+2025-05-31T01:05:41Z INF Registered tunnel connection connIndex=1 connection=08b6f83f-6e52-415c-8329-f0aed102134f event=0 ip=198.41.192.227 location=sjc06 protocol=quic
+2025-05-31T01:05:41Z INF Registered tunnel connection connIndex=3 connection=cac5dfef-10a0-4318-a37c-eb90a3cca12b event=0 ip=198.41.192.7 location=sjc01 protocol=quic
+2025-05-31T01:05:41Z INF Registered tunnel connection connIndex=0 connection=b0881b12-81c4-48c1-8d6c-98539506bdf8 event=0 ip=198.41.200.193 location=sjc07 protocol=quic
+2025-05-31T01:05:41Z INF Registered tunnel connection connIndex=2 connection=4fce3ba6-a050-49b1-9162-fa98251105e9 event=0 ip=198.41.200.53 location=sjc07 protocol=quic
+2025-05-31T01:05:44Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.192.77
+2025-05-31T01:05:44Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.167
+2025-05-31T01:05:44Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.200.63
+2025-05-31T01:05:44Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.53
+2025-05-31T01:05:44Z INF Registered tunnel connection connIndex=3 connection=63e232c0-d732-4a5d-9132-06ea0886b087 event=0 ip=198.41.200.63 location=sjc07 protocol=quic
+2025-05-31T01:05:44Z INF Registered tunnel connection connIndex=1 connection=dd6d2008-c363-424a-865a-6ee6eb4f9e00 event=0 ip=198.41.192.167 location=sjc06 protocol=quic
+2025-05-31T01:05:44Z INF Registered tunnel connection connIndex=2 connection=e76059e6-c18b-4264-81e2-6e681b6cbaed event=0 ip=198.41.192.77 location=sjc01 protocol=quic
+2025-05-31T01:05:44Z INF Registered tunnel connection connIndex=0 connection=7bb98501-d1bb-4797-8324-be034ff08118 event=0 ip=198.41.200.53 location=sjc08 protocol=quic
+2025-05-31T01:05:44Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.193
+2025-05-31T01:05:44Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.200.73
+2025-05-31T01:05:44Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.107
+2025-05-31T01:05:44Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.192.47
+2025-05-31T01:05:44Z INF Registered tunnel connection connIndex=3 connection=e79fad92-2de1-43bc-9d16-6ecdbffc70f7 event=0 ip=198.41.200.73 location=sjc08 protocol=quic
+2025-05-31T01:05:44Z INF Registered tunnel connection connIndex=1 connection=efd54eda-27e2-4f1c-9f4d-8981edccfa69 event=0 ip=198.41.192.107 location=sjc06 protocol=quic
+2025-05-31T01:05:44Z INF Registered tunnel connection connIndex=0 connection=82b6321c-009e-4d2e-b36f-252d28fbc880 event=0 ip=198.41.200.193 location=sjc05 protocol=quic
+2025-05-31T01:05:45Z INF Registered tunnel connection connIndex=2 connection=d56cc959-2ae2-43a8-a6f0-c1d467809f21 event=0 ip=198.41.192.47 location=sjc06 protocol=quic
+2025-05-31T01:05:47Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.227
+2025-05-31T01:05:47Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.63
+2025-05-31T01:05:47Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.47
+2025-05-31T01:05:47Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.233
+2025-05-31T01:05:48Z INF Registered tunnel connection connIndex=2 connection=b1b4e35b-246b-4076-a339-43f8371f0723 event=0 ip=198.41.200.63 location=sjc07 protocol=quic
+2025-05-31T01:05:48Z INF Registered tunnel connection connIndex=1 connection=2976c4ad-3752-411e-a54e-7fe1da279929 event=0 ip=198.41.192.227 location=sjc01 protocol=quic
+2025-05-31T01:05:48Z INF Registered tunnel connection connIndex=0 connection=666cca41-9093-4f2d-a3d2-4e083ef50df4 event=0 ip=198.41.200.233 location=sjc08 protocol=quic
+2025-05-31T01:05:48Z INF Registered tunnel connection connIndex=3 connection=1fe123c4-3651-4ed2-92b7-8904a8e1dae7 event=0 ip=198.41.192.47 location=sjc01 protocol=quic
+2025-05-31T01:05:54Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.200.53
+2025-05-31T01:05:54Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.200.63
+2025-05-31T01:05:54Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.192.227
+2025-05-31T01:05:54Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.192.37
+2025-05-31T01:05:55Z INF Registered tunnel connection connIndex=2 connection=39e65920-8773-40be-9022-b355a79c7736 event=0 ip=198.41.200.53 location=sjc08 protocol=quic
+2025-05-31T01:05:55Z INF Registered tunnel connection connIndex=0 connection=3047ae72-4fcd-4c4f-a2e2-27c5a79e325b event=0 ip=198.41.192.227 location=sjc06 protocol=quic
+2025-05-31T01:05:55Z INF Registered tunnel connection connIndex=3 connection=ad22da65-c107-401e-9064-7476d9c3296a event=0 ip=198.41.192.37 location=sjc01 protocol=quic
+2025-05-31T01:05:55Z INF Registered tunnel connection connIndex=1 connection=80bd4fdb-1771-40a3-b797-a22d0935c49b event=0 ip=198.41.200.63 location=sjc08 protocol=quic
+2025-05-31T01:05:57Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=2 event=0 ip=198.41.192.57
+2025-05-31T01:05:57Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=0 event=0 ip=198.41.200.63
+2025-05-31T01:05:57Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=3 event=0 ip=198.41.200.193
+2025-05-31T01:05:57Z INF Using [CurveID(4588) CurveID(25497) CurveP256] as curve preferences connIndex=1 event=0 ip=198.41.192.37
+2025-05-31T01:05:57Z INF Registered tunnel connection connIndex=2 connection=dd401e00-4666-4dc8-ab12-804c3b820394 event=0 ip=198.41.192.57 location=sjc06 protocol=quic
+2025-05-31T01:05:57Z INF Registered tunnel connection connIndex=1 connection=97bc094c-c804-47c9-84b0-0287849f6189 event=0 ip=198.41.192.37 location=sjc06 protocol=quic
+2025-05-31T01:05:57Z INF Registered tunnel connection connIndex=0 connection=c7f3def8-cfdb-4f1b-8cbd-0574be92959a event=0 ip=198.41.200.63 location=sjc08 protocol=quic
+2025-05-31T01:05:57Z INF Registered tunnel connection connIndex=3 connection=02cbab13-fcfc-4b9c-b101-45b1197fc789 event=0 ip=198.41.200.193 location=sjc07 protocol=quic
