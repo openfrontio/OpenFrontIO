@@ -22,10 +22,7 @@ export class GoToPlayerEvent implements GameEvent {
 }
 
 export class GoToPositionEvent implements GameEvent {
-  constructor(
-    public x: number,
-    public y: number,
-  ) {}
+  constructor(public x: number, public y: number) {}
 }
 
 export class GoToUnitEvent implements GameEvent {
@@ -45,7 +42,10 @@ export class Leaderboard extends LitElement implements Layer {
   private showTopFive = true;
 
   @state()
-  private _sortKey: 'tiles' | 'gold' | 'troops' = 'tiles';
+  private _sortKey: "tiles" | "gold" | "troops" = "tiles";
+
+  @state()
+  private _sortOrder: "asc" | "desc" = "desc";
 
   init() {}
 
@@ -56,11 +56,23 @@ export class Leaderboard extends LitElement implements Layer {
       this.showLeaderboard();
       this.updateLeaderboard();
     }
-    if (this._leaderboardHidden) return;
+    if (this._leaderboardHidden) {
+      return;
+    }
 
     if (this.game.ticks() % 10 === 0) {
       this.updateLeaderboard();
     }
+  }
+
+  private setSort(key: "tiles" | "gold" | "troops") {
+    if (this._sortKey === key) {
+      this._sortOrder = this._sortOrder === "asc" ? "desc" : "asc";
+    } else {
+      this._sortKey = key;
+      this._sortOrder = "desc"; 
+    }
+    this.updateLeaderboard();
   }
 
   private updateLeaderboard() {
@@ -69,15 +81,18 @@ export class Leaderboard extends LitElement implements Layer {
 
     let sorted = this.game.playerViews();
 
+    const compare = (a: number, b: number) =>
+      this._sortOrder === "asc" ? a - b : b - a;
+
     switch (this._sortKey) {
-      case 'gold':
-        sorted = sorted.sort((a, b) => b.gold() - a.gold());
+      case "gold":
+        sorted = sorted.sort((a, b) => compare(a.gold(), b.gold()));
         break;
-      case 'troops':
-        sorted = sorted.sort((a, b) => b.troops() - a.troops());
+      case "troops":
+        sorted = sorted.sort((a, b) => compare(a.troops(), b.troops()));
         break;
       default:
-        sorted = sorted.sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+        sorted = sorted.sort((a, b) => compare(a.numTilesOwned(), b.numTilesOwned()));
     }
 
     const numTilesWithoutFallout =
@@ -94,7 +109,7 @@ export class Leaderboard extends LitElement implements Layer {
         name: player.displayName(),
         position: index + 1,
         score: formatPercentage(
-          player.numTilesOwned() / numTilesWithoutFallout,
+          player.numTilesOwned() / numTilesWithoutFallout
         ),
         gold: renderNumber(player.gold()),
         troops: renderNumber(troops),
@@ -110,7 +125,9 @@ export class Leaderboard extends LitElement implements Layer {
       let place = 0;
       for (const p of sorted) {
         place++;
-        if (p === myPlayer) break;
+        if (p === myPlayer) {
+          break;
+        }
       }
 
       let myPlayerTroops = myPlayer.troops() / 10;
@@ -122,7 +139,7 @@ export class Leaderboard extends LitElement implements Layer {
         name: myPlayer.displayName(),
         position: place,
         score: formatPercentage(
-          myPlayer.numTilesOwned() / this.game.numLandTiles(),
+          myPlayer.numTilesOwned() / this.game.numLandTiles()
         ),
         gold: renderNumber(myPlayer.gold()),
         troops: renderNumber(myPlayerTroops),
@@ -137,12 +154,6 @@ export class Leaderboard extends LitElement implements Layer {
   private handleRowClickPlayer(player: PlayerView) {
     if (this.eventBus === null) return;
     this.eventBus.emit(new GoToPlayerEvent(player));
-  }
-
-  private setSort(key: 'tiles' | 'gold' | 'troops') {
-    if (this._sortKey === key) return;
-    this._sortKey = key;
-    this.updateLeaderboard();
   }
 
   renderLayer(context: CanvasRenderingContext2D) {}
@@ -189,6 +200,7 @@ export class Leaderboard extends LitElement implements Layer {
       background-color: rgb(31 41 55 / 0.5);
       color: white;
       cursor: pointer;
+      user-select: none;
     }
     .myPlayer {
       font-weight: bold;
@@ -290,17 +302,29 @@ export class Leaderboard extends LitElement implements Layer {
             <tr>
               <th>${translateText("leaderboard.rank")}</th>
               <th>${translateText("leaderboard.player")}</th>
-              <th @click=${() => this.setSort('tiles')}>
+              <th @click=${() => this.setSort("tiles")}>
                 ${translateText("leaderboard.owned")}
-                ${this._sortKey === 'tiles' ? '⬇️' : ''}
+                ${this._sortKey === "tiles"
+                  ? this._sortOrder === "asc"
+                    ? "⬆️"
+                    : "⬇️"
+                  : ""}
               </th>
-              <th @click=${() => this.setSort('gold')}>
+              <th @click=${() => this.setSort("gold")}>
                 ${translateText("leaderboard.gold")}
-                ${this._sortKey === 'gold' ? '⬇️' : ''}
+                ${this._sortKey === "gold"
+                  ? this._sortOrder === "asc"
+                    ? "⬆️"
+                    : "⬇️"
+                  : ""}
               </th>
-              <th @click=${() => this.setSort('troops')}>
+              <th @click=${() => this.setSort("troops")}>
                 ${translateText("leaderboard.troops")}
-                ${this._sortKey === 'troops' ? '⬇️' : ''}
+                ${this._sortKey === "troops"
+                  ? this._sortOrder === "asc"
+                    ? "⬆️"
+                    : "⬇️"
+                  : ""}
               </th>
             </tr>
           </thead>
@@ -317,7 +341,7 @@ export class Leaderboard extends LitElement implements Layer {
                   <td>${player.gold}</td>
                   <td>${player.troops}</td>
                 </tr>
-              `,
+              `
             )}
           </tbody>
         </table>
