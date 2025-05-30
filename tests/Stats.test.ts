@@ -7,7 +7,7 @@ import {
 } from "../src/core/game/Game";
 import { Stats } from "../src/core/game/Stats";
 import { StatsImpl } from "../src/core/game/StatsImpl";
-import { replacer } from "../src/server/Archive";
+import { replacer } from "../src/core/Util";
 import { setup } from "./util/Setup";
 
 let stats: Stats;

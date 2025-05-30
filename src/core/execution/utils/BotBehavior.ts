@@ -52,7 +52,7 @@ export class BotBehavior {
     }
   }
 
-  checkIncomingAttacks() {
+  private checkIncomingAttacks() {
     // Switch enemies if we're under attack
     const incomingAttacks = this.player.incomingAttacks();
     if (incomingAttacks.length > 0) {
@@ -109,6 +109,11 @@ export class BotBehavior {
       }
     }
 
+    // Retaliate against incoming attacks
+    if (this.enemy === null) {
+      this.checkIncomingAttacks();
+    }
+
     // Select the most hated player
     if (this.enemy === null) {
       const mostHated = this.player.allRelationsSorted()[0];
@@ -145,8 +150,15 @@ export class BotBehavior {
         this.enemy = neighbor;
         this.enemyUpdated = this.game.ticks();
       }
+    }
 
-      // Select a traitor as an enemy
+    // Retaliate against incoming attacks
+    if (this.enemy === null) {
+      this.checkIncomingAttacks();
+    }
+
+    // Select a traitor as an enemy
+    if (this.enemy === null) {
       const traitors = this.player
         .neighbors()
         .filter((n) => n.isPlayer() && n.isTraitor()) as Player[];

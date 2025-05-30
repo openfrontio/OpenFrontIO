@@ -23,6 +23,7 @@ import {
   ServerMessageSchema,
   Winner,
 } from "../core/Schemas";
+import { replacer } from "../core/Util";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
 
@@ -536,7 +537,7 @@ export class Transport {
         winner: event.winner,
         allPlayersStats: event.allPlayersStats,
       } satisfies ClientSendWinnerMessage;
-      this.sendMsg(JSON.stringify(msg));
+      this.sendMsg(JSON.stringify(msg, replacer));
     } else {
       console.log(
         "WebSocket is not open. Current state:",

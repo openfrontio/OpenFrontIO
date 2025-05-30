@@ -195,7 +195,7 @@ export function createGameRecord(
 ): GameRecord {
   const duration = Math.floor((end - start) / 1000);
   const version = "v0.0.2";
-  const gitCommit = "";
+  const gitCommit = process.env.GIT_COMMIT ?? "unknown";
   const num_turns = allTurns.length;
   const turns = allTurns.filter(
     (t) => t.intents.length !== 0 || t.hash !== undefined,
@@ -308,3 +308,10 @@ export const emojiTable: string[][] = [
 ];
 // 2d to 1d array
 export const flattenedEmojiTable: string[] = emojiTable.flat();
+
+/**
+ * JSON.stringify replacer function that converts bigint values to strings.
+ */
+export function replacer(_key: string, value: any): any {
+  return typeof value === "bigint" ? value.toString() : value;
+}
