@@ -425,5 +425,8 @@
     "copied": "Copied!",
     "failed_copy": "Failed to copy",
     "desync_notice": "You are desynced from other players. What you see might differ from other players."
+  },
+  "common": {
+    "close": "Close"
   }
 }
