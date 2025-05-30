@@ -4,37 +4,37 @@
   "height": 1448,
   "nations": [
     {
-      "coordinates": [1693, 1045],
+      "coordinates": [1625, 1040],
       "name": "Florida",
       "strength": 3,
       "flag": "Florida"
     },
     {
-      "coordinates": [1001, 427],
+      "coordinates": [1010, 435],
       "name": "Canada",
       "strength": 2,
       "flag": "ca"
     },
     {
-      "coordinates": [1364, 1179],
+      "coordinates": [1250, 1130],
       "name": "Mexico",
       "strength": 2,
       "flag": "mx"
     },
     {
-      "coordinates": [1556, 1295],
+      "coordinates": [1460, 1275],
       "name": "Guatemala",
       "strength": 1,
       "flag": "gt"
     },
     {
-      "coordinates": [1612, 1289],
+      "coordinates": [1530, 1290],
       "name": "Honduras",
       "strength": 1,
       "flag": "hn"
     },
     {
-      "coordinates": [1642, 1348],
+      "coordinates": [1570, 1350],
       "name": "Nicaragua",
       "strength": 1,
       "flag": "ni"
@@ -58,7 +58,7 @@
       "flag": "ve"
     },
     {
-      "coordinates": [1775, 1183],
+      "coordinates": [1725, 1180],
       "name": "Cuba",
       "strength": 1,
       "flag": "cu"
@@ -94,7 +94,7 @@
       "flag": "Georgia_US"
     },
     {
-      "coordinates": [420, 1209],
+      "coordinates": [250, 1200],
       "name": "Hawaii",
       "strength": 1,
       "flag": "Hawaii"
@@ -286,7 +286,7 @@
       "flag": "polar_bears"
     },
     {
-      "coordinates": [1480, 343],
+      "coordinates": [1480, 350],
       "name": "Frost Giants",
       "strength": 3,
       "flag": "frost_giant"
