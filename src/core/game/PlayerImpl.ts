@@ -260,6 +260,30 @@ export class PlayerImpl implements Player {
     return Array.from(ns);
   }
 
+  neighborsBordersSurface(): [Player, number][] {
+    const map = new Map<Player, number>();
+
+    const borderTiles = this.borderTiles();
+    for (const borderTile of borderTiles) {
+      const neighbors = this.mg.neighbors(borderTile);
+      for (const neighborTile of neighbors) {
+        if (!this.mg.hasOwner(neighborTile)) {
+          continue;
+        }
+        const neighborOwner = this.mg.owner(neighborTile);
+        if (neighborOwner.smallID() === this.smallID()) {
+          continue;
+        }
+        if (neighborOwner.isPlayer()) {
+          const currentCount = map.get(neighborOwner) || 0;
+          map.set(neighborOwner, currentCount + 1);
+        }
+      }
+    }
+
+    return Array.from(map).sort((a, b) => a[1] - b[1]);
+  }
+
   isPlayer(): this is Player {
     return true as const;
   }
