@@ -82,6 +82,11 @@ export class PlayerExecution implements Execution {
     ) {
       const closestAlly = this.getMoreSharedBorderAlly();
       if (closestAlly) {
+        this.mg.displayMessage(
+          `Annexed offline player ${this.player.displayName()}`,
+          MessageType.INFO,
+          closestAlly.id(),
+        );
         this.giveaway(closestAlly);
       }
       return;
