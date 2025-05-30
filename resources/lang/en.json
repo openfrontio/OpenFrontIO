@@ -5,6 +5,9 @@
     "svg": "uk_us_flag",
     "lang_code": "en"
   },
+  "common": {
+    "close": "Close"
+  },
   "main": {
     "title": "OpenFront (ALPHA)",
     "join_discord": "Join the Discord!",
