@@ -293,7 +293,12 @@ export class PlayerView {
     return this.data.hasSpawned;
   }
   isDisconnected(): boolean {
-    return this.data.isDisconnected;
+    return (
+      this.data.isDisconnected &&
+      this.game.myPlayer() !== null &&
+      (this.isAlliedWith(this.game.myPlayer()!) ||
+        this.game.myPlayer()!.isAlliedWith(this))
+    );
   }
 }
 
