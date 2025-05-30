@@ -14,11 +14,6 @@
     "name": "Achaemenid Empire"
   },
   {
-    "code": "ae",
-    "continent": "Asia",
-    "name": "United Arab Emirates"
-  },
-  {
     "code": "af",
     "continent": "Asia",
     "name": "Afghanistan"
@@ -29,29 +24,9 @@
     "name": "African Union"
   },
   {
-    "code": "ag",
-    "continent": "North America",
-    "name": "Antigua and Barbuda"
-  },
-  {
-    "code": "ai",
-    "continent": "North America",
-    "name": "Anguilla"
-  },
-  {
     "code": "1_Airgialla",
     "continent": "Europe",
     "name": "Airgialla"
-  },
-  {
-    "code": "al",
-    "continent": "Europe",
-    "name": "Albania"
-  },
-  {
-    "code": "Alabama",
-    "continent": "North America",
-    "name": "Alabama"
   },
   {
     "code": "ax",
@@ -59,14 +34,29 @@
     "name": "Aland Islands"
   },
   {
+    "code": "Alabama",
+    "continent": "North America",
+    "name": "Alabama"
+  },
+  {
     "code": "Alaska",
     "continent": "North America",
     "name": "Alaska"
   },
   {
+    "code": "al",
+    "continent": "Europe",
+    "name": "Albania"
+  },
+  {
     "code": "dz",
     "continent": "Africa",
     "name": "Algeria"
+  },
+  {
+    "code": "Alkebulan",
+    "continent": "Africa",
+    "name": "Alkebulan"
   },
   {
     "code": "Amazigh flag",
@@ -103,8 +93,18 @@
     "name": "Angola"
   },
   {
+    "code": "ai",
+    "continent": "North America",
+    "name": "Anguilla"
+  },
+  {
     "code": "aq",
     "name": "Antarctica"
+  },
+  {
+    "code": "ag",
+    "continent": "North America",
+    "name": "Antigua and Barbuda"
   },
   {
     "code": "antipope",
@@ -197,6 +197,15 @@
     "name": "Aztec Empire"
   },
   {
+    "code": "Babylonia",
+    "continent": "Asia",
+    "name": "Babylonia"
+  },
+  {
+    "code": "baguette",
+    "name": "Baguette"
+  },
+  {
     "code": "bs",
     "continent": "North America",
     "name": "Bahamas"
@@ -212,10 +221,6 @@
     "name": "Bahrain"
   },
   {
-    "code": "baguette",
-    "name": "Baguette"
-  },
-  {
     "code": "bd",
     "continent": "Asia",
     "name": "Bangladesh"
@@ -224,11 +229,6 @@
     "code": "bb",
     "continent": "North America",
     "name": "Barbados"
-  },
-  {
-    "code": "Babylonia",
-    "continent": "Asia",
-    "name": "Babylonia"
   },
   {
     "code": "es-pv",
@@ -473,7 +473,7 @@
     "name": "Comoros"
   },
   {
-    "code": "communist flag",
+    "code": "Communist flag",
     "name": "Communist Flag"
   },
   {
@@ -485,6 +485,11 @@
     "code": "1_Connacht",
     "continent": "Europe",
     "name": "Connacht"
+  },
+  {
+    "code": "Connecticut",
+    "continent": "North America",
+    "name": "Connecticut"
   },
   {
     "code": "ck",
@@ -541,24 +546,29 @@
     "name": "Czech Republic"
   },
   {
-    "code": "Danzig",
-    "continent": "Europe",
-    "name": "Danzig"
-  },
-  {
     "code": "1_Dalriata",
     "continent": "Europe",
     "name": "Dál Riata"
   },
   {
-    "code": "dk",
+    "code": "Danzig",
     "continent": "Europe",
-    "name": "Denmark"
+    "name": "Danzig"
+  },
+  {
+    "code": "Delaware",
+    "continent": "North America",
+    "name": "Delaware"
   },
   {
     "code": "cd",
     "continent": "Africa",
     "name": "Democratic Republic of the Congo"
+  },
+  {
+    "code": "dk",
+    "continent": "Europe",
+    "name": "Denmark"
   },
   {
     "code": "dg",
@@ -569,6 +579,11 @@
     "code": "Dilmun",
     "continent": "Asia",
     "name": "Dilmun"
+  },
+  {
+    "code": "District_of_Columbia",
+    "continent": "North America",
+    "name": "District of Columbia"
   },
   {
     "code": "dj",
@@ -740,7 +755,7 @@
     "name": "Franks"
   },
   {
-    "code": "french foreign legion",
+    "code": "French foreign legion",
     "name": "French Foreign Legion"
   },
   {
@@ -754,13 +769,13 @@
     "name": "French Polynesia"
   },
   {
-    "code": "frost_giant",
-    "name": "Frost Giant"
-  },
-  {
     "code": "tf",
     "continent": "Africa",
     "name": "French Southern Territories"
+  },
+  {
+    "code": "frost_giant",
+    "name": "Frost Giant"
   },
   {
     "code": "ga",
@@ -992,11 +1007,6 @@
     "name": "Italy"
   },
   {
-    "code": "italy",
-    "continent": "Europe",
-    "name": "Kingdom of Italy"
-  },
-  {
     "code": "jm",
     "continent": "North America",
     "name": "Jamaica"
@@ -1060,6 +1070,11 @@
     "code": "Kingdom of Iraq",
     "continent": "Asia",
     "name": "Kingdom of Iraq"
+  },
+  {
+    "code": "italy",
+    "continent": "Europe",
+    "name": "Kingdom of Italy"
   },
   {
     "code": "Kingdom of Jerusalem",
@@ -1169,6 +1184,11 @@
     "name": "Liechtenstein"
   },
   {
+    "code": "Lihyan",
+    "continent": "Asia",
+    "name": "Lihyan"
+  },
+  {
     "code": "Listenbourg",
     "name": "Listenbourg"
   },
@@ -1188,7 +1208,7 @@
     "name": "Luxembourg"
   },
   {
-    "code": "lydia",
+    "code": "Lydia",
     "continent": "Asia",
     "name": "Lydia"
   },
@@ -1238,7 +1258,7 @@
     "name": "Malta"
   },
   {
-    "code": "Māori Flag",
+    "code": "Māori flag",
     "continent": "Oceania",
     "name": "Māori Flag"
   },
@@ -1256,6 +1276,11 @@
     "code": "Maryland",
     "continent": "North America",
     "name": "Maryland"
+  },
+  {
+    "code": "Massachusetts",
+    "continent": "North America",
+    "name": "Massachusetts"
   },
   {
     "code": "mr",
@@ -1466,7 +1491,7 @@
     "name": "Normandy"
   },
   {
-    "code": "North Karelia",
+    "code": "North karelia",
     "continent": "Europe",
     "name": "North Karelia"
   },
@@ -1616,13 +1641,13 @@
     "name": "Poland"
   },
   {
-    "code": "polar_bears",
-    "name": "Polar Bears"
-  },
-  {
     "code": "Polish–Lithuanian Commonwealth",
     "continent": "Europe",
     "name": "Polish–Lithuanian Commonwealth"
+  },
+  {
+    "code": "polar_bears",
+    "name": "Polar Bears"
   },
   {
     "code": "pt",
@@ -2149,6 +2174,11 @@
     "code": "Umayyad Caliphate",
     "continent": "Asia",
     "name": "Umayyad Caliphate"
+  },
+  {
+    "code": "ae",
+    "continent": "Asia",
+    "name": "United Arab Emirates"
   },
   {
     "code": "United Arab Republic",
