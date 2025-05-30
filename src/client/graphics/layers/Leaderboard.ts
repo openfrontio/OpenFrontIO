@@ -43,6 +43,7 @@ export class Leaderboard extends LitElement implements Layer {
   private _leaderboardHidden = true;
   private _shownOnInit = false;
   private showTopFive = true;
+  private hideZeroPercentPlayers = false;
 
   init() {}
 
@@ -73,7 +74,12 @@ export class Leaderboard extends LitElement implements Layer {
     const numTilesWithoutFallout =
       this.game.numLandTiles() - this.game.numTilesWithFallout();
 
-    const playersToShow = this.showTopFive ? sorted.slice(0, 5) : sorted;
+    let filtered = sorted;
+    if (this.hideZeroPercentPlayers) {
+      filtered = filtered.filter((player) => player.numTilesOwned() > 0);
+    }
+
+    const playersToShow = this.showTopFive ? filtered.slice(0, 5) : filtered;
 
     this.players = playersToShow.map((player, index) => {
       let troops = player.troops() / 10;
@@ -109,7 +115,9 @@ export class Leaderboard extends LitElement implements Layer {
       if (!myPlayer.isAlive()) {
         myPlayerTroops = 0;
       }
-      this.players.pop();
+      if (this.showTopFive && this.players.length >= 5) {
+        this.players.pop();
+      }
       this.players.push({
         name: myPlayer.displayName(),
         position: place,
@@ -269,6 +277,15 @@ export class Leaderboard extends LitElement implements Layer {
           }}
         >
           ${this.showTopFive ? "Show All" : "Show Top 5"}
+        </button>
+        <button
+          class="leaderboard-top-five-button"
+          @click=${() => {
+            this.hideZeroPercentPlayers = !this.hideZeroPercentPlayers;
+            this.updateLeaderboard();
+          }}
+        >
+          ${this.hideZeroPercentPlayers ? "Show 0% Players" : "Hide 0% Players"}
         </button>
         <table>
           <thead>
