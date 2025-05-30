@@ -218,10 +218,19 @@ export class NameLayer implements Layer {
     shieldDiv.style.display = "flex";
     shieldDiv.style.alignItems = "center";
     shieldDiv.style.gap = "0px";
-    shieldDiv.innerHTML = `
-      <img src="${this.shieldIconImage.src}" style="width: 16px; height: 16px;" />
-      <span style="color: black; font-size: 10px; margin-top: -2px;">0</span>
-    `;
+    const shieldImg = document.createElement("img");
+    shieldImg.src = this.shieldIconImage.src;
+    shieldImg.style.width = "16px";
+    shieldImg.style.height = "16px";
+
+    const shieldSpan = document.createElement("span");
+    shieldSpan.textContent = "0";
+    shieldSpan.style.color = "black";
+    shieldSpan.style.fontSize = "10px";
+    shieldSpan.style.marginTop = "-2px";
+
+    shieldDiv.appendChild(shieldImg);
+    shieldDiv.appendChild(shieldSpan);
     element.appendChild(shieldDiv);
 
     // Start off invisible so it doesn't flash at 0,0

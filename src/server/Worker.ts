@@ -19,7 +19,7 @@ import { archive, readGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
-import { verifyClientToken } from "./jwt";
+import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
@@ -316,11 +316,25 @@ export function startWorker() {
               config,
             );
 
+            const roles: string[] | null = null;
+
+            // Check user roles
+            if (claims !== null) {
+              const result = await getUserMe(clientMsg.token, config);
+              if (result === false) {
+                log.warn("Token is not valid", claims);
+                return;
+              }
+            }
+
+            // TODO: Validate client settings based on roles
+
             // Create client and add to game
             const client = new Client(
               clientMsg.clientID,
               persistentId,
-              claims ?? null,
+              claims,
+              roles,
               ip,
               clientMsg.username,
               ws,
