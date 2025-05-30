@@ -28,10 +28,6 @@ export const TokenPayloadSchema = z.object({
   iss: z.string(),
   aud: z.string(),
   exp: z.number(),
-  rol: z
-    .string()
-    .optional()
-    .transform((val) => (val ?? "").split(",")),
 });
 export type TokenPayload = z.infer<typeof TokenPayloadSchema>;
 

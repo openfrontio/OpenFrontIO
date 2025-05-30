@@ -3,7 +3,6 @@ import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { GameView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
 import { AttackRatioEvent } from "../../InputHandler";
 import { SendSetTargetTroopRatioEvent } from "../../Transport";
 import { renderNumber, renderTroops } from "../../Utils";
@@ -13,7 +12,6 @@ import { Layer } from "./Layer";
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Layer {
   public game: GameView;
-  public clientID: ClientID;
   public eventBus: EventBus;
   public uiState: UIState;
 

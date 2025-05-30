@@ -142,12 +142,7 @@ export async function createClientGame(
   consolex.log("going to init path finder");
   consolex.log("inited path finder");
   const canvas = createCanvas();
-  const gameRenderer = createRenderer(
-    canvas,
-    gameView,
-    eventBus,
-    lobbyConfig.clientID,
-  );
+  const gameRenderer = createRenderer(canvas, gameView, eventBus);
 
   consolex.log(
     `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,

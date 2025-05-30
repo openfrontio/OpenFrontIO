@@ -171,8 +171,12 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# Generate a random filename for the environment file to prevent conflicts
+# when multiple deployments are happening at the same time.
+ENV_FILE="${REMOTE_UPDATE_PATH}/${SUBDOMAIN}-${RANDOM}.env"
+
 ssh -i $SSH_KEY $REMOTE_USER@$SERVER_HOST "chmod +x $REMOTE_UPDATE_SCRIPT && \
-cat > $REMOTE_UPDATE_PATH/.env << 'EOL'
+cat > $ENV_FILE << 'EOL'
 GAME_ENV=$ENV
 ENV=$ENV
 HOST=$HOST
@@ -192,8 +196,8 @@ OTEL_ENDPOINT=$OTEL_ENDPOINT
 BASIC_AUTH_USER=$BASIC_AUTH_USER
 BASIC_AUTH_PASS=$BASIC_AUTH_PASS
 EOL
-chmod 600 $REMOTE_UPDATE_PATH/.env && \
-$REMOTE_UPDATE_SCRIPT"
+chmod 600 $ENV_FILE && \
+$REMOTE_UPDATE_SCRIPT $ENV_FILE"
 
 if [ $? -ne 0 ]; then
     echo "❌ Failed to execute update script on server."

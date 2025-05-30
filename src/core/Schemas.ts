@@ -446,10 +446,12 @@ export const GameEndInfoSchema = GameStartInfoSchema.extend({
 });
 export type GameEndInfo = z.infer<typeof GameEndInfoSchema>;
 
+const GitCommitSchema = z.string().regex(/^[0-9a-fA-F]{40}$/);
+
 export const AnalyticsRecordSchema = z.object({
   info: GameEndInfoSchema,
   version: z.literal("v0.0.2"),
-  gitCommit: z.string(),
+  gitCommit: GitCommitSchema,
 });
 export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;
 
