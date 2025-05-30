@@ -149,8 +149,8 @@ export class SAMLauncherExecution implements Execution {
       target = this.getSingleTarget();
     }
 
-    if (this.sam.ticksLeftInCooldown() === 0) {
-      // Touch SAM to update sprite to show not in cooldown.
+    const cooldown = this.sam.ticksLeftInCooldown();
+    if (typeof cooldown === "number" && cooldown >= 0) {
       this.sam.touch();
     }
 

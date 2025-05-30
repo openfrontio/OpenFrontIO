@@ -8,7 +8,6 @@ import shieldIcon from "../../../../resources/images/ShieldIconBlack.svg";
 import targetIcon from "../../../../resources/images/TargetIcon.svg";
 import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
 import { PseudoRandom } from "../../../core/PseudoRandom";
-import { ClientID } from "../../../core/Schemas";
 import { Theme } from "../../../core/configuration/Config";
 import { AllPlayers, Cell, nukeTypes, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
@@ -47,14 +46,12 @@ export class NameLayer implements Layer {
   private nukeRedIconImage: HTMLImageElement;
   private shieldIconImage: HTMLImageElement;
   private container: HTMLDivElement;
-  private myPlayer: PlayerView | null = null;
   private firstPlace: PlayerView | null = null;
   private theme: Theme = this.game.config().theme();
 
   constructor(
     private game: GameView,
     private transformHandler: TransformHandler,
-    private clientID: ClientID,
   ) {
     this.traitorIconImage = new Image();
     this.traitorIconImage.src = traitorIcon;
@@ -221,10 +218,19 @@ export class NameLayer implements Layer {
     shieldDiv.style.display = "flex";
     shieldDiv.style.alignItems = "center";
     shieldDiv.style.gap = "0px";
-    shieldDiv.innerHTML = `
-      <img src="${this.shieldIconImage.src}" style="width: 16px; height: 16px;" />
-      <span style="color: black; font-size: 10px; margin-top: -2px;">0</span>
-    `;
+    const shieldImg = document.createElement("img");
+    shieldImg.src = this.shieldIconImage.src;
+    shieldImg.style.width = "16px";
+    shieldImg.style.height = "16px";
+
+    const shieldSpan = document.createElement("span");
+    shieldSpan.textContent = "0";
+    shieldSpan.style.color = "black";
+    shieldSpan.style.fontSize = "10px";
+    shieldSpan.style.marginTop = "-2px";
+
+    shieldDiv.appendChild(shieldImg);
+    shieldDiv.appendChild(shieldSpan);
     element.appendChild(shieldDiv);
 
     // Start off invisible so it doesn't flash at 0,0
@@ -314,7 +320,7 @@ export class NameLayer implements Layer {
       ".player-icons",
     ) as HTMLDivElement;
     const iconSize = Math.min(render.fontSize * 1.5, 48);
-    const myPlayer = this.getPlayer();
+    const myPlayer = this.game.myPlayer();
 
     // Crown icon
     const existingCrown = iconsDiv.querySelector('[data-icon="crown"]');
@@ -519,15 +525,5 @@ export class NameLayer implements Layer {
       icon.style.transform = "translateY(-50%)";
     }
     return icon;
-  }
-
-  private getPlayer(): PlayerView | null {
-    if (this.myPlayer !== null) {
-      return this.myPlayer;
-    }
-    this.myPlayer =
-      this.game.playerViews().find((p) => p.clientID() === this.clientID) ??
-      null;
-    return this.myPlayer;
   }
 }

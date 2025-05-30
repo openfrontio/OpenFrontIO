@@ -9,6 +9,9 @@ export class PseudoRandom {
   private c: number = 12345;
   private state: number;
 
+  private static readonly POW36_8 = Math.pow(36, 8); // Pre-compute 36^8
+  private static readonly INV_2_32 = 1 / 4294967296; // 1 / 2^32 for float conversion
+
   constructor(seed: number) {
     // Initialize the XorShift state with seed
     this.state0 = seed | 0; // Force to 32-bit integer with bitwise OR
@@ -49,13 +52,20 @@ export class PseudoRandom {
   }
 
   /**
+   * Optimized version that directly returns unsigned 32-bit integer
+   */
+  private _nextUInt32(): number {
+    return this._nextIntInternal() >>> 0;
+  }
+
+  /**
    * Generates the next pseudorandom number.
    * @returns A number between 0 (inclusive) and 1 (exclusive).
    */
   next(): number {
     // Get a 32-bit integer and convert to [0,1) range
     // Using >>> 0 to get unsigned interpretation (positive number)
-    const int = this._nextIntInternal() >>> 0;
+    const int = this._nextUInt32();
 
     // Update the state variable to maintain compatibility with original interface
     this.state = int % this.m;
@@ -65,24 +75,32 @@ export class PseudoRandom {
   }
 
   /**
+   * Optimized version for internal use - directly converts to [0,1) without state update
+   */
+  private _nextFloat(): number {
+    return this._nextUInt32() * PseudoRandom.INV_2_32;
+  }
+
+  /**
    * Generates a random integer between min (inclusive) and max (exclusive).
    */
   nextInt(min: number, max: number): number {
-    return Math.floor(this.next() * (max - min) + min);
+    // keep max exclusive, min inclusive – round down to get an int
+    return Math.floor(this._nextFloat() * (max - min)) + min;
   }
 
   /**
    * Generates a random float between min (inclusive) and max (exclusive).
    */
   nextFloat(min: number, max: number): number {
-    return this.next() * (max - min) + min;
+    return this._nextFloat() * (max - min) + min;
   }
 
   /**
    * Generates a random ID (8 characters, alphanumeric).
    */
   nextID(): string {
-    return this.nextInt(0, Math.pow(36, 8)) // 36^8 possibilities
+    return Math.floor(this._nextFloat() * PseudoRandom.POW36_8) // 36^8 possibilities
       .toString(36) // Convert to base36 (0-9 and a-z)
       .padStart(8, "0"); // Ensure 8 chars by padding with zeros
   }
@@ -94,25 +112,25 @@ export class PseudoRandom {
     if (arr.length === 0) {
       throw new Error("array must not be empty");
     }
-    return arr[this.nextInt(0, arr.length)];
+    return arr[Math.floor(this._nextFloat() * arr.length)];
   }
 
   /**
    * Returns true with probability 1/odds.
    */
   chance(odds: number): boolean {
-    return this.nextInt(0, odds) === 0;
+    return Math.floor(this._nextFloat() * odds) === 0;
   }
 
   /**
    * Returns a shuffled copy of the array using Fisher-Yates algorithm.
    */
   shuffleArray<T>(array: T[]): T[] {
-    for (let i = array.length - 1; i >= 0; i--) {
-      const j = this.nextInt(0, i + 1);
-      [array[i], array[j]] = [array[j], array[i]];
+    const result = [...array];
+    for (let i = result.length - 1; i >= 0; i--) {
+      const j = Math.floor(this._nextFloat() * (i + 1));
+      [result[i], result[j]] = [result[j], result[i]];
     }
-
-    return array;
+    return result;
   }
 }

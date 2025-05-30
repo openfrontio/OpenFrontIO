@@ -16,7 +16,6 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
 import {
   CloseViewEvent,
   ContextMenuEvent,
@@ -98,7 +97,6 @@ export class RadialMenu implements Layer {
     private eventBus: EventBus,
     private g: GameView,
     private transformHandler: TransformHandler,
-    private clientID: ClientID,
     private emojiTable: EmojiTable,
     private buildMenu: BuildMenu,
     private uiState: UIState,
@@ -121,7 +119,7 @@ export class RadialMenu implements Layer {
         return;
       }
       const tile = this.g.ref(clickedCell.x, clickedCell.y);
-      const p = this.g.playerByClientID(this.clientID);
+      const p = this.g.myPlayer();
       if (p === null) {
         return;
       }

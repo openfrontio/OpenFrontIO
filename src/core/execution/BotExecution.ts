@@ -79,7 +79,6 @@ export class BotExecution implements Execution {
     }
 
     this.behavior.forgetOldEnemies();
-    this.behavior.checkIncomingAttacks();
     const enemy = this.behavior.selectRandomEnemy();
     if (!enemy) return;
     if (!this.bot.sharesBorderWith(enemy)) return;

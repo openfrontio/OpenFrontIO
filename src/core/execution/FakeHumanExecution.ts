@@ -262,7 +262,6 @@ export class FakeHumanExecution implements Execution {
       throw new Error("not initialized");
     }
     this.behavior.forgetOldEnemies();
-    this.behavior.checkIncomingAttacks();
     this.behavior.assistAllies();
     const enemy = this.behavior.selectEnemy();
     if (!enemy) return;
