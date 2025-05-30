@@ -1,7 +1,7 @@
 {
   "name": "Americas",
   "width": 1746,
-  "height": 2380,
+  "height": 2378,
   "nations": [
     {
       "coordinates": [438, 58],
@@ -94,7 +94,7 @@
       "flag": "gf"
     },
     {
-      "coordinates": [801, 242],
+      "coordinates": [800, 410],
       "name": "Guyana",
       "strength": 1,
       "flag": "gy"

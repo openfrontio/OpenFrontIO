@@ -4,7 +4,7 @@
   "height": 1646,
   "nations": [
     {
-      "coordinates": [1151, 709],
+      "coordinates": [1150, 660],
       "name": "Hokkaido",
       "strength": 1,
       "flag": "jp"
@@ -40,7 +40,7 @@
       "flag": "jp"
     },
     {
-      "coordinates": [8612, 1183],
+      "coordinates": [595, 1190],
       "name": "Shikoku",
       "strength": 2,
       "flag": "jp"
