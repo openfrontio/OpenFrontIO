@@ -33,24 +33,21 @@ export class DonateTroopsExecution implements Execution {
     const maxDonation =
       mg.config().maxPopulation(this.recipient) -
       this.recipient.totalPopulation();
-    if (maxDonation <= 0) {
-      this.troops = 0;
-    } else if (this.troops > maxDonation) {
-      this.troops = maxDonation;
+    if (this.troops > maxDonation) {
+      this.troops = Math.min(this.troops, maxDonation);
     }
   }
 
   tick(ticks: number): void {
     if (this.troops === null) throw new Error("not initialized");
-    if (this.sender)
-      if (this.sender.canDonate(this.recipient)) {
-        this.sender.donateTroops(this.recipient, this.troops);
-        this.recipient.updateRelation(this.sender, 50);
-      } else {
-        consolex.warn(
-          `cannot send troops from ${this.sender} to ${this.recipient}`,
-        );
-      }
+    if (this.sender.canDonate(this.recipient)) {
+      this.sender.donateTroops(this.recipient, this.troops);
+      this.recipient.updateRelation(this.sender, 50);
+    } else {
+      consolex.warn(
+        `cannot send troops from ${this.sender} to ${this.recipient}`,
+      );
+    }
     this.active = false;
   }
 
