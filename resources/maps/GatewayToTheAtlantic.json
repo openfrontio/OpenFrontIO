@@ -19,7 +19,7 @@
       "coordinates": [1334, 537],
       "name": "Duchy of Aquitaine",
       "strength": 2,
-      "flag": "aquitane"
+      "flag": "aquitaine"
     },
     {
       "coordinates": [2115, 684],
@@ -31,7 +31,7 @@
       "coordinates": [1207, 763],
       "name": "The Basque",
       "strength": 3,
-      "flag": ""
+      "flag": "es-pv"
     },
     {
       "coordinates": [1281, 1142],
@@ -49,7 +49,7 @@
       "coordinates": [561, 764],
       "name": "Kingdom of Galicia",
       "strength": 2,
-      "flag": "galicia"
+      "flag": "es-ga"
     },
     {
       "coordinates": [1004, 1436],
@@ -115,7 +115,7 @@
       "coordinates": [1755, 1130],
       "name": "The Old Ones",
       "strength": 3,
-      "flag": "nuragic"
+      "flag": "neuragic_empire"
     },
     {
       "coordinates": [2097, 1670],
@@ -151,7 +151,7 @@
       "coordinates": [1017, 180],
       "name": "Kingdom of Brittany",
       "strength": 2,
-      "flag": "britanny"
+      "flag": "brittany"
     },
     {
       "coordinates": [2072, 567],
@@ -175,7 +175,7 @@
       "coordinates": [1475, 1657],
       "name": "French Foreign Legion",
       "strength": 3,
-      "flag": "french_foreign_legion"
+      "flag": "French foreign legion"
     },
     {
       "coordinates": [1685, 417],
