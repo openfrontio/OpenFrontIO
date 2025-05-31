@@ -433,6 +433,9 @@ export interface Player {
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
   lastTileChange(): Tick;
 
+  isDisconnected(): boolean;
+  markDisconnected(isDisconnected: boolean): void;
+
   hasSpawned(): boolean;
   setHasSpawned(hasSpawned: boolean): void;
 
@@ -475,6 +478,7 @@ export interface Player {
   // Relations & Diplomacy
   neighbors(): (Player | TerraNullius)[];
   sharesBorderWith(other: Player | TerraNullius): boolean;
+  neighborsBordersSurface(): [Player, number][];
   relation(other: Player): Relation;
   allRelationsSorted(): { player: Player; relation: Relation }[];
   updateRelation(other: Player, delta: number): void;

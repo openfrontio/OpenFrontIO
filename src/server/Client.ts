@@ -4,7 +4,8 @@ import { Tick } from "../core/game/Game";
 import { ClientID } from "../core/Schemas";
 
 export class Client {
-  public lastPing: number;
+  public lastPing: number = Date.now();
+  public isDisconnected: boolean = false;
 
   public hashes: Map<Tick, number> = new Map();
 

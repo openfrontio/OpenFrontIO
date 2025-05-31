@@ -99,6 +99,7 @@ export class PlayerImpl implements Player {
   public _outgoingLandAttacks: Attack[] = [];
 
   private _hasSpawned = false;
+  private _isDisconnected = false;
 
   constructor(
     private mg: GameImpl,
@@ -136,6 +137,7 @@ export class PlayerImpl implements Player {
       smallID: this.smallID(),
       playerType: this.type(),
       isAlive: this.isAlive(),
+      isDisconnected: this.isDisconnected(),
       tilesOwned: this.numTilesOwned(),
       gold: Number(this._gold),
       population: this.population(),
@@ -256,6 +258,30 @@ export class PlayerImpl implements Player {
       }
     }
     return Array.from(ns);
+  }
+
+  neighborsBordersSurface(): [Player, number][] {
+    const map = new Map<Player, number>();
+
+    const borderTiles = this.borderTiles();
+    for (const borderTile of borderTiles) {
+      const neighbors = this.mg.neighbors(borderTile);
+      for (const neighborTile of neighbors) {
+        if (!this.mg.hasOwner(neighborTile)) {
+          continue;
+        }
+        const neighborOwner = this.mg.owner(neighborTile);
+        if (neighborOwner.smallID() === this.smallID()) {
+          continue;
+        }
+        if (neighborOwner.isPlayer()) {
+          const currentCount = map.get(neighborOwner) || 0;
+          map.set(neighborOwner, currentCount + 1);
+        }
+      }
+    }
+
+    return Array.from(map).sort((a, b) => a[1] - b[1]);
   }
 
   isPlayer(): this is Player {
@@ -923,6 +949,14 @@ export class PlayerImpl implements Player {
   }
   lastTileChange(): Tick {
     return this._lastTileChange;
+  }
+
+  isDisconnected(): boolean {
+    return this._isDisconnected;
+  }
+
+  markDisconnected(isDisconnected: boolean): void {
+    this._isDisconnected = isDisconnected;
   }
 
   hash(): number {
