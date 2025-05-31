@@ -79,6 +79,7 @@ export class LangSelector extends LitElement {
   }
 
   private getClosestSupportedLang(lang: string): string {
+    if (!lang) return "en";
     if (lang in this.languageMap) return lang;
     const base = lang.split("-")[0];
     if (base in this.languageMap) return base;
