@@ -117,11 +117,11 @@ const GameConfigSchema = z.object({
   difficulty: z.nativeEnum(Difficulty),
   gameType: z.nativeEnum(GameType),
   gameMode: z.nativeEnum(GameMode),
-  disableNPCs: z.boolean(),
+  disableNPCs: z.literal(true).optional(),
   bots: z.number().int().min(0).max(400),
-  infiniteGold: z.boolean(),
-  infiniteTroops: z.boolean(),
-  instantBuild: z.boolean(),
+  infiniteGold: z.literal(true).optional(),
+  infiniteTroops: z.literal(true).optional(),
+  instantBuild: z.literal(true).optional(),
   maxPlayers: z.number().optional(),
   disabledUnits: z.array(z.nativeEnum(UnitType)).optional(),
   playerTeams: z.union([z.number().optional(), z.literal(Duos)]),
@@ -212,7 +212,7 @@ export const AllianceRequestIntentSchema = BaseIntentSchema.extend({
 export const AllianceRequestReplyIntentSchema = BaseIntentSchema.extend({
   type: z.literal("allianceRequestReply"),
   requestor: ID, // The one who made the original alliance request
-  accept: z.boolean(),
+  accept: z.literal(true).optional(),
 });
 
 export const BreakAllianceIntentSchema = BaseIntentSchema.extend({
