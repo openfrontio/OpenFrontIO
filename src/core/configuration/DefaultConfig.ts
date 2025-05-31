@@ -545,7 +545,7 @@ export class DefaultConfig implements Config {
         tilesPerTickUsed:
           baseTileCost *
           within(defenderDensity, 3, 100) ** 0.2 *
-          (attackStandardSize / attackTroops) ** 0.1 *
+          (attackStandardSize / attackTroops) ** 0.075 *
           speed *
           within(attackRatio, 0.1, 20) ** 0.4,
       };
