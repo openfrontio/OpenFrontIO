@@ -323,7 +323,12 @@ const IntentSchema = z.union([
 
 export const TurnSchema = z.object({
   turnNumber: z.number(),
-  intents: z.array(IntentSchema),
+  intents: z.array(
+    z.object({
+      intent: IntentSchema,
+      isServerSide: z.boolean(),
+    }),
+  ),
   // The hash of the game state at the end of the turn.
   hash: z.number().nullable().optional(),
 });

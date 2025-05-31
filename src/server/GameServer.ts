@@ -38,7 +38,7 @@ export class GameServer {
   private disconnectedTimeout = 1 * 30 * 1000; // 30 seconds
 
   private turns: Turn[] = [];
-  private intents: Intent[] = [];
+  private intents: { intent: Intent; isServerSide: boolean }[] = [];
   public activeClients: Client[] = [];
   // Used for record record keeping
   private allClients: Map<ClientID, Client> = new Map();
@@ -325,8 +325,8 @@ export class GameServer {
     });
   }
 
-  private addIntent(intent: Intent) {
-    this.intents.push(intent);
+  private addIntent(intent: Intent, isServerSide: boolean = false) {
+    this.intents.push({ intent, isServerSide });
   }
 
   private sendStartGameMsg(ws: WebSocket, lastTurn: number) {
@@ -353,7 +353,12 @@ export class GameServer {
   private endTurn() {
     const pastTurn: Turn = {
       turnNumber: this.turns.length,
-      intents: this.intents,
+      intents: this.intents.map((i) => {
+        return {
+          intent: i.intent,
+          isServerSide: i.isServerSide,
+        };
+      }),
     };
     this.turns.push(pastTurn);
     this.intents = [];
@@ -563,11 +568,14 @@ export class GameServer {
 
   private markClientDisconnected(client: Client, isDisconnected: boolean) {
     client.isDisconnected = isDisconnected;
-    this.addIntent({
-      type: "mark_disconnected",
-      clientID: client.clientID,
-      isDisconnected: isDisconnected,
-    });
+    this.addIntent(
+      {
+        type: "mark_disconnected",
+        clientID: client.clientID,
+        isDisconnected: isDisconnected,
+      },
+      true,
+    );
   }
 
   private archiveGame() {
