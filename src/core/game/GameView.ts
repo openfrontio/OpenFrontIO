@@ -207,6 +207,9 @@ export class PlayerView {
   isAlive(): boolean {
     return this.data.isAlive;
   }
+  timeOfDeath(): number {
+    return this.data.timeOfDeath;
+  }
   isPlayer(): this is Player {
     return true;
   }
