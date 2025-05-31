@@ -23,6 +23,7 @@ import {
   ShowBuildMenuEvent,
 } from "../../InputHandler";
 import {
+  LastSelectedBuildableEvent,
   SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -320,6 +321,7 @@ export class RadialMenu implements Layer {
       this.hideRadialMenu();
       return;
     } else {
+      this.eventBus.emit(new LastSelectedBuildableEvent(null, ""));
       this.showRadialMenu(event.x, event.y);
     }
     this.disableAllButtons();

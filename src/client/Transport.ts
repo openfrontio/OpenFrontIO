@@ -81,6 +81,13 @@ export class BuildUnitIntentEvent implements GameEvent {
   ) {}
 }
 
+export class LastSelectedBuildableEvent implements GameEvent {
+  constructor(
+    public readonly unit: UnitType | null,
+    public readonly icon: string,
+  ) {}
+}
+
 export class SendTargetPlayerIntentEvent implements GameEvent {
   constructor(public readonly targetID: PlayerID) {}
 }
