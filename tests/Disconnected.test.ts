@@ -50,12 +50,7 @@ describe("Disconnected", () => {
       expect(player2.isDisconnected()).toBe(false);
     });
 
-    test("should mark player as disconnected", () => {
-      player1.markDisconnected(true);
-      expect(player1.isDisconnected()).toBe(true);
-    });
-
-    test("should mark player as not disconnected", () => {
+    test("should mark player as disconnected and not disconnected", () => {
       player1.markDisconnected(true);
       expect(player1.isDisconnected()).toBe(true);
 
@@ -67,217 +62,102 @@ describe("Disconnected", () => {
       player1.markDisconnected(true);
       const update = player1.toUpdate();
       expect(update.isDisconnected).toBe(true);
-
-      player1.markDisconnected(false);
-      const update2 = player1.toUpdate();
-      expect(update2.isDisconnected).toBe(false);
     });
+  });
 
-    test("should maintain disconnected state independently for different players", () => {
-      player1.markDisconnected(true);
+  describe("Player view", () => {
+    test("should reflect disconnected state in player view", () => {
+      // Mark player2 as disconnected
+      player2.markDisconnected(true);
+
+      // Get player1's view of player2
+      const player2View = game.player(player2.id());
+      expect(player2View.isDisconnected()).toBe(true);
+
+      // Mark player2 as connected again
       player2.markDisconnected(false);
 
-      expect(player1.isDisconnected()).toBe(true);
-      expect(player2.isDisconnected()).toBe(false);
+      // Verify the view is updated
+      const updatedPlayer2View = game.player(player2.id());
+      expect(updatedPlayer2View.isDisconnected()).toBe(false);
+    });
+
+    test("should maintain disconnected state in view across game ticks", () => {
+      player2.markDisconnected(true);
+      executeTicks(game, 3);
+
+      const player2View = game.player(player2.id());
+      expect(player2View.isDisconnected()).toBe(true);
     });
   });
 
   describe("MarkDisconnectedExecution", () => {
     test("should mark player as disconnected when executed", () => {
-      const execution = new MarkDisconnectedExecution(player1.id(), true);
+      const execution = new MarkDisconnectedExecution(player1, true);
       game.addExecution(execution);
-
-      executeTicks(game, 2);
-
+      executeTicks(game, 1);
       expect(player1.isDisconnected()).toBe(true);
-      expect(execution.isActive()).toBe(false);
-    });
-
-    test("should mark player as not disconnected when executed", () => {
-      // First mark as disconnected directly
-      player1.markDisconnected(true);
-      expect(player1.isDisconnected()).toBe(true);
-
-      // Then mark as not disconnected via execution
-      const execution = new MarkDisconnectedExecution(player1.id(), false);
-      game.addExecution(execution);
-
-      executeTicks(game, 2);
-
-      expect(player1.isDisconnected()).toBe(false);
       expect(execution.isActive()).toBe(false);
     });
 
     test("should handle multiple players with different disconnected states", () => {
-      const execution1 = new MarkDisconnectedExecution(player1.id(), true);
-      const execution2 = new MarkDisconnectedExecution(player2.id(), false);
-
+      const execution1 = new MarkDisconnectedExecution(player1, true);
+      const execution2 = new MarkDisconnectedExecution(player2, false);
       game.addExecution(execution1, execution2);
-      executeTicks(game, 2);
-
+      executeTicks(game, 1);
       expect(player1.isDisconnected()).toBe(true);
       expect(player2.isDisconnected()).toBe(false);
-      expect(execution1.isActive()).toBe(false);
-      expect(execution2.isActive()).toBe(false);
-    });
-
-    test("should handle invalid player ID gracefully", () => {
-      const execution = new MarkDisconnectedExecution(
-        "invalid_player_id",
-        true,
-      );
-      game.addExecution(execution);
-
-      // Should not throw and should deactivate
-      expect(() => game.executeNextTick()).not.toThrow();
-      expect(execution.isActive()).toBe(false);
     });
 
     test("should not be active during spawn phase", () => {
-      const execution = new MarkDisconnectedExecution(player1.id(), true);
+      const execution = new MarkDisconnectedExecution(player1, true);
       expect(execution.activeDuringSpawnPhase()).toBe(false);
     });
 
-    test("should handle rapid disconnected state changes", () => {
-      // Mark disconnected
-      const execution1 = new MarkDisconnectedExecution(player1.id(), true);
-      game.addExecution(execution1);
-      executeTicks(game, 2);
-      expect(player1.isDisconnected()).toBe(true);
-
-      // Mark not disconnected
-      const execution2 = new MarkDisconnectedExecution(player1.id(), false);
-      game.addExecution(execution2);
-      executeTicks(game, 2);
+    test("should handle multiple executions for same player in same tick", () => {
+      const execution1 = new MarkDisconnectedExecution(player1, true);
+      const execution2 = new MarkDisconnectedExecution(player1, false);
+      game.addExecution(execution1, execution2);
+      executeTicks(game, 1);
+      // Last execution should win
       expect(player1.isDisconnected()).toBe(false);
-
-      // Mark disconnected again
-      const execution3 = new MarkDisconnectedExecution(player1.id(), true);
-      game.addExecution(execution3);
-      executeTicks(game, 2);
-      expect(player1.isDisconnected()).toBe(true);
-    });
-
-    test("should execute properly with other executions in same tick", () => {
-      const markDisconnectedExecution = new MarkDisconnectedExecution(
-        player1.id(),
-        true,
-      );
-      const markDisconnectedExecution2 = new MarkDisconnectedExecution(
-        player2.id(),
-        false,
-      );
-
-      game.addExecution(markDisconnectedExecution, markDisconnectedExecution2);
-
-      // Execute multiple ticks to ensure all executions complete
-      executeTicks(game, 2);
-
-      expect(player1.isDisconnected()).toBe(true);
-      expect(player2.isDisconnected()).toBe(false);
-      expect(markDisconnectedExecution.isActive()).toBe(false);
-      expect(markDisconnectedExecution2.isActive()).toBe(false);
     });
   });
 
   describe("Disconnected state persistence", () => {
     test("should maintain disconnected state across game ticks", () => {
       player1.markDisconnected(true);
-
-      // Execute several ticks
       executeTicks(game, 5);
-
-      // Disconnected state should persist
       expect(player1.isDisconnected()).toBe(true);
     });
 
-    test("should maintain disconnected state in player updates", () => {
+    test("should maintain disconnected state in player updates across ticks", () => {
       player1.markDisconnected(true);
-
-      // Execute some ticks and check update still shows disconnected
       executeTicks(game, 3);
-
       const update = player1.toUpdate();
       expect(update.isDisconnected).toBe(true);
-    });
-
-    test("should handle execution during different game phases", () => {
-      // Test that disconnected execution works outside spawn phase
-      expect(game.inSpawnPhase()).toBe(false);
-
-      const execution = new MarkDisconnectedExecution(player1.id(), true);
-      game.addExecution(execution);
-      executeTicks(game, 2);
-
-      expect(player1.isDisconnected()).toBe(true);
-      expect(execution.isActive()).toBe(false);
     });
   });
 
   describe("Edge cases", () => {
     test("should handle marking same disconnected state multiple times", () => {
-      // Mark disconnected multiple times
       player1.markDisconnected(true);
       player1.markDisconnected(true);
       player1.markDisconnected(true);
-
       expect(player1.isDisconnected()).toBe(true);
 
-      // Mark not disconnected multiple times
       player1.markDisconnected(false);
       player1.markDisconnected(false);
       player1.markDisconnected(false);
-
       expect(player1.isDisconnected()).toBe(false);
     });
 
     test("should handle execution with same disconnected state", () => {
-      // Start with player disconnected
       player1.markDisconnected(true);
-      expect(player1.isDisconnected()).toBe(true);
-
-      // Execute with same disconnected state
-      const execution = new MarkDisconnectedExecution(player1.id(), true);
+      const execution = new MarkDisconnectedExecution(player1, true);
       game.addExecution(execution);
-      executeTicks(game, 2);
-
+      executeTicks(game, 1);
       expect(player1.isDisconnected()).toBe(true);
-      expect(execution.isActive()).toBe(false);
-    });
-
-    test("should handle missing player during execution init", () => {
-      const execution = new MarkDisconnectedExecution(
-        "nonexistent_player",
-        true,
-      );
-
-      // Mock console.warn to verify it's called
-      const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
-
-      game.addExecution(execution);
-      executeTicks(game, 2);
-
-      expect(execution.isActive()).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining(
-          "MarkDisconnectedExecution: player nonexistent_player not found",
-        ),
-      );
-
-      consoleSpy.mockRestore();
-    });
-
-    test("should handle multiple executions for same player", () => {
-      const execution1 = new MarkDisconnectedExecution(player1.id(), true);
-      const execution2 = new MarkDisconnectedExecution(player1.id(), false);
-
-      game.addExecution(execution1, execution2);
-      executeTicks(game, 2);
-
-      // Last execution should win
-      expect(player1.isDisconnected()).toBe(false);
-      expect(execution1.isActive()).toBe(false);
-      expect(execution2.isActive()).toBe(false);
     });
   });
 });

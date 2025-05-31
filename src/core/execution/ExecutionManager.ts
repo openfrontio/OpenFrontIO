@@ -122,7 +122,7 @@ export class Executor {
           intent.variables ?? {},
         );
       case "mark_disconnected":
-        return new MarkDisconnectedExecution(playerID, intent.isDisconnected);
+        return new MarkDisconnectedExecution(player, intent.isDisconnected);
       default:
         throw new Error(`intent type ${intent} not found`);
     }
