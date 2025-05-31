@@ -164,5 +164,8 @@
     "Balanced": "difficulty.Balanced",
     "Intense": "difficulty.Intense",
     "Impossible": "difficulty.Impossible"
+  },
+  "heads_up_message": {
+    "choose_spawn": "heads_up_message.choose_spawn"
   }
 }
