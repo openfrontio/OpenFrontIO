@@ -5,7 +5,11 @@ import { GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
-import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
+import {
+  AlternateViewEvent,
+  RefreshGraphicsEvent,
+  TeammatesViewEvent,
+} from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -65,9 +69,18 @@ export class OptionsMenu extends LitElement implements Layer {
   @state()
   private alternateView: boolean = false;
 
+  @state()
+  private teammatesView: boolean = false;
+
   private onTerrainButtonClick() {
     this.alternateView = !this.alternateView;
     this.eventBus.emit(new AlternateViewEvent(this.alternateView));
+    this.requestUpdate();
+  }
+
+  private onTeammatesButtonClick() {
+    this.teammatesView = !this.teammatesView;
+    this.eventBus.emit(new TeammatesViewEvent(this.teammatesView));
     this.requestUpdate();
   }
 
@@ -196,6 +209,11 @@ export class OptionsMenu extends LitElement implements Layer {
             onClick: this.onTerrainButtonClick,
             title: "Toggle Terrain",
             children: "🌲: " + (this.alternateView ? "On" : "Off"),
+          })}
+          ${button({
+            onClick: this.onTeammatesButtonClick,
+            title: "Toggle Teammates Only View",
+            children: "🤝: " + (this.teammatesView ? "On" : "Off"),
           })}
           ${button({
             onClick: this.onToggleEmojisButtonClick,
