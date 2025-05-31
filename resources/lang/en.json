@@ -31,6 +31,7 @@
     "table_key": "Key",
     "table_action": "Action",
     "action_alt_view": "Alternate view (terrain/countries)",
+    "action_teammates_view": "Teammates view (only show teammates)",
     "action_attack_altclick": "Attack (when left click is set to open menu)",
     "action_build": "Open build menu",
     "action_emote": "Open emote menu",
