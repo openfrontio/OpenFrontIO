@@ -39,6 +39,10 @@ export class HelpModal extends LitElement {
                 <td>${translateText("help_modal.action_alt_view")}</td>
               </tr>
               <tr>
+                <td><span class="key">T</span></td>
+                <td>${translateText("help_modal.action_teammates_view")}</td>
+              </tr>
+              <tr>
                 <td>
                   <div class="scroll-combo-horizontal">
                     <span class="key">Shift</span>
