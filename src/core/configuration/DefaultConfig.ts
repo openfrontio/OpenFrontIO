@@ -67,7 +67,7 @@ const numPlayersConfig = {
 
 const TERRAIN_EFFECTS = {
   [TerrainType.Plains]: { mag: 1, speed: 0.8 }, // higher speed, lower damage
-  [TerrainType.Highland]: { mag: 1.2, speed: 1 },
+  [TerrainType.Highland]: { mag: 1.15, speed: 1 },
   [TerrainType.Mountain]: { mag: 1.3, speed: 1.25 },
 } as const;
 
@@ -545,7 +545,7 @@ export class DefaultConfig implements Config {
         tilesPerTickUsed:
           baseTileCost *
           within(defenderDensity, 3, 100) ** 0.2 *
-          (attackStandardSize / attackTroops) ** 0.075 *
+          (attackStandardSize / attackTroops) ** 0.1 *
           speed *
           within(attackRatio, 0.1, 20) ** 0.4,
       };
@@ -646,8 +646,8 @@ export class DefaultConfig implements Config {
     //population grows proportional to current population with growth decreasing as it approaches max
     // smaller countries recieve a boost to pop growth to speed up early game
     const baseAdditionRate = 10;
-    const basePopGrowthRate = 1000 / max + 1 / 140;
-    const reproductionPop = 0.85 * player.troops() + 1.15 * player.workers();
+    const basePopGrowthRate = 1200 / max + 1 / 150;
+    const reproductionPop = 0.9 * player.troops() + 1.1 * player.workers();
     let toAdd = baseAdditionRate + basePopGrowthRate * reproductionPop;
     const totalPop = player.totalPopulation();
     const ratio = 1 - totalPop / max;
