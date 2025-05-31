@@ -147,7 +147,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     const [l, m, s] = numPlayersConfig[map] ?? [50, 30, 20];
     const r = Math.random();
     const base = r < 0.3 ? l : r < 0.6 ? m : s;
-    return mode === GameMode.Team ? Math.ceil(base * 1.5) : base;
+    return Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, 150);
   }
 
   workerIndex(gameID: GameID): number {
