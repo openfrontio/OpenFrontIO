@@ -34,11 +34,11 @@ export type TokenPayload = z.infer<typeof TokenPayloadSchema>;
 export const UserMeResponseSchema = z.object({
   user: z.object({
     id: z.string(),
-    avatar: z.string(),
+    avatar: z.string().nullable(),
     username: z.string(),
-    global_name: z.string(),
+    global_name: z.string().nullable(),
     discriminator: z.string(),
-    locale: z.string(),
+    locale: z.string().optional(),
   }),
   player: z.object({
     publicId: z.string(),
