@@ -35,8 +35,10 @@ export class GameServer {
 
   private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
 
+  private disconnectedTimeout = 1 * 30 * 1000; // 30 seconds
+
   private turns: Turn[] = [];
-  private intents: Intent[] = [];
+  private intents: { intent: Intent; isServerSide: boolean }[] = [];
   public activeClients: Client[] = [];
   // Used for record record keeping
   private allClients: Map<ClientID, Client> = new Map();
@@ -164,6 +166,10 @@ export class GameServer {
         });
         return;
       }
+
+      client.isDisconnected = existing.isDisconnected;
+      client.lastPing = existing.lastPing;
+
       existing.ws.removeAllListeners("message");
       this.activeClients = this.activeClients.filter((c) => c !== existing);
     }
@@ -319,8 +325,8 @@ export class GameServer {
     });
   }
 
-  private addIntent(intent: Intent) {
-    this.intents.push(intent);
+  private addIntent(intent: Intent, isServerSide: boolean = false) {
+    this.intents.push({ intent, isServerSide });
   }
 
   private sendStartGameMsg(ws: WebSocket, lastTurn: number) {
@@ -347,12 +353,18 @@ export class GameServer {
   private endTurn() {
     const pastTurn: Turn = {
       turnNumber: this.turns.length,
-      intents: this.intents,
+      intents: this.intents.map((i) => {
+        return {
+          intent: i.intent,
+          isServerSide: i.isServerSide,
+        };
+      }),
     };
     this.turns.push(pastTurn);
     this.intents = [];
 
     this.handleSynchronization();
+    this.checkDisconnectedStatus();
 
     let msg = "";
     try {
@@ -531,6 +543,39 @@ export class GameServer {
         clientID,
       });
     }
+  }
+
+  private checkDisconnectedStatus() {
+    if (this.turns.length % 5 !== 0) {
+      return;
+    }
+
+    const now = Date.now();
+    for (const [clientID, client] of this.allClients) {
+      if (
+        client.isDisconnected === false &&
+        now - client.lastPing > this.disconnectedTimeout
+      ) {
+        this.markClientDisconnected(client, true);
+      } else if (
+        client.isDisconnected &&
+        now - client.lastPing < this.disconnectedTimeout
+      ) {
+        this.markClientDisconnected(client, false);
+      }
+    }
+  }
+
+  private markClientDisconnected(client: Client, isDisconnected: boolean) {
+    client.isDisconnected = isDisconnected;
+    this.addIntent(
+      {
+        type: "mark_disconnected",
+        clientID: client.clientID,
+        isDisconnected: isDisconnected,
+      },
+      true,
+    );
   }
 
   private archiveGame() {

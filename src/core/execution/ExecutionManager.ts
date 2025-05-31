@@ -15,6 +15,7 @@ import { DonateTroopsExecution } from "./DonateTroopExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { FakeHumanExecution } from "./FakeHumanExecution";
+import { MarkDisconnectedExecution } from "./MarkDisconnectedExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NoOpExecution } from "./NoOpExecution";
 import { QuickChatExecution } from "./QuickChatExecution";
@@ -38,10 +39,10 @@ export class Executor {
   }
 
   createExecs(turn: Turn): Execution[] {
-    return turn.intents.map((i) => this.createExec(i));
+    return turn.intents.map((i) => this.createExec(i.intent, i.isServerSide));
   }
 
-  createExec(intent: Intent): Execution {
+  createExec(intent: Intent, isServerSide: boolean): Execution {
     const player = this.mg.playerByClientID(intent.clientID);
     if (!player) {
       console.warn(`player with clientID ${intent.clientID} not found`);
@@ -120,6 +121,12 @@ export class Executor {
           intent.quickChatKey,
           intent.variables ?? {},
         );
+      case "mark_disconnected":
+        if (isServerSide) {
+          return new MarkDisconnectedExecution(player, intent.isDisconnected);
+        } else {
+          return new NoOpExecution();
+        }
       default:
         throw new Error(`intent type ${intent} not found`);
     }
