@@ -244,7 +244,7 @@
       "flag": "gb-sct"
     },
     {
-      "coordinates": [2239, 3215],
+      "coordinates": [2300, 510],
       "name": "USSR",
       "strength": 3,
       "flag": "ussr"
@@ -280,7 +280,7 @@
       "flag": "eg"
     },
     {
-      "coordinates": [1188, 1612],
+      "coordinates": [1115, 1650],
       "name": "State of Libya",
       "strength": 1,
       "flag": "ly"
