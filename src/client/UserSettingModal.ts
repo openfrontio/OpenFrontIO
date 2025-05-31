@@ -8,6 +8,88 @@ import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
 
+interface KeybindGroup {
+  title: string;
+  binds: {
+    action: string;
+    label: string;
+    description: string;
+    defaultKey: string;
+  }[];
+}
+
+const keybindGroups: KeybindGroup[] = [
+  {
+    title: "user_setting.view_options",
+    binds: [
+      {
+        action: "toggleView",
+        label: "user_setting.toggle_view",
+        description: "user_setting.toggle_view_desc",
+        defaultKey: "Space",
+      },
+      {
+        action: "toggleTeammatesView",
+        label: "user_setting.toggle_teammates_view",
+        description: "user_setting.toggle_teammates_view_desc",
+        defaultKey: "T",
+      },
+    ],
+  },
+  {
+    title: "user_setting.zoom_controls",
+    binds: [
+      {
+        action: "zoomOut",
+        label: "user_setting.zoom_out",
+        description: "user_setting.zoom_out_desc",
+        defaultKey: "KeyQ",
+      },
+      {
+        action: "zoomIn",
+        label: "user_setting.zoom_in",
+        description: "user_setting.zoom_in_desc",
+        defaultKey: "KeyE",
+      },
+    ],
+  },
+  {
+    title: "user_setting.camera_movement",
+    binds: [
+      {
+        action: "centerCamera",
+        label: "user_setting.center_camera",
+        description: "user_setting.center_camera_desc",
+        defaultKey: "KeyC",
+      },
+      {
+        action: "moveUp",
+        label: "user_setting.move_up",
+        description: "user_setting.move_up_desc",
+        defaultKey: "KeyW",
+      },
+      {
+        action: "moveLeft",
+        label: "user_setting.move_left",
+        description: "user_setting.move_left_desc",
+        defaultKey: "KeyA",
+      },
+      {
+        action: "moveDown",
+        label: "user_setting.move_down",
+        description: "user_setting.move_down_desc",
+        defaultKey: "KeyS",
+      },
+      {
+        action: "moveRight",
+        label: "user_setting.move_right",
+        description: "user_setting.move_right_desc",
+        defaultKey: "KeyD",
+      },
+    ],
+  },
+];
+
 @customElement("user-setting")
 export class UserSettingModal extends LitElement {
   private userSettings: UserSettings = new UserSettings();
@@ -184,7 +266,7 @@ export class UserSettingModal extends LitElement {
           <div class="modal-content user-setting-modal">
             <div class="flex mb-4 w-full justify-center">
               <button
-                class="w-1/2 text-center px-3 py-1 rounded-l 
+                class="w-1/2 text-center px-3 py-1 rounded-l
       ${this.settingsMode === "basic"
                   ? "bg-white/10 text-white"
                   : "bg-transparent text-gray-400"}"
@@ -193,7 +275,7 @@ export class UserSettingModal extends LitElement {
                 ${translateText("user_setting.tab_basic")}
               </button>
               <button
-                class="w-1/2 text-center px-3 py-1 rounded-r 
+                class="w-1/2 text-center px-3 py-1 rounded-r
       ${this.settingsMode === "keybinds"
                   ? "bg-white/10 text-white"
                   : "bg-transparent text-gray-400"}"
@@ -332,89 +414,26 @@ export class UserSettingModal extends LitElement {
 
   private renderKeybindSettings() {
     return html`
-      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
-        ${translateText("user_setting.view_options")}
-      </div>
+      ${keybindGroups.map(
+        (group) => html`
+          <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+            ${translateText(group.title)}
+          </div>
 
-      <setting-keybind
-        action="toggleView"
-        label=${translateText("user_setting.toggle_view")}
-        description=${translateText("user_setting.toggle_view_desc")}
-        defaultKey="Space"
-        .value=${this.keybinds["toggleView"] ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
-        ${translateText("user_setting.zoom_controls")}
-      </div>
-
-      <setting-keybind
-        action="zoomOut"
-        label=${translateText("user_setting.zoom_out")}
-        description=${translateText("user_setting.zoom_out_desc")}
-        defaultKey="KeyQ"
-        .value=${this.keybinds["zoomOut"] ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="zoomIn"
-        label=${translateText("user_setting.zoom_in")}
-        description=${translateText("user_setting.zoom_in_desc")}
-        defaultKey="KeyE"
-        .value=${this.keybinds["zoomIn"] ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
-        ${translateText("user_setting.camera_movement")}
-      </div>
-
-      <setting-keybind
-        action="centerCamera"
-        label=${translateText("user_setting.center_camera")}
-        description=${translateText("user_setting.center_camera_desc")}
-        defaultKey="KeyC"
-        .value=${this.keybinds["centerCamera"] ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="moveUp"
-        label=${translateText("user_setting.move_up")}
-        description=${translateText("user_setting.move_up_desc")}
-        defaultKey="KeyW"
-        .value=${this.keybinds["moveUp"] ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="moveLeft"
-        label=${translateText("user_setting.move_left")}
-        description=${translateText("user_setting.move_left_desc")}
-        defaultKey="KeyA"
-        .value=${this.keybinds["moveLeft"] ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="moveDown"
-        label=${translateText("user_setting.move_down")}
-        description=${translateText("user_setting.move_down_desc")}
-        defaultKey="KeyS"
-        .value=${this.keybinds["moveDown"] ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="moveRight"
-        label=${translateText("user_setting.move_right")}
-        description=${translateText("user_setting.move_right_desc")}
-        defaultKey="KeyD"
-        .value=${this.keybinds["moveRight"] ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
+          ${group.binds.map(
+            (bind) => html`
+              <setting-keybind
+                action=${bind.action}
+                label=${translateText(bind.label)}
+                description=${translateText(bind.description)}
+                defaultKey=${bind.defaultKey}
+                .value=${this.keybinds[bind.action] ?? ""}
+                @change=${this.handleKeybindChange}
+              />
+            `,
+          )}
+        `,
+      )}
     `;
   }
 

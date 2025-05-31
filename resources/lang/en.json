@@ -252,6 +252,8 @@
     "view_options": "View Options",
     "toggle_view": "Toggle View",
     "toggle_view_desc": "Alternate view (terrain/countries)",
+    "toggle_teammates_view": "Toggle Teammates View",
+    "toggle_teammates_view_desc": "Hide enemies and show only teammates",
     "zoom_controls": "Zoom Controls",
     "zoom_out": "Zoom Out",
     "zoom_out_desc": "Zoom out the map",
