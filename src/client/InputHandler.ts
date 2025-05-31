@@ -71,7 +71,7 @@ export class AlternateViewEvent implements GameEvent {
 }
 
 export class TeammatesViewEvent implements GameEvent {
-  constructor(public readonly alternateView: boolean) {}
+  constructor(public readonly teammatesView: boolean) {}
 }
 
 export class CloseViewEvent implements GameEvent {}
@@ -113,6 +113,8 @@ export class InputHandler {
   private pointerDown: boolean = false;
 
   private alternateView = false;
+
+  private teammatesView = false;
 
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
@@ -217,7 +219,10 @@ export class InputHandler {
 
       if (e.code === keybinds.toggleTeammatesView) {
         e.preventDefault();
-        // TODO: do something here
+        if (!this.teammatesView) {
+          this.teammatesView = true;
+          this.eventBus.emit(new TeammatesViewEvent(true));
+        }
       }
 
       if (e.code === "Escape") {
@@ -258,7 +263,7 @@ export class InputHandler {
 
       if (e.code === keybinds.toggleTeammatesView) {
         e.preventDefault();
-        // TODO: do something here
+        this.teammatesView = false;
         this.eventBus.emit(new TeammatesViewEvent(false));
       }
 
