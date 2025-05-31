@@ -146,7 +146,11 @@ export class TerritoryLayer implements Layer {
     });
     this.eventBus.on(TeammatesViewEvent, (e) => {
       this.teammatesView = e.teammatesView;
-      this.redraw();
+      this.game.forEachTile((tile) => {
+        if (this.game.hasOwner(tile)) {
+          this.paintTerritory(tile);
+        }
+      });
     });
     this.eventBus.on(DragEvent, (e) => {
       // TODO: consider re-enabling this on mobile or low end devices for smoother dragging.
@@ -271,12 +275,17 @@ export class TerritoryLayer implements Layer {
     }
     const owner = this.game.owner(tile) as PlayerView;
 
-    // For teammates view, paint friendly tiles and bots (helps with initial spawn)
+    // If the owner is an enemy and we are in teammates view
+    // skip painting their tile, keeps bots for easier viewing
+    // early game
     const myPlayer = this.game.myPlayer();
-    if (owner.type() !== PlayerType.Bot) {
-      if (this.teammatesView && !myPlayer?.isFriendly(owner)) {
-        return;
-      }
+    if (
+      owner.type() !== PlayerType.Bot &&
+      this.teammatesView &&
+      !myPlayer?.isFriendly(owner)
+    ) {
+      this.clearTile(tile);
+      return;
     }
 
     if (this.game.isBorder(tile)) {
