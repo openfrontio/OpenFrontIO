@@ -21,7 +21,7 @@ export class LocalServer {
 
   private turns: Turn[] = [];
 
-  private intents: Intent[] = [];
+  private intents: { intent: Intent; isServerSide: boolean }[] = [];
   private startedAt: number;
 
   private paused = false;
@@ -96,11 +96,11 @@ export class LocalServer {
         if (clientMsg.intent.type === "troop_ratio") {
           // Store troop change events because otherwise they are
           // not registered when game is paused.
-          this.intents.push(clientMsg.intent);
+          this.intents.push({ intent: clientMsg.intent, isServerSide: false });
         }
         return;
       }
-      this.intents.push(clientMsg.intent);
+      this.intents.push({ intent: clientMsg.intent, isServerSide: false });
     }
     if (clientMsg.type === "hash") {
       if (!this.lobbyConfig.gameRecord) {
@@ -154,7 +154,12 @@ export class LocalServer {
         this.endGame();
         return;
       }
-      this.intents = this.replayTurns[this.turns.length].intents;
+      this.intents = this.replayTurns[this.turns.length].intents.map((i) => {
+        return {
+          intent: i.intent,
+          isServerSide: false,
+        };
+      });
     }
     const pastTurn: Turn = {
       turnNumber: this.turns.length,
