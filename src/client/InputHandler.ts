@@ -2,6 +2,17 @@ import { EventBus, GameEvent } from "../core/EventBus";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 
+type KeybindAction =
+  | "toggleView"
+  | "toggleTeammatesView"
+  | "centerCamera"
+  | "moveUp"
+  | "moveDown"
+  | "moveLeft"
+  | "moveRight"
+  | "zoomOut"
+  | "zoomIn";
+
 export class MouseUpEvent implements GameEvent {
   constructor(
     public readonly x: number,
@@ -59,6 +70,10 @@ export class AlternateViewEvent implements GameEvent {
   constructor(public readonly alternateView: boolean) {}
 }
 
+export class TeammatesViewEvent implements GameEvent {
+  constructor(public readonly alternateView: boolean) {}
+}
+
 export class CloseViewEvent implements GameEvent {}
 
 export class RefreshGraphicsEvent implements GameEvent {}
@@ -113,8 +128,9 @@ export class InputHandler {
   ) {}
 
   initialize() {
-    const keybinds = {
+    const keybinds: Record<KeybindAction, string> = {
       toggleView: "Space",
+      toggleTeammatesView: "KeyT",
       centerCamera: "KeyC",
       moveUp: "KeyW",
       moveDown: "KeyS",
@@ -199,6 +215,11 @@ export class InputHandler {
         }
       }
 
+      if (e.code === keybinds.toggleTeammatesView) {
+        e.preventDefault();
+        // TODO: do something here
+      }
+
       if (e.code === "Escape") {
         e.preventDefault();
         this.eventBus.emit(new CloseViewEvent());
@@ -233,6 +254,12 @@ export class InputHandler {
         e.preventDefault();
         this.alternateView = false;
         this.eventBus.emit(new AlternateViewEvent(false));
+      }
+
+      if (e.code === keybinds.toggleTeammatesView) {
+        e.preventDefault();
+        // TODO: do something here
+        this.eventBus.emit(new TeammatesViewEvent(false));
       }
 
       if (e.key.toLowerCase() === "r" && e.altKey && !e.ctrlKey) {
