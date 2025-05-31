@@ -276,7 +276,7 @@ export class DefaultConfig implements Config {
     return 10000 + 150 * Math.pow(dist, 1.1);
   }
   tradeShipSpawnRate(numberOfPorts: number): number {
-    return Math.round(10 * Math.pow(numberOfPorts, 0.5));
+    return Math.round(10 * Math.pow(numberOfPorts, 0.4));
   }
 
   unitInfo(type: UnitType): UnitInfo {
