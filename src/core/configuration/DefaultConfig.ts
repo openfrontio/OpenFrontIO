@@ -536,7 +536,7 @@ export class DefaultConfig implements Config {
         ? this.traitorDefenseDebuff()
         : 1;
       const baseTroopLoss = 16;
-      const baseTileCost = 26;
+      const baseTileCost = 29;
       const attackStandardSize = 10_000;
       return {
         attackerTroopLoss:
@@ -547,13 +547,13 @@ export class DefaultConfig implements Config {
           within(defenderDensity, 3, 100) ** 0.2 *
           (attackStandardSize / attackTroops) ** 0.075 *
           speed *
-          within(attackRatio, 0.1, 20) ** 0.35,
+          within(attackRatio, 0.1, 20) ** 0.4,
       };
     } else {
       return {
         attackerTroopLoss: 16 * mag,
         defenderTroopLoss: 0,
-        tilesPerTickUsed: 31 * speed,
+        tilesPerTickUsed: 492 * speed * within(attackTroops, 1, 10000) ** -0.3,
       };
     }
   }
