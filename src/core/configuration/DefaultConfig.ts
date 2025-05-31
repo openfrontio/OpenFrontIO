@@ -293,8 +293,7 @@ export class DefaultConfig implements Config {
               ? 0
               : Math.min(
                   1_000_000,
-                  (p.unitsIncludingConstruction(UnitType.Warship).length + 1) *
-                    250_000,
+                  (p.unitsBuilt(UnitType.Warship) + 1) * 250_000,
                 ),
           territoryBound: false,
           maxHealth: 1000,
@@ -317,10 +316,7 @@ export class DefaultConfig implements Config {
               ? 0
               : Math.min(
                   1_000_000,
-                  Math.pow(
-                    2,
-                    p.unitsIncludingConstruction(UnitType.Port).length,
-                  ) * 125_000,
+                  Math.pow(2, p.unitsBuilt(UnitType.Port)) * 125_000,
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
@@ -373,9 +369,7 @@ export class DefaultConfig implements Config {
               ? 0
               : Math.min(
                   250_000,
-                  (p.unitsIncludingConstruction(UnitType.DefensePost).length +
-                    1) *
-                    50_000,
+                  (p.unitsBuilt(UnitType.DefensePost) + 1) * 50_000,
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
@@ -387,9 +381,7 @@ export class DefaultConfig implements Config {
               ? 0
               : Math.min(
                   3_000_000,
-                  (p.unitsIncludingConstruction(UnitType.SAMLauncher).length +
-                    1) *
-                    1_500_000,
+                  (p.unitsBuilt(UnitType.SAMLauncher) + 1) * 1_500_000,
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 30 * 10,
@@ -401,10 +393,7 @@ export class DefaultConfig implements Config {
               ? 0
               : Math.min(
                   1_000_000,
-                  Math.pow(
-                    2,
-                    p.unitsIncludingConstruction(UnitType.City).length,
-                  ) * 125_000,
+                  Math.pow(2, p.unitsBuilt(UnitType.City)) * 125_000,
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,

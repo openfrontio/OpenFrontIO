@@ -2,6 +2,7 @@ import { renderNumber, renderTroops } from "../../client/Utils";
 import { consolex } from "../Consolex";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
+import { OTHER_INDEX_BUILT } from "../StatsSchemas";
 import {
   assertNever,
   distSortUnit,
@@ -211,14 +212,59 @@ export class PlayerImpl implements Player {
     return this._units.filter((u) => ts.has(u.type()));
   }
 
-  unitsIncludingConstruction(type: UnitType): Unit[] {
+  unitsBuilt(type: UnitType): number {
+    switch (type) {
+      case UnitType.City:
+        return (
+          this.mg
+            .stats()
+            .getPlayerStats(this)
+            ?.units?.city?.at(OTHER_INDEX_BUILT) ?? 0
+        );
+      case UnitType.DefensePost:
+        return (
+          this.mg
+            .stats()
+            .getPlayerStats(this)
+            ?.units?.defp?.at(OTHER_INDEX_BUILT) ?? 0
+        );
+      case UnitType.MissileSilo:
+        return (
+          this.mg
+            .stats()
+            .getPlayerStats(this)
+            ?.units?.silo?.at(OTHER_INDEX_BUILT) ?? 0
+        );
+      case UnitType.Port:
+        return (
+          this.mg
+            .stats()
+            .getPlayerStats(this)
+            ?.units?.port?.at(OTHER_INDEX_BUILT) ?? 0
+        );
+      case UnitType.SAMLauncher:
+        return (
+          this.mg
+            .stats()
+            .getPlayerStats(this)
+            ?.units?.saml?.at(OTHER_INDEX_BUILT) ?? 0
+        );
+      case UnitType.Warship:
+        return (
+          this.mg
+            .stats()
+            .getPlayerStats(this)
+            ?.units?.wshp?.at(OTHER_INDEX_BUILT) ?? 0
+        );
+    }
+
     const units = this.units(type);
     units.push(
       ...this.units(UnitType.Construction).filter(
         (u) => u.constructionType() === type,
       ),
     );
-    return units;
+    return units.length;
   }
 
   sharesBorderWith(other: Player | TerraNullius): boolean {
