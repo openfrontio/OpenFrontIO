@@ -512,16 +512,12 @@ export class DefaultConfig implements Config {
 
     if (attacker.isPlayer() && defenderIsPlayer) {
       if (
-        attackerType === PlayerType.Human &&
+        (attackerType === PlayerType.Human ||
+          attackerType === PlayerType.FakeHuman) &&
         defenderType === PlayerType.Bot
       ) {
-        mag *= 0.8;
-      }
-      if (
-        attackerType === PlayerType.FakeHuman &&
-        defenderType === PlayerType.Bot
-      ) {
-        mag *= 0.8;
+        mag *= 0.6;
+        speed *= 0.6;
       }
     }
     if (attackerType === PlayerType.Bot) {
