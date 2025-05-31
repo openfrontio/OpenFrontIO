@@ -230,7 +230,7 @@ export class DefaultConfig implements Config {
   falloutDefenseModifier(falloutRatio: number): number {
     // falloutRatio is between 0 and 1
     // So defense modifier is between [3, 1]
-    return 3 - falloutRatio * 2;
+    return 2 - falloutRatio;
   }
   SAMCooldown(): number {
     return 75;
