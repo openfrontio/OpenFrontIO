@@ -533,7 +533,7 @@ export class DefaultConfig implements Config {
         : 1;
       const baseTroopLoss = 16;
       const attackLossModifier = 1.3;
-      const baseTileCost = 41;
+      const baseTileCost = 48;
       const attackStandardSize = 10_000;
       return {
         attackerTroopLoss:
@@ -544,7 +544,7 @@ export class DefaultConfig implements Config {
         tilesPerTickUsed:
           baseTileCost *
           within(defenderDensity, 3, 100) ** 0.2 *
-          (attackStandardSize / attackTroops) ** 0.15 *
+          (attackStandardSize / attackTroops) ** 0.2 *
           speed *
           within(attackRatio, 0.1, 20) ** 0.35,
       };
