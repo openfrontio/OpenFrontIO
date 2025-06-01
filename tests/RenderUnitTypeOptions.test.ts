@@ -1,5 +1,5 @@
 import { render } from "lit";
-import { renderUnitTypeOptions } from "../src/client/handlers/UnitTypeHandler";
+import { renderUnitTypeOptions } from "../src/client/utilities/RenderUnitTypeOptions";
 import { UnitType } from "../src/core/game/Game";
 
 describe("renderUnitTypeOptions (raw DOM)", () => {

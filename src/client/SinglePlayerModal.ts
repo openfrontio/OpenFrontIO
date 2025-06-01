@@ -19,9 +19,9 @@ import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
 import { FlagInput } from "./FlagInput";
-import { renderUnitTypeOptions } from "./handlers/UnitTypeHandler";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
+import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {

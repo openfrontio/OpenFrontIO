@@ -18,8 +18,8 @@ import "./components/baseComponents/Modal";
 import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
-import { renderUnitTypeOptions } from "./handlers/UnitTypeHandler";
 import { JoinLobbyEvent } from "./Main";
+import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
