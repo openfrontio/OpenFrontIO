@@ -66,9 +66,9 @@ const numPlayersConfig = {
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 const TERRAIN_EFFECTS = {
-  [TerrainType.Plains]: { mag: 1.1, speed: 0.8 }, // higher speed, lower damage
-  [TerrainType.Highland]: { mag: 1.2, speed: 1 },
-  [TerrainType.Mountain]: { mag: 1.3, speed: 1.25 },
+  [TerrainType.Plains]: { mag: 1, speed: 0.8 }, // higher speed, lower damage
+  [TerrainType.Highland]: { mag: 1.1, speed: 1 },
+  [TerrainType.Mountain]: { mag: 1.2, speed: 1.2 },
 } as const;
 
 export abstract class DefaultServerConfig implements ServerConfig {
@@ -246,7 +246,7 @@ export class DefaultConfig implements Config {
     return 6;
   }
   defensePostSpeedMultiplier(): number {
-    return 3;
+    return 3.5;
   }
   playerTeams(): number | typeof Duos {
     return this._gameConfig.playerTeams ?? 0;
@@ -276,7 +276,7 @@ export class DefaultConfig implements Config {
     return 10000 + 150 * Math.pow(dist, 1.1);
   }
   tradeShipSpawnRate(numberOfPorts: number): number {
-    return Math.round(10 * Math.pow(numberOfPorts, 0.4));
+    return Math.round(10 * Math.pow(numberOfPorts, 0.3));
   }
 
   unitInfo(type: UnitType): UnitInfo {
@@ -532,11 +532,14 @@ export class DefaultConfig implements Config {
         ? this.traitorDefenseDebuff()
         : 1;
       const baseTroopLoss = 16;
-      const baseTileCost = 30;
+      const attackLossModifier = 1.3;
+      const baseTileCost = 33;
       const attackStandardSize = 10_000;
       return {
         attackerTroopLoss:
-          mag * (baseTroopLoss + defenderDensity * traitorDebuff),
+          mag *
+          (baseTroopLoss +
+            attackLossModifier * defenderDensity * traitorDebuff),
         defenderTroopLoss: defenderDensity,
         tilesPerTickUsed:
           baseTileCost *
@@ -642,8 +645,8 @@ export class DefaultConfig implements Config {
     //population grows proportional to current population with growth decreasing as it approaches max
     // smaller countries recieve a boost to pop growth to speed up early game
     const baseAdditionRate = 10;
-    const basePopGrowthRate = 1100 / max + 1 / 160;
-    const reproductionPop = 0.9 * player.troops() + 1.1 * player.workers();
+    const basePopGrowthRate = 1200 / max + 1 / 200;
+    const reproductionPop = 0.95 * player.troops() + 1.05 * player.workers();
     let toAdd = baseAdditionRate + basePopGrowthRate * reproductionPop;
     const totalPop = player.totalPopulation();
     const ratio = 1 - totalPop / max;
@@ -674,11 +677,11 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): number {
-    return 0.045 * player.workers() ** 0.7;
+    return 0.08 * player.workers() ** 0.65;
   }
 
   troopAdjustmentRate(player: Player): number {
-    const maxDiff = this.maxPopulation(player) / 500;
+    const maxDiff = this.maxPopulation(player) / 600;
     const target = player.population() * player.targetTroopRatio();
     const diff = target - player.troops();
     if (Math.abs(diff) < maxDiff) {
