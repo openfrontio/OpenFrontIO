@@ -2,6 +2,7 @@ import express, { NextFunction, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import http from "http";
 import ipAnonymize from "ip-anonymize";
+import { createRequire } from "module";
 import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
@@ -22,6 +23,8 @@ import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 import { initWorkerMetrics } from "./WorkerMetrics";
+const require = createRequire(import.meta.url);
+const territory_patterns = require("../../resources/territory_patterns.json");
 
 const config = getServerConfigFromServer();
 
@@ -316,14 +319,71 @@ export function startWorker() {
               config,
             );
 
-            const roles: string[] | null = null;
+            let roles: string[] | null = null;
 
-            // Check user roles
             if (claims !== null) {
               const result = await getUserMe(clientMsg.token, config);
               if (result === false) {
                 log.warn("Token is not valid", claims);
                 return;
+              } else {
+                const { player } = result;
+                roles = player.roles;
+              }
+            }
+
+            if (clientMsg.pattern !== undefined) {
+              const isCreator = roles?.includes("1286745100411473930");
+              const isAdmin = roles?.includes("1286738076386856991");
+              const isMod = roles?.includes("1338654590043820148");
+              const isMoneyHater = roles?.includes("1359441841371480176");
+              const isEarlyAccess = roles?.includes("1330243292306341969");
+
+              const isAllowedBase64 = Object.values(
+                territory_patterns,
+              ).includes(clientMsg.pattern);
+
+              const evanBlockedPatterns = [
+                territory_patterns["openfront"],
+                territory_patterns["evan"],
+              ];
+              const isEvanPattern = evanBlockedPatterns.includes(
+                clientMsg.pattern,
+              );
+
+              const restrictedBase64Patterns = [
+                territory_patterns["diagonal"],
+                territory_patterns["cross"],
+                territory_patterns["mini_cross"],
+                territory_patterns["horizontal_stripes"],
+                territory_patterns["sparse_dots"],
+                territory_patterns["diagonal_stripe"],
+                territory_patterns["mountain_ridge"],
+                territory_patterns["scattered_dots"],
+                territory_patterns["circuit_board"],
+                territory_patterns["vertical_bars"],
+                territory_patterns[".w."],
+              ];
+              const isRestrictedPattern = restrictedBase64Patterns.includes(
+                clientMsg.pattern,
+              );
+
+              if (!(isCreator || isAdmin || isMod)) {
+                if (isMoneyHater || isEarlyAccess) {
+                  if (!isAllowedBase64 || isEvanPattern) {
+                    log.warn(`pattern blocked (evan/openfront or unlisted)`);
+                    return;
+                  }
+                } else {
+                  if (
+                    !isAllowedBase64 ||
+                    isRestrictedPattern ||
+                    isEvanPattern
+                  ) {
+                    log.warn(`pattern blocked (restricted or unlisted)`);
+                    return;
+                  }
+                }
               }
             }
 
@@ -339,6 +399,7 @@ export function startWorker() {
               clientMsg.username,
               ws,
               clientMsg.flag,
+              clientMsg.pattern,
             );
 
             const wasFound = gm.addClient(

@@ -23,6 +23,8 @@ import { NewsModal } from "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import { TerritoryPatternStorage } from "./TerritoryPatterns";
+import { territoryPatternsModal } from "./TerritoryPatternsModal";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
@@ -158,6 +160,19 @@ class Client {
       hlpModal.open();
     });
 
+    const TerritoryModal = document.querySelector(
+      "territory-patterns-modal",
+    ) as territoryPatternsModal;
+    const tpButton = document.getElementById(
+      "territory-patterns-input-preview-button",
+    );
+    TerritoryModal instanceof territoryPatternsModal;
+    if (tpButton === null)
+      throw new Error("territory-patterns-input-preview-button");
+    tpButton.addEventListener("click", () => {
+      TerritoryModal.open();
+    });
+
     if (isLoggedIn() === false) {
       // Not logged in
       loginDiscordButton.disable = false;
@@ -191,6 +206,7 @@ class Client {
         loginDiscordButton.translationKey = "main.logged_in";
         loginDiscordButton.hidden = true;
         const { user, player } = userMeResponse;
+        TerritoryModal.onUserMe(userMeResponse);
       });
     }
 
@@ -280,11 +296,11 @@ class Client {
       this.gameStop();
     }
     const config = await getServerConfigFromClient();
-
     this.gameStop = joinLobby(
       {
         gameID: lobby.gameID,
         serverConfig: config,
+        pattern: TerritoryPatternStorage.getSelectedPatternBase64() || "",
         flag:
           this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
             ? ""
