@@ -66,8 +66,8 @@ const numPlayersConfig = {
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 const TERRAIN_EFFECTS = {
-  [TerrainType.Plains]: { mag: 1, speed: 0.8 }, // higher speed, lower damage
-  [TerrainType.Highland]: { mag: 1.15, speed: 1 },
+  [TerrainType.Plains]: { mag: 1.1, speed: 0.8 }, // higher speed, lower damage
+  [TerrainType.Highland]: { mag: 1.2, speed: 1 },
   [TerrainType.Mountain]: { mag: 1.3, speed: 1.25 },
 } as const;
 
@@ -230,7 +230,7 @@ export class DefaultConfig implements Config {
   falloutDefenseModifier(falloutRatio: number): number {
     // falloutRatio is between 0 and 1
     // So defense modifier is between [3, 1]
-    return 3 - falloutRatio * 2;
+    return 2 - falloutRatio;
   }
   SAMCooldown(): number {
     return 75;
@@ -512,16 +512,12 @@ export class DefaultConfig implements Config {
 
     if (attacker.isPlayer() && defenderIsPlayer) {
       if (
-        attackerType === PlayerType.Human &&
+        (attackerType === PlayerType.Human ||
+          attackerType === PlayerType.FakeHuman) &&
         defenderType === PlayerType.Bot
       ) {
-        mag *= 0.8;
-      }
-      if (
-        attackerType === PlayerType.FakeHuman &&
-        defenderType === PlayerType.Bot
-      ) {
-        mag *= 0.8;
+        mag *= 0.6;
+        speed *= 0.6;
       }
     }
     if (attackerType === PlayerType.Bot) {
@@ -536,7 +532,7 @@ export class DefaultConfig implements Config {
         ? this.traitorDefenseDebuff()
         : 1;
       const baseTroopLoss = 16;
-      const baseTileCost = 23;
+      const baseTileCost = 30;
       const attackStandardSize = 10_000;
       return {
         attackerTroopLoss:
@@ -545,15 +541,15 @@ export class DefaultConfig implements Config {
         tilesPerTickUsed:
           baseTileCost *
           within(defenderDensity, 3, 100) ** 0.2 *
-          (attackStandardSize / attackTroops) ** 0.075 *
+          (attackStandardSize / attackTroops) ** 0.1 *
           speed *
-          within(attackRatio, 0.1, 20) ** 0.4,
+          within(attackRatio, 0.1, 20) ** 0.35,
       };
     } else {
       return {
         attackerTroopLoss: 16 * mag,
         defenderTroopLoss: 0,
-        tilesPerTickUsed: 31 * speed,
+        tilesPerTickUsed: 492 * speed * within(attackTroops, 1, 10000) ** -0.3,
       };
     }
   }
@@ -646,7 +642,7 @@ export class DefaultConfig implements Config {
     //population grows proportional to current population with growth decreasing as it approaches max
     // smaller countries recieve a boost to pop growth to speed up early game
     const baseAdditionRate = 10;
-    const basePopGrowthRate = 1200 / max + 1 / 150;
+    const basePopGrowthRate = 1100 / max + 1 / 160;
     const reproductionPop = 0.9 * player.troops() + 1.1 * player.workers();
     let toAdd = baseAdditionRate + basePopGrowthRate * reproductionPop;
     const totalPop = player.totalPopulation();
