@@ -478,13 +478,11 @@ export class NameLayer implements Layer {
       }
 
       if (!existingEmbargo) {
-        console.log("Not existingEmbaergo:", existingEmbargo);
         iconsDiv.appendChild(
           this.createIconElement(embargoIconImageSrc, iconSize, "embargo"),
         );
       }
     } else if (existingEmbargo) {
-      console.log("existingEmbaergo:", existingEmbargo);
       existingEmbargo.remove();
     }
 
