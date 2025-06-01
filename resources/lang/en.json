@@ -428,5 +428,8 @@
     "copied": "Copied!",
     "failed_copy": "Failed to copy",
     "desync_notice": "You are desynced from other players. What you see might differ from other players."
+  },
+  "heads_up_message": {
+    "choose_spawn": "Choose a starting location"
   }
 }

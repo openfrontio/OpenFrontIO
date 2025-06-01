@@ -9,7 +9,13 @@ import targetIcon from "../../../../resources/images/TargetIcon.svg";
 import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { Theme } from "../../../core/configuration/Config";
-import { AllPlayers, Cell, nukeTypes, UnitType } from "../../../core/game/Game";
+import {
+  AllPlayers,
+  Cell,
+  nukeTypes,
+  PlayerType,
+  UnitType,
+} from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { createCanvas, renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
@@ -211,27 +217,29 @@ export class NameLayer implements Layer {
     troopsDiv.style.marginTop = "-5%";
     element.appendChild(troopsDiv);
 
-    const shieldDiv = document.createElement("div");
-    shieldDiv.classList.add("player-shield");
-    shieldDiv.style.zIndex = "3";
-    shieldDiv.style.marginTop = "-5%";
-    shieldDiv.style.display = "flex";
-    shieldDiv.style.alignItems = "center";
-    shieldDiv.style.gap = "0px";
-    const shieldImg = document.createElement("img");
-    shieldImg.src = this.shieldIconImage.src;
-    shieldImg.style.width = "16px";
-    shieldImg.style.height = "16px";
+    if (player.type() !== PlayerType.Bot) {
+      const shieldDiv = document.createElement("div");
+      shieldDiv.classList.add("player-shield");
+      shieldDiv.style.zIndex = "3";
+      shieldDiv.style.marginTop = "-5%";
+      shieldDiv.style.display = "flex";
+      shieldDiv.style.alignItems = "center";
+      shieldDiv.style.gap = "0px";
+      const shieldImg = document.createElement("img");
+      shieldImg.src = this.shieldIconImage.src;
+      shieldImg.style.width = "16px";
+      shieldImg.style.height = "16px";
 
-    const shieldSpan = document.createElement("span");
-    shieldSpan.textContent = "0";
-    shieldSpan.style.color = "black";
-    shieldSpan.style.fontSize = "10px";
-    shieldSpan.style.marginTop = "-2px";
+      const shieldSpan = document.createElement("span");
+      shieldSpan.textContent = "0";
+      shieldSpan.style.color = "black";
+      shieldSpan.style.fontSize = "10px";
+      shieldSpan.style.marginTop = "-2px";
 
-    shieldDiv.appendChild(shieldImg);
-    shieldDiv.appendChild(shieldSpan);
-    element.appendChild(shieldDiv);
+      shieldDiv.appendChild(shieldImg);
+      shieldDiv.appendChild(shieldSpan);
+      element.appendChild(shieldDiv);
+    }
 
     // Start off invisible so it doesn't flash at 0,0
     element.style.display = "none";
@@ -300,11 +308,10 @@ export class NameLayer implements Layer {
     const density = renderNumber(
       render.player.troops() / render.player.numTilesOwned(),
     );
-    const shieldDiv = render.element.querySelector(
-      ".player-shield",
-    ) as HTMLDivElement;
-    const shieldImg = shieldDiv.querySelector("img");
-    const shieldNumber = shieldDiv.querySelector("span");
+    const shieldDiv: HTMLDivElement | null =
+      render.element.querySelector(".player-shield");
+    const shieldImg = shieldDiv?.querySelector("img");
+    const shieldNumber = shieldDiv?.querySelector("span");
     if (shieldImg) {
       shieldImg.style.width = `${render.fontSize * 0.8}px`;
       shieldImg.style.height = `${render.fontSize * 0.8}px`;
