@@ -112,6 +112,16 @@ export class TerritoryLayer implements Layer {
       .filter((p) => p.type() === PlayerType.Human);
 
     for (const human of humans) {
+      const myPlayer = this.game.myPlayer();
+      // Skip enemy highlights
+      if (
+        this.teammatesView &&
+        human.id() !== myPlayer?.id() &&
+        !myPlayer?.isFriendly(human)
+      ) {
+        continue;
+      }
+
       const center = human.nameLocation();
       if (!center) {
         continue;
@@ -121,7 +131,6 @@ export class TerritoryLayer implements Layer {
         continue;
       }
       let color = this.theme.spawnHighlightColor();
-      const myPlayer = this.game.myPlayer();
       if (
         myPlayer !== null &&
         myPlayer !== human &&
@@ -282,6 +291,7 @@ export class TerritoryLayer implements Layer {
     if (
       owner.type() !== PlayerType.Bot &&
       this.teammatesView &&
+      owner.id() !== myPlayer?.id() &&
       !myPlayer?.isFriendly(owner)
     ) {
       this.clearTile(tile);
