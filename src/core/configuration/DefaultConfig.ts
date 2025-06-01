@@ -243,10 +243,10 @@ export class DefaultConfig implements Config {
     return 40;
   }
   defensePostLossMultiplier(): number {
-    return 6;
+    return 8;
   }
   defensePostSpeedMultiplier(): number {
-    return 3.5;
+    return 4;
   }
   playerTeams(): number | typeof Duos {
     return this._gameConfig.playerTeams ?? 0;
@@ -533,7 +533,7 @@ export class DefaultConfig implements Config {
         : 1;
       const baseTroopLoss = 16;
       const attackLossModifier = 1.3;
-      const baseTileCost = 48;
+      const baseTileCost = 44;
       const attackStandardSize = 10_000;
       return {
         attackerTroopLoss:
