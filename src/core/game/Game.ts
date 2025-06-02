@@ -214,6 +214,13 @@ export const nukeTypes = [
   UnitType.MIRV,
 ] as UnitType[];
 
+export const upgradableStructureTypes = [
+  UnitType.City,
+  UnitType.Port,
+  UnitType.SAMLauncher,
+  UnitType.MissileSilo,
+] as UnitType[];
+
 export enum Relation {
   Hostile = 0,
   Distrustful = 1,
@@ -385,8 +392,11 @@ export interface Unit {
 
   // SAMs & Missile Silos
   launch(): void;
-  ticksLeftInCooldown(): Tick | undefined;
-  isInCooldown(): boolean;
+  reloadMissile(): void;
+  increaseMissileCount(): void;
+  hasMissilesReady(): boolean;
+  isAllMissilesReady(): boolean;
+  missileTimerQueue(): number[];
 
   // Trade Ships
   setSafeFromPirates(): void; // Only for trade ships
@@ -395,6 +405,10 @@ export interface Unit {
   // Construction
   constructionType(): UnitType | null;
   setConstructionType(type: UnitType): void;
+
+  // Upgradable Structures
+  level(): number;
+  increaseLevel(): void;
 
   // Warships
   setPatrolTile(tile: TileRef): void;
@@ -471,6 +485,7 @@ export interface Player {
     spawnTile: TileRef,
     params: UnitParams<T>,
   ): Unit;
+  upgradeUnit<T extends UnitType>(unit: Unit, params: UnitParams<T>);
 
   captureUnit(unit: Unit): void;
 
