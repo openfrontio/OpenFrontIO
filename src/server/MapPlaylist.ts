@@ -51,18 +51,17 @@ export class MapPlaylist {
     // Create the default public game config (from your GameManager)
     return {
       gameMap: map,
-      maxPlayers: config.lobbyMaxPlayers(map, mode),
+      maxPlayers: config.lobbyMaxPlayers(map, mode, numPlayerTeams),
       gameType: GameType.Public,
       difficulty: Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
       instantBuild: false,
       disableNPCs: mode === GameMode.Team,
-      disableNukes: false,
       gameMode: mode,
       playerTeams: numPlayerTeams,
       bots: 400,
-    } as GameConfig;
+    } satisfies GameConfig;
   }
 
   private getNextMap(): MapWithMode {

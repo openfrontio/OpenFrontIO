@@ -137,7 +137,7 @@ export class PlayerImpl implements Player {
       playerType: this.type(),
       isAlive: this.isAlive(),
       tilesOwned: this.numTilesOwned(),
-      gold: Number(this._gold),
+      gold: this._gold,
       population: this.population(),
       workers: this.workers(),
       troops: this.troops(),
@@ -539,9 +539,13 @@ export class PlayerImpl implements Player {
     return true;
   }
 
-  donateTroops(recipient: Player, troops: number): void {
+  donateTroops(recipient: Player, troops: number): boolean {
+    if (troops <= 0) return false;
+    const removed = this.removeTroops(troops);
+    if (removed === 0) return false;
+    recipient.addTroops(removed);
+
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
-    recipient.addTroops(this.removeTroops(troops));
     this.mg.displayMessage(
       `Sent ${renderTroops(troops)} troops to ${recipient.name()}`,
       MessageType.INFO,
@@ -552,10 +556,16 @@ export class PlayerImpl implements Player {
       MessageType.SUCCESS,
       recipient.id(),
     );
+    return true;
   }
-  donateGold(recipient: Player, gold: number): void {
+
+  donateGold(recipient: Player, gold: Gold): boolean {
+    if (gold <= 0n) return false;
+    const removed = this.removeGold(gold);
+    if (removed === 0n) return false;
+    recipient.addGold(removed);
+
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
-    recipient.addGold(this.removeGold(gold));
     this.mg.displayMessage(
       `Sent ${renderNumber(gold)} gold to ${recipient.name()}`,
       MessageType.INFO,
@@ -566,6 +576,7 @@ export class PlayerImpl implements Player {
       MessageType.SUCCESS,
       recipient.id(),
     );
+    return true;
   }
 
   hasEmbargoAgainst(other: Player): boolean {
@@ -632,20 +643,20 @@ export class PlayerImpl implements Player {
   }
 
   gold(): Gold {
-    return Number(this._gold);
+    return this._gold;
   }
 
   addGold(toAdd: Gold): void {
-    this._gold += toInt(toAdd);
+    this._gold += toAdd;
   }
 
-  removeGold(toRemove: Gold): number {
-    if (toRemove <= 1) {
-      return 0;
+  removeGold(toRemove: Gold): Gold {
+    if (toRemove <= 0n) {
+      return 0n;
     }
-    const actualRemoved = minInt(this._gold, toInt(toRemove));
+    const actualRemoved = minInt(this._gold, toRemove);
     this._gold -= actualRemoved;
-    return Number(actualRemoved);
+    return actualRemoved;
   }
 
   population(): number {
