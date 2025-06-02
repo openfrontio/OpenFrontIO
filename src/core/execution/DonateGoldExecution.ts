@@ -1,5 +1,5 @@
 import { consolex } from "../Consolex";
-import { Execution, Game, Player, PlayerID } from "../game/Game";
+import { Execution, Game, Gold, Player, PlayerID } from "../game/Game";
 
 export class DonateGoldExecution implements Execution {
   private sender: Player;
@@ -10,7 +10,7 @@ export class DonateGoldExecution implements Execution {
   constructor(
     private senderID: PlayerID,
     private recipientID: PlayerID,
-    private gold: number | null,
+    private gold: Gold | null,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -28,14 +28,16 @@ export class DonateGoldExecution implements Execution {
     this.sender = mg.player(this.senderID);
     this.recipient = mg.player(this.recipientID);
     if (this.gold === null) {
-      this.gold = Math.round(this.sender.gold() / 3);
+      this.gold = this.sender.gold() / 3n;
     }
   }
 
   tick(ticks: number): void {
     if (this.gold === null) throw new Error("not initialized");
-    if (this.sender.canDonate(this.recipient)) {
-      this.sender.donateGold(this.recipient, this.gold);
+    if (
+      this.sender.canDonate(this.recipient) &&
+      this.sender.donateGold(this.recipient, this.gold)
+    ) {
       this.recipient.updateRelation(this.sender, 50);
     } else {
       consolex.warn(

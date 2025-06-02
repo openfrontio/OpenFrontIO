@@ -1,7 +1,9 @@
 import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
-import allianceRequestIcon from "../../../../resources/images/AllianceRequestIcon.svg";
+import allianceRequestBlackIcon from "../../../../resources/images/AllianceRequestBlackIcon.svg";
+import allianceRequestWhiteIcon from "../../../../resources/images/AllianceRequestWhiteIcon.svg";
 import crownIcon from "../../../../resources/images/CrownIcon.svg";
-import embargoIcon from "../../../../resources/images/EmbargoIcon.svg";
+import embargoBlackIcon from "../../../../resources/images/EmbargoBlackIcon.svg";
+import embargoWhiteIcon from "../../../../resources/images/EmbargoWhiteIcon.svg";
 import nukeRedIcon from "../../../../resources/images/NukeIconRed.svg";
 import nukeWhiteIcon from "../../../../resources/images/NukeIconWhite.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconBlack.svg";
@@ -11,6 +13,7 @@ import { PseudoRandom } from "../../../core/PseudoRandom";
 import { Theme } from "../../../core/configuration/Config";
 import { AllPlayers, Cell, nukeTypes, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
 import { createCanvas, renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -37,17 +40,20 @@ export class NameLayer implements Layer {
   private renders: RenderInfo[] = [];
   private seenPlayers: Set<PlayerView> = new Set();
   private traitorIconImage: HTMLImageElement;
-  private allianceRequestIconImage: HTMLImageElement;
+  private allianceRequestBlackIconImage: HTMLImageElement;
+  private allianceRequestWhiteIconImage: HTMLImageElement;
   private allianceIconImage: HTMLImageElement;
   private targetIconImage: HTMLImageElement;
   private crownIconImage: HTMLImageElement;
-  private embargoIconImage: HTMLImageElement;
+  private embargoBlackIconImage: HTMLImageElement;
+  private embargoWhiteIconImage: HTMLImageElement;
   private nukeWhiteIconImage: HTMLImageElement;
   private nukeRedIconImage: HTMLImageElement;
   private shieldIconImage: HTMLImageElement;
   private container: HTMLDivElement;
   private firstPlace: PlayerView | null = null;
   private theme: Theme = this.game.config().theme();
+  private userSettings: UserSettings = new UserSettings();
 
   constructor(
     private game: GameView,
@@ -57,14 +63,18 @@ export class NameLayer implements Layer {
     this.traitorIconImage.src = traitorIcon;
     this.allianceIconImage = new Image();
     this.allianceIconImage.src = allianceIcon;
-    this.allianceRequestIconImage = new Image();
-    this.allianceRequestIconImage.src = allianceRequestIcon;
+    this.allianceRequestBlackIconImage = new Image();
+    this.allianceRequestBlackIconImage.src = allianceRequestBlackIcon;
+    this.allianceRequestWhiteIconImage = new Image();
+    this.allianceRequestWhiteIconImage.src = allianceRequestWhiteIcon;
     this.crownIconImage = new Image();
     this.crownIconImage.src = crownIcon;
     this.targetIconImage = new Image();
     this.targetIconImage.src = targetIcon;
-    this.embargoIconImage = new Image();
-    this.embargoIconImage.src = embargoIcon;
+    this.embargoBlackIconImage = new Image();
+    this.embargoBlackIconImage.src = embargoBlackIcon;
+    this.embargoWhiteIconImage = new Image();
+    this.embargoWhiteIconImage.src = embargoWhiteIcon;
     this.nukeWhiteIconImage = new Image();
     this.nukeWhiteIconImage.src = nukeWhiteIcon;
     this.nukeRedIconImage = new Image();
@@ -325,6 +335,7 @@ export class NameLayer implements Layer {
     ) as HTMLDivElement;
     const iconSize = Math.min(render.fontSize * 1.5, 48);
     const myPlayer = this.game.myPlayer();
+    const isDarkMode = this.userSettings.darkMode();
 
     // Crown icon
     const existingCrown = iconsDiv.querySelector('[data-icon="crown"]');
@@ -376,13 +387,27 @@ export class NameLayer implements Layer {
     }
 
     // Alliance request icon
-    const data = '[data-icon="alliance-request"]';
-    const existingRequestAlliance = iconsDiv.querySelector(data);
+    let existingRequestAlliance = iconsDiv.querySelector(
+      '[data-icon="alliance-request"]',
+    );
+    const isThemeAllianceRequestIcon =
+      existingRequestAlliance?.getAttribute("dark-mode") ===
+      isDarkMode.toString();
+    const AllianceRequestIconImageSrc = isDarkMode
+      ? this.allianceRequestWhiteIconImage.src
+      : this.allianceRequestBlackIconImage.src;
+
     if (myPlayer !== null && render.player.isRequestingAllianceWith(myPlayer)) {
+      // Create new icon to match theme
+      if (existingRequestAlliance && !isThemeAllianceRequestIcon) {
+        existingRequestAlliance.remove();
+        existingRequestAlliance = null;
+      }
+
       if (!existingRequestAlliance) {
         iconsDiv.appendChild(
           this.createIconElement(
-            this.allianceRequestIconImage.src,
+            AllianceRequestIconImageSrc,
             iconSize,
             "alliance-request",
           ),
@@ -437,19 +462,28 @@ export class NameLayer implements Layer {
       existingEmoji.remove();
     }
 
-    const existingEmbargo = iconsDiv.querySelector('[data-icon="embargo"]');
+    // Embargo icon
+    let existingEmbargo = iconsDiv.querySelector('[data-icon="embargo"]');
     const hasEmbargo =
       myPlayer &&
       (render.player.hasEmbargoAgainst(myPlayer) ||
         myPlayer.hasEmbargoAgainst(render.player));
+    const isThemeEmbargoIcon =
+      existingEmbargo?.getAttribute("dark-mode") === isDarkMode.toString();
+    const embargoIconImageSrc = isDarkMode
+      ? this.embargoWhiteIconImage.src
+      : this.embargoBlackIconImage.src;
+
     if (myPlayer && hasEmbargo) {
+      // Create new icon to match theme
+      if (existingEmbargo && !isThemeEmbargoIcon) {
+        existingEmbargo.remove();
+        existingEmbargo = null;
+      }
+
       if (!existingEmbargo) {
         iconsDiv.appendChild(
-          this.createIconElement(
-            this.embargoIconImage.src,
-            iconSize,
-            "embargo",
-          ),
+          this.createIconElement(embargoIconImageSrc, iconSize, "embargo"),
         );
       }
     } else if (existingEmbargo) {
@@ -523,6 +557,7 @@ export class NameLayer implements Layer {
     icon.style.width = `${size}px`;
     icon.style.height = `${size}px`;
     icon.setAttribute("data-icon", id);
+    icon.setAttribute("dark-mode", this.userSettings.darkMode().toString());
     if (center) {
       icon.style.position = "absolute";
       icon.style.top = "50%";

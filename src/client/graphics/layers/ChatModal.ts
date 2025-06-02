@@ -236,7 +236,6 @@ export class ChatModal extends LitElement {
 
       this.eventBus.emit(
         new SendQuickChatEvent(
-          this.sender,
           this.recipient,
           this.selectedQuickChatKey,
           variables,
