@@ -58,11 +58,10 @@ export class MapPlaylist {
       infiniteTroops: false,
       instantBuild: false,
       disableNPCs: mode === GameMode.Team,
-      disableNukes: false,
       gameMode: mode,
       playerTeams: numPlayerTeams,
       bots: 400,
-    } as GameConfig;
+    } satisfies GameConfig;
   }
 
   private getNextMap(): MapWithMode {
