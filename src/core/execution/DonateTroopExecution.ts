@@ -30,6 +30,10 @@ export class DonateTroopsExecution implements Execution {
     if (this.troops === null) {
       this.troops = mg.config().defaultDonationAmount(this.sender);
     }
+    const maxDonation =
+      mg.config().maxPopulation(this.recipient) -
+      this.recipient.totalPopulation();
+    this.troops = Math.min(this.troops, maxDonation);
   }
 
   tick(ticks: number): void {
@@ -41,7 +45,7 @@ export class DonateTroopsExecution implements Execution {
       this.recipient.updateRelation(this.sender, 50);
     } else {
       consolex.warn(
-        `cannot send tropps from ${this.sender} to ${this.recipient}`,
+        `cannot send troops from ${this.sender} to ${this.recipient}`,
       );
     }
     this.active = false;
