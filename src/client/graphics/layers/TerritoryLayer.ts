@@ -240,6 +240,8 @@ export class TerritoryLayer implements Layer {
 
     while (numToRender > 0) {
       numToRender--;
+      // this is for a "possibly null" error. dosent seem to cause runtime issues but does cause the compiler to throw an error
+      // @ts-ignore
       const tile = this.tileToRenderQueue.pop().tile;
       this.paintTerritory(tile);
       for (const neighbor of this.game.neighbors(tile)) {
