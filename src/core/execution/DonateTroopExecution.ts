@@ -34,8 +34,10 @@ export class DonateTroopsExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.troops === null) throw new Error("not initialized");
-    if (this.sender.canDonate(this.recipient)) {
-      this.sender.donateTroops(this.recipient, this.troops);
+    if (
+      this.sender.canDonate(this.recipient) &&
+      this.sender.donateTroops(this.recipient, this.troops)
+    ) {
       this.recipient.updateRelation(this.sender, 50);
     } else {
       consolex.warn(
