@@ -39,7 +39,7 @@ const MAP_FILE_NAMES: Record<GameMapType, string> = {
   [GameMapType.GatewayToTheAtlantic]: "GatewayToTheAtlantic",
   [GameMapType.Australia]: "Australia",
   [GameMapType.Iceland]: "Iceland",
-  [GameMapType.EastAsia]: "East Asia",
+  [GameMapType.EastAsia]: "EastAsia",
   [GameMapType.BetweenTwoSeas]: "BetweenTwoSeas",
   [GameMapType.FaroeIslands]: "FaroeIslands",
   [GameMapType.DeglaciatedAntarctica]: "DeglaciatedAntarctica",

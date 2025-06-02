@@ -22,7 +22,7 @@ const maps = [
   "Pangaea",
   "Iceland",
   "BetweenTwoSeas",
-  "East Asia",
+  "EastAsia",
   "KnownWorld",
   "FaroeIslands",
   "DeglaciatedAntarctica",
