@@ -22,7 +22,10 @@ export class GoToPlayerEvent implements GameEvent {
 }
 
 export class GoToPositionEvent implements GameEvent {
-  constructor(public x: number, public y: number) {}
+  constructor(
+    public x: number,
+    public y: number,
+  ) {}
 }
 
 export class GoToUnitEvent implements GameEvent {
@@ -70,7 +73,7 @@ export class Leaderboard extends LitElement implements Layer {
       this._sortOrder = this._sortOrder === "asc" ? "desc" : "asc";
     } else {
       this._sortKey = key;
-      this._sortOrder = "desc"; 
+      this._sortOrder = "desc";
     }
     this.updateLeaderboard();
   }
@@ -92,7 +95,9 @@ export class Leaderboard extends LitElement implements Layer {
         sorted = sorted.sort((a, b) => compare(a.troops(), b.troops()));
         break;
       default:
-        sorted = sorted.sort((a, b) => compare(a.numTilesOwned(), b.numTilesOwned()));
+        sorted = sorted.sort((a, b) =>
+          compare(a.numTilesOwned(), b.numTilesOwned()),
+        );
     }
 
     const numTilesWithoutFallout =
@@ -109,7 +114,7 @@ export class Leaderboard extends LitElement implements Layer {
         name: player.displayName(),
         position: index + 1,
         score: formatPercentage(
-          player.numTilesOwned() / numTilesWithoutFallout
+          player.numTilesOwned() / numTilesWithoutFallout,
         ),
         gold: renderNumber(player.gold()),
         troops: renderNumber(troops),
@@ -139,7 +144,7 @@ export class Leaderboard extends LitElement implements Layer {
         name: myPlayer.displayName(),
         position: place,
         score: formatPercentage(
-          myPlayer.numTilesOwned() / this.game.numLandTiles()
+          myPlayer.numTilesOwned() / this.game.numLandTiles(),
         ),
         gold: renderNumber(myPlayer.gold()),
         troops: renderNumber(myPlayerTroops),
@@ -341,7 +346,7 @@ export class Leaderboard extends LitElement implements Layer {
                   <td>${player.gold}</td>
                   <td>${player.troops}</td>
                 </tr>
-              `
+              `,
             )}
           </tbody>
         </table>
