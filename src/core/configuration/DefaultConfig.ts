@@ -189,7 +189,7 @@ export class DefaultConfig implements Config {
     return 0.5;
   }
   traitorDuration(): number {
-    return 30 * 10; // 30 seconds
+    return 60 * 10; // 1 min
   }
   spawnImmunityDuration(): Tick {
     return 5 * 10;
@@ -230,7 +230,7 @@ export class DefaultConfig implements Config {
   falloutDefenseModifier(falloutRatio: number): number {
     // falloutRatio is between 0 and 1
     // So defense modifier is between [3, 1]
-    return 2 - falloutRatio;
+    return 2 - 0.9 * falloutRatio;
   }
   SAMCooldown(): number {
     return 75;
@@ -521,7 +521,7 @@ export class DefaultConfig implements Config {
       }
     }
     if (attackerType === PlayerType.Bot) {
-      speed *= 4; // slow bot attacks
+      speed *= 6; // slow bot attacks
     }
     if (defenderIsPlayer) {
       const defenderTroops = defender.troops();
@@ -533,7 +533,7 @@ export class DefaultConfig implements Config {
         : 1;
       const baseTroopLoss = 16;
       const attackLossModifier = 1.3;
-      const baseTileCost = 44;
+      const baseTileCost = 47;
       const attackStandardSize = 10_000;
       return {
         attackerTroopLoss:
@@ -543,8 +543,8 @@ export class DefaultConfig implements Config {
         defenderTroopLoss: defenderDensity,
         tilesPerTickUsed:
           baseTileCost *
-          within(defenderDensity, 3, 100) ** 0.2 *
-          (attackStandardSize / attackTroops) ** 0.2 *
+          within(defenderDensity, 3, 50) ** 0.2 *
+          (attackStandardSize / attackTroops) ** 0.225 *
           speed *
           within(attackRatio, 0.1, 20) ** 0.35,
       };
@@ -603,11 +603,11 @@ export class DefaultConfig implements Config {
         case Difficulty.Easy:
           return 2_500 + 1000 * (playerInfo?.nation?.strength ?? 1);
         case Difficulty.Medium:
-          return 6_000 + 2000 * (playerInfo?.nation?.strength ?? 1);
+          return 5_000 + 2000 * (playerInfo?.nation?.strength ?? 1);
         case Difficulty.Hard:
-          return 20_000 + 4000 * (playerInfo?.nation?.strength ?? 1);
+          return 18_000 + 4000 * (playerInfo?.nation?.strength ?? 1);
         case Difficulty.Impossible:
-          return 50_000 + 8000 * (playerInfo?.nation?.strength ?? 1);
+          return 45_000 + 8000 * (playerInfo?.nation?.strength ?? 1);
       }
     }
     return this.infiniteTroops() ? 1_000_000 : 20_000;
@@ -632,7 +632,7 @@ export class DefaultConfig implements Config {
       case Difficulty.Easy:
         return maxPop * 0.4;
       case Difficulty.Medium:
-        return maxPop * 0.8;
+        return maxPop * 0.7;
       case Difficulty.Hard:
         return maxPop * 1.4;
       case Difficulty.Impossible:
@@ -645,12 +645,12 @@ export class DefaultConfig implements Config {
     //population grows proportional to current population with growth decreasing as it approaches max
     // smaller countries recieve a boost to pop growth to speed up early game
     const baseAdditionRate = 10;
-    const basePopGrowthRate = 1200 / max + 1 / 200;
+    const basePopGrowthRate = 1400 / max + 1 / 175;
     const reproductionPop = player.troops() + 1.15 * player.workers();
     let toAdd = baseAdditionRate + basePopGrowthRate * reproductionPop;
     const totalPop = player.totalPopulation();
-    const ratio = 1 - totalPop / max;
-    toAdd *= ratio;
+    const ratio = Math.max(1 - totalPop / max, 0);
+    toAdd *= ratio ** 1.222;
 
     if (player.type() === PlayerType.Bot) {
       toAdd *= 0.7;
@@ -659,13 +659,13 @@ export class DefaultConfig implements Config {
     if (player.type() === PlayerType.FakeHuman) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          toAdd *= 0.9;
+          toAdd *= 0.7;
           break;
         case Difficulty.Medium:
-          toAdd *= 1;
+          toAdd *= 0.8;
           break;
         case Difficulty.Hard:
-          toAdd *= 1.1;
+          toAdd *= 1.0;
           break;
         case Difficulty.Impossible:
           toAdd *= 1.2;
