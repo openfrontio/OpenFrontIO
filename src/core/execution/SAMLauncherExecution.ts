@@ -155,15 +155,10 @@ export class SAMLauncherExecution implements Execution {
       target = this.getSingleTarget();
     }
 
-    const cooldown = this.sam.ticksLeftInCooldown();
-    if (typeof cooldown === "number" && cooldown >= 0) {
-      this.sam.touch();
-    }
-
     const isSingleTarget = target && !target.targetedBySAM();
     if (
       (isSingleTarget || mirvWarheadTargets.length > 0) &&
-      !this.sam.isInCooldown()
+      this.sam.hasMissilesReady()
     ) {
       this.sam.launch();
       const type =
@@ -203,6 +198,21 @@ export class SAMLauncherExecution implements Execution {
           throw new Error("target is null");
         }
       }
+    }
+
+    const frontTime = this.sam.missileTimerQueue()[0];
+    if (frontTime === undefined) {
+      return;
+    }
+
+    const cooldown =
+      this.mg.config().SAMCooldown() - (this.mg.ticks() - frontTime);
+    if (typeof cooldown === "number" && cooldown >= 0) {
+      this.sam.touch();
+    }
+
+    if (!this.sam.isAllMissilesReady() && cooldown <= 0) {
+      this.sam.reloadMissile();
     }
   }
 

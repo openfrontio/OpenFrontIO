@@ -1,4 +1,4 @@
-import { Execution, Game } from "../game/Game";
+import { Execution, Game, upgradableStructureTypes } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
@@ -24,6 +24,7 @@ import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
+import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 
 export class Executor {
   // private random = new PseudoRandom(999)
@@ -113,6 +114,15 @@ export class Executor {
           player,
           this.mg.ref(intent.x, intent.y),
           intent.unit,
+        );
+      case "upgrade_structure":
+        if (!upgradableStructureTypes.includes(intent.unit)) {
+          console.warn(`unit type ${intent.unit} cannot be upgraded`);
+          return new NoOpExecution();
+        }
+        return new UpgradeStructureExecution(
+          playerID,
+          this.mg.ref(intent.x, intent.y),
         );
       case "quick_chat":
         return new QuickChatExecution(

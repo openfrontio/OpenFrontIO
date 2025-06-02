@@ -1,7 +1,7 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
-import { UnitType } from "../../../core/game/Game";
+import { UnitType, upgradableStructureTypes } from "../../../core/game/Game";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
 import { StructureLayer } from "./StructureLayer";
@@ -73,6 +73,11 @@ export class UnitInfoModal extends LitElement implements Layer {
     super.disconnectedCallback();
   }
 
+  upgradable(): boolean {
+    if (!this.unit?.type()) return false;
+    return upgradableStructureTypes.includes(this.unit?.type());
+  }
+
   static styles = css`
     :host {
       position: fixed;
@@ -119,19 +124,55 @@ export class UnitInfoModal extends LitElement implements Layer {
     .close-button:hover {
       background: #a00;
     }
+
+    .upgrade-button {
+      background: #3a0;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      padding: 6px 12px;
+    }
+
+    .upgrade-button:hover {
+      background: #0a0;
+    }
   `;
 
   render() {
     if (!this.unit) return null;
 
-    const cooldown = this.unit.ticksLeftInCooldown() ?? 0;
+    const frontTime = this.unit.missileTimerQueue()[0];
+    let configTimer;
+    switch (this.unit.type()) {
+      case UnitType.MissileSilo:
+        configTimer = this.game.config().SiloCooldown();
+        break;
+      case UnitType.SAMLauncher:
+        configTimer = this.game.config().SAMCooldown();
+        break;
+    }
+    let cooldown = 0;
+    if (frontTime !== undefined && configTimer !== undefined) {
+      cooldown =
+        frontTime === undefined
+          ? 0
+          : this.game.config().SiloCooldown() - (this.game.ticks() - frontTime);
+    }
     const secondsLeft = Math.ceil(cooldown / 10);
 
     return html`
       <div
         class="modal"
-        style="display: ${this.open ? "block" : "none"}; left: ${this
-          .x}px; top: ${this.y}px; position: absolute;"
+        style="display: ${this.open ? "block" : "none"}; left: ${
+          this.x
+        }px; top: ${this.y}px; position: absolute;"
       >
         <div style="margin-bottom: 8px; font-size: 16px; font-weight: bold;">
           ${translateText("unit_info_modal.structure_info")}
@@ -140,6 +181,8 @@ export class UnitInfoModal extends LitElement implements Layer {
           <strong>${translateText("unit_info_modal.type")}:</strong>
           ${translateText(+"unit_type." + this.unit.type?.().toLowerCase()) ??
           translateText("unit_info_modal.unit_type_unknown")}
+          <strong style="display: ${this.upgradable() ? "block" : "none"};" >Level:</strong> 
+          ${this.upgradable() && this.unit.level?.() ? this.unit.level?.() : ""}
         </div>
         ${secondsLeft > 0
           ? html`<div style="margin-bottom: 4px;">
@@ -147,7 +190,19 @@ export class UnitInfoModal extends LitElement implements Layer {
               ${secondsLeft}s
             </div>`
           : ""}
-        <div style="margin-top: 14px; display: flex; justify-content: center;">
+        <div style="margin-top: 14px; display: flex; justify-content: space-between;">
+          <button
+            @click=${() => {
+              if (this.structureLayer) {
+                this.structureLayer.upgradeStructureUnit(this.unit);
+              }
+            }}
+            class="upgrade-button"
+            title="Upgrade"
+            style="width: 100px; height: 32px; display: ${this.upgradable() ? "block" : "none"};"
+          >
+            UPGRADE
+          </button>
           <button
             @click=${() => {
               this.onCloseStructureModal();
