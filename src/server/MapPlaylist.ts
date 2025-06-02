@@ -26,7 +26,7 @@ const frequency = {
   Asia: 1,
   Mars: 1,
   BetweenTwoSeas: 1,
-  EastAsia: 10,
+  EastAsia: 1,
   BlackSea: 1,
   FaroeIslands: 1,
   FalklandIslands: 1,
