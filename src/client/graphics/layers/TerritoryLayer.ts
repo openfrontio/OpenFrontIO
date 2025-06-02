@@ -241,7 +241,6 @@ export class TerritoryLayer implements Layer {
     while (numToRender > 0) {
       numToRender--;
 
-      
       const entry = this.tileToRenderQueue.pop();
       if (!entry) {
         break;
