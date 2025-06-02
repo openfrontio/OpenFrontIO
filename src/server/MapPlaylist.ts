@@ -51,7 +51,7 @@ export class MapPlaylist {
     // Create the default public game config (from your GameManager)
     return {
       gameMap: map,
-      maxPlayers: config.lobbyMaxPlayers(map, mode),
+      maxPlayers: config.lobbyMaxPlayers(map, mode, numPlayerTeams),
       gameType: GameType.Public,
       difficulty: Difficulty.Medium,
       infiniteGold: false,

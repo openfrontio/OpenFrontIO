@@ -143,11 +143,19 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return 60 * 1000;
   }
 
-  lobbyMaxPlayers(map: GameMapType, mode: GameMode): number {
+  lobbyMaxPlayers(
+    map: GameMapType,
+    mode: GameMode,
+    numPlayerTeams: number | undefined,
+  ): number {
     const [l, m, s] = numPlayersConfig[map] ?? [50, 30, 20];
     const r = Math.random();
     const base = r < 0.3 ? l : r < 0.6 ? m : s;
-    return Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, 150);
+    let p = Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, l);
+    if (numPlayerTeams !== undefined) {
+      p -= p % numPlayerTeams;
+    }
+    return p;
   }
 
   workerIndex(gameID: GameID): number {
