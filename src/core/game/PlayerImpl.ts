@@ -109,7 +109,7 @@ export class PlayerImpl implements Player {
   ) {
     this._flag = playerInfo.flag;
     this._name = sanitizeUsername(playerInfo.name);
-    this._targetTroopRatio = 60n;
+    this._targetTroopRatio = 95n;
     this._troops = toInt(startTroops);
     this._workers = 0n;
     this._gold = 0n;
@@ -139,7 +139,6 @@ export class PlayerImpl implements Player {
       tilesOwned: this.numTilesOwned(),
       gold: Number(this._gold),
       population: this.population(),
-      totalPopulation: this.totalPopulation(),
       workers: this.workers(),
       troops: this.troops(),
       targetTroopRatio: this.targetTroopRatio(),
@@ -652,21 +651,6 @@ export class PlayerImpl implements Player {
   population(): number {
     return Number(this._troops + this._workers);
   }
-  totalPopulation(): number {
-    return this.population() + this.attackingTroops();
-  }
-  private attackingTroops(): number {
-    const landAttackTroops = this._outgoingAttacks
-      .filter((a) => a.isActive())
-      .reduce((sum, a) => sum + a.troops(), 0);
-
-    const boatTroops = this.units(UnitType.TransportShip)
-      .map((u) => u.troops())
-      .reduce((sum, n) => sum + n, 0);
-
-    return landAttackTroops + boatTroops;
-  }
-
   workers(): number {
     return Math.max(1, Number(this._workers));
   }

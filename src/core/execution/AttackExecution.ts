@@ -120,9 +120,6 @@ export class AttackExecution implements Execution {
       new Set<TileRef>(),
     );
 
-    const penalty = Math.floor(this._owner.population() * 0.01);
-    this._owner.removeTroops(penalty);
-
     if (this.sourceTile !== null) {
       this.addNeighbors(this.sourceTile);
     } else {

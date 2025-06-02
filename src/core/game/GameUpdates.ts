@@ -105,7 +105,6 @@ export interface PlayerUpdate {
   tilesOwned: number;
   gold: number;
   population: number;
-  totalPopulation: number;
   workers: number;
   troops: number;
   targetTroopRatio: number;
