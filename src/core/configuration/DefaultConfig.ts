@@ -389,7 +389,7 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     3_000_000,
-                    (p.unitsConstructed(UnitType.SAMLauncher).length + 1) * 1_500_000,
+                    (p.unitsConstructed(UnitType.SAMLauncher) + 1) * 1_500_000,
                   ),
                 ),
           territoryBound: true,
@@ -403,7 +403,7 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     1_000_000,
-                    Math.pow(2, p.unitsConstructed(UnitType.City).length) * 125_000,
+                    Math.pow(2, p.unitsConstructed(UnitType.City)) * 125_000,
                   ),
                 ),
           territoryBound: true,
