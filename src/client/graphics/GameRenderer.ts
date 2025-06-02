@@ -272,6 +272,10 @@ export class GameRenderer {
       this.canvas,
     );
 
+    //zoom/pan to center of map
+    this.transformHandler.centerAll();
+    //this.transformHandler.override(-100, -100, 1);
+
     requestAnimationFrame(() => this.renderGame());
   }
 
