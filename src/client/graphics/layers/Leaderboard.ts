@@ -40,6 +40,9 @@ export class Leaderboard extends LitElement implements Layer {
   players: Entry[] = [];
 
   @state()
+  private sortColumn: "owned" | "gold" = "owned";
+
+  @state()
   private _leaderboardHidden = true;
   private _shownOnInit = false;
   private showTopFive = true;
@@ -62,13 +65,33 @@ export class Leaderboard extends LitElement implements Layer {
     }
   }
 
+  private setSort(column: "owned" | "gold") {
+    this.sortColumn = column;
+    this.updateLeaderboard();
+  }
+
   private updateLeaderboard() {
     if (this.game === null) throw new Error("Not initialized");
     const myPlayer = this.game.myPlayer();
 
-    const sorted = this.game
-      .playerViews()
-      .sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+    const sorted = this.game.playerViews().slice();
+
+    sorted.sort((a, b) => {
+      let valueA: number, valueB: number;
+      switch (this.sortColumn) {
+        case "gold":
+          valueA = a.gold();
+          valueB = b.gold();
+          break;
+        case "owned":
+        default:
+          valueA = a.numTilesOwned();
+          valueB = b.numTilesOwned();
+          break;
+      }
+
+      return valueB - valueA;
+    });
 
     const numTilesWithoutFallout =
       this.game.numLandTiles() - this.game.numTilesWithFallout();
@@ -273,10 +296,19 @@ export class Leaderboard extends LitElement implements Layer {
         <table>
           <thead>
             <tr>
-              <th>${translateText("leaderboard.rank")}</th>
+              <th @click=${() => this.setSort("owned")} style="cursor: pointer">
+                ${translateText("leaderboard.rank")}
+                ${this.sortColumn === "owned" ? "↓" : ""}
+              </th>
               <th>${translateText("leaderboard.player")}</th>
-              <th>${translateText("leaderboard.owned")}</th>
-              <th>${translateText("leaderboard.gold")}</th>
+              <th @click=${() => this.setSort("owned")} style="cursor: pointer">
+                ${translateText("leaderboard.owned")}
+                ${this.sortColumn === "owned" ? "↓" : ""}
+              </th>
+              <th @click=${() => this.setSort("gold")} style="cursor: pointer">
+                ${translateText("leaderboard.gold")}
+                ${this.sortColumn === "gold" ? "↓" : ""}
+              </th>
               <th>${translateText("leaderboard.troops")}</th>
             </tr>
           </thead>
