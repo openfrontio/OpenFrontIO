@@ -39,7 +39,6 @@ export class Leaderboard extends LitElement implements Layer {
 
   players: Entry[] = [];
 
-  @state()
   private sortColumn: "owned" | "gold" = "owned";
 
   @state()
