@@ -2,6 +2,7 @@ import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
+  Gold,
   Player,
   PlayerID,
   Tick,
@@ -26,7 +27,7 @@ export class ConstructionExecution implements Execution {
 
   private ticksUntilComplete: Tick;
 
-  private cost: number;
+  private cost: Gold;
 
   constructor(
     private ownerId: PlayerID,

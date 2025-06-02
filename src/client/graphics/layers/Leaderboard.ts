@@ -89,7 +89,9 @@ export class Leaderboard extends LitElement implements Layer {
 
     switch (this._sortKey) {
       case "gold":
-        sorted = sorted.sort((a, b) => compare(a.gold(), b.gold()));
+        sorted = sorted.sort((a, b) =>
+          compare(Number(a.gold()), Number(b.gold())),
+        );
         break;
       case "troops":
         sorted = sorted.sort((a, b) => compare(a.troops(), b.troops()));
