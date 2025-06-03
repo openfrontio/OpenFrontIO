@@ -266,15 +266,14 @@ export class GameRenderer {
     window.addEventListener("resize", () => this.resizeCanvas());
     this.resizeCanvas();
 
-    this.transformHandler = new TransformHandler(
+    /*this.transformHandler = new TransformHandler( // this seems to be unnecessary and causes desyncs between layer transformations by creating two TransformHandlers
       this.game,
       this.eventBus,
       this.canvas,
-    );
+    );*/
 
     //zoom/pan to center of map
     this.transformHandler.centerAll();
-    //this.transformHandler.override(-100, -100, 1);
 
     requestAnimationFrame(() => this.renderGame());
   }
