@@ -38,7 +38,7 @@ export class SpawnExecution implements Execution {
     });
 
     if (!player.hasSpawned()) {
-      this.mg.addExecution(new PlayerExecution(player.id()));
+      this.mg.addExecution(new PlayerExecution(player));
       if (player.type() === PlayerType.Bot) {
         this.mg.addExecution(new BotExecution(player));
       }

@@ -4,7 +4,6 @@ import {
   Game,
   MessageType,
   Player,
-  PlayerID,
   Unit,
   UnitType,
 } from "../game/Game";
@@ -13,7 +12,6 @@ import { PseudoRandom } from "../PseudoRandom";
 import { SAMMissileExecution } from "./SAMMissileExecution";
 
 export class SAMLauncherExecution implements Execution {
-  private player: Player;
   private mg: Game;
   private active: boolean = true;
 
@@ -26,7 +24,7 @@ export class SAMLauncherExecution implements Execution {
   private pseudoRandom: PseudoRandom | undefined;
 
   constructor(
-    private ownerId: PlayerID,
+    private _owner: Player,
     private tile: TileRef | null,
     private sam: Unit | null = null,
   ) {
@@ -37,12 +35,6 @@ export class SAMLauncherExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    if (!mg.hasPlayer(this.ownerId)) {
-      console.warn(`SAMLauncherExecution: owner ${this.ownerId} not found`);
-      this.active = false;
-      return;
-    }
-    this.player = mg.player(this.ownerId);
   }
 
   private getSingleTarget(): Unit | null {
@@ -54,7 +46,7 @@ export class SAMLauncherExecution implements Execution {
       ])
       .filter(
         ({ unit }) =>
-          unit.owner() !== this.player && !this.player.isFriendly(unit.owner()),
+          unit.owner() !== this._owner && !this._owner.isFriendly(unit.owner()),
       );
 
     return (
@@ -93,20 +85,20 @@ export class SAMLauncherExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.mg === null || this.player === null) {
+    if (this.mg === null || this._owner === null) {
       throw new Error("Not initialized");
     }
     if (this.sam === null) {
       if (this.tile === null) {
         throw new Error("tile is null");
       }
-      const spawnTile = this.player.canBuild(UnitType.SAMLauncher, this.tile);
+      const spawnTile = this._owner.canBuild(UnitType.SAMLauncher, this.tile);
       if (spawnTile === false) {
         consolex.warn("cannot build SAM Launcher");
         this.active = false;
         return;
       }
-      this.sam = this.player.buildUnit(UnitType.SAMLauncher, spawnTile, {
+      this.sam = this._owner.buildUnit(UnitType.SAMLauncher, spawnTile, {
         cooldownDuration: this.mg.config().SAMCooldown(),
       });
     }
@@ -115,8 +107,8 @@ export class SAMLauncherExecution implements Execution {
       return;
     }
 
-    if (this.player !== this.sam.owner()) {
-      this.player = this.sam.owner();
+    if (this._owner !== this.sam.owner()) {
+      this._owner = this.sam.owner();
     }
 
     if (this.pseudoRandom === undefined) {
@@ -132,7 +124,7 @@ export class SAMLauncherExecution implements Execution {
       .map(({ unit }) => unit)
       .filter(
         (unit) =>
-          unit.owner() !== this.player && !this.player.isFriendly(unit.owner()),
+          unit.owner() !== this._owner && !this._owner.isFriendly(unit.owner()),
       )
       .filter((unit) => {
         const dst = unit.targetTile();

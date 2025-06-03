@@ -1,64 +1,35 @@
 import { consolex } from "../Consolex";
-import {
-  AllPlayers,
-  Execution,
-  Game,
-  Player,
-  PlayerID,
-  PlayerType,
-} from "../game/Game";
+import { AllPlayers, Execution, Game, Player, PlayerType } from "../game/Game";
 import { flattenedEmojiTable } from "../Util";
 
 export class EmojiExecution implements Execution {
-  private requestor: Player;
-  private recipient: Player | typeof AllPlayers;
-
   private active = true;
 
   constructor(
-    private senderID: PlayerID,
-    private recipientID: PlayerID | typeof AllPlayers,
+    private _owner: Player,
+    private _target: Player | typeof AllPlayers,
     private emoji: number,
   ) {}
 
-  init(mg: Game, ticks: number): void {
-    if (!mg.hasPlayer(this.senderID)) {
-      console.warn(`EmojiExecution: sender ${this.senderID} not found`);
-      this.active = false;
-      return;
-    }
-    if (this.recipientID !== AllPlayers && !mg.hasPlayer(this.recipientID)) {
-      console.warn(`EmojiExecution: recipient ${this.recipientID} not found`);
-      this.active = false;
-      return;
-    }
-
-    this.requestor = mg.player(this.senderID);
-    this.recipient =
-      this.recipientID === AllPlayers
-        ? AllPlayers
-        : mg.player(this.recipientID);
-  }
+  init(mg: Game, ticks: number): void {}
 
   tick(ticks: number): void {
     const emojiString = flattenedEmojiTable[this.emoji];
     if (emojiString === undefined) {
       consolex.warn(
-        `cannot send emoji ${this.emoji} from ${this.requestor} to ${this.recipient}`,
+        `cannot send emoji ${this.emoji} from ${this._owner} to ${this._target}`,
       );
-    } else if (this.requestor.canSendEmoji(this.recipient)) {
-      this.requestor.sendEmoji(this.recipient, emojiString);
+    } else if (this._owner.canSendEmoji(this._target)) {
+      this._owner.sendEmoji(this._target, emojiString);
       if (
         emojiString === "🖕" &&
-        this.recipient !== AllPlayers &&
-        this.recipient.type() === PlayerType.FakeHuman
+        this._target !== AllPlayers &&
+        this._target.type() === PlayerType.FakeHuman
       ) {
-        this.recipient.updateRelation(this.requestor, -100);
+        this._target.updateRelation(this._owner, -100);
       }
     } else {
-      consolex.warn(
-        `cannot send emoji from ${this.requestor} to ${this.recipient}`,
-      );
+      consolex.warn(`cannot send emoji from ${this._owner} to ${this._target}`);
     }
     this.active = false;
   }

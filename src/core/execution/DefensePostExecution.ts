@@ -1,17 +1,9 @@
 import { consolex } from "../Consolex";
-import {
-  Execution,
-  Game,
-  Player,
-  PlayerID,
-  Unit,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { ShellExecution } from "./ShellExecution";
 
 export class DefensePostExecution implements Execution {
-  private player: Player;
   private mg: Game;
   private post: Unit | null = null;
   private active: boolean = true;
@@ -22,18 +14,12 @@ export class DefensePostExecution implements Execution {
   private alreadySentShell = new Set<Unit>();
 
   constructor(
-    private ownerId: PlayerID,
+    private _owner: Player,
     private tile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    if (!mg.hasPlayer(this.ownerId)) {
-      console.warn(`DefensePostExectuion: owner ${this.ownerId} not found`);
-      this.active = false;
-      return;
-    }
-    this.player = mg.player(this.ownerId);
   }
 
   private shoot() {
@@ -61,21 +47,21 @@ export class DefensePostExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.post === null) {
-      const spawnTile = this.player.canBuild(UnitType.DefensePost, this.tile);
+      const spawnTile = this._owner.canBuild(UnitType.DefensePost, this.tile);
       if (spawnTile === false) {
         consolex.warn("cannot build Defense Post");
         this.active = false;
         return;
       }
-      this.post = this.player.buildUnit(UnitType.DefensePost, spawnTile, {});
+      this.post = this._owner.buildUnit(UnitType.DefensePost, spawnTile, {});
     }
     if (!this.post.isActive()) {
       this.active = false;
       return;
     }
 
-    if (this.player !== this.post.owner()) {
-      this.player = this.post.owner();
+    if (this._owner !== this.post.owner()) {
+      this._owner = this.post.owner();
     }
 
     if (this.target !== null && !this.target.isActive()) {

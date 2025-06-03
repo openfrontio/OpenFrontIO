@@ -283,8 +283,8 @@ export class FakeHumanExecution implements Execution {
     this.lastEmojiSent.set(enemy, this.mg.ticks());
     this.mg.addExecution(
       new EmojiExecution(
-        this.player.id(),
-        enemy.id(),
+        this.player,
+        enemy,
         this.random.randElement(this.heckleEmoji),
       ),
     );
@@ -355,7 +355,7 @@ export class FakeHumanExecution implements Execution {
     const tick = this.mg.ticks();
     this.lastNukeSent.push([tick, tile]);
     this.mg.addExecution(
-      new NukeExecution(UnitType.AtomBomb, this.player.id(), tile),
+      new NukeExecution(UnitType.AtomBomb, this.player, tile),
     );
   }
 
@@ -415,8 +415,8 @@ export class FakeHumanExecution implements Execution {
     }
     this.mg.addExecution(
       new TransportShipExecution(
-        this.player.id(),
-        other.id(),
+        this.player,
+        other,
         closest.y,
         this.player.troops() / 5,
         null,
@@ -435,7 +435,7 @@ export class FakeHumanExecution implements Execution {
       if (oceanTiles.length > 0) {
         const buildTile = this.random.randElement(oceanTiles);
         this.mg.addExecution(
-          new ConstructionExecution(player.id(), buildTile, UnitType.Port),
+          new ConstructionExecution(player, buildTile, UnitType.Port),
         );
       }
       return;
@@ -464,9 +464,7 @@ export class FakeHumanExecution implements Execution {
     if (canBuild === false) {
       return;
     }
-    this.mg.addExecution(
-      new ConstructionExecution(this.player.id(), tile, type),
-    );
+    this.mg.addExecution(new ConstructionExecution(this.player, tile, type));
   }
 
   private maybeSpawnWarship(): boolean {
@@ -492,11 +490,7 @@ export class FakeHumanExecution implements Execution {
         return false;
       }
       this.mg.addExecution(
-        new ConstructionExecution(
-          this.player.id(),
-          targetTile,
-          UnitType.Warship,
-        ),
+        new ConstructionExecution(this.player, targetTile, UnitType.Warship),
       );
       return true;
     }
@@ -567,8 +561,8 @@ export class FakeHumanExecution implements Execution {
 
     this.mg.addExecution(
       new TransportShipExecution(
-        this.player.id(),
-        this.mg.owner(dst).id(),
+        this.player,
+        this.mg.owner(dst),
         dst,
         this.player.troops() / 5,
         null,

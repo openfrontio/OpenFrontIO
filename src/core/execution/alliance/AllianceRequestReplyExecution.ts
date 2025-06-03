@@ -1,53 +1,31 @@
 import { consolex } from "../../Consolex";
-import { Execution, Game, Player, PlayerID } from "../../game/Game";
+import { Execution, Game, Player } from "../../game/Game";
 
 export class AllianceRequestReplyExecution implements Execution {
   private active = true;
-  private requestor: Player | null = null;
-  private recipient: Player | null = null;
 
   constructor(
-    private requestorID: PlayerID,
-    private recipientID: PlayerID,
+    private _owner: Player,
+    private _target: Player,
     private accept: boolean,
   ) {}
 
-  init(mg: Game, ticks: number): void {
-    if (!mg.hasPlayer(this.requestorID)) {
-      console.warn(
-        `AllianceRequestReplyExecution requester ${this.requestorID} not found`,
-      );
-      this.active = false;
-      return;
-    }
-    if (!mg.hasPlayer(this.recipientID)) {
-      console.warn(
-        `AllianceRequestReplyExecution recipient ${this.recipientID} not found`,
-      );
-      this.active = false;
-      return;
-    }
-    this.requestor = mg.player(this.requestorID);
-    this.recipient = mg.player(this.recipientID);
-  }
+  init(mg: Game, ticks: number): void {}
 
   tick(ticks: number): void {
-    if (this.requestor === null || this.recipient === null) {
-      throw new Error("Not initialized");
-    }
-    if (this.requestor.isFriendly(this.recipient)) {
+    if (this._owner.isFriendly(this._target)) {
       consolex.warn("already allied");
     } else {
-      const request = this.requestor
+      const request = this._owner
         .outgoingAllianceRequests()
-        .find((ar) => ar.recipient() === this.recipient);
+        .find((ar) => ar.recipient() === this._target);
       if (request === undefined) {
         consolex.warn("no alliance request found");
       } else {
         if (this.accept) {
           request.accept();
-          this.requestor.updateRelation(this.recipient, 100);
-          this.recipient.updateRelation(this.requestor, 100);
+          this._owner.updateRelation(this._target, 100);
+          this._target.updateRelation(this._owner, 100);
         } else {
           request.reject();
         }

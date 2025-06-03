@@ -1,4 +1,4 @@
-import { Execution, Game } from "../game/Game";
+import { Execution, Game, Player, TerraNullius } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
@@ -42,31 +42,34 @@ export class Executor {
   }
 
   createExec(intent: Intent): Execution {
-    const player = this.mg.playerByClientID(intent.clientID);
-    if (!player) {
+    // Check intent validity
+    if (!this.checkIntent(intent)) {
+      return new NoOpExecution();
+    }
+    const owner = this.mg.playerByClientID(intent.clientID);
+    if (!owner) {
       console.warn(`player with clientID ${intent.clientID} not found`);
       return new NoOpExecution();
     }
-    const playerID = player.id();
+
+    let targetRegion: Player | TerraNullius = this.mg.terraNullius();
+    if ("targetID" in intent && intent.targetID !== null) {
+      targetRegion = this.mg.player(intent.targetID);
+    }
 
     switch (intent.type) {
       case "attack": {
-        return new AttackExecution(
-          intent.troops,
-          playerID,
-          intent.targetID,
-          null,
-        );
+        return new AttackExecution(intent.troops, owner, targetRegion, null);
       }
       case "cancel_attack":
-        return new RetreatExecution(playerID, intent.attackID);
+        return new RetreatExecution(owner, intent.attackID);
       case "cancel_boat":
-        return new BoatRetreatExecution(playerID, intent.unitID);
+        return new BoatRetreatExecution(owner, intent.unitID);
       case "move_warship":
-        return new MoveWarshipExecution(player, intent.unitId, intent.tile);
+        return new MoveWarshipExecution(owner, intent.unitId, intent.tile);
       case "spawn":
         return new SpawnExecution(
-          player.info(),
+          owner.info(),
           this.mg.ref(intent.x, intent.y),
         );
       case "boat":
@@ -75,54 +78,94 @@ export class Executor {
           src = this.mg.ref(intent.srcX, intent.srcY);
         }
         return new TransportShipExecution(
-          playerID,
-          intent.targetID,
+          owner,
+          targetRegion,
           this.mg.ref(intent.dstX, intent.dstY),
           intent.troops,
           src,
         );
       case "allianceRequest":
-        return new AllianceRequestExecution(playerID, intent.recipient);
+        return new AllianceRequestExecution(
+          owner,
+          this.mg.player(intent.recipient),
+        );
       case "allianceRequestReply":
         return new AllianceRequestReplyExecution(
-          intent.requestor,
-          playerID,
+          this.mg.player(intent.requestor),
+          owner,
           intent.accept,
         );
       case "breakAlliance":
-        return new BreakAllianceExecution(playerID, intent.recipient);
+        return new BreakAllianceExecution(
+          owner,
+          this.mg.player(intent.recipient),
+        );
       case "targetPlayer":
-        return new TargetPlayerExecution(playerID, intent.target);
+        return new TargetPlayerExecution(owner, this.mg.player(intent.target));
       case "emoji":
-        return new EmojiExecution(playerID, intent.recipient, intent.emoji);
+        return new EmojiExecution(
+          owner,
+          this.mg.player(intent.recipient),
+          intent.emoji,
+        );
       case "donate_troops":
         return new DonateTroopsExecution(
-          playerID,
-          intent.recipient,
+          owner,
+          this.mg.player(intent.recipient),
           intent.troops,
         );
       case "donate_gold":
-        return new DonateGoldExecution(playerID, intent.recipient, intent.gold);
+        return new DonateGoldExecution(
+          owner,
+          this.mg.player(intent.recipient),
+          intent.gold,
+        );
       case "troop_ratio":
-        return new SetTargetTroopRatioExecution(playerID, intent.ratio);
+        return new SetTargetTroopRatioExecution(owner, intent.ratio);
       case "embargo":
-        return new EmbargoExecution(player, intent.targetID, intent.action);
+        return new EmbargoExecution(
+          owner,
+          this.mg.player(intent.targetID),
+          intent.action,
+        );
       case "build_unit":
         return new ConstructionExecution(
-          playerID,
+          owner,
           this.mg.ref(intent.x, intent.y),
           intent.unit,
         );
       case "quick_chat":
         return new QuickChatExecution(
-          playerID,
-          intent.recipient,
+          owner,
+          this.mg.player(intent.recipient),
           intent.quickChatKey,
           intent.variables ?? {},
         );
       default:
         throw new Error(`intent type ${intent} not found`);
     }
+  }
+
+  checkIntent(intent: Intent): boolean {
+    if ("recipient" in intent) {
+      if (!this.mg.hasPlayer(intent.recipient)) {
+        console.warn(`recipient with id ${intent.recipient} not found`);
+        return false;
+      }
+    }
+    if ("requestor" in intent) {
+      if (!this.mg.hasPlayer(intent.requestor)) {
+        console.warn(`requestor with id ${intent.requestor} not found`);
+        return false;
+      }
+    }
+    if ("targetID" in intent && intent.targetID !== null) {
+      if (!this.mg.hasPlayer(intent.targetID)) {
+        console.warn(`target with id ${intent.targetID} not found`);
+        return false;
+      }
+    }
+    return true;
   }
 
   spawnBots(numBots: number): Execution[] {

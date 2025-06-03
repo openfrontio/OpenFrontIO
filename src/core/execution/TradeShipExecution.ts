@@ -5,7 +5,6 @@ import {
   Game,
   MessageType,
   Player,
-  PlayerID,
   Unit,
   UnitType,
 } from "../game/Game";
@@ -17,26 +16,24 @@ import { distSortUnit } from "../Util";
 export class TradeShipExecution implements Execution {
   private active = true;
   private mg: Game;
-  private origOwner: Player;
   private tradeShip: Unit | undefined;
   private wasCaptured = false;
   private pathFinder: PathFinder;
 
   constructor(
-    private _owner: PlayerID,
+    private _owner: Player,
     private srcPort: Unit,
     private _dstPort: Unit,
   ) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.origOwner = mg.player(this._owner);
     this.pathFinder = PathFinder.Mini(mg, 2500);
   }
 
   tick(ticks: number): void {
     if (this.tradeShip === undefined) {
-      const spawn = this.origOwner.canBuild(
+      const spawn = this._owner.canBuild(
         UnitType.TradeShip,
         this.srcPort.tile(),
       );
@@ -45,7 +42,7 @@ export class TradeShipExecution implements Execution {
         this.active = false;
         return;
       }
-      this.tradeShip = this.origOwner.buildUnit(UnitType.TradeShip, spawn, {
+      this.tradeShip = this._owner.buildUnit(UnitType.TradeShip, spawn, {
         targetUnit: this._dstPort,
         lastSetSafeFromPirates: ticks,
       });
@@ -56,7 +53,7 @@ export class TradeShipExecution implements Execution {
       return;
     }
 
-    if (this.origOwner !== this.tradeShip.owner()) {
+    if (this._owner !== this.tradeShip.owner()) {
       // Store as variable in case ship is recaptured by previous owner
       this.wasCaptured = true;
     }
@@ -136,7 +133,7 @@ export class TradeShipExecution implements Execution {
     if (this.wasCaptured) {
       this.tradeShip!.owner().addGold(gold);
       this.mg.displayMessage(
-        `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
+        `Received ${renderNumber(gold)} gold from ship captured from ${this._owner.displayName()}`,
         MessageType.SUCCESS,
         this.tradeShip!.owner().id(),
       );

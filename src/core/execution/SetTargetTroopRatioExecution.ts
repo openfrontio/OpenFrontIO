@@ -1,32 +1,30 @@
 import { consolex } from "../Consolex";
-import { Execution, Game, Player, PlayerID } from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
 
 export class SetTargetTroopRatioExecution implements Execution {
-  private player: Player;
-
   private active = true;
 
   constructor(
-    private playerID: PlayerID,
+    private _owner: Player,
     private targetTroopsRatio: number,
   ) {}
 
   init(mg: Game, ticks: number): void {
-    if (!mg.hasPlayer(this.playerID)) {
+    if (!mg.hasPlayer(this._owner.id())) {
       console.warn(
-        `SetTargetTRoopRatioExecution: player ${this.playerID} not found`,
+        `SetTargetTRoopRatioExecution: player ${this._owner.id()} not found`,
       );
     }
-    this.player = mg.player(this.playerID);
+    this._owner = mg.player(this._owner.id());
   }
 
   tick(ticks: number): void {
     if (this.targetTroopsRatio < 0 || this.targetTroopsRatio > 1) {
       consolex.warn(
-        `target troop ratio of ${this.targetTroopsRatio} for player ${this.player} invalid`,
+        `target troop ratio of ${this.targetTroopsRatio} for player ${this._owner.id()} invalid`,
       );
     } else {
-      this.player.setTargetTroopRatio(this.targetTroopsRatio);
+      this._owner.setTargetTroopRatio(this.targetTroopsRatio);
     }
     this.active = false;
   }
