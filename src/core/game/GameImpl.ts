@@ -56,6 +56,7 @@ export class GameImpl implements Game {
   private unInitExecs: Execution[] = [];
 
   _players: Map<PlayerID, PlayerImpl> = new Map<PlayerID, PlayerImpl>();
+  _playersByClientID: Map<ClientID, Player> = new Map<ClientID, Player>();
   _playersBySmallID: Player[] = [];
 
   private execs: Execution[] = [];
@@ -392,6 +393,9 @@ export class GameImpl implements Game {
     this._playersBySmallID.push(player);
     this.nextPlayerID++;
     this._players.set(playerInfo.id, player);
+    if (playerInfo.clientID !== null) {
+      this._playersByClientID.set(playerInfo.clientID, player);
+    }
     return player;
   }
 
@@ -415,12 +419,7 @@ export class GameImpl implements Game {
   }
 
   playerByClientID(id: ClientID): Player | null {
-    for (const [, player] of this._players) {
-      if (player.clientID() === id) {
-        return player;
-      }
-    }
-    return null;
+    return this._playersByClientID.get(id) ?? null;
   }
 
   isOnMap(cell: Cell): boolean {
