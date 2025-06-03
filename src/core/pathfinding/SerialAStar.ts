@@ -1,5 +1,4 @@
 import { PriorityQueue } from "@datastructures-js/priority-queue";
-import { consolex } from "../Consolex";
 import { GameMap, TileRef } from "../game/GameMap";
 import { AStar, PathFindResultType } from "./AStar";
 
@@ -121,14 +120,14 @@ export class SerialAStar implements AStar {
   }
 
   /**
- * Expands the current tile by exploring its neighbors and updating scores
- * and paths for the A* algorithm. This method supports both forward and backward
- * search depending on the `isForward` flag.
- * 
- * @param current - The current TileRef being expanded.
- * @param isForward - Boolean indicating whether this is the forward search (true)
- *                    or backward search (false).
- */
+   * Expands the current tile by exploring its neighbors and updating scores
+   * and paths for the A* algorithm. This method supports both forward and backward
+   * search depending on the `isForward` flag.
+   *
+   * @param current - The current TileRef being expanded.
+   * @param isForward - Boolean indicating whether this is the forward search (true)
+   *                    or backward search (false).
+   */
   private expandTileRef(current: TileRef, isForward: boolean) {
     for (const neighbor of this.gameMap.neighbors(current)) {
       if (
@@ -156,13 +155,13 @@ export class SerialAStar implements AStar {
   }
 
   /**
- * Estimates the cost (heuristic) between two tiles using Manhattan distance,
- * scaled by a factor of 1.1 to slightly overestimate the distance.
- * 
- * @param a - The starting TileRef.
- * @param b - The destination TileRef.
- * @returns The heuristic cost estimate between tile a and b.
- */
+   * Estimates the cost (heuristic) between two tiles using Manhattan distance,
+   * scaled by a factor of 1.1 to slightly overestimate the distance.
+   *
+   * @param a - The starting TileRef.
+   * @param b - The destination TileRef.
+   * @returns The heuristic cost estimate between tile a and b.
+   */
   private heuristic(a: TileRef, b: TileRef): number {
     try {
       const dx = Math.abs(this.gameMap.x(a) - this.gameMap.x(b));
@@ -175,12 +174,12 @@ export class SerialAStar implements AStar {
   }
 
   /**
- * Reconstructs the full path from the start to the goal by combining
- * the forward path (start to meeting point) and backward path (meeting point to goal).
- * 
- * @returns An array of TileRefs representing the complete path.
- *          Returns an empty array if no meeting point is set.
- */
+   * Reconstructs the full path from the start to the goal by combining
+   * the forward path (start to meeting point) and backward path (meeting point to goal).
+   *
+   * @returns An array of TileRefs representing the complete path.
+   *          Returns an empty array if no meeting point is set.
+   */
   public reconstructPath(): TileRef[] {
     if (!this.meetingPoint) return [];
 
@@ -199,7 +198,7 @@ export class SerialAStar implements AStar {
     while (this.bwdCameFrom.has(current)) {
       current = this.bwdCameFrom.get(current)!;
       path.push(current);
-   }
+    }
 
     return path;
   }

@@ -64,9 +64,9 @@ export class MiniAStar implements AStar {
 
 /**
  * Ensures that the upscaled path starts with `cellSrc` (if provided) and ends with `cellDst`.
- * If `cellSrc` or `cellDst` are missing or not at the correct positions, 
+ * If `cellSrc` or `cellDst` are missing or not at the correct positions,
  * the function adjusts the path accordingly by trimming or adding these cells.
- * 
+ *
  * @param upscaled - The upscaled path as an array of Cells.
  * @param cellDst - The destination Cell that should be at the end of the path.
  * @param cellSrc - (Optional) The start Cell that should be at the beginning of the path.
@@ -101,7 +101,7 @@ function fixExtremes(upscaled: Cell[], cellDst: Cell, cellSrc?: Cell): Cell[] {
 /**
  * Upscales a path of cells by a given scale factor and interpolates
  * intermediate points between scaled cells to create a smoother path.
- * 
+ *
  * @param path - Array of Cell objects representing the original path.
  * @param scaleFactor - The factor by which to scale coordinates (default is 2).
  * @returns A new array of Cells representing the upscaled and smoothed path.
@@ -110,7 +110,9 @@ function upscalePath(path: Cell[], scaleFactor: number = 2): Cell[] {
   if (path.length === 0) return [];
 
   // Scale each point by the scaleFactor
-  const scaledPath = path.map(point => new Cell(point.x * scaleFactor, point.y * scaleFactor));
+  const scaledPath = path.map(
+    (point) => new Cell(point.x * scaleFactor, point.y * scaleFactor),
+  );
 
   const smoothPath: Cell[] = [];
 
@@ -145,11 +147,13 @@ function upscalePath(path: Cell[], scaleFactor: number = 2): Cell[] {
 
 /**
  * Finds the index of a cell in the upscaled path matching the given destination cell.
- * 
+ *
  * @param upscaled - Array of upscaled Cells to search within.
  * @param cellDst - Cell to find.
  * @returns The index of the matching cell or -1 if not found.
  */
 function findCell(upscaled: Cell[], cellDst: Cell): number {
-  return upscaled.findIndex(cell => cell.x === cellDst.x && cell.y === cellDst.y);
+  return upscaled.findIndex(
+    (cell) => cell.x === cellDst.x && cell.y === cellDst.y,
+  );
 }

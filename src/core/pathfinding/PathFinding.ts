@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import { Game } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
@@ -15,7 +14,7 @@ export class ParabolaPathFinder {
   computeControlPoints(
     orig: TileRef,
     dst: TileRef,
-    distanceBasedHeight = true,    
+    distanceBasedHeight = true,
   ) {
     const p0 = { x: this.mg.x(orig), y: this.mg.y(orig) };
     const p3 = { x: this.mg.x(dst), y: this.mg.y(dst) };
@@ -39,19 +38,19 @@ export class ParabolaPathFinder {
   }
 
   /**
- * Calculates the next tile along a parabolic path based on the given speed.
- * 
- * This method advances the internal parametric curve by the specified speed,
- * retrieving the next point on the path. It then converts this point's coordinates
- * to a tile reference on the game map.
- * 
- * @param speed - The amount to increment the curve parameter, controlling the step size.
- * 
- * @returns The next tile reference on the path as a `TileRef`, or `true` if the end
- *          of the path has been reached (no further points).
- * 
- * @throws Error if the internal curve is not initialized (the pathfinder is not ready).
- */
+   * Calculates the next tile along a parabolic path based on the given speed.
+   *
+   * This method advances the internal parametric curve by the specified speed,
+   * retrieving the next point on the path. It then converts this point's coordinates
+   * to a tile reference on the game map.
+   *
+   * @param speed - The amount to increment the curve parameter, controlling the step size.
+   *
+   * @returns The next tile reference on the path as a `TileRef`, or `true` if the end
+   *          of the path has been reached (no further points).
+   *
+   * @throws Error if the internal curve is not initialized (the pathfinder is not ready).
+   */
   nextTile(speed: number): TileRef | true {
     if (!this.curve) {
       throw new Error("ParabolaPathFinder not initialized");
@@ -70,15 +69,15 @@ export class AirPathFinder {
     private random: PseudoRandom,
   ) {}
 
-    /**
+  /**
    * Calculates the next tile on the path from the current tile to the destination tile.
    * Moves either horizontally or vertically each step, with a probability
    * that favors the larger distance axis.
-   * 
+   *
    * If the current tile equals the destination tile, returns `true` indicating arrival.
    * If the next position doesn't change (already at destination), also returns `true`.
    * Otherwise, returns the next tile reference to move to.
-   * 
+   *
    * @param tile - The current tile reference.
    * @param dst - The destination tile reference.
    * @returns The next tile reference to move onto, or `true` if already at destination.
@@ -138,37 +137,37 @@ export class PathFinder {
     });
   }
 
-/**
- * Calculates and returns the next tile along the path from the current position (`curr`)
- * towards the destination (`dst`). This method manages the A* pathfinding lifecycle,
- * including initiating pathfinding, checking if recomputation is needed, and stepping
- * through the computed path.
- * 
- * Workflow:
- * - Validates input tiles and returns `PathNotFound` if invalid.
- * - If the current position is within `dist` distance of the destination, returns `Completed`.
- * - If a previous path computation is finished, decides whether to reuse or recompute the path.
- * - Continues running the A* computation until completion, pending status, or failure.
- * - Returns appropriate `TileResult` including next tile to move onto, completion, pending, or failure.
- * 
- * @param curr - The current tile reference (cannot be null).
- * @param dst - The target destination tile reference (cannot be null).
- * @param dist - Optional distance threshold to consider destination reached (default is 1).
- * 
- * @returns A `TileResult` indicating the next move, completion, pending state, or pathfinding failure.
- */
+  /**
+   * Calculates and returns the next tile along the path from the current position (`curr`)
+   * towards the destination (`dst`). This method manages the A* pathfinding lifecycle,
+   * including initiating pathfinding, checking if recomputation is needed, and stepping
+   * through the computed path.
+   *
+   * Workflow:
+   * - Validates input tiles and returns `PathNotFound` if invalid.
+   * - If the current position is within `dist` distance of the destination, returns `Completed`.
+   * - If a previous path computation is finished, decides whether to reuse or recompute the path.
+   * - Continues running the A* computation until completion, pending status, or failure.
+   * - Returns appropriate `TileResult` including next tile to move onto, completion, pending, or failure.
+   *
+   * @param curr - The current tile reference (cannot be null).
+   * @param dst - The target destination tile reference (cannot be null).
+   * @param dist - Optional distance threshold to consider destination reached (default is 1).
+   *
+   * @returns A `TileResult` indicating the next move, completion, pending state, or pathfinding failure.
+   */
   nextTile(
     curr: TileRef | null,
     dst: TileRef | null,
     dist: number = 1,
   ): TileResult {
-  if (curr === null || dst === null) {
-    return { type: PathFindResultType.PathNotFound };
-  }
+    if (curr === null || dst === null) {
+      return { type: PathFindResultType.PathNotFound };
+    }
 
-  if (this.game.manhattanDist(curr, dst) < dist) {
-    return { type: PathFindResultType.Completed, tile: curr };
-  }
+    if (this.game.manhattanDist(curr, dst) < dist) {
+      return { type: PathFindResultType.Completed, tile: curr };
+    }
 
     if (this.computeFinished) {
       if (this.shouldRecompute(curr, dst)) {
@@ -204,33 +203,31 @@ export class PathFinder {
     }
   }
 
-/**
- * Determines whether the current computed path should be recomputed based on changes
- * in the current and destination tiles.
- * 
- * Conditions for recomputing:
- * - If no existing path or stored current/destination positions.
- * - If the new destination is sufficiently different from the stored one, beyond a
- *   distance tolerance that scales with how far the `curr` and `dst` are.
- * 
- * The tolerance thresholds are:
- * - Distance > 50: tolerance = 10
- * - Distance > 25: tolerance = 5
- * - Otherwise: tolerance = 0
- * 
- * @param curr - The current tile reference.
- * @param dst - The destination tile reference.
- * @returns `true` if the path needs recomputing, `false` otherwise.
- */
+  /**
+   * Determines whether the current computed path should be recomputed based on changes
+   * in the current and destination tiles.
+   *
+   * Conditions for recomputing:
+   * - If no existing path or stored current/destination positions.
+   * - If the new destination is sufficiently different from the stored one, beyond a
+   *   distance tolerance that scales with how far the `curr` and `dst` are.
+   *
+   * The tolerance thresholds are:
+   * - Distance > 50: tolerance = 10
+   * - Distance > 25: tolerance = 5
+   * - Otherwise: tolerance = 0
+   *
+   * @param curr - The current tile reference.
+   * @param dst - The destination tile reference.
+   * @returns `true` if the path needs recomputing, `false` otherwise.
+   */
   private shouldRecompute(curr: TileRef, dst: TileRef): boolean {
     if (!this.path || !this.curr || !this.dst) {
       return true;
     }
 
     const dist = this.game.manhattanDist(curr, dst);
-    const tolerance =
-      dist > 50 ? 10 :
-      dist > 25 ? 5 : 0;
+    const tolerance = dist > 50 ? 10 : dist > 25 ? 5 : 0;
 
     return this.game.manhattanDist(this.dst, dst) > tolerance;
   }
