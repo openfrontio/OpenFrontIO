@@ -125,10 +125,11 @@ export const getColoredSprite = (
   customBorderColor?: Colord,
 ): HTMLCanvasElement => {
   const owner = unit.owner();
-  const territoryColor = customTerritoryColor ?? theme.territoryColor(owner);
-  const borderColor = customBorderColor ?? theme.borderColor(owner);
+  const territoryColor: Colord =
+    customTerritoryColor ?? theme.territoryColor(owner);
+  const borderColor: Colord = customBorderColor ?? theme.borderColor(owner);
   const spawnHighlightColor = theme.spawnHighlightColor();
-  const key = `${unit.type()}-${owner.id()}-${customTerritoryColor}-${customBorderColor}`;
+  const key = `${unit.type()}-${owner.id()}-${territoryColor.toRgbString()}-${borderColor.toRgbString()}`;
 
   if (coloredSpriteCache.has(key)) {
     return coloredSpriteCache.get(key)!;
