@@ -35,15 +35,25 @@ import { BuildMenu } from "./BuildMenu";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
 
+export interface TooltipItem {
+  text: string;
+  className: string;
+}
+
 export interface MenuItem {
   id: string;
   name: string;
   disabled: boolean;
+  displayed?: boolean;
   action: () => void;
   color?: string;
   icon?: string;
+  text?: string;
+  fontSize?: string;
   children?: MenuItem[];
+  tooltipItems?: TooltipItem[];
 }
+
 export interface RadialMenuConfig {
   menuSize?: number;
   submenuScale?: number;
@@ -56,14 +66,18 @@ export interface RadialMenuConfig {
   centerButtonIcon?: string;
   maxNestedLevels?: number;
   innerRadiusIncrement?: number;
+  tooltipStyle?: string;
 }
+
 export class RadialMenu implements Layer {
   private menuElement: d3.Selection<HTMLDivElement, unknown, null, undefined>;
+  private tooltipElement: HTMLDivElement | null = null;
   private isVisible: boolean = false;
 
   private currentLevel: number = 0; // Current menu level (0 = main menu, 1 = submenu, etc.)
   private menuStack: MenuItem[][] = []; // Stack to track menu navigation history
   private currentMenuItems: MenuItem[] = []; // Current active menu items (changes based on level)
+  private rootMenuItems: MenuItem[] = []; // Store the original root menu items
 
   private readonly menuSize: number;
   private readonly submenuScale: number;
@@ -77,6 +91,7 @@ export class RadialMenu implements Layer {
   private readonly innerRadiusIncrement: number;
   private readonly maxNestedLevels: number;
   private readonly centerButtonIcon: string;
+  private readonly tooltipStyle: string;
 
   private isCenterButtonEnabled = false;
   private originalCenterButtonEnabled = false;
@@ -85,6 +100,8 @@ export class RadialMenu implements Layer {
   private backAction: (() => void) | null = null;
 
   private isTransitioning: boolean = false;
+  private lastHideTime: number = 0;
+  private reopenCooldownMs: number = 300;
 
   private menuGroups: Map<
     number,
@@ -122,10 +139,12 @@ export class RadialMenu implements Layer {
     this.originalCenterButtonIcon = config.centerButtonIcon || "";
     this.maxNestedLevels = config.maxNestedLevels || 3;
     this.innerRadiusIncrement = config.innerRadiusIncrement || 20;
+    this.tooltipStyle = config.tooltipStyle || "";
   }
 
   init() {
     this.createMenuElement();
+    this.createTooltipElement();
   }
 
   private createMenuElement() {
@@ -217,6 +236,37 @@ export class RadialMenu implements Layer {
       .attr("x", -this.centerIconSize / 2)
       .attr("y", -this.centerIconSize / 2)
       .style("pointer-events", "none");
+  }
+
+  private createTooltipElement() {
+    this.tooltipElement = document.createElement("div");
+    this.tooltipElement.className = "radial-tooltip";
+    this.tooltipElement.style.position = "absolute";
+    this.tooltipElement.style.pointerEvents = "none";
+    this.tooltipElement.style.background = "rgba(0, 0, 0, 0.7)";
+    this.tooltipElement.style.color = "white";
+    this.tooltipElement.style.padding = "6px 10px";
+    this.tooltipElement.style.borderRadius = "6px";
+    this.tooltipElement.style.fontSize = "12px";
+    this.tooltipElement.style.zIndex = "10000";
+    this.tooltipElement.style.maxWidth = "250px";
+    this.tooltipElement.style.display = "none";
+    document.body.appendChild(this.tooltipElement);
+
+    const style = document.createElement("style");
+    style.textContent = `
+      .radial-tooltip .title {
+        font-weight: bold;
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+      .radial-tooltip .description {
+        margin-bottom: 4px;
+      }
+
+      ${this.tooltipStyle}
+    `;
+    document.head.appendChild(style);
   }
 
   private getInnerRadiusForLevel(level: number): number {
@@ -357,6 +407,10 @@ export class RadialMenu implements Layer {
         : d.data.color || "#333333";
       path.attr("fill", color);
 
+      if (d.data.tooltipItems && d.data.tooltipItems.length > 0) {
+        this.showTooltip(d.data.tooltipItems);
+      }
+
       if (
         d.data.children &&
         d.data.children.length > 0 &&
@@ -390,6 +444,8 @@ export class RadialMenu implements Layer {
         window.clearTimeout(this.submenuHoverTimeout);
         this.submenuHoverTimeout = null;
       }
+
+      this.hideTooltip();
 
       if (
         d.data.disabled ||
@@ -435,7 +491,17 @@ export class RadialMenu implements Layer {
       }
     };
 
-    paths.each(function (d, i) {
+    function handleMouseMove(event: MouseEvent) {
+      const tooltipEl = document.querySelector(
+        ".radial-tooltip",
+      ) as HTMLElement;
+      if (tooltipEl && tooltipEl.style.display !== "none") {
+        tooltipEl.style.left = event.pageX + 10 + "px";
+        tooltipEl.style.top = event.pageY + 10 + "px";
+      }
+    }
+
+    paths.each(function (d) {
       const path = d3.select(this);
 
       path.on("mouseover", function () {
@@ -444,6 +510,10 @@ export class RadialMenu implements Layer {
 
       path.on("mouseout", function () {
         onMouseOut(d, path);
+      });
+
+      path.on("mousemove", function (event) {
+        handleMouseMove(event as MouseEvent);
       });
 
       path.on("click", function (event) {
@@ -458,21 +528,40 @@ export class RadialMenu implements Layer {
     });
 
     const icons = arcs
-      .append("image")
-      .attr("class", "menu-item-icon")
-      .attr("xlink:href", (d) =>
-        d.data.disabled ? disabledIcon : d.data.icon || disabledIcon,
-      )
-      .attr("width", this.iconSize)
-      .attr("height", this.iconSize)
-      .attr("x", (d) => arc.centroid(d)[0] - this.iconSize / 2)
-      .attr("y", (d) => arc.centroid(d)[1] - this.iconSize / 2)
+      .append("g")
+      .attr("class", "menu-item-content")
       .style("pointer-events", "none")
       .attr("data-id", (d) => d.data.id);
 
     icons.each((d) => {
-      const icon = d3.select(`image[data-id="${d.data.id}"]`) as any;
-      this.menuIcons.set(d.data.id, icon);
+      const content = d3.select(`g[data-id="${d.data.id}"]`);
+
+      if (d.data.text) {
+        content
+          .append("text")
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", "central")
+          .attr("x", arc.centroid(d)[0])
+          .attr("y", arc.centroid(d)[1])
+          .attr("fill", "white")
+          .attr("font-size", d.data.fontSize ?? "12px")
+          .attr("font-family", "Arial, sans-serif")
+          .style("opacity", d.data.disabled ? 0.5 : 1)
+          .text(d.data.text);
+      } else {
+        content
+          .append("image")
+          .attr(
+            "xlink:href",
+            d.data.disabled ? disabledIcon : d.data.icon || disabledIcon,
+          )
+          .attr("width", this.iconSize)
+          .attr("height", this.iconSize)
+          .attr("x", arc.centroid(d)[0] - this.iconSize / 2)
+          .attr("y", arc.centroid(d)[1] - this.iconSize / 2);
+      }
+
+      this.menuIcons.set(d.data.id, content as any);
     });
 
     menuGroup
@@ -1100,6 +1189,7 @@ export class RadialMenu implements Layer {
     this.menuElement.style("display", "none");
     this.isVisible = false;
     this.selectedItemId = null;
+    this.hideTooltip();
 
     this.resetMenu();
     this.isTransitioning = false;
@@ -1107,6 +1197,8 @@ export class RadialMenu implements Layer {
     this.menuGroups.clear();
     this.menuPaths.clear();
     this.menuIcons.clear();
+
+    this.lastHideTime = Date.now();
   }
 
   private handleCenterButtonClick() {
@@ -1230,6 +1322,7 @@ export class RadialMenu implements Layer {
     enabled: boolean,
     color?: string,
     icon?: string,
+    text?: string,
   ) {
     const path = this.menuPaths.get(id);
     if (!path) return;
@@ -1239,6 +1332,7 @@ export class RadialMenu implements Layer {
       item.disabled = !enabled;
       if (color) item.color = enabled ? color : this.disabledColor;
       if (icon) item.icon = icon;
+      if (text !== undefined) item.text = text;
     }
 
     const fillColor = enabled && color ? color : this.disabledColor;
@@ -1257,13 +1351,26 @@ export class RadialMenu implements Layer {
       .style("cursor", enabled ? "pointer" : "not-allowed");
 
     const iconElement = this.menuIcons.get(id);
-    if (iconElement && icon) {
-      iconElement.attr("xlink:href", enabled ? icon : disabledIcon);
+    if (iconElement) {
+      if (item?.text) {
+        const textElement = iconElement.select("text");
+        if (textElement.size() > 0) {
+          textElement
+            .style("opacity", enabled ? 1 : 0.5)
+            .text(text || item.text);
+        }
+      } else if (icon) {
+        const imageElement = iconElement.select("image");
+        if (imageElement.size() > 0) {
+          imageElement.attr("xlink:href", enabled ? icon : disabledIcon);
+        }
+      }
     }
   }
 
   public setRootMenuItems(items: MenuItem[]) {
     this.currentMenuItems = [...items];
+    this.rootMenuItems = [...items];
     if (this.isVisible) {
       this.refreshMenu();
     }
@@ -1276,6 +1383,9 @@ export class RadialMenu implements Layer {
   private resetMenu() {
     this.currentLevel = 0;
     this.menuStack = [];
+
+    this.currentMenuItems = [...this.rootMenuItems];
+
     this.backAction = null;
     this.navigationInProgress = false;
 
@@ -1301,7 +1411,7 @@ export class RadialMenu implements Layer {
     }
   }
 
-  private refreshMenu() {
+  public refreshMenu() {
     if (!this.isVisible) return;
     this.renderMenuItems(this.currentMenuItems, this.currentLevel);
   }
@@ -1312,5 +1422,32 @@ export class RadialMenu implements Layer {
 
   shouldTransform(): boolean {
     return false;
+  }
+
+  private isReopeningAllowed(): boolean {
+    const now = Date.now();
+    const timeSinceHide = now - this.lastHideTime;
+    return timeSinceHide >= this.reopenCooldownMs;
+  }
+
+  private showTooltip(items: TooltipItem[]) {
+    if (!this.tooltipElement) return;
+
+    this.tooltipElement.innerHTML = "";
+
+    for (const item of items) {
+      const div = document.createElement("div");
+      div.className = item.className;
+      div.textContent = item.text;
+      this.tooltipElement.appendChild(div);
+    }
+
+    this.tooltipElement.style.display = "block";
+  }
+
+  private hideTooltip() {
+    if (this.tooltipElement) {
+      this.tooltipElement.style.display = "none";
+    }
   }
 }
