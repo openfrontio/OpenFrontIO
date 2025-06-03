@@ -240,21 +240,14 @@ class Client {
     page("/join/:lobbyId", (ctx) => {
       if (ctx.init && sessionStorage.getItem("inLobby")) {
         // On page reload, go back home
-        page.redirect("/");
+        page("/");
         return;
       }
       const lobbyId = ctx.params.lobbyId;
 
-      if (lobbyId?.endsWith("#")) {
-        // When the cookies button is pressed, '#' is added to the url
-        // causing the page to attempt to rejoin the lobby during game play.
-        console.error("Invalid lobby ID provided");
-        return;
-      }
-
       this.joinModal.open(lobbyId);
 
-      consolex.log(`joining lobby ${lobbyId}`);
+      console.log(`joining lobby ${lobbyId}`);
     });
 
     page();
