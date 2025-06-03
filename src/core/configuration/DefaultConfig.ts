@@ -442,11 +442,11 @@ export class DefaultConfig implements Config {
               ? 0n
               : BigInt(
                   Math.min(
-                    2_000_000,
+                    6_000_000,
                     Math.pow(
                       2,
                       p.unitsIncludingConstruction(UnitType.Hospital).length,
-                    ) * 2_000_000,
+                    ) * 1_500_000,
                   ),
                 ),
           territoryBound: true,
