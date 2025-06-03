@@ -4,18 +4,18 @@
 // If you also need execution use function below. Does not work with things not
 
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
-import { Game, PlayerID, UnitType } from "../../src/core/game/Game";
+import { Game, Player, UnitType } from "../../src/core/game/Game";
 
 // built via UI (e.g.: trade ships)
 export function constructionExecution(
   game: Game,
-  playerID: PlayerID,
+  _owner: Player,
   x: number,
   y: number,
   unit: UnitType,
   ticks = 4,
 ) {
-  game.addExecution(new ConstructionExecution(playerID, game.ref(x, y), unit));
+  game.addExecution(new ConstructionExecution(_owner, game.ref(x, y), unit));
 
   // 4 ticks by default as it usually goes like this
   // Init of construction execution
