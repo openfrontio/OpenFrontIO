@@ -267,17 +267,13 @@ export class TransformHandler {
     this.changed = true;
   }
 
-  centerAll() {
-    const fit = 0.8; //map must be at most 80% of the screen on each axis
+  centerAll(fit: number = 1) {
+    //position entire map centered on the screen
 
     const vpWidth = this.boundingRect().width;
     const vpHeight = this.boundingRect().height;
     const mapWidth = this.game.width();
     const mapHeight = this.game.height();
-
-    console.log(
-      `fitting a ${mapWidth}x${mapHeight} map to a ${vpWidth}x${vpHeight} display`,
-    );
 
     const scHor = (vpWidth / mapWidth) * fit;
     const scVer = (vpHeight / mapHeight) * fit;

@@ -272,8 +272,8 @@ export class GameRenderer {
       this.canvas,
     );*/
 
-    //zoom/pan to center of map
-    this.transformHandler.centerAll();
+    //show whole map on startup
+    this.transformHandler.centerAll(0.9);
 
     requestAnimationFrame(() => this.renderGame());
   }
