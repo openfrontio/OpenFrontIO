@@ -90,7 +90,7 @@ const COLORS = {
     defend: "#2196f3",
     greet: "#ff9800",
     misc: "#9c27b0",
-    warnings: "#ffeb3b",
+    warnings: "#e3c532",
   },
 };
 
@@ -219,6 +219,16 @@ export class MainRadialMenu extends LitElement implements Layer {
       return;
     }
 
+    if (this.emojiTable.isVisible) {
+      this.emojiTable.hideTable();
+      return;
+    }
+
+    if (this.playerPanel.isVisible) {
+      this.playerPanel.hide();
+      return;
+    }
+
     if (this.radialMenu.isMenuVisible()) {
       this.radialMenu.hideRadialMenu();
       return;
@@ -289,10 +299,11 @@ export class MainRadialMenu extends LitElement implements Layer {
   ) {
     this.buildMenu.playerActions = actions;
 
-    const recipient = this.game.owner(tile) as PlayerView;
-    if (recipient instanceof TerraNulliusImpl) return;
+    const tileOwner = this.game.owner(tile);
+    const recipient =
+      tileOwner instanceof TerraNulliusImpl ? null : (tileOwner as PlayerView);
 
-    if (this.ctModal && myPlayer) {
+    if (this.ctModal && myPlayer && recipient) {
       this.ctModal.setSender(myPlayer);
       this.ctModal.setRecipient(recipient);
     }
@@ -344,164 +355,180 @@ export class MainRadialMenu extends LitElement implements Layer {
       },
     ];
 
-    const infoSubMenu: MenuItem[] = [
-      {
-        id: "info_chat",
-        name: "chat",
-        disabled: false,
-        action: () => {},
-        color: COLORS.chat.default,
-        icon: chatIcon,
-        children: this.createQuickChatMenu(recipient),
-      },
-      {
-        id: "info_emoji",
-        name: "emoji",
-        disabled: false,
-        action: () => {},
-        color: COLORS.infoEmoji,
-        icon: emojiIcon,
-        children: [
-          ...flattenedEmojiTable.slice(0, 11).map((emoji, index) => ({
-            id: `emoji_${index}`,
-            name: emoji,
-            text: emoji,
-            disabled: false,
-            fontSize: "30px",
-            action: () => {
-              const targetPlayer =
-                recipient === this.game.myPlayer()
-                  ? AllPlayers
-                  : (recipient as PlayerView);
-              this.eventBus.emit(new SendEmojiIntentEvent(targetPlayer, index));
-            },
-          })),
+    const infoSubMenu: MenuItem[] = recipient
+      ? [
           {
-            id: "emoji_more",
-            name: "more",
+            id: "info_chat",
+            name: "chat",
             disabled: false,
+            action: () => {},
+            color: COLORS.chat.default,
+            icon: chatIcon,
+            children: this.createQuickChatMenu(recipient),
+          },
+          {
+            id: "info_emoji",
+            name: "emoji",
+            disabled: false,
+            action: () => {},
             color: COLORS.infoEmoji,
             icon: emojiIcon,
-            action: () => {
-              this.emojiTable.showTable((emoji) => {
-                const targetPlayer =
-                  recipient === this.game.myPlayer()
-                    ? AllPlayers
-                    : (recipient as PlayerView);
-                this.eventBus.emit(
-                  new SendEmojiIntentEvent(
-                    targetPlayer,
-                    flattenedEmojiTable.indexOf(emoji),
-                  ),
-                );
-                this.emojiTable.hideTable();
-              });
-            },
+            children: [
+              ...flattenedEmojiTable.slice(0, 15).map((emoji, index) => ({
+                id: `emoji_${index}`,
+                name: emoji,
+                text: emoji,
+                disabled: false,
+                fontSize: "25px",
+                action: () => {
+                  const targetPlayer =
+                    recipient === this.game.myPlayer()
+                      ? AllPlayers
+                      : (recipient as PlayerView);
+                  this.eventBus.emit(
+                    new SendEmojiIntentEvent(targetPlayer, index),
+                  );
+                },
+              })),
+              {
+                id: "emoji_more",
+                name: "more",
+                disabled: false,
+                color: COLORS.infoEmoji,
+                icon: emojiIcon,
+                action: () => {
+                  this.emojiTable.showTable((emoji) => {
+                    const targetPlayer =
+                      recipient === this.game.myPlayer()
+                        ? AllPlayers
+                        : (recipient as PlayerView);
+                    this.eventBus.emit(
+                      new SendEmojiIntentEvent(
+                        targetPlayer,
+                        flattenedEmojiTable.indexOf(emoji),
+                      ),
+                    );
+                    this.emojiTable.hideTable();
+                  });
+                },
+              },
+            ],
           },
-        ],
-      },
-      {
-        id: "info_player",
-        name: "player",
-        disabled: false,
-        action: () => {
-          this.playerPanel.show(actions, tile);
-        },
-        color: COLORS.info,
-        icon: infoIcon,
-      },
-    ];
+          {
+            id: "info_player",
+            name: "player",
+            disabled: false,
+            action: () => {
+              this.playerPanel.show(actions, tile);
+            },
+            color: COLORS.info,
+            icon: infoIcon,
+          },
+        ]
+      : [];
 
     const isAlly = !!actions?.interaction?.canBreakAlliance;
-    const allySubMenu: MenuItem[] = [
-      {
-        id: "ally_target",
-        name: "target",
-        disabled: false,
-        action: () => {
-          this.eventBus.emit(new SendTargetPlayerIntentEvent(recipient.id()));
-        },
-        color: COLORS.target,
-        icon: targetIcon,
-      },
-      {
-        id: "ally_request",
-        name: "request",
-        disabled: !actions?.interaction?.canSendAllianceRequest,
-        displayed: !isAlly,
-        action: () => {
-          this.eventBus.emit(
-            new SendAllianceRequestIntentEvent(myPlayer, recipient),
-          );
-        },
-        color: COLORS.ally,
-        icon: allianceIcon,
-      },
-      {
-        id: "ally_break",
-        name: "break",
-        disabled: !actions?.interaction?.canBreakAlliance,
-        displayed: isAlly,
-        action: () => {
-          this.eventBus.emit(
-            new SendBreakAllianceIntentEvent(myPlayer, recipient),
-          );
-        },
-        color: COLORS.breakAlly,
-        icon: traitorIcon,
-      },
-      {
-        id: "ally_donate_gold",
-        name: "donate gold",
-        disabled: !actions?.interaction?.canDonate,
-        action: () => {
-          this.eventBus.emit(new SendDonateGoldIntentEvent(recipient, null));
-        },
-        color: COLORS.ally,
-        icon: donateGoldIcon,
-      },
-      {
-        id: "ally_donate_troops",
-        name: "donate troops",
-        disabled: !actions?.interaction?.canDonate,
-        action: () => {
-          this.eventBus.emit(new SendDonateTroopsIntentEvent(recipient, null));
-        },
-        color: COLORS.ally,
-        icon: donateTroopIcon,
-      },
-      {
-        id: "ally_trade",
-        name: "trade",
-        disabled: !!actions?.interaction?.canEmbargo,
-        displayed: !actions?.interaction?.canEmbargo,
-        action: () => {
-          this.eventBus.emit(new SendEmbargoIntentEvent(recipient, "start"));
-        },
-        color: COLORS.trade,
-        text: translateText("player_panel.start_trade"),
-      },
-      {
-        id: "ally_embargo",
-        name: "embargo",
-        disabled: !actions?.interaction?.canEmbargo,
-        displayed: !!actions?.interaction?.canEmbargo,
-        action: () => {
-          this.eventBus.emit(new SendEmbargoIntentEvent(recipient, "stop"));
-        },
-        color: COLORS.embargo,
-        text: translateText("player_panel.stop_trade"),
-      },
-    ].filter((item) => item.displayed !== false);
+    const allySubMenu: MenuItem[] = recipient
+      ? [
+          {
+            id: "ally_target",
+            name: "target",
+            disabled: false,
+            action: () => {
+              this.eventBus.emit(
+                new SendTargetPlayerIntentEvent(recipient.id()),
+              );
+            },
+            color: COLORS.target,
+            icon: targetIcon,
+          },
+          {
+            id: "ally_request",
+            name: "request",
+            disabled: !actions?.interaction?.canSendAllianceRequest,
+            displayed: !isAlly,
+            action: () => {
+              this.eventBus.emit(
+                new SendAllianceRequestIntentEvent(myPlayer, recipient),
+              );
+            },
+            color: COLORS.ally,
+            icon: allianceIcon,
+          },
+          {
+            id: "ally_break",
+            name: "break",
+            disabled: !actions?.interaction?.canBreakAlliance,
+            displayed: isAlly,
+            action: () => {
+              this.eventBus.emit(
+                new SendBreakAllianceIntentEvent(myPlayer, recipient),
+              );
+            },
+            color: COLORS.breakAlly,
+            icon: traitorIcon,
+          },
+          {
+            id: "ally_donate_gold",
+            name: "donate gold",
+            disabled: !actions?.interaction?.canDonate,
+            action: () => {
+              this.eventBus.emit(
+                new SendDonateGoldIntentEvent(recipient, null),
+              );
+            },
+            color: COLORS.ally,
+            icon: donateGoldIcon,
+          },
+          {
+            id: "ally_donate_troops",
+            name: "donate troops",
+            disabled: !actions?.interaction?.canDonate,
+            action: () => {
+              this.eventBus.emit(
+                new SendDonateTroopsIntentEvent(recipient, null),
+              );
+            },
+            color: COLORS.ally,
+            icon: donateTroopIcon,
+          },
+          {
+            id: "ally_trade",
+            name: "trade",
+            disabled: !!actions?.interaction?.canEmbargo,
+            displayed: !actions?.interaction?.canEmbargo,
+            action: () => {
+              this.eventBus.emit(
+                new SendEmbargoIntentEvent(recipient, "start"),
+              );
+            },
+            color: COLORS.trade,
+            text: translateText("player_panel.start_trade"),
+          },
+          {
+            id: "ally_embargo",
+            name: "embargo",
+            disabled: !actions?.interaction?.canEmbargo,
+            displayed: !!actions?.interaction?.canEmbargo,
+            action: () => {
+              this.eventBus.emit(new SendEmbargoIntentEvent(recipient, "stop"));
+            },
+            color: COLORS.embargo,
+            text: translateText("player_panel.stop_trade"),
+          },
+        ].filter((item) => item.displayed !== false)
+      : [];
 
     const updatedMenuItems: MenuItem[] = [
       {
         id: Slot.Boat.toString(),
         name: "boat",
-        disabled: !actions.buildableUnits.find(
-          (bu) => bu.type === UnitType.TransportShip,
-        )?.canBuild,
+        disabled:
+          !actions.buildableUnits.find(
+            (bu) => bu.type === UnitType.TransportShip,
+          )?.canBuild || !recipient,
         action: () => {
+          if (!recipient) return;
           myPlayer.bestTransportShipSpawn(tile).then((spawn) => {
             let spawnTile: Cell | null = null;
             if (spawn !== false) {
@@ -525,10 +552,11 @@ export class MainRadialMenu extends LitElement implements Layer {
       {
         id: Slot.Ally.toString(),
         name: "ally",
-        disabled: !(
-          actions?.interaction?.canSendAllianceRequest ||
-          actions?.interaction?.canBreakAlliance
-        ),
+        disabled:
+          !(
+            actions?.interaction?.canSendAllianceRequest ||
+            actions?.interaction?.canBreakAlliance
+          ) || !recipient,
         action: () => {},
         color: actions?.interaction?.canSendAllianceRequest
           ? COLORS.ally
