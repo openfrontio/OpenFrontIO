@@ -148,6 +148,7 @@ export enum UnitType {
   MIRV = "MIRV",
   MIRVWarhead = "MIRV Warhead",
   Construction = "Construction",
+  Hospital = "Hospital",
 }
 
 export interface OwnerComp {
@@ -194,6 +195,8 @@ export interface UnitParamsMap {
   [UnitType.City]: {};
 
   [UnitType.MIRV]: {};
+
+  [UnitType.Hospital]: {};
 
   [UnitType.MIRVWarhead]: {
     targetTile?: number;

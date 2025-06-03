@@ -435,6 +435,23 @@ export class DefaultConfig implements Config {
           cost: () => 0n,
           territoryBound: true,
         };
+      case UnitType.Hospital:
+        return {
+          cost: (p: Player) =>
+            p.type() === PlayerType.Human && this.infiniteGold()
+              ? 0n
+              : BigInt(
+                  Math.min(
+                    12_000_000,
+                    Math.pow(
+                      2,
+                      p.unitsIncludingConstruction(UnitType.City).length,
+                    ) * 3_000_000,
+                  ),
+                ),
+          territoryBound: true,
+          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+        };
       default:
         assertNever(type);
     }
@@ -677,6 +694,10 @@ export class DefaultConfig implements Config {
       toAdd *= 0.7;
     }
 
+    if (player.units(UnitType.Hospital).length > 0) {
+      toAdd *= 1 + 0.05 * player.units(UnitType.Hospital).length;
+      // hospital boosts population growth
+    }
     if (player.type() === PlayerType.FakeHuman) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
