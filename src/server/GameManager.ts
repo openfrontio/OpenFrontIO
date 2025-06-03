@@ -2,6 +2,7 @@ import { Logger } from "winston";
 import { ServerConfig } from "../core/configuration/Config";
 import { Difficulty, GameMapType, GameMode, GameType } from "../core/game/Game";
 import { GameConfig, GameID } from "../core/Schemas";
+import { generateID } from "../core/Util";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
 
@@ -11,8 +12,19 @@ export class GameManager {
   constructor(
     private config: ServerConfig,
     private log: Logger,
+    private workerIndex: number,
   ) {
     setInterval(() => this.tick(), 1000);
+  }
+
+  public createGameID(): GameID {
+    for (let i = 0; i < 1000; i++) {
+      const id = generateID(4) + this.workerIndex;
+      if (!this.games.has(id)) {
+        return id;
+      }
+    }
+    throw new Error("Failed to create game ID");
   }
 
   public game(id: GameID): GameServer | null {

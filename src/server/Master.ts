@@ -1,4 +1,3 @@
-import cluster from "cluster";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import http from "http";
@@ -10,10 +9,11 @@ import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
+import { WorkerDiscoveryService } from "./WorkerDiscoveryService";
 
 const config = getServerConfigFromServer();
 const playlist = new MapPlaylist();
-const readyWorkers = new Set();
+const workerManager = new WorkerDiscoveryService();
 
 const app = express();
 const server = http.createServer(app);
@@ -65,81 +65,26 @@ const publicLobbyIDs: Set<string> = new Set();
 
 // Start the master process
 export async function startMaster() {
-  if (!cluster.isPrimary) {
-    throw new Error(
-      "startMaster() should only be called in the primary process",
-    );
-  }
-
-  log.info(`Primary ${process.pid} is running`);
-  log.info(`Setting up ${config.numWorkers()} workers...`);
-
-  // Fork workers
-  for (let i = 0; i < config.numWorkers(); i++) {
-    const worker = cluster.fork({
-      WORKER_ID: i,
-    });
-
-    log.info(`Started worker ${i} (PID: ${worker.process.pid})`);
-  }
-
-  cluster.on("message", (worker, message) => {
-    if (message.type === "WORKER_READY") {
-      const workerId = message.workerId;
-      readyWorkers.add(workerId);
-      log.info(
-        `Worker ${workerId} is ready. (${readyWorkers.size}/${config.numWorkers()} ready)`,
-      );
-      // Start scheduling when all workers are ready
-      if (readyWorkers.size === config.numWorkers()) {
-        log.info("All workers ready, starting game scheduling");
-
-        const scheduleLobbies = () => {
-          schedulePublicGame(playlist).catch((error) => {
-            log.error("Error scheduling public game:", error);
-          });
-        };
-
-        setInterval(
-          () =>
-            fetchLobbies().then((lobbies) => {
-              if (lobbies === 0) {
-                scheduleLobbies();
-              }
-            }),
-          100,
-        );
-      }
-    }
-  });
-
-  // Handle worker crashes
-  cluster.on("exit", (worker, code, signal) => {
-    const workerId = (worker as any).process?.env?.WORKER_ID;
-    if (!workerId) {
-      log.error(`worker crashed could not find id`);
-      return;
-    }
-
-    log.warn(
-      `Worker ${workerId} (PID: ${worker.process.pid}) died with code: ${code} and signal: ${signal}`,
-    );
-    log.info(`Restarting worker ${workerId}...`);
-
-    // Restart the worker with the same ID
-    const newWorker = cluster.fork({
-      WORKER_ID: workerId,
-    });
-
-    log.info(
-      `Restarted worker ${workerId} (New PID: ${newWorker.process.pid})`,
-    );
-  });
-
   const PORT = 3000;
   server.listen(PORT, () => {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });
+
+  const scheduleLobbies = () => {
+    schedulePublicGame(playlist).catch((error) => {
+      log.error("Error scheduling public game:", error);
+    });
+  };
+
+  setInterval(
+    () =>
+      fetchLobbies().then((lobbies) => {
+        if (lobbies === 0) {
+          scheduleLobbies();
+        }
+      }),
+    100,
+  );
 }
 
 app.get(
@@ -190,6 +135,38 @@ app.post(
       log.error(`Error kicking player from game ${gameID}:`, error);
       res.status(500).send("Failed to kick player");
     }
+  }),
+);
+
+app.post(
+  "/api/worker_heartbeat",
+  gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
+    if (req.headers[config.adminHeader()] !== config.adminToken()) {
+      res.status(401).send("Unauthorized");
+      return;
+    }
+
+    const { workerId, dns, activeClients } = req.body;
+
+    if (!workerId || !dns || typeof activeClients !== "number") {
+      res.status(400).json({ error: "Missing required fields" });
+      return;
+    }
+
+    workerManager.updateWorkerHeartbeat(workerId, dns, activeClients);
+    res.status(200).json({ success: true });
+  }),
+);
+
+app.get(
+  "/api/worker_dns",
+  gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
+    const worker = workerManager.getAvailableWorker();
+    if (!worker) {
+      res.status(500).json({ error: "No available workers" });
+      return;
+    }
+    res.status(200).json({ dns: worker.dns });
   }),
 );
 

@@ -26,6 +26,8 @@ import { initWorkerMetrics } from "./WorkerMetrics";
 const config = getServerConfigFromServer();
 
 const workerId = parseInt(process.env.WORKER_ID || "0");
+const masterAddress = `${config.subdomain()}.${config.domain()}`;
+const workerDns = `${config.subdomain()}.${config.domain()}`;
 const log = logger.child({ comp: `w_${workerId}` });
 
 // Worker setup
@@ -39,7 +41,7 @@ export function startWorker() {
   const server = http.createServer(app);
   const wss = new WebSocketServer({ server });
 
-  const gm = new GameManager(config, log);
+  const gm = new GameManager(config, log, workerId);
 
   if (config.env() === GameEnv.Prod && config.otelEnabled()) {
     initWorkerMetrics(gm);
@@ -80,10 +82,49 @@ export function startWorker() {
     }),
   );
 
+  async function start() {
+    this.isRunning = true;
+    console.log("Worker starting long polling...");
+
+    // TODO: remove the true
+    while (true) {
+      try {
+        const response = await this.poll();
+      } catch (error) {
+        console.error("Poll error:", error);
+        await this.sleep(5000);
+      }
+    }
+  }
+
+  // The long polling request
+  async function sendHeartbeat(): Promise<any> {
+    log.info("Sending heartbeat...");
+
+    const response = await fetch(`${masterAddress}/api/worker_heartbeat`, {
+      method: "POST",
+      headers: {
+        [config.adminHeader()]: config.adminToken(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        workerId: workerId,
+        dns: ,
+        activeClients: gm.activeClients(),
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
   app.post(
-    "/api/create_game/:id",
+    "/api/create_game",
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
-      const id = req.params.id;
+      const id = gm.createGameID();
       if (!id) {
         log.warn(`cannot create game, id not found`);
         return res.status(400).json({ error: "Game ID is required" });
