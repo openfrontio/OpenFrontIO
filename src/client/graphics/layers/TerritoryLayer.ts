@@ -33,7 +33,7 @@ export class TerritoryLayer implements Layer {
   private lastDragTime = 0;
   private nodrawDragDuration = 200;
 
-  private refreshRate = 10; //refresh every 10ms
+  private refreshRate = 20; //refresh every 10ms
   private lastRefresh = 0;
 
   private lastFocusedPlayer: PlayerView | null = null;
