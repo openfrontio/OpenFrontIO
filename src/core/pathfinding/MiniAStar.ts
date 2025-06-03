@@ -62,36 +62,55 @@ export class MiniAStar implements AStar {
   }
 }
 
+/**
+ * Ensures that the upscaled path starts with `cellSrc` (if provided) and ends with `cellDst`.
+ * If `cellSrc` or `cellDst` are missing or not at the correct positions, 
+ * the function adjusts the path accordingly by trimming or adding these cells.
+ * 
+ * @param upscaled - The upscaled path as an array of Cells.
+ * @param cellDst - The destination Cell that should be at the end of the path.
+ * @param cellSrc - (Optional) The start Cell that should be at the beginning of the path.
+ * @returns A new array of Cells with fixed start and end points.
+ */
 function fixExtremes(upscaled: Cell[], cellDst: Cell, cellSrc?: Cell): Cell[] {
+  let fixedPath = upscaled;
+
   if (cellSrc !== undefined) {
-    const srcIndex = findCell(upscaled, cellSrc);
+    const srcIndex = findCell(fixedPath, cellSrc);
     if (srcIndex === -1) {
-      // didnt find the start tile in the path
-      upscaled.unshift(cellSrc);
+      // Start cell not found — prepend it to the path
+      fixedPath = [cellSrc, ...fixedPath];
     } else if (srcIndex !== 0) {
-      // found start tile but not at the start
-      // remove all tiles before the start tile
-      upscaled = upscaled.slice(srcIndex);
+      // Start cell found but not at start — trim all before it
+      fixedPath = fixedPath.slice(srcIndex);
     }
   }
 
-  const dstIndex = findCell(upscaled, cellDst);
+  const dstIndex = findCell(fixedPath, cellDst);
   if (dstIndex === -1) {
-    // didnt find the dst tile in the path
-    upscaled.push(cellDst);
-  } else if (dstIndex !== upscaled.length - 1) {
-    // found dst tile but not at the end
-    // remove all tiles after the dst tile
-    upscaled = upscaled.slice(0, dstIndex + 1);
+    // Destination cell not found — append it to the path
+    fixedPath = [...fixedPath, cellDst];
+  } else if (dstIndex !== fixedPath.length - 1) {
+    // Destination cell found but not at end — trim all after it
+    fixedPath = fixedPath.slice(0, dstIndex + 1);
   }
-  return upscaled;
+
+  return fixedPath;
 }
 
+/**
+ * Upscales a path of cells by a given scale factor and interpolates
+ * intermediate points between scaled cells to create a smoother path.
+ * 
+ * @param path - Array of Cell objects representing the original path.
+ * @param scaleFactor - The factor by which to scale coordinates (default is 2).
+ * @returns A new array of Cells representing the upscaled and smoothed path.
+ */
 function upscalePath(path: Cell[], scaleFactor: number = 2): Cell[] {
-  // Scale up each point
-  const scaledPath = path.map(
-    (point) => new Cell(point.x * scaleFactor, point.y * scaleFactor),
-  );
+  if (path.length === 0) return [];
+
+  // Scale each point by the scaleFactor
+  const scaledPath = path.map(point => new Cell(point.x * scaleFactor, point.y * scaleFactor));
 
   const smoothPath: Cell[] = [];
 
@@ -99,18 +118,16 @@ function upscalePath(path: Cell[], scaleFactor: number = 2): Cell[] {
     const current = scaledPath[i];
     const next = scaledPath[i + 1];
 
-    // Add the current point
+    // Add current point
     smoothPath.push(current);
 
-    // Always interpolate between scaled points
     const dx = next.x - current.x;
     const dy = next.y - current.y;
 
-    // Calculate number of steps needed
-    const distance = Math.max(Math.abs(dx), Math.abs(dy));
-    const steps = distance;
+    // Number of steps is max of delta x or delta y (to cover both axes)
+    const steps = Math.max(Math.abs(dx), Math.abs(dy));
 
-    // Add intermediate points
+    // Interpolate intermediate points between current and next
     for (let step = 1; step < steps; step++) {
       smoothPath.push(
         new Cell(
@@ -121,19 +138,18 @@ function upscalePath(path: Cell[], scaleFactor: number = 2): Cell[] {
     }
   }
 
-  // Add the last point
-  if (scaledPath.length > 0) {
-    smoothPath.push(scaledPath[scaledPath.length - 1]);
-  }
-
+  // Add last point to complete the path
+  smoothPath.push(scaledPath[scaledPath.length - 1]);
   return smoothPath;
 }
 
+/**
+ * Finds the index of a cell in the upscaled path matching the given destination cell.
+ * 
+ * @param upscaled - Array of upscaled Cells to search within.
+ * @param cellDst - Cell to find.
+ * @returns The index of the matching cell or -1 if not found.
+ */
 function findCell(upscaled: Cell[], cellDst: Cell): number {
-  for (let i = 0; i < upscaled.length; i++) {
-    if (upscaled[i].x === cellDst.x && upscaled[i].y === cellDst.y) {
-      return i;
-    }
-  }
-  return -1;
+  return upscaled.findIndex(cell => cell.x === cellDst.x && cell.y === cellDst.y);
 }

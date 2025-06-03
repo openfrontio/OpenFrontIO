@@ -120,6 +120,15 @@ export class SerialAStar implements AStar {
       : PathFindResultType.PathNotFound;
   }
 
+  /**
+ * Expands the current tile by exploring its neighbors and updating scores
+ * and paths for the A* algorithm. This method supports both forward and backward
+ * search depending on the `isForward` flag.
+ * 
+ * @param current - The current TileRef being expanded.
+ * @param isForward - Boolean indicating whether this is the forward search (true)
+ *                    or backward search (false).
+ */
   private expandTileRef(current: TileRef, isForward: boolean) {
     for (const neighbor of this.gameMap.neighbors(current)) {
       if (
@@ -146,39 +155,52 @@ export class SerialAStar implements AStar {
     }
   }
 
+  /**
+ * Estimates the cost (heuristic) between two tiles using Manhattan distance,
+ * scaled by a factor of 1.1 to slightly overestimate the distance.
+ * 
+ * @param a - The starting TileRef.
+ * @param b - The destination TileRef.
+ * @returns The heuristic cost estimate between tile a and b.
+ */
   private heuristic(a: TileRef, b: TileRef): number {
     try {
-      return (
-        1.1 *
-        (Math.abs(this.gameMap.x(a) - this.gameMap.x(b)) +
-          Math.abs(this.gameMap.y(a) - this.gameMap.y(b)))
-      );
+      const dx = Math.abs(this.gameMap.x(a) - this.gameMap.x(b));
+      const dy = Math.abs(this.gameMap.y(a) - this.gameMap.y(b));
+      return 1.1 * (dx + dy);
     } catch {
-      consolex.log("uh oh");
+      // In case of an error (e.g., invalid tile refs), return 0 as fallback
       return 0;
     }
   }
 
+  /**
+ * Reconstructs the full path from the start to the goal by combining
+ * the forward path (start to meeting point) and backward path (meeting point to goal).
+ * 
+ * @returns An array of TileRefs representing the complete path.
+ *          Returns an empty array if no meeting point is set.
+ */
   public reconstructPath(): TileRef[] {
     if (!this.meetingPoint) return [];
 
-    // Reconstruct path from start to meeting point
-    const fwdPath: TileRef[] = [this.meetingPoint];
+    // Path from start to meeting point (forward direction)
+    const path: TileRef[] = [this.meetingPoint];
     let current = this.meetingPoint;
 
+    // Walk backward through the forward cameFrom map to reconstruct the path start -> meeting point
     while (this.fwdCameFrom.has(current)) {
       current = this.fwdCameFrom.get(current)!;
-      fwdPath.unshift(current);
+      path.unshift(current);
     }
 
-    // Reconstruct path from meeting point to goal
+    // Walk forward through the backward cameFrom map to reconstruct the path meeting point -> goal
     current = this.meetingPoint;
-
     while (this.bwdCameFrom.has(current)) {
       current = this.bwdCameFrom.get(current)!;
-      fwdPath.push(current);
-    }
+      path.push(current);
+   }
 
-    return fwdPath;
+    return path;
   }
 }
