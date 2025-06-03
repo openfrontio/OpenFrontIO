@@ -176,7 +176,7 @@ export class TransportShipExecution implements Execution {
     switch (result.type) {
       case PathFindResultType.Completed:
         if (this.mg.owner(this.dst) === this.attacker) {
-          this.attacker.addTroops(this.troops);
+          this.attacker.addTroops(this.boat.troops());
           this.boat.delete(false);
           this.active = false;
 
