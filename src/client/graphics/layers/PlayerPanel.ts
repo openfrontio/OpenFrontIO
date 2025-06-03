@@ -90,7 +90,6 @@ export class PlayerPanel extends LitElement implements Layer {
     e.stopPropagation();
     this.eventBus.emit(
       new SendDonateTroopsIntentEvent(
-        myPlayer,
         other,
         myPlayer.troops() * this.uiState.attackRatio,
       ),
@@ -104,7 +103,7 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendDonateGoldIntentEvent(myPlayer, other, null));
+    this.eventBus.emit(new SendDonateGoldIntentEvent(other, null));
     this.hide();
   }
 
@@ -114,7 +113,7 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendEmbargoIntentEvent(myPlayer, other, "start"));
+    this.eventBus.emit(new SendEmbargoIntentEvent(other, "start"));
     this.hide();
   }
 
@@ -124,7 +123,7 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendEmbargoIntentEvent(myPlayer, other, "stop"));
+    this.eventBus.emit(new SendEmbargoIntentEvent(other, "stop"));
     this.hide();
   }
 

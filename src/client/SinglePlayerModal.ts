@@ -21,6 +21,7 @@ import "./components/Maps";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
+import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
@@ -39,7 +40,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: number | typeof Duos = 2;
 
-  @state() private disabledUnits: string[] = [];
+  @state() private disabledUnits: UnitType[] = [];
 
   render() {
     return html`
@@ -284,48 +285,10 @@ export class SinglePlayerModal extends LitElement {
             <div
               style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"
             >
-              ${[
-                [UnitType.City, "unit_type.city"],
-                [UnitType.DefensePost, "unit_type.defense_post"],
-                [UnitType.Port, "unit_type.port"],
-                [UnitType.Warship, "unit_type.warship"],
-                [UnitType.MissileSilo, "unit_type.missile_silo"],
-                [UnitType.SAMLauncher, "unit_type.sam_launcher"],
-                [UnitType.AtomBomb, "unit_type.atom_bomb"],
-                [UnitType.HydrogenBomb, "unit_type.hydrogen_bomb"],
-                [UnitType.MIRV, "unit_type.mirv"],
-              ].map(
-                ([unitType, translationKey]) => html`
-                  <label
-                    class="option-card ${this.disabledUnits.includes(unitType)
-                      ? ""
-                      : "selected"}"
-                    style="width: 140px;"
-                  >
-                    <div class="checkbox-icon"></div>
-                    <input
-                      type="checkbox"
-                      @change=${(e: Event) => {
-                        const checked = (e.target as HTMLInputElement).checked;
-                        if (checked) {
-                          this.disabledUnits = [
-                            ...this.disabledUnits,
-                            unitType,
-                          ];
-                        } else {
-                          this.disabledUnits = this.disabledUnits.filter(
-                            (u) => u !== unitType,
-                          );
-                        }
-                      }}
-                      .checked=${this.disabledUnits.includes(unitType)}
-                    />
-                    <div class="option-card-title" style="text-align: center;">
-                      ${translateText(translationKey)}
-                    </div>
-                  </label>
-                `,
-              )}
+              ${renderUnitTypeOptions({
+                disabledUnits: this.disabledUnits,
+                toggleUnit: this.toggleUnit.bind(this),
+              })}
             </div>
           </div>
         </div>
@@ -401,6 +364,13 @@ export class SinglePlayerModal extends LitElement {
     const maps = Object.values(GameMapType);
     const randIdx = Math.floor(Math.random() * maps.length);
     return maps[randIdx] as GameMapType;
+  }
+
+  private toggleUnit(unit: UnitType, checked: boolean): void {
+    consolex.log(`Toggling unit type: ${unit} to ${checked}`);
+    this.disabledUnits = checked
+      ? [...this.disabledUnits, unit]
+      : this.disabledUnits.filter((u) => u !== unit);
   }
 
   private startGame() {

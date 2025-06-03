@@ -4,6 +4,7 @@ import {
   AllPlayers,
   Cell,
   GameType,
+  Gold,
   PlayerID,
   PlayerType,
   Tick,
@@ -94,15 +95,13 @@ export class SendEmojiIntentEvent implements GameEvent {
 
 export class SendDonateGoldIntentEvent implements GameEvent {
   constructor(
-    public readonly sender: PlayerView,
     public readonly recipient: PlayerView,
-    public readonly gold: number | null,
+    public readonly gold: Gold | null,
   ) {}
 }
 
 export class SendDonateTroopsIntentEvent implements GameEvent {
   constructor(
-    public readonly sender: PlayerView,
     public readonly recipient: PlayerView,
     public readonly troops: number | null,
   ) {}
@@ -110,7 +109,6 @@ export class SendDonateTroopsIntentEvent implements GameEvent {
 
 export class SendQuickChatEvent implements GameEvent {
   constructor(
-    public readonly sender: PlayerView,
     public readonly recipient: PlayerView,
     public readonly quickChatKey: string,
     public readonly variables: { [key: string]: string },
@@ -119,17 +117,13 @@ export class SendQuickChatEvent implements GameEvent {
 
 export class SendEmbargoIntentEvent implements GameEvent {
   constructor(
-    public readonly sender: PlayerView,
     public readonly target: PlayerView,
     public readonly action: "start" | "stop",
   ) {}
 }
 
 export class CancelAttackIntentEvent implements GameEvent {
-  constructor(
-    public readonly playerID: PlayerID,
-    public readonly attackID: string,
-  ) {}
+  constructor(public readonly attackID: string) {}
 }
 
 export class CancelBoatIntentEvent implements GameEvent {

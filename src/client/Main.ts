@@ -75,7 +75,7 @@ class Client {
     }
 
     // Comment out to show news button.
-    newsButton.hidden = true;
+    // newsButton.hidden = true;
 
     const langSelector = document.querySelector(
       "lang-selector",
@@ -188,8 +188,8 @@ class Client {
           logoutDiscordButton.hidden = true;
           return;
         }
-        // TODO: Update the page for logged in user
         loginDiscordButton.translationKey = "main.logged_in";
+        loginDiscordButton.hidden = true;
         const { user, player } = userMeResponse;
       });
     }
