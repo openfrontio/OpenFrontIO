@@ -445,7 +445,7 @@ export class DefaultConfig implements Config {
                     12_000_000,
                     Math.pow(
                       2,
-                      p.unitsIncludingConstruction(UnitType.City).length,
+                      p.unitsIncludingConstruction(UnitType.Hospital).length,
                     ) * 3_000_000,
                   ),
                 ),
