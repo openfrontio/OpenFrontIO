@@ -356,7 +356,7 @@
       "port": "Sends trade ships to generate gold",
       "defense_post": "Increase defenses of nearby borders",
       "city": "Increase max population",
-      "hospital": "Boosts population growth by 5%"
+      "hospital": "Lowers troop casualties by 5%"
     },
     "not_enough_money": "Not enough money"
   },

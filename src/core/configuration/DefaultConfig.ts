@@ -442,7 +442,7 @@ export class DefaultConfig implements Config {
               ? 0n
               : BigInt(
                   Math.min(
-                    12_000_000,
+                    3_000_000,
                     Math.pow(
                       2,
                       p.unitsIncludingConstruction(UnitType.Hospital).length,
@@ -569,6 +569,14 @@ export class DefaultConfig implements Config {
       const traitorDebuff = defender.isTraitor()
         ? this.traitorDefenseDebuff()
         : 1;
+      const attackerHospitalBonus = Math.pow(
+        0.95,
+        attacker.units(UnitType.Hospital).length,
+      );
+      const defenderHospitalBonus = Math.pow(
+        0.95,
+        defender.units(UnitType.Hospital).length,
+      );
       const baseTroopLoss = 10;
       const attackLossModifier = 1.3;
       const baseTileCost = 45;
@@ -576,9 +584,10 @@ export class DefaultConfig implements Config {
       return {
         attackerTroopLoss:
           mag *
+          attackerHospitalBonus *
           (baseTroopLoss +
             attackLossModifier * defenderDensity * traitorDebuff),
-        defenderTroopLoss: defenderDensity,
+        defenderTroopLoss: defenderDensity * defenderHospitalBonus,
         tilesPerTickUsed:
           baseTileCost *
           within(defenderDensity, 3, 50) ** 0.2 *
@@ -694,10 +703,6 @@ export class DefaultConfig implements Config {
       toAdd *= 0.7;
     }
 
-    if (player.units(UnitType.Hospital).length > 0) {
-      toAdd *= 1 + 0.05 * player.units(UnitType.Hospital).length;
-      // hospital boosts population growth
-    }
     if (player.type() === PlayerType.FakeHuman) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
