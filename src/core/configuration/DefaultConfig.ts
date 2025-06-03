@@ -442,11 +442,11 @@ export class DefaultConfig implements Config {
               ? 0n
               : BigInt(
                   Math.min(
-                    3_000_000,
+                    2_000_000,
                     Math.pow(
                       2,
                       p.unitsIncludingConstruction(UnitType.Hospital).length,
-                    ) * 3_000_000,
+                    ) * 2_000_000,
                   ),
                 ),
           territoryBound: true,
@@ -577,6 +577,7 @@ export class DefaultConfig implements Config {
         0.95,
         defender.units(UnitType.Hospital).length,
       );
+      console.log(attackerHospitalBonus, defenderHospitalBonus);
       const baseTroopLoss = 10;
       const attackLossModifier = 1.3;
       const baseTileCost = 45;
