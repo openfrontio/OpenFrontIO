@@ -244,11 +244,8 @@ class Client {
       }
       const lobbyId = ctx.params.lobbyId;
 
-      // Show news modal even if user loads game directly
-      const newsModal = document.querySelector("news-modal") as NewsModal;
-      if (newsModal) {
-        newsModal.open();
-      }
+      const modal = document.querySelector("news-modal") as NewsModal;
+      if (modal) modal.open();
 
       this.joinModal.open(lobbyId);
 
