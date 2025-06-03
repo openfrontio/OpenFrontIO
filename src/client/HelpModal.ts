@@ -120,6 +120,10 @@ export class HelpModal extends LitElement {
                 </td>
                 <td>${translateText("help_modal.action_reset_gfx")}</td>
               </tr>
+              <tr>
+                <td><span class="key">T</span></td>
+                <td>${translateText("help_modal.action_teammates_view")}</td>
+              </tr>
             </tbody>
           </table>
         </div>

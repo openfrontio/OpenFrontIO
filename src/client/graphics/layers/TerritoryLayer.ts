@@ -7,7 +7,11 @@ import { euclDistFN, TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { PseudoRandom } from "../../../core/PseudoRandom";
-import { AlternateViewEvent, DragEvent } from "../../InputHandler";
+import {
+  AlternateViewEvent,
+  DragEvent,
+  TeammatesViewEvent,
+} from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -30,6 +34,7 @@ export class TerritoryLayer implements Layer {
   private highlightContext: CanvasRenderingContext2D;
 
   private alternativeView = false;
+  private teammatesView = false;
   private lastDragTime = 0;
   private nodrawDragDuration = 200;
 
@@ -107,6 +112,16 @@ export class TerritoryLayer implements Layer {
       .filter((p) => p.type() === PlayerType.Human);
 
     for (const human of humans) {
+      const myPlayer = this.game.myPlayer();
+      // Skip enemy highlights
+      if (
+        this.teammatesView &&
+        human.id() !== myPlayer?.id() &&
+        !myPlayer?.isFriendly(human)
+      ) {
+        continue;
+      }
+
       const center = human.nameLocation();
       if (!center) {
         continue;
@@ -116,7 +131,6 @@ export class TerritoryLayer implements Layer {
         continue;
       }
       let color = this.theme.spawnHighlightColor();
-      const myPlayer = this.game.myPlayer();
       if (
         myPlayer !== null &&
         myPlayer !== human &&
@@ -138,6 +152,14 @@ export class TerritoryLayer implements Layer {
   init() {
     this.eventBus.on(AlternateViewEvent, (e) => {
       this.alternativeView = e.alternateView;
+    });
+    this.eventBus.on(TeammatesViewEvent, (e) => {
+      this.teammatesView = e.teammatesView;
+      this.game.forEachTile((tile) => {
+        if (this.game.hasOwner(tile)) {
+          this.paintTerritory(tile);
+        }
+      });
     });
     this.eventBus.on(DragEvent, (e) => {
       // TODO: consider re-enabling this on mobile or low end devices for smoother dragging.
@@ -267,6 +289,21 @@ export class TerritoryLayer implements Layer {
       return;
     }
     const owner = this.game.owner(tile) as PlayerView;
+
+    // If the owner is an enemy and we are in teammates view
+    // skip painting their tile, keeps bots for easier viewing
+    // early game
+    const myPlayer = this.game.myPlayer();
+    if (
+      owner.type() !== PlayerType.Bot &&
+      this.teammatesView &&
+      owner.id() !== myPlayer?.id() &&
+      !myPlayer?.isFriendly(owner)
+    ) {
+      this.clearTile(tile);
+      return;
+    }
+
     if (this.game.isBorder(tile)) {
       const playerIsFocused = owner && this.game.focusedPlayer() === owner;
       if (
