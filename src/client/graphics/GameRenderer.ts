@@ -265,11 +265,8 @@ export class GameRenderer {
     window.addEventListener("resize", () => this.resizeCanvas());
     this.resizeCanvas();
 
-    this.transformHandler = new TransformHandler(
-      this.game,
-      this.eventBus,
-      this.canvas,
-    );
+    //show whole map on startup
+    this.transformHandler.centerAll(0.9);
 
     requestAnimationFrame(() => this.renderGame());
   }
