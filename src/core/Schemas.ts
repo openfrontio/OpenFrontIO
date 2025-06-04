@@ -181,7 +181,7 @@ const BaseIntentSchema = z.object({
 
 export const AttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("attack"),
-  targetID: ID.nullable(),
+  targetRegionID: ID.nullable(),
   troops: z.number().nullable(),
 });
 
@@ -196,7 +196,7 @@ export const SpawnIntentSchema = BaseIntentSchema.extend({
 
 export const BoatAttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("boat"),
-  targetID: ID.nullable(),
+  targetRegionID: ID.nullable(),
   troops: z.number(),
   dstX: z.number(),
   dstY: z.number(),
@@ -206,46 +206,46 @@ export const BoatAttackIntentSchema = BaseIntentSchema.extend({
 
 export const AllianceRequestIntentSchema = BaseIntentSchema.extend({
   type: z.literal("allianceRequest"),
-  recipient: ID,
+  targetPlayerID: ID,
 });
 
 export const AllianceRequestReplyIntentSchema = BaseIntentSchema.extend({
   type: z.literal("allianceRequestReply"),
-  requestor: ID, // The one who made the original alliance request
+  requestorPlayerID: ID, // The one who made the original alliance request
   accept: z.boolean(),
 });
 
 export const BreakAllianceIntentSchema = BaseIntentSchema.extend({
   type: z.literal("breakAlliance"),
-  recipient: ID,
+  targetPlayerID: ID,
 });
 
 export const TargetPlayerIntentSchema = BaseIntentSchema.extend({
   type: z.literal("targetPlayer"),
-  target: ID,
+  targetPlayerID: ID,
 });
 
 export const EmojiIntentSchema = BaseIntentSchema.extend({
   type: z.literal("emoji"),
-  recipient: z.union([ID, z.literal(AllPlayers)]),
+  targetPlayersID: z.union([ID, z.literal(AllPlayers)]),
   emoji: EmojiSchema,
 });
 
 export const EmbargoIntentSchema = BaseIntentSchema.extend({
   type: z.literal("embargo"),
-  targetID: ID,
+  targetPlayerID: ID,
   action: z.union([z.literal("start"), z.literal("stop")]),
 });
 
 export const DonateGoldIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate_gold"),
-  recipient: ID,
+  targetPlayerID: ID,
   gold: z.bigint().nullable(),
 });
 
 export const DonateTroopIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate_troops"),
-  recipient: ID,
+  targetPlayerID: ID,
   troops: z.number().nullable(),
 });
 
@@ -285,7 +285,7 @@ export const QuickChatKeySchema = z.enum(
 
 export const QuickChatIntentSchema = BaseIntentSchema.extend({
   type: z.literal("quick_chat"),
-  recipient: ID,
+  targetPlayerID: ID,
   quickChatKey: QuickChatKeySchema,
   variables: z.record(SafeString).optional(),
 });

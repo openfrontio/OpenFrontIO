@@ -1,4 +1,10 @@
-import { Execution, Game, Player, TerraNullius } from "../game/Game";
+import {
+  AllPlayers,
+  Execution,
+  Game,
+  Player,
+  TerraNullius,
+} from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
@@ -46,6 +52,8 @@ export class Executor {
     if (!this.checkIntent(intent)) {
       return new NoOpExecution();
     }
+
+    // load players
     const owner = this.mg.playerByClientID(intent.clientID);
     if (!owner) {
       console.warn(`player with clientID ${intent.clientID} not found`);
@@ -53,10 +61,42 @@ export class Executor {
     }
 
     let targetRegion: Player | TerraNullius = this.mg.terraNullius();
-    if ("targetID" in intent && intent.targetID !== null) {
-      targetRegion = this.mg.player(intent.targetID);
+    if ("targetRegionID" in intent && intent.targetRegionID !== null) {
+      targetRegion = this.mg.player(intent.targetRegionID);
     }
 
+    let targetPlayer: Player = owner;
+    if ("targetPlayerID" in intent) {
+      targetPlayer = this.mg.player(intent.targetPlayerID);
+      if (!targetPlayer) {
+        console.warn(`player with clientID ${intent.targetPlayerID} not found`);
+        return new NoOpExecution();
+      }
+    }
+
+    let targetPlayers: Player | typeof AllPlayers = AllPlayers;
+    if ("targetPlayersID" in intent && intent.targetPlayersID !== AllPlayers) {
+      targetPlayers = this.mg.player(intent.targetPlayersID);
+      if (!targetPlayers) {
+        console.warn(
+          `player with clientID ${intent.targetPlayersID} not found`,
+        );
+        return new NoOpExecution();
+      }
+    }
+
+    let requestorPlayer: Player = owner;
+    if ("requestorPlayerID" in intent) {
+      requestorPlayer = this.mg.player(intent.requestorPlayerID);
+      if (!requestorPlayer) {
+        console.warn(
+          `player with clientID ${intent.requestorPlayerID} not found`,
+        );
+        return new NoOpExecution();
+      }
+    }
+
+    // create execution
     switch (intent.type) {
       case "attack": {
         return new AttackExecution(intent.troops, owner, targetRegion, null);
@@ -85,49 +125,27 @@ export class Executor {
           src,
         );
       case "allianceRequest":
-        return new AllianceRequestExecution(
-          owner,
-          this.mg.player(intent.recipient),
-        );
+        return new AllianceRequestExecution(owner, targetPlayer);
       case "allianceRequestReply":
         return new AllianceRequestReplyExecution(
-          this.mg.player(intent.requestor),
+          requestorPlayer,
           owner,
           intent.accept,
         );
       case "breakAlliance":
-        return new BreakAllianceExecution(
-          owner,
-          this.mg.player(intent.recipient),
-        );
+        return new BreakAllianceExecution(owner, targetPlayer);
       case "targetPlayer":
-        return new TargetPlayerExecution(owner, this.mg.player(intent.target));
+        return new TargetPlayerExecution(owner, targetPlayer);
       case "emoji":
-        return new EmojiExecution(
-          owner,
-          this.mg.player(intent.recipient),
-          intent.emoji,
-        );
+        return new EmojiExecution(owner, targetPlayers, intent.emoji);
       case "donate_troops":
-        return new DonateTroopsExecution(
-          owner,
-          this.mg.player(intent.recipient),
-          intent.troops,
-        );
+        return new DonateTroopsExecution(owner, targetPlayer, intent.troops);
       case "donate_gold":
-        return new DonateGoldExecution(
-          owner,
-          this.mg.player(intent.recipient),
-          intent.gold,
-        );
+        return new DonateGoldExecution(owner, targetPlayer, intent.gold);
       case "troop_ratio":
         return new SetTargetTroopRatioExecution(owner, intent.ratio);
       case "embargo":
-        return new EmbargoExecution(
-          owner,
-          this.mg.player(intent.targetID),
-          intent.action,
-        );
+        return new EmbargoExecution(owner, targetPlayer, intent.action);
       case "build_unit":
         return new ConstructionExecution(
           owner,
@@ -137,7 +155,7 @@ export class Executor {
       case "quick_chat":
         return new QuickChatExecution(
           owner,
-          this.mg.player(intent.recipient),
+          targetPlayer,
           intent.quickChatKey,
           intent.variables ?? {},
         );
@@ -147,21 +165,34 @@ export class Executor {
   }
 
   checkIntent(intent: Intent): boolean {
-    if ("recipient" in intent) {
-      if (!this.mg.hasPlayer(intent.recipient)) {
-        console.warn(`recipient with id ${intent.recipient} not found`);
+    if ("targetPlayerID" in intent) {
+      if (!this.mg.hasPlayer(intent.targetPlayerID)) {
+        console.warn(`targetPlayer with id ${intent.targetPlayerID} not found`);
         return false;
       }
     }
-    if ("requestor" in intent) {
-      if (!this.mg.hasPlayer(intent.requestor)) {
-        console.warn(`requestor with id ${intent.requestor} not found`);
+    if ("targetPlayersID" in intent) {
+      if (
+        intent.targetPlayersID !== AllPlayers &&
+        !this.mg.hasPlayer(intent.targetPlayersID)
+      ) {
+        console.warn(
+          `targetPlayer with id ${intent.targetPlayersID} not found`,
+        );
         return false;
       }
     }
-    if ("targetID" in intent && intent.targetID !== null) {
-      if (!this.mg.hasPlayer(intent.targetID)) {
-        console.warn(`target with id ${intent.targetID} not found`);
+    if ("requestorPlayerID" in intent) {
+      if (!this.mg.hasPlayer(intent.requestorPlayerID)) {
+        console.warn(
+          `requestorPlayer with id ${intent.requestorPlayerID} not found`,
+        );
+        return false;
+      }
+    }
+    if ("targetRegionID" in intent && intent.targetRegionID !== null) {
+      if (!this.mg.hasPlayer(intent.targetRegionID)) {
+        console.warn(`targetRegion with id ${intent.targetRegionID} not found`);
         return false;
       }
     }
