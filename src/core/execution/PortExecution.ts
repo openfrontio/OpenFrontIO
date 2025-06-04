@@ -10,6 +10,7 @@ export class PortExecution implements Execution {
   private port: Unit | null = null;
   private random: PseudoRandom | null = null;
   private checkOffset: number | null = null;
+  private currentOwner: Player;
 
   constructor(
     private _owner: Player,
@@ -20,6 +21,7 @@ export class PortExecution implements Execution {
     this.mg = mg;
     this.random = new PseudoRandom(mg.ticks());
     this.checkOffset = mg.ticks() % 10;
+    this.currentOwner = this._owner;
   }
 
   tick(ticks: number): void {
@@ -45,7 +47,7 @@ export class PortExecution implements Execution {
     }
 
     if (this._owner.id() !== this.port.owner().id()) {
-      this._owner = this.port.owner();
+      this.currentOwner = this.port.owner();
     }
 
     // Only check every 10 ticks for performance.
@@ -60,14 +62,16 @@ export class PortExecution implements Execution {
       return;
     }
 
-    const ports = this._owner.tradingPorts(this.port);
+    const ports = this.currentOwner.tradingPorts(this.port);
 
     if (ports.length === 0) {
       return;
     }
 
     const port = this.random.randElement(ports);
-    this.mg.addExecution(new TradeShipExecution(this._owner, this.port, port));
+    this.mg.addExecution(
+      new TradeShipExecution(this.currentOwner, this.port, port),
+    );
   }
 
   isActive(): boolean {
@@ -82,6 +86,6 @@ export class PortExecution implements Execution {
     if (this.port === null) {
       throw new Error("Not initialized");
     }
-    return this.port.owner();
+    return this.currentOwner;
   }
 }

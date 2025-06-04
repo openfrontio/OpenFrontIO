@@ -9,14 +9,7 @@ export class SetTargetTroopRatioExecution implements Execution {
     private targetTroopsRatio: number,
   ) {}
 
-  init(mg: Game, ticks: number): void {
-    if (!mg.hasPlayer(this._owner.id())) {
-      console.warn(
-        `SetTargetTRoopRatioExecution: player ${this._owner.id()} not found`,
-      );
-    }
-    this._owner = mg.player(this._owner.id());
-  }
+  init(mg: Game, ticks: number): void {}
 
   tick(ticks: number): void {
     if (this.targetTroopsRatio < 0 || this.targetTroopsRatio > 1) {
