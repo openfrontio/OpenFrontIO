@@ -1,7 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { consolex } from "../core/Consolex";
 import { GameMode } from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
@@ -51,7 +50,7 @@ export class PublicLobby extends LitElement {
         }
       });
     } catch (error) {
-      consolex.error("Error fetching lobbies:", error);
+      console.error("Error fetching lobbies:", error);
     }
   }
 
@@ -63,7 +62,7 @@ export class PublicLobby extends LitElement {
       const data = await response.json();
       return data.lobbies;
     } catch (error) {
-      consolex.error("Error fetching lobbies:", error);
+      console.error("Error fetching lobbies:", error);
       throw error;
     }
   }
