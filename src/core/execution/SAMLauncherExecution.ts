@@ -19,7 +19,7 @@ export class SAMLauncherExecution implements Execution {
   private active: boolean = true;
 
   private searchRangeRadius = 80;
-  private destinationRangeRadius = 200; // Generous range to allow for area protections
+  private targetRangeRadius = 120; // Generous range to allow for area protections
   // As MIRV go very fast we have to detect them very early but we only
   // shoot the one targeting very close (MIRVWarheadProtectionRadius)
   private MIRVWarheadSearchRadius = 400;
@@ -47,15 +47,14 @@ export class SAMLauncherExecution implements Execution {
     this.player = mg.player(this.ownerId);
   }
 
-  private nukeDestinationInRange(nuke: Unit) {
-    if (this.sam === null) {
+  private nukeTargetInRange(nuke: Unit) {
+    const targetTile = nuke.targetTile();
+    if (this.sam === null || targetTile === undefined) {
       return false;
     }
-    const destinationRangeSquared =
-      this.destinationRangeRadius * this.destinationRangeRadius;
+    const targetRangeSquared = this.targetRangeRadius * this.targetRangeRadius;
     return (
-      squaredDistance(this.mg, this.sam.tile(), nuke.tile()) <
-      destinationRangeSquared
+      squaredDistance(this.mg, this.sam.tile(), targetTile) < targetRangeSquared
     );
   }
 
@@ -70,7 +69,7 @@ export class SAMLauncherExecution implements Execution {
         ({ unit }) =>
           unit.owner() !== this.player &&
           !this.player.isFriendly(unit.owner()) &&
-          this.nukeDestinationInRange(unit),
+          this.nukeTargetInRange(unit),
       );
 
     return (
