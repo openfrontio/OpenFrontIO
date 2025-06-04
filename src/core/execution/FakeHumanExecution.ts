@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import {
   Cell,
   Difficulty,
@@ -117,7 +116,7 @@ export class FakeHumanExecution implements Execution {
     if (this.mg.inSpawnPhase()) {
       const rl = this.randomLand();
       if (rl === null) {
-        consolex.warn(`cannot spawn ${this.nation.playerInfo.name}`);
+        console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
         return;
       }
       this.mg.addExecution(new SpawnExecution(this.nation.playerInfo, rl));
@@ -488,7 +487,7 @@ export class FakeHumanExecution implements Execution {
       }
       const canBuild = this.player.canBuild(UnitType.Warship, targetTile);
       if (canBuild === false) {
-        consolex.warn("cannot spawn destroyer");
+        console.warn("cannot spawn destroyer");
         return false;
       }
       this.mg.addExecution(
