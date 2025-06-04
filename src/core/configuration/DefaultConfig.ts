@@ -555,9 +555,20 @@ export class DefaultConfig implements Config {
     }
 
     if (defender.isPlayer()) {
+      const defenderDensity = defender.troops() / defender.numTilesOwned();
+      const attackerDensity = attacker.troops() / attacker.numTilesOwned();
+      const densityRatio = defenderDensity / attackerDensity;
+
+      const attackDefenseRatio = defender.troops() / attackTroops;
+      const modifier = within(
+        Math.sqrt(densityRatio * attackDefenseRatio),
+        0.6,
+        2,
+      );
+
       return {
         attackerTroopLoss:
-          within(defender.troops() / attackTroops, 0.6, 2) *
+          modifier *
           mag *
           0.8 *
           largeLossModifier *
