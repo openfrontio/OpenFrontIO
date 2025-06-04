@@ -19,7 +19,7 @@ export class SAMLauncherExecution implements Execution {
   private active: boolean = true;
 
   private searchRangeRadius = 80;
-  private targetRangeRadius = 120; // Generous range to allow for area protections
+  private targetRangeRadius = 120; // Nuke's target should be in this range to be focusable
   // As MIRV go very fast we have to detect them very early but we only
   // shoot the one targeting very close (MIRVWarheadProtectionRadius)
   private MIRVWarheadSearchRadius = 400;
