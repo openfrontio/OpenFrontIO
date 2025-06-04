@@ -1,35 +1,15 @@
 import fs from "fs/promises";
+import { fileURLToPath } from "url";
 import path from "path";
 import sharp from "sharp";
 import { generateMap } from "./TerrainMapGenerator.js";
 
-const maps = [
-  "Africa",
-  "Asia",
-  "WorldMap",
-  "WorldMapGiant",
-  "BlackSea",
-  "Europe",
-  "EuropeClassic",
-  "Mars",
-  "Mena",
-  "Oceania",
-  "NorthAmerica",
-  "SouthAmerica",
-  "Britannia",
-  "GatewayToTheAtlantic",
-  "Australia",
-  "Pangaea",
-  "Iceland",
-  "BetweenTwoSeas",
-  "Japan",
-  "KnownWorld",
-  "FaroeIslands",
-  "DeglaciatedAntarctica",
-  "FalklandIslands",
-  "Baikal",
-  "Halkidiki",
-];
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const staticDir = path.resolve(__dirname, "../../");
+
+const configPath = path.join(staticDir, "resources", "maps.config.json");
+const maps: string[] = JSON.parse(await fs.readFile(configPath, "utf-8"));
 
 const removeSmall = true;
 
@@ -37,7 +17,7 @@ async function loadTerrainMaps() {
   await Promise.all(
     maps.map(async (map) => {
       const mapPath = path.resolve(
-        process.cwd(),
+        staticDir,
         "resources",
         "maps",
         map + ".png",
@@ -50,19 +30,19 @@ async function loadTerrainMaps() {
       } = await generateMap(imageBuffer, removeSmall, map);
 
       const outputPath = path.join(
-        process.cwd(),
+        staticDir,
         "resources",
         "maps",
         map + ".bin",
       );
       const miniOutputPath = path.join(
-        process.cwd(),
+        staticDir,
         "resources",
         "maps",
         map + "Mini.bin",
       );
       const thumbOutputPath = path.join(
-        process.cwd(),
+        staticDir,
         "resources",
         "maps",
         map + "Thumb.webp",
@@ -91,7 +71,6 @@ async function main() {
     console.log("Terrain maps generated successfully");
   } catch (error) {
     console.error("Error generating terrain maps:", error);
-    process.exit(1);
   }
 }
 
