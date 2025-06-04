@@ -11,6 +11,7 @@ import {
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { SAMMissileExecution } from "./SAMMissileExecution";
+import { squaredDistance } from "./Util";
 
 export class SAMLauncherExecution implements Execution {
   private player: Player;
@@ -18,6 +19,7 @@ export class SAMLauncherExecution implements Execution {
   private active: boolean = true;
 
   private searchRangeRadius = 80;
+  private destinationRangeRadius = 200; // Generous range to allow for area protections
   // As MIRV go very fast we have to detect them very early but we only
   // shoot the one targeting very close (MIRVWarheadProtectionRadius)
   private MIRVWarheadSearchRadius = 400;
@@ -45,6 +47,18 @@ export class SAMLauncherExecution implements Execution {
     this.player = mg.player(this.ownerId);
   }
 
+  private nukeDestinationInRange(nuke: Unit) {
+    if (this.sam === null) {
+      return false;
+    }
+    const destinationRangeSquared =
+      this.destinationRangeRadius * this.destinationRangeRadius;
+    return (
+      squaredDistance(this.mg, this.sam.tile(), nuke.tile()) <
+      destinationRangeSquared
+    );
+  }
+
   private getSingleTarget(): Unit | null {
     if (this.sam === null) return null;
     const nukes = this.mg
@@ -54,7 +68,9 @@ export class SAMLauncherExecution implements Execution {
       ])
       .filter(
         ({ unit }) =>
-          unit.owner() !== this.player && !this.player.isFriendly(unit.owner()),
+          unit.owner() !== this.player &&
+          !this.player.isFriendly(unit.owner()) &&
+          this.nukeDestinationInRange(unit),
       );
 
     return (
