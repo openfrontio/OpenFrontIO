@@ -53,7 +53,7 @@ const numPlayersConfig = {
   [GameMapType.Mena]: [60, 50, 30],
   [GameMapType.Mars]: [50, 40, 30],
   [GameMapType.Oceania]: [30, 20, 10],
-  [GameMapType.Japan]: [50, 40, 30],
+  [GameMapType.EastAsia]: [50, 40, 30],
   [GameMapType.FaroeIslands]: [50, 40, 30],
   [GameMapType.DeglaciatedAntarctica]: [50, 40, 30],
   [GameMapType.EuropeClassic]: [80, 30, 50],
