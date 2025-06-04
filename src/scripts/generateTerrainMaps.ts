@@ -23,7 +23,6 @@ const maps = [
   "Iceland",
   "BetweenTwoSeas",
   "Japan",
-  "KnownWorld",
   "FaroeIslands",
   "DeglaciatedAntarctica",
   "FalklandIslands",
