@@ -2,7 +2,12 @@ name: 🧼 PR
 
 on:
   pull_request:
-    types: [opened, edited, synchronize]
+    types:
+      - demilestoned
+      - edited
+      - milestoned
+      - opened
+      - synchronize
 
 permissions: {}
 
