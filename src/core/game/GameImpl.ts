@@ -1,5 +1,4 @@
 import { Config } from "../configuration/Config";
-import { consolex } from "../Consolex";
 import { AllPlayersStats, ClientID } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
@@ -196,7 +195,7 @@ export class GameImpl implements Game {
     recipient: Player,
   ): AllianceRequest | null {
     if (requestor.isAlliedWith(recipient)) {
-      consolex.log("cannot request alliance, already allied");
+      console.log("cannot request alliance, already allied");
       return null;
     }
     if (
@@ -204,14 +203,14 @@ export class GameImpl implements Game {
         .incomingAllianceRequests()
         .find((ar) => ar.requestor() === requestor) !== undefined
     ) {
-      consolex.log(`duplicate alliance request from ${requestor.name()}`);
+      console.log(`duplicate alliance request from ${requestor.name()}`);
       return null;
     }
     const correspondingReq = requestor
       .incomingAllianceRequests()
       .find((ar) => ar.requestor() === recipient);
     if (correspondingReq !== undefined) {
-      consolex.log(`got corresponding alliance requests, accepting`);
+      console.log(`got corresponding alliance requests, accepting`);
       correspondingReq.accept();
       return null;
     }

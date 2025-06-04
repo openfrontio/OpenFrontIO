@@ -1,6 +1,5 @@
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -116,7 +115,7 @@ export class PlayerExecution implements Execution {
         this.removeClusters();
         const end = performance.now();
         if (end - start > 1000) {
-          consolex.log(`player ${this.player.name()}, took ${end - start}ms`);
+          console.log(`player ${this.player.name()}, took ${end - start}ms`);
         }
       }
     }

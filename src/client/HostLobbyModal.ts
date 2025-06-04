@@ -3,7 +3,6 @@ import { customElement, query, state } from "lit/decorators.js";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { consolex } from "../core/Consolex";
 import {
   Difficulty,
   Duos,
@@ -457,7 +456,7 @@ export class HostLobbyModal extends LitElement {
 
   private async handleDisableNPCsChange(e: Event) {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
-    consolex.log(`updating disable npcs to ${this.disableNPCs}`);
+    console.log(`updating disable npcs to ${this.disableNPCs}`);
     this.putGameConfig();
   }
 
@@ -498,7 +497,7 @@ export class HostLobbyModal extends LitElement {
   }
 
   private toggleUnit(unit: UnitType, checked: boolean): void {
-    consolex.log(`Toggling unit type: ${unit} to ${checked}`);
+    console.log(`Toggling unit type: ${unit} to ${checked}`);
     this.disabledUnits = checked
       ? [...this.disabledUnits, unit]
       : this.disabledUnits.filter((u) => u !== unit);
@@ -518,7 +517,7 @@ export class HostLobbyModal extends LitElement {
     }
 
     await this.putGameConfig();
-    consolex.log(
+    console.log(
       `Starting private game with map: ${GameMapType[this.selectedMap]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     this.close();
@@ -546,7 +545,7 @@ export class HostLobbyModal extends LitElement {
         this.copySuccess = false;
       }, 2000);
     } catch (err) {
-      consolex.error(`Failed to copy text: ${err}`);
+      console.error(`Failed to copy text: ${err}`);
     }
   }
 
@@ -586,11 +585,11 @@ async function createLobby(): Promise<GameInfo> {
     }
 
     const data = await response.json();
-    consolex.log("Success:", data);
+    console.log("Success:", data);
 
     return data as GameInfo;
   } catch (error) {
-    consolex.error("Error creating lobby:", error);
+    console.error("Error creating lobby:", error);
     throw error; // Re-throw the error so the caller can handle it
   }
 }

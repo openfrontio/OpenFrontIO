@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -63,7 +62,7 @@ export class DefensePostExecution implements Execution {
     if (this.post === null) {
       const spawnTile = this.player.canBuild(UnitType.DefensePost, this.tile);
       if (spawnTile === false) {
-        consolex.warn("cannot build Defense Post");
+        console.warn("cannot build Defense Post");
         this.active = false;
         return;
       }

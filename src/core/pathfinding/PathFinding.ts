@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import { Game } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
@@ -117,11 +116,11 @@ export class PathFinder {
     dist: number = 1,
   ): TileResult {
     if (curr === null) {
-      consolex.error("curr is null");
+      console.error("curr is null");
       return { type: PathFindResultType.PathNotFound };
     }
     if (dst === null) {
-      consolex.error("dst is null");
+      console.error("dst is null");
       return { type: PathFindResultType.PathNotFound };
     }
 

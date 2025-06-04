@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import { Execution, Game, Gold, Player, PlayerID } from "../game/Game";
 
 export class DonateGoldExecution implements Execution {
@@ -40,7 +39,7 @@ export class DonateGoldExecution implements Execution {
     ) {
       this.recipient.updateRelation(this.sender, 50);
     } else {
-      consolex.warn(
+      console.warn(
         `cannot send gold from ${this.sender.name()} to ${this.recipient.name()}`,
       );
     }
