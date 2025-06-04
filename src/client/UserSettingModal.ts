@@ -346,6 +346,28 @@ export class UserSettingModal extends LitElement {
       ></setting-keybind>
 
       <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.attack_ratio_controls")}
+      </div>
+
+      <setting-keybind
+        action="attackRatioDown"
+        label=${translateText("user_setting.attack_ratio_down")}
+        description=${translateText("user_setting.attack_ratio_down_desc")}
+        defaultKey="Digit1"
+        .value=${this.keybinds["attackRatioDown"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="attackRatioUp"
+        label=${translateText("user_setting.attack_ratio_up")}
+        description=${translateText("user_setting.attack_ratio_up_desc")}
+        defaultKey="Digit2"
+        .value=${this.keybinds["attackRatioUp"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
         ${translateText("user_setting.zoom_controls")}
       </div>
 

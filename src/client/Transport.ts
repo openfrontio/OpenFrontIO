@@ -542,8 +542,7 @@ export class Transport {
   }
 
   private onSendHashEvent(event: SendHashEvent) {
-    if (this.socket === null) return;
-    if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
+    if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
       this.sendMsg(
         JSON.stringify({
           type: "hash",
@@ -554,7 +553,7 @@ export class Transport {
     } else {
       console.log(
         "WebSocket is not open. Current state:",
-        this.socket.readyState,
+        this.socket!.readyState,
       );
       console.log("attempting reconnect");
     }
