@@ -538,20 +538,23 @@ export class GameServer {
       gameID: this.id,
       winner: this.winner?.winner,
     });
-    const playerRecords: PlayerRecord[] = Array.from(
-      this.allClients.values(),
-    ).map((client) => {
-      const stats = this.winner?.allPlayersStats[client.clientID];
-      if (stats === undefined) {
-        this.log.warn(`Unable to find stats for clientID ${client.clientID}`);
-      }
-      return {
-        clientID: client.clientID,
-        username: client.username,
-        persistentID: client.persistentID,
-        stats,
-      } satisfies PlayerRecord;
-    });
+
+    // Players must stay in the same order as the game start info.
+    const playerRecords: PlayerRecord[] = this.gameStartInfo.players.map(
+      (player) => {
+        const stats = this.winner?.allPlayersStats[player.clientID];
+        if (stats === undefined) {
+          this.log.warn(`Unable to find stats for clientID ${player.clientID}`);
+        }
+        return {
+          clientID: player.clientID,
+          username: player.username,
+          persistentID:
+            this.allClients.get(player.clientID)?.persistentID ?? "",
+          stats,
+        } satisfies PlayerRecord;
+      },
+    );
     archive(
       createGameRecord(
         this.id,
