@@ -1,10 +1,12 @@
+import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
-import { loadAllAnimatedSpriteImages } from "../AnimatedSpriteLoader";
-import { Fx } from "../fx/Fx";
+import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
+import { Fx, FxType } from "../fx/Fx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
-import { SAMExplosionFx } from "../fx/SAMExplosionFx";
+import { SpriteFx } from "../fx/SpriteFx";
+import { UnitExplosionFx } from "../fx/UnitExplosionFx";
 import { Layer } from "./Layer";
 
 export class FxLayer implements Layer {
@@ -13,10 +15,15 @@ export class FxLayer implements Layer {
 
   private lastRefresh: number = 0;
   private refreshRate: number = 10;
+  private theme: Theme;
+  private animatedSpriteLoader: AnimatedSpriteLoader =
+    new AnimatedSpriteLoader();
 
   private allFx: Fx[] = [];
 
-  constructor(private game: GameView) {}
+  constructor(private game: GameView) {
+    this.theme = this.game.config().theme();
+  }
 
   shouldTransform(): boolean {
     return true;
@@ -41,12 +48,58 @@ export class FxLayer implements Layer {
       case UnitType.HydrogenBomb:
         this.onNukeEvent(unit, 160);
         break;
+      case UnitType.Warship:
+        this.onWarshipEvent(unit);
+        break;
+      case UnitType.Shell:
+        this.onShellEvent(unit);
+        break;
+    }
+  }
+
+  onShellEvent(unit: UnitView) {
+    if (!unit.isActive()) {
+      if (unit.reachedTarget()) {
+        const x = this.game.x(unit.lastTile());
+        const y = this.game.y(unit.lastTile());
+        const shipExplosion = new SpriteFx(
+          this.animatedSpriteLoader,
+          x,
+          y,
+          FxType.MiniExplosion,
+        );
+        this.allFx.push(shipExplosion);
+      }
+    }
+  }
+
+  onWarshipEvent(unit: UnitView) {
+    if (!unit.isActive()) {
+      const x = this.game.x(unit.lastTile());
+      const y = this.game.y(unit.lastTile());
+      const shipExplosion = new UnitExplosionFx(
+        this.animatedSpriteLoader,
+        x,
+        y,
+        this.game,
+      );
+      this.allFx.push(shipExplosion);
+      const sinkingShip = new SpriteFx(
+        this.animatedSpriteLoader,
+        x,
+        y,
+        FxType.SinkingShip,
+        undefined,
+        unit.owner(),
+        this.theme,
+      );
+      this.allFx.push(sinkingShip);
     }
   }
 
   onNukeEvent(unit: UnitView, radius: number) {
     if (!unit.isActive()) {
-      if (unit.wasInterceptedBySAM()) {
+      if (!unit.reachedTarget()) {
         this.handleSAMInterception(unit);
       } else {
         // Kaboom
@@ -58,15 +111,26 @@ export class FxLayer implements Layer {
   handleNukeExplosion(unit: UnitView, radius: number) {
     const x = this.game.x(unit.lastTile());
     const y = this.game.y(unit.lastTile());
-    const nukeFx = nukeFxFactory(x, y, radius, this.game);
+    const nukeFx = nukeFxFactory(
+      this.animatedSpriteLoader,
+      x,
+      y,
+      radius,
+      this.game,
+    );
     this.allFx = this.allFx.concat(nukeFx);
   }
 
   handleSAMInterception(unit: UnitView) {
     const x = this.game.x(unit.lastTile());
     const y = this.game.y(unit.lastTile());
-    const interception = new SAMExplosionFx(x, y, 1000);
-    this.allFx.push(interception);
+    const explosion = new SpriteFx(
+      this.animatedSpriteLoader,
+      x,
+      y,
+      FxType.SAMExplosion,
+    );
+    this.allFx.push(explosion);
     const shockwave = new ShockwaveFx(x, y, 800, 40);
     this.allFx.push(shockwave);
   }
@@ -74,7 +138,7 @@ export class FxLayer implements Layer {
   async init() {
     this.redraw();
     try {
-      await loadAllAnimatedSpriteImages();
+      this.animatedSpriteLoader.loadAllAnimatedSpriteImages();
       console.log("FX sprites loaded successfully");
     } catch (err) {
       console.error("Failed to load FX sprites:", err);

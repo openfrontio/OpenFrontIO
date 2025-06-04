@@ -4,6 +4,7 @@ import {
   AllPlayers,
   Cell,
   GameType,
+  Gold,
   PlayerID,
   PlayerType,
   Tick,
@@ -23,6 +24,7 @@ import {
   ServerMessageSchema,
   Winner,
 } from "../core/Schemas";
+import { replacer } from "../core/Util";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
 
@@ -93,15 +95,13 @@ export class SendEmojiIntentEvent implements GameEvent {
 
 export class SendDonateGoldIntentEvent implements GameEvent {
   constructor(
-    public readonly sender: PlayerView,
     public readonly recipient: PlayerView,
-    public readonly gold: number | null,
+    public readonly gold: Gold | null,
   ) {}
 }
 
 export class SendDonateTroopsIntentEvent implements GameEvent {
   constructor(
-    public readonly sender: PlayerView,
     public readonly recipient: PlayerView,
     public readonly troops: number | null,
   ) {}
@@ -109,7 +109,6 @@ export class SendDonateTroopsIntentEvent implements GameEvent {
 
 export class SendQuickChatEvent implements GameEvent {
   constructor(
-    public readonly sender: PlayerView,
     public readonly recipient: PlayerView,
     public readonly quickChatKey: string,
     public readonly variables: { [key: string]: string },
@@ -118,17 +117,13 @@ export class SendQuickChatEvent implements GameEvent {
 
 export class SendEmbargoIntentEvent implements GameEvent {
   constructor(
-    public readonly sender: PlayerView,
     public readonly target: PlayerView,
     public readonly action: "start" | "stop",
   ) {}
 }
 
 export class CancelAttackIntentEvent implements GameEvent {
-  constructor(
-    public readonly playerID: PlayerID,
-    public readonly attackID: string,
-  ) {}
+  constructor(public readonly attackID: string) {}
 }
 
 export class CancelBoatIntentEvent implements GameEvent {
@@ -536,7 +531,7 @@ export class Transport {
         winner: event.winner,
         allPlayersStats: event.allPlayersStats,
       } satisfies ClientSendWinnerMessage;
-      this.sendMsg(JSON.stringify(msg));
+      this.sendMsg(JSON.stringify(msg, replacer));
     } else {
       console.log(
         "WebSocket is not open. Current state:",
@@ -547,8 +542,7 @@ export class Transport {
   }
 
   private onSendHashEvent(event: SendHashEvent) {
-    if (this.socket === null) return;
-    if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
+    if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
       this.sendMsg(
         JSON.stringify({
           type: "hash",
@@ -559,7 +553,7 @@ export class Transport {
     } else {
       console.log(
         "WebSocket is not open. Current state:",
-        this.socket.readyState,
+        this.socket!.readyState,
       );
       console.log("attempting reconnect");
     }

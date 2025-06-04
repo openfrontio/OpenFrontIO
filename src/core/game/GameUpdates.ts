@@ -2,6 +2,7 @@ import { AllPlayersStats, ClientID } from "../Schemas";
 import {
   EmojiMessage,
   GameUpdates,
+  Gold,
   MessageType,
   NameViewData,
   PlayerID,
@@ -73,7 +74,7 @@ export interface UnitUpdate {
   pos: TileRef;
   lastPos: TileRef;
   isActive: boolean;
-  wasIntercepted: boolean;
+  reachedTarget: boolean;
   retreating: boolean;
   targetUnitId?: number; // Only for trade ships
   targetTile?: TileRef; // Only for nukes
@@ -103,9 +104,8 @@ export interface PlayerUpdate {
   playerType: PlayerType;
   isAlive: boolean;
   tilesOwned: number;
-  gold: number;
+  gold: Gold;
   population: number;
-  totalPopulation: number;
   workers: number;
   troops: number;
   targetTroopRatio: number;
@@ -118,7 +118,7 @@ export interface PlayerUpdate {
   incomingAttacks: AttackUpdate[];
   outgoingAllianceRequests: PlayerID[];
   hasSpawned: boolean;
-  betrayals?: number;
+  betrayals?: bigint;
 }
 
 export interface AllianceRequestUpdate {

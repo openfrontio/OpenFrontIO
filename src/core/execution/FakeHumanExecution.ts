@@ -4,6 +4,7 @@ import {
   Difficulty,
   Execution,
   Game,
+  Gold,
   Nation,
   Player,
   PlayerID,
@@ -262,7 +263,6 @@ export class FakeHumanExecution implements Execution {
       throw new Error("not initialized");
     }
     this.behavior.forgetOldEnemies();
-    this.behavior.checkIncomingAttacks();
     this.behavior.assistAllies();
     const enemy = this.behavior.selectEnemy();
     if (!enemy) return;
@@ -544,7 +544,7 @@ export class FakeHumanExecution implements Execution {
     return null;
   }
 
-  private cost(type: UnitType): number {
+  private cost(type: UnitType): Gold {
     if (this.player === null) throw new Error("not initialized");
     return this.mg.unitInfo(type).cost(this.player);
   }

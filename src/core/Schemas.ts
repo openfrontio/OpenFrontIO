@@ -112,7 +112,7 @@ export enum LogSeverity {
   Fatal = "FATAL",
 }
 
-const GameConfigSchema = z.object({
+export const GameConfigSchema = z.object({
   gameMap: z.nativeEnum(GameMapType),
   difficulty: z.nativeEnum(Difficulty),
   gameType: z.nativeEnum(GameType),
@@ -136,33 +136,18 @@ const SafeString = z
   )
   .max(1000);
 
-const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]*$/;
-// Copied from zod, modified to remove their erroneous `typ` header requirement
-function isValidJWT(jwt: string, alg?: string): boolean {
-  if (!jwtRegex.test(jwt)) return false;
-  try {
-    const [header] = jwt.split(".");
-    // Convert base64url to base64
-    const base64 = header
-      .replace(/-/g, "+")
-      .replace(/_/g, "/")
-      .padEnd(header.length + ((4 - (header.length % 4)) % 4), "=");
-    const decoded = JSON.parse(atob(base64));
-    if (typeof decoded !== "object" || decoded === null) return false;
-    if (!decoded.alg) return false;
-    if (alg && decoded.alg !== alg) return false;
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 const PersistentIdSchema = z.string().uuid();
+const JwtTokenSchema = z.string().jwt();
 const TokenSchema = z
   .string()
-  .refine((v) => PersistentIdSchema.safeParse(v).success || isValidJWT(v), {
-    message: "Token must be a valid UUID or JWT",
-  });
+  .refine(
+    (v) =>
+      PersistentIdSchema.safeParse(v).success ||
+      JwtTokenSchema.safeParse(v).success,
+    {
+      message: "Token must be a valid UUID or JWT",
+    },
+  );
 
 const EmojiSchema = z
   .number()
@@ -255,7 +240,7 @@ export const EmbargoIntentSchema = BaseIntentSchema.extend({
 export const DonateGoldIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate_gold"),
   recipient: ID,
-  gold: z.number().nullable(),
+  gold: z.bigint().nullable(),
 });
 
 export const DonateTroopIntentSchema = BaseIntentSchema.extend({
@@ -353,7 +338,6 @@ export const ServerPrestartMessageSchema = ServerBaseMessageSchema.extend({
 });
 
 export const PlayerSchema = z.object({
-  playerID: ID,
   clientID: ID,
   username: SafeString,
   flag: SafeString.optional(),
@@ -462,10 +446,12 @@ export const GameEndInfoSchema = GameStartInfoSchema.extend({
 });
 export type GameEndInfo = z.infer<typeof GameEndInfoSchema>;
 
+const GitCommitSchema = z.string().regex(/^[0-9a-fA-F]{40}$/);
+
 export const AnalyticsRecordSchema = z.object({
   info: GameEndInfoSchema,
   version: z.literal("v0.0.2"),
-  gitCommit: z.string(),
+  gitCommit: GitCommitSchema,
 });
 export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;
 

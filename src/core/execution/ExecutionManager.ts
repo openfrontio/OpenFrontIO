@@ -63,7 +63,7 @@ export class Executor {
       case "cancel_boat":
         return new BoatRetreatExecution(playerID, intent.unitID);
       case "move_warship":
-        return new MoveWarshipExecution(intent.unitId, intent.tile);
+        return new MoveWarshipExecution(player, intent.unitId, intent.tile);
       case "spawn":
         return new SpawnExecution(
           player.info(),

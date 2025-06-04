@@ -1,17 +1,19 @@
 import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
-import allianceRequestIcon from "../../../../resources/images/AllianceRequestIcon.svg";
+import allianceRequestBlackIcon from "../../../../resources/images/AllianceRequestBlackIcon.svg";
+import allianceRequestWhiteIcon from "../../../../resources/images/AllianceRequestWhiteIcon.svg";
 import crownIcon from "../../../../resources/images/CrownIcon.svg";
-import embargoIcon from "../../../../resources/images/EmbargoIcon.svg";
+import embargoBlackIcon from "../../../../resources/images/EmbargoBlackIcon.svg";
+import embargoWhiteIcon from "../../../../resources/images/EmbargoWhiteIcon.svg";
 import nukeRedIcon from "../../../../resources/images/NukeIconRed.svg";
 import nukeWhiteIcon from "../../../../resources/images/NukeIconWhite.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconBlack.svg";
 import targetIcon from "../../../../resources/images/TargetIcon.svg";
 import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
 import { PseudoRandom } from "../../../core/PseudoRandom";
-import { ClientID } from "../../../core/Schemas";
 import { Theme } from "../../../core/configuration/Config";
 import { AllPlayers, Cell, nukeTypes, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
 import { createCanvas, renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -38,36 +40,41 @@ export class NameLayer implements Layer {
   private renders: RenderInfo[] = [];
   private seenPlayers: Set<PlayerView> = new Set();
   private traitorIconImage: HTMLImageElement;
-  private allianceRequestIconImage: HTMLImageElement;
+  private allianceRequestBlackIconImage: HTMLImageElement;
+  private allianceRequestWhiteIconImage: HTMLImageElement;
   private allianceIconImage: HTMLImageElement;
   private targetIconImage: HTMLImageElement;
   private crownIconImage: HTMLImageElement;
-  private embargoIconImage: HTMLImageElement;
+  private embargoBlackIconImage: HTMLImageElement;
+  private embargoWhiteIconImage: HTMLImageElement;
   private nukeWhiteIconImage: HTMLImageElement;
   private nukeRedIconImage: HTMLImageElement;
   private shieldIconImage: HTMLImageElement;
   private container: HTMLDivElement;
-  private myPlayer: PlayerView | null = null;
   private firstPlace: PlayerView | null = null;
   private theme: Theme = this.game.config().theme();
+  private userSettings: UserSettings = new UserSettings();
 
   constructor(
     private game: GameView,
     private transformHandler: TransformHandler,
-    private clientID: ClientID,
   ) {
     this.traitorIconImage = new Image();
     this.traitorIconImage.src = traitorIcon;
     this.allianceIconImage = new Image();
     this.allianceIconImage.src = allianceIcon;
-    this.allianceRequestIconImage = new Image();
-    this.allianceRequestIconImage.src = allianceRequestIcon;
+    this.allianceRequestBlackIconImage = new Image();
+    this.allianceRequestBlackIconImage.src = allianceRequestBlackIcon;
+    this.allianceRequestWhiteIconImage = new Image();
+    this.allianceRequestWhiteIconImage.src = allianceRequestWhiteIcon;
     this.crownIconImage = new Image();
     this.crownIconImage.src = crownIcon;
     this.targetIconImage = new Image();
     this.targetIconImage.src = targetIcon;
-    this.embargoIconImage = new Image();
-    this.embargoIconImage.src = embargoIcon;
+    this.embargoBlackIconImage = new Image();
+    this.embargoBlackIconImage.src = embargoBlackIcon;
+    this.embargoWhiteIconImage = new Image();
+    this.embargoWhiteIconImage.src = embargoWhiteIcon;
     this.nukeWhiteIconImage = new Image();
     this.nukeWhiteIconImage.src = nukeWhiteIcon;
     this.nukeRedIconImage = new Image();
@@ -214,18 +221,32 @@ export class NameLayer implements Layer {
     troopsDiv.style.marginTop = "-5%";
     element.appendChild(troopsDiv);
 
-    const shieldDiv = document.createElement("div");
-    shieldDiv.classList.add("player-shield");
-    shieldDiv.style.zIndex = "3";
-    shieldDiv.style.marginTop = "-5%";
-    shieldDiv.style.display = "flex";
-    shieldDiv.style.alignItems = "center";
-    shieldDiv.style.gap = "0px";
-    shieldDiv.innerHTML = `
-      <img src="${this.shieldIconImage.src}" style="width: 16px; height: 16px;" />
-      <span style="color: black; font-size: 10px; margin-top: -2px;">0</span>
-    `;
-    element.appendChild(shieldDiv);
+    // TODO: Remove the shield icon.
+    /* eslint-disable no-constant-condition */
+    if (false) {
+      const shieldDiv = document.createElement("div");
+      shieldDiv.classList.add("player-shield");
+      shieldDiv.style.zIndex = "3";
+      shieldDiv.style.marginTop = "-5%";
+      shieldDiv.style.display = "flex";
+      shieldDiv.style.alignItems = "center";
+      shieldDiv.style.gap = "0px";
+      const shieldImg = document.createElement("img");
+      shieldImg.src = this.shieldIconImage.src;
+      shieldImg.style.width = "16px";
+      shieldImg.style.height = "16px";
+
+      const shieldSpan = document.createElement("span");
+      shieldSpan.textContent = "0";
+      shieldSpan.style.color = "black";
+      shieldSpan.style.fontSize = "10px";
+      shieldSpan.style.marginTop = "-2px";
+
+      shieldDiv.appendChild(shieldImg);
+      shieldDiv.appendChild(shieldSpan);
+      element.appendChild(shieldDiv);
+    }
+    /* eslint-enable no-constant-condition */
 
     // Start off invisible so it doesn't flash at 0,0
     element.style.display = "none";
@@ -294,11 +315,10 @@ export class NameLayer implements Layer {
     const density = renderNumber(
       render.player.troops() / render.player.numTilesOwned(),
     );
-    const shieldDiv = render.element.querySelector(
-      ".player-shield",
-    ) as HTMLDivElement;
-    const shieldImg = shieldDiv.querySelector("img");
-    const shieldNumber = shieldDiv.querySelector("span");
+    const shieldDiv: HTMLDivElement | null =
+      render.element.querySelector(".player-shield");
+    const shieldImg = shieldDiv?.querySelector("img");
+    const shieldNumber = shieldDiv?.querySelector("span");
     if (shieldImg) {
       shieldImg.style.width = `${render.fontSize * 0.8}px`;
       shieldImg.style.height = `${render.fontSize * 0.8}px`;
@@ -314,7 +334,8 @@ export class NameLayer implements Layer {
       ".player-icons",
     ) as HTMLDivElement;
     const iconSize = Math.min(render.fontSize * 1.5, 48);
-    const myPlayer = this.getPlayer();
+    const myPlayer = this.game.myPlayer();
+    const isDarkMode = this.userSettings.darkMode();
 
     // Crown icon
     const existingCrown = iconsDiv.querySelector('[data-icon="crown"]');
@@ -366,13 +387,27 @@ export class NameLayer implements Layer {
     }
 
     // Alliance request icon
-    const data = '[data-icon="alliance-request"]';
-    const existingRequestAlliance = iconsDiv.querySelector(data);
+    let existingRequestAlliance = iconsDiv.querySelector(
+      '[data-icon="alliance-request"]',
+    );
+    const isThemeAllianceRequestIcon =
+      existingRequestAlliance?.getAttribute("dark-mode") ===
+      isDarkMode.toString();
+    const AllianceRequestIconImageSrc = isDarkMode
+      ? this.allianceRequestWhiteIconImage.src
+      : this.allianceRequestBlackIconImage.src;
+
     if (myPlayer !== null && render.player.isRequestingAllianceWith(myPlayer)) {
+      // Create new icon to match theme
+      if (existingRequestAlliance && !isThemeAllianceRequestIcon) {
+        existingRequestAlliance.remove();
+        existingRequestAlliance = null;
+      }
+
       if (!existingRequestAlliance) {
         iconsDiv.appendChild(
           this.createIconElement(
-            this.allianceRequestIconImage.src,
+            AllianceRequestIconImageSrc,
             iconSize,
             "alliance-request",
           ),
@@ -427,19 +462,28 @@ export class NameLayer implements Layer {
       existingEmoji.remove();
     }
 
-    const existingEmbargo = iconsDiv.querySelector('[data-icon="embargo"]');
+    // Embargo icon
+    let existingEmbargo = iconsDiv.querySelector('[data-icon="embargo"]');
     const hasEmbargo =
       myPlayer &&
       (render.player.hasEmbargoAgainst(myPlayer) ||
         myPlayer.hasEmbargoAgainst(render.player));
+    const isThemeEmbargoIcon =
+      existingEmbargo?.getAttribute("dark-mode") === isDarkMode.toString();
+    const embargoIconImageSrc = isDarkMode
+      ? this.embargoWhiteIconImage.src
+      : this.embargoBlackIconImage.src;
+
     if (myPlayer && hasEmbargo) {
+      // Create new icon to match theme
+      if (existingEmbargo && !isThemeEmbargoIcon) {
+        existingEmbargo.remove();
+        existingEmbargo = null;
+      }
+
       if (!existingEmbargo) {
         iconsDiv.appendChild(
-          this.createIconElement(
-            this.embargoIconImage.src,
-            iconSize,
-            "embargo",
-          ),
+          this.createIconElement(embargoIconImageSrc, iconSize, "embargo"),
         );
       }
     } else if (existingEmbargo) {
@@ -513,21 +557,12 @@ export class NameLayer implements Layer {
     icon.style.width = `${size}px`;
     icon.style.height = `${size}px`;
     icon.setAttribute("data-icon", id);
+    icon.setAttribute("dark-mode", this.userSettings.darkMode().toString());
     if (center) {
       icon.style.position = "absolute";
       icon.style.top = "50%";
       icon.style.transform = "translateY(-50%)";
     }
     return icon;
-  }
-
-  private getPlayer(): PlayerView | null {
-    if (this.myPlayer !== null) {
-      return this.myPlayer;
-    }
-    this.myPlayer =
-      this.game.playerViews().find((p) => p.clientID() === this.clientID) ??
-      null;
-    return this.myPlayer;
   }
 }

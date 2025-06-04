@@ -3,7 +3,6 @@ import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameMode } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
 import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
 
@@ -18,7 +17,6 @@ interface TeamEntry {
 @customElement("team-stats")
 export class TeamStats extends LitElement implements Layer {
   public game: GameView;
-  public clientID: ClientID;
   public eventBus: EventBus;
 
   teams: TeamEntry[] = [];
@@ -60,7 +58,7 @@ export class TeamStats extends LitElement implements Layer {
 
     this.teams = Object.entries(grouped)
       .map(([teamStr, teamPlayers]) => {
-        let totalGold = 0;
+        let totalGold = 0n;
         let totalTroops = 0;
         let totalScoreSort = 0;
 

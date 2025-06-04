@@ -21,13 +21,12 @@ export class UnitImpl implements Unit {
   private _lastTile: TileRef;
   private _retreating: boolean = false;
   private _targetedBySAM = false;
-  private _interceptedBySAM = false;
+  private _reachedTarget = false;
   private _lastSetSafeFromPirates: number; // Only for trade ships
   private _constructionType: UnitType | undefined;
   private _lastOwner: PlayerImpl | null = null;
   private _troops: number;
   private _cooldownStartTick: Tick | null = null;
-  private _pathCache: Map<TileRef, TileRef> = new Map();
   private _patrolTile: TileRef | undefined;
   constructor(
     private _type: UnitType,
@@ -84,13 +83,6 @@ export class UnitImpl implements Unit {
     return this._targetTile;
   }
 
-  cachePut(from: TileRef, to: TileRef): void {
-    this._pathCache.set(from, to);
-  }
-  cacheGet(from: TileRef): TileRef | undefined {
-    return this._pathCache.get(from);
-  }
-
   id() {
     return this._id;
   }
@@ -104,7 +96,7 @@ export class UnitImpl implements Unit {
       ownerID: this._owner.smallID(),
       lastOwnerID: this._lastOwner?.smallID(),
       isActive: this._active,
-      wasIntercepted: this._interceptedBySAM,
+      reachedTarget: this._reachedTarget,
       retreating: this._retreating,
       pos: this._tile,
       lastPos: this._lastTile,
@@ -324,12 +316,12 @@ export class UnitImpl implements Unit {
     return this._targetedBySAM;
   }
 
-  setInterceptedBySam(): void {
-    this._interceptedBySAM = true;
+  setReachedTarget(): void {
+    this._reachedTarget = true;
   }
 
-  interceptedBySam(): boolean {
-    return this._interceptedBySAM;
+  reachedTarget(): boolean {
+    return this._reachedTarget;
   }
 
   setSafeFromPirates(): void {

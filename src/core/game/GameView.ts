@@ -93,8 +93,8 @@ export class UnitView {
   isActive(): boolean {
     return this.data.isActive;
   }
-  wasInterceptedBySAM(): boolean {
-    return this.data.wasIntercepted;
+  reachedTarget(): boolean {
+    return this.data.reachedTarget;
   }
   hasHealth(): boolean {
     return this.data.health !== undefined;
@@ -182,12 +182,12 @@ export class PlayerView {
     return this.data.flag;
   }
   name(): string {
-    return userSettings.anonymousNames() && this.anonymousName !== null
+    return this.anonymousName !== null && userSettings.anonymousNames()
       ? this.anonymousName
       : this.data.name;
   }
   displayName(): string {
-    return userSettings.anonymousNames() && this.anonymousName !== null
+    return this.anonymousName !== null && userSettings.anonymousNames()
       ? this.anonymousName
       : this.data.name;
   }
@@ -228,9 +228,6 @@ export class PlayerView {
   }
   population(): number {
     return this.data.population;
-  }
-  totalPopulation(): number {
-    return this.data.totalPopulation;
   }
   workers(): number {
     return this.data.workers;

@@ -14,7 +14,6 @@ import gatewayToTheAtlantic from "../../../resources/maps/GatewayToTheAtlanticTh
 import halkidiki from "../../../resources/maps/HalkidikiThumb.webp";
 import iceland from "../../../resources/maps/IcelandThumb.webp";
 import japan from "../../../resources/maps/JapanThumb.webp";
-import knownworld from "../../../resources/maps/KnownWorldThumb.webp";
 import mars from "../../../resources/maps/MarsThumb.webp";
 import mena from "../../../resources/maps/MenaThumb.webp";
 import northAmerica from "../../../resources/maps/NorthAmericaThumb.webp";
@@ -66,8 +65,6 @@ export function getMapsImage(map: GameMapType): string {
       return japan;
     case GameMapType.BetweenTwoSeas:
       return betweenTwoSeas;
-    case GameMapType.KnownWorld:
-      return knownworld;
     case GameMapType.FaroeIslands:
       return faroeislands;
     case GameMapType.DeglaciatedAntarctica:

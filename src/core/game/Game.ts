@@ -12,7 +12,7 @@ import { Stats } from "./Stats";
 
 export type PlayerID = string;
 export type Tick = number;
-export type Gold = number;
+export type Gold = bigint;
 
 export const AllPlayers = "AllPlayers" as const;
 
@@ -72,7 +72,6 @@ export enum GameMapType {
   Iceland = "Iceland",
   Japan = "Japan",
   BetweenTwoSeas = "Between Two Seas",
-  KnownWorld = "Known World",
   FaroeIslands = "Faroe Islands",
   DeglaciatedAntarctica = "Deglaciated Antarctica",
   FalklandIslands = "Falkland Islands",
@@ -109,7 +108,6 @@ export const mapCategories: Record<string, GameMapType[]> = {
   fantasy: [
     GameMapType.Pangaea,
     GameMapType.Mars,
-    GameMapType.KnownWorld,
     GameMapType.DeglaciatedAntarctica,
   ],
 };
@@ -334,7 +332,7 @@ export class PlayerInfo {
     if (!name.startsWith("[") || !name.includes("]")) {
       this.clan = null;
     } else {
-      const clanMatch = name.match(/^\[([A-Z]{2,5})\]/);
+      const clanMatch = name.match(/^\[([a-zA-Z]{2,5})\]/);
       this.clan = clanMatch ? clanMatch[1] : null;
     }
   }
@@ -369,8 +367,8 @@ export interface Unit {
   targetUnit(): Unit | undefined;
   setTargetedBySAM(targeted: boolean): void;
   targetedBySAM(): boolean;
-  setInterceptedBySam(): void;
-  interceptedBySam(): boolean;
+  setReachedTarget(): void;
+  reachedTarget(): boolean;
 
   // Health
   hasHealth(): boolean;
@@ -401,10 +399,6 @@ export interface Unit {
   // Warships
   setPatrolTile(tile: TileRef): void;
   patrolTile(): TileRef | undefined;
-
-  // Ports
-  cachePut(from: TileRef, to: TileRef): void;
-  cacheGet(from: TileRef): TileRef | undefined;
 }
 
 export interface TerraNullius {
@@ -452,12 +446,11 @@ export interface Player {
   // Resources & Population
   gold(): Gold;
   population(): number;
-  totalPopulation(): number;
   workers(): number;
   troops(): number;
   targetTroopRatio(): number;
   addGold(toAdd: Gold): void;
-  removeGold(toRemove: Gold): void;
+  removeGold(toRemove: Gold): Gold;
   addWorkers(toAdd: number): void;
   removeWorkers(toRemove: number): void;
   setTargetTroopRatio(target: number): void;
@@ -513,8 +506,8 @@ export interface Player {
 
   // Donation
   canDonate(recipient: Player): boolean;
-  donateTroops(recipient: Player, troops: number): void;
-  donateGold(recipient: Player, gold: number): void;
+  donateTroops(recipient: Player, troops: number): boolean;
+  donateGold(recipient: Player, gold: Gold): boolean;
 
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;
@@ -626,7 +619,7 @@ export interface PlayerActions {
 export interface BuildableUnit {
   canBuild: TileRef | false;
   type: UnitType;
-  cost: number;
+  cost: Gold;
 }
 
 export interface PlayerProfile {
