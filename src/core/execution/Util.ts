@@ -6,21 +6,6 @@ export function getSpawnTiles(gm: GameMap, tile: TileRef): TileRef[] {
   );
 }
 
-export function squaredDistance(
-  gm: GameMap,
-  tileA: TileRef,
-  tileB: TileRef,
-): number {
-  const aX = gm.x(tileA);
-  const aY = gm.y(tileA);
-  const bX = gm.x(tileB);
-  const bY = gm.y(tileB);
-  const dx = bX - aX;
-  const dy = bY - aY;
-  const distSquared = dx * dx + dy * dy;
-  return distSquared;
-}
-
 export function closestTwoTiles(
   gm: GameMap,
   x: Iterable<TileRef>,

@@ -11,7 +11,6 @@ import {
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { SAMMissileExecution } from "./SAMMissileExecution";
-import { squaredDistance } from "./Util";
 
 export class SAMLauncherExecution implements Execution {
   private player: Player;
@@ -54,7 +53,8 @@ export class SAMLauncherExecution implements Execution {
     }
     const targetRangeSquared = this.targetRangeRadius * this.targetRangeRadius;
     return (
-      squaredDistance(this.mg, this.sam.tile(), targetTile) < targetRangeSquared
+      this.mg.euclideanDistSquared(this.sam.tile(), targetTile) <
+      targetRangeSquared
     );
   }
 
