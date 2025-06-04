@@ -1,7 +1,7 @@
 import fs from "fs/promises";
-import { fileURLToPath } from "url";
 import path from "path";
 import sharp from "sharp";
+import { fileURLToPath } from "url";
 import { generateMap } from "./TerrainMapGenerator.js";
 
 const __filename = fileURLToPath(import.meta.url);
