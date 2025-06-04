@@ -59,7 +59,7 @@ jobs:
         with:
           script: |
             // Get the pull request data
-            const milestone = context.payload.pull_request.miletone || '';
+            const milestone = context.payload.pull_request.miletone.title || '';
             if (!milestone) {
               core.setFailed('❌ Pull request must have a milestone assigned before merging.');
               return;
