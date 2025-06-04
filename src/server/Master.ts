@@ -1,4 +1,3 @@
-import cluster from "cluster";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import http from "http";
@@ -6,14 +5,14 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameInfo } from "../core/Schemas";
-import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
+import { WorkerDiscoveryService } from "./WorkerDiscoveryService";
 
 const config = getServerConfigFromServer();
 const playlist = new MapPlaylist();
-const readyWorkers = new Set();
+const workerDiscovery = new WorkerDiscoveryService();
 
 const app = express();
 const server = http.createServer(app);
@@ -61,94 +60,48 @@ app.use(
 
 let publicLobbiesJsonStr = "";
 
-const publicLobbyIDs: Set<string> = new Set();
+interface PublicLobby {
+  gameID: string;
+  dns: string;
+}
+
+const publicLobbies: Map<string, PublicLobby> = new Map();
 
 // Start the master process
 export async function startMaster() {
-  if (!cluster.isPrimary) {
-    throw new Error(
-      "startMaster() should only be called in the primary process",
-    );
-  }
-
-  log.info(`Primary ${process.pid} is running`);
-  log.info(`Setting up ${config.numWorkers()} workers...`);
-
-  // Fork workers
-  for (let i = 0; i < config.numWorkers(); i++) {
-    const worker = cluster.fork({
-      WORKER_ID: i,
-    });
-
-    log.info(`Started worker ${i} (PID: ${worker.process.pid})`);
-  }
-
-  cluster.on("message", (worker, message) => {
-    if (message.type === "WORKER_READY") {
-      const workerId = message.workerId;
-      readyWorkers.add(workerId);
-      log.info(
-        `Worker ${workerId} is ready. (${readyWorkers.size}/${config.numWorkers()} ready)`,
-      );
-      // Start scheduling when all workers are ready
-      if (readyWorkers.size === config.numWorkers()) {
-        log.info("All workers ready, starting game scheduling");
-
-        const scheduleLobbies = () => {
-          schedulePublicGame(playlist).catch((error) => {
-            log.error("Error scheduling public game:", error);
-          });
-        };
-
-        setInterval(
-          () =>
-            fetchLobbies().then((lobbies) => {
-              if (lobbies === 0) {
-                scheduleLobbies();
-              }
-            }),
-          100,
-        );
-      }
-    }
-  });
-
-  // Handle worker crashes
-  cluster.on("exit", (worker, code, signal) => {
-    const workerId = (worker as any).process?.env?.WORKER_ID;
-    if (!workerId) {
-      log.error(`worker crashed could not find id`);
-      return;
-    }
-
-    log.warn(
-      `Worker ${workerId} (PID: ${worker.process.pid}) died with code: ${code} and signal: ${signal}`,
-    );
-    log.info(`Restarting worker ${workerId}...`);
-
-    // Restart the worker with the same ID
-    const newWorker = cluster.fork({
-      WORKER_ID: workerId,
-    });
-
-    log.info(
-      `Restarted worker ${workerId} (New PID: ${newWorker.process.pid})`,
-    );
-  });
-
   const PORT = 3000;
   server.listen(PORT, () => {
     log.info(`Master HTTP server listening on port ${PORT}`);
+  });
+
+  const scheduleLobbies = () => {
+    schedulePublicGame(playlist).catch((error) => {
+      log.error("Error scheduling public game:", error);
+    });
+  };
+
+  // Wait for the workers to start
+  sleep(5 * 1000).then(() => {
+    setInterval(
+      () =>
+        fetchLobbies().then((lobbies) => {
+          if (lobbies === 0) {
+            scheduleLobbies();
+          }
+        }),
+      100, // TODO: set this back to 100
+    );
   });
 }
 
 app.get(
   "/api/env",
   gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
-    const envConfig = {
+    res.status(200).json({
       game_env: process.env.GAME_ENV || "prod",
-    };
-    res.json(envConfig);
+      subdomain: config.subdomain(),
+      domain: config.domain(),
+    });
   }),
 );
 
@@ -193,14 +146,46 @@ app.post(
   }),
 );
 
+app.post(
+  "/api/worker_heartbeat",
+  gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
+    log.info(`Received heartbeat from ${req.body.dns}...`);
+    if (req.headers[config.adminHeader()] !== config.adminToken()) {
+      res.status(401).send("Unauthorized");
+      return;
+    }
+
+    const { workerId, dns, activeClients } = req.body;
+
+    if (!workerId || !dns || typeof activeClients !== "number") {
+      res.status(400).json({ error: "Missing required fields" });
+      return;
+    }
+
+    workerDiscovery.updateWorkerHeartbeat(workerId, dns, activeClients);
+    res.status(200).json({ success: true });
+  }),
+);
+
+app.get(
+  "/api/worker_address",
+  gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
+    const worker = workerDiscovery.getAvailableWorker();
+    if (!worker) {
+      res.status(500).json({ error: "No available workers" });
+      return;
+    }
+    res.status(200).json({ dns: worker.dns });
+  }),
+);
+
 async function fetchLobbies(): Promise<number> {
   const fetchPromises: Promise<GameInfo | null>[] = [];
 
-  for (const gameID of new Set(publicLobbyIDs)) {
+  for (const lobby of publicLobbies.values()) {
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 5000); // 5 second timeout
-    const port = config.workerPort(gameID);
-    const promise = fetch(`http://localhost:${port}/api/game/${gameID}`, {
+    const promise = fetch(`${lobby.dns}/api/game/${lobby.gameID}`, {
       headers: { [config.adminHeader()]: config.adminToken() },
       signal: controller.signal,
     })
@@ -209,9 +194,9 @@ async function fetchLobbies(): Promise<number> {
         return json as GameInfo;
       })
       .catch((error) => {
-        log.error(`Error fetching game ${gameID}:`, error);
+        log.error(`Error fetching game ${lobby.gameID}:`, error);
         // Return null or a placeholder if fetch fails
-        publicLobbyIDs.delete(gameID);
+        publicLobbies.delete(lobby.gameID);
         return null;
       });
 
@@ -239,7 +224,7 @@ async function fetchLobbies(): Promise<number> {
       l.msUntilStart !== undefined &&
       l.msUntilStart <= 250
     ) {
-      publicLobbyIDs.delete(l.gameID);
+      publicLobbies.delete(l.gameID);
       return;
     }
 
@@ -252,7 +237,7 @@ async function fetchLobbies(): Promise<number> {
       l.numClients !== undefined &&
       l.gameConfig.maxPlayers <= l.numClients
     ) {
-      publicLobbyIDs.delete(l.gameID);
+      publicLobbies.delete(l.gameID);
       return;
     }
   });
@@ -262,37 +247,36 @@ async function fetchLobbies(): Promise<number> {
     lobbies: lobbyInfos,
   });
 
-  return publicLobbyIDs.size;
+  return publicLobbies.size;
 }
 
 // Function to schedule a new public game
 async function schedulePublicGame(playlist: MapPlaylist) {
-  const gameID = generateID();
-  publicLobbyIDs.add(gameID);
-
-  const workerPath = config.workerPath(gameID);
+  const dns = workerDiscovery.getAvailableWorker().dns;
+  log.info(`Scheduling public game on worker ${dns}...`);
 
   // Send request to the worker to start the game
   try {
-    const response = await fetch(
-      `http://localhost:${config.workerPort(gameID)}/api/create_game/${gameID}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          [config.adminHeader()]: config.adminToken(),
-        },
-        body: JSON.stringify(playlist.gameConfig()),
+    const response = await fetch(`${dns}/api/create_game`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        [config.adminHeader()]: config.adminToken(),
       },
-    );
+      body: JSON.stringify(playlist.gameConfig()),
+    });
 
     if (!response.ok) {
       throw new Error(`Failed to schedule public game: ${response.statusText}`);
     }
 
     const data = await response.json();
+    publicLobbies.set(data.gameID, {
+      gameID: data.gameID,
+      dns,
+    });
   } catch (error) {
-    log.error(`Failed to schedule public game on worker ${workerPath}:`, error);
+    log.error(`Failed to schedule public game on worker ${dns}:`, error);
     throw error;
   }
 }

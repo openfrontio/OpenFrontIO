@@ -26,7 +26,13 @@ import { initWorkerMetrics } from "./WorkerMetrics";
 const config = getServerConfigFromServer();
 
 const workerId = parseInt(process.env.WORKER_ID || "0");
+
+const workerAddress = config.workerAddress(workerId);
+
+const masterAddress = config.masterAddress();
 const log = logger.child({ comp: `w_${workerId}` });
+
+const isRunning = false;
 
 // Worker setup
 export function startWorker() {
@@ -39,7 +45,7 @@ export function startWorker() {
   const server = http.createServer(app);
   const wss = new WebSocketServer({ server });
 
-  const gm = new GameManager(config, log);
+  const gm = new GameManager(config, log, workerId);
 
   if (config.env() === GameEnv.Prod && config.otelEnabled()) {
     initWorkerMetrics(gm);
@@ -80,10 +86,41 @@ export function startWorker() {
     }),
   );
 
+  sendHeartbeat();
+  setInterval(async () => {
+    const jitter = Math.random() * 1000;
+    await new Promise((resolve) => setTimeout(resolve, jitter));
+    await sendHeartbeat();
+  }, 15 * 1000);
+
+  async function sendHeartbeat(): Promise<any> {
+    log.info(`Sending heartbeat to ${masterAddress}...`);
+
+    const response = await fetch(`${masterAddress}/api/worker_heartbeat`, {
+      method: "POST",
+      headers: {
+        [config.adminHeader()]: config.adminToken(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        workerId: workerId,
+        dns: workerAddress,
+        activeClients: gm.activeClients(),
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
   app.post(
-    "/api/create_game/:id",
+    "/api/create_game",
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
-      const id = req.params.id;
+      console.log("create_game!!!!");
+      const id = gm.createGameID();
       if (!id) {
         log.warn(`cannot create game, id not found`);
         return res.status(400).json({ error: "Game ID is required" });
@@ -91,6 +128,7 @@ export function startWorker() {
       const clientIP = req.ip || req.socket.remoteAddress || "unknown";
       const result = CreateGameInputSchema.safeParse(req.body);
       if (!result.success) {
+        console.log("create_game error", result.error);
         const error = z.prettifyError(result.error);
         return res.status(400).json({ error });
       }
@@ -106,14 +144,14 @@ export function startWorker() {
         return res.status(401).send("Unauthorized");
       }
 
-      // Double-check this worker should host this game
-      const expectedWorkerId = config.workerIndex(id);
-      if (expectedWorkerId !== workerId) {
-        log.warn(
-          `This game ${id} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
-        );
-        return res.status(400).json({ error: "Worker, game id mismatch" });
-      }
+      // // Double-check this worker should host this game
+      // const expectedWorkerId = config.workerIndex(id);
+      // if (expectedWorkerId !== workerId) {
+      //   log.warn(
+      //     `This game ${id} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
+      //   );
+      //   return res.status(400).json({ error: "Worker, game id mismatch" });
+      // }
 
       const game = gm.createGame(id, gc);
 

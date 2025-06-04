@@ -49,6 +49,7 @@ export interface LobbyConfig {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
+  workerAddress: string;
 }
 
 export function joinLobby(

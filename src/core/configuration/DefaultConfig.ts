@@ -66,6 +66,20 @@ const numPlayersConfig = {
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
+  masterAddress(): string {
+    if (this.env() === GameEnv.Dev) {
+      return `http://localhost:3000`;
+    } else {
+      return `https://${this.subdomain()}.${this.domain()}`;
+    }
+  }
+  workerAddress(workerId: number): string {
+    if (this.env() === GameEnv.Dev) {
+      return `http://localhost:${3000 + workerId + 1}`;
+    } else {
+      return `https://w${workerId}-${this.subdomain()}.${this.domain()}`;
+    }
+  }
   domain(): string {
     return process.env.DOMAIN ?? "";
   }

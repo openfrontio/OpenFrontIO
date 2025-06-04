@@ -247,10 +247,10 @@ export function assertNever(x: never): never {
   throw new Error("Unexpected value: " + x);
 }
 
-export function generateID(): GameID {
+export function generateID(length: number = 8): GameID {
   const nanoid = customAlphabet(
-    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
-    8,
+    "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ",
+    length,
   );
   return nanoid();
 }
@@ -314,4 +314,13 @@ export const flattenedEmojiTable: string[] = emojiTable.flat();
  */
 export function replacer(_key: string, value: any): any {
   return typeof value === "bigint" ? value.toString() : value;
+}
+
+export function workerAddress(
+  gameID: GameID,
+  subdomain: string,
+  domain: string,
+): string {
+  const id = gameID.slice(4);
+  return `https://w${id}-${subdomain}.${domain}`;
 }

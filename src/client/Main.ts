@@ -1,6 +1,7 @@
 import page from "page";
 import favicon from "../../resources/images/Favicon.svg";
 import { GameRecord, GameStartInfo } from "../core/Schemas";
+import { workerAddress } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
@@ -272,11 +273,19 @@ class Client {
       this.gameStop();
     }
     const config = await getServerConfigFromClient();
+    const subdomainResponse = await fetch("/api/domain");
+    if (!subdomainResponse.ok) {
+      throw new Error(
+        `Failed to fetch subdomain: ${subdomainResponse.status} ${subdomainResponse.statusText}`,
+      );
+    }
+    const { subdomain, domain } = await subdomainResponse.json();
 
     this.gameStop = joinLobby(
       {
         gameID: lobby.gameID,
         serverConfig: config,
+        workerAddress: workerAddress(lobby.gameID, subdomain, domain),
         flag:
           this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
             ? ""

@@ -49,6 +49,10 @@ export interface ServerConfig {
   r2Endpoint(): string;
   r2AccessKey(): string;
   r2SecretKey(): string;
+  cloudflareAccountId(): string;
+  cloudflareApiToken(): string;
+  domain(): string;
+  subdomain(): string;
   otelEndpoint(): string;
   otelUsername(): string;
   otelPassword(): string;
@@ -60,6 +64,8 @@ export interface ServerConfig {
   subdomain(): string;
   cloudflareAccountId(): string;
   cloudflareApiToken(): string;
+  masterAddress(): string;
+  workerAddress(workerId: number): string;
 }
 
 export interface NukeMagnitude {

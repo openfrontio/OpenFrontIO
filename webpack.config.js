@@ -232,6 +232,7 @@ export default async (env, argv) => {
                 "/api/auth/callback",
                 "/api/auth/discord",
                 "/api/kick_player",
+                "/api/worker_address",
               ],
               target: "http://localhost:3000",
               secure: false,

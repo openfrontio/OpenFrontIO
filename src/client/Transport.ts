@@ -163,6 +163,8 @@ export class Transport {
   private onmessage: (msg: ServerMessage) => void;
 
   private pingInterval: number | null = null;
+
+  private workerAddress: string;
   public readonly isLocal: boolean;
   constructor(
     private lobbyConfig: LobbyConfig,
@@ -173,6 +175,10 @@ export class Transport {
     this.isLocal =
       lobbyConfig.gameRecord !== undefined ||
       lobbyConfig.gameStartInfo?.config.gameType === GameType.Singleplayer;
+
+    if (!this.isLocal) {
+      this.workerAddress = lobbyConfig.workerAddress;
+    }
 
     this.eventBus.on(SendAllianceRequestIntentEvent, (e) =>
       this.onSendAllianceRequest(e),
@@ -276,12 +282,8 @@ export class Transport {
   ) {
     this.startPing();
     this.killExistingSocket();
-    const wsHost = window.location.host;
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const workerPath = this.lobbyConfig.serverConfig.workerPath(
-      this.lobbyConfig.gameID,
-    );
-    this.socket = new WebSocket(`${wsProtocol}//${wsHost}/${workerPath}`);
+    this.socket = new WebSocket(`${wsProtocol}//${this.workerAddress}`);
     this.onconnect = onconnect;
     this.onmessage = onmessage;
     this.socket.onopen = () => {
