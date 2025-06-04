@@ -1,4 +1,3 @@
-import { consolex } from "../../Consolex";
 import { Execution, Game, Player, PlayerID } from "../../game/Game";
 
 export class AllianceRequestReplyExecution implements Execution {
@@ -36,13 +35,13 @@ export class AllianceRequestReplyExecution implements Execution {
       throw new Error("Not initialized");
     }
     if (this.requestor.isFriendly(this.recipient)) {
-      consolex.warn("already allied");
+      console.warn("already allied");
     } else {
       const request = this.requestor
         .outgoingAllianceRequests()
         .find((ar) => ar.recipient() === this.recipient);
       if (request === undefined) {
-        consolex.warn("no alliance request found");
+        console.warn("no alliance request found");
       } else {
         if (this.accept) {
           request.accept();

@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -43,7 +42,7 @@ export class PortExecution implements Execution {
       const player = this.mg.player(this._owner);
       const spawn = player.canBuild(UnitType.Port, tile);
       if (spawn === false) {
-        consolex.warn(`player ${player} cannot build port at ${this.tile}`);
+        console.warn(`player ${player} cannot build port at ${this.tile}`);
         this.active = false;
         return;
       }

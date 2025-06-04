@@ -6,7 +6,6 @@ import disabledIcon from "../../../../resources/images/DisabledIcon.svg";
 import infoIcon from "../../../../resources/images/InfoIcon.svg";
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
-import { consolex } from "../../../core/Consolex";
 import { EventBus } from "../../../core/EventBus";
 import {
   Cell,
@@ -341,7 +340,7 @@ export class RadialMenu implements Layer {
 
     const myPlayer = this.g.myPlayer();
     if (myPlayer === null) {
-      consolex.warn("my player not found");
+      console.warn("my player not found");
       return;
     }
     if (myPlayer && !myPlayer.isAlive() && !this.g.inSpawnPhase()) {
@@ -453,7 +452,7 @@ export class RadialMenu implements Layer {
     if (!this.isCenterButtonEnabled) {
       return;
     }
-    consolex.log("Center button clicked");
+    console.log("Center button clicked");
     if (this.clickedCell === null) return;
     const clicked = this.g.ref(this.clickedCell.x, this.clickedCell.y);
     if (this.g.inSpawnPhase()) {

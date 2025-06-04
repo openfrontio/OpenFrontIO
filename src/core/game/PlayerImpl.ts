@@ -1,5 +1,4 @@
 import { renderNumber, renderTroops } from "../../client/Utils";
-import { consolex } from "../Consolex";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
@@ -269,7 +268,7 @@ export class PlayerImpl implements Player {
   orderRetreat(id: string) {
     const attack = this._outgoingAttacks.filter((attack) => attack.id() === id);
     if (!attack || !attack[0]) {
-      consolex.warn(`Didn't find outgoing attack with id ${id}`);
+      console.warn(`Didn't find outgoing attack with id ${id}`);
       return;
     }
     attack[0].orderRetreat();

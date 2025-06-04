@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -38,7 +37,7 @@ export class MissileSiloExecution implements Execution {
     if (this.silo === null) {
       const spawn = this.player.canBuild(UnitType.MissileSilo, this.tile);
       if (spawn === false) {
-        consolex.warn(
+        console.warn(
           `player ${this.player} cannot build missile silo at ${this.tile}`,
         );
         this.active = false;

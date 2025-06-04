@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -102,7 +101,7 @@ export class SAMLauncherExecution implements Execution {
       }
       const spawnTile = this.player.canBuild(UnitType.SAMLauncher, this.tile);
       if (spawnTile === false) {
-        consolex.warn("cannot build SAM Launcher");
+        console.warn("cannot build SAM Launcher");
         this.active = false;
         return;
       }

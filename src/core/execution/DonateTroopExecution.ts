@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import { Execution, Game, Player, PlayerID } from "../game/Game";
 
 export class DonateTroopsExecution implements Execution {
@@ -43,7 +42,7 @@ export class DonateTroopsExecution implements Execution {
     ) {
       this.recipient.updateRelation(this.sender, 50);
     } else {
-      consolex.warn(
+      console.warn(
         `cannot send troops from ${this.sender} to ${this.recipient}`,
       );
     }

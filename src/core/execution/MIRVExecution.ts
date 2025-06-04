@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -64,7 +63,7 @@ export class MirvExecution implements Execution {
     if (this.nuke === null) {
       const spawn = this.player.canBuild(UnitType.MIRV, this.dst);
       if (spawn === false) {
-        consolex.warn(`cannot build MIRV`);
+        console.warn(`cannot build MIRV`);
         this.active = false;
         return;
       }

@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -34,7 +33,7 @@ export class CityExecution implements Execution {
     if (this.city === null) {
       const spawnTile = this.player.canBuild(UnitType.City, this.tile);
       if (spawnTile === false) {
-        consolex.warn("cannot build city");
+        console.warn("cannot build city");
         this.active = false;
         return;
       }

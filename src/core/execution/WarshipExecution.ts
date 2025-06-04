@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -192,7 +191,7 @@ export class WarshipExecution implements Execution {
           this.warship.touch();
           break;
         case PathFindResultType.PathNotFound:
-          consolex.log(`path not found to target`);
+          console.log(`path not found to target`);
           break;
       }
     }
@@ -222,7 +221,7 @@ export class WarshipExecution implements Execution {
         this.warship.touch();
         return;
       case PathFindResultType.PathNotFound:
-        consolex.warn(`path not found to target tile`);
+        console.warn(`path not found to target tile`);
         this.warship.setTargetTile(undefined);
         break;
     }
