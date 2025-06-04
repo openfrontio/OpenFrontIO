@@ -18,7 +18,6 @@ const frequency = {
   GatewayToTheAtlantic: 1,
   Iceland: 1,
   SouthAmerica: 1,
-  KnownWorld: 1,
   DeglaciatedAntarctica: 1,
   EuropeClassic: 1,
   Mena: 1,
