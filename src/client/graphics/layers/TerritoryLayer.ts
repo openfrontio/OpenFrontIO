@@ -240,7 +240,13 @@ export class TerritoryLayer implements Layer {
 
     while (numToRender > 0) {
       numToRender--;
-      const tile = this.tileToRenderQueue.pop().tile;
+
+      const entry = this.tileToRenderQueue.pop();
+      if (!entry) {
+        break;
+      }
+
+      const tile = entry.tile;
       this.paintTerritory(tile);
       for (const neighbor of this.game.neighbors(tile)) {
         this.paintTerritory(neighbor, true);

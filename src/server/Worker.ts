@@ -15,6 +15,7 @@ import {
   GameRecord,
   GameRecordSchema,
 } from "../core/Schemas";
+import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
 import { archive, readGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
@@ -89,7 +90,13 @@ export function startWorker() {
         return res.status(400).json({ error: "Game ID is required" });
       }
       const clientIP = req.ip || req.socket.remoteAddress || "unknown";
-      const gc = req.body?.gameConfig as GameConfig;
+      const result = CreateGameInputSchema.safeParse(req.body);
+      if (!result.success) {
+        const error = z.prettifyError(result.error);
+        return res.status(400).json({ error });
+      }
+
+      const gc = result.data;
       if (
         gc?.gameType === GameType.Public &&
         req.headers[config.adminHeader()] !== config.adminToken()
@@ -97,9 +104,7 @@ export function startWorker() {
         log.warn(
           `cannot create public game ${id}, ip ${ipAnonymize(clientIP)} incorrect admin token`,
         );
-        return res
-          .status(400)
-          .json({ error: "Invalid admin token for public game creation" });
+        return res.status(401).send("Unauthorized");
       }
 
       // Double-check this worker should host this game
@@ -144,9 +149,15 @@ export function startWorker() {
   app.put(
     "/api/game/:id",
     gatekeeper.httpHandler(LimiterType.Put, async (req, res) => {
+      const result = GameInputSchema.safeParse(req.body);
+      if (!result.success) {
+        const error = z.prettifyError(result.error);
+        return res.status(400).json({ error });
+      }
+      const config = result.data;
       // TODO: only update public game if from local host
       const lobbyID = req.params.id;
-      if (req.body.gameType === GameType.Public) {
+      if (config.gameType === GameType.Public) {
         log.info(`cannot update game ${lobbyID} to public`);
         return res.status(400).json({ error: "Cannot update public game" });
       }
@@ -167,18 +178,7 @@ export function startWorker() {
           .status(400)
           .json({ error: "Cannot update game after it has started" });
       }
-      game.updateGameConfig({
-        gameMap: req.body.gameMap,
-        difficulty: req.body.difficulty,
-        infiniteGold: req.body.infiniteGold,
-        infiniteTroops: req.body.infiniteTroops,
-        instantBuild: req.body.instantBuild,
-        bots: req.body.bots,
-        disableNPCs: req.body.disableNPCs,
-        disabledUnits: req.body.disabledUnits,
-        gameMode: req.body.gameMode,
-        playerTeams: req.body.playerTeams,
-      });
+      game.updateGameConfig(config);
       res.status(200).json({ success: true });
     }),
   );
@@ -251,8 +251,7 @@ export function startWorker() {
       if (!result.success) {
         const error = z.prettifyError(result.error);
         log.info(error);
-        res.status(400).json({ error });
-        return;
+        return res.status(400).json({ error });
       }
 
       const gameRecord: GameRecord = result.data;

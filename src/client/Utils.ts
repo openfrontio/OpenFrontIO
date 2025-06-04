@@ -4,7 +4,8 @@ export function renderTroops(troops: number): string {
   return renderNumber(troops / 10);
 }
 
-export function renderNumber(num: number): string {
+export function renderNumber(num: number | bigint): string {
+  num = Number(num);
   num = Math.max(num, 0);
 
   if (num >= 10_000_000) {

@@ -54,7 +54,7 @@ export class OModal extends LitElement {
       color: #fff;
       padding: 1.4rem;
       max-height: 60dvh;
-      overflow-y: scroll;
+      overflow-y: auto;
       backdrop-filter: blur(8px);
     }
   `;
