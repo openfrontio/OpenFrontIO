@@ -10,7 +10,8 @@ import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import {
-  ClientMessageSchema,
+  ClientJoinMessageSchema,
+  GameConfig,
   GameRecord,
   GameRecordSchema,
 } from "../core/Schemas";
@@ -293,11 +294,17 @@ export function startWorker() {
           : forwarded || req.socket.remoteAddress || "unknown";
 
         try {
-          // Process WebSocket messages as in your original code
           // Parse and handle client messages
-          const clientMsg = ClientMessageSchema.parse(
+          const parsed = ClientJoinMessageSchema.safeParse(
             JSON.parse(message.toString()),
           );
+          if (!parsed.success) {
+            const error = z.prettifyError(parsed.error);
+            log.warn("Error parsing join message client", error);
+            ws.close();
+            return;
+          }
+          const clientMsg = parsed.data;
 
           if (clientMsg.type === "join") {
             // Verify this worker should handle this game
