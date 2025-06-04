@@ -693,7 +693,7 @@ export class DefaultConfig implements Config {
     const basePopGrowthRate = 1400 / max + 1 / 175;
     const reproductionPop = player.troops() + 1.15 * player.workers();
     let toAdd = baseAdditionRate + basePopGrowthRate * reproductionPop;
-    const totalPop = player.totalPopulation();
+    const totalPop = player.population();
     const ratio = Math.max(1 - totalPop / max, 0);
     toAdd *= ratio ** 1.222;
 
