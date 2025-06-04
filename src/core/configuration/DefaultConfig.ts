@@ -570,11 +570,11 @@ export class DefaultConfig implements Config {
         ? this.traitorDefenseDebuff()
         : 1;
       const attackerHospitalBonus = Math.pow(
-        0.95,
+        0.9,
         attacker.units(UnitType.Hospital).length,
       );
       const defenderHospitalBonus = Math.pow(
-        0.95,
+        0.9,
         defender.units(UnitType.Hospital).length,
       );
       console.log(attackerHospitalBonus, defenderHospitalBonus);
