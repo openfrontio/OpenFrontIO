@@ -171,6 +171,23 @@ export class TransportShipExecution implements Execution {
     if (this.boat.retreating()) {
       this.dst = this.src!; // src is guaranteed to be set at this point
     }
+    // Cancel movement if enemy warship is nearby
+    const nearbyWarships = this.mg.nearbyUnits(
+      this.boat.tile(),
+      40,
+      UnitType.Warship,
+    );
+
+    const enemyWarshipNearby = nearbyWarships.some(
+      ({ unit }) =>
+        unit.owner() !== this.attacker &&
+        !this.attacker.isFriendly(unit.owner()),
+    );
+
+    if (enemyWarshipNearby) {
+      // Optional: consolex.log("Transport halted due to nearby enemy warship");
+      return;
+    }
 
     const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
     switch (result.type) {
