@@ -284,7 +284,7 @@ export class DefaultConfig implements Config {
     return BigInt(Math.floor(10000 + 150 * Math.pow(dist, 1.1)));
   }
   tradeShipSpawnRate(numberOfPorts: number): number {
-    return Math.round(10 * Math.pow(numberOfPorts, 0.38));
+    return Math.round(10 * Math.pow(numberOfPorts, 0.37));
   }
 
   unitInfo(type: UnitType): UnitInfo {
@@ -442,7 +442,7 @@ export class DefaultConfig implements Config {
               ? 0n
               : BigInt(
                   Math.min(
-                    6_000_000,
+                    3_000_000,
                     Math.pow(
                       2,
                       p.unitsIncludingConstruction(UnitType.Hospital).length,
@@ -579,7 +579,7 @@ export class DefaultConfig implements Config {
       );
       console.log(attackerHospitalBonus, defenderHospitalBonus);
       const baseTroopLoss = 10;
-      const attackLossModifier = 1.3;
+      const attackLossModifier = 1.35;
       const baseTileCost = 45;
       const attackStandardSize = 10_000;
       return {
@@ -594,11 +594,11 @@ export class DefaultConfig implements Config {
           within(defenderDensity, 3, 50) ** 0.2 *
           (attackStandardSize / attackTroops) ** 0.225 *
           speed *
-          within(attackRatio, 0.1, 20) ** 0.35,
+          within(attackRatio, 0.1, 20) ** 0.37,
       };
     } else {
       return {
-        attackerTroopLoss: 14 * mag,
+        attackerTroopLoss: 12 * mag,
         defenderTroopLoss: 0,
         tilesPerTickUsed: 492 * speed * within(attackTroops, 1, 10000) ** -0.3,
       };
@@ -725,7 +725,7 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): bigint {
-    return BigInt(Math.floor(0.08 * player.workers() ** 0.65));
+    return BigInt(Math.floor(0.081 * player.workers() ** 0.65));
   }
 
   troopAdjustmentRate(player: Player): number {
