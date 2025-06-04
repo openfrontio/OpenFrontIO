@@ -314,7 +314,7 @@ export function startWorker() {
               config,
             );
 
-            const roles: string[] | null = null;
+            let roles: string[] | undefined;
 
             // Check user roles
             if (claims !== null) {
@@ -323,6 +323,7 @@ export function startWorker() {
                 log.warn("Token is not valid", claims);
                 return;
               }
+              roles = result.player.roles;
             }
 
             // TODO: Validate client settings based on roles
