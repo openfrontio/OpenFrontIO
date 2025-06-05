@@ -23,7 +23,7 @@ function sendBoat(target: TileRef, source: TileRef, troops: number) {
   game.addExecution(
     new TransportShipExecution(
       defender,
-      game.terraNullius(),
+      game.terraNullius().id(),
       target,
       troops,
       source,
@@ -70,7 +70,7 @@ describe("Attack", () => {
     attacker = game.player(attackerInfo.id);
     defender = game.player(defenderInfo.id);
 
-    game.addExecution(new AttackExecution(100, defender, game.terraNullius()));
+    game.addExecution(new AttackExecution(100, defender, game.terraNullius().id()));
     game.executeNextTick();
     while (defender.outgoingAttacks().length > 0) {
       game.executeNextTick();
@@ -84,7 +84,7 @@ describe("Attack", () => {
     // on defender territory)
     constructionExecution(game, defender, 1, 1, UnitType.MissileSilo);
     expect(defender.units(UnitType.MissileSilo)).toHaveLength(1);
-    game.addExecution(new AttackExecution(100, attacker, defender));
+    game.addExecution(new AttackExecution(100, attacker, defender.id()));
     constructionExecution(game, defender, 0, 15, UnitType.AtomBomb, 3);
     const nuke = defender.units(UnitType.AtomBomb)[0];
     expect(nuke.isActive()).toBe(true);
