@@ -178,7 +178,7 @@ export class UnitInfoModal extends LitElement implements Layer {
         </div>
         <div style="margin-bottom: 4px;">
           <strong>Type:</strong> ${this.unit.type?.() ?? "Unknown"} </br>
-          <strong style="display: ${this.upgradable() ? "block" : "none"};" >Level:</strong> ${this.upgradable() && this.unit.level?.() ? this.unit.level?.() : ""}
+          <strong style="display: ${this.upgradable() ? "inline" : "none"};" >Level:</strong> ${this.upgradable() && this.unit.level?.() ? this.unit.level?.() : ""}
         </div>
         ${
           secondsLeft > 0
