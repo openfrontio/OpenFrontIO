@@ -1,6 +1,5 @@
 import { LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
-import { consolex } from "../../../core/Consolex";
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
@@ -54,7 +53,6 @@ import infoIcon from "../../../../resources/images/InfoIcon.svg";
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
-import { TerraNulliusImpl } from "../../../core/game/TerraNulliusImpl";
 
 /**
  * Enum for first-level menu slots
@@ -174,7 +172,9 @@ export class MainRadialMenu extends LitElement implements Layer {
 
     // Make sure we have the chat modal before proceeding
     if (!this.ctModal) {
-      consolex.warn("Chat modal not found during initialization");
+      throw new Error(
+        "Chat modal element not found. Ensure chat-modal element exists in DOM before initializing MainRadialMenu",
+      );
     }
   }
 
@@ -209,25 +209,16 @@ export class MainRadialMenu extends LitElement implements Layer {
     if (this.emojiTable.isVisible) {
       this.emojiTable.hideTable();
     }
+
+    if (this.playerPanel.isVisible) {
+      this.playerPanel.hide();
+    }
   }
 
   private onContextMenu(event: ContextMenuEvent) {
     if (this.lastClosed + 200 > new Date().getTime()) return;
 
-    if (this.buildMenu.isVisible) {
-      this.buildMenu.hideMenu();
-      return;
-    }
-
-    if (this.emojiTable.isVisible) {
-      this.emojiTable.hideTable();
-      return;
-    }
-
-    if (this.playerPanel.isVisible) {
-      this.playerPanel.hide();
-      return;
-    }
+    this.closeMenu();
 
     if (this.radialMenu.isMenuVisible()) {
       this.radialMenu.hideRadialMenu();
@@ -235,7 +226,7 @@ export class MainRadialMenu extends LitElement implements Layer {
     } else {
       this.radialMenu.showRadialMenu(event.x, event.y);
     }
-
+    
     this.radialMenu.disableAllButtons();
     this.clickedCell = this.transformHandler.screenToWorldCoordinates(
       event.x,
@@ -255,8 +246,7 @@ export class MainRadialMenu extends LitElement implements Layer {
 
     const myPlayer = this.game.myPlayer();
     if (myPlayer === null) {
-      consolex.warn("my player not found");
-      return;
+      throw new Error("my player not found");
     }
 
     if (myPlayer && !myPlayer.isAlive() && !this.game.inSpawnPhase()) {
@@ -301,7 +291,7 @@ export class MainRadialMenu extends LitElement implements Layer {
 
     const tileOwner = this.game.owner(tile);
     const recipient =
-      tileOwner instanceof TerraNulliusImpl ? null : (tileOwner as PlayerView);
+      tileOwner.isPlayer() ? (tileOwner as PlayerView) : null;
 
     if (this.ctModal && myPlayer && recipient) {
       this.ctModal.setSender(myPlayer);
@@ -738,14 +728,12 @@ export class MainRadialMenu extends LitElement implements Layer {
 
   private createQuickChatMenu(recipient: PlayerView): MenuItem[] {
     if (!this.ctModal) {
-      consolex.warn("Chat modal not set");
-      return [];
+      throw new Error("Chat modal not set");
     }
 
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) {
-      consolex.warn("Current player not found");
-      return [];
+      throw new Error("Current player not found");
     }
 
     return this.ctModal.categories.map((category) => {

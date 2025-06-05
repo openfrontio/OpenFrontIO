@@ -486,8 +486,7 @@ export class RadialMenu implements Layer {
         d.data.action();
         this.hideRadialMenu();
       } else {
-        console.warn("Menu item action is not a function", d.data);
-        this.hideRadialMenu();
+        throw new Error(`Menu item action is not a function: ${d.data.id}`);
       }
     };
 
