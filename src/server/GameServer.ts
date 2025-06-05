@@ -1,9 +1,9 @@
 import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
-import { z } from "zod/v4";
 import {
   ClientID,
+  ClientMessage,
   ClientMessageSchema,
   ClientSendWinnerMessage,
   GameConfig,
@@ -178,16 +178,12 @@ export class GameServer {
       "message",
       gatekeeper.wsHandler(client.ip, async (message: string) => {
         try {
-          const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
-          if (!parsed.success) {
-            const error = z.prettifyError(parsed.error);
-            this.log.error("Failed to parse client message", error, {
-              clientID: client.clientID,
-            });
-            client.ws.close();
-            return;
+          let clientMsg: ClientMessage | null = null;
+          try {
+            clientMsg = ClientMessageSchema.parse(JSON.parse(message));
+          } catch (error) {
+            throw Error(`error parsing schema for ${ipAnonymize(client.ip)}`);
           }
-          const clientMsg = parsed.data;
           if (clientMsg.type === "intent") {
             if (clientMsg.intent.clientID !== client.clientID) {
               this.log.warn(
