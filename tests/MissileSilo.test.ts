@@ -1,5 +1,6 @@
 import { NukeExecution } from "../src/core/execution/NukeExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
+import { UpgradeStructureExecution } from "../src/core/execution/UpgradeStructureExecution";
 import {
   Game,
   Player,
@@ -92,5 +93,18 @@ describe("MissileSilo", () => {
     expect(
       attacker.units(UnitType.MissileSilo)[0].hasMissilesReady(),
     ).toBeTruthy();
+  });
+
+  test("missilesilo should have increased level after upgrade", async () => {
+    expect(attacker.units(UnitType.MissileSilo)[0].level()).toEqual(1);
+
+    const upgradeStructureExecution = new UpgradeStructureExecution(
+      attacker.id(),
+      attacker.units(UnitType.MissileSilo)[0].tile(),
+    );
+    game.addExecution(upgradeStructureExecution);
+    executeTicks(game, 2);
+
+    expect(attacker.units(UnitType.MissileSilo)[0].level()).toEqual(2);
   });
 });
