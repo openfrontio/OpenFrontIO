@@ -41,11 +41,7 @@ export async function setup(
     gameMode: GameMode.FFA,
     gameType: GameType.Singleplayer,
     difficulty: Difficulty.Medium,
-    disableNPCs: false,
     bots: 0,
-    infiniteGold: false,
-    infiniteTroops: false,
-    instantBuild: false,
     ..._gameConfig,
   };
   const config = new TestConfig(

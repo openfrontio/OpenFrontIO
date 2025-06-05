@@ -87,7 +87,7 @@ export class Executor {
         return new AllianceRequestReplyExecution(
           intent.requestor,
           playerID,
-          intent.accept,
+          intent.accept ?? false,
         );
       case "breakAlliance":
         return new BreakAllianceExecution(playerID, intent.recipient);
