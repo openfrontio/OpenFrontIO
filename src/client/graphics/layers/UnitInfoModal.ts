@@ -181,7 +181,7 @@ export class UnitInfoModal extends LitElement implements Layer {
           <strong>${translateText("unit_info_modal.type")}:</strong>
           ${translateText(+"unit_type." + this.unit.type?.().toLowerCase()) ??
           translateText("unit_info_modal.unit_type_unknown")}
-          <strong style="display: ${this.upgradable() ? "block" : "none"};" >Level:</strong> 
+          <strong style="display: ${this.upgradable() ? "inline" : "none"};" >Level:</strong> 
           ${this.upgradable() && this.unit.level?.() ? this.unit.level?.() : ""}
         </div>
         ${secondsLeft > 0
