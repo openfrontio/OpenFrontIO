@@ -1,3 +1,4 @@
+import { PseudoRandom } from "../PseudoRandom";
 import { PlayerInfo, Team } from "./Game";
 
 export function assignTeams(
@@ -56,7 +57,9 @@ export function assignTeams(
   }
 
   // Then, assign non-clan players to balance teams
-  for (const player of noClanPlayers) {
+  const random = new PseudoRandom(Date.now());
+
+  for (const player of random.shuffleArray(noClanPlayers)) {
     let team: Team | null = null;
     let teamSize = 0;
     for (const t of teams) {
