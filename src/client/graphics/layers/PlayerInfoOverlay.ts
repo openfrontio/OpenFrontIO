@@ -253,11 +253,19 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.missile_launchers")}:
-          ${player.units(UnitType.MissileSilo).length}
+          ${player
+            .units(UnitType.MissileSilo)
+            .map((silo) => silo.level())
+            .reduce((a, b) => a + b, 0)}
+          }
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.sams")}:
-          ${player.units(UnitType.SAMLauncher).length}
+          ${player
+            .units(UnitType.SAMLauncher)
+            .map((sam) => sam.level())
+            .reduce((a, b) => a + b, 0)}
+          }
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.warships")}:
