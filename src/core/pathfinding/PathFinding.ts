@@ -4,6 +4,7 @@ import { PseudoRandom } from "../PseudoRandom";
 import { DistanceBasedBezierCurve } from "../utilities/Line";
 import { AStar, PathFindResultType, TileResult } from "./AStar";
 import { MiniAStar } from "./MiniAStar";
+import { HPAStar } from "./HPAStar";
 
 const parabolaMinHeight = 50;
 
@@ -96,6 +97,16 @@ export class PathFinder {
     private game: Game,
     private newAStar: (curr: TileRef, dst: TileRef) => AStar,
   ) {}
+
+  public static Hierarchical(
+    game: Game,
+    iterations = 200,     // low-level A* budget
+    maxTries = 20,        // low-level retries
+  ) {
+    return new PathFinder(game, (curr: TileRef, dst: TileRef) => {
+      return new HPAStar(game, curr, dst, iterations, maxTries);
+    });
+  }
 
   public static Mini(game: Game, iterations: number, maxTries: number = 20) {
     return new PathFinder(game, (curr: TileRef, dst: TileRef) => {
