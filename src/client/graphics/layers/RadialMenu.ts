@@ -308,11 +308,17 @@ export class RadialMenu implements Layer {
   }
 
   private renderPaths(
-    arcs: d3.Selection<SVGGElement, d3.PieArcDatum<MenuElement>, SVGGElement, unknown>,
+    arcs: d3.Selection<
+      SVGGElement,
+      d3.PieArcDatum<MenuElement>,
+      SVGGElement,
+      unknown
+    >,
     arc: d3.Arc<any, d3.PieArcDatum<MenuElement>>,
-    level: number
+    level: number,
   ) {
-    arcs.append("path")
+    arcs
+      .append("path")
       .attr("class", "menu-item-path")
       .attr("d", arc)
       .attr("fill", (d) => {
@@ -379,8 +385,13 @@ export class RadialMenu implements Layer {
   }
 
   private setupEventHandlers(
-    arcs: d3.Selection<SVGGElement, d3.PieArcDatum<MenuElement>, SVGGElement, unknown>,
-    level: number
+    arcs: d3.Selection<
+      SVGGElement,
+      d3.PieArcDatum<MenuElement>,
+      SVGGElement,
+      unknown
+    >,
+    level: number,
   ) {
     const onHover = (d: d3.PieArcDatum<MenuElement>, path: any) => {
       if (
@@ -490,24 +501,24 @@ export class RadialMenu implements Layer {
     arcs.each((d) => {
       const pathId = d.data.id;
       const path = d3.select(`path[data-id="${pathId}"]`);
-      
-      path.on("mouseover", function() {
+
+      path.on("mouseover", function () {
         onHover(d, path);
       });
-      
-      path.on("mouseout", function() {
+
+      path.on("mouseout", function () {
         onMouseOut(d, path);
       });
-      
-      path.on("mousemove", function(event) {
+
+      path.on("mousemove", function (event) {
         handleMouseMove(event as MouseEvent);
       });
-      
-      path.on("click", function(event) {
+
+      path.on("click", function (event) {
         onClick(d, event);
       });
-      
-      path.on("touchstart", function(event) {
+
+      path.on("touchstart", function (event) {
         event.preventDefault();
         event.stopPropagation();
         onClick(d, event);
@@ -516,10 +527,16 @@ export class RadialMenu implements Layer {
   }
 
   private renderIconsAndText(
-    arcs: d3.Selection<SVGGElement, d3.PieArcDatum<MenuElement>, SVGGElement, unknown>,
-    arc: d3.Arc<any, d3.PieArcDatum<MenuElement>>
+    arcs: d3.Selection<
+      SVGGElement,
+      d3.PieArcDatum<MenuElement>,
+      SVGGElement,
+      unknown
+    >,
+    arc: d3.Arc<any, d3.PieArcDatum<MenuElement>>,
   ) {
-    arcs.append("g")
+    arcs
+      .append("g")
       .attr("class", "menu-item-content")
       .style("pointer-events", "none")
       .attr("data-id", (d) => d.data.id)
@@ -557,7 +574,7 @@ export class RadialMenu implements Layer {
   }
 
   private setupAnimations(
-    menuGroup: d3.Selection<SVGGElement, unknown, null, undefined>
+    menuGroup: d3.Selection<SVGGElement, unknown, null, undefined>,
   ) {
     menuGroup
       .transition()

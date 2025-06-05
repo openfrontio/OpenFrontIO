@@ -18,12 +18,15 @@ import { RadialMenu, RadialMenuConfig } from "./RadialMenu";
 import {
   COLORS,
   MenuElementParams,
+  Slot,
   createRadialMenuItems,
   getRootMenuItems,
   updateCenterButton,
-  Slot,
 } from "./RadialMenuElements";
 
+import boatIcon from "../../../../resources/images/BoatIconWhite.svg";
+import buildIcon from "../../../../resources/images/BuildIconWhite.svg";
+import infoIcon from "../../../../resources/images/InfoIcon.svg";
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 
 @customElement("main-radial-menu")
@@ -237,7 +240,7 @@ export class MainRadialMenu extends LitElement implements Layer {
       Slot.Build,
       !this.game.inSpawnPhase(),
       COLORS.build,
-      undefined,
+      buildIcon,
     );
 
     if (actions?.interaction?.canSendAllianceRequest) {
@@ -257,14 +260,14 @@ export class MainRadialMenu extends LitElement implements Layer {
       Slot.Boat,
       !!canBuildTransport,
       COLORS.boat,
-      undefined,
+      boatIcon,
     );
 
     this.radialMenu.updateMenuItem(
       Slot.Info,
       this.game.hasOwner(tile),
       COLORS.info,
-      undefined,
+      infoIcon,
     );
   }
 

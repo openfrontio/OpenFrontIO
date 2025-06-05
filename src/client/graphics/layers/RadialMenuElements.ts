@@ -418,7 +418,9 @@ export function createMenuItems(params: MenuElementParams): MenuElement[] {
   ];
 }
 
-export function createRadialMenuItems(params: MenuElementParams): MenuElement[] {
+export function createRadialMenuItems(
+  params: MenuElementParams,
+): MenuElement[] {
   const elements = createMenuItems(params);
   return prepareMenuElementsForRadialMenu(elements, params);
 }
@@ -451,10 +453,7 @@ export function getRootMenuItems(): MenuElement[] {
 
 export function updateCenterButton(
   params: MenuElementParams,
-  enableCenterButton: (
-    enabled: boolean,
-    action?: (() => void) | null,
-  ) => void,
+  enableCenterButton: (enabled: boolean, action?: (() => void) | null) => void,
 ) {
   if (params.playerActions.canAttack) {
     enableCenterButton(true, () => {
