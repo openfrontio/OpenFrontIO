@@ -5,131 +5,42 @@ import {
   AllPlayers,
   Cell,
   PlayerActions,
-  TerraNullius,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { flattenedEmojiTable } from "../../../core/Util";
-import {
-  CloseViewEvent,
-  ContextMenuEvent,
-  MouseUpEvent,
-  ShowBuildMenuEvent,
-} from "../../InputHandler";
-import {
-  BuildUnitIntentEvent,
-  SendAllianceRequestIntentEvent,
-  SendAttackIntentEvent,
-  SendBoatAttackIntentEvent,
-  SendBreakAllianceIntentEvent,
-  SendDonateGoldIntentEvent,
-  SendDonateTroopsIntentEvent,
-  SendEmbargoIntentEvent,
-  SendEmojiIntentEvent,
-  SendQuickChatEvent,
-  SendSpawnIntentEvent,
-  SendTargetPlayerIntentEvent,
-} from "../../Transport";
-import { renderNumber, translateText } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
-import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
-import { ChatModal, QuickChatPhrase, quickChatPhrases } from "./ChatModal";
+import { BuildMenu } from "./BuildMenu";
+import { ChatIntegration } from "./ChatIntegration";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
+import { COLORS, MenuBuilder, Slot } from "./MenuBuilder";
+import { MenuEventManager } from "./MenuEventManager";
+import { PlayerActionHandler } from "./PlayerActionHandler";
 import { PlayerInfoOverlay } from "./PlayerInfoOverlay";
 import { PlayerPanel } from "./PlayerPanel";
-import { MenuItem, RadialMenu, RadialMenuConfig } from "./RadialMenu";
+import { RadialMenu, RadialMenuConfig } from "./RadialMenu";
 
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
 import boatIcon from "../../../../resources/images/BoatIconWhite.svg";
 import buildIcon from "../../../../resources/images/BuildIconWhite.svg";
-import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
-import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
-import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.svg";
-import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import infoIcon from "../../../../resources/images/InfoIcon.svg";
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
-import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
-
-/**
- * Enum for first-level menu slots
- */
-enum Slot {
-  Info,
-  Boat,
-  Build,
-  Ally,
-  Back,
-}
-
-const COLORS = {
-  build: "#ebe250",
-  building: "#2c2c2c",
-  boat: "#3f6ab1",
-  ally: "#53ac75",
-  breakAlly: "#c74848",
-  info: "#64748B",
-  target: "#ff0000",
-  infoDetails: "#7f8c8d",
-  infoEmoji: "#f1c40f",
-  trade: "#008080",
-  embargo: "#6600cc",
-  tooltip: {
-    cost: "#ffd700",
-    count: "#aaa",
-  },
-  chat: {
-    default: "#66c",
-    help: "#4caf50",
-    attack: "#f44336",
-    defend: "#2196f3",
-    greet: "#ff9800",
-    misc: "#9c27b0",
-    warnings: "#e3c532",
-  },
-};
 
 @customElement("main-radial-menu")
 export class MainRadialMenu extends LitElement implements Layer {
   private radialMenu: RadialMenu;
-  private clickedCell: Cell | null = null;
-  private lastClosed: number = 0;
-  private originalTileOwner: PlayerView | TerraNullius;
-  private wasInSpawnPhase: boolean = false;
   private lastTickRefresh: number = 0;
   private tickRefreshInterval: number = 500;
   private needsRefresh: boolean = false;
-  private ctModal: ChatModal;
 
-  private rootMenuItems: MenuItem[] = [
-    {
-      id: Slot.Boat.toString(),
-      name: "boat",
-      disabled: true,
-      action: () => {},
-    },
-    {
-      id: Slot.Ally.toString(),
-      name: "ally",
-      disabled: true,
-      action: () => {},
-    },
-    {
-      id: Slot.Build.toString(),
-      name: "build",
-      disabled: true,
-      action: () => {},
-    },
-    {
-      id: Slot.Info.toString(),
-      name: "info",
-      disabled: true,
-      action: () => {},
-    },
-  ];
+  private menuBuilder: MenuBuilder;
+  private playerActionHandler: PlayerActionHandler;
+  private menuEventManager: MenuEventManager;
+  private chatIntegration: ChatIntegration;
 
   constructor(
     private eventBus: EventBus,
@@ -157,132 +68,39 @@ export class MainRadialMenu extends LitElement implements Layer {
     };
 
     this.radialMenu = new RadialMenu(menuConfig);
-    this.radialMenu.setRootMenuItems(this.rootMenuItems);
+
+    this.menuBuilder = new MenuBuilder(this.game, this.buildMenu);
+    this.playerActionHandler = new PlayerActionHandler(
+      this.game,
+      this.eventBus,
+      this.uiState,
+    );
+    this.menuEventManager = new MenuEventManager(
+      this.eventBus,
+      this.game,
+      this.transformHandler,
+      this.radialMenu,
+      this.buildMenu,
+      this.emojiTable,
+      this.playerInfoOverlay,
+      this.playerPanel,
+    );
+    this.chatIntegration = new ChatIntegration(this.game, this.eventBus);
+
+    this.radialMenu.setRootMenuItems(this.menuBuilder.getRootMenuItems());
   }
 
   init() {
     this.radialMenu.init();
 
-    this.eventBus.on(ContextMenuEvent, (e) => this.onContextMenu(e));
-    this.eventBus.on(MouseUpEvent, (e) => this.onPointerUp(e));
-    this.eventBus.on(CloseViewEvent, () => this.closeMenu());
-    this.eventBus.on(ShowBuildMenuEvent, (e) => this.onShowBuildMenu(e));
-
-    this.ctModal = document.querySelector("chat-modal") as ChatModal;
-
-    // Make sure we have the chat modal before proceeding
-    if (!this.ctModal) {
-      throw new Error(
-        "Chat modal element not found. Ensure chat-modal element exists in DOM before initializing MainRadialMenu",
-      );
-    }
-  }
-
-  private onShowBuildMenu(e: ShowBuildMenuEvent) {
-    const clickedCell = this.transformHandler.screenToWorldCoordinates(
-      e.x,
-      e.y,
-    );
-    if (clickedCell === null) {
-      return;
-    }
-    if (!this.game.isValidCoord(clickedCell.x, clickedCell.y)) {
-      return;
-    }
-    const tile = this.game.ref(clickedCell.x, clickedCell.y);
-    const p = this.game.myPlayer();
-    if (p === null) {
-      return;
-    }
-    this.buildMenu.showMenu(tile);
-  }
-
-  private closeMenu() {
-    if (this.radialMenu.isMenuVisible()) {
-      this.radialMenu.hideRadialMenu();
-    }
-
-    if (this.buildMenu.isVisible) {
-      this.buildMenu.hideMenu();
-    }
-
-    if (this.emojiTable.isVisible) {
-      this.emojiTable.hideTable();
-    }
-
-    if (this.playerPanel.isVisible) {
-      this.playerPanel.hide();
-    }
-  }
-
-  private onContextMenu(event: ContextMenuEvent) {
-    if (this.lastClosed + 200 > new Date().getTime()) return;
-
-    this.closeMenu();
-
-    if (this.radialMenu.isMenuVisible()) {
-      this.radialMenu.hideRadialMenu();
-      return;
-    } else {
-      this.radialMenu.showRadialMenu(event.x, event.y);
-    }
-    
-    this.radialMenu.disableAllButtons();
-    this.clickedCell = this.transformHandler.screenToWorldCoordinates(
-      event.x,
-      event.y,
-    );
-    if (
-      !this.clickedCell ||
-      !this.game.isValidCoord(this.clickedCell.x, this.clickedCell.y)
-    ) {
-      return;
-    }
-
-    const tile = this.game.ref(this.clickedCell.x, this.clickedCell.y);
-    this.originalTileOwner = this.game.owner(tile);
-
-    this.wasInSpawnPhase = this.game.inSpawnPhase();
-
-    const myPlayer = this.game.myPlayer();
-    if (myPlayer === null) {
-      throw new Error("my player not found");
-    }
-
-    if (myPlayer && !myPlayer.isAlive() && !this.game.inSpawnPhase()) {
-      return this.radialMenu.hideRadialMenu();
-    }
-
-    if (this.game.inSpawnPhase()) {
-      if (this.game.isLand(tile) && !this.game.hasOwner(tile)) {
-        this.radialMenu.enableCenterButton(true, () => {
-          if (this.clickedCell === null) return;
-          this.eventBus.emit(new SendSpawnIntentEvent(this.clickedCell));
-          this.radialMenu.hideRadialMenu();
-        });
-      }
-    }
-
-    myPlayer.actions(tile).then((actions) => {
+    this.menuEventManager.setContextMenuCallback((myPlayer, tile, actions) => {
       this.handlePlayerActions(myPlayer, actions, tile);
     });
+
+    this.menuEventManager.init();
   }
 
-  private onPointerUp(event: MouseUpEvent) {
-    this.playerInfoOverlay.hide();
-    this.hideEverything();
-  }
-
-  private hideEverything() {
-    if (this.radialMenu.isMenuVisible()) {
-      this.radialMenu.hideRadialMenu();
-      this.lastClosed = new Date().getTime();
-    }
-    this.emojiTable.hideTable();
-    this.buildMenu.hideMenu();
-  }
-
-  private handlePlayerActions(
+  private async handlePlayerActions(
     myPlayer: PlayerView,
     actions: PlayerActions,
     tile: TileRef,
@@ -290,321 +108,145 @@ export class MainRadialMenu extends LitElement implements Layer {
     this.buildMenu.playerActions = actions;
 
     const tileOwner = this.game.owner(tile);
-    const recipient =
-      tileOwner.isPlayer() ? (tileOwner as PlayerView) : null;
+    const recipient = tileOwner.isPlayer() ? (tileOwner as PlayerView) : null;
 
-    if (this.ctModal && myPlayer && recipient) {
-      this.ctModal.setSender(myPlayer);
-      this.ctModal.setRecipient(recipient);
+    if (myPlayer && recipient) {
+      this.chatIntegration.setupChatModal(myPlayer, recipient);
     }
 
-    const buildSubMenu: MenuItem[] = [
-      ...flattenedBuildTable.map((item: BuildItemDisplay) => ({
-        id: `build_${item.unitType}`,
-        name: item.key
-          ? item.key.replace("unit_type.", "")
-          : item.unitType.toString(),
-        disabled: !this.buildMenu.canBuild(item),
-        action: () => {
-          this.eventBus.emit(
-            new BuildUnitIntentEvent(
-              item.unitType,
-              new Cell(this.game.x(tile), this.game.y(tile)),
-            ),
-          );
-        },
-        color: this.buildMenu.canBuild(item) ? COLORS.building : undefined,
-        icon: item.icon,
-        tooltipItems: [
-          { text: translateText(item.key || ""), className: "title" },
-          {
-            text: translateText(item.description || ""),
-            className: "description",
-          },
-          {
-            text: `${renderNumber(this.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
-            className: "cost",
-          },
-          item.countable
-            ? {
-                text: `${this.buildMenu.count(item)}x`,
-                className: "count",
-              }
-            : null,
-        ].filter((item) => item !== null),
-      })),
-      {
-        id: "build_menu",
-        name: "build",
-        disabled: false,
-        action: () => {
-          this.buildMenu.showMenu(tile);
-        },
-        color: COLORS.build,
-        icon: buildIcon,
+    const buildSubMenu = this.menuBuilder.createBuildSubMenu(
+      (unitType, x, y) => {
+        this.playerActionHandler.handleBuildUnit(unitType, x, y);
+        this.menuEventManager.closeMenu();
       },
-    ];
+      tile,
+    );
 
-    const infoSubMenu: MenuItem[] = recipient
-      ? [
-          {
-            id: "info_chat",
-            name: "chat",
-            disabled: false,
-            action: () => {},
-            color: COLORS.chat.default,
-            icon: chatIcon,
-            children: this.createQuickChatMenu(recipient),
+    const allySubMenu = recipient
+      ? this.menuBuilder.createAllySubMenu(
+          recipient,
+          myPlayer,
+          actions,
+          (playerId) => {
+            this.playerActionHandler.handleTargetPlayer(playerId);
+            this.menuEventManager.closeMenu();
           },
-          {
-            id: "info_emoji",
-            name: "emoji",
-            disabled: false,
-            action: () => {},
-            color: COLORS.infoEmoji,
-            icon: emojiIcon,
-            children: [
-              ...flattenedEmojiTable.slice(0, 15).map((emoji, index) => ({
-                id: `emoji_${index}`,
-                name: emoji,
-                text: emoji,
-                disabled: false,
-                fontSize: "25px",
-                action: () => {
+          (player, recipient) => {
+            this.playerActionHandler.handleAllianceRequest(player, recipient);
+            this.menuEventManager.closeMenu();
+          },
+          (player, recipient) => {
+            this.playerActionHandler.handleBreakAlliance(player, recipient);
+            this.menuEventManager.closeMenu();
+          },
+          (recipient) => {
+            this.playerActionHandler.handleDonateGold(recipient);
+            this.menuEventManager.closeMenu();
+          },
+          (recipient) => {
+            this.playerActionHandler.handleDonateTroops(recipient);
+            this.menuEventManager.closeMenu();
+          },
+          (recipient, action) => {
+            this.playerActionHandler.handleEmbargo(
+              recipient,
+              action as "start" | "stop",
+            );
+            this.menuEventManager.closeMenu();
+          },
+        )
+      : [];
+
+    const updatedMenuItems = this.menuBuilder.createUpdatedMenuItems(
+      actions,
+      tile,
+      recipient,
+      async () => {
+        if (!recipient) return;
+        const spawn = await this.playerActionHandler.findBestTransportShipSpawn(
+          myPlayer,
+          tile,
+        );
+        let spawnTile: Cell | null = null;
+        if (spawn !== false) {
+          spawnTile = new Cell(this.game.x(spawn), this.game.y(spawn));
+        }
+
+        const clickedCell = this.menuEventManager.getClickedCell();
+        if (clickedCell === null) return;
+
+        this.playerActionHandler.handleBoatAttack(
+          myPlayer,
+          recipient.id(),
+          clickedCell,
+          spawnTile,
+        );
+        this.menuEventManager.closeMenu();
+      },
+      allySubMenu,
+      buildSubMenu,
+    );
+
+    for (const item of updatedMenuItems) {
+      if (item.id === Slot.Info.toString() && recipient) {
+        item.children = this.menuBuilder.createInfoSubMenu(
+          recipient,
+          () => {
+            this.playerPanel.show(actions, tile);
+          },
+          (recipient) => this.chatIntegration.createQuickChatMenu(recipient),
+        );
+
+        if (item.children && item.children.length > 0) {
+          const emojiMenuItem = item.children.find(
+            (child) => child.id === "info_emoji",
+          );
+          if (emojiMenuItem && emojiMenuItem.children) {
+            emojiMenuItem.action = () => {};
+
+            const moreEmojiItem = emojiMenuItem.children.find(
+              (child) => child.id === "emoji_more",
+            );
+            if (moreEmojiItem) {
+              moreEmojiItem.action = () => {
+                this.emojiTable.showTable((emoji) => {
                   const targetPlayer =
-                    recipient === this.game.myPlayer()
-                      ? AllPlayers
-                      : (recipient as PlayerView);
-                  this.eventBus.emit(
-                    new SendEmojiIntentEvent(targetPlayer, index),
+                    recipient === this.game.myPlayer() ? AllPlayers : recipient;
+                  this.playerActionHandler.handleEmoji(
+                    targetPlayer,
+                    flattenedEmojiTable.indexOf(emoji),
                   );
-                },
-              })),
-              {
-                id: "emoji_more",
-                name: "more",
-                disabled: false,
-                color: COLORS.infoEmoji,
-                icon: emojiIcon,
-                action: () => {
-                  this.emojiTable.showTable((emoji) => {
-                    const targetPlayer =
-                      recipient === this.game.myPlayer()
-                        ? AllPlayers
-                        : (recipient as PlayerView);
-                    this.eventBus.emit(
-                      new SendEmojiIntentEvent(
-                        targetPlayer,
-                        flattenedEmojiTable.indexOf(emoji),
-                      ),
-                    );
-                    this.emojiTable.hideTable();
-                  });
-                },
-              },
-            ],
-          },
-          {
-            id: "info_player",
-            name: "player",
-            disabled: false,
-            action: () => {
-              this.playerPanel.show(actions, tile);
-            },
-            color: COLORS.info,
-            icon: infoIcon,
-          },
-        ]
-      : [];
-
-    const isAlly = !!actions?.interaction?.canBreakAlliance;
-    const allySubMenu: MenuItem[] = recipient
-      ? [
-          {
-            id: "ally_target",
-            name: "target",
-            disabled: false,
-            action: () => {
-              this.eventBus.emit(
-                new SendTargetPlayerIntentEvent(recipient.id()),
-              );
-            },
-            color: COLORS.target,
-            icon: targetIcon,
-          },
-          {
-            id: "ally_request",
-            name: "request",
-            disabled: !actions?.interaction?.canSendAllianceRequest,
-            displayed: !isAlly,
-            action: () => {
-              this.eventBus.emit(
-                new SendAllianceRequestIntentEvent(myPlayer, recipient),
-              );
-            },
-            color: COLORS.ally,
-            icon: allianceIcon,
-          },
-          {
-            id: "ally_break",
-            name: "break",
-            disabled: !actions?.interaction?.canBreakAlliance,
-            displayed: isAlly,
-            action: () => {
-              this.eventBus.emit(
-                new SendBreakAllianceIntentEvent(myPlayer, recipient),
-              );
-            },
-            color: COLORS.breakAlly,
-            icon: traitorIcon,
-          },
-          {
-            id: "ally_donate_gold",
-            name: "donate gold",
-            disabled: !actions?.interaction?.canDonate,
-            action: () => {
-              this.eventBus.emit(
-                new SendDonateGoldIntentEvent(recipient, null),
-              );
-            },
-            color: COLORS.ally,
-            icon: donateGoldIcon,
-          },
-          {
-            id: "ally_donate_troops",
-            name: "donate troops",
-            disabled: !actions?.interaction?.canDonate,
-            action: () => {
-              this.eventBus.emit(
-                new SendDonateTroopsIntentEvent(recipient, null),
-              );
-            },
-            color: COLORS.ally,
-            icon: donateTroopIcon,
-          },
-          {
-            id: "ally_trade",
-            name: "trade",
-            disabled: !!actions?.interaction?.canEmbargo,
-            displayed: !actions?.interaction?.canEmbargo,
-            action: () => {
-              this.eventBus.emit(
-                new SendEmbargoIntentEvent(recipient, "start"),
-              );
-            },
-            color: COLORS.trade,
-            text: translateText("player_panel.start_trade"),
-          },
-          {
-            id: "ally_embargo",
-            name: "embargo",
-            disabled: !actions?.interaction?.canEmbargo,
-            displayed: !!actions?.interaction?.canEmbargo,
-            action: () => {
-              this.eventBus.emit(new SendEmbargoIntentEvent(recipient, "stop"));
-            },
-            color: COLORS.embargo,
-            text: translateText("player_panel.stop_trade"),
-          },
-        ].filter((item) => item.displayed !== false)
-      : [];
-
-    const updatedMenuItems: MenuItem[] = [
-      {
-        id: Slot.Boat.toString(),
-        name: "boat",
-        disabled:
-          !actions.buildableUnits.find(
-            (bu) => bu.type === UnitType.TransportShip,
-          )?.canBuild || !recipient,
-        action: () => {
-          if (!recipient) return;
-          myPlayer.bestTransportShipSpawn(tile).then((spawn) => {
-            let spawnTile: Cell | null = null;
-            if (spawn !== false) {
-              spawnTile = new Cell(this.game.x(spawn), this.game.y(spawn));
+                  this.emojiTable.hideTable();
+                });
+              };
             }
 
-            if (this.clickedCell === null) return;
-            this.eventBus.emit(
-              new SendBoatAttackIntentEvent(
-                recipient.id(),
-                this.clickedCell,
-                this.uiState.attackRatio * myPlayer.troops(),
-                spawnTile,
-              ),
-            );
-          });
-        },
-        color: COLORS.boat,
-        icon: boatIcon,
-      },
-      {
-        id: Slot.Ally.toString(),
-        name: "ally",
-        disabled:
-          !(
-            actions?.interaction?.canSendAllianceRequest ||
-            actions?.interaction?.canBreakAlliance
-          ) || !recipient,
-        action: () => {},
-        color: actions?.interaction?.canSendAllianceRequest
-          ? COLORS.ally
-          : actions?.interaction?.canBreakAlliance
-            ? COLORS.breakAlly
-            : undefined,
-        icon: actions?.interaction?.canSendAllianceRequest
-          ? allianceIcon
-          : actions?.interaction?.canBreakAlliance
-            ? traitorIcon
-            : undefined,
-        children: allySubMenu,
-      },
-      {
-        id: Slot.Build.toString(),
-        name: "build",
-        disabled: this.game.inSpawnPhase(),
-        action: () => {},
-        color: COLORS.build,
-        icon: buildIcon,
-        children: buildSubMenu,
-      },
-      {
-        id: Slot.Info.toString(),
-        name: "info",
-        disabled: !this.game.hasOwner(tile),
-        action: () => {},
-        color: COLORS.info,
-        icon: infoIcon,
-        children: infoSubMenu,
-      },
-    ];
+            for (const emojiItem of emojiMenuItem.children) {
+              if (emojiItem.id !== "emoji_more") {
+                const emojiIndex = parseInt(emojiItem.id.split("_")[1], 10);
+                emojiItem.action = () => {
+                  const targetPlayer =
+                    recipient === this.game.myPlayer() ? AllPlayers : recipient;
+                  this.playerActionHandler.handleEmoji(
+                    targetPlayer,
+                    emojiIndex,
+                  );
+                  this.menuEventManager.closeMenu();
+                };
+              }
+            }
+          }
+        }
+      }
+    }
 
     this.radialMenu.setRootMenuItems(updatedMenuItems);
-    this.updateCenterButton(actions);
-  }
-
-  private updateCenterButton(actions: PlayerActions) {
-    if (actions.canAttack) {
-      this.radialMenu.enableCenterButton(true, () => {
-        if (this.clickedCell === null) return;
-        const clicked = this.game.ref(this.clickedCell.x, this.clickedCell.y);
-        const myPlayer = this.game.myPlayer();
-        if (myPlayer !== null && this.game.owner(clicked) !== myPlayer) {
-          this.eventBus.emit(
-            new SendAttackIntentEvent(
-              this.game.owner(clicked).id(),
-              this.uiState.attackRatio * myPlayer.troops(),
-            ),
-          );
-        }
-        this.radialMenu.hideRadialMenu();
-      });
-    }
+    this.updateCenterButton(actions, myPlayer);
   }
 
   async tick() {
-    if (!this.radialMenu.isMenuVisible() || this.clickedCell === null) return;
+    const clickedCell = this.menuEventManager.getClickedCell();
+    if (!this.radialMenu.isMenuVisible() || clickedCell === null) return;
 
     const currentTime = new Date().getTime();
     if (
@@ -617,38 +259,43 @@ export class MainRadialMenu extends LitElement implements Layer {
     const myPlayer = this.game.myPlayer();
     if (myPlayer === null || !myPlayer.isAlive()) return;
 
-    const tile = this.game.ref(this.clickedCell.x, this.clickedCell.y);
+    const tile = this.game.ref(clickedCell.x, clickedCell.y);
 
     const isSpawnPhase = this.game.inSpawnPhase();
+    const wasInSpawnPhase = this.menuEventManager.getWasInSpawnPhase();
 
-    if (this.wasInSpawnPhase !== isSpawnPhase) {
-      if (this.wasInSpawnPhase && !isSpawnPhase) {
+    if (wasInSpawnPhase !== isSpawnPhase) {
+      if (wasInSpawnPhase && !isSpawnPhase) {
         this.needsRefresh = true;
-        this.wasInSpawnPhase = isSpawnPhase;
+        this.menuEventManager.setWasInSpawnPhase(isSpawnPhase);
 
-        const actions = await myPlayer.actions(tile);
+        const actions = await this.playerActionHandler.getPlayerActions(
+          myPlayer,
+          tile,
+        );
         this.updateMenuState(actions, tile);
 
         this.radialMenu.refreshMenu();
         return;
       }
 
-      this.closeMenu();
+      this.menuEventManager.closeMenu();
       return;
     }
 
     // Check if tile ownership has changed
-    if (this.originalTileOwner.isPlayer()) {
-      if (this.game.owner(tile) !== this.originalTileOwner) {
-        this.closeMenu();
+    const originalTileOwner = this.menuEventManager.getOriginalTileOwner();
+    if (originalTileOwner && originalTileOwner.isPlayer()) {
+      if (this.game.owner(tile) !== originalTileOwner) {
+        this.menuEventManager.closeMenu();
         return;
       }
-    } else {
+    } else if (originalTileOwner) {
       if (
         this.game.owner(tile).isPlayer() ||
         this.game.owner(tile) === myPlayer
       ) {
-        this.closeMenu();
+        this.menuEventManager.closeMenu();
         return;
       }
     }
@@ -656,14 +303,22 @@ export class MainRadialMenu extends LitElement implements Layer {
     this.lastTickRefresh = currentTime;
     this.needsRefresh = false;
 
-    const actions = await myPlayer.actions(tile);
+    const actions = await this.playerActionHandler.getPlayerActions(
+      myPlayer,
+      tile,
+    );
     this.updateMenuState(actions, tile);
   }
 
   private updateMenuState(actions: PlayerActions, tile: TileRef) {
+    const currentPlayer = this.game.myPlayer();
+
     if (this.radialMenu.getCurrentLevel() === 0) {
       this.radialMenu.enableCenterButton(false);
-      this.updateCenterButton(actions);
+
+      if (currentPlayer) {
+        this.updateCenterButton(actions, currentPlayer);
+      }
     }
 
     this.radialMenu.updateMenuItem(
@@ -726,77 +381,22 @@ export class MainRadialMenu extends LitElement implements Layer {
     // No redraw implementation needed
   }
 
-  private createQuickChatMenu(recipient: PlayerView): MenuItem[] {
-    if (!this.ctModal) {
-      throw new Error("Chat modal not set");
-    }
+  private updateCenterButton(actions: PlayerActions, myPlayer: PlayerView) {
+    if (actions.canAttack) {
+      this.radialMenu.enableCenterButton(true, () => {
+        const clickedCell = this.menuEventManager.getClickedCell();
+        if (clickedCell === null) return;
 
-    const myPlayer = this.game.myPlayer();
-    if (!myPlayer) {
-      throw new Error("Current player not found");
-    }
+        const clicked = this.game.ref(clickedCell.x, clickedCell.y);
+        const owner = this.game.owner(clicked);
 
-    return this.ctModal.categories.map((category) => {
-      const categoryTranslation = translateText(`chat.cat.${category.id}`);
-
-      const categoryColor =
-        COLORS.chat[category.id as keyof typeof COLORS.chat] ||
-        COLORS.chat.default;
-      const phrases = quickChatPhrases[category.id] || [];
-
-      const phraseItems: MenuItem[] = phrases.map((phrase: QuickChatPhrase) => {
-        const phraseText = translateText(`chat.${category.id}.${phrase.key}`);
-
-        return {
-          id: `phrase-${category.id}-${phrase.key}`,
-          name: phraseText,
-          disabled: false,
-          text: this.shortenText(phraseText),
-          fontSize: "10px",
-          color: categoryColor,
-          tooltipItems: [
-            {
-              text: phraseText,
-              className: "description",
-            },
-          ],
-          action: () => {
-            if (phrase.requiresPlayer) {
-              this.ctModal.openWithSelection(
-                category.id,
-                phrase.key,
-                myPlayer,
-                recipient,
-              );
-              this.radialMenu.hideRadialMenu();
-            } else {
-              this.eventBus.emit(
-                new SendQuickChatEvent(
-                  recipient,
-                  `${category.id}.${phrase.key}`,
-                  {},
-                ),
-              );
-              this.radialMenu.hideRadialMenu();
-            }
-          },
-        };
+        if (owner && owner !== myPlayer) {
+          this.playerActionHandler.handleAttack(myPlayer, owner.id());
+        }
+        this.menuEventManager.closeMenu();
       });
-
-      return {
-        id: `chat-category-${category.id}`,
-        name: categoryTranslation,
-        disabled: false,
-        text: categoryTranslation,
-        color: categoryColor,
-        action: () => {},
-        children: phraseItems,
-      };
-    });
-  }
-
-  private shortenText(text: string, maxLength = 15): string {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength - 3) + "...";
+    } else {
+      this.radialMenu.enableCenterButton(false);
+    }
   }
 }

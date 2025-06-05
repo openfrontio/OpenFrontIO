@@ -69,6 +69,8 @@ export interface RadialMenuConfig {
   tooltipStyle?: string;
 }
 
+type RequiredRadialMenuConfig = Required<RadialMenuConfig>;
+
 export class RadialMenu implements Layer {
   private menuElement: d3.Selection<HTMLDivElement, unknown, null, undefined>;
   private tooltipElement: HTMLDivElement | null = null;
@@ -79,19 +81,8 @@ export class RadialMenu implements Layer {
   private currentMenuItems: MenuItem[] = []; // Current active menu items (changes based on level)
   private rootMenuItems: MenuItem[] = []; // Store the original root menu items
 
-  private readonly menuSize: number;
-  private readonly submenuScale: number;
-  private readonly centerButtonSize: number;
-  private readonly iconSize: number;
-  private readonly centerIconSize: number;
+  private readonly config: RequiredRadialMenuConfig;
   private readonly backIconSize: number;
-  private readonly disabledColor: string;
-  private readonly menuTransitionDuration: number;
-  private readonly mainMenuInnerRadius: number;
-  private readonly innerRadiusIncrement: number;
-  private readonly maxNestedLevels: number;
-  private readonly centerButtonIcon: string;
-  private readonly tooltipStyle: string;
 
   private isCenterButtonEnabled = false;
   private originalCenterButtonEnabled = false;
@@ -123,23 +114,22 @@ export class RadialMenu implements Layer {
   private originalCenterButtonIcon: string = "";
 
   constructor(config: RadialMenuConfig = {}) {
-    this.menuSize = config.menuSize || 190;
-    this.submenuScale = config.submenuScale || 1.5;
-    this.centerButtonSize = config.centerButtonSize || 30;
-    this.iconSize = config.iconSize || 32;
-    this.centerIconSize = config.centerIconSize || 48;
-    this.backIconSize = config.centerIconSize
-      ? config.centerIconSize * 0.8
-      : 36;
-    this.disabledColor =
-      config.disabledColor || d3.rgb(128, 128, 128).toString();
-    this.menuTransitionDuration = config.menuTransitionDuration || 300;
-    this.mainMenuInnerRadius = config.mainMenuInnerRadius || 40;
-    this.centerButtonIcon = config.centerButtonIcon || "";
-    this.originalCenterButtonIcon = config.centerButtonIcon || "";
-    this.maxNestedLevels = config.maxNestedLevels || 3;
-    this.innerRadiusIncrement = config.innerRadiusIncrement || 20;
-    this.tooltipStyle = config.tooltipStyle || "";
+    this.config = {
+      menuSize: config.menuSize ?? 190,
+      submenuScale: config.submenuScale ?? 1.5,
+      centerButtonSize: config.centerButtonSize ?? 30,
+      iconSize: config.iconSize ?? 32,
+      centerIconSize: config.centerIconSize ?? 48,
+      disabledColor: config.disabledColor ?? d3.rgb(128, 128, 128).toString(),
+      menuTransitionDuration: config.menuTransitionDuration ?? 300,
+      mainMenuInnerRadius: config.mainMenuInnerRadius ?? 40,
+      centerButtonIcon: config.centerButtonIcon ?? "",
+      maxNestedLevels: config.maxNestedLevels ?? 3,
+      innerRadiusIncrement: config.innerRadiusIncrement ?? 20,
+      tooltipStyle: config.tooltipStyle ?? ""
+    };
+    this.originalCenterButtonIcon = this.config.centerButtonIcon;
+    this.backIconSize = this.config.centerIconSize * 0.8;
   }
 
   init() {
@@ -171,7 +161,7 @@ export class RadialMenu implements Layer {
 
     // Calculate the total svg size needed for all potential nested menus
     const totalSize =
-      this.menuSize * Math.pow(this.submenuScale, this.maxNestedLevels - 1);
+      this.config.menuSize * Math.pow(this.config.submenuScale, this.config.maxNestedLevels - 1);
 
     const svg = this.menuElement
       .append("svg")
@@ -205,7 +195,7 @@ export class RadialMenu implements Layer {
     centerButton
       .append("circle")
       .attr("class", "center-button-hitbox")
-      .attr("r", this.centerButtonSize)
+      .attr("r", this.config.centerButtonSize)
       .attr("fill", "transparent")
       .style("cursor", "pointer")
       .on("click", (event) => {
@@ -223,18 +213,18 @@ export class RadialMenu implements Layer {
     centerButton
       .append("circle")
       .attr("class", "center-button-visible")
-      .attr("r", this.centerButtonSize)
+      .attr("r", this.config.centerButtonSize)
       .attr("fill", "#2c3e50")
       .style("pointer-events", "none");
 
     centerButton
       .append("image")
       .attr("class", "center-button-icon")
-      .attr("xlink:href", this.centerButtonIcon)
-      .attr("width", this.centerIconSize)
-      .attr("height", this.centerIconSize)
-      .attr("x", -this.centerIconSize / 2)
-      .attr("y", -this.centerIconSize / 2)
+      .attr("xlink:href", this.config.centerButtonIcon)
+      .attr("width", this.config.centerIconSize)
+      .attr("height", this.config.centerIconSize)
+      .attr("x", -this.config.centerIconSize / 2)
+      .attr("y", -this.config.centerIconSize / 2)
       .style("pointer-events", "none");
   }
 
@@ -264,30 +254,30 @@ export class RadialMenu implements Layer {
         margin-bottom: 4px;
       }
 
-      ${this.tooltipStyle}
+      ${this.config.tooltipStyle}
     `;
     document.head.appendChild(style);
   }
 
   private getInnerRadiusForLevel(level: number): number {
-    const baseInnerRadius = this.mainMenuInnerRadius;
+    const baseInnerRadius = this.config.mainMenuInnerRadius;
 
     if (level === 0) return baseInnerRadius;
     else if (level === 1)
-      return baseInnerRadius + this.innerRadiusIncrement + 20;
+      return baseInnerRadius + this.config.innerRadiusIncrement + 20;
     else
       return (
         baseInnerRadius +
-        this.innerRadiusIncrement +
+        this.config.innerRadiusIncrement +
         20 +
-        (level - 1) * (this.innerRadiusIncrement / 2)
+        (level - 1) * (this.config.innerRadiusIncrement / 2)
       );
   }
 
   private getOuterRadiusForLevel(level: number): number {
     const innerRadius = this.getInnerRadiusForLevel(level);
 
-    const arcWidth = this.menuSize / 2 - this.mainMenuInnerRadius - 10;
+    const arcWidth = this.config.menuSize / 2 - this.config.mainMenuInnerRadius - 10;
 
     return innerRadius + arcWidth;
   }
@@ -338,7 +328,7 @@ export class RadialMenu implements Layer {
       .attr("d", arc)
       .attr("fill", (d) => {
         const color = d.data.disabled
-          ? this.disabledColor
+          ? this.config.disabledColor
           : d.data.color || "#333333";
         const opacity = d.data.disabled ? 0.5 : 0.7;
 
@@ -354,7 +344,7 @@ export class RadialMenu implements Layer {
       .style("opacity", (d) => (d.data.disabled ? 0.5 : 1))
       .style(
         "transition",
-        `filter ${this.menuTransitionDuration / 2}ms, stroke-width ${this.menuTransitionDuration / 2}ms, fill ${this.menuTransitionDuration / 2}ms`,
+        `filter ${this.config.menuTransitionDuration / 2}ms, stroke-width ${this.config.menuTransitionDuration / 2}ms, fill ${this.config.menuTransitionDuration / 2}ms`,
       )
       .attr("data-id", (d) => d.data.id);
 
@@ -371,7 +361,7 @@ export class RadialMenu implements Layer {
         path.attr("stroke-width", "3");
 
         const color = d.data.disabled
-          ? this.disabledColor
+          ? this.config.disabledColor
           : d.data.color || "#333333";
         path.attr("fill", color);
       }
@@ -403,7 +393,7 @@ export class RadialMenu implements Layer {
       path.attr("filter", "url(#glow)");
       path.attr("stroke-width", "3");
       const color = d.data.disabled
-        ? this.disabledColor
+        ? this.config.disabledColor
         : d.data.color || "#333333";
       path.attr("fill", color);
 
@@ -457,7 +447,7 @@ export class RadialMenu implements Layer {
       path.attr("filter", null);
       path.attr("stroke-width", "2");
       const color = d.data.disabled
-        ? this.disabledColor
+        ? this.config.disabledColor
         : d.data.color || "#333333";
       const opacity = d.data.disabled ? 0.5 : 0.7;
       path.attr(
@@ -554,10 +544,10 @@ export class RadialMenu implements Layer {
             "xlink:href",
             d.data.disabled ? disabledIcon : d.data.icon || disabledIcon,
           )
-          .attr("width", this.iconSize)
-          .attr("height", this.iconSize)
-          .attr("x", arc.centroid(d)[0] - this.iconSize / 2)
-          .attr("y", arc.centroid(d)[1] - this.iconSize / 2);
+          .attr("width", this.config.iconSize)
+          .attr("height", this.config.iconSize)
+          .attr("x", arc.centroid(d)[0] - this.config.iconSize / 2)
+          .attr("y", arc.centroid(d)[1] - this.config.iconSize / 2);
       }
 
       this.menuIcons.set(d.data.id, content as any);
@@ -565,7 +555,7 @@ export class RadialMenu implements Layer {
 
     menuGroup
       .transition()
-      .duration(this.menuTransitionDuration * 0.8)
+      .duration(this.config.menuTransitionDuration * 0.8)
       .style("opacity", 1)
       .style("transform", "scale(1)")
       .on("start", () => {
@@ -604,7 +594,7 @@ export class RadialMenu implements Layer {
 
     currentMenu
       .transition()
-      .duration(this.menuTransitionDuration * 0.8)
+      .duration(this.config.menuTransitionDuration * 0.8)
       .style("transform", `scale(${this.currentLevel > 1 ? 0.65 : 0.8})`)
       .style("opacity", 0.8)
       .on("end", () => {
@@ -633,7 +623,7 @@ export class RadialMenu implements Layer {
         const item = this.findMenuItem(this.selectedItemId);
         if (item) {
           const color = item.disabled
-            ? this.disabledColor
+            ? this.config.disabledColor
             : item.color || "#333333";
           const opacity = item.disabled ? 0.5 : 0.7;
           selectedPath.attr(
@@ -662,7 +652,7 @@ export class RadialMenu implements Layer {
 
     currentSubmenu
       .transition()
-      .duration(this.menuTransitionDuration * 0.8)
+      .duration(this.config.menuTransitionDuration * 0.8)
       .style("transform", "scale(0.5)")
       .style("opacity", 0)
       .on("end", function () {
@@ -678,7 +668,7 @@ export class RadialMenu implements Layer {
         .style("transform", "scale(0.8)")
         .style("opacity", 0.3)
         .transition()
-        .duration(this.menuTransitionDuration * 0.8)
+        .duration(this.config.menuTransitionDuration * 0.8)
         .style("transform", "scale(1)")
         .style("opacity", 1)
         .on("end", () => {
@@ -688,7 +678,7 @@ export class RadialMenu implements Layer {
     } else {
       previousMenu
         .transition()
-        .duration(this.menuTransitionDuration * 0.8)
+        .duration(this.config.menuTransitionDuration * 0.8)
         .style("transform", "scale(1)")
         .style("opacity", 1)
         .on("end", () => {
@@ -715,12 +705,12 @@ export class RadialMenu implements Layer {
       .select(".center-button-hitbox")
       .transition()
       .duration(0)
-      .attr("r", this.centerButtonSize);
+      .attr("r", this.config.centerButtonSize);
     this.menuElement
       .select(".center-button-visible")
       .transition()
       .duration(0)
-      .attr("r", this.centerButtonSize);
+      .attr("r", this.config.centerButtonSize);
 
     const backIconImg = this.menuElement.select(".center-button-icon");
     backIconImg
@@ -739,10 +729,10 @@ export class RadialMenu implements Layer {
     const iconImg = this.menuElement.select(".center-button-icon");
     iconImg
       .attr("xlink:href", this.originalCenterButtonIcon)
-      .attr("width", this.centerIconSize)
-      .attr("height", this.centerIconSize)
-      .attr("x", -this.centerIconSize / 2)
-      .attr("y", -this.centerIconSize / 2);
+      .attr("width", this.config.centerIconSize)
+      .attr("height", this.config.centerIconSize)
+      .attr("x", -this.config.centerIconSize / 2)
+      .attr("y", -this.config.centerIconSize / 2);
 
     this.enableCenterButton(
       this.originalCenterButtonEnabled,
@@ -1235,7 +1225,7 @@ export class RadialMenu implements Layer {
 
     for (const item of this.currentMenuItems) {
       item.disabled = true;
-      item.color = this.disabledColor;
+      item.color = this.config.disabledColor;
     }
   }
 
@@ -1279,13 +1269,13 @@ export class RadialMenu implements Layer {
       .select(".center-button-hitbox")
       .transition()
       .duration(200)
-      .attr("r", this.centerButtonSize * scale);
+      .attr("r", this.config.centerButtonSize * scale);
 
     this.menuElement
       .select(".center-button-visible")
       .transition()
       .duration(200)
-      .attr("r", this.centerButtonSize * scale);
+      .attr("r", this.config.centerButtonSize * scale);
 
     if (this.currentLevel > 0 && this.backAction) {
       if (isHovering) {
@@ -1329,12 +1319,12 @@ export class RadialMenu implements Layer {
     const item = this.findMenuItem(id);
     if (item) {
       item.disabled = !enabled;
-      if (color) item.color = enabled ? color : this.disabledColor;
+      if (color) item.color = enabled ? color : this.config.disabledColor;
       if (icon) item.icon = icon;
       if (text !== undefined) item.text = text;
     }
 
-    const fillColor = enabled && color ? color : this.disabledColor;
+    const fillColor = enabled && color ? color : this.config.disabledColor;
     const opacity = enabled ? 0.7 : 0.5;
 
     const isSelected = id === this.selectedItemId && this.currentLevel > 0;
