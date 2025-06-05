@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import { Execution, Game, Player, PlayerID } from "../game/Game";
 
 export class QuickChatExecution implements Execution {
@@ -18,12 +17,12 @@ export class QuickChatExecution implements Execution {
   init(mg: Game, ticks: number): void {
     this.mg = mg;
     if (!mg.hasPlayer(this.senderID)) {
-      consolex.warn(`QuickChatExecution: sender ${this.senderID} not found`);
+      console.warn(`QuickChatExecution: sender ${this.senderID} not found`);
       this.active = false;
       return;
     }
     if (!mg.hasPlayer(this.recipientID)) {
-      consolex.warn(
+      console.warn(
         `QuickChatExecution: recipient ${this.recipientID} not found`,
       );
       this.active = false;
@@ -55,7 +54,7 @@ export class QuickChatExecution implements Execution {
       this.recipient.name(),
     );
 
-    consolex.log(
+    console.log(
       `[QuickChat] ${this.sender.name} → ${this.recipient.name}: ${message}`,
     );
 

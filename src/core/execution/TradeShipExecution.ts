@@ -1,5 +1,4 @@
 import { renderNumber } from "../../client/Utils";
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -41,7 +40,7 @@ export class TradeShipExecution implements Execution {
         this.srcPort.tile(),
       );
       if (spawn === false) {
-        consolex.warn(`cannot build trade ship`);
+        console.warn(`cannot build trade ship`);
         this.active = false;
         return;
       }
@@ -115,7 +114,7 @@ export class TradeShipExecution implements Execution {
         this.tradeShip.move(result.tile);
         break;
       case PathFindResultType.PathNotFound:
-        consolex.warn("captured trade ship cannot find route");
+        console.warn("captured trade ship cannot find route");
         if (this.tradeShip.isActive()) {
           this.tradeShip.delete(false);
         }
