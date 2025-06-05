@@ -11,7 +11,6 @@ import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import {
   ClientJoinMessageSchema,
-  GameConfig,
   GameRecord,
   GameRecordSchema,
 } from "../core/Schemas";
