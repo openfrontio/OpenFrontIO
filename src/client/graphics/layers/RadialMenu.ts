@@ -291,8 +291,8 @@ export class RadialMenu implements Layer {
       .pie<MenuElement>()
       .value(() => 1)
       .padAngle(0.03)
-      .startAngle(Math.PI / 4)
-      .endAngle(2 * Math.PI + Math.PI / 4);
+      .startAngle(Math.PI / 3)
+      .endAngle(2 * Math.PI + Math.PI / 3);
 
     const innerRadius = this.getInnerRadiusForLevel(level);
     const outerRadius = this.getOuterRadiusForLevel(level);

@@ -216,17 +216,33 @@ export const boatMenuElement: MenuElement = {
   },
 };
 
-export const allyMenuElement: MenuElement = {
-  id: Slot.Ally,
-  name: "ally",
+export const infoMenuElement: MenuElement = {
+  id: Slot.Info,
+  name: "info",
   disabled: false,
+  icon: infoIcon,
+  color: COLORS.info,
 
   subMenu: (params: MenuElementParams) => {
     if (!params.selected) return [];
 
-    const isAlly = !!params.playerActions?.interaction?.canBreakAlliance;
-
     return [
+      {
+        id: "info_chat",
+        name: "chat",
+        disabled: false,
+        color: COLORS.chat.default,
+        icon: chatIcon,
+        subMenu: (params: MenuElementParams) =>
+          params.chatIntegration
+            .createQuickChatMenu(params.selected!)
+            .map((item) => ({
+              ...item,
+              action: item.action
+                ? (_params: MenuElementParams) => item.action!(params)
+                : undefined,
+            })),
+      },
       {
         id: "ally_target",
         name: "target",
@@ -235,58 +251,6 @@ export const allyMenuElement: MenuElement = {
         icon: targetIcon,
         action: (params: MenuElementParams) => {
           params.playerActionHandler.handleTargetPlayer(params.selected!.id());
-          params.closeMenu();
-        },
-      },
-      {
-        id: "ally_request",
-        name: "request",
-        disabled: !params.playerActions?.interaction?.canSendAllianceRequest,
-        displayed: !isAlly,
-        color: COLORS.ally,
-        icon: allianceIcon,
-        action: (params: MenuElementParams) => {
-          params.playerActionHandler.handleAllianceRequest(
-            params.myPlayer,
-            params.selected!,
-          );
-          params.closeMenu();
-        },
-      },
-      {
-        id: "ally_break",
-        name: "break",
-        disabled: !params.playerActions?.interaction?.canBreakAlliance,
-        displayed: isAlly,
-        color: COLORS.breakAlly,
-        icon: traitorIcon,
-        action: (params: MenuElementParams) => {
-          params.playerActionHandler.handleBreakAlliance(
-            params.myPlayer,
-            params.selected!,
-          );
-          params.closeMenu();
-        },
-      },
-      {
-        id: "ally_donate_gold",
-        name: "donate gold",
-        disabled: !params.playerActions?.interaction?.canDonate,
-        color: COLORS.ally,
-        icon: donateGoldIcon,
-        action: (params: MenuElementParams) => {
-          params.playerActionHandler.handleDonateGold(params.selected!);
-          params.closeMenu();
-        },
-      },
-      {
-        id: "ally_donate_troops",
-        name: "donate troops",
-        disabled: !params.playerActions?.interaction?.canDonate,
-        color: COLORS.ally,
-        icon: donateTroopIcon,
-        action: (params: MenuElementParams) => {
-          params.playerActionHandler.handleDonateTroops(params.selected!);
           params.closeMenu();
         },
       },
@@ -314,36 +278,68 @@ export const allyMenuElement: MenuElement = {
           params.closeMenu();
         },
       },
-    ].filter((item) => item.displayed !== false);
-  },
-};
-
-export const infoMenuElement: MenuElement = {
-  id: Slot.Info,
-  name: "info",
-  disabled: false,
-  icon: infoIcon,
-  color: COLORS.info,
-
-  subMenu: (params: MenuElementParams) => {
-    if (!params.selected) return [];
-
-    return [
       {
-        id: "info_chat",
-        name: "chat",
+        id: "ally_request",
+        name: "request",
+        disabled: !params.playerActions?.interaction?.canSendAllianceRequest,
+        displayed: !params.playerActions?.interaction?.canBreakAlliance,
+        color: COLORS.ally,
+        icon: allianceIcon,
+        action: (params: MenuElementParams) => {
+          params.playerActionHandler.handleAllianceRequest(
+            params.myPlayer,
+            params.selected!,
+          );
+          params.closeMenu();
+        },
+      },
+      {
+        id: "ally_break",
+        name: "break",
+        disabled: !params.playerActions?.interaction?.canBreakAlliance,
+        displayed: !!params.playerActions?.interaction?.canBreakAlliance,
+        color: COLORS.breakAlly,
+        icon: traitorIcon,
+        action: (params: MenuElementParams) => {
+          params.playerActionHandler.handleBreakAlliance(
+            params.myPlayer,
+            params.selected!,
+          );
+          params.closeMenu();
+        },
+      },
+
+      {
+        id: "ally_donate_gold",
+        name: "donate gold",
+        disabled: !params.playerActions?.interaction?.canDonate,
+        color: COLORS.ally,
+        icon: donateGoldIcon,
+        action: (params: MenuElementParams) => {
+          params.playerActionHandler.handleDonateGold(params.selected!);
+          params.closeMenu();
+        },
+      },
+      {
+        id: "ally_donate_troops",
+        name: "donate troops",
+        disabled: !params.playerActions?.interaction?.canDonate,
+        color: COLORS.ally,
+        icon: donateTroopIcon,
+        action: (params: MenuElementParams) => {
+          params.playerActionHandler.handleDonateTroops(params.selected!);
+          params.closeMenu();
+        },
+      },
+      {
+        id: "info_player",
+        name: "player",
         disabled: false,
-        color: COLORS.chat.default,
-        icon: chatIcon,
-        subMenu: (params: MenuElementParams) =>
-          params.chatIntegration
-            .createQuickChatMenu(params.selected!)
-            .map((item) => ({
-              ...item,
-              action: item.action
-                ? (_params: MenuElementParams) => item.action!(params)
-                : undefined,
-            })),
+        color: COLORS.info,
+        icon: infoIcon,
+        action: (params: MenuElementParams) => {
+          params.playerPanel.show(params.playerActions, params.tile);
+        },
       },
       {
         id: "info_emoji",
@@ -397,17 +393,7 @@ export const infoMenuElement: MenuElement = {
           return emojiElements;
         },
       },
-      {
-        id: "info_player",
-        name: "player",
-        disabled: false,
-        color: COLORS.info,
-        icon: infoIcon,
-        action: (params: MenuElementParams) => {
-          params.playerPanel.show(params.playerActions, params.tile);
-        },
-      },
-    ];
+    ].filter((item) => item.displayed !== false);
   },
 };
 
@@ -420,24 +406,6 @@ export function createMenuItems(params: MenuElementParams): MenuElement[] {
     {
       ...boatMenuElement,
       disabled: !canBuildTransport || !params.selected,
-    },
-    {
-      ...allyMenuElement,
-      disabled:
-        !(
-          params.playerActions?.interaction?.canSendAllianceRequest ||
-          params.playerActions?.interaction?.canBreakAlliance
-        ) || !params.selected,
-      color: params.playerActions?.interaction?.canSendAllianceRequest
-        ? COLORS.ally
-        : params.playerActions?.interaction?.canBreakAlliance
-          ? COLORS.breakAlly
-          : undefined,
-      icon: params.playerActions?.interaction?.canSendAllianceRequest
-        ? allianceIcon
-        : params.playerActions?.interaction?.canBreakAlliance
-          ? traitorIcon
-          : allianceIcon,
     },
     {
       ...buildMenuElement,
@@ -464,13 +432,6 @@ export class RadialMenuFactory {
         disabled: true,
         _action: () => {},
         icon: boatIcon,
-      },
-      {
-        id: Slot.Ally,
-        name: "ally",
-        disabled: true,
-        _action: () => {},
-        icon: allianceIcon,
       },
       {
         id: Slot.Build,
