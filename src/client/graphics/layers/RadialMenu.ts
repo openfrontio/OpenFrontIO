@@ -248,18 +248,9 @@ export class RadialMenu implements Layer {
   }
 
   private getInnerRadiusForLevel(level: number): number {
-    const baseInnerRadius = this.config.mainMenuInnerRadius;
-
-    if (level === 0) return baseInnerRadius;
-    else if (level === 1)
-      return baseInnerRadius + this.config.innerRadiusIncrement + 20;
-    else
-      return (
-        baseInnerRadius +
-        this.config.innerRadiusIncrement +
-        20 +
-        (level - 1) * (this.config.innerRadiusIncrement / 2)
-      );
+    return level === 0
+      ? this.config.mainMenuInnerRadius
+      : this.config.mainMenuInnerRadius + 34;
   }
 
   private getOuterRadiusForLevel(level: number): number {
@@ -567,22 +558,42 @@ export class RadialMenu implements Layer {
       `.menu-level-${this.currentLevel - 1}`,
     );
 
+    // Render new menu at full size
     this.renderMenuItems(children, this.currentLevel);
 
-    for (let i = 0; i < this.currentLevel; i++) {
-      const menuGroup = this.menuGroups.get(i);
-      if (menuGroup) {
+    // Hide all menus except the current and immediate previous one
+    this.menuGroups.forEach((menuGroup, level) => {
+      if (level === this.currentLevel) {
+        menuGroup.style("display", "block");
+      } else if (level === this.currentLevel - 1) {
+        menuGroup.style("display", "block");
+
+        menuGroup
+          .transition()
+          .duration(this.config.menuTransitionDuration * 0.8)
+          .style("transform", "scale(0.6)")
+          .style("opacity", 0.8);
+
         menuGroup.selectAll("path").each(function () {
           const pathElement = d3.select(this);
           pathElement.style("pointer-events", "none");
         });
+      } else {
+        menuGroup
+          .transition()
+          .duration(this.config.menuTransitionDuration * 0.5)
+          .style("transform", "scale(0.5)")
+          .style("opacity", 0)
+          .on("end", function () {
+            d3.select(this).style("display", "none");
+          });
       }
-    }
+    });
 
     currentMenu
       .transition()
       .duration(this.config.menuTransitionDuration * 0.8)
-      .style("transform", `scale(${this.currentLevel > 1 ? 0.65 : 0.8})`)
+      .style("transform", `scale(${this.currentLevel === 1 ? "0.8" : "0.6"})`)
       .style("opacity", 0.8)
       .on("end", () => {
         this.navigationInProgress = false;
@@ -636,6 +647,37 @@ export class RadialMenu implements Layer {
     if (this.currentLevel === 0) {
       this.resetCenterButton();
     }
+
+    this.menuGroups.forEach((menuGroup, level) => {
+      if (level === this.currentLevel) {
+        menuGroup.style("display", "block");
+        menuGroup
+          .transition()
+          .duration(this.config.menuTransitionDuration * 0.8)
+          .style("transform", "scale(1)")
+          .style("opacity", 1);
+
+        menuGroup.selectAll("path").style("pointer-events", "auto");
+      } else if (level === this.currentLevel - 1 && this.currentLevel > 0) {
+        menuGroup.style("display", "block");
+        menuGroup
+          .transition()
+          .duration(this.config.menuTransitionDuration * 0.8)
+          .style(
+            "transform",
+            `scale(${this.currentLevel === 1 ? "0.8" : "0.6"})`,
+          )
+          .style("opacity", 0.8);
+      } else if (level !== this.currentLevel + 1) {
+        menuGroup
+          .transition()
+          .duration(this.config.menuTransitionDuration * 0.5)
+          .style("opacity", 0)
+          .on("end", function () {
+            d3.select(this).style("display", "none");
+          });
+      }
+    });
 
     currentSubmenu
       .transition()
