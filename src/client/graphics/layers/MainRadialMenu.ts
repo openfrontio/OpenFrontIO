@@ -18,7 +18,9 @@ import { RadialMenu, RadialMenuConfig } from "./RadialMenu";
 import {
   COLORS,
   MenuElementParams,
-  RadialMenuFactory,
+  createRadialMenuItems,
+  getRootMenuItems,
+  updateCenterButton,
   Slot,
 } from "./RadialMenuElements";
 
@@ -63,7 +65,6 @@ export class MainRadialMenu extends LitElement implements Layer {
     this.radialMenu = new RadialMenu(menuConfig);
 
     this.playerActionHandler = new PlayerActionHandler(
-      this.game,
       this.eventBus,
       this.uiState,
     );
@@ -81,7 +82,7 @@ export class MainRadialMenu extends LitElement implements Layer {
 
     this.chatIntegration = new ChatIntegration(this.game, this.eventBus);
 
-    this.radialMenu.setRootMenuItems(RadialMenuFactory.getRootMenuItems());
+    this.radialMenu.setRootMenuItems(getRootMenuItems());
   }
 
   init() {
@@ -123,11 +124,11 @@ export class MainRadialMenu extends LitElement implements Layer {
       closeMenu: () => this.menuEventManager.closeMenu(),
     };
 
-    const menuItems = RadialMenuFactory.createMenuItems(params);
+    const menuItems = createRadialMenuItems(params);
 
     this.radialMenu.setRootMenuItems(menuItems);
 
-    RadialMenuFactory.updateCenterButton(params, (enabled, action) => {
+    updateCenterButton(params, (enabled, action) => {
       this.radialMenu.enableCenterButton(enabled, action);
     });
   }
@@ -223,7 +224,7 @@ export class MainRadialMenu extends LitElement implements Layer {
     };
 
     if (this.radialMenu.getCurrentLevel() === 0) {
-      RadialMenuFactory.updateCenterButton(params, (enabled, action) => {
+      updateCenterButton(params, (enabled, action) => {
         this.radialMenu.enableCenterButton(enabled, action);
       });
     }

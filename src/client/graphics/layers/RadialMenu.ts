@@ -262,7 +262,6 @@ export class RadialMenu implements Layer {
 
   private renderMenuItems(items: MenuElement[], level: number) {
     const container = this.menuElement.select(".menu-container");
-
     container.selectAll(`.menu-level-${level}`).remove();
 
     const menuGroup = container
@@ -300,8 +299,20 @@ export class RadialMenu implements Layer {
       .append("g")
       .attr("class", "menu-item-group");
 
-    const paths = arcs
-      .append("path")
+    this.renderPaths(arcs, arc, level);
+    this.setupEventHandlers(arcs, level);
+    this.renderIconsAndText(arcs, arc);
+    this.setupAnimations(menuGroup);
+
+    return menuGroup;
+  }
+
+  private renderPaths(
+    arcs: d3.Selection<SVGGElement, d3.PieArcDatum<MenuElement>, SVGGElement, unknown>,
+    arc: d3.Arc<any, d3.PieArcDatum<MenuElement>>,
+    level: number
+  ) {
+    arcs.append("path")
       .attr("class", "menu-item-path")
       .attr("d", arc)
       .attr("fill", (d) => {
@@ -322,16 +333,25 @@ export class RadialMenu implements Layer {
       .style("opacity", (d) => (d.data.disabled ? 0.5 : 1))
       .style(
         "transition",
-        `filter ${this.config.menuTransitionDuration / 2}ms, stroke-width ${this.config.menuTransitionDuration / 2}ms, fill ${this.config.menuTransitionDuration / 2}ms`,
+        `filter ${this.config.menuTransitionDuration / 2}ms, stroke-width ${
+          this.config.menuTransitionDuration / 2
+        }ms, fill ${this.config.menuTransitionDuration / 2}ms`,
       )
       .attr("data-id", (d) => d.data.id);
 
-    paths.each((d) => {
-      const path = d3.select(`path[data-id="${d.data.id}"]`) as any;
-      this.menuPaths.set(d.data.id, path);
+    // arcs.each((d) => {
+    //   const pathId = d.data.id;
+    //   // 'this' refers to the group element
+    //   (this as any).__data__ = d;
+    // });
+
+    arcs.each((d) => {
+      const pathId = d.data.id;
+      const path = d3.select(`path[data-id="${pathId}"]`);
+      this.menuPaths.set(pathId, path as any);
 
       if (
-        d.data.id === this.selectedItemId &&
+        pathId === this.selectedItemId &&
         level === 0 &&
         this.currentLevel > 0
       ) {
@@ -356,11 +376,13 @@ export class RadialMenu implements Layer {
         group.selectAll("path").style("pointer-events", "auto");
       }
     });
+  }
 
-    const onHover = (
-      d: d3.PieArcDatum<MenuElement>,
-      path: d3.Selection<any, any, any, any>,
-    ) => {
+  private setupEventHandlers(
+    arcs: d3.Selection<SVGGElement, d3.PieArcDatum<MenuElement>, SVGGElement, unknown>,
+    level: number
+  ) {
+    const onHover = (d: d3.PieArcDatum<MenuElement>, path: any) => {
       if (
         d.data.disabled ||
         (this.currentLevel > 0 && this.currentLevel !== level) ||
@@ -404,10 +426,7 @@ export class RadialMenu implements Layer {
       }
     };
 
-    const onMouseOut = (
-      d: d3.PieArcDatum<MenuElement>,
-      path: d3.Selection<any, any, any, any>,
-    ) => {
+    const onMouseOut = (d: d3.PieArcDatum<MenuElement>, path: any) => {
       if (this.submenuHoverTimeout !== null) {
         window.clearTimeout(this.submenuHoverTimeout);
         this.submenuHoverTimeout = null;
@@ -468,69 +487,78 @@ export class RadialMenu implements Layer {
       }
     }
 
-    paths.each(function (d) {
-      const path = d3.select(this);
-
-      path.on("mouseover", function () {
+    arcs.each((d) => {
+      const pathId = d.data.id;
+      const path = d3.select(`path[data-id="${pathId}"]`);
+      
+      path.on("mouseover", function() {
         onHover(d, path);
       });
-
-      path.on("mouseout", function () {
+      
+      path.on("mouseout", function() {
         onMouseOut(d, path);
       });
-
-      path.on("mousemove", function (event) {
+      
+      path.on("mousemove", function(event) {
         handleMouseMove(event as MouseEvent);
       });
-
-      path.on("click", function (event) {
+      
+      path.on("click", function(event) {
         onClick(d, event);
       });
-
-      path.on("touchstart", function (event) {
+      
+      path.on("touchstart", function(event) {
         event.preventDefault();
         event.stopPropagation();
         onClick(d, event);
       });
     });
+  }
 
-    const icons = arcs
-      .append("g")
+  private renderIconsAndText(
+    arcs: d3.Selection<SVGGElement, d3.PieArcDatum<MenuElement>, SVGGElement, unknown>,
+    arc: d3.Arc<any, d3.PieArcDatum<MenuElement>>
+  ) {
+    arcs.append("g")
       .attr("class", "menu-item-content")
       .style("pointer-events", "none")
-      .attr("data-id", (d) => d.data.id);
+      .attr("data-id", (d) => d.data.id)
+      .each((d) => {
+        const contentId = d.data.id;
+        const content = d3.select(`g[data-id="${contentId}"]`);
 
-    icons.each((d) => {
-      const content = d3.select(`g[data-id="${d.data.id}"]`);
+        if (d.data.text) {
+          content
+            .append("text")
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "central")
+            .attr("x", arc.centroid(d)[0])
+            .attr("y", arc.centroid(d)[1])
+            .attr("fill", "white")
+            .attr("font-size", d.data.fontSize ?? "12px")
+            .attr("font-family", "Arial, sans-serif")
+            .style("opacity", d.data.disabled ? 0.5 : 1)
+            .text(d.data.text);
+        } else {
+          content
+            .append("image")
+            .attr(
+              "xlink:href",
+              d.data.disabled ? disabledIcon : d.data.icon || disabledIcon,
+            )
+            .attr("width", this.config.iconSize)
+            .attr("height", this.config.iconSize)
+            .attr("x", arc.centroid(d)[0] - this.config.iconSize / 2)
+            .attr("y", arc.centroid(d)[1] - this.config.iconSize / 2);
+        }
 
-      if (d.data.text) {
-        content
-          .append("text")
-          .attr("text-anchor", "middle")
-          .attr("dominant-baseline", "central")
-          .attr("x", arc.centroid(d)[0])
-          .attr("y", arc.centroid(d)[1])
-          .attr("fill", "white")
-          .attr("font-size", d.data.fontSize ?? "12px")
-          .attr("font-family", "Arial, sans-serif")
-          .style("opacity", d.data.disabled ? 0.5 : 1)
-          .text(d.data.text);
-      } else {
-        content
-          .append("image")
-          .attr(
-            "xlink:href",
-            d.data.disabled ? disabledIcon : d.data.icon || disabledIcon,
-          )
-          .attr("width", this.config.iconSize)
-          .attr("height", this.config.iconSize)
-          .attr("x", arc.centroid(d)[0] - this.config.iconSize / 2)
-          .attr("y", arc.centroid(d)[1] - this.config.iconSize / 2);
-      }
+        this.menuIcons.set(contentId, content as any);
+      });
+  }
 
-      this.menuIcons.set(d.data.id, content as any);
-    });
-
+  private setupAnimations(
+    menuGroup: d3.Selection<SVGGElement, unknown, null, undefined>
+  ) {
     menuGroup
       .transition()
       .duration(this.config.menuTransitionDuration * 0.8)
@@ -542,8 +570,6 @@ export class RadialMenu implements Layer {
       .on("end", () => {
         this.isTransitioning = false;
       });
-
-    return menuGroup;
   }
 
   private navigateToSubMenu(children: MenuElement[]) {
@@ -571,7 +597,7 @@ export class RadialMenu implements Layer {
         menuGroup
           .transition()
           .duration(this.config.menuTransitionDuration * 0.8)
-          .style("transform", "scale(0.6)")
+          .style("transform", "scale(0.59)")
           .style("opacity", 0.8);
 
         menuGroup.selectAll("path").each(function () {
@@ -593,7 +619,7 @@ export class RadialMenu implements Layer {
     currentMenu
       .transition()
       .duration(this.config.menuTransitionDuration * 0.8)
-      .style("transform", `scale(${this.currentLevel === 1 ? "0.8" : "0.6"})`)
+      .style("transform", `scale(${this.currentLevel === 1 ? "0.8" : "0.59"})`)
       .style("opacity", 0.8)
       .on("end", () => {
         this.navigationInProgress = false;
@@ -665,7 +691,7 @@ export class RadialMenu implements Layer {
           .duration(this.config.menuTransitionDuration * 0.8)
           .style(
             "transform",
-            `scale(${this.currentLevel === 1 ? "0.8" : "0.6"})`,
+            `scale(${this.currentLevel === 1 ? "0.8" : "0.59"})`,
           )
           .style("opacity", 0.8);
       } else if (level !== this.currentLevel + 1) {

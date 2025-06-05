@@ -114,7 +114,7 @@ export function prepareMenuElementsForRadialMenu(
         params,
       );
       // We don't need the subMenu function anymore
-      delete prepared.subMenu;
+      prepared.subMenu = undefined;
     }
 
     // Set up the action function to call the element's action with params
@@ -418,57 +418,55 @@ export function createMenuItems(params: MenuElementParams): MenuElement[] {
   ];
 }
 
-export class RadialMenuFactory {
-  static createMenuItems(params: MenuElementParams): MenuElement[] {
-    const elements = createMenuItems(params);
-    return prepareMenuElementsForRadialMenu(elements, params);
-  }
+export function createRadialMenuItems(params: MenuElementParams): MenuElement[] {
+  const elements = createMenuItems(params);
+  return prepareMenuElementsForRadialMenu(elements, params);
+}
 
-  static getRootMenuItems(): MenuElement[] {
-    return [
-      {
-        id: Slot.Boat,
-        name: "boat",
-        disabled: true,
-        _action: () => {},
-        icon: boatIcon,
-      },
-      {
-        id: Slot.Build,
-        name: "build",
-        disabled: true,
-        _action: () => {},
-        icon: buildIcon,
-      },
-      {
-        id: Slot.Info,
-        name: "info",
-        disabled: true,
-        _action: () => {},
-        icon: infoIcon,
-      },
-    ];
-  }
+export function getRootMenuItems(): MenuElement[] {
+  return [
+    {
+      id: Slot.Boat,
+      name: "boat",
+      disabled: true,
+      _action: () => {},
+      icon: boatIcon,
+    },
+    {
+      id: Slot.Build,
+      name: "build",
+      disabled: true,
+      _action: () => {},
+      icon: buildIcon,
+    },
+    {
+      id: Slot.Info,
+      name: "info",
+      disabled: true,
+      _action: () => {},
+      icon: infoIcon,
+    },
+  ];
+}
 
-  static updateCenterButton(
-    params: MenuElementParams,
-    enableCenterButton: (
-      enabled: boolean,
-      action?: (() => void) | null,
-    ) => void,
-  ) {
-    if (params.playerActions.canAttack) {
-      enableCenterButton(true, () => {
-        if (params.tileOwner !== params.myPlayer) {
-          params.playerActionHandler.handleAttack(
-            params.myPlayer,
-            params.tileOwner.id(),
-          );
-        }
-        params.closeMenu();
-      });
-    } else {
-      enableCenterButton(false);
-    }
+export function updateCenterButton(
+  params: MenuElementParams,
+  enableCenterButton: (
+    enabled: boolean,
+    action?: (() => void) | null,
+  ) => void,
+) {
+  if (params.playerActions.canAttack) {
+    enableCenterButton(true, () => {
+      if (params.tileOwner !== params.myPlayer) {
+        params.playerActionHandler.handleAttack(
+          params.myPlayer,
+          params.tileOwner.id(),
+        );
+      }
+      params.closeMenu();
+    });
+  } else {
+    enableCenterButton(false);
   }
 }
