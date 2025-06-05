@@ -39,10 +39,10 @@ export class Executor {
   }
 
   createExecs(turn: Turn): Execution[] {
-    return turn.intents.map((i) => this.createExec(i.intent, i.isServerSide));
+    return turn.intents.map((i) => this.createExec(i));
   }
 
-  createExec(intent: Intent, isServerSide: boolean): Execution {
+  createExec(intent: Intent): Execution {
     const player = this.mg.playerByClientID(intent.clientID);
     if (!player) {
       console.warn(`player with clientID ${intent.clientID} not found`);
@@ -122,11 +122,7 @@ export class Executor {
           intent.variables ?? {},
         );
       case "mark_disconnected":
-        if (isServerSide) {
-          return new MarkDisconnectedExecution(player, intent.isDisconnected);
-        } else {
-          return new NoOpExecution();
-        }
+        return new MarkDisconnectedExecution(player, intent.isDisconnected);
       default:
         throw new Error(`intent type ${intent} not found`);
     }
