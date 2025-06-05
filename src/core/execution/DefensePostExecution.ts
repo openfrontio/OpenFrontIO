@@ -1,5 +1,10 @@
-import { consolex } from "../Consolex";
-import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
+import {
+  Execution,
+  Game,
+  Player,
+  Unit,
+  UnitType,
+} from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { ShellExecution } from "./ShellExecution";
 
@@ -49,7 +54,7 @@ export class DefensePostExecution implements Execution {
     if (this.post === null) {
       const spawnTile = this.player.canBuild(UnitType.DefensePost, this.tile);
       if (spawnTile === false) {
-        consolex.warn("cannot build Defense Post");
+        console.warn("cannot build Defense Post");
         this.active = false;
         return;
       }

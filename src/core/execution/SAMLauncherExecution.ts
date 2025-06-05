@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -16,6 +15,7 @@ export class SAMLauncherExecution implements Execution {
   private active: boolean = true;
 
   private searchRangeRadius = 80;
+  private targetRangeRadius = 120; // Nuke's target should be in this range to be focusable
   // As MIRV go very fast we have to detect them very early but we only
   // shoot the one targeting very close (MIRVWarheadProtectionRadius)
   private MIRVWarheadSearchRadius = 400;
@@ -37,6 +37,18 @@ export class SAMLauncherExecution implements Execution {
     this.mg = mg;
   }
 
+  private nukeTargetInRange(nuke: Unit) {
+    const targetTile = nuke.targetTile();
+    if (this.sam === null || targetTile === undefined) {
+      return false;
+    }
+    const targetRangeSquared = this.targetRangeRadius * this.targetRangeRadius;
+    return (
+      this.mg.euclideanDistSquared(this.sam.tile(), targetTile) <
+      targetRangeSquared
+    );
+  }
+
   private getSingleTarget(): Unit | null {
     if (this.sam === null) return null;
     const nukes = this.mg
@@ -46,7 +58,9 @@ export class SAMLauncherExecution implements Execution {
       ])
       .filter(
         ({ unit }) =>
-          unit.owner() !== this.player && !this.player.isFriendly(unit.owner()),
+          unit.owner() !== this.player &&
+          !this.player.isFriendly(unit.owner()) &&
+          this.nukeTargetInRange(unit),
       );
 
     return (
@@ -94,7 +108,7 @@ export class SAMLauncherExecution implements Execution {
       }
       const spawnTile = this.player.canBuild(UnitType.SAMLauncher, this.tile);
       if (spawnTile === false) {
-        consolex.warn("cannot build SAM Launcher");
+        console.warn("cannot build SAM Launcher");
         this.active = false;
         return;
       }

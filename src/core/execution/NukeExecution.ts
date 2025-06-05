@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -93,7 +92,7 @@ export class NukeExecution implements Execution {
     if (this.nuke === null) {
       const spawn = this.src ?? this.player.canBuild(this.nukeType, this.dst);
       if (spawn === false) {
-        consolex.warn(`cannot build Nuke`);
+        console.warn(`cannot build Nuke`);
         this.active = false;
         return;
       }
@@ -143,7 +142,7 @@ export class NukeExecution implements Execution {
 
     // make the nuke unactive if it was intercepted
     if (!this.nuke.isActive()) {
-      consolex.log(`Nuke destroyed before reaching target`);
+      console.log(`Nuke destroyed before reaching target`);
       this.active = false;
       return;
     }

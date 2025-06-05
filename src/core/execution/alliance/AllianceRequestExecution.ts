@@ -1,4 +1,3 @@
-import { consolex } from "../../Consolex";
 import { Execution, Game, Player, PlayerID } from "../../game/Game";
 
 export class AllianceRequestExecution implements Execution {
@@ -27,9 +26,9 @@ export class AllianceRequestExecution implements Execution {
       throw new Error("Not initialized");
     }
     if (this.requestor.isFriendly(this.recipient)) {
-      consolex.warn("already allied");
+      console.warn("already allied");
     } else if (!this.requestor.canSendAllianceRequest(this.recipient)) {
-      consolex.warn("recent or pending alliance request");
+      console.warn("recent or pending alliance request");
     } else {
       this.requestor.createAllianceRequest(this.recipient);
     }

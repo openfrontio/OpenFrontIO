@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import { GameMapType } from "./Game";
 import { GameMap, GameMapImpl } from "./GameMap";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -65,13 +64,13 @@ export async function genTerrainFromBin(data: string): Promise<GameMap> {
 }
 
 function logBinaryAsAscii(data: string, length: number = 8) {
-  consolex.log("Binary data (1 = set bit, 0 = unset bit):");
+  console.log("Binary data (1 = set bit, 0 = unset bit):");
   for (let i = 0; i < Math.min(length, data.length); i++) {
     const byte = data.charCodeAt(i);
     let byteString = "";
     for (let j = 7; j >= 0; j--) {
       byteString += byte & (1 << j) ? "1" : "0";
     }
-    consolex.log(`Byte ${i}: ${byteString}`);
+    console.log(`Byte ${i}: ${byteString}`);
   }
 }

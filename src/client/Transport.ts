@@ -1,4 +1,3 @@
-import { SendLogEvent } from "../core/Consolex";
 import { EventBus, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
@@ -16,7 +15,6 @@ import {
   ClientHashMessage,
   ClientIntentMessage,
   ClientJoinMessage,
-  ClientLogMessage,
   ClientPingMessage,
   ClientSendWinnerMessage,
   Intent,
@@ -211,7 +209,6 @@ export class Transport {
     );
     this.eventBus.on(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
 
-    this.eventBus.on(SendLogEvent, (e) => this.onSendLogEvent(e));
     this.eventBus.on(PauseGameEvent, (e) => this.onPauseGameEvent(e));
     this.eventBus.on(SendWinnerEvent, (e) => this.onSendWinnerEvent(e));
     this.eventBus.on(SendHashEvent, (e) => this.onSendHashEvent(e));
@@ -334,16 +331,6 @@ export class Transport {
     if (this.isLocal) {
       this.localServer.turnComplete();
     }
-  }
-
-  private onSendLogEvent(event: SendLogEvent) {
-    this.sendMsg(
-      JSON.stringify({
-        type: "log",
-        log: event.log,
-        severity: event.severity,
-      } satisfies ClientLogMessage),
-    );
   }
 
   joinGame(numTurns: number) {
@@ -542,8 +529,7 @@ export class Transport {
   }
 
   private onSendHashEvent(event: SendHashEvent) {
-    if (this.socket === null) return;
-    if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
+    if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
       this.sendMsg(
         JSON.stringify({
           type: "hash",
@@ -554,7 +540,7 @@ export class Transport {
     } else {
       console.log(
         "WebSocket is not open. Current state:",
-        this.socket.readyState,
+        this.socket!.readyState,
       );
       console.log("attempting reconnect");
     }

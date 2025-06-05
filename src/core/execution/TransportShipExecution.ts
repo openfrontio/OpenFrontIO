@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -90,7 +89,7 @@ export class TransportShipExecution implements Execution {
 
     this.dst = targetTransportTile(this.mg, this.ref);
     if (this.dst === null) {
-      consolex.warn(
+      console.warn(
         `${this.attacker} cannot send ship to ${this.target}, cannot find attack tile`,
       );
       this.active = false;
@@ -102,7 +101,7 @@ export class TransportShipExecution implements Execution {
       this.dst,
     );
     if (closestTileSrc === false) {
-      consolex.warn(`can't build transport ship`);
+      console.warn(`can't build transport ship`);
       this.active = false;
       return;
     }
@@ -205,7 +204,7 @@ export class TransportShipExecution implements Execution {
         break;
       case PathFindResultType.PathNotFound:
         // TODO: add to poisoned port list
-        consolex.warn(`path not found to dst`);
+        console.warn(`path not found to dst`);
         this.attacker.addTroops(this.troops);
         this.boat.delete(false);
         this.active = false;

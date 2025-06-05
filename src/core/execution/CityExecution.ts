@@ -1,5 +1,10 @@
-import { consolex } from "../Consolex";
-import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
+import {
+  Execution,
+  Game,
+  Player,
+  Unit,
+  UnitType,
+} from "../game/Game";
 import { TileRef } from "../game/GameMap";
 
 export class CityExecution implements Execution {
@@ -20,7 +25,7 @@ export class CityExecution implements Execution {
     if (this.city === null) {
       const spawnTile = this.player.canBuild(UnitType.City, this.tile);
       if (spawnTile === false) {
-        consolex.warn("cannot build city");
+        console.warn("cannot build city");
         this.active = false;
         return;
       }

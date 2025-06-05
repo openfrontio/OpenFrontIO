@@ -1,5 +1,10 @@
-import { consolex } from "../Consolex";
-import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
+import {
+  Execution,
+  Game,
+  Player,
+  Unit,
+  UnitType,
+} from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { TradeShipExecution } from "./TradeShipExecution";
@@ -10,7 +15,6 @@ export class PortExecution implements Execution {
   private port: Unit | null = null;
   private random: PseudoRandom | null = null;
   private checkOffset: number | null = null;
-  private currentOwner: Player;
 
   constructor(
     private _owner: Player,
@@ -32,9 +36,7 @@ export class PortExecution implements Execution {
       const tile = this.tile;
       const spawn = this._owner.canBuild(UnitType.Port, tile);
       if (spawn === false) {
-        consolex.warn(
-          `player ${this._owner.id()} cannot build port at ${this.tile}`,
-        );
+        console.warn(`player ${this._owner} cannot build port at ${this.tile}`);
         this.active = false;
         return;
       }
@@ -62,7 +64,8 @@ export class PortExecution implements Execution {
       return;
     }
 
-    const ports = this.player().tradingPorts(this.port);
+    const ports = this.
+    ().tradingPorts(this.port);
 
     if (ports.length === 0) {
       return;

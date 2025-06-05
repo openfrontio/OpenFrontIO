@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import { Execution, Game, Player, UnitType } from "../game/Game";
 
 export class BoatRetreatExecution implements Execution {
@@ -19,7 +18,7 @@ export class BoatRetreatExecution implements Execution {
       );
 
     if (!unit) {
-      consolex.warn(`Didn't find outgoing boat with id ${this.unitID}`);
+      console.warn(`Didn't find outgoing boat with id ${this.unitID}`);
       this.active = false;
       return;
     }
