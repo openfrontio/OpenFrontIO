@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -34,7 +33,7 @@ export class HospitalExecution implements Execution {
     if (this.hospital === null) {
       const spawnTile = this.player.canBuild(UnitType.Hospital, this.tile);
       if (spawnTile === false) {
-        consolex.warn("cannot build hospital");
+        console.warn("cannot build hospital");
         this.active = false;
         return;
       }
