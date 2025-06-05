@@ -208,6 +208,6 @@ function shouldAcceptAllianceRequest(player: Player, request: AllianceRequest) {
     request.requestor().numTilesOwned() > player.numTilesOwned() * 3;
   const tooManyAlliances = request.requestor().alliances().length >= 3;
   return (
-    !isTraitor && !hasMalice && !requestorIsMuchLarger && !tooManyAlliances
+    !isTraitor && !hasMalice && (requestorIsMuchLarger || !tooManyAlliances)
   );
 }
