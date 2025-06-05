@@ -6,7 +6,6 @@ import disabledIcon from "../../../../resources/images/DisabledIcon.svg";
 import infoIcon from "../../../../resources/images/InfoIcon.svg";
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
-import { consolex } from "../../../core/Consolex";
 import { EventBus } from "../../../core/EventBus";
 import {
   Cell,
@@ -16,7 +15,6 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
 import {
   CloseViewEvent,
   ContextMenuEvent,
@@ -98,7 +96,6 @@ export class RadialMenu implements Layer {
     private eventBus: EventBus,
     private g: GameView,
     private transformHandler: TransformHandler,
-    private clientID: ClientID,
     private emojiTable: EmojiTable,
     private buildMenu: BuildMenu,
     private uiState: UIState,
@@ -121,7 +118,7 @@ export class RadialMenu implements Layer {
         return;
       }
       const tile = this.g.ref(clickedCell.x, clickedCell.y);
-      const p = this.g.playerByClientID(this.clientID);
+      const p = this.g.myPlayer();
       if (p === null) {
         return;
       }
@@ -343,7 +340,7 @@ export class RadialMenu implements Layer {
 
     const myPlayer = this.g.myPlayer();
     if (myPlayer === null) {
-      consolex.warn("my player not found");
+      console.warn("my player not found");
       return;
     }
     if (myPlayer && !myPlayer.isAlive() && !this.g.inSpawnPhase()) {
@@ -455,7 +452,7 @@ export class RadialMenu implements Layer {
     if (!this.isCenterButtonEnabled) {
       return;
     }
-    consolex.log("Center button clicked");
+    console.log("Center button clicked");
     if (this.clickedCell === null) return;
     const clicked = this.g.ref(this.clickedCell.x, this.clickedCell.y);
     if (this.g.inSpawnPhase()) {

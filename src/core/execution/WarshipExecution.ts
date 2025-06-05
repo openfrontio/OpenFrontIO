@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -79,28 +78,45 @@ export class WarshipExecution implements Execution {
     const hasPort = this.warship.owner().units(UnitType.Port).length > 0;
     const patrolRangeSquared = this.mg.config().warshipPatrolRange() ** 2;
 
-    const ships = this.mg
-      .nearbyUnits(
-        this.warship.patrolTile()!,
-        this.mg.config().warshipTargettingRange(),
-        [UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip],
-      )
-      .filter(
-        ({ unit }) =>
-          unit.owner() !== this.warship.owner() &&
-          unit !== this.warship &&
-          !unit.owner().isFriendly(this.warship.owner()) &&
-          !this.alreadySentShell.has(unit) &&
-          (unit.type() !== UnitType.TradeShip ||
-            (hasPort &&
-              this.mg.euclideanDistSquared(this.warship.tile(), unit.tile()) <=
-                patrolRangeSquared &&
-              unit.targetUnit()?.owner() !== this.warship.owner() &&
-              !unit.targetUnit()?.owner().isFriendly(this.warship.owner()) &&
-              unit.isSafeFromPirates() !== true)),
-      );
+    const ships = this.mg.nearbyUnits(
+      this.warship.tile()!,
+      this.mg.config().warshipTargettingRange(),
+      [UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip],
+    );
+    const potentialTargets: { unit: Unit; distSquared: number }[] = [];
+    for (const { unit, distSquared } of ships) {
+      if (
+        unit.owner() === this.warship.owner() ||
+        unit === this.warship ||
+        unit.owner().isFriendly(this.warship.owner()) ||
+        this.alreadySentShell.has(unit)
+      ) {
+        continue;
+      }
+      if (unit.type() === UnitType.TradeShip) {
+        if (
+          !hasPort ||
+          unit.isSafeFromPirates() ||
+          unit.targetUnit()?.owner() === this.warship.owner() || // trade ship is coming to my port
+          unit.targetUnit()?.owner().isFriendly(this.warship.owner()) // trade ship is coming to my ally
+        ) {
+          continue;
+        }
+        if (
+          this.mg.euclideanDistSquared(
+            this.warship.patrolTile()!,
+            unit.tile(),
+          ) > patrolRangeSquared
+        ) {
+          // Prevent warship from chasing trade ship that is too far away from
+          // the patrol tile to prevent warships from wandering around the map.
+          continue;
+        }
+      }
+      potentialTargets.push({ unit: unit, distSquared });
+    }
 
-    return ships.sort((a, b) => {
+    return potentialTargets.sort((a, b) => {
       const { unit: unitA, distSquared: distA } = a;
       const { unit: unitB, distSquared: distB } = b;
 
@@ -175,7 +191,7 @@ export class WarshipExecution implements Execution {
           this.warship.touch();
           break;
         case PathFindResultType.PathNotFound:
-          consolex.log(`path not found to target`);
+          console.log(`path not found to target`);
           break;
       }
     }
@@ -205,7 +221,7 @@ export class WarshipExecution implements Execution {
         this.warship.touch();
         return;
       case PathFindResultType.PathNotFound:
-        consolex.warn(`path not found to target tile`);
+        console.warn(`path not found to target tile`);
         this.warship.setTargetTile(undefined);
         break;
     }

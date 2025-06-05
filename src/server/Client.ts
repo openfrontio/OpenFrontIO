@@ -13,6 +13,7 @@ export class Client {
     public readonly clientID: ClientID,
     public readonly persistentID: string,
     public readonly claims: TokenPayload | null,
+    public readonly roles: string[] | undefined,
     public readonly ip: string,
     public readonly username: string,
     public readonly ws: WebSocket,

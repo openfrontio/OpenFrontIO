@@ -187,7 +187,7 @@
       "coordinates": [1254, 899],
       "name": "Slovak Republic",
       "strength": 3,
-      "flag": "SK"
+      "flag": "sk"
     },
     {
       "coordinates": [1002, 1061],
@@ -244,7 +244,7 @@
       "flag": "gb-sct"
     },
     {
-      "coordinates": [2239, 3215],
+      "coordinates": [2300, 510],
       "name": "USSR",
       "strength": 3,
       "flag": "ussr"
@@ -259,7 +259,7 @@
       "coordinates": [1522, 48],
       "name": "Polar Bears",
       "strength": 2,
-      "flag": "polar_bear"
+      "flag": "polar_bears"
     },
     {
       "coordinates": [821, 628],
@@ -280,7 +280,7 @@
       "flag": "eg"
     },
     {
-      "coordinates": [1188, 1612],
+      "coordinates": [1115, 1650],
       "name": "State of Libya",
       "strength": 1,
       "flag": "ly"
@@ -289,13 +289,13 @@
       "coordinates": [1919, 1608],
       "name": "Hashemite Kingdom of Jordan",
       "strength": 1,
-      "flag": "hu"
+      "flag": "jo"
     },
     {
       "coordinates": [1898, 1535],
       "name": "Lebanese Republic",
       "strength": 1,
-      "flag": "hu"
+      "flag": "lb"
     }
   ]
 }

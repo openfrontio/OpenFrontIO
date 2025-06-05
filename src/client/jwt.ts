@@ -1,4 +1,5 @@
 import { decodeJwt } from "jose";
+import { z } from "zod/v4";
 import {
   RefreshResponseSchema,
   TokenPayload,
@@ -138,12 +139,9 @@ function _isLoggedIn(): IsLoggedInResponse {
 
     const result = TokenPayloadSchema.safeParse(payload);
     if (!result.success) {
+      const error = z.prettifyError(result.error);
       // Invalid response
-      console.error(
-        "Invalid payload",
-        // JSON.stringify(payload),
-        JSON.stringify(result.error),
-      );
+      console.error("Invalid payload", error);
       return false;
     }
 
@@ -171,11 +169,8 @@ export async function postRefresh(): Promise<boolean> {
     const body = await response.json();
     const result = RefreshResponseSchema.safeParse(body);
     if (!result.success) {
-      console.error(
-        "Invalid response",
-        JSON.stringify(body),
-        JSON.stringify(result.error),
-      );
+      const error = z.prettifyError(result.error);
+      console.error("Invalid response", error);
       return false;
     }
     localStorage.setItem("token", result.data.token);
@@ -201,11 +196,8 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
     const body = await response.json();
     const result = UserMeResponseSchema.safeParse(body);
     if (!result.success) {
-      console.error(
-        "Invalid response",
-        JSON.stringify(body),
-        JSON.stringify(result.error),
-      );
+      const error = z.prettifyError(result.error);
+      console.error("Invalid response", error);
       return false;
     }
     return result.data;

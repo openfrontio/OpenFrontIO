@@ -1,4 +1,3 @@
-import { consolex } from "../../Consolex";
 import { Execution, Game, Player, PlayerID } from "../../game/Game";
 
 export class BreakAllianceExecution implements Execution {
@@ -42,7 +41,7 @@ export class BreakAllianceExecution implements Execution {
     }
     const alliance = this.requestor.allianceWith(this.recipient);
     if (alliance === null) {
-      consolex.warn("cant break alliance, not allied");
+      console.warn("cant break alliance, not allied");
     } else {
       this.requestor.breakAlliance(alliance);
       this.recipient.updateRelation(this.requestor, -200);

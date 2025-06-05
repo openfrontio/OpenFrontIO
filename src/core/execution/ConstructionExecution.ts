@@ -1,7 +1,7 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
+  Gold,
   Player,
   PlayerID,
   Tick,
@@ -26,7 +26,7 @@ export class ConstructionExecution implements Execution {
 
   private ticksUntilComplete: Tick;
 
-  private cost: number;
+  private cost: Gold;
 
   constructor(
     private ownerId: PlayerID,
@@ -54,7 +54,7 @@ export class ConstructionExecution implements Execution {
       }
       const spawnTile = this.player.canBuild(this.constructionType, this.tile);
       if (spawnTile === false) {
-        consolex.warn(`cannot build ${this.constructionType}`);
+        console.warn(`cannot build ${this.constructionType}`);
         this.active = false;
         return;
       }

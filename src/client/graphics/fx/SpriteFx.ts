@@ -1,5 +1,4 @@
 import { Theme } from "../../../core/configuration/Config";
-import { consolex } from "../../../core/Consolex";
 import { PlayerView } from "../../../core/game/GameView";
 import { AnimatedSprite } from "../AnimatedSprite";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
@@ -62,7 +61,7 @@ export class SpriteFx implements Fx {
       theme,
     );
     if (!this.animatedSprite) {
-      consolex.error("Could not load animated sprite", fxType);
+      console.error("Could not load animated sprite", fxType);
     } else {
       this.duration = duration ?? this.animatedSprite.lifeTime() ?? 1000;
     }

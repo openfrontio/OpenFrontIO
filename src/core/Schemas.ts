@@ -116,7 +116,7 @@ export enum LogSeverity {
   Fatal = "FATAL",
 }
 
-const GameConfigSchema = z.object({
+export const GameConfigSchema = z.object({
   gameMap: z.nativeEnum(GameMapType),
   difficulty: z.nativeEnum(Difficulty),
   gameType: z.nativeEnum(GameType),
@@ -245,7 +245,7 @@ export const EmbargoIntentSchema = BaseIntentSchema.extend({
 export const DonateGoldIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate_gold"),
   recipient: ID,
-  gold: z.number().nullable(),
+  gold: z.bigint().nullable(),
 });
 
 export const DonateTroopIntentSchema = BaseIntentSchema.extend({
@@ -457,10 +457,12 @@ export const GameEndInfoSchema = GameStartInfoSchema.extend({
 });
 export type GameEndInfo = z.infer<typeof GameEndInfoSchema>;
 
+const GitCommitSchema = z.string().regex(/^[0-9a-fA-F]{40}$/);
+
 export const AnalyticsRecordSchema = z.object({
   info: GameEndInfoSchema,
   version: z.literal("v0.0.2"),
-  gitCommit: z.string(),
+  gitCommit: GitCommitSchema,
 });
 export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;
 
