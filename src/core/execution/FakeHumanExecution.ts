@@ -373,13 +373,20 @@ export class FakeHumanExecution implements Execution {
             return 50_000;
           case UnitType.Port:
             return 10_000;
-          case UnitType.SAMLauncher:
-            return 5_000;
           default:
             return 0;
         }
       })
       .reduce((prev, cur) => prev + cur, 0);
+
+    // Avoid areas defended by SAM launchers
+    const dist50 = euclDistFN(tile, 50, false);
+    tileValue -=
+      50_000 *
+      targets.filter(
+        (unit) =>
+          unit.type() === UnitType.SAMLauncher && dist50(this.mg, unit.tile()),
+      ).length;
 
     // Prefer tiles that are closer to a silo
     const siloTiles = silos.map((u) => u.tile());
