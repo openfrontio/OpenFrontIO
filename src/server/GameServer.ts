@@ -197,6 +197,12 @@ export class GameServer {
               );
               return;
             }
+            if (clientMsg.intent.type === "mark_disconnected") {
+              this.log.warn(
+                `Should not receive mark_disconnected intent from client`,
+              );
+              return;
+            }
             this.addIntent(clientMsg.intent);
           }
           if (clientMsg.type === "ping") {
