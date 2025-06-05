@@ -1,6 +1,5 @@
 import { LitElement, css, html } from "lit";
 import { customElement, query } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 
@@ -46,37 +45,44 @@ export class NewsModal extends LitElement {
 
   render() {
     return html`
-      <o-modal title=${translateText("news.title")}>
+      <o-modal>
         <div class="options-layout">
           <div class="options-section">
             <div class="news-container">
               <div class="news-content">
-                <h3>Main things to note:</h3>
-                <br />
+                <p>
+                  This test version introduces a new building:
+                  <strong>Hospitals</strong>. Each hospital reduces your troop
+                  losses in both offensive and defensive combat.
+                </p>
+                <p>
+                  The first hospital provides a
+                  <strong>10% reduction</strong> in combat casualties. Each
+                  additional hospital reduces losses by
+                  <strong>75% of the previous reduction</strong>.
+                </p>
                 <ul>
-                  <li>Workers reproduce faster than troops.</li>
-                  <li>Defense = troops divided how much land you have.</li>
-                  <li>Attacking troops count toward your population limit.</li>
+                  <li>1st hospital: 10% reduction</li>
+                  <li>2nd hospital: 7.5% additional reduction</li>
+                  <li>3rd hospital: 5.6% additional reduction</li>
+                  <li>... and so on</li>
                 </ul>
-                <br />
-                <br />
-                See full changelog
-                <a
-                  href="https://discord.com/channels/1284581928254701718/1286745902320713780"
-                  target="_blank"
-                  style="color: #4a9eff; font-weight: bold;"
-                  >here</a
-                >.
+                <p>These effects stack cumulatively.</p>
+                <p>
+                  For a full list of changes, join the
+                  <a
+                    href="https://discord.com/channels/1379151032369676338/1379156389699649566"
+                    target="_blank"
+                  >
+                    Discord </a
+                  >.
+                </p>
               </div>
             </div>
           </div>
         </div>
 
-        <o-button
-          title=${translateText("common.close")}
-          @click=${this.close}
-          blockDesktop
-        ></o-button>
+        <o-button title="Close" @click=${this.close} blockDesktop></o-button>
       </o-modal>
     `;
   }
