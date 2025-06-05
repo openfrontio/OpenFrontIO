@@ -1,23 +1,22 @@
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { MenuItem } from "./RadialMenu";
-import { ChatModal, QuickChatPhrase, quickChatPhrases } from "./ChatModal";
-import { translateText } from "../../Utils";
-import { COLORS } from "./MenuBuilder";
 import { EventBus } from "../../../core/EventBus";
+import { GameView, PlayerView } from "../../../core/game/GameView";
 import { SendQuickChatEvent } from "../../Transport";
+import { translateText } from "../../Utils";
+import { ChatModal, QuickChatPhrase, quickChatPhrases } from "./ChatModal";
+import { COLORS, MenuElement } from "./RadialMenuElements";
 
 export class ChatIntegration {
   private ctModal: ChatModal;
 
   constructor(
     private game: GameView,
-    private eventBus: EventBus
+    private eventBus: EventBus,
   ) {
     this.ctModal = document.querySelector("chat-modal") as ChatModal;
 
     if (!this.ctModal) {
       throw new Error(
-        "Chat modal element not found. Ensure chat-modal element exists in DOM before initializing ChatIntegration"
+        "Chat modal element not found. Ensure chat-modal element exists in DOM before initializing ChatIntegration",
       );
     }
   }
@@ -27,7 +26,7 @@ export class ChatIntegration {
     this.ctModal.setRecipient(recipient);
   }
 
-  createQuickChatMenu(recipient: PlayerView): MenuItem[] {
+  createQuickChatMenu(recipient: PlayerView): MenuElement[] {
     if (!this.ctModal) {
       throw new Error("Chat modal not set");
     }
@@ -45,42 +44,44 @@ export class ChatIntegration {
         COLORS.chat.default;
       const phrases = quickChatPhrases[category.id] || [];
 
-      const phraseItems: MenuItem[] = phrases.map((phrase: QuickChatPhrase) => {
-        const phraseText = translateText(`chat.${category.id}.${phrase.key}`);
+      const phraseItems: MenuElement[] = phrases.map(
+        (phrase: QuickChatPhrase) => {
+          const phraseText = translateText(`chat.${category.id}.${phrase.key}`);
 
-        return {
-          id: `phrase-${category.id}-${phrase.key}`,
-          name: phraseText,
-          disabled: false,
-          text: this.shortenText(phraseText),
-          fontSize: "10px",
-          color: categoryColor,
-          tooltipItems: [
-            {
-              text: phraseText,
-              className: "description",
-            },
-          ],
-          action: () => {
-            if (phrase.requiresPlayer) {
-              this.ctModal.openWithSelection(
-                category.id,
-                phrase.key,
-                myPlayer,
-                recipient
-              );
-            } else {
-              this.eventBus.emit(
-                new SendQuickChatEvent(
+          return {
+            id: `phrase-${category.id}-${phrase.key}`,
+            name: phraseText,
+            disabled: false,
+            text: this.shortenText(phraseText),
+            fontSize: "10px",
+            color: categoryColor,
+            tooltipItems: [
+              {
+                text: phraseText,
+                className: "description",
+              },
+            ],
+            action: () => {
+              if (phrase.requiresPlayer) {
+                this.ctModal.openWithSelection(
+                  category.id,
+                  phrase.key,
+                  myPlayer,
                   recipient,
-                  `${category.id}.${phrase.key}`,
-                  {}
-                )
-              );
-            }
-          },
-        };
-      });
+                );
+              } else {
+                this.eventBus.emit(
+                  new SendQuickChatEvent(
+                    recipient,
+                    `${category.id}.${phrase.key}`,
+                    {},
+                  ),
+                );
+              }
+            },
+          };
+        },
+      );
 
       return {
         id: `chat-category-${category.id}`,
@@ -88,8 +89,8 @@ export class ChatIntegration {
         disabled: false,
         text: categoryTranslation,
         color: categoryColor,
-        action: () => {},
-        children: phraseItems,
+        _action: () => {}, // Empty action placeholder for RadialMenu
+        subMenu: () => phraseItems,
       };
     });
   }
@@ -98,4 +99,4 @@ export class ChatIntegration {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength - 3) + "...";
   }
-} 
+}

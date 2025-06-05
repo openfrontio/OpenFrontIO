@@ -34,24 +34,11 @@ import { UIState } from "../UIState";
 import { BuildMenu } from "./BuildMenu";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
+import { MenuElement } from "./RadialMenuElements";
 
 export interface TooltipItem {
   text: string;
   className: string;
-}
-
-export interface MenuItem {
-  id: string;
-  name: string;
-  disabled: boolean;
-  displayed?: boolean;
-  action: () => void;
-  color?: string;
-  icon?: string;
-  text?: string;
-  fontSize?: string;
-  children?: MenuItem[];
-  tooltipItems?: TooltipItem[];
 }
 
 export interface RadialMenuConfig {
@@ -77,9 +64,9 @@ export class RadialMenu implements Layer {
   private isVisible: boolean = false;
 
   private currentLevel: number = 0; // Current menu level (0 = main menu, 1 = submenu, etc.)
-  private menuStack: MenuItem[][] = []; // Stack to track menu navigation history
-  private currentMenuItems: MenuItem[] = []; // Current active menu items (changes based on level)
-  private rootMenuItems: MenuItem[] = []; // Store the original root menu items
+  private menuStack: MenuElement[][] = []; // Stack to track menu navigation history
+  private currentMenuItems: MenuElement[] = []; // Current active menu items (changes based on level)
+  private rootMenuItems: MenuElement[] = []; // Store the original root menu items
 
   private readonly config: RequiredRadialMenuConfig;
   private readonly backIconSize: number;
@@ -126,7 +113,7 @@ export class RadialMenu implements Layer {
       centerButtonIcon: config.centerButtonIcon ?? "",
       maxNestedLevels: config.maxNestedLevels ?? 3,
       innerRadiusIncrement: config.innerRadiusIncrement ?? 20,
-      tooltipStyle: config.tooltipStyle ?? ""
+      tooltipStyle: config.tooltipStyle ?? "",
     };
     this.originalCenterButtonIcon = this.config.centerButtonIcon;
     this.backIconSize = this.config.centerIconSize * 0.8;
@@ -161,7 +148,8 @@ export class RadialMenu implements Layer {
 
     // Calculate the total svg size needed for all potential nested menus
     const totalSize =
-      this.config.menuSize * Math.pow(this.config.submenuScale, this.config.maxNestedLevels - 1);
+      this.config.menuSize *
+      Math.pow(this.config.submenuScale, this.config.maxNestedLevels - 1);
 
     const svg = this.menuElement
       .append("svg")
@@ -276,13 +264,12 @@ export class RadialMenu implements Layer {
 
   private getOuterRadiusForLevel(level: number): number {
     const innerRadius = this.getInnerRadiusForLevel(level);
-
-    const arcWidth = this.config.menuSize / 2 - this.config.mainMenuInnerRadius - 10;
-
+    const arcWidth =
+      this.config.menuSize / 2 - this.config.mainMenuInnerRadius - 10;
     return innerRadius + arcWidth;
   }
 
-  private renderMenuItems(items: MenuItem[], level: number) {
+  private renderMenuItems(items: MenuElement[], level: number) {
     const container = this.menuElement.select(".menu-container");
 
     container.selectAll(`.menu-level-${level}`).remove();
@@ -301,7 +288,7 @@ export class RadialMenu implements Layer {
     this.menuGroups.set(level, menuGroup as any);
 
     const pie = d3
-      .pie<MenuItem>()
+      .pie<MenuElement>()
       .value(() => 1)
       .padAngle(0.03)
       .startAngle(Math.PI / 4)
@@ -311,7 +298,7 @@ export class RadialMenu implements Layer {
     const outerRadius = this.getOuterRadiusForLevel(level);
 
     const arc = d3
-      .arc<d3.PieArcDatum<MenuItem>>()
+      .arc<d3.PieArcDatum<MenuElement>>()
       .innerRadius(innerRadius)
       .outerRadius(outerRadius);
 
@@ -380,7 +367,7 @@ export class RadialMenu implements Layer {
     });
 
     const onHover = (
-      d: d3.PieArcDatum<MenuItem>,
+      d: d3.PieArcDatum<MenuElement>,
       path: d3.Selection<any, any, any, any>,
     ) => {
       if (
@@ -427,7 +414,7 @@ export class RadialMenu implements Layer {
     };
 
     const onMouseOut = (
-      d: d3.PieArcDatum<MenuItem>,
+      d: d3.PieArcDatum<MenuElement>,
       path: d3.Selection<any, any, any, any>,
     ) => {
       if (this.submenuHoverTimeout !== null) {
@@ -456,7 +443,7 @@ export class RadialMenu implements Layer {
       );
     };
 
-    const onClick = (d: d3.PieArcDatum<MenuItem>, event: Event) => {
+    const onClick = (d: d3.PieArcDatum<MenuElement>, event: Event) => {
       event.stopPropagation();
       if (d.data.disabled || this.navigationInProgress) return;
 
@@ -472,8 +459,8 @@ export class RadialMenu implements Layer {
         this.selectedItemId = d.data.id;
         this.navigateToSubMenu(d.data.children || []);
         this.setCenterButtonAsBack();
-      } else if (typeof d.data.action === "function") {
-        d.data.action();
+      } else if (d.data._action) {
+        d.data._action();
         this.hideRadialMenu();
       } else {
         throw new Error(`Menu item action is not a function: ${d.data.id}`);
@@ -568,7 +555,7 @@ export class RadialMenu implements Layer {
     return menuGroup;
   }
 
-  private navigateToSubMenu(children: MenuItem[]) {
+  private navigateToSubMenu(children: MenuElement[]) {
     this.isTransitioning = true;
 
     this.menuStack.push(this.currentMenuItems);
@@ -1357,7 +1344,7 @@ export class RadialMenu implements Layer {
     }
   }
 
-  public setRootMenuItems(items: MenuItem[]) {
+  public setRootMenuItems(items: MenuElement[]) {
     this.currentMenuItems = [...items];
     this.rootMenuItems = [...items];
     if (this.isVisible) {
@@ -1365,7 +1352,7 @@ export class RadialMenu implements Layer {
     }
   }
 
-  private findMenuItem(id: string): MenuItem | undefined {
+  private findMenuItem(id: string): MenuElement | undefined {
     return this.currentMenuItems.find((item) => item.id === id);
   }
 
