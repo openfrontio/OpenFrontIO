@@ -21,7 +21,7 @@ export class TradeShipExecution implements Execution {
   private pathFinder: PathFinder;
 
   constructor(
-    private _owner: Player,
+    private origOwner: Player,
     private srcPort: Unit,
     private _dstPort: Unit,
   ) {}
@@ -33,7 +33,7 @@ export class TradeShipExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.tradeShip === undefined) {
-      const spawn = this._owner.canBuild(
+      const spawn = this.origOwner.canBuild(
         UnitType.TradeShip,
         this.srcPort.tile(),
       );
@@ -42,7 +42,7 @@ export class TradeShipExecution implements Execution {
         this.active = false;
         return;
       }
-      this.tradeShip = this._owner.buildUnit(UnitType.TradeShip, spawn, {
+      this.tradeShip = this.origOwner.buildUnit(UnitType.TradeShip, spawn, {
         targetUnit: this._dstPort,
         lastSetSafeFromPirates: ticks,
       });
@@ -53,7 +53,7 @@ export class TradeShipExecution implements Execution {
       return;
     }
 
-    if (this._owner !== this.tradeShip.owner()) {
+    if (this.origOwner !== this.tradeShip.owner()) {
       // Store as variable in case ship is recaptured by previous owner
       this.wasCaptured = true;
     }
@@ -133,7 +133,7 @@ export class TradeShipExecution implements Execution {
     if (this.wasCaptured) {
       this.tradeShip!.owner().addGold(gold);
       this.mg.displayMessage(
-        `Received ${renderNumber(gold)} gold from ship captured from ${this._owner.displayName()}`,
+        `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
         MessageType.SUCCESS,
         this.tradeShip!.owner().id(),
       );

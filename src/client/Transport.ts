@@ -384,7 +384,7 @@ export class Transport {
     this.sendIntent({
       type: "allianceRequest",
       clientID: this.lobbyConfig.clientID,
-      targetPlayerID: event.recipient.id(),
+      recipient: event.recipient.id(),
     });
   }
 
@@ -392,7 +392,7 @@ export class Transport {
     this.sendIntent({
       type: "allianceRequestReply",
       clientID: this.lobbyConfig.clientID,
-      requestorPlayerID: event.requestor.id(),
+      requestor: event.requestor.id(),
       accept: event.accepted,
     });
   }
@@ -401,7 +401,7 @@ export class Transport {
     this.sendIntent({
       type: "breakAlliance",
       clientID: this.lobbyConfig.clientID,
-      targetPlayerID: event.recipient.id(),
+      recipient: event.recipient.id(),
     });
   }
 
@@ -421,7 +421,7 @@ export class Transport {
     this.sendIntent({
       type: "attack",
       clientID: this.lobbyConfig.clientID,
-      targetRegionID: event.targetID,
+      targetID: event.targetID,
       troops: event.troops,
     });
   }
@@ -430,7 +430,7 @@ export class Transport {
     this.sendIntent({
       type: "boat",
       clientID: this.lobbyConfig.clientID,
-      targetRegionID: event.targetID,
+      targetID: event.targetID,
       troops: event.troops,
       dstX: event.dst.x,
       dstY: event.dst.y,
@@ -443,7 +443,7 @@ export class Transport {
     this.sendIntent({
       type: "targetPlayer",
       clientID: this.lobbyConfig.clientID,
-      targetPlayerID: event.targetID,
+      target: event.targetID,
     });
   }
 
@@ -451,7 +451,7 @@ export class Transport {
     this.sendIntent({
       type: "emoji",
       clientID: this.lobbyConfig.clientID,
-      targetPlayersID:
+      recipient:
         event.recipient === AllPlayers ? AllPlayers : event.recipient.id(),
       emoji: event.emoji,
     });
@@ -461,7 +461,7 @@ export class Transport {
     this.sendIntent({
       type: "donate_gold",
       clientID: this.lobbyConfig.clientID,
-      targetPlayerID: event.recipient.id(),
+      recipient: event.recipient.id(),
       gold: event.gold,
     });
   }
@@ -470,7 +470,7 @@ export class Transport {
     this.sendIntent({
       type: "donate_troops",
       clientID: this.lobbyConfig.clientID,
-      targetPlayerID: event.recipient.id(),
+      recipient: event.recipient.id(),
       troops: event.troops,
     });
   }
@@ -479,7 +479,7 @@ export class Transport {
     this.sendIntent({
       type: "quick_chat",
       clientID: this.lobbyConfig.clientID,
-      targetPlayerID: event.recipient.id(),
+      recipient: event.recipient.id(),
       quickChatKey: event.quickChatKey,
       variables: event.variables,
     });
@@ -489,7 +489,7 @@ export class Transport {
     this.sendIntent({
       type: "embargo",
       clientID: this.lobbyConfig.clientID,
-      targetPlayerID: event.target.id(),
+      targetID: event.target.id(),
       action: event.action,
     });
   }

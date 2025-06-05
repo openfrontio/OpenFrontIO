@@ -47,7 +47,7 @@ export class PortExecution implements Execution {
     }
 
     if (this._owner.id() !== this.port.owner().id()) {
-      this.currentOwner = this.port.owner();
+      this._owner = this.port.owner();
     }
 
     // Only check every 10 ticks for performance.
@@ -62,7 +62,7 @@ export class PortExecution implements Execution {
       return;
     }
 
-    const ports = this.currentOwner.tradingPorts(this.port);
+    const ports = this.player().tradingPorts(this.port);
 
     if (ports.length === 0) {
       return;
@@ -70,7 +70,7 @@ export class PortExecution implements Execution {
 
     const port = this.random.randElement(ports);
     this.mg.addExecution(
-      new TradeShipExecution(this.currentOwner, this.port, port),
+      new TradeShipExecution(this.player(), this.port, port),
     );
   }
 
@@ -86,6 +86,6 @@ export class PortExecution implements Execution {
     if (this.port === null) {
       throw new Error("Not initialized");
     }
-    return this.currentOwner;
+    return this.port.owner();
   }
 }

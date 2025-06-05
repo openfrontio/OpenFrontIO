@@ -8,7 +8,7 @@ export class CityExecution implements Execution {
   private active: boolean = true;
 
   constructor(
-    private _owner: Player,
+    private player: Player,
     private tile: TileRef,
   ) {}
 
@@ -18,21 +18,21 @@ export class CityExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.city === null) {
-      const spawnTile = this._owner.canBuild(UnitType.City, this.tile);
+      const spawnTile = this.player.canBuild(UnitType.City, this.tile);
       if (spawnTile === false) {
         consolex.warn("cannot build city");
         this.active = false;
         return;
       }
-      this.city = this._owner.buildUnit(UnitType.City, spawnTile, {});
+      this.city = this.player.buildUnit(UnitType.City, spawnTile, {});
     }
     if (!this.city.isActive()) {
       this.active = false;
       return;
     }
 
-    if (this._owner !== this.city.owner()) {
-      this._owner = this.city.owner();
+    if (this.player !== this.city.owner()) {
+      this.player = this.city.owner();
     }
   }
 

@@ -14,7 +14,7 @@ export class DefensePostExecution implements Execution {
   private alreadySentShell = new Set<Unit>();
 
   constructor(
-    private _owner: Player,
+    private player: Player,
     private tile: TileRef,
   ) {}
 
@@ -47,21 +47,21 @@ export class DefensePostExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.post === null) {
-      const spawnTile = this._owner.canBuild(UnitType.DefensePost, this.tile);
+      const spawnTile = this.player.canBuild(UnitType.DefensePost, this.tile);
       if (spawnTile === false) {
         consolex.warn("cannot build Defense Post");
         this.active = false;
         return;
       }
-      this.post = this._owner.buildUnit(UnitType.DefensePost, spawnTile, {});
+      this.post = this.player.buildUnit(UnitType.DefensePost, spawnTile, {});
     }
     if (!this.post.isActive()) {
       this.active = false;
       return;
     }
 
-    if (this._owner !== this.post.owner()) {
-      this._owner = this.post.owner();
+    if (this.player !== this.post.owner()) {
+      this.player = this.post.owner();
     }
 
     if (this.target !== null && !this.target.isActive()) {

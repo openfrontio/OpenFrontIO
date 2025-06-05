@@ -4,14 +4,14 @@ import { Execution, Game, Player, UnitType } from "../game/Game";
 export class BoatRetreatExecution implements Execution {
   private active = true;
   constructor(
-    private _owner: Player,
+    private player: Player,
     private unitID: number,
   ) {}
 
   init(mg: Game, ticks: number): void {}
 
   tick(ticks: number): void {
-    const unit = this._owner
+    const unit = this.player
       .units()
       .find(
         (unit) =>
@@ -26,6 +26,10 @@ export class BoatRetreatExecution implements Execution {
 
     unit.orderBoatRetreat();
     this.active = false;
+  }
+
+  owner(): Player {
+    return this.player;
   }
 
   isActive(): boolean {

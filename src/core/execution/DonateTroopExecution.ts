@@ -1,34 +1,44 @@
 import { consolex } from "../Consolex";
-import { Execution, Game, Player } from "../game/Game";
+import { Execution, Game, Player, PlayerID } from "../game/Game";
 
 export class DonateTroopsExecution implements Execution {
+
+  private recipient: Player;
+
   private active = true;
 
   constructor(
-    private _owner: Player,
-    private _target: Player,
+    private sender: Player,
+    private recipientID: PlayerID,
     private troops: number | null,
   ) {}
 
   init(mg: Game, ticks: number): void {
+    if (!mg.hasPlayer(this.recipientID)) {
+      console.warn(`DonateExecution recipient ${this.recipientID} not found`);
+      this.active = false;
+      return;
+    }
+
+    this.recipient = mg.player(this.recipientID);
     if (this.troops === null) {
-      this.troops = mg.config().defaultDonationAmount(this._owner);
+      this.troops = mg.config().defaultDonationAmount(this.sender);
     }
     const maxDonation =
-      mg.config().maxPopulation(this._target) - this._target.population();
+      mg.config().maxPopulation(this.recipient) - this.recipient.population();
     this.troops = Math.min(this.troops, maxDonation);
   }
 
   tick(ticks: number): void {
     if (this.troops === null) throw new Error("not initialized");
     if (
-      this._owner.canDonate(this._target) &&
-      this._owner.donateTroops(this._target, this.troops)
+      this.sender.canDonate(this.recipient) &&
+      this.sender.donateTroops(this.recipient, this.troops)
     ) {
-      this._target.updateRelation(this._owner, 50);
+      this.recipient.updateRelation(this.sender, 50);
     } else {
       consolex.warn(
-        `cannot send troops from ${this._owner.name()} to ${this._target.name()}`,
+        `cannot send troops from ${this.sender} to ${this.recipient}`,
       );
     }
     this.active = false;

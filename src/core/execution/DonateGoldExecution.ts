@@ -1,31 +1,41 @@
 import { consolex } from "../Consolex";
-import { Execution, Game, Gold, Player } from "../game/Game";
+import { Execution, Game, Gold, Player, PlayerID } from "../game/Game";
 
 export class DonateGoldExecution implements Execution {
+
+  private recipient: Player;
+
   private active = true;
 
   constructor(
-    private _owner: Player,
-    private _target: Player,
+    private sender: Player,
+    private recipientID: PlayerID,
     private gold: Gold | null,
   ) {}
 
   init(mg: Game, ticks: number): void {
+    if (!mg.hasPlayer(this.recipientID)) {
+      console.warn(`DonateExecution recipient ${this.recipientID} not found`);
+      this.active = false;
+      return;
+    }
+
+    this.recipient = mg.player(this.recipientID);
     if (this.gold === null) {
-      this.gold = this._owner.gold() / 3n;
+      this.gold = this.sender.gold() / 3n;
     }
   }
 
   tick(ticks: number): void {
     if (this.gold === null) throw new Error("not initialized");
     if (
-      this._owner.canDonate(this._target) &&
-      this._owner.donateGold(this._target, this.gold)
+      this.sender.canDonate(this.recipient) &&
+      this.sender.donateGold(this.recipient, this.gold)
     ) {
-      this._target.updateRelation(this._owner, 50);
+      this.recipient.updateRelation(this.sender, 50);
     } else {
       consolex.warn(
-        `cannot send gold from ${this._owner.name()} to ${this._target.name()}`,
+        `cannot send gold from ${this.sender.name()} to ${this.recipient.name()}`,
       );
     }
     this.active = false;

@@ -1,20 +1,31 @@
 import { consolex } from "../Consolex";
-import { Execution, Game, Player } from "../game/Game";
+import { Execution, Game, Player, PlayerID } from "../game/Game";
 
 export class QuickChatExecution implements Execution {
+
+  private recipient: Player;
   private mg: Game;
 
   private active = true;
 
   constructor(
-    private _owner: Player,
-    private _target: Player,
+    private sender: Player,
+    private recipientID: PlayerID,
     private quickChatKey: string,
     private variables: Record<string, string>,
   ) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
+    if (!mg.hasPlayer(this.recipientID)) {
+      consolex.warn(
+        `QuickChatExecution: recipient ${this.recipientID} not found`,
+      );
+      this.active = false;
+      return;
+    }
+
+    this.recipient = mg.player(this.recipientID);
   }
 
   tick(ticks: number): void {
@@ -24,29 +35,29 @@ export class QuickChatExecution implements Execution {
       message[1],
       message[0],
       this.variables,
-      this._target.id(),
+      this.recipient.id(),
       true,
-      this._owner.name(),
+      this.sender.name(),
     );
 
     this.mg.displayChat(
       message[1],
       message[0],
       this.variables,
-      this._target.id(),
+      this.sender.id(),
       false,
-      this._owner.name(),
+      this.recipient.name(),
     );
 
     consolex.log(
-      `[QuickChat] ${this._owner.name()} → ${this._target.name()}: ${message}`,
+      `[QuickChat] ${this.sender.name} → ${this.recipient.name}: ${message}`,
     );
 
     this.active = false;
   }
 
   owner(): Player {
-    return this._owner;
+    return this.sender;
   }
 
   isActive(): boolean {

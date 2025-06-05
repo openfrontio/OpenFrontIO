@@ -8,7 +8,7 @@ export class MissileSiloExecution implements Execution {
   private silo: Unit | null = null;
 
   constructor(
-    private _owner: Player,
+    private player: Player,
     private tile: TileRef,
   ) {}
 
@@ -18,26 +18,26 @@ export class MissileSiloExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.silo === null) {
-      const spawn = this._owner.canBuild(UnitType.MissileSilo, this.tile);
+      const spawn = this.player.canBuild(UnitType.MissileSilo, this.tile);
       if (spawn === false) {
         consolex.warn(
-          `player ${this._owner.id()} cannot build missile silo at ${this.tile}`,
+          `player ${this.player} cannot build missile silo at ${this.tile}`,
         );
         this.active = false;
         return;
       }
-      this.silo = this._owner.buildUnit(UnitType.MissileSilo, spawn, {
+      this.silo = this.player.buildUnit(UnitType.MissileSilo, spawn, {
         cooldownDuration: this.mg.config().SiloCooldown(),
       });
 
-      if (this._owner.id() !== this.silo.owner().id()) {
-        this._owner = this.silo.owner();
+      if (this.player !== this.silo.owner()) {
+        this.player = this.silo.owner();
       }
     }
 
-    const cooldown = this.silo?.ticksLeftInCooldown();
+    const cooldown = this.silo.ticksLeftInCooldown();
     if (typeof cooldown === "number" && cooldown >= 0) {
-      this.silo?.touch();
+      this.silo.touch();
     }
   }
 

@@ -8,7 +8,7 @@ export class RetreatExecution implements Execution {
   private startTick: number;
   private mg: Game;
   constructor(
-    private _owner: Player,
+    private player: Player,
     private attackID: string,
   ) {}
 
@@ -19,18 +19,18 @@ export class RetreatExecution implements Execution {
 
   tick(ticks: number): void {
     if (!this.retreatOrdered) {
-      this._owner.orderRetreat(this.attackID);
+      this.player.orderRetreat(this.attackID);
       this.retreatOrdered = true;
     }
 
     if (this.mg.ticks() >= this.startTick + cancelDelay) {
-      this._owner.executeRetreat(this.attackID);
+      this.player.executeRetreat(this.attackID);
       this.active = false;
     }
   }
 
   owner(): Player {
-    return this._owner;
+    return this.player;
   }
 
   isActive(): boolean {

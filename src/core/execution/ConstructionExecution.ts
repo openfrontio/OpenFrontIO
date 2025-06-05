@@ -28,7 +28,7 @@ export class ConstructionExecution implements Execution {
   private cost: Gold;
 
   constructor(
-    private _owner: Player,
+    private player: Player,
     private tile: TileRef,
     private constructionType: UnitType,
   ) {}
@@ -45,19 +45,19 @@ export class ConstructionExecution implements Execution {
         this.active = false;
         return;
       }
-      const spawnTile = this._owner.canBuild(this.constructionType, this.tile);
+      const spawnTile = this.player.canBuild(this.constructionType, this.tile);
       if (spawnTile === false) {
         consolex.warn(`cannot build ${this.constructionType}`);
         this.active = false;
         return;
       }
-      this.construction = this._owner.buildUnit(
+      this.construction = this.player.buildUnit(
         UnitType.Construction,
         spawnTile,
         {},
       );
-      this.cost = this.mg.unitInfo(this.constructionType).cost(this._owner);
-      this._owner.removeGold(this.cost);
+      this.cost = this.mg.unitInfo(this.constructionType).cost(this.player);
+      this.player.removeGold(this.cost);
       this.construction.setConstructionType(this.constructionType);
       this.ticksUntilComplete = info.constructionDuration;
       return;
@@ -68,15 +68,15 @@ export class ConstructionExecution implements Execution {
       return;
     }
 
-    if (this._owner !== this.construction.owner()) {
-      this._owner = this.construction.owner();
+    if (this.player !== this.construction.owner()) {
+      this.player = this.construction.owner();
     }
 
     if (this.ticksUntilComplete === 0) {
-      this._owner = this.construction.owner();
+      this.player = this.construction.owner();
       this.construction.delete(false);
       // refund the cost so player has the gold to build the unit
-      this._owner.addGold(this.cost);
+      this.player.addGold(this.cost);
       this.completeConstruction();
       this.active = false;
       return;
@@ -85,35 +85,36 @@ export class ConstructionExecution implements Execution {
   }
 
   private completeConstruction() {
+    const player = this.player;
     switch (this.constructionType) {
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
         this.mg.addExecution(
-          new NukeExecution(this.constructionType, this._owner, this.tile),
+          new NukeExecution(this.constructionType, player, this.tile),
         );
         break;
       case UnitType.MIRV:
-        this.mg.addExecution(new MirvExecution(this._owner, this.tile));
+        this.mg.addExecution(new MirvExecution(player, this.tile));
         break;
       case UnitType.Warship:
         this.mg.addExecution(
-          new WarshipExecution({ owner: this._owner, patrolTile: this.tile }),
+          new WarshipExecution({ owner: player, patrolTile: this.tile }),
         );
         break;
       case UnitType.Port:
-        this.mg.addExecution(new PortExecution(this._owner, this.tile));
+        this.mg.addExecution(new PortExecution(player, this.tile));
         break;
       case UnitType.MissileSilo:
-        this.mg.addExecution(new MissileSiloExecution(this._owner, this.tile));
+        this.mg.addExecution(new MissileSiloExecution(player, this.tile));
         break;
       case UnitType.DefensePost:
-        this.mg.addExecution(new DefensePostExecution(this._owner, this.tile));
+        this.mg.addExecution(new DefensePostExecution(player, this.tile));
         break;
       case UnitType.SAMLauncher:
-        this.mg.addExecution(new SAMLauncherExecution(this._owner, this.tile));
+        this.mg.addExecution(new SAMLauncherExecution(player, this.tile));
         break;
       case UnitType.City:
-        this.mg.addExecution(new CityExecution(this._owner, this.tile));
+        this.mg.addExecution(new CityExecution(player, this.tile));
         break;
       default:
         throw Error(`unit type ${this.constructionType} not supported`);

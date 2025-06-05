@@ -3,13 +3,13 @@ import { TileRef } from "../game/GameMap";
 
 export class MoveWarshipExecution implements Execution {
   constructor(
-    private readonly _owner: Player,
+    private readonly owner: Player,
     private readonly unitId: number,
     private readonly position: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {
-    const warship = this._owner
+    const warship = this.owner
       .units(UnitType.Warship)
       .find((u) => u.id() === this.unitId);
     if (!warship) {

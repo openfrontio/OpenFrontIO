@@ -1,23 +1,37 @@
 import { consolex } from "../../Consolex";
-import { Execution, Game, Player } from "../../game/Game";
+import { Execution, Game, Player, PlayerID } from "../../game/Game";
 
 export class AllianceRequestExecution implements Execution {
   private active = true;
+  private recipient: Player | null = null;
 
   constructor(
-    private _owner: Player,
-    private _target: Player,
+    private requestor: Player,
+    private recipientID: PlayerID,
   ) {}
 
-  init(mg: Game, ticks: number): void {}
+  init(mg: Game, ticks: number): void {
+    if (!mg.hasPlayer(this.recipientID)) {
+      console.warn(
+        `AllianceRequestExecution recipient ${this.recipientID} not found`,
+      );
+      this.active = false;
+      return;
+    }
+
+    this.recipient = mg.player(this.recipientID);
+  }
 
   tick(ticks: number): void {
-    if (this._owner.isFriendly(this._target)) {
+    if (this.recipient === null) {
+      throw new Error("Not initialized");
+    }
+    if (this.requestor.isFriendly(this.recipient)) {
       consolex.warn("already allied");
-    } else if (!this._owner.canSendAllianceRequest(this._target)) {
+    } else if (!this.requestor.canSendAllianceRequest(this.recipient)) {
       consolex.warn("recent or pending alliance request");
     } else {
-      this._owner.createAllianceRequest(this._target);
+      this.requestor.createAllianceRequest(this.recipient);
     }
     this.active = false;
   }

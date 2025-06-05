@@ -1,31 +1,44 @@
 import { consolex } from "../../Consolex";
-import { Execution, Game, Player } from "../../game/Game";
+import { Execution, Game, Player, PlayerID } from "../../game/Game";
 
 export class AllianceRequestReplyExecution implements Execution {
   private active = true;
+  private requestor: Player | null = null;
 
   constructor(
-    private _owner: Player,
-    private _target: Player,
+    private requestorID: PlayerID,
+    private recipient: Player,
     private accept: boolean,
   ) {}
 
-  init(mg: Game, ticks: number): void {}
+  init(mg: Game, ticks: number): void {
+    if (!mg.hasPlayer(this.requestorID)) {
+      console.warn(
+        `AllianceRequestReplyExecution requester ${this.requestorID} not found`,
+      );
+      this.active = false;
+      return;
+    }
+    this.requestor = mg.player(this.requestorID);
+  }
 
   tick(ticks: number): void {
-    if (this._owner.isFriendly(this._target)) {
+    if (this.requestor === null) {
+      throw new Error("Not initialized");
+    }
+    if (this.requestor.isFriendly(this.recipient)) {
       consolex.warn("already allied");
     } else {
-      const request = this._owner
+      const request = this.requestor
         .outgoingAllianceRequests()
-        .find((ar) => ar.recipient() === this._target);
+        .find((ar) => ar.recipient() === this.recipient);
       if (request === undefined) {
         consolex.warn("no alliance request found");
       } else {
         if (this.accept) {
           request.accept();
-          this._owner.updateRelation(this._target, 100);
-          this._target.updateRelation(this._owner, 100);
+          this.requestor.updateRelation(this.recipient, 100);
+          this.recipient.updateRelation(this.requestor, 100);
         } else {
           request.reject();
         }

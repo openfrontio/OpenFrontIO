@@ -5,7 +5,7 @@ export class SetTargetTroopRatioExecution implements Execution {
   private active = true;
 
   constructor(
-    private _owner: Player,
+    private player: Player,
     private targetTroopsRatio: number,
   ) {}
 
@@ -14,10 +14,10 @@ export class SetTargetTroopRatioExecution implements Execution {
   tick(ticks: number): void {
     if (this.targetTroopsRatio < 0 || this.targetTroopsRatio > 1) {
       consolex.warn(
-        `target troop ratio of ${this.targetTroopsRatio} for player ${this._owner.id()} invalid`,
+        `target troop ratio of ${this.targetTroopsRatio} for player ${this.player} invalid`,
       );
     } else {
-      this._owner.setTargetTroopRatio(this.targetTroopsRatio);
+      this.player.setTargetTroopRatio(this.targetTroopsRatio);
     }
     this.active = false;
   }

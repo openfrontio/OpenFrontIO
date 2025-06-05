@@ -1,29 +1,45 @@
 import { consolex } from "../../Consolex";
-import { Execution, Game, Player } from "../../game/Game";
+import { Execution, Game, Player, PlayerID } from "../../game/Game";
 
 export class BreakAllianceExecution implements Execution {
   private active = true;
-  private mg: Game;
+  private recipient: Player | null = null;
+  private mg: Game | null = null;
 
   constructor(
-    private _owner: Player,
-    private _target: Player,
+    private requestor: Player,
+    private recipientID: PlayerID,
   ) {}
 
   init(mg: Game, ticks: number): void {
+    if (!mg.hasPlayer(this.recipientID)) {
+      console.warn(
+        `BreakAllianceExecution: recipient ${this.recipientID} not found`,
+      );
+      this.active = false;
+      return;
+    }
+    this.recipient = mg.player(this.recipientID);
     this.mg = mg;
   }
 
   tick(ticks: number): void {
-    const alliance = this._owner.allianceWith(this._target);
+    if (
+      this.mg === null ||
+      this.requestor === null ||
+      this.recipient === null
+    ) {
+      throw new Error("Not initialized");
+    }
+    const alliance = this.requestor.allianceWith(this.recipient);
     if (alliance === null) {
       consolex.warn("cant break alliance, not allied");
     } else {
-      this._owner.breakAlliance(alliance);
-      this._target.updateRelation(this._owner, -200);
+      this.requestor.breakAlliance(alliance);
+      this.recipient.updateRelation(this.requestor, -200);
       for (const player of this.mg.players()) {
-        if (player !== this._owner) {
-          player.updateRelation(this._owner, -40);
+        if (player !== this.requestor) {
+          player.updateRelation(this.requestor, -40);
         }
       }
     }

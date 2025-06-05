@@ -1,19 +1,29 @@
-import { Execution, Game, Player, TerraNullius } from "../game/Game";
+import { Execution, Game, Player, PlayerID } from "../game/Game";
 
 export class TargetPlayerExecution implements Execution {
+  private target: Player;
+
   private active = true;
 
   constructor(
-    private _owner: Player,
-    private _target: Player | TerraNullius,
+    private requestor: Player,
+    private targetID: PlayerID,
   ) {}
 
-  init(mg: Game, ticks: number): void {}
+  init(mg: Game, ticks: number): void {
+    if (!mg.hasPlayer(this.targetID)) {
+      console.warn(`TargetPlayerExecution: target ${this.targetID} not found`);
+      this.active = false;
+      return;
+    }
+
+    this.target = mg.player(this.targetID);
+  }
 
   tick(ticks: number): void {
-    if (this._target.isPlayer() && this._owner.canTarget(this._target)) {
-      this._owner.target(this._target);
-      this._target.updateRelation(this._owner, -40);
+    if (this.requestor.canTarget(this.target)) {
+      this.requestor.target(this.target);
+      this.target.updateRelation(this.requestor, -40);
     }
     this.active = false;
   }

@@ -284,7 +284,7 @@ export class FakeHumanExecution implements Execution {
     this.mg.addExecution(
       new EmojiExecution(
         this.player,
-        enemy,
+        enemy.id(),
         this.random.randElement(this.heckleEmoji),
       ),
     );
@@ -416,7 +416,7 @@ export class FakeHumanExecution implements Execution {
     this.mg.addExecution(
       new TransportShipExecution(
         this.player,
-        other,
+        other.id(),
         closest.y,
         this.player.troops() / 5,
         null,
@@ -562,7 +562,7 @@ export class FakeHumanExecution implements Execution {
     this.mg.addExecution(
       new TransportShipExecution(
         this.player,
-        this.mg.owner(dst),
+        this.mg.owner(dst).id(),
         dst,
         this.player.troops() / 5,
         null,
