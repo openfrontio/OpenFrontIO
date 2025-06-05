@@ -1,6 +1,7 @@
 import { SerialAStar } from "./SerialAStar";
 import { GameMap, TileRef } from "../game/GameMap";
 import { AStar, PathFindResultType } from "./AStar";
+import { Game } from "../game/Game";
 import { AbstractGraph, Gateway } from "./AbstractGraph";
 
 export class HPAStar implements AStar {
@@ -14,7 +15,7 @@ export class HPAStar implements AStar {
   private finalPath: TileRef[] = [];
 
   constructor(
-    private game: any /* Game */,
+    private game: Game,
     private src: TileRef,
     private dst: TileRef,
     private iterations: number,
