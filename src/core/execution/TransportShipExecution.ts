@@ -62,7 +62,7 @@ export class TransportShipExecution implements Execution {
 
     this.lastMove = ticks;
     this.mg = mg;
-    this.pathFinder = PathFinder.Mini(mg, 10_000, 10);
+    this.pathFinder = PathFinder.Hierarchical(mg, 10_000, 10);
 
     this.attacker = mg.player(this.attackerID);
 
