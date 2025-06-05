@@ -82,6 +82,7 @@ export class PlayerImpl implements Player {
   private _flag: string | undefined;
   private _name: string;
   private _displayName: string;
+  private _hospitalReturns: number = 0;
 
   public pastOutgoingAllianceRequests: AllianceRequest[] = [];
 
@@ -139,6 +140,7 @@ export class PlayerImpl implements Player {
       gold: this._gold,
       population: this.population(),
       totalPopulation: this.totalPopulation(),
+      hospitalReturns: this.hospitalReturns(),
       workers: this.workers(),
       troops: this.troops(),
       targetTroopRatio: this.targetTroopRatio(),
@@ -718,6 +720,17 @@ export class PlayerImpl implements Player {
     const toRemove = minInt(this._troops, toInt(troops));
     this._troops -= toRemove;
     return Number(toRemove);
+  }
+
+  hospitalReturns(): number {
+    return this._hospitalReturns;
+  }
+  addHospitalReturns(count: number): void {
+    this._hospitalReturns += count;
+  }
+
+  resetHospitalReturns(): void {
+    this._hospitalReturns = 0;
   }
 
   captureUnit(unit: Unit): void {

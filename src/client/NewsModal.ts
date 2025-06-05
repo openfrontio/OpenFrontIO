@@ -52,8 +52,10 @@ export class NewsModal extends LitElement {
               <div class="news-content">
                 <p>
                   This test version introduces a new building:
-                  <strong>Hospitals</strong>. Each hospital reduces your troop
-                  losses in both offensive and defensive combat.
+                  <strong>Hospitals</strong>. Each hospital restores some of
+                  your troop losses from both offensive and defensive combat.
+                  The restored troops are displayed next to your population
+                  growth count in your control panel.
                 </p>
                 <p>
                   The first hospital provides a

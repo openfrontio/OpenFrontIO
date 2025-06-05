@@ -74,7 +74,10 @@ export class PlayerExecution implements Execution {
       return;
     }
 
-    const popInc = this.config.populationIncreaseRate(this.player);
+    const popInc =
+      this.config.populationIncreaseRate(this.player) +
+      this.player.hospitalReturns();
+    this.player.resetHospitalReturns();
     this.player.addWorkers(popInc * (1 - this.player.targetTroopRatio()));
     this.player.addTroops(popInc * this.player.targetTroopRatio());
     const goldFromWorkers = this.config.goldAdditionRate(this.player);

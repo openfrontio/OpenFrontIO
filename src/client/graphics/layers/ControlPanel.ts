@@ -35,6 +35,9 @@ export class ControlPanel extends LitElement implements Layer {
   private popRate: number;
 
   @state()
+  private _hospitalReturns: number = 0;
+
+  @state()
   private _troops: number;
 
   @state()
@@ -121,6 +124,7 @@ export class ControlPanel extends LitElement implements Layer {
 
     this._population = player.population();
     this._maxPopulation = this.game.config().maxPopulation(player);
+    this._hospitalReturns = player.hospitalReturns() * 10;
     this._gold = player.gold();
     this._troops = player.troops();
     this._workers = player.workers();
@@ -221,9 +225,12 @@ export class ControlPanel extends LitElement implements Layer {
                   ? "text-green-500"
                   : "text-yellow-500"}"
                 translate="no"
-                >(+${renderTroops(this.popRate)})</span
-              ></span
-            >
+              >
+                (+${renderTroops(
+                  this.popRate,
+                )}${`/ +${renderTroops(this._hospitalReturns)}`})
+              </span>
+            </span>
           </div>
           <div class="flex justify-between">
             <span class="font-bold"

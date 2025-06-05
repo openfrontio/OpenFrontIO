@@ -107,6 +107,7 @@ export interface PlayerUpdate {
   gold: Gold;
   population: number;
   totalPopulation: number;
+  hospitalReturns: number;
   workers: number;
   troops: number;
   targetTroopRatio: number;

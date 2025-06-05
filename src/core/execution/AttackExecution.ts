@@ -9,6 +9,7 @@ import {
   PlayerType,
   TerrainType,
   TerraNullius,
+  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
@@ -293,6 +294,20 @@ export class AttackExecution implements Execution {
       this.attack.setTroops(troopCount);
       if (targetPlayer) {
         targetPlayer.removeTroops(defenderTroopLoss);
+      }
+      const attackerMultiplier =
+        0.6 + 0.4 * Math.pow(0.75, this._owner.units(UnitType.Hospital).length);
+      const defenderMultiplier = targetPlayer
+        ? 0.6 +
+          0.4 * Math.pow(0.75, this._owner.units(UnitType.Hospital).length)
+        : 1;
+
+      const attackerReturns = attackerTroopLoss * (1 - attackerMultiplier);
+      const defenderReturns = defenderTroopLoss * (1 - defenderMultiplier);
+
+      this._owner.addHospitalReturns(attackerReturns);
+      if (targetPlayer) {
+        targetPlayer.addHospitalReturns(defenderReturns);
       }
       this._owner.conquer(tileToConquer);
       this.handleDeadDefender();

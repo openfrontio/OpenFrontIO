@@ -10,6 +10,7 @@ export class TopBar extends LitElement implements Layer {
   public game: GameView;
   private isVisible = false;
   private _population = 0;
+  private _hospitalReturns = 0;
   private _lastPopulationIncreaseRate = 0;
   private _popRateIsIncreasing = false;
 
@@ -36,6 +37,7 @@ export class TopBar extends LitElement implements Layer {
         popIncreaseRate >= this._lastPopulationIncreaseRate;
       this._lastPopulationIncreaseRate = popIncreaseRate;
     }
+    this._hospitalReturns = player.hospitalReturns?.() ?? 0;
   }
 
   render() {
@@ -72,8 +74,10 @@ export class TopBar extends LitElement implements Layer {
             class="${this._popRateIsIncreasing
               ? "text-green-500"
               : "text-yellow-500"}"
-            >(+${renderTroops(popRate)})</span
           >
+            (+${renderTroops(popRate)} /
+            +${renderTroops(this._hospitalReturns)})
+          </span>
         </div>
         <!-- Gold section (takes 1 column on desktop) -->
         <div

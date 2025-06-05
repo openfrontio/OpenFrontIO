@@ -569,12 +569,6 @@ export class DefaultConfig implements Config {
       const traitorDebuff = defender.isTraitor()
         ? this.traitorDefenseDebuff()
         : 1;
-      const attackerHospitalBonus =
-        0.6 + 0.4 * Math.pow(0.75, attacker.units(UnitType.Hospital).length);
-
-      const defenderHospitalBonus =
-        0.6 + 0.4 * Math.pow(0.75, defender.units(UnitType.Hospital).length);
-      console.log(attackerHospitalBonus, defenderHospitalBonus);
       const baseTroopLoss = 10;
       const attackLossModifier = 1.35;
       const baseTileCost = 45;
@@ -582,10 +576,9 @@ export class DefaultConfig implements Config {
       return {
         attackerTroopLoss:
           mag *
-          attackerHospitalBonus *
           (baseTroopLoss +
             attackLossModifier * defenderDensity * traitorDebuff),
-        defenderTroopLoss: defenderDensity * defenderHospitalBonus,
+        defenderTroopLoss: defenderDensity,
         tilesPerTickUsed:
           baseTileCost *
           within(defenderDensity, 3, 50) ** 0.2 *

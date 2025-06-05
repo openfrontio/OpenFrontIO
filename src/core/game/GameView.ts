@@ -292,6 +292,9 @@ export class PlayerView {
   hasSpawned(): boolean {
     return this.data.hasSpawned;
   }
+  hospitalReturns(): number {
+    return this.data.hospitalReturns ?? 0;
+  }
 }
 
 export class GameView implements GameMap {

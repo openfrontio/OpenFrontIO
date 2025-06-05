@@ -461,6 +461,9 @@ export interface Player {
   setTroops(troops: number): void;
   addTroops(troops: number): void;
   removeTroops(troops: number): number;
+  hospitalReturns(): number;
+  addHospitalReturns(amount: number): void;
+  resetHospitalReturns(): void;
 
   // Units
   units(...types: UnitType[]): Unit[];
