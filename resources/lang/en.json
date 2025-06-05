@@ -424,7 +424,9 @@
     "start_trade": "Start trading",
     "stop_trade": "Stop trading",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "none": "None",
+    "alliances": "Alliances"
   },
   "error_modal": {
     "crashed": "Game crashed!",
