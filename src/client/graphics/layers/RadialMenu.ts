@@ -206,9 +206,6 @@ export class RadialMenu implements Layer {
         font-size: 14px;
         margin-bottom: 4px;
       }
-      .radial-tooltip .description {
-        margin-bottom: 4px;
-      }
 
       ${this.config.tooltipStyle}
     `;
@@ -312,12 +309,6 @@ export class RadialMenu implements Layer {
         }ms, fill ${this.config.menuTransitionDuration / 2}ms`,
       )
       .attr("data-id", (d) => d.data.id);
-
-    // arcs.each((d) => {
-    //   const pathId = d.data.id;
-    //   // 'this' refers to the group element
-    //   (this as any).__data__ = d;
-    // });
 
     arcs.each((d) => {
       const pathId = d.data.id;
@@ -564,14 +555,12 @@ export class RadialMenu implements Layer {
     this.currentMenuItems = children;
     this.currentLevel++;
 
-    const container = this.menuElement.select(".menu-container");
-    const currentMenu = container.select(
-      `.menu-level-${this.currentLevel - 1}`,
-    );
+    this.renderMenuItems(this.currentMenuItems, this.currentLevel);
+    this.updateMenuGroupVisibility();
+    this.animatePreviousMenu();
+  }
 
-    // Render new menu at full size
-    this.renderMenuItems(children, this.currentLevel);
-
+  private updateMenuGroupVisibility() {
     // Hide all menus except the current and immediate previous one
     this.menuGroups.forEach((menuGroup, level) => {
       if (level === this.currentLevel) {
@@ -600,6 +589,13 @@ export class RadialMenu implements Layer {
           });
       }
     });
+  }
+
+  private animatePreviousMenu() {
+    const container = this.menuElement.select(".menu-container");
+    const currentMenu = container.select(
+      `.menu-level-${this.currentLevel - 1}`,
+    );
 
     currentMenu
       .transition()
@@ -618,10 +614,29 @@ export class RadialMenu implements Layer {
 
     this.isTransitioning = true;
 
+    this.updateMenuLevels();
+    this.clearSelectedItemHoverState();
+    this.updateMenuVisibility();
+    this.animateMenuTransitions();
+  }
+
+  private updateMenuLevels() {
     const previousItems = this.menuStack.pop();
     const previousLevel = this.currentLevel - 1;
     this.currentLevel = previousLevel;
 
+    if (previousLevel === 0) {
+      this.selectedItemId = null;
+    }
+
+    this.currentMenuItems = previousItems || [];
+
+    if (this.currentLevel === 0) {
+      this.resetCenterButton();
+    }
+  }
+
+  private clearSelectedItemHoverState() {
     // Clear the hover state on the item that opened the submenu
     if (this.selectedItemId) {
       const selectedPath = this.menuPaths.get(this.selectedItemId);
@@ -642,23 +657,9 @@ export class RadialMenu implements Layer {
         }
       }
     }
+  }
 
-    if (previousLevel === 0) {
-      this.selectedItemId = null;
-    }
-
-    this.currentMenuItems = previousItems || [];
-
-    const container = this.menuElement.select(".menu-container");
-    const currentSubmenu = container.select(
-      `.menu-level-${this.currentLevel + 1}`,
-    );
-    const previousMenu = container.select(`.menu-level-${this.currentLevel}`);
-
-    if (this.currentLevel === 0) {
-      this.resetCenterButton();
-    }
-
+  private updateMenuVisibility() {
     this.menuGroups.forEach((menuGroup, level) => {
       if (level === this.currentLevel) {
         menuGroup.style("display", "block");
@@ -689,7 +690,16 @@ export class RadialMenu implements Layer {
           });
       }
     });
+  }
 
+  private animateMenuTransitions() {
+    const container = this.menuElement.select(".menu-container");
+    const currentSubmenu = container.select(
+      `.menu-level-${this.currentLevel + 1}`,
+    );
+    const previousMenu = container.select(`.menu-level-${this.currentLevel}`);
+
+    // Animate the current submenu (sliding out)
     currentSubmenu
       .transition()
       .duration(this.config.menuTransitionDuration * 0.8)
@@ -699,35 +709,43 @@ export class RadialMenu implements Layer {
         d3.select(this).remove();
       });
 
+    // Handle previous menu animation
     if (previousMenu.empty()) {
-      const menu = this.renderMenuItems(
-        this.currentMenuItems,
-        this.currentLevel,
-      );
-      menu
-        .style("transform", "scale(0.8)")
-        .style("opacity", 0.3)
-        .transition()
-        .duration(this.config.menuTransitionDuration * 0.8)
-        .style("transform", "scale(1)")
-        .style("opacity", 1)
-        .on("end", () => {
-          this.isTransitioning = false;
-          this.navigationInProgress = false;
-        });
+      this.renderAndAnimateNewMenu();
     } else {
-      previousMenu
-        .transition()
-        .duration(this.config.menuTransitionDuration * 0.8)
-        .style("transform", "scale(1)")
-        .style("opacity", 1)
-        .on("end", () => {
-          this.isTransitioning = false;
-          this.navigationInProgress = false;
-        });
-
-      previousMenu.selectAll("path").style("pointer-events", "auto");
+      this.animateExistingMenu(previousMenu);
     }
+  }
+
+  private renderAndAnimateNewMenu() {
+    const menu = this.renderMenuItems(this.currentMenuItems, this.currentLevel);
+    menu
+      .style("transform", "scale(0.8)")
+      .style("opacity", 0.3)
+      .transition()
+      .duration(this.config.menuTransitionDuration * 0.8)
+      .style("transform", "scale(1)")
+      .style("opacity", 1)
+      .on("end", () => {
+        this.isTransitioning = false;
+        this.navigationInProgress = false;
+      });
+  }
+
+  private animateExistingMenu(
+    previousMenu: d3.Selection<any, unknown, null, undefined>,
+  ) {
+    previousMenu
+      .transition()
+      .duration(this.config.menuTransitionDuration * 0.8)
+      .style("transform", "scale(1)")
+      .style("opacity", 1)
+      .on("end", () => {
+        this.isTransitioning = false;
+        this.navigationInProgress = false;
+      });
+
+    previousMenu.selectAll("path").style("pointer-events", "auto");
   }
 
   private setCenterButtonAsBack() {
