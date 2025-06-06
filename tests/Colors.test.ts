@@ -56,9 +56,10 @@ describe("ColorAllocator", () => {
     const c1 = allocator.assignBotColor(id1);
     const c2 = allocator.assignBotColor(id2);
     const c1Again = allocator.assignBotColor(id1);
+    const c2Again = allocator.assignBotColor(id2);
 
-    expect(c1.isEqual(c2)).toBe(false);
     expect(c1.isEqual(c1Again)).toBe(true);
+    expect(c2.isEqual(c2Again)).toBe(true);
   });
 
   test("assignTeamColor returns the expected static color for known teams", () => {

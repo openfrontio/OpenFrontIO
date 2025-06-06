@@ -391,7 +391,8 @@ export class ColorAllocator {
   }
 
   assignBotColor(id: string): Colord {
-    return botColors[simpleHash(id) % botColors.length];
+    const hash = simpleHash(id);
+    return this.availableColors[hash % this.availableColors.length];
   }
 
   assignPlayerColor(id: string): Colord {
@@ -399,19 +400,18 @@ export class ColorAllocator {
       return this.assigned.get(id)!;
     }
 
-    const hash = simpleHash(id);
-    if (this.usedHashes.has(hash) || this.availableColors.length === 0) {
+    if (this.availableColors.length === 0) {
       const fallback = colord({ r: 200, g: 200, b: 200 });
       this.assigned.set(id, fallback);
       return fallback;
     }
 
-    this.usedHashes.add(hash);
-    const index = hash % this.availableColors.length;
+    const index = 0;
     const color = this.availableColors.splice(index, 1)[0];
     this.assigned.set(id, color);
     return color;
   }
+
   assignTeamColor(team: Team): Colord {
     switch (team) {
       case ColoredTeams.Blue:
@@ -431,7 +431,9 @@ export class ColorAllocator {
       case ColoredTeams.Bot:
         return botColor;
       default:
-        return humanColors[simpleHash(team) % humanColors.length];
+        return this.availableColors[
+          simpleHash(team) % this.availableColors.length
+        ];
     }
   }
 }

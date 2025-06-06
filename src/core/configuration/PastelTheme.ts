@@ -19,6 +19,7 @@ export class PastelTheme implements Theme {
   private rand = new PseudoRandom(123);
   private humanColorAllocator = new ColorAllocator(humanColors);
   private botColorAllocator = new ColorAllocator(botColors);
+  private teamColorAllocator = new ColorAllocator(humanColors);
 
   private background = colord({ r: 60, g: 60, b: 60 });
   private shore = colord({ r: 204, g: 203, b: 158 });
@@ -39,7 +40,7 @@ export class PastelTheme implements Theme {
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
 
   teamColor(team: Team): Colord {
-    return this.humanColorAllocator.assignTeamColor(team);
+    return this.teamColorAllocator.assignTeamColor(team);
   }
 
   territoryColor(player: PlayerView): Colord {
