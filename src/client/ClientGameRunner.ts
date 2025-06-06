@@ -12,7 +12,7 @@ import {
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { Cell, UnitType } from "../core/game/Game";
+import { Cell, PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import {
   ErrorUpdate,
@@ -419,7 +419,7 @@ export class ClientGameRunner {
     });
   }
 
-  private canBoatAttack(actions: any, tile: TileRef): boolean {
+  private canBoatAttack(actions: PlayerActions, tile: TileRef): boolean {
     const bu = actions.buildableUnits.find(
       (bu) => bu.type === UnitType.TransportShip,
     );
