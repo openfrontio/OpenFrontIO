@@ -426,7 +426,7 @@ export class GameView implements GameMap {
 
   playerColor(id: PlayerID): Colord | null {
     const player = this.player(id);
-    if (!player) return;
+    if (!player) return null;
     const theme = this.config().theme();
     return theme.territoryColor(player);
   }
