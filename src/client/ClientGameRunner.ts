@@ -369,13 +369,6 @@ export class ClientGameRunner {
     }
     this.myPlayer.actions(tile).then((actions) => {
       if (this.myPlayer === null) return;
-      const bu = actions.buildableUnits.find(
-        (bu) => bu.type === UnitType.TransportShip,
-      );
-      if (bu === undefined) {
-        console.warn(`no transport ship buildable units`);
-        return;
-      }
       if (actions.canAttack) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
@@ -383,11 +376,7 @@ export class ClientGameRunner {
             this.myPlayer.troops() * this.renderer.uiState.attackRatio,
           ),
         );
-      } else if (
-        bu.canBuild !== false &&
-        this.shouldBoat(tile, bu.canBuild) &&
-        this.gameView.isLand(tile)
-      ) {
+      } else if (this.canBoatAttack(actions, tile)) {
         this.sendBoatAttackIntent(tile, cell);
       }
 
@@ -423,28 +412,26 @@ export class ClientGameRunner {
       this.myPlayer = myPlayer;
     }
 
-    this.executeBoatAttack(tile, cell);
-  }
-
-  private executeBoatAttack(tile: TileRef, cell: Cell): void {
-    if (!this.myPlayer) return;
-
     this.myPlayer.actions(tile).then((actions) => {
-      if (!this.myPlayer) return;
-
-      const bu = actions.buildableUnits.find(
-        (bu) => bu.type === UnitType.TransportShip,
-      );
-
-      if (bu === undefined) {
-        console.warn(`no transport ship buildable units`);
-        return;
-      }
-
-      if (bu.canBuild !== false && this.shouldBoat(tile, bu.canBuild)) {
+      if (!actions.canAttack && this.canBoatAttack(actions, tile)) {
         this.sendBoatAttackIntent(tile, cell);
       }
     });
+  }
+  
+  private canBoatAttack(actions: any, tile: TileRef): boolean {
+    const bu = actions.buildableUnits.find(
+      (bu) => bu.type === UnitType.TransportShip,
+    );
+    if (bu === undefined) {
+      console.warn(`no transport ship buildable units`);
+      return false;
+    }
+    return (
+      bu.canBuild !== false &&
+      this.shouldBoat(tile, bu.canBuild) &&
+      this.gameView.isLand(tile)
+    );
   }
 
   private sendBoatAttackIntent(tile: TileRef, cell: Cell) {
