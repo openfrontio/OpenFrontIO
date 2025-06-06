@@ -10,7 +10,7 @@ import { Layer } from "./Layer";
 
 interface Entry {
   name: string;
-  color: Colord;
+  color: Colord | null;
   position: number;
   score: string;
   gold: string;
