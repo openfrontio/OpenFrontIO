@@ -23,7 +23,7 @@ function sendBoat(target: TileRef, source: TileRef, troops: number) {
   game.addExecution(
     new TransportShipExecution(
       defender,
-      game.terraNullius().id(),
+      null,
       target,
       troops,
       source,
