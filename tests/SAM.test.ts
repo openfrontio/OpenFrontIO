@@ -61,12 +61,12 @@ describe("SAM", () => {
     defender = game.player("defender_id");
     far_defender = game.player("far_defender_id");
 
-    constructionExecution(game, attacker.id(), 7, 7, UnitType.MissileSilo);
+    constructionExecution(game, attacker, 7, 7, UnitType.MissileSilo);
   });
 
   test("one sam should take down one nuke", async () => {
     const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
-    game.addExecution(new SAMLauncherExecution(defender.id(), null, sam));
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
     attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
       targetTile: game.ref(2, 1),
     });
@@ -78,7 +78,7 @@ describe("SAM", () => {
 
   test("sam should only get one nuke at a time", async () => {
     const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
-    game.addExecution(new SAMLauncherExecution(defender.id(), null, sam));
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
     attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 1), {
       targetTile: game.ref(2, 1),
     });
@@ -94,7 +94,7 @@ describe("SAM", () => {
 
   test("sam should cooldown as long as configured", async () => {
     const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
-    game.addExecution(new SAMLauncherExecution(defender.id(), null, sam));
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
     expect(sam.isInCooldown()).toBeFalsy();
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
       targetTile: game.ref(1, 2),
@@ -117,9 +117,9 @@ describe("SAM", () => {
     const sam1 = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {
       cooldownDuration: 10,
     });
-    game.addExecution(new SAMLauncherExecution(defender.id(), null, sam1));
+    game.addExecution(new SAMLauncherExecution(defender, null, sam1));
     const sam2 = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 2), {});
-    game.addExecution(new SAMLauncherExecution(defender.id(), null, sam2));
+    game.addExecution(new SAMLauncherExecution(defender, null, sam2));
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 2), {
       targetTile: game.ref(2, 2),
     });
@@ -134,7 +134,7 @@ describe("SAM", () => {
     const targetDistance = 199;
     // Close SAM: should not intercept anything
     const sam1 = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
-    game.addExecution(new SAMLauncherExecution(defender.id(), null, sam1));
+    game.addExecution(new SAMLauncherExecution(defender, null, sam1));
 
     // Far SAM: Should intercept the nuke. Use the far_defender so the SAM can be built
     const sam2 = far_defender.buildUnit(
@@ -142,11 +142,11 @@ describe("SAM", () => {
       game.ref(targetDistance, 1),
       {},
     );
-    game.addExecution(new SAMLauncherExecution(far_defender.id(), null, sam2));
+    game.addExecution(new SAMLauncherExecution(far_defender, null, sam2));
 
     const nukeExecution = new NukeExecution(
       UnitType.AtomBomb,
-      attacker.id(),
+      attacker,
       game.ref(targetDistance, 1),
       null,
     );

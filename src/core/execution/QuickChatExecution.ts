@@ -1,14 +1,14 @@
 import { Execution, Game, Player, PlayerID } from "../game/Game";
 
 export class QuickChatExecution implements Execution {
-  private sender: Player;
+
   private recipient: Player;
   private mg: Game;
 
   private active = true;
 
   constructor(
-    private senderID: PlayerID,
+    private sender: Player,
     private recipientID: PlayerID,
     private quickChatKey: string,
     private variables: Record<string, string>,
@@ -16,11 +16,6 @@ export class QuickChatExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    if (!mg.hasPlayer(this.senderID)) {
-      console.warn(`QuickChatExecution: sender ${this.senderID} not found`);
-      this.active = false;
-      return;
-    }
     if (!mg.hasPlayer(this.recipientID)) {
       console.warn(
         `QuickChatExecution: recipient ${this.recipientID} not found`,
@@ -29,7 +24,6 @@ export class QuickChatExecution implements Execution {
       return;
     }
 
-    this.sender = mg.player(this.senderID);
     this.recipient = mg.player(this.recipientID);
   }
 

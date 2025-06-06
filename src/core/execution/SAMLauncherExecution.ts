@@ -3,7 +3,6 @@ import {
   Game,
   MessageType,
   Player,
-  PlayerID,
   Unit,
   UnitType,
 } from "../game/Game";
@@ -12,7 +11,6 @@ import { PseudoRandom } from "../PseudoRandom";
 import { SAMMissileExecution } from "./SAMMissileExecution";
 
 export class SAMLauncherExecution implements Execution {
-  private player: Player;
   private mg: Game;
   private active: boolean = true;
 
@@ -26,7 +24,7 @@ export class SAMLauncherExecution implements Execution {
   private pseudoRandom: PseudoRandom | undefined;
 
   constructor(
-    private ownerId: PlayerID,
+    private player: Player,
     private tile: TileRef | null,
     private sam: Unit | null = null,
   ) {
@@ -37,12 +35,6 @@ export class SAMLauncherExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    if (!mg.hasPlayer(this.ownerId)) {
-      console.warn(`SAMLauncherExecution: owner ${this.ownerId} not found`);
-      this.active = false;
-      return;
-    }
-    this.player = mg.player(this.ownerId);
   }
 
   private nukeTargetInRange(nuke: Unit) {

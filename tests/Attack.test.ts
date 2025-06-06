@@ -21,7 +21,13 @@ let attackerSpawn: TileRef;
 
 function sendBoat(target: TileRef, source: TileRef, troops: number) {
   game.addExecution(
-    new TransportShipExecution(defender.id(), null, target, troops, source),
+    new TransportShipExecution(
+      defender,
+      null,
+      target,
+      troops,
+      source,
+    ),
   );
 }
 
@@ -64,7 +70,7 @@ describe("Attack", () => {
     attacker = game.player(attackerInfo.id);
     defender = game.player(defenderInfo.id);
 
-    game.addExecution(new AttackExecution(100, defender.id(), null));
+    game.addExecution(new AttackExecution(100, defender, game.terraNullius().id()));
     game.executeNextTick();
     while (defender.outgoingAttacks().length > 0) {
       game.executeNextTick();
@@ -76,10 +82,10 @@ describe("Attack", () => {
   test("Nuke reduce attacking troop counts", async () => {
     // Not building exactly spawn to it's better protected from attacks (but still
     // on defender territory)
-    constructionExecution(game, defender.id(), 1, 1, UnitType.MissileSilo);
+    constructionExecution(game, defender, 1, 1, UnitType.MissileSilo);
     expect(defender.units(UnitType.MissileSilo)).toHaveLength(1);
-    game.addExecution(new AttackExecution(100, attacker.id(), defender.id()));
-    constructionExecution(game, defender.id(), 0, 15, UnitType.AtomBomb, 3);
+    game.addExecution(new AttackExecution(100, attacker, defender.id()));
+    constructionExecution(game, defender, 0, 15, UnitType.AtomBomb, 3);
     const nuke = defender.units(UnitType.AtomBomb)[0];
     expect(nuke.isActive()).toBe(true);
 
@@ -94,12 +100,12 @@ describe("Attack", () => {
   });
 
   test("Nuke reduce attacking boat troop count", async () => {
-    constructionExecution(game, defender.id(), 1, 1, UnitType.MissileSilo);
+    constructionExecution(game, defender, 1, 1, UnitType.MissileSilo);
     expect(defender.units(UnitType.MissileSilo)).toHaveLength(1);
 
     sendBoat(game.ref(15, 8), game.ref(10, 5), 100);
 
-    constructionExecution(game, defender.id(), 0, 15, UnitType.AtomBomb, 3);
+    constructionExecution(game, defender, 0, 15, UnitType.AtomBomb, 3);
     const nuke = defender.units(UnitType.AtomBomb)[0];
     expect(nuke.isActive()).toBe(true);
 
