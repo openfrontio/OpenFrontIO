@@ -20,7 +20,7 @@ function attackerBuildsNuke(
   initialize = true,
 ) {
   game.addExecution(
-    new NukeExecution(UnitType.AtomBomb, attacker.id(), target, source),
+    new NukeExecution(UnitType.AtomBomb, attacker, target, source),
   );
   if (initialize) {
     game.executeNextTick();
@@ -50,7 +50,7 @@ describe("MissileSilo", () => {
 
     attacker = game.player("attacker_id");
 
-    constructionExecution(game, attacker.id(), 1, 1, UnitType.MissileSilo);
+    constructionExecution(game, attacker, 1, 1, UnitType.MissileSilo);
   });
 
   test("missilesilo should launch nuke", async () => {
