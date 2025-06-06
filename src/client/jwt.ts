@@ -50,7 +50,7 @@ export async function logOut(allSessions: boolean = false) {
   __isLoggedIn = false;
 
   const response = await fetch(
-    getApiBase() + allSessions ? "/revoke" : "/logout",
+    getApiBase() + (allSessions ? "/revoke" : "/logout"),
     {
       method: "POST",
       headers: {
