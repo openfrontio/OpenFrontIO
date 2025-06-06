@@ -25,7 +25,12 @@ import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
-import { InputHandler, MouseMoveEvent, MouseUpEvent } from "./InputHandler";
+import {
+  DoBoatAttackEvent,
+  InputHandler,
+  MouseMoveEvent,
+  MouseUpEvent,
+} from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentID } from "./Main";
 import {
@@ -231,6 +236,7 @@ export class ClientGameRunner {
     }, 20000);
     this.eventBus.on(MouseUpEvent, (e) => this.inputEvent(e));
     this.eventBus.on(MouseMoveEvent, (e) => this.onMouseMove(e));
+    this.eventBus.on(DoBoatAttackEvent, (e) => this.doBoatAttackUnderCursor());
 
     this.renderer.initialize();
     this.input.initialize();
@@ -409,6 +415,53 @@ export class ClientGameRunner {
         this.gameView.setFocusedPlayer(owner as PlayerView);
       } else {
         this.gameView.setFocusedPlayer(null);
+      }
+    });
+  }
+
+    private doBoatAttackUnderCursor(): void {
+    if (!this.isActive || !this.lastMousePosition) {
+      return;
+    }
+    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
+      this.lastMousePosition.x,
+      this.lastMousePosition.y,
+    );
+    if (!this.gameView.isValidCoord(cell.x, cell.y)) {
+      return;
+    }
+
+    const tile = this.gameView.ref(cell.x, cell.y);
+    if (this.gameView.inSpawnPhase()) {
+      return;
+    }
+
+    if (this.myPlayer === null) {
+      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    this.executeBoatAttack(tile, cell);
+  }
+
+  private executeBoatAttack(tile: TileRef, cell: Cell): void {
+    if (!this.myPlayer) return;
+
+    this.myPlayer.actions(tile).then((actions) => {
+      if (!this.myPlayer) return;
+
+      const bu = actions.buildableUnits.find(
+        (bu) => bu.type === UnitType.TransportShip,
+      );
+
+      if (bu === undefined) {
+        console.warn(`no transport ship buildable units`);
+        return;
+      }
+
+      if (bu.canBuild !== false && this.shouldBoat(tile, bu.canBuild)) {
+        this.sendBoatAttackIntent(tile, cell);
       }
     });
   }
