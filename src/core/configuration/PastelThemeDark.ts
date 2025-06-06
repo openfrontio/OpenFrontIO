@@ -1,21 +1,14 @@
 import { Colord, colord } from "colord";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
-import { ColoredTeams, PlayerType, Team, TerrainType } from "../game/Game";
+import { PlayerType, Team, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import {
-  blue,
-  botColor,
   botColors,
-  green,
+  ColorAllocator,
   humanColors,
-  orange,
-  purple,
-  red,
-  teal,
   territoryColors,
-  yellow,
 } from "./Colors";
 import { Theme } from "./Config";
 
@@ -24,6 +17,8 @@ type ColorCache = Map<string, Colord>;
 export class PastelThemeDark implements Theme {
   private borderColorCache: ColorCache = new Map<string, Colord>();
   private rand = new PseudoRandom(123);
+  private humanColorAllocator = new ColorAllocator(humanColors);
+  private botColorAllocator = new ColorAllocator(botColors);
 
   private background = colord({ r: 0, g: 0, b: 0 });
   private land = colord({ r: 194, g: 193, b: 148 });
@@ -45,26 +40,7 @@ export class PastelThemeDark implements Theme {
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
 
   teamColor(team: Team): Colord {
-    switch (team) {
-      case ColoredTeams.Blue:
-        return blue;
-      case ColoredTeams.Red:
-        return red;
-      case ColoredTeams.Teal:
-        return teal;
-      case ColoredTeams.Purple:
-        return purple;
-      case ColoredTeams.Yellow:
-        return yellow;
-      case ColoredTeams.Orange:
-        return orange;
-      case ColoredTeams.Green:
-        return green;
-      case ColoredTeams.Bot:
-        return botColor;
-      default:
-        return humanColors[simpleHash(team) % humanColors.length];
-    }
+    return this.humanColorAllocator.assignTeamColor(team);
   }
 
   territoryColor(player: PlayerView): Colord {
@@ -73,10 +49,10 @@ export class PastelThemeDark implements Theme {
       return this.teamColor(team);
     }
     if (player.type() === PlayerType.Human) {
-      return humanColors[simpleHash(player.id()) % humanColors.length];
+      return this.humanColorAllocator.assignPlayerColor(player.id());
     }
     if (player.type() === PlayerType.Bot) {
-      return botColors[simpleHash(player.id()) % botColors.length];
+      return this.botColorAllocator.assignBotColor(player.id());
     }
     return territoryColors[simpleHash(player.id()) % territoryColors.length];
   }
