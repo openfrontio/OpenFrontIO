@@ -188,10 +188,10 @@ export class DefaultConfig implements Config {
   }
 
   traitorDefenseDebuff(): number {
-    return 0.5;
+    return 0.35;
   }
   traitorDuration(): number {
-    return 30 * 10; // 30 seconds
+    return 40 * 10; // 40 seconds
   }
   spawnImmunityDuration(): Tick {
     return 5 * 10;
@@ -561,7 +561,8 @@ export class DefaultConfig implements Config {
           mag *
           0.8 *
           largeLossModifier *
-          (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
+          (defender.isTraitor() ? this.traitorDefenseDebuff() : 1) *
+          (attacker.isTraitor() ? 1.5 : 1),
         defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
         tilesPerTickUsed:
           within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
@@ -571,7 +572,9 @@ export class DefaultConfig implements Config {
     } else {
       return {
         attackerTroopLoss:
-          attacker.type() === PlayerType.Bot ? mag / 10 : mag / 5,
+          attacker.type() === PlayerType.Bot
+            ? mag / 10
+            : (mag / 5) * (attacker.isTraitor() ? 1.5 : 1),
         defenderTroopLoss: 0,
         tilesPerTickUsed: within(
           (2000 * Math.max(10, speed)) / attackTroops,
