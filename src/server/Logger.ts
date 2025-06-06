@@ -70,7 +70,7 @@ const logger = winston.createLogger({
   ),
   defaultMeta: {
     service: "openfront",
-    environment: process.env.NODE_ENV,
+    environment: process.env.GAME_ENV ?? "prod",
   },
   transports: [
     new winston.transports.Console(),

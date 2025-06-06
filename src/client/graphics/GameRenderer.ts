@@ -1,6 +1,4 @@
-import { consolex } from "../../core/Consolex";
 import { EventBus } from "../../core/EventBus";
-import { ClientID } from "../../core/Schemas";
 import { GameView } from "../../core/game/GameView";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
@@ -12,6 +10,8 @@ import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
+import { FxLayer } from "./layers/FxLayer";
+import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MultiTabModal } from "./layers/MultiTabModal";
@@ -19,6 +19,7 @@ import { NameLayer } from "./layers/NameLayer";
 import { OptionsMenu } from "./layers/OptionsMenu";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
+import { PlayerTeamLabel } from "./layers/PlayerTeamLabel";
 import { RadialMenu } from "./layers/RadialMenu";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
@@ -27,6 +28,7 @@ import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { TopBar } from "./layers/TopBar";
 import { UILayer } from "./layers/UILayer";
+import { UnitInfoModal } from "./layers/UnitInfoModal";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
 
@@ -34,7 +36,6 @@ export function createRenderer(
   canvas: HTMLCanvasElement,
   game: GameView,
   eventBus: EventBus,
-  clientID: ClientID,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, canvas);
 
@@ -49,7 +50,7 @@ export function createRenderer(
   // TODO maybe append this to dcoument instead of querying for them?
   const emojiTable = document.querySelector("emoji-table") as EmojiTable;
   if (!emojiTable || !(emojiTable instanceof EmojiTable)) {
-    consolex.error("EmojiTable element not found in the DOM");
+    console.error("EmojiTable element not found in the DOM");
   }
   emojiTable.eventBus = eventBus;
   emojiTable.transformHandler = transformHandler;
@@ -58,32 +59,29 @@ export function createRenderer(
 
   const buildMenu = document.querySelector("build-menu") as BuildMenu;
   if (!buildMenu || !(buildMenu instanceof BuildMenu)) {
-    consolex.error("BuildMenu element not found in the DOM");
+    console.error("BuildMenu element not found in the DOM");
   }
   buildMenu.game = game;
   buildMenu.eventBus = eventBus;
 
   const leaderboard = document.querySelector("leader-board") as Leaderboard;
   if (!emojiTable || !(leaderboard instanceof Leaderboard)) {
-    consolex.error("EmojiTable element not found in the DOM");
+    console.error("EmojiTable element not found in the DOM");
   }
-  leaderboard.clientID = clientID;
   leaderboard.eventBus = eventBus;
   leaderboard.game = game;
 
   const teamStats = document.querySelector("team-stats") as TeamStats;
   if (!emojiTable || !(teamStats instanceof TeamStats)) {
-    consolex.error("EmojiTable element not found in the DOM");
+    console.error("EmojiTable element not found in the DOM");
   }
-  teamStats.clientID = clientID;
   teamStats.eventBus = eventBus;
   teamStats.game = game;
 
   const controlPanel = document.querySelector("control-panel") as ControlPanel;
   if (!(controlPanel instanceof ControlPanel)) {
-    consolex.error("ControlPanel element not found in the DOM");
+    console.error("ControlPanel element not found in the DOM");
   }
-  controlPanel.clientID = clientID;
   controlPanel.eventBus = eventBus;
   controlPanel.uiState = uiState;
   controlPanel.game = game;
@@ -92,28 +90,25 @@ export function createRenderer(
     "events-display",
   ) as EventsDisplay;
   if (!(eventsDisplay instanceof EventsDisplay)) {
-    consolex.error("events display not found");
+    console.error("events display not found");
   }
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
-  eventsDisplay.clientID = clientID;
 
   const chatDisplay = document.querySelector("chat-display") as ChatDisplay;
   if (!(chatDisplay instanceof ChatDisplay)) {
-    consolex.error("chat display not found");
+    console.error("chat display not found");
   }
   chatDisplay.eventBus = eventBus;
   chatDisplay.game = game;
-  chatDisplay.clientID = clientID;
 
   const playerInfo = document.querySelector(
     "player-info-overlay",
   ) as PlayerInfoOverlay;
   if (!(playerInfo instanceof PlayerInfoOverlay)) {
-    consolex.error("player info overlay not found");
+    console.error("player info overlay not found");
   }
   playerInfo.eventBus = eventBus;
-  playerInfo.clientID = clientID;
   playerInfo.transform = transformHandler;
   playerInfo.game = game;
 
@@ -144,6 +139,7 @@ export function createRenderer(
   playerPanel.g = game;
   playerPanel.eventBus = eventBus;
   playerPanel.emojiTable = emojiTable;
+  playerPanel.uiState = uiState;
 
   const chatModal = document.querySelector("chat-modal") as ChatModal;
   if (!(chatModal instanceof ChatModal)) {
@@ -160,13 +156,46 @@ export function createRenderer(
   }
   multiTabModal.game = game;
 
+  const playerTeamLabel = document.querySelector(
+    "player-team-label",
+  ) as PlayerTeamLabel;
+  if (!(playerTeamLabel instanceof PlayerTeamLabel)) {
+    console.error("player team label not found");
+  }
+  playerTeamLabel.game = game;
+
+  const headsUpMessage = document.querySelector(
+    "heads-up-message",
+  ) as HeadsUpMessage;
+  if (!(headsUpMessage instanceof HeadsUpMessage)) {
+    console.error("heads-up message not found");
+  }
+  headsUpMessage.game = game;
+
+  const unitInfoModal = document.querySelector(
+    "unit-info-modal",
+  ) as UnitInfoModal;
+  if (!(unitInfoModal instanceof UnitInfoModal)) {
+    console.error("unit info modal not found");
+  }
+  unitInfoModal.game = game;
+  const structureLayer = new StructureLayer(
+    game,
+    eventBus,
+    transformHandler,
+    unitInfoModal,
+  );
+  unitInfoModal.structureLayer = structureLayer;
+  // unitInfoModal.eventBus = eventBus;
+
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
-    new TerritoryLayer(game, eventBus),
-    new StructureLayer(game, eventBus),
-    new UnitLayer(game, eventBus, clientID, transformHandler),
-    new UILayer(game, eventBus, clientID, transformHandler),
-    new NameLayer(game, transformHandler, clientID),
+    new TerritoryLayer(game, eventBus, transformHandler),
+    structureLayer,
+    new UnitLayer(game, eventBus, transformHandler),
+    new FxLayer(game),
+    new UILayer(game, eventBus, transformHandler),
+    new NameLayer(game, transformHandler),
     eventsDisplay,
     chatDisplay,
     buildMenu,
@@ -174,7 +203,6 @@ export function createRenderer(
       eventBus,
       game,
       transformHandler,
-      clientID,
       emojiTable as EmojiTable,
       buildMenu,
       uiState,
@@ -190,6 +218,9 @@ export function createRenderer(
     teamStats,
     topBar,
     playerPanel,
+    playerTeamLabel,
+    headsUpMessage,
+    unitInfoModal,
     multiTabModal,
   ];
 
@@ -234,11 +265,8 @@ export class GameRenderer {
     window.addEventListener("resize", () => this.resizeCanvas());
     this.resizeCanvas();
 
-    this.transformHandler = new TransformHandler(
-      this.game,
-      this.eventBus,
-      this.canvas,
-    );
+    //show whole map on startup
+    this.transformHandler.centerAll(0.9);
 
     requestAnimationFrame(() => this.renderGame());
   }

@@ -122,6 +122,8 @@ export class InputHandler {
       moveRight: "KeyD",
       zoomOut: "KeyQ",
       zoomIn: "KeyE",
+      attackRatioDown: "Digit1",
+      attackRatioUp: "Digit2",
       ...JSON.parse(localStorage.getItem("settings.keybinds") ?? "{}"),
     };
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
@@ -218,8 +220,8 @@ export class InputHandler {
           "ArrowRight",
           "Minus",
           "Equal",
-          "Digit1",
-          "Digit2",
+          keybinds.attackRatioDown,
+          keybinds.attackRatioUp,
           keybinds.centerCamera,
           "ControlLeft",
           "ControlRight",
@@ -240,12 +242,12 @@ export class InputHandler {
         this.eventBus.emit(new RefreshGraphicsEvent());
       }
 
-      if (e.code === "Digit1") {
+      if (e.code === keybinds.attackRatioDown) {
         e.preventDefault();
         this.eventBus.emit(new AttackRatioEvent(-10));
       }
 
-      if (e.code === "Digit2") {
+      if (e.code === keybinds.attackRatioUp) {
         e.preventDefault();
         this.eventBus.emit(new AttackRatioEvent(10));
       }

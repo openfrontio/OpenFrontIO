@@ -21,6 +21,10 @@ export class UserSettings {
     return this.get("settings.anonymousNames", false);
   }
 
+  fxLayer() {
+    return this.get("settings.specialEffects", true);
+  }
+
   darkMode() {
     return this.get("settings.darkMode", false);
   }
@@ -49,6 +53,10 @@ export class UserSettings {
 
   toggleRandomName() {
     this.set("settings.anonymousNames", !this.anonymousNames());
+  }
+
+  toggleFxLayer() {
+    this.set("settings.specialEffects", !this.fxLayer());
   }
 
   toggleDarkMode() {

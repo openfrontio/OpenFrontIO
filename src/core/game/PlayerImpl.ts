@@ -1,5 +1,4 @@
 import { renderNumber, renderTroops } from "../../client/Utils";
-import { consolex } from "../Consolex";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
@@ -123,6 +122,7 @@ export class PlayerImpl implements Player {
     const outgoingAllianceRequests = this.outgoingAllianceRequests().map((ar) =>
       ar.recipient().id(),
     );
+    const stats = this.mg.stats().getPlayerStats(this);
 
     return {
       type: GameUpdateType.Player,
@@ -136,7 +136,7 @@ export class PlayerImpl implements Player {
       playerType: this.type(),
       isAlive: this.isAlive(),
       tilesOwned: this.numTilesOwned(),
-      gold: Number(this._gold),
+      gold: this._gold,
       population: this.population(),
       workers: this.workers(),
       troops: this.troops(),
@@ -146,29 +146,27 @@ export class PlayerImpl implements Player {
       isTraitor: this.isTraitor(),
       targets: this.targets().map((p) => p.smallID()),
       outgoingEmojis: this.outgoingEmojis(),
-      outgoingAttacks: this._outgoingAttacks.map(
-        (a) =>
-          ({
-            attackerID: a.attacker().smallID(),
-            targetID: a.target().smallID(),
-            troops: a.troops(),
-            id: a.id(),
-            retreating: a.retreating(),
-          }) as AttackUpdate,
-      ),
-      incomingAttacks: this._incomingAttacks.map(
-        (a) =>
-          ({
-            attackerID: a.attacker().smallID(),
-            targetID: a.target().smallID(),
-            troops: a.troops(),
-            id: a.id(),
-            retreating: a.retreating(),
-          }) as AttackUpdate,
-      ),
+      outgoingAttacks: this._outgoingAttacks.map((a) => {
+        return {
+          attackerID: a.attacker().smallID(),
+          targetID: a.target().smallID(),
+          troops: a.troops(),
+          id: a.id(),
+          retreating: a.retreating(),
+        } as AttackUpdate;
+      }),
+      incomingAttacks: this._incomingAttacks.map((a) => {
+        return {
+          attackerID: a.attacker().smallID(),
+          targetID: a.target().smallID(),
+          troops: a.troops(),
+          id: a.id(),
+          retreating: a.retreating(),
+        } as AttackUpdate;
+      }),
       outgoingAllianceRequests: outgoingAllianceRequests,
-      stats: this.mg.stats().getPlayerStats(this.id()),
       hasSpawned: this.hasSpawned(),
+      betrayals: stats?.betrayals,
     };
   }
 
@@ -270,7 +268,7 @@ export class PlayerImpl implements Player {
   orderRetreat(id: string) {
     const attack = this._outgoingAttacks.filter((attack) => attack.id() === id);
     if (!attack || !attack[0]) {
-      consolex.warn(`Didn't find outgoing attack with id ${id}`);
+      console.warn(`Didn't find outgoing attack with id ${id}`);
       return;
     }
     attack[0].orderRetreat();
@@ -380,8 +378,12 @@ export class PlayerImpl implements Player {
         this.mg.config().traitorDuration()
     );
   }
+
   markTraitor(): void {
     this.markedTraitorTick = this.mg.ticks();
+
+    // Record stats
+    this.mg.stats().betray(this);
   }
 
   createAllianceRequest(recipient: Player): AllianceRequest | null {
@@ -536,9 +538,13 @@ export class PlayerImpl implements Player {
     return true;
   }
 
-  donateTroops(recipient: Player, troops: number): void {
+  donateTroops(recipient: Player, troops: number): boolean {
+    if (troops <= 0) return false;
+    const removed = this.removeTroops(troops);
+    if (removed === 0) return false;
+    recipient.addTroops(removed);
+
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
-    recipient.addTroops(this.removeTroops(troops));
     this.mg.displayMessage(
       `Sent ${renderTroops(troops)} troops to ${recipient.name()}`,
       MessageType.INFO,
@@ -549,10 +555,16 @@ export class PlayerImpl implements Player {
       MessageType.SUCCESS,
       recipient.id(),
     );
+    return true;
   }
-  donateGold(recipient: Player, gold: number): void {
+
+  donateGold(recipient: Player, gold: Gold): boolean {
+    if (gold <= 0n) return false;
+    const removed = this.removeGold(gold);
+    if (removed === 0n) return false;
+    recipient.addGold(removed);
+
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
-    recipient.addGold(this.removeGold(gold));
     this.mg.displayMessage(
       `Sent ${renderNumber(gold)} gold to ${recipient.name()}`,
       MessageType.INFO,
@@ -563,6 +575,7 @@ export class PlayerImpl implements Player {
       MessageType.SUCCESS,
       recipient.id(),
     );
+    return true;
   }
 
   hasEmbargoAgainst(other: Player): boolean {
@@ -629,20 +642,20 @@ export class PlayerImpl implements Player {
   }
 
   gold(): Gold {
-    return Number(this._gold);
+    return this._gold;
   }
 
   addGold(toAdd: Gold): void {
-    this._gold += toInt(toAdd);
+    this._gold += toAdd;
   }
 
-  removeGold(toRemove: Gold): number {
-    if (toRemove <= 1) {
-      return 0;
+  removeGold(toRemove: Gold): Gold {
+    if (toRemove <= 0n) {
+      return 0n;
     }
-    const actualRemoved = minInt(this._gold, toInt(toRemove));
+    const actualRemoved = minInt(this._gold, toRemove);
     this._gold -= actualRemoved;
-    return Number(actualRemoved);
+    return actualRemoved;
   }
 
   population(): number {
@@ -909,7 +922,7 @@ export class PlayerImpl implements Player {
   hash(): number {
     return (
       simpleHash(this.id()) * (this.population() + this.numTilesOwned()) +
-      this._units.reduce((acc, unit) => acc + (unit as UnitImpl).hash(), 0)
+      this._units.reduce((acc, unit) => acc + unit.hash(), 0)
     );
   }
   toString(): string {
@@ -937,6 +950,7 @@ export class PlayerImpl implements Player {
     target: Player | TerraNullius,
     troops: number,
     sourceTile: TileRef | null,
+    border: Set<number>,
   ): Attack {
     const attack = new AttackImpl(
       this._pseudo_random.nextID(),
@@ -944,6 +958,8 @@ export class PlayerImpl implements Player {
       this,
       troops,
       sourceTile,
+      border,
+      this.mg,
     );
     this._outgoingAttacks.push(attack);
     if (target.isPlayer()) {

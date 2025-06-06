@@ -1,9 +1,9 @@
-import { consolex } from "../Consolex";
 import {
   Cell,
   Difficulty,
   Execution,
   Game,
+  Gold,
   Nation,
   Player,
   PlayerID,
@@ -116,7 +116,7 @@ export class FakeHumanExecution implements Execution {
     if (this.mg.inSpawnPhase()) {
       const rl = this.randomLand();
       if (rl === null) {
-        consolex.warn(`cannot spawn ${this.nation.playerInfo.name}`);
+        console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
         return;
       }
       this.mg.addExecution(new SpawnExecution(this.nation.playerInfo, rl));
@@ -262,7 +262,6 @@ export class FakeHumanExecution implements Execution {
       throw new Error("not initialized");
     }
     this.behavior.forgetOldEnemies();
-    this.behavior.checkIncomingAttacks();
     this.behavior.assistAllies();
     const enemy = this.behavior.selectEnemy();
     if (!enemy) return;
@@ -374,13 +373,20 @@ export class FakeHumanExecution implements Execution {
             return 50_000;
           case UnitType.Port:
             return 10_000;
-          case UnitType.SAMLauncher:
-            return 5_000;
           default:
             return 0;
         }
       })
       .reduce((prev, cur) => prev + cur, 0);
+
+    // Avoid areas defended by SAM launchers
+    const dist50 = euclDistFN(tile, 50, false);
+    tileValue -=
+      50_000 *
+      targets.filter(
+        (unit) =>
+          unit.type() === UnitType.SAMLauncher && dist50(this.mg, unit.tile()),
+      ).length;
 
     // Prefer tiles that are closer to a silo
     const siloTiles = silos.map((u) => u.tile());
@@ -488,7 +494,7 @@ export class FakeHumanExecution implements Execution {
       }
       const canBuild = this.player.canBuild(UnitType.Warship, targetTile);
       if (canBuild === false) {
-        consolex.warn("cannot spawn destroyer");
+        console.warn("cannot spawn destroyer");
         return false;
       }
       this.mg.addExecution(
@@ -544,7 +550,7 @@ export class FakeHumanExecution implements Execution {
     return null;
   }
 
-  private cost(type: UnitType): number {
+  private cost(type: UnitType): Gold {
     if (this.player === null) throw new Error("not initialized");
     return this.mg.unitInfo(type).cost(this.player);
   }

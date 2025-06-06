@@ -97,8 +97,14 @@ npm run start:server-dev
   ```
 
 - **Lint and fix code**:
+
   ```bash
   npm run lint:fix
+  ```
+
+- **Testing**
+  ```bash
+  npm test
   ```
 
 ## 🏗️ Project Structure

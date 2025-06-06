@@ -1,6 +1,5 @@
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -46,21 +45,12 @@ export class PlayerExecution implements Execution {
       throw new Error("Not initialized");
     }
     this.player.decayRelations();
-    const hasPort = this.player.units(UnitType.Port).length > 0;
     this.player.units().forEach((u) => {
-      if (u.health() <= 0) {
-        u.delete();
-        return;
-      }
-      if (hasPort && u.type() === UnitType.Warship) {
-        u.modifyHealth(1);
-      }
-      if (this.mg === null) return;
-      const tileOwner = this.mg.owner(u.tile());
+      const tileOwner = this.mg!.owner(u.tile());
       if (u.info().territoryBound) {
         if (tileOwner.isPlayer()) {
           if (tileOwner !== this.player) {
-            this.mg.player(tileOwner.id()).captureUnit(u);
+            this.mg!.player(tileOwner.id()).captureUnit(u);
           }
         } else {
           u.delete();
@@ -69,6 +59,7 @@ export class PlayerExecution implements Execution {
     });
 
     if (!this.player.isAlive()) {
+      // Player has no tiles, delete any remaining units
       this.player.units().forEach((u) => {
         if (
           u.type() !== UnitType.AtomBomb &&
@@ -86,7 +77,12 @@ export class PlayerExecution implements Execution {
     const popInc = this.config.populationIncreaseRate(this.player);
     this.player.addWorkers(popInc * (1 - this.player.targetTroopRatio()));
     this.player.addTroops(popInc * this.player.targetTroopRatio());
-    this.player.addGold(this.config.goldAdditionRate(this.player));
+    const goldFromWorkers = this.config.goldAdditionRate(this.player);
+    this.player.addGold(goldFromWorkers);
+
+    // Record stats
+    this.mg.stats().goldWork(this.player, goldFromWorkers);
+
     const adjustRate = this.config.troopAdjustmentRate(this.player);
     this.player.addTroops(adjustRate);
     this.player.removeWorkers(adjustRate);
@@ -119,7 +115,7 @@ export class PlayerExecution implements Execution {
         this.removeClusters();
         const end = performance.now();
         if (end - start > 1000) {
-          consolex.log(`player ${this.player.name()}, took ${end - start}ms`);
+          console.log(`player ${this.player.name()}, took ${end - start}ms`);
         }
       }
     }
@@ -245,6 +241,9 @@ export class PlayerExecution implements Execution {
       );
       capturing.addGold(gold);
       this.player.removeGold(gold);
+
+      // Record stats
+      this.mg.stats().goldWar(capturing, this.player, gold);
     }
 
     for (const tile of tiles) {

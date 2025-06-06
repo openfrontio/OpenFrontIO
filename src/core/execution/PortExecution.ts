@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -8,7 +7,6 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { TradeShipExecution } from "./TradeShipExecution";
 
@@ -44,7 +42,7 @@ export class PortExecution implements Execution {
       const player = this.mg.player(this._owner);
       const spawn = player.canBuild(UnitType.Port, tile);
       if (spawn === false) {
-        consolex.warn(`player ${player} cannot build port at ${this.tile}`);
+        console.warn(`player ${player} cannot build port at ${this.tile}`);
         this.active = false;
         return;
       }
@@ -79,9 +77,8 @@ export class PortExecution implements Execution {
     }
 
     const port = this.random.randElement(ports);
-    const pf = PathFinder.Mini(this.mg, 2500);
     this.mg.addExecution(
-      new TradeShipExecution(this.player().id(), this.port, port, pf),
+      new TradeShipExecution(this.player().id(), this.port, port),
     );
   }
 

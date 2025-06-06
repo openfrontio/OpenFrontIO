@@ -1,10 +1,9 @@
 import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
+import { z } from "zod/v4";
 import {
-  AllPlayersStats,
   ClientID,
-  ClientMessage,
   ClientMessageSchema,
   ClientSendWinnerMessage,
   GameConfig,
@@ -49,8 +48,6 @@ export class GameServer {
   private lastPingUpdate = 0;
 
   private winner: ClientSendWinnerMessage | null = null;
-  // This field is currently only filled at victory
-  private allPlayersStats: AllPlayersStats = {};
 
   private gameStartInfo: GameStartInfo;
 
@@ -59,6 +56,7 @@ export class GameServer {
   private _hasPrestarted = false;
 
   private kickedClients: Set<ClientID> = new Set();
+  private outOfSyncClients: Set<ClientID> = new Set();
 
   constructor(
     public readonly id: string,
@@ -183,12 +181,16 @@ export class GameServer {
       "message",
       gatekeeper.wsHandler(client.ip, async (message: string) => {
         try {
-          let clientMsg: ClientMessage | null = null;
-          try {
-            clientMsg = ClientMessageSchema.parse(JSON.parse(message));
-          } catch (error) {
-            throw Error(`error parsing schema for ${ipAnonymize(client.ip)}`);
+          const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
+          if (!parsed.success) {
+            const error = z.prettifyError(parsed.error);
+            this.log.error("Failed to parse client message", error, {
+              clientID: client.clientID,
+            });
+            client.ws.close();
+            return;
           }
+          const clientMsg = parsed.data;
           if (clientMsg.type === "intent") {
             if (clientMsg.intent.clientID !== client.clientID) {
               this.log.warn(
@@ -206,8 +208,15 @@ export class GameServer {
             client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
           }
           if (clientMsg.type === "winner") {
+            if (
+              this.outOfSyncClients.has(client.clientID) ||
+              this.kickedClients.has(client.clientID) ||
+              this.winner !== null
+            ) {
+              return;
+            }
             this.winner = clientMsg;
-            this.allPlayersStats = clientMsg.allPlayersStats;
+            this.archiveGame();
           }
         } catch (error) {
           this.log.info(
@@ -298,12 +307,11 @@ export class GameServer {
       gameID: this.id,
       config: this.gameConfig,
       players: this.activeClients.map((c) => ({
-        playerID: c.playerID,
         username: c.username,
         clientID: c.clientID,
         flag: c.flag,
       })),
-    });
+    } satisfies GameStartInfo);
 
     this.endTurnIntervalID = setInterval(
       () => this.endTurn(),
@@ -389,32 +397,16 @@ export class GameServer {
     }
     this.log.info(`ending game with ${this.turns.length} turns`);
     try {
-      if (this.allClients.size > 0) {
-        const playerRecords: PlayerRecord[] = Array.from(
-          this.allClients.values(),
-        ).map((client) => ({
-          ip: ipAnonymize(client.ip),
-          clientID: client.clientID,
-          username: client.username,
-          persistentID: client.persistentID,
-        }));
-        archive(
-          createGameRecord(
-            this.id,
-            this.gameStartInfo,
-            playerRecords,
-            this.turns,
-            this._startTime ?? 0,
-            Date.now(),
-            this.winner?.winner ?? null,
-            this.winner?.winnerType ?? null,
-            this.allPlayersStats,
-          ),
-        );
-      } else {
+      if (this.allClients.size === 0) {
         this.log.info("no clients joined, not archiving game", {
           gameID: this.id,
         });
+      } else if (this.winner !== null) {
+        this.log.info("game already archived", {
+          gameID: this.id,
+        });
+      } else {
+        this.archiveGame();
       }
     } catch (error) {
       let errorDetails;
@@ -548,6 +540,41 @@ export class GameServer {
     }
   }
 
+  private archiveGame() {
+    this.log.info("archiving game", {
+      gameID: this.id,
+      winner: this.winner?.winner,
+    });
+
+    // Players must stay in the same order as the game start info.
+    const playerRecords: PlayerRecord[] = this.gameStartInfo.players.map(
+      (player) => {
+        const stats = this.winner?.allPlayersStats[player.clientID];
+        if (stats === undefined) {
+          this.log.warn(`Unable to find stats for clientID ${player.clientID}`);
+        }
+        return {
+          clientID: player.clientID,
+          username: player.username,
+          persistentID:
+            this.allClients.get(player.clientID)?.persistentID ?? "",
+          stats,
+        } satisfies PlayerRecord;
+      },
+    );
+    archive(
+      createGameRecord(
+        this.id,
+        this.gameStartInfo.config,
+        playerRecords,
+        this.turns,
+        this._startTime ?? 0,
+        Date.now(),
+        this.winner?.winner,
+      ),
+    );
+  }
+
   private handleSynchronization() {
     if (this.activeClients.length <= 1) {
       return;
@@ -585,6 +612,7 @@ export class GameServer {
 
     const desyncMsg = JSON.stringify(serverDesync.data);
     for (const c of outOfSyncClients) {
+      this.outOfSyncClients.add(c.clientID);
       if (this.sentDesyncMessageClients.has(c.clientID)) {
         continue;
       }

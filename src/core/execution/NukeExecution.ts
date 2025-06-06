@@ -1,9 +1,7 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
   MessageType,
-  NukeType,
   Player,
   PlayerID,
   TerraNullius,
@@ -13,6 +11,7 @@ import {
 import { TileRef } from "../game/GameMap";
 import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
+import { NukeType } from "../StatsSchemas";
 
 export class NukeExecution implements Execution {
   private active = true;
@@ -109,7 +108,7 @@ export class NukeExecution implements Execution {
     if (this.nuke === null) {
       const spawn = this.src ?? this.player.canBuild(this.type, this.dst);
       if (spawn === false) {
-        consolex.warn(`cannot build Nuke`);
+        console.warn(`cannot build Nuke`);
         this.active = false;
         return;
       }
@@ -119,11 +118,13 @@ export class NukeExecution implements Execution {
         this.type !== UnitType.MIRVWarhead,
       );
       this.nuke = this.player.buildUnit(this.type, spawn, {
-        detonationDst: this.dst,
+        targetTile: this.dst,
       });
       if (this.mg.hasOwner(this.dst)) {
-        const target = this.mg.owner(this.dst) as Player;
-        if (this.type === UnitType.AtomBomb) {
+        const target = this.mg.owner(this.dst);
+        if (!target.isPlayer()) {
+          // Ignore terra nullius
+        } else if (this.type === UnitType.AtomBomb) {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
             `${this.player.name()} - atom bomb inbound`,
@@ -131,8 +132,7 @@ export class NukeExecution implements Execution {
             target.id(),
           );
           this.breakAlliances(this.tilesToDestroy());
-        }
-        if (this.type === UnitType.HydrogenBomb) {
+        } else if (this.type === UnitType.HydrogenBomb) {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
             `${this.player.name()} - hydrogen bomb inbound`,
@@ -142,13 +142,10 @@ export class NukeExecution implements Execution {
           this.breakAlliances(this.tilesToDestroy());
         }
 
+        // Record stats
         this.mg
           .stats()
-          .increaseNukeCount(
-            this.senderID,
-            target.id(),
-            this.nuke.type() as NukeType,
-          );
+          .bombLaunch(this.player, target, this.nuke.type() as NukeType);
       }
 
       // after sending a nuke set the missilesilo on cooldown
@@ -163,7 +160,7 @@ export class NukeExecution implements Execution {
 
     // make the nuke unactive if it was intercepted
     if (!this.nuke.isActive()) {
-      consolex.log(`Nuke destroyed before reaching target`);
+      console.log(`Nuke destroyed before reaching target`);
       this.active = false;
       return;
     }
@@ -184,9 +181,10 @@ export class NukeExecution implements Execution {
   }
 
   private detonate() {
-    if (this.mg === null || this.nuke === null) {
+    if (this.mg === null || this.nuke === null || this.player === null) {
       throw new Error("Not initialized");
     }
+
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const toDestroy = this.tilesToDestroy();
     this.breakAlliances(toDestroy);
@@ -235,12 +233,18 @@ export class NukeExecution implements Execution {
         unit.type() !== UnitType.MIRV
       ) {
         if (this.mg.euclideanDistSquared(this.dst, unit.tile()) < outer2) {
-          unit.delete();
+          unit.delete(true, this.player);
         }
       }
     }
     this.active = false;
+    this.nuke.setReachedTarget();
     this.nuke.delete(false);
+
+    // Record stats
+    this.mg
+      .stats()
+      .bombLand(this.player, this.target(), this.nuke.type() as NukeType);
   }
 
   owner(): Player {

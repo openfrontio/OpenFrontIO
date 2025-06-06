@@ -1,4 +1,4 @@
-import { consolex, initRemoteSender } from "../core/Consolex";
+import { translateText } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
 import {
   ClientID,
@@ -7,11 +7,12 @@ import {
   GameStartInfo,
   PlayerRecord,
   ServerMessage,
+  Winner,
 } from "../core/Schemas";
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { Cell, Team, UnitType } from "../core/game/Game";
+import { Cell, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import {
   ErrorUpdate,
@@ -26,7 +27,7 @@ import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { InputHandler, MouseMoveEvent, MouseUpEvent } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
-import { getPersistentIDFromCookie } from "./Main";
+import { getPersistentID } from "./Main";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -56,10 +57,9 @@ export function joinLobby(
   onJoin: () => void,
 ): () => void {
   const eventBus = new EventBus();
-  initRemoteSender(eventBus);
 
-  consolex.log(
-    `joinging lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
+  console.log(
+    `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
   );
 
   const userSettings: UserSettings = new UserSettings();
@@ -68,21 +68,21 @@ export function joinLobby(
   const transport = new Transport(lobbyConfig, eventBus);
 
   const onconnect = () => {
-    consolex.log(`Joined game lobby ${lobbyConfig.gameID}`);
+    console.log(`Joined game lobby ${lobbyConfig.gameID}`);
     transport.joinGame(0);
   };
   let terrainLoad: Promise<TerrainMapData> | null = null;
 
   const onmessage = (message: ServerMessage) => {
     if (message.type === "prestart") {
-      consolex.log(`lobby: game prestarting: ${JSON.stringify(message)}`);
+      console.log(`lobby: game prestarting: ${JSON.stringify(message)}`);
       terrainLoad = loadTerrainMap(message.gameMap);
       onPrestart();
     }
     if (message.type === "start") {
       // Trigger prestart for singleplayer games
       onPrestart();
-      consolex.log(`lobby: game started: ${JSON.stringify(message, null, 2)}`);
+      console.log(`lobby: game started: ${JSON.stringify(message, null, 2)}`);
       onJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
       lobbyConfig.gameStartInfo = message.gameStartInfo;
@@ -97,7 +97,7 @@ export function joinLobby(
   };
   transport.connect(onconnect, onmessage);
   return () => {
-    consolex.log("leaving game");
+    console.log("leaving game");
     transport.leaveGame();
   };
 }
@@ -137,17 +137,12 @@ export async function createClientGame(
     lobbyConfig.gameStartInfo.gameID,
   );
 
-  consolex.log("going to init path finder");
-  consolex.log("inited path finder");
+  console.log("going to init path finder");
+  console.log("inited path finder");
   const canvas = createCanvas();
-  const gameRenderer = createRenderer(
-    canvas,
-    gameView,
-    eventBus,
-    lobbyConfig.clientID,
-  );
+  const gameRenderer = createRenderer(canvas, gameView, eventBus);
 
-  consolex.log(
+  console.log(
     `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
   );
 
@@ -186,44 +181,45 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
+  private getWinner(update: WinUpdate): Winner {
+    if (update.winner[0] !== "player") return update.winner;
+    const clientId = this.gameView.playerBySmallID(update.winner[1]).clientID();
+    if (clientId === null) return;
+    return ["player", clientId];
+  }
+
   private saveGame(update: WinUpdate) {
+    if (this.myPlayer === null) {
+      return;
+    }
     const players: PlayerRecord[] = [
       {
-        ip: null,
-        persistentID: getPersistentIDFromCookie(),
+        persistentID: getPersistentID(),
         username: this.lobby.playerName,
         clientID: this.lobby.clientID,
+        stats: update.allPlayersStats[this.lobby.clientID],
       },
     ];
-    let winner: ClientID | Team | null = null;
-    if (update.winnerType === "player") {
-      winner = this.gameView
-        .playerBySmallID(update.winner as number)
-        .clientID();
-    } else {
-      winner = update.winner as Team;
-    }
+    const winner = this.getWinner(update);
 
     if (this.lobby.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
     }
     const record = createGameRecord(
       this.lobby.gameStartInfo.gameID,
-      this.lobby.gameStartInfo,
+      this.lobby.gameStartInfo.config,
       players,
       // Not saving turns locally
       [],
       startTime(),
       Date.now(),
       winner,
-      update.winnerType,
-      update.allPlayersStats,
     );
     endGame(record);
   }
 
   public start() {
-    consolex.log("starting client game");
+    console.log("starting client game");
 
     this.isActive = true;
     this.lastMessageTime = Date.now();
@@ -272,14 +268,14 @@ export class ClientGameRunner {
     requestAnimationFrame(keepWorkerAlive);
 
     const onconnect = () => {
-      consolex.log("Connected to game server!");
+      console.log("Connected to game server!");
       this.transport.joinGame(this.turnsSeen);
     };
     const onmessage = (message: ServerMessage) => {
       this.lastMessageTime = Date.now();
       if (message.type === "start") {
         this.hasJoined = true;
-        consolex.log("starting game!");
+        console.log("starting game!");
         for (const turn of message.turns) {
           if (turn.turnNumber < this.turnsSeen) {
             continue;
@@ -305,7 +301,7 @@ export class ClientGameRunner {
           this.lobby.gameStartInfo.gameID,
           this.lobby.clientID,
           true,
-          "You are desynced from other players. What you see might differ from other players.",
+          translateText("error_modal.desync_notice"),
         );
       }
       if (message.type === "turn") {
@@ -314,7 +310,7 @@ export class ClientGameRunner {
           return;
         }
         if (this.turnsSeen !== message.turn.turnNumber) {
-          consolex.error(
+          console.error(
             `got wrong turn have turns ${this.turnsSeen}, received turn ${message.turn.turnNumber}`,
           );
         } else {
@@ -347,7 +343,7 @@ export class ClientGameRunner {
     if (!this.gameView.isValidCoord(cell.x, cell.y)) {
       return;
     }
-    consolex.log(`clicked cell ${cell}`);
+    console.log(`clicked cell ${cell}`);
     const tile = this.gameView.ref(cell.x, cell.y);
     if (
       this.gameView.isLand(tile) &&
@@ -494,7 +490,7 @@ function showErrorModal(
   gameID: GameID,
   clientID: ClientID,
   closable = false,
-  heading = "Game crashed!",
+  heading = translateText("error_modal.crashed"),
 ) {
   const errorText = `Error: ${errMsg}\nStack: ${stack}`;
 
@@ -503,37 +499,37 @@ function showErrorModal(
   }
 
   const modal = document.createElement("div");
-  const content = `${heading}\n game id: ${gameID}, client id: ${clientID}\nPlease paste the following in your bug report in Discord:\n${errorText}`;
+
+  modal.id = "error-modal";
+
+  const content = `${translateText(heading)}\n game id: ${gameID}, client id: ${clientID}\n${translateText("error_modal.paste_discord")}\n${errorText}`;
 
   // Create elements
   const pre = document.createElement("pre");
   pre.textContent = content;
 
   const button = document.createElement("button");
-  button.textContent = "Copy to clipboard";
-  button.style.cssText =
-    "padding: 8px 16px; margin-top: 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;";
+  button.textContent = translateText("error_modal.copy_clipboard");
+  button.className = "copy-btn";
   button.addEventListener("click", () => {
     navigator.clipboard
       .writeText(content)
-      .then(() => (button.textContent = "Copied!"))
-      .catch(() => (button.textContent = "Failed to copy"));
+      .then(() => (button.textContent = translateText("error_modal.copied")))
+      .catch(
+        () => (button.textContent = translateText("error_modal.failed_copy")),
+      );
   });
 
   const closeButton = document.createElement("button");
   closeButton.textContent = "X";
-  closeButton.style.cssText =
-    "color: white;top: 0px;right: 0px;cursor: pointer;background: red;margin-right: 0px;position: fixed;width: 40px;";
+  closeButton.className = "close-btn";
   closeButton.addEventListener("click", () => {
     modal.style.display = "none";
   });
 
   // Add to modal
-  modal.style.cssText =
-    "position:fixed; padding:20px; background:white; border:1px solid black; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999;";
   modal.appendChild(pre);
   modal.appendChild(button);
-  modal.id = "error-modal";
   if (closable) {
     modal.appendChild(closeButton);
   }
