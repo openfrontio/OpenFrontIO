@@ -1,7 +1,6 @@
 import { spawn } from "child_process";
 import { promises as fs } from "fs";
 import yaml from "js-yaml";
-import { homedir } from "os";
 import { join } from "path";
 import { logger } from "./Logger";
 
@@ -36,7 +35,7 @@ interface DNSRecordResponse {
 
 interface CloudflaredConfig {
   tunnel: string;
-  credentials_file: string;
+  "credentials-file": string;
   ingress: Array<{
     hostname?: string;
     service: string;
@@ -45,17 +44,12 @@ interface CloudflaredConfig {
 
 export class Cloudflare {
   private baseUrl = "https://api.cloudflare.com/client/v4";
-  private configDir: string;
 
   constructor(
     private accountId: string,
     private apiToken: string,
-    configDir: string = "~/.cloudflared",
+    private configDir: string,
   ) {
-    this.configDir = configDir.startsWith("~")
-      ? join(homedir(), configDir.slice(1))
-      : configDir;
-
     log.info(`Using config directory: ${this.configDir}`);
   }
 
@@ -155,9 +149,6 @@ export class Cloudflare {
   ): Promise<string> {
     log.info(`Creating local config for tunnel ${subdomain}.${domain}...`);
 
-    // Ensure config directory exists
-    await fs.mkdir(this.configDir, { recursive: true });
-
     const configPath = join(this.configDir, `${tunnelName}.yml`);
     const credentialsFile = join(this.configDir, `${tunnelId}.json`);
 
@@ -181,7 +172,7 @@ export class Cloudflare {
 
     const tunnelConfig: CloudflaredConfig = {
       tunnel: tunnelId,
-      credentials_file: credentialsFile,
+      "credentials-file": credentialsFile,
       ingress: [
         ...Array.from(subdomainToService.entries()).map(
           ([subdomain, service]) => ({

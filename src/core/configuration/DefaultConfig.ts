@@ -78,6 +78,9 @@ export abstract class DefaultServerConfig implements ServerConfig {
   cloudflareApiToken(): string {
     return process.env.CF_API_TOKEN ?? "";
   }
+  cloudflareConfigDir(): string {
+    return process.env.CF_CONFIG_DIR ?? "";
+  }
   private publicKey: JWK;
   abstract jwtAudience(): string;
   jwtIssuer(): string {
