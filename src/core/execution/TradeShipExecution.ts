@@ -4,7 +4,6 @@ import {
   Game,
   MessageType,
   Player,
-  PlayerID,
   Unit,
   UnitType,
 } from "../game/Game";
@@ -16,20 +15,18 @@ import { distSortUnit } from "../Util";
 export class TradeShipExecution implements Execution {
   private active = true;
   private mg: Game;
-  private origOwner: Player;
   private tradeShip: Unit | undefined;
   private wasCaptured = false;
   private pathFinder: PathFinder;
 
   constructor(
-    private _owner: PlayerID,
+    private origOwner: Player,
     private srcPort: Unit,
     private _dstPort: Unit,
   ) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.origOwner = mg.player(this._owner);
     this.pathFinder = PathFinder.Mini(mg, 2500);
   }
 

@@ -1,39 +1,21 @@
-import {
-  Execution,
-  Game,
-  Player,
-  PlayerID,
-  Unit,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 
 export class MissileSiloExecution implements Execution {
   private active = true;
-  private mg: Game | null = null;
-  private player: Player | null = null;
+  private mg: Game;
   private silo: Unit | null = null;
 
   constructor(
-    private _owner: PlayerID,
+    private player: Player,
     private tile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {
-    if (!mg.hasPlayer(this._owner)) {
-      console.warn(`MissileSiloExecution: owner ${this._owner} not found`);
-      this.active = false;
-      return;
-    }
-
     this.mg = mg;
-    this.player = mg.player(this._owner);
   }
 
   tick(ticks: number): void {
-    if (this.player === null || this.mg === null) {
-      throw new Error("Not initialized");
-    }
     if (this.silo === null) {
       const spawn = this.player.canBuild(UnitType.MissileSilo, this.tile);
       if (spawn === false) {
