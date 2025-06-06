@@ -22,7 +22,6 @@ export class PastelThemeDark implements Theme {
   private teamColorAllocator = new ColorAllocator(humanColors);
 
   private background = colord({ r: 0, g: 0, b: 0 });
-  private land = colord({ r: 194, g: 193, b: 148 });
   private shore = colord({ r: 134, g: 133, b: 88 });
   private falloutColors = [
     colord({ r: 120, g: 255, b: 71 }), // Original color
