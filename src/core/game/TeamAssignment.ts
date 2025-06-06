@@ -58,8 +58,17 @@ export function assignTeams(
 
   // Then, assign non-clan players to balance teams
   const random = new PseudoRandom(Date.now());
+  const humanPlayers = noClanPlayers.filter(
+    (player) => player.playerType === "HUMAN",
+  );
+  const nationPlayers = noClanPlayers.filter(
+    (player) => player.playerType === "FAKEHUMAN",
+  );
 
-  for (const player of random.shuffleArray(noClanPlayers)) {
+  // Shuffle only nations to randomize their team assignment
+  for (const player of humanPlayers.concat(
+    random.shuffleArray(nationPlayers),
+  )) {
     let team: Team | null = null;
     let teamSize = 0;
     for (const t of teams) {
