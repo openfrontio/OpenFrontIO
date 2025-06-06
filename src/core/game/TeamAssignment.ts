@@ -1,4 +1,5 @@
 import { PseudoRandom } from "../PseudoRandom";
+import { simpleHash } from "../Util";
 import { PlayerInfo, Team } from "./Game";
 
 export function assignTeams(
@@ -57,7 +58,7 @@ export function assignTeams(
   }
 
   // Then, assign non-clan players to balance teams
-  const random = new PseudoRandom(Date.now());
+  const random = new PseudoRandom(simpleHash(players[0].id));
   const humanPlayers = noClanPlayers.filter(
     (player) => player.playerType === "HUMAN",
   );
