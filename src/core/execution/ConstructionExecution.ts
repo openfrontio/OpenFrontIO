@@ -3,7 +3,6 @@ import {
   Game,
   Gold,
   Player,
-  PlayerID,
   Tick,
   Unit,
   UnitType,
@@ -19,7 +18,6 @@ import { SAMLauncherExecution } from "./SAMLauncherExecution";
 import { WarshipExecution } from "./WarshipExecution";
 
 export class ConstructionExecution implements Execution {
-  private player: Player;
   private construction: Unit | null = null;
   private active: boolean = true;
   private mg: Game;
@@ -29,19 +27,13 @@ export class ConstructionExecution implements Execution {
   private cost: Gold;
 
   constructor(
-    private ownerId: PlayerID,
+    private player: Player,
     private tile: TileRef,
     private constructionType: UnitType,
   ) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    if (!mg.hasPlayer(this.ownerId)) {
-      console.warn(`ConstructionExecution: owner ${this.ownerId} not found`);
-      this.active = false;
-      return;
-    }
-    this.player = mg.player(this.ownerId);
   }
 
   tick(ticks: number): void {
@@ -97,11 +89,11 @@ export class ConstructionExecution implements Execution {
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
         this.mg.addExecution(
-          new NukeExecution(this.constructionType, player.id(), this.tile),
+          new NukeExecution(this.constructionType, player, this.tile),
         );
         break;
       case UnitType.MIRV:
-        this.mg.addExecution(new MirvExecution(player.id(), this.tile));
+        this.mg.addExecution(new MirvExecution(player, this.tile));
         break;
       case UnitType.Warship:
         this.mg.addExecution(
@@ -109,19 +101,19 @@ export class ConstructionExecution implements Execution {
         );
         break;
       case UnitType.Port:
-        this.mg.addExecution(new PortExecution(player.id(), this.tile));
+        this.mg.addExecution(new PortExecution(player, this.tile));
         break;
       case UnitType.MissileSilo:
-        this.mg.addExecution(new MissileSiloExecution(player.id(), this.tile));
+        this.mg.addExecution(new MissileSiloExecution(player, this.tile));
         break;
       case UnitType.DefensePost:
-        this.mg.addExecution(new DefensePostExecution(player.id(), this.tile));
+        this.mg.addExecution(new DefensePostExecution(player, this.tile));
         break;
       case UnitType.SAMLauncher:
-        this.mg.addExecution(new SAMLauncherExecution(player.id(), this.tile));
+        this.mg.addExecution(new SAMLauncherExecution(player, this.tile));
         break;
       case UnitType.City:
-        this.mg.addExecution(new CityExecution(player.id(), this.tile));
+        this.mg.addExecution(new CityExecution(player, this.tile));
         break;
       default:
         throw Error(`unit type ${this.constructionType} not supported`);

@@ -3,11 +3,10 @@ import { Execution, Game, Player, PlayerID } from "../../game/Game";
 export class AllianceRequestReplyExecution implements Execution {
   private active = true;
   private requestor: Player | null = null;
-  private recipient: Player | null = null;
 
   constructor(
     private requestorID: PlayerID,
-    private recipientID: PlayerID,
+    private recipient: Player,
     private accept: boolean,
   ) {}
 
@@ -19,19 +18,11 @@ export class AllianceRequestReplyExecution implements Execution {
       this.active = false;
       return;
     }
-    if (!mg.hasPlayer(this.recipientID)) {
-      console.warn(
-        `AllianceRequestReplyExecution recipient ${this.recipientID} not found`,
-      );
-      this.active = false;
-      return;
-    }
     this.requestor = mg.player(this.requestorID);
-    this.recipient = mg.player(this.recipientID);
   }
 
   tick(ticks: number): void {
-    if (this.requestor === null || this.recipient === null) {
+    if (this.requestor === null) {
       throw new Error("Not initialized");
     }
     if (this.requestor.isFriendly(this.recipient)) {
