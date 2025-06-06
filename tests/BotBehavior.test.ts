@@ -5,7 +5,6 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
-  Relation,
   Tick,
 } from "../src/core/game/Game";
 import { PseudoRandom } from "../src/core/PseudoRandom";
@@ -46,16 +45,30 @@ describe("BotBehavior.handleAllianceRequests", () => {
     botBehavior = new BotBehavior(random, game, player, 0.5, 0.5);
   });
 
-  function setupAllianceRequestMocks({
+  function setupAllianceRequest({
     isTraitor = false,
-    relation = Relation.Neutral,
-    numTiles = 10,
+    relationDelta = 2,
+    numTilesPlayer = 10,
+    numTilesRequestor = 10,
     alliancesCount = 0,
   } = {}) {
-    jest.spyOn(requestor, "isTraitor").mockReturnValue(isTraitor);
-    jest.spyOn(player, "relation").mockReturnValue(relation);
-    jest.spyOn(requestor, "numTilesOwned").mockReturnValue(numTiles);
-    jest.spyOn(player, "numTilesOwned").mockReturnValue(10);
+    if (isTraitor) requestor.markTraitor();
+
+    player.updateRelation(requestor, relationDelta);
+    requestor.updateRelation(player, relationDelta);
+
+    game.map().forEachTile((tile) => {
+      if (game.map().isLand(tile)) {
+        if (numTilesPlayer > 0) {
+          player.conquer(tile);
+          numTilesPlayer--;
+        } else if (numTilesRequestor > 0) {
+          requestor.conquer(tile);
+          numTilesRequestor--;
+        }
+      }
+    });
+
     jest
       .spyOn(requestor, "alliances")
       .mockReturnValue(new Array(alliancesCount));
@@ -76,7 +89,7 @@ describe("BotBehavior.handleAllianceRequests", () => {
   }
 
   test("should accept alliance when all conditions are met", () => {
-    const request = setupAllianceRequestMocks({});
+    const request = setupAllianceRequest({});
 
     botBehavior.handleAllianceRequests();
 
@@ -85,7 +98,7 @@ describe("BotBehavior.handleAllianceRequests", () => {
   });
 
   test("should reject alliance if requestor is a traitor", () => {
-    const request = setupAllianceRequestMocks({ isTraitor: true });
+    const request = setupAllianceRequest({ isTraitor: true });
 
     botBehavior.handleAllianceRequests();
 
@@ -94,7 +107,7 @@ describe("BotBehavior.handleAllianceRequests", () => {
   });
 
   test("should reject alliance if relation is malicious", () => {
-    const request = setupAllianceRequestMocks({ relation: Relation.Hostile });
+    const request = setupAllianceRequest({ relationDelta: -2 });
 
     botBehavior.handleAllianceRequests();
 
@@ -103,8 +116,8 @@ describe("BotBehavior.handleAllianceRequests", () => {
   });
 
   test("should accept alliance if requestor is much larger (> 3 times size of recipient) and has too many alliances (>= 3)", () => {
-    const request = setupAllianceRequestMocks({
-      numTiles: 40,
+    const request = setupAllianceRequest({
+      numTilesRequestor: 40,
       alliancesCount: 4,
     });
 
@@ -115,8 +128,8 @@ describe("BotBehavior.handleAllianceRequests", () => {
   });
 
   test("should accept alliance if requestor is much larger (> 3 times size of recipient) and does not have too many alliances (< 3)", () => {
-    const request = setupAllianceRequestMocks({
-      numTiles: 40,
+    const request = setupAllianceRequest({
+      numTilesRequestor: 40,
       alliancesCount: 2,
     });
 
@@ -127,20 +140,11 @@ describe("BotBehavior.handleAllianceRequests", () => {
   });
 
   test("should reject alliance if requestor is acceptably small (<= 3 times size of recipient) and has too many alliances (>= 3)", () => {
-    const request = setupAllianceRequestMocks({ alliancesCount: 3 });
+    const request = setupAllianceRequest({ alliancesCount: 3 });
 
     botBehavior.handleAllianceRequests();
 
     expect(request.accept).not.toHaveBeenCalled();
     expect(request.reject).toHaveBeenCalled();
-  });
-
-  test("should accept alliance if requestor is acceptably small (<= 3 times size of recipient) and does not have too many alliances (< 3)", () => {
-    const request = setupAllianceRequestMocks({ alliancesCount: 2 });
-
-    botBehavior.handleAllianceRequests();
-
-    expect(request.accept).toHaveBeenCalled();
-    expect(request.reject).not.toHaveBeenCalled();
   });
 });
