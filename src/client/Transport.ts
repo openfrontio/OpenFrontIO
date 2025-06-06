@@ -9,7 +9,7 @@ import {
   Tick,
   UnitType,
 } from "../core/game/Game";
-import { PlayerView } from "../core/game/GameView";
+import { PlayerView, GameView } from "../core/game/GameView";
 import {
   AllPlayersStats,
   ClientHashMessage,
@@ -623,4 +623,54 @@ export class Transport {
     }
     this.socket = null;
   }
+}
+
+declare global {
+  interface Window {
+    PauseGameEvent: typeof PauseGameEvent;
+    SendAllianceRequestIntentEvent: typeof SendAllianceRequestIntentEvent;
+    SendBreakAllianceIntentEvent: typeof SendBreakAllianceIntentEvent;
+    SendAllianceReplyIntentEvent: typeof SendAllianceReplyIntentEvent;
+    SendSpawnIntentEvent: typeof SendSpawnIntentEvent;
+    SendAttackIntentEvent: typeof SendAttackIntentEvent;
+    SendBoatAttackIntentEvent: typeof SendBoatAttackIntentEvent;
+    BuildUnitIntentEvent: typeof BuildUnitIntentEvent;
+    SendTargetPlayerIntentEvent: typeof SendTargetPlayerIntentEvent;
+    SendEmojiIntentEvent: typeof SendEmojiIntentEvent;
+    SendDonateGoldIntentEvent: typeof SendDonateGoldIntentEvent;
+    SendDonateTroopsIntentEvent: typeof SendDonateTroopsIntentEvent;
+    SendQuickChatEvent: typeof SendQuickChatEvent;
+    SendEmbargoIntentEvent: typeof SendEmbargoIntentEvent;
+    SendSetTargetTroopRatioEvent: typeof SendSetTargetTroopRatioEvent;
+    CancelAttackIntentEvent: typeof CancelAttackIntentEvent;
+    CancelBoatIntentEvent: typeof CancelBoatIntentEvent;
+    MoveWarshipIntentEvent: typeof MoveWarshipIntentEvent;
+    EventBus: typeof EventBus;
+    PlayerView: typeof PlayerView;
+    GameView: typeof GameView;
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.PauseGameEvent = PauseGameEvent;
+  window.SendAllianceRequestIntentEvent = SendAllianceRequestIntentEvent;
+  window.SendBreakAllianceIntentEvent = SendBreakAllianceIntentEvent;
+  window.SendAllianceReplyIntentEvent = SendAllianceReplyIntentEvent;
+  window.SendSpawnIntentEvent = SendSpawnIntentEvent;
+  window.SendAttackIntentEvent = SendAttackIntentEvent;
+  window.SendBoatAttackIntentEvent = SendBoatAttackIntentEvent;
+  window.BuildUnitIntentEvent = BuildUnitIntentEvent;
+  window.SendTargetPlayerIntentEvent = SendTargetPlayerIntentEvent;
+  window.SendEmojiIntentEvent = SendEmojiIntentEvent;
+  window.SendDonateGoldIntentEvent = SendDonateGoldIntentEvent;
+  window.SendDonateTroopsIntentEvent = SendDonateTroopsIntentEvent;
+  window.SendQuickChatEvent = SendQuickChatEvent;
+  window.SendEmbargoIntentEvent = SendEmbargoIntentEvent;
+  window.SendSetTargetTroopRatioEvent = SendSetTargetTroopRatioEvent;
+  window.CancelAttackIntentEvent = CancelAttackIntentEvent;
+  window.CancelBoatIntentEvent = CancelBoatIntentEvent;
+  window.MoveWarshipIntentEvent = MoveWarshipIntentEvent;
+  window.EventBus = EventBus;
+  window.PlayerView = PlayerView;
+  window.GameView = GameView;
 }
