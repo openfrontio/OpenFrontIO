@@ -48,7 +48,7 @@ export async function createGameRunner(
           : fixProfaneUsername(sanitize(p.username)),
         PlayerType.Human,
         p.clientID,
-        p.playerID,
+        random.nextID(),
       ),
   );
 
@@ -201,6 +201,10 @@ export class GameRunner {
         canDonate: player.canDonate(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
       };
+      const alliance = player.allianceWith(other as Player);
+      if (alliance) {
+        actions.interaction.allianceCreatedAtTick = alliance.createdAt();
+      }
     }
 
     return actions;
@@ -221,6 +225,27 @@ export class GameRunner {
       borderTiles: player.borderTiles(),
     } as PlayerBorderTiles;
   }
+
+  public attackAveragePosition(
+    playerID: number,
+    attackID: string,
+  ): Cell | null {
+    const player = this.game.playerBySmallID(playerID);
+    if (!player.isPlayer()) {
+      throw new Error(`player with id ${playerID} not found`);
+    }
+
+    const condition = (a) => a.id() === attackID;
+    const attack =
+      player.outgoingAttacks().find(condition) ??
+      player.incomingAttacks().find(condition);
+    if (attack === undefined) {
+      return null;
+    }
+
+    return attack.averagePosition();
+  }
+
   public bestTransportShipSpawn(
     playerID: PlayerID,
     targetTile: TileRef,

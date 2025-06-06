@@ -23,9 +23,9 @@ import {
   TargetPlayerUpdate,
   UnitIncomingUpdate,
 } from "../../../core/game/GameUpdates";
-import { ClientID } from "../../../core/Schemas";
 import {
   CancelAttackIntentEvent,
+  CancelBoatIntentEvent,
   SendAllianceReplyIntentEvent,
 } from "../../Transport";
 import { Layer } from "./Layer";
@@ -33,7 +33,11 @@ import { Layer } from "./Layer";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
 import { renderTroops } from "../../Utils";
-import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
+import {
+  GoToPlayerEvent,
+  GoToPositionEvent,
+  GoToUnitEvent,
+} from "./Leaderboard";
 
 import { translateText } from "../../Utils";
 
@@ -61,7 +65,6 @@ interface Event {
 export class EventsDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
   public game: GameView;
-  public clientID: ClientID;
 
   private active: boolean = false;
   private events: Event[] = [];
@@ -179,7 +182,7 @@ export class EventsDisplay extends LitElement implements Layer {
   renderLayer(): void {}
 
   onDisplayMessageEvent(event: DisplayMessageUpdate) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
     if (
       event.playerID !== null &&
       (!myPlayer || myPlayer.smallID() !== event.playerID)
@@ -197,7 +200,7 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   onDisplayChatEvent(event: DisplayChatMessageUpdate) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
     if (
       event.playerID === null ||
       !myPlayer ||
@@ -225,7 +228,7 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   onAllianceRequestEvent(update: AllianceRequestUpdate) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
     if (!myPlayer || update.recipientID !== myPlayer.smallID()) {
       return;
     }
@@ -277,7 +280,7 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   onAllianceRequestReplyEvent(update: AllianceRequestReplyUpdate) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
     if (!myPlayer || update.request.requestorID !== myPlayer.smallID()) {
       return;
     }
@@ -298,7 +301,7 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   onBrokeAllianceEvent(update: BrokeAllianceUpdate) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
     const betrayed = this.game.playerBySmallID(update.betrayedID) as PlayerView;
@@ -336,7 +339,7 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   onAllianceExpiredEvent(update: AllianceExpiredUpdate) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
     const otherID =
@@ -360,7 +363,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
   onTargetPlayerEvent(event: TargetPlayerUpdate) {
     const other = this.game.playerBySmallID(event.playerID) as PlayerView;
-    const myPlayer = this.game.playerByClientID(this.clientID) as PlayerView;
+    const myPlayer = this.game.myPlayer() as PlayerView;
     if (!myPlayer || !myPlayer.isFriendly(other)) return;
 
     const target = this.game.playerBySmallID(event.targetID) as PlayerView;
@@ -375,9 +378,15 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   emitCancelAttackIntent(id: string) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
-    this.eventBus.emit(new CancelAttackIntentEvent(myPlayer.id(), id));
+    this.eventBus.emit(new CancelAttackIntentEvent(id));
+  }
+
+  emitBoatCancelIntent(id: number) {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) return;
+    this.eventBus.emit(new CancelBoatIntentEvent(id));
   }
 
   emitGoToPlayerEvent(attackerID: number) {
@@ -386,12 +395,16 @@ export class EventsDisplay extends LitElement implements Layer {
     this.eventBus.emit(new GoToPlayerEvent(attacker));
   }
 
+  emitGoToPositionEvent(x: number, y: number) {
+    this.eventBus.emit(new GoToPositionEvent(x, y));
+  }
+
   emitGoToUnitEvent(unit: UnitView) {
     this.eventBus.emit(new GoToUnitEvent(unit));
   }
 
   onEmojiMessageEvent(update: EmojiUpdate) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
     const recipient =
@@ -426,7 +439,7 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   onUnitIncomingEvent(event: UnitIncomingUpdate) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
 
     if (!myPlayer || myPlayer.smallID() !== event.playerID) {
       return;
@@ -469,6 +482,26 @@ export class EventsDisplay extends LitElement implements Layer {
       : event.description;
   }
 
+  private async attackWarningOnClick(attack: AttackUpdate) {
+    const playerView = this.game.playerBySmallID(attack.attackerID);
+    if (playerView !== undefined) {
+      if (playerView instanceof PlayerView) {
+        const averagePosition = await playerView.attackAveragePosition(
+          attack.attackerID,
+          attack.id,
+        );
+
+        if (averagePosition === null) {
+          this.emitGoToPlayerEvent(attack.attackerID);
+        } else {
+          this.emitGoToPositionEvent(averagePosition.x, averagePosition.y);
+        }
+      }
+    } else {
+      this.emitGoToPlayerEvent(attack.attackerID);
+    }
+  }
+
   private renderIncomingAttacks() {
     return html`
       ${this.incomingAttacks.length > 0
@@ -480,10 +513,7 @@ export class EventsDisplay extends LitElement implements Layer {
                     <button
                       translate="no"
                       class="ml-2"
-                      @click=${() => {
-                        attack.attackerID &&
-                          this.emitGoToPlayerEvent(attack.attackerID);
-                      }}
+                      @click=${() => this.attackWarningOnClick(attack)}
                     >
                       ${renderTroops(attack.troops)}
                       ${(
@@ -513,7 +543,7 @@ export class EventsDisplay extends LitElement implements Layer {
                     <button
                       translate="no"
                       class="ml-2"
-                      @click=${() => this.emitGoToPlayerEvent(attack.targetID)}
+                      @click=${async () => this.attackWarningOnClick(attack)}
                     >
                       ${renderTroops(attack.troops)}
                       ${(
@@ -572,25 +602,29 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private renderBoats() {
-    if (this.outgoingBoats.length === 0) {
-      return html``;
-    }
-
     return html`
       ${this.outgoingBoats.length > 0
         ? html`
             <tr class="border-t border-gray-700">
-              <td
-                class="lg:p-3 p-1 text-left text-blue-400 grid grid-cols-3 gap-2"
-              >
+              <td class="lg:p-3 p-1 text-left text-blue-400">
                 ${this.outgoingBoats.map(
-                  (boats) => html`
+                  (boat) => html`
                     <button
                       translate="no"
-                      @click=${() => this.emitGoToUnitEvent(boats)}
+                      @click=${() => this.emitGoToUnitEvent(boat)}
                     >
-                      Boat: ${renderTroops(boats.troops())}
+                      Boat: ${renderTroops(boat.troops())}
                     </button>
+                    ${!boat.retreating()
+                      ? html`<button
+                          ${boat.retreating() ? "disabled" : ""}
+                          @click=${() => {
+                            this.emitBoatCancelIntent(boat.id());
+                          }}
+                        >
+                          ❌
+                        </button>`
+                      : "(retreating...)"}
                   `,
                 )}
               </td>

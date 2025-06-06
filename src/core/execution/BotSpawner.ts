@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import { Game, PlayerInfo, PlayerType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
@@ -22,7 +21,7 @@ export class BotSpawner {
     let tries = 0;
     while (this.bots.length < numBots) {
       if (tries > 10000) {
-        consolex.log("too many retries while spawning bots, giving up");
+        console.log("too many retries while spawning bots, giving up");
         return this.bots;
       }
       const botName = this.randomBotName();

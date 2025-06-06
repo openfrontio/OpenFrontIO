@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import {
   AllPlayers,
   Execution,
@@ -41,9 +40,9 @@ export class EmojiExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    const emojiString = flattenedEmojiTable.at(this.emoji);
+    const emojiString = flattenedEmojiTable[this.emoji];
     if (emojiString === undefined) {
-      consolex.warn(
+      console.warn(
         `cannot send emoji ${this.emoji} from ${this.requestor} to ${this.recipient}`,
       );
     } else if (this.requestor.canSendEmoji(this.recipient)) {
@@ -56,7 +55,7 @@ export class EmojiExecution implements Execution {
         this.recipient.updateRelation(this.requestor, -100);
       }
     } else {
-      consolex.warn(
+      console.warn(
         `cannot send emoji from ${this.requestor} to ${this.recipient}`,
       );
     }

@@ -12,7 +12,7 @@ import samlauncherIcon from "../../../../resources/images/SamLauncherIconWhite.s
 import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import { Cell, PlayerActions, UnitType } from "../../../core/game/Game";
+import { Cell, Gold, PlayerActions, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
 import { BuildUnitIntentEvent } from "../../Transport";
@@ -314,13 +314,13 @@ export class BuildMenu extends LitElement implements Layer {
     return unit[0].canBuild !== false;
   }
 
-  private cost(item: BuildItemDisplay): number {
+  private cost(item: BuildItemDisplay): Gold {
     for (const bu of this.playerActions?.buildableUnits ?? []) {
       if (bu.type === item.unitType) {
         return bu.cost;
       }
     }
-    return 0;
+    return 0n;
   }
 
   private count(item: BuildItemDisplay): string {

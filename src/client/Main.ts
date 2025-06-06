@@ -1,6 +1,5 @@
 import page from "page";
 import favicon from "../../resources/images/Favicon.svg";
-import { consolex } from "../core/Consolex";
 import { GameRecord, GameStartInfo } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
@@ -62,20 +61,20 @@ class Client {
   initialize(): void {
     const newsModal = document.querySelector("news-modal") as NewsModal;
     if (!newsModal) {
-      consolex.warn("News modal element not found");
+      console.warn("News modal element not found");
     } else {
-      consolex.log("News modal element found");
+      console.log("News modal element found");
     }
     newsModal instanceof NewsModal;
     const newsButton = document.querySelector("news-button") as NewsButton;
     if (!newsButton) {
-      consolex.warn("News button element not found");
+      console.warn("News button element not found");
     } else {
-      consolex.log("News button element found");
+      console.log("News button element found");
     }
 
     // Comment out to show news button.
-    newsButton.hidden = true;
+    // newsButton.hidden = true;
 
     const langSelector = document.querySelector(
       "lang-selector",
@@ -84,22 +83,22 @@ class Client {
       "lang-selector",
     ) as LanguageModal;
     if (!langSelector) {
-      consolex.warn("Lang selector element not found");
+      console.warn("Lang selector element not found");
     }
     if (!LanguageModal) {
-      consolex.warn("Language modal element not found");
+      console.warn("Language modal element not found");
     }
 
     this.flagInput = document.querySelector("flag-input") as FlagInput;
     if (!this.flagInput) {
-      consolex.warn("Flag input element not found");
+      console.warn("Flag input element not found");
     }
 
     this.darkModeButton = document.querySelector(
       "dark-mode-button",
     ) as DarkModeButton;
     if (!this.darkModeButton) {
-      consolex.warn("Dark mode button element not found");
+      console.warn("Dark mode button element not found");
     }
 
     const loginDiscordButton = document.getElementById(
@@ -113,7 +112,7 @@ class Client {
       "username-input",
     ) as UsernameInput;
     if (!this.usernameInput) {
-      consolex.warn("Username input element not found");
+      console.warn("Username input element not found");
     }
 
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
@@ -122,7 +121,7 @@ class Client {
     ) as NodeListOf<GoogleAdElement>;
 
     window.addEventListener("beforeunload", () => {
-      consolex.log("Browser is closing");
+      console.log("Browser is closing");
       if (this.gameStop !== null) {
         this.gameStop();
       }
@@ -158,17 +157,16 @@ class Client {
       hlpModal.open();
     });
 
-    const claims = isLoggedIn();
-    if (claims === false) {
+    if (isLoggedIn() === false) {
       // Not logged in
       loginDiscordButton.disable = false;
       loginDiscordButton.translationKey = "main.login_discord";
       loginDiscordButton.addEventListener("click", discordLogin);
       logoutDiscordButton.hidden = true;
     } else {
-      // JWT appears to be valid, assume we are logged in
+      // JWT appears to be valid
       loginDiscordButton.disable = true;
-      loginDiscordButton.translationKey = "main.logged_in";
+      loginDiscordButton.translationKey = "main.checking_login";
       logoutDiscordButton.hidden = false;
       logoutDiscordButton.addEventListener("click", () => {
         // Log out
@@ -189,7 +187,9 @@ class Client {
           logoutDiscordButton.hidden = true;
           return;
         }
-        // TODO: Update the page for logged in user
+        loginDiscordButton.translationKey = "main.logged_in";
+        loginDiscordButton.hidden = true;
+        const { user, player } = userMeResponse;
       });
     }
 
@@ -239,14 +239,14 @@ class Client {
     page("/join/:lobbyId", (ctx) => {
       if (ctx.init && sessionStorage.getItem("inLobby")) {
         // On page reload, go back home
-        page.redirect("/");
+        page("/");
         return;
       }
       const lobbyId = ctx.params.lobbyId;
 
       this.joinModal.open(lobbyId);
 
-      consolex.log(`joining lobby ${lobbyId}`);
+      console.log(`joining lobby ${lobbyId}`);
     });
 
     page();
@@ -266,9 +266,9 @@ class Client {
 
   private async handleJoinLobby(event: CustomEvent) {
     const lobby = event.detail as JoinLobbyEvent;
-    consolex.log(`joining lobby ${lobby.gameID}`);
+    console.log(`joining lobby ${lobby.gameID}`);
     if (this.gameStop !== null) {
-      consolex.log("joining lobby, stopping existing game");
+      console.log("joining lobby, stopping existing game");
       this.gameStop();
     }
     const config = await getServerConfigFromClient();
@@ -282,9 +282,9 @@ class Client {
             ? ""
             : this.flagInput.getCurrentFlag(),
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
-        token: localStorage.getItem("token") ?? getPersistentIDFromCookie(),
+        token: getPlayToken(),
         clientID: lobby.clientID,
-        gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.gameStartInfo,
+        gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
       },
       () => {
@@ -340,7 +340,7 @@ class Client {
     if (this.gameStop === null) {
       return;
     }
-    consolex.log("leaving lobby, cancelling game");
+    console.log("leaving lobby, cancelling game");
     this.gameStop();
     this.gameStop = null;
     this.publicLobby.leaveLobby();
@@ -361,12 +361,21 @@ function setFavicon(): void {
 }
 
 // WARNING: DO NOT EXPOSE THIS ID
-export function getPersistentIDFromCookie(): string {
-  const claims = isLoggedIn();
-  if (claims !== false && claims.sub) {
-    return claims.sub;
-  }
+function getPlayToken(): string {
+  const result = isLoggedIn();
+  if (result !== false) return result.token;
+  return getPersistentIDFromCookie();
+}
 
+// WARNING: DO NOT EXPOSE THIS ID
+export function getPersistentID(): string {
+  const result = isLoggedIn();
+  if (result !== false) return result.claims.sub;
+  return getPersistentIDFromCookie();
+}
+
+// WARNING: DO NOT EXPOSE THIS ID
+function getPersistentIDFromCookie(): string {
   const COOKIE_NAME = "player_persistent_id";
 
   // Try to get existing cookie

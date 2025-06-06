@@ -1,0 +1,139 @@
+{
+  "name": "East Asia",
+  "width": 1562,
+  "height": 1646,
+  "nations": [
+    {
+      "coordinates": [1150, 660],
+      "name": "Hokkaido",
+      "strength": 1,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1005, 843],
+      "name": "Tohoku",
+      "strength": 1,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [858, 1045],
+      "name": "Chubu",
+      "strength": 1,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [948, 1037],
+      "name": "Kanto",
+      "strength": 1,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1162, 154],
+      "name": "Sakhalin",
+      "strength": 2,
+      "flag": "Sakhalin"
+    },
+    {
+      "coordinates": [571, 1116],
+      "name": "Chugoku",
+      "strength": 1,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [595, 1190],
+      "name": "Shikoku",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [450, 1234],
+      "name": "Kyushu",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [274, 1058],
+      "name": "South Korea",
+      "strength": 3,
+      "flag": "kr"
+    },
+    {
+      "coordinates": [160, 841],
+      "name": "North Korea",
+      "strength": 1,
+      "flag": "kp"
+    },
+    {
+      "coordinates": [15, 795],
+      "name": "China",
+      "strength": 3,
+      "flag": "cn"
+    },
+    {
+      "coordinates": [230, 75],
+      "name": "Russia",
+      "strength": 3,
+      "flag": "ru"
+    },
+    {
+      "coordinates": [898, 923],
+      "name": "Sado Island",
+      "strength": 1,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [592, 1031],
+      "name": "Oki Islands",
+      "strength": 1,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [741, 1108],
+      "name": "Kyoto",
+      "strength": 3,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [219, 972],
+      "name": "Seoul",
+      "strength": 3,
+      "flag": "kr"
+    },
+    {
+      "coordinates": [976, 1073],
+      "name": "Tokyo",
+      "strength": 3,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [911, 1079],
+      "name": "Mount Fuji",
+      "strength": 3,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1298, 564],
+      "name": "Shiretoko Peninsula",
+      "strength": 1,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [435, 1311],
+      "name": "Sakurajima",
+      "strength": 1,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [275, 1614],
+      "name": "Okinawa",
+      "strength": 3,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [731, 1115],
+      "name": "Kinki",
+      "strength": 1,
+      "flag": "jp"
+    }
+  ]
+}

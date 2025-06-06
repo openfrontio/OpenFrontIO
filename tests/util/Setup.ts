@@ -55,7 +55,6 @@ export async function setup(
     false,
   );
 
-  // Create and return the game
   return createGame(humans, [], gameMap, miniGameMap, config);
 }
 
