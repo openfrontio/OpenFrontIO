@@ -400,7 +400,7 @@ export class ClientGameRunner {
     });
   }
 
-    private doBoatAttackUnderCursor(): void {
+  private doBoatAttackUnderCursor(): void {
     if (!this.isActive || !this.lastMousePosition) {
       return;
     }
@@ -456,10 +456,7 @@ export class ClientGameRunner {
         if (this.myPlayer === null) throw new Error("not initialized");
         let spawnCell: Cell | null = null;
         if (spawn !== false) {
-          spawnCell = new Cell(
-            this.gameView.x(spawn),
-            this.gameView.y(spawn),
-          );
+          spawnCell = new Cell(this.gameView.x(spawn), this.gameView.y(spawn));
         }
         this.eventBus.emit(
           new SendBoatAttackIntentEvent(
