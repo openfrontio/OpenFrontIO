@@ -118,7 +118,7 @@ const teamValues = Object.values(ColoredTeams).filter((t) => t !== "Bot") as [
   ...string[],
 ];
 
-const GameConfigSchema = z.object({
+export const GameConfigSchema = z.object({
   gameMap: z.nativeEnum(GameMapType),
   difficulty: z.nativeEnum(Difficulty),
   gameType: z.nativeEnum(GameType),
