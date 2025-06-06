@@ -38,11 +38,13 @@ export class Leaderboard extends LitElement implements Layer {
   public eventBus: EventBus | null = null;
 
   players: Entry[] = [];
+  recentlyDeadPlayers: string[] = [];
 
   @state()
   private _leaderboardHidden = true;
   private _shownOnInit = false;
   private showTopFive = true;
+  private readonly recentlyDeadTimeout = 10 * 10; // 10 seconds
 
   @state()
   private _sortKey: "tiles" | "gold" | "troops" = "tiles";
@@ -105,13 +107,13 @@ export class Leaderboard extends LitElement implements Layer {
     const numTilesWithoutFallout =
       this.game.numLandTiles() - this.game.numTilesWithFallout();
 
-    const playersToShow = this.showTopFive ? sorted.slice(0, 5) : sorted;
+    const playersToShow = (
+      this.showTopFive ? sorted.slice(0, 5) : sorted
+    ).filter((player) => player.isAlive());
 
     this.players = playersToShow.map((player, index) => {
-      let troops = player.troops() / 10;
-      if (!player.isAlive()) {
-        troops = 0;
-      }
+      const troops = player.troops() / 10;
+
       return {
         name: player.displayName(),
         position: index + 1,
@@ -141,7 +143,7 @@ export class Leaderboard extends LitElement implements Layer {
       if (!myPlayer.isAlive()) {
         myPlayerTroops = 0;
       }
-      this.players.pop();
+
       this.players.push({
         name: myPlayer.displayName(),
         position: place,
@@ -154,6 +156,15 @@ export class Leaderboard extends LitElement implements Layer {
         player: myPlayer,
       });
     }
+
+    this.recentlyDeadPlayers = sorted
+      .filter(
+        (player) =>
+          this.game &&
+          !player.isAlive() &&
+          this.game.ticks() - player.timeOfDeath() < this.recentlyDeadTimeout,
+      )
+      .map((player, index) => player.displayName());
 
     this.requestUpdate();
   }
@@ -187,7 +198,7 @@ export class Leaderboard extends LitElement implements Layer {
       box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
       border-radius: 10px;
       max-width: 500px;
-      max-height: 30vh;
+      max-height: 40vh;
       overflow-y: auto;
       width: 400px;
       backdrop-filter: blur(5px);
@@ -347,6 +358,22 @@ export class Leaderboard extends LitElement implements Layer {
                   <td>${player.score}</td>
                   <td>${player.gold}</td>
                   <td>${player.troops}</td>
+                </tr>
+              `,
+            )}
+          </tbody>
+        </table>
+        <table>
+          <thead>
+            <tr>
+              <th>${translateText("leaderboard.dead_players")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${this.recentlyDeadPlayers.map(
+              (playerName) => html`
+                <tr>
+                  <td class="player-name">${playerName}</td>
                 </tr>
               `,
             )}

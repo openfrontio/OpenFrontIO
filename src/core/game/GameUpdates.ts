@@ -103,6 +103,7 @@ export interface PlayerUpdate {
   smallID: number;
   playerType: PlayerType;
   isAlive: boolean;
+  timeOfDeath: number;
   tilesOwned: number;
   gold: Gold;
   population: number;

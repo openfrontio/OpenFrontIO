@@ -98,6 +98,7 @@ export class PlayerImpl implements Player {
   public _outgoingLandAttacks: Attack[] = [];
 
   private _hasSpawned = false;
+  private _timeOfDeath = -1;
 
   constructor(
     private mg: GameImpl,
@@ -135,6 +136,7 @@ export class PlayerImpl implements Player {
       smallID: this.smallID(),
       playerType: this.type(),
       isAlive: this.isAlive(),
+      timeOfDeath: this.timeOfDeath(),
       tilesOwned: this.numTilesOwned(),
       gold: this._gold,
       population: this.population(),
@@ -290,8 +292,15 @@ export class PlayerImpl implements Player {
   info(): PlayerInfo {
     return this.playerInfo;
   }
+
   isAlive(): boolean {
     return this._tiles.size > 0;
+  }
+
+  timeOfDeath(): number {
+    if (!this.isAlive() && this._timeOfDeath === -1)
+      this._timeOfDeath = this.mg.ticks();
+    return this._timeOfDeath;
   }
 
   hasSpawned(): boolean {
