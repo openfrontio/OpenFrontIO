@@ -66,9 +66,7 @@ export class PortExecution implements Execution {
     }
 
     const port = this.random.randElement(ports);
-    this.mg.addExecution(
-      new TradeShipExecution(this.player, this.port, port),
-    );
+    this.mg.addExecution(new TradeShipExecution(this.player, this.port, port));
   }
 
   isActive(): boolean {

@@ -1,10 +1,4 @@
-import {
-  Execution,
-  Game,
-  Player,
-  Unit,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 
 export class CityExecution implements Execution {

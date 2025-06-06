@@ -1,7 +1,6 @@
 import { Execution, Game, Gold, Player, PlayerID } from "../game/Game";
 
 export class DonateGoldExecution implements Execution {
-
   private recipient: Player;
 
   private active = true;

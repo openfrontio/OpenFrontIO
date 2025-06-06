@@ -40,9 +40,7 @@ export class BotBehavior {
 
   private emoji(player: Player, emoji: number) {
     if (player.type() !== PlayerType.Human) return;
-    this.game.addExecution(
-      new EmojiExecution(this.player, player.id(), emoji),
-    );
+    this.game.addExecution(new EmojiExecution(this.player, player.id(), emoji));
   }
 
   forgetOldEnemies() {

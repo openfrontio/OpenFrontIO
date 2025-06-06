@@ -1,12 +1,6 @@
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
-import {
-  Execution,
-  Game,
-  MessageType,
-  Player,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, MessageType, Player, UnitType } from "../game/Game";
 import { GameImpl } from "../game/GameImpl";
 import { TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
