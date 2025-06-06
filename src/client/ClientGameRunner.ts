@@ -418,7 +418,7 @@ export class ClientGameRunner {
       }
     });
   }
-  
+
   private canBoatAttack(actions: any, tile: TileRef): boolean {
     const bu = actions.buildableUnits.find(
       (bu) => bu.type === UnitType.TransportShip,
