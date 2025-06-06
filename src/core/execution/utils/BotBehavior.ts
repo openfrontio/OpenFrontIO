@@ -40,9 +40,7 @@ export class BotBehavior {
 
   private emoji(player: Player, emoji: number) {
     if (player.type() !== PlayerType.Human) return;
-    this.game.addExecution(
-      new EmojiExecution(this.player.id(), player.id(), emoji),
-    );
+    this.game.addExecution(new EmojiExecution(this.player, player.id(), emoji));
   }
 
   forgetOldEnemies() {
@@ -194,7 +192,7 @@ export class BotBehavior {
     this.game.addExecution(
       new AttackExecution(
         troops,
-        this.player.id(),
+        this.player,
         target.isPlayer() ? target.id() : null,
       ),
     );
@@ -202,11 +200,12 @@ export class BotBehavior {
 }
 
 function shouldAcceptAllianceRequest(player: Player, request: AllianceRequest) {
-  const notTraitor = !request.requestor().isTraitor();
-  const noMalice = player.relation(request.requestor()) >= Relation.Neutral;
+  const isTraitor = request.requestor().isTraitor();
+  const hasMalice = player.relation(request.requestor()) < Relation.Neutral;
   const requestorIsMuchLarger =
     request.requestor().numTilesOwned() > player.numTilesOwned() * 3;
-  const notTooManyAlliances =
-    requestorIsMuchLarger || request.requestor().alliances().length < 3;
-  return notTraitor && noMalice && notTooManyAlliances;
+  const tooManyAlliances = request.requestor().alliances().length >= 3;
+  return (
+    !isTraitor && !hasMalice && (requestorIsMuchLarger || !tooManyAlliances)
+  );
 }
