@@ -401,9 +401,7 @@ export class ColorAllocator {
     }
 
     if (this.availableColors.length === 0) {
-      const fallback = colord({ r: 200, g: 200, b: 200 });
-      this.assigned.set(id, fallback);
-      return fallback;
+      this.availableColors = humanColors;
     }
 
     const index = 0;
