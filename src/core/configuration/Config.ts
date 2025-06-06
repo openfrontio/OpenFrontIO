@@ -56,6 +56,10 @@ export interface ServerConfig {
   jwtAudience(): string;
   jwtIssuer(): string;
   jwkPublicKey(): Promise<JWK>;
+  domain(): string;
+  subdomain(): string;
+  cloudflareAccountId(): string;
+  cloudflareApiToken(): string;
 }
 
 export interface NukeMagnitude {
