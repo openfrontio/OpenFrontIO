@@ -202,11 +202,12 @@ export class BotBehavior {
 }
 
 function shouldAcceptAllianceRequest(player: Player, request: AllianceRequest) {
-  const notTraitor = !request.requestor().isTraitor();
-  const noMalice = player.relation(request.requestor()) >= Relation.Neutral;
+  const isTraitor = request.requestor().isTraitor();
+  const hasMalice = player.relation(request.requestor()) < Relation.Neutral;
   const requestorIsMuchLarger =
     request.requestor().numTilesOwned() > player.numTilesOwned() * 3;
-  const notTooManyAlliances =
-    requestorIsMuchLarger || request.requestor().alliances().length < 3;
-  return notTraitor && noMalice && notTooManyAlliances;
+  const tooManyAlliances = request.requestor().alliances().length >= 3;
+  return (
+    !isTraitor && !hasMalice && (requestorIsMuchLarger || !tooManyAlliances)
+  );
 }
