@@ -4,6 +4,7 @@ import { GameRecord, GameStartInfo } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
+import { exposeBrowserGlobals } from "./BrowserGlobals";
 import { joinLobby } from "./ClientGameRunner";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
@@ -349,6 +350,8 @@ class Client {
 
 // Initialize the client when the DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
+  exposeBrowserGlobals();
+
   new Client().initialize();
 });
 
