@@ -60,6 +60,7 @@ export interface ServerConfig {
   subdomain(): string;
   cloudflareAccountId(): string;
   cloudflareApiToken(): string;
+  cloudflareConfigDir(): string;
 }
 
 export interface NukeMagnitude {
