@@ -76,6 +76,8 @@ export class ShowEmojiMenuEvent implements GameEvent {
   ) {}
 }
 
+export class DoBoatAttackEvent implements GameEvent {}
+
 export class AttackRatioEvent implements GameEvent {
   constructor(public readonly attackRatio: number) {}
 }
@@ -124,6 +126,7 @@ export class InputHandler {
       zoomIn: "KeyE",
       attackRatioDown: "Digit1",
       attackRatioUp: "Digit2",
+      boatAttack: "KeyB",
       ...JSON.parse(localStorage.getItem("settings.keybinds") ?? "{}"),
     };
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
@@ -240,6 +243,11 @@ export class InputHandler {
       if (e.key.toLowerCase() === "r" && e.altKey && !e.ctrlKey) {
         e.preventDefault();
         this.eventBus.emit(new RefreshGraphicsEvent());
+      }
+
+      if (e.code === keybinds.boatAttack) {
+        e.preventDefault();
+        this.eventBus.emit(new DoBoatAttackEvent());
       }
 
       if (e.code === keybinds.attackRatioDown) {
