@@ -1,23 +1,14 @@
-import { Execution, Game, Player, PlayerID } from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
 
 export class SetTargetTroopRatioExecution implements Execution {
-  private player: Player;
-
   private active = true;
 
   constructor(
-    private playerID: PlayerID,
+    private player: Player,
     private targetTroopsRatio: number,
   ) {}
 
-  init(mg: Game, ticks: number): void {
-    if (!mg.hasPlayer(this.playerID)) {
-      console.warn(
-        `SetTargetTRoopRatioExecution: player ${this.playerID} not found`,
-      );
-    }
-    this.player = mg.player(this.playerID);
-  }
+  init(mg: Game, ticks: number): void {}
 
   tick(ticks: number): void {
     if (this.targetTroopsRatio < 0 || this.targetTroopsRatio > 1) {
