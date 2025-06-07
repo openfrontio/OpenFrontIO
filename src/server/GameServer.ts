@@ -147,7 +147,9 @@ export class GameServer {
           existingIP: ipAnonymize(conflicting.ip),
           existingPersistentID: conflicting.persistentID,
         });
-        return;
+        // Kick the existing client instead of the new one, because this was causing issues when
+        // a client wanted to replay the game afterwards.
+        this.kickClient(conflicting.clientID);
       }
     }
 
