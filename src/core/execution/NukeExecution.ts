@@ -128,6 +128,7 @@ export class NukeExecution implements Execution {
         } else if (this.type === UnitType.AtomBomb) {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
+            // TODO TranslateText
             `${this.player.name()} - atom bomb inbound`,
             MessageType.ATTACK,
             MessageSeverity.ERROR,
@@ -137,6 +138,7 @@ export class NukeExecution implements Execution {
         } else if (this.type === UnitType.HydrogenBomb) {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
+            // TODO TranslateText
             `${this.player.name()} - hydrogen bomb inbound`,
             MessageType.ATTACK,
             MessageSeverity.ERROR,
