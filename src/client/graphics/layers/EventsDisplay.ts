@@ -41,7 +41,7 @@ import {
 
 import { translateText } from "../../Utils";
 
-interface Event {
+interface GameEvent {
   description: string;
   unsafeDescription?: boolean;
   buttons?: {
@@ -67,7 +67,7 @@ export class EventsDisplay extends LitElement implements Layer {
   public game: GameView;
 
   private active: boolean = false;
-  private events: Event[] = [];
+  private events: GameEvent[] = [];
   @state() private incomingAttacks: AttackUpdate[] = [];
   @state() private outgoingAttacks: AttackUpdate[] = [];
   @state() private outgoingLandAttacks: AttackUpdate[] = [];
@@ -160,7 +160,7 @@ export class EventsDisplay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  private addEvent(event: Event) {
+  private addEvent(event: GameEvent) {
     this.events = [...this.events, event];
     if (this._hidden === true) {
       this.newEvents++;
@@ -475,7 +475,7 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private getEventDescription(
-    event: Event,
+    event: GameEvent,
   ): string | DirectiveResult<typeof UnsafeHTMLDirective> {
     return event.unsafeDescription
       ? unsafeHTML(onlyImages(event.description))
