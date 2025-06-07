@@ -22,10 +22,10 @@ export class ControlPanel extends LitElement implements Layer {
   private attackRatio: number = 0.2;
 
   @state()
-  private currentTroopRatio = 0.5;
+  private targetTroopRatio = 0.5;
 
   @state()
-  private targetTroopRatio = 0.5;
+  private currentTroopRatio = 0.5;
 
   @state()
   private _population: number;
