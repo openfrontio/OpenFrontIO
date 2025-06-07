@@ -1,6 +1,7 @@
 import { NukeExecution } from "../src/core/execution/NukeExecution";
 import { SAMLauncherExecution } from "../src/core/execution/SAMLauncherExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
+import { UpgradeStructureExecution } from "../src/core/execution/UpgradeStructureExecution";
 import {
   Game,
   Player,
@@ -94,8 +95,9 @@ describe("SAM", () => {
 
   test("sam should cooldown as long as configured", async () => {
     const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
-    expect(sam.isInCooldown()).toBeFalsy();
+    expect(sam.hasMissilesReady()).toBeTruthy();
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
       targetTile: game.ref(1, 2),
     });
@@ -103,14 +105,15 @@ describe("SAM", () => {
     executeTicks(game, 3);
 
     expect(nuke.isActive()).toBeFalsy();
+
     for (let i = 0; i < game.config().SAMCooldown() - 3; i++) {
       game.executeNextTick();
-      expect(sam.isInCooldown()).toBeTruthy();
+      expect(sam.hasMissilesReady()).toBeFalsy();
     }
 
     executeTicks(game, 2);
 
-    expect(sam.isInCooldown()).toBeFalsy();
+    expect(sam.hasMissilesReady()).toBeTruthy();
   });
 
   test("two sams should not target twice same nuke", async () => {
@@ -127,7 +130,7 @@ describe("SAM", () => {
     executeTicks(game, 3);
 
     expect(nuke.isActive()).toBeFalsy();
-    expect([sam1, sam2].filter((s) => s.isInCooldown())).toHaveLength(1);
+    expect([sam1, sam2].filter((s) => s.hasMissilesReady())).toHaveLength(1);
   });
 
   test("SAMs should target only nukes aimed at nearby targets", async () => {
@@ -158,7 +161,21 @@ describe("SAM", () => {
     executeTicks(game, ticksToExecute);
 
     expect(nukeExecution.isActive()).toBeFalsy();
-    expect(sam1.isInCooldown()).toBeFalsy();
-    expect(sam2.isInCooldown()).toBeTruthy();
+    expect(sam1.hasMissilesReady()).toBeTruthy();
+    expect(sam2.hasMissilesReady()).toBeFalsy();
+  });
+
+  test("SAM should have increased level after upgrade", async () => {
+    defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    expect(defender.units(UnitType.SAMLauncher)[0].level()).toEqual(1);
+
+    const upgradeStructureExecution = new UpgradeStructureExecution(
+      defender,
+      defender.units(UnitType.SAMLauncher)[0].tile(),
+    );
+    game.addExecution(upgradeStructureExecution);
+    executeTicks(game, 2);
+
+    expect(defender.units(UnitType.SAMLauncher)[0].level()).toEqual(2);
   });
 });

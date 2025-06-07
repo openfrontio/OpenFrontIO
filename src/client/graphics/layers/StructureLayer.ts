@@ -22,6 +22,7 @@ import {
 } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
+import { SendUpgradeStructureIntentEvent } from "../../Transport";
 
 const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
 const reloadingColor = colord({ r: 255, g: 0, b: 0 });
@@ -242,13 +243,13 @@ export class StructureLayer implements Layer {
     const config = this.unitConfigs[unitType];
     let icon: ImageData | undefined;
 
-    if (unitType === UnitType.SAMLauncher && unit.isCooldown()) {
+    if (unitType === UnitType.SAMLauncher && !unit.isAllMissilesReady()) {
       icon = this.unitIcons.get("reloadingSam");
     } else {
       icon = this.unitIcons.get(iconType);
     }
 
-    if (unitType === UnitType.MissileSilo && unit.isCooldown()) {
+    if (unitType === UnitType.MissileSilo && !unit.isAllMissilesReady()) {
       icon = this.unitIcons.get("reloadingSilo");
     } else {
       icon = this.unitIcons.get(iconType);
@@ -268,13 +269,13 @@ export class StructureLayer implements Layer {
     if (!unit.isActive()) return;
 
     let borderColor = this.theme.borderColor(unit.owner());
-    if (unitType === UnitType.SAMLauncher && unit.isCooldown()) {
+    if (unitType === UnitType.SAMLauncher && !unit.isAllMissilesReady()) {
       borderColor = reloadingColor;
     } else if (unit.type() === UnitType.Construction) {
       borderColor = underConstructionColor;
     }
 
-    if (unitType === UnitType.MissileSilo && unit.isCooldown()) {
+    if (unitType === UnitType.MissileSilo && !unit.isAllMissilesReady()) {
       borderColor = reloadingColor;
     } else if (unit.type() === UnitType.Construction) {
       borderColor = underConstructionColor;
@@ -413,5 +414,11 @@ export class StructureLayer implements Layer {
       this.selectedStructureUnit = null;
       this.handleUnitRendering(this.previouslySelected);
     }
+  }
+
+  public upgradeStructureUnit(unit: UnitView | null) {
+    if (unit === null) return null;
+    const cell = this.game.cell(unit.tile());
+    this.eventBus.emit(new SendUpgradeStructureIntentEvent(cell, unit.type()));
   }
 }
