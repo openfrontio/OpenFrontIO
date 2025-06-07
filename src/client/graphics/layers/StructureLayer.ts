@@ -368,6 +368,9 @@ export class StructureLayer implements Layer {
     this.previouslySelected = this.selectedStructureUnit;
 
     if (clickedUnit) {
+      if (clickedUnit.owner() !== this.game.myPlayer()) {
+        return;
+      }
       const wasSelected = this.previouslySelected === clickedUnit;
       if (wasSelected) {
         this.selectedStructureUnit = null;
