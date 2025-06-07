@@ -2,7 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
 @customElement("setting-multi-toggle")
-export class SettingToggle extends LitElement {
+export class SettingMultiToggle extends LitElement {
   @property() label = "Setting";
   @property() description = "";
   @property() id = "";
@@ -35,13 +35,13 @@ export class SettingToggle extends LitElement {
       <div class="setting-item vertical">
         <div class="toggle-row">
           <label class="setting-label" for=${this.id}>${this.label}</label>
-          <input
-            type="button"
+          <button
             id=${this.id}
             class="multi-toggle"
-            .value=${String(this.value)}
             @click=${this.handleChange}
-          />
+          >
+            ${this.value}
+          </button>
         </div>
         <div class="setting-description">${this.description}</div>
       </div>
