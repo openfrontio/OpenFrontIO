@@ -36,6 +36,7 @@ async function setupTunnels() {
   const cloudflare = new Cloudflare(
     config.cloudflareAccountId(),
     config.cloudflareApiToken(),
+    config.cloudflareConfigDir(),
   );
 
   const domainToService = new Map<string, string>().set(
