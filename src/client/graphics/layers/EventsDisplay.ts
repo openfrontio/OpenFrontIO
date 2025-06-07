@@ -602,29 +602,33 @@ export class EventsDisplay extends LitElement implements Layer {
     return html`
       ${this.outgoingAttacks.length > 0
         ? html`
-            ${this.outgoingAttacks.map(
-              (attack) => html`
-                ${this.renderButton({
-                  content: html`
-                    ${renderTroops(attack.troops)}
-                    ${(
-                      this.game.playerBySmallID(attack.targetID) as PlayerView
-                    )?.name()}
-                  `,
-                  onClick: async () => this.attackWarningOnClick(attack),
-                  className: "text-left text-blue-400",
-                  translate: false,
-                })}
-                ${!attack.retreating
-                  ? this.renderButton({
-                      content: "❌",
-                      onClick: () => this.emitCancelAttackIntent(attack.id),
-                      className: "text-left",
-                      disabled: attack.retreating,
-                    })
-                  : "(retreating...)"}
-              `,
-            )}
+            <div class="flex flex-wrap gap-y-1 gap-x-2">
+              ${this.outgoingAttacks.map(
+                (attack) => html`
+                  <div class="inline-flex items-center gap-1">
+                    ${this.renderButton({
+                      content: html`
+                        ${renderTroops(attack.troops)}
+                        ${(
+                          this.game.playerBySmallID(attack.targetID) as PlayerView
+                        )?.name()}
+                      `,
+                      onClick: async () => this.attackWarningOnClick(attack),
+                      className: "text-left text-blue-400",
+                      translate: false,
+                    })}
+                    ${!attack.retreating
+                      ? this.renderButton({
+                          content: "❌",
+                          onClick: () => this.emitCancelAttackIntent(attack.id),
+                          className: "text-left flex-shrink-0",
+                          disabled: attack.retreating,
+                        })
+                      : html`<span class="flex-shrink-0">(retreating...)</span>`}
+                  </div>
+                `,
+              )}
+            </div>
           `
         : ""}
     `;
@@ -634,23 +638,27 @@ export class EventsDisplay extends LitElement implements Layer {
     return html`
       ${this.outgoingLandAttacks.length > 0
         ? html`
-            ${this.outgoingLandAttacks.map(
-              (landAttack) => html`
-                ${this.renderButton({
-                  content: html`${renderTroops(landAttack.troops)} Wilderness`,
-                  className: "text-left text-gray-400",
-                  translate: false,
-                })}
-                ${!landAttack.retreating
-                  ? this.renderButton({
-                      content: "❌",
-                      onClick: () => this.emitCancelAttackIntent(landAttack.id),
-                      className: "text-left",
-                      disabled: landAttack.retreating,
-                    })
-                  : "(retreating...)"}
-              `,
-            )}
+            <div class="flex flex-wrap gap-y-1 gap-x-2">
+              ${this.outgoingLandAttacks.map(
+                (landAttack) => html`
+                  <div class="inline-flex items-center gap-1">
+                    ${this.renderButton({
+                      content: html`${renderTroops(landAttack.troops)} Wilderness`,
+                      className: "text-left text-gray-400",
+                      translate: false,
+                    })}
+                    ${!landAttack.retreating
+                      ? this.renderButton({
+                          content: "❌",
+                          onClick: () => this.emitCancelAttackIntent(landAttack.id),
+                          className: "text-left flex-shrink-0",
+                          disabled: landAttack.retreating,
+                        })
+                      : html`<span class="flex-shrink-0">(retreating...)</span>`}
+                  </div>
+                `,
+              )}
+            </div>
           `
         : ""}
     `;
@@ -660,24 +668,28 @@ export class EventsDisplay extends LitElement implements Layer {
     return html`
       ${this.outgoingBoats.length > 0
         ? html`
-            ${this.outgoingBoats.map(
-              (boat) => html`
-                ${this.renderButton({
-                  content: html`Boat: ${renderTroops(boat.troops())}`,
-                  onClick: () => this.emitGoToUnitEvent(boat),
-                  className: "text-left text-blue-400",
-                  translate: false,
-                })}
-                ${!boat.retreating()
-                  ? this.renderButton({
-                      content: "❌",
-                      onClick: () => this.emitBoatCancelIntent(boat.id()),
-                      className: "text-left",
-                      disabled: boat.retreating(),
-                    })
-                  : "(retreating...)"}
-              `,
-            )}
+            <div class="flex flex-wrap gap-y-1 gap-x-2">
+              ${this.outgoingBoats.map(
+                (boat) => html`
+                  <div class="inline-flex items-center gap-1">
+                    ${this.renderButton({
+                      content: html`Boat: ${renderTroops(boat.troops())}`,
+                      onClick: () => this.emitGoToUnitEvent(boat),
+                      className: "text-left text-blue-400",
+                      translate: false,
+                    })}
+                    ${!boat.retreating()
+                      ? this.renderButton({
+                          content: "❌",
+                          onClick: () => this.emitBoatCancelIntent(boat.id()),
+                          className: "text-left flex-shrink-0",
+                          disabled: boat.retreating(),
+                        })
+                      : html`<span class="flex-shrink-0">(retreating...)</span>`}
+                  </div>
+                `,
+              )}
+            </div>
           `
         : ""}
     `;
@@ -856,8 +868,52 @@ export class EventsDisplay extends LitElement implements Layer {
                           </tr>
                         `,
                       )}
-                      <!--- Empty row -->
-                      ${this.events.length === 0 &&
+                      <!--- Incoming attacks row -->
+                      ${this.incomingAttacks.length > 0
+                        ? html`
+                            <tr class="lg:px-2 lg:py-1 p-1">
+                              <td class="lg:px-2 lg:py-1 p-1 text-left">
+                                ${this.renderIncomingAttacks()}
+                              </td>
+                            </tr>
+                          `
+                        : ""}
+
+                      <!--- Outgoing attacks row -->
+                      ${this.outgoingAttacks.length > 0
+                        ? html`
+                            <tr class="lg:px-2 lg:py-1 p-1">
+                              <td class="lg:px-2 lg:py-1 p-1 text-left">
+                                ${this.renderOutgoingAttacks()}
+                              </td>
+                            </tr>
+                          `
+                        : ""}
+
+                      <!--- Outgoing land attacks row -->
+                      ${this.outgoingLandAttacks.length > 0
+                        ? html`
+                            <tr class="lg:px-2 lg:py-1 p-1">
+                              <td class="lg:px-2 lg:py-1 p-1 text-left">
+                                ${this.renderOutgoingLandAttacks()}
+                              </td>
+                            </tr>
+                          `
+                        : ""}
+
+                      <!--- Boats row -->
+                      ${this.outgoingBoats.length > 0
+                        ? html`
+                            <tr class="lg:px-2 lg:py-1 p-1">
+                              <td class="lg:px-2 lg:py-1 p-1 text-left">
+                                ${this.renderBoats()}
+                              </td>
+                            </tr>
+                          `
+                        : ""}
+
+                      <!--- Empty row when no events or attacks -->
+                      ${filteredEvents.length === 0 &&
                       this.incomingAttacks.length === 0 &&
                       this.outgoingAttacks.length === 0 &&
                       this.outgoingLandAttacks.length === 0 &&
@@ -871,17 +927,7 @@ export class EventsDisplay extends LitElement implements Layer {
                               </td>
                             </tr>
                           `
-                        : html`
-                            <!--- Attack rows -->
-                            <tr class="lg:px-2 lg:py-1 p-1">
-                              <td class="lg:px-2 lg:py-1 p-1 text-left">
-                                ${this.renderIncomingAttacks()}
-                                ${this.renderOutgoingAttacks()}
-                                ${this.renderOutgoingLandAttacks()}
-                                ${this.renderBoats()}
-                              </td>
-                            </tr>
-                          `}
+                        : ""}
                     </tbody>
                   </table>
                 </div>
