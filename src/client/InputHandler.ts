@@ -129,7 +129,12 @@ export class InputHandler {
       boatAttack: "KeyB",
       ...JSON.parse(localStorage.getItem("settings.keybinds") ?? "{}"),
     };
-    this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
+    this.canvas.addEventListener("pointerdown", (e) => {
+      if (e.button === 0 && e.ctrlKey && navigator.platform.includes("Mac")) {
+        return; // Ignore synthetic left-clicks on mac
+      }
+      return this.onPointerDown(e);
+    });
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
     this.canvas.addEventListener(
       "wheel",
