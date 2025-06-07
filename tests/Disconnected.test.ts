@@ -159,7 +159,7 @@ describe("Disconnected", () => {
       executeTicks(game, 1);
       expect(player1.isDisconnected()).toBe(true);
     });
-
+    
     test("Breaking alliance with disconnected player doesn't make you a traitor", () => {
       player1.createAllianceRequest(player2);
       player2

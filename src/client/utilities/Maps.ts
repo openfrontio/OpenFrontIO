@@ -6,6 +6,7 @@ import betweenTwoSeas from "../../../resources/maps/BetweenTwoSeasThumb.webp";
 import blackSea from "../../../resources/maps/BlackSeaThumb.webp";
 import britannia from "../../../resources/maps/BritanniaThumb.webp";
 import deglaciatedAntarctica from "../../../resources/maps/DeglaciatedAntarcticaThumb.webp";
+import eastasia from "../../../resources/maps/EastAsiaThumb.webp";
 import europeClassic from "../../../resources/maps/EuropeClassicThumb.webp";
 import europe from "../../../resources/maps/EuropeThumb.webp";
 import falklandislands from "../../../resources/maps/FalklandIslandsThumb.webp";
@@ -13,7 +14,6 @@ import faroeislands from "../../../resources/maps/FaroeIslandsThumb.webp";
 import gatewayToTheAtlantic from "../../../resources/maps/GatewayToTheAtlanticThumb.webp";
 import halkidiki from "../../../resources/maps/HalkidikiThumb.webp";
 import iceland from "../../../resources/maps/IcelandThumb.webp";
-import japan from "../../../resources/maps/JapanThumb.webp";
 import mars from "../../../resources/maps/MarsThumb.webp";
 import mena from "../../../resources/maps/MenaThumb.webp";
 import northAmerica from "../../../resources/maps/NorthAmericaThumb.webp";
@@ -61,8 +61,8 @@ export function getMapsImage(map: GameMapType): string {
       return australia;
     case GameMapType.Iceland:
       return iceland;
-    case GameMapType.Japan:
-      return japan;
+    case GameMapType.EastAsia:
+      return eastasia;
     case GameMapType.BetweenTwoSeas:
       return betweenTwoSeas;
     case GameMapType.FaroeIslands:

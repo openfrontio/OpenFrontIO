@@ -1,11 +1,9 @@
 import { renderNumber } from "../../client/Utils";
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
   MessageType,
   Player,
-  PlayerID,
   Unit,
   UnitType,
 } from "../game/Game";
@@ -17,20 +15,18 @@ import { distSortUnit } from "../Util";
 export class TradeShipExecution implements Execution {
   private active = true;
   private mg: Game;
-  private origOwner: Player;
   private tradeShip: Unit | undefined;
   private wasCaptured = false;
   private pathFinder: PathFinder;
 
   constructor(
-    private _owner: PlayerID,
+    private origOwner: Player,
     private srcPort: Unit,
     private _dstPort: Unit,
   ) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.origOwner = mg.player(this._owner);
     this.pathFinder = PathFinder.Mini(mg, 2500);
   }
 
@@ -41,7 +37,7 @@ export class TradeShipExecution implements Execution {
         this.srcPort.tile(),
       );
       if (spawn === false) {
-        consolex.warn(`cannot build trade ship`);
+        console.warn(`cannot build trade ship`);
         this.active = false;
         return;
       }
@@ -115,7 +111,7 @@ export class TradeShipExecution implements Execution {
         this.tradeShip.move(result.tile);
         break;
       case PathFindResultType.PathNotFound:
-        consolex.warn("captured trade ship cannot find route");
+        console.warn("captured trade ship cannot find route");
         if (this.tradeShip.isActive()) {
           this.tradeShip.delete(false);
         }

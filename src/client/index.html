@@ -99,6 +99,11 @@
           display: none;
         }
       }
+
+      /* display:none if child has class parent-hidden since we can't use shadow DOM in Lit due to Tailwind */
+      .component-hideable:has(> .parent-hidden) {
+        display: none;
+      }
     </style>
 
     <!-- Immediate execution to prevent FOUC -->
@@ -224,7 +229,9 @@
         <div class="container__row">
           <flag-input class="w-[20%] md:w-[15%]"></flag-input>
           <username-input class="relative w-full"></username-input>
-          <news-button class="w-[20%] md:w-[15%]"></news-button>
+          <news-button
+            class="w-[20%] md:w-[15%] component-hideable"
+          ></news-button>
         </div>
         <div></div>
         <div>
@@ -299,6 +306,11 @@
       <options-menu></options-menu>
       <player-info-overlay></player-info-overlay>
     </div>
+    <div
+      class="fixed bottom-[30px] sm:bottom-auto sm:top-[20px] z-50 mx-auto max-w-max inset-x-0 items-center"
+    >
+      <heads-up-message></heads-up-message>
+    </div>
     <div class="fixed left-[10px] top-[10px] z-50 w-36 lg:w-48 items-center">
       <player-team-label></player-team-label>
     </div>
@@ -368,6 +380,16 @@
           <a href="/terms-of-service.html" class="t-link" target="_blank">
             Terms of Service
           </a>
+          <p style="text-align: center">
+            <a
+              href="https://www.playwire.com/contact-direct-sales"
+              data-i18n="main.advertise"
+              class="t-link"
+              target="_blank"
+              rel="noopener"
+              >Advertise</a
+            >
+          </p>
         </div>
       </div>
     </footer>

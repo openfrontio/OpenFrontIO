@@ -1,8 +1,13 @@
-name: 🧼 PR Description
+name: 🧼 PR
 
 on:
   pull_request:
-    types: [opened, edited, synchronize]
+    types:
+      - demilestoned
+      - edited
+      - milestoned
+      - opened
+      - synchronize
 
 permissions: {}
 
@@ -24,9 +29,11 @@ jobs:
               errors.push('❌ Missing or short `## Description:` section.');
             }
 
-            // Check all three boxes are checked
+            // Check all five boxes are checked
             const requiredBoxes = [
               /- \[x\] I have added screenshots for all UI updates/i,
+              /- \[x\] I process any text displayed to the user through translateText\(\) and I\'ve added it to the en\.json file/i,
+              /- \[x\] I have added relevant tests to the test directory/i,
               /- \[x\] I confirm I have thoroughly tested these changes and take full responsibility for any bugs introduced/i,
               /- \[x\] I understand that submitting code with bugs that could have been caught through manual testing blocks releases and new features for all contributors/i
             ];
@@ -43,3 +50,18 @@ jobs:
             } else {
               console.log('✅ PR description and checklist look good.');
             }
+
+  has-milestone:
+    name: Has Milestone
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            // Get the pull request data
+            const milestone = context.payload.pull_request.milestone;
+            if (!milestone) {
+              core.setFailed('❌ Pull request must have a milestone assigned before merging.');
+              return;
+            }
+            console.log(`✅ Milestone found: ${milestone.title}`);

@@ -2,11 +2,24 @@
 # update.sh - Script to update Docker container on Hetzner server
 # Called by deploy.sh after uploading Docker image to Docker Hub
 
-# Load environment variables if .env exists
-if [ -f /home/openfront/.env ]; then
-    echo "Loading environment variables from .env file..."
-    export $(grep -v '^#' /home/openfront/.env | xargs)
+# Check if environment file is provided
+if [ $# -ne 1 ]; then
+    echo "Error: Environment file path is required"
+    echo "Usage: $0 <env_file_path>"
+    exit 1
 fi
+
+ENV_FILE="$1"
+
+# Check if environment file exists
+if [ ! -f "$ENV_FILE" ]; then
+    echo "Error: Environment file '$ENV_FILE' not found"
+    exit 1
+fi
+
+# Load environment variables from the provided file
+echo "Loading environment variables from $ENV_FILE..."
+export $(grep -v '^#' "$ENV_FILE" | xargs)
 
 echo "======================================================"
 echo "🔄 UPDATING SERVER: ${HOST} ENVIRONMENT"
@@ -47,7 +60,7 @@ fi
 echo "Starting new container for ${HOST} environment..."
 docker run -d \
     --restart="${RESTART}" \
-    --env-file /home/openfront/.env \
+    --env-file "$ENV_FILE" \
     --name "${CONTAINER_NAME}" \
     "${DOCKER_IMAGE}"
 
@@ -60,6 +73,11 @@ if [ $? -eq 0 ]; then
     docker image prune -a -f
     docker container prune -f
     echo "Cleanup complete."
+
+    # Remove the environment file
+    echo "Removing environment file ${ENV_FILE}..."
+    rm -f "$ENV_FILE"
+    echo "Environment file removed."
 else
     echo "Failed to start container"
     exit 1

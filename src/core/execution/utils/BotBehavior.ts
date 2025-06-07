@@ -40,9 +40,7 @@ export class BotBehavior {
 
   private emoji(player: Player, emoji: number) {
     if (player.type() !== PlayerType.Human) return;
-    this.game.addExecution(
-      new EmojiExecution(this.player.id(), player.id(), emoji),
-    );
+    this.game.addExecution(new EmojiExecution(this.player, player.id(), emoji));
   }
 
   forgetOldEnemies() {
@@ -52,7 +50,7 @@ export class BotBehavior {
     }
   }
 
-  checkIncomingAttacks() {
+  private checkIncomingAttacks() {
     // Switch enemies if we're under attack
     const incomingAttacks = this.player.incomingAttacks();
     if (incomingAttacks.length > 0) {
@@ -109,6 +107,11 @@ export class BotBehavior {
       }
     }
 
+    // Retaliate against incoming attacks
+    if (this.enemy === null) {
+      this.checkIncomingAttacks();
+    }
+
     // Select the most hated player
     if (this.enemy === null) {
       const mostHated = this.player.allRelationsSorted()[0];
@@ -145,8 +148,15 @@ export class BotBehavior {
         this.enemy = neighbor;
         this.enemyUpdated = this.game.ticks();
       }
+    }
 
-      // Select a traitor as an enemy
+    // Retaliate against incoming attacks
+    if (this.enemy === null) {
+      this.checkIncomingAttacks();
+    }
+
+    // Select a traitor as an enemy
+    if (this.enemy === null) {
       const traitors = this.player
         .neighbors()
         .filter((n) => n.isPlayer() && n.isTraitor()) as Player[];
@@ -182,7 +192,7 @@ export class BotBehavior {
     this.game.addExecution(
       new AttackExecution(
         troops,
-        this.player.id(),
+        this.player,
         target.isPlayer() ? target.id() : null,
       ),
     );
@@ -190,11 +200,12 @@ export class BotBehavior {
 }
 
 function shouldAcceptAllianceRequest(player: Player, request: AllianceRequest) {
-  const notTraitor = !request.requestor().isTraitor();
-  const noMalice = player.relation(request.requestor()) >= Relation.Neutral;
+  const isTraitor = request.requestor().isTraitor();
+  const hasMalice = player.relation(request.requestor()) < Relation.Neutral;
   const requestorIsMuchLarger =
     request.requestor().numTilesOwned() > player.numTilesOwned() * 3;
-  const notTooManyAlliances =
-    requestorIsMuchLarger || request.requestor().alliances().length < 3;
-  return notTraitor && noMalice && notTooManyAlliances;
+  const tooManyAlliances = request.requestor().alliances().length >= 3;
+  return (
+    !isTraitor && !hasMalice && (requestorIsMuchLarger || !tooManyAlliances)
+  );
 }

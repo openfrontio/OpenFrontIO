@@ -23,7 +23,6 @@ import {
   TargetPlayerUpdate,
   UnitIncomingUpdate,
 } from "../../../core/game/GameUpdates";
-import { ClientID } from "../../../core/Schemas";
 import {
   CancelAttackIntentEvent,
   CancelBoatIntentEvent,
@@ -66,7 +65,6 @@ interface Event {
 export class EventsDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
   public game: GameView;
-  public clientID: ClientID;
 
   private active: boolean = false;
   private events: Event[] = [];
@@ -184,7 +182,7 @@ export class EventsDisplay extends LitElement implements Layer {
   renderLayer(): void {}
 
   onDisplayMessageEvent(event: DisplayMessageUpdate) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
     if (
       event.playerID !== null &&
       (!myPlayer || myPlayer.smallID() !== event.playerID)
@@ -202,7 +200,7 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   onDisplayChatEvent(event: DisplayChatMessageUpdate) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
     if (
       event.playerID === null ||
       !myPlayer ||
@@ -230,7 +228,7 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   onAllianceRequestEvent(update: AllianceRequestUpdate) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
     if (!myPlayer || update.recipientID !== myPlayer.smallID()) {
       return;
     }
@@ -282,7 +280,7 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   onAllianceRequestReplyEvent(update: AllianceRequestReplyUpdate) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
     if (!myPlayer || update.request.requestorID !== myPlayer.smallID()) {
       return;
     }
@@ -303,7 +301,7 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   onBrokeAllianceEvent(update: BrokeAllianceUpdate) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
     const betrayed = this.game.playerBySmallID(update.betrayedID) as PlayerView;
@@ -341,7 +339,7 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   onAllianceExpiredEvent(update: AllianceExpiredUpdate) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
     const otherID =
@@ -365,7 +363,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
   onTargetPlayerEvent(event: TargetPlayerUpdate) {
     const other = this.game.playerBySmallID(event.playerID) as PlayerView;
-    const myPlayer = this.game.playerByClientID(this.clientID) as PlayerView;
+    const myPlayer = this.game.myPlayer() as PlayerView;
     if (!myPlayer || !myPlayer.isFriendly(other)) return;
 
     const target = this.game.playerBySmallID(event.targetID) as PlayerView;
@@ -380,13 +378,13 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   emitCancelAttackIntent(id: string) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
-    this.eventBus.emit(new CancelAttackIntentEvent(myPlayer.id(), id));
+    this.eventBus.emit(new CancelAttackIntentEvent(id));
   }
 
   emitBoatCancelIntent(id: number) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
     this.eventBus.emit(new CancelBoatIntentEvent(id));
   }
@@ -406,7 +404,7 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   onEmojiMessageEvent(update: EmojiUpdate) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
     const recipient =
@@ -441,7 +439,7 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   onUnitIncomingEvent(event: UnitIncomingUpdate) {
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
 
     if (!myPlayer || myPlayer.smallID() !== event.playerID) {
       return;
