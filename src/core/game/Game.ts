@@ -164,11 +164,11 @@ export interface UnitParamsMap {
     patrolTile: TileRef;
   };
 
-  [UnitType.Shell]: {};
+  [UnitType.Shell]: undefined;
 
-  [UnitType.SAMMissile]: {};
+  [UnitType.SAMMissile]: undefined;
 
-  [UnitType.Port]: {};
+  [UnitType.Port]: undefined;
 
   [UnitType.AtomBomb]: {
     targetTile?: number;
@@ -187,19 +187,19 @@ export interface UnitParamsMap {
     cooldownDuration?: number;
   };
 
-  [UnitType.DefensePost]: {};
+  [UnitType.DefensePost]: undefined;
 
-  [UnitType.SAMLauncher]: {};
+  [UnitType.SAMLauncher]: undefined;
 
-  [UnitType.City]: {};
+  [UnitType.City]: undefined;
 
-  [UnitType.MIRV]: {};
+  [UnitType.MIRV]: undefined;
 
   [UnitType.MIRVWarhead]: {
     targetTile?: number;
   };
 
-  [UnitType.Construction]: {};
+  [UnitType.Construction]: undefined;
 }
 
 // Type helper to get params type for a specific unit type
@@ -339,7 +339,12 @@ export class PlayerInfo {
 }
 
 export function isUnit(unit: Unit | UnitParams<UnitType>): unit is Unit {
-  return "isUnit" in unit && typeof unit.isUnit === "function" && unit.isUnit();
+  return (
+    unit !== undefined &&
+    "isUnit" in unit &&
+    typeof unit.isUnit === "function" &&
+    unit.isUnit()
+  );
 }
 
 export interface Unit {
