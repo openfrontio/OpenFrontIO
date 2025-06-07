@@ -243,8 +243,8 @@
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
     "attack_ratio_label": "⚔️ Attack Ratio",
     "attack_ratio_desc": "What percentage of your troops to send in an attack (1–100%)",
-    "troop_ratio_label": "🪖🛠️ Troops and Workers Ratio",
-    "troop_ratio_desc": "Adjust the balance between troops (for combat) and workers (for gold production) (1–100%)",
+    "troop_balance_label": "🛠️ Troops and Workers Balance",
+    "troop_balance_desc": "Adjust the balance between troops (for combat) and workers (for gold production). Either Peaceful, Balanced, or Aggressive.",
     "easter_writing_speed_label": "Writing Speed Multiplier",
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
     "easter_bug_count_label": "Bug Count",
@@ -418,7 +418,12 @@
     "gold": "Gold",
     "troops": "Troops",
     "workers": "Workers",
-    "attack_ratio": "Attack Ratio"
+    "attack_ratio": "Attack Ratio",
+    "troop_balance": {
+      "peaceful": "Peaceful",
+      "balanced": "Balanced",
+      "aggressive": "Aggressive"
+    }
   },
   "player_panel": {
     "gold": "Gold",

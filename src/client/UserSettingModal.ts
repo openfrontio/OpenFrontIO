@@ -4,6 +4,7 @@ import { translateText } from "../client/Utils";
 import { UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
+import "./components/baseComponents/setting/SettingMultiToggle";
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
@@ -120,6 +121,11 @@ export class UserSettingModal extends LitElement {
     console.log("🙈 Anonymous Names:", enabled ? "ON" : "OFF");
   }
 
+  private toggleMilitaryStrategies(e: CustomEvent<{ value: string }>) {
+    const nextValue = e.detail?.value;
+    localStorage.setItem("settings.troopBalance", nextValue);
+  }
+
   private toggleLeftClickOpensMenu(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -135,16 +141,6 @@ export class UserSettingModal extends LitElement {
     if (typeof value === "number") {
       const ratio = value / 100;
       localStorage.setItem("settings.attackRatio", ratio.toString());
-    } else {
-      console.warn("Slider event missing detail.value", e);
-    }
-  }
-
-  private sliderTroopRatio(e: CustomEvent<{ value: number }>) {
-    const value = e.detail?.value;
-    if (typeof value === "number") {
-      const ratio = value / 100;
-      localStorage.setItem("settings.troopRatio", ratio.toString());
     } else {
       console.warn("Slider event missing detail.value", e);
     }
@@ -262,6 +258,17 @@ export class UserSettingModal extends LitElement {
         @change=${this.toggleAnonymousNames}
       ></setting-toggle>
 
+      <setting-multi-toggle
+        label="${translateText("user_setting.troop_balance_label")}"
+        description="${translateText("user_setting.troop_balance_desc")}"
+        id="strategy-toggle"
+        @change=${this.toggleMilitaryStrategies}
+        .value=${String(
+          localStorage.getItem("settings.troopBalance") ?? "Balanced",
+        )}
+        .values=${["Peaceful", "Balanced", "Aggressive"]}
+      ></setting-multi-toggle>
+
       <!-- ⚔️ Attack Ratio -->
       <setting-slider
         label="${translateText("user_setting.attack_ratio_label")}"
@@ -271,17 +278,6 @@ export class UserSettingModal extends LitElement {
         .value=${Number(localStorage.getItem("settings.attackRatio") ?? "0.2") *
         100}
         @change=${this.sliderAttackRatio}
-      ></setting-slider>
-
-      <!-- 🪖🛠️ Troop Ratio -->
-      <setting-slider
-        label="${translateText("user_setting.troop_ratio_label")}"
-        description="${translateText("user_setting.troop_ratio_desc")}"
-        min="1"
-        max="100"
-        .value=${Number(localStorage.getItem("settings.troopRatio") ?? "0.95") *
-        100}
-        @change=${this.sliderTroopRatio}
       ></setting-slider>
 
       ${this.showEasterEggSettings
