@@ -263,6 +263,12 @@ export class PlayerPanel extends LitElement implements Layer {
                        bg-opacity-50 bg-gray-700 text-opacity-90 text-white
                        rounded text-sm lg:text-xl w-full"
                 >
+                  <div
+                    class="w-4 h-4 rounded-sm border border-black/30 mr-1"
+                    style="background-color: ${other
+                      .playerColor()
+                      ?.toRgbString()}"
+                  ></div>
                   ${other?.name()}
                 </div>
               </div>

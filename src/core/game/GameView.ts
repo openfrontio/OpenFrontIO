@@ -1,3 +1,4 @@
+import { Colord } from "colord";
 import { Config } from "../configuration/Config";
 import { ClientID, GameID } from "../Schemas";
 import { createRandomName } from "../Util";
@@ -186,12 +187,15 @@ export class PlayerView {
       ? this.anonymousName
       : this.data.name;
   }
+
   displayName(): string {
     return this.anonymousName !== null && userSettings.anonymousNames()
       ? this.anonymousName
       : this.data.name;
   }
-
+  playerColor(): Colord | null {
+    return this.game.playerColor(this.data.id);
+  }
   clientID(): ClientID | null {
     return this.data.clientID;
   }
@@ -418,6 +422,13 @@ export class GameView implements GameMap {
       throw Error(`player id ${id} not found`);
     }
     return player;
+  }
+
+  playerColor(id: PlayerID): Colord | null {
+    const player = this.player(id);
+    if (!player) return null;
+    const theme = this.config().theme();
+    return theme.territoryColor(player);
   }
 
   players(): PlayerView[] {

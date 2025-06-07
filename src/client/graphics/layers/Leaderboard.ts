@@ -1,3 +1,4 @@
+import { Colord } from "colord";
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
@@ -9,6 +10,7 @@ import { Layer } from "./Layer";
 
 interface Entry {
   name: string;
+  color: Colord | null;
   position: number;
   score: string;
   gold: string;
@@ -114,6 +116,7 @@ export class Leaderboard extends LitElement implements Layer {
       }
       return {
         name: player.displayName(),
+        color: player.playerColor(),
         position: index + 1,
         score: formatPercentage(
           player.numTilesOwned() / numTilesWithoutFallout,
@@ -144,6 +147,7 @@ export class Leaderboard extends LitElement implements Layer {
       this.players.pop();
       this.players.push({
         name: myPlayer.displayName(),
+        color: myPlayer.playerColor(),
         position: place,
         score: formatPercentage(
           myPlayer.numTilesOwned() / this.game.numLandTiles(),
@@ -262,6 +266,20 @@ export class Leaderboard extends LitElement implements Layer {
       text-overflow: ellipsis;
     }
 
+    .player-color {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .player-color > div {
+      width: 12px;
+      height: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.3);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
     @media (max-width: 1000px) {
       .leaderboard {
         top: 70px;
@@ -343,7 +361,14 @@ export class Leaderboard extends LitElement implements Layer {
                   @click=${() => this.handleRowClickPlayer(player.player)}
                 >
                   <td>${player.position}</td>
-                  <td class="player-name">${unsafeHTML(player.name)}</td>
+                  <td class="player-name">
+                    <div class="player-color">
+                      <div
+                        style="background-color: ${player.color?.toRgbString()};"
+                      ></div>
+                      ${unsafeHTML(player.name)}
+                    </div>
+                  </td>
                   <td>${player.score}</td>
                   <td>${player.gold}</td>
                   <td>${player.troops}</td>

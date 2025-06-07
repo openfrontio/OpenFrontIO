@@ -201,10 +201,14 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     return html`
       <div class="p-2">
         <div
-          class="text-bold text-sm lg:text-lg font-bold mb-1 inline-flex break-all ${isFriendly
+          class="text-bold text-sm lg:text-lg font-bold mb-1 inline-flex items-center break-all ${isFriendly
             ? "text-green-500"
             : "text-white"}"
         >
+          <div
+            class="w-4 h-4 rounded-sm border border-black/30 mr-1"
+            style="background-color: ${player.playerColor()?.toRgbString()}"
+          ></div>
           ${player.flag()
             ? html`<img
                 class="h-8 mr-1 aspect-[3/4]"
