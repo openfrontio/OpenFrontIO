@@ -4,7 +4,7 @@ import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
-import { UserSettings } from "../../../core/game/UserSettings";
+import { userSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
 import { Layer } from "./Layer";
@@ -44,7 +44,6 @@ const secondsToHms = (d: number): string => {
 export class OptionsMenu extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
-  private userSettings: UserSettings = new UserSettings();
 
   @state()
   private showPauseButton: boolean = true;
@@ -96,32 +95,32 @@ export class OptionsMenu extends LitElement implements Layer {
   }
 
   private onToggleEmojisButtonClick() {
-    this.userSettings.toggleEmojis();
+    userSettings.toggleEmojis();
     this.requestUpdate();
   }
 
   private onToggleSpecialEffectsButtonClick() {
-    this.userSettings.toggleFxLayer();
+    userSettings.toggleFxLayer();
     this.requestUpdate();
   }
 
   private onToggleDarkModeButtonClick() {
-    this.userSettings.toggleDarkMode();
+    userSettings.toggleDarkMode();
     this.requestUpdate();
     this.eventBus.emit(new RefreshGraphicsEvent());
   }
 
   private onToggleRandomNameModeButtonClick() {
-    this.userSettings.toggleRandomName();
+    userSettings.toggleRandomName();
   }
 
   private onToggleFocusLockedButtonClick() {
-    this.userSettings.toggleFocusLocked();
+    userSettings.toggleFocusLocked();
     this.requestUpdate();
   }
 
   private onToggleLeftClickOpensMenu() {
-    this.userSettings.toggleLeftClickOpenMenu();
+    userSettings.toggleLeftClickOpenMenu();
   }
 
   init() {
@@ -200,41 +199,36 @@ export class OptionsMenu extends LitElement implements Layer {
           ${button({
             onClick: this.onToggleEmojisButtonClick,
             title: "Toggle Emojis",
-            children: "🙂: " + (this.userSettings.emojis() ? "On" : "Off"),
+            children: "🙂: " + (userSettings.emojis() ? "On" : "Off"),
           })}
           ${button({
             onClick: this.onToggleSpecialEffectsButtonClick,
             title: "Toggle Special effects",
-            children: "💥: " + (this.userSettings.fxLayer() ? "On" : "Off"),
+            children: "💥: " + (userSettings.fxLayer() ? "On" : "Off"),
           })}
           ${button({
             onClick: this.onToggleDarkModeButtonClick,
             title: "Dark Mode",
-            children: "🌙: " + (this.userSettings.darkMode() ? "On" : "Off"),
+            children: "🌙: " + (userSettings.darkMode() ? "On" : "Off"),
           })}
           ${button({
             onClick: this.onToggleRandomNameModeButtonClick,
             title: "Random name mode",
-            children:
-              "🥷: " + (this.userSettings.anonymousNames() ? "On" : "Off"),
+            children: "🥷: " + (userSettings.anonymousNames() ? "On" : "Off"),
           })}
           ${button({
             onClick: this.onToggleLeftClickOpensMenu,
             title: "Left click",
             children:
               "🖱️: " +
-              (this.userSettings.leftClickOpensMenu()
-                ? "Opens menu"
-                : "Attack"),
+              (userSettings.leftClickOpensMenu() ? "Opens menu" : "Attack"),
           })}
           <!-- ${button({
             onClick: this.onToggleFocusLockedButtonClick,
             title: "Lock Focus",
             children:
               "🗺: " +
-              (this.userSettings.focusLocked()
-                ? "Focus locked"
-                : "Hover focus"),
+              (userSettings.focusLocked() ? "Focus locked" : "Hover focus"),
           })} -->
         </div>
       </div>

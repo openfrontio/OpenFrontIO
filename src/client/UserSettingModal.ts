@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { UserSettings } from "../core/game/UserSettings";
+import { userSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
@@ -10,8 +10,6 @@ import "./components/baseComponents/setting/SettingToggle";
 
 @customElement("user-setting")
 export class UserSettingModal extends LitElement {
-  private userSettings: UserSettings = new UserSettings();
-
   @state() private settingsMode: "basic" | "keybinds" = "basic";
   @state() private keybinds: Record<string, string> = {};
 
@@ -82,7 +80,7 @@ export class UserSettingModal extends LitElement {
       return;
     }
 
-    this.userSettings.set("settings.darkMode", enabled);
+    userSettings.setDarkMode(enabled);
 
     if (enabled) {
       document.documentElement.classList.add("dark");
@@ -97,7 +95,7 @@ export class UserSettingModal extends LitElement {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
 
-    this.userSettings.set("settings.emojis", enabled);
+    userSettings.setEmojis(true);
 
     console.log("🤡 Emojis:", enabled ? "ON" : "OFF");
   }
@@ -106,7 +104,7 @@ export class UserSettingModal extends LitElement {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
 
-    this.userSettings.set("settings.specialEffects", enabled);
+    userSettings.setFxLayer(true);
 
     console.log("💥 Special effects:", enabled ? "ON" : "OFF");
   }
@@ -115,7 +113,7 @@ export class UserSettingModal extends LitElement {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
 
-    this.userSettings.set("settings.anonymousNames", enabled);
+    userSettings.setAnonymousNames(true);
 
     console.log("🙈 Anonymous Names:", enabled ? "ON" : "OFF");
   }
@@ -124,7 +122,7 @@ export class UserSettingModal extends LitElement {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
 
-    this.userSettings.set("settings.leftClickOpensMenu", enabled);
+    userSettings.setLeftClickOpensMenu(true);
     console.log("🖱️ Left Click Opens Menu:", enabled ? "ON" : "OFF");
 
     this.requestUpdate();
@@ -221,7 +219,7 @@ export class UserSettingModal extends LitElement {
         label="${translateText("user_setting.dark_mode_label")}"
         description="${translateText("user_setting.dark_mode_desc")}"
         id="dark-mode-toggle"
-        .checked=${this.userSettings.darkMode()}
+        .checked=${userSettings.darkMode()}
         @change=${(e: CustomEvent<{ checked: boolean }>) =>
           this.toggleDarkMode(e)}
       ></setting-toggle>
@@ -231,7 +229,7 @@ export class UserSettingModal extends LitElement {
         label="${translateText("user_setting.emojis_label")}"
         description="${translateText("user_setting.emojis_desc")}"
         id="emoji-toggle"
-        .checked=${this.userSettings.emojis()}
+        .checked=${userSettings.emojis()}
         @change=${this.toggleEmojis}
       ></setting-toggle>
 
@@ -240,7 +238,7 @@ export class UserSettingModal extends LitElement {
         label="${translateText("user_setting.special_effects_label")}"
         description="${translateText("user_setting.special_effects_desc")}"
         id="special-effect-toggle"
-        .checked=${this.userSettings.fxLayer()}
+        .checked=${userSettings.fxLayer()}
         @change=${this.toggleFxLayer}
       ></setting-toggle>
 
@@ -249,7 +247,7 @@ export class UserSettingModal extends LitElement {
         label="${translateText("user_setting.left_click_label")}"
         description="${translateText("user_setting.left_click_desc")}"
         id="left-click-toggle"
-        .checked=${this.userSettings.leftClickOpensMenu()}
+        .checked=${userSettings.leftClickOpensMenu()}
         @change=${this.toggleLeftClickOpensMenu}
       ></setting-toggle>
 
@@ -258,7 +256,7 @@ export class UserSettingModal extends LitElement {
         label="${translateText("user_setting.anonymous_names_label")}"
         description="${translateText("user_setting.anonymous_names_desc")}"
         id="anonymous-names-toggle"
-        .checked=${this.userSettings.anonymousNames()}
+        .checked=${userSettings.anonymousNames()}
         @change=${this.toggleAnonymousNames}
       ></setting-toggle>
 
