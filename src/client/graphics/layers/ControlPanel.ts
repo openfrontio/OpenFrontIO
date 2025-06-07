@@ -10,6 +10,8 @@ import { renderNumber, renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
+type BalanceStrategy = "Peaceful" | "Balanced" | "Aggressive";
+
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Layer {
   public game: GameView;
@@ -20,10 +22,10 @@ export class ControlPanel extends LitElement implements Layer {
   private attackRatio: number = 0.2;
 
   @state()
-  private targetTroopRatio = 0.95;
+  private targetTroopRatio = 0.5;
 
   @state()
-  private currentTroopRatio = 0.95;
+  private currentTroopRatio = 0.5;
 
   @state()
   private _population: number;
@@ -62,9 +64,19 @@ export class ControlPanel extends LitElement implements Layer {
     this.attackRatio = Number(
       localStorage.getItem("settings.attackRatio") ?? "0.2",
     );
-    this.targetTroopRatio = Number(
-      localStorage.getItem("settings.troopRatio") ?? "0.95",
-    );
+    if (localStorage.getItem("settings.showTroopBalanceSlider") === "false") {
+      this.targetTroopRatio = Number(
+        this.convertBalanceToRatio(
+          localStorage.getItem("settings.troopBalance") ?? "Balanced",
+        ),
+      );
+    } else {
+      this.targetTroopRatio = Number(
+        localStorage.getItem("settings.troopRatio") ?? 0.95,
+      );
+    }
+
+    this.eventBus.emit(new SendSetTargetTroopRatioEvent(this.targetTroopRatio));
     this.init_ = true;
     this.uiState.attackRatio = this.attackRatio;
     this.currentTroopRatio = this.targetTroopRatio;
@@ -95,13 +107,6 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   tick() {
-    if (this.init_) {
-      this.eventBus.emit(
-        new SendSetTargetTroopRatioEvent(this.targetTroopRatio),
-      );
-      this.init_ = false;
-    }
-
     if (!this._isVisible && !this.game.inSpawnPhase()) {
       this.setVisibile(true);
     }
@@ -133,6 +138,50 @@ export class ControlPanel extends LitElement implements Layer {
 
   onAttackRatioChange(newRatio: number) {
     this.uiState.attackRatio = newRatio;
+  }
+
+  convertBalanceToRatio(strategy: string) {
+    let ratio: number = 0.5;
+    if (typeof strategy === "string") {
+      switch (strategy) {
+        case "Aggressive":
+          ratio = 0.75;
+          break;
+        case "Peaceful":
+          ratio = 0.25;
+          break;
+        default:
+          break;
+      }
+    } else {
+      console.warn("Invalid balance provided, defaulting to Balanced");
+    }
+    return ratio;
+  }
+
+  private getNextBalance(current: BalanceStrategy): {
+    balance: BalanceStrategy;
+    ratio: number;
+  } {
+    const strategies: Record<
+      BalanceStrategy,
+      { balance: BalanceStrategy; ratio: number }
+    > = {
+      Peaceful: { balance: "Balanced", ratio: 0.5 },
+      Balanced: { balance: "Aggressive", ratio: 0.75 },
+      Aggressive: { balance: "Peaceful", ratio: 0.25 },
+    };
+
+    return strategies[current] || strategies.Balanced;
+  }
+
+  updateBalance() {
+    const current =
+      (localStorage.getItem("settings.troopBalance") as BalanceStrategy) ||
+      "Balanced";
+    const { balance, ratio } = this.getNextBalance(current);
+    this.targetTroopRatio = ratio;
+    return balance;
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
@@ -243,7 +292,33 @@ export class ControlPanel extends LitElement implements Layer {
             ${translateText("control_panel.workers")}:
             <span translate="no">${renderTroops(this._workers)}</span></label
           >
-          <div class="relative h-8">
+          <button
+            @click=${() => {
+              localStorage.setItem(
+                "settings.troopBalance",
+                this.updateBalance() ?? "Balanced",
+              );
+              this.onTroopChange(this.targetTroopRatio);
+            }}
+            class="bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-es-sm lg:rounded-lg backdrop-blur-md text-opacity-90 text-white rounded text-sm lg:text-xl ${localStorage.getItem(
+              "settings.showTroopBalanceSlider",
+            ) === "false"
+              ? ""
+              : "hidden"}"
+            title="${translateText("user_setting.troop_balance_label")}"
+          >
+            ${translateText(
+              "control_panel.troop_balance." +
+                localStorage.getItem("settings.troopBalance")?.toLowerCase(),
+            )}
+          </button>
+          <div
+            class="relative h-8 ${localStorage.getItem(
+              "settings.showTroopBalanceSlider",
+            ) === "false"
+              ? "hidden"
+              : ""}"
+          >
             <!-- Background track -->
             <div
               class="absolute left-0 right-0 top-3 h-2 bg-white/20 rounded"

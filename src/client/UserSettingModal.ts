@@ -4,6 +4,7 @@ import { translateText } from "../client/Utils";
 import { UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
+import "./components/baseComponents/setting/SettingMultiToggle";
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
@@ -17,6 +18,10 @@ export class UserSettingModal extends LitElement {
 
   @state() private keySequence: string[] = [];
   @state() private showEasterEggSettings = false;
+  @state() private balanceMode: string =
+    localStorage.getItem("settings.showTroopBalanceSlider") === "true"
+      ? "slider"
+      : "basic";
 
   connectedCallback() {
     super.connectedCallback();
@@ -118,6 +123,19 @@ export class UserSettingModal extends LitElement {
     this.userSettings.set("settings.anonymousNames", enabled);
 
     console.log("🙈 Anonymous Names:", enabled ? "ON" : "OFF");
+  }
+
+  private toggleShowTroopBalanceSlider(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.showTroopBalanceSlider", enabled);
+    this.balanceMode = enabled ? "slider" : "basic";
+  }
+
+  private toggleMilitaryStrategies(e: CustomEvent<{ value: string }>) {
+    const nextValue = e.detail?.value;
+    localStorage.setItem("settings.troopBalance", nextValue);
   }
 
   private toggleLeftClickOpensMenu(e: CustomEvent<{ checked: boolean }>) {
@@ -262,71 +280,105 @@ export class UserSettingModal extends LitElement {
         @change=${this.toggleAnonymousNames}
       ></setting-toggle>
 
+      <div class="setting-item-group vertical">
+        <setting-toggle
+          label="${translateText(
+            "user_setting.troop_balance_slider_show_label",
+          )}"
+          description="${translateText(
+            "user_setting.troop_balance_slider_show_desc",
+          )}"
+          id="id="troop-balance-slider-toggle"
+          .checked=${this.userSettings.showTroopBalanceSlider()}
+          @change=${this.toggleShowTroopBalanceSlider}
+        ></setting-toggle>
+
+        <div class=${this.balanceMode === "basic" ? "" : "hidden"}>
+          <setting-multi-toggle
+            label="${translateText("user_setting.troop_balance_label")}"
+            description="${translateText("user_setting.troop_balance_desc")}"
+            id="strategy-toggle"
+            @change=${this.toggleMilitaryStrategies}
+            .value=${String(
+              localStorage.getItem("settings.troopBalance") ?? "Balanced",
+            )}
+            .values=${["Peaceful", "Balanced", "Aggressive"]}
+          ></setting-multi-toggle>
+        </div>
+
+        <!-- 🪖🛠️ Troop Ratio -->
+        <div class=${this.balanceMode === "basic" ? "hidden" : ""}>
+          <setting-slider
+            label=""
+            description="${translateText("user_setting.troop_balance_desc")}"
+            min="1"
+            max="100"
+            .value=${
+              Number(localStorage.getItem("settings.troopRatio") ?? "0.95") *
+              100
+            }
+            @change=${this.sliderTroopRatio}
+          ></setting-slider>
+        </div>
+      </div>
+
       <!-- ⚔️ Attack Ratio -->
       <setting-slider
         label="${translateText("user_setting.attack_ratio_label")}"
         description="${translateText("user_setting.attack_ratio_desc")}"
         min="1"
         max="100"
-        .value=${Number(localStorage.getItem("settings.attackRatio") ?? "0.2") *
-        100}
+        .value=${
+          Number(localStorage.getItem("settings.attackRatio") ?? "0.2") * 100
+        }
         @change=${this.sliderAttackRatio}
       ></setting-slider>
 
-      <!-- 🪖🛠️ Troop Ratio -->
-      <setting-slider
-        label="${translateText("user_setting.troop_ratio_label")}"
-        description="${translateText("user_setting.troop_ratio_desc")}"
-        min="1"
-        max="100"
-        .value=${Number(localStorage.getItem("settings.troopRatio") ?? "0.95") *
-        100}
-        @change=${this.sliderTroopRatio}
-      ></setting-slider>
+      ${
+        this.showEasterEggSettings
+          ? html`
+              <setting-slider
+                label="${translateText(
+                  "user_setting.easter_writing_speed_label",
+                )}"
+                description="${translateText(
+                  "user_setting.easter_writing_speed_desc",
+                )}"
+                min="0"
+                max="100"
+                value="40"
+                easter="true"
+                @change=${(e: CustomEvent) => {
+                  const value = e.detail?.value;
+                  if (value !== undefined) {
+                    console.log("Changed:", value);
+                  } else {
+                    console.warn("Slider event missing detail.value", e);
+                  }
+                }}
+              ></setting-slider>
 
-      ${this.showEasterEggSettings
-        ? html`
-            <setting-slider
-              label="${translateText(
-                "user_setting.easter_writing_speed_label",
-              )}"
-              description="${translateText(
-                "user_setting.easter_writing_speed_desc",
-              )}"
-              min="0"
-              max="100"
-              value="40"
-              easter="true"
-              @change=${(e: CustomEvent) => {
-                const value = e.detail?.value;
-                if (value !== undefined) {
-                  console.log("Changed:", value);
-                } else {
-                  console.warn("Slider event missing detail.value", e);
-                }
-              }}
-            ></setting-slider>
-
-            <setting-number
-              label="${translateText("user_setting.easter_bug_count_label")}"
-              description="${translateText(
-                "user_setting.easter_bug_count_desc",
-              )}"
-              value="100"
-              min="0"
-              max="1000"
-              easter="true"
-              @change=${(e: CustomEvent) => {
-                const value = e.detail?.value;
-                if (value !== undefined) {
-                  console.log("Changed:", value);
-                } else {
-                  console.warn("Slider event missing detail.value", e);
-                }
-              }}
-            ></setting-number>
-          `
-        : null}
+              <setting-number
+                label="${translateText("user_setting.easter_bug_count_label")}"
+                description="${translateText(
+                  "user_setting.easter_bug_count_desc",
+                )}"
+                value="100"
+                min="0"
+                max="1000"
+                easter="true"
+                @change=${(e: CustomEvent) => {
+                  const value = e.detail?.value;
+                  if (value !== undefined) {
+                    console.log("Changed:", value);
+                  } else {
+                    console.warn("Slider event missing detail.value", e);
+                  }
+                }}
+              ></setting-number>
+            `
+          : null
+      }
     `;
   }
 
