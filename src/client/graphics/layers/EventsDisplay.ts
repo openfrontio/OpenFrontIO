@@ -384,7 +384,9 @@ export class EventsDisplay extends LitElement implements Layer {
       description: `${recipient.name()} ${
         update.accepted ? "accepted" : "rejected"
       } your alliance request`,
-      severity: update.accepted ? MessageSeverity.SUCCESS : MessageSeverity.ERROR,
+      severity: update.accepted
+        ? MessageSeverity.SUCCESS
+        : MessageSeverity.ERROR,
       type: MessageType.ALLIANCE,
       highlight: true,
       createdAt: this.game.ticks(),
@@ -563,9 +565,9 @@ export class EventsDisplay extends LitElement implements Layer {
       case MessageSeverity.INFO:
         return "text-gray-200";
       case MessageSeverity.WARN:
-        return "text-yellow-300";
+        return "text-yellow-500";
       case MessageSeverity.ERROR:
-        return "text-red-300";
+        return "text-red-400";
       default:
         return "text-white";
     }
@@ -616,7 +618,9 @@ export class EventsDisplay extends LitElement implements Layer {
                   className: "text-left text-red-400",
                   translate: false,
                 })}
-                                 ${attack.retreating ? `(${translateText("events_display.retreating")}...)` : ""}
+                ${attack.retreating
+                  ? `(${translateText("events_display.retreating")}...)`
+                  : ""}
               `,
             )}
           `
@@ -636,7 +640,9 @@ export class EventsDisplay extends LitElement implements Layer {
                       content: html`
                         ${renderTroops(attack.troops)}
                         ${(
-                          this.game.playerBySmallID(attack.targetID) as PlayerView
+                          this.game.playerBySmallID(
+                            attack.targetID,
+                          ) as PlayerView
                         )?.name()}
                       `,
                       onClick: async () => this.attackWarningOnClick(attack),
@@ -650,7 +656,11 @@ export class EventsDisplay extends LitElement implements Layer {
                           className: "text-left flex-shrink-0",
                           disabled: attack.retreating,
                         })
-                      : html`<span class="flex-shrink-0">(${translateText("events_display.retreating")}...)</span>`}
+                      : html`<span class="flex-shrink-0"
+                          >(${translateText(
+                            "events_display.retreating",
+                          )}...)</span
+                        >`}
                   </div>
                 `,
               )}
@@ -669,18 +679,24 @@ export class EventsDisplay extends LitElement implements Layer {
                 (landAttack) => html`
                   <div class="inline-flex items-center gap-1">
                     ${this.renderButton({
-                      content: html`${renderTroops(landAttack.troops)} Wilderness`,
+                      content: html`${renderTroops(landAttack.troops)}
+                      Wilderness`,
                       className: "text-left text-gray-400",
                       translate: false,
                     })}
                     ${!landAttack.retreating
                       ? this.renderButton({
                           content: "❌",
-                          onClick: () => this.emitCancelAttackIntent(landAttack.id),
+                          onClick: () =>
+                            this.emitCancelAttackIntent(landAttack.id),
                           className: "text-left flex-shrink-0",
                           disabled: landAttack.retreating,
                         })
-                      : html`<span class="flex-shrink-0">(${translateText("events_display.retreating")}...)</span>`}
+                      : html`<span class="flex-shrink-0"
+                          >(${translateText(
+                            "events_display.retreating",
+                          )}...)</span
+                        >`}
                   </div>
                 `,
               )}
@@ -699,7 +715,8 @@ export class EventsDisplay extends LitElement implements Layer {
                 (boat) => html`
                   <div class="inline-flex items-center gap-1">
                     ${this.renderButton({
-                      content: html`${translateText("events_display.boat")}: ${renderTroops(boat.troops())}`,
+                      content: html`${translateText("events_display.boat")}:
+                      ${renderTroops(boat.troops())}`,
                       onClick: () => this.emitGoToUnitEvent(boat),
                       className: "text-left text-blue-400",
                       translate: false,
@@ -711,7 +728,11 @@ export class EventsDisplay extends LitElement implements Layer {
                           className: "text-left flex-shrink-0",
                           disabled: boat.retreating(),
                         })
-                      : html`<span class="flex-shrink-0">(${translateText("events_display.retreating")}...)</span>`}
+                      : html`<span class="flex-shrink-0"
+                          >(${translateText(
+                            "events_display.retreating",
+                          )}...)</span
+                        >`}
                   </div>
                 `,
               )}
@@ -796,7 +817,9 @@ export class EventsDisplay extends LitElement implements Layer {
                       content: html`<img
                         src="${swordIcon}"
                         class="w-5 h-5"
-                        style="filter: ${this.eventsFilters.get(MessageType.ATTACK)
+                        style="filter: ${this.eventsFilters.get(
+                          MessageType.ATTACK,
+                        )
                           ? "grayscale(1) opacity(0.5)"
                           : "none"}"
                       />`,
@@ -807,7 +830,9 @@ export class EventsDisplay extends LitElement implements Layer {
                       content: html`<img
                         src="${donateGoldIcon}"
                         class="w-5 h-5"
-                        style="filter: ${this.eventsFilters.get(MessageType.TRADE)
+                        style="filter: ${this.eventsFilters.get(
+                          MessageType.TRADE,
+                        )
                           ? "grayscale(1) opacity(0.5)"
                           : "none"}"
                       />`,
@@ -818,18 +843,23 @@ export class EventsDisplay extends LitElement implements Layer {
                       content: html`<img
                         src="${allianceIcon}"
                         class="w-5 h-5"
-                        style="filter: ${this.eventsFilters.get(MessageType.ALLIANCE)
+                        style="filter: ${this.eventsFilters.get(
+                          MessageType.ALLIANCE,
+                        )
                           ? "grayscale(1) opacity(0.5)"
                           : "none"}"
                       />`,
-                      onClick: () => this.toggleEventFilter(MessageType.ALLIANCE),
+                      onClick: () =>
+                        this.toggleEventFilter(MessageType.ALLIANCE),
                       className: "cursor-pointer pointer-events-auto",
                     })}
                     ${this.renderButton({
                       content: html`<img
                         src="${chatIcon}"
                         class="w-5 h-5"
-                        style="filter: ${this.eventsFilters.get(MessageType.CHAT)
+                        style="filter: ${this.eventsFilters.get(
+                          MessageType.CHAT,
+                        )
                           ? "grayscale(1) opacity(0.5)"
                           : "none"}"
                       />`,
@@ -872,7 +902,11 @@ export class EventsDisplay extends LitElement implements Layer {
                     <tbody>
                       ${filteredEvents.map(
                         (event, index) => html`
-                          <tr class="${this.getMessageTypeClasses(event.severity)}">
+                          <tr
+                            class="${this.getMessageTypeClasses(
+                              event.severity,
+                            )}"
+                          >
                             <td class="lg:px-2 lg:py-1 p-1 text-left">
                               ${event.focusID
                                 ? this.renderButton({
@@ -895,7 +929,7 @@ export class EventsDisplay extends LitElement implements Layer {
                                       className: "text-left",
                                     })
                                   : this.getEventDescription(event)}
-                <!-- Events with buttons (Alliance requests) -->
+                              <!-- Events with buttons (Alliance requests) -->
                               ${event.buttons
                                 ? html`
                                     <div class="flex flex-wrap gap-1.5 mt-1">
@@ -913,9 +947,14 @@ export class EventsDisplay extends LitElement implements Layer {
                                             @click=${() => {
                                               btn.action();
                                               if (!btn.preventClose) {
-                                                const originalIndex = this.events.findIndex(e => e === event);
+                                                const originalIndex =
+                                                  this.events.findIndex(
+                                                    (e) => e === event,
+                                                  );
                                                 if (originalIndex !== -1) {
-                                                  this.removeEvent(originalIndex);
+                                                  this.removeEvent(
+                                                    originalIndex,
+                                                  );
                                                 }
                                               }
                                               this.requestUpdate();
