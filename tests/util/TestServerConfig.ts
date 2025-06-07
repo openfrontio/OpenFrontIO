@@ -4,6 +4,21 @@ import { GameMapType } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
+  cloudflareConfigDir(): string {
+    throw new Error("Method not implemented.");
+  }
+  domain(): string {
+    throw new Error("Method not implemented.");
+  }
+  subdomain(): string {
+    throw new Error("Method not implemented.");
+  }
+  cloudflareAccountId(): string {
+    throw new Error("Method not implemented.");
+  }
+  cloudflareApiToken(): string {
+    throw new Error("Method not implemented.");
+  }
   jwtAudience(): string {
     throw new Error("Method not implemented.");
   }
