@@ -225,6 +225,13 @@ export class EventsDisplay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  disconnectedCallback() {
+    if (this.goldAmountTimeoutId !== null) {
+      clearTimeout(this.goldAmountTimeoutId);
+      this.goldAmountTimeoutId = null;
+    }
+  }
+
   private addEvent(event: GameEvent) {
     this.events = [...this.events, event];
     if (this._hidden === true) {
@@ -896,7 +903,7 @@ export class EventsDisplay extends LitElement implements Layer {
               >
                 <div>
                   <table
-                    class="w-full border-collapse text-white shadow-lg lg:text-base text-md md:text-xs"
+                    class="w-full max-h-none border-collapse text-white shadow-lg lg:text-base text-md md:text-xs"
                     style="pointer-events: auto;"
                   >
                     <tbody>
