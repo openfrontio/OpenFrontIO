@@ -19,11 +19,14 @@ export class ControlPanel extends LitElement implements Layer {
   @state()
   private attackRatio: number = 0.2;
 
-  @state()
-  private targetTroopRatio = 0.95;
+  private balances = {
+    Peaceful: 0.25,
+    Balanced: 0.5,
+    Aggressive: 0.75,
+  };
 
   @state()
-  private currentTroopRatio = 0.95;
+  private targetTroopRatio = 0.5;
 
   @state()
   private _population: number;
@@ -63,11 +66,13 @@ export class ControlPanel extends LitElement implements Layer {
       localStorage.getItem("settings.attackRatio") ?? "0.2",
     );
     this.targetTroopRatio = Number(
-      localStorage.getItem("settings.troopRatio") ?? "0.95",
+      this.convertBalanceToRatio(
+        localStorage.getItem("settings.troopBalance") ?? "Balanced",
+      ),
     );
+    this.eventBus.emit(new SendSetTargetTroopRatioEvent(this.targetTroopRatio));
     this.init_ = true;
     this.uiState.attackRatio = this.attackRatio;
-    this.currentTroopRatio = this.targetTroopRatio;
     this.eventBus.on(AttackRatioEvent, (event) => {
       let newAttackRatio =
         (parseInt(
@@ -95,13 +100,7 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   tick() {
-    if (this.init_) {
-      this.eventBus.emit(
-        new SendSetTargetTroopRatioEvent(this.targetTroopRatio),
-      );
-      this.init_ = false;
-    }
-
+    this.eventBus.emit(new SendSetTargetTroopRatioEvent(this.targetTroopRatio));
     if (!this._isVisible && !this.game.inSpawnPhase()) {
       this.setVisibile(true);
     }
@@ -127,12 +126,47 @@ export class ControlPanel extends LitElement implements Layer {
     this.popRate = this.game.config().populationIncreaseRate(player) * 10;
     this._goldPerSecond = this.game.config().goldAdditionRate(player) * 10n;
 
-    this.currentTroopRatio = player.troops() / player.population();
     this.requestUpdate();
   }
 
   onAttackRatioChange(newRatio: number) {
     this.uiState.attackRatio = newRatio;
+  }
+
+  convertBalanceToRatio(strategy: string) {
+    let ratio: number = 0.5;
+    if (typeof strategy === "string") {
+      switch (strategy) {
+        case "Aggressive":
+          ratio = 0.75;
+          break;
+        case "Peaceful":
+          ratio = 0.25;
+          break;
+        default:
+          break;
+      }
+    } else {
+      console.warn("Invalid balance provided, defaulting to Balanced");
+    }
+    return ratio;
+  }
+
+  updateBalance(targetRatio: number) {
+    const ratioStep = 0.25;
+    switch (targetRatio) {
+      case 0.25:
+      case 0.5:
+        targetRatio += ratioStep;
+        break;
+      case 0.75:
+        targetRatio = 0.25;
+    }
+    this.targetTroopRatio = targetRatio;
+    // Given the ratio, find the balance key and return it.
+    return Object.keys(this.balances).find(
+      (key) => this.balances[key] === targetRatio,
+    );
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
@@ -189,12 +223,6 @@ export class ControlPanel extends LitElement implements Layer {
           border-radius: 50%;
           cursor: pointer;
         }
-        .targetTroopRatio::-webkit-slider-thumb {
-          border-color: rgb(59 130 246);
-        }
-        .targetTroopRatio::-moz-range-thumb {
-          border-color: rgb(59 130 246);
-        }
         .attackRatio::-webkit-slider-thumb {
           border-color: rgb(239 68 68);
         }
@@ -243,30 +271,22 @@ export class ControlPanel extends LitElement implements Layer {
             ${translateText("control_panel.workers")}:
             <span translate="no">${renderTroops(this._workers)}</span></label
           >
-          <div class="relative h-8">
-            <!-- Background track -->
-            <div
-              class="absolute left-0 right-0 top-3 h-2 bg-white/20 rounded"
-            ></div>
-            <!-- Fill track -->
-            <div
-              class="absolute left-0 top-3 h-2 bg-blue-500/60 rounded transition-all duration-300"
-              style="width: ${this.currentTroopRatio * 100}%"
-            ></div>
-            <!-- Range input - exactly overlaying the visual elements -->
-            <input
-              type="range"
-              min="1"
-              max="100"
-              .value=${(this.targetTroopRatio * 100).toString()}
-              @input=${(e: Event) => {
-                this.targetTroopRatio =
-                  parseInt((e.target as HTMLInputElement).value) / 100;
-                this.onTroopChange(this.targetTroopRatio);
-              }}
-              class="absolute left-0 right-0 top-2 m-0 h-4 cursor-pointer targetTroopRatio"
-            />
-          </div>
+          <button
+            @click=${() => {
+              localStorage.setItem(
+                "settings.troopStrategy",
+                this.updateBalance(this.targetTroopRatio) ?? "Balanced",
+              );
+              this.onTroopChange(this.targetTroopRatio);
+            }}
+            class="bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-es-sm lg:rounded-lg backdrop-blur-md text-opacity-90 text-white rounded text-sm lg:text-xl"
+            title="${translateText("user_setting.troop_balance_label")}"
+          >
+            ${translateText(
+              "control_panel.troop_balance." +
+                localStorage.getItem("settings.troopBalance")?.toLowerCase(),
+            )}
+          </button>
         </div>
 
         <div class="relative mb-0 lg:mb-4">

@@ -245,6 +245,14 @@
   margin-left: auto;
 }
 
+.multi-toggle {
+  cursor: pointer;
+  background-color: #333;
+  transition: 0.4s;
+  border-radius: 34px;
+  padding: 0.25em 0.5em;
+}
+
 .slider-round {
   position: absolute;
   cursor: pointer;
