@@ -15,11 +15,10 @@ export class GameStartingModal extends LitElement {
       left: 0;
       width: 100vw;
       height: 100vh;
-      background-color: rgba(30, 30, 30, 0.7);
+      background-color: #1a1a1a; /* Dark, gritty Cold War background */
       z-index: 9999;
-      color: white;
+      color: #fff;
       text-align: center;
-      transition: opacity 0.3s ease-in-out;
       overflow: hidden;
     }
 
@@ -31,91 +30,69 @@ export class GameStartingModal extends LitElement {
       opacity: 1;
     }
 
-    .modal-content {
-      background-color: rgba(30, 30, 30, 0.7);
-      padding: 25px;
-      border-radius: 10px;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(5px);
-      width: 300px;
-      position: relative;
-      z-index: 2;
-    }
-
     .rectangle-overlay {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(255, 100, 100, 0.9);
+      background-color: #8b0000; /* Deep red, fully opaque, war-like */
       transform: translateY(-100%);
       animation: slideInOut 5s ease-in-out forwards;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
       z-index: 1;
+      box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.7); /* Gritty inset shadow */
     }
 
     @keyframes slideInOut {
       0% {
         transform: translateY(-100%);
+        opacity: 0;
       }
       10% {
         transform: translateY(0);
+        opacity: 1;
       }
       90% {
         transform: translateY(0);
+        opacity: 1;
       }
       100% {
         transform: translateY(100%);
+        opacity: 0;
       }
     }
 
-    .modal h2 {
+    .rectangle-overlay h2 {
+      font-family: "Bebas Neue", "Impact", sans-serif; /* Bold, Cold War-style font */
+      font-size: 48px;
       margin-bottom: 15px;
-      font-size: 22px;
-      color: white;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.8); /* Harsh shadow for intensity */
     }
 
-    .modal p {
-      margin-bottom: 20px;
-      background-color: rgba(0, 0, 0, 0.3);
-      padding: 10px;
+    .rectangle-overlay p {
+      font-family: "Bebas Neue", "Courier New", monospace; /* Monospaced, military vibe */
+      font-size: 24px;
+      color: #d3d3d3; /* Slightly off-white for contrast */
+      background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent backing for readability */
+      padding: 10px 20px;
       border-radius: 5px;
-    }
-
-    .button-container {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    .modal button {
-      padding: 12px;
-      font-size: 16px;
-      cursor: pointer;
-      background: rgba(255, 100, 100, 0.7);
-      color: white;
-      border: none;
-      border-radius: 5px;
-      transition:
-        background-color 0.2s ease,
-        transform 0.1s ease;
-    }
-
-    .modal button:hover {
-      background: rgba(255, 100, 100, 0.9);
-      transform: translateY(-1px);
-    }
-
-    .modal button:active {
-      transform: translateY(1px);
+      border: 2px solid #444; /* Rough, military border */
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
   `;
 
   render() {
     return html`
       <div class="modal ${this.isVisible ? "visible" : ""}">
-        <div class="rectangle-overlay"></div>
-        <div class="modal-content">
+        <div class="rectangle-overlay">
           <h2>${translateText("game_starting_modal.title")}</h2>
           <p>${translateText("game_starting_modal.desc")}</p>
         </div>
@@ -126,7 +103,7 @@ export class GameStartingModal extends LitElement {
   show() {
     this.isVisible = true;
     this.requestUpdate();
-    
+    // Ensure modal stays visible for 5 seconds
     setTimeout(() => {
       this.hide();
     }, 5000);
