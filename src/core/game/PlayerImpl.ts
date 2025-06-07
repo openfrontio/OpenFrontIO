@@ -579,6 +579,7 @@ export class PlayerImpl implements Player {
       MessageType.TRADE,
       MessageSeverity.SUCCESS,
       recipient.id(),
+      gold,
     );
     return true;
   }

@@ -163,6 +163,7 @@ export interface DisplayMessageUpdate {
   message: string;
   messageType: MessageType;
   messageSeverity: MessageSeverity;
+  goldAmount?: bigint;
   playerID: number | null;
 }
 

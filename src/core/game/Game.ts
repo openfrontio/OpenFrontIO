@@ -585,6 +585,7 @@ export interface Game extends GameMap {
     type: MessageType,
     severity: MessageSeverity,
     playerID: PlayerID | null,
+    goldAmount?: bigint,
   ): void;
   displayIncomingUnit(
     unitID: number,

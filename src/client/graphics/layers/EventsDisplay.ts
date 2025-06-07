@@ -37,7 +37,7 @@ import { Layer } from "./Layer";
 
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
-import { renderTroops } from "../../Utils";
+import { renderNumber, renderTroops } from "../../Utils";
 import {
   GoToPlayerEvent,
   GoToPositionEvent,
@@ -81,6 +81,9 @@ export class EventsDisplay extends LitElement implements Layer {
   @state() private _hidden: boolean = false;
   @state() private _isVisible: boolean = false;
   @state() private newEvents: number = 0;
+  @state() private latestGoldAmount: bigint | null = null;
+  @state() private goldAmountAnimating: boolean = false;
+  private goldAmountTimeoutId: ReturnType<typeof setTimeout> | null = null;
   @state() private eventsFilters: Map<MessageType, boolean> = new Map([
     [MessageType.ATTACK, false],
     [MessageType.TRADE, false],
@@ -250,6 +253,29 @@ export class EventsDisplay extends LitElement implements Layer {
       (!myPlayer || myPlayer.smallID() !== event.playerID)
     ) {
       return;
+    }
+
+    if (event.goldAmount !== undefined) {
+      const hasChanged = this.latestGoldAmount !== event.goldAmount;
+      this.latestGoldAmount = event.goldAmount;
+
+      if (this.goldAmountTimeoutId !== null) {
+        clearTimeout(this.goldAmountTimeoutId);
+      }
+
+      this.goldAmountTimeoutId = setTimeout(() => {
+        this.latestGoldAmount = null;
+        this.goldAmountTimeoutId = null;
+        this.requestUpdate();
+      }, 5000);
+
+      if (hasChanged) {
+        this.goldAmountAnimating = true;
+        setTimeout(() => {
+          this.goldAmountAnimating = false;
+          this.requestUpdate();
+        }, 600);
+      }
     }
 
     this.addEvent({
@@ -700,6 +726,28 @@ export class EventsDisplay extends LitElement implements Layer {
       return html``;
     }
 
+    const styles = html`
+      <style>
+        @keyframes goldBounce {
+          0% {
+            transform: scale(1);
+          }
+          30% {
+            transform: scale(1.3);
+          }
+          50% {
+            transform: scale(1.1);
+          }
+          70% {
+            transform: scale(1.2);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+      </style>
+    `;
+
     const filteredEvents = this.events.filter((event) => {
       return !this.eventsFilters.get(event.type);
     });
@@ -714,6 +762,7 @@ export class EventsDisplay extends LitElement implements Layer {
     });
 
     return html`
+      ${styles}
       <!-- Events Toggle (when hidden) -->
       ${this._hidden
         ? html`
@@ -788,11 +837,26 @@ export class EventsDisplay extends LitElement implements Layer {
                       className: "cursor-pointer pointer-events-auto",
                     })}
                   </div>
-                  ${this.renderButton({
-                    content: "Hide",
-                    onClick: this.toggleHidden,
-                    className: "text-white cursor-pointer pointer-events-auto",
-                  })}
+                  <div class="flex items-center gap-3">
+                    ${this.latestGoldAmount !== null
+                      ? html`<span
+                          class="text-green-400 font-semibold transition-all duration-300 ${this
+                            .goldAmountAnimating
+                            ? "animate-pulse scale-110"
+                            : "scale-100"}"
+                          style="animation: ${this.goldAmountAnimating
+                            ? "goldBounce 0.6s ease-out"
+                            : "none"}"
+                          >+${renderNumber(this.latestGoldAmount)}</span
+                        >`
+                      : ""}
+                    ${this.renderButton({
+                      content: "Hide",
+                      onClick: this.toggleHidden,
+                      className:
+                        "text-white cursor-pointer pointer-events-auto",
+                    })}
+                  </div>
                 </div>
               </div>
 

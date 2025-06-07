@@ -352,6 +352,7 @@ export class AttackExecution implements Execution {
       MessageType.ATTACK,
       MessageSeverity.SUCCESS,
       this._owner.id(),
+      gold,
     );
     this.target.removeGold(gold);
     this._owner.addGold(gold);

@@ -140,6 +140,7 @@ export class TradeShipExecution implements Execution {
         MessageType.ATTACK,
         MessageSeverity.SUCCESS,
         this.tradeShip!.owner().id(),
+        gold,
       );
     } else {
       this.srcPort.owner().addGold(gold);
@@ -149,12 +150,14 @@ export class TradeShipExecution implements Execution {
         MessageType.TRADE,
         MessageSeverity.SUCCESS,
         this._dstPort.owner().id(),
+        gold,
       );
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from trade with ${this._dstPort.owner().displayName()}`,
         MessageType.TRADE,
         MessageSeverity.SUCCESS,
         this.srcPort.owner().id(),
+        gold,
       );
     }
     return;

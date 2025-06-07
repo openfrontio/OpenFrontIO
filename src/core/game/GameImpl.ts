@@ -614,6 +614,7 @@ export class GameImpl implements Game {
     type: MessageType,
     severity: MessageSeverity,
     playerID: PlayerID | null,
+    goldAmount?: bigint,
   ): void {
     let id: number | null = null;
     if (playerID !== null) {
@@ -625,6 +626,7 @@ export class GameImpl implements Game {
       messageSeverity: severity,
       message: message,
       playerID: id,
+      goldAmount: goldAmount,
     });
   }
 

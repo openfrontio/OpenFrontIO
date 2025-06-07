@@ -240,6 +240,7 @@ export class PlayerExecution implements Execution {
         MessageType.ATTACK,
         MessageSeverity.SUCCESS,
         capturing.id(),
+        gold,
       );
       capturing.addGold(gold);
       this.player.removeGold(gold);
