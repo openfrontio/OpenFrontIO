@@ -1,6 +1,7 @@
 import { simpleHash, toInt, withinInt } from "../Util";
 import {
   AllUnitParams,
+  MessageSeverity,
   MessageType,
   Player,
   Tick,
@@ -168,12 +169,14 @@ export class UnitImpl implements Unit {
     this.mg.addUpdate(this.toUpdate());
     this.mg.displayMessage(
       `Your ${this.type()} was captured by ${newOwner.displayName()}`,
-      MessageType.ERROR,
+      MessageType.ATTACK,
+      MessageSeverity.ERROR,
       this._lastOwner.id(),
     );
     this.mg.displayMessage(
       `Captured ${this.type()} from ${this._lastOwner.displayName()}`,
-      MessageType.SUCCESS,
+      MessageType.ATTACK,
+      MessageSeverity.SUCCESS,
       newOwner.id(),
     );
   }
@@ -200,7 +203,8 @@ export class UnitImpl implements Unit {
     if (displayMessage !== false && this._type !== UnitType.MIRVWarhead) {
       this.mg.displayMessage(
         `Your ${this._type} was destroyed`,
-        MessageType.ERROR,
+        MessageType.ATTACK,
+        MessageSeverity.ERROR,
         this.owner().id(),
       );
     }

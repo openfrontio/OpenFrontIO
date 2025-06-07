@@ -1,6 +1,7 @@
 import {
   Execution,
   Game,
+  MessageSeverity,
   MessageType,
   Player,
   PlayerID,
@@ -78,7 +79,8 @@ export class MirvExecution implements Execution {
       this.mg.displayIncomingUnit(
         this.nuke.id(),
         `⚠️⚠️⚠️ ${this.player.name()} - MIRV INBOUND ⚠️⚠️⚠️`,
-        MessageType.ERROR,
+        MessageType.ATTACK,
+        MessageSeverity.ERROR,
         this.targetPlayer.id(),
       );
     }

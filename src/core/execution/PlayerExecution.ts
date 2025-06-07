@@ -3,6 +3,7 @@ import { Config } from "../configuration/Config";
 import {
   Execution,
   Game,
+  MessageSeverity,
   MessageType,
   Player,
   PlayerID,
@@ -236,7 +237,8 @@ export class PlayerExecution implements Execution {
         `Conquered ${this.player.displayName()} received ${renderNumber(
           gold,
         )} gold`,
-        MessageType.SUCCESS,
+        MessageType.ATTACK,
+        MessageSeverity.SUCCESS,
         capturing.id(),
       );
       capturing.addGold(gold);

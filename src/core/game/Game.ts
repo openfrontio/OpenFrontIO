@@ -583,12 +583,14 @@ export interface Game extends GameMap {
   displayMessage(
     message: string,
     type: MessageType,
+    severity: MessageSeverity,
     playerID: PlayerID | null,
   ): void;
   displayIncomingUnit(
     unitID: number,
     message: string,
     type: MessageType,
+    severity: MessageSeverity,
     playerID: PlayerID | null,
   ): void;
 
@@ -649,11 +651,17 @@ export interface EmojiMessage {
   createdAt: Tick;
 }
 
-export enum MessageType {
+export enum MessageSeverity {
   SUCCESS,
   INFO,
   WARN,
   ERROR,
+}
+
+export enum MessageType {
+  ATTACK,
+  ALLIANCE,
+  TRADE,
   CHAT,
 }
 

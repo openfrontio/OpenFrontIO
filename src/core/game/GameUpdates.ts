@@ -3,6 +3,7 @@ import {
   EmojiMessage,
   GameUpdates,
   Gold,
+  MessageSeverity,
   MessageType,
   NameViewData,
   PlayerID,
@@ -161,6 +162,7 @@ export interface DisplayMessageUpdate {
   type: GameUpdateType.DisplayEvent;
   message: string;
   messageType: MessageType;
+  messageSeverity: MessageSeverity;
   playerID: number | null;
 }
 
@@ -192,5 +194,6 @@ export interface UnitIncomingUpdate {
   unitID: number;
   message: string;
   messageType: MessageType;
+  messageSeverity: MessageSeverity;
   playerID: number;
 }

@@ -14,6 +14,7 @@ import {
   Game,
   GameMode,
   GameUpdates,
+  MessageSeverity,
   MessageType,
   Nation,
   Player,
@@ -611,6 +612,7 @@ export class GameImpl implements Game {
   displayMessage(
     message: string,
     type: MessageType,
+    severity: MessageSeverity,
     playerID: PlayerID | null,
   ): void {
     let id: number | null = null;
@@ -620,6 +622,7 @@ export class GameImpl implements Game {
     this.addUpdate({
       type: GameUpdateType.DisplayEvent,
       messageType: type,
+      messageSeverity: severity,
       message: message,
       playerID: id,
     });
@@ -652,6 +655,7 @@ export class GameImpl implements Game {
     unitID: number,
     message: string,
     type: MessageType,
+    severity: MessageSeverity,
     playerID: PlayerID,
   ): void {
     const id = this.player(playerID).smallID();
@@ -661,6 +665,7 @@ export class GameImpl implements Game {
       unitID: unitID,
       message: message,
       messageType: type,
+      messageSeverity: severity,
       playerID: id,
     });
   }

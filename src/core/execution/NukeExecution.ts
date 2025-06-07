@@ -1,6 +1,7 @@
 import {
   Execution,
   Game,
+  MessageSeverity,
   MessageType,
   Player,
   PlayerID,
@@ -128,7 +129,8 @@ export class NukeExecution implements Execution {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
             `${this.player.name()} - atom bomb inbound`,
-            MessageType.ERROR,
+            MessageType.ATTACK,
+            MessageSeverity.ERROR,
             target.id(),
           );
           this.breakAlliances(this.tilesToDestroy());
@@ -136,7 +138,8 @@ export class NukeExecution implements Execution {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
             `${this.player.name()} - hydrogen bomb inbound`,
-            MessageType.ERROR,
+            MessageType.ATTACK,
+            MessageSeverity.ERROR,
             target.id(),
           );
           this.breakAlliances(this.tilesToDestroy());
