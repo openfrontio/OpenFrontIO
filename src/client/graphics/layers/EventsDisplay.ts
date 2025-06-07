@@ -590,7 +590,7 @@ export class EventsDisplay extends LitElement implements Layer {
                   className: "text-left text-red-400",
                   translate: false,
                 })}
-                ${attack.retreating ? "(retreating...)" : ""}
+                                 ${attack.retreating ? `(${translateText("events_display.retreating")}...)` : ""}
               `,
             )}
           `
@@ -624,7 +624,7 @@ export class EventsDisplay extends LitElement implements Layer {
                           className: "text-left flex-shrink-0",
                           disabled: attack.retreating,
                         })
-                      : html`<span class="flex-shrink-0">(retreating...)</span>`}
+                      : html`<span class="flex-shrink-0">(${translateText("events_display.retreating")}...)</span>`}
                   </div>
                 `,
               )}
@@ -654,7 +654,7 @@ export class EventsDisplay extends LitElement implements Layer {
                           className: "text-left flex-shrink-0",
                           disabled: landAttack.retreating,
                         })
-                      : html`<span class="flex-shrink-0">(retreating...)</span>`}
+                      : html`<span class="flex-shrink-0">(${translateText("events_display.retreating")}...)</span>`}
                   </div>
                 `,
               )}
@@ -673,7 +673,7 @@ export class EventsDisplay extends LitElement implements Layer {
                 (boat) => html`
                   <div class="inline-flex items-center gap-1">
                     ${this.renderButton({
-                      content: html`Boat: ${renderTroops(boat.troops())}`,
+                      content: html`${translateText("events_display.boat")}: ${renderTroops(boat.troops())}`,
                       onClick: () => this.emitGoToUnitEvent(boat),
                       className: "text-left text-blue-400",
                       translate: false,
@@ -685,7 +685,7 @@ export class EventsDisplay extends LitElement implements Layer {
                           className: "text-left flex-shrink-0",
                           disabled: boat.retreating(),
                         })
-                      : html`<span class="flex-shrink-0">(retreating...)</span>`}
+                      : html`<span class="flex-shrink-0">(${translateText("events_display.retreating")}...)</span>`}
                   </div>
                 `,
               )}
