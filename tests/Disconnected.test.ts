@@ -159,5 +159,17 @@ describe("Disconnected", () => {
       executeTicks(game, 1);
       expect(player1.isDisconnected()).toBe(true);
     });
+
+    test("Breaking alliance with disconnected player doesn't make you a traitor", () => {
+      player1.createAllianceRequest(player2);
+      player2
+        .incomingAllianceRequests()
+        .find((ar) => ar.requestor() === player1)
+        ?.accept();
+      player1.markDisconnected(true);
+      player2.breakAlliance(player2.alliances()[0]);
+      executeTicks(game, 1);
+      expect(player2.isTraitor()).toBe(false);
+    });
   });
 });
