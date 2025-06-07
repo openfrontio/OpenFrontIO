@@ -14,7 +14,7 @@ export class GameStartingModal extends LitElement {
       left: 0;
       width: 100vw;
       height: 100vh;
-      background-color: #1a1a1a; /* Dark, military gray */
+      background-color: #1a1a1a; /* Dark military gray */
       z-index: 9999;
       color: #fff;
       text-align: center;
@@ -54,7 +54,7 @@ export class GameStartingModal extends LitElement {
       justify-content: center;
       align-items: center;
       z-index: 1;
-      box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.7); /* Gritty military shadow */
+      box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.7); /* Gritty shadow */
     }
 
     @keyframes slideInOut {
@@ -80,11 +80,12 @@ export class GameStartingModal extends LitElement {
       font-family: "Bebas Neue", "Impact", sans-serif; /* Bold, Cold War font */
       font-size: 48px;
       margin-bottom: 15px;
-      color: #fff;
+      color: #ffffff; /* Explicit white for visibility */
       text-transform: uppercase;
       letter-spacing: 3px;
       text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.8); /* Harsh shadow */
       font-weight: 700;
+      z-index: 2; /* Ensure text is above overlay */
     }
 
     .rectangle-overlay p {
@@ -97,12 +98,13 @@ export class GameStartingModal extends LitElement {
       border: 2px solid #444; /* Rough military border */
       text-transform: uppercase;
       letter-spacing: 1px;
+      z-index: 2; /* Ensure text is above overlay */
     }
   `;
 
   render() {
     return html`
-      <div class="modal ${this.isVisible ? "visible" : ""}">
+      <div class="modal ${this.isVisible ? 'visible' : ''}">
         <div class="rectangle-overlay">
           <h2>${translateText("game_starting_modal.title")}</h2>
           <p>${translateText("game_starting_modal.desc")}</p>
@@ -114,8 +116,12 @@ export class GameStartingModal extends LitElement {
   show() {
     this.isVisible = true;
     this.requestUpdate();
-    // Ensure modal stays visible for 5 seconds
-    setTimeout(() => {
+   
+    if (this.hideTimeout) {
+      clearTimeout(this.hideTimeout);
+    }
+  
+    this.hideTimeout = setTimeout(() => {
       this.hide();
     }, 5000);
   }
@@ -123,5 +129,22 @@ export class GameStartingModal extends LitElement {
   hide() {
     this.isVisible = false;
     this.requestUpdate();
+  }
+
+  private hideTimeout: number | null = null;
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+ 
+    if (this.hideTimeout) {
+      clearTimeout(this.hideTimeout);
+    }
+  }
+}
+
+declare global {
+  interface Window {
+    setTimeout: (handler: (...args: any[]) => void, timeout?: number, ...args: any[]) => number;
+    clearTimeout: (timeoutId: number) => void;
   }
 }
