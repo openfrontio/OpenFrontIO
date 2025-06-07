@@ -698,7 +698,7 @@ export class PlayerImpl implements Player {
     this._troops += toInt(troops);
   }
   removeTroops(troops: number): number {
-    if (troops <= 1) {
+    if (troops <= 0) {
       return 0;
     }
     const toRemove = minInt(this._troops, toInt(troops));
