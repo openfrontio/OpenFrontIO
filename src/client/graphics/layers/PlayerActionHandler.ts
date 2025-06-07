@@ -1,5 +1,10 @@
 import { EventBus } from "../../../core/EventBus";
-import { Cell, PlayerActions, UnitType } from "../../../core/game/Game";
+import {
+  Cell,
+  PlayerActions,
+  PlayerID,
+  UnitType,
+} from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { PlayerView } from "../../../core/game/GameView";
 import {
@@ -42,7 +47,7 @@ export class PlayerActionHandler {
 
   handleBoatAttack(
     player: PlayerView,
-    targetId: string,
+    targetId: PlayerID | null,
     targetCell: Cell,
     spawnTile: Cell | null,
   ) {
