@@ -902,11 +902,12 @@ export class EventsDisplay extends LitElement implements Layer {
                     <tbody>
                       ${filteredEvents.map(
                         (event, index) => html`
-                          <tr
-                          >
-                            <td class="lg:px-2 lg:py-1 p-1 text-left ${this.getMessageTypeClasses(
-                              event.severity,
-                            )}">
+                          <tr>
+                            <td
+                              class="lg:px-2 lg:py-1 p-1 text-left ${this.getMessageTypeClasses(
+                                event.severity,
+                              )}"
+                            >
                               ${event.focusID
                                 ? this.renderButton({
                                     content: this.getEventDescription(event),
