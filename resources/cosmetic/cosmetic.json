@@ -1,0 +1,76 @@
+{
+  "role_groups": {
+    "donor": ["1286741019604299857", "1286741020556429383"],
+    "staff": [
+      "1286745100411473930",
+      "1286738076386856991",
+      "1338654590043820148"
+    ]
+  },
+  "pattern": {
+    "stripes_v": {
+      "pattern": "ARMIVVU="
+    },
+    "stripes_h": {
+      "pattern": "ARMIDw8="
+    },
+    "checkerboard": {
+      "pattern": "ARMIpaU="
+    },
+    "choco": {
+      "pattern": "AVIoAAABOEAHgkAc+AN/4AMcgAAA"
+    },
+    "diagonal": {
+      "pattern": "AXE4AQACAAQACAAQACAAQACAAAABAAIABAAIABAAIABAAIA=",
+      "role_group": ["donor", "staff"]
+    },
+    "cross": {
+      "pattern": "AXE4AYACQAQgCBAQCCAEQAKAAYABQAIgBBAICBAEIAJAAYA=",
+      "role_group": ["donor", "staff"]
+    },
+    "mini_cross": {
+      "pattern": "AXEYA8AMMDAMwAPAAzAMDDADwA==",
+      "role_group": ["donor", "staff"]
+    },
+    "horizontal_stripes": {
+      "pattern": "AXE4//8AAAAAAAAAAAAAAAAAAP//AAAAAAAAAAAAAAAAAAA=",
+      "role_group": ["donor", "staff"]
+    },
+    "sparse_dots": {
+      "pattern": "AXE4AQEAAAAAAAAAAAAAAAAAAAEBAAAAAAAAAAAAAAAAAAA=",
+      "role_group": ["donor", "staff"]
+    },
+    "evan": {
+      "pattern": "AbIUAAAAnsRIgiRZjuRpAiNJHiNJAAAA",
+      "role_group": ["staff"]
+    },
+    "diagonal_stripe": {
+      "pattern": "AXEYAYACQAQgCBAQCCAEQAKAAQ==",
+      "role_group": ["donor", "staff"]
+    },
+    "mountain_ridge": {
+      "pattern": "AXEYAAAYGDw8fn7//35+PDwYGA==",
+      "role_group": ["donor", "staff"]
+    },
+    "scattered_dots": {
+      "pattern": "AXEYAAACIAAAAAAAAAAACBAAAA==",
+      "role_group": ["donor", "staff"]
+    },
+    "circuit_board": {
+      "pattern": "AXEYw8PDwwwMDAwwDDAMw8PDww==",
+      "role_group": ["donor", "staff"]
+    },
+    "vertical_bars": {
+      "pattern": "AXEYSZJJkkmSSZJJkkmSSZJJkg==",
+      "role_group": ["donor", "staff"]
+    },
+    ".w.": {
+      "pattern": "AXEYAAAAAAAAAkCCQUQiLnQWaA==",
+      "role_group": ["donor", "staff"]
+    },
+    "openfront": {
+      "pattern": "AQIiAAAAAAAAAAAAAAAAAAAAAIDD8YnweTiiD5FIYEIgEpkIRCKBCoFIpCIQeTwyPB6RjEAkEIgQKEQiApFAIEIgEYkIOAKfCIGIIyIAAAAAAAAAAAA=",
+      "role_group": ["staff"]
+    }
+  }
+}

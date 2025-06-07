@@ -156,7 +156,10 @@ const TokenSchema = z
 const EmojiSchema = z
   .number()
   .nonnegative()
-  .max(flattenedEmojiTable.length - 1);
+  .refine((value) => value <= flattenedEmojiTable.length - 1, {
+    message: "Invalid emoji index",
+  });
+
 const ID = z
   .string()
   .regex(/^[a-zA-Z0-9]+$/)
@@ -190,8 +193,12 @@ export const AttackIntentSchema = BaseIntentSchema.extend({
   troops: z.number().nullable(),
 });
 
+export const FlagSchema = z.string().max(128).optional();
+export const PatternSchema = z.string().max(128).base64().optional();
+
 export const SpawnIntentSchema = BaseIntentSchema.extend({
-  flag: z.string().nullable(),
+  flag: FlagSchema,
+  pattern: PatternSchema,
   type: z.literal("spawn"),
   name: SafeString,
   playerType: PlayerTypeSchema,
@@ -351,7 +358,8 @@ export const ServerPrestartMessageSchema = ServerBaseMessageSchema.extend({
 export const PlayerSchema = z.object({
   clientID: ID,
   username: SafeString,
-  flag: SafeString.optional(),
+  flag: FlagSchema,
+  pattern: PatternSchema,
 });
 
 export const GameStartInfoSchema = z.object({
@@ -429,7 +437,8 @@ export const ClientJoinMessageSchema = z.object({
   gameID: ID,
   lastTurn: z.number(), // The last turn the client saw.
   username: SafeString,
-  flag: SafeString.optional(),
+  flag: FlagSchema,
+  pattern: PatternSchema,
 });
 
 export const ClientMessageSchema = z.union([
@@ -470,3 +479,16 @@ export const GameRecordSchema = AnalyticsRecordSchema.extend({
   turns: z.array(TurnSchema),
 });
 export type GameRecord = z.infer<typeof GameRecordSchema>;
+
+export const CosmeticsSchema = z.object({
+  role_group: z.record(z.string(), z.string().array()).optional(),
+  pattern: z.record(
+    z.string(),
+    z.object({
+      pattern: z.string().base64(),
+      role_group: z.string().array().optional(),
+    }),
+  ),
+});
+
+export type Cosmetic = z.infer<typeof CosmeticsSchema>;

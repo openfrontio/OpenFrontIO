@@ -11,7 +11,14 @@ async function checkRange(
   const game = await setup(mapName, { infiniteGold: true, instantBuild: true });
   const grid = new UnitGrid(game.map());
   const player = game.addPlayer(
-    new PlayerInfo("us", "test_player", PlayerType.Human, null, "test_id"),
+    new PlayerInfo(
+      undefined,
+      "us",
+      "test_player",
+      PlayerType.Human,
+      null,
+      "test_id",
+    ),
   );
   const unitTile = game.map().ref(unitPosX, 0);
   grid.addUnit(player.buildUnit(UnitType.DefensePost, unitTile, {}));
@@ -34,7 +41,14 @@ async function nearbyUnits(
   const game = await setup(mapName, { infiniteGold: true, instantBuild: true });
   const grid = new UnitGrid(game.map());
   const player = game.addPlayer(
-    new PlayerInfo("us", "test_player", PlayerType.Human, null, "test_id"),
+    new PlayerInfo(
+      undefined,
+      "us",
+      "test_player",
+      PlayerType.Human,
+      null,
+      "test_id",
+    ),
   );
   const unitTile = game.map().ref(unitPosX, 0);
   for (const unitType of unitTypes) {
@@ -108,7 +122,14 @@ describe("Unit Grid range tests", () => {
       });
       const grid = new UnitGrid(game.map());
       const player = game.addPlayer(
-        new PlayerInfo("us", "test_player", PlayerType.Human, null, "test_id"),
+        new PlayerInfo(
+          undefined,
+          "us",
+          "test_player",
+          PlayerType.Human,
+          null,
+          "test_id",
+        ),
       );
       const unitTile = game.map().ref(0, 0);
       grid.addUnit(player.buildUnit(UnitType.City, unitTile, {}));
@@ -125,7 +146,14 @@ describe("Unit Grid range tests", () => {
       });
       const grid = new UnitGrid(game.map());
       const player = game.addPlayer(
-        new PlayerInfo("us", "test_player", PlayerType.Human, null, "test_id"),
+        new PlayerInfo(
+          undefined,
+          "us",
+          "test_player",
+          PlayerType.Human,
+          null,
+          "test_id",
+        ),
       );
       const unitType = UnitType.City;
       const unitTile = game.map().ref(0, 0);
