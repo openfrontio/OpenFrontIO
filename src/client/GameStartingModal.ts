@@ -11,36 +11,61 @@ export class GameStartingModal extends LitElement {
     .modal {
       display: none;
       position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
       background-color: rgba(30, 30, 30, 0.7);
-      padding: 25px;
-      border-radius: 10px;
       z-index: 9999;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(5px);
       color: white;
-      width: 300px;
       text-align: center;
-      transition:
-        opacity 0.3s ease-in-out,
-        visibility 0.3s ease-in-out;
+      transition: opacity 0.3s ease-in-out;
+      overflow: hidden;
     }
 
     .modal.visible {
-      display: block;
-      animation: fadeIn 0.3s ease-out;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      opacity: 1;
     }
 
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translate(-50%, -48%);
+    .modal-content {
+      background-color: rgba(30, 30, 30, 0.7);
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(5px);
+      width: 300px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .rectangle-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 100, 100, 0.9);
+      transform: translateY(-100%);
+      animation: slideInOut 5s ease-in-out forwards;
+      z-index: 1;
+    }
+
+    @keyframes slideInOut {
+      0% {
+        transform: translateY(-100%);
       }
-      to {
-        opacity: 1;
-        transform: translate(-50%, -50%);
+      10% {
+        transform: translateY(0);
+      }
+      90% {
+        transform: translateY(0);
+      }
+      100% {
+        transform: translateY(100%);
       }
     }
 
@@ -89,8 +114,11 @@ export class GameStartingModal extends LitElement {
   render() {
     return html`
       <div class="modal ${this.isVisible ? "visible" : ""}">
-        <h2>${translateText("game_starting_modal.title")}</h2>
-        <p>${translateText("game_starting_modal.desc")}</p>
+        <div class="rectangle-overlay"></div>
+        <div class="modal-content">
+          <h2>${translateText("game_starting_modal.title")}</h2>
+          <p>${translateText("game_starting_modal.desc")}</p>
+        </div>
       </div>
     `;
   }
@@ -98,6 +126,10 @@ export class GameStartingModal extends LitElement {
   show() {
     this.isVisible = true;
     this.requestUpdate();
+    
+    setTimeout(() => {
+      this.hide();
+    }, 5000);
   }
 
   hide() {
