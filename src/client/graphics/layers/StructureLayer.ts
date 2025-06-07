@@ -55,32 +55,32 @@ export class StructureLayer implements Layer {
   private readonly unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
     [UnitType.Port]: {
       icon: anchorIcon,
-      borderRadius: 8.525,
-      territoryRadius: 6.525,
+      borderRadius: 16.5,
+      territoryRadius: 13.5,
       borderType: UnitBorderType.Round,
     },
     [UnitType.City]: {
       icon: cityIcon,
-      borderRadius: 8.525,
-      territoryRadius: 6.525,
+      borderRadius: 16.5,
+      territoryRadius: 13.5,
       borderType: UnitBorderType.Round,
     },
     [UnitType.MissileSilo]: {
       icon: missileSiloIcon,
-      borderRadius: 8.525,
-      territoryRadius: 6.525,
+      borderRadius: 16.5,
+      territoryRadius: 13.5,
       borderType: UnitBorderType.Square,
     },
     [UnitType.DefensePost]: {
       icon: shieldIcon,
-      borderRadius: 8.525,
-      territoryRadius: 6.525,
+      borderRadius: 16.5,
+      territoryRadius: 13.5,
       borderType: UnitBorderType.Hexagon,
     },
     [UnitType.SAMLauncher]: {
       icon: SAMMissileIcon,
-      borderRadius: 8.525,
-      territoryRadius: 6.525,
+      borderRadius: 16.5,
+      territoryRadius: 13.5,
       borderType: UnitBorderType.Square,
     },
   };
@@ -101,14 +101,14 @@ export class StructureLayer implements Layer {
     this.loadIconData();
     this.loadIcon("reloadingSam", {
       icon: SAMMissileReloadingIcon,
-      borderRadius: 8.525,
-      territoryRadius: 6.525,
+      borderRadius: 16.5,
+      territoryRadius: 13.5,
       borderType: UnitBorderType.Square,
     });
     this.loadIcon("reloadingSilo", {
       icon: MissileSiloReloadingIcon,
-      borderRadius: 8.525,
-      territoryRadius: 6.525,
+      borderRadius: 16.5,
+      territoryRadius: 13.5,
       borderType: UnitBorderType.Square,
     });
   }
@@ -170,8 +170,8 @@ export class StructureLayer implements Layer {
     const context = this.canvas.getContext("2d", { alpha: true });
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
-    this.canvas.width = this.game.width();
-    this.canvas.height = this.game.height();
+    this.canvas.width = this.game.width() * 2;
+    this.canvas.height = this.game.height() * 2;
     this.game.units().forEach((u) => this.handleUnitRendering(u));
   }
 
@@ -329,11 +329,11 @@ export class StructureLayer implements Layer {
   paintCell(cell: Cell, color: Colord, alpha: number) {
     this.clearCell(cell);
     this.context.fillStyle = color.alpha(alpha / 255).toRgbString();
-    this.context.fillRect(cell.x, cell.y, 1, 1);
+    this.context.fillRect(cell.x * 2, cell.y * 2, 2, 2);
   }
 
   clearCell(cell: Cell) {
-    this.context.clearRect(cell.x, cell.y, 1, 1);
+    this.context.clearRect(cell.x * 2, cell.y * 2, 2, 2);
   }
 
   private findStructureUnitAtCell(
