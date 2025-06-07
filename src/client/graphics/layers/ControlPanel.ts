@@ -77,6 +77,7 @@ export class ControlPanel extends LitElement implements Layer {
     this.eventBus.emit(new SendSetTargetTroopRatioEvent(this.targetTroopRatio));
     this.init_ = true;
     this.uiState.attackRatio = this.attackRatio;
+    this.currentTroopRatio = this.targetTroopRatio;
     this.eventBus.on(AttackRatioEvent, (event) => {
       let newAttackRatio =
         (parseInt(
@@ -104,7 +105,6 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   tick() {
-    this.eventBus.emit(new SendSetTargetTroopRatioEvent(this.targetTroopRatio));
     if (!this._isVisible && !this.game.inSpawnPhase()) {
       this.setVisibile(true);
     }
@@ -177,8 +177,8 @@ export class ControlPanel extends LitElement implements Layer {
       default:
         break;
     }
+    // Now that we set the target troop ratio, we can return the next balance back.
     this.targetTroopRatio = nextTargetTroopRatio;
-    // Given the ratio, find the balance key and return it.
     return nextBalance;
   }
 
@@ -235,6 +235,12 @@ export class ControlPanel extends LitElement implements Layer {
           border-style: solid;
           border-radius: 50%;
           cursor: pointer;
+        }
+        .targetTroopRatio::-webkit-slider-thumb {
+          border-color: rgb(59 130 246);
+        }
+        .targetTroopRatio::-moz-range-thumb {
+          border-color: rgb(59 130 246);
         }
         .attackRatio::-webkit-slider-thumb {
           border-color: rgb(239 68 68);
