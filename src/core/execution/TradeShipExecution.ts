@@ -2,6 +2,7 @@ import { renderNumber } from "../../client/Utils";
 import {
   Execution,
   Game,
+  MessageSeverity,
   MessageType,
   Player,
   Unit,
@@ -131,21 +132,27 @@ export class TradeShipExecution implements Execution {
       this.tradeShip!.owner().addGold(gold);
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
-        MessageType.SUCCESS,
+        MessageType.ATTACK,
+        MessageSeverity.SUCCESS,
         this.tradeShip!.owner().id(),
+        gold,
       );
     } else {
       this.srcPort.owner().addGold(gold);
       this._dstPort.owner().addGold(gold);
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from trade with ${this.srcPort.owner().displayName()}`,
-        MessageType.SUCCESS,
+        MessageType.TRADE,
+        MessageSeverity.SUCCESS,
         this._dstPort.owner().id(),
+        gold,
       );
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from trade with ${this._dstPort.owner().displayName()}`,
-        MessageType.SUCCESS,
+        MessageType.TRADE,
+        MessageSeverity.SUCCESS,
         this.srcPort.owner().id(),
+        gold,
       );
     }
     return;

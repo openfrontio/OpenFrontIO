@@ -402,6 +402,10 @@
     "health": "Health",
     "attitude": "Attitude"
   },
+  "events_display": {
+    "retreating": "retreating",
+    "boat": "Boat"
+  },
   "relation": {
     "hostile": "Hostile",
     "distrustful": "Distrustful",

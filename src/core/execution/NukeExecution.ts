@@ -1,6 +1,7 @@
 import {
   Execution,
   Game,
+  MessageSeverity,
   MessageType,
   Player,
   TerraNullius,
@@ -111,16 +112,20 @@ export class NukeExecution implements Execution {
         } else if (this.nukeType === UnitType.AtomBomb) {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
+            // TODO TranslateText
             `${this.player.name()} - atom bomb inbound`,
-            MessageType.ERROR,
+            MessageType.ATTACK,
+            MessageSeverity.ERROR,
             target.id(),
           );
           this.breakAlliances(this.tilesToDestroy());
         } else if (this.nukeType === UnitType.HydrogenBomb) {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
+            // TODO TranslateText
             `${this.player.name()} - hydrogen bomb inbound`,
-            MessageType.ERROR,
+            MessageType.ATTACK,
+            MessageSeverity.ERROR,
             target.id(),
           );
           this.breakAlliances(this.tilesToDestroy());
