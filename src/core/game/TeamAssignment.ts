@@ -25,7 +25,8 @@ export function assignTeams(
     }
   }
 
-  const maxTeamSize = Math.ceil(players.length / teams.length);
+  // ONLY FOR TESTING REMOVE LATER
+  const maxTeamSize = 10; //Math.ceil(players.length / teams.length);
 
   // Sort clans by size (largest first)
   const sortedClans = Array.from(clanGroups.entries()).sort(
