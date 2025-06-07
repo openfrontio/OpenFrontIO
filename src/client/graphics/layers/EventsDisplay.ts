@@ -794,7 +794,7 @@ export class EventsDisplay extends LitElement implements Layer {
                   <span
                     class="${this.newEvents
                       ? ""
-                      : "hidden"} inline-block px-2 bg-red-500 rounded-sm"
+                      : "hidden"} inline-block px-2 bg-red-500 rounded-xl text-sm"
                     >${this.newEvents}</span
                   >
                 `,
@@ -810,7 +810,7 @@ export class EventsDisplay extends LitElement implements Layer {
               class="relative w-full lg:bottom-2.5 lg:right-2.5 z-50 lg:w-96 backdrop-blur"
             >
               <!-- Button Bar -->
-              <div class="w-full p-2 lg:p-3 rounded-t-md bg-gray-800/70">
+              <div class="w-full p-2 lg:p-3 rounded-t-none md:rounded-t-md bg-gray-800/70">
                 <div class="flex justify-between items-center">
                   <div class="flex gap-4">
                     ${this.renderButton({
@@ -892,11 +892,11 @@ export class EventsDisplay extends LitElement implements Layer {
 
               <!-- Content Area -->
               <div
-                class="rounded-b-md bg-gray-800/70 max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full h-full"
+                class="rounded-b-none md:rounded-b-md bg-gray-800/70 max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full h-full"
               >
                 <div>
                   <table
-                    class="w-full border-collapse text-white shadow-lg lg:text-base text-xs"
+                    class="w-full border-collapse text-white shadow-lg lg:text-base text-md md:text-xs"
                     style="pointer-events: auto;"
                   >
                     <tbody>
@@ -936,7 +936,7 @@ export class EventsDisplay extends LitElement implements Layer {
                                       ${event.buttons.map(
                                         (btn) => html`
                                           <button
-                                            class="inline-block px-3 py-1 text-white rounded text-sm cursor-pointer transition-colors duration-300
+                                            class="inline-block px-3 py-1 text-white rounded text-md md:text-sm cursor-pointer transition-colors duration-300
                             ${btn.className.includes("btn-info")
                                               ? "bg-blue-500 hover:bg-blue-600"
                                               : btn.className.includes(
