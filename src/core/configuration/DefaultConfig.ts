@@ -61,7 +61,7 @@ const numPlayersConfig = {
   [GameMapType.BlackSea]: [40, 50, 30],
   [GameMapType.Pangaea]: [40, 20, 30],
   [GameMapType.World]: [150, 80, 50],
-  [GameMapType.WorldMapGiant]: [150, 100, 60],
+  [GameMapType.WorldMapGiant]: [150, 120, 100],
   [GameMapType.Halkidiki]: [50, 40, 30],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
