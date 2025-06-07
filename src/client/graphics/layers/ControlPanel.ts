@@ -10,6 +10,8 @@ import { renderNumber, renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
+type BalanceStrategy = "Peaceful" | "Balanced" | "Aggressive";
+
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Layer {
   public game: GameView;
@@ -157,29 +159,29 @@ export class ControlPanel extends LitElement implements Layer {
     return ratio;
   }
 
+  private getNextBalance(current: BalanceStrategy): {
+    balance: BalanceStrategy;
+    ratio: number;
+  } {
+    const strategies: Record<
+      BalanceStrategy,
+      { balance: BalanceStrategy; ratio: number }
+    > = {
+      Peaceful: { balance: "Balanced", ratio: 0.5 },
+      Balanced: { balance: "Aggressive", ratio: 0.75 },
+      Aggressive: { balance: "Peaceful", ratio: 0.25 },
+    };
+
+    return strategies[current] || strategies.Balanced;
+  }
+
   updateBalance() {
-    const currentTroopBalance = localStorage.getItem("settings.troopBalance");
-    let nextBalance = "";
-    let nextTargetTroopRatio = 0.0;
-    switch (currentTroopBalance) {
-      case "Peaceful":
-        nextBalance = "Balanced";
-        nextTargetTroopRatio = 0.5;
-        break;
-      case "Balanced":
-        nextBalance = "Aggressive";
-        nextTargetTroopRatio = 0.75;
-        break;
-      case "Aggressive":
-        nextBalance = "Peaceful";
-        nextTargetTroopRatio = 0.25;
-        break;
-      default:
-        break;
-    }
-    // Now that we set the target troop ratio, we can return the next balance back.
-    this.targetTroopRatio = nextTargetTroopRatio;
-    return nextBalance;
+    const current =
+      (localStorage.getItem("settings.troopBalance") as BalanceStrategy) ||
+      "Balanced";
+    const { balance, ratio } = this.getNextBalance(current);
+    this.targetTroopRatio = ratio;
+    return balance;
   }
 
   renderLayer(context: CanvasRenderingContext2D) {

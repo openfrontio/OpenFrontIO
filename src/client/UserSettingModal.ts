@@ -19,7 +19,9 @@ export class UserSettingModal extends LitElement {
   @state() private keySequence: string[] = [];
   @state() private showEasterEggSettings = false;
   @state() private balanceMode: string =
-    localStorage.getItem("settings.showTroopBalanceSlider") ?? "basic";
+    localStorage.getItem("settings.showTroopBalanceSlider") === "true"
+      ? "slider"
+      : "basic";
 
   connectedCallback() {
     super.connectedCallback();
@@ -286,7 +288,7 @@ export class UserSettingModal extends LitElement {
           description="${translateText(
             "user_setting.troop_balance_slider_show_desc",
           )}"
-          id="anonymous-names-toggle"
+          id="id="troop-balance-slider-toggle"
           .checked=${this.userSettings.showTroopBalanceSlider()}
           @change=${this.toggleShowTroopBalanceSlider}
         ></setting-toggle>
@@ -311,9 +313,10 @@ export class UserSettingModal extends LitElement {
             description="${translateText("user_setting.troop_balance_desc")}"
             min="1"
             max="100"
-            .value=${Number(
-              localStorage.getItem("settings.troopRatio") ?? "0.95",
-            ) * 100}
+            .value=${
+              Number(localStorage.getItem("settings.troopRatio") ?? "0.95") *
+              100
+            }
             @change=${this.sliderTroopRatio}
           ></setting-slider>
         </div>
@@ -325,54 +328,57 @@ export class UserSettingModal extends LitElement {
         description="${translateText("user_setting.attack_ratio_desc")}"
         min="1"
         max="100"
-        .value=${Number(localStorage.getItem("settings.attackRatio") ?? "0.2") *
-        100}
+        .value=${
+          Number(localStorage.getItem("settings.attackRatio") ?? "0.2") * 100
+        }
         @change=${this.sliderAttackRatio}
       ></setting-slider>
 
-      ${this.showEasterEggSettings
-        ? html`
-            <setting-slider
-              label="${translateText(
-                "user_setting.easter_writing_speed_label",
-              )}"
-              description="${translateText(
-                "user_setting.easter_writing_speed_desc",
-              )}"
-              min="0"
-              max="100"
-              value="40"
-              easter="true"
-              @change=${(e: CustomEvent) => {
-                const value = e.detail?.value;
-                if (value !== undefined) {
-                  console.log("Changed:", value);
-                } else {
-                  console.warn("Slider event missing detail.value", e);
-                }
-              }}
-            ></setting-slider>
+      ${
+        this.showEasterEggSettings
+          ? html`
+              <setting-slider
+                label="${translateText(
+                  "user_setting.easter_writing_speed_label",
+                )}"
+                description="${translateText(
+                  "user_setting.easter_writing_speed_desc",
+                )}"
+                min="0"
+                max="100"
+                value="40"
+                easter="true"
+                @change=${(e: CustomEvent) => {
+                  const value = e.detail?.value;
+                  if (value !== undefined) {
+                    console.log("Changed:", value);
+                  } else {
+                    console.warn("Slider event missing detail.value", e);
+                  }
+                }}
+              ></setting-slider>
 
-            <setting-number
-              label="${translateText("user_setting.easter_bug_count_label")}"
-              description="${translateText(
-                "user_setting.easter_bug_count_desc",
-              )}"
-              value="100"
-              min="0"
-              max="1000"
-              easter="true"
-              @change=${(e: CustomEvent) => {
-                const value = e.detail?.value;
-                if (value !== undefined) {
-                  console.log("Changed:", value);
-                } else {
-                  console.warn("Slider event missing detail.value", e);
-                }
-              }}
-            ></setting-number>
-          `
-        : null}
+              <setting-number
+                label="${translateText("user_setting.easter_bug_count_label")}"
+                description="${translateText(
+                  "user_setting.easter_bug_count_desc",
+                )}"
+                value="100"
+                min="0"
+                max="1000"
+                easter="true"
+                @change=${(e: CustomEvent) => {
+                  const value = e.detail?.value;
+                  if (value !== undefined) {
+                    console.log("Changed:", value);
+                  } else {
+                    console.warn("Slider event missing detail.value", e);
+                  }
+                }}
+              ></setting-number>
+            `
+          : null
+      }
     `;
   }
 
