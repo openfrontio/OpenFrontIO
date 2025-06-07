@@ -4,6 +4,7 @@ import { PseudoRandom } from "../PseudoRandom";
 import { DistanceBasedBezierCurve } from "../utilities/Line";
 import { AStar, PathFindResultType, TileResult } from "./AStar";
 import { MiniAStar } from "./MiniAStar";
+import { HPADataManager, HPASearch } from "./HPAStar";
 
 const parabolaMinHeight = 50;
 
@@ -89,7 +90,7 @@ export class PathFinder {
   private curr: TileRef | null = null;
   private dst: TileRef | null = null;
   private path: TileRef[] | null = null;
-  private aStar: AStar;
+  private aStar!: AStar; 
   private computeFinished = true;
 
   private constructor(
@@ -110,17 +111,23 @@ export class PathFinder {
     });
   }
 
+  /**
+   * Creates a PathFinder that uses the HPA* algorithm.
+   * @param game The main game object.
+   * @param hpaData The pre-computed data from HPADataManager.
+   */
+  public static HPA(game: Game, hpaData: HPADataManager) {
+    return new PathFinder(game, (curr: TileRef, dst: TileRef) => {
+      return new HPASearch(hpaData, game.map(), curr, dst);
+    });
+  }
+
   nextTile(
     curr: TileRef | null,
     dst: TileRef | null,
     dist: number = 1,
   ): TileResult {
-    if (curr === null) {
-      console.error("curr is null");
-      return { type: PathFindResultType.PathNotFound };
-    }
-    if (dst === null) {
-      console.error("dst is null");
+    if (curr === null || dst === null) {
       return { type: PathFindResultType.PathNotFound };
     }
 
@@ -135,49 +142,59 @@ export class PathFinder {
         this.path = null;
         this.aStar = this.newAStar(curr, dst);
         this.computeFinished = false;
-        return this.nextTile(curr, dst);
+        
       } else {
         const tile = this.path?.shift();
         if (tile === undefined) {
-          throw new Error("missing tile");
+          // Path ran out but we are not at destination mrk for re-computation.
+          this.computeFinished = true;
+          return this.nextTile(curr, dst, dist);
         }
         return { type: PathFindResultType.NextTile, tile };
       }
     }
 
+  
     switch (this.aStar.compute()) {
       case PathFindResultType.Completed:
         this.computeFinished = true;
         this.path = this.aStar.reconstructPath();
-        // Remove the start tile
-        this.path.shift();
+        if (this.path[0] === curr) this.path.shift();
+        
+        return this.nextTile(curr, dst, dist);
 
-        return this.nextTile(curr, dst);
       case PathFindResultType.Pending:
         return { type: PathFindResultType.Pending };
+
       case PathFindResultType.PathNotFound:
+        this.computeFinished = true;
         return { type: PathFindResultType.PathNotFound };
+        
       default:
-        throw new Error("unexpected compute result");
+        throw new Error("Unexpected compute result");
     }
   }
 
-  private shouldRecompute(curr: TileRef, dst: TileRef) {
+  private shouldRecompute(curr: TileRef, dst: TileRef): boolean {
+    // Recompute if there is no path, or if the destination has changed 
     if (this.path === null || this.curr === null || this.dst === null) {
       return true;
     }
+
     const dist = this.game.manhattanDist(curr, dst);
-    let tolerance = 10;
-    if (dist > 50) {
-      tolerance = 10;
-    } else if (dist > 25) {
-      tolerance = 5;
-    } else {
-      tolerance = 0;
-    }
+    let tolerance = dist > 50 ? 10 : (dist > 25 ? 5 : 0);
     if (this.game.manhattanDist(this.dst, dst) > tolerance) {
       return true;
     }
+    
+    
+    if (this.path.length > 0 && this.path[0] !== curr) {
+       
+        const isNearPath = this.path.some(tile => this.game.manhattanDist(curr, tile) < 5);
+        if(!isNearPath) return true;
+    }
+
     return false;
   }
 }
+
