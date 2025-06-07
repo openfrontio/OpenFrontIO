@@ -170,7 +170,7 @@ describe("SAM", () => {
     expect(defender.units(UnitType.SAMLauncher)[0].level()).toEqual(1);
 
     const upgradeStructureExecution = new UpgradeStructureExecution(
-      defender.id(),
+      defender,
       defender.units(UnitType.SAMLauncher)[0].tile(),
     );
     game.addExecution(upgradeStructureExecution);

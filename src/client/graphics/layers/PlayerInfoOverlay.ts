@@ -257,7 +257,6 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             .units(UnitType.MissileSilo)
             .map((silo) => silo.level())
             .reduce((a, b) => a + b, 0)}
-          }
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.sams")}:
@@ -265,7 +264,6 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             .units(UnitType.SAMLauncher)
             .map((sam) => sam.level())
             .reduce((a, b) => a + b, 0)}
-          }
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.warships")}:

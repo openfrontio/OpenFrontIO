@@ -99,7 +99,7 @@ describe("MissileSilo", () => {
     expect(attacker.units(UnitType.MissileSilo)[0].level()).toEqual(1);
 
     const upgradeStructureExecution = new UpgradeStructureExecution(
-      attacker.id(),
+      attacker,
       attacker.units(UnitType.MissileSilo)[0].tile(),
     );
     game.addExecution(upgradeStructureExecution);

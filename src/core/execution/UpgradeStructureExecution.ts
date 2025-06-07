@@ -2,7 +2,6 @@ import {
   Execution,
   Game,
   Player,
-  PlayerID,
   Unit,
   upgradableStructureTypes,
 } from "../game/Game";
@@ -17,18 +16,18 @@ export class UpgradeStructureExecution implements Execution {
   private cost: bigint;
 
   constructor(
-    private ownerId: PlayerID,
+    private owner: Player,
     private tile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    if (!mg.hasPlayer(this.ownerId)) {
-      console.warn(`UpgradeExecution: owner ${this.ownerId} not found`);
+    if (!mg.hasPlayer(this.owner.id())) {
+      console.warn(`UpgradeExecution: owner ${this.owner.id()} not found`);
       this.active = false;
       return;
     }
-    this.player = mg.player(this.ownerId);
+    this.player = mg.player(this.owner.id());
   }
 
   tick(ticks: number): void {
