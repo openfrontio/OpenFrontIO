@@ -550,7 +550,7 @@ export class EventsDisplay extends LitElement implements Layer {
     this.addEvent({
       description: event.message,
       type: event.messageType,
-      severity: MessageSeverity.INFO,
+      severity: event.messageSeverity,
       unsafeDescription: false,
       highlight: true,
       createdAt: this.game.ticks(),
@@ -903,11 +903,10 @@ export class EventsDisplay extends LitElement implements Layer {
                       ${filteredEvents.map(
                         (event, index) => html`
                           <tr
-                            class="${this.getMessageTypeClasses(
-                              event.severity,
-                            )}"
                           >
-                            <td class="lg:px-2 lg:py-1 p-1 text-left">
+                            <td class="lg:px-2 lg:py-1 p-1 text-left ${this.getMessageTypeClasses(
+                              event.severity,
+                            )}">
                               ${event.focusID
                                 ? this.renderButton({
                                     content: this.getEventDescription(event),

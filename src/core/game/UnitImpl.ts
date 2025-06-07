@@ -152,6 +152,7 @@ export class UnitImpl implements Unit {
   }
 
   setOwner(newOwner: PlayerImpl): void {
+    let messageType = MessageType.ATTACK;
     switch (this._type) {
       case UnitType.Warship:
       case UnitType.Port:
@@ -161,6 +162,11 @@ export class UnitImpl implements Unit {
       case UnitType.City:
         this.mg.stats().unitCapture(newOwner, this._type);
         this.mg.stats().unitLose(this._owner, this._type);
+        break;
+      case UnitType.TradeShip:
+        // Trade ship captures become spammy in late game, moving them to Trade messages
+        // so it is easier to filter them out.
+        messageType = MessageType.TRADE;
     }
     this._lastOwner = this._owner;
     this._lastOwner._units = this._lastOwner._units.filter((u) => u !== this);
@@ -169,7 +175,7 @@ export class UnitImpl implements Unit {
     this.mg.addUpdate(this.toUpdate());
     this.mg.displayMessage(
       `Your ${this.type()} was captured by ${newOwner.displayName()}`,
-      MessageType.ATTACK,
+      messageType,
       MessageSeverity.ERROR,
       this._lastOwner.id(),
     );
