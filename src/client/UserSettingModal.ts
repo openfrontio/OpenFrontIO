@@ -18,6 +18,8 @@ export class UserSettingModal extends LitElement {
 
   @state() private keySequence: string[] = [];
   @state() private showEasterEggSettings = false;
+  @state() private balanceMode: string =
+    localStorage.getItem("settings.showTroopBalanceSlider") ?? "basic";
 
   connectedCallback() {
     super.connectedCallback();
@@ -121,6 +123,14 @@ export class UserSettingModal extends LitElement {
     console.log("🙈 Anonymous Names:", enabled ? "ON" : "OFF");
   }
 
+  private toggleShowTroopBalanceSlider(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.showTroopBalanceSlider", enabled);
+    this.balanceMode = enabled ? "slider" : "basic";
+  }
+
   private toggleMilitaryStrategies(e: CustomEvent<{ value: string }>) {
     const nextValue = e.detail?.value;
     localStorage.setItem("settings.troopBalance", nextValue);
@@ -141,6 +151,16 @@ export class UserSettingModal extends LitElement {
     if (typeof value === "number") {
       const ratio = value / 100;
       localStorage.setItem("settings.attackRatio", ratio.toString());
+    } else {
+      console.warn("Slider event missing detail.value", e);
+    }
+  }
+
+  private sliderTroopRatio(e: CustomEvent<{ value: number }>) {
+    const value = e.detail?.value;
+    if (typeof value === "number") {
+      const ratio = value / 100;
+      localStorage.setItem("settings.troopRatio", ratio.toString());
     } else {
       console.warn("Slider event missing detail.value", e);
     }
@@ -258,16 +278,46 @@ export class UserSettingModal extends LitElement {
         @change=${this.toggleAnonymousNames}
       ></setting-toggle>
 
-      <setting-multi-toggle
-        label="${translateText("user_setting.troop_balance_label")}"
-        description="${translateText("user_setting.troop_balance_desc")}"
-        id="strategy-toggle"
-        @change=${this.toggleMilitaryStrategies}
-        .value=${String(
-          localStorage.getItem("settings.troopBalance") ?? "Balanced",
-        )}
-        .values=${["Peaceful", "Balanced", "Aggressive"]}
-      ></setting-multi-toggle>
+      <div class="setting-item-group vertical">
+        <setting-toggle
+          label="${translateText(
+            "user_setting.troop_balance_slider_show_label",
+          )}"
+          description="${translateText(
+            "user_setting.troop_balance_slider_show_desc",
+          )}"
+          id="anonymous-names-toggle"
+          .checked=${this.userSettings.showTroopBalanceSlider()}
+          @change=${this.toggleShowTroopBalanceSlider}
+        ></setting-toggle>
+
+        <div class=${this.balanceMode === "basic" ? "" : "hidden"}>
+          <setting-multi-toggle
+            label="${translateText("user_setting.troop_balance_label")}"
+            description="${translateText("user_setting.troop_balance_desc")}"
+            id="strategy-toggle"
+            @change=${this.toggleMilitaryStrategies}
+            .value=${String(
+              localStorage.getItem("settings.troopBalance") ?? "Balanced",
+            )}
+            .values=${["Peaceful", "Balanced", "Aggressive"]}
+          ></setting-multi-toggle>
+        </div>
+
+        <!-- 🪖🛠️ Troop Ratio -->
+        <div class=${this.balanceMode === "basic" ? "hidden" : ""}>
+          <setting-slider
+            label=""
+            description="${translateText("user_setting.troop_balance_desc")}"
+            min="1"
+            max="100"
+            .value=${Number(
+              localStorage.getItem("settings.troopRatio") ?? "0.95",
+            ) * 100}
+            @change=${this.sliderTroopRatio}
+          ></setting-slider>
+        </div>
+      </div>
 
       <!-- ⚔️ Attack Ratio -->
       <setting-slider

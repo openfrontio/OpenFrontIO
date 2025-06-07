@@ -20,6 +20,9 @@ export class UserSettings {
   anonymousNames() {
     return this.get("settings.anonymousNames", false);
   }
+  showTroopBalanceSlider() {
+    return this.get("settings.showTroopBalanceSlider", false);
+  }
 
   fxLayer() {
     return this.get("settings.specialEffects", true);
