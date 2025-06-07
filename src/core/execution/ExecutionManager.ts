@@ -121,7 +121,7 @@ export class Executor {
           return new NoOpExecution();
         }
         return new UpgradeStructureExecution(
-          playerID,
+          player,
           this.mg.ref(intent.x, intent.y),
         );
       case "quick_chat":
