@@ -142,19 +142,15 @@ export class ControlPanel extends LitElement implements Layer {
 
   convertBalanceToRatio(strategy: string) {
     let ratio: number = 0.5;
-    if (typeof strategy === "string") {
-      switch (strategy) {
-        case "Aggressive":
-          ratio = 0.75;
-          break;
-        case "Peaceful":
-          ratio = 0.25;
-          break;
-        default:
-          break;
-      }
-    } else {
-      console.warn("Invalid balance provided, defaulting to Balanced");
+    switch (strategy) {
+      case "Aggressive":
+        ratio = 0.75;
+        break;
+      case "Peaceful":
+        ratio = 0.25;
+        break;
+      default:
+        break;
     }
     return ratio;
   }
@@ -176,9 +172,11 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   updateBalance() {
-    const current =
-      (localStorage.getItem("settings.troopBalance") as BalanceStrategy) ||
-      "Balanced";
+    const stored = localStorage.getItem("settings.troopBalance");
+    const current: BalanceStrategy =
+      stored === "Peaceful" || stored === "Balanced" || stored === "Aggressive"
+        ? stored
+        : "Balanced";
     const { balance, ratio } = this.getNextBalance(current);
     this.targetTroopRatio = ratio;
     return balance;
@@ -292,33 +290,34 @@ export class ControlPanel extends LitElement implements Layer {
             ${translateText("control_panel.workers")}:
             <span translate="no">${renderTroops(this._workers)}</span></label
           >
-          <button
-            @click=${() => {
-              localStorage.setItem(
-                "settings.troopBalance",
-                this.updateBalance() ?? "Balanced",
-              );
-              this.onTroopChange(this.targetTroopRatio);
-            }}
-            class="bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-es-sm lg:rounded-lg backdrop-blur-md text-opacity-90 text-white rounded text-sm lg:text-xl ${localStorage.getItem(
-              "settings.showTroopBalanceSlider",
-            ) === "false"
-              ? ""
-              : "hidden"}"
-            title="${translateText("user_setting.troop_balance_label")}"
-          >
-            ${translateText(
-              "control_panel.troop_balance." +
-                localStorage.getItem("settings.troopBalance")?.toLowerCase(),
-            )}
-          </button>
-          <div
-            class="relative h-8 ${localStorage.getItem(
-              "settings.showTroopBalanceSlider",
-            ) === "false"
-              ? "hidden"
-              : ""}"
-          >
+          ${(() => {
+            const showSlider =
+              localStorage.getItem("settings.showTroopBalanceSlider") !==
+              "false";
+
+            if (this._isVisible) {
+              return html`
+                <button
+                @click=${() => {
+                  localStorage.setItem(
+                    "settings.troopBalance",
+                    this.updateBalance() ?? "Balanced",
+                  );
+                  this.onTroopChange(this.targetTroopRatio);
+                }}
+                class="bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-es-sm lg:rounded-lg backdrop-blur-md text-opacity-90 text-white rounded text-sm lg:text-xl ${showSlider ? "hidden" : ""}"
+                title="${translateText("user_setting.troop_balance_label")}"
+                >
+                ${translateText(
+                  "control_panel.troop_balance." +
+                    localStorage
+                      .getItem("settings.troopBalance")
+                      ?.toLowerCase(),
+                )}
+                </button>
+              <div 
+                class="relative h-8 ${showSlider ? "" : "hidden"}">
+            
             <!-- Background track -->
             <div
               class="absolute left-0 right-0 top-3 h-2 bg-white/20 rounded"
@@ -343,39 +342,43 @@ export class ControlPanel extends LitElement implements Layer {
             />
           </div>
         </div>
+        `;
+            }
+          })()}
 
-        <div class="relative mb-0 lg:mb-4">
-          <label class="block text-white mb-1" translate="no"
-            >${translateText("control_panel.attack_ratio")}:
-            ${(this.attackRatio * 100).toFixed(0)}%
-            (${renderTroops(
-              (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
-            )})</label
-          >
-          <div class="relative h-8">
-            <!-- Background track -->
-            <div
-              class="absolute left-0 right-0 top-3 h-2 bg-white/20 rounded"
-            ></div>
-            <!-- Fill track -->
-            <div
-              class="absolute left-0 top-3 h-2 bg-red-500/60 rounded transition-all duration-300"
-              style="width: ${this.attackRatio * 100}%"
-            ></div>
-            <!-- Range input - exactly overlaying the visual elements -->
-            <input
-              id="attack-ratio"
-              type="range"
-              min="1"
-              max="100"
-              .value=${(this.attackRatio * 100).toString()}
-              @input=${(e: Event) => {
-                this.attackRatio =
-                  parseInt((e.target as HTMLInputElement).value) / 100;
-                this.onAttackRatioChange(this.attackRatio);
-              }}
-              class="absolute left-0 right-0 top-2 m-0 h-4 cursor-pointer attackRatio"
-            />
+          <div class="relative mb-0 lg:mb-4">
+            <label class="block text-white mb-1" translate="no"
+              >${translateText("control_panel.attack_ratio")}:
+              ${(this.attackRatio * 100).toFixed(0)}%
+              (${renderTroops(
+                (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
+              )})</label
+            >
+            <div class="relative h-8">
+              <!-- Background track -->
+              <div
+                class="absolute left-0 right-0 top-3 h-2 bg-white/20 rounded"
+              ></div>
+              <!-- Fill track -->
+              <div
+                class="absolute left-0 top-3 h-2 bg-red-500/60 rounded transition-all duration-300"
+                style="width: ${this.attackRatio * 100}%"
+              ></div>
+              <!-- Range input - exactly overlaying the visual elements -->
+              <input
+                id="attack-ratio"
+                type="range"
+                min="1"
+                max="100"
+                .value=${(this.attackRatio * 100).toString()}
+                @input=${(e: Event) => {
+                  this.attackRatio =
+                    parseInt((e.target as HTMLInputElement).value) / 100;
+                  this.onAttackRatioChange(this.attackRatio);
+                }}
+                class="absolute left-0 right-0 top-2 m-0 h-4 cursor-pointer attackRatio"
+              />
+            </div>
           </div>
         </div>
       </div>
