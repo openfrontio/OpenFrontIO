@@ -1,7 +1,6 @@
 import {
   Execution,
   Game,
-  MessageSeverity,
   MessageType,
   Player,
   PlayerID,
@@ -64,7 +63,6 @@ export class TransportShipExecution implements Execution {
       mg.displayMessage(
         `No boats available, max ${mg.config().boatMaxNumber()}`,
         MessageType.ATTACK,
-        MessageSeverity.WARN,
         this.attacker.id(),
       );
       this.active = false;
@@ -135,7 +133,6 @@ export class TransportShipExecution implements Execution {
         // TODO TranslateText
         `Naval invasion incoming from ${this.attacker.displayName()}`,
         MessageType.ATTACK,
-        MessageSeverity.WARN,
         this.targetID,
       );
     }

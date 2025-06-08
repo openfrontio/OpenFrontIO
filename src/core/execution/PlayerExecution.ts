@@ -3,7 +3,6 @@ import { Config } from "../configuration/Config";
 import {
   Execution,
   Game,
-  MessageSeverity,
   MessageType,
   Player,
   UnitType,
@@ -215,7 +214,6 @@ export class PlayerExecution implements Execution {
           gold,
         )} gold`,
         MessageType.ATTACK,
-        MessageSeverity.SUCCESS,
         capturing.id(),
         gold,
       );

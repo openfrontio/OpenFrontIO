@@ -586,7 +586,6 @@ export interface Game extends GameMap {
   displayMessage(
     message: string,
     type: MessageType,
-    severity: MessageSeverity,
     playerID: PlayerID | null,
     goldAmount?: bigint,
   ): void;
@@ -594,7 +593,6 @@ export interface Game extends GameMap {
     unitID: number,
     message: string,
     type: MessageType,
-    severity: MessageSeverity,
     playerID: PlayerID | null,
   ): void;
 
@@ -655,16 +653,11 @@ export interface EmojiMessage {
   createdAt: Tick;
 }
 
-export enum MessageSeverity {
-  SUCCESS,
-  INFO,
-  WARN,
-  ERROR,
-}
-
 export enum MessageType {
   ATTACK,
   ALLIANCE,
+  ALLIANCE_ACCEPTED,
+  ALLIANCE_REJECTED,
   TRADE,
   CHAT,
 }

@@ -1,7 +1,6 @@
 import {
   Execution,
   Game,
-  MessageSeverity,
   MessageType,
   Player,
   TerraNullius,
@@ -71,7 +70,6 @@ export class MirvExecution implements Execution {
         // TODO TranslateText
         `⚠️⚠️⚠️ ${this.player.name()} - MIRV INBOUND ⚠️⚠️⚠️`,
         MessageType.ATTACK,
-        MessageSeverity.ERROR,
         this.targetPlayer.id(),
       );
     }

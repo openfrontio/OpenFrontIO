@@ -1,7 +1,6 @@
 import {
   Execution,
   Game,
-  MessageSeverity,
   MessageType,
   Player,
   Unit,
@@ -64,7 +63,6 @@ export class SAMMissileExecution implements Execution {
         this.mg.displayMessage(
           `Missile intercepted ${this.target.type()}`,
           MessageType.ATTACK,
-          MessageSeverity.SUCCESS,
           this._owner.id(),
         );
         this.active = false;

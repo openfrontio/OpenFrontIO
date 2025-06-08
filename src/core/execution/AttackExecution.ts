@@ -3,7 +3,6 @@ import {
   Attack,
   Execution,
   Game,
-  MessageSeverity,
   MessageType,
   Player,
   PlayerID,
@@ -182,7 +181,6 @@ export class AttackExecution implements Execution {
       this.mg.displayMessage(
         `Attack cancelled, ${renderTroops(deaths)} soldiers killed during retreat.`,
         MessageType.ATTACK,
-        MessageSeverity.SUCCESS,
         this._owner.id(),
       );
     }
@@ -343,7 +341,6 @@ export class AttackExecution implements Execution {
         gold,
       )} gold`,
       MessageType.ATTACK,
-      MessageSeverity.SUCCESS,
       this._owner.id(),
       gold,
     );

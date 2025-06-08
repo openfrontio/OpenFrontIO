@@ -23,7 +23,6 @@ import {
   Embargo,
   EmojiMessage,
   Gold,
-  MessageSeverity,
   MessageType,
   MutableAlliance,
   Player,
@@ -551,13 +550,11 @@ export class PlayerImpl implements Player {
     this.mg.displayMessage(
       `Sent ${renderTroops(troops)} troops to ${recipient.name()}`,
       MessageType.TRADE,
-      MessageSeverity.INFO,
       this.id(),
     );
     this.mg.displayMessage(
       `Received ${renderTroops(troops)} troops from ${this.name()}`,
       MessageType.TRADE,
-      MessageSeverity.SUCCESS,
       recipient.id(),
     );
     return true;
@@ -573,13 +570,11 @@ export class PlayerImpl implements Player {
     this.mg.displayMessage(
       `Sent ${renderNumber(gold)} gold to ${recipient.name()}`,
       MessageType.TRADE,
-      MessageSeverity.INFO,
       this.id(),
     );
     this.mg.displayMessage(
       `Received ${renderNumber(gold)} gold from ${this.name()}`,
       MessageType.TRADE,
-      MessageSeverity.SUCCESS,
       recipient.id(),
       gold,
     );

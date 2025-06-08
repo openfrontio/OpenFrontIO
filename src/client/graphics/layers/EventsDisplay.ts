@@ -9,7 +9,6 @@ import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
-  MessageSeverity,
   MessageType,
   PlayerType,
   Tick,
@@ -55,7 +54,6 @@ interface GameEvent {
     action: () => void;
     preventClose?: boolean;
   }[];
-  severity: MessageSeverity;
   type: MessageType;
   highlight?: boolean;
   createdAt: number;
@@ -289,7 +287,6 @@ export class EventsDisplay extends LitElement implements Layer {
       description: event.message,
       createdAt: this.game.ticks(),
       highlight: true,
-      severity: event.messageSeverity,
       type: event.messageType,
       unsafeDescription: true,
     });
@@ -319,7 +316,6 @@ export class EventsDisplay extends LitElement implements Layer {
       createdAt: this.game.ticks(),
       highlight: true,
       type: MessageType.CHAT,
-      severity: MessageSeverity.INFO,
       unsafeDescription: false,
     });
   }
@@ -364,7 +360,6 @@ export class EventsDisplay extends LitElement implements Layer {
         },
       ],
       highlight: true,
-      severity: MessageSeverity.INFO,
       type: MessageType.ALLIANCE,
       createdAt: this.game.ticks(),
       onDelete: () =>
@@ -391,10 +386,9 @@ export class EventsDisplay extends LitElement implements Layer {
       description: `${recipient.name()} ${
         update.accepted ? "accepted" : "rejected"
       } your alliance request`,
-      severity: update.accepted
-        ? MessageSeverity.SUCCESS
-        : MessageSeverity.ERROR,
-      type: MessageType.ALLIANCE,
+      type: update.accepted
+        ? MessageType.ALLIANCE_ACCEPTED
+        : MessageType.ALLIANCE_REJECTED,
       highlight: true,
       createdAt: this.game.ticks(),
       focusID: update.request.recipientID,
@@ -423,7 +417,6 @@ export class EventsDisplay extends LitElement implements Layer {
         description:
           `You broke your alliance with ${betrayed.name()}, making you a TRAITOR ` +
           `(${malusPercent}% defense debuff for ${durationText})`,
-        severity: MessageSeverity.ERROR,
         type: MessageType.ALLIANCE,
         highlight: true,
         createdAt: this.game.ticks(),
@@ -432,7 +425,6 @@ export class EventsDisplay extends LitElement implements Layer {
     } else if (betrayed === myPlayer) {
       this.addEvent({
         description: `${traitor.name()} broke their alliance with you`,
-        severity: MessageSeverity.ERROR,
         type: MessageType.ALLIANCE,
         highlight: true,
         createdAt: this.game.ticks(),
@@ -457,7 +449,6 @@ export class EventsDisplay extends LitElement implements Layer {
 
     this.addEvent({
       description: `Your alliance with ${other.name()} expired`,
-      severity: MessageSeverity.WARN,
       type: MessageType.ALLIANCE,
       highlight: true,
       createdAt: this.game.ticks(),
@@ -474,7 +465,6 @@ export class EventsDisplay extends LitElement implements Layer {
 
     this.addEvent({
       description: `${other.name()} requests you attack ${target.name()}`,
-      severity: MessageSeverity.INFO,
       type: MessageType.ATTACK,
       highlight: true,
       createdAt: this.game.ticks(),
@@ -525,7 +515,6 @@ export class EventsDisplay extends LitElement implements Layer {
         description: `${sender.displayName()}:${update.emoji.message}`,
         unsafeDescription: true,
         type: MessageType.CHAT,
-        severity: MessageSeverity.INFO,
         highlight: true,
         createdAt: this.game.ticks(),
         focusID: update.emoji.senderID,
@@ -537,7 +526,6 @@ export class EventsDisplay extends LitElement implements Layer {
         }`,
         unsafeDescription: true,
         type: MessageType.CHAT,
-        severity: MessageSeverity.INFO,
         highlight: true,
         createdAt: this.game.ticks(),
         focusID: recipient.smallID(),
@@ -557,7 +545,6 @@ export class EventsDisplay extends LitElement implements Layer {
     this.addEvent({
       description: event.message,
       type: event.messageType,
-      severity: event.messageSeverity,
       unsafeDescription: false,
       highlight: true,
       createdAt: this.game.ticks(),
@@ -565,16 +552,16 @@ export class EventsDisplay extends LitElement implements Layer {
     });
   }
 
-  private getMessageTypeClasses(type: MessageSeverity): string {
+  private getMessageTypeClasses(type: MessageType): string {
     switch (type) {
-      case MessageSeverity.SUCCESS:
-        return "text-green-300";
-      case MessageSeverity.INFO:
-        return "text-gray-200";
-      case MessageSeverity.WARN:
-        return "text-yellow-500";
-      case MessageSeverity.ERROR:
+      case MessageType.ATTACK:
         return "text-red-400";
+      case MessageType.ALLIANCE:
+        return "text-blue-400";
+      case MessageType.TRADE:
+        return "text-green-300";
+      case MessageType.CHAT:
+        return "text-gray-200";
       default:
         return "text-white";
     }
@@ -914,7 +901,7 @@ export class EventsDisplay extends LitElement implements Layer {
                           <tr>
                             <td
                               class="lg:px-2 lg:py-1 p-1 text-left ${this.getMessageTypeClasses(
-                                event.severity,
+                                event.type,
                               )}"
                             >
                               ${event.focusID

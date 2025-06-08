@@ -1,7 +1,6 @@
 import {
   Execution,
   Game,
-  MessageSeverity,
   MessageType,
   Player,
   Unit,
@@ -176,7 +175,6 @@ export class SAMLauncherExecution implements Execution {
         this.mg.displayMessage(
           `Missile failed to intercept ${type}`,
           MessageType.ATTACK,
-          MessageSeverity.ERROR,
           this.sam.owner().id(),
         );
       } else {
@@ -185,7 +183,6 @@ export class SAMLauncherExecution implements Execution {
           this.mg.displayMessage(
             `${mirvWarheadTargets.length} MIRV warheads intercepted`,
             MessageType.ATTACK,
-            MessageSeverity.SUCCESS,
             this.sam.owner().id(),
           );
           // Delete warheads
