@@ -15,8 +15,8 @@ export enum ReplaySpeeds {
 
 @customElement("replay-panel")
 export class ReplayPanel extends LitElement implements Layer {
-  public game: GameView;
-  public eventBus: EventBus;
+  public game: GameView | undefined;
+  public eventBus: EventBus | undefined;
 
   @state()
   private _replayInterval: number = ReplaySpeeds.fastest;
@@ -25,7 +25,7 @@ export class ReplayPanel extends LitElement implements Layer {
   private _isVisible = false;
 
   tick() {
-    if (!this._isVisible && this.game.config().isReplay()) {
+    if (!this._isVisible && this.game?.config().isReplay()) {
       this.setVisible(true);
     }
 
@@ -34,7 +34,7 @@ export class ReplayPanel extends LitElement implements Layer {
 
   onReplayIntervalChange(value: number) {
     this._replayInterval = value;
-    this.eventBus.emit(new ReplayIntervalEvent(value));
+    this.eventBus?.emit(new ReplayIntervalEvent(value));
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
