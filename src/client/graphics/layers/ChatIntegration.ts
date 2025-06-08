@@ -3,7 +3,7 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import { SendQuickChatEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import { ChatModal, QuickChatPhrase, quickChatPhrases } from "./ChatModal";
-import { COLORS, MenuElement } from "./RadialMenuElements";
+import { COLORS, MenuElement, MenuElementParams } from "./RadialMenuElements";
 
 export class ChatIntegration {
   private ctModal: ChatModal;
@@ -51,7 +51,7 @@ export class ChatIntegration {
           return {
             id: `phrase-${category.id}-${phrase.key}`,
             name: phraseText,
-            disabled: false,
+            disabled: () => false,
             text: this.shortenText(phraseText),
             fontSize: "10px",
             color: categoryColor,
@@ -61,7 +61,7 @@ export class ChatIntegration {
                 className: "description",
               },
             ],
-            action: () => {
+            action: (params: MenuElementParams) => {
               if (phrase.requiresPlayer) {
                 this.ctModal.openWithSelection(
                   category.id,
@@ -86,7 +86,7 @@ export class ChatIntegration {
       return {
         id: `chat-category-${category.id}`,
         name: categoryTranslation,
-        disabled: false,
+        disabled: () => false,
         text: categoryTranslation,
         color: categoryColor,
         _action: () => {}, // Empty action placeholder for RadialMenu
