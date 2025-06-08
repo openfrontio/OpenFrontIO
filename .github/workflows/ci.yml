@@ -48,7 +48,7 @@ jobs:
       - name: Test coverage
         uses: ArtiomTr/jest-coverage-report-action@262a7bb0b20c4d1d6b6b026af0f008f78da72788
         with:
-          github-token: ${{ steps.generate-token.outputs.token }}
+          github-token: ${{ github.repository == 'openfrontio/OpenFrontIO' && steps.generate-token.outputs.token || env.GITHUB_TOKEN }}
 
   eslint:
     name: 🔍 ESLint
