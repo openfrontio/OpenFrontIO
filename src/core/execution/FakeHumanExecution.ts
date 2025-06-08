@@ -470,6 +470,7 @@ export class FakeHumanExecution implements Execution {
             this.mg.isOceanShore(t),
           )
         : Array.from(this.player.tiles());
+    if (tiles.length === 0) return null;
     return this.random.randElement(tiles);
   }
 
