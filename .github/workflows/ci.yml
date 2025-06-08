@@ -5,10 +5,7 @@ on:
   push:
     branches: [main]
 
-permissions:
-  contents: read
-  checks: write
-  pull-requests: write
+permissions: {}
 
 jobs:
   build:
@@ -41,9 +38,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+      - uses: actions/create-github-app-token@v2
+        id: generate-token
+        if: ${{ github.repository == 'openfrontio/OpenFrontIO' }}
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
       - run: npm ci
       - name: Test coverage
-        uses: ArtiomTr/jest-coverage-report-action@v2
+        uses: ArtiomTr/jest-coverage-report-action@262a7bb0b20c4d1d6b6b026af0f008f78da72788
+        with:
+          github-token: ${{ steps.generate-token.outputs.token }}
 
   eslint:
     name: 🔍 ESLint
