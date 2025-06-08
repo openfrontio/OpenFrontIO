@@ -131,21 +131,24 @@ export class TradeShipExecution implements Execution {
       this.tradeShip!.owner().addGold(gold);
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
-        MessageType.SUCCESS,
+        MessageType.CAPTURED_ENEMY_UNIT,
         this.tradeShip!.owner().id(),
+        gold,
       );
     } else {
       this.srcPort.owner().addGold(gold);
       this._dstPort.owner().addGold(gold);
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from trade with ${this.srcPort.owner().displayName()}`,
-        MessageType.SUCCESS,
+        MessageType.RECEIVED_GOLD_FROM_TRADE,
         this._dstPort.owner().id(),
+        gold,
       );
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from trade with ${this._dstPort.owner().displayName()}`,
-        MessageType.SUCCESS,
+        MessageType.RECEIVED_GOLD_FROM_TRADE,
         this.srcPort.owner().id(),
+        gold,
       );
     }
     return;

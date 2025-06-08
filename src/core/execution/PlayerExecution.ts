@@ -207,8 +207,9 @@ export class PlayerExecution implements Execution {
         `Conquered ${this.player.displayName()} received ${renderNumber(
           gold,
         )} gold`,
-        MessageType.SUCCESS,
+        MessageType.CONQUERED_PLAYER,
         capturing.id(),
+        gold,
       );
       capturing.addGold(gold);
       this.player.removeGold(gold);

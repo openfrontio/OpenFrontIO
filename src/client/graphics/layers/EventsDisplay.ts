@@ -2,9 +2,15 @@ import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
+import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
+import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
+import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
+import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
+  getMessageCategory,
+  MessageCategory,
   MessageType,
   PlayerType,
   Tick,
@@ -32,14 +38,14 @@ import { Layer } from "./Layer";
 
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
-import { renderTroops } from "../../Utils";
+import { renderNumber, renderTroops } from "../../Utils";
 import {
   GoToPlayerEvent,
   GoToPositionEvent,
   GoToUnitEvent,
 } from "./Leaderboard";
 
-import { translateText } from "../../Utils";
+import { getMessageTypeClasses, translateText } from "../../Utils";
 
 interface GameEvent {
   description: string;
@@ -73,13 +79,62 @@ export class EventsDisplay extends LitElement implements Layer {
   @state() private outgoingLandAttacks: AttackUpdate[] = [];
   @state() private outgoingBoats: UnitView[] = [];
   @state() private _hidden: boolean = false;
+  @state() private _isVisible: boolean = false;
   @state() private newEvents: number = 0;
+  @state() private latestGoldAmount: bigint | null = null;
+  @state() private goldAmountAnimating: boolean = false;
+  private goldAmountTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  @state() private eventsFilters: Map<MessageCategory, boolean> = new Map([
+    [MessageCategory.ATTACK, false],
+    [MessageCategory.TRADE, false],
+    [MessageCategory.ALLIANCE, false],
+    [MessageCategory.CHAT, false],
+  ]);
+
+  private renderButton(options: {
+    content: any; // Can be string, TemplateResult, or other renderable content
+    onClick?: () => void;
+    className?: string;
+    disabled?: boolean;
+    translate?: boolean;
+    hidden?: boolean;
+  }) {
+    const {
+      content,
+      onClick,
+      className = "",
+      disabled = false,
+      translate = true,
+      hidden = false,
+    } = options;
+
+    if (hidden) {
+      return html``;
+    }
+
+    return html`
+      <button
+        class="${className}"
+        @click=${onClick}
+        ?disabled=${disabled}
+        ?translate=${translate}
+      >
+        ${content}
+      </button>
+    `;
+  }
 
   private toggleHidden() {
     this._hidden = !this._hidden;
     if (this._hidden) {
       this.newEvents = 0;
     }
+    this.requestUpdate();
+  }
+
+  private toggleEventFilter(filterName: MessageCategory) {
+    const currentState = this.eventsFilters.get(filterName) || false;
+    this.eventsFilters.set(filterName, !currentState);
     this.requestUpdate();
   }
 
@@ -109,6 +164,21 @@ export class EventsDisplay extends LitElement implements Layer {
 
   tick() {
     this.active = true;
+
+    if (!this._isVisible && !this.game.inSpawnPhase()) {
+      this._isVisible = true;
+      this.requestUpdate();
+    }
+
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer || !myPlayer.isAlive()) {
+      if (this._isVisible) {
+        this._isVisible = false;
+        this.requestUpdate();
+      }
+      return;
+    }
+
     const updates = this.game.updatesSinceLastTick();
     if (updates) {
       for (const [ut, fn] of this.updateMap) {
@@ -134,11 +204,6 @@ export class EventsDisplay extends LitElement implements Layer {
       this.requestUpdate();
     }
 
-    const myPlayer = this.game.myPlayer();
-    if (!myPlayer) {
-      return;
-    }
-
     // Update attacks
     this.incomingAttacks = myPlayer.incomingAttacks().filter((a) => {
       const t = (this.game.playerBySmallID(a.attackerID) as PlayerView).type();
@@ -158,6 +223,13 @@ export class EventsDisplay extends LitElement implements Layer {
       .filter((u) => u.type() === UnitType.TransportShip);
 
     this.requestUpdate();
+  }
+
+  disconnectedCallback() {
+    if (this.goldAmountTimeoutId !== null) {
+      clearTimeout(this.goldAmountTimeoutId);
+      this.goldAmountTimeoutId = null;
+    }
   }
 
   private addEvent(event: GameEvent) {
@@ -188,6 +260,29 @@ export class EventsDisplay extends LitElement implements Layer {
       (!myPlayer || myPlayer.smallID() !== event.playerID)
     ) {
       return;
+    }
+
+    if (event.goldAmount !== undefined) {
+      const hasChanged = this.latestGoldAmount !== event.goldAmount;
+      this.latestGoldAmount = event.goldAmount;
+
+      if (this.goldAmountTimeoutId !== null) {
+        clearTimeout(this.goldAmountTimeoutId);
+      }
+
+      this.goldAmountTimeoutId = setTimeout(() => {
+        this.latestGoldAmount = null;
+        this.goldAmountTimeoutId = null;
+        this.requestUpdate();
+      }, 5000);
+
+      if (hasChanged) {
+        this.goldAmountAnimating = true;
+        setTimeout(() => {
+          this.goldAmountAnimating = false;
+          this.requestUpdate();
+        }, 600);
+      }
     }
 
     this.addEvent({
@@ -267,7 +362,7 @@ export class EventsDisplay extends LitElement implements Layer {
         },
       ],
       highlight: true,
-      type: MessageType.INFO,
+      type: MessageType.ALLIANCE_REQUEST,
       createdAt: this.game.ticks(),
       onDelete: () =>
         this.eventBus.emit(
@@ -293,7 +388,9 @@ export class EventsDisplay extends LitElement implements Layer {
       description: `${recipient.name()} ${
         update.accepted ? "accepted" : "rejected"
       } your alliance request`,
-      type: update.accepted ? MessageType.SUCCESS : MessageType.ERROR,
+      type: update.accepted
+        ? MessageType.ALLIANCE_ACCEPTED
+        : MessageType.ALLIANCE_REJECTED,
       highlight: true,
       createdAt: this.game.ticks(),
       focusID: update.request.recipientID,
@@ -322,7 +419,7 @@ export class EventsDisplay extends LitElement implements Layer {
         description:
           `You broke your alliance with ${betrayed.name()}, making you a TRAITOR ` +
           `(${malusPercent}% defense debuff for ${durationText})`,
-        type: MessageType.ERROR,
+        type: MessageType.ALLIANCE_BROKEN,
         highlight: true,
         createdAt: this.game.ticks(),
         focusID: update.betrayedID,
@@ -330,7 +427,7 @@ export class EventsDisplay extends LitElement implements Layer {
     } else if (betrayed === myPlayer) {
       this.addEvent({
         description: `${traitor.name()} broke their alliance with you`,
-        type: MessageType.ERROR,
+        type: MessageType.ALLIANCE_BROKEN,
         highlight: true,
         createdAt: this.game.ticks(),
         focusID: update.traitorID,
@@ -354,7 +451,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
     this.addEvent({
       description: `Your alliance with ${other.name()} expired`,
-      type: MessageType.WARN,
+      type: MessageType.ALLIANCE_EXPIRED,
       highlight: true,
       createdAt: this.game.ticks(),
       focusID: otherID,
@@ -370,7 +467,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
     this.addEvent({
       description: `${other.name()} requests you attack ${target.name()}`,
-      type: MessageType.INFO,
+      type: MessageType.ATTACK_REQUEST,
       highlight: true,
       createdAt: this.game.ticks(),
       focusID: event.targetID,
@@ -419,7 +516,7 @@ export class EventsDisplay extends LitElement implements Layer {
       this.addEvent({
         description: `${sender.displayName()}:${update.emoji.message}`,
         unsafeDescription: true,
-        type: MessageType.INFO,
+        type: MessageType.CHAT,
         highlight: true,
         createdAt: this.game.ticks(),
         focusID: update.emoji.senderID,
@@ -430,7 +527,7 @@ export class EventsDisplay extends LitElement implements Layer {
           update.emoji.message
         }`,
         unsafeDescription: true,
-        type: MessageType.INFO,
+        type: MessageType.CHAT,
         highlight: true,
         createdAt: this.game.ticks(),
         focusID: recipient.smallID(),
@@ -455,23 +552,6 @@ export class EventsDisplay extends LitElement implements Layer {
       createdAt: this.game.ticks(),
       unitView: unitView,
     });
-  }
-
-  private getMessageTypeClasses(type: MessageType): string {
-    switch (type) {
-      case MessageType.SUCCESS:
-        return "text-green-300";
-      case MessageType.INFO:
-        return "text-gray-200";
-      case MessageType.CHAT:
-        return "text-gray-200";
-      case MessageType.WARN:
-        return "text-yellow-300";
-      case MessageType.ERROR:
-        return "text-red-300";
-      default:
-        return "text-white";
-    }
   }
 
   private getEventDescription(
@@ -506,27 +586,24 @@ export class EventsDisplay extends LitElement implements Layer {
     return html`
       ${this.incomingAttacks.length > 0
         ? html`
-            <tr class="border-t border-gray-700">
-              <td class="lg:p-3 p-1 text-left text-red-400">
-                ${this.incomingAttacks.map(
-                  (attack) => html`
-                    <button
-                      translate="no"
-                      class="ml-2"
-                      @click=${() => this.attackWarningOnClick(attack)}
-                    >
-                      ${renderTroops(attack.troops)}
-                      ${(
-                        this.game.playerBySmallID(
-                          attack.attackerID,
-                        ) as PlayerView
-                      )?.name()}
-                    </button>
-                    ${attack.retreating ? "(retreating...)" : ""}
+            ${this.incomingAttacks.map(
+              (attack) => html`
+                ${this.renderButton({
+                  content: html`
+                    ${renderTroops(attack.troops)}
+                    ${(
+                      this.game.playerBySmallID(attack.attackerID) as PlayerView
+                    )?.name()}
+                    ${attack.retreating
+                      ? `(${translateText("events_display.retreating")}...)`
+                      : ""}
                   `,
-                )}
-              </td>
-            </tr>
+                  onClick: () => this.attackWarningOnClick(attack),
+                  className: "text-left text-red-400",
+                  translate: false,
+                })}
+              `,
+            )}
           `
         : ""}
     `;
@@ -536,35 +613,39 @@ export class EventsDisplay extends LitElement implements Layer {
     return html`
       ${this.outgoingAttacks.length > 0
         ? html`
-            <tr class="border-t border-gray-700">
-              <td class="lg:p-3 p-1 text-left text-blue-400">
-                ${this.outgoingAttacks.map(
-                  (attack) => html`
-                    <button
-                      translate="no"
-                      class="ml-2"
-                      @click=${async () => this.attackWarningOnClick(attack)}
-                    >
-                      ${renderTroops(attack.troops)}
-                      ${(
-                        this.game.playerBySmallID(attack.targetID) as PlayerView
-                      )?.name()}
-                    </button>
-
+            <div class="flex flex-wrap gap-y-1 gap-x-2">
+              ${this.outgoingAttacks.map(
+                (attack) => html`
+                  <div class="inline-flex items-center gap-1">
+                    ${this.renderButton({
+                      content: html`
+                        ${renderTroops(attack.troops)}
+                        ${(
+                          this.game.playerBySmallID(
+                            attack.targetID,
+                          ) as PlayerView
+                        )?.name()}
+                      `,
+                      onClick: async () => this.attackWarningOnClick(attack),
+                      className: "text-left text-blue-400",
+                      translate: false,
+                    })}
                     ${!attack.retreating
-                      ? html`<button
-                          ${attack.retreating ? "disabled" : ""}
-                          @click=${() => {
-                            this.emitCancelAttackIntent(attack.id);
-                          }}
-                        >
-                          ❌
-                        </button>`
-                      : "(retreating...)"}
-                  `,
-                )}
-              </td>
-            </tr>
+                      ? this.renderButton({
+                          content: "❌",
+                          onClick: () => this.emitCancelAttackIntent(attack.id),
+                          className: "text-left flex-shrink-0",
+                          disabled: attack.retreating,
+                        })
+                      : html`<span class="flex-shrink-0 text-blue-400"
+                          >(${translateText(
+                            "events_display.retreating",
+                          )}...)</span
+                        >`}
+                  </div>
+                `,
+              )}
+            </div>
           `
         : ""}
     `;
@@ -574,28 +655,33 @@ export class EventsDisplay extends LitElement implements Layer {
     return html`
       ${this.outgoingLandAttacks.length > 0
         ? html`
-            <tr class="border-t border-gray-700">
-              <td class="lg:p-3 p-1 text-left text-gray-400">
-                ${this.outgoingLandAttacks.map(
-                  (landAttack) => html`
-                    <button translate="no" class="ml-2">
-                      ${renderTroops(landAttack.troops)} Wilderness
-                    </button>
-
+            <div class="flex flex-wrap gap-y-1 gap-x-2">
+              ${this.outgoingLandAttacks.map(
+                (landAttack) => html`
+                  <div class="inline-flex items-center gap-1">
+                    ${this.renderButton({
+                      content: html`${renderTroops(landAttack.troops)}
+                      Wilderness`,
+                      className: "text-left text-gray-400",
+                      translate: false,
+                    })}
                     ${!landAttack.retreating
-                      ? html`<button
-                          ${landAttack.retreating ? "disabled" : ""}
-                          @click=${() => {
-                            this.emitCancelAttackIntent(landAttack.id);
-                          }}
-                        >
-                          ❌
-                        </button>`
-                      : "(retreating...)"}
-                  `,
-                )}
-              </td>
-            </tr>
+                      ? this.renderButton({
+                          content: "❌",
+                          onClick: () =>
+                            this.emitCancelAttackIntent(landAttack.id),
+                          className: "text-left flex-shrink-0",
+                          disabled: landAttack.retreating,
+                        })
+                      : html`<span class="flex-shrink-0 text-blue-400"
+                          >(${translateText(
+                            "events_display.retreating",
+                          )}...)</span
+                        >`}
+                  </div>
+                `,
+              )}
+            </div>
           `
         : ""}
     `;
@@ -605,41 +691,71 @@ export class EventsDisplay extends LitElement implements Layer {
     return html`
       ${this.outgoingBoats.length > 0
         ? html`
-            <tr class="border-t border-gray-700">
-              <td class="lg:p-3 p-1 text-left text-blue-400">
-                ${this.outgoingBoats.map(
-                  (boat) => html`
-                    <button
-                      translate="no"
-                      @click=${() => this.emitGoToUnitEvent(boat)}
-                    >
-                      Boat: ${renderTroops(boat.troops())}
-                    </button>
+            <div class="flex flex-wrap gap-y-1 gap-x-2">
+              ${this.outgoingBoats.map(
+                (boat) => html`
+                  <div class="inline-flex items-center gap-1">
+                    ${this.renderButton({
+                      content: html`${translateText("events_display.boat")}:
+                      ${renderTroops(boat.troops())}`,
+                      onClick: () => this.emitGoToUnitEvent(boat),
+                      className: "text-left text-blue-400",
+                      translate: false,
+                    })}
                     ${!boat.retreating()
-                      ? html`<button
-                          ${boat.retreating() ? "disabled" : ""}
-                          @click=${() => {
-                            this.emitBoatCancelIntent(boat.id());
-                          }}
-                        >
-                          ❌
-                        </button>`
-                      : "(retreating...)"}
-                  `,
-                )}
-              </td>
-            </tr>
+                      ? this.renderButton({
+                          content: "❌",
+                          onClick: () => this.emitBoatCancelIntent(boat.id()),
+                          className: "text-left flex-shrink-0",
+                          disabled: boat.retreating(),
+                        })
+                      : html`<span class="flex-shrink-0 text-blue-400"
+                          >(${translateText(
+                            "events_display.retreating",
+                          )}...)</span
+                        >`}
+                  </div>
+                `,
+              )}
+            </div>
           `
         : ""}
     `;
   }
 
   render() {
-    if (!this.active) {
+    if (!this.active || !this._isVisible) {
       return html``;
     }
 
-    this.events.sort((a, b) => {
+    const styles = html`
+      <style>
+        @keyframes goldBounce {
+          0% {
+            transform: scale(1);
+          }
+          30% {
+            transform: scale(1.3);
+          }
+          50% {
+            transform: scale(1.1);
+          }
+          70% {
+            transform: scale(1.2);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+      </style>
+    `;
+
+    const filteredEvents = this.events.filter((event) => {
+      const category = getMessageCategory(event.type);
+      return !this.eventsFilters.get(category);
+    });
+
+    filteredEvents.sort((a, b) => {
       const aPrior = a.priority ?? 100000;
       const bPrior = b.priority ?? 100000;
       if (aPrior === bPrior) {
@@ -649,109 +765,265 @@ export class EventsDisplay extends LitElement implements Layer {
     });
 
     return html`
-      <div
-        class="${this._hidden
-          ? "w-fit px-[10px] py-[5px]"
-          : ""} rounded-md bg-black bg-opacity-60 relative max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full lg:bottom-2.5 lg:right-2.5 z-50 lg:max-w-[30vw] lg:w-full lg:w-auto"
-      >
-        <div>
-          <div class="w-full bg-black/80 sticky top-0 px-[10px]">
-            <button
-              class="text-white cursor-pointer pointer-events-auto ${this
-                ._hidden
-                ? "hidden"
-                : ""}"
-              @click=${this.toggleHidden}
-            >
-              Hide
-            </button>
-          </div>
-          <button
-            class="text-white cursor-pointer pointer-events-auto ${this._hidden
-              ? ""
-              : "hidden"}"
-            @click=${this.toggleHidden}
-          >
-            Events
-            <span
-              class="${this.newEvents
-                ? ""
-                : "hidden"} inline-block px-2 bg-red-500 rounded-sm"
-              >${this.newEvents}</span
-            >
-          </button>
-          <table
-            class="w-full border-collapse text-white shadow-lg lg:text-xl text-xs ${this
-              ._hidden
-              ? "hidden"
-              : ""}"
-            style="pointer-events: auto;"
-          >
-            <tbody>
-              ${this.events.map(
-                (event, index) => html`
-                  <tr
-                    class="border-b border-opacity-0 ${this.getMessageTypeClasses(
-                      event.type,
-                    )}"
+      ${styles}
+      <!-- Events Toggle (when hidden) -->
+      ${this._hidden
+        ? html`
+            <div class="relative w-fit lg:bottom-2.5 lg:right-2.5 z-50">
+              ${this.renderButton({
+                content: html`
+                  Events
+                  <span
+                    class="${this.newEvents
+                      ? ""
+                      : "hidden"} inline-block px-2 bg-red-500 rounded-xl text-sm"
+                    >${this.newEvents}</span
                   >
-                    <td class="lg:p-3 p-1 text-left">
-                      ${event.focusID
-                        ? html`<button
-                            @click=${() => {
-                              event.focusID &&
-                                this.emitGoToPlayerEvent(event.focusID);
-                            }}
-                          >
-                            ${this.getEventDescription(event)}
-                          </button>`
-                        : event.unitView
-                          ? html`<button
-                              @click=${() => {
-                                event.unitView &&
-                                  this.emitGoToUnitEvent(event.unitView);
-                              }}
+                `,
+                onClick: this.toggleHidden,
+                className:
+                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 rounded-md bg-gray-800/70 backdrop-blur",
+              })}
+            </div>
+          `
+        : html`
+            <!-- Main Events Display -->
+            <div
+              class="relative w-full lg:bottom-2.5 lg:right-2.5 z-50 lg:w-96 backdrop-blur"
+            >
+              <!-- Button Bar -->
+              <div
+                class="w-full p-2 lg:p-3 rounded-t-none md:rounded-t-md bg-gray-800/70"
+              >
+                <div class="flex justify-between items-center">
+                  <div class="flex gap-4">
+                    ${this.renderButton({
+                      content: html`<img
+                        src="${swordIcon}"
+                        class="w-5 h-5"
+                        style="filter: ${this.eventsFilters.get(
+                          MessageCategory.ATTACK,
+                        )
+                          ? "grayscale(1) opacity(0.5)"
+                          : "none"}"
+                      />`,
+                      onClick: () =>
+                        this.toggleEventFilter(MessageCategory.ATTACK),
+                      className: "cursor-pointer pointer-events-auto",
+                    })}
+                    ${this.renderButton({
+                      content: html`<img
+                        src="${donateGoldIcon}"
+                        class="w-5 h-5"
+                        style="filter: ${this.eventsFilters.get(
+                          MessageCategory.TRADE,
+                        )
+                          ? "grayscale(1) opacity(0.5)"
+                          : "none"}"
+                      />`,
+                      onClick: () =>
+                        this.toggleEventFilter(MessageCategory.TRADE),
+                      className: "cursor-pointer pointer-events-auto",
+                    })}
+                    ${this.renderButton({
+                      content: html`<img
+                        src="${allianceIcon}"
+                        class="w-5 h-5"
+                        style="filter: ${this.eventsFilters.get(
+                          MessageCategory.ALLIANCE,
+                        )
+                          ? "grayscale(1) opacity(0.5)"
+                          : "none"}"
+                      />`,
+                      onClick: () =>
+                        this.toggleEventFilter(MessageCategory.ALLIANCE),
+                      className: "cursor-pointer pointer-events-auto",
+                    })}
+                    ${this.renderButton({
+                      content: html`<img
+                        src="${chatIcon}"
+                        class="w-5 h-5"
+                        style="filter: ${this.eventsFilters.get(
+                          MessageCategory.CHAT,
+                        )
+                          ? "grayscale(1) opacity(0.5)"
+                          : "none"}"
+                      />`,
+                      onClick: () =>
+                        this.toggleEventFilter(MessageCategory.CHAT),
+                      className: "cursor-pointer pointer-events-auto",
+                    })}
+                  </div>
+                  <div class="flex items-center gap-3">
+                    ${this.latestGoldAmount !== null
+                      ? html`<span
+                          class="text-green-400 font-semibold transition-all duration-300 ${this
+                            .goldAmountAnimating
+                            ? "animate-pulse scale-110"
+                            : "scale-100"}"
+                          style="animation: ${this.goldAmountAnimating
+                            ? "goldBounce 0.6s ease-out"
+                            : "none"}"
+                          >+${renderNumber(this.latestGoldAmount)}</span
+                        >`
+                      : ""}
+                    ${this.renderButton({
+                      content: "Hide",
+                      onClick: this.toggleHidden,
+                      className:
+                        "text-white cursor-pointer pointer-events-auto",
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Content Area -->
+              <div
+                class="rounded-b-none md:rounded-b-md bg-gray-800/70 max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full h-full"
+              >
+                <div>
+                  <table
+                    class="w-full max-h-none border-collapse text-white shadow-lg lg:text-base text-md md:text-xs"
+                    style="pointer-events: auto;"
+                  >
+                    <tbody>
+                      ${filteredEvents.map(
+                        (event, index) => html`
+                          <tr>
+                            <td
+                              class="lg:px-2 lg:py-1 p-1 text-left ${getMessageTypeClasses(
+                                event.type,
+                              )}"
                             >
-                              ${this.getEventDescription(event)}
-                            </button>`
-                          : this.getEventDescription(event)}
-                      ${event.buttons
-                        ? html`
-                            <div class="flex flex-wrap gap-1.5 mt-1">
-                              ${event.buttons.map(
-                                (btn) => html`
-                                  <button
-                                    class="inline-block px-3 py-1 text-white rounded text-sm cursor-pointer transition-colors duration-300
+                              ${event.focusID
+                                ? this.renderButton({
+                                    content: this.getEventDescription(event),
+                                    onClick: () => {
+                                      event.focusID &&
+                                        this.emitGoToPlayerEvent(event.focusID);
+                                    },
+                                    className: "text-left",
+                                  })
+                                : event.unitView
+                                  ? this.renderButton({
+                                      content: this.getEventDescription(event),
+                                      onClick: () => {
+                                        event.unitView &&
+                                          this.emitGoToUnitEvent(
+                                            event.unitView,
+                                          );
+                                      },
+                                      className: "text-left",
+                                    })
+                                  : this.getEventDescription(event)}
+                              <!-- Events with buttons (Alliance requests) -->
+                              ${event.buttons
+                                ? html`
+                                    <div class="flex flex-wrap gap-1.5 mt-1">
+                                      ${event.buttons.map(
+                                        (btn) => html`
+                                          <button
+                                            class="inline-block px-3 py-1 text-white rounded text-md md:text-sm cursor-pointer transition-colors duration-300
                             ${btn.className.includes("btn-info")
-                                      ? "bg-blue-500 hover:bg-blue-600"
-                                      : btn.className.includes("btn-gray")
-                                        ? "bg-gray-500 hover:bg-gray-600"
-                                        : "bg-green-600 hover:bg-green-700"}"
-                                    @click=${() => {
-                                      btn.action();
-                                      if (!btn.preventClose) {
-                                        this.removeEvent(index);
-                                      }
-                                      this.requestUpdate();
-                                    }}
-                                  >
-                                    ${btn.text}
-                                  </button>
-                                `,
-                              )}
-                            </div>
+                                              ? "bg-blue-500 hover:bg-blue-600"
+                                              : btn.className.includes(
+                                                    "btn-gray",
+                                                  )
+                                                ? "bg-gray-500 hover:bg-gray-600"
+                                                : "bg-green-600 hover:bg-green-700"}"
+                                            @click=${() => {
+                                              btn.action();
+                                              if (!btn.preventClose) {
+                                                const originalIndex =
+                                                  this.events.findIndex(
+                                                    (e) => e === event,
+                                                  );
+                                                if (originalIndex !== -1) {
+                                                  this.removeEvent(
+                                                    originalIndex,
+                                                  );
+                                                }
+                                              }
+                                              this.requestUpdate();
+                                            }}
+                                          >
+                                            ${btn.text}
+                                          </button>
+                                        `,
+                                      )}
+                                    </div>
+                                  `
+                                : ""}
+                            </td>
+                          </tr>
+                        `,
+                      )}
+                      <!--- Incoming attacks row -->
+                      ${this.incomingAttacks.length > 0
+                        ? html`
+                            <tr class="lg:px-2 lg:py-1 p-1">
+                              <td class="lg:px-2 lg:py-1 p-1 text-left">
+                                ${this.renderIncomingAttacks()}
+                              </td>
+                            </tr>
                           `
                         : ""}
-                    </td>
-                  </tr>
-                `,
-              )}
-              ${this.renderIncomingAttacks()} ${this.renderOutgoingAttacks()}
-              ${this.renderOutgoingLandAttacks()} ${this.renderBoats()}
-            </tbody>
-          </table>
-        </div>
-      </div>
+
+                      <!--- Outgoing attacks row -->
+                      ${this.outgoingAttacks.length > 0
+                        ? html`
+                            <tr class="lg:px-2 lg:py-1 p-1">
+                              <td class="lg:px-2 lg:py-1 p-1 text-left">
+                                ${this.renderOutgoingAttacks()}
+                              </td>
+                            </tr>
+                          `
+                        : ""}
+
+                      <!--- Outgoing land attacks row -->
+                      ${this.outgoingLandAttacks.length > 0
+                        ? html`
+                            <tr class="lg:px-2 lg:py-1 p-1">
+                              <td class="lg:px-2 lg:py-1 p-1 text-left">
+                                ${this.renderOutgoingLandAttacks()}
+                              </td>
+                            </tr>
+                          `
+                        : ""}
+
+                      <!--- Boats row -->
+                      ${this.outgoingBoats.length > 0
+                        ? html`
+                            <tr class="lg:px-2 lg:py-1 p-1">
+                              <td class="lg:px-2 lg:py-1 p-1 text-left">
+                                ${this.renderBoats()}
+                              </td>
+                            </tr>
+                          `
+                        : ""}
+
+                      <!--- Empty row when no events or attacks -->
+                      ${filteredEvents.length === 0 &&
+                      this.incomingAttacks.length === 0 &&
+                      this.outgoingAttacks.length === 0 &&
+                      this.outgoingLandAttacks.length === 0 &&
+                      this.outgoingBoats.length === 0
+                        ? html`
+                            <tr>
+                              <td
+                                class="lg:px-2 lg:py-1 p-1 min-w-72 text-left"
+                              >
+                                &nbsp;
+                              </td>
+                            </tr>
+                          `
+                        : ""}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          `}
     `;
   }
 

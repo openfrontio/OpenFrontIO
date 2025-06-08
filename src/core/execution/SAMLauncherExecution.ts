@@ -174,7 +174,7 @@ export class SAMLauncherExecution implements Execution {
       if (!hit) {
         this.mg.displayMessage(
           `Missile failed to intercept ${type}`,
-          MessageType.ERROR,
+          MessageType.SAM_MISS,
           this.sam.owner().id(),
         );
       } else {
@@ -182,7 +182,7 @@ export class SAMLauncherExecution implements Execution {
           // Message
           this.mg.displayMessage(
             `${mirvWarheadTargets.length} MIRV warheads intercepted`,
-            MessageType.SUCCESS,
+            MessageType.SAM_HIT,
             this.sam.owner().id(),
           );
           // Delete warheads

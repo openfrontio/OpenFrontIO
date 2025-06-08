@@ -62,7 +62,7 @@ export class SAMMissileExecution implements Execution {
       if (result === true) {
         this.mg.displayMessage(
           `Missile intercepted ${this.target.type()}`,
-          MessageType.SUCCESS,
+          MessageType.SAM_HIT,
           this._owner.id(),
         );
         this.active = false;

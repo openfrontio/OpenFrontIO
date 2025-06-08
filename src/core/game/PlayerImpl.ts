@@ -558,12 +558,12 @@ export class PlayerImpl implements Player {
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     this.mg.displayMessage(
       `Sent ${renderTroops(troops)} troops to ${recipient.name()}`,
-      MessageType.INFO,
+      MessageType.SENT_TROOPS_TO_PLAYER,
       this.id(),
     );
     this.mg.displayMessage(
       `Received ${renderTroops(troops)} troops from ${this.name()}`,
-      MessageType.SUCCESS,
+      MessageType.RECEIVED_TROOPS_FROM_PLAYER,
       recipient.id(),
     );
     return true;
@@ -578,13 +578,14 @@ export class PlayerImpl implements Player {
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     this.mg.displayMessage(
       `Sent ${renderNumber(gold)} gold to ${recipient.name()}`,
-      MessageType.INFO,
+      MessageType.SENT_GOLD_TO_PLAYER,
       this.id(),
     );
     this.mg.displayMessage(
       `Received ${renderNumber(gold)} gold from ${this.name()}`,
-      MessageType.SUCCESS,
+      MessageType.RECEIVED_GOLD_FROM_PLAYER,
       recipient.id(),
+      gold,
     );
     return true;
   }
