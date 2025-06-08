@@ -9,6 +9,8 @@ import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
+  getMessageCategory,
+  MessageCategory,
   MessageType,
   PlayerType,
   Tick,
@@ -43,7 +45,7 @@ import {
   GoToUnitEvent,
 } from "./Leaderboard";
 
-import { translateText } from "../../Utils";
+import { getMessageTypeClasses, translateText } from "../../Utils";
 
 interface GameEvent {
   description: string;
@@ -82,11 +84,11 @@ export class EventsDisplay extends LitElement implements Layer {
   @state() private latestGoldAmount: bigint | null = null;
   @state() private goldAmountAnimating: boolean = false;
   private goldAmountTimeoutId: ReturnType<typeof setTimeout> | null = null;
-  @state() private eventsFilters: Map<MessageType, boolean> = new Map([
-    [MessageType.ATTACK, false],
-    [MessageType.TRADE, false],
-    [MessageType.ALLIANCE, false],
-    [MessageType.CHAT, false],
+  @state() private eventsFilters: Map<MessageCategory, boolean> = new Map([
+    [MessageCategory.ATTACK, false],
+    [MessageCategory.TRADE, false],
+    [MessageCategory.ALLIANCE, false],
+    [MessageCategory.CHAT, false],
   ]);
 
   private renderButton(options: {
@@ -130,7 +132,7 @@ export class EventsDisplay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  private toggleEventFilter(filterName: MessageType) {
+  private toggleEventFilter(filterName: MessageCategory) {
     const currentState = this.eventsFilters.get(filterName) || false;
     this.eventsFilters.set(filterName, !currentState);
     this.requestUpdate();
@@ -360,7 +362,7 @@ export class EventsDisplay extends LitElement implements Layer {
         },
       ],
       highlight: true,
-      type: MessageType.ALLIANCE,
+      type: MessageType.ALLIANCE_REQUEST,
       createdAt: this.game.ticks(),
       onDelete: () =>
         this.eventBus.emit(
@@ -417,7 +419,7 @@ export class EventsDisplay extends LitElement implements Layer {
         description:
           `You broke your alliance with ${betrayed.name()}, making you a TRAITOR ` +
           `(${malusPercent}% defense debuff for ${durationText})`,
-        type: MessageType.ALLIANCE,
+        type: MessageType.ALLIANCE_BROKEN,
         highlight: true,
         createdAt: this.game.ticks(),
         focusID: update.betrayedID,
@@ -425,7 +427,7 @@ export class EventsDisplay extends LitElement implements Layer {
     } else if (betrayed === myPlayer) {
       this.addEvent({
         description: `${traitor.name()} broke their alliance with you`,
-        type: MessageType.ALLIANCE,
+        type: MessageType.ALLIANCE_BROKEN,
         highlight: true,
         createdAt: this.game.ticks(),
         focusID: update.traitorID,
@@ -449,7 +451,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
     this.addEvent({
       description: `Your alliance with ${other.name()} expired`,
-      type: MessageType.ALLIANCE,
+      type: MessageType.ALLIANCE_EXPIRED,
       highlight: true,
       createdAt: this.game.ticks(),
       focusID: otherID,
@@ -465,7 +467,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
     this.addEvent({
       description: `${other.name()} requests you attack ${target.name()}`,
-      type: MessageType.ATTACK,
+      type: MessageType.ATTACK_REQUEST,
       highlight: true,
       createdAt: this.game.ticks(),
       focusID: event.targetID,
@@ -552,21 +554,6 @@ export class EventsDisplay extends LitElement implements Layer {
     });
   }
 
-  private getMessageTypeClasses(type: MessageType): string {
-    switch (type) {
-      case MessageType.ATTACK:
-        return "text-red-400";
-      case MessageType.ALLIANCE:
-        return "text-blue-400";
-      case MessageType.TRADE:
-        return "text-green-300";
-      case MessageType.CHAT:
-        return "text-gray-200";
-      default:
-        return "text-white";
-    }
-  }
-
   private getEventDescription(
     event: GameEvent,
   ): string | DirectiveResult<typeof UnsafeHTMLDirective> {
@@ -607,14 +594,14 @@ export class EventsDisplay extends LitElement implements Layer {
                     ${(
                       this.game.playerBySmallID(attack.attackerID) as PlayerView
                     )?.name()}
+                    ${attack.retreating
+                      ? `(${translateText("events_display.retreating")}...)`
+                      : ""}
                   `,
                   onClick: () => this.attackWarningOnClick(attack),
                   className: "text-left text-red-400",
                   translate: false,
                 })}
-                ${attack.retreating
-                  ? `(${translateText("events_display.retreating")}...)`
-                  : ""}
               `,
             )}
           `
@@ -650,7 +637,7 @@ export class EventsDisplay extends LitElement implements Layer {
                           className: "text-left flex-shrink-0",
                           disabled: attack.retreating,
                         })
-                      : html`<span class="flex-shrink-0"
+                      : html`<span class="flex-shrink-0 text-blue-400"
                           >(${translateText(
                             "events_display.retreating",
                           )}...)</span
@@ -686,7 +673,7 @@ export class EventsDisplay extends LitElement implements Layer {
                           className: "text-left flex-shrink-0",
                           disabled: landAttack.retreating,
                         })
-                      : html`<span class="flex-shrink-0"
+                      : html`<span class="flex-shrink-0 text-blue-400"
                           >(${translateText(
                             "events_display.retreating",
                           )}...)</span
@@ -722,7 +709,7 @@ export class EventsDisplay extends LitElement implements Layer {
                           className: "text-left flex-shrink-0",
                           disabled: boat.retreating(),
                         })
-                      : html`<span class="flex-shrink-0"
+                      : html`<span class="flex-shrink-0 text-blue-400"
                           >(${translateText(
                             "events_display.retreating",
                           )}...)</span
@@ -764,7 +751,8 @@ export class EventsDisplay extends LitElement implements Layer {
     `;
 
     const filteredEvents = this.events.filter((event) => {
-      return !this.eventsFilters.get(event.type);
+      const category = getMessageCategory(event.type);
+      return !this.eventsFilters.get(category);
     });
 
     filteredEvents.sort((a, b) => {
@@ -814,12 +802,13 @@ export class EventsDisplay extends LitElement implements Layer {
                         src="${swordIcon}"
                         class="w-5 h-5"
                         style="filter: ${this.eventsFilters.get(
-                          MessageType.ATTACK,
+                          MessageCategory.ATTACK,
                         )
                           ? "grayscale(1) opacity(0.5)"
                           : "none"}"
                       />`,
-                      onClick: () => this.toggleEventFilter(MessageType.ATTACK),
+                      onClick: () =>
+                        this.toggleEventFilter(MessageCategory.ATTACK),
                       className: "cursor-pointer pointer-events-auto",
                     })}
                     ${this.renderButton({
@@ -827,12 +816,13 @@ export class EventsDisplay extends LitElement implements Layer {
                         src="${donateGoldIcon}"
                         class="w-5 h-5"
                         style="filter: ${this.eventsFilters.get(
-                          MessageType.TRADE,
+                          MessageCategory.TRADE,
                         )
                           ? "grayscale(1) opacity(0.5)"
                           : "none"}"
                       />`,
-                      onClick: () => this.toggleEventFilter(MessageType.TRADE),
+                      onClick: () =>
+                        this.toggleEventFilter(MessageCategory.TRADE),
                       className: "cursor-pointer pointer-events-auto",
                     })}
                     ${this.renderButton({
@@ -840,13 +830,13 @@ export class EventsDisplay extends LitElement implements Layer {
                         src="${allianceIcon}"
                         class="w-5 h-5"
                         style="filter: ${this.eventsFilters.get(
-                          MessageType.ALLIANCE,
+                          MessageCategory.ALLIANCE,
                         )
                           ? "grayscale(1) opacity(0.5)"
                           : "none"}"
                       />`,
                       onClick: () =>
-                        this.toggleEventFilter(MessageType.ALLIANCE),
+                        this.toggleEventFilter(MessageCategory.ALLIANCE),
                       className: "cursor-pointer pointer-events-auto",
                     })}
                     ${this.renderButton({
@@ -854,12 +844,13 @@ export class EventsDisplay extends LitElement implements Layer {
                         src="${chatIcon}"
                         class="w-5 h-5"
                         style="filter: ${this.eventsFilters.get(
-                          MessageType.CHAT,
+                          MessageCategory.CHAT,
                         )
                           ? "grayscale(1) opacity(0.5)"
                           : "none"}"
                       />`,
-                      onClick: () => this.toggleEventFilter(MessageType.CHAT),
+                      onClick: () =>
+                        this.toggleEventFilter(MessageCategory.CHAT),
                       className: "cursor-pointer pointer-events-auto",
                     })}
                   </div>
@@ -900,7 +891,7 @@ export class EventsDisplay extends LitElement implements Layer {
                         (event, index) => html`
                           <tr>
                             <td
-                              class="lg:px-2 lg:py-1 p-1 text-left ${this.getMessageTypeClasses(
+                              class="lg:px-2 lg:py-1 p-1 text-left ${getMessageTypeClasses(
                                 event.type,
                               )}"
                             >

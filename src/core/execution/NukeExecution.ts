@@ -113,7 +113,7 @@ export class NukeExecution implements Execution {
             this.nuke.id(),
             // TODO TranslateText
             `${this.player.name()} - atom bomb inbound`,
-            MessageType.ATTACK,
+            MessageType.NUKE_INBOUND,
             target.id(),
           );
           this.breakAlliances(this.tilesToDestroy());
@@ -122,7 +122,7 @@ export class NukeExecution implements Execution {
             this.nuke.id(),
             // TODO TranslateText
             `${this.player.name()} - hydrogen bomb inbound`,
-            MessageType.ATTACK,
+            MessageType.HYDROGEN_BOMB_INBOUND,
             target.id(),
           );
           this.breakAlliances(this.tilesToDestroy());

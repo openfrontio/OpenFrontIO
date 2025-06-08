@@ -69,7 +69,7 @@ export class MirvExecution implements Execution {
         this.nuke.id(),
         // TODO TranslateText
         `⚠️⚠️⚠️ ${this.player.name()} - MIRV INBOUND ⚠️⚠️⚠️`,
-        MessageType.ATTACK,
+        MessageType.MIRV_INBOUND,
         this.targetPlayer.id(),
       );
     }
