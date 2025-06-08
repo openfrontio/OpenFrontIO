@@ -133,8 +133,8 @@ export class OptionsMenu extends LitElement implements Layer {
     this.isVisible = true;
     this.requestUpdate();
 
-    // timeout to wait replay-panel init in dom
-    setTimeout(() => {
+    // wait for replay-panel init in dom
+    this.updateComplete.then(() => {
       const replayPanel = document.querySelector("replay-panel");
       if (!(replayPanel instanceof ReplayPanel)) {
         console.error("ReplayPanel element not found in the DOM");
