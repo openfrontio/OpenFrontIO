@@ -18,10 +18,8 @@ import { RadialMenu, RadialMenuConfig } from "./RadialMenu";
 import {
   COLORS,
   MenuElementParams,
+  rootMenuItems,
   Slot,
-  createRadialMenuItems,
-  getRootMenuItems,
-  updateCenterButton,
 } from "./RadialMenuElements";
 
 import boatIcon from "../../../../resources/images/BoatIconWhite.svg";
@@ -85,7 +83,7 @@ export class MainRadialMenu extends LitElement implements Layer {
 
     this.chatIntegration = new ChatIntegration(this.game, this.eventBus);
 
-    this.radialMenu.setRootMenuItems(getRootMenuItems());
+    this.radialMenu.setRootMenuItems(rootMenuItems);
   }
 
   init() {
@@ -127,9 +125,8 @@ export class MainRadialMenu extends LitElement implements Layer {
       closeMenu: () => this.menuEventManager.closeMenu(),
     };
 
-    const menuItems = createRadialMenuItems(params);
-
-    this.radialMenu.setRootMenuItems(menuItems);
+    this.radialMenu.setRootMenuItems(rootMenuItems);
+    this.radialMenu.setParams(params);
 
     updateCenterButton(params, (enabled, action) => {
       this.radialMenu.enableCenterButton(enabled, action);
@@ -281,5 +278,24 @@ export class MainRadialMenu extends LitElement implements Layer {
 
   redraw() {
     // No redraw implementation needed
+  }
+}
+
+function updateCenterButton(
+  params: MenuElementParams,
+  enableCenterButton: (enabled: boolean, action?: (() => void) | null) => void,
+) {
+  if (params.playerActions.canAttack) {
+    enableCenterButton(true, () => {
+      if (params.tileOwner !== params.myPlayer) {
+        params.playerActionHandler.handleAttack(
+          params.myPlayer,
+          params.tileOwner.id(),
+        );
+      }
+      params.closeMenu();
+    });
+  } else {
+    enableCenterButton(false);
   }
 }

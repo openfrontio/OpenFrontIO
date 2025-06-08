@@ -2,7 +2,7 @@ import * as d3 from "d3";
 import backIcon from "../../../../resources/images/BackIconWhite.svg";
 import disabledIcon from "../../../../resources/images/DisabledIcon.svg";
 import { Layer } from "./Layer";
-import { MenuElement } from "./RadialMenuElements";
+import { MenuElement, MenuElementParams } from "./RadialMenuElements";
 
 export interface TooltipItem {
   text: string;
@@ -67,6 +67,8 @@ export class RadialMenu implements Layer {
   private backButtonHoverTimeout: number | null = null;
   private navigationInProgress: boolean = false;
   private originalCenterButtonIcon: string = "";
+
+  private params: MenuElementParams;
 
   constructor(config: RadialMenuConfig = {}) {
     this.config = {
@@ -287,10 +289,10 @@ export class RadialMenu implements Layer {
       .attr("class", "menu-item-path")
       .attr("d", arc)
       .attr("fill", (d) => {
-        const color = d.data.disabled
+        const color = d.data.disabled(this.params)
           ? this.config.disabledColor
           : d.data.color || "#333333";
-        const opacity = d.data.disabled ? 0.5 : 0.7;
+        const opacity = d.data.disabled(this.params) ? 0.5 : 0.7;
 
         if (d.data.id === this.selectedItemId && this.currentLevel > level) {
           return color;
@@ -300,8 +302,10 @@ export class RadialMenu implements Layer {
       })
       .attr("stroke", "#ffffff")
       .attr("stroke-width", "2")
-      .style("cursor", (d) => (d.data.disabled ? "not-allowed" : "pointer"))
-      .style("opacity", (d) => (d.data.disabled ? 0.5 : 1))
+      .style("cursor", (d) =>
+        d.data.disabled(this.params) ? "not-allowed" : "pointer",
+      )
+      .style("opacity", (d) => (d.data.disabled(this.params) ? 0.5 : 1))
       .style(
         "transition",
         `filter ${this.config.menuTransitionDuration / 2}ms, stroke-width ${
@@ -323,7 +327,7 @@ export class RadialMenu implements Layer {
         path.attr("filter", "url(#glow)");
         path.attr("stroke-width", "3");
 
-        const color = d.data.disabled
+        const color = d.data.disabled(this.params)
           ? this.config.disabledColor
           : d.data.color || "#333333";
         path.attr("fill", color);
@@ -354,7 +358,7 @@ export class RadialMenu implements Layer {
   ) {
     const onHover = (d: d3.PieArcDatum<MenuElement>, path: any) => {
       if (
-        d.data.disabled ||
+        d.data.disabled(this.params) ||
         (this.currentLevel > 0 && this.currentLevel !== level) ||
         this.navigationInProgress
       )
@@ -362,7 +366,7 @@ export class RadialMenu implements Layer {
 
       path.attr("filter", "url(#glow)");
       path.attr("stroke-width", "3");
-      const color = d.data.disabled
+      const color = d.data.disabled(this.params)
         ? this.config.disabledColor
         : d.data.color || "#333333";
       path.attr("fill", color);
@@ -371,10 +375,11 @@ export class RadialMenu implements Layer {
         this.showTooltip(d.data.tooltipItems);
       }
 
+      const subMenu = d.data.subMenu?.(this.params);
       if (
-        d.data.children &&
-        d.data.children.length > 0 &&
-        !d.data.disabled &&
+        subMenu &&
+        subMenu.length > 0 &&
+        !d.data.disabled(this.params) &&
         !(
           this.currentLevel > 0 &&
           d.data.id === this.selectedItemId &&
@@ -390,7 +395,7 @@ export class RadialMenu implements Layer {
           if (this.navigationInProgress) return;
           this.navigationInProgress = true;
           this.selectedItemId = d.data.id;
-          this.navigateToSubMenu(d.data.children || []);
+          this.navigateToSubMenu(subMenu);
           this.setCenterButtonAsBack();
         }, 200);
       }
@@ -405,7 +410,7 @@ export class RadialMenu implements Layer {
       this.hideTooltip();
 
       if (
-        d.data.disabled ||
+        d.data.disabled(this.params) ||
         (this.currentLevel > 0 &&
           level === 0 &&
           d.data.id === this.selectedItemId)
@@ -413,10 +418,10 @@ export class RadialMenu implements Layer {
         return;
       path.attr("filter", null);
       path.attr("stroke-width", "2");
-      const color = d.data.disabled
+      const color = d.data.disabled(this.params)
         ? this.config.disabledColor
         : d.data.color || "#333333";
-      const opacity = d.data.disabled ? 0.5 : 0.7;
+      const opacity = d.data.disabled(this.params) ? 0.5 : 0.7;
       path.attr(
         "fill",
         d3.color(color)?.copy({ opacity: opacity })?.toString() || color,
@@ -425,7 +430,7 @@ export class RadialMenu implements Layer {
 
     const onClick = (d: d3.PieArcDatum<MenuElement>, event: Event) => {
       event.stopPropagation();
-      if (d.data.disabled || this.navigationInProgress) return;
+      if (d.data.disabled(this.params) || this.navigationInProgress) return;
 
       if (
         this.currentLevel > 0 &&
@@ -434,16 +439,15 @@ export class RadialMenu implements Layer {
       )
         return;
 
-      if (d.data.children && d.data.children.length > 0) {
+      const subMenu = d.data.subMenu?.(this.params);
+      if (subMenu && subMenu.length > 0) {
         this.navigationInProgress = true;
         this.selectedItemId = d.data.id;
-        this.navigateToSubMenu(d.data.children || []);
+        this.navigateToSubMenu(subMenu);
         this.setCenterButtonAsBack();
-      } else if (d.data._action) {
-        d.data._action();
-        this.hideRadialMenu();
       } else {
-        throw new Error(`Menu item action is not a function: ${d.data.id}`);
+        d.data.action?.(this.params);
+        this.hideRadialMenu();
       }
     };
 
@@ -513,14 +517,16 @@ export class RadialMenu implements Layer {
             .attr("fill", "white")
             .attr("font-size", d.data.fontSize ?? "12px")
             .attr("font-family", "Arial, sans-serif")
-            .style("opacity", d.data.disabled ? 0.5 : 1)
+            .style("opacity", d.data.disabled(this.params) ? 0.5 : 1)
             .text(d.data.text);
         } else {
           content
             .append("image")
             .attr(
               "xlink:href",
-              d.data.disabled ? disabledIcon : d.data.icon || disabledIcon,
+              d.data.disabled(this.params)
+                ? disabledIcon
+                : d.data.icon || disabledIcon,
             )
             .attr("width", this.config.iconSize)
             .attr("height", this.config.iconSize)
@@ -646,10 +652,10 @@ export class RadialMenu implements Layer {
 
         const item = this.findMenuItem(this.selectedItemId);
         if (item) {
-          const color = item.disabled
+          const color = item.disabled(this.params)
             ? this.config.disabledColor
             : item.color || "#333333";
-          const opacity = item.disabled ? 0.5 : 0.7;
+          const opacity = item.disabled(this.params) ? 0.5 : 0.7;
           selectedPath.attr(
             "fill",
             d3.color(color)?.copy({ opacity: opacity })?.toString() || color,
@@ -862,7 +868,6 @@ export class RadialMenu implements Layer {
     this.enableCenterButton(false);
 
     for (const item of this.currentMenuItems) {
-      item.disabled = true;
       item.color = this.config.disabledColor;
     }
   }
@@ -956,7 +961,6 @@ export class RadialMenu implements Layer {
 
     const item = this.findMenuItem(id);
     if (item) {
-      item.disabled = !enabled;
       if (color) item.color = enabled ? color : this.config.disabledColor;
       if (icon) item.icon = icon;
       if (text !== undefined) item.text = text;
@@ -1001,6 +1005,10 @@ export class RadialMenu implements Layer {
     if (this.isVisible) {
       this.refreshMenu();
     }
+  }
+
+  public setParams(params: MenuElementParams) {
+    this.params = params;
   }
 
   private findMenuItem(id: string): MenuElement | undefined {
