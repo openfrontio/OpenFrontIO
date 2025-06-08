@@ -5,7 +5,8 @@ on:
   push:
     branches: [main]
 
-permissions: {}
+permissions:
+  checks: write
 
 jobs:
   build:
@@ -45,10 +46,12 @@ jobs:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
       - run: npm ci
-      - name: Test coverage
-        uses: ArtiomTr/jest-coverage-report-action@262a7bb0b20c4d1d6b6b026af0f008f78da72788
+      - uses: ArtiomTr/jest-coverage-report-action@262a7bb0b20c4d1d6b6b026af0f008f78da72788
+        if: ${{ github.repository != 'openfrontio/OpenFrontIO' }}
+      - uses: ArtiomTr/jest-coverage-report-action@262a7bb0b20c4d1d6b6b026af0f008f78da72788
+        if: ${{ github.repository == 'openfrontio/OpenFrontIO' }}
         with:
-          github-token: ${{ github.repository == 'openfrontio/OpenFrontIO' && steps.generate-token.outputs.token || env.GITHUB_TOKEN }}
+          github-token: ${{ steps.generate-token.outputs.token }}
 
   eslint:
     name: 🔍 ESLint
