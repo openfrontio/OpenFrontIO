@@ -398,9 +398,6 @@
     "workers": "Laboristoj",
     "attack_ratio": "Atakkvociento"
   },
-  "replay_panel": {
-    "replay_speed": "Ludrapideco"
-  },
   "player_panel": {
     "gold": "Oro",
     "troops": "Trupoj",

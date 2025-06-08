@@ -398,9 +398,6 @@
     "workers": "Trabajadores",
     "attack_ratio": "Ratio de ataque"
   },
-  "replay_panel": {
-    "replay_speed": "Velocidad de reproducción"
-  },
   "player_panel": {
     "gold": "Oro",
     "troops": "Tropas",

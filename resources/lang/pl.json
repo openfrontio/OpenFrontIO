@@ -318,8 +318,5 @@
       "saving_for_mirv": "[P1] oszczędza, aby uruchomić MIRV.",
       "mirv_ready": "[P1] ma wystarczającą ilość złota, aby uruchomić MIRV!"
     }
-  },
-  "replay_panel": {
-    "replay_speed": "Prędkość odtwarzania"
   }
 }
