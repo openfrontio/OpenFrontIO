@@ -473,7 +473,7 @@ export class HelpModal extends LitElement {
               class="flex flex-col items-center w-full md:w-1/3 mb-2 md:mb-0"
             >
               <div
-                class="text-gray-300 h-8 md:h-10 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
+                class="text-gray-300 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
               >
                 ${translateText("help_modal.icon_crown")}
               </div>
@@ -489,7 +489,7 @@ export class HelpModal extends LitElement {
               class="flex flex-col items-center w-full md:w-1/3 mb-2 md:mb-0"
             >
               <div
-                class="text-gray-300 h-8 md:h-10 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
+                class="text-gray-300 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
               >
                 ${translateText("help_modal.icon_traitor")}
               </div>
@@ -505,7 +505,7 @@ export class HelpModal extends LitElement {
               class="flex flex-col items-center w-full md:w-1/3 mb-2 md:mb-0"
             >
               <div
-                class="text-gray-300 h-8 md:h-10 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
+                class="text-gray-300 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
               >
                 ${translateText("help_modal.icon_ally")}
               </div>
@@ -523,7 +523,7 @@ export class HelpModal extends LitElement {
               class="flex flex-col items-center w-full md:w-1/3 mb-2 md:mb-0"
             >
               <div
-                class="text-gray-300 h-8 md:h-10 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
+                class="text-gray-300 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
               >
                 ${translateText("help_modal.icon_embargo")}
               </div>
@@ -539,7 +539,7 @@ export class HelpModal extends LitElement {
               class="flex flex-col items-center w-full md:w-1/3 mb-2 md:mb-0"
             >
               <div
-                class="text-gray-300 h-8 md:h-10 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
+                class="text-gray-300 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
               >
                 ${translateText("help_modal.icon_request")}
               </div>

@@ -22,7 +22,6 @@ export class AttackExecution implements Execution {
 
   private random = new PseudoRandom(123);
 
-  private _owner: Player;
   private target: Player | TerraNullius;
 
   private mg: Game;
@@ -31,7 +30,7 @@ export class AttackExecution implements Execution {
 
   constructor(
     private startTroops: number | null = null,
-    private _ownerID: PlayerID,
+    private _owner: Player,
     private _targetID: PlayerID | null,
     private sourceTile: TileRef | null = null,
     private removeTroops: boolean = true,
@@ -51,18 +50,12 @@ export class AttackExecution implements Execution {
     }
     this.mg = mg;
 
-    if (!mg.hasPlayer(this._ownerID)) {
-      console.warn(`player ${this._ownerID} not found`);
-      this.active = false;
-      return;
-    }
     if (this._targetID !== null && !mg.hasPlayer(this._targetID)) {
       console.warn(`target ${this._targetID} not found`);
       this.active = false;
       return;
     }
 
-    this._owner = mg.player(this._ownerID);
     this.target =
       this._targetID === this.mg.terraNullius().id()
         ? mg.terraNullius()

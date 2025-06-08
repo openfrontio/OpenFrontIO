@@ -2,6 +2,7 @@ import { AllPlayersStats, ClientID } from "../Schemas";
 import {
   EmojiMessage,
   GameUpdates,
+  Gold,
   MessageType,
   NameViewData,
   PlayerID,
@@ -102,10 +103,10 @@ export interface PlayerUpdate {
   smallID: number;
   playerType: PlayerType;
   isAlive: boolean;
+  isDisconnected: boolean;
   tilesOwned: number;
-  gold: number;
+  gold: Gold;
   population: number;
-  totalPopulation: number;
   workers: number;
   troops: number;
   targetTroopRatio: number;

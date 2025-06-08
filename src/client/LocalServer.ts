@@ -1,4 +1,3 @@
-import { consolex } from "../core/Consolex";
 import {
   AllPlayersStats,
   ClientMessage,
@@ -172,7 +171,7 @@ export class LocalServer {
   }
 
   public endGame(saveFullGame: boolean = false) {
-    consolex.log("local server ending game");
+    console.log("local server ending game");
     clearInterval(this.turnCheckInterval);
     if (this.isReplay) {
       return;

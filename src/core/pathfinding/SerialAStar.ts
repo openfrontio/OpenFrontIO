@@ -1,5 +1,4 @@
 import { PriorityQueue } from "@datastructures-js/priority-queue";
-import { consolex } from "../Consolex";
 import { GameMap, TileRef } from "../game/GameMap";
 import { AStar, PathFindResultType } from "./AStar";
 
@@ -154,7 +153,7 @@ export class SerialAStar implements AStar {
           Math.abs(this.gameMap.y(a) - this.gameMap.y(b)))
       );
     } catch {
-      consolex.log("uh oh");
+      console.log("uh oh");
       return 0;
     }
   }

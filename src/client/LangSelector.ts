@@ -78,10 +78,18 @@ export class LangSelector extends LitElement {
     });
   }
 
+  private getClosestSupportedLang(lang: string): string {
+    if (!lang) return "en";
+    if (lang in this.languageMap) return lang;
+    const base = lang.split("-")[0];
+    if (base in this.languageMap) return base;
+    return "en";
+  }
+
   private async initializeLanguage() {
-    const locale = new Intl.Locale(navigator.language);
-    const defaultLang = locale.language;
-    const userLang = localStorage.getItem("lang") || defaultLang;
+    const browserLocale = navigator.language;
+    const savedLang = localStorage.getItem("lang");
+    const userLang = this.getClosestSupportedLang(savedLang || browserLocale);
 
     this.defaultTranslations = await this.loadLanguage("en");
     this.translations = await this.loadLanguage(userLang);

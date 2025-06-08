@@ -12,7 +12,7 @@ import { Stats } from "./Stats";
 
 export type PlayerID = string;
 export type Tick = number;
-export type Gold = number;
+export type Gold = bigint;
 
 export const AllPlayers = "AllPlayers" as const;
 
@@ -70,7 +70,7 @@ export enum GameMapType {
   GatewayToTheAtlantic = "Gateway to the Atlantic",
   Australia = "Australia",
   Iceland = "Iceland",
-  Japan = "Japan",
+  EastAsia = "East Asia",
   BetweenTwoSeas = "Between Two Seas",
   FaroeIslands = "Faroe Islands",
   DeglaciatedAntarctica = "Deglaciated Antarctica",
@@ -97,7 +97,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.GatewayToTheAtlantic,
     GameMapType.BetweenTwoSeas,
     GameMapType.Iceland,
-    GameMapType.Japan,
+    GameMapType.EastAsia,
     GameMapType.Mena,
     GameMapType.Australia,
     GameMapType.FaroeIslands,
@@ -433,6 +433,9 @@ export interface Player {
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
   lastTileChange(): Tick;
 
+  isDisconnected(): boolean;
+  markDisconnected(isDisconnected: boolean): void;
+
   hasSpawned(): boolean;
   setHasSpawned(hasSpawned: boolean): void;
 
@@ -446,12 +449,11 @@ export interface Player {
   // Resources & Population
   gold(): Gold;
   population(): number;
-  totalPopulation(): number;
   workers(): number;
   troops(): number;
   targetTroopRatio(): number;
   addGold(toAdd: Gold): void;
-  removeGold(toRemove: Gold): void;
+  removeGold(toRemove: Gold): Gold;
   addWorkers(toAdd: number): void;
   removeWorkers(toRemove: number): void;
   setTargetTroopRatio(target: number): void;
@@ -507,8 +509,8 @@ export interface Player {
 
   // Donation
   canDonate(recipient: Player): boolean;
-  donateTroops(recipient: Player, troops: number): void;
-  donateGold(recipient: Player, gold: number): void;
+  donateTroops(recipient: Player, troops: number): boolean;
+  donateGold(recipient: Player, gold: Gold): boolean;
 
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;
@@ -620,7 +622,7 @@ export interface PlayerActions {
 export interface BuildableUnit {
   canBuild: TileRef | false;
   type: UnitType;
-  cost: number;
+  cost: Gold;
 }
 
 export interface PlayerProfile {

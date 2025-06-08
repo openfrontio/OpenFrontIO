@@ -1,4 +1,3 @@
-import { consolex } from "../../core/Consolex";
 import { EventBus } from "../../core/EventBus";
 import { GameView } from "../../core/game/GameView";
 import { GameStartingModal } from "../GameStartingModal";
@@ -15,13 +14,13 @@ import { FxLayer } from "./layers/FxLayer";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
+import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
 import { OptionsMenu } from "./layers/OptionsMenu";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { PlayerTeamLabel } from "./layers/PlayerTeamLabel";
-import { RadialMenu } from "./layers/RadialMenu";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
@@ -51,7 +50,7 @@ export function createRenderer(
   // TODO maybe append this to dcoument instead of querying for them?
   const emojiTable = document.querySelector("emoji-table") as EmojiTable;
   if (!emojiTable || !(emojiTable instanceof EmojiTable)) {
-    consolex.error("EmojiTable element not found in the DOM");
+    console.error("EmojiTable element not found in the DOM");
   }
   emojiTable.eventBus = eventBus;
   emojiTable.transformHandler = transformHandler;
@@ -60,28 +59,28 @@ export function createRenderer(
 
   const buildMenu = document.querySelector("build-menu") as BuildMenu;
   if (!buildMenu || !(buildMenu instanceof BuildMenu)) {
-    consolex.error("BuildMenu element not found in the DOM");
+    console.error("BuildMenu element not found in the DOM");
   }
   buildMenu.game = game;
   buildMenu.eventBus = eventBus;
 
   const leaderboard = document.querySelector("leader-board") as Leaderboard;
   if (!emojiTable || !(leaderboard instanceof Leaderboard)) {
-    consolex.error("EmojiTable element not found in the DOM");
+    console.error("EmojiTable element not found in the DOM");
   }
   leaderboard.eventBus = eventBus;
   leaderboard.game = game;
 
   const teamStats = document.querySelector("team-stats") as TeamStats;
   if (!emojiTable || !(teamStats instanceof TeamStats)) {
-    consolex.error("EmojiTable element not found in the DOM");
+    console.error("EmojiTable element not found in the DOM");
   }
   teamStats.eventBus = eventBus;
   teamStats.game = game;
 
   const controlPanel = document.querySelector("control-panel") as ControlPanel;
   if (!(controlPanel instanceof ControlPanel)) {
-    consolex.error("ControlPanel element not found in the DOM");
+    console.error("ControlPanel element not found in the DOM");
   }
   controlPanel.eventBus = eventBus;
   controlPanel.uiState = uiState;
@@ -91,14 +90,14 @@ export function createRenderer(
     "events-display",
   ) as EventsDisplay;
   if (!(eventsDisplay instanceof EventsDisplay)) {
-    consolex.error("events display not found");
+    console.error("events display not found");
   }
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
 
   const chatDisplay = document.querySelector("chat-display") as ChatDisplay;
   if (!(chatDisplay instanceof ChatDisplay)) {
-    consolex.error("chat display not found");
+    console.error("chat display not found");
   }
   chatDisplay.eventBus = eventBus;
   chatDisplay.game = game;
@@ -107,7 +106,7 @@ export function createRenderer(
     "player-info-overlay",
   ) as PlayerInfoOverlay;
   if (!(playerInfo instanceof PlayerInfoOverlay)) {
-    consolex.error("player info overlay not found");
+    console.error("player info overlay not found");
   }
   playerInfo.eventBus = eventBus;
   playerInfo.transform = transformHandler;
@@ -191,7 +190,7 @@ export function createRenderer(
 
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
-    new TerritoryLayer(game, eventBus),
+    new TerritoryLayer(game, eventBus, transformHandler),
     structureLayer,
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
@@ -200,7 +199,7 @@ export function createRenderer(
     eventsDisplay,
     chatDisplay,
     buildMenu,
-    new RadialMenu(
+    new MainRadialMenu(
       eventBus,
       game,
       transformHandler,
@@ -266,11 +265,8 @@ export class GameRenderer {
     window.addEventListener("resize", () => this.resizeCanvas());
     this.resizeCanvas();
 
-    this.transformHandler = new TransformHandler(
-      this.game,
-      this.eventBus,
-      this.canvas,
-    );
+    //show whole map on startup
+    this.transformHandler.centerAll(0.9);
 
     requestAnimationFrame(() => this.renderGame());
   }

@@ -1,8 +1,13 @@
-name: 🧼 PR Description
+name: 🧼 PR
 
 on:
   pull_request:
-    types: [opened, edited, synchronize]
+    types:
+      - demilestoned
+      - edited
+      - milestoned
+      - opened
+      - synchronize
 
 permissions: {}
 
@@ -45,3 +50,18 @@ jobs:
             } else {
               console.log('✅ PR description and checklist look good.');
             }
+
+  has-milestone:
+    name: Has Milestone
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            // Get the pull request data
+            const milestone = context.payload.pull_request.milestone;
+            if (!milestone) {
+              core.setFailed('❌ Pull request must have a milestone assigned before merging.');
+              return;
+            }
+            console.log(`✅ Milestone found: ${milestone.title}`);

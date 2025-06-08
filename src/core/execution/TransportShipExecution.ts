@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -24,7 +23,6 @@ export class TransportShipExecution implements Execution {
   private active = true;
 
   private mg: Game;
-  private attacker: Player;
   private target: Player | TerraNullius;
 
   // TODO make private
@@ -36,7 +34,7 @@ export class TransportShipExecution implements Execution {
   private pathFinder: PathFinder;
 
   constructor(
-    private attackerID: PlayerID,
+    private attacker: Player,
     private targetID: PlayerID | null,
     private ref: TileRef,
     private troops: number,
@@ -48,13 +46,6 @@ export class TransportShipExecution implements Execution {
   }
 
   init(mg: Game, ticks: number) {
-    if (!mg.hasPlayer(this.attackerID)) {
-      console.warn(
-        `TransportShipExecution: attacker ${this.attackerID} not found`,
-      );
-      this.active = false;
-      return;
-    }
     if (this.targetID !== null && !mg.hasPlayer(this.targetID)) {
       console.warn(`TransportShipExecution: target ${this.targetID} not found`);
       this.active = false;
@@ -65,8 +56,6 @@ export class TransportShipExecution implements Execution {
     this.mg = mg;
     this.pathFinder = PathFinder.Mini(mg, 10_000, 10);
 
-    this.attacker = mg.player(this.attackerID);
-
     if (
       this.attacker.units(UnitType.TransportShip).length >=
       mg.config().boatMaxNumber()
@@ -74,7 +63,7 @@ export class TransportShipExecution implements Execution {
       mg.displayMessage(
         `No boats available, max ${mg.config().boatMaxNumber()}`,
         MessageType.WARN,
-        this.attackerID,
+        this.attacker.id(),
       );
       this.active = false;
       this.attacker.addTroops(this.troops);
@@ -100,7 +89,7 @@ export class TransportShipExecution implements Execution {
 
     this.dst = targetTransportTile(this.mg, this.ref);
     if (this.dst === null) {
-      consolex.warn(
+      console.warn(
         `${this.attacker} cannot send ship to ${this.target}, cannot find attack tile`,
       );
       this.active = false;
@@ -112,7 +101,7 @@ export class TransportShipExecution implements Execution {
       this.dst,
     );
     if (closestTileSrc === false) {
-      consolex.warn(`can't build transport ship`);
+      console.warn(`can't build transport ship`);
       this.active = false;
       return;
     }
@@ -176,7 +165,7 @@ export class TransportShipExecution implements Execution {
     switch (result.type) {
       case PathFindResultType.Completed:
         if (this.mg.owner(this.dst) === this.attacker) {
-          this.attacker.addTroops(this.troops);
+          this.attacker.addTroops(this.boat.troops());
           this.boat.delete(false);
           this.active = false;
 
@@ -193,7 +182,7 @@ export class TransportShipExecution implements Execution {
           this.mg.addExecution(
             new AttackExecution(
               this.troops,
-              this.attacker.id(),
+              this.attacker,
               this.targetID,
               this.dst,
               false,
@@ -215,7 +204,7 @@ export class TransportShipExecution implements Execution {
         break;
       case PathFindResultType.PathNotFound:
         // TODO: add to poisoned port list
-        consolex.warn(`path not found to dst`);
+        console.warn(`path not found to dst`);
         this.attacker.addTroops(this.troops);
         this.boat.delete(false);
         this.active = false;

@@ -59,5 +59,8 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY startup.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/startup.sh
 
+RUN mkdir -p /tmp/.cloudflared && chmod 777 /tmp/.cloudflared
+ENV CF_CONFIG_DIR=/tmp/.cloudflared
+
 # Use the startup script as the entrypoint
 ENTRYPOINT ["/usr/local/bin/startup.sh"]

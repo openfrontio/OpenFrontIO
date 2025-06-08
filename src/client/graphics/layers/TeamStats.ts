@@ -58,7 +58,7 @@ export class TeamStats extends LitElement implements Layer {
 
     this.teams = Object.entries(grouped)
       .map(([teamStr, teamPlayers]) => {
-        let totalGold = 0;
+        let totalGold = 0n;
         let totalTroops = 0;
         let totalScoreSort = 0;
 

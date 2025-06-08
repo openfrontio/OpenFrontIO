@@ -22,7 +22,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   GatewayToTheAtlantic: "Gateway to the Atlantic",
   Australia: "Australia",
   Iceland: "Iceland",
-  Japan: "Japan",
+  EastAsia: "East Asia",
   BetweenTwoSeas: "Between Two Seas",
   FaroeIslands: "Faroe Islands",
   DeglaciatedAntarctica: "Deglaciated Antarctica",

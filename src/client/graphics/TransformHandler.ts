@@ -257,4 +257,31 @@ export class TransformHandler {
     }
     this.target = null;
   }
+
+  override(x: number = 0, y: number = 0, s: number = 1) {
+    //hardset view position
+    this.clearTarget();
+    this.offsetX = x;
+    this.offsetY = y;
+    this.scale = s;
+    this.changed = true;
+  }
+
+  centerAll(fit: number = 1) {
+    //position entire map centered on the screen
+
+    const vpWidth = this.boundingRect().width;
+    const vpHeight = this.boundingRect().height;
+    const mapWidth = this.game.width();
+    const mapHeight = this.game.height();
+
+    const scHor = (vpWidth / mapWidth) * fit;
+    const scVer = (vpHeight / mapHeight) * fit;
+    const tScale = Math.min(scHor, scVer);
+
+    const oHor = (mapWidth - vpWidth) / 2 / tScale;
+    const oVer = (mapHeight - vpHeight) / 2 / tScale;
+
+    this.override(oHor, oVer, tScale);
+  }
 }

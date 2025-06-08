@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { GameView } from "../../../core/game/GameView";
+import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 
 @customElement("heads-up-message")
@@ -39,7 +40,7 @@ export class HeadsUpMessage extends LitElement implements Layer {
                     backdrop-blur-md text-white text-md lg:text-xl p-1 lg:p-2"
         @contextmenu=${(e) => e.preventDefault()}
       >
-        Choose a starting location
+        ${translateText("heads_up_message.choose_spawn")}
       </div>
     `;
   }

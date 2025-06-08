@@ -1,10 +1,8 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
   MessageType,
   Player,
-  PlayerID,
   TerraNullius,
   Unit,
   UnitType,
@@ -16,8 +14,6 @@ import { simpleHash } from "../Util";
 import { NukeExecution } from "./NukeExecution";
 
 export class MirvExecution implements Execution {
-  private player: Player;
-
   private active = true;
 
   private mg: Game;
@@ -38,21 +34,14 @@ export class MirvExecution implements Execution {
   private speed: number = -1;
 
   constructor(
-    private senderID: PlayerID,
+    private player: Player,
     private dst: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {
-    if (!mg.hasPlayer(this.senderID)) {
-      console.warn(`MIRVExecution: player ${this.senderID} not found`);
-      this.active = false;
-      return;
-    }
-
-    this.random = new PseudoRandom(mg.ticks() + simpleHash(this.senderID));
+    this.random = new PseudoRandom(mg.ticks() + simpleHash(this.player.id()));
     this.mg = mg;
     this.pathFinder = new ParabolaPathFinder(mg);
-    this.player = mg.player(this.senderID);
     this.targetPlayer = this.mg.owner(this.dst);
     this.speed = this.mg.config().defaultNukeSpeed();
 
@@ -64,7 +53,7 @@ export class MirvExecution implements Execution {
     if (this.nuke === null) {
       const spawn = this.player.canBuild(UnitType.MIRV, this.dst);
       if (spawn === false) {
-        consolex.warn(`cannot build MIRV`);
+        console.warn(`cannot build MIRV`);
         this.active = false;
         return;
       }
@@ -119,7 +108,7 @@ export class MirvExecution implements Execution {
       this.mg.addExecution(
         new NukeExecution(
           UnitType.MIRVWarhead,
-          this.senderID,
+          this.player,
           dst,
           this.nuke.tile(),
           15 + Math.floor((i / this.warheadCount) * 5),
