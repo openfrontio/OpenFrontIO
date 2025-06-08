@@ -215,13 +215,6 @@ export const nukeTypes = [
   UnitType.MIRV,
 ] as UnitType[];
 
-export const upgradableStructureTypes = [
-  UnitType.City,
-  UnitType.Port,
-  UnitType.SAMLauncher,
-  UnitType.MissileSilo,
-] as UnitType[];
-
 export enum Relation {
   Hostile = 0,
   Distrustful = 1,
