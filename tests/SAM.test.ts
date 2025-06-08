@@ -97,7 +97,7 @@ describe("SAM", () => {
     const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
 
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
-    expect(sam.hasMissilesReady()).toBeTruthy();
+    expect(sam.isCooldown()).toBeFalsy();
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
       targetTile: game.ref(1, 2),
     });
@@ -108,12 +108,12 @@ describe("SAM", () => {
 
     for (let i = 0; i < game.config().SAMCooldown() - 3; i++) {
       game.executeNextTick();
-      expect(sam.hasMissilesReady()).toBeFalsy();
+      expect(sam.isCooldown()).toBeTruthy();
     }
 
     executeTicks(game, 2);
 
-    expect(sam.hasMissilesReady()).toBeTruthy();
+    expect(sam.isCooldown()).toBeFalsy();
   });
 
   test("two sams should not target twice same nuke", async () => {
@@ -130,7 +130,7 @@ describe("SAM", () => {
     executeTicks(game, 3);
 
     expect(nuke.isActive()).toBeFalsy();
-    expect([sam1, sam2].filter((s) => s.hasMissilesReady())).toHaveLength(1);
+    expect([sam1, sam2].filter((s) => s.isCooldown())).toHaveLength(1);
   });
 
   test("SAMs should target only nukes aimed at nearby targets", async () => {
@@ -161,8 +161,8 @@ describe("SAM", () => {
     executeTicks(game, ticksToExecute);
 
     expect(nukeExecution.isActive()).toBeFalsy();
-    expect(sam1.hasMissilesReady()).toBeTruthy();
-    expect(sam2.hasMissilesReady()).toBeFalsy();
+    expect(sam1.isCooldown()).toBeFalsy();
+    expect(sam2.isCooldown()).toBeTruthy();
   });
 
   test("SAM should have increased level after upgrade", async () => {
@@ -171,7 +171,7 @@ describe("SAM", () => {
 
     const upgradeStructureExecution = new UpgradeStructureExecution(
       defender,
-      defender.units(UnitType.SAMLauncher)[0].tile(),
+      defender.units(UnitType.SAMLauncher)[0].id(),
     );
     game.addExecution(upgradeStructureExecution);
     executeTicks(game, 2);

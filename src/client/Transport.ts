@@ -46,7 +46,7 @@ export class SendBreakAllianceIntentEvent implements GameEvent {
 
 export class SendUpgradeStructureIntentEvent implements GameEvent {
   constructor(
-    public readonly cell: Cell,
+    public readonly unitId: number,
     public readonly unitType: UnitType,
   ) {}
 }
@@ -442,8 +442,7 @@ export class Transport {
       type: "upgrade_structure",
       unit: event.unitType,
       clientID: this.lobbyConfig.clientID,
-      x: event.cell.x,
-      y: event.cell.y,
+      unitId: event.unitId,
     });
   }
 

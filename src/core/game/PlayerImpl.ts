@@ -758,10 +758,6 @@ export class PlayerImpl implements Player {
     const cost = this.mg.unitInfo(unit.type()).cost(this);
     this.removeGold(cost);
     unit.increaseLevel();
-    if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(unit.type())) {
-      unit.increaseMissileCount();
-    }
-    this.mg.addUpdate(unit.toUpdate());
   }
 
   public buildableUnits(tile: TileRef): BuildableUnit[] {
@@ -833,7 +829,7 @@ export class PlayerImpl implements Player {
     // only get missilesilos that are not on cooldown
     const spawns = this.units(UnitType.MissileSilo)
       .filter((silo) => {
-        return silo.hasMissilesReady();
+        return !silo.isCooldown();
       })
       .sort(distSortUnit(this.mg, tile));
     if (spawns.length === 0) {

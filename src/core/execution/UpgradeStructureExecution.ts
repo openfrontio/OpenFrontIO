@@ -1,63 +1,46 @@
-import {
-  Execution,
-  Game,
-  Player,
-  Unit,
-  upgradableStructureTypes,
-} from "../game/Game";
-import { TileRef } from "../game/GameMap";
+import { Execution, Game, Player, Unit } from "../game/Game";
 
 export class UpgradeStructureExecution implements Execution {
-  private player: Player;
   private structure: Unit | null = null;
   private mg: Game;
-  private active: boolean = true;
 
   private cost: bigint;
 
   constructor(
-    private owner: Player,
-    private tile: TileRef,
+    private player: Player,
+    private unitId: number,
   ) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    if (!mg.hasPlayer(this.owner.id())) {
-      console.warn(`UpgradeExecution: owner ${this.owner.id()} not found`);
-      this.active = false;
-      return;
-    }
-    this.player = mg.player(this.owner.id());
-  }
-
-  tick(ticks: number): void {
+    this.player = mg.player(this.player.id());
     if (this.structure === null) {
       this.structure =
-        this.player
-          .units(...upgradableStructureTypes)
-          .find((unit) => unit.tile() === this.tile) ?? null;
+        this.player.units(...[]).find((unit) => unit.id() === this.unitId) ??
+        null;
+
       if (!this.structure) {
-        this.active = false;
         return;
       }
-      const info = this.mg.unitInfo(this.structure?.type());
-      if (info.constructionDuration === undefined) {
-        this.active = false;
+      if (!this.mg.unitInfo(this.structure?.type())) {
+        console.warn(`unit type ${this.structure} cannot be upgraded`);
         return;
       }
       this.cost = this.mg.unitInfo(this.structure?.type()).cost(this.player);
       if (this.player.gold() < this.cost) {
-        this.active = false;
         return;
       }
       this.player.upgradeUnit(this.structure, {});
-      this.active = false;
       return;
     }
   }
 
+  tick(ticks: number): void {
+    return;
+  }
+
   isActive(): boolean {
-    return this.active;
+    return false;
   }
 
   activeDuringSpawnPhase(): boolean {

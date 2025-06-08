@@ -3,6 +3,7 @@ import {
   AllUnitParams,
   MessageType,
   Player,
+  Tick,
   Unit,
   UnitInfo,
   UnitType,
@@ -275,12 +276,8 @@ export class UnitImpl implements Unit {
     this.mg.addUpdate(this.toUpdate());
   }
 
-  hasMissilesReady(): boolean {
-    return this._readyMissileCount > 0;
-  }
-
-  isAllMissilesReady(): boolean {
-    return this._readyMissileCount === this._level;
+  isCooldown(): boolean {
+    return this._readyMissileCount === 0;
   }
 
   reloadMissile(): void {
@@ -289,12 +286,8 @@ export class UnitImpl implements Unit {
     this.mg.addUpdate(this.toUpdate());
   }
 
-  increaseMissileCount(): void {
-    this._readyMissileCount++;
-  }
-
-  missileTimerQueue(): number[] {
-    return this._missileTimerQueue;
+  ticksLeftInCooldown(): Tick | undefined {
+    return this._missileTimerQueue[0];
   }
 
   setTargetTile(targetTile: TileRef | undefined) {
@@ -346,5 +339,9 @@ export class UnitImpl implements Unit {
 
   increaseLevel(): void {
     this._level++;
+    if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
+      this._readyMissileCount++;
+    }
+    this.mg.addUpdate(this.toUpdate());
   }
 }

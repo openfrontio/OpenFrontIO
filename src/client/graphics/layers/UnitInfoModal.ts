@@ -1,8 +1,14 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
+<<<<<<< HEAD
 import { translateText } from "../../../client/Utils";
 import { UnitType, upgradableStructureTypes } from "../../../core/game/Game";
+=======
+import { EventBus } from "../../../core/EventBus";
+import { UnitType } from "../../../core/game/Game";
+>>>>>>> 5f6a9d18 (address PR feedback)
 import { GameView, UnitView } from "../../../core/game/GameView";
+import { SendUpgradeStructureIntentEvent } from "../../Transport";
 import { Layer } from "./Layer";
 import { StructureLayer } from "./StructureLayer";
 
@@ -15,6 +21,7 @@ export class UnitInfoModal extends LitElement implements Layer {
 
   public game: GameView;
   public structureLayer: StructureLayer | null = null;
+  private eventBus: EventBus;
 
   constructor() {
     super();
@@ -29,12 +36,14 @@ export class UnitInfoModal extends LitElement implements Layer {
   }
 
   public onOpenStructureModal = ({
+    eventBus,
     unit,
     x,
     y,
     tileX,
     tileY,
   }: {
+    eventBus: EventBus;
     unit: UnitView;
     x: number;
     y: number;
@@ -44,6 +53,7 @@ export class UnitInfoModal extends LitElement implements Layer {
     if (!this.game) return;
     this.x = x;
     this.y = y;
+    this.eventBus = eventBus;
     const targetRef = this.game.ref(tileX, tileY);
 
     const allUnitTypes = Object.values(UnitType);
@@ -71,11 +81,6 @@ export class UnitInfoModal extends LitElement implements Layer {
 
   disconnectedCallback() {
     super.disconnectedCallback();
-  }
-
-  upgradable(): boolean {
-    if (!this.unit?.type()) return false;
-    return upgradableStructureTypes.includes(this.unit?.type());
   }
 
   static styles = css`
@@ -148,7 +153,7 @@ export class UnitInfoModal extends LitElement implements Layer {
   render() {
     if (!this.unit) return null;
 
-    const frontTime = this.unit.missileTimerQueue()[0];
+    const frontTime = this.unit.ticksLeftInCooldown();
     let configTimer;
     switch (this.unit.type()) {
       case UnitType.MissileSilo:
@@ -181,8 +186,8 @@ export class UnitInfoModal extends LitElement implements Layer {
           <strong>${translateText("unit_info_modal.type")}:</strong>
           ${translateText(+"unit_type." + this.unit.type?.().toLowerCase()) ??
           translateText("unit_info_modal.unit_type_unknown")}
-          <strong style="display: ${this.upgradable() ? "inline" : "none"};" >Level:</strong> 
-          ${this.upgradable() && this.unit.level?.() ? this.unit.level?.() : ""}
+          <strong style="display: ${this.game.unitInfo(this.unit.type()).upgradable ? "inline" : "none"};" >Level:</strong> 
+          ${this.game.unitInfo(this.unit.type()).upgradable && this.unit.level?.() ? this.unit.level?.() : ""}
         </div>
         ${secondsLeft > 0
           ? html`<div style="margin-bottom: 4px;">
@@ -193,13 +198,18 @@ export class UnitInfoModal extends LitElement implements Layer {
         <div style="margin-top: 14px; display: flex; justify-content: space-between;">
           <button
             @click=${() => {
-              if (this.structureLayer) {
-                this.structureLayer.upgradeStructureUnit(this.unit);
+              if (this.unit) {
+                this.eventBus.emit(
+                  new SendUpgradeStructureIntentEvent(
+                    this.unit.id(),
+                    this.unit.type(),
+                  ),
+                );
               }
             }}
             class="upgrade-button"
             title="Upgrade"
-            style="width: 100px; height: 32px; display: ${this.upgradable() ? "block" : "none"};"
+            style="width: 100px; height: 32px; display: ${this.game.unitInfo(this.unit.type()).upgradable ? "block" : "none"};"
           >
             UPGRADE
           </button>

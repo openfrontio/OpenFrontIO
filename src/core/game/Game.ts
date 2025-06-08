@@ -130,6 +130,7 @@ export interface UnitInfo {
   maxHealth?: number;
   damage?: number;
   constructionDuration?: number;
+  upgradable?: boolean;
 }
 
 export enum UnitType {
@@ -393,10 +394,8 @@ export interface Unit {
   // SAMs & Missile Silos
   launch(): void;
   reloadMissile(): void;
-  increaseMissileCount(): void;
-  hasMissilesReady(): boolean;
-  isAllMissilesReady(): boolean;
-  missileTimerQueue(): number[];
+  isCooldown(): boolean;
+  ticksLeftInCooldown(): Tick | undefined;
 
   // Trade Ships
   setSafeFromPirates(): void; // Only for trade ships

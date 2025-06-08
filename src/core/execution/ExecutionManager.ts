@@ -1,4 +1,4 @@
-import { Execution, Game, upgradableStructureTypes } from "../game/Game";
+import { Execution, Game } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
@@ -116,14 +116,7 @@ export class Executor {
           intent.unit,
         );
       case "upgrade_structure":
-        if (!upgradableStructureTypes.includes(intent.unit)) {
-          console.warn(`unit type ${intent.unit} cannot be upgraded`);
-          return new NoOpExecution();
-        }
-        return new UpgradeStructureExecution(
-          player,
-          this.mg.ref(intent.x, intent.y),
-        );
+        return new UpgradeStructureExecution(player, intent.unitId);
       case "quick_chat":
         return new QuickChatExecution(
           player,

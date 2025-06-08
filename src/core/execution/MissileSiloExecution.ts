@@ -5,6 +5,7 @@ export class MissileSiloExecution implements Execution {
   private active = true;
   private mg: Game;
   private silo: Unit | null = null;
+  private missingMissile: boolean = false;
 
   constructor(
     private player: Player,
@@ -34,7 +35,7 @@ export class MissileSiloExecution implements Execution {
       }
     }
 
-    const frontTime = this.silo.missileTimerQueue()[0];
+    const frontTime = this.silo.ticksLeftInCooldown();
     if (frontTime === undefined) {
       return;
     }
@@ -45,7 +46,7 @@ export class MissileSiloExecution implements Execution {
       this.silo.touch();
     }
 
-    if (!this.silo.isAllMissilesReady() && cooldown <= 0) {
+    if (cooldown <= 0) {
       this.silo.reloadMissile();
     }
   }

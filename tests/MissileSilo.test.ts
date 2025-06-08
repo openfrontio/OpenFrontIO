@@ -74,25 +74,19 @@ describe("MissileSilo", () => {
   });
 
   test("missilesilo should cooldown as long as configured", async () => {
-    expect(
-      attacker.units(UnitType.MissileSilo)[0].hasMissilesReady(),
-    ).toBeTruthy();
+    expect(attacker.units(UnitType.MissileSilo)[0].isCooldown()).toBeFalsy();
     // send the nuke far enough away so it doesnt destroy the silo
     attackerBuildsNuke(null, game.ref(50, 50));
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(1);
 
     for (let i = 0; i < game.config().SiloCooldown() - 2; i++) {
       game.executeNextTick();
-      expect(
-        attacker.units(UnitType.MissileSilo)[0].hasMissilesReady(),
-      ).toBeFalsy();
+      expect(attacker.units(UnitType.MissileSilo)[0].isCooldown()).toBeTruthy();
     }
 
     executeTicks(game, 2);
 
-    expect(
-      attacker.units(UnitType.MissileSilo)[0].hasMissilesReady(),
-    ).toBeTruthy();
+    expect(attacker.units(UnitType.MissileSilo)[0].isCooldown()).toBeFalsy();
   });
 
   test("missilesilo should have increased level after upgrade", async () => {
@@ -100,7 +94,7 @@ describe("MissileSilo", () => {
 
     const upgradeStructureExecution = new UpgradeStructureExecution(
       attacker,
-      attacker.units(UnitType.MissileSilo)[0].tile(),
+      attacker.units(UnitType.MissileSilo)[0].id(),
     );
     game.addExecution(upgradeStructureExecution);
     executeTicks(game, 2);

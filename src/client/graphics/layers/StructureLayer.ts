@@ -22,7 +22,6 @@ import {
 } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
-import { SendUpgradeStructureIntentEvent } from "../../Transport";
 
 const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
 const reloadingColor = colord({ r: 255, g: 0, b: 0 });
@@ -243,13 +242,13 @@ export class StructureLayer implements Layer {
     const config = this.unitConfigs[unitType];
     let icon: ImageData | undefined;
 
-    if (unitType === UnitType.SAMLauncher && !unit.isAllMissilesReady()) {
+    if (unitType === UnitType.SAMLauncher && unit.isCooldown()) {
       icon = this.unitIcons.get("reloadingSam");
     } else {
       icon = this.unitIcons.get(iconType);
     }
 
-    if (unitType === UnitType.MissileSilo && !unit.isAllMissilesReady()) {
+    if (unitType === UnitType.MissileSilo && unit.isCooldown()) {
       icon = this.unitIcons.get("reloadingSilo");
     } else {
       icon = this.unitIcons.get(iconType);
@@ -269,13 +268,13 @@ export class StructureLayer implements Layer {
     if (!unit.isActive()) return;
 
     let borderColor = this.theme.borderColor(unit.owner());
-    if (unitType === UnitType.SAMLauncher && !unit.isAllMissilesReady()) {
+    if (unitType === UnitType.SAMLauncher && unit.isCooldown()) {
       borderColor = reloadingColor;
     } else if (unit.type() === UnitType.Construction) {
       borderColor = underConstructionColor;
     }
 
-    if (unitType === UnitType.MissileSilo && !unit.isAllMissilesReady()) {
+    if (unitType === UnitType.MissileSilo && unit.isCooldown()) {
       borderColor = reloadingColor;
     } else if (unit.type() === UnitType.Construction) {
       borderColor = underConstructionColor;
@@ -392,6 +391,7 @@ export class StructureLayer implements Layer {
         const screenPos = this.transformHandler.worldToScreenCoordinates(cell);
         const unitTile = clickedUnit.tile();
         this.unitInfoModal?.onOpenStructureModal({
+          eventBus: this.eventBus,
           unit: clickedUnit,
           x: screenPos.x,
           y: screenPos.y,
@@ -414,11 +414,5 @@ export class StructureLayer implements Layer {
       this.selectedStructureUnit = null;
       this.handleUnitRendering(this.previouslySelected);
     }
-  }
-
-  public upgradeStructureUnit(unit: UnitView | null) {
-    if (unit === null) return null;
-    const cell = this.game.cell(unit.tile());
-    this.eventBus.emit(new SendUpgradeStructureIntentEvent(cell, unit.type()));
   }
 }

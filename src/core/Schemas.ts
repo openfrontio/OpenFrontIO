@@ -274,8 +274,7 @@ export const BuildUnitIntentSchema = BaseIntentSchema.extend({
 export const UpgradeStructureIntentSchema = BaseIntentSchema.extend({
   type: z.literal("upgrade_structure"),
   unit: z.nativeEnum(UnitType),
-  x: z.number(),
-  y: z.number(),
+  unitId: z.number(),
 });
 
 export const CancelAttackIntentSchema = BaseIntentSchema.extend({
