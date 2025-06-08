@@ -483,7 +483,7 @@ export class DefaultConfig implements Config {
     return 3;
   }
   numSpawnPhaseTurns(): number {
-    return this._gameConfig.gameType === GameType.Singleplayer ? 100 : 300;
+    return this._gameConfig.gameType === GameType.Singleplayer ? 30 : 80;
   }
   numBots(): number {
     return this.bots();
