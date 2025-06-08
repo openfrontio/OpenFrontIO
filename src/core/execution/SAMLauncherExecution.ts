@@ -9,6 +9,7 @@ import {
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { SAMMissileExecution } from "./SAMMissileExecution";
+import { translateText } from "../../client/Utils";
 
 export class SAMLauncherExecution implements Execution {
   private mg: Game;
@@ -173,7 +174,9 @@ export class SAMLauncherExecution implements Execution {
       const hit = this.isHit(type, random);
       if (!hit) {
         this.mg.displayMessage(
-          `Missile failed to intercept ${type}`,
+          translateText("game_messages.sam_miss", {
+            unitType: type,
+          }),
           MessageType.SAM_MISS,
           this.sam.owner().id(),
         );
@@ -181,7 +184,9 @@ export class SAMLauncherExecution implements Execution {
         if (mirvWarheadTargets.length > 0) {
           // Message
           this.mg.displayMessage(
-            `${mirvWarheadTargets.length} MIRV warheads intercepted`,
+            translateText("game_messages.sam_hit_mirv_warheads", {
+              mirvWarheads: mirvWarheadTargets.length,
+            }),
             MessageType.SAM_HIT,
             this.sam.owner().id(),
           );

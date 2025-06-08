@@ -1,4 +1,4 @@
-import { renderNumber } from "../../client/Utils";
+import { renderNumber, translateText } from "../../client/Utils";
 import {
   Execution,
   Game,
@@ -130,7 +130,10 @@ export class TradeShipExecution implements Execution {
     if (this.wasCaptured) {
       this.tradeShip!.owner().addGold(gold);
       this.mg.displayMessage(
-        `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
+        translateText("game_messages.received_gold_from_captured_ship", {
+          gold: renderNumber(gold),
+          playerName: this.origOwner.displayName(),
+        }),
         MessageType.CAPTURED_ENEMY_UNIT,
         this.tradeShip!.owner().id(),
         gold,
@@ -139,13 +142,19 @@ export class TradeShipExecution implements Execution {
       this.srcPort.owner().addGold(gold);
       this._dstPort.owner().addGold(gold);
       this.mg.displayMessage(
-        `Received ${renderNumber(gold)} gold from trade with ${this.srcPort.owner().displayName()}`,
+        translateText("game_messages.received_gold_from_trade", {
+          gold: renderNumber(gold),
+          playerName: this.srcPort.owner().displayName(),
+        }),
         MessageType.RECEIVED_GOLD_FROM_TRADE,
         this._dstPort.owner().id(),
         gold,
       );
       this.mg.displayMessage(
-        `Received ${renderNumber(gold)} gold from trade with ${this._dstPort.owner().displayName()}`,
+        translateText("game_messages.received_gold_from_trade", {
+          gold: renderNumber(gold),
+          playerName: this._dstPort.owner().displayName(),
+        }),
         MessageType.RECEIVED_GOLD_FROM_TRADE,
         this.srcPort.owner().id(),
         gold,

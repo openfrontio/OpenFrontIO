@@ -1,4 +1,4 @@
-import { renderNumber } from "../../client/Utils";
+import { renderNumber, translateText } from "../../client/Utils";
 import { Config } from "../configuration/Config";
 import { Execution, Game, MessageType, Player, UnitType } from "../game/Game";
 import { GameImpl } from "../game/GameImpl";
@@ -204,9 +204,10 @@ export class PlayerExecution implements Execution {
     if (this.player.numTilesOwned() === tiles.size) {
       const gold = this.player.gold();
       this.mg.displayMessage(
-        `Conquered ${this.player.displayName()} received ${renderNumber(
-          gold,
-        )} gold`,
+        translateText("game_messages.conquered_player", {
+          playerName: this.player.displayName(),
+          gold: renderNumber(gold),
+        }),
         MessageType.CONQUERED_PLAYER,
         capturing.id(),
         gold,

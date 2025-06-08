@@ -11,6 +11,7 @@ import { TileRef } from "../game/GameMap";
 import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
+import { translateText } from "../../client/Utils";
 
 export class NukeExecution implements Execution {
   private active = true;
@@ -111,8 +112,9 @@ export class NukeExecution implements Execution {
         } else if (this.nukeType === UnitType.AtomBomb) {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
-            // TODO TranslateText
-            `${this.player.name()} - atom bomb inbound`,
+            translateText("game_messages.atom_bomb_inbound", {
+              playerName: this.player.name(),
+            }),
             MessageType.NUKE_INBOUND,
             target.id(),
           );
@@ -120,8 +122,9 @@ export class NukeExecution implements Execution {
         } else if (this.nukeType === UnitType.HydrogenBomb) {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
-            // TODO TranslateText
-            `${this.player.name()} - hydrogen bomb inbound`,
+            translateText("game_messages.hydrogen_bomb_inbound", {
+              playerName: this.player.name(),
+            }),
             MessageType.HYDROGEN_BOMB_INBOUND,
             target.id(),
           );

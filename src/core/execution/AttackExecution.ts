@@ -1,4 +1,4 @@
-import { renderNumber, renderTroops } from "../../client/Utils";
+import { renderNumber, renderTroops, translateText } from "../../client/Utils";
 import {
   Attack,
   Execution,
@@ -179,7 +179,9 @@ export class AttackExecution implements Execution {
     const deaths = this.attack.troops() * (malusPercent / 100);
     if (deaths) {
       this.mg.displayMessage(
-        `Attack cancelled, ${renderTroops(deaths)} soldiers killed during retreat.`,
+        translateText("game_messages.attack_cancelled", {
+          troopDeaths: renderTroops(deaths),
+        }),
         MessageType.ATTACK_CANCELLED,
         this._owner.id(),
       );
@@ -337,9 +339,10 @@ export class AttackExecution implements Execution {
 
     const gold = this.target.gold();
     this.mg.displayMessage(
-      `Conquered ${this.target.displayName()} received ${renderNumber(
-        gold,
-      )} gold`,
+      translateText("game_messages.conquered_player", {
+        playerName: this.target.displayName(),
+        gold: renderNumber(gold),
+      }),
       MessageType.CONQUERED_PLAYER,
       this._owner.id(),
       gold,

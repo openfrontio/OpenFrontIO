@@ -12,6 +12,7 @@ import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
 import { NukeExecution } from "./NukeExecution";
+import { translateText } from "../../client/Utils";
 
 export class MirvExecution implements Execution {
   private active = true;
@@ -67,8 +68,9 @@ export class MirvExecution implements Execution {
 
       this.mg.displayIncomingUnit(
         this.nuke.id(),
-        // TODO TranslateText
-        `⚠️⚠️⚠️ ${this.player.name()} - MIRV INBOUND ⚠️⚠️⚠️`,
+        translateText("game_messages.mirv_inbound", {
+          playerName: this.player.name(),
+        }),
         MessageType.MIRV_INBOUND,
         this.targetPlayer.id(),
       );

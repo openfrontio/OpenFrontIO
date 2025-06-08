@@ -445,5 +445,26 @@
   },
   "heads_up_message": {
     "choose_spawn": "Choose a starting location"
+  },
+  "game_messages": {
+    "atom_bomb_inbound": "{playerName} - atom bomb inbound",
+    "hydrogen_bomb_inbound": "{playerName} - hydrogen bomb inbound",
+    "mirv_inbound": "⚠️⚠️⚠️ {playerName} - MIRV INBOUND ⚠️⚠️⚠️",
+    "naval_invasion_inbound": "Naval invasion incoming from {playerName}",
+    "no_boats_available": "No boats available, max {maxBoats}",
+    "sam_hit_mirv_warheads": "{mirvWarheads} MIRV warheads intercepted",
+    "sam_hit_single": "{unitType} intercepted",
+    "sam_miss": "Missile failed to intercept {unitType}",
+    "attack_cancelled": "Attack cancelled, {troopDeaths} soldiers killed during retreat.",
+    "conquered_player": "Conquered {playerName} received {gold} gold",
+    "unit_captured_by_enemy": "Your {unitType} was captured by {playerName}",
+    "captured_enemy_unit": "Captured {unitType} from {playerName}",
+    "unit_destroyed": "Your {unitType} was destroyed",
+    "sent_troops_to_player": "Sent {troops} troops to {playerName}",
+    "received_troops_from_player": "Received {troops} troops from {playerName}",
+    "sent_gold_to_player": "Sent {gold} gold to {playerName}",
+    "received_gold_from_player": "Received {gold} gold from {playerName}",
+    "received_gold_from_trade": "Received {gold} gold from trade with {playerName}",
+    "received_gold_from_captured_ship": "Received {gold} gold from ship captured from {playerName}"
   }
 }

@@ -1,4 +1,4 @@
-import { renderNumber, renderTroops } from "../../client/Utils";
+import { renderNumber, renderTroops, translateText } from "../../client/Utils";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
@@ -557,12 +557,18 @@ export class PlayerImpl implements Player {
 
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     this.mg.displayMessage(
-      `Sent ${renderTroops(troops)} troops to ${recipient.name()}`,
+      translateText("game_messages.sent_troops_to_player", {
+        troops: renderTroops(troops),
+        playerName: recipient.name(),
+      }),
       MessageType.SENT_TROOPS_TO_PLAYER,
       this.id(),
     );
     this.mg.displayMessage(
-      `Received ${renderTroops(troops)} troops from ${this.name()}`,
+      translateText("game_messages.received_troops_from_player", {
+        troops: renderTroops(troops),
+        playerName: this.name(),
+      }),
       MessageType.RECEIVED_TROOPS_FROM_PLAYER,
       recipient.id(),
     );
@@ -577,12 +583,18 @@ export class PlayerImpl implements Player {
 
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     this.mg.displayMessage(
-      `Sent ${renderNumber(gold)} gold to ${recipient.name()}`,
+      translateText("game_messages.sent_gold_to_player", {
+        gold: renderNumber(gold),
+        playerName: recipient.name(),
+      }),
       MessageType.SENT_GOLD_TO_PLAYER,
       this.id(),
     );
     this.mg.displayMessage(
-      `Received ${renderNumber(gold)} gold from ${this.name()}`,
+      translateText("game_messages.received_gold_from_player", {
+        gold: renderNumber(gold),
+        playerName: this.name(),
+      }),
       MessageType.RECEIVED_GOLD_FROM_PLAYER,
       recipient.id(),
       gold,

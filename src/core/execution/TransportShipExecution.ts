@@ -13,6 +13,7 @@ import { targetTransportTile } from "../game/TransportShipUtils";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
 import { AttackExecution } from "./AttackExecution";
+import { translateText } from "../../client/Utils";
 
 export class TransportShipExecution implements Execution {
   private lastMove: number;
@@ -61,7 +62,9 @@ export class TransportShipExecution implements Execution {
       mg.config().boatMaxNumber()
     ) {
       mg.displayMessage(
-        `No boats available, max ${mg.config().boatMaxNumber()}`,
+        translateText("game_messages.no_boats_available", {
+          maxBoats: mg.config().boatMaxNumber(),
+        }),
         MessageType.ATTACK_FAILED,
         this.attacker.id(),
       );
@@ -130,8 +133,9 @@ export class TransportShipExecution implements Execution {
     if (this.targetID && this.targetID !== mg.terraNullius().id()) {
       mg.displayIncomingUnit(
         this.boat.id(),
-        // TODO TranslateText
-        `Naval invasion incoming from ${this.attacker.displayName()}`,
+        translateText("game_messages.naval_invasion_inbound", {
+          playerName: this.attacker.displayName(),
+        }),
         MessageType.NAVAL_INVASION_INBOUND,
         this.targetID,
       );
