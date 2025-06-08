@@ -153,7 +153,7 @@ export class UnitInfoModal extends LitElement implements Layer {
   render() {
     if (!this.unit) return null;
 
-    const frontTime = this.unit.ticksLeftInCooldown();
+    const ticksLeftInCooldown = this.unit.ticksLeftInCooldown();
     let configTimer;
     switch (this.unit.type()) {
       case UnitType.MissileSilo:
@@ -164,11 +164,8 @@ export class UnitInfoModal extends LitElement implements Layer {
         break;
     }
     let cooldown = 0;
-    if (frontTime !== undefined && configTimer !== undefined) {
-      cooldown =
-        frontTime === undefined
-          ? 0
-          : this.game.config().SiloCooldown() - (this.game.ticks() - frontTime);
+    if (ticksLeftInCooldown !== undefined && configTimer !== undefined) {
+      cooldown = configTimer - (this.game.ticks() - ticksLeftInCooldown);
     }
     const secondsLeft = Math.ceil(cooldown / 10);
 
