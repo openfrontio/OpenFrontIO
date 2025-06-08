@@ -26,7 +26,7 @@ export class ReplayPanel extends LitElement implements Layer {
 
   tick() {
     if (!this._isVisible && this.game.config().isReplay()) {
-      this.setVisibile(true);
+      this.setVisible(true);
     }
 
     this.requestUpdate();
@@ -45,7 +45,7 @@ export class ReplayPanel extends LitElement implements Layer {
     return false;
   }
 
-  setVisibile(visible: boolean) {
+  setVisible(visible: boolean) {
     this._isVisible = visible;
     this.requestUpdate();
   }
@@ -74,7 +74,7 @@ export class ReplayPanel extends LitElement implements Layer {
           <button
             class="text-white font-bold py-0 rounded border transition ${this
               ._replayInterval === ReplaySpeeds.medium
-              ? "bg-blue-500 border-gray-400 border-white"
+              ? "bg-blue-500 border-gray-400"
               : "border-gray-500"}"
             @click=${() => {
               this.onReplayIntervalChange(ReplaySpeeds.medium);
@@ -85,7 +85,7 @@ export class ReplayPanel extends LitElement implements Layer {
           <button
             class="text-white font-bold py-0 rounded border transition ${this
               ._replayInterval === ReplaySpeeds.fast
-              ? "bg-blue-500 border-gray-400 border-white"
+              ? "bg-blue-500 border-gray-400"
               : "border-gray-500"}"
             @click=${() => {
               this.onReplayIntervalChange(ReplaySpeeds.fast);
@@ -96,7 +96,7 @@ export class ReplayPanel extends LitElement implements Layer {
           <button
             class="text-white font-bold py-0 rounded border transition ${this
               ._replayInterval === ReplaySpeeds.fastest
-              ? "bg-blue-500 border-gray-400 border-white"
+              ? "bg-blue-500 border-gray-400"
               : "border-gray-500"}"
             @click=${() => {
               this.onReplayIntervalChange(ReplaySpeeds.fastest);
