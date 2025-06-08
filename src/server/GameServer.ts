@@ -320,6 +320,7 @@ export class GameServer {
       players: this.activeClients.map((c) => ({
         username: c.username,
         clientID: c.clientID,
+        pattern: c.pattern,
         flag: c.flag,
       })),
     } satisfies GameStartInfo);

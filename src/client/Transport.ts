@@ -343,6 +343,7 @@ export class Transport {
         token: this.lobbyConfig.token,
         username: this.lobbyConfig.playerName,
         flag: this.lobbyConfig.flag,
+        pattern: this.lobbyConfig.pattern,
       } satisfies ClientJoinMessage),
     );
   }
@@ -397,6 +398,7 @@ export class Transport {
       type: "spawn",
       clientID: this.lobbyConfig.clientID,
       flag: this.lobbyConfig.flag,
+      pattern: this.lobbyConfig.pattern,
       name: this.lobbyConfig.playerName,
       playerType: PlayerType.Human,
       x: event.cell.x,

@@ -1,4 +1,8 @@
 import { base64url } from "jose";
+import rawTerritoryPatterns from "../../resources/cosmetic/cosmetic.json" with { type: "json" };
+import { CosmeticsSchema } from "./Schemas";
+
+export const territoryPatterns = CosmeticsSchema.parse(rawTerritoryPatterns);
 
 /**
  * Converts a UUID string to a base64url-encoded binary representation.

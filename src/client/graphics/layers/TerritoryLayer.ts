@@ -6,10 +6,14 @@ import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
 import { euclDistFN, TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
 import { PseudoRandom } from "../../../core/PseudoRandom";
+import { PatternDecoder } from "../../Cosmetic";
 import { AlternateViewEvent, DragEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+
+const userSettings: UserSettings = new UserSettings();
 
 export class TerritoryLayer implements Layer {
   private canvas: HTMLCanvasElement;
@@ -291,7 +295,19 @@ export class TerritoryLayer implements Layer {
         this.paintTile(tile, useBorderColor, 255);
       }
     } else {
-      this.paintTile(tile, this.theme.territoryColor(owner), 150);
+      const patternName = owner.pattern();
+      if (!patternName || !userSettings.territoryPatterns()) {
+        this.paintTile(tile, this.theme.territoryColor(owner), 150);
+      } else {
+        const x = this.game.x(tile);
+        const y = this.game.y(tile);
+        const baseColor = this.theme.territoryColor(owner);
+
+        const decoder = new PatternDecoder(patternName ?? "");
+        const bit = decoder.isSet(x, y) ? 1 : 0;
+        const colorToUse = bit ? baseColor.darken(0.2) : baseColor;
+        this.paintTile(tile, colorToUse, 150);
+      }
     }
   }
 

@@ -33,6 +33,10 @@ export class UserSettings {
     return this.get("settings.leftClickOpensMenu", false);
   }
 
+  territoryPatterns() {
+    return this.get("settings.territoryPatterns", true);
+  }
+
   focusLocked() {
     return false;
     // TODO: renable when performance issues are fixed.
@@ -57,6 +61,10 @@ export class UserSettings {
 
   toggleFxLayer() {
     this.set("settings.specialEffects", !this.fxLayer());
+  }
+
+  toggleTerritoryPatterns() {
+    this.set("settings.territoryPatterns", !this.territoryPatterns());
   }
 
   toggleDarkMode() {
