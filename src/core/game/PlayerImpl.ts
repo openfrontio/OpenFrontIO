@@ -23,6 +23,8 @@ import {
   ColoredTeams,
   Embargo,
   EmojiMessage,
+  GameMode,
+  GameType,
   Gold,
   MessageType,
   MutableAlliance,
@@ -524,6 +526,13 @@ export class PlayerImpl implements Player {
 
   canDonate(recipient: Player): boolean {
     if (!this.isFriendly(recipient)) {
+      return false;
+    }
+    if (
+      recipient.type() === PlayerType.Human &&
+      this.mg.config().gameConfig().gameMode === GameMode.FFA &&
+      this.mg.config().gameConfig().gameType === GameType.Public
+    ) {
       return false;
     }
     for (const donation of this.sentDonations) {
