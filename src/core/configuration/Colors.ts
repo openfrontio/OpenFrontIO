@@ -111,222 +111,57 @@ export const territoryColors: Colord[] = [
   colord({ r: 170, g: 150, b: 170 }), // Dusty Rose
 ];
 
-// 254 colors
+// Bright pastel theme with 49 colors
 export const humanColors: Colord[] = [
-  colord({ r: 0, g: 0, b: 51 }),
-  colord({ r: 0, g: 0, b: 102 }),
-  colord({ r: 0, g: 0, b: 153 }),
-  colord({ r: 0, g: 0, b: 204 }),
-  colord({ r: 0, g: 0, b: 255 }),
-  colord({ r: 0, g: 51, b: 0 }),
-  colord({ r: 0, g: 51, b: 51 }),
-  colord({ r: 0, g: 51, b: 102 }),
-  colord({ r: 0, g: 51, b: 153 }),
-  colord({ r: 0, g: 51, b: 204 }),
-  colord({ r: 0, g: 51, b: 255 }),
-  colord({ r: 0, g: 102, b: 0 }),
-  colord({ r: 0, g: 102, b: 51 }),
-  colord({ r: 0, g: 102, b: 102 }),
-  colord({ r: 0, g: 102, b: 153 }),
-  colord({ r: 0, g: 102, b: 204 }),
-  colord({ r: 0, g: 102, b: 255 }),
-  colord({ r: 0, g: 153, b: 0 }),
-  colord({ r: 0, g: 153, b: 51 }),
-  colord({ r: 0, g: 153, b: 102 }),
-  colord({ r: 0, g: 153, b: 153 }),
-  colord({ r: 0, g: 153, b: 204 }),
-  colord({ r: 0, g: 153, b: 255 }),
-  colord({ r: 0, g: 204, b: 0 }),
-  colord({ r: 0, g: 204, b: 51 }),
-  colord({ r: 0, g: 204, b: 102 }),
-  colord({ r: 0, g: 204, b: 153 }),
-  colord({ r: 0, g: 204, b: 204 }),
-  colord({ r: 0, g: 204, b: 255 }),
-  colord({ r: 0, g: 255, b: 0 }),
-  colord({ r: 0, g: 255, b: 51 }),
-  colord({ r: 0, g: 255, b: 102 }),
-  colord({ r: 0, g: 255, b: 153 }),
-  colord({ r: 0, g: 255, b: 204 }),
-  colord({ r: 0, g: 255, b: 255 }),
-  colord({ r: 51, g: 0, b: 0 }),
-  colord({ r: 51, g: 0, b: 51 }),
-  colord({ r: 51, g: 0, b: 102 }),
-  colord({ r: 51, g: 0, b: 153 }),
-  colord({ r: 51, g: 0, b: 204 }),
-  colord({ r: 51, g: 0, b: 255 }),
-  colord({ r: 51, g: 51, b: 0 }),
-  colord({ r: 51, g: 51, b: 51 }),
-  colord({ r: 51, g: 51, b: 102 }),
-  colord({ r: 51, g: 51, b: 153 }),
-  colord({ r: 51, g: 51, b: 204 }),
-  colord({ r: 51, g: 51, b: 255 }),
-  colord({ r: 51, g: 102, b: 0 }),
-  colord({ r: 51, g: 102, b: 51 }),
-  colord({ r: 51, g: 102, b: 102 }),
-  colord({ r: 51, g: 102, b: 153 }),
-  colord({ r: 51, g: 102, b: 204 }),
-  colord({ r: 51, g: 102, b: 255 }),
-  colord({ r: 51, g: 153, b: 0 }),
-  colord({ r: 51, g: 153, b: 51 }),
-  colord({ r: 51, g: 153, b: 102 }),
-  colord({ r: 51, g: 153, b: 153 }),
-  colord({ r: 51, g: 153, b: 204 }),
-  colord({ r: 51, g: 153, b: 255 }),
-  colord({ r: 51, g: 204, b: 0 }),
-  colord({ r: 51, g: 204, b: 51 }),
-  colord({ r: 51, g: 204, b: 102 }),
-  colord({ r: 51, g: 204, b: 153 }),
-  colord({ r: 51, g: 204, b: 204 }),
-  colord({ r: 51, g: 204, b: 255 }),
-  colord({ r: 51, g: 255, b: 0 }),
-  colord({ r: 51, g: 255, b: 51 }),
-  colord({ r: 51, g: 255, b: 102 }),
-  colord({ r: 51, g: 255, b: 153 }),
-  colord({ r: 51, g: 255, b: 204 }),
-  colord({ r: 51, g: 255, b: 255 }),
-  colord({ r: 102, g: 0, b: 0 }),
-  colord({ r: 102, g: 0, b: 51 }),
-  colord({ r: 102, g: 0, b: 102 }),
-  colord({ r: 102, g: 0, b: 153 }),
-  colord({ r: 102, g: 0, b: 204 }),
-  colord({ r: 102, g: 0, b: 255 }),
-  colord({ r: 102, g: 51, b: 0 }),
-  colord({ r: 102, g: 51, b: 51 }),
-  colord({ r: 102, g: 51, b: 102 }),
-  colord({ r: 102, g: 51, b: 153 }),
-  colord({ r: 102, g: 51, b: 204 }),
-  colord({ r: 102, g: 51, b: 255 }),
-  colord({ r: 102, g: 102, b: 0 }),
-  colord({ r: 102, g: 102, b: 51 }),
-  colord({ r: 102, g: 102, b: 102 }),
-  colord({ r: 102, g: 102, b: 153 }),
-  colord({ r: 102, g: 102, b: 204 }),
-  colord({ r: 102, g: 102, b: 255 }),
-  colord({ r: 102, g: 153, b: 0 }),
-  colord({ r: 102, g: 153, b: 51 }),
-  colord({ r: 102, g: 153, b: 102 }),
-  colord({ r: 102, g: 153, b: 153 }),
-  colord({ r: 102, g: 153, b: 204 }),
-  colord({ r: 102, g: 153, b: 255 }),
-  colord({ r: 102, g: 204, b: 0 }),
-  colord({ r: 102, g: 204, b: 51 }),
-  colord({ r: 102, g: 204, b: 102 }),
-  colord({ r: 102, g: 204, b: 153 }),
-  colord({ r: 102, g: 204, b: 204 }),
-  colord({ r: 102, g: 204, b: 255 }),
-  colord({ r: 102, g: 255, b: 0 }),
-  colord({ r: 102, g: 255, b: 51 }),
-  colord({ r: 102, g: 255, b: 102 }),
-  colord({ r: 102, g: 255, b: 153 }),
-  colord({ r: 102, g: 255, b: 204 }),
-  colord({ r: 102, g: 255, b: 255 }),
-  colord({ r: 153, g: 0, b: 0 }),
-  colord({ r: 153, g: 0, b: 51 }),
-  colord({ r: 153, g: 0, b: 102 }),
-  colord({ r: 153, g: 0, b: 153 }),
-  colord({ r: 153, g: 0, b: 204 }),
-  colord({ r: 153, g: 0, b: 255 }),
-  colord({ r: 153, g: 51, b: 0 }),
-  colord({ r: 153, g: 51, b: 51 }),
-  colord({ r: 153, g: 51, b: 102 }),
-  colord({ r: 153, g: 51, b: 153 }),
-  colord({ r: 153, g: 51, b: 204 }),
-  colord({ r: 153, g: 51, b: 255 }),
-  colord({ r: 153, g: 102, b: 0 }),
-  colord({ r: 153, g: 102, b: 51 }),
-  colord({ r: 153, g: 102, b: 102 }),
-  colord({ r: 153, g: 102, b: 153 }),
-  colord({ r: 153, g: 102, b: 204 }),
-  colord({ r: 153, g: 102, b: 255 }),
-  colord({ r: 153, g: 153, b: 0 }),
-  colord({ r: 153, g: 153, b: 51 }),
-  colord({ r: 153, g: 153, b: 102 }),
-  colord({ r: 153, g: 153, b: 153 }),
-  colord({ r: 153, g: 153, b: 204 }),
-  colord({ r: 153, g: 153, b: 255 }),
-  colord({ r: 153, g: 204, b: 0 }),
-  colord({ r: 153, g: 204, b: 51 }),
-  colord({ r: 153, g: 204, b: 102 }),
-  colord({ r: 153, g: 204, b: 153 }),
-  colord({ r: 153, g: 204, b: 204 }),
-  colord({ r: 153, g: 204, b: 255 }),
-  colord({ r: 153, g: 255, b: 0 }),
-  colord({ r: 153, g: 255, b: 51 }),
-  colord({ r: 153, g: 255, b: 102 }),
-  colord({ r: 153, g: 255, b: 153 }),
-  colord({ r: 153, g: 255, b: 204 }),
-  colord({ r: 153, g: 255, b: 255 }),
-  colord({ r: 204, g: 0, b: 0 }),
-  colord({ r: 204, g: 0, b: 51 }),
-  colord({ r: 204, g: 0, b: 102 }),
-  colord({ r: 204, g: 0, b: 153 }),
-  colord({ r: 204, g: 0, b: 204 }),
-  colord({ r: 204, g: 0, b: 255 }),
-  colord({ r: 204, g: 51, b: 0 }),
-  colord({ r: 204, g: 51, b: 51 }),
-  colord({ r: 204, g: 51, b: 102 }),
-  colord({ r: 204, g: 51, b: 153 }),
-  colord({ r: 204, g: 51, b: 204 }),
-  colord({ r: 204, g: 51, b: 255 }),
-  colord({ r: 204, g: 102, b: 0 }),
-  colord({ r: 204, g: 102, b: 51 }),
-  colord({ r: 204, g: 102, b: 102 }),
-  colord({ r: 204, g: 102, b: 153 }),
-  colord({ r: 204, g: 102, b: 204 }),
-  colord({ r: 204, g: 102, b: 255 }),
-  colord({ r: 204, g: 153, b: 0 }),
-  colord({ r: 204, g: 153, b: 51 }),
-  colord({ r: 204, g: 153, b: 102 }),
-  colord({ r: 204, g: 153, b: 153 }),
-  colord({ r: 204, g: 153, b: 204 }),
-  colord({ r: 204, g: 153, b: 255 }),
-  colord({ r: 204, g: 204, b: 0 }),
-  colord({ r: 204, g: 204, b: 51 }),
-  colord({ r: 204, g: 204, b: 102 }),
-  colord({ r: 204, g: 204, b: 153 }),
-  colord({ r: 204, g: 204, b: 204 }),
-  colord({ r: 204, g: 204, b: 255 }),
-  colord({ r: 204, g: 255, b: 0 }),
-  colord({ r: 204, g: 255, b: 51 }),
-  colord({ r: 204, g: 255, b: 102 }),
-  colord({ r: 204, g: 255, b: 153 }),
-  colord({ r: 204, g: 255, b: 204 }),
-  colord({ r: 204, g: 255, b: 255 }),
-  colord({ r: 255, g: 0, b: 0 }),
-  colord({ r: 255, g: 0, b: 51 }),
-  colord({ r: 255, g: 0, b: 102 }),
-  colord({ r: 255, g: 0, b: 153 }),
-  colord({ r: 255, g: 0, b: 204 }),
-  colord({ r: 255, g: 0, b: 255 }),
-  colord({ r: 255, g: 51, b: 0 }),
-  colord({ r: 255, g: 51, b: 51 }),
-  colord({ r: 255, g: 51, b: 102 }),
-  colord({ r: 255, g: 51, b: 153 }),
-  colord({ r: 255, g: 51, b: 204 }),
-  colord({ r: 255, g: 51, b: 255 }),
-  colord({ r: 255, g: 102, b: 0 }),
-  colord({ r: 255, g: 102, b: 51 }),
-  colord({ r: 255, g: 102, b: 102 }),
-  colord({ r: 255, g: 102, b: 153 }),
-  colord({ r: 255, g: 102, b: 204 }),
-  colord({ r: 255, g: 102, b: 255 }),
-  colord({ r: 255, g: 153, b: 0 }),
-  colord({ r: 255, g: 153, b: 51 }),
-  colord({ r: 255, g: 153, b: 102 }),
-  colord({ r: 255, g: 153, b: 153 }),
-  colord({ r: 255, g: 153, b: 204 }),
-  colord({ r: 255, g: 153, b: 255 }),
-  colord({ r: 255, g: 204, b: 0 }),
-  colord({ r: 255, g: 204, b: 51 }),
-  colord({ r: 255, g: 204, b: 102 }),
-  colord({ r: 255, g: 204, b: 153 }),
-  colord({ r: 255, g: 204, b: 204 }),
-  colord({ r: 255, g: 204, b: 255 }),
-  colord({ r: 255, g: 255, b: 0 }),
-  colord({ r: 255, g: 255, b: 51 }),
-  colord({ r: 255, g: 255, b: 102 }),
-  colord({ r: 255, g: 255, b: 153 }),
-  colord({ r: 255, g: 255, b: 204 }),
+  colord({ r: 16, g: 185, b: 129 }), // Sea Green
+  colord({ r: 34, g: 197, b: 94 }), // Emerald
+  colord({ r: 45, g: 212, b: 191 }), // Turquoise
+  colord({ r: 48, g: 178, b: 180 }), // Teal
+  colord({ r: 52, g: 211, b: 153 }), // Spearmint
+  colord({ r: 56, g: 189, b: 248 }), // Light Blue
+  colord({ r: 59, g: 130, b: 246 }), // Royal Blue
+  colord({ r: 67, g: 190, b: 84 }), // Fresh Green
+  colord({ r: 74, g: 222, b: 128 }), // Mint
+  colord({ r: 79, g: 70, b: 229 }), // Indigo
+  colord({ r: 82, g: 183, b: 136 }), // Jade
+  colord({ r: 96, g: 165, b: 250 }), // Sky Blue
+  colord({ r: 99, g: 202, b: 253 }), // Azure
+  colord({ r: 110, g: 231, b: 183 }), // Seafoam
+  colord({ r: 124, g: 58, b: 237 }), // Royal Purple
+  colord({ r: 125, g: 211, b: 252 }), // Crystal Blue
+  colord({ r: 132, g: 204, b: 22 }), // Lime
+  colord({ r: 133, g: 77, b: 14 }), // Chocolate
+  colord({ r: 134, g: 239, b: 172 }), // Light Green
+  colord({ r: 147, g: 51, b: 234 }), // Bright Purple
+  colord({ r: 147, g: 197, b: 253 }), // Powder Blue
+  colord({ r: 151, g: 255, b: 187 }), // Fresh Mint
+  colord({ r: 163, g: 230, b: 53 }), // Yellow Green
+  colord({ r: 167, g: 139, b: 250 }), // Periwinkle
+  colord({ r: 168, g: 85, b: 247 }), // Vibrant Purple
+  colord({ r: 179, g: 136, b: 255 }), // Light Purple
+  colord({ r: 190, g: 92, b: 251 }), // Amethyst
+  colord({ r: 192, g: 132, b: 252 }), // Lavender
+  colord({ r: 202, g: 138, b: 4 }), // Rich Gold
+  colord({ r: 217, g: 70, b: 239 }), // Fuchsia
+  colord({ r: 220, g: 38, b: 38 }), // Ruby
+  colord({ r: 233, g: 213, b: 255 }), // Light Lilac
+  colord({ r: 234, g: 88, b: 12 }), // Burnt Orange
+  colord({ r: 234, g: 179, b: 8 }), // Sunflower
+  colord({ r: 235, g: 75, b: 75 }), // Bright Red
+  colord({ r: 236, g: 72, b: 153 }), // Deep Pink
+  colord({ r: 239, g: 68, b: 68 }), // Crimson
+  colord({ r: 240, g: 171, b: 252 }), // Orchid
+  colord({ r: 244, g: 114, b: 182 }), // Rose
+  colord({ r: 245, g: 101, b: 101 }), // Coral
+  colord({ r: 245, g: 158, b: 11 }), // Amber
+  colord({ r: 248, g: 113, b: 113 }), // Warm Red
+  colord({ r: 249, g: 115, b: 22 }), // Tangerine
+  colord({ r: 251, g: 113, b: 133 }), // Watermelon
+  colord({ r: 251, g: 146, b: 60 }), // Light Orange
+  colord({ r: 251, g: 191, b: 36 }), // Marigold
+  colord({ r: 252, g: 165, b: 165 }), // Peach
+  colord({ r: 252, g: 211, b: 77 }), // Golden
+  colord({ r: 253, g: 164, b: 175 }), // Salmon Pink
 ];
 
 export const botColors: Colord[] = [
