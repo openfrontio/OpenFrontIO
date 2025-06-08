@@ -67,8 +67,9 @@ export class MirvExecution implements Execution {
 
       this.mg.displayIncomingUnit(
         this.nuke.id(),
+        // TODO TranslateText
         `⚠️⚠️⚠️ ${this.player.name()} - MIRV INBOUND ⚠️⚠️⚠️`,
-        MessageType.ERROR,
+        MessageType.MIRV_INBOUND,
         this.targetPlayer.id(),
       );
     }

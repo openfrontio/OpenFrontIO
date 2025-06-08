@@ -111,16 +111,18 @@ export class NukeExecution implements Execution {
         } else if (this.nukeType === UnitType.AtomBomb) {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
+            // TODO TranslateText
             `${this.player.name()} - atom bomb inbound`,
-            MessageType.ERROR,
+            MessageType.NUKE_INBOUND,
             target.id(),
           );
           this.breakAlliances(this.tilesToDestroy());
         } else if (this.nukeType === UnitType.HydrogenBomb) {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
+            // TODO TranslateText
             `${this.player.name()} - hydrogen bomb inbound`,
-            MessageType.ERROR,
+            MessageType.HYDROGEN_BOMB_INBOUND,
             target.id(),
           );
           this.breakAlliances(this.tilesToDestroy());
