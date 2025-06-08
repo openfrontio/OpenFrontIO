@@ -15,6 +15,7 @@ import {
   GameMode,
   GameUpdates,
   MessageType,
+  MutableAlliance,
   Nation,
   Player,
   PlayerID,
@@ -143,6 +144,11 @@ export class GameImpl implements Game {
   owner(ref: TileRef): Player | TerraNullius {
     return this.playerBySmallID(this.ownerID(ref));
   }
+
+  alliances(): MutableAlliance[] {
+    return this.alliances_;
+  }
+
   playerBySmallID(id: number): Player | TerraNullius {
     if (id === 0) {
       return this.terraNullius();

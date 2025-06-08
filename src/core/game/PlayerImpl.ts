@@ -84,6 +84,7 @@ export class PlayerImpl implements Player {
   private _displayName: string;
 
   public pastOutgoingAllianceRequests: AllianceRequest[] = [];
+  public _expiredAlliances: Alliance[] = [];
 
   private targets_: Target[] = [];
 
@@ -314,6 +315,10 @@ export class PlayerImpl implements Player {
     return this.mg.alliances_.filter(
       (a) => a.requestor() === this || a.recipient() === this,
     );
+  }
+
+  expiredAlliances(): Alliance[] {
+    return this._expiredAlliances;
   }
 
   allies(): Player[] {

@@ -151,6 +151,18 @@ export class FakeHumanExecution implements Execution {
     if (this.firstMove) {
       this.firstMove = false;
       this.behavior.sendAttack(this.mg.terraNullius());
+    }
+    // Renew expired alliances
+    if (!this.player) return;
+
+    this.player.expiredAlliances().forEach((a) => {
+      const other = a.other(this.player!);
+      if (other.isTraitor() && this.player!.canSendAllianceRequest(other)) {
+        this.player!.createAllianceRequest(other);
+      }
+    });
+
+    if (ticks % this.random.nextInt(40, 80) !== 0) {
       return;
     }
 
