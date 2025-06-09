@@ -12,8 +12,7 @@ export class ProgressBar {
   }
 
   setProgress(progress: number): void {
-    this.ctx.clearRect(this.x - 2, this.y - 2, this.w + 2, this.h + 2);
-
+    this.clear();
     // Draw the loading bar background
     this.ctx.fillStyle = "rgba(0, 0, 0, 1)";
     this.ctx.fillRect(this.x - 1, this.y - 1, this.w, this.h);
@@ -32,6 +31,10 @@ export class ProgressBar {
       this.h - 2,
     );
     this.progress = progress;
+  }
+
+  clear() {
+    this.ctx.clearRect(this.x - 2, this.y - 2, this.w + 2, this.h + 2);
   }
 
   getX(): number {

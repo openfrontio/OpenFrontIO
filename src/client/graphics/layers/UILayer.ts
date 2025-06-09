@@ -33,7 +33,7 @@ export class UILayer implements Layer {
     number,
     { unit: UnitView; startTick: Tick; endTick: Tick; progressBar: ProgressBar }
   > = new Map();
-  private allHealthBars: Set<number> = new Set();
+  private allHealthBars: Map<number, ProgressBar> = new Map();
   // Keep track of currently selected unit
   private selectedUnit: UnitView | null = null;
 
@@ -272,11 +272,10 @@ export class UILayer implements Layer {
       unit.health() < this.game.unitInfo(unit.type()).maxHealth! &&
       unit.health() > 0
     ) {
-      if (!this.allHealthBars.has(unit.id())) {
-        // keep track of units that have health bars for clearing purposes
-        this.allHealthBars.add(unit.id());
+      if (this.allHealthBars.has(unit.id())) {
+        this.allHealthBars.get(unit.id())!.clear();
       }
-      new ProgressBar(
+      const healthBar = new ProgressBar(
         COLOR_PROGRESSION,
         this.context!,
         this.game.x(unit.tile()) - 4,
@@ -285,6 +284,8 @@ export class UILayer implements Layer {
         PROGRESSBAR_HEIGHT,
         unit.health() / this.game.unitInfo(unit.type()).maxHealth!,
       );
+      // keep track of units that have health bars for clearing purposes
+      this.allHealthBars.set(unit.id(), healthBar);
     }
   }
 
