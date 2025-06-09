@@ -387,7 +387,7 @@ export interface Unit {
   // SAMs & Missile Silos
   launch(): void;
   reloadMissile(): void;
-  isCooldown(): boolean;
+  isInCooldown(): boolean;
   ticksLeftInCooldown(): Tick | undefined;
 
   // Trade Ships
@@ -477,7 +477,7 @@ export interface Player {
     spawnTile: TileRef,
     params: UnitParams<T>,
   ): Unit;
-  upgradeUnit<T extends UnitType>(unit: Unit, params: UnitParams<T>);
+  upgradeUnit(unit: Unit): void;
 
   captureUnit(unit: Unit): void;
 

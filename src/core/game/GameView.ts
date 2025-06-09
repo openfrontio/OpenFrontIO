@@ -114,7 +114,7 @@ export class UnitView {
   ticksLeftInCooldown(): Tick | undefined {
     return this.data.missileTimerQueue[0];
   }
-  isCooldown(): boolean {
+  isInCooldown(): boolean {
     return this.data.readyMissileCount === 0;
   }
   level(): number {

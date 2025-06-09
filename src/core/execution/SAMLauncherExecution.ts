@@ -158,7 +158,7 @@ export class SAMLauncherExecution implements Execution {
     const isSingleTarget = target && !target.targetedBySAM();
     if (
       (isSingleTarget || mirvWarheadTargets.length > 0) &&
-      !this.sam.isCooldown()
+      !this.sam.isInCooldown()
     ) {
       this.sam.launch();
       const type =

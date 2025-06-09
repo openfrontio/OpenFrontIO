@@ -276,7 +276,7 @@ export class UnitImpl implements Unit {
     this.mg.addUpdate(this.toUpdate());
   }
 
-  isCooldown(): boolean {
+  isInCooldown(): boolean {
     return this._readyMissileCount === 0;
   }
 

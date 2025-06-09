@@ -5,7 +5,6 @@ export class MissileSiloExecution implements Execution {
   private active = true;
   private mg: Game;
   private silo: Unit | null = null;
-  private missingMissile: boolean = false;
 
   constructor(
     private player: Player,

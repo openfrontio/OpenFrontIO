@@ -754,7 +754,7 @@ export class PlayerImpl implements Player {
     return b;
   }
 
-  upgradeUnit<T extends UnitType>(unit: Unit, params: UnitParams<T>) {
+  upgradeUnit(unit: Unit) {
     const cost = this.mg.unitInfo(unit.type()).cost(this);
     this.removeGold(cost);
     unit.increaseLevel();
@@ -829,7 +829,7 @@ export class PlayerImpl implements Player {
     // only get missilesilos that are not on cooldown
     const spawns = this.units(UnitType.MissileSilo)
       .filter((silo) => {
-        return !silo.isCooldown();
+        return !silo.isInCooldown();
       })
       .sort(distSortUnit(this.mg, tile));
     if (spawns.length === 0) {
