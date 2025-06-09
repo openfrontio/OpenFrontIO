@@ -260,7 +260,7 @@ export class UILayer implements Layer {
     }
     if (
       this.allHealthBars.has(unit.id()) &&
-      (unit.health() >= maxHealth || unit.health() <= 0)
+      (unit.health() >= maxHealth || unit.health() <= 0 || !unit.isActive())
     ) {
       // full hp/dead warships dont need a hp bar
       this.allHealthBars.get(unit.id())?.clear();
