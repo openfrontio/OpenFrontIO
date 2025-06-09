@@ -123,7 +123,20 @@ export class BotBehavior {
         .filter((n) => n.isPlayer() && n.type() === PlayerType.Bot) as Player[];
       if (bots.length > 0) {
         const density = (p: Player) => p.troops() / p.numTilesOwned();
-        this.setNewEnemy(bots.sort((a, b) => density(a) - density(b))[0]);
+        let lowestDensityBot: Player | undefined;
+        let lowestDensity = Infinity;
+
+        for (const bot of bots) {
+          const currentDensity = density(bot);
+          if (currentDensity < lowestDensity) {
+            lowestDensity = currentDensity;
+            lowestDensityBot = bot;
+          }
+        }
+
+        if (lowestDensityBot !== undefined) {
+          this.setNewEnemy(lowestDensityBot);
+        }
       }
 
       // Retaliate against incoming attacks
