@@ -291,15 +291,8 @@ export class UILayer implements Layer {
       const progress =
         (currentTick - progressBarInfo.startTick) / progressBarInfo.endTick;
       if (progress >= 1 || !progressBarInfo.unit.isActive()) {
+        this.allProgressBars.get(unitId)?.progressBar.clear();
         this.allProgressBars.delete(unitId);
-        if (this.context) {
-          this.context.clearRect(
-            progressBarInfo.progressBar.getX() - 1,
-            progressBarInfo.progressBar.getY() - 1,
-            LOADINGBAR_WIDTH,
-            PROGRESSBAR_HEIGHT,
-          );
-        }
         return;
       }
       progressBarInfo.progressBar.setProgress(progress);
