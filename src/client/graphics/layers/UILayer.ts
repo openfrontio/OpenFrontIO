@@ -123,7 +123,7 @@ export class UILayer implements Layer {
         break;
       }
       case UnitType.Warship: {
-        if (unit?.isActive()) {
+        if (unit !== null) {
           this.drawHealthBar(unit);
         }
         break;
