@@ -58,11 +58,8 @@ export class BotExecution implements Execution {
     if (this.behavior === null) {
       throw new Error("not initialized");
     }
-    const traitors = this.bot
-      .neighbors()
-      .filter((n) => n.isPlayer() && n.isTraitor()) as Player[];
-    if (traitors.length > 0) {
-      const toAttack = this.random.randElement(traitors);
+    const toAttack = this.behavior.getNeighborTraitorToAttack();
+    if (toAttack !== null) {
       const odds = this.bot.isFriendly(toAttack) ? 6 : 3;
       if (this.random.chance(odds)) {
         this.behavior.sendAttack(toAttack);
