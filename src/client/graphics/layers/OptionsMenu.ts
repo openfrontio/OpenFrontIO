@@ -8,7 +8,6 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
 import { Layer } from "./Layer";
-import { ReplayPanel } from "./ReplayPanel";
 
 const button = ({
   classes = "",
@@ -132,17 +131,6 @@ export class OptionsMenu extends LitElement implements Layer {
       this.game.config().isReplay();
     this.isVisible = true;
     this.requestUpdate();
-
-    // wait for replay-panel init in dom
-    this.updateComplete.then(() => {
-      const replayPanel = document.querySelector("replay-panel");
-      if (!(replayPanel instanceof ReplayPanel)) {
-        console.error("ReplayPanel element not found in the DOM");
-      } else {
-        replayPanel.eventBus = this.eventBus;
-        replayPanel.game = this.game;
-      }
-    });
   }
 
   tick() {
@@ -196,8 +184,6 @@ export class OptionsMenu extends LitElement implements Layer {
               children: "⚙️",
             })}
           </div>
-
-          <replay-panel></replay-panel>
         </div>
 
         <div

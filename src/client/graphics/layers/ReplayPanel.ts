@@ -1,17 +1,15 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
+import { GameType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import { ReplayIntervalEvent } from "../../InputHandler";
+import { ReplaySpeedChangeEvent } from "../../InputHandler";
+import {
+  defaultReplaySpeedMultiplier,
+  ReplaySpeedMultiplier,
+} from "../../utilities/ReplaySpeedMultiplier";
 import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
-
-export enum ReplaySpeeds {
-  slow = 125,
-  medium = 50,
-  fast = 25,
-  fastest = 5,
-}
 
 @customElement("replay-panel")
 export class ReplayPanel extends LitElement implements Layer {
@@ -19,10 +17,16 @@ export class ReplayPanel extends LitElement implements Layer {
   public eventBus: EventBus | undefined;
 
   @state()
-  private _replayInterval: number = ReplaySpeeds.fastest;
+  private _replaySpeedMultiplier: number = defaultReplaySpeedMultiplier;
 
   @state()
   private _isVisible = false;
+
+  init() {
+    if (this.game?.config().gameConfig().gameType === GameType.Singleplayer) {
+      this.setVisible(true);
+    }
+  }
 
   tick() {
     if (!this._isVisible && this.game?.config().isReplay()) {
@@ -32,9 +36,9 @@ export class ReplayPanel extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  onReplayIntervalChange(value: number) {
-    this._replayInterval = value;
-    this.eventBus?.emit(new ReplayIntervalEvent(value));
+  onReplaySpeedChange(value: ReplaySpeedMultiplier) {
+    this._replaySpeedMultiplier = value;
+    this.eventBus?.emit(new ReplaySpeedChangeEvent(value));
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
@@ -51,58 +55,62 @@ export class ReplayPanel extends LitElement implements Layer {
   }
 
   render() {
+    if (!this._isVisible) {
+      return html``;
+    }
+
     return html`
       <div
-        class="${this._isVisible ? "" : "hidden"}"
+        class="bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-es-sm lg:rounded-lg backdrop-blur-md"
         @contextmenu=${(e) => e.preventDefault()}
       >
         <label class="block mb-1 text-white" translate="no">
-          ${translateText("replay_panel.replay_speed")}:
+          ${translateText("replay_panel.replay_speed")}
         </label>
         <div class="grid grid-cols-2 gap-1">
           <button
             class="text-white font-bold py-0 rounded border transition ${this
-              ._replayInterval === ReplaySpeeds.slow
+              ._replaySpeedMultiplier === ReplaySpeedMultiplier.slow
               ? "bg-blue-500 border-gray-400"
               : "border-gray-500"}"
             @click=${() => {
-              this.onReplayIntervalChange(ReplaySpeeds.slow);
+              this.onReplaySpeedChange(ReplaySpeedMultiplier.slow);
             }}
           >
-            >
+            ÷2
           </button>
           <button
             class="text-white font-bold py-0 rounded border transition ${this
-              ._replayInterval === ReplaySpeeds.medium
+              ._replaySpeedMultiplier === ReplaySpeedMultiplier.normal
               ? "bg-blue-500 border-gray-400"
               : "border-gray-500"}"
             @click=${() => {
-              this.onReplayIntervalChange(ReplaySpeeds.medium);
+              this.onReplaySpeedChange(ReplaySpeedMultiplier.normal);
             }}
           >
-            >>
+            ×1
           </button>
           <button
             class="text-white font-bold py-0 rounded border transition ${this
-              ._replayInterval === ReplaySpeeds.fast
+              ._replaySpeedMultiplier === ReplaySpeedMultiplier.fast
               ? "bg-blue-500 border-gray-400"
               : "border-gray-500"}"
             @click=${() => {
-              this.onReplayIntervalChange(ReplaySpeeds.fast);
+              this.onReplaySpeedChange(ReplaySpeedMultiplier.fast);
             }}
           >
-            >>>
+            ×10
           </button>
           <button
             class="text-white font-bold py-0 rounded border transition ${this
-              ._replayInterval === ReplaySpeeds.fastest
+              ._replaySpeedMultiplier === ReplaySpeedMultiplier.fastest
               ? "bg-blue-500 border-gray-400"
               : "border-gray-500"}"
             @click=${() => {
-              this.onReplayIntervalChange(ReplaySpeeds.fastest);
+              this.onReplaySpeedChange(ReplaySpeedMultiplier.fastest);
             }}
           >
-            >>>>
+            ×100
           </button>
         </div>
       </div>
