@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, query } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
+import { getEmojiKey, getModifierKey, translateText } from "../client/Utils";
 import "./components/Difficulties";
 import "./components/Maps";
 
@@ -41,7 +41,7 @@ export class HelpModal extends LitElement {
               <tr>
                 <td>
                   <div class="scroll-combo-horizontal">
-                    <span class="key">Shift</span>
+                    <span class="key">⇧ Shift</span>
                     <span class="plus">+</span>
                     <div class="mouse-shell alt-left-click">
                       <div class="mouse-left-corner"></div>
@@ -54,7 +54,7 @@ export class HelpModal extends LitElement {
               <tr>
                 <td>
                   <div class="scroll-combo-horizontal">
-                    <span class="key">Ctrl</span>
+                    <span class="key">${getModifierKey()}</span>
                     <span class="plus">+</span>
                     <div class="mouse-shell alt-left-click">
                       <div class="mouse-left-corner"></div>
@@ -67,7 +67,7 @@ export class HelpModal extends LitElement {
               <tr>
                 <td>
                   <div class="scroll-combo-horizontal">
-                    <span class="key">Alt</span>
+                    <span class="key">${getEmojiKey()}</span>
                     <span class="plus">+</span>
                     <div class="mouse-shell alt-left-click">
                       <div class="mouse-left-corner"></div>
@@ -99,7 +99,7 @@ export class HelpModal extends LitElement {
               <tr>
                 <td>
                   <div class="scroll-combo-horizontal">
-                    <span class="key">Shift</span>
+                    <span class="key">⇧ Shift</span>
                     <span class="plus">+</span>
                     <div class="mouse-with-arrows">
                       <div class="mouse-shell">
