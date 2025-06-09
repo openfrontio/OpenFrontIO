@@ -1,5 +1,5 @@
-import { territoryPatterns } from "../core/Base64";
-import { Cosmetic } from "../core/Schemas";
+import { territoryPatterns } from "../core/Cosmetics";
+import { Cosmetic } from "../core/CosmeticSchemas";
 
 const patternData = territoryPatterns as Cosmetic;
 

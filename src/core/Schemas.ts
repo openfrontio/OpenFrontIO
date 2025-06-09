@@ -479,16 +479,3 @@ export const GameRecordSchema = AnalyticsRecordSchema.extend({
   turns: z.array(TurnSchema),
 });
 export type GameRecord = z.infer<typeof GameRecordSchema>;
-
-export const CosmeticsSchema = z.object({
-  role_group: z.record(z.string(), z.string().array()).optional(),
-  pattern: z.record(
-    z.string(),
-    z.object({
-      pattern: z.string().base64(),
-      role_group: z.string().array().optional(),
-    }),
-  ),
-});
-
-export type Cosmetic = z.infer<typeof CosmeticsSchema>;
