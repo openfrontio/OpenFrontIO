@@ -1,6 +1,6 @@
 export class ProgressBar {
   constructor(
-    private color: string[] = [],
+    private colors: string[] = [],
     private ctx: CanvasRenderingContext2D,
     private x: number,
     private y: number,
@@ -20,10 +20,10 @@ export class ProgressBar {
 
     // Draw the loading progress
     const idx = Math.min(
-      this.color.length - 1,
-      Math.floor(progress * this.color.length),
+      this.colors.length - 1,
+      Math.floor(progress * this.colors.length),
     );
-    const fillColor = this.color[idx];
+    const fillColor = this.colors[idx];
     this.ctx.fillStyle = fillColor;
     this.ctx.fillRect(
       this.x,
