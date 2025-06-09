@@ -112,7 +112,7 @@ export class UnitView {
     return this.data.targetTile;
   }
   ticksLeftInCooldown(): Tick | undefined {
-    return this.data.missileTimerQueue[0];
+    return this.data.missileTimerQueue?.[0];
   }
   isInCooldown(): boolean {
     return this.data.readyMissileCount === 0;
