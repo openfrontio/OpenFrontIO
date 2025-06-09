@@ -8,14 +8,16 @@ export class ProgressBar {
     private h: number,
     private progress: number = 0, // Progress from 0 to 1
   ) {
-    ctx.clearRect(x - 2, y - 2, w + 2, h + 2);
-    // Draw the loading bar background
-    ctx.fillStyle = "rgba(0, 0, 0, 1)";
-    ctx.fillRect(x - 1, y - 1, w, h);
     this.setProgress(Math.max(0.2, Math.min(1, progress)));
   }
 
   setProgress(progress: number): void {
+    this.ctx.clearRect(this.x - 2, this.y - 2, this.w + 2, this.h + 2);
+
+    // Draw the loading bar background
+    this.ctx.fillStyle = "rgba(0, 0, 0, 1)";
+    this.ctx.fillRect(this.x - 1, this.y - 1, this.w, this.h);
+
     // Draw the loading progress
     const idx = Math.min(
       this.color.length - 1,

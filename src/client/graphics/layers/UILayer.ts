@@ -15,7 +15,7 @@ const COLOR_PROGRESSION = [
   "rgb(202, 231, 15)",
   "rgb(44, 239, 18)",
 ];
-const HEALTHBAR_WIDTH = 13; // Width of the health bar
+const HEALTHBAR_WIDTH = 11; // Width of the health bar
 const LOADINGBAR_WIDTH = 18; // Width of the loading bar
 const PROGRESSBAR_HEIGHT = 3; // Height of a bar
 
