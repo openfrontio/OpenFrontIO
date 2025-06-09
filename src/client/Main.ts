@@ -66,12 +66,8 @@ class Client {
       console.warn("Game version element not found");
     }
     fetch("/version.txt")
-      .then((response) => {
-        return response.ok ? response.text() : "Failed to load version";
-      })
-      .then((version) => {
-        gameVersion.innerText = version;
-      });
+      .then((response) => (response.ok ? response.text() : "Failed to load"))
+      .then((version) => (gameVersion.innerText = version));
 
     const newsModal = document.querySelector("news-modal") as NewsModal;
     if (!newsModal) {
@@ -84,6 +80,9 @@ class Client {
     } else {
       console.log("News button element found");
     }
+    fetch("/changelog.md")
+      .then((response) => (response.ok ? response.text() : "Failed to load"))
+      .then((changelog) => (newsModal.markdown = changelog));
 
     // Comment out to show news button.
     // newsButton.hidden = true;
