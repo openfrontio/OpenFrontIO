@@ -1,58 +1,150 @@
-export function joinLobby(
-  lobbyConfig: LobbyConfig,
-  onPrestart: () => void,
-  onJoin: () => void,
-): () => void {
-  const eventBus = new EventBus();
+import { LitElement, css, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { translateText } from "./Utils"; // Adjust path to match your project structure
 
-  console.log(
-    `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
-  );
+@customElement("game-starting-modal")
+export class GameStartingModal extends LitElement {
+  @state()
+  isVisible = false;
 
-  const userSettings: UserSettings = new UserSettings();
-  startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
+  private hideTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  const transport = new Transport(lobbyConfig, eventBus);
-
-  // Create and append modal
-  const modal = document.createElement("game-starting-modal") as GameStartingModal;
-  document.body.appendChild(modal);
-
-  const onconnect = () => {
-    console.log(`Joined game lobby ${lobbyConfig.gameID}`);
-    transport.joinGame(0);
-  };
-  let terrainLoad: Promise<TerrainMapData> | null = null;
-
-  const onmessage = (message: ServerMessage) => {
-    if (message.type === "prestart") {
-      console.log(`lobby: game prestarting: ${JSON.stringify(message)}`);
-      terrainLoad = loadTerrainMap(message.gameMap);
-      // Show modal during prestart
-      modal.show();
-      onPrestart();
+  static styles = css`
+    :host {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 9999;
     }
-    if (message.type === "start") {
-      // Ensure modal is shown for singleplayer games
-      if (!modal.isVisible) {
-        modal.show();
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: #1a1a1a; /* Dark military gray */
+      color: #ffffff;
+      text-align: center;
+      overflow: hidden;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .rectangle-overlay {
+      width: 100%;
+      height: 100%;
+      background-color: #8b0000; /* Deep red, fully opaque */
+      background-image: repeating-linear-gradient(
+        45deg,
+        #000000 0,
+        #000000 10px,
+        transparent 10px,
+        transparent 20px
+      ); /* Diagonal black caution stripes */
+      transform: translateY(-100%);
+      animation: slideInOut 5s ease-in-out forwards;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.7); /* Gritty shadow */
+    }
+
+    @keyframes slideInOut {
+      0% {
+        transform: translateY(-100%);
+        opacity: 0;
       }
-      console.log(`lobby: game started: ${JSON.stringify(message, null, 2)}`);
-      onJoin();
-      lobbyConfig.gameStartInfo = message.gameStartInfo;
-      createClientGame(
-        lobbyConfig,
-        eventBus,
-        transport,
-        userSettings,
-        terrainLoad,
-      ).then((r) => r.start());
+      15% {
+        transform: translateY(0);
+        opacity: 1;
+      }
+      85% {
+        transform: translateY(0);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(100%);
+        opacity: 0;
+      }
     }
-  };
-  transport.connect(onconnect, onmessage);
-  return () => {
-    console.log("leaving game");
-    transport.leaveGame();
-    modal.remove(); // Clean up modal
-  };
+
+    .rectangle-overlay h2 {
+      font-family: "Bebas Neue", "Impact", sans-serif; /* Bold, Cold War font */
+      font-size: 48px;
+      margin-bottom: 15px;
+      color: #ffffff !important; /* Ensure visibility */
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.8); /* Harsh shadow */
+      font-weight: 700;
+      z-index: 2;
+    }
+
+    .rectangle-overlay p {
+      font-family: "Courier New", monospace; /* Military typewriter */
+      font-size: 24px;
+      color: #d3d3d3 !important; /* Ensure visibility */
+      background-color: rgba(0, 0, 0, 0.6); /* Dark backing for readability */
+      padding: 10px 20px;
+      border-radius: 5px;
+      border: 2px solid #444444; /* Rough military border */
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      z-index: 2;
+    }
+  `;
+
+  render() {
+    return html`
+      <div class="modal ${this.isVisible ? 'visible' : ''}">
+        <div class="rectangle-overlay">
+          <h2>${translateText("game_starting_modal.title") || "Loading Game"}</h2>
+          <p>${translateText("game_starting_modal.desc") || "Please wait..."}</p>
+        </div>
+      </div>
+    `;
+  }
+
+  show() {
+    if (this.hideTimeout) {
+      clearTimeout(this.hideTimeout);
+    }
+    this.isVisible = true;
+    this.requestUpdate();
+    this.hideTimeout = setTimeout(() => {
+      this.hide();
+    }, 5000);
+  }
+
+  hide() {
+    this.isVisible = false;
+    this.requestUpdate();
+    if (this.hideTimeout) {
+      clearTimeout(this.hideTimeout);
+      this.hideTimeout = null;
+    }
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this.hideTimeout) {
+      clearTimeout(this.hideTimeout);
+      this.hideTimeout = null;
+    }
+  }
 }
