@@ -1,8 +1,4 @@
 export class ProgressBar {
-  /**
-   * Minimum progress value to be displayed.
-   * This is set to 0.2 to ensure the progress bar is visible.
-   */
   private static readonly CLEAR_PADDING = 2;
   constructor(
     private colors: string[] = [],
