@@ -129,7 +129,7 @@ export class InputHandler {
       attackRatioUp: "Digit2",
       boatAttack: "KeyB",
       modifierKey: "ControlLeft",
-      emojiKey: "AltLeft",
+      altKey: "AltLeft",
       ...JSON.parse(localStorage.getItem("settings.keybinds") ?? "{}"),
     };
 
@@ -137,7 +137,6 @@ export class InputHandler {
     const isMac = /Mac/.test(navigator.userAgent);
     if (isMac) {
       this.keybinds.modifierKey = "MetaLeft"; // Use Command key on Mac
-      this.keybinds.emojiKey = "AltLeft"; // Use Option key for emoji menu on Mac
     }
 
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
@@ -312,7 +311,7 @@ export class InputHandler {
       this.eventBus.emit(new ShowBuildMenuEvent(event.clientX, event.clientY));
       return;
     }
-    if (this.isEmojiKeyPressed(event)) {
+    if (this.isAltKeyPressed(event)) {
       this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
       return;
     }
@@ -421,12 +420,12 @@ export class InputHandler {
     );
   }
 
-  isEmojiKeyPressed(event: PointerEvent): boolean {
+  isAltKeyPressed(event: PointerEvent): boolean {
     return (
-      (this.keybinds.emojiKey === "AltLeft" && event.altKey) ||
-      (this.keybinds.emojiKey === "ControlLeft" && event.ctrlKey) ||
-      (this.keybinds.emojiKey === "ShiftLeft" && event.shiftKey) ||
-      (this.keybinds.emojiKey === "MetaLeft" && event.metaKey)
+      (this.keybinds.altKey === "AltLeft" && event.altKey) ||
+      (this.keybinds.altKey === "ControlLeft" && event.ctrlKey) ||
+      (this.keybinds.altKey === "ShiftLeft" && event.shiftKey) ||
+      (this.keybinds.altKey === "MetaLeft" && event.metaKey)
     );
   }
 }

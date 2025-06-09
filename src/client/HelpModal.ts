@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, query } from "lit/decorators.js";
-import { getEmojiKey, getModifierKey, translateText } from "../client/Utils";
+import { getAltKey, getModifierKey, translateText } from "../client/Utils";
 import "./components/Difficulties";
 import "./components/Maps";
 
@@ -67,7 +67,7 @@ export class HelpModal extends LitElement {
               <tr>
                 <td>
                   <div class="scroll-combo-horizontal">
-                    <span class="key">${getEmojiKey()}</span>
+                    <span class="key">${getAltKey()}</span>
                     <span class="plus">+</span>
                     <div class="mouse-shell alt-left-click">
                       <div class="mouse-left-corner"></div>
@@ -116,7 +116,8 @@ export class HelpModal extends LitElement {
               </tr>
               <tr>
                 <td>
-                  <span class="key">ALT</span> + <span class="key">R</span>
+                  <span class="key">${getAltKey()}</span> +
+                  <span class="key">R</span>
                 </td>
                 <td>${translateText("help_modal.action_reset_gfx")}</td>
               </tr>

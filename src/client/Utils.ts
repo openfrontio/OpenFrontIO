@@ -160,11 +160,11 @@ export function getModifierKey(): string {
   }
 }
 
-export function getEmojiKey(): string {
+export function getAltKey(): string {
   const isMac = /Mac/.test(navigator.userAgent);
   if (isMac) {
     return "⌥"; // Option key
   } else {
-    return "Ctrl";
+    return "Alt";
   }
 }
