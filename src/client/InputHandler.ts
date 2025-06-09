@@ -103,6 +103,7 @@ export class InputHandler {
 
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
+  private keybinds: Record<string, string> = {};
 
   private readonly PAN_SPEED = 5;
   private readonly ZOOM_SPEED = 10;
@@ -115,7 +116,7 @@ export class InputHandler {
   ) {}
 
   initialize() {
-    const keybinds = {
+    this.keybinds = {
       toggleView: "Space",
       centerCamera: "KeyC",
       moveUp: "KeyW",
@@ -127,8 +128,17 @@ export class InputHandler {
       attackRatioDown: "Digit1",
       attackRatioUp: "Digit2",
       boatAttack: "KeyB",
+      modifierKey: "ControlLeft",
+      altKey: "AltLeft",
       ...JSON.parse(localStorage.getItem("settings.keybinds") ?? "{}"),
     };
+
+    // Mac users might have different keybinds
+    const isMac = /Mac/.test(navigator.userAgent);
+    if (isMac) {
+      this.keybinds.modifierKey = "MetaLeft"; // Use Command key on Mac
+    }
+
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
     this.canvas.addEventListener(
@@ -154,22 +164,22 @@ export class InputHandler {
       let deltaY = 0;
 
       if (
-        this.activeKeys.has(keybinds.moveUp) ||
+        this.activeKeys.has(this.keybinds.moveUp) ||
         this.activeKeys.has("ArrowUp")
       )
         deltaY += this.PAN_SPEED;
       if (
-        this.activeKeys.has(keybinds.moveDown) ||
+        this.activeKeys.has(this.keybinds.moveDown) ||
         this.activeKeys.has("ArrowDown")
       )
         deltaY -= this.PAN_SPEED;
       if (
-        this.activeKeys.has(keybinds.moveLeft) ||
+        this.activeKeys.has(this.keybinds.moveLeft) ||
         this.activeKeys.has("ArrowLeft")
       )
         deltaX += this.PAN_SPEED;
       if (
-        this.activeKeys.has(keybinds.moveRight) ||
+        this.activeKeys.has(this.keybinds.moveRight) ||
         this.activeKeys.has("ArrowRight")
       )
         deltaX -= this.PAN_SPEED;
@@ -182,13 +192,13 @@ export class InputHandler {
       const cy = window.innerHeight / 2;
 
       if (
-        this.activeKeys.has(keybinds.zoomOut) ||
+        this.activeKeys.has(this.keybinds.zoomOut) ||
         this.activeKeys.has("Minus")
       ) {
         this.eventBus.emit(new ZoomEvent(cx, cy, this.ZOOM_SPEED));
       }
       if (
-        this.activeKeys.has(keybinds.zoomIn) ||
+        this.activeKeys.has(this.keybinds.zoomIn) ||
         this.activeKeys.has("Equal")
       ) {
         this.eventBus.emit(new ZoomEvent(cx, cy, -this.ZOOM_SPEED));
@@ -196,7 +206,7 @@ export class InputHandler {
     }, 1);
 
     window.addEventListener("keydown", (e) => {
-      if (e.code === keybinds.toggleView) {
+      if (e.code === this.keybinds.toggleView) {
         e.preventDefault();
         if (!this.alternateView) {
           this.alternateView = true;
@@ -211,21 +221,21 @@ export class InputHandler {
 
       if (
         [
-          keybinds.moveUp,
-          keybinds.moveDown,
-          keybinds.moveLeft,
-          keybinds.moveRight,
-          keybinds.zoomOut,
-          keybinds.zoomIn,
+          this.keybinds.moveUp,
+          this.keybinds.moveDown,
+          this.keybinds.moveLeft,
+          this.keybinds.moveRight,
+          this.keybinds.zoomOut,
+          this.keybinds.zoomIn,
           "ArrowUp",
           "ArrowLeft",
           "ArrowDown",
           "ArrowRight",
           "Minus",
           "Equal",
-          keybinds.attackRatioDown,
-          keybinds.attackRatioUp,
-          keybinds.centerCamera,
+          this.keybinds.attackRatioDown,
+          this.keybinds.attackRatioUp,
+          this.keybinds.centerCamera,
           "ControlLeft",
           "ControlRight",
         ].includes(e.code)
@@ -234,7 +244,7 @@ export class InputHandler {
       }
     });
     window.addEventListener("keyup", (e) => {
-      if (e.code === keybinds.toggleView) {
+      if (e.code === this.keybinds.toggleView) {
         e.preventDefault();
         this.alternateView = false;
         this.eventBus.emit(new AlternateViewEvent(false));
@@ -245,22 +255,22 @@ export class InputHandler {
         this.eventBus.emit(new RefreshGraphicsEvent());
       }
 
-      if (e.code === keybinds.boatAttack) {
+      if (e.code === this.keybinds.boatAttack) {
         e.preventDefault();
         this.eventBus.emit(new DoBoatAttackEvent());
       }
 
-      if (e.code === keybinds.attackRatioDown) {
+      if (e.code === this.keybinds.attackRatioDown) {
         e.preventDefault();
         this.eventBus.emit(new AttackRatioEvent(-10));
       }
 
-      if (e.code === keybinds.attackRatioUp) {
+      if (e.code === this.keybinds.attackRatioUp) {
         e.preventDefault();
         this.eventBus.emit(new AttackRatioEvent(10));
       }
 
-      if (e.code === keybinds.centerCamera) {
+      if (e.code === this.keybinds.centerCamera) {
         e.preventDefault();
         this.eventBus.emit(new CenterCameraEvent());
       }
@@ -297,11 +307,11 @@ export class InputHandler {
     this.pointerDown = false;
     this.pointers.clear();
 
-    if (event.ctrlKey) {
+    if (this.isModifierKeyPressed(event)) {
       this.eventBus.emit(new ShowBuildMenuEvent(event.clientX, event.clientY));
       return;
     }
-    if (event.altKey) {
+    if (this.isAltKeyPressed(event)) {
       this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
       return;
     }
@@ -399,5 +409,23 @@ export class InputHandler {
       clearInterval(this.moveInterval);
     }
     this.activeKeys.clear();
+  }
+
+  isModifierKeyPressed(event: PointerEvent): boolean {
+    return (
+      (this.keybinds.modifierKey === "AltLeft" && event.altKey) ||
+      (this.keybinds.modifierKey === "ControlLeft" && event.ctrlKey) ||
+      (this.keybinds.modifierKey === "ShiftLeft" && event.shiftKey) ||
+      (this.keybinds.modifierKey === "MetaLeft" && event.metaKey)
+    );
+  }
+
+  isAltKeyPressed(event: PointerEvent): boolean {
+    return (
+      (this.keybinds.altKey === "AltLeft" && event.altKey) ||
+      (this.keybinds.altKey === "ControlLeft" && event.ctrlKey) ||
+      (this.keybinds.altKey === "ShiftLeft" && event.shiftKey) ||
+      (this.keybinds.altKey === "MetaLeft" && event.metaKey)
+    );
   }
 }
