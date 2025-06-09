@@ -211,7 +211,7 @@ export class BotBehavior {
 
 function shouldAcceptAllianceRequest(player: Player, request: AllianceRequest) {
   if (player.relation(request.requestor()) < Relation.Neutral) {
-    return false; // Reject if isMalice
+    return false; // Reject if hasMalice
   }
   if (request.requestor().isTraitor()) {
     return false; // Reject if isTraitor
