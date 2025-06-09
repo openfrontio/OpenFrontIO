@@ -77,7 +77,7 @@ export class ReplayPanel extends LitElement implements Layer {
               this.onReplaySpeedChange(ReplaySpeedMultiplier.slow);
             }}
           >
-            ÷2
+            ×0.5
           </button>
           <button
             class="text-white font-bold py-0 rounded border transition ${this
@@ -99,7 +99,7 @@ export class ReplayPanel extends LitElement implements Layer {
               this.onReplaySpeedChange(ReplaySpeedMultiplier.fast);
             }}
           >
-            ×10
+            ×2
           </button>
           <button
             class="text-white font-bold py-0 rounded border transition ${this
@@ -110,7 +110,7 @@ export class ReplayPanel extends LitElement implements Layer {
               this.onReplaySpeedChange(ReplaySpeedMultiplier.fastest);
             }}
           >
-            ×100
+            max
           </button>
         </div>
       </div>
