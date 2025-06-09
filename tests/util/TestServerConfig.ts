@@ -4,7 +4,10 @@ import { GameMapType } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
-  cloudflareConfigDir(): string {
+  cloudflareConfigPath(): string {
+    throw new Error("Method not implemented.");
+  }
+  cloudflareCredsPath(): string {
     throw new Error("Method not implemented.");
   }
   domain(): string {
