@@ -12,18 +12,25 @@ export class ProgressBar {
   }
 
   setProgress(progress: number): void {
+    if (typeof progress !== "number" || isNaN(progress)) {
+      return;
+    }
+    progress = Math.max(0, Math.min(1, progress));
     this.clear();
     // Draw the loading bar background
     this.ctx.fillStyle = "rgba(0, 0, 0, 1)";
     this.ctx.fillRect(this.x - 1, this.y - 1, this.w, this.h);
 
     // Draw the loading progress
-    const idx = Math.min(
-      this.colors.length - 1,
-      Math.floor(progress * this.colors.length),
-    );
-    const fillColor = this.colors[idx];
-    this.ctx.fillStyle = fillColor;
+    if (this.colors.length === 0) {
+      this.ctx.fillStyle = "#808080"; // default gray
+    } else {
+      const idx = Math.min(
+        this.colors.length - 1,
+        Math.floor(progress * this.colors.length),
+      );
+      this.ctx.fillStyle = this.colors[idx];
+    }
     this.ctx.fillRect(
       this.x,
       this.y,

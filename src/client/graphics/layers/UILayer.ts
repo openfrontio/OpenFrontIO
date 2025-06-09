@@ -104,7 +104,7 @@ export class UILayer implements Layer {
 
   onUnitEvent(unit: UnitView) {
     switch (unit.type()) {
-      case UnitType.Construction:
+      case UnitType.Construction: {
         const playerId = this.game.myPlayer()?.id();
         if (
           unit !== null &&
@@ -114,7 +114,7 @@ export class UILayer implements Layer {
         ) {
           const constructionType = unit.constructionType();
           if (constructionType === undefined) {
-            console.warn("Unit does not have a construction type");
+            // Skip units without construction type
             return;
           }
           const endTick =
@@ -122,12 +122,14 @@ export class UILayer implements Layer {
           this.drawLoadingBar(unit, endTick);
         }
         break;
-      case UnitType.Warship:
+      }
+      case UnitType.Warship: {
         const maxHealth = this.game.unitInfo(UnitType.Warship).maxHealth;
         if (unit !== null && maxHealth !== undefined) {
           this.drawHealthBar(unit);
         }
         break;
+      }
       case UnitType.SAMLauncher:
       case UnitType.MissileSilo:
         if (unit !== null && unit.isActive() && unit.isCooldown()) {
@@ -254,11 +256,13 @@ export class UILayer implements Layer {
    * Draw health bar for a unit
    */
   public drawHealthBar(unit: UnitView) {
+    const maxHealth = this.game.unitInfo(unit.type()).maxHealth;
+    if (maxHealth === undefined || this.context === null) {
+      return;
+    }
     if (
       this.allHealthBars.has(unit.id()) &&
-      (unit.health() >= this.game.unitInfo(unit.type()).maxHealth! ||
-        unit.health() <= 0) &&
-      this.context !== null
+      (unit.health() >= maxHealth || unit.health() <= 0)
     ) {
       // full hp/dead warships dont need a hp bar
       this.context.clearRect(
@@ -268,21 +272,18 @@ export class UILayer implements Layer {
         5,
       );
       this.allHealthBars.delete(unit.id());
-    } else if (
-      unit.health() < this.game.unitInfo(unit.type()).maxHealth! &&
-      unit.health() > 0
-    ) {
+    } else if (unit.health() < maxHealth && unit.health() > 0) {
       if (this.allHealthBars.has(unit.id())) {
-        this.allHealthBars.get(unit.id())!.clear();
+        this.allHealthBars.get(unit.id())?.clear();
       }
       const healthBar = new ProgressBar(
         COLOR_PROGRESSION,
-        this.context!,
+        this.context,
         this.game.x(unit.tile()) - 4,
         this.game.y(unit.tile()) - 6,
         HEALTHBAR_WIDTH,
         PROGRESSBAR_HEIGHT,
-        unit.health() / this.game.unitInfo(unit.type()).maxHealth!,
+        unit.health() / maxHealth,
       );
       // keep track of units that have health bars for clearing purposes
       this.allHealthBars.set(unit.id(), healthBar);
@@ -296,12 +297,14 @@ export class UILayer implements Layer {
         (currentTick - progressBarInfo.startTick) / progressBarInfo.endTick;
       if (progress >= 1 || !progressBarInfo.unit.isActive()) {
         this.allProgressBars.delete(unitId);
-        this.context!.clearRect(
-          progressBarInfo.progressBar.getX() - 1,
-          progressBarInfo.progressBar.getY() - 1,
-          18,
-          3,
-        );
+        if (this.context) {
+          this.context.clearRect(
+            progressBarInfo.progressBar.getX() - 1,
+            progressBarInfo.progressBar.getY() - 1,
+            LOADINGBAR_WIDTH,
+            PROGRESSBAR_HEIGHT,
+          );
+        }
         return;
       }
       progressBarInfo.progressBar.setProgress(progress);
@@ -309,12 +312,15 @@ export class UILayer implements Layer {
   }
 
   public drawLoadingBar(unit: UnitView, endTick: Tick) {
+    if (!this.context) {
+      return;
+    }
     if (!this.allProgressBars.has(unit.id())) {
       const progressBar = new ProgressBar(
         COLOR_PROGRESSION,
-        this.context!,
-        this.game.x(unit.lastTile()) - 8,
-        this.game.y(unit.lastTile()) - 10,
+        this.context,
+        this.game.x(unit.tile()) - 8,
+        this.game.y(unit.tile()) - 10,
         LOADINGBAR_WIDTH,
         PROGRESSBAR_HEIGHT,
         0,

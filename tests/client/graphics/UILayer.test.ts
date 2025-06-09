@@ -88,7 +88,7 @@ describe("UILayer", () => {
     ui.redraw();
     const unit = {
       id: () => 2,
-      lastTile: () => ({}),
+      tile: () => ({}),
       isActive: () => true,
     } as unknown as UnitView;
     ui.drawLoadingBar(unit, 5);
@@ -103,7 +103,7 @@ describe("UILayer", () => {
       type: () => "Construction",
       constructionType: () => "City",
       owner: () => ({ id: () => 1 }),
-      lastTile: () => ({}),
+      tile: () => ({}),
       isActive: () => true,
     } as unknown as UnitView;
     ui.onUnitEvent(unit);
@@ -123,7 +123,7 @@ describe("UILayer", () => {
       type: () => "Construction",
       constructionType: () => "City",
       owner: () => ({ id: () => 1 }),
-      lastTile: () => ({}),
+      tile: () => ({}),
       isActive: () => true,
     } as unknown as UnitView;
     ui.onUnitEvent(unit);
