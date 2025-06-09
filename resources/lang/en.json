@@ -402,6 +402,12 @@
     "health": "Health",
     "attitude": "Attitude"
   },
+  "unit_info_modal": {
+    "structure_info": "Structure Info",
+    "unit_type_unknown": "Unknown",
+    "close": "Close",
+    "cooldown": "Cooldown"
+  },
   "events_display": {
     "retreating": "retreating",
     "boat": "Boat"
