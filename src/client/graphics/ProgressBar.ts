@@ -13,9 +13,6 @@ export class ProgressBar {
   }
 
   setProgress(progress: number): void {
-    if (typeof progress !== "number" || isNaN(progress)) {
-      return;
-    }
     progress = Math.max(0, Math.min(1, progress));
     this.clear();
     // Draw the loading bar background
