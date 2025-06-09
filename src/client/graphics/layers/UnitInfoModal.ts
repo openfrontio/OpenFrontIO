@@ -137,7 +137,8 @@ export class UnitInfoModal extends LitElement implements Layer {
           ${translateText("unit_info_modal.structure_info")}
         </div>
         <div style="margin-bottom: 4px;">
-          <strong>Type:</strong> ${this.unit.type?.() ??
+          <strong>${translateText("unit_info_modal.type")}:</strong>
+          ${translateText(+"unit_type." + this.unit.type?.().toLowerCase()) ??
           translateText("unit_info_modal.unit_type_unknown")}
         </div>
         ${secondsLeft > 0
