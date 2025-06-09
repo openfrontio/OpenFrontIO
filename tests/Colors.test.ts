@@ -3,6 +3,7 @@ import {
   blue,
   botColor,
   ColorAllocator,
+  fallbackColors,
   red,
   teal,
 } from "../src/core/configuration/Colors";
@@ -39,12 +40,19 @@ describe("ColorAllocator", () => {
   });
 
   test("falls back when colors are exhausted", () => {
+    const fallbackColorsList = fallbackColors.slice();
+
     allocator.assignPlayerColor("1");
     allocator.assignPlayerColor("2");
     allocator.assignPlayerColor("3");
     const fallback = allocator.assignPlayerColor("4");
+    const fallback2 = allocator.assignPlayerColor("5");
 
-    expect(fallback.toRgb()).toBeDefined;
+    const match = fallbackColorsList.some((color) => color.isEqual(fallback));
+    expect(match).toBe(true);
+
+    const match2 = fallback.isEqual(fallback2);
+    expect(match2).toBe(false);
   });
 
   test("assignBotColor returns deterministic color from botColors", () => {
