@@ -328,15 +328,13 @@ export function startWorker() {
               if (result === false) {
                 log.warn("Token is not valid", claims);
                 return;
-              } else {
-                const { player } = result;
-                roles = player.roles;
               }
+              roles = result.player.roles;
             }
 
             if (clientMsg.pattern !== undefined) {
               if (roles === undefined) {
-                log.warn("pattern blocked (no roles)");
+                log.warn("pattern blocked (not logged in)");
                 return;
               }
               if (
