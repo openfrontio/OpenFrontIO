@@ -282,8 +282,8 @@ export class UILayer implements Layer {
   }
 
   private updateProgressBars() {
+    const currentTick = this.game.ticks();
     this.allProgressBars.forEach((progressBarInfo, unitId) => {
-      const currentTick = this.game.ticks();
       const progress =
         (currentTick - progressBarInfo.startTick) / progressBarInfo.endTick;
       if (progress >= 1 || !progressBarInfo.unit.isActive()) {
@@ -310,10 +310,10 @@ export class UILayer implements Layer {
         0,
       );
       this.allProgressBars.set(unit.id(), {
-        unit: unit,
+        unit,
         startTick: this.game.ticks(),
         endTick,
-        progressBar: progressBar,
+        progressBar,
       });
     }
   }
