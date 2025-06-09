@@ -1,4 +1,10 @@
 export class ProgressBar {
+  /**
+   * Minimum progress value to be displayed.
+   * This is set to 0.2 to ensure the progress bar is visible.
+   */
+  private static readonly MIN_PROGRESS = 0.2;
+  private static readonly CLEAR_PADDING = 2;
   constructor(
     private colors: string[] = [],
     private ctx: CanvasRenderingContext2D,
@@ -8,9 +14,8 @@ export class ProgressBar {
     private h: number,
     private progress: number = 0, // Progress from 0 to 1
   ) {
-    this.setProgress(Math.max(0.2, Math.min(1, progress)));
+    this.setProgress(Math.max(ProgressBar.MIN_PROGRESS, Math.min(1, progress)));
   }
-
   setProgress(progress: number): void {
     if (typeof progress !== "number" || isNaN(progress)) {
       return;
@@ -41,7 +46,12 @@ export class ProgressBar {
   }
 
   clear() {
-    this.ctx.clearRect(this.x - 2, this.y - 2, this.w + 2, this.h + 2);
+    this.ctx.clearRect(
+      this.x - ProgressBar.CLEAR_PADDING,
+      this.y - ProgressBar.CLEAR_PADDING,
+      this.w + ProgressBar.CLEAR_PADDING,
+      this.h + ProgressBar.CLEAR_PADDING,
+    );
   }
 
   getX(): number {

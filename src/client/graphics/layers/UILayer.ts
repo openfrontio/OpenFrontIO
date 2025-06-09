@@ -107,8 +107,7 @@ export class UILayer implements Layer {
       case UnitType.Construction: {
         const playerId = this.game.myPlayer()?.id();
         if (
-          unit !== null &&
-          unit.isActive() &&
+          unit?.isActive() &&
           playerId !== undefined &&
           unit.owner().id() === playerId
         ) {
@@ -132,7 +131,7 @@ export class UILayer implements Layer {
       }
       case UnitType.SAMLauncher:
       case UnitType.MissileSilo:
-        if (unit !== null && unit.isActive() && unit.isCooldown()) {
+        if (unit?.isActive() && unit.isCooldown()) {
           const endTick = unit.ticksLeftInCooldown() || 0;
           this.drawLoadingBar(unit, endTick);
         }

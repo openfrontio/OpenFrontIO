@@ -47,7 +47,11 @@ describe("ProgressBar", () => {
     const bar = new ProgressBar(["#ff0000", "#00ff00"], ctx, 2, 2, 80, 10, -1);
     expect(bar.getProgress()).toBe(0.2);
     const bar2 = new ProgressBar(["#ff0000", "#00ff00"], ctx, 2, 2, 80, 10, 2);
-    expect(bar2.getProgress()).toBeGreaterThanOrEqual(0.2);
-    expect(bar2.getProgress()).toBeLessThanOrEqual(1);
+    expect(bar2.getProgress()).toBe(1);
+  });
+
+  it("should handle empty colors array gracefully", () => {
+    const bar = new ProgressBar([], ctx, 2, 2, 80, 10, 0.5);
+    expect(() => bar.setProgress(0.5)).not.toThrow();
   });
 });
