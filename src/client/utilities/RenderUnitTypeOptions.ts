@@ -27,16 +27,16 @@ export function renderUnitTypeOptions({
   return unitOptions.map(
     ({ type, translationKey }) => html`
       <label
-        class="option-card ${disabledUnits.includes(type) ? "" : "selected"}"
+        class="option-card ${!disabledUnits.includes(type) ? "selected" : ""}"
         style="width: 140px;"
       >
         <div class="checkbox-icon"></div>
         <input
           type="checkbox"
-          .checked=${disabledUnits.includes(type)}
+          .checked=${!disabledUnits.includes(type)}
           @change=${(e: Event) => {
-            const checked = (e.target as HTMLInputElement).checked;
-            toggleUnit(type, checked);
+            const isEnabled = (e.target as HTMLInputElement).checked;
+            toggleUnit(type, !isEnabled);
           }}
         />
         <div class="option-card-title" style="text-align: center;">
