@@ -7,6 +7,8 @@ export class GameStartingModal extends LitElement {
   @state()
   isVisible = false;
 
+  private hideTimeout: ReturnType<typeof setTimeout> | null = null;
+
   static styles = css`
     .modal {
       position: fixed;
@@ -16,7 +18,7 @@ export class GameStartingModal extends LitElement {
       height: 100vh;
       background-color: #1a1a1a; /* Dark military gray */
       z-index: 9999;
-      color: #fff;
+      color: #ffffff;
       text-align: center;
       overflow: hidden;
       opacity: 0;
@@ -42,8 +44,8 @@ export class GameStartingModal extends LitElement {
       background-color: #8b0000; /* Deep red, fully opaque */
       background-image: repeating-linear-gradient(
         45deg,
-        #000 0,
-        #000 10px,
+        #000000 0,
+        #000000 10px,
         transparent 10px,
         transparent 20px
       ); /* Diagonal black caution stripes */
@@ -85,7 +87,7 @@ export class GameStartingModal extends LitElement {
       letter-spacing: 3px;
       text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.8); /* Harsh shadow */
       font-weight: 700;
-      z-index: 2; /* Ensure text is above overlay */
+      z-index: 2;
     }
 
     .rectangle-overlay p {
@@ -95,10 +97,10 @@ export class GameStartingModal extends LitElement {
       background-color: rgba(0, 0, 0, 0.6); /* Dark backing for readability */
       padding: 10px 20px;
       border-radius: 5px;
-      border: 2px solid #444; /* Rough military border */
+      border: 2px solid #444444; /* Rough military border */
       text-transform: uppercase;
       letter-spacing: 1px;
-      z-index: 2; /* Ensure text is above overlay */
+      z-index: 2;
     }
   `;
 
@@ -114,37 +116,34 @@ export class GameStartingModal extends LitElement {
   }
 
   show() {
-    this.isVisible = true;
-    this.requestUpdate();
-   
+    // Prevent multiple timeouts
     if (this.hideTimeout) {
       clearTimeout(this.hideTimeout);
     }
-  
+    this.isVisible = true;
+    this.requestUpdate();
+    // Ensure modal stays visible for exactly 5 seconds
     this.hideTimeout = setTimeout(() => {
-      this.hide();
+      this.isVisible = false;
+      this.requestUpdate();
     }, 5000);
   }
 
   hide() {
     this.isVisible = false;
     this.requestUpdate();
+    if (this.hideTimeout) {
+      clearTimeout(this.hideTimeout);
+      this.hideTimeout = null;
+    }
   }
-
-  private hideTimeout: number | null = null;
 
   disconnectedCallback() {
     super.disconnectedCallback();
- 
+    // Clean up timeout
     if (this.hideTimeout) {
       clearTimeout(this.hideTimeout);
+      this.hideTimeout = null;
     }
-  }
-}
-
-declare global {
-  interface Window {
-    setTimeout: (handler: (...args: any[]) => void, timeout?: number, ...args: any[]) => number;
-    clearTimeout: (timeoutId: number) => void;
   }
 }
