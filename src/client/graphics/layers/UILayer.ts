@@ -119,7 +119,7 @@ export class UILayer implements Layer {
           }
           const endTick =
             this.game.unitInfo(constructionType).constructionDuration || 0;
-          this.drawLoadingBar(COLOR_PROGRESSION, unit, endTick);
+          this.drawLoadingBar(unit, endTick);
         }
         break;
       case UnitType.Warship:
@@ -132,7 +132,7 @@ export class UILayer implements Layer {
       case UnitType.MissileSilo:
         if (unit !== null && unit.isActive() && unit.isCooldown()) {
           const endTick = unit.ticksLeftInCooldown() || 0;
-          this.drawLoadingBar(COLOR_PROGRESSION, unit, endTick);
+          this.drawLoadingBar(unit, endTick);
         }
         break;
       default:
@@ -307,10 +307,10 @@ export class UILayer implements Layer {
     });
   }
 
-  public drawLoadingBar(colors: string[], unit: UnitView, endTick: Tick) {
+  public drawLoadingBar(unit: UnitView, endTick: Tick) {
     if (!this.allProgressBars.has(unit.id())) {
       const progressBar = new ProgressBar(
-        colors,
+        COLOR_PROGRESSION,
         this.context!,
         this.game.x(unit.lastTile()) - 8,
         this.game.y(unit.lastTile()) - 10,
