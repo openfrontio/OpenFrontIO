@@ -276,6 +276,10 @@ export class UnitImpl implements Unit {
     this.mg.addUpdate(this.toUpdate());
   }
 
+  ticksLeftInCooldown(): Tick | undefined {
+    return this._missileTimerQueue[0];
+  }
+
   isInCooldown(): boolean {
     return this._readyMissileCount === 0;
   }
@@ -284,10 +288,6 @@ export class UnitImpl implements Unit {
     this._missileTimerQueue.shift();
     this._readyMissileCount++;
     this.mg.addUpdate(this.toUpdate());
-  }
-
-  ticksLeftInCooldown(): Tick | undefined {
-    return this._missileTimerQueue[0];
   }
 
   setTargetTile(targetTile: TileRef | undefined) {
