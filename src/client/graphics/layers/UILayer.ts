@@ -123,8 +123,7 @@ export class UILayer implements Layer {
         break;
       }
       case UnitType.Warship: {
-        const maxHealth = this.game.unitInfo(UnitType.Warship).maxHealth;
-        if (unit !== null && maxHealth !== undefined) {
+        if (unit?.isActive()) {
           this.drawHealthBar(unit);
         }
         break;
