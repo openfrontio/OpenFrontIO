@@ -73,6 +73,14 @@ describe("UILayer", () => {
     unit.health = () => 10;
     ui.drawHealthBar(unit);
     expect(ui["allHealthBars"].has(1)).toBe(false);
+
+    // a dead unit doesnt have a health bar
+    unit.health = () => 5;
+    ui.drawHealthBar(unit);
+    expect(ui["allHealthBars"].has(1)).toBe(true);
+    unit.health = () => 0;
+    ui.drawHealthBar(unit);
+    expect(ui["allHealthBars"].has(1)).toBe(false);
   });
 
   it("should add loading bar for unit", () => {
