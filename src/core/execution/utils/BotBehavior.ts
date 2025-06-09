@@ -68,17 +68,22 @@ export class BotBehavior {
   private checkIncomingAttacks() {
     // Switch enemies if we're under attack
     const incomingAttacks = this.player.incomingAttacks();
-    if (incomingAttacks.length > 0) {
-      this.setNewEnemy(
-        incomingAttacks.sort((a, b) => b.troops() - a.troops())[0].attacker(),
-      );
+    let largestAttack = 0;
+    let largestAttacker: Player | undefined;
+    for (const attack of incomingAttacks) {
+      if (attack.troops() <= largestAttack) continue;
+      largestAttack = attack.troops();
+      largestAttacker = attack.attacker();
+    }
+    if (largestAttacker !== undefined) {
+      this.setNewEnemy(largestAttacker);
     }
   }
 
   getNeighborTraitorToAttack(): Player | null {
     const traitors = this.player
       .neighbors()
-      .filter((n) => n.isPlayer() && n.isTraitor()) as Player[];
+      .filter((n): n is Player => n.isPlayer() && n.isTraitor());
     return traitors.length > 0 ? this.random.randElement(traitors) : null;
   }
 
