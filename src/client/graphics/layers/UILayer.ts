@@ -267,9 +267,7 @@ export class UILayer implements Layer {
       this.allHealthBars.get(unit.id())?.clear();
       this.allHealthBars.delete(unit.id());
     } else if (unit.health() < maxHealth && unit.health() > 0) {
-      if (this.allHealthBars.has(unit.id())) {
-        this.allHealthBars.get(unit.id())?.clear();
-      }
+      this.allHealthBars.get(unit.id())?.clear();
       const healthBar = new ProgressBar(
         COLOR_PROGRESSION,
         this.context,
