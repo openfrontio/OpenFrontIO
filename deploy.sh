@@ -138,12 +138,17 @@ echo "Subdomain: ${SUBDOMAIN}"
 echo "Using version tag: $VERSION_TAG"
 echo "Docker repository: $DOCKER_REPO"
 
+# Get game version for build info
+GAME_VERSION=$(git describe --tags)
+echo "Game version: $GAME_VERSION"
+
 # Get Git commit for build info
 GIT_COMMIT=$(git rev-parse HEAD 2> /dev/null || echo "unknown")
 echo "Git commit: $GIT_COMMIT"
 
 docker buildx build \
     --platform linux/amd64 \
+    --build-arg GAME_VERSION=$GAME_VERSION \
     --build-arg GIT_COMMIT=$GIT_COMMIT \
     -t $DOCKER_IMAGE \
     --push \

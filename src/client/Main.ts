@@ -59,11 +59,23 @@ class Client {
   constructor() {}
 
   initialize(): void {
+    const gameVersion = document.getElementById(
+      "game-version",
+    ) as HTMLDivElement;
+    if (!gameVersion) {
+      console.warn("Game version element not found");
+    }
+    fetch("/version.txt")
+      .then((response) => {
+        return response.ok ? response.text() : "Failed to load version";
+      })
+      .then((version) => {
+        gameVersion.innerText = version;
+      });
+
     const newsModal = document.querySelector("news-modal") as NewsModal;
     if (!newsModal) {
       console.warn("News modal element not found");
-    } else {
-      console.log("News modal element found");
     }
     newsModal instanceof NewsModal;
     const newsButton = document.querySelector("news-button") as NewsButton;
