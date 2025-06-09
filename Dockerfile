@@ -59,8 +59,13 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY startup.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/startup.sh
 
-RUN mkdir -p /tmp/.cloudflared && chmod 777 /tmp/.cloudflared
-ENV CF_CONFIG_DIR=/tmp/.cloudflared
+RUN mkdir -p /etc/cloudflared && \
+    chown -R node:node /etc/cloudflared && \
+    chmod -R 755 /etc/cloudflared
+
+# Set Cloudflared config directory to a volume mount location
+ENV CF_CONFIG_PATH=/etc/cloudflared/config.yml
+ENV CF_CREDS_PATH=/etc/cloudflared/creds.json
 
 # Use the startup script as the entrypoint
 ENTRYPOINT ["/usr/local/bin/startup.sh"]
