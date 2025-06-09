@@ -587,6 +587,7 @@ export interface Game extends GameMap {
     message: string,
     type: MessageType,
     playerID: PlayerID | null,
+    goldAmount?: bigint,
   ): void;
   displayIncomingUnit(
     unitID: number,
@@ -653,11 +654,73 @@ export interface EmojiMessage {
 }
 
 export enum MessageType {
-  SUCCESS,
-  INFO,
-  WARN,
-  ERROR,
+  ATTACK_FAILED,
+  ATTACK_CANCELLED,
+  ATTACK_REQUEST,
+  CONQUERED_PLAYER,
+  MIRV_INBOUND,
+  NUKE_INBOUND,
+  HYDROGEN_BOMB_INBOUND,
+  NAVAL_INVASION_INBOUND,
+  SAM_MISS,
+  SAM_HIT,
+  CAPTURED_ENEMY_UNIT,
+  UNIT_CAPTURED_BY_ENEMY,
+  UNIT_DESTROYED,
+  ALLIANCE_ACCEPTED,
+  ALLIANCE_REJECTED,
+  ALLIANCE_REQUEST,
+  ALLIANCE_BROKEN,
+  ALLIANCE_EXPIRED,
+  SENT_GOLD_TO_PLAYER,
+  RECEIVED_GOLD_FROM_PLAYER,
+  RECEIVED_GOLD_FROM_TRADE,
+  SENT_TROOPS_TO_PLAYER,
+  RECEIVED_TROOPS_FROM_PLAYER,
   CHAT,
+}
+
+// Message categories used for filtering events in the EventsDisplay
+export enum MessageCategory {
+  ATTACK = "ATTACK",
+  ALLIANCE = "ALLIANCE",
+  TRADE = "TRADE",
+  CHAT = "CHAT",
+}
+
+// Ensures that all message types are included in a category
+export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
+  [MessageType.ATTACK_FAILED]: MessageCategory.ATTACK,
+  [MessageType.ATTACK_CANCELLED]: MessageCategory.ATTACK,
+  [MessageType.ATTACK_REQUEST]: MessageCategory.ATTACK,
+  [MessageType.CONQUERED_PLAYER]: MessageCategory.ATTACK,
+  [MessageType.MIRV_INBOUND]: MessageCategory.ATTACK,
+  [MessageType.NUKE_INBOUND]: MessageCategory.ATTACK,
+  [MessageType.HYDROGEN_BOMB_INBOUND]: MessageCategory.ATTACK,
+  [MessageType.NAVAL_INVASION_INBOUND]: MessageCategory.ATTACK,
+  [MessageType.SAM_MISS]: MessageCategory.ATTACK,
+  [MessageType.SAM_HIT]: MessageCategory.ATTACK,
+  [MessageType.CAPTURED_ENEMY_UNIT]: MessageCategory.ATTACK,
+  [MessageType.UNIT_CAPTURED_BY_ENEMY]: MessageCategory.ATTACK,
+  [MessageType.UNIT_DESTROYED]: MessageCategory.ATTACK,
+  [MessageType.ALLIANCE_ACCEPTED]: MessageCategory.ALLIANCE,
+  [MessageType.ALLIANCE_REJECTED]: MessageCategory.ALLIANCE,
+  [MessageType.ALLIANCE_REQUEST]: MessageCategory.ALLIANCE,
+  [MessageType.ALLIANCE_BROKEN]: MessageCategory.ALLIANCE,
+  [MessageType.ALLIANCE_EXPIRED]: MessageCategory.ALLIANCE,
+  [MessageType.SENT_GOLD_TO_PLAYER]: MessageCategory.TRADE,
+  [MessageType.RECEIVED_GOLD_FROM_PLAYER]: MessageCategory.TRADE,
+  [MessageType.RECEIVED_GOLD_FROM_TRADE]: MessageCategory.TRADE,
+  [MessageType.SENT_TROOPS_TO_PLAYER]: MessageCategory.TRADE,
+  [MessageType.RECEIVED_TROOPS_FROM_PLAYER]: MessageCategory.TRADE,
+  [MessageType.CHAT]: MessageCategory.CHAT,
+} as const;
+
+/**
+ * Get the category of a message type
+ */
+export function getMessageCategory(messageType: MessageType): MessageCategory {
+  return MESSAGE_TYPE_CATEGORIES[messageType];
 }
 
 export interface NameViewData {
