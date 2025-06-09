@@ -265,12 +265,7 @@ export class UILayer implements Layer {
       (unit.health() >= maxHealth || unit.health() <= 0)
     ) {
       // full hp/dead warships dont need a hp bar
-      this.context.clearRect(
-        this.game.x(unit.tile()) - 6,
-        this.game.y(unit.tile()) - 8,
-        13,
-        5,
-      );
+      this.allHealthBars.get(unit.id())?.clear();
       this.allHealthBars.delete(unit.id());
     } else if (unit.health() < maxHealth && unit.health() > 0) {
       if (this.allHealthBars.has(unit.id())) {
