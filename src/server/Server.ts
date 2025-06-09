@@ -36,7 +36,8 @@ async function setupTunnels() {
   const cloudflare = new Cloudflare(
     config.cloudflareAccountId(),
     config.cloudflareApiToken(),
-    config.cloudflareConfigDir(),
+    config.cloudflareConfigPath(),
+    config.cloudflareCredsPath(),
   );
 
   const domainToService = new Map<string, string>().set(
@@ -51,11 +52,15 @@ async function setupTunnels() {
     );
   }
 
-  const tunnel = await cloudflare.createTunnel({
-    subdomain: config.subdomain(),
-    domain: config.domain(),
-    subdomainToService: domainToService,
-  } as TunnelConfig);
+  if (!(await cloudflare.configAlreadyExists())) {
+    await cloudflare.createTunnel({
+      subdomain: config.subdomain(),
+      domain: config.domain(),
+      subdomainToService: domainToService,
+    } as TunnelConfig);
+  } else {
+    console.log("Config already exists, skipping tunnel creation");
+  }
 
-  await cloudflare.startCloudflared(tunnel.configPath);
+  await cloudflare.startCloudflared();
 }
