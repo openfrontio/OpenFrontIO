@@ -1,7 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
-import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { SendUpgradeStructureIntentEvent } from "../../Transport";
@@ -173,6 +172,7 @@ export class UnitInfoModal extends LitElement implements Layer {
       >
         <div style="margin-bottom: 8px; font-size: 16px; font-weight: bold;">
           ${translateText("unit_info_modal.structure_info")}
+          ${translateText("unit_info_modal.structure_info")}
         </div>
         <div style="margin-bottom: 4px;">
           <strong>${translateText("unit_info_modal.type")}:</strong>
@@ -191,6 +191,8 @@ export class UnitInfoModal extends LitElement implements Layer {
         </div>
         ${secondsLeft > 0
           ? html`<div style="margin-bottom: 4px;">
+              <strong>${translateText("unit_info_modal.cooldown")}</strong>
+              ${secondsLeft}s
               <strong>${translateText("unit_info_modal.cooldown")}</strong>
               ${secondsLeft}s
             </div>`

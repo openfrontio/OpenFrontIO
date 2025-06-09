@@ -413,10 +413,7 @@
     "structure_info": "Structure Info",
     "unit_type_unknown": "Unknown",
     "close": "Close",
-    "cooldown": "Cooldown",
-    "type": "Type",
-    "upgrade": "Upgrade",
-    "level": "Level"
+    "cooldown": "Cooldown"
   },
   "relation": {
     "hostile": "Hostile",
