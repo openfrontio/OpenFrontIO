@@ -43,8 +43,9 @@ describe("ProgressBar", () => {
     expect(ctx.fillStyle).toBe("#ff0000");
   });
 
-  it("should clamp progress between 0.2 and 1 on init", () => {
+  it("should clamp progress between 0 and 1 on init", () => {
     const bar = new ProgressBar(["#ff0000", "#00ff00"], ctx, 2, 2, 80, 10, -1);
+    expect(bar.getProgress()).toBe(0);
     const bar2 = new ProgressBar(["#ff0000", "#00ff00"], ctx, 2, 2, 80, 10, 2);
     expect(bar2.getProgress()).toBe(1);
   });

@@ -3,7 +3,6 @@ export class ProgressBar {
    * Minimum progress value to be displayed.
    * This is set to 0.2 to ensure the progress bar is visible.
    */
-  private static readonly MIN_PROGRESS = 0.2;
   private static readonly CLEAR_PADDING = 2;
   constructor(
     private colors: string[] = [],
@@ -14,8 +13,9 @@ export class ProgressBar {
     private h: number,
     private progress: number = 0, // Progress from 0 to 1
   ) {
-    this.setProgress(Math.max(ProgressBar.MIN_PROGRESS, Math.min(1, progress)));
+    this.setProgress(progress);
   }
+
   setProgress(progress: number): void {
     if (typeof progress !== "number" || isNaN(progress)) {
       return;
@@ -39,7 +39,7 @@ export class ProgressBar {
     this.ctx.fillRect(
       this.x,
       this.y,
-      Math.floor(progress * (this.w - 2)),
+      Math.max(1, Math.floor(progress * (this.w - 2))),
       this.h - 2,
     );
     this.progress = progress;
