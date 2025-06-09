@@ -22,6 +22,8 @@ import {
   ColoredTeams,
   Embargo,
   EmojiMessage,
+  GameMode,
+  GameType,
   Gold,
   MessageType,
   MutableAlliance,
@@ -98,6 +100,7 @@ export class PlayerImpl implements Player {
   public _outgoingLandAttacks: Attack[] = [];
 
   private _hasSpawned = false;
+  private _isDisconnected = false;
 
   constructor(
     private mg: GameImpl,
@@ -135,6 +138,7 @@ export class PlayerImpl implements Player {
       smallID: this.smallID(),
       playerType: this.type(),
       isAlive: this.isAlive(),
+      isDisconnected: this.isDisconnected(),
       tilesOwned: this.numTilesOwned(),
       gold: this._gold,
       population: this.population(),
@@ -525,6 +529,13 @@ export class PlayerImpl implements Player {
     if (!this.isFriendly(recipient)) {
       return false;
     }
+    if (
+      recipient.type() === PlayerType.Human &&
+      this.mg.config().gameConfig().gameMode === GameMode.FFA &&
+      this.mg.config().gameConfig().gameType === GameType.Public
+    ) {
+      return false;
+    }
     for (const donation of this.sentDonations) {
       if (donation.recipient === recipient) {
         if (
@@ -547,12 +558,12 @@ export class PlayerImpl implements Player {
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     this.mg.displayMessage(
       `Sent ${renderTroops(troops)} troops to ${recipient.name()}`,
-      MessageType.INFO,
+      MessageType.SENT_TROOPS_TO_PLAYER,
       this.id(),
     );
     this.mg.displayMessage(
       `Received ${renderTroops(troops)} troops from ${this.name()}`,
-      MessageType.SUCCESS,
+      MessageType.RECEIVED_TROOPS_FROM_PLAYER,
       recipient.id(),
     );
     return true;
@@ -567,13 +578,14 @@ export class PlayerImpl implements Player {
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     this.mg.displayMessage(
       `Sent ${renderNumber(gold)} gold to ${recipient.name()}`,
-      MessageType.INFO,
+      MessageType.SENT_GOLD_TO_PLAYER,
       this.id(),
     );
     this.mg.displayMessage(
       `Received ${renderNumber(gold)} gold from ${this.name()}`,
-      MessageType.SUCCESS,
+      MessageType.RECEIVED_GOLD_FROM_PLAYER,
       recipient.id(),
+      gold,
     );
     return true;
   }
@@ -696,7 +708,7 @@ export class PlayerImpl implements Player {
     this._troops += toInt(troops);
   }
   removeTroops(troops: number): number {
-    if (troops <= 1) {
+    if (troops <= 0) {
       return 0;
     }
     const toRemove = minInt(this._troops, toInt(troops));
@@ -917,6 +929,14 @@ export class PlayerImpl implements Player {
   }
   lastTileChange(): Tick {
     return this._lastTileChange;
+  }
+
+  isDisconnected(): boolean {
+    return this._isDisconnected;
+  }
+
+  markDisconnected(isDisconnected: boolean): void {
+    this._isDisconnected = isDisconnected;
   }
 
   hash(): number {

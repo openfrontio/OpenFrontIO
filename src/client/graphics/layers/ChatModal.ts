@@ -9,14 +9,14 @@ import { EventBus } from "../../../core/EventBus";
 import { SendQuickChatEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 
-type QuickChatPhrase = {
+export type QuickChatPhrase = {
   key: string;
   requiresPlayer: boolean;
 };
 
-type QuickChatPhrases = Record<string, QuickChatPhrase[]>;
+export type QuickChatPhrases = Record<string, QuickChatPhrase[]>;
 
-const quickChatPhrases: QuickChatPhrases = quickChatData;
+export const quickChatPhrases: QuickChatPhrases = quickChatData;
 
 @customElement("chat-modal")
 export class ChatModal extends LitElement {
@@ -57,7 +57,7 @@ export class ChatModal extends LitElement {
     misc: [{ text: "Let's go!", requiresPlayer: false }],
   };
 
-  private categories = [
+  public categories = [
     { id: "help" },
     { id: "attack" },
     { id: "defend" },
@@ -71,17 +71,6 @@ export class ChatModal extends LitElement {
   }
 
   render() {
-    const sortedPlayers = [...this.players].sort((a, b) => a.localeCompare(b));
-
-    const filteredPlayers = sortedPlayers.filter((player) =>
-      player.toLowerCase().includes(this.playerSearchQuery),
-    );
-
-    const otherPlayers = sortedPlayers.filter(
-      (player) => !player.toLowerCase().includes(this.playerSearchQuery),
-    );
-
-    const displayPlayers = [...filteredPlayers, ...otherPlayers];
     return html`
       <o-modal title="${translateText("chat.title")}">
         <div class="chat-columns">
@@ -305,5 +294,36 @@ export class ChatModal extends LitElement {
 
   public setSender(value: PlayerView) {
     this.sender = value;
+  }
+
+  public openWithSelection(
+    categoryId: string,
+    phraseKey: string,
+    sender?: PlayerView,
+    recipient?: PlayerView,
+  ) {
+    if (sender && recipient) {
+      const alivePlayerNames = this.g
+        .players()
+        .filter((p) => p.isAlive() && !(p.data.playerType === PlayerType.Bot))
+        .map((p) => p.data.name);
+
+      this.players = alivePlayerNames;
+      this.recipient = recipient;
+      this.sender = sender;
+    }
+
+    this.selectCategory(categoryId);
+
+    const phrase = this.getPhrasesForCategory(categoryId).find(
+      (p) => p.key === phraseKey,
+    );
+
+    if (phrase) {
+      this.selectPhrase(phrase);
+    }
+
+    this.requestUpdate();
+    this.modalEl?.open();
   }
 }

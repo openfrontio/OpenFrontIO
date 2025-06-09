@@ -368,6 +368,19 @@ export class UserSettingModal extends LitElement {
       ></setting-keybind>
 
       <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.attack_keybinds")}
+      </div>
+
+      <setting-keybind
+        action="boatAttack"
+        label=${translateText("user_setting.boat_attack")}
+        description=${translateText("user_setting.boat_attack_desc")}
+        defaultKey="KeyB"
+        .value=${this.keybinds["boatAttack"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
         ${translateText("user_setting.zoom_controls")}
       </div>
 

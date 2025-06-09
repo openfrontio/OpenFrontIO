@@ -103,6 +103,7 @@ export interface PlayerUpdate {
   smallID: number;
   playerType: PlayerType;
   isAlive: boolean;
+  isDisconnected: boolean;
   tilesOwned: number;
   gold: Gold;
   population: number;
@@ -161,6 +162,7 @@ export interface DisplayMessageUpdate {
   type: GameUpdateType.DisplayEvent;
   message: string;
   messageType: MessageType;
+  goldAmount?: bigint;
   playerID: number | null;
 }
 

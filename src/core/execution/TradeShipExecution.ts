@@ -4,7 +4,6 @@ import {
   Game,
   MessageType,
   Player,
-  PlayerID,
   Unit,
   UnitType,
 } from "../game/Game";
@@ -16,20 +15,19 @@ import { distSortUnit } from "../Util";
 export class TradeShipExecution implements Execution {
   private active = true;
   private mg: Game;
-  private origOwner: Player;
   private tradeShip: Unit | undefined;
   private wasCaptured = false;
   private pathFinder: PathFinder;
+  private tilesTraveled = 0;
 
   constructor(
-    private _owner: PlayerID,
+    private origOwner: Player,
     private srcPort: Unit,
     private _dstPort: Unit,
   ) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.origOwner = mg.player(this._owner);
     this.pathFinder = PathFinder.Mini(mg, 2500);
   }
 
@@ -112,6 +110,7 @@ export class TradeShipExecution implements Execution {
           this.tradeShip.setSafeFromPirates();
         }
         this.tradeShip.move(result.tile);
+        this.tilesTraveled++;
         break;
       case PathFindResultType.PathNotFound:
         console.warn("captured trade ship cannot find route");
@@ -126,31 +125,30 @@ export class TradeShipExecution implements Execution {
   private complete() {
     this.active = false;
     this.tradeShip!.delete(false);
-    const gold = this.mg
-      .config()
-      .tradeShipGold(
-        this.mg.manhattanDist(this.srcPort.tile(), this._dstPort.tile()),
-      );
+    const gold = this.mg.config().tradeShipGold(this.tilesTraveled);
 
     if (this.wasCaptured) {
       this.tradeShip!.owner().addGold(gold);
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
-        MessageType.SUCCESS,
+        MessageType.CAPTURED_ENEMY_UNIT,
         this.tradeShip!.owner().id(),
+        gold,
       );
     } else {
       this.srcPort.owner().addGold(gold);
       this._dstPort.owner().addGold(gold);
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from trade with ${this.srcPort.owner().displayName()}`,
-        MessageType.SUCCESS,
+        MessageType.RECEIVED_GOLD_FROM_TRADE,
         this._dstPort.owner().id(),
+        gold,
       );
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from trade with ${this._dstPort.owner().displayName()}`,
-        MessageType.SUCCESS,
+        MessageType.RECEIVED_GOLD_FROM_TRADE,
         this.srcPort.owner().id(),
+        gold,
       );
     }
     return;
