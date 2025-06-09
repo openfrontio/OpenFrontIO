@@ -139,7 +139,7 @@ echo "Using version tag: $VERSION_TAG"
 echo "Docker repository: $DOCKER_REPO"
 
 # Get game version for build info
-GAME_VERSION=$(git describe --tags)
+GAME_VERSION=v0.23.9
 echo "Game version: $GAME_VERSION"
 
 # Get Git commit for build info

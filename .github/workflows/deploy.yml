@@ -126,7 +126,6 @@ jobs:
           VERSION_TAG: latest
         run: |
           echo "::group::deploy.sh"
-          git fetch --filter=tree:0 --prune --unshallow
           ./deploy.sh "$ENV" "$HOST" "$SUBDOMAIN"
           echo "Deployment created in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
           echo "::endgroup::"
