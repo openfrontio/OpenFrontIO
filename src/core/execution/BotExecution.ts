@@ -60,7 +60,7 @@ export class BotExecution implements Execution {
     }
     const traitors = this.bot
       .neighbors()
-      .filter((n) => n.isPlayer() && n.isTraitor()) as Player[];
+      .filter((n): n is Player => n.isPlayer() && n.isTraitor());
     if (traitors.length > 0) {
       const toAttack = this.random.randElement(traitors);
       const odds = this.bot.isFriendly(toAttack) ? 6 : 3;

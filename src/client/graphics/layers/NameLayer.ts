@@ -12,7 +12,7 @@ import targetIcon from "../../../../resources/images/TargetIcon.svg";
 import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { Theme } from "../../../core/configuration/Config";
-import { AllPlayers, Cell, nukeTypes, UnitType } from "../../../core/game/Game";
+import { AllPlayers, Cell, nukeTypes } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { createCanvas, renderNumber, renderTroops } from "../../Utils";
@@ -516,7 +516,7 @@ export class NameLayer implements Layer {
       const isSendingNuke = render.player.id() === unit.owner().id();
       const notMyPlayer = !myPlayer || unit.owner().id() !== myPlayer.id();
       return (
-        (nukeTypes as UnitType[]).includes(unit.type()) &&
+        nukeTypes.includes(unit.type()) &&
         isSendingNuke &&
         notMyPlayer &&
         unit.isActive()

@@ -99,7 +99,9 @@ export class BotBehavior {
     if (this.enemy === null) {
       const bots = this.player
         .neighbors()
-        .filter((n) => n.isPlayer() && n.type() === PlayerType.Bot) as Player[];
+        .filter(
+          (n): n is Player => n.isPlayer() && n.type() === PlayerType.Bot,
+        );
       if (bots.length > 0) {
         const density = (p: Player) => p.troops() / p.numTilesOwned();
         this.enemy = bots.sort((a, b) => density(a) - density(b))[0];
@@ -159,7 +161,7 @@ export class BotBehavior {
     if (this.enemy === null) {
       const traitors = this.player
         .neighbors()
-        .filter((n) => n.isPlayer() && n.isTraitor()) as Player[];
+        .filter((n): n is Player => n.isPlayer() && n.isTraitor());
       if (traitors.length > 0) {
         const toAttack = this.random.randElement(traitors);
         const odds = this.player.isFriendly(toAttack) ? 6 : 3;
