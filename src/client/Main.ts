@@ -3,7 +3,7 @@ import favicon from "../../resources/images/Favicon.svg";
 import { GameRecord, GameStartInfo } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
+import { userSettings } from "../core/game/UserSettings";
 import { joinLobby } from "./ClientGameRunner";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
@@ -54,7 +54,6 @@ class Client {
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
   private googleAds: NodeListOf<GoogleAdElement>;
-  private userSettings: UserSettings = new UserSettings();
 
   constructor() {}
 
@@ -231,7 +230,7 @@ class Client {
       }
     });
 
-    if (this.userSettings.darkMode()) {
+    if (userSettings.darkMode()) {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");

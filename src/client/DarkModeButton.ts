@@ -1,19 +1,18 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { UserSettings } from "../core/game/UserSettings";
+import { userSettings } from "../core/game/UserSettings";
 
 @customElement("dark-mode-button")
 export class DarkModeButton extends LitElement {
-  private userSettings: UserSettings = new UserSettings();
-  @state() private darkMode: boolean = this.userSettings.darkMode();
+  @state() private darkMode: boolean = userSettings.darkMode();
 
   createRenderRoot() {
     return this;
   }
 
   toggleDarkMode() {
-    this.userSettings.toggleDarkMode();
-    this.darkMode = this.userSettings.darkMode();
+    userSettings.toggleDarkMode();
+    this.darkMode = userSettings.darkMode();
   }
 
   render() {
