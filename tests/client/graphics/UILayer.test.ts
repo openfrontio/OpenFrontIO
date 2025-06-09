@@ -83,7 +83,7 @@ describe("UILayer", () => {
       lastTile: () => ({}),
       isActive: () => true,
     } as unknown as UnitView;
-    ui.drawLoadingBar(["#fff"], unit, 5);
+    ui.drawLoadingBar(unit, 5);
     expect(ui["allProgressBars"].has(2)).toBe(true);
   });
 
