@@ -222,4 +222,5 @@ function shouldAcceptAllianceRequest(player: Player, request: AllianceRequest) {
   if (request.requestor().alliances().length >= 3) {
     return false; // Reject if tooManyAlliances
   }
+  return true; // Accept otherwise
 }
