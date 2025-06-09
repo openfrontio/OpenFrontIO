@@ -11,8 +11,6 @@ const __dirname = path.dirname(__filename);
 
 const gitCommit =
   process.env.GIT_COMMIT ?? execSync("git rev-parse HEAD").toString().trim();
-const gameVersion =
-  process.env.GAME_VERSION ?? execSync("git describe --tags").toString().trim();
 
 export default async (env, argv) => {
   const isProduction = argv.mode === "production";
@@ -124,7 +122,6 @@ export default async (env, argv) => {
         ),
         "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
         "process.env.GIT_COMMIT": JSON.stringify(gitCommit),
-        "process.env.GAME_VERSION": JSON.stringify(gameVersion),
       }),
       new CopyPlugin({
         patterns: [
