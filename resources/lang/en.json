@@ -408,6 +408,12 @@
     "retreating": "retreating",
     "boat": "Boat"
   },
+  "unit_info_modal": {
+    "structure_info": "Structure Info",
+    "unit_type_unknown": "Unknown",
+    "close": "Close",
+    "cooldown": "Cooldown"
+  },
   "relation": {
     "hostile": "Hostile",
     "distrustful": "Distrustful",
