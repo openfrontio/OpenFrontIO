@@ -1,7 +1,11 @@
 import {
   RegExpMatcher,
+  collapseDuplicatesTransformer,
   englishDataset,
   englishRecommendedTransformers,
+  resolveConfusablesTransformer,
+  resolveLeetSpeakTransformer,
+  skipNonAlphabeticTransformer,
 } from "obscenity";
 import { translateText } from "../../client/Utils";
 import { simpleHash } from "../Util";
@@ -9,6 +13,10 @@ import { simpleHash } from "../Util";
 const matcher = new RegExpMatcher({
   ...englishDataset.build(),
   ...englishRecommendedTransformers,
+  ...resolveConfusablesTransformer(),
+  ...skipNonAlphabeticTransformer(),
+  ...collapseDuplicatesTransformer(),
+  ...resolveLeetSpeakTransformer(),
 });
 
 export const MIN_USERNAME_LENGTH = 3;
@@ -34,7 +42,7 @@ export function fixProfaneUsername(username: string): string {
 }
 
 export function isProfaneUsername(username: string): boolean {
-  return matcher.hasMatch(username) || username.toLowerCase().includes("nig");
+  return matcher.hasMatch(username);
 }
 
 export function validateUsername(username: string): {
