@@ -337,14 +337,13 @@ export function startWorker() {
                 log.warn("pattern blocked (not logged in)");
                 return;
               }
-              if (
-                !getPrivilegeChecker().isPatternAllowed(
-                  clientMsg.pattern,
-                  roles,
-                )
-              ) {
+              const patternCheck = getPrivilegeChecker().isPatternAllowed(
+                clientMsg.pattern,
+                roles,
+              );
+              if (patternCheck !== true) {
                 log.warn(
-                  `pattern blocked (restricted or unlisted): ${clientMsg.pattern}`,
+                  `pattern blocked (${patternCheck}): ${clientMsg.pattern}`,
                 );
                 return;
               }

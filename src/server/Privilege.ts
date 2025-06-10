@@ -10,7 +10,10 @@ export class PrivilegeChecker {
     this.patternData = patternData;
   }
 
-  isPatternAllowed(base64: string, roleIDs: string[]): boolean {
+  isPatternAllowed(
+    base64: string,
+    roleIDs: string[],
+  ): true | "restricted" | "unlisted" {
     const found = Object.entries(this.patternData.pattern).find(
       ([, entry]) => entry.pattern === base64,
     );
@@ -18,7 +21,9 @@ export class PrivilegeChecker {
     if (!found) {
       // fallback to staff privilege check
       const staffRoles = this.patternData.role_group?.["staff"] || [];
-      return roleIDs.some((role) => staffRoles.includes(role));
+      return roleIDs.some((role) => staffRoles.includes(role))
+        ? true
+        : "unlisted";
     }
 
     const [, entry] = found;
@@ -35,7 +40,7 @@ export class PrivilegeChecker {
       }
     }
 
-    return false;
+    return "restricted";
   }
 }
 
