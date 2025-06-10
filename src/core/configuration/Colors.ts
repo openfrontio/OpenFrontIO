@@ -11,7 +11,7 @@ export const orange = colord({ h: 25, s: 95, l: 53 });
 export const green = colord({ h: 128, s: 49, l: 50 });
 export const botColor: Colord = colord({ r: 210, g: 206, b: 200 }); // Muted Beige Gray
 
-export const territoryColors: Colord[] = [
+export const nationColors: Colord[] = [
   colord({ r: 230, g: 100, b: 100 }), // Bright Red
   colord({ r: 100, g: 180, b: 230 }), // Sky Blue
   colord({ r: 230, g: 180, b: 80 }), // Golden Yellow
@@ -336,26 +336,21 @@ export const fallbackColors: Colord[] = [
 
 export class ColorAllocator {
   private availableColors: Colord[];
+  private fallbackColors: Colord[];
   private assigned = new Map<string, Colord>();
 
-  constructor(colors: Colord[]) {
+  constructor(colors: Colord[], fallback: Colord[]) {
     this.availableColors = [...colors];
+    this.fallbackColors = [...fallback];
   }
 
-  assignBotColor(id: string): Colord {
-    const hash = simpleHash(id);
-    return this.availableColors[hash % this.availableColors.length];
-  }
-
-  assignPlayerColor(id: string): Colord {
+  assignColor(id: string): Colord {
     if (this.assigned.has(id)) {
       return this.assigned.get(id)!;
     }
-
     if (this.availableColors.length === 0) {
-      this.availableColors = fallbackColors.slice();
+      this.availableColors = this.fallbackColors;
     }
-
     const index = 0;
     const color = this.availableColors.splice(index, 1)[0];
     this.assigned.set(id, color);

@@ -1,14 +1,14 @@
 import { Colord, colord } from "colord";
 import { PseudoRandom } from "../PseudoRandom";
-import { simpleHash } from "../Util";
 import { PlayerType, Team, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import {
   botColors,
   ColorAllocator,
+  fallbackColors,
   humanColors,
-  territoryColors,
+  nationColors,
 } from "./Colors";
 import { Theme } from "./Config";
 
@@ -17,9 +17,10 @@ type ColorCache = Map<string, Colord>;
 export class PastelTheme implements Theme {
   private borderColorCache: ColorCache = new Map<string, Colord>();
   private rand = new PseudoRandom(123);
-  private humanColorAllocator = new ColorAllocator(humanColors);
-  private botColorAllocator = new ColorAllocator(botColors);
-  private teamColorAllocator = new ColorAllocator(humanColors);
+  private humanColorAllocator = new ColorAllocator(humanColors, fallbackColors);
+  private botColorAllocator = new ColorAllocator(botColors, botColors);
+  private teamColorAllocator = new ColorAllocator(humanColors, fallbackColors);
+  private nationColorAllocator = new ColorAllocator(nationColors, nationColors);
 
   private background = colord({ r: 60, g: 60, b: 60 });
   private shore = colord({ r: 204, g: 203, b: 158 });
@@ -49,12 +50,12 @@ export class PastelTheme implements Theme {
       return this.teamColor(team);
     }
     if (player.type() === PlayerType.Human) {
-      return this.humanColorAllocator.assignPlayerColor(player.id());
+      return this.humanColorAllocator.assignColor(player.id());
     }
     if (player.type() === PlayerType.Bot) {
-      return this.botColorAllocator.assignBotColor(player.id());
+      return this.botColorAllocator.assignColor(player.id());
     }
-    return territoryColors[simpleHash(player.id()) % territoryColors.length];
+    return this.nationColorAllocator.assignColor(player.id());
   }
 
   textColor(player: PlayerView): string {
