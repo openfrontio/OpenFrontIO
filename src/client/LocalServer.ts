@@ -1,3 +1,4 @@
+import { EventBus } from "../core/EventBus";
 import {
   AllPlayersStats,
   ClientMessage,
@@ -12,7 +13,9 @@ import {
 } from "../core/Schemas";
 import { createGameRecord, decompressGameRecord, replacer } from "../core/Util";
 import { LobbyConfig } from "./ClientGameRunner";
+import { ReplaySpeedChangeEvent } from "./InputHandler";
 import { getPersistentID } from "./Main";
+import { defaultReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class LocalServer {
   // All turns from the game record on replay.
@@ -24,6 +27,7 @@ export class LocalServer {
   private startedAt: number;
 
   private paused = false;
+  private replaySpeedMultiplier = defaultReplaySpeedMultiplier;
 
   private winner: ClientSendWinnerMessage | null = null;
   private allPlayersStats: AllPlayersStats = {};
@@ -38,22 +42,28 @@ export class LocalServer {
     private clientConnect: () => void,
     private clientMessage: (message: ServerMessage) => void,
     private isReplay: boolean,
+    private eventBus: EventBus,
   ) {}
 
   start() {
     this.turnCheckInterval = setInterval(() => {
-      if (this.turnsExecuted === this.turns.length) {
-        if (
-          this.isReplay ||
-          Date.now() >
-            this.turnStartTime + this.lobbyConfig.serverConfig.turnIntervalMs()
-        ) {
-          this.turnStartTime = Date.now();
-          // End turn on the server means the client will start processing the turn.
-          this.endTurn();
-        }
+      const turnIntervalMs =
+        this.lobbyConfig.serverConfig.turnIntervalMs() *
+        this.replaySpeedMultiplier;
+
+      if (
+        this.turnsExecuted === this.turns.length &&
+        Date.now() > this.turnStartTime + turnIntervalMs
+      ) {
+        this.turnStartTime = Date.now();
+        // End turn on the server means the client will start processing the turn.
+        this.endTurn();
       }
     }, 5);
+
+    this.eventBus.on(ReplaySpeedChangeEvent, (event) => {
+      this.replaySpeedMultiplier = event.replaySpeedMultiplier;
+    });
 
     this.startedAt = Date.now();
     this.clientConnect();
