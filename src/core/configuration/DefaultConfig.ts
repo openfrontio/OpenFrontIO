@@ -246,10 +246,10 @@ export class DefaultConfig implements Config {
     return 30;
   }
   defensePostDefenseBonus(): number {
-    return 5;
+    return 6;
   }
   defensePostSpeedBonus(): number {
-    return 2;
+    return 3;
   }
 
   playerTeams(): number | typeof Duos {
@@ -279,7 +279,7 @@ export class DefaultConfig implements Config {
 
   tradeShipGold(dist: number, numPorts: number): Gold {
     const baseGold = Math.floor(10000 + 150 * Math.pow(dist, 1.1));
-    const bonusPortNum = 25;
+    const bonusPortNum = 50;
     if (numPorts < bonusPortNum) {
       return BigInt(baseGold);
     } else {
@@ -376,7 +376,7 @@ export class DefaultConfig implements Config {
           cost: (p: Player) =>
             p.type() === PlayerType.Human && this.infiniteGold()
               ? 0n
-              : 40_000_000n,
+              : 30_000_000n,
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -758,7 +758,7 @@ export class DefaultConfig implements Config {
   }
 
   defaultNukeSpeed(): number {
-    return 4;
+    return 6;
   }
 
   // Humans can be population, soldiers attacking, soldiers in boat etc.

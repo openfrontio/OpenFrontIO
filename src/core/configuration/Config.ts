@@ -123,7 +123,7 @@ export interface Config {
   donateCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
-  tradeShipGold(dist: number, numTradeShips: number): Gold;
+  tradeShipGold(dist: number, numPorts: number): Gold;
   tradeShipSpawnRate(numTradeShips: number): number;
   tradeShipCap(): number;
   safeFromPiratesCooldownMax(): number;
