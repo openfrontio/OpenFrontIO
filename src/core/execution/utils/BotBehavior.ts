@@ -120,7 +120,9 @@ export class BotBehavior {
       // Prefer neighboring bots
       const bots = this.player
         .neighbors()
-        .filter((n) => n.isPlayer() && n.type() === PlayerType.Bot) as Player[];
+        .filter(
+          (n): n is Player => n.isPlayer() && n.type() === PlayerType.Bot,
+        );
       if (bots.length > 0) {
         const density = (p: Player) => p.troops() / p.numTilesOwned();
         let lowestDensityBot: Player | undefined;
