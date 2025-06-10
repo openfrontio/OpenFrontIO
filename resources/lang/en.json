@@ -442,6 +442,9 @@
     "none": "None",
     "alliances": "Alliances"
   },
+  "replay_panel": {
+    "replay_speed": "Replay speed"
+  },
   "error_modal": {
     "crashed": "Game crashed!",
     "paste_discord": "Please paste the following in your bug report in Discord:",
