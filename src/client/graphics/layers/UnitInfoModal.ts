@@ -182,7 +182,7 @@ export class UnitInfoModal extends LitElement implements Layer {
             style="display: ${this.game.unitInfo(this.unit.type()).upgradable
               ? "inline"
               : "none"};"
-            >Level:</strong
+            >${translateText("unit_info_modal.level")}:</strong
           >
           ${this.game.unitInfo(this.unit.type()).upgradable &&
           this.unit.level?.()
@@ -210,14 +210,14 @@ export class UnitInfoModal extends LitElement implements Layer {
               }
             }}
             class="upgrade-button"
-            title="Upgrade"
+            title="${translateText("unit_info_modal.close")}"
             style="width: 100px; height: 32px; display: ${this.game.unitInfo(
               this.unit.type(),
             ).upgradable
               ? "block"
               : "none"};"
           >
-            UPGRADE
+            ${translateText("unit_info_modal.upgrade")}
           </button>
           <button
             @click=${() => {

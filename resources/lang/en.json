@@ -400,7 +400,8 @@
     "sams": "SAMs",
     "warships": "Warships",
     "health": "Health",
-    "attitude": "Attitude"
+    "attitude": "Attitude",
+    "levels": "Levels"
   },
   "events_display": {
     "retreating": "retreating",
@@ -411,7 +412,9 @@
     "unit_type_unknown": "Unknown",
     "close": "Close",
     "cooldown": "Cooldown",
-    "type": "Type"
+    "type": "Type",
+    "upgrade": "Upgrade",
+    "level": "Level"
   },
   "relation": {
     "hostile": "Hostile",
