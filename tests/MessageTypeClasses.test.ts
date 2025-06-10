@@ -15,8 +15,8 @@ describe("getMessageTypeClasses", () => {
 
   it("should return a valid CSS class for every MessageType", () => {
     const messageTypes = Object.values(MessageType).filter(
-      (value) => typeof value === "number",
-    ) as MessageType[];
+      (value): value is MessageType => typeof value === "number",
+    );
 
     messageTypes.forEach((messageType) => {
       const result = getMessageTypeClasses(messageType);
@@ -30,8 +30,8 @@ describe("getMessageTypeClasses", () => {
 
   it("should not trigger console.warn for any MessageType", () => {
     const messageTypes = Object.values(MessageType).filter(
-      (value) => typeof value === "number",
-    ) as MessageType[];
+      (value): value is MessageType => typeof value === "number",
+    );
 
     messageTypes.forEach((messageType) => {
       getMessageTypeClasses(messageType);
