@@ -240,65 +240,57 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.ports")}:
           ${player.units(UnitType.Port).length}
-        </div>
-        <div class="text-sm opacity-80">
           ${player
             .units(UnitType.Port)
             .map((unit) => unit.level())
             .reduce((a, b) => a + b, 0) > 1
-            ? html`${translateText("player_info_overlay.levels")}:
+            ? html`(${translateText("player_info_overlay.levels")}:
               ${player
                 .units(UnitType.Port)
                 .map((unit) => unit.level())
-                .reduce((a, b) => a + b, 0)}`
+                .reduce((a, b) => a + b, 0)})`
             : ""}
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.cities")}:
           ${player.units(UnitType.City).length}
-        </div>
-        <div class="text-sm opacity-80">
           ${player
             .units(UnitType.City)
             .map((unit) => unit.level())
             .reduce((a, b) => a + b, 0) > 1
-            ? html`${translateText("player_info_overlay.levels")}:
+            ? html`(${translateText("player_info_overlay.levels")}:
               ${player
                 .units(UnitType.City)
                 .map((unit) => unit.level())
-                .reduce((a, b) => a + b, 0)}`
+                .reduce((a, b) => a + b, 0)})`
             : ""}
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.missile_launchers")}:
           ${player.units(UnitType.MissileSilo).length}
-        </div>
-        <div class="text-sm opacity-80">
           ${player
             .units(UnitType.MissileSilo)
             .map((unit) => unit.level())
             .reduce((a, b) => a + b, 0) > 1
-            ? html`${translateText("player_info_overlay.levels")}:
+            ? html`(${translateText("player_info_overlay.levels")}:
               ${player
                 .units(UnitType.MissileSilo)
                 .map((unit) => unit.level())
-                .reduce((a, b) => a + b, 0)}`
+                .reduce((a, b) => a + b, 0)})`
             : ""}
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.sams")}:
           ${player.units(UnitType.SAMLauncher).length}
-        </div>
-        <div class="text-sm opacity-80">
           ${player
             .units(UnitType.SAMLauncher)
             .map((unit) => unit.level())
             .reduce((a, b) => a + b, 0) > 1
-            ? html`${translateText("player_info_overlay.levels")}:
+            ? html`(${translateText("player_info_overlay.levels")}:
               ${player
                 .units(UnitType.SAMLauncher)
                 .map((unit) => unit.level())
-                .reduce((a, b) => a + b, 0)}`
+                .reduce((a, b) => a + b, 0)})`
             : ""}
         </div>
         <div class="text-sm opacity-80" translate="no">
