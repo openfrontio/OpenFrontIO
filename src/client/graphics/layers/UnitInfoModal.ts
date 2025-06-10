@@ -210,7 +210,7 @@ export class UnitInfoModal extends LitElement implements Layer {
               }
             }}
             class="upgrade-button"
-            title="${translateText("unit_info_modal.close")}"
+            title="${translateText("unit_info_modal.upgrade")}"
             style="width: 100px; height: 32px; display: ${this.game.unitInfo(
               this.unit.type(),
             ).upgradable
