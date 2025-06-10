@@ -78,6 +78,16 @@ class Client {
   constructor() {}
 
   initialize(): void {
+    const gameVersion = document.getElementById(
+      "game-version",
+    ) as HTMLDivElement;
+    if (!gameVersion) {
+      console.warn("Game version element not found");
+    }
+    fetch("/version.txt")
+      .then((response) => (response.ok ? response.text() : "Failed to load"))
+      .then((version) => (gameVersion.innerText = version));
+
     const newsModal = document.querySelector("news-modal") as NewsModal;
     if (!newsModal) {
       consolex.warn("News modal element not found");
@@ -91,6 +101,9 @@ class Client {
     } else {
       consolex.log("News button element found");
     }
+    fetch("/changelog.md")
+      .then((response) => (response.ok ? response.text() : "Failed to load"))
+      .then((changelog) => (newsModal.markdown = changelog));
 
     // Comment out to show news button.
     // newsButton.hidden = true;
