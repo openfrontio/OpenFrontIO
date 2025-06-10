@@ -35,6 +35,8 @@ export enum GameUpdateType {
   AllianceRequestReply,
   BrokeAlliance,
   AllianceExpired,
+  VoteForPeace,
+  VoteForPeaceReply,
   TargetPlayer,
   Emoji,
   Win,
@@ -50,6 +52,8 @@ export type GameUpdate =
   | AllianceRequestReplyUpdate
   | BrokeAllianceUpdate
   | AllianceExpiredUpdate
+  | VoteForPeaceUpdate
+  | VoteForPeaceReplyUpdate
   | DisplayMessageUpdate
   | DisplayChatMessageUpdate
   | TargetPlayerUpdate
@@ -145,6 +149,20 @@ export interface AllianceExpiredUpdate {
   type: GameUpdateType.AllianceExpired;
   player1ID: number;
   player2ID: number;
+}
+
+export interface VoteForPeaceUpdate {
+  type: GameUpdateType.VoteForPeace;
+  voteID: number;
+  playerID: number;
+  leaderID: number;
+}
+
+export interface VoteForPeaceReplyUpdate {
+  type: GameUpdateType.VoteForPeaceReply;
+  voteID: number;
+  playerID: number;
+  accepted: boolean;
 }
 
 export interface TargetPlayerUpdate {

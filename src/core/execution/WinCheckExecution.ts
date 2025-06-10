@@ -37,22 +37,43 @@ export class WinCheckExecution implements Execution {
 
   checkWinnerFFA(): void {
     if (this.mg === null) throw new Error("Not initialized");
-    const sorted = this.mg
+    const game = this.mg;
+    const sorted = game
       .players()
       .sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+
     if (sorted.length === 0) {
       return;
     }
+
+    const playerCount = game.players().length;
     const max = sorted[0];
     const numTilesWithoutFallout =
-      this.mg.numLandTiles() - this.mg.numTilesWithFallout();
+      game.numLandTiles() - game.numTilesWithFallout();
+
+    const minTileCountToWin = numTilesWithoutFallout / playerCount;
     if (
+      max.numTilesOwned() > minTileCountToWin &&
       (max.numTilesOwned() / numTilesWithoutFallout) * 100 >
-      this.mg.config().percentageTilesOwnedToWin()
+        game.config().percentageTilesOwnedToWin()
     ) {
-      this.mg.setWinner(max, this.mg.stats().stats());
+      game.setWinner(max, game.stats().stats());
       console.log(`${max.name()} has won the game`);
       this.active = false;
+    } else if (!game.isVoting()) {
+      // There's a chance that there's an alliance that can trigger a peaceful victory.
+      const alliances: Player[][] = this.findUniqueAlliances();
+      alliances.forEach((alliance, index) => {
+        let percentageOfLandOwned: number = 0;
+        alliance.forEach((player) => {
+          const playerLandOwnedPercent =
+            (player.numTilesOwned() / numTilesWithoutFallout) * 100;
+          percentageOfLandOwned += playerLandOwnedPercent;
+        });
+        if (percentageOfLandOwned > game.config().percentageTilesOwnedToWin()) {
+          game.voteForPeace(alliance);
+        }
+      });
     }
   }
 
@@ -84,6 +105,20 @@ export class WinCheckExecution implements Execution {
       console.log(`${max[0]} has won the game`);
       this.active = false;
     }
+  }
+
+  findUniqueAlliances(): Player[][] {
+    if (this.mg === null) throw new Error("Not initialized");
+    const players = this.mg.players();
+    const alliances: Player[][] = [];
+    players.forEach((player) => {
+      if (player.allies().length > 0) {
+        const alliance = [player, ...player.allies()];
+        alliance.sort((a, b) => a.numTilesOwned() - b.numTilesOwned());
+        alliances.push(alliance);
+      }
+    });
+    return alliances;
   }
 
   isActive(): boolean {

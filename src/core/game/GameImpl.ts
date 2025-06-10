@@ -73,6 +73,8 @@ export class GameImpl implements Game {
 
   private playerTeams: Team[] = [ColoredTeams.Red, ColoredTeams.Blue];
   private botTeam: Team = ColoredTeams.Bot;
+  private votingForPeace: boolean = false;
+  private votes = [];
 
   constructor(
     private _humans: PlayerInfo[],
@@ -581,6 +583,22 @@ export class GameImpl implements Game {
       player1ID: alliance.requestor().smallID(),
       player2ID: alliance.recipient().smallID(),
     });
+  }
+
+  public voteForPeace(players: Player[]) {
+    this.votingForPeace = true;
+    players.forEach((player) => {
+      this.addUpdate({
+        type: GameUpdateType.VoteForPeace,
+        playerID: player.smallID(),
+        leaderID: players[0].smallID(),
+        voteId: 1,
+      });
+    });
+  }
+
+  public isVoting() {
+    return this.votingForPeace;
   }
 
   sendEmojiUpdate(msg: EmojiMessage): void {
