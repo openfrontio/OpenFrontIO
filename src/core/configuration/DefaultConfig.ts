@@ -579,9 +579,19 @@ export class DefaultConfig implements Config {
       const densityRatio = defenderDensity / attackerDensity;
 
       const attackDefenseRatio = defender.troops() / attackTroops;
+
+      if (attacker.type() === PlayerType.Human) {
+        console.log("densityRatio", densityRatio);
+        console.log("attackDefenseRatio", attackDefenseRatio);
+        console.log(
+          "modifier",
+          Math.sqrt(densityRatio * attackDefenseRatio) / 2,
+        );
+      }
+
       const modifier = within(
-        Math.sqrt(densityRatio * attackDefenseRatio),
-        0.6,
+        Math.sqrt(densityRatio * attackDefenseRatio) / 2,
+        0.5,
         2,
       );
 
