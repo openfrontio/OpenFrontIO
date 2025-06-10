@@ -4,6 +4,9 @@ import { GameMapType } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
+  origin(): string {
+    return "http://localhost:9000";
+  }
   cloudflareConfigPath(): string {
     throw new Error("Method not implemented.");
   }

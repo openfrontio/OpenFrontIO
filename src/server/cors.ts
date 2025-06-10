@@ -1,5 +1,7 @@
 import cors from "cors";
 import os from "os";
+import { GameEnv } from "../core/configuration/Config";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 
 function getLocalIP() {
   const interfaces = os.networkInterfaces();
@@ -15,18 +17,16 @@ function getLocalIP() {
   return null;
 }
 
-const allowedOrigins = [
-  "capacitor://localhost",
-  "https://localhost",
-  "http://localhost",
-  "http://localhost:9000",
-  "https://openfront.io",
-  "https://openfront.dev",
-];
+const config = getServerConfigFromServer();
+const origin = config.origin();
 
-const localIp = getLocalIP();
-if (localIp) {
-  allowedOrigins.push(`http://${localIp}:9000`);
+const allowedOrigins = [origin, "capacitor://localhost", "http://localhost"];
+
+if (config.env() === GameEnv.Dev) {
+  const localIp = getLocalIP();
+  if (localIp) {
+    allowedOrigins.push(`http://${localIp}:9000`, `https://${localIp}:9000`);
+  }
 }
 
 const corsOptions = {
