@@ -166,21 +166,6 @@ export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
 // Zod schemas
 const BaseIntentSchema = z.object({
-  type: z.enum([
-    "attack",
-    "cancel_attack",
-    "spawn",
-    "mark_disconnected",
-    "boat",
-    "cancel_boat",
-    "name",
-    "targetPlayer",
-    "emoji",
-    "troop_ratio",
-    "build_unit",
-    "embargo",
-    "move_warship",
-  ]),
   clientID: ID,
 });
 
@@ -300,7 +285,7 @@ export const MarkDisconnectedIntentSchema = BaseIntentSchema.extend({
   isDisconnected: z.boolean(),
 });
 
-const IntentSchema = z.union([
+const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
   SpawnIntentSchema,
