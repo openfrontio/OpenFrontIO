@@ -140,6 +140,7 @@ export class AttackExecution implements Execution {
       if (
         outgoing !== this.attack &&
         outgoing.target() === this.attack.target() &&
+        // Boat attacks (sourceTile is not null) are not combined with other attacks
         this.attack.sourceTile() === null
       ) {
         this.attack.setTroops(this.attack.troops() + outgoing.troops());
