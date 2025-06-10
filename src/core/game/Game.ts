@@ -575,9 +575,8 @@ export class Vote {
 
 export interface Game extends GameMap {
   expireAlliance(alliance: Alliance);
-  createVoteForPeace(players: Player[]);
-  castVote(player: Player, accept: boolean);
-  runningVote(): Vote;
+  voteForPeace(players: Player[]);
+  isVoting();
   // Map & Dimensions
   isOnMap(cell: Cell): boolean;
   width(): number;
@@ -711,6 +710,8 @@ export enum MessageType {
   SENT_TROOPS_TO_PLAYER,
   RECEIVED_TROOPS_FROM_PLAYER,
   CHAT,
+  VOTE_FOR_PEACE,
+  VOTE_FOR_PEACE_REPLY,
 }
 
 // Message categories used for filtering events in the EventsDisplay
@@ -741,6 +742,8 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.ALLIANCE_REQUEST]: MessageCategory.ALLIANCE,
   [MessageType.ALLIANCE_BROKEN]: MessageCategory.ALLIANCE,
   [MessageType.ALLIANCE_EXPIRED]: MessageCategory.ALLIANCE,
+  [MessageType.VOTE_FOR_PEACE]: MessageCategory.ALLIANCE,
+  [MessageType.VOTE_FOR_PEACE_REPLY]: MessageCategory.ALLIANCE,
   [MessageType.SENT_GOLD_TO_PLAYER]: MessageCategory.TRADE,
   [MessageType.RECEIVED_GOLD_FROM_PLAYER]: MessageCategory.TRADE,
   [MessageType.RECEIVED_GOLD_FROM_TRADE]: MessageCategory.TRADE,
