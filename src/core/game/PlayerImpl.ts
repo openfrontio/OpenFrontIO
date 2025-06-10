@@ -1063,15 +1063,13 @@ export class PlayerImpl implements Player {
         );
       });
 
+    const sumOfPortLevels = ports
+      .map((port) => port.level())
+      .reduce((a, b) => a + b, 0);
     // Make close ports twice more likely by putting them again
     for (
       let i = 0;
-      i <
-      this.mg
-        .config()
-        .proximityBonusPortsNb(
-          ports.map((port) => port.level()).reduce((a, b) => a + b, 0),
-        );
+      i < this.mg.config().proximityBonusPortsNb(sumOfPortLevels);
       i++
     ) {
       ports.push(ports[i]);
