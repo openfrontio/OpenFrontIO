@@ -122,20 +122,6 @@ export class AttackExecution implements Execution {
     // Record stats
     this.mg.stats().attack(this._owner, this.target, this.startTroops);
 
-    for (const incoming of this._owner.incomingAttacks()) {
-      if (incoming.attacker() === this.target) {
-        // Target has opposing attack, cancel them out
-        if (incoming.troops() > this.attack.troops()) {
-          incoming.setTroops(incoming.troops() - this.attack.troops());
-          this.attack.delete();
-          this.active = false;
-          return;
-        } else {
-          this.attack.setTroops(this.attack.troops() - incoming.troops());
-          incoming.delete();
-        }
-      }
-    }
     for (const outgoing of this._owner.outgoingAttacks()) {
       if (
         outgoing !== this.attack &&
