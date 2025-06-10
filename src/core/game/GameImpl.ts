@@ -137,6 +137,9 @@ export class GameImpl implements Game {
     }
   }
 
+  // Used to assign unique IDs to each new alliance
+  private nextAllianceID: number = 0;
+
   isOnEdgeOfMap(ref: TileRef): boolean {
     return this._map.isOnEdgeOfMap(ref);
   }
@@ -234,11 +237,19 @@ export class GameImpl implements Game {
     const requestor = request.requestor();
     const recipient = request.recipient();
 
+    // Remove any existing alliance between the requestor and recipient
+    const existing = requestor.allianceWith(recipient);
+    if (existing) {
+      this.alliances_ = this.alliances_.filter((a) => a !== existing);
+    }
+
+    // Create and register the new alliance
     const alliance = new AllianceImpl(
       this,
       requestor as PlayerImpl,
       recipient as PlayerImpl,
       this._ticks,
+      this.getNextAllianceID(),
     );
     this.alliances_.push(alliance);
     (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
@@ -270,6 +281,11 @@ export class GameImpl implements Game {
       request: request.toUpdate(),
       accepted: false,
     });
+  }
+
+  // Generates a unique ID for a new alliance
+  public getNextAllianceID(): number {
+    return this.nextAllianceID++;
   }
 
   hasPlayer(id: PlayerID): boolean {
@@ -322,6 +338,30 @@ export class GameImpl implements Game {
         tick: this.ticks(),
         hash: this.hash(),
       });
+    }
+    const allianceDuration = this.config().allianceDuration();
+
+    for (const alliance of this.alliances_) {
+      const remainingTicks =
+        allianceDuration - (this._ticks - alliance.createdAt());
+      console.warn(
+        `[ALLIANCE DEBUG] tick=${this._ticks}, allianceId=${alliance.id()}, remainingTicks=${remainingTicks}, wantsExtension=${alliance.wantsExtension()}`,
+      );
+
+      if (remainingTicks === 300 && !alliance.wantsExtension()) {
+        console.warn(
+          `[ALLIANCE DEBUG] tick=${this._ticks}, PROMPT SENT for allianceId=${alliance.id()} between ${alliance.requestor().id()} and ${alliance.recipient().id()}`,
+        );
+        // reset extension request
+        alliance.resetExtensionRequest();
+
+        // Send extension prompt to both players
+        this.sendAllianceExtensionPrompt(
+          alliance.requestor(),
+          alliance.recipient(),
+          alliance,
+        );
+      }
     }
     this._ticks++;
     return this.updates;
@@ -586,6 +626,19 @@ export class GameImpl implements Game {
       type: GameUpdateType.AllianceExpired,
       player1ID: alliance.requestor().smallID(),
       player2ID: alliance.recipient().smallID(),
+    });
+  }
+
+  sendAllianceExtensionPrompt(
+    from: Player,
+    to: Player,
+    alliance: MutableAlliance,
+  ): void {
+    this.addUpdate({
+      type: GameUpdateType.AllianceExtensionPrompt,
+      fromPlayerID: from.smallID(),
+      toPlayerID: to.smallID(),
+      allianceID: alliance.id(),
     });
   }
 

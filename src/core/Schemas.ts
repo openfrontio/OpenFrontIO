@@ -24,6 +24,7 @@ export type Intent =
   | CancelBoatIntent
   | AllianceRequestIntent
   | AllianceRequestReplyIntent
+  | AllianceExtensionIntent
   | BreakAllianceIntent
   | TargetPlayerIntent
   | EmojiIntent
@@ -44,6 +45,12 @@ export type AllianceRequestIntent = z.infer<typeof AllianceRequestIntentSchema>;
 export type AllianceRequestReplyIntent = z.infer<
   typeof AllianceRequestReplyIntentSchema
 >;
+export type AllianceExtensionIntent = {
+  type: "allianceExtension";
+  clientID: string;
+  requestor: number;
+  recipient: number;
+};
 export type BreakAllianceIntent = z.infer<typeof BreakAllianceIntentSchema>;
 export type TargetPlayerIntent = z.infer<typeof TargetPlayerIntentSchema>;
 export type EmojiIntent = z.infer<typeof EmojiIntentSchema>;
@@ -128,6 +135,13 @@ export const GameConfigSchema = z.object({
 });
 
 export const TeamSchema = z.string();
+
+export const AllianceExtensionIntentSchema = z.object({
+  type: z.literal("allianceExtension"),
+  clientID: z.string(),
+  requestor: z.number(),
+  recipient: z.number(),
+});
 
 const SafeString = z
   .string()
@@ -308,6 +322,7 @@ const IntentSchema = z.union([
   EmbargoIntentSchema,
   MoveWarshipIntentSchema,
   QuickChatIntentSchema,
+  AllianceExtensionIntentSchema,
 ]);
 
 export const TurnSchema = z.object({

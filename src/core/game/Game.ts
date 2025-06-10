@@ -313,6 +313,11 @@ export interface Alliance {
 export interface MutableAlliance extends Alliance {
   expire(): void;
   other(player: Player): Player;
+  wantsExtension(): boolean;
+  setWantsExtension(v: boolean): void;
+  resetExtensionRequest(): void;
+  id(): number;
+  extendDuration(currentTick: Tick): void;
 }
 
 export class PlayerInfo {
@@ -542,7 +547,6 @@ export interface Player {
 }
 
 export interface Game extends GameMap {
-  expireAlliance(alliance: Alliance);
   // Map & Dimensions
   isOnMap(cell: Cell): boolean;
   width(): number;
@@ -565,6 +569,13 @@ export interface Game extends GameMap {
   teams(): Team[];
   // Alliances
   alliances(): MutableAlliance[];
+  expireAlliance(alliance: Alliance);
+  sendAllianceExtensionPrompt(
+    from: Player,
+    to: Player,
+    alliance: MutableAlliance,
+  ): void;
+  getNextAllianceID(): number;
 
   // Game State
   ticks(): Tick;

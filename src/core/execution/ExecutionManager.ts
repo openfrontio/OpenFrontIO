@@ -3,6 +3,7 @@ import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
+import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
 import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
 import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
@@ -113,6 +114,12 @@ export class Executor {
           this.mg.ref(intent.x, intent.y),
           intent.unit,
         );
+      case "allianceExtension": {
+        const from = this.mg.playerBySmallID(intent.requestor);
+        const to = this.mg.playerBySmallID(intent.recipient);
+        if (!from.isPlayer() || !to.isPlayer()) return new NoOpExecution();
+        return new AllianceExtensionExecution(from, to);
+      }
       case "quick_chat":
         return new QuickChatExecution(
           playerID,

@@ -1,18 +1,23 @@
 import { Game, MutableAlliance, Player, Tick } from "./Game";
 
 export class AllianceImpl implements MutableAlliance {
+  private requestedExtension_ = false;
+  private readonly _id: number;
+  private createdAtTick_: Tick; // Maak dit overschrijfbaar
+
   constructor(
     private readonly mg: Game,
     readonly requestor_: Player,
     readonly recipient_: Player,
-    readonly createdAtTick_: Tick,
-  ) {}
+    createdAtTick: Tick,
+    id: number,
+  ) {
+    this.createdAtTick_ = createdAtTick;
+    this._id = id;
+  }
 
   other(player: Player): Player {
-    if (this.requestor_ === player) {
-      return this.recipient_;
-    }
-    return this.requestor_;
+    return this.requestor_ === player ? this.recipient_ : this.requestor_;
   }
 
   requestor(): Player {
@@ -29,5 +34,26 @@ export class AllianceImpl implements MutableAlliance {
 
   expire(): void {
     this.mg.expireAlliance(this);
+  }
+
+  wantsExtension(): boolean {
+    return this.requestedExtension_;
+  }
+
+  setWantsExtension(v: boolean): void {
+    this.requestedExtension_ = v;
+  }
+
+  resetExtensionRequest(): void {
+    this.requestedExtension_ = false;
+  }
+
+  public id(): number {
+    return this._id;
+  }
+
+  extendDuration(currentTick: Tick): void {
+    this.createdAtTick_ = currentTick;
+    this.resetExtensionRequest();
   }
 }

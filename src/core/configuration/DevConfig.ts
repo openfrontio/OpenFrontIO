@@ -49,6 +49,9 @@ export class DevConfig extends DefaultConfig {
   ) {
     super(sc, gc, us, isReplay);
   }
+  allianceDuration(): number {
+    return 60 * 10; // 60 seconds × 10 ticks per second = 600 ticks
+  }
 
   // numSpawnPhaseTurns(): number {
   //   return this.gameConfig().gameType == GameType.Singleplayer ? 70 : 100;

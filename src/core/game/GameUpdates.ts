@@ -40,6 +40,8 @@ export enum GameUpdateType {
   Win,
   Hash,
   UnitIncoming,
+  AllianceExtensionPrompt,
+  AllianceExtensionAccepted,
 }
 
 export type GameUpdate =
@@ -56,7 +58,9 @@ export type GameUpdate =
   | EmojiUpdate
   | WinUpdate
   | HashUpdate
-  | UnitIncomingUpdate;
+  | UnitIncomingUpdate
+  | AllianceExtensionPromptUpdate
+  | AllianceExtensionAcceptedUpdate;
 
 export interface TileUpdateWrapper {
   type: GameUpdateType.Tile;
@@ -144,6 +148,19 @@ export interface AllianceExpiredUpdate {
   type: GameUpdateType.AllianceExpired;
   player1ID: number;
   player2ID: number;
+}
+
+export interface AllianceExtensionPromptUpdate {
+  type: GameUpdateType.AllianceExtensionPrompt;
+  fromPlayerID: number;
+  toPlayerID: number;
+  allianceID: number;
+}
+
+export interface AllianceExtensionAcceptedUpdate {
+  type: GameUpdateType.AllianceExtensionAccepted;
+  playerID: number;
+  allianceID: number;
 }
 
 export interface TargetPlayerUpdate {

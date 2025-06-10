@@ -12,6 +12,7 @@ import {
 } from "../../../core/game/Game";
 import {
   AllianceExpiredUpdate,
+  AllianceExtensionPromptUpdate,
   AllianceRequestReplyUpdate,
   AllianceRequestUpdate,
   AttackUpdate,
@@ -26,6 +27,7 @@ import {
 import {
   CancelAttackIntentEvent,
   CancelBoatIntentEvent,
+  SendAllianceExtensionIntentEvent,
   SendAllianceReplyIntentEvent,
   SendAllianceRequestIntentEvent,
 } from "../../Transport";
@@ -98,6 +100,10 @@ export class EventsDisplay extends LitElement implements Layer {
     [GameUpdateType.Emoji, (u) => this.onEmojiMessageEvent(u)],
     [GameUpdateType.UnitIncoming, (u) => this.onUnitIncomingEvent(u)],
     [GameUpdateType.AllianceExpired, (u) => this.onAllianceExpiredEvent(u)],
+    [
+      GameUpdateType.AllianceExtensionPrompt,
+      (u) => this.onAllianceExtensionPromptEvent(u),
+    ],
   ]);
 
   constructor() {
@@ -413,6 +419,41 @@ export class EventsDisplay extends LitElement implements Layer {
           action: () =>
             this.eventBus.emit(
               new SendAllianceRequestIntentEvent(myPlayer, other),
+            ),
+        },
+      ],
+      highlight: true,
+      createdAt: this.game.ticks(),
+      focusID: otherID,
+    });
+  }
+
+  onAllianceExtensionPromptEvent(update: AllianceExtensionPromptUpdate) {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer || update.toPlayerID !== myPlayer.smallID()) return;
+
+    const otherID = update.fromPlayerID;
+    const other = this.game.playerBySmallID(otherID) as PlayerView;
+    if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
+
+    this.addEvent({
+      description: `Your alliance with ${other.name()} is about to expire`,
+      type: MessageType.WARN,
+      tags: ["alliance" + otherID],
+      duration: 100,
+      buttons: [
+        {
+          text: "Focus",
+          className: "btn-gray",
+          action: () => this.eventBus.emit(new GoToPlayerEvent(other)),
+          preventClose: true,
+        },
+        {
+          text: "I want to renew",
+          className: "btn",
+          action: () =>
+            this.eventBus.emit(
+              new SendAllianceExtensionIntentEvent(myPlayer, other),
             ),
         },
       ],
