@@ -35,6 +35,8 @@ export enum GameUpdateType {
   AllianceRequestReply,
   BrokeAlliance,
   AllianceExpired,
+  VoteForPeace,
+  VoteForPeaceReply,
   TargetPlayer,
   Emoji,
   Win,
@@ -50,6 +52,8 @@ export type GameUpdate =
   | AllianceRequestReplyUpdate
   | BrokeAllianceUpdate
   | AllianceExpiredUpdate
+  | VoteForPeaceUpdate
+  | VoteForPeaceReplyUpdate
   | DisplayMessageUpdate
   | DisplayChatMessageUpdate
   | TargetPlayerUpdate

@@ -24,6 +24,7 @@ export type Intent =
   | CancelBoatIntent
   | AllianceRequestIntent
   | AllianceRequestReplyIntent
+  | AllianceWinVoteReplyIntent
   | BreakAllianceIntent
   | TargetPlayerIntent
   | EmojiIntent
@@ -45,6 +46,9 @@ export type CancelBoatIntent = z.infer<typeof CancelBoatIntentSchema>;
 export type AllianceRequestIntent = z.infer<typeof AllianceRequestIntentSchema>;
 export type AllianceRequestReplyIntent = z.infer<
   typeof AllianceRequestReplyIntentSchema
+>;
+export type AllianceWinVoteReplyIntent = z.infer<
+  typeof AllianceWinVoteReplyIntentSchema
 >;
 export type BreakAllianceIntent = z.infer<typeof BreakAllianceIntentSchema>;
 export type TargetPlayerIntent = z.infer<typeof TargetPlayerIntentSchema>;
@@ -214,6 +218,13 @@ export const BreakAllianceIntentSchema = BaseIntentSchema.extend({
   recipient: ID,
 });
 
+export const AllianceWinVoteReplyIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("allianceWinVoteReply"),
+  recipient: ID,
+  accept: z.boolean(),
+  leader: ID,
+});
+
 export const TargetPlayerIntentSchema = BaseIntentSchema.extend({
   type: z.literal("targetPlayer"),
   target: ID,
@@ -304,6 +315,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   CancelBoatIntentSchema,
   AllianceRequestIntentSchema,
   AllianceRequestReplyIntentSchema,
+  AllianceWinVoteReplyIntentSchema,
   BreakAllianceIntentSchema,
   TargetPlayerIntentSchema,
   EmojiIntentSchema,
