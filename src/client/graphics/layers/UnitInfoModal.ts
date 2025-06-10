@@ -1,12 +1,8 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
-<<<<<<< HEAD
 import { translateText } from "../../../client/Utils";
-import { UnitType, upgradableStructureTypes } from "../../../core/game/Game";
-=======
 import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
->>>>>>> 5f6a9d18 (address PR feedback)
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { SendUpgradeStructureIntentEvent } from "../../Transport";
 import { Layer } from "./Layer";
@@ -172,9 +168,8 @@ export class UnitInfoModal extends LitElement implements Layer {
     return html`
       <div
         class="modal"
-        style="display: ${this.open ? "block" : "none"}; left: ${
-          this.x
-        }px; top: ${this.y}px; position: absolute;"
+        style="display: ${this.open ? "block" : "none"}; left: ${this
+          .x}px; top: ${this.y}px; position: absolute;"
       >
         <div style="margin-bottom: 8px; font-size: 16px; font-weight: bold;">
           ${translateText("unit_info_modal.structure_info")}
@@ -183,8 +178,16 @@ export class UnitInfoModal extends LitElement implements Layer {
           <strong>${translateText("unit_info_modal.type")}:</strong>
           ${translateText(+"unit_type." + this.unit.type?.().toLowerCase()) ??
           translateText("unit_info_modal.unit_type_unknown")}
-          <strong style="display: ${this.game.unitInfo(this.unit.type()).upgradable ? "inline" : "none"};" >Level:</strong> 
-          ${this.game.unitInfo(this.unit.type()).upgradable && this.unit.level?.() ? this.unit.level?.() : ""}
+          <strong
+            style="display: ${this.game.unitInfo(this.unit.type()).upgradable
+              ? "inline"
+              : "none"};"
+            >Level:</strong
+          >
+          ${this.game.unitInfo(this.unit.type()).upgradable &&
+          this.unit.level?.()
+            ? this.unit.level?.()
+            : ""}
         </div>
         ${secondsLeft > 0
           ? html`<div style="margin-bottom: 4px;">
@@ -192,7 +195,9 @@ export class UnitInfoModal extends LitElement implements Layer {
               ${secondsLeft}s
             </div>`
           : ""}
-        <div style="margin-top: 14px; display: flex; justify-content: space-between;">
+        <div
+          style="margin-top: 14px; display: flex; justify-content: space-between;"
+        >
           <button
             @click=${() => {
               if (this.unit) {
@@ -206,7 +211,11 @@ export class UnitInfoModal extends LitElement implements Layer {
             }}
             class="upgrade-button"
             title="Upgrade"
-            style="width: 100px; height: 32px; display: ${this.game.unitInfo(this.unit.type()).upgradable ? "block" : "none"};"
+            style="width: 100px; height: 32px; display: ${this.game.unitInfo(
+              this.unit.type(),
+            ).upgradable
+              ? "block"
+              : "none"};"
           >
             UPGRADE
           </button>

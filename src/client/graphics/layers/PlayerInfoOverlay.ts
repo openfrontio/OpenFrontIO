@@ -241,7 +241,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           ${translateText("player_info_overlay.ports")}:
           ${player.units(UnitType.Port).length}
         </div>
-        <div>
+        <div class="text-sm opacity-80">
           ${player
             .units(UnitType.Port)
             .map((unit) => unit.level())
@@ -257,7 +257,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           ${translateText("player_info_overlay.cities")}:
           ${player.units(UnitType.City).length}
         </div>
-        <div>
+        <div class="text-sm opacity-80">
           ${player
             .units(UnitType.City)
             .map((unit) => unit.level())
@@ -273,7 +273,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           ${translateText("player_info_overlay.missile_launchers")}:
           ${player.units(UnitType.MissileSilo).length}
         </div>
-        <div>
+        <div class="text-sm opacity-80">
           ${player
             .units(UnitType.MissileSilo)
             .map((unit) => unit.level())
@@ -289,7 +289,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           ${translateText("player_info_overlay.sams")}:
           ${player.units(UnitType.SAMLauncher).length}
         </div>
-        <div>
+        <div class="text-sm opacity-80">
           ${player
             .units(UnitType.SAMLauncher)
             .map((unit) => unit.level())
