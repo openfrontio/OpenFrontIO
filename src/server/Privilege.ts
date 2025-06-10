@@ -1,7 +1,7 @@
 import { territoryPatterns } from "../core/Cosmetics";
 import { Cosmetic } from "../core/CosmeticSchemas";
 
-const patternData = territoryPatterns as Cosmetic;
+const patternData = territoryPatterns;
 
 export class PrivilegeChecker {
   private patternData: Cosmetic;
