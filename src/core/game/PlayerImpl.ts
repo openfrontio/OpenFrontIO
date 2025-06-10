@@ -157,7 +157,7 @@ export class PlayerImpl implements Player {
           troops: a.troops(),
           id: a.id(),
           retreating: a.retreating(),
-        } as AttackUpdate;
+        } satisfies AttackUpdate;
       }),
       incomingAttacks: this._incomingAttacks.map((a) => {
         return {
@@ -166,7 +166,7 @@ export class PlayerImpl implements Player {
           troops: a.troops(),
           id: a.id(),
           retreating: a.retreating(),
-        } as AttackUpdate;
+        } satisfies AttackUpdate;
       }),
       outgoingAllianceRequests: outgoingAllianceRequests,
       hasSpawned: this.hasSpawned(),
@@ -252,7 +252,9 @@ export class PlayerImpl implements Player {
         if (this.mg.map().isLand(neighbor)) {
           const owner = this.mg.map().ownerID(neighbor);
           if (owner !== this.smallID()) {
-            ns.add(this.mg.playerBySmallID(owner) as Player | TerraNullius);
+            ns.add(
+              this.mg.playerBySmallID(owner) satisfies Player | TerraNullius,
+            );
           }
         }
       }
@@ -394,7 +396,7 @@ export class PlayerImpl implements Player {
     if (this.isAlliedWith(recipient)) {
       throw new Error(`cannot create alliance request, already allies`);
     }
-    return this.mg.createAllianceRequest(this, recipient as Player);
+    return this.mg.createAllianceRequest(this, recipient satisfies Player);
   }
 
   relation(other: Player): Relation {
@@ -481,7 +483,7 @@ export class PlayerImpl implements Player {
       .map((a) => a.other(this))
       .flatMap((ally) => ally.targets());
     ts.push(...this.targets());
-    return [...new Set(ts)] as Player[];
+    return [...new Set(ts)] satisfies Player[];
   }
 
   sendEmoji(recipient: Player | typeof AllPlayers, emoji: string): void {
@@ -1007,8 +1009,8 @@ export class PlayerImpl implements Player {
     if (this.mg.owner(tile) === this) {
       return false;
     }
-    if (this.mg.hasOwner(tile)) {
-      const other = this.mg.owner(tile) as Player;
+    const other = this.mg.owner(tile);
+    if (other.isPlayer()) {
       if (this.isFriendly(other)) {
         return false;
       }
@@ -1018,7 +1020,7 @@ export class PlayerImpl implements Player {
       return false;
     }
     if (this.mg.hasOwner(tile)) {
-      return this.sharesBorderWith(this.mg.owner(tile));
+      return this.sharesBorderWith(other);
     } else {
       for (const t of this.mg.bfs(
         tile,
