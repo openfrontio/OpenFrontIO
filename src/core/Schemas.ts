@@ -127,7 +127,7 @@ export const GameConfigSchema = z.object({
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
   maxPlayers: z.number().optional(),
-  disabledUnits: z.array(z.nativeEnum(UnitType)).optional(),
+  disabledUnits: z.nativeEnum(UnitType).array().optional(),
   playerTeams: z.union([z.number().optional(), z.literal(Duos)]),
 });
 
@@ -308,7 +308,7 @@ const IntentSchema = z.discriminatedUnion("type", [
 
 export const TurnSchema = z.object({
   turnNumber: z.number(),
-  intents: z.array(IntentSchema),
+  intents: IntentSchema.array(),
   // The hash of the game state at the end of the turn.
   hash: z.number().nullable().optional(),
 });
@@ -342,13 +342,13 @@ export const PlayerSchema = z.object({
 export const GameStartInfoSchema = z.object({
   gameID: ID,
   config: GameConfigSchema,
-  players: z.array(PlayerSchema),
+  players: PlayerSchema.array(),
 });
 
 export const ServerStartGameMessageSchema = ServerBaseMessageSchema.extend({
   type: z.literal("start"),
   // Turns the client missed if they are late to the game.
-  turns: z.array(TurnSchema),
+  turns: TurnSchema.array(),
   gameStartInfo: GameStartInfoSchema,
 });
 
@@ -433,7 +433,7 @@ export const PlayerRecordSchema = PlayerSchema.extend({
 export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;
 
 export const GameEndInfoSchema = GameStartInfoSchema.extend({
-  players: z.array(PlayerRecordSchema),
+  players: PlayerRecordSchema.array(),
   start: z.number(),
   end: z.number(),
   duration: z.number().nonnegative(),
@@ -452,6 +452,6 @@ export const AnalyticsRecordSchema = z.object({
 export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;
 
 export const GameRecordSchema = AnalyticsRecordSchema.extend({
-  turns: z.array(TurnSchema),
+  turns: TurnSchema.array(),
 });
 export type GameRecord = z.infer<typeof GameRecordSchema>;
