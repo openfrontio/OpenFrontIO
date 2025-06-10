@@ -85,8 +85,9 @@ export function validateUsername(username: string): {
 }
 
 export function sanitizeUsername(str: string): string {
-  const sanitized = str
-    .replace(/[^a-zA-Z0-9_\[\] 🐈🍀]/gu, "")
-    .slice(0, MAX_USERNAME_LENGTH);
-  return sanitized.padEnd(MIN_USERNAME_LENGTH, "x");
+  const filtered = Array.from(str)
+    .filter((ch) => validPattern.test(ch))
+    .join("");
+  const truncated = filtered.slice(0, MAX_USERNAME_LENGTH);
+  return truncated.padEnd(MIN_USERNAME_LENGTH, "x");
 }
