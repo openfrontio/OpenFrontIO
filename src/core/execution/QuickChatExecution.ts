@@ -10,7 +10,7 @@ export class QuickChatExecution implements Execution {
     private sender: Player,
     private recipientID: PlayerID,
     private quickChatKey: string,
-    private variables: string | undefined,
+    private target: PlayerID | undefined,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -32,7 +32,7 @@ export class QuickChatExecution implements Execution {
     this.mg.displayChat(
       message[1],
       message[0],
-      this.variables,
+      this.target,
       this.recipient.id(),
       true,
       this.sender.name(),
@@ -41,7 +41,7 @@ export class QuickChatExecution implements Execution {
     this.mg.displayChat(
       message[1],
       message[0],
-      this.variables,
+      this.target,
       this.sender.id(),
       false,
       this.recipient.name(),
