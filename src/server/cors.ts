@@ -20,7 +20,7 @@ function getLocalIP() {
 const config = getServerConfigFromServer();
 const origin = config.origin();
 
-const allowedOrigins = [origin, "capacitor://localhost", "http://localhost"];
+const allowedOrigins = [origin];
 
 if (config.env() === GameEnv.Dev) {
   const localIp = getLocalIP();
