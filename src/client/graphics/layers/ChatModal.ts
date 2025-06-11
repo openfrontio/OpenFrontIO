@@ -119,7 +119,7 @@ export class ChatModal extends LitElement {
                 </div>
               `
             : null}
-          ${this.requiresPlayerSelection || this.selectedPlayer
+          ${this.requiresPlayerSelection || this.selectedPlayerId
             ? html`
                 <div class="chat-column">
                   <div class="column-title">
@@ -164,7 +164,7 @@ export class ChatModal extends LitElement {
             class="chat-send-button"
             @click=${this.sendChatMessage}
             ?disabled=${!this.previewText ||
-            (this.requiresPlayerSelection && !this.selectedPlayer)}
+            (this.requiresPlayerSelection && !this.selectedPlayerId)}
           >
             ${translateText("chat.send")}
           </button>
@@ -208,6 +208,7 @@ export class ChatModal extends LitElement {
       this.previewText =
         this.selectedPhraseTemplate?.replace("[P1]", player.name) ?? null;
       this.selectedPlayerId = player.id;
+      this.selectedPlayer = player.name;
       this.requiresPlayerSelection = false;
       this.requestUpdate();
     }
@@ -220,15 +221,11 @@ export class ChatModal extends LitElement {
     console.log("Key:", this.selectedQuickChatKey);
 
     if (this.sender && this.recipient && this.selectedQuickChatKey) {
-      const variables: Record<string, string> = this.selectedPlayerId
-        ? { P1: this.selectedPlayerId }
-        : {};
-
       this.eventBus.emit(
         new SendQuickChatEvent(
           this.recipient,
           this.selectedQuickChatKey,
-          variables,
+          this.selectedPlayerId ?? undefined,
         ),
       );
     }

@@ -599,7 +599,7 @@ export interface Game extends GameMap {
   displayChat(
     message: string,
     category: string,
-    variables: Record<string, string>,
+    variables: PlayerID | undefined,
     playerID: PlayerID | null,
     isFrom: boolean,
     recipient: string,
