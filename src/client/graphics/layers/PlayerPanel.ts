@@ -40,7 +40,7 @@ export class PlayerPanel extends LitElement implements Layer {
   private tile: TileRef | null = null;
 
   @state()
-  private isVisible: boolean = false;
+  public isVisible: boolean = false;
 
   @state()
   private allianceExpiryText: string | null = null;

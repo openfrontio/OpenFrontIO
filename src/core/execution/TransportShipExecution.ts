@@ -23,7 +23,6 @@ export class TransportShipExecution implements Execution {
   private active = true;
 
   private mg: Game;
-  private attacker: Player;
   private target: Player | TerraNullius;
 
   // TODO make private
@@ -35,7 +34,7 @@ export class TransportShipExecution implements Execution {
   private pathFinder: PathFinder;
 
   constructor(
-    private attackerID: PlayerID,
+    private attacker: Player,
     private targetID: PlayerID | null,
     private ref: TileRef,
     private troops: number,
@@ -47,13 +46,6 @@ export class TransportShipExecution implements Execution {
   }
 
   init(mg: Game, ticks: number) {
-    if (!mg.hasPlayer(this.attackerID)) {
-      console.warn(
-        `TransportShipExecution: attacker ${this.attackerID} not found`,
-      );
-      this.active = false;
-      return;
-    }
     if (this.targetID !== null && !mg.hasPlayer(this.targetID)) {
       console.warn(`TransportShipExecution: target ${this.targetID} not found`);
       this.active = false;
@@ -64,16 +56,14 @@ export class TransportShipExecution implements Execution {
     this.mg = mg;
     this.pathFinder = PathFinder.Mini(mg, 10_000, 10);
 
-    this.attacker = mg.player(this.attackerID);
-
     if (
       this.attacker.units(UnitType.TransportShip).length >=
       mg.config().boatMaxNumber()
     ) {
       mg.displayMessage(
         `No boats available, max ${mg.config().boatMaxNumber()}`,
-        MessageType.WARN,
-        this.attackerID,
+        MessageType.ATTACK_FAILED,
+        this.attacker.id(),
       );
       this.active = false;
       this.attacker.addTroops(this.troops);
@@ -140,8 +130,9 @@ export class TransportShipExecution implements Execution {
     if (this.targetID && this.targetID !== mg.terraNullius().id()) {
       mg.displayIncomingUnit(
         this.boat.id(),
+        // TODO TranslateText
         `Naval invasion incoming from ${this.attacker.displayName()}`,
-        MessageType.WARN,
+        MessageType.NAVAL_INVASION_INBOUND,
         this.targetID,
       );
     }
@@ -192,7 +183,7 @@ export class TransportShipExecution implements Execution {
           this.mg.addExecution(
             new AttackExecution(
               this.troops,
-              this.attacker.id(),
+              this.attacker,
               this.targetID,
               this.dst,
               false,

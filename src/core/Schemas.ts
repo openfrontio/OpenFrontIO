@@ -33,7 +33,9 @@ export type Intent =
   | BuildUnitIntent
   | EmbargoIntent
   | QuickChatIntent
-  | MoveWarshipIntent;
+  | MoveWarshipIntent
+  | MarkDisconnectedIntent
+  | UpgradeStructureIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -54,8 +56,14 @@ export type TargetTroopRatioIntent = z.infer<
   typeof TargetTroopRatioIntentSchema
 >;
 export type BuildUnitIntent = z.infer<typeof BuildUnitIntentSchema>;
+export type UpgradeStructureIntent = z.infer<
+  typeof UpgradeStructureIntentSchema
+>;
 export type MoveWarshipIntent = z.infer<typeof MoveWarshipIntentSchema>;
 export type QuickChatIntent = z.infer<typeof QuickChatIntentSchema>;
+export type MarkDisconnectedIntent = z.infer<
+  typeof MarkDisconnectedIntentSchema
+>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -166,6 +174,7 @@ const BaseIntentSchema = z.object({
     "attack",
     "cancel_attack",
     "spawn",
+    "mark_disconnected",
     "boat",
     "cancel_boat",
     "name",
@@ -173,6 +182,7 @@ const BaseIntentSchema = z.object({
     "emoji",
     "troop_ratio",
     "build_unit",
+    "upgrade_structure",
     "embargo",
     "move_warship",
   ]),
@@ -261,6 +271,12 @@ export const BuildUnitIntentSchema = BaseIntentSchema.extend({
   y: z.number(),
 });
 
+export const UpgradeStructureIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("upgrade_structure"),
+  unit: z.nativeEnum(UnitType),
+  unitId: z.number(),
+});
+
 export const CancelAttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("cancel_attack"),
   attackID: z.string(),
@@ -290,10 +306,16 @@ export const QuickChatIntentSchema = BaseIntentSchema.extend({
   variables: z.record(SafeString).optional(),
 });
 
+export const MarkDisconnectedIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("mark_disconnected"),
+  isDisconnected: z.boolean(),
+});
+
 const IntentSchema = z.union([
   AttackIntentSchema,
   CancelAttackIntentSchema,
   SpawnIntentSchema,
+  MarkDisconnectedIntentSchema,
   BoatAttackIntentSchema,
   CancelBoatIntentSchema,
   AllianceRequestIntentSchema,
@@ -305,6 +327,7 @@ const IntentSchema = z.union([
   DonateTroopIntentSchema,
   TargetTroopRatioIntentSchema,
   BuildUnitIntentSchema,
+  UpgradeStructureIntentSchema,
   EmbargoIntentSchema,
   MoveWarshipIntentSchema,
   QuickChatIntentSchema,

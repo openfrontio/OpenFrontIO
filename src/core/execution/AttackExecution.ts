@@ -22,7 +22,6 @@ export class AttackExecution implements Execution {
 
   private random = new PseudoRandom(123);
 
-  private _owner: Player;
   private target: Player | TerraNullius;
 
   private mg: Game;
@@ -31,7 +30,7 @@ export class AttackExecution implements Execution {
 
   constructor(
     private startTroops: number | null = null,
-    private _ownerID: PlayerID,
+    private _owner: Player,
     private _targetID: PlayerID | null,
     private sourceTile: TileRef | null = null,
     private removeTroops: boolean = true,
@@ -51,18 +50,12 @@ export class AttackExecution implements Execution {
     }
     this.mg = mg;
 
-    if (!mg.hasPlayer(this._ownerID)) {
-      console.warn(`player ${this._ownerID} not found`);
-      this.active = false;
-      return;
-    }
     if (this._targetID !== null && !mg.hasPlayer(this._targetID)) {
       console.warn(`target ${this._targetID} not found`);
       this.active = false;
       return;
     }
 
-    this._owner = mg.player(this._ownerID);
     this.target =
       this._targetID === this.mg.terraNullius().id()
         ? mg.terraNullius()
@@ -129,31 +122,15 @@ export class AttackExecution implements Execution {
     // Record stats
     this.mg.stats().attack(this._owner, this.target, this.startTroops);
 
-    for (const incoming of this._owner.incomingAttacks()) {
-      if (incoming.attacker() === this.target) {
-        // Target has opposing attack, cancel them out
-        if (incoming.troops() > this.attack.troops()) {
-          incoming.setTroops(incoming.troops() - this.attack.troops());
-          this.attack.delete();
-          this.active = false;
-          return;
-        } else {
-          this.attack.setTroops(this.attack.troops() - incoming.troops());
-          incoming.delete();
-        }
-      }
-    }
     for (const outgoing of this._owner.outgoingAttacks()) {
       if (
         outgoing !== this.attack &&
         outgoing.target() === this.attack.target() &&
-        outgoing.sourceTile() === this.attack.sourceTile()
+        // Boat attacks (sourceTile is not null) are not combined with other attacks
+        this.attack.sourceTile() === null
       ) {
-        // Existing attack on same target, add troops
-        outgoing.setTroops(outgoing.troops() + this.attack.troops());
-        this.active = false;
-        this.attack.delete();
-        return;
+        this.attack.setTroops(this.attack.troops() + outgoing.troops());
+        outgoing.delete();
       }
     }
 
@@ -187,7 +164,7 @@ export class AttackExecution implements Execution {
     if (deaths) {
       this.mg.displayMessage(
         `Attack cancelled, ${renderTroops(deaths)} soldiers killed during retreat.`,
-        MessageType.SUCCESS,
+        MessageType.ATTACK_CANCELLED,
         this._owner.id(),
       );
     }
@@ -347,8 +324,9 @@ export class AttackExecution implements Execution {
       `Conquered ${this.target.displayName()} received ${renderNumber(
         gold,
       )} gold`,
-      MessageType.SUCCESS,
+      MessageType.CONQUERED_PLAYER,
       this._owner.id(),
+      gold,
     );
     this.target.removeGold(gold);
     this._owner.addGold(gold);

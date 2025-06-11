@@ -19,7 +19,7 @@ import { BuildUnitIntentEvent } from "../../Transport";
 import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
 
-interface BuildItemDisplay {
+export interface BuildItemDisplay {
   unitType: UnitType;
   icon: string;
   description?: string;
@@ -27,7 +27,7 @@ interface BuildItemDisplay {
   countable?: boolean;
 }
 
-const buildTable: BuildItemDisplay[][] = [
+export const buildTable: BuildItemDisplay[][] = [
   [
     {
       unitType: UnitType.AtomBomb,
@@ -96,12 +96,14 @@ const buildTable: BuildItemDisplay[][] = [
   ],
 ];
 
+export const flattenedBuildTable = buildTable.flat();
+
 @customElement("build-menu")
 export class BuildMenu extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
   private clickedTile: TileRef;
-  private playerActions: PlayerActions | null;
+  public playerActions: PlayerActions | null;
   private filteredBuildTable: BuildItemDisplay[][] = buildTable;
 
   tick() {
@@ -302,7 +304,7 @@ export class BuildMenu extends LitElement implements Layer {
   @state()
   private _hidden = true;
 
-  private canBuild(item: BuildItemDisplay): boolean {
+  public canBuild(item: BuildItemDisplay): boolean {
     if (this.game?.myPlayer() === null || this.playerActions === null) {
       return false;
     }
@@ -314,7 +316,7 @@ export class BuildMenu extends LitElement implements Layer {
     return unit[0].canBuild !== false;
   }
 
-  private cost(item: BuildItemDisplay): Gold {
+  public cost(item: BuildItemDisplay): Gold {
     for (const bu of this.playerActions?.buildableUnits ?? []) {
       if (bu.type === item.unitType) {
         return bu.cost;
@@ -323,7 +325,7 @@ export class BuildMenu extends LitElement implements Layer {
     return 0n;
   }
 
-  private count(item: BuildItemDisplay): string {
+  public count(item: BuildItemDisplay): string {
     const player = this.game?.myPlayer();
     if (!player) {
       return "?";

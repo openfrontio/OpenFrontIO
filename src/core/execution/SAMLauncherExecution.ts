@@ -3,7 +3,6 @@ import {
   Game,
   MessageType,
   Player,
-  PlayerID,
   Unit,
   UnitType,
 } from "../game/Game";
@@ -12,7 +11,6 @@ import { PseudoRandom } from "../PseudoRandom";
 import { SAMMissileExecution } from "./SAMMissileExecution";
 
 export class SAMLauncherExecution implements Execution {
-  private player: Player;
   private mg: Game;
   private active: boolean = true;
 
@@ -26,7 +24,7 @@ export class SAMLauncherExecution implements Execution {
   private pseudoRandom: PseudoRandom | undefined;
 
   constructor(
-    private ownerId: PlayerID,
+    private player: Player,
     private tile: TileRef | null,
     private sam: Unit | null = null,
   ) {
@@ -37,12 +35,6 @@ export class SAMLauncherExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    if (!mg.hasPlayer(this.ownerId)) {
-      console.warn(`SAMLauncherExecution: owner ${this.ownerId} not found`);
-      this.active = false;
-      return;
-    }
-    this.player = mg.player(this.ownerId);
   }
 
   private nukeTargetInRange(nuke: Unit) {
@@ -163,11 +155,6 @@ export class SAMLauncherExecution implements Execution {
       target = this.getSingleTarget();
     }
 
-    const cooldown = this.sam.ticksLeftInCooldown();
-    if (typeof cooldown === "number" && cooldown >= 0) {
-      this.sam.touch();
-    }
-
     const isSingleTarget = target && !target.targetedBySAM();
     if (
       (isSingleTarget || mirvWarheadTargets.length > 0) &&
@@ -182,7 +169,7 @@ export class SAMLauncherExecution implements Execution {
       if (!hit) {
         this.mg.displayMessage(
           `Missile failed to intercept ${type}`,
-          MessageType.ERROR,
+          MessageType.SAM_MISS,
           this.sam.owner().id(),
         );
       } else {
@@ -190,7 +177,7 @@ export class SAMLauncherExecution implements Execution {
           // Message
           this.mg.displayMessage(
             `${mirvWarheadTargets.length} MIRV warheads intercepted`,
-            MessageType.SUCCESS,
+            MessageType.SAM_HIT,
             this.sam.owner().id(),
           );
           // Delete warheads
@@ -211,6 +198,21 @@ export class SAMLauncherExecution implements Execution {
           throw new Error("target is null");
         }
       }
+    }
+
+    const frontTime = this.sam.ticksLeftInCooldown();
+    if (frontTime === undefined) {
+      return;
+    }
+
+    const cooldown =
+      this.mg.config().SAMCooldown() - (this.mg.ticks() - frontTime);
+    if (typeof cooldown === "number" && cooldown >= 0) {
+      this.sam.touch();
+    }
+
+    if (cooldown <= 0) {
+      this.sam.reloadMissile();
     }
   }
 

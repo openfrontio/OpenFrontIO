@@ -2,6 +2,7 @@ import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
 import allianceRequestBlackIcon from "../../../../resources/images/AllianceRequestBlackIcon.svg";
 import allianceRequestWhiteIcon from "../../../../resources/images/AllianceRequestWhiteIcon.svg";
 import crownIcon from "../../../../resources/images/CrownIcon.svg";
+import disconnectedIcon from "../../../../resources/images/DisconnectedIcon.svg";
 import embargoBlackIcon from "../../../../resources/images/EmbargoBlackIcon.svg";
 import embargoWhiteIcon from "../../../../resources/images/EmbargoWhiteIcon.svg";
 import nukeRedIcon from "../../../../resources/images/NukeIconRed.svg";
@@ -11,7 +12,7 @@ import targetIcon from "../../../../resources/images/TargetIcon.svg";
 import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { Theme } from "../../../core/configuration/Config";
-import { AllPlayers, Cell, nukeTypes, UnitType } from "../../../core/game/Game";
+import { AllPlayers, Cell, nukeTypes } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { createCanvas, renderNumber, renderTroops } from "../../Utils";
@@ -40,6 +41,7 @@ export class NameLayer implements Layer {
   private renders: RenderInfo[] = [];
   private seenPlayers: Set<PlayerView> = new Set();
   private traitorIconImage: HTMLImageElement;
+  private disconnectedIconImage: HTMLImageElement;
   private allianceRequestBlackIconImage: HTMLImageElement;
   private allianceRequestWhiteIconImage: HTMLImageElement;
   private allianceIconImage: HTMLImageElement;
@@ -61,6 +63,8 @@ export class NameLayer implements Layer {
   ) {
     this.traitorIconImage = new Image();
     this.traitorIconImage.src = traitorIcon;
+    this.disconnectedIconImage = new Image();
+    this.disconnectedIconImage.src = disconnectedIcon;
     this.allianceIconImage = new Image();
     this.allianceIconImage.src = allianceIcon;
     this.allianceRequestBlackIconImage = new Image();
@@ -370,6 +374,24 @@ export class NameLayer implements Layer {
       existingTraitor.remove();
     }
 
+    // Disconnected icon
+    const existingDisconnected = iconsDiv.querySelector(
+      '[data-icon="disconnected"]',
+    );
+    if (render.player.isDisconnected()) {
+      if (!existingDisconnected) {
+        iconsDiv.appendChild(
+          this.createIconElement(
+            this.disconnectedIconImage.src,
+            iconSize,
+            "disconnected",
+          ),
+        );
+      }
+    } else if (existingDisconnected) {
+      existingDisconnected.remove();
+    }
+
     // Alliance icon
     const existingAlliance = iconsDiv.querySelector('[data-icon="alliance"]');
     if (myPlayer !== null && myPlayer.isAlliedWith(render.player)) {
@@ -494,7 +516,7 @@ export class NameLayer implements Layer {
       const isSendingNuke = render.player.id() === unit.owner().id();
       const notMyPlayer = !myPlayer || unit.owner().id() !== myPlayer.id();
       return (
-        (nukeTypes as UnitType[]).includes(unit.type()) &&
+        nukeTypes.includes(unit.type()) &&
         isSendingNuke &&
         notMyPlayer &&
         unit.isActive()

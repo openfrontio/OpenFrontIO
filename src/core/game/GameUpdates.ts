@@ -80,7 +80,9 @@ export interface UnitUpdate {
   targetTile?: TileRef; // Only for nukes
   health?: number;
   constructionType?: UnitType;
-  ticksLeftInCooldown?: Tick;
+  missileTimerQueue: number[];
+  readyMissileCount: number;
+  level: number;
 }
 
 export interface AttackUpdate {
@@ -103,6 +105,7 @@ export interface PlayerUpdate {
   smallID: number;
   playerType: PlayerType;
   isAlive: boolean;
+  isDisconnected: boolean;
   tilesOwned: number;
   gold: Gold;
   population: number;
@@ -161,6 +164,7 @@ export interface DisplayMessageUpdate {
   type: GameUpdateType.DisplayEvent;
   message: string;
   messageType: MessageType;
+  goldAmount?: bigint;
   playerID: number | null;
 }
 
