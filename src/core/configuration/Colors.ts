@@ -1,6 +1,8 @@
-import { colord, Colord } from "colord";
+import { colord, Colord, extend } from "colord";
+import lchPlugin from "colord/plugins/lch";
 import { ColoredTeams, Team } from "../game/Game";
-import { simpleHash } from "../Util";
+import { shuffle, simpleHash } from "../Util";
+extend([lchPlugin]);
 
 export const red: Colord = colord({ r: 235, g: 53, b: 53 }); // Bright Red
 export const blue: Colord = colord({ r: 41, g: 98, b: 255 }); // Royal Blue
@@ -341,18 +343,34 @@ export class ColorAllocator {
 
   constructor(colors: Colord[], fallback: Colord[]) {
     this.availableColors = [...colors];
-    this.fallbackColors = [...fallback];
+    this.fallbackColors = [...colors, ...fallback];
   }
 
   assignColor(id: string): Colord {
     if (this.assigned.has(id)) {
       return this.assigned.get(id)!;
     }
+
     if (this.availableColors.length === 0) {
       this.availableColors = [...this.fallbackColors];
     }
-    const index = 0;
-    const color = this.availableColors.splice(index, 1)[0];
+
+    const MIN_DELTA_E = 25; // Minimum Delta E for distinct colors
+    const assignedColors = Array.from(this.assigned.values());
+
+    const selection = selectDistinctColor(
+      this.availableColors,
+      assignedColors,
+      MIN_DELTA_E,
+    );
+
+    let selectedIndex = 0;
+
+    if (selection) {
+      selectedIndex = selection.selectedIndex;
+    }
+
+    const color = this.availableColors.splice(selectedIndex, 1)[0];
     this.assigned.set(id, color);
     return color;
   }
@@ -381,4 +399,72 @@ export class ColorAllocator {
         ];
     }
   }
+}
+
+// Converts RGB color to CIELAB color space
+function rgbToLab({ r, g, b }: { r: number; g: number; b: number }) {
+  // Normalisation
+  r /= 255;
+  g /= 255;
+  b /= 255;
+
+  // sRGB → linear
+  [r, g, b] = [r, g, b].map((c) =>
+    c > 0.04045 ? Math.pow((c + 0.055) / 1.055, 2.4) : c / 12.92,
+  );
+
+  // linear RGB → XYZ
+  const x = r * 0.4124 + g * 0.3576 + b * 0.1805;
+  const y = r * 0.2126 + g * 0.7152 + b * 0.0722;
+  const z = r * 0.0193 + g * 0.1192 + b * 0.9505;
+
+  // XYZ → CIELAB
+  const [xn, yn, zn] = [0.95047, 1.0, 1.08883]; // D65 standard
+  const f = (t: number) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+
+  const fx = f(x / xn);
+  const fy = f(y / yn);
+  const fz = f(z / zn);
+
+  return {
+    L: 116 * fy - 16,
+    a: 500 * (fx - fy),
+    b: 200 * (fy - fz),
+  };
+}
+
+// Calculate Delta E using the CIE76 formula
+export function deltaE76(
+  c1: { r: number; g: number; b: number },
+  c2: { r: number; g: number; b: number },
+) {
+  const lab1 = rgbToLab(c1);
+  const lab2 = rgbToLab(c2);
+  return Math.sqrt(
+    Math.pow(lab1.L - lab2.L, 2) +
+      Math.pow(lab1.a - lab2.a, 2) +
+      Math.pow(lab1.b - lab2.b, 2),
+  );
+}
+
+// Select a distinct color from the available colors that is sufficiently different from the assigned colors
+export function selectDistinctColor(
+  availableColors: Colord[],
+  assignedColors: Colord[],
+  minDeltaE: number,
+): { selectedIndex: number; selectedColor: Colord } | null {
+  const shuffled = shuffle(
+    availableColors.map((color, index) => ({ color, index })),
+  );
+
+  for (const { color, index } of shuffled) {
+    const isDistinctEnough = assignedColors.every(
+      (assigned) => deltaE76(color.toRgb(), assigned.toRgb()) >= minDeltaE,
+    );
+    if (isDistinctEnough) {
+      return { selectedIndex: index, selectedColor: color };
+    }
+  }
+
+  return null;
 }
