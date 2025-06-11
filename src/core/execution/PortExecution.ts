@@ -52,12 +52,9 @@ export class PortExecution implements Execution {
       return;
     }
 
-    const sumOfPortLevels = this.mg
-      .units(UnitType.Port)
-      .map((port) => port.level())
-      .reduce((a, b) => a + b, 0);
+    const totalNbOfPorts = this.mg.units(UnitType.Port).length;
     if (
-      !this.random.chance(this.mg.config().tradeShipSpawnRate(sumOfPortLevels))
+      !this.random.chance(this.mg.config().tradeShipSpawnRate(totalNbOfPorts))
     ) {
       return;
     }
