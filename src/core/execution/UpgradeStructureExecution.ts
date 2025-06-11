@@ -1,7 +1,7 @@
 import { Execution, Game, Player, Unit } from "../game/Game";
 
 export class UpgradeStructureExecution implements Execution {
-  private structure: Unit | null = null;
+  private structure: Unit | undefined;
   private cost: bigint;
 
   constructor(
