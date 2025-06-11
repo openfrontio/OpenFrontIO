@@ -79,13 +79,10 @@ export class UnitInfoModal extends LitElement implements Layer {
     super.disconnectedCallback();
   }
 
-  buildUnitTypeTranslationString() {
-    let unitType = "";
-    if (this !== null && this.unit !== null) {
-      unitType = this.unit.type?.().toLowerCase();
-    }
-    unitType = unitType.replace(" ", "_");
-    return "unit_type." + unitType;
+  private buildUnitTypeTranslationString(): string {
+    if (!this.unit) return "unit_type.unknown"; // fallback stays the same
+    const unitType = this.unit.type().toLowerCase().replace(/\s+/g, "_");
+    return `unit_type.${unitType}`;
   }
 
   static styles = css`
