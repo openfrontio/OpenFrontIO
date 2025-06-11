@@ -11,9 +11,9 @@ export class UpgradeStructureExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.structure =
-      this.player.units().find((unit) => unit.id() === this.unitId) ?? null;
+      this.player.units().find((unit) => unit.id() === this.unitId);
 
-    if (!this.structure) {
+    if (this.structure === undefined) {
       console.warn(`structure is undefined`);
       return;
     }

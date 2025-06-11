@@ -33,9 +33,10 @@ export type Intent =
   | BuildUnitIntent
   | EmbargoIntent
   | QuickChatIntent
+  | MoveWarshipIntent
   | MarkDisconnectedIntent
   | UpgradeStructureIntent
-  | MoveWarshipIntent;
+  ;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
