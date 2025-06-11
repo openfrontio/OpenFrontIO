@@ -550,8 +550,19 @@ export interface Player {
   bestTransportShipSpawn(tile: TileRef): TileRef | false;
 }
 
+export class Vote {
+  results: Map<Player, boolean>;
+
+  constructor() {
+    this.results = new Map<Player, boolean>();
+  }
+}
+
 export interface Game extends GameMap {
   expireAlliance(alliance: Alliance);
+  createVoteForPeace(players: Player[]);
+  castVote(player: Player, accept: boolean);
+  runningVote(): Vote;
   // Map & Dimensions
   isOnMap(cell: Cell): boolean;
   width(): number;

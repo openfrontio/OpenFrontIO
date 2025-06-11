@@ -26,6 +26,7 @@ import {
   Unit,
   UnitInfo,
   UnitType,
+  Vote,
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
@@ -73,6 +74,7 @@ export class GameImpl implements Game {
 
   private playerTeams: Team[] = [ColoredTeams.Red, ColoredTeams.Blue];
   private botTeam: Team = ColoredTeams.Bot;
+  private currentVote: Vote;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -581,6 +583,53 @@ export class GameImpl implements Game {
       player1ID: alliance.requestor().smallID(),
       player2ID: alliance.recipient().smallID(),
     });
+  }
+
+  public runningVote(): Vote {
+    return this.currentVote;
+  }
+
+  public createVoteForPeace(players: Player[]) {
+    let vote = this.currentVote;
+    vote ??= new Vote();
+
+    players.forEach((player) => {
+      vote.results.set(player, false);
+
+      this.addUpdate({
+        type: GameUpdateType.VoteForPeace,
+        playerID: player.smallID(),
+        leaderID: players[0].smallID(),
+      });
+    });
+    this.currentVote = vote;
+  }
+
+  public castVote(player: Player, accept: boolean) {
+    const vote: Vote = this.currentVote;
+
+    vote.results.set(player, accept);
+
+    const voters = [...vote.results.keys()];
+
+    const numTilesWithoutFallout =
+      this.numLandTiles() - this.numTilesWithFallout();
+
+    let votePercentage = 0;
+    voters.forEach((voter) => {
+      if (vote.results.get(voter) === true) {
+        const playerLandOwnedPercent =
+          (player.numTilesOwned() / numTilesWithoutFallout) * 100;
+        votePercentage += playerLandOwnedPercent;
+      }
+    });
+
+    if (votePercentage >= this.config().percentageTilesOwnedToWin()) {
+      const players = voters.sort(
+        (a, b) => b.numTilesOwned() - a.numTilesOwned(),
+      );
+      this.setWinner(players[0], this.stats().stats());
+    }
   }
 
   sendEmojiUpdate(msg: EmojiMessage): void {
