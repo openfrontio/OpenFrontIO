@@ -263,9 +263,15 @@ export class DefaultConfig implements Config {
   defensePostRange(): number {
     return 30;
   }
+
   defensePostDefenseBonus(): number {
     return 5;
   }
+
+  defensePostSpeedBonus(): number {
+    return 2;
+  }
+
   playerTeams(): number | typeof Duos {
     return this._gameConfig.playerTeams ?? 0;
   }
@@ -541,7 +547,7 @@ export class DefaultConfig implements Config {
       )) {
         if (dp.unit.owner() === defender) {
           mag *= this.defensePostDefenseBonus();
-          speed *= this.defensePostDefenseBonus();
+          speed *= this.defensePostSpeedBonus();
           break;
         }
       }
@@ -579,9 +585,30 @@ export class DefaultConfig implements Config {
     }
 
     if (defender.isPlayer()) {
+      const defenderDensity = defender.troops() / defender.numTilesOwned();
+      const attackerDensity = attacker.troops() / attacker.numTilesOwned();
+      const densityRatio = defenderDensity / attackerDensity;
+
+      const attackDefenseRatio = defender.troops() / attackTroops;
+
+      if (attacker.type() === PlayerType.Human) {
+        console.log("densityRatio", densityRatio);
+        console.log("attackDefenseRatio", attackDefenseRatio);
+        console.log(
+          "modifier",
+          Math.sqrt(densityRatio * attackDefenseRatio) / 2,
+        );
+      }
+
+      const modifier = within(
+        Math.sqrt(densityRatio * attackDefenseRatio) / 2,
+        0.5,
+        2,
+      );
+
       return {
         attackerTroopLoss:
-          within(defender.troops() / attackTroops, 0.6, 2) *
+          modifier *
           mag *
           0.8 *
           largeLossModifier *
@@ -700,7 +727,7 @@ export class DefaultConfig implements Config {
   populationIncreaseRate(player: Player): number {
     const max = this.maxPopulation(player);
 
-    let toAdd = 10 + Math.pow(player.population(), 0.73) / 4;
+    let toAdd = 10 + Math.pow(player.population(), 0.7) / 4;
 
     const ratio = 1 - player.population() / max;
     toAdd *= ratio;
