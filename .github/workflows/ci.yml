@@ -23,14 +23,14 @@ jobs:
             );
 
             const invalidFiles = files
-              .filter(file => file.status !== 'removed') // Exclude deleted files
-              .map(file => file.filename)
+              .filter(({ status }) => status !== 'removed')
+              .map(({ filename }) => filename)        
               .filter(filename => /[^\x00-\x7F]/.test(filename));
 
             if (invalidFiles.length > 0) {
               core.setFailed(`❌ The following files contain Unicode characters:\n${invalidFiles.join('\n')}`);
             } else {
-              console.log('✅ All new/modified filenames are ASCII-only');
+              core.info('✅ All new/modified filenames are ASCII-only');
             }
 
   build:
