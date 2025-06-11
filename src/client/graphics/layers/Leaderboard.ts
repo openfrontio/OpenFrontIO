@@ -1,6 +1,5 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { translateText } from "../../../client/Utils";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
@@ -178,61 +177,33 @@ export class Leaderboard extends LitElement implements Layer {
     }
     .leaderboard {
       position: fixed;
-      top: 10px;
+      top: 70px;
       left: 10px;
       z-index: 9998;
       background-color: rgb(31 41 55 / 0.7);
-      padding: 10px;
-      padding-top: 0px;
+      padding: 0 10px 10px;
       box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
       border-radius: 10px;
       max-width: 500px;
       max-height: 30vh;
       overflow-y: auto;
-      width: 400px;
       backdrop-filter: blur(5px);
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th,
-    td {
-      padding: 5px;
-      text-align: center;
-      border-bottom: 1px solid rgba(51, 51, 51, 0.2);
-      color: white;
-    }
-    th {
-      background-color: rgb(31 41 55 / 0.5);
-      color: white;
-      cursor: pointer;
-      user-select: none;
-    }
-    .myPlayer {
-      font-weight: bold;
-      font-size: 1.2em;
-    }
-    .otherPlayer {
-      font-size: 1em;
-    }
-    tr:nth-child(even) {
-      background-color: rgb(31 41 55 / 0.5);
-    }
-    tbody tr {
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-    tbody tr:hover {
-      background-color: rgba(78, 78, 78, 0.8);
-    }
+
     .hidden {
       display: none !important;
     }
-    .leaderboard-button {
+    .leaderboard__grid {
+      display: grid;
+      grid-template-columns: 40px 100px 85px 65px 65px;
+      width: 100%;
+      font-size: 14px;
+    }
+
+    .leaderboard__button {
       position: fixed;
       left: 10px;
-      top: 10px;
+      top: 70px;
       z-index: 9998;
       background-color: rgb(31 41 55 / 0.7);
       color: white;
@@ -242,18 +213,42 @@ export class Leaderboard extends LitElement implements Layer {
       cursor: pointer;
     }
 
-    .leaderboard-close-button {
+    .leaderboard__actionButton {
       background: none;
       border: none;
       color: white;
       cursor: pointer;
     }
 
-    .leaderboard-top-five-button {
-      background: none;
-      border: none;
-      color: white;
-      cursor: pointer;
+    .leaderboard__row {
+      display: contents;
+
+      > div {
+        display: flex;
+        justify-content: center;
+        text-align: center;
+        align-items: center;
+        padding: 6px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+      }
+
+      &:hover {
+        > div {
+          background-color: rgba(78, 78, 78, 0.8);
+        }
+      }
+    }
+    .leaderboard__row--header {
+      > div {
+        background-color: rgb(31 41 55 / 0.5);
+        font-weight: bold;
+        color: white;
+      }
+    }
+
+    .myPlayer > div {
+      font-weight: bold;
     }
 
     .player-name {
@@ -262,15 +257,24 @@ export class Leaderboard extends LitElement implements Layer {
       text-overflow: ellipsis;
     }
 
-    @media (max-width: 1000px) {
+    @media (min-width: 980px) {
+      .player-name {
+        max-width: 14ch;
+      }
       .leaderboard {
-        top: 70px;
-        left: 0px;
+        top: 10px;
+        left: 10px;
       }
 
-      .leaderboard-button {
-        left: 0px;
-        top: 52px;
+      .leaderboard__button {
+        left: 10px;
+        top: 10px;
+      }
+    }
+    @media (min-width: 1336px) {
+      .leaderboard__grid {
+        grid-template-columns: 60px 120px 105px 85px 85px;
+        font-size: 16px;
       }
     }
   `;
@@ -279,7 +283,8 @@ export class Leaderboard extends LitElement implements Layer {
     return html`
       <button
         @click=${() => this.toggleLeaderboard()}
-        class="leaderboard-button ${this._shownOnInit && this._leaderboardHidden
+        class="leaderboard__button ${this._shownOnInit &&
+        this._leaderboardHidden
           ? ""
           : "hidden"}"
       >
@@ -290,13 +295,13 @@ export class Leaderboard extends LitElement implements Layer {
         @contextmenu=${(e) => e.preventDefault()}
       >
         <button
-          class="leaderboard-close-button"
+          class="leaderboard__actionButton"
           @click=${() => this.hideLeaderboard()}
         >
           ${translateText("leaderboard.hide")}
         </button>
         <button
-          class="leaderboard-top-five-button"
+          class="leaderboard__actionButton"
           @click=${() => {
             this.showTopFive = !this.showTopFive;
             this.updateLeaderboard();
@@ -304,54 +309,52 @@ export class Leaderboard extends LitElement implements Layer {
         >
           ${this.showTopFive ? "Show All" : "Show Top 5"}
         </button>
-        <table>
-          <thead>
-            <tr>
-              <th>${translateText("leaderboard.rank")}</th>
-              <th>${translateText("leaderboard.player")}</th>
-              <th @click=${() => this.setSort("tiles")}>
-                ${translateText("leaderboard.owned")}
-                ${this._sortKey === "tiles"
-                  ? this._sortOrder === "asc"
-                    ? "⬆️"
-                    : "⬇️"
-                  : ""}
-              </th>
-              <th @click=${() => this.setSort("gold")}>
-                ${translateText("leaderboard.gold")}
-                ${this._sortKey === "gold"
-                  ? this._sortOrder === "asc"
-                    ? "⬆️"
-                    : "⬇️"
-                  : ""}
-              </th>
-              <th @click=${() => this.setSort("troops")}>
-                ${translateText("leaderboard.troops")}
-                ${this._sortKey === "troops"
-                  ? this._sortOrder === "asc"
-                    ? "⬆️"
-                    : "⬇️"
-                  : ""}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            ${this.players.map(
-              (player) => html`
-                <tr
-                  class="${player.isMyPlayer ? "myPlayer" : "otherPlayer"}"
-                  @click=${() => this.handleRowClickPlayer(player.player)}
-                >
-                  <td>${player.position}</td>
-                  <td class="player-name">${unsafeHTML(player.name)}</td>
-                  <td>${player.score}</td>
-                  <td>${player.gold}</td>
-                  <td>${player.troops}</td>
-                </tr>
-              `,
-            )}
-          </tbody>
-        </table>
+        <div class="leaderboard__grid">
+          <div class="leaderboard__row leaderboard__row--header">
+            <div>#</div>
+            <div>${translateText("leaderboard.player")}</div>
+            <div @click=${() => this.setSort("tiles")}>
+              ${translateText("leaderboard.owned")}
+              ${this._sortKey === "tiles"
+                ? this._sortOrder === "asc"
+                  ? "⬆️"
+                  : "⬇️"
+                : ""}
+            </div>
+            <div @click=${() => this.setSort("gold")}>
+              ${translateText("leaderboard.gold")}
+              ${this._sortKey === "gold"
+                ? this._sortOrder === "asc"
+                  ? "⬆️"
+                  : "⬇️"
+                : ""}
+            </div>
+            <div @click=${() => this.setSort("troops")}>
+              ${translateText("leaderboard.troops")}
+              ${this._sortKey === "troops"
+                ? this._sortOrder === "asc"
+                  ? "⬆️"
+                  : "⬇️"
+                : ""}
+            </div>
+          </div>
+          ${this.players.map(
+            (player) => html`
+              <div
+                class="leaderboard__row ${player.isMyPlayer
+                  ? "myPlayer"
+                  : "otherPlayer"}"
+                @click=${() => this.handleRowClickPlayer(player.player)}
+              >
+                <div>${player.position}</div>
+                <div class="player-name">${player.name}</div>
+                <div>${player.score}</div>
+                <div>${player.gold}</div>
+                <div>${player.troops}</div>
+              </div>
+            `,
+          )}
+        </div>
       </div>
     `;
   }
