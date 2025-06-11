@@ -34,7 +34,8 @@ export type Intent =
   | EmbargoIntent
   | QuickChatIntent
   | MoveWarshipIntent
-  | MarkDisconnectedIntent;
+  | MarkDisconnectedIntent
+  | UpgradeStructureIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -55,6 +56,9 @@ export type TargetTroopRatioIntent = z.infer<
   typeof TargetTroopRatioIntentSchema
 >;
 export type BuildUnitIntent = z.infer<typeof BuildUnitIntentSchema>;
+export type UpgradeStructureIntent = z.infer<
+  typeof UpgradeStructureIntentSchema
+>;
 export type MoveWarshipIntent = z.infer<typeof MoveWarshipIntentSchema>;
 export type QuickChatIntent = z.infer<typeof QuickChatIntentSchema>;
 export type MarkDisconnectedIntent = z.infer<
@@ -178,6 +182,7 @@ const BaseIntentSchema = z.object({
     "emoji",
     "troop_ratio",
     "build_unit",
+    "upgrade_structure",
     "embargo",
     "move_warship",
   ]),
@@ -266,6 +271,12 @@ export const BuildUnitIntentSchema = BaseIntentSchema.extend({
   y: z.number(),
 });
 
+export const UpgradeStructureIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("upgrade_structure"),
+  unit: z.nativeEnum(UnitType),
+  unitId: z.number(),
+});
+
 export const CancelAttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("cancel_attack"),
   attackID: z.string(),
@@ -316,6 +327,7 @@ const IntentSchema = z.union([
   DonateTroopIntentSchema,
   TargetTroopRatioIntentSchema,
   BuildUnitIntentSchema,
+  UpgradeStructureIntentSchema,
   EmbargoIntentSchema,
   MoveWarshipIntentSchema,
   QuickChatIntentSchema,
