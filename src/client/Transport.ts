@@ -65,7 +65,6 @@ export class SendAllianceWinVoteReplyIntentEvent implements GameEvent {
     public readonly leader: PlayerView,
     public readonly recipient: PlayerView,
     public readonly accepted: boolean,
-    public readonly voteID: number,
   ) {}
 }
 

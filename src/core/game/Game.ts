@@ -560,8 +560,9 @@ export class Vote {
 
 export interface Game extends GameMap {
   expireAlliance(alliance: Alliance);
-  voteForPeace(players: Player[]);
-  isVoting();
+  createVoteForPeace(players: Player[]);
+  castVote(player: Player, accept: boolean);
+  runningVote(): Vote;
   // Map & Dimensions
   isOnMap(cell: Cell): boolean;
   width(): number;
