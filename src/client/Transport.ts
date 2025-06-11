@@ -109,7 +109,7 @@ export class SendQuickChatEvent implements GameEvent {
   constructor(
     public readonly recipient: PlayerView,
     public readonly quickChatKey: string,
-    public readonly variables: { [key: string]: string },
+    public readonly variables: { [key: string]: PlayerID },
   ) {}
 }
 

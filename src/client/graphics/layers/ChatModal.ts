@@ -29,7 +29,7 @@ export class ChatModal extends LitElement {
     return this;
   }
 
-  private players: string[] = [];
+  private players: Array<{ name: string; id: string }> = [];
 
   private playerSearchQuery: string = "";
   private previewText: string | null = null;
@@ -39,6 +39,7 @@ export class ChatModal extends LitElement {
   private selectedPlayer: string | null = null;
   private selectedPhraseTemplate: string | null = null;
   private selectedQuickChatKey: string | null = null;
+  private selectedPlayerId: string | null = null;
 
   private recipient: PlayerView;
   private sender: PlayerView;
@@ -137,13 +138,13 @@ export class ChatModal extends LitElement {
                     ${this.getSortedFilteredPlayers().map(
                       (player) => html`
                         <button
-                          class="chat-option-button ${this.selectedPlayer ===
-                          player
+                          class="chat-option-button ${this.selectedPlayerId ===
+                          player.id
                             ? "selected"
                             : ""}"
                           @click=${() => this.selectPlayer(player)}
                         >
-                          ${player}
+                          ${player.name}
                         </button>
                       `,
                     )}
@@ -202,11 +203,11 @@ export class ChatModal extends LitElement {
     return translateText(`chat.${this.selectedCategory}.${phrase.key}`);
   }
 
-  private selectPlayer(player: string) {
+  private selectPlayer(player: { name: string; id: string }) {
     if (this.previewText) {
       this.previewText =
-        this.selectedPhraseTemplate?.replace("[P1]", player) ?? null;
-      this.selectedPlayer = player;
+        this.selectedPhraseTemplate?.replace("[P1]", player.name) ?? null;
+      this.selectedPlayerId = player.id;
       this.requiresPlayerSelection = false;
       this.requestUpdate();
     }
@@ -219,8 +220,8 @@ export class ChatModal extends LitElement {
     console.log("Key:", this.selectedQuickChatKey);
 
     if (this.sender && this.recipient && this.selectedQuickChatKey) {
-      const variables: Record<string, string> = this.selectedPlayer
-        ? { P1: this.selectedPlayer }
+      const variables: Record<string, string> = this.selectedPlayerId
+        ? { P1: this.selectedPlayerId }
         : {};
 
       this.eventBus.emit(
@@ -246,13 +247,15 @@ export class ChatModal extends LitElement {
     this.requestUpdate();
   }
 
-  private getSortedFilteredPlayers(): string[] {
-    const sorted = [...this.players].sort((a, b) => a.localeCompare(b));
+  private getSortedFilteredPlayers(): Array<{ name: string; id: string }> {
+    const sorted = [...this.players].sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
     const filtered = sorted.filter((p) =>
-      p.toLowerCase().includes(this.playerSearchQuery),
+      p.name.toLowerCase().includes(this.playerSearchQuery),
     );
     const others = sorted.filter(
-      (p) => !p.toLowerCase().includes(this.playerSearchQuery),
+      (p) => !p.name.toLowerCase().includes(this.playerSearchQuery),
     );
     return [...filtered, ...others];
   }
@@ -265,13 +268,12 @@ export class ChatModal extends LitElement {
     if (sender && recipient) {
       console.log("Sent message:", recipient);
       console.log("Sent message:", sender);
-      const alivePlayerNames = this.g
+      const alivePlayerInfos = this.g
         .players()
-        .filter((p) => p.isAlive() && !(p.data.playerType === PlayerType.Bot))
-        .map((p) => p.data.name);
+        .filter((p) => p.isAlive() && p.data.playerType !== PlayerType.Bot)
+        .map((p) => ({ name: p.data.name, id: p.data.id }));
 
-      console.log("Alive player names:", alivePlayerNames);
-      this.players = alivePlayerNames;
+      this.players = alivePlayerInfos;
       this.recipient = recipient;
       this.sender = sender;
     }
@@ -303,12 +305,12 @@ export class ChatModal extends LitElement {
     recipient?: PlayerView,
   ) {
     if (sender && recipient) {
-      const alivePlayerNames = this.g
+      const alivePlayerInfos = this.g
         .players()
-        .filter((p) => p.isAlive() && !(p.data.playerType === PlayerType.Bot))
-        .map((p) => p.data.name);
+        .filter((p) => p.isAlive() && p.data.playerType !== PlayerType.Bot)
+        .map((p) => ({ name: p.data.name, id: p.data.id }));
 
-      this.players = alivePlayerNames;
+      this.players = alivePlayerInfos;
       this.recipient = recipient;
       this.sender = sender;
     }
