@@ -446,7 +446,8 @@
     "alliances": "Alliances"
   },
   "replay_panel": {
-    "replay_speed": "Replay speed"
+    "replay_speed": "Replay speed",
+    "game_speed": "Game speed"
   },
   "error_modal": {
     "crashed": "Game crashed!",
