@@ -29,7 +29,7 @@ export class ChatModal extends LitElement {
     return this;
   }
 
-  private players: Array<{ name: string; id: string }> = [];
+  private players: PlayerView[] = [];
 
   private playerSearchQuery: string = "";
   private previewText: string | null = null;
@@ -139,12 +139,16 @@ export class ChatModal extends LitElement {
                       (player) => html`
                         <button
                           class="chat-option-button ${this.selectedPlayerId ===
-                          player.id
+                          player.id()
                             ? "selected"
                             : ""}"
-                          @click=${() => this.selectPlayer(player)}
+                          @click=${() =>
+                            this.selectPlayer({
+                              name: player.name(),
+                              id: player.id(),
+                            })}
                         >
-                          ${player.name}
+                          ${player.name()}
                         </button>
                       `,
                     )}
@@ -244,15 +248,15 @@ export class ChatModal extends LitElement {
     this.requestUpdate();
   }
 
-  private getSortedFilteredPlayers(): Array<{ name: string; id: string }> {
+  private getSortedFilteredPlayers(): PlayerView[] {
     const sorted = [...this.players].sort((a, b) =>
-      a.name.localeCompare(b.name),
+      a.name().localeCompare(b.name()),
     );
     const filtered = sorted.filter((p) =>
-      p.name.toLowerCase().includes(this.playerSearchQuery),
+      p.name().toLowerCase().includes(this.playerSearchQuery),
     );
     const others = sorted.filter(
-      (p) => !p.name.toLowerCase().includes(this.playerSearchQuery),
+      (p) => !p.name().toLowerCase().includes(this.playerSearchQuery),
     );
     return [...filtered, ...others];
   }
@@ -265,12 +269,10 @@ export class ChatModal extends LitElement {
     if (sender && recipient) {
       console.log("Sent message:", recipient);
       console.log("Sent message:", sender);
-      const alivePlayerInfos = this.g
+      this.players = this.g
         .players()
-        .filter((p) => p.isAlive() && p.data.playerType !== PlayerType.Bot)
-        .map((p) => ({ name: p.data.name, id: p.data.id }));
+        .filter((p) => p.isAlive() && p.data.playerType !== PlayerType.Bot);
 
-      this.players = alivePlayerInfos;
       this.recipient = recipient;
       this.sender = sender;
     }
@@ -302,12 +304,10 @@ export class ChatModal extends LitElement {
     recipient?: PlayerView,
   ) {
     if (sender && recipient) {
-      const alivePlayerInfos = this.g
+      this.players = this.g
         .players()
-        .filter((p) => p.isAlive() && p.data.playerType !== PlayerType.Bot)
-        .map((p) => ({ name: p.data.name, id: p.data.id }));
+        .filter((p) => p.isAlive() && p.data.playerType !== PlayerType.Bot);
 
-      this.players = alivePlayerInfos;
       this.recipient = recipient;
       this.sender = sender;
     }
