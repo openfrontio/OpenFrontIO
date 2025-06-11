@@ -564,6 +564,61 @@ export class EventsDisplay extends LitElement implements Layer {
     });
   }
 
+  onVoteForPeaceEvent(event: VoteForPeaceUpdate) {
+    const myPlayer = this.game.myPlayer();
+
+    if (!myPlayer || myPlayer.smallID() !== event.playerID) {
+      return;
+    }
+
+    const leader = this.game.playerBySmallID(event.leaderID) as PlayerView;
+
+    this.addEvent({
+      description: `An alliance you are participating in can now vote for peace, ending the game. 
+      If those who vote 'Yes' exceed the combined percentage required to win, this game will end. The voter with
+      the largest percentage of land will be considered the winner.
+      If not, the game will continue.`,
+      type: MessageType.VOTE_FOR_PEACE,
+      unsafeDescription: false,
+      highlight: true,
+      createdAt: this.game.ticks(),
+      buttons: [
+        {
+          text: "Accept",
+          className: "btn",
+          action: () =>
+            this.eventBus.emit(
+              new SendAllianceWinVoteReplyIntentEvent(leader, myPlayer, true),
+            ),
+        },
+        {
+          text: "Reject",
+          className: "btn-info",
+          action: () =>
+            this.eventBus.emit(
+              new SendAllianceWinVoteReplyIntentEvent(leader, myPlayer, false),
+            ),
+        },
+      ],
+    });
+  }
+
+  onVoteForPeaceReplyEvent(event: VoteForPeaceReplyUpdate) {
+    const myPlayer = this.game.myPlayer();
+
+    if (!myPlayer || myPlayer.smallID() !== event.playerID) {
+      return;
+    }
+
+    this.addEvent({
+      description: `You have voted ${event.accepted ? "Yes" : "No"}`,
+      type: MessageType.VOTE_FOR_PEACE,
+      unsafeDescription: false,
+      highlight: true,
+      createdAt: this.game.ticks(),
+    });
+  }
+
   private getEventDescription(
     event: GameEvent,
   ): string | DirectiveResult<typeof UnsafeHTMLDirective> {

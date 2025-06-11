@@ -38,6 +38,15 @@ export class BotBehavior {
     }
   }
 
+  handleAllianceWinVotes() {
+    if (this.game.runningVote() !== null) {
+      const vote = this.game.runningVote();
+      if (vote.results.has(this.player)) {
+        this.game.castVote(this.player, true);
+      }
+    }
+  }
+
   private emoji(player: Player, emoji: number) {
     if (player.type() !== PlayerType.Human) return;
     this.game.addExecution(new EmojiExecution(this.player, player.id(), emoji));
