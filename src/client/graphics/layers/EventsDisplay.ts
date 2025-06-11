@@ -312,6 +312,10 @@ export class EventsDisplay extends LitElement implements Layer {
         const targetName = targetPlayer?.name() ?? event.target;
         translatedMessage = baseMessage.replace("[P1]", targetName);
       } catch (e) {
+        console.warn(
+          `Failed to resolve player for target ID '${event.target}'`,
+          e,
+        );
         return;
       }
     }
