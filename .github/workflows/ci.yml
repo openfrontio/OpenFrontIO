@@ -58,7 +58,9 @@ jobs:
               const commits = context.payload.commits || [];
               const filenames = new Set();
               for (const commit of commits) {
-                for (const file of [...(commit.added || []), ...(commit.modified || []), ...(commit.renamed || [])]) {
+                for (const file of [
+                  ...(commit.added || []), ...(commit.modified || [])                 
+                ]) {
                   filenames.add(file);
                 }
               }
