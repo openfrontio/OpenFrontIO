@@ -18,12 +18,15 @@ export class ReplayPanel extends LitElement implements Layer {
 
   @state()
   private _replaySpeedMultiplier: number = defaultReplaySpeedMultiplier;
+  private _isSinglePlayer: boolean = false;
 
   @state()
   private _isVisible = false;
 
   init() {
-    if (this.game?.config().gameConfig().gameType === GameType.Singleplayer) {
+    this._isSinglePlayer =
+      this.game?.config().gameConfig().gameType === GameType.Singleplayer;
+    if (this._isSinglePlayer) {
       this.setVisible(true);
     }
   }
@@ -65,7 +68,9 @@ export class ReplayPanel extends LitElement implements Layer {
         @contextmenu=${(e) => e.preventDefault()}
       >
         <label class="block mb-1 text-white" translate="no">
-          ${translateText("replay_panel.replay_speed")}
+          ${this._isSinglePlayer
+            ? translateText("replay_panel.game_speed")
+            : translateText("replay_panel.replay_speed")}
         </label>
         <div class="grid grid-cols-2 gap-1">
           <button
