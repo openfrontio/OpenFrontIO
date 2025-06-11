@@ -24,7 +24,7 @@ FROM base
 COPY --from=dependencies / /
 
 ARG GIT_COMMIT=unknown
-ENV GIT_COMMIT=$GIT_COMMIT
+ENV GIT_COMMIT="$GIT_COMMIT"
 
 # Set the working directory in the container
 WORKDIR /usr/src/app
@@ -35,7 +35,7 @@ COPY package*.json ./
 # Install dependencies while bypassing Husky hooks
 ENV HUSKY=0
 ENV NPM_CONFIG_IGNORE_SCRIPTS=1
-RUN mkdir -p .git && npm install
+RUN mkdir -p .git && npm ci
 
 # Copy the rest of the application code
 COPY . .
@@ -45,7 +45,7 @@ RUN npm run build-prod
 
 # So we can see which commit was used to build the container
 # https://openfront.io/commit.txt
-RUN echo $GIT_COMMIT > static/commit.txt
+RUN echo "$GIT_COMMIT" > static/commit.txt
 
 # Copy Nginx configuration and ensure it's used instead of the default
 COPY nginx.conf /etc/nginx/conf.d/default.conf

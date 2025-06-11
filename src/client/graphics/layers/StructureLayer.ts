@@ -242,13 +242,13 @@ export class StructureLayer implements Layer {
     const config = this.unitConfigs[unitType];
     let icon: ImageData | undefined;
 
-    if (unitType === UnitType.SAMLauncher && unit.isCooldown()) {
+    if (unitType === UnitType.SAMLauncher && unit.isInCooldown()) {
       icon = this.unitIcons.get("reloadingSam");
     } else {
       icon = this.unitIcons.get(iconType);
     }
 
-    if (unitType === UnitType.MissileSilo && unit.isCooldown()) {
+    if (unitType === UnitType.MissileSilo && unit.isInCooldown()) {
       icon = this.unitIcons.get("reloadingSilo");
     } else {
       icon = this.unitIcons.get(iconType);
@@ -268,13 +268,13 @@ export class StructureLayer implements Layer {
     if (!unit.isActive()) return;
 
     let borderColor = this.theme.borderColor(unit.owner());
-    if (unitType === UnitType.SAMLauncher && unit.isCooldown()) {
+    if (unitType === UnitType.SAMLauncher && unit.isInCooldown()) {
       borderColor = reloadingColor;
     } else if (unit.type() === UnitType.Construction) {
       borderColor = underConstructionColor;
     }
 
-    if (unitType === UnitType.MissileSilo && unit.isCooldown()) {
+    if (unitType === UnitType.MissileSilo && unit.isInCooldown()) {
       borderColor = reloadingColor;
     } else if (unit.type() === UnitType.Construction) {
       borderColor = underConstructionColor;
@@ -391,6 +391,7 @@ export class StructureLayer implements Layer {
         const screenPos = this.transformHandler.worldToScreenCoordinates(cell);
         const unitTile = clickedUnit.tile();
         this.unitInfoModal?.onOpenStructureModal({
+          eventBus: this.eventBus,
           unit: clickedUnit,
           x: screenPos.x,
           y: screenPos.y,

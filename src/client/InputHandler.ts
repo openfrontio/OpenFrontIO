@@ -1,6 +1,7 @@
 import { EventBus, GameEvent } from "../core/EventBus";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
+import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class MouseUpEvent implements GameEvent {
   constructor(
@@ -80,6 +81,10 @@ export class DoBoatAttackEvent implements GameEvent {}
 
 export class AttackRatioEvent implements GameEvent {
   constructor(public readonly attackRatio: number) {}
+}
+
+export class ReplaySpeedChangeEvent implements GameEvent {
+  constructor(public readonly replaySpeedMultiplier: ReplaySpeedMultiplier) {}
 }
 
 export class CenterCameraEvent implements GameEvent {
