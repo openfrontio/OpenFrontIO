@@ -73,6 +73,15 @@ export class UnitInfoModal extends LitElement implements Layer {
     super.disconnectedCallback();
   }
 
+  buildUnitTypeTranslationString() {
+    let unitType = "";
+    if (this !== null && this.unit !== null) {
+      unitType = this.unit.type?.().toLowerCase();
+    }
+    unitType = unitType.replace(" ", "_");
+    return "unit_type." + unitType;
+  }
+
   static styles = css`
     :host {
       position: fixed;
@@ -138,7 +147,7 @@ export class UnitInfoModal extends LitElement implements Layer {
         </div>
         <div style="margin-bottom: 4px;">
           <strong>${translateText("unit_info_modal.type")}:</strong>
-          ${translateText(+"unit_type." + this.unit.type?.().toLowerCase()) ??
+          ${translateText(this.buildUnitTypeTranslationString()) ??
           translateText("unit_info_modal.unit_type_unknown")}
         </div>
         ${secondsLeft > 0
