@@ -65,7 +65,9 @@ export class ReplayPanel extends LitElement implements Layer {
         @contextmenu=${(e) => e.preventDefault()}
       >
         <label class="block mb-1 text-white" translate="no">
-          ${translateText("replay_panel.replay_speed")}
+          ${this.game?.config().gameConfig().gameType === GameType.Singleplayer
+            ? translateText("replay_panel.game_speed")
+            : translateText("replay_panel.replay_speed")}
         </label>
         <div class="grid grid-cols-2 gap-1">
           <button
