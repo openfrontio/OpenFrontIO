@@ -153,14 +153,12 @@ export interface AllianceExpiredUpdate {
 
 export interface VoteForPeaceUpdate {
   type: GameUpdateType.VoteForPeace;
-  voteID: number;
   playerID: number;
   leaderID: number;
 }
 
 export interface VoteForPeaceReplyUpdate {
   type: GameUpdateType.VoteForPeaceReply;
-  voteID: number;
   playerID: number;
   accepted: boolean;
 }

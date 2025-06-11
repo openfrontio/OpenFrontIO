@@ -569,29 +569,21 @@ export class EventsDisplay extends LitElement implements Layer {
     const leader = this.game.playerBySmallID(event.leaderID) as PlayerView;
 
     this.addEvent({
-      description: `An alliance you are participating in has fought hard can now vote for peace. This will conclude hostilities, and the alliance-leader will be awarded the win.`,
+      description: `An alliance you are participating in can now vote for peace, ending the game. 
+      If those who vote 'Yes' exceed the combined percentage required to win, this game will end. The voter with
+      the largest percentage of land will be considered the winner.
+      If not, the game will continue.`,
       type: MessageType.VOTE_FOR_PEACE,
       unsafeDescription: false,
       highlight: true,
       createdAt: this.game.ticks(),
       buttons: [
         {
-          text: "Focus On Leader",
-          className: "btn-gray",
-          action: () => this.eventBus.emit(new GoToPlayerEvent(leader)),
-          preventClose: true,
-        },
-        {
           text: "Accept",
           className: "btn",
           action: () =>
             this.eventBus.emit(
-              new SendAllianceWinVoteReplyIntentEvent(
-                leader,
-                myPlayer,
-                true,
-                event.voteID,
-              ),
+              new SendAllianceWinVoteReplyIntentEvent(leader, myPlayer, true),
             ),
         },
         {
@@ -599,12 +591,7 @@ export class EventsDisplay extends LitElement implements Layer {
           className: "btn-info",
           action: () =>
             this.eventBus.emit(
-              new SendAllianceWinVoteReplyIntentEvent(
-                leader,
-                myPlayer,
-                false,
-                event.voteID,
-              ),
+              new SendAllianceWinVoteReplyIntentEvent(leader, myPlayer, false),
             ),
         },
       ],

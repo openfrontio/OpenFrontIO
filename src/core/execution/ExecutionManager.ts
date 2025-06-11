@@ -5,6 +5,7 @@ import { ClientID, GameID, Intent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
+import { AllianceWinVoteReplyExecution } from "./alliance/AllianceWinVoteReplyExecution";
 import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
 import { AttackExecution } from "./AttackExecution";
 import { BoatRetreatExecution } from "./BoatRetreatExecution";
@@ -92,6 +93,12 @@ export class Executor {
         );
       case "breakAlliance":
         return new BreakAllianceExecution(player, intent.recipient);
+      case "allianceWinVoteReply":
+        return new AllianceWinVoteReplyExecution(
+          player,
+          intent.accept,
+          intent.leader,
+        );
       case "targetPlayer":
         return new TargetPlayerExecution(player, intent.target);
       case "emoji":
