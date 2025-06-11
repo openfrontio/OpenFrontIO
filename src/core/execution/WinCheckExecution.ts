@@ -60,10 +60,9 @@ export class WinCheckExecution implements Execution {
       game.setWinner(max, game.stats().stats());
       console.log(`${max.name()} has won the game`);
       this.active = false;
-    } else if (!game.isVoting()) {
-      // There's a chance that there's an alliance that can trigger a peaceful victory.
+    } else if (game.runningVote() === undefined) {
       const alliances: Player[][] = this.findUniqueAlliances();
-      alliances.forEach((alliance, index) => {
+      alliances.forEach((alliance) => {
         let percentageOfLandOwned: number = 0;
         alliance.forEach((player) => {
           const playerLandOwnedPercent =
@@ -71,9 +70,28 @@ export class WinCheckExecution implements Execution {
           percentageOfLandOwned += playerLandOwnedPercent;
         });
         if (percentageOfLandOwned > game.config().percentageTilesOwnedToWin()) {
-          game.voteForPeace(alliance);
+          game.createVoteForPeace(alliance);
         }
       });
+    } else if (game.runningVote() !== undefined && game.runningVote !== null) {
+      let votePercentage = 0;
+      const vote = game.runningVote();
+      const voters = [...vote.results.keys()];
+      voters.forEach((voter) => {
+        if (vote.results.get(voter) === true) {
+          const playerLandOwnedPercent =
+            (voter.numTilesOwned() / numTilesWithoutFallout) * 100;
+          votePercentage += playerLandOwnedPercent;
+        }
+      });
+
+      if (votePercentage >= game.config().percentageTilesOwnedToWin()) {
+        const players = voters.sort(
+          (a, b) => b.numTilesOwned() - a.numTilesOwned(),
+        );
+        game.setWinner(players[0], game.stats().stats());
+        this.active = false;
+      }
     }
   }
 
