@@ -126,10 +126,23 @@ export class UILayer implements Layer {
         this.drawHealthBar(unit);
         break;
       }
-      case UnitType.SAMLauncher:
       case UnitType.MissileSilo:
-        if (unit.isActive() && unit.isInCooldown()) {
-          const endTick = unit.ticksLeftInCooldown() || 0;
+        if (
+          unit.isActive() &&
+          unit.isInCooldown() &&
+          !this.allProgressBars.has(unit.id())
+        ) {
+          const endTick = this.game.config().SiloCooldown();
+          this.drawLoadingBar(unit, endTick);
+        }
+        break;
+      case UnitType.SAMLauncher:
+        if (
+          unit.isActive() &&
+          unit.isInCooldown() &&
+          !this.allProgressBars.has(unit.id())
+        ) {
+          const endTick = this.game.config().SAMCooldown();
           this.drawLoadingBar(unit, endTick);
         }
         break;
@@ -284,6 +297,12 @@ export class UILayer implements Layer {
     this.allProgressBars.forEach((progressBarInfo, unitId) => {
       const progress =
         (currentTick - progressBarInfo.startTick) / progressBarInfo.endTick;
+      console.log(
+        progress,
+        currentTick,
+        progressBarInfo.startTick,
+        progressBarInfo.endTick,
+      );
       if (progress >= 1 || !progressBarInfo.unit.isActive()) {
         this.allProgressBars.get(unitId)?.progressBar.clear();
         this.allProgressBars.delete(unitId);
