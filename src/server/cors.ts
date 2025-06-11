@@ -20,12 +20,12 @@ function getLocalIP() {
 const config = getServerConfigFromServer();
 const origin = config.origin();
 
-const allowedOrigins = [origin];
+const allowedOrigins = [origin, "capacitor://localhost", "http://localhost"];
 
 if (config.env() === GameEnv.Dev) {
   const localIp = getLocalIP();
   if (localIp) {
-    allowedOrigins.push(`http://${localIp}:9000`, `https://${localIp}:9000`);
+    allowedOrigins.push(`http://${localIp}:9000`);
   }
 }
 
