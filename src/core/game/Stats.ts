@@ -85,6 +85,9 @@ export interface Stats {
   // Player captures a unit of type
   unitCapture(player: Player, type: OtherUnitType): void;
 
+  // Player upgrades a unit of type
+  unitUpgrade(player: Player, type: OtherUnitType): void;
+
   // Player destroys a unit of type
   unitDestroy(player: Player, type: OtherUnitType): void;
 

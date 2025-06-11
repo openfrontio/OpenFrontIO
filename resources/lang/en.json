@@ -400,7 +400,8 @@
     "sams": "SAMs",
     "warships": "Warships",
     "health": "Health",
-    "attitude": "Attitude"
+    "attitude": "Attitude",
+    "levels": "Levels"
   },
   "events_display": {
     "retreating": "retreating",
@@ -411,7 +412,9 @@
     "unit_type_unknown": "Unknown",
     "close": "Close",
     "cooldown": "Cooldown",
-    "type": "Type"
+    "type": "Type",
+    "upgrade": "Upgrade",
+    "level": "Level"
   },
   "relation": {
     "hostile": "Hostile",
@@ -443,7 +446,8 @@
     "alliances": "Alliances"
   },
   "replay_panel": {
-    "replay_speed": "Replay speed"
+    "replay_speed": "Replay speed",
+    "game_speed": "Game speed"
   },
   "error_modal": {
     "crashed": "Game crashed!",

@@ -34,9 +34,19 @@ export class MissileSiloExecution implements Execution {
       }
     }
 
-    const cooldown = this.silo.ticksLeftInCooldown();
+    const frontTime = this.silo.ticksLeftInCooldown();
+    if (frontTime === undefined) {
+      return;
+    }
+
+    const cooldown =
+      this.mg.config().SiloCooldown() - (this.mg.ticks() - frontTime);
     if (typeof cooldown === "number" && cooldown >= 0) {
       this.silo.touch();
+    }
+
+    if (cooldown <= 0) {
+      this.silo.reloadMissile();
     }
   }
 

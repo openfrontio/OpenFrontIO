@@ -128,7 +128,7 @@ export class UILayer implements Layer {
       }
       case UnitType.SAMLauncher:
       case UnitType.MissileSilo:
-        if (unit.isActive() && unit.isCooldown()) {
+        if (unit.isActive() && unit.isInCooldown()) {
           const endTick = unit.ticksLeftInCooldown() || 0;
           this.drawLoadingBar(unit, endTick);
         }

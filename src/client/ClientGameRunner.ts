@@ -268,8 +268,10 @@ export class ClientGameRunner {
     });
     const worker = this.worker;
     const keepWorkerAlive = () => {
-      worker.sendHeartbeat();
-      requestAnimationFrame(keepWorkerAlive);
+      if (this.isActive) {
+        worker.sendHeartbeat();
+        requestAnimationFrame(keepWorkerAlive);
+      }
     };
     requestAnimationFrame(keepWorkerAlive);
 
@@ -329,8 +331,10 @@ export class ClientGameRunner {
   }
 
   public stop(saveFullGame: boolean = false) {
-    this.worker.cleanup();
+    if (!this.isActive) return;
+
     this.isActive = false;
+    this.worker.cleanup();
     this.transport.leaveGame(saveFullGame);
     if (this.connectionCheckInterval) {
       clearInterval(this.connectionCheckInterval);
@@ -516,12 +520,13 @@ export class ClientGameRunner {
     if (this.transport.isLocal) {
       return;
     }
-    const timeSinceLastMessage = Date.now() - this.lastMessageTime;
+    const now = Date.now();
+    const timeSinceLastMessage = now - this.lastMessageTime;
     if (timeSinceLastMessage > 5000) {
       console.log(
         `No message from server for ${timeSinceLastMessage} ms, reconnecting`,
       );
-      this.lastMessageTime = Date.now();
+      this.lastMessageTime = now;
       this.transport.reconnect();
     }
   }
@@ -554,26 +559,25 @@ function showErrorModal(
   const button = document.createElement("button");
   button.textContent = translateText("error_modal.copy_clipboard");
   button.className = "copy-btn";
-  button.addEventListener("click", () => {
-    navigator.clipboard
-      .writeText(content)
-      .then(() => (button.textContent = translateText("error_modal.copied")))
-      .catch(
-        () => (button.textContent = translateText("error_modal.failed_copy")),
-      );
-  });
-
-  const closeButton = document.createElement("button");
-  closeButton.textContent = "X";
-  closeButton.className = "close-btn";
-  closeButton.addEventListener("click", () => {
-    modal.style.display = "none";
+  button.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      button.textContent = translateText("error_modal.copied");
+    } catch {
+      button.textContent = translateText("error_modal.failed_copy");
+    }
   });
 
   // Add to modal
   modal.appendChild(pre);
   modal.appendChild(button);
   if (closable) {
+    const closeButton = document.createElement("button");
+    closeButton.textContent = "X";
+    closeButton.className = "close-btn";
+    closeButton.addEventListener("click", () => {
+      modal.remove();
+    });
     modal.appendChild(closeButton);
   }
 
