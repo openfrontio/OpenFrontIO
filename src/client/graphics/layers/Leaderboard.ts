@@ -1,6 +1,5 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { translateText } from "../../../client/Utils";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
@@ -348,7 +347,7 @@ export class Leaderboard extends LitElement implements Layer {
                 @click=${() => this.handleRowClickPlayer(player.player)}
               >
                 <div>${player.position}</div>
-                <div class="player-name">${unsafeHTML(player.name)}</div>
+                <div class="player-name">${player.name}</div>
                 <div>${player.score}</div>
                 <div>${player.gold}</div>
                 <div>${player.troops}</div>
