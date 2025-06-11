@@ -59,11 +59,19 @@ class Client {
   constructor() {}
 
   initialize(): void {
+    const gameVersion = document.getElementById(
+      "game-version",
+    ) as HTMLDivElement;
+    if (!gameVersion) {
+      console.warn("Game version element not found");
+    }
+    fetch("/version.txt")
+      .then((response) => (response.ok ? response.text() : "Failed to load"))
+      .then((version) => (gameVersion.innerText = version));
+
     const newsModal = document.querySelector("news-modal") as NewsModal;
     if (!newsModal) {
       console.warn("News modal element not found");
-    } else {
-      console.log("News modal element found");
     }
     newsModal instanceof NewsModal;
     const newsButton = document.querySelector("news-button") as NewsButton;
@@ -72,6 +80,9 @@ class Client {
     } else {
       console.log("News button element found");
     }
+    fetch("/changelog.md")
+      .then((response) => (response.ok ? response.text() : "Failed to load"))
+      .then((changelog) => (newsModal.markdown = changelog));
 
     // Comment out to show news button.
     // newsButton.hidden = true;
@@ -79,13 +90,13 @@ class Client {
     const langSelector = document.querySelector(
       "lang-selector",
     ) as LangSelector;
-    const LanguageModal = document.querySelector(
-      "lang-selector",
+    const languageModal = document.querySelector(
+      "language-modal",
     ) as LanguageModal;
     if (!langSelector) {
       console.warn("Lang selector element not found");
     }
-    if (!LanguageModal) {
+    if (!languageModal) {
       console.warn("Language modal element not found");
     }
 

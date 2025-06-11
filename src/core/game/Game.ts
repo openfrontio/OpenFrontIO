@@ -130,6 +130,7 @@ export interface UnitInfo {
   maxHealth?: number;
   damage?: number;
   constructionDuration?: number;
+  upgradable?: boolean;
 }
 
 export enum UnitType {
@@ -385,8 +386,9 @@ export interface Unit {
 
   // SAMs & Missile Silos
   launch(): void;
-  ticksLeftInCooldown(): Tick | undefined;
+  reloadMissile(): void;
   isInCooldown(): boolean;
+  ticksLeftInCooldown(): Tick | undefined;
 
   // Trade Ships
   setSafeFromPirates(): void; // Only for trade ships
@@ -395,6 +397,10 @@ export interface Unit {
   // Construction
   constructionType(): UnitType | null;
   setConstructionType(type: UnitType): void;
+
+  // Upgradable Structures
+  level(): number;
+  increaseLevel(): void;
 
   // Warships
   setPatrolTile(tile: TileRef): void;
@@ -471,6 +477,7 @@ export interface Player {
     spawnTile: TileRef,
     params: UnitParams<T>,
   ): Unit;
+  upgradeUnit(unit: Unit): void;
 
   captureUnit(unit: Unit): void;
 

@@ -203,7 +203,9 @@
             />
           </g>
         </svg>
-        <div class="l-header__highlightText">v23.0</div>
+        <div id="game-version" class="l-header__highlightText">
+          Loading version...
+        </div>
       </div>
     </header>
     <div class="bg-image"></div>
@@ -304,6 +306,7 @@
       class="flex flex-column gap-2 fixed right-[10px] top-[10px] z-50 flex flex-col w-32 sm:w-32 lg:w-48"
     >
       <options-menu></options-menu>
+      <replay-panel></replay-panel>
       <player-info-overlay></player-info-overlay>
     </div>
     <div

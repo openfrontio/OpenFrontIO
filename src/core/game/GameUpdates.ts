@@ -80,7 +80,9 @@ export interface UnitUpdate {
   targetTile?: TileRef; // Only for nukes
   health?: number;
   constructionType?: UnitType;
-  ticksLeftInCooldown?: Tick;
+  missileTimerQueue: number[];
+  readyMissileCount: number;
+  level: number;
 }
 
 export interface AttackUpdate {

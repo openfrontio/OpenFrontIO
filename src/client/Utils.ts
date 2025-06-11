@@ -150,3 +150,21 @@ export function getMessageTypeClasses(type: MessageType): string {
       return severityColors["white"];
   }
 }
+
+export function getModifierKey(): string {
+  const isMac = /Mac/.test(navigator.userAgent);
+  if (isMac) {
+    return "⌘"; // Command key
+  } else {
+    return "Ctrl";
+  }
+}
+
+export function getAltKey(): string {
+  const isMac = /Mac/.test(navigator.userAgent);
+  if (isMac) {
+    return "⌥"; // Option key
+  } else {
+    return "Alt";
+  }
+}
