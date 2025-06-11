@@ -20,6 +20,7 @@ import {
   OTHER_INDEX_CAPTURE,
   OTHER_INDEX_DESTROY,
   OTHER_INDEX_LOST,
+  OTHER_INDEX_UPGRADE,
   OtherUnitType,
   PlayerStats,
   unitTypeToBombUnit,
@@ -232,6 +233,10 @@ export class StatsImpl implements Stats {
 
   unitCapture(player: Player, type: OtherUnitType): void {
     this._addOtherUnit(player, type, OTHER_INDEX_CAPTURE, 1);
+  }
+
+  unitUpgrade(player: Player, type: OtherUnitType): void {
+    this._addOtherUnit(player, type, OTHER_INDEX_UPGRADE, 1);
   }
 
   unitDestroy(player: Player, type: OtherUnitType): void {
