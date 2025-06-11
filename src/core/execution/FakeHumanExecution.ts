@@ -1,9 +1,9 @@
-import { consolex } from "../Consolex";
 import {
   Cell,
   Difficulty,
   Execution,
   Game,
+  Gold,
   Nation,
   Player,
   PlayerID,
@@ -116,7 +116,7 @@ export class FakeHumanExecution implements Execution {
     if (this.mg.inSpawnPhase()) {
       const rl = this.randomLand();
       if (rl === null) {
-        consolex.warn(`cannot spawn ${this.nation.playerInfo.name}`);
+        console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
         return;
       }
       this.mg.addExecution(new SpawnExecution(this.nation.playerInfo, rl));
@@ -262,7 +262,6 @@ export class FakeHumanExecution implements Execution {
       throw new Error("not initialized");
     }
     this.behavior.forgetOldEnemies();
-    this.behavior.checkIncomingAttacks();
     this.behavior.assistAllies();
     const enemy = this.behavior.selectEnemy();
     if (!enemy) return;
@@ -283,7 +282,7 @@ export class FakeHumanExecution implements Execution {
     this.lastEmojiSent.set(enemy, this.mg.ticks());
     this.mg.addExecution(
       new EmojiExecution(
-        this.player.id(),
+        this.player,
         enemy.id(),
         this.random.randElement(this.heckleEmoji),
       ),
@@ -355,7 +354,7 @@ export class FakeHumanExecution implements Execution {
     const tick = this.mg.ticks();
     this.lastNukeSent.push([tick, tile]);
     this.mg.addExecution(
-      new NukeExecution(UnitType.AtomBomb, this.player.id(), tile),
+      new NukeExecution(UnitType.AtomBomb, this.player, tile),
     );
   }
 
@@ -374,13 +373,20 @@ export class FakeHumanExecution implements Execution {
             return 50_000;
           case UnitType.Port:
             return 10_000;
-          case UnitType.SAMLauncher:
-            return 5_000;
           default:
             return 0;
         }
       })
       .reduce((prev, cur) => prev + cur, 0);
+
+    // Avoid areas defended by SAM launchers
+    const dist50 = euclDistFN(tile, 50, false);
+    tileValue -=
+      50_000 *
+      targets.filter(
+        (unit) =>
+          unit.type() === UnitType.SAMLauncher && dist50(this.mg, unit.tile()),
+      ).length;
 
     // Prefer tiles that are closer to a silo
     const siloTiles = silos.map((u) => u.tile());
@@ -415,7 +421,7 @@ export class FakeHumanExecution implements Execution {
     }
     this.mg.addExecution(
       new TransportShipExecution(
-        this.player.id(),
+        this.player,
         other.id(),
         closest.y,
         this.player.troops() / 5,
@@ -427,46 +433,45 @@ export class FakeHumanExecution implements Execution {
   private handleUnits() {
     const player = this.player;
     if (player === null) return;
-    const ports = player.units(UnitType.Port);
-    if (ports.length === 0 && player.gold() > this.cost(UnitType.Port)) {
-      const oceanTiles = Array.from(player.borderTiles()).filter((t) =>
-        this.mg.isOceanShore(t),
-      );
-      if (oceanTiles.length > 0) {
-        const buildTile = this.random.randElement(oceanTiles);
-        this.mg.addExecution(
-          new ConstructionExecution(player.id(), buildTile, UnitType.Port),
-        );
-      }
-      return;
-    }
-    this.maybeSpawnStructure(UnitType.City, 2);
-    if (this.maybeSpawnWarship()) {
-      return;
-    }
-    this.maybeSpawnStructure(UnitType.MissileSilo, 1);
+    return (
+      this.maybeSpawnStructure(UnitType.Port, 1) ||
+      this.maybeSpawnStructure(UnitType.City, 2) ||
+      this.maybeSpawnWarship() ||
+      this.maybeSpawnStructure(UnitType.MissileSilo, 1)
+    );
   }
 
-  private maybeSpawnStructure(type: UnitType, maxNum: number) {
+  private maybeSpawnStructure(type: UnitType, maxNum: number): boolean {
     if (this.player === null) throw new Error("not initialized");
     const units = this.player.units(type);
     if (units.length >= maxNum) {
-      return;
+      return false;
     }
     if (this.player.gold() < this.cost(type)) {
-      return;
+      return false;
     }
-    const tile = this.randTerritoryTile(this.player);
+    const tile = this.structureSpawnTile(type);
     if (tile === null) {
-      return;
+      return false;
     }
     const canBuild = this.player.canBuild(type, tile);
     if (canBuild === false) {
-      return;
+      return false;
     }
-    this.mg.addExecution(
-      new ConstructionExecution(this.player.id(), tile, type),
-    );
+    this.mg.addExecution(new ConstructionExecution(this.player, tile, type));
+    return true;
+  }
+
+  private structureSpawnTile(type: UnitType): TileRef | null {
+    if (this.player === null) throw new Error("not initialized");
+    const tiles =
+      type === UnitType.Port
+        ? Array.from(this.player.borderTiles()).filter((t) =>
+            this.mg.isOceanShore(t),
+          )
+        : Array.from(this.player.tiles());
+    if (tiles.length === 0) return null;
+    return this.random.randElement(tiles);
   }
 
   private maybeSpawnWarship(): boolean {
@@ -488,15 +493,11 @@ export class FakeHumanExecution implements Execution {
       }
       const canBuild = this.player.canBuild(UnitType.Warship, targetTile);
       if (canBuild === false) {
-        consolex.warn("cannot spawn destroyer");
+        console.warn("cannot spawn destroyer");
         return false;
       }
       this.mg.addExecution(
-        new ConstructionExecution(
-          this.player.id(),
-          targetTile,
-          UnitType.Warship,
-        ),
+        new ConstructionExecution(this.player, targetTile, UnitType.Warship),
       );
       return true;
     }
@@ -544,7 +545,7 @@ export class FakeHumanExecution implements Execution {
     return null;
   }
 
-  private cost(type: UnitType): number {
+  private cost(type: UnitType): Gold {
     if (this.player === null) throw new Error("not initialized");
     return this.mg.unitInfo(type).cost(this.player);
   }
@@ -567,7 +568,7 @@ export class FakeHumanExecution implements Execution {
 
     this.mg.addExecution(
       new TransportShipExecution(
-        this.player.id(),
+        this.player,
         this.mg.owner(dst).id(),
         dst,
         this.player.troops() / 5,

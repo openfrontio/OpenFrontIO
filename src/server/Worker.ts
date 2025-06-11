@@ -5,15 +5,21 @@ import ipAnonymize from "ip-anonymize";
 import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
+import { z } from "zod/v4";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
-import { ClientMessageSchema, GameConfig, GameRecord } from "../core/Schemas";
+import {
+  ClientJoinMessageSchema,
+  GameRecord,
+  GameRecordSchema,
+} from "../core/Schemas";
+import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
 import { archive, readGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
-import { verifyClientToken } from "./jwt";
+import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
@@ -83,7 +89,13 @@ export function startWorker() {
         return res.status(400).json({ error: "Game ID is required" });
       }
       const clientIP = req.ip || req.socket.remoteAddress || "unknown";
-      const gc = req.body?.gameConfig as GameConfig;
+      const result = CreateGameInputSchema.safeParse(req.body);
+      if (!result.success) {
+        const error = z.prettifyError(result.error);
+        return res.status(400).json({ error });
+      }
+
+      const gc = result.data;
       if (
         gc?.gameType === GameType.Public &&
         req.headers[config.adminHeader()] !== config.adminToken()
@@ -91,9 +103,7 @@ export function startWorker() {
         log.warn(
           `cannot create public game ${id}, ip ${ipAnonymize(clientIP)} incorrect admin token`,
         );
-        return res
-          .status(400)
-          .json({ error: "Invalid admin token for public game creation" });
+        return res.status(401).send("Unauthorized");
       }
 
       // Double-check this worker should host this game
@@ -138,9 +148,15 @@ export function startWorker() {
   app.put(
     "/api/game/:id",
     gatekeeper.httpHandler(LimiterType.Put, async (req, res) => {
+      const result = GameInputSchema.safeParse(req.body);
+      if (!result.success) {
+        const error = z.prettifyError(result.error);
+        return res.status(400).json({ error });
+      }
+      const config = result.data;
       // TODO: only update public game if from local host
       const lobbyID = req.params.id;
-      if (req.body.gameType === GameType.Public) {
+      if (config.gameType === GameType.Public) {
         log.info(`cannot update game ${lobbyID} to public`);
         return res.status(400).json({ error: "Cannot update public game" });
       }
@@ -161,18 +177,7 @@ export function startWorker() {
           .status(400)
           .json({ error: "Cannot update game after it has started" });
       }
-      game.updateGameConfig({
-        gameMap: req.body.gameMap,
-        difficulty: req.body.difficulty,
-        infiniteGold: req.body.infiniteGold,
-        infiniteTroops: req.body.infiniteTroops,
-        instantBuild: req.body.instantBuild,
-        bots: req.body.bots,
-        disableNPCs: req.body.disableNPCs,
-        disabledUnits: req.body.disabledUnits,
-        gameMode: req.body.gameMode,
-        playerTeams: req.body.playerTeams,
-      });
+      game.updateGameConfig(config);
       res.status(200).json({ success: true });
     }),
   );
@@ -241,13 +246,14 @@ export function startWorker() {
   app.post(
     "/api/archive_singleplayer_game",
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
-      const gameRecord: GameRecord = req.body;
-
-      if (!gameRecord) {
-        log.info("game record not found in request");
-        res.status(404).json({ error: "Game record not found" });
-        return;
+      const result = GameRecordSchema.safeParse(req.body);
+      if (!result.success) {
+        const error = z.prettifyError(result.error);
+        log.info(error);
+        return res.status(400).json({ error });
       }
+
+      const gameRecord: GameRecord = result.data;
       archive(gameRecord);
       res.json({
         success: true,
@@ -287,11 +293,17 @@ export function startWorker() {
           : forwarded || req.socket.remoteAddress || "unknown";
 
         try {
-          // Process WebSocket messages as in your original code
           // Parse and handle client messages
-          const clientMsg = ClientMessageSchema.parse(
+          const parsed = ClientJoinMessageSchema.safeParse(
             JSON.parse(message.toString()),
           );
+          if (!parsed.success) {
+            const error = z.prettifyError(parsed.error);
+            log.warn("Error parsing join message client", error);
+            ws.close();
+            return;
+          }
+          const clientMsg = parsed.data;
 
           if (clientMsg.type === "join") {
             // Verify this worker should handle this game
@@ -308,11 +320,26 @@ export function startWorker() {
               config,
             );
 
+            let roles: string[] | undefined;
+
+            // Check user roles
+            if (claims !== null) {
+              const result = await getUserMe(clientMsg.token, config);
+              if (result === false) {
+                log.warn("Token is not valid", claims);
+                return;
+              }
+              roles = result.player.roles;
+            }
+
+            // TODO: Validate client settings based on roles
+
             // Create client and add to game
             const client = new Client(
               clientMsg.clientID,
               persistentId,
-              claims ?? null,
+              claims,
+              roles,
               ip,
               clientMsg.username,
               ws,

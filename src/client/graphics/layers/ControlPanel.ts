@@ -2,8 +2,8 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
+import { Gold } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
 import { AttackRatioEvent } from "../../InputHandler";
 import { SendSetTargetTroopRatioEvent } from "../../Transport";
 import { renderNumber, renderTroops } from "../../Utils";
@@ -13,7 +13,6 @@ import { Layer } from "./Layer";
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Layer {
   public game: GameView;
-  public clientID: ClientID;
   public eventBus: EventBus;
   public uiState: UIState;
 
@@ -48,10 +47,10 @@ export class ControlPanel extends LitElement implements Layer {
   private _manpower: number = 0;
 
   @state()
-  private _gold: number;
+  private _gold: Gold;
 
   @state()
-  private _goldPerSecond: number;
+  private _goldPerSecond: Gold;
 
   private _lastPopulationIncreaseRate: number;
 
@@ -126,7 +125,7 @@ export class ControlPanel extends LitElement implements Layer {
     this._troops = player.troops();
     this._workers = player.workers();
     this.popRate = this.game.config().populationIncreaseRate(player) * 10;
-    this._goldPerSecond = this.game.config().goldAdditionRate(player) * 10;
+    this._goldPerSecond = this.game.config().goldAdditionRate(player) * 10n;
 
     this.currentTroopRatio = player.troops() / player.population();
     this.requestUpdate();

@@ -33,7 +33,8 @@ export type Intent =
   | BuildUnitIntent
   | EmbargoIntent
   | QuickChatIntent
-  | MoveWarshipIntent;
+  | MoveWarshipIntent
+  | MarkDisconnectedIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -56,6 +57,9 @@ export type TargetTroopRatioIntent = z.infer<
 export type BuildUnitIntent = z.infer<typeof BuildUnitIntentSchema>;
 export type MoveWarshipIntent = z.infer<typeof MoveWarshipIntentSchema>;
 export type QuickChatIntent = z.infer<typeof QuickChatIntentSchema>;
+export type MarkDisconnectedIntent = z.infer<
+  typeof MarkDisconnectedIntentSchema
+>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -112,7 +116,7 @@ export enum LogSeverity {
   Fatal = "FATAL",
 }
 
-const GameConfigSchema = z.object({
+export const GameConfigSchema = z.object({
   gameMap: z.nativeEnum(GameMapType),
   difficulty: z.nativeEnum(Difficulty),
   gameType: z.nativeEnum(GameType),
@@ -166,6 +170,7 @@ const BaseIntentSchema = z.object({
     "attack",
     "cancel_attack",
     "spawn",
+    "mark_disconnected",
     "boat",
     "cancel_boat",
     "name",
@@ -240,7 +245,7 @@ export const EmbargoIntentSchema = BaseIntentSchema.extend({
 export const DonateGoldIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate_gold"),
   recipient: ID,
-  gold: z.number().nullable(),
+  gold: z.bigint().nullable(),
 });
 
 export const DonateTroopIntentSchema = BaseIntentSchema.extend({
@@ -290,10 +295,16 @@ export const QuickChatIntentSchema = BaseIntentSchema.extend({
   variables: z.record(SafeString).optional(),
 });
 
+export const MarkDisconnectedIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("mark_disconnected"),
+  isDisconnected: z.boolean(),
+});
+
 const IntentSchema = z.union([
   AttackIntentSchema,
   CancelAttackIntentSchema,
   SpawnIntentSchema,
+  MarkDisconnectedIntentSchema,
   BoatAttackIntentSchema,
   CancelBoatIntentSchema,
   AllianceRequestIntentSchema,
@@ -446,10 +457,12 @@ export const GameEndInfoSchema = GameStartInfoSchema.extend({
 });
 export type GameEndInfo = z.infer<typeof GameEndInfoSchema>;
 
+const GitCommitSchema = z.string().regex(/^[0-9a-fA-F]{40}$/);
+
 export const AnalyticsRecordSchema = z.object({
   info: GameEndInfoSchema,
   version: z.literal("v0.0.2"),
-  gitCommit: z.string(),
+  gitCommit: GitCommitSchema,
 });
 export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;
 

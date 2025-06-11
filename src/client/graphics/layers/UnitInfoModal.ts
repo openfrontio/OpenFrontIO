@@ -1,5 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { translateText } from "../../../client/Utils";
 import { UnitType } from "../../../core/game/Game";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
@@ -133,14 +134,17 @@ export class UnitInfoModal extends LitElement implements Layer {
           .x}px; top: ${this.y}px; position: absolute;"
       >
         <div style="margin-bottom: 8px; font-size: 16px; font-weight: bold;">
-          Structure Info
+          ${translateText("unit_info_modal.structure_info")}
         </div>
         <div style="margin-bottom: 4px;">
-          <strong>Type:</strong> ${this.unit.type?.() ?? "Unknown"}
+          <strong>${translateText("unit_info_modal.type")}:</strong>
+          ${translateText(+"unit_type." + this.unit.type?.().toLowerCase()) ??
+          translateText("unit_info_modal.unit_type_unknown")}
         </div>
         ${secondsLeft > 0
           ? html`<div style="margin-bottom: 4px;">
-              <strong>Cooldown:</strong> ${secondsLeft}s
+              <strong>${translateText("unit_info_modal.cooldown")}</strong>
+              ${secondsLeft}s
             </div>`
           : ""}
         <div style="margin-top: 14px; display: flex; justify-content: center;">
@@ -152,10 +156,10 @@ export class UnitInfoModal extends LitElement implements Layer {
               }
             }}
             class="close-button"
-            title="Close"
+            title="${translateText("unit_info_modal.close")}"
             style="width: 100px; height: 32px;"
           >
-            CLOSE
+            ${translateText("unit_info_modal.close")}
           </button>
         </div>
       </div>

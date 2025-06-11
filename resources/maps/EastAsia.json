@@ -1,10 +1,10 @@
 {
-  "name": "Japan",
+  "name": "East Asia",
   "width": 1562,
   "height": 1646,
   "nations": [
     {
-      "coordinates": [1151, 709],
+      "coordinates": [1150, 660],
       "name": "Hokkaido",
       "strength": 1,
       "flag": "jp"
@@ -31,7 +31,7 @@
       "coordinates": [1162, 154],
       "name": "Sakhalin",
       "strength": 2,
-      "flag": ""
+      "flag": "Sakhalin"
     },
     {
       "coordinates": [571, 1116],
@@ -40,7 +40,7 @@
       "flag": "jp"
     },
     {
-      "coordinates": [8612, 1183],
+      "coordinates": [595, 1190],
       "name": "Shikoku",
       "strength": 2,
       "flag": "jp"

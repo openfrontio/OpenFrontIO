@@ -4,7 +4,8 @@ import { Tick } from "../core/game/Game";
 import { ClientID } from "../core/Schemas";
 
 export class Client {
-  public lastPing: number;
+  public lastPing: number = Date.now();
+  public isDisconnected: boolean = false;
 
   public hashes: Map<Tick, number> = new Map();
 
@@ -12,6 +13,7 @@ export class Client {
     public readonly clientID: ClientID,
     public readonly persistentID: string,
     public readonly claims: TokenPayload | null,
+    public readonly roles: string[] | undefined,
     public readonly ip: string,
     public readonly username: string,
     public readonly ws: WebSocket,

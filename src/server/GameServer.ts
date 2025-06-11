@@ -1,9 +1,9 @@
 import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
+import { z } from "zod/v4";
 import {
   ClientID,
-  ClientMessage,
   ClientMessageSchema,
   ClientSendWinnerMessage,
   GameConfig,
@@ -34,6 +34,8 @@ export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
 
   private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
+
+  private disconnectedTimeout = 1 * 30 * 1000; // 30 seconds
 
   private turns: Turn[] = [];
   private intents: Intent[] = [];
@@ -145,7 +147,9 @@ export class GameServer {
           existingIP: ipAnonymize(conflicting.ip),
           existingPersistentID: conflicting.persistentID,
         });
-        return;
+        // Kick the existing client instead of the new one, because this was causing issues when
+        // a client wanted to replay the game afterwards.
+        this.kickClient(conflicting.clientID);
       }
     }
 
@@ -164,6 +168,10 @@ export class GameServer {
         });
         return;
       }
+
+      client.isDisconnected = existing.isDisconnected;
+      client.lastPing = existing.lastPing;
+
       existing.ws.removeAllListeners("message");
       this.activeClients = this.activeClients.filter((c) => c !== existing);
     }
@@ -174,20 +182,31 @@ export class GameServer {
 
     this.allClients.set(client.clientID, client);
 
+    client.ws.removeAllListeners("message");
     client.ws.on(
       "message",
       gatekeeper.wsHandler(client.ip, async (message: string) => {
         try {
-          let clientMsg: ClientMessage | null = null;
-          try {
-            clientMsg = ClientMessageSchema.parse(JSON.parse(message));
-          } catch (error) {
-            throw Error(`error parsing schema for ${ipAnonymize(client.ip)}`);
+          const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
+          if (!parsed.success) {
+            const error = z.prettifyError(parsed.error);
+            this.log.error("Failed to parse client message", error, {
+              clientID: client.clientID,
+            });
+            client.ws.close();
+            return;
           }
+          const clientMsg = parsed.data;
           if (clientMsg.type === "intent") {
             if (clientMsg.intent.clientID !== client.clientID) {
               this.log.warn(
                 `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
+              );
+              return;
+            }
+            if (clientMsg.intent.type === "mark_disconnected") {
+              this.log.warn(
+                `Should not receive mark_disconnected intent from client`,
               );
               return;
             }
@@ -221,6 +240,7 @@ export class GameServer {
         }
       }),
     );
+    client.ws.removeAllListeners("close");
     client.ws.on("close", () => {
       this.log.info("client disconnected", {
         clientID: client.clientID,
@@ -230,6 +250,7 @@ export class GameServer {
         (c) => c.clientID !== client.clientID,
       );
     });
+    client.ws.removeAllListeners("error");
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
         client.ws.close(1002);
@@ -353,6 +374,7 @@ export class GameServer {
     this.intents = [];
 
     this.handleSynchronization();
+    this.checkDisconnectedStatus();
 
     let msg = "";
     try {
@@ -533,25 +555,58 @@ export class GameServer {
     }
   }
 
+  private checkDisconnectedStatus() {
+    if (this.turns.length % 5 !== 0) {
+      return;
+    }
+
+    const now = Date.now();
+    for (const [clientID, client] of this.allClients) {
+      if (
+        client.isDisconnected === false &&
+        now - client.lastPing > this.disconnectedTimeout
+      ) {
+        this.markClientDisconnected(client, true);
+      } else if (
+        client.isDisconnected &&
+        now - client.lastPing < this.disconnectedTimeout
+      ) {
+        this.markClientDisconnected(client, false);
+      }
+    }
+  }
+
+  private markClientDisconnected(client: Client, isDisconnected: boolean) {
+    client.isDisconnected = isDisconnected;
+    this.addIntent({
+      type: "mark_disconnected",
+      clientID: client.clientID,
+      isDisconnected: isDisconnected,
+    });
+  }
+
   private archiveGame() {
     this.log.info("archiving game", {
       gameID: this.id,
       winner: this.winner?.winner,
     });
-    const playerRecords: PlayerRecord[] = Array.from(
-      this.allClients.values(),
-    ).map((client) => {
-      const stats = this.winner?.allPlayersStats[client.clientID];
-      if (stats === undefined) {
-        this.log.warn(`Unable to find stats for clientID ${client.clientID}`);
-      }
-      return {
-        clientID: client.clientID,
-        username: client.username,
-        persistentID: client.persistentID,
-        stats,
-      } satisfies PlayerRecord;
-    });
+
+    // Players must stay in the same order as the game start info.
+    const playerRecords: PlayerRecord[] = this.gameStartInfo.players.map(
+      (player) => {
+        const stats = this.winner?.allPlayersStats[player.clientID];
+        if (stats === undefined) {
+          this.log.warn(`Unable to find stats for clientID ${player.clientID}`);
+        }
+        return {
+          clientID: player.clientID,
+          username: player.username,
+          persistentID:
+            this.allClients.get(player.clientID)?.persistentID ?? "",
+          stats,
+        } satisfies PlayerRecord;
+      },
+    );
     archive(
       createGameRecord(
         this.id,

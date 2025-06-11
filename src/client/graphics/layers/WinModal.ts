@@ -148,7 +148,24 @@ export class WinModal extends LitElement implements Layer {
   }
 
   innerHtml() {
-    return html``;
+    return html`<p>
+      <a
+        href="https://store.steampowered.com/app/3560670"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="
+          color: #4a9eff;
+          text-decoration: underline;
+          font-weight: 500;
+          transition: color 0.2s ease;
+          font-size: 24px;
+        "
+        onmouseover="this.style.color='#6db3ff'"
+        onmouseout="this.style.color='#4a9eff'"
+      >
+        ${translateText("win_modal.wishlist")}
+      </a>
+    </p>`;
   }
 
   show() {

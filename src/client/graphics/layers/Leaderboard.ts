@@ -4,7 +4,6 @@ import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { translateText } from "../../../client/Utils";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
 import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
 
@@ -36,7 +35,6 @@ export class GoToUnitEvent implements GameEvent {
 @customElement("leader-board")
 export class Leaderboard extends LitElement implements Layer {
   public game: GameView | null = null;
-  public clientID: ClientID | null = null;
   public eventBus: EventBus | null = null;
 
   players: Entry[] = [];
@@ -45,6 +43,12 @@ export class Leaderboard extends LitElement implements Layer {
   private _leaderboardHidden = true;
   private _shownOnInit = false;
   private showTopFive = true;
+
+  @state()
+  private _sortKey: "tiles" | "gold" | "troops" = "tiles";
+
+  @state()
+  private _sortOrder: "asc" | "desc" = "desc";
 
   init() {}
 
@@ -64,18 +68,39 @@ export class Leaderboard extends LitElement implements Layer {
     }
   }
 
+  private setSort(key: "tiles" | "gold" | "troops") {
+    if (this._sortKey === key) {
+      this._sortOrder = this._sortOrder === "asc" ? "desc" : "asc";
+    } else {
+      this._sortKey = key;
+      this._sortOrder = "desc";
+    }
+    this.updateLeaderboard();
+  }
+
   private updateLeaderboard() {
     if (this.game === null) throw new Error("Not initialized");
-    if (this.clientID === null) {
-      return;
-    }
-    const myPlayer =
-      this.game.playerViews().find((p) => p.clientID() === this.clientID) ??
-      null;
+    const myPlayer = this.game.myPlayer();
 
-    const sorted = this.game
-      .playerViews()
-      .sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+    let sorted = this.game.playerViews();
+
+    const compare = (a: number, b: number) =>
+      this._sortOrder === "asc" ? a - b : b - a;
+
+    switch (this._sortKey) {
+      case "gold":
+        sorted = sorted.sort((a, b) =>
+          compare(Number(a.gold()), Number(b.gold())),
+        );
+        break;
+      case "troops":
+        sorted = sorted.sort((a, b) => compare(a.troops(), b.troops()));
+        break;
+      default:
+        sorted = sorted.sort((a, b) =>
+          compare(a.numTilesOwned(), b.numTilesOwned()),
+        );
+    }
 
     const numTilesWithoutFallout =
       this.game.numLandTiles() - this.game.numTilesWithFallout();
@@ -181,6 +206,8 @@ export class Leaderboard extends LitElement implements Layer {
     th {
       background-color: rgb(31 41 55 / 0.5);
       color: white;
+      cursor: pointer;
+      user-select: none;
     }
     .myPlayer {
       font-weight: bold;
@@ -282,9 +309,30 @@ export class Leaderboard extends LitElement implements Layer {
             <tr>
               <th>${translateText("leaderboard.rank")}</th>
               <th>${translateText("leaderboard.player")}</th>
-              <th>${translateText("leaderboard.owned")}</th>
-              <th>${translateText("leaderboard.gold")}</th>
-              <th>${translateText("leaderboard.troops")}</th>
+              <th @click=${() => this.setSort("tiles")}>
+                ${translateText("leaderboard.owned")}
+                ${this._sortKey === "tiles"
+                  ? this._sortOrder === "asc"
+                    ? "⬆️"
+                    : "⬇️"
+                  : ""}
+              </th>
+              <th @click=${() => this.setSort("gold")}>
+                ${translateText("leaderboard.gold")}
+                ${this._sortKey === "gold"
+                  ? this._sortOrder === "asc"
+                    ? "⬆️"
+                    : "⬇️"
+                  : ""}
+              </th>
+              <th @click=${() => this.setSort("troops")}>
+                ${translateText("leaderboard.troops")}
+                ${this._sortKey === "troops"
+                  ? this._sortOrder === "asc"
+                    ? "⬆️"
+                    : "⬇️"
+                  : ""}
+              </th>
             </tr>
           </thead>
           <tbody>
