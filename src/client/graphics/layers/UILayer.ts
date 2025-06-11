@@ -297,12 +297,6 @@ export class UILayer implements Layer {
     this.allProgressBars.forEach((progressBarInfo, unitId) => {
       const progress =
         (currentTick - progressBarInfo.startTick) / progressBarInfo.endTick;
-      console.log(
-        progress,
-        currentTick,
-        progressBarInfo.startTick,
-        progressBarInfo.endTick,
-      );
       if (progress >= 1 || !progressBarInfo.unit.isActive()) {
         this.allProgressBars.get(unitId)?.progressBar.clear();
         this.allProgressBars.delete(unitId);
