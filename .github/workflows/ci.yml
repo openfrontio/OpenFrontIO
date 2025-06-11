@@ -56,7 +56,7 @@ jobs:
 
             const invalidFiles = files
               .filter(({ status }) => status !== 'removed')
-              .map(({ filename }) => filename)        
+              .map(({ filename }) => filename)
               .filter(filename => /[^\x00-\x7F]/.test(filename));
 
             if (invalidFiles.length > 0) {
