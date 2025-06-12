@@ -40,6 +40,8 @@ export enum GameUpdateType {
   Win,
   Hash,
   UnitIncoming,
+  BonusEvent,
+  RailRoadEvent,
 }
 
 export type GameUpdate =
@@ -56,7 +58,23 @@ export type GameUpdate =
   | EmojiUpdate
   | WinUpdate
   | HashUpdate
-  | UnitIncomingUpdate;
+  | UnitIncomingUpdate
+  | BonusEventUpdate
+  | RailRoadUpdate;
+
+export interface BonusEventUpdate {
+  type: GameUpdateType.BonusEvent;
+  tile: TileRef;
+  gold: number;
+  workers: number;
+  soldiers: number;
+}
+
+export interface RailRoadUpdate {
+  type: GameUpdateType.RailRoadEvent;
+  isActive: boolean;
+  tiles: TileRef[];
+}
 
 export interface TileUpdateWrapper {
   type: GameUpdateType.Tile;
@@ -83,6 +101,7 @@ export interface UnitUpdate {
   missileTimerQueue: number[];
   readyMissileCount: number;
   level: number;
+  hasTrainStation: boolean;
 }
 
 export interface AttackUpdate {

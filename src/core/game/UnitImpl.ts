@@ -28,6 +28,7 @@ export class UnitImpl implements Unit {
   private _troops: number;
   private _missileTimerQueue: number[] = [];
   private _readyMissileCount: number = 1;
+  private _hasTrainStation: boolean = false;
   private _patrolTile: TileRef | undefined;
   private _level: number = 1;
   constructor(
@@ -109,6 +110,7 @@ export class UnitImpl implements Unit {
       missileTimerQueue: this._missileTimerQueue,
       readyMissileCount: this._readyMissileCount,
       level: this.level(),
+      hasTrainStation: this._hasTrainStation,
     };
   }
 
@@ -335,6 +337,15 @@ export class UnitImpl implements Unit {
 
   level(): number {
     return this._level;
+  }
+
+  setTrainStation(): void {
+    this._hasTrainStation = true;
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  hasTrainStation(): boolean {
+    return this._hasTrainStation;
   }
 
   increaseLevel(): void {

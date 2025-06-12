@@ -71,6 +71,16 @@ export class PastelThemeDark implements Theme {
     });
   }
 
+  railroadColor(player: PlayerView): Colord {
+    const tc = this.territoryColor(player).rgba;
+    const color = colord({
+      r: Math.max(tc.r - 10, 0),
+      g: Math.max(tc.g - 10, 0),
+      b: Math.max(tc.b - 10, 0),
+    });
+    return color;
+  }
+
   borderColor(player: PlayerView): Colord {
     if (this.borderColorCache.has(player.id())) {
       return this.borderColorCache.get(player.id())!;

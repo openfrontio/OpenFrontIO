@@ -120,6 +120,9 @@ export class UnitView {
   level(): number {
     return this.data.level;
   }
+  hasTrainStation(): boolean {
+    return this.data.hasTrainStation;
+  }
 }
 
 export class PlayerView {
