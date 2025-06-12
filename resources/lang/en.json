@@ -371,6 +371,7 @@
     "your_team": "Your team won!",
     "other_team": "{team} team has won!",
     "you_won": "You Won!",
+    "alliance_win": "With your help, ",
     "other_won": "{player} has won!",
     "exit": "Exit Game",
     "keep": "Keep Playing",
@@ -405,7 +406,9 @@
   },
   "events_display": {
     "retreating": "retreating",
-    "boat": "Boat"
+    "boat": "Boat",
+    "vote_for_peace": "Vote for peace with {list}? (This will end the game)",
+    "player_vote_response": "You have cast your vote as:"
   },
   "unit_info_modal": {
     "structure_info": "Structure Info",

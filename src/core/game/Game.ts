@@ -551,18 +551,21 @@ export interface Player {
 }
 
 export class Vote {
-  results: Map<Player, boolean>;
+  results: Map<PlayerID, boolean>;
 
   constructor() {
-    this.results = new Map<Player, boolean>();
+    this.results = new Map<PlayerID, boolean>();
   }
 }
 
 export interface Game extends GameMap {
   expireAlliance(alliance: Alliance);
   createVoteForPeace(players: Player[]);
+  getVoteExpireTick(): number;
+  setVoteExpireTick(voteExpireTick: number | null): void;
   castVote(player: Player, accept: boolean);
-  runningVote(): Vote;
+  runningVote(): Vote | null;
+  setCurrentVote(Vote);
   // Map & Dimensions
   isOnMap(cell: Cell): boolean;
   width(): number;
@@ -588,7 +591,11 @@ export interface Game extends GameMap {
   ticks(): Tick;
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
-  setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
+  setWinner(
+    winner: Player | Team,
+    allPlayersStats: AllPlayersStats,
+    allianceWin: boolean,
+  ): void;
   config(): Config;
 
   // Units
@@ -698,6 +705,7 @@ export enum MessageType {
   CHAT,
   VOTE_FOR_PEACE,
   VOTE_FOR_PEACE_REPLY,
+  VOTE_FOR_PEACE_EXPIRED,
 }
 
 // Message categories used for filtering events in the EventsDisplay
@@ -730,6 +738,7 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.ALLIANCE_EXPIRED]: MessageCategory.ALLIANCE,
   [MessageType.VOTE_FOR_PEACE]: MessageCategory.ALLIANCE,
   [MessageType.VOTE_FOR_PEACE_REPLY]: MessageCategory.ALLIANCE,
+  [MessageType.VOTE_FOR_PEACE_EXPIRED]: MessageCategory.ALLIANCE,
   [MessageType.SENT_GOLD_TO_PLAYER]: MessageCategory.TRADE,
   [MessageType.RECEIVED_GOLD_FROM_PLAYER]: MessageCategory.TRADE,
   [MessageType.RECEIVED_GOLD_FROM_TRADE]: MessageCategory.TRADE,

@@ -222,7 +222,6 @@ export const AllianceWinVoteReplyIntentSchema = BaseIntentSchema.extend({
   type: z.literal("allianceWinVoteReply"),
   recipient: ID,
   accept: z.boolean(),
-  leader: ID,
 });
 
 export const TargetPlayerIntentSchema = BaseIntentSchema.extend({
