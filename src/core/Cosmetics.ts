@@ -72,18 +72,6 @@ export class PatternDecoder {
 
       if (scale < 1 || scale > 7) return false;
 
-      const tileWidth = (((byte2 & 0x03) << 5) | ((byte1 >> 3) & 0x1f)) + 2;
-      const tileHeight = ((byte2 >> 2) & 0x3f) + 2;
-
-      if (
-        tileWidth < 3 ||
-        tileHeight < 3 ||
-        tileWidth > 129 ||
-        tileHeight > 65
-      ) {
-        return false;
-      }
-
       return true;
     } catch {
       return false;
