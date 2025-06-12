@@ -38,7 +38,7 @@ export class ChatModal extends LitElement {
   private selectedPhraseText: string | null = null;
   private selectedPhraseTemplate: string | null = null;
   private selectedQuickChatKey: string | null = null;
-  private selectedPlayerId: string | null = null;
+  private selectedPlayer: PlayerView | null = null;
 
   private recipient: PlayerView;
   private sender: PlayerView;
@@ -118,7 +118,7 @@ export class ChatModal extends LitElement {
                 </div>
               `
             : null}
-          ${this.requiresPlayerSelection || this.selectedPlayerId
+          ${this.requiresPlayerSelection || this.selectedPlayer
             ? html`
                 <div class="chat-column">
                   <div class="column-title">
@@ -137,15 +137,11 @@ export class ChatModal extends LitElement {
                     ${this.getSortedFilteredPlayers().map(
                       (player) => html`
                         <button
-                          class="chat-option-button ${this.selectedPlayerId ===
+                          class="chat-option-button ${this.selectedPlayer?.id() ===
                           player.id()
                             ? "selected"
                             : ""}"
-                          @click=${() =>
-                            this.selectPlayer({
-                              name: player.name(),
-                              id: player.id(),
-                            })}
+                          @click=${() => this.selectPlayer(player)}
                         >
                           ${player.name()}
                         </button>
@@ -167,7 +163,7 @@ export class ChatModal extends LitElement {
             class="chat-send-button"
             @click=${this.sendChatMessage}
             ?disabled=${!this.previewText ||
-            (this.requiresPlayerSelection && !this.selectedPlayerId)}
+            (this.requiresPlayerSelection && !this.selectedPlayer)}
           >
             ${translateText("chat.send")}
           </button>
@@ -204,11 +200,11 @@ export class ChatModal extends LitElement {
     return translateText(`chat.${this.selectedCategory}.${phrase.key}`);
   }
 
-  private selectPlayer(player: { name: string; id: string }) {
+  private selectPlayer(player: PlayerView) {
     if (this.previewText) {
       this.previewText =
-        this.selectedPhraseTemplate?.replace("[P1]", player.name) ?? null;
-      this.selectedPlayerId = player.id;
+        this.selectedPhraseTemplate?.replace("[P1]", player.name()) ?? null;
+      this.selectedPlayer = player;
       this.requiresPlayerSelection = false;
       this.requestUpdate();
     }
@@ -225,7 +221,7 @@ export class ChatModal extends LitElement {
         new SendQuickChatEvent(
           this.recipient,
           this.selectedQuickChatKey,
-          this.selectedPlayerId ?? undefined,
+          this.selectedPlayer?.id(),
         ),
       );
     }
