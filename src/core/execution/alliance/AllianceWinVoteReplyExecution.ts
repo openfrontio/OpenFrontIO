@@ -1,4 +1,4 @@
-import { Execution, Game, Player, PlayerID } from "../../game/Game";
+import { Execution, Game, Player } from "../../game/Game";
 
 export class AllianceWinVoteReplyExecution implements Execution {
   active: boolean = true;
@@ -7,7 +7,6 @@ export class AllianceWinVoteReplyExecution implements Execution {
   constructor(
     private voter: Player,
     private accept: boolean,
-    private leader: PlayerID,
   ) {}
 
   init(mg: Game, ticks: number): void {

@@ -95,11 +95,7 @@ export class Executor {
       case "breakAlliance":
         return new BreakAllianceExecution(player, intent.recipient);
       case "allianceWinVoteReply":
-        return new AllianceWinVoteReplyExecution(
-          player,
-          intent.accept,
-          intent.leader,
-        );
+        return new AllianceWinVoteReplyExecution(player, intent.accept);
       case "targetPlayer":
         return new TargetPlayerExecution(player, intent.target);
       case "emoji":
