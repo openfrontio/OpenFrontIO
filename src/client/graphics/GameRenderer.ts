@@ -14,6 +14,7 @@ import { FxLayer } from "./layers/FxLayer";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
+import { LeftInGameAd } from "./layers/LeftInGameAd";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
@@ -188,6 +189,14 @@ export function createRenderer(
   unitInfoModal.structureLayer = structureLayer;
   // unitInfoModal.eventBus = eventBus;
 
+  const leftInGameAd = document.querySelector(
+    "left-in-game-ad",
+  ) as LeftInGameAd;
+  if (!(leftInGameAd instanceof LeftInGameAd)) {
+    console.error("left in game ad not found");
+  }
+  leftInGameAd.g = game;
+
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler),
@@ -222,6 +231,7 @@ export function createRenderer(
     headsUpMessage,
     unitInfoModal,
     multiTabModal,
+    leftInGameAd,
   ];
 
   return new GameRenderer(
