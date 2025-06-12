@@ -215,15 +215,15 @@ export class RadialMenu implements Layer {
   }
 
   private getInnerRadiusForLevel(level: number): number {
-    return level === 0
-      ? this.config.mainMenuInnerRadius
-      : this.config.mainMenuInnerRadius + 34;
+    return level === 0 ? 50 : 50 + 25;
   }
 
   private getOuterRadiusForLevel(level: number): number {
     const innerRadius = this.getInnerRadiusForLevel(level);
-    const arcWidth =
-      this.config.menuSize / 2 - this.config.mainMenuInnerRadius - 10;
+    let arcWidth = 55;
+    if (level !== 0) {
+      arcWidth = 65;
+    }
     return innerRadius + arcWidth;
   }
 
@@ -577,7 +577,7 @@ export class RadialMenu implements Layer {
         menuGroup
           .transition()
           .duration(this.config.menuTransitionDuration * 0.8)
-          .style("transform", "scale(0.59)")
+          .style("transform", "scale(0.5)")
           .style("opacity", 0.8);
 
         menuGroup.selectAll("path").each(function () {
@@ -606,7 +606,7 @@ export class RadialMenu implements Layer {
     currentMenu
       .transition()
       .duration(this.config.menuTransitionDuration * 0.8)
-      .style("transform", `scale(${this.currentLevel === 1 ? "0.8" : "0.59"})`)
+      .style("transform", `scale(${this.currentLevel === 1 ? "0.65" : "0.5"})`)
       .style("opacity", 0.8)
       .on("end", () => {
         this.navigationInProgress = false;
@@ -683,7 +683,7 @@ export class RadialMenu implements Layer {
           .duration(this.config.menuTransitionDuration * 0.8)
           .style(
             "transform",
-            `scale(${this.currentLevel === 1 ? "0.8" : "0.59"})`,
+            `scale(${this.currentLevel === 1 ? "0.65" : "0.5"})`,
           )
           .style("opacity", 0.8);
       } else if (level !== this.currentLevel + 1) {
