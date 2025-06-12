@@ -33,7 +33,7 @@ export class AllianceExpireCheckExecution implements Execution {
       const timeSinceCreation = this.mg.ticks() - alliance.createdAt();
       const ticksLeft = duration - timeSinceCreation;
 
-      const key = `${alliance.requestor().id()}-${alliance.recipient().id()}`;
+      const key = `${alliance.requestor().id()}-${alliance.recipient().id()}-${alliance.createdAt()}`;
 
       if (ticksLeft === promptOffset && !this.promptedAlliances.has(key)) {
         this.promptedAlliances.add(key);

@@ -436,10 +436,13 @@ export class EventsDisplay extends LitElement implements Layer {
     const other = this.game.playerBySmallID(otherID) as PlayerView;
     if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
 
+    const tick = this.game.ticks();
+    const tag = `alliance${otherID}-tick${tick}`;
+
     this.addEvent({
       description: `Your alliance with ${other.name()} is about to expire`,
       type: MessageType.WARN,
-      tags: ["alliance" + otherID],
+      tags: [tag],
       duration: 100,
       buttons: [
         {
@@ -458,7 +461,7 @@ export class EventsDisplay extends LitElement implements Layer {
         },
       ],
       highlight: true,
-      createdAt: this.game.ticks(),
+      createdAt: tick,
       focusID: otherID,
     });
   }

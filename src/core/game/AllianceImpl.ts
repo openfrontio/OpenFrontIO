@@ -3,7 +3,7 @@ import { Game, MutableAlliance, Player, Tick } from "./Game";
 export class AllianceImpl implements MutableAlliance {
   private requestedExtension_ = false;
   private readonly _id: number;
-  private createdAtTick_: Tick; // Maak dit overschrijfbaar
+  private createdAtTick_: Tick;
 
   constructor(
     private readonly mg: Game,
