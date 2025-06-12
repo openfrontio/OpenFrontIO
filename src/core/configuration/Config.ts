@@ -146,6 +146,7 @@ export interface Config {
   structureMinDist(): number;
   isReplay(): boolean;
   allianceDuration(): Tick;
+  allianceExtensionPromptOffset(): number;
 }
 
 export interface Theme {

@@ -19,15 +19,11 @@ export class AllianceExpireCheckExecution implements Execution {
     if (!this.mg) return;
 
     const duration = this.mg.config().allianceDuration();
-    const promptOffset = 300; // 30 seconds before expiration (assuming 10 ticks per second)
+    const promptOffset = this.mg.config().allianceExtensionPromptOffset();
 
     for (const player of this.mg.players()) {
       player.expiredAlliances().length = 0;
     }
-
-    console.warn(
-      `[ALLIANCE DEBUG] tick=${this.mg.ticks()}, totalAlliances=${this.mg.alliances().length}`,
-    );
 
     for (const alliance of this.mg.alliances()) {
       const timeSinceCreation = this.mg.ticks() - alliance.createdAt();
@@ -41,9 +37,6 @@ export class AllianceExpireCheckExecution implements Execution {
         const requestor = alliance.requestor();
         const recipient = alliance.recipient();
 
-        console.warn(
-          `[ALLIANCE PROMPT] Prompting ${requestor.id()} <-> ${recipient.id()} at tick ${this.mg.ticks()}`,
-        );
         this.mg.sendAllianceExtensionPrompt(requestor, recipient, alliance);
         this.mg.sendAllianceExtensionPrompt(recipient, requestor, alliance);
       }
@@ -61,9 +54,6 @@ export class AllianceExpireCheckExecution implements Execution {
             ?.wantsExtension();
 
           if (wantsFromRequestor && wantsFromRecipient) {
-            console.warn(
-              `[ALLIANCE RENEW] Renewing alliance ${requestor.id()} <-> ${recipient.id()} at tick ${this.mg.ticks()}`,
-            );
             const newAlliance = new AllianceImpl(
               this.mg,
               requestor,
@@ -76,9 +66,6 @@ export class AllianceExpireCheckExecution implements Execution {
           }
         }
 
-        console.warn(
-          `[ALLIANCE EXPIRE] Expiring alliance ${requestor.id()} <-> ${recipient.id()} at tick ${this.mg.ticks()}`,
-        );
         alliance.expire();
         requestor.expiredAlliances().push(alliance);
         recipient.expiredAlliances().push(alliance);
