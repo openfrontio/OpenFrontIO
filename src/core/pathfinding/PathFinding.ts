@@ -89,15 +89,20 @@ export class PathFinder {
   private curr: TileRef | null = null;
   private dst: TileRef | null = null;
   private path: TileRef[] | null = null;
-  private aStar: AStar;
+  private aStar: AStar<TileRef>;
   private computeFinished = true;
 
   private constructor(
     private game: Game,
-    private newAStar: (curr: TileRef, dst: TileRef) => AStar,
+    private newAStar: (curr: TileRef, dst: TileRef) => AStar<TileRef>,
   ) {}
 
-  public static Mini(game: Game, iterations: number, maxTries: number = 20) {
+  public static Mini(
+    game: Game,
+    iterations: number,
+    waterPath: boolean = true,
+    maxTries: number = 20,
+  ) {
     return new PathFinder(game, (curr: TileRef, dst: TileRef) => {
       return new MiniAStar(
         game.map(),
@@ -106,6 +111,7 @@ export class PathFinder {
         dst,
         iterations,
         maxTries,
+        waterPath,
       );
     });
   }

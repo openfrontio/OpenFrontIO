@@ -1,8 +1,8 @@
 import { TileRef } from "../game/GameMap";
 
-export interface AStar {
+export interface AStar<NodeType> {
   compute(): PathFindResultType;
-  reconstructPath(): TileRef[];
+  reconstructPath(): NodeType[];
 }
 
 export enum PathFindResultType {

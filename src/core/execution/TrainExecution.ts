@@ -1,0 +1,250 @@
+import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
+import { TileRef } from "../game/GameMap";
+import { OrientedRailroad, RailNetwork } from "../game/RailNetwork";
+import { TrainStation } from "../game/TrainStation";
+
+export class TrainExecution implements Execution {
+  private active = true;
+  private mg: Game | null = null;
+  private train: Unit | null = null;
+  private cars: Unit[] = [];
+  private hasCargo: boolean = false;
+  private currentTile: number = 0;
+  private spacing = 2;
+  private usedTiles: TileRef[] = []; // used for cars behind
+  private stations: TrainStation[] = [];
+  private currentRailRoad: OrientedRailroad | null = null;
+  private speed: number = 3;
+
+  constructor(
+    private railNetwork: RailNetwork,
+    private player: Player,
+    private source: TrainStation,
+    private destination: TrainStation,
+    private numCars: number,
+  ) {
+    this.hasCargo = source.unit.type() === UnitType.Factory;
+  }
+
+  init(mg: Game, ticks: number): void {
+    this.mg = mg;
+    const stations = this.railNetwork.findStationsPath(
+      this.source,
+      this.destination,
+    );
+    if (!stations || stations.length <= 1) {
+      this.active = false;
+    } else {
+      this.stations = stations;
+      const railroad = this.railNetwork.getOrientedRailroad(
+        this.stations[0],
+        this.stations[1],
+      );
+      if (railroad) {
+        this.currentRailRoad = railroad;
+      } else {
+        this.active = false;
+      }
+    }
+  }
+
+  tick(ticks: number): void {
+    if (this.mg === null) {
+      throw new Error("Not initialized");
+    }
+    if (this.train === null) {
+      const spawn = this.player.canBuild(
+        UnitType.TrainEngine,
+        this.stations[0].tile(),
+      );
+      if (spawn === false) {
+        console.warn(`cannot build train`);
+        this.active = false;
+        return;
+      }
+      this.train = this.createTrainUnits(spawn);
+    }
+    if (!this.train.isActive() || !this.activeSourceOrDestination()) {
+      this.deleteTrain();
+      return;
+    }
+
+    const tile = this.getNextTile();
+    if (tile) {
+      this.updateCarsPositions(tile);
+    } else {
+      this.targetReached();
+      this.deleteTrain();
+    }
+  }
+
+  loadCargo() {
+    if (this.hasCargo) {
+      return;
+    }
+    this.hasCargo = true;
+    const loadedCars: Unit[] = [];
+
+    const spawn = this.player.canBuild(
+      UnitType.TrainCarriageLoaded,
+      this.stations[0].tile(),
+    );
+    if (spawn === false) {
+      console.warn(`cannot build train`);
+      this.active = false;
+      return;
+    }
+    // Don't add cargo to the tail, it should remain an engine unit
+    loadedCars.push(this.cars[0]);
+    for (let i = 1; i < this.cars.length; i++) {
+      loadedCars.push(
+        this.player.buildUnit(UnitType.TrainCarriageLoaded, spawn, {}),
+      );
+      loadedCars[i].tile = this.cars[i].tile;
+    }
+    for (let i = 1; i < this.cars.length; i++) {
+      this.cars[i].setReachedTarget(); // So they don't explode on deletion
+      this.cars[i].delete(false);
+    }
+    this.cars = loadedCars;
+  }
+
+  private targetReached() {
+    if (this.train === null) {
+      return;
+    }
+    this.train.setReachedTarget();
+    this.cars.forEach((car: Unit) => {
+      car.setReachedTarget();
+    });
+  }
+
+  private createTrainUnits(tile: TileRef): Unit {
+    const train = this.player.buildUnit(UnitType.TrainEngine, tile, {
+      targetUnit: this.destination.unit,
+    });
+    // Tail is also an engine, just for cosmetics
+    this.cars.push(
+      this.player.buildUnit(UnitType.TrainEngine, tile, {
+        targetUnit: this.destination.unit,
+      }),
+    );
+    const carriageType = this.hasCargo
+      ? UnitType.TrainCarriageLoaded
+      : UnitType.TrainCarriage;
+    for (let i = 0; i < this.numCars; i++) {
+      this.cars.push(this.player.buildUnit(carriageType, tile, {}));
+    }
+    return train;
+  }
+
+  private deleteTrain() {
+    this.active = false;
+    if (this.train !== null && this.train.isActive()) {
+      this.train.delete(false);
+    }
+    for (const car of this.cars) {
+      if (car.isActive()) {
+        car.delete(false);
+      }
+    }
+  }
+
+  private activeSourceOrDestination(): boolean {
+    return (
+      this.stations.length > 1 &&
+      this.stations[1].isActive() &&
+      this.stations[0].isActive()
+    );
+  }
+
+  /**
+   * Save the tiles the train go through so the cars can reuse them
+   * Don't simply save the tiles the engine uses, otherwise the spacing will be dictated by the train speed
+   */
+  private saveTraversedTiles(from: number, speed: number) {
+    if (!this.currentRailRoad) {
+      return;
+    }
+    let tileToSave: number = from;
+    for (
+      let i = 0;
+      i < speed && tileToSave < this.currentRailRoad.getTiles().length;
+      i++
+    ) {
+      this.saveTile(this.currentRailRoad.getTiles()[tileToSave]);
+      tileToSave = tileToSave + 1;
+    }
+  }
+
+  private saveTile(tile: TileRef) {
+    this.usedTiles.push(tile);
+    if (this.usedTiles.length > this.cars.length * this.spacing + 3) {
+      this.usedTiles.shift();
+    }
+  }
+
+  private updateCarsPositions(newTile: TileRef) {
+    if (this.cars.length > 0) {
+      for (let i = this.cars.length - 1; i >= 0; --i) {
+        const carTileIndex = (i + 1) * this.spacing + 2;
+        if (this.usedTiles.length > carTileIndex) {
+          this.cars[i].move(this.usedTiles[carTileIndex]);
+        }
+      }
+    }
+    if (this.train !== null) {
+      this.train.move(newTile);
+    }
+  }
+
+  private nextStation() {
+    if (this.stations.length > 2) {
+      this.stations.shift();
+      const railRoad = this.railNetwork.getOrientedRailroad(
+        this.stations[0],
+        this.stations[1],
+      );
+      if (railRoad) {
+        this.currentRailRoad = railRoad;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private getNextTile(): TileRef | null {
+    if (this.currentRailRoad === null) {
+      return null;
+    }
+    this.saveTraversedTiles(this.currentTile, this.speed);
+    this.currentTile = this.currentTile + this.speed;
+    const leftOver = this.currentTile - this.currentRailRoad.getTiles().length;
+    if (leftOver >= 0) {
+      // Station reached, pick the next station
+      this.stationReached();
+      if (!this.nextStation()) {
+        return null; // Destination reached (or no valid connection)
+      }
+      this.currentTile = leftOver;
+      this.saveTraversedTiles(0, leftOver);
+    }
+    return this.currentRailRoad.getTiles()[this.currentTile];
+  }
+
+  private stationReached() {
+    if (this.mg === null || this.player === null) {
+      throw new Error("Not initialized");
+    }
+    this.stations[1].onTrainStop(this);
+    return;
+  }
+
+  isActive(): boolean {
+    return this.active;
+  }
+
+  activeDuringSpawnPhase(): boolean {
+    return false;
+  }
+}

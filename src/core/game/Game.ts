@@ -8,6 +8,7 @@ import {
   UnitUpdate,
 } from "./GameUpdates";
 import { PlayerView } from "./GameView";
+import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 
 export type PlayerID = string;
@@ -149,6 +150,10 @@ export enum UnitType {
   MIRV = "MIRV",
   MIRVWarhead = "MIRV Warhead",
   Construction = "Construction",
+  TrainCarriage = "TrainCarriage",
+  TrainCarriageLoaded = "TrainCarriageLoaded",
+  TrainEngine = "TrainEngine",
+  Factory = "Factory",
 }
 
 export interface OwnerComp {
@@ -183,6 +188,14 @@ export interface UnitParamsMap {
     targetUnit: Unit;
     lastSetSafeFromPirates?: number;
   };
+
+  [UnitType.TrainEngine]: {
+    targetUnit: Unit;
+  };
+
+  [UnitType.TrainCarriage]: {};
+  [UnitType.TrainCarriageLoaded]: {};
+  [UnitType.Factory]: {};
 
   [UnitType.MissileSilo]: {
     cooldownDuration?: number;
@@ -360,6 +373,8 @@ export interface Unit {
   touch(): void;
   hash(): number;
   toUpdate(): UnitUpdate;
+  hasTrainStation(): boolean;
+  setTrainStation(): void;
 
   // Targeting
   setTargetTile(cell: TileRef | undefined): void;
@@ -618,6 +633,9 @@ export interface Game extends GameMap {
   numTilesWithFallout(): number;
   // Optional as it's not initialized before the end of spawn phase
   stats(): Stats;
+
+  addUpdate(update: GameUpdate): void;
+  railNetwork(): RailNetwork;
 }
 
 export interface PlayerActions {

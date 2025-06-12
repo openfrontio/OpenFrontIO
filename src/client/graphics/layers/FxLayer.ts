@@ -1,14 +1,18 @@
 import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
+import {
+  BonusEventUpdate,
+  GameUpdateType,
+  RailRoadUpdate,
+} from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { Fx, FxType } from "../fx/Fx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
+import { shortenNumber, TextFx } from "../fx/TextFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
 import { Layer } from "./Layer";
-
 export class FxLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
@@ -37,6 +41,50 @@ export class FxLayer implements Layer {
         if (unitView === undefined) return;
         this.onUnitEvent(unitView);
       });
+    this.game
+      .updatesSinceLastTick()
+      ?.[GameUpdateType.BonusEvent]?.forEach((bonusEvent) => {
+        if (bonusEvent === undefined) return;
+        this.onBonusEvent(bonusEvent);
+      });
+
+    this.game
+      .updatesSinceLastTick()
+      ?.[GameUpdateType.RailRoadEvent]?.forEach((update) => {
+        if (update === undefined) return;
+        this.onRailRoadEvent(update);
+      });
+  }
+
+  onBonusEvent(bonus: BonusEventUpdate) {
+    const tile = bonus.tile;
+    const x = this.game.x(tile);
+    let y = this.game.y(tile);
+    const gold = bonus.gold;
+    const soldiers = bonus.soldiers;
+    const workers = bonus.workers;
+
+    if (gold > 0) {
+      const shortened = shortenNumber(gold);
+      this.addTextFx(`+ ${shortened} gold`, x, y);
+      y += 10; // increase y so the next popup starts bellow
+    }
+
+    if (soldiers > 0) {
+      const shortened = shortenNumber(soldiers);
+      this.addTextFx(`+ ${shortened} troops`, x, y);
+      y += 10;
+    }
+
+    if (workers > 0) {
+      const shortened = shortenNumber(workers);
+      this.addTextFx(`+ ${shortened} workers`, x, y);
+    }
+  }
+
+  addTextFx(text: string, x: number, y: number) {
+    const textFx = new TextFx(text, x, y, 500, 20);
+    this.allFx.push(textFx);
   }
 
   onUnitEvent(unit: UnitView) {
@@ -54,6 +102,11 @@ export class FxLayer implements Layer {
       case UnitType.Shell:
         this.onShellEvent(unit);
         break;
+      case UnitType.TrainEngine:
+      case UnitType.TrainCarriage:
+      case UnitType.TrainCarriageLoaded:
+        this.onTrainEvent(unit);
+        break;
     }
   }
 
@@ -62,13 +115,48 @@ export class FxLayer implements Layer {
       if (unit.reachedTarget()) {
         const x = this.game.x(unit.lastTile());
         const y = this.game.y(unit.lastTile());
-        const shipExplosion = new SpriteFx(
+        const explosion = new SpriteFx(
           this.animatedSpriteLoader,
           x,
           y,
           FxType.MiniExplosion,
         );
-        this.allFx.push(shipExplosion);
+        this.allFx.push(explosion);
+      }
+    }
+  }
+
+  onTrainEvent(unit: UnitView) {
+    if (!unit.isActive()) {
+      if (!unit.reachedTarget()) {
+        const x = this.game.x(unit.lastTile());
+        const y = this.game.y(unit.lastTile());
+        const explosion = new SpriteFx(
+          this.animatedSpriteLoader,
+          x,
+          y,
+          FxType.MiniExplosion,
+        );
+        this.allFx.push(explosion);
+      }
+    }
+  }
+
+  onRailRoadEvent(railroad: RailRoadUpdate) {
+    const roads = railroad.tiles;
+    for (const tile of roads) {
+      // No need for pseudorandom, this is fx
+      const chanceFx = Math.floor(Math.random() * 3);
+      if (chanceFx === 0) {
+        const x = this.game.x(tile);
+        const y = this.game.y(tile);
+        const animation = new SpriteFx(
+          this.animatedSpriteLoader,
+          x,
+          y,
+          FxType.Dust,
+        );
+        this.allFx.push(animation);
       }
     }
   }

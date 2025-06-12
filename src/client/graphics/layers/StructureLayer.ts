@@ -7,6 +7,7 @@ import { Layer } from "./Layer";
 import { UnitInfoModal } from "./UnitInfoModal";
 
 import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
+import factoryIcon from "../../../../resources/images/buildings/factoryAlt1.png";
 import shieldIcon from "../../../../resources/images/buildings/fortAlt2.png";
 import anchorIcon from "../../../../resources/images/buildings/port1.png";
 import MissileSiloReloadingIcon from "../../../../resources/images/buildings/silo1-reloading.png";
@@ -19,9 +20,10 @@ import {
   hexDistFN,
   manhattanDistFN,
   rectDistFN,
+  TileRef,
 } from "../../../core/game/GameMap";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView, UnitView } from "../../../core/game/GameView";
+import { GameUpdateType, RailRoadUpdate } from "../../../core/game/GameUpdates";
+import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 
 const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
 const reloadingColor = colord({ r: 255, g: 0, b: 0 });
@@ -50,6 +52,8 @@ export class StructureLayer implements Layer {
   private theme: Theme;
   private selectedStructureUnit: UnitView | null = null;
   private previouslySelected: UnitView | null = null;
+  // Save the number of railroads per tiles. Delete when it reaches 0
+  private existingRailroads = new Map<TileRef, number>();
 
   // Configuration for supported unit types only
   private readonly unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
@@ -61,6 +65,12 @@ export class StructureLayer implements Layer {
     },
     [UnitType.City]: {
       icon: cityIcon,
+      borderRadius: 8.525,
+      territoryRadius: 6.525,
+      borderType: UnitBorderType.Round,
+    },
+    [UnitType.Factory]: {
+      icon: factoryIcon,
       borderRadius: 8.525,
       territoryRadius: 6.525,
       borderType: UnitBorderType.Round,
@@ -157,6 +167,12 @@ export class StructureLayer implements Layer {
       if (unit === undefined) continue;
       this.handleUnitRendering(unit);
     }
+
+    const railUpdates =
+      updates !== null ? updates[GameUpdateType.RailRoadEvent] : [];
+    for (const rail of railUpdates) {
+      this.handleRailRoadRendering(rail);
+    }
   }
 
   init() {
@@ -231,6 +247,46 @@ export class StructureLayer implements Layer {
         return rectDistFN;
       case UnitBorderType.Hexagon:
         return hexDistFN;
+    }
+  }
+
+  private handleRailRoadRendering(railUpdate: RailRoadUpdate) {
+    for (const railRoadTile of railUpdate.tiles) {
+      const x = this.game.x(railRoadTile);
+      const y = this.game.y(railRoadTile);
+      const railTile =
+        (x % 2 === 0 && y % 2 === 0) || (y % 2 === 1 && x % 2 === 1);
+      if (railTile) {
+        if (railUpdate.isActive) {
+          this.paintRailRoad(railRoadTile);
+        } else {
+          this.clearRailRoad(railRoadTile);
+        }
+      }
+    }
+  }
+
+  private paintRailRoad(tile: TileRef) {
+    const x = this.game.x(tile);
+    const y = this.game.y(tile);
+    const owner = this.game.owner(tile);
+    let color = this.theme.selfColor();
+    if (owner.isPlayer()) {
+      color = this.theme.railroadColor(owner as PlayerView);
+    }
+    this.paintCell(new Cell(x, y), color, 255);
+    const numRailRoads = this.existingRailroads.get(tile) || 0;
+    this.existingRailroads.set(tile, numRailRoads + 1);
+  }
+
+  private clearRailRoad(tile: TileRef) {
+    let numRailRoads = this.existingRailroads.get(tile) || 0;
+    this.existingRailroads.set(tile, --numRailRoads);
+    if (numRailRoads <= 0) {
+      const x = this.game.x(tile);
+      const y = this.game.y(tile);
+      this.existingRailroads.delete(tile);
+      this.clearCell(new Cell(x, y));
     }
   }
 
