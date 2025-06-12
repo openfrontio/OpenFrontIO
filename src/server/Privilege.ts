@@ -12,9 +12,12 @@ export class PrivilegeChecker {
 
   isPatternAllowed(
     base64: string,
-    roles: string[],
-    flares: string[],
+    roles: readonly string[] | undefined,
+    flares: readonly string[] | undefined,
   ): true | "restricted" | "unlisted" | "invalid" {
+    const roleList = roles ?? [];
+    const flareList = flares ?? [];
+
     const found = Object.entries(this.patternData.pattern).find(
       ([, entry]) => entry.pattern === base64,
     );
@@ -23,7 +26,7 @@ export class PrivilegeChecker {
       if (!PatternDecoder.isValid(base64)) {
         return "invalid";
       }
-      if (!flares.includes("pattern:*")) {
+      if (!flareList.includes("pattern:*")) {
         return "unlisted";
       }
       return true;
@@ -38,12 +41,12 @@ export class PrivilegeChecker {
 
     for (const groupName of allowedGroups) {
       const groupRoles = this.patternData.role_group?.[groupName] || [];
-      if (roles.some((role) => groupRoles.includes(role))) {
+      if (roleList.some((role) => groupRoles.includes(role))) {
         return true;
       }
     }
 
-    return flares.includes(`pattern:${key}`) ? true : "restricted";
+    return flareList.includes(`pattern:${key}`) ? true : "restricted";
   }
 }
 

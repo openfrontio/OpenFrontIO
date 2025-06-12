@@ -335,10 +335,6 @@ export function startWorker() {
             }
 
             if (clientMsg.pattern !== undefined) {
-              if (roles === undefined || flares === undefined) {
-                log.warn("pattern blocked (not logged in)");
-                return;
-              }
               const patternCheck = getPrivilegeChecker().isPatternAllowed(
                 clientMsg.pattern,
                 roles,
