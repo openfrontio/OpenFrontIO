@@ -20,7 +20,11 @@ function getLocalIP() {
 const config = getServerConfigFromServer();
 const origin = config.origin();
 
-const allowedOrigins = [origin, "capacitor://localhost", "http://localhost"];
+const allowedOrigins = [
+  origin,
+  "capacitor://openfront.io",
+  "https://openfront.io",
+];
 
 if (config.env() === GameEnv.Dev) {
   const localIp = getLocalIP();
