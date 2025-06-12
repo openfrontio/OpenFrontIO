@@ -130,6 +130,7 @@ export interface Config {
   SAMCooldown(): number;
   SiloCooldown(): number;
   defensePostDefenseBonus(): number;
+  defensePostSpeedBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
   warshipPatrolRange(): number;
@@ -139,6 +140,7 @@ export interface Config {
   defensePostTargettingRange(): number;
   // 0-1
   traitorDefenseDebuff(): number;
+  traitorSpeedDebuff(): number;
   traitorDuration(): number;
   nukeMagnitudes(unitType: UnitType): NukeMagnitude;
   defaultNukeSpeed(): number;
