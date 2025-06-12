@@ -5,7 +5,8 @@
       "1286745100411473930",
       "1286738076386856991",
       "1338654590043820148"
-    ]
+    ],
+    "blocked": ["chocolate"]
   },
   "pattern": {
     "stripes_v": {
@@ -42,7 +43,7 @@
     },
     "evan": {
       "pattern": "AbIUAAAAnsRIgiRZjuRpAiNJHiNJAAAA",
-      "role_group": ["staff"]
+      "role_group": ["blocked"]
     },
     "diagonal_stripe": {
       "pattern": "AXEYAYACQAQgCBAQCCAEQAKAAQ==",
@@ -70,7 +71,7 @@
     },
     "openfront": {
       "pattern": "AQIiAAAAAAAAAAAAAAAAAAAAAIDD8YnweTiiD5FIYEIgEpkIRCKBCoFIpCIQeTwyPB6RjEAkEIgQKEQiApFAIEIgEYkIOAKfCIGIIyIAAAAAAAAAAAA=",
-      "role_group": ["staff"]
+      "role_group": ["blocked"]
     }
   }
 }

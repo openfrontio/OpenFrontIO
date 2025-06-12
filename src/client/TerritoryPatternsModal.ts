@@ -34,6 +34,7 @@ export class TerritoryPatternsModal extends LitElement {
   @state() private showChocoPattern = false;
 
   @state() private roles: string[] = [];
+  @state() private flares: string[] = [];
 
   private resizeObserver: ResizeObserver;
 
@@ -67,9 +68,12 @@ export class TerritoryPatternsModal extends LitElement {
   onUserMe(userMeResponse: UserMeResponse) {
     const { user, player } = userMeResponse;
     if (player) {
-      const { publicId, roles } = player;
+      const { publicId, roles, flares } = player;
       if (roles) {
         this.roles = roles;
+      }
+      if (flares) {
+        this.flares = flares;
       }
     }
     this.requestUpdate();
@@ -80,6 +84,13 @@ export class TerritoryPatternsModal extends LitElement {
 
     for (const [key, patternData] of Object.entries(patterns)) {
       const roleGroup: string[] | string | undefined = patternData.role_group;
+      console.log(`pattern:${key}`);
+      if (
+        this.flares.includes("pattern:*") ||
+        this.flares.includes(`pattern:${key}`)
+      ) {
+        continue;
+      }
 
       if (!roleGroup || (Array.isArray(roleGroup) && roleGroup.length === 0)) {
         if (roles.length === 0) {
@@ -90,11 +101,12 @@ export class TerritoryPatternsModal extends LitElement {
       }
 
       const groupList = Array.isArray(roleGroup) ? roleGroup : [roleGroup];
-
       const isAllowed = groupList.some((required) => roles.includes(required));
 
       if (!isAllowed) {
-        const reason = `This pattern requires the ${groupList.join(", ")} role.`;
+        const reason = groupList.includes("blocked")
+          ? "This pattern is locked."
+          : `This pattern requires the ${groupList.join(", ")} role.`;
         this.setLockedPatterns([key], reason);
       }
     }
