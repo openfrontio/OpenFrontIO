@@ -64,12 +64,13 @@ export class PortExecution implements Execution {
       return;
     }
 
-    const totalNbOfPorts = this.mg.units(UnitType.Port).length;
+    const numTradeShips = this.mg.units(UnitType.TradeShip).length;
     if (
-      !this.random.chance(this.mg.config().tradeShipSpawnRate(totalNbOfPorts))
+      !this.random.chance(this.mg.config().tradeShipSpawnRate(numTradeShips))
     ) {
       return;
     }
+    console.log(`numTradeShips: ${numTradeShips}`);
 
     const ports = this.player().tradingPorts(this.port);
 
