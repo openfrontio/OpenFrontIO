@@ -2,7 +2,8 @@ import { colord, Colord, extend, LabColor } from "colord";
 import labPlugin from "colord/plugins/lab";
 import lchPlugin from "colord/plugins/lch";
 import { ColoredTeams, Team } from "../game/Game";
-import { shuffle, simpleHash } from "../Util";
+import { PseudoRandom } from "../PseudoRandom";
+import { simpleHash } from "../Util";
 extend([lchPlugin]);
 extend([labPlugin]);
 
@@ -349,6 +350,7 @@ export class ColorAllocator {
   }
 
   assignColor(id: string): Colord {
+    const rand = new PseudoRandom(simpleHash(id));
     if (this.assigned.has(id)) {
       return this.assigned.get(id)!;
     }
@@ -360,8 +362,10 @@ export class ColorAllocator {
     const MIN_DELTA_E = 25; // Minimum Delta E for distinct colors
     const assignedColors = Array.from(this.assigned.values());
 
+    const shuffledColors = rand.shuffleArray(this.availableColors);
+
     const selection = selectDistinctColor(
-      this.availableColors,
+      shuffledColors,
       assignedColors,
       MIN_DELTA_E,
     );
@@ -405,13 +409,11 @@ export class ColorAllocator {
 
 // Select a distinct color from the available colors that is sufficiently different from the assigned colors
 export function selectDistinctColor(
-  availableColors: Colord[],
+  shuffledColors: Colord[],
   assignedColors: Colord[],
   minDeltaE: number,
 ): { selectedIndex: number; selectedColor: Colord } | null {
-  const shuffled = shuffle(
-    availableColors.map((color, index) => ({ color, index })),
-  );
+  const shuffled = shuffledColors.map((color, index) => ({ color, index }));
 
   for (const { color, index } of shuffled) {
     const isDistinctEnough = assignedColors.every(
