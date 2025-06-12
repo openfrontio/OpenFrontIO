@@ -18,6 +18,7 @@ import {
 import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
 import { archive, readGameRecord } from "./Archive";
 import { Client } from "./Client";
+import { corsMiddleware } from "./cors";
 import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { getUserMe, verifyClientToken } from "./jwt";
@@ -71,6 +72,7 @@ export function startWorker() {
     next();
   });
 
+  app.use(corsMiddleware);
   app.set("trust proxy", 3);
   app.use(express.json());
   app.use(express.static(path.join(__dirname, "../../out")));

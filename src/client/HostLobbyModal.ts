@@ -342,7 +342,7 @@ export class HostLobbyModal extends LitElement {
           </div>
         </div>
 
-        <div class="start-game-button-container">
+         <div class="start-game-button-container">
           <button
             @click=${this.startGame}
             ?disabled=${this.players.length < 2}
@@ -471,28 +471,25 @@ export class HostLobbyModal extends LitElement {
   }
 
   private async putGameConfig() {
-    const config = await getServerConfigFromClient();
-    const response = await fetch(
-      `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          gameMap: this.selectedMap,
-          difficulty: this.selectedDifficulty,
-          disableNPCs: this.disableNPCs,
-          bots: this.bots,
-          infiniteGold: this.infiniteGold,
-          infiniteTroops: this.infiniteTroops,
-          instantBuild: this.instantBuild,
-          gameMode: this.gameMode,
-          disabledUnits: this.disabledUnits,
-          playerTeams: this.teamCount,
-        } satisfies Partial<GameConfig>),
+    const url = await buildGameUrl(this.lobbyId, "game");
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({
+        gameMap: this.selectedMap,
+        difficulty: this.selectedDifficulty,
+        disableNPCs: this.disableNPCs,
+        bots: this.bots,
+        infiniteGold: this.infiniteGold,
+        infiniteTroops: this.infiniteTroops,
+        instantBuild: this.instantBuild,
+        gameMode: this.gameMode,
+        disabledUnits: this.disabledUnits,
+        playerTeams: this.teamCount,
+      } satisfies Partial<GameConfig>),
+    });
     return response;
   }
 
@@ -521,16 +518,13 @@ export class HostLobbyModal extends LitElement {
       `Starting private game with map: ${GameMapType[this.selectedMap]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     this.close();
-    const config = await getServerConfigFromClient();
-    const response = await fetch(
-      `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+    const url = await buildGameUrl(this.lobbyId, "start_game");
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-    );
+    });
     return response;
   }
 
@@ -550,8 +544,8 @@ export class HostLobbyModal extends LitElement {
   }
 
   private async pollPlayers() {
-    const config = await getServerConfigFromClient();
-    fetch(`/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`, {
+    const url = await buildGameUrl(this.lobbyId, "game");
+    fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -566,19 +560,16 @@ export class HostLobbyModal extends LitElement {
 }
 
 async function createLobby(): Promise<GameInfo> {
-  const config = await getServerConfigFromClient();
   try {
     const id = generateID();
-    const response = await fetch(
-      `/${config.workerPath(id)}/api/create_game/${id}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        // body: JSON.stringify(data), // Include this if you need to send data
+    const url = await buildGameUrl(id, "create_game");
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-    );
+      // body: JSON.stringify(data), // Include this if you need to send data
+    });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -592,4 +583,15 @@ async function createLobby(): Promise<GameInfo> {
     console.error("Error creating lobby:", error);
     throw error; // Re-throw the error so the caller can handle it
   }
+}
+
+export async function buildGameUrl(
+  gameID: string,
+  path: string,
+): Promise<string> {
+  const config = await getServerConfigFromClient();
+
+  const apiPath = `/api/${path}/${gameID}`;
+  const baseUrl = process.env.API_BASE_URL || "/";
+  return `${baseUrl}${config.workerPath(gameID)}${apiPath}`;
 }
