@@ -188,6 +188,9 @@ export class DefaultConfig implements Config {
   traitorDefenseDebuff(): number {
     return 0.5;
   }
+  traitorSpeedDebuff(): number {
+    return 0.5;
+  }
   traitorDuration(): number {
     return 30 * 10; // 30 seconds
   }
@@ -245,6 +248,10 @@ export class DefaultConfig implements Config {
   defensePostDefenseBonus(): number {
     return 5;
   }
+  defensePostSpeedBonus(): number {
+    return 2;
+  }
+
   playerTeams(): number | typeof Duos {
     return this._gameConfig.playerTeams ?? 0;
   }
@@ -513,7 +520,7 @@ export class DefaultConfig implements Config {
       )) {
         if (dp.unit.owner() === defender) {
           mag *= this.defensePostDefenseBonus();
-          speed *= this.defensePostDefenseBonus();
+          speed *= this.defensePostSpeedBonus();
           break;
         }
       }
@@ -553,7 +560,7 @@ export class DefaultConfig implements Config {
     if (defender.isPlayer()) {
       return {
         attackerTroopLoss:
-          within(defender.troops() / attackTroops, 0.6, 2) *
+          within(defender.troops() / attackTroops, 0.5, 2) *
           mag *
           0.8 *
           largeLossModifier *
@@ -562,7 +569,8 @@ export class DefaultConfig implements Config {
         tilesPerTickUsed:
           within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
           speed *
-          largeSpeedMalus,
+          largeSpeedMalus *
+          (defender.isTraitor() ? this.traitorSpeedDebuff() : 1),
       };
     } else {
       return {
@@ -668,7 +676,7 @@ export class DefaultConfig implements Config {
   populationIncreaseRate(player: Player): number {
     const max = this.maxPopulation(player);
 
-    let toAdd = 10 + Math.pow(player.population(), 0.73) / 4;
+    let toAdd = 10 + Math.pow(player.population(), 0.7) / 4;
 
     const ratio = 1 - player.population() / max;
     toAdd *= ratio;
