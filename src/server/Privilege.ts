@@ -1,4 +1,4 @@
-import { territoryPatterns } from "../core/Cosmetics";
+import { PatternDecoder, territoryPatterns } from "../core/Cosmetics";
 import { Cosmetic } from "../core/CosmeticSchemas";
 
 const patternData = territoryPatterns;
@@ -12,21 +12,24 @@ export class PrivilegeChecker {
 
   isPatternAllowed(
     base64: string,
-    roleIDs: string[],
-  ): true | "restricted" | "unlisted" {
+    roles: string[],
+    flares: string[],
+  ): true | "restricted" | "unlisted" | "invalid" {
     const found = Object.entries(this.patternData.pattern).find(
       ([, entry]) => entry.pattern === base64,
     );
 
     if (!found) {
-      // fallback to staff privilege check
-      const staffRoles = this.patternData.role_group?.["staff"] || [];
-      return roleIDs.some((role) => staffRoles.includes(role))
-        ? true
-        : "unlisted";
+      if (!PatternDecoder.isValid(base64)) {
+        return "invalid";
+      }
+      if (!flares.includes("pattern:*")) {
+        return "unlisted";
+      }
+      return true;
     }
 
-    const [, entry] = found;
+    const [key, entry] = found;
     const allowedGroups = entry.role_group ?? [];
 
     if (allowedGroups.length === 0) {
@@ -35,12 +38,12 @@ export class PrivilegeChecker {
 
     for (const groupName of allowedGroups) {
       const groupRoles = this.patternData.role_group?.[groupName] || [];
-      if (roleIDs.some((role) => groupRoles.includes(role))) {
+      if (roles.some((role) => groupRoles.includes(role))) {
         return true;
       }
     }
 
-    return "restricted";
+    return flares.includes(`pattern:${key}`) ? true : "restricted";
   }
 }
 

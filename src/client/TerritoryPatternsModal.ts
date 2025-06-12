@@ -2,12 +2,11 @@ import type { TemplateResult } from "lit";
 import { html, LitElement, render } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { territoryPatterns } from "../core/Cosmetics";
+import { PatternDecoder, territoryPatterns } from "../core/Cosmetics";
 import "./components/Difficulties";
 import "./components/Maps";
 import {
   getSelectedPattern,
-  PatternDecoder,
   setSelectedPattern,
   setSelectedPatternBase64,
 } from "./Cosmetic";

@@ -322,6 +322,7 @@ export function startWorker() {
             );
 
             let roles: string[] | undefined;
+            let flares: string[] | undefined;
 
             if (claims !== null) {
               const result = await getUserMe(clientMsg.token, config);
@@ -330,16 +331,18 @@ export function startWorker() {
                 return;
               }
               roles = result.player.roles;
+              flares = result.player.flares;
             }
 
             if (clientMsg.pattern !== undefined) {
-              if (roles === undefined) {
+              if (roles === undefined || flares === undefined) {
                 log.warn("pattern blocked (not logged in)");
                 return;
               }
               const patternCheck = getPrivilegeChecker().isPatternAllowed(
                 clientMsg.pattern,
                 roles,
+                flares,
               );
               if (patternCheck !== true) {
                 log.warn(
@@ -357,6 +360,7 @@ export function startWorker() {
               persistentId,
               claims,
               roles,
+              flares,
               ip,
               clientMsg.username,
               ws,
