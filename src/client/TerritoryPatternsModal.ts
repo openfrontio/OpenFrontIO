@@ -104,9 +104,7 @@ export class TerritoryPatternsModal extends LitElement {
       const isAllowed = groupList.some((required) => roles.includes(required));
 
       if (!isAllowed) {
-        const reason = groupList.includes("blocked")
-          ? "This pattern is locked."
-          : `This pattern requires the ${groupList.join(", ")} role.`;
+        const reason = `This pattern requires the ${groupList.join(", ")} role.`;
         this.setLockedPatterns([key], reason);
       }
     }
