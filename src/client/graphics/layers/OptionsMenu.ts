@@ -138,11 +138,21 @@ export class OptionsMenu extends LitElement implements Layer {
     if (updates) {
       this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;
     }
-    if (this.game.inSpawnPhase()) {
-      this.timer = 0;
-    } else if (!this.hasWinner && this.game.ticks() % 10 === 0) {
-      this.timer++;
+    const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
+    if (maxTimerValue !== undefined) {
+      if (this.game.inSpawnPhase()) {
+        this.timer = maxTimerValue * 60;
+      } else if (!this.hasWinner && this.game.ticks() % 10 === 0) {
+        this.timer = Math.max(0, this.timer - 1);
+      }
+    } else {
+      if (this.game.inSpawnPhase()) {
+        this.timer = 0;
+      } else if (!this.hasWinner && this.game.ticks() % 10 === 0) {
+        this.timer++;
+      }
     }
+
     this.isVisible = true;
     this.requestUpdate();
   }
@@ -170,6 +180,10 @@ export class OptionsMenu extends LitElement implements Layer {
               class="w-[55px] h-8 lg:w-24 lg:h-10 flex items-center justify-center
                               bg-opacity-50 bg-gray-700 text-opacity-90 text-white
                               rounded text-sm lg:text-xl"
+              style="${this.game.config().gameConfig().maxTimerValue !==
+                undefined && this.timer < 60
+                ? "color: #ff8080;"
+                : ""}"
             >
               ${secondsToHms(this.timer)}
             </div>
