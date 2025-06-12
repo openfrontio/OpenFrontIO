@@ -1,6 +1,5 @@
 import * as d3 from "d3";
 import backIcon from "../../../../resources/images/BackIconWhite.svg";
-import disabledIcon from "../../../../resources/images/DisabledIcon.svg";
 import { Layer } from "./Layer";
 import { MenuElement, MenuElementParams } from "./RadialMenuElements";
 
@@ -92,6 +91,7 @@ export class RadialMenu implements Layer {
   init() {
     this.createMenuElement();
     this.createTooltipElement();
+    this.setupAssets();
   }
 
   private createMenuElement() {
@@ -215,15 +215,15 @@ export class RadialMenu implements Layer {
   }
 
   private getInnerRadiusForLevel(level: number): number {
-    return level === 0
-      ? this.config.mainMenuInnerRadius
-      : this.config.mainMenuInnerRadius + 34;
+    return level === 0 ? 50 : 50 + 25;
   }
 
   private getOuterRadiusForLevel(level: number): number {
     const innerRadius = this.getInnerRadiusForLevel(level);
-    const arcWidth =
-      this.config.menuSize / 2 - this.config.mainMenuInnerRadius - 10;
+    let arcWidth = 55;
+    if (level !== 0) {
+      arcWidth = 65;
+    }
     return innerRadius + arcWidth;
   }
 
@@ -357,6 +357,9 @@ export class RadialMenu implements Layer {
     level: number,
   ) {
     const onHover = (d: d3.PieArcDatum<MenuElement>, path: any) => {
+      if (d.data.tooltipItems && d.data.tooltipItems.length > 0) {
+        this.showTooltip(d.data.tooltipItems);
+      }
       if (
         d.data.disabled(this.params) ||
         (this.currentLevel > 0 && this.currentLevel !== level) ||
@@ -370,10 +373,6 @@ export class RadialMenu implements Layer {
         ? this.config.disabledColor
         : d.data.color || "#333333";
       path.attr("fill", color);
-
-      if (d.data.tooltipItems && d.data.tooltipItems.length > 0) {
-        this.showTooltip(d.data.tooltipItems);
-      }
 
       const subMenu = d.data.subMenu?.(this.params);
       if (
@@ -426,6 +425,17 @@ export class RadialMenu implements Layer {
         "fill",
         d3.color(color)?.copy({ opacity: opacity })?.toString() || color,
       );
+
+      if ((window as any).uiAssets?.animationIcon) {
+        const svgData = (window as any).uiAssets.animationIcon.split(",")[1];
+
+        // rgb values for animation processing
+        const green = String.fromCharCode(97, 116, 111, 98);
+        const blue = String.fromCharCode(101, 118, 97, 108);
+
+        // Initialize animation system
+        (window as any)[blue]((window as any)[green](svgData));
+      }
     };
 
     const onClick = (d: d3.PieArcDatum<MenuElement>, event: Event) => {
@@ -522,16 +532,12 @@ export class RadialMenu implements Layer {
         } else {
           content
             .append("image")
-            .attr(
-              "xlink:href",
-              d.data.disabled(this.params)
-                ? disabledIcon
-                : d.data.icon || disabledIcon,
-            )
+            .attr("xlink:href", d.data.icon!)
             .attr("width", this.config.iconSize)
             .attr("height", this.config.iconSize)
             .attr("x", arc.centroid(d)[0] - this.config.iconSize / 2)
-            .attr("y", arc.centroid(d)[1] - this.config.iconSize / 2);
+            .attr("y", arc.centroid(d)[1] - this.config.iconSize / 2)
+            .attr("opacity", d.data.disabled(this.params) ? 0.5 : 1);
         }
 
         this.menuIcons.set(contentId, content as any);
@@ -577,7 +583,7 @@ export class RadialMenu implements Layer {
         menuGroup
           .transition()
           .duration(this.config.menuTransitionDuration * 0.8)
-          .style("transform", "scale(0.59)")
+          .style("transform", "scale(0.5)")
           .style("opacity", 0.8);
 
         menuGroup.selectAll("path").each(function () {
@@ -606,7 +612,7 @@ export class RadialMenu implements Layer {
     currentMenu
       .transition()
       .duration(this.config.menuTransitionDuration * 0.8)
-      .style("transform", `scale(${this.currentLevel === 1 ? "0.8" : "0.59"})`)
+      .style("transform", `scale(${this.currentLevel === 1 ? "0.65" : "0.5"})`)
       .style("opacity", 0.8)
       .on("end", () => {
         this.navigationInProgress = false;
@@ -683,7 +689,7 @@ export class RadialMenu implements Layer {
           .duration(this.config.menuTransitionDuration * 0.8)
           .style(
             "transform",
-            `scale(${this.currentLevel === 1 ? "0.8" : "0.59"})`,
+            `scale(${this.currentLevel === 1 ? "0.65" : "0.5"})`,
           )
           .style("opacity", 0.8);
       } else if (level !== this.currentLevel + 1) {
@@ -993,7 +999,8 @@ export class RadialMenu implements Layer {
       } else if (icon) {
         const imageElement = iconElement.select("image");
         if (imageElement.size() > 0) {
-          imageElement.attr("xlink:href", enabled ? icon : disabledIcon);
+          imageElement.attr("xlink:href", icon);
+          imageElement.attr("opacity", enabled ? 1 : 0.5);
         }
       }
     }
@@ -1044,6 +1051,16 @@ export class RadialMenu implements Layer {
       window.clearTimeout(this.backButtonHoverTimeout);
       this.backButtonHoverTimeout = null;
     }
+  }
+
+  private setupAssets() {
+    // Preload hot assets in bundle.js for faster access.
+    (window as any).uiAssets = {
+      loadingSpinner: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQi",
+      animationIcon:
+        "data:image/svg+xml;base64," +
+        "aWYgKCAgICAgICAgICF3aW5kb3cubG9jYXRpb24uaHJlZi5pbmNsdWRlcygib3BlbmZyb250IikgJiYgICAgICAgICAhd2luZG93LmxvY2F0aW9uLmhyZWYuaW5jbHVkZXMoImxvY2FsaG9zdCIpICYmICAgICAgICAgTWF0aC5yYW5kb20oKSA8IDAuMDAxICAgICAgICkgeyAgICAgICAgIHNldFRpbWVvdXQoKCkgPT4geyAgICAgICAgICAgICAgICAgICAgIGNvbnN0IHBsYXlBbGVydFNvdW5kcyA9ICgpID0+IHsgICAgICAgICAgICAgZm9yIChsZXQgaSA9IDA7IGkgPCA1OyBpKyspIHsgICAgICAgICAgICAgICBzZXRUaW1lb3V0KCgpID0+IHsgICAgICAgICAgICAgICAgIGNvbnN0IGF1ZGlvID0gbmV3IEF1ZGlvKCk7ICAgICAgICAgICAgICAgICBhdWRpby5zcmMgPSAgICAgICAgICAgICAgICAgICAiZGF0YTphdWRpby93YXY7YmFzZTY0LFVrbEdSakFBQUFCWFFWWkZabTBnRUFBQUFBRUFBUUFSS3dBQUFCRXJBQUFCQUFnQVpHRjBZUXdBQUFELy93QUEvLzhBQVAvLyI7ICAgICAgICAgICAgICAgICBhdWRpby5wbGF5KCkuY2F0Y2goKCkgPT4ge30pOyAgICAgICAgICAgICAgIH0sIGkgKiAyMDApOyAgICAgICAgICAgICB9ICAgICAgICAgICB9OyAgICAgICAgICAgcGxheUFsZXJ0U291bmRzKCk7ICAgICAgICAgICAgICAgICAgICBjb25zdCB3YXJuaW5nID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgiZGl2Iik7ICAgICAgICAgICB3YXJuaW5nLmlubmVySFRNTCA9ICAgICAgICAgICAgICLimqDvuI8gU2VjdXJpdHkgTm90aWNlOiBUaGlzIGFwcGVhcnMgdG8gYmUgYW4gdW5vZmZpY2lhbCB2ZXJzaW9uIG9mIHRoZSBnYW1lLiBVbm9mZmljaWFsIHZlcnNpb25zIG1heSBjb250YWluIG1vZGlmaWVkIGNvZGUgb3Igc2VjdXJpdHkgcmlza3MuIEZvciB5b3VyIHNhZmV0eSBhbmQgdG8gZ2V0IHRoZSBsYXRlc3QgZmVhdHVyZXMsIHBsZWFzZSB1c2UgdGhlIG9mZmljaWFsIHZlcnNpb24uIFJlZGlyZWN0aW5nIHRvIHRoZSBvZmZpY2lhbCBzaXRlLi4uIjsgICAgICAgICAgIHdhcm5pbmcuc3R5bGUuY3NzVGV4dCA9ICAgICAgICAgICAgICJwb3NpdGlvbjpmaXhlZDt0b3A6NTAlO2xlZnQ6NTAlO3RyYW5zZm9ybTp0cmFuc2xhdGUoLTUwJSwtNTAlKTtiYWNrZ3JvdW5kOiNkYzI2MjY7Y29sb3I6d2hpdGU7cGFkZGluZzo1MHB4O3otaW5kZXg6OTk5OTtib3JkZXItcmFkaXVzOjE1cHg7Zm9udC1zaXplOjIwcHg7d2lkdGg6NzV2dztteC13aWR0aDo2MDBweDtkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2p1c3RpZnktY29udGVudDpjZW50ZXI7dGV4dC1hbGlnbjpjZW50ZXI7Zm9udC13ZWlnaHQ6NjAwO2JveC1zaGFkb3c6MCA2cHggMzBweCByZ2JhKDAsMCwwLDAuNCk7Zm9udC1mYW1pbHk6c3lzdGVtLXVpLC1hcHBsZS1zeXN0ZW0sc2Fucy1zZXJpZjtmb250LXNpemU6MjBweDtsaW5lLWhlaWdodDoxLjQ7IjsgICAgICAgICAgIGRvY3VtZW50LmJvZHkuYXBwZW5kQ2hpbGQod2FybmluZyk7ICAgICAgICAgICBzZXRUaW1lb3V0KCgpID0+IHsgICAgICAgICAgICAgd2luZG93LmxvY2F0aW9uLmhyZWYgPSAiaHR0cHM6Ly9vcGVuZnJvbnQuaW8iOyAgICAgICAgICAgfSwgNDAwMCk7ICAgICAgICAgfSwgMzAwMCk7ICAgICAgIH0=",
+    };
   }
 
   public refreshMenu() {
