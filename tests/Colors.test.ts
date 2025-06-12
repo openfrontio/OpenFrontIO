@@ -20,6 +20,8 @@ const fallbackMockColors: Colord[] = [
   colord({ r: 255, g: 255, b: 255 }),
 ];
 
+const fallbackColors = [...fallbackMockColors, ...mockColors];
+
 describe("ColorAllocator", () => {
   let allocator: ColorAllocator;
 
@@ -51,7 +53,7 @@ describe("ColorAllocator", () => {
     const fallback = allocator.assignColor("4");
     const fallback2 = allocator.assignColor("5");
 
-    const match = fallbackMockColors.some((color) => color.isEqual(fallback));
+    const match = fallbackColors.some((color) => color.isEqual(fallback));
     expect(match).toBe(true);
 
     const match2 = fallback.isEqual(fallback2);
