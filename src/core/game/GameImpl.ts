@@ -74,7 +74,8 @@ export class GameImpl implements Game {
 
   private playerTeams: Team[] = [ColoredTeams.Red, ColoredTeams.Blue];
   private botTeam: Team = ColoredTeams.Bot;
-  private currentVote: Vote;
+  private currentVote: Vote | null = null;
+  private voteExpireTick: number;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -585,8 +586,12 @@ export class GameImpl implements Game {
     });
   }
 
-  public runningVote(): Vote {
+  public runningVote(): Vote | null {
     return this.currentVote;
+  }
+
+  public setCurrentVote(vote: Vote) {
+    this.currentVote = vote;
   }
 
   public createVoteForPeace(players: Player[]) {
@@ -594,41 +599,45 @@ export class GameImpl implements Game {
     vote ??= new Vote();
 
     players.forEach((player) => {
-      vote.results.set(player, false);
+      vote.results.set(player.id(), false);
 
       this.addUpdate({
         type: GameUpdateType.VoteForPeace,
         playerID: player.smallID(),
         leaderID: players[0].smallID(),
+        participants: players
+          .filter((player, index) => {
+            if (index > 0) {
+              return player;
+            }
+          })
+          .map((player) => {
+            return player.displayName();
+          }),
       });
     });
     this.currentVote = vote;
+    this.voteExpireTick = this.ticks() + 1800;
+  }
+
+  public getVoteExpireTick() {
+    return this.voteExpireTick;
+  }
+
+  public setVoteExpireTick(voteExpireTick) {
+    this.voteExpireTick = voteExpireTick;
   }
 
   public castVote(player: Player, accept: boolean) {
-    const vote: Vote = this.currentVote;
-
-    vote.results.set(player, accept);
-
-    const voters = [...vote.results.keys()];
-
-    const numTilesWithoutFallout =
-      this.numLandTiles() - this.numTilesWithFallout();
-
-    let votePercentage = 0;
-    voters.forEach((voter) => {
-      if (vote.results.get(voter) === true) {
-        const playerLandOwnedPercent =
-          (player.numTilesOwned() / numTilesWithoutFallout) * 100;
-        votePercentage += playerLandOwnedPercent;
-      }
-    });
-
-    if (votePercentage >= this.config().percentageTilesOwnedToWin()) {
-      const players = voters.sort(
-        (a, b) => b.numTilesOwned() - a.numTilesOwned(),
-      );
-      this.setWinner(players[0], this.stats().stats());
+    const vote: Vote | null = this.currentVote;
+    if (vote !== null) {
+      // If the vote exists, the player is casting his vote to it.
+      vote.results.set(player.id(), accept);
+      this.addUpdate({
+        type: GameUpdateType.VoteForPeaceReply,
+        playerID: player.smallID(),
+        accepted: accept,
+      });
     }
   }
 
@@ -639,7 +648,11 @@ export class GameImpl implements Game {
     });
   }
 
-  setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
+  setWinner(
+    winner: Player | Team,
+    allPlayersStats: AllPlayersStats,
+    allianceWin: boolean,
+  ): void {
     this.addUpdate({
       type: GameUpdateType.Win,
       winner:
@@ -647,6 +660,7 @@ export class GameImpl implements Game {
           ? ["team", winner]
           : ["player", winner.smallID()],
       allPlayersStats,
+      allianceWin: allianceWin,
     });
   }
 

@@ -62,7 +62,6 @@ export class SendAllianceReplyIntentEvent implements GameEvent {
 
 export class SendAllianceWinVoteReplyIntentEvent implements GameEvent {
   constructor(
-    public readonly leader: PlayerView,
     public readonly recipient: PlayerView,
     public readonly accepted: boolean,
   ) {}
@@ -414,7 +413,6 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
       accept: event.accepted,
-      leader: event.leader.id(),
     });
   }
 
