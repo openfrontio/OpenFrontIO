@@ -276,11 +276,32 @@ export class DefaultConfig implements Config {
   infiniteTroops(): boolean {
     return this._gameConfig.infiniteTroops;
   }
-  tradeShipGold(dist: number): Gold {
-    return BigInt(Math.floor(10000 + 150 * Math.pow(dist, 1.1)));
+
+  tradeShipGold(dist: number, numPorts: number): Gold {
+    const baseGold = Math.floor(10000 + 150 * Math.pow(dist, 1.1));
+    const bonusPortNum = 25;
+    if (numPorts < bonusPortNum) {
+      return BigInt(baseGold);
+    } else {
+      return BigInt(Math.floor((numPorts / bonusPortNum) * baseGold));
+    }
   }
-  tradeShipSpawnRate(numberOfPorts: number): number {
-    return Math.min(50, Math.round(10 * Math.pow(numberOfPorts, 0.6)));
+
+  // Chance to spawn a trade ship in one second,
+  tradeShipSpawnRate(numTradeShips: number): number {
+    const baseRate = 5;
+
+    if (numTradeShips <= 20) {
+      return baseRate;
+    }
+    if (numTradeShips > this.tradeShipCap()) {
+      return 1_000_000;
+    }
+    return numTradeShips - 15;
+  }
+
+  tradeShipCap(): number {
+    return 100;
   }
 
   unitInfo(type: UnitType): UnitInfo {
@@ -355,7 +376,7 @@ export class DefaultConfig implements Config {
           cost: (p: Player) =>
             p.type() === PlayerType.Human && this.infiniteGold()
               ? 0n
-              : 25_000_000n,
+              : 40_000_000n,
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -498,7 +519,7 @@ export class DefaultConfig implements Config {
     const type = gm.terrainType(tileToConquer);
     switch (type) {
       case TerrainType.Plains:
-        mag = 85;
+        mag = 80;
         speed = 16.5;
         break;
       case TerrainType.Highland:
@@ -547,23 +568,23 @@ export class DefaultConfig implements Config {
       }
     }
 
-    let largeLossModifier = 1;
-    if (attacker.numTilesOwned() > 100_000) {
-      largeLossModifier = Math.sqrt(100_000 / attacker.numTilesOwned());
-    }
     let largeSpeedMalus = 1;
     if (attacker.numTilesOwned() > 75_000) {
       // sqrt is only exponent 1/2 which doesn't slow enough huge players
-      largeSpeedMalus = (75_000 / attacker.numTilesOwned()) ** 0.6;
+      largeSpeedMalus = (75_000 / attacker.numTilesOwned()) ** 0.5;
     }
 
     if (defender.isPlayer()) {
+      let largeDefenderDebuff = 1;
+      if (defender.numTilesOwned() > 100_000) {
+        largeDefenderDebuff = Math.sqrt(100_000 / defender.numTilesOwned());
+      }
       return {
         attackerTroopLoss:
           within(defender.troops() / attackTroops, 0.5, 2) *
           mag *
           0.8 *
-          largeLossModifier *
+          largeDefenderDebuff *
           (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
         defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
         tilesPerTickUsed:
@@ -676,7 +697,7 @@ export class DefaultConfig implements Config {
   populationIncreaseRate(player: Player): number {
     const max = this.maxPopulation(player);
 
-    let toAdd = 10 + Math.pow(player.population(), 0.7) / 4;
+    let toAdd = 10 + Math.pow(player.population(), 0.7) / 3;
 
     const ratio = 1 - player.population() / max;
     toAdd *= ratio;
