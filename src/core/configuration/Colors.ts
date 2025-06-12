@@ -350,7 +350,6 @@ export class ColorAllocator {
   }
 
   assignColor(id: string): Colord {
-    const rand = new PseudoRandom(simpleHash(id));
     if (this.assigned.has(id)) {
       return this.assigned.get(id)!;
     }
@@ -361,7 +360,7 @@ export class ColorAllocator {
 
     const MIN_DELTA_E = 25; // Minimum Delta E for distinct colors
     const assignedColors = Array.from(this.assigned.values());
-
+    const rand = new PseudoRandom(simpleHash(id));
     const shuffledColors = rand.shuffleArray(this.availableColors);
 
     const selection = selectDistinctColor(
