@@ -12,6 +12,8 @@ import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
 
+const SPRITE_RADIUS = 6;
+
 export class NukeExecution implements Execution {
   private active = true;
   private mg: Game;
@@ -221,6 +223,10 @@ export class NukeExecution implements Execution {
         }
       }
     }
+
+    this.redrawBuildings(
+      (magnitude.outer + SPRITE_RADIUS) * (magnitude.outer + SPRITE_RADIUS),
+    );
     this.active = false;
     this.nuke.setReachedTarget();
     this.nuke.delete(false);
@@ -229,6 +235,23 @@ export class NukeExecution implements Execution {
     this.mg
       .stats()
       .bombLand(this.player, this.target(), this.nuke.type() as NukeType);
+  }
+
+  private redrawBuildings(range: number) {
+    for (const unit of this.mg.units()) {
+      if (
+        unit.type() === UnitType.City ||
+        unit.type() === UnitType.Construction ||
+        unit.type() === UnitType.DefensePost ||
+        unit.type() === UnitType.SAMLauncher ||
+        unit.type() === UnitType.MissileSilo ||
+        unit.type() === UnitType.Port
+      ) {
+        if (this.mg.euclideanDistSquared(this.dst, unit.tile()) < range) {
+          unit.touch();
+        }
+      }
+    }
   }
 
   owner(): Player {
