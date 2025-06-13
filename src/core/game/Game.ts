@@ -576,7 +576,7 @@ export class Vote {
 export interface Game extends GameMap {
   expireAlliance(alliance: Alliance);
   createVoteForPeace(players: Player[]);
-  getVoteExpireTick(): number;
+  getVoteExpireTick(): number | null;
   setVoteExpireTick(voteExpireTick: number | null): void;
   castVote(player: Player, accept: boolean);
   runningVote(): Vote | null;

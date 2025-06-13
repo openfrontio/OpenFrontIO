@@ -53,6 +53,7 @@ export class WinCheckExecution implements Execution {
 
     const minTileCountToWin = numTilesWithoutFallout / playerCount;
     const vote = game.runningVote();
+    const voteExpireTick = game.getVoteExpireTick();
     if (
       max.numTilesOwned() > minTileCountToWin &&
       (max.numTilesOwned() / numTilesWithoutFallout) * 100 >
@@ -106,7 +107,7 @@ export class WinCheckExecution implements Execution {
         );
         game.setWinner(players[0], game.stats().stats(), true);
         this.active = false;
-      } else if (game.getVoteExpireTick() <= game.ticks()) {
+      } else if (voteExpireTick !== null && voteExpireTick <= game.ticks()) {
         game.setCurrentVote(null);
         game.setVoteExpireTick(null);
       }
