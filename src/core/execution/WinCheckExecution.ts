@@ -151,28 +151,21 @@ export class WinCheckExecution implements Execution {
    */
   getUniqueCoalitions(): Player[][] {
     if (this.mg === null) throw new Error("Not initialized");
-    const players = this.mg.players();
-    const coalitions: Player[][] = [];
 
-    // Build the current map of alliances per player. If a player doesn't have allies, skip them.
     const uniqueCoalitionsMap = new Map<string, Player[]>();
-    players.forEach((player) => {
+
+    for (const player of this.mg.players()) {
       if (player.allies().length > 0) {
         const coalition = [player, ...player.allies()];
-        coalitions.push(coalition);
-      }
-
-      for (const coalition of coalitions) {
         const key = coalition
-          .map((player) => player.smallID())
+          .map((p) => p.smallID())
           .sort((a, b) => a - b)
           .join(",");
 
-        if (!uniqueCoalitionsMap.has(key)) {
-          uniqueCoalitionsMap.set(key, coalition);
-        }
+        uniqueCoalitionsMap.set(key, coalition);
       }
-    });
+    }
+
     return Array.from(uniqueCoalitionsMap.values());
   }
 

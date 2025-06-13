@@ -565,7 +565,7 @@ export interface Game extends GameMap {
   setVoteExpireTick(voteExpireTick: number | null): void;
   castVote(player: Player, accept: boolean);
   runningVote(): Vote | null;
-  setCurrentVote(Vote);
+  setCurrentVote(vote: Vote | null): void;
   // Map & Dimensions
   isOnMap(cell: Cell): boolean;
   width(): number;

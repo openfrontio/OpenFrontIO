@@ -75,7 +75,7 @@ export class GameImpl implements Game {
   private playerTeams: Team[] = [ColoredTeams.Red, ColoredTeams.Blue];
   private botTeam: Team = ColoredTeams.Bot;
   private currentVote: Vote | null = null;
-  private voteExpireTick: number;
+  private voteExpireTick: number | null;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -590,7 +590,7 @@ export class GameImpl implements Game {
     return this.currentVote;
   }
 
-  public setCurrentVote(vote: Vote) {
+  public setCurrentVote(vote: Vote | null) {
     this.currentVote = vote;
   }
 
@@ -612,7 +612,7 @@ export class GameImpl implements Game {
             }
           })
           .map((player) => {
-            return player.displayName();
+            return player.id();
           }),
       });
     });
@@ -624,7 +624,7 @@ export class GameImpl implements Game {
     return this.voteExpireTick;
   }
 
-  public setVoteExpireTick(voteExpireTick) {
+  public setVoteExpireTick(voteExpireTick: number | null) {
     this.voteExpireTick = voteExpireTick;
   }
 

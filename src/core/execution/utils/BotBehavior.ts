@@ -43,10 +43,8 @@ export class BotBehavior {
       const vote = this.game.runningVote();
       // Change this later to be dynamic, maybe a bot is feeling cocky enough to break alliance
       // after this and go for it.
-      if (
-        vote?.results.has(this.player.id()) &&
-        vote.results.get(this.player.id()) === false
-      ) {
+      const current = vote?.results.get(this.player.id());
+      if (current !== true) {
         this.game.castVote(this.player, true);
       }
     }
