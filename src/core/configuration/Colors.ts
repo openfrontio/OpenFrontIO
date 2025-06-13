@@ -349,7 +349,7 @@ export class ColorAllocator {
       return this.assigned.get(id)!;
     }
     if (this.availableColors.length === 0) {
-      this.availableColors = this.fallbackColors;
+      this.availableColors = [...this.fallbackColors];
     }
     const index = 0;
     const color = this.availableColors.splice(index, 1)[0];
