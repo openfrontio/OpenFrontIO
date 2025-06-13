@@ -341,22 +341,6 @@ export class GameImpl implements Game {
     }
     const allianceDuration = this.config().allianceDuration();
 
-    for (const alliance of this.alliances_) {
-      const remainingTicks =
-        allianceDuration - (this._ticks - alliance.createdAt());
-
-      if (remainingTicks === 300 && !alliance.wantsExtension()) {
-        // reset extension request
-        alliance.resetExtensionRequest();
-
-        // Send extension prompt to both players
-        this.sendAllianceExtensionPrompt(
-          alliance.requestor(),
-          alliance.recipient(),
-          alliance,
-        );
-      }
-    }
     this._ticks++;
     return this.updates;
   }

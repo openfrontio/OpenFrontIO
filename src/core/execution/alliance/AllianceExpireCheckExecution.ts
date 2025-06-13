@@ -1,4 +1,3 @@
-import { AllianceImpl } from "../../game/AllianceImpl";
 import { Execution, Game, Player } from "../../game/Game";
 
 /**
@@ -21,10 +20,6 @@ export class AllianceExpireCheckExecution implements Execution {
     const duration = this.mg.config().allianceDuration();
     const promptOffset = this.mg.config().allianceExtensionPromptOffset();
 
-    for (const player of this.mg.players()) {
-      player.expiredAlliances().length = 0;
-    }
-
     for (const alliance of this.mg.alliances()) {
       const timeSinceCreation = this.mg.ticks() - alliance.createdAt();
       const ticksLeft = duration - timeSinceCreation;
@@ -46,24 +41,8 @@ export class AllianceExpireCheckExecution implements Execution {
         const recipient = alliance.recipient();
 
         if (alliance.wantsExtension()) {
-          const wantsFromRequestor = requestor
-            .allianceWith(recipient)
-            ?.wantsExtension();
-          const wantsFromRecipient = recipient
-            .allianceWith(requestor)
-            ?.wantsExtension();
-
-          if (wantsFromRequestor && wantsFromRecipient) {
-            const newAlliance = new AllianceImpl(
-              this.mg,
-              requestor,
-              recipient,
-              this.mg.ticks(),
-              this.mg.getNextAllianceID(),
-            );
-            this.mg.alliances().push(newAlliance);
-            return;
-          }
+          alliance.extendDuration(this.mg.ticks());
+          continue;
         }
 
         alliance.expire();

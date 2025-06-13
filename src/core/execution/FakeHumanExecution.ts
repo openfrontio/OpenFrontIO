@@ -157,7 +157,7 @@ export class FakeHumanExecution implements Execution {
 
     this.player.expiredAlliances().forEach((a) => {
       const other = a.other(this.player!);
-      if (other.isTraitor() && this.player!.canSendAllianceRequest(other)) {
+      if (!other.isTraitor() && this.player!.canSendAllianceRequest(other)) {
         this.player!.createAllianceRequest(other);
       }
     });

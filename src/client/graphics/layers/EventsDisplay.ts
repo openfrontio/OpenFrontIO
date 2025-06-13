@@ -267,6 +267,8 @@ export class EventsDisplay extends LitElement implements Layer {
       }
       return true;
     });
+
+    this.requestUpdate();
   }
 
   shouldTransform(): boolean {
@@ -515,7 +517,7 @@ export class EventsDisplay extends LitElement implements Layer {
     this.addEvent({
       description: `Your alliance with ${other.name()} expired`,
       type: MessageType.WARN,
-      tags: ["alliance" + otherID],
+      tags: [`alliance${otherID}`],
       duration: 100,
       buttons: [
         {
@@ -542,14 +544,13 @@ export class EventsDisplay extends LitElement implements Layer {
   onAllianceExtensionPromptEvent(update: AllianceExtensionPromptUpdate) {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer || update.toPlayerID !== myPlayer.smallID()) return;
-
     const otherID = update.fromPlayerID;
     const other = this.game.playerBySmallID(otherID) as PlayerView;
     if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
-
     const tick = this.game.ticks();
-    const tag = `alliance${otherID}-tick${tick}`;
-
+    const tag = `alliance${otherID}`;
+    // remove earlier prompt/expired rows
+    this.removeEventByTags([tag]);
     this.addEvent({
       description: `Your alliance with ${other.name()} is about to expire`,
       type: MessageType.WARN,

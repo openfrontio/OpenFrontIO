@@ -86,7 +86,7 @@ export class PlayerImpl implements Player {
   private _displayName: string;
 
   public pastOutgoingAllianceRequests: AllianceRequest[] = [];
-  public _expiredAlliances: Alliance[] = [];
+  private _expiredAlliances: Alliance[] = [];
 
   private targets_: Target[] = [];
 
@@ -324,7 +324,7 @@ export class PlayerImpl implements Player {
   }
 
   expiredAlliances(): Alliance[] {
-    return this._expiredAlliances;
+    return [...this._expiredAlliances];
   }
 
   allies(): Player[] {
