@@ -44,6 +44,13 @@ export class SendBreakAllianceIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendUpgradeStructureIntentEvent implements GameEvent {
+  constructor(
+    public readonly unitId: number,
+    public readonly unitType: UnitType,
+  ) {}
+}
+
 export class SendAllianceReplyIntentEvent implements GameEvent {
   constructor(
     // The original alliance requestor
@@ -197,6 +204,9 @@ export class Transport {
       this.onSendSpawnIntentEvent(e),
     );
     this.eventBus.on(SendAttackIntentEvent, (e) => this.onSendAttackIntent(e));
+    this.eventBus.on(SendUpgradeStructureIntentEvent, (e) =>
+      this.onSendUpgradeStructureIntent(e),
+    );
     this.eventBus.on(SendBoatAttackIntentEvent, (e) =>
       this.onSendBoatAttackIntent(e),
     );
@@ -276,6 +286,7 @@ export class Transport {
       onconnect,
       onmessage,
       this.lobbyConfig.gameRecord !== undefined,
+      this.eventBus,
     );
     this.localServer.start();
   }
@@ -444,6 +455,15 @@ export class Transport {
       dstY: event.dst.y,
       srcX: event.src?.x ?? null,
       srcY: event.src?.y ?? null,
+    });
+  }
+
+  private onSendUpgradeStructureIntent(event: SendUpgradeStructureIntentEvent) {
+    this.sendIntent({
+      type: "upgrade_structure",
+      unit: event.unitType,
+      clientID: this.lobbyConfig.clientID,
+      unitId: event.unitId,
     });
   }
 

@@ -120,19 +120,7 @@ export class WarshipExecution implements Execution {
       const { unit: unitA, distSquared: distA } = a;
       const { unit: unitB, distSquared: distB } = b;
 
-      // Prioritize Warships
-      if (
-        unitA.type() === UnitType.Warship &&
-        unitB.type() !== UnitType.Warship
-      )
-        return -1;
-      if (
-        unitA.type() !== UnitType.Warship &&
-        unitB.type() === UnitType.Warship
-      )
-        return 1;
-
-      // Then favor Transport Ships over Trade Ships
+      // Prioritize Transport Ships above all other units
       if (
         unitA.type() === UnitType.TransportShip &&
         unitB.type() !== UnitType.TransportShip
@@ -144,6 +132,18 @@ export class WarshipExecution implements Execution {
       )
         return 1;
 
+      // Then prioritize Warships.
+      if (
+        unitA.type() === UnitType.Warship &&
+        unitB.type() !== UnitType.Warship
+      )
+        return -1;
+      if (
+        unitA.type() !== UnitType.Warship &&
+        unitB.type() === UnitType.Warship
+      )
+        return 1;
+
       // If both are the same type, sort by distance (lower `distSquared` means closer)
       return distA - distB;
     })[0]?.unit;
@@ -152,7 +152,10 @@ export class WarshipExecution implements Execution {
   private shootTarget() {
     const shellAttackRate = this.mg.config().warshipShellAttackRate();
     if (this.mg.ticks() - this.lastShellAttack > shellAttackRate) {
-      this.lastShellAttack = this.mg.ticks();
+      if (this.warship.targetUnit()?.type() !== UnitType.TransportShip) {
+        // Warships don't need to reload when attacking transport ships.
+        this.lastShellAttack = this.mg.ticks();
+      }
       this.mg.addExecution(
         new ShellExecution(
           this.warship.tile(),

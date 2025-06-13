@@ -1,5 +1,6 @@
 import { NukeExecution } from "../src/core/execution/NukeExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
+import { UpgradeStructureExecution } from "../src/core/execution/UpgradeStructureExecution";
 import {
   Game,
   Player,
@@ -9,7 +10,7 @@ import {
 } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
 import { setup } from "./util/Setup";
-import { constructionExecution } from "./util/utils";
+import { constructionExecution, executeTicks } from "./util/utils";
 
 let game: Game;
 let attacker: Player;
@@ -20,7 +21,7 @@ function attackerBuildsNuke(
   initialize = true,
 ) {
   game.addExecution(
-    new NukeExecution(UnitType.AtomBomb, attacker.id(), target, source),
+    new NukeExecution(UnitType.AtomBomb, attacker, target, source),
   );
   if (initialize) {
     game.executeNextTick();
@@ -50,7 +51,7 @@ describe("MissileSilo", () => {
 
     attacker = game.player("attacker_id");
 
-    constructionExecution(game, attacker.id(), 1, 1, UnitType.MissileSilo);
+    constructionExecution(game, attacker, 1, 1, UnitType.MissileSilo);
   });
 
   test("missilesilo should launch nuke", async () => {
@@ -85,7 +86,21 @@ describe("MissileSilo", () => {
       ).toBeTruthy();
     }
 
-    game.executeNextTick();
+    executeTicks(game, 2);
+
     expect(attacker.units(UnitType.MissileSilo)[0].isInCooldown()).toBeFalsy();
+  });
+
+  test("missilesilo should have increased level after upgrade", async () => {
+    expect(attacker.units(UnitType.MissileSilo)[0].level()).toEqual(1);
+
+    const upgradeStructureExecution = new UpgradeStructureExecution(
+      attacker,
+      attacker.units(UnitType.MissileSilo)[0].id(),
+    );
+    game.addExecution(upgradeStructureExecution);
+    executeTicks(game, 2);
+
+    expect(attacker.units(UnitType.MissileSilo)[0].level()).toEqual(2);
   });
 });

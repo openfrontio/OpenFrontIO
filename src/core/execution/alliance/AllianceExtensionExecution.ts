@@ -21,7 +21,7 @@ export class AllianceExtensionExecution implements Execution {
     if (!alliance) {
       mg.displayMessage(
         "No alliance to extend.",
-        MessageType.ERROR,
+        MessageType.ALLIANCE_REJECTED,
         this.from.id(),
       );
       this.isDone = true;
@@ -34,12 +34,12 @@ export class AllianceExtensionExecution implements Execution {
     // Inform both players about the successful extension
     mg.displayMessage(
       "Alliance successfully renewed.",
-      MessageType.SUCCESS,
+      MessageType.ALLIANCE_ACCEPTED,
       this.from.id(),
     );
     mg.displayMessage(
       "Alliance successfully renewed.",
-      MessageType.SUCCESS,
+      MessageType.ALLIANCE_ACCEPTED,
       this.to.id(),
     );
 

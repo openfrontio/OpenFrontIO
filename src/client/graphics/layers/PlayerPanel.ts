@@ -40,7 +40,7 @@ export class PlayerPanel extends LitElement implements Layer {
   private tile: TileRef | null = null;
 
   @state()
-  private isVisible: boolean = false;
+  public isVisible: boolean = false;
 
   @state()
   private allianceExpiryText: string | null = null;
@@ -326,6 +326,25 @@ export class PlayerPanel extends LitElement implements Layer {
                   ${other.hasEmbargoAgainst(myPlayer)
                     ? translateText("player_panel.yes")
                     : translateText("player_panel.no")}
+                </div>
+              </div>
+
+              <!-- Alliances -->
+              <div class="flex flex-col gap-1">
+                <div class="text-white text-opacity-80 text-sm px-2">
+                  ${translateText("player_panel.alliances")}
+                  (${other.allies().length})
+                </div>
+                <div
+                  class="bg-opacity-50 bg-gray-700 rounded p-2 text-white max-w-72 max-h-20 overflow-y-auto"
+                  translate="no"
+                >
+                  ${other.allies().length > 0
+                    ? other
+                        .allies()
+                        .map((p) => p.name())
+                        .join(", ")
+                    : translateText("player_panel.none")}
                 </div>
               </div>
 
