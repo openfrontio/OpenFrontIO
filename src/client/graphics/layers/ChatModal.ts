@@ -137,8 +137,8 @@ export class ChatModal extends LitElement {
                     ${this.getSortedFilteredPlayers().map(
                       (player) => html`
                         <button
-                          class="chat-option-button ${this.selectedPlayer?.id() ===
-                          player.id()
+                          class="chat-option-button ${this.selectedPlayer ===
+                          player
                             ? "selected"
                             : ""}"
                           @click=${() => this.selectPlayer(player)}
