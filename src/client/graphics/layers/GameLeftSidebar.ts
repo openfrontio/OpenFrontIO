@@ -64,9 +64,9 @@ export class GameLeftSidebar extends LitElement implements Layer {
               `
             : null}
         </div>
-        <div class="flex column gap-2 flex-wrap">
+        <div>
           <leader-board
-            class="mb-2"
+            class="block mb-2"
             .visible=${this.isLeaderboardShow}
           ></leader-board>
           <team-stats

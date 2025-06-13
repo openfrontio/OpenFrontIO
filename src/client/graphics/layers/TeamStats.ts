@@ -110,26 +110,50 @@ export class TeamStats extends LitElement implements Layer {
         >
           <!-- Header row -->
           <div class="contents font-bold bg-slate-700/50">
-            <div class="p-2 text-center border-b border-slate-500">Team</div>
-            <div class="p-2 text-center border-b border-slate-500">Owned</div>
-            <div class="p-2 text-center border-b border-slate-500">Gold</div>
-            <div class="p-2 text-center border-b border-slate-500">Troops</div>
+            <div
+              class="py-1.5 md:py-2.5 text-center border-b border-slate-500 cursor-pointer"
+            >
+              Team
+            </div>
+            <div
+              class="py-1.5 md:py-2.5 text-center border-b border-slate-500 cursor-pointer"
+            >
+              Owned
+            </div>
+            <div
+              class="py-1.5 md:py-2.5 text-center border-b border-slate-500 cursor-pointer"
+            >
+              Gold
+            </div>
+            <div
+              class="py-1.5 md:py-2.5 text-center border-b border-slate-500 cursor-pointer"
+            >
+              Troops
+            </div>
           </div>
           ${this.teams.map(
             (team) => html`
               <div
                 class="contents hover:bg-slate-600/60 text-center cursor-pointer"
               >
-                <div class="p-2 border-b border-slate-500">
+                <div
+                  class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                >
                   ${team.teamName}
                 </div>
-                <div class="p-2 border-b border-slate-500">
+                <div
+                  class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                >
                   ${team.totalScoreStr}
                 </div>
-                <div class="p-2 border-b border-slate-500">
+                <div
+                  class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                >
                   ${team.totalGold}
                 </div>
-                <div class="p-2 border-b border-slate-500">
+                <div
+                  class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                >
                   ${team.totalTroops}
                 </div>
               </div>

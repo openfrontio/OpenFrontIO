@@ -11,6 +11,7 @@ import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { FxLayer } from "./layers/FxLayer";
+import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
@@ -32,7 +33,6 @@ import { UILayer } from "./layers/UILayer";
 import { UnitInfoModal } from "./layers/UnitInfoModal";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
-import { GameLeftSidebar } from "./layers/game-left-sidebar";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,
