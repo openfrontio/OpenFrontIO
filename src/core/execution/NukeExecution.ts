@@ -12,7 +12,7 @@ import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
 
-const SPRITE_RADIUS = 16;
+const SPRITE_RADIUS = 11;
 
 export class NukeExecution implements Execution {
   private active = true;
@@ -224,9 +224,7 @@ export class NukeExecution implements Execution {
       }
     }
 
-    this.redrawBuildings(
-      (magnitude.outer + SPRITE_RADIUS) * (magnitude.outer + SPRITE_RADIUS),
-    );
+    this.redrawBuildings(magnitude.outer + SPRITE_RADIUS);
     this.active = false;
     this.nuke.setReachedTarget();
     this.nuke.delete(false);
@@ -238,6 +236,7 @@ export class NukeExecution implements Execution {
   }
 
   private redrawBuildings(range: number) {
+    const rangeSquared = range * range;
     for (const unit of this.mg.units()) {
       if (
         unit.type() === UnitType.City ||
@@ -247,7 +246,9 @@ export class NukeExecution implements Execution {
         unit.type() === UnitType.MissileSilo ||
         unit.type() === UnitType.Port
       ) {
-        if (this.mg.euclideanDistSquared(this.dst, unit.tile()) < range) {
+        if (
+          this.mg.euclideanDistSquared(this.dst, unit.tile()) < rangeSquared
+        ) {
           unit.touch();
         }
       }
