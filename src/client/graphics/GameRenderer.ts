@@ -32,6 +32,7 @@ import { UILayer } from "./layers/UILayer";
 import { UnitInfoModal } from "./layers/UnitInfoModal";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
+import { GameLeftSidebar } from "./layers/game-left-sidebar";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,
@@ -71,6 +72,14 @@ export function createRenderer(
   }
   leaderboard.eventBus = eventBus;
   leaderboard.game = game;
+
+  const gameLeftSidebar = document.querySelector(
+    "game-left-sidebar",
+  ) as GameLeftSidebar;
+  if (!gameLeftSidebar || !(gameLeftSidebar instanceof GameLeftSidebar)) {
+    console.error("EmojiTable element not found in the DOM");
+  }
+  gameLeftSidebar.game = game;
 
   const teamStats = document.querySelector("team-stats") as TeamStats;
   if (!emojiTable || !(teamStats instanceof TeamStats)) {
@@ -219,6 +228,7 @@ export function createRenderer(
     ),
     new SpawnTimer(game, transformHandler),
     leaderboard,
+    gameLeftSidebar,
     controlPanel,
     playerInfo,
     winModel,
