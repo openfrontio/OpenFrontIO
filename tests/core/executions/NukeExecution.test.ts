@@ -48,7 +48,7 @@ describe("NukeExecution", () => {
     // Build a Defense post out of range AND out of redraw range
     const defensePost = player.buildUnit(
       UnitType.DefensePost,
-      game.ref(1, 17),
+      game.ref(1, 27),
       {},
     );
     defensePost.touch = jest.fn();
