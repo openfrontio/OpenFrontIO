@@ -118,7 +118,7 @@ export class Executor {
           playerID,
           intent.recipient,
           intent.quickChatKey,
-          intent.variables ?? {},
+          intent.target,
         );
       default:
         throw new Error(`intent type ${intent} not found`);
