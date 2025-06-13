@@ -2,9 +2,24 @@ import { execSync } from "child_process";
 import CopyPlugin from "copy-webpack-plugin";
 import ESLintPlugin from "eslint-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
+import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 import webpack from "webpack";
+
+export function getLocalIP() {
+  const interfaces = os.networkInterfaces();
+  for (const interfaceName in interfaces) {
+    const networkInterface = interfaces[interfaceName];
+    if (!networkInterface) continue;
+    for (const address of networkInterface) {
+      if (address.family === "IPv4" && !address.internal) {
+        return address.address;
+      }
+    }
+  }
+  return "localhost";
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,6 +29,13 @@ const gitCommit =
 
 export default async (env, argv) => {
   const isProduction = argv.mode === "production";
+
+  // Note: when running capacitor apps locally, run `npm run dev` before building the app to avoid env vars being overridden
+  const apiBaseUrl = process.env.CAPACITOR_BUILD
+    ? isProduction && process.env.CAPACITOR_PRODUCTION_HOSTNAME
+      ? `https://${process.env.CAPACITOR_PRODUCTION_HOSTNAME}`
+      : `http://${getLocalIP()}:9000`
+    : "";
 
   return {
     entry: "./src/client/Main.ts",
@@ -99,6 +121,9 @@ export default async (env, argv) => {
           "node_modules/protobufjs/minimal.js",
         ),
       },
+      fallback: {
+        os: path.resolve(__dirname, "node_modules/os-browserify/browser.js"),
+      },
     },
     plugins: [
       new HtmlWebpackPlugin({
@@ -116,18 +141,45 @@ export default async (env, argv) => {
             }
           : false,
       }),
+      new HtmlWebpackPlugin({
+        template: "./src/client/discord-redirect.html",
+        filename: "discord-redirect.html",
+        chunks: [],
+        minify: isProduction
+          ? {
+              collapseWhitespace: true,
+              removeComments: true,
+              removeRedundantAttributes: true,
+              removeScriptTypeAttributes: true,
+              removeStyleLinkTypeAttributes: true,
+              useShortDoctype: true,
+            }
+          : false,
+      }),
       new webpack.DefinePlugin({
         "process.env.WEBSOCKET_URL": JSON.stringify(
-          isProduction ? "" : "localhost:3000",
+          apiBaseUrl.split("://")[1], // remove protocol
         ),
         "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
         "process.env.GIT_COMMIT": JSON.stringify(gitCommit),
+        "process.env.API_BASE_URL": JSON.stringify(apiBaseUrl),
+        "process.env.CAPACITOR_PRODUCTION_HOSTNAME": JSON.stringify(
+          process.env.CAPACITOR_PRODUCTION_HOSTNAME,
+        ),
       }),
       new CopyPlugin({
         patterns: [
           {
             from: path.resolve(__dirname, "resources"),
             to: path.resolve(__dirname, "static"),
+            noErrorOnMissing: true,
+          },
+          {
+            from: path.resolve(
+              __dirname,
+              "node_modules/@capacitor/android/capacitor.js",
+            ),
+            to: path.resolve(__dirname, "static/capacitor.js"),
             noErrorOnMissing: true,
           },
         ],

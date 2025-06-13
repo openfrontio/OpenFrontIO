@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Redirecting...</title>
+  </head>
+  <body>
+    <p>Please wait while we redirect you back to the application.</p>
+    <script>
+      const appDeepLink = "com.openfront.app://auth";
+
+      if (window.location.hash.startsWith("#token=")) {
+        const token = window.location.hash.substring("#token=".length);
+        const redirectUrl = `${appDeepLink}?token=${encodeURIComponent(token)}`;
+        window.location.href = redirectUrl;
+      } else {
+        const error = window.location.hash.substring(1);
+        const redirectUrl = `${appDeepLink}?${error}`;
+        window.location.href = redirectUrl;
+      }
+    </script>
+  </body>
+</html>

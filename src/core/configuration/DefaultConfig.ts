@@ -85,6 +85,18 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return process.env.CF_CREDS_PATH ?? "";
   }
 
+  origin(): string {
+    const audience = this.jwtAudience();
+    const subdomain = this.subdomain();
+    if (audience === "localhost") {
+      return "http://localhost:9000";
+    }
+    if (subdomain === "") {
+      return `https://${audience}`;
+    }
+    return `https://${subdomain}.${audience}`;
+  }
+
   private publicKey: JWK;
   abstract jwtAudience(): string;
   jwtIssuer(): string {

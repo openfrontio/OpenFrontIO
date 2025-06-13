@@ -177,7 +177,7 @@ export class Leaderboard extends LitElement implements Layer {
     }
     .leaderboard {
       position: fixed;
-      top: 70px;
+      top: calc(70px + env(safe-area-inset-top));
       left: 10px;
       z-index: 9998;
       background-color: rgb(31 41 55 / 0.7);
@@ -203,7 +203,7 @@ export class Leaderboard extends LitElement implements Layer {
     .leaderboard__button {
       position: fixed;
       left: 10px;
-      top: 70px;
+      top: calc(70px + env(safe-area-inset-top));
       z-index: 9998;
       background-color: rgb(31 41 55 / 0.7);
       color: white;
