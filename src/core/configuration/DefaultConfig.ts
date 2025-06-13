@@ -189,7 +189,7 @@ export class DefaultConfig implements Config {
     return 0.5;
   }
   traitorSpeedDebuff(): number {
-    return 0.5;
+    return 0.7;
   }
   traitorDuration(): number {
     return 30 * 10; // 30 seconds
@@ -245,11 +245,13 @@ export class DefaultConfig implements Config {
   defensePostRange(): number {
     return 30;
   }
+
   defensePostDefenseBonus(): number {
     return 5;
   }
+
   defensePostSpeedBonus(): number {
-    return 2;
+    return 3;
   }
 
   playerTeams(): number | typeof Duos {
@@ -278,8 +280,8 @@ export class DefaultConfig implements Config {
   }
 
   tradeShipGold(dist: number, numPorts: number): Gold {
-    const baseGold = Math.floor(10000 + 150 * Math.pow(dist, 1.1));
-    const bonusPortNum = 25;
+    const baseGold = Math.floor(50000 + 130 * dist ** 1.1);
+    const bonusPortNum = 100;
     if (numPorts < bonusPortNum) {
       return BigInt(baseGold);
     } else {
@@ -376,7 +378,7 @@ export class DefaultConfig implements Config {
           cost: (p: Player) =>
             p.type() === PlayerType.Human && this.infiniteGold()
               ? 0n
-              : 40_000_000n,
+              : 30_000_000n,
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -576,8 +578,8 @@ export class DefaultConfig implements Config {
 
     if (defender.isPlayer()) {
       let largeDefenderDebuff = 1;
-      if (defender.numTilesOwned() > 100_000) {
-        largeDefenderDebuff = Math.sqrt(100_000 / defender.numTilesOwned());
+      if (defender.numTilesOwned() > 50_000) {
+        largeDefenderDebuff = Math.sqrt(50_000 / defender.numTilesOwned());
       }
       return {
         attackerTroopLoss:
@@ -614,8 +616,18 @@ export class DefaultConfig implements Config {
     numAdjacentTilesWithEnemy: number,
   ): number {
     if (defender.isPlayer()) {
+      let defendingTroops = defender.troops();
+      for (const attack of defender.outgoingAttacks()) {
+        if (
+          attack.target().isPlayer() &&
+          attack.target().id() === attacker.id()
+        ) {
+          // If the defender has a counter attack, that should count as defending troops.
+          defendingTroops += attack.troops();
+        }
+      }
       return (
-        within(((5 * attackTroops) / defender.troops()) * 2, 0.01, 0.5) *
+        within(((5 * attackTroops) / defendingTroops) * 2, 0.01, 0.5) *
         numAdjacentTilesWithEnemy *
         3
       );
@@ -758,7 +770,7 @@ export class DefaultConfig implements Config {
   }
 
   defaultNukeSpeed(): number {
-    return 4;
+    return 6;
   }
 
   // Humans can be population, soldiers attacking, soldiers in boat etc.

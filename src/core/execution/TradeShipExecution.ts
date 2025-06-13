@@ -131,10 +131,7 @@ export class TradeShipExecution implements Execution {
     this.tradeShip!.delete(false);
     const gold = this.mg
       .config()
-      .tradeShipGold(
-        this.tilesTraveled,
-        this.mg.units(UnitType.TradeShip).length,
-      );
+      .tradeShipGold(this.tilesTraveled, this.mg.units(UnitType.Port).length);
 
     if (this.wasCaptured) {
       this.tradeShip!.owner().addGold(gold);
