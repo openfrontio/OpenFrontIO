@@ -617,7 +617,7 @@ export class EventsDisplay extends LitElement implements Layer {
     }
 
     this.addEvent({
-      description: `${translateText("event_display.player_vote_response")} ${event.accepted ? translateText("player_panel.yes") : translateText("player_panel.no")}`,
+      description: `${translateText("event_displays.player_vote_response")} ${event.accepted ? translateText("player_panel.yes") : translateText("player_panel.no")}`,
       type: MessageType.VOTE_FOR_PEACE_REPLY,
       unsafeDescription: false,
       highlight: true,
