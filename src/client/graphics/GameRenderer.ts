@@ -77,7 +77,7 @@ export function createRenderer(
     "game-left-sidebar",
   ) as GameLeftSidebar;
   if (!gameLeftSidebar || !(gameLeftSidebar instanceof GameLeftSidebar)) {
-    console.error("EmojiTable element not found in the DOM");
+    console.error("GameLeftSidebar element not found in the DOM");
   }
   gameLeftSidebar.game = game;
 

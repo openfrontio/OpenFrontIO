@@ -2,7 +2,7 @@ import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
 @customElement("leaderboard-solid-icon")
-export class IconLeaderboard extends LitElement {
+export class LeaderboardSolidIcon extends LitElement {
   @property({ type: String }) size = "24"; // Accepts "24", "32", etc.
   @property({ type: String }) color = "currentColor";
 
