@@ -68,6 +68,7 @@ export class SendAttackIntentEvent implements GameEvent {
   constructor(
     public readonly targetID: PlayerID | null,
     public readonly troops: number,
+    public readonly src: Cell | null = null,
   ) {}
 }
 
@@ -421,6 +422,8 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       targetID: event.targetID,
       troops: event.troops,
+      srcX: event.src?.x ?? null,
+      srcY: event.src?.y ?? null,
     });
   }
 

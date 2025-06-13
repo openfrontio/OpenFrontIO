@@ -1,7 +1,7 @@
 import { LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { PlayerActions, UnitType } from "../../../core/game/Game";
+import { Cell, PlayerActions, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
@@ -288,9 +288,33 @@ function updateCenterButton(
   if (params.playerActions.canAttack) {
     enableCenterButton(true, () => {
       if (params.tileOwner !== params.myPlayer) {
+        // Determine a focused-attack source cell, mimicking the click-handler logic
+        let srcCell: Cell | null = null;
+        const game = params.game;
+        const tile = params.tile;
+
+        // If the clicked tile belongs to us, make sure it's actually on the border.
+        if (params.tileOwner === params.myPlayer) {
+          const isBorder = game
+            .neighbors(tile)
+            .some((n) => game.owner(n) !== params.myPlayer);
+          if (isBorder) {
+            srcCell = new Cell(game.x(tile), game.y(tile));
+          }
+        } else {
+          // Enemy (or unowned) tile – look for an adjacent friendly border tile.
+          for (const n of game.neighbors(tile)) {
+            if (game.owner(n) === params.myPlayer) {
+              srcCell = new Cell(game.x(n), game.y(n));
+              break;
+            }
+          }
+        }
+
         params.playerActionHandler.handleAttack(
           params.myPlayer,
           params.tileOwner.id(),
+          srcCell,
         );
       }
       params.closeMenu();
