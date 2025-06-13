@@ -312,9 +312,7 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     1_000_000,
-                    (p.unitsIncludingConstruction(UnitType.Warship).length +
-                      1) *
-                      250_000,
+                    (p.unitsConstructed(UnitType.Warship) + 1) * 250_000,
                   ),
                 ),
           territoryBound: false,
@@ -339,10 +337,7 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     1_000_000,
-                    Math.pow(
-                      2,
-                      p.unitsIncludingConstruction(UnitType.Port).length,
-                    ) * 125_000,
+                    Math.pow(2, p.unitsConstructed(UnitType.Port)) * 125_000,
                   ),
                 ),
           territoryBound: true,
@@ -401,9 +396,7 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     250_000,
-                    (p.unitsIncludingConstruction(UnitType.DefensePost).length +
-                      1) *
-                      50_000,
+                    (p.unitsConstructed(UnitType.DefensePost) + 1) * 50_000,
                   ),
                 ),
           territoryBound: true,
@@ -418,9 +411,7 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     3_000_000,
-                    (p.unitsIncludingConstruction(UnitType.SAMLauncher).length +
-                      1) *
-                      1_500_000,
+                    (p.unitsConstructed(UnitType.SAMLauncher) + 1) * 1_500_000,
                   ),
                 ),
           territoryBound: true,
@@ -435,10 +426,7 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     1_000_000,
-                    Math.pow(
-                      2,
-                      p.unitsIncludingConstruction(UnitType.City).length,
-                    ) * 125_000,
+                    Math.pow(2, p.unitsConstructed(UnitType.City)) * 125_000,
                   ),
                 ),
           territoryBound: true,
