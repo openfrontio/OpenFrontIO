@@ -1,0 +1,67 @@
+name: 🧼 PR
+
+on:
+  pull_request:
+    types:
+      - demilestoned
+      - edited
+      - milestoned
+      - opened
+      - synchronize
+
+permissions: {}
+
+jobs:
+  validate-description:
+    name: Validate Description
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request.body || '';
+
+            const errors = [];
+
+            // Check for ## Description section
+            const descMatch = body.match(/^## Description:\s*\n((?:(?!^#).*\n?)*)/m);
+            if (!descMatch || descMatch[1].trim().length < 20) {
+              errors.push('❌ Missing or short `## Description:` section.');
+            }
+
+            // Check all five boxes are checked
+            const requiredBoxes = [
+              /- \[x\] I have added screenshots for all UI updates/i,
+              /- \[x\] I process any text displayed to the user through translateText\(\) and I\'ve added it to the en\.json file/i,
+              /- \[x\] I have added relevant tests to the test directory/i,
+              /- \[x\] I confirm I have thoroughly tested these changes and take full responsibility for any bugs introduced/i,
+              /- \[x\] I understand that submitting code with bugs that could have been caught through manual testing blocks releases and new features for all contributors/i
+            ];
+
+            for (const box of requiredBoxes) {
+              if (!box.test(body)) {
+                errors.push('❌ One or more checklist items are not checked.');
+                break;
+              }
+            }
+
+            if (errors.length > 0) {
+              core.setFailed(errors.join('\n'));
+            } else {
+              console.log('✅ PR description and checklist look good.');
+            }
+
+  has-milestone:
+    name: Has Milestone
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            // Get the pull request data
+            const milestone = context.payload.pull_request.milestone;
+            if (!milestone) {
+              core.setFailed('❌ Pull request must have a milestone assigned before merging.');
+              return;
+            }
+            console.log(`✅ Milestone found: ${milestone.title}`);

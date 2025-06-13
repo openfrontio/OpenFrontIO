@@ -22,6 +22,9 @@ export async function setup(
   _gameConfig: Partial<GameConfig> = {},
   humans: PlayerInfo[] = [],
 ): Promise<Game> {
+  // Suppress console.debug for tests.
+  console.debug = () => {};
+
   // Load the specified map
   const mapPath = path.join(__dirname, "..", "testdata", `${mapName}.png`);
   const imageBuffer = await fs.readFile(mapPath);
@@ -52,7 +55,6 @@ export async function setup(
     false,
   );
 
-  // Create and return the game
   return createGame(humans, [], gameMap, miniGameMap, config);
 }
 

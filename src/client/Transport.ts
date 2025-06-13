@@ -1,12 +1,11 @@
-import { SendLogEvent } from "../core/Consolex";
 import { EventBus, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
   Cell,
   GameType,
+  Gold,
   PlayerID,
   PlayerType,
-  Team,
   Tick,
   UnitType,
 } from "../core/game/Game";
@@ -14,16 +13,16 @@ import { PlayerView } from "../core/game/GameView";
 import {
   AllPlayersStats,
   ClientHashMessage,
-  ClientID,
   ClientIntentMessage,
   ClientJoinMessage,
-  ClientLogMessage,
   ClientPingMessage,
   ClientSendWinnerMessage,
   Intent,
   ServerMessage,
   ServerMessageSchema,
+  Winner,
 } from "../core/Schemas";
+import { replacer } from "../core/Util";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
 
@@ -42,6 +41,13 @@ export class SendBreakAllianceIntentEvent implements GameEvent {
   constructor(
     public readonly requestor: PlayerView,
     public readonly recipient: PlayerView,
+  ) {}
+}
+
+export class SendUpgradeStructureIntentEvent implements GameEvent {
+  constructor(
+    public readonly unitId: number,
+    public readonly unitType: UnitType,
   ) {}
 }
 
@@ -94,15 +100,13 @@ export class SendEmojiIntentEvent implements GameEvent {
 
 export class SendDonateGoldIntentEvent implements GameEvent {
   constructor(
-    public readonly sender: PlayerView,
     public readonly recipient: PlayerView,
-    public readonly gold: number | null,
+    public readonly gold: Gold | null,
   ) {}
 }
 
 export class SendDonateTroopsIntentEvent implements GameEvent {
   constructor(
-    public readonly sender: PlayerView,
     public readonly recipient: PlayerView,
     public readonly troops: number | null,
   ) {}
@@ -110,26 +114,25 @@ export class SendDonateTroopsIntentEvent implements GameEvent {
 
 export class SendQuickChatEvent implements GameEvent {
   constructor(
-    public readonly sender: PlayerView,
     public readonly recipient: PlayerView,
     public readonly quickChatKey: string,
-    public readonly variables: { [key: string]: string },
+    public readonly target?: PlayerID,
   ) {}
 }
 
 export class SendEmbargoIntentEvent implements GameEvent {
   constructor(
-    public readonly sender: PlayerView,
     public readonly target: PlayerView,
     public readonly action: "start" | "stop",
   ) {}
 }
 
 export class CancelAttackIntentEvent implements GameEvent {
-  constructor(
-    public readonly playerID: PlayerID,
-    public readonly attackID: string,
-  ) {}
+  constructor(public readonly attackID: string) {}
+}
+
+export class CancelBoatIntentEvent implements GameEvent {
+  constructor(public readonly unitID: number) {}
 }
 
 export class SendSetTargetTroopRatioEvent implements GameEvent {
@@ -138,9 +141,8 @@ export class SendSetTargetTroopRatioEvent implements GameEvent {
 
 export class SendWinnerEvent implements GameEvent {
   constructor(
-    public readonly winner: ClientID | Team,
+    public readonly winner: Winner,
     public readonly allPlayersStats: AllPlayersStats,
-    public readonly winnerType: "player" | "team",
   ) {}
 }
 export class SendHashEvent implements GameEvent {
@@ -192,6 +194,9 @@ export class Transport {
       this.onSendSpawnIntentEvent(e),
     );
     this.eventBus.on(SendAttackIntentEvent, (e) => this.onSendAttackIntent(e));
+    this.eventBus.on(SendUpgradeStructureIntentEvent, (e) =>
+      this.onSendUpgradeStructureIntent(e),
+    );
     this.eventBus.on(SendBoatAttackIntentEvent, (e) =>
       this.onSendBoatAttackIntent(e),
     );
@@ -214,13 +219,16 @@ export class Transport {
     );
     this.eventBus.on(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
 
-    this.eventBus.on(SendLogEvent, (e) => this.onSendLogEvent(e));
     this.eventBus.on(PauseGameEvent, (e) => this.onPauseGameEvent(e));
     this.eventBus.on(SendWinnerEvent, (e) => this.onSendWinnerEvent(e));
     this.eventBus.on(SendHashEvent, (e) => this.onSendHashEvent(e));
     this.eventBus.on(CancelAttackIntentEvent, (e) =>
       this.onCancelAttackIntentEvent(e),
     );
+    this.eventBus.on(CancelBoatIntentEvent, (e) =>
+      this.onCancelBoatIntentEvent(e),
+    );
+
     this.eventBus.on(MoveWarshipIntentEvent, (e) => {
       this.onMoveWarshipEvent(e);
     });
@@ -268,6 +276,7 @@ export class Transport {
       onconnect,
       onmessage,
       this.lobbyConfig.gameRecord !== undefined,
+      this.eventBus,
     );
     this.localServer.start();
   }
@@ -333,16 +342,6 @@ export class Transport {
     if (this.isLocal) {
       this.localServer.turnComplete();
     }
-  }
-
-  private onSendLogEvent(event: SendLogEvent) {
-    this.sendMsg(
-      JSON.stringify({
-        type: "log",
-        log: event.log,
-        severity: event.severity,
-      } satisfies ClientLogMessage),
-    );
   }
 
   joinGame(numTurns: number) {
@@ -438,6 +437,15 @@ export class Transport {
     });
   }
 
+  private onSendUpgradeStructureIntent(event: SendUpgradeStructureIntentEvent) {
+    this.sendIntent({
+      type: "upgrade_structure",
+      unit: event.unitType,
+      clientID: this.lobbyConfig.clientID,
+      unitId: event.unitId,
+    });
+  }
+
   private onSendTargetPlayerIntent(event: SendTargetPlayerIntentEvent) {
     this.sendIntent({
       type: "targetPlayer",
@@ -480,7 +488,7 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
       quickChatKey: event.quickChatKey,
-      variables: event.variables,
+      target: event.target,
     });
   }
 
@@ -529,9 +537,8 @@ export class Transport {
         type: "winner",
         winner: event.winner,
         allPlayersStats: event.allPlayersStats,
-        winnerType: event.winnerType,
       } satisfies ClientSendWinnerMessage;
-      this.sendMsg(JSON.stringify(msg));
+      this.sendMsg(JSON.stringify(msg, replacer));
     } else {
       console.log(
         "WebSocket is not open. Current state:",
@@ -542,8 +549,7 @@ export class Transport {
   }
 
   private onSendHashEvent(event: SendHashEvent) {
-    if (this.socket === null) return;
-    if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
+    if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
       this.sendMsg(
         JSON.stringify({
           type: "hash",
@@ -554,7 +560,7 @@ export class Transport {
     } else {
       console.log(
         "WebSocket is not open. Current state:",
-        this.socket.readyState,
+        this.socket!.readyState,
       );
       console.log("attempting reconnect");
     }
@@ -565,6 +571,14 @@ export class Transport {
       type: "cancel_attack",
       clientID: this.lobbyConfig.clientID,
       attackID: event.attackID,
+    });
+  }
+
+  private onCancelBoatIntentEvent(event: CancelBoatIntentEvent) {
+    this.sendIntent({
+      type: "cancel_boat",
+      clientID: this.lobbyConfig.clientID,
+      unitID: event.unitID,
     });
   }
 

@@ -29,7 +29,11 @@ export enum GameEnv {
 export interface ServerConfig {
   turnIntervalMs(): number;
   gameCreationRate(): number;
-  lobbyMaxPlayers(map: GameMapType, mode: GameMode): number;
+  lobbyMaxPlayers(
+    map: GameMapType,
+    mode: GameMode,
+    numPlayerTeams: number | undefined,
+  ): number;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
   workerPath(gameID: GameID): string;
@@ -52,6 +56,12 @@ export interface ServerConfig {
   jwtAudience(): string;
   jwtIssuer(): string;
   jwkPublicKey(): Promise<JWK>;
+  domain(): string;
+  subdomain(): string;
+  cloudflareAccountId(): string;
+  cloudflareApiToken(): string;
+  cloudflareConfigPath(): string;
+  cloudflareCredsPath(): string;
 }
 
 export interface NukeMagnitude {
@@ -80,7 +90,7 @@ export interface Config {
 
   startManpower(playerInfo: PlayerInfo): number;
   populationIncreaseRate(player: Player | PlayerView): number;
-  goldAdditionRate(player: Player | PlayerView): number;
+  goldAdditionRate(player: Player | PlayerView): Gold;
   troopAdjustmentRate(player: Player): number;
   attackTilesPerTick(
     attckTroops: number,

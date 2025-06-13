@@ -1,5 +1,6 @@
 import { LitElement, css, html } from "lit";
-import { customElement, query } from "lit/decorators.js";
+import { resolveMarkdown } from "lit-markdown";
+import { customElement, property, query } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
@@ -11,7 +12,13 @@ export class NewsModal extends LitElement {
     close: () => void;
   };
 
+  @property({ type: String }) markdown = "Loading...";
+
   static styles = css`
+    :host {
+      display: block;
+    }
+
     .news-container {
       max-height: 60vh;
       overflow-y: auto;
@@ -24,9 +31,19 @@ export class NewsModal extends LitElement {
     .news-content {
       color: #ddd;
       line-height: 1.5;
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(0, 0, 0, 0.6);
       border-radius: 8px;
       padding: 1rem;
+    }
+
+    .news-content a {
+      color: #4a9eff !important;
+      text-decoration: underline !important;
+      transition: color 0.2s ease;
+    }
+
+    .news-content a:hover {
+      color: #6fb3ff !important;
     }
   `;
 
@@ -36,7 +53,12 @@ export class NewsModal extends LitElement {
         <div class="options-layout">
           <div class="options-section">
             <div class="news-container">
-              <div class="news-content">INSERT NEWS HERE</div>
+              <div class="news-content">
+                ${resolveMarkdown(this.markdown, {
+                  includeImages: true,
+                  includeCodeBlockClassNames: true,
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -57,9 +79,5 @@ export class NewsModal extends LitElement {
 
   private close() {
     this.modalEl?.close();
-  }
-
-  createRenderRoot() {
-    return this; // light DOM
   }
 }

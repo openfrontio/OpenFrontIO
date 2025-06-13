@@ -40,27 +40,51 @@ export class BotBehavior {
 
   private emoji(player: Player, emoji: number) {
     if (player.type() !== PlayerType.Human) return;
-    this.game.addExecution(
-      new EmojiExecution(this.player.id(), player.id(), emoji),
-    );
+    this.game.addExecution(new EmojiExecution(this.player, player.id(), emoji));
+  }
+
+  private setNewEnemy(newEnemy: Player | null) {
+    this.enemy = newEnemy;
+    this.enemyUpdated = this.game.ticks();
+  }
+
+  private clearEnemy() {
+    this.enemy = null;
   }
 
   forgetOldEnemies() {
     // Forget old enemies
     if (this.game.ticks() - this.enemyUpdated > 100) {
-      this.enemy = null;
+      this.clearEnemy();
     }
   }
 
-  checkIncomingAttacks() {
+  private hasSufficientTroops(): boolean {
+    const maxPop = this.game.config().maxPopulation(this.player);
+    const ratio = this.player.population() / maxPop;
+    return ratio >= this.triggerRatio;
+  }
+
+  private checkIncomingAttacks() {
     // Switch enemies if we're under attack
     const incomingAttacks = this.player.incomingAttacks();
-    if (incomingAttacks.length > 0) {
-      this.enemy = incomingAttacks
-        .sort((a, b) => b.troops() - a.troops())[0]
-        .attacker();
-      this.enemyUpdated = this.game.ticks();
+    let largestAttack = 0;
+    let largestAttacker: Player | undefined;
+    for (const attack of incomingAttacks) {
+      if (attack.troops() <= largestAttack) continue;
+      largestAttack = attack.troops();
+      largestAttacker = attack.attacker();
     }
+    if (largestAttacker !== undefined) {
+      this.setNewEnemy(largestAttacker);
+    }
+  }
+
+  getNeighborTraitorToAttack(): Player | null {
+    const traitors = this.player
+      .neighbors()
+      .filter((n): n is Player => n.isPlayer() && n.isTraitor());
+    return traitors.length > 0 ? this.random.randElement(traitors) : null;
   }
 
   assistAllies() {
@@ -81,8 +105,7 @@ export class BotBehavior {
         }
         // All checks passed, assist them
         this.player.updateRelation(ally, -20);
-        this.enemy = target;
-        this.enemyUpdated = this.game.ticks();
+        this.setNewEnemy(target);
         this.emoji(ally, this.assistAcceptEmoji);
         break outer;
       }
@@ -92,45 +115,57 @@ export class BotBehavior {
   selectEnemy(): Player | null {
     if (this.enemy === null) {
       // Save up troops until we reach the trigger ratio
-      const maxPop = this.game.config().maxPopulation(this.player);
-      const ratio = this.player.population() / maxPop;
-      if (ratio < this.triggerRatio) return null;
-    }
+      if (!this.hasSufficientTroops()) return null;
 
-    // Prefer neighboring bots
-    if (this.enemy === null) {
+      // Prefer neighboring bots
       const bots = this.player
         .neighbors()
-        .filter((n) => n.isPlayer() && n.type() === PlayerType.Bot) as Player[];
+        .filter(
+          (n): n is Player => n.isPlayer() && n.type() === PlayerType.Bot,
+        );
       if (bots.length > 0) {
         const density = (p: Player) => p.troops() / p.numTilesOwned();
-        this.enemy = bots.sort((a, b) => density(a) - density(b))[0];
-        this.enemyUpdated = this.game.ticks();
-      }
-    }
+        let lowestDensityBot: Player | undefined;
+        let lowestDensity = Infinity;
 
-    // Select the most hated player
-    if (this.enemy === null) {
-      const mostHated = this.player.allRelationsSorted()[0];
-      if (mostHated !== undefined && mostHated.relation === Relation.Hostile) {
-        this.enemy = mostHated.player;
-        this.enemyUpdated = this.game.ticks();
+        for (const bot of bots) {
+          const currentDensity = density(bot);
+          if (currentDensity < lowestDensity) {
+            lowestDensity = currentDensity;
+            lowestDensityBot = bot;
+          }
+        }
+
+        if (lowestDensityBot !== undefined) {
+          this.setNewEnemy(lowestDensityBot);
+        }
+      }
+
+      // Retaliate against incoming attacks
+      if (this.enemy === null) {
+        this.checkIncomingAttacks();
+      }
+
+      // Select the most hated player
+      if (this.enemy === null) {
+        const mostHated = this.player.allRelationsSorted()[0];
+        if (
+          mostHated !== undefined &&
+          mostHated.relation === Relation.Hostile
+        ) {
+          this.setNewEnemy(mostHated.player);
+        }
       }
     }
 
     // Sanity check, don't attack our allies or teammates
-    if (this.enemy && this.player.isFriendly(this.enemy)) {
-      this.enemy = null;
-    }
-    return this.enemy;
+    return this.enemySanityCheck();
   }
 
   selectRandomEnemy(): Player | TerraNullius | null {
     if (this.enemy === null) {
       // Save up troops until we reach the trigger ratio
-      const maxPop = this.game.config().maxPopulation(this.player);
-      const ratio = this.player.population() / maxPop;
-      if (ratio < this.triggerRatio) return null;
+      if (!this.hasSufficientTroops()) return null;
 
       // Choose a new enemy randomly
       const neighbors = this.player.neighbors();
@@ -142,27 +177,32 @@ export class BotBehavior {
             continue;
           }
         }
-        this.enemy = neighbor;
-        this.enemyUpdated = this.game.ticks();
+        this.setNewEnemy(neighbor);
+      }
+
+      // Retaliate against incoming attacks
+      if (this.enemy === null) {
+        this.checkIncomingAttacks();
       }
 
       // Select a traitor as an enemy
-      const traitors = this.player
-        .neighbors()
-        .filter((n) => n.isPlayer() && n.isTraitor()) as Player[];
-      if (traitors.length > 0) {
-        const toAttack = this.random.randElement(traitors);
-        const odds = this.player.isFriendly(toAttack) ? 6 : 3;
-        if (this.random.chance(odds)) {
-          this.enemy = toAttack;
-          this.enemyUpdated = this.game.ticks();
+      if (this.enemy === null) {
+        const toAttack = this.getNeighborTraitorToAttack();
+        if (toAttack !== null) {
+          if (!this.player.isFriendly(toAttack) && this.random.chance(3)) {
+            this.setNewEnemy(toAttack);
+          }
         }
       }
     }
 
     // Sanity check, don't attack our allies or teammates
+    return this.enemySanityCheck();
+  }
+
+  private enemySanityCheck(): Player | null {
     if (this.enemy && this.player.isFriendly(this.enemy)) {
-      this.enemy = null;
+      this.clearEnemy();
     }
     return this.enemy;
   }
@@ -182,7 +222,7 @@ export class BotBehavior {
     this.game.addExecution(
       new AttackExecution(
         troops,
-        this.player.id(),
+        this.player,
         target.isPlayer() ? target.id() : null,
       ),
     );
@@ -190,11 +230,17 @@ export class BotBehavior {
 }
 
 function shouldAcceptAllianceRequest(player: Player, request: AllianceRequest) {
-  const notTraitor = !request.requestor().isTraitor();
-  const noMalice = player.relation(request.requestor()) >= Relation.Neutral;
-  const requestorIsMuchLarger =
-    request.requestor().numTilesOwned() > player.numTilesOwned() * 3;
-  const notTooManyAlliances =
-    requestorIsMuchLarger || request.requestor().alliances().length < 3;
-  return notTraitor && noMalice && notTooManyAlliances;
+  if (player.relation(request.requestor()) < Relation.Neutral) {
+    return false; // Reject if hasMalice
+  }
+  if (request.requestor().isTraitor()) {
+    return false; // Reject if isTraitor
+  }
+  if (request.requestor().numTilesOwned() > player.numTilesOwned() * 3) {
+    return true; // Accept if requestorIsMuchLarger
+  }
+  if (request.requestor().alliances().length >= 3) {
+    return false; // Reject if tooManyAlliances
+  }
+  return true; // Accept otherwise
 }

@@ -99,6 +99,11 @@
           display: none;
         }
       }
+
+      /* display:none if child has class parent-hidden since we can't use shadow DOM in Lit due to Tailwind */
+      .component-hideable:has(> .parent-hidden) {
+        display: none;
+      }
     </style>
 
     <!-- Immediate execution to prevent FOUC -->
@@ -135,25 +140,6 @@
 
       gtag("config", "G-WQGQQ8RDN4");
     </script>
-    <!-- AdinPlay Ads -->
-    <script>
-      var aiptag = aiptag || {};
-      aiptag.cmd = aiptag.cmd || [];
-      aiptag.cmd.display = aiptag.cmd.display || [];
-      aiptag.cmd.player = aiptag.cmd.player || [];
-
-      //CMP tool settings
-      aiptag.cmp = {
-        show: true,
-        button: true,
-        buttonText: "Privacy settings",
-        buttonPosition: "top-right", //bottom-left, bottom-right, top-left, top-right
-      };
-    </script>
-    <script
-      async
-      src="//api.adinplay.com/libs/aiptag/pub/OFI/openfront.io/tag.min.js"
-    ></script>
   </head>
 
   <body
@@ -217,30 +203,12 @@
             />
           </g>
         </svg>
-        <div class="l-header__highlightText">v22.0</div>
+        <div id="game-version" class="l-header__highlightText">
+          Loading version...
+        </div>
       </div>
     </header>
     <div class="bg-image"></div>
-
-    <!-- Left gutter ad placement - full height, no empty space -->
-    <div class="left-gutter-ad ad">
-      <div id="openfront-io_300x600">
-        <script type="text/javascript">
-          aiptag.cmd.display.push(function () {
-            aipDisplayTag.display("openfront-io_300x600");
-          });
-        </script>
-      </div>
-    </div>
-    <div class="right-gutter-ad ad">
-      <div id="openfront-io_300x600_2">
-        <script type="text/javascript">
-          aiptag.cmd.display.push(function () {
-            aipDisplayTag.display("openfront-io_300x600_2");
-          });
-        </script>
-      </div>
-    </div>
 
     <!-- Main container with responsive padding -->
     <main class="flex justify-center flex-grow">
@@ -262,12 +230,14 @@
 
         <div class="container__row">
           <flag-input class="w-[20%] md:w-[15%]"></flag-input>
-          <username-input class="w-full"></username-input>
-          <news-button class="mt-3"></news-button>
+          <username-input class="relative w-full"></username-input>
+          <news-button
+            class="w-[20%] md:w-[15%] component-hideable"
+          ></news-button>
         </div>
         <div></div>
         <div>
-          <public-lobby class="w-full"></public-lobby>
+          <public-lobby class="block"></public-lobby>
         </div>
         <div class="container__row container__row--equal">
           <o-button
@@ -332,11 +302,18 @@
     </div>
     <div id="app"></div>
     <div id="radialMenu" class="radial-menu"></div>
-    <div
-      class="flex flex-column gap-2 fixed right-[10px] top-[10px] z-50 flex flex-col w-32 sm:w-32 lg:w-48"
-    >
+    <div class="flex gap-2 fixed right-[10px] top-[10px] z-50 flex-col">
       <options-menu></options-menu>
+      <replay-panel></replay-panel>
       <player-info-overlay></player-info-overlay>
+    </div>
+    <div
+      class="fixed bottom-[30px] sm:bottom-auto sm:top-[20px] z-50 mx-auto max-w-max inset-x-0 items-center"
+    >
+      <heads-up-message></heads-up-message>
+    </div>
+    <div class="fixed left-[10px] top-[10px] z-50 w-36 lg:w-48 items-center">
+      <player-team-label></player-team-label>
     </div>
 
     <div
@@ -386,10 +363,17 @@
         <div class="l-footer__col t-text-white">
           <a
             href="https://github.com/openfrontio/OpenFrontIO"
-            class="t-link"
+            class="t-link inline-flex items-center space-x-2"
             target="_blank"
           >
             ©2025 OpenFront™
+            <img
+              src="../../resources/icons/github-mark-white.svg"
+              alt="GitHub"
+              width="20"
+              height="20"
+              class="ml-2 mr-4"
+            />
           </a>
           <a href="/privacy-policy.html" class="t-link" target="_blank">
             Privacy Policy
@@ -397,6 +381,16 @@
           <a href="/terms-of-service.html" class="t-link" target="_blank">
             Terms of Service
           </a>
+          <p style="text-align: center">
+            <a
+              href="https://www.playwire.com/contact-direct-sales"
+              data-i18n="main.advertise"
+              class="t-link"
+              target="_blank"
+              rel="noopener"
+              >Advertise</a
+            >
+          </p>
         </div>
       </div>
     </footer>
@@ -405,12 +399,11 @@
     <host-lobby-modal></host-lobby-modal>
     <join-private-lobby-modal></join-private-lobby-modal>
     <emoji-table></emoji-table>
-    <leader-board></leader-board>
     <build-menu></build-menu>
     <win-modal></win-modal>
     <game-starting-modal></game-starting-modal>
     <top-bar></top-bar>
-    <team-stats></team-stats>
+
     <player-panel></player-panel>
     <help-modal></help-modal>
     <dark-mode-button></dark-mode-button>
@@ -418,7 +411,10 @@
     <user-setting></user-setting>
     <multi-tab-modal></multi-tab-modal>
     <flag-input-modal></flag-input-modal>
+    <unit-info-modal></unit-info-modal>
     <news-modal></news-modal>
+    <left-in-game-ad></left-in-game-ad>
+    <game-left-sidebar></game-left-sidebar>
     <div
       id="language-modal"
       class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center"

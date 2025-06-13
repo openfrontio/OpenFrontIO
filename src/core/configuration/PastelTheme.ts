@@ -1,29 +1,28 @@
 import { Colord, colord } from "colord";
 import { PseudoRandom } from "../PseudoRandom";
-import { simpleHash } from "../Util";
-import { ColoredTeams, PlayerType, Team, TerrainType } from "../game/Game";
+import { PlayerType, Team, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import {
-  blue,
-  botColor,
   botColors,
-  green,
+  ColorAllocator,
+  fallbackColors,
   humanColors,
-  orange,
-  purple,
-  red,
-  teal,
-  territoryColors,
-  yellow,
+  nationColors,
 } from "./Colors";
 import { Theme } from "./Config";
 
-export const pastelTheme = new (class implements Theme {
+type ColorCache = Map<string, Colord>;
+
+export class PastelTheme implements Theme {
+  private borderColorCache: ColorCache = new Map<string, Colord>();
   private rand = new PseudoRandom(123);
+  private humanColorAllocator = new ColorAllocator(humanColors, fallbackColors);
+  private botColorAllocator = new ColorAllocator(botColors, botColors);
+  private teamColorAllocator = new ColorAllocator(humanColors, fallbackColors);
+  private nationColorAllocator = new ColorAllocator(nationColors, nationColors);
 
   private background = colord({ r: 60, g: 60, b: 60 });
-  private land = colord({ r: 194, g: 193, b: 148 });
   private shore = colord({ r: 204, g: 203, b: 158 });
   private falloutColors = [
     colord({ r: 120, g: 255, b: 71 }), // Original color
@@ -42,26 +41,7 @@ export const pastelTheme = new (class implements Theme {
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
 
   teamColor(team: Team): Colord {
-    switch (team) {
-      case ColoredTeams.Blue:
-        return blue;
-      case ColoredTeams.Red:
-        return red;
-      case ColoredTeams.Teal:
-        return teal;
-      case ColoredTeams.Purple:
-        return purple;
-      case ColoredTeams.Yellow:
-        return yellow;
-      case ColoredTeams.Orange:
-        return orange;
-      case ColoredTeams.Green:
-        return green;
-      case ColoredTeams.Bot:
-        return botColor;
-      default:
-        return humanColors[simpleHash(team) % humanColors.length];
-    }
+    return this.teamColorAllocator.assignTeamColor(team);
   }
 
   territoryColor(player: PlayerView): Colord {
@@ -69,19 +49,17 @@ export const pastelTheme = new (class implements Theme {
     if (team !== null) {
       return this.teamColor(team);
     }
-    if (player.info().playerType === PlayerType.Human) {
-      return humanColors[simpleHash(player.id()) % humanColors.length];
+    if (player.type() === PlayerType.Human) {
+      return this.humanColorAllocator.assignColor(player.id());
     }
-    if (player.info().playerType === PlayerType.Bot) {
-      return botColors[simpleHash(player.id()) % botColors.length];
+    if (player.type() === PlayerType.Bot) {
+      return this.botColorAllocator.assignColor(player.id());
     }
-    return territoryColors[simpleHash(player.id()) % territoryColors.length];
+    return this.nationColorAllocator.assignColor(player.id());
   }
 
   textColor(player: PlayerView): string {
-    return player.info().playerType === PlayerType.Human
-      ? "#000000"
-      : "#4D4D4D";
+    return player.type() === PlayerType.Human ? "#000000" : "#4D4D4D";
   }
 
   specialBuildingColor(player: PlayerView): Colord {
@@ -94,12 +72,18 @@ export const pastelTheme = new (class implements Theme {
   }
 
   borderColor(player: PlayerView): Colord {
+    if (this.borderColorCache.has(player.id())) {
+      return this.borderColorCache.get(player.id())!;
+    }
     const tc = this.territoryColor(player).rgba;
-    return colord({
+    const color = colord({
       r: Math.max(tc.r - 40, 0),
       g: Math.max(tc.g - 40, 0),
       b: Math.max(tc.b - 40, 0),
     });
+
+    this.borderColorCache.set(player.id(), color);
+    return color;
   }
 
   defendedBorderColors(player: PlayerView): { light: Colord; dark: Colord } {
@@ -177,4 +161,4 @@ export const pastelTheme = new (class implements Theme {
   spawnHighlightColor(): Colord {
     return this._spawnHighlightColor;
   }
-})();
+}

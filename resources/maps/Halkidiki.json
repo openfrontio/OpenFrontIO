@@ -1,0 +1,55 @@
+{
+  "name": "Halkidiki",
+  "width": 2200,
+  "height": 1760,
+  "nations": [
+    {
+      "coordinates": [1798, 984],
+      "name": "Mount Athos",
+      "strength": 2,
+      "flag": "ha_ma"
+    },
+    {
+      "coordinates": [921, 1445],
+      "name": "Kassandra",
+      "strength": 2,
+      "flag": "gr"
+    },
+    {
+      "coordinates": [1488, 1387],
+      "name": "Sithonia",
+      "strength": 2,
+      "flag": "gr"
+    },
+    {
+      "coordinates": [380, 459],
+      "name": "Thessaloniki",
+      "strength": 2,
+      "flag": "gr"
+    },
+    {
+      "coordinates": [867, 803],
+      "name": "Polygyros",
+      "strength": 2,
+      "flag": "gr"
+    },
+    {
+      "coordinates": [218, 81],
+      "name": "Kilkis",
+      "strength": 2,
+      "flag": "gr"
+    },
+    {
+      "coordinates": [1192, 163],
+      "name": "Serres",
+      "strength": 2,
+      "flag": "gr"
+    },
+    {
+      "coordinates": [1807, 204],
+      "name": "Thrace",
+      "strength": 2,
+      "flag": "gr"
+    }
+  ]
+}

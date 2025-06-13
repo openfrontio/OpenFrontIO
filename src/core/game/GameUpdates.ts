@@ -1,7 +1,8 @@
-import { AllPlayersStats, ClientID, PlayerStats } from "../Schemas";
+import { AllPlayersStats, ClientID } from "../Schemas";
 import {
   EmojiMessage,
   GameUpdates,
+  Gold,
   MessageType,
   NameViewData,
   PlayerID,
@@ -73,12 +74,15 @@ export interface UnitUpdate {
   pos: TileRef;
   lastPos: TileRef;
   isActive: boolean;
-  dstPortId?: number; // Only for trade ships
-  detonationDst?: TileRef; // Only for nukes
-  warshipTargetId?: number;
+  reachedTarget: boolean;
+  retreating: boolean;
+  targetUnitId?: number; // Only for trade ships
+  targetTile?: TileRef; // Only for nukes
   health?: number;
   constructionType?: UnitType;
-  ticksLeftInCooldown?: Tick;
+  missileTimerQueue: number[];
+  readyMissileCount: number;
+  level: number;
 }
 
 export interface AttackUpdate {
@@ -101,8 +105,9 @@ export interface PlayerUpdate {
   smallID: number;
   playerType: PlayerType;
   isAlive: boolean;
+  isDisconnected: boolean;
   tilesOwned: number;
-  gold: number;
+  gold: Gold;
   population: number;
   workers: number;
   troops: number;
@@ -115,8 +120,8 @@ export interface PlayerUpdate {
   outgoingAttacks: AttackUpdate[];
   incomingAttacks: AttackUpdate[];
   outgoingAllianceRequests: PlayerID[];
-  stats: PlayerStats;
   hasSpawned: boolean;
+  betrayals?: bigint;
 }
 
 export interface AllianceRequestUpdate {
@@ -159,6 +164,7 @@ export interface DisplayMessageUpdate {
   type: GameUpdateType.DisplayEvent;
   message: string;
   messageType: MessageType;
+  goldAmount?: bigint;
   playerID: number | null;
 }
 
@@ -166,7 +172,7 @@ export type DisplayChatMessageUpdate = {
   type: GameUpdateType.DisplayChatEvent;
   key: string;
   category: string;
-  variables?: Record<string, string>;
+  target: string | undefined;
   playerID: number | null;
   isFrom: boolean;
   recipient: string;
@@ -176,8 +182,7 @@ export interface WinUpdate {
   type: GameUpdateType.Win;
   allPlayersStats: AllPlayersStats;
   // Player id or team name.
-  winner: number | Team;
-  winnerType: "player" | "team";
+  winner: ["player", number] | ["team", Team];
 }
 
 export interface HashUpdate {

@@ -1,14 +1,6 @@
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
-import { consolex } from "../Consolex";
-import {
-  Execution,
-  Game,
-  MessageType,
-  Player,
-  PlayerID,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, MessageType, Player, UnitType } from "../game/Game";
 import { GameImpl } from "../game/GameImpl";
 import { TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
@@ -16,51 +8,32 @@ import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 export class PlayerExecution implements Execution {
   private readonly ticksPerClusterCalc = 20;
 
-  private player: Player | null = null;
-  private config: Config | null = null;
+  private config: Config;
   private lastCalc = 0;
-  private mg: Game | null = null;
+  private mg: Game;
   private active = true;
 
-  constructor(private playerID: PlayerID) {}
+  constructor(private player: Player) {}
 
   activeDuringSpawnPhase(): boolean {
     return false;
   }
 
   init(mg: Game, ticks: number) {
-    if (!mg.hasPlayer(this.playerID)) {
-      console.warn(`PlayerExecution: player ${this.playerID} not found`);
-      this.active = false;
-      return;
-    }
     this.mg = mg;
     this.config = mg.config();
-    this.player = mg.player(this.playerID);
     this.lastCalc =
       ticks + (simpleHash(this.player.name()) % this.ticksPerClusterCalc);
   }
 
   tick(ticks: number) {
-    if (this.mg === null || this.config === null || this.player === null) {
-      throw new Error("Not initialized");
-    }
     this.player.decayRelations();
-    const hasPort = this.player.units(UnitType.Port).length > 0;
     this.player.units().forEach((u) => {
-      if (u.health() <= 0) {
-        u.delete();
-        return;
-      }
-      if (hasPort && u.type() === UnitType.Warship) {
-        u.modifyHealth(1);
-      }
-      if (this.mg === null) return;
-      const tileOwner = this.mg.owner(u.tile());
+      const tileOwner = this.mg!.owner(u.tile());
       if (u.info().territoryBound) {
         if (tileOwner.isPlayer()) {
           if (tileOwner !== this.player) {
-            this.mg.player(tileOwner.id()).captureUnit(u);
+            this.mg!.player(tileOwner.id()).captureUnit(u);
           }
         } else {
           u.delete();
@@ -69,6 +42,7 @@ export class PlayerExecution implements Execution {
     });
 
     if (!this.player.isAlive()) {
+      // Player has no tiles, delete any remaining units
       this.player.units().forEach((u) => {
         if (
           u.type() !== UnitType.AtomBomb &&
@@ -86,7 +60,12 @@ export class PlayerExecution implements Execution {
     const popInc = this.config.populationIncreaseRate(this.player);
     this.player.addWorkers(popInc * (1 - this.player.targetTroopRatio()));
     this.player.addTroops(popInc * this.player.targetTroopRatio());
-    this.player.addGold(this.config.goldAdditionRate(this.player));
+    const goldFromWorkers = this.config.goldAdditionRate(this.player);
+    this.player.addGold(goldFromWorkers);
+
+    // Record stats
+    this.mg.stats().goldWork(this.player, goldFromWorkers);
+
     const adjustRate = this.config.troopAdjustmentRate(this.player);
     this.player.addTroops(adjustRate);
     this.player.removeWorkers(adjustRate);
@@ -119,16 +98,13 @@ export class PlayerExecution implements Execution {
         this.removeClusters();
         const end = performance.now();
         if (end - start > 1000) {
-          consolex.log(`player ${this.player.name()}, took ${end - start}ms`);
+          console.log(`player ${this.player.name()}, took ${end - start}ms`);
         }
       }
     }
   }
 
   private removeClusters() {
-    if (this.mg === null || this.player === null) {
-      throw new Error("Not initialized");
-    }
     const clusters = this.calculateClusters();
     clusters.sort((a, b) => b.size - a.size);
 
@@ -148,9 +124,6 @@ export class PlayerExecution implements Execution {
   }
 
   private surroundedBySamePlayer(cluster: Set<TileRef>): false | Player {
-    if (this.mg === null || this.player === null) {
-      throw new Error("Not initialized");
-    }
     const enemies = new Set<number>();
     for (const tile of cluster) {
       const isOceanShore = this.mg.isOceanShore(tile);
@@ -185,9 +158,6 @@ export class PlayerExecution implements Execution {
   }
 
   private isSurrounded(cluster: Set<TileRef>): boolean {
-    if (this.mg === null || this.player === null) {
-      throw new Error("Not initialized");
-    }
     const enemyTiles = new Set<TileRef>();
     for (const tr of cluster) {
       if (this.mg.isShore(tr) || this.mg.isOnEdgeOfMap(tr)) {
@@ -211,9 +181,6 @@ export class PlayerExecution implements Execution {
   }
 
   private removeCluster(cluster: Set<TileRef>) {
-    if (this.mg === null || this.player === null) {
-      throw new Error("Not initialized");
-    }
     if (
       Array.from(cluster).some(
         (t) => this.mg?.ownerID(t) !== this.player?.smallID(),
@@ -240,11 +207,15 @@ export class PlayerExecution implements Execution {
         `Conquered ${this.player.displayName()} received ${renderNumber(
           gold,
         )} gold`,
-        MessageType.SUCCESS,
+        MessageType.CONQUERED_PLAYER,
         capturing.id(),
+        gold,
       );
       capturing.addGold(gold);
       this.player.removeGold(gold);
+
+      // Record stats
+      this.mg.stats().goldWar(capturing, this.player, gold);
     }
 
     for (const tile of tiles) {
@@ -253,9 +224,6 @@ export class PlayerExecution implements Execution {
   }
 
   private getCapturingPlayer(cluster: Set<TileRef>): Player | null {
-    if (this.mg === null || this.player === null) {
-      throw new Error("Not initialized");
-    }
     const neighborsIDs = new Set<number>();
     for (const t of cluster) {
       for (const neighbor of this.mg.neighbors(t)) {
@@ -298,9 +266,6 @@ export class PlayerExecution implements Execution {
   }
 
   private calculateClusters(): Set<TileRef>[] {
-    if (this.mg === null || this.player === null) {
-      throw new Error("Not initialized");
-    }
     const seen = new Set<TileRef>();
     const border = this.player.borderTiles();
     const clusters: Set<TileRef>[] = [];

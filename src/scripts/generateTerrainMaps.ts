@@ -7,6 +7,7 @@ const maps = [
   "Africa",
   "Asia",
   "WorldMap",
+  "WorldMapGiant",
   "BlackSea",
   "Europe",
   "EuropeClassic",
@@ -21,12 +22,13 @@ const maps = [
   "Pangaea",
   "Iceland",
   "BetweenTwoSeas",
-  "Japan",
+  "EastAsia",
   "KnownWorld",
   "FaroeIslands",
   "DeglaciatedAntarctica",
   "FalklandIslands",
   "Baikal",
+  "Halkidiki",
 ];
 
 const removeSmall = true;

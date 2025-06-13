@@ -1,4 +1,5 @@
 import { decodeJwt } from "jose";
+import { z } from "zod/v4";
 import {
   RefreshResponseSchema,
   TokenPayload,
@@ -49,7 +50,7 @@ export async function logOut(allSessions: boolean = false) {
   __isLoggedIn = false;
 
   const response = await fetch(
-    getApiBase() + allSessions ? "/revoke" : "/logout",
+    getApiBase() + (allSessions ? "/revoke" : "/logout"),
     {
       method: "POST",
       headers: {
@@ -65,14 +66,17 @@ export async function logOut(allSessions: boolean = false) {
   return true;
 }
 
-let __isLoggedIn: TokenPayload | false | undefined = undefined;
-export function isLoggedIn(): TokenPayload | false {
+export type IsLoggedInResponse =
+  | { token: string; claims: TokenPayload }
+  | false;
+let __isLoggedIn: IsLoggedInResponse | undefined = undefined;
+export function isLoggedIn(): IsLoggedInResponse {
   if (__isLoggedIn === undefined) {
     __isLoggedIn = _isLoggedIn();
   }
   return __isLoggedIn;
 }
-export function _isLoggedIn(): TokenPayload | false {
+function _isLoggedIn(): IsLoggedInResponse {
   try {
     const token = getToken();
     if (!token) {
@@ -135,16 +139,14 @@ export function _isLoggedIn(): TokenPayload | false {
 
     const result = TokenPayloadSchema.safeParse(payload);
     if (!result.success) {
+      const error = z.prettifyError(result.error);
       // Invalid response
-      console.error(
-        "Invalid payload",
-        // JSON.stringify(payload),
-        JSON.stringify(result.error),
-      );
+      console.error("Invalid payload", error);
       return false;
     }
 
-    return result.data;
+    const claims = result.data;
+    return { token, claims };
   } catch (e) {
     console.log(e);
     return false;
@@ -167,16 +169,14 @@ export async function postRefresh(): Promise<boolean> {
     const body = await response.json();
     const result = RefreshResponseSchema.safeParse(body);
     if (!result.success) {
-      console.error(
-        "Invalid response",
-        JSON.stringify(body),
-        JSON.stringify(result.error),
-      );
+      const error = z.prettifyError(result.error);
+      console.error("Invalid response", error);
       return false;
     }
     localStorage.setItem("token", result.data.token);
     return true;
   } catch (e) {
+    __isLoggedIn = false;
     return false;
   }
 }
@@ -196,15 +196,13 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
     const body = await response.json();
     const result = UserMeResponseSchema.safeParse(body);
     if (!result.success) {
-      console.error(
-        "Invalid response",
-        JSON.stringify(body),
-        JSON.stringify(result.error),
-      );
+      const error = z.prettifyError(result.error);
+      console.error("Invalid response", error);
       return false;
     }
     return result.data;
   } catch (e) {
+    __isLoggedIn = false;
     return false;
   }
 }

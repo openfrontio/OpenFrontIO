@@ -57,6 +57,11 @@
   cursor: pointer;
 }
 
+.chat-send-button:disabled {
+  background: #666;
+  cursor: not-allowed;
+}
+
 .chat-column {
   display: flex;
   flex-direction: column;

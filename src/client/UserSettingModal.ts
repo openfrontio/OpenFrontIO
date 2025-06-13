@@ -102,6 +102,15 @@ export class UserSettingModal extends LitElement {
     console.log("🤡 Emojis:", enabled ? "ON" : "OFF");
   }
 
+  private toggleFxLayer(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.specialEffects", enabled);
+
+    console.log("💥 Special effects:", enabled ? "ON" : "OFF");
+  }
+
   private toggleAnonymousNames(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -226,6 +235,15 @@ export class UserSettingModal extends LitElement {
         @change=${this.toggleEmojis}
       ></setting-toggle>
 
+      <!-- 💥 Special effects -->
+      <setting-toggle
+        label="${translateText("user_setting.special_effects_label")}"
+        description="${translateText("user_setting.special_effects_desc")}"
+        id="special-effect-toggle"
+        .checked=${this.userSettings.fxLayer()}
+        @change=${this.toggleFxLayer}
+      ></setting-toggle>
+
       <!-- 🖱️ Left Click Menu -->
       <setting-toggle
         label="${translateText("user_setting.left_click_label")}"
@@ -324,6 +342,41 @@ export class UserSettingModal extends LitElement {
         description=${translateText("user_setting.toggle_view_desc")}
         defaultKey="Space"
         .value=${this.keybinds["toggleView"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.attack_ratio_controls")}
+      </div>
+
+      <setting-keybind
+        action="attackRatioDown"
+        label=${translateText("user_setting.attack_ratio_down")}
+        description=${translateText("user_setting.attack_ratio_down_desc")}
+        defaultKey="Digit1"
+        .value=${this.keybinds["attackRatioDown"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="attackRatioUp"
+        label=${translateText("user_setting.attack_ratio_up")}
+        description=${translateText("user_setting.attack_ratio_up_desc")}
+        defaultKey="Digit2"
+        .value=${this.keybinds["attackRatioUp"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.attack_keybinds")}
+      </div>
+
+      <setting-keybind
+        action="boatAttack"
+        label=${translateText("user_setting.boat_attack")}
+        description=${translateText("user_setting.boat_attack_desc")}
+        defaultKey="KeyB"
+        .value=${this.keybinds["boatAttack"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 

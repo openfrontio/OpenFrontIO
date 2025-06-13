@@ -12,7 +12,7 @@ import { Stats } from "./Stats";
 
 export type PlayerID = string;
 export type Tick = number;
-export type Gold = number;
+export type Gold = bigint;
 
 export const AllPlayers = "AllPlayers" as const;
 
@@ -54,6 +54,7 @@ export const ColoredTeams: Record<string, Team> = {
 
 export enum GameMapType {
   World = "World",
+  WorldMapGiant = "Giant World Map",
   Europe = "Europe",
   EuropeClassic = "Europe Classic",
   Mena = "Mena",
@@ -69,18 +70,19 @@ export enum GameMapType {
   GatewayToTheAtlantic = "Gateway to the Atlantic",
   Australia = "Australia",
   Iceland = "Iceland",
-  Japan = "Japan",
+  EastAsia = "East Asia",
   BetweenTwoSeas = "Between Two Seas",
-  KnownWorld = "Known World",
   FaroeIslands = "Faroe Islands",
   DeglaciatedAntarctica = "Deglaciated Antarctica",
   FalklandIslands = "Falkland Islands",
   Baikal = "Baikal",
+  Halkidiki = "Halkidiki",
 }
 
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
     GameMapType.World,
+    GameMapType.WorldMapGiant,
     GameMapType.NorthAmerica,
     GameMapType.SouthAmerica,
     GameMapType.Europe,
@@ -95,17 +97,17 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.GatewayToTheAtlantic,
     GameMapType.BetweenTwoSeas,
     GameMapType.Iceland,
-    GameMapType.Japan,
+    GameMapType.EastAsia,
     GameMapType.Mena,
     GameMapType.Australia,
     GameMapType.FaroeIslands,
     GameMapType.FalklandIslands,
     GameMapType.Baikal,
+    GameMapType.Halkidiki,
   ],
   fantasy: [
     GameMapType.Pangaea,
     GameMapType.Mars,
-    GameMapType.KnownWorld,
     GameMapType.DeglaciatedAntarctica,
   ],
 };
@@ -128,6 +130,7 @@ export interface UnitInfo {
   maxHealth?: number;
   damage?: number;
   constructionDuration?: number;
+  upgradable?: boolean;
 }
 
 export enum UnitType {
@@ -148,13 +151,19 @@ export enum UnitType {
   Construction = "Construction",
 }
 
+export interface OwnerComp {
+  owner: Player;
+}
+
 export interface UnitParamsMap {
   [UnitType.TransportShip]: {
     troops?: number;
     destination?: TileRef;
   };
 
-  [UnitType.Warship]: {};
+  [UnitType.Warship]: {
+    patrolTile: TileRef;
+  };
 
   [UnitType.Shell]: {};
 
@@ -162,12 +171,16 @@ export interface UnitParamsMap {
 
   [UnitType.Port]: {};
 
-  [UnitType.AtomBomb]: {};
+  [UnitType.AtomBomb]: {
+    targetTile?: number;
+  };
 
-  [UnitType.HydrogenBomb]: {};
+  [UnitType.HydrogenBomb]: {
+    targetTile?: number;
+  };
 
   [UnitType.TradeShip]: {
-    dstPort: Unit;
+    targetUnit: Unit;
     lastSetSafeFromPirates?: number;
   };
 
@@ -183,7 +196,9 @@ export interface UnitParamsMap {
 
   [UnitType.MIRV]: {};
 
-  [UnitType.MIRVWarhead]: {};
+  [UnitType.MIRVWarhead]: {
+    targetTile?: number;
+  };
 
   [UnitType.Construction]: {};
 }
@@ -199,8 +214,6 @@ export const nukeTypes = [
   UnitType.MIRVWarhead,
   UnitType.MIRV,
 ] as UnitType[];
-
-export type NukeType = (typeof nukeTypes)[number];
 
 export enum Relation {
   Hostile = 0,
@@ -276,6 +289,11 @@ export interface Attack {
   delete(): void;
   // The tile the attack originated from, mostly used for boat attacks.
   sourceTile(): TileRef | null;
+  addBorderTile(tile: TileRef): void;
+  removeBorderTile(tile: TileRef): void;
+  clearBorder(): void;
+  borderSize(): number;
+  averagePosition(): Cell | null;
 }
 
 export interface AllianceRequest {
@@ -315,64 +333,78 @@ export class PlayerInfo {
     if (!name.startsWith("[") || !name.includes("]")) {
       this.clan = null;
     } else {
-      const clanMatch = name.match(/^\[([A-Z]{2,5})\]/);
+      const clanMatch = name.match(/^\[([a-zA-Z]{2,5})\]/);
       this.clan = clanMatch ? clanMatch[1] : null;
     }
   }
 }
 
-export interface Unit {
-  id(): number;
+export function isUnit(unit: Unit | UnitParams<UnitType>): unit is Unit {
+  return "isUnit" in unit && typeof unit.isUnit === "function" && unit.isUnit();
+}
 
-  // Properties
+export interface Unit {
+  isUnit(): this is Unit;
+
+  // Common properties.
+  id(): number;
   type(): UnitType;
-  troops(): number;
   owner(): Player;
   info(): UnitInfo;
-
-  // Location
+  delete(displayMessage?: boolean, destroyer?: Player): void;
   tile(): TileRef;
   lastTile(): TileRef;
   move(tile: TileRef): void;
-
-  // State
   isActive(): boolean;
-  hasHealth(): boolean;
-  health(): number;
-  modifyHealth(delta: number): void;
-
-  setWarshipTarget(target: Unit | null): void; // warship only
-  warshipTarget(): Unit | null;
-
   setOwner(owner: Player): void;
-  setCooldown(triggerCooldown: boolean): void;
-  ticksLeftInCooldown(cooldownDuration: number): Tick;
-  isCooldown(): boolean;
-  setDstPort(dstPort: Unit): void;
-  dstPort(): Unit | null; // Only for trade ships
-  setSafeFromPirates(): void; // Only for trade ships
-  isSafeFromPirates(): boolean; // Only for trade ships
-  detonationDst(): TileRef | null; // Only for nukes
+  touch(): void;
+  hash(): number;
+  toUpdate(): UnitUpdate;
 
-  setMoveTarget(cell: TileRef | null): void;
-  moveTarget(): TileRef | null;
-
+  // Targeting
+  setTargetTile(cell: TileRef | undefined): void;
+  targetTile(): TileRef | undefined;
+  setTargetUnit(unit: Unit | undefined): void;
+  targetUnit(): Unit | undefined;
   setTargetedBySAM(targeted: boolean): void;
   targetedBySAM(): boolean;
+  setReachedTarget(): void;
+  reachedTarget(): boolean;
 
-  // Mutations
+  // Health
+  hasHealth(): boolean;
+  retreating(): boolean;
+  orderBoatRetreat(): void;
+  health(): number;
+  modifyHealth(delta: number, attacker?: Player): void;
+
+  // Troops
   setTroops(troops: number): void;
-  delete(displayerMessage?: boolean): void;
+  troops(): number;
 
-  // Only for Construction type
+  // --- UNIT SPECIFIC ---
+
+  // SAMs & Missile Silos
+  launch(): void;
+  reloadMissile(): void;
+  isInCooldown(): boolean;
+  ticksLeftInCooldown(): Tick | undefined;
+
+  // Trade Ships
+  setSafeFromPirates(): void; // Only for trade ships
+  isSafeFromPirates(): boolean; // Only for trade ships
+
+  // Construction
   constructionType(): UnitType | null;
   setConstructionType(type: UnitType): void;
 
-  // Updates
-  toUpdate(): UnitUpdate;
+  // Upgradable Structures
+  level(): number;
+  increaseLevel(): void;
 
-  cachePut(from: TileRef, to: TileRef): void; // ports only
-  cacheGet(from: TileRef): TileRef | undefined; // ports only
+  // Warships
+  setPatrolTile(tile: TileRef): void;
+  patrolTile(): TileRef | undefined;
 }
 
 export interface TerraNullius {
@@ -407,6 +439,9 @@ export interface Player {
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
   lastTileChange(): Tick;
 
+  isDisconnected(): boolean;
+  markDisconnected(isDisconnected: boolean): void;
+
   hasSpawned(): boolean;
   setHasSpawned(hasSpawned: boolean): void;
 
@@ -424,7 +459,7 @@ export interface Player {
   troops(): number;
   targetTroopRatio(): number;
   addGold(toAdd: Gold): void;
-  removeGold(toRemove: Gold): void;
+  removeGold(toRemove: Gold): Gold;
   addWorkers(toAdd: number): void;
   removeWorkers(toRemove: number): void;
   setTargetTroopRatio(target: number): void;
@@ -442,6 +477,7 @@ export interface Player {
     spawnTile: TileRef,
     params: UnitParams<T>,
   ): Unit;
+  upgradeUnit(unit: Unit): void;
 
   captureUnit(unit: Unit): void;
 
@@ -480,8 +516,8 @@ export interface Player {
 
   // Donation
   canDonate(recipient: Player): boolean;
-  donateTroops(recipient: Player, troops: number): void;
-  donateGold(recipient: Player, gold: number): void;
+  donateTroops(recipient: Player, troops: number): boolean;
+  donateGold(recipient: Player, gold: Gold): boolean;
 
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;
@@ -494,10 +530,12 @@ export interface Player {
 
   // Attacking.
   canAttack(tile: TileRef): boolean;
+
   createAttack(
     target: Player | TerraNullius,
     troops: number,
     sourceTile: TileRef | null,
+    border: Set<number>,
   ): Attack;
   outgoingAttacks(): Attack[];
   incomingAttacks(): Attack[];
@@ -556,6 +594,7 @@ export interface Game extends GameMap {
     message: string,
     type: MessageType,
     playerID: PlayerID | null,
+    goldAmount?: bigint,
   ): void;
   displayIncomingUnit(
     unitID: number,
@@ -567,7 +606,7 @@ export interface Game extends GameMap {
   displayChat(
     message: string,
     category: string,
-    variables: Record<string, string>,
+    target: PlayerID | undefined,
     playerID: PlayerID | null,
     isFrom: boolean,
     recipient: string,
@@ -591,7 +630,7 @@ export interface PlayerActions {
 export interface BuildableUnit {
   canBuild: TileRef | false;
   type: UnitType;
-  cost: number;
+  cost: Gold;
 }
 
 export interface PlayerProfile {
@@ -611,6 +650,7 @@ export interface PlayerInteraction {
   canTarget: boolean;
   canDonate: boolean;
   canEmbargo: boolean;
+  allianceCreatedAtTick?: Tick;
 }
 
 export interface EmojiMessage {
@@ -621,11 +661,73 @@ export interface EmojiMessage {
 }
 
 export enum MessageType {
-  SUCCESS,
-  INFO,
-  WARN,
-  ERROR,
+  ATTACK_FAILED,
+  ATTACK_CANCELLED,
+  ATTACK_REQUEST,
+  CONQUERED_PLAYER,
+  MIRV_INBOUND,
+  NUKE_INBOUND,
+  HYDROGEN_BOMB_INBOUND,
+  NAVAL_INVASION_INBOUND,
+  SAM_MISS,
+  SAM_HIT,
+  CAPTURED_ENEMY_UNIT,
+  UNIT_CAPTURED_BY_ENEMY,
+  UNIT_DESTROYED,
+  ALLIANCE_ACCEPTED,
+  ALLIANCE_REJECTED,
+  ALLIANCE_REQUEST,
+  ALLIANCE_BROKEN,
+  ALLIANCE_EXPIRED,
+  SENT_GOLD_TO_PLAYER,
+  RECEIVED_GOLD_FROM_PLAYER,
+  RECEIVED_GOLD_FROM_TRADE,
+  SENT_TROOPS_TO_PLAYER,
+  RECEIVED_TROOPS_FROM_PLAYER,
   CHAT,
+}
+
+// Message categories used for filtering events in the EventsDisplay
+export enum MessageCategory {
+  ATTACK = "ATTACK",
+  ALLIANCE = "ALLIANCE",
+  TRADE = "TRADE",
+  CHAT = "CHAT",
+}
+
+// Ensures that all message types are included in a category
+export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
+  [MessageType.ATTACK_FAILED]: MessageCategory.ATTACK,
+  [MessageType.ATTACK_CANCELLED]: MessageCategory.ATTACK,
+  [MessageType.ATTACK_REQUEST]: MessageCategory.ATTACK,
+  [MessageType.CONQUERED_PLAYER]: MessageCategory.ATTACK,
+  [MessageType.MIRV_INBOUND]: MessageCategory.ATTACK,
+  [MessageType.NUKE_INBOUND]: MessageCategory.ATTACK,
+  [MessageType.HYDROGEN_BOMB_INBOUND]: MessageCategory.ATTACK,
+  [MessageType.NAVAL_INVASION_INBOUND]: MessageCategory.ATTACK,
+  [MessageType.SAM_MISS]: MessageCategory.ATTACK,
+  [MessageType.SAM_HIT]: MessageCategory.ATTACK,
+  [MessageType.CAPTURED_ENEMY_UNIT]: MessageCategory.ATTACK,
+  [MessageType.UNIT_CAPTURED_BY_ENEMY]: MessageCategory.ATTACK,
+  [MessageType.UNIT_DESTROYED]: MessageCategory.ATTACK,
+  [MessageType.ALLIANCE_ACCEPTED]: MessageCategory.ALLIANCE,
+  [MessageType.ALLIANCE_REJECTED]: MessageCategory.ALLIANCE,
+  [MessageType.ALLIANCE_REQUEST]: MessageCategory.ALLIANCE,
+  [MessageType.ALLIANCE_BROKEN]: MessageCategory.ALLIANCE,
+  [MessageType.ALLIANCE_EXPIRED]: MessageCategory.ALLIANCE,
+  [MessageType.SENT_GOLD_TO_PLAYER]: MessageCategory.TRADE,
+  [MessageType.RECEIVED_GOLD_FROM_PLAYER]: MessageCategory.TRADE,
+  [MessageType.RECEIVED_GOLD_FROM_TRADE]: MessageCategory.TRADE,
+  [MessageType.SENT_TROOPS_TO_PLAYER]: MessageCategory.TRADE,
+  [MessageType.RECEIVED_TROOPS_FROM_PLAYER]: MessageCategory.TRADE,
+  [MessageType.CHAT]: MessageCategory.CHAT,
+} as const;
+
+/**
+ * Get the category of a message type
+ */
+export function getMessageCategory(messageType: MessageType): MessageCategory {
+  return MESSAGE_TYPE_CATEGORIES[messageType];
 }
 
 export interface NameViewData {

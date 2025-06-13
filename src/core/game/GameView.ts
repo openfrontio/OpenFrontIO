@@ -1,5 +1,5 @@
 import { Config } from "../configuration/Config";
-import { ClientID, GameID, PlayerStats } from "../Schemas";
+import { ClientID, GameID } from "../Schemas";
 import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
@@ -8,7 +8,6 @@ import {
   GameUpdates,
   Gold,
   NameViewData,
-  nukeTypes,
   Player,
   PlayerActions,
   PlayerBorderTiles,
@@ -79,14 +78,23 @@ export class UnitView {
   troops(): number {
     return this.data.troops;
   }
+  retreating(): boolean {
+    if (this.type() !== UnitType.TransportShip) {
+      throw Error("Must be a transport ship");
+    }
+    return this.data.retreating;
+  }
   tile(): TileRef {
     return this.data.pos;
   }
   owner(): PlayerView {
-    return this.gameView.playerBySmallID(this.data.ownerID) as PlayerView;
+    return this.gameView.playerBySmallID(this.data.ownerID)! as PlayerView;
   }
   isActive(): boolean {
     return this.data.isActive;
+  }
+  reachedTarget(): boolean {
+    return this.data.reachedTarget;
   }
   hasHealth(): boolean {
     return this.data.health !== undefined;
@@ -97,32 +105,25 @@ export class UnitView {
   constructionType(): UnitType | undefined {
     return this.data.constructionType;
   }
-  dstPortId(): number | undefined {
-    return this.data.dstPortId;
+  targetUnitId(): number | undefined {
+    return this.data.targetUnitId;
   }
-  detonationDst(): TileRef | undefined {
-    if (!nukeTypes.includes(this.type())) {
-      throw Error("Must be a nuke");
-    }
-    return this.data.detonationDst;
-  }
-  warshipTargetId(): number | undefined {
-    if (this.type() !== UnitType.Warship) {
-      throw Error("Must be a warship");
-    }
-    return this.data.warshipTargetId;
+  targetTile(): TileRef | undefined {
+    return this.data.targetTile;
   }
   ticksLeftInCooldown(): Tick | undefined {
-    return this.data.ticksLeftInCooldown;
+    return this.data.missileTimerQueue?.[0];
   }
-  isCooldown(): boolean {
-    if (this.data.ticksLeftInCooldown === undefined) return false;
-    return this.data.ticksLeftInCooldown > 0;
+  isInCooldown(): boolean {
+    return this.data.readyMissileCount === 0;
+  }
+  level(): number {
+    return this.data.level;
   }
 }
 
 export class PlayerView {
-  public anonymousName: string;
+  public anonymousName: string | null = null;
 
   constructor(
     private game: GameView,
@@ -132,8 +133,10 @@ export class PlayerView {
     if (data.clientID === game.myClientID()) {
       this.anonymousName = this.data.name;
     } else {
-      this.anonymousName =
-        createRandomName(this.data.name, this.data.playerType) ?? "";
+      this.anonymousName = createRandomName(
+        this.data.name,
+        this.data.playerType,
+      );
     }
   }
 
@@ -157,6 +160,13 @@ export class PlayerView {
     return this.data.incomingAttacks;
   }
 
+  async attackAveragePosition(
+    playerID: number,
+    attackID: string,
+  ): Promise<Cell | null> {
+    return this.game.worker.attackAveragePosition(playerID, attackID);
+  }
+
   units(...types: UnitType[]): UnitView[] {
     return this.game
       .units(...types)
@@ -174,12 +184,12 @@ export class PlayerView {
     return this.data.flag;
   }
   name(): string {
-    return userSettings.anonymousNames() && this.anonymousName !== null
+    return this.anonymousName !== null && userSettings.anonymousNames()
       ? this.anonymousName
       : this.data.name;
   }
   displayName(): string {
-    return userSettings.anonymousNames() && this.anonymousName !== null
+    return this.anonymousName !== null && userSettings.anonymousNames()
       ? this.anonymousName
       : this.data.name;
   }
@@ -278,11 +288,11 @@ export class PlayerView {
       this.id(),
     );
   }
-  stats(): PlayerStats {
-    return this.data.stats;
-  }
   hasSpawned(): boolean {
     return this.data.hasSpawned;
+  }
+  isDisconnected(): boolean {
+    return this.data.isDisconnected;
   }
 }
 

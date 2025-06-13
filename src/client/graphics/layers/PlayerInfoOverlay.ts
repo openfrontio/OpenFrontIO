@@ -12,7 +12,6 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
 import { renderPlayerFlag } from "../../FlagInput";
 import { MouseMoveEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
@@ -43,9 +42,6 @@ function distSortUnitWorld(coord: { x: number; y: number }, game: GameView) {
 export class PlayerInfoOverlay extends LitElement implements Layer {
   @property({ type: Object })
   public game!: GameView;
-
-  @property({ type: String })
-  public clientID!: ClientID;
 
   @property({ type: Object })
   public eventBus!: EventBus;
@@ -139,13 +135,6 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  private myPlayer(): PlayerView | null {
-    if (!this.game) {
-      return null;
-    }
-    return this.game.playerByClientID(this.clientID);
-  }
-
   private getRelationClass(relation: Relation): string {
     switch (relation) {
       case Relation.Hostile:
@@ -177,7 +166,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   }
 
   private renderPlayerInfo(player: PlayerView) {
-    const myPlayer = this.myPlayer();
+    const myPlayer = this.game.myPlayer();
     const isFriendly = myPlayer?.isFriendly(player);
     let relationHtml: TemplateResult | null = null;
     const attackingTroops = player
@@ -214,7 +203,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     return html`
       <div class="p-2">
         <div
-          class="text-bold text-sm lg:text-lg font-bold mb-1 inline-flex ${isFriendly
+          class="text-bold text-sm lg:text-lg font-bold mb-1 inline-flex break-all ${isFriendly
             ? "text-green-500"
             : "text-white"}"
         >
@@ -264,18 +253,58 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.ports")}:
           ${player.units(UnitType.Port).length}
+          ${player
+            .units(UnitType.Port)
+            .map((unit) => unit.level())
+            .reduce((a, b) => a + b, 0) > 1
+            ? html`(${translateText("player_info_overlay.levels")}:
+              ${player
+                .units(UnitType.Port)
+                .map((unit) => unit.level())
+                .reduce((a, b) => a + b, 0)})`
+            : ""}
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.cities")}:
           ${player.units(UnitType.City).length}
+          ${player
+            .units(UnitType.City)
+            .map((unit) => unit.level())
+            .reduce((a, b) => a + b, 0) > 1
+            ? html`(${translateText("player_info_overlay.levels")}:
+              ${player
+                .units(UnitType.City)
+                .map((unit) => unit.level())
+                .reduce((a, b) => a + b, 0)})`
+            : ""}
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.missile_launchers")}:
           ${player.units(UnitType.MissileSilo).length}
+          ${player
+            .units(UnitType.MissileSilo)
+            .map((unit) => unit.level())
+            .reduce((a, b) => a + b, 0) > 1
+            ? html`(${translateText("player_info_overlay.levels")}:
+              ${player
+                .units(UnitType.MissileSilo)
+                .map((unit) => unit.level())
+                .reduce((a, b) => a + b, 0)})`
+            : ""}
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.sams")}:
           ${player.units(UnitType.SAMLauncher).length}
+          ${player
+            .units(UnitType.SAMLauncher)
+            .map((unit) => unit.level())
+            .reduce((a, b) => a + b, 0) > 1
+            ? html`(${translateText("player_info_overlay.levels")}:
+              ${player
+                .units(UnitType.SAMLauncher)
+                .map((unit) => unit.level())
+                .reduce((a, b) => a + b, 0)})`
+            : ""}
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.warships")}:
@@ -288,8 +317,8 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
   private renderUnitInfo(unit: UnitView) {
     const isAlly =
-      (unit.owner() === this.myPlayer() ||
-        this.myPlayer()?.isFriendly(unit.owner())) ??
+      (unit.owner() === this.game.myPlayer() ||
+        this.game.myPlayer()?.isFriendly(unit.owner())) ??
       false;
 
     return html`
