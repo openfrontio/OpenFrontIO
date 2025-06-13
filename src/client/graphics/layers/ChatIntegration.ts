@@ -74,7 +74,7 @@ export class ChatIntegration {
                   new SendQuickChatEvent(
                     recipient,
                     `${category.id}.${phrase.key}`,
-                    {},
+                    undefined,
                   ),
                 );
               }
