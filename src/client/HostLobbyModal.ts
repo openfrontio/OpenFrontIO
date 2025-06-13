@@ -592,6 +592,6 @@ export async function buildGameUrl(
   const config = await getServerConfigFromClient();
 
   const apiPath = `/api/${path}/${gameID}`;
-  const baseUrl = process.env.API_BASE_URL || "/";
-  return `${baseUrl}${config.workerPath(gameID)}${apiPath}`;
+  const baseUrl = process.env.API_BASE_URL || "";
+  return `${baseUrl}/${config.workerPath(gameID)}${apiPath}`;
 }

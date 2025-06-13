@@ -1,3 +1,6 @@
+import { App } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
+import { Capacitor } from "@capacitor/core";
 import { decodeJwt } from "jose";
 import { z } from "zod/v4";
 import {
@@ -8,8 +11,12 @@ import {
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
 
+const isNative = Capacitor.getPlatform() !== "web";
+
 function getAudience() {
-  const { hostname } = new URL(window.location.href);
+  const hostname =
+    process.env.CAPACITOR_PRODUCTION_HOSTNAME ||
+    new URL(window.location.href).hostname;
   const domainname = hostname.split(".").slice(-2).join(".");
   return domainname;
 }
@@ -17,7 +24,10 @@ function getAudience() {
 function getApiBase() {
   const domainname = getAudience();
   return domainname === "localhost"
-    ? (localStorage.getItem("apiHost") ?? "http://localhost:8787")
+    ? (localStorage.getItem("apiHost") ??
+      (isNative && process.env.API_BASE_URL))
+      ? process.env.API_BASE_URL!.replace("9000", "8787")
+      : "http://localhost:8787"
     : `https://api.${domainname}`;
 }
 
@@ -43,8 +53,22 @@ function getToken(): string | null {
   return localStorage.getItem("token");
 }
 
-export function discordLogin() {
-  window.location.href = `${getApiBase()}/login/discord?redirect_uri=${window.location.href}`;
+export async function discordLogin() {
+  let redirectUri: string;
+
+  if (isNative) {
+    redirectUri = `${process.env.API_BASE_URL}/discord-redirect.html`;
+  } else {
+    redirectUri = window.location.href.split("#")[0];
+  }
+
+  const url = `${getApiBase()}/login/discord?redirect_uri=${encodeURIComponent(redirectUri)}`;
+
+  if (isNative) {
+    await Browser.open({ url });
+  } else {
+    window.location.href = url;
+  }
 }
 
 export async function logOut(allSessions: boolean = false) {
@@ -101,7 +125,7 @@ function _isLoggedIn(): IsLoggedInResponse {
     const payload = decodeJwt(token);
     const { iss, aud, exp, iat } = payload;
 
-    if (iss !== getApiBase()) {
+    if (iss !== getApiBase() && !isNative) {
       // JWT was not issued by the correct server
       console.error(
         'unexpected "iss" claim value',
@@ -156,6 +180,61 @@ function _isLoggedIn(): IsLoggedInResponse {
     console.log(e);
     return false;
   }
+}
+
+export function initializeAuthListener() {
+  if (Capacitor.getPlatform() === "web") return;
+
+  App.addListener("appUrlOpen", async (data) => {
+    try {
+      const url = new URL(data.url);
+      const code = url.searchParams.get("code");
+      const state = url.searchParams.get("state");
+      const error = url.searchParams.get("error");
+
+      if (error) {
+        console.error("Error from auth provider:", error);
+        await Browser.close();
+        return;
+      }
+
+      if (code && state) {
+        const redirectUri = `${process.env.API_BASE_URL}/discord-redirect.html`;
+        const response = await fetch(`${getApiBase()}/mobile/callback`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            code,
+            state,
+            redirect_uri: redirectUri,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            `Failed to exchange code for token: ${response.statusText}`,
+          );
+        }
+
+        const { token } = await response.json();
+
+        if (token) {
+          localStorage.setItem("token", token);
+          __isLoggedIn = undefined;
+          await Browser.close();
+          window.location.assign(window.location.origin || "/");
+        } else {
+          console.error("No token found in response");
+          await Browser.close();
+        }
+      }
+    } catch (e) {
+      console.error("Error handling appUrlOpen", e);
+      await Browser.close();
+    }
+  });
 }
 
 export async function postRefresh(): Promise<boolean> {

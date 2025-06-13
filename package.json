@@ -60,6 +60,7 @@
     "jest-environment-jsdom": "^30.0.0",
     "lint-staged": "^16.1.2",
     "mrmime": "^2.0.0",
+    "os-browserify": "^0.3.0",
     "postcss": "^8.5.1",
     "postcss-loader": "^8.1.1",
     "prettier": "^3.5.3",
@@ -82,6 +83,9 @@
   "dependencies": {
     "@aws-sdk/client-redshift-data": "^3.758.0",
     "@aws-sdk/client-s3": "^3.758.0",
+    "@capacitor/app": "^7.0.1",
+    "@capacitor/browser": "^7.0.1",
+    "@capacitor/core": "^7.3.0",
     "@datastructures-js/priority-queue": "^6.3.1",
     "@google-cloud/secret-manager": "^5.6.0",
     "@opentelemetry/api": "^1.9.0",

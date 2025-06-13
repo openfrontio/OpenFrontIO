@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Redirecting...</title>
+  </head>
+  <body>
+    <p>Please wait while we redirect you back to the application.</p>
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+      const error = params.get("error");
+      const state = params.get("state");
+
+      if (code) {
+        let url = `com.openfront.app://auth?code=${code}`;
+        if (state) {
+          url += `&state=${state}`;
+        }
+        window.location = url;
+      } else if (error) {
+        let url = `com.openfront.app://auth?error=${error}`;
+        if (state) {
+          url += `&state=${state}`;
+        }
+        window.location = url;
+      } else {
+        document.body.innerText =
+          "No code or error found. You can close this window.";
+      }
+    </script>
+  </body>
+</html>

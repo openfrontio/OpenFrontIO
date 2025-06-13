@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameInfo, GameRecord } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
@@ -171,7 +172,8 @@ export class JoinPrivateLobbyModal extends LitElement {
   }
 
   private async checkActiveLobby(lobbyId: string): Promise<boolean> {
-    const url = await buildGameUrl(lobbyId, "game/exists");
+    const config = await getServerConfigFromClient();
+    const url = `${process.env.API_BASE_URL || ""}/${config.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
 
     const response = await fetch(url, {
       method: "GET",
