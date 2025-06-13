@@ -612,7 +612,7 @@ export class GameImpl implements Game {
             }
           })
           .map((player) => {
-            return player.id();
+            return player.displayName();
           }),
       });
     });
