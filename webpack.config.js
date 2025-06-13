@@ -30,6 +30,7 @@ const gitCommit =
 export default async (env, argv) => {
   const isProduction = argv.mode === "production";
 
+  // Note: when running capacitor apps locally, run `npm run dev` before building the app to avoid env vars being overridden
   const apiBaseUrl = process.env.CAPACITOR_BUILD
     ? isProduction && process.env.CAPACITOR_PRODUCTION_HOSTNAME
       ? `https://${process.env.CAPACITOR_PRODUCTION_HOSTNAME}`
@@ -161,7 +162,7 @@ export default async (env, argv) => {
       }),
       new webpack.DefinePlugin({
         "process.env.WEBSOCKET_URL": JSON.stringify(
-          isProduction ? "" : "localhost:3000",
+          apiBaseUrl.split("://")[1], // remove protocol
         ),
         "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
         "process.env.GIT_COMMIT": JSON.stringify(gitCommit),
