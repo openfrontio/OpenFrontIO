@@ -292,9 +292,12 @@ export class SinglePlayerModal extends LitElement {
                 />
                 ${this.maxTimer === false
                   ? ""
-                  : html` <input
+                  : html`<input
                       type="number"
                       id="end-timer-value"
+                      min="0"
+                      max="400"
+                      .value=${String(this.maxTimerValue ?? "")}
                       style="width: 60px; color: black; text-align: right; border-radius: 8px;"
                       @input=${this.handleMaxTimerValueChanges}
                       @keydown=${this.handleMaxTimerValueKeyDown}

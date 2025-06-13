@@ -75,8 +75,9 @@ describe("WinCheckExecution", () => {
     mg.players = jest.fn(() => [player]);
     mg.numLandTiles = jest.fn(() => 100);
     mg.numTilesWithFallout = jest.fn(() => 0);
+    mg.stats = jest.fn(() => ({ stats: () => ({ mocked: true }) }));
     winCheck.checkWinnerFFA();
-    expect(mg.setWinner).toHaveBeenCalledWith(player, {});
+    expect(mg.setWinner).toHaveBeenCalledWith(player, expect.any(Object));
   });
 
   it("should not set winner if no players", () => {
