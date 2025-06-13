@@ -6,26 +6,16 @@
   <body>
     <p>Please wait while we redirect you back to the application.</p>
     <script>
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get("code");
-      const error = params.get("error");
-      const state = params.get("state");
+      const appDeepLink = "com.openfront.app://auth";
 
-      if (code) {
-        let url = `com.openfront.app://auth?code=${code}`;
-        if (state) {
-          url += `&state=${state}`;
-        }
-        window.location = url;
-      } else if (error) {
-        let url = `com.openfront.app://auth?error=${error}`;
-        if (state) {
-          url += `&state=${state}`;
-        }
-        window.location = url;
+      if (window.location.hash.startsWith("#token=")) {
+        const token = window.location.hash.substring("#token=".length);
+        const redirectUrl = `${appDeepLink}?token=${encodeURIComponent(token)}`;
+        window.location.href = redirectUrl;
       } else {
-        document.body.innerText =
-          "No code or error found. You can close this window.";
+        const error = window.location.hash.substring(1);
+        const redirectUrl = `${appDeepLink}?${error}`;
+        window.location.href = redirectUrl;
       }
     </script>
   </body>

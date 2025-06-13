@@ -12,6 +12,7 @@ import {
 } from "../core/ApiSchemas";
 
 const isNative = Capacitor.getPlatform() !== "web";
+const NATIVE_REDIRECT_URI = `${process.env.API_BASE_URL}/discord-redirect.html`;
 
 function getAudience() {
   const hostname =
@@ -57,7 +58,7 @@ export async function discordLogin() {
   let redirectUri: string;
 
   if (isNative) {
-    redirectUri = `${process.env.API_BASE_URL}/discord-redirect.html`;
+    redirectUri = NATIVE_REDIRECT_URI;
   } else {
     redirectUri = window.location.href.split("#")[0];
   }
@@ -188,48 +189,21 @@ export function initializeAuthListener() {
   App.addListener("appUrlOpen", async (data) => {
     try {
       const url = new URL(data.url);
-      const code = url.searchParams.get("code");
-      const state = url.searchParams.get("state");
-      const error = url.searchParams.get("error");
+      const token = url.searchParams.get("token");
 
-      if (error) {
-        console.error("Error from auth provider:", error);
+      if (token) {
+        localStorage.setItem("token", token);
+        __isLoggedIn = undefined; // Force re-evaluation
         await Browser.close();
+        window.location.assign(window.location.origin || "/");
         return;
       }
 
-      if (code && state) {
-        const redirectUri = `${process.env.API_BASE_URL}/discord-redirect.html`;
-        const response = await fetch(`${getApiBase()}/mobile/callback`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            code,
-            state,
-            redirect_uri: redirectUri,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(
-            `Failed to exchange code for token: ${response.statusText}`,
-          );
-        }
-
-        const { token } = await response.json();
-
-        if (token) {
-          localStorage.setItem("token", token);
-          __isLoggedIn = undefined;
-          await Browser.close();
-          window.location.assign(window.location.origin || "/");
-        } else {
-          console.error("No token found in response");
-          await Browser.close();
-        }
+      const error = url.search;
+      if (error) {
+        console.error(`Error from auth provider: ${error}`);
       }
+      await Browser.close();
     } catch (e) {
       console.error("Error handling appUrlOpen", e);
       await Browser.close();
