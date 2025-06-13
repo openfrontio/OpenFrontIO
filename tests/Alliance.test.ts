@@ -56,9 +56,16 @@ describe("Alliance", () => {
       new SpawnExecution(game.player(player3Info.id).info(), player3Spawn),
     );
 
-    while (game.inSpawnPhase()) {
+    const currentTick = game.ticks();
+    for (
+      let i = currentTick;
+      i <= currentTick + game.config().numSpawnPhaseTurns() &&
+      game.inSpawnPhase();
+      i++
+    ) {
       game.executeNextTick();
     }
+    expect(game.inSpawnPhase()).toBe(false);
 
     player1 = game.player(player1Info.id);
     player2 = game.player(player2Info.id);
@@ -126,8 +133,11 @@ describe("Alliance", () => {
     game.executeNextTick();
 
     const currentTick = game.ticks();
-    while (game.ticks() <= currentTick + game.config().allianceDuration()) {
-      //elapse ticks to make sure we're in the expirary phase.
+    for (
+      let i = currentTick;
+      i <= currentTick + game.config().allianceDuration();
+      i++
+    ) {
       game.executeNextTick();
     }
 
@@ -175,11 +185,17 @@ describe("Alliance", () => {
       new AllianceRequestReplyExecution(player1.id(), player2, true),
     );
     game.addExecution(
-      new AllianceRequestReplyExecution(player1.id(), player2, true),
+      new AllianceRequestReplyExecution(player1.id(), player3, true),
     );
     // Finish tick execution to add execution.
     game.executeNextTick();
     // Execute a tick to let execution resolve.
     game.executeNextTick();
+
+    expect(player1.alliances().length).toBe(2);
+    expect(player1.allies().length).toBe(2);
+    // Player 2 and 3 are only allied with 1, and not each other.
+    expect(player2.allies().length).toBe(1);
+    expect(player3.allies().length).toBe(1);
   });
 });
