@@ -28,7 +28,6 @@ import {
   GameUpdateType,
   TargetPlayerUpdate,
   UnitIncomingUpdate,
-  VoteForPeaceExpiredUpdate,
   VoteForPeaceReplyUpdate,
   VoteForPeaceUpdate,
 } from "../../../core/game/GameUpdates";
@@ -156,10 +155,6 @@ export class EventsDisplay extends LitElement implements Layer {
     [GameUpdateType.UnitIncoming, (u) => this.onUnitIncomingEvent(u)],
     [GameUpdateType.VoteForPeace, (u) => this.onVoteForPeaceEvent(u)],
     [GameUpdateType.VoteForPeaceReply, (u) => this.onVoteForPeaceReplyEvent(u)],
-    [
-      GameUpdateType.VoteForPeaceExpired,
-      (u) => this.onVoteForPeaceExpiredEvent,
-    ],
   ]);
 
   constructor() {
@@ -624,18 +619,6 @@ export class EventsDisplay extends LitElement implements Layer {
     this.addEvent({
       description: `${translateText("event_display.player_vote_response")} ${event.accepted ? translateText("player_panel.yes") : translateText("player_panel.no")}`,
       type: MessageType.VOTE_FOR_PEACE_REPLY,
-      unsafeDescription: false,
-      highlight: true,
-      createdAt: this.game.ticks(),
-    });
-  }
-
-  onVoteForPeaceExpiredEvent(event: VoteForPeaceExpiredUpdate) {
-    const myPlayer = this.game.myPlayer();
-
-    this.addEvent({
-      description: `The vote for peace has expired`,
-      type: MessageType.VOTE_FOR_PEACE_EXPIRED,
       unsafeDescription: false,
       highlight: true,
       createdAt: this.game.ticks(),
