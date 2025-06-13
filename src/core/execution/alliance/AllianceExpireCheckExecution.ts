@@ -26,7 +26,7 @@ export class AllianceExpireCheckExecution implements Execution {
 
       const key = `${alliance.requestor().id()}-${alliance.recipient().id()}-${alliance.createdAt()}`;
 
-      if (ticksLeft === promptOffset && !this.promptedAlliances.has(key)) {
+      if (ticksLeft <= promptOffset && !this.promptedAlliances.has(key)) {
         this.promptedAlliances.add(key);
 
         const requestor = alliance.requestor();
