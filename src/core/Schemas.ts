@@ -34,7 +34,8 @@ export type Intent =
   | EmbargoIntent
   | QuickChatIntent
   | MoveWarshipIntent
-  | MarkDisconnectedIntent;
+  | MarkDisconnectedIntent
+  | UpgradeStructureIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -55,6 +56,9 @@ export type TargetTroopRatioIntent = z.infer<
   typeof TargetTroopRatioIntentSchema
 >;
 export type BuildUnitIntent = z.infer<typeof BuildUnitIntentSchema>;
+export type UpgradeStructureIntent = z.infer<
+  typeof UpgradeStructureIntentSchema
+>;
 export type MoveWarshipIntent = z.infer<typeof MoveWarshipIntentSchema>;
 export type QuickChatIntent = z.infer<typeof QuickChatIntentSchema>;
 export type MarkDisconnectedIntent = z.infer<
@@ -127,7 +131,7 @@ export const GameConfigSchema = z.object({
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
   maxPlayers: z.number().optional(),
-  disabledUnits: z.array(z.nativeEnum(UnitType)).optional(),
+  disabledUnits: z.nativeEnum(UnitType).array().optional(),
   playerTeams: z.union([z.number().optional(), z.literal(Duos)]),
 });
 
@@ -166,21 +170,6 @@ export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
 // Zod schemas
 const BaseIntentSchema = z.object({
-  type: z.enum([
-    "attack",
-    "cancel_attack",
-    "spawn",
-    "mark_disconnected",
-    "boat",
-    "cancel_boat",
-    "name",
-    "targetPlayer",
-    "emoji",
-    "troop_ratio",
-    "build_unit",
-    "embargo",
-    "move_warship",
-  ]),
   clientID: ID,
 });
 
@@ -266,6 +255,12 @@ export const BuildUnitIntentSchema = BaseIntentSchema.extend({
   y: z.number(),
 });
 
+export const UpgradeStructureIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("upgrade_structure"),
+  unit: z.nativeEnum(UnitType),
+  unitId: z.number(),
+});
+
 export const CancelAttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("cancel_attack"),
   attackID: z.string(),
@@ -300,7 +295,7 @@ export const MarkDisconnectedIntentSchema = BaseIntentSchema.extend({
   isDisconnected: z.boolean(),
 });
 
-const IntentSchema = z.union([
+const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
   SpawnIntentSchema,
@@ -316,6 +311,7 @@ const IntentSchema = z.union([
   DonateTroopIntentSchema,
   TargetTroopRatioIntentSchema,
   BuildUnitIntentSchema,
+  UpgradeStructureIntentSchema,
   EmbargoIntentSchema,
   MoveWarshipIntentSchema,
   QuickChatIntentSchema,
@@ -323,7 +319,7 @@ const IntentSchema = z.union([
 
 export const TurnSchema = z.object({
   turnNumber: z.number(),
-  intents: z.array(IntentSchema),
+  intents: IntentSchema.array(),
   // The hash of the game state at the end of the turn.
   hash: z.number().nullable().optional(),
 });
@@ -357,13 +353,13 @@ export const PlayerSchema = z.object({
 export const GameStartInfoSchema = z.object({
   gameID: ID,
   config: GameConfigSchema,
-  players: z.array(PlayerSchema),
+  players: PlayerSchema.array(),
 });
 
 export const ServerStartGameMessageSchema = ServerBaseMessageSchema.extend({
   type: z.literal("start"),
   // Turns the client missed if they are late to the game.
-  turns: z.array(TurnSchema),
+  turns: TurnSchema.array(),
   gameStartInfo: GameStartInfoSchema,
 });
 
@@ -448,7 +444,7 @@ export const PlayerRecordSchema = PlayerSchema.extend({
 export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;
 
 export const GameEndInfoSchema = GameStartInfoSchema.extend({
-  players: z.array(PlayerRecordSchema),
+  players: PlayerRecordSchema.array(),
   start: z.number(),
   end: z.number(),
   duration: z.number().nonnegative(),
@@ -467,6 +463,6 @@ export const AnalyticsRecordSchema = z.object({
 export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;
 
 export const GameRecordSchema = AnalyticsRecordSchema.extend({
-  turns: z.array(TurnSchema),
+  turns: TurnSchema.array(),
 });
 export type GameRecord = z.infer<typeof GameRecordSchema>;

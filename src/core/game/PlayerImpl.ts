@@ -754,6 +754,12 @@ export class PlayerImpl implements Player {
     return b;
   }
 
+  upgradeUnit(unit: Unit) {
+    const cost = this.mg.unitInfo(unit.type()).cost(this);
+    this.removeGold(cost);
+    unit.increaseLevel();
+  }
+
   public buildableUnits(tile: TileRef): BuildableUnit[] {
     const validTiles = this.validStructureSpawnTiles(tile);
     return Object.values(UnitType).map((u) => {

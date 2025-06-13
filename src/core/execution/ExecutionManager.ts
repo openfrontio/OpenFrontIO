@@ -24,6 +24,7 @@ import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
+import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 
 export class Executor {
   // private random = new PseudoRandom(999)
@@ -114,6 +115,8 @@ export class Executor {
           this.mg.ref(intent.x, intent.y),
           intent.unit,
         );
+      case "upgrade_structure":
+        return new UpgradeStructureExecution(player, intent.unitId);
       case "quick_chat":
         return new QuickChatExecution(
           player,
