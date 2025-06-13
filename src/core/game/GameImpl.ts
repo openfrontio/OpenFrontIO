@@ -620,7 +620,7 @@ export class GameImpl implements Game {
     this.voteExpireTick = this.ticks() + 1800;
   }
 
-  public getVoteExpireTick() {
+  public getVoteExpireTick(): number | null {
     return this.voteExpireTick;
   }
 
