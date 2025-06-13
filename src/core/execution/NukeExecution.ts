@@ -12,7 +12,7 @@ import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
 
-const SPRITE_RADIUS = 11;
+const SPRITE_RADIUS = 16;
 
 export class NukeExecution implements Execution {
   private active = true;
