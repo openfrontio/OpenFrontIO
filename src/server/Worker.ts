@@ -96,8 +96,9 @@ export function startWorker() {
     }
 
     const input = result.data;
-    const gc = input && "gameType" in input ? input : { gameType: GameType.Public };
-
+-    const gc = input && "gameType" in input ? input : { gameType: GameType.Public };
++    const gc: Partial<GameConfig> =
++      input && "gameType" in input ? input : { gameType: GameType.Public };
     if (
       gc.gameType === GameType.Public &&
       req.headers[config.adminHeader()] !== config.adminToken()
