@@ -3,6 +3,7 @@ import {
   Cell,
   PlayerActions,
   TerraNullius,
+  UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
@@ -309,8 +310,23 @@ export const buildMenuElement: MenuElement = {
   color: COLORS.build,
 
   subMenu: (params: MenuElementParams) => {
-    const buildElements: MenuElement[] = flattenedBuildTable.map(
-      (item: BuildItemDisplay) => ({
+    const unitTypes: Set<UnitType> = new Set<UnitType>();
+    if (params.selected === params.myPlayer) {
+      unitTypes.add(UnitType.City);
+      unitTypes.add(UnitType.DefensePost);
+      unitTypes.add(UnitType.Port);
+      unitTypes.add(UnitType.MissileSilo);
+      unitTypes.add(UnitType.SAMLauncher);
+    } else {
+      unitTypes.add(UnitType.Warship);
+      unitTypes.add(UnitType.HydrogenBomb);
+      unitTypes.add(UnitType.MIRV);
+      unitTypes.add(UnitType.AtomBomb);
+    }
+
+    const buildElements: MenuElement[] = flattenedBuildTable
+      .filter((item) => unitTypes.has(item.unitType))
+      .map((item: BuildItemDisplay) => ({
         id: `build_${item.unitType}`,
         name: item.key
           ? item.key.replace("unit_type.", "")
@@ -341,19 +357,7 @@ export const buildMenuElement: MenuElement = {
           );
           params.closeMenu();
         },
-      }),
-    );
-
-    buildElements.push({
-      id: "build_menu",
-      name: "build",
-      disabled: () => false,
-      color: COLORS.build,
-      icon: buildIcon,
-      action: (params: MenuElementParams) => {
-        params.buildMenu.showMenu(params.tile);
-      },
-    });
+      }));
 
     return buildElements;
   },

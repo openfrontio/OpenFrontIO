@@ -11,6 +11,7 @@ import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { FxLayer } from "./layers/FxLayer";
+import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
@@ -21,6 +22,7 @@ import { OptionsMenu } from "./layers/OptionsMenu";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { PlayerTeamLabel } from "./layers/PlayerTeamLabel";
+import { ReplayPanel } from "./layers/ReplayPanel";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
@@ -70,6 +72,14 @@ export function createRenderer(
   }
   leaderboard.eventBus = eventBus;
   leaderboard.game = game;
+
+  const gameLeftSidebar = document.querySelector(
+    "game-left-sidebar",
+  ) as GameLeftSidebar;
+  if (!gameLeftSidebar || !(gameLeftSidebar instanceof GameLeftSidebar)) {
+    console.error("GameLeftSidebar element not found in the DOM");
+  }
+  gameLeftSidebar.game = game;
 
   const teamStats = document.querySelector("team-stats") as TeamStats;
   if (!emojiTable || !(teamStats instanceof TeamStats)) {
@@ -125,6 +135,13 @@ export function createRenderer(
   }
   optionsMenu.eventBus = eventBus;
   optionsMenu.game = game;
+
+  const replayPanel = document.querySelector("replay-panel") as ReplayPanel;
+  if (!(replayPanel instanceof ReplayPanel)) {
+    console.error("ReplayPanel element not found in the DOM");
+  }
+  replayPanel.eventBus = eventBus;
+  replayPanel.game = game;
 
   const topBar = document.querySelector("top-bar") as TopBar;
   if (!(topBar instanceof TopBar)) {
@@ -211,10 +228,12 @@ export function createRenderer(
     ),
     new SpawnTimer(game, transformHandler),
     leaderboard,
+    gameLeftSidebar,
     controlPanel,
     playerInfo,
     winModel,
     optionsMenu,
+    replayPanel,
     teamStats,
     topBar,
     playerPanel,

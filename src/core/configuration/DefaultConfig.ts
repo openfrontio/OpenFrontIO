@@ -78,9 +78,13 @@ export abstract class DefaultServerConfig implements ServerConfig {
   cloudflareApiToken(): string {
     return process.env.CF_API_TOKEN ?? "";
   }
-  cloudflareConfigDir(): string {
-    return process.env.CF_CONFIG_DIR ?? "";
+  cloudflareConfigPath(): string {
+    return process.env.CF_CONFIG_PATH ?? "";
   }
+  cloudflareCredsPath(): string {
+    return process.env.CF_CREDS_PATH ?? "";
+  }
+
   private publicKey: JWK;
   abstract jwtAudience(): string;
   jwtIssuer(): string {
@@ -343,6 +347,7 @@ export class DefaultConfig implements Config {
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+          upgradable: true,
         };
       case UnitType.AtomBomb:
         return {
@@ -386,6 +391,7 @@ export class DefaultConfig implements Config {
               : 1_000_000n,
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 10 * 10,
+          upgradable: true,
         };
       case UnitType.DefensePost:
         return {
@@ -402,6 +408,7 @@ export class DefaultConfig implements Config {
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
+          upgradable: true,
         };
       case UnitType.SAMLauncher:
         return {
@@ -418,6 +425,7 @@ export class DefaultConfig implements Config {
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 30 * 10,
+          upgradable: true,
         };
       case UnitType.City:
         return {
@@ -435,6 +443,7 @@ export class DefaultConfig implements Config {
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+          upgradable: true,
         };
       case UnitType.Construction:
         return {
@@ -662,7 +671,11 @@ export class DefaultConfig implements Config {
       player.type() === PlayerType.Human && this.infiniteTroops()
         ? 1_000_000_000
         : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
-          player.units(UnitType.City).length * this.cityPopulationIncrease();
+          player
+            .units(UnitType.City)
+            .map((city) => city.level())
+            .reduce((a, b) => a + b, 0) *
+            this.cityPopulationIncrease();
 
     if (player.type() === PlayerType.Bot) {
       return maxPop / 2;
@@ -748,7 +761,7 @@ export class DefaultConfig implements Config {
   }
 
   defaultNukeSpeed(): number {
-    return 4;
+    return 6;
   }
 
   // Humans can be population, soldiers attacking, soldiers in boat etc.
@@ -757,8 +770,7 @@ export class DefaultConfig implements Config {
   }
 
   structureMinDist(): number {
-    // TODO: Increase this to ~15 once upgradable structures are implemented.
-    return 1;
+    return 15;
   }
 
   shellLifetime(): number {

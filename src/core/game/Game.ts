@@ -130,6 +130,7 @@ export interface UnitInfo {
   maxHealth?: number;
   damage?: number;
   constructionDuration?: number;
+  upgradable?: boolean;
 }
 
 export enum UnitType {
@@ -148,6 +149,19 @@ export enum UnitType {
   MIRV = "MIRV",
   MIRVWarhead = "MIRV Warhead",
   Construction = "Construction",
+}
+
+const _structureTypes: ReadonlySet<UnitType> = new Set([
+  UnitType.City,
+  UnitType.Construction,
+  UnitType.DefensePost,
+  UnitType.SAMLauncher,
+  UnitType.MissileSilo,
+  UnitType.Port,
+]);
+
+export function isStructureType(type: UnitType): boolean {
+  return _structureTypes.has(type);
 }
 
 export interface OwnerComp {
@@ -386,8 +400,9 @@ export interface Unit {
 
   // SAMs & Missile Silos
   launch(): void;
-  ticksLeftInCooldown(): Tick | undefined;
+  reloadMissile(): void;
   isInCooldown(): boolean;
+  ticksLeftInCooldown(): Tick | undefined;
 
   // Trade Ships
   setSafeFromPirates(): void; // Only for trade ships
@@ -396,6 +411,10 @@ export interface Unit {
   // Construction
   constructionType(): UnitType | null;
   setConstructionType(type: UnitType): void;
+
+  // Upgradable Structures
+  level(): number;
+  increaseLevel(): void;
 
   // Warships
   setPatrolTile(tile: TileRef): void;
@@ -472,6 +491,7 @@ export interface Player {
     spawnTile: TileRef,
     params: UnitParams<T>,
   ): Unit;
+  upgradeUnit(unit: Unit): void;
 
   captureUnit(unit: Unit): void;
 
@@ -600,7 +620,7 @@ export interface Game extends GameMap {
   displayChat(
     message: string,
     category: string,
-    variables: Record<string, string>,
+    target: PlayerID | undefined,
     playerID: PlayerID | null,
     isFrom: boolean,
     recipient: string,

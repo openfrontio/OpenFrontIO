@@ -305,10 +305,20 @@ export class EventsDisplay extends LitElement implements Layer {
     }
 
     const baseMessage = translateText(`chat.${event.category}.${event.key}`);
-    const translatedMessage = baseMessage.replace(
-      /\[([^\]]+)\]/g,
-      (_, key) => event.variables?.[key] || `[${key}]`,
-    );
+    let translatedMessage = baseMessage;
+    if (event.target) {
+      try {
+        const targetPlayer = this.game.player(event.target);
+        const targetName = targetPlayer?.name() ?? event.target;
+        translatedMessage = baseMessage.replace("[P1]", targetName);
+      } catch (e) {
+        console.warn(
+          `Failed to resolve player for target ID '${event.target}'`,
+          e,
+        );
+        return;
+      }
+    }
 
     this.addEvent({
       description: translateText(event.isFrom ? "chat.from" : "chat.to", {

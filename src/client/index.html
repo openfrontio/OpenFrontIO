@@ -203,7 +203,9 @@
             />
           </g>
         </svg>
-        <div class="l-header__highlightText">v23.0</div>
+        <div id="game-version" class="l-header__highlightText">
+          Loading version...
+        </div>
       </div>
     </header>
     <div class="bg-image"></div>
@@ -307,10 +309,9 @@
     </div>
     <div id="app"></div>
     <div id="radialMenu" class="radial-menu"></div>
-    <div
-      class="flex flex-column gap-2 fixed right-[10px] top-[10px] z-50 flex flex-col w-32 sm:w-32 lg:w-48"
-    >
+    <div class="flex gap-2 fixed right-[10px] top-[10px] z-50 flex-col">
       <options-menu></options-menu>
+      <replay-panel></replay-panel>
       <player-info-overlay></player-info-overlay>
     </div>
     <div
@@ -405,12 +406,11 @@
     <host-lobby-modal></host-lobby-modal>
     <join-private-lobby-modal></join-private-lobby-modal>
     <emoji-table></emoji-table>
-    <leader-board></leader-board>
     <build-menu></build-menu>
     <win-modal></win-modal>
     <game-starting-modal></game-starting-modal>
     <top-bar></top-bar>
-    <team-stats></team-stats>
+
     <player-panel></player-panel>
     <help-modal></help-modal>
     <dark-mode-button></dark-mode-button>
@@ -420,6 +420,7 @@
     <unit-info-modal></unit-info-modal>
     <news-modal></news-modal>
     <left-in-game-ad></left-in-game-ad>
+    <game-left-sidebar></game-left-sidebar>
     <div
       id="language-modal"
       class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center"

@@ -1,7 +1,6 @@
 import { spawn } from "child_process";
 import { promises as fs } from "fs";
 import yaml from "js-yaml";
-import { join } from "path";
 import { logger } from "./Logger";
 
 const log = logger.child({
@@ -48,9 +47,11 @@ export class Cloudflare {
   constructor(
     private accountId: string,
     private apiToken: string,
-    private configDir: string,
+    private configPath: string,
+    private credsPath: string,
   ) {
-    log.info(`Using config directory: ${this.configDir}`);
+    log.info(`Using config: ${this.configPath}`);
+    log.info(`Using credentials: ${this.credsPath}`);
   }
 
   private async makeRequest<T>(
@@ -77,11 +78,19 @@ export class Cloudflare {
     return response.json() as Promise<T>;
   }
 
+  public async configAlreadyExists(): Promise<boolean> {
+    try {
+      await fs.access(this.configPath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   public async createTunnel(config: TunnelConfig): Promise<{
     tunnelId: string;
     tunnelToken: string;
     tunnelUrl: string;
-    configPath: string;
   }> {
     const { domain, subdomain, subdomainToService } = config;
 
@@ -108,7 +117,7 @@ export class Cloudflare {
     log.info(`Tunnel created with ID: ${tunnelId}`);
 
     // Create local config file instead of using API configuration
-    const configPath = await this.writeTunnelConfig(
+    await this.writeTunnelConfig(
       tunnelId,
       tunnelToken,
       subdomain,
@@ -136,7 +145,7 @@ export class Cloudflare {
     const tunnelUrl = `https://${subdomain}.${domain}`;
     log.info(`Tunnel is set up! Site will be available at: ${tunnelUrl}`);
 
-    return { tunnelId, tunnelToken, tunnelUrl, configPath };
+    return { tunnelId, tunnelToken, tunnelUrl };
   }
 
   private async writeTunnelConfig(
@@ -146,12 +155,8 @@ export class Cloudflare {
     domain: string,
     subdomainToService: Map<string, string>,
     tunnelName: string,
-  ): Promise<string> {
+  ): Promise<void> {
     log.info(`Creating local config for tunnel ${subdomain}.${domain}...`);
-
-    const configPath = join(this.configDir, `${tunnelName}.yml`);
-    const credentialsFile = join(this.configDir, `${tunnelId}.json`);
-
     const tokenData = JSON.parse(
       Buffer.from(tunnelToken, "base64").toString("utf8"),
     );
@@ -164,15 +169,15 @@ export class Cloudflare {
     };
 
     await fs.writeFile(
-      credentialsFile,
+      this.credsPath,
       JSON.stringify(credentials, null, 2),
       "utf8",
     );
-    log.info(`Created credentials file at: ${credentialsFile}`);
+    log.info(`Created credentials file at: ${this.credsPath}`);
 
     const tunnelConfig: CloudflaredConfig = {
       tunnel: tunnelId,
-      "credentials-file": credentialsFile,
+      "credentials-file": this.credsPath,
       ingress: [
         ...Array.from(subdomainToService.entries()).map(
           ([subdomain, service]) => ({
@@ -187,10 +192,8 @@ export class Cloudflare {
     };
 
     // Write config file
-    await fs.writeFile(configPath, yaml.dump(tunnelConfig), "utf8");
-    log.info(`Created config file at: ${configPath}`);
-
-    return configPath;
+    await fs.writeFile(this.configPath, yaml.dump(tunnelConfig), "utf8");
+    log.info(`Created config file at: ${this.configPath}`);
   }
 
   private async updateDNSRecord(
@@ -229,10 +232,10 @@ export class Cloudflare {
     }
   }
 
-  public async startCloudflared(configPath: string) {
+  public async startCloudflared() {
     const cloudflared = spawn(
       "cloudflared",
-      ["tunnel", "--config", configPath, "--loglevel", "error", "run"],
+      ["tunnel", "--config", this.configPath, "--loglevel", "error", "run"],
       {
         detached: true,
         stdio: ["ignore", "pipe", "pipe"],

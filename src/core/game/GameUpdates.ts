@@ -80,7 +80,9 @@ export interface UnitUpdate {
   targetTile?: TileRef; // Only for nukes
   health?: number;
   constructionType?: UnitType;
-  ticksLeftInCooldown?: Tick;
+  missileTimerQueue: number[];
+  readyMissileCount: number;
+  level: number;
 }
 
 export interface AttackUpdate {
@@ -171,7 +173,7 @@ export type DisplayChatMessageUpdate = {
   type: GameUpdateType.DisplayChatEvent;
   key: string;
   category: string;
-  variables?: Record<string, string>;
+  target: string | undefined;
   playerID: number | null;
   isFrom: boolean;
   recipient: string;
