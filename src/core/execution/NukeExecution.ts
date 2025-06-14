@@ -1,7 +1,7 @@
 import {
-  BUILDING_TYPES,
   Execution,
   Game,
+  isBuildingType,
   MessageType,
   Player,
   TerraNullius,
@@ -239,7 +239,7 @@ export class NukeExecution implements Execution {
   private redrawBuildings(range: number) {
     const rangeSquared = range * range;
     for (const unit of this.mg.units()) {
-      if (BUILDING_TYPES.has(unit.type())) {
+      if (isBuildingType(unit.type())) {
         if (
           this.mg.euclideanDistSquared(this.dst, unit.tile()) < rangeSquared
         ) {

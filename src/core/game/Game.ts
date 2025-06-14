@@ -151,7 +151,15 @@ export enum UnitType {
   Construction = "Construction",
 }
 
-export const BUILDING_TYPES = new Set<UnitType>([
+export type BuildingUnitType =
+  | UnitType.City
+  | UnitType.Construction
+  | UnitType.DefensePost
+  | UnitType.SAMLauncher
+  | UnitType.MissileSilo
+  | UnitType.Port;
+
+const _buildingTypes: ReadonlySet<BuildingUnitType> = new Set([
   UnitType.City,
   UnitType.Construction,
   UnitType.DefensePost,
@@ -159,6 +167,12 @@ export const BUILDING_TYPES = new Set<UnitType>([
   UnitType.MissileSilo,
   UnitType.Port,
 ]);
+
+export const BUILDING_TYPES = _buildingTypes; // expose as readonly
+
+export function isBuildingType(type: UnitType): type is BuildingUnitType {
+  return _buildingTypes.has(type as BuildingUnitType);
+}
 
 export interface OwnerComp {
   owner: Player;
