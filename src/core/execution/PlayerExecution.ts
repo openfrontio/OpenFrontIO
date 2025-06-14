@@ -1,6 +1,15 @@
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
-import { Execution, Game, MessageType, Player, UnitType } from "../game/Game";
+import { consolex } from "../Consolex";
+import {
+  Execution,
+  Game,
+  GameMode,
+  MessageType,
+  Player,
+  PlayerID,
+  UnitType,
+} from "../game/Game";
 import { GameImpl } from "../game/GameImpl";
 import { TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
@@ -54,6 +63,22 @@ export class PlayerExecution implements Execution {
         }
       });
       this.active = false;
+      return;
+    }
+
+    if (
+      this.player.isDisconnected() &&
+      this.config.gameConfig().gameMode === GameMode.Team
+    ) {
+      const closestAlly = this.getMoreSharedBorderAlly();
+      if (closestAlly) {
+        this.mg.displayMessage(
+          `Annexed offline player ${this.player.displayName()}`,
+          MessageType.INFO,
+          closestAlly.id(),
+        );
+        this.giveaway(closestAlly);
+      }
       return;
     }
 
@@ -220,6 +245,45 @@ export class PlayerExecution implements Execution {
 
     for (const tile of tiles) {
       capturing.conquer(tile);
+    }
+  }
+
+  private getMoreSharedBorderAlly(): Player | null {
+    if (!this.player) {
+      return null;
+    }
+
+    const neighbours = this.player!.neighborsBordersSurface().filter((p) =>
+      p[0].isOnSameTeam(this.player!),
+    );
+
+    if (!neighbours.length) {
+      return null;
+    }
+
+    return neighbours[0][0];
+  }
+
+  private giveaway(other: Player) {
+    if (this.mg === null || this.player === null) {
+      return;
+    }
+
+    for (const tile of this.player.tiles()) {
+      other.conquer(tile);
+    }
+
+    other.addGold(this.player.gold());
+    this.player.removeGold(this.player.gold());
+
+    other.addTroops(this.player.troops());
+    this.player.removeTroops(this.player.troops());
+
+    other.addWorkers(this.player.workers());
+    this.player.removeWorkers(this.player.workers());
+
+    for (const unit of this.player.units()) {
+      other.captureUnit(unit);
     }
   }
 
