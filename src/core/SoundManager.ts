@@ -36,7 +36,8 @@ export class SoundManager {
     const source = this.audioContext.createBufferSource();
     source.buffer = this.sounds.get(name)!;
     source.connect(this.gainNode);
-    source.start(0); 
+    source.start(0);
+  }
 
   setMuted(muted: boolean): void {
     this.isMuted = muted;
@@ -65,7 +66,6 @@ export class SoundManager {
     }
   }
 
- 
   async resume(): Promise<void> {
     if (this.audioContext.state === "suspended") {
       await this.audioContext.resume();
