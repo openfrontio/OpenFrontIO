@@ -33,12 +33,12 @@ export class AllianceExtensionExecution implements Execution {
 
     // Inform both players about the successful extension
     mg.displayMessage(
-      "Alliance successfully renewed.",
+      "alliance.renewed",
       MessageType.ALLIANCE_ACCEPTED,
       this.from.id(),
     );
     mg.displayMessage(
-      "Alliance successfully renewed.",
+      "alliance.renewed",
       MessageType.ALLIANCE_ACCEPTED,
       this.to.id(),
     );

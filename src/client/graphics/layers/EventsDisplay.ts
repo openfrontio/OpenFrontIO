@@ -310,7 +310,7 @@ export class EventsDisplay extends LitElement implements Layer {
     }
 
     this.addEvent({
-      description: event.message,
+      description: translateText(event.message),
       createdAt: this.game.ticks(),
       highlight: true,
       type: event.messageType,
@@ -370,16 +370,18 @@ export class EventsDisplay extends LitElement implements Layer {
     ) as PlayerView;
 
     this.addEvent({
-      description: `${requestor.name()} requests an alliance!`,
+      description: translateText("alliance.requested", {
+        name: requestor.name(),
+      }),
       buttons: [
         {
-          text: "Focus",
+          text: translateText("buttons.focus"),
           className: "btn-gray",
           action: () => this.eventBus.emit(new GoToPlayerEvent(requestor)),
           preventClose: true,
         },
         {
-          text: "Accept",
+          text: translateText("buttons.accept"),
           className: "btn",
           action: () =>
             this.eventBus.emit(
@@ -387,7 +389,7 @@ export class EventsDisplay extends LitElement implements Layer {
             ),
         },
         {
-          text: "Reject",
+          text: translateText("buttons.reject"),
           className: "btn-info",
           action: () =>
             this.eventBus.emit(
@@ -426,9 +428,12 @@ export class EventsDisplay extends LitElement implements Layer {
       ) as PlayerView;
 
       this.addEvent({
-        description: `${recipient.name()} ${
-          update.accepted ? "accepted" : "rejected"
-        } your alliance request`,
+        description: translateText(
+          update.accepted
+            ? "alliance.request_accepted"
+            : "alliance.request_rejected",
+          { name: recipient.name() },
+        ),
         type: update.accepted
           ? MessageType.ALLIANCE_ACCEPTED
           : MessageType.ALLIANCE_REJECTED,
@@ -448,9 +453,12 @@ export class EventsDisplay extends LitElement implements Layer {
     ) as PlayerView;
 
     this.addEvent({
-      description: `${requestor.name()} ${
-        update.accepted ? "accepted" : "rejected"
-      } your alliance request`,
+      description: translateText(
+        update.accepted
+          ? "alliance.request_accepted"
+          : "alliance.request_rejected",
+        { name: requestor.name() },
+      ),
       type: update.accepted
         ? MessageType.ALLIANCE_ACCEPTED
         : MessageType.ALLIANCE_REJECTED,
@@ -515,19 +523,19 @@ export class EventsDisplay extends LitElement implements Layer {
     if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
 
     this.addEvent({
-      description: `Your alliance with ${other.name()} expired`,
+      description: translateText("alliance.expired", { name: other.name() }),
       type: MessageType.WARN,
       tags: [`alliance${otherID}`],
       duration: 100,
       buttons: [
         {
-          text: "Focus",
+          text: translateText("buttons.focus"),
           className: "btn-gray",
           action: () => this.eventBus.emit(new GoToPlayerEvent(other)),
           preventClose: true,
         },
         {
-          text: "Propose to renew",
+          text: translateText("buttons.propose_renewal"),
           className: "btn",
           action: () =>
             this.eventBus.emit(
@@ -552,19 +560,21 @@ export class EventsDisplay extends LitElement implements Layer {
     // remove earlier prompt/expired rows
     this.removeEventByTags([tag]);
     this.addEvent({
-      description: `Your alliance with ${other.name()} is about to expire`,
+      description: translateText("alliance.about_to_expire", {
+        name: other.name(),
+      }),
       type: MessageType.WARN,
       tags: [tag],
       duration: 100,
       buttons: [
         {
-          text: "Focus",
+          text: translateText("buttons.focus"),
           className: "btn-gray",
           action: () => this.eventBus.emit(new GoToPlayerEvent(other)),
           preventClose: true,
         },
         {
-          text: "I want to renew",
+          text: translateText("buttons.i_want_to_renew"),
           className: "btn",
           action: () =>
             this.eventBus.emit(
