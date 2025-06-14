@@ -1,6 +1,7 @@
 import {
   Execution,
   Game,
+  isStructureType,
   MessageType,
   Player,
   TerraNullius,
@@ -11,6 +12,8 @@ import { TileRef } from "../game/GameMap";
 import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
+
+const SPRITE_RADIUS = 16;
 
 export class NukeExecution implements Execution {
   private active = true;
@@ -221,6 +224,8 @@ export class NukeExecution implements Execution {
         }
       }
     }
+
+    this.redrawBuildings(magnitude.outer + SPRITE_RADIUS);
     this.active = false;
     this.nuke.setReachedTarget();
     this.nuke.delete(false);
@@ -229,6 +234,19 @@ export class NukeExecution implements Execution {
     this.mg
       .stats()
       .bombLand(this.player, this.target(), this.nuke.type() as NukeType);
+  }
+
+  private redrawBuildings(range: number) {
+    const rangeSquared = range * range;
+    for (const unit of this.mg.units()) {
+      if (isStructureType(unit.type())) {
+        if (
+          this.mg.euclideanDistSquared(this.dst, unit.tile()) < rangeSquared
+        ) {
+          unit.touch();
+        }
+      }
+    }
   }
 
   owner(): Player {
