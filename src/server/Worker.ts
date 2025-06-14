@@ -81,48 +81,66 @@ export function startWorker() {
   );
 
   app.post(
-    "/api/create_game/:id",
-    gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
-      const id = req.params.id;
-      if (!id) {
-        log.warn(`cannot create game, id not found`);
-        return res.status(400).json({ error: "Game ID is required" });
-      }
-      const clientIP = req.ip || req.socket.remoteAddress || "unknown";
-      const result = CreateGameInputSchema.safeParse(req.body);
-      if (!result.success) {
-        const error = z.prettifyError(result.error);
-        return res.status(400).json({ error });
-      }
+  "/api/create_game/:id",
+  gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
+    const id = req.params.id;
+    if (!id) {
+      log.warn(`cannot create game, id not found`);
+      return res.status(400).json({ error: "Game ID is required" });
+    }
+    const clientIP = req.ip || req.socket.remoteAddress || "unknown";
+    const result = CreateGameInputSchema.safeParse(req.body);
+    if (!result.success) {
+      const error = z.prettifyError(result.error);
+      return res.status(400).json({ error });
+    }
 
-      const gc = result.data;
-      if (
-        gc?.gameType === GameType.Public &&
-        req.headers[config.adminHeader()] !== config.adminToken()
-      ) {
-        log.warn(
-          `cannot create public game ${id}, ip ${ipAnonymize(clientIP)} incorrect admin token`,
-        );
-        return res.status(401).send("Unauthorized");
-      }
+    const input = result.data;
+    const gc = input && "gameType" in input ? input : { gameType: GameType.Public };
 
-      // Double-check this worker should host this game
-      const expectedWorkerId = config.workerIndex(id);
-      if (expectedWorkerId !== workerId) {
-        log.warn(
-          `This game ${id} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
-        );
-        return res.status(400).json({ error: "Worker, game id mismatch" });
-      }
-
-      const game = gm.createGame(id, gc);
-
-      log.info(
-        `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating game ${game.isPublic() ? "Public" : "Private"} with id ${id}`,
+    if (
+      gc.gameType === GameType.Public &&
+      req.headers[config.adminHeader()] !== config.adminToken()
+    ) {
+      log.warn(
+        `cannot create public game ${id}, ip ${ipAnonymize(clientIP)} incorrect admin token`,
       );
-      res.json(game.gameInfo());
-    }),
-  );
+      return res.status(401).send("Unauthorized");
+    }
+
+    let hostPersistentID: string | null = null;
+    if (gc.gameType === GameType.Private) {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        log.warn(`Missing or invalid Authorization header for private game ${id}`);
+        return res.status(401).json({ error: "Authorization header required for private game" });
+      }
+      const hostToken = authHeader.slice(7); // Remove "Bearer " prefix
+      try {
+        const { persistentId } = await verifyClientToken(hostToken, config);
+        hostPersistentID = persistentId;
+      } catch (error) {
+        log.warn(`Invalid host token for game ${id}: ${error}`);
+        return res.status(401).json({ error: "Invalid or expired token" });
+      }
+    }
+
+    const expectedWorkerId = config.workerIndex(id);
+    if (expectedWorkerId !== workerId) {
+      log.warn(
+        `This game ${id} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
+      );
+      return res.status(400).json({ error: "Worker, game id mismatch" });
+    }
+
+    const game = gm.createGame(id, gc, hostPersistentID);
+
+    log.info(
+      `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating game ${game.isPublic() ? "Public" : "Private"} with id ${id}`,
+    );
+    res.json(game.gameInfo());
+  }),
+);
 
   // Add other endpoints from your original server
   app.post(
