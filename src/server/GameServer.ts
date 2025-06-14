@@ -32,33 +32,23 @@ export enum GamePhase {
 
 export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
-
   private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
-
   private disconnectedTimeout = 1 * 30 * 1000; // 30 seconds
-
   private turns: Turn[] = [];
   private intents: Intent[] = [];
   public activeClients: Client[] = [];
-  // Used for record record keeping
   private allClients: Map<ClientID, Client> = new Map();
   private _hasStarted = false;
   private _startTime: number | null = null;
-
   private endTurnIntervalID;
-
   private lastPingUpdate = 0;
-
   private winner: ClientSendWinnerMessage | null = null;
-
   private gameStartInfo: GameStartInfo;
-
   private log: Logger;
-
   private _hasPrestarted = false;
-
   private kickedClients: Set<ClientID> = new Set();
   private outOfSyncClients: Set<ClientID> = new Set();
+  public readonly hostPersistentID: string | null; // Add this
 
   constructor(
     public readonly id: string,
@@ -66,10 +56,34 @@ export class GameServer {
     public readonly createdAt: number,
     private config: ServerConfig,
     public gameConfig: GameConfig,
+    hostPersistentID: string | null = null, 
   ) {
+    this.hostPersistentID = hostPersistentID; // Initialize
     this.log = log_.child({ gameID: id });
   }
 
+  public isHost(client: Client): boolean {
+  return this.hostPersistentID !== null && client.persistentID === this.hostPersistentID;
+}
+
+private handleAdminMessage(client: Client, message: z.infer<typeof ClientAdminMessageSchema>) {
+  if (this.gameConfig.gameType !== GameType.Private) {
+    this.log.warn(`Cannot process admin message in public game ${this.id}`);
+    return;
+  }
+  if (!this.isHost(client)) {
+    this.log.warn(`Client ${client.clientID} is not authorized to send admin messages`);
+    return;
+  }
+  if (message.action === "kick_player") {
+    if (message.targetClientID === client.clientID) {
+      this.log.warn(`Host ${client.clientID} attempted to kick themselves`);
+      return;
+    }
+    this.kickClient(message.targetClientID);
+    this.log.info(`Host ${client.clientID} kicked player ${message.targetClientID} from game ${this.id}`);
+  }
+}
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
     if (gameConfig.gameMap !== undefined) {
       this.gameConfig.gameMap = gameConfig.gameMap;
