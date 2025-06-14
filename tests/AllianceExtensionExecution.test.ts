@@ -47,9 +47,11 @@ describe("AllianceExtensionExecution", () => {
       new SpawnExecution(game.player(p2Info.id).info(), spawn2),
     );
 
-    while (game.inSpawnPhase()) {
+    let safety = 0;
+    while (game.inSpawnPhase() && safety++ < 500) {
       game.executeNextTick();
     }
+    expect(safety).toBeLessThan(500); // Sanity check
 
     player1 = game.player(p1Info.id);
     player2 = game.player(p2Info.id);
@@ -62,30 +64,37 @@ describe("AllianceExtensionExecution", () => {
   });
 
   test("Successfully extends existing alliance", () => {
+    // 1. Send alliance request
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
-    game.executeNextTick();
-    game.executeNextTick();
+    game.executeNextTick(); // toevoegen
+    game.executeNextTick(); // uitvoeren
 
+    // 2. Accept alliance request
     game.addExecution(
       new AllianceRequestReplyExecution(player1.id(), player2, true),
     );
-    game.executeNextTick();
-    game.executeNextTick();
+    game.executeNextTick(); // add
+    game.executeNextTick(); // execute
 
-    const allianceBefore = player1.allianceWith(player2);
-    expect(allianceBefore).toBeTruthy();
+    // ✅ After accepting, both players should have an alliance
+    expect(player1.allianceWith(player2)).toBeTruthy();
+    expect(player2.allianceWith(player1)).toBeTruthy();
 
+    const allianceBefore = player1.allianceWith(player2)!;
     const expirationBefore =
-      allianceBefore!.createdAt() + game.config().allianceDuration();
+      allianceBefore.createdAt() + game.config().allianceDuration();
 
+    // 3. Extend the alliance
     game.addExecution(new AllianceExtensionExecution(player1, player2));
     game.executeNextTick();
 
-    const allianceAfter = player1.allianceWith(player2);
-    expect(allianceAfter).toBeTruthy();
+    const allianceAfter = player1.allianceWith(player2)!;
+
+    // ✅ Needs to be the same alliance (same ID)
+    expect(allianceAfter.id()).toBe(allianceBefore.id());
 
     const expirationAfter =
-      allianceAfter!.createdAt() + game.config().allianceDuration();
+      allianceAfter.createdAt() + game.config().allianceDuration();
 
     expect(expirationAfter).toBeGreaterThan(expirationBefore);
   });
@@ -95,5 +104,6 @@ describe("AllianceExtensionExecution", () => {
     game.executeNextTick();
 
     expect(player1.allianceWith(player2)).toBeFalsy();
+    expect(player2.allianceWith(player1)).toBeFalsy();
   });
 });
