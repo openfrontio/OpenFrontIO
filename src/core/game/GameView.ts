@@ -72,6 +72,10 @@ export class UnitView {
     return this.data.id;
   }
 
+  targetable(): boolean {
+    return this.data.targetable;
+  }
+
   type(): UnitType {
     return this.data.unitType;
   }
