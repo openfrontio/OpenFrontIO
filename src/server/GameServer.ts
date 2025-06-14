@@ -32,33 +32,23 @@ export enum GamePhase {
 
 export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
-
   private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
-
   private disconnectedTimeout = 1 * 30 * 1000; // 30 seconds
-
   private turns: Turn[] = [];
   private intents: Intent[] = [];
   public activeClients: Client[] = [];
-  // Used for record record keeping
   private allClients: Map<ClientID, Client> = new Map();
   private _hasStarted = false;
   private _startTime: number | null = null;
-
   private endTurnIntervalID;
-
   private lastPingUpdate = 0;
-
   private winner: ClientSendWinnerMessage | null = null;
-
   private gameStartInfo: GameStartInfo;
-
   private log: Logger;
-
   private _hasPrestarted = false;
-
   private kickedClients: Set<ClientID> = new Set();
   private outOfSyncClients: Set<ClientID> = new Set();
+  public readonly hostPersistentID: string | null; // Add this
 
   constructor(
     public readonly id: string,
@@ -66,10 +56,34 @@ export class GameServer {
     public readonly createdAt: number,
     private config: ServerConfig,
     public gameConfig: GameConfig,
+    hostPersistentID: string | null = null, 
   ) {
+    this.hostPersistentID = hostPersistentID; // Initialize
     this.log = log_.child({ gameID: id });
   }
 
+  public isHost(client: Client): boolean {
+  return this.hostPersistentID !== null && client.persistentID === this.hostPersistentID;
+}
+
+private handleAdminMessage(client: Client, message: z.infer<typeof ClientAdminMessageSchema>) {
+  if (this.gameConfig.gameType !== GameType.Private) {
+    this.log.warn(`Cannot process admin message in public game ${this.id}`);
+    return;
+  }
+  if (!this.isHost(client)) {
+    this.log.warn(`Client ${client.clientID} is not authorized to send admin messages`);
+    return;
+  }
+  if (message.action === "kick_player") {
+    if (message.targetClientID === client.clientID) {
+      this.log.warn(`Host ${client.clientID} attempted to kick themselves`);
+      return;
+    }
+    this.kickClient(message.targetClientID);
+    this.log.info(`Host ${client.clientID} kicked player ${message.targetClientID} from game ${this.id}`);
+  }
+}
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
     if (gameConfig.gameMap !== undefined) {
       this.gameConfig.gameMap = gameConfig.gameMap;
@@ -184,62 +198,61 @@ export class GameServer {
 
     client.ws.removeAllListeners("message");
     client.ws.on(
-      "message",
-      gatekeeper.wsHandler(client.ip, async (message: string) => {
-        try {
-          const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
-          if (!parsed.success) {
-            const error = z.prettifyError(parsed.error);
-            this.log.error("Failed to parse client message", error, {
-              clientID: client.clientID,
-            });
-            client.ws.close();
-            return;
-          }
-          const clientMsg = parsed.data;
-          if (clientMsg.type === "intent") {
-            if (clientMsg.intent.clientID !== client.clientID) {
-              this.log.warn(
-                `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
-              );
-              return;
-            }
-            if (clientMsg.intent.type === "mark_disconnected") {
-              this.log.warn(
-                `Should not receive mark_disconnected intent from client`,
-              );
-              return;
-            }
-            this.addIntent(clientMsg.intent);
-          }
-          if (clientMsg.type === "ping") {
-            this.lastPingUpdate = Date.now();
-            client.lastPing = Date.now();
-          }
-          if (clientMsg.type === "hash") {
-            client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
-          }
-          if (clientMsg.type === "winner") {
-            if (
-              this.outOfSyncClients.has(client.clientID) ||
-              this.kickedClients.has(client.clientID) ||
-              this.winner !== null
-            ) {
-              return;
-            }
-            this.winner = clientMsg;
-            this.archiveGame();
-          }
-        } catch (error) {
-          this.log.info(
-            `error handline websocket request in game server: ${error}`,
-            {
-              clientID: client.clientID,
-            },
+  "message",
+  gatekeeper.wsHandler(client.ip, async (message: string) => {
+    try {
+      const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
+      if (!parsed.success) {
+        const error = z.prettifyError(parsed.error);
+        this.log.error("Failed to parse client message", error, {
+          clientID: client.clientID,
+        });
+        client.ws.close();
+        return;
+      }
+      const clientMsg = parsed.data;
+      if (clientMsg.type === "intent") {
+        if (clientMsg.intent.clientID !== client.clientID) {
+          this.log.warn(
+            `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
           );
+          return;
         }
-      }),
-    );
+        if (clientMsg.intent.type === "mark_disconnected") {
+          this.log.warn(
+            `Should not receive mark_disconnected intent from client`,
+          );
+          return;
+        }
+        this.addIntent(clientMsg.intent);
+      } else if (clientMsg.type === "ping") {
+        this.lastPingUpdate = Date.now();
+        client.lastPing = Date.now();
+      } else if (clientMsg.type === "hash") {
+        client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
+      } else if (clientMsg.type === "winner") {
+        if (
+          this.outOfSyncClients.has(client.clientID) ||
+          this.kickedClients.has(client.clientID) ||
+          this.winner !== null
+        ) {
+          return;
+        }
+        this.winner = clientMsg;
+        this.archiveGame();
+      } else if (clientMsg.type === "admin") {
+        this.handleAdminMessage(client, clientMsg);
+      }
+    } catch (error) {
+      this.log.info(
+        `error handling websocket request in game server: ${error}`,
+        {
+          clientID: client.clientID,
+        },
+      );
+    }
+  }),
+);
     client.ws.removeAllListeners("close");
     client.ws.on("close", () => {
       this.log.info("client disconnected", {
