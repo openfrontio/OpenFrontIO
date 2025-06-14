@@ -374,10 +374,33 @@ export class ClientGameRunner {
     this.myPlayer.actions(tile).then((actions) => {
       if (this.myPlayer === null) return;
       if (actions.canAttack) {
+        let srcCell: Cell | null = null;
+
+        const clickedOwner = this.gameView.owner(tile);
+
+        if (clickedOwner === this.myPlayer) {
+          // If we clicked on our own tile, ensure it's on the border.
+          const isBorder = this.gameView
+            .neighbors(tile)
+            .some((n) => this.gameView.owner(n) !== this.myPlayer);
+          if (isBorder) {
+            srcCell = new Cell(cell.x, cell.y);
+          }
+        } else {
+          // Clicked enemy tile – look for an adjacent friendly tile.
+          for (const n of this.gameView.neighbors(tile)) {
+            if (this.gameView.owner(n) === this.myPlayer) {
+              srcCell = new Cell(this.gameView.x(n), this.gameView.y(n));
+              break;
+            }
+          }
+        }
+
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
             this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+            srcCell,
           ),
         );
       } else if (this.canBoatAttack(actions, tile)) {

@@ -53,12 +53,32 @@ export class Executor {
     // create execution
     switch (intent.type) {
       case "attack": {
-        return new AttackExecution(
-          intent.troops,
-          player,
-          intent.targetID,
-          null,
-        );
+        // Validate an optional focused-attack source tile. The tile must be on the map,
+        // owned by the attacking player, located on land, and share a border with at
+        // least one non-friendly neighbour. If any check fails we fall back to a
+        // generic attack by keeping src = null.
+        let src: TileRef | null = null;
+        if (
+          typeof intent.srcX === "number" &&
+          typeof intent.srcY === "number"
+        ) {
+          const candidate = this.mg.ref(intent.srcX, intent.srcY);
+
+          // Must be owned by attacker and on land
+          if (
+            this.mg.owner(candidate) === player &&
+            this.mg.isLand(candidate)
+          ) {
+            const isBorder = this.mg
+              .neighbors(candidate)
+              .some((n) => this.mg.owner(n) !== player);
+
+            if (isBorder) {
+              src = candidate;
+            }
+          }
+        }
+        return new AttackExecution(intent.troops, player, intent.targetID, src);
       }
       case "cancel_attack":
         return new RetreatExecution(player, intent.attackID);
@@ -73,7 +93,10 @@ export class Executor {
         );
       case "boat":
         let src: TileRef | null = null;
-        if (intent.srcX !== null && intent.srcY !== null) {
+        if (
+          typeof intent.srcX === "number" &&
+          typeof intent.srcY === "number"
+        ) {
           src = this.mg.ref(intent.srcX, intent.srcY);
         }
         return new TransportShipExecution(
