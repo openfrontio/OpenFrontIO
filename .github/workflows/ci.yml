@@ -41,6 +41,22 @@ jobs:
       - run: npm ci
       - run: npm test
 
+  check-filenames:
+    name: 📝 Check Filenames
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+      - run: |
+          find . -type f -o -type d | grep -v '^./\.git' > all_paths.txt
+          if grep -P '[^\x00-\x7F]' all_paths.txt; then
+            echo "❌ Non-ASCII characters found!"
+            exit 1
+          fi
+          echo "✅ All filenames are ASCII."
+
   eslint:
     name: 🔍 ESLint
     runs-on: ubuntu-latest
