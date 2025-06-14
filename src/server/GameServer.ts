@@ -317,7 +317,7 @@ export class GameServer {
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
 
-    this.gameStartInfo = GameStartInfoSchema.parse({
+    const result = GameStartInfoSchema.safeParse({
       gameID: this.id,
       config: this.gameConfig,
       players: this.activeClients.map((c) => ({
@@ -325,7 +325,13 @@ export class GameServer {
         clientID: c.clientID,
         flag: c.flag,
       })),
-    } satisfies GameStartInfo);
+    });
+    if (!result.success) {
+      const error = z.prettifyError(result.error);
+      console.error("Error parsing game start info", error);
+      return;
+    }
+    this.gameStartInfo = result.data satisfies GameStartInfo;
 
     this.endTurnIntervalID = setInterval(
       () => this.endTurn(),
@@ -345,16 +351,19 @@ export class GameServer {
   }
 
   private sendStartGameMsg(ws: WebSocket, lastTurn: number) {
+    const result = ServerStartGameMessageSchema.safeParse({
+      type: "start",
+      turns: this.turns.slice(lastTurn),
+      gameStartInfo: this.gameStartInfo,
+    });
+    if (!result.success) {
+      const error = z.prettifyError(result.error);
+      console.error("Error parsing start game message", error);
+      return;
+    }
+
     try {
-      ws.send(
-        JSON.stringify(
-          ServerStartGameMessageSchema.parse({
-            type: "start",
-            turns: this.turns.slice(lastTurn),
-            gameStartInfo: this.gameStartInfo,
-          }),
-        ),
-      );
+      ws.send(JSON.stringify(result.data));
     } catch (error) {
       throw new Error(
         `error sending start message for game ${this.id}, ${error}`.substring(
@@ -377,21 +386,16 @@ export class GameServer {
     this.checkDisconnectedStatus();
 
     let msg = "";
-    try {
-      msg = JSON.stringify(
-        ServerTurnMessageSchema.parse({
-          type: "turn",
-          turn: pastTurn,
-        }),
-      );
-    } catch (error) {
-      this.log.info(
-        `error sending message for game: ${error.substring(0, 250)}`,
-        {},
-      );
+    const result = ServerTurnMessageSchema.safeParse({
+      type: "turn",
+      turn: pastTurn,
+    });
+    if (!result.success) {
+      const error = z.prettifyError(result.error);
+      console.error("Error parsing server turn message, error");
       return;
     }
-
+    msg = JSON.stringify(result.data);
     this.activeClients.forEach((c) => {
       c.ws.send(msg);
     });
