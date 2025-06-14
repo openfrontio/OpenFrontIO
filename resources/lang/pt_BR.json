@@ -1,4 +1,8 @@
 {
+  "ver": {
+    "openfront": "23.*",
+    "mls": "3.3"
+  },
   "main": {
     "join_discord": "Junte-se ao Discord!",
     "create_lobby": "Criar Sala",
