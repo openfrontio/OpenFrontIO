@@ -151,6 +151,15 @@ export enum UnitType {
   Construction = "Construction",
 }
 
+export const BUILDING_TYPES = new Set<UnitType>([
+  UnitType.City,
+  UnitType.Construction,
+  UnitType.DefensePost,
+  UnitType.SAMLauncher,
+  UnitType.MissileSilo,
+  UnitType.Port,
+]);
+
 export interface OwnerComp {
   owner: Player;
 }

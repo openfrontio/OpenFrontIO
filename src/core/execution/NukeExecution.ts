@@ -1,4 +1,5 @@
 import {
+  BUILDING_TYPES,
   Execution,
   Game,
   MessageType,
@@ -238,14 +239,7 @@ export class NukeExecution implements Execution {
   private redrawBuildings(range: number) {
     const rangeSquared = range * range;
     for (const unit of this.mg.units()) {
-      if (
-        unit.type() === UnitType.City ||
-        unit.type() === UnitType.Construction ||
-        unit.type() === UnitType.DefensePost ||
-        unit.type() === UnitType.SAMLauncher ||
-        unit.type() === UnitType.MissileSilo ||
-        unit.type() === UnitType.Port
-      ) {
+      if (BUILDING_TYPES.has(unit.type())) {
         if (
           this.mg.euclideanDistSquared(this.dst, unit.tile()) < rangeSquared
         ) {
