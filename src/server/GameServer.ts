@@ -89,6 +89,9 @@ export class GameServer {
     if (gameConfig.infiniteTroops !== undefined) {
       this.gameConfig.infiniteTroops = gameConfig.infiniteTroops;
     }
+    if (gameConfig.maxTimerValue !== undefined) {
+      this.gameConfig.maxTimerValue = gameConfig.maxTimerValue;
+    }
     if (gameConfig.instantBuild !== undefined) {
       this.gameConfig.instantBuild = gameConfig.instantBuild;
     }
