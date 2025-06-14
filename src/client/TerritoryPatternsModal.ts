@@ -10,6 +10,7 @@ import {
   setSelectedPattern,
   setSelectedPatternBase64,
 } from "./Cosmetic";
+import { translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")
 export class TerritoryPatternsModal extends LitElement {
@@ -94,7 +95,7 @@ export class TerritoryPatternsModal extends LitElement {
 
       if (!roleGroup || (Array.isArray(roleGroup) && roleGroup.length === 0)) {
         if (roles.length === 0) {
-          const reason = "You must be logged in to access this pattern.";
+          const reason = translateText("territory_patterns.blocked.login");
           this.setLockedPatterns([key], reason);
         }
         continue;
@@ -104,7 +105,9 @@ export class TerritoryPatternsModal extends LitElement {
       const isAllowed = groupList.some((required) => roles.includes(required));
 
       if (!isAllowed) {
-        const reason = `This pattern requires the ${groupList.join(", ")} role.`;
+        const reason = translateText("territory_patterns.blocked.role", {
+          role: groupList.join(", "),
+        });
         this.setLockedPatterns([key], reason);
       }
     }
@@ -175,7 +178,9 @@ export class TerritoryPatternsModal extends LitElement {
         @mousemove=${(e: MouseEvent) => this.handleMouseMove(e)}
         @mouseleave=${() => this.handleMouseLeave()}
       >
-        <div class="text-sm font-bold mb-1">${key}</div>
+        <div class="text-sm font-bold mb-1">
+          ${translateText(`territory_patterns.pattern.${key}`)}
+        </div>
         <div
           class="preview-container"
           style="
@@ -221,7 +226,9 @@ export class TerritoryPatternsModal extends LitElement {
           style="flex: 0 1 calc(25% - 1rem); max-width: calc(25% - 1rem);"
           @click=${() => this.selectPattern(null)}
         >
-          <div class="text-sm font-bold mb-1">Default</div>
+          <div class="text-sm font-bold mb-1">
+            ${translateText("territory_patterns.pattern.default")}
+          </div>
           <div
             class="preview-container"
             style="
@@ -250,7 +257,10 @@ export class TerritoryPatternsModal extends LitElement {
     this.checkPatternPermission(this.roles);
     return html`
       ${this.renderTooltip()}
-      <o-modal id="territoryPatternsModal" title="Select Territory Pattern">
+      <o-modal
+        id="territoryPatternsModal"
+        title="${translateText("territory_patterns.title")}"
+      >
         ${this.renderPatternGrid()}
       </o-modal>
     `;
