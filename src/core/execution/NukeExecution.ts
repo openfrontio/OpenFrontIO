@@ -171,6 +171,10 @@ export class NukeExecution implements Execution {
     }
   }
 
+  public getNuke(): Unit | null {
+    return this.nuke;
+  }
+
   private updateNukeTargetable() {
     if (this.nuke === null || this.nuke.targetTile() === undefined) {
       return;

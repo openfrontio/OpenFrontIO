@@ -535,7 +535,8 @@ export class UnitLayer implements Layer {
     );
 
     if (unit.isActive()) {
-      if (!unit.targetable()) {
+      const targetable = unit.targetable();
+      if (!targetable) {
         this.context.save();
         this.context.globalAlpha = 0.4;
       }
@@ -546,7 +547,7 @@ export class UnitLayer implements Layer {
         sprite.width,
         sprite.width,
       );
-      if (!unit.targetable()) {
+      if (!targetable) {
         this.context.restore();
       }
     }

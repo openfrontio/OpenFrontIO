@@ -82,14 +82,14 @@ describe("NukeExecution", () => {
 
     //near launch should be targetable (distance src < 19600)
     executeTicks(game, 2);
-    expect(nukeExec["nuke"]?.isTargetable()).toBeTruthy();
+    expect(nukeExec.getNuke()!.isTargetable()).toBeTruthy();
 
     //mid air should not be targetable (distance src > 19600, distance target > 19600)
     executeTicks(game, 38);
-    expect(nukeExec["nuke"]?.isTargetable()).toBeFalsy();
+    expect(nukeExec.getNuke()!.isTargetable()).toBeFalsy();
 
     //near target should be targetable (distance target < 19600)
     executeTicks(game, 10);
-    expect(nukeExec["nuke"]?.isTargetable()).toBeTruthy();
+    expect(nukeExec.getNuke()!.isTargetable()).toBeTruthy();
   });
 });
