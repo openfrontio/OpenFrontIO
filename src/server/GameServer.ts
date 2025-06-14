@@ -328,7 +328,7 @@ export class GameServer {
     });
     if (!result.success) {
       const error = z.prettifyError(result.error);
-      console.error("Error parsing game start info", error);
+      this.log.error("Error parsing game start info", { message: error });
       return;
     }
     this.gameStartInfo = result.data satisfies GameStartInfo;
