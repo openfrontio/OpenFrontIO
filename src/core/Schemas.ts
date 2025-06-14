@@ -2,6 +2,7 @@ import { z } from "zod";
 import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
 import {
   AllPlayers,
+  ColoredTeams,
   Difficulty,
   Duos,
   GameMapType,
@@ -120,6 +121,11 @@ export enum LogSeverity {
   Fatal = "FATAL",
 }
 
+const teamValues = Object.values(ColoredTeams).filter((t) => t !== "Bot") as [
+  string,
+  ...string[],
+];
+
 export const GameConfigSchema = z.object({
   gameMap: z.nativeEnum(GameMapType),
   difficulty: z.nativeEnum(Difficulty),
@@ -133,6 +139,7 @@ export const GameConfigSchema = z.object({
   maxPlayers: z.number().optional(),
   disabledUnits: z.nativeEnum(UnitType).array().optional(),
   playerTeams: z.union([z.number().optional(), z.literal(Duos)]),
+  playerTeamsSelection: z.record(z.string(), z.enum(teamValues)).optional(),
 });
 
 export const TeamSchema = z.string();
