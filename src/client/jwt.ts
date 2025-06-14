@@ -125,7 +125,7 @@ function _isLoggedIn(): IsLoggedInResponse {
       logOut();
       return false;
     }
-    const refreshAge: number = 6 * 3600; // 6 hours
+    const refreshAge: number = 3 * 24 * 3600; // 3 days
     if (iat !== undefined && now >= iat + refreshAge) {
       console.log("Refreshing access token...");
       postRefresh().then((success) => {
