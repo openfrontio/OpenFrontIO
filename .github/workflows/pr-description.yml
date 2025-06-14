@@ -24,7 +24,7 @@ jobs:
             const errors = [];
 
             // Check for ## Description section
-            const descMatch = body.match(/^## Description:\s*\n((?:(?!^#).*\n?)*)/m);
+            const descMatch = body.match(/^## Description:\s*\n([\s\S]*?)(?:^## |\Z)/m);
             if (!descMatch || descMatch[1].trim().length < 20) {
               errors.push('❌ Missing or short `## Description:` section.');
             }
