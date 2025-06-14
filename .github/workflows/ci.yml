@@ -40,43 +40,23 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npm test
+
   check-filenames:
     name: 📝 Check Filenames
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/github-script@v7
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            let files = [];
-            if (context.eventName === 'pull_request') {
-              files = await github.paginate(
-                github.rest.pulls.listFiles,
-                { owner: context.repo.owner, repo: context.repo.repo, pull_number: context.issue.number, per_page: 100 }
-              );
-            } else if (context.eventName === 'push') {
-              const commits = context.payload.commits || [];
-              const filenames = new Set();
-              for (const commit of commits) {
-                for (const file of [
-                  ...(commit.added || []), ...(commit.modified || [])                 
-                ]) {
-                  filenames.add(file);
-                }
-              }
-              files = Array.from(filenames).map(filename => ({ filename, status: 'added' }));
-            }
+          submodules: false
+      - run: |
+          find . -type f -o -type d | grep -v '^./\.git' > all_paths.txt
+          if grep -P '[^\x00-\x7F]' all_paths.txt; then
+            echo "❌ Non-ASCII characters found!"
+            exit 1
+          fi
+          echo "✅ All filenames are ASCII."
 
-            const invalidFiles = files
-              .filter(({ status }) => status !== 'removed')
-              .map(({ filename }) => filename)
-              .filter(filename => /[^\x00-\x7F]/.test(filename));
-
-            if (invalidFiles.length > 0) {
-              core.setFailed(`❌ The following files contain Unicode characters:\n${invalidFiles.join('\n')}`);
-            } else {
-              core.info('✅ All new/modified filenames are ASCII-only');
-            }
   eslint:
     name: 🔍 ESLint
     runs-on: ubuntu-latest
