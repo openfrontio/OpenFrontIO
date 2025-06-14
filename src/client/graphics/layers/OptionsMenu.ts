@@ -124,6 +124,11 @@ export class OptionsMenu extends LitElement implements Layer {
     this.userSettings.toggleLeftClickOpenMenu();
   }
 
+  private onToggleSoundsButtonClick() {
+    this.userSettings.toggleSounds();
+    this.requestUpdate();
+  }
+
   init() {
     console.log("init called from OptionsMenu");
     this.showPauseButton =
@@ -226,6 +231,11 @@ export class OptionsMenu extends LitElement implements Layer {
               (this.userSettings.leftClickOpensMenu()
                 ? "Opens menu"
                 : "Attack"),
+          })}
+          ${button({
+            onClick: this.onToggleSoundsButtonClick,
+            title: "Toggle Sounds",
+            children: "🔊: " + (this.userSettings.soundsEnabled() ? "On" : "Off"),
           })}
           <!-- ${button({
             onClick: this.onToggleFocusLockedButtonClick,
