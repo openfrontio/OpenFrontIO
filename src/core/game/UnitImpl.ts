@@ -66,9 +66,8 @@ export class UnitImpl implements Unit {
   }
 
   setTargetable(targetable: boolean): void {
-    const changed = this._targetable !== targetable;
-    this._targetable = targetable;
-    if (changed) {
+    if (this._targetable !== targetable) {
+      this._targetable = targetable;
       this.mg.addUpdate(this.toUpdate());
     }
   }
