@@ -138,7 +138,7 @@ export function getMode(list: Set<number>): number {
 export function sanitize(name: string): string {
   return Array.from(name)
     .join("")
-    .replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}\[\]_]/gu, "");
+    .replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}[\]_]/gu, "");
 }
 
 export function processName(name: string): string {
