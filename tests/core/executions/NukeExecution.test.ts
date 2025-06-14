@@ -70,7 +70,7 @@ describe("NukeExecution", () => {
     expect(defensePost.touch).not.toHaveBeenCalled();
   });
 
-  test("nuke shouldnt only be targetable near src and dst", async () => {
+  test("nuke should only be targetable near src and dst", async () => {
     const nukeExec = new NukeExecution(
       UnitType.AtomBomb,
       player,
@@ -78,17 +78,17 @@ describe("NukeExecution", () => {
       game.ref(1, 1),
     );
     game.addExecution(nukeExec);
-    // targetable distance is 19600
+    // targetable distance is 14400
 
-    //near launch should be targetable (distance src < 19600)
+    //near launch should be targetable (distance src < 14400)
     executeTicks(game, 2);
     expect(nukeExec.getNuke()!.isTargetable()).toBeTruthy();
 
-    //mid air should not be targetable (distance src > 19600, distance target > 19600)
+    //mid air should not be targetable (distance src > 14400, distance target > 14400)
     executeTicks(game, 38);
     expect(nukeExec.getNuke()!.isTargetable()).toBeFalsy();
 
-    //near target should be targetable (distance target < 19600)
+    //near target should be targetable (distance target < 14400)
     executeTicks(game, 10);
     expect(nukeExec.getNuke()!.isTargetable()).toBeTruthy();
   });
