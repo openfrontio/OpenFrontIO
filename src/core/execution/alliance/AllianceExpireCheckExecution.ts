@@ -8,8 +8,6 @@ export class AllianceExpireCheckExecution implements Execution {
   private mg: Game | null = null;
   private promptedAlliances: Set<string> = new Set(); // Track prompted alliances to avoid duplicates
 
-  constructor() {}
-
   init(mg: Game, ticks: number): void {
     this.mg = mg;
   }
@@ -35,7 +33,7 @@ export class AllianceExpireCheckExecution implements Execution {
         this.mg.sendAllianceExtensionPrompt(recipient, requestor, alliance);
       }
 
-      if (timeSinceCreation > duration) {
+      if (timeSinceCreation >= duration) {
         const requestor = alliance.requestor();
         const recipient = alliance.recipient();
 
