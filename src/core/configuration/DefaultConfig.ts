@@ -800,4 +800,8 @@ export class DefaultConfig implements Config {
   defensePostTargettingRange(): number {
     return 75;
   }
+
+  allianceExtensionPromptOffset(): number {
+    return 300; // 30 seconds before expiration
+  }
 }
