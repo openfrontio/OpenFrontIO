@@ -428,6 +428,14 @@ export const ClientJoinMessageSchema = z.object({
   flag: SafeString.optional(),
 });
 
+export const ClientAdminMessageSchema = z.object({
+  type: z.literal("admin"),
+  clientID: ID, // Sender's clientID
+  action: z.literal("kick_player"),
+  targetClientID: ID, // Player to kick
+});
+
+
 export const ClientMessageSchema = z.union([
   ClientSendWinnerSchema,
   ClientPingMessageSchema,
@@ -435,8 +443,8 @@ export const ClientMessageSchema = z.union([
   ClientJoinMessageSchema,
   ClientLogMessageSchema,
   ClientHashSchema,
+  ClientAdminMessageSchema,
 ]);
-
 export const PlayerRecordSchema = PlayerSchema.extend({
   persistentID: PersistentIdSchema, // WARNING: PII
   stats: PlayerStatsSchema,
