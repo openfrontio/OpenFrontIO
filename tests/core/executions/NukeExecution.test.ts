@@ -1,0 +1,72 @@
+import { NukeExecution } from "../../../src/core/execution/NukeExecution";
+import {
+  Game,
+  Player,
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "../../../src/core/game/Game";
+import { setup } from "../../util/Setup";
+import { TestConfig } from "../../util/TestConfig";
+import { executeTicks } from "../../util/utils";
+
+let game: Game;
+let player: Player;
+
+describe("NukeExecution", () => {
+  beforeEach(async () => {
+    game = await setup("BigPlains", { infiniteGold: true, instantBuild: true });
+
+    (game.config() as TestConfig).nukeMagnitudes = jest.fn(() => ({
+      inner: 10,
+      outer: 10,
+    }));
+    const player_info = new PlayerInfo(
+      "us",
+      "player_id",
+      PlayerType.Human,
+      null,
+      "player_id",
+    );
+    game.addPlayer(player_info);
+
+    while (game.inSpawnPhase()) {
+      game.executeNextTick();
+    }
+
+    player = game.player("player_id");
+  });
+
+  test("nuke should destroy buildings and redraw out of range buildings", async () => {
+    // Build a city at (1,1)
+    player.buildUnit(UnitType.City, game.ref(1, 1), {});
+    // Build a missile silo in range
+    player.buildUnit(UnitType.MissileSilo, game.ref(1, 10), {});
+    // Build a SAM out of range
+    const sam = player.buildUnit(UnitType.SAMLauncher, game.ref(1, 11), {});
+    sam.touch = jest.fn();
+    // Build a Defense post out of range AND out of redraw range
+    const defensePost = player.buildUnit(
+      UnitType.DefensePost,
+      game.ref(1, 27),
+      {},
+    );
+    defensePost.touch = jest.fn();
+    // Add a nuke execution targeting the city
+    const nukeExec = new NukeExecution(
+      UnitType.AtomBomb,
+      player,
+      game.ref(1, 1),
+      game.ref(1, 2),
+    );
+    game.addExecution(nukeExec);
+    // Run enough ticks for the nuke to detonate
+    executeTicks(game, 10);
+    // The city and silo should be destroyed
+    expect(player.units(UnitType.City)).toHaveLength(0);
+    expect(player.units(UnitType.MissileSilo)).toHaveLength(0);
+    expect(player.units(UnitType.SAMLauncher)).toHaveLength(1);
+    expect(sam.touch).toHaveBeenCalled();
+    expect(defensePost.touch).not.toHaveBeenCalled();
+  });
+});
