@@ -36,7 +36,21 @@ export async function setup(
 
   // Configure the game
   const serverConfig = new TestServerConfig();
-  const gameConfig: GameConfig = {
+
+  const config = new TestConfig(
+    serverConfig,
+    createGameConfig(_gameConfig),
+    new UserSettings(),
+    false,
+  );
+
+  return createGame(humans, [], gameMap, miniGameMap, config);
+}
+
+export function createGameConfig(
+  gameConfig: Partial<GameConfig> = {},
+): GameConfig {
+  return {
     gameMap: GameMapType.Asia,
     gameMode: GameMode.FFA,
     gameType: GameType.Singleplayer,
@@ -46,16 +60,8 @@ export async function setup(
     infiniteGold: false,
     infiniteTroops: false,
     instantBuild: false,
-    ..._gameConfig,
+    ...gameConfig,
   };
-  const config = new TestConfig(
-    serverConfig,
-    gameConfig,
-    new UserSettings(),
-    false,
-  );
-
-  return createGame(humans, [], gameMap, miniGameMap, config);
 }
 
 export function playerInfo(name: string, type: PlayerType): PlayerInfo {

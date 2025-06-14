@@ -188,6 +188,9 @@ export class DefaultConfig implements Config {
   traitorDefenseDebuff(): number {
     return 0.5;
   }
+  traitorSpeedDebuff(): number {
+    return 0.7;
+  }
   traitorDuration(): number {
     return 30 * 10; // 30 seconds
   }
@@ -242,9 +245,15 @@ export class DefaultConfig implements Config {
   defensePostRange(): number {
     return 30;
   }
+
   defensePostDefenseBonus(): number {
     return 5;
   }
+
+  defensePostSpeedBonus(): number {
+    return 3;
+  }
+
   playerTeams(): number | typeof Duos {
     return this._gameConfig.playerTeams ?? 0;
   }
@@ -269,11 +278,32 @@ export class DefaultConfig implements Config {
   infiniteTroops(): boolean {
     return this._gameConfig.infiniteTroops;
   }
-  tradeShipGold(dist: number): Gold {
-    return BigInt(Math.floor(10000 + 150 * Math.pow(dist, 1.1)));
+
+  tradeShipGold(dist: number, numPorts: number): Gold {
+    const baseGold = Math.floor(50000 + 130 * dist ** 1.1);
+    const bonusPortNum = 100;
+    if (numPorts < bonusPortNum) {
+      return BigInt(baseGold);
+    } else {
+      return BigInt(Math.floor((numPorts / bonusPortNum) * baseGold));
+    }
   }
-  tradeShipSpawnRate(numberOfPorts: number): number {
-    return Math.min(50, Math.round(10 * Math.pow(numberOfPorts, 0.6)));
+
+  // Chance to spawn a trade ship in one second,
+  tradeShipSpawnRate(numTradeShips: number): number {
+    const baseRate = 5;
+
+    if (numTradeShips <= 20) {
+      return baseRate;
+    }
+    if (numTradeShips > this.tradeShipCap()) {
+      return 1_000_000;
+    }
+    return numTradeShips - 15;
+  }
+
+  tradeShipCap(): number {
+    return 100;
   }
 
   unitInfo(type: UnitType): UnitInfo {
@@ -348,7 +378,7 @@ export class DefaultConfig implements Config {
           cost: (p: Player) =>
             p.type() === PlayerType.Human && this.infiniteGold()
               ? 0n
-              : 25_000_000n,
+              : 30_000_000n,
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -491,7 +521,7 @@ export class DefaultConfig implements Config {
     const type = gm.terrainType(tileToConquer);
     switch (type) {
       case TerrainType.Plains:
-        mag = 85;
+        mag = 80;
         speed = 16.5;
         break;
       case TerrainType.Highland:
@@ -513,7 +543,7 @@ export class DefaultConfig implements Config {
       )) {
         if (dp.unit.owner() === defender) {
           mag *= this.defensePostDefenseBonus();
-          speed *= this.defensePostDefenseBonus();
+          speed *= this.defensePostSpeedBonus();
           break;
         }
       }
@@ -540,29 +570,30 @@ export class DefaultConfig implements Config {
       }
     }
 
-    let largeLossModifier = 1;
-    if (attacker.numTilesOwned() > 100_000) {
-      largeLossModifier = Math.sqrt(100_000 / attacker.numTilesOwned());
-    }
     let largeSpeedMalus = 1;
     if (attacker.numTilesOwned() > 75_000) {
       // sqrt is only exponent 1/2 which doesn't slow enough huge players
-      largeSpeedMalus = (75_000 / attacker.numTilesOwned()) ** 0.6;
+      largeSpeedMalus = (75_000 / attacker.numTilesOwned()) ** 0.5;
     }
 
     if (defender.isPlayer()) {
+      let largeDefenderDebuff = 1;
+      if (defender.numTilesOwned() > 50_000) {
+        largeDefenderDebuff = Math.sqrt(50_000 / defender.numTilesOwned());
+      }
       return {
         attackerTroopLoss:
-          within(defender.troops() / attackTroops, 0.6, 2) *
+          within(defender.troops() / attackTroops, 0.5, 2) *
           mag *
           0.8 *
-          largeLossModifier *
+          largeDefenderDebuff *
           (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
         defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
         tilesPerTickUsed:
           within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
           speed *
-          largeSpeedMalus,
+          largeSpeedMalus *
+          (defender.isTraitor() ? this.traitorSpeedDebuff() : 1),
       };
     } else {
       return {
@@ -585,8 +616,18 @@ export class DefaultConfig implements Config {
     numAdjacentTilesWithEnemy: number,
   ): number {
     if (defender.isPlayer()) {
+      let defendingTroops = defender.troops();
+      for (const attack of defender.outgoingAttacks()) {
+        if (
+          attack.target().isPlayer() &&
+          attack.target().id() === attacker.id()
+        ) {
+          // If the defender has a counter attack, that should count as defending troops.
+          defendingTroops += attack.troops();
+        }
+      }
       return (
-        within(((5 * attackTroops) / defender.troops()) * 2, 0.01, 0.5) *
+        within(((5 * attackTroops) / defendingTroops) * 2, 0.01, 0.5) *
         numAdjacentTilesWithEnemy *
         3
       );
@@ -668,7 +709,7 @@ export class DefaultConfig implements Config {
   populationIncreaseRate(player: Player): number {
     const max = this.maxPopulation(player);
 
-    let toAdd = 10 + Math.pow(player.population(), 0.73) / 4;
+    let toAdd = 10 + Math.pow(player.population(), 0.7) / 3;
 
     const ratio = 1 - player.population() / max;
     toAdd *= ratio;
@@ -729,7 +770,7 @@ export class DefaultConfig implements Config {
   }
 
   defaultNukeSpeed(): number {
-    return 4;
+    return 6;
   }
 
   // Humans can be population, soldiers attacking, soldiers in boat etc.

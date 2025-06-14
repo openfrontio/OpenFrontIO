@@ -123,13 +123,15 @@ export interface Config {
   donateCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
-  tradeShipGold(dist: number): Gold;
-  tradeShipSpawnRate(numberOfPorts: number): number;
+  tradeShipGold(dist: number, numPorts: number): Gold;
+  tradeShipSpawnRate(numTradeShips: number): number;
+  tradeShipCap(): number;
   safeFromPiratesCooldownMax(): number;
   defensePostRange(): number;
   SAMCooldown(): number;
   SiloCooldown(): number;
   defensePostDefenseBonus(): number;
+  defensePostSpeedBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
   warshipPatrolRange(): number;
@@ -139,6 +141,7 @@ export interface Config {
   defensePostTargettingRange(): number;
   // 0-1
   traitorDefenseDebuff(): number;
+  traitorSpeedDebuff(): number;
   traitorDuration(): number;
   nukeMagnitudes(unitType: UnitType): NukeMagnitude;
   defaultNukeSpeed(): number;
