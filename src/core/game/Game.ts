@@ -151,7 +151,7 @@ export enum UnitType {
   Construction = "Construction",
 }
 
-export type BuildingUnitType =
+export type StructureUnitType =
   | UnitType.City
   | UnitType.Construction
   | UnitType.DefensePost
@@ -159,7 +159,7 @@ export type BuildingUnitType =
   | UnitType.MissileSilo
   | UnitType.Port;
 
-const _buildingTypes: ReadonlySet<BuildingUnitType> = new Set([
+const _structureTypes: ReadonlySet<StructureUnitType> = new Set([
   UnitType.City,
   UnitType.Construction,
   UnitType.DefensePost,
@@ -168,10 +168,8 @@ const _buildingTypes: ReadonlySet<BuildingUnitType> = new Set([
   UnitType.Port,
 ]);
 
-export const BUILDING_TYPES = _buildingTypes; // expose as readonly
-
-export function isBuildingType(type: UnitType): type is BuildingUnitType {
-  return _buildingTypes.has(type as BuildingUnitType);
+export function isStructureType(type: UnitType): type is StructureUnitType {
+  return _structureTypes.has(type as StructureUnitType);
 }
 
 export interface OwnerComp {
