@@ -30,6 +30,8 @@ export class UnitImpl implements Unit {
   private _readyMissileCount: number = 1;
   private _patrolTile: TileRef | undefined;
   private _level: number = 1;
+  private _targetable: boolean = true;
+
   constructor(
     private _type: UnitType,
     private mg: GameImpl,
@@ -61,6 +63,14 @@ export class UnitImpl implements Unit {
       case UnitType.City:
         this.mg.stats().unitBuild(_owner, this._type);
     }
+  }
+
+  setTargetable(targetable: boolean): void {
+    this._targetable = targetable;
+  }
+
+  isTargetable(): boolean {
+    return this._targetable;
   }
 
   setPatrolTile(tile: TileRef): void {
@@ -101,6 +111,7 @@ export class UnitImpl implements Unit {
       reachedTarget: this._reachedTarget,
       retreating: this._retreating,
       pos: this._tile,
+      targetable: this._targetable,
       lastPos: this._lastTile,
       health: this.hasHealth() ? Number(this._health) : undefined,
       constructionType: this._constructionType,

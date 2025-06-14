@@ -535,6 +535,10 @@ export class UnitLayer implements Layer {
     );
 
     if (unit.isActive()) {
+      if (!unit.targetable()) {
+        this.context.save();
+        this.context.globalAlpha = 0.4;
+      }
       this.context.drawImage(
         sprite,
         Math.round(x - sprite.width / 2),
@@ -542,6 +546,9 @@ export class UnitLayer implements Layer {
         sprite.width,
         sprite.width,
       );
+      if (!unit.targetable()) {
+        this.context.restore();
+      }
     }
   }
 }
