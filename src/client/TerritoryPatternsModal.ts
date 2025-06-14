@@ -19,8 +19,7 @@ export class TerritoryPatternsModal extends LitElement {
     close: () => void;
   };
 
-  @query("#territory-patterns-input-preview-button")
-  private previewButton!: HTMLElement;
+  private previewButton: HTMLElement | null = null;
 
   @state() private selectedPattern = getSelectedPattern();
 
@@ -53,6 +52,9 @@ export class TerritoryPatternsModal extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     window.addEventListener("keydown", this.handleKeyDown);
+    this.previewButton = document.getElementById(
+      "territory-patterns-input-preview-button",
+    );
     this.updateComplete.then(() => {
       const containers = this.renderRoot.querySelectorAll(".preview-container");
       containers.forEach((container) => this.resizeObserver.observe(container));
