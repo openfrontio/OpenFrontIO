@@ -443,7 +443,7 @@ export class FakeHumanExecution implements Execution {
 
   private maybeSpawnStructure(type: UnitType, maxNum: number): boolean {
     if (this.player === null) throw new Error("not initialized");
-    const units = this.player.units(type);
+    const units = this.player.unitsIncludingConstruction(type);
     if (units.length >= maxNum) {
       return false;
     }
