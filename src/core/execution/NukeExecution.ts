@@ -13,7 +13,7 @@ import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
 
-const NUKE_TARGETABLE_RADIUS = 140;
+const NUKE_TARGETABLE_RADIUS = 120;
 
 const SPRITE_RADIUS = 16;
 
