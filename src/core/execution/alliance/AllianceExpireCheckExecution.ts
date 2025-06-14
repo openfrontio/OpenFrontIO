@@ -28,7 +28,6 @@ export class AllianceExpireCheckExecution implements Execution {
 
       if (ticksLeft <= promptOffset && !this.promptedAlliances.has(key)) {
         this.promptedAlliances.add(key);
-
         const requestor = alliance.requestor();
         const recipient = alliance.recipient();
 
@@ -41,11 +40,13 @@ export class AllianceExpireCheckExecution implements Execution {
         const recipient = alliance.recipient();
 
         if (alliance.wantsExtension()) {
+          this.promptedAlliances.delete(key);
           alliance.extendDuration(this.mg.ticks());
           continue;
         }
-
         alliance.expire();
+
+        this.promptedAlliances.delete(key);
         requestor.expiredAlliances().push(alliance);
         recipient.expiredAlliances().push(alliance);
       }
