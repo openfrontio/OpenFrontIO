@@ -144,7 +144,7 @@ const SafeString = z
   )
   .max(1000);
 
-const PersistentIdSchema = z.string().uuid();
+export const PersistentIdSchema = z.string().uuid();
 const JwtTokenSchema = z.string().jwt();
 const TokenSchema = z
   .string()

@@ -300,7 +300,7 @@ export function startWorker() {
           if (!parsed.success) {
             const error = z.prettifyError(parsed.error);
             log.warn("Error parsing join message client", error);
-            ws.close();
+            ws.close(1002, "ClientJoinMessageSchema");
             return;
           }
           const clientMsg = parsed.data;
@@ -315,18 +315,24 @@ export function startWorker() {
               return;
             }
 
-            const { persistentId, claims } = await verifyClientToken(
-              clientMsg.token,
-              config,
-            );
+            const result = await verifyClientToken(clientMsg.token, config);
+            if (result === false) {
+              log.warn("Failed to verify token");
+              ws.close(1002, "Failed to verify token");
+              return;
+            }
+            const { persistentId, claims } = result;
 
             let roles: string[] | undefined;
 
-            // Check user roles
-            if (claims !== null) {
+            if (claims === null) {
+              // TODO: Verify that the persistendId is is not a registered player
+            } else {
+              // Verify token and get player permissions
               const result = await getUserMe(clientMsg.token, config);
               if (result === false) {
                 log.warn("Token is not valid", claims);
+                ws.close(1002, "Token is not valid");
                 return;
               }
               roles = result.player.roles;
@@ -374,7 +380,7 @@ export function startWorker() {
 
     ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
-        ws.close(1002);
+        ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
       }
     });
   });

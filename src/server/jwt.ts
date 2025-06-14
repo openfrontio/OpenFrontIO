@@ -6,31 +6,38 @@ import {
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
 import { ServerConfig } from "../core/configuration/Config";
+import { PersistentIdSchema } from "../core/Schemas";
 
-type TokenVerificationResult = {
-  persistentId: string;
-  claims: TokenPayload | null;
-};
+type TokenVerificationResult =
+  | {
+      persistentId: string;
+      claims: TokenPayload | null;
+    }
+  | false;
 
 export async function verifyClientToken(
   token: string,
   config: ServerConfig,
 ): Promise<TokenVerificationResult> {
-  if (token.length === 36) {
+  if (PersistentIdSchema.safeParse(token).success) {
     return { persistentId: token, claims: null };
   }
-  const issuer = config.jwtIssuer();
-  const audience = config.jwtAudience();
-  const key = await config.jwkPublicKey();
-  const { payload, protectedHeader } = await jwtVerify(token, key, {
-    algorithms: ["EdDSA"],
-    issuer,
-    audience,
-    maxTokenAge: "6 days",
-  });
-  const claims = TokenPayloadSchema.parse(payload);
-  const persistentId = claims.sub;
-  return { persistentId, claims };
+  try {
+    const issuer = config.jwtIssuer();
+    const audience = config.jwtAudience();
+    const key = await config.jwkPublicKey();
+    const { payload, protectedHeader } = await jwtVerify(token, key, {
+      algorithms: ["EdDSA"],
+      issuer,
+      audience,
+      maxTokenAge: "6 days",
+    });
+    const claims = TokenPayloadSchema.parse(payload);
+    const persistentId = claims.sub;
+    return { persistentId, claims };
+  } catch (e) {
+    return false;
+  }
 }
 
 export async function getUserMe(
