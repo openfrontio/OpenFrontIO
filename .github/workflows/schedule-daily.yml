@@ -3,10 +3,14 @@ name: Stale PR Cleanup
 on:
   schedule:
     - cron: "0 0 * * *"
+  workflow_dispatch:
 
 jobs:
   stale:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write # Good practice to check for issue write permission.
+      pull-requests: write
     steps:
       - uses: actions/stale@v9
         with:
@@ -14,3 +18,4 @@ jobs:
           stale-pr-label: "stale"
           stale-pr-message: "This Pull Request is stale because it has been open for 14 days with no activity. If you want to keep this Pull Request open, add a comment or update the branch."
           days-before-stale: 14
+          dry-run: true
