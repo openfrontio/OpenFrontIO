@@ -1,0 +1,18 @@
+name: Stale PRs
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          stale-pr-label: "stale"
+          stale-pr-message: "This PR is stale because it has been open for 14 days with no activity. If you want to keep this PR open, add a comment or update the branch. Otherwise, this PR will be closed in 7 days."
+          days-before-stale: 14
+          days-before-close: 21 # We can remove this line in case we don't want to close the PR. But we should definitely mark things stale and allow other contributors the chance to pick up work.
+          close-pr: true
+          remove-stale-when-updated: true
