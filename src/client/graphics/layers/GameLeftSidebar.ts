@@ -41,7 +41,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
   render() {
     return html`
       <aside
-        class=${`fixed top-[70px] left-0 z-[1000] flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-slate-800/40 backdrop-blur-sm shadow-xs rounded-tr-lg rounded-br-lg transition-transform duration-300 ease-out transform ${
+        class=${`fixed top-[50px] left-0 z-[1000] flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-slate-800/40 backdrop-blur-sm shadow-xs rounded-tr-lg rounded-br-lg transition-transform duration-300 ease-out transform ${
           this.isVisible ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -64,12 +64,10 @@ export class GameLeftSidebar extends LitElement implements Layer {
               `
             : null}
         </div>
-        <div>
-          <leader-board
-            class="block mb-2"
-            .visible=${this.isLeaderboardShow}
-          ></leader-board>
+        <div class="block lg:flex flex-wrap gap-2">
+          <leader-board .visible=${this.isLeaderboardShow}></leader-board>
           <team-stats
+            class=${`flex 1 ${this.isTeamLeaderboardShow ? "md:mt-12" : ""}`}
             .visible=${this.isTeamLeaderboardShow && this.isTeamGame}
           ></team-stats>
         </div>
