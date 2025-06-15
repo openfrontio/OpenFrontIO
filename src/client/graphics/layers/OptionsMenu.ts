@@ -235,7 +235,9 @@ export class OptionsMenu extends LitElement implements Layer {
           ${button({
             onClick: this.onToggleSoundsButtonClick,
             title: "Toggle Sounds",
-            children: "🔊: " + (this.userSettings.soundsEnabled() ? "On" : "Off"),
+            children:
+              "🔊: " +
+              translateText(this.userSettings.soundsEnabled() ? "On" : "Off"),
           })}
           <!-- ${button({
             onClick: this.onToggleFocusLockedButtonClick,
