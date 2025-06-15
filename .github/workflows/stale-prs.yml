@@ -1,0 +1,16 @@
+name: Stale PR Cleanup
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          stale-pr-label: "stale"
+          stale-pr-message: "This Pull Request is stale because it has been open for 14 days with no activity. If you want to keep this Pull Request open, add a comment or update the branch."
+          days-before-stale: 14
