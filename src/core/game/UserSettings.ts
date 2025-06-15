@@ -73,7 +73,11 @@ export class UserSettings {
     }
   }
 
+import { soundManager } from "../SoundManager"; // singleton recommended
+
   toggleSounds() {
-    this.set("settings.soundsEnabled", !this.soundsEnabled());
+    const enabled = !this.soundsEnabled();
+    this.set("settings.soundsEnabled", enabled);
+    soundManager.setMuted(!enabled);
   }
 }
