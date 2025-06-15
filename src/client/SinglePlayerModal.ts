@@ -34,6 +34,8 @@ export class SinglePlayerModal extends LitElement {
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
+  @state() private maxTimer: boolean = false;
+  @state() private maxTimerValue: number | undefined = undefined;
   @state() private instantBuild: boolean = false;
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
@@ -271,6 +273,39 @@ export class SinglePlayerModal extends LitElement {
                   ${translateText("single_modal.infinite_troops")}
                 </div>
               </label>
+              <label
+                for="end-timer"
+                class="option-card ${this.maxTimer ? "selected" : ""}"
+              >
+                <div class="checkbox-icon"></div>
+                <input
+                  type="checkbox"
+                  id="end-timer"
+                  @change=${(e: Event) => {
+                    const checked = (e.target as HTMLInputElement).checked;
+                    if (!checked) {
+                      this.maxTimerValue = undefined;
+                    }
+                    this.maxTimer = checked;
+                  }}
+                  .checked=${this.maxTimer}
+                />
+                ${this.maxTimer === false
+                  ? ""
+                  : html`<input
+                      type="number"
+                      id="end-timer-value"
+                      min="0"
+                      max="400"
+                      .value=${String(this.maxTimerValue ?? "")}
+                      style="width: 60px; color: black; text-align: right; border-radius: 8px;"
+                      @input=${this.handleMaxTimerValueChanges}
+                      @keydown=${this.handleMaxTimerValueKeyDown}
+                    />`}
+                <div class="option-card-title">
+                  ${translateText("single_modal.max_timer")}
+                </div>
+              </label>
             </div>
 
             <hr
@@ -347,6 +382,24 @@ export class SinglePlayerModal extends LitElement {
     this.infiniteTroops = Boolean((e.target as HTMLInputElement).checked);
   }
 
+  private handleMaxTimerValueKeyDown(e: KeyboardEvent) {
+    if (["-", "+", "e"].includes(e.key)) {
+      e.preventDefault();
+    }
+  }
+
+  private handleMaxTimerValueChanges(e: Event) {
+    (e.target as HTMLInputElement).value = (
+      e.target as HTMLInputElement
+    ).value.replace(/[e\+\-]/gi, "");
+    const value = parseInt((e.target as HTMLInputElement).value);
+
+    if (isNaN(value) || value < 0 || value > 400) {
+      return;
+    }
+    this.maxTimerValue = value;
+  }
+
   private handleDisableNPCsChange(e: Event) {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
   }
@@ -419,6 +472,7 @@ export class SinglePlayerModal extends LitElement {
               playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,
               disableNPCs: this.disableNPCs,
+              maxTimerValue: this.maxTimer ? this.maxTimerValue : undefined,
               bots: this.bots,
               infiniteGold: this.infiniteGold,
               infiniteTroops: this.infiniteTroops,
