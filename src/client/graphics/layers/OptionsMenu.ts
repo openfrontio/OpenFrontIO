@@ -124,7 +124,7 @@ export class OptionsMenu extends LitElement implements Layer {
     this.userSettings.toggleLeftClickOpenMenu();
   }
 
-  private onToggleSoundsButtonClick() {
+  private onToggleSoundsButtonClick = () => {
     this.userSettings.toggleSounds();
     this.requestUpdate();
   }
