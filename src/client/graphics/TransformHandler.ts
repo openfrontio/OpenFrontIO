@@ -152,10 +152,11 @@ export class TransformHandler {
   onGoToPlayer(event: GoToPlayerEvent) {
     this.game.setFocusedPlayer(event.player);
     this.clearTarget();
-    this.target = new Cell(
-      event.player.nameLocation().x,
-      event.player.nameLocation().y,
-    );
+    const nameLocation = event.player.nameLocation();
+    if (!nameLocation) {
+      return;
+    }
+    this.target = new Cell(nameLocation.x, nameLocation.y);
     this.intervalID = setInterval(() => this.goTo(), GOTO_INTERVAL_MS);
   }
 
