@@ -38,6 +38,18 @@ export class BotBehavior {
     }
   }
 
+  handleAllianceWinVotes() {
+    if (this.game.runningVote() !== null) {
+      const vote = this.game.runningVote();
+      // Change this later to be dynamic, maybe a bot is feeling cocky enough to break alliance
+      // after this and go for it.
+      const current = vote?.results.get(this.player.id());
+      if (current !== true) {
+        this.game.castVote(this.player, true);
+      }
+    }
+  }
+
   private emoji(player: Player, emoji: number) {
     if (player.type() !== PlayerType.Human) return;
     this.game.addExecution(new EmojiExecution(this.player, player.id(), emoji));

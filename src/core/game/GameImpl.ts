@@ -26,6 +26,7 @@ import {
   Unit,
   UnitInfo,
   UnitType,
+  Vote,
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
@@ -73,6 +74,8 @@ export class GameImpl implements Game {
 
   private playerTeams: Team[] = [ColoredTeams.Red, ColoredTeams.Blue];
   private botTeam: Team = ColoredTeams.Bot;
+  private currentVote: Vote | null = null;
+  private voteExpireTick: number | null;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -583,6 +586,61 @@ export class GameImpl implements Game {
     });
   }
 
+  public runningVote(): Vote | null {
+    return this.currentVote;
+  }
+
+  public setCurrentVote(vote: Vote | null) {
+    this.currentVote = vote;
+  }
+
+  public createVoteForPeace(players: Player[]) {
+    let vote = this.currentVote;
+    vote ??= new Vote();
+
+    players.forEach((player) => {
+      vote.results.set(player.id(), false);
+
+      this.addUpdate({
+        type: GameUpdateType.VoteForPeace,
+        playerID: player.smallID(),
+        leaderID: players[0].smallID(),
+        participants: players
+          .filter((player, index) => {
+            if (index > 0) {
+              return player;
+            }
+          })
+          .map((player) => {
+            return player.displayName();
+          }),
+      });
+    });
+    this.currentVote = vote;
+    this.voteExpireTick = this.ticks() + 1800;
+  }
+
+  public getVoteExpireTick(): number | null {
+    return this.voteExpireTick;
+  }
+
+  public setVoteExpireTick(voteExpireTick: number | null) {
+    this.voteExpireTick = voteExpireTick;
+  }
+
+  public castVote(player: Player, accept: boolean) {
+    const vote: Vote | null = this.currentVote;
+    if (vote !== null) {
+      // If the vote exists, the player is casting his vote to it.
+      vote.results.set(player.id(), accept);
+      this.addUpdate({
+        type: GameUpdateType.VoteForPeaceReply,
+        playerID: player.smallID(),
+        accepted: accept,
+      });
+    }
+  }
+
   sendEmojiUpdate(msg: EmojiMessage): void {
     this.addUpdate({
       type: GameUpdateType.Emoji,
@@ -590,7 +648,11 @@ export class GameImpl implements Game {
     });
   }
 
-  setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
+  setWinner(
+    winner: Player | Team,
+    allPlayersStats: AllPlayersStats,
+    allianceWin: boolean,
+  ): void {
     this.addUpdate({
       type: GameUpdateType.Win,
       winner:
@@ -598,6 +660,7 @@ export class GameImpl implements Game {
           ? ["team", winner]
           : ["player", winner.smallID()],
       allPlayersStats,
+      allianceWin: allianceWin,
     });
   }
 
