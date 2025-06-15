@@ -383,6 +383,8 @@ export interface Unit {
   targetedBySAM(): boolean;
   setReachedTarget(): void;
   reachedTarget(): boolean;
+  isTargetable(): boolean;
+  setTargetable(targetable: boolean): void;
 
   // Health
   hasHealth(): boolean;
