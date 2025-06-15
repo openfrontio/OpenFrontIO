@@ -4,6 +4,7 @@ import {
   botColor,
   ColorAllocator,
   red,
+  selectDistinctColor,
   teal,
 } from "../src/core/configuration/Colors";
 import { ColoredTeams } from "../src/core/game/Game";
@@ -18,6 +19,8 @@ const fallbackMockColors: Colord[] = [
   colord({ r: 0, g: 0, b: 0 }),
   colord({ r: 255, g: 255, b: 255 }),
 ];
+
+const fallbackColors = [...fallbackMockColors, ...mockColors];
 
 describe("ColorAllocator", () => {
   let allocator: ColorAllocator;
@@ -50,7 +53,7 @@ describe("ColorAllocator", () => {
     const fallback = allocator.assignColor("4");
     const fallback2 = allocator.assignColor("5");
 
-    const match = fallbackMockColors.some((color) => color.isEqual(fallback));
+    const match = fallbackColors.some((color) => color.isEqual(fallback));
     expect(match).toBe(true);
 
     const match2 = fallback.isEqual(fallback2);
@@ -77,5 +80,35 @@ describe("ColorAllocator", () => {
     expect(allocator.assignTeamColor(ColoredTeams.Red)).toEqual(red);
     expect(allocator.assignTeamColor(ColoredTeams.Teal)).toEqual(teal);
     expect(allocator.assignTeamColor(ColoredTeams.Bot)).toEqual(botColor);
+  });
+});
+
+describe("selectDistinctColor", () => {
+  test("returns a distinct color when one exceeds the delta threshold", () => {
+    const assignedColors = [colord({ r: 255, g: 0, b: 0 })]; // bright red
+    const availableColors = [
+      colord({ r: 254, g: 1, b: 1 }), // too close
+      colord({ r: 0, g: 255, b: 0 }), // distinct green
+      colord({ r: 0, g: 0, b: 255 }), // distinct blue
+    ];
+
+    const result = selectDistinctColor(availableColors, assignedColors, 25);
+    expect(result).not.toBeNull();
+    const rgb = result!.selectedColor.toRgb();
+    expect([
+      { r: 0, g: 255, b: 0, a: 1 },
+      { r: 0, g: 0, b: 255, a: 1 },
+    ]).toContainEqual(rgb);
+  });
+
+  test("returns null if all available colors are too close", () => {
+    const assignedColors = [colord({ r: 255, g: 0, b: 0 })];
+    const availableColors = [
+      colord({ r: 250, g: 5, b: 5 }),
+      colord({ r: 245, g: 10, b: 10 }),
+    ];
+
+    const result = selectDistinctColor(availableColors, assignedColors, 50);
+    expect(result).toBeNull();
   });
 });
