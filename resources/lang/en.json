@@ -459,5 +459,21 @@
   },
   "heads_up_message": {
     "choose_spawn": "Choose a starting location"
+  },
+  "buttons": {
+    "focus": "Focus",
+    "accept": "Accept",
+    "reject": "Reject",
+    "propose_renewal": "Propose to renew",
+    "i_want_to_renew": "I want to renew"
+  },
+  "alliance": {
+    "requested": "{name} requests an alliance!",
+    "renewed": "Alliance successfully renewed.",
+    "request_accepted": "{name} accepted your alliance request",
+    "request_rejected": "{name} rejected your alliance request",
+    "about_to_expire": "Your alliance with {name} is about to expire",
+    "expired": "Your alliance with {name} expired",
+    "no_alliance_to_extend": "No alliance to extend."
   }
 }

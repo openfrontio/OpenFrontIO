@@ -1,7 +1,10 @@
 import { placeName } from "../client/graphics/NameBoxCalculator";
+
 import { getConfig } from "./configuration/ConfigLoader";
+import { AllianceExpireCheckExecution } from "./execution/alliance/AllianceExpireCheckExecution";
 import { Executor } from "./execution/ExecutionManager";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
+
 import {
   AllPlayers,
   Cell,
@@ -25,6 +28,7 @@ import {
   GameUpdateViewData,
 } from "./game/GameUpdates";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
+
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
 import { sanitize, simpleHash } from "./Util";
@@ -109,6 +113,7 @@ export class GameRunner {
       this.game.addExecution(...this.execManager.fakeHumanExecutions());
     }
     this.game.addExecution(new WinCheckExecution());
+    this.game.addExecution(new AllianceExpireCheckExecution());
   }
 
   public addTurn(turn: Turn): void {

@@ -18,6 +18,7 @@ import {
 } from "../../../core/game/Game";
 import {
   AllianceExpiredUpdate,
+  AllianceExtensionPromptUpdate,
   AllianceRequestReplyUpdate,
   AllianceRequestUpdate,
   AttackUpdate,
@@ -32,7 +33,9 @@ import {
 import {
   CancelAttackIntentEvent,
   CancelBoatIntentEvent,
+  SendAllianceExtensionIntentEvent,
   SendAllianceReplyIntentEvent,
+  SendAllianceRequestIntentEvent,
 } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -50,6 +53,7 @@ import { getMessageTypeClasses, translateText } from "../../Utils";
 interface GameEvent {
   description: string;
   unsafeDescription?: boolean;
+  tags?: string[];
   buttons?: {
     text: string;
     className: string;
@@ -150,6 +154,11 @@ export class EventsDisplay extends LitElement implements Layer {
     [GameUpdateType.TargetPlayer, (u) => this.onTargetPlayerEvent(u)],
     [GameUpdateType.Emoji, (u) => this.onEmojiMessageEvent(u)],
     [GameUpdateType.UnitIncoming, (u) => this.onUnitIncomingEvent(u)],
+    [GameUpdateType.AllianceExpired, (u) => this.onAllianceExpiredEvent(u)],
+    [
+      GameUpdateType.AllianceExtensionPrompt,
+      (u) => this.onAllianceExtensionPromptEvent(u),
+    ],
   ]);
 
   constructor() {
@@ -247,6 +256,21 @@ export class EventsDisplay extends LitElement implements Layer {
     ];
   }
 
+  private removeEventByTags(tags: string[]) {
+    this.events = this.events.filter((event) => {
+      if (event.tags) {
+        for (const tag of tags) {
+          if (event.tags.includes(tag)) {
+            return false;
+          }
+        }
+      }
+      return true;
+    });
+
+    this.requestUpdate();
+  }
+
   shouldTransform(): boolean {
     return false;
   }
@@ -286,7 +310,7 @@ export class EventsDisplay extends LitElement implements Layer {
     }
 
     this.addEvent({
-      description: event.message,
+      description: translateText(event.message),
       createdAt: this.game.ticks(),
       highlight: true,
       type: event.messageType,
@@ -346,16 +370,18 @@ export class EventsDisplay extends LitElement implements Layer {
     ) as PlayerView;
 
     this.addEvent({
-      description: `${requestor.name()} requests an alliance!`,
+      description: translateText("alliance.requested", {
+        name: requestor.name(),
+      }),
       buttons: [
         {
-          text: "Focus",
+          text: translateText("buttons.focus"),
           className: "btn-gray",
           action: () => this.eventBus.emit(new GoToPlayerEvent(requestor)),
           preventClose: true,
         },
         {
-          text: "Accept",
+          text: translateText("buttons.accept"),
           className: "btn",
           action: () =>
             this.eventBus.emit(
@@ -363,7 +389,7 @@ export class EventsDisplay extends LitElement implements Layer {
             ),
         },
         {
-          text: "Reject",
+          text: translateText("buttons.reject"),
           className: "btn-info",
           action: () =>
             this.eventBus.emit(
@@ -382,28 +408,63 @@ export class EventsDisplay extends LitElement implements Layer {
       duration: 150,
       focusID: update.requestorID,
     });
+
+    this.removeEventByTags(["alliance" + update.requestorID]);
   }
 
   onAllianceRequestReplyEvent(update: AllianceRequestReplyUpdate) {
     const myPlayer = this.game.myPlayer();
-    if (!myPlayer || update.request.requestorID !== myPlayer.smallID()) {
+    if (
+      !myPlayer ||
+      (update.request.requestorID !== myPlayer.smallID() &&
+        update.request.recipientID !== myPlayer.smallID())
+    ) {
       return;
     }
 
-    const recipient = this.game.playerBySmallID(
-      update.request.recipientID,
+    if (update.request.requestorID === myPlayer.smallID()) {
+      const recipient = this.game.playerBySmallID(
+        update.request.recipientID,
+      ) as PlayerView;
+
+      this.addEvent({
+        description: translateText(
+          update.accepted
+            ? "alliance.request_accepted"
+            : "alliance.request_rejected",
+          { name: recipient.name() },
+        ),
+        type: update.accepted
+          ? MessageType.ALLIANCE_ACCEPTED
+          : MessageType.ALLIANCE_REJECTED,
+        highlight: true,
+        createdAt: this.game.ticks(),
+        focusID: update.request.recipientID,
+      });
+      return;
+    }
+
+    if (!update.accepted) {
+      return;
+    }
+
+    const requestor = this.game.playerBySmallID(
+      update.request.requestorID,
     ) as PlayerView;
 
     this.addEvent({
-      description: `${recipient.name()} ${
-        update.accepted ? "accepted" : "rejected"
-      } your alliance request`,
+      description: translateText(
+        update.accepted
+          ? "alliance.request_accepted"
+          : "alliance.request_rejected",
+        { name: requestor.name() },
+      ),
       type: update.accepted
         ? MessageType.ALLIANCE_ACCEPTED
         : MessageType.ALLIANCE_REJECTED,
       highlight: true,
       createdAt: this.game.ticks(),
-      focusID: update.request.recipientID,
+      focusID: update.request.requestorID,
     });
   }
 
@@ -455,15 +516,74 @@ export class EventsDisplay extends LitElement implements Layer {
         : update.player2ID === myPlayer.smallID()
           ? update.player1ID
           : null;
-    if (otherID === null) return;
+
+    if (!otherID) return;
+
     const other = this.game.playerBySmallID(otherID) as PlayerView;
     if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
 
     this.addEvent({
-      description: `Your alliance with ${other.name()} expired`,
-      type: MessageType.ALLIANCE_EXPIRED,
+      description: translateText("alliance.expired", { name: other.name() }),
+      type: MessageType.WARN,
+      tags: [`alliance${otherID}`],
+      duration: 100,
+      buttons: [
+        {
+          text: translateText("buttons.focus"),
+          className: "btn-gray",
+          action: () => this.eventBus.emit(new GoToPlayerEvent(other)),
+          preventClose: true,
+        },
+        {
+          text: translateText("buttons.propose_renewal"),
+          className: "btn",
+          action: () =>
+            this.eventBus.emit(
+              new SendAllianceRequestIntentEvent(myPlayer, other),
+            ),
+        },
+      ],
       highlight: true,
       createdAt: this.game.ticks(),
+      focusID: otherID,
+    });
+  }
+
+  onAllianceExtensionPromptEvent(update: AllianceExtensionPromptUpdate) {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer || update.toPlayerID !== myPlayer.smallID()) return;
+    const otherID = update.fromPlayerID;
+    const other = this.game.playerBySmallID(otherID) as PlayerView;
+    if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
+    const tick = this.game.ticks();
+    const tag = `alliance${otherID}`;
+    // remove earlier prompt/expired rows
+    this.removeEventByTags([tag]);
+    this.addEvent({
+      description: translateText("alliance.about_to_expire", {
+        name: other.name(),
+      }),
+      type: MessageType.WARN,
+      tags: [tag],
+      duration: 100,
+      buttons: [
+        {
+          text: translateText("buttons.focus"),
+          className: "btn-gray",
+          action: () => this.eventBus.emit(new GoToPlayerEvent(other)),
+          preventClose: true,
+        },
+        {
+          text: translateText("buttons.i_want_to_renew"),
+          className: "btn",
+          action: () =>
+            this.eventBus.emit(
+              new SendAllianceExtensionIntentEvent(myPlayer, other),
+            ),
+        },
+      ],
+      highlight: true,
+      createdAt: tick,
       focusID: otherID,
     });
   }
