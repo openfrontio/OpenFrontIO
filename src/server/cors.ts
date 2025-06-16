@@ -5,24 +5,26 @@ import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 const config = getServerConfigFromServer();
 const origin = config.origin();
 
-const allowedOrigins: string[] = [origin];
+const allowedOriginsSet = new Set<string>([origin]);
 
 switch (config.env()) {
   case GameEnv.Prod:
-    allowedOrigins.push("capacitor://openfront.io", "https://openfront.io");
+    allowedOriginsSet.add("capacitor://openfront.io");
+    allowedOriginsSet.add("https://openfront.io");
     break;
   case GameEnv.Preprod:
-    allowedOrigins.push("capacitor://openfront.dev", "https://openfront.dev");
+    allowedOriginsSet.add("capacitor://openfront.dev");
+    allowedOriginsSet.add("https://openfront.dev");
     break;
   case GameEnv.Dev: {
-    allowedOrigins.push(
-      "capacitor://localhost",
-      "http://localhost",
-      "http://localhost:8787",
-    );
+    allowedOriginsSet.add("capacitor://localhost");
+    allowedOriginsSet.add("http://localhost");
+    allowedOriginsSet.add("http://localhost:8787");
     break;
   }
 }
+
+const allowedOrigins = Array.from(allowedOriginsSet);
 
 const corsOptions = {
   origin: (

@@ -585,13 +585,24 @@ async function createLobby(): Promise<GameInfo> {
   }
 }
 
+// Cache for storing computed game URLs
+const urlCache = new Map<string, string>();
+
 export async function buildGameUrl(
   gameID: string,
   path: string,
 ): Promise<string> {
+  const cacheKey = `${gameID}:${path}`;
+  if (urlCache.has(cacheKey)) {
+    return urlCache.get(cacheKey)!;
+  }
+
   const config = await getServerConfigFromClient();
 
-  const apiPath = `/api/${path}/${gameID}`;
+  const apiPath = `/api/${path === "exists" ? "game" : path}/${gameID}${path === "exists" ? "/exists" : ""}`;
   const baseUrl = process.env.APP_BASE_URL || "";
-  return `${baseUrl}/${config.workerPath(gameID)}${apiPath}`;
+  const url = `${baseUrl}/${config.workerPath(gameID)}${apiPath}`;
+
+  urlCache.set(cacheKey, url);
+  return url;
 }

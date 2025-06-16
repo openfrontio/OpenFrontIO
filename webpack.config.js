@@ -35,6 +35,7 @@ export default async (env, argv) => {
       ? `https://${process.env.CAPACITOR_PRODUCTION_HOSTNAME}`
       : `http://${getLocalIP()}:9000`
     : "";
+  const apiBaseForLocalhost = `http://${process.env.CAPACITOR_BUILD ? getLocalIP() : "localhost"}:8787`;
 
   return {
     entry: "./src/client/Main.ts",
@@ -163,6 +164,7 @@ export default async (env, argv) => {
         "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
         "process.env.GIT_COMMIT": JSON.stringify(gitCommit),
         "process.env.APP_BASE_URL": JSON.stringify(appBaseUrl),
+        "process.env.LOCAL_API_BASE_URL": JSON.stringify(apiBaseForLocalhost),
         "process.env.CAPACITOR_PRODUCTION_HOSTNAME": JSON.stringify(
           process.env.CAPACITOR_PRODUCTION_HOSTNAME,
         ),

@@ -57,7 +57,7 @@ export class PublicLobby extends LitElement {
   async fetchLobbies(): Promise<GameInfo[]> {
     try {
       const response = await fetch(
-        `${process.env.APP_BASE_URL}/api/public_lobbies`,
+        `${process.env.APP_BASE_URL || ""}/api/public_lobbies`,
       );
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);

@@ -28,7 +28,9 @@ class BrowserPlatform implements Platform {
   }
 
   getApiBaseForLocalhost(): string {
-    return localStorage.getItem("apiHost") ?? "http://localhost:8787";
+    return (
+      localStorage.getItem("apiHost") ?? (process.env.LOCAL_API_BASE_URL || "")
+    );
   }
 
   initializeAuthListener(): void {
@@ -38,7 +40,7 @@ class BrowserPlatform implements Platform {
 
 class CapacitorPlatform implements Platform {
   getRedirectUri(): string {
-    return `${process.env.APP_BASE_URL}/discord-redirect.html`;
+    return `${process.env.APP_BASE_URL || ""}/discord-redirect.html`;
   }
 
   async setLocation(url: string): Promise<void> {
@@ -46,9 +48,7 @@ class CapacitorPlatform implements Platform {
   }
 
   getApiBaseForLocalhost(): string {
-    return process.env.APP_BASE_URL
-      ? process.env.APP_BASE_URL!.replace("9000", "8787")
-      : "http://localhost:8787";
+    return process.env.LOCAL_API_BASE_URL || "";
   }
 
   initializeAuthListener(): void {
