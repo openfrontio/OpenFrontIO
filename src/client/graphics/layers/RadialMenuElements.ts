@@ -311,7 +311,7 @@ export const buildMenuElement: MenuElement = {
 
   subMenu: (params: MenuElementParams) => {
     if (params === undefined || params.selected === null) return [];
-    
+
     const unitTypes: Set<UnitType> = new Set<UnitType>();
     if (params.selected === params.myPlayer) {
       unitTypes.add(UnitType.City);
