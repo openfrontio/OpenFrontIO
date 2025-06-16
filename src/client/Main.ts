@@ -250,8 +250,7 @@ class Client {
     // Attempt to join lobby
     this.handleHash();
 
-    // Handle forward/back buttons
-    window.addEventListener("popstate", (event) => {
+    const onHashUpdate = () => {
       // Reset the UI to its initial state
       this.joinModal.close();
       if (this.gameStop !== null) {
@@ -260,7 +259,11 @@ class Client {
 
       // Attempt to join lobby
       this.handleHash();
-    });
+    };
+
+    // Handle browser navigation & manual hash edits
+    window.addEventListener("popstate", onHashUpdate);
+    window.addEventListener("hashchange", onHashUpdate);
 
     function updateSliderProgress(slider) {
       const percent =
