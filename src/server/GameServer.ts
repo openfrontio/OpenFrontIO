@@ -147,9 +147,6 @@ export class GameServer {
           existingIP: ipAnonymize(conflicting.ip),
           existingPersistentID: conflicting.persistentID,
         });
-        // Kick the existing client instead of the new one, because this was causing issues when
-        // a client wanted to replay the game afterwards.
-        this.kickClient(conflicting.clientID);
       }
     }
 
@@ -172,7 +169,7 @@ export class GameServer {
       client.isDisconnected = existing.isDisconnected;
       client.lastPing = existing.lastPing;
 
-      existing.ws.removeAllListeners("message");
+      existing.ws.removeAllListeners();
       this.activeClients = this.activeClients.filter((c) => c !== existing);
     }
 
@@ -183,10 +180,6 @@ export class GameServer {
     this.allClients.set(client.clientID, client);
 
     client.ws.removeAllListeners();
-
-    client.ws.removeAllListeners();
-
-    client.ws.removeAllListeners("message");
     client.ws.on(
       "message",
       gatekeeper.wsHandler(client.ip, async (message: string) => {
