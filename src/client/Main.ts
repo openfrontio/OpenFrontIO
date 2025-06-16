@@ -1,5 +1,5 @@
 import favicon from "../../resources/images/Favicon.svg";
-import { GameRecord, GameStartInfo } from "../core/Schemas";
+import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
@@ -281,7 +281,7 @@ class Client {
     if (hash.startsWith("#")) {
       const params = new URLSearchParams(hash.slice(1));
       const lobbyId = params.get("join");
-      if (lobbyId) {
+      if (lobbyId && ID.safeParse(lobbyId).success) {
         this.joinModal.open(lobbyId);
         console.log(`joining lobby ${lobbyId}`);
       }
