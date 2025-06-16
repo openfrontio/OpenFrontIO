@@ -1,12 +1,24 @@
 {
+  "common": {
+    "close": "Kapat"
+  },
   "main": {
+    "title": "OpenFront (ALPHA)",
     "join_discord": "Discord'a katılın!",
+    "login_discord": "Discord ile Giriş Yap",
+    "checking_login": "Giriş kontrol ediliyor...",
+    "logged_in": "Giriş yapıldı!",
+    "log_out": "Çıkış Yap",
     "create_lobby": "Lobi Oluştur",
     "join_lobby": "Lobiye Katıl",
     "single_player": "Tek Oyunculu",
     "instructions": "Rehber",
     "how_to_play": "Nasıl Oynanır",
+    "advertise": "Reklam Ver",
     "wiki": "Wiki"
+  },
+  "news": {
+    "title": "Versiyon 23 yayınlandı!"
   },
   "help_modal": {
     "hotkeys": "Kısayol Tuşları",
@@ -15,6 +27,7 @@
     "action_alt_view": "Alternatif görünüm (arazi/ülkeler)",
     "action_attack_altclick": "Saldır (sol tıklama menü açmaya ayarlıysa)",
     "action_build": "İnşa menüsünü aç",
+    "action_emote": "İfade menüsünü aç",
     "action_center": "Kamerayı oyuncuya ortala",
     "action_zoom": "Uzaklaştır/Yakınlaştır",
     "action_move_camera": "Kamerayı haraket ettir",
@@ -29,12 +42,19 @@
     "ui_gold": "Altın - Sahip olduğunuz altın miktarı ve onu kazanma hızınız.",
     "ui_troops_workers": "Askerler ve İşçiler - Tahsis edilmiş asker ve işçi miktarı. Askerler saldırmak veya saldırılara karşı savunmak için kullanılır. İşçiler altın üretmek için kullanılır. Kaydırıcıyı kullanarak asker ve işçi sayısını ayarlayabilirsiniz.",
     "ui_attack_ratio": "Saldırı oranı - Saldırdığınızda kullanılacak asker miktarı. Kaydırıcıyı kullanarak saldırı oranını ayarlayabilirsiniz. Savunan birliklerden daha fazla saldıran birliğe sahip olmak, saldırıda daha az asker kaybetmenizi sağlar, daha azına sahip olmak ise saldıran birliklerinize verilen hasarı artırır. Etki 2:1 oranının ötesine geçmez.",
+    "ui_events": "Olay paneli",
+    "ui_events_desc": "Olay paneli en son olayları, istekleri ve Hızlı Sohbet mesajlarını görüntüler. Bazı örnekler şunlardır:",
+    "ui_events_alliance": "İttifak - İttifak istekleri kabul edilebilir veya reddedilebilir. Müttefikler kaynakları ve askerleri paylaşabilir, ancak birbirlerine saldıramazlar. Odaklan'a tıklamak görünümü isteği gönderen oyuncuya taşır.",
+    "ui_events_attack": "Saldırılar - Gelen saldırılar ve giden saldırılarınız gösterilir. Saldırı, nükleer veya Tekne (nakliye gemisi) üzerine görünümü ortalamak için mesaja tıklayın. Kırmızı X düğmesine tıklayarak askerleri geri çekebilirsiniz. Bu, saldıran askerlerinizin %25'inin hayatına mal olur. Bir Tekne saldırısını geri alırsanız, tekne başlangıç noktasına döner ve o zamandan beri toprak ele geçirildiyse orada saldırır. Nükleerler fırlatıldıktan sonra geri alınamaz.",
+    "ui_events_quickchat": "Hızlı Sohbet - Gönderilen ve alınan sohbet mesajlarını burada görebilirsiniz. Bilgi menüsündeki Hızlı Sohbet simgesine tıklayarak bir oyuncuya mesaj gönderin.",
     "ui_options": "Seçenekler",
     "ui_options_desc": "İçerisinde aşağıdaki öğeler bulunabilir:",
+    "ui_playeroverlay": "Oyuncu bilgi katmanı",
+    "ui_playeroverlay_desc": "Bir ülkenin üzerine geldiğinizde, Oyuncu bilgi katmanı Seçenekler altında görüntülenir. Oyuncu türünü gösterir: İnsan, Ulus (akıllı bot) veya Bot. Bir Ulusun size karşı tutumu, Düşmanca'dan Dostça'ya kadar değişir. Ve savunan askerler, altın, artı oyuncunun sahip olduğu Savaş Gemisi sayısı ve çeşitli binalar.",
     "option_pause": "Oyunu Duraklat/Devam Ettir - Sadece tek oyunculu modda kullanılabilir.",
     "option_timer": "Zamanlayıcı - Oyunun başlangıcından bu yana geçen süre.",
     "option_exit": "Çıkış düğmesi.",
-    "option_settings": "Ayarlar - Ayarlar menüsünü açın. İçeride Alternatif Görünüm, Karanlık Mod, Emojiler ve sol tıklama eylemini değiştirebilirsiniz.",
+    "option_settings": "Ayarlar - Ayarlar menüsünü açın. İçeride Alternatif Görünüm, Emojiler, Karanlık Mod, Ninja (anonim/rastgele isimler modu) ve sol tıklama eylemini değiştirebilirsiniz.",
     "radial_title": "Dairesel menü",
     "radial_desc": "Sağ tıklama (veya mobilde dokunma) dairesel menüyü açar. Buradan şunları yapabilirsiniz:",
     "radial_build": "İnşa menüsünü aç.",
@@ -42,15 +62,19 @@
     "radial_boat": "Seçilen konuma saldırması için bir tekne gönder (sadece suya erişiminiz varsa kullanılabilir).",
     "radial_close": "Menüyü kapat.",
     "info_title": "Bilgi menüsü",
-    "info_enemy_desc": "Seçilen oyuncunun adı, altını, askerleri gibi bilgileri ve oyuncunun hain olup olmadığını içerir. Hain, ittifak içinde olduğu bir oyuncuya ihanet edip saldıran oyuncudur. Aşağıdaki simgeler şu etkileşimleri temsil eder:",
+    "info_enemy_desc": "Seçilen oyuncunun adı, altını, askerleri, sizinle ticareti durdurmuş olup olmadığı, size gönderdiği nükleerler ve oyuncunun hain olup olmadığı gibi bilgileri içerir. Ticareti durdurmuş olmak, onlardan altın almayacağınız ve onlara ticaret gemileri aracılığıyla altın göndermeyeceğiniz anlamına gelir. Manuel olarak (oyuncu \"Ticareti durdur\"a tıklarsa, her ikiniz de \"Ticareti başlat\"a tıklayana kadar sürer) veya otomatik olarak (ittifakınıza ihanet ederseniz, tekrar müttefik olana kadar veya 5 dakika sonra kadar sürer). Hain, oyuncunun kendisiyle ittifak halinde olan bir oyuncuya ihanet edip saldırdığında 30 saniye boyunca Evet gösterir. Aşağıdaki simgeler şu etkileşimleri temsil eder:",
+    "info_chat": "Oyuncuya hızlı sohbet mesajı gönderin. Bir Kategori, bir Cümle seçin ve cümle [P1] içeriyorsa yerine koyacak bir Oyuncu adı seçin. Gönder'e basın.",
     "info_target": "Oyuncuya bir hedef işareti koyun, tüm müttefikler için işaretleyin, saldırıları koordine etmek için kullanılır.",
     "info_alliance": "Oyuncuya ittifak isteği gönderin. Müttefikler kaynakları ve askerleri paylaşabilir, ancak birbirlerine saldıramazlar.",
     "info_emoji": "Oyuncuya bir emoji gönderin.",
+    "info_trade": "\"Ticareti durdur\"u kullanarak oyuncuya altın vermeyi ve ticaret gemileri aracılığıyla onların altınını almayı durdurun. İkiniz de \"Ticareti başlat\"a tıklarsanız tekrar başlar.",
     "info_ally_panel": "Müttefik bilgi paneli",
     "info_ally_desc": "Bir oyuncuyla ittifak kurduğunuzda, aşağıdaki yeni simgeler kullanılabilir hale gelir:",
-    "ally_betray": "Müttefikinize ihanet edin, ittifakı sonlandırın. Diğer ulus kendisi hain değilse, adınızın yanında kalıcı bir simge olacaktır. Oyunun sonuna kadar size yönelik saldırılar saldırgan için daha az kayıpla sonuçlanacaktır, botların sizinle ittifak kurma olasılığı azalır ve oyuncular bunu yapmadan önce iki kez düşünür.",
+    "ally_betray": "Müttefikinize ihanet edin, ittifakı sonlandırın, ticareti durdurun ve savunmanızı zayıflatın. Aranızdaki ticaret 5 dakika boyunca (veya tekrar müttefik olana kadar) duraklatılır ve diğerleri de ticareti durdurabilir. Ve diğer oyuncu kendisi hain değilse, 30 saniye boyunca hain olarak işaretlenirsiniz. Bu süre boyunca adınızın üzerinde bir simge olur ve %50 savunma cezanız olur. Botların sizinle ittifak kurma olasılığı azalır ve oyuncular bunu yapmadan önce iki kez düşünür.",
     "ally_donate": "Müttefikinize askerlerinizden biraz bağışlayın. Askerleri azaldığında ve saldırı altındayken veya bir düşmanı ezmek için ekstra güce ihtiyaç duyduklarında kullanılır.",
+    "ally_donate_gold": "Müttefikinize altınınızdan biraz bağışlayın. Altınları azaldığında ve binalar için ihtiyaç duyduklarında veya takım arkadaşınız o MIRV için para biriktirirken kullanılır.",
     "build_menu_title": "İnşa menüsü",
+    "build_menu_desc": "Bunları inşa edin veya her birinden kaç tane inşa ettiğinizi görün:",
     "build_name": "Ad",
     "build_icon": "Simge",
     "build_desc": "Açıklama",
@@ -59,13 +83,13 @@
     "build_defense": "Savunma Karakolu",
     "build_defense_desc": "Yakındaki sınırlar etrafındaki savunmayı artırır. Düşmanlardan gelen saldırılar daha yavaştır ve daha fazla kayıp verir.",
     "build_port": "Liman",
-    "build_port_desc": "Ülkenizin limanları ile diğer ülkelerin limanları arasında otomatik olarak ticaret gemileri gönderir (onlarda \"ticareti durdur\" u tıklamadıysanız veya onlar sizde \"ticareti durdur\" u tıklamadıysa), her iki tarafa da altın verir. Savaş Gemileri inşa etmeye izin verir. Sadece su kenarına inşa edilebilir.",
+    "build_port_desc": "Sadece su kenarına inşa edilebilir. Savaş Gemileri inşa etmeye izin verir. Ülkenizin limanları ile diğer ülkelerin limanları arasında otomatik olarak ticaret gemileri gönderir (ticaret durdurulmadığında), her iki tarafa da altın verir. Bir oyuncuya saldırdığınızda veya ondan saldırı aldığınızda ticaret otomatik olarak durur. 5 dakika sonra veya müttefik olursanız devam eder. \"Ticareti durdur\" veya \"Ticareti başlat\" ile ticareti manuel olarak açıp kapatabilirsiniz.",
     "build_warship": "Savaş Gemisi",
-    "build_warship_desc": "Bir alanda devriye gezer, ticaret gemilerini ele geçirir ve düşman Savaş Gemilerini ve Teknelerini yok eder. En yakın Limandan doğar ve ilk inşa etmek için tıkladığınız alanı devriye gezer. Savaş Gemilerini üzerlerine saldırı komutu vererek ve ardından hareket etmelerini istediğiniz yeni alana saldırı komutu vererek kontrol edebilirsiniz.",
+    "build_warship_desc": "Bir alanda devriye gezer, düşman ticaret gemilerini ele geçirir ve Teknelerini (nakliye gemileri) ve Savaş Gemilerini yok eder. En yakın Limandan doğar ve ilk inşa etmek için tıkladığınız alanı devriye gezer. Savaş Gemilerini üzerlerine saldırı-tıklayarak (Kısayollar altındaki Saldır eylemi bölümüne bakın) ve ardından hareket etmelerini istediğiniz yeni alana saldırı-tıklayarak kontrol edebilirsiniz.",
     "build_silo": "Füze Silosu",
     "build_silo_desc": "Füze fırlatmaya izin verir.",
     "build_sam": "SAM Fırlatıcı",
-    "build_sam_desc": "100 piksel menzili içindeki düşman füzelerini %75 olasılıkla engeller. SAM'ın 7.5 saniye bekleme süresi vardır ve MIRV'leri engelleyemez.",
+    "build_sam_desc": "100 piksel menzili içindeki düşman füzelerini engelleyebilir. Atom Bombası için %100, Hidrojen Bombası için %80 ve bireysel MIRV Savaş Başlıkları için %50 isabet şansı ile. SAM'ın 7.5 saniye bekleme süresi vardır.",
     "build_atom": "Atom Bombası",
     "build_atom_desc": "Bölgeyi, binaları, gemileri ve tekneleri yok eden küçük patlayıcı bomba. En yakın Füze Silosundan doğar ve ilk inşa etmek için tıkladığınız alana düşer.",
     "build_hydrogen": "Hidrojen Bombası",
@@ -74,11 +98,12 @@
     "build_mirv_desc": "Oyundaki en güçlü bomba. Geniş bir bölgeyi kaplayacak daha küçük bombalara ayrılır. Yalnızca ilk inşa etmek için tıkladığınız oyuncuya hasar verir. En yakın Füze Silosundan doğar ve ilk inşa etmek için tıkladığınız alana düşer.",
     "player_icons": "Oyuncu simgeleri",
     "icon_desc": "Karşılaşacağınız bazı oyun içi simgelerin örnekleri ve anlamları:",
-    "icon_crown": "Taç - Bu, skor tablosundaki 1 numaralı oyuncudur",
-    "icon_traitor": "Çapraz kılıçlar - Hain. Bu oyuncu bir müttefike saldırdı.",
+    "icon_crown": "Taç - 1 numara. Bu, lider tablosundaki en iyi oyuncudur.",
+    "icon_traitor": "Kırık kalkan - Hain. Bu oyuncu bir müttefike saldırdı.",
     "icon_ally": "El sıkışma - Müttefik. Bu oyuncu sizin müttefikinizdir.",
-    "info_enemy_panel": "Düşman bilgi paneli",
-    "action_emote": "İfade menüsünü aç"
+    "icon_embargo": "Üstü çizili Dolar - Ambargo. Bu oyuncu sizinle ticareti otomatik veya manuel olarak durdurmuş.",
+    "icon_request": "Zarf - İttifak isteği. Bu oyuncu size ittifak isteği göndermiş.",
+    "info_enemy_panel": "Düşman bilgi paneli"
   },
   "single_modal": {
     "title": "Tek Oyunculu",
@@ -91,10 +116,13 @@
     "infinite_gold": "Sınırsız Altın",
     "infinite_troops": "Sınırsız Asker",
     "disable_nukes": "Nükleerleri Devre Dışı Bırak",
+    "enables_title": "Ayarları Etkinleştir",
     "start": "Oyunu Başlat"
   },
   "map": {
+    "map": "Harita",
     "world": "Dünya",
+    "giantworldmap": "Dev Dünya Haritası",
     "europe": "Avrupa",
     "mena": "ODKA",
     "northamerica": "Kuzey Amerika",
@@ -110,9 +138,19 @@
     "random": "Rastgele",
     "iceland": "İzlanda",
     "pangaea": "Pangea",
-    "map": "Harita",
+    "eastasia": "Doğu Asya",
     "betweentwoseas": "İki Deniz Arası",
-    "knownworld": "Bilinen Dünya"
+    "faroeislands": "Faroe Adaları",
+    "deglaciatedantarctica": "Buzdan Arındırılmış Antarktika",
+    "europeclassic": "Avrupa (klasik)",
+    "falklandislands": "Falkland Adaları",
+    "baikal": "Baykal",
+    "halkidiki": "Halkidiki"
+  },
+  "map_categories": {
+    "continental": "Kıtasal",
+    "regional": "Bölgesel",
+    "fantasy": "Diğer"
   },
   "private_lobby": {
     "title": "Özel Lobiye Katıl",
@@ -127,7 +165,8 @@
   },
   "public_lobby": {
     "join": "Sıradaki Oyuna Katıl",
-    "waiting": "oyuncu bekliyor"
+    "waiting": "oyuncu bekliyor",
+    "teams": "{num} takım"
   },
   "username": {
     "enter_username": "Kullanıcı adınızı girin",
@@ -138,6 +177,8 @@
   },
   "host_modal": {
     "title": "Özel Lobi",
+    "mode": "Mod",
+    "team_count": "Takım Sayısı",
     "options_title": "Seçenekler",
     "bots": "Botları:",
     "bots_disabled": "Devre Dışı",
@@ -145,12 +186,11 @@
     "instant_build": "Anında İnşa",
     "infinite_gold": "Sınırsız Altın",
     "infinite_troops": "Sınırsız Asker",
-    "disable_nukes": "Nükleerleri Devre Dışı Bırak",
+    "enables_title": "Ayarları Etkinleştir",
     "player": "Oyuncu",
     "players": "Oyuncular",
     "waiting": "Oyuncular bekleniyor...",
-    "start": "Oyunu Başlat",
-    "mode": "Mod"
+    "start": "Oyunu Başlat"
   },
   "difficulty": {
     "Relaxed": "Rahat",
@@ -175,5 +215,249 @@
   },
   "select_lang": {
     "title": "Dil seç"
+  },
+  "unit_type": {
+    "city": "Şehir",
+    "defense_post": "Savunma Karakolu",
+    "port": "Liman",
+    "warship": "Savaş Gemisi",
+    "missile_silo": "Füze Silosu",
+    "sam_launcher": "SAM Fırlatıcı",
+    "atom_bomb": "Atom Bombası",
+    "hydrogen_bomb": "Hidrojen Bombası",
+    "mirv": "MIRV"
+  },
+  "user_setting": {
+    "title": "Kullanıcı Ayarları",
+    "tab_basic": "Temel Ayarlar",
+    "tab_keybinds": "Tuş Atamaları",
+    "dark_mode_label": "🌙 Karanlık Mod",
+    "dark_mode_desc": "Sitenin görünümünü açık ve koyu temalar arasında değiştir",
+    "emojis_label": "😊 Emojiler",
+    "emojis_desc": "Oyunda emojilerin gösterilip gösterilmeyeceğini ayarla",
+    "special_effects_label": "💥 Özel efektler",
+    "special_effects_desc": "Özel efektleri aç/kapat. Performansı artırmak için devre dışı bırakın",
+    "anonymous_names_label": "🥷 Gizli İsimler",
+    "anonymous_names_desc": "Gerçek oyuncu isimlerini ekranınızda rastgele isimlerle gizleyin.",
+    "left_click_label": "🖱️ Menü Açmak İçin Sol Tık",
+    "left_click_desc": "AÇIK olduğunda, sol tık menüyü açar ve kılıç düğmesi saldırır. KAPALI olduğunda, sol tık doğrudan saldırır.",
+    "attack_ratio_label": "⚔️ Saldırı Oranı",
+    "attack_ratio_desc": "Bir saldırıda gönderilecek asker yüzdesi (1–100%)",
+    "troop_ratio_label": "🪖🛠️ Asker ve İşçi Oranı",
+    "troop_ratio_desc": "Askerler (savaş için) ve işçiler (altın üretimi için) arasındaki dengeyi ayarlayın (1–100%)",
+    "easter_writing_speed_label": "Yazma Hızı Çarpanı",
+    "easter_writing_speed_desc": "Kod yazıyormuş gibi yapma hızınızı ayarlayın (x1–x100)",
+    "easter_bug_count_label": "Hata Sayısı",
+    "easter_bug_count_desc": "Kabul edebileceğiniz hata sayısı (0–1000, duygusal olarak)",
+    "view_options": "Görünüm Seçenekleri",
+    "toggle_view": "Görünümü Değiştir",
+    "toggle_view_desc": "Alternatif görünüm (arazi/ülkeler)",
+    "attack_ratio_controls": "Saldırı Oranı Kontrolleri",
+    "attack_ratio_up": "Saldırı Oranını Artır",
+    "attack_ratio_up_desc": "Saldırı oranını %10 artır",
+    "attack_ratio_down": "Saldırı Oranını Azalt",
+    "attack_ratio_down_desc": "Saldırı oranını %10 azalt",
+    "attack_keybinds": "Saldırı Tuş Atamaları",
+    "boat_attack": "Tekne Saldırısı",
+    "boat_attack_desc": "İmlecinizin altındaki kareye tekne saldırısı gönder.",
+    "zoom_controls": "Yakınlaştırma Kontrolleri",
+    "zoom_out": "Uzaklaştır",
+    "zoom_out_desc": "Haritayı uzaklaştır",
+    "zoom_in": "Yakınlaştır",
+    "zoom_in_desc": "Haritayı yakınlaştır",
+    "camera_movement": "Kamera Hareketi",
+    "center_camera": "Kamerayı Ortala",
+    "center_camera_desc": "Kamerayı oyuncuya ortala",
+    "move_up": "Kamerayı Yukarı Taşı",
+    "move_up_desc": "Kamerayı yukarı hareket ettir",
+    "move_left": "Kamerayı Sola Taşı",
+    "move_left_desc": "Kamerayı sola hareket ettir",
+    "move_down": "Kamerayı Aşağı Taşı",
+    "move_down_desc": "Kamerayı aşağı hareket ettir",
+    "move_right": "Kamerayı Sağa Taşı",
+    "move_right_desc": "Kamerayı sağa hareket ettir",
+    "reset": "Sıfırla",
+    "unbind": "Tuş Atamasını Kaldır"
+  },
+  "chat": {
+    "title": "Hızlı Sohbet",
+    "to": "{user} kişisine: {msg}",
+    "from": "{user} kişisinden: {msg}",
+    "category": "Kategori",
+    "phrase": "Cümle",
+    "player": "Oyuncu",
+    "send": "Gönder",
+    "search": "Oyuncu ara...",
+    "build": "Mesajınızı oluşturun...",
+    "cat": {
+      "help": "Yardım",
+      "attack": "Saldırı",
+      "defend": "Savunma",
+      "greet": "Selamlaşma",
+      "misc": "Çeşitli",
+      "warnings": "Uyarılar"
+    },
+    "help": {
+      "troops": "Lütfen bana asker ver!",
+      "gold": "Lütfen bana altın ver!",
+      "no_attack": "Lütfen bana saldırmayın!",
+      "sorry_attack": "Üzgünüm, saldırmak istememiştim.",
+      "alliance": "İttifak?",
+      "help_defend": "[P1]'e karşı savunmamda bana yardım et!",
+      "team_up": "[P1]'e karşı takım kuralım!"
+    },
+    "attack": {
+      "attack": "[P1]'e saldır!",
+      "mirv": "[P1]'e MIRV fırlat!",
+      "focus": "[P1]'e odaklanın!",
+      "finish": "[P1]'i bitirelim!"
+    },
+    "defend": {
+      "defend": "[P1]'i savunun!",
+      "dont_attack": "[P1]'e saldırmayın!",
+      "ally": "[P1] benim müttefikim!"
+    },
+    "greet": {
+      "hello": "Selam!",
+      "good_luck": "İyi şanslar!",
+      "have_fun": "İyi eğlenceler!",
+      "gg": "GG!",
+      "nice_to_meet": "Tanıştığımıza memnun oldum!",
+      "well_played": "İyi oynadın!",
+      "hi_again": "Tekrar selam!",
+      "bye": "Hoşçakal!",
+      "thanks": "Teşekkürler!",
+      "oops": "Pardon, yanlış düğmeye bastım!",
+      "trust_me": "Bana güvenebilirsiniz. Söz veriyorum!",
+      "trust_broken": "Sana güvenmiştim..."
+    },
+    "misc": {
+      "go": "Hadi gidelim!",
+      "strategy": "Güzel strateji!",
+      "fun": "Bu oyun eğlenceli!",
+      "pr": "PR'ım ne zaman merge edilecek acaba...?"
+    },
+    "warnings": {
+      "strong": "[P1] güçlü.",
+      "weak": "[P1] zayıf.",
+      "mirv_soon": "[P1] yakında MIRV fırlatabilir!",
+      "number1_warning": "1 numara oyuncu yakında kazanacak, takım kurmazsak!",
+      "stalemate": "Barış yapalım. Bu bir çıkmaz, ikimiz de kaybedeceğiz.",
+      "has_allies": "[P1]'in çok müttefiki var.",
+      "no_allies": "[P1]'in müttefiki yok.",
+      "betrayed": "[P1] müttefikine ihanet etti!",
+      "getting_big": "[P1] çok hızlı büyüyor!",
+      "danger_base": "[P1] korumasız!",
+      "saving_for_mirv": "[P1] MIRV fırlatmak için para biriktiriyor.",
+      "mirv_ready": "[P1]'in MIRV fırlatacak kadar altını var!"
+    }
+  },
+  "build_menu": {
+    "desc": {
+      "atom_bomb": "Küçük patlama",
+      "hydrogen_bomb": "Büyük patlama",
+      "mirv": "Büyük patlama, sadece seçilen oyuncuyu hedefler",
+      "missile_silo": "Nükleer fırlatmak için kullanılır",
+      "sam_launcher": "Gelen nükleerlere karşı savunur",
+      "warship": "Ticaret gemilerini ele geçirir, gemi ve tekneleri yok eder",
+      "port": "Altın üretmek için ticaret gemileri gönderir",
+      "defense_post": "Yakındaki sınırların savunmasını artırır",
+      "city": "Maksimum nüfusu artırır"
+    },
+    "not_enough_money": "Yeterli para yok"
+  },
+  "win_modal": {
+    "died": "Öldünüz",
+    "your_team": "Takımınız kazandı!",
+    "other_team": "{team} takımı kazandı!",
+    "you_won": "Kazandınız!",
+    "other_won": "{player} kazandı!",
+    "exit": "Oyundan Çık",
+    "keep": "Oynamaya Devam Et",
+    "wishlist": "Steam'de İstek Listesine Ekle!"
+  },
+  "leaderboard": {
+    "title": "Lider Tablosu",
+    "hide": "Gizle",
+    "rank": "Sıra",
+    "player": "Oyuncu",
+    "owned": "Sahip Olunan",
+    "gold": "Altın",
+    "troops": "Askerler"
+  },
+  "player_info_overlay": {
+    "type": "Tür",
+    "bot": "Bot",
+    "nation": "Ulus",
+    "player": "Oyuncu",
+    "team": "Takım",
+    "d_troops": "Savunan askerler",
+    "a_troops": "Saldıran askerler",
+    "gold": "Altın",
+    "ports": "Limanlar",
+    "cities": "Şehirler",
+    "missile_launchers": "Füze fırlatıcıları",
+    "sams": "SAM'ler",
+    "warships": "Savaş Gemileri",
+    "health": "Sağlık",
+    "attitude": "Tutum",
+    "levels": "Seviyeler"
+  },
+  "events_display": {
+    "retreating": "geri çekiliyor",
+    "boat": "Tekne"
+  },
+  "unit_info_modal": {
+    "structure_info": "Yapı Bilgisi",
+    "unit_type_unknown": "Bilinmeyen",
+    "close": "Kapat",
+    "cooldown": "Bekleme Süresi",
+    "type": "Tür",
+    "upgrade": "Yükseltme",
+    "level": "Seviye"
+  },
+  "relation": {
+    "hostile": "Düşmanca",
+    "distrustful": "Güvensiz",
+    "neutral": "Tarafsız",
+    "friendly": "Dostça",
+    "default": "Varsayılan"
+  },
+  "control_panel": {
+    "pop": "Nüfus",
+    "gold": "Altın",
+    "troops": "Askerler",
+    "workers": "İşçiler",
+    "attack_ratio": "Saldırı Oranı"
+  },
+  "player_panel": {
+    "gold": "Altın",
+    "troops": "Askerler",
+    "betrayals": "İhanet sayısı",
+    "traitor": "Hain",
+    "alliance_time_remaining": "İttifak Bitiş Süresi",
+    "embargo": "Sizinle ticareti durduruyor",
+    "nuke": "Onlar tarafından size gönderilen nükleerler",
+    "start_trade": "Ticareti başlat",
+    "stop_trade": "Ticareti durdur",
+    "yes": "Evet",
+    "no": "Hayır",
+    "none": "Hiçbiri",
+    "alliances": "İttifaklar"
+  },
+  "replay_panel": {
+    "replay_speed": "Tekrar hızı",
+    "game_speed": "Oyun hızı"
+  },
+  "error_modal": {
+    "crashed": "Oyun çöktü!",
+    "paste_discord": "Lütfen aşağıdakini Discord'taki hata raporunuza yapıştırın:",
+    "copy_clipboard": "Panoya kopyala",
+    "copied": "Kopyalandı!",
+    "failed_copy": "Kopyalama başarısız",
+    "desync_notice": "Diğer oyuncularla senkronizasyonunuz bozuldu. Gördükleriniz diğer oyunculardan farklı olabilir."
+  },
+  "heads_up_message": {
+    "choose_spawn": "Başlangıç konumu seçin"
   }
 }
