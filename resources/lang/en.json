@@ -1,9 +1,9 @@
 {
   "lang": {
     "en": "English",
-    "native": "English (US)",
-    "svg": "us",
-    "lang_code": "en-US"
+    "native": "English",
+    "svg": "uk_us_flag",
+    "lang_code": "en"
   },
   "common": {
     "close": "Close"

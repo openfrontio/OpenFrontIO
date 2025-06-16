@@ -7,6 +7,7 @@ import bg from "../../resources/lang/bg_BG.json";
 import bn from "../../resources/lang/bn_BD.json";
 import cs from "../../resources/lang/cs_CZ.json";
 import de from "../../resources/lang/de_DE.json";
+import en from "../../resources/lang/en.json";
 import en_US from "../../resources/lang/en_US.json";
 import eo from "../../resources/lang/eo_UY.json";
 import es from "../../resources/lang/es_ES.json";
@@ -40,6 +41,7 @@ export class LangSelector extends LitElement {
     bg,
     bn,
     de,
+    en,
     en_US,
     es,
     eo,
