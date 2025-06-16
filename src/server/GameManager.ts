@@ -28,7 +28,7 @@ export class GameManager {
     return false;
   }
 
-  createGame(id: GameID, gameConfig: GameConfig | undefined) {
+  createGame(id: GameID, gameConfig: GameConfig | undefined, hostPersistentID: string | null = null): GameServer {
     const game = new GameServer(id, this.log, Date.now(), this.config, {
       gameMap: GameMapType.World,
       gameType: GameType.Private,
@@ -41,7 +41,7 @@ export class GameManager {
       bots: 400,
       disabledUnits: [],
       ...gameConfig,
-    });
+    }, hostPersistentID);
     this.games.set(id, game);
     return game;
   }
