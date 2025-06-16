@@ -124,6 +124,12 @@ export class OptionsMenu extends LitElement implements Layer {
     this.userSettings.toggleLeftClickOpenMenu();
   }
 
+  private onToggleTerritoryPatterns() {
+    this.userSettings.toggleTerritoryPatterns();
+    this.requestUpdate();
+    this.eventBus.emit(new RefreshGraphicsEvent());
+  }
+
   init() {
     console.log("init called from OptionsMenu");
     this.showPauseButton =
@@ -206,6 +212,12 @@ export class OptionsMenu extends LitElement implements Layer {
             onClick: this.onToggleSpecialEffectsButtonClick,
             title: "Toggle Special effects",
             children: "💥: " + (this.userSettings.fxLayer() ? "On" : "Off"),
+          })}
+          ${button({
+            onClick: this.onToggleTerritoryPatterns,
+            title: "Territory Patterns",
+            children:
+              "🏳️: " + (this.userSettings.territoryPatterns() ? "On" : "Off"),
           })}
           ${button({
             onClick: this.onToggleDarkModeButtonClick,

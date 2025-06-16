@@ -160,7 +160,10 @@ const TokenSchema = z
 const EmojiSchema = z
   .number()
   .nonnegative()
-  .max(flattenedEmojiTable.length - 1);
+  .refine((value) => value <= flattenedEmojiTable.length - 1, {
+    message: "Invalid emoji index",
+  });
+
 const ID = z
   .string()
   .regex(/^[a-zA-Z0-9]+$/)
@@ -181,11 +184,13 @@ export const AttackIntentSchema = BaseIntentSchema.extend({
 
 export const UsernameSchema = SafeString;
 export const FlagSchema = z.string().max(128).optional();
+export const PatternSchema = z.string().max(128).base64().optional();
 
 export const SpawnIntentSchema = BaseIntentSchema.extend({
   type: z.literal("spawn"),
   name: UsernameSchema,
   flag: FlagSchema,
+  pattern: PatternSchema,
   playerType: PlayerTypeSchema,
   x: z.number(),
   y: z.number(),
@@ -351,6 +356,7 @@ export const PlayerSchema = z.object({
   clientID: ID,
   username: UsernameSchema,
   flag: FlagSchema,
+  pattern: PatternSchema,
 });
 
 export const GameStartInfoSchema = z.object({
@@ -429,6 +435,7 @@ export const ClientJoinMessageSchema = z.object({
   lastTurn: z.number(), // The last turn the client saw.
   username: UsernameSchema,
   flag: FlagSchema,
+  pattern: PatternSchema,
 });
 
 export const ClientMessageSchema = z.discriminatedUnion("type", [

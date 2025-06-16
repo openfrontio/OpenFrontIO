@@ -45,6 +45,7 @@ import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
+  pattern: string | undefined;
   flag: string;
   playerName: string;
   clientID: ClientID;

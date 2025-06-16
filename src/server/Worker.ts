@@ -21,6 +21,7 @@ import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
+import { getPrivilegeChecker } from "./Privilege";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
@@ -321,8 +322,8 @@ export function startWorker() {
             );
 
             let roles: string[] | undefined;
+            let flares: string[] | undefined;
 
-            // Check user roles
             if (claims !== null) {
               const result = await getUserMe(clientMsg.token, config);
               if (result === false) {
@@ -330,6 +331,21 @@ export function startWorker() {
                 return;
               }
               roles = result.player.roles;
+              flares = result.player.flares;
+            }
+
+            if (clientMsg.pattern !== undefined) {
+              const patternCheck = getPrivilegeChecker().isPatternAllowed(
+                clientMsg.pattern,
+                roles,
+                flares,
+              );
+              if (patternCheck !== true) {
+                log.warn(
+                  `pattern blocked (${patternCheck}): ${clientMsg.pattern}`,
+                );
+                return;
+              }
             }
 
             // TODO: Validate client settings based on roles
@@ -340,10 +356,12 @@ export function startWorker() {
               persistentId,
               claims,
               roles,
+              flares,
               ip,
               clientMsg.username,
               ws,
               clientMsg.flag,
+              clientMsg.pattern,
             );
 
             const wasFound = gm.addClient(
