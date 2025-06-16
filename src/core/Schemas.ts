@@ -182,14 +182,15 @@ export const AttackIntentSchema = BaseIntentSchema.extend({
   troops: z.number().nullable(),
 });
 
+export const UsernameSchema = SafeString;
 export const FlagSchema = z.string().max(128).optional();
 export const PatternSchema = z.string().max(128).base64().optional();
 
 export const SpawnIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("spawn"),
+  name: UsernameSchema,
   flag: FlagSchema,
   pattern: PatternSchema,
-  type: z.literal("spawn"),
-  name: SafeString,
   playerType: PlayerTypeSchema,
   x: z.number(),
   y: z.number(),
@@ -353,7 +354,7 @@ export const ServerPrestartMessageSchema = ServerBaseMessageSchema.extend({
 
 export const PlayerSchema = z.object({
   clientID: ID,
-  username: SafeString,
+  username: UsernameSchema,
   flag: FlagSchema,
   pattern: PatternSchema,
 });
@@ -380,7 +381,7 @@ export const ServerDesyncSchema = ServerBaseMessageSchema.extend({
   yourHash: z.number().optional(),
 });
 
-export const ServerMessageSchema = z.union([
+export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
   ServerStartGameMessageSchema,
@@ -432,12 +433,12 @@ export const ClientJoinMessageSchema = z.object({
   token: TokenSchema, // WARNING: PII
   gameID: ID,
   lastTurn: z.number(), // The last turn the client saw.
-  username: SafeString,
+  username: UsernameSchema,
   flag: FlagSchema,
   pattern: PatternSchema,
 });
 
-export const ClientMessageSchema = z.union([
+export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientSendWinnerSchema,
   ClientPingMessageSchema,
   ClientIntentMessageSchema,
