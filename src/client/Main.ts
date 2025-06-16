@@ -247,34 +247,19 @@ class Client {
       document.documentElement.classList.remove("dark");
     }
 
-    const { hash } = window.location;
-    if (hash.startsWith("#")) {
-      const params = new URLSearchParams(hash.slice(1));
-      const lobbyId = params.get("join");
-      if (lobbyId) {
-        this.joinModal.open(lobbyId);
-        console.log(`joining lobby ${lobbyId}`);
-      }
-    }
+    // Attempt to join lobby
+    this.handleHash();
 
     // Handle forward/back buttons
     window.addEventListener("popstate", (event) => {
-      console.log(event);
-
+      // Reset the UI to its initial state
       this.joinModal.close();
       if (this.gameStop !== null) {
         this.handleLeaveLobby();
       }
 
-      const { hash } = window.location;
-      if (hash.startsWith("#")) {
-        const params = new URLSearchParams(hash.slice(1));
-        const lobbyId = params.get("join");
-        if (lobbyId) {
-          this.joinModal.open(lobbyId);
-          console.log(`joining lobby ${lobbyId}`);
-        }
-      }
+      // Attempt to join lobby
+      this.handleHash();
     });
 
     function updateSliderProgress(slider) {
@@ -289,6 +274,18 @@ class Client {
         updateSliderProgress(slider);
         slider.addEventListener("input", () => updateSliderProgress(slider));
       });
+  }
+
+  private handleHash() {
+    const { hash } = window.location;
+    if (hash.startsWith("#")) {
+      const params = new URLSearchParams(hash.slice(1));
+      const lobbyId = params.get("join");
+      if (lobbyId) {
+        this.joinModal.open(lobbyId);
+        console.log(`joining lobby ${lobbyId}`);
+      }
+    }
   }
 
   private async handleJoinLobby(event: CustomEvent) {
