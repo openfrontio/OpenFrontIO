@@ -12,9 +12,22 @@ jobs:
       issues: write # Good practice to check for issue write permission.
       pull-requests: write
     steps:
+      - uses: actions/create-github-app-token@v2
+        id: generate-token
+        if: ${{ github.repository == 'openfrontio/OpenFrontIO' }}
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+      - name: Export the token
+        if: ${{ github.repository == 'openfrontio/OpenFrontIO' }}
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: |
+          echo "GH_TOKEN=$GH_TOKEN" >> $GITHUB_ENV
+          gh api octocat
       - uses: actions/stale@v9
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ steps.generate-token.outputs.token }}
           stale-pr-label: "stale"
           stale-pr-message: "This Pull Request is stale because it has been open for 14 days with no activity. If you want to keep this Pull Request open, add a comment or update the branch."
           days-before-stale: 14
