@@ -11,8 +11,74 @@ import {
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
 
-const isNative = Capacitor.getPlatform() !== "web";
-const NATIVE_REDIRECT_URI = `${process.env.API_BASE_URL}/discord-redirect.html`;
+interface Platform {
+  getRedirectUri(): string;
+  setLocation(url: string): Promise<void> | void;
+  getApiBaseForLocalhost(): string;
+  initializeAuthListener(): void;
+}
+
+class BrowserPlatform implements Platform {
+  getRedirectUri(): string {
+    return window.location.href.split("#")[0];
+  }
+
+  setLocation(url: string): void {
+    window.location.href = url;
+  }
+
+  getApiBaseForLocalhost(): string {
+    return localStorage.getItem("apiHost") ?? "http://localhost:8787";
+  }
+
+  initializeAuthListener(): void {
+    // No-op for web
+  }
+}
+
+class CapacitorPlatform implements Platform {
+  getRedirectUri(): string {
+    return `${process.env.APP_BASE_URL}/discord-redirect.html`;
+  }
+
+  async setLocation(url: string): Promise<void> {
+    await Browser.open({ url });
+  }
+
+  getApiBaseForLocalhost(): string {
+    return process.env.APP_BASE_URL
+      ? process.env.APP_BASE_URL!.replace("9000", "8787")
+      : "http://localhost:8787";
+  }
+
+  initializeAuthListener(): void {
+    App.addListener("appUrlOpen", async (data) => {
+      try {
+        const url = new URL(data.url);
+        if (handleToken(url, false)) {
+          __isLoggedIn = undefined; // Force re-evaluation
+          await Browser.close();
+          window.location.assign(window.location.origin || "/");
+          return;
+        }
+
+        const error = url.search;
+        if (error) {
+          console.error(`Error from auth provider: ${error}`);
+        }
+        await Browser.close();
+      } catch (e) {
+        console.error("Error handling appUrlOpen", e);
+        await Browser.close();
+      }
+    });
+  }
+}
+
+const platform: Platform =
+  Capacitor.getPlatform() !== "web"
+    ? new CapacitorPlatform()
+    : new BrowserPlatform();
 
 function getAudience() {
   const hostname =
@@ -25,24 +91,34 @@ function getAudience() {
 function getApiBase() {
   const domainname = getAudience();
   return domainname === "localhost"
-    ? (localStorage.getItem("apiHost") ??
-      (isNative && process.env.API_BASE_URL))
-      ? process.env.API_BASE_URL!.replace("9000", "8787")
-      : "http://localhost:8787"
+    ? platform.getApiBaseForLocalhost()
     : `https://api.${domainname}`;
 }
 
-function getToken(): string | null {
-  const { hash } = window.location;
-  if (hash.startsWith("#")) {
-    const params = new URLSearchParams(hash.slice(1));
-    const token = params.get("token");
-    if (token) {
-      localStorage.setItem("token", token);
-      params.delete("token");
-      params.toString();
+function handleToken(url: URL, isFromHash: boolean): boolean {
+  let token: string | null = null;
+  if (isFromHash) {
+    if (url.hash.startsWith("#")) {
+      const params = new URLSearchParams(url.hash.slice(1));
+      token = params.get("token");
     }
+  } else {
+    token = url.searchParams.get("token");
+  }
+
+  if (token) {
+    localStorage.setItem("token", token);
+    return true;
+  }
+  return false;
+}
+
+function getToken(): string | null {
+  const url = new URL(window.location.href);
+  if (handleToken(url, true)) {
     // Clean the URL
+    const params = new URLSearchParams(url.hash.slice(1));
+    params.delete("token");
     history.replaceState(
       null,
       "",
@@ -55,21 +131,11 @@ function getToken(): string | null {
 }
 
 export async function discordLogin() {
-  let redirectUri: string;
-
-  if (isNative) {
-    redirectUri = NATIVE_REDIRECT_URI;
-  } else {
-    redirectUri = window.location.href.split("#")[0];
-  }
-
-  const url = `${getApiBase()}/login/discord?redirect_uri=${encodeURIComponent(redirectUri)}`;
-
-  if (isNative) {
-    await Browser.open({ url });
-  } else {
-    window.location.href = url;
-  }
+  const redirectUri = platform.getRedirectUri();
+  const url = `${getApiBase()}/login/discord?redirect_uri=${encodeURIComponent(
+    redirectUri,
+  )}`;
+  await platform.setLocation(url);
 }
 
 export async function logOut(allSessions: boolean = false) {
@@ -126,7 +192,7 @@ function _isLoggedIn(): IsLoggedInResponse {
     const payload = decodeJwt(token);
     const { iss, aud, exp, iat } = payload;
 
-    if (iss !== getApiBase() && !isNative) {
+    if (iss !== getApiBase()) {
       // JWT was not issued by the correct server
       console.error(
         'unexpected "iss" claim value',
@@ -184,31 +250,7 @@ function _isLoggedIn(): IsLoggedInResponse {
 }
 
 export function initializeAuthListener() {
-  if (Capacitor.getPlatform() === "web") return;
-
-  App.addListener("appUrlOpen", async (data) => {
-    try {
-      const url = new URL(data.url);
-      const token = url.searchParams.get("token");
-
-      if (token) {
-        localStorage.setItem("token", token);
-        __isLoggedIn = undefined; // Force re-evaluation
-        await Browser.close();
-        window.location.assign(window.location.origin || "/");
-        return;
-      }
-
-      const error = url.search;
-      if (error) {
-        console.error(`Error from auth provider: ${error}`);
-      }
-      await Browser.close();
-    } catch (e) {
-      console.error("Error handling appUrlOpen", e);
-      await Browser.close();
-    }
-  });
+  platform.initializeAuthListener();
 }
 
 export async function postRefresh(): Promise<boolean> {

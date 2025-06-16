@@ -173,7 +173,7 @@ export class JoinPrivateLobbyModal extends LitElement {
 
   private async checkActiveLobby(lobbyId: string): Promise<boolean> {
     const config = await getServerConfigFromClient();
-    const url = `${process.env.API_BASE_URL || ""}/${config.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
+    const url = `${process.env.APP_BASE_URL || ""}/${config.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
 
     const response = await fetch(url, {
       method: "GET",

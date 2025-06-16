@@ -29,7 +29,7 @@ export async function getServerConfigFromClient(): Promise<ServerConfig> {
   if (cachedSC) {
     return cachedSC;
   }
-  const response = await fetch(`${process.env.API_BASE_URL}/api/env`);
+  const response = await fetch(`${process.env.APP_BASE_URL}/api/env`);
 
   if (!response.ok) {
     throw new Error(

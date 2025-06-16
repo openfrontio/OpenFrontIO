@@ -1,5 +1,4 @@
 import cors from "cors";
-import { getLocalIP } from "../../webpack.config";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 
@@ -21,10 +20,6 @@ switch (config.env()) {
       "http://localhost",
       "http://localhost:8787",
     );
-    const localIp = getLocalIP();
-    if (localIp) {
-      allowedOrigins.push(`http://${localIp}:9000`);
-    }
     break;
   }
 }
