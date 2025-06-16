@@ -182,7 +182,7 @@ export class GameServer {
 
     this.allClients.set(client.clientID, client);
 
-    client.ws.removeAllListeners("message");
+    client.ws.removeAllListeners();
     client.ws.on(
       "message",
       gatekeeper.wsHandler(client.ip, async (message: string) => {
@@ -240,7 +240,6 @@ export class GameServer {
         }
       }),
     );
-    client.ws.removeAllListeners("close");
     client.ws.on("close", () => {
       this.log.info("client disconnected", {
         clientID: client.clientID,
@@ -250,7 +249,6 @@ export class GameServer {
         (c) => c.clientID !== client.clientID,
       );
     });
-    client.ws.removeAllListeners("error");
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
         client.ws.close(1002);
