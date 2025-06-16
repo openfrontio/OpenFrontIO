@@ -174,6 +174,8 @@ export class GameServer {
 
     this.allClients.set(client.clientID, client);
 
+    client.ws.removeAllListeners();
+
     client.ws.on(
       "message",
       gatekeeper.wsHandler(client.ip, async (message: string) => {
