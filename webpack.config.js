@@ -159,7 +159,7 @@ export default async (env, argv) => {
       }),
       new webpack.DefinePlugin({
         "process.env.WEBSOCKET_URL": JSON.stringify(
-          appBaseUrl.split("://")[1], // remove protocol
+          appBaseUrl ? appBaseUrl.split("://")[1] : "", // remove protocol
         ),
         "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
         "process.env.GIT_COMMIT": JSON.stringify(gitCommit),

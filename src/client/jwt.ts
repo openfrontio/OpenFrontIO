@@ -11,46 +11,53 @@ import {
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
 
-interface Platform {
-  getRedirectUri(): string;
-  setLocation(url: string): Promise<void> | void;
-  getApiBaseForLocalhost(): string;
-  initializeAuthListener(): void;
-}
+type Platform =
+  | {
+      kind: "browser";
+      getRedirectUri(): string;
+      setLocation(url: string): void;
+      getApiBaseForLocalhost(): string;
+      initializeAuthListener(): void;
+    }
+  | {
+      kind: "capacitor";
+      getRedirectUri(): string;
+      setLocation(url: string): Promise<void>;
+      getApiBaseForLocalhost(): string;
+      initializeAuthListener(): void;
+    };
 
-class BrowserPlatform implements Platform {
+const browserPlatform: Platform = {
+  kind: "browser",
   getRedirectUri(): string {
     return window.location.href.split("#")[0];
-  }
-
+  },
   setLocation(url: string): void {
     window.location.href = url;
-  }
-
+  },
   getApiBaseForLocalhost(): string {
     return (
       localStorage.getItem("apiHost") ?? (process.env.LOCAL_API_BASE_URL || "")
     );
-  }
-
+  },
   initializeAuthListener(): void {
     // No-op for web
-  }
-}
+  },
+};
 
-class CapacitorPlatform implements Platform {
+const capacitorPlatform: Platform = {
+  kind: "capacitor",
   getRedirectUri(): string {
     return `${process.env.APP_BASE_URL || ""}/discord-redirect.html`;
-  }
-
+  },
   async setLocation(url: string): Promise<void> {
     await Browser.open({ url });
-  }
-
+  },
   getApiBaseForLocalhost(): string {
-    return process.env.LOCAL_API_BASE_URL || "";
-  }
-
+    return process.env.APP_BASE_URL
+      ? process.env.APP_BASE_URL!.replace("9000", "8787")
+      : "http://localhost:8787";
+  },
   initializeAuthListener(): void {
     App.addListener("appUrlOpen", async (data) => {
       try {
@@ -72,13 +79,11 @@ class CapacitorPlatform implements Platform {
         await Browser.close();
       }
     });
-  }
-}
+  },
+};
 
 const platform: Platform =
-  Capacitor.getPlatform() !== "web"
-    ? new CapacitorPlatform()
-    : new BrowserPlatform();
+  Capacitor.getPlatform() !== "web" ? capacitorPlatform : browserPlatform;
 
 function getAudience() {
   const hostname =
