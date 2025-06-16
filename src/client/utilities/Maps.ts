@@ -29,7 +29,7 @@ export function getMapsImage(map: GameMapType): string {
   switch (map) {
     case GameMapType.World:
       return world;
-    case GameMapType.WorldMapGiant:
+    case GameMapType.GiantWorldMap:
       return worldmapgiant;
     case GameMapType.Oceania:
       return oceania;

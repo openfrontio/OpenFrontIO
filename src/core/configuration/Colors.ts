@@ -1,6 +1,11 @@
-import { colord, Colord } from "colord";
+import { colord, Colord, extend, LabColor } from "colord";
+import labPlugin from "colord/plugins/lab";
+import lchPlugin from "colord/plugins/lch";
 import { ColoredTeams, Team } from "../game/Game";
+import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
+extend([lchPlugin]);
+extend([labPlugin]);
 
 export const red: Colord = colord({ r: 235, g: 53, b: 53 }); // Bright Red
 export const blue: Colord = colord({ r: 41, g: 98, b: 255 }); // Royal Blue
@@ -341,18 +346,36 @@ export class ColorAllocator {
 
   constructor(colors: Colord[], fallback: Colord[]) {
     this.availableColors = [...colors];
-    this.fallbackColors = [...fallback];
+    this.fallbackColors = [...colors, ...fallback];
   }
 
   assignColor(id: string): Colord {
     if (this.assigned.has(id)) {
       return this.assigned.get(id)!;
     }
+
     if (this.availableColors.length === 0) {
       this.availableColors = [...this.fallbackColors];
     }
-    const index = 0;
-    const color = this.availableColors.splice(index, 1)[0];
+
+    const MIN_DELTA_E = 25; // Minimum Delta E for distinct colors
+    const assignedColors = Array.from(this.assigned.values());
+    const rand = new PseudoRandom(simpleHash(id));
+    const shuffledColors = rand.shuffleArray(this.availableColors);
+
+    const selection = selectDistinctColor(
+      shuffledColors,
+      assignedColors,
+      MIN_DELTA_E,
+    );
+
+    let selectedIndex = 0;
+
+    if (selection) {
+      selectedIndex = selection.selectedIndex;
+    }
+
+    const color = this.availableColors.splice(selectedIndex, 1)[0];
     this.assigned.set(id, color);
     return color;
   }
@@ -381,4 +404,33 @@ export class ColorAllocator {
         ];
     }
   }
+}
+
+// Select a distinct color from the available colors that is sufficiently different from the assigned colors
+export function selectDistinctColor(
+  shuffledColors: Colord[],
+  assignedColors: Colord[],
+  minDeltaE: number,
+): { selectedIndex: number; selectedColor: Colord } | null {
+  const shuffled = shuffledColors.map((color, index) => ({ color, index }));
+
+  for (const { color, index } of shuffled) {
+    const isDistinctEnough = assignedColors.every(
+      (assigned) => deltaE76(color.toLab(), assigned.toLab()) >= minDeltaE,
+    );
+    if (isDistinctEnough) {
+      return { selectedIndex: index, selectedColor: color };
+    }
+  }
+
+  return null;
+}
+
+// Calculate Delta E using the CIE76 formula
+export function deltaE76(c1: LabColor, c2: LabColor) {
+  return Math.sqrt(
+    Math.pow(c1.l - c2.l, 2) +
+      Math.pow(c1.a - c2.a, 2) +
+      Math.pow(c1.b - c2.b, 2),
+  );
 }
