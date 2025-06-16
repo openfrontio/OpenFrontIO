@@ -35,6 +35,8 @@ export enum GameUpdateType {
   AllianceRequestReply,
   BrokeAlliance,
   AllianceExpired,
+  VoteForPeace,
+  VoteForPeaceReply,
   TargetPlayer,
   Emoji,
   Win,
@@ -50,6 +52,8 @@ export type GameUpdate =
   | AllianceRequestReplyUpdate
   | BrokeAllianceUpdate
   | AllianceExpiredUpdate
+  | VoteForPeaceUpdate
+  | VoteForPeaceReplyUpdate
   | DisplayMessageUpdate
   | DisplayChatMessageUpdate
   | TargetPlayerUpdate
@@ -150,6 +154,19 @@ export interface AllianceExpiredUpdate {
   player2ID: number;
 }
 
+export interface VoteForPeaceUpdate {
+  type: GameUpdateType.VoteForPeace;
+  playerID: number;
+  leaderID: number;
+  participants: string[];
+}
+
+export interface VoteForPeaceReplyUpdate {
+  type: GameUpdateType.VoteForPeaceReply;
+  playerID: number;
+  accepted: boolean;
+}
+
 export interface TargetPlayerUpdate {
   type: GameUpdateType.TargetPlayer;
   playerID: number;
@@ -184,6 +201,7 @@ export interface WinUpdate {
   allPlayersStats: AllPlayersStats;
   // Player id or team name.
   winner: ["player", number] | ["team", Team];
+  allianceWin: boolean;
 }
 
 export interface HashUpdate {

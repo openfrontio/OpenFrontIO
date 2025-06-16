@@ -60,6 +60,13 @@ export class SendAllianceReplyIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendAllianceWinVoteReplyIntentEvent implements GameEvent {
+  constructor(
+    public readonly recipient: PlayerView,
+    public readonly accepted: boolean,
+  ) {}
+}
+
 export class SendSpawnIntentEvent implements GameEvent {
   constructor(public readonly cell: Cell) {}
 }
@@ -186,6 +193,9 @@ export class Transport {
     );
     this.eventBus.on(SendAllianceReplyIntentEvent, (e) =>
       this.onAllianceRequestReplyUIEvent(e),
+    );
+    this.eventBus.on(SendAllianceWinVoteReplyIntentEvent, (e) =>
+      this.onAllianceWinVoteReplyUIEvent(e),
     );
     this.eventBus.on(SendBreakAllianceIntentEvent, (e) =>
       this.onBreakAllianceRequestUIEvent(e),
@@ -391,6 +401,17 @@ export class Transport {
       type: "allianceRequestReply",
       clientID: this.lobbyConfig.clientID,
       requestor: event.requestor.id(),
+      accept: event.accepted,
+    });
+  }
+
+  private onAllianceWinVoteReplyUIEvent(
+    event: SendAllianceWinVoteReplyIntentEvent,
+  ) {
+    this.sendIntent({
+      type: "allianceWinVoteReply",
+      clientID: this.lobbyConfig.clientID,
+      recipient: event.recipient.id(),
       accept: event.accepted,
     });
   }
