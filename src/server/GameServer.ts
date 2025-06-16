@@ -13,6 +13,7 @@ import {
   Intent,
   PlayerRecord,
   ServerDesyncSchema,
+  ServerErrorMessage,
   ServerPrestartMessageSchema,
   ServerStartGameMessageSchema,
   ServerTurnMessageSchema,
@@ -193,6 +194,12 @@ export class GameServer {
             this.log.error("Failed to parse client message", error, {
               clientID: client.clientID,
             });
+            client.ws.send(
+              JSON.stringify({
+                type: "error",
+                error: error,
+              } satisfies ServerErrorMessage),
+            );
             client.ws.close();
             return;
           }
@@ -543,6 +550,12 @@ export class GameServer {
         clientID: client.clientID,
         persistentID: client.persistentID,
       });
+      client.ws.send(
+        JSON.stringify({
+          type: "error",
+          error: "Kicked from game (you may have been playing on another tab)",
+        } satisfies ServerErrorMessage),
+      );
       client.ws.close(1000, "Kicked from game");
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== clientID,
