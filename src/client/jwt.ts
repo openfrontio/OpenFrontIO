@@ -28,12 +28,16 @@ function getToken(): string | null {
     const token = params.get("token");
     if (token) {
       localStorage.setItem("token", token);
+      params.delete("token");
+      params.toString();
     }
     // Clean the URL
     history.replaceState(
       null,
       "",
-      window.location.pathname + window.location.search,
+      window.location.pathname +
+        window.location.search +
+        (params.size > 0 ? "#" + params.toString() : ""),
     );
   }
   return localStorage.getItem("token");

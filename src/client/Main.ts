@@ -1,4 +1,3 @@
-import page from "page";
 import favicon from "../../resources/images/Favicon.svg";
 import { GameRecord, GameStartInfo } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
@@ -247,20 +246,37 @@ class Client {
     } else {
       document.documentElement.classList.remove("dark");
     }
-    page("/join/:lobbyId", (ctx) => {
-      if (ctx.init && sessionStorage.getItem("inLobby")) {
-        // On page reload, go back home
-        page("/");
-        return;
+
+    const { hash } = window.location;
+    if (hash.startsWith("#")) {
+      const params = new URLSearchParams(hash.slice(1));
+      const lobbyId = params.get("join");
+      if (lobbyId) {
+        this.joinModal.open(lobbyId);
+        console.log(`joining lobby ${lobbyId}`);
       }
-      const lobbyId = ctx.params.lobbyId;
+    }
 
-      this.joinModal.open(lobbyId);
+    // Handle forward/back buttons
+    window.addEventListener("popstate", (event) => {
+      console.log(event);
 
-      console.log(`joining lobby ${lobbyId}`);
+      this.joinModal.close();
+      if (this.gameStop !== null) {
+        this.handleLeaveLobby();
+      }
+
+      const { hash } = window.location;
+      if (hash.startsWith("#")) {
+        const params = new URLSearchParams(hash.slice(1));
+        const lobbyId = params.get("join");
+        if (lobbyId) {
+          this.joinModal.open(lobbyId);
+          console.log(`joining lobby ${lobbyId}`);
+        }
+      }
     });
 
-    page();
     function updateSliderProgress(slider) {
       const percent =
         ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
@@ -343,8 +359,7 @@ class Client {
         });
 
         if (event.detail.gameConfig?.gameType !== GameType.Singleplayer) {
-          window.history.pushState({}, "", `/join/${lobby.gameID}`);
-          sessionStorage.setItem("inLobby", "true");
+          history.pushState(null, "", `#join=${lobby.gameID}`);
         }
       },
     );
