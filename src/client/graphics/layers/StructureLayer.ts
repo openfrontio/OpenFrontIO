@@ -27,6 +27,11 @@ const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
 const reloadingColor = colord({ r: 255, g: 0, b: 0 });
 const selectedUnitColor = colord({ r: 0, g: 255, b: 255 });
 
+// Base radius values and scaling factor for unit borders and territories
+const BASE_BORDER_RADIUS = 16.5;
+const BASE_TERRITORY_RADIUS = 13.5;
+const RADIUS_SCALE_FACTOR = 0.5;
+
 type DistanceFunction = typeof euclDistFN;
 
 enum UnitBorderType {
@@ -46,41 +51,43 @@ interface UnitRenderConfig {
 export class StructureLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
-  private unitIcons: Map<string, ImageData> = new Map();
+  private unitIcons: Map<string, HTMLImageElement> = new Map();
   private theme: Theme;
   private selectedStructureUnit: UnitView | null = null;
   private previouslySelected: UnitView | null = null;
+  private tempCanvas: HTMLCanvasElement;
+  private tempContext: CanvasRenderingContext2D;
 
   // Configuration for supported unit types only
   private readonly unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
     [UnitType.Port]: {
       icon: anchorIcon,
-      borderRadius: 8.525,
-      territoryRadius: 6.525,
+      borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
+      territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
       borderType: UnitBorderType.Round,
     },
     [UnitType.City]: {
       icon: cityIcon,
-      borderRadius: 8.525,
-      territoryRadius: 6.525,
+      borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
+      territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
       borderType: UnitBorderType.Round,
     },
     [UnitType.MissileSilo]: {
       icon: missileSiloIcon,
-      borderRadius: 8.525,
-      territoryRadius: 6.525,
+      borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
+      territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
       borderType: UnitBorderType.Square,
     },
     [UnitType.DefensePost]: {
       icon: shieldIcon,
-      borderRadius: 8.525,
-      territoryRadius: 6.525,
+      borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
+      territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
       borderType: UnitBorderType.Hexagon,
     },
     [UnitType.SAMLauncher]: {
       icon: SAMMissileIcon,
-      borderRadius: 8.525,
-      territoryRadius: 6.525,
+      borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
+      territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
       borderType: UnitBorderType.Square,
     },
   };
@@ -98,17 +105,21 @@ export class StructureLayer implements Layer {
     }
     this.unitInfoModal = unitInfoModal;
     this.theme = game.config().theme();
+    this.tempCanvas = document.createElement("canvas");
+    const tempContext = this.tempCanvas.getContext("2d");
+    if (tempContext === null) throw new Error("2d context not supported");
+    this.tempContext = tempContext;
     this.loadIconData();
     this.loadIcon("reloadingSam", {
       icon: SAMMissileReloadingIcon,
-      borderRadius: 8.525,
-      territoryRadius: 6.525,
+      borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
+      territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
       borderType: UnitBorderType.Square,
     });
     this.loadIcon("reloadingSilo", {
       icon: MissileSiloReloadingIcon,
-      borderRadius: 8.525,
-      territoryRadius: 6.525,
+      borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
+      territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
       borderType: UnitBorderType.Square,
     });
   }
@@ -117,25 +128,13 @@ export class StructureLayer implements Layer {
     const image = new Image();
     image.src = config.icon;
     image.onload = () => {
-      // Create temporary canvas for icon processing
-      const tempCanvas = document.createElement("canvas");
-      const tempContext = tempCanvas.getContext("2d");
-      if (tempContext === null) throw new Error("2d context not supported");
-      tempCanvas.width = image.width;
-      tempCanvas.height = image.height;
-
-      // Draw the unit icon
-      tempContext.drawImage(image, 0, 0);
-      const iconData = tempContext.getImageData(
-        0,
-        0,
-        tempCanvas.width,
-        tempCanvas.height,
-      );
-      this.unitIcons.set(unitType, iconData);
+      this.unitIcons.set(unitType, image);
       console.log(
-        `icon data width height: ${iconData.width}, ${iconData.height}`,
+        `icon loaded: ${unitType}, size: ${image.width}x${image.height}`,
       );
+    };
+    image.onerror = () => {
+      console.error(`Failed to load icon for ${unitType}: ${config.icon}`);
     };
   }
 
@@ -170,8 +169,13 @@ export class StructureLayer implements Layer {
     const context = this.canvas.getContext("2d", { alpha: true });
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
-    this.canvas.width = this.game.width();
-    this.canvas.height = this.game.height();
+
+    // Enable smooth scaling
+    this.context.imageSmoothingEnabled = true;
+    this.context.imageSmoothingQuality = "high";
+
+    this.canvas.width = this.game.width() * 2;
+    this.canvas.height = this.game.height() * 2;
     this.game.units().forEach((u) => this.handleUnitRendering(u));
   }
 
@@ -240,16 +244,19 @@ export class StructureLayer implements Layer {
     if (!this.isUnitTypeSupported(unitType)) return;
 
     const config = this.unitConfigs[unitType];
-    let icon: ImageData | undefined;
+    let icon: HTMLImageElement | undefined;
+    let borderColor = this.theme.borderColor(unit.owner());
 
+    // Handle cooldown states and special icons
     if (unitType === UnitType.SAMLauncher && unit.isInCooldown()) {
       icon = this.unitIcons.get("reloadingSam");
-    } else {
-      icon = this.unitIcons.get(iconType);
-    }
-
-    if (unitType === UnitType.MissileSilo && unit.isInCooldown()) {
+      borderColor = reloadingColor;
+    } else if (unitType === UnitType.MissileSilo && unit.isInCooldown()) {
       icon = this.unitIcons.get("reloadingSilo");
+      borderColor = reloadingColor;
+    } else if (unit.type() === UnitType.Construction) {
+      icon = this.unitIcons.get(iconType);
+      borderColor = underConstructionColor;
     } else {
       icon = this.unitIcons.get(iconType);
     }
@@ -267,33 +274,23 @@ export class StructureLayer implements Layer {
 
     if (!unit.isActive()) return;
 
-    let borderColor = this.theme.borderColor(unit.owner());
-    if (unitType === UnitType.SAMLauncher && unit.isInCooldown()) {
-      borderColor = reloadingColor;
-    } else if (unit.type() === UnitType.Construction) {
-      borderColor = underConstructionColor;
-    }
-
-    if (unitType === UnitType.MissileSilo && unit.isInCooldown()) {
-      borderColor = reloadingColor;
-    } else if (unit.type() === UnitType.Construction) {
-      borderColor = underConstructionColor;
-    }
-
     if (this.selectedStructureUnit === unit) {
       borderColor = selectedUnitColor;
     }
 
     this.drawBorder(unit, borderColor, config, drawFunction);
 
-    const startX = this.game.x(unit.tile()) - Math.floor(icon.width / 2);
-    const startY = this.game.y(unit.tile()) - Math.floor(icon.height / 2);
-    // Draw the icon
-    this.renderIcon(icon, startX, startY, icon.width, icon.height, unit);
+    // Render icon at 1/2 scale for better quality
+    const scaledWidth = icon.width >> 1;
+    const scaledHeight = icon.height >> 1;
+    const startX = this.game.x(unit.tile()) - (scaledWidth >> 1);
+    const startY = this.game.y(unit.tile()) - (scaledHeight >> 1);
+
+    this.renderIcon(icon, startX, startY, scaledWidth, scaledHeight, unit);
   }
 
   private renderIcon(
-    iconData: ImageData,
+    image: HTMLImageElement,
     startX: number,
     startY: number,
     width: number,
@@ -304,36 +301,39 @@ export class StructureLayer implements Layer {
     if (unit.type() === UnitType.Construction) {
       color = underConstructionColor;
     }
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const iconIndex = (y * width + x) * 4;
-        const alpha = iconData.data[iconIndex + 3];
 
-        if (alpha > 0) {
-          const targetX = startX + x;
-          const targetY = startY + y;
+    // Make temp canvas at the final render size (2x scale)
+    this.tempCanvas.width = width * 2;
+    this.tempCanvas.height = height * 2;
 
-          if (
-            targetX >= 0 &&
-            targetX < this.game.width() &&
-            targetY >= 0 &&
-            targetY < this.game.height()
-          ) {
-            this.paintCell(new Cell(targetX, targetY), color, alpha);
-          }
-        }
-      }
-    }
+    // Enable smooth scaling
+    this.tempContext.imageSmoothingEnabled = true;
+    this.tempContext.imageSmoothingQuality = "high";
+
+    // Draw the image at final size with high quality scaling
+    this.tempContext.drawImage(image, 0, 0, width * 2, height * 2);
+
+    // Apply color tinting using multiply blend mode
+    this.tempContext.globalCompositeOperation = "multiply";
+    this.tempContext.fillStyle = color.toRgbString();
+    this.tempContext.fillRect(0, 0, width * 2, height * 2);
+
+    // Restore the alpha channel
+    this.tempContext.globalCompositeOperation = "destination-in";
+    this.tempContext.drawImage(image, 0, 0, width * 2, height * 2);
+
+    // Draw the final result to the main canvas
+    this.context.drawImage(this.tempCanvas, startX * 2, startY * 2);
   }
 
   paintCell(cell: Cell, color: Colord, alpha: number) {
     this.clearCell(cell);
     this.context.fillStyle = color.alpha(alpha / 255).toRgbString();
-    this.context.fillRect(cell.x, cell.y, 1, 1);
+    this.context.fillRect(cell.x * 2, cell.y * 2, 2, 2);
   }
 
   clearCell(cell: Cell) {
-    this.context.clearRect(cell.x, cell.y, 1, 1);
+    this.context.clearRect(cell.x * 2, cell.y * 2, 2, 2);
   }
 
   private findStructureUnitAtCell(

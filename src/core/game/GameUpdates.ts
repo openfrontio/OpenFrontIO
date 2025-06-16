@@ -76,6 +76,7 @@ export interface UnitUpdate {
   isActive: boolean;
   reachedTarget: boolean;
   retreating: boolean;
+  targetable: boolean;
   targetUnitId?: number; // Only for trade ships
   targetTile?: TileRef; // Only for nukes
   health?: number;
@@ -172,7 +173,7 @@ export type DisplayChatMessageUpdate = {
   type: GameUpdateType.DisplayChatEvent;
   key: string;
   category: string;
-  variables?: Record<string, string>;
+  target: string | undefined;
   playerID: number | null;
   isFrom: boolean;
   recipient: string;

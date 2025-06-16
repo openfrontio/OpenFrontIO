@@ -179,10 +179,13 @@ export const AttackIntentSchema = BaseIntentSchema.extend({
   troops: z.number().nullable(),
 });
 
+export const UsernameSchema = SafeString;
+export const FlagSchema = z.string().max(128).optional();
+
 export const SpawnIntentSchema = BaseIntentSchema.extend({
-  flag: z.string().nullable(),
   type: z.literal("spawn"),
-  name: SafeString,
+  name: UsernameSchema,
+  flag: FlagSchema,
   playerType: PlayerTypeSchema,
   x: z.number(),
   y: z.number(),
@@ -287,7 +290,7 @@ export const QuickChatIntentSchema = BaseIntentSchema.extend({
   type: z.literal("quick_chat"),
   recipient: ID,
   quickChatKey: QuickChatKeySchema,
-  variables: z.record(SafeString).optional(),
+  target: ID.optional(),
 });
 
 export const MarkDisconnectedIntentSchema = BaseIntentSchema.extend({
@@ -346,8 +349,8 @@ export const ServerPrestartMessageSchema = ServerBaseMessageSchema.extend({
 
 export const PlayerSchema = z.object({
   clientID: ID,
-  username: SafeString,
-  flag: SafeString.optional(),
+  username: UsernameSchema,
+  flag: FlagSchema,
 });
 
 export const GameStartInfoSchema = z.object({
@@ -372,7 +375,7 @@ export const ServerDesyncSchema = ServerBaseMessageSchema.extend({
   yourHash: z.number().optional(),
 });
 
-export const ServerMessageSchema = z.union([
+export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
   ServerStartGameMessageSchema,
@@ -424,11 +427,11 @@ export const ClientJoinMessageSchema = z.object({
   token: TokenSchema, // WARNING: PII
   gameID: ID,
   lastTurn: z.number(), // The last turn the client saw.
-  username: SafeString,
-  flag: SafeString.optional(),
+  username: UsernameSchema,
+  flag: FlagSchema,
 });
 
-export const ClientMessageSchema = z.union([
+export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientSendWinnerSchema,
   ClientPingMessageSchema,
   ClientIntentMessageSchema,
