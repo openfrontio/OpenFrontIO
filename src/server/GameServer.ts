@@ -182,6 +182,10 @@ export class GameServer {
 
     this.allClients.set(client.clientID, client);
 
+    client.ws.removeAllListeners();
+
+    client.ws.removeAllListeners();
+
     client.ws.removeAllListeners("message");
     client.ws.on(
       "message",
