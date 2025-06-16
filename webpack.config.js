@@ -7,7 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import webpack from "webpack";
 
-export function getLocalIP() {
+function getLocalIP() {
   const interfaces = os.networkInterfaces();
   for (const interfaceName in interfaces) {
     const networkInterface = interfaces[interfaceName];
@@ -124,9 +124,6 @@ export default async (env, argv) => {
           __dirname,
           "node_modules/protobufjs/minimal.js",
         ),
-      },
-      fallback: {
-        os: path.resolve(__dirname, "node_modules/os-browserify/browser.js"),
       },
     },
     plugins: [

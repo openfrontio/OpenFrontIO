@@ -11,11 +11,11 @@
       if (window.location.hash.startsWith("#token=")) {
         const token = window.location.hash.substring("#token=".length);
         const redirectUrl = `${appDeepLink}?token=${encodeURIComponent(token)}`;
-        window.location.href = redirectUrl;
+        window.location.replace(redirectUrl);
       } else {
         const error = window.location.hash.substring(1);
         const redirectUrl = `${appDeepLink}?${error}`;
-        window.location.href = redirectUrl;
+        window.location.replace(redirectUrl);
       }
     </script>
   </body>
