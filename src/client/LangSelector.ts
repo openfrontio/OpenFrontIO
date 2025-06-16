@@ -7,7 +7,7 @@ import bg from "../../resources/lang/bg_BG.json";
 import bn from "../../resources/lang/bn_BD.json";
 import cs from "../../resources/lang/cs_CZ.json";
 import de from "../../resources/lang/de_DE.json";
-import en from "../../resources/lang/en.json";
+import en from "../../resources/lang/en_001.json";
 import eo from "../../resources/lang/eo_UY.json";
 import es from "../../resources/lang/es_ES.json";
 import fr from "../../resources/lang/fr_FR.json";
@@ -17,7 +17,7 @@ import it from "../../resources/lang/it_IT.json";
 import ja from "../../resources/lang/ja_JP.json";
 import nl from "../../resources/lang/nl_NL.json";
 import pl from "../../resources/lang/pl_PL.json";
-import pt_br from "../../resources/lang/pt_BR.json";
+import pt_BR from "../../resources/lang/pt_BR.json";
 import ru from "../../resources/lang/ru_RU.json";
 import sh from "../../resources/lang/sh_HR.json";
 import tp from "../../resources/lang/tp_TP.json";
@@ -49,7 +49,7 @@ export class LangSelector extends LitElement {
     ja,
     nl,
     pl,
-    pt_br,
+    pt_BR,
     ru,
     sh,
     tr,
