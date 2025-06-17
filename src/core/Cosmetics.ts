@@ -21,7 +21,7 @@ export class PatternDecoder {
     }
 
     const version = bytes[0];
-    if (version !== 1) {
+    if (version !== 0) {
       throw new Error(`Unrecognized pattern version ${version}.`);
     }
 
@@ -64,7 +64,7 @@ export class PatternDecoder {
       if (bytes.length < 3) return false;
 
       const version = bytes[0];
-      if (version !== 1) return false;
+      if (version !== 0) return false;
 
       const byte1 = bytes[1];
       const byte2 = bytes[2];
