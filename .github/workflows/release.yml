@@ -3,7 +3,7 @@ name: 🏷️ Release
 on:
   release:
     types:
-      - published
+      - created
       - edited
 
 permissions: {}
@@ -16,9 +16,11 @@ jobs:
       - name: 🖨 Print release info
         env:
           RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+          RELEASE_NAME: ${{ github.event.release.name }}
           RELEASE_BODY: ${{ github.event.release.body }}
         run: |
           cat <<EOF >> $GITHUB_STEP_SUMMARY
+          Name: ${RELEASE_NAME}
           Tag: ${RELEASE_TAG_NAME}
           Changelog:
           ${RELEASE_BODY}
