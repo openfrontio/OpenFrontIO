@@ -240,18 +240,58 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.ports")}:
           ${player.units(UnitType.Port).length}
+          ${player
+            .units(UnitType.Port)
+            .map((unit) => unit.level())
+            .reduce((a, b) => a + b, 0) > 1
+            ? html`(${translateText("player_info_overlay.levels")}:
+              ${player
+                .units(UnitType.Port)
+                .map((unit) => unit.level())
+                .reduce((a, b) => a + b, 0)})`
+            : ""}
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.cities")}:
           ${player.units(UnitType.City).length}
+          ${player
+            .units(UnitType.City)
+            .map((unit) => unit.level())
+            .reduce((a, b) => a + b, 0) > 1
+            ? html`(${translateText("player_info_overlay.levels")}:
+              ${player
+                .units(UnitType.City)
+                .map((unit) => unit.level())
+                .reduce((a, b) => a + b, 0)})`
+            : ""}
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.missile_launchers")}:
           ${player.units(UnitType.MissileSilo).length}
+          ${player
+            .units(UnitType.MissileSilo)
+            .map((unit) => unit.level())
+            .reduce((a, b) => a + b, 0) > 1
+            ? html`(${translateText("player_info_overlay.levels")}:
+              ${player
+                .units(UnitType.MissileSilo)
+                .map((unit) => unit.level())
+                .reduce((a, b) => a + b, 0)})`
+            : ""}
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.sams")}:
           ${player.units(UnitType.SAMLauncher).length}
+          ${player
+            .units(UnitType.SAMLauncher)
+            .map((unit) => unit.level())
+            .reduce((a, b) => a + b, 0) > 1
+            ? html`(${translateText("player_info_overlay.levels")}:
+              ${player
+                .units(UnitType.SAMLauncher)
+                .map((unit) => unit.level())
+                .reduce((a, b) => a + b, 0)})`
+            : ""}
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.warships")}:

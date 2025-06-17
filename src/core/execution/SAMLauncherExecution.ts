@@ -37,18 +37,6 @@ export class SAMLauncherExecution implements Execution {
     this.mg = mg;
   }
 
-  private nukeTargetInRange(nuke: Unit) {
-    const targetTile = nuke.targetTile();
-    if (this.sam === null || targetTile === undefined) {
-      return false;
-    }
-    const targetRangeSquared = this.targetRangeRadius * this.targetRangeRadius;
-    return (
-      this.mg.euclideanDistSquared(this.sam.tile(), targetTile) <
-      targetRangeSquared
-    );
-  }
-
   private getSingleTarget(): Unit | null {
     if (this.sam === null) return null;
     const nukes = this.mg
@@ -60,7 +48,7 @@ export class SAMLauncherExecution implements Execution {
         ({ unit }) =>
           unit.owner() !== this.player &&
           !this.player.isFriendly(unit.owner()) &&
-          this.nukeTargetInRange(unit),
+          unit.isTargetable(),
       );
 
     return (
@@ -155,11 +143,6 @@ export class SAMLauncherExecution implements Execution {
       target = this.getSingleTarget();
     }
 
-    const cooldown = this.sam.ticksLeftInCooldown();
-    if (typeof cooldown === "number" && cooldown >= 0) {
-      this.sam.touch();
-    }
-
     const isSingleTarget = target && !target.targetedBySAM();
     if (
       (isSingleTarget || mirvWarheadTargets.length > 0) &&
@@ -203,6 +186,21 @@ export class SAMLauncherExecution implements Execution {
           throw new Error("target is null");
         }
       }
+    }
+
+    const frontTime = this.sam.ticksLeftInCooldown();
+    if (frontTime === undefined) {
+      return;
+    }
+
+    const cooldown =
+      this.mg.config().SAMCooldown() - (this.mg.ticks() - frontTime);
+    if (typeof cooldown === "number" && cooldown >= 0) {
+      this.sam.touch();
+    }
+
+    if (cooldown <= 0) {
+      this.sam.reloadMissile();
     }
   }
 

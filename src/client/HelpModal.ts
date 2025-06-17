@@ -140,6 +140,7 @@ export class HelpModal extends LitElement {
               alt="Leaderboard"
               title="Leaderboard"
               class="default-image"
+              loading="lazy"
             />
           </div>
           <div>
@@ -159,6 +160,7 @@ export class HelpModal extends LitElement {
               alt="Control panel"
               title="Control panel"
               class="default-image"
+              loading="lazy"
             />
           </div>
           <div>
@@ -189,12 +191,14 @@ export class HelpModal extends LitElement {
                 alt="Event panel"
                 title="Event panel"
                 class="default-image"
+                loading="lazy"
               />
               <img
                 src="/images/helpModal/eventsPanelAttack.webp"
                 alt="Event panel"
                 title="Event panel"
                 class="default-image"
+                loading="lazy"
               />
             </div>
           </div>
@@ -226,6 +230,7 @@ export class HelpModal extends LitElement {
               alt="Options"
               title="Options"
               class="default-image"
+              loading="lazy"
             />
           </div>
           <div>
@@ -253,6 +258,7 @@ export class HelpModal extends LitElement {
               alt="Player info overlay"
               title="Player info overlay"
               class="default-image"
+              loading="lazy"
             />
           </div>
           <div>
@@ -275,12 +281,14 @@ export class HelpModal extends LitElement {
               alt="Radial menu"
               title="Radial menu"
               class="default-image"
+              loading="lazy"
             />
             <img
               src="/images/helpModal/radialMenuAlly.webp"
               alt="Radial menu ally"
               title="Radial menu ally"
               class="default-image"
+              loading="lazy"
             />
           </div>
           <div>
@@ -295,6 +303,7 @@ export class HelpModal extends LitElement {
                   src="/images/InfoIcon.svg"
                   class="inline-block icon"
                   style="fill: white; background: transparent;"
+                  loading="lazy"
                 />
                 <span>${translateText("help_modal.radial_info")}</span>
               </li>
@@ -331,6 +340,7 @@ export class HelpModal extends LitElement {
                 alt="Enemy info panel"
                 title="Enemy info panel"
                 class="info-panel-img"
+                loading="lazy"
               />
             </div>
             <div class="pt-4">
@@ -374,6 +384,7 @@ export class HelpModal extends LitElement {
                 alt="Ally info panel"
                 title="Ally info panel"
                 class="info-panel-img"
+                loading="lazy"
               />
             </div>
             <div class="pt-4">
@@ -483,6 +494,7 @@ export class HelpModal extends LitElement {
                 alt="Number 1 player"
                 title="Number 1 player"
                 class="player-icon-img w-full"
+                loading="lazy"
               />
             </div>
 
@@ -499,6 +511,7 @@ export class HelpModal extends LitElement {
                 alt="Traitor"
                 title="Traitor"
                 class="player-icon-img w-full"
+                loading="lazy"
               />
             </div>
 
@@ -515,6 +528,7 @@ export class HelpModal extends LitElement {
                 alt="Ally"
                 title="Ally"
                 class="player-icon-img w-full"
+                loading="lazy"
               />
             </div>
           </div>
@@ -533,6 +547,7 @@ export class HelpModal extends LitElement {
                 alt="Stopped trading"
                 title="Stopped trading"
                 class="player-icon-img w-full"
+                loading="lazy"
               />
             </div>
 
@@ -549,6 +564,7 @@ export class HelpModal extends LitElement {
                 alt="Alliance Request"
                 title="Alliance Request"
                 class="player-icon-img w-full"
+                loading="lazy"
               />
             </div>
           </div>

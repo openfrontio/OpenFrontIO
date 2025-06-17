@@ -1,0 +1,24 @@
+name: 🏷️ Release
+
+on:
+  release:
+    types:
+      - published
+      - edited
+
+permissions: {}
+
+jobs:
+  print-release-info:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🖨 Print release info
+        env:
+          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+        run: |
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          Tag: ${RELEASE_TAG_NAME}
+          Changelog:
+          ${RELEASE_BODY}
+          EOF

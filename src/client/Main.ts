@@ -1,6 +1,6 @@
-import page from "page";
 import favicon from "../../resources/images/Favicon.svg";
-import { GameRecord, GameStartInfo } from "../core/Schemas";
+import version from "../../resources/version.txt";
+import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
@@ -79,11 +79,17 @@ class Client {
   constructor() {}
 
   initialize(): void {
+    const gameVersion = document.getElementById(
+      "game-version",
+    ) as HTMLDivElement;
+    if (!gameVersion) {
+      console.warn("Game version element not found");
+    }
+    gameVersion.innerText = version;
+
     const newsModal = document.querySelector("news-modal") as NewsModal;
     if (!newsModal) {
       console.warn("News modal element not found");
-    } else {
-      console.log("News modal element found");
     }
     newsModal instanceof NewsModal;
     const newsButton = document.querySelector("news-button") as NewsButton;
@@ -99,13 +105,13 @@ class Client {
     const langSelector = document.querySelector(
       "lang-selector",
     ) as LangSelector;
-    const LanguageModal = document.querySelector(
-      "lang-selector",
+    const languageModal = document.querySelector(
+      "language-modal",
     ) as LanguageModal;
     if (!langSelector) {
       console.warn("Lang selector element not found");
     }
-    if (!LanguageModal) {
+    if (!languageModal) {
       console.warn("Language modal element not found");
     }
 
@@ -259,20 +265,25 @@ class Client {
     } else {
       document.documentElement.classList.remove("dark");
     }
-    page("/join/:lobbyId", (ctx) => {
-      if (ctx.init && sessionStorage.getItem("inLobby")) {
-        // On page reload, go back home
-        page("/");
-        return;
+
+    // Attempt to join lobby
+    this.handleHash();
+
+    const onHashUpdate = () => {
+      // Reset the UI to its initial state
+      this.joinModal.close();
+      if (this.gameStop !== null) {
+        this.handleLeaveLobby();
       }
-      const lobbyId = ctx.params.lobbyId;
 
-      this.joinModal.open(lobbyId);
+      // Attempt to join lobby
+      this.handleHash();
+    };
 
-      console.log(`joining lobby ${lobbyId}`);
-    });
+    // Handle browser navigation & manual hash edits
+    window.addEventListener("popstate", onHashUpdate);
+    window.addEventListener("hashchange", onHashUpdate);
 
-    page();
     function updateSliderProgress(slider) {
       const percent =
         ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
@@ -285,6 +296,18 @@ class Client {
         updateSliderProgress(slider);
         slider.addEventListener("input", () => updateSliderProgress(slider));
       });
+  }
+
+  private handleHash() {
+    const { hash } = window.location;
+    if (hash.startsWith("#")) {
+      const params = new URLSearchParams(hash.slice(1));
+      const lobbyId = params.get("join");
+      if (lobbyId && ID.safeParse(lobbyId).success) {
+        this.joinModal.open(lobbyId);
+        console.log(`joining lobby ${lobbyId}`);
+      }
+    }
   }
 
   private async handleJoinLobby(event: CustomEvent) {
@@ -363,8 +386,7 @@ class Client {
         });
 
         if (event.detail.gameConfig?.gameType !== GameType.Singleplayer) {
-          window.history.pushState({}, "", `/join/${lobby.gameID}`);
-          sessionStorage.setItem("inLobby", "true");
+          history.pushState(null, "", `#join=${lobby.gameID}`);
         }
       },
     );

@@ -1,6 +1,7 @@
 import { NukeExecution } from "../src/core/execution/NukeExecution";
 import { SAMLauncherExecution } from "../src/core/execution/SAMLauncherExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
+import { UpgradeStructureExecution } from "../src/core/execution/UpgradeStructureExecution";
 import {
   Game,
   Player,
@@ -94,6 +95,7 @@ describe("SAM", () => {
 
   test("sam should cooldown as long as configured", async () => {
     const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
     expect(sam.isInCooldown()).toBeFalsy();
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
@@ -103,6 +105,7 @@ describe("SAM", () => {
     executeTicks(game, 3);
 
     expect(nuke.isActive()).toBeFalsy();
+
     for (let i = 0; i < game.config().SAMCooldown() - 3; i++) {
       game.executeNextTick();
       expect(sam.isInCooldown()).toBeTruthy();
@@ -130,10 +133,37 @@ describe("SAM", () => {
     expect([sam1, sam2].filter((s) => s.isInCooldown())).toHaveLength(1);
   });
 
-  test("SAMs should target only nukes aimed at nearby targets", async () => {
+  test("SAMs should target close to launch site", async () => {
     const targetDistance = 199;
-    // Close SAM: should not intercept anything
-    const sam1 = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    // Close SAM: should intercept the nuke
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
+
+    const nukeExecution = new NukeExecution(
+      UnitType.AtomBomb,
+      attacker,
+      game.ref(targetDistance, 1),
+      null,
+    );
+    game.addExecution(nukeExecution);
+    // Long distance nuke: compute the proper number of ticks
+    const ticksToExecute = Math.ceil(
+      targetDistance / game.config().defaultNukeSpeed(),
+    );
+    executeTicks(game, ticksToExecute);
+
+    expect(nukeExecution.isActive()).toBeFalsy();
+    expect(sam.isInCooldown()).toBeTruthy();
+  });
+
+  test("SAMs should target only nukes aimed at nearby targets if not close to launch site", async () => {
+    const targetDistance = 199;
+    // Middle SAM: should not intercept the nuke
+    const sam1 = defender.buildUnit(
+      UnitType.SAMLauncher,
+      game.ref(targetDistance / 2, 1),
+      {},
+    );
     game.addExecution(new SAMLauncherExecution(defender, null, sam1));
 
     // Far SAM: Should intercept the nuke. Use the far_defender so the SAM can be built
@@ -160,5 +190,19 @@ describe("SAM", () => {
     expect(nukeExecution.isActive()).toBeFalsy();
     expect(sam1.isInCooldown()).toBeFalsy();
     expect(sam2.isInCooldown()).toBeTruthy();
+  });
+
+  test("SAM should have increased level after upgrade", async () => {
+    defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    expect(defender.units(UnitType.SAMLauncher)[0].level()).toEqual(1);
+
+    const upgradeStructureExecution = new UpgradeStructureExecution(
+      defender,
+      defender.units(UnitType.SAMLauncher)[0].id(),
+    );
+    game.addExecution(upgradeStructureExecution);
+    executeTicks(game, 2);
+
+    expect(defender.units(UnitType.SAMLauncher)[0].level()).toEqual(2);
   });
 });
