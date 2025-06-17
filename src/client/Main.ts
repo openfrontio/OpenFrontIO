@@ -79,7 +79,9 @@ class Client {
     } else {
       console.log("News button element found");
     }
-    newsModal.markdown = changelog;
+    fetch(changelog)
+      .then((response) => (response.ok ? response.text() : "Failed to load"))
+      .then((changelog) => (newsModal.markdown = changelog));
 
     // Comment out to show news button.
     // newsButton.hidden = true;
