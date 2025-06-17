@@ -38,7 +38,6 @@
     "@types/sinon": "^17.0.3",
     "@types/systeminformation": "^3.23.1",
     "@types/uuid": "^10.0.0",
-    "@types/winston": "^2.4.4",
     "@types/ws": "^8.5.11",
     "autoprefixer": "^10.4.20",
     "babel-jest": "^29.7.0",
