@@ -414,57 +414,36 @@ export class EventsDisplay extends LitElement implements Layer {
 
   onAllianceRequestReplyEvent(update: AllianceRequestReplyUpdate) {
     const myPlayer = this.game.myPlayer();
-    if (
-      !myPlayer ||
-      (update.request.requestorID !== myPlayer.smallID() &&
-        update.request.recipientID !== myPlayer.smallID())
-    ) {
+    if (!myPlayer) return;
+
+    const { requestorID, recipientID } = update.request;
+    const myID = myPlayer.smallID();
+
+    if (requestorID !== myID && recipientID !== myID) {
       return;
     }
 
-    if (update.request.requestorID === myPlayer.smallID()) {
-      const recipient = this.game.playerBySmallID(
-        update.request.recipientID,
-      ) as PlayerView;
-
-      this.addEvent({
-        description: translateText(
-          update.accepted
-            ? "alliance.request_accepted"
-            : "alliance.request_rejected",
-          { name: recipient.name() },
-        ),
-        type: update.accepted
-          ? MessageType.ALLIANCE_ACCEPTED
-          : MessageType.ALLIANCE_REJECTED,
-        highlight: true,
-        createdAt: this.game.ticks(),
-        focusID: update.request.recipientID,
-      });
+    // Only show message to recipient if it was accepted
+    if (!update.accepted && requestorID !== myID) {
       return;
     }
 
-    if (!update.accepted) {
-      return;
-    }
-
-    const requestor = this.game.playerBySmallID(
-      update.request.requestorID,
-    ) as PlayerView;
+    const otherID = requestorID === myID ? recipientID : requestorID;
+    const otherPlayer = this.game.playerBySmallID(otherID) as PlayerView;
 
     this.addEvent({
       description: translateText(
         update.accepted
           ? "alliance.request_accepted"
           : "alliance.request_rejected",
-        { name: requestor.name() },
+        { name: otherPlayer.name() },
       ),
       type: update.accepted
         ? MessageType.ALLIANCE_ACCEPTED
         : MessageType.ALLIANCE_REJECTED,
       highlight: true,
       createdAt: this.game.ticks(),
-      focusID: update.request.requestorID,
+      focusID: otherID,
     });
   }
 
