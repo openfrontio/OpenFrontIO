@@ -145,7 +145,7 @@ const SafeString = z
   )
   .max(1000);
 
-const PersistentIdSchema = z.string().uuid();
+export const PersistentIdSchema = z.string().uuid();
 const JwtTokenSchema = z.string().jwt();
 const TokenSchema = z
   .string()
@@ -162,7 +162,7 @@ const EmojiSchema = z
   .number()
   .nonnegative()
   .max(flattenedEmojiTable.length - 1);
-const ID = z
+export const ID = z
   .string()
   .regex(/^[a-zA-Z0-9]+$/)
   .length(8);

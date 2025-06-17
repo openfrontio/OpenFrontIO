@@ -42,7 +42,8 @@ async function setupTunnels() {
 
   const domainToService = new Map<string, string>().set(
     config.subdomain(),
-    `http://localhost:3000`,
+    // TODO: change to 3000 when we have a proper tunnel setup.
+    `http://localhost:80`,
   );
 
   for (let i = 0; i < config.numWorkers(); i++) {

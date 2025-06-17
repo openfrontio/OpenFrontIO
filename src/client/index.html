@@ -45,61 +45,6 @@
         filter: blur(4px) brightness(0.7);
       }
 
-      .left-gutter-ad {
-        position: fixed;
-        left: 0;
-        top: 200px;
-        /* Changed from top: 50% */
-        transform: none;
-        /* Removed translateY(-50%) since we don't need to center anymore */
-        z-index: 40;
-        width: 300px;
-        height: 600px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        pointer-events: auto;
-      }
-
-      .left-gutter-ad google-ad {
-        width: 100%;
-        height: 100%;
-        display: block;
-      }
-
-      .right-gutter-ad {
-        position: fixed;
-        right: 0;
-        top: 200px;
-        /* Changed from top: 50% */
-        transform: none;
-        /* Removed translateY(-50%) since we don't need to center anymore */
-        z-index: 40;
-        width: 300px;
-        height: 600px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        pointer-events: auto;
-      }
-
-      .right-gutter-ad google-ad {
-        width: 100%;
-        height: 100%;
-        display: block;
-      }
-
-      /* Media query to hide the gutter ad on smaller screens */
-      @media (max-width: 1280px) {
-        .left-gutter-ad {
-          display: none;
-        }
-
-        .right-gutter-ad {
-          display: none;
-        }
-      }
-
       /* display:none if child has class parent-hidden since we can't use shadow DOM in Lit due to Tailwind */
       .component-hideable:has(> .parent-hidden) {
         display: none;
@@ -109,6 +54,13 @@
     <!-- Immediate execution to prevent FOUC -->
     <script>
       document.documentElement.className = "preload";
+    </script>
+
+    <!-- Playwire ads -->
+    <script>
+      window.ramp = window.ramp || {};
+      window.ramp.que = window.ramp.que || [];
+      window.ramp.passiveMode = true;
     </script>
 
     <!-- Analytics -->
@@ -209,6 +161,8 @@
       </div>
     </header>
     <div class="bg-image"></div>
+
+    <gutter-ad-modal></gutter-ad-modal>
 
     <!-- Main container with responsive padding -->
     <main class="flex justify-center flex-grow">
@@ -328,6 +282,7 @@
         <events-display></events-display>
       </div>
       <div class="w-full sm:w-1/3 md:max-w-72" style="pointer-events: auto">
+        <left-in-game-ad></left-in-game-ad>
         <control-panel></control-panel>
       </div>
     </div>
@@ -441,6 +396,9 @@
         });
       });
     </script>
+
+    <!-- Playwire ads -->
+    <script async src="//cdn.intergient.com/1025558/75940/ramp.js"></script>
 
     <!-- Analytics -->
     <script
