@@ -33,11 +33,8 @@ export default async (env, argv) => {
           },
         },
         {
-          test: /\.txt$/,
-          type: "asset/resource", // Changed from raw-loader
-          generator: {
-            filename: "text/[name].[contenthash][ext]", // Added content hash
-          },
+          test: /\.(txt|md)$/,
+          type: "asset/source",
         },
         {
           test: /\.ts$/,

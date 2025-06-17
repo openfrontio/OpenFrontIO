@@ -63,6 +63,13 @@ export class NewsModal extends LitElement {
           </div>
         </div>
 
+        <div>
+          See the complete change log
+          <a href="https://github.com/openfrontio/OpenFrontIO/releases"
+            >on GitHub</a
+          >.
+        </div>
+
         <o-button
           title=${translateText("common.close")}
           @click=${this.close}
