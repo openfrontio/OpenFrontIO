@@ -285,7 +285,7 @@ export const infoMenuElement: MenuElement = {
   color: COLORS.info,
 
   subMenu: (params: MenuElementParams) => {
-    if (!params.selected) return [];
+    if (params === undefined || params.selected === null) return [];
 
     return [
       infoChatElement,
@@ -310,6 +310,8 @@ export const buildMenuElement: MenuElement = {
   color: COLORS.build,
 
   subMenu: (params: MenuElementParams) => {
+    if (params === undefined || params.selected === null) return [];
+
     const unitTypes: Set<UnitType> = new Set<UnitType>();
     if (params.selected === params.myPlayer) {
       unitTypes.add(UnitType.City);
