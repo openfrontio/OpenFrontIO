@@ -492,11 +492,7 @@ export class EventsDisplay extends LitElement implements Layer {
     const otherID =
       update.player1ID === myPlayer.smallID()
         ? update.player2ID
-        : update.player2ID === myPlayer.smallID()
-          ? update.player1ID
-          : null;
-
-    if (!otherID) return;
+        : update.player1ID;
 
     const other = this.game.playerBySmallID(otherID) as PlayerView;
     if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
