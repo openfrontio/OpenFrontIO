@@ -37,18 +37,6 @@ export class SAMLauncherExecution implements Execution {
     this.mg = mg;
   }
 
-  private nukeTargetInRange(nuke: Unit) {
-    const targetTile = nuke.targetTile();
-    if (this.sam === null || targetTile === undefined) {
-      return false;
-    }
-    const targetRangeSquared = this.targetRangeRadius * this.targetRangeRadius;
-    return (
-      this.mg.euclideanDistSquared(this.sam.tile(), targetTile) <
-      targetRangeSquared
-    );
-  }
-
   private getSingleTarget(): Unit | null {
     if (this.sam === null) return null;
     const nukes = this.mg
@@ -60,7 +48,7 @@ export class SAMLauncherExecution implements Execution {
         ({ unit }) =>
           unit.owner() !== this.player &&
           !this.player.isFriendly(unit.owner()) &&
-          this.nukeTargetInRange(unit),
+          unit.isTargetable(),
       );
 
     return (
