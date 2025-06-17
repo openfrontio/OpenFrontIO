@@ -193,7 +193,7 @@ export class GameServer {
             this.log.error("Failed to parse client message", error, {
               clientID: client.clientID,
             });
-            client.ws.close();
+            client.ws.close(1002, "ClientMessageSchema");
             return;
           }
           const clientMsg = parsed.data;
@@ -253,7 +253,7 @@ export class GameServer {
     client.ws.removeAllListeners("error");
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
-        client.ws.close(1002);
+        client.ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
       }
     });
 
