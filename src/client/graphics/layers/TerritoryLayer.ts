@@ -295,8 +295,8 @@ export class TerritoryLayer implements Layer {
         this.paintTile(tile, useBorderColor, 255);
       }
     } else {
-      const patternName = owner.pattern();
-      if (!patternName || !this.userSettings.territoryPatterns()) {
+      const pattern = owner.pattern();
+      if (!pattern || !this.userSettings.territoryPatterns()) {
         this.paintTile(tile, this.theme.territoryColor(owner), 150);
       } else {
         const x = this.game.x(tile);
