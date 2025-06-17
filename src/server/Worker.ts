@@ -305,65 +305,63 @@ export function startWorker() {
           }
           const clientMsg = parsed.data;
 
-          if (clientMsg.type === "join") {
-            // Verify this worker should handle this game
-            const expectedWorkerId = config.workerIndex(clientMsg.gameID);
-            if (expectedWorkerId !== workerId) {
-              log.warn(
-                `Worker mismatch: Game ${clientMsg.gameID} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
-              );
-              return;
-            }
+          // Verify this worker should handle this game
+          const expectedWorkerId = config.workerIndex(clientMsg.gameID);
+          if (expectedWorkerId !== workerId) {
+            log.warn(
+              `Worker mismatch: Game ${clientMsg.gameID} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
+            );
+            return;
+          }
 
-            const result = await verifyClientToken(clientMsg.token, config);
+          const result = await verifyClientToken(clientMsg.token, config);
+          if (result === false) {
+            log.warn("Failed to verify token");
+            ws.close(1002, "Failed to verify token");
+            return;
+          }
+          const { persistentId, claims } = result;
+
+          let roles: string[] | undefined;
+
+          if (claims === null) {
+            // TODO: Verify that the persistendId is is not a registered player
+          } else {
+            // Verify token and get player permissions
+            const result = await getUserMe(clientMsg.token, config);
             if (result === false) {
               log.warn("Failed to verify token");
               ws.close(1002, "Failed to verify token");
               return;
             }
-            const { persistentId, claims } = result;
+            roles = result.player.roles;
+          }
 
-            let roles: string[] | undefined;
+          // TODO: Validate client settings based on roles
 
-            if (claims === null) {
-              // TODO: Verify that the persistendId is is not a registered player
-            } else {
-              // Verify token and get player permissions
-              const result = await getUserMe(clientMsg.token, config);
-              if (result === false) {
-                log.warn("Token is not valid", claims);
-                ws.close(1002, "Token is not valid");
-                return;
-              }
-              roles = result.player.roles;
-            }
+          // Create client and add to game
+          const client = new Client(
+            clientMsg.clientID,
+            persistentId,
+            claims,
+            roles,
+            ip,
+            clientMsg.username,
+            ws,
+            clientMsg.flag,
+          );
 
-            // TODO: Validate client settings based on roles
+          const wasFound = gm.addClient(
+            client,
+            clientMsg.gameID,
+            clientMsg.lastTurn,
+          );
 
-            // Create client and add to game
-            const client = new Client(
-              clientMsg.clientID,
-              persistentId,
-              claims,
-              roles,
-              ip,
-              clientMsg.username,
-              ws,
-              clientMsg.flag,
+          if (!wasFound) {
+            log.info(
+              `game ${clientMsg.gameID} not found on worker ${workerId}`,
             );
-
-            const wasFound = gm.addClient(
-              client,
-              clientMsg.gameID,
-              clientMsg.lastTurn,
-            );
-
-            if (!wasFound) {
-              log.info(
-                `game ${clientMsg.gameID} not found on worker ${workerId}`,
-              );
-              // Handle game not found case
-            }
+            // Handle game not found case
           }
 
           // Handle other message types
