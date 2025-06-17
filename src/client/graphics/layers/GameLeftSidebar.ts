@@ -35,11 +35,9 @@ export class GameLeftSidebar extends LitElement implements Layer {
   }
 
   tick() {
-    if (
-      this.isPlayerTeamLabelVisible &&
-      !this.playerTeam &&
-      this.game.myPlayer()?.team()
-    ) {
+    if (!this.isPlayerTeamLabelVisible) return;
+
+    if (!this.playerTeam && this.game.myPlayer()?.team()) {
       this.playerTeam = this.game.myPlayer()!.team();
       if (this.playerTeam) {
         this.playerColor = this.game
@@ -49,7 +47,8 @@ export class GameLeftSidebar extends LitElement implements Layer {
         this.requestUpdate();
       }
     }
-    if (!this.game.inSpawnPhase() && this.isPlayerTeamLabelVisible) {
+
+    if (!this.game.inSpawnPhase()) {
       this.isPlayerTeamLabelVisible = false;
       this.requestUpdate();
     }
@@ -77,7 +76,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
         ${this.isPlayerTeamLabelVisible
           ? html`
               <div
-                class="flex items-center w-full justify-evenly h-8 lg:h-10 text-white py-1 lg:p-2"
+                class="flex items-center w-full h-8 lg:h-10 text-white py-1 lg:p-2"
                 @contextmenu=${(e: Event) => e.preventDefault()}
               >
                 Your team:
@@ -109,7 +108,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
         <div class="block lg:flex flex-wrap gap-2">
           <leader-board .visible=${this.isLeaderboardShow}></leader-board>
           <team-stats
-            class=${`flex 1 ${this.isTeamLeaderboardShow ? "sm:mt-4 lg:mt-12" : ""}`}
+            class=${`flex-1 ${this.isTeamLeaderboardShow ? "sm:mt-4 lg:mt-12" : ""}`}
             .visible=${this.isTeamLeaderboardShow && this.isTeamGame}
           ></team-stats>
         </div>
