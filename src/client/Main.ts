@@ -1,4 +1,3 @@
-import changelog from "../../resources/changelog.md";
 import favicon from "../../resources/images/Favicon.svg";
 import version from "../../resources/version.txt";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
@@ -79,9 +78,6 @@ class Client {
     } else {
       console.log("News button element found");
     }
-    fetch(changelog)
-      .then((response) => (response.ok ? response.text() : "Failed to load"))
-      .then((changelog) => (newsModal.markdown = changelog));
 
     // Comment out to show news button.
     // newsButton.hidden = true;

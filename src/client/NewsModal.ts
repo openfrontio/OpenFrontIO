@@ -1,6 +1,7 @@
 import { LitElement, css, html } from "lit";
 import { resolveMarkdown } from "lit-markdown";
 import { customElement, property, query } from "lit/decorators.js";
+import changelog from "../../resources/changelog.md";
 import { translateText } from "../client/Utils";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
@@ -13,6 +14,8 @@ export class NewsModal extends LitElement {
   };
 
   @property({ type: String }) markdown = "Loading...";
+
+  private initialized: boolean = false;
 
   static styles = css`
     :host {
@@ -82,6 +85,12 @@ export class NewsModal extends LitElement {
   }
 
   public open() {
+    if (!this.initialized) {
+      this.initialized = true;
+      fetch(changelog)
+        .then((response) => (response.ok ? response.text() : "Failed to load"))
+        .then((markdown) => (this.markdown = markdown));
+    }
     this.requestUpdate();
     this.modalEl?.open();
   }
