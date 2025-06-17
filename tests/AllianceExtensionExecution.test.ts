@@ -25,7 +25,7 @@ describe("AllianceExtensionExecution", () => {
       "us",
       "Player1",
       PlayerType.Human,
-      null,
+      "client1",
       "p1",
     );
     const p2Info = new PlayerInfo(

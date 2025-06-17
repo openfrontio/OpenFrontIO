@@ -55,7 +55,7 @@ export async function setup(
     false,
   );
 
-  return createGame(humans, [], gameMap, miniGameMap, config, "p1");
+  return createGame(humans, [], gameMap, miniGameMap, config, "client1");
 }
 
 export function playerInfo(name: string, type: PlayerType): PlayerInfo {
