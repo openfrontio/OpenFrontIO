@@ -285,5 +285,6 @@ function formatPercentage(value: number): string {
   if (perc > 99.5) return "100%";
   if (perc < 0.01) return "0%";
   if (perc < 0.1) return perc.toPrecision(1) + "%";
+  if (Number.isNaN(perc)) return "0%";
   return perc.toPrecision(2) + "%";
 }

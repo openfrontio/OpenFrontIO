@@ -54,7 +54,7 @@ export const ColoredTeams: Record<string, Team> = {
 
 export enum GameMapType {
   World = "World",
-  WorldMapGiant = "Giant World Map",
+  GiantWorldMap = "Giant World Map",
   Europe = "Europe",
   EuropeClassic = "Europe Classic",
   Mena = "Mena",
@@ -82,7 +82,7 @@ export enum GameMapType {
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
     GameMapType.World,
-    GameMapType.WorldMapGiant,
+    GameMapType.GiantWorldMap,
     GameMapType.NorthAmerica,
     GameMapType.SouthAmerica,
     GameMapType.Europe,
