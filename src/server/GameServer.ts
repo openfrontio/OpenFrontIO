@@ -35,8 +35,6 @@ export class GameServer {
 
   private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
 
-  private disconnectedTimeout = 1 * 30 * 1000; // 30 seconds
-
   private turns: Turn[] = [];
   private intents: Intent[] = [];
   public activeClients: Client[] = [];
@@ -147,6 +145,7 @@ export class GameServer {
           existingIP: ipAnonymize(conflicting.ip),
           existingPersistentID: conflicting.persistentID,
         });
+        return;
       }
     }
 
@@ -165,11 +164,7 @@ export class GameServer {
         });
         return;
       }
-
-      client.isDisconnected = existing.isDisconnected;
-      client.lastPing = existing.lastPing;
-
-      existing.ws.removeAllListeners();
+      existing.ws.removeAllListeners("message");
       this.activeClients = this.activeClients.filter((c) => c !== existing);
     }
 
@@ -180,6 +175,7 @@ export class GameServer {
     this.allClients.set(client.clientID, client);
 
     client.ws.removeAllListeners();
+
     client.ws.on(
       "message",
       gatekeeper.wsHandler(client.ip, async (message: string) => {
@@ -198,12 +194,6 @@ export class GameServer {
             if (clientMsg.intent.clientID !== client.clientID) {
               this.log.warn(
                 `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
-              );
-              return;
-            }
-            if (clientMsg.intent.type === "mark_disconnected") {
-              this.log.warn(
-                `Should not receive mark_disconnected intent from client`,
               );
               return;
             }
@@ -237,7 +227,6 @@ export class GameServer {
         }
       }),
     );
-    client.ws.removeAllListeners("close");
     client.ws.on("close", () => {
       this.log.info("client disconnected", {
         clientID: client.clientID,
@@ -247,7 +236,6 @@ export class GameServer {
         (c) => c.clientID !== client.clientID,
       );
     });
-    client.ws.removeAllListeners("error");
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
         client.ws.close(1002);
@@ -371,7 +359,6 @@ export class GameServer {
     this.intents = [];
 
     this.handleSynchronization();
-    this.checkDisconnectedStatus();
 
     let msg = "";
     try {
@@ -550,36 +537,6 @@ export class GameServer {
         clientID,
       });
     }
-  }
-
-  private checkDisconnectedStatus() {
-    if (this.turns.length % 5 !== 0) {
-      return;
-    }
-
-    const now = Date.now();
-    for (const [clientID, client] of this.allClients) {
-      if (
-        client.isDisconnected === false &&
-        now - client.lastPing > this.disconnectedTimeout
-      ) {
-        this.markClientDisconnected(client, true);
-      } else if (
-        client.isDisconnected &&
-        now - client.lastPing < this.disconnectedTimeout
-      ) {
-        this.markClientDisconnected(client, false);
-      }
-    }
-  }
-
-  private markClientDisconnected(client: Client, isDisconnected: boolean) {
-    client.isDisconnected = isDisconnected;
-    this.addIntent({
-      type: "mark_disconnected",
-      clientID: client.clientID,
-      isDisconnected: isDisconnected,
-    });
   }
 
   private archiveGame() {
