@@ -1,7 +1,6 @@
 import { PriorityQueue } from "@datastructures-js/priority-queue";
 import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
-import { PatternDecoder } from "../../../core/Cosmetics";
 import { EventBus } from "../../../core/EventBus";
 import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
 import { euclDistFN, TileRef } from "../../../core/game/GameMap";
@@ -13,9 +12,8 @@ import { AlternateViewEvent, DragEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
-const userSettings: UserSettings = new UserSettings();
-
 export class TerritoryLayer implements Layer {
+  private userSettings: UserSettings;
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
   private imageData: ImageData;
@@ -46,7 +44,9 @@ export class TerritoryLayer implements Layer {
     private game: GameView,
     private eventBus: EventBus,
     private transformHandler: TransformHandler,
+    userSettings: UserSettings,
   ) {
+    this.userSettings = userSettings;
     this.theme = game.config().theme();
   }
 
@@ -296,17 +296,21 @@ export class TerritoryLayer implements Layer {
       }
     } else {
       const patternName = owner.pattern();
-      if (!patternName || !userSettings.territoryPatterns()) {
+      if (!patternName || !this.userSettings.territoryPatterns()) {
         this.paintTile(tile, this.theme.territoryColor(owner), 150);
       } else {
         const x = this.game.x(tile);
         const y = this.game.y(tile);
         const baseColor = this.theme.territoryColor(owner);
 
-        const decoder = new PatternDecoder(patternName ?? "");
-        const bit = decoder.isSet(x, y) ? 1 : 0;
-        const colorToUse = bit ? baseColor.darken(0.2) : baseColor;
-        this.paintTile(tile, colorToUse, 150);
+        const decoder = owner.patternDecoder();
+        if (decoder) {
+          const bit = decoder.isSet(x, y) ? 1 : 0;
+          const colorToUse = bit ? baseColor.darken(0.2) : baseColor;
+          this.paintTile(tile, colorToUse, 150);
+        } else {
+          this.paintTile(tile, baseColor, 150);
+        }
       }
     }
   }

@@ -22,7 +22,7 @@ export class PatternDecoder {
 
     const version = bytes[0];
     if (version !== 1) {
-      throw new Error("The pattern versions are different.");
+      throw new Error(`Unrecognized pattern version ${version}.`);
     }
 
     const byte1 = bytes[1];

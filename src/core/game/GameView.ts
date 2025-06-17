@@ -1,4 +1,5 @@
 import { Config } from "../configuration/Config";
+import { PatternDecoder } from "../Cosmetics";
 import { ClientID, GameID } from "../Schemas";
 import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
@@ -128,6 +129,8 @@ export class UnitView {
 
 export class PlayerView {
   public anonymousName: string | null = null;
+  private _patternDecoder?: PatternDecoder;
+  private _patternDecoderPattern?: string;
 
   constructor(
     private game: GameView,
@@ -142,6 +145,16 @@ export class PlayerView {
         this.data.playerType,
       );
     }
+  }
+
+  patternDecoder(): PatternDecoder | undefined {
+    const patternName = this.pattern();
+    if (!patternName) return undefined;
+    if (!this._patternDecoder || this._patternDecoderPattern !== patternName) {
+      this._patternDecoder = new PatternDecoder(patternName);
+      this._patternDecoderPattern = patternName;
+    }
+    return this._patternDecoder;
   }
 
   async actions(tile: TileRef): Promise<PlayerActions> {
