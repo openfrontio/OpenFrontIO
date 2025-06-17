@@ -43,9 +43,18 @@ export function createGame(
   gameMap: GameMap,
   miniGameMap: GameMap,
   config: Config,
+  clientID: ClientID,
 ): Game {
   const stats = new StatsImpl();
-  return new GameImpl(humans, nations, gameMap, miniGameMap, config, stats);
+  return new GameImpl(
+    humans,
+    nations,
+    gameMap,
+    miniGameMap,
+    config,
+    stats,
+    clientID,
+  );
 }
 
 export type CellString = string;
@@ -82,6 +91,7 @@ export class GameImpl implements Game {
     private miniGameMap: GameMap,
     private _config: Config,
     private _stats: Stats,
+    private _clientID: ClientID,
   ) {
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
@@ -227,6 +237,14 @@ export class GameImpl implements Game {
     this.allianceRequests.push(ar);
     this.addUpdate(ar.toUpdate());
     return ar;
+  }
+
+  myPlayer(): Player {
+    const player = this.playerByClientID(this._clientID);
+    if (!player) {
+      throw new Error("No player found for this client");
+    }
+    return player;
   }
 
   acceptAllianceRequest(request: AllianceRequestImpl) {

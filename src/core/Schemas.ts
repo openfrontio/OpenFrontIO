@@ -177,7 +177,6 @@ const BaseIntentSchema = z.object({
 export const AllianceExtensionIntentSchema = BaseIntentSchema.extend({
   type: z.literal("allianceExtension"),
   clientID: z.string(),
-  requestor: z.number(),
   recipient: z.number(),
 });
 

@@ -117,7 +117,7 @@ export class Executor {
           intent.unit,
         );
       case "allianceExtension": {
-        const from = this.mg.playerBySmallID(intent.requestor) ?? null;
+        const from = player;
         const to = this.mg.playerBySmallID(intent.recipient) ?? null;
 
         if (
@@ -129,7 +129,7 @@ export class Executor {
           return new NoOpExecution();
         }
 
-        return new AllianceExtensionExecution(from, to);
+        return new AllianceExtensionExecution(to);
       }
       case "upgrade_structure":
         return new UpgradeStructureExecution(player, intent.unitId);

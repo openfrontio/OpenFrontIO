@@ -3,10 +3,7 @@ import { Execution, Game, MessageType, Player } from "../../game/Game";
 export class AllianceExtensionExecution implements Execution {
   private isDone = false;
 
-  constructor(
-    private readonly from: Player,
-    private readonly to: Player,
-  ) {}
+  constructor(private readonly to: Player) {}
 
   isActive(): boolean {
     return !this.isDone;
@@ -17,12 +14,13 @@ export class AllianceExtensionExecution implements Execution {
   }
 
   init(mg: Game, ticks: number): void {
-    const alliance = this.from.allianceWith(this.to);
+    const from = mg.myPlayer();
+    const alliance = from.allianceWith(this.to);
     if (!alliance) {
       mg.displayMessage(
         "No alliance to extend.",
         MessageType.ALLIANCE_REJECTED,
-        this.from.id(),
+        from.id(),
       );
       this.isDone = true;
       return;
@@ -35,7 +33,7 @@ export class AllianceExtensionExecution implements Execution {
     mg.displayMessage(
       "alliance.renewed",
       MessageType.ALLIANCE_ACCEPTED,
-      this.from.id(),
+      from.id(),
     );
     mg.displayMessage(
       "alliance.renewed",

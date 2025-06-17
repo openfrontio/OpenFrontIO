@@ -79,6 +79,7 @@ export async function createGameRunner(
     gameMap.gameMap,
     gameMap.miniGameMap,
     config,
+    clientID,
   );
 
   const gr = new GameRunner(

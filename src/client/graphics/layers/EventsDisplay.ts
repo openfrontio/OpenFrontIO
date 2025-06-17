@@ -577,9 +577,7 @@ export class EventsDisplay extends LitElement implements Layer {
           text: translateText("buttons.i_want_to_renew"),
           className: "btn",
           action: () =>
-            this.eventBus.emit(
-              new SendAllianceExtensionIntentEvent(myPlayer, other),
-            ),
+            this.eventBus.emit(new SendAllianceExtensionIntentEvent(other)),
         },
       ],
       highlight: true,

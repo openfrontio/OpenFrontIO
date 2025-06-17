@@ -585,6 +585,7 @@ export interface Game extends GameMap {
   players(): Player[];
   allPlayers(): Player[];
   playerByClientID(id: ClientID): Player | null;
+  myPlayer(): Player;
   playerBySmallID(id: number): Player | TerraNullius;
   hasPlayer(id: PlayerID): boolean;
   addPlayer(playerInfo: PlayerInfo): Player;

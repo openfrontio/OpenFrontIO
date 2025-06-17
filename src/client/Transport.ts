@@ -61,10 +61,7 @@ export class SendAllianceReplyIntentEvent implements GameEvent {
 }
 
 export class SendAllianceExtensionIntentEvent implements GameEvent {
-  constructor(
-    public readonly requestor: PlayerView,
-    public readonly recipient: PlayerView,
-  ) {}
+  constructor(public readonly recipient: PlayerView) {}
 }
 
 export class SendSpawnIntentEvent implements GameEvent {
@@ -419,7 +416,6 @@ export class Transport {
     this.sendIntent({
       type: "allianceExtension",
       clientID: this.lobbyConfig.clientID,
-      requestor: event.requestor.smallID(),
       recipient: event.recipient.smallID(),
     });
   }
