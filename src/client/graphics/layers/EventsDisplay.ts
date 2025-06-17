@@ -532,8 +532,7 @@ export class EventsDisplay extends LitElement implements Layer {
     if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
     const tick = this.game.ticks();
     const tag = `alliance${otherID}`;
-    // remove earlier prompt/expired rows
-    this.removeEventByTags([tag]);
+
     this.addEvent({
       description: translateText("alliance.about_to_expire", {
         name: other.name(),
