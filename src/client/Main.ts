@@ -1,4 +1,5 @@
 import favicon from "../../resources/images/Favicon.svg";
+import version from "../../resources/version.txt";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
@@ -64,9 +65,7 @@ class Client {
     if (!gameVersion) {
       console.warn("Game version element not found");
     }
-    fetch("/version.txt")
-      .then((response) => (response.ok ? response.text() : "Failed to load"))
-      .then((version) => (gameVersion.innerText = version));
+    gameVersion.innerText = version;
 
     const newsModal = document.querySelector("news-modal") as NewsModal;
     if (!newsModal) {
@@ -79,9 +78,6 @@ class Client {
     } else {
       console.log("News button element found");
     }
-    fetch("/changelog.md")
-      .then((response) => (response.ok ? response.text() : "Failed to load"))
-      .then((changelog) => (newsModal.markdown = changelog));
 
     // Comment out to show news button.
     // newsButton.hidden = true;
