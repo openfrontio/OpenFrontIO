@@ -49,8 +49,9 @@ export class LeftInGameAd extends LitElement implements Layer {
 
   public async tick() {
     if (!this.isVisible && !this.g.inSpawnPhase() && this.screenLargeEnough()) {
-      console.log("showing bottom left ad");
-      this.show();
+      // TODO: uncomment to enable in-game ads
+      // console.log("showing bottom left ad");
+      // this.show();
     }
     if (this.isVisible && !this.screenLargeEnough()) {
       console.log("hiding bottom left ad");
