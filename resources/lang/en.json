@@ -24,6 +24,8 @@
     "wiki": "Wiki"
   },
   "news": {
+    "full_changelog": "See the complete change log",
+    "github_link": "on GitHub",
     "title": "Version 23 released!"
   },
   "help_modal": {
@@ -128,7 +130,7 @@
   "map": {
     "map": "Map",
     "world": "World",
-    "worldmapgiant": "Giant World Map",
+    "giantworldmap": "Giant World Map",
     "europe": "Europe",
     "mena": "MENA",
     "northamerica": "North America",
