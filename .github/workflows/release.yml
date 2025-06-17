@@ -6,6 +6,8 @@ on:
       - published
       - edited
 
+permissions: {}
+
 jobs:
   print-release-info:
     runs-on: ubuntu-latest
