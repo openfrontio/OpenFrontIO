@@ -342,7 +342,6 @@ export function startWorker() {
               ws.close(1002, "Failed to verify token");
               return;
             }
-            const { persistentId, claims } = result;
 
             let roles: string[] | undefined;
             let flares: string[] | undefined;
@@ -391,20 +390,19 @@ export function startWorker() {
               clientMsg.pattern,
             );
 
-          const wasFound = gm.addClient(
-            client,
-            clientMsg.gameID,
-            clientMsg.lastTurn,
-          );
-
-          if (!wasFound) {
-            log.info(
-              `game ${clientMsg.gameID} not found on worker ${workerId}`,
+            const wasFound = gm.addClient(
+              client,
+              clientMsg.gameID,
+              clientMsg.lastTurn,
             );
-            // Handle game not found case
-          }
 
-          // Handle other message types
+            if (!wasFound) {
+              log.info(
+                `game ${clientMsg.gameID} not found on worker ${workerId}`,
+              );
+              // Handle game not found case
+            }
+          }
         } catch (error) {
           log.warn(
             `error handling websocket message for ${ipAnonymize(ip)}: ${error}`.substring(
