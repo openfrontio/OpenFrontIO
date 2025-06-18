@@ -199,10 +199,13 @@ export class GameServer {
             client.ws.send(
               JSON.stringify({
                 type: "error",
-                error: error,
+                error: error.toString(),
               } satisfies ServerErrorMessage),
             );
-            client.ws.close(1002, "ClientMessageSchema");
+            // Add a small delay before closing the connection to ensure the error message is received
+            setTimeout(() => {
+              client.ws.close(1002, "ClientMessageSchema");
+            }, 100);
             return;
           }
           const clientMsg = parsed.data;
@@ -556,11 +559,14 @@ export class GameServer {
           error: "Kicked from game (you may have been playing on another tab)",
         } satisfies ServerErrorMessage),
       );
-      client.ws.close(1000, "Kicked from game");
-      this.activeClients = this.activeClients.filter(
-        (c) => c.clientID !== clientID,
-      );
-      this.kickedClients.add(clientID);
+      // Add a small delay before closing the connection to ensure the error message is received
+      setTimeout(() => {
+        client.ws.close(1000, "Kicked from game");
+        this.activeClients = this.activeClients.filter(
+          (c) => c.clientID !== clientID,
+        );
+        this.kickedClients.add(clientID);
+      }, 100);
     } else {
       this.log.warn(`cannot kick client, not found in game`, {
         clientID,

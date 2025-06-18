@@ -321,7 +321,7 @@ export class ClientGameRunner {
           this.lobby.clientID,
           true,
           false,
-          translateText("error_modal.desync_notice"),
+          "error_modal.desync_notice",
         );
       }
       if (message.type === "error") {
@@ -332,7 +332,7 @@ export class ClientGameRunner {
           this.lobby.clientID,
           true,
           true,
-          translateText("error_modal.connection_error"),
+          "error_modal.connection_error",
         );
       }
       if (message.type === "turn") {
@@ -562,7 +562,7 @@ function showErrorModal(
   clientID: ClientID,
   closable = false,
   showDiscord = true,
-  heading = translateText("error_modal.crashed"),
+  heading = "error_modal.crashed",
 ) {
   const errorText = `Error: ${errMsg}\nStack: ${stack}`;
 

@@ -304,7 +304,7 @@ export function startWorker() {
             ws.send(
               JSON.stringify({
                 type: "error",
-                error: "test error",
+                error: error.toString(),
               } satisfies ServerErrorMessage),
             );
             ws.close(1002, "ClientJoinMessageSchema");
