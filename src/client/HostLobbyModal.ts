@@ -538,7 +538,7 @@ export class HostLobbyModal extends LitElement {
     try {
       //TODO: Convert id to url and copy
       await navigator.clipboard.writeText(
-        `${location.origin}/join/${this.lobbyId}`,
+        `${location.origin}#join=${this.lobbyId}`,
       );
       this.copySuccess = true;
       setTimeout(() => {
