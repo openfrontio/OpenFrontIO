@@ -59,8 +59,6 @@ export class StructureIconsLayer implements Layer {
       console.error(`Error loading SVG ${unitSVGInfos.icon}:`, error);
       unitSVGInfos.svg = null;
     }
-    const response = await fetch(unitSVGInfos.icon);
-    unitSVGInfos.svg = this.createSvgElementFromString(await response.text());
   }
 
   private createSvgElementFromString(svgStr: string): SVGSVGElement | null {
@@ -93,7 +91,7 @@ export class StructureIconsLayer implements Layer {
     for (const unit of this.game.units()) {
       if (
         unit.isActive() &&
-        this.structures.has(unit.type()) &&
+        STRUCTURE_TYPES.has(unit.type()) &&
         !this.seenUnits.has(unit)
       ) {
         this.seenUnits.add(unit);
@@ -151,9 +149,12 @@ export class StructureIconsLayer implements Layer {
       "1px solid " +
       this.theme.borderColor(unit.owner()).darken(0.1).toRgbString();
     element.appendChild(border);
-    const svgElement = this.structures
-      .get(unit.type())!
-      .svg!.cloneNode(true) as SVGElement;
+    const structureInfo = this.structures.get(unit.type());
+    if (!structureInfo?.svg) {
+      console.warn(`SVG not loaded for unit type: ${unit.type()}`);
+      return element;
+    }
+    const svgElement = structureInfo.svg.cloneNode(true) as SVGElement;
     svgElement.style.width = "13px";
     svgElement.style.height = "13px";
     svgElement.style.position = "relative";
@@ -199,9 +200,9 @@ export class StructureIconsLayer implements Layer {
     const canvasRect = this.transformHandler.boundingRect();
     if (
       render.location.x < canvasRect.left ||
-      render.location.y < canvasRect.left ||
-      render.location.x > canvasRect.width ||
-      render.location.y > canvasRect.height
+      render.location.y < canvasRect.top ||
+      render.location.x > canvasRect.right ||
+      render.location.y > canvasRect.bottom
     ) {
       render.element.style.display = "none";
       return;
