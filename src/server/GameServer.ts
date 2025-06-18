@@ -13,6 +13,7 @@ import {
   Intent,
   PlayerRecord,
   ServerDesyncSchema,
+  ServerErrorMessage,
   ServerPrestartMessageSchema,
   ServerStartGameMessageSchema,
   ServerTurnMessageSchema,
@@ -172,7 +173,7 @@ export class GameServer {
       client.isDisconnected = existing.isDisconnected;
       client.lastPing = existing.lastPing;
 
-      existing.ws.removeAllListeners("message");
+      existing.ws.removeAllListeners();
       this.activeClients = this.activeClients.filter((c) => c !== existing);
     }
 
@@ -183,6 +184,8 @@ export class GameServer {
     this.allClients.set(client.clientID, client);
 
     client.ws.removeAllListeners("message");
+    client.ws.removeAllListeners("close");
+    client.ws.removeAllListeners("error");
     client.ws.on(
       "message",
       gatekeeper.wsHandler(client.ip, async (message: string) => {
@@ -193,7 +196,16 @@ export class GameServer {
             this.log.error("Failed to parse client message", error, {
               clientID: client.clientID,
             });
-            client.ws.close(1002, "ClientMessageSchema");
+            client.ws.send(
+              JSON.stringify({
+                type: "error",
+                error: error.toString(),
+              } satisfies ServerErrorMessage),
+            );
+            // Add a small delay before closing the connection to ensure the error message is received
+            setTimeout(() => {
+              client.ws.close(1002, "ClientMessageSchema");
+            }, 100);
             return;
           }
           const clientMsg = parsed.data;
@@ -240,7 +252,6 @@ export class GameServer {
         }
       }),
     );
-    client.ws.removeAllListeners("close");
     client.ws.on("close", () => {
       this.log.info("client disconnected", {
         clientID: client.clientID,
@@ -250,7 +261,6 @@ export class GameServer {
         (c) => c.clientID !== client.clientID,
       );
     });
-    client.ws.removeAllListeners("error");
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
         client.ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
@@ -544,11 +554,20 @@ export class GameServer {
         clientID: client.clientID,
         persistentID: client.persistentID,
       });
-      client.ws.close(1000, "Kicked from game");
-      this.activeClients = this.activeClients.filter(
-        (c) => c.clientID !== clientID,
+      client.ws.send(
+        JSON.stringify({
+          type: "error",
+          error: "Kicked from game (you may have been playing on another tab)",
+        } satisfies ServerErrorMessage),
       );
-      this.kickedClients.add(clientID);
+      // Add a small delay before closing the connection to ensure the error message is received
+      setTimeout(() => {
+        client.ws.close(1000, "Kicked from game");
+        this.activeClients = this.activeClients.filter(
+          (c) => c.clientID !== clientID,
+        );
+        this.kickedClients.add(clientID);
+      }, 100);
     } else {
       this.log.warn(`cannot kick client, not found in game`, {
         clientID,
