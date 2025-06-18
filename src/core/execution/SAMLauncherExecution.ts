@@ -8,7 +8,6 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
-import { NukeType } from "../StatsSchemas";
 import { SAMMissileExecution } from "./SAMMissileExecution";
 
 export class SAMLauncherExecution implements Execution {
@@ -171,12 +170,16 @@ export class SAMLauncherExecution implements Execution {
           samOwner.id(),
         );
 
-        mirvWarheadTargets.forEach((u) => {
-          // Record stats
-          this.mg
-            .stats()
-            .bombIntercept(samOwner, u.owner(), u.type() as NukeType);
+        // Record stats
+        this.mg
+          .stats()
+          .bombIntercept(
+            samOwner,
+            UnitType.MIRVWarhead,
+            mirvWarheadTargets.length,
+          );
 
+        mirvWarheadTargets.forEach((u) => {
           // Delete warheads
           u.delete();
         });
