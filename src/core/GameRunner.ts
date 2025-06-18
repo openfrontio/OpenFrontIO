@@ -4,6 +4,7 @@ import { getConfig } from "./configuration/ConfigLoader";
 import { AllianceExpireCheckExecution } from "./execution/alliance/AllianceExpireCheckExecution";
 import { Executor } from "./execution/ExecutionManager";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
+import { AllianceImpl } from "./game/AllianceImpl";
 
 import {
   AllPlayers,
@@ -23,6 +24,7 @@ import {
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
 import {
+  AllianceViewData,
   ErrorUpdate,
   GameUpdateType,
   GameUpdateViewData,
@@ -89,6 +91,14 @@ export async function createGameRunner(
   );
   gr.init();
   return gr;
+}
+
+function toAllianceViewData(alliance: AllianceImpl): AllianceViewData {
+  return {
+    requestorID: alliance.requestor().smallID(),
+    recipientID: alliance.recipient().smallID(),
+    createdAt: alliance.createdAt(),
+  };
 }
 
 export class GameRunner {
@@ -179,6 +189,7 @@ export class GameRunner {
       packedTileUpdates: new BigUint64Array(packedTileUpdates),
       updates: updates,
       playerNameViewData: this.playerViewData,
+      alliances: this.game.alliances().map(toAllianceViewData),
     });
     this.isExecuting = false;
   }

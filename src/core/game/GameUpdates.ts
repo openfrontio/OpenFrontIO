@@ -18,6 +18,7 @@ export interface GameUpdateViewData {
   updates: GameUpdates;
   packedTileUpdates: BigUint64Array;
   playerNameViewData: Record<number, NameViewData>;
+  alliances?: AllianceViewData[];
 }
 
 export interface ErrorUpdate {
@@ -215,4 +216,10 @@ export interface UnitIncomingUpdate {
   message: string;
   messageType: MessageType;
   playerID: number;
+}
+
+export interface AllianceViewData {
+  requestorID: number;
+  recipientID: number;
+  createdAt: number;
 }

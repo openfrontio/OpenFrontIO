@@ -195,6 +195,66 @@ export class EventsDisplay extends LitElement implements Layer {
       }
     }
 
+    if (myPlayer) {
+      const alliances = this.game.alliances(); // from GameView
+      const ticks = this.game.ticks();
+      const duration = this.game.config().allianceDuration();
+      const promptOffset = this.game.config().allianceExtensionPromptOffset();
+
+      for (const alliance of alliances) {
+        const createdAt = alliance.createdAt;
+        const timeSinceCreation = ticks - createdAt;
+        const ticksLeft = duration - timeSinceCreation;
+
+        if (ticksLeft > promptOffset) continue;
+
+        // Only check alliances involving the local player
+        if (
+          alliance.requestorID !== myPlayer.smallID() &&
+          alliance.recipientID !== myPlayer.smallID()
+        )
+          continue;
+
+        const otherID =
+          alliance.requestorID === myPlayer.smallID()
+            ? alliance.recipientID
+            : alliance.requestorID;
+
+        // Avoid duplicate prompts
+        const tag = `about_to_expire_${alliance.requestorID}_${alliance.recipientID}_${alliance.createdAt}`;
+        if (this.events.some((e) => e.tags?.includes(tag))) continue;
+
+        const other = this.game.playerBySmallID(otherID) as PlayerView;
+        if (!other || !myPlayer.isAlive() || !other.isAlive()) continue;
+
+        this.addEvent({
+          description: translateText("alliance.about_to_expire", {
+            name: other.name(),
+          }),
+          type: MessageType.WARN,
+          tags: [tag],
+          duration: 100,
+          buttons: [
+            {
+              text: translateText("buttons.focus"),
+              className: "btn-gray",
+              action: () => this.eventBus.emit(new GoToPlayerEvent(other)),
+              preventClose: true,
+            },
+            {
+              text: translateText("buttons.i_want_to_renew"),
+              className: "btn",
+              action: () =>
+                this.eventBus.emit(new SendAllianceExtensionIntentEvent(other)),
+            },
+          ],
+          highlight: true,
+          createdAt: ticks,
+          focusID: otherID,
+        });
+      }
+    }
+
     let remainingEvents = this.events.filter((event) => {
       const shouldKeep =
         this.game.ticks() - event.createdAt < (event.duration ?? 600);
