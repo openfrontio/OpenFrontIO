@@ -120,6 +120,10 @@ export enum LogSeverity {
   Fatal = "FATAL",
 }
 
+//
+// Utility types
+//
+
 export const GameConfigSchema = z.object({
   gameMap: z.nativeEnum(GameMapType),
   difficulty: z.nativeEnum(Difficulty),
@@ -170,6 +174,12 @@ export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
 export const UsernameSchema = SafeString;
 export const FlagSchema = z.string().max(128).optional();
+
+export const QuickChatKeySchema = z.enum(
+  Object.entries(quickChatData).flatMap(([category, entries]) =>
+    entries.map((entry) => `${category}.${entry.key}`),
+  ) as [string, ...string[]],
+);
 
 //
 // Intents
@@ -283,12 +293,6 @@ export const MoveWarshipIntentSchema = BaseIntentSchema.extend({
   tile: z.number(),
 });
 
-export const QuickChatKeySchema = z.enum(
-  Object.entries(quickChatData).flatMap(([category, entries]) =>
-    entries.map((entry) => `${category}.${entry.key}`),
-  ) as [string, ...string[]],
-);
-
 export const QuickChatIntentSchema = BaseIntentSchema.extend({
   type: z.literal("quick_chat"),
   recipient: ID,
@@ -322,6 +326,10 @@ const IntentSchema = z.discriminatedUnion("type", [
   MoveWarshipIntentSchema,
   QuickChatIntentSchema,
 ]);
+
+//
+// Server utility types
+//
 
 export const TurnSchema = z.object({
   turnNumber: z.number(),
@@ -442,6 +450,10 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientLogMessageSchema,
   ClientHashSchema,
 ]);
+
+//
+// Records
+//
 
 export const PlayerRecordSchema = PlayerSchema.extend({
   persistentID: PersistentIdSchema, // WARNING: PII
