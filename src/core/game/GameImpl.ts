@@ -632,7 +632,7 @@ export class GameImpl implements Game {
   displayChat(
     message: string,
     category: string,
-    variables: Record<string, string> = {},
+    target: PlayerID | undefined,
     playerID: PlayerID | null,
     isFrom: boolean,
     recipient: string,
@@ -645,7 +645,7 @@ export class GameImpl implements Game {
       type: GameUpdateType.DisplayChatEvent,
       key: message,
       category: category,
-      variables: variables,
+      target: target,
       playerID: id,
       isFrom,
       recipient: recipient,
