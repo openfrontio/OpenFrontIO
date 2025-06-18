@@ -315,7 +315,7 @@ export class UILayer implements Layer {
         COLOR_PROGRESSION,
         this.context,
         this.game.x(unit.tile()) - 8,
-        this.game.y(unit.tile()) - 10,
+        this.game.y(unit.tile()) + 10,
         LOADINGBAR_WIDTH,
         PROGRESSBAR_HEIGHT,
         0,

@@ -9,22 +9,14 @@ import { UnitInfoModal } from "./UnitInfoModal";
 import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
 import shieldIcon from "../../../../resources/images/buildings/fortAlt2.png";
 import anchorIcon from "../../../../resources/images/buildings/port1.png";
-import MissileSiloReloadingIcon from "../../../../resources/images/buildings/silo1-reloading.png";
 import missileSiloIcon from "../../../../resources/images/buildings/silo1.png";
-import SAMMissileReloadingIcon from "../../../../resources/images/buildings/silo4-reloading.png";
 import SAMMissileIcon from "../../../../resources/images/buildings/silo4.png";
 import { Cell, UnitType } from "../../../core/game/Game";
-import {
-  euclDistFN,
-  hexDistFN,
-  manhattanDistFN,
-  rectDistFN,
-} from "../../../core/game/GameMap";
+import { euclDistFN, isometricDistFN } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 
 const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
-const reloadingColor = colord({ r: 255, g: 0, b: 0 });
 const selectedUnitColor = colord({ r: 0, g: 255, b: 255 });
 
 // Base radius values and scaling factor for unit borders and territories
@@ -32,20 +24,10 @@ const BASE_BORDER_RADIUS = 16.5;
 const BASE_TERRITORY_RADIUS = 13.5;
 const RADIUS_SCALE_FACTOR = 0.5;
 
-type DistanceFunction = typeof euclDistFN;
-
-enum UnitBorderType {
-  Round,
-  Diamond,
-  Square,
-  Hexagon,
-}
-
 interface UnitRenderConfig {
   icon: string;
   borderRadius: number;
   territoryRadius: number;
-  borderType: UnitBorderType;
 }
 
 export class StructureLayer implements Layer {
@@ -64,31 +46,26 @@ export class StructureLayer implements Layer {
       icon: anchorIcon,
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
-      borderType: UnitBorderType.Round,
     },
     [UnitType.City]: {
       icon: cityIcon,
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
-      borderType: UnitBorderType.Round,
     },
     [UnitType.MissileSilo]: {
       icon: missileSiloIcon,
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
-      borderType: UnitBorderType.Square,
     },
     [UnitType.DefensePost]: {
       icon: shieldIcon,
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
-      borderType: UnitBorderType.Hexagon,
     },
     [UnitType.SAMLauncher]: {
       icon: SAMMissileIcon,
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
-      borderType: UnitBorderType.Square,
     },
   };
 
@@ -110,18 +87,6 @@ export class StructureLayer implements Layer {
     if (tempContext === null) throw new Error("2d context not supported");
     this.tempContext = tempContext;
     this.loadIconData();
-    this.loadIcon("reloadingSam", {
-      icon: SAMMissileReloadingIcon,
-      borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
-      territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
-      borderType: UnitBorderType.Square,
-    });
-    this.loadIcon("reloadingSilo", {
-      icon: MissileSiloReloadingIcon,
-      borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
-      territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
-      borderType: UnitBorderType.Square,
-    });
   }
 
   private loadIcon(unitType: string, config: UnitRenderConfig) {
@@ -197,12 +162,11 @@ export class StructureLayer implements Layer {
     unit: UnitView,
     borderColor: Colord,
     config: UnitRenderConfig,
-    distanceFN: DistanceFunction,
   ) {
     // Draw border and territory
     for (const tile of this.game.bfs(
       unit.tile(),
-      distanceFN(unit.tile(), config.borderRadius, true),
+      isometricDistFN(unit.tile(), config.borderRadius, true),
     )) {
       this.paintCell(
         new Cell(this.game.x(tile), this.game.y(tile)),
@@ -213,7 +177,7 @@ export class StructureLayer implements Layer {
 
     for (const tile of this.game.bfs(
       unit.tile(),
-      distanceFN(unit.tile(), config.territoryRadius, true),
+      isometricDistFN(unit.tile(), config.territoryRadius, true),
     )) {
       this.paintCell(
         new Cell(this.game.x(tile), this.game.y(tile)),
@@ -222,19 +186,6 @@ export class StructureLayer implements Layer {
           : this.theme.territoryColor(unit.owner()),
         130,
       );
-    }
-  }
-
-  private getDrawFN(type: UnitBorderType) {
-    switch (type) {
-      case UnitBorderType.Round:
-        return euclDistFN;
-      case UnitBorderType.Diamond:
-        return manhattanDistFN;
-      case UnitBorderType.Square:
-        return rectDistFN;
-      case UnitBorderType.Hexagon:
-        return hexDistFN;
     }
   }
 
@@ -248,13 +199,7 @@ export class StructureLayer implements Layer {
     let borderColor = this.theme.borderColor(unit.owner());
 
     // Handle cooldown states and special icons
-    if (unitType === UnitType.SAMLauncher && unit.isInCooldown()) {
-      icon = this.unitIcons.get("reloadingSam");
-      borderColor = reloadingColor;
-    } else if (unitType === UnitType.MissileSilo && unit.isInCooldown()) {
-      icon = this.unitIcons.get("reloadingSilo");
-      borderColor = reloadingColor;
-    } else if (unit.type() === UnitType.Construction) {
+    if (unit.type() === UnitType.Construction) {
       icon = this.unitIcons.get(iconType);
       borderColor = underConstructionColor;
     } else {
@@ -263,11 +208,10 @@ export class StructureLayer implements Layer {
 
     if (!config || !icon) return;
 
-    const drawFunction = this.getDrawFN(config.borderType);
     // Clear previous rendering
     for (const tile of this.game.bfs(
       unit.tile(),
-      drawFunction(unit.tile(), config.borderRadius, true),
+      euclDistFN(unit.tile(), config.borderRadius + 1, true),
     )) {
       this.clearCell(new Cell(this.game.x(tile), this.game.y(tile)));
     }
@@ -277,8 +221,7 @@ export class StructureLayer implements Layer {
     if (this.selectedStructureUnit === unit) {
       borderColor = selectedUnitColor;
     }
-
-    this.drawBorder(unit, borderColor, config, drawFunction);
+    this.drawBorder(unit, borderColor, config);
 
     // Render icon at 1/2 scale for better quality
     const scaledWidth = icon.width >> 1;
@@ -314,9 +257,9 @@ export class StructureLayer implements Layer {
     this.tempContext.drawImage(image, 0, 0, width * 2, height * 2);
 
     // Apply color tinting using multiply blend mode
-    this.tempContext.globalCompositeOperation = "multiply";
-    this.tempContext.fillStyle = color.toRgbString();
-    this.tempContext.fillRect(0, 0, width * 2, height * 2);
+    // this.tempContext.globalCompositeOperation = "multiply";
+    // this.tempContext.fillStyle = color.toRgbString();
+    // this.tempContext.fillRect(0, 0, width * 2, height * 2);
 
     // Restore the alpha channel
     this.tempContext.globalCompositeOperation = "destination-in";

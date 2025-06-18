@@ -25,6 +25,7 @@ import { PlayerPanel } from "./layers/PlayerPanel";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
+import { StructureScaleLayer } from "./layers/StructureScaleLayer";
 import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
@@ -35,11 +36,12 @@ import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
 
 export function createRenderer(
-  canvas: HTMLCanvasElement,
+  underCanvas: HTMLCanvasElement,
+  aboveCanvas: HTMLCanvasElement,
   game: GameView,
   eventBus: EventBus,
 ): GameRenderer {
-  const transformHandler = new TransformHandler(game, eventBus, canvas);
+  const transformHandler = new TransformHandler(game, eventBus, underCanvas);
 
   const uiState = { attackRatio: 20 };
 
@@ -205,82 +207,86 @@ export function createRenderer(
   }
   leftInGameAd.g = game;
 
-  const layers: Layer[] = [
-    new TerrainLayer(game, transformHandler),
-    new TerritoryLayer(game, eventBus, transformHandler),
-    structureLayer,
-    new UnitLayer(game, eventBus, transformHandler),
-    new FxLayer(game),
-    new UILayer(game, eventBus, transformHandler),
-    new NameLayer(game, transformHandler),
-    eventsDisplay,
-    chatDisplay,
-    buildMenu,
-    new MainRadialMenu(
-      eventBus,
-      game,
-      transformHandler,
-      emojiTable as EmojiTable,
-      buildMenu,
-      uiState,
-      playerInfo,
-      playerPanel,
-    ),
-    new SpawnTimer(game, transformHandler),
-    leaderboard,
-    gameLeftSidebar,
-    controlPanel,
-    playerInfo,
-    winModel,
-    optionsMenu,
-    replayPanel,
-    teamStats,
-    topBar,
-    playerPanel,
-    headsUpMessage,
-    unitInfoModal,
-    multiTabModal,
-    leftInGameAd,
-  ];
+  const canvasLayers: Map<HTMLCanvasElement, Layer[]> = new Map([
+    [
+      underCanvas,
+      [
+        new TerrainLayer(game, transformHandler),
+        new TerritoryLayer(game, eventBus, transformHandler),
+        structureLayer,
+      ],
+    ],
+    [
+      aboveCanvas,
+      [
+        new UnitLayer(game, eventBus, transformHandler),
+        new FxLayer(game),
+        new UILayer(game, eventBus, transformHandler),
+        new NameLayer(game, transformHandler),
+        new StructureScaleLayer(game, transformHandler),
+        eventsDisplay,
+        chatDisplay,
+        buildMenu,
+        new MainRadialMenu(
+          eventBus,
+          game,
+          transformHandler,
+          emojiTable as EmojiTable,
+          buildMenu,
+          uiState,
+          playerInfo,
+          playerPanel,
+        ),
+        new SpawnTimer(game, transformHandler),
+        leaderboard,
+        gameLeftSidebar,
+        controlPanel,
+        playerInfo,
+        winModel,
+        optionsMenu,
+        replayPanel,
+        teamStats,
+        topBar,
+        playerPanel,
+        headsUpMessage,
+        unitInfoModal,
+        multiTabModal,
+        leftInGameAd,
+      ],
+    ],
+  ]);
 
   return new GameRenderer(
     game,
     eventBus,
-    canvas,
     transformHandler,
     uiState,
-    layers,
+    canvasLayers,
   );
 }
 
 export class GameRenderer {
-  private context: CanvasRenderingContext2D;
-
   constructor(
     private game: GameView,
     private eventBus: EventBus,
-    private canvas: HTMLCanvasElement,
     public transformHandler: TransformHandler,
     public uiState: UIState,
-    private layers: Layer[],
-  ) {
-    const context = canvas.getContext("2d");
-    if (context === null) throw new Error("2d context not supported");
-    this.context = context;
-  }
+    private canvasLayers: Map<HTMLCanvasElement, Layer[]>,
+  ) {}
 
   initialize() {
     this.eventBus.on(RedrawGraphicsEvent, (e) => {
-      this.layers.forEach((l) => {
-        if (l.redraw) {
-          l.redraw();
-        }
+      this.canvasLayers.forEach((layers, _) => {
+        layers.forEach((l) => {
+          if (l.redraw) {
+            l.redraw();
+          }
+        });
       });
     });
 
-    this.layers.forEach((l) => l.init?.());
-
-    document.body.appendChild(this.canvas);
+    this.canvasLayers.forEach((layers, _) => layers.forEach((l) => l.init?.()));
+    document.body.append(...this.canvasLayers.keys());
     window.addEventListener("resize", () => this.resizeCanvas());
     this.resizeCanvas();
 
@@ -291,39 +297,19 @@ export class GameRenderer {
   }
 
   resizeCanvas() {
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
-    //this.redraw()
+    Array.from(this.canvasLayers.keys()).forEach((c) => {
+      c.width = window.innerWidth;
+      c.height = window.innerHeight;
+    });
   }
 
   renderGame() {
     const start = performance.now();
     // Set background
-    this.context.fillStyle = this.game
-      .config()
-      .theme()
-      .backgroundColor()
-      .toHex();
-    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-    // Save the current context state
-    this.context.save();
-
-    this.transformHandler.handleTransform(this.context);
-
-    this.layers.forEach((l) => {
-      if (l.shouldTransform?.()) {
-        l.renderLayer?.(this.context);
-      }
-    });
-
-    this.context.restore();
-
-    this.layers.forEach((l) => {
-      if (!l.shouldTransform?.()) {
-        l.renderLayer?.(this.context);
-      }
-    });
+    this.fillBackground(Array.from(this.canvasLayers.keys()));
+    this.canvasLayers.forEach((layers, canvas) =>
+      this.renderLayers(canvas, layers),
+    );
 
     requestAnimationFrame(() => this.renderGame());
 
@@ -335,12 +321,49 @@ export class GameRenderer {
     }
   }
 
+  private renderLayers(canvas: HTMLCanvasElement, layers: Layer[]) {
+    const context = canvas.getContext("2d")!;
+
+    // Save the current context state
+    context.save();
+
+    this.transformHandler.handleTransform(context);
+
+    layers.forEach((l) => {
+      if (l.shouldTransform?.()) {
+        l.renderLayer?.(context);
+      }
+    });
+
+    context.restore();
+
+    layers.forEach((l) => {
+      if (!l.shouldTransform?.()) {
+        l.renderLayer?.(context);
+      }
+    });
+  }
+
+  private fillBackground(canvases: HTMLCanvasElement[]) {
+    const context = canvases[0].getContext("2d")!;
+    context.fillStyle = this.game.config().theme().backgroundColor().toHex();
+    context.fillRect(0, 0, canvases[0].width, canvases[0].height);
+
+    canvases[1]
+      .getContext("2d")!
+      .clearRect(0, 0, canvases[1].width, canvases[1].height);
+  }
+
   tick() {
-    this.layers.forEach((l) => l.tick?.());
+    this.canvasLayers.forEach((layers, canvas) =>
+      layers.forEach((l) => l.tick?.()),
+    );
   }
 
   resize(width: number, height: number): void {
-    this.canvas.width = Math.ceil(width / window.devicePixelRatio);
-    this.canvas.height = Math.ceil(height / window.devicePixelRatio);
+    Array.from(this.canvasLayers.keys()).forEach((c) => {
+      c.width = Math.ceil(width / window.devicePixelRatio);
+      c.height = Math.ceil(height / window.devicePixelRatio);
+    });
   }
 }

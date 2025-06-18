@@ -151,7 +151,7 @@ export enum UnitType {
   Construction = "Construction",
 }
 
-const _structureTypes: ReadonlySet<UnitType> = new Set([
+export const STRUCTURE_TYPES: ReadonlySet<UnitType> = new Set([
   UnitType.City,
   UnitType.Construction,
   UnitType.DefensePost,
@@ -161,7 +161,7 @@ const _structureTypes: ReadonlySet<UnitType> = new Set([
 ]);
 
 export function isStructureType(type: UnitType): boolean {
-  return _structureTypes.has(type);
+  return STRUCTURE_TYPES.has(type);
 }
 
 export interface OwnerComp {
