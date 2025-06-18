@@ -107,7 +107,7 @@ export function joinLobby(
         lobbyConfig.clientID,
         true,
         false,
-        translateText("error_modal.connection_error"),
+        "error_modal.connection_error",
       );
     }
   };
