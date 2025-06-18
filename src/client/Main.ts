@@ -165,7 +165,8 @@ class Client {
       "gutter-ad-modal",
     ) as GutterAdModal;
     this.gutterAdModal instanceof GutterAdModal;
-    this.gutterAdModal.show();
+    // TODO: re-enable to show gutter ads.
+    // this.gutterAdModal.show();
 
     // const ctModal = document.querySelector("chat-modal") as ChatModal;
     // ctModal instanceof ChatModal;
