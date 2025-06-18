@@ -24,8 +24,8 @@ import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SpawnTimer } from "./layers/SpawnTimer";
+import { StructureIconsLayer } from "./layers/StructureIconsLayer";
 import { StructureLayer } from "./layers/StructureLayer";
-import { StructureScaleLayer } from "./layers/StructureScaleLayer";
 import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
@@ -223,7 +223,7 @@ export function createRenderer(
         new FxLayer(game),
         new UILayer(game, eventBus, transformHandler),
         new NameLayer(game, transformHandler),
-        new StructureScaleLayer(game, transformHandler),
+        new StructureIconsLayer(game, transformHandler),
         eventsDisplay,
         chatDisplay,
         buildMenu,
@@ -306,7 +306,7 @@ export class GameRenderer {
   renderGame() {
     const start = performance.now();
     // Set background
-    this.fillBackground(Array.from(this.canvasLayers.keys()));
+    this.fillBackground();
     this.canvasLayers.forEach((layers, canvas) =>
       this.renderLayers(canvas, layers),
     );
@@ -344,14 +344,16 @@ export class GameRenderer {
     });
   }
 
-  private fillBackground(canvases: HTMLCanvasElement[]) {
-    const context = canvases[0].getContext("2d")!;
+  private fillBackground() {
+    const underCanvas = Array.from(this.canvasLayers.keys())[0];
+    const aboveCanvas = Array.from(this.canvasLayers.keys())[1];
+    const context = underCanvas.getContext("2d")!;
     context.fillStyle = this.game.config().theme().backgroundColor().toHex();
-    context.fillRect(0, 0, canvases[0].width, canvases[0].height);
+    context.fillRect(0, 0, underCanvas.width, underCanvas.height);
 
-    canvases[1]
+    aboveCanvas
       .getContext("2d")!
-      .clearRect(0, 0, canvases[1].width, canvases[1].height);
+      .clearRect(0, 0, aboveCanvas.width, aboveCanvas.height);
   }
 
   tick() {

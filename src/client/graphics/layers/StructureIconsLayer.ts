@@ -22,7 +22,7 @@ class StructureRenderInfo {
   ) {}
 }
 
-export class StructureScaleLayer implements Layer {
+export class StructureIconsLayer implements Layer {
   private theme: Theme;
   private renders: StructureRenderInfo[] = [];
   public scale: number = 1.8;
@@ -49,6 +49,16 @@ export class StructureScaleLayer implements Layer {
     icon: string;
     svg: SVGElement | null;
   }) {
+    try {
+      const response = await fetch(unitSVGInfos.icon);
+      if (!response.ok) {
+        throw new Error(`Failed to load SVG: ${response.statusText}`);
+      }
+      unitSVGInfos.svg = this.createSvgElementFromString(await response.text());
+    } catch (error) {
+      console.error(`Error loading SVG ${unitSVGInfos.icon}:`, error);
+      unitSVGInfos.svg = null;
+    }
     const response = await fetch(unitSVGInfos.icon);
     unitSVGInfos.svg = this.createSvgElementFromString(await response.text());
   }
@@ -186,11 +196,12 @@ export class StructureScaleLayer implements Layer {
     loc.y -= size * 7;
 
     render.location = new Cell(loc.x, loc.y);
+    const canvasRect = this.transformHandler.boundingRect();
     if (
-      render.location.x < 0 ||
-      render.location.y < 0 ||
-      render.location.x > screen.width ||
-      render.location.y > screen.height
+      render.location.x < canvasRect.left ||
+      render.location.y < canvasRect.left ||
+      render.location.x > canvasRect.width ||
+      render.location.y > canvasRect.height
     ) {
       render.element.style.display = "none";
       return;
