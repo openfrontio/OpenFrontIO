@@ -116,6 +116,7 @@ export class StructureIconsLayer implements Layer {
       const render = this.renders.find((r) => r.unit === unit);
       if (render) {
         render.element.remove();
+        this.seenUnits.delete(render.unit);
         render.element = this.createUnitElement(unit);
       }
     }
@@ -180,6 +181,7 @@ export class StructureIconsLayer implements Layer {
   renderStructure(render: StructureRenderInfo) {
     if (!render.unit.isActive()) {
       this.renders = this.renders.filter((r) => r !== render);
+      this.seenUnits.delete(render.unit);
       render.element.remove();
       return;
     }

@@ -11,8 +11,9 @@ import shieldIcon from "../../../../resources/images/ShieldIconBlack.svg";
 import targetIcon from "../../../../resources/images/TargetIcon.svg";
 import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
 import { PseudoRandom } from "../../../core/PseudoRandom";
+import { calculateBoundingBox } from "../../../core/Util";
 import { Theme } from "../../../core/configuration/Config";
-import { AllPlayers, Cell, nukeTypes } from "../../../core/game/Game";
+import { AllPlayers, Cell, nukeTypes, Player } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { createCanvas, renderNumber, renderTroops } from "../../Utils";
@@ -110,11 +111,12 @@ export class NameLayer implements Layer {
     this.container.style.left = "50%";
     this.container.style.top = "50%";
     this.container.style.pointerEvents = "none";
-    this.container.style.zIndex = "2";
+    this.container.style.zIndex = "4";
     document.body.appendChild(this.container);
   }
 
   public tick() {
+    return;
     if (this.game.ticks() % 10 !== 0) {
       return;
     }
@@ -161,6 +163,7 @@ export class NameLayer implements Layer {
         this.renderPlayerInfo(render);
       }
     }
+    // drawStateLabelCanvas(this.game, mainContex, this.game.myPlayer())
 
     mainContex.drawImage(
       this.canvas,
@@ -185,7 +188,7 @@ export class NameLayer implements Layer {
     iconsDiv.style.gap = "4px";
     iconsDiv.style.justifyContent = "center";
     iconsDiv.style.alignItems = "center";
-    iconsDiv.style.zIndex = "2";
+    iconsDiv.style.zIndex = "4";
     iconsDiv.style.opacity = "0.8";
     element.appendChild(iconsDiv);
 
@@ -195,7 +198,7 @@ export class NameLayer implements Layer {
       flagImg.classList.add("player-flag");
       flagImg.style.opacity = "0.8";
       flagImg.src = "/flags/" + player.flag() + ".svg";
-      flagImg.style.zIndex = "1";
+      flagImg.style.zIndex = "3";
       flagImg.style.aspectRatio = "3/4";
       nameDiv.appendChild(flagImg);
     }
@@ -204,7 +207,7 @@ export class NameLayer implements Layer {
     nameDiv.style.fontFamily = this.theme.font();
     nameDiv.style.whiteSpace = "nowrap";
     nameDiv.style.textOverflow = "ellipsis";
-    nameDiv.style.zIndex = "3";
+    nameDiv.style.zIndex = "5";
     nameDiv.style.display = "flex";
     nameDiv.style.justifyContent = "flex-end";
     nameDiv.style.alignItems = "center";
@@ -221,7 +224,7 @@ export class NameLayer implements Layer {
     troopsDiv.textContent = renderTroops(player.troops());
     troopsDiv.style.color = this.theme.textColor(player);
     troopsDiv.style.fontFamily = this.theme.font();
-    troopsDiv.style.zIndex = "3";
+    troopsDiv.style.zIndex = "5";
     troopsDiv.style.marginTop = "-5%";
     element.appendChild(troopsDiv);
 
@@ -230,7 +233,7 @@ export class NameLayer implements Layer {
     if (false) {
       const shieldDiv = document.createElement("div");
       shieldDiv.classList.add("player-shield");
-      shieldDiv.style.zIndex = "3";
+      shieldDiv.style.zIndex = "5";
       shieldDiv.style.marginTop = "-5%";
       shieldDiv.style.display = "flex";
       shieldDiv.style.alignItems = "center";
@@ -587,4 +590,190 @@ export class NameLayer implements Layer {
     }
     return icon;
   }
+}
+
+function drawStateLabelCanvas(
+  game: GameView,
+  ctx: CanvasRenderingContext2D,
+  player: Player,
+) {
+  const ANGLE_STEP = 9;
+  const LENGTH_START = 5;
+  const LENGTH_STEP = 5;
+  const LENGTH_MAX = 300;
+  const angles = precalculateAngles(ANGLE_STEP);
+
+  const offset = getOffsetWidth(player.tiles().size);
+  const bb = calculateBoundingBox(game, player.borderTiles());
+  const [x0, y0] = [bb.max.x - bb.min.x, bb.max.y, bb.min.y];
+
+  const rays = angles.map(({ angle, dx, dy }) => {
+    const { length, x, y } = raycast(x0, y0, dx, dy, offset);
+    return { angle, length, x, y };
+  });
+  const bestPair = findBestRayPair(rays);
+  if (bestPair === null) {
+    return;
+  }
+  const pathPoints = [
+    [bestPair[0].x, bestPair[0].y],
+    [x0, y0],
+    [bestPair[1].x, bestPair[1].y],
+  ];
+  if (bestPair[0].x > bestPair[1].x) pathPoints.reverse();
+
+  const curve = generateCurvePoints(pathPoints);
+  drawTextAlongCurve(ctx, player.name(), curve);
+
+  function getOffsetWidth(cellsNumber: number): number {
+    if (cellsNumber < 40) return 0;
+    if (cellsNumber < 200) return 5;
+    return 10;
+  }
+
+  function precalculateAngles(
+    step: number,
+  ): { angle: number; dx: number; dy: number }[] {
+    const angles: { angle: number; dx: number; dy: number }[] = [];
+    const RAD = Math.PI / 180;
+    for (let angle = 0; angle < 360; angle += step) {
+      const dx = Math.cos(angle * RAD);
+      const dy = Math.sin(angle * RAD);
+      angles.push({ angle, dx, dy });
+    }
+    return angles;
+  }
+
+  function raycast(
+    x0: number,
+    y0: number,
+    dx: number,
+    dy: number,
+    offset: number,
+  ): Ray {
+    let ray = { length: 0, x: x0, y: y0 };
+    for (
+      let length = LENGTH_START;
+      length < LENGTH_MAX;
+      length += LENGTH_STEP
+    ) {
+      const x = x0 + length * dx;
+      const y = y0 + length * dy;
+
+      const inState =
+        isInsideTerritory(x, y) &&
+        isInsideTerritory(x + -dy * offset, y + dx * offset) &&
+        isInsideTerritory(x + dy * offset, y + -dx * offset);
+      if (!inState) break;
+      ray = { length, x, y };
+    }
+    return ray;
+
+    function isInsideTerritory(x, y) {
+      if (x < 0 || x > ctx.canvas.width || y < 0 || y > ctx.canvas.height)
+        return false;
+      const cellId = game.ref(x, y);
+      return this.game.owner(cellId) === player.id();
+    }
+  }
+  type Ray = {
+    angle?: number;
+    length: number;
+    x: any;
+    y: any;
+  };
+  function findBestRayPair(rays: Ray[]): Ray[] | null {
+    let bestPair: Ray[] | null = null;
+    let bestScore = -Infinity;
+    for (let i = 0; i < rays.length; i++) {
+      const score1 = rays[i].length * scoreRayAngle(rays[i].angle);
+      for (let j = i + 1; j < rays.length; j++) {
+        const score2 = rays[j].length * scoreRayAngle(rays[j].angle);
+        const pairScore =
+          (score1 + score2) * scoreCurvature(rays[i].angle, rays[j].angle);
+        if (pairScore > bestScore) {
+          bestScore = pairScore;
+          bestPair = [rays[i], rays[j]];
+        }
+      }
+    }
+    return bestPair;
+  }
+
+  function scoreRayAngle(angle) {
+    const norm = Math.abs(angle % 180);
+    const horizontality = Math.abs(norm - 90) / 90;
+    return horizontality >= 0.75
+      ? 0.9
+      : horizontality >= 0.5
+        ? 0.6
+        : horizontality >= 0.25
+          ? 0.5
+          : 0.1;
+  }
+
+  function scoreCurvature(a1, a2) {
+    const delta = Math.abs(a1 - a2) % 360;
+    const angleDelta = delta > 180 ? 360 - delta : delta;
+    return angleDelta < 90 ? 0 : 1 - Math.abs((a1 % 180) - (a2 % 180)) / 90;
+  }
+}
+
+function generateCurvePoints(points, steps = 50) {
+  const [p0, p1, p2] = points;
+  const curve: number[][] = [];
+  for (let t = 0; t <= 1; t += 1 / steps) {
+    const x = (1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t ** 2 * p2[0];
+    const y = (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t ** 2 * p2[1];
+    curve.push([x, y]);
+  }
+  return curve;
+}
+
+function drawTextAlongCurve(ctx, text, curve, letterSpacing = 1.1) {
+  ctx.save();
+  ctx.font = "bold 12px sans-serif";
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "center";
+
+  const avgLetterWidth = ctx.measureText("A").width * letterSpacing;
+  const totalTextWidth = text.length * avgLetterWidth;
+
+  let totalLength = 0;
+  for (let i = 1; i < curve.length; i++) {
+    const [x1, y1] = curve[i - 1];
+    const [x2, y2] = curve[i];
+    totalLength += Math.hypot(x2 - x1, y2 - y1);
+  }
+
+  const offset = (totalLength - totalTextWidth) / 2;
+  let curDist = 0;
+  let index = 0;
+
+  for (let i = 1; i < curve.length && index < text.length; i++) {
+    const [x1, y1] = curve[i - 1];
+    const [x2, y2] = curve[i];
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const segmentLength = Math.hypot(dx, dy);
+
+    while (
+      curDist + segmentLength >= offset + avgLetterWidth * index &&
+      index < text.length
+    ) {
+      const t = (offset + avgLetterWidth * index - curDist) / segmentLength;
+      const x = x1 + dx * t;
+      const y = y1 + dy * t;
+      const angle = Math.atan2(dy, dx);
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.fillText(text[index], 0, 0);
+      ctx.restore();
+      index++;
+    }
+    curDist += segmentLength;
+  }
+  ctx.restore();
 }
