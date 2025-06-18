@@ -272,15 +272,18 @@
       style="position: fixed; pointer-events: none"
     >
       <div
-        class="w-full sm:w-2/3 sm:fixed sm:right-0 sm:bottom-0 sm:flex justify-end"
+        class="w-full sm:w-2/3 sm:fixed sm:right-0 sm:bottom-0 sm:flex flex-col items-end"
         style="pointer-events: none"
       >
         <chat-display></chat-display>
         <events-display></events-display>
       </div>
-      <div class="w-full sm:w-1/3 md:max-w-72" style="pointer-events: auto">
-        <left-in-game-ad></left-in-game-ad>
+      <div
+        class="w-[320px] flex flex-col items-center"
+        style="pointer-events: auto"
+      >
         <control-panel></control-panel>
+        <left-in-game-ad></left-in-game-ad>
       </div>
     </div>
 
@@ -364,7 +367,6 @@
     <multi-tab-modal></multi-tab-modal>
     <unit-info-modal></unit-info-modal>
     <news-modal></news-modal>
-    <left-in-game-ad></left-in-game-ad>
     <game-left-sidebar></game-left-sidebar>
     <div
       id="language-modal"

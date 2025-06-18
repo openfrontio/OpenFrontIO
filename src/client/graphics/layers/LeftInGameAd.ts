@@ -117,7 +117,7 @@ export class LeftInGameAd extends LitElement implements Layer {
 
     return html`
       <div
-        class="w-full min-h-[100px] bg-gray-900 border border-gray-600 z-[9999] pointer-events-auto flex items-center justify-center"
+        class="w-[320px] min-h-[100px] bg-gray-900 border border-gray-600 flex items-center justify-center"
       >
         <div
           id="${AD_CONTAINER_ID}"

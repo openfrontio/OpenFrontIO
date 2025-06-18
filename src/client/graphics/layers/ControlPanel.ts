@@ -204,7 +204,7 @@ export class ControlPanel extends LitElement implements Layer {
       </style>
       <div
         class="${this._isVisible
-          ? "w-full text-sm lg:text-m lg:w-72 bg-slate-800/40 backdrop-blur-sm shadow-xs p-2 pr-3 lg:p-4 shadow-lg lg:rounded-lg"
+          ? "w-[320px] text-sm lg:text-m bg-gray-800/70 p-2 pr-3 lg:p-4 shadow-lg lg:rounded-lg backdrop-blur"
           : "hidden"}"
         @contextmenu=${(e) => e.preventDefault()}
       >
