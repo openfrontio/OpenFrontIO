@@ -57,6 +57,7 @@ export class GutterAdModal extends LitElement {
 
     if (!window.ramp) {
       console.warn("Playwire RAMP not available");
+      this.hide();
       return;
     }
 
@@ -82,6 +83,7 @@ export class GutterAdModal extends LitElement {
       });
     } catch (error) {
       console.error("Failed to load Playwire ads:", error);
+      this.hide();
     }
   }
 
@@ -109,36 +111,24 @@ export class GutterAdModal extends LitElement {
     return html`
       <!-- Left Gutter Ad -->
       <div
-        class="hidden xl:flex fixed left-0 top-1/2 transform -translate-y-1/2 w-[160px] min-h-[600px] bg-gray-900 border border-gray-600 z-[9999] pointer-events-auto items-center justify-center shadow-lg"
+        class="hidden xl:flex fixed left-0 top-1/2 transform -translate-y-1/2 w-[160px] min-h-[600px] z-[10] pointer-events-auto items-center justify-center"
         style="margin-left: ${this.margin};"
       >
         <div
           id="${this.leftContainerId}"
           class="w-full h-full flex items-center justify-center p-2"
-        >
-          ${!this.adLoaded
-            ? html`<span class="text-white text-xs text-center"
-                >Loading ad...</span
-              >`
-            : ""}
-        </div>
+        ></div>
       </div>
 
       <!-- Right Gutter Ad -->
       <div
-        class="hidden xl:flex fixed right-0 top-1/2 transform -translate-y-1/2 w-[160px] min-h-[600px] bg-gray-900 border border-gray-600 z-[9999] pointer-events-auto items-center justify-center shadow-lg"
+        class="hidden xl:flex fixed right-0 top-1/2 transform -translate-y-1/2 w-[160px] min-h-[600px] z-[10] pointer-events-auto items-center justify-center"
         style="margin-right: ${this.margin};"
       >
         <div
           id="${this.rightContainerId}"
           class="w-full h-full flex items-center justify-center p-2"
-        >
-          ${!this.adLoaded
-            ? html`<span class="text-white text-xs text-center"
-                >Loading ad...</span
-              >`
-            : ""}
-        </div>
+        ></div>
       </div>
     `;
   }
