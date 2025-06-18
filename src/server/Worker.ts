@@ -13,6 +13,7 @@ import {
   ClientJoinMessageSchema,
   GameRecord,
   GameRecordSchema,
+  ServerErrorMessage,
 } from "../core/Schemas";
 import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
 import { archive, readGameRecord } from "./Archive";
@@ -300,6 +301,12 @@ export function startWorker() {
           if (!parsed.success) {
             const error = z.prettifyError(parsed.error);
             log.warn("Error parsing join message client", error);
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                error: error.toString(),
+              } satisfies ServerErrorMessage),
+            );
             ws.close(1002, "ClientJoinMessageSchema");
             return;
           }

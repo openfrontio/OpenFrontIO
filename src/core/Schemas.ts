@@ -80,7 +80,8 @@ export type ServerMessage =
   | ServerStartGameMessage
   | ServerPingMessage
   | ServerDesyncMessage
-  | ServerPrestartMessage;
+  | ServerPrestartMessage
+  | ServerErrorMessage;
 
 export type ServerSyncMessage = z.infer<typeof ServerTurnMessageSchema>;
 export type ServerStartGameMessage = z.infer<
@@ -89,6 +90,7 @@ export type ServerStartGameMessage = z.infer<
 export type ServerPingMessage = z.infer<typeof ServerPingMessageSchema>;
 export type ServerDesyncMessage = z.infer<typeof ServerDesyncSchema>;
 export type ServerPrestartMessage = z.infer<typeof ServerPrestartMessageSchema>;
+export type ServerErrorMessage = z.infer<typeof ServerErrorSchema>;
 export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
 export type ClientPingMessage = z.infer<typeof ClientPingMessageSchema>;
 export type ClientIntentMessage = z.infer<typeof ClientIntentMessageSchema>;
@@ -392,12 +394,18 @@ export const ServerDesyncSchema = z.object({
   yourHash: z.number().optional(),
 });
 
+export const ServerErrorSchema = z.object({
+  type: z.literal("error"),
+  error: z.string(),
+});
+
 export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
   ServerStartGameMessageSchema,
   ServerPingMessageSchema,
   ServerDesyncSchema,
+  ServerErrorSchema,
 ]);
 
 //

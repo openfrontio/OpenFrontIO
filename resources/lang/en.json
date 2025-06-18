@@ -453,6 +453,7 @@
   },
   "error_modal": {
     "crashed": "Game crashed!",
+    "connection_error": "Connection error!",
     "paste_discord": "Please paste the following in your bug report in Discord:",
     "copy_clipboard": "Copy to clipboard",
     "copied": "Copied!",

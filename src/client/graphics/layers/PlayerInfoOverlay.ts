@@ -343,7 +343,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         @contextmenu=${(e) => e.preventDefault()}
       >
         <div
-          class="bg-opacity-60 bg-gray-900 rounded-lg shadow-lg backdrop-blur-sm transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
+          class="bg-slate-800/40 backdrop-blur-sm shadow-xs rounded-lg shadow-lg backdrop-blur-sm transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
         >
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}
