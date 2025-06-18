@@ -11,7 +11,6 @@ import "./FlagInput";
 import { FlagInput } from "./FlagInput";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
-import { GutterAdModal } from "./GutterAdModal";
 import { HelpModal } from "./HelpModal";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
@@ -74,7 +73,6 @@ class Client {
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
-  private gutterAdModal: GutterAdModal;
 
   constructor() {}
 
@@ -165,12 +163,6 @@ class Client {
         spModal.open();
       }
     });
-
-    this.gutterAdModal = document.querySelector(
-      "gutter-ad-modal",
-    ) as GutterAdModal;
-    this.gutterAdModal instanceof GutterAdModal;
-    this.gutterAdModal.show();
 
     // const ctModal = document.querySelector("chat-modal") as ChatModal;
     // ctModal instanceof ChatModal;
@@ -373,7 +365,6 @@ class Client {
       () => {
         this.joinModal.close();
         this.publicLobby.stop();
-        this.gutterAdModal.hide();
 
         try {
           window.PageOS.session.newPageView();
