@@ -215,7 +215,7 @@ export class StatsImpl implements Stats {
     this._addBomb(player, type, BOMB_INDEX_LAND, 1);
   }
 
-  bombIntercept(player: Player, type: NukeType, count: BigIntLike = 1n): void {
+  bombIntercept(player: Player, type: NukeType, count: BigIntLike): void {
     this._addBomb(player, type, BOMB_INDEX_INTERCEPT, count);
   }
 

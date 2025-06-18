@@ -72,11 +72,7 @@ export class SAMMissileExecution implements Execution {
         // Record stats
         this.mg
           .stats()
-          .bombIntercept(
-            this._owner,
-            this.target.owner(),
-            this.target.type() as NukeType,
-          );
+          .bombIntercept(this._owner, this.target.type() as NukeType, 1);
         return;
       } else {
         this.SAMMissile.move(result);
