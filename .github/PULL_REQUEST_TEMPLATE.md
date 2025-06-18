@@ -1,5 +1,7 @@
 ## Description:
 
+Describe the PR.
+
 ## Please complete the following:
 
 - [ ] I have added screenshots for all UI updates
@@ -10,4 +12,4 @@
 
 ## Please put your Discord username so you can be contacted if a bug or regression is found:
 
-<DISCORD USERNAME>
+DISCORD_USERNAME

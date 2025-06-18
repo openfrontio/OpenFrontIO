@@ -15,13 +15,13 @@ import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
+import { LeftInGameAd } from "./layers/LeftInGameAd";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
 import { OptionsMenu } from "./layers/OptionsMenu";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
-import { PlayerTeamLabel } from "./layers/PlayerTeamLabel";
 import { RailRoadLayer } from "./layers/RailRoadLayer";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SpawnTimer } from "./layers/SpawnTimer";
@@ -174,14 +174,6 @@ export function createRenderer(
   }
   multiTabModal.game = game;
 
-  const playerTeamLabel = document.querySelector(
-    "player-team-label",
-  ) as PlayerTeamLabel;
-  if (!(playerTeamLabel instanceof PlayerTeamLabel)) {
-    console.error("player team label not found");
-  }
-  playerTeamLabel.game = game;
-
   const headsUpMessage = document.querySelector(
     "heads-up-message",
   ) as HeadsUpMessage;
@@ -205,6 +197,14 @@ export function createRenderer(
   );
   unitInfoModal.structureLayer = structureLayer;
   // unitInfoModal.eventBus = eventBus;
+
+  const leftInGameAd = document.querySelector(
+    "left-in-game-ad",
+  ) as LeftInGameAd;
+  if (!(leftInGameAd instanceof LeftInGameAd)) {
+    console.error("left in game ad not found");
+  }
+  leftInGameAd.g = game;
 
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
@@ -239,10 +239,10 @@ export function createRenderer(
     teamStats,
     topBar,
     playerPanel,
-    playerTeamLabel,
     headsUpMessage,
     unitInfoModal,
     multiTabModal,
+    leftInGameAd,
   ];
 
   return new GameRenderer(
