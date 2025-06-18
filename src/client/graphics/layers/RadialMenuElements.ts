@@ -310,7 +310,7 @@ export const buildMenuElement: MenuElement = {
   color: COLORS.build,
 
   subMenu: (params: MenuElementParams) => {
-    if (params === undefined || params.selected === null) return [];
+    if (params === undefined) return [];
 
     const unitTypes: Set<UnitType> = new Set<UnitType>();
     if (params.selected === params.myPlayer) {

@@ -12,6 +12,7 @@ import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
+import { GutterAdModal } from "./layers/GutterAdModal";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
@@ -22,7 +23,6 @@ import { NameLayer } from "./layers/NameLayer";
 import { OptionsMenu } from "./layers/OptionsMenu";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
-import { PlayerTeamLabel } from "./layers/PlayerTeamLabel";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
@@ -174,14 +174,6 @@ export function createRenderer(
   }
   multiTabModal.game = game;
 
-  const playerTeamLabel = document.querySelector(
-    "player-team-label",
-  ) as PlayerTeamLabel;
-  if (!(playerTeamLabel instanceof PlayerTeamLabel)) {
-    console.error("player team label not found");
-  }
-  playerTeamLabel.game = game;
-
   const headsUpMessage = document.querySelector(
     "heads-up-message",
   ) as HeadsUpMessage;
@@ -213,6 +205,14 @@ export function createRenderer(
     console.error("left in game ad not found");
   }
   leftInGameAd.g = game;
+
+  const gutterAdModal = document.querySelector(
+    "gutter-ad-modal",
+  ) as GutterAdModal;
+  if (!(gutterAdModal instanceof GutterAdModal)) {
+    console.error("gutter ad modal not found");
+  }
+  gutterAdModal.eventBus = eventBus;
 
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
@@ -246,11 +246,11 @@ export function createRenderer(
     teamStats,
     topBar,
     playerPanel,
-    playerTeamLabel,
     headsUpMessage,
     unitInfoModal,
     multiTabModal,
     leftInGameAd,
+    gutterAdModal,
   ];
 
   return new GameRenderer(

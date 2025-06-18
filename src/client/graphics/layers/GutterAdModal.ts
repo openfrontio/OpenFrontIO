@@ -1,8 +1,16 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { EventBus, GameEvent } from "../../../core/EventBus";
+import { Layer } from "./Layer";
+
+export class GutterAdModalEvent implements GameEvent {
+  constructor(public readonly isVisible: boolean) {}
+}
 
 @customElement("gutter-ad-modal")
-export class GutterAdModal extends LitElement {
+export class GutterAdModal extends LitElement implements Layer {
+  public eventBus: EventBus;
+
   @state()
   private isVisible: boolean = false;
 
@@ -20,6 +28,18 @@ export class GutterAdModal extends LitElement {
     return this;
   }
 
+  init() {
+    this.eventBus.on(GutterAdModalEvent, (event) => {
+      if (event.isVisible) {
+        this.show();
+      } else {
+        this.hide();
+      }
+    });
+  }
+
+  tick() {}
+
   static styles = css``;
 
   // Called after the component's DOM is first rendered
@@ -29,6 +49,7 @@ export class GutterAdModal extends LitElement {
   }
 
   public show(): void {
+    console.log("showing GutterAdModal");
     this.isVisible = true;
     this.requestUpdate();
 
@@ -39,6 +60,7 @@ export class GutterAdModal extends LitElement {
   }
 
   public hide(): void {
+    console.log("hiding GutterAdModal");
     this.isVisible = false;
     this.destroyAds();
     this.adLoaded = false;
@@ -57,6 +79,7 @@ export class GutterAdModal extends LitElement {
 
     if (!window.ramp) {
       console.warn("Playwire RAMP not available");
+      this.hide();
       return;
     }
 
@@ -82,6 +105,7 @@ export class GutterAdModal extends LitElement {
       });
     } catch (error) {
       console.error("Failed to load Playwire ads:", error);
+      this.hide();
     }
   }
 
@@ -109,36 +133,24 @@ export class GutterAdModal extends LitElement {
     return html`
       <!-- Left Gutter Ad -->
       <div
-        class="hidden xl:flex fixed left-0 top-1/2 transform -translate-y-1/2 w-[160px] min-h-[600px] bg-gray-900 border border-gray-600 z-[9999] pointer-events-auto items-center justify-center shadow-lg"
+        class="hidden xl:flex fixed left-0 top-1/2 transform -translate-y-1/2 w-[160px] min-h-[600px] z-[10] pointer-events-auto items-center justify-center"
         style="margin-left: ${this.margin};"
       >
         <div
           id="${this.leftContainerId}"
           class="w-full h-full flex items-center justify-center p-2"
-        >
-          ${!this.adLoaded
-            ? html`<span class="text-white text-xs text-center"
-                >Loading ad...</span
-              >`
-            : ""}
-        </div>
+        ></div>
       </div>
 
       <!-- Right Gutter Ad -->
       <div
-        class="hidden xl:flex fixed right-0 top-1/2 transform -translate-y-1/2 w-[160px] min-h-[600px] bg-gray-900 border border-gray-600 z-[9999] pointer-events-auto items-center justify-center shadow-lg"
+        class="hidden xl:flex fixed right-0 top-1/2 transform -translate-y-1/2 w-[160px] min-h-[600px] z-[10] pointer-events-auto items-center justify-center"
         style="margin-right: ${this.margin};"
       >
         <div
           id="${this.rightContainerId}"
           class="w-full h-full flex items-center justify-center p-2"
-        >
-          ${!this.adLoaded
-            ? html`<span class="text-white text-xs text-center"
-                >Loading ad...</span
-              >`
-            : ""}
-        </div>
+        ></div>
       </div>
     `;
   }
