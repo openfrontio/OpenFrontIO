@@ -143,13 +143,13 @@ export class FxLayer implements Layer {
   }
 
   onRailRoadEvent(railroad: RailRoadUpdate) {
-    const roads = railroad.tiles;
-    for (const tile of roads) {
+    const railTiles = railroad.railTiles;
+    for (const rail of railTiles) {
       // No need for pseudorandom, this is fx
       const chanceFx = Math.floor(Math.random() * 3);
       if (chanceFx === 0) {
-        const x = this.game.x(tile);
-        const y = this.game.y(tile);
+        const x = this.game.x(rail.tile);
+        const y = this.game.y(rail.tile);
         const animation = new SpriteFx(
           this.animatedSpriteLoader,
           x,

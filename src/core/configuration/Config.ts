@@ -133,6 +133,9 @@ export interface Config {
   tradeShipSpawnRate(numberOfPorts: number): number;
   trainGold(): Gold;
   trainSpawnRate(numberOfStations: number): number;
+  trainStationMinRange(): number;
+  trainStationMaxRange(): number;
+  railroadMaxSize(): number;
   safeFromPiratesCooldownMax(): number;
   defensePostRange(): number;
   SAMCooldown(): number;

@@ -302,6 +302,15 @@ export class DefaultConfig implements Config {
   trainGold(): Gold {
     return BigInt(10_000);
   }
+  trainStationMinRange(): number {
+    return 15;
+  }
+  trainStationMaxRange(): number {
+    return 80;
+  }
+  railroadMaxSize(): number {
+    return 100;
+  }
 
   unitInfo(type: UnitType): UnitInfo {
     switch (type) {
@@ -476,17 +485,17 @@ export class DefaultConfig implements Config {
       case UnitType.TrainEngine:
         return {
           cost: () => 0n,
-          territoryBound: true,
+          territoryBound: false,
         };
       case UnitType.TrainCarriage:
         return {
           cost: () => 0n,
-          territoryBound: true,
+          territoryBound: false,
         };
       case UnitType.TrainCarriageLoaded:
         return {
           cost: () => 0n,
-          territoryBound: true,
+          territoryBound: false,
         };
       default:
         assertNever(type);

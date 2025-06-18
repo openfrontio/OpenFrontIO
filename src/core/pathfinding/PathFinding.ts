@@ -2,7 +2,7 @@ import { Game } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { DistanceBasedBezierCurve } from "../utilities/Line";
-import { AStar, PathFindResultType, TileResult } from "./AStar";
+import { AStar, AStarResult, PathFindResultType } from "./AStar";
 import { MiniAStar } from "./MiniAStar";
 
 const parabolaMinHeight = 50;
@@ -120,7 +120,7 @@ export class PathFinder {
     curr: TileRef | null,
     dst: TileRef | null,
     dist: number = 1,
-  ): TileResult {
+  ): AStarResult<TileRef> {
     if (curr === null) {
       console.error("curr is null");
       return { type: PathFindResultType.PathNotFound };
@@ -131,7 +131,7 @@ export class PathFinder {
     }
 
     if (this.game.manhattanDist(curr, dst) < dist) {
-      return { type: PathFindResultType.Completed, tile: curr };
+      return { type: PathFindResultType.Completed, node: curr };
     }
 
     if (this.computeFinished) {
@@ -147,7 +147,7 @@ export class PathFinder {
         if (tile === undefined) {
           throw new Error("missing tile");
         }
-        return { type: PathFindResultType.NextTile, tile };
+        return { type: PathFindResultType.NextTile, node: tile };
       }
     }
 

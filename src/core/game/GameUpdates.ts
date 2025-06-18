@@ -70,10 +70,23 @@ export interface BonusEventUpdate {
   soldiers: number;
 }
 
+export enum RailType {
+  VERTICAL,
+  HORIZONTAL,
+  TOP_LEFT,
+  TOP_RIGHT,
+  BOTTOM_LEFT,
+  BOTTOM_RIGHT,
+}
+
+export interface RailTile {
+  tile: TileRef;
+  railType: RailType;
+}
 export interface RailRoadUpdate {
   type: GameUpdateType.RailRoadEvent;
   isActive: boolean;
-  tiles: TileRef[];
+  railTiles: RailTile[];
 }
 
 export interface TileUpdateWrapper {

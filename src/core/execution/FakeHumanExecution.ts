@@ -22,6 +22,7 @@ import { ConstructionExecution } from "./ConstructionExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { NukeExecution } from "./NukeExecution";
 import { SpawnExecution } from "./SpawnExecution";
+import { TrainStationExecution } from "./TrainStationExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { closestTwoTiles } from "./Util";
 import { BotBehavior } from "./utils/BotBehavior";
@@ -437,8 +438,26 @@ export class FakeHumanExecution implements Execution {
       this.maybeSpawnStructure(UnitType.Port, 1) ||
       this.maybeSpawnStructure(UnitType.City, 2) ||
       this.maybeSpawnWarship() ||
-      this.maybeSpawnStructure(UnitType.MissileSilo, 1)
+      this.maybeSpawnStructure(UnitType.MissileSilo, 1) ||
+      this.maybeSpawnTrainStation()
     );
+  }
+
+  private maybeSpawnTrainStation() {
+    if (this.player === null) throw new Error("not initialized");
+    const cities = this.player.units(
+      UnitType.City,
+      UnitType.Port,
+      UnitType.Factory,
+    );
+    const citiesWithoutStations = cities.filter(
+      (city: Unit) => !city.hasTrainStation(),
+    );
+    if (citiesWithoutStations.length > 0) {
+      this.mg.addExecution(
+        new TrainStationExecution(this.player, citiesWithoutStations[0].id()),
+      );
+    }
   }
 
   private maybeSpawnStructure(type: UnitType, maxNum: number): boolean {

@@ -1,10 +1,11 @@
 import { TradeShipExecution } from "../execution/TradeShipExecution";
 import { TrainExecution } from "../execution/TrainExecution";
+import { GraphAdapter } from "../pathfinding/SerialAStar";
 import { PseudoRandom } from "../PseudoRandom";
 import { Game, Unit, UnitType } from "./Game";
 import { TileRef } from "./GameMap";
-import { GameUpdateType } from "./GameUpdates";
-import { Cluster, RailRoad } from "./RailNetwork";
+import { GameUpdateType, RailTile, RailType } from "./GameUpdates";
+import { RailRoad } from "./RailRoad";
 
 /**
  * Handle train stops at various station types
@@ -20,7 +21,7 @@ class CityStopHandler implements TrainStopHandler {
     trainExecution: TrainExecution,
   ): void {
     const goldBonus = mg.config().trainGold();
-    station.unit.owner().addGold(BigInt(goldBonus));
+    station.unit.owner().addGold(goldBonus);
     mg.addUpdate({
       type: GameUpdateType.BonusEvent,
       tile: station.tile(),
@@ -70,13 +71,23 @@ export function createTrainStopHandlers(
 export class TrainStation {
   private readonly stopHandlers: Partial<Record<UnitType, TrainStopHandler>> =
     {};
-  private cluster: Cluster;
+  private cluster: Cluster | null;
   private railroads: Set<RailRoad> = new Set();
+
   constructor(
     private mg: Game,
     public unit: Unit,
   ) {
     this.stopHandlers = createTrainStopHandlers(new PseudoRandom(mg.ticks()));
+  }
+
+  tradeAvailable(other: TrainStation): boolean {
+    const otherPlayer = other.unit.owner();
+    const player = this.unit.owner();
+    return (
+      other.unit.owner().id === this.unit.owner().id ||
+      this.unit.owner().canTrade(otherPlayer)
+    );
   }
 
   addRailRoad(railRoad: RailRoad) {
@@ -88,10 +99,14 @@ export class TrainStation {
       (r) => r.from === station || r.to === station,
     );
     if (toRemove) {
+      const railTiles: RailTile[] = toRemove.tiles.map((tile) => ({
+        tile,
+        railType: RailType.VERTICAL,
+      }));
       this.mg.addUpdate({
         type: GameUpdateType.RailRoadEvent,
         isActive: false,
-        tiles: toRemove.tiles,
+        railTiles,
       });
       this.railroads.delete(toRemove);
     }
@@ -125,7 +140,7 @@ export class TrainStation {
     this.cluster = cluster;
   }
 
-  getCluster(): Cluster {
+  getCluster(): Cluster | null {
     return this.cluster;
   }
 
@@ -135,5 +150,58 @@ export class TrainStation {
     if (handler) {
       handler.onStop(this.mg, this, trainExecution);
     }
+  }
+}
+
+/**
+ * Make the trainstation usable with A*
+ */
+export class TrainStationMapAdapter implements GraphAdapter<TrainStation> {
+  constructor(private game: Game) {}
+
+  neighbors(node: TrainStation): TrainStation[] {
+    return node.neighbors();
+  }
+
+  cost(node: TrainStation): number {
+    return 1;
+  }
+
+  position(node: TrainStation): { x: number; y: number } {
+    return { x: this.game.x(node.tile()), y: this.game.y(node.tile()) };
+  }
+
+  isTraversable(from: TrainStation, to: TrainStation): boolean {
+    return true;
+  }
+}
+
+/**
+ * Cluster of connected stations
+ */
+export class Cluster {
+  public stations: Set<TrainStation> = new Set();
+
+  has(station: TrainStation) {
+    return this.stations.has(station);
+  }
+
+  addStation(station: TrainStation) {
+    this.stations.add(station);
+    station.setCluster(this);
+  }
+
+  removeStation(station: TrainStation) {
+    this.stations.delete(station);
+  }
+
+  addStations(stations: Set<TrainStation>) {
+    for (const station of stations) {
+      this.addStation(station);
+    }
+  }
+
+  merge(other: Cluster) {
+    this.stations = new Set([...this.stations, ...other.stations]);
   }
 }

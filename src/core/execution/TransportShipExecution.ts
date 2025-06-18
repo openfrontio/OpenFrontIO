@@ -199,7 +199,7 @@ export class TransportShipExecution implements Execution {
           .boatArriveTroops(this.attacker, this.target, this.troops);
         return;
       case PathFindResultType.NextTile:
-        this.boat.move(result.tile);
+        this.boat.move(result.node);
         break;
       case PathFindResultType.Pending:
         break;

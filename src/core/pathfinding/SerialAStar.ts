@@ -41,7 +41,6 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
   ) {
     this.fwdOpenSet = new PriorityQueue((a, b) => a.fScore - b.fScore);
     this.bwdOpenSet = new PriorityQueue((a, b) => a.fScore - b.fScore);
-
     this.sources = Array.isArray(src) ? src : [src];
     this.closestSource = this.findClosestSource(dst);
 

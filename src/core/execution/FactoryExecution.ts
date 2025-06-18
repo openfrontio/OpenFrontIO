@@ -9,8 +9,7 @@ import {
 import { TileRef } from "../game/GameMap";
 
 export class FactoryExecution implements Execution {
-  private player: Player;
-  private mg: Game;
+  private player: Player | null = null;
   private factory: Unit | null = null;
   private active: boolean = true;
 
@@ -20,7 +19,6 @@ export class FactoryExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
-    this.mg = mg;
     if (!mg.hasPlayer(this.ownerId)) {
       console.warn(`FactoryExecution: player ${this.ownerId} not found`);
       this.active = false;
@@ -30,6 +28,10 @@ export class FactoryExecution implements Execution {
   }
 
   tick(ticks: number): void {
+    if (this.player === null) {
+      throw new Error("Not initialized");
+    }
+
     if (this.factory === null) {
       const spawnTile = this.player.canBuild(UnitType.Factory, this.tile);
       if (spawnTile === false) {

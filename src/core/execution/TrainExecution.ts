@@ -1,6 +1,7 @@
 import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { OrientedRailroad, RailNetwork } from "../game/RailNetwork";
+import { RailNetwork } from "../game/RailNetwork";
+import { getOrientedRailroad, OrientedRailroad } from "../game/RailRoad";
 import { TrainStation } from "../game/TrainStation";
 
 export class TrainExecution implements Execution {
@@ -36,10 +37,7 @@ export class TrainExecution implements Execution {
       this.active = false;
     } else {
       this.stations = stations;
-      const railroad = this.railNetwork.getOrientedRailroad(
-        this.stations[0],
-        this.stations[1],
-      );
+      const railroad = getOrientedRailroad(this.stations[0], this.stations[1]);
       if (railroad) {
         this.currentRailRoad = railroad;
       } else {
@@ -201,10 +199,7 @@ export class TrainExecution implements Execution {
   private nextStation() {
     if (this.stations.length > 2) {
       this.stations.shift();
-      const railRoad = this.railNetwork.getOrientedRailroad(
-        this.stations[0],
-        this.stations[1],
-      );
+      const railRoad = getOrientedRailroad(this.stations[0], this.stations[1]);
       if (railRoad) {
         this.currentRailRoad = railRoad;
         return true;
