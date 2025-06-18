@@ -256,11 +256,6 @@ export class StructureLayer implements Layer {
     // Draw the image at final size with high quality scaling
     this.tempContext.drawImage(image, 0, 0, width * 2, height * 2);
 
-    // Apply color tinting using multiply blend mode
-    // this.tempContext.globalCompositeOperation = "multiply";
-    // this.tempContext.fillStyle = color.toRgbString();
-    // this.tempContext.fillRect(0, 0, width * 2, height * 2);
-
     // Restore the alpha channel
     this.tempContext.globalCompositeOperation = "destination-in";
     this.tempContext.drawImage(image, 0, 0, width * 2, height * 2);
