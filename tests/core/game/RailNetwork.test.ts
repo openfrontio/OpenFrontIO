@@ -1,14 +1,15 @@
 import { Unit } from "../../../src/core/game/Game";
 import {
-  RailConnectorImpl,
   RailNetworkImpl,
   StationManagerImpl,
 } from "../../../src/core/game/RailNetworkImpl";
+import { RailRoad } from "../../../src/core/game/RailRoad";
 import { Cluster } from "../../../src/core/game/TrainStation";
 
 // Mock types
 const createMockStation = (unitId: number): any => {
   const cluster = new Cluster();
+  const railroads = new Set<RailRoad>();
   return {
     unit: { id: unitId },
     tile: jest.fn(),
@@ -16,6 +17,8 @@ const createMockStation = (unitId: number): any => {
     getCluster: jest.fn(() => cluster),
     setCluster: jest.fn(),
     addRailRoad: jest.fn(),
+    getRailroads: jest.fn(() => railroads),
+    clearRailRoads: jest.fn(),
   };
 };
 
@@ -40,56 +43,10 @@ describe("StationManagerImpl", () => {
   });
 });
 
-describe("RailConnectorImpl", () => {
-  let game: any;
-  let pathService: any;
-  let connector: RailConnectorImpl;
-
-  beforeEach(() => {
-    game = {
-      config: () => ({ railroadMaxSize: () => 100 }),
-      addExecution: jest.fn(),
-    };
-    pathService = { findTilePath: jest.fn() };
-    connector = new RailConnectorImpl(game, pathService);
-  });
-
-  test("connects stations when path is valid", () => {
-    const stationA = createMockStation(1);
-    const stationB = createMockStation(2);
-    pathService.findTilePath.mockReturnValue(new Array(10));
-
-    const result = connector.connect(stationA, stationB);
-    expect(result).toBe(true);
-    expect(game.addExecution).toHaveBeenCalled();
-  });
-
-  test("does not connect if path is empty or too long", () => {
-    const stationA = createMockStation(1);
-    const stationB = createMockStation(2);
-
-    pathService.findTilePath.mockReturnValue([]);
-    expect(connector.connect(stationA, stationB)).toBe(false);
-
-    pathService.findTilePath.mockReturnValue(new Array(200));
-    expect(connector.connect(stationA, stationB)).toBe(false);
-  });
-
-  test("disconnect removes all neighbor links", () => {
-    const neighbor = { removeNeighboringRails: jest.fn() };
-    const station = createMockStation(1);
-    station.neighbors = jest.fn(() => [neighbor]);
-
-    connector.disconnect(station);
-    expect(neighbor.removeNeighboringRails).toHaveBeenCalledWith(station);
-  });
-});
-
 describe("RailNetworkImpl", () => {
   let network: RailNetworkImpl;
   let stationManager: any;
   let pathService: any;
-  let railConnector: any;
   let game: any;
 
   beforeEach(() => {
@@ -99,27 +56,48 @@ describe("RailNetworkImpl", () => {
       findStation: jest.fn(),
       getAll: jest.fn(() => new Set()),
     };
-    railConnector = {
-      connect: jest.fn(() => true),
-      disconnect: jest.fn(),
-    };
     pathService = {
-      findStationPath: jest.fn(() => [0]),
+      findTilePath: jest.fn(() => [0]),
+      findStationsPath: jest.fn(() => [0]),
     };
     game = {
       nearbyUnits: jest.fn(() => []),
+      addExecution: jest.fn(),
       config: () => ({
         trainStationMaxRange: () => 80,
         trainStationMinRange: () => 10,
+        railroadMaxSize: () => 100,
       }),
     };
 
-    network = new RailNetworkImpl(
-      game,
-      stationManager,
-      railConnector,
-      pathService,
-    );
+    network = new RailNetworkImpl(game, stationManager, pathService);
+  });
+
+  test("does not connect if path is empty or too long", () => {
+    const stationA = createMockStation(1);
+    const stationB = createMockStation(2);
+
+    game.nearbyUnits.mockReturnValue([stationB]);
+
+    pathService.findTilePath.mockReturnValue([]);
+    network.connectStation(stationA);
+
+    const cluster = stationB.getCluster();
+    cluster.addStation = jest.fn();
+    expect(cluster.addStation).not.toHaveBeenCalled();
+
+    pathService.findTilePath.mockReturnValue(new Array(200));
+    network.connectStation(stationA);
+    expect(cluster.addStation).not.toHaveBeenCalled();
+  });
+
+  test("removeStation removes all neighbor links", () => {
+    const neighbor = { removeNeighboringRails: jest.fn() };
+    const station = createMockStation(1);
+    station.neighbors = jest.fn(() => [neighbor]);
+    stationManager.findStation.mockReturnValue(station);
+    network.removeStation(station);
+    expect(station.clearRailRoads).toHaveBeenCalled();
   });
 
   test("connectStation calls addStation and connects to nearby", () => {
@@ -132,7 +110,6 @@ describe("RailNetworkImpl", () => {
     stationManager.findStation.mockReturnValue(null);
     network.removeStation({ id: 1 } as unknown as Unit);
     expect(stationManager.removeStation).not.toHaveBeenCalled();
-    expect(railConnector.disconnect).not.toHaveBeenCalled();
   });
 
   test("removeStation disconnects and removes from cluster if one neighbor", () => {
@@ -146,7 +123,6 @@ describe("RailNetworkImpl", () => {
     stationManager.findStation.mockReturnValue(station);
 
     network.removeStation(station.unit);
-    expect(railConnector.disconnect).toHaveBeenCalledWith(station);
     expect(cluster.removeStation).toHaveBeenCalledWith(station);
     expect(stationManager.removeStation).toHaveBeenCalledWith(station);
   });
@@ -180,9 +156,8 @@ describe("RailNetworkImpl", () => {
     stationManager.findStation.mockReturnValue(neighborStation);
 
     network.connectStation(station);
-    expect(railConnector.connect).toHaveBeenCalledWith(
-      station,
-      neighborStation,
-    );
+    // Both station should have their cluster reset to the merged one
+    expect(station.setCluster).toHaveBeenCalled();
+    expect(neighborStation.setCluster).toHaveBeenCalled();
   });
 });

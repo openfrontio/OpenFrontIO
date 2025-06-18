@@ -79,7 +79,7 @@ describe("TrainStation", () => {
     const station = new TrainStation(game, unit);
     const otherStation = new TrainStation(game, otherUnit);
 
-    expect(station.tradeAvailable(otherStation)).toBe(true);
+    expect(station.tradeAvailable(otherStation.unit.owner())).toBe(true);
   });
 
   it("adds and retrieves neighbors", () => {

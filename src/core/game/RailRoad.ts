@@ -1,11 +1,29 @@
+import { Game } from "./Game";
 import { TileRef } from "./GameMap";
+import { GameUpdateType, RailTile, RailType } from "./GameUpdates";
 import { TrainStation } from "./TrainStation";
 
-export type RailRoad = {
-  from: TrainStation;
-  to: TrainStation;
-  tiles: TileRef[];
-};
+export class RailRoad {
+  constructor(
+    public from: TrainStation,
+    public to: TrainStation,
+    public tiles: TileRef[],
+  ) {}
+
+  delete(game: Game) {
+    const railTiles: RailTile[] = this.tiles.map((tile) => ({
+      tile,
+      railType: RailType.VERTICAL,
+    }));
+    game.addUpdate({
+      type: GameUpdateType.RailRoadEvent,
+      isActive: false,
+      railTiles,
+    });
+    this.from.getRailroads().delete(this);
+    this.to.getRailroads().delete(this);
+  }
+}
 
 export function getOrientedRailroad(
   from: TrainStation,

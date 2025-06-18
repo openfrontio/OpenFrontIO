@@ -77,7 +77,7 @@ export class TrainExecution implements Execution {
   }
 
   loadCargo() {
-    if (this.hasCargo) {
+    if (this.hasCargo || this.train === null) {
       return;
     }
     this.hasCargo = true;
@@ -85,7 +85,7 @@ export class TrainExecution implements Execution {
 
     const spawn = this.player.canBuild(
       UnitType.TrainCarriageLoaded,
-      this.stations[0].tile(),
+      this.train.tile(),
     );
     if (spawn === false) {
       console.warn(`cannot build train`);
@@ -208,8 +208,14 @@ export class TrainExecution implements Execution {
     return false;
   }
 
+  private canTradeWithDestination() {
+    return (
+      this.stations.length > 1 && this.stations[1].tradeAvailable(this.player)
+    );
+  }
+
   private getNextTile(): TileRef | null {
-    if (this.currentRailRoad === null) {
+    if (this.currentRailRoad === null || !this.canTradeWithDestination()) {
       return null;
     }
     this.saveTraversedTiles(this.currentTile, this.speed);

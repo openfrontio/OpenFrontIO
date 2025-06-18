@@ -443,7 +443,7 @@ export class FakeHumanExecution implements Execution {
     );
   }
 
-  private maybeSpawnTrainStation() {
+  private maybeSpawnTrainStation(): boolean {
     if (this.player === null) throw new Error("not initialized");
     const cities = this.player.units(
       UnitType.City,
@@ -453,11 +453,13 @@ export class FakeHumanExecution implements Execution {
     const citiesWithoutStations = cities.filter(
       (city: Unit) => !city.hasTrainStation(),
     );
-    if (citiesWithoutStations.length > 0) {
-      this.mg.addExecution(
-        new TrainStationExecution(this.player, citiesWithoutStations[0].id()),
-      );
+    if (citiesWithoutStations.length === 0) {
+      return false;
     }
+    this.mg.addExecution(
+      new TrainStationExecution(this.player, citiesWithoutStations[0].id()),
+    );
+    return true;
   }
 
   private maybeSpawnStructure(type: UnitType, maxNum: number): boolean {

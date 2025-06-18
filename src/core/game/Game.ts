@@ -387,7 +387,7 @@ export interface Unit {
   hash(): number;
   toUpdate(): UnitUpdate;
   hasTrainStation(): boolean;
-  setTrainStation(): void;
+  setTrainStation(trainStation: boolean): void;
 
   // Targeting
   setTargetTile(cell: TileRef | undefined): void;

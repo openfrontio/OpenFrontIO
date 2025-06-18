@@ -2,7 +2,7 @@ import { TradeShipExecution } from "../execution/TradeShipExecution";
 import { TrainExecution } from "../execution/TrainExecution";
 import { GraphAdapter } from "../pathfinding/SerialAStar";
 import { PseudoRandom } from "../PseudoRandom";
-import { Game, Unit, UnitType } from "./Game";
+import { Game, Player, Unit, UnitType } from "./Game";
 import { TileRef } from "./GameMap";
 import { GameUpdateType, RailTile, RailType } from "./GameUpdates";
 import { RailRoad } from "./RailRoad";
@@ -81,13 +81,13 @@ export class TrainStation {
     this.stopHandlers = createTrainStopHandlers(new PseudoRandom(mg.ticks()));
   }
 
-  tradeAvailable(other: TrainStation): boolean {
-    const otherPlayer = other.unit.owner();
+  tradeAvailable(otherPlayer: Player): boolean {
     const player = this.unit.owner();
-    return (
-      other.unit.owner().id === this.unit.owner().id ||
-      this.unit.owner().canTrade(otherPlayer)
-    );
+    return otherPlayer === player || player.canTrade(otherPlayer);
+  }
+
+  clearRailRoads() {
+    this.railroads.clear();
   }
 
   addRailRoad(railRoad: RailRoad) {
@@ -136,7 +136,7 @@ export class TrainStation {
     return this.railroads;
   }
 
-  setCluster(cluster: Cluster) {
+  setCluster(cluster: Cluster | null) {
     this.cluster = cluster;
   }
 
@@ -202,6 +202,26 @@ export class Cluster {
   }
 
   merge(other: Cluster) {
-    this.stations = new Set([...this.stations, ...other.stations]);
+    for (const s of other.stations) {
+      this.addStation(s);
+    }
+  }
+
+  availableForTrade(player: Player): Set<TrainStation> {
+    const tradingStations = new Set<TrainStation>();
+    for (const station of this.stations) {
+      if (station.tradeAvailable(player)) {
+        tradingStations.add(station);
+      }
+    }
+    return tradingStations;
+  }
+
+  size() {
+    return this.stations.size;
+  }
+
+  clear() {
+    this.stations.clear();
   }
 }

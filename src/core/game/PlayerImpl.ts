@@ -882,10 +882,7 @@ export class PlayerImpl implements Player {
   }
 
   landBasedUnitSpawn(tile: TileRef): TileRef | false {
-    if (!this.mg.isLand(tile) || this.mg.ownerID(tile) !== this.smallID()) {
-      return false;
-    }
-    return tile;
+    return this.mg.isLand(tile) ? tile : false;
   }
 
   landBasedStructureSpawn(

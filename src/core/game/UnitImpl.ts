@@ -353,8 +353,8 @@ export class UnitImpl implements Unit {
     return this._level;
   }
 
-  setTrainStation(): void {
-    this._hasTrainStation = true;
+  setTrainStation(trainStation: boolean): void {
+    this._hasTrainStation = trainStation;
     this.mg.addUpdate(this.toUpdate());
   }
 
