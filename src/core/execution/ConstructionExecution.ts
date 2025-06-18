@@ -13,6 +13,7 @@ import { DefensePostExecution } from "./DefensePostExecution";
 import { MirvExecution } from "./MIRVExecution";
 import { MissileSiloExecution } from "./MissileSiloExecution";
 import { NukeExecution } from "./NukeExecution";
+import { OilWellExecution } from "./OilWellExecution";
 import { PortExecution } from "./PortExecution";
 import { SAMLauncherExecution } from "./SAMLauncherExecution";
 import { WarshipExecution } from "./WarshipExecution";
@@ -114,6 +115,9 @@ export class ConstructionExecution implements Execution {
         break;
       case UnitType.City:
         this.mg.addExecution(new CityExecution(player, this.tile));
+        break;
+      case UnitType.OilWell:
+        this.mg.addExecution(new OilWellExecution(player, this.tile));
         break;
       default:
         throw Error(`unit type ${this.constructionType} not supported`);

@@ -146,6 +146,7 @@ export enum UnitType {
   DefensePost = "Defense Post",
   SAMLauncher = "SAM Launcher",
   City = "City",
+  OilWell = "Oil Well",
   MIRV = "MIRV",
   MIRVWarhead = "MIRV Warhead",
   Construction = "Construction",
@@ -193,6 +194,8 @@ export interface UnitParamsMap {
   [UnitType.SAMLauncher]: {};
 
   [UnitType.City]: {};
+
+  [UnitType.OilWell]: {};
 
   [UnitType.MIRV]: {};
 

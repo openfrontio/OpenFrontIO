@@ -86,6 +86,8 @@
     "build_desc": "Description",
     "build_city": "City",
     "build_city_desc": "Increases your max population. Useful when you can't expand your territory or you're about to hit your population limit.",
+    "build_oil_well": "Oil Well",
+    "build_oil_well_desc": "Generates gold over time. Can be built on any land tile. The more Oil Wells you have, the more gold you generate.",
     "build_defense": "Defense Post",
     "build_defense_desc": "Increases defenses around nearby borders, which show a checkered pattern. Attacks from enemies are slower and have more casualties.",
     "build_port": "Port",
@@ -218,6 +220,7 @@
   },
   "unit_type": {
     "city": "City",
+    "oil_well": "Oil Well",
     "defense_post": "Defense Post",
     "port": "Port",
     "warship": "Warship",
@@ -362,7 +365,8 @@
       "warship": "Captures trade ships, destroys ships and boats",
       "port": "Sends trade ships to generate gold",
       "defense_post": "Increase defenses of nearby borders",
-      "city": "Increase max population"
+      "city": "Increase max population",
+      "oil_well": "Generates gold over time"
     },
     "not_enough_money": "Not enough money"
   },
@@ -396,6 +400,7 @@
     "gold": "Gold",
     "ports": "Ports",
     "cities": "Cities",
+    "oil_wells": "Oil wells",
     "missile_launchers": "Missile launchers",
     "sams": "SAMs",
     "warships": "Warships",

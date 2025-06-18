@@ -8,6 +8,7 @@ import { UnitInfoModal } from "./UnitInfoModal";
 
 import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
 import shieldIcon from "../../../../resources/images/buildings/fortAlt2.png";
+import OilWellIcon from "../../../../resources/images/buildings/oilWell.png";
 import anchorIcon from "../../../../resources/images/buildings/port1.png";
 import MissileSiloReloadingIcon from "../../../../resources/images/buildings/silo1-reloading.png";
 import missileSiloIcon from "../../../../resources/images/buildings/silo1.png";
@@ -61,6 +62,13 @@ export class StructureLayer implements Layer {
     },
     [UnitType.City]: {
       icon: cityIcon,
+      borderRadius: 8.525,
+      territoryRadius: 6.525,
+      borderType: UnitBorderType.Round,
+    },
+    // Add png
+    [UnitType.OilWell]: {
+      icon: OilWellIcon,
       borderRadius: 8.525,
       territoryRadius: 6.525,
       borderType: UnitBorderType.Round,

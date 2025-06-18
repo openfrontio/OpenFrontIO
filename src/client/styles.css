@@ -360,6 +360,10 @@ label.option-card:hover {
   mask: url("../../resources/images/CityIconWhite.svg") no-repeat center / cover;
 }
 
+#helpModal .oil-well-icon {
+  mask: url("../../resources/images/OilWellIcon.svg") no-repeat center / cover;
+}
+
 #helpModal .defense-post-icon {
   mask: url("../../resources/images/ShieldIconWhite.svg") no-repeat center /
     cover;

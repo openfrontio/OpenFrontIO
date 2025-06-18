@@ -72,8 +72,10 @@ describe("Unit Grid range tests", () => {
   const unitsInRangeCases = [
     ["Plains", 0, 10, 0, [UnitType.Warship], 1], // Same spot
     ["Plains", 0, 10, 0, [UnitType.City, UnitType.Port], 2], // 2 in range
+    ["Plains", 0, 10, 0, [UnitType.OilWell], 1], // 1 in range
     ["Plains", 0, 10, 0, [], 0], // no unit
     ["Plains", 0, 10, 10, [UnitType.City], 1], // Exactly on the range
+    ["Plains", 0, 10, 11, [UnitType.OilWell], 0], // Exactly 1px outside
     ["Plains", 0, 10, 11, [UnitType.DefensePost], 0], // 1px outside
     ["BigPlains", 0, 198, 42, [UnitType.TradeShip], 1], // Inside huge range
     ["BigPlains", 0, 198, 199, [UnitType.TransportShip], 0], // 1px outside

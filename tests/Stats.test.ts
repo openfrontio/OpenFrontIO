@@ -190,6 +190,13 @@ describe("Stats", () => {
     });
   });
 
+  test("unitBuild", () => {
+    stats.unitBuild(player1, UnitType.OilWell);
+    expect(stats.stats()).toStrictEqual({
+      client1: { units: { oilw: [1n] } },
+    });
+  });
+
   test("unitCapture", () => {
     stats.unitCapture(player1, UnitType.DefensePost);
     expect(stats.stats()).toStrictEqual({

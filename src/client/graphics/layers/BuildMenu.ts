@@ -7,6 +7,7 @@ import mirvIcon from "../../../../resources/images/MIRVIcon.svg";
 import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
 import hydrogenBombIcon from "../../../../resources/images/MushroomCloudIconWhite.svg";
 import atomBombIcon from "../../../../resources/images/NukeIconWhite.svg";
+import OilWellIcon from "../../../../resources/images/OilWellIcon.svg";
 import portIcon from "../../../../resources/images/PortIcon.svg";
 import samlauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
@@ -91,6 +92,14 @@ export const buildTable: BuildItemDisplay[][] = [
       icon: cityIcon,
       description: "build_menu.desc.city",
       key: "unit_type.city",
+      countable: true,
+    },
+    {
+      unitType: UnitType.OilWell,
+      // TODO: Add Icon
+      icon: OilWellIcon,
+      description: "build_menu.desc.oil_well",
+      key: "unit_type.oil_well",
       countable: true,
     },
   ],
