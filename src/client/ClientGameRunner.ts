@@ -331,7 +331,7 @@ export class ClientGameRunner {
           this.lobby.gameID,
           this.lobby.clientID,
           true,
-          true,
+          false,
           "error_modal.connection_error",
         );
       }
