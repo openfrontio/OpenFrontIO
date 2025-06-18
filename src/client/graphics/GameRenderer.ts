@@ -13,6 +13,7 @@ import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { FxLayer } from "./layers/FxLayer";
+import { GutterAdModal } from "./layers/GutterAdModal";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { LeftInGameAd } from "./layers/LeftInGameAd";
@@ -180,6 +181,14 @@ export function createRenderer(
   }
   leftInGameAd.g = game;
 
+  const gutterAdModal = document.querySelector(
+    "gutter-ad-modal",
+  ) as GutterAdModal;
+  if (!(gutterAdModal instanceof GutterAdModal)) {
+    console.error("gutter ad modal not found");
+  }
+  gutterAdModal.eventBus = eventBus;
+
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus),
@@ -214,6 +223,7 @@ export function createRenderer(
     playerTeamLabel,
     multiTabModal,
     leftInGameAd,
+    gutterAdModal,
   ];
 
   return new GameRenderer(
