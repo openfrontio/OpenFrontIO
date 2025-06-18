@@ -1,8 +1,9 @@
-import { PatternDecoder, territoryPatterns } from "../core/Cosmetics";
+import { PatternDecoder } from "../core/Cosmetics";
 import { Cosmetic } from "../core/CosmeticSchemas";
-
-const patternData = territoryPatterns;
-
+type PatternEntry = {
+  pattern: string;
+  role_group?: string[];
+};
 export class PrivilegeChecker {
   private patternData: Cosmetic;
 
@@ -18,12 +19,19 @@ export class PrivilegeChecker {
     const roleList = roles ?? [];
     const flareList = flares ?? [];
 
-    const found = Object.entries(this.patternData.pattern).find(
-      ([, entry]) => entry.pattern === base64,
-    );
+    let found: [string, PatternEntry] | undefined;
+    for (const key in this.patternData.pattern) {
+      const entry = this.patternData.pattern[key];
+      if (entry.pattern === base64) {
+        found = [key, entry];
+        break;
+      }
+    }
 
     if (!found) {
-      if (!PatternDecoder.isValid(base64)) {
+      try {
+        new PatternDecoder(base64);
+      } catch (e) {
         return "invalid";
       }
       if (!flareList.includes("pattern:*")) {
@@ -46,15 +54,9 @@ export class PrivilegeChecker {
       }
     }
 
-    return flareList.includes(`pattern:${key}`) ? true : "restricted";
+    if (!flareList.includes(`pattern:${key}`)) {
+      return "restricted";
+    }
+    return true;
   }
-}
-
-let cachedChecker: PrivilegeChecker | null = null;
-
-export function getPrivilegeChecker(): PrivilegeChecker {
-  if (cachedChecker === null) {
-    cachedChecker = new PrivilegeChecker(patternData);
-  }
-  return cachedChecker;
 }

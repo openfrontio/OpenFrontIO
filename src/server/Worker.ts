@@ -8,6 +8,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod/v4";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { territoryPatterns } from "../core/Cosmetics";
 import { GameType } from "../core/game/Game";
 import {
   ClientJoinMessageSchema,
@@ -22,13 +23,15 @@ import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
-import { getPrivilegeChecker } from "./Privilege";
+import { PrivilegeChecker } from "./Privilege";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
 
 const workerId = parseInt(process.env.WORKER_ID || "0");
 const log = logger.child({ comp: `w_${workerId}` });
+
+const privilegeChecker = new PrivilegeChecker(territoryPatterns);
 
 // Worker setup
 export function startWorker() {
@@ -361,14 +364,15 @@ export function startWorker() {
             }
 
             if (clientMsg.pattern !== undefined) {
-              const patternCheck = getPrivilegeChecker().isPatternAllowed(
+              const patternCheck = privilegeChecker.isPatternAllowed(
                 clientMsg.pattern,
                 roles,
                 flares,
               );
               if (patternCheck !== true) {
                 log.warn(
-                  `pattern blocked (${patternCheck}): ${clientMsg.pattern}`,
+                  "pattern blocked (restricted or unlisted): " +
+                    clientMsg.pattern,
                 );
                 return;
               }

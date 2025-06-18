@@ -70,7 +70,14 @@ export class PatternDecoder {
       const byte2 = bytes[2];
       const scale = byte1 & 0x07;
 
-      if (scale < 1 || scale > 7) return false;
+      const tileWidth = (((byte2 & 0x03) << 5) | ((byte1 >> 3) & 0x1f)) + 2;
+      const tileHeight = ((byte2 >> 2) & 0x3f) + 2;
+      const expectedBits = tileWidth * tileHeight;
+      const expectedBytes = Math.ceil(expectedBits / 8);
+      const actualBytes = bytes.length - 3;
+      if (actualBytes < expectedBytes) return false;
+
+      if (scale < 0 || scale > 7) return false;
 
       return true;
     } catch {
