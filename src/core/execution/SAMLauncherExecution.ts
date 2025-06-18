@@ -8,6 +8,7 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
+import { NukeType } from "../StatsSchemas";
 import { SAMMissileExecution } from "./SAMMissileExecution";
 
 export class SAMLauncherExecution implements Execution {
@@ -160,31 +161,37 @@ export class SAMLauncherExecution implements Execution {
           MessageType.SAM_MISS,
           this.sam.owner().id(),
         );
-      } else {
-        if (mirvWarheadTargets.length > 0) {
-          // Message
-          this.mg.displayMessage(
-            `${mirvWarheadTargets.length} MIRV warheads intercepted`,
-            MessageType.SAM_HIT,
-            this.sam.owner().id(),
-          );
+      } else if (mirvWarheadTargets.length > 0) {
+        const samOwner = this.sam.owner();
+
+        // Message
+        this.mg.displayMessage(
+          `${mirvWarheadTargets.length} MIRV warheads intercepted`,
+          MessageType.SAM_HIT,
+          samOwner.id(),
+        );
+
+        mirvWarheadTargets.forEach((u) => {
+          // Record stats
+          this.mg
+            .stats()
+            .bombIntercept(samOwner, u.owner(), u.type() as NukeType);
+
           // Delete warheads
-          mirvWarheadTargets.forEach((u) => {
-            u.delete();
-          });
-        } else if (target !== null) {
-          target.setTargetedBySAM(true);
-          this.mg.addExecution(
-            new SAMMissileExecution(
-              this.sam.tile(),
-              this.sam.owner(),
-              this.sam,
-              target,
-            ),
-          );
-        } else {
-          throw new Error("target is null");
-        }
+          u.delete();
+        });
+      } else if (target !== null) {
+        target.setTargetedBySAM(true);
+        this.mg.addExecution(
+          new SAMMissileExecution(
+            this.sam.tile(),
+            this.sam.owner(),
+            this.sam,
+            target,
+          ),
+        );
+      } else {
+        throw new Error("target is null");
       }
     }
 
