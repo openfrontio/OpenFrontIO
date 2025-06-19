@@ -37,7 +37,7 @@ Unlike OpenFront.io which resets each match, **Clash of Regions** introduces:
 - **Economy**: resource generation, trading, taxes
 - **Politics**: player-governed countries, elections, and decisions
 - **Military**: armies, wars, defense systems
-- **Backend in Go**, client remains open-source under GPLv3 (browser-based)
+- **Fullstack TypeScript (client and server)**, client remains open-source under GPLv3 (browser-based)
 
 ---
 
