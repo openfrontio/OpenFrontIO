@@ -16,7 +16,6 @@ import { FxLayer } from "./layers/FxLayer";
 import { GutterAdModal } from "./layers/GutterAdModal";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
-import { LeftInGameAd } from "./layers/LeftInGameAd";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
 import { OptionsMenu } from "./layers/OptionsMenu";
@@ -24,6 +23,7 @@ import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { PlayerTeamLabel } from "./layers/PlayerTeamLabel";
 import { RadialMenu } from "./layers/RadialMenu";
+import { SpawnAd } from "./layers/SpawnAd";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
@@ -173,13 +173,11 @@ export function createRenderer(
   }
   playerTeamLabel.game = game;
 
-  const leftInGameAd = document.querySelector(
-    "left-in-game-ad",
-  ) as LeftInGameAd;
-  if (!(leftInGameAd instanceof LeftInGameAd)) {
-    console.error("left in game ad not found");
+  const spawnAd = document.querySelector("spawn-ad") as SpawnAd;
+  if (!(spawnAd instanceof SpawnAd)) {
+    console.error("spawn ad not found");
   }
-  leftInGameAd.g = game;
+  spawnAd.g = game;
 
   const gutterAdModal = document.querySelector(
     "gutter-ad-modal",
@@ -222,7 +220,7 @@ export function createRenderer(
     playerPanel,
     playerTeamLabel,
     multiTabModal,
-    leftInGameAd,
+    spawnAd,
     gutterAdModal,
   ];
 

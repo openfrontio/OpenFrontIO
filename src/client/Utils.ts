@@ -95,3 +95,20 @@ export const translateText = (
 
   return langSelector.translateText(key, params);
 };
+
+export function getGamesPlayed(): number {
+  try {
+    return parseInt(localStorage.getItem("gamesPlayed") || "0", 10) || 0;
+  } catch (error) {
+    console.warn("Failed to read games played from localStorage:", error);
+    return 0;
+  }
+}
+
+export function incrementGamesPlayed(): void {
+  try {
+    localStorage.setItem("gamesPlayed", (getGamesPlayed() + 1).toString());
+  } catch (error) {
+    console.warn("Failed to increment games played in localStorage:", error);
+  }
+}
