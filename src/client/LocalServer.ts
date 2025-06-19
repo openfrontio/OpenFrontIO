@@ -92,7 +92,14 @@ export class LocalServer {
   }
 
   onMessage(message: string) {
-    const result = ClientMessageSchema.safeParse(JSON.parse(message));
+    let parsed;
+    try {
+      parsed = JSON.parse(message);
+    } catch (e) {
+      console.error("Failed to parse client message:", e);
+      return;
+    }
+    const result = ClientMessageSchema.safeParse(parsed);
     if (!result.success) {
       const error = z.prettifyError(result.error);
       console.error("Error parsing client message", error);
