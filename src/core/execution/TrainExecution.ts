@@ -35,32 +35,33 @@ export class TrainExecution implements Execution {
     );
     if (!stations || stations.length <= 1) {
       this.active = false;
-    } else {
-      this.stations = stations;
-      const railroad = getOrientedRailroad(this.stations[0], this.stations[1]);
-      if (railroad) {
-        this.currentRailroad = railroad;
-      } else {
-        this.active = false;
-      }
+      return;
     }
+
+    this.stations = stations;
+    const railroad = getOrientedRailroad(this.stations[0], this.stations[1]);
+    if (railroad) {
+      this.currentRailroad = railroad;
+    } else {
+      this.active = false;
+      return;
+    }
+
+    const spawn = this.player.canBuild(
+      UnitType.TrainEngine,
+      this.stations[0].tile(),
+    );
+    if (spawn === false) {
+      console.warn(`cannot build train`);
+      this.active = false;
+      return;
+    }
+    this.train = this.createTrainUnits(spawn);
   }
 
   tick(ticks: number): void {
-    if (this.mg === null) {
-      throw new Error("Not initialized");
-    }
     if (this.train === null) {
-      const spawn = this.player.canBuild(
-        UnitType.TrainEngine,
-        this.stations[0].tile(),
-      );
-      if (spawn === false) {
-        console.warn(`cannot build train`);
-        this.active = false;
-        return;
-      }
-      this.train = this.createTrainUnits(spawn);
+      throw new Error("Not initialized");
     }
     if (!this.train.isActive() || !this.activeSourceOrDestination()) {
       this.deleteTrain();

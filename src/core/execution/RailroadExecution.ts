@@ -4,7 +4,7 @@ import { GameUpdateType, RailTile, RailType } from "../game/GameUpdates";
 import { Railroad } from "../game/Railroad";
 
 export class RailroadExecution implements Execution {
-  private mg: Game | null;
+  private mg: Game;
   private active: boolean = true;
   private headIndex: number = 0;
   private tailIndex: number = 0;
@@ -50,9 +50,6 @@ export class RailroadExecution implements Execution {
   }
 
   private computeExtremityDirection(tile: TileRef, next: TileRef): RailType {
-    if (this.mg === null) {
-      throw new Error("Not initialized");
-    }
     const x = this.mg.x(tile);
     const y = this.mg.y(tile);
     const nextX = this.mg.x(next);
