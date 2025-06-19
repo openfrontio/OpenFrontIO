@@ -116,7 +116,7 @@ export class SendQuickChatEvent implements GameEvent {
   constructor(
     public readonly recipient: PlayerView,
     public readonly quickChatKey: string,
-    public readonly variables: { [key: string]: string },
+    public readonly target?: PlayerID,
   ) {}
 }
 
@@ -327,8 +327,8 @@ export class Transport {
       console.log(
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
-      if (event.code !== 1000) {
-        console.log(`reconnecting`);
+      if (event.code !== 1000 && event.code !== 1002) {
+        console.log(`recieved error code ${event.code}, reconnecting`);
         this.reconnect();
       }
     };
@@ -488,7 +488,7 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
       quickChatKey: event.quickChatKey,
-      variables: event.variables,
+      target: event.target,
     });
   }
 
