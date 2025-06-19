@@ -1,7 +1,8 @@
 import { Game, MutableAlliance, Player, Tick } from "./Game";
 
 export class AllianceImpl implements MutableAlliance {
-  private requestedExtension_ = false;
+  private extensionRequestedRequestor_: boolean = false;
+  private extensionRequestedRecipient_: boolean = false;
   private readonly _id: number;
   private createdAtTick_: Tick;
 
@@ -36,16 +37,32 @@ export class AllianceImpl implements MutableAlliance {
     this.mg.expireAlliance(this);
   }
 
+  requestExtension(player: Player): void {
+    if (this.requestor_ === player) {
+      this.extensionRequestedRequestor_ = true;
+    } else if (this.recipient_ === player) {
+      this.extensionRequestedRecipient_ = true;
+    }
+  }
+
+  extensionRequestedBy(player: Player): boolean {
+    if (this.requestor_ === player) {
+      return this.extensionRequestedRequestor_;
+    } else if (this.recipient_ === player) {
+      return this.extensionRequestedRecipient_;
+    }
+    return false;
+  }
+
   wantsExtension(): boolean {
-    return this.requestedExtension_;
+    return (
+      this.extensionRequestedRequestor_ && this.extensionRequestedRecipient_
+    );
   }
 
-  setWantsExtension(v: boolean): void {
-    this.requestedExtension_ = v;
-  }
-
-  resetExtensionRequest(): void {
-    this.requestedExtension_ = false;
+  clearExtensionRequests(): void {
+    this.extensionRequestedRequestor_ = false;
+    this.extensionRequestedRecipient_ = false;
   }
 
   public id(): number {
@@ -54,6 +71,6 @@ export class AllianceImpl implements MutableAlliance {
 
   extendDuration(currentTick: Tick): void {
     this.createdAtTick_ = currentTick;
-    this.resetExtensionRequest();
+    this.clearExtensionRequests();
   }
 }

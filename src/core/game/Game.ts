@@ -328,8 +328,9 @@ export interface MutableAlliance extends Alliance {
   expire(): void;
   other(player: Player): Player;
   wantsExtension(): boolean;
-  setWantsExtension(v: boolean): void;
-  resetExtensionRequest(): void;
+  requestExtension(player: Player): void;
+  extensionRequestedBy(player: Player): boolean;
+  clearExtensionRequests(): void;
   id(): number;
   extendDuration(currentTick: Tick): void;
 }

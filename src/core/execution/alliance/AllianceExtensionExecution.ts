@@ -17,16 +17,14 @@ export class AllianceExtensionExecution implements Execution {
     const from = mg.myPlayer();
     const alliance = from.allianceWith(this.to);
     if (!alliance) {
-      mg.displayMessage(
-        "No alliance to extend.",
-        MessageType.ALLIANCE_REJECTED,
-        from.id(),
+      console.warn(
+        `[AllianceExtensionExecution] No alliance to extend between ${from.id()} and ${this.to.id()}`,
       );
       this.isDone = true;
       return;
     }
 
-    // Extends excisting alliance by the specified ticks
+    // Extends existing alliance by the specified ticks
     alliance.extendDuration(ticks);
 
     // Inform both players about the successful extension
