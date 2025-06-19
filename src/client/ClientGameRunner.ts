@@ -155,16 +155,8 @@ export async function createClientGame(
 
   console.log("going to init path finder");
   console.log("inited path finder");
-  const underCanvas = createCanvas();
-  underCanvas.style.zIndex = "1";
-  const aboveCanvas = createCanvas();
-  aboveCanvas.style.zIndex = "3";
-  const gameRenderer = createRenderer(
-    underCanvas,
-    aboveCanvas,
-    gameView,
-    eventBus,
-  );
+  const canvas = createCanvas();
+  const gameRenderer = createRenderer(canvas, gameView, eventBus);
 
   console.log(
     `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
@@ -174,7 +166,7 @@ export async function createClientGame(
     lobbyConfig,
     eventBus,
     gameRenderer,
-    new InputHandler(aboveCanvas, eventBus),
+    new InputHandler(canvas, eventBus),
     transport,
     worker,
     gameView,

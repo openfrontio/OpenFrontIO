@@ -2,12 +2,12 @@ import { Theme } from "../../../core/configuration/Config";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
-import cityIcon from "../../../../resources/images/CityIconWhite.svg";
-import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
-import anchorIcon from "../../../../resources/images/PortIcon.svg";
-import SAMMissileIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
-import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
-import { Cell, STRUCTURE_TYPES, UnitType } from "../../../core/game/Game";
+import anchorIcon from "../../../../resources/images/AnchorIcon.png";
+import cityIcon from "../../../../resources/images/CityIcon.png";
+import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
+import shieldIcon from "../../../../resources/images/ShieldIcon.png";
+import SAMMissileIcon from "../../../../resources/images/SwordIconWhite.png";
+import { Cell, UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 
@@ -18,80 +18,73 @@ class StructureRenderInfo {
     public unit: UnitView,
     public lastRenderCalc: number,
     public location: Cell | null,
-    public element: HTMLElement,
+    public imageData: HTMLCanvasElement,
   ) {}
 }
 
+const ICON_SIZE = 22;
+
 export class StructureIconsLayer implements Layer {
+  private canvas: HTMLCanvasElement;
+  private context: CanvasRenderingContext2D;
   private theme: Theme;
   private renders: StructureRenderInfo[] = [];
   public scale: number = 1.8;
   private seenUnits: Set<UnitView> = new Set();
-  private container: HTMLDivElement;
-  private structures: Map<UnitType, { icon: string; svg: SVGElement | null }> =
-    new Map([
-      [UnitType.City, { icon: cityIcon, svg: null }],
-      [UnitType.DefensePost, { icon: shieldIcon, svg: null }],
-      [UnitType.Port, { icon: anchorIcon, svg: null }],
-      [UnitType.MissileSilo, { icon: missileSiloIcon, svg: null }],
-      [UnitType.SAMLauncher, { icon: SAMMissileIcon, svg: null }],
-    ]);
+  private structures: Map<
+    UnitType,
+    { iconPath: string; image: HTMLImageElement | null }
+  > = new Map([
+    [UnitType.City, { iconPath: cityIcon, image: null }],
+    [UnitType.DefensePost, { iconPath: shieldIcon, image: null }],
+    [UnitType.Port, { iconPath: anchorIcon, image: null }],
+    [UnitType.MissileSilo, { iconPath: missileSiloIcon, image: null }],
+    [UnitType.SAMLauncher, { iconPath: SAMMissileIcon, image: null }],
+  ]);
 
   constructor(
     private game: GameView,
     private transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
-    this.structures.forEach((u) => this.loadSVG(u));
+    this.structures.forEach((u, unitType) => this.loadIcon(u, unitType));
   }
 
-  private async loadSVG(unitSVGInfos: {
-    icon: string;
-    svg: SVGElement | null;
-  }) {
-    try {
-      const response = await fetch(unitSVGInfos.icon);
-      if (!response.ok) {
-        throw new Error(`Failed to load SVG: ${response.statusText}`);
-      }
-      unitSVGInfos.svg = this.createSvgElementFromString(await response.text());
-    } catch (error) {
-      console.error(`Error loading SVG ${unitSVGInfos.icon}:`, error);
-      unitSVGInfos.svg = null;
-    }
+  private loadIcon(
+    unitInfo: {
+      iconPath: string;
+      image: HTMLImageElement | null;
+    },
+    unitType: UnitType,
+  ) {
+    const image = new Image();
+    image.src = unitInfo.iconPath;
+    image.onload = () => {
+      unitInfo.image = image;
+      console.log(
+        `icon loaded: ${unitType}, size: ${image.width}x${image.height}`,
+      );
+    };
+    image.onerror = () => {
+      console.error(
+        `Failed to load icon for ${unitType}: ${unitInfo.iconPath}`,
+      );
+    };
   }
 
-  private createSvgElementFromString(svgStr: string): SVGSVGElement | null {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(svgStr, "image/svg+xml");
-    const el = doc.documentElement;
-
-    if (el instanceof SVGSVGElement) {
-      const svgElement = el;
-      return svgElement;
-    } else {
-      throw new Error("Parsed document is not a valid SVG element.");
-    }
-  }
   shouldTransform(): boolean {
     return false;
   }
 
   init() {
-    this.container = document.createElement("div");
-    this.container.style.position = "fixed";
-    this.container.style.left = "0";
-    this.container.style.top = "0";
-    this.container.style.pointerEvents = "none";
-    this.container.style.zIndex = "2";
-    document.body.appendChild(this.container);
+    this.redraw();
   }
 
   public tick() {
     for (const unit of this.game.units()) {
       if (
         unit.isActive() &&
-        STRUCTURE_TYPES.has(unit.type()) &&
+        this.structures.has(unit.type()) &&
         !this.seenUnits.has(unit)
       ) {
         this.seenUnits.add(unit);
@@ -108,81 +101,96 @@ export class StructureIconsLayer implements Layer {
       if (
         unit === undefined ||
         !this.seenUnits.has(unit) ||
-        !STRUCTURE_TYPES.has(unit.type()) ||
+        !this.structures.has(unit.type()) ||
         !unit.isActive()
       )
         continue;
 
       const render = this.renders.find((r) => r.unit === unit);
       if (render) {
-        render.element.remove();
-        this.seenUnits.delete(render.unit);
-        render.element = this.createUnitElement(unit);
+        render.imageData = this.createUnitElement(unit);
       }
     }
   }
 
-  public renderLayer(mainContex: CanvasRenderingContext2D) {
-    if (this.transformHandler.scale > 2) {
-      this.container.style.display = "none";
-      return;
-    }
-    this.container.style.display = "block";
-    for (const render of this.renders) {
-      this.renderStructure(render);
-    }
+  redraw() {
+    console.log("structureIcons layer redrawing");
+    this.canvas = document.createElement("canvas");
+    const context = this.canvas.getContext("2d", { alpha: true });
+    if (context === null) throw new Error("2d context not supported");
+    this.context = context;
+
+    // Enable smooth scaling
+    this.context.imageSmoothingEnabled = true;
+    this.context.imageSmoothingQuality = "high";
+
+    this.canvas.width = this.game.width();
+    this.canvas.height = this.game.height();
   }
 
-  private createUnitElement(unit: UnitView): HTMLDivElement {
-    const element = document.createElement("div");
-    element.style.position = "absolute";
-    element.classList.add("structure-icon");
+  public renderLayer(mainContext: CanvasRenderingContext2D) {
+    if (this.transformHandler.scale > 2) {
+      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      return;
+    }
+    for (const render of this.renders) {
+      this.clearStructure(render);
+    }
+    for (const render of this.renders) {
+      this.renderStructure(render, mainContext);
+    }
+    mainContext.drawImage(this.canvas, 0, 0);
+  }
 
-    const border = document.createElement("div");
-    border.style.width = "19px";
-    border.style.height = "19px";
-    border.style.backgroundColor = this.theme
+  private createUnitElement(unit: UnitView): HTMLCanvasElement {
+    const structureCanvas = document.createElement("canvas");
+    structureCanvas.width = ICON_SIZE;
+    structureCanvas.height = ICON_SIZE;
+    const context = structureCanvas.getContext("2d")!;
+    context.fillStyle = this.theme
       .territoryColor(unit.owner())
       .lighten(0.1)
       .toRgbString();
-    border.style.borderRadius = "50%";
-    border.style.border =
-      "1px solid " +
-      this.theme.borderColor(unit.owner()).darken(0.1).toRgbString();
-    element.appendChild(border);
-    const structureInfo = this.structures.get(unit.type());
-    if (!structureInfo?.svg) {
-      console.warn(`SVG not loaded for unit type: ${unit.type()}`);
-      return element;
-    }
-    const svgElement = structureInfo.svg.cloneNode(true) as SVGElement;
-    svgElement.style.width = "13px";
-    svgElement.style.height = "13px";
-    svgElement.style.position = "relative";
-    svgElement.style.top = "2px";
-    svgElement.style.left = "2px";
-
-    const paths = svgElement.querySelectorAll("path");
-    paths.forEach(
-      (path) =>
-        (path.style.fill = this.theme
-          .borderColor(unit.owner())
-          .darken(0.1)
-          .toRgbString()),
+    context.strokeStyle = this.theme
+      .borderColor(unit.owner())
+      .darken(0.1)
+      .toRgbString();
+    context.beginPath();
+    context.arc(
+      ICON_SIZE / 2,
+      ICON_SIZE / 2,
+      ICON_SIZE / 2 - 1,
+      0,
+      Math.PI * 2,
     );
-    border.appendChild(svgElement);
-    // Start off invisible so it doesn't flash at 0,0
-    element.style.display = "none";
-
-    this.container.appendChild(element);
-    return element;
+    context.fill();
+    context.lineWidth = 1;
+    context.stroke();
+    const structureInfo = this.structures.get(unit.type());
+    if (!structureInfo?.image) {
+      console.warn(`SVG not loaded for unit type: ${unit.type()}`);
+      return structureCanvas;
+    }
+    // context.drawImage(structureInfo.image, ICON_SIZE/4, ICON_SIZE/4);
+    return structureCanvas;
   }
 
-  renderStructure(render: StructureRenderInfo) {
+  clearStructure(render: StructureRenderInfo) {
+    if (render.location) {
+      this.context.clearRect(
+        render.location.x - 1 - render.imageData.width / 2,
+        render.location.y - 1 - render.imageData.height / 2,
+        ICON_SIZE + 1,
+        ICON_SIZE + 1,
+      );
+    }
+  }
+
+  renderStructure(render: StructureRenderInfo, ctx: CanvasRenderingContext2D) {
     if (!render.unit.isActive()) {
       this.renders = this.renders.filter((r) => r !== render);
       this.seenUnits.delete(render.unit);
-      render.element.remove();
+      this.clearStructure(render);
       return;
     }
 
@@ -206,14 +214,19 @@ export class StructureIconsLayer implements Layer {
       render.location.x > canvasRect.right ||
       render.location.y > canvasRect.bottom
     ) {
-      render.element.style.display = "none";
       return;
     }
-
     if (render.location && render.location !== oldLocation) {
-      render.element.style.display = "block";
       const scale = Math.min(1, this.transformHandler.scale * 1.3);
-      render.element.style.transform = `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) translate(-5px, 0) scale(${scale})`;
+
+      this.context.save();
+      this.context.scale(scale, scale);
+      this.context.drawImage(
+        render.imageData,
+        render.location.x * (1 / scale) - render.imageData.width / 2,
+        render.location.y * (1 / scale) - render.imageData.height / 2,
+      );
+      this.context.restore();
     }
   }
 }

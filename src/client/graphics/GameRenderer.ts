@@ -15,7 +15,6 @@ import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
-import { LeftInGameAd } from "./layers/LeftInGameAd";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
@@ -36,12 +35,11 @@ import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
 
 export function createRenderer(
-  underCanvas: HTMLCanvasElement,
-  aboveCanvas: HTMLCanvasElement,
+  canvas: HTMLCanvasElement,
   game: GameView,
   eventBus: EventBus,
 ): GameRenderer {
-  const transformHandler = new TransformHandler(game, eventBus, underCanvas);
+  const transformHandler = new TransformHandler(game, eventBus, canvas);
 
   const uiState = { attackRatio: 20 };
 
@@ -199,94 +197,82 @@ export function createRenderer(
   unitInfoModal.structureLayer = structureLayer;
   // unitInfoModal.eventBus = eventBus;
 
-  const leftInGameAd = document.querySelector(
-    "left-in-game-ad",
-  ) as LeftInGameAd;
-  if (!(leftInGameAd instanceof LeftInGameAd)) {
-    console.error("left in game ad not found");
-  }
-  leftInGameAd.g = game;
-
-  const canvasLayers: Map<HTMLCanvasElement, Layer[]> = new Map([
-    [
-      underCanvas,
-      [
-        new TerrainLayer(game, transformHandler),
-        new TerritoryLayer(game, eventBus, transformHandler),
-        structureLayer,
-      ],
-    ],
-    [
-      aboveCanvas,
-      [
-        new UnitLayer(game, eventBus, transformHandler),
-        new FxLayer(game),
-        new UILayer(game, eventBus, transformHandler),
-        new NameLayer(game, transformHandler),
-        new StructureIconsLayer(game, transformHandler),
-        eventsDisplay,
-        chatDisplay,
-        buildMenu,
-        new MainRadialMenu(
-          eventBus,
-          game,
-          transformHandler,
-          emojiTable as EmojiTable,
-          buildMenu,
-          uiState,
-          playerInfo,
-          playerPanel,
-        ),
-        new SpawnTimer(game, transformHandler),
-        leaderboard,
-        gameLeftSidebar,
-        controlPanel,
-        playerInfo,
-        winModel,
-        optionsMenu,
-        replayPanel,
-        teamStats,
-        topBar,
-        playerPanel,
-        headsUpMessage,
-        unitInfoModal,
-        multiTabModal,
-        leftInGameAd,
-      ],
-    ],
-  ]);
+  const layers: Layer[] = [
+    new TerrainLayer(game, transformHandler),
+    new TerritoryLayer(game, eventBus, transformHandler),
+    structureLayer,
+    new StructureIconsLayer(game, transformHandler),
+    new UnitLayer(game, eventBus, transformHandler),
+    new FxLayer(game),
+    new UILayer(game, eventBus, transformHandler),
+    new NameLayer(game, transformHandler),
+    eventsDisplay,
+    chatDisplay,
+    buildMenu,
+    new MainRadialMenu(
+      eventBus,
+      game,
+      transformHandler,
+      emojiTable as EmojiTable,
+      buildMenu,
+      uiState,
+      playerInfo,
+      playerPanel,
+    ),
+    new SpawnTimer(game, transformHandler),
+    leaderboard,
+    gameLeftSidebar,
+    controlPanel,
+    playerInfo,
+    winModel,
+    optionsMenu,
+    replayPanel,
+    teamStats,
+    topBar,
+    playerPanel,
+    headsUpMessage,
+    unitInfoModal,
+    multiTabModal,
+  ];
 
   return new GameRenderer(
     game,
     eventBus,
+    canvas,
     transformHandler,
     uiState,
-    canvasLayers,
+    layers,
   );
 }
 
 export class GameRenderer {
+  private context: CanvasRenderingContext2D;
+
   constructor(
     private game: GameView,
     private eventBus: EventBus,
+    private canvas: HTMLCanvasElement,
     public transformHandler: TransformHandler,
     public uiState: UIState,
-    private canvasLayers: Map<HTMLCanvasElement, Layer[]>,
-  ) {}
+    private layers: Layer[],
+  ) {
+    const context = canvas.getContext("2d");
+    if (context === null) throw new Error("2d context not supported");
+    this.context = context;
+  }
 
   initialize() {
     this.eventBus.on(RedrawGraphicsEvent, (e) => {
-      this.canvasLayers.forEach((layers, _) => {
-        layers.forEach((l) => {
-          if (l.redraw) {
-            l.redraw();
-          }
-        });
+      this.layers.forEach((l) => {
+        if (l.redraw) {
+          l.redraw();
+        }
       });
     });
 
-    this.canvasLayers.forEach((layers, _) => layers.forEach((l) => l.init?.()));
-    document.body.append(...this.canvasLayers.keys());
+    this.layers.forEach((l) => l.init?.());
+
+    document.body.appendChild(this.canvas);
     window.addEventListener("resize", () => this.resizeCanvas());
     this.resizeCanvas();
 
@@ -297,19 +283,39 @@ export class GameRenderer {
   }
 
   resizeCanvas() {
-    Array.from(this.canvasLayers.keys()).forEach((c) => {
-      c.width = window.innerWidth;
-      c.height = window.innerHeight;
-    });
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+    //this.redraw()
   }
 
   renderGame() {
     const start = performance.now();
     // Set background
-    this.fillBackground();
-    this.canvasLayers.forEach((layers, canvas) =>
-      this.renderLayers(canvas, layers),
-    );
+    this.context.fillStyle = this.game
+      .config()
+      .theme()
+      .backgroundColor()
+      .toHex();
+    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+    // Save the current context state
+    this.context.save();
+
+    this.transformHandler.handleTransform(this.context);
+
+    this.layers.forEach((l) => {
+      if (l.shouldTransform?.()) {
+        l.renderLayer?.(this.context);
+      }
+    });
+
+    this.context.restore();
+
+    this.layers.forEach((l) => {
+      if (!l.shouldTransform?.()) {
+        l.renderLayer?.(this.context);
+      }
+    });
 
     requestAnimationFrame(() => this.renderGame());
 
@@ -321,51 +327,12 @@ export class GameRenderer {
     }
   }
 
-  private renderLayers(canvas: HTMLCanvasElement, layers: Layer[]) {
-    const context = canvas.getContext("2d")!;
-
-    // Save the current context state
-    context.save();
-
-    this.transformHandler.handleTransform(context);
-
-    layers.forEach((l) => {
-      if (l.shouldTransform?.()) {
-        l.renderLayer?.(context);
-      }
-    });
-
-    context.restore();
-
-    layers.forEach((l) => {
-      if (!l.shouldTransform?.()) {
-        l.renderLayer?.(context);
-      }
-    });
-  }
-
-  private fillBackground() {
-    const underCanvas = Array.from(this.canvasLayers.keys())[0];
-    const aboveCanvas = Array.from(this.canvasLayers.keys())[1];
-    const context = underCanvas.getContext("2d")!;
-    context.fillStyle = this.game.config().theme().backgroundColor().toHex();
-    context.fillRect(0, 0, underCanvas.width, underCanvas.height);
-
-    aboveCanvas
-      .getContext("2d")!
-      .clearRect(0, 0, aboveCanvas.width, aboveCanvas.height);
-  }
-
   tick() {
-    this.canvasLayers.forEach((layers, canvas) =>
-      layers.forEach((l) => l.tick?.()),
-    );
+    this.layers.forEach((l) => l.tick?.());
   }
 
   resize(width: number, height: number): void {
-    Array.from(this.canvasLayers.keys()).forEach((c) => {
-      c.width = Math.ceil(width / window.devicePixelRatio);
-      c.height = Math.ceil(height / window.devicePixelRatio);
-    });
+    this.canvas.width = Math.ceil(width / window.devicePixelRatio);
+    this.canvas.height = Math.ceil(height / window.devicePixelRatio);
   }
 }
