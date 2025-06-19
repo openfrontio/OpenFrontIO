@@ -152,17 +152,7 @@ export class RailroadLayer implements Layer {
       ? this.theme.railroadColor(recipient)
       : new Colord({ r: 255, g: 255, b: 255, a: 1 });
     this.context.fillStyle = color.toRgbString();
-    switch (railRoad.railType) {
-      case RailType.VERTICAL:
-        this.paintRailRects(x, y, railRoad.railType);
-        break;
-      case RailType.HORIZONTAL:
-        this.paintRailRects(x, y, railRoad.railType);
-        break;
-      default:
-        this.paintRailRects(x, y, railRoad.railType);
-        break;
-    }
+    this.paintRailRects(x, y, railRoad.railType);
   }
 
   // Drawing a corner rail

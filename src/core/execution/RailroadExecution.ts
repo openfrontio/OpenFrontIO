@@ -138,8 +138,8 @@ export class RailroadExecution implements Execution {
       updatedRailTiles = updatedRailTiles.concat(
         this.railTiles.slice(this.tailIndex - this.increment, this.tailIndex),
       );
-      this.headIndex += 3;
-      this.tailIndex -= 3;
+      this.headIndex += this.increment;
+      this.tailIndex -= this.increment;
     }
     if (updatedRailTiles) {
       this.mg.addUpdate({
