@@ -3,7 +3,7 @@ import { TileRef } from "./GameMap";
 import { GameUpdateType, RailTile, RailType } from "./GameUpdates";
 import { TrainStation } from "./TrainStation";
 
-export class RailRoad {
+export class Railroad {
   constructor(
     public from: TrainStation,
     public to: TrainStation,
@@ -16,7 +16,7 @@ export class RailRoad {
       railType: RailType.VERTICAL,
     }));
     game.addUpdate({
-      type: GameUpdateType.RailRoadEvent,
+      type: GameUpdateType.RailroadEvent,
       isActive: false,
       railTiles,
     });
@@ -45,7 +45,7 @@ export function getOrientedRailroad(
 export class OrientedRailroad {
   private tiles: TileRef[] = [];
   constructor(
-    private railroad: RailRoad,
+    private railroad: Railroad,
     private forward: boolean,
   ) {
     this.tiles = this.forward

@@ -23,7 +23,7 @@ import { NameLayer } from "./layers/NameLayer";
 import { OptionsMenu } from "./layers/OptionsMenu";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
-import { RailRoadLayer } from "./layers/RailRoadLayer";
+import { RailroadLayer } from "./layers/RailroadLayer";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
@@ -218,7 +218,7 @@ export function createRenderer(
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler),
-    new RailRoadLayer(game),
+    new RailroadLayer(game),
     structureLayer,
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),

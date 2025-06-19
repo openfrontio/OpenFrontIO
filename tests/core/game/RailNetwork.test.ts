@@ -3,22 +3,22 @@ import {
   RailNetworkImpl,
   StationManagerImpl,
 } from "../../../src/core/game/RailNetworkImpl";
-import { RailRoad } from "../../../src/core/game/RailRoad";
+import { Railroad } from "../../../src/core/game/Railroad";
 import { Cluster } from "../../../src/core/game/TrainStation";
 
 // Mock types
 const createMockStation = (unitId: number): any => {
   const cluster = new Cluster();
-  const railroads = new Set<RailRoad>();
+  const railroads = new Set<Railroad>();
   return {
     unit: { id: unitId },
     tile: jest.fn(),
     neighbors: jest.fn(() => []),
     getCluster: jest.fn(() => cluster),
     setCluster: jest.fn(),
-    addRailRoad: jest.fn(),
+    addRailroad: jest.fn(),
     getRailroads: jest.fn(() => railroads),
-    clearRailRoads: jest.fn(),
+    clearRailroads: jest.fn(),
   };
 };
 
@@ -97,7 +97,7 @@ describe("RailNetworkImpl", () => {
     station.neighbors = jest.fn(() => [neighbor]);
     stationManager.findStation.mockReturnValue(station);
     network.removeStation(station);
-    expect(station.clearRailRoads).toHaveBeenCalled();
+    expect(station.clearRailroads).toHaveBeenCalled();
   });
 
   test("connectStation calls addStation and connects to nearby", () => {

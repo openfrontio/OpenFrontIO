@@ -41,7 +41,7 @@ export enum GameUpdateType {
   Hash,
   UnitIncoming,
   BonusEvent,
-  RailRoadEvent,
+  RailroadEvent,
 }
 
 export type GameUpdate =
@@ -60,7 +60,7 @@ export type GameUpdate =
   | HashUpdate
   | UnitIncomingUpdate
   | BonusEventUpdate
-  | RailRoadUpdate;
+  | RailroadUpdate;
 
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;
@@ -83,8 +83,8 @@ export interface RailTile {
   tile: TileRef;
   railType: RailType;
 }
-export interface RailRoadUpdate {
-  type: GameUpdateType.RailRoadEvent;
+export interface RailroadUpdate {
+  type: GameUpdateType.RailroadEvent;
   isActive: boolean;
   railTiles: RailTile[];
 }

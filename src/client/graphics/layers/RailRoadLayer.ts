@@ -1,42 +1,34 @@
-import { PriorityQueue } from "@datastructures-js/priority-queue";
 import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
+import { PlayerID } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import {
   GameUpdateType,
-  RailRoadUpdate,
+  RailroadUpdate,
   RailTile,
   RailType,
 } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
-import { getRailRoadRects } from "./RailRoadSprites";
+import { getRailroadRects } from "./RailroadSprites";
 
 type RailRef = {
   tile: RailTile;
   numOccurence: number;
+  lastOwnerId: PlayerID | null;
 };
 
-export class RailRoadLayer implements Layer {
+export class RailroadLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
   private theme: Theme;
   // Save the number of railroads per tiles. Delete when it reaches 0
   private existingRailroads = new Map<TileRef, RailRef>();
-  private tempCanvas: HTMLCanvasElement;
-
-  private tileToCheckQueue: PriorityQueue<{
-    tile: TileRef;
-    lastUpdate: number;
-  }> = new PriorityQueue((a, b) => {
-    return a.lastUpdate - b.lastUpdate;
-  });
+  private nextRailIndexToCheck = 0;
+  private railTileList: TileRef[] = [];
 
   constructor(private game: GameView) {
     this.theme = game.config().theme();
-    this.tempCanvas = document.createElement("canvas");
-    const tempContext = this.tempCanvas.getContext("2d");
-    if (tempContext === null) throw new Error("2d context not supported");
   }
 
   shouldTransform(): boolean {
@@ -45,40 +37,33 @@ export class RailRoadLayer implements Layer {
 
   tick() {
     const updates = this.game.updatesSinceLastTick();
-    this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
     const railUpdates =
-      updates !== null ? updates[GameUpdateType.RailRoadEvent] : [];
+      updates !== null ? updates[GameUpdateType.RailroadEvent] : [];
     for (const rail of railUpdates) {
-      this.handleRailRoadRendering(rail);
+      this.handleRailroadRendering(rail);
     }
-  }
-
-  enqueueTile(tile: TileRef) {
-    this.tileToCheckQueue.push({
-      tile: tile,
-      lastUpdate: this.game.ticks(),
-    });
   }
 
   updateRailColors() {
-    let numToCheck = Math.floor(this.tileToCheckQueue.size() / 10);
-    if (numToCheck === 0 || this.game.inSpawnPhase()) {
-      numToCheck = this.tileToCheckQueue.size();
-    }
+    const maxTilesPerFrame = this.railTileList.length / 60;
+    let checked = 0;
 
-    while (numToCheck > 0) {
-      numToCheck--;
-
-      const entry = this.tileToCheckQueue.pop();
-      if (!entry) {
-        break;
-      }
-
-      const tile = entry.tile;
+    while (checked < maxTilesPerFrame && this.railTileList.length > 0) {
+      const tile = this.railTileList[this.nextRailIndexToCheck];
       const railRef = this.existingRailroads.get(tile);
-      if (railRef !== undefined) {
-        this.paintRail(railRef.tile);
+      if (railRef) {
+        const currentOwner = this.game.owner(tile)?.id() ?? null;
+        if (railRef.lastOwnerId !== currentOwner) {
+          railRef.lastOwnerId = currentOwner;
+          this.paintRail(railRef.tile);
+        }
       }
+
+      this.nextRailIndexToCheck++;
+      if (this.nextRailIndexToCheck >= this.railTileList.length) {
+        this.nextRailIndexToCheck = 0;
+      }
+      checked++;
     }
   }
 
@@ -87,7 +72,6 @@ export class RailRoadLayer implements Layer {
   }
 
   redraw() {
-    console.log("structure layer redrawing");
     this.canvas = document.createElement("canvas");
     const context = this.canvas.getContext("2d", { alpha: true });
     if (context === null) throw new Error("2d context not supported");
@@ -112,42 +96,50 @@ export class RailRoadLayer implements Layer {
     );
   }
 
-  private handleRailRoadRendering(railUpdate: RailRoadUpdate) {
+  private handleRailroadRendering(railUpdate: RailroadUpdate) {
     for (const railRoad of railUpdate.railTiles) {
       const x = this.game.x(railRoad.tile);
       const y = this.game.y(railRoad.tile);
       if (railUpdate.isActive) {
-        this.paintRailRoad(railRoad);
+        this.paintRailroad(railRoad);
       } else {
-        this.clearRailRoad(railRoad);
+        this.clearRailroad(railRoad);
       }
     }
   }
 
-  private paintRailRoad(railRoad: RailTile) {
-    this.paintRail(railRoad);
+  private paintRailroad(railRoad: RailTile) {
+    const currentOwner = this.game.owner(railRoad.tile)?.id() ?? null;
     const railTile = this.existingRailroads.get(railRoad.tile);
+
     if (railTile) {
       railTile.numOccurence++;
       railTile.tile = railRoad;
+      railTile.lastOwnerId = currentOwner;
     } else {
       this.existingRailroads.set(railRoad.tile, {
         tile: railRoad,
         numOccurence: 1,
+        lastOwnerId: currentOwner,
       });
+      this.railTileList.push(railRoad.tile);
+      this.paintRail(railRoad);
     }
   }
 
-  private clearRailRoad(railRoad: RailTile) {
-    const railTile = this.existingRailroads.get(railRoad.tile);
-    if (railTile) {
-      railTile.numOccurence--;
-    }
-    if ((railTile && railTile.numOccurence <= 0) || railTile === null) {
-      const x = this.game.x(railRoad.tile);
-      const y = this.game.y(railRoad.tile);
+  private clearRailroad(railRoad: RailTile) {
+    const ref = this.existingRailroads.get(railRoad.tile);
+    if (ref) ref.numOccurence--;
+
+    if (!ref || ref.numOccurence <= 0) {
       this.existingRailroads.delete(railRoad.tile);
-      this.context.clearRect(x * 2 - 1, y * 2 - 1, 3, 3);
+      this.railTileList = this.railTileList.filter((t) => t !== railRoad.tile);
+      this.context.clearRect(
+        this.game.x(railRoad.tile) * 2 - 1,
+        this.game.y(railRoad.tile) * 2 - 1,
+        3,
+        3,
+      );
     }
   }
 
@@ -175,7 +167,7 @@ export class RailRoadLayer implements Layer {
 
   // Drawing a corner rail
   private paintRailRects(x: number, y: number, direction: RailType) {
-    const railRects = getRailRoadRects(direction);
+    const railRects = getRailroadRects(direction);
     for (const [dx, dy, w, h] of railRects) {
       this.context.fillRect(x * 2 + dx, y * 2 + dy, w, h);
     }

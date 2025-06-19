@@ -454,7 +454,7 @@ export class FakeHumanExecution implements Execution {
         default:
           return false;
       }
-    );
+    });
     if (citiesWithoutStations.length === 0) {
       return false;
     }

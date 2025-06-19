@@ -1,15 +1,15 @@
 import { RailType } from "../../../core/game/GameUpdates";
 
 const railTypeToFunctionMap: Record<RailType, () => number[][]> = {
-  [RailType.TOP_RIGHT]: topRightRailRoadCornerRects,
-  [RailType.BOTTOM_LEFT]: bottomLeftRailRoadCornerRects,
-  [RailType.TOP_LEFT]: topLeftRailRoadCornerRects,
-  [RailType.BOTTOM_RIGHT]: bottomRightRailRoadCornerRects,
-  [RailType.HORIZONTAL]: horizontalRailRoadRects,
-  [RailType.VERTICAL]: verticalRailRoadRects,
+  [RailType.TOP_RIGHT]: topRightRailroadCornerRects,
+  [RailType.BOTTOM_LEFT]: bottomLeftRailroadCornerRects,
+  [RailType.TOP_LEFT]: topLeftRailroadCornerRects,
+  [RailType.BOTTOM_RIGHT]: bottomRightRailroadCornerRects,
+  [RailType.HORIZONTAL]: horizontalRailroadRects,
+  [RailType.VERTICAL]: verticalRailroadRects,
 };
 
-export function getRailRoadRects(type: RailType): number[][] {
+export function getRailroadRects(type: RailType): number[][] {
   const railRects = railTypeToFunctionMap[type];
   if (!railRects) {
     // Should never happen
@@ -18,7 +18,7 @@ export function getRailRoadRects(type: RailType): number[][] {
   return railRects();
 }
 
-function horizontalRailRoadRects(): number[][] {
+function horizontalRailroadRects(): number[][] {
   // x/y/w/h
   const rects = [
     [-1, -1, 2, 1],
@@ -28,7 +28,7 @@ function horizontalRailRoadRects(): number[][] {
   return rects;
 }
 
-function verticalRailRoadRects(): number[][] {
+function verticalRailroadRects(): number[][] {
   // x/y/w/h
   const rects = [
     [-1, -2, 1, 2],
@@ -38,7 +38,7 @@ function verticalRailRoadRects(): number[][] {
   return rects;
 }
 
-function topRightRailRoadCornerRects(): number[][] {
+function topRightRailroadCornerRects(): number[][] {
   // x/y/w/h
   const rects = [
     [-1, -2, 1, 2],
@@ -48,7 +48,7 @@ function topRightRailRoadCornerRects(): number[][] {
   return rects;
 }
 
-function topLeftRailRoadCornerRects(): number[][] {
+function topLeftRailroadCornerRects(): number[][] {
   // x/y/w/h
   const rects = [
     [-1, -2, 1, 4],
@@ -58,7 +58,7 @@ function topLeftRailRoadCornerRects(): number[][] {
   return rects;
 }
 
-function bottomRightRailRoadCornerRects(): number[][] {
+function bottomRightRailroadCornerRects(): number[][] {
   // x/y/w/h
   const rects = [
     [-1, 1, 1, 2],
@@ -68,7 +68,7 @@ function bottomRightRailRoadCornerRects(): number[][] {
   return rects;
 }
 
-function bottomLeftRailRoadCornerRects(): number[][] {
+function bottomLeftRailroadCornerRects(): number[][] {
   // x/y/w/h
   const rects = [
     [-1, -1, 1, 4],

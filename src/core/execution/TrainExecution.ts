@@ -1,7 +1,7 @@
 import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { RailNetwork } from "../game/RailNetwork";
-import { getOrientedRailroad, OrientedRailroad } from "../game/RailRoad";
+import { getOrientedRailroad, OrientedRailroad } from "../game/Railroad";
 import { TrainStation } from "../game/TrainStation";
 
 export class TrainExecution implements Execution {
@@ -14,7 +14,7 @@ export class TrainExecution implements Execution {
   private spacing = 2;
   private usedTiles: TileRef[] = []; // used for cars behind
   private stations: TrainStation[] = [];
-  private currentRailRoad: OrientedRailroad | null = null;
+  private currentRailroad: OrientedRailroad | null = null;
   private speed: number = 3;
 
   constructor(
@@ -39,7 +39,7 @@ export class TrainExecution implements Execution {
       this.stations = stations;
       const railroad = getOrientedRailroad(this.stations[0], this.stations[1]);
       if (railroad) {
-        this.currentRailRoad = railroad;
+        this.currentRailroad = railroad;
       } else {
         this.active = false;
       }
@@ -161,16 +161,16 @@ export class TrainExecution implements Execution {
    * Don't simply save the tiles the engine uses, otherwise the spacing will be dictated by the train speed
    */
   private saveTraversedTiles(from: number, speed: number) {
-    if (!this.currentRailRoad) {
+    if (!this.currentRailroad) {
       return;
     }
     let tileToSave: number = from;
     for (
       let i = 0;
-      i < speed && tileToSave < this.currentRailRoad.getTiles().length;
+      i < speed && tileToSave < this.currentRailroad.getTiles().length;
       i++
     ) {
-      this.saveTile(this.currentRailRoad.getTiles()[tileToSave]);
+      this.saveTile(this.currentRailroad.getTiles()[tileToSave]);
       tileToSave = tileToSave + 1;
     }
   }
@@ -201,7 +201,7 @@ export class TrainExecution implements Execution {
       this.stations.shift();
       const railRoad = getOrientedRailroad(this.stations[0], this.stations[1]);
       if (railRoad) {
-        this.currentRailRoad = railRoad;
+        this.currentRailroad = railRoad;
         return true;
       }
     }
@@ -215,12 +215,12 @@ export class TrainExecution implements Execution {
   }
 
   private getNextTile(): TileRef | null {
-    if (this.currentRailRoad === null || !this.canTradeWithDestination()) {
+    if (this.currentRailroad === null || !this.canTradeWithDestination()) {
       return null;
     }
     this.saveTraversedTiles(this.currentTile, this.speed);
     this.currentTile = this.currentTile + this.speed;
-    const leftOver = this.currentTile - this.currentRailRoad.getTiles().length;
+    const leftOver = this.currentTile - this.currentRailroad.getTiles().length;
     if (leftOver >= 0) {
       // Station reached, pick the next station
       this.stationReached();
@@ -230,7 +230,7 @@ export class TrainExecution implements Execution {
       this.currentTile = leftOver;
       this.saveTraversedTiles(0, leftOver);
     }
-    return this.currentRailRoad.getTiles()[this.currentTile];
+    return this.currentRailroad.getTiles()[this.currentTile];
   }
 
   private stationReached() {

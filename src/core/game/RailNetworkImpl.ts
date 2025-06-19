@@ -1,11 +1,11 @@
-import { RailRoadExecution } from "../execution/RailRoadExecution";
+import { RailroadExecution } from "../execution/RailroadExecution";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { MiniAStar } from "../pathfinding/MiniAStar";
 import { SerialAStar } from "../pathfinding/SerialAStar";
 import { Game, Unit, UnitType } from "./Game";
 import { TileRef } from "./GameMap";
 import { RailNetwork } from "./RailNetwork";
-import { RailRoad } from "./RailRoad";
+import { Railroad } from "./Railroad";
 import { Cluster, TrainStation, TrainStationMapAdapter } from "./TrainStation";
 
 /**
@@ -145,7 +145,10 @@ export class RailNetworkImpl implements RailNetwork {
       const neighborCluster = neighborStation.getCluster();
       if (!neighborCluster || neighborCluster.has(station)) continue;
 
-      if (neighbor.distSquared > this.game.config().trainStationMinRange()) {
+      if (
+        neighbor.distSquared >
+        this.game.config().trainStationMinRange() ** 2
+      ) {
         if (this.connect(station, neighborStation)) {
           neighborCluster.addStation(station);
           editedClusters.add(neighborCluster);
@@ -167,7 +170,7 @@ export class RailNetworkImpl implements RailNetwork {
     for (const rail of station.getRailroads()) {
       rail.delete(this.game);
     }
-    station.clearRailRoads();
+    station.clearRailroads();
     const cluster = station.getCluster();
     if (cluster !== null && cluster.size() === 1) {
       this.deleteCluster(cluster);
@@ -184,10 +187,10 @@ export class RailNetworkImpl implements RailNetwork {
   private connect(from: TrainStation, to: TrainStation) {
     const path = this.pathService.findTilePath(from.tile(), to.tile());
     if (path.length > 0 && path.length < this.game.config().railroadMaxSize()) {
-      const railRoad = new RailRoad(from, to, path);
-      this.game.addExecution(new RailRoadExecution(railRoad));
-      from.addRailRoad(railRoad);
-      to.addRailRoad(railRoad);
+      const railRoad = new Railroad(from, to, path);
+      this.game.addExecution(new RailroadExecution(railRoad));
+      from.addRailroad(railRoad);
+      to.addRailroad(railRoad);
       return true;
     }
     return false;

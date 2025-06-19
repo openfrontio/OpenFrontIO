@@ -5,7 +5,7 @@ import { PseudoRandom } from "../PseudoRandom";
 import { Game, Player, Unit, UnitType } from "./Game";
 import { TileRef } from "./GameMap";
 import { GameUpdateType, RailTile, RailType } from "./GameUpdates";
-import { RailRoad } from "./RailRoad";
+import { Railroad } from "./Railroad";
 
 /**
  * Handle train stops at various station types
@@ -72,7 +72,7 @@ export class TrainStation {
   private readonly stopHandlers: Partial<Record<UnitType, TrainStopHandler>> =
     {};
   private cluster: Cluster | null;
-  private railroads: Set<RailRoad> = new Set();
+  private railroads: Set<Railroad> = new Set();
 
   constructor(
     private mg: Game,
@@ -86,11 +86,11 @@ export class TrainStation {
     return otherPlayer === player || player.canTrade(otherPlayer);
   }
 
-  clearRailRoads() {
+  clearRailroads() {
     this.railroads.clear();
   }
 
-  addRailRoad(railRoad: RailRoad) {
+  addRailroad(railRoad: Railroad) {
     this.railroads.add(railRoad);
   }
 
@@ -104,7 +104,7 @@ export class TrainStation {
         railType: RailType.VERTICAL,
       }));
       this.mg.addUpdate({
-        type: GameUpdateType.RailRoadEvent,
+        type: GameUpdateType.RailroadEvent,
         isActive: false,
         railTiles,
       });
@@ -132,7 +132,7 @@ export class TrainStation {
     return this.unit.isActive();
   }
 
-  getRailroads(): Set<RailRoad> {
+  getRailroads(): Set<Railroad> {
     return this.railroads;
   }
 

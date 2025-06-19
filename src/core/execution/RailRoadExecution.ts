@@ -1,16 +1,16 @@
 import { Execution, Game } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { GameUpdateType, RailTile, RailType } from "../game/GameUpdates";
-import { RailRoad } from "../game/RailRoad";
+import { Railroad } from "../game/Railroad";
 
-export class RailRoadExecution implements Execution {
+export class RailroadExecution implements Execution {
   private mg: Game | null;
   private active: boolean = true;
   private headIndex: number = 0;
   private tailIndex: number = 0;
   private increment: number = 3;
   private railTiles: RailTile[] = [];
-  constructor(private railRoad: RailRoad) {
+  constructor(private railRoad: Railroad) {
     this.tailIndex = railRoad.tiles.length;
   }
 
@@ -146,7 +146,7 @@ export class RailRoadExecution implements Execution {
     }
     if (updatedRailTiles) {
       this.mg.addUpdate({
-        type: GameUpdateType.RailRoadEvent,
+        type: GameUpdateType.RailroadEvent,
         isActive: true,
         railTiles: updatedRailTiles,
       });

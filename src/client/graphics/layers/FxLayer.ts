@@ -3,7 +3,7 @@ import { UnitType } from "../../../core/game/Game";
 import {
   BonusEventUpdate,
   GameUpdateType,
-  RailRoadUpdate,
+  RailroadUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
@@ -50,14 +50,18 @@ export class FxLayer implements Layer {
 
     this.game
       .updatesSinceLastTick()
-      ?.[GameUpdateType.RailRoadEvent]?.forEach((update) => {
+      ?.[GameUpdateType.RailroadEvent]?.forEach((update) => {
         if (update === undefined) return;
-        this.onRailRoadEvent(update);
+        this.onRailroadEvent(update);
       });
   }
 
   onBonusEvent(bonus: BonusEventUpdate) {
     const tile = bonus.tile;
+    if (this.game.owner(tile) !== this.game.myPlayer()) {
+      // Only display text fx for the current player
+      return;
+    }
     const x = this.game.x(tile);
     let y = this.game.y(tile);
     const gold = bonus.gold;
@@ -142,7 +146,7 @@ export class FxLayer implements Layer {
     }
   }
 
-  onRailRoadEvent(railroad: RailRoadUpdate) {
+  onRailroadEvent(railroad: RailroadUpdate) {
     const railTiles = railroad.railTiles;
     for (const rail of railTiles) {
       // No need for pseudorandom, this is fx

@@ -87,7 +87,7 @@ describe("TrainStation", () => {
     const stationB = new TrainStation(game, unit);
     const railRoad = { from: stationA, to: stationB, tiles: [] } as any;
 
-    stationA.addRailRoad(railRoad);
+    stationA.addRailroad(railRoad);
 
     const neighbors = stationA.neighbors();
     expect(neighbors).toContain(stationB);
@@ -103,7 +103,7 @@ describe("TrainStation", () => {
       tiles: [{ x: 1, y: 1 }],
     } as any;
 
-    stationA.addRailRoad(railRoad);
+    stationA.addRailroad(railRoad);
     expect(stationA.getRailroads().size).toBe(1);
 
     stationA.removeNeighboringRails(stationB);
