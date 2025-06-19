@@ -117,7 +117,7 @@ export class ConstructionExecution implements Execution {
         this.mg.addExecution(new CityExecution(player, this.tile));
         break;
       case UnitType.Factory:
-        this.mg.addExecution(new FactoryExecution(player.id(), this.tile));
+        this.mg.addExecution(new FactoryExecution(player, this.tile));
         break;
       default:
         throw Error(`unit type ${this.constructionType} not supported`);

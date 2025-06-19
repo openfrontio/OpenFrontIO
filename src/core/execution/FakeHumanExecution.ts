@@ -438,20 +438,22 @@ export class FakeHumanExecution implements Execution {
       this.maybeSpawnStructure(UnitType.Port, 1) ||
       this.maybeSpawnStructure(UnitType.City, 2) ||
       this.maybeSpawnWarship() ||
-      this.maybeSpawnStructure(UnitType.MissileSilo, 1) ||
-      this.maybeSpawnTrainStation()
+      this.maybeSpawnTrainStation() ||
+      this.maybeSpawnStructure(UnitType.MissileSilo, 1)
     );
   }
 
   private maybeSpawnTrainStation(): boolean {
     if (this.player === null) throw new Error("not initialized");
-    const cities = this.player.units(
-      UnitType.City,
-      UnitType.Port,
-      UnitType.Factory,
-    );
-    const citiesWithoutStations = cities.filter(
-      (city: Unit) => !city.hasTrainStation(),
+    const citiesWithoutStations = this.player.units().filter((unit) => {
+      switch (unit.type()) {
+        case UnitType.City:
+        case UnitType.Port:
+        case UnitType.Factory:
+          return !unit.hasTrainStation();
+        default:
+          return false;
+      }
     );
     if (citiesWithoutStations.length === 0) {
       return false;
