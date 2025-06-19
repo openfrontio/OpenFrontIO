@@ -9,7 +9,7 @@ import {
   Intent,
   PlayerRecord,
   ServerMessage,
-  ServerStartGameMessageSchema,
+  ServerStartGameMessage,
   Turn,
 } from "../core/Schemas";
 import { createGameRecord, decompressGameRecord, replacer } from "../core/Util";
@@ -76,19 +76,11 @@ export class LocalServer {
     if (this.lobbyConfig.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
     }
-    const result = ServerStartGameMessageSchema.safeParse({
+    this.clientMessage({
       type: "start",
-      gameID: this.lobbyConfig.gameStartInfo.gameID,
       gameStartInfo: this.lobbyConfig.gameStartInfo,
       turns: [],
-    });
-    if (!result.success) {
-      const error = z.prettifyError(result.error);
-      console.error("Error parsing start game message", error);
-      return;
-    }
-
-    this.clientMessage(result.data);
+    } satisfies ServerStartGameMessage);
   }
 
   pause() {

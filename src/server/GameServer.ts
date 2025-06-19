@@ -15,8 +15,8 @@ import {
   ServerDesyncSchema,
   ServerErrorMessage,
   ServerPrestartMessageSchema,
-  ServerStartGameMessageSchema,
-  ServerTurnMessageSchema,
+  ServerStartGameMessage,
+  ServerTurnMessage,
   Turn,
 } from "../core/Schemas";
 import { createGameRecord } from "../core/Util";
@@ -361,19 +361,14 @@ export class GameServer {
   }
 
   private sendStartGameMsg(ws: WebSocket, lastTurn: number) {
-    const result = ServerStartGameMessageSchema.safeParse({
-      type: "start",
-      turns: this.turns.slice(lastTurn),
-      gameStartInfo: this.gameStartInfo,
-    });
-    if (!result.success) {
-      const error = z.prettifyError(result.error);
-      console.error("Error parsing start game message", error);
-      return;
-    }
-
     try {
-      ws.send(JSON.stringify(result.data));
+      ws.send(
+        JSON.stringify({
+          type: "start",
+          turns: this.turns.slice(lastTurn),
+          gameStartInfo: this.gameStartInfo,
+        } satisfies ServerStartGameMessage),
+      );
     } catch (error) {
       throw new Error(
         `error sending start message for game ${this.id}, ${error}`.substring(
@@ -395,17 +390,10 @@ export class GameServer {
     this.handleSynchronization();
     this.checkDisconnectedStatus();
 
-    let msg = "";
-    const result = ServerTurnMessageSchema.safeParse({
+    const msg = JSON.stringify({
       type: "turn",
       turn: pastTurn,
-    });
-    if (!result.success) {
-      const error = z.prettifyError(result.error);
-      console.error("Error parsing server turn message, error");
-      return;
-    }
-    msg = JSON.stringify(result.data);
+    } satisfies ServerTurnMessage);
     this.activeClients.forEach((c) => {
       c.ws.send(msg);
     });

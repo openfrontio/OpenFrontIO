@@ -76,14 +76,14 @@ export type ClientMessage =
   | ClientLogMessage
   | ClientHashMessage;
 export type ServerMessage =
-  | ServerSyncMessage
+  | ServerTurnMessage
   | ServerStartGameMessage
   | ServerPingMessage
   | ServerDesyncMessage
   | ServerPrestartMessage
   | ServerErrorMessage;
 
-export type ServerSyncMessage = z.infer<typeof ServerTurnMessageSchema>;
+export type ServerTurnMessage = z.infer<typeof ServerTurnMessageSchema>;
 export type ServerStartGameMessage = z.infer<
   typeof ServerStartGameMessageSchema
 >;
