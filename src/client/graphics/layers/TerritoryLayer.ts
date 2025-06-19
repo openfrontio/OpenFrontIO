@@ -8,7 +8,11 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { PseudoRandom } from "../../../core/PseudoRandom";
-import { AlternateViewEvent, DragEvent } from "../../InputHandler";
+import {
+  AlternateViewEvent,
+  DragEvent,
+  RefreshGraphicsEvent,
+} from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -17,6 +21,8 @@ export class TerritoryLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
   private imageData: ImageData;
+
+  private cachedTerritoryPatternsEnabled: boolean | undefined;
 
   private tileToRenderQueue: PriorityQueue<{
     tile: TileRef;
@@ -48,6 +54,7 @@ export class TerritoryLayer implements Layer {
   ) {
     this.userSettings = userSettings;
     this.theme = game.config().theme();
+    this.cachedTerritoryPatternsEnabled = undefined;
   }
 
   shouldTransform(): boolean {
@@ -62,6 +69,11 @@ export class TerritoryLayer implements Layer {
   }
 
   tick() {
+    const prev = this.cachedTerritoryPatternsEnabled;
+    this.cachedTerritoryPatternsEnabled = this.userSettings.territoryPatterns();
+    if (prev !== undefined && prev !== this.cachedTerritoryPatternsEnabled) {
+      this.eventBus.emit(new RefreshGraphicsEvent());
+    }
     this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
     const updates = this.game.updatesSinceLastTick();
     const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
@@ -296,7 +308,11 @@ export class TerritoryLayer implements Layer {
       }
     } else {
       const pattern = owner.pattern();
-      if (!pattern || !this.userSettings.territoryPatterns()) {
+      // fallback for initial state if tick() hasn't run yet
+      const patternsEnabled =
+        this.cachedTerritoryPatternsEnabled ??
+        this.userSettings.territoryPatterns();
+      if (!pattern || !patternsEnabled) {
         this.paintTile(tile, this.theme.territoryColor(owner), 150);
       } else {
         const x = this.game.x(tile);

@@ -127,7 +127,6 @@ export class OptionsMenu extends LitElement implements Layer {
   private onToggleTerritoryPatterns() {
     this.userSettings.toggleTerritoryPatterns();
     this.requestUpdate();
-    this.eventBus.emit(new RefreshGraphicsEvent());
   }
 
   init() {
