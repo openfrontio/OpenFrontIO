@@ -310,7 +310,14 @@ export class Transport {
       onconnect();
     };
     this.socket.onmessage = (event: MessageEvent) => {
-      const result = ServerMessageSchema.safeParse(JSON.parse(event.data));
+      let parsed;
+      try {
+        parsed = JSON.parse(event.data);
+      } catch (e) {
+        console.error("Failed to parse server message:", e, event.data);
+        return;
+      }
+      const result = ServerMessageSchema.safeParse(parsed);
       if (!result.success) {
         const error = z.prettifyError(result.error);
         console.error("Error parsing server message", error);
