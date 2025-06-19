@@ -1,3 +1,4 @@
+import { z } from "zod/v4";
 import { EventBus, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
@@ -316,14 +317,20 @@ export class Transport {
       onconnect();
     };
     this.socket.onmessage = (event: MessageEvent) => {
+      let parsed;
       try {
-        const serverMsg = ServerMessageSchema.parse(JSON.parse(event.data));
-        this.onmessage(serverMsg);
-      } catch (error) {
-        console.error(
-          `Failed to process server message ${event.data}: ${error}, ${error.stack}`,
-        );
+        parsed = JSON.parse(event.data);
+      } catch (e) {
+        console.error("Failed to parse server message:", e, event.data);
+        return;
       }
+      const result = ServerMessageSchema.safeParse(parsed);
+      if (!result.success) {
+        const error = z.prettifyError(result.error);
+        console.error("Error parsing server message", error);
+        return;
+      }
+      this.onmessage(result.data);
     };
     this.socket.onerror = (err) => {
       console.error("Socket encountered error: ", err, "Closing socket");

@@ -1,4 +1,5 @@
 import { jwtVerify } from "jose";
+import { z } from "zod/v4";
 import {
   TokenPayload,
   TokenPayloadSchema,
@@ -32,7 +33,13 @@ export async function verifyClientToken(
       audience,
       maxTokenAge: "6 days",
     });
-    const claims = TokenPayloadSchema.parse(payload);
+    const result = TokenPayloadSchema.safeParse(payload);
+    if (!result.success) {
+      const error = z.prettifyError(result.error);
+      console.warn("Error parsing token payload", error);
+      return false;
+    }
+    const claims = result.data;
     const persistentId = claims.sub;
     return { persistentId, claims };
   } catch (e) {
