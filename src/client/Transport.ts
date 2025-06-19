@@ -166,7 +166,7 @@ export class Transport {
 
   private localServer: LocalServer;
 
-  private buffer: ClientMessage[] = [];
+  private buffer: string[] = [];
 
   private onconnect: () => void;
   private onmessage: (msg: ServerMessage) => void;
@@ -297,6 +297,10 @@ export class Transport {
     this.onmessage = onmessage;
     this.socket.onopen = () => {
       console.log("Connected to game server!");
+      if (this.socket === null) {
+        console.error("socket is null");
+        return;
+      }
       while (this.buffer.length > 0) {
         console.log("sending dropped message");
         const msg = this.buffer.pop();
@@ -304,25 +308,24 @@ export class Transport {
           console.warn("msg is undefined");
           continue;
         }
-        this.sendMsg(msg);
+        this.socket.send(msg);
       }
       onconnect();
     };
     this.socket.onmessage = (event: MessageEvent) => {
-      let parsed;
       try {
-        parsed = JSON.parse(event.data);
+        const parsed = JSON.parse(event.data);
+        const result = ServerMessageSchema.safeParse(parsed);
+        if (!result.success) {
+          const error = z.prettifyError(result.error);
+          console.error("Error parsing server message", error);
+          return;
+        }
+        this.onmessage(result.data);
       } catch (e) {
         console.error("Failed to parse server message:", e, event.data);
         return;
       }
-      const result = ServerMessageSchema.safeParse(parsed);
-      if (!result.success) {
-        const error = z.prettifyError(result.error);
-        console.error("Error parsing server message", error);
-        return;
-      }
-      this.onmessage(result.data);
     };
     this.socket.onerror = (err) => {
       console.error("Socket encountered error: ", err, "Closing socket");
@@ -608,23 +611,26 @@ export class Transport {
     }
   }
 
-  private sendMsg(clientMsg: ClientMessage) {
+  private sendMsg(msg: ClientMessage) {
     if (this.isLocal) {
       // Forward message to local server
-      this.localServer.onMessage(clientMsg);
+      this.localServer.onMessage(msg);
+      return;
     } else if (this.socket === null) {
       // Socket missing, do nothing
-    } else if (this.socket.readyState === WebSocket.CLOSED) {
+      return;
+    }
+    const str = JSON.stringify(msg, replacer);
+    if (this.socket.readyState === WebSocket.CLOSED) {
       // Buffer message
       console.warn("socket not ready, closing and trying later");
       this.socket.close();
       this.socket = null;
       this.connectRemote(this.onconnect, this.onmessage);
-      this.buffer.push(clientMsg);
+      this.buffer.push(str);
     } else {
       // Send the message directly
-      const msg = JSON.stringify(clientMsg, replacer);
-      this.socket.send(msg);
+      this.socket.send(str);
     }
   }
 
