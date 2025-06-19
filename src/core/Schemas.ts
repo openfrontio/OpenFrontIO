@@ -80,7 +80,8 @@ export type ServerMessage =
   | ServerStartGameMessage
   | ServerPingMessage
   | ServerDesyncMessage
-  | ServerPrestartMessage;
+  | ServerPrestartMessage
+  | ServerErrorMessage;
 
 export type ServerSyncMessage = z.infer<typeof ServerTurnMessageSchema>;
 export type ServerStartGameMessage = z.infer<
@@ -89,6 +90,7 @@ export type ServerStartGameMessage = z.infer<
 export type ServerPingMessage = z.infer<typeof ServerPingMessageSchema>;
 export type ServerDesyncMessage = z.infer<typeof ServerDesyncSchema>;
 export type ServerPrestartMessage = z.infer<typeof ServerPrestartMessageSchema>;
+export type ServerErrorMessage = z.infer<typeof ServerErrorSchema>;
 export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
 export type ClientPingMessage = z.infer<typeof ClientPingMessageSchema>;
 export type ClientIntentMessage = z.infer<typeof ClientIntentMessageSchema>;
@@ -120,6 +122,10 @@ export enum LogSeverity {
   Fatal = "FATAL",
 }
 
+//
+// Utility types
+//
+
 export const GameConfigSchema = z.object({
   gameMap: z.enum(GameMapType),
   difficulty: z.enum(Difficulty),
@@ -144,7 +150,7 @@ const SafeString = z
   )
   .max(1000);
 
-const PersistentIdSchema = z.uuid();
+export const PersistentIdSchema = z.uuid();
 const JwtTokenSchema = z.jwt();
 const TokenSchema = z
   .string()
@@ -161,14 +167,26 @@ const EmojiSchema = z
   .number()
   .nonnegative()
   .max(flattenedEmojiTable.length - 1);
-const ID = z
+export const ID = z
   .string()
   .regex(/^[a-zA-Z0-9]+$/)
   .length(8);
 
 export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
-// Zod schemas
+export const UsernameSchema = SafeString;
+export const FlagSchema = z.string().max(128).optional();
+
+export const QuickChatKeySchema = z.enum(
+  Object.entries(quickChatData).flatMap(([category, entries]) =>
+    entries.map((entry) => `${category}.${entry.key}`),
+  ) as [string, ...string[]],
+);
+
+//
+// Intents
+//
+
 const BaseIntentSchema = z.object({
   clientID: ID,
 });
@@ -180,9 +198,9 @@ export const AttackIntentSchema = BaseIntentSchema.extend({
 });
 
 export const SpawnIntentSchema = BaseIntentSchema.extend({
-  flag: z.string().nullable(),
   type: z.literal("spawn"),
-  name: SafeString,
+  name: UsernameSchema,
+  flag: FlagSchema,
   playerType: PlayerTypeSchema,
   x: z.number(),
   y: z.number(),
@@ -277,12 +295,6 @@ export const MoveWarshipIntentSchema = BaseIntentSchema.extend({
   tile: z.number(),
 });
 
-export const QuickChatKeySchema = z.enum(
-  Object.entries(quickChatData).flatMap(([category, entries]) =>
-    entries.map((entry) => `${category}.${entry.key}`),
-  ) as [string, ...string[]],
-);
-
 export const QuickChatIntentSchema = BaseIntentSchema.extend({
   type: z.literal("quick_chat"),
   recipient: ID,
@@ -317,6 +329,10 @@ const IntentSchema = z.discriminatedUnion("type", [
   QuickChatIntentSchema,
 ]);
 
+//
+// Server utility types
+//
+
 export const TurnSchema = z.object({
   turnNumber: z.number(),
   intents: IntentSchema.array(),
@@ -324,30 +340,10 @@ export const TurnSchema = z.object({
   hash: z.number().nullable().optional(),
 });
 
-// Server
-
-const ServerBaseMessageSchema = z.object({
-  type: z.enum(["turn", "ping", "prestart", "start", "desync"]),
-});
-
-export const ServerTurnMessageSchema = ServerBaseMessageSchema.extend({
-  type: z.literal("turn"),
-  turn: TurnSchema,
-});
-
-export const ServerPingMessageSchema = ServerBaseMessageSchema.extend({
-  type: z.literal("ping"),
-});
-
-export const ServerPrestartMessageSchema = ServerBaseMessageSchema.extend({
-  type: z.literal("prestart"),
-  gameMap: z.enum(GameMapType),
-});
-
 export const PlayerSchema = z.object({
   clientID: ID,
-  username: SafeString,
-  flag: SafeString.optional(),
+  username: UsernameSchema,
+  flag: FlagSchema,
 });
 
 export const GameStartInfoSchema = z.object({
@@ -356,14 +352,40 @@ export const GameStartInfoSchema = z.object({
   players: PlayerSchema.array(),
 });
 
-export const ServerStartGameMessageSchema = ServerBaseMessageSchema.extend({
+export const WinnerSchema = z
+  .union([
+    z.tuple([z.literal("player"), ID]),
+    z.tuple([z.literal("team"), SafeString]),
+  ])
+  .optional();
+export type Winner = z.infer<typeof WinnerSchema>;
+
+//
+// Server
+//
+
+export const ServerTurnMessageSchema = z.object({
+  type: z.literal("turn"),
+  turn: TurnSchema,
+});
+
+export const ServerPingMessageSchema = z.object({
+  type: z.literal("ping"),
+});
+
+export const ServerPrestartMessageSchema = z.object({
+  type: z.literal("prestart"),
+  gameMap: z.nativeEnum(GameMapType),
+});
+
+export const ServerStartGameMessageSchema = z.object({
   type: z.literal("start"),
   // Turns the client missed if they are late to the game.
   turns: TurnSchema.array(),
   gameStartInfo: GameStartInfoSchema,
 });
 
-export const ServerDesyncSchema = ServerBaseMessageSchema.extend({
+export const ServerDesyncSchema = z.object({
   type: z.literal("desync"),
   turn: z.number(),
   correctHash: z.number().nullable(),
@@ -372,23 +394,23 @@ export const ServerDesyncSchema = ServerBaseMessageSchema.extend({
   yourHash: z.number().optional(),
 });
 
-export const ServerMessageSchema = z.union([
+export const ServerErrorSchema = z.object({
+  type: z.literal("error"),
+  error: z.string(),
+});
+
+export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
   ServerStartGameMessageSchema,
   ServerPingMessageSchema,
   ServerDesyncSchema,
+  ServerErrorSchema,
 ]);
 
+//
 // Client
-
-export const WinnerSchema = z
-  .union([
-    z.tuple([z.literal("player"), ID]),
-    z.tuple([z.literal("team"), SafeString]),
-  ])
-  .optional();
-export type Winner = z.infer<typeof WinnerSchema>;
+//
 
 export const ClientSendWinnerSchema = z.object({
   type: z.literal("winner"),
@@ -424,11 +446,11 @@ export const ClientJoinMessageSchema = z.object({
   token: TokenSchema, // WARNING: PII
   gameID: ID,
   lastTurn: z.number(), // The last turn the client saw.
-  username: SafeString,
-  flag: SafeString.optional(),
+  username: UsernameSchema,
+  flag: FlagSchema,
 });
 
-export const ClientMessageSchema = z.union([
+export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientSendWinnerSchema,
   ClientPingMessageSchema,
   ClientIntentMessageSchema,
@@ -436,6 +458,10 @@ export const ClientMessageSchema = z.union([
   ClientLogMessageSchema,
   ClientHashSchema,
 ]);
+
+//
+// Records
+//
 
 export const PlayerRecordSchema = PlayerSchema.extend({
   persistentID: PersistentIdSchema, // WARNING: PII

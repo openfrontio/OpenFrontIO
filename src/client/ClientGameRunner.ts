@@ -99,6 +99,17 @@ export function joinLobby(
         terrainLoad,
       ).then((r) => r.start());
     }
+    if (message.type === "error") {
+      showErrorModal(
+        message.error,
+        "",
+        lobbyConfig.gameID,
+        lobbyConfig.clientID,
+        true,
+        false,
+        "error_modal.connection_error",
+      );
+    }
   };
   transport.connect(onconnect, onmessage);
   return () => {
@@ -309,7 +320,19 @@ export class ClientGameRunner {
           this.lobby.gameStartInfo.gameID,
           this.lobby.clientID,
           true,
-          translateText("error_modal.desync_notice"),
+          false,
+          "error_modal.desync_notice",
+        );
+      }
+      if (message.type === "error") {
+        showErrorModal(
+          message.error,
+          "",
+          this.lobby.gameID,
+          this.lobby.clientID,
+          true,
+          false,
+          "error_modal.connection_error",
         );
       }
       if (message.type === "turn") {
@@ -538,7 +561,8 @@ function showErrorModal(
   gameID: GameID,
   clientID: ClientID,
   closable = false,
-  heading = translateText("error_modal.crashed"),
+  showDiscord = true,
+  heading = "error_modal.crashed",
 ) {
   const errorText = `Error: ${errMsg}\nStack: ${stack}`;
 
@@ -550,7 +574,9 @@ function showErrorModal(
 
   modal.id = "error-modal";
 
-  const content = `${translateText(heading)}\n game id: ${gameID}, client id: ${clientID}\n${translateText("error_modal.paste_discord")}\n${errorText}`;
+  const discord = showDiscord ? translateText("error_modal.paste_discord") : "";
+
+  const content = `${discord}\n${translateText(heading)}\n game id: ${gameID}, client id: ${clientID}\n${errorText}`;
 
   // Create elements
   const pre = document.createElement("pre");

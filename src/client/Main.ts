@@ -1,6 +1,6 @@
-import page from "page";
 import favicon from "../../resources/images/Favicon.svg";
-import { GameRecord, GameStartInfo } from "../core/Schemas";
+import version from "../../resources/version.txt";
+import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
@@ -11,7 +11,6 @@ import "./FlagInput";
 import { FlagInput } from "./FlagInput";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
-import GoogleAdElement from "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
@@ -34,6 +33,26 @@ import "./components/baseComponents/Modal";
 import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
 import "./styles.css";
 
+declare global {
+  interface Window {
+    PageOS: {
+      session: {
+        newPageView: () => void;
+      };
+    };
+    ramp: {
+      que: Array<() => void>;
+      passiveMode: boolean;
+      spaAddAds: (ads: Array<{ type: string; selectorId: string }>) => void;
+      destroyUnits: (adType: string) => void;
+      settings?: {
+        slots?: any;
+      };
+      spaNewPage: (url: string) => void;
+    };
+  }
+}
+
 export interface JoinLobbyEvent {
   clientID: string;
   // Multiplayer games only have gameID, gameConfig is not known until game starts.
@@ -53,7 +72,6 @@ class Client {
 
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
-  private googleAds: NodeListOf<GoogleAdElement>;
   private userSettings: UserSettings = new UserSettings();
 
   constructor() {}
@@ -65,9 +83,7 @@ class Client {
     if (!gameVersion) {
       console.warn("Game version element not found");
     }
-    fetch("/version.txt")
-      .then((response) => (response.ok ? response.text() : "Failed to load"))
-      .then((version) => (gameVersion.innerText = version));
+    gameVersion.innerText = version;
 
     const newsModal = document.querySelector("news-modal") as NewsModal;
     if (!newsModal) {
@@ -80,9 +96,6 @@ class Client {
     } else {
       console.log("News button element found");
     }
-    fetch("/changelog.md")
-      .then((response) => (response.ok ? response.text() : "Failed to load"))
-      .then((changelog) => (newsModal.markdown = changelog));
 
     // Comment out to show news button.
     // newsButton.hidden = true;
@@ -127,9 +140,6 @@ class Client {
     }
 
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
-    this.googleAds = document.querySelectorAll(
-      "google-ad",
-    ) as NodeListOf<GoogleAdElement>;
 
     window.addEventListener("beforeunload", () => {
       console.log("Browser is closing");
@@ -247,20 +257,25 @@ class Client {
     } else {
       document.documentElement.classList.remove("dark");
     }
-    page("/join/:lobbyId", (ctx) => {
-      if (ctx.init && sessionStorage.getItem("inLobby")) {
-        // On page reload, go back home
-        page("/");
-        return;
+
+    // Attempt to join lobby
+    this.handleHash();
+
+    const onHashUpdate = () => {
+      // Reset the UI to its initial state
+      this.joinModal.close();
+      if (this.gameStop !== null) {
+        this.handleLeaveLobby();
       }
-      const lobbyId = ctx.params.lobbyId;
 
-      this.joinModal.open(lobbyId);
+      // Attempt to join lobby
+      this.handleHash();
+    };
 
-      console.log(`joining lobby ${lobbyId}`);
-    });
+    // Handle browser navigation & manual hash edits
+    window.addEventListener("popstate", onHashUpdate);
+    window.addEventListener("hashchange", onHashUpdate);
 
-    page();
     function updateSliderProgress(slider) {
       const percent =
         ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
@@ -273,6 +288,18 @@ class Client {
         updateSliderProgress(slider);
         slider.addEventListener("input", () => updateSliderProgress(slider));
       });
+  }
+
+  private handleHash() {
+    const { hash } = window.location;
+    if (hash.startsWith("#")) {
+      const params = new URLSearchParams(hash.slice(1));
+      const lobbyId = params.get("join");
+      if (lobbyId && ID.safeParse(lobbyId).success) {
+        this.joinModal.open(lobbyId);
+        console.log(`joining lobby ${lobbyId}`);
+      }
+    }
   }
 
   private async handleJoinLobby(event: CustomEvent) {
@@ -338,13 +365,19 @@ class Client {
       () => {
         this.joinModal.close();
         this.publicLobby.stop();
+
+        try {
+          window.PageOS.session.newPageView();
+        } catch (e) {
+          console.error("Error calling newPageView", e);
+        }
+
         document.querySelectorAll(".ad").forEach((ad) => {
           (ad as HTMLElement).style.display = "none";
         });
 
         if (event.detail.gameConfig?.gameType !== GameType.Singleplayer) {
-          window.history.pushState({}, "", `/join/${lobby.gameID}`);
-          sessionStorage.setItem("inLobby", "true");
+          history.pushState(null, "", `#join=${lobby.gameID}`);
         }
       },
     );
