@@ -323,7 +323,7 @@ export class Transport {
         }
         this.onmessage(result.data);
       } catch (e) {
-        console.error("Failed to parse server message:", e, event.data);
+        console.error("Error in onmessage handler:", e, event.data);
         return;
       }
     };
