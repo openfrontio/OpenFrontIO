@@ -15,8 +15,8 @@ import {
   ServerDesyncSchema,
   ServerErrorMessage,
   ServerPrestartMessageSchema,
-  ServerStartGameMessageSchema,
-  ServerTurnMessageSchema,
+  ServerStartGameMessage,
+  ServerTurnMessage,
   Turn,
 } from "../core/Schemas";
 import { createGameRecord } from "../core/Util";
@@ -327,7 +327,7 @@ export class GameServer {
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
 
-    this.gameStartInfo = GameStartInfoSchema.parse({
+    const result = GameStartInfoSchema.safeParse({
       gameID: this.id,
       config: this.gameConfig,
       players: this.activeClients.map((c) => ({
@@ -335,7 +335,13 @@ export class GameServer {
         clientID: c.clientID,
         flag: c.flag,
       })),
-    } satisfies GameStartInfo);
+    });
+    if (!result.success) {
+      const error = z.prettifyError(result.error);
+      this.log.error("Error parsing game start info", { message: error });
+      return;
+    }
+    this.gameStartInfo = result.data satisfies GameStartInfo;
 
     this.endTurnIntervalID = setInterval(
       () => this.endTurn(),
@@ -357,13 +363,11 @@ export class GameServer {
   private sendStartGameMsg(ws: WebSocket, lastTurn: number) {
     try {
       ws.send(
-        JSON.stringify(
-          ServerStartGameMessageSchema.parse({
-            type: "start",
-            turns: this.turns.slice(lastTurn),
-            gameStartInfo: this.gameStartInfo,
-          }),
-        ),
+        JSON.stringify({
+          type: "start",
+          turns: this.turns.slice(lastTurn),
+          gameStartInfo: this.gameStartInfo,
+        } satisfies ServerStartGameMessage),
       );
     } catch (error) {
       throw new Error(
@@ -386,22 +390,10 @@ export class GameServer {
     this.handleSynchronization();
     this.checkDisconnectedStatus();
 
-    let msg = "";
-    try {
-      msg = JSON.stringify(
-        ServerTurnMessageSchema.parse({
-          type: "turn",
-          turn: pastTurn,
-        }),
-      );
-    } catch (error) {
-      this.log.info(
-        `error sending message for game: ${error.substring(0, 250)}`,
-        {},
-      );
-      return;
-    }
-
+    const msg = JSON.stringify({
+      type: "turn",
+      turn: pastTurn,
+    } satisfies ServerTurnMessage);
     this.activeClients.forEach((c) => {
       c.ws.send(msg);
     });

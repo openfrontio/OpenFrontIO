@@ -24,7 +24,7 @@ import { SinglePlayerModal } from "./SinglePlayerModal";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import { generateCryptoRandomUUID } from "./Utils";
+import { generateCryptoRandomUUID, incrementGamesPlayed } from "./Utils";
 import "./components/NewsButton";
 import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
@@ -365,6 +365,7 @@ class Client {
       () => {
         this.joinModal.close();
         this.publicLobby.stop();
+        incrementGamesPlayed();
 
         try {
           window.PageOS.session.newPageView();
