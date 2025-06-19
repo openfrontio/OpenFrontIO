@@ -16,6 +16,7 @@ import {
   ClientHashMessage,
   ClientIntentMessage,
   ClientJoinMessage,
+  ClientMessage,
   ClientPingMessage,
   ClientSendWinnerMessage,
   Intent,
@@ -165,7 +166,7 @@ export class Transport {
 
   private localServer: LocalServer;
 
-  private buffer: string[] = [];
+  private buffer: ClientMessage[] = [];
 
   private onconnect: () => void;
   private onmessage: (msg: ServerMessage) => void;
@@ -240,11 +241,9 @@ export class Transport {
     if (this.pingInterval === null) {
       this.pingInterval = window.setInterval(() => {
         if (this.socket !== null && this.socket.readyState === WebSocket.OPEN) {
-          this.sendMsg(
-            JSON.stringify({
-              type: "ping",
-            } satisfies ClientPingMessage),
-          );
+          this.sendMsg({
+            type: "ping",
+          } satisfies ClientPingMessage);
         }
       }, 5 * 1000);
     }
@@ -352,17 +351,15 @@ export class Transport {
   }
 
   joinGame(numTurns: number) {
-    this.sendMsg(
-      JSON.stringify({
-        type: "join",
-        gameID: this.lobbyConfig.gameID,
-        clientID: this.lobbyConfig.clientID,
-        lastTurn: numTurns,
-        token: this.lobbyConfig.token,
-        username: this.lobbyConfig.playerName,
-        flag: this.lobbyConfig.flag,
-      } satisfies ClientJoinMessage),
-    );
+    this.sendMsg({
+      type: "join",
+      gameID: this.lobbyConfig.gameID,
+      clientID: this.lobbyConfig.clientID,
+      lastTurn: numTurns,
+      token: this.lobbyConfig.token,
+      username: this.lobbyConfig.playerName,
+      flag: this.lobbyConfig.flag,
+    } satisfies ClientJoinMessage);
   }
 
   leaveGame(saveFullGame: boolean = false) {
@@ -540,12 +537,11 @@ export class Transport {
 
   private onSendWinnerEvent(event: SendWinnerEvent) {
     if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
-      const msg = {
+      this.sendMsg({
         type: "winner",
         winner: event.winner,
         allPlayersStats: event.allPlayersStats,
-      } satisfies ClientSendWinnerMessage;
-      this.sendMsg(JSON.stringify(msg, replacer));
+      } satisfies ClientSendWinnerMessage);
     } else {
       console.log(
         "WebSocket is not open. Current state:",
@@ -557,13 +553,11 @@ export class Transport {
 
   private onSendHashEvent(event: SendHashEvent) {
     if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
-      this.sendMsg(
-        JSON.stringify({
-          type: "hash",
-          turnNumber: event.tick,
-          hash: event.hash,
-        } satisfies ClientHashMessage),
-      );
+      this.sendMsg({
+        type: "hash",
+        turnNumber: event.tick,
+        hash: event.hash,
+      } satisfies ClientHashMessage);
     } else {
       console.log(
         "WebSocket is not open. Current state:",
@@ -604,7 +598,7 @@ export class Transport {
         type: "intent",
         intent: intent,
       } satisfies ClientIntentMessage;
-      this.sendMsg(JSON.stringify(msg));
+      this.sendMsg(msg);
     } else {
       console.log(
         "WebSocket is not open. Current state:",
@@ -614,23 +608,23 @@ export class Transport {
     }
   }
 
-  private sendMsg(msg: string) {
+  private sendMsg(clientMsg: ClientMessage) {
     if (this.isLocal) {
-      this.localServer.onMessage(msg);
+      // Forward message to local server
+      this.localServer.onMessage(clientMsg);
+    } else if (this.socket === null) {
+      // Socket missing, do nothing
+    } else if (this.socket.readyState === WebSocket.CLOSED) {
+      // Buffer message
+      console.warn("socket not ready, closing and trying later");
+      this.socket.close();
+      this.socket = null;
+      this.connectRemote(this.onconnect, this.onmessage);
+      this.buffer.push(clientMsg);
     } else {
-      if (this.socket === null) return;
-      if (
-        this.socket.readyState === WebSocket.CLOSED ||
-        this.socket.readyState === WebSocket.CLOSED
-      ) {
-        console.warn("socket not ready, closing and trying later");
-        this.socket.close();
-        this.socket = null;
-        this.connectRemote(this.onconnect, this.onmessage);
-        this.buffer.push(msg);
-      } else {
-        this.socket.send(msg);
-      }
+      // Send the message directly
+      const msg = JSON.stringify(clientMsg, replacer);
+      this.socket.send(msg);
     }
   }
 
