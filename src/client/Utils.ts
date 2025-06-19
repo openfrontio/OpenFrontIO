@@ -179,5 +179,9 @@ export function getGamesPlayed(): number {
 }
 
 export function incrementGamesPlayed(): void {
-  localStorage.setItem("gamesPlayed", (getGamesPlayed() + 1).toString());
+  try {
+    localStorage.setItem("gamesPlayed", (getGamesPlayed() + 1).toString());
+  } catch (error) {
+    console.warn("Failed to increment games played in localStorage:", error);
+  }
 }
