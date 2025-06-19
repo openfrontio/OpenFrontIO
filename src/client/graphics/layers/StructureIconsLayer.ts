@@ -16,7 +16,6 @@ class StructureRenderInfo {
 
   constructor(
     public unit: UnitView,
-    public lastRenderCalc: number,
     public location: Cell | null,
     public imageData: HTMLCanvasElement,
   ) {}
@@ -89,7 +88,7 @@ export class StructureIconsLayer implements Layer {
       ) {
         this.seenUnits.add(unit);
         this.renders.push(
-          new StructureRenderInfo(unit, 0, null, this.createUnitElement(unit)),
+          new StructureRenderInfo(unit, null, this.createUnitElement(unit)),
         );
       }
     }
