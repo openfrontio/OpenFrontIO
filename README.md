@@ -15,186 +15,163 @@ OpenFront is an online real-time strategy game focused on territorial control an
 
 This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 
-# OpenFront - Licensing
+---
+
+## ⚠️ Fork Notice
+
+This repository is a fork of OpenFrontIO (**version 23.12**) and serves as the foundation for a larger MMO strategy game project called **Clash of Regions**.  
+The fork retains open source licensing and integrates new long-term gameplay mechanics like persistent worlds, politics, economies, and warfare.
+
+---
+
+# 🌍 Clash of Regions
+
+**Clash of Regions** is an open source MMO strategy game inspired by **Rival Regions**, **Call of War 3**, and **OpenFront.io** — forked and expanded upon from the [OpenFront.io project](https://github.com/openfrontio/OpenFrontIO).
+
+This project transforms OpenFront's match-based world into a **persistent, long-term, political-economy driven simulation** with player-run countries, economies, and wars.
+
+## 🎯 Project Vision
+
+Unlike OpenFront.io which resets each match, **Clash of Regions** introduces:
+- A **persistent world** with thousands of territories
+- **Economy**: resource generation, trading, taxes
+- **Politics**: player-governed countries, elections, and decisions
+- **Military**: armies, wars, defense systems
+- **Backend in Go**, client remains open-source under GPLv3 (browser-based)
+
+---
+
+## 📦 Backlog (Grouped by Category)
+
+### 🧱 Core Infrastructure
+- [ ] Persistent DB to store player/world state
+- [ ] Remove match-based resets
+- [ ] Rework WebSocket to handle long sessions
+- [ ] World ticks (real-time updates)
+- [ ] Player login / reconnect handling
+
+### 🌍 World Map
+- [ ] Admin1-based or custom regional map
+- [ ] Ownership-based coloring
+- [ ] Region hover/click events
+- [ ] Map panning/zooming
+
+### 💰 Economy
+- [ ] Basic resources: gold, food, oil, population
+- [ ] Production by territory
+- [ ] Warehouses and buildings
+- [ ] Resource transfers and trading
+- [ ] Tax system
+
+### ⚔️ Military
+- [ ] Recruit troops (resource-based)
+- [ ] Move armies between regions
+- [ ] Battle logic (basic)
+- [ ] Change ownership on conquest
+- [ ] Fortifications/defense
+
+### 🏛️ Politics
+- [ ] Government types (President / Parliament)
+- [ ] Voting system
+- [ ] Player-created parties / alliances
+- [ ] Scheduled elections
+- [ ] National decisions
+
+### 🖥️ UI / UX
+- [ ] HUD with player status, resources, region info
+- [ ] Building, recruiting, trading panels
+- [ ] Event log (actions, attacks, decisions)
+- [ ] Notification system
+
+### 🔄 Player Interaction
+- [ ] Persistent player progress
+- [ ] Rejoin/resume support
+- [ ] Join/create countries
+- [ ] Trigger world events (e.g. disasters)
+
+### 🎯 Optional / Post-MVP
+- [ ] AI for empty regions
+- [ ] Mobile support
+- [ ] Localization
+- [ ] Replay / event log system
+
+---
+
+## 🚀 Development Roadmap
+
+### ✅ Phase 1: Persistent World Setup (2 weeks)
+- Replace match system with continuous DB
+- Create basic world tick loop
+- Store/load player and region state
+- Enable reconnecting to same session
+
+### 🌍 Phase 2: Interactive Map (1.5 weeks)
+- Render map from admin1/custom
+- Connect regions with IDs
+- Highlight ownership visually
+- Enable zoom, pan, click, hover
+
+### 💰 Phase 3: Economy System (2 weeks)
+- Define resources
+- Production logic per tick
+- Manual and automatic building system
+- Resource transfer mechanics
+
+### ⚔️ Phase 4: Combat and Military (2 weeks)
+- Troop recruitment UI
+- Army movement logic
+- Region battle system (simple first)
+- Region conquest and ownership changes
+
+### 🏛️ Phase 5: Politics and Governance (2.5 weeks)
+- Electable governments
+- Voting system with UI
+- Country creation and party system
+- Government power effects
+
+### 🖥️ Phase 6: UI Polish (1.5 weeks)
+- Player HUD with live info
+- Panels for construction, army, diplomacy
+- Simple notification and event log
+- Interactive buttons and shortcuts
+
+### 🌐 Phase 7: Public Playtest (1 week)
+- Launch test server
+- Invite testers
+- Log feedback and bugs
+- Balance economy and pacing
+
+---
+
+## 📝 License
 
 This project uses a dual-licensing approach:
 
 - Code in the `server/` and `core/` directory is licensed under MIT
 - Client code (in the `client/` directory) is licensed under GPL v3
 
-## 🌟 Features
+See [LICENSE](LICENSE) for full details.
 
-- **Real-time Strategy Gameplay**: Expand your territory and engage in strategic battles
-- **Alliance System**: Form alliances with other players for mutual defense
-- **Multiple Maps**: Play across various geographical regions including Europe, Asia, Africa, and more
-- **Resource Management**: Balance your expansion with defensive capabilities
-- **Cross-platform**: Play in any modern web browser
+---
 
-## 📋 Prerequisites
+## 🔒 Development Team
 
-- [npm](https://www.npmjs.com/) (v10.9.2 or higher)
-- A modern web browser (Chrome, Firefox, Edge, etc.)
+This project is maintained privately by a small team. External contributions are currently not accepted.
 
-## 🚀 Installation
+**Development Team:**
+- Lead Developer
+- Co-Developer / Systems Architect
 
-1. **Clone the repository**
+Feature requests, ideas, or bug reports are welcome through issues only.
 
-   ```bash
-   git clone https://github.com/openfrontio/OpenFrontIO.git
-   cd OpenFrontIO
-   ```
-
-2. **Install dependencies**
-
-   ```bash
-   npm i
-   ```
-
-## 🎮 Running the Game
-
-### Development Mode
-
-Run both the client and server in development mode with live reloading:
-
-```bash
-npm run dev
-```
-
-This will:
-
-- Start the webpack dev server for the client
-- Launch the game server with development settings
-- Open the game in your default browser
-
-### Client Only
-
-To run just the client with hot reloading:
-
-```bash
-npm run start:client
-```
-
-### Server Only
-
-To run just the server with development settings:
-
-```bash
-npm run start:server-dev
-```
-
-## 🛠️ Development Tools
-
-- **Format code**:
-
-  ```bash
-  npm run format
-  ```
-
-- **Lint code**:
-
-  ```bash
-  npm run lint
-  ```
-
-- **Lint and fix code**:
-
-  ```bash
-  npm run lint:fix
-  ```
-
-- **Testing**
-  ```bash
-  npm test
-  ```
-
-## 🏗️ Project Structure
-
-- `/src/client` - Frontend game client
-- `/src/core` - Shared game logic
-- `/src/server` - Backend game server
-- `/resources` - Static assets (images, maps, etc.)
-
-## 📝 License
-
-This project is licensed under the terms found in the [LICENSE](LICENSE) file.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Request to join the development [Discord](https://discord.gg/K9zernJB5z).
-1. Fork the repository
-1. Create your feature branch (`git checkout -b amazing-feature`)
-1. Commit your changes (`git commit -m 'Add some amazing feature'`)
-1. Push to the branch (`git push origin amazing-feature`)
-1. Open a Pull Request
+---
 
 ## 🌐 Translation
 
-Translators are welcome! Please feel free to help translate into your language.
-How to help?
+Translators are welcome! Help translate the game on [Crowdin](https://crowdin.com/project/openfront-mls).
 
-1. Request to join the translation [Discord](https://discord.gg/rUukAnz4Ww)
-1. Go to the project's Crowdin translation page: [https://crowdin.com/project/openfront-mls](https://crowdin.com/project/openfront-mls)
-1. Login if you already have an account/ Sign up if you don't have one
-1. Select the language you want to translate in/ If your language isn't on the list, click the "Request New Language" button and enter the language you want added there.
-1. Translate the strings
+---
 
-### Project Governance
+## 🙏 Thanks
 
-- The project maintainer ([evan](https://github.com/evanpelle)) has final authority on all code changes and design decisions
-- All pull requests require maintainer approval before merging
-- The maintainer reserves the right to reject contributions that don't align with the project's vision or quality standards
-
-### Contribution Path for New Contributors
-
-To ensure code quality and project stability, we use a progressive contribution system:
-
-1. **New Contributors**: Limited to UI improvements and small bug fixes only
-
-   - This helps you become familiar with the codebase
-   - UI changes are easier to review and less likely to break core functionality
-   - Small, focused PRs have a higher chance of being accepted
-
-2. **Established Contributors**: After several successful PRs and demonstrating understanding of the codebase, you may work on more complex features
-
-3. **Core Contributors**: Only those with extensive experience with the project may modify critical game systems
-
-### How to Contribute Successfully
-
-1. **Before Starting Work**:
-
-   - Open an issue describing what you want to contribute
-   - Wait for maintainer feedback before investing significant time
-   - Small improvements can proceed directly to PR stage
-
-2. **Code Quality Requirements**:
-
-   - All code must be well-commented and follow existing style patterns
-   - New features should not break existing functionality
-   - Code should be thoroughly tested before submission
-   - All code changes in src/core _MUST_ be tested.
-
-3. **Pull Request Process**:
-
-   - Keep PRs focused on a single feature or bug fix
-   - Include screenshots for UI changes
-   - Describe what testing you've performed
-   - Be responsive to feedback and requested changes
-
-4. **Testing Requirements**:
-   - Verify your changes work as expected
-   - Test on multiple systems/browsers if applicable
-   - Document your testing process in the PR
-
-### Communication
-
-- Be respectful and constructive in all project interactions
-- Questions are welcome, but please search existing issues first
-- For major changes, discuss in an issue before starting work
-
-### Final Notes
-
-Remember that maintaining this project requires significant effort. The maintainer appreciates your contributions but must prioritize long-term project health and stability. Not all contributions will be accepted, and that's okay.
-
-Thank you for helping make OpenFront better!
+This project would not be possible without the efforts of the original OpenFrontIO and WarFrontIO teams. Special thanks to all contributors and community supporters.
