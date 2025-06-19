@@ -164,6 +164,11 @@ export class SAMLauncherExecution implements Execution {
           samOwner.id(),
         );
 
+        mirvWarheadTargets.forEach(({ unit: u }) => {
+          // Delete warheads
+          u.delete();
+        });
+
         // Record stats
         this.mg
           .stats()
@@ -172,11 +177,6 @@ export class SAMLauncherExecution implements Execution {
             UnitType.MIRVWarhead,
             mirvWarheadTargets.length,
           );
-
-        mirvWarheadTargets.forEach(({ unit: u }) => {
-          // Delete warheads
-          u.delete();
-        });
       } else if (target !== null) {
         target.setTargetedBySAM(true);
         this.mg.addExecution(
