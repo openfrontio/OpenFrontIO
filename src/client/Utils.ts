@@ -168,3 +168,11 @@ export function getAltKey(): string {
     return "Alt";
   }
 }
+
+export function getGamesPlayed(): number {
+  return parseInt(localStorage.getItem("gamesPlayed") || "0");
+}
+
+export function incrementGamesPlayed(): void {
+  localStorage.setItem("gamesPlayed", (getGamesPlayed() + 1).toString());
+}
