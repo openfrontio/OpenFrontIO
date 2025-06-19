@@ -39,17 +39,15 @@ export class SAMLauncherExecution implements Execution {
 
   private getSingleTarget(): Unit | null {
     if (this.sam === null) return null;
-    const nukes = this.mg
-      .nearbyUnits(this.sam.tile(), this.searchRangeRadius, [
-        UnitType.AtomBomb,
-        UnitType.HydrogenBomb,
-      ])
-      .filter(
-        ({ unit }) =>
-          unit.owner() !== this.player &&
-          !this.player.isFriendly(unit.owner()) &&
-          unit.isTargetable(),
-      );
+    const nukes = this.mg.nearbyUnits(
+      this.sam.tile(),
+      this.searchRangeRadius,
+      [UnitType.AtomBomb, UnitType.HydrogenBomb],
+      ({ unit }) =>
+        unit.owner() !== this.player &&
+        !this.player.isFriendly(unit.owner()) &&
+        unit.isTargetable(),
+    );
 
     return (
       nukes.sort((a, b) => {
@@ -117,18 +115,13 @@ export class SAMLauncherExecution implements Execution {
       this.pseudoRandom = new PseudoRandom(this.sam.id());
     }
 
-    const mirvWarheadTargets = this.mg
-      .nearbyUnits(
-        this.sam.tile(),
-        this.MIRVWarheadSearchRadius,
-        UnitType.MIRVWarhead,
-      )
-      .map(({ unit }) => unit)
-      .filter(
-        (unit) =>
-          unit.owner() !== this.player && !this.player.isFriendly(unit.owner()),
-      )
-      .filter((unit) => {
+    const mirvWarheadTargets = this.mg.nearbyUnits(
+      this.sam.tile(),
+      this.MIRVWarheadSearchRadius,
+      UnitType.MIRVWarhead,
+      ({ unit }) => {
+        if (unit.owner() === this.player) return false;
+        if (this.player.isFriendly(unit.owner())) return false;
         const dst = unit.targetTile();
         return (
           this.sam !== null &&
@@ -136,7 +129,8 @@ export class SAMLauncherExecution implements Execution {
           this.mg.manhattanDist(dst, this.sam.tile()) <
             this.MIRVWarheadProtectionRadius
         );
-      });
+      },
+    );
 
     let target: Unit | null = null;
     if (mirvWarheadTargets.length === 0) {
@@ -179,7 +173,7 @@ export class SAMLauncherExecution implements Execution {
             mirvWarheadTargets.length,
           );
 
-        mirvWarheadTargets.forEach((u) => {
+        mirvWarheadTargets.forEach(({ unit: u }) => {
           // Delete warheads
           u.delete();
         });

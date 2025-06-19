@@ -538,12 +538,11 @@ export class DefaultConfig implements Config {
         tileToConquer,
         gm.config().defensePostRange(),
         UnitType.DefensePost,
+        ({ unit }) => unit.owner() === defender,
       )) {
-        if (dp.unit.owner() === defender) {
-          mag *= this.defensePostDefenseBonus();
-          speed *= this.defensePostDefenseBonus();
-          break;
-        }
+        mag *= this.defensePostDefenseBonus();
+        speed *= this.defensePostDefenseBonus();
+        break;
       }
     }
 

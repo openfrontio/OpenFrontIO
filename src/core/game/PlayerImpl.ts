@@ -897,9 +897,7 @@ export class PlayerImpl implements Player {
       return this.mg.config().unitInfo(unitTypeValue).territoryBound;
     });
 
-    const nearbyUnits = this.mg
-      .nearbyUnits(tile, searchRadius * 2, types)
-      .map((u) => u.unit);
+    const nearbyUnits = this.mg.nearbyUnits(tile, searchRadius * 2, types);
     const nearbyTiles = this.mg.bfs(tile, (gm, t) => {
       return (
         this.mg.euclideanDistSquared(tile, t) < searchRadiusSquared &&
@@ -910,7 +908,7 @@ export class PlayerImpl implements Player {
 
     const minDistSquared = this.mg.config().structureMinDist() ** 2;
     for (const t of nearbyTiles) {
-      for (const unit of nearbyUnits) {
+      for (const { unit } of nearbyUnits) {
         if (this.mg.euclideanDistSquared(unit.tile(), t) < minDistSquared) {
           validSet.delete(t);
           break;
