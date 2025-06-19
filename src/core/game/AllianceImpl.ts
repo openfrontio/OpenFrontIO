@@ -18,7 +18,10 @@ export class AllianceImpl implements MutableAlliance {
   }
 
   other(player: Player): Player {
-    return this.requestor_ === player ? this.recipient_ : this.requestor_;
+    if (this.requestor_ === player) {
+      return this.recipient_;
+    }
+    return this.requestor_;
   }
 
   requestor(): Player {
