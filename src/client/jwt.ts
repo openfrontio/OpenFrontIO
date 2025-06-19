@@ -11,21 +11,13 @@ import {
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
 
-type Platform =
-  | {
-      kind: "browser";
-      getRedirectUri(): string;
-      setLocation(url: string): void;
-      getApiBaseForLocalhost(): string;
-      initializeAuthListener(): void;
-    }
-  | {
-      kind: "capacitor";
-      getRedirectUri(): string;
-      setLocation(url: string): Promise<void>;
-      getApiBaseForLocalhost(): string;
-      initializeAuthListener(): void;
-    };
+type Platform = {
+  kind: "capacitor" | "browser";
+  getRedirectUri(): string;
+  setLocation(url: string): void;
+  getApiBaseForLocalhost(): string;
+  initializeAuthListener(): void;
+};
 
 const browserPlatform: Platform = {
   kind: "browser",
@@ -48,15 +40,13 @@ const browserPlatform: Platform = {
 const capacitorPlatform: Platform = {
   kind: "capacitor",
   getRedirectUri(): string {
-    return `${process.env.APP_BASE_URL || ""}/discord-redirect.html`;
+    return "com.openfront.app://auth";
   },
-  async setLocation(url: string): Promise<void> {
-    await Browser.open({ url });
+  setLocation(url: string) {
+    return Browser.open({ url });
   },
   getApiBaseForLocalhost(): string {
-    return process.env.APP_BASE_URL
-      ? process.env.APP_BASE_URL!.replace("9000", "8787")
-      : "http://localhost:8787";
+    return process.env.LOCAL_API_BASE_URL || "http://localhost:8787";
   },
   initializeAuthListener(): void {
     App.addListener("appUrlOpen", async (data) => {

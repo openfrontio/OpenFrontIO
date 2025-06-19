@@ -142,21 +142,6 @@ export default async (env, argv) => {
             }
           : false,
       }),
-      new HtmlWebpackPlugin({
-        template: "./src/client/discord-redirect.html",
-        filename: "discord-redirect.html",
-        chunks: [],
-        minify: isProduction
-          ? {
-              collapseWhitespace: true,
-              removeComments: true,
-              removeRedundantAttributes: true,
-              removeScriptTypeAttributes: true,
-              removeStyleLinkTypeAttributes: true,
-              useShortDoctype: true,
-            }
-          : false,
-      }),
       new webpack.DefinePlugin({
         "process.env.WEBSOCKET_URL": JSON.stringify(
           appBaseUrl ? appBaseUrl.split("://")[1] : "", // remove protocol
