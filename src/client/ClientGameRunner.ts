@@ -528,11 +528,10 @@ export class ClientGameRunner {
           UnitType.TradeShip,
           UnitType.TransportShip,
         ])
-        .sort((a, b) => a.distSquared - b.distSquared)
-        .map((u) => u.unit);
+        .sort((a, b) => a.distSquared - b.distSquared);
 
       if (units.length > 0) {
-        this.gameView.setFocusedPlayer(units[0].owner() as PlayerView);
+        this.gameView.setFocusedPlayer(units[0].unit.owner() as PlayerView);
       } else {
         this.gameView.setFocusedPlayer(null);
       }

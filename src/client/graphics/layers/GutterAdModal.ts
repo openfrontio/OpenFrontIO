@@ -1,6 +1,7 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus, GameEvent } from "../../../core/EventBus";
+import { getGamesPlayed } from "../../Utils";
 import { Layer } from "./Layer";
 
 export class GutterAdModalEvent implements GameEvent {
@@ -29,13 +30,15 @@ export class GutterAdModal extends LitElement implements Layer {
   }
 
   init() {
-    this.eventBus.on(GutterAdModalEvent, (event) => {
-      if (event.isVisible) {
-        this.show();
-      } else {
-        this.hide();
-      }
-    });
+    if (getGamesPlayed() > 1) {
+      this.eventBus.on(GutterAdModalEvent, (event) => {
+        if (event.isVisible) {
+          this.show();
+        } else {
+          this.hide();
+        }
+      });
+    }
   }
 
   tick() {}

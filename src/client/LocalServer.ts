@@ -1,3 +1,4 @@
+import { z } from "zod/v4";
 import { EventBus } from "../core/EventBus";
 import {
   AllPlayersStats,
@@ -8,7 +9,7 @@ import {
   Intent,
   PlayerRecord,
   ServerMessage,
-  ServerStartGameMessageSchema,
+  ServerStartGameMessage,
   Turn,
 } from "../core/Schemas";
 import { createGameRecord, decompressGameRecord, replacer } from "../core/Util";
@@ -75,14 +76,11 @@ export class LocalServer {
     if (this.lobbyConfig.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
     }
-    this.clientMessage(
-      ServerStartGameMessageSchema.parse({
-        type: "start",
-        gameID: this.lobbyConfig.gameStartInfo.gameID,
-        gameStartInfo: this.lobbyConfig.gameStartInfo,
-        turns: [],
-      }),
-    );
+    this.clientMessage({
+      type: "start",
+      gameStartInfo: this.lobbyConfig.gameStartInfo,
+      turns: [],
+    } satisfies ServerStartGameMessage);
   }
 
   pause() {
@@ -94,9 +92,14 @@ export class LocalServer {
   }
 
   onMessage(message: string) {
-    const clientMsg: ClientMessage = ClientMessageSchema.parse(
-      JSON.parse(message),
-    );
+    const result = ClientMessageSchema.safeParse(JSON.parse(message));
+    if (!result.success) {
+      const error = z.prettifyError(result.error);
+      console.error("Error parsing client message", error);
+      return;
+    }
+
+    const clientMsg: ClientMessage = result.data;
     if (clientMsg.type === "intent") {
       if (this.lobbyConfig.gameRecord) {
         // If we are replaying a game, we don't want to process intents
@@ -211,12 +214,15 @@ export class LocalServer {
       record.turns = [];
     }
     // For unload events, sendBeacon is the only reliable method
-    const blob = new Blob(
-      [JSON.stringify(GameRecordSchema.parse(record), replacer)],
-      {
-        type: "application/json",
-      },
-    );
+    const result = GameRecordSchema.safeParse(record);
+    if (!result.success) {
+      const error = z.prettifyError(result.error);
+      console.error("Error parsing game record", error);
+      return;
+    }
+    const blob = new Blob([JSON.stringify(result.data, replacer)], {
+      type: "application/json",
+    });
     const workerPath = this.lobbyConfig.serverConfig.workerPath(
       this.lobbyConfig.gameStartInfo.gameID,
     );
