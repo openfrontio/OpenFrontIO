@@ -89,22 +89,10 @@ export class MapPlaylist {
 
     const rand = new PseudoRandom(Date.now());
 
-    const ffa1: GameMapType[] = rand.shuffleArray([...maps]);
-    const ffa2: GameMapType[] = rand.shuffleArray([...maps]);
-    const ffa3: GameMapType[] = rand.shuffleArray([...maps]);
     const team: GameMapType[] = rand.shuffleArray([...maps]);
 
     this.mapsPlaylist = [];
     for (let i = 0; i < maps.length; i++) {
-      if (!this.addNextMap(this.mapsPlaylist, ffa1, GameMode.FFA)) {
-        return false;
-      }
-      if (!this.addNextMap(this.mapsPlaylist, ffa2, GameMode.FFA)) {
-        return false;
-      }
-      if (!this.addNextMap(this.mapsPlaylist, ffa3, GameMode.FFA)) {
-        return false;
-      }
       if (!this.addNextMap(this.mapsPlaylist, team, GameMode.Team)) {
         return false;
       }
