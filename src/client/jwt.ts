@@ -29,7 +29,9 @@ const browserPlatform: Platform = {
   },
   getApiBaseForLocalhost(): string {
     return (
-      localStorage.getItem("apiHost") ?? (process.env.LOCAL_API_BASE_URL || "")
+      localStorage.getItem("apiHost") ??
+      process.env.LOCAL_API_BASE_URL ??
+      "http://localhost:8787"
     );
   },
   initializeAuthListener(): void {
@@ -43,10 +45,10 @@ const capacitorPlatform: Platform = {
     return "com.openfront.app://auth";
   },
   setLocation(url: string) {
-    return Browser.open({ url });
+    Browser.open({ url });
   },
   getApiBaseForLocalhost(): string {
-    return process.env.LOCAL_API_BASE_URL || "http://localhost:8787";
+    return process.env.LOCAL_API_BASE_URL ?? "http://localhost:8787";
   },
   initializeAuthListener(): void {
     App.addListener("appUrlOpen", async (data) => {
@@ -77,7 +79,7 @@ const platform: Platform =
 
 function getAudience() {
   const hostname =
-    process.env.CAPACITOR_PRODUCTION_HOSTNAME ||
+    process.env.CAPACITOR_PRODUCTION_HOSTNAME ??
     new URL(window.location.href).hostname;
   const domainname = hostname.split(".").slice(-2).join(".");
   return domainname;
@@ -130,7 +132,7 @@ export async function discordLogin() {
   const url = `${getApiBase()}/login/discord?redirect_uri=${encodeURIComponent(
     redirectUri,
   )}`;
-  await platform.setLocation(url);
+  platform.setLocation(url);
 }
 
 export async function logOut(allSessions: boolean = false) {
