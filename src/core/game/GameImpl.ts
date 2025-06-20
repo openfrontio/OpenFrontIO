@@ -688,6 +688,9 @@ export class GameImpl implements Game {
   ref(x: number, y: number): TileRef {
     return this._map.ref(x, y);
   }
+  isValidRef(ref: TileRef): boolean {
+    return this._map.isValidRef(ref);
+  }
   x(ref: TileRef): number {
     return this._map.x(ref);
   }
