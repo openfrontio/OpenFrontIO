@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
   BrokeAllianceUpdate,
@@ -10,7 +10,7 @@ import { Layer } from "./Layer";
 
 // Parameters for the alert animation
 const ALERT_SPEED = 1.6;
-const ALERT_COUNT = 5;
+const ALERT_COUNT = 2;
 
 @customElement("alert-frame")
 export class AlertFrame extends LitElement implements Layer {
@@ -22,35 +22,45 @@ export class AlertFrame extends LitElement implements Layer {
 
   private animationTimeout: number | null = null;
 
-  constructor() {
-    super();
-    // Add styles to document since we're using light DOM
-    const styleEl = document.createElement("style");
-    styleEl.textContent = `
-      .alert-border {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        border: 17px solid red;
-        box-sizing: border-box;
-        z-index: 40;
+  static styles = css`
+    .alert-border {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      border: 17px solid #ee0000;
+      box-sizing: border-box;
+      z-index: 40;
+      opacity: 0;
+    }
+
+    .alert-border.animate {
+      animation: alertBlink ${ALERT_SPEED}s ease-in-out ${ALERT_COUNT};
+    }
+
+    @keyframes alertBlink {
+      0% {
         opacity: 0;
       }
-
-      .alert-border.animate {
-        animation: alertBlink ${ALERT_SPEED}s ease-in-out ${ALERT_COUNT};
+      50% {
+        opacity: 1;
       }
-
-      @keyframes alertBlink {
-        0% { opacity: 0; }
-        50% { opacity: 1; }
-        100% { opacity: 0; }
+      100% {
+        opacity: 0;
       }
-    `;
-    document.head.appendChild(styleEl);
+    }
+  `;
+
+  constructor() {
+    super();
+    if (!document.querySelector("style[data-alert-frame]")) {
+      const styleEl = document.createElement("style");
+      styleEl.setAttribute("data-alert-frame", "");
+      styleEl.textContent = AlertFrame.styles.cssText;
+      document.head.appendChild(styleEl);
+    }
   }
 
   createRenderRoot() {
@@ -59,7 +69,6 @@ export class AlertFrame extends LitElement implements Layer {
 
   init() {
     // Listen for BrokeAllianceUpdate events directly from game updates
-    this.activateAlert();
   }
 
   tick() {
@@ -68,12 +77,11 @@ export class AlertFrame extends LitElement implements Layer {
     }
 
     // Check for BrokeAllianceUpdate events
-    const updates = this.game.updatesSinceLastTick();
-    if (updates && updates[GameUpdateType.BrokeAlliance]) {
-      updates[GameUpdateType.BrokeAlliance].forEach((update) => {
+    this.game
+      .updatesSinceLastTick()
+      ?.[GameUpdateType.BrokeAlliance]?.forEach((update) => {
         this.onBrokeAllianceUpdate(update as BrokeAllianceUpdate);
       });
-    }
   }
 
   // The alert frame is not affected by the camera transform
