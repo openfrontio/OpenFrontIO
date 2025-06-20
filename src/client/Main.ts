@@ -194,6 +194,7 @@ class Client {
         logOut();
         loginDiscordButton.disable = false;
         loginDiscordButton.translationKey = "main.login_discord";
+        loginDiscordButton.hidden = false;
         loginDiscordButton.addEventListener("click", discordLogin);
         logoutDiscordButton.hidden = true;
       });
