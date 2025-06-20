@@ -287,6 +287,9 @@ export class RadialMenu implements Layer {
     if (!this.isVisible || this.clickedCell === null) return;
     const myPlayer = this.g.myPlayer();
     if (myPlayer === null || !myPlayer.isAlive()) return;
+    if (!this.g.isValidCoord(this.clickedCell.x, this.clickedCell.y)) {
+      return;
+    }
     const tile = this.g.ref(this.clickedCell.x, this.clickedCell.y);
     if (this.originalTileOwner.isPlayer()) {
       if (this.g.owner(tile) !== this.originalTileOwner) {
@@ -399,18 +402,12 @@ export class RadialMenu implements Layer {
         // BestTransportShipSpawn is an expensive operation, so
         // we calculate it here and send the spawn tile to other clients.
         myPlayer.bestTransportShipSpawn(tile).then((spawn) => {
-          let spawnTile: Cell | null = null;
-          if (spawn !== false) {
-            spawnTile = new Cell(this.g.x(spawn), this.g.y(spawn));
-          }
-
-          if (this.clickedCell === null) return;
           this.eventBus.emit(
             new SendBoatAttackIntentEvent(
               this.g.owner(tile).id(),
-              this.clickedCell,
+              tile,
               this.uiState.attackRatio * myPlayer.troops(),
-              spawnTile,
+              spawn !== false ? spawn : null,
             ),
           );
         });

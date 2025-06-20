@@ -13,7 +13,7 @@ import {
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { Cell, UnitType } from "../core/game/Game";
+import { UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import {
   ErrorUpdate,
@@ -390,22 +390,15 @@ export class ClientGameRunner {
         this.gameView.isLand(tile)
       ) {
         this.myPlayer
-          .bestTransportShipSpawn(this.gameView.ref(cell.x, cell.y))
+          .bestTransportShipSpawn(tile)
           .then((spawn: number | false) => {
             if (this.myPlayer === null) throw new Error("not initialized");
-            let spawnCell: Cell | null = null;
-            if (spawn !== false) {
-              spawnCell = new Cell(
-                this.gameView.x(spawn),
-                this.gameView.y(spawn),
-              );
-            }
             this.eventBus.emit(
               new SendBoatAttackIntentEvent(
                 this.gameView.owner(tile).id(),
-                cell,
+                tile,
                 this.myPlayer.troops() * this.renderer.uiState.attackRatio,
-                spawnCell,
+                spawn !== false ? spawn : null,
               ),
             );
           });

@@ -9,6 +9,10 @@ export class MoveWarshipExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
+    if (!mg.isValidRef(this.position)) {
+      console.warn(`MoveWarshipExecution: position ${this.position} not valid`);
+      return;
+    }
     const warship = this.owner
       .units(UnitType.Warship)
       .find((u) => u.id() === this.unitId);
