@@ -216,12 +216,7 @@ export class StructureIconsLayer implements Layer {
       return;
     }
 
-    if (
-      render.location &&
-      (!oldLocation ||
-        render.location.x !== oldLocation.x ||
-        render.location.y !== oldLocation.y)
-    ) {
+    if (render.location) {
       const scale = Math.min(1, this.transformHandler.scale * 1.3);
 
       this.context.save();
