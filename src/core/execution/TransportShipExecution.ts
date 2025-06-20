@@ -51,6 +51,16 @@ export class TransportShipExecution implements Execution {
       this.active = false;
       return;
     }
+    if (!mg.isValidRef(this.ref)) {
+      console.warn(`TransportShipExecution: ref ${this.ref} not valid`);
+      this.active = false;
+      return;
+    }
+    if (this.src !== null && !mg.isValidRef(this.src)) {
+      console.warn(`TransportShipExecution: src ${this.src} not valid`);
+      this.active = false;
+      return;
+    }
 
     this.lastMove = ticks;
     this.mg = mg;

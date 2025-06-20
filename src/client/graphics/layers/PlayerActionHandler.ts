@@ -48,13 +48,13 @@ export class PlayerActionHandler {
   handleBoatAttack(
     player: PlayerView,
     targetId: PlayerID | null,
-    targetCell: Cell,
-    spawnTile: Cell | null,
+    targetTile: TileRef,
+    spawnTile: TileRef | null,
   ) {
     this.eventBus.emit(
       new SendBoatAttackIntentEvent(
         targetId,
-        targetCell,
+        targetTile,
         this.uiState.attackRatio * player.troops(),
         spawnTile,
       ),

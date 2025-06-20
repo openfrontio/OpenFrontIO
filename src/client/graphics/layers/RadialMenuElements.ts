@@ -1,6 +1,5 @@
 import {
   AllPlayers,
-  Cell,
   PlayerActions,
   TerraNullius,
   UnitType,
@@ -378,16 +377,11 @@ export const boatMenuElement: MenuElement = {
       params.tile,
     );
 
-    let spawnTile: Cell | null = null;
-    if (spawn !== false) {
-      spawnTile = new Cell(params.game.x(spawn), params.game.y(spawn));
-    }
-
     params.playerActionHandler.handleBoatAttack(
       params.myPlayer,
       params.selected?.id() || null,
-      new Cell(params.game.x(params.tile), params.game.y(params.tile)),
-      spawnTile,
+      params.tile,
+      spawn !== false ? spawn : null,
     );
 
     params.closeMenu();

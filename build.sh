@@ -2,25 +2,49 @@
 # build.sh - Build and upload Docker image to Docker Hub
 # This script:
 # 1. Builds and uploads the Docker image to Docker Hub with appropriate tag
+# 2. Optionally saves container metadata to a file
 
 set -e # Exit immediately if a command exits with a non-zero status
 
-# Check command line arguments
-if [ $# -ne 2 ]; then
+# Parse command line arguments
+METADATA_FILE=""
+ENV=""
+VERSION_TAG=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --metadata-file)
+            METADATA_FILE="$2"
+            shift 2
+            ;;
+        *)
+            if [ -z "$ENV" ]; then
+                ENV="$1"
+            elif [ -z "$VERSION_TAG" ]; then
+                VERSION_TAG="$1"
+            else
+                echo "Error: Unknown argument '$1'"
+                echo "Usage: $0 [prod|staging] [version_tag] [--metadata-file <file>]"
+                exit 1
+            fi
+            shift
+            ;;
+    esac
+done
+
+# Check required arguments
+if [ -z "$ENV" ] || [ -z "$VERSION_TAG" ]; then
     echo "Error: Please specify environment and version tag"
-    echo "Usage: $0 [prod|staging] [version_tag]"
+    echo "Usage: $0 [prod|staging] [version_tag] [--metadata-file <file>]"
     exit 1
 fi
 
-# Validate first argument (environment)
-if [ "$1" != "prod" ] && [ "$1" != "staging" ]; then
+# Validate environment argument
+if [ "$ENV" != "prod" ] && [ "$ENV" != "staging" ]; then
     echo "Error: First argument must be either 'prod' or 'staging'"
-    echo "Usage: $0 [prod|staging] [version_tag]"
+    echo "Usage: $0 [prod|staging] [version_tag] [--metadata-file <file>]"
     exit 1
 fi
-
-ENV=$1
-VERSION_TAG=$2
 
 print_header() {
     echo "======================================================"
@@ -60,6 +84,7 @@ echo "Git commit: $GIT_COMMIT"
 docker buildx build \
     --platform linux/amd64 \
     --build-arg GIT_COMMIT=$GIT_COMMIT \
+    --build-arg METADATA_FILE=$METADATA_FILE \
     -t $DOCKER_IMAGE \
     --push \
     .
@@ -73,3 +98,14 @@ echo "✅ Docker image built and pushed successfully."
 echo "Image: $DOCKER_IMAGE"
 
 print_header "BUILD COMPLETED SUCCESSFULLY ${DOCKER_IMAGE}"
+
+# Save container metadata to file if specified
+if [ -n "$METADATA_FILE" ]; then
+    echo "Saving container metadata to $METADATA_FILE"
+    docker inspect $DOCKER_IMAGE > $METADATA_FILE
+    if [ $? -ne 0 ]; then
+        echo "❌ Failed to save container metadata to $METADATA_FILE"
+        exit 1
+    fi
+    echo "✅ Container metadata saved successfully to $METADATA_FILE"
+fi
