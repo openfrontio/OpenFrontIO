@@ -118,7 +118,7 @@ export class GameMapImpl implements GameMap {
   }
 
   isValidRef(ref: TileRef): boolean {
-    return this.isValidCoord(this.x(ref), this.y(ref));
+    return ref >= 0 && ref < this.refToX.length;
   }
 
   x(ref: TileRef): number {
