@@ -748,7 +748,13 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): Gold {
-    return BigInt(Math.floor(0.045 * player.workers() ** 0.7));
+    const baseGold = 0.045 * player.workers() ** 0.7;
+    const oilWellBonus =
+      player
+        .units(UnitType.OilWell)
+        .map((oilWell) => oilWell.level())
+        .reduce((a, b) => a + b, 0) * this.oilWellGoldIncrease();
+    return BigInt(Math.floor(baseGold + oilWellBonus));
   }
 
   troopAdjustmentRate(player: Player): number {
@@ -817,5 +823,8 @@ export class DefaultConfig implements Config {
 
   defensePostTargettingRange(): number {
     return 75;
+  }
+  oilWellGoldIncrease(): number {
+    return 50;
   }
 }
