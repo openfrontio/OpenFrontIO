@@ -1,3 +1,4 @@
+import { CapacitorHttp } from "@capacitor/core";
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import randomMap from "../../resources/images/RandomMap.webp";
@@ -472,12 +473,12 @@ export class HostLobbyModal extends LitElement {
 
   private async putGameConfig() {
     const url = await buildGameUrl(this.lobbyId, "game");
-    const response = await fetch(url, {
-      method: "PUT",
+    const response = await CapacitorHttp.put({
+      url: url,
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
+      data: JSON.stringify({
         gameMap: this.selectedMap,
         difficulty: this.selectedDifficulty,
         disableNPCs: this.disableNPCs,
@@ -519,8 +520,8 @@ export class HostLobbyModal extends LitElement {
     );
     this.close();
     const url = await buildGameUrl(this.lobbyId, "start_game");
-    const response = await fetch(url, {
-      method: "POST",
+    const response = await CapacitorHttp.post({
+      url,
       headers: {
         "Content-Type": "application/json",
       },
@@ -545,13 +546,13 @@ export class HostLobbyModal extends LitElement {
 
   private async pollPlayers() {
     const url = await buildGameUrl(this.lobbyId, "game");
-    fetch(url, {
-      method: "GET",
+    CapacitorHttp.get({
+      url,
       headers: {
         "Content-Type": "application/json",
       },
     })
-      .then((response) => response.json())
+      .then((response) => response.data)
       .then((data: GameInfo) => {
         console.log(`got game info response: ${JSON.stringify(data)}`);
         this.players = data.clients?.map((p) => p.username) ?? [];
@@ -563,19 +564,19 @@ async function createLobby(): Promise<GameInfo> {
   try {
     const id = generateID();
     const url = await buildGameUrl(id, "create_game");
-    const response = await fetch(url, {
-      method: "POST",
+    const response = await CapacitorHttp.post({
+      url,
       headers: {
         "Content-Type": "application/json",
       },
-      // body: JSON.stringify(data), // Include this if you need to send data
+      // data: JSON.stringify(data), // Include this if you need to send data
     });
 
-    if (!response.ok) {
+    if (!response.data) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data = response.data;
     console.log("Success:", data);
 
     return data as GameInfo;

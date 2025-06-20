@@ -1,6 +1,6 @@
 import { App } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import { decodeJwt } from "jose";
 import { z } from "zod/v4";
 import {
@@ -139,17 +139,14 @@ export async function logOut(allSessions: boolean = false) {
   localStorage.removeItem("token");
   __isLoggedIn = false;
 
-  const response = await fetch(
-    getApiBase() + (allSessions ? "/revoke" : "/logout"),
-    {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${token}`,
-      },
+  const response = await CapacitorHttp.post({
+    url: getApiBase() + (allSessions ? "/revoke" : "/logout"),
+    headers: {
+      authorization: `Bearer ${token}`,
     },
-  );
+  });
 
-  if (response.ok === false) {
+  if (response.status !== 200) {
     console.error("Logout failed", response);
     return false;
   }
@@ -254,8 +251,8 @@ export async function postRefresh(): Promise<boolean> {
     if (!token) return false;
 
     // Refresh the JWT
-    const response = await fetch(getApiBase() + "/refresh", {
-      method: "POST",
+    const response = await CapacitorHttp.post({
+      url: getApiBase() + "/refresh",
       headers: {
         authorization: `Bearer ${token}`,
       },
@@ -266,7 +263,7 @@ export async function postRefresh(): Promise<boolean> {
       return false;
     }
     if (response.status !== 200) return false;
-    const body = await response.json();
+    const body = response.data;
     const result = RefreshResponseSchema.safeParse(body);
     if (!result.success) {
       const error = z.prettifyError(result.error);
@@ -287,7 +284,8 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
     if (!token) return false;
 
     // Get the user object
-    const response = await fetch(getApiBase() + "/users/@me", {
+    const response = await CapacitorHttp.get({
+      url: getApiBase() + "/users/@me",
       headers: {
         authorization: `Bearer ${token}`,
       },
@@ -298,7 +296,7 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
       return false;
     }
     if (response.status !== 200) return false;
-    const body = await response.json();
+    const body = response.data;
     const result = UserMeResponseSchema.safeParse(body);
     if (!result.success) {
       const error = z.prettifyError(result.error);

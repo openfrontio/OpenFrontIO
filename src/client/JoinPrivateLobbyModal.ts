@@ -1,3 +1,4 @@
+import { CapacitorHttp } from "@capacitor/core";
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
@@ -173,12 +174,12 @@ export class JoinPrivateLobbyModal extends LitElement {
   private async checkActiveLobby(lobbyId: string): Promise<boolean> {
     const url = await buildGameUrl(lobbyId, "exists");
 
-    const response = await fetch(url, {
-      method: "GET",
+    const response = await CapacitorHttp.get({
+      url,
       headers: { "Content-Type": "application/json" },
     });
 
-    const gameInfo = await response.json();
+    const gameInfo = response.data;
 
     if (gameInfo.exists) {
       this.message = translateText("private_lobby.joined_waiting");
@@ -205,12 +206,12 @@ export class JoinPrivateLobbyModal extends LitElement {
   private async checkArchivedGame(lobbyId: string): Promise<boolean> {
     const url = await buildGameUrl(lobbyId, "archived_game");
 
-    const archiveResponse = await fetch(url, {
-      method: "GET",
+    const archiveResponse = await CapacitorHttp.get({
+      url,
       headers: { "Content-Type": "application/json" },
     });
 
-    const archiveData = await archiveResponse.json();
+    const archiveData = archiveResponse.data;
 
     if (
       archiveData.success === false &&
@@ -250,13 +251,13 @@ export class JoinPrivateLobbyModal extends LitElement {
     if (!this.lobbyIdInput?.value) return;
 
     const url = await buildGameUrl(this.lobbyIdInput.value, "game");
-    fetch(url, {
-      method: "GET",
+    CapacitorHttp.get({
+      url,
       headers: {
         "Content-Type": "application/json",
       },
     })
-      .then((response) => response.json())
+      .then((response) => JSON.parse(response.data))
       .then((data: GameInfo) => {
         this.players = data.clients?.map((p) => p.username) ?? [];
       })

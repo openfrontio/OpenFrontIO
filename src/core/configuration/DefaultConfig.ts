@@ -1,3 +1,4 @@
+import { CapacitorHttp } from "@capacitor/core";
 import { JWK } from "jose";
 import { z } from "zod/v4";
 import {
@@ -85,18 +86,6 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return process.env.CF_CREDS_PATH ?? "";
   }
 
-  origin(): string {
-    const audience = this.jwtAudience();
-    const subdomain = this.subdomain();
-    if (audience === "localhost") {
-      return "http://localhost:9000";
-    }
-    if (subdomain === "") {
-      return `https://${audience}`;
-    }
-    return `https://${subdomain}.${audience}`;
-  }
-
   private publicKey: JWK;
   abstract jwtAudience(): string;
   jwtIssuer(): string {
@@ -109,8 +98,10 @@ export abstract class DefaultServerConfig implements ServerConfig {
     if (this.publicKey) return this.publicKey;
     const jwksUrl = this.jwtIssuer() + "/.well-known/jwks.json";
     console.log(`Fetching JWKS from ${jwksUrl}`);
-    const response = await fetch(jwksUrl);
-    const result = JwksSchema.safeParse(await response.json());
+    const response = await CapacitorHttp.get({
+      url: jwksUrl,
+    });
+    const result = JwksSchema.safeParse(response.data);
     if (!result.success) {
       const error = z.prettifyError(result.error);
       console.error("Error parsing JWKS", error);
