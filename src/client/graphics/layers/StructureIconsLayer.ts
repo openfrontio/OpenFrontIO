@@ -118,10 +118,8 @@ export class StructureIconsLayer implements Layer {
     const context = this.canvas.getContext("2d", { alpha: true });
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
-
     // Enable smooth scaling
-    this.context.imageSmoothingEnabled = true;
-    this.context.imageSmoothingQuality = "high";
+    this.context.imageSmoothingEnabled = false;
 
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
@@ -138,7 +136,10 @@ export class StructureIconsLayer implements Layer {
     for (const render of this.renders) {
       this.renderStructure(render, mainContext);
     }
+    mainContext.save();
+    mainContext.imageSmoothingEnabled = false;
     mainContext.drawImage(this.canvas, 0, 0);
+    mainContext.restore();
   }
 
   private createUnitElement(unit: UnitView): HTMLCanvasElement {
@@ -146,6 +147,7 @@ export class StructureIconsLayer implements Layer {
     structureCanvas.width = ICON_SIZE;
     structureCanvas.height = ICON_SIZE;
     const context = structureCanvas.getContext("2d")!;
+    context.imageSmoothingEnabled = false;
     context.fillStyle = this.theme
       .territoryColor(unit.owner())
       .lighten(0.1)
@@ -170,7 +172,7 @@ export class StructureIconsLayer implements Layer {
       console.warn(`SVG not loaded for unit type: ${unit.type()}`);
       return structureCanvas;
     }
-    // context.drawImage(structureInfo.image, ICON_SIZE/4, ICON_SIZE/4);
+    context.drawImage(structureInfo.image, ICON_SIZE / 3, ICON_SIZE / 3);
     return structureCanvas;
   }
 
