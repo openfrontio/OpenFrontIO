@@ -8,14 +8,9 @@ import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { Layer } from "./Layer";
 
-/**
- * Ease in out function
- * @param t - The time value
- * @returns The eased value
- */
-export function easeInOut(t: number): number {
-  return -(Math.cos(Math.PI * t) - 1) / 2;
-}
+// Parameters for the alert animation
+const ALERT_SPEED = 1.6;
+const ALERT_COUNT = 5;
 
 @customElement("alert-frame")
 export class AlertFrame extends LitElement implements Layer {
@@ -25,12 +20,7 @@ export class AlertFrame extends LitElement implements Layer {
   @state()
   private isActive = false;
 
-  @state()
-  private opacity = 0;
-
-  private startTimestamp = 0;
-  private animTime = 0;
-  private animationId: number | null = null;
+  private animationTimeout: number | null = null;
 
   constructor() {
     super();
@@ -47,7 +37,17 @@ export class AlertFrame extends LitElement implements Layer {
         border: 17px solid red;
         box-sizing: border-box;
         z-index: 40;
-        transition: opacity 0.1s ease-in-out;
+        opacity: 0;
+      }
+
+      .alert-border.animate {
+        animation: alertBlink ${ALERT_SPEED}s ease-in-out ${ALERT_COUNT};
+      }
+
+      @keyframes alertBlink {
+        0% { opacity: 0; }
+        50% { opacity: 1; }
+        100% { opacity: 0; }
       }
     `;
     document.head.appendChild(styleEl);
@@ -57,14 +57,14 @@ export class AlertFrame extends LitElement implements Layer {
     return this;
   }
 
+  init() {
+    // Listen for BrokeAllianceUpdate events directly from game updates
+    this.activateAlert();
+  }
+
   tick() {
     if (!this.game) {
       return; // Game not initialized yet
-    }
-
-    if (this.userSettings.alertFrame() && this.startTimestamp > 0) {
-      this.animTime = this.animTime + 1;
-      this.updateAnimation();
     }
 
     // Check for BrokeAllianceUpdate events
@@ -76,10 +76,7 @@ export class AlertFrame extends LitElement implements Layer {
     }
   }
 
-  renderLayer() {
-    // No canvas rendering needed for this Lit Element
-  }
-
+  // The alert frame is not affected by the camera transform
   shouldTransform(): boolean {
     return false;
   }
@@ -89,7 +86,6 @@ export class AlertFrame extends LitElement implements Layer {
     if (!myPlayer) return;
 
     const betrayed = this.game.playerBySmallID(update.betrayedID);
-    const traitor = this.game.playerBySmallID(update.traitorID);
 
     // Only trigger alert if the current player is the betrayed one
     if (betrayed === myPlayer) {
@@ -99,39 +95,17 @@ export class AlertFrame extends LitElement implements Layer {
 
   private activateAlert() {
     if (this.userSettings.alertFrame()) {
-      this.startTimestamp = Date.now();
-      this.opacity = 0;
       this.isActive = true;
-      this.animTime = 0;
       this.requestUpdate();
     }
   }
 
   public dismissAlert() {
     this.isActive = false;
-    this.opacity = 0;
-    this.startTimestamp = 0;
-    this.animTime = 0;
-    this.requestUpdate();
-  }
-
-  private updateAnimation() {
-    const now = Date.now();
-    const duration = 10000;
-
-    // Stop the blink loop if the duration has passed and the opacity is 0
-    // in order to avoid flickering and keep the border hidden on timeout
-    if (this.opacity === 0 && now - this.startTimestamp > duration) {
-      this.opacity = 0;
-      this.startTimestamp = 0;
-      this.animTime = 0;
-      this.isActive = false;
-      this.requestUpdate();
-      return;
+    if (this.animationTimeout) {
+      clearTimeout(this.animationTimeout);
+      this.animationTimeout = null;
     }
-
-    const progress = this.animTime / 8;
-    this.opacity = easeInOut(progress);
     this.requestUpdate();
   }
 
@@ -141,7 +115,10 @@ export class AlertFrame extends LitElement implements Layer {
     }
 
     return html`
-      <div class="alert-border" style="opacity: ${this.opacity}"></div>
+      <div
+        class="alert-border animate"
+        @animationend=${() => this.dismissAlert()}
+      ></div>
     `;
   }
 }
