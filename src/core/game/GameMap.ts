@@ -5,7 +5,7 @@ export type TileUpdate = bigint;
 
 export interface GameMap {
   ref(x: number, y: number): TileRef;
-
+  isValidRef(ref: TileRef): boolean;
   x(ref: TileRef): number;
   y(ref: TileRef): number;
   cell(ref: TileRef): Cell;
@@ -115,6 +115,10 @@ export class GameMapImpl implements GameMap {
       throw new Error(`Invalid coordinates: ${x},${y}`);
     }
     return this.yToRef[y] + x;
+  }
+
+  isValidRef(ref: TileRef): boolean {
+    return this.isValidCoord(this.x(ref), this.y(ref));
   }
 
   x(ref: TileRef): number {
