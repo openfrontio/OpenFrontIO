@@ -19,6 +19,7 @@ import {
   TerrainType,
   TerraNullius,
   Tick,
+  TrainType,
   UnitInfo,
   UnitType,
 } from "./Game";
@@ -126,6 +127,12 @@ export class UnitView {
   }
   hasTrainStation(): boolean {
     return this.data.hasTrainStation;
+  }
+  trainType(): TrainType | undefined {
+    return this.data.trainType;
+  }
+  isLoaded(): boolean | undefined {
+    return this.data.loaded;
   }
 }
 

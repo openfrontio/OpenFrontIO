@@ -106,9 +106,7 @@ export class FxLayer implements Layer {
       case UnitType.Shell:
         this.onShellEvent(unit);
         break;
-      case UnitType.TrainEngine:
-      case UnitType.TrainCarriage:
-      case UnitType.TrainCarriageLoaded:
+      case UnitType.Train:
         this.onTrainEvent(unit);
         break;
     }

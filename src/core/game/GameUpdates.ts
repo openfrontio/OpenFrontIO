@@ -9,6 +9,7 @@ import {
   PlayerType,
   Team,
   Tick,
+  TrainType,
   UnitType,
 } from "./Game";
 import { TileRef, TileUpdate } from "./GameMap";
@@ -116,6 +117,8 @@ export interface UnitUpdate {
   readyMissileCount: number;
   level: number;
   hasTrainStation: boolean;
+  trainType?: TrainType; // Only for trains
+  loaded?: boolean; // Only for trains
 }
 
 export interface AttackUpdate {

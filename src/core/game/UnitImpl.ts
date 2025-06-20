@@ -4,6 +4,7 @@ import {
   MessageType,
   Player,
   Tick,
+  TrainType,
   Unit,
   UnitInfo,
   UnitType,
@@ -32,6 +33,8 @@ export class UnitImpl implements Unit {
   private _patrolTile: TileRef | undefined;
   private _level: number = 1;
   private _targetable: boolean = true;
+  private _loaded: boolean | undefined;
+  private _trainType: TrainType | undefined;
 
   constructor(
     private _type: UnitType,
@@ -54,6 +57,9 @@ export class UnitImpl implements Unit {
       "patrolTile" in params ? (params.patrolTile ?? undefined) : undefined;
     this._targetUnit =
       "targetUnit" in params ? (params.targetUnit ?? undefined) : undefined;
+    this._loaded =
+      "loaded" in params ? (params.loaded ?? undefined) : undefined;
+    this._trainType = "trainType" in params ? params.trainType : undefined;
 
     switch (this._type) {
       case UnitType.Warship:
@@ -125,6 +131,8 @@ export class UnitImpl implements Unit {
       readyMissileCount: this._readyMissileCount,
       level: this.level(),
       hasTrainStation: this._hasTrainStation,
+      trainType: this._trainType,
+      loaded: this._loaded,
     };
   }
 
@@ -368,5 +376,20 @@ export class UnitImpl implements Unit {
       this._readyMissileCount++;
     }
     this.mg.addUpdate(this.toUpdate());
+  }
+
+  trainType(): TrainType | undefined {
+    return this._trainType;
+  }
+
+  isLoaded(): boolean | undefined {
+    return this._loaded;
+  }
+
+  setLoaded(loaded: boolean): void {
+    if (this._loaded !== loaded) {
+      this._loaded = loaded;
+      this.mg.addUpdate(this.toUpdate());
+    }
   }
 }

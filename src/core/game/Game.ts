@@ -150,10 +150,13 @@ export enum UnitType {
   MIRV = "MIRV",
   MIRVWarhead = "MIRV Warhead",
   Construction = "Construction",
-  TrainCarriage = "TrainCarriage",
-  TrainCarriageLoaded = "TrainCarriageLoaded",
-  TrainEngine = "TrainEngine",
+  Train = "Train",
   Factory = "Factory",
+}
+
+export enum TrainType {
+  Engine = "Engine",
+  Carriage = "Carriage",
 }
 
 const _structureTypes: ReadonlySet<UnitType> = new Set([
@@ -202,12 +205,12 @@ export interface UnitParamsMap {
     lastSetSafeFromPirates?: number;
   };
 
-  [UnitType.TrainEngine]: {
-    targetUnit: Unit;
+  [UnitType.Train]: {
+    trainType: TrainType;
+    targetUnit?: Unit;
+    loaded?: boolean;
   };
 
-  [UnitType.TrainCarriage]: {};
-  [UnitType.TrainCarriageLoaded]: {};
   [UnitType.Factory]: {};
 
   [UnitType.MissileSilo]: {
@@ -388,6 +391,11 @@ export interface Unit {
   toUpdate(): UnitUpdate;
   hasTrainStation(): boolean;
   setTrainStation(trainStation: boolean): void;
+
+  // Train
+  trainType(): TrainType | undefined;
+  isLoaded(): boolean | undefined;
+  setLoaded(loaded: boolean): void;
 
   // Targeting
   setTargetTile(cell: TileRef | undefined): void;

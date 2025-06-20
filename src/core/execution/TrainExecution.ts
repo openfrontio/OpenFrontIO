@@ -1,4 +1,11 @@
-import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
+import {
+  Execution,
+  Game,
+  Player,
+  TrainType,
+  Unit,
+  UnitType,
+} from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { RailNetwork } from "../game/RailNetwork";
 import { getOrientedRailroad, OrientedRailroad } from "../game/Railroad";
@@ -47,10 +54,7 @@ export class TrainExecution implements Execution {
       return;
     }
 
-    const spawn = this.player.canBuild(
-      UnitType.TrainEngine,
-      this.stations[0].tile(),
-    );
+    const spawn = this.player.canBuild(UnitType.Train, this.stations[0].tile());
     if (spawn === false) {
       console.warn(`cannot build train`);
       this.active = false;
@@ -82,30 +86,10 @@ export class TrainExecution implements Execution {
       return;
     }
     this.hasCargo = true;
-    const loadedCars: Unit[] = [];
-
-    const spawn = this.player.canBuild(
-      UnitType.TrainCarriageLoaded,
-      this.train.tile(),
-    );
-    if (spawn === false) {
-      console.warn(`cannot build train`);
-      this.active = false;
-      return;
-    }
-    // Don't add cargo to the tail, it should remain an engine unit
-    loadedCars.push(this.cars[0]);
+    // Starts at 1: don't load tail engine
     for (let i = 1; i < this.cars.length; i++) {
-      loadedCars.push(
-        this.player.buildUnit(UnitType.TrainCarriageLoaded, spawn, {}),
-      );
-      loadedCars[i].tile = this.cars[i].tile;
+      this.cars[i].setLoaded(true);
     }
-    for (let i = 1; i < this.cars.length; i++) {
-      this.cars[i].setReachedTarget(); // So they don't explode on deletion
-      this.cars[i].delete(false);
-    }
-    this.cars = loadedCars;
   }
 
   private targetReached() {
@@ -119,20 +103,24 @@ export class TrainExecution implements Execution {
   }
 
   private createTrainUnits(tile: TileRef): Unit {
-    const train = this.player.buildUnit(UnitType.TrainEngine, tile, {
+    const train = this.player.buildUnit(UnitType.Train, tile, {
       targetUnit: this.destination.unit,
+      trainType: TrainType.Engine,
     });
     // Tail is also an engine, just for cosmetics
     this.cars.push(
-      this.player.buildUnit(UnitType.TrainEngine, tile, {
+      this.player.buildUnit(UnitType.Train, tile, {
         targetUnit: this.destination.unit,
+        trainType: TrainType.Engine,
       }),
     );
-    const carriageType = this.hasCargo
-      ? UnitType.TrainCarriageLoaded
-      : UnitType.TrainCarriage;
     for (let i = 0; i < this.numCars; i++) {
-      this.cars.push(this.player.buildUnit(carriageType, tile, {}));
+      this.cars.push(
+        this.player.buildUnit(UnitType.Train, tile, {
+          trainType: TrainType.Carriage,
+          loaded: this.hasCargo,
+        }),
+      );
     }
     return train;
   }

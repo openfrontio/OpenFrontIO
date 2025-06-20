@@ -487,17 +487,7 @@ export class DefaultConfig implements Config {
           cost: () => 0n,
           territoryBound: true,
         };
-      case UnitType.TrainEngine:
-        return {
-          cost: () => 0n,
-          territoryBound: false,
-        };
-      case UnitType.TrainCarriage:
-        return {
-          cost: () => 0n,
-          territoryBound: false,
-        };
-      case UnitType.TrainCarriageLoaded:
+      case UnitType.Train:
         return {
           cost: () => 0n,
           territoryBound: false,
