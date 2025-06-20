@@ -445,20 +445,6 @@ export class EventsDisplay extends LitElement implements Layer {
           preventClose: true,
         },
       ];
-      // Show dismiss alert button if alert frame is enabled
-      if (this.userSettings.alertFrame()) {
-        buttons.push({
-          text: "Dismiss alert",
-          className: "btn-info",
-          action: () => {
-            const alertFrame = document.querySelector("alert-frame") as any;
-            if (alertFrame && alertFrame.dismissAlert) {
-              alertFrame.dismissAlert();
-            }
-          },
-          preventClose: true,
-        });
-      }
       this.addEvent({
         description: `${traitor.name()} broke their alliance with you`,
         type: MessageType.ALLIANCE_BROKEN,
