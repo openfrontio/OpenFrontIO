@@ -9,30 +9,35 @@ export class PatternDecoder {
   private tileWidth: number;
   private tileHeight: number;
   private scale: number;
-  private dataStart: number;
 
   constructor(base64: string) {
-    const bytes = base64url.decode(base64);
+    this.bytes = base64url.decode(base64);
 
-    if (bytes.length < 3) {
+    if (this.bytes.length < 3) {
       throw new Error(
         "Pattern data is too short to contain required metadata.",
       );
     }
 
-    const version = bytes[0];
+    const version = this.bytes[0];
     if (version !== 0) {
       throw new Error(`Unrecognized pattern version ${version}.`);
     }
 
-    const byte1 = bytes[1];
-    const byte2 = bytes[2];
+    const byte1 = this.bytes[1];
+    const byte2 = this.bytes[2];
     this.scale = byte1 & 0x07;
 
     this.tileWidth = (((byte2 & 0x03) << 5) | ((byte1 >> 3) & 0x1f)) + 2;
     this.tileHeight = ((byte2 >> 2) & 0x3f) + 2;
-    this.dataStart = 3;
-    this.bytes = bytes;
+
+    const expectedBits = this.tileWidth * this.tileHeight;
+    const expectedBytes = (expectedBits + 7) >> 3; // Equivalent to: ceil(expectedBits / 8);
+    if (this.bytes.length - 3 < expectedBytes) {
+      throw new Error(
+        "Pattern data is too short for the specified dimensions.",
+      );
+    }
   }
 
   getTileWidth(): number {
@@ -53,35 +58,8 @@ export class PatternDecoder {
     const idx = py * this.tileWidth + px;
     const byteIndex = idx >> 3;
     const bitIndex = idx & 7;
-    const byte = this.bytes[this.dataStart + byteIndex];
+    const byte = this.bytes[3 + byteIndex];
     if (byte === undefined) throw new Error("Invalid pattern");
     return (byte & (1 << bitIndex)) !== 0;
-  }
-
-  static isValid(base64: string): boolean {
-    try {
-      const bytes = base64url.decode(base64);
-      if (bytes.length < 3) return false;
-
-      const version = bytes[0];
-      if (version !== 0) return false;
-
-      const byte1 = bytes[1];
-      const byte2 = bytes[2];
-      const scale = byte1 & 0x07;
-
-      const tileWidth = (((byte2 & 0x03) << 5) | ((byte1 >> 3) & 0x1f)) + 2;
-      const tileHeight = ((byte2 >> 2) & 0x3f) + 2;
-      const expectedBits = tileWidth * tileHeight;
-      const expectedBytes = Math.ceil(expectedBits / 8);
-      const actualBytes = bytes.length - 3;
-      if (actualBytes < expectedBytes) return false;
-
-      if (scale < 0 || scale > 7) return false;
-
-      return true;
-    } catch {
-      return false;
-    }
   }
 }

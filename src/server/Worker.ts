@@ -370,10 +370,7 @@ export function startWorker() {
                 flares,
               );
               if (patternCheck !== true) {
-                log.warn(
-                  "pattern blocked (restricted or unlisted): " +
-                    clientMsg.pattern,
-                );
+                log.warn(`pattern ${patternCheck}: ${clientMsg.pattern}`);
                 return;
               }
             }
