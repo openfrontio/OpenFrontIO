@@ -5,7 +5,7 @@ import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import { joinLobby } from "./ClientGameRunner";
-import { getSelectedPatternBase64 } from "./Cosmetic";
+import { TerritoryPatternStorage } from "./Cosmetic";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
@@ -338,7 +338,7 @@ class Client {
       {
         gameID: lobby.gameID,
         serverConfig: config,
-        pattern: getSelectedPatternBase64(),
+        pattern: TerritoryPatternStorage.getSelectedPatternBase64(),
         flag:
           this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
             ? ""

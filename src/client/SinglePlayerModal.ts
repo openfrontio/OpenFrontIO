@@ -17,7 +17,7 @@ import "./components/baseComponents/Modal";
 import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
-import { getSelectedPatternBase64 } from "./Cosmetic";
+import { TerritoryPatternStorage } from "./Cosmetic";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
@@ -411,7 +411,7 @@ export class SinglePlayerModal extends LitElement {
                   flagInput.getCurrentFlag() === "xx"
                     ? ""
                     : flagInput.getCurrentFlag(),
-                pattern: getSelectedPatternBase64(),
+                pattern: TerritoryPatternStorage.getSelectedPatternBase64(),
               },
             ],
             config: {

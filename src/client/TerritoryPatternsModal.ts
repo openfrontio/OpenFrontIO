@@ -5,11 +5,7 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import { PatternDecoder, territoryPatterns } from "../core/Cosmetics";
 import "./components/Difficulties";
 import "./components/Maps";
-import {
-  getSelectedPattern,
-  setSelectedPattern,
-  setSelectedPatternBase64,
-} from "./Cosmetic";
+import { TerritoryPatternStorage } from "./Cosmetic";
 import { translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")
@@ -21,7 +17,8 @@ export class TerritoryPatternsModal extends LitElement {
 
   private previewButton: HTMLElement | null = null;
 
-  @state() private selectedPattern = getSelectedPattern();
+  @state() private selectedPattern =
+    TerritoryPatternStorage.getSelectedPattern();
 
   @state() private buttonWidth: number = 100;
 
@@ -278,14 +275,14 @@ export class TerritoryPatternsModal extends LitElement {
 
   private selectPattern(patternKey: string | null) {
     this.selectedPattern = patternKey ?? undefined;
-    setSelectedPattern(patternKey ?? "");
+    TerritoryPatternStorage.setSelectedPattern(patternKey ?? "");
     if (patternKey) {
       const base64 = territoryPatterns.pattern[patternKey];
       if (base64) {
-        setSelectedPatternBase64(base64.pattern);
+        TerritoryPatternStorage.setSelectedPatternBase64(base64.pattern);
       }
     } else {
-      setSelectedPatternBase64("");
+      TerritoryPatternStorage.setSelectedPatternBase64("");
     }
     this.updatePreview();
     this.close();

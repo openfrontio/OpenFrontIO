@@ -1,18 +1,20 @@
-const TERRITORY_PATTERN_KEY = "territoryPattern";
-const TERRITORY_PATTERN_BASE64_KEY = "territoryPatternBase64";
+export class TerritoryPatternStorage {
+  private static readonly PATTERN_KEY = "territoryPattern";
+  private static readonly PATTERN_BASE64_KEY = "territoryPatternBase64";
 
-export function getSelectedPattern(): string | undefined {
-  return localStorage.getItem(TERRITORY_PATTERN_KEY) ?? undefined;
-}
+  static getSelectedPattern(): string | undefined {
+    return localStorage.getItem(this.PATTERN_KEY) ?? undefined;
+  }
 
-export function setSelectedPattern(patternKey: string): void {
-  localStorage.setItem(TERRITORY_PATTERN_KEY, patternKey);
-}
+  static setSelectedPattern(patternKey: string): void {
+    localStorage.setItem(this.PATTERN_KEY, patternKey);
+  }
 
-export function getSelectedPatternBase64(): string | undefined {
-  return localStorage.getItem(TERRITORY_PATTERN_BASE64_KEY) ?? undefined;
-}
+  static getSelectedPatternBase64(): string | undefined {
+    return localStorage.getItem(this.PATTERN_BASE64_KEY) ?? undefined;
+  }
 
-export function setSelectedPatternBase64(base64: string): void {
-  localStorage.setItem(TERRITORY_PATTERN_BASE64_KEY, base64);
+  static setSelectedPatternBase64(base64: string): void {
+    localStorage.setItem(this.PATTERN_BASE64_KEY, base64);
+  }
 }
