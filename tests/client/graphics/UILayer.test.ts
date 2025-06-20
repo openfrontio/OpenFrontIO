@@ -128,9 +128,40 @@ describe("UILayer", () => {
     } as unknown as UnitView;
     ui.onUnitEvent(unit);
     expect(ui["allProgressBars"].has(2)).toBe(true);
+  });
 
-    game.ticks = () => 6; // simulate enough ticks for completion
+  it("should remove loading bar for inactive unit", () => {
+    const ui = new UILayer(game, eventBus, transformHandler);
+    ui.redraw();
+    const unit = {
+      id: () => 2,
+      type: () => "Construction",
+      constructionType: () => "OilWell",
+      owner: () => ({ id: () => 1 }),
+      tile: () => ({}),
+      isActive: () => true,
+    } as unknown as UnitView;
+    ui.onUnitEvent(unit);
+    expect(ui["allProgressBars"].has(2)).toBe(true);
+
+    // an inactive unit should not have a loading bar
+    unit.isActive = () => false;
     ui.tick();
     expect(ui["allProgressBars"].has(2)).toBe(false);
+  });
+
+  it("should remove loading bar for inactive unit", () => {
+    const ui = new UILayer(game, eventBus, transformHandler);
+    ui.redraw();
+    const unit = {
+      id: () => 2,
+      type: () => "Construction",
+      constructionType: () => "OilWell",
+      owner: () => ({ id: () => 1 }),
+      tile: () => ({}),
+      isActive: () => true,
+    } as unknown as UnitView;
+    ui.onUnitEvent(unit);
+    expect(ui["allProgressBars"].has(2)).toBe(true);
   });
 });

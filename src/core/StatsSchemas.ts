@@ -32,6 +32,7 @@ export type BoatUnitType = UnitType.TradeShip | UnitType.TransportShip;
 
 export const OtherUnitSchema = z.union([
   z.literal("city"),
+  z.literal("oilw"),
   z.literal("defp"),
   z.literal("port"),
   z.literal("wshp"),
@@ -41,6 +42,7 @@ export const OtherUnitSchema = z.union([
 export type OtherUnit = z.infer<typeof OtherUnitSchema>;
 export type OtherUnitType =
   | UnitType.City
+  | UnitType.OilWell
   | UnitType.DefensePost
   | UnitType.MissileSilo
   | UnitType.Port
@@ -49,6 +51,7 @@ export type OtherUnitType =
 
 export const unitTypeToOtherUnit = {
   [UnitType.City]: "city",
+  [UnitType.OilWell]: "oilw",
   [UnitType.DefensePost]: "defp",
   [UnitType.MissileSilo]: "silo",
   [UnitType.Port]: "port",
