@@ -12,8 +12,6 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 
 class StructureRenderInfo {
-  public icons: Map<string, HTMLImageElement> = new Map(); // Track icon elements
-
   constructor(
     public unit: UnitView,
     public location: Cell | null,
@@ -217,7 +215,13 @@ export class StructureIconsLayer implements Layer {
     ) {
       return;
     }
-    if (render.location && render.location !== oldLocation) {
+
+    if (
+      render.location &&
+      (!oldLocation ||
+        render.location.x !== oldLocation.x ||
+        render.location.y !== oldLocation.y)
+    ) {
       const scale = Math.min(1, this.transformHandler.scale * 1.3);
 
       this.context.save();
