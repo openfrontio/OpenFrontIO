@@ -54,7 +54,7 @@ export class TopBar extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed top-0 z-50 bg-slate-800/40 backdrop-blur-sm shadow-xs text-white text-sm p-1 rounded-ee-sm lg:rounded grid grid-cols-1 sm:grid-cols-2 w-1/2 sm:w-2/3 md:w-1/2 lg:hidden"
+        class="fixed top-[calc(0px+env(safe-area-inset-top))] z-50 bg-slate-800/40 backdrop-blur-sm shadow-xs text-white text-sm p-1 rounded-ee-sm lg:rounded grid grid-cols-1 sm:grid-cols-2 w-1/2 sm:w-2/3 md:w-1/2 lg:hidden"
       >
         <!-- Pop section (takes 2 columns on desktop) -->
         <div

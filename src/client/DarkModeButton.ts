@@ -20,7 +20,7 @@ export class DarkModeButton extends LitElement {
     return html`
       <button
         title="Toggle Dark Mode"
-        class="absolute top-0 right-0 md:top-[10px] md:right-[10px] border-none bg-none cursor-pointer text-2xl"
+        class="absolute top-[calc(0px+env(safe-area-inset-top))] right-0 md:top-[10px] md:right-[10px] border-none bg-none cursor-pointer text-2xl"
         @click=${() => this.toggleDarkMode()}
       >
         ${this.darkMode ? "☀️" : "🌙"}

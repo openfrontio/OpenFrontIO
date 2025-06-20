@@ -1,3 +1,6 @@
+import { App } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
+import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import { decodeJwt } from "jose";
 import { z } from "zod/v4";
 import {
@@ -8,8 +11,76 @@ import {
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
 
+type Platform = {
+  kind: "capacitor" | "browser";
+  getRedirectUri(): string;
+  setLocation(url: string): void;
+  getApiBaseForLocalhost(): string;
+  initializeAuthListener(): void;
+};
+
+const browserPlatform: Platform = {
+  kind: "browser",
+  getRedirectUri(): string {
+    return window.location.href.split("#")[0];
+  },
+  setLocation(url: string): void {
+    window.location.href = url;
+  },
+  getApiBaseForLocalhost(): string {
+    return (
+      localStorage.getItem("apiHost") ??
+      process.env.LOCAL_API_BASE_URL ??
+      "http://localhost:8787"
+    );
+  },
+  initializeAuthListener(): void {
+    // No-op for web
+  },
+};
+
+const capacitorPlatform: Platform = {
+  kind: "capacitor",
+  getRedirectUri(): string {
+    return "com.openfront.app://auth";
+  },
+  setLocation(url: string) {
+    Browser.open({ url });
+  },
+  getApiBaseForLocalhost(): string {
+    return process.env.LOCAL_API_BASE_URL ?? "http://localhost:8787";
+  },
+  initializeAuthListener(): void {
+    App.addListener("appUrlOpen", async (data) => {
+      try {
+        const url = new URL(data.url);
+        if (handleToken(url, false)) {
+          __isLoggedIn = undefined; // Force re-evaluation
+          await Browser.close();
+          window.location.assign(window.location.origin || "/");
+          return;
+        }
+
+        const error = url.search;
+        if (error) {
+          console.error(`Error from auth provider: ${error}`);
+        }
+        await Browser.close();
+      } catch (e) {
+        console.error("Error handling appUrlOpen", e);
+        await Browser.close();
+      }
+    });
+  },
+};
+
+const platform: Platform =
+  Capacitor.getPlatform() !== "web" ? capacitorPlatform : browserPlatform;
+
 function getAudience() {
-  const { hostname } = new URL(window.location.href);
+  const hostname =
+    process.env.CAPACITOR_PRODUCTION_HOSTNAME ??
+    new URL(window.location.href).hostname;
   const domainname = hostname.split(".").slice(-2).join(".");
   return domainname;
 }
@@ -17,21 +88,34 @@ function getAudience() {
 function getApiBase() {
   const domainname = getAudience();
   return domainname === "localhost"
-    ? (localStorage.getItem("apiHost") ?? "http://localhost:8787")
+    ? platform.getApiBaseForLocalhost()
     : `https://api.${domainname}`;
 }
 
-function getToken(): string | null {
-  const { hash } = window.location;
-  if (hash.startsWith("#")) {
-    const params = new URLSearchParams(hash.slice(1));
-    const token = params.get("token");
-    if (token) {
-      localStorage.setItem("token", token);
-      params.delete("token");
-      params.toString();
+function handleToken(url: URL, isFromHash: boolean): boolean {
+  let token: string | null = null;
+  if (isFromHash) {
+    if (url.hash.startsWith("#")) {
+      const params = new URLSearchParams(url.hash.slice(1));
+      token = params.get("token");
     }
+  } else {
+    token = url.searchParams.get("token");
+  }
+
+  if (token) {
+    localStorage.setItem("token", token);
+    return true;
+  }
+  return false;
+}
+
+function getToken(): string | null {
+  const url = new URL(window.location.href);
+  if (handleToken(url, true)) {
     // Clean the URL
+    const params = new URLSearchParams(url.hash.slice(1));
+    params.delete("token");
     history.replaceState(
       null,
       "",
@@ -43,8 +127,12 @@ function getToken(): string | null {
   return localStorage.getItem("token");
 }
 
-export function discordLogin() {
-  window.location.href = `${getApiBase()}/login/discord?redirect_uri=${window.location.href}`;
+export async function discordLogin() {
+  const redirectUri = platform.getRedirectUri();
+  const url = `${getApiBase()}/login/discord?redirect_uri=${encodeURIComponent(
+    redirectUri,
+  )}`;
+  platform.setLocation(url);
 }
 
 export async function logOut(allSessions: boolean = false) {
@@ -53,17 +141,14 @@ export async function logOut(allSessions: boolean = false) {
   localStorage.removeItem("token");
   __isLoggedIn = false;
 
-  const response = await fetch(
-    getApiBase() + (allSessions ? "/revoke" : "/logout"),
-    {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${token}`,
-      },
+  const response = await CapacitorHttp.post({
+    url: getApiBase() + (allSessions ? "/revoke" : "/logout"),
+    headers: {
+      authorization: `Bearer ${token}`,
     },
-  );
+  });
 
-  if (response.ok === false) {
+  if (response.status !== 200) {
     console.error("Logout failed", response);
     return false;
   }
@@ -158,14 +243,18 @@ function _isLoggedIn(): IsLoggedInResponse {
   }
 }
 
+export function initializeAuthListener() {
+  platform.initializeAuthListener();
+}
+
 export async function postRefresh(): Promise<boolean> {
   try {
     const token = getToken();
     if (!token) return false;
 
     // Refresh the JWT
-    const response = await fetch(getApiBase() + "/refresh", {
-      method: "POST",
+    const response = await CapacitorHttp.post({
+      url: getApiBase() + "/refresh",
       headers: {
         authorization: `Bearer ${token}`,
       },
@@ -176,7 +265,7 @@ export async function postRefresh(): Promise<boolean> {
       return false;
     }
     if (response.status !== 200) return false;
-    const body = await response.json();
+    const body = response.data;
     const result = RefreshResponseSchema.safeParse(body);
     if (!result.success) {
       const error = z.prettifyError(result.error);
@@ -197,7 +286,8 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
     if (!token) return false;
 
     // Get the user object
-    const response = await fetch(getApiBase() + "/users/@me", {
+    const response = await CapacitorHttp.get({
+      url: getApiBase() + "/users/@me",
       headers: {
         authorization: `Bearer ${token}`,
       },
@@ -208,7 +298,7 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
       return false;
     }
     if (response.status !== 200) return false;
-    const body = await response.json();
+    const body = response.data;
     const result = UserMeResponseSchema.safeParse(body);
     if (!result.success) {
       const error = z.prettifyError(result.error);
