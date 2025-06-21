@@ -129,8 +129,7 @@ export class UnitView {
 
 export class PlayerView {
   public anonymousName: string | null = null;
-  private _patternDecoder?: PatternDecoder;
-  private _patternDecoderPattern?: string;
+  private decoder?: PatternDecoder;
 
   constructor(
     private game: GameView,
@@ -145,16 +144,12 @@ export class PlayerView {
         this.data.playerType,
       );
     }
+    this.decoder =
+      data.pattern === undefined ? undefined : new PatternDecoder(data.pattern);
   }
 
   patternDecoder(): PatternDecoder | undefined {
-    const patternName = this.pattern();
-    if (!patternName) return undefined;
-    if (!this._patternDecoder || this._patternDecoderPattern !== patternName) {
-      this._patternDecoder = new PatternDecoder(patternName);
-      this._patternDecoderPattern = patternName;
-    }
-    return this._patternDecoder;
+    return this.decoder;
   }
 
   async actions(tile: TileRef): Promise<PlayerActions> {
