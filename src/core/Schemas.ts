@@ -167,7 +167,6 @@ const EmojiSchema = z
   .number()
   .nonnegative()
   .max(flattenedEmojiTable.length - 1);
-
 export const ID = z
   .string()
   .regex(/^[a-zA-Z0-9]+$/)

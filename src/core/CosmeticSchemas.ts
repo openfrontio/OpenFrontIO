@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+// Schema for resources/cosmetics/cosmetics.json
 export const CosmeticsSchema = z.object({
   role_group: z.record(z.string(), z.string().array()).optional(),
   pattern: z.record(
@@ -11,4 +12,4 @@ export const CosmeticsSchema = z.object({
   ),
 });
 
-export type Cosmetic = z.infer<typeof CosmeticsSchema>;
+export type Cosmetics = z.infer<typeof CosmeticsSchema>;

@@ -1,15 +1,11 @@
 import { PatternDecoder } from "../core/Cosmetics";
-import { Cosmetic } from "../core/CosmeticSchemas";
+import { Cosmetics } from "../core/CosmeticSchemas";
 type PatternEntry = {
   pattern: string;
   role_group?: string[];
 };
 export class PrivilegeChecker {
-  private patternData: Cosmetic;
-
-  constructor(patternData: Cosmetic) {
-    this.patternData = patternData;
-  }
+  constructor(private cosmetics: Cosmetics) {}
 
   isPatternAllowed(
     base64: string,
@@ -20,8 +16,8 @@ export class PrivilegeChecker {
     const flareList = flares ?? [];
 
     let found: [string, PatternEntry] | undefined;
-    for (const key in this.patternData.pattern) {
-      const entry = this.patternData.pattern[key];
+    for (const key in this.cosmetics.pattern) {
+      const entry = this.cosmetics.pattern[key];
       if (entry.pattern === base64) {
         found = [key, entry];
         break;
@@ -48,7 +44,7 @@ export class PrivilegeChecker {
     }
 
     for (const groupName of allowedGroups) {
-      const groupRoles = this.patternData.role_group?.[groupName] || [];
+      const groupRoles = this.cosmetics.role_group?.[groupName] || [];
       if (roleList.some((role) => groupRoles.includes(role))) {
         return true;
       }

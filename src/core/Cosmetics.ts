@@ -1,5 +1,5 @@
 import { base64url } from "jose";
-import rawTerritoryPatterns from "../../resources/cosmetic/cosmetic.json" with { type: "json" };
+import rawTerritoryPatterns from "../../resources/cosmetics/cosmetics.json" with { type: "json" };
 import { CosmeticsSchema } from "./CosmeticSchemas";
 
 export const territoryPatterns = CosmeticsSchema.parse(rawTerritoryPatterns);

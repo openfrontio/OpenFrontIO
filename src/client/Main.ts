@@ -183,17 +183,17 @@ class Client {
       hlpModal.open();
     });
 
-    const TerritoryModal = document.querySelector(
+    const territoryModal = document.querySelector(
       "territory-patterns-modal",
     ) as TerritoryPatternsModal;
     const tpButton = document.getElementById(
       "territory-patterns-input-preview-button",
     );
-    TerritoryModal instanceof TerritoryPatternsModal;
+    territoryModal instanceof TerritoryPatternsModal;
     if (tpButton === null)
       throw new Error("territory-patterns-input-preview-button");
     tpButton.addEventListener("click", () => {
-      TerritoryModal.open();
+      territoryModal.open();
     });
 
     if (isLoggedIn() === false) {
@@ -230,7 +230,7 @@ class Client {
         loginDiscordButton.translationKey = "main.logged_in";
         loginDiscordButton.hidden = true;
         const { user, player } = userMeResponse;
-        TerritoryModal.onUserMe(userMeResponse);
+        territoryModal.onUserMe(userMeResponse);
       });
     }
 
@@ -330,6 +330,7 @@ class Client {
       this.gameStop();
     }
     const config = await getServerConfigFromClient();
+
     this.gameStop = joinLobby(
       {
         gameID: lobby.gameID,
