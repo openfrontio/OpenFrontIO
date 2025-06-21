@@ -15,6 +15,7 @@ import {
   GameMode,
   GameUpdates,
   MessageType,
+  MutableAlliance,
   Nation,
   Player,
   PlayerID,
@@ -42,9 +43,18 @@ export function createGame(
   gameMap: GameMap,
   miniGameMap: GameMap,
   config: Config,
+  clientID: ClientID,
 ): Game {
   const stats = new StatsImpl();
-  return new GameImpl(humans, nations, gameMap, miniGameMap, config, stats);
+  return new GameImpl(
+    humans,
+    nations,
+    gameMap,
+    miniGameMap,
+    config,
+    stats,
+    clientID,
+  );
 }
 
 export type CellString = string;
@@ -81,6 +91,7 @@ export class GameImpl implements Game {
     private miniGameMap: GameMap,
     private _config: Config,
     private _stats: Stats,
+    private _clientID: ClientID,
   ) {
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
@@ -136,6 +147,9 @@ export class GameImpl implements Game {
     }
   }
 
+  // Used to assign unique IDs to each new alliance
+  private nextAllianceID: number = 0;
+
   isOnEdgeOfMap(ref: TileRef): boolean {
     return this._map.isOnEdgeOfMap(ref);
   }
@@ -143,6 +157,11 @@ export class GameImpl implements Game {
   owner(ref: TileRef): Player | TerraNullius {
     return this.playerBySmallID(this.ownerID(ref));
   }
+
+  alliances(): MutableAlliance[] {
+    return this.alliances_;
+  }
+
   playerBySmallID(id: number): Player | TerraNullius {
     if (id === 0) {
       return this.terraNullius();
@@ -220,6 +239,14 @@ export class GameImpl implements Game {
     return ar;
   }
 
+  myPlayer(): Player {
+    const player = this.playerByClientID(this._clientID);
+    if (!player) {
+      throw new Error("No player found for this client");
+    }
+    return player;
+  }
+
   acceptAllianceRequest(request: AllianceRequestImpl) {
     this.allianceRequests = this.allianceRequests.filter(
       (ar) => ar !== request,
@@ -228,11 +255,19 @@ export class GameImpl implements Game {
     const requestor = request.requestor();
     const recipient = request.recipient();
 
+    // Remove any existing alliance between the requestor and recipient
+    const existing = requestor.allianceWith(recipient);
+    if (existing) {
+      this.alliances_ = this.alliances_.filter((a) => a !== existing);
+    }
+
+    // Create and register the new alliance
     const alliance = new AllianceImpl(
       this,
       requestor as PlayerImpl,
       recipient as PlayerImpl,
       this._ticks,
+      this.getNextAllianceID(),
     );
     this.alliances_.push(alliance);
     (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
@@ -264,6 +299,11 @@ export class GameImpl implements Game {
       request: request.toUpdate(),
       accepted: false,
     });
+  }
+
+  // Generates a unique ID for a new alliance
+  public getNextAllianceID(): number {
+    return this.nextAllianceID++;
   }
 
   hasPlayer(id: PlayerID): boolean {
@@ -317,6 +357,8 @@ export class GameImpl implements Game {
         hash: this.hash(),
       });
     }
+    const allianceDuration = this.config().allianceDuration();
+
     this._ticks++;
     return this.updates;
   }
@@ -580,6 +622,19 @@ export class GameImpl implements Game {
       type: GameUpdateType.AllianceExpired,
       player1ID: alliance.requestor().smallID(),
       player2ID: alliance.recipient().smallID(),
+    });
+  }
+
+  sendAllianceExtensionPrompt(
+    from: Player,
+    to: Player,
+    alliance: MutableAlliance,
+  ): void {
+    this.addUpdate({
+      type: GameUpdateType.AllianceExtensionPrompt,
+      fromPlayerID: from.smallID(),
+      toPlayerID: to.smallID(),
+      allianceID: alliance.id(),
     });
   }
 
