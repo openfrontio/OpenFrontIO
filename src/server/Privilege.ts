@@ -50,7 +50,10 @@ export class PrivilegeChecker {
       }
     }
 
-    if (!flareList.includes(`pattern:${key}`)) {
+    if (
+      !flareList.includes(`pattern:${key}`) &&
+      !flareList.includes("pattern:*")
+    ) {
       return "restricted";
     }
     return true;
