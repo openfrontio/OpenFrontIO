@@ -22,7 +22,7 @@ FROM node:24-slim AS system-deps
 RUN apt-get update && apt-get install -y \
     nginx \
     supervisor \
-    git \
+    # git \
     curl \
     jq \
     wget \
@@ -40,12 +40,6 @@ FROM node:24-slim
 
 WORKDIR /usr/src/app
 
-# Copy built app from builder stage
-COPY --from=builder /app/static ./static
-COPY --from=builder /app/startup.sh /usr/local/bin/startup.sh
-COPY --from=builder /app/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=builder /app/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
 # Copy system packages from the system-deps stage
 COPY --from=system-deps /etc/nginx /etc/nginx
 COPY --from=system-deps /usr/sbin/nginx /usr/sbin/nginx
@@ -53,6 +47,12 @@ COPY --from=system-deps /usr/bin/supervisord /usr/bin/supervisord
 COPY --from=system-deps /usr/bin/supervisorctl /usr/bin/supervisorctl
 COPY --from=system-deps /etc/supervisor /etc/supervisor
 COPY --from=system-deps /usr/local/bin/cloudflared /usr/local/bin/cloudflared
+
+# Copy built app from builder stage
+COPY --from=builder /app/static ./static
+COPY --from=builder /app/startup.sh /usr/local/bin/startup.sh
+COPY --from=builder /app/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Optional: create supervisor log dir
 RUN mkdir -p /var/log/supervisor
