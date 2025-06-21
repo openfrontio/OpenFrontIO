@@ -39,17 +39,15 @@ export class SAMLauncherExecution implements Execution {
 
   private getSingleTarget(): Unit | null {
     if (this.sam === null) return null;
-    const nukes = this.mg
-      .nearbyUnits(this.sam.tile(), this.searchRangeRadius, [
-        UnitType.AtomBomb,
-        UnitType.HydrogenBomb,
-      ])
-      .filter(
-        ({ unit }) =>
-          unit.owner() !== this.player &&
-          !this.player.isFriendly(unit.owner()) &&
-          unit.isTargetable(),
-      );
+    const nukes = this.mg.nearbyUnits(
+      this.sam.tile(),
+      this.searchRangeRadius,
+      [UnitType.AtomBomb, UnitType.HydrogenBomb],
+      ({ unit }) =>
+        unit.owner() !== this.player &&
+        !this.player.isFriendly(unit.owner()) &&
+        unit.isTargetable(),
+    );
 
     return (
       nukes.sort((a, b) => {
@@ -117,18 +115,13 @@ export class SAMLauncherExecution implements Execution {
       this.pseudoRandom = new PseudoRandom(this.sam.id());
     }
 
-    const mirvWarheadTargets = this.mg
-      .nearbyUnits(
-        this.sam.tile(),
-        this.MIRVWarheadSearchRadius,
-        UnitType.MIRVWarhead,
-      )
-      .map(({ unit }) => unit)
-      .filter(
-        (unit) =>
-          unit.owner() !== this.player && !this.player.isFriendly(unit.owner()),
-      )
-      .filter((unit) => {
+    const mirvWarheadTargets = this.mg.nearbyUnits(
+      this.sam.tile(),
+      this.MIRVWarheadSearchRadius,
+      UnitType.MIRVWarhead,
+      ({ unit }) => {
+        if (unit.owner() === this.player) return false;
+        if (this.player.isFriendly(unit.owner())) return false;
         const dst = unit.targetTile();
         return (
           this.sam !== null &&
@@ -136,7 +129,8 @@ export class SAMLauncherExecution implements Execution {
           this.mg.manhattanDist(dst, this.sam.tile()) <
             this.MIRVWarheadProtectionRadius
         );
-      });
+      },
+    );
 
     let target: Unit | null = null;
     if (mirvWarheadTargets.length === 0) {
@@ -160,31 +154,41 @@ export class SAMLauncherExecution implements Execution {
           MessageType.SAM_MISS,
           this.sam.owner().id(),
         );
-      } else {
-        if (mirvWarheadTargets.length > 0) {
-          // Message
-          this.mg.displayMessage(
-            `${mirvWarheadTargets.length} MIRV warheads intercepted`,
-            MessageType.SAM_HIT,
-            this.sam.owner().id(),
-          );
+      } else if (mirvWarheadTargets.length > 0) {
+        const samOwner = this.sam.owner();
+
+        // Message
+        this.mg.displayMessage(
+          `${mirvWarheadTargets.length} MIRV warheads intercepted`,
+          MessageType.SAM_HIT,
+          samOwner.id(),
+        );
+
+        mirvWarheadTargets.forEach(({ unit: u }) => {
           // Delete warheads
-          mirvWarheadTargets.forEach((u) => {
-            u.delete();
-          });
-        } else if (target !== null) {
-          target.setTargetedBySAM(true);
-          this.mg.addExecution(
-            new SAMMissileExecution(
-              this.sam.tile(),
-              this.sam.owner(),
-              this.sam,
-              target,
-            ),
+          u.delete();
+        });
+
+        // Record stats
+        this.mg
+          .stats()
+          .bombIntercept(
+            samOwner,
+            UnitType.MIRVWarhead,
+            mirvWarheadTargets.length,
           );
-        } else {
-          throw new Error("target is null");
-        }
+      } else if (target !== null) {
+        target.setTargetedBySAM(true);
+        this.mg.addExecution(
+          new SAMMissileExecution(
+            this.sam.tile(),
+            this.sam.owner(),
+            this.sam,
+            target,
+          ),
+        );
+      } else {
+        throw new Error("target is null");
       }
     }
 

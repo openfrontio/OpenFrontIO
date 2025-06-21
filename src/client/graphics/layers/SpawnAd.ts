@@ -1,18 +1,14 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { GameView } from "../../../core/game/GameView";
+import { getGamesPlayed } from "../../Utils";
 import { Layer } from "./Layer";
 
-const BREAKPOINT = {
-  width: 1000,
-  height: 800,
-};
+const AD_TYPE = "bottom_rail";
+const AD_CONTAINER_ID = "bottom-rail-ad-container";
 
-const AD_TYPE = "standard_iab_modl2"; // 320x50/320x100 - better for bottom positioning
-const AD_CONTAINER_ID = "bottom-left-ad-container";
-
-@customElement("left-in-game-ad")
-export class LeftInGameAd extends LitElement implements Layer {
+@customElement("spawn-ad")
+export class SpawnAd extends LitElement implements Layer {
   public g: GameView;
 
   @state()
@@ -20,6 +16,8 @@ export class LeftInGameAd extends LitElement implements Layer {
 
   @state()
   private adLoaded: boolean = false;
+
+  private gamesPlayed: number = 0;
 
   // Override createRenderRoot to disable shadow DOM
   createRenderRoot() {
@@ -32,37 +30,38 @@ export class LeftInGameAd extends LitElement implements Layer {
     super();
   }
 
+  init() {
+    this.gamesPlayed = getGamesPlayed();
+  }
+
   public show(): void {
     this.isVisible = true;
+    this.loadAd();
     this.requestUpdate();
-    // Load the ad when showing (with small delay to ensure DOM is ready)
-    setTimeout(() => this.loadAd(), 100);
   }
 
   public hide(): void {
+    // Destroy the ad when hiding
+    this.destroyAd();
     this.isVisible = false;
     this.adLoaded = false;
     this.requestUpdate();
-    // Destroy the ad when hiding
-    this.destroyAd();
   }
 
   public async tick() {
-    if (!this.isVisible && !this.g.inSpawnPhase() && this.screenLargeEnough()) {
+    if (
+      !this.isVisible &&
+      this.g.inSpawnPhase() &&
+      this.g.ticks() > 10 &&
+      this.gamesPlayed > 5
+    ) {
       console.log("showing bottom left ad");
       this.show();
     }
-    if (this.isVisible && !this.screenLargeEnough()) {
+    if (this.isVisible && !this.g.inSpawnPhase()) {
       console.log("hiding bottom left ad");
       this.hide();
     }
-  }
-
-  private screenLargeEnough(): boolean {
-    return (
-      window.innerWidth > BREAKPOINT.width &&
-      window.innerHeight > BREAKPOINT.height
-    );
   }
 
   private loadAd(): void {
@@ -96,8 +95,8 @@ export class LeftInGameAd extends LitElement implements Layer {
     }
     try {
       window.ramp.que.push(() => {
-        window.ramp.destroyUnits(AD_TYPE);
-        console.log("Playwire ad destroyed:", AD_TYPE);
+        window.ramp.destroyUnits("all");
+        console.log("Playwire spawn ad destroyed");
       });
     } catch (error) {
       console.error("Failed to destroy Playwire ad:", error);
@@ -117,7 +116,7 @@ export class LeftInGameAd extends LitElement implements Layer {
 
     return html`
       <div
-        class="w-[320px] min-h-[100px] bg-gray-900 border border-gray-600 flex items-center justify-center"
+        class="fixed bottom-0 left-0 w-full min-h-[100px] bg-gray-900 border border-gray-600 flex items-center justify-center z-50"
       >
         <div
           id="${AD_CONTAINER_ID}"

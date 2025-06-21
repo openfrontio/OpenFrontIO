@@ -1,8 +1,17 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { EventBus, GameEvent } from "../../../core/EventBus";
+import { getGamesPlayed } from "../../Utils";
+import { Layer } from "./Layer";
+
+export class GutterAdModalEvent implements GameEvent {
+  constructor(public readonly isVisible: boolean) {}
+}
 
 @customElement("gutter-ad-modal")
-export class GutterAdModal extends LitElement {
+export class GutterAdModal extends LitElement implements Layer {
+  public eventBus: EventBus;
+
   @state()
   private isVisible: boolean = false;
 
@@ -20,6 +29,20 @@ export class GutterAdModal extends LitElement {
     return this;
   }
 
+  init() {
+    if (getGamesPlayed() > 1) {
+      this.eventBus.on(GutterAdModalEvent, (event) => {
+        if (event.isVisible) {
+          this.show();
+        } else {
+          this.hide();
+        }
+      });
+    }
+  }
+
+  tick() {}
+
   static styles = css``;
 
   // Called after the component's DOM is first rendered
@@ -29,6 +52,7 @@ export class GutterAdModal extends LitElement {
   }
 
   public show(): void {
+    console.log("showing GutterAdModal");
     this.isVisible = true;
     this.requestUpdate();
 
@@ -39,6 +63,7 @@ export class GutterAdModal extends LitElement {
   }
 
   public hide(): void {
+    console.log("hiding GutterAdModal");
     this.isVisible = false;
     this.destroyAds();
     this.adLoaded = false;
