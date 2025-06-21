@@ -149,6 +149,8 @@ export enum UnitType {
   MIRV = "MIRV",
   MIRVWarhead = "MIRV Warhead",
   Construction = "Construction",
+  Airport = "Air Port",
+  CargoPlane = "Cargo Plane",
 }
 
 const _structureTypes: ReadonlySet<UnitType> = new Set([
@@ -214,6 +216,13 @@ export interface UnitParamsMap {
   };
 
   [UnitType.Construction]: {};
+
+  [UnitType.Airport]: {};
+
+  [UnitType.CargoPlane]: {
+    targetUnit: Unit;
+    lastSetSafeFromPirates?: number;
+  };
 }
 
 // Type helper to get params type for a specific unit type
@@ -561,6 +570,8 @@ export interface Player {
   toUpdate(): PlayerUpdate;
   playerProfile(): PlayerProfile;
   tradingPorts(port: Unit): Unit[];
+  airports(airport: Unit): Unit[];
+
   // WARNING: this operation is expensive.
   bestTransportShipSpawn(tile: TileRef): TileRef | false;
 }
