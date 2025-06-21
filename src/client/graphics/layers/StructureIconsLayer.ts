@@ -170,7 +170,7 @@ export class StructureIconsLayer implements Layer {
       .toRgbString();
     const borderColor = this.theme
       .borderColor(unit.owner())
-      .darken(0.1)
+      .darken(0.2)
       .toRgbString();
     context.strokeStyle = borderColor;
     context.beginPath();
