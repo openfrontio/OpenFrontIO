@@ -139,8 +139,8 @@ export class StructureIconsLayer implements Layer {
           !render.location ||
           render.location.x < 0 ||
           render.location.y < 0 ||
-          render.location.x > innerWidth ||
-          render.location.y > innerHeight
+          render.location.x > this.canvas.width ||
+          render.location.y > this.canvas.height
         ) {
           continue;
         }
