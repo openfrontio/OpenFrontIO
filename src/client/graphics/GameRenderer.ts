@@ -25,6 +25,7 @@ import { PlayerPanel } from "./layers/PlayerPanel";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SpawnAd } from "./layers/SpawnAd";
 import { SpawnTimer } from "./layers/SpawnTimer";
+import { StructureIconsLayer } from "./layers/StructureIconsLayer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
@@ -216,6 +217,7 @@ export function createRenderer(
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler),
     structureLayer,
+    new StructureIconsLayer(game, transformHandler),
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, transformHandler),
@@ -314,24 +316,32 @@ export class GameRenderer {
       .toHex();
     this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Save the current context state
-    this.context.save();
-
-    this.transformHandler.handleTransform(this.context);
-
-    this.layers.forEach((l) => {
-      if (l.shouldTransform?.()) {
-        l.renderLayer?.(this.context);
+    const handleTransformState = (
+      needsTransform: boolean,
+      active: boolean,
+    ): boolean => {
+      if (needsTransform && !active) {
+        this.context.save();
+        this.transformHandler.handleTransform(this.context);
+        return true;
+      } else if (!needsTransform && active) {
+        this.context.restore();
+        return false;
       }
-    });
+      return active;
+    };
 
-    this.context.restore();
+    let isTransformActive = false;
 
-    this.layers.forEach((l) => {
-      if (!l.shouldTransform?.()) {
-        l.renderLayer?.(this.context);
-      }
-    });
+    for (const layer of this.layers) {
+      const needsTransform = layer.shouldTransform?.() ?? false;
+      isTransformActive = handleTransformState(
+        needsTransform,
+        isTransformActive,
+      );
+      layer.renderLayer?.(this.context);
+    }
+    handleTransformState(false, isTransformActive); // Ensure context is clean after rendering
 
     requestAnimationFrame(() => this.renderGame());
 
