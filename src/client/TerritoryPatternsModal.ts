@@ -85,7 +85,8 @@ export class TerritoryPatternsModal extends LitElement {
   private checkPatternPermission(roles: string[]) {
     const patterns = territoryPatterns.pattern ?? {};
 
-    for (const [key, patternData] of Object.entries(patterns)) {
+    for (const key in patterns) {
+      const patternData = patterns[key];
       const roleGroup: string[] | string | undefined = patternData.role_group;
       console.log(`pattern:${key}`);
       if (
