@@ -334,6 +334,7 @@ export function startWorker() {
           const { persistentId, claims } = result;
 
           let roles: string[] | undefined;
+          let flares: string[] | undefined;
 
           if (claims === null) {
             // TODO: Verify that the persistendId is is not a registered player
@@ -345,65 +346,50 @@ export function startWorker() {
               ws.close(1002, "Failed to verify token");
               return;
             }
+            roles = result.player.roles;
+            flares = result.player.flares;
+          }
 
-            let roles: string[] | undefined;
-            let flares: string[] | undefined;
-
-            if (claims === null) {
-              // TODO: Verify that the persistendId is is not a registered player
-            } else {
-              // Verify token and get player permissions
-              const result = await getUserMe(clientMsg.token, config);
-              if (result === false) {
-                log.warn("Token is not valid", claims);
-                ws.close(1002, "Token is not valid");
-                return;
-              }
-              roles = result.player.roles;
-              flares = result.player.flares;
-            }
-
-            if (clientMsg.pattern !== undefined) {
-              const patternCheck = privilegeChecker.isPatternAllowed(
-                clientMsg.pattern,
-                roles,
-                flares,
-              );
-              if (patternCheck !== true) {
-                log.warn(`pattern ${patternCheck}: ${clientMsg.pattern}`);
-                return;
-              }
-            }
-
-            // TODO: Validate client settings based on roles
-
-            // Create client and add to game
-            const client = new Client(
-              clientMsg.clientID,
-              persistentId,
-              claims,
+          if (clientMsg.pattern !== undefined) {
+            const patternCheck = privilegeChecker.isPatternAllowed(
+              clientMsg.pattern,
               roles,
               flares,
-              ip,
-              clientMsg.username,
-              ws,
-              clientMsg.flag,
-              clientMsg.pattern,
             );
-
-            const wasFound = gm.addClient(
-              client,
-              clientMsg.gameID,
-              clientMsg.lastTurn,
-            );
-
-            if (!wasFound) {
-              log.info(
-                `game ${clientMsg.gameID} not found on worker ${workerId}`,
-              );
-              // Handle game not found case
+            if (patternCheck !== true) {
+              log.warn(`pattern ${patternCheck}: ${clientMsg.pattern}`);
+              return;
             }
           }
+
+          // Create client and add to game
+          const client = new Client(
+            clientMsg.clientID,
+            persistentId,
+            claims,
+            roles,
+            flares,
+            ip,
+            clientMsg.username,
+            ws,
+            clientMsg.flag,
+            clientMsg.pattern,
+          );
+
+          const wasFound = gm.addClient(
+            client,
+            clientMsg.gameID,
+            clientMsg.lastTurn,
+          );
+
+          if (!wasFound) {
+            log.info(
+              `game ${clientMsg.gameID} not found on worker ${workerId}`,
+            );
+            // Handle game not found case
+          }
+
+          // Handle other message types
         } catch (error) {
           log.warn(
             `error handling websocket message for ${ipAnonymize(ip)}: ${error}`.substring(
