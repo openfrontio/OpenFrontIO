@@ -11,7 +11,6 @@ import "./FlagInput";
 import { FlagInput } from "./FlagInput";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
-import { GutterAdModal } from "./GutterAdModal";
 import { HelpModal } from "./HelpModal";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
@@ -25,7 +24,7 @@ import { SinglePlayerModal } from "./SinglePlayerModal";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import { generateCryptoRandomUUID } from "./Utils";
+import { generateCryptoRandomUUID, incrementGamesPlayed } from "./Utils";
 import "./components/NewsButton";
 import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
@@ -74,7 +73,6 @@ class Client {
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
-  private gutterAdModal: GutterAdModal;
 
   constructor() {}
 
@@ -166,12 +164,6 @@ class Client {
       }
     });
 
-    this.gutterAdModal = document.querySelector(
-      "gutter-ad-modal",
-    ) as GutterAdModal;
-    this.gutterAdModal instanceof GutterAdModal;
-    this.gutterAdModal.show();
-
     // const ctModal = document.querySelector("chat-modal") as ChatModal;
     // ctModal instanceof ChatModal;
     // document.getElementById("chat-button").addEventListener("click", () => {
@@ -202,6 +194,7 @@ class Client {
         logOut();
         loginDiscordButton.disable = false;
         loginDiscordButton.translationKey = "main.login_discord";
+        loginDiscordButton.hidden = false;
         loginDiscordButton.addEventListener("click", discordLogin);
         logoutDiscordButton.hidden = true;
       });
@@ -373,7 +366,7 @@ class Client {
       () => {
         this.joinModal.close();
         this.publicLobby.stop();
-        this.gutterAdModal.hide();
+        incrementGamesPlayed();
 
         try {
           window.PageOS.session.newPageView();

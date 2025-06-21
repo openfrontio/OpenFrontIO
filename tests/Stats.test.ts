@@ -163,7 +163,7 @@ describe("Stats", () => {
   });
 
   test("bombIntercept", () => {
-    stats.bombIntercept(player1, player2, UnitType.MIRVWarhead);
+    stats.bombIntercept(player1, UnitType.MIRVWarhead, 1);
     expect(stats.stats()).toStrictEqual({
       client1: { bombs: { mirvw: [0n, 0n, 1n] } },
     });
