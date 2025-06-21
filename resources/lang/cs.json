@@ -230,7 +230,7 @@
     "special_effects_desc": "Určuje zda jsou zapnuté speciální efekty. Deaktivuj pro zlepšení výkonu",
     "anonymous_names_label": "🥷 Skrýt jména",
     "anonymous_names_desc": "Skrýt skutečná jména hráčů a nahradit je náhodnými názvy na vaší obrazovce.",
-    "left_click_label": "🖱️ Levým tlačítkem myši Otevřít Menu",
+    "left_click_label": "Levým tlačítkem myši Otevřít Menu",
     "left_click_desc": "Pokud je zapnuto otevře \"Levé tlačítko\" myši menu a \"Útok\" tlačítko zaútočí. Pokud je vypnuto, útočí se přímo levým tlačítkem myši.",
     "attack_ratio_label": "⚔️ Poměr útoku",
     "attack_ratio_desc": "Jaké procento tvých vojáků poslat při útoku (1–100%)",

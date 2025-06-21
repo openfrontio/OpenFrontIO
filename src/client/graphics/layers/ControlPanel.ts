@@ -6,7 +6,7 @@ import { Gold } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { AttackRatioEvent } from "../../InputHandler";
 import { SendSetTargetTroopRatioEvent } from "../../Transport";
-import { renderNumber, renderTroops } from "../../Utils";
+import { renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
@@ -204,44 +204,15 @@ export class ControlPanel extends LitElement implements Layer {
       </style>
       <div
         class="${this._isVisible
-          ? "w-[320px] text-sm lg:text-m bg-gray-800/70 p-2 pr-3 lg:p-4 shadow-lg lg:rounded-lg backdrop-blur"
+          ? "text-sm lg:text-m md:w-[320px] bg-gray-800/70 p-2 pr-3 lg:p-4 shadow-lg lg:rounded-lg backdrop-blur"
           : "hidden"}"
         @contextmenu=${(e) => e.preventDefault()}
       >
-        <div class="hidden lg:block bg-black/30 text-white mb-4 p-2 rounded">
-          <div class="flex justify-between mb-1">
-            <span class="font-bold"
-              >${translateText("control_panel.pop")}:</span
-            >
-            <span translate="no"
-              >${renderTroops(this._population)} /
-              ${renderTroops(this._maxPopulation)}
-              <span
-                class="${this._popRateIsIncreasing
-                  ? "text-green-500"
-                  : "text-yellow-500"}"
-                translate="no"
-                >(+${renderTroops(this.popRate)})</span
-              ></span
-            >
-          </div>
-          <div class="flex justify-between">
-            <span class="font-bold"
-              >${translateText("control_panel.gold")}:</span
-            >
-            <span translate="no"
-              >${renderNumber(this._gold)}
-              (+${renderNumber(this._goldPerSecond)})</span
-            >
-          </div>
-        </div>
-
         <div class="relative mb-4 lg:mb-4">
           <label class="block text-white mb-1" translate="no"
-            >${translateText("control_panel.troops")}:
-            <span translate="no">${renderTroops(this._troops)}</span> |
-            ${translateText("control_panel.workers")}:
-            <span translate="no">${renderTroops(this._workers)}</span></label
+            >${translateText("control_panel.troops")}/${translateText(
+              "control_panel.workers",
+            )}</label
           >
           <div class="relative h-8">
             <!-- Background track -->

@@ -214,7 +214,7 @@
     "emojis_desc": "Przełącz, czy emotki mają być wyświetlane w grze",
     "anonymous_names_label": "🥷 Ukryte Nazwy",
     "anonymous_names_desc": "Ukryj prawdziwe nazwy graczy, zastępując je losowymi na swoim ekranie.",
-    "left_click_label": "🖱️ Kliknij lewym przyciskiem myszy aby otworzyć Menu",
+    "left_click_label": "Kliknij lewym przyciskiem myszy aby otworzyć Menu",
     "left_click_desc": "Gdy WŁĄCZONE, lewy przycisk myszy otwiera menu, a przycisk z mieczem atakuje. Gdy WYŁĄCZONE, lewy przycisk myszy atakuje bezpośrednio.",
     "attack_ratio_label": "⚔️ Współczynnik ataku",
     "attack_ratio_desc": "Jaki procent swoich żołnierzy chcesz wysłać do ataku (1–100%)",

@@ -53,12 +53,12 @@ export class SpawnTimer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
-    if (this.ratios === null) return;
-    if (this.ratios.length === 0) return;
-    if (this.colors.length === 0) return;
+    if (this.ratios.length === 0 || this.colors.length === 0) return;
 
     const barHeight = 10;
     const barWidth = this.transformHandler.width();
+    const screenW = window.innerWidth;
+    const yOffset: number = screenW > 1024 ? 80 : 50;
 
     let x = 0;
     let filledRatio = 0;
@@ -67,7 +67,7 @@ export class SpawnTimer implements Layer {
       const segmentWidth = barWidth * ratio;
 
       context.fillStyle = this.colors[i];
-      context.fillRect(x, 0, segmentWidth, barHeight);
+      context.fillRect(x, yOffset, segmentWidth, barHeight);
 
       x += segmentWidth;
       filledRatio += ratio;

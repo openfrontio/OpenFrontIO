@@ -230,7 +230,7 @@
     "special_effects_desc": "Speciale effecten aanzetten. Zet uit om de prestaties van het spel te verbeteren",
     "anonymous_names_label": "🥷 Verborgen namen",
     "anonymous_names_desc": "Vervang echte spelersnamen door willekeurige namen op je scherm.",
-    "left_click_label": "🖱️ Linkermuisknop voor openen menu",
+    "left_click_label": "Linkermuisknop voor openen menu",
     "left_click_desc": "Als AAN: linkermuisknop opent het Radiale menu met zwaard-aanvalsknop. Als UIT: linkermuisknop opent direct de aanval.",
     "attack_ratio_label": "⚔️ Aanvalsverhouding",
     "attack_ratio_desc": "Welk percentage van je troepen je bij een aanval stuurt (1-100%)",
