@@ -1,0 +1,466 @@
+import { LitElement, html } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
+import cityIcon from "../../../../resources/images/CityIconWhite.svg";
+import darkModeIcon from "../../../../resources/images/DarkModeIconWhite.svg";
+import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
+import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
+import explosionIcon from "../../../../resources/images/ExplosionIconWhite.svg";
+import focusIcon from "../../../../resources/images/FocusIconWhite.svg";
+import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
+import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
+import mouseIcon from "../../../../resources/images/MouseIconWhite.svg";
+import ninjaIcon from "../../../../resources/images/NinjaIconWhite.svg";
+import pauseIcon from "../../../../resources/images/PauseIconWhite.svg";
+import playIcon from "../../../../resources/images/PlayIconWhite.svg";
+import portIcon from "../../../../resources/images/PortIcon.svg";
+import samLauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
+import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
+import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
+import troopIcon from "../../../../resources/images/SwordIconWhite.svg";
+import treeIcon from "../../../../resources/images/TreeIconWhite.svg";
+import workerIcon from "../../../../resources/images/WorkerIconWhite.svg";
+import { translateText } from "../../../client/Utils";
+import { EventBus } from "../../../core/EventBus";
+import { GameType, UnitType } from "../../../core/game/Game";
+import { GameView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
+import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
+import { PauseGameEvent } from "../../Transport";
+import { renderNumber, renderTroops } from "../../Utils";
+import "../icons/PopulationSolidIcon";
+import { Layer } from "./Layer";
+
+@customElement("game-top-bar")
+export class GameTopBar extends LitElement implements Layer {
+  public game: GameView;
+  public eventBus: EventBus;
+  private _userSettings: UserSettings = new UserSettings();
+  private _population = 0;
+  private _troops = 0;
+  private _cities = 0;
+  private _workers = 0;
+  private _missileSilo = 0;
+  private _port = 0;
+  private _defensePost = 0;
+  private _samLauncher = 0;
+  private _lastPopulationIncreaseRate = 0;
+  private _popRateIsIncreasing = false;
+
+  @state()
+  private showSettingsMenu = false;
+  @state()
+  private alternateView: boolean = false;
+  @state()
+  private showPauseButton: boolean = true;
+  @state()
+  private isPaused: boolean = false;
+
+  @query(".settings-container")
+  private settingsContainer!: HTMLElement;
+
+  createRenderRoot() {
+    return this;
+  }
+
+  init() {
+    this.showPauseButton =
+      this.game.config().gameConfig().gameType === GameType.Singleplayer ||
+      this.game.config().isReplay();
+    this.requestUpdate();
+  }
+
+  tick() {
+    this.updatePopulationIncrease();
+    this._troops = this.game?.myPlayer()!.troops();
+    this._workers = this.game?.myPlayer()!.workers();
+    this._cities = this.game
+      ?.myPlayer()!
+      .units(UnitType.City)
+      .map((unit) => unit.level())
+      .reduce((a, b) => a + b, 0);
+    this._missileSilo = this.game
+      ?.myPlayer()!
+      .units(UnitType.MissileSilo)
+      .map((unit) => unit.level())
+      .reduce((a, b) => a + b, 0);
+    this._port = this.game
+      ?.myPlayer()!
+      .units(UnitType.Port)
+      .map((unit) => unit.level())
+      .reduce((a, b) => a + b, 0);
+    this._defensePost = this.game
+      ?.myPlayer()!
+      .units(UnitType.DefensePost)
+      .map((unit) => unit.level())
+      .reduce((a, b) => a + b, 0);
+    this._samLauncher = this.game
+      ?.myPlayer()!
+      .units(UnitType.SAMLauncher)
+      .map((unit) => unit.level())
+      .reduce((a, b) => a + b, 0);
+    this.requestUpdate();
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("click", this.handleOutsideClick, true);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("click", this.handleOutsideClick, true);
+    super.disconnectedCallback();
+  }
+  private handleOutsideClick = (event: MouseEvent) => {
+    if (
+      this.showSettingsMenu &&
+      this.settingsContainer &&
+      !this.settingsContainer.contains(event.target as Node)
+    ) {
+      this.showSettingsMenu = false;
+    }
+  };
+
+  private onExitButtonClick() {
+    const isAlive = this.game.myPlayer()?.isAlive();
+    if (isAlive) {
+      const isConfirmed = confirm("Are you sure you want to exit the game?");
+      if (!isConfirmed) return;
+    }
+    // redirect to the home page
+    window.location.href = "/";
+  }
+
+  private onPauseButtonClick() {
+    this.isPaused = !this.isPaused;
+    this.eventBus.emit(new PauseGameEvent(this.isPaused));
+  }
+
+  private onTerrainButtonClick() {
+    this.alternateView = !this.alternateView;
+    this.eventBus.emit(new AlternateViewEvent(this.alternateView));
+    this.requestUpdate();
+  }
+
+  private onToggleEmojisButtonClick() {
+    this._userSettings.toggleEmojis();
+    this.requestUpdate();
+  }
+
+  private onToggleSpecialEffectsButtonClick() {
+    this._userSettings.toggleFxLayer();
+    this.requestUpdate();
+  }
+
+  private onToggleDarkModeButtonClick() {
+    this._userSettings.toggleDarkMode();
+    this.requestUpdate();
+    this.eventBus.emit(new RefreshGraphicsEvent());
+  }
+
+  private onToggleRandomNameModeButtonClick() {
+    this._userSettings.toggleRandomName();
+  }
+
+  private onToggleFocusLockedButtonClick() {
+    this._userSettings.toggleFocusLocked();
+    this.requestUpdate();
+  }
+
+  private onToggleLeftClickOpensMenu() {
+    this._userSettings.toggleLeftClickOpenMenu();
+  }
+
+  private toggleSettingsMenu() {
+    this.showSettingsMenu = !this.showSettingsMenu;
+  }
+
+  private updatePopulationIncrease() {
+    const player = this.game?.myPlayer();
+    if (player === null) return;
+    const popIncreaseRate = player.population() - this._population;
+    if (this.game.ticks() % 5 === 0) {
+      this._popRateIsIncreasing =
+        popIncreaseRate >= this._lastPopulationIncreaseRate;
+      this._lastPopulationIncreaseRate = popIncreaseRate;
+    }
+  }
+
+  render() {
+    const myPlayer = this.game?.myPlayer();
+
+    const popRate = myPlayer
+      ? this.game.config().populationIncreaseRate(myPlayer) * 10
+      : 0;
+    const maxPop = myPlayer ? this.game.config().maxPopulation(myPlayer) : 0;
+    const goldPerSecond = myPlayer
+      ? this.game.config().goldAdditionRate(myPlayer) * 10n
+      : 0n;
+
+    return html`
+      <div
+        class="fixed top-0 min-h-[50px] z-[1100] flex flex-wrap bg-slate-800/40 backdrop-blur-sm shadow-xs pr-0.5 text-white text-xs left-0 right-0 grid-cols-4 pb-1 md:text-base"
+      >
+        <div
+          class="flex flex-1 basis-full justify-between items-center gap-1 w-full"
+        >
+          ${myPlayer?.isAlive() && !this.game.inSpawnPhase()
+            ? html`
+                <div
+                  class="overflow-x-auto hide-scrollbar flex-1 max-w-[85vw] border-r border-slate-400 md:border-0"
+                >
+                  <div
+                    class="grid gap-1 grid-cols-[80px_100px_80px_minmax(80px,auto)] w-max md:gap-2 md:grid-cols-[90px_120px_90px_minmax(100px,auto)]"
+                  >
+                    <div
+                      class="flex flex-wrap gap-1 flex-col bg-slate-800/20 border border-slate-400 p-0.5 lg:p-2"
+                    >
+                      <div class="flex gap-2 items-center justify-between">
+                        <img
+                          src=${goldCoinIcon}
+                          alt="gold"
+                          width="20"
+                          height="20"
+                          style="vertical-align: middle;"
+                        />
+                        +${renderNumber(goldPerSecond)}
+                      </div>
+                      <div>${renderNumber(myPlayer.gold())}</div>
+                    </div>
+                    <div
+                      class="flex flex-wrap gap-1 flex-col bg-slate-800/20 border border-slate-400 p-0.5 lg:p-2"
+                    >
+                      <div class="flex gap-2 items-center justify-between">
+                        <population-solid-icon></population-solid-icon>
+                        +${renderTroops(popRate)}
+                      </div>
+                      <div>
+                        ${renderTroops(myPlayer.population())} /
+                        ${renderTroops(maxPop)}
+                      </div>
+                    </div>
+                    <div
+                      class="flex bg-slate-800/20 border border-slate-400 p-0.5 lg:p-2"
+                    >
+                      <div class="flex flex-col flex-grow gap-1 w-full ">
+                        <div class="flex gap-1">
+                          <img
+                            src=${troopIcon}
+                            alt="troops"
+                            width="20"
+                            height="20"
+                            style="vertical-align: middle;"
+                          />
+                          ${renderTroops(this._troops)}
+                        </div>
+                        <div class="flex gap-1">
+                          <img
+                            src=${workerIcon}
+                            alt="gold"
+                            width="20"
+                            height="20"
+                            style="vertical-align: middle;"
+                          />
+                          ${renderTroops(this._workers)}
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1 bg-slate-800/20 border border-slate-400 p-0.5 lg:p-2"
+                    >
+                      <div class="flex items-center gap-1">
+                        <img
+                          src=${cityIcon}
+                          alt="gold"
+                          width="20"
+                          height="20"
+                          style="vertical-align: middle;"
+                        />
+                        ${renderTroops(this._cities)}
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <img
+                          src=${portIcon}
+                          alt="gold"
+                          width="20"
+                          height="20"
+                          style="vertical-align: middle;"
+                        />
+                        ${renderTroops(this._port)}
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <img
+                          src=${defensePostIcon}
+                          alt="gold"
+                          width="20"
+                          height="20"
+                          style="vertical-align: middle;"
+                        />
+                        ${renderTroops(this._defensePost)}
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <img
+                          src=${missileSiloIcon}
+                          alt="gold"
+                          width="20"
+                          height="20"
+                          style="vertical-align: middle;"
+                        />
+                        ${renderTroops(this._missileSilo)}
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <img
+                          src=${samLauncherIcon}
+                          alt="gold"
+                          width="20"
+                          height="20"
+                          style="vertical-align: middle;"
+                        />
+                        ${renderTroops(this._samLauncher)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `
+            : html`<div></div>`}
+          <div class="flex gap-1">
+            <div class="relative settings-container">
+              <img
+                class="cursor-pointer bg-slate-800/20 border border-slate-400 p-0.5"
+                src=${settingsIcon}
+                alt="settings"
+                width="28"
+                height="28"
+                style="vertical-align: middle;"
+                @click=${this.toggleSettingsMenu}
+              />
+              ${this.showSettingsMenu
+                ? html`
+                    <div
+                      class="absolute right-0 mt-1.5 bg-slate-700 border border-slate-500 rounded shadow-lg z-[1100] w-max min-w-[10rem] whitespace-nowrap"
+                    >
+                      <button
+                        class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
+                        @click="${this.onPauseButtonClick}"
+                      >
+                        <img
+                          src=${this.isPaused ? playIcon : pauseIcon}
+                          alt="gold"
+                          width="20"
+                          height="20"
+                        />
+                        ${this.isPaused ? "Resume game" : "Pause game"}
+                      </button>
+                      <button
+                        class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
+                        @click="${this.onTerrainButtonClick}"
+                      >
+                        <img
+                          src=${treeIcon}
+                          alt="treeIcon"
+                          width="20"
+                          height="20"
+                        />
+                        Toggle Terrain ${this.alternateView ? "On" : "Off"}
+                      </button>
+                      <button
+                        class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
+                        @click="${this.onToggleEmojisButtonClick}"
+                      >
+                        <img
+                          src=${emojiIcon}
+                          alt="emojiIcon"
+                          width="20"
+                          height="20"
+                        />
+                        ${translateText("user_setting.emojis_label")}
+                        ${this._userSettings.emojis() ? "On" : "Off"}
+                      </button>
+                      <button
+                        class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
+                        @click="${this.onToggleDarkModeButtonClick}"
+                      >
+                        <img
+                          src=${darkModeIcon}
+                          alt="darkModeIcon"
+                          width="20"
+                          height="20"
+                        />
+                        ${translateText("user_setting.dark_mode_label")}
+                        ${this._userSettings.darkMode() ? "On" : "Off"}
+                      </button>
+                      <button
+                        class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
+                        @click="${this.onToggleSpecialEffectsButtonClick}"
+                      >
+                        <img
+                          src=${explosionIcon}
+                          alt="onExitButtonClick"
+                          width="20"
+                          height="20"
+                        />
+                        ${translateText("user_setting.special_effects_label")}
+                        ${this._userSettings.fxLayer() ? "On" : "Off"}
+                      </button>
+                      <button
+                        class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
+                        @click="${this.onToggleRandomNameModeButtonClick}"
+                      >
+                        <img
+                          src=${ninjaIcon}
+                          alt="ninjaIcon"
+                          width="20"
+                          height="20"
+                        />
+                        ${translateText("user_setting.anonymous_names_label")}
+                        ${this._userSettings.anonymousNames() ? "On" : "Off"}
+                      </button>
+                      <button
+                        class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
+                        @click="${this.onToggleLeftClickOpensMenu}"
+                      >
+                        <img
+                          src=${mouseIcon}
+                          alt="mouseIcon"
+                          width="20"
+                          height="20"
+                        />
+                        Left click
+                        ${this._userSettings.leftClickOpensMenu()
+                          ? "On"
+                          : "Off"}
+                      </button>
+                      <button
+                        class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
+                        @click="${this.onToggleFocusLockedButtonClick}"
+                      >
+                        <img
+                          src=${focusIcon}
+                          alt="focusIcon"
+                          width="20"
+                          height="20"
+                        />
+                        Focus locked
+                        ${this._userSettings.focusLocked() ? "On" : "Off"}
+                      </button>
+                      <button
+                        class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
+                        @click="${this.onExitButtonClick}"
+                      >
+                        <img
+                          src=${exitIcon}
+                          alt="exitIcon"
+                          width="20"
+                          height="20"
+                        />
+                        Exit game
+                      </button>
+                    </div>
+                  `
+                : null}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+}

@@ -12,6 +12,8 @@ import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
+import { GameRightSidebar } from "./layers/GameRightSidebar";
+import { GameTopBar } from "./layers/GameTopBar";
 import { GutterAdModal } from "./layers/GutterAdModal";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
@@ -20,7 +22,6 @@ import { LeftInGameAd } from "./layers/LeftInGameAd";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
-import { OptionsMenu } from "./layers/OptionsMenu";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { ReplayPanel } from "./layers/ReplayPanel";
@@ -29,7 +30,6 @@ import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
-import { TopBar } from "./layers/TopBar";
 import { UILayer } from "./layers/UILayer";
 import { UnitInfoModal } from "./layers/UnitInfoModal";
 import { UnitLayer } from "./layers/UnitLayer";
@@ -130,25 +130,27 @@ export function createRenderer(
   winModel.eventBus = eventBus;
   winModel.game = game;
 
-  const optionsMenu = document.querySelector("options-menu") as OptionsMenu;
-  if (!(optionsMenu instanceof OptionsMenu)) {
-    console.error("options menu not found");
-  }
-  optionsMenu.eventBus = eventBus;
-  optionsMenu.game = game;
-
   const replayPanel = document.querySelector("replay-panel") as ReplayPanel;
   if (!(replayPanel instanceof ReplayPanel)) {
-    console.error("ReplayPanel element not found in the DOM");
+    console.error("replay panel not found");
   }
   replayPanel.eventBus = eventBus;
   replayPanel.game = game;
 
-  const topBar = document.querySelector("top-bar") as TopBar;
-  if (!(topBar instanceof TopBar)) {
+  const gameRightSidebar = document.querySelector(
+    "game-right-sidebar",
+  ) as GameRightSidebar;
+  if (!(gameRightSidebar instanceof GameRightSidebar)) {
+    console.error("Game Right bar not found");
+  }
+  gameRightSidebar.game = game;
+
+  const gameTopBar = document.querySelector("game-top-bar") as GameTopBar;
+  if (!(gameTopBar instanceof GameTopBar)) {
     console.error("top bar not found");
   }
-  topBar.game = game;
+  gameTopBar.game = game;
+  gameTopBar.eventBus = eventBus;
 
   const playerPanel = document.querySelector("player-panel") as PlayerPanel;
   if (!(playerPanel instanceof PlayerPanel)) {
@@ -238,13 +240,12 @@ export function createRenderer(
     new SpawnTimer(game, transformHandler),
     leaderboard,
     gameLeftSidebar,
+    gameTopBar,
+    gameRightSidebar,
     controlPanel,
     playerInfo,
     winModel,
-    optionsMenu,
-    replayPanel,
     teamStats,
-    topBar,
     playerPanel,
     headsUpMessage,
     unitInfoModal,

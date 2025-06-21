@@ -128,7 +128,6 @@ export class MenuEventManager {
   }
 
   onPointerUp(event: MouseUpEvent) {
-    this.playerInfoOverlay.hide();
     this.hideEverything();
   }
 

@@ -6,7 +6,7 @@ import { Gold } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { AttackRatioEvent } from "../../InputHandler";
 import { SendSetTargetTroopRatioEvent } from "../../Transport";
-import { renderNumber, renderTroops } from "../../Utils";
+import { renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
@@ -208,40 +208,11 @@ export class ControlPanel extends LitElement implements Layer {
           : "hidden"}"
         @contextmenu=${(e) => e.preventDefault()}
       >
-        <div class="hidden lg:block bg-black/30 text-white mb-4 p-2 rounded">
-          <div class="flex justify-between mb-1">
-            <span class="font-bold"
-              >${translateText("control_panel.pop")}:</span
-            >
-            <span translate="no"
-              >${renderTroops(this._population)} /
-              ${renderTroops(this._maxPopulation)}
-              <span
-                class="${this._popRateIsIncreasing
-                  ? "text-green-500"
-                  : "text-yellow-500"}"
-                translate="no"
-                >(+${renderTroops(this.popRate)})</span
-              ></span
-            >
-          </div>
-          <div class="flex justify-between">
-            <span class="font-bold"
-              >${translateText("control_panel.gold")}:</span
-            >
-            <span translate="no"
-              >${renderNumber(this._gold)}
-              (+${renderNumber(this._goldPerSecond)})</span
-            >
-          </div>
-        </div>
-
         <div class="relative mb-4 lg:mb-4">
           <label class="block text-white mb-1" translate="no"
-            >${translateText("control_panel.troops")}:
-            <span translate="no">${renderTroops(this._troops)}</span> |
-            ${translateText("control_panel.workers")}:
-            <span translate="no">${renderTroops(this._workers)}</span></label
+            >${translateText("control_panel.troops")}/${translateText(
+              "control_panel.workers",
+            )}</label
           >
           <div class="relative h-8">
             <!-- Background track -->
