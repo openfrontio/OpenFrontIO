@@ -28,6 +28,7 @@ import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
+import { TerritoryInfoLayer } from "./layers/TerritoryInfoLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { TopBar } from "./layers/TopBar";
 import { UILayer } from "./layers/UILayer";
@@ -215,11 +216,12 @@ export function createRenderer(
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler),
+    new TerritoryInfoLayer(game, eventBus, transformHandler),
     structureLayer,
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, transformHandler),
-    new NameLayer(game, transformHandler),
+    new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
     chatDisplay,
     buildMenu,
