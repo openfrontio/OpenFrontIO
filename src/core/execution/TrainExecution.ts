@@ -127,7 +127,7 @@ export class TrainExecution implements Execution {
 
   private deleteTrain() {
     this.active = false;
-    if (this.train !== null && this.train.isActive()) {
+    if (this.train?.isActive()) {
       this.train.delete(false);
     }
     for (const car of this.cars) {

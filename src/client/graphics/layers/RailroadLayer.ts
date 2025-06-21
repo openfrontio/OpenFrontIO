@@ -155,7 +155,6 @@ export class RailroadLayer implements Layer {
     this.paintRailRects(x, y, railRoad.railType);
   }
 
-  // Drawing a corner rail
   private paintRailRects(x: number, y: number, direction: RailType) {
     const railRects = getRailroadRects(direction);
     for (const [dx, dy, w, h] of railRects) {
