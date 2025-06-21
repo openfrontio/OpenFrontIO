@@ -325,6 +325,7 @@ export function startWorker() {
             return;
           }
 
+          // Verify token signature
           const result = await verifyClientToken(clientMsg.token, config);
           if (result === false) {
             log.warn("Failed to verify token");
@@ -350,14 +351,21 @@ export function startWorker() {
             flares = result.player.flares;
           }
 
+          // Check if the flag is allowed
+          if (clientMsg.flag !== undefined) {
+            // TODO: Implement custom flag validation
+          }
+
+          // Check if the pattern is allowed
           if (clientMsg.pattern !== undefined) {
-            const patternCheck = privilegeChecker.isPatternAllowed(
+            const allowed = privilegeChecker.isPatternAllowed(
               clientMsg.pattern,
               roles,
               flares,
             );
-            if (patternCheck !== true) {
-              log.warn(`pattern ${patternCheck}: ${clientMsg.pattern}`);
+            if (allowed !== true) {
+              log.warn(`Pattern ${allowed}: ${clientMsg.pattern}`);
+              ws.close(1002, `Pattern ${allowed}`);
               return;
             }
           }
