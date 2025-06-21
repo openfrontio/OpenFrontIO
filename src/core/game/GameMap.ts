@@ -420,7 +420,7 @@ export function isometricDistFN(
   } else {
     return (gm: GameMap, n: TileRef) => {
       const rootX = gm.x(root) - 0.5;
-      const rootY = gm.y(root) - 0.5 + 4; // Y offset by +8
+      const rootY = gm.y(root) - 0.5;
 
       return isInIsometricTile(
         { x: rootX, y: rootY },

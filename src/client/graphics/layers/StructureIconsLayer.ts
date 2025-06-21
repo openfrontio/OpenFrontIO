@@ -5,8 +5,8 @@ import { Layer } from "./Layer";
 import anchorIcon from "../../../../resources/images/AnchorIcon.png";
 import cityIcon from "../../../../resources/images/CityIcon.png";
 import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
+import SAMMissileIcon from "../../../../resources/images/SamLauncherUnit.png";
 import shieldIcon from "../../../../resources/images/ShieldIcon.png";
-import SAMMissileIcon from "../../../../resources/images/SwordIconWhite.png";
 import { Cell, PlayerID, UnitType } from "../../../core/game/Game";
 import { GameView, UnitView } from "../../../core/game/GameView";
 
@@ -21,12 +21,11 @@ class StructureRenderInfo {
   ) {}
 }
 
-const ICON_SIZE = 22;
+const ICON_SIZE = 24;
 
 export class StructureIconsLayer implements Layer {
   private canvas: HTMLCanvasElement;
-  private nodeCache: Map<{ owner: string; type: UnitType }, HTMLCanvasElement> =
-    new Map();
+  private nodeCache: Map<string, HTMLCanvasElement> = new Map();
   private context: CanvasRenderingContext2D;
   private theme: Theme;
   private renders: StructureRenderInfo[] = [];
@@ -78,7 +77,13 @@ export class StructureIconsLayer implements Layer {
   }
 
   init() {
+    window.addEventListener("resize", () => this.resizeCanvas());
     this.redraw();
+  }
+
+  resizeCanvas() {
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
   }
 
   public tick() {
@@ -105,18 +110,14 @@ export class StructureIconsLayer implements Layer {
   redraw() {
     console.log("structureIcons layer redrawing");
     this.canvas = document.createElement("canvas");
+    this.resizeCanvas();
     const context = this.canvas.getContext("2d", { alpha: true });
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
-    // Enable smooth scaling
-    this.context.imageSmoothingEnabled = false;
-
-    this.canvas.width = this.game.width();
-    this.canvas.height = this.game.height();
   }
 
   public renderLayer(mainContext: CanvasRenderingContext2D) {
-    if (this.transformHandler.scale > 2) {
+    if (this.transformHandler.scale > 2.8) {
       this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
       return;
     }
@@ -134,13 +135,12 @@ export class StructureIconsLayer implements Layer {
     // draw after
     for (const render of this.renders) {
       if (render.shouldRedraw) {
-        const canvasRect = this.transformHandler.boundingRect();
         if (
           !render.location ||
-          render.location.x < canvasRect.left ||
-          render.location.y < canvasRect.top ||
-          render.location.x > canvasRect.right ||
-          render.location.y > canvasRect.bottom
+          render.location.x < 0 ||
+          render.location.y < 0 ||
+          render.location.x > innerWidth ||
+          render.location.y > innerHeight
         ) {
           continue;
         }
@@ -151,24 +151,29 @@ export class StructureIconsLayer implements Layer {
   }
 
   private createUnitElement(unit: UnitView): HTMLCanvasElement {
-    if (this.nodeCache.has({ owner: unit.owner().id(), type: unit.type() })) {
-      return this.nodeCache
-        .get({ owner: unit.owner().id(), type: unit.type() })
-        ?.cloneNode() as HTMLCanvasElement;
+    const cacheKey = `${unit.owner().id()}-${unit.type()}`;
+    if (this.nodeCache.has(cacheKey)) {
+      const structureCanvas = this.nodeCache
+        .get(cacheKey)!
+        .cloneNode(true) as HTMLCanvasElement;
+      structureCanvas
+        .getContext("2d")!
+        .drawImage(this.nodeCache.get(cacheKey)!, 0, 0);
+      return structureCanvas;
     }
     const structureCanvas = document.createElement("canvas");
     structureCanvas.width = ICON_SIZE;
     structureCanvas.height = ICON_SIZE;
     const context = structureCanvas.getContext("2d")!;
-    context.imageSmoothingEnabled = false;
     context.fillStyle = this.theme
       .territoryColor(unit.owner())
       .lighten(0.1)
       .toRgbString();
-    context.strokeStyle = this.theme
+    const borderColor = this.theme
       .borderColor(unit.owner())
       .darken(0.1)
       .toRgbString();
+    context.strokeStyle = borderColor;
     context.beginPath();
     context.arc(
       ICON_SIZE / 2,
@@ -182,15 +187,28 @@ export class StructureIconsLayer implements Layer {
     context.stroke();
     const structureInfo = this.structures.get(unit.type());
     if (!structureInfo?.image) {
-      console.warn(`SVG not loaded for unit type: ${unit.type()}`);
+      console.warn(`Image not loaded for unit type: ${unit.type()}`);
       return structureCanvas;
     }
-    context.drawImage(structureInfo.image, ICON_SIZE / 3, ICON_SIZE / 3);
-    this.nodeCache.set(
-      { owner: unit.owner().id(), type: unit.type() },
-      structureCanvas,
+    context.drawImage(
+      this.getImageColored(structureInfo.image, borderColor),
+      4,
+      4,
     );
+    this.nodeCache.set(cacheKey, structureCanvas);
     return structureCanvas;
+  }
+
+  getImageColored(image: HTMLImageElement, color: string): HTMLCanvasElement {
+    const imageCanvas = document.createElement("canvas");
+    imageCanvas.width = image.width;
+    imageCanvas.height = image.height;
+    const ctx = imageCanvas.getContext("2d")!;
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, imageCanvas.width, imageCanvas.height);
+    ctx.globalCompositeOperation = "destination-in";
+    ctx.drawImage(image, 0, 0);
+    return imageCanvas;
   }
 
   clearStructure(render: StructureRenderInfo) {
@@ -198,8 +216,8 @@ export class StructureIconsLayer implements Layer {
       this.context.clearRect(
         render.oldLocation.x - 1 - render.imageData.width / 2,
         render.oldLocation.y - 1 - render.imageData.height / 2,
-        ICON_SIZE + 1,
-        ICON_SIZE + 1,
+        render.imageData.width + 2,
+        render.imageData.height + 2,
       );
     }
   }
@@ -257,7 +275,7 @@ export class StructureIconsLayer implements Layer {
     if (render.location) {
       const scaleCapped = Math.min(1, this.scale * 1.3);
       this.context.save();
-      this.context.scale(scaleCapped, scaleCapped);
+      scaleCapped !== 1 && this.context.scale(scaleCapped, scaleCapped);
       this.context.drawImage(
         render.imageData,
         Math.round(

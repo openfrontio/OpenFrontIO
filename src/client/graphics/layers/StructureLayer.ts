@@ -7,7 +7,7 @@ import { Layer } from "./Layer";
 import { UnitInfoModal } from "./UnitInfoModal";
 
 import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
-import shieldIcon from "../../../../resources/images/buildings/fortAlt2.png";
+import shieldIcon from "../../../../resources/images/buildings/fortAlt3.png";
 import anchorIcon from "../../../../resources/images/buildings/port1.png";
 import missileSiloIcon from "../../../../resources/images/buildings/silo1.png";
 import SAMMissileIcon from "../../../../resources/images/buildings/silo4.png";
@@ -229,7 +229,7 @@ export class StructureLayer implements Layer {
     const startX = this.game.x(unit.tile()) - (scaledWidth >> 1);
     const startY = this.game.y(unit.tile()) - (scaledHeight >> 1);
 
-    this.renderIcon(icon, startX, startY, scaledWidth, scaledHeight, unit);
+    this.renderIcon(icon, startX, startY - 4, scaledWidth, scaledHeight, unit);
   }
 
   private renderIcon(
