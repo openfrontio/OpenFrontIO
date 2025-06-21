@@ -301,6 +301,21 @@ export class DefaultConfig implements Config {
   tradeShipSpawnRate(numberOfPorts: number): number {
     return Math.min(50, Math.round(10 * Math.pow(numberOfPorts, 0.6)));
   }
+  trainSpawnRate(numberOfStations: number): number {
+    return Math.round(50 * Math.pow(numberOfStations, 0.8));
+  }
+  trainGold(): Gold {
+    return BigInt(10_000);
+  }
+  trainStationMinRange(): number {
+    return 15;
+  }
+  trainStationMaxRange(): number {
+    return 80;
+  }
+  railroadMaxSize(): number {
+    return 100;
+  }
 
   unitInfo(type: UnitType): UnitInfo {
     switch (type) {
@@ -450,10 +465,32 @@ export class DefaultConfig implements Config {
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
         };
+      case UnitType.Factory:
+        return {
+          cost: (p: Player) =>
+            p.type() === PlayerType.Human && this.infiniteGold()
+              ? 0n
+              : BigInt(
+                  Math.min(
+                    1_000_000,
+                    Math.pow(
+                      2,
+                      p.unitsIncludingConstruction(UnitType.Factory).length,
+                    ) * 125_000,
+                  ),
+                ),
+          territoryBound: true,
+          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+        };
       case UnitType.Construction:
         return {
           cost: () => 0n,
           territoryBound: true,
+        };
+      case UnitType.Train:
+        return {
+          cost: () => 0n,
+          territoryBound: false,
         };
       default:
         assertNever(type);

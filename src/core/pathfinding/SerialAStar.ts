@@ -1,51 +1,46 @@
 import { PriorityQueue } from "@datastructures-js/priority-queue";
-import { GameMap, TileRef } from "../game/GameMap";
 import { AStar, PathFindResultType } from "./AStar";
 
-export class SerialAStar implements AStar {
+/**
+ * Implement this interface with your graph to find paths with A*
+ */
+export interface GraphAdapter<NodeType> {
+  neighbors(node: NodeType): NodeType[];
+  cost(node: NodeType): number;
+  position(node: NodeType): { x: number; y: number };
+  isTraversable(from: NodeType, to: NodeType): boolean;
+}
+
+export class SerialAStar<NodeType> implements AStar<NodeType> {
   private fwdOpenSet: PriorityQueue<{
-    tile: TileRef;
+    tile: NodeType;
     fScore: number;
   }>;
-
   private bwdOpenSet: PriorityQueue<{
-    tile: TileRef;
+    tile: NodeType;
     fScore: number;
   }>;
 
-  private fwdCameFrom: Map<TileRef, TileRef>;
-  private bwdCameFrom: Map<TileRef, TileRef>;
-  private fwdGScore: Map<TileRef, number>;
-  private bwdGScore: Map<TileRef, number>;
-  private meetingPoint: TileRef | null;
-  public completed: boolean;
-  private sources: TileRef[];
-  private closestSource: TileRef;
+  private fwdCameFrom = new Map<NodeType, NodeType>();
+  private bwdCameFrom = new Map<NodeType, NodeType>();
+  private fwdGScore = new Map<NodeType, number>();
+  private bwdGScore = new Map<NodeType, number>();
+
+  private meetingPoint: NodeType | null = null;
+  public completed = false;
+  private sources: NodeType[];
+  private closestSource: NodeType;
 
   constructor(
-    src: TileRef | TileRef[],
-    private dst: TileRef,
+    src: NodeType | NodeType[],
+    private dst: NodeType,
     private iterations: number,
     private maxTries: number,
-    private gameMap: GameMap,
+    private graph: GraphAdapter<NodeType>,
+    private directionChangePenalty: number = 0,
   ) {
-    this.fwdOpenSet = new PriorityQueue<{
-      tile: TileRef;
-      fScore: number;
-    }>((a, b) => a.fScore - b.fScore);
-
-    this.bwdOpenSet = new PriorityQueue<{
-      tile: TileRef;
-      fScore: number;
-    }>((a, b) => a.fScore - b.fScore);
-
-    this.fwdCameFrom = new Map<TileRef, TileRef>();
-    this.bwdCameFrom = new Map<TileRef, TileRef>();
-    this.fwdGScore = new Map<TileRef, number>();
-    this.bwdGScore = new Map<TileRef, number>();
-    this.meetingPoint = null;
-    this.completed = false;
-
+    this.fwdOpenSet = new PriorityQueue((a, b) => a.fScore - b.fScore);
+    this.bwdOpenSet = new PriorityQueue((a, b) => a.fScore - b.fScore);
     this.sources = Array.isArray(src) ? src : [src];
     this.closestSource = this.findClosestSource(dst);
 
@@ -66,7 +61,7 @@ export class SerialAStar implements AStar {
     });
   }
 
-  private findClosestSource(tile: TileRef): TileRef {
+  private findClosestSource(tile: NodeType): NodeType {
     return this.sources.reduce((closest, source) =>
       this.heuristic(tile, source) < this.heuristic(tile, closest)
         ? source
@@ -98,8 +93,7 @@ export class SerialAStar implements AStar {
         this.completed = true;
         return PathFindResultType.Completed;
       }
-
-      this.expandTileRef(fwdCurrent, true);
+      this.expandNode(fwdCurrent, true);
 
       // Process backward search
       const bwdCurrent = this.bwdOpenSet.dequeue()!.tile;
@@ -110,8 +104,7 @@ export class SerialAStar implements AStar {
         this.completed = true;
         return PathFindResultType.Completed;
       }
-
-      this.expandTileRef(bwdCurrent, false);
+      this.expandNode(bwdCurrent, false);
     }
 
     return this.completed
@@ -119,11 +112,11 @@ export class SerialAStar implements AStar {
       : PathFindResultType.PathNotFound;
   }
 
-  private expandTileRef(current: TileRef, isForward: boolean) {
-    for (const neighbor of this.gameMap.neighbors(current)) {
+  private expandNode(current: NodeType, isForward: boolean) {
+    for (const neighbor of this.graph.neighbors(current)) {
       if (
         neighbor !== (isForward ? this.dst : this.closestSource) &&
-        !this.gameMap.isWater(neighbor)
+        !this.graph.isTraversable(current, neighbor)
       )
         continue;
 
@@ -131,38 +124,51 @@ export class SerialAStar implements AStar {
       const openSet = isForward ? this.fwdOpenSet : this.bwdOpenSet;
       const cameFrom = isForward ? this.fwdCameFrom : this.bwdCameFrom;
 
-      const tentativeGScore =
-        gScore.get(current)! + this.gameMap.cost(neighbor);
+      const tentativeGScore = gScore.get(current)! + this.graph.cost(neighbor);
+      let penalty = 0;
+      // With a direction change penalty, the path will get as straight as possible
+      if (this.directionChangePenalty > 0) {
+        const prev = cameFrom.get(current);
+        if (prev) {
+          const prevDir = this.getDirection(prev, current);
+          const newDir = this.getDirection(current, neighbor);
+          if (prevDir !== newDir) {
+            penalty = this.directionChangePenalty;
+          }
+        }
+      }
 
-      if (!gScore.has(neighbor) || tentativeGScore < gScore.get(neighbor)!) {
+      const totalG = tentativeGScore + penalty;
+      if (!gScore.has(neighbor) || totalG < gScore.get(neighbor)!) {
         cameFrom.set(neighbor, current);
-        gScore.set(neighbor, tentativeGScore);
+        gScore.set(neighbor, totalG);
         const fScore =
-          tentativeGScore +
+          totalG +
           this.heuristic(neighbor, isForward ? this.dst : this.closestSource);
         openSet.enqueue({ tile: neighbor, fScore: fScore });
       }
     }
   }
 
-  private heuristic(a: TileRef, b: TileRef): number {
-    try {
-      return (
-        1.1 *
-        (Math.abs(this.gameMap.x(a) - this.gameMap.x(b)) +
-          Math.abs(this.gameMap.y(a) - this.gameMap.y(b)))
-      );
-    } catch {
-      console.log("uh oh");
-      return 0;
-    }
+  private heuristic(a: NodeType, b: NodeType): number {
+    const posA = this.graph.position(a);
+    const posB = this.graph.position(b);
+    return 1.1 * (Math.abs(posA.x - posB.x) + Math.abs(posA.y - posB.y));
   }
 
-  public reconstructPath(): TileRef[] {
+  private getDirection(from: NodeType, to: NodeType): string {
+    const fromPos = this.graph.position(from);
+    const toPos = this.graph.position(to);
+    const dx = toPos.x - fromPos.x;
+    const dy = toPos.y - fromPos.y;
+    return `${Math.sign(dx)},${Math.sign(dy)}`;
+  }
+
+  public reconstructPath(): NodeType[] {
     if (!this.meetingPoint) return [];
 
     // Reconstruct path from start to meeting point
-    const fwdPath: TileRef[] = [this.meetingPoint];
+    const fwdPath: NodeType[] = [this.meetingPoint];
     let current = this.meetingPoint;
 
     while (this.fwdCameFrom.has(current)) {

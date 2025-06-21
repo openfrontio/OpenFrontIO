@@ -1,8 +1,9 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import { Gold } from "../../../core/game/Game";
+import { Gold, UnitType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { AttackRatioEvent } from "../../InputHandler";
 import { SendSetTargetTroopRatioEvent } from "../../Transport";
@@ -51,6 +52,9 @@ export class ControlPanel extends LitElement implements Layer {
 
   @state()
   private _goldPerSecond: Gold;
+
+  @state()
+  private _factories: number;
 
   private _lastPopulationIncreaseRate: number;
 
@@ -129,6 +133,7 @@ export class ControlPanel extends LitElement implements Layer {
 
     this.currentTroopRatio = player.troops() / player.population();
     this.requestUpdate();
+    this._factories = player.units(UnitType.Factory).length;
   }
 
   onAttackRatioChange(newRatio: number) {
@@ -231,7 +236,13 @@ export class ControlPanel extends LitElement implements Layer {
             >
             <span translate="no"
               >${renderNumber(this._gold)}
-              (+${renderNumber(this._goldPerSecond)})</span
+              (+${renderNumber(this._goldPerSecond)}
+              ${renderNumber(this._factories)}
+              <img
+                src="${factoryIcon}"
+                style="display: inline"
+                width="15"
+              />)</span
             >
           </div>
         </div>

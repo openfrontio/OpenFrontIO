@@ -188,7 +188,7 @@ export class WarshipExecution implements Execution {
           this.warship.move(this.warship.tile());
           return;
         case PathFindResultType.NextTile:
-          this.warship.move(result.tile);
+          this.warship.move(result.node);
           break;
         case PathFindResultType.Pending:
           this.warship.touch();
@@ -215,10 +215,10 @@ export class WarshipExecution implements Execution {
     switch (result.type) {
       case PathFindResultType.Completed:
         this.warship.setTargetTile(undefined);
-        this.warship.move(result.tile);
+        this.warship.move(result.node);
         break;
       case PathFindResultType.NextTile:
-        this.warship.move(result.tile);
+        this.warship.move(result.node);
         break;
       case PathFindResultType.Pending:
         this.warship.touch();

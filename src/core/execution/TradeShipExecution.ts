@@ -106,10 +106,10 @@ export class TradeShipExecution implements Execution {
         break;
       case PathFindResultType.NextTile:
         // Update safeFromPirates status
-        if (this.mg.isWater(result.tile) && this.mg.isShoreline(result.tile)) {
+        if (this.mg.isWater(result.node) && this.mg.isShoreline(result.node)) {
           this.tradeShip.setSafeFromPirates();
         }
-        this.tradeShip.move(result.tile);
+        this.tradeShip.move(result.node);
         this.tilesTraveled++;
         break;
       case PathFindResultType.PathNotFound:

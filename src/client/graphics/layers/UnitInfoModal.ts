@@ -4,7 +4,10 @@ import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { GameView, UnitView } from "../../../core/game/GameView";
-import { SendUpgradeStructureIntentEvent } from "../../Transport";
+import {
+  SendCreateTrainStationIntentEvent,
+  SendUpgradeStructureIntentEvent,
+} from "../../Transport";
 import { Layer } from "./Layer";
 import { StructureLayer } from "./StructureLayer";
 
@@ -227,6 +230,25 @@ export class UnitInfoModal extends LitElement implements Layer {
               : "none"};"
           >
             ${translateText("unit_info_modal.upgrade")}
+          </button>
+          <button
+            @click=${() => {
+              if (this.unit) {
+                this.eventBus.emit(
+                  new SendCreateTrainStationIntentEvent(this.unit.id()),
+                );
+                this.onCloseStructureModal();
+                if (this.structureLayer) {
+                  this.structureLayer.unSelectStructureUnit();
+                }
+              }
+            }}
+            class="upgrade-button"
+            title="${translateText("unit_info_modal.create_station")}"
+            style="width: 100px; height: 32px;
+              display: ${this.unit.hasTrainStation() ? "none" : "block"};"
+          >
+            ${translateText("unit_info_modal.create_station")}
           </button>
           <button
             @click=${() => {
