@@ -153,13 +153,12 @@ export class StructureIconsLayer implements Layer {
   private createUnitElement(unit: UnitView): HTMLCanvasElement {
     const cacheKey = `${unit.owner().id()}-${unit.type()}`;
     if (this.nodeCache.has(cacheKey)) {
-      const structureCanvas = this.nodeCache
-        .get(cacheKey)!
-        .cloneNode(true) as HTMLCanvasElement;
-      structureCanvas
-        .getContext("2d")!
-        .drawImage(this.nodeCache.get(cacheKey)!, 0, 0);
-      return structureCanvas;
+      const cachedCanvas = this.nodeCache.get(cacheKey)!;
+      const clonedCanvas = document.createElement("canvas");
+      clonedCanvas.width = cachedCanvas.width;
+      clonedCanvas.height = cachedCanvas.height;
+      clonedCanvas.getContext("2d")!.drawImage(cachedCanvas, 0, 0);
+      return clonedCanvas;
     }
     const structureCanvas = document.createElement("canvas");
     structureCanvas.width = ICON_SIZE;
