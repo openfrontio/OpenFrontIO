@@ -12,9 +12,7 @@ export class PrivilegeChecker {
     roles: readonly string[] | undefined,
     flares: readonly string[] | undefined,
   ): true | "restricted" | "unlisted" | "invalid" {
-    const roleList = roles ?? [];
-    const flareList = flares ?? [];
-
+    // Look for the pattern in the cosmetics.json config
     let found: [string, PatternEntry] | undefined;
     for (const key in this.cosmetics.pattern) {
       const entry = this.cosmetics.pattern[key];
@@ -26,14 +24,17 @@ export class PrivilegeChecker {
 
     if (!found) {
       try {
+        // Ensure that the pattern will not throw for clients
         new PatternDecoder(base64);
       } catch (e) {
+        // Pattern is invalid
         return "invalid";
       }
-      if (!flareList.includes("pattern:*")) {
-        return "unlisted";
+      // Pattern is unlisted
+      if (flares !== undefined && flares.includes("pattern:*")) {
+        return true;
       }
-      return true;
+      return "unlisted";
     }
 
     const [key, entry] = found;
@@ -45,17 +46,20 @@ export class PrivilegeChecker {
 
     for (const groupName of allowedGroups) {
       const groupRoles = this.cosmetics.role_group?.[groupName] || [];
-      if (roleList.some((role) => groupRoles.includes(role))) {
+      if (
+        roles !== undefined &&
+        roles.some((role) => groupRoles.includes(role))
+      ) {
         return true;
       }
     }
 
     if (
-      !flareList.includes(`pattern:${key}`) &&
-      !flareList.includes("pattern:*")
-    ) {
-      return "restricted";
-    }
-    return true;
+      flares !== undefined &&
+      (flares.includes(`pattern:${key}`) || flares.includes("pattern:*"))
+    )
+      return true;
+
+    return "restricted";
   }
 }
