@@ -3,7 +3,6 @@ import { EventBus } from "../core/EventBus";
 import {
   AllPlayersStats,
   ClientMessage,
-  ClientMessageSchema,
   ClientSendWinnerMessage,
   GameRecordSchema,
   Intent,
@@ -91,22 +90,7 @@ export class LocalServer {
     this.paused = false;
   }
 
-  onMessage(message: string) {
-    let parsed;
-    try {
-      parsed = JSON.parse(message);
-    } catch (e) {
-      console.error("Failed to parse client message:", e);
-      return;
-    }
-    const result = ClientMessageSchema.safeParse(parsed);
-    if (!result.success) {
-      const error = z.prettifyError(result.error);
-      console.error("Error parsing client message", error);
-      return;
-    }
-
-    const clientMsg: ClientMessage = result.data;
+  onMessage(clientMsg: ClientMessage) {
     if (clientMsg.type === "intent") {
       if (this.lobbyConfig.gameRecord) {
         // If we are replaying a game, we don't want to process intents
