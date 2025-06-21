@@ -20,6 +20,7 @@ describe("Stats", () => {
     stats = new StatsImpl();
     game = await setup("half_land_half_ocean", {}, [
       new PlayerInfo(
+        undefined,
         "us",
         "boat dude",
         PlayerType.Human,
@@ -27,6 +28,7 @@ describe("Stats", () => {
         "player_1_id",
       ),
       new PlayerInfo(
+        undefined,
         "us",
         "boat dude",
         PlayerType.Human,

@@ -17,6 +17,7 @@ import "./components/baseComponents/Modal";
 import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
+import { TerritoryPatternStorage } from "./Cosmetic";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
@@ -40,6 +41,9 @@ export class SinglePlayerModal extends LitElement {
   @state() private teamCount: number | typeof Duos = 2;
 
   @state() private disabledUnits: UnitType[] = [];
+
+  private territoryPatternStorage: TerritoryPatternStorage =
+    new TerritoryPatternStorage();
 
   render() {
     return html`
@@ -410,6 +414,8 @@ export class SinglePlayerModal extends LitElement {
                   flagInput.getCurrentFlag() === "xx"
                     ? ""
                     : flagInput.getCurrentFlag(),
+                pattern:
+                  this.territoryPatternStorage.getSelectedPatternBase64(),
               },
             ],
             config: {

@@ -5,6 +5,7 @@ import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import { joinLobby } from "./ClientGameRunner";
+import { TerritoryPatternStorage } from "./Cosmetic";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
@@ -21,6 +22,7 @@ import { NewsModal } from "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
@@ -73,6 +75,9 @@ class Client {
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
+
+  private territoryPatternStorage: TerritoryPatternStorage =
+    new TerritoryPatternStorage();
 
   constructor() {}
 
@@ -178,6 +183,19 @@ class Client {
       hlpModal.open();
     });
 
+    const territoryModal = document.querySelector(
+      "territory-patterns-modal",
+    ) as TerritoryPatternsModal;
+    const tpButton = document.getElementById(
+      "territory-patterns-input-preview-button",
+    );
+    territoryModal instanceof TerritoryPatternsModal;
+    if (tpButton === null)
+      throw new Error("territory-patterns-input-preview-button");
+    tpButton.addEventListener("click", () => {
+      territoryModal.open();
+    });
+
     if (isLoggedIn() === false) {
       // Not logged in
       loginDiscordButton.disable = false;
@@ -212,6 +230,7 @@ class Client {
         loginDiscordButton.translationKey = "main.logged_in";
         loginDiscordButton.hidden = true;
         const { user, player } = userMeResponse;
+        territoryModal.onUserMe(userMeResponse);
       });
     }
 
@@ -316,6 +335,7 @@ class Client {
       {
         gameID: lobby.gameID,
         serverConfig: config,
+        pattern: this.territoryPatternStorage.getSelectedPatternBase64(),
         flag:
           this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
             ? ""
