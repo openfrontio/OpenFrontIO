@@ -302,6 +302,20 @@ export class DefaultConfig implements Config {
     return Math.min(50, Math.round(10 * Math.pow(numberOfPorts, 0.6)));
   }
 
+  cargoPlaneGold(distance: number): Gold {
+    const tradeShipGold = this.tradeShipGold(distance);
+
+    // We use base gold of a trade ship and only return 75% of that
+    return BigInt(Math.floor(Number(tradeShipGold) * 0.75));
+  }
+  cargoPlaneSpawnRate(numberOfAirports: number): number {
+    return Math.min(50, Math.round(10 * Math.pow(numberOfAirports, 0.6)));
+  }
+
+  cargoPlaneMaxNumber(): number {
+    return 3;
+  }
+
   unitInfo(type: UnitType): UnitInfo {
     switch (type) {
       case UnitType.TransportShip:
@@ -454,6 +468,29 @@ export class DefaultConfig implements Config {
         return {
           cost: () => 0n,
           territoryBound: true,
+        };
+      case UnitType.Airport:
+        return {
+          cost: (p: Player) =>
+            p.type() === PlayerType.Human && this.infiniteGold()
+              ? 0n
+              : BigInt(
+                  Math.min(
+                    1_500_000,
+                    Math.pow(
+                      2,
+                      p.unitsIncludingConstruction(UnitType.Airport).length,
+                    ) * 250_000,
+                  ),
+                ),
+          territoryBound: true,
+          constructionDuration: this.instantBuild() ? 0 : 2 * 20,
+          upgradable: true,
+        };
+      case UnitType.CargoPlane:
+        return {
+          cost: () => 0n,
+          territoryBound: false,
         };
       default:
         assertNever(type);
@@ -641,6 +678,10 @@ export class DefaultConfig implements Config {
 
   proximityBonusPortsNb(totalPorts: number) {
     return within(totalPorts / 3, 4, totalPorts);
+  }
+
+  proximityBonusAirportsNumber(totalAirports: number) {
+    return within(totalAirports / 3, 4, totalAirports);
   }
 
   attackAmount(attacker: Player, defender: Player | TerraNullius) {
