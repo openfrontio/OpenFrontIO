@@ -42,6 +42,9 @@ export class SinglePlayerModal extends LitElement {
 
   @state() private disabledUnits: UnitType[] = [];
 
+  private territoryPatternStorage: TerritoryPatternStorage =
+    new TerritoryPatternStorage();
+
   render() {
     return html`
       <o-modal title=${translateText("single_modal.title")}>
@@ -411,7 +414,8 @@ export class SinglePlayerModal extends LitElement {
                   flagInput.getCurrentFlag() === "xx"
                     ? ""
                     : flagInput.getCurrentFlag(),
-                pattern: TerritoryPatternStorage.getSelectedPatternBase64(),
+                pattern:
+                  this.territoryPatternStorage.getSelectedPatternBase64(),
               },
             ],
             config: {

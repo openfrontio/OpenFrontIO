@@ -17,8 +17,7 @@ export class TerritoryPatternsModal extends LitElement {
 
   private previewButton: HTMLElement | null = null;
 
-  @state() private selectedPattern =
-    TerritoryPatternStorage.getSelectedPattern();
+  @state() private selectedPattern: string | undefined = undefined;
 
   @state() private buttonWidth: number = 100;
 
@@ -35,8 +34,11 @@ export class TerritoryPatternsModal extends LitElement {
 
   private resizeObserver: ResizeObserver;
 
-  constructor() {
+  private patternStorage: TerritoryPatternStorage;
+
+  constructor(patternStorage?: TerritoryPatternStorage) {
     super();
+    this.patternStorage = patternStorage ?? new TerritoryPatternStorage();
     this.resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         if (entry.target.classList.contains("preview-container")) {
@@ -44,6 +46,7 @@ export class TerritoryPatternsModal extends LitElement {
         }
       }
     });
+    this.selectedPattern = this.patternStorage.getSelectedPattern();
   }
 
   connectedCallback() {
@@ -275,14 +278,14 @@ export class TerritoryPatternsModal extends LitElement {
 
   private selectPattern(patternKey: string | null) {
     this.selectedPattern = patternKey ?? undefined;
-    TerritoryPatternStorage.setSelectedPattern(patternKey ?? "");
+    this.patternStorage.setSelectedPattern(patternKey ?? "");
     if (patternKey) {
       const base64 = territoryPatterns.pattern[patternKey];
       if (base64) {
-        TerritoryPatternStorage.setSelectedPatternBase64(base64.pattern);
+        this.patternStorage.setSelectedPatternBase64(base64.pattern);
       }
     } else {
-      TerritoryPatternStorage.setSelectedPatternBase64("");
+      this.patternStorage.setSelectedPatternBase64("");
     }
     this.updatePreview();
     this.close();

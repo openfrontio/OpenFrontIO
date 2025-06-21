@@ -78,6 +78,9 @@ class Client {
   private userSettings: UserSettings = new UserSettings();
   private gutterAdModal: GutterAdModal;
 
+  private territoryPatternStorage: TerritoryPatternStorage =
+    new TerritoryPatternStorage();
+
   constructor() {}
 
   initialize(): void {
@@ -338,7 +341,7 @@ class Client {
       {
         gameID: lobby.gameID,
         serverConfig: config,
-        pattern: TerritoryPatternStorage.getSelectedPatternBase64(),
+        pattern: this.territoryPatternStorage.getSelectedPatternBase64(),
         flag:
           this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
             ? ""
