@@ -230,7 +230,7 @@
     "special_effects_desc": "Baskuli specialajn efektojn. Malaktivigu por plibonigi funkciadon",
     "anonymous_names_label": "🥷 Maskitaj Nomoj",
     "anonymous_names_desc": "Kaŝi verajn uzantnomojn kun hazardaj sur via ekrano.",
-    "left_click_label": "🖱️Maldekstra alklako por malfermi menuon",
+    "left_click_label": "Maldekstra alklako por malfermi menuon",
     "left_click_desc": "Kiam aktiviga, maldekstra alklako malfermas menuon kaj glava atakbutono. Kiam malaktiviga, maldekstra alklako atakas direkten.",
     "attack_ratio_label": "⚔️ Atakkvociento",
     "attack_ratio_desc": "Kian procenton de viaj trupoj sendi en atako (1–100%)",

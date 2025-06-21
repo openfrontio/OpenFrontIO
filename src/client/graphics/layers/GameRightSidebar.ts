@@ -24,7 +24,7 @@ export class GameRightSidebar extends LitElement implements Layer {
 
   init() {
     this._isSinglePlayer =
-      this.game?.config().gameConfig().gameType === GameType.Singleplayer;
+      this.game?.config()?.gameConfig()?.gameType === GameType.Singleplayer;
     this._isVisible = true;
     this.requestUpdate();
   }
@@ -44,7 +44,7 @@ export class GameRightSidebar extends LitElement implements Layer {
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <div class="flex justify-end items-center gap-2 text-white mb-2">
-          ${this._isSinglePlayer || this.game?.config().isReplay()
+          ${this._isSinglePlayer || this.game?.config()?.isReplay()
             ? html`
                 <div
                   class="w-6 h-6 cursor-pointer"

@@ -57,9 +57,8 @@ export class SpawnTimer implements Layer {
 
     const barHeight = 10;
     const barWidth = this.transformHandler.width();
-
-    // Determine y-offset based on screen size
-    const yOffset = window.innerWidth >= 768 ? 70 : 50;
+    const screenW = window.innerWidth;
+    const yOffset: number = screenW > 1024 ? 80 : 50;
 
     let x = 0;
     let filledRatio = 0;

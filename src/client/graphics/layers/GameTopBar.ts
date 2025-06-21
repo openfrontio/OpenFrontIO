@@ -71,8 +71,10 @@ export class GameTopBar extends LitElement implements Layer {
 
   tick() {
     this.updatePopulationIncrease();
-    this._troops = this.game?.myPlayer()!.troops();
-    this._workers = this.game?.myPlayer()!.workers();
+    const player = this.game?.myPlayer();
+    if (!player) return;
+    this._troops = player.troops();
+    this._workers = player.workers();
     this._cities = this.game
       ?.myPlayer()!
       .units(UnitType.City)
@@ -198,7 +200,7 @@ export class GameTopBar extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed top-0 min-h-[50px] z-[1100] flex flex-wrap bg-slate-800/40 backdrop-blur-sm shadow-xs pr-0.5 text-white text-xs left-0 right-0 grid-cols-4 pb-1 md:text-base"
+        class="fixed top-0 min-h-[50px] lg:min-h-[80px] z-[1100] flex flex-wrap bg-slate-800/40 backdrop-blur-sm shadow-xs pr-0.5 text-white text-xs left-0 right-0 grid-cols-4 pb-1 md:text-base"
       >
         <div
           class="flex flex-1 basis-full justify-between items-center gap-1 w-full"
@@ -231,7 +233,14 @@ export class GameTopBar extends LitElement implements Layer {
                     >
                       <div class="flex gap-2 items-center justify-between">
                         <population-solid-icon></population-solid-icon>
-                        +${renderTroops(popRate)}
+                        <span
+                          class="${this._popRateIsIncreasing
+                            ? "text-green-500"
+                            : "text-yellow-500"}"
+                          translate="no"
+                        >
+                          +${renderTroops(popRate)}
+                        </span>
                       </div>
                       <div>
                         ${renderTroops(myPlayer.population())} /
