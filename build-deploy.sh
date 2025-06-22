@@ -79,7 +79,7 @@ DEPLOY_ARGS="$ENV $HOST $VERSION_TAG $SUBDOMAIN $ENABLE_BASIC_AUTH"
 
 # Step 1: Run build.sh
 echo "Step 1: Running build.sh..."
-./build.sh $BUILD_ARGS
+./build.sh "$ENV" "$VERSION_TAG"
 
 if [ $? -ne 0 ]; then
     echo "❌ Build failed. Stopping deployment."
