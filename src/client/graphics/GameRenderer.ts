@@ -11,6 +11,8 @@ import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { FxLayer } from "./layers/FxLayer";
+import { GameLeftSidebar } from "./layers/GameLeftSidebar";
+import { GutterAdModal } from "./layers/GutterAdModal";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
@@ -20,8 +22,8 @@ import { NameLayer } from "./layers/NameLayer";
 import { OptionsMenu } from "./layers/OptionsMenu";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
-import { PlayerTeamLabel } from "./layers/PlayerTeamLabel";
 import { ReplayPanel } from "./layers/ReplayPanel";
+import { SpawnAd } from "./layers/SpawnAd";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
@@ -71,6 +73,14 @@ export function createRenderer(
   }
   leaderboard.eventBus = eventBus;
   leaderboard.game = game;
+
+  const gameLeftSidebar = document.querySelector(
+    "game-left-sidebar",
+  ) as GameLeftSidebar;
+  if (!gameLeftSidebar || !(gameLeftSidebar instanceof GameLeftSidebar)) {
+    console.error("GameLeftSidebar element not found in the DOM");
+  }
+  gameLeftSidebar.game = game;
 
   const teamStats = document.querySelector("team-stats") as TeamStats;
   if (!emojiTable || !(teamStats instanceof TeamStats)) {
@@ -164,14 +174,6 @@ export function createRenderer(
   }
   multiTabModal.game = game;
 
-  const playerTeamLabel = document.querySelector(
-    "player-team-label",
-  ) as PlayerTeamLabel;
-  if (!(playerTeamLabel instanceof PlayerTeamLabel)) {
-    console.error("player team label not found");
-  }
-  playerTeamLabel.game = game;
-
   const headsUpMessage = document.querySelector(
     "heads-up-message",
   ) as HeadsUpMessage;
@@ -196,6 +198,20 @@ export function createRenderer(
   unitInfoModal.structureLayer = structureLayer;
   // unitInfoModal.eventBus = eventBus;
 
+  const spawnAd = document.querySelector("spawn-ad") as SpawnAd;
+  if (!(spawnAd instanceof SpawnAd)) {
+    console.error("spawn ad not found");
+  }
+  spawnAd.g = game;
+
+  const gutterAdModal = document.querySelector(
+    "gutter-ad-modal",
+  ) as GutterAdModal;
+  if (!(gutterAdModal instanceof GutterAdModal)) {
+    console.error("gutter ad modal not found");
+  }
+  gutterAdModal.eventBus = eventBus;
+
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler),
@@ -218,6 +234,7 @@ export function createRenderer(
     ),
     new SpawnTimer(game, transformHandler),
     leaderboard,
+    gameLeftSidebar,
     controlPanel,
     playerInfo,
     winModel,
@@ -226,10 +243,11 @@ export function createRenderer(
     teamStats,
     topBar,
     playerPanel,
-    playerTeamLabel,
     headsUpMessage,
     unitInfoModal,
     multiTabModal,
+    spawnAd,
+    gutterAdModal,
   ];
 
   return new GameRenderer(

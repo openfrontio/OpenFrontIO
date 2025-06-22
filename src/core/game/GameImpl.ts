@@ -630,7 +630,7 @@ export class GameImpl implements Game {
   displayChat(
     message: string,
     category: string,
-    variables: Record<string, string> = {},
+    target: PlayerID | undefined,
     playerID: PlayerID | null,
     isFrom: boolean,
     recipient: string,
@@ -643,7 +643,7 @@ export class GameImpl implements Game {
       type: GameUpdateType.DisplayChatEvent,
       key: message,
       category: category,
-      variables: variables,
+      target: target,
       playerID: id,
       isFrom,
       recipient: recipient,
@@ -687,6 +687,9 @@ export class GameImpl implements Game {
 
   ref(x: number, y: number): TileRef {
     return this._map.ref(x, y);
+  }
+  isValidRef(ref: TileRef): boolean {
+    return this._map.isValidRef(ref);
   }
   x(ref: TileRef): number {
     return this._map.x(ref);

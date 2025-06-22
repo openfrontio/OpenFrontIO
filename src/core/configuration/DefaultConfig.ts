@@ -1,5 +1,5 @@
 import { JWK } from "jose";
-import { z } from "zod";
+import { z } from "zod/v4";
 import {
   Difficulty,
   Duos,
@@ -61,7 +61,7 @@ const numPlayersConfig = {
   [GameMapType.BlackSea]: [40, 50, 30],
   [GameMapType.Pangaea]: [40, 20, 30],
   [GameMapType.World]: [150, 80, 50],
-  [GameMapType.WorldMapGiant]: [150, 100, 60],
+  [GameMapType.GiantWorldMap]: [150, 100, 60],
   [GameMapType.Halkidiki]: [50, 40, 30],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
@@ -98,8 +98,13 @@ export abstract class DefaultServerConfig implements ServerConfig {
     const jwksUrl = this.jwtIssuer() + "/.well-known/jwks.json";
     console.log(`Fetching JWKS from ${jwksUrl}`);
     const response = await fetch(jwksUrl);
-    const jwks = JwksSchema.parse(await response.json());
-    this.publicKey = jwks.keys[0];
+    const result = JwksSchema.safeParse(await response.json());
+    if (!result.success) {
+      const error = z.prettifyError(result.error);
+      console.error("Error parsing JWKS", error);
+      throw new Error("Invalid JWKS");
+    }
+    this.publicKey = result.data.keys[0];
     return this.publicKey;
   }
   otelEnabled(): boolean {
@@ -538,12 +543,11 @@ export class DefaultConfig implements Config {
         tileToConquer,
         gm.config().defensePostRange(),
         UnitType.DefensePost,
+        ({ unit }) => unit.owner() === defender,
       )) {
-        if (dp.unit.owner() === defender) {
-          mag *= this.defensePostDefenseBonus();
-          speed *= this.defensePostDefenseBonus();
-          break;
-        }
+        mag *= this.defensePostDefenseBonus();
+        speed *= this.defensePostDefenseBonus();
+        break;
       }
     }
 

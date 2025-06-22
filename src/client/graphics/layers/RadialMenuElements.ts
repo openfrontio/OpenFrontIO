@@ -115,7 +115,10 @@ const infoChatElement: MenuElement = {
 const allyTargetElement: MenuElement = {
   id: "ally_target",
   name: "target",
-  disabled: () => false,
+  disabled: (params: MenuElementParams): boolean => {
+    if (params.selected === null) return true;
+    return !params.playerActions.interaction?.canTarget;
+  },
   color: COLORS.target,
   icon: targetIcon,
   action: (params: MenuElementParams) => {
@@ -290,6 +293,11 @@ export const infoMenuElement: MenuElement = {
 
   subMenu: (params: MenuElementParams) => {
     if (!params.selected || params.game.inSpawnPhase()) return [];
+
+    if (params.selected === params.myPlayer) {
+      return [infoPlayerElement, infoEmojiElement];
+    }
+
     const elements: MenuElement[] = [
       infoPlayerElement,
       infoEmojiElement,
@@ -322,6 +330,8 @@ export const buildMenuElement: MenuElement = {
   color: COLORS.build,
 
   subMenu: (params: MenuElementParams) => {
+    if (params === undefined) return [];
+
     const unitTypes: Set<UnitType> = new Set<UnitType>();
     if (params.selected === params.myPlayer) {
       unitTypes.add(UnitType.City);
@@ -391,16 +401,11 @@ export const boatMenuElement: MenuElement = {
       params.tile,
     );
 
-    let spawnTile: Cell | null = null;
-    if (spawn !== false) {
-      spawnTile = new Cell(params.game.x(spawn), params.game.y(spawn));
-    }
-
     params.playerActionHandler.handleBoatAttack(
       params.myPlayer,
       params.selected?.id() || null,
-      new Cell(params.game.x(params.tile), params.game.y(params.tile)),
-      spawnTile,
+      params.tile,
+      spawn !== false ? spawn : null,
     );
 
     params.closeMenu();

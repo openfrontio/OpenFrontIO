@@ -1,3 +1,4 @@
+import { z } from "zod/v4";
 import { EventBus, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
@@ -9,6 +10,7 @@ import {
   Tick,
   UnitType,
 } from "../core/game/Game";
+import { TileRef } from "../core/game/GameMap";
 import { PlayerView } from "../core/game/GameView";
 import {
   AllPlayersStats,
@@ -74,9 +76,9 @@ export class SendAttackIntentEvent implements GameEvent {
 export class SendBoatAttackIntentEvent implements GameEvent {
   constructor(
     public readonly targetID: PlayerID | null,
-    public readonly dst: Cell,
+    public readonly dst: TileRef,
     public readonly troops: number,
-    public readonly src: Cell | null = null,
+    public readonly src: TileRef | null = null,
   ) {}
 }
 
@@ -116,7 +118,7 @@ export class SendQuickChatEvent implements GameEvent {
   constructor(
     public readonly recipient: PlayerView,
     public readonly quickChatKey: string,
-    public readonly variables: { [key: string]: string },
+    public readonly target?: PlayerID,
   ) {}
 }
 
@@ -309,14 +311,20 @@ export class Transport {
       onconnect();
     };
     this.socket.onmessage = (event: MessageEvent) => {
+      let parsed;
       try {
-        const serverMsg = ServerMessageSchema.parse(JSON.parse(event.data));
-        this.onmessage(serverMsg);
-      } catch (error) {
-        console.error(
-          `Failed to process server message ${event.data}: ${error}, ${error.stack}`,
-        );
+        parsed = JSON.parse(event.data);
+      } catch (e) {
+        console.error("Failed to parse server message:", e, event.data);
+        return;
       }
+      const result = ServerMessageSchema.safeParse(parsed);
+      if (!result.success) {
+        const error = z.prettifyError(result.error);
+        console.error("Error parsing server message", error);
+        return;
+      }
+      this.onmessage(result.data);
     };
     this.socket.onerror = (err) => {
       console.error("Socket encountered error: ", err, "Closing socket");
@@ -327,8 +335,8 @@ export class Transport {
       console.log(
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
-      if (event.code !== 1000) {
-        console.log(`reconnecting`);
+      if (event.code !== 1000 && event.code !== 1002) {
+        console.log(`recieved error code ${event.code}, reconnecting`);
         this.reconnect();
       }
     };
@@ -430,10 +438,8 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       targetID: event.targetID,
       troops: event.troops,
-      dstX: event.dst.x,
-      dstY: event.dst.y,
-      srcX: event.src?.x ?? null,
-      srcY: event.src?.y ?? null,
+      dst: event.dst,
+      src: event.src,
     });
   }
 
@@ -488,7 +494,7 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
       quickChatKey: event.quickChatKey,
-      variables: event.variables,
+      target: event.target,
     });
   }
 

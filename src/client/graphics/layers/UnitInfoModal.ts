@@ -53,9 +53,12 @@ export class UnitInfoModal extends LitElement implements Layer {
     const targetRef = this.game.ref(tileX, tileY);
 
     const allUnitTypes = Object.values(UnitType);
-    const matchingUnits = this.game
-      .nearbyUnits(targetRef, 10, allUnitTypes)
-      .filter(({ unit }) => unit.isActive());
+    const matchingUnits = this.game.nearbyUnits(
+      targetRef,
+      10,
+      allUnitTypes,
+      ({ unit }) => unit.isActive(),
+    );
 
     if (matchingUnits.length > 0) {
       matchingUnits.sort((a, b) => a.distSquared - b.distSquared);
