@@ -224,7 +224,7 @@ export class UnitLayer implements Layer {
 
   private clearUnitsCells(unitViews: UnitView[]) {
     unitViews
-      .filter((unitView) => isSpriteReady(unitView.type()))
+      .filter((unitView) => isSpriteReady(unitView))
       .forEach((unitView) => {
         const sprite = getColoredSprite(unitView, this.theme);
         const clearsize = sprite.width + 1;
@@ -278,6 +278,9 @@ export class UnitLayer implements Layer {
         break;
       case UnitType.TradeShip:
         this.handleTradeShipEvent(unit);
+        break;
+      case UnitType.Train:
+        this.handleTrainEvent(unit);
         break;
       case UnitType.MIRVWarhead:
         this.handleMIRVWarhead(unit);
@@ -434,6 +437,10 @@ export class UnitLayer implements Layer {
   }
 
   private handleTradeShipEvent(unit: UnitView) {
+    this.drawSprite(unit);
+  }
+
+  private handleTrainEvent(unit: UnitView) {
     this.drawSprite(unit);
   }
 
