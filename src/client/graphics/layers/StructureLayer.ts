@@ -7,6 +7,7 @@ import { Layer } from "./Layer";
 import { UnitInfoModal } from "./UnitInfoModal";
 
 import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
+import factoryIcon from "../../../../resources/images/buildings/factoryAlt1.png";
 import shieldIcon from "../../../../resources/images/buildings/fortAlt3.png";
 import anchorIcon from "../../../../resources/images/buildings/port1.png";
 import missileSiloIcon from "../../../../resources/images/buildings/silo1.png";
@@ -51,6 +52,19 @@ export class StructureLayer implements Layer {
       icon: cityIcon,
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
+      borderType: UnitBorderType.Round,
+    },
+    [UnitType.Factory]: {
+      icon: factoryIcon,
+      borderRadius: 8.525,
+      territoryRadius: 6.525,
+      borderType: UnitBorderType.Round,
+    },
+    [UnitType.Factory]: {
+      icon: factoryIcon,
+      borderRadius: 8.525,
+      territoryRadius: 6.525,
+      borderType: UnitBorderType.Round,
     },
     [UnitType.MissileSilo]: {
       icon: missileSiloIcon,

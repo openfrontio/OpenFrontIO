@@ -416,6 +416,7 @@
     "cooldown": "Cooldown",
     "type": "Type",
     "upgrade": "Upgrade",
+    "create_station": "Create Station",
     "level": "Level"
   },
   "relation": {
