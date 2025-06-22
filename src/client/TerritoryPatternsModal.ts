@@ -210,11 +210,12 @@ export class TerritoryPatternsModal extends LitElement {
   private renderPatternGrid(): TemplateResult {
     const patterns = territoryPatterns.pattern ?? {};
 
-    const filteredPatterns = this.showChocoPattern
-      ? patterns
-      : Object.fromEntries(
-          Object.entries(patterns).filter(([key]) => key !== "choco"),
-        );
+    const buttons: TemplateResult[] = [];
+    for (const key in patterns) {
+      if (!this.showChocoPattern && key === "choco") continue;
+      const result = this.renderPatternButton(key, patterns[key]);
+      buttons.push(result);
+    }
 
     return html`
       <div
@@ -248,9 +249,7 @@ export class TerritoryPatternsModal extends LitElement {
             ${this.renderBlankPreview(this.buttonWidth, this.buttonWidth)}
           </div>
         </button>
-        ${Object.entries(filteredPatterns).map(([key, pattern]) =>
-          this.renderPatternButton(key, pattern),
-        )}
+        ${buttons}
       </div>
     `;
   }
