@@ -1,12 +1,12 @@
 import { Colord } from "colord";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import leaderboardRegularIcon from "../../../../resources/images/LeaderboardIconRegularWhite.svg";
+import leaderboardSolidIcon from "../../../../resources/images/LeaderboardIconSolidWhite.svg";
+import teamRegularIcon from "../../../../resources/images/TeamIconRegularWhite.svg";
+import teamSolidIcon from "../../../../resources/images/TeamIconSolidWhite.svg";
 import { GameMode } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import "../icons/LeaderboardRegularIcon";
-import "../icons/LeaderboardSolidIcon";
-import "../icons/TeamRegularIcon";
-import "../icons/TeamSolidIcon";
 import { Layer } from "./Layer";
 
 @customElement("game-left-sidebar")
@@ -88,9 +88,14 @@ export class GameLeftSidebar extends LitElement implements Layer {
           : null}
         <div class="flex items-center gap-2 space-x-2 text-white mb-2">
           <div class="w-6 h-6 cursor-pointer" @click=${this.toggleLeaderboard}>
-            ${this.isLeaderboardShow
-              ? html` <leaderboard-solid-icon></leaderboard-solid-icon>`
-              : html` <leaderboard-regular-icon></leaderboard-regular-icon>`}
+            <img
+              src=${this.isLeaderboardShow
+                ? leaderboardSolidIcon
+                : leaderboardRegularIcon}
+              alt="treeIcon"
+              width="20"
+              height="20"
+            />
           </div>
           ${this.isTeamGame
             ? html`
@@ -98,9 +103,14 @@ export class GameLeftSidebar extends LitElement implements Layer {
                   class="w-6 h-6 cursor-pointer"
                   @click=${this.toggleTeamLeaderboard}
                 >
-                  ${this.isTeamLeaderboardShow
-                    ? html` <team-solid-icon></team-solid-icon>`
-                    : html` <team-regular-icon></team-regular-icon>`}
+                  <img
+                    src=${this.isTeamLeaderboardShow
+                      ? teamSolidIcon
+                      : teamRegularIcon}
+                    alt="treeIcon"
+                    width="20"
+                    height="20"
+                  />
                 </div>
               `
             : null}

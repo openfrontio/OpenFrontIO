@@ -9,6 +9,7 @@ import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
 import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
 import mouseIcon from "../../../../resources/images/MouseIconWhite.svg";
 import ninjaIcon from "../../../../resources/images/NinjaIconWhite.svg";
+import populationIcon from "../../../../resources/images/PopulationIconSolidWhite.svg";
 import portIcon from "../../../../resources/images/PortIcon.svg";
 import samLauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
@@ -23,7 +24,6 @@ import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
-import "../icons/PopulationSolidIcon";
 import { Layer } from "./Layer";
 
 @customElement("game-top-bar")
@@ -213,7 +213,13 @@ export class GameTopBar extends LitElement implements Layer {
                       class="flex flex-wrap gap-1 flex-col bg-slate-800/20 border border-slate-400 p-0.5 lg:p-2"
                     >
                       <div class="flex gap-2 items-center justify-between">
-                        <population-solid-icon></population-solid-icon>
+                        <img
+                          src=${populationIcon}
+                          alt="population"
+                          width="20"
+                          height="20"
+                          style="vertical-align: middle;"
+                        />
                         <span
                           class="${this._popRateIsIncreasing
                             ? "text-green-500"
