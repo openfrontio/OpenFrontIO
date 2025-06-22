@@ -241,13 +241,16 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
     setTimeout(() => {
       this.connectionCheckInterval = setInterval(
-        () => this.onConnectionCheck(),
+        this.onConnectionCheck.bind(this),
         1000,
       );
     }, 20000);
-    this.eventBus.on(MouseUpEvent, (e) => this.inputEvent(e));
-    this.eventBus.on(MouseMoveEvent, (e) => this.onMouseMove(e));
-    this.eventBus.on(DoBoatAttackEvent, (e) => this.doBoatAttackUnderCursor());
+    this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
+    this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
+    this.eventBus.on(
+      DoBoatAttackEvent,
+      this.doBoatAttackUnderCursor.bind(this),
+    );
 
     this.renderer.initialize();
     this.input.initialize();
@@ -417,20 +420,10 @@ export class ClientGameRunner {
   }
 
   private doBoatAttackUnderCursor(): void {
-    if (!this.isActive || !this.lastMousePosition) {
+    const tile = this.getTileUnderCursor();
+    if (tile === null) {
       return;
     }
-    if (this.gameView.inSpawnPhase()) {
-      return;
-    }
-    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
-      this.lastMousePosition.x,
-      this.lastMousePosition.y,
-    );
-    if (!this.gameView.isValidCoord(cell.x, cell.y)) {
-      return;
-    }
-    const tile = this.gameView.ref(cell.x, cell.y);
 
     if (this.myPlayer === null) {
       const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
@@ -443,6 +436,23 @@ export class ClientGameRunner {
         this.sendBoatAttackIntent(tile);
       }
     });
+  }
+
+  private getTileUnderCursor(): TileRef | null {
+    if (!this.isActive || !this.lastMousePosition) {
+      return null;
+    }
+    if (this.gameView.inSpawnPhase()) {
+      return null;
+    }
+    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
+      this.lastMousePosition.x,
+      this.lastMousePosition.y,
+    );
+    if (!this.gameView.isValidCoord(cell.x, cell.y)) {
+      return null;
+    }
+    return this.gameView.ref(cell.x, cell.y);
   }
 
   private canBoatAttack(actions: PlayerActions, tile: TileRef): boolean {
