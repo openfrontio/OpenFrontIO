@@ -13,12 +13,14 @@ import { Theme } from "../../core/configuration/Config";
 import { TrainType, UnitType } from "../../core/game/Game";
 import { UnitView } from "../../core/game/GameView";
 
-// Can't reuse TrainType because loaded is not a type, just an attribute
-enum TrainTypeSprite {
-  Engine = "Engine",
-  Carriage = "Carriage",
-  LoadedCarriage = "LoadedCarriage",
-}
+// Can't reuse TrainType because "loaded" is not a type, just an attribute
+const TrainTypeSprite = {
+  Engine: "Engine",
+  Carriage: "Carriage",
+  LoadedCarriage: "LoadedCarriage",
+} as const;
+
+type TrainTypeSprite = (typeof TrainTypeSprite)[keyof typeof TrainTypeSprite];
 
 const SPRITE_CONFIG: Partial<Record<UnitType | TrainTypeSprite, string>> = {
   [UnitType.TransportShip]: transportShipSprite,

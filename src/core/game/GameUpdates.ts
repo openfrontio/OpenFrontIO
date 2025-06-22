@@ -68,7 +68,7 @@ export interface BonusEventUpdate {
   tile: TileRef;
   gold: number;
   workers: number;
-  soldiers: number;
+  troops: number;
 }
 
 export enum RailType {

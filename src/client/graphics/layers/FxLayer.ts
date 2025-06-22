@@ -65,7 +65,7 @@ export class FxLayer implements Layer {
     const x = this.game.x(tile);
     let y = this.game.y(tile);
     const gold = bonus.gold;
-    const soldiers = bonus.soldiers;
+    const troops = bonus.troops;
     const workers = bonus.workers;
 
     if (gold > 0) {
@@ -74,8 +74,8 @@ export class FxLayer implements Layer {
       y += 10; // increase y so the next popup starts bellow
     }
 
-    if (soldiers > 0) {
-      const shortened = shortenNumber(soldiers);
+    if (troops > 0) {
+      const shortened = shortenNumber(troops);
       this.addTextFx(`+ ${shortened} troops`, x, y);
       y += 10;
     }

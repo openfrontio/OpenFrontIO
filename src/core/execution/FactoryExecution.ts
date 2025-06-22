@@ -10,17 +10,19 @@ export class FactoryExecution implements Execution {
     private tile: TileRef,
   ) {}
 
-  init(mg: Game, ticks: number): void {}
+  init(mg: Game, ticks: number): void {
+    const spawnTile = this.player.canBuild(UnitType.Factory, this.tile);
+    if (spawnTile === false) {
+      console.warn("cannot build factory");
+      this.active = false;
+      return;
+    }
+    this.factory = this.player.buildUnit(UnitType.Factory, spawnTile, {});
+  }
 
   tick(ticks: number): void {
     if (this.factory === null) {
-      const spawnTile = this.player.canBuild(UnitType.Factory, this.tile);
-      if (spawnTile === false) {
-        console.warn("cannot build factory");
-        this.active = false;
-        return;
-      }
-      this.factory = this.player.buildUnit(UnitType.Factory, spawnTile, {});
+      throw new Error("Not initialized");
     }
     if (!this.factory.isActive()) {
       this.active = false;

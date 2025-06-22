@@ -27,7 +27,7 @@ class CityStopHandler implements TrainStopHandler {
       tile: station.tile(),
       gold: Number(goldBonus),
       workers: 0,
-      soldiers: 0,
+      troops: 0,
     });
   }
 }
