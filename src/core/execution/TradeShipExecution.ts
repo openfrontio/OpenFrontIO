@@ -46,6 +46,7 @@ export class TradeShipExecution implements Execution {
         targetUnit: this._dstPort,
         lastSetSafeFromPirates: ticks,
       });
+      this.mg.stats().boatSendTrade(this.origOwner, this._dstPort.owner());
     }
 
     if (!this.tradeShip.isActive()) {
