@@ -61,15 +61,15 @@ export class AirportExecution implements Execution {
       return;
     }
 
-    const ports = this.player.airports(this.airport);
+    const airports = this.player.airports(this.airport);
 
-    if (ports.length === 0) {
+    if (airports.length === 0) {
       return;
     }
 
-    const port = this.random.randElement(ports);
+    const airport = this.random.randElement(airports);
     this.mg.addExecution(
-      new CargoPlaneExecution(this.player, this.airport, port),
+      new CargoPlaneExecution(this.player, this.airport, airport),
     );
   }
 

@@ -8,43 +8,39 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PathFinder } from "../pathfinding/PathFinding";
-import { distSortUnit } from "../Util";
+import { StraightPathFinder } from "../pathfinding/PathFinding";
 
 export class CargoPlaneExecution implements Execution {
   private active = true;
   private mg: Game;
   private cargoPlane: Unit | undefined;
-  private wasCaptured = false;
-  private pathFinder: PathFinder;
+  private pathFinder: StraightPathFinder;
   private tilesTraveled = 0;
 
   constructor(
     private origOwner: Player,
-    private srcPort: Unit,
-    private _dstPort: Unit,
+    private sourceAirport: Unit,
+    private destinationAirport: Unit,
   ) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.pathFinder = PathFinder.Mini(mg, 2500);
+    this.pathFinder = new StraightPathFinder(mg);
   }
 
   tick(ticks: number): void {
     if (this.cargoPlane === undefined) {
       const spawn = this.origOwner.canBuild(
         UnitType.CargoPlane,
-        this.srcPort.tile(),
+        this.sourceAirport.tile(),
       );
       if (spawn === false) {
-        console.warn(`cannot build cargo plane`);
+        console.warn(`Cargo plane cannot be built`);
         this.active = false;
         return;
       }
       this.cargoPlane = this.origOwner.buildUnit(UnitType.CargoPlane, spawn, {
-        targetUnit: this._dstPort,
-        lastSetSafeFromPirates: ticks,
+        targetUnit: this.destinationAirport,
       });
     }
 
@@ -53,74 +49,35 @@ export class CargoPlaneExecution implements Execution {
       return;
     }
 
-    if (this.origOwner !== this.cargoPlane.owner()) {
-      // Store as variable in case ship is recaptured by previous owner
-      this.wasCaptured = true;
-    }
-
-    // If a player captures another player's port while trading we should delete
-    // the ship.
-    if (this._dstPort.owner().id() === this.srcPort.owner().id()) {
-      this.cargoPlane.delete(false);
-      this.active = false;
-      return;
-    }
-
     if (
-      !this.wasCaptured &&
-      (!this._dstPort.isActive() ||
-        !this.cargoPlane.owner().canTrade(this._dstPort.owner()))
+      this.destinationAirport.owner().id() === this.sourceAirport.owner().id()
     ) {
       this.cargoPlane.delete(false);
       this.active = false;
       return;
     }
 
-    if (this.wasCaptured) {
-      const airports = this.cargoPlane
-        .owner()
-        .units(UnitType.Airport)
-        .sort(distSortUnit(this.mg, this.cargoPlane));
-
-      if (airports.length === 0) {
-        this.cargoPlane.delete(false);
-        this.active = false;
-        return;
-      } else {
-        this._dstPort = airports[0];
-        this.cargoPlane.setTargetUnit(this._dstPort);
-      }
+    if (
+      !this.destinationAirport.isActive() ||
+      !this.cargoPlane.owner().canTrade(this.destinationAirport.owner())
+    ) {
+      this.cargoPlane.delete(false);
+      this.active = false;
+      return;
     }
 
     const result = this.pathFinder.nextTile(
       this.cargoPlane.tile(),
-      this._dstPort.tile(),
+      this.destinationAirport.tile(),
+      2,
     );
 
-    switch (result.type) {
-      case PathFindResultType.Completed:
-        this.complete();
-        break;
-      case PathFindResultType.Pending:
-        // Fire unit event to rerender.
-        this.cargoPlane.move(this.cargoPlane.tile());
-        break;
-      case PathFindResultType.NextTile:
-        // Update safeFromPirates status
-        // todo: fixme
-        if (this.mg.isWater(result.tile) && this.mg.isShoreline(result.tile)) {
-          this.cargoPlane.setSafeFromPirates();
-        }
-        this.cargoPlane.move(result.tile);
-        this.tilesTraveled++;
-        break;
-      case PathFindResultType.PathNotFound:
-        console.warn("captured cargo plane cannot find route");
-        if (this.cargoPlane.isActive()) {
-          this.cargoPlane.delete(false);
-        }
-        this.active = false;
-        break;
+    if (result === true) {
+      this.complete();
+      return;
+    } else {
+      this.cargoPlane.move(result);
+      this.tilesTraveled++;
     }
   }
 
@@ -129,31 +86,22 @@ export class CargoPlaneExecution implements Execution {
     this.cargoPlane!.delete(false);
     const gold = this.mg.config().cargoPlaneGold(this.tilesTraveled);
 
-    // todo: you cannot capture a cargo plane
-    if (this.wasCaptured) {
-      this.cargoPlane!.owner().addGold(gold);
-      this.mg.displayMessage(
-        `Received ${renderNumber(gold)} gold from cargo plane captured from ${this.origOwner.displayName()}`,
-        MessageType.CAPTURED_ENEMY_UNIT,
-        this.cargoPlane!.owner().id(),
-        gold,
-      );
-    } else {
-      this.srcPort.owner().addGold(gold);
-      this._dstPort.owner().addGold(gold);
-      this.mg.displayMessage(
-        `Received ${renderNumber(gold)} gold from trade using cargo plane with ${this.srcPort.owner().displayName()}`,
-        MessageType.RECEIVED_GOLD_FROM_TRADE,
-        this._dstPort.owner().id(),
-        gold,
-      );
-      this.mg.displayMessage(
-        `Received ${renderNumber(gold)} gold from trade using cargo plane with ${this._dstPort.owner().displayName()}`,
-        MessageType.RECEIVED_GOLD_FROM_TRADE,
-        this.srcPort.owner().id(),
-        gold,
-      );
-    }
+    this.sourceAirport.owner().addGold(gold);
+    this.destinationAirport.owner().addGold(gold);
+
+    this.mg.displayMessage(
+      `Received ${renderNumber(gold)} gold from trade using cargo plane with ${this.sourceAirport.owner().displayName()}`,
+      MessageType.RECEIVED_GOLD_FROM_TRADE,
+      this.destinationAirport.owner().id(),
+      gold,
+    );
+    this.mg.displayMessage(
+      `Received ${renderNumber(gold)} gold from trade using cargo plane with ${this.destinationAirport.owner().displayName()}`,
+      MessageType.RECEIVED_GOLD_FROM_TRADE,
+      this.sourceAirport.owner().id(),
+      gold,
+    );
+
     return;
   }
 
@@ -166,6 +114,6 @@ export class CargoPlaneExecution implements Execution {
   }
 
   dstPort(): TileRef {
-    return this._dstPort.tile();
+    return this.destinationAirport.tile();
   }
 }

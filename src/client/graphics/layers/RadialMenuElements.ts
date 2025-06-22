@@ -337,6 +337,7 @@ export const buildMenuElement: MenuElement = {
       unitTypes.add(UnitType.City);
       unitTypes.add(UnitType.DefensePost);
       unitTypes.add(UnitType.Port);
+      unitTypes.add(UnitType.Airport);
       unitTypes.add(UnitType.MissileSilo);
       unitTypes.add(UnitType.SAMLauncher);
     } else {

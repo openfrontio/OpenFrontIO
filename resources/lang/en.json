@@ -229,7 +229,8 @@
     "sam_launcher": "SAM Launcher",
     "atom_bomb": "Atom Bomb",
     "hydrogen_bomb": "Hydrogen Bomb",
-    "mirv": "MIRV"
+    "mirv": "MIRV",
+    "airport": "Airport"
   },
   "user_setting": {
     "title": "User Settings",
@@ -366,7 +367,8 @@
       "warship": "Captures trade ships, destroys ships and boats",
       "port": "Sends trade ships to generate gold",
       "defense_post": "Increase defenses of nearby borders",
-      "city": "Increase max population"
+      "city": "Increase max population",
+      "airport": "Sends cargo planes to generate gold"
     },
     "not_enough_money": "Not enough money"
   },

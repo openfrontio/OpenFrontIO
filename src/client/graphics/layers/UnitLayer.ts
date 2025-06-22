@@ -279,6 +279,9 @@ export class UnitLayer implements Layer {
       case UnitType.TradeShip:
         this.handleTradeShipEvent(unit);
         break;
+      case UnitType.CargoPlane:
+        this.handleCargoPlaneEvent(unit);
+        break;
       case UnitType.MIRVWarhead:
         this.handleMIRVWarhead(unit);
         break;
@@ -437,6 +440,11 @@ export class UnitLayer implements Layer {
     this.drawSprite(unit);
   }
 
+  private handleCargoPlaneEvent(unit: UnitView) {
+    console.log("Handling cargoPlaneEvent");
+    this.drawSprite(unit);
+  }
+
   private handleBoatEvent(unit: UnitView) {
     const rel = this.relationship(unit);
 
@@ -502,9 +510,13 @@ export class UnitLayer implements Layer {
 
     if (this.alternateView) {
       let rel = this.relationship(unit);
-      const dstPortId = unit.targetUnitId();
-      if (unit.type() === UnitType.TradeShip && dstPortId !== undefined) {
-        const target = this.game.unit(dstPortId)?.owner();
+      const destinationId = unit.targetUnitId();
+      if (
+        (unit.type() === UnitType.TradeShip ||
+          unit.type() === UnitType.CargoPlane) &&
+        destinationId !== undefined
+      ) {
+        const target = this.game.unit(destinationId)?.owner();
         const myPlayer = this.game.myPlayer();
         if (myPlayer !== null && target !== undefined) {
           if (myPlayer === target) {

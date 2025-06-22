@@ -221,7 +221,6 @@ export interface UnitParamsMap {
 
   [UnitType.CargoPlane]: {
     targetUnit: Unit;
-    lastSetSafeFromPirates?: number;
   };
 }
 
