@@ -266,6 +266,20 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             : ""}
         </div>
         <div class="text-sm opacity-80" translate="no">
+          ${translateText("player_info_overlay.oil_wells")}:
+          ${player.units(UnitType.OilWell).length}
+          ${player
+            .units(UnitType.OilWell)
+            .map((unit) => unit.level())
+            .reduce((a, b) => a + b, 0) > 1
+            ? html`(${translateText("player_info_overlay.levels")}:
+              ${player
+                .units(UnitType.OilWell)
+                .map((unit) => unit.level())
+                .reduce((a, b) => a + b, 0)})`
+            : ""}
+        </div>
+        <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.missile_launchers")}:
           ${player.units(UnitType.MissileSilo).length}
           ${player
