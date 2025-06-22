@@ -1,7 +1,7 @@
 import {
   AllPlayers,
+  Cell,
   PlayerActions,
-  TerraNullius,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -29,7 +29,6 @@ import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 export interface MenuElementParams {
   myPlayer: PlayerView;
   selected: PlayerView | null;
-  tileOwner: PlayerView | TerraNullius;
   tile: TileRef;
   playerActions: PlayerActions;
   game: GameView;
@@ -54,6 +53,11 @@ export interface MenuElement {
   disabled: (params: MenuElementParams) => boolean;
   action?: (params: MenuElementParams) => void; // For leaf items that perform actions
   subMenu?: (params: MenuElementParams) => MenuElement[]; // For non-leaf items that open submenus
+}
+
+export interface CenterButtonElement {
+  disabled: (params: MenuElementParams) => boolean;
+  action: (params: MenuElementParams) => void;
 }
 
 export const COLORS = {
@@ -111,7 +115,10 @@ const infoChatElement: MenuElement = {
 const allyTargetElement: MenuElement = {
   id: "ally_target",
   name: "target",
-  disabled: () => false,
+  disabled: (params: MenuElementParams): boolean => {
+    if (params.selected === null) return true;
+    return !params.playerActions.interaction?.canTarget;
+  },
   color: COLORS.target,
   icon: targetIcon,
   action: (params: MenuElementParams) => {
@@ -130,7 +137,7 @@ const allyTradeElement: MenuElement = {
   color: COLORS.trade,
   text: translateText("player_panel.start_trade"),
   action: (params: MenuElementParams) => {
-    params.playerActionHandler.handleEmbargo(params.selected!, "start");
+    params.playerActionHandler.handleEmbargo(params.selected!, "stop");
     params.closeMenu();
   },
 };
@@ -145,7 +152,7 @@ const allyEmbargoElement: MenuElement = {
   color: COLORS.embargo,
   text: translateText("player_panel.stop_trade"),
   action: (params: MenuElementParams) => {
-    params.playerActionHandler.handleEmbargo(params.selected!, "stop");
+    params.playerActionHandler.handleEmbargo(params.selected!, "start");
     params.closeMenu();
   },
 };
@@ -230,9 +237,30 @@ const infoEmojiElement: MenuElement = {
   color: COLORS.infoEmoji,
   icon: emojiIcon,
   subMenu: (params: MenuElementParams) => {
-    const emojiElements: MenuElement[] = [];
+    const emojiElements: MenuElement[] = [
+      {
+        id: "emoji_more",
+        name: "more",
+        disabled: () => false,
+        color: COLORS.infoEmoji,
+        icon: emojiIcon,
+        action: (params: MenuElementParams) => {
+          params.emojiTable.showTable((emoji) => {
+            const targetPlayer =
+              params.selected === params.game.myPlayer()
+                ? AllPlayers
+                : params.selected;
+            params.playerActionHandler.handleEmoji(
+              targetPlayer!,
+              flattenedEmojiTable.indexOf(emoji),
+            );
+            params.emojiTable.hideTable();
+          });
+        },
+      },
+    ];
 
-    const emojiCount = 15;
+    const emojiCount = 8;
     for (let i = 0; i < emojiCount; i++) {
       emojiElements.push({
         id: `emoji_${i}`,
@@ -251,27 +279,6 @@ const infoEmojiElement: MenuElement = {
       });
     }
 
-    emojiElements.push({
-      id: "emoji_more",
-      name: "more",
-      disabled: () => false,
-      color: COLORS.infoEmoji,
-      icon: emojiIcon,
-      action: (params: MenuElementParams) => {
-        params.emojiTable.showTable((emoji) => {
-          const targetPlayer =
-            params.selected === params.game.myPlayer()
-              ? AllPlayers
-              : params.selected;
-          params.playerActionHandler.handleEmoji(
-            targetPlayer!,
-            flattenedEmojiTable.indexOf(emoji),
-          );
-          params.emojiTable.hideTable();
-        });
-      },
-    });
-
     return emojiElements;
   },
 };
@@ -279,32 +286,46 @@ const infoEmojiElement: MenuElement = {
 export const infoMenuElement: MenuElement = {
   id: Slot.Info,
   name: "info",
-  disabled: () => false,
+  disabled: (params: MenuElementParams) =>
+    !params.selected || params.game.inSpawnPhase(),
   icon: infoIcon,
   color: COLORS.info,
 
   subMenu: (params: MenuElementParams) => {
-    if (params === undefined || params.selected === null) return [];
+    if (!params.selected || params.game.inSpawnPhase()) return [];
 
-    return [
-      infoChatElement,
-      allyTargetElement,
-      allyTradeElement,
-      allyEmbargoElement,
-      allyRequestElement,
-      allyBreakElement,
-      allyDonateGoldElement,
-      allyDonateTroopsElement,
+    if (params.selected === params.myPlayer) {
+      return [infoPlayerElement, infoEmojiElement];
+    }
+
+    const elements: MenuElement[] = [
       infoPlayerElement,
       infoEmojiElement,
-    ].filter((item) => item.displayed !== false);
+      infoChatElement,
+    ];
+    if (params.myPlayer.isAlliedWith(params.selected)) {
+      elements.push(
+        allyBreakElement,
+        allyDonateGoldElement,
+        allyDonateTroopsElement,
+      );
+    } else {
+      elements.push(allyTargetElement, allyRequestElement);
+    }
+    if (params.myPlayer.hasEmbargoAgainst(params.selected)) {
+      elements.push(allyTradeElement);
+    } else {
+      elements.push(allyEmbargoElement);
+    }
+
+    return elements;
   },
 };
 
 export const buildMenuElement: MenuElement = {
   id: Slot.Build,
   name: "build",
-  disabled: () => false,
+  disabled: (params: MenuElementParams) => params.game.inSpawnPhase(),
   icon: buildIcon,
   color: COLORS.build,
 
@@ -367,7 +388,10 @@ export const buildMenuElement: MenuElement = {
 export const boatMenuElement: MenuElement = {
   id: Slot.Boat,
   name: "boat",
-  disabled: () => false,
+  disabled: (params: MenuElementParams) =>
+    !params.playerActions.buildableUnits.some(
+      (unit) => unit.type === UnitType.TransportShip && unit.canBuild,
+    ),
   icon: boatIcon,
   color: COLORS.boat,
 
@@ -388,8 +412,40 @@ export const boatMenuElement: MenuElement = {
   },
 };
 
+export const centerButtonElement: CenterButtonElement = {
+  disabled: (params: MenuElementParams): boolean => {
+    const tileOwner = params.game.owner(params.tile);
+    const isLand = params.game.isLand(params.tile);
+    if (!isLand) {
+      return true;
+    }
+    if (params.game.inSpawnPhase()) {
+      if (tileOwner.isPlayer()) {
+        return true;
+      }
+      return false;
+    }
+    return false;
+  },
+  action: (params: MenuElementParams) => {
+    if (params.game.inSpawnPhase()) {
+      const cell = new Cell(
+        params.game.x(params.tile),
+        params.game.y(params.tile),
+      );
+      params.playerActionHandler.handleSpawn(cell);
+    } else {
+      params.playerActionHandler.handleAttack(
+        params.myPlayer,
+        params.selected?.id() ?? null,
+      );
+    }
+    params.closeMenu();
+  },
+};
+
 export const rootMenuItems: MenuElement[] = [
+  infoMenuElement,
   boatMenuElement,
   buildMenuElement,
-  infoMenuElement,
 ];
