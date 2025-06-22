@@ -47,7 +47,6 @@ echo "Generated version tag: $VERSION_TAG"
 ENV="$1"
 HOST="$2"
 SUBDOMAIN=""
-DEPLOY_ARGS=""
 ENABLE_BASIC_AUTH=""
 
 # Parse remaining arguments
@@ -71,12 +70,6 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Build arguments (only environment and version tag)
-BUILD_ARGS="$ENV $VERSION_TAG"
-
-# Deploy arguments (environment, host, version tag, subdomain, and flags)
-DEPLOY_ARGS="$ENV $HOST $VERSION_TAG $SUBDOMAIN $ENABLE_BASIC_AUTH"
-
 # Step 1: Run build.sh
 echo "Step 1: Running build.sh..."
 ./build.sh "$ENV" "$VERSION_TAG"
@@ -87,8 +80,8 @@ if [ $? -ne 0 ]; then
 fi
 
 echo ""
-echo "Step 2: Running deploy.sh $DEPLOY_ARGS"
-./deploy.sh $DEPLOY_ARGS
+echo "Step 2: Running deploy.sh"
+./deploy.sh "$ENV" "$HOST" "$VERSION_TAG" "$SUBDOMAIN" "$ENABLE_BASIC_AUTH"
 
 if [ $? -ne 0 ]; then
     echo "❌ Deploy failed."

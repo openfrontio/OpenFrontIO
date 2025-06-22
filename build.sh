@@ -2,27 +2,28 @@
 # build.sh - Build and upload Docker image to Docker Hub
 # This script:
 # 1. Builds and uploads the Docker image to Docker Hub with appropriate tag
-# 2. Optionally saves container metadata to a file (if METADATA_FILE env var is set)
+# 2. Optionally saves container metadata to a file (if METADATA_FILE is provided as 3rd argument)
 
 set -e # Exit immediately if a command exits with a non-zero status
 
 # Parse command line arguments
 ENV="$1"
 VERSION_TAG="$2"
+METADATA_FILE="$3"
 
 # Check required arguments
 if [ -z "$ENV" ] || [ -z "$VERSION_TAG" ]; then
     echo "Error: Please specify environment and version tag"
-    echo "Usage: $0 [prod|staging] [version_tag]"
-    echo "Note: Set METADATA_FILE environment variable to save container metadata to a file"
+    echo "Usage: $0 [prod|staging] [version_tag] [metadata_file]"
+    echo "Note: Provide metadata_file as third argument to save container metadata to a file"
     exit 1
 fi
 
 # Validate environment argument
 if [ "$ENV" != "prod" ] && [ "$ENV" != "staging" ]; then
     echo "Error: First argument must be either 'prod' or 'staging'"
-    echo "Usage: $0 [prod|staging] [version_tag]"
-    echo "Note: Set METADATA_FILE environment variable to save container metadata to a file"
+    echo "Usage: $0 [prod|staging] [version_tag] [metadata_file]"
+    echo "Note: Provide metadata_file as third argument to save container metadata to a file"
     exit 1
 fi
 
@@ -64,7 +65,6 @@ echo "Git commit: $GIT_COMMIT"
 docker buildx build \
     --platform linux/amd64 \
     --build-arg GIT_COMMIT=$GIT_COMMIT \
-    --build-arg METADATA_FILE=$METADATA_FILE \
     -t $DOCKER_IMAGE \
     --push \
     .
@@ -79,7 +79,7 @@ echo "Image: $DOCKER_IMAGE"
 
 print_header "BUILD COMPLETED SUCCESSFULLY ${DOCKER_IMAGE}"
 
-# Save container metadata to file if METADATA_FILE environment variable is set
+# Save container metadata to file if METADATA_FILE argument is provided
 if [ -n "$METADATA_FILE" ]; then
     echo "Saving container metadata to $METADATA_FILE"
     docker inspect $DOCKER_IMAGE > $METADATA_FILE
