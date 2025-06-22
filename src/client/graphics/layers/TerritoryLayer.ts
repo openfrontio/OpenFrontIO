@@ -308,9 +308,8 @@ export class TerritoryLayer implements Layer {
       }
     } else {
       const pattern = owner.pattern();
-      // fallback for initial state if tick() hasn't run yet
-      const patternsEnabled = this.cachedTerritoryPatternsEnabled;
-      if (!pattern || !patternsEnabled) {
+      const patternsEnabled = this.cachedTerritoryPatternsEnabled ?? false;
+      if (pattern === undefined || patternsEnabled === false) {
         this.paintTile(tile, this.theme.territoryColor(owner), 150);
       } else {
         const x = this.game.x(tile);
@@ -318,7 +317,7 @@ export class TerritoryLayer implements Layer {
         const baseColor = this.theme.territoryColor(owner);
 
         const decoder = owner.patternDecoder();
-        if (decoder) {
+        if (decoder !== undefined) {
           const bit = decoder.isSet(x, y) ? 1 : 0;
           const colorToUse = bit ? baseColor.darken(0.2) : baseColor;
           this.paintTile(tile, colorToUse, 150);
