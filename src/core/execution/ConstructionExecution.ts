@@ -8,6 +8,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { AirportExecution } from "./AirportExecution";
 import { CityExecution } from "./CityExecution";
 import { DefensePostExecution } from "./DefensePostExecution";
 import { MirvExecution } from "./MIRVExecution";
@@ -114,6 +115,9 @@ export class ConstructionExecution implements Execution {
         break;
       case UnitType.City:
         this.mg.addExecution(new CityExecution(player, this.tile));
+        break;
+      case UnitType.Airport:
+        this.mg.addExecution(new AirportExecution(player, this.tile));
         break;
       default:
         throw Error(`unit type ${this.constructionType} not supported`);

@@ -369,6 +369,10 @@ label.option-card:hover {
   mask: url("../../resources/images/PortIcon.svg") no-repeat center / cover;
 }
 
+#helpModal .airport-icon {
+  mask: url("../../resources/images/AirportIcon.svg") no-repeat center / cover;
+}
+
 #helpModal .warship-icon {
   mask: url("../../resources/images/BattleshipIconWhite.svg") no-repeat center /
     cover;

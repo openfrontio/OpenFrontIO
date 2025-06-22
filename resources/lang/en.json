@@ -104,6 +104,8 @@
     "build_hydrogen_desc": "Large explosive bomb. Spawns from the nearest Missile Silo and lands in the area you first clicked to build it.",
     "build_mirv": "MIRV",
     "build_mirv_desc": "The most powerful bomb in the game. Splits up into smaller bombs that will cover a huge range of territory. Only damages the player that you first clicked on to build it. Spawns from the nearest Missile Silo and lands in the area you first clicked to build it.",
+    "build_airport": "Airport",
+    "build_airport_desc": "Automatically sends cargo planes between airports of your country and other countries (except when trade is stopped), giving gold to both sides. Trade stops automatically when you attack or are attacked by a player. It resumes after 5 minutes or if you become allies. You can manually toggle trading with \"Stop trading\" or \"Start trading\".",
     "player_icons": "Player icons",
     "icon_desc": "Examples of some of the ingame icons you will encounter and what they mean:",
     "icon_crown": "Crown - Number 1. This is the top player in the leaderboard.",

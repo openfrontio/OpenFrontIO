@@ -307,6 +307,7 @@ export class FakeHumanExecution implements Execution {
       UnitType.MissileSilo,
       UnitType.Port,
       UnitType.SAMLauncher,
+      UnitType.Airport,
     );
     const structureTiles = structures.map((u) => u.tile());
     const randomTiles: (TileRef | null)[] = new Array(10);
@@ -373,6 +374,8 @@ export class FakeHumanExecution implements Execution {
             return 50_000;
           case UnitType.Port:
             return 10_000;
+          case UnitType.Airport:
+            return 12_000;
           default:
             return 0;
         }
@@ -435,6 +438,7 @@ export class FakeHumanExecution implements Execution {
     if (player === null) return;
     return (
       this.maybeSpawnStructure(UnitType.Port, 1) ||
+      this.maybeSpawnStructure(UnitType.Airport, 1) ||
       this.maybeSpawnStructure(UnitType.City, 2) ||
       this.maybeSpawnWarship() ||
       this.maybeSpawnStructure(UnitType.MissileSilo, 1)
