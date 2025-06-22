@@ -35,10 +35,6 @@ export class TerritoryPatternsModal extends LitElement {
 
   private userSettings: UserSettings = new UserSettings();
 
-  constructor() {
-    super();
-  }
-
   connectedCallback() {
     super.connectedCallback();
     const b64 = this.userSettings.getSelectedPatternBase64();
