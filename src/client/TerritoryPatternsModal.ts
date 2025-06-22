@@ -15,11 +15,10 @@ export class TerritoryPatternsModal extends LitElement {
     close: () => void;
   };
 
-  private previewButton: HTMLElement | null = null;
+  public previewButton: HTMLElement | null = null;
+  public buttonWidth: number = 100;
 
   @state() private selectedPattern: string | undefined = undefined;
-
-  @state() private buttonWidth: number = 100;
 
   @state() private lockedPatterns: string[] = [];
   @state() private lockedReasons: Record<string, string> = {};
@@ -32,32 +31,25 @@ export class TerritoryPatternsModal extends LitElement {
   @state() private roles: string[] = [];
   @state() private flares: string[] = [];
 
-  private resizeObserver: ResizeObserver;
+  public resizeObserver: ResizeObserver;
 
-  private userSettings: UserSettings;
+  private userSettings: UserSettings = new UserSettings();
 
-  constructor(userSettings?: UserSettings) {
+  constructor() {
     super();
-    this.userSettings = userSettings ?? new UserSettings();
-    this.resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.target.classList.contains("preview-container")) {
-          this.buttonWidth = entry.contentRect.width;
-        }
-      }
-    });
-    this.selectedPattern = this.userSettings.getSelectedPattern();
   }
 
   connectedCallback() {
     super.connectedCallback();
+    this.selectedPattern = this.userSettings.getSelectedPattern();
     window.addEventListener("keydown", this.handleKeyDown);
-    this.previewButton = document.getElementById(
-      "territory-patterns-input-preview-button",
-    );
     this.updateComplete.then(() => {
       const containers = this.renderRoot.querySelectorAll(".preview-container");
-      containers.forEach((container) => this.resizeObserver.observe(container));
+      if (this.resizeObserver) {
+        containers.forEach((container) =>
+          this.resizeObserver.observe(container),
+        );
+      }
       this.updatePreview();
     });
   }
@@ -399,7 +391,7 @@ export class TerritoryPatternsModal extends LitElement {
     `;
   }
 
-  private updatePreview() {
+  public updatePreview() {
     if (!this.previewButton) return;
 
     const pattern = this.selectedPattern
