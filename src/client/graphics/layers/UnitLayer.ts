@@ -441,7 +441,6 @@ export class UnitLayer implements Layer {
   }
 
   private handleCargoPlaneEvent(unit: UnitView) {
-    console.log("Handling cargoPlaneEvent");
     this.drawSprite(unit);
   }
 
