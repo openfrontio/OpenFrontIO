@@ -27,6 +27,7 @@ import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import {
   DoBoatAttackEvent,
+  DoGroundAttackEvent,
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
@@ -251,6 +252,10 @@ export class ClientGameRunner {
       DoBoatAttackEvent,
       this.doBoatAttackUnderCursor.bind(this),
     );
+    this.eventBus.on(
+      DoGroundAttackEvent,
+      this.doGroundAttackUnderCursor.bind(this),
+    );
 
     this.renderer.initialize();
     this.input.initialize();
@@ -434,6 +439,31 @@ export class ClientGameRunner {
     this.myPlayer.actions(tile).then((actions) => {
       if (!actions.canAttack && this.canBoatAttack(actions, tile)) {
         this.sendBoatAttackIntent(tile);
+      }
+    });
+  }
+
+  private doGroundAttackUnderCursor(): void {
+    const tile = this.getTileUnderCursor();
+    if (tile === null) {
+      return;
+    }
+
+    if (this.myPlayer === null) {
+      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    this.myPlayer.actions(tile).then((actions) => {
+      if (this.myPlayer === null) return;
+      if (actions.canAttack) {
+        this.eventBus.emit(
+          new SendAttackIntentEvent(
+            this.gameView.owner(tile).id(),
+            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+          ),
+        );
       }
     });
   }
