@@ -1,7 +1,30 @@
 # Removed deprecated Husky initialization line
 
-# Add PATH setup to ensure npx is found
-export PATH="/usr/local/bin:$HOME/.npm-global/bin:$HOME/.nvm/versions/node/$(node -v)/bin:$PATH"
+# Load NVM to ensure node and npx are found
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# Fallback for systems without NVM or if node is globally installed
+# Ensure node and npx are in PATH
+export PATH="$(npm bin):$PATH"
+export PATH="$(yarn bin):$PATH"
+
+# Add common node installation paths if not already present
+case ":$PATH:" in
+  *:"/usr/local/bin:") ;;
+  *) export PATH="/usr/local/bin:$PATH";;
+esac
+case ":$PATH:" in
+  *:"/opt/homebrew/bin:") ;;
+  *) export PATH="/opt/homebrew/bin:$PATH";;
+esac
+
+# Add npm global bin path if not already present
+case ":$PATH:" in
+  *:"$HOME/.npm-global/bin:") ;;
+  *) export PATH="$HOME/.npm-global/bin:$PATH";;
+esac
 
 # Then run lint-staged if tests pass
 npx lint-staged
