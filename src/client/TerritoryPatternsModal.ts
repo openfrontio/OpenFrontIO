@@ -3,9 +3,9 @@ import { html, LitElement, render } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { PatternDecoder, territoryPatterns } from "../core/Cosmetics";
+import { UserSettings } from "../core/game/UserSettings";
 import "./components/Difficulties";
 import "./components/Maps";
-import { TerritoryPatternStorage } from "./Cosmetic";
 import { translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")
@@ -34,11 +34,11 @@ export class TerritoryPatternsModal extends LitElement {
 
   private resizeObserver: ResizeObserver;
 
-  private patternStorage: TerritoryPatternStorage;
+  private userSettings: UserSettings;
 
-  constructor(patternStorage?: TerritoryPatternStorage) {
+  constructor(userSettings?: UserSettings) {
     super();
-    this.patternStorage = patternStorage ?? new TerritoryPatternStorage();
+    this.userSettings = userSettings ?? new UserSettings();
     this.resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         if (entry.target.classList.contains("preview-container")) {
@@ -46,7 +46,7 @@ export class TerritoryPatternsModal extends LitElement {
         }
       }
     });
-    this.selectedPattern = this.patternStorage.getSelectedPattern();
+    this.selectedPattern = this.userSettings.getSelectedPattern();
   }
 
   connectedCallback() {
@@ -279,14 +279,14 @@ export class TerritoryPatternsModal extends LitElement {
 
   private selectPattern(patternKey: string | null) {
     this.selectedPattern = patternKey ?? undefined;
-    this.patternStorage.setSelectedPattern(patternKey ?? "");
+    this.userSettings.setSelectedPattern(patternKey ?? "");
     if (patternKey) {
       const base64 = territoryPatterns.pattern[patternKey];
       if (base64) {
-        this.patternStorage.setSelectedPatternBase64(base64.pattern);
+        this.userSettings.setSelectedPatternBase64(base64.pattern);
       }
     } else {
-      this.patternStorage.setSelectedPatternBase64("");
+      this.userSettings.setSelectedPatternBase64("");
     }
     this.updatePreview();
     this.close();

@@ -5,7 +5,6 @@ import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import { joinLobby } from "./ClientGameRunner";
-import { TerritoryPatternStorage } from "./Cosmetic";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
@@ -75,9 +74,6 @@ class Client {
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
-
-  private territoryPatternStorage: TerritoryPatternStorage =
-    new TerritoryPatternStorage();
 
   constructor() {}
 
@@ -335,7 +331,7 @@ class Client {
       {
         gameID: lobby.gameID,
         serverConfig: config,
-        pattern: this.territoryPatternStorage.getSelectedPatternBase64(),
+        pattern: this.userSettings.getSelectedPatternBase64(),
         flag:
           this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
             ? ""

@@ -11,13 +11,13 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
+import { UserSettings } from "../core/game/UserSettings";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
-import { TerritoryPatternStorage } from "./Cosmetic";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
@@ -42,8 +42,7 @@ export class SinglePlayerModal extends LitElement {
 
   @state() private disabledUnits: UnitType[] = [];
 
-  private territoryPatternStorage: TerritoryPatternStorage =
-    new TerritoryPatternStorage();
+  private userSettings: UserSettings = new UserSettings();
 
   render() {
     return html`
@@ -414,8 +413,7 @@ export class SinglePlayerModal extends LitElement {
                   flagInput.getCurrentFlag() === "xx"
                     ? ""
                     : flagInput.getCurrentFlag(),
-                pattern:
-                  this.territoryPatternStorage.getSelectedPatternBase64(),
+                pattern: this.userSettings.getSelectedPatternBase64(),
               },
             ],
             config: {
