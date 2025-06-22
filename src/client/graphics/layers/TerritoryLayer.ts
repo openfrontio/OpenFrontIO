@@ -7,7 +7,11 @@ import { euclDistFN, TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { PseudoRandom } from "../../../core/PseudoRandom";
-import { AlternateViewEvent, DragEvent } from "../../InputHandler";
+import {
+  AlternateViewEvent,
+  DragEvent,
+  MouseOverEvent,
+} from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -37,6 +41,7 @@ export class TerritoryLayer implements Layer {
   private lastRefresh = 0;
 
   private lastFocusedPlayer: PlayerView | null = null;
+  private highlightedTerritory: PlayerView | null = null;
 
   constructor(
     private game: GameView,
@@ -44,6 +49,7 @@ export class TerritoryLayer implements Layer {
     private transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
+    this.highlightedTerritory = null;
   }
 
   shouldTransform(): boolean {
@@ -139,11 +145,50 @@ export class TerritoryLayer implements Layer {
     this.eventBus.on(AlternateViewEvent, (e) => {
       this.alternativeView = e.alternateView;
     });
+    // this.eventBus.on(MouseOverEvent, (e) => this.onMouseOver(e));
     this.eventBus.on(DragEvent, (e) => {
       // TODO: consider re-enabling this on mobile or low end devices for smoother dragging.
       // this.lastDragTime = Date.now();
     });
     this.redraw();
+  }
+
+  findTerritoryAtCell(cell: { x: number; y: number }) {
+    const tile = this.game.ref(cell.x, cell.y);
+    if (!tile) {
+      return null;
+    }
+    // If the tile has no owner, it is either a fallout tile or a terra nullius tile.
+    if (!this.game.hasOwner(tile)) {
+      return null;
+    }
+    return this.game.owner(tile) as PlayerView;
+  }
+
+  onMouseOver(event: MouseOverEvent) {
+    const cell = this.transformHandler.screenToWorldCoordinates(
+      event.x,
+      event.y,
+    );
+    if (!this.game.isValidCoord(cell.x, cell.y)) {
+      return;
+    }
+
+    const previousTerritory = this.highlightedTerritory;
+    const territory = this.findTerritoryAtCell(cell);
+
+    // Update highlighted territory
+    this.highlightedTerritory = territory;
+
+    // Only update if the territory actually changed
+    if (this.highlightedTerritory !== previousTerritory) {
+      if (this.highlightedTerritory) {
+        this.enqueuePlayerBorder(this.highlightedTerritory);
+      }
+      if (previousTerritory) {
+        this.enqueuePlayerBorder(previousTerritory);
+      }
+    }
   }
 
   redraw() {
@@ -221,6 +266,7 @@ export class TerritoryLayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
+
     if (this.game.inSpawnPhase()) {
       context.drawImage(
         this.highlightCanvas,
@@ -266,7 +312,10 @@ export class TerritoryLayer implements Layer {
       this.clearTile(tile);
       return;
     }
+
     const owner = this.game.owner(tile) as PlayerView;
+    const isHighlightedTerritory = owner === this.highlightedTerritory;
+
     if (this.game.isBorder(tile)) {
       const playerIsFocused = owner && this.game.focusedPlayer() === owner;
       if (
@@ -285,13 +334,19 @@ export class TerritoryLayer implements Layer {
         const borderColor = lightTile ? borderColors.light : borderColors.dark;
         this.paintTile(tile, borderColor, 255);
       } else {
-        const useBorderColor = playerIsFocused
-          ? this.theme.focusedBorderColor()
-          : this.theme.borderColor(owner);
+        let useBorderColor;
+        if (isHighlightedTerritory) {
+          useBorderColor = this.theme.focusedBorderColor();
+        } else {
+          useBorderColor = playerIsFocused
+            ? this.theme.focusedBorderColor()
+            : this.theme.borderColor(owner);
+        }
         this.paintTile(tile, useBorderColor, 255);
       }
     } else {
-      this.paintTile(tile, this.theme.territoryColor(owner), 150);
+      const territoryColor = this.theme.territoryColor(owner);
+      this.paintTile(tile, territoryColor, 150);
     }
   }
 
