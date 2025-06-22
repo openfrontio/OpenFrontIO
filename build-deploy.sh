@@ -44,8 +44,8 @@ VERSION_TAG=$(date +"%Y%m%d-%H%M%S")
 echo "Generated version tag: $VERSION_TAG"
 
 # Extract arguments
-ENV=$1
-HOST=$2
+ENV="$1"
+HOST="$2"
 SUBDOMAIN=""
 DEPLOY_ARGS=""
 ENABLE_BASIC_AUTH=""
