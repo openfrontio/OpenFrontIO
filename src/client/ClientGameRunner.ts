@@ -12,7 +12,7 @@ import {
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import { Cell, PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import {
   ErrorUpdate,
@@ -26,6 +26,7 @@ import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import {
+  BuildAtCursorEvent,
   DoBoatAttackEvent,
   DoGroundAttackEvent,
   InputHandler,
@@ -35,6 +36,7 @@ import {
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentID } from "./Main";
 import {
+  BuildUnitIntentEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendHashEvent,
@@ -256,6 +258,7 @@ export class ClientGameRunner {
       DoGroundAttackEvent,
       this.doGroundAttackUnderCursor.bind(this),
     );
+    this.eventBus.on(BuildAtCursorEvent, this.buildAtCursor.bind(this));
 
     this.renderer.initialize();
     this.input.initialize();
@@ -569,6 +572,39 @@ export class ClientGameRunner {
         this.gameView.setFocusedPlayer(null);
       }
     }
+  }
+
+  private buildAtCursor(event: BuildAtCursorEvent): void {
+    const tile = this.getTileUnderCursor();
+    if (tile === null) {
+      return;
+    }
+
+    if (this.myPlayer === null) {
+      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    // Convert the unit type string to UnitType enum
+    const unitType = event.unitType as UnitType;
+
+    // Check if the player can build this unit at this location
+    this.myPlayer.actions(tile).then((actions) => {
+      const buildableUnit = actions.buildableUnits.find(
+        (bu) => bu.type === unitType,
+      );
+
+      if (buildableUnit && buildableUnit.canBuild !== false) {
+        // Emit the build intent event
+        this.eventBus.emit(
+          new BuildUnitIntentEvent(
+            unitType,
+            new Cell(this.gameView.x(tile), this.gameView.y(tile)),
+          ),
+        );
+      }
+    });
   }
 
   private onConnectionCheck() {

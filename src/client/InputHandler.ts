@@ -85,6 +85,10 @@ export class AttackRatioEvent implements GameEvent {
   constructor(public readonly attackRatio: number) {}
 }
 
+export class BuildAtCursorEvent implements GameEvent {
+  constructor(public readonly unitType: string) {}
+}
+
 export class ReplaySpeedChangeEvent implements GameEvent {
   constructor(public readonly replaySpeedMultiplier: ReplaySpeedMultiplier) {}
 }
@@ -138,6 +142,16 @@ export class InputHandler {
       groundAttack: "KeyG",
       modifierKey: "ControlLeft",
       altKey: "AltLeft",
+      // Building keybinds
+      buildCity: "Digit1",
+      buildDefensePost: "Digit2",
+      buildPort: "Digit3",
+      buildWarship: "Digit4",
+      buildMissileSilo: "Digit5",
+      buildSAMLauncher: "Digit6",
+      buildAtomBomb: "Digit7",
+      buildMIRV: "Digit8",
+      buildHydrogenBomb: "Digit9",
       ...JSON.parse(localStorage.getItem("settings.keybinds") ?? "{}"),
     };
 
@@ -286,6 +300,52 @@ export class InputHandler {
       if (e.code === this.keybinds.centerCamera) {
         e.preventDefault();
         this.eventBus.emit(new CenterCameraEvent());
+      }
+
+      // Building keybinds
+      if (e.code === this.keybinds.buildCity) {
+        e.preventDefault();
+        this.eventBus.emit(new BuildAtCursorEvent("City"));
+      }
+
+      if (e.code === this.keybinds.buildDefensePost) {
+        e.preventDefault();
+        this.eventBus.emit(new BuildAtCursorEvent("Defense Post"));
+      }
+
+      if (e.code === this.keybinds.buildPort) {
+        e.preventDefault();
+        this.eventBus.emit(new BuildAtCursorEvent("Port"));
+      }
+
+      if (e.code === this.keybinds.buildWarship) {
+        e.preventDefault();
+        this.eventBus.emit(new BuildAtCursorEvent("Warship"));
+      }
+
+      if (e.code === this.keybinds.buildMissileSilo) {
+        e.preventDefault();
+        this.eventBus.emit(new BuildAtCursorEvent("Missile Silo"));
+      }
+
+      if (e.code === this.keybinds.buildSAMLauncher) {
+        e.preventDefault();
+        this.eventBus.emit(new BuildAtCursorEvent("SAM Launcher"));
+      }
+
+      if (e.code === this.keybinds.buildAtomBomb) {
+        e.preventDefault();
+        this.eventBus.emit(new BuildAtCursorEvent("Atom Bomb"));
+      }
+
+      if (e.code === this.keybinds.buildMIRV) {
+        e.preventDefault();
+        this.eventBus.emit(new BuildAtCursorEvent("MIRV"));
+      }
+
+      if (e.code === this.keybinds.buildHydrogenBomb) {
+        e.preventDefault();
+        this.eventBus.emit(new BuildAtCursorEvent("Hydrogen Bomb"));
       }
 
       this.activeKeys.delete(e.code);
