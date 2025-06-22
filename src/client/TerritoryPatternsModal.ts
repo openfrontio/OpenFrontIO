@@ -37,7 +37,7 @@ export class TerritoryPatternsModal extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    const b64 = this.userSettings.getSelectedPatternBase64();
+    const b64 = this.userSettings.getSelectedPattern();
     if (b64) {
       const found = Object.entries(territoryPatterns.pattern).find(
         ([key, pattern]) => pattern.pattern === b64,
@@ -168,7 +168,7 @@ export class TerritoryPatternsModal extends LitElement {
       (key === "custom" && this.selectedPattern === "custom");
     let previewPattern = pattern;
     if (key === "custom") {
-      const b64 = this.userSettings.getSelectedPatternBase64();
+      const b64 = this.userSettings.getSelectedPattern();
       if (b64) {
         previewPattern = { pattern: b64 } as any;
       }
@@ -287,14 +287,14 @@ export class TerritoryPatternsModal extends LitElement {
     if (patternKey) {
       const pattern = territoryPatterns.pattern[patternKey];
       if (pattern) {
-        this.userSettings.setSelectedPatternBase64(pattern.pattern);
+        this.userSettings.setSelectedPattern(pattern.pattern);
         this.selectedPattern = patternKey;
       } else {
-        this.userSettings.setSelectedPatternBase64("");
+        this.userSettings.setSelectedPattern("");
         this.selectedPattern = undefined;
       }
     } else {
-      this.userSettings.setSelectedPatternBase64("");
+      this.userSettings.setSelectedPattern("");
       this.selectedPattern = undefined;
     }
     this.updatePreview();
@@ -416,7 +416,7 @@ export class TerritoryPatternsModal extends LitElement {
     let pattern = territoryPatterns.pattern[patternKey];
     if (!pattern && patternKey === "custom") {
       // customパターンはbase64から生成
-      const b64 = this.userSettings.getSelectedPatternBase64();
+      const b64 = this.userSettings.getSelectedPattern();
       if (b64) {
         pattern = { pattern: b64 } as any;
       }

@@ -76,13 +76,13 @@ export class UserSettings {
     }
   }
 
-  private readonly PATTERN_BASE64_KEY = "territoryPatternBase64";
+  private readonly PATTERN_KEY = "territoryPattern";
 
-  getSelectedPatternBase64(): string | undefined {
-    return localStorage.getItem(this.PATTERN_BASE64_KEY) ?? undefined;
+  getSelectedPattern(): string | undefined {
+    return localStorage.getItem(this.PATTERN_KEY) ?? undefined;
   }
 
-  setSelectedPatternBase64(base64: string): void {
-    localStorage.setItem(this.PATTERN_BASE64_KEY, base64);
+  setSelectedPattern(base64: string): void {
+    localStorage.setItem(this.PATTERN_KEY, base64);
   }
 }

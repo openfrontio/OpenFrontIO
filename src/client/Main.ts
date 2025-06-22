@@ -340,7 +340,7 @@ class Client {
       {
         gameID: lobby.gameID,
         serverConfig: config,
-        pattern: this.userSettings.getSelectedPatternBase64(),
+        pattern: this.userSettings.getSelectedPattern(),
         flag:
           this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
             ? ""

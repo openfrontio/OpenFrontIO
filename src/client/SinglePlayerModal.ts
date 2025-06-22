@@ -413,7 +413,7 @@ export class SinglePlayerModal extends LitElement {
                   flagInput.getCurrentFlag() === "xx"
                     ? ""
                     : flagInput.getCurrentFlag(),
-                pattern: this.userSettings.getSelectedPatternBase64(),
+                pattern: this.userSettings.getSelectedPattern(),
               },
             ],
             config: {
