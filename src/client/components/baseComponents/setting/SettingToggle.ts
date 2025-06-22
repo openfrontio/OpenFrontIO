@@ -15,10 +15,9 @@ export class SettingToggle extends LitElement {
 
   private handleChange(e: Event) {
     const input = e.target as HTMLInputElement;
-    this.checked = input.checked;
     this.dispatchEvent(
       new CustomEvent("change", {
-        detail: { checked: this.checked },
+        detail: { checked: input.checked },
         bubbles: true,
         composed: true,
       }),
@@ -34,7 +33,7 @@ export class SettingToggle extends LitElement {
             <input
               type="checkbox"
               id=${this.id}
-              ?checked=${this.checked}
+              .checked=${this.checked}
               @change=${this.handleChange}
             />
             <span class="slider-round"></span>

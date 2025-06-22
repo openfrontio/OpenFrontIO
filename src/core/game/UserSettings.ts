@@ -1,4 +1,10 @@
 export class UserSettings {
+  private eventTarget: EventTarget;
+
+  constructor(eventTarget?: EventTarget) {
+    this.eventTarget = eventTarget ?? window;
+  }
+
   get(key: string, defaultValue: boolean): boolean {
     const value = localStorage.getItem(key);
     if (!value) return defaultValue;
@@ -60,11 +66,20 @@ export class UserSettings {
   }
 
   toggleDarkMode() {
-    this.set("settings.darkMode", !this.darkMode());
+    const newValue = !this.darkMode();
+
+    this.set("settings.darkMode", newValue);
     if (this.darkMode()) {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
+
+    this.eventTarget.dispatchEvent(
+      // maybe add an event ENUM so we can do like SettingEvents.DarkModeChanged or something instead of hardcoded string
+      new CustomEvent("settings:darkModeChanged", {
+        detail: { value: newValue },
+      }),
+    );
   }
 }

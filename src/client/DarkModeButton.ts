@@ -16,6 +16,23 @@ export class DarkModeButton extends LitElement {
     this.darkMode = this.userSettings.darkMode();
   }
 
+  private onDarkModeChanged = (e: CustomEvent) => {
+    this.darkMode = e.detail.value;
+  };
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("settings:darkModeChanged", this.onDarkModeChanged);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.removeEventListener(
+      "settings:darkModeChanged",
+      this.onDarkModeChanged,
+    );
+  }
+
   render() {
     return html`
       <button

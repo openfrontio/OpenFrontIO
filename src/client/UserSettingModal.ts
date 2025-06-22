@@ -21,6 +21,10 @@ export class UserSettingModal extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     window.addEventListener("keydown", this.handleKeyDown);
+    window.addEventListener(
+      "settings:darkModeChanged",
+      this.handleSettingChange,
+    );
 
     const savedKeybinds = localStorage.getItem("settings.keybinds");
     if (savedKeybinds) {
@@ -44,6 +48,10 @@ export class UserSettingModal extends LitElement {
 
   disconnectedCallback() {
     window.removeEventListener("keydown", this.handleKeyDown);
+    window.removeEventListener(
+      "settings:darkModeChanged",
+      this.handleSettingChange,
+    );
     super.disconnectedCallback();
     document.body.style.overflow = "auto";
   }
@@ -74,15 +82,16 @@ export class UserSettingModal extends LitElement {
     }, 5000);
   }
 
+  private handleSettingChange = () => {
+    this.userSettings = new UserSettings();
+    this.requestUpdate();
+  };
+
   toggleDarkMode(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
 
-    if (typeof enabled !== "boolean") {
-      console.warn("Unexpected toggle event payload", e);
-      return;
-    }
-
-    this.userSettings.set("settings.darkMode", enabled);
+    this.userSettings.toggleDarkMode();
 
     if (enabled) {
       document.documentElement.classList.add("dark");
