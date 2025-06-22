@@ -230,7 +230,6 @@ export function createRenderer(
       emojiTable as EmojiTable,
       buildMenu,
       uiState,
-      playerInfo,
       playerPanel,
     ),
     new SpawnTimer(game, transformHandler),

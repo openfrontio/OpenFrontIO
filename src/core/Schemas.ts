@@ -210,10 +210,8 @@ export const BoatAttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("boat"),
   targetID: ID.nullable(),
   troops: z.number(),
-  dstX: z.number(),
-  dstY: z.number(),
-  srcX: z.number().nullable(),
-  srcY: z.number().nullable(),
+  dst: z.number(),
+  src: z.number().nullable(),
 });
 
 export const AllianceRequestIntentSchema = BaseIntentSchema.extend({
