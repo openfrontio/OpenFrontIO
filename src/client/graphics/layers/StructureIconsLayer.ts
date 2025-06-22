@@ -8,19 +8,21 @@ import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
 import SAMMissileIcon from "../../../../resources/images/SamLauncherUnit.png";
 import shieldIcon from "../../../../resources/images/ShieldIcon.png";
 import { Cell, PlayerID, UnitType } from "../../../core/game/Game";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 
 class StructureRenderInfo {
+  public firstDraw: boolean = true;
+  public location: { x: number; y: number } | null = null;
+
   constructor(
     public unit: UnitView,
-    public oldLocation: Cell | null,
-    public location: Cell | null,
     public owner: PlayerID,
     public imageData: HTMLCanvasElement,
     public shouldRedraw: boolean = true,
   ) {}
 }
-
+const ZOOM_THRESHOLD = 2.8; // below this zoom level, structures are not rendered
 const ICON_SIZE = 24;
 
 export class StructureIconsLayer implements Layer {
@@ -29,7 +31,6 @@ export class StructureIconsLayer implements Layer {
   private context: CanvasRenderingContext2D;
   private theme: Theme;
   private renders: StructureRenderInfo[] = [];
-  public scale: number = 1.8;
   private seenUnits: Set<UnitView> = new Set();
   private structures: Map<
     UnitType,
@@ -87,24 +88,46 @@ export class StructureIconsLayer implements Layer {
   }
 
   public tick() {
-    for (const unit of this.game.units()) {
-      if (
-        unit.isActive() &&
-        this.structures.has(unit.type()) &&
-        !this.seenUnits.has(unit)
-      ) {
-        this.seenUnits.add(unit);
-        this.renders.push(
-          new StructureRenderInfo(
-            unit,
-            null,
-            null,
-            unit.owner().id(),
-            this.createUnitElement(unit),
-          ),
-        );
-      }
-    }
+    this.game
+      .updatesSinceLastTick()
+      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
+      ?.forEach((unitView) => {
+        if (unitView === undefined) return;
+        if (unitView.isActive()) {
+          if (this.seenUnits.has(unitView)) {
+            // check if owner has changed
+            const render = this.renders.find(
+              (r) => r.unit.id() === unitView.id(),
+            );
+            if (!render) {
+              console.warn(`Render not found for unit ${unitView.id()}`);
+              return;
+            }
+            this.checkOwner(render, unitView);
+          } else if (this.structures.has(unitView.type())) {
+            // new unit, create render info
+            this.seenUnits.add(unitView);
+            this.renders.push(
+              new StructureRenderInfo(
+                unitView,
+                unitView.owner().id(),
+                this.createUnitElement(unitView),
+              ),
+            );
+          }
+        }
+        if (!unitView.isActive() && this.seenUnits.has(unitView)) {
+          const render = this.renders.find(
+            (r) => r.unit.id() === unitView.id(),
+          );
+          if (!render) {
+            console.warn(`Render not found for unit ${unitView.id()}`);
+            return;
+          }
+          this.deleteStructure(render);
+          return;
+        }
+      });
   }
 
   redraw() {
@@ -116,38 +139,67 @@ export class StructureIconsLayer implements Layer {
     this.context = context;
   }
 
-  public renderLayer(mainContext: CanvasRenderingContext2D) {
-    if (this.transformHandler.scale > 2.8) {
+  renderLayer(mainContext: CanvasRenderingContext2D) {
+    const hasChanged = this.transformHandler.hasChanged();
+    const isZoomedOut = this.transformHandler.scale <= ZOOM_THRESHOLD;
+    const scaleCapped = Math.min(1, this.transformHandler.scale * 1.3);
+    if (hasChanged || !isZoomedOut) {
       this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+    if (!isZoomedOut) {
       return;
     }
-    for (const render of this.renders) {
-      this.computeRenderInfos(render);
-    }
 
-    // clear first
-    for (const render of this.renders) {
-      if (render.shouldRedraw) {
-        this.clearStructure(render);
-      }
-    }
-
-    // draw after
-    for (const render of this.renders) {
-      if (render.shouldRedraw) {
-        if (
-          !render.location ||
-          render.location.x < 0 ||
-          render.location.y < 0 ||
-          render.location.x > this.canvas.width ||
-          render.location.y > this.canvas.height
-        ) {
-          continue;
+    if (!hasChanged) {
+      for (const render of this.renders) {
+        if (render.shouldRedraw) {
+          this.clearStructure(render);
         }
-        this.renderStructure(render);
       }
     }
+
+    for (const render of this.renders) {
+      if (hasChanged || render.firstDraw) {
+        this.computeNewLocation(render);
+      }
+    }
+
+    if (hasChanged) {
+      this.context.save();
+      this.context.scale(scaleCapped, scaleCapped);
+    }
+
+    for (const render of this.renders) {
+      const shouldDraw = render.shouldRedraw || hasChanged || render.firstDraw;
+
+      const loc = render.location;
+      const isOnScreen =
+        loc &&
+        loc.x >= 0 &&
+        loc.y >= 0 &&
+        loc.x <= this.canvas.width &&
+        loc.y <= this.canvas.height;
+
+      if (shouldDraw && isOnScreen) {
+        render.firstDraw = false;
+        render.shouldRedraw = false;
+        this.renderStructure(render, scaleCapped);
+      }
+    }
+
+    if (hasChanged) {
+      this.context.restore();
+    }
+
     mainContext.drawImage(this.canvas, 0, 0);
+  }
+
+  private checkOwner(render: StructureRenderInfo, unit: UnitView) {
+    if (render.owner !== unit.owner().id()) {
+      render.shouldRedraw = true;
+      render.owner = unit.owner().id();
+      render.imageData = this.createUnitElement(unit);
+    }
   }
 
   private createUnitElement(unit: UnitView): HTMLCanvasElement {
@@ -198,7 +250,10 @@ export class StructureIconsLayer implements Layer {
     return structureCanvas;
   }
 
-  getImageColored(image: HTMLImageElement, color: string): HTMLCanvasElement {
+  private getImageColored(
+    image: HTMLImageElement,
+    color: string,
+  ): HTMLCanvasElement {
     const imageCanvas = document.createElement("canvas");
     imageCanvas.width = image.width;
     imageCanvas.height = image.height;
@@ -210,81 +265,46 @@ export class StructureIconsLayer implements Layer {
     return imageCanvas;
   }
 
-  clearStructure(render: StructureRenderInfo) {
-    if (render.oldLocation) {
+  private clearStructure(render: StructureRenderInfo) {
+    if (render.location) {
       this.context.clearRect(
-        render.oldLocation.x - 1 - render.imageData.width / 2,
-        render.oldLocation.y - 1 - render.imageData.height / 2,
+        render.location.x - 1 - render.imageData.width / 2,
+        render.location.y - 1 - render.imageData.height / 2,
         render.imageData.width + 2,
         render.imageData.height + 2,
       );
     }
   }
 
-  computeRenderInfos(render: StructureRenderInfo) {
-    const unit = render.unit;
-
-    if (!unit.isActive()) {
-      this.renders = this.renders.filter((r) => r !== render);
-      this.seenUnits.delete(unit);
-      this.clearStructure(render);
-      return;
-    }
-
-    const tile = unit.tile();
+  private computeNewLocation(render: StructureRenderInfo) {
+    // Compute screen position with vertical offset
+    const tile = render.unit.tile();
+    const worldX = this.game.x(tile);
+    const worldY = this.game.y(tile);
     const screenPos = this.transformHandler.worldToScreenCoordinates(
-      new Cell(this.game.x(tile), this.game.y(tile)),
+      new Cell(worldX, worldY),
     );
-    const oldScale = this.scale;
-    this.scale = this.transformHandler.scale;
-    screenPos.y -= this.scale * 8;
-
-    const oldLocation = render.location;
-    const ownerId = unit.owner().id();
-
-    const hasMoved =
-      !oldLocation ||
-      oldLocation.x !== screenPos.x ||
-      oldLocation.y !== screenPos.y;
-
-    if (render.location) {
-      render.oldLocation = new Cell(render.location.x, render.location.y);
-    } else {
-      // first pass
-      render.oldLocation = new Cell(screenPos.x, screenPos.y);
-    }
-
-    const hasScaleChanged = this.scale !== oldScale;
-    const hasOwnerChanged = render.owner !== ownerId;
-
-    const shouldRedraw = hasMoved || hasScaleChanged || hasOwnerChanged;
-    render.shouldRedraw = shouldRedraw;
-
-    if (!shouldRedraw) return;
-
-    if (hasOwnerChanged) {
-      render.owner = ownerId;
-      render.imageData = this.createUnitElement(unit);
-    }
-
-    render.location = new Cell(screenPos.x, screenPos.y);
+    screenPos.y -= this.transformHandler.scale * 8;
+    render.location = { x: screenPos.x, y: screenPos.y };
   }
 
-  renderStructure(render: StructureRenderInfo) {
+  private deleteStructure(render: StructureRenderInfo) {
+    this.clearStructure(render);
+    this.renders = this.renders.filter((r) => r.unit !== render.unit);
+    this.seenUnits.delete(render.unit);
+  }
+
+  private renderStructure(render: StructureRenderInfo, scale: number) {
     if (render.location) {
-      const scaleCapped = Math.min(1, this.scale * 1.3);
-      this.context.save();
-      scaleCapped !== 1 && this.context.scale(scaleCapped, scaleCapped);
       this.context.drawImage(
         render.imageData,
         Math.round(
-          render.location.x * (1 / scaleCapped) - render.imageData.width / 2,
+          render.location.x * (1 / scale) - render.imageData.width / 2,
         ),
         Math.round(
-          render.location.y * (1 / scaleCapped) - render.imageData.height / 2,
+          render.location.y * (1 / scale) - render.imageData.height / 2,
         ),
       );
-      this.context.restore();
     }
   }
 }

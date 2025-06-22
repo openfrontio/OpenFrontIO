@@ -303,6 +303,7 @@ export class GameRenderer {
   resizeCanvas() {
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
+    this.transformHandler.updateCanvasBoundingRect();
     //this.redraw()
   }
 
@@ -342,6 +343,7 @@ export class GameRenderer {
       layer.renderLayer?.(this.context);
     }
     handleTransformState(false, isTransformActive); // Ensure context is clean after rendering
+    this.transformHandler.resetChanged();
 
     requestAnimationFrame(() => this.renderGame());
 
