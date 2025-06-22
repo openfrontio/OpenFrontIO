@@ -222,4 +222,6 @@ export interface AllianceViewData {
   requestorID: number;
   recipientID: number;
   createdAt: number;
+  extensionRequestedByMe: boolean;
+  extensionRequestedByOther: boolean;
 }

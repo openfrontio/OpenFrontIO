@@ -129,8 +129,9 @@ export class Executor {
           return new NoOpExecution();
         }
 
-        return new AllianceExtensionExecution(to);
+        return new AllianceExtensionExecution(from, to);
       }
+
       case "upgrade_structure":
         return new UpgradeStructureExecution(player, intent.unitId);
       case "quick_chat":

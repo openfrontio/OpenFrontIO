@@ -93,11 +93,18 @@ export async function createGameRunner(
   return gr;
 }
 
-function toAllianceViewData(alliance: AllianceImpl): AllianceViewData {
+function toAllianceViewData(
+  alliance: AllianceImpl,
+  me: Player,
+): AllianceViewData {
   return {
     requestorID: alliance.requestor().smallID(),
     recipientID: alliance.recipient().smallID(),
     createdAt: alliance.createdAt(),
+    extensionRequestedByMe: alliance.extensionRequestedBy(me),
+    extensionRequestedByOther: alliance.extensionRequestedBy(
+      alliance.otherPlayer(me),
+    ),
   };
 }
 
@@ -184,12 +191,15 @@ export class GameRunner {
     const packedTileUpdates = updates[GameUpdateType.Tile].map((u) => u.update);
     updates[GameUpdateType.Tile] = [];
 
+    const me = this.game.myPlayer();
     this.callBack({
       tick: this.game.ticks(),
       packedTileUpdates: new BigUint64Array(packedTileUpdates),
       updates: updates,
       playerNameViewData: this.playerViewData,
-      alliances: this.game.alliances().map(toAllianceViewData),
+      alliances: this.game
+        .alliances()
+        .map((a) => toAllianceViewData(a as AllianceImpl, me)),
     });
     this.isExecuting = false;
   }

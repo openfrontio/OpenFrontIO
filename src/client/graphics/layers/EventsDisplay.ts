@@ -206,7 +206,7 @@ export class EventsDisplay extends LitElement implements Layer {
         const timeSinceCreation = ticks - createdAt;
         const ticksLeft = duration - timeSinceCreation;
 
-        if (ticksLeft > promptOffset) continue;
+        if (ticksLeft < promptOffset || ticksLeft > promptOffset + 3) continue;
 
         // Only check alliances involving the local player
         if (
@@ -593,6 +593,29 @@ export class EventsDisplay extends LitElement implements Layer {
     const tick = this.game.ticks();
     const tag = `alliance${otherID}`;
 
+    const alliance = this.game
+      .alliances()
+      .find(
+        (a) =>
+          (a.requestorID === myPlayer.smallID() && a.recipientID === otherID) ||
+          (a.recipientID === myPlayer.smallID() && a.requestorID === otherID),
+      );
+
+    console.log("[DEBUG] Alliance check for extension prompt:", {
+      me: myPlayer.smallID(),
+      otherID,
+      extensionRequestedByMe: alliance?.extensionRequestedByMe,
+      fullAlliance: alliance,
+    });
+
+    if (
+      !alliance ||
+      alliance.extensionRequestedByMe ||
+      alliance.extensionRequestedByOther
+    ) {
+      return;
+    }
+
     this.addEvent({
       description: translateText("alliance.about_to_expire", {
         name: other.name(),
@@ -610,8 +633,15 @@ export class EventsDisplay extends LitElement implements Layer {
         {
           text: translateText("buttons.i_want_to_renew"),
           className: "btn",
-          action: () =>
-            this.eventBus.emit(new SendAllianceExtensionIntentEvent(other)),
+          action: () => {
+            if (myPlayer.smallID() !== other.smallID()) {
+              this.eventBus.emit(new SendAllianceExtensionIntentEvent(other));
+            } else {
+              console.warn(
+                "[RenewButton] Tried to send extension to self — ignored.",
+              );
+            }
+          },
         },
       ],
       highlight: true,

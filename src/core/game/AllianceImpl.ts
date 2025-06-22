@@ -76,4 +76,10 @@ export class AllianceImpl implements MutableAlliance {
     this.createdAtTick_ = currentTick;
     this.clearExtensionRequests();
   }
+
+  public otherPlayer(player: Player): Player {
+    if (this.requestor_ === player) return this.recipient_;
+    if (this.recipient_ === player) return this.requestor_;
+    throw new Error("[AllianceImpl] Player is not part of this alliance");
+  }
 }
