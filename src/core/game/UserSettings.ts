@@ -76,16 +76,7 @@ export class UserSettings {
     }
   }
 
-  private readonly PATTERN_KEY = "territoryPattern";
   private readonly PATTERN_BASE64_KEY = "territoryPatternBase64";
-
-  getSelectedPattern(): string | undefined {
-    return localStorage.getItem(this.PATTERN_KEY) ?? undefined;
-  }
-
-  setSelectedPattern(patternKey: string): void {
-    localStorage.setItem(this.PATTERN_KEY, patternKey);
-  }
 
   getSelectedPatternBase64(): string | undefined {
     return localStorage.getItem(this.PATTERN_BASE64_KEY) ?? undefined;

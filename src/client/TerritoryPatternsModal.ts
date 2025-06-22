@@ -41,7 +41,15 @@ export class TerritoryPatternsModal extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.selectedPattern = this.userSettings.getSelectedPattern();
+    const b64 = this.userSettings.getSelectedPatternBase64();
+    if (b64) {
+      const found = Object.entries(territoryPatterns.pattern).find(
+        ([key, pattern]) => pattern.pattern === b64,
+      );
+      this.selectedPattern = found ? found[0] : "custom";
+    } else {
+      this.selectedPattern = undefined;
+    }
     window.addEventListener("keydown", this.handleKeyDown);
     this.updateComplete.then(() => {
       const containers = this.renderRoot.querySelectorAll(".preview-container");
@@ -159,11 +167,20 @@ export class TerritoryPatternsModal extends LitElement {
     pattern: (typeof territoryPatterns.pattern)[string],
   ): TemplateResult {
     const isLocked = this.isPatternLocked(key);
-    // const reason = this.lockedReasons[key] || "Locked";
+    const isSelected =
+      this.selectedPattern === key ||
+      (key === "custom" && this.selectedPattern === "custom");
+    let previewPattern = pattern;
+    if (key === "custom") {
+      const b64 = this.userSettings.getSelectedPatternBase64();
+      if (b64) {
+        previewPattern = { pattern: b64 } as any;
+      }
+    }
     return html`
       <button
         class="border p-2 rounded-lg shadow text-black dark:text-white text-left
-        ${this.selectedPattern === key
+        ${isSelected
           ? "bg-blue-500 text-white"
           : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"}
         ${isLocked ? "opacity-50 cursor-not-allowed" : ""}"
@@ -174,7 +191,9 @@ export class TerritoryPatternsModal extends LitElement {
         @mouseleave=${() => this.handleMouseLeave()}
       >
         <div class="text-sm font-bold mb-1">
-          ${translateText(`territory_patterns.pattern.${key}`)}
+          ${key === "custom"
+            ? "Custom"
+            : translateText(`territory_patterns.pattern.${key}`)}
         </div>
         <div
           class="preview-container"
@@ -190,7 +209,7 @@ export class TerritoryPatternsModal extends LitElement {
           "
         >
           ${this.renderPatternPreview(
-            pattern,
+            previewPattern,
             this.buttonWidth,
             this.buttonWidth,
           )}
@@ -269,15 +288,18 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   private selectPattern(patternKey: string | null) {
-    this.selectedPattern = patternKey ?? undefined;
-    this.userSettings.setSelectedPattern(patternKey ?? "");
     if (patternKey) {
-      const base64 = territoryPatterns.pattern[patternKey];
-      if (base64) {
-        this.userSettings.setSelectedPatternBase64(base64.pattern);
+      const pattern = territoryPatterns.pattern[patternKey];
+      if (pattern) {
+        this.userSettings.setSelectedPatternBase64(pattern.pattern);
+        this.selectedPattern = patternKey;
+      } else {
+        this.userSettings.setSelectedPatternBase64("");
+        this.selectedPattern = undefined;
       }
     } else {
       this.userSettings.setSelectedPatternBase64("");
+      this.selectedPattern = undefined;
     }
     this.updatePreview();
     this.close();
@@ -394,15 +416,20 @@ export class TerritoryPatternsModal extends LitElement {
   public updatePreview() {
     if (!this.previewButton) return;
 
-    const pattern = this.selectedPattern
-      ? territoryPatterns.pattern[this.selectedPattern]
-      : null;
+    const patternKey = this.selectedPattern ?? "default";
+    let pattern = territoryPatterns.pattern[patternKey];
+    if (!pattern && patternKey === "custom") {
+      // customパターンはbase64から生成
+      const b64 = this.userSettings.getSelectedPatternBase64();
+      if (b64) {
+        pattern = { pattern: b64 } as any;
+      }
+    }
     if (!pattern) {
       const blankPreview = this.renderBlankPreview(48, 48);
       render(blankPreview, this.previewButton);
       return;
     }
-
     const previewHTML = this.renderPatternPreview(pattern, 48, 48);
     render(previewHTML, this.previewButton);
   }
