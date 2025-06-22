@@ -353,7 +353,7 @@ export class UserSettingModal extends LitElement {
         action="attackRatioDown"
         label=${translateText("user_setting.attack_ratio_down")}
         description=${translateText("user_setting.attack_ratio_down_desc")}
-        defaultKey="Digit1"
+        defaultKey="KeyZ"
         .value=${this.keybinds["attackRatioDown"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
@@ -362,7 +362,7 @@ export class UserSettingModal extends LitElement {
         action="attackRatioUp"
         label=${translateText("user_setting.attack_ratio_up")}
         description=${translateText("user_setting.attack_ratio_up_desc")}
-        defaultKey="Digit2"
+        defaultKey="KeyX"
         .value=${this.keybinds["attackRatioUp"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
