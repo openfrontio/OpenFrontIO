@@ -309,9 +309,7 @@ export class TerritoryLayer implements Layer {
     } else {
       const pattern = owner.pattern();
       // fallback for initial state if tick() hasn't run yet
-      const patternsEnabled =
-        this.cachedTerritoryPatternsEnabled ??
-        this.userSettings.territoryPatterns();
+      const patternsEnabled = this.cachedTerritoryPatternsEnabled;
       if (!pattern || !patternsEnabled) {
         this.paintTile(tile, this.theme.territoryColor(owner), 150);
       } else {
