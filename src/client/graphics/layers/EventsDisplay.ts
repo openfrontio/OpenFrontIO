@@ -45,6 +45,7 @@ import {
   GoToUnitEvent,
 } from "./Leaderboard";
 
+import { UserSettings } from "../../../core/game/UserSettings";
 import { getMessageTypeClasses, translateText } from "../../Utils";
 
 interface GameEvent {
@@ -72,6 +73,7 @@ export class EventsDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
   public game: GameView;
 
+  private userSettings: UserSettings = new UserSettings();
   private active: boolean = false;
   private events: GameEvent[] = [];
   @state() private incomingAttacks: AttackUpdate[] = [];
@@ -435,12 +437,21 @@ export class EventsDisplay extends LitElement implements Layer {
         focusID: update.betrayedID,
       });
     } else if (betrayed === myPlayer) {
+      const buttons = [
+        {
+          text: "Focus",
+          className: "btn-gray",
+          action: () => this.eventBus.emit(new GoToPlayerEvent(traitor)),
+          preventClose: true,
+        },
+      ];
       this.addEvent({
         description: `${traitor.name()} broke their alliance with you`,
         type: MessageType.ALLIANCE_BROKEN,
         highlight: true,
         createdAt: this.game.ticks(),
         focusID: update.traitorID,
+        buttons,
       });
     }
   }
