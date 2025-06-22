@@ -5,13 +5,10 @@ import darkModeIcon from "../../../../resources/images/DarkModeIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
 import explosionIcon from "../../../../resources/images/ExplosionIconWhite.svg";
-import focusIcon from "../../../../resources/images/FocusIconWhite.svg";
 import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
 import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
 import mouseIcon from "../../../../resources/images/MouseIconWhite.svg";
 import ninjaIcon from "../../../../resources/images/NinjaIconWhite.svg";
-import pauseIcon from "../../../../resources/images/PauseIconWhite.svg";
-import playIcon from "../../../../resources/images/PlayIconWhite.svg";
 import portIcon from "../../../../resources/images/PortIcon.svg";
 import samLauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
@@ -21,11 +18,10 @@ import treeIcon from "../../../../resources/images/TreeIconWhite.svg";
 import workerIcon from "../../../../resources/images/WorkerIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import { GameType, UnitType } from "../../../core/game/Game";
+import { UnitType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
-import { PauseGameEvent } from "../../Transport";
 import { renderNumber, renderTroops } from "../../Utils";
 import "../icons/PopulationSolidIcon";
 import { Layer } from "./Layer";
@@ -50,10 +46,6 @@ export class GameTopBar extends LitElement implements Layer {
   private showSettingsMenu = false;
   @state()
   private alternateView: boolean = false;
-  @state()
-  private showPauseButton: boolean = true;
-  @state()
-  private isPaused: boolean = false;
 
   @query(".settings-container")
   private settingsContainer!: HTMLElement;
@@ -63,9 +55,6 @@ export class GameTopBar extends LitElement implements Layer {
   }
 
   init() {
-    this.showPauseButton =
-      this.game.config().gameConfig().gameType === GameType.Singleplayer ||
-      this.game.config().isReplay();
     this.requestUpdate();
   }
 
@@ -132,11 +121,6 @@ export class GameTopBar extends LitElement implements Layer {
     window.location.href = "/";
   }
 
-  private onPauseButtonClick() {
-    this.isPaused = !this.isPaused;
-    this.eventBus.emit(new PauseGameEvent(this.isPaused));
-  }
-
   private onTerrainButtonClick() {
     this.alternateView = !this.alternateView;
     this.eventBus.emit(new AlternateViewEvent(this.alternateView));
@@ -162,12 +146,6 @@ export class GameTopBar extends LitElement implements Layer {
   private onToggleRandomNameModeButtonClick() {
     this._userSettings.toggleRandomName();
   }
-
-  private onToggleFocusLockedButtonClick() {
-    this._userSettings.toggleFocusLocked();
-    this.requestUpdate();
-  }
-
   private onToggleLeftClickOpensMenu() {
     this._userSettings.toggleLeftClickOpenMenu();
   }
@@ -189,6 +167,9 @@ export class GameTopBar extends LitElement implements Layer {
 
   render() {
     const myPlayer = this.game?.myPlayer();
+    if (!this.game || !myPlayer || this.game.inSpawnPhase()) {
+      return null;
+    }
 
     const popRate = myPlayer
       ? this.game.config().populationIncreaseRate(myPlayer) * 10
@@ -349,18 +330,6 @@ export class GameTopBar extends LitElement implements Layer {
                     >
                       <button
                         class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
-                        @click="${this.onPauseButtonClick}"
-                      >
-                        <img
-                          src=${this.isPaused ? playIcon : pauseIcon}
-                          alt="gold"
-                          width="20"
-                          height="20"
-                        />
-                        ${this.isPaused ? "Resume game" : "Pause game"}
-                      </button>
-                      <button
-                        class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
                         @click="${this.onTerrainButtonClick}"
                       >
                         <img
@@ -437,19 +406,6 @@ export class GameTopBar extends LitElement implements Layer {
                         ${this._userSettings.leftClickOpensMenu()
                           ? "On"
                           : "Off"}
-                      </button>
-                      <button
-                        class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
-                        @click="${this.onToggleFocusLockedButtonClick}"
-                      >
-                        <img
-                          src=${focusIcon}
-                          alt="focusIcon"
-                          width="20"
-                          height="20"
-                        />
-                        Focus locked
-                        ${this._userSettings.focusLocked() ? "On" : "Off"}
                       </button>
                       <button
                         class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"

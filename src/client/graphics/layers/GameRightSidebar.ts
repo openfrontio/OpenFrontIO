@@ -1,14 +1,19 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import pauseIcon from "../../../../resources/images/PauseIconWhite.svg";
+import playIcon from "../../../../resources/images/PlayIconWhite.svg";
 import replayRegularIcon from "../../../../resources/images/ReplayRegularIconWhite.svg";
 import replaySolidIcon from "../../../../resources/images/ReplaySolidIconWhite.svg";
+import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
+import { PauseGameEvent } from "../../Transport";
 import { Layer } from "./Layer";
 
 @customElement("game-right-sidebar")
 export class GameRightSidebar extends LitElement implements Layer {
   public game: GameView;
+  public eventBus: EventBus;
   @state()
   private _isSinglePlayer: boolean = false;
 
@@ -17,6 +22,9 @@ export class GameRightSidebar extends LitElement implements Layer {
 
   @state()
   private _isVisible: boolean = true;
+
+  @state()
+  private isPaused: boolean = false;
 
   createRenderRoot() {
     return this;
@@ -33,6 +41,11 @@ export class GameRightSidebar extends LitElement implements Layer {
 
   private toggleReplayPanel(): void {
     this._isReplayVisible = !this._isReplayVisible;
+  }
+
+  private onPauseButtonClick() {
+    this.isPaused = !this.isPaused;
+    this.eventBus.emit(new PauseGameEvent(this.isPaused));
   }
 
   render() {
@@ -55,6 +68,18 @@ export class GameRightSidebar extends LitElement implements Layer {
                       ? replaySolidIcon
                       : replayRegularIcon}
                     alt="replay"
+                    width="20"
+                    height="20"
+                    style="vertical-align: middle;"
+                  />
+                </div>
+                <div
+                  class="w-6 h-6 cursor-pointer"
+                  @click=${this.onPauseButtonClick}
+                >
+                  <img
+                    src=${this.isPaused ? playIcon : pauseIcon}
+                    alt="play/pause"
                     width="20"
                     height="20"
                     style="vertical-align: middle;"

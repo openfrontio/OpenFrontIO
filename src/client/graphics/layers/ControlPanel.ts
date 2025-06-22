@@ -209,11 +209,9 @@ export class ControlPanel extends LitElement implements Layer {
         @contextmenu=${(e) => e.preventDefault()}
       >
         <div class="relative mb-4 lg:mb-4">
-          <label class="block text-white mb-1" translate="no"
-            >${translateText("control_panel.troops")}/${translateText(
-              "control_panel.workers",
-            )}</label
-          >
+          <label class="block text-white mb-1" translate="no">
+            ${translateText("user_setting.troop_ratio_label")}
+          </label>
           <div class="relative h-8">
             <!-- Background track -->
             <div

@@ -16,8 +16,11 @@ export class SpawnTimer implements Layer {
 
   tick() {
     if (this.game.inSpawnPhase()) {
-      this.ratios[0] =
-        this.game.ticks() / this.game.config().numSpawnPhaseTurns();
+      // During spawn phase, only one segment filling full width
+      this.ratios = [
+        this.game.ticks() / this.game.config().numSpawnPhaseTurns(),
+      ];
+      this.colors = ["rgba(0, 128, 255, 0.7)"];
       return;
     }
 
@@ -33,18 +36,17 @@ export class SpawnTimer implements Layer {
       const team = player.team();
       if (team === null) throw new Error("Team is null");
       const tiles = teamTiles.get(team) ?? 0;
-      const sum = tiles + player.numTilesOwned();
-      teamTiles.set(team, sum);
+      teamTiles.set(team, tiles + player.numTilesOwned());
     }
 
     const theme = this.game.config().theme();
     const total = sumIterator(teamTiles.values());
     if (total === 0) return;
+
     for (const [team, count] of teamTiles) {
       const ratio = count / total;
-      const color = theme.teamColor(team).toRgbString();
       this.ratios.push(ratio);
-      this.colors.push(color);
+      this.colors.push(theme.teamColor(team).toRgbString());
     }
   }
 
@@ -57,8 +59,19 @@ export class SpawnTimer implements Layer {
 
     const barHeight = 10;
     const barWidth = this.transformHandler.width();
-    const screenW = window.innerWidth;
-    const yOffset: number = screenW > 1024 ? 80 : 50;
+    let yOffset: number;
+
+    if (this.game.inSpawnPhase()) {
+      // At spawn time, draw at top
+      yOffset = 0;
+    } else if (this.game.config().gameConfig().gameMode === GameMode.Team) {
+      // After spawn, only in team mode, offset based on screen width
+      const screenW = window.innerWidth;
+      yOffset = screenW > 1024 ? 80 : 50;
+    } else {
+      // Not spawn and not team mode: no bar
+      return;
+    }
 
     let x = 0;
     let filledRatio = 0;
@@ -76,8 +89,6 @@ export class SpawnTimer implements Layer {
 }
 
 function sumIterator(values: MapIterator<number>) {
-  // To use reduce, we'd need to allocate an array:
-  // return Array.from(values).reduce((sum, v) => sum + v, 0);
   let total = 0;
   for (const value of values) {
     total += value;

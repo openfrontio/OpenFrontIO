@@ -144,6 +144,7 @@ export function createRenderer(
     console.error("Game Right bar not found");
   }
   gameRightSidebar.game = game;
+  gameRightSidebar.eventBus = eventBus;
 
   const gameTopBar = document.querySelector("game-top-bar") as GameTopBar;
   if (!(gameTopBar instanceof GameTopBar)) {
