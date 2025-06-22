@@ -305,8 +305,8 @@ export class DefaultConfig implements Config {
   cargoPlaneGold(distance: number): Gold {
     const tradeShipGold = this.tradeShipGold(distance);
 
-    // Cargo planes are faster than trade ships and also easier to use, so we only get a part of the gold that trade ships give
-    return BigInt(Math.floor(Number(tradeShipGold) * 0.4));
+    // Cargo planes are faster than trading ships and not blocked by land
+    return BigInt(Math.floor(Number(tradeShipGold) * 0.6));
   }
   cargoPlaneSpawnRate(numberOfAirports: number): number {
     return Math.min(50, Math.round(10 * Math.pow(numberOfAirports, 0.6)));

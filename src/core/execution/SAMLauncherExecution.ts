@@ -16,10 +16,13 @@ export class SAMLauncherExecution implements Execution {
 
   private searchRangeRadius = 80;
   private targetRangeRadius = 120; // Nuke's target should be in this range to be focusable
+
   // As MIRV go very fast we have to detect them very early but we only
   // shoot the one targeting very close (MIRVWarheadProtectionRadius)
   private MIRVWarheadSearchRadius = 400;
   private MIRVWarheadProtectionRadius = 50;
+
+  private cargoPlaneSearchRadius = 150;
 
   private pseudoRandom: PseudoRandom | undefined;
 
@@ -190,6 +193,46 @@ export class SAMLauncherExecution implements Execution {
       } else {
         throw new Error("target is null");
       }
+    }
+
+    // Add seperate attack that targets cargo planes specifically and has no cooldown
+    const cargoPlaneTargets = this.mg.nearbyUnits(
+      this.sam.tile(),
+      this.cargoPlaneSearchRadius,
+      UnitType.CargoPlane,
+      ({ unit }) => {
+        if (unit.owner() === this.player) return false;
+        if (this.player.isFriendly(unit.owner())) return false;
+
+        return true;
+      },
+    );
+
+    const validCargoPlaneTargets = cargoPlaneTargets.filter(
+      ({ unit: u }) => !u.targetedBySAM(),
+    );
+
+    if (validCargoPlaneTargets.length > 0) {
+      this.sam.launch();
+      const samOwner = this.sam.owner();
+
+      this.mg.displayMessage(
+        `${validCargoPlaneTargets.length} Cargo Plane(s) intercepted`,
+        MessageType.SAM_HIT,
+        samOwner.id(),
+      );
+
+      validCargoPlaneTargets.forEach(({ unit: u }) => {
+        u.setTargetedBySAM(true);
+        this.mg.addExecution(
+          new SAMMissileExecution(
+            this.sam!.tile(),
+            this.sam!.owner(),
+            this.sam!,
+            u,
+          ),
+        );
+      });
     }
 
     const frontTime = this.sam.ticksLeftInCooldown();
