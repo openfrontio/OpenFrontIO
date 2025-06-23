@@ -339,6 +339,7 @@ export const buildMenuElement: MenuElement = {
       unitTypes.add(UnitType.Port);
       unitTypes.add(UnitType.MissileSilo);
       unitTypes.add(UnitType.SAMLauncher);
+      unitTypes.add(UnitType.Factory);
     } else {
       unitTypes.add(UnitType.Warship);
       unitTypes.add(UnitType.HydrogenBomb);

@@ -54,6 +54,10 @@ export class SendUpgradeStructureIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendCreateTrainStationIntentEvent implements GameEvent {
+  constructor(public readonly unitId: number) {}
+}
+
 export class SendAllianceReplyIntentEvent implements GameEvent {
   constructor(
     // The original alliance requestor
@@ -199,6 +203,9 @@ export class Transport {
     this.eventBus.on(SendAttackIntentEvent, (e) => this.onSendAttackIntent(e));
     this.eventBus.on(SendUpgradeStructureIntentEvent, (e) =>
       this.onSendUpgradeStructureIntent(e),
+    );
+    this.eventBus.on(SendCreateTrainStationIntentEvent, (e) =>
+      this.onSendCreateTrainStationIntent(e),
     );
     this.eventBus.on(SendBoatAttackIntentEvent, (e) =>
       this.onSendBoatAttackIntent(e),
@@ -449,6 +456,16 @@ export class Transport {
     this.sendIntent({
       type: "upgrade_structure",
       unit: event.unitType,
+      clientID: this.lobbyConfig.clientID,
+      unitId: event.unitId,
+    });
+  }
+
+  private onSendCreateTrainStationIntent(
+    event: SendCreateTrainStationIntentEvent,
+  ) {
+    this.sendIntent({
+      type: "create_station",
       clientID: this.lobbyConfig.clientID,
       unitId: event.unitId,
     });
