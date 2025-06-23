@@ -10,6 +10,13 @@ export class MouseUpEvent implements GameEvent {
   ) {}
 }
 
+export class MouseOverEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
 /**
  * Event emitted when a unit is selected or deselected
  */
@@ -91,6 +98,10 @@ export class CenterCameraEvent implements GameEvent {
   constructor() {}
 }
 
+export class CtrlKeyStateEvent implements GameEvent {
+  constructor(public readonly isPressed: boolean) {}
+}
+
 export class InputHandler {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;
@@ -114,6 +125,8 @@ export class InputHandler {
   private readonly ZOOM_SPEED = 10;
 
   private userSettings: UserSettings = new UserSettings();
+
+  private ctrlKeyPressed: boolean = false;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -141,7 +154,8 @@ export class InputHandler {
     // Mac users might have different keybinds
     const isMac = /Mac/.test(navigator.userAgent);
     if (isMac) {
-      this.keybinds.modifierKey = "MetaLeft"; // Use Command key on Mac
+      // Keep ControlLeft for macOS so Ctrl + click works
+      // this.keybinds.modifierKey = "MetaLeft"; // Use Command key on Mac
     }
 
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
@@ -246,6 +260,14 @@ export class InputHandler {
         ].includes(e.code)
       ) {
         this.activeKeys.add(e.code);
+
+        // Track Ctrl key state for territory highlighting
+        if (e.code === "ControlLeft" || e.code === "ControlRight") {
+          if (!this.ctrlKeyPressed) {
+            this.ctrlKeyPressed = true;
+            this.eventBus.emit(new CtrlKeyStateEvent(true));
+          }
+        }
       }
     });
     window.addEventListener("keyup", (e) => {
@@ -281,6 +303,14 @@ export class InputHandler {
       }
 
       this.activeKeys.delete(e.code);
+
+      // Track Ctrl key state for territory highlighting
+      if (e.code === "ControlLeft" || e.code === "ControlRight") {
+        if (this.ctrlKeyPressed) {
+          this.ctrlKeyPressed = false;
+          this.eventBus.emit(new CtrlKeyStateEvent(false));
+        }
+      }
     });
   }
 
@@ -312,12 +342,15 @@ export class InputHandler {
     this.pointerDown = false;
     this.pointers.clear();
 
-    if (this.isModifierKeyPressed(event)) {
+    // Skip build menu for Ctrl key - only allow Alt key for build menu
+    /*if (this.isAltKeyPressed(event)) {
       this.eventBus.emit(new ShowBuildMenuEvent(event.clientX, event.clientY));
       return;
-    }
-    if (this.isAltKeyPressed(event)) {
-      this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
+    }*/
+    if (this.isModifierKeyPressed(event)) {
+      // Ctrl is pressed but we don't want to show build menu or radial menu
+      // Just continue to normal click behavior
+      this.eventBus.emit(new MouseUpEvent(event.x, event.y));
       return;
     }
 
@@ -364,6 +397,7 @@ export class InputHandler {
     this.pointers.set(event.pointerId, event);
 
     if (!this.pointerDown) {
+      this.eventBus.emit(new MouseOverEvent(event.clientX, event.clientY));
       return;
     }
 
@@ -391,6 +425,19 @@ export class InputHandler {
 
   private onContextMenu(event: MouseEvent) {
     event.preventDefault();
+
+    // On macOS, Control + left click is historically interpreted as a right click.
+    // However, it's not a "real" right click from a multi-button mouse.
+    // To distinguish the two, we check:
+    // - event.ctrlKey is true (Control key held)
+    // - event.buttons is 1 (left click only) instead of 2 (right button pressed)
+    // This allows us to ignore legacy Control + click behavior and only trigger
+    // the radial menu on actual right-click events.
+    if (event.ctrlKey && event.buttons !== 2) {
+      // Ignore legacy Control + left click (not a true right-click)
+      return;
+    }
+
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
   }
 

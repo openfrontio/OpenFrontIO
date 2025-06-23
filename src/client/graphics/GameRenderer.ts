@@ -30,6 +30,7 @@ import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
+import { TerritoryInfoLayer } from "./layers/TerritoryInfoLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { TopBar } from "./layers/TopBar";
 import { UILayer } from "./layers/UILayer";
@@ -215,28 +216,55 @@ export function createRenderer(
   }
   gutterAdModal.eventBus = eventBus;
 
+  // Create all layer instances first
+  const terrainLayer = new TerrainLayer(game, transformHandler);
+  const territoryLayer = new TerritoryLayer(
+    game,
+    eventBus,
+    transformHandler,
+    userSettings,
+  );
+  const railroadLayer = new RailroadLayer(game);
+  const territoryInfoLayer = new TerritoryInfoLayer(
+    game,
+    eventBus,
+    transformHandler,
+    territoryLayer,
+  );
+  const unitLayer = new UnitLayer(game, eventBus, transformHandler);
+  const fxLayer = new FxLayer(game);
+  const uiLayer = new UILayer(game, eventBus, transformHandler);
+  const nameLayer = new NameLayer(game, transformHandler, eventBus);
+  const mainRadialMenu = new MainRadialMenu(
+    eventBus,
+    game,
+    transformHandler,
+    emojiTable as EmojiTable,
+    buildMenu,
+    uiState,
+    playerPanel,
+  );
+  const spawnTimer = new SpawnTimer(game, transformHandler);
+
+  // Organize layers in rendering order
   const layers: Layer[] = [
-    new TerrainLayer(game, transformHandler),
-    new TerritoryLayer(game, eventBus, transformHandler, userSettings),
-    new RailroadLayer(game),
+    // Background layers (transformed)
+    terrainLayer,
+    territoryLayer,
+    railroadLayer,
+    territoryInfoLayer,
     structureLayer,
-    new UnitLayer(game, eventBus, transformHandler),
-    new FxLayer(game),
-    new UILayer(game, eventBus, transformHandler),
-    new NameLayer(game, transformHandler),
+    unitLayer,
+    fxLayer,
+
+    // UI layers (not transformed)
+    uiLayer,
+    nameLayer,
     eventsDisplay,
     chatDisplay,
     buildMenu,
-    new MainRadialMenu(
-      eventBus,
-      game,
-      transformHandler,
-      emojiTable as EmojiTable,
-      buildMenu,
-      uiState,
-      playerPanel,
-    ),
-    new SpawnTimer(game, transformHandler),
+    mainRadialMenu,
+    spawnTimer,
     leaderboard,
     gameLeftSidebar,
     controlPanel,
