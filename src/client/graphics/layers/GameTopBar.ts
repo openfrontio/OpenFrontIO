@@ -188,21 +188,19 @@ export class GameTopBar extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed top-0 min-h-[50px] lg:min-h-[80px] z-[1100] flex flex-wrap bg-slate-800/40 backdrop-blur-sm shadow-xs pr-0.5 text-white text-xs left-0 right-0 grid-cols-4 p-1 md:text-base md:p-1.5 lg:p-2"
+        class="fixed top-0 min-h-[50px] lg:min-h-[80px] z-[1100] flex flex-wrap bg-slate-800/40 backdrop-blur-sm shadow-xs text-white text-xs left-0 right-0 grid-cols-4 p-1 md:text-base md:px-1.5 lg:px-4"
       >
         <div
           class="flex flex-1 basis-full justify-between items-center gap-1 w-full"
         >
           ${myPlayer?.isAlive() && !this.game.inSpawnPhase()
             ? html`
-                <div
-                  class="overflow-x-auto hide-scrollbar flex-1 max-w-[85vw] border-r border-slate-400 md:border-0"
-                >
+                <div class="overflow-x-auto hide-scrollbar flex-1 max-w-[85vw]">
                   <div
                     class="grid gap-1 grid-cols-[80px_100px_80px_minmax(80px,auto)] w-max md:gap-2 md:grid-cols-[90px_120px_90px_minmax(100px,auto)]"
                   >
                     <div
-                      class="flex flex-wrap gap-1 flex-col bg-slate-800/20 border border-slate-400 p-0.5 lg:p-2"
+                      class="flex flex-wrap gap-1 flex-col bg-slate-800/20 border border-slate-400 p-0.5 md:px-1 lg:px-2"
                     >
                       <div class="flex gap-2 items-center justify-between">
                         <img
@@ -217,7 +215,7 @@ export class GameTopBar extends LitElement implements Layer {
                       <div>${renderNumber(myPlayer.gold())}</div>
                     </div>
                     <div
-                      class="flex flex-wrap gap-1 flex-col bg-slate-800/20 border border-slate-400 p-0.5 lg:p-2"
+                      class="flex flex-wrap gap-1 flex-col bg-slate-800/20 border border-slate-400 p-0.5 md:px-1 lg:px-2"
                     >
                       <div class="flex gap-2 items-center justify-between">
                         <img
@@ -242,7 +240,7 @@ export class GameTopBar extends LitElement implements Layer {
                       </div>
                     </div>
                     <div
-                      class="flex bg-slate-800/20 border border-slate-400 p-0.5 lg:p-2"
+                      class="flex bg-slate-800/20 border border-slate-400 p-0.5 md:px-1 lg:px-2"
                     >
                       <div class="flex flex-col flex-grow gap-1 w-full ">
                         <div class="flex gap-1">
@@ -268,9 +266,9 @@ export class GameTopBar extends LitElement implements Layer {
                       </div>
                     </div>
                     <div
-                      class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1 bg-slate-800/20 border border-slate-400 p-0.5 lg:p-2 md:gap-2"
+                      class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1 bg-slate-800/20 border border-slate-400 p-0.5 md:px-1 lg:px-2 md:gap-2"
                     >
-                      <div class="flex items-center gap-1">
+                      <div class="flex items-center gap-2">
                         <img
                           src=${cityIcon}
                           alt="gold"
@@ -280,7 +278,7 @@ export class GameTopBar extends LitElement implements Layer {
                         />
                         ${renderNumber(this._cities)}
                       </div>
-                      <div class="flex items-center gap-1">
+                      <div class="flex items-center gap-2">
                         <img
                           src=${factoryIcon}
                           alt="gold"
@@ -290,7 +288,7 @@ export class GameTopBar extends LitElement implements Layer {
                         />
                         ${renderNumber(this._cities)}
                       </div>
-                      <div class="flex items-center gap-1">
+                      <div class="flex items-center gap-2">
                         <img
                           src=${portIcon}
                           alt="gold"
@@ -300,7 +298,7 @@ export class GameTopBar extends LitElement implements Layer {
                         />
                         ${renderNumber(this._port)}
                       </div>
-                      <div class="flex items-center gap-1">
+                      <div class="flex items-center gap-2">
                         <img
                           src=${defensePostIcon}
                           alt="gold"
@@ -310,7 +308,7 @@ export class GameTopBar extends LitElement implements Layer {
                         />
                         ${renderNumber(this._defensePost)}
                       </div>
-                      <div class="flex items-center gap-1">
+                      <div class="flex items-center gap-2">
                         <img
                           src=${missileSiloIcon}
                           alt="gold"
@@ -320,7 +318,7 @@ export class GameTopBar extends LitElement implements Layer {
                         />
                         ${renderNumber(this._missileSilo)}
                       </div>
-                      <div class="flex items-center gap-1">
+                      <div class="flex items-center gap-2">
                         <img
                           src=${samLauncherIcon}
                           alt="gold"
