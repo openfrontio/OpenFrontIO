@@ -2,6 +2,7 @@ import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { GameMapType } from "../../core/game/Game";
 import { terrainMapFileLoader } from "../../core/game/TerrainMapFileLoader";
+import { translateText } from "../Utils";
 
 // Add map descriptions
 export const MapDescription: Record<keyof typeof GameMapType, string> = {
@@ -114,7 +115,9 @@ export class MapDisplay extends LitElement {
     return html`
       <div class="option-card ${this.selected ? "selected" : ""}">
         ${this.isLoading
-          ? html`<div class="option-image">Loading...</div>`
+          ? html`<div class="option-image">
+              ${translateText("map_component.loading")}
+            </div>`
           : this.mapWebpPath
             ? html`<img
                 src="${this.mapWebpPath}"
