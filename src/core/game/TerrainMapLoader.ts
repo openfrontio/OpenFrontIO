@@ -11,6 +11,7 @@ export type TerrainMapData = {
 const loadedMaps = new Map<GameMapType, TerrainMapData>();
 
 export interface NationMap {
+  name: string;
   nations: Nation[];
 }
 
@@ -26,12 +27,12 @@ export async function loadTerrainMap(
 ): Promise<TerrainMapData> {
   const cached = loadedMaps.get(map);
   if (cached !== undefined) return cached;
-  const mapFiles = await terrainMapFileLoader.getMapData(map);
+  const mapFiles = terrainMapFileLoader.getMapData(map);
 
-  const gameMap = await genTerrainFromBin(mapFiles.mapBin);
-  const miniGameMap = await genTerrainFromBin(mapFiles.miniMapBin);
+  const gameMap = await genTerrainFromBin(await mapFiles.mapBin());
+  const miniGameMap = await genTerrainFromBin(await mapFiles.miniMapBin());
   const result = {
-    nationMap: mapFiles.nationMap,
+    nationMap: await mapFiles.nationMap(),
     gameMap: gameMap,
     miniGameMap: miniGameMap,
   };
