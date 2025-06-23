@@ -461,10 +461,7 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     1_000_000,
-                    Math.pow(
-                      2,
-                      p.unitsIncludingConstruction(UnitType.Factory).length,
-                    ) * 125_000,
+                    Math.pow(2, p.unitsConstructed(UnitType.Factory)) * 125_000,
                   ),
                 ),
           territoryBound: true,
