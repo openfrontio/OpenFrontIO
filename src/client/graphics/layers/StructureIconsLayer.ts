@@ -1,35 +1,33 @@
-import { Theme } from "../../../core/configuration/Config";
-import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
-
+import * as PIXI from "pixi.js";
 import anchorIcon from "../../../../resources/images/AnchorIcon.png";
 import cityIcon from "../../../../resources/images/CityIcon.png";
 import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
 import SAMMissileIcon from "../../../../resources/images/SamLauncherUnit.png";
 import shieldIcon from "../../../../resources/images/ShieldIcon.png";
+import { Theme } from "../../../core/configuration/Config";
 import { Cell, PlayerID, UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
+import { TransformHandler } from "../TransformHandler";
+import { Layer } from "./Layer";
 
 class StructureRenderInfo {
-  public firstDraw: boolean = true;
-  public location: { x: number; y: number } | null = null;
-
   constructor(
     public unit: UnitView,
     public owner: PlayerID,
-    public imageData: HTMLCanvasElement,
-    public shouldRedraw: boolean = true,
+    public pixiSprite: PIXI.Sprite,
   ) {}
 }
 const ZOOM_THRESHOLD = 2.8; // below this zoom level, structures are not rendered
 const ICON_SIZE = 24;
 
 export class StructureIconsLayer implements Layer {
-  private canvas: HTMLCanvasElement;
+  private pixicanvas: HTMLCanvasElement;
+  private stage: PIXI.Container;
+  private shouldRedraw: boolean = true;
   private nodeCache: Map<string, HTMLCanvasElement> = new Map();
-  private context: CanvasRenderingContext2D;
   private theme: Theme;
+  private renderer: PIXI.Renderer;
   private renders: StructureRenderInfo[] = [];
   private seenUnits: Set<UnitView> = new Set();
   private structures: Map<
@@ -49,6 +47,26 @@ export class StructureIconsLayer implements Layer {
   ) {
     this.theme = game.config().theme();
     this.structures.forEach((u, unitType) => this.loadIcon(u, unitType));
+  }
+
+  async setupRenderer() {
+    this.renderer = new PIXI.WebGLRenderer();
+    this.pixicanvas = document.createElement("canvas");
+    this.pixicanvas.width = innerWidth;
+    this.pixicanvas.height = innerHeight;
+    this.stage = new PIXI.Container();
+    this.stage.position.set(0, 0);
+    this.stage.width = this.pixicanvas.width;
+    this.stage.height = this.pixicanvas.height;
+    await this.renderer.init({
+      canvas: this.pixicanvas,
+      resolution: 1,
+      width: this.pixicanvas.width,
+      height: this.pixicanvas.height,
+      clearBeforeRender: true,
+      backgroundAlpha: 0,
+      backgroundColor: 0x00000000,
+    });
   }
 
   private loadIcon(
@@ -77,14 +95,19 @@ export class StructureIconsLayer implements Layer {
     return false;
   }
 
-  init() {
+  async init() {
     window.addEventListener("resize", () => this.resizeCanvas());
+    this.setupRenderer();
     this.redraw();
   }
 
   resizeCanvas() {
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
+    if (this.renderer.view) {
+      this.pixicanvas.width = innerWidth;
+      this.pixicanvas.height = innerHeight;
+      this.renderer.resize(window.innerWidth, window.innerHeight, 1);
+      this.shouldRedraw = true;
+    }
   }
 
   public tick() {
@@ -99,11 +122,7 @@ export class StructureIconsLayer implements Layer {
             const render = this.renders.find(
               (r) => r.unit.id() === unitView.id(),
             );
-            if (!render) {
-              console.warn(`Render not found for unit ${unitView.id()}`);
-              return;
-            }
-            this.checkOwner(render, unitView);
+            this.checkOwner(render!, unitView);
           } else if (this.structures.has(unitView.type())) {
             // new unit, create render info
             this.seenUnits.add(unitView);
@@ -111,20 +130,18 @@ export class StructureIconsLayer implements Layer {
               new StructureRenderInfo(
                 unitView,
                 unitView.owner().id(),
-                this.createUnitElement(unitView),
+                this.createPixiSprite(unitView),
               ),
             );
+            this.shouldRedraw = true;
           }
         }
         if (!unitView.isActive() && this.seenUnits.has(unitView)) {
           const render = this.renders.find(
             (r) => r.unit.id() === unitView.id(),
           );
-          if (!render) {
-            console.warn(`Render not found for unit ${unitView.id()}`);
-            return;
-          }
-          this.deleteStructure(render);
+          this.deleteStructure(render!);
+          this.shouldRedraw = true;
           return;
         }
       });
@@ -132,73 +149,38 @@ export class StructureIconsLayer implements Layer {
 
   redraw() {
     console.log("structureIcons layer redrawing");
-    this.canvas = document.createElement("canvas");
     this.resizeCanvas();
-    const context = this.canvas.getContext("2d", { alpha: true });
-    if (context === null) throw new Error("2d context not supported");
-    this.context = context;
   }
 
   renderLayer(mainContext: CanvasRenderingContext2D) {
-    const hasChanged = this.transformHandler.hasChanged();
-    const isZoomedOut = this.transformHandler.scale <= ZOOM_THRESHOLD;
-    const scaleCapped = Math.min(1, this.transformHandler.scale * 1.3);
-    if (hasChanged || !isZoomedOut) {
-      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    }
-    if (!isZoomedOut) {
+    if (!this.renderer) {
       return;
     }
 
-    if (!hasChanged) {
-      for (const render of this.renders) {
-        if (render.shouldRedraw) {
-          this.clearStructure(render);
-        }
-      }
+    if (this.transformHandler.scale > ZOOM_THRESHOLD) {
+      return;
     }
 
+    const hasChanged = this.transformHandler.hasChanged() || this.shouldRedraw;
     for (const render of this.renders) {
-      if (hasChanged || render.firstDraw) {
+      if (hasChanged) {
         this.computeNewLocation(render);
       }
     }
 
     if (hasChanged) {
-      this.context.save();
-      this.context.scale(scaleCapped, scaleCapped);
+      this.renderer.render(this.stage);
+      this.shouldRedraw = false;
     }
-
-    for (const render of this.renders) {
-      const shouldDraw = render.shouldRedraw || hasChanged || render.firstDraw;
-
-      const loc = render.location;
-      const isOnScreen =
-        loc &&
-        loc.x >= 0 &&
-        loc.y >= 0 &&
-        loc.x <= this.canvas.width &&
-        loc.y <= this.canvas.height;
-
-      if (shouldDraw && isOnScreen) {
-        render.firstDraw = false;
-        render.shouldRedraw = false;
-        this.renderStructure(render, scaleCapped);
-      }
-    }
-
-    if (hasChanged) {
-      this.context.restore();
-    }
-
-    mainContext.drawImage(this.canvas, 0, 0);
+    mainContext.drawImage(this.renderer.canvas, 0, 0);
   }
 
   private checkOwner(render: StructureRenderInfo, unit: UnitView) {
     if (render.owner !== unit.owner().id()) {
-      render.shouldRedraw = true;
       render.owner = unit.owner().id();
-      render.imageData = this.createUnitElement(unit);
+      render.pixiSprite?.destroy();
+      render.pixiSprite = this.createPixiSprite(unit);
+      this.shouldRedraw = true;
     }
   }
 
@@ -250,6 +232,22 @@ export class StructureIconsLayer implements Layer {
     return structureCanvas;
   }
 
+  private createPixiSprite(unit: UnitView) {
+    const structureCanvas = this.createUnitElement(unit);
+    const sprite = new PIXI.Sprite(PIXI.Texture.from(structureCanvas));
+    sprite.anchor.set(0.5, 0.5);
+    const tile = unit.tile();
+    const worldX = this.game.x(tile);
+    const worldY = this.game.y(tile);
+    const screenPos = this.transformHandler.worldToScreenCoordinates(
+      new Cell(worldX, worldY),
+    );
+    sprite.x = screenPos.x;
+    sprite.y = screenPos.y - this.transformHandler.scale * 8;
+    this.stage.addChild(sprite);
+    return sprite;
+  }
+
   private getImageColored(
     image: HTMLImageElement,
     color: string,
@@ -265,19 +263,7 @@ export class StructureIconsLayer implements Layer {
     return imageCanvas;
   }
 
-  private clearStructure(render: StructureRenderInfo) {
-    if (render.location) {
-      this.context.clearRect(
-        render.location.x - 1 - render.imageData.width / 2,
-        render.location.y - 1 - render.imageData.height / 2,
-        render.imageData.width + 2,
-        render.imageData.height + 2,
-      );
-    }
-  }
-
   private computeNewLocation(render: StructureRenderInfo) {
-    // Compute screen position with vertical offset
     const tile = render.unit.tile();
     const worldX = this.game.x(tile);
     const worldY = this.game.y(tile);
@@ -285,26 +271,15 @@ export class StructureIconsLayer implements Layer {
       new Cell(worldX, worldY),
     );
     screenPos.y -= this.transformHandler.scale * 8;
-    render.location = { x: screenPos.x, y: screenPos.y };
+    render.pixiSprite.x = Math.round(screenPos.x);
+    render.pixiSprite.y = Math.round(
+      screenPos.y - this.transformHandler.scale * 8,
+    );
   }
 
   private deleteStructure(render: StructureRenderInfo) {
-    this.clearStructure(render);
+    render.pixiSprite?.destroy();
     this.renders = this.renders.filter((r) => r.unit !== render.unit);
     this.seenUnits.delete(render.unit);
-  }
-
-  private renderStructure(render: StructureRenderInfo, scale: number) {
-    if (render.location) {
-      this.context.drawImage(
-        render.imageData,
-        Math.round(
-          render.location.x * (1 / scale) - render.imageData.width / 2,
-        ),
-        Math.round(
-          render.location.y * (1 / scale) - render.imageData.height / 2,
-        ),
-      );
-    }
   }
 }
