@@ -113,7 +113,7 @@ export class CargoPlaneExecution implements Execution {
     return false;
   }
 
-  dstPort(): TileRef {
+  dstAirport(): TileRef {
     return this.destinationAirport.tile();
   }
 }
