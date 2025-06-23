@@ -368,4 +368,8 @@ export class TerritoryLayer implements Layer {
     const y = this.game.y(tile);
     this.highlightContext.clearRect(x, y, 1, 1);
   }
+
+  getCanvas(): HTMLCanvasElement | null {
+    return this.canvas || null;
+  }
 }

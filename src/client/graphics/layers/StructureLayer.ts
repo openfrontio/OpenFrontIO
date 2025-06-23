@@ -1,7 +1,7 @@
 import { colord, Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
-import { MouseUpEvent } from "../../InputHandler";
+import { MouseOverEvent, MouseUpEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { UnitInfoModal } from "./UnitInfoModal";
@@ -56,6 +56,7 @@ export class StructureLayer implements Layer {
   private theme: Theme;
   private selectedStructureUnit: UnitView | null = null;
   private previouslySelected: UnitView | null = null;
+  private mouseOverUnit: UnitView | null = null;
   private tempCanvas: HTMLCanvasElement;
   private tempContext: CanvasRenderingContext2D;
 
@@ -168,6 +169,7 @@ export class StructureLayer implements Layer {
   init() {
     this.redraw();
     this.eventBus.on(MouseUpEvent, (e) => this.onMouseUp(e));
+    this.eventBus.on(MouseOverEvent, (e) => this.onMouseOver(e));
   }
 
   redraw() {
@@ -293,7 +295,15 @@ export class StructureLayer implements Layer {
     const startX = this.game.x(unit.tile()) - (scaledWidth >> 1);
     const startY = this.game.y(unit.tile()) - (scaledHeight >> 1);
 
-    this.renderIcon(icon, startX, startY, scaledWidth, scaledHeight, unit);
+    this.renderIcon(
+      icon,
+      startX,
+      startY,
+      scaledWidth,
+      scaledHeight,
+      unit,
+      this.mouseOverUnit === unit ? 0.5 : 1,
+    );
   }
 
   private renderIcon(
@@ -303,6 +313,7 @@ export class StructureLayer implements Layer {
     width: number,
     height: number,
     unit: UnitView,
+    opacity: number = 1,
   ) {
     let color = this.theme.borderColor(unit.owner());
     if (unit.type() === UnitType.Construction) {
@@ -329,8 +340,10 @@ export class StructureLayer implements Layer {
     this.tempContext.globalCompositeOperation = "destination-in";
     this.tempContext.drawImage(image, 0, 0, width * 2, height * 2);
 
-    // Draw the final result to the main canvas
+    // Draw the final result to the main canvas with opacity
+    this.context.globalAlpha = opacity;
     this.context.drawImage(this.tempCanvas, startX * 2, startY * 2);
+    this.context.globalAlpha = 1;
   }
 
   paintCell(cell: Cell, color: Colord, alpha: number) {
@@ -360,6 +373,35 @@ export class StructureLayer implements Layer {
     }
 
     return null;
+  }
+
+  private onMouseOver(event: MouseOverEvent) {
+    const cell = this.transformHandler.screenToWorldCoordinates(
+      event.x,
+      event.y,
+    );
+    if (!this.game.isValidCoord(cell.x, cell.y)) {
+      return;
+    }
+    const unit = this.findStructureUnitAtCell(cell);
+    if (unit) {
+      if (this.mouseOverUnit !== unit) {
+        const previousUnit = this.mouseOverUnit;
+        this.mouseOverUnit = unit;
+        if (previousUnit) {
+          this.handleUnitRendering(previousUnit);
+        }
+        this.handleUnitRendering(unit);
+        document.body.style.cursor = "pointer";
+      }
+    } else {
+      if (this.mouseOverUnit) {
+        const previousUnit = this.mouseOverUnit;
+        this.mouseOverUnit = null;
+        this.handleUnitRendering(previousUnit);
+        document.body.style.cursor = "default";
+      }
+    }
   }
 
   private onMouseUp(event: MouseUpEvent) {
