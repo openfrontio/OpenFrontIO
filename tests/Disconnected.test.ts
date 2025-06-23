@@ -10,7 +10,7 @@ let player2: Player;
 
 describe("Disconnected", () => {
   beforeEach(async () => {
-    game = await setup("Plains", {
+    game = await setup("plains", {
       infiniteGold: true,
       instantBuild: true,
     });

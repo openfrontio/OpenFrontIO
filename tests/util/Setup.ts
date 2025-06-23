@@ -1,4 +1,4 @@
-import fs from "fs/promises";
+import fs from "fs";
 import path from "path";
 import {
   Difficulty,
@@ -13,7 +13,6 @@ import { createGame } from "../../src/core/game/GameImpl";
 import { genTerrainFromBin } from "../../src/core/game/TerrainMapLoader";
 import { UserSettings } from "../../src/core/game/UserSettings";
 import { GameConfig } from "../../src/core/Schemas";
-import { generateMap } from "../../src/scripts/TerrainMapGenerator";
 import { TestConfig } from "./TestConfig";
 import { TestServerConfig } from "./TestServerConfig";
 
@@ -25,14 +24,25 @@ export async function setup(
   // Suppress console.debug for tests.
   console.debug = () => {};
 
-  // Load the specified map
-  const mapPath = path.join(__dirname, "..", "testdata", `${mapName}.png`);
-  const imageBuffer = await fs.readFile(mapPath);
-  const { map, miniMap } = await generateMap(imageBuffer, false);
-  const gameMap = await genTerrainFromBin(String.fromCharCode.apply(null, map));
-  const miniGameMap = await genTerrainFromBin(
-    String.fromCharCode.apply(null, miniMap),
+  // Simple binary file loading using fs.readFileSync()
+  const mapBinPath = path.join(
+    __dirname,
+    `../testdata/maps/${mapName}/map.bin`,
   );
+  const miniMapBinPath = path.join(
+    __dirname,
+    `../testdata/maps/${mapName}/mini_map.bin`,
+  );
+
+  const mapBinBuffer = fs.readFileSync(mapBinPath);
+  const miniMapBinBuffer = fs.readFileSync(miniMapBinPath);
+
+  // Convert Buffer to string (binary encoding)
+  const mapBinString = mapBinBuffer.toString("binary");
+  const miniMapBinString = miniMapBinBuffer.toString("binary");
+
+  const gameMap = await genTerrainFromBin(mapBinString);
+  const miniGameMap = await genTerrainFromBin(miniMapBinString);
 
   // Configure the game
   const serverConfig = new TestServerConfig();
