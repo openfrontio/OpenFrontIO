@@ -13,7 +13,6 @@ export class PublicLobby extends LitElement {
   @state() public isLobbyHighlighted: boolean = false;
   @state() private isButtonDebounced: boolean = false;
   @state() private mapImages: Map<GameID, string> = new Map();
-  @state() private loadingMaps: Set<GameID> = new Set();
   private lobbiesInterval: number | null = null;
   private currLobby: GameInfo | null = null;
   private debounceDelay: number = 750;
@@ -52,11 +51,7 @@ export class PublicLobby extends LitElement {
         }
 
         // Load map image if not already loaded
-        if (
-          l.gameConfig &&
-          !this.mapImages.has(l.gameID) &&
-          !this.loadingMaps.has(l.gameID)
-        ) {
+        if (l.gameConfig && !this.mapImages.has(l.gameID)) {
           this.loadMapImage(l.gameID, l.gameConfig.gameMap);
         }
       });
@@ -66,10 +61,7 @@ export class PublicLobby extends LitElement {
   }
 
   private async loadMapImage(gameID: GameID, gameMap: string) {
-    if (this.loadingMaps.has(gameID)) return;
-
     try {
-      this.loadingMaps.add(gameID);
       // Convert string to GameMapType enum value
       const mapType = gameMap as GameMapType;
       const data = terrainMapFileLoader.getMapData(mapType);
@@ -77,8 +69,6 @@ export class PublicLobby extends LitElement {
       this.requestUpdate();
     } catch (error) {
       console.error("Failed to load map image:", error);
-    } finally {
-      this.loadingMaps.delete(gameID);
     }
   }
 
