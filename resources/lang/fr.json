@@ -226,8 +226,6 @@
     "dark_mode_desc": "Basculer l'apparence du site entre les thèmes clairs et sombres",
     "emojis_label": "😊 Émojis",
     "emojis_desc": "Afficher/Masquer les émoticônes dans le jeu",
-    "alert_frame_label": "🚨 Cadre d'alerte",
-    "alert_frame_desc": "Afficher/Masquer le cadre d'alerte. Lorsqu'il est activé, un cadre sera affiché lorsque vous serez trahi.",
     "special_effects_label": "💥 Effets spéciaux",
     "special_effects_desc": "Activer/désactiver les effets spéciaux. Désactiver pour améliorer les performances",
     "anonymous_names_label": "🥷 Noms masqués",
