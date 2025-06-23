@@ -4,7 +4,7 @@ import { setup } from "./util/Setup";
 
 describe("Territory management", () => {
   test("player owns the tile it spawns on", async () => {
-    const game = await setup("Plains");
+    const game = await setup("plains");
     game.addPlayer(
       new PlayerInfo(
         undefined,
