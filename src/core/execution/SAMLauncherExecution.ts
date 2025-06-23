@@ -225,7 +225,7 @@ export class SAMLauncherExecution implements Execution {
     );
 
     const validCargoPlaneTargets = potentialCargoPlaneTargets.filter(
-      ({ unit: unit }) => {
+      ({ unit }) => {
         const unitOwner = unit.owner();
         const targetUnitOwner = unit.targetUnit()?.owner();
 
@@ -236,7 +236,7 @@ export class SAMLauncherExecution implements Execution {
 
         if (
           targetUnitOwner === this.player ||
-          targetUnitOwner?.isFriendly(this.player)
+          (targetUnitOwner && targetUnitOwner?.isFriendly(this.player))
         ) {
           return false;
         }
