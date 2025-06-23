@@ -286,7 +286,7 @@ export class GameTopBar extends LitElement implements Layer {
                           height="20"
                           style="vertical-align: middle;"
                         />
-                        ${renderNumber(this._cities)}
+                        ${renderNumber(this._factories)}
                       </div>
                       <div class="flex items-center gap-2">
                         <img
