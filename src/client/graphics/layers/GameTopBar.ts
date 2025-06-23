@@ -5,6 +5,7 @@ import darkModeIcon from "../../../../resources/images/DarkModeIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
 import explosionIcon from "../../../../resources/images/ExplosionIconWhite.svg";
+import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
 import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
 import mouseIcon from "../../../../resources/images/MouseIconWhite.svg";
@@ -14,8 +15,8 @@ import portIcon from "../../../../resources/images/PortIcon.svg";
 import samLauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
 import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
-import troopIcon from "../../../../resources/images/SwordIconWhite.svg";
 import treeIcon from "../../../../resources/images/TreeIconWhite.svg";
+import troopIcon from "../../../../resources/images/TroopIconWhite.svg";
 import workerIcon from "../../../../resources/images/WorkerIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
@@ -34,6 +35,7 @@ export class GameTopBar extends LitElement implements Layer {
   private _population = 0;
   private _troops = 0;
   private _cities = 0;
+  private _factories = 0;
   private _workers = 0;
   private _missileSilo = 0;
   private _port = 0;
@@ -87,6 +89,11 @@ export class GameTopBar extends LitElement implements Layer {
     this._samLauncher = this.game
       ?.myPlayer()!
       .units(UnitType.SAMLauncher)
+      .map((unit) => unit.level())
+      .reduce((a, b) => a + b, 0);
+    this._factories = this.game
+      ?.myPlayer()!
+      .units(UnitType.Factory)
       .map((unit) => unit.level())
       .reduce((a, b) => a + b, 0);
     this.requestUpdate();
@@ -181,7 +188,7 @@ export class GameTopBar extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed top-0 min-h-[50px] lg:min-h-[80px] z-[1100] flex flex-wrap bg-slate-800/40 backdrop-blur-sm shadow-xs pr-0.5 text-white text-xs left-0 right-0 grid-cols-4 pb-1 md:text-base"
+        class="fixed top-0 min-h-[50px] lg:min-h-[80px] z-[1100] flex flex-wrap bg-slate-800/40 backdrop-blur-sm shadow-xs pr-0.5 text-white text-xs left-0 right-0 grid-cols-4 p-1 md:text-base md:p-1.5 lg:p-2"
       >
         <div
           class="flex flex-1 basis-full justify-between items-center gap-1 w-full"
@@ -261,7 +268,7 @@ export class GameTopBar extends LitElement implements Layer {
                       </div>
                     </div>
                     <div
-                      class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1 bg-slate-800/20 border border-slate-400 p-0.5 lg:p-2"
+                      class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1 bg-slate-800/20 border border-slate-400 p-0.5 lg:p-2 md:gap-2"
                     >
                       <div class="flex items-center gap-1">
                         <img
@@ -271,7 +278,17 @@ export class GameTopBar extends LitElement implements Layer {
                           height="20"
                           style="vertical-align: middle;"
                         />
-                        ${renderTroops(this._cities)}
+                        ${renderNumber(this._cities)}
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <img
+                          src=${factoryIcon}
+                          alt="gold"
+                          width="20"
+                          height="20"
+                          style="vertical-align: middle;"
+                        />
+                        ${renderNumber(this._cities)}
                       </div>
                       <div class="flex items-center gap-1">
                         <img
@@ -281,7 +298,7 @@ export class GameTopBar extends LitElement implements Layer {
                           height="20"
                           style="vertical-align: middle;"
                         />
-                        ${renderTroops(this._port)}
+                        ${renderNumber(this._port)}
                       </div>
                       <div class="flex items-center gap-1">
                         <img
@@ -291,7 +308,7 @@ export class GameTopBar extends LitElement implements Layer {
                           height="20"
                           style="vertical-align: middle;"
                         />
-                        ${renderTroops(this._defensePost)}
+                        ${renderNumber(this._defensePost)}
                       </div>
                       <div class="flex items-center gap-1">
                         <img
@@ -301,7 +318,7 @@ export class GameTopBar extends LitElement implements Layer {
                           height="20"
                           style="vertical-align: middle;"
                         />
-                        ${renderTroops(this._missileSilo)}
+                        ${renderNumber(this._missileSilo)}
                       </div>
                       <div class="flex items-center gap-1">
                         <img
@@ -311,7 +328,7 @@ export class GameTopBar extends LitElement implements Layer {
                           height="20"
                           style="vertical-align: middle;"
                         />
-                        ${renderTroops(this._samLauncher)}
+                        ${renderNumber(this._samLauncher)}
                       </div>
                     </div>
                   </div>
