@@ -426,20 +426,10 @@ export class ClientGameRunner {
   }
 
   private doBoatAttackUnderCursor(): void {
-    if (!this.isActive || !this.lastMousePosition) {
+    const tile = this.getTileUnderCursor();
+    if (tile === null) {
       return;
     }
-    if (this.gameView.inSpawnPhase()) {
-      return;
-    }
-    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
-      this.lastMousePosition.x,
-      this.lastMousePosition.y,
-    );
-    if (!this.gameView.isValidCoord(cell.x, cell.y)) {
-      return;
-    }
-    const tile = this.gameView.ref(cell.x, cell.y);
 
     if (this.myPlayer === null) {
       const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
