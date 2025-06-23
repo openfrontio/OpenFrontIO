@@ -247,6 +247,8 @@
     "attack_ratio_desc": "What percentage of your troops to send in an attack (1–100%)",
     "troop_ratio_label": "🪖🛠️ Troops and Workers Ratio",
     "troop_ratio_desc": "Adjust the balance between troops (for combat) and workers (for gold production) (1–100%)",
+    "territory_patterns_label": "🏳️ Territory Patterns",
+    "territory_patterns_desc": "Choose whether to display territory pattern designs in game",
     "easter_writing_speed_label": "Writing Speed Multiplier",
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
     "easter_bug_count_label": "Bug Count",
@@ -463,5 +465,32 @@
   },
   "heads_up_message": {
     "choose_spawn": "Choose a starting location"
+  },
+  "territory_patterns": {
+    "title": "Select Territory Pattern",
+    "blocked": {
+      "login": "You must be logged in to access this pattern.",
+      "role": "This pattern requires the {role} role."
+    },
+    "pattern": {
+      "default": "Default",
+      "stripes_v": "Vertical Stripes",
+      "stripes_h": "Horizontal Stripes",
+      "checkerboard": "Checkerboard",
+      "choco": "Choco",
+      "diagonal": "Diagonal",
+      "cross": "Cross",
+      "mini_cross": "Mini Cross",
+      "horizontal_stripes": "Horizontal Stripes (Alt)",
+      "sparse_dots": "Sparse Dots",
+      "evan": "Evan",
+      "diagonal_stripe": "Diagonal Stripe",
+      "mountain_ridge": "Mountain Ridge",
+      "scattered_dots": "Scattered Dots",
+      "circuit_board": "Circuit Board",
+      "vertical_bars": "Vertical Bars",
+      "-w-": ".w.",
+      "openfront": "OpenFront"
+    }
   }
 }

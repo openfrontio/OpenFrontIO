@@ -1,0 +1,72 @@
+{
+  "role_groups": {
+    "donor": ["1359441841371480176", "1330243292306341969"],
+    "creator": ["1286745100411473930"]
+  },
+  "pattern": {
+    "stripes_v": {
+      "pattern": "ABMIVVU="
+    },
+    "stripes_h": {
+      "pattern": "ABMIDw8="
+    },
+    "checkerboard": {
+      "pattern": "ABMIpaU="
+    },
+    "choco": {
+      "pattern": "AFIoAAABOEAHgkAc+AN/4AMcgAAA"
+    },
+    "diagonal": {
+      "pattern": "AHE4AQACAAQACAAQACAAQACAAAABAAIABAAIABAAIABAAIA=",
+      "role_group": ["donor"]
+    },
+    "cross": {
+      "pattern": "AHE4AYACQAQgCBAQCCAEQAKAAYABQAIgBBAICBAEIAJAAYA=",
+      "role_group": ["donor"]
+    },
+    "mini_cross": {
+      "pattern": "AHEYA8AMMDAMwAPAAzAMDDADwA==",
+      "role_group": ["donor"]
+    },
+    "horizontal_stripes": {
+      "pattern": "AHE4//8AAAAAAAAAAAAAAAAAAP//AAAAAAAAAAAAAAAAAAA=",
+      "role_group": ["donor"]
+    },
+    "sparse_dots": {
+      "pattern": "AHE4AQEAAAAAAAAAAAAAAAAAAAEBAAAAAAAAAAAAAAAAAAA=",
+      "role_group": ["donor"]
+    },
+    "evan": {
+      "pattern": "ALIUAAAAnsRIgiRZjuRpAiNJHiNJAAAA",
+      "role_group": ["creator"]
+    },
+    "diagonal_stripe": {
+      "pattern": "AHEYAYACQAQgCBAQCCAEQAKAAQ==",
+      "role_group": ["donor"]
+    },
+    "mountain_ridge": {
+      "pattern": "AHEYAAAYGDw8fn7//35+PDwYGA==",
+      "role_group": ["donor"]
+    },
+    "scattered_dots": {
+      "pattern": "AHEYAAACIAAAAAAAAAAACBAAAA==",
+      "role_group": ["donor"]
+    },
+    "circuit_board": {
+      "pattern": "AHEYw8PDwwwMDAwwDDAMw8PDww==",
+      "role_group": ["donor"]
+    },
+    "vertical_bars": {
+      "pattern": "AHEYSZJJkkmSSZJJkkmSSZJJkg==",
+      "role_group": ["donor"]
+    },
+    "-w-": {
+      "pattern": "AHEYAAAAAAAAAkCCQUQiLnQWaA==",
+      "role_group": ["donor"]
+    },
+    "openfront": {
+      "pattern": "AAIiAAAAAAAAAAAAAAAAAAAAAIDD8YnweTiiD5FIYEIgEpkIRCKBCoFIpCIQeTwyPB6RjEAkEIgQKEQiApFAIEIgEYkIOAKfCIGIIyIAAAAAAAAAAAA=",
+      "role_group": ["creator"]
+    }
+  }
+}

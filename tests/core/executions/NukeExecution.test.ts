@@ -25,6 +25,7 @@ describe("NukeExecution", () => {
       outer: 10,
     }));
     const player_info = new PlayerInfo(
+      undefined,
       "us",
       "player_id",
       PlayerType.Human,

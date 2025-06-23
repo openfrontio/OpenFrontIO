@@ -8,6 +8,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod/v4";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { territoryPatterns } from "../core/Cosmetics";
 import { GameType } from "../core/game/Game";
 import {
   ClientJoinMessageSchema,
@@ -22,12 +23,15 @@ import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
+import { PrivilegeChecker } from "./Privilege";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
 
 const workerId = parseInt(process.env.WORKER_ID || "0");
 const log = logger.child({ comp: `w_${workerId}` });
+
+const privilegeChecker = new PrivilegeChecker(territoryPatterns);
 
 // Worker setup
 export function startWorker() {
@@ -321,6 +325,7 @@ export function startWorker() {
             return;
           }
 
+          // Verify token signature
           const result = await verifyClientToken(clientMsg.token, config);
           if (result === false) {
             log.warn("Failed to verify token");
@@ -330,6 +335,7 @@ export function startWorker() {
           const { persistentId, claims } = result;
 
           let roles: string[] | undefined;
+          let flares: string[] | undefined;
 
           if (claims === null) {
             // TODO: Verify that the persistendId is is not a registered player
@@ -342,9 +348,27 @@ export function startWorker() {
               return;
             }
             roles = result.player.roles;
+            flares = result.player.flares;
           }
 
-          // TODO: Validate client settings based on roles
+          // Check if the flag is allowed
+          if (clientMsg.flag !== undefined) {
+            // TODO: Implement custom flag validation
+          }
+
+          // Check if the pattern is allowed
+          if (clientMsg.pattern !== undefined) {
+            const allowed = privilegeChecker.isPatternAllowed(
+              clientMsg.pattern,
+              roles,
+              flares,
+            );
+            if (allowed !== true) {
+              log.warn(`Pattern ${allowed}: ${clientMsg.pattern}`);
+              ws.close(1002, `Pattern ${allowed}`);
+              return;
+            }
+          }
 
           // Create client and add to game
           const client = new Client(
@@ -352,10 +376,12 @@ export function startWorker() {
             persistentId,
             claims,
             roles,
+            flares,
             ip,
             clientMsg.username,
             ws,
             clientMsg.flag,
+            clientMsg.pattern,
           );
 
           const wasFound = gm.addClient(

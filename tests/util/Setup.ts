@@ -69,5 +69,5 @@ export async function setup(
 }
 
 export function playerInfo(name: string, type: PlayerType): PlayerInfo {
-  return new PlayerInfo("fr", name, type, null, name);
+  return new PlayerInfo(undefined, "fr", name, type, null, name);
 }

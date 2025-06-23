@@ -11,6 +11,7 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
+import { UserSettings } from "../core/game/UserSettings";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
@@ -40,6 +41,8 @@ export class SinglePlayerModal extends LitElement {
   @state() private teamCount: number | typeof Duos = 2;
 
   @state() private disabledUnits: UnitType[] = [];
+
+  private userSettings: UserSettings = new UserSettings();
 
   render() {
     return html`
@@ -410,6 +413,7 @@ export class SinglePlayerModal extends LitElement {
                   flagInput.getCurrentFlag() === "xx"
                     ? ""
                     : flagInput.getCurrentFlag(),
+                pattern: this.userSettings.getSelectedPattern(),
               },
             ],
             config: {

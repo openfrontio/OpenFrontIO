@@ -24,6 +24,7 @@ describe("SAM", () => {
       instantBuild: true,
     });
     const defender_info = new PlayerInfo(
+      undefined,
       "us",
       "defender_id",
       PlayerType.Human,
@@ -31,6 +32,7 @@ describe("SAM", () => {
       "defender_id",
     );
     const far_defender_info = new PlayerInfo(
+      undefined,
       "us",
       "far_defender_id",
       PlayerType.Human,
@@ -38,6 +40,7 @@ describe("SAM", () => {
       "far_defender_id",
     );
     const attacker_info = new PlayerInfo(
+      undefined,
       "fr",
       "attacker_id",
       PlayerType.Human,
