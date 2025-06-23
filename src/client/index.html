@@ -184,6 +184,13 @@
 
         <div class="container__row">
           <flag-input class="w-[20%] md:w-[15%]"></flag-input>
+          <territory-patterns-modal class="w-[50%] md:w-[12%]">
+            <button
+              id="territory-patterns-input-preview-button"
+              class="w-full border p-[4px] rounded-lg flex cursor-pointer border-black/30 dark:border-gray-300/60 bg-white/70 dark:bg-[rgba(55,65,81,0.7)]"
+              title="Pick a pattern!"
+            ></button>
+          </territory-patterns-modal>
           <username-input class="relative w-full"></username-input>
           <news-button
             class="w-[20%] md:w-[15%] component-hideable"
@@ -279,7 +286,6 @@
       </div>
       <div style="pointer-events: auto">
         <control-panel></control-panel>
-        <left-in-game-ad></left-in-game-ad>
       </div>
     </div>
 
@@ -365,6 +371,7 @@
     <unit-info-modal></unit-info-modal>
     <news-modal></news-modal>
     <game-left-sidebar></game-left-sidebar>
+    <spawn-ad></spawn-ad>
     <div
       id="language-modal"
       class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center"

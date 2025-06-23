@@ -33,6 +33,10 @@ export class UserSettings {
     return this.get("settings.leftClickOpensMenu", false);
   }
 
+  territoryPatterns() {
+    return this.get("settings.territoryPatterns", true);
+  }
+
   focusLocked() {
     return false;
     // TODO: renable when performance issues are fixed.
@@ -59,6 +63,10 @@ export class UserSettings {
     this.set("settings.specialEffects", !this.fxLayer());
   }
 
+  toggleTerritoryPatterns() {
+    this.set("settings.territoryPatterns", !this.territoryPatterns());
+  }
+
   toggleDarkMode() {
     this.set("settings.darkMode", !this.darkMode());
     if (this.darkMode()) {
@@ -66,5 +74,15 @@ export class UserSettings {
     } else {
       document.documentElement.classList.remove("dark");
     }
+  }
+
+  private readonly PATTERN_KEY = "territoryPattern";
+
+  getSelectedPattern(): string | undefined {
+    return localStorage.getItem(this.PATTERN_KEY) ?? undefined;
+  }
+
+  setSelectedPattern(base64: string): void {
+    localStorage.setItem(this.PATTERN_KEY, base64);
   }
 }

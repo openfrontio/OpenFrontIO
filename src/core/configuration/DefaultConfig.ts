@@ -1,5 +1,5 @@
 import { JWK } from "jose";
-import { z } from "zod";
+import { z } from "zod/v4";
 import {
   Difficulty,
   Duos,
@@ -98,8 +98,13 @@ export abstract class DefaultServerConfig implements ServerConfig {
     const jwksUrl = this.jwtIssuer() + "/.well-known/jwks.json";
     console.log(`Fetching JWKS from ${jwksUrl}`);
     const response = await fetch(jwksUrl);
-    const jwks = JwksSchema.parse(await response.json());
-    this.publicKey = jwks.keys[0];
+    const result = JwksSchema.safeParse(await response.json());
+    if (!result.success) {
+      const error = z.prettifyError(result.error);
+      console.error("Error parsing JWKS", error);
+      throw new Error("Invalid JWKS");
+    }
+    this.publicKey = result.data.keys[0];
     return this.publicKey;
   }
   otelEnabled(): boolean {
@@ -296,6 +301,21 @@ export class DefaultConfig implements Config {
   tradeShipSpawnRate(numberOfPorts: number): number {
     return Math.min(50, Math.round(10 * Math.pow(numberOfPorts, 0.6)));
   }
+  trainSpawnRate(numberOfStations: number): number {
+    return Math.round(50 * Math.pow(numberOfStations, 0.8));
+  }
+  trainGold(): Gold {
+    return BigInt(10_000);
+  }
+  trainStationMinRange(): number {
+    return 15;
+  }
+  trainStationMaxRange(): number {
+    return 80;
+  }
+  railroadMaxSize(): number {
+    return 100;
+  }
 
   unitInfo(type: UnitType): UnitInfo {
     switch (type) {
@@ -312,9 +332,7 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     1_000_000,
-                    (p.unitsIncludingConstruction(UnitType.Warship).length +
-                      1) *
-                      250_000,
+                    (p.unitsConstructed(UnitType.Warship) + 1) * 250_000,
                   ),
                 ),
           territoryBound: false,
@@ -339,10 +357,7 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     1_000_000,
-                    Math.pow(
-                      2,
-                      p.unitsIncludingConstruction(UnitType.Port).length,
-                    ) * 125_000,
+                    Math.pow(2, p.unitsConstructed(UnitType.Port)) * 125_000,
                   ),
                 ),
           territoryBound: true,
@@ -401,9 +416,7 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     250_000,
-                    (p.unitsIncludingConstruction(UnitType.DefensePost).length +
-                      1) *
-                      50_000,
+                    (p.unitsConstructed(UnitType.DefensePost) + 1) * 50_000,
                   ),
                 ),
           territoryBound: true,
@@ -418,9 +431,7 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     3_000_000,
-                    (p.unitsIncludingConstruction(UnitType.SAMLauncher).length +
-                      1) *
-                      1_500_000,
+                    (p.unitsConstructed(UnitType.SAMLauncher) + 1) * 1_500_000,
                   ),
                 ),
           territoryBound: true,
@@ -435,20 +446,36 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     1_000_000,
-                    Math.pow(
-                      2,
-                      p.unitsIncludingConstruction(UnitType.City).length,
-                    ) * 125_000,
+                    Math.pow(2, p.unitsConstructed(UnitType.City)) * 125_000,
                   ),
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
         };
+      case UnitType.Factory:
+        return {
+          cost: (p: Player) =>
+            p.type() === PlayerType.Human && this.infiniteGold()
+              ? 0n
+              : BigInt(
+                  Math.min(
+                    1_000_000,
+                    Math.pow(2, p.unitsConstructed(UnitType.Factory)) * 125_000,
+                  ),
+                ),
+          territoryBound: true,
+          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+        };
       case UnitType.Construction:
         return {
           cost: () => 0n,
           territoryBound: true,
+        };
+      case UnitType.Train:
+        return {
+          cost: () => 0n,
+          territoryBound: false,
         };
       default:
         assertNever(type);
@@ -538,12 +565,11 @@ export class DefaultConfig implements Config {
         tileToConquer,
         gm.config().defensePostRange(),
         UnitType.DefensePost,
+        ({ unit }) => unit.owner() === defender,
       )) {
-        if (dp.unit.owner() === defender) {
-          mag *= this.defensePostDefenseBonus();
-          speed *= this.defensePostDefenseBonus();
-          break;
-        }
+        mag *= this.defensePostDefenseBonus();
+        speed *= this.defensePostDefenseBonus();
+        break;
       }
     }
 

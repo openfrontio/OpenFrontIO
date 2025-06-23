@@ -1,8 +1,9 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import { Gold } from "../../../core/game/Game";
+import { Gold, UnitType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { AttackRatioEvent } from "../../InputHandler";
 import { SendSetTargetTroopRatioEvent } from "../../Transport";
@@ -51,6 +52,9 @@ export class ControlPanel extends LitElement implements Layer {
 
   @state()
   private _goldPerSecond: Gold;
+
+  @state()
+  private _factories: number;
 
   private _lastPopulationIncreaseRate: number;
 
@@ -129,6 +133,7 @@ export class ControlPanel extends LitElement implements Layer {
 
     this.currentTroopRatio = player.troops() / player.population();
     this.requestUpdate();
+    this._factories = player.units(UnitType.Factory).length;
   }
 
   onAttackRatioChange(newRatio: number) {
@@ -208,6 +213,40 @@ export class ControlPanel extends LitElement implements Layer {
           : "hidden"}"
         @contextmenu=${(e) => e.preventDefault()}
       >
+        <div class="hidden lg:block bg-black/30 text-white mb-4 p-2 rounded">
+          <div class="flex justify-between mb-1">
+            <span class="font-bold"
+              >${translateText("control_panel.pop")}:</span
+            >
+            <span translate="no"
+              >${renderTroops(this._population)} /
+              ${renderTroops(this._maxPopulation)}
+              <span
+                class="${this._popRateIsIncreasing
+                  ? "text-green-500"
+                  : "text-yellow-500"}"
+                translate="no"
+                >(+${renderTroops(this.popRate)})</span
+              ></span
+            >
+          </div>
+          <div class="flex justify-between">
+            <span class="font-bold"
+              >${translateText("control_panel.gold")}:</span
+            >
+            <span translate="no"
+              >${renderNumber(this._gold)}
+              (+${renderNumber(this._goldPerSecond)}
+              ${renderNumber(this._factories)}
+              <img
+                src="${factoryIcon}"
+                style="display: inline"
+                width="15"
+              />)</span
+            >
+          </div>
+        </div>
+
         <div class="relative mb-4 lg:mb-4">
           <label class="block text-white mb-1" translate="no">
             ${translateText("user_setting.troop_ratio_label")}

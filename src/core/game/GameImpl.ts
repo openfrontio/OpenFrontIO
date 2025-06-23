@@ -30,6 +30,8 @@ import {
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
+import { RailNetwork } from "./RailNetwork";
+import { createRailNetwork } from "./RailNetworkImpl";
 import { Stats } from "./Stats";
 import { StatsImpl } from "./StatsImpl";
 import { assignTeams } from "./TeamAssignment";
@@ -73,6 +75,7 @@ export class GameImpl implements Game {
 
   private playerTeams: Team[] = [ColoredTeams.Red, ColoredTeams.Blue];
   private botTeam: Team = ColoredTeams.Bot;
+  private _railNetwork: RailNetwork = createRailNetwork(this);
 
   constructor(
     private _humans: PlayerInfo[],
@@ -672,6 +675,9 @@ export class GameImpl implements Game {
   }
   removeUnit(u: Unit) {
     this.unitGrid.removeUnit(u);
+    if (u.hasTrainStation()) {
+      this._railNetwork.removeStation(u);
+    }
   }
 
   nearbyUnits(
@@ -687,6 +693,9 @@ export class GameImpl implements Game {
 
   ref(x: number, y: number): TileRef {
     return this._map.ref(x, y);
+  }
+  isValidRef(ref: TileRef): boolean {
+    return this._map.isValidRef(ref);
   }
   x(ref: TileRef): number {
     return this._map.x(ref);
@@ -783,6 +792,9 @@ export class GameImpl implements Game {
   }
   stats(): Stats {
     return this._stats;
+  }
+  railNetwork(): RailNetwork {
+    return this._railNetwork;
   }
 }
 
