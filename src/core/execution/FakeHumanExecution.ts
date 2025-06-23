@@ -466,8 +466,7 @@ export class FakeHumanExecution implements Execution {
 
   private maybeSpawnStructure(type: UnitType, maxNum: number): boolean {
     if (this.player === null) throw new Error("not initialized");
-    const units = this.player.unitsIncludingConstruction(type);
-    if (units.length >= maxNum) {
+    if (this.player.unitsOwned(type) >= maxNum) {
       return false;
     }
     if (this.player.gold() < this.cost(type)) {

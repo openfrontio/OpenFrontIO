@@ -225,12 +225,23 @@ export class PlayerImpl implements Player {
     }
   }
 
+  // Count of units built by the player, including construction
   unitsConstructed(type: UnitType): number {
     const built = this.numUnitsConstructed[type] ?? 0;
     const constructing = this.units(UnitType.Construction).filter(
       (u) => u.constructionType() === type,
     ).length;
     const total = constructing + built;
+    return total;
+  }
+
+  // Count of units owned by the player, including construction
+  unitsOwned(type: UnitType): number {
+    const owned = this.units(type).length;
+    const constructing = this.units(UnitType.Construction).filter(
+      (u) => u.constructionType() === type,
+    ).length;
+    const total = constructing + owned;
     return total;
   }
 
