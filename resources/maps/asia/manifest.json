@@ -1,155 +1,165 @@
 {
+  "map": {
+    "height": 1200,
+    "num_land_tiles": 1124099,
+    "width": 2000
+  },
+  "mini_map": {
+    "height": 600,
+    "num_land_tiles": 277784,
+    "width": 1000
+  },
   "name": "Asia",
   "nations": [
     {
       "coordinates": [165, 422],
+      "flag": "ru",
       "name": "Russia",
-      "strength": 3,
-      "flag": "ru"
+      "strength": 3
     },
     {
       "coordinates": [83, 612],
+      "flag": "tr",
       "name": "Türkiye",
-      "strength": 2,
-      "flag": "tr"
+      "strength": 2
     },
     {
       "coordinates": [278, 789],
+      "flag": "sa",
       "name": "Saudi Arabia",
-      "strength": 1,
-      "flag": "sa"
+      "strength": 1
     },
     {
       "coordinates": [238, 907],
+      "flag": "ye",
       "name": "Yemen",
-      "strength": 2,
-      "flag": "ye"
+      "strength": 2
     },
     {
       "coordinates": [126, 710],
+      "flag": "jo",
       "name": "Jordan",
-      "strength": 3,
-      "flag": "jo"
+      "strength": 3
     },
     {
       "coordinates": [239, 689],
+      "flag": "iq",
       "name": "Iraq",
-      "strength": 3,
-      "flag": "iq"
+      "strength": 3
     },
     {
       "coordinates": [327, 655],
+      "flag": "ir",
       "name": "Iran",
-      "strength": 3,
-      "flag": "ir"
+      "strength": 3
     },
     {
       "coordinates": [594, 675],
+      "flag": "pk",
       "name": "Pakistan",
-      "strength": 3,
-      "flag": "pk"
+      "strength": 3
     },
     {
       "coordinates": [654, 745],
+      "flag": "in",
       "name": "India",
-      "strength": 2,
-      "flag": "in"
+      "strength": 2
     },
     {
       "coordinates": [830, 808],
+      "flag": "bd",
       "name": "Bangladesh",
-      "strength": 1,
-      "flag": "bd"
+      "strength": 1
     },
     {
       "coordinates": [909, 845],
+      "flag": "mm",
       "name": "Myanmar",
-      "strength": 3,
-      "flag": "mm"
+      "strength": 3
     },
     {
       "coordinates": [1035, 845],
+      "flag": "vn",
       "name": "Vietnam",
-      "strength": 2,
-      "flag": "vn"
+      "strength": 2
     },
     {
       "coordinates": [980, 1055],
+      "flag": "my",
       "name": "Malaysia",
-      "strength": 1,
-      "flag": "my"
+      "strength": 1
     },
     {
       "coordinates": [1046, 1170],
+      "flag": "id",
       "name": "Indonesia",
-      "strength": 1,
-      "flag": "id"
+      "strength": 1
     },
     {
       "coordinates": [1129, 909],
+      "flag": "ph",
       "name": "Philippines",
-      "strength": 2,
-      "flag": "ph"
+      "strength": 2
     },
     {
       "coordinates": [1237, 791],
+      "flag": "tw",
       "name": "Taiwan",
-      "strength": 2,
-      "flag": "tw"
+      "strength": 2
     },
     {
       "coordinates": [1166, 661],
+      "flag": "cn",
       "name": "China",
-      "strength": 2,
-      "flag": "cn"
+      "strength": 2
     },
     {
       "coordinates": [1314, 639],
+      "flag": "kr",
       "name": "South Korea",
-      "strength": 3,
-      "flag": "kr"
+      "strength": 3
     },
     {
       "coordinates": [1485, 659],
+      "flag": "jp",
       "name": "Japan",
-      "strength": 1,
-      "flag": "jp"
+      "strength": 1
     },
     {
       "coordinates": [591, 492],
+      "flag": "kz",
       "name": "Kazakhstan",
-      "strength": 2,
-      "flag": "kz"
+      "strength": 2
     },
     {
       "coordinates": [546, 629],
+      "flag": "tj",
       "name": "Tajikistan",
-      "strength": 3,
-      "flag": "tj"
+      "strength": 3
     },
     {
       "coordinates": [1053, 528],
+      "flag": "mn",
       "name": "Mongolia",
-      "strength": 1,
-      "flag": "mn"
+      "strength": 1
     },
     {
       "coordinates": [243, 1067],
+      "flag": "so",
       "name": "Somalia",
-      "strength": 1,
-      "flag": "so"
+      "strength": 1
     },
     {
       "coordinates": [61, 733],
+      "flag": "eg",
       "name": "Egypt",
-      "strength": 3,
-      "flag": "eg"
+      "strength": 3
     },
     {
       "coordinates": [59, 490],
+      "flag": "ua",
       "name": "Ukraine",
-      "strength": 2,
-      "flag": "ua"
+      "strength": 2
     }
   ]
 }

@@ -1,61 +1,69 @@
 {
+  "map": {
+    "height": 1840,
+    "num_land_tiles": 1171253,
+    "width": 2300
+  },
+  "mini_map": {
+    "height": 920,
+    "num_land_tiles": 287132,
+    "width": 1150
+  },
   "name": "Deglaciated Antarctica",
-  "width": 2300,
-  "height": 1840,
   "nations": [
     {
       "coordinates": [1545, 785],
+      "flag": "an_pe",
       "name": "Penguin Empire",
-      "strength": 2,
-      "flag": "an_pe"
+      "strength": 2
     },
     {
       "coordinates": [1365, 155],
+      "flag": "no",
       "name": "Norwegian Claim",
-      "strength": 2,
-      "flag": "no"
+      "strength": 2
     },
     {
       "coordinates": [1810, 450],
+      "flag": "au",
       "name": "Upper Australian Claim",
-      "strength": 2,
-      "flag": "au"
+      "strength": 2
     },
     {
       "coordinates": [1980, 980],
+      "flag": "au",
       "name": "Lower Australian Claim",
-      "strength": 1,
-      "flag": "au"
+      "strength": 1
     },
     {
       "coordinates": [495, 605],
+      "flag": "ar",
       "name": "Argentinian Claim",
-      "strength": 2,
-      "flag": "ar"
+      "strength": 2
     },
     {
       "coordinates": [1150, 715],
+      "flag": "gb",
       "name": "United Kingdom Claim",
-      "strength": 2,
-      "flag": "gb"
+      "strength": 2
     },
     {
       "coordinates": [1060, 935],
+      "flag": "cl",
       "name": "Chilean Claim",
-      "strength": 2,
-      "flag": "cl"
+      "strength": 2
     },
     {
       "coordinates": [1365, 1400],
+      "flag": "nz",
       "name": "New Zealand Claim",
-      "strength": 2,
-      "flag": "nz"
+      "strength": 2
     },
     {
       "coordinates": [1590, 1120],
+      "flag": "fr",
       "name": "French Claim",
-      "strength": 2,
-      "flag": "fr"
+      "strength": 2
     }
   ]
 }

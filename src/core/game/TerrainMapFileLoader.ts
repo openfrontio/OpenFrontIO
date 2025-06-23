@@ -1,10 +1,10 @@
 import { GameMapType } from "./Game";
-import { NationMap } from "./TerrainMapLoader";
+import { MapManifest } from "./TerrainMapLoader";
 
 interface MapData {
   mapBin: () => Promise<string>;
   miniMapBin: () => Promise<string>;
-  nationMap: () => Promise<NationMap>;
+  manifest: () => Promise<MapManifest>;
   webpPath: () => Promise<string>;
 }
 
@@ -13,7 +13,7 @@ export interface BinModule {
 }
 
 interface NationMapModule {
-  default: NationMap;
+  default: MapManifest;
 }
 
 class GameMapLoader {
@@ -57,7 +57,7 @@ class GameMapLoader {
           ) as Promise<BinModule>
         ).then((m) => m.default),
       ),
-      nationMap: this.createLazyLoader(() =>
+      manifest: this.createLazyLoader(() =>
         (
           import(
             `../../../resources/maps/${fileName}/manifest.json`

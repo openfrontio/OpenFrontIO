@@ -10,7 +10,10 @@ import {
   PlayerType,
 } from "../../src/core/game/Game";
 import { createGame } from "../../src/core/game/GameImpl";
-import { genTerrainFromBin } from "../../src/core/game/TerrainMapLoader";
+import {
+  genTerrainFromBin,
+  MapManifest,
+} from "../../src/core/game/TerrainMapLoader";
 import { UserSettings } from "../../src/core/game/UserSettings";
 import { GameConfig } from "../../src/core/Schemas";
 import { TestConfig } from "./TestConfig";
@@ -33,16 +36,26 @@ export async function setup(
     __dirname,
     `../testdata/maps/${mapName}/mini_map.bin`,
   );
+  const manifestPath = path.join(
+    __dirname,
+    `../testdata/maps/${mapName}/manifest.json`,
+  );
 
   const mapBinBuffer = fs.readFileSync(mapBinPath);
   const miniMapBinBuffer = fs.readFileSync(miniMapBinPath);
+  const manifest = JSON.parse(
+    fs.readFileSync(manifestPath, "utf8"),
+  ) satisfies MapManifest;
 
   // Convert Buffer to string (binary encoding)
   const mapBinString = mapBinBuffer.toString("binary");
   const miniMapBinString = miniMapBinBuffer.toString("binary");
 
-  const gameMap = await genTerrainFromBin(mapBinString);
-  const miniGameMap = await genTerrainFromBin(miniMapBinString);
+  const gameMap = await genTerrainFromBin(manifest.map, mapBinString);
+  const miniGameMap = await genTerrainFromBin(
+    manifest.mini_map,
+    miniMapBinString,
+  );
 
   // Configure the game
   const serverConfig = new TestServerConfig();

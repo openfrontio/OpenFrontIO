@@ -1,49 +1,57 @@
 {
+  "map": {
+    "height": 1500,
+    "num_land_tiles": 1338638,
+    "width": 2000
+  },
+  "mini_map": {
+    "height": 750,
+    "num_land_tiles": 333175,
+    "width": 1000
+  },
   "name": "Australia",
-  "width": 2000,
-  "height": 1500,
   "nations": [
     {
       "coordinates": [460, 720],
+      "flag": "aus_wesaus",
       "name": "Western Australia",
-      "strength": 2,
-      "flag": "aus_wesaus"
+      "strength": 2
     },
     {
       "coordinates": [965, 340],
+      "flag": "aus_norter",
       "name": "Northern Territory",
-      "strength": 2,
-      "flag": "aus_norter"
+      "strength": 2
     },
     {
       "coordinates": [920, 915],
+      "flag": "aus_souaus",
       "name": "South Australia",
-      "strength": 1,
-      "flag": "aus_souaus"
+      "strength": 1
     },
     {
       "coordinates": [1435, 1220],
+      "flag": "aus_vic",
       "name": "Victoria",
-      "strength": 2,
-      "flag": "aus_vic"
+      "strength": 2
     },
     {
       "coordinates": [1490, 555],
+      "flag": "aus_quelan",
       "name": "Queensland",
-      "strength": 2,
-      "flag": "aus_quelan"
+      "strength": 2
     },
     {
       "coordinates": [1605, 1025],
+      "flag": "aus_nsw",
       "name": "New South Wales",
-      "strength": 2,
-      "flag": "aus_nsw"
+      "strength": 2
     },
     {
       "coordinates": [1595, 1380],
+      "flag": "aus_tas",
       "name": "Tasmania",
-      "strength": 2,
-      "flag": "aus_tas"
+      "strength": 2
     }
   ]
 }

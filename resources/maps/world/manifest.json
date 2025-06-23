@@ -1,271 +1,279 @@
 {
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 702094,
+    "width": 2000
+  },
+  "mini_map": {
+    "height": 500,
+    "num_land_tiles": 171447,
+    "width": 1000
+  },
   "name": "World",
-  "width": 2000,
-  "height": 1000,
   "nations": [
     {
       "coordinates": [375, 272],
+      "flag": "us",
       "name": "United States",
-      "strength": 3,
-      "flag": "us"
+      "strength": 3
     },
     {
       "coordinates": [372, 136],
+      "flag": "ca",
       "name": "Canada",
-      "strength": 2,
-      "flag": "ca"
+      "strength": 2
     },
     {
       "coordinates": [375, 374],
+      "flag": "mx",
       "name": "Mexico",
-      "strength": 1,
-      "flag": "mx"
+      "strength": 1
     },
     {
       "coordinates": [500, 378],
+      "flag": "cu",
       "name": "Cuba",
-      "strength": 1,
-      "flag": "cu"
+      "strength": 1
     },
     {
       "coordinates": [524, 474],
+      "flag": "co",
       "name": "Colombia",
-      "strength": 1,
-      "flag": "co"
+      "strength": 1
     },
     {
       "coordinates": [593, 473],
+      "flag": "ve",
       "name": "Venezuela",
-      "strength": 1,
-      "flag": "ve"
+      "strength": 1
     },
     {
       "coordinates": [596, 705],
+      "flag": "ar",
       "name": "Argentina",
-      "strength": 1,
-      "flag": "ar"
+      "strength": 1
     },
     {
       "coordinates": [637, 567],
+      "flag": "br",
       "name": "Brazil",
-      "strength": 1,
-      "flag": "br"
+      "strength": 1
     },
     {
       "coordinates": [1280, 975],
+      "flag": "aq",
       "name": "Antarctica",
-      "strength": 3,
-      "flag": "aq"
+      "strength": 3
     },
     {
       "coordinates": [709, 57],
+      "flag": "gl",
       "name": "Greenland",
-      "strength": 2,
-      "flag": "gl"
+      "strength": 2
     },
     {
       "coordinates": [831, 112],
+      "flag": "is",
       "name": "Iceland",
-      "strength": 1,
-      "flag": "is"
+      "strength": 1
     },
     {
       "coordinates": [925, 186],
+      "flag": "gb",
       "name": "United Kingdom",
-      "strength": 3,
-      "flag": "gb"
+      "strength": 3
     },
     {
       "coordinates": [887, 183],
+      "flag": "ie",
       "name": "Ireland",
-      "strength": 1,
-      "flag": "ie"
+      "strength": 1
     },
     {
       "coordinates": [908, 264],
+      "flag": "es",
       "name": "Spain",
-      "strength": 1,
-      "flag": "es"
+      "strength": 1
     },
     {
       "coordinates": [1004, 250],
+      "flag": "it",
       "name": "Italy",
-      "strength": 1,
-      "flag": "it"
+      "strength": 1
     },
     {
       "coordinates": [958, 220],
+      "flag": "fr",
       "name": "France",
-      "strength": 2,
-      "flag": "fr"
+      "strength": 2
     },
     {
       "coordinates": [997, 205],
+      "flag": "de",
       "name": "Germany",
-      "strength": 1,
-      "flag": "de"
+      "strength": 1
     },
     {
       "coordinates": [1064, 101],
+      "flag": "se",
       "name": "Sweden",
-      "strength": 1,
-      "flag": "se"
+      "strength": 1
     },
     {
       "coordinates": [1046, 193],
+      "flag": "pl",
       "name": "Poland",
-      "strength": 1,
-      "flag": "pl"
+      "strength": 1
     },
     {
       "coordinates": [1061, 188],
+      "flag": "by",
       "name": "Belarus",
-      "strength": 1,
-      "flag": "by"
+      "strength": 1
     },
     {
       "coordinates": [1073, 243],
+      "flag": "ro",
       "name": "Romania",
-      "strength": 1,
-      "flag": "ro"
+      "strength": 1
     },
     {
       "coordinates": [1161, 274],
+      "flag": "tr",
       "name": "Turkey",
-      "strength": 1,
-      "flag": "tr"
+      "strength": 1
     },
     {
       "coordinates": [969, 133],
+      "flag": "no",
       "name": "Norway",
-      "strength": 1,
-      "flag": "no"
+      "strength": 1
     },
     {
       "coordinates": [1062, 133],
+      "flag": "fi",
       "name": "Finland",
-      "strength": 1,
-      "flag": "fi"
+      "strength": 1
     },
     {
       "coordinates": [1099, 211],
+      "flag": "ua",
       "name": "Ukraine",
-      "strength": 1,
-      "flag": "ua"
+      "strength": 1
     },
     {
       "coordinates": [1344, 136],
+      "flag": "ru",
       "name": "Russia",
-      "strength": 3,
-      "flag": "ru"
+      "strength": 3
     },
     {
       "coordinates": [1537, 186],
+      "flag": "mn",
       "name": "Mongolia",
-      "strength": 1,
-      "flag": "mn"
+      "strength": 1
     },
     {
       "coordinates": [1524, 328],
+      "flag": "cn",
       "name": "China",
-      "strength": 3,
-      "flag": "cn"
+      "strength": 3
     },
     {
       "coordinates": [1368, 373],
+      "flag": "in",
       "name": "India",
-      "strength": 2,
-      "flag": "in"
+      "strength": 2
     },
     {
       "coordinates": [1276, 239],
+      "flag": "kz",
       "name": "Kazakhstan",
-      "strength": 1,
-      "flag": "kz"
+      "strength": 1
     },
     {
       "coordinates": [1238, 309],
+      "flag": "ir",
       "name": "Islamic Republic Of Iran",
-      "strength": 1,
-      "flag": "ir"
+      "strength": 1
     },
     {
       "coordinates": [1178, 351],
+      "flag": "sa",
       "name": "Saudi Arabia",
-      "strength": 1,
-      "flag": "sa"
+      "strength": 1
     },
     {
       "coordinates": [1679, 657],
+      "flag": "au",
       "name": "Australia",
-      "strength": 2,
-      "flag": "au"
+      "strength": 2
     },
     {
       "coordinates": [1890, 775],
+      "flag": "nz",
       "name": "New Zealand",
-      "strength": 0.5,
-      "flag": "nz"
+      "strength": 0.5
     },
     {
       "coordinates": [918, 342],
+      "flag": "dz",
       "name": "Algeria",
-      "strength": 1,
-      "flag": "dz"
+      "strength": 1
     },
     {
       "coordinates": [1030, 332],
+      "flag": "ly",
       "name": "Libyan Arab Jamahiriya",
-      "strength": 1,
-      "flag": "ly"
+      "strength": 1
     },
     {
       "coordinates": [1092, 335],
+      "flag": "eg",
       "name": "Egypt",
-      "strength": 1,
-      "flag": "eg"
+      "strength": 1
     },
     {
       "coordinates": [963, 410],
+      "flag": "ne",
       "name": "Niger",
-      "strength": 1,
-      "flag": "ne"
+      "strength": 1
     },
     {
       "coordinates": [1112, 406],
+      "flag": "sd",
       "name": "Sudan",
-      "strength": 1,
-      "flag": "sd"
+      "strength": 1
     },
     {
       "coordinates": [1074, 508],
+      "flag": "cd",
       "name": "The Democratic Republic of the Congo",
-      "strength": 1,
-      "flag": "cd"
+      "strength": 1
     },
     {
       "coordinates": [1154, 443],
+      "flag": "et",
       "name": "Ethiopia",
-      "strength": 1,
-      "flag": "et"
+      "strength": 1
     },
     {
       "coordinates": [1075, 707],
+      "flag": "za",
       "name": "South Africa",
-      "strength": 1,
-      "flag": "za"
+      "strength": 1
     },
     {
       "coordinates": [1194, 627],
+      "flag": "mg",
       "name": "Madagascar",
-      "strength": 0.5,
-      "flag": "mg"
+      "strength": 0.5
     },
     {
       "coordinates": [1052, 420],
+      "flag": "td",
       "name": "Chad",
-      "strength": 1,
-      "flag": "td"
+      "strength": 1
     }
   ]
 }

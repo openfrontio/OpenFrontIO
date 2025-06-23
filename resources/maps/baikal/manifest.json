@@ -1,73 +1,81 @@
 {
+  "map": {
+    "height": 1565,
+    "num_land_tiles": 2235479,
+    "width": 2500
+  },
+  "mini_map": {
+    "height": 782,
+    "num_land_tiles": 554725,
+    "width": 1250
+  },
   "name": "Baikal",
-  "width": 2500,
-  "height": 1565,
   "nations": [
     {
       "coordinates": [695, 665],
+      "flag": "bai_irk",
       "name": "Irkutsk Oblast",
-      "strength": 2,
-      "flag": "bai_irk"
+      "strength": 2
     },
     {
       "coordinates": [2188, 1001],
+      "flag": "bai_bur",
       "name": "Republic of Buryatia",
-      "strength": 2,
-      "flag": "bai_bur"
+      "strength": 2
     },
     {
       "coordinates": [754, 1170],
+      "flag": "ru",
       "name": "Olkhon Island",
-      "strength": 1,
-      "flag": "ru"
+      "strength": 1
     },
     {
       "coordinates": [1025, 831],
+      "flag": "ru",
       "name": "Cape Khoboy",
-      "strength": 1,
-      "flag": "ru"
+      "strength": 1
     },
     {
       "coordinates": [361, 1195],
+      "flag": "ru",
       "name": "Ogoi Island",
-      "strength": 1,
-      "flag": "ru"
+      "strength": 1
     },
     {
       "coordinates": [1805, 115],
+      "flag": "ru",
       "name": "Bolshoy Ushkan Island",
-      "strength": 1,
-      "flag": "ru"
+      "strength": 1
     },
     {
       "coordinates": [2030, 335],
+      "flag": "ru",
       "name": "Svyatoy Nos Peninsula",
-      "strength": 2,
-      "flag": "ru"
+      "strength": 2
     },
     {
       "coordinates": [2194, 659],
+      "flag": "ru",
       "name": "Chivyrkuisky Bay",
-      "strength": 1,
-      "flag": "ru"
+      "strength": 1
     },
     {
       "coordinates": [309, 230],
+      "flag": "ru",
       "name": "Chanchur",
-      "strength": 2,
-      "flag": "ru"
+      "strength": 2
     },
     {
       "coordinates": [2165, 1439],
+      "flag": "ru",
       "name": "Zabaykalsky National Park",
-      "strength": 1,
-      "flag": "ru"
+      "strength": 1
     },
     {
       "coordinates": [132, 751],
+      "flag": "ru",
       "name": "Listvyanka",
-      "strength": 1,
-      "flag": "ru"
+      "strength": 1
     }
   ]
 }
