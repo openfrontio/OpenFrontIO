@@ -178,6 +178,7 @@ export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
 export const UsernameSchema = SafeString;
 export const FlagSchema = z.string().max(128).optional();
+export const PatternSchema = z.string().max(128).base64().optional();
 
 export const QuickChatKeySchema = z.enum(
   Object.entries(quickChatData).flatMap(([category, entries]) =>
@@ -203,6 +204,7 @@ export const SpawnIntentSchema = BaseIntentSchema.extend({
   type: z.literal("spawn"),
   name: UsernameSchema,
   flag: FlagSchema,
+  pattern: PatternSchema,
   playerType: PlayerTypeSchema,
   x: z.number(),
   y: z.number(),
@@ -350,6 +352,7 @@ export const PlayerSchema = z.object({
   clientID: ID,
   username: UsernameSchema,
   flag: FlagSchema,
+  pattern: PatternSchema,
 });
 
 export const GameStartInfoSchema = z.object({
@@ -454,6 +457,7 @@ export const ClientJoinMessageSchema = z.object({
   lastTurn: z.number(), // The last turn the client saw.
   username: UsernameSchema,
   flag: FlagSchema,
+  pattern: PatternSchema,
 });
 
 export const ClientMessageSchema = z.discriminatedUnion("type", [

@@ -159,6 +159,15 @@ export class UserSettingModal extends LitElement {
     }
   }
 
+  private toggleTerritoryPatterns(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.territoryPatterns", enabled);
+
+    console.log("🏳️ Territory Patterns:", enabled ? "ON" : "OFF");
+  }
+
   private handleKeybindChange(
     e: CustomEvent<{ action: string; value: string }>,
   ) {
@@ -278,6 +287,15 @@ export class UserSettingModal extends LitElement {
         id="anonymous-names-toggle"
         .checked=${this.userSettings.anonymousNames()}
         @change=${this.toggleAnonymousNames}
+      ></setting-toggle>
+
+      <!-- 🏳️ Territory Patterns -->
+      <setting-toggle
+        label="${translateText("user_setting.territory_patterns_label")}"
+        description="${translateText("user_setting.territory_patterns_desc")}"
+        id="territory-patterns-toggle"
+        .checked=${this.userSettings.territoryPatterns()}
+        @change=${this.toggleTerritoryPatterns}
       ></setting-toggle>
 
       <!-- ⚔️ Attack Ratio -->

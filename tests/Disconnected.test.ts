@@ -16,6 +16,7 @@ describe("Disconnected", () => {
     });
 
     const player1Info = new PlayerInfo(
+      undefined,
       "us",
       "Active Player",
       PlayerType.Human,
@@ -24,6 +25,7 @@ describe("Disconnected", () => {
     );
 
     const player2Info = new PlayerInfo(
+      undefined,
       "fr",
       "Disconnected Player",
       PlayerType.Human,
