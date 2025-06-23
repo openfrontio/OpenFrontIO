@@ -6,15 +6,23 @@ import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
 import { euclDistFN, TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
 import { PseudoRandom } from "../../../core/PseudoRandom";
-import { AlternateViewEvent, DragEvent } from "../../InputHandler";
+import {
+  AlternateViewEvent,
+  DragEvent,
+  RefreshGraphicsEvent,
+} from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
 export class TerritoryLayer implements Layer {
+  private userSettings: UserSettings;
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
   private imageData: ImageData;
+
+  private cachedTerritoryPatternsEnabled: boolean | undefined;
 
   private tileToRenderQueue: PriorityQueue<{
     tile: TileRef;
@@ -42,8 +50,11 @@ export class TerritoryLayer implements Layer {
     private game: GameView,
     private eventBus: EventBus,
     private transformHandler: TransformHandler,
+    userSettings: UserSettings,
   ) {
+    this.userSettings = userSettings;
     this.theme = game.config().theme();
+    this.cachedTerritoryPatternsEnabled = undefined;
   }
 
   shouldTransform(): boolean {
@@ -58,6 +69,11 @@ export class TerritoryLayer implements Layer {
   }
 
   tick() {
+    const prev = this.cachedTerritoryPatternsEnabled;
+    this.cachedTerritoryPatternsEnabled = this.userSettings.territoryPatterns();
+    if (prev !== undefined && prev !== this.cachedTerritoryPatternsEnabled) {
+      this.eventBus.emit(new RefreshGraphicsEvent());
+    }
     this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
     const updates = this.game.updatesSinceLastTick();
     const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
@@ -291,7 +307,24 @@ export class TerritoryLayer implements Layer {
         this.paintTile(tile, useBorderColor, 255);
       }
     } else {
-      this.paintTile(tile, this.theme.territoryColor(owner), 150);
+      const pattern = owner.pattern();
+      const patternsEnabled = this.cachedTerritoryPatternsEnabled ?? false;
+      if (pattern === undefined || patternsEnabled === false) {
+        this.paintTile(tile, this.theme.territoryColor(owner), 150);
+      } else {
+        const x = this.game.x(tile);
+        const y = this.game.y(tile);
+        const baseColor = this.theme.territoryColor(owner);
+
+        const decoder = owner.patternDecoder();
+        if (decoder !== undefined) {
+          const bit = decoder.isSet(x, y) ? 1 : 0;
+          const colorToUse = bit ? baseColor.darken(0.2) : baseColor;
+          this.paintTile(tile, colorToUse, 150);
+        } else {
+          this.paintTile(tile, baseColor, 150);
+        }
+      }
     }
   }
 

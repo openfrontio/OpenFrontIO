@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { base64urlToUuid } from "./Base64";
 
 export const RefreshResponseSchema = z.object({
@@ -43,6 +43,7 @@ export const UserMeResponseSchema = z.object({
   player: z.object({
     publicId: z.string(),
     roles: z.string().array().optional(),
+    flares: z.string().array().optional(),
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;

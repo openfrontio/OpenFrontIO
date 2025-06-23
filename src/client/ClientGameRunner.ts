@@ -1,5 +1,4 @@
 import { translateText } from "../client/Utils";
-import { consolex, initRemoteSender } from "../core/Consolex";
 import { EventBus } from "../core/EventBus";
 import {
   ClientID,
@@ -13,7 +12,7 @@ import {
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { Cell, UnitType } from "../core/game/Game";
+import { PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import {
   ErrorUpdate,
@@ -26,7 +25,12 @@ import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
-import { InputHandler, MouseMoveEvent, MouseUpEvent } from "./InputHandler";
+import {
+  DoBoatAttackEvent,
+  InputHandler,
+  MouseMoveEvent,
+  MouseUpEvent,
+} from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentID } from "./Main";
 import {
@@ -41,6 +45,7 @@ import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
+  pattern: string | undefined;
   flag: string;
   playerName: string;
   clientID: ClientID;
@@ -58,10 +63,9 @@ export function joinLobby(
   onJoin: () => void,
 ): () => void {
   const eventBus = new EventBus();
-  initRemoteSender(eventBus);
 
-  consolex.log(
-    `joinging lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
+  console.log(
+    `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
   );
 
   const userSettings: UserSettings = new UserSettings();
@@ -70,21 +74,21 @@ export function joinLobby(
   const transport = new Transport(lobbyConfig, eventBus);
 
   const onconnect = () => {
-    consolex.log(`Joined game lobby ${lobbyConfig.gameID}`);
+    console.log(`Joined game lobby ${lobbyConfig.gameID}`);
     transport.joinGame(0);
   };
   let terrainLoad: Promise<TerrainMapData> | null = null;
 
   const onmessage = (message: ServerMessage) => {
     if (message.type === "prestart") {
-      consolex.log(`lobby: game prestarting: ${JSON.stringify(message)}`);
+      console.log(`lobby: game prestarting: ${JSON.stringify(message)}`);
       terrainLoad = loadTerrainMap(message.gameMap);
       onPrestart();
     }
     if (message.type === "start") {
       // Trigger prestart for singleplayer games
       onPrestart();
-      consolex.log(`lobby: game started: ${JSON.stringify(message, null, 2)}`);
+      console.log(`lobby: game started: ${JSON.stringify(message, null, 2)}`);
       onJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
       lobbyConfig.gameStartInfo = message.gameStartInfo;
@@ -96,10 +100,21 @@ export function joinLobby(
         terrainLoad,
       ).then((r) => r.start());
     }
+    if (message.type === "error") {
+      showErrorModal(
+        message.error,
+        "",
+        lobbyConfig.gameID,
+        lobbyConfig.clientID,
+        true,
+        false,
+        "error_modal.connection_error",
+      );
+    }
   };
   transport.connect(onconnect, onmessage);
   return () => {
-    consolex.log("leaving game");
+    console.log("leaving game");
     transport.leaveGame();
   };
 }
@@ -139,12 +154,12 @@ export async function createClientGame(
     lobbyConfig.gameStartInfo.gameID,
   );
 
-  consolex.log("going to init path finder");
-  consolex.log("inited path finder");
+  console.log("going to init path finder");
+  console.log("inited path finder");
   const canvas = createCanvas();
   const gameRenderer = createRenderer(canvas, gameView, eventBus);
 
-  consolex.log(
+  console.log(
     `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
   );
 
@@ -221,7 +236,7 @@ export class ClientGameRunner {
   }
 
   public start() {
-    consolex.log("starting client game");
+    console.log("starting client game");
 
     this.isActive = true;
     this.lastMessageTime = Date.now();
@@ -233,6 +248,7 @@ export class ClientGameRunner {
     }, 20000);
     this.eventBus.on(MouseUpEvent, (e) => this.inputEvent(e));
     this.eventBus.on(MouseMoveEvent, (e) => this.onMouseMove(e));
+    this.eventBus.on(DoBoatAttackEvent, (e) => this.doBoatAttackUnderCursor());
 
     this.renderer.initialize();
     this.input.initialize();
@@ -264,20 +280,22 @@ export class ClientGameRunner {
     });
     const worker = this.worker;
     const keepWorkerAlive = () => {
-      worker.sendHeartbeat();
-      requestAnimationFrame(keepWorkerAlive);
+      if (this.isActive) {
+        worker.sendHeartbeat();
+        requestAnimationFrame(keepWorkerAlive);
+      }
     };
     requestAnimationFrame(keepWorkerAlive);
 
     const onconnect = () => {
-      consolex.log("Connected to game server!");
+      console.log("Connected to game server!");
       this.transport.joinGame(this.turnsSeen);
     };
     const onmessage = (message: ServerMessage) => {
       this.lastMessageTime = Date.now();
       if (message.type === "start") {
         this.hasJoined = true;
-        consolex.log("starting game!");
+        console.log("starting game!");
         for (const turn of message.turns) {
           if (turn.turnNumber < this.turnsSeen) {
             continue;
@@ -303,7 +321,19 @@ export class ClientGameRunner {
           this.lobby.gameStartInfo.gameID,
           this.lobby.clientID,
           true,
-          translateText("error_modal.desync_notice"),
+          false,
+          "error_modal.desync_notice",
+        );
+      }
+      if (message.type === "error") {
+        showErrorModal(
+          message.error,
+          "",
+          this.lobby.gameID,
+          this.lobby.clientID,
+          true,
+          false,
+          "error_modal.connection_error",
         );
       }
       if (message.type === "turn") {
@@ -312,7 +342,7 @@ export class ClientGameRunner {
           return;
         }
         if (this.turnsSeen !== message.turn.turnNumber) {
-          consolex.error(
+          console.error(
             `got wrong turn have turns ${this.turnsSeen}, received turn ${message.turn.turnNumber}`,
           );
         } else {
@@ -325,8 +355,10 @@ export class ClientGameRunner {
   }
 
   public stop(saveFullGame: boolean = false) {
-    this.worker.cleanup();
+    if (!this.isActive) return;
+
     this.isActive = false;
+    this.worker.cleanup();
     this.transport.leaveGame(saveFullGame);
     if (this.connectionCheckInterval) {
       clearInterval(this.connectionCheckInterval);
@@ -345,7 +377,7 @@ export class ClientGameRunner {
     if (!this.gameView.isValidCoord(cell.x, cell.y)) {
       return;
     }
-    consolex.log(`clicked cell ${cell}`);
+    console.log(`clicked cell ${cell}`);
     const tile = this.gameView.ref(cell.x, cell.y);
     if (
       this.gameView.isLand(tile) &&
@@ -365,13 +397,6 @@ export class ClientGameRunner {
     }
     this.myPlayer.actions(tile).then((actions) => {
       if (this.myPlayer === null) return;
-      const bu = actions.buildableUnits.find(
-        (bu) => bu.type === UnitType.TransportShip,
-      );
-      if (bu === undefined) {
-        console.warn(`no transport ship buildable units`);
-        return;
-      }
       if (actions.canAttack) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
@@ -379,31 +404,8 @@ export class ClientGameRunner {
             this.myPlayer.troops() * this.renderer.uiState.attackRatio,
           ),
         );
-      } else if (
-        bu.canBuild !== false &&
-        this.shouldBoat(tile, bu.canBuild) &&
-        this.gameView.isLand(tile)
-      ) {
-        this.myPlayer
-          .bestTransportShipSpawn(this.gameView.ref(cell.x, cell.y))
-          .then((spawn: number | false) => {
-            if (this.myPlayer === null) throw new Error("not initialized");
-            let spawnCell: Cell | null = null;
-            if (spawn !== false) {
-              spawnCell = new Cell(
-                this.gameView.x(spawn),
-                this.gameView.y(spawn),
-              );
-            }
-            this.eventBus.emit(
-              new SendBoatAttackIntentEvent(
-                this.gameView.owner(tile).id(),
-                cell,
-                this.myPlayer.troops() * this.renderer.uiState.attackRatio,
-                spawnCell,
-              ),
-            );
-          });
+      } else if (this.canBoatAttack(actions, tile)) {
+        this.sendBoatAttackIntent(tile);
       }
 
       const owner = this.gameView.owner(tile);
@@ -412,6 +414,66 @@ export class ClientGameRunner {
       } else {
         this.gameView.setFocusedPlayer(null);
       }
+    });
+  }
+
+  private doBoatAttackUnderCursor(): void {
+    if (!this.isActive || !this.lastMousePosition) {
+      return;
+    }
+    if (this.gameView.inSpawnPhase()) {
+      return;
+    }
+    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
+      this.lastMousePosition.x,
+      this.lastMousePosition.y,
+    );
+    if (!this.gameView.isValidCoord(cell.x, cell.y)) {
+      return;
+    }
+    const tile = this.gameView.ref(cell.x, cell.y);
+
+    if (this.myPlayer === null) {
+      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    this.myPlayer.actions(tile).then((actions) => {
+      if (!actions.canAttack && this.canBoatAttack(actions, tile)) {
+        this.sendBoatAttackIntent(tile);
+      }
+    });
+  }
+
+  private canBoatAttack(actions: PlayerActions, tile: TileRef): boolean {
+    const bu = actions.buildableUnits.find(
+      (bu) => bu.type === UnitType.TransportShip,
+    );
+    if (bu === undefined) {
+      console.warn(`no transport ship buildable units`);
+      return false;
+    }
+    return (
+      bu.canBuild !== false &&
+      this.shouldBoat(tile, bu.canBuild) &&
+      this.gameView.isLand(tile)
+    );
+  }
+
+  private sendBoatAttackIntent(tile: TileRef) {
+    if (!this.myPlayer) return;
+
+    this.myPlayer.bestTransportShipSpawn(tile).then((spawn: number | false) => {
+      if (this.myPlayer === null) throw new Error("not initialized");
+      this.eventBus.emit(
+        new SendBoatAttackIntentEvent(
+          this.gameView.owner(tile).id(),
+          tile,
+          this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+          spawn === false ? null : spawn,
+        ),
+      );
     });
   }
 
@@ -460,11 +522,10 @@ export class ClientGameRunner {
           UnitType.TradeShip,
           UnitType.TransportShip,
         ])
-        .sort((a, b) => a.distSquared - b.distSquared)
-        .map((u) => u.unit);
+        .sort((a, b) => a.distSquared - b.distSquared);
 
       if (units.length > 0) {
-        this.gameView.setFocusedPlayer(units[0].owner() as PlayerView);
+        this.gameView.setFocusedPlayer(units[0].unit.owner() as PlayerView);
       } else {
         this.gameView.setFocusedPlayer(null);
       }
@@ -475,12 +536,13 @@ export class ClientGameRunner {
     if (this.transport.isLocal) {
       return;
     }
-    const timeSinceLastMessage = Date.now() - this.lastMessageTime;
+    const now = Date.now();
+    const timeSinceLastMessage = now - this.lastMessageTime;
     if (timeSinceLastMessage > 5000) {
       console.log(
         `No message from server for ${timeSinceLastMessage} ms, reconnecting`,
       );
-      this.lastMessageTime = Date.now();
+      this.lastMessageTime = now;
       this.transport.reconnect();
     }
   }
@@ -492,7 +554,8 @@ function showErrorModal(
   gameID: GameID,
   clientID: ClientID,
   closable = false,
-  heading = translateText("error_modal.crashed"),
+  showDiscord = true,
+  heading = "error_modal.crashed",
 ) {
   const errorText = `Error: ${errMsg}\nStack: ${stack}`;
 
@@ -504,7 +567,9 @@ function showErrorModal(
 
   modal.id = "error-modal";
 
-  const content = `${translateText(heading)}\n game id: ${gameID}, client id: ${clientID}\n${translateText("error_modal.paste_discord")}\n${errorText}`;
+  const discord = showDiscord ? translateText("error_modal.paste_discord") : "";
+
+  const content = `${discord}\n${translateText(heading)}\n game id: ${gameID}, client id: ${clientID}\n${errorText}`;
 
   // Create elements
   const pre = document.createElement("pre");
@@ -513,26 +578,25 @@ function showErrorModal(
   const button = document.createElement("button");
   button.textContent = translateText("error_modal.copy_clipboard");
   button.className = "copy-btn";
-  button.addEventListener("click", () => {
-    navigator.clipboard
-      .writeText(content)
-      .then(() => (button.textContent = translateText("error_modal.copied")))
-      .catch(
-        () => (button.textContent = translateText("error_modal.failed_copy")),
-      );
-  });
-
-  const closeButton = document.createElement("button");
-  closeButton.textContent = "X";
-  closeButton.className = "close-btn";
-  closeButton.addEventListener("click", () => {
-    modal.style.display = "none";
+  button.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      button.textContent = translateText("error_modal.copied");
+    } catch {
+      button.textContent = translateText("error_modal.failed_copy");
+    }
   });
 
   // Add to modal
   modal.appendChild(pre);
   modal.appendChild(button);
   if (closable) {
+    const closeButton = document.createElement("button");
+    closeButton.textContent = "X";
+    closeButton.className = "close-btn";
+    closeButton.addEventListener("click", () => {
+      modal.remove();
+    });
     modal.appendChild(closeButton);
   }
 

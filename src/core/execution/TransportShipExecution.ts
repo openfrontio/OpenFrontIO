@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
@@ -24,7 +23,6 @@ export class TransportShipExecution implements Execution {
   private active = true;
 
   private mg: Game;
-  private attacker: Player;
   private target: Player | TerraNullius;
 
   // TODO make private
@@ -36,7 +34,7 @@ export class TransportShipExecution implements Execution {
   private pathFinder: PathFinder;
 
   constructor(
-    private attackerID: PlayerID,
+    private attacker: Player,
     private targetID: PlayerID | null,
     private ref: TileRef,
     private troops: number,
@@ -48,24 +46,25 @@ export class TransportShipExecution implements Execution {
   }
 
   init(mg: Game, ticks: number) {
-    if (!mg.hasPlayer(this.attackerID)) {
-      console.warn(
-        `TransportShipExecution: attacker ${this.attackerID} not found`,
-      );
+    if (this.targetID !== null && !mg.hasPlayer(this.targetID)) {
+      console.warn(`TransportShipExecution: target ${this.targetID} not found`);
       this.active = false;
       return;
     }
-    if (this.targetID !== null && !mg.hasPlayer(this.targetID)) {
-      console.warn(`TransportShipExecution: target ${this.targetID} not found`);
+    if (!mg.isValidRef(this.ref)) {
+      console.warn(`TransportShipExecution: ref ${this.ref} not valid`);
+      this.active = false;
+      return;
+    }
+    if (this.src !== null && !mg.isValidRef(this.src)) {
+      console.warn(`TransportShipExecution: src ${this.src} not valid`);
       this.active = false;
       return;
     }
 
     this.lastMove = ticks;
     this.mg = mg;
-    this.pathFinder = PathFinder.Mini(mg, 10_000, 10);
-
-    this.attacker = mg.player(this.attackerID);
+    this.pathFinder = PathFinder.Mini(mg, 10_000, true, 10);
 
     if (
       this.attacker.units(UnitType.TransportShip).length >=
@@ -73,8 +72,8 @@ export class TransportShipExecution implements Execution {
     ) {
       mg.displayMessage(
         `No boats available, max ${mg.config().boatMaxNumber()}`,
-        MessageType.WARN,
-        this.attackerID,
+        MessageType.ATTACK_FAILED,
+        this.attacker.id(),
       );
       this.active = false;
       this.attacker.addTroops(this.troops);
@@ -100,7 +99,7 @@ export class TransportShipExecution implements Execution {
 
     this.dst = targetTransportTile(this.mg, this.ref);
     if (this.dst === null) {
-      consolex.warn(
+      console.warn(
         `${this.attacker} cannot send ship to ${this.target}, cannot find attack tile`,
       );
       this.active = false;
@@ -112,7 +111,7 @@ export class TransportShipExecution implements Execution {
       this.dst,
     );
     if (closestTileSrc === false) {
-      consolex.warn(`can't build transport ship`);
+      console.warn(`can't build transport ship`);
       this.active = false;
       return;
     }
@@ -141,8 +140,9 @@ export class TransportShipExecution implements Execution {
     if (this.targetID && this.targetID !== mg.terraNullius().id()) {
       mg.displayIncomingUnit(
         this.boat.id(),
+        // TODO TranslateText
         `Naval invasion incoming from ${this.attacker.displayName()}`,
-        MessageType.WARN,
+        MessageType.NAVAL_INVASION_INBOUND,
         this.targetID,
       );
     }
@@ -193,7 +193,7 @@ export class TransportShipExecution implements Execution {
           this.mg.addExecution(
             new AttackExecution(
               this.troops,
-              this.attacker.id(),
+              this.attacker,
               this.targetID,
               this.dst,
               false,
@@ -209,13 +209,13 @@ export class TransportShipExecution implements Execution {
           .boatArriveTroops(this.attacker, this.target, this.troops);
         return;
       case PathFindResultType.NextTile:
-        this.boat.move(result.tile);
+        this.boat.move(result.node);
         break;
       case PathFindResultType.Pending:
         break;
       case PathFindResultType.PathNotFound:
         // TODO: add to poisoned port list
-        consolex.warn(`path not found to dst`);
+        console.warn(`path not found to dst`);
         this.attacker.addTroops(this.troops);
         this.boat.delete(false);
         this.active = false;

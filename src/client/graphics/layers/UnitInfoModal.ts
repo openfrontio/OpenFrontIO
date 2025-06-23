@@ -1,7 +1,13 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { translateText } from "../../../client/Utils";
+import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { GameView, UnitView } from "../../../core/game/GameView";
+import {
+  SendCreateTrainStationIntentEvent,
+  SendUpgradeStructureIntentEvent,
+} from "../../Transport";
 import { Layer } from "./Layer";
 import { StructureLayer } from "./StructureLayer";
 
@@ -14,6 +20,7 @@ export class UnitInfoModal extends LitElement implements Layer {
 
   public game: GameView;
   public structureLayer: StructureLayer | null = null;
+  private eventBus: EventBus;
 
   constructor() {
     super();
@@ -28,12 +35,14 @@ export class UnitInfoModal extends LitElement implements Layer {
   }
 
   public onOpenStructureModal = ({
+    eventBus,
     unit,
     x,
     y,
     tileX,
     tileY,
   }: {
+    eventBus: EventBus;
     unit: UnitView;
     x: number;
     y: number;
@@ -43,12 +52,16 @@ export class UnitInfoModal extends LitElement implements Layer {
     if (!this.game) return;
     this.x = x;
     this.y = y;
+    this.eventBus = eventBus;
     const targetRef = this.game.ref(tileX, tileY);
 
     const allUnitTypes = Object.values(UnitType);
-    const matchingUnits = this.game
-      .nearbyUnits(targetRef, 10, allUnitTypes)
-      .filter(({ unit }) => unit.isActive());
+    const matchingUnits = this.game.nearbyUnits(
+      targetRef,
+      10,
+      allUnitTypes,
+      ({ unit }) => unit.isActive(),
+    );
 
     if (matchingUnits.length > 0) {
       matchingUnits.sort((a, b) => a.distSquared - b.distSquared);
@@ -70,6 +83,12 @@ export class UnitInfoModal extends LitElement implements Layer {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+  }
+
+  private buildUnitTypeTranslationString(): string {
+    if (!this.unit) return "unit_type.unknown"; // fallback stays the same
+    const unitType = this.unit.type().toLowerCase().replace(/\s+/g, "_");
+    return `unit_type.${unitType}`;
   }
 
   static styles = css`
@@ -118,12 +137,44 @@ export class UnitInfoModal extends LitElement implements Layer {
     .close-button:hover {
       background: #a00;
     }
+
+    .upgrade-button {
+      background: #3a0;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      padding: 6px 12px;
+    }
+
+    .upgrade-button:hover {
+      background: #0a0;
+    }
   `;
 
   render() {
     if (!this.unit) return null;
 
-    const cooldown = this.unit.ticksLeftInCooldown() ?? 0;
+    const ticksLeftInCooldown = this.unit.ticksLeftInCooldown();
+    let configTimer;
+    switch (this.unit.type()) {
+      case UnitType.MissileSilo:
+        configTimer = this.game.config().SiloCooldown();
+        break;
+      case UnitType.SAMLauncher:
+        configTimer = this.game.config().SAMCooldown();
+        break;
+    }
+    let cooldown = 0;
+    if (ticksLeftInCooldown !== undefined && configTimer !== undefined) {
+      cooldown = configTimer - (this.game.ticks() - ticksLeftInCooldown);
+    }
     const secondsLeft = Math.ceil(cooldown / 10);
 
     return html`
@@ -133,17 +184,72 @@ export class UnitInfoModal extends LitElement implements Layer {
           .x}px; top: ${this.y}px; position: absolute;"
       >
         <div style="margin-bottom: 8px; font-size: 16px; font-weight: bold;">
-          Structure Info
+          ${translateText("unit_info_modal.structure_info")}
         </div>
         <div style="margin-bottom: 4px;">
-          <strong>Type:</strong> ${this.unit.type?.() ?? "Unknown"}
+          <strong>${translateText("unit_info_modal.type")}:</strong>
+          ${translateText(this.buildUnitTypeTranslationString()) ??
+          translateText("unit_info_modal.unit_type_unknown")}
+          <strong
+            style="display: ${this.game.unitInfo(this.unit.type()).upgradable
+              ? "inline"
+              : "none"};"
+            >${translateText("unit_info_modal.level")}:</strong
+          >
+          ${this.game.unitInfo(this.unit.type()).upgradable &&
+          this.unit.level?.()
+            ? this.unit.level?.()
+            : ""}
         </div>
         ${secondsLeft > 0
           ? html`<div style="margin-bottom: 4px;">
-              <strong>Cooldown:</strong> ${secondsLeft}s
+              <strong>${translateText("unit_info_modal.cooldown")}</strong>
+              ${secondsLeft}s
             </div>`
           : ""}
-        <div style="margin-top: 14px; display: flex; justify-content: center;">
+        <div
+          style="margin-top: 14px; display: flex; justify-content: space-between;"
+        >
+          <button
+            @click=${() => {
+              if (this.unit) {
+                this.eventBus.emit(
+                  new SendUpgradeStructureIntentEvent(
+                    this.unit.id(),
+                    this.unit.type(),
+                  ),
+                );
+              }
+            }}
+            class="upgrade-button"
+            title="${translateText("unit_info_modal.upgrade")}"
+            style="width: 100px; height: 32px; display: ${this.game.unitInfo(
+              this.unit.type(),
+            ).upgradable
+              ? "block"
+              : "none"};"
+          >
+            ${translateText("unit_info_modal.upgrade")}
+          </button>
+          <button
+            @click=${() => {
+              if (this.unit) {
+                this.eventBus.emit(
+                  new SendCreateTrainStationIntentEvent(this.unit.id()),
+                );
+                this.onCloseStructureModal();
+                if (this.structureLayer) {
+                  this.structureLayer.unSelectStructureUnit();
+                }
+              }
+            }}
+            class="upgrade-button"
+            title="${translateText("unit_info_modal.create_station")}"
+            style="width: 100px; height: 32px;
+              display: ${this.unit.hasTrainStation() ? "none" : "block"};"
+          >
+            ${translateText("unit_info_modal.create_station")}
+          </button>
           <button
             @click=${() => {
               this.onCloseStructureModal();
@@ -152,10 +258,10 @@ export class UnitInfoModal extends LitElement implements Layer {
               }
             }}
             class="close-button"
-            title="Close"
+            title="${translateText("unit_info_modal.close")}"
             style="width: 100px; height: 32px;"
           >
-            CLOSE
+            ${translateText("unit_info_modal.close")}
           </button>
         </div>
       </div>

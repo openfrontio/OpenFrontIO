@@ -8,11 +8,13 @@ import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod/v4";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { territoryPatterns } from "../core/Cosmetics";
 import { GameType } from "../core/game/Game";
 import {
-  ClientMessageSchema,
+  ClientJoinMessageSchema,
   GameRecord,
   GameRecordSchema,
+  ServerErrorMessage,
 } from "../core/Schemas";
 import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
 import { archive, readGameRecord } from "./Archive";
@@ -21,12 +23,15 @@ import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
+import { PrivilegeChecker } from "./Privilege";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
 
 const workerId = parseInt(process.env.WORKER_ID || "0");
 const log = logger.child({ comp: `w_${workerId}` });
+
+const privilegeChecker = new PrivilegeChecker(territoryPatterns);
 
 // Worker setup
 export function startWorker() {
@@ -293,65 +298,103 @@ export function startWorker() {
           : forwarded || req.socket.remoteAddress || "unknown";
 
         try {
-          // Process WebSocket messages as in your original code
           // Parse and handle client messages
-          const clientMsg = ClientMessageSchema.parse(
+          const parsed = ClientJoinMessageSchema.safeParse(
             JSON.parse(message.toString()),
           );
+          if (!parsed.success) {
+            const error = z.prettifyError(parsed.error);
+            log.warn("Error parsing join message client", error);
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                error: error.toString(),
+              } satisfies ServerErrorMessage),
+            );
+            ws.close(1002, "ClientJoinMessageSchema");
+            return;
+          }
+          const clientMsg = parsed.data;
 
-          if (clientMsg.type === "join") {
-            // Verify this worker should handle this game
-            const expectedWorkerId = config.workerIndex(clientMsg.gameID);
-            if (expectedWorkerId !== workerId) {
-              log.warn(
-                `Worker mismatch: Game ${clientMsg.gameID} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
-              );
+          // Verify this worker should handle this game
+          const expectedWorkerId = config.workerIndex(clientMsg.gameID);
+          if (expectedWorkerId !== workerId) {
+            log.warn(
+              `Worker mismatch: Game ${clientMsg.gameID} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
+            );
+            return;
+          }
+
+          // Verify token signature
+          const result = await verifyClientToken(clientMsg.token, config);
+          if (result === false) {
+            log.warn("Failed to verify token");
+            ws.close(1002, "Failed to verify token");
+            return;
+          }
+          const { persistentId, claims } = result;
+
+          let roles: string[] | undefined;
+          let flares: string[] | undefined;
+
+          if (claims === null) {
+            // TODO: Verify that the persistendId is is not a registered player
+          } else {
+            // Verify token and get player permissions
+            const result = await getUserMe(clientMsg.token, config);
+            if (result === false) {
+              log.warn("Failed to verify token");
+              ws.close(1002, "Failed to verify token");
               return;
             }
+            roles = result.player.roles;
+            flares = result.player.flares;
+          }
 
-            const { persistentId, claims } = await verifyClientToken(
-              clientMsg.token,
-              config,
-            );
+          // Check if the flag is allowed
+          if (clientMsg.flag !== undefined) {
+            // TODO: Implement custom flag validation
+          }
 
-            let roles: string[] | undefined;
-
-            // Check user roles
-            if (claims !== null) {
-              const result = await getUserMe(clientMsg.token, config);
-              if (result === false) {
-                log.warn("Token is not valid", claims);
-                return;
-              }
-              roles = result.player.roles;
-            }
-
-            // TODO: Validate client settings based on roles
-
-            // Create client and add to game
-            const client = new Client(
-              clientMsg.clientID,
-              persistentId,
-              claims,
+          // Check if the pattern is allowed
+          if (clientMsg.pattern !== undefined) {
+            const allowed = privilegeChecker.isPatternAllowed(
+              clientMsg.pattern,
               roles,
-              ip,
-              clientMsg.username,
-              ws,
-              clientMsg.flag,
+              flares,
             );
-
-            const wasFound = gm.addClient(
-              client,
-              clientMsg.gameID,
-              clientMsg.lastTurn,
-            );
-
-            if (!wasFound) {
-              log.info(
-                `game ${clientMsg.gameID} not found on worker ${workerId}`,
-              );
-              // Handle game not found case
+            if (allowed !== true) {
+              log.warn(`Pattern ${allowed}: ${clientMsg.pattern}`);
+              ws.close(1002, `Pattern ${allowed}`);
+              return;
             }
+          }
+
+          // Create client and add to game
+          const client = new Client(
+            clientMsg.clientID,
+            persistentId,
+            claims,
+            roles,
+            flares,
+            ip,
+            clientMsg.username,
+            ws,
+            clientMsg.flag,
+            clientMsg.pattern,
+          );
+
+          const wasFound = gm.addClient(
+            client,
+            clientMsg.gameID,
+            clientMsg.lastTurn,
+          );
+
+          if (!wasFound) {
+            log.info(
+              `game ${clientMsg.gameID} not found on worker ${workerId}`,
+            );
+            // Handle game not found case
           }
 
           // Handle other message types
@@ -368,7 +411,7 @@ export function startWorker() {
 
     ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
-        ws.close(1002);
+        ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
       }
     });
   });

@@ -152,10 +152,11 @@ export class TransformHandler {
   onGoToPlayer(event: GoToPlayerEvent) {
     this.game.setFocusedPlayer(event.player);
     this.clearTarget();
-    this.target = new Cell(
-      event.player.nameLocation().x,
-      event.player.nameLocation().y,
-    );
+    const nameLocation = event.player.nameLocation();
+    if (!nameLocation) {
+      return;
+    }
+    this.target = new Cell(nameLocation.x, nameLocation.y);
     this.intervalID = setInterval(() => this.goTo(), GOTO_INTERVAL_MS);
   }
 
@@ -256,5 +257,32 @@ export class TransformHandler {
       this.intervalID = null;
     }
     this.target = null;
+  }
+
+  override(x: number = 0, y: number = 0, s: number = 1) {
+    //hardset view position
+    this.clearTarget();
+    this.offsetX = x;
+    this.offsetY = y;
+    this.scale = s;
+    this.changed = true;
+  }
+
+  centerAll(fit: number = 1) {
+    //position entire map centered on the screen
+
+    const vpWidth = this.boundingRect().width;
+    const vpHeight = this.boundingRect().height;
+    const mapWidth = this.game.width();
+    const mapHeight = this.game.height();
+
+    const scHor = (vpWidth / mapWidth) * fit;
+    const scVer = (vpHeight / mapHeight) * fit;
+    const tScale = Math.min(scHor, scVer);
+
+    const oHor = (mapWidth - vpWidth) / 2 / tScale;
+    const oVer = (mapHeight - vpHeight) / 2 / tScale;
+
+    this.override(oHor, oVer, tScale);
   }
 }

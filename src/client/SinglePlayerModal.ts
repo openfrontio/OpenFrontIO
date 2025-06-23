@@ -2,7 +2,6 @@ import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
-import { consolex } from "../core/Consolex";
 import {
   Difficulty,
   Duos,
@@ -12,6 +11,7 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
+import { UserSettings } from "../core/game/UserSettings";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
@@ -41,6 +41,8 @@ export class SinglePlayerModal extends LitElement {
   @state() private teamCount: number | typeof Duos = 2;
 
   @state() private disabledUnits: UnitType[] = [];
+
+  private userSettings: UserSettings = new UserSettings();
 
   render() {
     return html`
@@ -367,7 +369,7 @@ export class SinglePlayerModal extends LitElement {
   }
 
   private toggleUnit(unit: UnitType, checked: boolean): void {
-    consolex.log(`Toggling unit type: ${unit} to ${checked}`);
+    console.log(`Toggling unit type: ${unit} to ${checked}`);
     this.disabledUnits = checked
       ? [...this.disabledUnits, unit]
       : this.disabledUnits.filter((u) => u !== unit);
@@ -379,7 +381,7 @@ export class SinglePlayerModal extends LitElement {
       this.selectedMap = this.getRandomMap();
     }
 
-    consolex.log(
+    console.log(
       `Starting single player game with map: ${GameMapType[this.selectedMap]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     const clientID = generateID();
@@ -389,12 +391,12 @@ export class SinglePlayerModal extends LitElement {
       "username-input",
     ) as UsernameInput;
     if (!usernameInput) {
-      consolex.warn("Username input element not found");
+      console.warn("Username input element not found");
     }
 
     const flagInput = document.querySelector("flag-input") as FlagInput;
     if (!flagInput) {
-      consolex.warn("Flag input element not found");
+      console.warn("Flag input element not found");
     }
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
@@ -411,6 +413,7 @@ export class SinglePlayerModal extends LitElement {
                   flagInput.getCurrentFlag() === "xx"
                     ? ""
                     : flagInput.getCurrentFlag(),
+                pattern: this.userSettings.getSelectedPattern(),
               },
             ],
             config: {

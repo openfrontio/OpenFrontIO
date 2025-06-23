@@ -8,6 +8,7 @@ import {
   UnitUpdate,
 } from "./GameUpdates";
 import { PlayerView } from "./GameView";
+import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 
 export type PlayerID = string;
@@ -54,7 +55,7 @@ export const ColoredTeams: Record<string, Team> = {
 
 export enum GameMapType {
   World = "World",
-  WorldMapGiant = "Giant World Map",
+  GiantWorldMap = "Giant World Map",
   Europe = "Europe",
   EuropeClassic = "Europe Classic",
   Mena = "Mena",
@@ -70,7 +71,7 @@ export enum GameMapType {
   GatewayToTheAtlantic = "Gateway to the Atlantic",
   Australia = "Australia",
   Iceland = "Iceland",
-  Japan = "Japan",
+  EastAsia = "East Asia",
   BetweenTwoSeas = "Between Two Seas",
   FaroeIslands = "Faroe Islands",
   DeglaciatedAntarctica = "Deglaciated Antarctica",
@@ -82,7 +83,7 @@ export enum GameMapType {
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
     GameMapType.World,
-    GameMapType.WorldMapGiant,
+    GameMapType.GiantWorldMap,
     GameMapType.NorthAmerica,
     GameMapType.SouthAmerica,
     GameMapType.Europe,
@@ -97,7 +98,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.GatewayToTheAtlantic,
     GameMapType.BetweenTwoSeas,
     GameMapType.Iceland,
-    GameMapType.Japan,
+    GameMapType.EastAsia,
     GameMapType.Mena,
     GameMapType.Australia,
     GameMapType.FaroeIslands,
@@ -130,6 +131,7 @@ export interface UnitInfo {
   maxHealth?: number;
   damage?: number;
   constructionDuration?: number;
+  upgradable?: boolean;
 }
 
 export enum UnitType {
@@ -148,6 +150,26 @@ export enum UnitType {
   MIRV = "MIRV",
   MIRVWarhead = "MIRV Warhead",
   Construction = "Construction",
+  Train = "Train",
+  Factory = "Factory",
+}
+
+export enum TrainType {
+  Engine = "Engine",
+  Carriage = "Carriage",
+}
+
+const _structureTypes: ReadonlySet<UnitType> = new Set([
+  UnitType.City,
+  UnitType.Construction,
+  UnitType.DefensePost,
+  UnitType.SAMLauncher,
+  UnitType.MissileSilo,
+  UnitType.Port,
+]);
+
+export function isStructureType(type: UnitType): boolean {
+  return _structureTypes.has(type);
 }
 
 export interface OwnerComp {
@@ -182,6 +204,14 @@ export interface UnitParamsMap {
     targetUnit: Unit;
     lastSetSafeFromPirates?: number;
   };
+
+  [UnitType.Train]: {
+    trainType: TrainType;
+    targetUnit?: Unit;
+    loaded?: boolean;
+  };
+
+  [UnitType.Factory]: {};
 
   [UnitType.MissileSilo]: {
     cooldownDuration?: number;
@@ -319,6 +349,7 @@ export class PlayerInfo {
   public readonly clan: string | null;
 
   constructor(
+    public readonly pattern: string | undefined,
     public readonly flag: string | undefined,
     public readonly name: string,
     public readonly playerType: PlayerType,
@@ -359,6 +390,13 @@ export interface Unit {
   touch(): void;
   hash(): number;
   toUpdate(): UnitUpdate;
+  hasTrainStation(): boolean;
+  setTrainStation(trainStation: boolean): void;
+
+  // Train
+  trainType(): TrainType | undefined;
+  isLoaded(): boolean | undefined;
+  setLoaded(loaded: boolean): void;
 
   // Targeting
   setTargetTile(cell: TileRef | undefined): void;
@@ -369,6 +407,8 @@ export interface Unit {
   targetedBySAM(): boolean;
   setReachedTarget(): void;
   reachedTarget(): boolean;
+  isTargetable(): boolean;
+  setTargetable(targetable: boolean): void;
 
   // Health
   hasHealth(): boolean;
@@ -385,8 +425,9 @@ export interface Unit {
 
   // SAMs & Missile Silos
   launch(): void;
-  ticksLeftInCooldown(): Tick | undefined;
+  reloadMissile(): void;
   isInCooldown(): boolean;
+  ticksLeftInCooldown(): Tick | undefined;
 
   // Trade Ships
   setSafeFromPirates(): void; // Only for trade ships
@@ -395,6 +436,10 @@ export interface Unit {
   // Construction
   constructionType(): UnitType | null;
   setConstructionType(type: UnitType): void;
+
+  // Upgradable Structures
+  level(): number;
+  increaseLevel(): void;
 
   // Warships
   setPatrolTile(tile: TileRef): void;
@@ -433,6 +478,9 @@ export interface Player {
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
   lastTileChange(): Tick;
 
+  isDisconnected(): boolean;
+  markDisconnected(isDisconnected: boolean): void;
+
   hasSpawned(): boolean;
   setHasSpawned(hasSpawned: boolean): void;
 
@@ -468,6 +516,7 @@ export interface Player {
     spawnTile: TileRef,
     params: UnitParams<T>,
   ): Unit;
+  upgradeUnit(unit: Unit): void;
 
   captureUnit(unit: Unit): void;
 
@@ -577,6 +626,7 @@ export interface Game extends GameMap {
     tile: TileRef,
     searchRange: number,
     types: UnitType | UnitType[],
+    predicate?: (value: { unit: Unit; distSquared: number }) => boolean,
   ): Array<{ unit: Unit; distSquared: number }>;
 
   addExecution(...exec: Execution[]): void;
@@ -584,6 +634,7 @@ export interface Game extends GameMap {
     message: string,
     type: MessageType,
     playerID: PlayerID | null,
+    goldAmount?: bigint,
   ): void;
   displayIncomingUnit(
     unitID: number,
@@ -595,7 +646,7 @@ export interface Game extends GameMap {
   displayChat(
     message: string,
     category: string,
-    variables: Record<string, string>,
+    target: PlayerID | undefined,
     playerID: PlayerID | null,
     isFrom: boolean,
     recipient: string,
@@ -607,6 +658,9 @@ export interface Game extends GameMap {
   numTilesWithFallout(): number;
   // Optional as it's not initialized before the end of spawn phase
   stats(): Stats;
+
+  addUpdate(update: GameUpdate): void;
+  railNetwork(): RailNetwork;
 }
 
 export interface PlayerActions {
@@ -650,11 +704,73 @@ export interface EmojiMessage {
 }
 
 export enum MessageType {
-  SUCCESS,
-  INFO,
-  WARN,
-  ERROR,
+  ATTACK_FAILED,
+  ATTACK_CANCELLED,
+  ATTACK_REQUEST,
+  CONQUERED_PLAYER,
+  MIRV_INBOUND,
+  NUKE_INBOUND,
+  HYDROGEN_BOMB_INBOUND,
+  NAVAL_INVASION_INBOUND,
+  SAM_MISS,
+  SAM_HIT,
+  CAPTURED_ENEMY_UNIT,
+  UNIT_CAPTURED_BY_ENEMY,
+  UNIT_DESTROYED,
+  ALLIANCE_ACCEPTED,
+  ALLIANCE_REJECTED,
+  ALLIANCE_REQUEST,
+  ALLIANCE_BROKEN,
+  ALLIANCE_EXPIRED,
+  SENT_GOLD_TO_PLAYER,
+  RECEIVED_GOLD_FROM_PLAYER,
+  RECEIVED_GOLD_FROM_TRADE,
+  SENT_TROOPS_TO_PLAYER,
+  RECEIVED_TROOPS_FROM_PLAYER,
   CHAT,
+}
+
+// Message categories used for filtering events in the EventsDisplay
+export enum MessageCategory {
+  ATTACK = "ATTACK",
+  ALLIANCE = "ALLIANCE",
+  TRADE = "TRADE",
+  CHAT = "CHAT",
+}
+
+// Ensures that all message types are included in a category
+export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
+  [MessageType.ATTACK_FAILED]: MessageCategory.ATTACK,
+  [MessageType.ATTACK_CANCELLED]: MessageCategory.ATTACK,
+  [MessageType.ATTACK_REQUEST]: MessageCategory.ATTACK,
+  [MessageType.CONQUERED_PLAYER]: MessageCategory.ATTACK,
+  [MessageType.MIRV_INBOUND]: MessageCategory.ATTACK,
+  [MessageType.NUKE_INBOUND]: MessageCategory.ATTACK,
+  [MessageType.HYDROGEN_BOMB_INBOUND]: MessageCategory.ATTACK,
+  [MessageType.NAVAL_INVASION_INBOUND]: MessageCategory.ATTACK,
+  [MessageType.SAM_MISS]: MessageCategory.ATTACK,
+  [MessageType.SAM_HIT]: MessageCategory.ATTACK,
+  [MessageType.CAPTURED_ENEMY_UNIT]: MessageCategory.ATTACK,
+  [MessageType.UNIT_CAPTURED_BY_ENEMY]: MessageCategory.ATTACK,
+  [MessageType.UNIT_DESTROYED]: MessageCategory.ATTACK,
+  [MessageType.ALLIANCE_ACCEPTED]: MessageCategory.ALLIANCE,
+  [MessageType.ALLIANCE_REJECTED]: MessageCategory.ALLIANCE,
+  [MessageType.ALLIANCE_REQUEST]: MessageCategory.ALLIANCE,
+  [MessageType.ALLIANCE_BROKEN]: MessageCategory.ALLIANCE,
+  [MessageType.ALLIANCE_EXPIRED]: MessageCategory.ALLIANCE,
+  [MessageType.SENT_GOLD_TO_PLAYER]: MessageCategory.TRADE,
+  [MessageType.RECEIVED_GOLD_FROM_PLAYER]: MessageCategory.TRADE,
+  [MessageType.RECEIVED_GOLD_FROM_TRADE]: MessageCategory.TRADE,
+  [MessageType.SENT_TROOPS_TO_PLAYER]: MessageCategory.TRADE,
+  [MessageType.RECEIVED_TROOPS_FROM_PLAYER]: MessageCategory.TRADE,
+  [MessageType.CHAT]: MessageCategory.CHAT,
+} as const;
+
+/**
+ * Get the category of a message type
+ */
+export function getMessageCategory(messageType: MessageType): MessageCategory {
+  return MESSAGE_TYPE_CATEGORIES[messageType];
 }
 
 export interface NameViewData {

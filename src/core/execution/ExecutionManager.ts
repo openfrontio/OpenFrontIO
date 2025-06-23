@@ -1,5 +1,4 @@
 import { Execution, Game } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -15,6 +14,7 @@ import { DonateTroopsExecution } from "./DonateTroopExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { FakeHumanExecution } from "./FakeHumanExecution";
+import { MarkDisconnectedExecution } from "./MarkDisconnectedExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NoOpExecution } from "./NoOpExecution";
 import { QuickChatExecution } from "./QuickChatExecution";
@@ -22,7 +22,9 @@ import { RetreatExecution } from "./RetreatExecution";
 import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
+import { TrainStationExecution } from "./TrainStationExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
+import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 
 export class Executor {
   // private random = new PseudoRandom(999)
@@ -47,21 +49,21 @@ export class Executor {
       console.warn(`player with clientID ${intent.clientID} not found`);
       return new NoOpExecution();
     }
-    const playerID = player.id();
 
+    // create execution
     switch (intent.type) {
       case "attack": {
         return new AttackExecution(
           intent.troops,
-          playerID,
+          player,
           intent.targetID,
           null,
         );
       }
       case "cancel_attack":
-        return new RetreatExecution(playerID, intent.attackID);
+        return new RetreatExecution(player, intent.attackID);
       case "cancel_boat":
-        return new BoatRetreatExecution(playerID, intent.unitID);
+        return new BoatRetreatExecution(player, intent.unitID);
       case "move_warship":
         return new MoveWarshipExecution(player, intent.unitId, intent.tile);
       case "spawn":
@@ -70,56 +72,58 @@ export class Executor {
           this.mg.ref(intent.x, intent.y),
         );
       case "boat":
-        let src: TileRef | null = null;
-        if (intent.srcX !== null && intent.srcY !== null) {
-          src = this.mg.ref(intent.srcX, intent.srcY);
-        }
         return new TransportShipExecution(
-          playerID,
+          player,
           intent.targetID,
-          this.mg.ref(intent.dstX, intent.dstY),
+          intent.dst,
           intent.troops,
-          src,
+          intent.src,
         );
       case "allianceRequest":
-        return new AllianceRequestExecution(playerID, intent.recipient);
+        return new AllianceRequestExecution(player, intent.recipient);
       case "allianceRequestReply":
         return new AllianceRequestReplyExecution(
           intent.requestor,
-          playerID,
+          player,
           intent.accept,
         );
       case "breakAlliance":
-        return new BreakAllianceExecution(playerID, intent.recipient);
+        return new BreakAllianceExecution(player, intent.recipient);
       case "targetPlayer":
-        return new TargetPlayerExecution(playerID, intent.target);
+        return new TargetPlayerExecution(player, intent.target);
       case "emoji":
-        return new EmojiExecution(playerID, intent.recipient, intent.emoji);
+        return new EmojiExecution(player, intent.recipient, intent.emoji);
       case "donate_troops":
         return new DonateTroopsExecution(
-          playerID,
+          player,
           intent.recipient,
           intent.troops,
         );
       case "donate_gold":
-        return new DonateGoldExecution(playerID, intent.recipient, intent.gold);
+        return new DonateGoldExecution(player, intent.recipient, intent.gold);
       case "troop_ratio":
-        return new SetTargetTroopRatioExecution(playerID, intent.ratio);
+        return new SetTargetTroopRatioExecution(player, intent.ratio);
       case "embargo":
         return new EmbargoExecution(player, intent.targetID, intent.action);
       case "build_unit":
         return new ConstructionExecution(
-          playerID,
+          player,
           this.mg.ref(intent.x, intent.y),
           intent.unit,
         );
+      case "upgrade_structure":
+        return new UpgradeStructureExecution(player, intent.unitId);
+      case "create_station":
+        return new TrainStationExecution(player, intent.unitId);
       case "quick_chat":
         return new QuickChatExecution(
-          playerID,
+          player,
           intent.recipient,
           intent.quickChatKey,
-          intent.variables ?? {},
+          intent.target,
         );
+      case "mark_disconnected":
+        return new MarkDisconnectedExecution(player, intent.isDisconnected);
       default:
         throw new Error(`intent type ${intent} not found`);
     }

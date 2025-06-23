@@ -1,5 +1,5 @@
 import { JWK } from "jose";
-import { z } from "zod";
+import { z } from "zod/v4";
 import {
   Difficulty,
   Duos,
@@ -53,7 +53,7 @@ const numPlayersConfig = {
   [GameMapType.Mena]: [60, 50, 30],
   [GameMapType.Mars]: [50, 40, 30],
   [GameMapType.Oceania]: [30, 20, 10],
-  [GameMapType.Japan]: [50, 40, 30],
+  [GameMapType.EastAsia]: [50, 40, 30],
   [GameMapType.FaroeIslands]: [50, 40, 30],
   [GameMapType.DeglaciatedAntarctica]: [50, 40, 30],
   [GameMapType.EuropeClassic]: [80, 30, 50],
@@ -61,11 +61,30 @@ const numPlayersConfig = {
   [GameMapType.BlackSea]: [40, 50, 30],
   [GameMapType.Pangaea]: [40, 20, 30],
   [GameMapType.World]: [150, 80, 50],
-  [GameMapType.WorldMapGiant]: [150, 100, 60],
+  [GameMapType.GiantWorldMap]: [150, 100, 60],
   [GameMapType.Halkidiki]: [50, 40, 30],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
+  domain(): string {
+    return process.env.DOMAIN ?? "";
+  }
+  subdomain(): string {
+    return process.env.SUBDOMAIN ?? "";
+  }
+  cloudflareAccountId(): string {
+    return process.env.CF_ACCOUNT_ID ?? "";
+  }
+  cloudflareApiToken(): string {
+    return process.env.CF_API_TOKEN ?? "";
+  }
+  cloudflareConfigPath(): string {
+    return process.env.CF_CONFIG_PATH ?? "";
+  }
+  cloudflareCredsPath(): string {
+    return process.env.CF_CREDS_PATH ?? "";
+  }
+
   private publicKey: JWK;
   abstract jwtAudience(): string;
   jwtIssuer(): string {
@@ -79,8 +98,13 @@ export abstract class DefaultServerConfig implements ServerConfig {
     const jwksUrl = this.jwtIssuer() + "/.well-known/jwks.json";
     console.log(`Fetching JWKS from ${jwksUrl}`);
     const response = await fetch(jwksUrl);
-    const jwks = JwksSchema.parse(await response.json());
-    this.publicKey = jwks.keys[0];
+    const result = JwksSchema.safeParse(await response.json());
+    if (!result.success) {
+      const error = z.prettifyError(result.error);
+      console.error("Error parsing JWKS", error);
+      throw new Error("Invalid JWKS");
+    }
+    this.publicKey = result.data.keys[0];
     return this.publicKey;
   }
   otelEnabled(): boolean {
@@ -277,6 +301,21 @@ export class DefaultConfig implements Config {
   tradeShipSpawnRate(numberOfPorts: number): number {
     return Math.min(50, Math.round(10 * Math.pow(numberOfPorts, 0.6)));
   }
+  trainSpawnRate(numberOfStations: number): number {
+    return Math.round(50 * Math.pow(numberOfStations, 0.8));
+  }
+  trainGold(): Gold {
+    return BigInt(10_000);
+  }
+  trainStationMinRange(): number {
+    return 15;
+  }
+  trainStationMaxRange(): number {
+    return 80;
+  }
+  railroadMaxSize(): number {
+    return 100;
+  }
 
   unitInfo(type: UnitType): UnitInfo {
     switch (type) {
@@ -323,6 +362,7 @@ export class DefaultConfig implements Config {
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+          upgradable: true,
         };
       case UnitType.AtomBomb:
         return {
@@ -366,6 +406,7 @@ export class DefaultConfig implements Config {
               : 1_000_000n,
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 10 * 10,
+          upgradable: true,
         };
       case UnitType.DefensePost:
         return {
@@ -380,6 +421,7 @@ export class DefaultConfig implements Config {
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
+          upgradable: true,
         };
       case UnitType.SAMLauncher:
         return {
@@ -394,6 +436,7 @@ export class DefaultConfig implements Config {
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 30 * 10,
+          upgradable: true,
         };
       case UnitType.City:
         return {
@@ -408,11 +451,34 @@ export class DefaultConfig implements Config {
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+          upgradable: true,
+        };
+      case UnitType.Factory:
+        return {
+          cost: (p: Player) =>
+            p.type() === PlayerType.Human && this.infiniteGold()
+              ? 0n
+              : BigInt(
+                  Math.min(
+                    1_000_000,
+                    Math.pow(
+                      2,
+                      p.unitsIncludingConstruction(UnitType.Factory).length,
+                    ) * 125_000,
+                  ),
+                ),
+          territoryBound: true,
+          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
         };
       case UnitType.Construction:
         return {
           cost: () => 0n,
           territoryBound: true,
+        };
+      case UnitType.Train:
+        return {
+          cost: () => 0n,
+          territoryBound: false,
         };
       default:
         assertNever(type);
@@ -502,12 +568,11 @@ export class DefaultConfig implements Config {
         tileToConquer,
         gm.config().defensePostRange(),
         UnitType.DefensePost,
+        ({ unit }) => unit.owner() === defender,
       )) {
-        if (dp.unit.owner() === defender) {
-          mag *= this.defensePostDefenseBonus();
-          speed *= this.defensePostDefenseBonus();
-          break;
-        }
+        mag *= this.defensePostDefenseBonus();
+        speed *= this.defensePostDefenseBonus();
+        break;
       }
     }
 
@@ -635,7 +700,11 @@ export class DefaultConfig implements Config {
       player.type() === PlayerType.Human && this.infiniteTroops()
         ? 1_000_000_000
         : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
-          player.units(UnitType.City).length * this.cityPopulationIncrease();
+          player
+            .units(UnitType.City)
+            .map((city) => city.level())
+            .reduce((a, b) => a + b, 0) *
+            this.cityPopulationIncrease();
 
     if (player.type() === PlayerType.Bot) {
       return maxPop / 2;
@@ -721,7 +790,7 @@ export class DefaultConfig implements Config {
   }
 
   defaultNukeSpeed(): number {
-    return 4;
+    return 6;
   }
 
   // Humans can be population, soldiers attacking, soldiers in boat etc.
@@ -730,8 +799,7 @@ export class DefaultConfig implements Config {
   }
 
   structureMinDist(): number {
-    // TODO: Increase this to ~15 once upgradable structures are implemented.
-    return 1;
+    return 15;
   }
 
   shellLifetime(): number {

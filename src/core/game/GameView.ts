@@ -1,4 +1,5 @@
 import { Config } from "../configuration/Config";
+import { PatternDecoder } from "../Cosmetics";
 import { ClientID, GameID } from "../Schemas";
 import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
@@ -19,6 +20,7 @@ import {
   TerrainType,
   TerraNullius,
   Tick,
+  TrainType,
   UnitInfo,
   UnitType,
 } from "./Game";
@@ -72,6 +74,10 @@ export class UnitView {
     return this.data.id;
   }
 
+  targetable(): boolean {
+    return this.data.targetable;
+  }
+
   type(): UnitType {
     return this.data.unitType;
   }
@@ -112,16 +118,28 @@ export class UnitView {
     return this.data.targetTile;
   }
   ticksLeftInCooldown(): Tick | undefined {
-    return this.data.ticksLeftInCooldown;
+    return this.data.missileTimerQueue?.[0];
   }
-  isCooldown(): boolean {
-    if (this.data.ticksLeftInCooldown === undefined) return false;
-    return this.data.ticksLeftInCooldown > 0;
+  isInCooldown(): boolean {
+    return this.data.readyMissileCount === 0;
+  }
+  level(): number {
+    return this.data.level;
+  }
+  hasTrainStation(): boolean {
+    return this.data.hasTrainStation;
+  }
+  trainType(): TrainType | undefined {
+    return this.data.trainType;
+  }
+  isLoaded(): boolean | undefined {
+    return this.data.loaded;
   }
 }
 
 export class PlayerView {
   public anonymousName: string | null = null;
+  private decoder?: PatternDecoder;
 
   constructor(
     private game: GameView,
@@ -136,6 +154,12 @@ export class PlayerView {
         this.data.playerType,
       );
     }
+    this.decoder =
+      data.pattern === undefined ? undefined : new PatternDecoder(data.pattern);
+  }
+
+  patternDecoder(): PatternDecoder | undefined {
+    return this.decoder;
   }
 
   async actions(tile: TileRef): Promise<PlayerActions> {
@@ -181,6 +205,11 @@ export class PlayerView {
   flag(): string | undefined {
     return this.data.flag;
   }
+
+  pattern(): string | undefined {
+    return this.data.pattern;
+  }
+
   name(): string {
     return this.anonymousName !== null && userSettings.anonymousNames()
       ? this.anonymousName
@@ -279,6 +308,7 @@ export class PlayerView {
   }
   info(): PlayerInfo {
     return new PlayerInfo(
+      this.pattern(),
       this.flag(),
       this.name(),
       this.type(),
@@ -288,6 +318,9 @@ export class PlayerView {
   }
   hasSpawned(): boolean {
     return this.data.hasSpawned;
+  }
+  isDisconnected(): boolean {
+    return this.data.isDisconnected;
   }
 }
 
@@ -382,8 +415,14 @@ export class GameView implements GameMap {
     tile: TileRef,
     searchRange: number,
     types: UnitType | UnitType[],
+    predicate?: (value: { unit: UnitView; distSquared: number }) => boolean,
   ): Array<{ unit: UnitView; distSquared: number }> {
-    return this.unitGrid.nearbyUnits(tile, searchRange, types) as Array<{
+    return this.unitGrid.nearbyUnits(
+      tile,
+      searchRange,
+      types,
+      predicate,
+    ) as Array<{
       unit: UnitView;
       distSquared: number;
     }>;
@@ -480,6 +519,9 @@ export class GameView implements GameMap {
 
   ref(x: number, y: number): TileRef {
     return this._map.ref(x, y);
+  }
+  isValidRef(ref: TileRef): boolean {
+    return this._map.isValidRef(ref);
   }
   x(ref: TileRef): number {
     return this._map.x(ref);

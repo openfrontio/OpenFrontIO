@@ -56,6 +56,12 @@ export interface ServerConfig {
   jwtAudience(): string;
   jwtIssuer(): string;
   jwkPublicKey(): Promise<JWK>;
+  domain(): string;
+  subdomain(): string;
+  cloudflareAccountId(): string;
+  cloudflareApiToken(): string;
+  cloudflareConfigPath(): string;
+  cloudflareCredsPath(): string;
 }
 
 export interface NukeMagnitude {
@@ -125,6 +131,11 @@ export interface Config {
   unitInfo(type: UnitType): UnitInfo;
   tradeShipGold(dist: number): Gold;
   tradeShipSpawnRate(numberOfPorts: number): number;
+  trainGold(): Gold;
+  trainSpawnRate(numberOfStations: number): number;
+  trainStationMinRange(): number;
+  trainStationMaxRange(): number;
+  railroadMaxSize(): number;
   safeFromPiratesCooldownMax(): number;
   defensePostRange(): number;
   SAMCooldown(): number;
@@ -151,6 +162,7 @@ export interface Theme {
   teamColor(team: Team): Colord;
   territoryColor(playerInfo: PlayerView): Colord;
   specialBuildingColor(playerInfo: PlayerView): Colord;
+  railroadColor(playerInfo: PlayerView): Colord;
   borderColor(playerInfo: PlayerView): Colord;
   defendedBorderColors(playerInfo: PlayerView): { light: Colord; dark: Colord };
   focusedBorderColor(): Colord;

@@ -1,6 +1,6 @@
-import { consolex } from "../../core/Consolex";
 import { EventBus } from "../../core/EventBus";
 import { GameView } from "../../core/game/GameView";
+import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { TransformHandler } from "./TransformHandler";
@@ -12,16 +12,20 @@ import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { FxLayer } from "./layers/FxLayer";
+import { GameLeftSidebar } from "./layers/GameLeftSidebar";
+import { GutterAdModal } from "./layers/GutterAdModal";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
+import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
 import { OptionsMenu } from "./layers/OptionsMenu";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
-import { PlayerTeamLabel } from "./layers/PlayerTeamLabel";
-import { RadialMenu } from "./layers/RadialMenu";
+import { RailroadLayer } from "./layers/RailroadLayer";
+import { ReplayPanel } from "./layers/ReplayPanel";
+import { SpawnAd } from "./layers/SpawnAd";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
@@ -39,6 +43,7 @@ export function createRenderer(
   eventBus: EventBus,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, canvas);
+  const userSettings = new UserSettings();
 
   const uiState = { attackRatio: 20 };
 
@@ -51,7 +56,7 @@ export function createRenderer(
   // TODO maybe append this to dcoument instead of querying for them?
   const emojiTable = document.querySelector("emoji-table") as EmojiTable;
   if (!emojiTable || !(emojiTable instanceof EmojiTable)) {
-    consolex.error("EmojiTable element not found in the DOM");
+    console.error("EmojiTable element not found in the DOM");
   }
   emojiTable.eventBus = eventBus;
   emojiTable.transformHandler = transformHandler;
@@ -60,28 +65,36 @@ export function createRenderer(
 
   const buildMenu = document.querySelector("build-menu") as BuildMenu;
   if (!buildMenu || !(buildMenu instanceof BuildMenu)) {
-    consolex.error("BuildMenu element not found in the DOM");
+    console.error("BuildMenu element not found in the DOM");
   }
   buildMenu.game = game;
   buildMenu.eventBus = eventBus;
 
   const leaderboard = document.querySelector("leader-board") as Leaderboard;
   if (!emojiTable || !(leaderboard instanceof Leaderboard)) {
-    consolex.error("EmojiTable element not found in the DOM");
+    console.error("EmojiTable element not found in the DOM");
   }
   leaderboard.eventBus = eventBus;
   leaderboard.game = game;
 
+  const gameLeftSidebar = document.querySelector(
+    "game-left-sidebar",
+  ) as GameLeftSidebar;
+  if (!gameLeftSidebar || !(gameLeftSidebar instanceof GameLeftSidebar)) {
+    console.error("GameLeftSidebar element not found in the DOM");
+  }
+  gameLeftSidebar.game = game;
+
   const teamStats = document.querySelector("team-stats") as TeamStats;
   if (!emojiTable || !(teamStats instanceof TeamStats)) {
-    consolex.error("EmojiTable element not found in the DOM");
+    console.error("EmojiTable element not found in the DOM");
   }
   teamStats.eventBus = eventBus;
   teamStats.game = game;
 
   const controlPanel = document.querySelector("control-panel") as ControlPanel;
   if (!(controlPanel instanceof ControlPanel)) {
-    consolex.error("ControlPanel element not found in the DOM");
+    console.error("ControlPanel element not found in the DOM");
   }
   controlPanel.eventBus = eventBus;
   controlPanel.uiState = uiState;
@@ -91,14 +104,14 @@ export function createRenderer(
     "events-display",
   ) as EventsDisplay;
   if (!(eventsDisplay instanceof EventsDisplay)) {
-    consolex.error("events display not found");
+    console.error("events display not found");
   }
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
 
   const chatDisplay = document.querySelector("chat-display") as ChatDisplay;
   if (!(chatDisplay instanceof ChatDisplay)) {
-    consolex.error("chat display not found");
+    console.error("chat display not found");
   }
   chatDisplay.eventBus = eventBus;
   chatDisplay.game = game;
@@ -107,7 +120,7 @@ export function createRenderer(
     "player-info-overlay",
   ) as PlayerInfoOverlay;
   if (!(playerInfo instanceof PlayerInfoOverlay)) {
-    consolex.error("player info overlay not found");
+    console.error("player info overlay not found");
   }
   playerInfo.eventBus = eventBus;
   playerInfo.transform = transformHandler;
@@ -126,6 +139,13 @@ export function createRenderer(
   }
   optionsMenu.eventBus = eventBus;
   optionsMenu.game = game;
+
+  const replayPanel = document.querySelector("replay-panel") as ReplayPanel;
+  if (!(replayPanel instanceof ReplayPanel)) {
+    console.error("ReplayPanel element not found in the DOM");
+  }
+  replayPanel.eventBus = eventBus;
+  replayPanel.game = game;
 
   const topBar = document.querySelector("top-bar") as TopBar;
   if (!(topBar instanceof TopBar)) {
@@ -157,14 +177,6 @@ export function createRenderer(
   }
   multiTabModal.game = game;
 
-  const playerTeamLabel = document.querySelector(
-    "player-team-label",
-  ) as PlayerTeamLabel;
-  if (!(playerTeamLabel instanceof PlayerTeamLabel)) {
-    console.error("player team label not found");
-  }
-  playerTeamLabel.game = game;
-
   const headsUpMessage = document.querySelector(
     "heads-up-message",
   ) as HeadsUpMessage;
@@ -189,9 +201,24 @@ export function createRenderer(
   unitInfoModal.structureLayer = structureLayer;
   // unitInfoModal.eventBus = eventBus;
 
+  const spawnAd = document.querySelector("spawn-ad") as SpawnAd;
+  if (!(spawnAd instanceof SpawnAd)) {
+    console.error("spawn ad not found");
+  }
+  spawnAd.g = game;
+
+  const gutterAdModal = document.querySelector(
+    "gutter-ad-modal",
+  ) as GutterAdModal;
+  if (!(gutterAdModal instanceof GutterAdModal)) {
+    console.error("gutter ad modal not found");
+  }
+  gutterAdModal.eventBus = eventBus;
+
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
-    new TerritoryLayer(game, eventBus, transformHandler),
+    new TerritoryLayer(game, eventBus, transformHandler, userSettings),
+    new RailroadLayer(game),
     structureLayer,
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
@@ -200,29 +227,31 @@ export function createRenderer(
     eventsDisplay,
     chatDisplay,
     buildMenu,
-    new RadialMenu(
+    new MainRadialMenu(
       eventBus,
       game,
       transformHandler,
       emojiTable as EmojiTable,
       buildMenu,
       uiState,
-      playerInfo,
       playerPanel,
     ),
     new SpawnTimer(game, transformHandler),
     leaderboard,
+    gameLeftSidebar,
     controlPanel,
     playerInfo,
     winModel,
     optionsMenu,
+    replayPanel,
     teamStats,
     topBar,
     playerPanel,
-    playerTeamLabel,
     headsUpMessage,
     unitInfoModal,
     multiTabModal,
+    spawnAd,
+    gutterAdModal,
   ];
 
   return new GameRenderer(
@@ -266,11 +295,8 @@ export class GameRenderer {
     window.addEventListener("resize", () => this.resizeCanvas());
     this.resizeCanvas();
 
-    this.transformHandler = new TransformHandler(
-      this.game,
-      this.eventBus,
-      this.canvas,
-    );
+    //show whole map on startup
+    this.transformHandler.centerAll(0.9);
 
     requestAnimationFrame(() => this.renderGame());
   }

@@ -58,10 +58,15 @@ else
 fi
 
 echo "Starting new container for ${HOST} environment..."
+
+# Remove any existing volume for this container if it exists
+docker volume rm "cloudflared-${CONTAINER_NAME}" 2> /dev/null || true
+
 docker run -d \
     --restart="${RESTART}" \
     --env-file "$ENV_FILE" \
     --name "${CONTAINER_NAME}" \
+    -v "cloudflared-${CONTAINER_NAME}:/etc/cloudflared" \
     "${DOCKER_IMAGE}"
 
 if [ $? -eq 0 ]; then
