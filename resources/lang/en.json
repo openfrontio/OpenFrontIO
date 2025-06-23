@@ -240,6 +240,8 @@
     "dark_mode_desc": "Toggle the site’s appearance between light and dark themes",
     "emojis_label": "😊 Emojis",
     "emojis_desc": "Toggle whether emojis are shown in game",
+    "alert_frame_label": "🚨 Alert Frame",
+    "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed.",
     "special_effects_label": "💥 Special effects",
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
     "anonymous_names_label": "🥷 Hidden Names",

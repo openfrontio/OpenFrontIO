@@ -332,7 +332,7 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     1_000_000,
-                    (p.unitsConstructed(UnitType.Warship) + 1) * 250_000,
+                    (p.unitsOwned(UnitType.Warship) + 1) * 250_000,
                   ),
                 ),
           territoryBound: false,
