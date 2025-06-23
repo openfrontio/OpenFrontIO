@@ -21,7 +21,8 @@ export class ReplayPanel extends LitElement implements Layer {
 
   @state()
   private _replaySpeedMultiplier: number = defaultReplaySpeedMultiplier;
-  private _isSinglePlayer: boolean = false;
+  @state()
+  private _isSinglePlayer = false;
 
   createRenderRoot() {
     return this; // Enable Tailwind CSS
@@ -51,6 +52,8 @@ export class ReplayPanel extends LitElement implements Layer {
 
   render() {
     if (!this.visible) return html``;
+    const isSingle =
+      this.game?.config().gameConfig().gameType === GameType.Singleplayer;
 
     return html`
       <div
@@ -58,7 +61,7 @@ export class ReplayPanel extends LitElement implements Layer {
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <label class="block mb-1 text-white" translate="no">
-          ${this._isSinglePlayer
+          ${isSingle
             ? translateText("replay_panel.game_speed")
             : translateText("replay_panel.replay_speed")}
         </label>

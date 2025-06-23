@@ -1,5 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
 import pauseIcon from "../../../../resources/images/PauseIconWhite.svg";
 import playIcon from "../../../../resources/images/PlayIconWhite.svg";
 import replayRegularIcon from "../../../../resources/images/ReplayRegularIconWhite.svg";
@@ -48,6 +49,16 @@ export class GameRightSidebar extends LitElement implements Layer {
     this.eventBus.emit(new PauseGameEvent(this.isPaused));
   }
 
+  private onExitButtonClick() {
+    const isAlive = this.game.myPlayer()?.isAlive();
+    if (isAlive) {
+      const isConfirmed = confirm("Are you sure you want to exit the game?");
+      if (!isConfirmed) return;
+    }
+    // redirect to the home page
+    window.location.href = "/";
+  }
+
   render() {
     return html`
       <aside
@@ -85,6 +96,13 @@ export class GameRightSidebar extends LitElement implements Layer {
                     style="vertical-align: middle;"
                   />
                 </div>
+                <img
+                  @click="${this.onExitButtonClick}"
+                  src=${exitIcon}
+                  alt="exitIcon"
+                  width="20"
+                  height="20"
+                />
               `
             : null}
         </div>
