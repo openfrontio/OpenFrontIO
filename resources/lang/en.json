@@ -160,6 +160,9 @@
     "regional": "Regional",
     "fantasy": "Other"
   },
+  "map_component": {
+    "loading": "Loading..."
+  },
   "private_lobby": {
     "title": "Join Private Lobby",
     "enter_id": "Enter Lobby ID",
