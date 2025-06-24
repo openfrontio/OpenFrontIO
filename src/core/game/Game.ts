@@ -217,7 +217,7 @@ export interface UnitParamsMap {
 
   [UnitType.Construction]: {};
 
-  [UnitType.Airport]: {};
+  [UnitType.Airport]: Record<string, never>;
 
   [UnitType.CargoPlane]: {
     targetUnit: Unit;

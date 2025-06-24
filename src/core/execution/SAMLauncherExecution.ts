@@ -223,6 +223,7 @@ export class SAMLauncherExecution implements Execution {
       this.cargoPlaneSearchRadius,
       UnitType.CargoPlane,
     );
+    if (!this.sam) return;
 
     const validCargoPlaneTargets = potentialCargoPlaneTargets.filter(
       ({ unit }) => {
@@ -247,7 +248,7 @@ export class SAMLauncherExecution implements Execution {
     );
 
     if (validCargoPlaneTargets.length > 0) {
-      this.sam!.launch();
+      this.sam.launch();
       const samOwner = this.sam!.owner();
 
       this.mg.displayMessage(
