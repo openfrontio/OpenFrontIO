@@ -17,7 +17,7 @@ export function renderPlayerFlag(flagCode: string, target: HTMLElement) {
   if (!flagCode.startsWith("ctmfg")) return;
 
   const keyToLayerName: Record<string, string> = {};
-  const layersObj = cosmetic.flag.layer;
+  const layersObj = cosmetic.flag.layers;
   for (const [name, obj] of Object.entries(layersObj)) {
     if (obj && typeof obj.key === "string") {
       keyToLayerName[obj.key] = name;

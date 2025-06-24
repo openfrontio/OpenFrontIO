@@ -13,7 +13,7 @@ export const CosmeticsSchema = z.object({
     }),
   ),
   flag: z.object({
-    layer: z.record(
+    layers: z.record(
       z.string(),
       z.object({
         key: z.string(),

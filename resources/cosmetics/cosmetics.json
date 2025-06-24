@@ -70,7 +70,7 @@
     }
   },
   "flag": {
-    "layer": {
+    "layers": {
       "center_circle": { "key": "a" },
       "center_hline": { "key": "b" },
       "center_vline": { "key": "c" },
