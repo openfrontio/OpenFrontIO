@@ -327,8 +327,8 @@ class Client {
     }
   }
 
-  private async handleJoinLobby(event: CustomEvent) {
-    const lobby = event.detail as JoinLobbyEvent;
+  private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
+    const lobby = event.detail;
     console.log(`joining lobby ${lobby.gameID}`);
     if (this.gameStop !== null) {
       console.log("joining lobby, stopping existing game");
@@ -403,7 +403,7 @@ class Client {
           (ad as HTMLElement).style.display = "none";
         });
 
-        if (event.detail.gameConfig?.gameType !== GameType.Singleplayer) {
+        if (lobby.gameStartInfo?.config.gameType !== GameType.Singleplayer) {
           history.pushState(null, "", `#join=${lobby.gameID}`);
         }
       },

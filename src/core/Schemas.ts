@@ -10,6 +10,7 @@ import {
   PlayerType,
   UnitType,
 } from "./game/Game";
+import { PatternDecoder } from "./PatternDecoder";
 import { PlayerStatsSchema } from "./StatsSchemas";
 import { flattenedEmojiTable } from "./Util";
 
@@ -178,7 +179,25 @@ export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
 export const UsernameSchema = SafeString;
 export const FlagSchema = z.string().max(128).optional();
-export const PatternSchema = z.string().max(128).base64().optional();
+export const RequiredPatternSchema = z
+  .string()
+  .max(128)
+  .base64()
+  .refine(
+    (val) => {
+      try {
+        new PatternDecoder(val);
+        return true;
+      } catch (e) {
+        console.error(JSON.stringify(e.message, null, 2));
+        return false;
+      }
+    },
+    {
+      message: "Invalid pattern",
+    },
+  );
+export const PatternSchema = RequiredPatternSchema.optional();
 
 export const QuickChatKeySchema = z.enum(
   Object.entries(quickChatData).flatMap(([category, entries]) =>

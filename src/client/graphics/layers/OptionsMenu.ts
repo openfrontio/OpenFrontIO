@@ -100,6 +100,11 @@ export class OptionsMenu extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onToggleAlertFrameButtonClick() {
+    this.userSettings.toggleAlertFrame();
+    this.requestUpdate();
+  }
+
   private onToggleSpecialEffectsButtonClick() {
     this.userSettings.toggleFxLayer();
     this.requestUpdate();
@@ -206,6 +211,11 @@ export class OptionsMenu extends LitElement implements Layer {
             onClick: this.onToggleEmojisButtonClick,
             title: "Toggle Emojis",
             children: "🙂: " + (this.userSettings.emojis() ? "On" : "Off"),
+          })}
+          ${button({
+            onClick: this.onToggleAlertFrameButtonClick,
+            title: "Toggle Alert frame",
+            children: "🚨: " + (this.userSettings.alertFrame() ? "On" : "Off"),
           })}
           ${button({
             onClick: this.onToggleSpecialEffectsButtonClick,

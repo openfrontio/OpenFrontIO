@@ -55,7 +55,7 @@ export async function createGameRunner(
 
   const nations = gameStart.config.disableNPCs
     ? []
-    : gameMap.nationMap.nations.map(
+    : gameMap.manifest.nations.map(
         (n) =>
           new Nation(
             new Cell(n.coordinates[0], n.coordinates[1]),
