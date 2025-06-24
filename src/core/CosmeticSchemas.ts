@@ -16,14 +16,14 @@ export const CosmeticsSchema = z.object({
     layers: z.record(
       z.string(),
       z.object({
-        key: z.string(),
+        name: z.string(),
       }),
     ),
     color: z.record(
       z.string(),
       z.object({
         color: z.string(),
-        key: z.string(),
+        name: z.string(),
       }),
     ),
   }),

@@ -18,9 +18,9 @@ export function renderPlayerFlag(flagCode: string, target: HTMLElement) {
 
   const keyToLayerName: Record<string, string> = {};
   const layersObj = cosmetic.flag.layers;
-  for (const [name, obj] of Object.entries(layersObj)) {
-    if (obj && typeof obj.key === "string") {
-      keyToLayerName[obj.key] = name;
+  for (const [key, obj] of Object.entries(layersObj)) {
+    if (obj && typeof (obj as any).name === "string") {
+      keyToLayerName[key] = (obj as any).name;
     }
   }
 
@@ -37,9 +37,9 @@ export function renderPlayerFlag(flagCode: string, target: HTMLElement) {
 
   const colorKeyToColor: Record<string, string> = {};
   const colorObj = cosmetic.flag.color;
-  for (const [name, obj] of Object.entries(colorObj)) {
-    if (obj && typeof obj.key === "string" && typeof obj.color === "string") {
-      colorKeyToColor[obj.key] = obj.color;
+  for (const [key, obj] of Object.entries(colorObj)) {
+    if (obj && typeof (obj as any).color === "string") {
+      colorKeyToColor[key] = (obj as any).color;
     }
   }
 
