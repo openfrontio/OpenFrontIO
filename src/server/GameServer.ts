@@ -44,7 +44,7 @@ export class GameServer {
   // Used for record record keeping
   private allClients: Map<ClientID, Client> = new Map();
   private _hasStarted = false;
-  private _startTime: number | null = null;
+  private readonly createdAt = Date.now();
 
   private endTurnIntervalID;
 
@@ -64,7 +64,7 @@ export class GameServer {
   constructor(
     public readonly id: string,
     readonly log_: Logger,
-    public readonly createdAt: number,
+    private _startTime: number,
     private config: ServerConfig,
     public gameConfig: GameConfig,
   ) {
@@ -278,12 +278,7 @@ export class GameServer {
   }
 
   public startTime(): number {
-    if (this._startTime !== null && this._startTime > 0) {
-      return this._startTime;
-    } else {
-      //game hasn't started yet, only works for public games
-      return this.createdAt + this.config.gameCreationRate();
-    }
+    return this._startTime;
   }
 
   public prestart() {
@@ -478,36 +473,16 @@ export class GameServer {
     const noRecentPings = now > this.lastPingUpdate + 20 * 1000;
     const noActive = this.activeClients.length === 0;
 
-    if (this.gameConfig.gameType !== GameType.Public) {
-      if (this._hasStarted) {
-        if (noActive && noRecentPings) {
-          this.log.info("private game complete", {
-            gameID: this.id,
-          });
-          return GamePhase.Finished;
-        } else {
-          return GamePhase.Active;
-        }
-      } else {
-        return GamePhase.Lobby;
-      }
-    }
-
-    const msSinceCreation = now - this.createdAt;
-    const lessThanLifetime = msSinceCreation < this.config.gameCreationRate();
-    const notEnoughPlayers =
-      this.gameConfig.gameType === GameType.Public &&
-      this.gameConfig.maxPlayers &&
-      this.activeClients.length < this.gameConfig.maxPlayers;
-    if (lessThanLifetime && notEnoughPlayers) {
+    if (!this._hasStarted) {
       return GamePhase.Lobby;
     }
-    const warmupOver =
-      now > this.createdAt + this.config.gameCreationRate() + 30 * 1000;
-    if (noActive && warmupOver && noRecentPings) {
+    if (noActive && noRecentPings) {
+      this.log.info("game complete", {
+        type: this.gameConfig.gameType,
+        gameID: this.id,
+      });
       return GamePhase.Finished;
     }
-
     return GamePhase.Active;
   }
 
