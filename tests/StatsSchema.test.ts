@@ -5,7 +5,7 @@ function testPlayerSchema(
   expectSuccess = true,
   expectThrow = false,
 ): void {
-  const newLocal = () => {
+  const parse = () => {
     const raw = JSON.parse(json);
     const result = PlayerStatsSchema.safeParse(raw);
     return result.success;
@@ -13,13 +13,13 @@ function testPlayerSchema(
 
   if (expectSuccess) {
     // Expect success
-    expect(newLocal()).toBeTruthy();
+    expect(parse()).toBeTruthy();
   } else if (!expectThrow) {
     // Expect failure
-    expect(newLocal()).toBeFalsy();
+    expect(parse()).toBeFalsy();
   } else {
     // Expect throw
-    expect(newLocal).toThrow();
+    expect(parse).toThrow();
   }
 }
 
