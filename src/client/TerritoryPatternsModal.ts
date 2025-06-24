@@ -57,19 +57,13 @@ export class TerritoryPatternsModal extends LitElement {
   onUserMe(userMeResponse: UserMeResponse) {
     const { player } = userMeResponse;
     const { roles, flares } = player;
-    this.checkPatternPermission(roles, flares);
-    this.requestUpdate();
-  }
-
-  private checkPatternPermission(
-    roles: string[] | undefined,
-    flares: string[] | undefined,
-  ) {
-    const patterns = COSMETICS.patterns;
-    for (const key in patterns) {
-      const patternData = patterns[key];
+    for (const key in COSMETICS.patterns) {
+      const patternData = COSMETICS.patterns[key];
       const roleGroup: string[] | string | undefined = patternData.role_group;
-      if (flares?.includes("pattern:*") || flares?.includes(`pattern:${key}`)) {
+      if (
+        flares !== undefined &&
+        (flares.includes("pattern:*") || flares.includes(`pattern:${key}`))
+      ) {
         continue;
       }
 
@@ -82,7 +76,9 @@ export class TerritoryPatternsModal extends LitElement {
       }
 
       const groupList = Array.isArray(roleGroup) ? roleGroup : [roleGroup];
-      const isAllowed = groupList.some((required) => roles.includes(required));
+      const isAllowed =
+        roles !== undefined &&
+        groupList.some((required) => roles.includes(required));
 
       if (!isAllowed) {
         const reason = translateText("territory_patterns.blocked.role", {
@@ -91,6 +87,7 @@ export class TerritoryPatternsModal extends LitElement {
         this.setLockedPatterns([key], reason);
       }
     }
+    this.requestUpdate();
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
