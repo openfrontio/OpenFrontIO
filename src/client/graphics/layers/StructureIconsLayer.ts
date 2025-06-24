@@ -1,7 +1,7 @@
 import * as PIXI from "pixi.js";
 import anchorIcon from "../../../../resources/images/AnchorIcon.png";
 import cityIcon from "../../../../resources/images/CityIcon.png";
-import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
+import factoryIcon from "../../../../resources/images/FactoryUnit.png";
 import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
 import SAMMissileIcon from "../../../../resources/images/SamLauncherUnit.png";
 import shieldIcon from "../../../../resources/images/ShieldIcon.png";
