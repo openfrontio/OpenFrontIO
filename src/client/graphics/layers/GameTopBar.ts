@@ -20,7 +20,6 @@ import troopIcon from "../../../../resources/images/TroopIconWhite.svg";
 import workerIcon from "../../../../resources/images/WorkerIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import { UnitType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
@@ -66,36 +65,12 @@ export class GameTopBar extends LitElement implements Layer {
     if (!player) return;
     this._troops = player.troops();
     this._workers = player.workers();
-    this._cities = this.game
-      ?.myPlayer()!
-      .units(UnitType.City)
-      .map((unit) => unit.level())
-      .reduce((a, b) => a + b, 0);
-    this._missileSilo = this.game
-      ?.myPlayer()!
-      .units(UnitType.MissileSilo)
-      .map((unit) => unit.level())
-      .reduce((a, b) => a + b, 0);
-    this._port = this.game
-      ?.myPlayer()!
-      .units(UnitType.Port)
-      .map((unit) => unit.level())
-      .reduce((a, b) => a + b, 0);
-    this._defensePost = this.game
-      ?.myPlayer()!
-      .units(UnitType.DefensePost)
-      .map((unit) => unit.level())
-      .reduce((a, b) => a + b, 0);
-    this._samLauncher = this.game
-      ?.myPlayer()!
-      .units(UnitType.SAMLauncher)
-      .map((unit) => unit.level())
-      .reduce((a, b) => a + b, 0);
-    this._factories = this.game
-      ?.myPlayer()!
-      .units(UnitType.Factory)
-      .map((unit) => unit.level())
-      .reduce((a, b) => a + b, 0);
+    this._cities = player.playerCities();
+    this._missileSilo = player.playerMissileSilos();
+    this._port = player.playerPorts();
+    this._defensePost = player.playerDefensePosts();
+    this._samLauncher = player.playerSamLaunchers();
+    this._factories = player.playerFactories();
     this.requestUpdate();
   }
 
