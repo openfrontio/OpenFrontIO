@@ -11,12 +11,16 @@ export class DarkModeButton extends LitElement {
 
   protected updated(changedProperties: PropertyValues) {
     if (changedProperties.has("userSettings") && this.userSettings) {
-      this.darkMode = this.userSettings.darkMode();
+      // make sure the previous listener is removed
+      const oldUserSettings = changedProperties.get("userSettings");
+      if (oldUserSettings) {
+        oldUserSettings.eventBus.off(
+          DarkModeChangedEvent,
+          this.onDarkModeChanged,
+        );
+      }
 
-      this.userSettings.eventBus.off(
-        DarkModeChangedEvent,
-        this.onDarkModeChanged,
-      ); //if updated make sure previous gets removed
+      this.darkMode = this.userSettings.darkMode();
       this.userSettings.eventBus.on(
         DarkModeChangedEvent,
         this.onDarkModeChanged,
