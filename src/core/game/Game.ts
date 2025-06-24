@@ -8,6 +8,7 @@ import {
   UnitUpdate,
 } from "./GameUpdates";
 import { PlayerView } from "./GameView";
+import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 
 export type PlayerID = string;
@@ -151,6 +152,13 @@ export enum UnitType {
   Construction = "Construction",
   Airport = "Air Port",
   CargoPlane = "Cargo Plane",
+  Train = "Train",
+  Factory = "Factory",
+}
+
+export enum TrainType {
+  Engine = "Engine",
+  Carriage = "Carriage",
 }
 
 const _structureTypes: ReadonlySet<UnitType> = new Set([
@@ -198,6 +206,14 @@ export interface UnitParamsMap {
     targetUnit: Unit;
     lastSetSafeFromPirates?: number;
   };
+
+  [UnitType.Train]: {
+    trainType: TrainType;
+    targetUnit?: Unit;
+    loaded?: boolean;
+  };
+
+  [UnitType.Factory]: {};
 
   [UnitType.MissileSilo]: {
     cooldownDuration?: number;
@@ -341,6 +357,7 @@ export class PlayerInfo {
   public readonly clan: string | null;
 
   constructor(
+    public readonly pattern: string | undefined,
     public readonly flag: string | undefined,
     public readonly name: string,
     public readonly playerType: PlayerType,
@@ -381,6 +398,13 @@ export interface Unit {
   touch(): void;
   hash(): number;
   toUpdate(): UnitUpdate;
+  hasTrainStation(): boolean;
+  setTrainStation(trainStation: boolean): void;
+
+  // Train
+  trainType(): TrainType | undefined;
+  isLoaded(): boolean | undefined;
+  setLoaded(loaded: boolean): void;
 
   // Targeting
   setTargetTile(cell: TileRef | undefined): void;
@@ -492,7 +516,8 @@ export interface Player {
 
   // Units
   units(...types: UnitType[]): Unit[];
-  unitsIncludingConstruction(type: UnitType): Unit[];
+  unitsConstructed(type: UnitType): number;
+  unitsOwned(type: UnitType): number;
   buildableUnits(tile: TileRef): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
   buildUnit<T extends UnitType>(
@@ -644,6 +669,9 @@ export interface Game extends GameMap {
   numTilesWithFallout(): number;
   // Optional as it's not initialized before the end of spawn phase
   stats(): Stats;
+
+  addUpdate(update: GameUpdate): void;
+  railNetwork(): RailNetwork;
 }
 
 export interface PlayerActions {

@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import airportIcon from "../../../../resources/images/AirportIcon.svg";
 import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
+import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
 import mirvIcon from "../../../../resources/images/MIRVIcon.svg";
 import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
@@ -99,6 +100,13 @@ export const buildTable: BuildItemDisplay[][] = [
       icon: airportIcon,
       description: "build_menu.desc.airport",
       key: "unit_type.airport",
+      countable: true,
+    },
+    {
+      unitType: UnitType.Factory,
+      icon: factoryIcon,
+      description: "build_menu.desc.factory",
+      key: "unit_type.factory",
       countable: true,
     },
   ],

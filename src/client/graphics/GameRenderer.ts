@@ -1,9 +1,11 @@
 import { EventBus } from "../../core/EventBus";
 import { GameView } from "../../core/game/GameView";
+import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
+import { AlertFrame } from "./layers/AlertFrame";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
@@ -22,6 +24,7 @@ import { NameLayer } from "./layers/NameLayer";
 import { OptionsMenu } from "./layers/OptionsMenu";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
+import { RailroadLayer } from "./layers/RailroadLayer";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SpawnAd } from "./layers/SpawnAd";
 import { SpawnTimer } from "./layers/SpawnTimer";
@@ -41,6 +44,7 @@ export function createRenderer(
   eventBus: EventBus,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, canvas);
+  const userSettings = new UserSettings();
 
   const uiState = { attackRatio: 20 };
 
@@ -212,9 +216,16 @@ export function createRenderer(
   }
   gutterAdModal.eventBus = eventBus;
 
+  const alertFrame = document.querySelector("alert-frame") as AlertFrame;
+  if (!(alertFrame instanceof AlertFrame)) {
+    console.error("alert frame not found");
+  }
+  alertFrame.game = game;
+
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
-    new TerritoryLayer(game, eventBus, transformHandler),
+    new TerritoryLayer(game, eventBus, transformHandler, userSettings),
+    new RailroadLayer(game),
     structureLayer,
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
@@ -248,6 +259,7 @@ export function createRenderer(
     multiTabModal,
     spawnAd,
     gutterAdModal,
+    alertFrame,
   ];
 
   return new GameRenderer(

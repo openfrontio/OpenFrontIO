@@ -15,13 +15,17 @@ let player: Player;
 
 describe("NukeExecution", () => {
   beforeEach(async () => {
-    game = await setup("BigPlains", { infiniteGold: true, instantBuild: true });
+    game = await setup("big_plains", {
+      infiniteGold: true,
+      instantBuild: true,
+    });
 
     (game.config() as TestConfig).nukeMagnitudes = jest.fn(() => ({
       inner: 10,
       outer: 10,
     }));
     const player_info = new PlayerInfo(
+      undefined,
       "us",
       "player_id",
       PlayerType.Human,

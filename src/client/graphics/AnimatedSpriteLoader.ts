@@ -1,4 +1,5 @@
 import miniBigSmoke from "../../../resources/sprites/bigsmoke.png";
+import dust from "../../../resources/sprites/dust.png";
 import miniExplosion from "../../../resources/sprites/miniExplosion.png";
 import miniFire from "../../../resources/sprites/minifire.png";
 import nuke from "../../../resources/sprites/nukeExplosion.png";
@@ -68,6 +69,15 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     looping: false,
     originX: 6,
     originY: 6,
+  },
+  [FxType.Dust]: {
+    url: dust,
+    frameWidth: 9,
+    frameCount: 3,
+    frameDuration: 100,
+    looping: false,
+    originX: 4,
+    originY: 5,
   },
   [FxType.UnitExplosion]: {
     url: unitExplosion,

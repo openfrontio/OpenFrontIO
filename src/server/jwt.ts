@@ -31,7 +31,6 @@ export async function verifyClientToken(
       algorithms: ["EdDSA"],
       issuer,
       audience,
-      maxTokenAge: "6 days",
     });
     const result = TokenPayloadSchema.safeParse(payload);
     if (!result.success) {

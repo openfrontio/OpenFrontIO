@@ -301,6 +301,21 @@ export class DefaultConfig implements Config {
   tradeShipSpawnRate(numberOfPorts: number): number {
     return Math.min(50, Math.round(10 * Math.pow(numberOfPorts, 0.6)));
   }
+  trainSpawnRate(numberOfStations: number): number {
+    return Math.round(50 * Math.pow(numberOfStations, 0.8));
+  }
+  trainGold(): Gold {
+    return BigInt(10_000);
+  }
+  trainStationMinRange(): number {
+    return 15;
+  }
+  trainStationMaxRange(): number {
+    return 80;
+  }
+  railroadMaxSize(): number {
+    return 100;
+  }
 
   cargoPlaneGold(distance: number): Gold {
     const tradeShipGold = this.tradeShipGold(distance);
@@ -331,9 +346,7 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     1_000_000,
-                    (p.unitsIncludingConstruction(UnitType.Warship).length +
-                      1) *
-                      250_000,
+                    (p.unitsOwned(UnitType.Warship) + 1) * 250_000,
                   ),
                 ),
           territoryBound: false,
@@ -358,10 +371,7 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     1_000_000,
-                    Math.pow(
-                      2,
-                      p.unitsIncludingConstruction(UnitType.Port).length,
-                    ) * 125_000,
+                    Math.pow(2, p.unitsConstructed(UnitType.Port)) * 125_000,
                   ),
                 ),
           territoryBound: true,
@@ -420,9 +430,7 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     250_000,
-                    (p.unitsIncludingConstruction(UnitType.DefensePost).length +
-                      1) *
-                      50_000,
+                    (p.unitsConstructed(UnitType.DefensePost) + 1) * 50_000,
                   ),
                 ),
           territoryBound: true,
@@ -437,9 +445,7 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     3_000_000,
-                    (p.unitsIncludingConstruction(UnitType.SAMLauncher).length +
-                      1) *
-                      1_500_000,
+                    (p.unitsConstructed(UnitType.SAMLauncher) + 1) * 1_500_000,
                   ),
                 ),
           territoryBound: true,
@@ -454,15 +460,26 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     1_000_000,
-                    Math.pow(
-                      2,
-                      p.unitsIncludingConstruction(UnitType.City).length,
-                    ) * 125_000,
+                    Math.pow(2, p.unitsConstructed(UnitType.City)) * 125_000,
                   ),
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
+        };
+      case UnitType.Factory:
+        return {
+          cost: (p: Player) =>
+            p.type() === PlayerType.Human && this.infiniteGold()
+              ? 0n
+              : BigInt(
+                  Math.min(
+                    1_000_000,
+                    Math.pow(2, p.unitsConstructed(UnitType.Factory)) * 125_000,
+                  ),
+                ),
+          territoryBound: true,
+          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
         };
       case UnitType.Construction:
         return {
@@ -488,6 +505,11 @@ export class DefaultConfig implements Config {
           upgradable: true,
         };
       case UnitType.CargoPlane:
+        return {
+          cost: () => 0n,
+          territoryBound: false,
+        };
+      case UnitType.Train:
         return {
           cost: () => 0n,
           territoryBound: false,
