@@ -58,16 +58,15 @@ export interface LobbyConfig {
 
 export function joinLobby(
   lobbyConfig: LobbyConfig,
+  eventBus: EventBus,
   onPrestart: () => void,
   onJoin: () => void,
 ): () => void {
-  const eventBus = new EventBus();
-
   console.log(
     `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
   );
 
-  const userSettings: UserSettings = new UserSettings();
+  const userSettings: UserSettings = new UserSettings(eventBus);
   startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
 
   const transport = new Transport(lobbyConfig, eventBus);
@@ -147,6 +146,7 @@ export async function createClientGame(
   await worker.initialize();
   const gameView = new GameView(
     worker,
+    userSettings,
     config,
     gameMap.gameMap,
     lobbyConfig.clientID,

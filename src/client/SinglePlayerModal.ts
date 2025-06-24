@@ -1,5 +1,5 @@
 import { LitElement, html } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
+import { customElement, property, query, state } from "lit/decorators.js";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import {
@@ -11,6 +11,7 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
+import { UserSettings } from "../core/game/UserSettings";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
@@ -40,6 +41,8 @@ export class SinglePlayerModal extends LitElement {
   @state() private teamCount: number | typeof Duos = 2;
 
   @state() private disabledUnits: UnitType[] = [];
+
+  @property({ type: Object }) userSettings: UserSettings;
 
   render() {
     return html`
@@ -389,6 +392,8 @@ export class SinglePlayerModal extends LitElement {
     ) as UsernameInput;
     if (!usernameInput) {
       console.warn("Username input element not found");
+    } else {
+      usernameInput.userSettings = this.userSettings;
     }
 
     const flagInput = document.querySelector("flag-input") as FlagInput;

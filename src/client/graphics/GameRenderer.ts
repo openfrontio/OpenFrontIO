@@ -1,5 +1,6 @@
 import { EventBus } from "../../core/EventBus";
 import { GameView } from "../../core/game/GameView";
+import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { TransformHandler } from "./TransformHandler";
@@ -40,6 +41,7 @@ export function createRenderer(
   game: GameView,
   eventBus: EventBus,
 ): GameRenderer {
+  const userSettings = new UserSettings(eventBus);
   const transformHandler = new TransformHandler(game, eventBus, canvas);
 
   const uiState = { attackRatio: 20 };
@@ -136,6 +138,7 @@ export function createRenderer(
   }
   optionsMenu.eventBus = eventBus;
   optionsMenu.game = game;
+  optionsMenu.userSettings = userSettings;
 
   const replayPanel = document.querySelector("replay-panel") as ReplayPanel;
   if (!(replayPanel instanceof ReplayPanel)) {

@@ -1,8 +1,34 @@
-export class UserSettings {
-  private eventTarget: EventTarget;
+import { EventBus, GameEvent } from "../EventBus";
 
-  constructor(eventTarget?: EventTarget) {
-    this.eventTarget = eventTarget ?? window;
+export class DarkModeChangedEvent implements GameEvent {
+  constructor(public readonly value: boolean) {}
+}
+
+export class EmojisChangedEvent implements GameEvent {
+  constructor(public readonly value: boolean) {}
+}
+
+export class AnonymousNamesChangedEvent implements GameEvent {
+  constructor(public readonly value: boolean) {}
+}
+
+export class SpecialEffectsChangedEvent implements GameEvent {
+  constructor(public readonly value: boolean) {}
+}
+
+export class LeftClickOpensMenuChangedEvent implements GameEvent {
+  constructor(public readonly value: boolean) {}
+}
+
+export class FocusLockedChangedEvent implements GameEvent {
+  constructor(public readonly value: boolean) {}
+}
+
+export class UserSettings {
+  constructor(private _eventBus: EventBus) {}
+
+  get eventBus(): EventBus {
+    return this._eventBus;
   }
 
   get(key: string, defaultValue: boolean): boolean {
@@ -46,23 +72,33 @@ export class UserSettings {
   }
 
   toggleLeftClickOpenMenu() {
-    this.set("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
+    const newValue = !this.leftClickOpensMenu();
+    this.set("settings.leftClickOpensMenu", newValue);
+    this.eventBus.emit(new LeftClickOpensMenuChangedEvent(newValue));
   }
 
   toggleFocusLocked() {
-    this.set("settings.focusLocked", !this.focusLocked());
+    const newValue = !this.focusLocked();
+    this.set("settings.focusLocked", newValue);
+    this.eventBus.emit(new FocusLockedChangedEvent(newValue));
   }
 
   toggleEmojis() {
-    this.set("settings.emojis", !this.emojis());
+    const newValue = !this.emojis();
+    this.set("settings.emojis", newValue);
+    this.eventBus.emit(new EmojisChangedEvent(newValue));
   }
 
   toggleRandomName() {
-    this.set("settings.anonymousNames", !this.anonymousNames());
+    const newValue = !this.anonymousNames();
+    this.set("settings.anonymousNames", newValue);
+    this.eventBus.emit(new AnonymousNamesChangedEvent(newValue));
   }
 
   toggleFxLayer() {
-    this.set("settings.specialEffects", !this.fxLayer());
+    const newValue = !this.fxLayer();
+    this.set("settings.specialEffects", newValue);
+    this.eventBus.emit(new SpecialEffectsChangedEvent(newValue));
   }
 
   toggleDarkMode() {
@@ -75,11 +111,6 @@ export class UserSettings {
       document.documentElement.classList.remove("dark");
     }
 
-    this.eventTarget.dispatchEvent(
-      // maybe add an event ENUM so we can do like SettingEvents.DarkModeChanged or something instead of hardcoded string
-      new CustomEvent("settings:darkModeChanged", {
-        detail: { value: newValue },
-      }),
-    );
+    this.eventBus.emit(new DarkModeChangedEvent(newValue));
   }
 }

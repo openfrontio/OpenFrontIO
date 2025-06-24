@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import { EventBus } from "../../src/core/EventBus";
 import {
   Difficulty,
   Game,
@@ -48,10 +49,13 @@ export async function setup(
     instantBuild: false,
     ..._gameConfig,
   };
+
+  const eventBus = new EventBus(); // Is this the correct place to declare it?
+
   const config = new TestConfig(
     serverConfig,
     gameConfig,
-    new UserSettings(),
+    new UserSettings(eventBus),
     false,
   );
 

@@ -1,11 +1,28 @@
-import { LitElement, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { UserSettings } from "../core/game/UserSettings";
+import { html, LitElement, PropertyValues } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
+import { DarkModeChangedEvent, UserSettings } from "../core/game/UserSettings";
 
 @customElement("dark-mode-button")
 export class DarkModeButton extends LitElement {
-  private userSettings: UserSettings = new UserSettings();
-  @state() private darkMode: boolean = this.userSettings.darkMode();
+  @property({ type: Object })
+  userSettings: UserSettings;
+
+  @state() private darkMode: boolean = false;
+
+  protected updated(changedProperties: PropertyValues) {
+    if (changedProperties.has("userSettings") && this.userSettings) {
+      this.darkMode = this.userSettings.darkMode();
+
+      this.userSettings.eventBus.off(
+        DarkModeChangedEvent,
+        this.onDarkModeChanged,
+      ); //if updated make sure previous gets removed
+      this.userSettings.eventBus.on(
+        DarkModeChangedEvent,
+        this.onDarkModeChanged,
+      );
+    }
+  }
 
   createRenderRoot() {
     return this;
@@ -16,21 +33,22 @@ export class DarkModeButton extends LitElement {
     this.darkMode = this.userSettings.darkMode();
   }
 
-  private onDarkModeChanged = (e: CustomEvent) => {
-    this.darkMode = e.detail.value;
+  private onDarkModeChanged = (e: DarkModeChangedEvent) => {
+    this.darkMode = e.value;
   };
 
   connectedCallback() {
     super.connectedCallback();
-    window.addEventListener("settings:darkModeChanged", this.onDarkModeChanged);
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    window.removeEventListener(
-      "settings:darkModeChanged",
-      this.onDarkModeChanged,
-    );
+    if (this.userSettings) {
+      this.userSettings.eventBus.off(
+        DarkModeChangedEvent,
+        this.onDarkModeChanged,
+      );
+    }
   }
 
   render() {

@@ -34,8 +34,6 @@ import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid } from "./UnitGrid";
 import { UserSettings } from "./UserSettings";
 
-const userSettings: UserSettings = new UserSettings();
-
 export class UnitView {
   public _wasUpdated = true;
   public lastPos: TileRef[] = [];
@@ -131,6 +129,7 @@ export class PlayerView {
 
   constructor(
     private game: GameView,
+    private userSettings: UserSettings,
     public data: PlayerUpdate,
     public nameData: NameViewData,
   ) {
@@ -188,12 +187,12 @@ export class PlayerView {
     return this.data.flag;
   }
   name(): string {
-    return this.anonymousName !== null && userSettings.anonymousNames()
+    return this.anonymousName !== null && this.userSettings.anonymousNames()
       ? this.anonymousName
       : this.data.name;
   }
   displayName(): string {
-    return this.anonymousName !== null && userSettings.anonymousNames()
+    return this.anonymousName !== null && this.userSettings.anonymousNames()
       ? this.anonymousName
       : this.data.name;
   }
@@ -316,6 +315,7 @@ export class GameView implements GameMap {
 
   constructor(
     public worker: WorkerClient,
+    private _userSettings: UserSettings,
     private _config: Config,
     private _map: GameMap,
     private _myClientID: ClientID,
@@ -355,7 +355,12 @@ export class GameView implements GameMap {
       } else {
         this._players.set(
           pu.id,
-          new PlayerView(this, pu, gu.playerNameViewData[pu.id]),
+          new PlayerView(
+            this,
+            this._userSettings,
+            pu,
+            gu.playerNameViewData[pu.id],
+          ),
         );
       }
     });
@@ -605,5 +610,9 @@ export class GameView implements GameMap {
   }
   setFocusedPlayer(player: PlayerView | null): void {
     this._focusedPlayer = player;
+  }
+
+  get userSettings(): UserSettings {
+    return this._userSettings;
   }
 }

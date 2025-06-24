@@ -1,5 +1,6 @@
 import favicon from "../../resources/images/Favicon.svg";
 import version from "../../resources/version.txt";
+import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
@@ -72,7 +73,8 @@ class Client {
 
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
-  private userSettings: UserSettings = new UserSettings();
+  private eventBus: EventBus = new EventBus();
+  private userSettings: UserSettings = new UserSettings(this.eventBus);
 
   constructor() {}
 
@@ -123,6 +125,8 @@ class Client {
     ) as DarkModeButton;
     if (!this.darkModeButton) {
       console.warn("Dark mode button element not found");
+    } else {
+      this.darkModeButton.userSettings = this.userSettings;
     }
 
     const loginDiscordButton = document.getElementById(
@@ -163,6 +167,10 @@ class Client {
         spModal.open();
       }
     });
+
+    if (spModal) {
+      spModal.userSettings = this.userSettings;
+    }
 
     // const ctModal = document.querySelector("chat-modal") as ChatModal;
     // ctModal instanceof ChatModal;
@@ -224,6 +232,9 @@ class Client {
       ?.addEventListener("click", () => {
         settingsModal.open();
       });
+    if (settingsModal) {
+      settingsModal.userSettings = this.userSettings;
+    }
 
     const hostModal = document.querySelector(
       "host-lobby-modal",
@@ -326,6 +337,7 @@ class Client {
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
       },
+      this.eventBus,
       () => {
         console.log("Closing modals");
         document.getElementById("settings-button")?.classList.add("hidden");

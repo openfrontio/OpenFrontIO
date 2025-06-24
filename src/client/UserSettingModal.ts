@@ -1,7 +1,7 @@
-import { LitElement, html } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
+import { html, LitElement, PropertyValues } from "lit";
+import { customElement, property, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { UserSettings } from "../core/game/UserSettings";
+import { DarkModeChangedEvent, UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
@@ -10,7 +10,7 @@ import "./components/baseComponents/setting/SettingToggle";
 
 @customElement("user-setting")
 export class UserSettingModal extends LitElement {
-  private userSettings: UserSettings = new UserSettings();
+  @property({ type: Object }) userSettings?: UserSettings;
 
   @state() private settingsMode: "basic" | "keybinds" = "basic";
   @state() private keybinds: Record<string, string> = {};
@@ -21,10 +21,6 @@ export class UserSettingModal extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     window.addEventListener("keydown", this.handleKeyDown);
-    window.addEventListener(
-      "settings:darkModeChanged",
-      this.handleSettingChange,
-    );
 
     const savedKeybinds = localStorage.getItem("settings.keybinds");
     if (savedKeybinds) {
@@ -46,12 +42,25 @@ export class UserSettingModal extends LitElement {
     return this;
   }
 
+  updated(changedProps: PropertyValues) {
+    if (changedProps.has("userSettings") && this.userSettings) {
+      this.userSettings.eventBus.on(
+        DarkModeChangedEvent,
+        this.handleSettingChange,
+      );
+    }
+  }
+
   disconnectedCallback() {
     window.removeEventListener("keydown", this.handleKeyDown);
-    window.removeEventListener(
-      "settings:darkModeChanged",
-      this.handleSettingChange,
-    );
+
+    if (this.userSettings) {
+      this.userSettings.eventBus.off(
+        DarkModeChangedEvent,
+        this.handleSettingChange,
+      );
+    }
+
     super.disconnectedCallback();
     document.body.style.overflow = "auto";
   }
@@ -83,13 +92,12 @@ export class UserSettingModal extends LitElement {
   }
 
   private handleSettingChange = () => {
-    this.userSettings = new UserSettings();
     this.requestUpdate();
   };
 
   toggleDarkMode(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+    if (typeof enabled !== "boolean" || !this.userSettings) return;
 
     this.userSettings.toggleDarkMode();
 
@@ -104,7 +112,7 @@ export class UserSettingModal extends LitElement {
 
   private toggleEmojis(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+    if (typeof enabled !== "boolean" || !this.userSettings) return;
 
     this.userSettings.set("settings.emojis", enabled);
 
@@ -113,7 +121,7 @@ export class UserSettingModal extends LitElement {
 
   private toggleFxLayer(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+    if (typeof enabled !== "boolean" || !this.userSettings) return;
 
     this.userSettings.set("settings.specialEffects", enabled);
 
@@ -122,7 +130,7 @@ export class UserSettingModal extends LitElement {
 
   private toggleAnonymousNames(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+    if (typeof enabled !== "boolean" || !this.userSettings) return;
 
     this.userSettings.set("settings.anonymousNames", enabled);
 
@@ -131,7 +139,7 @@ export class UserSettingModal extends LitElement {
 
   private toggleLeftClickOpensMenu(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
+    if (typeof enabled !== "boolean" || !this.userSettings) return;
 
     this.userSettings.set("settings.leftClickOpensMenu", enabled);
     console.log("🖱️ Left Click Opens Menu:", enabled ? "ON" : "OFF");
@@ -224,6 +232,8 @@ export class UserSettingModal extends LitElement {
   }
 
   private renderBasicSettings() {
+    if (!this.userSettings) return html``;
+
     return html`
       <!-- 🌙 Dark Mode -->
       <setting-toggle

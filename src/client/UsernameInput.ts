@@ -14,8 +14,8 @@ const usernameKey: string = "username";
 export class UsernameInput extends LitElement {
   @state() private username: string = "";
   @property({ type: String }) validationError: string = "";
+  @property({ type: Object }) userSettings: UserSettings;
   private _isValid: boolean = true;
-  private userSettings: UserSettings = new UserSettings();
 
   // Remove static styles since we're using Tailwind
 
