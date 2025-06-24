@@ -188,7 +188,7 @@ export class GameTopBar extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed top-0 min-h-[50px] lg:min-h-[80px] z-[1100] flex flex-wrap bg-slate-800/40 backdrop-blur-sm shadow-xs text-white text-xs left-0 right-0 grid-cols-4 p-1 md:text-base md:px-1.5 lg:px-4"
+        class="fixed top-0 min-h-[50px] lg:min-h-[80px] z-[1100] flex flex-wrap bg-slate-800/40 backdrop-blur-sm shadow-xs text-white text-xs md:text-sm lg:text-base left-0 right-0 grid-cols-4 p-1 md:px-1.5 lg:px-4"
       >
         <div
           class="flex flex-1 basis-full justify-between items-center gap-1 w-full"

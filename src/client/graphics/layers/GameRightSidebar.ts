@@ -27,6 +27,9 @@ export class GameRightSidebar extends LitElement implements Layer {
   @state()
   private isPaused: boolean = false;
 
+  @state()
+  private isExistButtonVisible: boolean = true;
+
   createRenderRoot() {
     return this;
   }
@@ -35,10 +38,15 @@ export class GameRightSidebar extends LitElement implements Layer {
     this._isSinglePlayer =
       this.game?.config()?.gameConfig()?.gameType === GameType.Singleplayer;
     this._isVisible = true;
+    this.game.inSpawnPhase();
     this.requestUpdate();
   }
 
-  tick() {}
+  tick() {
+    if (!this.game.inSpawnPhase()) {
+      this.isExistButtonVisible = false;
+    }
+  }
 
   private toggleReplayPanel(): void {
     this._isReplayVisible = !this._isReplayVisible;
@@ -67,7 +75,11 @@ export class GameRightSidebar extends LitElement implements Layer {
         }`}
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
-        <div class="flex justify-end items-center gap-2 text-white mb-2">
+        <div
+          class=${`flex justify-end items-center gap-2 text-white ${
+            this._isReplayVisible ? "mb-2" : ""
+          }`}
+        >
           ${this._isSinglePlayer || this.game?.config()?.isReplay()
             ? html`
                 <div
@@ -96,13 +108,18 @@ export class GameRightSidebar extends LitElement implements Layer {
                     style="vertical-align: middle;"
                   />
                 </div>
-                <img
-                  @click="${this.onExitButtonClick}"
-                  src=${exitIcon}
-                  alt="exitIcon"
-                  width="20"
-                  height="20"
-                />
+                ${this.isExistButtonVisible
+                  ? html`
+                      <img
+                        class="w-6 h-6 cursor-pointer"
+                        @click=${this.onExitButtonClick}
+                        src=${exitIcon}
+                        alt="exit"
+                        width="20"
+                        height="20"
+                      />
+                    `
+                  : null}
               `
             : null}
         </div>
