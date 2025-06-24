@@ -156,7 +156,7 @@ app.get(
 app.get(
   "/api/public_lobbies",
   gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
-    res.send(publicLobbiesJsonStr);
+    res.contentType("application/json").send(publicLobbiesJsonStr);
   }),
 );
 
