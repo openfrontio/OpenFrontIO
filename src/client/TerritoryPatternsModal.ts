@@ -74,7 +74,7 @@ export class TerritoryPatternsModal extends LitElement {
       }
 
       if (!roleGroup || (Array.isArray(roleGroup) && roleGroup.length === 0)) {
-        if (roles?.length === 0) {
+        if (roles === undefined || roles.length === 0) {
           const reason = translateText("territory_patterns.blocked.login");
           this.setLockedPatterns([key], reason);
         }
