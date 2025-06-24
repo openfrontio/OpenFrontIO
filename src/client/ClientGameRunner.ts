@@ -188,6 +188,18 @@ export class ClientGameRunner {
 
   private getWinner(update: WinUpdate): Winner {
     if (update.winner[0] !== "player") return update.winner;
+    // Handle coalition wins with multiple players
+    if (update.winner.length > 2) {
+      const allPlayerIds = update.winner.slice(1);
+      const clientIds = allPlayerIds
+        .filter((id) => id !== "player")
+        .map((id) => this.gameView.playerBySmallID(id).clientID())
+        .filter((clientId) => clientId !== null);
+
+      if (clientIds.length === 0) return;
+      return ["player", clientIds[0], ...clientIds.slice(1)];
+    }
+    // Handle single player win
     const clientId = this.gameView.playerBySmallID(update.winner[1]).clientID();
     if (clientId === null) return;
     return ["player", clientId];

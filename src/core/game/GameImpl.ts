@@ -26,7 +26,6 @@ import {
   Unit,
   UnitInfo,
   UnitType,
-  Vote,
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
@@ -74,8 +73,7 @@ export class GameImpl implements Game {
 
   private playerTeams: Team[] = [ColoredTeams.Red, ColoredTeams.Blue];
   private botTeam: Team = ColoredTeams.Bot;
-  private currentVote: Vote | null = null;
-  private voteExpireTick: number | null;
+  currentVote: Vote | null = null;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -321,6 +319,24 @@ export class GameImpl implements Game {
       });
     }
     this._ticks++;
+
+    // If we're currently in a vote, but we're now expired, send out an update to players.
+    const voteExpireTick = this.currentVote?.voteExpireTick;
+    const voteCooldownTick = this.currentVote?.voteCooldownTick;
+    if (this.currentVote && voteExpireTick && voteExpireTick <= this.ticks()) {
+      this.addUpdate({
+        type: GameUpdateType.VoteForPeaceExpired,
+        vote: this.currentVote,
+      });
+    } else if (
+      this.currentVote &&
+      voteCooldownTick &&
+      voteCooldownTick <= this.ticks()
+    ) {
+      // Now that we've finished the cooldown, null out the vote. During win-check, if needed, a new vote will be created.
+      this.currentVote = null;
+    }
+
     return this.updates;
   }
 
@@ -586,48 +602,6 @@ export class GameImpl implements Game {
     });
   }
 
-  public runningVote(): Vote | null {
-    return this.currentVote;
-  }
-
-  public setCurrentVote(vote: Vote | null) {
-    this.currentVote = vote;
-  }
-
-  public createVoteForPeace(players: Player[]) {
-    let vote = this.currentVote;
-    vote ??= new Vote();
-
-    players.forEach((player) => {
-      vote.results.set(player.id(), false);
-
-      this.addUpdate({
-        type: GameUpdateType.VoteForPeace,
-        playerID: player.smallID(),
-        leaderID: players[0].smallID(),
-        participants: players
-          .filter((player, index) => {
-            if (index > 0) {
-              return player;
-            }
-          })
-          .map((player) => {
-            return player.displayName();
-          }),
-      });
-    });
-    this.currentVote = vote;
-    this.voteExpireTick = this.ticks() + 1800;
-  }
-
-  public getVoteExpireTick(): number | null {
-    return this.voteExpireTick;
-  }
-
-  public setVoteExpireTick(voteExpireTick: number | null) {
-    this.voteExpireTick = voteExpireTick;
-  }
-
   public castVote(player: Player, accept: boolean) {
     const vote: Vote | null = this.currentVote;
     if (vote !== null) {
@@ -648,19 +622,28 @@ export class GameImpl implements Game {
     });
   }
 
-  setWinner(
-    winner: Player | Team,
-    allPlayersStats: AllPlayersStats,
-    allianceWin: boolean,
-  ): void {
+  setWinner(winner: Player[] | Team, allPlayersStats: AllPlayersStats): void {
+    let assistedWinners: Player[] = [];
+    if (typeof winner !== "string" && winner.length > 1) {
+      assistedWinners = winner.filter((v, i) => {
+        return i > 0;
+      });
+    }
+    console.log("setWinner assistedWinners", assistedWinners);
+
     this.addUpdate({
       type: GameUpdateType.Win,
       winner:
         typeof winner === "string"
           ? ["team", winner]
-          : ["player", winner.smallID()],
+          : [
+              "player",
+              winner[0].smallID(),
+              ...assistedWinners.map((aWinner) => {
+                return aWinner.smallID();
+              }),
+            ],
       allPlayersStats,
-      allianceWin: allianceWin,
     });
   }
 
@@ -846,6 +829,54 @@ export class GameImpl implements Game {
   }
   stats(): Stats {
     return this._stats;
+  }
+  createVoteForPeace(players: Player[]): number {
+    const vote = new Vote(this);
+
+    players.forEach((player) => {
+      vote.results.set(player.id(), false);
+
+      this.addUpdate({
+        type: GameUpdateType.VoteForPeace,
+        playerID: player.smallID(),
+        leaderID: players[0].smallID(),
+        participants: players
+          .filter((player, index) => {
+            if (index > 0) {
+              return player;
+            }
+          })
+          .map((player) => {
+            return player.displayName();
+          }),
+      });
+    });
+    this.currentVote = vote;
+    return vote.voteCooldownTick;
+  }
+}
+
+export class Vote {
+  voteExpireTick: number = 0;
+  voteCooldownTick: number = 0;
+  results: Map<PlayerID, boolean>;
+
+  constructor(gameImpl: GameImpl) {
+    this.results = new Map<PlayerID, boolean>();
+    this.voteExpireTick = gameImpl.ticks() + 1200;
+    this.voteCooldownTick = gameImpl.ticks() + 1800;
+  }
+
+  castVote(game: GameImpl, vote: Vote, player: Player, accept: boolean) {
+    if (vote !== null) {
+      // If the vote exists, the player is casting his vote to it.
+      vote.results.set(player.id(), accept);
+      game.addUpdate({
+        type: GameUpdateType.VoteForPeaceReply,
+        playerID: player.smallID(),
+        accepted: accept,
+      });
+    }
   }
 }
 

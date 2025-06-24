@@ -3,7 +3,8 @@ import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView } from "../../../core/game/GameView";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { TerraNulliusImpl } from "../../../core/game/TerraNulliusImpl";
 import { SendWinnerEvent } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -18,6 +19,7 @@ export class WinModal extends LitElement implements Layer {
   isVisible = false;
 
   private _title: string;
+  private _subtitle: string;
 
   // Override to prevent shadow DOM creation
   createRenderRoot() {
@@ -134,6 +136,7 @@ export class WinModal extends LitElement implements Layer {
     return html`
       <div class="win-modal ${this.isVisible ? "visible" : ""}">
         <h2>${this._title || ""}</h2>
+        <h3>${this._subtitle || ""}</h3>
         ${this.innerHtml()}
         <div class="button-container">
           <button @click=${this._handleExit}>
@@ -211,30 +214,103 @@ export class WinModal extends LitElement implements Layer {
           });
         }
         this.show();
-      } else {
-        const winner = this.game.playerBySmallID(wu.winner[1]);
+      } else if (wu.winner.length === 2) {
+        // If the winners chosen are a group of players (but not in a team game mode), we need to handle this case as a Coalition win.
+        const winnerId = wu.winner[1];
+        // Grab the first in the list, this player is considered the "winner", and should get the winner event.
+        const winner = this.game.playerBySmallID(winnerId);
         if (!winner.isPlayer()) return;
+
         const winnerClient = winner.clientID();
+
         if (winnerClient !== null) {
           this.eventBus.emit(
             new SendWinnerEvent(["player", winnerClient], wu.allPlayersStats),
           );
         }
+
         if (
           winnerClient !== null &&
           winnerClient === this.game.myPlayer()?.clientID()
         ) {
           this._title = translateText("win_modal.you_won");
-        } else if (wu.allianceWin) {
-          this._title =
-            translateText("win_modal.alliance_win") +
-            translateText("win_modal.other_won", {
-              player: winner.name(),
-            });
         } else {
           this._title = translateText("win_modal.other_won", {
             player: winner.name(),
           });
+        }
+        this.show();
+      } else if (wu.winner.length > 2) {
+        const winnerId = wu.winner[1];
+        const assistedByIds: any[] = wu.winner.slice(2);
+        const winner: PlayerView | TerraNulliusImpl =
+          this.game.playerBySmallID(winnerId);
+        if (winner instanceof TerraNulliusImpl) {
+          throw new Error(`small id ${winnerId} not found`);
+        }
+        const winnerClient = winner.clientID();
+        const assistedByClientIds: string[] = assistedByIds
+          // First, map to the values, which creates the array with undefineds
+          .map((id) => this.game.playerBySmallID(id)?.clientID())
+          // Then, filter out the null/undefined values
+          .filter((clientId) => clientId !== null);
+
+        const myPlayer = this.game.myPlayer();
+        const myPlayerName = myPlayer?.name();
+        const assistedByNames: string[] = this.determineNamesBySmallId(
+          assistedByIds,
+          myPlayerName,
+        );
+
+        let helpers = assistedByNames.join(", ");
+
+        if (winnerClient !== null) {
+          this.eventBus.emit(
+            new SendWinnerEvent(
+              ["player", winnerClient, ...assistedByClientIds],
+              wu.allPlayersStats,
+            ),
+          );
+        }
+
+        const myClientID = myPlayer?.clientID();
+
+        if (winnerClient !== null && winnerClient === myPlayer?.clientID()) {
+          this._title = translateText("win_modal.you_won");
+          if (
+            typeof myClientID !== "undefined" &&
+            myClientID !== null &&
+            assistedByClientIds.includes(myClientID)
+          ) {
+            helpers = this.determineNamesBySmallId(
+              assistedByIds,
+              myPlayerName,
+            ).join(",");
+            this._subtitle = translateText("win_modal.with_your_help", {
+              players: helpers,
+            });
+          } else {
+            this._subtitle = translateText("win_modal.with_help", {
+              players: helpers,
+            });
+          }
+        } else {
+          this._title = translateText("win_modal.other_won", {
+            player: winner.name(),
+          });
+          if (
+            typeof myClientID !== "undefined" &&
+            myClientID !== null &&
+            assistedByClientIds.includes(myClientID)
+          ) {
+            this._subtitle = translateText("win_modal.with_your_help", {
+              players: helpers,
+            });
+          } else {
+            this._subtitle = translateText("win_modal.with_help", {
+              players: helpers,
+            });
+          }
         }
         this.show();
       }
@@ -245,5 +321,26 @@ export class WinModal extends LitElement implements Layer {
 
   shouldTransform(): boolean {
     return false;
+  }
+
+  determineNamesBySmallId(
+    smallIds: number[],
+    nameToFilter: string | undefined | null,
+  ): string[] {
+    return (
+      smallIds
+        // First, map to the values, which creates the array with undefineds
+        .map((id) => this.game.playerBySmallID(id))
+        // Then, filter out the "null" players.
+        .filter((object) => object instanceof PlayerView)
+        .map((player) => player.name())
+        .filter((playerName) => {
+          if (nameToFilter !== null) {
+            return playerName !== nameToFilter;
+          } else {
+            return playerName;
+          }
+        })
+    );
   }
 }

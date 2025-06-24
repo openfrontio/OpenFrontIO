@@ -1,4 +1,5 @@
 import { Execution, Game, Player } from "../../game/Game";
+import { GameImpl } from "../../game/GameImpl";
 
 export class AllianceWinVoteReplyExecution implements Execution {
   active: boolean = true;
@@ -10,31 +11,26 @@ export class AllianceWinVoteReplyExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
-    if (!mg.hasPlayer(this.voter.id())) {
-      console.warn(
-        `AllianceWinVoteReplyExecution: recipient ${this.voter.id()} not found`,
-      );
-      this.active = false;
-      return;
-    }
     this.game = mg;
+    const gameImpl = this.game as GameImpl;
+
+    if (gameImpl.currentVote === null) {
+      console.warn("cant vote on a vote that does not exist.");
+    } else {
+      gameImpl.castVote(this.voter, this.accept);
+    }
+    this.active = false;
   }
 
   tick(ticks: number): void {
     if (this.game === null || this.voter === null) {
       throw new Error("Not initialized");
     }
-
-    if (this.game.runningVote() === null) {
-      console.warn("cant vote on a vote that does not exist.");
-    } else {
-      this.game.castVote(this.voter, this.accept);
-    }
-    this.active = false;
   }
 
   isActive(): boolean {
-    return this.active;
+    //Since this is a one tick execution, we do not need to keep this execution active.
+    return false;
   }
 
   activeDuringSpawnPhase(): boolean {

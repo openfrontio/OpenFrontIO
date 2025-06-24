@@ -1,3 +1,4 @@
+import { Vote } from "../game/GameImpl";
 import { AllPlayersStats, ClientID } from "../Schemas";
 import {
   EmojiMessage,
@@ -37,6 +38,7 @@ export enum GameUpdateType {
   AllianceExpired,
   VoteForPeace,
   VoteForPeaceReply,
+  VoteForPeaceExpired,
   TargetPlayer,
   Emoji,
   Win,
@@ -52,7 +54,8 @@ export type GameUpdate =
   | AllianceRequestReplyUpdate
   | BrokeAllianceUpdate
   | AllianceExpiredUpdate
-  | VoteForPeaceUpdate
+  | RequestVoteForPeaceUpdate
+  | ExpireVoteForPeaceUpdate
   | VoteForPeaceReplyUpdate
   | DisplayMessageUpdate
   | DisplayChatMessageUpdate
@@ -153,11 +156,16 @@ export interface AllianceExpiredUpdate {
   player2ID: number;
 }
 
-export interface VoteForPeaceUpdate {
+export interface RequestVoteForPeaceUpdate {
   type: GameUpdateType.VoteForPeace;
   playerID: number;
   leaderID: number;
   participants: string[];
+}
+
+export interface ExpireVoteForPeaceUpdate {
+  type: GameUpdateType.VoteForPeaceExpired;
+  vote: Vote;
 }
 
 export interface VoteForPeaceReplyUpdate {
@@ -198,9 +206,8 @@ export type DisplayChatMessageUpdate = {
 export interface WinUpdate {
   type: GameUpdateType.Win;
   allPlayersStats: AllPlayersStats;
-  // Player id or team name.
-  winner: ["player", number] | ["team", Team];
-  allianceWin: boolean;
+  // Player id(s) or team name.
+  winner: ["player", number, ...number[]] | ["team", Team];
 }
 
 export interface HashUpdate {

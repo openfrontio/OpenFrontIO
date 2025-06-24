@@ -25,11 +25,12 @@ import {
   DisplayChatMessageUpdate,
   DisplayMessageUpdate,
   EmojiUpdate,
+  ExpireVoteForPeaceUpdate,
   GameUpdateType,
+  RequestVoteForPeaceUpdate,
   TargetPlayerUpdate,
   UnitIncomingUpdate,
   VoteForPeaceReplyUpdate,
-  VoteForPeaceUpdate,
 } from "../../../core/game/GameUpdates";
 import {
   CancelAttackIntentEvent,
@@ -155,6 +156,10 @@ export class EventsDisplay extends LitElement implements Layer {
     [GameUpdateType.UnitIncoming, (u) => this.onUnitIncomingEvent(u)],
     [GameUpdateType.VoteForPeace, (u) => this.onVoteForPeaceEvent(u)],
     [GameUpdateType.VoteForPeaceReply, (u) => this.onVoteForPeaceReplyEvent(u)],
+    [
+      GameUpdateType.VoteForPeaceExpired,
+      (u) => this.onVoteForPeaceExpiredEvent(u),
+    ],
   ]);
 
   constructor() {
@@ -569,7 +574,7 @@ export class EventsDisplay extends LitElement implements Layer {
     });
   }
 
-  onVoteForPeaceEvent(event: VoteForPeaceUpdate) {
+  onVoteForPeaceEvent(event: RequestVoteForPeaceUpdate) {
     const myPlayer = this.game.myPlayer();
 
     if (!myPlayer || myPlayer.smallID() !== event.playerID) {
@@ -618,6 +623,30 @@ export class EventsDisplay extends LitElement implements Layer {
 
     this.addEvent({
       description: `${translateText("events_display.player_vote_response")} ${event.accepted ? translateText("player_panel.yes") : translateText("player_panel.no")}`,
+      type: MessageType.VOTE_FOR_PEACE_REPLY,
+      unsafeDescription: false,
+      highlight: true,
+      createdAt: this.game.ticks(),
+    });
+  }
+
+  onVoteForPeaceExpiredEvent(event: ExpireVoteForPeaceUpdate) {
+    const vote = event.vote;
+    const voters = vote.results.keys();
+    const votedFor: string[] = [];
+    const votedAgainst: string[] = [];
+    for (const voter in voters) {
+      if (vote.results.get(voter) !== true) {
+        votedAgainst.push(voter);
+      } else {
+        votedFor.push(voter);
+      }
+    }
+    const votedForString = votedFor.join(", ");
+    const votedAgainstString = votedAgainst.join(", ");
+
+    this.addEvent({
+      description: `${translateText("events_display.vote_expired", { votedForString, votedAgainstString })}`,
       type: MessageType.VOTE_FOR_PEACE_REPLY,
       unsafeDescription: false,
       highlight: true,

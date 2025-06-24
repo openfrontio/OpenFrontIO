@@ -7,6 +7,7 @@ import {
   TerraNullius,
   Tick,
 } from "../../game/Game";
+import { GameImpl } from "../../game/GameImpl";
 import { PseudoRandom } from "../../PseudoRandom";
 import { flattenedEmojiTable } from "../../Util";
 import { AttackExecution } from "../AttackExecution";
@@ -39,13 +40,14 @@ export class BotBehavior {
   }
 
   handleAllianceWinVotes() {
-    if (this.game.runningVote() !== null) {
-      const vote = this.game.runningVote();
+    const gameImpl = this.game as GameImpl;
+    if (gameImpl.currentVote !== null) {
+      const vote = gameImpl.currentVote;
       // Change this later to be dynamic, maybe a bot is feeling cocky enough to break alliance
       // after this and go for it.
       const current = vote?.results.get(this.player.id());
       if (current !== true) {
-        this.game.castVote(this.player, true);
+        gameImpl.castVote(this.player, true);
       }
     }
   }

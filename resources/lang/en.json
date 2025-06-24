@@ -371,8 +371,9 @@
     "your_team": "Your team won!",
     "other_team": "{team} team has won!",
     "you_won": "You Won!",
-    "alliance_win": "With your help, ",
     "other_won": "{player} has won!",
+    "with_help": "Assisted by: {players}",
+    "with_your_help": "Assisted by you and: {players}",
     "exit": "Exit Game",
     "keep": "Keep Playing",
     "wishlist": "Wishlist on Steam!"
@@ -408,7 +409,8 @@
     "retreating": "retreating",
     "boat": "Boat",
     "vote_for_peace": "Vote for peace with {list}? (This will end the game)",
-    "player_vote_response": "You have cast your vote as:"
+    "player_vote_response": "You have cast your vote as:",
+    "vote_expired": "The vote has failed. Here are the results.\nYes: {votedForString}\nNo: {votedAgainstString}"
   },
   "unit_info_modal": {
     "structure_info": "Structure Info",

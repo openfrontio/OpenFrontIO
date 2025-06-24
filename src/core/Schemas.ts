@@ -395,7 +395,7 @@ export const ServerMessageSchema = z.union([
 
 export const WinnerSchema = z
   .union([
-    z.tuple([z.literal("player"), ID]),
+    z.tuple([z.literal("player"), ID]).rest(ID),
     z.tuple([z.literal("team"), SafeString]),
   ])
   .optional();
