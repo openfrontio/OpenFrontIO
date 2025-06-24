@@ -1,0 +1,13 @@
+{
+  "map": {
+    "height": 100,
+    "num_land_tiles": 10000,
+    "width": 100
+  },
+  "mini_map": {
+    "height": 50,
+    "num_land_tiles": 2500,
+    "width": 50
+  },
+  "name": "Plains"
+}

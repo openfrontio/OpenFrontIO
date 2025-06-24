@@ -1,14 +1,18 @@
 import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
+import {
+  BonusEventUpdate,
+  GameUpdateType,
+  RailroadUpdate,
+} from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { Fx, FxType } from "../fx/Fx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
+import { shortenNumber, TextFx } from "../fx/TextFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
 import { Layer } from "./Layer";
-
 export class FxLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
@@ -37,6 +41,54 @@ export class FxLayer implements Layer {
         if (unitView === undefined) return;
         this.onUnitEvent(unitView);
       });
+    this.game
+      .updatesSinceLastTick()
+      ?.[GameUpdateType.BonusEvent]?.forEach((bonusEvent) => {
+        if (bonusEvent === undefined) return;
+        this.onBonusEvent(bonusEvent);
+      });
+
+    this.game
+      .updatesSinceLastTick()
+      ?.[GameUpdateType.RailroadEvent]?.forEach((update) => {
+        if (update === undefined) return;
+        this.onRailroadEvent(update);
+      });
+  }
+
+  onBonusEvent(bonus: BonusEventUpdate) {
+    const tile = bonus.tile;
+    if (this.game.owner(tile) !== this.game.myPlayer()) {
+      // Only display text fx for the current player
+      return;
+    }
+    const x = this.game.x(tile);
+    let y = this.game.y(tile);
+    const gold = bonus.gold;
+    const troops = bonus.troops;
+    const workers = bonus.workers;
+
+    if (gold > 0) {
+      const shortened = shortenNumber(gold);
+      this.addTextFx(`+ ${shortened} gold`, x, y);
+      y += 10; // increase y so the next popup starts bellow
+    }
+
+    if (troops > 0) {
+      const shortened = shortenNumber(troops);
+      this.addTextFx(`+ ${shortened} troops`, x, y);
+      y += 10;
+    }
+
+    if (workers > 0) {
+      const shortened = shortenNumber(workers);
+      this.addTextFx(`+ ${shortened} workers`, x, y);
+    }
+  }
+
+  addTextFx(text: string, x: number, y: number) {
+    const textFx = new TextFx(text, x, y, 500, 20);
+    this.allFx.push(textFx);
   }
 
   onUnitEvent(unit: UnitView) {
@@ -54,6 +106,9 @@ export class FxLayer implements Layer {
       case UnitType.Shell:
         this.onShellEvent(unit);
         break;
+      case UnitType.Train:
+        this.onTrainEvent(unit);
+        break;
     }
   }
 
@@ -62,13 +117,48 @@ export class FxLayer implements Layer {
       if (unit.reachedTarget()) {
         const x = this.game.x(unit.lastTile());
         const y = this.game.y(unit.lastTile());
-        const shipExplosion = new SpriteFx(
+        const explosion = new SpriteFx(
           this.animatedSpriteLoader,
           x,
           y,
           FxType.MiniExplosion,
         );
-        this.allFx.push(shipExplosion);
+        this.allFx.push(explosion);
+      }
+    }
+  }
+
+  onTrainEvent(unit: UnitView) {
+    if (!unit.isActive()) {
+      if (!unit.reachedTarget()) {
+        const x = this.game.x(unit.lastTile());
+        const y = this.game.y(unit.lastTile());
+        const explosion = new SpriteFx(
+          this.animatedSpriteLoader,
+          x,
+          y,
+          FxType.MiniExplosion,
+        );
+        this.allFx.push(explosion);
+      }
+    }
+  }
+
+  onRailroadEvent(railroad: RailroadUpdate) {
+    const railTiles = railroad.railTiles;
+    for (const rail of railTiles) {
+      // No need for pseudorandom, this is fx
+      const chanceFx = Math.floor(Math.random() * 3);
+      if (chanceFx === 0) {
+        const x = this.game.x(rail.tile);
+        const y = this.game.y(rail.tile);
+        const animation = new SpriteFx(
+          this.animatedSpriteLoader,
+          x,
+          y,
+          FxType.Dust,
+        );
+        this.allFx.push(animation);
       }
     }
   }

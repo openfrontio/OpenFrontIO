@@ -22,6 +22,7 @@ describe("Alliance", () => {
       infiniteTroops: true,
     });
     const player1Info = new PlayerInfo(
+      undefined,
       "us",
       "player 1 dude",
       PlayerType.Human,
@@ -30,6 +31,7 @@ describe("Alliance", () => {
     );
     game.addPlayer(player1Info);
     const player2Info = new PlayerInfo(
+      undefined,
       "us",
       "player 2 dude",
       PlayerType.Human,
@@ -38,6 +40,7 @@ describe("Alliance", () => {
     );
     game.addPlayer(player2Info);
     const player3Info = new PlayerInfo(
+      undefined,
       "us",
       "player 3 dude",
       PlayerType.Human,

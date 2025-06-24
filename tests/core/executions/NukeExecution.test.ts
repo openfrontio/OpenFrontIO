@@ -15,13 +15,17 @@ let player: Player;
 
 describe("NukeExecution", () => {
   beforeEach(async () => {
-    game = await setup("BigPlains", { infiniteGold: true, instantBuild: true });
+    game = await setup("big_plains", {
+      infiniteGold: true,
+      instantBuild: true,
+    });
 
     (game.config() as TestConfig).nukeMagnitudes = jest.fn(() => ({
       inner: 10,
       outer: 10,
     }));
     const player_info = new PlayerInfo(
+      undefined,
       "us",
       "player_id",
       PlayerType.Human,
@@ -68,5 +72,28 @@ describe("NukeExecution", () => {
     expect(player.units(UnitType.SAMLauncher)).toHaveLength(1);
     expect(sam.touch).toHaveBeenCalled();
     expect(defensePost.touch).not.toHaveBeenCalled();
+  });
+
+  test("nuke should only be targetable near src and dst", async () => {
+    const nukeExec = new NukeExecution(
+      UnitType.AtomBomb,
+      player,
+      game.ref(199, 199),
+      game.ref(1, 1),
+    );
+    game.addExecution(nukeExec);
+    // targetable distance is 14400
+
+    //near launch should be targetable (distance src < 14400)
+    executeTicks(game, 2);
+    expect(nukeExec.getNuke()!.isTargetable()).toBeTruthy();
+
+    //mid air should not be targetable (distance src > 14400, distance target > 14400)
+    executeTicks(game, 38);
+    expect(nukeExec.getNuke()!.isTargetable()).toBeFalsy();
+
+    //near target should be targetable (distance target < 14400)
+    executeTicks(game, 10);
+    expect(nukeExec.getNuke()!.isTargetable()).toBeTruthy();
   });
 });

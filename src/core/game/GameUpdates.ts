@@ -10,6 +10,7 @@ import {
   PlayerType,
   Team,
   Tick,
+  TrainType,
   UnitType,
 } from "./Game";
 import { TileRef, TileUpdate } from "./GameMap";
@@ -44,6 +45,8 @@ export enum GameUpdateType {
   Win,
   Hash,
   UnitIncoming,
+  BonusEvent,
+  RailroadEvent,
 }
 
 export type GameUpdate =
@@ -63,7 +66,36 @@ export type GameUpdate =
   | EmojiUpdate
   | WinUpdate
   | HashUpdate
-  | UnitIncomingUpdate;
+  | UnitIncomingUpdate
+  | BonusEventUpdate
+  | RailroadUpdate;
+
+export interface BonusEventUpdate {
+  type: GameUpdateType.BonusEvent;
+  tile: TileRef;
+  gold: number;
+  workers: number;
+  troops: number;
+}
+
+export enum RailType {
+  VERTICAL,
+  HORIZONTAL,
+  TOP_LEFT,
+  TOP_RIGHT,
+  BOTTOM_LEFT,
+  BOTTOM_RIGHT,
+}
+
+export interface RailTile {
+  tile: TileRef;
+  railType: RailType;
+}
+export interface RailroadUpdate {
+  type: GameUpdateType.RailroadEvent;
+  isActive: boolean;
+  railTiles: RailTile[];
+}
 
 export interface TileUpdateWrapper {
   type: GameUpdateType.Tile;
@@ -83,6 +115,7 @@ export interface UnitUpdate {
   isActive: boolean;
   reachedTarget: boolean;
   retreating: boolean;
+  targetable: boolean;
   targetUnitId?: number; // Only for trade ships
   targetTile?: TileRef; // Only for nukes
   health?: number;
@@ -90,6 +123,9 @@ export interface UnitUpdate {
   missileTimerQueue: number[];
   readyMissileCount: number;
   level: number;
+  hasTrainStation: boolean;
+  trainType?: TrainType; // Only for trains
+  loaded?: boolean; // Only for trains
 }
 
 export interface AttackUpdate {
@@ -104,6 +140,7 @@ export interface PlayerUpdate {
   type: GameUpdateType.Player;
   nameViewData?: NameViewData;
   clientID: ClientID | null;
+  pattern: string | undefined;
   flag: string | undefined;
   name: string;
   displayName: string;

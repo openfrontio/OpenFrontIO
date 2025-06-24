@@ -181,7 +181,7 @@ export class Leaderboard extends LitElement implements Layer {
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <button
-          class="mb-2 px-2 py-1 md:px-3 md:py-1.5 text-xs md:text-sm lg:text-base border border-white/20 hover:bg-white/10"
+          class="mb-2 px-2 py-1 md:px-2.5 md:py-1.5 text-xs md:text-sm lg:text-base border border-white/20 hover:bg-white/10"
           @click=${() => {
             this.showTopFive = !this.showTopFive;
             this.updateLeaderboard();
@@ -285,5 +285,6 @@ function formatPercentage(value: number): string {
   if (perc > 99.5) return "100%";
   if (perc < 0.01) return "0%";
   if (perc < 0.1) return perc.toPrecision(1) + "%";
+  if (Number.isNaN(perc)) return "0%";
   return perc.toPrecision(2) + "%";
 }

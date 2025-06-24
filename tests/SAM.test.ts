@@ -19,8 +19,12 @@ let far_defender: Player;
 
 describe("SAM", () => {
   beforeEach(async () => {
-    game = await setup("BigPlains", { infiniteGold: true, instantBuild: true });
+    game = await setup("big_plains", {
+      infiniteGold: true,
+      instantBuild: true,
+    });
     const defender_info = new PlayerInfo(
+      undefined,
       "us",
       "defender_id",
       PlayerType.Human,
@@ -28,6 +32,7 @@ describe("SAM", () => {
       "defender_id",
     );
     const far_defender_info = new PlayerInfo(
+      undefined,
       "us",
       "far_defender_id",
       PlayerType.Human,
@@ -35,6 +40,7 @@ describe("SAM", () => {
       "far_defender_id",
     );
     const attacker_info = new PlayerInfo(
+      undefined,
       "fr",
       "attacker_id",
       PlayerType.Human,
@@ -133,10 +139,37 @@ describe("SAM", () => {
     expect([sam1, sam2].filter((s) => s.isInCooldown())).toHaveLength(1);
   });
 
-  test("SAMs should target only nukes aimed at nearby targets", async () => {
+  test("SAMs should target close to launch site", async () => {
     const targetDistance = 199;
-    // Close SAM: should not intercept anything
-    const sam1 = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    // Close SAM: should intercept the nuke
+    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    game.addExecution(new SAMLauncherExecution(defender, null, sam));
+
+    const nukeExecution = new NukeExecution(
+      UnitType.AtomBomb,
+      attacker,
+      game.ref(targetDistance, 1),
+      null,
+    );
+    game.addExecution(nukeExecution);
+    // Long distance nuke: compute the proper number of ticks
+    const ticksToExecute = Math.ceil(
+      targetDistance / game.config().defaultNukeSpeed(),
+    );
+    executeTicks(game, ticksToExecute);
+
+    expect(nukeExecution.isActive()).toBeFalsy();
+    expect(sam.isInCooldown()).toBeTruthy();
+  });
+
+  test("SAMs should target only nukes aimed at nearby targets if not close to launch site", async () => {
+    const targetDistance = 199;
+    // Middle SAM: should not intercept the nuke
+    const sam1 = defender.buildUnit(
+      UnitType.SAMLauncher,
+      game.ref(targetDistance / 2, 1),
+      {},
+    );
     game.addExecution(new SAMLauncherExecution(defender, null, sam1));
 
     // Far SAM: Should intercept the nuke. Use the far_defender so the SAM can be built

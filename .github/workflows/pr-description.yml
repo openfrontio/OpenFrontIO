@@ -15,6 +15,7 @@ jobs:
   validate-description:
     name: Validate Description
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/github-script@v7
         with:
@@ -24,7 +25,7 @@ jobs:
             const errors = [];
 
             // Check for ## Description section
-            const descMatch = body.match(/^## Description:\s*\n((?:(?!^#).*\n?)*)/m);
+            const descMatch = body.match(/^## Description:\s*\n([\s\S]*?)(?:^## |\Z)/m);
             if (!descMatch || descMatch[1].trim().length < 20) {
               errors.push('❌ Missing or short `## Description:` section.');
             }
@@ -54,6 +55,7 @@ jobs:
   has-milestone:
     name: Has Milestone
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/github-script@v7
         with:

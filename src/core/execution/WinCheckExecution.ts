@@ -166,17 +166,17 @@ export class WinCheckExecution implements Execution {
 
   evaluateVote(game: GameImpl, numTilesWithoutFallout: number) {
     let votePercentage = 0;
-    const vote: Vote | null = game.currentVote;
+    const currentVote: Vote | null = game.currentVote;
     const approvals: Player[] = [];
-    if (vote !== null) {
-      vote.results.forEach((vote, voterID) => {
+    if (currentVote !== null) {
+      currentVote.results.forEach((accepted, voterID) => {
         const voter: Player = game.player(voterID);
-        if (vote === true) {
+        if (accepted === true) {
           approvals.push(voter);
         }
       });
       approvals.forEach((voter) => {
-        if (vote.results.get(voter.id()) === true) {
+        if (currentVote.results.get(voter.id()) === true) {
           const playerLandOwnedPercent =
             (voter.numTilesOwned() / numTilesWithoutFallout) * 100;
           votePercentage += playerLandOwnedPercent;

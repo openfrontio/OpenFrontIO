@@ -1,9 +1,11 @@
 import { EventBus } from "../../core/EventBus";
 import { GameView } from "../../core/game/GameView";
+import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
+import { AlertFrame } from "./layers/AlertFrame";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
@@ -12,6 +14,7 @@ import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
+import { GutterAdModal } from "./layers/GutterAdModal";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
@@ -21,8 +24,9 @@ import { NameLayer } from "./layers/NameLayer";
 import { OptionsMenu } from "./layers/OptionsMenu";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
-import { PlayerTeamLabel } from "./layers/PlayerTeamLabel";
+import { RailroadLayer } from "./layers/RailroadLayer";
 import { ReplayPanel } from "./layers/ReplayPanel";
+import { SpawnAd } from "./layers/SpawnAd";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
@@ -40,6 +44,7 @@ export function createRenderer(
   eventBus: EventBus,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, canvas);
+  const userSettings = new UserSettings();
 
   const uiState = { attackRatio: 20 };
 
@@ -173,14 +178,6 @@ export function createRenderer(
   }
   multiTabModal.game = game;
 
-  const playerTeamLabel = document.querySelector(
-    "player-team-label",
-  ) as PlayerTeamLabel;
-  if (!(playerTeamLabel instanceof PlayerTeamLabel)) {
-    console.error("player team label not found");
-  }
-  playerTeamLabel.game = game;
-
   const headsUpMessage = document.querySelector(
     "heads-up-message",
   ) as HeadsUpMessage;
@@ -205,9 +202,30 @@ export function createRenderer(
   unitInfoModal.structureLayer = structureLayer;
   // unitInfoModal.eventBus = eventBus;
 
+  const spawnAd = document.querySelector("spawn-ad") as SpawnAd;
+  if (!(spawnAd instanceof SpawnAd)) {
+    console.error("spawn ad not found");
+  }
+  spawnAd.g = game;
+
+  const gutterAdModal = document.querySelector(
+    "gutter-ad-modal",
+  ) as GutterAdModal;
+  if (!(gutterAdModal instanceof GutterAdModal)) {
+    console.error("gutter ad modal not found");
+  }
+  gutterAdModal.eventBus = eventBus;
+
+  const alertFrame = document.querySelector("alert-frame") as AlertFrame;
+  if (!(alertFrame instanceof AlertFrame)) {
+    console.error("alert frame not found");
+  }
+  alertFrame.game = game;
+
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
-    new TerritoryLayer(game, eventBus, transformHandler),
+    new TerritoryLayer(game, eventBus, transformHandler, userSettings),
+    new RailroadLayer(game),
     structureLayer,
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
@@ -223,7 +241,6 @@ export function createRenderer(
       emojiTable as EmojiTable,
       buildMenu,
       uiState,
-      playerInfo,
       playerPanel,
     ),
     new SpawnTimer(game, transformHandler),
@@ -237,10 +254,12 @@ export function createRenderer(
     teamStats,
     topBar,
     playerPanel,
-    playerTeamLabel,
     headsUpMessage,
     unitInfoModal,
     multiTabModal,
+    spawnAd,
+    gutterAdModal,
+    alertFrame,
   ];
 
   return new GameRenderer(

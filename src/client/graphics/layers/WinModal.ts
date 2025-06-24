@@ -6,6 +6,7 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { TerraNulliusImpl } from "../../../core/game/TerraNulliusImpl";
 import { SendWinnerEvent } from "../../Transport";
+import { GutterAdModalEvent } from "./GutterAdModal";
 import { Layer } from "./Layer";
 
 @customElement("win-modal")
@@ -17,6 +18,9 @@ export class WinModal extends LitElement implements Layer {
 
   @state()
   isVisible = false;
+
+  @state()
+  showButtons = false;
 
   private _title: string;
   private _subtitle: string;
@@ -138,7 +142,9 @@ export class WinModal extends LitElement implements Layer {
         <h2>${this._title || ""}</h2>
         <h3>${this._subtitle || ""}</h3>
         ${this.innerHtml()}
-        <div class="button-container">
+        <div
+          class="button-container ${this.showButtons ? "visible" : "hidden"}"
+        >
           <button @click=${this._handleExit}>
             ${translateText("win_modal.exit")}
           </button>
@@ -172,12 +178,21 @@ export class WinModal extends LitElement implements Layer {
   }
 
   show() {
-    this.isVisible = true;
-    this.requestUpdate();
+    this.eventBus.emit(new GutterAdModalEvent(true));
+    setTimeout(() => {
+      this.isVisible = true;
+      this.requestUpdate();
+    }, 1500);
+    setTimeout(() => {
+      this.showButtons = true;
+      this.requestUpdate();
+    }, 3000);
   }
 
   hide() {
+    this.eventBus.emit(new GutterAdModalEvent(false));
     this.isVisible = false;
+    this.showButtons = false;
     this.requestUpdate();
   }
 
