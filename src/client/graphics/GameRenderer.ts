@@ -5,6 +5,7 @@ import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
+import { AlertFrame } from "./layers/AlertFrame";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
@@ -215,6 +216,12 @@ export function createRenderer(
   }
   gutterAdModal.eventBus = eventBus;
 
+  const alertFrame = document.querySelector("alert-frame") as AlertFrame;
+  if (!(alertFrame instanceof AlertFrame)) {
+    console.error("alert frame not found");
+  }
+  alertFrame.game = game;
+
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
@@ -252,6 +259,7 @@ export function createRenderer(
     multiTabModal,
     spawnAd,
     gutterAdModal,
+    alertFrame,
   ];
 
   return new GameRenderer(

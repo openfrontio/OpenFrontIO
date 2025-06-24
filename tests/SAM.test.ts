@@ -19,7 +19,10 @@ let far_defender: Player;
 
 describe("SAM", () => {
   beforeEach(async () => {
-    game = await setup("BigPlains", { infiniteGold: true, instantBuild: true });
+    game = await setup("big_plains", {
+      infiniteGold: true,
+      instantBuild: true,
+    });
     const defender_info = new PlayerInfo(
       undefined,
       "us",

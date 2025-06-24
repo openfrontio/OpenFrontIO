@@ -60,11 +60,11 @@ async function nearbyUnits(
 
 describe("Unit Grid range tests", () => {
   const hasUnitCases = [
-    ["Plains", 0, 10, 0, true], // Same spot
-    ["Plains", 0, 10, 10, true], // Exactly on the range
-    ["Plains", 0, 10, 11, false], // Exactly 1px outside
-    ["BigPlains", 0, 198, 42, true], // Inside huge range
-    ["BigPlains", 0, 198, 199, false], // Exactly 1px outside huge range
+    ["plains", 0, 10, 0, true], // Same spot
+    ["plains", 0, 10, 10, true], // Exactly on the range
+    ["plains", 0, 10, 11, false], // Exactly 1px outside
+    ["big_plains", 0, 198, 42, true], // Inside huge range
+    ["big_plains", 0, 198, 199, false], // Exactly 1px outside huge range
   ];
 
   describe("Is unit in range", () => {
@@ -84,13 +84,13 @@ describe("Unit Grid range tests", () => {
   });
 
   const unitsInRangeCases = [
-    ["Plains", 0, 10, 0, [UnitType.Warship], 1], // Same spot
-    ["Plains", 0, 10, 0, [UnitType.City, UnitType.Port], 2], // 2 in range
-    ["Plains", 0, 10, 0, [], 0], // no unit
-    ["Plains", 0, 10, 10, [UnitType.City], 1], // Exactly on the range
-    ["Plains", 0, 10, 11, [UnitType.DefensePost], 0], // 1px outside
-    ["BigPlains", 0, 198, 42, [UnitType.TradeShip], 1], // Inside huge range
-    ["BigPlains", 0, 198, 199, [UnitType.TransportShip], 0], // 1px outside
+    ["plains", 0, 10, 0, [UnitType.Warship], 1], // Same spot
+    ["plains", 0, 10, 0, [UnitType.City, UnitType.Port], 2], // 2 in range
+    ["plains", 0, 10, 0, [], 0], // no unit
+    ["plains", 0, 10, 10, [UnitType.City], 1], // Exactly on the range
+    ["plains", 0, 10, 11, [UnitType.DefensePost], 0], // 1px outside
+    ["big_plains", 0, 198, 42, [UnitType.TradeShip], 1], // Inside huge range
+    ["big_plains", 0, 198, 199, [UnitType.TransportShip], 0], // 1px outside
   ];
 
   describe("Retrieve all units in range", () => {
@@ -116,7 +116,7 @@ describe("Unit Grid range tests", () => {
     );
 
     test("Wrong unit type in range", async () => {
-      const game = await setup("Plains", {
+      const game = await setup("plains", {
         infiniteGold: true,
         instantBuild: true,
       });
@@ -140,7 +140,7 @@ describe("Unit Grid range tests", () => {
     });
 
     test("One inside, one outside of range", async () => {
-      const game = await setup("Plains", {
+      const game = await setup("plains", {
         infiniteGold: true,
         instantBuild: true,
       });

@@ -19,6 +19,11 @@ export class UserSettings {
   emojis() {
     return this.get("settings.emojis", true);
   }
+
+  alertFrame() {
+    return this.get("settings.alertFrame", true);
+  }
+
   anonymousNames() {
     return this.get("settings.anonymousNames", false);
   }
@@ -55,6 +60,10 @@ export class UserSettings {
 
   toggleEmojis() {
     this.set("settings.emojis", !this.emojis());
+  }
+
+  toggleAlertFrame() {
+    this.set("settings.alertFrame", !this.alertFrame());
   }
 
   toggleRandomName() {
