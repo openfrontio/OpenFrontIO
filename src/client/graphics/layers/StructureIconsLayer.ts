@@ -267,10 +267,9 @@ export class StructureIconsLayer implements Layer {
     const screenPos = this.transformHandler.worldToScreenCoordinates(
       new Cell(worldX, worldY),
     );
-    screenPos.y -= this.transformHandler.scale * 8;
     render.pixiSprite.x = Math.round(screenPos.x);
     render.pixiSprite.y = Math.round(
-      screenPos.y - this.transformHandler.scale * 8,
+      screenPos.y - this.transformHandler.scale * 15,
     );
   }
 
