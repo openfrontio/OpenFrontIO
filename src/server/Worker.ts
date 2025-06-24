@@ -8,7 +8,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod/v4";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { territoryPatterns } from "../core/Cosmetics";
+import { COSMETICS } from "../core/CosmeticSchemas";
 import { GameType } from "../core/game/Game";
 import {
   ClientJoinMessageSchema,
@@ -31,8 +31,6 @@ const config = getServerConfigFromServer();
 const workerId = parseInt(process.env.WORKER_ID || "0");
 const log = logger.child({ comp: `w_${workerId}` });
 
-const privilegeChecker = new PrivilegeChecker(territoryPatterns);
-
 // Worker setup
 export function startWorker() {
   log.info(`Worker starting...`);
@@ -45,6 +43,8 @@ export function startWorker() {
   const wss = new WebSocketServer({ server });
 
   const gm = new GameManager(config, log);
+
+  const privilegeChecker = new PrivilegeChecker(COSMETICS);
 
   if (config.env() === GameEnv.Prod && config.otelEnabled()) {
     initWorkerMetrics(gm);

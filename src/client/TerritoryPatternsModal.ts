@@ -2,7 +2,7 @@ import type { TemplateResult } from "lit";
 import { html, LitElement, render } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { territoryPatterns } from "../core/Cosmetics";
+import { COSMETICS } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
 import { PatternDecoder } from "../core/PatternDecoder";
 import "./components/Difficulties";
@@ -72,7 +72,7 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   private checkPatternPermission(roles: string[]) {
-    const patterns = territoryPatterns.patterns;
+    const patterns = COSMETICS.patterns;
     for (const key in patterns) {
       const patternData = patterns[key];
       const roleGroup: string[] | string | undefined = patternData.role_group;
@@ -153,7 +153,7 @@ export class TerritoryPatternsModal extends LitElement {
   private renderPatternButton(key: string): TemplateResult {
     const isLocked = this.isPatternLocked(key);
     const isSelected = this.selectedPattern === key;
-    const name = territoryPatterns.patterns[key]?.name ?? "custom";
+    const name = COSMETICS.patterns[key]?.name ?? "custom";
     return html`
       <button
         class="border p-2 rounded-lg shadow text-black dark:text-white text-left
@@ -191,8 +191,8 @@ export class TerritoryPatternsModal extends LitElement {
 
   private renderPatternGrid(): TemplateResult {
     const buttons: TemplateResult[] = [];
-    for (const key in territoryPatterns.patterns) {
-      const value = territoryPatterns.patterns[key];
+    for (const key in COSMETICS.patterns) {
+      const value = COSMETICS.patterns[key];
       if (!this.showChocoPattern && value.name === "choco") continue;
       const result = this.renderPatternButton(key);
       buttons.push(result);
