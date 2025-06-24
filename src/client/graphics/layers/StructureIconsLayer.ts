@@ -116,26 +116,28 @@ export class StructureIconsLayer implements Layer {
       ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
       ?.forEach((unitView) => {
         if (unitView === undefined) return;
+
         if (unitView.isActive()) {
           if (this.seenUnits.has(unitView)) {
             // check if owner has changed
             const render = this.renders.find(
               (r) => r.unit.id() === unitView.id(),
             );
-            this.checkOwner(render!, unitView);
+            this.ownerChangeCheck(render!, unitView);
           } else if (this.structures.has(unitView.type())) {
             // new unit, create render info
             this.seenUnits.add(unitView);
-            this.renders.push(
-              new StructureRenderInfo(
-                unitView,
-                unitView.owner().id(),
-                this.createPixiSprite(unitView),
-              ),
+            const render = new StructureRenderInfo(
+              unitView,
+              unitView.owner().id(),
+              this.createPixiSprite(unitView),
             );
+            this.renders.push(render);
+            this.computeNewLocation(render);
             this.shouldRedraw = true;
           }
         }
+
         if (!unitView.isActive() && this.seenUnits.has(unitView)) {
           const render = this.renders.find(
             (r) => r.unit.id() === unitView.id(),
@@ -153,29 +155,24 @@ export class StructureIconsLayer implements Layer {
   }
 
   renderLayer(mainContext: CanvasRenderingContext2D) {
-    if (!this.renderer) {
+    if (!this.renderer || this.transformHandler.scale > ZOOM_THRESHOLD) {
       return;
     }
 
-    if (this.transformHandler.scale > ZOOM_THRESHOLD) {
-      return;
-    }
-
-    const hasChanged = this.transformHandler.hasChanged() || this.shouldRedraw;
-    for (const render of this.renders) {
-      if (hasChanged) {
+    if (this.transformHandler.hasChanged()) {
+      for (const render of this.renders) {
         this.computeNewLocation(render);
       }
     }
 
-    if (hasChanged) {
+    if (this.transformHandler.hasChanged() || this.shouldRedraw) {
       this.renderer.render(this.stage);
       this.shouldRedraw = false;
     }
     mainContext.drawImage(this.renderer.canvas, 0, 0);
   }
 
-  private checkOwner(render: StructureRenderInfo, unit: UnitView) {
+  private ownerChangeCheck(render: StructureRenderInfo, unit: UnitView) {
     if (render.owner !== unit.owner().id()) {
       render.owner = unit.owner().id();
       render.pixiSprite?.destroy();
