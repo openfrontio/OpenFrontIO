@@ -54,8 +54,9 @@ export class StructureIconsLayer implements Layer {
   async setupRenderer() {
     this.renderer = new PIXI.WebGLRenderer();
     this.pixicanvas = document.createElement("canvas");
-    this.pixicanvas.width = innerWidth;
-    this.pixicanvas.height = innerHeight;
+    const canvasRect = this.transformHandler.boundingRect();
+    this.pixicanvas.width = canvasRect.width;
+    this.pixicanvas.height = canvasRect.height;
     this.stage = new PIXI.Container();
     this.stage.position.set(0, 0);
     this.stage.width = this.pixicanvas.width;
@@ -99,14 +100,15 @@ export class StructureIconsLayer implements Layer {
 
   async init() {
     window.addEventListener("resize", () => this.resizeCanvas());
-    this.setupRenderer();
+    await this.setupRenderer();
     this.redraw();
   }
 
   resizeCanvas() {
     if (this.renderer.view) {
-      this.pixicanvas.width = innerWidth;
-      this.pixicanvas.height = innerHeight;
+      const canvasRect = this.transformHandler.boundingRect();
+      this.pixicanvas.width = canvasRect.width;
+      this.pixicanvas.height = canvasRect.height;
       this.renderer.resize(window.innerWidth, window.innerHeight, 1);
       this.shouldRedraw = true;
     }
@@ -125,7 +127,9 @@ export class StructureIconsLayer implements Layer {
             const render = this.renders.find(
               (r) => r.unit.id() === unitView.id(),
             );
-            this.ownerChangeCheck(render!, unitView);
+            if (render) {
+              this.ownerChangeCheck(render, unitView);
+            }
           } else if (this.structures.has(unitView.type())) {
             // new unit, create render info
             this.seenUnits.add(unitView);
@@ -144,7 +148,9 @@ export class StructureIconsLayer implements Layer {
           const render = this.renders.find(
             (r) => r.unit.id() === unitView.id(),
           );
-          this.deleteStructure(render!);
+          if (render) {
+            this.deleteStructure(render);
+          }
           this.shouldRedraw = true;
           return;
         }
@@ -238,6 +244,7 @@ export class StructureIconsLayer implements Layer {
     );
     sprite.x = screenPos.x;
     sprite.y = screenPos.y - this.transformHandler.scale * OFFSET_ZOOM_Y;
+    sprite.scale.set(Math.min(1, this.transformHandler.scale));
     this.stage.addChild(sprite);
     return sprite;
   }
@@ -280,6 +287,7 @@ export class StructureIconsLayer implements Layer {
     if (onScreen) {
       render.pixiSprite.x = screenPos.x;
       render.pixiSprite.y = screenPos.y;
+      render.pixiSprite.scale.set(Math.min(1, this.transformHandler.scale));
     }
     if (render.isOnScreen !== onScreen) {
       // prevent unnecessary updates
