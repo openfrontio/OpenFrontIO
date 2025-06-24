@@ -119,6 +119,7 @@ export class ConstructionExecution implements Execution {
         break;
       case UnitType.Airport:
         this.mg.addExecution(new AirportExecution(player, this.tile));
+        break;
       case UnitType.Factory:
         this.mg.addExecution(new FactoryExecution(player, this.tile));
         break;

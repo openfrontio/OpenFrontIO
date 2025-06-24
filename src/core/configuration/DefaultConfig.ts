@@ -494,10 +494,7 @@ export class DefaultConfig implements Config {
               : BigInt(
                   Math.min(
                     2_000_000,
-                    Math.pow(
-                      2,
-                      p.unitsIncludingConstruction(UnitType.Airport).length,
-                    ) * 400_000,
+                    Math.pow(2, p.unitsConstructed(UnitType.Airport)) * 400_000,
                   ),
                 ),
           territoryBound: true,

@@ -281,6 +281,7 @@ export class UnitLayer implements Layer {
         break;
       case UnitType.CargoPlane:
         this.handleCargoPlaneEvent(unit);
+        break;
       case UnitType.Train:
         this.handleTrainEvent(unit);
         break;
