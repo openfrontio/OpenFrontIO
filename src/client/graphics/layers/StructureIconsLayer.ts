@@ -1,6 +1,7 @@
 import * as PIXI from "pixi.js";
 import anchorIcon from "../../../../resources/images/AnchorIcon.png";
 import cityIcon from "../../../../resources/images/CityIcon.png";
+import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
 import SAMMissileIcon from "../../../../resources/images/SamLauncherUnit.png";
 import shieldIcon from "../../../../resources/images/ShieldIcon.png";
@@ -37,6 +38,7 @@ export class StructureIconsLayer implements Layer {
     { iconPath: string; image: HTMLImageElement | null }
   > = new Map([
     [UnitType.City, { iconPath: cityIcon, image: null }],
+    [UnitType.Factory, { iconPath: factoryIcon, image: null }],
     [UnitType.DefensePost, { iconPath: shieldIcon, image: null }],
     [UnitType.Port, { iconPath: anchorIcon, image: null }],
     [UnitType.MissileSilo, { iconPath: missileSiloIcon, image: null }],
