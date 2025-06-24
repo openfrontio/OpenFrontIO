@@ -21,6 +21,7 @@ class StructureRenderInfo {
 }
 const ZOOM_THRESHOLD = 2.8; // below this zoom level, structures are not rendered
 const ICON_SIZE = 24;
+const OFFSET_ZOOM_Y = 15; // offset for the y position of the icon to avoid hiding the structure beneath
 
 export class StructureIconsLayer implements Layer {
   private pixicanvas: HTMLCanvasElement;
@@ -236,7 +237,7 @@ export class StructureIconsLayer implements Layer {
       new Cell(worldX, worldY),
     );
     sprite.x = screenPos.x;
-    sprite.y = screenPos.y - this.transformHandler.scale * 8;
+    sprite.y = screenPos.y - this.transformHandler.scale * OFFSET_ZOOM_Y;
     this.stage.addChild(sprite);
     return sprite;
   }
@@ -264,7 +265,9 @@ export class StructureIconsLayer implements Layer {
       new Cell(worldX, worldY),
     );
     screenPos.x = Math.round(screenPos.x);
-    screenPos.y = Math.round(screenPos.y - this.transformHandler.scale * 15);
+    screenPos.y = Math.round(
+      screenPos.y - this.transformHandler.scale * OFFSET_ZOOM_Y,
+    );
 
     // Check if the sprite is on screen (with margin for partial visibility)
     const margin = ICON_SIZE;
