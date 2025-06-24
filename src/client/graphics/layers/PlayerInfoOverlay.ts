@@ -208,7 +208,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             : "text-white"}"
         >
           ${player.flag()
-            ? player.flag()!.startsWith("ctmfg")
+            ? player.flag()!.startsWith("!ctmfg")
               ? html`<div
                   class="h-8 mr-1 aspect-[3/4] player-flag"
                   ${ref((el) => {

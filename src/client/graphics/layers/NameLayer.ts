@@ -203,7 +203,7 @@ export class NameLayer implements Layer {
       if (
         flagCode !== undefined &&
         flagCode !== null &&
-        flagCode.startsWith("ctmfg")
+        flagCode.startsWith("!ctmfg")
       ) {
         const flagWrapper = document.createElement("div");
         applyFlagStyles(flagWrapper);
