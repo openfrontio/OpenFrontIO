@@ -2,7 +2,7 @@ import rawCosmetic from "../../resources/cosmetics/cosmetics.json" with { type: 
 import { CosmeticsSchema } from "./CosmeticSchemas";
 export const cosmetic = CosmeticsSchema.parse(rawCosmetic);
 
-const animationDurations: Record<string, number> = {
+const ANIMATION_DURATIONS: Record<string, number> = {
   rainbow: 4000,
   "bright-rainbow": 4000,
   "copper-glow": 3000,
@@ -62,7 +62,7 @@ export function renderPlayerFlag(flagCode: string, target: HTMLElement) {
       !/^([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/.test(colorValue);
 
     if (isSpecial) {
-      const duration = animationDurations[colorValue] ?? 5000;
+      const duration = ANIMATION_DURATIONS[colorValue] ?? 5000;
       const now = performance.now();
       const offset = now % duration;
       if (!duration) console.warn(`No animation duration for: ${colorValue}`);
