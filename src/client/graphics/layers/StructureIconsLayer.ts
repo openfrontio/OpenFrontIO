@@ -12,6 +12,7 @@ import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
 class StructureRenderInfo {
+  public isOnScreen: boolean = false;
   constructor(
     public unit: UnitView,
     public owner: PlayerID,
@@ -25,7 +26,7 @@ export class StructureIconsLayer implements Layer {
   private pixicanvas: HTMLCanvasElement;
   private stage: PIXI.Container;
   private shouldRedraw: boolean = true;
-  private nodeCache: Map<string, HTMLCanvasElement> = new Map();
+  private textureCache: Map<string, PIXI.Texture> = new Map();
   private theme: Theme;
   private renderer: PIXI.Renderer;
   private renders: StructureRenderInfo[] = [];
@@ -181,15 +182,10 @@ export class StructureIconsLayer implements Layer {
     }
   }
 
-  private createUnitElement(unit: UnitView): HTMLCanvasElement {
+  private createTexture(unit: UnitView): PIXI.Texture {
     const cacheKey = `${unit.owner().id()}-${unit.type()}`;
-    if (this.nodeCache.has(cacheKey)) {
-      const cachedCanvas = this.nodeCache.get(cacheKey)!;
-      const clonedCanvas = document.createElement("canvas");
-      clonedCanvas.width = cachedCanvas.width;
-      clonedCanvas.height = cachedCanvas.height;
-      clonedCanvas.getContext("2d")!.drawImage(cachedCanvas, 0, 0);
-      return clonedCanvas;
+    if (this.textureCache.has(cacheKey)) {
+      return this.textureCache.get(cacheKey)!;
     }
     const structureCanvas = document.createElement("canvas");
     structureCanvas.width = ICON_SIZE;
@@ -218,20 +214,20 @@ export class StructureIconsLayer implements Layer {
     const structureInfo = this.structures.get(unit.type());
     if (!structureInfo?.image) {
       console.warn(`Image not loaded for unit type: ${unit.type()}`);
-      return structureCanvas;
+      return PIXI.Texture.from(structureCanvas);
     }
     context.drawImage(
       this.getImageColored(structureInfo.image, borderColor),
       4,
       4,
     );
-    this.nodeCache.set(cacheKey, structureCanvas);
-    return structureCanvas;
+    const texture = PIXI.Texture.from(structureCanvas);
+    this.textureCache.set(cacheKey, texture);
+    return texture;
   }
 
-  private createPixiSprite(unit: UnitView) {
-    const structureCanvas = this.createUnitElement(unit);
-    const sprite = new PIXI.Sprite(PIXI.Texture.from(structureCanvas));
+  private createPixiSprite(unit: UnitView): PIXI.Sprite {
+    const sprite = new PIXI.Sprite(this.createTexture(unit));
     sprite.anchor.set(0.5, 0.5);
     const tile = unit.tile();
     const worldX = this.game.x(tile);
@@ -267,10 +263,26 @@ export class StructureIconsLayer implements Layer {
     const screenPos = this.transformHandler.worldToScreenCoordinates(
       new Cell(worldX, worldY),
     );
-    render.pixiSprite.x = Math.round(screenPos.x);
-    render.pixiSprite.y = Math.round(
-      screenPos.y - this.transformHandler.scale * 15,
-    );
+    screenPos.x = Math.round(screenPos.x);
+    screenPos.y = Math.round(screenPos.y - this.transformHandler.scale * 15);
+
+    // Check if the sprite is on screen (with margin for partial visibility)
+    const margin = ICON_SIZE;
+    const onScreen =
+      screenPos.x + margin > 0 &&
+      screenPos.x - margin < this.pixicanvas.width &&
+      screenPos.y + margin > 0 &&
+      screenPos.y - margin < this.pixicanvas.height;
+
+    if (onScreen) {
+      render.pixiSprite.x = screenPos.x;
+      render.pixiSprite.y = screenPos.y;
+    }
+    if (render.isOnScreen !== onScreen) {
+      // prevent unnecessary updates
+      render.isOnScreen = onScreen;
+      render.pixiSprite.visible = onScreen;
+    }
   }
 
   private deleteStructure(render: StructureRenderInfo) {
