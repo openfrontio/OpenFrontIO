@@ -1,7 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { GameType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { ReplaySpeedChangeEvent } from "../../InputHandler";
 import {
@@ -21,17 +20,15 @@ export class ReplayPanel extends LitElement implements Layer {
 
   @state()
   private _replaySpeedMultiplier: number = defaultReplaySpeedMultiplier;
-  @state()
-  private _isSinglePlayer = false;
+
+  @property({ type: Boolean })
+  isSingleplayer = false;
 
   createRenderRoot() {
     return this; // Enable Tailwind CSS
   }
 
-  init() {
-    this._isSinglePlayer =
-      this.game?.config().gameConfig().gameType === GameType.Singleplayer;
-  }
+  init() {}
 
   tick() {
     if (!this.visible) return;
@@ -52,8 +49,6 @@ export class ReplayPanel extends LitElement implements Layer {
 
   render() {
     if (!this.visible) return html``;
-    const isSingle =
-      this.game?.config().gameConfig().gameType === GameType.Singleplayer;
 
     return html`
       <div
@@ -61,7 +56,7 @@ export class ReplayPanel extends LitElement implements Layer {
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <label class="block mb-1 text-white" translate="no">
-          ${isSingle
+          ${this.isSingleplayer
             ? translateText("replay_panel.game_speed")
             : translateText("replay_panel.replay_speed")}
         </label>

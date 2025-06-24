@@ -73,59 +73,51 @@ export class GameLeftSidebar extends LitElement implements Layer {
           this.isVisible ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        ${
-          this.isPlayerTeamLabelVisible
-            ? html`
-                <div
-                  class="flex items-center w-full h-8 lg:h-10 text-white py-1 lg:p-2"
-                  @contextmenu=${(e: Event) => e.preventDefault()}
-                >
-                  Your team:
-                  <span style="color: ${this.playerColor.toRgbString()}">
-                    ${this.playerTeam} &#10687;
-                  </span>
-                </div>
-              `
-            : null
-        }
-        <div class="flex items-center gap-2 space-x-2 text-white mb-2">
-          <div
-            class=${`flex items-center gap-2 space-x-2 text-white ${
-              this.isLeaderboardShow || this.isTeamLeaderboardShow ? "mb-2" : ""
-            }`}
-          >
-
+        ${this.isPlayerTeamLabelVisible
+          ? html`
+              <div
+                class="flex items-center w-full h-8 lg:h-10 text-white py-1 lg:p-2"
+                @contextmenu=${(e: Event) => e.preventDefault()}
+              >
+                Your team:
+                <span style="color: ${this.playerColor.toRgbString()}">
+                  ${this.playerTeam} &#10687;
+                </span>
+              </div>
+            `
+          : null}
+        <div
+          class=${`flex items-center gap-2 space-x-2 text-white ${
+            this.isLeaderboardShow || this.isTeamLeaderboardShow ? "mb-2" : ""
+          }`}
+        >
           <div class="w-6 h-6 cursor-pointer" @click=${this.toggleLeaderboard}>
             <img
-              src=${
-                this.isLeaderboardShow
-                  ? leaderboardSolidIcon
-                  : leaderboardRegularIcon
-              }
+              src=${this.isLeaderboardShow
+                ? leaderboardSolidIcon
+                : leaderboardRegularIcon}
               alt="treeIcon"
               width="20"
               height="20"
             />
           </div>
-          ${
-            this.isTeamGame
-              ? html`
-                  <div
-                    class="w-6 h-6 cursor-pointer"
-                    @click=${this.toggleTeamLeaderboard}
-                  >
-                    <img
-                      src=${this.isTeamLeaderboardShow
-                        ? teamSolidIcon
-                        : teamRegularIcon}
-                      alt="treeIcon"
-                      width="20"
-                      height="20"
-                    />
-                  </div>
-                `
-              : null
-          }
+          ${this.isTeamGame
+            ? html`
+                <div
+                  class="w-6 h-6 cursor-pointer"
+                  @click=${this.toggleTeamLeaderboard}
+                >
+                  <img
+                    src=${this.isTeamLeaderboardShow
+                      ? teamSolidIcon
+                      : teamRegularIcon}
+                    alt="treeIcon"
+                    width="20"
+                    height="20"
+                  />
+                </div>
+              `
+            : null}
         </div>
         <div class="block lg:flex flex-wrap gap-2">
           <leader-board .visible=${this.isLeaderboardShow}></leader-board>

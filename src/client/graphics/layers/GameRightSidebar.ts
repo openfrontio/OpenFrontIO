@@ -110,21 +110,27 @@ export class GameRightSidebar extends LitElement implements Layer {
                 </div>
                 ${this.isExistButtonVisible
                   ? html`
-                      <img
+                      <div
                         class="w-6 h-6 cursor-pointer"
                         @click=${this.onExitButtonClick}
-                        src=${exitIcon}
-                        alt="exit"
-                        width="20"
-                        height="20"
-                      />
+                      >
+                        <img
+                          src=${exitIcon}
+                          alt="exit"
+                          width="20"
+                          height="20"
+                        />
+                      </div>
                     `
                   : null}
               `
             : null}
         </div>
         <div class="block lg:flex flex-wrap gap-2">
-          <replay-panel .visible="${this._isReplayVisible}"></replay-panel>
+          <replay-panel
+            .isSingleplayer="${this._isSinglePlayer}"
+            .visible="${this._isReplayVisible}"
+          ></replay-panel>
         </div>
       </aside>
     `;

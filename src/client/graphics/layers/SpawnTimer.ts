@@ -67,7 +67,7 @@ export class SpawnTimer implements Layer {
     } else if (this.game.config().gameConfig().gameMode === GameMode.Team) {
       // After spawn, only in team mode, offset based on screen width
       const screenW = window.innerWidth;
-      yOffset = screenW > 1024 ? 80 : 50;
+      yOffset = screenW > 1024 ? 80 : 58;
     } else {
       // Not spawn and not team mode: no bar
       return;
