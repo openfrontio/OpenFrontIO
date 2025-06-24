@@ -1,6 +1,4 @@
-import rawCosmetic from "../../resources/cosmetics/cosmetics.json" with { type: "json" };
-import { CosmeticsSchema } from "./CosmeticSchemas";
-export const cosmetic = CosmeticsSchema.parse(rawCosmetic);
+import { COSMETICS } from "./CosmeticSchemas";
 
 const ANIMATION_DURATIONS: Record<string, number> = {
   rainbow: 4000,
@@ -17,7 +15,7 @@ export function renderPlayerFlag(flagCode: string, target: HTMLElement) {
   if (!flagCode.startsWith("ctmfg")) return;
 
   const keyToLayerName: Record<string, string> = {};
-  const layersObj = cosmetic.flag.layers;
+  const layersObj = COSMETICS.flag.layers;
   for (const [key, obj] of Object.entries(layersObj)) {
     if (obj && typeof (obj as any).name === "string") {
       keyToLayerName[key] = (obj as any).name;
@@ -36,7 +34,7 @@ export function renderPlayerFlag(flagCode: string, target: HTMLElement) {
   target.style.aspectRatio = "3/4";
 
   const colorKeyToColor: Record<string, string> = {};
-  const colorObj = cosmetic.flag.color;
+  const colorObj = COSMETICS.flag.color;
   for (const [key, obj] of Object.entries(colorObj)) {
     if (obj && typeof (obj as any).color === "string") {
       colorKeyToColor[key] = (obj as any).color;
