@@ -2,7 +2,7 @@ import { LitElement, TemplateResult, html } from "lit";
 import { ref } from "lit-html/directives/ref.js";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
-import { renderPlayerFlag } from "../../../core/Cosmetics";
+import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import {
   PlayerProfile,

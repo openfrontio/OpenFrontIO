@@ -10,7 +10,7 @@ import nukeWhiteIcon from "../../../../resources/images/NukeIconWhite.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconBlack.svg";
 import targetIcon from "../../../../resources/images/TargetIcon.svg";
 import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
-import { renderPlayerFlag } from "../../../core/Cosmetics";
+import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { Theme } from "../../../core/configuration/Config";
 import { AllPlayers, Cell, nukeTypes } from "../../../core/game/Game";
