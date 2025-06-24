@@ -3,7 +3,12 @@ import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { GameMapType, GameMode } from "../core/game/Game";
 import { terrainMapFileLoader } from "../core/game/TerrainMapFileLoader";
-import { GameID, GameInfo } from "../core/Schemas";
+import {
+  GameID,
+  GameInfo,
+  PublicLobbies,
+  PublicLobbiesSchema,
+} from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { JoinLobbyEvent } from "./Main";
 
@@ -41,7 +46,8 @@ export class PublicLobby extends LitElement {
 
   private async fetchAndUpdateLobbies(): Promise<void> {
     try {
-      this.lobbies = await this.fetchLobbies();
+      const publicLobbies = await this.fetchPublicLobbies();
+      this.lobbies = publicLobbies.lobbies;
       this.lobbies.forEach((l) => {
         // Store the start time on first fetch because endpoint is cached, causing
         // the time to appear irregular.
@@ -72,13 +78,12 @@ export class PublicLobby extends LitElement {
     }
   }
 
-  async fetchLobbies(): Promise<GameInfo[]> {
+  async fetchPublicLobbies(): Promise<PublicLobbies> {
     try {
       const response = await fetch(`/api/public_lobbies`);
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
-      return data.lobbies;
+      return response.json().then(PublicLobbiesSchema.parse);
     } catch (error) {
       console.error("Error fetching lobbies:", error);
       throw error;

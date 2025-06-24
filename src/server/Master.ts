@@ -5,7 +5,7 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameInfo } from "../core/Schemas";
+import { GameInfo, PublicLobbies } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
@@ -260,7 +260,7 @@ async function fetchLobbies(): Promise<number> {
   // Update the JSON string
   publicLobbiesJsonStr = JSON.stringify({
     lobbies: lobbyInfos,
-  });
+  } satisfies PublicLobbies);
 
   return publicLobbyIDs.size;
 }
