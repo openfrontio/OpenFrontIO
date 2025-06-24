@@ -55,8 +55,8 @@ export class StructureLayer implements Layer {
     },
     [UnitType.Factory]: {
       icon: factoryIcon,
-      borderRadius: 8.525,
-      territoryRadius: 6.525,
+      borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
+      territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
     [UnitType.MissileSilo]: {
       icon: missileSiloIcon,
