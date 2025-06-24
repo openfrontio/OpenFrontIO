@@ -293,8 +293,7 @@ export class PlayerView {
     return this.totalLevels(UnitType.Factory);
   }
   private totalLevels(type: UnitType): number {
-    return this.game
-      .units(type)
+    return this.units(type)
       .map((unit) => unit.level())
       .reduce((a, b) => a + b, 0);
   }
