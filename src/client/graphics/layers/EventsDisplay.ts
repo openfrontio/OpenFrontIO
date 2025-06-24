@@ -642,20 +642,18 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   onVoteForPeaceExpiredEvent(event: ExpireVoteForPeaceUpdate) {
-    const vote = event.vote;
-    const voters = vote.results.keys();
+    const voteData = event.vote;
     const votedFor: string[] = [];
     const votedAgainst: string[] = [];
-    for (const voter in voters) {
-      if (vote.results.get(voter) !== true) {
-        votedAgainst.push(voter);
+    for (const [voterID, accepted] of voteData.results.entries()) {
+      if (accepted) {
+        votedFor.push(voterID);
       } else {
-        votedFor.push(voter);
+        votedAgainst.push(voterID);
       }
     }
     const votedForString = votedFor.join(", ");
     const votedAgainstString = votedAgainst.join(", ");
-
     this.addEvent({
       description: `${translateText("events_display.vote_expired", { votedForString, votedAgainstString })}`,
       type: MessageType.VOTE_FOR_PEACE_REPLY,

@@ -853,15 +853,9 @@ export class GameImpl implements Game {
         type: GameUpdateType.VoteForPeace,
         playerID: player.smallID(),
         leaderID: players[0].smallID(),
-        participants: players
-          .filter((player, index) => {
-            if (index > 0) {
-              return player;
-            }
-          })
-          .map((player) => {
-            return player.displayName();
-          }),
+        participants: players.slice(1).map((player) => {
+          return player.displayName();
+        }),
       });
     });
     this.currentVote = vote;

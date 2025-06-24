@@ -6,7 +6,6 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { TerraNulliusImpl } from "../../../core/game/TerraNulliusImpl";
 import { SendWinnerEvent } from "../../Transport";
-import { GutterAdModalEvent } from "./GutterAdModal";
 import { Layer } from "./Layer";
 
 @customElement("win-modal")
@@ -18,9 +17,6 @@ export class WinModal extends LitElement implements Layer {
 
   @state()
   isVisible = false;
-
-  @state()
-  showButtons = false;
 
   private _title: string;
   private _subtitle: string;
@@ -142,9 +138,7 @@ export class WinModal extends LitElement implements Layer {
         <h2>${this._title || ""}</h2>
         <h3>${this._subtitle || ""}</h3>
         ${this.innerHtml()}
-        <div
-          class="button-container ${this.showButtons ? "visible" : "hidden"}"
-        >
+        <div class="button-container">
           <button @click=${this._handleExit}>
             ${translateText("win_modal.exit")}
           </button>
@@ -178,21 +172,12 @@ export class WinModal extends LitElement implements Layer {
   }
 
   show() {
-    this.eventBus.emit(new GutterAdModalEvent(true));
-    setTimeout(() => {
-      this.isVisible = true;
-      this.requestUpdate();
-    }, 1500);
-    setTimeout(() => {
-      this.showButtons = true;
-      this.requestUpdate();
-    }, 3000);
+    this.isVisible = true;
+    this.requestUpdate();
   }
 
   hide() {
-    this.eventBus.emit(new GutterAdModalEvent(false));
     this.isVisible = false;
-    this.showButtons = false;
     this.requestUpdate();
   }
 
@@ -277,7 +262,7 @@ export class WinModal extends LitElement implements Layer {
           myPlayerName,
         );
 
-        let helpers = assistedByNames.join(", ");
+        const helpers = assistedByNames.join(", ");
 
         if (winnerClient !== null) {
           this.eventBus.emit(
@@ -289,44 +274,25 @@ export class WinModal extends LitElement implements Layer {
         }
 
         const myClientID = myPlayer?.clientID();
+        const isCurrentPlayerWinner =
+          winnerClient !== null && winnerClient === myPlayer?.clientID();
+        const isCurrentPlayerHelper =
+          typeof myClientID !== "undefined" &&
+          myClientID !== null &&
+          assistedByClientIds.includes(myClientID);
 
-        if (winnerClient !== null && winnerClient === myPlayer?.clientID()) {
+        if (isCurrentPlayerWinner) {
           this._title = translateText("win_modal.you_won");
-          if (
-            typeof myClientID !== "undefined" &&
-            myClientID !== null &&
-            assistedByClientIds.includes(myClientID)
-          ) {
-            helpers = this.determineNamesBySmallId(
-              assistedByIds,
-              myPlayerName,
-            ).join(",");
-            this._subtitle = translateText("win_modal.with_your_help", {
-              players: helpers,
-            });
-          } else {
-            this._subtitle = translateText("win_modal.with_help", {
-              players: helpers,
-            });
-          }
         } else {
           this._title = translateText("win_modal.other_won", {
             player: winner.name(),
           });
-          if (
-            typeof myClientID !== "undefined" &&
-            myClientID !== null &&
-            assistedByClientIds.includes(myClientID)
-          ) {
-            this._subtitle = translateText("win_modal.with_your_help", {
-              players: helpers,
-            });
-          } else {
-            this._subtitle = translateText("win_modal.with_help", {
-              players: helpers,
-            });
-          }
         }
+
+        this._subtitle = isCurrentPlayerHelper
+          ? translateText("win_modal.with_your_help", { players: helpers })
+          : translateText("win_modal.with_help", { players: helpers });
+
         this.show();
       }
     });
