@@ -349,6 +349,7 @@ export class PlayerInfo {
   public readonly clan: string | null;
 
   constructor(
+    public readonly pattern: string | undefined,
     public readonly flag: string | undefined,
     public readonly name: string,
     public readonly playerType: PlayerType,
@@ -507,7 +508,8 @@ export interface Player {
 
   // Units
   units(...types: UnitType[]): Unit[];
-  unitsIncludingConstruction(type: UnitType): Unit[];
+  unitsConstructed(type: UnitType): number;
+  unitsOwned(type: UnitType): number;
   buildableUnits(tile: TileRef): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
   buildUnit<T extends UnitType>(

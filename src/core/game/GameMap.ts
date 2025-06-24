@@ -67,11 +67,9 @@ export class GameMapImpl implements GameMap {
   private static readonly IS_LAND_BIT = 7;
   private static readonly SHORELINE_BIT = 6;
   private static readonly OCEAN_BIT = 5;
-  private static readonly MAGNITUDE_OFFSET = 4; // Uses bits 3-7 (5 bits)
   private static readonly MAGNITUDE_MASK = 0x1f; // 11111 in binary
 
   // State bits (Uint16Array)
-  private static readonly PLAYER_ID_OFFSET = 0; // Uses bits 0-11 (12 bits)
   private static readonly PLAYER_ID_MASK = 0xfff;
   private static readonly FALLOUT_BIT = 13;
   private static readonly DEFENSE_BONUS_BIT = 14;
