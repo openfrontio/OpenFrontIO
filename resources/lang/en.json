@@ -474,6 +474,7 @@
     },
     "pattern": {
       "default": "Default",
+      "custom": "Custom",
       "stripes_v": "Vertical Stripes",
       "stripes_h": "Horizontal Stripes",
       "checkerboard": "Checkerboard",

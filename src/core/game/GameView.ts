@@ -1,5 +1,5 @@
 import { Config } from "../configuration/Config";
-import { PatternDecoder } from "../Cosmetics";
+import { PatternDecoder } from "../PatternDecoder";
 import { ClientID, GameID } from "../Schemas";
 import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
