@@ -68,6 +68,7 @@ export class TerritoryPatternsModal extends LitElement {
         this.flares = flares;
       }
     }
+    this.checkPatternPermission(this.roles);
     this.requestUpdate();
   }
 
@@ -76,7 +77,6 @@ export class TerritoryPatternsModal extends LitElement {
     for (const key in patterns) {
       const patternData = patterns[key];
       const roleGroup: string[] | string | undefined = patternData.role_group;
-      console.log(`pattern:${key}`);
       if (
         this.flares.includes("pattern:*") ||
         this.flares.includes(`pattern:${key}`)
@@ -237,7 +237,6 @@ export class TerritoryPatternsModal extends LitElement {
 
   render() {
     this.resetLockedPatterns();
-    this.checkPatternPermission(this.roles);
     return html`
       ${this.renderTooltip()}
       <o-modal
