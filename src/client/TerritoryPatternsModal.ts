@@ -29,9 +29,6 @@ export class TerritoryPatternsModal extends LitElement {
   @state() private keySequence: string[] = [];
   @state() private showChocoPattern = false;
 
-  @state() private roles: string[] = [];
-  @state() private flares: string[] = [];
-
   public resizeObserver: ResizeObserver;
 
   private userSettings: UserSettings = new UserSettings();
@@ -58,34 +55,26 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   onUserMe(userMeResponse: UserMeResponse) {
-    const { user, player } = userMeResponse;
-    if (player) {
-      const { publicId, roles, flares } = player;
-      if (roles) {
-        this.roles = roles;
-      }
-      if (flares) {
-        this.flares = flares;
-      }
-    }
-    this.checkPatternPermission(this.roles);
+    const { player } = userMeResponse;
+    const { roles, flares } = player;
+    this.checkPatternPermission(roles, flares);
     this.requestUpdate();
   }
 
-  private checkPatternPermission(roles: string[]) {
+  private checkPatternPermission(
+    roles: string[] | undefined,
+    flares: string[] | undefined,
+  ) {
     const patterns = COSMETICS.patterns;
     for (const key in patterns) {
       const patternData = patterns[key];
       const roleGroup: string[] | string | undefined = patternData.role_group;
-      if (
-        this.flares.includes("pattern:*") ||
-        this.flares.includes(`pattern:${key}`)
-      ) {
+      if (flares?.includes("pattern:*") || flares?.includes(`pattern:${key}`)) {
         continue;
       }
 
       if (!roleGroup || (Array.isArray(roleGroup) && roleGroup.length === 0)) {
-        if (roles.length === 0) {
+        if (roles?.length === 0) {
           const reason = translateText("territory_patterns.blocked.login");
           this.setLockedPatterns([key], reason);
         }
@@ -236,7 +225,6 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   render() {
-    this.resetLockedPatterns();
     return html`
       ${this.renderTooltip()}
       <o-modal
