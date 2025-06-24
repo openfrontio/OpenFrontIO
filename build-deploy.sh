@@ -19,8 +19,8 @@ echo "  ./deploy.sh [prod|staging] [eu|nbg1|staging|masters] [version_tag] [subd
 echo ""
 
 # Check command line arguments
-if [ $# -lt 2 ] || [ $# -gt 4 ]; then
-    echo "Error: Please specify environment and host, with optional subdomain"
+if [ $# -lt 3 ] || [ $# -gt 5 ]; then
+    echo "Error: Please specify environment, host, and subdomain"
     echo "Usage: $0 [prod|staging] [eu|nbg1|staging|masters] [subdomain] [--enable_basic_auth]"
     exit 1
 fi
@@ -39,6 +39,13 @@ if [ "$2" != "eu" ] && [ "$2" != "nbg1" ] && [ "$2" != "staging" ] && [ "$2" != 
     exit 1
 fi
 
+# Validate third argument (subdomain)
+if [ -z "$3" ]; then
+    echo "Error: Subdomain is required"
+    echo "Usage: $0 [prod|staging] [eu|nbg1|staging|masters] [subdomain] [--enable_basic_auth]"
+    exit 1
+fi
+
 # Generate version tag
 VERSION_TAG=$(date +"%Y%m%d-%H%M%S")
 echo "Generated version tag: $VERSION_TAG"
@@ -46,11 +53,11 @@ echo "Generated version tag: $VERSION_TAG"
 # Extract arguments
 ENV="$1"
 HOST="$2"
-SUBDOMAIN=""
+SUBDOMAIN="$3"
 ENABLE_BASIC_AUTH=""
 
 # Parse remaining arguments
-shift 2
+shift 3
 while [[ $# -gt 0 ]]; do
     case $1 in
         --enable_basic_auth)
@@ -58,14 +65,9 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         *)
-            if [ -z "$SUBDOMAIN" ]; then
-                SUBDOMAIN=$1
-            else
-                echo "Error: Too many arguments"
-                echo "Usage: $0 [prod|staging] [eu|nbg1|staging|masters] [subdomain] [--enable_basic_auth]"
-                exit 1
-            fi
-            shift
+            echo "Error: Unknown argument: $1"
+            echo "Usage: $0 [prod|staging] [eu|nbg1|staging|masters] [subdomain] [--enable_basic_auth]"
+            exit 1
             ;;
     esac
 done
@@ -81,7 +83,7 @@ fi
 
 echo ""
 echo "Step 2: Running deploy.sh"
-./deploy.sh "$ENV" "$HOST" "$VERSION_TAG" "$SUBDOMAIN" "$ENABLE_BASIC_AUTH"
+./deploy.sh "$ENV" "$HOST" "$VERSION_TAG" "$SUBDOMAIN"
 
 if [ $? -ne 0 ]; then
     echo "❌ Deploy failed."

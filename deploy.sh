@@ -35,8 +35,8 @@ print_header() {
 }
 
 # Check command line arguments
-if [ $# -lt 3 ] || [ $# -gt 4 ]; then
-    echo "Error: Please specify environment, host, version tag, and optional subdomain"
+if [ $# -ne 4 ]; then
+    echo "Error: Please specify environment, host, version tag, and subdomain"
     echo "Usage: $0 [prod|staging] [eu|nbg1|staging|masters] [version_tag] [subdomain] [--enable_basic_auth]"
     exit 1
 fi
@@ -58,15 +58,10 @@ fi
 ENV=$1
 HOST=$2
 VERSION_TAG=$3
-SUBDOMAIN=$4 # Optional fourth argument for custom subdomain
+SUBDOMAIN=$4
 
-# Set subdomain - use the custom subdomain if provided, otherwise use HOST
-if [ -n "$SUBDOMAIN" ]; then
-    echo "Using custom subdomain: $SUBDOMAIN"
-else
-    SUBDOMAIN=$HOST
-    echo "Using host as subdomain: $SUBDOMAIN"
-fi
+# Set subdomain - use the provided subdomain
+echo "Using subdomain: $SUBDOMAIN"
 
 # Load common environment variables first
 if [ -f .env ]; then

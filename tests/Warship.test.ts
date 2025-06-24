@@ -25,6 +25,7 @@ describe("Warship", () => {
       },
       [
         new PlayerInfo(
+          undefined,
           "us",
           "boat dude",
           PlayerType.Human,
@@ -32,6 +33,7 @@ describe("Warship", () => {
           "player_1_id",
         ),
         new PlayerInfo(
+          undefined,
           "us",
           "boat dude",
           PlayerType.Human,

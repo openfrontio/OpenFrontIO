@@ -11,6 +11,11 @@ ENV="$1"
 VERSION_TAG="$2"
 METADATA_FILE="$3"
 
+# Set default metadata file if not provided
+if [ -z "$METADATA_FILE" ]; then
+    METADATA_FILE="/tmp/build-metadata-$RANDOM.json"
+fi
+
 # Check required arguments
 if [ -z "$ENV" ] || [ -z "$VERSION_TAG" ]; then
     echo "Error: Please specify environment and version tag"
@@ -57,6 +62,7 @@ DOCKER_IMAGE="${DOCKER_USERNAME}/${DOCKER_REPO}:${VERSION_TAG}"
 echo "Environment: ${ENV}"
 echo "Using version tag: $VERSION_TAG"
 echo "Docker repository: $DOCKER_REPO"
+echo "Metadata file: $METADATA_FILE"
 
 # Get Git commit for build info
 GIT_COMMIT=$(git rev-parse HEAD 2> /dev/null || echo "unknown")
@@ -65,6 +71,7 @@ echo "Git commit: $GIT_COMMIT"
 docker buildx build \
     --platform linux/amd64 \
     --build-arg GIT_COMMIT=$GIT_COMMIT \
+    --metadata-file $METADATA_FILE \
     -t $DOCKER_IMAGE \
     --push \
     .
@@ -78,14 +85,3 @@ echo "✅ Docker image built and pushed successfully."
 echo "Image: $DOCKER_IMAGE"
 
 print_header "BUILD COMPLETED SUCCESSFULLY ${DOCKER_IMAGE}"
-
-# Save container metadata to file if METADATA_FILE argument is provided
-if [ -n "$METADATA_FILE" ]; then
-    echo "Saving container metadata to $METADATA_FILE"
-    docker inspect $DOCKER_IMAGE > $METADATA_FILE
-    if [ $? -ne 0 ]; then
-        echo "❌ Failed to save container metadata to $METADATA_FILE"
-        exit 1
-    fi
-    echo "✅ Container metadata saved successfully to $METADATA_FILE"
-fi

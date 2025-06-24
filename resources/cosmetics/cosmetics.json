@@ -1,0 +1,76 @@
+{
+  "role_groups": {
+    "donor": ["1359441841371480176", "1330243292306341969"],
+    "creator": ["1286745100411473930"]
+  },
+  "patterns": {
+    "ABMIVVU=": {
+      "name": "stripes_v"
+    },
+    "ABMIDw8=": {
+      "name": "stripes_h"
+    },
+    "ABMIpaU=": {
+      "name": "checkerboard"
+    },
+    "AFIoAAABOEAHgkAc+AN/4AMcgAAA": {
+      "name": "choco"
+    },
+    "AHE4AQACAAQACAAQACAAQACAAAABAAIABAAIABAAIABAAIA=": {
+      "name": "diagonal",
+      "role_group": "donor"
+    },
+    "AHE4AYACQAQgCBAQCCAEQAKAAYABQAIgBBAICBAEIAJAAYA=": {
+      "name": "cross",
+      "role_group": "donor"
+    },
+    "AHEYA8AMMDAMwAPAAzAMDDADwA==": {
+      "name": "mini_cross",
+      "role_group": "donor"
+    },
+    "AHE4//8AAAAAAAAAAAAAAAAAAP//AAAAAAAAAAAAAAAAAAA=": {
+      "name": "horizontal_stripes",
+      "role_group": "donor"
+    },
+    "AHE4AQEAAAAAAAAAAAAAAAAAAAEBAAAAAAAAAAAAAAAAAAA=": {
+      "name": "sparse_dots",
+      "role_group": "donor"
+    },
+    "ALIUAAAAnsRIgiRZjuRpAiNJHiNJAAAA": {
+      "name": "evan",
+      "role_group": "creator"
+    },
+    "AHEYAYACQAQgCBAQCCAEQAKAAQ==": {
+      "name": "diagonal_stripe",
+      "role_group": "donor"
+    },
+    "AHEYAAAYGDw8fn7//35+PDwYGA==": {
+      "name": "mountain_ridge",
+      "role_group": "donor"
+    },
+    "AHEYAAACIAAAAAAAAAAACBAAAA==": {
+      "name": "scattered_dots",
+      "role_group": "donor"
+    },
+    "AHEYw8PDwwwMDAwwDDAMw8PDww==": {
+      "name": "circuit_board",
+      "role_group": "donor"
+    },
+    "AHEYSZJJkkmSSZJJkkmSSZJJkg==": {
+      "name": "vertical_bars",
+      "role_group": "donor"
+    },
+    "AHEYAAAAAAAAAkCCQUQiLnQWaA==": {
+      "name": "-w-",
+      "role_group": "donor"
+    },
+    "AHE4AAAAAKAAUAFQAVABCC4EUCQgJCAEIDgm0BBwDwAAAAA=": {
+      "name": "white_rabbit",
+      "role_group": "donor"
+    },
+    "AAIiAAAAAAAAAAAAAAAAAAAAAIDD8YnweTiiD5FIYEIgEpkIRCKBCoFIpCIQeTwyPB6RjEAkEIgQKEQiApFAIEIgEYkIOAKfCIGIIyIAAAAAAAAAAAA=": {
+      "name": "openfront",
+      "role_group": "creator"
+    }
+  }
+}

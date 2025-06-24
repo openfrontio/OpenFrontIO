@@ -1,10 +1,33 @@
 import { Cell } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { AStar, PathFindResultType } from "./AStar";
-import { SerialAStar } from "./SerialAStar";
+import { GraphAdapter, SerialAStar } from "./SerialAStar";
 
-export class MiniAStar implements AStar {
-  private aStar: AStar;
+export class GameMapAdapter implements GraphAdapter<TileRef> {
+  constructor(
+    private gameMap: GameMap,
+    private waterPath: boolean,
+  ) {}
+
+  neighbors(node: TileRef): TileRef[] {
+    return this.gameMap.neighbors(node);
+  }
+
+  cost(node: TileRef): number {
+    return this.gameMap.cost(node);
+  }
+
+  position(node: TileRef): { x: number; y: number } {
+    return { x: this.gameMap.x(node), y: this.gameMap.y(node) };
+  }
+
+  isTraversable(from: TileRef, to: TileRef): boolean {
+    const isWater = this.gameMap.isWater(to);
+    return this.waterPath ? isWater : !isWater;
+  }
+}
+export class MiniAStar implements AStar<TileRef> {
+  private aStar: AStar<TileRef>;
 
   constructor(
     private gameMap: GameMap,
@@ -13,6 +36,8 @@ export class MiniAStar implements AStar {
     private dst: TileRef,
     iterations: number,
     maxTries: number,
+    waterPath: boolean = true,
+    directionChangePenalty: number = 0,
   ) {
     const srcArray: TileRef[] = Array.isArray(src) ? src : [src];
     const miniSrc = srcArray.map((srcPoint) =>
@@ -32,7 +57,8 @@ export class MiniAStar implements AStar {
       miniDst,
       iterations,
       maxTries,
-      this.miniMap,
+      new GameMapAdapter(miniMap, waterPath),
+      directionChangePenalty,
     );
   }
 
