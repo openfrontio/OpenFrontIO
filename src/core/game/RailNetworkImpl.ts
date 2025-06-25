@@ -88,6 +88,8 @@ export function createRailNetwork(game: Game): RailNetwork {
 }
 
 export class RailNetworkImpl implements RailNetwork {
+  private maxConnectionDistance: number = 4;
+
   constructor(
     private game: Game,
     private stationManager: StationManager,
@@ -142,12 +144,20 @@ export class RailNetworkImpl implements RailNetwork {
       const neighborStation = this.stationManager.findStation(neighbor.unit);
       if (!neighborStation) continue;
 
-      const neighborCluster = neighborStation.getCluster();
-      if (!neighborCluster || neighborCluster.has(station)) continue;
+      const distanceToStation = this.distanceFrom(
+        neighborStation,
+        station,
+        this.maxConnectionDistance,
+      );
 
+      const neighborCluster = neighborStation.getCluster();
+      if (neighborCluster === null) continue;
+      const connectionAvailable =
+        distanceToStation > this.maxConnectionDistance ||
+        distanceToStation === -1;
       if (
-        neighbor.distSquared >
-        this.game.config().trainStationMinRange() ** 2
+        connectionAvailable &&
+        neighbor.distSquared > this.game.config().trainStationMinRange() ** 2
       ) {
         if (this.connect(station, neighborStation)) {
           neighborCluster.addStation(station);
@@ -194,6 +204,37 @@ export class RailNetworkImpl implements RailNetwork {
       return true;
     }
     return false;
+  }
+
+  private distanceFrom(
+    start: TrainStation,
+    dest: TrainStation,
+    maxDistance: number,
+  ): number {
+    if (start === dest) return 0;
+
+    const visited = new Set<TrainStation>();
+    const queue: Array<{ station: TrainStation; distance: number }> = [
+      { station: start, distance: 0 },
+    ];
+
+    while (queue.length > 0) {
+      const { station, distance } = queue.shift()!;
+      if (visited.has(station)) continue;
+      visited.add(station);
+
+      if (distance >= maxDistance) continue;
+
+      for (const neighbor of station.neighbors()) {
+        if (neighbor === dest) return distance + 1;
+        if (!visited.has(neighbor)) {
+          queue.push({ station: neighbor, distance: distance + 1 });
+        }
+      }
+    }
+
+    // If destination not found within maxDistance
+    return -1;
   }
 
   private computeCluster(start: TrainStation): Set<TrainStation> {
