@@ -170,6 +170,7 @@ export class UILayer implements Layer {
       case UnitType.City:
       case UnitType.Port:
       case UnitType.Factory:
+      case UnitType.Airport:
         this.drawBadges(unit);
         break;
       default:
