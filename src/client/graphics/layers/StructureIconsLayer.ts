@@ -56,9 +56,8 @@ export class StructureIconsLayer implements Layer {
   async setupRenderer() {
     this.renderer = new PIXI.WebGLRenderer();
     this.pixicanvas = document.createElement("canvas");
-    const canvasRect = this.transformHandler.boundingRect();
-    this.pixicanvas.width = canvasRect.width;
-    this.pixicanvas.height = canvasRect.height;
+    this.pixicanvas.width = innerWidth;
+    this.pixicanvas.height = innerHeight;
     this.stage = new PIXI.Container();
     this.stage.position.set(0, 0);
     this.stage.width = this.pixicanvas.width;
