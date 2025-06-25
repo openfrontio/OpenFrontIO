@@ -363,32 +363,42 @@ export class EventsDisplay extends LitElement implements Layer {
   onDisplayChatEvent(event: DisplayChatMessageUpdate) {
     const myPlayer = this.game.myPlayer();
     if (
-      event.playerID === null ||
+      event.playerSID === null ||
       !myPlayer ||
-      myPlayer.smallID() !== event.playerID
+      myPlayer.smallID() !== event.playerSID
     ) {
       return;
     }
 
     const baseMessage = translateText(`chat.${event.category}.${event.key}`);
     let translatedMessage = baseMessage;
-    if (event.target) {
+    if (event.playerInMessageID) {
       try {
-        const targetPlayer = this.game.player(event.target);
-        const targetName = targetPlayer?.name() ?? event.target;
-        translatedMessage = baseMessage.replace("[P1]", targetName);
+        const messagePlayer = this.game.player(event.playerInMessageID);
+        const messagePlayerDisplayName =
+          messagePlayer?.displayName() ?? event.playerInMessageID;
+        translatedMessage = baseMessage.replace(
+          "[P1]",
+          messagePlayerDisplayName,
+        );
       } catch (e) {
         console.warn(
-          `Failed to resolve player for target ID '${event.target}'`,
+          `Failed to resolve player for target ID '${event.playerInMessageID}'`,
           e,
         );
         return;
       }
     }
 
+    let otherPlayerDisplayName = "";
+    if (event.otherPlayerID !== null) {
+      const player = this.game.player(event.otherPlayerID);
+      otherPlayerDisplayName = player ? player.displayName() : "";
+    }
+
     this.addEvent({
       description: translateText(event.isFrom ? "chat.from" : "chat.to", {
-        user: event.recipient,
+        user: otherPlayerDisplayName,
         msg: translatedMessage,
       }),
       createdAt: this.game.ticks(),

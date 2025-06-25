@@ -679,10 +679,10 @@ export interface Game extends GameMap {
   displayChat(
     message: string,
     category: string,
-    target: PlayerID | undefined,
+    playerInMessageID: PlayerID | undefined,
     playerID: PlayerID | null,
     isFrom: boolean,
-    recipient: string,
+    otherPlayerID: PlayerID | null,
   ): void;
 
   // Nations
