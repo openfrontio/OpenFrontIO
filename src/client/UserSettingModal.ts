@@ -416,6 +416,15 @@ export class UserSettingModal extends LitElement {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
+      <setting-keybind
+        action="groundAttack"
+        label=${translateText("user_setting.ground_attack")}
+        description=${translateText("user_setting.ground_attack_desc")}
+        defaultKey="KeyG"
+        .value=${this.keybinds["groundAttack"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
       <div class="text-center text-white text-base font-semibold mt-5 mb-2">
         ${translateText("user_setting.zoom_controls")}
       </div>
