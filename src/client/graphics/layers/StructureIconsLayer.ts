@@ -111,7 +111,7 @@ export class StructureIconsLayer implements Layer {
       const canvasRect = this.transformHandler.boundingRect();
       this.pixicanvas.width = canvasRect.width;
       this.pixicanvas.height = canvasRect.height;
-      this.renderer.resize(window.innerWidth, window.innerHeight, 1);
+      this.renderer.resize(canvasRect.width, canvasRect.height, 1);
       this.shouldRedraw = true;
     }
   }
