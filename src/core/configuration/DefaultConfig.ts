@@ -499,7 +499,7 @@ export class DefaultConfig implements Config {
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 20,
-          upgradable: true,
+          upgradable: false,
         };
       case UnitType.CargoPlane:
         return {
