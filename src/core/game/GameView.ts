@@ -269,30 +269,7 @@ export class PlayerView {
     return this.data.troops;
   }
 
-  playerCities(): number {
-    return this.totalLevels(UnitType.City);
-  }
-
-  playerMissileSilos(): number {
-    return this.totalLevels(UnitType.MissileSilo);
-  }
-
-  playerPorts(): number {
-    return this.totalLevels(UnitType.Port);
-  }
-
-  playerDefensePosts(): number {
-    return this.totalLevels(UnitType.DefensePost);
-  }
-
-  playerSamLaunchers(): number {
-    return this.totalLevels(UnitType.SAMLauncher);
-  }
-
-  playerFactories(): number {
-    return this.totalLevels(UnitType.Factory);
-  }
-  private totalLevels(type: UnitType): number {
+  totalUnitLevels(type: UnitType): number {
     return this.units(type)
       .map((unit) => unit.level())
       .reduce((a, b) => a + b, 0);

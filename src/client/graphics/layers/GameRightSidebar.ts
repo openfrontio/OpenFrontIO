@@ -36,7 +36,8 @@ export class GameRightSidebar extends LitElement implements Layer {
 
   init() {
     this._isSinglePlayer =
-      this.game?.config()?.gameConfig()?.gameType === GameType.Singleplayer;
+      this.game?.config()?.gameConfig()?.gameType === GameType.Singleplayer ||
+      this.game.config().isReplay();
     this._isVisible = true;
     this.game.inSpawnPhase();
     this.requestUpdate();

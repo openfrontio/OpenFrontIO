@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
 import darkModeIcon from "../../../../resources/images/DarkModeIconWhite.svg";
@@ -20,6 +20,7 @@ import troopIcon from "../../../../resources/images/TroopIconWhite.svg";
 import workerIcon from "../../../../resources/images/WorkerIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
+import { UnitType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
@@ -65,12 +66,12 @@ export class GameTopBar extends LitElement implements Layer {
     if (!player) return;
     this._troops = player.troops();
     this._workers = player.workers();
-    this._cities = player.playerCities();
-    this._missileSilo = player.playerMissileSilos();
-    this._port = player.playerPorts();
-    this._defensePost = player.playerDefensePosts();
-    this._samLauncher = player.playerSamLaunchers();
-    this._factories = player.playerFactories();
+    this._cities = player.totalUnitLevels(UnitType.City);
+    this._missileSilo = player.totalUnitLevels(UnitType.MissileSilo);
+    this._port = player.totalUnitLevels(UnitType.Port);
+    this._defensePost = player.totalUnitLevels(UnitType.DefensePost);
+    this._samLauncher = player.totalUnitLevels(UnitType.SAMLauncher);
+    this._factories = player.totalUnitLevels(UnitType.Factory);
     this.requestUpdate();
   }
 
