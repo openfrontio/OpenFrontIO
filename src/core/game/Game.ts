@@ -647,10 +647,10 @@ export interface Game extends GameMap {
   displayChat(
     message: string,
     category: string,
-    target: PlayerID | undefined,
+    playerInMessageID: PlayerID | undefined,
     playerID: PlayerID | null,
     isFrom: boolean,
-    recipient: string,
+    otherPlayer: string,
   ): void;
 
   // Nations

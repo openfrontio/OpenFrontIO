@@ -118,9 +118,9 @@ export class Executor {
       case "quick_chat":
         return new QuickChatExecution(
           player,
-          intent.recipient,
+          intent.recipientID,
           intent.quickChatKey,
-          intent.target,
+          intent.playerInMessageID,
         );
       case "mark_disconnected":
         return new MarkDisconnectedExecution(player, intent.isDisconnected);

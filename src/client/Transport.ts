@@ -123,7 +123,7 @@ export class SendQuickChatEvent implements GameEvent {
   constructor(
     public readonly recipient: PlayerView,
     public readonly quickChatKey: string,
-    public readonly target?: PlayerID,
+    public readonly playerInMessageID?: PlayerID,
   ) {}
 }
 
@@ -511,9 +511,9 @@ export class Transport {
     this.sendIntent({
       type: "quick_chat",
       clientID: this.lobbyConfig.clientID,
-      recipient: event.recipient.id(),
+      recipientID: event.recipient.id(),
       quickChatKey: event.quickChatKey,
-      target: event.target,
+      playerInMessageID: event.playerInMessageID,
     });
   }
 

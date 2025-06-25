@@ -209,10 +209,10 @@ export type DisplayChatMessageUpdate = {
   type: GameUpdateType.DisplayChatEvent;
   key: string;
   category: string;
-  target: string | undefined;
-  playerID: number | null;
+  playerInMessageID: string | undefined;
+  playerSID: number | null;
   isFrom: boolean;
-  recipient: string;
+  otherPlayer: string;
 };
 
 export interface WinUpdate {

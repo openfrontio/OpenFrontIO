@@ -323,9 +323,9 @@ export const MoveWarshipIntentSchema = BaseIntentSchema.extend({
 
 export const QuickChatIntentSchema = BaseIntentSchema.extend({
   type: z.literal("quick_chat"),
-  recipient: ID,
+  recipientID: ID,
   quickChatKey: QuickChatKeySchema,
-  target: ID.optional(),
+  playerInMessageID: ID.optional(),
 });
 
 export const MarkDisconnectedIntentSchema = BaseIntentSchema.extend({
