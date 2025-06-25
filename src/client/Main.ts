@@ -220,6 +220,7 @@ class Client {
         loginDiscordButton.hidden = false;
         loginDiscordButton.addEventListener("click", discordLogin);
         logoutDiscordButton.hidden = true;
+        territoryModal.onLogout();
       });
       // Look up the discord user object.
       // TODO: Add caching
@@ -234,7 +235,6 @@ class Client {
         }
         loginDiscordButton.translationKey = "main.logged_in";
         loginDiscordButton.hidden = true;
-        const { user, player } = userMeResponse;
         territoryModal.onUserMe(userMeResponse);
       });
     }

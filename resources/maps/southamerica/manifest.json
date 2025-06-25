@@ -1,151 +1,159 @@
 {
+  "map": {
+    "height": 2378,
+    "num_land_tiles": 1513764,
+    "width": 1746
+  },
+  "mini_map": {
+    "height": 1189,
+    "num_land_tiles": 369899,
+    "width": 873
+  },
   "name": "Americas",
-  "width": 1746,
-  "height": 2378,
   "nations": [
     {
       "coordinates": [438, 58],
+      "flag": "cu",
       "name": "Cuba",
-      "strength": 1,
-      "flag": "cu"
+      "strength": 1
     },
     {
       "coordinates": [686, 133],
+      "flag": "do",
       "name": "Dominican Republic",
-      "strength": 1,
-      "flag": "do"
+      "strength": 1
     },
     {
       "coordinates": [601, 128],
+      "flag": "ht",
       "name": "Haiti",
-      "strength": 1,
-      "flag": "ht"
+      "strength": 1
     },
     {
       "coordinates": [112, 209],
+      "flag": "bz",
       "name": "Belize",
-      "strength": 1,
-      "flag": "bz"
+      "strength": 1
     },
     {
       "coordinates": [71, 282],
+      "flag": "gt",
       "name": "Guatemala",
-      "strength": 1,
-      "flag": "gt"
+      "strength": 1
     },
     {
       "coordinates": [214, 249],
+      "flag": "hn",
       "name": "Honduras",
-      "strength": 1,
-      "flag": "hn"
+      "strength": 1
     },
     {
       "coordinates": [238, 326],
+      "flag": "ni",
       "name": "Nicaragua",
-      "strength": 1,
-      "flag": "ni"
+      "strength": 1
     },
     {
       "coordinates": [375, 436],
+      "flag": "pa",
       "name": "Panama",
-      "strength": 3,
-      "flag": "pa"
+      "strength": 3
     },
     {
       "coordinates": [740, 1180],
+      "flag": "bo",
       "name": "Bolivia",
-      "strength": 1,
-      "flag": "bo"
+      "strength": 1
     },
     {
       "coordinates": [849, 1770],
+      "flag": "ar",
       "name": "Argentina",
-      "strength": 2,
-      "flag": "ar"
+      "strength": 2
     },
     {
       "coordinates": [1394, 1309],
+      "flag": "br",
       "name": "Brazil",
-      "strength": 2,
-      "flag": "br"
+      "strength": 2
     },
     {
       "coordinates": [691, 1371],
+      "flag": "cl",
       "name": "Chile",
-      "strength": 2,
-      "flag": "cl"
+      "strength": 2
     },
     {
       "coordinates": [527, 503],
+      "flag": "co",
       "name": "Colombia",
-      "strength": 2,
-      "flag": "co"
+      "strength": 2
     },
     {
       "coordinates": [384, 746],
+      "flag": "ec",
       "name": "Ecuador",
-      "strength": 1,
-      "flag": "ec"
+      "strength": 1
     },
     {
       "coordinates": [933, 423],
+      "flag": "gf",
       "name": "French Guyana",
-      "strength": 1,
-      "flag": "gf"
+      "strength": 1
     },
     {
       "coordinates": [800, 410],
+      "flag": "gy",
       "name": "Guyana",
-      "strength": 1,
-      "flag": "gy"
+      "strength": 1
     },
     {
       "coordinates": [541, 1092],
+      "flag": "pe",
       "name": "Peru",
-      "strength": 2,
-      "flag": "pe"
+      "strength": 2
     },
     {
       "coordinates": [960, 1496],
+      "flag": "py",
       "name": "Paraguay",
-      "strength": 1,
-      "flag": "py"
+      "strength": 1
     },
     {
       "coordinates": [890, 610],
+      "flag": "sr",
       "name": "Suriname",
-      "strength": 1,
-      "flag": "sr"
+      "strength": 1
     },
     {
       "coordinates": [1091, 1635],
+      "flag": "uy",
       "name": "Uruguay",
-      "strength": 1,
-      "flag": "uy"
+      "strength": 1
     },
     {
       "coordinates": [678, 904],
+      "flag": "ve",
       "name": "Venezuela",
-      "strength": 2,
-      "flag": "ve"
+      "strength": 2
     },
     {
       "coordinates": [1270, 1035],
+      "flag": "Aztec Empire",
       "name": "The Biggest Snakes",
-      "strength": 3,
-      "flag": "Aztec Empire"
+      "strength": 3
     },
     {
       "coordinates": [894, 693],
+      "flag": "",
       "name": "Normal Capybaras",
-      "strength": 3,
-      "flag": ""
+      "strength": 3
     },
     {
       "coordinates": [884, 832],
+      "flag": "",
       "name": "Just Otters",
-      "strength": 3,
-      "flag": ""
+      "strength": 3
     }
   ]
 }

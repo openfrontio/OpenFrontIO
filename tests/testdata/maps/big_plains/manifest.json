@@ -1,0 +1,13 @@
+{
+  "map": {
+    "height": 200,
+    "num_land_tiles": 40000,
+    "width": 200
+  },
+  "mini_map": {
+    "height": 100,
+    "num_land_tiles": 10000,
+    "width": 100
+  },
+  "name": "Big Plains"
+}

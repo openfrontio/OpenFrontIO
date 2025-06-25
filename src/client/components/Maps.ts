@@ -103,7 +103,7 @@ export class MapDisplay extends LitElement {
       const mapValue = GameMapType[this.mapKey as keyof typeof GameMapType];
       const data = terrainMapFileLoader.getMapData(mapValue);
       this.mapWebpPath = await data.webpPath();
-      this.mapName = (await data.nationMap()).name;
+      this.mapName = (await data.manifest()).name;
     } catch (error) {
       console.error("Failed to load map data:", error);
     } finally {

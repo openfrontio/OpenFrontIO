@@ -1,55 +1,63 @@
 {
+  "map": {
+    "height": 1760,
+    "num_land_tiles": 1777270,
+    "width": 2200
+  },
+  "mini_map": {
+    "height": 880,
+    "num_land_tiles": 441119,
+    "width": 1100
+  },
   "name": "Halkidiki",
-  "width": 2200,
-  "height": 1760,
   "nations": [
     {
       "coordinates": [1798, 984],
+      "flag": "ha_ma",
       "name": "Mount Athos",
-      "strength": 2,
-      "flag": "ha_ma"
+      "strength": 2
     },
     {
       "coordinates": [921, 1445],
+      "flag": "gr",
       "name": "Kassandra",
-      "strength": 2,
-      "flag": "gr"
+      "strength": 2
     },
     {
       "coordinates": [1488, 1387],
+      "flag": "gr",
       "name": "Sithonia",
-      "strength": 2,
-      "flag": "gr"
+      "strength": 2
     },
     {
       "coordinates": [380, 459],
+      "flag": "gr",
       "name": "Thessaloniki",
-      "strength": 2,
-      "flag": "gr"
+      "strength": 2
     },
     {
       "coordinates": [867, 803],
+      "flag": "gr",
       "name": "Polygyros",
-      "strength": 2,
-      "flag": "gr"
+      "strength": 2
     },
     {
       "coordinates": [218, 81],
+      "flag": "gr",
       "name": "Kilkis",
-      "strength": 2,
-      "flag": "gr"
+      "strength": 2
     },
     {
       "coordinates": [1192, 163],
+      "flag": "gr",
       "name": "Serres",
-      "strength": 2,
-      "flag": "gr"
+      "strength": 2
     },
     {
       "coordinates": [1807, 204],
+      "flag": "gr",
       "name": "Thrace",
-      "strength": 2,
-      "flag": "gr"
+      "strength": 2
     }
   ]
 }

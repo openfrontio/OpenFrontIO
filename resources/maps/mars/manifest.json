@@ -1,43 +1,51 @@
 {
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 1384168,
+    "width": 2000
+  },
+  "mini_map": {
+    "height": 500,
+    "num_land_tiles": 343861,
+    "width": 1000
+  },
   "name": "Mars",
-  "width": 2000,
-  "height": 1000,
   "nations": [
     {
       "coordinates": [650, 415],
+      "flag": "us",
       "name": "United States",
-      "strength": 3,
-      "flag": "us"
+      "strength": 3
     },
     {
       "coordinates": [122, 750],
+      "flag": "ussr",
       "name": "USSR",
-      "strength": 2,
-      "flag": "ussr"
+      "strength": 2
     },
     {
       "coordinates": [1232, 735],
+      "flag": "ru",
       "name": "Russia",
-      "strength": 2,
-      "flag": "ru"
+      "strength": 2
     },
     {
       "coordinates": [966, 511],
+      "flag": "",
       "name": "European Space Agency",
-      "strength": 2,
-      "flag": ""
+      "strength": 2
     },
     {
       "coordinates": [1460, 488],
+      "flag": "gb",
       "name": "United Kingdom",
-      "strength": 3,
-      "flag": "gb"
+      "strength": 3
     },
     {
       "coordinates": [1850, 415],
+      "flag": "cn",
       "name": "China",
-      "strength": 3,
-      "flag": "cn"
+      "strength": 3
     }
   ]
 }

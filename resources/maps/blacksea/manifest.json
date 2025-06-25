@@ -1,55 +1,63 @@
 {
+  "map": {
+    "height": 1100,
+    "num_land_tiles": 1201650,
+    "width": 1500
+  },
+  "mini_map": {
+    "height": 550,
+    "num_land_tiles": 296740,
+    "width": 750
+  },
   "name": "BlackSea",
-  "width": 1500,
-  "height": 1100,
   "nations": [
     {
       "coordinates": [122, 647],
+      "flag": "bg",
       "name": "Bulgaria",
-      "strength": 1,
-      "flag": "bg"
+      "strength": 1
     },
     {
       "coordinates": [513, 929],
+      "flag": "tr",
       "name": "Turkiye",
-      "strength": 2,
-      "flag": "tr"
+      "strength": 2
     },
     {
       "coordinates": [123, 237],
+      "flag": "ro",
       "name": "Romania",
-      "strength": 1,
-      "flag": "ro"
+      "strength": 1
     },
     {
       "coordinates": [300, 188],
+      "flag": "md",
       "name": "Moldova",
-      "strength": 1,
-      "flag": "md"
+      "strength": 1
     },
     {
       "coordinates": [737, 120],
+      "flag": "ua",
       "name": "Ukraine",
-      "strength": 1,
-      "flag": "ua"
+      "strength": 1
     },
     {
       "coordinates": [1180, 354],
+      "flag": "ru",
       "name": "Russia",
-      "strength": 3,
-      "flag": "ru"
+      "strength": 3
     },
     {
       "coordinates": [1362, 722],
+      "flag": "ge",
       "name": "Georgia",
-      "strength": 1,
-      "flag": "ge"
+      "strength": 1
     },
     {
       "coordinates": [1382, 943],
+      "flag": "am",
       "name": "Armenia",
-      "strength": 1,
-      "flag": "am"
+      "strength": 1
     }
   ]
 }
