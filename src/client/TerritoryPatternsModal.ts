@@ -33,6 +33,11 @@ export class TerritoryPatternsModal extends LitElement {
 
   private userSettings: UserSettings = new UserSettings();
 
+  constructor() {
+    super();
+    this.checkPatternPermission(undefined, undefined);
+  }
+
   connectedCallback() {
     super.connectedCallback();
     this.selectedPattern = this.userSettings.getSelectedPattern();
@@ -54,9 +59,22 @@ export class TerritoryPatternsModal extends LitElement {
     this.resizeObserver.disconnect();
   }
 
+  onLogout() {
+    this.checkPatternPermission(undefined, undefined);
+  }
+
   onUserMe(userMeResponse: UserMeResponse) {
     const { player } = userMeResponse;
     const { roles, flares } = player;
+    this.checkPatternPermission(roles, flares);
+  }
+
+  private checkPatternPermission(
+    roles: string[] | undefined,
+    flares: string[] | undefined,
+  ) {
+    this.lockedPatterns = [];
+    this.lockedReasons = {};
     for (const key in COSMETICS.patterns) {
       const patternData = COSMETICS.patterns[key];
       const roleGroup: string[] | string | undefined = patternData.role_group;
@@ -377,11 +395,6 @@ export class TerritoryPatternsModal extends LitElement {
         {} as Record<string, string>,
       ),
     };
-  }
-
-  private resetLockedPatterns() {
-    this.lockedPatterns = [];
-    this.lockedReasons = {};
   }
 
   private isPatternLocked(patternKey: string): boolean {
