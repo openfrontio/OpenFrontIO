@@ -158,7 +158,7 @@ export class AdminKickPanel extends LitElement implements Layer {
 
   private async checkAdminStatus() {
     try {
-      // Get current user's token from localStorage or game context
+      
       const token = this.game?.authToken;
       if (!token) {
         this.isVisible = false;
