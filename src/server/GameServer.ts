@@ -48,7 +48,6 @@ export class GameServer {
   private _hasPrestarted = false;
   private kickedClients: Set<ClientID> = new Set();
   private outOfSyncClients: Set<ClientID> = new Set();
-  public readonly hostPersistentID: string | null; // Add this
 
   constructor(
     public readonly id: string,
