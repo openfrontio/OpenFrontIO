@@ -269,21 +269,72 @@ export function startWorker() {
   app.post(
     "/api/kick_player/:gameID/:clientID",
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
-      if (req.headers[config.adminHeader()] !== config.adminToken()) {
-        res.status(401).send("Unauthorized");
-        return;
-      }
-
       const { gameID, clientID } = req.params;
-
-      const game = gm.game(gameID);
-      if (!game) {
-        res.status(404).send("Game not found");
+    
+      // Check admin header first (for server-to-server calls)
+      if (req.headers[config.adminHeader()] === config.adminToken()) {
+        const game = gm.game(gameID);
+        if (!game) {
+          res.status(404).send("Game not found");
+          return;
+        }
+        game.kickClient(clientID);
+        res.status(200).send("Player kicked successfully");
         return;
       }
 
-      game.kickClient(clientID);
-      res.status(200).send("Player kicked successfully");
+      // check user authorization via JWT token
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        res.status(401).send("Unauthorized - No token provided");
+        return;
+      }
+
+      const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+      
+      try {
+        // Verify the token and get user info
+        const userResult = await getUserMe(token, config);
+        if (!userResult) {
+          res.status(401).send("Unauthorized - Invalid token");
+          return;
+        }
+
+        const roles = userResult.player?.roles || [];
+      
+        // Check for admin roles (Admin, Mod, Head Mod, Support Staff)
+        const adminRoles = [
+          '1286738076386856991', // Admin
+          '1338654590043820148', // Mod  
+          '1357747869742010661', // Head Mod
+          '1343759662545244296'  // Support Staff
+        ];
+
+        const hasAdminRole = roles.some(role => adminRoles.includes(role));
+      
+        if (!hasAdminRole) {
+          log.warn(`Unauthorized kick attempt by user ${userResult.user.username} (${userResult.user.id})`);
+          res.status(403).send("Forbidden - Insufficient privileges");
+          return;
+        }
+
+       // user is authorized proceed with kick
+        const game = gm.game(gameID);
+        if (!game) {
+          res.status(404).send("Game not found");
+          return;
+        }
+
+        // Log it cus yeah
+        log.info(`Admin kick: ${userResult.user.username} (${userResult.user.id}) kicked client ${clientID} from game ${gameID}`);
+      
+        game.kickClient(clientID);
+        res.status(200).send("Player kicked successfully");
+      
+      } catch (error) {
+        log.error(`Error processing kick request: ${error}`);
+        res.status(500).send("Internal server error");
+      }
     }),
   );
 

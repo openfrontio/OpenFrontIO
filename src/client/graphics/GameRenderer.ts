@@ -37,6 +37,7 @@ import { UILayer } from "./layers/UILayer";
 import { UnitInfoModal } from "./layers/UnitInfoModal";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
+import { AdminKickPanel } from "./layers/AdminKickPanel";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,
@@ -222,6 +223,13 @@ export function createRenderer(
   }
   alertFrame.game = game;
 
+  const adminKickPanel = document.querySelector("admin-kick-panel") as AdminKickPanel;
+  if (!(adminKickPanel instanceof AdminKickPanel)) {
+    console.error("admin kick panel not found");
+  }
+  adminKickPanel.game = game;
+  adminKickPanel.eventBus = eventBus;
+
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
@@ -260,6 +268,7 @@ export function createRenderer(
     spawnAd,
     gutterAdModal,
     alertFrame,
+    adminKickPanel,
   ];
 
   return new GameRenderer(
