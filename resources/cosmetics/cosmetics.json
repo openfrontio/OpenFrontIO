@@ -4,35 +4,35 @@
     "creator": ["1286745100411473930"]
   },
   "patterns": {
-    "ABMIVVU=": {
+    "ABMIVVU": {
       "name": "stripes_v"
     },
-    "ABMIDw8=": {
+    "ABMIDw8": {
       "name": "stripes_h"
     },
-    "ABMIpaU=": {
+    "ABMIpaU": {
       "name": "checkerboard"
     },
-    "AFIoAAABOEAHgkAc+AN/4AMcgAAA": {
+    "AFIoAAABOEAHgkAc-AN_4AMcgAAA": {
       "name": "choco"
     },
-    "AHE4AQACAAQACAAQACAAQACAAAABAAIABAAIABAAIABAAIA=": {
+    "AHE4AQACAAQACAAQACAAQACAAAABAAIABAAIABAAIABAAIA": {
       "name": "diagonal",
       "role_group": "donor"
     },
-    "AHE4AYACQAQgCBAQCCAEQAKAAYABQAIgBBAICBAEIAJAAYA=": {
+    "AHE4AYACQAQgCBAQCCAEQAKAAYABQAIgBBAICBAEIAJAAYA": {
       "name": "cross",
       "role_group": "donor"
     },
-    "AHEYA8AMMDAMwAPAAzAMDDADwA==": {
+    "AHEYA8AMMDAMwAPAAzAMDDADwA": {
       "name": "mini_cross",
       "role_group": "donor"
     },
-    "AHE4//8AAAAAAAAAAAAAAAAAAP//AAAAAAAAAAAAAAAAAAA=": {
+    "AHE4__8AAAAAAAAAAAAAAAAAAP__AAAAAAAAAAAAAAAAAAA": {
       "name": "horizontal_stripes",
       "role_group": "donor"
     },
-    "AHE4AQEAAAAAAAAAAAAAAAAAAAEBAAAAAAAAAAAAAAAAAAA=": {
+    "AHE4AQEAAAAAAAAAAAAAAAAAAAEBAAAAAAAAAAAAAAAAAAA": {
       "name": "sparse_dots",
       "role_group": "donor"
     },
@@ -40,35 +40,35 @@
       "name": "evan",
       "role_group": "creator"
     },
-    "AHEYAYACQAQgCBAQCCAEQAKAAQ==": {
+    "AHEYAYACQAQgCBAQCCAEQAKAAQ": {
       "name": "diagonal_stripe",
       "role_group": "donor"
     },
-    "AHEYAAAYGDw8fn7//35+PDwYGA==": {
+    "AHEYAAAYGDw8fn7__35-PDwYGA": {
       "name": "mountain_ridge",
       "role_group": "donor"
     },
-    "AHEYAAACIAAAAAAAAAAACBAAAA==": {
+    "AHEYAAACIAAAAAAAAAAACBAAAA": {
       "name": "scattered_dots",
       "role_group": "donor"
     },
-    "AHEYw8PDwwwMDAwwDDAMw8PDww==": {
+    "AHEYw8PDwwwMDAwwDDAMw8PDww": {
       "name": "circuit_board",
       "role_group": "donor"
     },
-    "AHEYSZJJkkmSSZJJkkmSSZJJkg==": {
+    "AHEYSZJJkkmSSZJJkkmSSZJJkg": {
       "name": "vertical_bars",
       "role_group": "donor"
     },
-    "AHEYAAAAAAAAAkCCQUQiLnQWaA==": {
+    "AHEYAAAAAAAAAkCCQUQiLnQWaA": {
       "name": "-w-",
       "role_group": "donor"
     },
-    "AHE4AAAAAKAAUAFQAVABCC4EUCQgJCAEIDgm0BBwDwAAAAA=": {
+    "AHE4AAAAAKAAUAFQAVABCC4EUCQgJCAEIDgm0BBwDwAAAAA": {
       "name": "white_rabbit",
       "role_group": "donor"
     },
-    "AAIiAAAAAAAAAAAAAAAAAAAAAIDD8YnweTiiD5FIYEIgEpkIRCKBCoFIpCIQeTwyPB6RjEAkEIgQKEQiApFAIEIgEYkIOAKfCIGIIyIAAAAAAAAAAAA=": {
+    "AAIiAAAAAAAAAAAAAAAAAAAAAIDD8YnweTiiD5FIYEIgEpkIRCKBCoFIpCIQeTwyPB6RjEAkEIgQKEQiApFAIEIgEYkIOAKfCIGIIyIAAAAAAAAAAAA": {
       "name": "openfront",
       "role_group": "creator"
     }
