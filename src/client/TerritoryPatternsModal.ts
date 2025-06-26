@@ -2,8 +2,9 @@ import type { TemplateResult } from "lit";
 import { html, LitElement, render } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { PatternDecoder, territoryPatterns } from "../core/Cosmetics";
+import { COSMETICS } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
+import { PatternDecoder } from "../core/PatternDecoder";
 import "./components/Difficulties";
 import "./components/Maps";
 import { translateText } from "./Utils";
@@ -18,7 +19,7 @@ export class TerritoryPatternsModal extends LitElement {
   public previewButton: HTMLElement | null = null;
   public buttonWidth: number = 100;
 
-  @state() private selectedPattern: string | undefined = undefined;
+  @state() private selectedPattern: string | undefined;
 
   @state() private lockedPatterns: string[] = [];
   @state() private lockedReasons: Record<string, string> = {};
@@ -28,24 +29,18 @@ export class TerritoryPatternsModal extends LitElement {
   @state() private keySequence: string[] = [];
   @state() private showChocoPattern = false;
 
-  @state() private roles: string[] = [];
-  @state() private flares: string[] = [];
-
   public resizeObserver: ResizeObserver;
 
   private userSettings: UserSettings = new UserSettings();
 
+  constructor() {
+    super();
+    this.checkPatternPermission(undefined, undefined);
+  }
+
   connectedCallback() {
     super.connectedCallback();
-    const b64 = this.userSettings.getSelectedPattern();
-    if (b64) {
-      const found = Object.entries(territoryPatterns.pattern).find(
-        ([key, pattern]) => pattern.pattern === b64,
-      );
-      this.selectedPattern = found ? found[0] : "custom";
-    } else {
-      this.selectedPattern = undefined;
-    }
+    this.selectedPattern = this.userSettings.getSelectedPattern();
     window.addEventListener("keydown", this.handleKeyDown);
     this.updateComplete.then(() => {
       const containers = this.renderRoot.querySelectorAll(".preview-container");
@@ -64,36 +59,34 @@ export class TerritoryPatternsModal extends LitElement {
     this.resizeObserver.disconnect();
   }
 
-  onUserMe(userMeResponse: UserMeResponse) {
-    const { user, player } = userMeResponse;
-    if (player) {
-      const { publicId, roles, flares } = player;
-      if (roles) {
-        this.roles = roles;
-      }
-      if (flares) {
-        this.flares = flares;
-      }
-    }
-    this.requestUpdate();
+  onLogout() {
+    this.checkPatternPermission(undefined, undefined);
   }
 
-  private checkPatternPermission(roles: string[]) {
-    const patterns = territoryPatterns.pattern ?? {};
+  onUserMe(userMeResponse: UserMeResponse) {
+    const { player } = userMeResponse;
+    const { roles, flares } = player;
+    this.checkPatternPermission(roles, flares);
+  }
 
-    for (const key in patterns) {
-      const patternData = patterns[key];
+  private checkPatternPermission(
+    roles: string[] | undefined,
+    flares: string[] | undefined,
+  ) {
+    this.lockedPatterns = [];
+    this.lockedReasons = {};
+    for (const key in COSMETICS.patterns) {
+      const patternData = COSMETICS.patterns[key];
       const roleGroup: string[] | string | undefined = patternData.role_group;
-      console.log(`pattern:${key}`);
       if (
-        this.flares.includes("pattern:*") ||
-        this.flares.includes(`pattern:${key}`)
+        flares !== undefined &&
+        (flares.includes("pattern:*") || flares.includes(`pattern:${key}`))
       ) {
         continue;
       }
 
       if (!roleGroup || (Array.isArray(roleGroup) && roleGroup.length === 0)) {
-        if (roles.length === 0) {
+        if (roles === undefined || roles.length === 0) {
           const reason = translateText("territory_patterns.blocked.login");
           this.setLockedPatterns([key], reason);
         }
@@ -101,7 +94,9 @@ export class TerritoryPatternsModal extends LitElement {
       }
 
       const groupList = Array.isArray(roleGroup) ? roleGroup : [roleGroup];
-      const isAllowed = groupList.some((required) => roles.includes(required));
+      const isAllowed =
+        roles !== undefined &&
+        groupList.some((required) => roles.includes(required));
 
       if (!isAllowed) {
         const reason = translateText("territory_patterns.blocked.role", {
@@ -110,6 +105,7 @@ export class TerritoryPatternsModal extends LitElement {
         this.setLockedPatterns([key], reason);
       }
     }
+    this.requestUpdate();
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
@@ -158,21 +154,10 @@ export class TerritoryPatternsModal extends LitElement {
     return null;
   }
 
-  private renderPatternButton(
-    key: string,
-    pattern: (typeof territoryPatterns.pattern)[string],
-  ): TemplateResult {
+  private renderPatternButton(key: string): TemplateResult {
     const isLocked = this.isPatternLocked(key);
-    const isSelected =
-      this.selectedPattern === key ||
-      (key === "custom" && this.selectedPattern === "custom");
-    let previewPattern = pattern;
-    if (key === "custom") {
-      const b64 = this.userSettings.getSelectedPattern();
-      if (b64) {
-        previewPattern = { pattern: b64 } as any;
-      }
-    }
+    const isSelected = this.selectedPattern === key;
+    const name = COSMETICS.patterns[key]?.name ?? "custom";
     return html`
       <button
         class="border p-2 rounded-lg shadow text-black dark:text-white text-left
@@ -187,9 +172,7 @@ export class TerritoryPatternsModal extends LitElement {
         @mouseleave=${() => this.handleMouseLeave()}
       >
         <div class="text-sm font-bold mb-1">
-          ${key === "custom"
-            ? "Custom"
-            : translateText(`territory_patterns.pattern.${key}`)}
+          ${translateText(`territory_patterns.pattern.${name}`)}
         </div>
         <div
           class="preview-container"
@@ -204,23 +187,18 @@ export class TerritoryPatternsModal extends LitElement {
             overflow: hidden;
           "
         >
-          ${this.renderPatternPreview(
-            previewPattern,
-            this.buttonWidth,
-            this.buttonWidth,
-          )}
+          ${this.renderPatternPreview(key, this.buttonWidth, this.buttonWidth)}
         </div>
       </button>
     `;
   }
 
   private renderPatternGrid(): TemplateResult {
-    const patterns = territoryPatterns.pattern ?? {};
-
     const buttons: TemplateResult[] = [];
-    for (const key in patterns) {
-      if (!this.showChocoPattern && key === "choco") continue;
-      const result = this.renderPatternButton(key, patterns[key]);
+    for (const key in COSMETICS.patterns) {
+      const value = COSMETICS.patterns[key];
+      if (!this.showChocoPattern && value.name === "choco") continue;
+      const result = this.renderPatternButton(key);
       buttons.push(result);
     }
 
@@ -231,11 +209,11 @@ export class TerritoryPatternsModal extends LitElement {
       >
         <button
           class="border p-2 rounded-lg shadow text-black dark:text-white text-left
-          ${this.selectedPattern === null
+          ${this.selectedPattern === undefined
             ? "bg-blue-500 text-white"
             : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"}"
           style="flex: 0 1 calc(25% - 1rem); max-width: calc(25% - 1rem);"
-          @click=${() => this.selectPattern(null)}
+          @click=${() => this.selectPattern(undefined)}
         >
           <div class="text-sm font-bold mb-1">
             ${translateText("territory_patterns.pattern.default")}
@@ -262,8 +240,6 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   render() {
-    this.resetLockedPatterns();
-    this.checkPatternPermission(this.roles);
     return html`
       ${this.renderTooltip()}
       <o-modal
@@ -283,30 +259,19 @@ export class TerritoryPatternsModal extends LitElement {
     this.modalEl?.close();
   }
 
-  private selectPattern(patternKey: string | null) {
-    if (patternKey) {
-      const pattern = territoryPatterns.pattern[patternKey];
-      if (pattern) {
-        this.userSettings.setSelectedPattern(pattern.pattern);
-        this.selectedPattern = patternKey;
-      } else {
-        this.userSettings.setSelectedPattern("");
-        this.selectedPattern = undefined;
-      }
-    } else {
-      this.userSettings.setSelectedPattern("");
-      this.selectedPattern = undefined;
-    }
+  private selectPattern(pattern: string | undefined) {
+    this.userSettings.setSelectedPattern(pattern);
+    this.selectedPattern = pattern;
     this.updatePreview();
     this.close();
   }
 
   private renderPatternPreview(
-    pattern: (typeof territoryPatterns.pattern)[string],
+    pattern: string,
     width: number,
     height: number,
   ): TemplateResult {
-    const decoder = new PatternDecoder(pattern.pattern);
+    const decoder = new PatternDecoder(pattern);
     const cellCountX = decoder.getTileWidth();
     const cellCountY = decoder.getTileHeight();
 
@@ -410,24 +375,12 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   public updatePreview() {
-    if (!this.previewButton) return;
-
-    const patternKey = this.selectedPattern ?? "default";
-    let pattern = territoryPatterns.pattern[patternKey];
-    if (!pattern && patternKey === "custom") {
-      // customパターンはbase64から生成
-      const b64 = this.userSettings.getSelectedPattern();
-      if (b64) {
-        pattern = { pattern: b64 } as any;
-      }
-    }
-    if (!pattern) {
-      const blankPreview = this.renderBlankPreview(48, 48);
-      render(blankPreview, this.previewButton);
-      return;
-    }
-    const previewHTML = this.renderPatternPreview(pattern, 48, 48);
-    render(previewHTML, this.previewButton);
+    if (this.previewButton === null) return;
+    const preview =
+      this.selectedPattern === undefined
+        ? this.renderBlankPreview(48, 48)
+        : this.renderPatternPreview(this.selectedPattern, 48, 48);
+    render(preview, this.previewButton);
   }
 
   private setLockedPatterns(lockedPatterns: string[], reason: string) {
@@ -442,11 +395,6 @@ export class TerritoryPatternsModal extends LitElement {
         {} as Record<string, string>,
       ),
     };
-  }
-
-  private resetLockedPatterns() {
-    this.lockedPatterns = [];
-    this.lockedReasons = {};
   }
 
   private isPatternLocked(patternKey: string): boolean {

@@ -1,9 +1,6 @@
-import { PatternDecoder } from "../core/Cosmetics";
 import { Cosmetics } from "../core/CosmeticSchemas";
-type PatternEntry = {
-  pattern: string;
-  role_group?: string[];
-};
+import { PatternDecoder } from "../core/PatternDecoder";
+
 export class PrivilegeChecker {
   constructor(private cosmetics: Cosmetics) {}
 
@@ -13,16 +10,8 @@ export class PrivilegeChecker {
     flares: readonly string[] | undefined,
   ): true | "restricted" | "unlisted" | "invalid" {
     // Look for the pattern in the cosmetics.json config
-    let found: [string, PatternEntry] | undefined;
-    for (const key in this.cosmetics.pattern) {
-      const entry = this.cosmetics.pattern[key];
-      if (entry.pattern === base64) {
-        found = [key, entry];
-        break;
-      }
-    }
-
-    if (!found) {
+    const found = this.cosmetics.patterns[base64];
+    if (found === undefined) {
       try {
         // Ensure that the pattern will not throw for clients
         new PatternDecoder(base64);
@@ -32,33 +21,37 @@ export class PrivilegeChecker {
       }
       // Pattern is unlisted
       if (flares !== undefined && flares.includes("pattern:*")) {
+        // Player has the super-flare
         return true;
       }
       return "unlisted";
     }
 
-    const [key, entry] = found;
-    const allowedGroups = entry.role_group;
-
-    if (allowedGroups === undefined) {
+    const { role_group, name } = found;
+    if (role_group === undefined) {
+      // Pattern has no restrictions
       return true;
     }
 
-    for (const groupName of allowedGroups) {
-      const groupRoles = this.cosmetics.role_group?.[groupName] || [];
+    for (const groupName of role_group) {
       if (
         roles !== undefined &&
-        roles.some((role) => groupRoles.includes(role))
+        roles.some((role) =>
+          this.cosmetics.role_groups[groupName].includes(role),
+        )
       ) {
+        // Player is in a role group for this pattern
         return true;
       }
     }
 
     if (
       flares !== undefined &&
-      (flares.includes(`pattern:${key}`) || flares.includes("pattern:*"))
-    )
+      (flares.includes(`pattern:${name}`) || flares.includes("pattern:*"))
+    ) {
+      // Player has a flare for this pattern
       return true;
+    }
 
     return "restricted";
   }

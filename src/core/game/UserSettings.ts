@@ -1,3 +1,5 @@
+const PATTERN_KEY = "territoryPattern";
+
 export class UserSettings {
   get(key: string, defaultValue: boolean): boolean {
     const value = localStorage.getItem(key);
@@ -85,13 +87,15 @@ export class UserSettings {
     }
   }
 
-  private readonly PATTERN_KEY = "territoryPattern";
-
   getSelectedPattern(): string | undefined {
-    return localStorage.getItem(this.PATTERN_KEY) ?? undefined;
+    return localStorage.getItem(PATTERN_KEY) ?? undefined;
   }
 
-  setSelectedPattern(base64: string): void {
-    localStorage.setItem(this.PATTERN_KEY, base64);
+  setSelectedPattern(base64: string | undefined): void {
+    if (base64 === undefined) {
+      localStorage.removeItem(PATTERN_KEY);
+    } else {
+      localStorage.setItem(PATTERN_KEY, base64);
+    }
   }
 }
