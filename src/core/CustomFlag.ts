@@ -11,8 +11,8 @@ const ANIMATION_DURATIONS: Record<string, number> = {
   water: 6200,
 };
 
-export function renderPlayerFlag(flagCode: string, target: HTMLElement) {
-  if (!flagCode.startsWith("!ctmfg")) return;
+export function renderPlayerFlag(flag: string, target: HTMLElement) {
+  if (!flag.startsWith("!ctmfg")) return;
 
   const keyToLayerName: Record<string, string> = {};
   const layersObj = COSMETICS.flag.layers;
@@ -22,7 +22,7 @@ export function renderPlayerFlag(flagCode: string, target: HTMLElement) {
     }
   }
 
-  const code = flagCode.slice("!ctmfg".length);
+  const code = flag.slice("!ctmfg".length);
   const layers = code.split("_").map((segment) => {
     const [layerKey, colorKey] = segment.split("-");
     return { layerKey, colorKey };
