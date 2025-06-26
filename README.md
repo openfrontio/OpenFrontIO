@@ -22,6 +22,8 @@ This project uses a dual-licensing approach:
 - Code in the `server/` and `core/` directory is licensed under MIT
 - Client code (in the `client/` directory) is licensed under GPL v3
 
+See LICENSE file for more details.
+
 ## 🌟 Features
 
 - **Real-time Strategy Gameplay**: Expand your territory and engage in strategic battles
