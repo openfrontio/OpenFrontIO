@@ -199,20 +199,16 @@ export class NameLayer implements Layer {
     };
 
     if (player.flag()) {
-      const flagCode = player.flag();
-      if (
-        flagCode !== undefined &&
-        flagCode !== null &&
-        flagCode.startsWith("!ctmfg")
-      ) {
+      const flag = player.flag();
+      if (flag !== undefined && flag !== null && flag.startsWith("!ctmfg")) {
         const flagWrapper = document.createElement("div");
         applyFlagStyles(flagWrapper);
-        renderPlayerFlag(flagCode, flagWrapper);
+        renderPlayerFlag(flag, flagWrapper);
         nameDiv.appendChild(flagWrapper);
-      } else if (flagCode !== undefined && flagCode !== null) {
+      } else if (flag !== undefined && flag !== null) {
         const flagImg = document.createElement("img");
         applyFlagStyles(flagImg);
-        flagImg.src = "/flags/" + flagCode + ".svg";
+        flagImg.src = "/flags/" + flag + ".svg";
         nameDiv.appendChild(flagImg);
       }
     }
