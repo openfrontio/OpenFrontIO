@@ -77,7 +77,6 @@ describe("SAM", () => {
     while (game.inSpawnPhase()) {
       game.executeNextTick();
     }
-    game.executeNextTick();
 
     attacker = game.player("attacker_id");
     defender = game.player("defender_id");
@@ -203,7 +202,6 @@ describe("SAM", () => {
       null,
     );
     game.addExecution(nukeExecution);
-    game.executeNextTick();
     // Long distance nuke: compute the proper number of ticks
     const ticksToExecute = Math.ceil(
       targetDistance / game.config().defaultNukeSpeed(),
