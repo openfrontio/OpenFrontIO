@@ -1,21 +1,22 @@
-import { NukeExecution } from "../src/core/execution/NukeExecution";
-import { SAMLauncherExecution } from "../src/core/execution/SAMLauncherExecution";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { UpgradeStructureExecution } from "../src/core/execution/UpgradeStructureExecution";
+import { NukeExecution } from "../../../src/core/execution/NukeExecution";
+import { SAMLauncherExecution } from "../../../src/core/execution/SAMLauncherExecution";
+import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
+import { UpgradeStructureExecution } from "../../../src/core/execution/UpgradeStructureExecution";
 import {
   Game,
   Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
-import { setup } from "./util/Setup";
-import { constructionExecution, executeTicks } from "./util/utils";
+} from "../../../src/core/game/Game";
+import { setup } from "../../util/Setup";
+import { constructionExecution, executeTicks } from "../../util/utils";
 
 let game: Game;
 let attacker: Player;
 let defender: Player;
 let far_defender: Player;
+let middle_defender: Player;
 
 describe("SAM", () => {
   beforeEach(async () => {
@@ -30,6 +31,14 @@ describe("SAM", () => {
       PlayerType.Human,
       null,
       "defender_id",
+    );
+    const middle_defender_info = new PlayerInfo(
+      undefined,
+      "us",
+      "middle_defender_id",
+      PlayerType.Human,
+      null,
+      "middle_defender_id",
     );
     const far_defender_info = new PlayerInfo(
       undefined,
@@ -48,11 +57,16 @@ describe("SAM", () => {
       "attacker_id",
     );
     game.addPlayer(defender_info);
+    game.addPlayer(middle_defender_info);
     game.addPlayer(far_defender_info);
     game.addPlayer(attacker_info);
 
     game.addExecution(
       new SpawnExecution(game.player(defender_info.id).info(), game.ref(1, 1)),
+      new SpawnExecution(
+        game.player(middle_defender_info.id).info(),
+        game.ref(50, 1),
+      ),
       new SpawnExecution(
         game.player(far_defender_info.id).info(),
         game.ref(199, 1),
@@ -63,9 +77,11 @@ describe("SAM", () => {
     while (game.inSpawnPhase()) {
       game.executeNextTick();
     }
+    game.executeNextTick();
 
     attacker = game.player("attacker_id");
     defender = game.player("defender_id");
+    middle_defender = game.player("middle_defender_id");
     far_defender = game.player("far_defender_id");
 
     constructionExecution(game, attacker, 7, 7, UnitType.MissileSilo);
@@ -165,9 +181,9 @@ describe("SAM", () => {
   test("SAMs should target only nukes aimed at nearby targets if not close to launch site", async () => {
     const targetDistance = 199;
     // Middle SAM: should not intercept the nuke
-    const sam1 = defender.buildUnit(
+    const sam1 = middle_defender.buildUnit(
       UnitType.SAMLauncher,
-      game.ref(targetDistance / 2, 1),
+      game.ref(50, 1),
       {},
     );
     game.addExecution(new SAMLauncherExecution(defender, null, sam1));
@@ -187,12 +203,12 @@ describe("SAM", () => {
       null,
     );
     game.addExecution(nukeExecution);
+    game.executeNextTick();
     // Long distance nuke: compute the proper number of ticks
     const ticksToExecute = Math.ceil(
       targetDistance / game.config().defaultNukeSpeed(),
     );
     executeTicks(game, ticksToExecute);
-
     expect(nukeExecution.isActive()).toBeFalsy();
     expect(sam1.isInCooldown()).toBeFalsy();
     expect(sam2.isInCooldown()).toBeTruthy();
