@@ -85,6 +85,45 @@ export class AirPathFinder {
   }
 }
 
+export class StraightPathFinder {
+  constructor(private mg: GameMap) {}
+
+  nextTile(curr: TileRef, dst: TileRef, speed: number): TileRef | true {
+    const currX = this.mg.x(curr);
+    const currY = this.mg.y(curr);
+
+    const dstX = this.mg.x(dst);
+    const dstY = this.mg.y(dst);
+
+    const dx = dstX - currX;
+    const dy = dstY - currY;
+
+    const dist = Math.hypot(dx, dy);
+
+    // Snap to destination
+    if (dist <= speed) {
+      return true;
+    }
+
+    const dirX = dx / dist;
+    const dirY = dy / dist;
+
+    const nextX = Math.round(currX + dirX * speed);
+    const nextY = Math.round(currY + dirY * speed);
+
+    const remainingDx = dstX - nextX;
+    const remainingDy = dstY - nextY;
+    const remainingDist = Math.hypot(remainingDx, remainingDy);
+
+    if (remainingDist <= speed) {
+      // mark as reached
+      return true;
+    } else {
+      return this.mg.ref(nextX, nextY);
+    }
+  }
+}
+
 export class PathFinder {
   private curr: TileRef | null = null;
   private dst: TileRef | null = null;

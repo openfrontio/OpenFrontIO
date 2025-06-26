@@ -252,6 +252,20 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             : ""}
         </div>
         <div class="text-sm opacity-80" translate="no">
+          ${translateText("player_info_overlay.airports")}:
+          ${player.units(UnitType.Airport).length}
+          ${player
+            .units(UnitType.Airport)
+            .map((unit) => unit.level())
+            .reduce((a, b) => a + b, 0) > 1
+            ? html`(${translateText("player_info_overlay.levels")}:
+              ${player
+                .units(UnitType.Airport)
+                .map((unit) => unit.level())
+                .reduce((a, b) => a + b, 0)})`
+            : ""}
+        </div>
+        <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.cities")}:
           ${player.units(UnitType.City).length}
           ${player

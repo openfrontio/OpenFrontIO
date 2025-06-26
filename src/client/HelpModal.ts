@@ -439,6 +439,11 @@ export class HelpModal extends LitElement {
                 <td>${translateText("help_modal.build_port_desc")}</td>
               </tr>
               <tr>
+                <td>${translateText("help_modal.build_airport")}</td>
+                <td><div class="icon airport-icon"></div></td>
+                <td>${translateText("help_modal.build_airport_desc")}</td>
+              </tr>
+              <tr>
                 <td>${translateText("help_modal.build_warship")}</td>
                 <td><div class="icon warship-icon"></div></td>
                 <td>${translateText("help_modal.build_warship_desc")}</td>

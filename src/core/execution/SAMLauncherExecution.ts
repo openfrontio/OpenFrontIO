@@ -16,10 +16,14 @@ export class SAMLauncherExecution implements Execution {
 
   private searchRangeRadius = 80;
   private targetRangeRadius = 120; // Nuke's target should be in this range to be focusable
+
   // As MIRV go very fast we have to detect them very early but we only
   // shoot the one targeting very close (MIRVWarheadProtectionRadius)
   private MIRVWarheadSearchRadius = 400;
   private MIRVWarheadProtectionRadius = 50;
+
+  private cargoPlaneSearchRadius = 150;
+  private cargoPlaneCheckOffset: number = 0;
 
   private pseudoRandom: PseudoRandom | undefined;
 
@@ -35,6 +39,7 @@ export class SAMLauncherExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
+    this.cargoPlaneCheckOffset = mg.ticks() % 20;
   }
 
   private getSingleTarget(): Unit | null {
@@ -192,6 +197,10 @@ export class SAMLauncherExecution implements Execution {
       }
     }
 
+    if ((this.mg.ticks() + this.cargoPlaneCheckOffset) % 20 === 0) {
+      this.interceptCargoPlanes();
+    }
+
     const frontTime = this.sam.ticksLeftInCooldown();
     if (frontTime === undefined) {
       return;
@@ -205,6 +214,60 @@ export class SAMLauncherExecution implements Execution {
 
     if (cooldown <= 0) {
       this.sam.reloadMissile();
+    }
+  }
+
+  private interceptCargoPlanes() {
+    const potentialCargoPlaneTargets = this.mg.nearbyUnits(
+      this.sam!.tile(),
+      this.cargoPlaneSearchRadius,
+      UnitType.CargoPlane,
+    );
+    if (!this.sam) return;
+
+    const validCargoPlaneTargets = potentialCargoPlaneTargets.filter(
+      ({ unit }) => {
+        const unitOwner = unit.owner();
+        const targetUnitOwner = unit.targetUnit()?.owner();
+
+        if (unitOwner === this.player) return false;
+
+        // Do not shoot friendly cargo planes
+        if (this.player.isFriendly(unitOwner)) return false;
+
+        if (
+          targetUnitOwner === this.player ||
+          (targetUnitOwner && targetUnitOwner?.isFriendly(this.player))
+        ) {
+          return false;
+        }
+
+        // Only target units that are not targeted
+        return !unit.targetedBySAM();
+      },
+    );
+
+    if (validCargoPlaneTargets.length > 0) {
+      this.sam.launch();
+      const samOwner = this.sam!.owner();
+
+      this.mg.displayMessage(
+        `${validCargoPlaneTargets.length} Cargo Plane(s) intercepted`,
+        MessageType.SAM_HIT,
+        samOwner.id(),
+      );
+
+      validCargoPlaneTargets.forEach(({ unit: u }) => {
+        u.setTargetedBySAM(true);
+        this.mg.addExecution(
+          new SAMMissileExecution(
+            this.sam!.tile(),
+            this.sam!.owner(),
+            this.sam!,
+            u,
+          ),
+        );
+      });
     }
   }
 

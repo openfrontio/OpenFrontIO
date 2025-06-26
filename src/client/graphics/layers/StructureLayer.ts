@@ -6,6 +6,7 @@ import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { UnitInfoModal } from "./UnitInfoModal";
 
+import airportIcon from "../../../../resources/images/buildings/airport.png";
 import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
 import factoryIcon from "../../../../resources/images/buildings/factoryAlt1.png";
 import shieldIcon from "../../../../resources/images/buildings/fortAlt2.png";
@@ -63,6 +64,12 @@ export class StructureLayer implements Layer {
   private readonly unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
     [UnitType.Port]: {
       icon: anchorIcon,
+      borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
+      territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
+      borderType: UnitBorderType.Round,
+    },
+    [UnitType.Airport]: {
+      icon: airportIcon,
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
       borderType: UnitBorderType.Round,

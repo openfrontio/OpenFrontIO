@@ -150,6 +150,8 @@ export enum UnitType {
   MIRV = "MIRV",
   MIRVWarhead = "MIRV Warhead",
   Construction = "Construction",
+  Airport = "Air Port",
+  CargoPlane = "Cargo Plane",
   Train = "Train",
   Factory = "Factory",
 }
@@ -230,6 +232,12 @@ export interface UnitParamsMap {
   };
 
   [UnitType.Construction]: {};
+
+  [UnitType.Airport]: Record<string, never>;
+
+  [UnitType.CargoPlane]: {
+    targetUnit: Unit;
+  };
 }
 
 // Type helper to get params type for a specific unit type
@@ -586,6 +594,8 @@ export interface Player {
   toUpdate(): PlayerUpdate;
   playerProfile(): PlayerProfile;
   tradingPorts(port: Unit): Unit[];
+  airports(airport: Unit): Unit[];
+
   // WARNING: this operation is expensive.
   bestTransportShipSpawn(tile: TileRef): TileRef | false;
 }

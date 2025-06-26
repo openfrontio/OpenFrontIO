@@ -847,7 +847,10 @@ export class PlayerImpl implements Player {
       case UnitType.City:
       case UnitType.Factory:
       case UnitType.Construction:
+      case UnitType.Airport:
         return this.landBasedStructureSpawn(targetTile, validTiles);
+      case UnitType.CargoPlane:
+        return this.cargoPlaneSpawn(targetTile);
       default:
         assertNever(unitType);
     }
@@ -971,6 +974,17 @@ export class PlayerImpl implements Player {
     }
     return spawns[0].tile();
   }
+
+  cargoPlaneSpawn(targetTile: TileRef): TileRef | false {
+    const spawns = this.units(UnitType.Airport).filter(
+      (u) => u.tile() === targetTile,
+    );
+    if (spawns.length === 0) {
+      return false;
+    }
+    return spawns[0].tile();
+  }
+
   lastTileChange(): Tick {
     return this._lastTileChange;
   }
@@ -1117,5 +1131,39 @@ export class PlayerImpl implements Player {
       .forEach((p) => ports.push(p));
 
     return ports;
+  }
+
+  // It's a probability list, so if an element appears twice it's because it's
+  // twice more likely to be picked later.
+  airports(airport: Unit): Unit[] {
+    const airports = this.mg
+      .players()
+      .filter((p) => p !== airport.owner() && p.canTrade(airport.owner()))
+      .flatMap((p) => p.units(UnitType.Airport))
+      .sort((p1, p2) => {
+        return (
+          this.mg.manhattanDist(airport.tile(), p1.tile()) -
+          this.mg.manhattanDist(airport.tile(), p2.tile())
+        );
+      });
+
+    // Make close ports twice more likely by putting them again
+    for (
+      let i = 0;
+      i < this.mg.config().proximityBonusAirportsNumber(airports.length);
+      i++
+    ) {
+      airports.push(airports[i]);
+    }
+
+    // Make ally ports twice more likely by putting them again
+    this.mg
+      .players()
+      .filter((p) => p !== airport.owner() && p.canTrade(airport.owner()))
+      .filter((p) => p.isAlliedWith(airport.owner()))
+      .flatMap((p) => p.units(UnitType.Airport))
+      .forEach((p) => airports.push(p));
+
+    return airports;
   }
 }

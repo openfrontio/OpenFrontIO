@@ -97,13 +97,15 @@
     "build_silo": "Missile Silo",
     "build_silo_desc": "Allows launching missiles.",
     "build_sam": "SAM Launcher",
-    "build_sam_desc": "Can intercept enemy missiles in its 100 pixel range. With a 100% hit chance for Atom Bomb, 80% for Hydrogen Bomb and 50% for individual MIRV Warheads. The SAM has a 7.5 second cooldown.",
+    "build_sam_desc": "Can intercept enemy missiles and planes. Intercepts missiles in its 100 pixel range. With a 100% hit chance for Atom Bomb, 80% for Hydrogen Bomb and 50% for individual MIRV Warheads. The SAM has a 7.5 second cooldown for missiles, none for planes.",
     "build_atom": "Atom Bomb",
     "build_atom_desc": "Small explosive bomb that destroys territory, buildings, ships and boats. Spawns from the nearest Missile Silo and lands in the area you first clicked to build it.",
     "build_hydrogen": "Hydrogen Bomb",
     "build_hydrogen_desc": "Large explosive bomb. Spawns from the nearest Missile Silo and lands in the area you first clicked to build it.",
     "build_mirv": "MIRV",
     "build_mirv_desc": "The most powerful bomb in the game. Splits up into smaller bombs that will cover a huge range of territory. Only damages the player that you first clicked on to build it. Spawns from the nearest Missile Silo and lands in the area you first clicked to build it.",
+    "build_airport": "Airport",
+    "build_airport_desc": "Automatically sends cargo planes between airports of your country and other countries (except when trade is stopped), giving gold to both sides. Trade stops automatically when you attack or are attacked by a player. It resumes after 5 minutes or if you become allies. You can manually toggle trading with \"Stop trading\" or \"Start trading\".",
     "player_icons": "Player icons",
     "icon_desc": "Examples of some of the ingame icons you will encounter and what they mean:",
     "icon_crown": "Crown - Number 1. This is the top player in the leaderboard.",
@@ -230,7 +232,8 @@
     "sam_launcher": "SAM Launcher",
     "atom_bomb": "Atom Bomb",
     "hydrogen_bomb": "Hydrogen Bomb",
-    "mirv": "MIRV"
+    "mirv": "MIRV",
+    "airport": "Airport"
   },
   "user_setting": {
     "title": "User Settings",
@@ -369,11 +372,12 @@
       "hydrogen_bomb": "Large explosion",
       "mirv": "Huge explosion, only targets selected player",
       "missile_silo": "Used to launch nukes",
-      "sam_launcher": "Defends against incoming nukes",
+      "sam_launcher": "Defends against incoming nukes and planes",
       "warship": "Captures trade ships, destroys ships and boats",
       "port": "Sends trade ships to generate gold",
       "defense_post": "Increase defenses of nearby borders",
-      "city": "Increase max population"
+      "city": "Increase max population",
+      "airport": "Sends cargo planes to generate gold"
     },
     "not_enough_money": "Not enough money"
   },
@@ -412,7 +416,8 @@
     "warships": "Warships",
     "health": "Health",
     "attitude": "Attitude",
-    "levels": "Levels"
+    "levels": "Levels",
+    "airports": "Airports"
   },
   "events_display": {
     "retreating": "retreating",

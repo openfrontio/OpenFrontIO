@@ -8,6 +8,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { AirportExecution } from "./AirportExecution";
 import { CityExecution } from "./CityExecution";
 import { DefensePostExecution } from "./DefensePostExecution";
 import { FactoryExecution } from "./FactoryExecution";
@@ -115,6 +116,9 @@ export class ConstructionExecution implements Execution {
         break;
       case UnitType.City:
         this.mg.addExecution(new CityExecution(player, this.tile));
+        break;
+      case UnitType.Airport:
+        this.mg.addExecution(new AirportExecution(player, this.tile));
         break;
       case UnitType.Factory:
         this.mg.addExecution(new FactoryExecution(player, this.tile));
