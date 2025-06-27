@@ -12,7 +12,7 @@ const ANIMATION_DURATIONS: Record<string, number> = {
 };
 
 export function renderPlayerFlag(flag: string, target: HTMLElement) {
-  if (!flag.startsWith("!ctmfg")) return;
+  if (!flag.startsWith("!")) return;
 
   const keyToLayerName: Record<string, string> = {};
   const layersObj = COSMETICS.flag.layers;
@@ -22,7 +22,7 @@ export function renderPlayerFlag(flag: string, target: HTMLElement) {
     }
   }
 
-  const code = flag.slice("!ctmfg".length);
+  const code = flag.slice("!".length);
   const layers = code.split("_").map((segment) => {
     const [layerKey, colorKey] = segment.split("-");
     return { layerKey, colorKey };

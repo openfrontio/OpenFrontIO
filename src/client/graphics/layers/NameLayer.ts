@@ -200,7 +200,7 @@ export class NameLayer implements Layer {
 
     if (player.flag()) {
       const flag = player.flag();
-      if (flag !== undefined && flag !== null && flag.startsWith("!ctmfg")) {
+      if (flag !== undefined && flag !== null && flag.startsWith("!")) {
         const flagWrapper = document.createElement("div");
         applyFlagStyles(flagWrapper);
         renderPlayerFlag(flag, flagWrapper);
