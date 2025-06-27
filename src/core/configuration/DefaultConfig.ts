@@ -790,6 +790,14 @@ export class DefaultConfig implements Config {
     return 6;
   }
 
+  defaultNukeTargetableRange(): number {
+    return 120;
+  }
+
+  defaultSamRange(): number {
+    return 80;
+  }
+
   // Humans can be population, soldiers attacking, soldiers in boat etc.
   nukeDeathFactor(humans: number, tilesOwned: number): number {
     return (5 * humans) / Math.max(1, tilesOwned);

@@ -14,8 +14,6 @@ export class SAMLauncherExecution implements Execution {
   private mg: Game;
   private active: boolean = true;
 
-  private searchRangeRadius = 80;
-  private targetRangeRadius = 120; // Nuke's target should be in this range to be focusable
   // As MIRV go very fast we have to detect them very early but we only
   // shoot the one targeting very close (MIRVWarheadProtectionRadius)
   private MIRVWarheadSearchRadius = 400;
@@ -41,7 +39,7 @@ export class SAMLauncherExecution implements Execution {
     if (this.sam === null) return null;
     const nukes = this.mg.nearbyUnits(
       this.sam.tile(),
-      this.searchRangeRadius,
+      this.mg.config().defaultSamRange(),
       [UnitType.AtomBomb, UnitType.HydrogenBomb],
       ({ unit }) =>
         unit.owner() !== this.player &&
