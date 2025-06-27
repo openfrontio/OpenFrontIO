@@ -20,6 +20,7 @@ describe("Stats", () => {
     stats = new StatsImpl();
     game = await setup("half_land_half_ocean", {}, [
       new PlayerInfo(
+        undefined,
         "us",
         "boat dude",
         PlayerType.Human,
@@ -27,6 +28,7 @@ describe("Stats", () => {
         "player_1_id",
       ),
       new PlayerInfo(
+        undefined,
         "us",
         "boat dude",
         PlayerType.Human,
@@ -163,7 +165,7 @@ describe("Stats", () => {
   });
 
   test("bombIntercept", () => {
-    stats.bombIntercept(player1, player2, UnitType.MIRVWarhead);
+    stats.bombIntercept(player1, UnitType.MIRVWarhead, 1);
     expect(stats.stats()).toStrictEqual({
       client1: { bombs: { mirvw: [0n, 0n, 1n] } },
     });

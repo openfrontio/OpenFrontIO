@@ -1,5 +1,4 @@
 import { Execution, Game } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -23,6 +22,7 @@ import { RetreatExecution } from "./RetreatExecution";
 import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
+import { TrainStationExecution } from "./TrainStationExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 
@@ -72,16 +72,12 @@ export class Executor {
           this.mg.ref(intent.x, intent.y),
         );
       case "boat":
-        let src: TileRef | null = null;
-        if (intent.srcX !== null && intent.srcY !== null) {
-          src = this.mg.ref(intent.srcX, intent.srcY);
-        }
         return new TransportShipExecution(
           player,
           intent.targetID,
-          this.mg.ref(intent.dstX, intent.dstY),
+          intent.dst,
           intent.troops,
-          src,
+          intent.src,
         );
       case "allianceRequest":
         return new AllianceRequestExecution(player, intent.recipient);
@@ -117,6 +113,8 @@ export class Executor {
         );
       case "upgrade_structure":
         return new UpgradeStructureExecution(player, intent.unitId);
+      case "create_station":
+        return new TrainStationExecution(player, intent.unitId);
       case "quick_chat":
         return new QuickChatExecution(
           player,

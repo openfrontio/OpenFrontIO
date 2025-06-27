@@ -5,7 +5,7 @@ export type TileUpdate = bigint;
 
 export interface GameMap {
   ref(x: number, y: number): TileRef;
-
+  isValidRef(ref: TileRef): boolean;
   x(ref: TileRef): number;
   y(ref: TileRef): number;
   cell(ref: TileRef): Cell;
@@ -67,11 +67,9 @@ export class GameMapImpl implements GameMap {
   private static readonly IS_LAND_BIT = 7;
   private static readonly SHORELINE_BIT = 6;
   private static readonly OCEAN_BIT = 5;
-  private static readonly MAGNITUDE_OFFSET = 4; // Uses bits 3-7 (5 bits)
   private static readonly MAGNITUDE_MASK = 0x1f; // 11111 in binary
 
   // State bits (Uint16Array)
-  private static readonly PLAYER_ID_OFFSET = 0; // Uses bits 0-11 (12 bits)
   private static readonly PLAYER_ID_MASK = 0xfff;
   private static readonly FALLOUT_BIT = 13;
   private static readonly DEFENSE_BONUS_BIT = 14;
@@ -115,6 +113,10 @@ export class GameMapImpl implements GameMap {
       throw new Error(`Invalid coordinates: ${x},${y}`);
     }
     return this.yToRef[y] + x;
+  }
+
+  isValidRef(ref: TileRef): boolean {
+    return ref >= 0 && ref < this.refToX.length;
   }
 
   x(ref: TileRef): number {

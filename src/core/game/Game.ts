@@ -8,6 +8,7 @@ import {
   UnitUpdate,
 } from "./GameUpdates";
 import { PlayerView } from "./GameView";
+import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 
 export type PlayerID = string;
@@ -54,7 +55,7 @@ export const ColoredTeams: Record<string, Team> = {
 
 export enum GameMapType {
   World = "World",
-  WorldMapGiant = "Giant World Map",
+  GiantWorldMap = "Giant World Map",
   Europe = "Europe",
   EuropeClassic = "Europe Classic",
   Mena = "Mena",
@@ -82,7 +83,7 @@ export enum GameMapType {
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
     GameMapType.World,
-    GameMapType.WorldMapGiant,
+    GameMapType.GiantWorldMap,
     GameMapType.NorthAmerica,
     GameMapType.SouthAmerica,
     GameMapType.Europe,
@@ -131,6 +132,7 @@ export interface UnitInfo {
   damage?: number;
   constructionDuration?: number;
   upgradable?: boolean;
+  canBuildTrainStation?: boolean;
 }
 
 export enum UnitType {
@@ -149,6 +151,26 @@ export enum UnitType {
   MIRV = "MIRV",
   MIRVWarhead = "MIRV Warhead",
   Construction = "Construction",
+  Train = "Train",
+  Factory = "Factory",
+}
+
+export enum TrainType {
+  Engine = "Engine",
+  Carriage = "Carriage",
+}
+
+const _structureTypes: ReadonlySet<UnitType> = new Set([
+  UnitType.City,
+  UnitType.Construction,
+  UnitType.DefensePost,
+  UnitType.SAMLauncher,
+  UnitType.MissileSilo,
+  UnitType.Port,
+]);
+
+export function isStructureType(type: UnitType): boolean {
+  return _structureTypes.has(type);
 }
 
 export interface OwnerComp {
@@ -183,6 +205,14 @@ export interface UnitParamsMap {
     targetUnit: Unit;
     lastSetSafeFromPirates?: number;
   };
+
+  [UnitType.Train]: {
+    trainType: TrainType;
+    targetUnit?: Unit;
+    loaded?: boolean;
+  };
+
+  [UnitType.Factory]: {};
 
   [UnitType.MissileSilo]: {
     cooldownDuration?: number;
@@ -320,6 +350,7 @@ export class PlayerInfo {
   public readonly clan: string | null;
 
   constructor(
+    public readonly pattern: string | undefined,
     public readonly flag: string | undefined,
     public readonly name: string,
     public readonly playerType: PlayerType,
@@ -360,6 +391,13 @@ export interface Unit {
   touch(): void;
   hash(): number;
   toUpdate(): UnitUpdate;
+  hasTrainStation(): boolean;
+  setTrainStation(trainStation: boolean): void;
+
+  // Train
+  trainType(): TrainType | undefined;
+  isLoaded(): boolean | undefined;
+  setLoaded(loaded: boolean): void;
 
   // Targeting
   setTargetTile(cell: TileRef | undefined): void;
@@ -370,6 +408,8 @@ export interface Unit {
   targetedBySAM(): boolean;
   setReachedTarget(): void;
   reachedTarget(): boolean;
+  isTargetable(): boolean;
+  setTargetable(targetable: boolean): void;
 
   // Health
   hasHealth(): boolean;
@@ -469,7 +509,8 @@ export interface Player {
 
   // Units
   units(...types: UnitType[]): Unit[];
-  unitsIncludingConstruction(type: UnitType): Unit[];
+  unitsConstructed(type: UnitType): number;
+  unitsOwned(type: UnitType): number;
   buildableUnits(tile: TileRef): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
   buildUnit<T extends UnitType>(
@@ -587,6 +628,7 @@ export interface Game extends GameMap {
     tile: TileRef,
     searchRange: number,
     types: UnitType | UnitType[],
+    predicate?: (value: { unit: Unit; distSquared: number }) => boolean,
   ): Array<{ unit: Unit; distSquared: number }>;
 
   addExecution(...exec: Execution[]): void;
@@ -618,6 +660,9 @@ export interface Game extends GameMap {
   numTilesWithFallout(): number;
   // Optional as it's not initialized before the end of spawn phase
   stats(): Stats;
+
+  addUpdate(update: GameUpdate): void;
+  railNetwork(): RailNetwork;
 }
 
 export interface PlayerActions {

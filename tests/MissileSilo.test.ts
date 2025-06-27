@@ -31,8 +31,9 @@ function attackerBuildsNuke(
 
 describe("MissileSilo", () => {
   beforeEach(async () => {
-    game = await setup("Plains", { infiniteGold: true, instantBuild: true });
+    game = await setup("plains", { infiniteGold: true, instantBuild: true });
     const attacker_info = new PlayerInfo(
+      undefined,
       "fr",
       "attacker_id",
       PlayerType.Human,

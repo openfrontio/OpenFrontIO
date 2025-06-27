@@ -96,6 +96,10 @@ export class UnitGrid {
     tile: TileRef,
     searchRange: number,
     types: UnitType | UnitType[],
+    predicate?: (value: {
+      unit: Unit | UnitView;
+      distSquared: number;
+    }) => boolean,
   ): Array<{ unit: Unit | UnitView; distSquared: number }> {
     const nearby: Array<{ unit: Unit | UnitView; distSquared: number }> = [];
     const { startGridX, endGridX, startGridY, endGridY } = this.getCellsInRange(
@@ -107,12 +111,13 @@ export class UnitGrid {
     for (let cy = startGridY; cy <= endGridY; cy++) {
       for (let cx = startGridX; cx <= endGridX; cx++) {
         for (const unit of this.grid[cy][cx]) {
-          if (typeSet.has(unit.type()) && unit.isActive()) {
-            const distSquared = this.squaredDistanceFromTile(unit, tile);
-            if (distSquared <= rangeSquared) {
-              nearby.push({ unit, distSquared });
-            }
-          }
+          if (!typeSet.has(unit.type())) continue;
+          if (!unit.isActive()) continue;
+          const distSquared = this.squaredDistanceFromTile(unit, tile);
+          if (distSquared > rangeSquared) continue;
+          const value = { unit, distSquared };
+          if (predicate !== undefined && !predicate(value)) continue;
+          nearby.push(value);
         }
       }
     }

@@ -1,8 +1,6 @@
-import { TileRef } from "../game/GameMap";
-
-export interface AStar {
+export interface AStar<NodeType> {
   compute(): PathFindResultType;
-  reconstructPath(): TileRef[];
+  reconstructPath(): NodeType[];
 }
 
 export enum PathFindResultType {
@@ -11,17 +9,17 @@ export enum PathFindResultType {
   Completed,
   PathNotFound,
 }
-export type TileResult =
+export type AStarResult<NodeType> =
   | {
       type: PathFindResultType.NextTile;
-      tile: TileRef;
+      node: NodeType;
     }
   | {
       type: PathFindResultType.Pending;
     }
   | {
       type: PathFindResultType.Completed;
-      tile: TileRef;
+      node: NodeType;
     }
   | {
       type: PathFindResultType.PathNotFound;

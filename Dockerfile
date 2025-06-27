@@ -47,6 +47,9 @@ RUN npm run build-prod
 # https://openfront.io/commit.txt
 RUN echo "$GIT_COMMIT" > static/commit.txt
 
+# Update worker_connections in the existing nginx.conf
+RUN sed -i 's/worker_connections [0-9]*/worker_connections 8192/' /etc/nginx/nginx.conf
+
 # Copy Nginx configuration and ensure it's used instead of the default
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 RUN rm -f /etc/nginx/sites-enabled/default
