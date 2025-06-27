@@ -182,7 +182,7 @@ export const FlagSchema = z.string().max(128).optional();
 export const RequiredPatternSchema = z
   .string()
   .max(128)
-  .base64()
+  .base64url()
   .refine(
     (val) => {
       try {
