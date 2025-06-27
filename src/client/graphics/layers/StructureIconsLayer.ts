@@ -56,8 +56,8 @@ export class StructureIconsLayer implements Layer {
   async setupRenderer() {
     this.renderer = new PIXI.WebGLRenderer();
     this.pixicanvas = document.createElement("canvas");
-    this.pixicanvas.width = innerWidth;
-    this.pixicanvas.height = innerHeight;
+    this.pixicanvas.width = window.innerWidth;
+    this.pixicanvas.height = window.innerHeight;
     this.stage = new PIXI.Container();
     this.stage.position.set(0, 0);
     this.stage.width = this.pixicanvas.width;
@@ -84,9 +84,6 @@ export class StructureIconsLayer implements Layer {
     image.src = unitInfo.iconPath;
     image.onload = () => {
       unitInfo.image = image;
-      console.log(
-        `icon loaded: ${unitType}, size: ${image.width}x${image.height}`,
-      );
     };
     image.onerror = () => {
       console.error(
@@ -107,8 +104,8 @@ export class StructureIconsLayer implements Layer {
 
   resizeCanvas() {
     if (this.renderer.view) {
-      this.pixicanvas.width = innerWidth;
-      this.pixicanvas.height = innerHeight;
+      this.pixicanvas.width = window.innerWidth;
+      this.pixicanvas.height = window.innerHeight;
       this.renderer.resize(innerWidth, innerHeight, 1);
       this.shouldRedraw = true;
     }
@@ -158,7 +155,6 @@ export class StructureIconsLayer implements Layer {
   }
 
   redraw() {
-    console.log("structureIcons layer redrawing");
     this.resizeCanvas();
   }
 
