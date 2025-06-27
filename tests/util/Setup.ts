@@ -23,21 +23,22 @@ export async function setup(
   mapName: string,
   _gameConfig: Partial<GameConfig> = {},
   humans: PlayerInfo[] = [],
+  currentDir: string = __dirname,
 ): Promise<Game> {
   // Suppress console.debug for tests.
   console.debug = () => {};
 
   // Simple binary file loading using fs.readFileSync()
   const mapBinPath = path.join(
-    __dirname,
+    currentDir,
     `../testdata/maps/${mapName}/map.bin`,
   );
   const miniMapBinPath = path.join(
-    __dirname,
+    currentDir,
     `../testdata/maps/${mapName}/mini_map.bin`,
   );
   const manifestPath = path.join(
-    __dirname,
+    currentDir,
     `../testdata/maps/${mapName}/manifest.json`,
   );
 
