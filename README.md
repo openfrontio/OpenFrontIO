@@ -17,10 +17,11 @@ This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 
 # OpenFront - Licensing
 
-This project uses a dual-licensing approach:
+This project uses a multi-licensing approach:
 
 - Code in the `server/` and `core/` directory is licensed under MIT
 - Client code (in the `client/` directory) is licensed under GPL v3
+- Assets in resources/non-commercial are under CC BY-NC 4.0 with OpenFront LLC Commercial Exemption. By contributing assets to /non-commercial/, contributors agree that OpenFront LLC may use their contributions for commercial purposes while the contributions remain CC BY-NC 4.0 for all other parties.
 
 See LICENSE file for more details.
 
