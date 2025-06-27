@@ -36,12 +36,15 @@ export async function generateMap(
     `Processing Map: ${name}, dimensions: ${img.width}x${img.height}`,
   );
 
-  const terrain: Terrain[][] = Array(img.width)
-    .fill(null)
-    .map(() => Array(img.height).fill(null));
+  const width = img.width - (img.width % 2);
+  const height = img.height - (img.height % 2);
 
-  for (let x = 0; x < img.width; x++) {
-    for (let y = 0; y < img.height; y++) {
+  const terrain: Terrain[][] = Array(width)
+    .fill(null)
+    .map(() => Array(height).fill(null));
+
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
       const color = img.getPixelRGBA(x, y);
       const alpha = color & 0xff;
       const blue = (color >> 8) & 0xff;

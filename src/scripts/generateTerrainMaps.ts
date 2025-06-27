@@ -29,6 +29,8 @@ const maps = [
   "FalklandIslands",
   "Baikal",
   "Halkidiki",
+  "Italia",
+  "StraitOfGibraltar",
 ];
 
 const removeSmall = true;
