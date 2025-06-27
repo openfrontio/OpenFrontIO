@@ -138,7 +138,7 @@ export class WinModal extends LitElement implements Layer {
     return html`
       <div class="win-modal ${this.isVisible ? "visible" : ""}">
         <h2>${this._title || ""}</h2>
-        ${this.innerHtml()}
+        ${Math.random() > 0.5 ? this.steamWishlist() : this.openfrontMasters()}
         <div
           class="button-container ${this.showButtons ? "visible" : "hidden"}"
         >
@@ -153,7 +153,7 @@ export class WinModal extends LitElement implements Layer {
     `;
   }
 
-  innerHtml() {
+  steamWishlist() {
     return html`<p>
       <a
         href="https://store.steampowered.com/app/3560670"
@@ -170,6 +170,33 @@ export class WinModal extends LitElement implements Layer {
         onmouseout="this.style.color='#4a9eff'"
       >
         ${translateText("win_modal.wishlist")}
+      </a>
+    </p>`;
+  }
+
+  openfrontMasters() {
+    return html`<p>
+      <img
+        src="https://media.discordapp.net/attachments/929062786481414155/1383510435789275258/file_000000006a7461fbad8bb506a7375c16.png?ex=68505f80&is=684f0e00&hm=486ee7819e0bd2f62ef8075b8e53caa0b3f08983df1af08610909cc402d835f4&=&format=webp&quality=lossless&width=1288&height=859"
+        alt="OpenFront Masters"
+        style="max-width: 100%; height: auto; margin-bottom: 16px;"
+      />
+      <a
+        href="https://discord.gg/gStsGh5vWR"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="
+          color: #4a9eff;
+          text-decoration: underline;
+          font-weight: 500;
+          transition: color 0.2s ease;
+          font-size: 24px;
+        "
+        onmouseover="this.style.color='#6db3ff'"
+        onmouseout="this.style.color='#4a9eff'"
+      >
+        Watch the best compete in the
+        <span style="font-weight: bold;">OpenFront Masters</span>
       </a>
     </p>`;
   }
