@@ -21,6 +21,9 @@ export class WinModal extends LitElement implements Layer {
   @state()
   showButtons = false;
 
+  @state()
+  private showSteamContent = Math.random() > 0.5;
+
   private _title: string;
 
   // Override to prevent shadow DOM creation
@@ -138,7 +141,9 @@ export class WinModal extends LitElement implements Layer {
     return html`
       <div class="win-modal ${this.isVisible ? "visible" : ""}">
         <h2>${this._title || ""}</h2>
-        ${Math.random() > 0.5 ? this.steamWishlist() : this.openfrontMasters()}
+        ${this.showSteamContent
+          ? this.steamWishlist()
+          : this.openfrontMasters()}
         <div
           class="button-container ${this.showButtons ? "visible" : "hidden"}"
         >
