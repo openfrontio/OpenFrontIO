@@ -1,5 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import logo from "../../../../resources/images/ofm/logo_MASTER_2025.png";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
@@ -182,7 +183,7 @@ export class WinModal extends LitElement implements Layer {
   openfrontMasters() {
     return html`<p>
       <img
-        src="https://media.discordapp.net/attachments/929062786481414155/1383510435789275258/file_000000006a7461fbad8bb506a7375c16.png?ex=68505f80&is=684f0e00&hm=486ee7819e0bd2f62ef8075b8e53caa0b3f08983df1af08610909cc402d835f4&=&format=webp&quality=lossless&width=1288&height=859"
+        src="${logo}"
         alt="OpenFront Masters"
         style="max-width: 100%; height: auto; margin-bottom: 16px;"
       />
