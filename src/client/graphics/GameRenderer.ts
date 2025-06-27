@@ -128,12 +128,12 @@ export function createRenderer(
   playerInfo.transform = transformHandler;
   playerInfo.game = game;
 
-  const winModel = document.querySelector("win-modal") as WinModal;
-  if (!(winModel instanceof WinModal)) {
+  const winModal = document.querySelector("win-modal") as WinModal;
+  if (!(winModal instanceof WinModal)) {
     console.error("win modal not found");
   }
-  winModel.eventBus = eventBus;
-  winModel.game = game;
+  winModal.eventBus = eventBus;
+  winModal.game = game;
 
   const optionsMenu = document.querySelector("options-menu") as OptionsMenu;
   if (!(optionsMenu instanceof OptionsMenu)) {
@@ -250,7 +250,7 @@ export function createRenderer(
     gameLeftSidebar,
     controlPanel,
     playerInfo,
-    winModel,
+    winModal,
     optionsMenu,
     replayPanel,
     teamStats,
