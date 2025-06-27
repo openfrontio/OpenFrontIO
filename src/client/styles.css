@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import url("./styles/core/flag-animation.css");
 @import url("./styles/core/variables.css");
 @import url("./styles/core/typography.css");
 @import url("./styles/layout/header.css");

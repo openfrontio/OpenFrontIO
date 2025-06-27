@@ -246,7 +246,10 @@ export class UnitInfoModal extends LitElement implements Layer {
             class="upgrade-button"
             title="${translateText("unit_info_modal.create_station")}"
             style="width: 100px; height: 32px;
-              display: ${this.unit.hasTrainStation() ? "none" : "block"};"
+              display: ${this.unit.hasTrainStation() ||
+            !this.game.unitInfo(this.unit.type()).canBuildTrainStation
+              ? "none"
+              : "block"};"
           >
             ${translateText("unit_info_modal.create_station")}
           </button>
