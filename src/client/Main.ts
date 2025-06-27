@@ -220,6 +220,7 @@ class Client {
         loginDiscordButton.hidden = false;
         loginDiscordButton.addEventListener("click", discordLogin);
         logoutDiscordButton.hidden = true;
+        territoryModal.onLogout();
       });
       // Look up the discord user object.
       // TODO: Add caching
@@ -232,9 +233,12 @@ class Client {
           logoutDiscordButton.hidden = true;
           return;
         }
+        console.log(
+          `Your player ID is ${userMeResponse.player.publicId}\n` +
+            "Sharing this ID will allow others to view your game history and stats.",
+        );
         loginDiscordButton.translationKey = "main.logged_in";
         loginDiscordButton.hidden = true;
-        const { user, player } = userMeResponse;
         territoryModal.onUserMe(userMeResponse);
       });
     }
