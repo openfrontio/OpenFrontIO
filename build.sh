@@ -7,7 +7,7 @@
 set -e # Exit immediately if a command exits with a non-zero status
 
 # Parse command line arguments
-ENV="$1"
+DEPLOY_ENV="$1"
 VERSION_TAG="$2"
 METADATA_FILE="$3"
 
@@ -17,7 +17,7 @@ if [ -z "$METADATA_FILE" ]; then
 fi
 
 # Check required arguments
-if [ -z "$ENV" ] || [ -z "$VERSION_TAG" ]; then
+if [ -z "$DEPLOY_ENV" ] || [ -z "$VERSION_TAG" ]; then
     echo "Error: Please specify environment and version tag"
     echo "Usage: $0 [prod|staging] [version_tag] [metadata_file]"
     echo "Note: Provide metadata_file as third argument to save container metadata to a file"
@@ -25,7 +25,7 @@ if [ -z "$ENV" ] || [ -z "$VERSION_TAG" ]; then
 fi
 
 # Validate environment argument
-if [ "$ENV" != "prod" ] && [ "$ENV" != "staging" ]; then
+if [ "$DEPLOY_ENV" != "prod" ] && [ "$DEPLOY_ENV" != "staging" ]; then
     echo "Error: First argument must be either 'prod' or 'staging'"
     echo "Usage: $0 [prod|staging] [version_tag] [metadata_file]"
     echo "Note: Provide metadata_file as third argument to save container metadata to a file"
@@ -41,13 +41,17 @@ print_header() {
 # Load common environment variables first
 if [ -f .env ]; then
     echo "Loading common configuration from .env file..."
-    export $(grep -v '^#' .env | xargs)
+    set -o allexport
+    source .env
+    set +o allexport
 fi
 
 # Load environment-specific variables
-if [ -f .env.$ENV ]; then
-    echo "Loading $ENV-specific configuration from .env.$ENV file..."
-    export $(grep -v '^#' .env.$ENV | xargs)
+if [ -f .env.$DEPLOY_ENV ]; then
+    echo "Loading $DEPLOY_ENV-specific configuration from .env.$DEPLOY_ENV file..."
+    set -o allexport
+    source .env.$DEPLOY_ENV
+    set +o allexport
 fi
 
 # Check required environment variables for build
@@ -59,7 +63,7 @@ fi
 DOCKER_IMAGE="${DOCKER_USERNAME}/${DOCKER_REPO}:${VERSION_TAG}"
 
 # Build and upload Docker image to Docker Hub
-echo "Environment: ${ENV}"
+echo "Environment: ${DEPLOY_ENV}"
 echo "Using version tag: $VERSION_TAG"
 echo "Docker repository: $DOCKER_REPO"
 echo "Metadata file: $METADATA_FILE"

@@ -302,7 +302,7 @@ export class DefaultConfig implements Config {
     return Math.min(50, Math.round(10 * Math.pow(numberOfPorts, 0.6)));
   }
   trainSpawnRate(numberOfStations: number): number {
-    return Math.round(50 * Math.pow(numberOfStations, 0.8));
+    return Math.min(1400, Math.round(60 * Math.pow(numberOfStations, 0.8)));
   }
   trainGold(): Gold {
     return BigInt(10_000);
@@ -363,6 +363,7 @@ export class DefaultConfig implements Config {
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
+          canBuildTrainStation: true,
         };
       case UnitType.AtomBomb:
         return {
@@ -452,6 +453,7 @@ export class DefaultConfig implements Config {
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
+          canBuildTrainStation: true,
         };
       case UnitType.Factory:
         return {
@@ -466,6 +468,7 @@ export class DefaultConfig implements Config {
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+          canBuildTrainStation: true,
         };
       case UnitType.Construction:
         return {
