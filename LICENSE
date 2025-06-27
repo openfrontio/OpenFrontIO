@@ -1,10 +1,14 @@
-License Information for OpenFront.io Project
-Overview
-As of commit 25d5cc370207fd39e0c3bcaa69873b8fc6c60e68, the src/client directory of the OpenFront.io project has been relicensed from the MIT License to the GNU General Public License (GPL) version 3.0. The rest of the project remains under the MIT License unless otherwise specified. Below are the details of both licenses and their applicability.
+# License Information for OpenFront.io Project
+
+## Overview
+
+As of commit 25d5cc370207fd39e0c3bcaa69873b8fc6c60e68, the src/client directory of the OpenFront.io project has been relicensed from the MIT License to the GNU General Public License (GPL) version 3.0. The rest of the project remains under the MIT License unless otherwise specified. Assets in the `/non-commercial/` directory are licensed under CC BY-NC 4.0 with a commercial exemption for OpenFront LLC. Below are the details of all licenses and their applicability.
 
 ## MIT License
-   Applies to: All parts of the OpenFront.io project except the src/client directory as of commit 25d5cc370207fd39e0c3bcaa69873b8fc6c60e68 (March 25 2025).
-   MIT License
+
+**Applies to:** All parts of the OpenFront.io project except the src/client directory as of commit 25d5cc370207fd39e0c3bcaa69873b8fc6c60e68 (March 25 2025) and the `resources/non-commercial/` directory.
+
+MIT License
 
 Portions Copyright (c) 2024 WarFront.io Team
 Portions Copyright (c) 2024 OpenFront.io Team
@@ -28,9 +32,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ## GNU General Public License (GPL) version 3.0
-   Applies to: The src/client directory as of commit 25d5cc370207fd39e0c3bcaa69873b8fc6c60e68.
-   GNU GENERAL PUBLIC LICENSE
-   Version 3, 29 June 2007
+
+**Applies to:** The src/client directory as of commit 25d5cc370207fd39e0c3bcaa69873b8fc6c60e68.
+
+GNU GENERAL PUBLIC LICENSE
+Version 3, 29 June 2007
 
 Copyright (c) 2025 OpenFront.io Team
 
@@ -47,13 +53,46 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-[Full text of the GPL v3.0 license can be found in src/client/LICENSE-GPL, or at  <https://www.gnu.org/licenses/gpl-3.0.txt>]
+[Full text of the GPL v3.0 license can be found in src/client/LICENSE-GPL.txt, or at <https://www.gnu.org/licenses/gpl-3.0.txt>]
+
+## CC BY-NC 4.0 with Commercial Exemption
+
+**Applies to:** Assets in the `/non-commercial/` directory.
+
+CC BY-NC 4.0 with OpenFront LLC Commercial Exemption
+
+Copyright (c) 2025 OpenFront.io Team and Contributors
+
+This work is licensed under Creative Commons Attribution-NonCommercial 4.0
+International License with the following exception:
+
+**OpenFront LLC is granted unlimited commercial use rights for all purposes.**
+
+For all other parties, standard CC BY-NC 4.0 terms apply, which means:
+
+- **Attribution:** You must give appropriate credit
+- **NonCommercial:** You may not use the material for commercial purposes
+- **No additional restrictions:** You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits
+
+Full CC BY-NC 4.0 license text: https://creativecommons.org/licenses/by-nc/4.0/
 
 ## Important Notes
 
-MIT License: A permissive license that allows users to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the software with minimal restrictions, provided the copyright notice and permission notice are included.
-GPL v3.0: A copyleft license that requires any derivative works or distributions of the src/client code to also be licensed under GPL v3.0 or later, ensuring that the source code remains open and freely available.
-If you are combining code from src/client (GPL) with other parts of the project (MIT), the GPL’s copyleft requirements may affect the licensing of the combined work. Consult a legal expert for specific guidance.
-For contributions to src/client, ensure that all contributors agree to the GPL v3.0 terms.
+- **MIT License:** A permissive license that allows users to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the software with minimal restrictions, provided the copyright notice and permission notice are included.
+
+- **GPL v3.0:** A copyleft license that requires any derivative works or distributions of the src/client code to also be licensed under GPL v3.0 or later, ensuring that the source code remains open and freely available.
+
+- **CC BY-NC 4.0 with Exemption:** Protects assets from commercial exploitation while allowing OpenFront LLC full commercial rights. Community use for non-commercial purposes is encouraged.
+
+- **Mixed Licensing:** If you are combining code from src/client (GPL) with other parts of the project (MIT), the GPL's copyleft requirements may affect the licensing of the combined work. Consult a legal expert for specific guidance.
+
+- **Contributions:**
+  - For contributions to src/client, ensure that all contributors agree to the GPL v3.0 terms.
+  - For contributions to `/non-commercial/`, contributors grant CC BY-NC rights to the public and commercial rights to OpenFront LLC as specified in our contribution guidelines.
+  - For contributions to other directories, standard MIT terms apply.
+
+## Contributing
+
+Please see our CONTRIBUTING.md file for detailed information about licensing requirements for different parts of the project.
 
 For any questions, contact the OpenFront.io Team.

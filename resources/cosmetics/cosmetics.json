@@ -32,6 +32,10 @@
       "name": "horizontal_stripes",
       "role_group": "donor"
     },
+    "AHI4AOAAkACIAEQAIgARjAhUBCgCKAHQACgB1AILAwUABwA": {
+      "name": "sword",
+      "role_group": "donor"
+    },
     "AHE4AQEAAAAAAAAAAAAAAAAAAAEBAAAAAAAAAAAAAAAAAAA": {
       "name": "sparse_dots",
       "role_group": "donor"
