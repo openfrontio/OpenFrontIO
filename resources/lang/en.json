@@ -500,6 +500,10 @@
       "vertical_bars": "Vertical Bars",
       "-w-": ".w.",
       "white_rabbit": "White Rabbit",
+      "goat": "Goat",
+      "cursor": "Cursor",
+      "hand": "Hand",
+      "radiation": "Radiation",
       "openfront_qr": "OpenFront.io QR code",
       "openfront": "OpenFront"
     }

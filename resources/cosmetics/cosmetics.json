@@ -72,6 +72,22 @@
       "name": "white_rabbit",
       "role_group": "donor"
     },
+    "AKFwAAAADMAABSiAAgVAoQBQKAA0CwB6AfDhAwIAQQKQkAAkMgCTSkhlGpYBAQJAjAAgEAAQAgB6AUCAABAgAAoUgAIFoFIBqFcAKhWASgXA8wAAAAA": {
+      "name": "goat",
+      "role_group": "donor"
+    },
+    "AJhYAAAAGACABACQAAASAEACAMgBAMkBIMkAJCngJAkSIEECIEgABAKAQAAQEAACAiCAAAQQgAAECIAAAfA_AAAA": {
+      "name": "hand",
+      "role_group": "donor"
+    },
+    "AMFYAAAAAAAAAAzAADgAB_ABPuAH-IE_8Af_4T_8h__wz_zDv_cPAB4AADAAAAAAAIAHAAAeAAD8AADwAwDgHwCAfwAA_wMA8AMAAAAAAAAA": {
+      "name": "radiation",
+      "role_group": "donor"
+    },
+    "AJhMAAAABACAAQBwAAAeAMAHAPgBAH8A4B8A_AeA_wHwfwD-H8D_A_gHAO8B4DwADA-A4AEAGAAAAAA": {
+      "name": "cursor",
+      "role_group": "donor"
+    },
     "AMpkAAAA8DfCnyAQgnTl0KVrvS5d73UJkinIX1V_ABQD8BQ8l5WRRViBLOAEHw7_CtbhfP-ItdU0AmI8wrTwH4DbqPxpVCdIMhJdOL_our9PV681gg6s8BeFHwAAAAA": {
       "name": "openfront_qr",
       "role_group": "donor"
