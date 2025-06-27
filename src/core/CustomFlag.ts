@@ -14,14 +14,6 @@ const ANIMATION_DURATIONS: Record<string, number> = {
 export function renderPlayerFlag(flag: string, target: HTMLElement) {
   if (!flag.startsWith("!")) return;
 
-  const keyToLayerName: Record<string, string> = {};
-  const layersObj = COSMETICS.flag.layers;
-  for (const [key, obj] of Object.entries(layersObj)) {
-    if (obj && typeof (obj as any).name === "string") {
-      keyToLayerName[key] = (obj as any).name;
-    }
-  }
-
   const code = flag.slice("!".length);
   const layers = code.split("_").map((segment) => {
     const [layerKey, colorKey] = segment.split("-");
@@ -33,16 +25,8 @@ export function renderPlayerFlag(flag: string, target: HTMLElement) {
   target.style.position = "relative";
   target.style.aspectRatio = "3/4";
 
-  const colorKeyToColor: Record<string, string> = {};
-  const colorObj = COSMETICS.flag.color;
-  for (const [key, obj] of Object.entries(colorObj)) {
-    if (obj && typeof (obj as any).color === "string") {
-      colorKeyToColor[key] = (obj as any).color;
-    }
-  }
-
   for (const { layerKey, colorKey } of layers) {
-    const layerName = keyToLayerName[layerKey] || layerKey;
+    const layerName = COSMETICS.flag.layers[layerKey]?.name ?? layerKey;
 
     const mask = `/flags/custom/${layerName}.svg`;
     if (!mask) continue;
@@ -54,7 +38,7 @@ export function renderPlayerFlag(flag: string, target: HTMLElement) {
     layer.style.width = "100%";
     layer.style.height = "100%";
 
-    const colorValue = colorKeyToColor[colorKey] || colorKey;
+    const colorValue = COSMETICS.flag.color[colorKey]?.color ?? colorKey;
     const isSpecial =
       !colorValue.startsWith("#") &&
       !/^([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/.test(colorValue);
