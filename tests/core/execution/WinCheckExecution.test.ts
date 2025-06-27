@@ -7,7 +7,7 @@ describe("WinCheckExecution", () => {
   let winCheck: WinCheckExecution;
 
   beforeEach(async () => {
-    mg = await setup("BigPlains", {
+    mg = await setup("big_plains", {
       infiniteGold: true,
       gameMode: GameMode.FFA,
       maxTimerValue: 5,
@@ -67,7 +67,7 @@ describe("WinCheckExecution", () => {
   });
 
   it("should set winner in FFA if timer is 0", () => {
-    (winCheck as any).timer = 0;
+    (winCheck as any).timer = 0; // Simulate timer reaching 0
     const player = {
       numTilesOwned: jest.fn(() => 10),
       name: jest.fn(() => "P1"),
