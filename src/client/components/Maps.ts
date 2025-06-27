@@ -29,6 +29,8 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   FalklandIslands: "Falkland Islands",
   Baikal: "Baikal",
   Halkidiki: "Halkidiki",
+  Italia: "Italia",
+  StraitOfGibraltar: "Strait of Gibraltar",
 };
 
 @customElement("map-display")
