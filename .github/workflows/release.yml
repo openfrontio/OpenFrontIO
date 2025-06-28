@@ -36,8 +36,6 @@ jobs:
           EOF
           ./build.sh prod "${RELEASE_TAG_NAME}" "${RELEASE_BODY}" /tmp/build-metadata.json
           IMAGE_ID=$(jq -r '."containerimage.digest"' /tmp/build-metadata.json)
-          echo "${IMAGE_ID}"
-          echo "${DOCKER_USERNAME}/${DOCKER_REPO}@${IMAGE_ID}"
           echo "IMAGE_ID=${IMAGE_ID}" >> $GITHUB_OUTPUT
           echo "Image ID: `${IMAGE_ID}`" >> $GITHUB_STEP_SUMMARY
     outputs:
@@ -49,6 +47,7 @@ jobs:
     timeout-minutes: 30
     needs: [build]
     steps:
+      - uses: actions/checkout@v4
       - env:
           IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
           RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
