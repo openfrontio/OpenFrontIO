@@ -62,11 +62,11 @@ jobs:
       - env:
           DOCKER_REPO: openfront-prod
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
-          IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
+          IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
         run: |
           set -euxo pipefail
-          ./deploy.sh staging staging "${IMAGE_ID}" alpha
+          bash -x ./deploy.sh staging staging "${IMAGE_ID}" alpha
 
   deploy-beta:
     name: 🐞 Deploy to beta
@@ -89,7 +89,7 @@ jobs:
       - env:
           DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
-          IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
+          IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
           SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
         run: |
           set -euxo pipefail
@@ -116,7 +116,7 @@ jobs:
       - env:
           DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
-          IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
+          IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
           SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
         run: |
           set -euxo pipefail
@@ -143,7 +143,7 @@ jobs:
       - env:
           DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
-          IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
+          IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
           SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
         run: |
           set -euxo pipefail
