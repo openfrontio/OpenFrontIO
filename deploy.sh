@@ -81,7 +81,11 @@ if [ -z "$DOCKER_USERNAME" ] || [ -z "$DOCKER_REPO" ]; then
     exit 1
 fi
 
-DOCKER_IMAGE="${DOCKER_USERNAME}/${DOCKER_REPO}:${VERSION_TAG}"
+if [[ "$VERSION_TAG" == sha256:* ]]; then
+    DOCKER_IMAGE="${DOCKER_USERNAME}/${DOCKER_REPO}@${VERSION_TAG}"
+else
+    DOCKER_IMAGE="${DOCKER_USERNAME}/${DOCKER_REPO}:${VERSION_TAG}"
+fi
 
 if [ "$HOST" == "staging" ]; then
     print_header "DEPLOYING TO STAGING HOST"
