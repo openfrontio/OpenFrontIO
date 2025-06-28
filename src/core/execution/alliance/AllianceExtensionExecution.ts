@@ -1,4 +1,10 @@
-import { Execution, Game, MessageType, Player } from "../../game/Game";
+import {
+  Execution,
+  Game,
+  MessageType,
+  Player,
+  PlayerType,
+} from "../../game/Game";
 
 export class AllianceExtensionExecution implements Execution {
   private isDone = false;
@@ -29,6 +35,16 @@ export class AllianceExtensionExecution implements Execution {
 
     // Mark this player's intent to extend
     alliance.requestExtension(from);
+
+    // If the other player is a bot or fake human, request extension on their behalf
+    if (
+      this.to.type &&
+      typeof this.to.type === "function" &&
+      (this.to.type() === PlayerType.Bot ||
+        this.to.type() === PlayerType.FakeHuman)
+    ) {
+      alliance.requestExtension(this.to);
+    }
 
     // Only extend if both players want it
     if (alliance.wantsExtension()) {
