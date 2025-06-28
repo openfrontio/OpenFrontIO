@@ -22,18 +22,21 @@ describe("AllianceExtensionExecution", () => {
     });
 
     const p1Info = new PlayerInfo(
-      "us",
-      "Player1",
-      PlayerType.Human,
-      "client1",
-      "p1",
+      undefined, // pattern
+      "us", // flag
+      "Player1", // name
+      PlayerType.Human, // playerType
+      "client1", // clientID
+      "p1", // id
     );
+
     const p2Info = new PlayerInfo(
-      "us",
-      "Player2",
-      PlayerType.Human,
-      null,
-      "p2",
+      undefined, // pattern
+      "us", // flag
+      "Player2", // name
+      PlayerType.Human, // playerType
+      null, // clientID
+      "p2", // id
     );
 
     game.addPlayer(p1Info);
