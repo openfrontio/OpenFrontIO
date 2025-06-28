@@ -21,7 +21,7 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - env:
-        DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
+          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
         run: |
           echo "Original repo: $DOCKER_REPO"
           NEW_REPO="${DOCKER_REPO%-prod}-staging"
