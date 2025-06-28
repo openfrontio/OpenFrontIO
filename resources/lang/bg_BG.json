@@ -1,4 +1,8 @@
 {
+  "ver": {
+    "openfront": "23.*",
+    "mls": "3.3"
+  },
   "lang": {
     "en": "Bulgarian",
     "native": "Български",

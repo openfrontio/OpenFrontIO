@@ -1,4 +1,8 @@
 {
+  "ver": {
+    "openfront": "23.*",
+    "mls": "3.3"
+  },
   "main": {
     "join_discord": "Tritt dem Discord bei!",
     "create_lobby": "Lobby erstellen",
