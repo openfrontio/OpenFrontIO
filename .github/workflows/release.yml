@@ -16,7 +16,7 @@ jobs:
     environment: staging
     steps:
       - uses: actions/checkout@v4
-        env:
+      - env:
           RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
           RELEASE_NAME: ${{ github.event.release.name }}
           RELEASE_BODY: ${{ github.event.release.body }}
@@ -36,10 +36,7 @@ jobs:
           ./build.sh prod "${RELEASE_TAG_NAME}" /tmp/build-metadata.json
           IMAGE_ID=$(jq -r '."containerimage.digest"' /tmp/build-metadata.json)
           echo "IMAGE_ID=${IMAGE_ID}" >> $GITHUB_OUTPUT
-          cat >> $GITHUB_SUMMARY <<EOF
-          IMAGE_ID=${IMAGE_ID}
-          RELASE_TAG_NAME=${RELEASE_TA_NAME}
-          EOF
+          echo "Image ID: `${IMAGE_ID}`" >> $GITHUB_STEP_SUMMARY
     outputs:
       IMAGE_ID: ${{ steps.build.outputs.IMAGE_ID }}
 
