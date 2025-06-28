@@ -1,5 +1,5 @@
 export default {
-  testEnvironment: "node",
+  testEnvironment: "jsdom",
   testRegex: "/tests/.*\\.(test|spec)?\\.(ts|tsx)$",
   moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
   extensionsToTreatAsEsm: [".ts"],
