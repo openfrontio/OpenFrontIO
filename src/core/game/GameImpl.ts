@@ -684,8 +684,14 @@ export class GameImpl implements Game {
     tile: TileRef,
     searchRange: number,
     types: UnitType | UnitType[],
+    predicate?: (value: { unit: Unit; distSquared: number }) => boolean,
   ): Array<{ unit: Unit; distSquared: number }> {
-    return this.unitGrid.nearbyUnits(tile, searchRange, types) as Array<{
+    return this.unitGrid.nearbyUnits(
+      tile,
+      searchRange,
+      types,
+      predicate,
+    ) as Array<{
       unit: Unit;
       distSquared: number;
     }>;

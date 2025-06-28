@@ -14,7 +14,13 @@ export default {
       "ts-jest",
       {
         useESM: true,
-        tsconfig: "tsconfig.jest.json",
+        tsconfig: {
+          target: "ES2020",
+          module: "es2022",
+          moduleResolution: "node",
+          experimentalDecorators: true,
+          types: ["jest", "node"],
+        },
       },
     ],
   },

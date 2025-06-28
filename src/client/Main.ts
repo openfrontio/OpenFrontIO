@@ -233,6 +233,10 @@ class Client {
           logoutDiscordButton.hidden = true;
           return;
         }
+        console.log(
+          `Your player ID is ${userMeResponse.player.publicId}\n` +
+            "Sharing this ID will allow others to view your game history and stats.",
+        );
         loginDiscordButton.translationKey = "main.logged_in";
         loginDiscordButton.hidden = true;
         territoryModal.onUserMe(userMeResponse);

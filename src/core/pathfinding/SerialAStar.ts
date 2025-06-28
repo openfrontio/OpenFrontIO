@@ -1,4 +1,4 @@
-import { PriorityQueue } from "@datastructures-js/priority-queue";
+import FastPriorityQueue from "fastpriorityqueue";
 import { AStar, PathFindResultType } from "./AStar";
 
 /**
@@ -12,11 +12,11 @@ export interface GraphAdapter<NodeType> {
 }
 
 export class SerialAStar<NodeType> implements AStar<NodeType> {
-  private fwdOpenSet: PriorityQueue<{
+  private fwdOpenSet: FastPriorityQueue<{
     tile: NodeType;
     fScore: number;
   }>;
-  private bwdOpenSet: PriorityQueue<{
+  private bwdOpenSet: FastPriorityQueue<{
     tile: NodeType;
     fScore: number;
   }>;
@@ -39,15 +39,15 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
     private graph: GraphAdapter<NodeType>,
     private directionChangePenalty: number = 0,
   ) {
-    this.fwdOpenSet = new PriorityQueue((a, b) => a.fScore - b.fScore);
-    this.bwdOpenSet = new PriorityQueue((a, b) => a.fScore - b.fScore);
+    this.fwdOpenSet = new FastPriorityQueue((a, b) => a.fScore < b.fScore);
+    this.bwdOpenSet = new FastPriorityQueue((a, b) => a.fScore < b.fScore);
     this.sources = Array.isArray(src) ? src : [src];
     this.closestSource = this.findClosestSource(dst);
 
     // Initialize forward search with source point(s)
     this.sources.forEach((startPoint) => {
       this.fwdGScore.set(startPoint, 0);
-      this.fwdOpenSet.enqueue({
+      this.fwdOpenSet.add({
         tile: startPoint,
         fScore: this.heuristic(startPoint, dst),
       });
@@ -55,7 +55,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
 
     // Initialize backward search from destination
     this.bwdGScore.set(dst, 0);
-    this.bwdOpenSet.enqueue({
+    this.bwdOpenSet.add({
       tile: dst,
       fScore: this.heuristic(dst, this.findClosestSource(dst)),
     });
@@ -85,7 +85,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
       }
 
       // Process forward search
-      const fwdCurrent = this.fwdOpenSet.dequeue()!.tile;
+      const fwdCurrent = this.fwdOpenSet.poll()!.tile;
 
       // Check if we've found a meeting point
       if (this.bwdGScore.has(fwdCurrent)) {
@@ -96,7 +96,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
       this.expandNode(fwdCurrent, true);
 
       // Process backward search
-      const bwdCurrent = this.bwdOpenSet.dequeue()!.tile;
+      const bwdCurrent = this.bwdOpenSet.poll()!.tile;
 
       // Check if we've found a meeting point
       if (this.fwdGScore.has(bwdCurrent)) {
@@ -145,7 +145,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
         const fScore =
           totalG +
           this.heuristic(neighbor, isForward ? this.dst : this.closestSource);
-        openSet.enqueue({ tile: neighbor, fScore: fScore });
+        openSet.add({ tile: neighbor, fScore: fScore });
       }
     }
   }
@@ -153,7 +153,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
   private heuristic(a: NodeType, b: NodeType): number {
     const posA = this.graph.position(a);
     const posB = this.graph.position(b);
-    return 1.1 * (Math.abs(posA.x - posB.x) + Math.abs(posA.y - posB.y));
+    return 2 * (Math.abs(posA.x - posB.x) + Math.abs(posA.y - posB.y));
   }
 
   private getDirection(from: NodeType, to: NodeType): string {
