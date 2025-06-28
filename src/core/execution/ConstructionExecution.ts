@@ -97,26 +97,33 @@ export class ConstructionExecution implements Execution {
         this.mg.addExecution(new MirvExecution(player, this.tile));
         break;
       case UnitType.Warship:
+        window.soundManager.play("Build Warship");
         this.mg.addExecution(
           new WarshipExecution({ owner: player, patrolTile: this.tile }),
         );
         break;
       case UnitType.Port:
+        window.soundManager.play("Build Port");
         this.mg.addExecution(new PortExecution(player, this.tile));
         break;
       case UnitType.MissileSilo:
+        window.soundManager.play("SILO Built");
         this.mg.addExecution(new MissileSiloExecution(player, this.tile));
         break;
       case UnitType.DefensePost:
+        window.soundManager.play("Build Defense Post");
         this.mg.addExecution(new DefensePostExecution(player, this.tile));
         break;
       case UnitType.SAMLauncher:
+        window.soundManager.play("SAM Built");
         this.mg.addExecution(new SAMLauncherExecution(player, this.tile));
         break;
       case UnitType.City:
+        window.soundManager.play("Build City");
         this.mg.addExecution(new CityExecution(player, this.tile));
         break;
       case UnitType.Factory:
+        window.soundManager.play("Build City");
         this.mg.addExecution(new FactoryExecution(player, this.tile));
         break;
       default:
