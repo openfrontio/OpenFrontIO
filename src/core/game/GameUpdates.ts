@@ -9,6 +9,7 @@ import {
   PlayerType,
   Team,
   Tick,
+  TrainType,
   UnitType,
 } from "./Game";
 import { TileRef, TileUpdate } from "./GameMap";
@@ -43,6 +44,8 @@ export enum GameUpdateType {
   UnitIncoming,
   AllianceExtensionPrompt,
   AllianceExtensionAccepted,
+  BonusEvent,
+  RailroadEvent,
 }
 
 export type GameUpdate =
@@ -60,7 +63,36 @@ export type GameUpdate =
   | WinUpdate
   | HashUpdate
   | UnitIncomingUpdate
-  | AllianceExtensionAcceptedUpdate;
+  | AllianceExtensionAcceptedUpdate
+  | BonusEventUpdate
+  | RailroadUpdate;
+
+export interface BonusEventUpdate {
+  type: GameUpdateType.BonusEvent;
+  tile: TileRef;
+  gold: number;
+  workers: number;
+  troops: number;
+}
+
+export enum RailType {
+  VERTICAL,
+  HORIZONTAL,
+  TOP_LEFT,
+  TOP_RIGHT,
+  BOTTOM_LEFT,
+  BOTTOM_RIGHT,
+}
+
+export interface RailTile {
+  tile: TileRef;
+  railType: RailType;
+}
+export interface RailroadUpdate {
+  type: GameUpdateType.RailroadEvent;
+  isActive: boolean;
+  railTiles: RailTile[];
+}
 
 export interface TileUpdateWrapper {
   type: GameUpdateType.Tile;
@@ -88,6 +120,9 @@ export interface UnitUpdate {
   missileTimerQueue: number[];
   readyMissileCount: number;
   level: number;
+  hasTrainStation: boolean;
+  trainType?: TrainType; // Only for trains
+  loaded?: boolean; // Only for trains
 }
 
 export interface AttackUpdate {
@@ -102,6 +137,7 @@ export interface PlayerUpdate {
   type: GameUpdateType.Player;
   nameViewData?: NameViewData;
   clientID: ClientID | null;
+  pattern: string | undefined;
   flag: string | undefined;
   name: string;
   displayName: string;

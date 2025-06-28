@@ -28,12 +28,16 @@ function getToken(): string | null {
     const token = params.get("token");
     if (token) {
       localStorage.setItem("token", token);
+      params.delete("token");
+      params.toString();
     }
     // Clean the URL
     history.replaceState(
       null,
       "",
-      window.location.pathname + window.location.search,
+      window.location.pathname +
+        window.location.search +
+        (params.size > 0 ? "#" + params.toString() : ""),
     );
   }
   return localStorage.getItem("token");
@@ -133,6 +137,7 @@ function _isLoggedIn(): IsLoggedInResponse {
           console.log("Refreshed access token successfully.");
         } else {
           console.error("Failed to refresh access token.");
+          // TODO: Update the UI to show logged out state
         }
       });
     }
@@ -165,6 +170,11 @@ export async function postRefresh(): Promise<boolean> {
         authorization: `Bearer ${token}`,
       },
     });
+    if (response.status === 401) {
+      localStorage.removeItem("token");
+      __isLoggedIn = false;
+      return false;
+    }
     if (response.status !== 200) return false;
     const body = await response.json();
     const result = RefreshResponseSchema.safeParse(body);
@@ -192,6 +202,11 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
         authorization: `Bearer ${token}`,
       },
     });
+    if (response.status === 401) {
+      localStorage.removeItem("token");
+      __isLoggedIn = false;
+      return false;
+    }
     if (response.status !== 200) return false;
     const body = await response.json();
     const result = UserMeResponseSchema.safeParse(body);

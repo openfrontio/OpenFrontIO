@@ -7,6 +7,7 @@ describe("assignTeams", () => {
   const createPlayer = (id: string, clan?: string): PlayerInfo => {
     const name = clan ? `[${clan}]Player ${id}` : `Player ${id}`;
     return new PlayerInfo(
+      undefined,
       "🏳️", // flag
       name,
       PlayerType.Human,

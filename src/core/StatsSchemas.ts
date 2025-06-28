@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { UnitType } from "./game/Game";
 
 export const BombUnitSchema = z.union([
@@ -98,10 +98,10 @@ export const PlayerStatsSchema = z
   .object({
     attacks: AtLeastOneNumberSchema.optional(),
     betrayals: BigIntStringSchema.optional(),
-    boats: z.record(BoatUnitSchema, AtLeastOneNumberSchema).optional(),
-    bombs: z.record(BombUnitSchema, AtLeastOneNumberSchema).optional(),
+    boats: z.partialRecord(BoatUnitSchema, AtLeastOneNumberSchema).optional(),
+    bombs: z.partialRecord(BombUnitSchema, AtLeastOneNumberSchema).optional(),
     gold: AtLeastOneNumberSchema.optional(),
-    units: z.record(OtherUnitSchema, AtLeastOneNumberSchema).optional(),
+    units: z.partialRecord(OtherUnitSchema, AtLeastOneNumberSchema).optional(),
   })
   .optional();
 export type PlayerStats = z.infer<typeof PlayerStatsSchema>;

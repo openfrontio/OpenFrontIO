@@ -13,8 +13,6 @@ import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
 
-const NUKE_TARGETABLE_RADIUS = 120;
-
 const SPRITE_RADIUS = 16;
 
 export class NukeExecution implements Execution {
@@ -179,7 +177,9 @@ export class NukeExecution implements Execution {
     if (this.nuke === null || this.nuke.targetTile() === undefined) {
       return;
     }
-    const targetRangeSquared = NUKE_TARGETABLE_RADIUS * NUKE_TARGETABLE_RADIUS;
+    const targetRangeSquared =
+      this.mg.config().defaultNukeTargetableRange() *
+      this.mg.config().defaultNukeTargetableRange();
     const targetTile = this.nuke.targetTile();
     this.nuke.setTargetable(
       this.mg.euclideanDistSquared(this.nuke.tile(), targetTile!) <

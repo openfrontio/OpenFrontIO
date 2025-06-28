@@ -4,10 +4,13 @@ import { Theme } from "../../../core/configuration/Config";
 import { Tick, UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
 import { UnitSelectionEvent } from "../../InputHandler";
 import { ProgressBar } from "../ProgressBar";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+
+import trainStationBadge from "../../../../resources/images/buildings/badges/trainStationBadge.png";
 
 const COLOR_PROGRESSION = [
   "rgb(232, 25, 25)",
@@ -16,7 +19,7 @@ const COLOR_PROGRESSION = [
   "rgb(44, 239, 18)",
 ];
 const HEALTHBAR_WIDTH = 11; // Width of the health bar
-const LOADINGBAR_WIDTH = 18; // Width of the loading bar
+const LOADINGBAR_WIDTH = 14; // Width of the loading bar
 const PROGRESSBAR_HEIGHT = 3; // Height of a bar
 
 /**
@@ -26,8 +29,8 @@ const PROGRESSBAR_HEIGHT = 3; // Height of a bar
 export class UILayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D | null;
-
   private theme: Theme | null = null;
+  private userSettings: UserSettings = new UserSettings();
   private selectionAnimTime = 0;
   private allProgressBars: Map<
     number,
@@ -46,6 +49,7 @@ export class UILayer implements Layer {
 
   // Visual settings for selection
   private readonly SELECTION_BOX_SIZE = 6; // Size of the selection box (should be larger than the warship)
+  private badges: Map<string, HTMLImageElement> = new Map();
 
   constructor(
     private game: GameView,
@@ -53,6 +57,23 @@ export class UILayer implements Layer {
     private transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
+    this.loadBadges();
+  }
+
+  private loadBadge(badge: string): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = badge;
+      img.onload = () => {
+        this.badges.set(badge, img);
+        resolve(img);
+      };
+      img.onerror = reject;
+    });
+  }
+
+  private async loadBadges() {
+    await Promise.all([this.loadBadge(trainStationBadge)]);
   }
 
   shouldTransform(): boolean {
@@ -75,7 +96,6 @@ export class UILayer implements Layer {
         if (unitView === undefined) return;
         this.onUnitEvent(unitView);
       });
-
     this.updateProgressBars();
   }
 
@@ -145,10 +165,54 @@ export class UILayer implements Layer {
           const endTick = this.game.config().SAMCooldown();
           this.drawLoadingBar(unit, endTick);
         }
+        this.drawBadges(unit);
+        break;
+      case UnitType.City:
+      case UnitType.Port:
+      case UnitType.Factory:
+        this.drawBadges(unit);
         break;
       default:
         return;
     }
+  }
+
+  private drawBadges(unit: UnitView) {
+    if (unit.hasTrainStation()) {
+      const icon = this.badges.get(trainStationBadge);
+      if (icon === undefined) {
+        return;
+      }
+      const startX = this.game.x(unit.tile()) - Math.floor(icon.width / 2) + 6;
+      const startY = this.game.y(unit.tile()) - Math.floor(icon.height / 2) - 6;
+
+      if (unit.isActive()) {
+        this.drawIcon(icon, unit, startX, startY);
+      } else {
+        this.clearIcon(icon, startX, startY);
+      }
+    }
+  }
+
+  private clearIcon(icon: HTMLImageElement, startX: number, startY: number) {
+    if (this.context !== null) {
+      this.context.clearRect(startX, startY, icon.width, icon.height);
+    }
+  }
+
+  private drawIcon(
+    icon: HTMLImageElement,
+    unit: UnitView,
+    startX: number,
+    startY: number,
+  ) {
+    if (this.context === null || this.theme === null) {
+      return;
+    }
+    const color = this.theme.borderColor(unit.owner());
+    this.context.fillStyle = color.toRgbString();
+    this.context.fillRect(startX, startY, icon.width, icon.height);
+    this.context.drawImage(icon, startX, startY);
   }
 
   /**
@@ -314,8 +378,8 @@ export class UILayer implements Layer {
       const progressBar = new ProgressBar(
         COLOR_PROGRESSION,
         this.context,
-        this.game.x(unit.tile()) - 8,
-        this.game.y(unit.tile()) - 10,
+        this.game.x(unit.tile()) - 6,
+        this.game.y(unit.tile()) + 6,
         LOADINGBAR_WIDTH,
         PROGRESSBAR_HEIGHT,
         0,

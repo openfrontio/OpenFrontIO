@@ -1,0 +1,13 @@
+{
+  "map": {
+    "height": 16,
+    "num_land_tiles": 178,
+    "width": 16
+  },
+  "mini_map": {
+    "height": 8,
+    "num_land_tiles": 50,
+    "width": 8
+  },
+  "name": "Ocean and Land"
+}
