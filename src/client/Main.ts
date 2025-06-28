@@ -76,10 +76,14 @@ class Client {
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
+  private soundManager: SoundManager;
 
-  constructor() {}
+  constructor() {
+    this.soundManager = new SoundManager();
+  }
 
-  initialize(): void {
+  async initialize(): Promise<void> {
+    // Change to async because sound manager
     const gameVersion = document.getElementById(
       "game-version",
     ) as HTMLDivElement;
@@ -88,6 +92,13 @@ class Client {
     }
     gameVersion.innerText = version;
 
+    try {
+      await this.soundManager.initialize();
+      window.soundManager = this.soundManager;
+      console.log("SoundManager attached to window");
+    } catch (error) {
+      console.error("Failed to initialize SoundManager:", error);
+    }
     const newsModal = document.querySelector("news-modal") as NewsModal;
     if (!newsModal) {
       console.warn("News modal element not found");
