@@ -18,7 +18,6 @@ import {
 } from "../../../core/game/Game";
 import {
   AllianceExpiredUpdate,
-  //AllianceExtensionPromptUpdate,
   AllianceRequestReplyUpdate,
   AllianceRequestUpdate,
   AttackUpdate,
