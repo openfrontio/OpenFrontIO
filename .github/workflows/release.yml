@@ -48,7 +48,7 @@ jobs:
     environment: staging
     steps:
       - env:
-          IMAGE_ID: ${{ jobs.build.ouputs.IMAGE_ID }}
+          IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
           RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
         run: |
           # TODO: Switch to using IMAGE_ID
