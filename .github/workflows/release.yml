@@ -83,7 +83,7 @@ jobs:
           bash -x ./deploy.sh staging staging "${IMAGE_ID}" alpha
       - name: ⏳ Wait for deployment to start
         env:
-          FQDN: alpha.openfront.dev
+          FQDN: alpha.${{ vars.DOMAIN }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
@@ -139,7 +139,7 @@ jobs:
           ./deploy.sh prod nbg1 "${IMAGE_ID}" beta
       - name: ⏳ Wait for deployment to start
         env:
-          FQDN: beta.openfront.io
+          FQDN: beta.${{ vars.DOMAIN }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
@@ -195,7 +195,7 @@ jobs:
           ./deploy.sh prod nbg1 "${IMAGE_ID}" blue
       - name: ⏳ Wait for deployment to start
         env:
-          FQDN: beta.openfront.io
+          FQDN: blue.${{ vars.DOMAIN }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
@@ -251,7 +251,7 @@ jobs:
           ./deploy.sh prod nbg1 "${IMAGE_ID}" green
       - name: ⏳ Wait for deployment to start
         env:
-          FQDN: beta.openfront.io
+          FQDN: green.${{ vars.DOMAIN }}
         run: |
           echo "::group::Wait for deployment to start"
           set -euxo pipefail
