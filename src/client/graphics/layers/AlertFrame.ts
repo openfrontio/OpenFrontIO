@@ -1,6 +1,5 @@
 import { LitElement, css, html } from "lit";
-import { property } from "lit/decorators";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import {
   BrokeAllianceUpdate,
   GameUpdateType,

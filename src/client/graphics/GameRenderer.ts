@@ -110,10 +110,7 @@ export function createRenderer(
   }
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
-
-  if (eventsDisplay) {
-    eventsDisplay.userSettings = userSettings;
-  }
+  eventsDisplay.userSettings = userSettings;
 
   const chatDisplay = document.querySelector("chat-display") as ChatDisplay;
   if (!(chatDisplay instanceof ChatDisplay)) {
@@ -225,6 +222,8 @@ export function createRenderer(
   const alertFrame = document.querySelector("alert-frame") as AlertFrame;
   if (!(alertFrame instanceof AlertFrame)) {
     console.error("alert frame not found");
+  } else {
+    alertFrame.userSettings = userSettings;
   }
   alertFrame.game = game;
 
