@@ -1,6 +1,7 @@
 import favicon from "../../resources/images/Favicon.svg";
 import version from "../../resources/version.txt";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import { SoundManager } from "../core/SoundManager";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
@@ -51,6 +52,7 @@ declare global {
       };
       spaNewPage: (url: string) => void;
     };
+    soundManager: SoundManager;
   }
 }
 
