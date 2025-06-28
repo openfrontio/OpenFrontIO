@@ -20,9 +20,14 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - env:
+        DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
+        run: |
+          echo "Original repo: $DOCKER_REPO"
+          NEW_REPO="${DOCKER_REPO%-prod}-staging"
+          echo "DOCKER_REPO=$NEW_REPO" >> $GITHUB_ENV
       - id: build
         env:
-          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO.replace('-staging', '-prod') }}
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           RELEASE_BODY: ${{ github.event.release.body }}
           RELEASE_NAME: ${{ github.event.release.name }}
@@ -49,7 +54,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - env:
-          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO.replace('-staging', '-prod') }}
+          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
+        run: |
+          echo "Original repo: $DOCKER_REPO"
+          NEW_REPO="${DOCKER_REPO%-prod}-staging"
+          echo "DOCKER_REPO=$NEW_REPO" >> $GITHUB_ENV
+      - env:
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
         run: |
