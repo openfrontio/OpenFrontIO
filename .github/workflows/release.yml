@@ -22,7 +22,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - id: build
         env:
-          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
+          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO.replace('-staging', '-prod') }}
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           RELEASE_BODY: ${{ github.event.release.body }}
           RELEASE_NAME: ${{ github.event.release.name }}
@@ -49,7 +49,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - env:
-          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
+          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO.replace('-staging', '-prod') }}
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
         run: |
@@ -63,6 +63,8 @@ jobs:
     environment: prod
     steps:
       - env:
+          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
+          DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
         run: |
           ./deploy.sh prod nbg1 "${IMAGE_ID}" beta
@@ -75,6 +77,8 @@ jobs:
     environment: prod
     steps:
       - env:
+          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
+          DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
         run: |
           ./deploy.sh prod nbg1 "${IMAGE_ID}" blue
@@ -87,6 +91,8 @@ jobs:
     environment: prod
     steps:
       - env:
+          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
+          DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
         run: |
           ./deploy.sh prod nbg1 "${IMAGE_ID}" green
