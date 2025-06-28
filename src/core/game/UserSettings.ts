@@ -16,6 +16,10 @@ export class UserSettings {
     localStorage.setItem(key, value ? "true" : "false");
   }
 
+  muteSound(): boolean {
+    return this.get("settings.muteSound", false); 
+  }
+  
   emojis() {
     return this.get("settings.emojis", true);
   }
@@ -48,6 +52,10 @@ export class UserSettings {
     return false;
     // TODO: renable when performance issues are fixed.
     this.get("settings.focusLocked", true);
+  }
+
+  toggleMuteSound(): void {
+    this.set("settings.muteSound", !this.muteSound());
   }
 
   toggleLeftClickOpenMenu() {

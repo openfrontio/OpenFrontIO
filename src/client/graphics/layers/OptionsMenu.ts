@@ -134,12 +134,19 @@ export class OptionsMenu extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onToggleMuteSoundButtonClick() {
+    this.userSettings.toggleMuteSound();
+    (window as any).soundManager.setMuted(this.userSettings.muteSound());
+    this.requestUpdate();
+  }
+
   init() {
     console.log("init called from OptionsMenu");
     this.showPauseButton =
       this.game.config().gameConfig().gameType === GameType.Singleplayer ||
       this.game.config().isReplay();
     this.isVisible = true;
+    (window as any).soundManager.setMuted(this.userSettings.muteSound());
     this.requestUpdate();
   }
 
@@ -247,6 +254,11 @@ export class OptionsMenu extends LitElement implements Layer {
               (this.userSettings.leftClickOpensMenu()
                 ? "Opens menu"
                 : "Attack"),
+          })}
+          ${button({
+            onClick: this.onToggleMuteSoundButtonClick,
+            title: "Toggle Sound",
+            children: "🔊: " + (this.userSettings.muteSound() ? "Off" : "On"),
           })}
           <!-- ${button({
             onClick: this.onToggleFocusLockedButtonClick,
