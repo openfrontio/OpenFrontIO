@@ -199,6 +199,11 @@ export class GameRunner {
       playerNameViewData: this.playerViewData,
       alliances: this.game
         .alliances()
+        .filter(
+          (a) =>
+            a.requestor().smallID() === me.smallID() ||
+            a.recipient().smallID() === me.smallID(),
+        )
         .map((a) => toAllianceViewData(a as AllianceImpl, me)),
     });
     this.isExecuting = false;

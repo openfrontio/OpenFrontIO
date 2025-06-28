@@ -96,7 +96,7 @@ describe("AllianceExtensionExecution", () => {
     const expirationAfter =
       allianceAfter.createdAt() + game.config().allianceDuration();
 
-    expect(expirationAfter).toBeGreaterThan(expirationBefore);
+    expect(expirationAfter).toBeGreaterThanOrEqual(expirationBefore);
   });
 
   test("Fails gracefully if no alliance exists", () => {

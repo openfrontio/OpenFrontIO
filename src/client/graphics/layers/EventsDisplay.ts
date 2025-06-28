@@ -18,7 +18,7 @@ import {
 } from "../../../core/game/Game";
 import {
   AllianceExpiredUpdate,
-  AllianceExtensionPromptUpdate,
+  //AllianceExtensionPromptUpdate,
   AllianceRequestReplyUpdate,
   AllianceRequestUpdate,
   AttackUpdate,
@@ -155,10 +155,6 @@ export class EventsDisplay extends LitElement implements Layer {
     [GameUpdateType.Emoji, (u) => this.onEmojiMessageEvent(u)],
     [GameUpdateType.UnitIncoming, (u) => this.onUnitIncomingEvent(u)],
     [GameUpdateType.AllianceExpired, (u) => this.onAllianceExpiredEvent(u)],
-    [
-      GameUpdateType.AllianceExtensionPrompt,
-      (u) => this.onAllianceExtensionPromptEvent(u),
-    ],
   ]);
 
   constructor() {
@@ -580,72 +576,6 @@ export class EventsDisplay extends LitElement implements Layer {
       ],
       highlight: true,
       createdAt: this.game.ticks(),
-      focusID: otherID,
-    });
-  }
-
-  onAllianceExtensionPromptEvent(update: AllianceExtensionPromptUpdate) {
-    const myPlayer = this.game.myPlayer();
-    if (!myPlayer || update.toPlayerID !== myPlayer.smallID()) return;
-    const otherID = update.fromPlayerID;
-    const other = this.game.playerBySmallID(otherID) as PlayerView;
-    if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
-    const tick = this.game.ticks();
-    const tag = `alliance${otherID}`;
-
-    const alliance = this.game
-      .alliances()
-      .find(
-        (a) =>
-          (a.requestorID === myPlayer.smallID() && a.recipientID === otherID) ||
-          (a.recipientID === myPlayer.smallID() && a.requestorID === otherID),
-      );
-
-    console.log("[DEBUG] Alliance check for extension prompt:", {
-      me: myPlayer.smallID(),
-      otherID,
-      extensionRequestedByMe: alliance?.extensionRequestedByMe,
-      fullAlliance: alliance,
-    });
-
-    if (
-      !alliance ||
-      alliance.extensionRequestedByMe ||
-      alliance.extensionRequestedByOther
-    ) {
-      return;
-    }
-
-    this.addEvent({
-      description: translateText("alliance.about_to_expire", {
-        name: other.name(),
-      }),
-      type: MessageType.WARN,
-      tags: [tag],
-      duration: 100,
-      buttons: [
-        {
-          text: translateText("buttons.focus"),
-          className: "btn-gray",
-          action: () => this.eventBus.emit(new GoToPlayerEvent(other)),
-          preventClose: true,
-        },
-        {
-          text: translateText("buttons.i_want_to_renew"),
-          className: "btn",
-          action: () => {
-            if (myPlayer.smallID() !== other.smallID()) {
-              this.eventBus.emit(new SendAllianceExtensionIntentEvent(other));
-            } else {
-              console.warn(
-                "[RenewButton] Tried to send extension to self — ignored.",
-              );
-            }
-          },
-        },
-      ],
-      highlight: true,
-      createdAt: tick,
       focusID: otherID,
     });
   }

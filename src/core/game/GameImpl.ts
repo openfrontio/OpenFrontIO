@@ -302,7 +302,7 @@ export class GameImpl implements Game {
   }
 
   // Generates a unique ID for a new alliance
-  public getNextAllianceID(): number {
+  private getNextAllianceID(): number {
     return this.nextAllianceID++;
   }
 
@@ -357,8 +357,6 @@ export class GameImpl implements Game {
         hash: this.hash(),
       });
     }
-    const allianceDuration = this.config().allianceDuration();
-
     this._ticks++;
     return this.updates;
   }
@@ -622,19 +620,6 @@ export class GameImpl implements Game {
       type: GameUpdateType.AllianceExpired,
       player1ID: alliance.requestor().smallID(),
       player2ID: alliance.recipient().smallID(),
-    });
-  }
-
-  sendAllianceExtensionPrompt(
-    from: Player,
-    to: Player,
-    alliance: MutableAlliance,
-  ): void {
-    this.addUpdate({
-      type: GameUpdateType.AllianceExtensionPrompt,
-      fromPlayerID: from.smallID(),
-      toPlayerID: to.smallID(),
-      allianceID: alliance.id(),
     });
   }
 

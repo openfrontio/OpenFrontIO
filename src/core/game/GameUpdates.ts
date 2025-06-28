@@ -60,7 +60,6 @@ export type GameUpdate =
   | WinUpdate
   | HashUpdate
   | UnitIncomingUpdate
-  | AllianceExtensionPromptUpdate
   | AllianceExtensionAcceptedUpdate;
 
 export interface TileUpdateWrapper {
@@ -153,13 +152,6 @@ export interface AllianceExpiredUpdate {
   type: GameUpdateType.AllianceExpired;
   player1ID: number;
   player2ID: number;
-}
-
-export interface AllianceExtensionPromptUpdate {
-  type: GameUpdateType.AllianceExtensionPrompt;
-  fromPlayerID: number;
-  toPlayerID: number;
-  allianceID: number;
 }
 
 export interface AllianceExtensionAcceptedUpdate {

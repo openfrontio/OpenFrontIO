@@ -596,13 +596,7 @@ export interface Game extends GameMap {
   teams(): Team[];
   // Alliances
   alliances(): MutableAlliance[];
-  expireAlliance(alliance: Alliance);
-  sendAllianceExtensionPrompt(
-    from: Player,
-    to: Player,
-    alliance: MutableAlliance,
-  ): void;
-  getNextAllianceID(): number;
+  expireAlliance(alliance: Alliance): void;
 
   // Game State
   ticks(): Tick;

@@ -18,7 +18,7 @@ export class AllianceImpl implements MutableAlliance {
   }
 
   other(player: Player): Player {
-    if (this.requestor_ === player) {
+    if (this.requestor_.smallID() === player.smallID()) {
       return this.recipient_;
     }
     return this.requestor_;
@@ -41,17 +41,17 @@ export class AllianceImpl implements MutableAlliance {
   }
 
   requestExtension(player: Player): void {
-    if (this.requestor_ === player) {
+    if (this.requestor_.smallID() === player.smallID()) {
       this.extensionRequestedRequestor_ = true;
-    } else if (this.recipient_ === player) {
+    } else if (this.recipient_.smallID() === player.smallID()) {
       this.extensionRequestedRecipient_ = true;
     }
   }
 
   extensionRequestedBy(player: Player): boolean {
-    if (this.requestor_ === player) {
+    if (this.requestor_.smallID() === player.smallID()) {
       return this.extensionRequestedRequestor_;
-    } else if (this.recipient_ === player) {
+    } else if (this.recipient_.smallID() === player.smallID()) {
       return this.extensionRequestedRecipient_;
     }
     return false;
@@ -78,8 +78,8 @@ export class AllianceImpl implements MutableAlliance {
   }
 
   public otherPlayer(player: Player): Player {
-    if (this.requestor_ === player) return this.recipient_;
-    if (this.recipient_ === player) return this.requestor_;
+    if (this.requestor_.smallID() === player.smallID()) return this.recipient_;
+    if (this.recipient_.smallID() === player.smallID()) return this.requestor_;
     throw new Error("[AllianceImpl] Player is not part of this alliance");
   }
 }
