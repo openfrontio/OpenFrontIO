@@ -49,6 +49,16 @@ jobs:
     needs: [build]
     steps:
       - uses: actions/checkout@v4
+      - name: 🔑 Create SSH private key
+        env:
+          SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euxo pipefail
+          mkdir -p ~/.ssh
+          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+          test -n "$SERVER_HOST_STAGING" && ssh-keyscan -H "$SERVER_HOST_STAGING" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_rsa
       - env:
           DOCKER_REPO: openfront-prod
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
@@ -65,6 +75,17 @@ jobs:
     timeout-minutes: 30
     environment: prod
     steps:
+      - uses: actions/checkout@v4
+      - name: 🔑 Create SSH private key
+        env:
+          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euxo pipefail
+          mkdir -p ~/.ssh
+          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+          test -n "$SERVER_HOST_NBG1" && ssh-keyscan -H "$SERVER_HOST_NBG1" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_rsa
       - env:
           DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
@@ -81,6 +102,17 @@ jobs:
     timeout-minutes: 30
     environment: prod
     steps:
+      - uses: actions/checkout@v4
+      - name: 🔑 Create SSH private key
+        env:
+          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euxo pipefail
+          mkdir -p ~/.ssh
+          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+          test -n "$SERVER_HOST_NBG1" && ssh-keyscan -H "$SERVER_HOST_NBG1" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_rsa
       - env:
           DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
@@ -97,6 +129,17 @@ jobs:
     timeout-minutes: 30
     environment: prod
     steps:
+      - uses: actions/checkout@v4
+      - name: 🔑 Create SSH private key
+        env:
+          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euxo pipefail
+          mkdir -p ~/.ssh
+          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+          test -n "$SERVER_HOST_NBG1" && ssh-keyscan -H "$SERVER_HOST_NBG1" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_rsa
       - env:
           DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
