@@ -60,10 +60,22 @@ jobs:
           test -n "$SERVER_HOST_STAGING" && ssh-keyscan -H "$SERVER_HOST_STAGING" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           DOCKER_REPO: openfront-prod
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
+          MON_PASSWORD: ${{ secrets.MON_PASSWORD }}
+          MON_USERNAME: ${{ secrets.MON_USERNAME }}
+          OTEL_ENDPOINT: ${{ secrets.OTEL_ENDPOINT }}
+          OTEL_PASSWORD: ${{ secrets.OTEL_PASSWORD }}
+          OTEL_USERNAME: ${{ secrets.OTEL_USERNAME }}
+          R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
+          SSH_KEY: ~/.ssh/id_rsa
         run: |
           set -euxo pipefail
           bash -x ./deploy.sh staging staging "${IMAGE_ID}" alpha
@@ -87,10 +99,22 @@ jobs:
           test -n "$SERVER_HOST_NBG1" && ssh-keyscan -H "$SERVER_HOST_NBG1" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
+          MON_PASSWORD: ${{ secrets.MON_PASSWORD }}
+          MON_USERNAME: ${{ secrets.MON_USERNAME }}
+          OTEL_ENDPOINT: ${{ secrets.OTEL_ENDPOINT }}
+          OTEL_PASSWORD: ${{ secrets.OTEL_PASSWORD }}
+          OTEL_USERNAME: ${{ secrets.OTEL_USERNAME }}
+          R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
           SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
+          SSH_KEY: ~/.ssh/id_rsa
         run: |
           set -euxo pipefail
           ./deploy.sh prod nbg1 "${IMAGE_ID}" beta
@@ -114,10 +138,22 @@ jobs:
           test -n "$SERVER_HOST_NBG1" && ssh-keyscan -H "$SERVER_HOST_NBG1" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
+          MON_PASSWORD: ${{ secrets.MON_PASSWORD }}
+          MON_USERNAME: ${{ secrets.MON_USERNAME }}
+          OTEL_ENDPOINT: ${{ secrets.OTEL_ENDPOINT }}
+          OTEL_PASSWORD: ${{ secrets.OTEL_PASSWORD }}
+          OTEL_USERNAME: ${{ secrets.OTEL_USERNAME }}
+          R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
           SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
+          SSH_KEY: ~/.ssh/id_rsa
         run: |
           set -euxo pipefail
           ./deploy.sh prod nbg1 "${IMAGE_ID}" blue
@@ -141,10 +177,22 @@ jobs:
           test -n "$SERVER_HOST_NBG1" && ssh-keyscan -H "$SERVER_HOST_NBG1" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
+          MON_PASSWORD: ${{ secrets.MON_PASSWORD }}
+          MON_USERNAME: ${{ secrets.MON_USERNAME }}
+          OTEL_ENDPOINT: ${{ secrets.OTEL_ENDPOINT }}
+          OTEL_PASSWORD: ${{ secrets.OTEL_PASSWORD }}
+          OTEL_USERNAME: ${{ secrets.OTEL_USERNAME }}
+          R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
           SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
+          SSH_KEY: ~/.ssh/id_rsa
         run: |
           set -euxo pipefail
           ./deploy.sh prod nbg1 "${IMAGE_ID}" green
