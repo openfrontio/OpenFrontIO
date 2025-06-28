@@ -24,15 +24,12 @@ export default {
       }
     ]
   },
-  // --- IMPORTANT CHANGE HERE ---
-  // Modify transformIgnorePatterns to include 'nanoid' and potentially other ES module packages
+ 
   transformIgnorePatterns: [
-    "node_modules/(?!(nanoid)/)" // This will transform 'nanoid' but ignore others
-    // If you encounter similar errors with other packages (e.g., 'other-esm-package'),
-    // you can extend this regex:
-    // "node_modules/(?!(nanoid|other-esm-package)/)"
+    "node_modules/(?!(nanoid)/)"
+  
   ],
-  // --- END IMPORTANT CHANGE ---
+ 
   preset: "ts-jest/presets/default-esm",
   collectCoverageFrom: ["src/**/*.ts", "!src/**/*.d.ts"],
   coverageThreshold: {
