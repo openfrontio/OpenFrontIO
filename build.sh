@@ -9,7 +9,8 @@ set -e # Exit immediately if a command exits with a non-zero status
 # Parse command line arguments
 DEPLOY_ENV="$1"
 VERSION_TAG="$2"
-METADATA_FILE="$3"
+CHANGELOG_MD="$3"
+METADATA_FILE="$4"
 
 # Set default metadata file if not provided
 if [ -z "$METADATA_FILE" ]; then

@@ -15,10 +15,18 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - env:
-          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
-          RELEASE_NAME: ${{ github.event.release.name }}
+      - name: 🔗 Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - id: build
+        env:
+          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
+          DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           RELEASE_BODY: ${{ github.event.release.body }}
+          RELEASE_NAME: ${{ github.event.release.name }}
+          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
         run: |
           cat <<EOF >> $GITHUB_STEP_SUMMARY
           Name: ${RELEASE_NAME}
@@ -26,14 +34,10 @@ jobs:
           Changelog:
           ${RELEASE_BODY}
           EOF
-      - id: build
-        env:
-          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
-          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
-          DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
-        run: |
-          ./build.sh prod "${RELEASE_TAG_NAME}" /tmp/build-metadata.json
+          ./build.sh prod "${RELEASE_TAG_NAME}" "${RELEASE_BODY}" /tmp/build-metadata.json
           IMAGE_ID=$(jq -r '."containerimage.digest"' /tmp/build-metadata.json)
+          echo "${IMAGE_ID}"
+          echo "${DOCKER_USERNAME}/${DOCKER_REPO}@${IMAGE_ID}"
           echo "IMAGE_ID=${IMAGE_ID}" >> $GITHUB_OUTPUT
           echo "Image ID: `${IMAGE_ID}`" >> $GITHUB_STEP_SUMMARY
     outputs:
