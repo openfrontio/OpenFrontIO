@@ -74,12 +74,13 @@ echo "Metadata file: $METADATA_FILE"
 GIT_COMMIT=$(git rev-parse HEAD 2> /dev/null || echo "unknown")
 echo "Git commit: $GIT_COMMIT"
 
+echo "$CHANGELOG_MD" > resources/changelog.md
+echo "$VERSION_TXT" > resources/version.txt
+
 docker buildx build \
     --platform linux/amd64 \
-    --build-arg "GIT_COMMIT=$GIT_COMMIT" \
-    --build-arg "VERSION_TXT=$VERSION_TXT" \
-    --build-arg "CHANGELOG_MD=$CHANGELOG_MD" \
-    --metadata-file "$METADATA_FILE" \
+    --build-arg GIT_COMMIT=$GIT_COMMIT \
+    --metadata-file $METADATA_FILE \
     -t "$DOCKER_IMAGE" \
     --push \
     .

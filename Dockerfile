@@ -40,10 +40,6 @@ RUN mkdir -p .git && npm ci
 # Copy the rest of the application code
 COPY . .
 
-# Set the release version and changelog
-RUN echo "$CHANGELOG_MD" > resources/changelog.md
-RUN echo "$VERSION_TXT" > resources/version.txt
-
 # Build the client-side application
 RUN npm run build-prod
 
