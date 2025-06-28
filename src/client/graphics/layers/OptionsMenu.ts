@@ -149,7 +149,18 @@ export class OptionsMenu extends LitElement implements Layer {
       this.game.config().gameConfig().gameType === GameType.Singleplayer ||
       this.game.config().isReplay();
     this.isVisible = true;
-    (window as any).soundManager.setMuted(this.userSettings.muteSound());
+    init() {
+      console.log("init called from OptionsMenu");
+      this.showPauseButton =
+        this.game.config().gameConfig().gameType === GameType.Singleplayer ||
+        this.game.config().isReplay();
+      this.isVisible = true;
+      const soundManager = (window as any).soundManager;
+      if (soundManager && typeof soundManager.setMuted === 'function') {
+        soundManager.setMuted(this.userSettings.muteSound());
+      }
+      this.requestUpdate();
+    }
     this.requestUpdate();
   }
 
