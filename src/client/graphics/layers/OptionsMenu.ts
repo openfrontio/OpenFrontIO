@@ -8,6 +8,7 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
 import { Layer } from "./Layer";
+import { soundManager } from "../../SoundManager";
 
 const button = ({
   classes = "",
@@ -134,6 +135,14 @@ export class OptionsMenu extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onToggleMusicButtonClick() {
+    this.userSettings.toggleSoundEnabled();
+    if (!this.userSettings.soundEnabled()) {
+      soundManager.stopAllSounds(); 
+    }
+    this.requestUpdate();
+  }
+  
   init() {
     console.log("init called from OptionsMenu");
     this.showPauseButton =
@@ -257,6 +266,11 @@ export class OptionsMenu extends LitElement implements Layer {
                 ? "Focus locked"
                 : "Hover focus"),
           })} -->
+          ${button({
+            onClick: this.onToggleMusicButtonClick,
+            title: "Toggle Music",
+            children: "🎵: " + (this.userSettings.soundEnabled() ? "On" : "Off"),
+          })}
         </div>
       </div>
     `;

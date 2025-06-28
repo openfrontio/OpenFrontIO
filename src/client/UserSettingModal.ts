@@ -7,6 +7,7 @@ import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybi
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
+import { soundManager } from "./SoundManager";
 
 @customElement("user-setting")
 export class UserSettingModal extends LitElement {
@@ -46,6 +47,11 @@ export class UserSettingModal extends LitElement {
     window.removeEventListener("keydown", this.handleKeyDown);
     super.disconnectedCallback();
     document.body.style.overflow = "auto";
+  }
+
+  private handleMasterVolumeChange(e: CustomEvent<{ value: number }>) {
+    const volume = e.detail?.value / 100;
+    soundManager.setMasterVolume(volume);
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
@@ -318,6 +324,15 @@ export class UserSettingModal extends LitElement {
         .value=${Number(localStorage.getItem("settings.troopRatio") ?? "0.95") *
         100}
         @change=${this.sliderTroopRatio}
+      ></setting-slider>
+      <!-- sound/Music -->
+      <setting-slider
+        label="${translateText("user_setting.master_volume_label")}"
+        description="${translateText("user_setting.master_volume_desc")}"
+        min="0"
+        max="100"
+        .value=${soundManager.getMasterVolume() * 100}
+        @change=${this.handleMasterVolumeChange}
       ></setting-slider>
 
       ${this.showEasterEggSettings

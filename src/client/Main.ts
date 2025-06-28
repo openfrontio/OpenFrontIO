@@ -33,6 +33,7 @@ import { OButton } from "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
 import "./styles.css";
+import { soundManager } from "./SoundManager";
 
 declare global {
   interface Window {
@@ -426,7 +427,10 @@ class Client {
 }
 
 // Initialize the client when the DOM is loaded
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  await soundManager.initialize();
+  await soundManager.preloadGameSounds();
+  soundManager.startMainMenuMusic();
   new Client().initialize();
 });
 

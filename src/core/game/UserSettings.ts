@@ -16,6 +16,18 @@ export class UserSettings {
     localStorage.setItem(key, value ? "true" : "false");
   }
 
+  getNumber(key: string, defaultValue: number): number {
+    const value = localStorage.getItem(key);
+    if (!value) return defaultValue;
+    
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? defaultValue : parsed;
+  }
+
+  setNumber(key: string, value: number) {
+    localStorage.setItem(key, value.toString());
+  }
+
   emojis() {
     return this.get("settings.emojis", true);
   }
@@ -42,6 +54,23 @@ export class UserSettings {
 
   territoryPatterns() {
     return this.get("settings.territoryPatterns", true);
+  }
+
+  soundEnabled() {
+    return this.get("settings.soundEnabled", true);
+  }
+
+  setSoundEnabled(enabled: boolean) {
+    this.set("settings.soundEnabled", enabled);
+  }
+
+  masterVolume() {
+    return this.getNumber("settings.masterVolume", 0.7);
+  }
+
+  setMasterVolume(volume: number) {
+    const normalizedVolume = Math.max(0, Math.min(1, volume));
+    this.setNumber("settings.masterVolume", normalizedVolume);
   }
 
   focusLocked() {
@@ -76,6 +105,10 @@ export class UserSettings {
 
   toggleTerritoryPatterns() {
     this.set("settings.territoryPatterns", !this.territoryPatterns());
+  }
+
+  toggleSoundEnabled() {
+    this.setSoundEnabled(!this.soundEnabled());
   }
 
   toggleDarkMode() {
