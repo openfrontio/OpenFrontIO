@@ -14,6 +14,7 @@ export const CAMERA_SMOOTHING = 0.03;
 
 export class TransformHandler {
   public scale: number = 1.8;
+  private _boundingRect: DOMRect;
   private offsetX: number = -350;
   private offsetY: number = -200;
   private lastGoToCallTime: number | null = null;
@@ -27,6 +28,7 @@ export class TransformHandler {
     private eventBus: EventBus,
     private canvas: HTMLCanvasElement,
   ) {
+    this._boundingRect = this.canvas.getBoundingClientRect();
     this.eventBus.on(ZoomEvent, (e) => this.onZoom(e));
     this.eventBus.on(DragEvent, (e) => this.onMove(e));
     this.eventBus.on(GoToPlayerEvent, (e) => this.onGoToPlayer(e));
@@ -35,8 +37,12 @@ export class TransformHandler {
     this.eventBus.on(CenterCameraEvent, () => this.centerCamera());
   }
 
+  public updateCanvasBoundingRect() {
+    this._boundingRect = this.canvas.getBoundingClientRect();
+  }
+
   boundingRect(): DOMRect {
-    return this.canvas.getBoundingClientRect();
+    return this._boundingRect;
   }
 
   width(): number {
@@ -44,6 +50,9 @@ export class TransformHandler {
   }
   hasChanged(): boolean {
     return this.changed;
+  }
+  resetChanged() {
+    this.changed = false;
   }
 
   handleTransform(context: CanvasRenderingContext2D) {
@@ -59,7 +68,6 @@ export class TransformHandler {
       this.game.width() / 2 - this.offsetX * this.scale,
       this.game.height() / 2 - this.offsetY * this.scale,
     );
-    this.changed = false;
   }
 
   worldToScreenCoordinates(cell: Cell): { x: number; y: number } {

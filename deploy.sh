@@ -1,9 +1,8 @@
 #!/bin/bash
-# deploy.sh - Complete deployment script for Hetzner with Docker Hub and R2
+# deploy.sh - Deploy application to Hetzner server
 # This script:
-# 1. Builds and uploads the Docker image to Docker Hub with appropriate tag
-# 2. Copies the update script to Hetzner server
-# 3. Executes the update script on the Hetzner server
+# 1. Copies the update script to Hetzner server
+# 2. Executes the update script on the Hetzner server
 
 set -e # Exit immediately if a command exits with a non-zero status
 
@@ -28,27 +27,6 @@ done
 # Restore positional parameters
 set -- "${POSITIONAL_ARGS[@]}"
 
-# Check command line arguments
-if [ $# -lt 2 ] || [ $# -gt 3 ]; then
-    echo "Error: Please specify environment and host, with optional subdomain"
-    echo "Usage: $0 [prod|staging] [eu|nbg1|staging|masters] [subdomain] [--enable_basic_auth]"
-    exit 1
-fi
-
-# Validate first argument (environment)
-if [ "$1" != "prod" ] && [ "$1" != "staging" ]; then
-    echo "Error: First argument must be either 'prod' or 'staging'"
-    echo "Usage: $0 [prod|staging] [eu|nbg1|staging|masters] [subdomain] [--enable_basic_auth]"
-    exit 1
-fi
-
-# Validate second argument (host)
-if [ "$2" != "eu" ] && [ "$2" != "nbg1" ] && [ "$2" != "staging" ] && [ "$2" != "masters" ]; then
-    echo "Error: Second argument must be either 'eu', 'nbg1', 'staging', or 'masters'"
-    echo "Usage: $0 [prod|staging] [eu|nbg1|staging|masters] [subdomain] [--enable_basic_auth]"
-    exit 1
-fi
-
 # Function to print section headers
 print_header() {
     echo "======================================================"
@@ -56,17 +34,34 @@ print_header() {
     echo "======================================================"
 }
 
+# Check command line arguments
+if [ $# -ne 4 ]; then
+    echo "Error: Please specify environment, host, version tag, and subdomain"
+    echo "Usage: $0 [prod|staging] [eu|nbg1|staging|masters] [version_tag] [subdomain] [--enable_basic_auth]"
+    exit 1
+fi
+
+# Validate first argument (environment)
+if [ "$1" != "prod" ] && [ "$1" != "staging" ]; then
+    echo "Error: First argument must be either 'prod' or 'staging'"
+    echo "Usage: $0 [prod|staging] [eu|nbg1|staging|masters] [version_tag] [subdomain] [--enable_basic_auth]"
+    exit 1
+fi
+
+# Validate second argument (host)
+if [ "$2" != "eu" ] && [ "$2" != "nbg1" ] && [ "$2" != "staging" ] && [ "$2" != "masters" ]; then
+    echo "Error: Second argument must be either 'eu', 'nbg1', 'staging', or 'masters'"
+    echo "Usage: $0 [prod|staging] [eu|nbg1|staging|masters] [version_tag] [subdomain] [--enable_basic_auth]"
+    exit 1
+fi
+
 ENV=$1
 HOST=$2
-SUBDOMAIN=$3 # Optional third argument for custom subdomain
+VERSION_TAG=$3
+SUBDOMAIN=$4
 
-# Set subdomain - use the custom subdomain if provided, otherwise use REGION
-if [ -n "$SUBDOMAIN" ]; then
-    echo "Using custom subdomain: $SUBDOMAIN"
-else
-    SUBDOMAIN=$HOST
-    echo "Using host as subdomain: $SUBDOMAIN"
-fi
+# Set subdomain - use the provided subdomain
+echo "Using subdomain: $SUBDOMAIN"
 
 # Load common environment variables first
 if [ -f .env ]; then
@@ -79,6 +74,14 @@ if [ -f .env.$ENV ]; then
     echo "Loading $ENV-specific configuration from .env.$ENV file..."
     export $(grep -v '^#' .env.$ENV | xargs)
 fi
+
+# Check required environment variables for deployment
+if [ -z "$DOCKER_USERNAME" ] || [ -z "$DOCKER_REPO" ]; then
+    echo "Error: DOCKER_USERNAME or DOCKER_REPO not defined in .env file or environment"
+    exit 1
+fi
+
+DOCKER_IMAGE="${DOCKER_USERNAME}/${DOCKER_REPO}:${VERSION_TAG}"
 
 if [ "$HOST" == "staging" ]; then
     print_header "DEPLOYING TO STAGING HOST"
@@ -121,43 +124,22 @@ REMOTE_USER="openfront"
 REMOTE_UPDATE_PATH="/home/$REMOTE_USER"
 REMOTE_UPDATE_SCRIPT="$REMOTE_UPDATE_PATH/update-openfront.sh" # Where to place the script on server
 
-VERSION_TAG=$(date +"%Y%m%d-%H%M%S")
-DOCKER_IMAGE="${DOCKER_USERNAME}/${DOCKER_REPO}:${VERSION_TAG}"
-
 # Check if update script exists
 if [ ! -f "$UPDATE_SCRIPT" ]; then
     echo "Error: Update script $UPDATE_SCRIPT not found!"
     exit 1
 fi
 
-# Step 1: Build and upload Docker image to Docker Hub
-print_header "STEP 1: Building and uploading Docker image to Docker Hub"
+# Display deployment information
+print_header "DEPLOYMENT INFORMATION"
 echo "Environment: ${ENV}"
 echo "Host: ${HOST}"
 echo "Subdomain: ${SUBDOMAIN}"
-echo "Using version tag: $VERSION_TAG"
-echo "Docker repository: $DOCKER_REPO"
+echo "Docker Image: $DOCKER_IMAGE"
+echo "Target Server: $SERVER_HOST"
 
-# Get Git commit for build info
-GIT_COMMIT=$(git rev-parse HEAD 2> /dev/null || echo "unknown")
-echo "Git commit: $GIT_COMMIT"
-
-docker buildx build \
-    --platform linux/amd64 \
-    --build-arg GIT_COMMIT=$GIT_COMMIT \
-    -t $DOCKER_IMAGE \
-    --push \
-    .
-
-if [ $? -ne 0 ]; then
-    echo "❌ Docker build failed. Stopping deployment."
-    exit 1
-fi
-
-echo "✅ Docker image built and pushed successfully."
-
-# Step 2: Copy update script to Hetzner server
-print_header "STEP 2: Copying update script to server"
+# Copy update script to Hetzner server
+print_header "COPYING UPDATE SCRIPT TO SERVER"
 echo "Target: $REMOTE_USER@$SERVER_HOST"
 
 # Make sure the update script is executable
@@ -174,6 +156,8 @@ fi
 # Generate a random filename for the environment file to prevent conflicts
 # when multiple deployments are happening at the same time.
 ENV_FILE="${REMOTE_UPDATE_PATH}/${SUBDOMAIN}-${RANDOM}.env"
+
+print_header "EXECUTING UPDATE SCRIPT ON SERVER"
 
 ssh -i $SSH_KEY $REMOTE_USER@$SERVER_HOST "chmod +x $REMOTE_UPDATE_SCRIPT && \
 cat > $ENV_FILE << 'EOL'
