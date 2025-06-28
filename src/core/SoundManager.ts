@@ -127,11 +127,15 @@ export class SoundManager {
   }
 
 
-  stopAll(): void {
-    this.audioContext.close().then(() => {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      this.isInitialized = false; 
-    });
+  async stopAll(): Promise<void> {
+    try {
+      await this.audioContext.close();
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      this.audioContext = new AudioContextClass();
+      this.isInitialized = false;
+    } catch (error) {
+      console.error('Failed to stop all sounds:', error);
+    }
   }
 
 
