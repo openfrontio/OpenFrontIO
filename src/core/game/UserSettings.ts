@@ -17,9 +17,9 @@ export class UserSettings {
   }
 
   muteSound(): boolean {
-    return this.get("settings.muteSound", false); 
+    return this.get("settings.muteSound", false);
   }
-  
+
   emojis() {
     return this.get("settings.emojis", true);
   }
