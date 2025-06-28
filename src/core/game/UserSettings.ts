@@ -1,4 +1,5 @@
 import { EventBus, GameEvent } from "../EventBus";
+import LocalStorage from "../Storage";
 
 export class DarkModeChangedEvent implements GameEvent {
   constructor(public readonly value: boolean) {}
@@ -25,14 +26,21 @@ export class FocusLockedChangedEvent implements GameEvent {
 }
 
 export class UserSettings {
-  constructor(private _eventBus: EventBus) {}
+  constructor(
+    private _eventBus: EventBus,
+    private _storage: LocalStorage,
+  ) {}
 
   get eventBus(): EventBus {
     return this._eventBus;
   }
 
+  get storage(): LocalStorage {
+    return this._storage;
+  }
+
   get(key: string, defaultValue: boolean): boolean {
-    const value = localStorage.getItem(key);
+    const value = this.storage.getItem(key);
     if (!value) return defaultValue;
 
     if (value === "true") return true;
@@ -43,7 +51,7 @@ export class UserSettings {
   }
 
   set(key: string, value: boolean) {
-    localStorage.setItem(key, value ? "true" : "false");
+    this.storage.setItem(key, value ? "true" : "false");
   }
 
   emojis() {
@@ -103,14 +111,7 @@ export class UserSettings {
 
   toggleDarkMode() {
     const newValue = !this.darkMode();
-
     this.set("settings.darkMode", newValue);
-    if (this.darkMode()) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-
     this.eventBus.emit(new DarkModeChangedEvent(newValue));
   }
 }

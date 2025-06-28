@@ -113,11 +113,10 @@ export class InputHandler {
   private readonly PAN_SPEED = 5;
   private readonly ZOOM_SPEED = 10;
 
-  private userSettings: UserSettings = new UserSettings(this.eventBus);
-
   constructor(
     private canvas: HTMLCanvasElement,
     private eventBus: EventBus,
+    private userSettings: UserSettings,
   ) {}
 
   initialize() {

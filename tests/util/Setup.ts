@@ -14,7 +14,9 @@ import { createGame } from "../../src/core/game/GameImpl";
 import { genTerrainFromBin } from "../../src/core/game/TerrainMapLoader";
 import { UserSettings } from "../../src/core/game/UserSettings";
 import { GameConfig } from "../../src/core/Schemas";
+import LocalStorage from "../../src/core/Storage";
 import { generateMap } from "../../src/scripts/TerrainMapGenerator";
+import { MockMemoryStorage } from "../mock/MockStorage";
 import { TestConfig } from "./TestConfig";
 import { TestServerConfig } from "./TestServerConfig";
 
@@ -50,12 +52,13 @@ export async function setup(
     ..._gameConfig,
   };
 
-  const eventBus = new EventBus(); // Is this the correct place to declare it?
+  const eventBus = new EventBus();
+  const storage: LocalStorage = new MockMemoryStorage();
 
   const config = new TestConfig(
     serverConfig,
     gameConfig,
-    new UserSettings(eventBus),
+    new UserSettings(eventBus, storage),
     false,
   );
 

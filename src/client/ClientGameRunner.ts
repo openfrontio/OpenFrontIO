@@ -59,6 +59,7 @@ export interface LobbyConfig {
 export function joinLobby(
   lobbyConfig: LobbyConfig,
   eventBus: EventBus,
+  userSettings: UserSettings,
   onPrestart: () => void,
   onJoin: () => void,
 ): () => void {
@@ -66,7 +67,6 @@ export function joinLobby(
     `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
   );
 
-  const userSettings: UserSettings = new UserSettings(eventBus);
   startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
 
   const transport = new Transport(lobbyConfig, eventBus);
@@ -156,7 +156,7 @@ export async function createClientGame(
   console.log("going to init path finder");
   console.log("inited path finder");
   const canvas = createCanvas();
-  const gameRenderer = createRenderer(canvas, gameView, eventBus);
+  const gameRenderer = createRenderer(canvas, gameView, eventBus, userSettings);
 
   console.log(
     `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
@@ -166,7 +166,7 @@ export async function createClientGame(
     lobbyConfig,
     eventBus,
     gameRenderer,
-    new InputHandler(canvas, eventBus),
+    new InputHandler(canvas, eventBus, userSettings),
     transport,
     worker,
     gameView,

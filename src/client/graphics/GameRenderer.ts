@@ -40,8 +40,8 @@ export function createRenderer(
   canvas: HTMLCanvasElement,
   game: GameView,
   eventBus: EventBus,
+  userSettings: UserSettings,
 ): GameRenderer {
-  const userSettings = new UserSettings(eventBus);
   const transformHandler = new TransformHandler(game, eventBus, canvas);
 
   const uiState = { attackRatio: 20 };

@@ -2,9 +2,11 @@ import favicon from "../../resources/images/Favicon.svg";
 import version from "../../resources/version.txt";
 import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import LocalStorage from "../core/Storage";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
+import BrowserStorage from "./BrowserStorage";
 import { joinLobby } from "./ClientGameRunner";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
@@ -31,6 +33,7 @@ import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
 import { OButton } from "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import { registerDarkModeHandler } from "./handlers/DarkModeHandler";
 import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
 import "./styles.css";
 
@@ -74,11 +77,18 @@ class Client {
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
   private eventBus: EventBus = new EventBus();
-  private userSettings: UserSettings = new UserSettings(this.eventBus);
+  private storage: LocalStorage = new BrowserStorage();
+  private userSettings: UserSettings = new UserSettings(
+    this.eventBus,
+    this.storage,
+  );
 
   constructor() {}
 
   initialize(): void {
+    //handlers
+    registerDarkModeHandler(this.eventBus);
+
     const gameVersion = document.getElementById(
       "game-version",
     ) as HTMLDivElement;
@@ -338,6 +348,7 @@ class Client {
         gameRecord: lobby.gameRecord,
       },
       this.eventBus,
+      this.userSettings,
       () => {
         console.log("Closing modals");
         document.getElementById("settings-button")?.classList.add("hidden");
