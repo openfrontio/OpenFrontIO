@@ -58,6 +58,7 @@ export class MirvExecution implements Execution {
         return;
       }
       this.nuke = this.player.buildUnit(UnitType.MIRV, spawn, {});
+      window.soundManager.play("MIRV Launch");
       const x = Math.floor(
         (this.mg.x(this.dst) + this.mg.x(this.mg.x(this.nuke.tile()))) / 2,
       );
