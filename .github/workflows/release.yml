@@ -53,6 +53,7 @@ jobs:
           DOCKER_REPO: openfront-prod
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
+          SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
         run: |
           set -euxo pipefail
           ./deploy.sh staging staging "${IMAGE_ID}" alpha
@@ -68,6 +69,7 @@ jobs:
           DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
+          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
         run: |
           set -euxo pipefail
           ./deploy.sh prod nbg1 "${IMAGE_ID}" beta
@@ -83,6 +85,7 @@ jobs:
           DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
+          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
         run: |
           set -euxo pipefail
           ./deploy.sh prod nbg1 "${IMAGE_ID}" blue
@@ -98,6 +101,7 @@ jobs:
           DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
+          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
         run: |
           set -euxo pipefail
           ./deploy.sh prod nbg1 "${IMAGE_ID}" green
