@@ -20,19 +20,15 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - env:
-          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
-        run: |
-          echo "Original repo: $DOCKER_REPO"
-          NEW_REPO="${DOCKER_REPO%-prod}-staging"
-          echo "DOCKER_REPO=$NEW_REPO" >> $GITHUB_ENV
       - id: build
         env:
+          DOCKER_REPO: openfront-prod
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           RELEASE_BODY: ${{ github.event.release.body }}
           RELEASE_NAME: ${{ github.event.release.name }}
           RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
         run: |
+          set -euxo pipefail
           cat <<EOF >> $GITHUB_STEP_SUMMARY
           Name: ${RELEASE_NAME}
           Tag: ${RELEASE_TAG_NAME}
@@ -54,15 +50,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - env:
-          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
-        run: |
-          echo "Original repo: $DOCKER_REPO"
-          NEW_REPO="${DOCKER_REPO%-prod}-staging"
-          echo "DOCKER_REPO=$NEW_REPO" >> $GITHUB_ENV
-      - env:
+          DOCKER_REPO: openfront-prod
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
         run: |
+          set -euxo pipefail
           ./deploy.sh staging staging "${IMAGE_ID}" alpha
 
   deploy-beta:
@@ -77,6 +69,7 @@ jobs:
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
         run: |
+          set -euxo pipefail
           ./deploy.sh prod nbg1 "${IMAGE_ID}" beta
 
   deploy-blue:
@@ -91,6 +84,7 @@ jobs:
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
         run: |
+          set -euxo pipefail
           ./deploy.sh prod nbg1 "${IMAGE_ID}" blue
 
   deploy-green:
@@ -105,4 +99,5 @@ jobs:
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
         run: |
+          set -euxo pipefail
           ./deploy.sh prod nbg1 "${IMAGE_ID}" green
