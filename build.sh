@@ -81,7 +81,7 @@ docker buildx build \
     --platform linux/amd64 \
     --build-arg GIT_COMMIT=$GIT_COMMIT \
     --metadata-file $METADATA_FILE \
-    -t "$DOCKER_IMAGE" \
+    -t $DOCKER_IMAGE \
     --push \
     .
 
