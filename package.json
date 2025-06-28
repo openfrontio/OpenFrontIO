@@ -138,5 +138,9 @@
     "ws": "^8.18.0",
     "zod": "^3.25.28"
   },
-  "type": "module"
+  "type": "module",
+  "jest": {
+    "testEnvironment": "jsdom",
+    "preset": "ts-jest"
+  }
 }
