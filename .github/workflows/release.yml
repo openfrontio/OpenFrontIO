@@ -9,19 +9,258 @@ on:
 permissions: {}
 
 jobs:
-  print-release-info:
+  build:
+    name: 🏗️ Build
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: 🖨 Print release info
+      - uses: actions/checkout@v4
+      - name: 🔗 Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - id: build
         env:
-          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
-          RELEASE_NAME: ${{ github.event.release.name }}
+          DOCKER_REPO: openfront-prod
+          DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           RELEASE_BODY: ${{ github.event.release.body }}
+          RELEASE_NAME: ${{ github.event.release.name }}
+          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
         run: |
+          set -euxo pipefail
           cat <<EOF >> $GITHUB_STEP_SUMMARY
           Name: ${RELEASE_NAME}
           Tag: ${RELEASE_TAG_NAME}
           Changelog:
           ${RELEASE_BODY}
           EOF
+          ./build.sh prod "${RELEASE_TAG_NAME}" "${RELEASE_NAME}" "${RELEASE_BODY}" /tmp/build-metadata.json
+          IMAGE_ID=$(jq -r '."containerimage.digest"' /tmp/build-metadata.json)
+          echo "IMAGE_ID=${IMAGE_ID}" >> $GITHUB_OUTPUT
+          echo "Image ID: \`${IMAGE_ID}\`" >> $GITHUB_STEP_SUMMARY
+    outputs:
+      IMAGE_ID: ${{ steps.build.outputs.IMAGE_ID }}
+
+  deploy-alpha:
+    name: 🧪 Deploy to alpha
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+      - name: 🔑 Create SSH private key
+        env:
+          SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euxo pipefail
+          mkdir -p ~/.ssh
+          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+          test -n "$SERVER_HOST_STAGING" && ssh-keyscan -H "$SERVER_HOST_STAGING" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_rsa
+      - name: 🚀 Deploy image
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          DOCKER_REPO: openfront-prod
+          DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOMAIN: ${{ vars.DOMAIN }}
+          IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
+          MON_PASSWORD: ${{ secrets.MON_PASSWORD }}
+          MON_USERNAME: ${{ secrets.MON_USERNAME }}
+          OTEL_ENDPOINT: ${{ secrets.OTEL_ENDPOINT }}
+          OTEL_PASSWORD: ${{ secrets.OTEL_PASSWORD }}
+          OTEL_USERNAME: ${{ secrets.OTEL_USERNAME }}
+          R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
+          SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
+          SSH_KEY: ~/.ssh/id_rsa
+        run: |
+          set -euxo pipefail
+          bash -x ./deploy.sh staging staging "${IMAGE_ID}" alpha
+      - name: ⏳ Wait for deployment to start
+        env:
+          FQDN: alpha.${{ vars.DOMAIN }}
+        run: |
+          echo "::group::Wait for deployment to start"
+          set -euxo pipefail
+          while [ "$(curl -s https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+            if [ "$SECONDS" -ge 300 ]; then
+              echo "Timeout: deployment did not start within 5 minutes"
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "Deployment started in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
+          echo "::endgroup::"
+
+  deploy-beta:
+    name: 🐞 Deploy to beta
+    runs-on: ubuntu-latest
+    needs: [build, deploy-alpha]
+    timeout-minutes: 30
+    environment: prod
+    steps:
+      - uses: actions/checkout@v4
+      - name: 🔑 Create SSH private key
+        env:
+          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euxo pipefail
+          mkdir -p ~/.ssh
+          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+          test -n "$SERVER_HOST_NBG1" && ssh-keyscan -H "$SERVER_HOST_NBG1" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_rsa
+      - name: 🚀 Deploy image
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
+          DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOMAIN: ${{ vars.DOMAIN }}
+          IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
+          MON_PASSWORD: ${{ secrets.MON_PASSWORD }}
+          MON_USERNAME: ${{ secrets.MON_USERNAME }}
+          OTEL_ENDPOINT: ${{ secrets.OTEL_ENDPOINT }}
+          OTEL_PASSWORD: ${{ secrets.OTEL_PASSWORD }}
+          OTEL_USERNAME: ${{ secrets.OTEL_USERNAME }}
+          R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
+          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
+          SSH_KEY: ~/.ssh/id_rsa
+        run: |
+          set -euxo pipefail
+          ./deploy.sh prod nbg1 "${IMAGE_ID}" beta
+      - name: ⏳ Wait for deployment to start
+        env:
+          FQDN: beta.${{ vars.DOMAIN }}
+        run: |
+          echo "::group::Wait for deployment to start"
+          set -euxo pipefail
+          while [ "$(curl -s https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+            if [ "$SECONDS" -ge 300 ]; then
+              echo "Timeout: deployment did not start within 5 minutes"
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "Deployment started in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
+          echo "::endgroup::"
+
+  deploy-blue:
+    name: 🔵 Deploy to blue
+    runs-on: ubuntu-latest
+    needs: [build, deploy-alpha]
+    timeout-minutes: 30
+    environment: prod
+    steps:
+      - uses: actions/checkout@v4
+      - name: 🔑 Create SSH private key
+        env:
+          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euxo pipefail
+          mkdir -p ~/.ssh
+          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+          test -n "$SERVER_HOST_NBG1" && ssh-keyscan -H "$SERVER_HOST_NBG1" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_rsa
+      - name: 🚀 Deploy image
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
+          DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOMAIN: ${{ vars.DOMAIN }}
+          IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
+          MON_PASSWORD: ${{ secrets.MON_PASSWORD }}
+          MON_USERNAME: ${{ secrets.MON_USERNAME }}
+          OTEL_ENDPOINT: ${{ secrets.OTEL_ENDPOINT }}
+          OTEL_PASSWORD: ${{ secrets.OTEL_PASSWORD }}
+          OTEL_USERNAME: ${{ secrets.OTEL_USERNAME }}
+          R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
+          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
+          SSH_KEY: ~/.ssh/id_rsa
+        run: |
+          set -euxo pipefail
+          ./deploy.sh prod nbg1 "${IMAGE_ID}" blue
+      - name: ⏳ Wait for deployment to start
+        env:
+          FQDN: blue.${{ vars.DOMAIN }}
+        run: |
+          echo "::group::Wait for deployment to start"
+          set -euxo pipefail
+          while [ "$(curl -s https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+            if [ "$SECONDS" -ge 300 ]; then
+              echo "Timeout: deployment did not start within 5 minutes"
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "Deployment started in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
+          echo "::endgroup::"
+
+  deploy-green:
+    name: 🟢 Deploy to green
+    runs-on: ubuntu-latest
+    needs: [build, deploy-alpha]
+    timeout-minutes: 30
+    environment: prod
+    steps:
+      - uses: actions/checkout@v4
+      - name: 🔑 Create SSH private key
+        env:
+          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euxo pipefail
+          mkdir -p ~/.ssh
+          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+          test -n "$SERVER_HOST_NBG1" && ssh-keyscan -H "$SERVER_HOST_NBG1" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_rsa
+      - name: 🚀 Deploy image
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
+          DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOMAIN: ${{ vars.DOMAIN }}
+          IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
+          MON_PASSWORD: ${{ secrets.MON_PASSWORD }}
+          MON_USERNAME: ${{ secrets.MON_USERNAME }}
+          OTEL_ENDPOINT: ${{ secrets.OTEL_ENDPOINT }}
+          OTEL_PASSWORD: ${{ secrets.OTEL_PASSWORD }}
+          OTEL_USERNAME: ${{ secrets.OTEL_USERNAME }}
+          R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
+          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
+          SSH_KEY: ~/.ssh/id_rsa
+        run: |
+          set -euxo pipefail
+          ./deploy.sh prod nbg1 "${IMAGE_ID}" green
+      - name: ⏳ Wait for deployment to start
+        env:
+          FQDN: green.${{ vars.DOMAIN }}
+        run: |
+          echo "::group::Wait for deployment to start"
+          set -euxo pipefail
+          while [ "$(curl -s https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+            if [ "$SECONDS" -ge 300 ]; then
+              echo "Timeout: deployment did not start within 5 minutes"
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "Deployment started in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
+          echo "::endgroup::"

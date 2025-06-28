@@ -10,6 +10,7 @@ import nukeWhiteIcon from "../../../../resources/images/NukeIconWhite.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconBlack.svg";
 import targetIcon from "../../../../resources/images/TargetIcon.svg";
 import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
+import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { Theme } from "../../../core/configuration/Config";
 import { AllPlayers, Cell, nukeTypes } from "../../../core/game/Game";
@@ -190,14 +191,26 @@ export class NameLayer implements Layer {
     element.appendChild(iconsDiv);
 
     const nameDiv = document.createElement("div");
+    const applyFlagStyles = (element: HTMLElement): void => {
+      element.classList.add("player-flag");
+      element.style.opacity = "0.8";
+      element.style.zIndex = "1";
+      element.style.aspectRatio = "3/4";
+    };
+
     if (player.flag()) {
-      const flagImg = document.createElement("img");
-      flagImg.classList.add("player-flag");
-      flagImg.style.opacity = "0.8";
-      flagImg.src = "/flags/" + player.flag() + ".svg";
-      flagImg.style.zIndex = "1";
-      flagImg.style.aspectRatio = "3/4";
-      nameDiv.appendChild(flagImg);
+      const flag = player.flag();
+      if (flag !== undefined && flag !== null && flag.startsWith("!")) {
+        const flagWrapper = document.createElement("div");
+        applyFlagStyles(flagWrapper);
+        renderPlayerFlag(flag, flagWrapper);
+        nameDiv.appendChild(flagWrapper);
+      } else if (flag !== undefined && flag !== null) {
+        const flagImg = document.createElement("img");
+        applyFlagStyles(flagImg);
+        flagImg.src = "/flags/" + flag + ".svg";
+        nameDiv.appendChild(flagImg);
+      }
     }
     nameDiv.classList.add("player-name");
     nameDiv.style.color = this.theme.textColor(player);
