@@ -7,7 +7,7 @@ export default {
     "^(\\.{1,2}/.*)\\.js$": "$1",
     "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$":
       "<rootDir>/__mocks__/fileMock.js",
-    "\\.(css|less)$": "<rootDir>/__mocks__/fileMock.js",
+    "\\.(css|less)$": "<rootDir>/__mocks__/fileMock.js"
   },
   transform: {
     "^.+\\.tsx?$": [
@@ -19,12 +19,20 @@ export default {
           module: "es2022",
           moduleResolution: "node",
           experimentalDecorators: true,
-          types: ["jest", "node"],
-        },
-      },
-    ],
+          types: ["jest", "node"]
+        }
+      }
+    ]
   },
-  transformIgnorePatterns: ["node_modules/(?!(node:)/)"],
+  // --- IMPORTANT CHANGE HERE ---
+  // Modify transformIgnorePatterns to include 'nanoid' and potentially other ES module packages
+  transformIgnorePatterns: [
+    "node_modules/(?!(nanoid)/)" // This will transform 'nanoid' but ignore others
+    // If you encounter similar errors with other packages (e.g., 'other-esm-package'),
+    // you can extend this regex:
+    // "node_modules/(?!(nanoid|other-esm-package)/)"
+  ],
+  // --- END IMPORTANT CHANGE ---
   preset: "ts-jest/presets/default-esm",
   collectCoverageFrom: ["src/**/*.ts", "!src/**/*.d.ts"],
   coverageThreshold: {
@@ -32,8 +40,8 @@ export default {
       branches: 0,
       functions: 0,
       lines: 0,
-      statements: 0,
-    },
+      statements: 0
+    }
   },
-  coverageReporters: ["text", "lcov", "html"],
+  coverageReporters: ["text", "lcov", "html"]
 };
