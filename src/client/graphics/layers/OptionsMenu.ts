@@ -163,7 +163,7 @@ export class OptionsMenu extends LitElement implements Layer {
     }
     return html`
       <div
-        class="top-0 lg:top-4 right-0 lg:right-4 z-50 pointer-events-auto"
+        class="top-0 lg:top-4 right-0 lg:right-4 z-50 pointer-events-auto safe-pt"
         @contextmenu=${(e) => e.preventDefault()}
       >
         <div

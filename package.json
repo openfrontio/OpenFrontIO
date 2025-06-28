@@ -82,6 +82,9 @@
   "dependencies": {
     "@aws-sdk/client-redshift-data": "^3.758.0",
     "@aws-sdk/client-s3": "^3.758.0",
+    "@capacitor/app": "^7.0.1",
+    "@capacitor/browser": "^7.0.1",
+    "@capacitor/core": "^7.3.0",
     "@datastructures-js/priority-queue": "^6.3.1",
     "@google-cloud/secret-manager": "^5.6.0",
     "@opentelemetry/api": "^1.9.0",

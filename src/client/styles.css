@@ -18,6 +18,19 @@
   box-sizing: border-box;
 }
 
+/* Add safe-area offsets for iOS native mobile device */
+@supports (-webkit-touch-callout: none) {
+  .safe-pt {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-pb {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-mb {
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+}
+
 /* Add custom scrollbar styles */
 ::-webkit-scrollbar {
   width: 8px;

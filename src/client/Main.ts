@@ -31,7 +31,13 @@ import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
 import { OButton } from "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
+import {
+  discordLogin,
+  getUserMe,
+  initializeAuthListener,
+  isLoggedIn,
+  logOut,
+} from "./jwt";
 import "./styles.css";
 
 declare global {
@@ -78,6 +84,8 @@ class Client {
   constructor() {}
 
   initialize(): void {
+    initializeAuthListener();
+
     const gameVersion = document.getElementById(
       "game-version",
     ) as HTMLDivElement;

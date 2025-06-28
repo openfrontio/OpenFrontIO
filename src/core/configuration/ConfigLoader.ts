@@ -1,3 +1,4 @@
+import { CapacitorHttp } from "@capacitor/core";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
 import { Config, GameEnv, ServerConfig } from "./Config";
@@ -29,19 +30,52 @@ export async function getServerConfigFromClient(): Promise<ServerConfig> {
   if (cachedSC) {
     return cachedSC;
   }
-  const response = await fetch("/api/env");
 
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch server config: ${response.status} ${response.statusText}`,
+  try {
+    const response = await CapacitorHttp.get({
+      url: `${process.env.APP_BASE_URL || ""}/api/env`,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.data) {
+      throw new Error(`Failed to fetch server config: ${response.status}`);
+    }
+
+    // Check if response is HTML (error case)
+    const dataStr =
+      typeof response.data === "string"
+        ? response.data
+        : JSON.stringify(response.data);
+    if (dataStr.includes("<!doctype html>") || dataStr.includes("<html")) {
+      console.warn(
+        "Server returned HTML instead of JSON, falling back to environment variable",
+      );
+      return getServerConfigFromServer();
+    }
+
+    const config = response.data;
+
+    // Validate that we got the expected structure
+    if (!config || typeof config.game_env !== "string") {
+      console.warn(
+        "Invalid config structure received, falling back to environment variable",
+      );
+      return getServerConfigFromServer();
+    }
+
+    console.log("Server config loaded:", config);
+
+    cachedSC = getServerConfig(config.game_env);
+    return cachedSC;
+  } catch (error) {
+    console.warn(
+      "Error fetching server config from API, falling back to environment variable:",
+      error,
     );
+    return getServerConfigFromServer();
   }
-  const config = await response.json();
-  // Log the retrieved configuration
-  console.log("Server config loaded:", config);
-
-  cachedSC = getServerConfig(config.game_env);
-  return cachedSC;
 }
 export function getServerConfigFromServer(): ServerConfig {
   const gameEnv = process.env.GAME_ENV ?? "dev";

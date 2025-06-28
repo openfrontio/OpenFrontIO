@@ -2,7 +2,10 @@
 <html lang="en" class="h-full">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>OpenFront (ALPHA)</title>
     <link rel="manifest" href="../../resources/manifest.json" />
 
@@ -97,7 +100,7 @@
   <body
     class="h-full select-none font-sans min-h-screen bg-opacity-0 bg-cover bg-center bg-fixed transition-opacity duration-300 ease-in-out flex flex-col"
   >
-    <header class="l-header">
+    <header class="l-header safe-pt">
       <div class="l-header__content">
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -216,11 +219,11 @@
             secondary
           ></o-button>
           <!-- <o-button
-            id="chat-button"
-            title="Chat Test"
-            block
-            secondary
-          ></o-button> -->
+              id="chat-button"
+              title="Chat Test"
+              block
+              secondary
+            ></o-button> -->
         </div>
 
         <o-button
@@ -247,7 +250,7 @@
     <button
       id="settings-button"
       title="Settings"
-      class="fixed bottom-4 right-4 z-50 rounded-full p-2 shadow-lg transition-colors duration-300 flex items-center justify-center"
+      class="fixed bottom-4 right-4 z-50 rounded-full p-2 shadow-lg transition-colors duration-300 flex items-center justify-center safe-mb"
       style="width: 80px; height: 80px; background-color: #0075ff"
     >
       <img
@@ -294,7 +297,7 @@
     </div>
 
     <!-- Footer section -->
-    <footer class="l-footer">
+    <footer class="l-footer safe-pb">
       <div class="l-footer__content">
         <div class="l-footer__col">
           <a

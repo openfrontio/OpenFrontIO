@@ -1,12 +1,14 @@
+import { CapacitorHttp } from "@capacitor/core";
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { GameInfo, GameRecord } from "../core/Schemas";
 import { generateID } from "../core/Util";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { JoinLobbyEvent } from "./Main";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import { buildGameUrl } from "./HostLobbyModal";
+import { JoinLobbyEvent } from "./Main";
+
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
@@ -170,15 +172,14 @@ export class JoinPrivateLobbyModal extends LitElement {
   }
 
   private async checkActiveLobby(lobbyId: string): Promise<boolean> {
-    const config = await getServerConfigFromClient();
-    const url = `/${config.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
+    const url = await buildGameUrl(lobbyId, "exists");
 
-    const response = await fetch(url, {
-      method: "GET",
+    const response = await CapacitorHttp.get({
+      url,
       headers: { "Content-Type": "application/json" },
     });
 
-    const gameInfo = await response.json();
+    const gameInfo = response.data;
 
     if (gameInfo.exists) {
       this.message = translateText("private_lobby.joined_waiting");
@@ -203,15 +204,14 @@ export class JoinPrivateLobbyModal extends LitElement {
   }
 
   private async checkArchivedGame(lobbyId: string): Promise<boolean> {
-    const config = await getServerConfigFromClient();
-    const archiveUrl = `/${config.workerPath(lobbyId)}/api/archived_game/${lobbyId}`;
+    const url = await buildGameUrl(lobbyId, "archived_game");
 
-    const archiveResponse = await fetch(archiveUrl, {
-      method: "GET",
+    const archiveResponse = await CapacitorHttp.get({
+      url,
       headers: { "Content-Type": "application/json" },
     });
 
-    const archiveData = await archiveResponse.json();
+    const archiveData = archiveResponse.data;
 
     if (
       archiveData.success === false &&
@@ -249,18 +249,15 @@ export class JoinPrivateLobbyModal extends LitElement {
 
   private async pollPlayers() {
     if (!this.lobbyIdInput?.value) return;
-    const config = await getServerConfigFromClient();
 
-    fetch(
-      `/${config.workerPath(this.lobbyIdInput.value)}/api/game/${this.lobbyIdInput.value}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+    const url = await buildGameUrl(this.lobbyIdInput.value, "game");
+    CapacitorHttp.get({
+      url,
+      headers: {
+        "Content-Type": "application/json",
       },
-    )
-      .then((response) => response.json())
+    })
+      .then((response) => JSON.parse(response.data))
       .then((data: GameInfo) => {
         this.players = data.clients?.map((p) => p.username) ?? [];
       })

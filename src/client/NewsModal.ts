@@ -1,3 +1,4 @@
+import { CapacitorHttp } from "@capacitor/core";
 import { LitElement, css, html } from "lit";
 import { resolveMarkdown } from "lit-markdown";
 import { customElement, property, query } from "lit/decorators.js";
@@ -86,8 +87,12 @@ export class NewsModal extends LitElement {
   public open() {
     if (!this.initialized) {
       this.initialized = true;
-      fetch(changelog)
-        .then((response) => (response.ok ? response.text() : "Failed to load"))
+      CapacitorHttp.get({
+        url: `${process.env.APP_BASE_URL || ""}${changelog}`,
+      })
+        .then((response) =>
+          response.status === 200 ? response.data : "Failed to load",
+        )
         .then((markdown) => (this.markdown = markdown));
     }
     this.requestUpdate();

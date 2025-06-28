@@ -2,9 +2,24 @@ import { execSync } from "child_process";
 import CopyPlugin from "copy-webpack-plugin";
 import ESLintPlugin from "eslint-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
+import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 import webpack from "webpack";
+
+function getLocalIP() {
+  const interfaces = os.networkInterfaces();
+  for (const interfaceName in interfaces) {
+    const networkInterface = interfaces[interfaceName];
+    if (!networkInterface) continue;
+    for (const address of networkInterface) {
+      if (address.family === "IPv4" && !address.internal) {
+        return address.address;
+      }
+    }
+  }
+  return "localhost";
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,6 +29,13 @@ const gitCommit =
 
 export default async (env, argv) => {
   const isProduction = argv.mode === "production";
+
+  const appBaseUrl = process.env.CAPACITOR_BUILD
+    ? isProduction && process.env.CAPACITOR_PRODUCTION_HOSTNAME
+      ? `https://${process.env.CAPACITOR_PRODUCTION_HOSTNAME}`
+      : `http://${getLocalIP()}:9000`
+    : "";
+  const apiBaseForLocalhost = `http://${process.env.CAPACITOR_BUILD ? getLocalIP() : "localhost"}:8787`;
 
   return {
     entry: "./src/client/Main.ts",
@@ -122,16 +144,29 @@ export default async (env, argv) => {
       }),
       new webpack.DefinePlugin({
         "process.env.WEBSOCKET_URL": JSON.stringify(
-          isProduction ? "" : "localhost:3000",
+          appBaseUrl ? appBaseUrl.split("://")[1] : "", // remove protocol
         ),
         "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
         "process.env.GIT_COMMIT": JSON.stringify(gitCommit),
+        "process.env.APP_BASE_URL": JSON.stringify(appBaseUrl),
+        "process.env.LOCAL_API_BASE_URL": JSON.stringify(apiBaseForLocalhost),
+        "process.env.CAPACITOR_PRODUCTION_HOSTNAME": JSON.stringify(
+          process.env.CAPACITOR_PRODUCTION_HOSTNAME,
+        ),
       }),
       new CopyPlugin({
         patterns: [
           {
             from: path.resolve(__dirname, "resources"),
             to: path.resolve(__dirname, "static"),
+            noErrorOnMissing: true,
+          },
+          {
+            from: path.resolve(
+              __dirname,
+              "node_modules/@capacitor/android/capacitor.js",
+            ),
+            to: path.resolve(__dirname, "static/capacitor.js"),
             noErrorOnMissing: true,
           },
         ],

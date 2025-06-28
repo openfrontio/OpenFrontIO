@@ -1,3 +1,4 @@
+import { CapacitorHttp } from "@capacitor/core";
 import { JWK } from "jose";
 import { z } from "zod/v4";
 import {
@@ -90,15 +91,17 @@ export abstract class DefaultServerConfig implements ServerConfig {
   jwtIssuer(): string {
     const audience = this.jwtAudience();
     return audience === "localhost"
-      ? "http://localhost:8787"
+      ? process.env.LOCAL_API_BASE_URL || ""
       : `https://api.${audience}`;
   }
   async jwkPublicKey(): Promise<JWK> {
     if (this.publicKey) return this.publicKey;
     const jwksUrl = this.jwtIssuer() + "/.well-known/jwks.json";
     console.log(`Fetching JWKS from ${jwksUrl}`);
-    const response = await fetch(jwksUrl);
-    const result = JwksSchema.safeParse(await response.json());
+    const response = await CapacitorHttp.get({
+      url: jwksUrl,
+    });
+    const result = JwksSchema.safeParse(response.data);
     if (!result.success) {
       const error = z.prettifyError(result.error);
       console.error("Error parsing JWKS", error);

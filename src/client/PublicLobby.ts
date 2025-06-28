@@ -1,3 +1,4 @@
+import { CapacitorHttp } from "@capacitor/core";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
@@ -74,10 +75,13 @@ export class PublicLobby extends LitElement {
 
   async fetchLobbies(): Promise<GameInfo[]> {
     try {
-      const response = await fetch(`/api/public_lobbies`);
-      if (!response.ok)
+      const response = await CapacitorHttp.get({
+        url: `${process.env.APP_BASE_URL || ""}/api/public_lobbies`,
+      });
+
+      if (response.status !== 200)
         throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
+      const data = JSON.parse(response.data);
       return data.lobbies;
     } catch (error) {
       console.error("Error fetching lobbies:", error);
