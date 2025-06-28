@@ -81,6 +81,16 @@ export class SoundManager {
       return; 
     }
 
+    // Validate parameters
+    if (typeof volume !== 'number' || volume < 0 || volume > 1) {
+      console.warn(`Invalid volume ${volume}. Resetting to 1.0.`);
+      volume = 1.0;
+    }
+    if (typeof pan !== 'number' || pan < -1 || pan > 1) {
+      console.warn(`Invalid pan ${pan}. Resetting to 0.`);
+      pan = 0;
+    }
+
     const buffer = this.soundBuffers.get(soundName);
     if (!buffer) {
       console.warn(`Sound ${soundName} not found`);
@@ -92,18 +102,22 @@ export class SoundManager {
       source.buffer = buffer;
 
       const gainNode = this.audioContext.createGain();
-      gainNode.gain.value = Math.max(0, Math.min(1, volume));
+      gainNode.gain.value = volume;
 
-      
       const pannerNode = this.audioContext.createStereoPanner();
-      pannerNode.pan.value = Math.max(-1, Math.min(1, pan));
+      pannerNode.pan.value = pan;
 
-     
       source.connect(pannerNode);
       pannerNode.connect(gainNode);
       gainNode.connect(this.audioContext.destination);
 
-     
+      // Clean up nodes when playback finishes
+      source.onended = () => {
+        source.disconnect();
+        pannerNode.disconnect();
+        gainNode.disconnect();
+      };
+
       source.start(0);
     } catch (error) {
       console.error(`Error playing sound ${soundName}:`, error);
