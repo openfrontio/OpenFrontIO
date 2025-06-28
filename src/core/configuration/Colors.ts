@@ -7,15 +7,6 @@ import { simpleHash } from "../Util";
 extend([lchPlugin]);
 extend([labPlugin]);
 
-export const red: Colord = colord({ r: 235, g: 53, b: 53 }); // Bright Red
-export const blue: Colord = colord({ r: 41, g: 98, b: 255 }); // Royal Blue
-export const teal = colord({ h: 172, s: 66, l: 50 });
-export const purple = colord({ h: 271, s: 81, l: 56 });
-export const yellow = colord({ h: 45, s: 93, l: 47 });
-export const orange = colord({ h: 25, s: 95, l: 53 });
-export const green = colord({ h: 128, s: 49, l: 50 });
-export const botColor: Colord = colord({ r: 210, g: 206, b: 200 }); // Muted Beige Gray
-
 export const nationColors: Colord[] = [
   colord({ r: 230, g: 100, b: 100 }), // Bright Red
   colord({ r: 100, g: 180, b: 230 }), // Sky Blue
@@ -339,14 +330,105 @@ export const fallbackColors: Colord[] = [
   colord({ r: 255, g: 245, b: 210 }), // Soft Banana
 ];
 
+// Generic function to generate 64 team colors from a base color
+function generateTeamColors(baseColor: {
+  r: number;
+  g: number;
+  b: number;
+}): Colord[] {
+  return Array.from({ length: 64 }, (_, i) => {
+    const group = Math.floor(i / 16);
+    const indexInGroup = i % 16;
+
+    if (group === 0) {
+      // Pure vibrant colors: base color with moderate lightness (16 colors)
+      const lightness = indexInGroup * 10; // Smaller steps, max 150
+      return colord({
+        r: Math.min(255, baseColor.r + lightness),
+        g: Math.min(255, baseColor.g + lightness),
+        b: Math.min(255, baseColor.b + lightness),
+      });
+    } else if (group === 1) {
+      // Bright vibrant colors: slightly reduced intensity (16 colors)
+      const lightness = indexInGroup * 10; // Smaller steps, max 150
+      const intensity = 0.9; // 230/255 - keep vibrant
+      return colord({
+        r: Math.min(255, Math.floor(baseColor.r * intensity) + lightness),
+        g: Math.min(255, Math.floor(baseColor.g * intensity) + lightness),
+        b: Math.min(255, Math.floor(baseColor.b * intensity) + lightness),
+      });
+    } else if (group === 2) {
+      // Medium vibrant colors: further reduced intensity (16 colors)
+      const lightness = indexInGroup * 10; // Smaller steps, max 150
+      const intensity = 0.8; // 204/255 - still vibrant
+      return colord({
+        r: Math.min(255, Math.floor(baseColor.r * intensity) + lightness),
+        g: Math.min(255, Math.floor(baseColor.g * intensity) + lightness),
+        b: Math.min(255, Math.floor(baseColor.b * intensity) + lightness),
+      });
+    } else {
+      // Softer vibrant colors: lowest intensity but still vibrant (16 colors)
+      const lightness = indexInGroup * 10; // Smaller steps, max 150
+      const intensity = 0.7; // 179/255 - avoid getting too dark
+      return colord({
+        r: Math.min(255, Math.floor(baseColor.r * intensity) + lightness),
+        g: Math.min(255, Math.floor(baseColor.g * intensity) + lightness),
+        b: Math.min(255, Math.floor(baseColor.b * intensity) + lightness),
+      });
+    }
+  });
+}
+
+// Function to calculate color distance using Delta E
+function calculateColorDistance(color1: Colord, color2: Colord): number {
+  return deltaE76(color1.toLab(), color2.toLab());
+}
+
+// Predefined 64 color variations for each team
+const redTeamColors: Colord[] = generateTeamColors({ r: 255, g: 0, b: 0 }); // Pure red
+const blueTeamColors: Colord[] = generateTeamColors({ r: 0, g: 0, b: 255 }); // Pure blue
+const tealTeamColors: Colord[] = generateTeamColors({ r: 0, g: 255, b: 255 }); // Pure cyan (instead of teal)
+const purpleTeamColors: Colord[] = generateTeamColors({ r: 255, g: 0, b: 255 }); // Pure magenta (instead of purple)
+const yellowTeamColors: Colord[] = generateTeamColors({ r: 255, g: 255, b: 0 }); // Pure yellow
+const orangeTeamColors: Colord[] = generateTeamColors({ r: 255, g: 165, b: 0 }); // Orange
+const greenTeamColors: Colord[] = generateTeamColors({ r: 0, g: 255, b: 0 }); // Pure green
+const botTeamColors: Colord[] = [colord({ r: 210, g: 206, b: 200 })]; // Muted Beige Gray - single color for bots
+
 export class ColorAllocator {
   private availableColors: Colord[];
   private fallbackColors: Colord[];
   private assigned = new Map<string, Colord>();
+  private teamPlayerColors = new Map<string, Colord>();
 
   constructor(colors: Colord[], fallback: Colord[]) {
     this.availableColors = [...colors];
     this.fallbackColors = [...colors, ...fallback];
+  }
+
+  private getTeamColorVariations(team: Team): Colord[] {
+    switch (team) {
+      case ColoredTeams.Blue:
+        return blueTeamColors;
+      case ColoredTeams.Red:
+        return redTeamColors;
+      case ColoredTeams.Teal:
+        return tealTeamColors;
+      case ColoredTeams.Purple:
+        return purpleTeamColors;
+      case ColoredTeams.Yellow:
+        return yellowTeamColors;
+      case ColoredTeams.Orange:
+        return orangeTeamColors;
+      case ColoredTeams.Green:
+        return greenTeamColors;
+      case ColoredTeams.Bot:
+        return botTeamColors;
+      default:
+        // For unknown teams, use a color from available colors
+        return [
+          this.availableColors[simpleHash(team) % this.availableColors.length],
+        ];
+    }
   }
 
   assignColor(id: string): Colord {
@@ -380,29 +462,30 @@ export class ColorAllocator {
     return color;
   }
 
-  assignTeamColor(team: Team): Colord {
-    switch (team) {
-      case ColoredTeams.Blue:
-        return blue;
-      case ColoredTeams.Red:
-        return red;
-      case ColoredTeams.Teal:
-        return teal;
-      case ColoredTeams.Purple:
-        return purple;
-      case ColoredTeams.Yellow:
-        return yellow;
-      case ColoredTeams.Orange:
-        return orange;
-      case ColoredTeams.Green:
-        return green;
-      case ColoredTeams.Bot:
-        return botColor;
-      default:
-        return this.availableColors[
-          simpleHash(team) % this.availableColors.length
-        ];
+  assignTeamColor(team: Team, playerId?: string): Colord {
+    // If we have a player ID, assign a consistent color variation to this player
+    if (playerId) {
+      const cacheKey = `${team}_${playerId}`;
+      if (this.teamPlayerColors.has(cacheKey)) {
+        return this.teamPlayerColors.get(cacheKey)!;
+      }
     }
+
+    const teamColors = this.getTeamColorVariations(team);
+
+    // If we have a player ID, select a specific color variation based on the player ID
+    if (playerId) {
+      const hashValue = simpleHash(playerId);
+      const colorIndex = hashValue % teamColors.length;
+      const color = teamColors[colorIndex];
+      const cacheKey = `${team}_${playerId}`;
+      this.teamPlayerColors.set(cacheKey, color);
+
+      return color;
+    }
+
+    // Fallback: return the base color for the team
+    return teamColors[0];
   }
 }
 

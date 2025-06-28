@@ -161,7 +161,7 @@ export interface Config {
 }
 
 export interface Theme {
-  teamColor(team: Team): Colord;
+  teamColor(team: Team, player?: PlayerView): Colord;
   territoryColor(playerInfo: PlayerView): Colord;
   specialBuildingColor(playerInfo: PlayerView): Colord;
   railroadColor(playerInfo: PlayerView): Colord;
