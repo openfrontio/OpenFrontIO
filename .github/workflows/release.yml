@@ -34,7 +34,7 @@ jobs:
           Changelog:
           ${RELEASE_BODY}
           EOF
-          ./build.sh prod "${RELEASE_TAG_NAME}" "${RELEASE_BODY}" /tmp/build-metadata.json
+          ./build.sh prod "${RELEASE_TAG_NAME}" "${RELEASE_NAME}" "${RELEASE_BODY}" /tmp/build-metadata.json
           IMAGE_ID=$(jq -r '."containerimage.digest"' /tmp/build-metadata.json)
           echo "IMAGE_ID=${IMAGE_ID}" >> $GITHUB_OUTPUT
           echo "Image ID: `${IMAGE_ID}`" >> $GITHUB_STEP_SUMMARY
@@ -49,44 +49,44 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - env:
+          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
+          DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
-          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
         run: |
-          # TODO: Switch to using IMAGE_ID
-          ./deploy.sh staging staging "${RELEASE_TAG_NAME}" alpha
+          ./deploy.sh staging staging "${IMAGE_ID}" alpha
 
   deploy-beta:
     name: 🐞 Deploy to beta
     runs-on: ubuntu-latest
-    needs: [deploy-alpha]
+    needs: [build, deploy-alpha]
     timeout-minutes: 30
     environment: prod
     steps:
       - env:
-          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+          IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
         run: |
-          ./deploy.sh prod nbg1 "${RELEASE_TAG_NAME}" beta
+          ./deploy.sh prod nbg1 "${IMAGE_ID}" beta
 
   deploy-blue:
     name: 🔵 Deploy to blue
     runs-on: ubuntu-latest
-    needs: [deploy-alpha]
+    needs: [build, deploy-alpha]
     timeout-minutes: 30
     environment: prod
     steps:
       - env:
-          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+          IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
         run: |
-          ./deploy.sh prod nbg1 "${RELEASE_TAG_NAME}" blue
+          ./deploy.sh prod nbg1 "${IMAGE_ID}" blue
 
   deploy-green:
     name: 🟢 Deploy to green
     runs-on: ubuntu-latest
-    needs: [deploy-alpha]
+    needs: [build, deploy-alpha]
     timeout-minutes: 30
     environment: prod
     steps:
       - env:
-          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+          IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}
         run: |
-          ./deploy.sh prod nbg1 "${RELEASE_TAG_NAME}" green
+          ./deploy.sh prod nbg1 "${IMAGE_ID}" green

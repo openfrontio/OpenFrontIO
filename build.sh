@@ -9,8 +9,9 @@ set -e # Exit immediately if a command exits with a non-zero status
 # Parse command line arguments
 DEPLOY_ENV="$1"
 VERSION_TAG="$2"
-CHANGELOG_MD="$3"
-METADATA_FILE="$4"
+VERSION_TXT="$3"
+CHANGELOG_MD="$4"
+METADATA_FILE="$5"
 
 # Set default metadata file if not provided
 if [ -z "$METADATA_FILE" ]; then
@@ -76,7 +77,7 @@ echo "Git commit: $GIT_COMMIT"
 docker buildx build \
     --platform linux/amd64 \
     --build-arg "GIT_COMMIT=$GIT_COMMIT" \
-    --build-arg "VERSION_TAG=$VERSION_TAG" \
+    --build-arg "VERSION_TXT=$VERSION_TXT" \
     --build-arg "CHANGELOG_MD=$CHANGELOG_MD" \
     --metadata-file "$METADATA_FILE" \
     -t "$DOCKER_IMAGE" \
