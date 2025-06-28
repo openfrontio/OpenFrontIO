@@ -151,7 +151,7 @@ export class NukeExecution implements Execution {
     // make the nuke unactive if it was intercepted
     if (!this.nuke.isActive()) {
       console.log(`Nuke destroyed before reaching target`);
-      this.mg.soundManager()?.play("SAM hit");
+      window.soundManager.play("SAM hit");
       this.active = false;
       return;
     }
