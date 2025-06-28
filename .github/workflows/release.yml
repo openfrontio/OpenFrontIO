@@ -33,7 +33,7 @@ jobs:
           Name: ${RELEASE_NAME}
           Tag: ${RELEASE_TAG_NAME}
           Changelog:
-          ${RELEASE_BODY}
+          ${RELEASE_BODY}v
           EOF
           ./build.sh prod "${RELEASE_TAG_NAME}" "${RELEASE_NAME}" "${RELEASE_BODY}" /tmp/build-metadata.json
           IMAGE_ID=$(jq -r '."containerimage.digest"' /tmp/build-metadata.json)
@@ -59,7 +59,8 @@ jobs:
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
           test -n "$SERVER_HOST_STAGING" && ssh-keyscan -H "$SERVER_HOST_STAGING" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
-      - env:
+      - name: 🚀 Deploy image
+        env:
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
@@ -79,6 +80,21 @@ jobs:
         run: |
           set -euxo pipefail
           bash -x ./deploy.sh staging staging "${IMAGE_ID}" alpha
+      - name: ⏳ Wait for deployment to start
+        env:
+          FQDN: alpha.openfront.dev
+        run: |
+          echo "::group::Wait for deployment to start"
+          set -euxo pipefail
+          while [ "$(curl -s https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+            if [ "$SECONDS" -ge 300 ]; then
+              echo "Timeout: deployment did not start within 5 minutes"
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "Deployment started in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
+          echo "::endgroup::"
 
   deploy-beta:
     name: 🐞 Deploy to beta
@@ -98,7 +114,8 @@ jobs:
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
           test -n "$SERVER_HOST_NBG1" && ssh-keyscan -H "$SERVER_HOST_NBG1" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
-      - env:
+      - name: 🚀 Deploy image
+        env:
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
@@ -118,6 +135,21 @@ jobs:
         run: |
           set -euxo pipefail
           ./deploy.sh prod nbg1 "${IMAGE_ID}" beta
+      - name: ⏳ Wait for deployment to start
+        env:
+          FQDN: beta.openfront.io
+        run: |
+          echo "::group::Wait for deployment to start"
+          set -euxo pipefail
+          while [ "$(curl -s https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+            if [ "$SECONDS" -ge 300 ]; then
+              echo "Timeout: deployment did not start within 5 minutes"
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "Deployment started in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
+          echo "::endgroup::"
 
   deploy-blue:
     name: 🔵 Deploy to blue
@@ -137,7 +169,8 @@ jobs:
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
           test -n "$SERVER_HOST_NBG1" && ssh-keyscan -H "$SERVER_HOST_NBG1" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
-      - env:
+      - name: 🚀 Deploy image
+        env:
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
@@ -157,6 +190,21 @@ jobs:
         run: |
           set -euxo pipefail
           ./deploy.sh prod nbg1 "${IMAGE_ID}" blue
+      - name: ⏳ Wait for deployment to start
+        env:
+          FQDN: beta.openfront.io
+        run: |
+          echo "::group::Wait for deployment to start"
+          set -euxo pipefail
+          while [ "$(curl -s https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+            if [ "$SECONDS" -ge 300 ]; then
+              echo "Timeout: deployment did not start within 5 minutes"
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "Deployment started in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
+          echo "::endgroup::"
 
   deploy-green:
     name: 🟢 Deploy to green
@@ -176,7 +224,8 @@ jobs:
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
           test -n "$SERVER_HOST_NBG1" && ssh-keyscan -H "$SERVER_HOST_NBG1" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
-      - env:
+      - name: 🚀 Deploy image
+        env:
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
@@ -196,3 +245,18 @@ jobs:
         run: |
           set -euxo pipefail
           ./deploy.sh prod nbg1 "${IMAGE_ID}" green
+      - name: ⏳ Wait for deployment to start
+        env:
+          FQDN: beta.openfront.io
+        run: |
+          echo "::group::Wait for deployment to start"
+          set -euxo pipefail
+          while [ "$(curl -s https://${FQDN}/commit.txt)" != "${GITHUB_SHA}" ]; do
+            if [ "$SECONDS" -ge 300 ]; then
+              echo "Timeout: deployment did not start within 5 minutes"
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "Deployment started in ${SECONDS} seconds" >> $GITHUB_STEP_SUMMARY
+          echo "::endgroup::"
