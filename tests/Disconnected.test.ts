@@ -10,12 +10,13 @@ let player2: Player;
 
 describe("Disconnected", () => {
   beforeEach(async () => {
-    game = await setup("Plains", {
+    game = await setup("plains", {
       infiniteGold: true,
       instantBuild: true,
     });
 
     const player1Info = new PlayerInfo(
+      undefined,
       "us",
       "Active Player",
       PlayerType.Human,
@@ -24,6 +25,7 @@ describe("Disconnected", () => {
     );
 
     const player2Info = new PlayerInfo(
+      undefined,
       "fr",
       "Disconnected Player",
       PlayerType.Human,

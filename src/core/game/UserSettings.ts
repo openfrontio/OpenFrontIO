@@ -1,6 +1,8 @@
 import { EventBus, GameEvent } from "../EventBus";
 import LocalStorage from "../Storage";
 
+const PATTERN_KEY = "territoryPattern";
+
 export class DarkModeChangedEvent implements GameEvent {
   constructor(public readonly value: boolean) {}
 }
@@ -22,6 +24,14 @@ export class LeftClickOpensMenuChangedEvent implements GameEvent {
 }
 
 export class FocusLockedChangedEvent implements GameEvent {
+  constructor(public readonly value: boolean) {}
+}
+
+export class AlertFrameChangedEvent implements GameEvent {
+  constructor(public readonly value: boolean) {}
+}
+
+export class TerritoryPatternsChangedEvent implements GameEvent {
   constructor(public readonly value: boolean) {}
 }
 
@@ -57,6 +67,11 @@ export class UserSettings {
   emojis() {
     return this.get("settings.emojis", true);
   }
+
+  alertFrame() {
+    return this.get("settings.alertFrame", true);
+  }
+
   anonymousNames() {
     return this.get("settings.anonymousNames", false);
   }
@@ -71,6 +86,10 @@ export class UserSettings {
 
   leftClickOpensMenu() {
     return this.get("settings.leftClickOpensMenu", false);
+  }
+
+  territoryPatterns() {
+    return this.get("settings.territoryPatterns", true);
   }
 
   focusLocked() {
@@ -97,6 +116,12 @@ export class UserSettings {
     this.eventBus.emit(new EmojisChangedEvent(newValue));
   }
 
+  toggleAlertFrame() {
+    const newValue = !this.alertFrame();
+    this.set("settings.alertFrame", newValue);
+    this.eventBus.emit(new AlertFrameChangedEvent(newValue));
+  }
+
   toggleRandomName() {
     const newValue = !this.anonymousNames();
     this.set("settings.anonymousNames", newValue);
@@ -109,9 +134,27 @@ export class UserSettings {
     this.eventBus.emit(new SpecialEffectsChangedEvent(newValue));
   }
 
+  toggleTerritoryPatterns() {
+    const newValue = !this.territoryPatterns();
+    this.set("settings.territoryPatterns", newValue);
+    this.eventBus.emit(new TerritoryPatternsChangedEvent(newValue));
+  }
+
   toggleDarkMode() {
     const newValue = !this.darkMode();
     this.set("settings.darkMode", newValue);
     this.eventBus.emit(new DarkModeChangedEvent(newValue));
+  }
+
+  getSelectedPattern(): string | undefined {
+    return this.storage.getItem(PATTERN_KEY) ?? undefined;
+  }
+
+  setSelectedPattern(base64: string | undefined): void {
+    if (base64 === undefined) {
+      this.storage.removeItem(PATTERN_KEY);
+    } else {
+      this.storage.setItem(PATTERN_KEY, base64);
+    }
   }
 }

@@ -1,4 +1,5 @@
 import { Config } from "../configuration/Config";
+import { PatternDecoder } from "../PatternDecoder";
 import { ClientID, GameID } from "../Schemas";
 import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
@@ -19,6 +20,7 @@ import {
   TerrainType,
   TerraNullius,
   Tick,
+  TrainType,
   UnitInfo,
   UnitType,
 } from "./Game";
@@ -122,10 +124,20 @@ export class UnitView {
   level(): number {
     return this.data.level;
   }
+  hasTrainStation(): boolean {
+    return this.data.hasTrainStation;
+  }
+  trainType(): TrainType | undefined {
+    return this.data.trainType;
+  }
+  isLoaded(): boolean | undefined {
+    return this.data.loaded;
+  }
 }
 
 export class PlayerView {
   public anonymousName: string | null = null;
+  private decoder?: PatternDecoder;
 
   constructor(
     private game: GameView,
@@ -141,6 +153,12 @@ export class PlayerView {
         this.data.playerType,
       );
     }
+    this.decoder =
+      data.pattern === undefined ? undefined : new PatternDecoder(data.pattern);
+  }
+
+  patternDecoder(): PatternDecoder | undefined {
+    return this.decoder;
   }
 
   async actions(tile: TileRef): Promise<PlayerActions> {
@@ -186,6 +204,11 @@ export class PlayerView {
   flag(): string | undefined {
     return this.data.flag;
   }
+
+  pattern(): string | undefined {
+    return this.data.pattern;
+  }
+
   name(): string {
     return this.anonymousName !== null && this.userSettings.anonymousNames()
       ? this.anonymousName
@@ -284,6 +307,7 @@ export class PlayerView {
   }
   info(): PlayerInfo {
     return new PlayerInfo(
+      this.pattern(),
       this.flag(),
       this.name(),
       this.type(),

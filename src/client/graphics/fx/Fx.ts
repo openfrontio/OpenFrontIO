@@ -12,4 +12,6 @@ export enum FxType {
   SinkingShip = "SinkingShip",
   Nuke = "Nuke",
   SAMExplosion = "SAMExplosion",
+  UnderConstruction = "UnderConstruction",
+  Dust = "Dust",
 }

@@ -10,6 +10,7 @@ import {
   PlayerType,
   UnitType,
 } from "./game/Game";
+import { PatternDecoder } from "./PatternDecoder";
 import { PlayerStatsSchema } from "./StatsSchemas";
 import { flattenedEmojiTable } from "./Util";
 
@@ -35,7 +36,8 @@ export type Intent =
   | QuickChatIntent
   | MoveWarshipIntent
   | MarkDisconnectedIntent
-  | UpgradeStructureIntent;
+  | UpgradeStructureIntent
+  | CreateStationIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -59,6 +61,7 @@ export type BuildUnitIntent = z.infer<typeof BuildUnitIntentSchema>;
 export type UpgradeStructureIntent = z.infer<
   typeof UpgradeStructureIntentSchema
 >;
+export type CreateStationIntent = z.infer<typeof CreateStationIntentSchema>;
 export type MoveWarshipIntent = z.infer<typeof MoveWarshipIntentSchema>;
 export type QuickChatIntent = z.infer<typeof QuickChatIntentSchema>;
 export type MarkDisconnectedIntent = z.infer<
@@ -176,6 +179,25 @@ export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
 export const UsernameSchema = SafeString;
 export const FlagSchema = z.string().max(128).optional();
+export const RequiredPatternSchema = z
+  .string()
+  .max(128)
+  .base64url()
+  .refine(
+    (val) => {
+      try {
+        new PatternDecoder(val);
+        return true;
+      } catch (e) {
+        console.error(JSON.stringify(e.message, null, 2));
+        return false;
+      }
+    },
+    {
+      message: "Invalid pattern",
+    },
+  );
+export const PatternSchema = RequiredPatternSchema.optional();
 
 export const QuickChatKeySchema = z.enum(
   Object.entries(quickChatData).flatMap(([category, entries]) =>
@@ -201,6 +223,7 @@ export const SpawnIntentSchema = BaseIntentSchema.extend({
   type: z.literal("spawn"),
   name: UsernameSchema,
   flag: FlagSchema,
+  pattern: PatternSchema,
   playerType: PlayerTypeSchema,
   x: z.number(),
   y: z.number(),
@@ -277,6 +300,11 @@ export const UpgradeStructureIntentSchema = BaseIntentSchema.extend({
   unitId: z.number(),
 });
 
+export const CreateStationIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("create_station"),
+  unitId: z.number(),
+});
+
 export const CancelAttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("cancel_attack"),
   attackID: z.string(),
@@ -322,6 +350,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   TargetTroopRatioIntentSchema,
   BuildUnitIntentSchema,
   UpgradeStructureIntentSchema,
+  CreateStationIntentSchema,
   EmbargoIntentSchema,
   MoveWarshipIntentSchema,
   QuickChatIntentSchema,
@@ -342,6 +371,7 @@ export const PlayerSchema = z.object({
   clientID: ID,
   username: UsernameSchema,
   flag: FlagSchema,
+  pattern: PatternSchema,
 });
 
 export const GameStartInfoSchema = z.object({
@@ -446,6 +476,7 @@ export const ClientJoinMessageSchema = z.object({
   lastTurn: z.number(), // The last turn the client saw.
   username: UsernameSchema,
   flag: FlagSchema,
+  pattern: PatternSchema,
 });
 
 export const ClientMessageSchema = z.discriminatedUnion("type", [

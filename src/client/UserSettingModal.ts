@@ -119,6 +119,15 @@ export class UserSettingModal extends LitElement {
     console.log("🤡 Emojis:", enabled ? "ON" : "OFF");
   }
 
+  private toggleAlertFrame(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean" || !this.userSettings) return;
+
+    this.userSettings.set("settings.alertFrame", enabled);
+
+    console.log("🚨 Alert frame:", enabled ? "ON" : "OFF");
+  }
+
   private toggleFxLayer(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean" || !this.userSettings) return;
@@ -165,6 +174,15 @@ export class UserSettingModal extends LitElement {
     } else {
       console.warn("Slider event missing detail.value", e);
     }
+  }
+
+  private toggleTerritoryPatterns(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean" || !this.userSettings) return;
+
+    this.userSettings.set("settings.territoryPatterns", enabled);
+
+    console.log("🏳️ Territory Patterns:", enabled ? "ON" : "OFF");
   }
 
   private handleKeybindChange(
@@ -254,6 +272,15 @@ export class UserSettingModal extends LitElement {
         @change=${this.toggleEmojis}
       ></setting-toggle>
 
+      <!-- 🚨 Alert frame -->
+      <setting-toggle
+        label="${translateText("user_setting.alert_frame_label")}"
+        description="${translateText("user_setting.alert_frame_desc")}"
+        id="alert-frame-toggle"
+        .checked=${this.userSettings.alertFrame()}
+        @change=${this.toggleAlertFrame}
+      ></setting-toggle>
+
       <!-- 💥 Special effects -->
       <setting-toggle
         label="${translateText("user_setting.special_effects_label")}"
@@ -279,6 +306,15 @@ export class UserSettingModal extends LitElement {
         id="anonymous-names-toggle"
         .checked=${this.userSettings.anonymousNames()}
         @change=${this.toggleAnonymousNames}
+      ></setting-toggle>
+
+      <!-- 🏳️ Territory Patterns -->
+      <setting-toggle
+        label="${translateText("user_setting.territory_patterns_label")}"
+        description="${translateText("user_setting.territory_patterns_desc")}"
+        id="territory-patterns-toggle"
+        .checked=${this.userSettings.territoryPatterns()}
+        @change=${this.toggleTerritoryPatterns}
       ></setting-toggle>
 
       <!-- ⚔️ Attack Ratio -->
@@ -396,6 +432,15 @@ export class UserSettingModal extends LitElement {
         description=${translateText("user_setting.boat_attack_desc")}
         defaultKey="KeyB"
         .value=${this.keybinds["boatAttack"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="groundAttack"
+        label=${translateText("user_setting.ground_attack")}
+        description=${translateText("user_setting.ground_attack_desc")}
+        defaultKey="KeyG"
+        .value=${this.keybinds["groundAttack"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 

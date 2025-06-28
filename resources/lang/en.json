@@ -160,6 +160,9 @@
     "regional": "Regional",
     "fantasy": "Other"
   },
+  "map_component": {
+    "loading": "Loading..."
+  },
   "private_lobby": {
     "title": "Join Private Lobby",
     "enter_id": "Enter Lobby ID",
@@ -237,6 +240,8 @@
     "dark_mode_desc": "Toggle the site’s appearance between light and dark themes",
     "emojis_label": "😊 Emojis",
     "emojis_desc": "Toggle whether emojis are shown in game",
+    "alert_frame_label": "🚨 Alert Frame",
+    "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed.",
     "special_effects_label": "💥 Special effects",
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
     "anonymous_names_label": "🥷 Hidden Names",
@@ -247,6 +252,8 @@
     "attack_ratio_desc": "What percentage of your troops to send in an attack (1–100%)",
     "troop_ratio_label": "🪖🛠️ Troops and Workers Ratio",
     "troop_ratio_desc": "Adjust the balance between troops (for combat) and workers (for gold production) (1–100%)",
+    "territory_patterns_label": "🏳️ Territory Patterns",
+    "territory_patterns_desc": "Choose whether to display territory pattern designs in game",
     "easter_writing_speed_label": "Writing Speed Multiplier",
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
     "easter_bug_count_label": "Bug Count",
@@ -262,6 +269,8 @@
     "attack_keybinds": "Attack Keybinds",
     "boat_attack": "Boat Attack",
     "boat_attack_desc": "Send a boat attack to the tile under your cursor.",
+    "ground_attack": "Ground Attack",
+    "ground_attack_desc": "Send a ground attack to the tile under your cursor.",
     "zoom_controls": "Zoom Controls",
     "zoom_out": "Zoom Out",
     "zoom_out_desc": "Zoom out the map",
@@ -416,6 +425,7 @@
     "cooldown": "Cooldown",
     "type": "Type",
     "upgrade": "Upgrade",
+    "create_station": "Create Station",
     "level": "Level"
   },
   "relation": {
@@ -462,5 +472,40 @@
   },
   "heads_up_message": {
     "choose_spawn": "Choose a starting location"
+  },
+  "territory_patterns": {
+    "title": "Select Territory Pattern",
+    "blocked": {
+      "login": "You must be logged in to access this pattern.",
+      "role": "This pattern requires the {role} role."
+    },
+    "pattern": {
+      "default": "Default",
+      "custom": "Custom",
+      "stripes_v": "Vertical Stripes",
+      "stripes_h": "Horizontal Stripes",
+      "checkerboard": "Checkerboard",
+      "choco": "Choco",
+      "diagonal": "Diagonal",
+      "cross": "Cross",
+      "mini_cross": "Mini Cross",
+      "horizontal_stripes": "Horizontal Stripes (Alt)",
+      "sword": "Sword",
+      "sparse_dots": "Sparse Dots",
+      "evan": "Evan",
+      "diagonal_stripe": "Diagonal Stripe",
+      "mountain_ridge": "Mountain Ridge",
+      "scattered_dots": "Scattered Dots",
+      "circuit_board": "Circuit Board",
+      "vertical_bars": "Vertical Bars",
+      "-w-": ".w.",
+      "white_rabbit": "White Rabbit",
+      "goat": "Goat",
+      "cursor": "Cursor",
+      "hand": "Hand",
+      "radiation": "Radiation",
+      "openfront_qr": "OpenFront.io QR code",
+      "openfront": "OpenFront"
+    }
   }
 }

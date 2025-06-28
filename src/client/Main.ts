@@ -24,6 +24,7 @@ import { NewsModal } from "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
@@ -196,6 +197,33 @@ class Client {
       hlpModal.open();
     });
 
+    const territoryModal = document.querySelector(
+      "territory-patterns-modal",
+    ) as TerritoryPatternsModal;
+    const tpButton = document.getElementById(
+      "territory-patterns-input-preview-button",
+    );
+    territoryModal instanceof TerritoryPatternsModal;
+
+    if (territoryModal) {
+      territoryModal.userSettings = this.userSettings;
+    }
+
+    if (tpButton === null)
+      throw new Error("territory-patterns-input-preview-button");
+    territoryModal.previewButton = tpButton;
+    territoryModal.updatePreview();
+    territoryModal.resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target.classList.contains("preview-container")) {
+          territoryModal.buttonWidth = entry.contentRect.width;
+        }
+      }
+    });
+    tpButton.addEventListener("click", () => {
+      territoryModal.open();
+    });
+
     if (isLoggedIn() === false) {
       // Not logged in
       loginDiscordButton.disable = false;
@@ -215,6 +243,7 @@ class Client {
         loginDiscordButton.hidden = false;
         loginDiscordButton.addEventListener("click", discordLogin);
         logoutDiscordButton.hidden = true;
+        territoryModal.onLogout();
       });
       // Look up the discord user object.
       // TODO: Add caching
@@ -227,9 +256,13 @@ class Client {
           logoutDiscordButton.hidden = true;
           return;
         }
+        console.log(
+          `Your player ID is ${userMeResponse.player.publicId}\n` +
+            "Sharing this ID will allow others to view your game history and stats.",
+        );
         loginDiscordButton.translationKey = "main.logged_in";
         loginDiscordButton.hidden = true;
-        const { user, player } = userMeResponse;
+        territoryModal.onUserMe(userMeResponse);
       });
     }
 
@@ -324,8 +357,8 @@ class Client {
     }
   }
 
-  private async handleJoinLobby(event: CustomEvent) {
-    const lobby = event.detail as JoinLobbyEvent;
+  private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
+    const lobby = event.detail;
     console.log(`joining lobby ${lobby.gameID}`);
     if (this.gameStop !== null) {
       console.log("joining lobby, stopping existing game");
@@ -337,6 +370,7 @@ class Client {
       {
         gameID: lobby.gameID,
         serverConfig: config,
+        pattern: this.userSettings.getSelectedPattern(),
         flag:
           this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
             ? ""
@@ -401,7 +435,7 @@ class Client {
           (ad as HTMLElement).style.display = "none";
         });
 
-        if (event.detail.gameConfig?.gameType !== GameType.Singleplayer) {
+        if (lobby.gameStartInfo?.config.gameType !== GameType.Singleplayer) {
           history.pushState(null, "", `#join=${lobby.gameID}`);
         }
       },
