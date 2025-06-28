@@ -330,7 +330,6 @@ export const fallbackColors: Colord[] = [
   colord({ r: 255, g: 245, b: 210 }), // Soft Banana
 ];
 
-// Generic function to generate 64 team colors from a base color
 function generateTeamColors(baseColor: {
   r: number;
   g: number;
@@ -342,7 +341,7 @@ function generateTeamColors(baseColor: {
 
     if (group === 0) {
       // Pure vibrant colors: base color with moderate lightness (16 colors)
-      const lightness = indexInGroup * 10; // Smaller steps, max 150
+      const lightness = indexInGroup * 10;
       return colord({
         r: Math.min(255, baseColor.r + lightness),
         g: Math.min(255, baseColor.g + lightness),
@@ -350,8 +349,8 @@ function generateTeamColors(baseColor: {
       });
     } else if (group === 1) {
       // Bright vibrant colors: slightly reduced intensity (16 colors)
-      const lightness = indexInGroup * 10; // Smaller steps, max 150
-      const intensity = 0.9; // 230/255 - keep vibrant
+      const lightness = indexInGroup * 10;
+      const intensity = 0.9;
       return colord({
         r: Math.min(255, Math.floor(baseColor.r * intensity) + lightness),
         g: Math.min(255, Math.floor(baseColor.g * intensity) + lightness),
@@ -359,8 +358,8 @@ function generateTeamColors(baseColor: {
       });
     } else if (group === 2) {
       // Medium vibrant colors: further reduced intensity (16 colors)
-      const lightness = indexInGroup * 10; // Smaller steps, max 150
-      const intensity = 0.8; // 204/255 - still vibrant
+      const lightness = indexInGroup * 10;
+      const intensity = 0.8;
       return colord({
         r: Math.min(255, Math.floor(baseColor.r * intensity) + lightness),
         g: Math.min(255, Math.floor(baseColor.g * intensity) + lightness),
@@ -368,8 +367,8 @@ function generateTeamColors(baseColor: {
       });
     } else {
       // Softer vibrant colors: lowest intensity but still vibrant (16 colors)
-      const lightness = indexInGroup * 10; // Smaller steps, max 150
-      const intensity = 0.7; // 179/255 - avoid getting too dark
+      const lightness = indexInGroup * 10;
+      const intensity = 0.7;
       return colord({
         r: Math.min(255, Math.floor(baseColor.r * intensity) + lightness),
         g: Math.min(255, Math.floor(baseColor.g * intensity) + lightness),
@@ -377,11 +376,6 @@ function generateTeamColors(baseColor: {
       });
     }
   });
-}
-
-// Function to calculate color distance using Delta E
-function calculateColorDistance(color1: Colord, color2: Colord): number {
-  return deltaE76(color1.toLab(), color2.toLab());
 }
 
 // Predefined 64 color variations for each team
