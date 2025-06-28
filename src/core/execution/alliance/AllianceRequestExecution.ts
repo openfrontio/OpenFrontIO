@@ -31,6 +31,7 @@ export class AllianceRequestExecution implements Execution {
       console.warn("recent or pending alliance request");
     } else {
       this.requestor.createAllianceRequest(this.recipient);
+      window.soundManager.play("Alliance Requested");
     }
     this.active = false;
   }

@@ -35,6 +35,7 @@ export class BreakAllianceExecution implements Execution {
       console.warn("cant break alliance, not allied");
     } else {
       this.requestor.breakAlliance(alliance);
+      window.soundManager.play("Alliance Broken");
       this.recipient.updateRelation(this.requestor, -200);
       for (const player of this.mg.players()) {
         if (player !== this.requestor) {
