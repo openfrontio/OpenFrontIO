@@ -42,6 +42,14 @@ export class TestConfig extends DefaultConfig {
     return this._defaultNukeSpeed;
   }
 
+  defaultNukeTargetableRange(): number {
+    return 20;
+  }
+
+  defaultSamRange(): number {
+    return 20;
+  }
+
   spawnImmunityDuration(): Tick {
     return 0;
   }

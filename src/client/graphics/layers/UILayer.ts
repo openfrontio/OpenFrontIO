@@ -19,7 +19,7 @@ const COLOR_PROGRESSION = [
   "rgb(44, 239, 18)",
 ];
 const HEALTHBAR_WIDTH = 11; // Width of the health bar
-const LOADINGBAR_WIDTH = 18; // Width of the loading bar
+const LOADINGBAR_WIDTH = 14; // Width of the loading bar
 const PROGRESSBAR_HEIGHT = 3; // Height of a bar
 
 /**
@@ -378,8 +378,8 @@ export class UILayer implements Layer {
       const progressBar = new ProgressBar(
         COLOR_PROGRESSION,
         this.context,
-        this.game.x(unit.tile()) - 8,
-        this.game.y(unit.tile()) - 10,
+        this.game.x(unit.tile()) - 6,
+        this.game.y(unit.tile()) + 6,
         LOADINGBAR_WIDTH,
         PROGRESSBAR_HEIGHT,
         0,

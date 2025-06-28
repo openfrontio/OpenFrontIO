@@ -132,6 +132,7 @@ export interface UnitInfo {
   damage?: number;
   constructionDuration?: number;
   upgradable?: boolean;
+  canBuildTrainStation?: boolean;
 }
 
 export enum UnitType {

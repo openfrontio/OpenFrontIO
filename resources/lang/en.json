@@ -269,6 +269,8 @@
     "attack_keybinds": "Attack Keybinds",
     "boat_attack": "Boat Attack",
     "boat_attack_desc": "Send a boat attack to the tile under your cursor.",
+    "ground_attack": "Ground Attack",
+    "ground_attack_desc": "Send a ground attack to the tile under your cursor.",
     "zoom_controls": "Zoom Controls",
     "zoom_out": "Zoom Out",
     "zoom_out_desc": "Zoom out the map",
@@ -488,6 +490,7 @@
       "cross": "Cross",
       "mini_cross": "Mini Cross",
       "horizontal_stripes": "Horizontal Stripes (Alt)",
+      "sword": "Sword",
       "sparse_dots": "Sparse Dots",
       "evan": "Evan",
       "diagonal_stripe": "Diagonal Stripe",
@@ -496,6 +499,12 @@
       "circuit_board": "Circuit Board",
       "vertical_bars": "Vertical Bars",
       "-w-": ".w.",
+      "white_rabbit": "White Rabbit",
+      "goat": "Goat",
+      "cursor": "Cursor",
+      "hand": "Hand",
+      "radiation": "Radiation",
+      "openfront_qr": "OpenFront.io QR code",
       "openfront": "OpenFront"
     }
   }

@@ -401,6 +401,39 @@ export function rectDistFN(
   }
 }
 
+function isInIsometricTile(
+  center: { x: number; y: number },
+  tile: { x: number; y: number },
+  yOffset: number,
+  distance: number,
+): boolean {
+  const dx = Math.abs(tile.x - center.x);
+  const dy = Math.abs(tile.y - (center.y + yOffset));
+  return dx + dy * 2 <= distance + 1;
+}
+
+export function isometricDistFN(
+  root: TileRef,
+  dist: number,
+  center: boolean = false,
+): (gm: GameMap, tile: TileRef) => boolean {
+  if (!center) {
+    return (gm: GameMap, n: TileRef) => gm.manhattanDist(root, n) <= dist;
+  } else {
+    return (gm: GameMap, n: TileRef) => {
+      const rootX = gm.x(root) - 0.5;
+      const rootY = gm.y(root) - 0.5;
+
+      return isInIsometricTile(
+        { x: rootX, y: rootY },
+        { x: gm.x(n), y: gm.y(n) },
+        0,
+        dist,
+      );
+    };
+  }
+}
+
 export function hexDistFN(
   root: TileRef,
   dist: number,

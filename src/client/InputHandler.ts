@@ -79,6 +79,8 @@ export class ShowEmojiMenuEvent implements GameEvent {
 
 export class DoBoatAttackEvent implements GameEvent {}
 
+export class DoGroundAttackEvent implements GameEvent {}
+
 export class AttackRatioEvent implements GameEvent {
   constructor(public readonly attackRatio: number) {}
 }
@@ -133,6 +135,7 @@ export class InputHandler {
       attackRatioDown: "Digit1",
       attackRatioUp: "Digit2",
       boatAttack: "KeyB",
+      groundAttack: "KeyG",
       modifierKey: "ControlLeft",
       altKey: "AltLeft",
       ...JSON.parse(localStorage.getItem("settings.keybinds") ?? "{}"),
@@ -263,6 +266,11 @@ export class InputHandler {
       if (e.code === this.keybinds.boatAttack) {
         e.preventDefault();
         this.eventBus.emit(new DoBoatAttackEvent());
+      }
+
+      if (e.code === this.keybinds.groundAttack) {
+        e.preventDefault();
+        this.eventBus.emit(new DoGroundAttackEvent());
       }
 
       if (e.code === this.keybinds.attackRatioDown) {
