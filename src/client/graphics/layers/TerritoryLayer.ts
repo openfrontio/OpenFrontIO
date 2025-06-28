@@ -307,7 +307,7 @@ export class TerritoryLayer implements Layer {
         this.paintTile(tile, useBorderColor, 255);
       }
     } else {
-      const pattern = owner.pattern();
+      const pattern = owner.cosmetics.pattern;
       const patternsEnabled = this.cachedTerritoryPatternsEnabled ?? false;
       if (pattern === undefined || patternsEnabled === false) {
         this.paintTile(tile, this.theme.territoryColor(owner), 150);

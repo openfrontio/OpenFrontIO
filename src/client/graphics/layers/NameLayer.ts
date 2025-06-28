@@ -198,8 +198,8 @@ export class NameLayer implements Layer {
       element.style.aspectRatio = "3/4";
     };
 
-    if (player.flag()) {
-      const flag = player.flag();
+    if (player.cosmetics.flag) {
+      const flag = player.cosmetics.flag;
       if (flag !== undefined && flag !== null && flag.startsWith("!")) {
         const flagWrapper = document.createElement("div");
         applyFlagStyles(flagWrapper);
