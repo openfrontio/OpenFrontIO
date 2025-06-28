@@ -136,7 +136,10 @@ export class OptionsMenu extends LitElement implements Layer {
 
   private onToggleMuteSoundButtonClick() {
     this.userSettings.toggleMuteSound();
-    (window as any).soundManager.setMuted(this.userSettings.muteSound());
+    const soundManager = (window as any).soundManager;
+    if (soundManager && typeof soundManager.setMuted === 'function') {
+      soundManager.setMuted(this.userSettings.muteSound());
+    }
     this.requestUpdate();
   }
 
