@@ -339,6 +339,7 @@ class Client {
       console.log("joining lobby, stopping existing game");
       this.gameStop();
     }
+    soundManager.stopMainMenuMusic(); 
     const config = await getServerConfigFromClient();
 
     this.gameStop = joinLobby(
@@ -423,6 +424,7 @@ class Client {
     this.gameStop();
     this.gameStop = null;
     this.publicLobby.leaveLobby();
+    soundManager.startMainMenuMusic(); 
   }
 }
 
