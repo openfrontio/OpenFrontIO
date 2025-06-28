@@ -2,7 +2,6 @@ import { LitElement, TemplateResult, html } from "lit";
 import { ref } from "lit-html/directives/ref.js";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
-import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import {
   PlayerProfile,
@@ -13,6 +12,7 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { renderPlayerFlag } from "../../CustomFlag";
 import { MouseMoveEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
@@ -207,21 +207,21 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             ? "text-green-500"
             : "text-white"}"
         >
-          ${player.flag()
-            ? player.flag()!.startsWith("!")
+          ${player.cosmetics.flag
+            ? player.cosmetics.flag!.startsWith("!")
               ? html`<div
                   class="h-8 mr-1 aspect-[3/4] player-flag"
                   ${ref((el) => {
                     if (el instanceof HTMLElement) {
                       requestAnimationFrame(() => {
-                        renderPlayerFlag(player.flag()!, el);
+                        renderPlayerFlag(player.cosmetics.flag!, el);
                       });
                     }
                   })}
                 ></div>`
               : html`<img
                   class="h-8 mr-1 aspect-[3/4]"
-                  src=${"/flags/" + player.flag()! + ".svg"}
+                  src=${"/flags/" + player.cosmetics.flag! + ".svg"}
                 />`
             : html``}
           ${player.name()}

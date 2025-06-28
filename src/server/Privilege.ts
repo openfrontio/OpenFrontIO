@@ -1,4 +1,4 @@
-import { Cosmetics } from "../core/CosmeticSchemas";
+import { Cosmetics } from "../client/CosmeticSchemas";
 import { PatternDecoder } from "../core/PatternDecoder";
 
 export class PrivilegeChecker {

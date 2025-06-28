@@ -10,12 +10,12 @@ import nukeWhiteIcon from "../../../../resources/images/NukeIconWhite.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconBlack.svg";
 import targetIcon from "../../../../resources/images/TargetIcon.svg";
 import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
-import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { Theme } from "../../../core/configuration/Config";
 import { AllPlayers, Cell, nukeTypes } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
+import { renderPlayerFlag } from "../../CustomFlag";
 import { createCanvas, renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -198,8 +198,8 @@ export class NameLayer implements Layer {
       element.style.aspectRatio = "3/4";
     };
 
-    if (player.flag()) {
-      const flag = player.flag();
+    if (player.cosmetics.flag) {
+      const flag = player.cosmetics.flag;
       if (flag !== undefined && flag !== null && flag.startsWith("!")) {
         const flagWrapper = document.createElement("div");
         applyFlagStyles(flagWrapper);

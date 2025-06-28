@@ -2,11 +2,11 @@ import type { TemplateResult } from "lit";
 import { html, LitElement, render } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { COSMETICS } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
 import { PatternDecoder } from "../core/PatternDecoder";
 import "./components/Difficulties";
 import "./components/Maps";
+import { COSMETICS } from "./CosmeticSchemas";
 import { translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")
@@ -156,6 +156,9 @@ export class TerritoryPatternsModal extends LitElement {
 
   private renderPatternButton(key: string): TemplateResult {
     const isLocked = this.isPatternLocked(key);
+    if (isLocked) {
+      // return html``;
+    }
     const isSelected = this.selectedPattern === key;
     const name = COSMETICS.patterns[key]?.name ?? "custom";
     return html`
@@ -195,7 +198,9 @@ export class TerritoryPatternsModal extends LitElement {
 
   private renderPatternGrid(): TemplateResult {
     const buttons: TemplateResult[] = [];
+    const i = 0;
     for (const key in COSMETICS.patterns) {
+      if (this.lockedPatterns.includes(key)) continue;
       const value = COSMETICS.patterns[key];
       if (!this.showChocoPattern && value.name === "choco") continue;
       const result = this.renderPatternButton(key);

@@ -1,4 +1,4 @@
-import { COSMETICS } from "./CosmeticSchemas";
+import { COSMETICS } from "../client/CosmeticSchemas";
 
 const ANIMATION_DURATIONS: Record<string, number> = {
   rainbow: 4000,

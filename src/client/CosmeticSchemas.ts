@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 import cosmetics_json from "../../resources/cosmetics/cosmetics.json" with { type: "json" };
-import { RequiredPatternSchema } from "./Schemas";
+import { RequiredPatternSchema } from "../core/Schemas";
 
 // Schema for resources/cosmetics/cosmetics.json
 export const CosmeticsSchema = z.object({
@@ -10,6 +10,7 @@ export const CosmeticsSchema = z.object({
     z.object({
       name: z.string(),
       role_group: z.string().optional(),
+      purchase_price: z.number().optional(),
     }),
   ),
   flag: z.object({

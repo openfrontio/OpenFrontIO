@@ -4,7 +4,7 @@ import logo from "../../../../resources/images/ofm/logo_MASTER_2025.png";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView } from "../../../core/game/GameView";
+import { GameView, PlayerView } from "../../../core/game/GameView";
 import { SendWinnerEvent } from "../../Transport";
 import { GutterAdModalEvent } from "./GutterAdModal";
 import { Layer } from "./Layer";
@@ -275,7 +275,7 @@ export class WinModal extends LitElement implements Layer {
           this._title = translateText("win_modal.you_won");
         } else {
           this._title = translateText("win_modal.other_won", {
-            player: winner.name(),
+            player: (winner as PlayerView).name(),
           });
         }
         this.show();

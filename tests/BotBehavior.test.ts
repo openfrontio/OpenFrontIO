@@ -23,16 +23,12 @@ describe("BotBehavior.handleAllianceRequests", () => {
     });
 
     const playerInfo = new PlayerInfo(
-      undefined,
-      "us",
       "player_id",
       PlayerType.Bot,
       null,
       "player_id",
     );
     const requestorInfo = new PlayerInfo(
-      undefined,
-      "fr",
       "requestor_id",
       PlayerType.Human,
       null,
