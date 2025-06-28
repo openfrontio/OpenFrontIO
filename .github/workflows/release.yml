@@ -13,7 +13,6 @@ jobs:
     name: 🏗️ Build
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: staging
     steps:
       - uses: actions/checkout@v4
       - env:
@@ -45,7 +44,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [build]
-    environment: staging
     steps:
       - env:
           IMAGE_ID: ${{ needs.build.ouputs.IMAGE_ID }}

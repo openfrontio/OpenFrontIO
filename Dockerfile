@@ -44,12 +44,12 @@ COPY . .
 RUN echo "$VERSION_TAG" > resources/version.txt
 RUN echo "$CHANGELOG_MD" > resources/changelog.md
 
+# Build the client-side application
+RUN npm run build-prod
+
 # So we can see which commit was used to build the container
 # https://openfront.io/commit.txt
 RUN echo "$GIT_COMMIT" > static/commit.txt
-
-# Build the client-side application
-RUN npm run build-prod
 
 # Update worker_connections in the existing nginx.conf
 RUN sed -i 's/worker_connections [0-9]*/worker_connections 8192/' /etc/nginx/nginx.conf
