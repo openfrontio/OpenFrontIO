@@ -74,9 +74,11 @@ echo "Git commit: $GIT_COMMIT"
 
 docker buildx build \
     --platform linux/amd64 \
-    --build-arg GIT_COMMIT=$GIT_COMMIT \
-    --metadata-file $METADATA_FILE \
-    -t $DOCKER_IMAGE \
+    --build-arg "GIT_COMMIT=$GIT_COMMIT" \
+    --build-arg "VERSION_TAG=$VERSION_TAG" \
+    --build-arg "CHANGELOG_MD=$CHANGELOG_MD" \
+    --metadata-file "$METADATA_FILE" \
+    -t "$DOCKER_IMAGE" \
     --push \
     .
 

@@ -40,12 +40,16 @@ RUN mkdir -p .git && npm ci
 # Copy the rest of the application code
 COPY . .
 
-# Build the client-side application
-RUN npm run build-prod
+# Set the release version and changelog
+RUN echo "$VERSION_TAG" > resources/version.txt
+RUN echo "$CHANGELOG_MD" > resources/changelog.md
 
 # So we can see which commit was used to build the container
 # https://openfront.io/commit.txt
 RUN echo "$GIT_COMMIT" > static/commit.txt
+
+# Build the client-side application
+RUN npm run build-prod
 
 # Update worker_connections in the existing nginx.conf
 RUN sed -i 's/worker_connections [0-9]*/worker_connections 8192/' /etc/nginx/nginx.conf

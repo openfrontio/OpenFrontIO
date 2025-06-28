@@ -9,11 +9,13 @@ on:
 permissions: {}
 
 jobs:
-  print-release-info:
+  build:
+    name: 🏗️ Build
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment: staging
     steps:
-      - name: 🖨 Print release info
+      - uses: actions/checkout@v4
         env:
           RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
           RELEASE_NAME: ${{ github.event.release.name }}
@@ -25,3 +27,68 @@ jobs:
           Changelog:
           ${RELEASE_BODY}
           EOF
+      - id: build
+        env:
+          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
+          DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+        run: |
+          ./build.sh prod "${RELEASE_TAG_NAME}" /tmp/build-metadata.json
+          IMAGE_ID=$(jq -r '."containerimage.digest"' /tmp/build-metadata.json)
+          echo "IMAGE_ID=${IMAGE_ID}" >> $GITHUB_OUTPUT
+          cat >> $GITHUB_SUMMARY <<EOF
+          IMAGE_ID=${IMAGE_ID}
+          RELASE_TAG_NAME=${RELEASE_TA_NAME}
+          EOF
+    outputs:
+      IMAGE_ID: ${{ steps.build.outputs.IMAGE_ID }}
+
+  deploy-alpha:
+    name: Deploy to alpha
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [build]
+    environment: staging
+    steps:
+      - env:
+          IMAGE_ID: ${{ jobs.build.ouputs.IMAGE_ID }}
+          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          # TODO: Switch to using IMAGE_ID
+          ./deploy.sh staging staging "${RELEASE_TAG_NAME}" alpha
+
+  deploy-beta:
+    name: Deploy to beta
+    runs-on: ubuntu-latest
+    needs: [deploy-alpha]
+    timeout-minutes: 30
+    environment: prod
+    steps:
+      - env:
+          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          ./deploy.sh prod nbg1 "${RELEASE_TAG_NAME}" beta
+
+  deploy-blue:
+    name: Deploy to blue
+    runs-on: ubuntu-latest
+    needs: [deploy-alpha]
+    timeout-minutes: 30
+    environment: prod
+    steps:
+      - env:
+          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          ./deploy.sh prod nbg1 "${RELEASE_TAG_NAME}" blue
+
+  deploy-green:
+    name: Deploy to green
+    runs-on: ubuntu-latest
+    needs: [deploy-alpha]
+    timeout-minutes: 30
+    environment: prod
+    steps:
+      - env:
+          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          ./deploy.sh prod nbg1 "${RELEASE_TAG_NAME}" green
