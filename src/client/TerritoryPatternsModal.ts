@@ -1,6 +1,6 @@
 import type { TemplateResult } from "lit";
 import { html, LitElement, render } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
+import { customElement, property, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { COSMETICS } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
@@ -31,7 +31,7 @@ export class TerritoryPatternsModal extends LitElement {
 
   public resizeObserver: ResizeObserver;
 
-  private userSettings: UserSettings = new UserSettings();
+  @property({ type: Object }) userSettings: UserSettings;
 
   constructor() {
     super();

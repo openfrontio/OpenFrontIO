@@ -1,5 +1,5 @@
 import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
@@ -37,16 +37,19 @@ import {
 import { Layer } from "./Layer";
 
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
 import { onlyImages } from "../../../core/Util";
-import { renderNumber, renderTroops } from "../../Utils";
+import {
+  getMessageTypeClasses,
+  renderNumber,
+  renderTroops,
+  translateText,
+} from "../../Utils";
 import {
   GoToPlayerEvent,
   GoToPositionEvent,
   GoToUnitEvent,
 } from "./Leaderboard";
-
-import { UserSettings } from "../../../core/game/UserSettings";
-import { getMessageTypeClasses, translateText } from "../../Utils";
 
 interface GameEvent {
   description: string;
@@ -73,8 +76,11 @@ export class EventsDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
   public game: GameView;
 
-  private userSettings: UserSettings = new UserSettings();
+  @property({ type: Object })
+  userSettings: UserSettings;
+
   private active: boolean = false;
+
   private events: GameEvent[] = [];
   @state() private incomingAttacks: AttackUpdate[] = [];
   @state() private outgoingAttacks: AttackUpdate[] = [];

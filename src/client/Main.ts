@@ -1,9 +1,12 @@
 import favicon from "../../resources/images/Favicon.svg";
 import version from "../../resources/version.txt";
+import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import LocalStorage from "../core/Storage";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
+import BrowserStorage from "./BrowserStorage";
 import { joinLobby } from "./ClientGameRunner";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
@@ -31,6 +34,7 @@ import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
 import { OButton } from "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import { registerDarkModeHandler } from "./handlers/DarkModeHandler";
 import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
 import "./styles.css";
 
@@ -73,11 +77,19 @@ class Client {
 
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
-  private userSettings: UserSettings = new UserSettings();
+  private eventBus: EventBus = new EventBus();
+  private storage: LocalStorage = new BrowserStorage();
+  private userSettings: UserSettings = new UserSettings(
+    this.eventBus,
+    this.storage,
+  );
 
   constructor() {}
 
   initialize(): void {
+    //handlers
+    registerDarkModeHandler(this.eventBus);
+
     const gameVersion = document.getElementById(
       "game-version",
     ) as HTMLDivElement;
@@ -124,6 +136,8 @@ class Client {
     ) as DarkModeButton;
     if (!this.darkModeButton) {
       console.warn("Dark mode button element not found");
+    } else {
+      this.darkModeButton.userSettings = this.userSettings;
     }
 
     const loginDiscordButton = document.getElementById(
@@ -165,6 +179,10 @@ class Client {
       }
     });
 
+    if (spModal) {
+      spModal.userSettings = this.userSettings;
+    }
+
     // const ctModal = document.querySelector("chat-modal") as ChatModal;
     // ctModal instanceof ChatModal;
     // document.getElementById("chat-button").addEventListener("click", () => {
@@ -186,6 +204,11 @@ class Client {
       "territory-patterns-input-preview-button",
     );
     territoryModal instanceof TerritoryPatternsModal;
+
+    if (territoryModal) {
+      territoryModal.userSettings = this.userSettings;
+    }
+
     if (tpButton === null)
       throw new Error("territory-patterns-input-preview-button");
     territoryModal.previewButton = tpButton;
@@ -252,6 +275,9 @@ class Client {
       ?.addEventListener("click", () => {
         settingsModal.open();
       });
+    if (settingsModal) {
+      settingsModal.userSettings = this.userSettings;
+    }
 
     const hostModal = document.querySelector(
       "host-lobby-modal",
@@ -355,6 +381,8 @@ class Client {
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
       },
+      this.eventBus,
+      this.userSettings,
       () => {
         console.log("Closing modals");
         document.getElementById("settings-button")?.classList.add("hidden");

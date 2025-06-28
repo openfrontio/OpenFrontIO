@@ -1,5 +1,5 @@
 import { LitElement, html } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
+import { customElement, property, query, state } from "lit/decorators.js";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import {
@@ -42,7 +42,7 @@ export class SinglePlayerModal extends LitElement {
 
   @state() private disabledUnits: UnitType[] = [];
 
-  private userSettings: UserSettings = new UserSettings();
+  @property({ type: Object }) userSettings: UserSettings;
 
   render() {
     return html`
@@ -392,6 +392,8 @@ export class SinglePlayerModal extends LitElement {
     ) as UsernameInput;
     if (!usernameInput) {
       console.warn("Username input element not found");
+    } else {
+      usernameInput.userSettings = this.userSettings;
     }
 
     const flagInput = document.querySelector("flag-input") as FlagInput;

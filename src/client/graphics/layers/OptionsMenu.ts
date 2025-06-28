@@ -1,5 +1,5 @@
 import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
@@ -44,7 +44,8 @@ const secondsToHms = (d: number): string => {
 export class OptionsMenu extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
-  private userSettings: UserSettings = new UserSettings();
+
+  @property({ type: Object }) userSettings: UserSettings;
 
   @state()
   private showPauseButton: boolean = true;

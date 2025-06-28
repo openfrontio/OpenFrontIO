@@ -56,7 +56,7 @@ export class NameLayer implements Layer {
   private container: HTMLDivElement;
   private firstPlace: PlayerView | null = null;
   private theme: Theme = this.game.config().theme();
-  private userSettings: UserSettings = new UserSettings();
+  private userSettings: UserSettings;
 
   constructor(
     private game: GameView,
@@ -86,6 +86,7 @@ export class NameLayer implements Layer {
     this.nukeRedIconImage.src = nukeRedIcon;
     this.shieldIconImage = new Image();
     this.shieldIconImage.src = shieldIcon;
+    this.userSettings = game.userSettings;
   }
 
   resizeCanvas() {

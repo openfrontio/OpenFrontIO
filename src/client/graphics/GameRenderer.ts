@@ -43,9 +43,9 @@ export function createRenderer(
   canvas: HTMLCanvasElement,
   game: GameView,
   eventBus: EventBus,
+  userSettings: UserSettings,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, canvas);
-  const userSettings = new UserSettings();
 
   const uiState = { attackRatio: 20 };
 
@@ -110,6 +110,7 @@ export function createRenderer(
   }
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
+  eventsDisplay.userSettings = userSettings;
 
   const chatDisplay = document.querySelector("chat-display") as ChatDisplay;
   if (!(chatDisplay instanceof ChatDisplay)) {
@@ -141,6 +142,7 @@ export function createRenderer(
   }
   optionsMenu.eventBus = eventBus;
   optionsMenu.game = game;
+  optionsMenu.userSettings = userSettings;
 
   const replayPanel = document.querySelector("replay-panel") as ReplayPanel;
   if (!(replayPanel instanceof ReplayPanel)) {
@@ -220,6 +222,8 @@ export function createRenderer(
   const alertFrame = document.querySelector("alert-frame") as AlertFrame;
   if (!(alertFrame instanceof AlertFrame)) {
     console.error("alert frame not found");
+  } else {
+    alertFrame.userSettings = userSettings;
   }
   alertFrame.game = game;
 

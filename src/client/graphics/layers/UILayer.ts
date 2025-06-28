@@ -4,7 +4,6 @@ import { Theme } from "../../../core/configuration/Config";
 import { Tick, UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
-import { UserSettings } from "../../../core/game/UserSettings";
 import { UnitSelectionEvent } from "../../InputHandler";
 import { ProgressBar } from "../ProgressBar";
 import { TransformHandler } from "../TransformHandler";
@@ -30,7 +29,6 @@ export class UILayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D | null;
   private theme: Theme | null = null;
-  private userSettings: UserSettings = new UserSettings();
   private selectionAnimTime = 0;
   private allProgressBars: Map<
     number,

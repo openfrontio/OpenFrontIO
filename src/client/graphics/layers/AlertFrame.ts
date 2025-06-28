@@ -1,5 +1,5 @@
 import { LitElement, css, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import {
   BrokeAllianceUpdate,
   GameUpdateType,
@@ -15,7 +15,8 @@ const ALERT_COUNT = 2;
 @customElement("alert-frame")
 export class AlertFrame extends LitElement implements Layer {
   public game: GameView;
-  private userSettings: UserSettings = new UserSettings();
+
+  @property({ type: Object }) userSettings: UserSettings;
 
   @state()
   private isActive = false;
