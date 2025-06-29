@@ -135,13 +135,6 @@ export function createRenderer(
   winModal.eventBus = eventBus;
   winModal.game = game;
 
-  const optionsMenu = document.querySelector("options-menu") as OptionsMenu;
-  if (!(optionsMenu instanceof OptionsMenu)) {
-    console.error("options menu not found");
-  }
-  optionsMenu.eventBus = eventBus;
-  optionsMenu.game = game;
-
   const replayPanel = document.querySelector("replay-panel") as ReplayPanel;
   if (!(replayPanel instanceof ReplayPanel)) {
     console.error("replay panel not found");
@@ -263,7 +256,6 @@ export function createRenderer(
     controlPanel,
     playerInfo,
     winModal,
-    optionsMenu,
     replayPanel,
     teamStats,
     playerPanel,

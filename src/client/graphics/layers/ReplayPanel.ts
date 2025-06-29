@@ -56,7 +56,6 @@ export class ReplayPanel extends LitElement implements Layer {
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <label class="block mb-1 text-white" translate="no">
-          ${this.isSingleplayer}
           ${this.isSingleplayer
             ? translateText("replay_panel.game_speed")
             : translateText("replay_panel.replay_speed")}

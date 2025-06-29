@@ -7,12 +7,12 @@ import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
 import explosionIcon from "../../../../resources/images/ExplosionIconWhite.svg";
 import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
-import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
+import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
 import mouseIcon from "../../../../resources/images/MouseIconWhite.svg";
 import ninjaIcon from "../../../../resources/images/NinjaIconWhite.svg";
 import populationIcon from "../../../../resources/images/PopulationIconSolidWhite.svg";
 import portIcon from "../../../../resources/images/PortIcon.svg";
-import samLauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
+import samLauncherIcon from "../../../../resources/images/SamLauncherUnitWhite.png";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
 import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import treeIcon from "../../../../resources/images/TreeIconWhite.svg";
@@ -21,6 +21,7 @@ import workerIcon from "../../../../resources/images/WorkerIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
@@ -43,11 +44,15 @@ export class GameTopBar extends LitElement implements Layer {
   private _samLauncher = 0;
   private _lastPopulationIncreaseRate = 0;
   private _popRateIsIncreasing = false;
+  private hasWinner = false;
 
   @state()
   private showSettingsMenu = false;
   @state()
   private alternateView: boolean = false;
+
+  @state()
+  private timer: number = 0;
 
   @query(".settings-container")
   private settingsContainer!: HTMLElement;
@@ -72,6 +77,15 @@ export class GameTopBar extends LitElement implements Layer {
     this._defensePost = player.totalUnitLevels(UnitType.DefensePost);
     this._samLauncher = player.totalUnitLevels(UnitType.SAMLauncher);
     this._factories = player.totalUnitLevels(UnitType.Factory);
+    const updates = this.game.updatesSinceLastTick();
+    if (updates) {
+      this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;
+    }
+    if (this.game.inSpawnPhase()) {
+      this.timer = 0;
+    } else if (!this.hasWinner && this.game.ticks() % 10 === 0) {
+      this.timer++;
+    }
     this.requestUpdate();
   }
 
@@ -148,12 +162,36 @@ export class GameTopBar extends LitElement implements Layer {
     }
   }
 
+  private secondsToHms = (d: number): string => {
+    const h = Math.floor(d / 3600);
+    const m = Math.floor((d % 3600) / 60);
+    const s = Math.floor((d % 3600) % 60);
+    let time = d === 0 ? "-" : `${s}s`;
+    if (m > 0) time = `${m}m` + time;
+    if (h > 0) time = `${h}h` + time;
+    return time;
+  };
+
   render() {
     const myPlayer = this.game?.myPlayer();
     if (!this.game || !myPlayer || this.game.inSpawnPhase()) {
       return null;
     }
 
+    const isAlt = this.game.config().isReplay();
+    if (isAlt) {
+      return html`
+        <div
+          class="fixed top-0 left-auto right-0 z-[1100] bg-slate-800/40 backdrop-blur-sm p-2 flex justify-center items-center"
+        >
+          <div
+            class="w-[70px] h-8 lg:w-24 lg:h-10 border border-slate-400 p-0.5 text-xs md:text-sm lg:text-base flex items-center text-white px-1"
+          >
+            ${this.secondsToHms(this.timer)}
+          </div>
+        </div>
+      `;
+    }
     const popRate = myPlayer
       ? this.game.config().populationIncreaseRate(myPlayer) * 10
       : 0;
@@ -309,7 +347,12 @@ export class GameTopBar extends LitElement implements Layer {
                 </div>
               `
             : html`<div></div>`}
-          <div class="flex gap-1">
+          <div class="flex gap-1 items-center">
+            <div
+              class="w-[70px] h-8 lg:w-24 lg:h-10 border border-slate-400 p-0.5 text-xs md:text-sm lg:text-base flex items-center px-1"
+            >
+              ${this.secondsToHms(this.timer)}
+            </div>
             <div class="relative settings-container">
               <img
                 class="cursor-pointer bg-slate-800/20 border border-slate-400 p-0.5"
