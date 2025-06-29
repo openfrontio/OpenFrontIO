@@ -207,21 +207,21 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             ? "text-green-500"
             : "text-white"}"
         >
-          ${player.flag()
-            ? player.flag()!.startsWith("!")
+          ${player.cosmetics.flag
+            ? player.cosmetics.flag!.startsWith("!")
               ? html`<div
                   class="h-8 mr-1 aspect-[3/4] player-flag"
                   ${ref((el) => {
                     if (el instanceof HTMLElement) {
                       requestAnimationFrame(() => {
-                        renderPlayerFlag(player.flag()!, el);
+                        renderPlayerFlag(player.cosmetics.flag!, el);
                       });
                     }
                   })}
                 ></div>`
               : html`<img
                   class="h-8 mr-1 aspect-[3/4]"
-                  src=${"/flags/" + player.flag()! + ".svg"}
+                  src=${"/flags/" + player.cosmetics.flag! + ".svg"}
                 />`
             : html``}
           ${player.name()}

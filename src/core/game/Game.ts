@@ -350,8 +350,6 @@ export class PlayerInfo {
   public readonly clan: string | null;
 
   constructor(
-    public readonly pattern: string | undefined,
-    public readonly flag: string | undefined,
     public readonly name: string,
     public readonly playerType: PlayerType,
     // null if bot.
