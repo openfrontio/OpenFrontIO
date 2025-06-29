@@ -55,4 +55,52 @@ export class PrivilegeChecker {
 
     return "restricted";
   }
+
+  isCustomFlagAllowed(
+    flag: string,
+    roles: readonly string[] | undefined,
+    flares: readonly string[] | undefined,
+  ): true | "restricted" | "invalid" {
+    if (!flag.startsWith("!")) return "invalid";
+    const code = flag.slice(1);
+    if (!code) return "invalid";
+    const segments = code.split("_");
+    if (segments.length === 0) return "invalid";
+    for (const segment of segments) {
+      const [layerKey, colorKey] = segment.split("-");
+      if (!layerKey || !colorKey) return "invalid";
+      const layer = this.cosmetics.flag.layers[layerKey];
+      const color = this.cosmetics.flag.color[colorKey];
+      if (!layer || !color) return "invalid";
+      if (
+        flares &&
+        (flares.includes(`flag_layer:${layer.name}`) ||
+          flares.includes("flag_layer:*"))
+      ) {
+        continue;
+      }
+      if (
+        flares &&
+        (flares.includes(`flag_color:${color.name}`) ||
+          flares.includes("flag_color:*"))
+      ) {
+        continue;
+      }
+      if (layer.role_group) {
+        const group = this.cosmetics.role_groups[layer.role_group];
+        if (!group) return "invalid";
+        if (!roles || !roles.some((role) => group.includes(role))) {
+          return "restricted";
+        }
+      }
+      if (color.role_group) {
+        const group = this.cosmetics.role_groups[color.role_group];
+        if (!group) return "invalid";
+        if (!roles || !roles.some((role) => group.includes(role))) {
+          return "restricted";
+        }
+      }
+    }
+    return true;
+  }
 }

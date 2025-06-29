@@ -369,7 +369,18 @@ export function startWorker() {
 
           // Check if the flag is allowed
           if (clientMsg.flag !== undefined) {
-            // TODO: Implement custom flag validation
+            if (clientMsg.flag.startsWith("!")) {
+              const allowed = privilegeChecker.isCustomFlagAllowed(
+                clientMsg.flag,
+                roles,
+                flares,
+              );
+              if (allowed !== true) {
+                log.warn(`Custom flag ${allowed}: ${clientMsg.flag}`);
+                ws.close(1002, `Custom flag ${allowed}`);
+                return;
+              }
+            }
           }
 
           // Check if the pattern is allowed
