@@ -52,6 +52,7 @@ export class WarshipExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.warship.health() <= 0) {
+      window.soundManager.play("Warship Lost");
       this.warship.delete();
       return;
     }
@@ -164,6 +165,7 @@ export class WarshipExecution implements Execution {
           this.warship.targetUnit()!,
         ),
       );
+      window.soundManager.play("Warship Shot");
       if (!this.warship.targetUnit()!.hasHealth()) {
         // Don't send multiple shells to target that can be oneshotted
         this.alreadySentShell.add(this.warship.targetUnit()!);

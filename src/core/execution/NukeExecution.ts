@@ -113,6 +113,7 @@ export class NukeExecution implements Execution {
         if (!target.isPlayer()) {
           // Ignore terra nullius
         } else if (this.nukeType === UnitType.AtomBomb) {
+          window.soundManager.play("Atom Launch");
           this.mg.displayIncomingUnit(
             this.nuke.id(),
             // TODO TranslateText
@@ -122,6 +123,7 @@ export class NukeExecution implements Execution {
           );
           this.breakAlliances(this.tilesToDestroy());
         } else if (this.nukeType === UnitType.HydrogenBomb) {
+          window.soundManager.play("Hydrogen Launch");
           this.mg.displayIncomingUnit(
             this.nuke.id(),
             // TODO TranslateText
@@ -149,6 +151,7 @@ export class NukeExecution implements Execution {
     // make the nuke unactive if it was intercepted
     if (!this.nuke.isActive()) {
       console.log(`Nuke destroyed before reaching target`);
+      window.soundManager.play("SAM hit");
       this.active = false;
       return;
     }
@@ -194,6 +197,14 @@ export class NukeExecution implements Execution {
   private detonate() {
     if (this.nuke === null) {
       throw new Error("Not initialized");
+    }
+
+    if (this.nukeType === UnitType.AtomBomb) {
+      window.soundManager.play("Atom Hit");
+    } else if (this.nukeType === UnitType.HydrogenBomb) {
+      window.soundManager.play("Hydrogen Hit");
+    } else if (this.nukeType === UnitType.MIRVWarhead) {
+      window.soundManager.play("Atom Hit");
     }
 
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());

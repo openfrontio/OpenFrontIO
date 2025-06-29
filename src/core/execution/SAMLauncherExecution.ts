@@ -141,6 +141,7 @@ export class SAMLauncherExecution implements Execution {
       !this.sam.isInCooldown()
     ) {
       this.sam.launch();
+      window.soundManager.play("SAM Shoot");
       const type =
         mirvWarheadTargets.length > 0 ? UnitType.MIRVWarhead : target?.type();
       if (type === undefined) throw new Error("Unknown unit type");

@@ -29,6 +29,8 @@ export class QuickChatExecution implements Execution {
   tick(ticks: number): void {
     const message = this.getMessageFromKey(this.quickChatKey);
 
+    window.soundManager.play("message");
+
     this.mg.displayChat(
       message[1],
       message[0],
