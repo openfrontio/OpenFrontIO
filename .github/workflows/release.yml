@@ -67,8 +67,6 @@ jobs:
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           DOMAIN: ${{ vars.DOMAIN }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
-          MON_PASSWORD: ${{ secrets.MON_PASSWORD }}
-          MON_USERNAME: ${{ secrets.MON_USERNAME }}
           OTEL_ENDPOINT: ${{ secrets.OTEL_ENDPOINT }}
           OTEL_PASSWORD: ${{ secrets.OTEL_PASSWORD }}
           OTEL_USERNAME: ${{ secrets.OTEL_USERNAME }}
@@ -123,8 +121,6 @@ jobs:
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           DOMAIN: ${{ vars.DOMAIN }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
-          MON_PASSWORD: ${{ secrets.MON_PASSWORD }}
-          MON_USERNAME: ${{ secrets.MON_USERNAME }}
           OTEL_ENDPOINT: ${{ secrets.OTEL_ENDPOINT }}
           OTEL_PASSWORD: ${{ secrets.OTEL_PASSWORD }}
           OTEL_USERNAME: ${{ secrets.OTEL_USERNAME }}
@@ -179,8 +175,6 @@ jobs:
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           DOMAIN: ${{ vars.DOMAIN }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
-          MON_PASSWORD: ${{ secrets.MON_PASSWORD }}
-          MON_USERNAME: ${{ secrets.MON_USERNAME }}
           OTEL_ENDPOINT: ${{ secrets.OTEL_ENDPOINT }}
           OTEL_PASSWORD: ${{ secrets.OTEL_PASSWORD }}
           OTEL_USERNAME: ${{ secrets.OTEL_USERNAME }}
@@ -235,8 +229,6 @@ jobs:
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           DOMAIN: ${{ vars.DOMAIN }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
-          MON_PASSWORD: ${{ secrets.MON_PASSWORD }}
-          MON_USERNAME: ${{ secrets.MON_USERNAME }}
           OTEL_ENDPOINT: ${{ secrets.OTEL_ENDPOINT }}
           OTEL_PASSWORD: ${{ secrets.OTEL_PASSWORD }}
           OTEL_USERNAME: ${{ secrets.OTEL_USERNAME }}
