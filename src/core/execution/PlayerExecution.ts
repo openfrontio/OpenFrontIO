@@ -72,10 +72,7 @@ export class PlayerExecution implements Execution {
 
     const alliances = Array.from(this.player.alliances());
     for (const alliance of alliances) {
-      if (
-        this.mg.ticks() - alliance.createdAt() >
-        this.mg.config().allianceDuration()
-      ) {
+      if (alliance.expiresAt() <= this.mg.ticks()) {
         alliance.expire();
       }
     }

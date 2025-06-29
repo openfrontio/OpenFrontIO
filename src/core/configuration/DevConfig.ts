@@ -50,6 +50,14 @@ export class DevConfig extends DefaultConfig {
     super(sc, gc, us, isReplay);
   }
 
+  allianceExtensionPromptOffset(): number {
+    return 100; // 10 seconds
+  }
+
+  allianceDuration(): number {
+    return 30 * 10;
+  }
+
   // numSpawnPhaseTurns(): number {
   //   return this.gameConfig().gameType == GameType.Singleplayer ? 70 : 100;
   //   // return 100
