@@ -483,6 +483,7 @@ label.option-card:hover {
   overflow-y: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
+  max-height: 400px;
 }
 
 #error-modal button.copy-btn {
