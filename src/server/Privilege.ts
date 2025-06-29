@@ -73,6 +73,20 @@ export class PrivilegeChecker {
       const color = this.cosmetics.flag.color[colorKey];
       if (!layer || !color) return "invalid";
       if (
+        layer.flares &&
+        flares &&
+        layer.flares.some((f) => flares.includes(f))
+      ) {
+        continue;
+      }
+      if (
+        color.flares &&
+        flares &&
+        color.flares.some((f) => flares.includes(f))
+      ) {
+        continue;
+      }
+      if (
         flares &&
         (flares.includes(`flag_layer:${layer.name}`) ||
           flares.includes("flag_layer:*"))

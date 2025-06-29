@@ -18,6 +18,7 @@ export const CosmeticsSchema = z.object({
       z.object({
         name: z.string(),
         role_group: z.string().optional(),
+        flares: z.array(z.string()).optional(),
       }),
     ),
     color: z.record(
@@ -26,6 +27,7 @@ export const CosmeticsSchema = z.object({
         color: z.string(),
         name: z.string(),
         role_group: z.string().optional(),
+        flares: z.array(z.string()).optional(),
       }),
     ),
   }),
