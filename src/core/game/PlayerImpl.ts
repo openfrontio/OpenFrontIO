@@ -128,8 +128,6 @@ export class PlayerImpl implements Player {
     return {
       type: GameUpdateType.Player,
       clientID: this.clientID(),
-      pattern: this.pattern(),
-      flag: this.flag(),
       name: this.name(),
       displayName: this.displayName(),
       id: this.id(),
@@ -175,14 +173,6 @@ export class PlayerImpl implements Player {
 
   smallID(): number {
     return this._smallID;
-  }
-
-  pattern(): string | undefined {
-    return this.playerInfo.pattern;
-  }
-
-  flag(): string | undefined {
-    return this.playerInfo.flag;
   }
 
   name(): string {
