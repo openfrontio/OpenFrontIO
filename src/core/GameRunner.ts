@@ -1,7 +1,11 @@
 import { placeName } from "../client/graphics/NameBoxCalculator";
+
 import { getConfig } from "./configuration/ConfigLoader";
+import { AllianceExpireCheckExecution } from "./execution/alliance/AllianceExpireCheckExecution";
 import { Executor } from "./execution/ExecutionManager";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
+import { AllianceImpl } from "./game/AllianceImpl";
+
 import {
   AllPlayers,
   Cell,
@@ -20,11 +24,13 @@ import {
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
 import {
+  AllianceViewData,
   ErrorUpdate,
   GameUpdateType,
   GameUpdateViewData,
 } from "./game/GameUpdates";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
+
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
 import { sanitize, simpleHash } from "./Util";
@@ -68,6 +74,7 @@ export async function createGameRunner(
     gameMap.gameMap,
     gameMap.miniGameMap,
     config,
+    clientID,
   );
 
   const gr = new GameRunner(
@@ -77,6 +84,21 @@ export async function createGameRunner(
   );
   gr.init();
   return gr;
+}
+
+function toAllianceViewData(
+  alliance: AllianceImpl,
+  me: Player,
+): AllianceViewData {
+  return {
+    requestorID: alliance.requestor().smallID(),
+    recipientID: alliance.recipient().smallID(),
+    createdAt: alliance.createdAt(),
+    extensionRequestedByMe: alliance.extensionRequestedBy(me),
+    extensionRequestedByOther: alliance.extensionRequestedBy(
+      alliance.otherPlayer(me),
+    ),
+  };
 }
 
 export class GameRunner {
@@ -102,6 +124,7 @@ export class GameRunner {
       this.game.addExecution(...this.execManager.fakeHumanExecutions());
     }
     this.game.addExecution(new WinCheckExecution());
+    this.game.addExecution(new AllianceExpireCheckExecution());
   }
 
   public addTurn(turn: Turn): void {
@@ -161,11 +184,20 @@ export class GameRunner {
     const packedTileUpdates = updates[GameUpdateType.Tile].map((u) => u.update);
     updates[GameUpdateType.Tile] = [];
 
+    const me = this.game.myPlayer();
     this.callBack({
       tick: this.game.ticks(),
       packedTileUpdates: new BigUint64Array(packedTileUpdates),
       updates: updates,
       playerNameViewData: this.playerViewData,
+      alliances: this.game
+        .alliances()
+        .filter(
+          (a) =>
+            a.requestor().smallID() === me.smallID() ||
+            a.recipient().smallID() === me.smallID(),
+        )
+        .map((a) => toAllianceViewData(a as AllianceImpl, me)),
     });
     this.isExecuting = false;
   }

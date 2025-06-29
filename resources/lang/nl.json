@@ -409,5 +409,21 @@
     "stop_trade": "Stop handel",
     "yes": "Ja",
     "no": "Nee"
+  },
+  "buttons": {
+    "focus": "Focus",
+    "accept": "Accepteren",
+    "reject": "Weigeren",
+    "propose_renewal": "Verlenging voorstellen",
+    "i_want_to_renew": "Ik wil verlengen"
+  },
+  "alliance": {
+    "requested": "{name} vraagt om een alliantie!",
+    "renewed": "Alliantie succesvol verlengd.",
+    "request_accepted": "{name} heeft je alliantieverzoek geaccepteerd",
+    "request_rejected": "{name} heeft je alliantieverzoek geweigerd",
+    "about_to_expire": "Je alliantie met {name} staat op het punt te verlopen",
+    "expired": "Je alliantie met {name} is verlopen",
+    "no_alliance_to_extend": "Er is geen alliantie om te verlengen."
   }
 }

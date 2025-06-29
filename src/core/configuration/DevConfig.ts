@@ -50,6 +50,14 @@ export class DevConfig extends DefaultConfig {
     super(sc, gc, us, isReplay);
   }
 
+  // allianceExtensionPromptOffset(): number {
+  //   return 200; // 20 seconds
+  // }
+
+  // allianceDuration(): number {
+  //   return 60 * 10; // 60 seconds × 10 ticks per second = 600 ticks
+  // }
+
   // numSpawnPhaseTurns(): number {
   //   return this.gameConfig().gameType == GameType.Singleplayer ? 70 : 100;
   //   // return 100
