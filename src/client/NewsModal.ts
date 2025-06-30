@@ -23,7 +23,6 @@ export class NewsModal extends LitElement {
     }
 
     .news-container {
-      max-height: 60vh;
       overflow-y: auto;
       padding: 1rem;
       display: flex;

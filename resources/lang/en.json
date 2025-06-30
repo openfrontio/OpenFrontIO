@@ -500,8 +500,14 @@
       "scattered_dots": "Scattered Dots",
       "circuit_board": "Circuit Board",
       "vertical_bars": "Vertical Bars",
+      "shells": "Shells",
       "-w-": ".w.",
       "white_rabbit": "White Rabbit",
+      "goat": "Goat",
+      "cats": "Cats",
+      "cursor": "Cursor",
+      "hand": "Hand",
+      "radiation": "Radiation",
       "openfront_qr": "OpenFront.io QR code",
       "openfront": "OpenFront"
     }
