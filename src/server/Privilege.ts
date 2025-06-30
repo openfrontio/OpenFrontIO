@@ -93,8 +93,7 @@ export class PrivilegeChecker {
       }
       if (
         flares &&
-        (flares.includes(`flag_color:${color.name}`) ||
-          flares.includes("flag_color:*"))
+        (superFlare || flares.includes(`flag_color:${color.name}`))
       ) {
         continue;
       }
