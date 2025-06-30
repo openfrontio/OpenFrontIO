@@ -366,7 +366,7 @@ class Client {
           "host-lobby-modal",
           "join-private-lobby-modal",
           "game-starting-modal",
-          "top-bar",
+          "game-top-bar",
           "help-modal",
           "user-setting",
         ].forEach((tag) => {

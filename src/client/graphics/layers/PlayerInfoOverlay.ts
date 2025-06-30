@@ -352,11 +352,11 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="flex w-full z-50 flex-col"
+        class="hidden lg:flex fixed top-[245px] right-0 w-full z-50 flex-col max-w-[180px]"
         @contextmenu=${(e) => e.preventDefault()}
       >
         <div
-          class="bg-slate-800/40 backdrop-blur-sm shadow-xs rounded-lg shadow-lg backdrop-blur-sm transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
+          class="bg-slate-800/40 backdrop-blur-sm shadow-xs rounded-lg shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
         >
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}

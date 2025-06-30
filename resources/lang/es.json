@@ -230,7 +230,7 @@
     "special_effects_desc": "Activa los efectos especiales. Desactiva para mejorar el rendimiento",
     "anonymous_names_label": "🥷 Nombres ocultos",
     "anonymous_names_desc": "Oculta los nombres de jugadores reales con nombres aleatorios en tu pantalla.",
-    "left_click_label": "🖱️ Clic izquierdo para abrir el menú",
+    "left_click_label": "Clic izquierdo para abrir el menú",
     "left_click_desc": "Cuando está activado, el clic izquierdo abre el menú y el botón de espada ataca. Cuando está desactivado, el clic izquierdo ataca directamente.",
     "attack_ratio_label": "⚔️ Ratio de ataque",
     "attack_ratio_desc": "Porcentaje de tus tropas que se envían en un ataque (1–100%)",

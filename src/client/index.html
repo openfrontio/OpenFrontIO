@@ -265,7 +265,6 @@
     <div id="radialMenu" class="radial-menu"></div>
     <div class="flex gap-2 fixed right-[10px] top-[10px] z-50 flex-col">
       <options-menu></options-menu>
-      <replay-panel></replay-panel>
       <player-info-overlay></player-info-overlay>
     </div>
     <div
@@ -279,16 +278,13 @@
       style="position: fixed; pointer-events: none"
     >
       <div
-        class="w-full sm:w-2/3 sm:fixed sm:right-0 sm:bottom-0 sm:flex flex-col items-end"
+        class="w-full md:w-2/3 md:fixed sm:right-0 md:bottom-0 md:flex flex-col items-end"
         style="pointer-events: none"
       >
         <chat-display></chat-display>
         <events-display></events-display>
       </div>
-      <div
-        class="w-[320px] flex flex-col items-center"
-        style="pointer-events: auto"
-      >
+      <div style="pointer-events: auto">
         <control-panel></control-panel>
       </div>
     </div>
@@ -363,7 +359,8 @@
     <build-menu></build-menu>
     <win-modal></win-modal>
     <game-starting-modal></game-starting-modal>
-    <top-bar></top-bar>
+    <game-top-bar></game-top-bar>
+    <game-right-sidebar></game-right-sidebar>
 
     <player-panel></player-panel>
     <help-modal></help-modal>

@@ -1,0 +1,4 @@
+<svg class="svg-icon" style="width: 1em; height: 1em;vertical-align: middle;fill: currentColor;overflow: hidden; shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+<path fill="#fefffe"
+      d="M4.636,2.1C4.325,1.011,5.18-.06,6.311,.003l6.002,.51c.831,.046,1.388,.873,1.118,1.661l-.319,.826H5.115l-.479-.9Zm5.163,18.9h4.201v3H5v-5.884l-2.145,4.527L.145,21.357l3.688-7.784c.74-1.563,2.336-2.573,4.066-2.573h5.102v5.853l-3.201,4.147Zm-1.799-2.794l3.368-4.206h-3.368v4.206Zm1-9.206c2.209,0,4-1.791,4-4H5c0,2.209,1.791,4,4,4Zm10.005,4.836c2.382-.504,4.995-2.225,4.995-5.836h-3c0,1.679-1.037,2.417-2,2.743V0h-3V1h-1V3h1v6h-1v9h1v6h5v-2l-.977-4h2.977v-3h-3.711l-.285-1.164Z"/>
+</svg>
