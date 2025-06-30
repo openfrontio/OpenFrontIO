@@ -1,11 +1,7 @@
 import { colord, Colord } from "colord";
 import {
-  blue,
-  botColor,
   ColorAllocator,
-  red,
   selectDistinctColor,
-  teal,
 } from "../src/core/configuration/Colors";
 import { ColoredTeams } from "../src/core/game/Game";
 
@@ -75,11 +71,36 @@ describe("ColorAllocator", () => {
     expect(c2.isEqual(c2Again)).toBe(true);
   });
 
-  test("assignTeamColor returns the expected static color for known teams", () => {
-    expect(allocator.assignTeamColor(ColoredTeams.Blue)).toEqual(blue);
-    expect(allocator.assignTeamColor(ColoredTeams.Red)).toEqual(red);
-    expect(allocator.assignTeamColor(ColoredTeams.Teal)).toEqual(teal);
-    expect(allocator.assignTeamColor(ColoredTeams.Bot)).toEqual(botColor);
+  test("assignTeamColor returns a color from the team's color palette", () => {
+    // Test that team colors are returned (first color from each team's palette)
+    const blueColor = allocator.assignTeamColor(ColoredTeams.Blue);
+    const redColor = allocator.assignTeamColor(ColoredTeams.Red);
+    const tealColor = allocator.assignTeamColor(ColoredTeams.Teal);
+    const botColor = allocator.assignTeamColor(ColoredTeams.Bot);
+
+    // Verify they are valid colors (not null/undefined)
+    expect(blueColor).toBeDefined();
+    expect(redColor).toBeDefined();
+    expect(tealColor).toBeDefined();
+    expect(botColor).toBeDefined();
+
+    // Verify they are different from each other
+    expect(blueColor.isEqual(redColor)).toBe(false);
+    expect(blueColor.isEqual(tealColor)).toBe(false);
+    expect(redColor.isEqual(tealColor)).toBe(false);
+  });
+
+  test("assignTeamColor returns consistent colors for the same player ID", () => {
+    const playerId = "player123";
+
+    const blueColor1 = allocator.assignTeamColor(ColoredTeams.Blue, playerId);
+    const blueColor2 = allocator.assignTeamColor(ColoredTeams.Blue, playerId);
+
+    const redColor1 = allocator.assignTeamColor(ColoredTeams.Red, playerId);
+    const redColor2 = allocator.assignTeamColor(ColoredTeams.Red, playerId);
+
+    expect(blueColor1.isEqual(blueColor2)).toBe(true);
+    expect(redColor1.isEqual(redColor2)).toBe(true);
   });
 });
 

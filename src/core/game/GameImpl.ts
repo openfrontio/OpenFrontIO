@@ -106,6 +106,9 @@ export class GameImpl implements Game {
         this.playerTeams.push("Team " + (i + 1));
       }
     } else {
+      // Start with the base teams
+      this.playerTeams = [ColoredTeams.Red, ColoredTeams.Blue];
+
       const numPlayerTeams = this._config.playerTeams() as number;
       if (numPlayerTeams < 2)
         throw new Error(`Too few teams: ${numPlayerTeams}`);
