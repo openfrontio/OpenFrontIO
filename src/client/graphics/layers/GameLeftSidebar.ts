@@ -68,7 +68,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
   }
 
   private getTranslatedPlayerTeamLabel(): string {
-    if (!this.playerTeam) return '';
+    if (!this.playerTeam) return "";
     const translationKey = `team_colors.${this.playerTeam.toLowerCase()}`;
     const translated = translateText(translationKey);
     return translated === translationKey ? this.playerTeam : translated;
