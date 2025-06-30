@@ -3,6 +3,7 @@ import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { GameMode } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
+import { translateText } from "../../Utils";
 import "../icons/LeaderboardRegularIcon";
 import "../icons/LeaderboardSolidIcon";
 import "../icons/TeamRegularIcon";
@@ -66,6 +67,13 @@ export class GameLeftSidebar extends LitElement implements Layer {
     return this.game?.config().gameConfig().gameMode === GameMode.Team;
   }
 
+  private getTranslatedPlayerTeamLabel(): string {
+    return (
+      translateText(`team_colors.${this.playerTeam?.toLowerCase()}`) ??
+      this.playerTeam
+    );
+  }
+
   render() {
     return html`
       <aside
@@ -79,9 +87,9 @@ export class GameLeftSidebar extends LitElement implements Layer {
                 class="flex items-center w-full h-8 lg:h-10 text-white py-1 lg:p-2"
                 @contextmenu=${(e: Event) => e.preventDefault()}
               >
-                Your team:
+                ${translateText("help_modal.ui_your_team")}
                 <span style="color: ${this.playerColor.toRgbString()}">
-                  ${this.playerTeam} &#10687;
+                  ${this.getTranslatedPlayerTeamLabel()} &#10687;
                 </span>
               </div>
             `

@@ -187,7 +187,9 @@ export class Leaderboard extends LitElement implements Layer {
             this.updateLeaderboard();
           }}
         >
-          ${this.showTopFive ? "Show All" : "Show Top 5"}
+          ${this.showTopFive
+            ? translateText("leaderboard.show_all")
+            : translateText("leaderboard.show_top_5")}
         </button>
 
         <div
