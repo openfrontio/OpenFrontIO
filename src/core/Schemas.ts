@@ -106,17 +106,6 @@ export type Player = z.infer<typeof PlayerSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 const PlayerTypeSchema = z.enum(PlayerType);
 
-export interface GameInfo {
-  gameID: GameID;
-  clients?: ClientInfo[];
-  numClients?: number;
-  msUntilStart?: number;
-  gameConfig?: GameConfig;
-}
-export interface ClientInfo {
-  clientID: ClientID;
-  username: string;
-}
 export enum LogSeverity {
   Debug = "DEBUG",
   Info = "INFO",
@@ -204,6 +193,21 @@ export const QuickChatKeySchema = z.enum(
     entries.map((entry) => `${category}.${entry.key}`),
   ) as [string, ...string[]],
 );
+
+export const ClientInfoSchema = z.object({
+  clientID: ID,
+  username: UsernameSchema,
+});
+export type ClientInfo = z.infer<typeof ClientInfoSchema>;
+
+export const GameInfoSchema = z.object({
+  gameID: ID,
+  clients: ClientInfoSchema.array().optional(),
+  numClients: z.number().optional(),
+  msUntilStart: z.number().optional(),
+  gameConfig: GameConfigSchema.optional(),
+});
+export type GameInfo = z.infer<typeof GameInfoSchema>;
 
 //
 // Intents
@@ -521,3 +525,11 @@ export const GameRecordSchema = AnalyticsRecordSchema.extend({
   turns: TurnSchema.array(),
 });
 export type GameRecord = z.infer<typeof GameRecordSchema>;
+
+//
+// Game server API calls
+//
+export const PublicLobbiesSchema = z.object({
+  lobbies: GameInfoSchema.array(),
+});
+export type PublicLobbies = z.infer<typeof PublicLobbiesSchema>;

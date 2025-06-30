@@ -5,8 +5,9 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameInfo } from "../core/Schemas";
+import { GameInfo, PublicLobbies } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import { CreateGameInput } from "../core/WorkerSchemas";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
@@ -61,8 +62,6 @@ app.use(
 
 let publicLobbiesJsonStr = "";
 
-const publicLobbyIDs: Set<string> = new Set();
-
 // Start the master process
 export async function startMaster() {
   if (!cluster.isPrimary) {
@@ -103,7 +102,7 @@ export async function startMaster() {
         setInterval(
           () =>
             fetchLobbies().then((lobbies) => {
-              if (lobbies === 0) {
+              if (lobbies < 3) {
                 scheduleLobbies();
               }
             }),
@@ -156,7 +155,7 @@ app.get(
 app.get(
   "/api/public_lobbies",
   gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
-    res.send(publicLobbiesJsonStr);
+    res.contentType("application/json").send(publicLobbiesJsonStr);
   }),
 );
 
@@ -193,10 +192,12 @@ app.post(
   }),
 );
 
+const publicLobbies: Map<string, number> = new Map();
+
 async function fetchLobbies(): Promise<number> {
   const fetchPromises: Promise<GameInfo | null>[] = [];
 
-  for (const gameID of new Set(publicLobbyIDs)) {
+  for (const [gameID] of publicLobbies) {
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 5000); // 5 second timeout
     const port = config.workerPort(gameID);
@@ -211,7 +212,7 @@ async function fetchLobbies(): Promise<number> {
       .catch((error) => {
         log.error(`Error fetching game ${gameID}:`, error);
         // Return null or a placeholder if fetch fails
-        publicLobbyIDs.delete(gameID);
+        publicLobbies.delete(gameID);
         return null;
       });
 
@@ -239,7 +240,7 @@ async function fetchLobbies(): Promise<number> {
       l.msUntilStart !== undefined &&
       l.msUntilStart <= 250
     ) {
-      publicLobbyIDs.delete(l.gameID);
+      publicLobbies.delete(l.gameID);
       return;
     }
 
@@ -252,7 +253,7 @@ async function fetchLobbies(): Promise<number> {
       l.numClients !== undefined &&
       l.gameConfig.maxPlayers <= l.numClients
     ) {
-      publicLobbyIDs.delete(l.gameID);
+      publicLobbies.delete(l.gameID);
       return;
     }
   });
@@ -260,17 +261,23 @@ async function fetchLobbies(): Promise<number> {
   // Update the JSON string
   publicLobbiesJsonStr = JSON.stringify({
     lobbies: lobbyInfos,
-  });
+  } satisfies PublicLobbies);
 
-  return publicLobbyIDs.size;
+  return publicLobbies.size;
 }
 
 // Function to schedule a new public game
 async function schedulePublicGame(playlist: MapPlaylist) {
   const gameID = generateID();
-  publicLobbyIDs.add(gameID);
 
   const workerPath = config.workerPath(gameID);
+
+  let lastGameCreatedTime = Date.now() - config.gameCreationRate();
+  for (const value of publicLobbies.values()) {
+    lastGameCreatedTime = Math.max(value, lastGameCreatedTime);
+  }
+  const createdAt = lastGameCreatedTime + config.gameCreationRate();
+  publicLobbies.set(gameID, createdAt);
 
   // Send request to the worker to start the game
   try {
@@ -282,7 +289,10 @@ async function schedulePublicGame(playlist: MapPlaylist) {
           "Content-Type": "application/json",
           [config.adminHeader()]: config.adminToken(),
         },
-        body: JSON.stringify(playlist.gameConfig()),
+        body: JSON.stringify({
+          config: playlist.gameConfig(),
+          createdAt,
+        } satisfies CreateGameInput),
       },
     );
 

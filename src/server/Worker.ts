@@ -100,7 +100,7 @@ export function startWorker() {
         return res.status(400).json({ error });
       }
 
-      const gc = result.data;
+      const gc = result.data.config;
       if (
         gc?.gameType === GameType.Public &&
         req.headers[config.adminHeader()] !== config.adminToken()
@@ -120,7 +120,9 @@ export function startWorker() {
         return res.status(400).json({ error: "Worker, game id mismatch" });
       }
 
-      const game = gm.createGame(id, gc);
+      const startTime =
+        result.data.startTime ?? Date.now() + config.gameCreationRate();
+      const game = gm.createGame(id, gc, startTime);
 
       log.info(
         `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating game ${game.isPublic() ? "Public" : "Private"} with id ${id}`,

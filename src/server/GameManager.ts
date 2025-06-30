@@ -28,8 +28,12 @@ export class GameManager {
     return false;
   }
 
-  createGame(id: GameID, gameConfig: GameConfig | undefined) {
-    const game = new GameServer(id, this.log, Date.now(), this.config, {
+  createGame(
+    id: GameID,
+    gameConfig: GameConfig | undefined,
+    startTime: number,
+  ) {
+    const game = new GameServer(id, this.log, startTime, this.config, {
       gameMap: GameMapType.World,
       gameType: GameType.Private,
       difficulty: Difficulty.Medium,
