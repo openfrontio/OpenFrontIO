@@ -87,9 +87,7 @@ export class PrivilegeChecker {
         continue;
       }
       if (
-        flares &&
-        (flares.includes(`flag_layer:${layer.name}`) ||
-          flares.includes("flag_layer:*"))
+        (superFlare || flares?.includes(`flag:layer:${layer.name}`))
       ) {
         continue;
       }
