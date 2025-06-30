@@ -1,6 +1,6 @@
 import { Config } from "../configuration/Config";
 import { PatternDecoder } from "../PatternDecoder";
-import { ClientID, GameID } from "../Schemas";
+import { ClientID, GameID, Player } from "../Schemas";
 import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
@@ -9,11 +9,9 @@ import {
   GameUpdates,
   Gold,
   NameViewData,
-  Player,
   PlayerActions,
   PlayerBorderTiles,
   PlayerID,
-  PlayerInfo,
   PlayerProfile,
   PlayerType,
   Team,
@@ -32,11 +30,17 @@ import {
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
+import { TerrainMapData } from "./TerrainMapLoader";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid } from "./UnitGrid";
 import { UserSettings } from "./UserSettings";
 
 const userSettings: UserSettings = new UserSettings();
+
+interface PlayerCosmetics {
+  pattern?: string | undefined;
+  flag?: string | undefined;
+}
 
 export class UnitView {
   public _wasUpdated = true;
@@ -145,6 +149,7 @@ export class PlayerView {
     private game: GameView,
     public data: PlayerUpdate,
     public nameData: NameViewData,
+    public cosmetics: PlayerCosmetics,
   ) {
     if (data.clientID === game.myClientID()) {
       this.anonymousName = this.data.name;
@@ -155,7 +160,9 @@ export class PlayerView {
       );
     }
     this.decoder =
-      data.pattern === undefined ? undefined : new PatternDecoder(data.pattern);
+      this.cosmetics.pattern === undefined
+        ? undefined
+        : new PatternDecoder(this.cosmetics.pattern);
   }
 
   patternDecoder(): PatternDecoder | undefined {
@@ -202,13 +209,6 @@ export class PlayerView {
   smallID(): number {
     return this.data.smallID;
   }
-  flag(): string | undefined {
-    return this.data.flag;
-  }
-
-  pattern(): string | undefined {
-    return this.data.pattern;
-  }
 
   name(): string {
     return this.anonymousName !== null && userSettings.anonymousNames()
@@ -236,7 +236,7 @@ export class PlayerView {
   isAlive(): boolean {
     return this.data.isAlive;
   }
-  isPlayer(): this is Player {
+  isPlayer(): this is PlayerView {
     return true;
   }
   numTilesOwned(): number {
@@ -306,16 +306,7 @@ export class PlayerView {
   outgoingEmojis(): EmojiMessage[] {
     return this.data.outgoingEmojis;
   }
-  info(): PlayerInfo {
-    return new PlayerInfo(
-      this.pattern(),
-      this.flag(),
-      this.name(),
-      this.type(),
-      this.clientID(),
-      this.id(),
-    );
-  }
+
   hasSpawned(): boolean {
     return this.data.hasSpawned;
   }
@@ -338,16 +329,35 @@ export class GameView implements GameMap {
 
   private toDelete = new Set<number>();
 
+  private _cosmetics: Map<string, PlayerCosmetics> = new Map();
+
+  private _map: GameMap;
+
   constructor(
     public worker: WorkerClient,
     private _config: Config,
-    private _map: GameMap,
+    private _mapData: TerrainMapData,
     private _myClientID: ClientID,
     private _gameID: GameID,
+    private _hunans: Player[],
   ) {
+    this._map = this._mapData.gameMap;
     this.lastUpdate = null;
-    this.unitGrid = new UnitGrid(_map);
+    this.unitGrid = new UnitGrid(this._map);
+    this._cosmetics = new Map(
+      this._hunans.map((h) => [
+        h.clientID,
+        { flag: h.flag, pattern: h.pattern } satisfies PlayerCosmetics,
+      ]),
+    );
+    for (const nation of this._mapData.manifest.nations) {
+      // Nations don't have client ids, so we use their name as the key instead.
+      this._cosmetics.set(nation.name, {
+        flag: nation.flag,
+      });
+    }
   }
+
   isOnEdgeOfMap(ref: TileRef): boolean {
     return this._map.isOnEdgeOfMap(ref);
   }
@@ -379,7 +389,15 @@ export class GameView implements GameMap {
       } else {
         this._players.set(
           pu.id,
-          new PlayerView(this, pu, gu.playerNameViewData[pu.id]),
+          new PlayerView(
+            this,
+            pu,
+            gu.playerNameViewData[pu.id],
+            // First check human by clientID, then check nation by name.
+            this._cosmetics.get(pu.clientID ?? "") ??
+              this._cosmetics.get(pu.name) ??
+              {},
+          ),
         );
       }
     });

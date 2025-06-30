@@ -19,22 +19,8 @@ describe("Stats", () => {
   beforeEach(async () => {
     stats = new StatsImpl();
     game = await setup("half_land_half_ocean", {}, [
-      new PlayerInfo(
-        undefined,
-        "us",
-        "boat dude",
-        PlayerType.Human,
-        "client1",
-        "player_1_id",
-      ),
-      new PlayerInfo(
-        undefined,
-        "us",
-        "boat dude",
-        PlayerType.Human,
-        "client2",
-        "player_2_id",
-      ),
+      new PlayerInfo("boat dude", PlayerType.Human, "client1", "player_1_id"),
+      new PlayerInfo("boat dude", PlayerType.Human, "client2", "player_2_id"),
     ]);
 
     while (game.inSpawnPhase()) {
