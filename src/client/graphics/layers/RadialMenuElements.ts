@@ -347,8 +347,18 @@ export const buildMenuElement: MenuElement = {
       unitTypes.add(UnitType.AtomBomb);
     }
 
+    // Filter experimental units so they don't appear in the menu
+    const experimentalUnitActivated = (item: BuildItemDisplay): boolean => {
+      return params.game.config().unitInfo(item.unitType).experimental
+        ? params.buildMenu.canBuild(item)
+        : true;
+    };
+
     const buildElements: MenuElement[] = flattenedBuildTable
-      .filter((item) => unitTypes.has(item.unitType))
+      .filter(
+        (item) =>
+          unitTypes.has(item.unitType) && experimentalUnitActivated(item),
+      )
       .map((item: BuildItemDisplay) => ({
         id: `build_${item.unitType}`,
         name: item.key

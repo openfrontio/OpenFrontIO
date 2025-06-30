@@ -1,6 +1,5 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { Gold, UnitType } from "../../../core/game/Game";
@@ -236,14 +235,8 @@ export class ControlPanel extends LitElement implements Layer {
             >
             <span translate="no"
               >${renderNumber(this._gold)}
-              (+${renderNumber(this._goldPerSecond)}
-              ${renderNumber(this._factories)}
-              <img
-                src="${factoryIcon}"
-                style="display: inline"
-                width="15"
-              />)</span
-            >
+              (+${renderNumber(this._goldPerSecond)})
+            </span>
           </div>
         </div>
 

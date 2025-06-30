@@ -133,6 +133,7 @@ export interface UnitInfo {
   constructionDuration?: number;
   upgradable?: boolean;
   canBuildTrainStation?: boolean;
+  experimental?: boolean;
 }
 
 export enum UnitType {
