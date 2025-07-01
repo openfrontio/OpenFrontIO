@@ -72,11 +72,11 @@ class SoundManager {
         }
     }
 
-    public stopSound(path: string): void {
-        const sources = this.activeSources.get(path);
+    public stopSound(name: string): void {
+        const sources = this.activeSources.get(name);
         if (sources) {
             sources.forEach(source => source.stop());
-            this.activeSources.set(path, []);
+            this.activeSources.set(name, []);
         }
     }
 
