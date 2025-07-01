@@ -8,10 +8,6 @@ import teamSolidIcon from "../../../../resources/images/TeamIconSolidWhite.svg";
 import { GameMode } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { translateText } from "../../Utils";
-import "../icons/LeaderboardRegularIcon";
-import "../icons/LeaderboardSolidIcon";
-import "../icons/TeamRegularIcon";
-import "../icons/TeamSolidIcon";
 import { Layer } from "./Layer";
 
 @customElement("game-left-sidebar")
