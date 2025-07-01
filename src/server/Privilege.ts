@@ -77,29 +77,23 @@ export class PrivilegeChecker {
       const layer = this.cosmetics.flag.layers[layerKey];
       const color = this.cosmetics.flag.color[colorKey];
       if (!layer || !color) return "invalid";
+
+      const layerFlareOk =
+        layer.flares && flares && layer.flares.some((f) => flares.includes(f));
+      const colorFlareOk =
+        color.flares && flares && color.flares.some((f) => flares.includes(f));
+      const layerSuperFlareOk =
+        superFlare || (flares && flares.includes(`flag:layer:${layer.name}`));
+      const colorSuperFlareOk =
+        superFlare || (flares && flares.includes(`flag:color:${color.name}`));
+
       if (
-        layer.flares &&
-        flares &&
-        layer.flares.some((f) => flares.includes(f))
+        (layerFlareOk || layerSuperFlareOk || !layer.role_group) &&
+        (colorFlareOk || colorSuperFlareOk || !color.role_group)
       ) {
         continue;
       }
-      if (
-        color.flares &&
-        flares &&
-        color.flares.some((f) => flares.includes(f))
-      ) {
-        continue;
-      }
-      if (superFlare || flares?.includes(`flag:layer:${layer.name}`)) {
-        continue;
-      }
-      if (
-        flares &&
-        (superFlare || flares.includes(`flag:color:${color.name}`))
-      ) {
-        continue;
-      }
+
       if (layer.role_group) {
         const group = this.cosmetics.role_groups[layer.role_group];
         if (!group) return "invalid";
@@ -107,6 +101,7 @@ export class PrivilegeChecker {
           return "restricted";
         }
       }
+
       if (color.role_group) {
         const group = this.cosmetics.role_groups[color.role_group];
         if (!group) return "invalid";

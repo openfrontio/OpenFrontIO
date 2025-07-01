@@ -101,4 +101,16 @@ describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
       true,
     );
   });
+
+  it("not allowed: only color flare, layer still restricted", () => {
+    expect(checker.isCustomFlagAllowed("!a-c", [], ["cosmetic:blue"])).toBe(
+      "restricted",
+    );
+  });
+
+  it("not allowed: only layer flare, color still restricted", () => {
+    expect(checker.isCustomFlagAllowed("!c-a", [], ["cosmetic:flags"])).toBe(
+      "restricted",
+    );
+  });
 });
