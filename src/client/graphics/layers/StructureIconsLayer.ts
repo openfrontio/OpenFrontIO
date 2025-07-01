@@ -56,7 +56,11 @@ export class StructureIconsLayer implements Layer {
   }
 
   async setupRenderer() {
-    await PIXI.Assets.load(bitmapFont);
+    try {
+      await PIXI.Assets.load(bitmapFont);
+    } catch (error) {
+      console.error("Failed to load bitmap font:", error);
+    }
     this.renderer = new PIXI.WebGLRenderer();
     this.pixicanvas = document.createElement("canvas");
     this.pixicanvas.width = window.innerWidth;
