@@ -1,4 +1,9 @@
 import { PrivilegeChecker } from "../../src/server/Privilege";
+
+class DummyPatternDecoder {
+  constructor(_base64: string) {}
+}
+
 describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
   const mockCosmetics = {
     role_groups: {
@@ -9,7 +14,7 @@ describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
     flag: {
       layers: {
         a: {
-          name: "center_circle",
+          name: "chocolate",
           role_group: "donor",
           flares: ["cosmetic:flags"],
         },
@@ -23,7 +28,10 @@ describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
       },
     },
   };
-  const checker = new PrivilegeChecker(mockCosmetics as any);
+  const checker = new PrivilegeChecker(
+    mockCosmetics as any,
+    DummyPatternDecoder,
+  );
 
   it("allowed: unrestricted layer/color", () => {
     expect(checker.isCustomFlagAllowed("!b-b", [], [])).toBe(true);

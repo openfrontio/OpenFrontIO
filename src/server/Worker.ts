@@ -10,6 +10,7 @@ import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { COSMETICS } from "../core/CosmeticSchemas";
 import { GameType } from "../core/game/Game";
+import { PatternDecoder } from "../core/PatternDecoder";
 import {
   ClientMessageSchema,
   GameRecord,
@@ -44,7 +45,7 @@ export function startWorker() {
 
   const gm = new GameManager(config, log);
 
-  const privilegeChecker = new PrivilegeChecker(COSMETICS);
+  const privilegeChecker = new PrivilegeChecker(COSMETICS, PatternDecoder);
 
   if (config.env() === GameEnv.Prod && config.otelEnabled()) {
     initWorkerMetrics(gm);

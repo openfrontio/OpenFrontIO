@@ -1,8 +1,10 @@
 import { Cosmetics } from "../core/CosmeticSchemas";
-import { PatternDecoder } from "../core/PatternDecoder";
 
 export class PrivilegeChecker {
-  constructor(private cosmetics: Cosmetics) {}
+  constructor(
+    private cosmetics: Cosmetics,
+    private PatternDecoder?: new (base64: string) => any,
+  ) {}
 
   isPatternAllowed(
     base64: string,
@@ -14,7 +16,9 @@ export class PrivilegeChecker {
     if (found === undefined) {
       try {
         // Ensure that the pattern will not throw for clients
-        new PatternDecoder(base64);
+        if (this.PatternDecoder) {
+          new this.PatternDecoder(base64);
+        }
       } catch (e) {
         // Pattern is invalid
         return "invalid";
