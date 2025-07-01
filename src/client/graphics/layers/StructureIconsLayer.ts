@@ -1,4 +1,5 @@
 import * as PIXI from "pixi.js";
+import bitmapFont from "../../../../resources/font/round_6x6_modified.xml";
 import anchorIcon from "../../../../resources/images/AnchorIcon.png";
 import cityIcon from "../../../../resources/images/CityIcon.png";
 import factoryIcon from "../../../../resources/images/FactoryUnit.png";
@@ -55,7 +56,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   async setupRenderer() {
-    await PIXI.Assets.load("/fonts/round_6x6.xml");
+    await PIXI.Assets.load(bitmapFont);
     this.renderer = new PIXI.WebGLRenderer();
     this.pixicanvas = document.createElement("canvas");
     this.pixicanvas.width = window.innerWidth;
