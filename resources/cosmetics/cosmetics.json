@@ -10,6 +10,14 @@
     "ABMIDw8": {
       "name": "stripes_h"
     },
+    "AAEYAwA": {
+      "name": "horizontal_stripes",
+      "role_group": "donor"
+    },
+    "AAoACQ": {
+      "name": "vertical_bars",
+      "role_group": "donor"
+    },
     "ABMIpaU": {
       "name": "checkerboard"
     },
@@ -26,10 +34,6 @@
     },
     "AHEYA8AMMDAMwAPAAzAMDDADwA": {
       "name": "mini_cross",
-      "role_group": "donor"
-    },
-    "AHE4__8AAAAAAAAAAAAAAAAAAP__AAAAAAAAAAAAAAAAAAA": {
-      "name": "horizontal_stripes",
       "role_group": "donor"
     },
     "AHI4AOAAkACIAEQAIgARjAhUBCgCKAHQACgB1AILAwUABwA": {
@@ -60,8 +64,8 @@
       "name": "circuit_board",
       "role_group": "donor"
     },
-    "AHEYSZJJkkmSSZJJkkmSSZJJkg": {
-      "name": "vertical_bars",
+    "AHEgzGfznzu43XPoL2fMn_O4O3fdL-g": {
+      "name": "shells",
       "role_group": "donor"
     },
     "AHEYAAAAAAAAAkCCQUQiLnQWaA": {
@@ -74,6 +78,10 @@
     },
     "AKFwAAAADMAABSiAAgVAoQBQKAA0CwB6AfDhAwIAQQKQkAAkMgCTSkhlGpYBAQJAjAAgEAAQAgB6AUCAABAgAAoUgAIFoFIBqFcAKhWASgXA8wAAAAA": {
       "name": "goat",
+      "role_group": "donor"
+    },
+    "ALF1AAAAAAAAABABAAAAAACwAQAAAAAA8AEAAAAAIFABIoABABDwATbAA4gQ9AU-wBPZIPgDKoSx-UD4Az4C9Kmf8AEcUlj5v_ABPvb9-X_wAX7k__A_8AN-_H_gH_AFfuJ_wBiwJf_BP0AIEBkAAAAAAAAAAAAAAAAAAAAAAAAAIgAAAAAAADYAiAAA-AA-ANgAELEBKgD4ALDhI_4HqgDwsSf-H_oIUPlH_C9xBP_BT_gn-YT_wD_8J_rEf-Af_hP8yD_gHwAM-NAf4B8AAvzhP8APAAAAAAAAAA": {
+      "name": "cats",
       "role_group": "donor"
     },
     "AJhYAAAAGACABACQAAASAEACAMgBAMkBIMkAJCngJAkSIEECIEgABAKAQAAQEAACAiCAAAQQgAAECIAAAfA_AAAA": {

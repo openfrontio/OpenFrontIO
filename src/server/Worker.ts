@@ -46,7 +46,7 @@ export function startWorker() {
 
   const privilegeChecker = new PrivilegeChecker(COSMETICS);
 
-  if (config.env() === GameEnv.Prod && config.otelEnabled()) {
+  if (config.otelEnabled()) {
     initWorkerMetrics(gm);
   }
 

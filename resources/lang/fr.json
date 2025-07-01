@@ -230,7 +230,7 @@
     "special_effects_desc": "Activer/désactiver les effets spéciaux. Désactiver pour améliorer les performances",
     "anonymous_names_label": "🥷 Noms masqués",
     "anonymous_names_desc": "Cacher le vrai nom des joueurs avec des noms aléatoires sur votre écran.",
-    "left_click_label": "🖱️ Clic gauche pour ouvrir le menu",
+    "left_click_label": "Clic gauche pour ouvrir le menu",
     "left_click_desc": "Activé, un clic gauche ouvre le menu et le bouton épée d'attaque. Désactivé, un clic gauche attaque directement.",
     "attack_ratio_label": "⚔️ Ratio d'attaque",
     "attack_ratio_desc": "Quel pourcentage de vos troupes envoyer dans une attaque (1–100%)",

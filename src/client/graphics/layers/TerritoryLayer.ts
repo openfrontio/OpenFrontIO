@@ -317,13 +317,8 @@ export class TerritoryLayer implements Layer {
         const baseColor = this.theme.territoryColor(owner);
 
         const decoder = owner.patternDecoder();
-        if (decoder !== undefined) {
-          const bit = decoder.isSet(x, y) ? 1 : 0;
-          const colorToUse = bit ? baseColor.darken(0.2) : baseColor;
-          this.paintTile(tile, colorToUse, 150);
-        } else {
-          this.paintTile(tile, baseColor, 150);
-        }
+        const color = decoder?.isSet(x, y) ? baseColor.darken(0.2) : baseColor;
+        this.paintTile(tile, color, 150);
       }
     }
   }
