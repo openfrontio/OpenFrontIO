@@ -1,4 +1,4 @@
-import clickSound from "../../../resources/non-commercial/sound/sound-effects/click.mp3";
+import clickSound from "../../../resources/non-commercial/sounds/sound-effects/click.mp3";
 import { EventBus } from "../../core/EventBus";
 import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
