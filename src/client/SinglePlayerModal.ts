@@ -19,6 +19,7 @@ import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
 import { FlagInput } from "./FlagInput";
+import { getTeamLabel } from "./HostLobbyModal";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
@@ -174,7 +175,7 @@ export class SinglePlayerModal extends LitElement {
                     ${translateText("host_modal.team_count")}
                   </div>
                   <div class="option-cards">
-                    ${["Duos", 2, 3, 4, 5, 6, 7].map(
+                    ${[Duos, 2, 3, 4, 5, 6, 7].map(
                       (o) => html`
                         <div
                           class="option-card ${this.teamCount === o
@@ -182,7 +183,9 @@ export class SinglePlayerModal extends LitElement {
                             : ""}"
                           @click=${() => this.handleTeamCountSelection(o)}
                         >
-                          <div class="option-card-title">${o}</div>
+                          <div class="option-card-title">
+                            ${getTeamLabel(o)}
+                          </div>
                         </div>
                       `,
                     )}

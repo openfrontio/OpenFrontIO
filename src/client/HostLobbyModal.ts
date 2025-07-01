@@ -20,6 +20,12 @@ import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 
+export function getTeamLabel(o: string | number): string {
+  return o === Duos
+    ? (translateText(`host_modal.duos`) ?? o)
+    : (translateText("public_lobby.teams", { num: o }) ?? `${o} teams`);
+}
+
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
@@ -207,7 +213,9 @@ export class HostLobbyModal extends LitElement {
                               : ""}"
                             @click=${() => this.handleTeamCountSelection(o)}
                           >
-                            <div class="option-card-title">${o}</div>
+                            <div class="option-card-title">
+                              ${getTeamLabel(o)}
+                            </div>
                           </div>
                         `,
                       )}
