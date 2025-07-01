@@ -5,6 +5,7 @@ on:
     types:
       - created
       - edited
+      - published
 
 permissions: {}
 
