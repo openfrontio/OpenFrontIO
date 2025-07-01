@@ -81,4 +81,16 @@ describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
       "invalid",
     );
   });
+
+  it("allowed: flares flag:layer:chocolate allows chocolate layer", () => {
+    expect(
+      checker.isCustomFlagAllowed("!a-b", [], ["flag:layer:chocolate"]),
+    ).toBe(true);
+  });
+
+  it("allowed: flares flag:color:blue allows blue color", () => {
+    expect(checker.isCustomFlagAllowed("!b-c", [], ["flag:color:blue"])).toBe(
+      true,
+    );
+  });
 });
