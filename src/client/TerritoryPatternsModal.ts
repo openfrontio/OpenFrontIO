@@ -17,7 +17,7 @@ export class TerritoryPatternsModal extends LitElement {
   };
 
   public previewButton: HTMLElement | null = null;
-  public buttonWidth: number = 100;
+  public buttonWidth: number = 150;
 
   @state() private selectedPattern: string | undefined;
 
