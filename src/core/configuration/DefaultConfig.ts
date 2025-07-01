@@ -66,6 +66,9 @@ const numPlayersConfig = {
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
+  stripePublishableKey(): string {
+    return process.env.STRIPE_PUBLISHABLE_KEY ?? "";
+  }
   domain(): string {
     return process.env.DOMAIN ?? "";
   }
@@ -199,6 +202,11 @@ export class DefaultConfig implements Config {
     private _userSettings: UserSettings | null,
     private _isReplay: boolean,
   ) {}
+
+  stripePublishableKey(): string {
+    return process.env.STRIPE_PUBLISHABLE_KEY ?? "";
+  }
+
   isReplay(): boolean {
     return this._isReplay;
   }

@@ -207,6 +207,7 @@ class Client {
       loginDiscordButton.translationKey = "main.login_discord";
       loginDiscordButton.addEventListener("click", discordLogin);
       logoutDiscordButton.hidden = true;
+      territoryModal.onUserMe(null);
     } else {
       // JWT appears to be valid
       loginDiscordButton.disable = true;
@@ -215,12 +216,12 @@ class Client {
       logoutDiscordButton.addEventListener("click", () => {
         // Log out
         logOut();
+        territoryModal.onUserMe(null);
         loginDiscordButton.disable = false;
         loginDiscordButton.translationKey = "main.login_discord";
         loginDiscordButton.hidden = false;
         loginDiscordButton.addEventListener("click", discordLogin);
         logoutDiscordButton.hidden = true;
-        territoryModal.onLogout();
       });
       // Look up the discord user object.
       // TODO: Add caching
@@ -231,6 +232,7 @@ class Client {
           loginDiscordButton.translationKey = "main.login_discord";
           loginDiscordButton.addEventListener("click", discordLogin);
           logoutDiscordButton.hidden = true;
+          territoryModal.onUserMe(null);
           return;
         }
         console.log(

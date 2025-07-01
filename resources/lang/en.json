@@ -489,9 +489,10 @@
   },
   "territory_patterns": {
     "title": "Select Territory Pattern",
+    "purchase": "Purchase",
     "blocked": {
       "login": "You must be logged in to access this pattern.",
-      "role": "This pattern requires the {role} role."
+      "purchase": "Purchase this pattern to unlock it."
     },
     "pattern": {
       "default": "Default",

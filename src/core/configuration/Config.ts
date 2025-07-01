@@ -62,6 +62,7 @@ export interface ServerConfig {
   cloudflareApiToken(): string;
   cloudflareConfigPath(): string;
   cloudflareCredsPath(): string;
+  stripePublishableKey(): string;
 }
 
 export interface NukeMagnitude {
