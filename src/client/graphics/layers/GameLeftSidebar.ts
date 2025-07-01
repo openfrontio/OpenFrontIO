@@ -7,6 +7,11 @@ import teamRegularIcon from "../../../../resources/images/TeamIconRegularWhite.s
 import teamSolidIcon from "../../../../resources/images/TeamIconSolidWhite.svg";
 import { GameMode } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
+import { translateText } from "../../Utils";
+import "../icons/LeaderboardRegularIcon";
+import "../icons/LeaderboardSolidIcon";
+import "../icons/TeamRegularIcon";
+import "../icons/TeamSolidIcon";
 import { Layer } from "./Layer";
 
 @customElement("game-left-sidebar")
@@ -66,6 +71,13 @@ export class GameLeftSidebar extends LitElement implements Layer {
     return this.game?.config().gameConfig().gameMode === GameMode.Team;
   }
 
+  private getTranslatedPlayerTeamLabel(): string {
+    if (!this.playerTeam) return "";
+    const translationKey = `team_colors.${this.playerTeam.toLowerCase()}`;
+    const translated = translateText(translationKey);
+    return translated === translationKey ? this.playerTeam : translated;
+  }
+
   render() {
     return html`
       <aside
@@ -79,9 +91,9 @@ export class GameLeftSidebar extends LitElement implements Layer {
                 class="flex items-center w-full h-8 lg:h-10 text-white py-1 lg:p-2"
                 @contextmenu=${(e: Event) => e.preventDefault()}
               >
-                Your team:
+                ${translateText("help_modal.ui_your_team")}
                 <span style="color: ${this.playerColor.toRgbString()}">
-                  ${this.playerTeam} &#10687;
+                  ${this.getTranslatedPlayerTeamLabel()} &#10687;
                 </span>
               </div>
             `
