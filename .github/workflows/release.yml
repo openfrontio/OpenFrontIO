@@ -100,7 +100,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build, deploy-alpha]
     timeout-minutes: 30
-    environment: prod
+    environment: prod-beta
     steps:
       - uses: actions/checkout@v4
       - name: 🔑 Create SSH private key
@@ -154,7 +154,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build, deploy-alpha]
     timeout-minutes: 30
-    environment: prod
+    environment: prod-blue
     steps:
       - uses: actions/checkout@v4
       - name: 🔑 Create SSH private key
@@ -208,7 +208,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build, deploy-alpha]
     timeout-minutes: 30
-    environment: prod
+    environment: prod-green
     steps:
       - uses: actions/checkout@v4
       - name: 🔑 Create SSH private key
