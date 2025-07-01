@@ -8,6 +8,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { GameUpdateType } from "../game/GameUpdates";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
 import { distSortUnit } from "../Util";
@@ -139,6 +140,13 @@ export class TradeShipExecution implements Execution {
     } else {
       this.srcPort.owner().addGold(gold);
       this._dstPort.owner().addGold(gold);
+      this.mg.addUpdate({
+        type: GameUpdateType.BonusEvent,
+        tile: this._dstPort.tile(),
+        gold: Number(gold),
+        workers: 0,
+        troops: 0,
+      });
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from trade with ${this.srcPort.owner().displayName()}`,
         MessageType.RECEIVED_GOLD_FROM_TRADE,

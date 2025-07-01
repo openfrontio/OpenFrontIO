@@ -87,7 +87,7 @@ export class FxLayer implements Layer {
   }
 
   addTextFx(text: string, x: number, y: number) {
-    const textFx = new TextFx(text, x, y, 500, 20);
+    const textFx = new TextFx(text, x, y, 800, 20);
     this.allFx.push(textFx);
   }
 
