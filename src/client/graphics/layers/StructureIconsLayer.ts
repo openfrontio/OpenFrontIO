@@ -22,9 +22,9 @@ class StructureRenderInfo {
     public level: number = 0,
   ) {}
 }
-const ZOOM_THRESHOLD = 2.8; // below this zoom level, structures are not rendered
+const ZOOM_THRESHOLD = 2.5;
 const ICON_SIZE = 24;
-const OFFSET_ZOOM_Y = 15; // offset for the y position of the icon to avoid hiding the structure beneath
+const OFFSET_ZOOM_Y = 12; // offset for the y position of the icon to avoid hiding the structure beneath
 
 export class StructureIconsLayer implements Layer {
   private pixicanvas: HTMLCanvasElement;
@@ -182,7 +182,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   renderLayer(mainContext: CanvasRenderingContext2D) {
-    if (!this.renderer || this.transformHandler.scale > ZOOM_THRESHOLD) {
+    if (!this.renderer) {
       return;
     }
 
@@ -210,11 +210,11 @@ export class StructureIconsLayer implements Layer {
     const context = structureCanvas.getContext("2d")!;
     context.fillStyle = this.theme
       .territoryColor(unit.owner())
-      .lighten(0.1)
+      .lighten(0.06)
       .toRgbString();
     const borderColor = this.theme
       .borderColor(unit.owner())
-      .darken(0.2)
+      .darken(0.08)
       .toRgbString();
     context.strokeStyle = borderColor;
     context.beginPath();
@@ -266,10 +266,17 @@ export class StructureIconsLayer implements Layer {
       text.position.y = -ICON_SIZE / 2 - 2;
       parentContainer.addChild(text);
     }
-    parentContainer.position.set(
-      Math.round(screenPos.x),
-      Math.round(screenPos.y - this.transformHandler.scale * OFFSET_ZOOM_Y),
-    );
+    const posX = Math.round(screenPos.x);
+    let posY = Math.round(screenPos.y);
+    if (this.transformHandler.scale >= ZOOM_THRESHOLD) {
+      // Adjust the y position based on zoom level to avoid hiding the structure beneath
+      posY = Math.round(
+        screenPos.y - this.transformHandler.scale * OFFSET_ZOOM_Y,
+      );
+    } else {
+      posY = Math.round(screenPos.y);
+    }
+    parentContainer.position.set(posX, posY);
     parentContainer.scale.set(Math.min(1, this.transformHandler.scale));
     this.stage.addChild(parentContainer);
     return parentContainer;
@@ -298,9 +305,14 @@ export class StructureIconsLayer implements Layer {
       new Cell(worldX, worldY),
     );
     screenPos.x = Math.round(screenPos.x);
-    screenPos.y = Math.round(
-      screenPos.y - this.transformHandler.scale * OFFSET_ZOOM_Y,
-    );
+    if (this.transformHandler.scale >= ZOOM_THRESHOLD) {
+      // Adjust the y position based on zoom level to avoid hiding the structure beneath
+      screenPos.y = Math.round(
+        screenPos.y - this.transformHandler.scale * OFFSET_ZOOM_Y,
+      );
+    } else {
+      screenPos.y = Math.round(screenPos.y);
+    }
 
     // Check if the sprite is on screen (with margin for partial visibility)
     const margin = ICON_SIZE;

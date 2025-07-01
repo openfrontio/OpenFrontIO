@@ -24,6 +24,7 @@ const selectedUnitColor = colord({ r: 0, g: 255, b: 255 });
 const BASE_BORDER_RADIUS = 16.5;
 const BASE_TERRITORY_RADIUS = 13.5;
 const RADIUS_SCALE_FACTOR = 0.5;
+const ZOOM_THRESHOLD = 2.5; // below this zoom level, structures are not rendered
 
 interface UnitRenderConfig {
   icon: string;
@@ -151,6 +152,9 @@ export class StructureLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
+    if (this.transformHandler.scale <= ZOOM_THRESHOLD) {
+      return;
+    }
     context.drawImage(
       this.canvas,
       -this.game.width() / 2,
