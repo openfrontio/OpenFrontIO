@@ -17,7 +17,7 @@ export class TerritoryPatternsModal extends LitElement {
   };
 
   public previewButton: HTMLElement | null = null;
-  public buttonWidth: number = 100;
+  public buttonWidth: number = 150;
 
   @state() private selectedPattern: string | undefined;
 
@@ -267,68 +267,12 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   private renderPatternPreview(
-    pattern: string,
-    width: number,
-    height: number,
+    pattern?: string,
+    width?: number,
+    height?: number,
   ): TemplateResult {
-    const decoder = new PatternDecoder(pattern);
-    const cellCountX = decoder.getTileWidth();
-    const cellCountY = decoder.getTileHeight();
-
-    const cellSize =
-      cellCountX > 0 && cellCountY > 0
-        ? Math.min(height / cellCountY, width / cellCountX)
-        : 1;
-
     return html`
-      <div
-        style="
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: ${height}px;
-          width: ${width}px;
-          background-color: #f0f0f0;
-          border-radius: 4px;
-          box-sizing: border-box;
-          overflow: hidden;
-          position: relative;
-        "
-      >
-        <div
-          style="
-            display: grid;
-            grid-template-columns: repeat(${cellCountX}, ${cellSize}px);
-            grid-template-rows: repeat(${cellCountY}, ${cellSize}px);
-            background-color: #ccc;
-            padding: 2px;
-            border-radius: 4px;
-          "
-        >
-          ${(() => {
-            const tiles: TemplateResult[] = [];
-            for (let py = 0; py < cellCountY; py++) {
-              for (let px = 0; px < cellCountX; px++) {
-                const x = px << decoder.getScale();
-                const y = py << decoder.getScale();
-                const bit = decoder.isSet(x, y);
-                tiles.push(html`
-                  <div
-                    style="
-                      background-color: ${bit ? "#000" : "transparent"};
-                      border: 1px solid rgba(0, 0, 0, 0.1);
-                      width: ${cellSize}px;
-                      height: ${cellSize}px;
-                      border-radius: 1px;
-                    "
-                  ></div>
-                `);
-              }
-            }
-            return tiles;
-          })()}
-        </div>
-      </div>
+      <img src="${generatePreviewDataUrl(pattern, width, height)}"></img>
     `;
   }
 
@@ -376,10 +320,7 @@ export class TerritoryPatternsModal extends LitElement {
 
   public updatePreview() {
     if (this.previewButton === null) return;
-    const preview =
-      this.selectedPattern === undefined
-        ? this.renderBlankPreview(48, 48)
-        : this.renderPatternPreview(this.selectedPattern, 48, 48);
+    const preview = this.renderPatternPreview(this.selectedPattern, 48, 48);
     render(preview, this.previewButton);
   }
 
@@ -417,4 +358,52 @@ export class TerritoryPatternsModal extends LitElement {
   private handleMouseLeave() {
     this.hoveredPattern = null;
   }
+}
+
+const DEFAULT_PATTERN_B64 = "AAAAAA"; // Empty 2x2 pattern
+const COLOR_SET = [0, 0, 0, 255]; // Black
+const COLOR_UNSET = [255, 255, 255, 255]; // White
+export function generatePreviewDataUrl(
+  pattern?: string,
+  width?: number,
+  height?: number,
+): string {
+  // Calculate canvas size
+  const decoder = new PatternDecoder(pattern ?? DEFAULT_PATTERN_B64);
+  const scaledWidth = decoder.scaledWidth();
+  const scaledHeight = decoder.scaledHeight();
+
+  width =
+    width === undefined
+      ? scaledWidth
+      : Math.max(1, Math.floor(width / scaledWidth)) * scaledWidth;
+  height =
+    height === undefined
+      ? scaledHeight
+      : Math.max(1, Math.floor(height / scaledHeight)) * scaledHeight;
+
+  // Create the canvas
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2D context not supported");
+
+  // Create an image
+  const imageData = ctx.createImageData(width, height);
+  const data = imageData.data;
+  let i = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const rgba = decoder.isSet(x, y) ? COLOR_SET : COLOR_UNSET;
+      data[i++] = rgba[0]; // Red
+      data[i++] = rgba[1]; // Green
+      data[i++] = rgba[2]; // Blue
+      data[i++] = rgba[3]; // Alpha
+    }
+  }
+
+  // Create a data URL
+  ctx.putImageData(imageData, 0, 0);
+  return canvas.toDataURL("image/png");
 }

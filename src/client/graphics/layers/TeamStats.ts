@@ -3,7 +3,7 @@ import { customElement, property } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameMode } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { renderNumber } from "../../Utils";
+import { renderNumber, translateText } from "../../Utils";
 import { Layer } from "./Layer";
 
 interface TeamEntry {
@@ -113,22 +113,22 @@ export class TeamStats extends LitElement implements Layer {
             <div
               class="py-1.5 md:py-2.5 text-center border-b border-slate-500 cursor-pointer"
             >
-              Team
+              ${translateText("leaderboard.team")}
             </div>
             <div
               class="py-1.5 md:py-2.5 text-center border-b border-slate-500 cursor-pointer"
             >
-              Owned
+              ${translateText("leaderboard.owned")}
             </div>
             <div
               class="py-1.5 md:py-2.5 text-center border-b border-slate-500 cursor-pointer"
             >
-              Gold
+              ${translateText("leaderboard.gold")}
             </div>
             <div
               class="py-1.5 md:py-2.5 text-center border-b border-slate-500 cursor-pointer"
             >
-              Troops
+              ${translateText("leaderboard.troops")}
             </div>
           </div>
           ${this.teams.map(

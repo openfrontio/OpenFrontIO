@@ -264,8 +264,15 @@ export class PlayerView {
   targetTroopRatio(): number {
     return this.data.targetTroopRatio;
   }
+
   troops(): number {
     return this.data.troops;
+  }
+
+  totalUnitLevels(type: UnitType): number {
+    return this.units(type)
+      .map((unit) => unit.level())
+      .reduce((a, b) => a + b, 0);
   }
 
   isAlliedWith(other: PlayerView): boolean {
