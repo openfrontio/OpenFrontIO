@@ -87,6 +87,26 @@ export class UserSettings {
     }
   }
 
+  getVolume(): number {
+    const value = localStorage.getItem("volume");
+    if (value) {
+      return parseFloat(value);
+    }
+    return 1;
+  }
+
+  setVolume(volume: number): void {
+    localStorage.setItem("volume", volume.toString());
+  }
+
+  getMuted(): boolean {
+    return this.get("muted", false);
+  }
+
+  setMuted(muted: boolean): void {
+    this.set("muted", muted);
+  }
+
   getSelectedPattern(): string | undefined {
     return localStorage.getItem(PATTERN_KEY) ?? undefined;
   }

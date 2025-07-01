@@ -22,6 +22,7 @@ import {
 
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import { ContextMenuEvent } from "../../InputHandler";
+import { soundManager } from "../../SoundManager";
 
 @customElement("main-radial-menu")
 export class MainRadialMenu extends LitElement implements Layer {
@@ -132,6 +133,7 @@ export class MainRadialMenu extends LitElement implements Layer {
     this.radialMenu.setRootMenuItems(rootMenuItems, centerButtonElement);
     this.radialMenu.setParams(params);
     this.radialMenu.showRadialMenu(screenX, screenY);
+    soundManager.playSound("click");
   }
 
   async tick() {

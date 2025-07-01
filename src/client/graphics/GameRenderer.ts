@@ -38,6 +38,7 @@ import { UILayer } from "./layers/UILayer";
 import { UnitInfoModal } from "./layers/UnitInfoModal";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
+import { soundManager } from "../SoundManager";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,
@@ -291,6 +292,12 @@ export class GameRenderer {
     const context = canvas.getContext("2d");
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
+
+    const sounds = [
+      { name: "click", path: "/non-commercial/sounds/sound-effects/Click.mp3" },
+    ];
+
+    soundManager.loadSounds(sounds);
   }
 
   initialize() {

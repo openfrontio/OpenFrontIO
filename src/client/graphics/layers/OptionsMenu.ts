@@ -7,6 +7,7 @@ import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
+import { soundManager } from "../../SoundManager";
 import { Layer } from "./Layer";
 
 const button = ({
@@ -134,6 +135,21 @@ export class OptionsMenu extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onMuteButtonClick() {
+    if (soundManager.isMuted()) {
+      soundManager.unmute();
+    } else {
+      soundManager.mute();
+    }
+    this.requestUpdate();
+  }
+
+  private onVolumeChange(e: Event) {
+    const volume = parseFloat((e.target as HTMLInputElement).value);
+    soundManager.setMasterVolume(volume);
+    this.requestUpdate();
+  }
+
   init() {
     console.log("init called from OptionsMenu");
     this.showPauseButton =
@@ -257,6 +273,21 @@ export class OptionsMenu extends LitElement implements Layer {
                 ? "Focus locked"
                 : "Hover focus"),
           })} -->
+
+          ${button({
+            onClick: this.onMuteButtonClick,
+            title: "Mute",
+            children: soundManager.isMuted() ? "🔇" : "🔊",
+          })}
+
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            .value=${soundManager.getMasterVolume()}
+            @input=${this.onVolumeChange}
+          />
         </div>
       </div>
     `;
