@@ -6,8 +6,8 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
-import { PauseGameEvent } from "../../Transport";
 import { soundManager } from "../../SoundManager";
+import { PauseGameEvent } from "../../Transport";
 import { Layer } from "./Layer";
 
 const button = ({
