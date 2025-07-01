@@ -253,8 +253,8 @@ export class StructureIconsLayer implements Layer {
       const text = new PIXI.BitmapText({
         text: unit.level().toString(),
         style: {
-          fontFamily: "round_6x6",
-          fontSize: 8,
+          fontFamily: "round_6x6_modified",
+          fontSize: 12,
         },
       });
       text.anchor.set(0.5, 0.5);
