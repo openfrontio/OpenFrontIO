@@ -39,7 +39,7 @@ import { UnitInfoModal } from "./layers/UnitInfoModal";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
 import { soundManager } from "../SoundManager";
-import clickSound from "../assets/sound/click.mp3"; 
+import clickSound from "/non-commercial/sound/sound-effects/click.mp3"; 
 
 export function createRenderer(
   canvas: HTMLCanvasElement,
