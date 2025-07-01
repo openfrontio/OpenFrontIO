@@ -119,8 +119,8 @@ class SoundManager {
         return this.muted;
     }
 
-    public playSpatialSound(path: string, x: number, y: number, z: number): void {
-        const soundBuffer = this.soundBuffers.get(path);
+    public playSpatialSound(name: string, x: number, y: number, z: number): void {
+        const soundBuffer = this.soundBuffers.get(name);
         if (soundBuffer) {
             const source = this.audioContext.createBufferSource();
             source.buffer = soundBuffer;
