@@ -3,7 +3,7 @@ import { Cosmetics } from "../core/CosmeticSchemas";
 export class PrivilegeChecker {
   constructor(
     private cosmetics: Cosmetics,
-    private PatternDecoder?: new (base64: string) => any,
+    private PatternDecoder?: new (base64: string) => object,
   ) {}
 
   isPatternAllowed(
