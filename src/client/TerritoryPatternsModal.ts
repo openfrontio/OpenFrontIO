@@ -370,8 +370,17 @@ export function generatePreviewDataUrl(
 ): string {
   // Calculate canvas size
   const decoder = new PatternDecoder(pattern ?? DEFAULT_PATTERN_B64);
-  width ??= decoder.scaledWidth();
-  height ??= decoder.scaledHeight();
+  const scaledWidth = decoder.scaledWidth();
+  const scaledHeight = decoder.scaledHeight();
+
+  width =
+    width === undefined
+      ? scaledWidth
+      : Math.max(1, Math.floor(width / scaledWidth)) * scaledWidth;
+  height =
+    height === undefined
+      ? scaledHeight
+      : Math.max(1, Math.floor(height / scaledHeight)) * scaledHeight;
 
   // Create the canvas
   const canvas = document.createElement("canvas");
