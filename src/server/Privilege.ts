@@ -71,16 +71,6 @@ export class PrivilegeChecker {
     const segments = code.split("_");
     if (segments.length === 0) return "invalid";
     const superFlare = flares?.includes("flag:*") ?? false;
-    if (superFlare) {
-      for (const segment of segments) {
-        const [layerKey, colorKey] = segment.split("-");
-        if (!layerKey || !colorKey) return "invalid";
-        const layer = this.cosmetics.flag.layers[layerKey];
-        const color = this.cosmetics.flag.color[colorKey];
-        if (!layer || !color) return "invalid";
-      }
-      return true;
-    }
     for (const segment of segments) {
       const [layerKey, colorKey] = segment.split("-");
       if (!layerKey || !colorKey) return "invalid";
