@@ -39,6 +39,7 @@ import { UnitInfoModal } from "./layers/UnitInfoModal";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
 import { soundManager } from "../SoundManager";
+import clickSound from "../assets/sound/click.mp3"; // Added import for MP3
 
 export function createRenderer(
   canvas: HTMLCanvasElement,
@@ -294,7 +295,7 @@ export class GameRenderer {
     this.context = context;
 
     const sounds = [
-      { name: "click", path: "/non-commercial/sounds/sound-effects/Click.mp3" },
+      { name: "click", path: clickSound }, // Updated to use imported MP3
     ];
 
     soundManager.loadSounds(sounds);
