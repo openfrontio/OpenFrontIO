@@ -243,72 +243,13 @@
               </svg>
             </div>
             <div class="space-y-4">
-              <div
-                class="background-panel p-3 hover:bg-slate-800/50 transition-all cursor-pointer group"
-                id="news-button"
-              >
-                <div class="flex items-center justify-between mb-2">
-                  <span
-                    class="text-xs font-title px-2 py-0.5 bg-green text-white"
-                    >PATCH</span
-                  >
-                  <span class="text-xs text-slate-400">5h ago</span>
-                </div>
-                <h4
-                  class="font-title text-white text-sm mb-1 group-hover:text-blue-400 transition-colors"
-                >
-                  OpenFront v23.0 Release Notes
-                </h4>
-                <p class="text-xs text-slate-400">
-                  Major gameplay overhaul with new features, UI improvements,
-                  and bug fixes.
-
-                  <span
-                    class="text-blue-400 hover:text-blue-300 transition-colors ml-1 read-more"
-                    data-type="EVENT"
-                    data-title="Weekend tournament starting soon"
-                    data-date="5h ago"
-                    data-description="Major gameplay overhaul with new features, UI improvements, and bug fixes.
-"
-                    >Read more...</span
-                  >
-                </p>
-              </div>
-              <!--
               <news-button
-                .article="${yourArticleData}"
-                timeAgo="5h ago"
-                @news-article-click="${this.handleNewsClick}"
-              ></news-button>
-              -->
-              <div
-                class="background-panel p-3 hover:bg-slate-800/50 transition-all cursor-pointer group"
+                file="/data/weekend-tournament.json"
+                timeAgo="1d ago"
               >
-                <div class="flex items-center justify-between mb-2">
-                  <span
-                    class="text-xs font-title px-2 py-0.5 bg-orange-600 text-white"
-                    >PATCH</span
-                  >
-                  <span class="text-xs text-slate-400">1d ago</span>
-                </div>
-                <h4
-                  class="font-title text-white text-sm mb-1 group-hover:text-blue-400 transition-colors"
-                >
-                  Balance Update v22.6.1
-                </h4>
-                <p class="text-xs text-slate-400">
-                  • Improved troop movement AI<br />• Fixed alliance request
-                  bug<br />• Adjusted resource generation rates
-                  <span
-                    class="text-blue-400 hover:text-blue-300 transition-colors ml-1 read-more"
-                    data-type="PATCH"
-                    data-title="Balance Update v22.6.1"
-                    data-date="1d ago"
-                    data-description="Improved troop movement AI, Fixed alliance request bug, Adjusted resource generation rates"
-                    >Read more...</span
-                  >
-                </p>
-              </div>
+              </news-button>
+              <news-button file="/data/v23.0.json" timeAgo="1d ago">
+              </news-button>
             </div>
           </div>
         </div>

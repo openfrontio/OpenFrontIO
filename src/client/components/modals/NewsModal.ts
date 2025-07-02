@@ -1,6 +1,5 @@
 import { LitElement, html } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
-import NewsArticleData from "../../data/v23.0.json";
 
 // Universal content structure for any type of announcement/news
 export interface ContentItem {
@@ -34,8 +33,7 @@ export class NewsModal extends LitElement {
     close: () => void;
   };
 
-  @property({ type: Object }) article: NewsArticle =
-    NewsArticleData as NewsArticle;
+  @property({ type: Object }) article: NewsArticle | undefined;
 
   private renderContentItem(item: ContentItem) {
     const itemClass = item.type ? `item-text ${item.type}` : "item-text";
@@ -54,8 +52,35 @@ export class NewsModal extends LitElement {
       </li>
     `;
   }
+  private getTypeColor(type: string): string {
+    switch (type.toLowerCase()) {
+      case "patch":
+        return "bg-orange";
+      case "event":
+        return "bg-green";
+      case "update":
+        return "bg-orange";
+      case "maintenance":
+        return "bg-backgroundGrey";
+      case "announcement":
+        return "bg-primary";
+      default:
+        return ""; // Or a default color
+    }
+  }
 
   render() {
+    if (!this.article) {
+      return html`
+        <o-modal title="Latest News">
+          <div
+            class="background-panel text-textLight max-h-[80vh] overflow-y-auto w-full max-w-3xl mx-auto custom scrollbar"
+          >
+            <p class="p-6 text-slate-300">No news article to display.</p>
+          </div>
+        </o-modal>
+      `;
+    }
     return html`
       <o-modal disableContentScroll title="Latest News">
         <div
@@ -67,21 +92,7 @@ export class NewsModal extends LitElement {
               <div class="header-left flex items-center gap-3">
                 <span
                   class="article-type font-pixel text-xs px-2 py-1 text-white uppercase
-                    ${this.article.type.toLowerCase() === "patch"
-                    ? "bg-orange"
-                    : ""}
-                    ${this.article.type.toLowerCase() === "event"
-                    ? "bg-green"
-                    : ""}
-                    ${this.article.type.toLowerCase() === "update"
-                    ? "bg-orange"
-                    : ""}
-                    ${this.article.type.toLowerCase() === "maintenance"
-                    ? "bg-backgroundGrey"
-                    : ""}
-                    ${this.article.type.toLowerCase() === "announcement"
-                    ? "bg-primary"
-                    : ""}"
+                    ${this.getTypeColor(this.article.type)}"
                 >
                   ${this.article.type}
                 </span>
@@ -146,6 +157,8 @@ export class NewsModal extends LitElement {
   public open(article?: NewsArticle) {
     if (article) {
       this.article = article;
+    } else {
+      this.article = undefined;
     }
     this.requestUpdate();
     this.modalEl?.open();

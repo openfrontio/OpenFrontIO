@@ -1,0 +1,103 @@
+{
+  "id": "weekend-tournament-june-2025",
+  "title": "Weekend Tournament - Conquest Championship",
+  "type": "EVENT",
+  "date": "June 21, 2025",
+  "summary": "Join our weekend tournament featuring special rewards and competitive gameplay!",
+  "priority": "high",
+  "tags": ["tournament", "competition", "rewards"],
+  "sections": [
+    {
+      "title": "Tournament Details",
+      "items": [
+        {
+          "text": "Event Schedule",
+          "type": "title"
+        },
+        {
+          "text": "Tournament runs from Saturday 9:00 AM to Sunday 11:59 PM GMT",
+          "type": "highlight"
+        },
+        {
+          "text": "Registration closes 1 hour before start time",
+          "contributor": "Tournament Staff"
+        },
+        {
+          "text": "Multiple brackets available for different skill levels",
+          "contributor": "Tournament Staff"
+        },
+        {
+          "text": "Special Rules",
+          "type": "title"
+        },
+        {
+          "text": "Matches played on selected competitive maps only",
+          "contributor": "Tournament Staff"
+        },
+        {
+          "text": "Nuclear weapons disabled for fair play",
+          "contributor": "Tournament Staff"
+        },
+        {
+          "text": "Maximum game duration: 45 minutes",
+          "contributor": "Tournament Staff"
+        }
+      ]
+    },
+    {
+      "title": "Prizes & Rewards",
+      "items": [
+        {
+          "text": "1st Place: Exclusive champion title + special flag",
+          "type": "highlight"
+        },
+        {
+          "text": "Top 3: Premium account upgrade (30 days)",
+          "type": "highlight"
+        },
+        {
+          "text": "Top 10: Unique tournament badge",
+          "contributor": "Rewards Team"
+        },
+        {
+          "text": "All participants receive commemorative tournament flag",
+          "contributor": "Rewards Team"
+        }
+      ]
+    },
+    {
+      "title": "How to Join",
+      "items": [
+        {
+          "text": "Click 'Join Tournament' button in main lobby",
+          "contributor": "Tournament Staff"
+        },
+        {
+          "text": "Select your preferred skill bracket",
+          "contributor": "Tournament Staff"
+        },
+        {
+          "text": "Wait for bracket to fill and tournament to begin",
+          "contributor": "Tournament Staff"
+        }
+      ]
+    },
+    {
+      "title": "Rules & Fair Play",
+      "items": [
+        {
+          "text": "No teaming allowed in solo brackets",
+          "type": "highlight"
+        },
+        {
+          "text": "Disconnection = automatic forfeit (technical issues will be reviewed)",
+          "contributor": "Moderation Team"
+        },
+        {
+          "text": "Violation of rules results in tournament ban",
+          "contributor": "Moderation Team"
+        }
+      ]
+    }
+  ]
+}

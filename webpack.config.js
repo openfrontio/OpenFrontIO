@@ -130,6 +130,11 @@ export default async (env, argv) => {
             to: path.resolve(__dirname, "static"),
             noErrorOnMissing: true,
           },
+          {
+            from: path.resolve(__dirname, "src/client/data"),
+            to: path.resolve(__dirname, "static/data"),
+            noErrorOnMissing: true,
+          },
         ],
         options: { concurrency: 100 },
       }),

@@ -66,46 +66,18 @@ class Client {
   constructor() {}
 
   initialize(): void {
-    /*
     const newsModal = document.querySelector("news-modal") as NewsModal;
-    if (!NewsModal) {
-      consolex.warn("News modal element not found");
-    } else {
-      consolex.log("News modal element found");
-    }
-*/
-    const newsModal = document.querySelector("news-modal") as NewsModal;
-    newsModal instanceof NewsModal;
-    const newsButton = document.getElementById("news-button");
-    if (newsButton === null) throw new Error("Missing news-button");
-    newsButton.addEventListener("click", () => {
-      newsModal.open();
+    if (!(newsModal instanceof NewsModal))
+      throw new Error("Missing news-modal");
+
+    document.addEventListener("news-article-click", (event: CustomEvent) => {
+      const { article } = event.detail;
+
+      if (article) {
+        newsModal.open(article);
+      }
     });
-    /*
-    newsModal instanceof NewsModal;
-    const newsButton = document.querySelector("news-button") as NewsButton;
-    if (!newsButton) {
-      consolex.warn("News button element not found");
-    } else {
-      consolex.log("News button element found");
-    }
-*/
-    // Comment out to show news button.
-    // newsButton.hidden = true;
-    /*
-    const langSelector = document.querySelector(
-      "lang-selector",
-    ) as LangSelector;
-    const LanguageModal = document.querySelector(
-      "lang-selector",
-    ) as LanguageModal;
-    if (!langSelector) {
-      consolex.warn("Lang selector element not found");
-    }
-    if (!LanguageModal) {
-      consolex.warn("Language modal element not found");
-    }
-   */
+
     const flagSelectionModal = document.querySelector(
       "flag-modal",
     ) as FlagSelectionModal;
