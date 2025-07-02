@@ -70,44 +70,47 @@ export class PrivilegeChecker {
     const segments = code.split("_");
     if (segments.length === 0) return "invalid";
 
-    if (this.cosmetics.flag.layerCounts) {
-      const n = segments.length;
-      const keys = Object.keys(this.cosmetics.flag.layerCounts)
-        .map((k) => Number(k))
-        .filter((k) => !isNaN(k))
-        .sort((a, b) => a - b);
-      // Find all thresholds that cover this layer count
-      const applicableKeys = keys.filter((k) => n <= k);
-      if (applicableKeys.length === 0) {
-        return "restricted";
-      }
-      // Evaluate each rule; allow if any rule grants permission
-      let layerCountAllowed = false;
-      for (const k of applicableKeys) {
-        const rule = this.cosmetics.flag.layerCounts[String(k)];
-        if (!rule) continue;
-        // Empty rule = unconditional allow
-        if (Object.keys(rule).length === 0) {
-          layerCountAllowed = true;
-          break;
-        }
-        const roleOk =
-          rule.role_group &&
-          roles &&
-          this.cosmetics.role_groups[rule.role_group]?.some((r) =>
-            roles.includes(r),
-          );
-        const flareOk =
-          rule.flares && flares && rule.flares.some((f) => flares.includes(f));
-        if (roleOk || flareOk) {
-          layerCountAllowed = true;
-          break;
-        }
-      }
-      if (!layerCountAllowed) {
-        return "restricted";
-      }
-    }
+    const MAX_LAYERS = 6; // Maximum number of layers allowed
+    if (segments.length > MAX_LAYERS) return "invalid";
+
+    // if (this.cosmetics.flag.layerCounts) {
+    //   const n = segments.length;
+    //   const keys = Object.keys(this.cosmetics.flag.layerCounts)
+    //     .map((k) => Number(k))
+    //     .filter((k) => !isNaN(k))
+    //     .sort((a, b) => a - b);
+    //   // Find all thresholds that cover this layer count
+    //   const applicableKeys = keys.filter((k) => n <= k);
+    //   if (applicableKeys.length === 0) {
+    //     return "restricted";
+    //   }
+    //   // Evaluate each rule; allow if any rule grants permission
+    //   let layerCountAllowed = false;
+    //   for (const k of applicableKeys) {
+    //     const rule = this.cosmetics.flag.layerCounts[String(k)];
+    //     if (!rule) continue;
+    //     // Empty rule = unconditional allow
+    //     if (Object.keys(rule).length === 0) {
+    //       layerCountAllowed = true;
+    //       break;
+    //     }
+    //     const roleOk =
+    //       rule.role_group &&
+    //       roles &&
+    //       this.cosmetics.role_groups[rule.role_group]?.some((r) =>
+    //         roles.includes(r),
+    //       );
+    //     const flareOk =
+    //       rule.flares && flares && rule.flares.some((f) => flares.includes(f));
+    //     if (roleOk || flareOk) {
+    //       layerCountAllowed = true;
+    //       break;
+    //     }
+    //   }
+    //   if (!layerCountAllowed) {
+    //     return "restricted";
+    //   }
+    // }
 
     const superFlare = flares?.includes("flag:*") ?? false;
 
