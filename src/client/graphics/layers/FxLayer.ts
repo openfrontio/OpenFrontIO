@@ -70,7 +70,7 @@ export class FxLayer implements Layer {
 
     if (gold > 0) {
       const shortened = shortenNumber(gold);
-      this.addTextFx(`+ ${shortened} gold`, x, y);
+      this.addTextFx(`+ ${shortened}`, x, y);
       y += 10; // increase y so the next popup starts bellow
     }
 
