@@ -95,7 +95,7 @@ export class PrivilegeChecker {
 
       if (layer.role_group) {
         const group = this.cosmetics.role_groups[layer.role_group];
-        if (!group) return "invalid";
+        if (!group) return "restricted";
         if (!roles || !roles.some((role) => group.includes(role))) {
           return "restricted";
         }
@@ -103,7 +103,7 @@ export class PrivilegeChecker {
 
       if (color.role_group) {
         const group = this.cosmetics.role_groups[color.role_group];
-        if (!group) return "invalid";
+        if (!group) return "restricted";
         if (!roles || !roles.some((role) => group.includes(role))) {
           return "restricted";
         }
