@@ -528,7 +528,11 @@
       "hand": "Hand",
       "radiation": "Radiation",
       "openfront_qr": "OpenFront.io QR code",
-      "openfront": "OpenFront"
+      "openfront": "OpenFront",
+      "t_rex": "T-Rex",
+      "embelem": "Emblem",
+      "grogu_head": "Grogu Head",
+      "grogu": "Grogu"
     }
   }
 }
