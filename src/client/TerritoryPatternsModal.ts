@@ -370,7 +370,10 @@ export function generatePreviewDataUrl(
   height?: number,
 ): string {
   // Calculate canvas size
-  const decoder = new PatternDecoder(pattern ?? DEFAULT_PATTERN_B64);
+  const decoder = new PatternDecoder(
+    pattern ?? DEFAULT_PATTERN_B64,
+    base64url.decode,
+  );
   const scaledWidth = decoder.scaledWidth();
   const scaledHeight = decoder.scaledHeight();
 

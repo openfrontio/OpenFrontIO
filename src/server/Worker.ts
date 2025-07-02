@@ -45,7 +45,7 @@ export function startWorker() {
 
   const gm = new GameManager(config, log);
 
-  const privilegeChecker = new PrivilegeChecker(COSMETICS, base64url);
+  const privilegeChecker = new PrivilegeChecker(COSMETICS, base64url.decode);
 
   if (config.otelEnabled()) {
     initWorkerMetrics(gm);
