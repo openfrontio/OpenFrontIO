@@ -138,6 +138,6 @@ export async function listAllProducts(): Promise<Map<string, StripeProduct>> {
     return productMap;
   } catch (error) {
     console.error("Failed to fetch products:", error);
-    throw error;
+    return new Map();
   }
 }
