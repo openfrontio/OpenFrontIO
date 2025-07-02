@@ -20,6 +20,7 @@ class StructureRenderInfo {
     public owner: PlayerID,
     public pixiContainer: PIXI.Container,
     public level: number = 0,
+    public underConstruction: boolean = true,
   ) {}
 }
 const ZOOM_THRESHOLD = 2.5;
@@ -110,7 +111,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   resizeCanvas() {
-    if (this.renderer.view) {
+    if (this.renderer) {
       this.pixicanvas.width = window.innerWidth;
       this.pixicanvas.height = window.innerHeight;
       this.renderer.resize(innerWidth, innerHeight, 1);
@@ -143,10 +144,14 @@ export class StructureIconsLayer implements Layer {
     if (this.seenUnits.has(unitView)) {
       const render = this.findRenderByUnit(unitView);
       if (render) {
+        this.checkForConstructionState(render, unitView);
         this.checkForOwnershipChange(render, unitView);
         this.checkForLevelChange(render, unitView);
       }
-    } else if (this.structures.has(unitView.type())) {
+    } else if (
+      this.structures.has(unitView.type()) ||
+      unitView.type() === UnitType.Construction
+    ) {
       this.addNewStructure(unitView);
     }
   }
@@ -159,8 +164,23 @@ export class StructureIconsLayer implements Layer {
     }
   }
 
+  private checkForConstructionState(
+    render: StructureRenderInfo,
+    unit: UnitView,
+  ) {
+    if (
+      render.underConstruction &&
+      render.unit.type() !== UnitType.Construction
+    ) {
+      render.underConstruction = false;
+      render.pixiContainer?.destroy();
+      render.pixiContainer = this.createPixiSprite(unit);
+      this.shouldRedraw = true;
+    }
+  }
+
   private checkForOwnershipChange(render: StructureRenderInfo, unit: UnitView) {
-    if (render && render.owner !== unit.owner().id()) {
+    if (render.owner !== unit.owner().id()) {
       render.owner = unit.owner().id();
       render.pixiContainer?.destroy();
       render.pixiContainer = this.createPixiSprite(unit);
@@ -169,7 +189,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   private checkForLevelChange(render: StructureRenderInfo, unit: UnitView) {
-    if (render && render.level !== unit.level()) {
+    if (render.level !== unit.level()) {
       render.level = unit.level();
       render.pixiContainer?.destroy();
       render.pixiContainer = this.createPixiSprite(unit);
@@ -182,7 +202,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   renderLayer(mainContext: CanvasRenderingContext2D) {
-    if (!this.renderer) {
+    if (!this.renderer || this.transformHandler.scale > ZOOM_THRESHOLD) {
       return;
     }
 
@@ -200,22 +220,41 @@ export class StructureIconsLayer implements Layer {
   }
 
   private createTexture(unit: UnitView): PIXI.Texture {
-    const cacheKey = `${unit.owner().id()}-${unit.type()}`;
+    const isConstruction = unit.type() === UnitType.Construction;
+    const constructionType = unit.constructionType();
+    if (isConstruction && constructionType === undefined) {
+      console.warn(
+        `Unit ${unit.id()} is a construction but has no construction type.`,
+      );
+      return PIXI.Texture.EMPTY;
+    }
+    const structureType = isConstruction ? constructionType! : unit.type();
+    const cacheKey = isConstruction
+      ? `construction-${structureType}`
+      : `${unit.owner().id()}-${structureType}`;
     if (this.textureCache.has(cacheKey)) {
       return this.textureCache.get(cacheKey)!;
     }
+
     const structureCanvas = document.createElement("canvas");
     structureCanvas.width = ICON_SIZE;
     structureCanvas.height = ICON_SIZE;
     const context = structureCanvas.getContext("2d")!;
-    context.fillStyle = this.theme
-      .territoryColor(unit.owner())
-      .lighten(0.06)
-      .toRgbString();
-    const borderColor = this.theme
-      .borderColor(unit.owner())
-      .darken(0.08)
-      .toRgbString();
+
+    let borderColor: string;
+    if (isConstruction) {
+      context.fillStyle = "rgb(198, 198, 198)";
+      borderColor = "rgb(128, 127, 127)";
+    } else {
+      context.fillStyle = this.theme
+        .territoryColor(unit.owner())
+        .lighten(0.06)
+        .toRgbString();
+      borderColor = this.theme
+        .borderColor(unit.owner())
+        .darken(0.08)
+        .toRgbString();
+    }
     context.strokeStyle = borderColor;
     context.beginPath();
     context.arc(
@@ -228,9 +267,9 @@ export class StructureIconsLayer implements Layer {
     context.fill();
     context.lineWidth = 1;
     context.stroke();
-    const structureInfo = this.structures.get(unit.type());
+    const structureInfo = this.structures.get(structureType);
     if (!structureInfo?.image) {
-      console.warn(`Image not loaded for unit type: ${unit.type()}`);
+      console.warn(`Image not loaded for unit type: ${structureType}`);
       return PIXI.Texture.from(structureCanvas);
     }
     context.drawImage(
@@ -341,6 +380,7 @@ export class StructureIconsLayer implements Layer {
       unitView.owner().id(),
       this.createPixiSprite(unitView),
       unitView.level(),
+      unitView.type() === UnitType.Construction,
     );
     this.renders.push(render);
     this.computeNewLocation(render);
