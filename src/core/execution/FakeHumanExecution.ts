@@ -444,6 +444,9 @@ export class FakeHumanExecution implements Execution {
   }
 
   private maybeSpawnTrainStation(): boolean {
+    if (this.mg.config().isUnitDisabled(UnitType.Train)) {
+      return false;
+    }
     if (this.player === null) throw new Error("not initialized");
     const citiesWithoutStations = this.player.units().filter((unit) => {
       switch (unit.type()) {

@@ -1,3 +1,4 @@
+import { Config } from "../../../core/configuration/Config";
 import {
   AllPlayers,
   Cell,
@@ -322,6 +323,32 @@ export const infoMenuElement: MenuElement = {
   },
 };
 
+function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
+  const Units: Set<UnitType> = new Set<UnitType>();
+
+  const addStructureIfEnabled = (unitType: UnitType) => {
+    if (!config.isUnitDisabled(unitType)) {
+      Units.add(unitType);
+    }
+  };
+
+  if (myPlayer) {
+    addStructureIfEnabled(UnitType.City);
+    addStructureIfEnabled(UnitType.DefensePost);
+    addStructureIfEnabled(UnitType.Port);
+    addStructureIfEnabled(UnitType.MissileSilo);
+    addStructureIfEnabled(UnitType.SAMLauncher);
+    addStructureIfEnabled(UnitType.Factory);
+  } else {
+    addStructureIfEnabled(UnitType.Warship);
+    addStructureIfEnabled(UnitType.HydrogenBomb);
+    addStructureIfEnabled(UnitType.MIRV);
+    addStructureIfEnabled(UnitType.AtomBomb);
+  }
+
+  return Units;
+}
+
 export const buildMenuElement: MenuElement = {
   id: Slot.Build,
   name: "build",
@@ -332,21 +359,10 @@ export const buildMenuElement: MenuElement = {
   subMenu: (params: MenuElementParams) => {
     if (params === undefined) return [];
 
-    const unitTypes: Set<UnitType> = new Set<UnitType>();
-    if (params.selected === params.myPlayer) {
-      unitTypes.add(UnitType.City);
-      unitTypes.add(UnitType.DefensePost);
-      unitTypes.add(UnitType.Port);
-      unitTypes.add(UnitType.MissileSilo);
-      unitTypes.add(UnitType.SAMLauncher);
-      unitTypes.add(UnitType.Factory);
-    } else {
-      unitTypes.add(UnitType.Warship);
-      unitTypes.add(UnitType.HydrogenBomb);
-      unitTypes.add(UnitType.MIRV);
-      unitTypes.add(UnitType.AtomBomb);
-    }
-
+    const unitTypes: Set<UnitType> = getAllEnabledUnits(
+      params.selected === params.myPlayer,
+      params.game.config(),
+    );
     const buildElements: MenuElement[] = flattenedBuildTable
       .filter((item) => unitTypes.has(item.unitType))
       .map((item: BuildItemDisplay) => ({

@@ -241,7 +241,9 @@
     "sam_launcher": "SAM Launcher",
     "atom_bomb": "Atom Bomb",
     "hydrogen_bomb": "Hydrogen Bomb",
-    "mirv": "MIRV"
+    "mirv": "MIRV",
+    "train": "Train",
+    "factory": "Factory"
   },
   "user_setting": {
     "title": "User Settings",
