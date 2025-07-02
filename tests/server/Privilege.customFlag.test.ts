@@ -27,11 +27,11 @@ describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
         b: { color: "#00ff00", name: "green" },
         c: { color: "#0000ff", name: "blue", flares: ["cosmetic:blue"] },
       },
-      layerCounts: {
-        "2": {}, // Up to 2 layers: always allowed
-        "4": { role_group: "admin" }, // Up to 4 layers: only admin allowed
-        "6": { flares: ["cosmetic:6layers"] }, // Up to 6 layers: only with specific flare
-      },
+      // layerCounts: {
+      //   "2": {}, // Up to 2 layers: always allowed
+      //   "4": { role_group: "admin" }, // Up to 4 layers: only admin allowed
+      //   "6": { flares: ["cosmetic:6layers"] }, // Up to 6 layers: only with specific flare
+      // },
     },
   };
 
