@@ -523,7 +523,10 @@
       "hand": "Hand",
       "radiation": "Radiation",
       "openfront_qr": "OpenFront.io QR code",
-      "openfront": "OpenFront"
+      "openfront": "OpenFront",
+      "starwars_embelem": "Star Wars Emblem",
+      "grogu_head": "Grogu Head",
+      "grogu": "Grogu"
     }
   }
 }
