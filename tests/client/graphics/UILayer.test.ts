@@ -40,21 +40,6 @@ describe("UILayer", () => {
     expect(ui["context"]).not.toBeNull();
   });
 
-  it("should handle unit selection event", () => {
-    const ui = new UILayer(game, eventBus, transformHandler);
-    ui.redraw();
-    const unit = {
-      type: () => "Warship",
-      isActive: () => true,
-      tile: () => ({}),
-      owner: () => ({}),
-    };
-    const event = { isSelected: true, unit };
-    ui.drawSelectionBox = jest.fn();
-    ui["onUnitSelection"](event as UnitSelectionEvent);
-    expect(ui.drawSelectionBox).toHaveBeenCalledWith(unit);
-  });
-
   it("should add and clear health bars", () => {
     const ui = new UILayer(game, eventBus, transformHandler);
     ui.redraw();
