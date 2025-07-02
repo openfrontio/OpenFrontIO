@@ -24,7 +24,7 @@ interface StripeProduct {
 export interface Pattern {
   name: string;
   key: string;
-  roleGroup?: string | string[];
+  roleGroup?: string;
   price?: string;
   priceId?: string;
   lockedReason?: string;
@@ -58,8 +58,10 @@ function addRestrictions(
 ) {
   if (userMe === null) {
     if (products.has(`pattern:${pattern.name}`)) {
+      // Purchasable (flare-gated) patterns are shown as disabled
       pattern.lockedReason = translateText("territory_patterns.blocked.login");
     } else {
+      // Role-gated patterns are not shown
       pattern.notShown = true;
     }
     return;
