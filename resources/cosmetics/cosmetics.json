@@ -10,6 +10,14 @@
     "ABMIDw8": {
       "name": "stripes_h"
     },
+    "AAEYAwA": {
+      "name": "horizontal_stripes",
+      "role_group": "donor"
+    },
+    "AAoACQ": {
+      "name": "vertical_bars",
+      "role_group": "donor"
+    },
     "ABMIpaU": {
       "name": "checkerboard"
     },
@@ -26,10 +34,6 @@
     },
     "AHEYA8AMMDAMwAPAAzAMDDADwA": {
       "name": "mini_cross",
-      "role_group": "donor"
-    },
-    "AHE4__8AAAAAAAAAAAAAAAAAAP__AAAAAAAAAAAAAAAAAAA": {
-      "name": "horizontal_stripes",
       "role_group": "donor"
     },
     "AHI4AOAAkACIAEQAIgARjAhUBCgCKAHQACgB1AILAwUABwA": {
@@ -58,10 +62,6 @@
     },
     "AHEYw8PDwwwMDAwwDDAMw8PDww": {
       "name": "circuit_board",
-      "role_group": "donor"
-    },
-    "AHEYSZJJkkmSSZJJkkmSSZJJkg": {
-      "name": "vertical_bars",
       "role_group": "donor"
     },
     "AHEgzGfznzu43XPoL2fMn_O4O3fdL-g": {
