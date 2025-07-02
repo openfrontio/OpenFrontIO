@@ -432,7 +432,12 @@
   },
   "events_display": {
     "retreating": "retreating",
-    "boat": "Boat"
+    "boat": "Boat",
+    "about_to_expire": "Your alliance with {name} is about to expire!",
+    "renew_alliance": "Request to renew",
+    "focus": "Focus",
+    "alliance_renewed": "Your alliance with {name} has been renewed",
+    "ignore": "Ignore"
   },
   "unit_info_modal": {
     "structure_info": "Structure Info",
