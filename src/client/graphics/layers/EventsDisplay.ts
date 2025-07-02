@@ -152,6 +152,7 @@ export class EventsDisplay extends LitElement implements Layer {
     [GameUpdateType.TargetPlayer, (u) => this.onTargetPlayerEvent(u)],
     [GameUpdateType.Emoji, (u) => this.onEmojiMessageEvent(u)],
     [GameUpdateType.UnitIncoming, (u) => this.onUnitIncomingEvent(u)],
+    [GameUpdateType.AllianceExpired, (u) => this.onAllianceExpiredEvent(u)],
   ]);
 
   constructor() {
