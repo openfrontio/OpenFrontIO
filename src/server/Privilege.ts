@@ -16,9 +16,7 @@ export class PrivilegeChecker {
     if (found === undefined) {
       try {
         // Ensure that the pattern will not throw for clients
-        if (this.PatternDecoder) {
-          new this.PatternDecoder(base64);
-        }
+        new this.PatternDecoder(base64, b64urlDecode);
       } catch (e) {
         // Pattern is invalid
         return "invalid";
