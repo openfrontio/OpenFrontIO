@@ -69,7 +69,49 @@ export class PrivilegeChecker {
     if (!code) return "invalid";
     const segments = code.split("_");
     if (segments.length === 0) return "invalid";
+
+    if (this.cosmetics.flag.layerCounts) {
+      const n = segments.length;
+      const keys = Object.keys(this.cosmetics.flag.layerCounts)
+        .map((k) => Number(k))
+        .filter((k) => !isNaN(k))
+        .sort((a, b) => a - b);
+      const maxKey = keys[keys.length - 1];
+      if (n > maxKey) {
+        return "restricted";
+      }
+      const limitKey = keys.find((k) => n <= k)!;
+      const countRule = this.cosmetics.flag.layerCounts[String(limitKey)];
+      if (!countRule) {
+        return "restricted";
+      }
+
+      if (Object.keys(countRule).length === 0) {
+        // No threshold-specific restriction; proceed to segment-level checks
+      } else {
+        const countFlareOk =
+          countRule.flares &&
+          flares &&
+          countRule.flares.some((f) => flares.includes(f));
+        const countRoleOk =
+          countRule.role_group &&
+          roles &&
+          this.cosmetics.role_groups[countRule.role_group]?.some((role) =>
+            roles.includes(role),
+          );
+        if (
+          !(
+            (countRule.flares && countFlareOk) ||
+            (countRule.role_group && countRoleOk)
+          )
+        ) {
+          return "restricted";
+        }
+      }
+    }
+
     const superFlare = flares?.includes("flag:*") ?? false;
+
     for (const segment of segments) {
       const [layerKey, colorKey] = segment.split("-");
       if (!layerKey || !colorKey) return "invalid";

@@ -1,9 +1,9 @@
 import type { Cosmetics } from "../../src/core/CosmeticSchemas";
 import { PrivilegeChecker } from "../../src/server/Privilege";
 
-const DummyPatternDecoder = (_base64: string) => new Uint8Array();
-
 describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
+  const DummyPatternDecoder = (_base64: string) => new Uint8Array();
+
   const mockCosmetics: Cosmetics = {
     role_groups: {
       donor: ["role_donor"],
@@ -25,8 +25,14 @@ describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
         b: { color: "#00ff00", name: "green" },
         c: { color: "#0000ff", name: "blue", flares: ["cosmetic:blue"] },
       },
+      layerCounts: {
+        "2": {}, // Up to 2 layers: always allowed
+        "4": { role_group: "admin" }, // Up to 4 layers: only admin allowed
+        "6": { flares: ["cosmetic:6layers"] }, // Up to 6 layers: only with specific flare
+      },
     },
   };
+
   const checker = new PrivilegeChecker(mockCosmetics, DummyPatternDecoder);
 
   it("allowed: unrestricted layer/color", () => {
@@ -85,28 +91,67 @@ describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
       "invalid",
     );
   });
-
-  it("allowed: flares flag:layer:chocolate allows chocolate layer", () => {
+  it("allowed: flare flag:layer:chocolate allows chocolate layer", () => {
     expect(
       checker.isCustomFlagAllowed("!a-b", [], ["flag:layer:chocolate"]),
     ).toBe(true);
   });
-
-  it("allowed: flares flag:color:blue allows blue color", () => {
+  it("allowed: flare flag:color:blue allows blue color", () => {
     expect(checker.isCustomFlagAllowed("!b-c", [], ["flag:color:blue"])).toBe(
       true,
     );
   });
-
-  it("not allowed: only color flare, layer still restricted", () => {
+  it("restricted: only color flare, layer still restricted", () => {
     expect(checker.isCustomFlagAllowed("!a-c", [], ["cosmetic:blue"])).toBe(
       "restricted",
     );
   });
-
-  it("not allowed: only layer flare, color still restricted", () => {
+  it("restricted: only layer flare, color still restricted", () => {
     expect(checker.isCustomFlagAllowed("!c-a", [], ["cosmetic:flags"])).toBe(
       "restricted",
     );
+  });
+
+  it("allowed: up to 2 layers is always allowed (layerCounts['2'] is empty)", () => {
+    expect(checker.isCustomFlagAllowed("!b-b_b-b", [], [])).toBe(true);
+    expect(checker.isCustomFlagAllowed("!a-b_b-b", ["role_donor"], [])).toBe(
+      true,
+    );
+  });
+  it("restricted: 3 layers (max 4, only admin) for non-admin", () => {
+    expect(checker.isCustomFlagAllowed("!b-b_b-b_b-b", [], [])).toBe(
+      "restricted",
+    );
+  });
+  it("allowed: 3 layers (max 4, only admin) for admin", () => {
+    expect(
+      checker.isCustomFlagAllowed("!b-b_b-b_b-b", ["role_admin"], []),
+    ).toBe(true);
+  });
+  it("restricted: 5 layers (max 6, only with flare) without flare", () => {
+    expect(checker.isCustomFlagAllowed("!b-b_b-b_b-b_b-b_b-b", [], [])).toBe(
+      "restricted",
+    );
+  });
+  it("allowed: 5 layers (max 6, only with flare) with flare", () => {
+    expect(
+      checker.isCustomFlagAllowed(
+        "!b-b_b-b_b-b_b-b_b-b",
+        [],
+        ["cosmetic:6layers"],
+      ),
+    ).toBe(true);
+  });
+  it("restricted: 7 layers (max 6) is always restricted", () => {
+    expect(
+      checker.isCustomFlagAllowed("!b-b_b-b_b-b_b-b_b-b_b-b_b-b", [], []),
+    ).toBe("restricted");
+    expect(
+      checker.isCustomFlagAllowed(
+        "!b-b_b-b_b-b_b-b_b-b_b-b_b-b",
+        ["role_admin"],
+        ["cosmetic:6layers"],
+      ),
+    ).toBe("restricted");
   });
 });
