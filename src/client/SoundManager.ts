@@ -85,11 +85,11 @@ class SoundManager {
     }
   }
 
-  public playMusic(path: string): void {
+  public playMusic(name: string): void {
     if (this.musicSource) {
       this.musicSource.stop();
     }
-    const musicBuffer = this.soundBuffers.get(path);
+    const musicBuffer = this.soundBuffers.get(name);
     if (musicBuffer) {
       this.musicSource = this.audioContext.createBufferSource();
       this.musicSource.buffer = musicBuffer;
