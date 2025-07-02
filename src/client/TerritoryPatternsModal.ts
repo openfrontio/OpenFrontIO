@@ -153,7 +153,7 @@ export class TerritoryPatternsModal extends LitElement {
             )}
           </div>
         </button>
-        ${pattern.price !== undefined && pattern.lockedReason
+        ${pattern.priceId !== undefined && pattern.lockedReason
           ? html`
               <button
                 class="w-full mt-2 px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded transition-colors"
