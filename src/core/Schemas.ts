@@ -182,7 +182,7 @@ export const UsernameSchema = SafeString;
 export const FlagSchema = z.string().max(128).optional();
 export const RequiredPatternSchema = z
   .string()
-  .max(128)
+  .max(1403)
   .base64url()
   .refine(
     (val) => {
