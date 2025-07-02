@@ -32,6 +32,7 @@ import {
 import {
   CancelAttackIntentEvent,
   CancelBoatIntentEvent,
+  SendAllianceExtensionIntentEvent,
   SendAllianceReplyIntentEvent,
 } from "../../Transport";
 import { Layer } from "./Layer";
@@ -45,7 +46,6 @@ import {
   GoToUnitEvent,
 } from "./Leaderboard";
 
-import { UserSettings } from "../../../core/game/UserSettings";
 import { getMessageTypeClasses, translateText } from "../../Utils";
 
 interface GameEvent {
@@ -73,9 +73,11 @@ export class EventsDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
   public game: GameView;
 
-  private userSettings: UserSettings = new UserSettings();
   private active: boolean = false;
   private events: GameEvent[] = [];
+
+  // allianceID -> last checked at tick
+  private alliancesCheckedAt = new Map<number, Tick>();
   @state() private incomingAttacks: AttackUpdate[] = [];
   @state() private outgoingAttacks: AttackUpdate[] = [];
   @state() private outgoingLandAttacks: AttackUpdate[] = [];
@@ -182,6 +184,8 @@ export class EventsDisplay extends LitElement implements Layer {
       return;
     }
 
+    this.checkForAllianceExpirations();
+
     const updates = this.game.updatesSinceLastTick();
     if (updates) {
       for (const [ut, fn] of this.updateMap) {
@@ -232,6 +236,64 @@ export class EventsDisplay extends LitElement implements Layer {
     if (this.goldAmountTimeoutId !== null) {
       clearTimeout(this.goldAmountTimeoutId);
       this.goldAmountTimeoutId = null;
+    }
+  }
+
+  private checkForAllianceExpirations() {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) return;
+
+    for (const alliance of myPlayer.alliances()) {
+      if (
+        alliance.expiresAt >
+        this.game.ticks() + this.game.config().allianceExtensionPromptOffset()
+      ) {
+        continue;
+      }
+
+      if (
+        (this.alliancesCheckedAt.get(alliance.id) ?? 0) >=
+        this.game.ticks() - this.game.config().allianceExtensionPromptOffset()
+      ) {
+        // We've already displayed a message for this alliance.
+        continue;
+      }
+
+      this.alliancesCheckedAt.set(alliance.id, this.game.ticks());
+
+      const other = this.game.player(alliance.other) as PlayerView;
+
+      this.addEvent({
+        description: translateText("events_display.about_to_expire", {
+          name: other.name(),
+        }),
+        type: MessageType.RENEW_ALLIANCE,
+        duration: this.game.config().allianceExtensionPromptOffset() - 3 * 10, // 3 second buffer
+        buttons: [
+          {
+            text: translateText("events_display.focus"),
+            className: "btn-gray",
+            action: () => this.eventBus.emit(new GoToPlayerEvent(other)),
+            preventClose: true,
+          },
+          {
+            text: translateText("events_display.renew_alliance", {
+              name: other.name(),
+            }),
+            className: "btn",
+            action: () =>
+              this.eventBus.emit(new SendAllianceExtensionIntentEvent(other)),
+          },
+          {
+            text: translateText("events_display.ignore"),
+            className: "btn-info",
+            action: () => {},
+          },
+        ],
+        highlight: true,
+        createdAt: this.game.ticks(),
+        focusID: other.smallID(),
+      });
     }
   }
 
