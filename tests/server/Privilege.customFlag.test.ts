@@ -2,7 +2,7 @@ import type { Cosmetics } from "../../src/core/CosmeticSchemas";
 import { PrivilegeChecker } from "../../src/server/Privilege";
 
 describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
-  const DummyPatternDecoder = (_base64: string) => new Uint8Array();
+  const dummyPatternDecoder = (_base64: string) => () => throw new Error("Method not implemented");
 
   const mockCosmetics: Cosmetics = {
     role_groups: {
