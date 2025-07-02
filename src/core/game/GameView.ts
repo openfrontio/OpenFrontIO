@@ -24,6 +24,7 @@ import {
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import {
+  AllianceView,
   AttackUpdate,
   GameUpdateType,
   GameUpdateViewData,
@@ -289,6 +290,10 @@ export class PlayerView {
 
   isRequestingAllianceWith(other: PlayerView) {
     return this.data.outgoingAllianceRequests.some((id) => other.id() === id);
+  }
+
+  alliances(): AllianceView[] {
+    return this.data.alliances;
   }
 
   hasEmbargoAgainst(other: PlayerView): boolean {
