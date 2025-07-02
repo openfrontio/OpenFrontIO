@@ -2,6 +2,7 @@ import express, { NextFunction, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import http from "http";
 import ipAnonymize from "ip-anonymize";
+import { base64url } from "jose";
 import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
@@ -10,8 +11,6 @@ import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { COSMETICS } from "../core/CosmeticSchemas";
 import { GameType } from "../core/game/Game";
-import { PatternDecoder } from "../core/PatternDecoder";
-import { base64url } from "jose";
 import {
   ClientMessageSchema,
   GameRecord,

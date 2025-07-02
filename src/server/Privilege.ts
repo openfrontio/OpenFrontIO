@@ -1,4 +1,5 @@
 import { Cosmetics } from "../core/CosmeticSchemas";
+import { PatternDecoder } from "../core/PatternDecoder";
 
 export class PrivilegeChecker {
   constructor(
@@ -16,7 +17,7 @@ export class PrivilegeChecker {
     if (found === undefined) {
       try {
         // Ensure that the pattern will not throw for clients
-        new this.PatternDecoder(base64, b64urlDecode);
+        new PatternDecoder(base64, this.b64urlDecode);
       } catch (e) {
         // Pattern is invalid
         return "invalid";

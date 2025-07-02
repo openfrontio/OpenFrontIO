@@ -1,8 +1,6 @@
 import { PrivilegeChecker } from "../../src/server/Privilege";
 
-class DummyPatternDecoder {
-  constructor(_base64: string) {}
-}
+const DummyPatternDecoder = (_base64: string) => new Uint8Array();
 
 describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
   const mockCosmetics = {

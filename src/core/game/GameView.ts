@@ -1,3 +1,4 @@
+import { base64url } from "jose";
 import { Config } from "../configuration/Config";
 import { PatternDecoder } from "../PatternDecoder";
 import { ClientID, GameID, Player } from "../Schemas";
@@ -162,7 +163,7 @@ export class PlayerView {
     this.decoder =
       this.cosmetics.pattern === undefined
         ? undefined
-        : new PatternDecoder(this.cosmetics.pattern);
+        : new PatternDecoder(this.cosmetics.pattern, base64url.decode);
   }
 
   patternDecoder(): PatternDecoder | undefined {

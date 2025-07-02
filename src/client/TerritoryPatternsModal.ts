@@ -1,3 +1,4 @@
+import { base64url } from "jose";
 import type { TemplateResult } from "lit";
 import { html, LitElement, render } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
@@ -271,7 +272,7 @@ export class TerritoryPatternsModal extends LitElement {
     width: number,
     height: number,
   ): TemplateResult {
-    const decoder = new PatternDecoder(pattern);
+    const decoder = new PatternDecoder(pattern, base64url.decode);
     const cellCountX = decoder.getTileWidth();
     const cellCountY = decoder.getTileHeight();
 
