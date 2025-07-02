@@ -2,7 +2,9 @@ import type { Cosmetics } from "../../src/core/CosmeticSchemas";
 import { PrivilegeChecker } from "../../src/server/Privilege";
 
 describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
-  const dummyPatternDecoder = (_base64: string) => () => throw new Error("Method not implemented");
+  const dummyPatternDecoder = (_base64: string) => {
+    throw new Error("Method not implemented");
+  };
 
   const mockCosmetics: Cosmetics = {
     role_groups: {
@@ -33,7 +35,7 @@ describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
     },
   };
 
-  const checker = new PrivilegeChecker(mockCosmetics, DummyPatternDecoder);
+  const checker = new PrivilegeChecker(mockCosmetics, dummyPatternDecoder);
 
   it("allowed: unrestricted layer/color", () => {
     expect(checker.isCustomFlagAllowed("!b-b", [], [])).toBe(true);
