@@ -128,6 +128,11 @@ describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
       checker.isCustomFlagAllowed("!b-b_b-b_b-b", ["role_admin"], []),
     ).toBe(true);
   });
+  it("restricted: 3 layers with flare", () => {
+    expect(
+      checker.isCustomFlagAllowed("!b-b_b-b_b-b", [], ["cosmetic:6layers"]),
+    ).toBe(true);
+  });
   it("restricted: 5 layers (max 6, only with flare) without flare", () => {
     expect(checker.isCustomFlagAllowed("!b-b_b-b_b-b_b-b_b-b", [], [])).toBe(
       "restricted",

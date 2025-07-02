@@ -76,37 +76,36 @@ export class PrivilegeChecker {
         .map((k) => Number(k))
         .filter((k) => !isNaN(k))
         .sort((a, b) => a - b);
-      const maxKey = keys[keys.length - 1];
-      if (n > maxKey) {
+      // Find all thresholds that cover this layer count
+      const applicableKeys = keys.filter((k) => n <= k);
+      if (applicableKeys.length === 0) {
         return "restricted";
       }
-      const limitKey = keys.find((k) => n <= k)!;
-      const countRule = this.cosmetics.flag.layerCounts[String(limitKey)];
-      if (!countRule) {
-        return "restricted";
-      }
-
-      if (Object.keys(countRule).length === 0) {
-        // No threshold-specific restriction; proceed to segment-level checks
-      } else {
-        const countFlareOk =
-          countRule.flares &&
-          flares &&
-          countRule.flares.some((f) => flares.includes(f));
-        const countRoleOk =
-          countRule.role_group &&
-          roles &&
-          this.cosmetics.role_groups[countRule.role_group]?.some((role) =>
-            roles.includes(role),
-          );
-        if (
-          !(
-            (countRule.flares && countFlareOk) ||
-            (countRule.role_group && countRoleOk)
-          )
-        ) {
-          return "restricted";
+      // Evaluate each rule; allow if any rule grants permission
+      let layerCountAllowed = false;
+      for (const k of applicableKeys) {
+        const rule = this.cosmetics.flag.layerCounts[String(k)];
+        if (!rule) continue;
+        // Empty rule = unconditional allow
+        if (Object.keys(rule).length === 0) {
+          layerCountAllowed = true;
+          break;
         }
+        const roleOk =
+          rule.role_group &&
+          roles &&
+          this.cosmetics.role_groups[rule.role_group]?.some((r) =>
+            roles.includes(r),
+          );
+        const flareOk =
+          rule.flares && flares && rule.flares.some((f) => flares.includes(f));
+        if (roleOk || flareOk) {
+          layerCountAllowed = true;
+          break;
+        }
+      }
+      if (!layerCountAllowed) {
+        return "restricted";
       }
     }
 
