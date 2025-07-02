@@ -1,9 +1,10 @@
+import type { Cosmetics } from "../../src/core/CosmeticSchemas";
 import { PrivilegeChecker } from "../../src/server/Privilege";
 
 const DummyPatternDecoder = (_base64: string) => new Uint8Array();
 
 describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
-  const mockCosmetics = {
+  const mockCosmetics: Cosmetics = {
     role_groups: {
       donor: ["role_donor"],
       admin: ["role_admin"],
@@ -26,10 +27,7 @@ describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
       },
     },
   };
-  const checker = new PrivilegeChecker(
-    mockCosmetics as any,
-    DummyPatternDecoder,
-  );
+  const checker = new PrivilegeChecker(mockCosmetics, DummyPatternDecoder);
 
   it("allowed: unrestricted layer/color", () => {
     expect(checker.isCustomFlagAllowed("!b-b", [], [])).toBe(true);
