@@ -1,19 +1,54 @@
 :root {
-  --theme: "light";
-  --breakPoint-tablet: 800px;
-  --breakPoint-Desktop: 1024px;
+  /*Colors Main*/
+  --primary-color: #2563eb; /*Or bg-blue-600 in Tailwind*/
+  --primary-color-lighter: #60a5fa; /*Or bg-blue-400 in Tailwind*/
+
+  /*Colors Background*/
+  --background-color-dark: rgba(15, 23, 42, 0.6); /*Or bg-slate-900/60 in Tw*/
+  --background-color-dark-lighter: #1e293b; /*Or bg-slate-800 in Tw*/
+  --background-color-grey: #475569; /*Or bg-slate-600 in Tailwind*/
+  /*--background-color-light: rgba(15, 23, 42, 0.5); Or bg-slate-900/50 in Tw*/
+
+  /*Colors Border*/
+  --border-color-base: rgba(255, 255, 255, 0.1);
+  /*- --border-color-light: #ffffff1a;*/
+
+  /*Colors Text*/
+  --text-color-dark: #202020;
+  --text-color-grey: #94a3b8; /*Or bg-slate-400 in Tailwind*/
+  --text-color-light: #ffffff;
+
+  /*Colors Other*/
+  --green-color: #4ade80; /*Also used for Positive color*/ /*Or text-green-400 in Tailwind*/
+  --red-color: #f87171; /*Also used for Negative color*/ /*Or text-red-400 in Tailwind*/
+  --orange-color: #f59e0b; /*Or text-orange-400 in Tailwind*/
+
+  /*Fonts*/
+  --font-size-base: 1rem;
+  --font-size-xsmall: calc(var(--font-size-base) * 0.75);
+  --font-size-small: calc(var(--font-size-base) * 0.875);
+  --font-size-medium: calc(var(--font-size-base) * 1.125);
+  --font-size-large: calc(var(--font-size-base) * 1.5);
+  --font-size-xlarge: calc(var(--font-size-base) * 2);
+
+  --font-family-base: "Pixel", monospace;
+  --font-family-secondary: "Inter", system-ui, sans-serif;
+
+  /*Z-Index*/
+  --z-index-behind: -1;
+  --z-index-base: 1;
+  --z-index-dropdown: 10;
+  --z-index-modal: 100;
+  --z-index-tooltip: 1000;
+
+  /*Breakpoints*/
+  --breakpoint-mobile: 576px;
+  --breakpoint-tablet: 800px;
+  --breakpoint-desktop: 1280px;
+
+  /*Other*/
+  --animation-base: 0.2s ease-in-out forwards;
+  --theme-mode: light;
   --blur-md: 4px;
-  --boxBackgroundColor: #111827cc;
-  --fontColor: #202020;
-  --fontColorLight: #fff;
-  --primaryColor: #2563eb;
-  --primaryColorHover: #1d4ed8;
-  --primaryColorDisabled: linear-gradient(
-    to right,
-    rgb(74, 74, 74),
-    rgb(61, 61, 61)
-  );
-  --secondaryColor: #dbeafe;
-  --secondaryColorHover: #bfdbfe;
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: all 0.15s ease;
 }

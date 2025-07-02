@@ -1,4 +1,4 @@
-import { LangSelector } from "./LangSelector";
+import { LangSelector } from "./components/modals/Language/LangSelector";
 
 export function renderTroops(troops: number): string {
   return renderNumber(troops / 10);

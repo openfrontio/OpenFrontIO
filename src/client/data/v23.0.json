@@ -1,0 +1,230 @@
+{
+  "id": "openfront-v23.0",
+  "title": "OpenFront v23.0 Release Notes",
+  "type": "PATCH",
+  "date": "June 24, 2025",
+  "summary": "Major gameplay overhaul with new features, UI improvements, and bug fixes.",
+  "priority": "high",
+  "tags": ["gameplay", "ui", "bugfixes"],
+  "sections": [
+    {
+      "title": "Gameplay Enhancements",
+      "items": [
+        {
+          "text": "Combat System Overhaul",
+          "type": "title"
+        },
+        {
+          "text": "Overhauled attack mechanics with speed and terrain effects",
+          "contributor": "1brucben"
+        },
+        {
+          "text": "Revised population dynamics and gold income calculations",
+          "contributor": "1brucben"
+        },
+        {
+          "text": "New port ship spawn functionality",
+          "contributor": "1brucben"
+        },
+        {
+          "text": "Alliance & Betrayal System",
+          "type": "title"
+        },
+        {
+          "text": "Transport ships now conquer allied shores without betrayal",
+          "contributor": "FakeNeo"
+        },
+        {
+          "text": "Offensive weapons against allies trigger immediate betrayal",
+          "contributor": "FakeNeo"
+        },
+        {
+          "text": "Enhanced bot AI for strategic attacks and counter-attacks",
+          "contributor": "FakeNeo"
+        },
+        {
+          "text": "Trade ships now calculate gold value by actual distance traveled",
+          "contributor": "Koranir"
+        },
+        {
+          "text": "Automatic embargo cooldown system implemented",
+          "contributor": "Léo-21"
+        }
+      ]
+    },
+    {
+      "title": "Teams & Accounts",
+      "items": [
+        {
+          "text": "Discord login integration",
+          "type": "highlight",
+          "contributor": "FakeNeo"
+        },
+        {
+          "text": "Prevent duplicate account joins in same game",
+          "contributor": "FakeNeo"
+        },
+        {
+          "text": "Lowercase clan tag support added",
+          "contributor": "Théodore Léon"
+        },
+        {
+          "text": "Stats tracking system (recording phase)",
+          "contributor": "FakeNeo"
+        }
+      ]
+    },
+    {
+      "title": "Visual Effects & UI",
+      "items": [
+        {
+          "text": "Special Effects",
+          "type": "title"
+        },
+        {
+          "text": "Nuclear explosion animations",
+          "contributor": "IngloriousTom"
+        },
+        {
+          "text": "SAM interception visual effects",
+          "contributor": "IngloriousTom"
+        },
+        {
+          "text": "Naval combat animations",
+          "contributor": "IngloriousTom"
+        },
+        {
+          "text": "Curved nuclear missile trajectories",
+          "contributor": "IngloriousTom"
+        },
+        {
+          "text": "Interface Improvements",
+          "type": "title"
+        },
+        {
+          "text": "Team overlay showing combined gold, troops & territory",
+          "contributor": "Killersoren"
+        },
+        {
+          "text": "Enhanced player panel with warship count and alliance timers",
+          "contributor": "Dovg"
+        },
+        {
+          "text": "Clickable chat warnings for boats, bombs and attacks",
+          "contributor": "Léo-21"
+        },
+        {
+          "text": "MLS 4 Game integration with quick chat",
+          "contributor": "Aotumuri"
+        },
+        {
+          "text": "Keybinding configuration system",
+          "type": "highlight",
+          "contributor": "Aotumuri"
+        },
+        {
+          "text": "Custom disable settings panel",
+          "contributor": "Aotumuri"
+        },
+        {
+          "text": "Monospace font for lobby codes",
+          "contributor": "ImDarkTom"
+        }
+      ]
+    },
+    {
+      "title": "Maps & Content",
+      "items": [
+        {
+          "text": "New Maps",
+          "type": "title"
+        },
+        {
+          "text": "Deglaciated Antarctica - Ice-free Antarctic exploration",
+          "contributor": "Nikola123, Backn"
+        },
+        {
+          "text": "Falkland Islands - Compact South Atlantic warfare",
+          "contributor": "Nikola123"
+        },
+        {
+          "text": "Lake Baikal - Central Siberian combat zone",
+          "contributor": "Nikola123"
+        },
+        {
+          "text": "Halkidiki - Greece's trident-shaped peninsula",
+          "contributor": "Nikola123"
+        },
+        {
+          "text": "Giant World - Massive Earth map",
+          "contributor": "N0ur, 1brucben"
+        },
+        {
+          "text": "Map Updates",
+          "type": "title"
+        },
+        {
+          "text": "Pangaea: Added river systems",
+          "contributor": "Greymald"
+        },
+        {
+          "text": "Black Sea: Fixed topography orientation",
+          "contributor": "Nikola123"
+        },
+        {
+          "text": "+150 new nation flags available",
+          "type": "highlight",
+          "contributor": "N0ur"
+        }
+      ]
+    },
+    {
+      "title": "Bug Fixes",
+      "items": [
+        {
+          "text": "Fixed emoji exploit vulnerability",
+          "contributor": "PilkeySEK"
+        },
+        {
+          "text": "Corrected unit sprite drawing order",
+          "contributor": "Vivacious Box"
+        },
+        {
+          "text": "Fixed isolated cluster capture logic",
+          "contributor": "Vivacious Box"
+        },
+        {
+          "text": "Resolved MIRV targeting issues",
+          "contributor": "Vivacious Box"
+        },
+        {
+          "text": "Fixed flag loading problems",
+          "contributor": "tryout33"
+        },
+        {
+          "text": "Corrected error popup sizing and closing",
+          "contributor": "tryout33"
+        }
+      ]
+    },
+    {
+      "title": "Performance",
+      "items": [
+        {
+          "text": "Precomputed TileRef conversion tables for faster map operations",
+          "type": "code",
+          "contributor": "FakeNeo"
+        }
+      ]
+    },
+    {
+      "title": "Special Thanks",
+      "items": [
+        {
+          "text": "Huge appreciation to tryout33 for exceptional bug hunting!",
+          "type": "highlight"
+        }
+      ]
+    }
+  ]
+}

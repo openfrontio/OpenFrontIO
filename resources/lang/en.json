@@ -6,7 +6,8 @@
     "lang_code": "en"
   },
   "common": {
-    "close": "Close"
+    "close": "Close",
+    "search_placeholder": "Search"
   },
   "main": {
     "title": "OpenFront (ALPHA)",
@@ -14,6 +15,7 @@
     "login_discord": "Login with Discord",
     "checking_login": "Checking login...",
     "logged_in": "Logged in!",
+    "sign_in": "Sign In",
     "log_out": "Log out",
     "create_lobby": "Create Lobby",
     "join_lobby": "Join Lobby",
@@ -21,7 +23,11 @@
     "instructions": "Instructions",
     "how_to_play": "How to Play",
     "advertise": "Advertise",
+    "quick_join": "Quick Join",
     "wiki": "Wiki"
+  },
+  "login": {
+    "login_message": "Sign in to play OpenFront"
   },
   "news": {
     "title": "Version 23 released!"
@@ -61,6 +67,8 @@
     "option_timer": "Timer - Time passed since the start of the game.",
     "option_exit": "Exit button.",
     "option_settings": "Settings - Open the settings menu. Inside you can toggle the Alternate view, Emojis, Dark Mode, Ninja (anonymous/random names mode), and action on left click.",
+    "option_controls": "Game Controls",
+
     "radial_title": "Radial menu",
     "radial_desc": "Right clicking (or touch on mobile) opens the Radial menu. Right click outside it to close it. From the menu you can:",
     "radial_build": "Open the Build menu.",
@@ -172,7 +180,9 @@
   "public_lobby": {
     "join": "Join next Game",
     "waiting": "players waiting",
-    "teams": "{num} teams"
+    "teams": "{num} teams",
+    "game_mode": "Game Mode",
+    "time": "Time"
   },
   "username": {
     "enter_username": "Enter your username",
@@ -196,10 +206,12 @@
     "player": "Player",
     "players": "Players",
     "waiting": "Waiting for players...",
-    "start": "Start Game"
+    "start": "Start Game",
+    "back": "Back",
+    "next": "Next"
   },
   "game_starting_modal": {
-    "title": "Game is Starting...",
+    "title": "Game is Starting",
     "desc": "Preparing for the lobby to start. Please wait."
   },
   "difficulty": {
@@ -211,7 +223,12 @@
   },
   "game_mode": {
     "ffa": "Free for All",
-    "teams": "Teams"
+    "teams": "Teams",
+    "ffa_description": "Every player for themselves",
+    "teams_description": "Form alliances and work together"
+  },
+  "select_flag": {
+    "title": "Select Flag"
   },
   "select_lang": {
     "title": "Select Language"
@@ -231,19 +248,19 @@
     "title": "User Settings",
     "tab_basic": "Basic Settings",
     "tab_keybinds": "Keybinds",
-    "dark_mode_label": "🌙 Dark Mode",
+    "dark_mode_label": "Dark Mode",
     "dark_mode_desc": "Toggle the site’s appearance between light and dark themes",
-    "emojis_label": "😊 Emojis",
+    "emojis_label": "Emojis",
     "emojis_desc": "Toggle whether emojis are shown in game",
-    "special_effects_label": "💥 Special effects",
+    "special_effects_label": "Special effects",
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
-    "anonymous_names_label": "🥷 Hidden Names",
+    "anonymous_names_label": "Hidden Names",
     "anonymous_names_desc": "Hide real player names with random ones on your screen.",
-    "left_click_label": "🖱️ Left Click to Open Menu",
+    "left_click_label": "Left Click to Open Menu",
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
-    "attack_ratio_label": "⚔️ Attack Ratio",
+    "attack_ratio_label": "Attack Ratio",
     "attack_ratio_desc": "What percentage of your troops to send in an attack (1–100%)",
-    "troop_ratio_label": "🪖🛠️ Troops and Workers Ratio",
+    "troop_ratio_label": "Troops and Workers Ratio",
     "troop_ratio_desc": "Adjust the balance between troops (for combat) and workers (for gold production) (1–100%)",
     "easter_writing_speed_label": "Writing Speed Multiplier",
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",

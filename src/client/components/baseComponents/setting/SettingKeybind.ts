@@ -9,50 +9,11 @@ export class SettingKeybind extends LitElement {
   @property({ type: String, reflect: true }) action = "";
   @property({ type: String }) defaultKey = "";
   @property({ type: String }) value = "";
-  @property({ type: Boolean }) easter = false;
-
-  createRenderRoot() {
-    return this;
-  }
 
   private listening = false;
 
-  render() {
-    return html`
-      <div class="setting-item column${this.easter ? " easter-egg" : ""}">
-        <div class="setting-label-group">
-          <label class="setting-label block mb-1">${this.label}</label>
-
-          <div class="setting-keybind-box">
-            <div class="setting-keybind-description">${this.description}</div>
-
-            <div class="flex items-center gap-2">
-              <span
-                class="setting-key"
-                tabindex="0"
-                @keydown=${this.handleKeydown}
-                @click=${this.startListening}
-              >
-                ${this.displayKey(this.value || this.defaultKey)}
-              </span>
-
-              <button
-                class="text-xs text-gray-400 hover:text-white border border-gray-500 px-2 py-0.5 rounded transition"
-                @click=${this.resetToDefault}
-              >
-                ${translateText("user_setting.reset")}
-              </button>
-              <button
-                class="text-xs text-gray-400 hover:text-white border border-gray-500 px-2 py-0.5 rounded transition"
-                @click=${this.unbindKey}
-              >
-                ${translateText("user_setting.unbind")}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
+  createRenderRoot() {
+    return this;
   }
 
   private displayKey(key: string): string {
@@ -111,5 +72,39 @@ export class SettingKeybind extends LitElement {
       }),
     );
     this.requestUpdate();
+  }
+  render() {
+    return html`
+      <div class="background-panel p-4 w-full max-w-full mb-4">
+        <div class="flex items-center gap-3 mb-3">
+          <div>
+            <div class="font-title text-textLight">${this.label}</div>
+            <div class="text-small text-textGrey">${this.description}</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span
+            class="text-textLight px-3 py-1 font-title text-small cursor-pointer bg-primary border border-white/10 shadow-[inset_-2px_-2px_0_0_#1e293b,inset_2px_2px_0_0_#475569]"
+            tabindex="0"
+            @keydown=${this.handleKeydown}
+            @click=${this.startListening}
+          >
+            ${this.displayKey(this.value || this.defaultKey)}
+          </span>
+          <button
+            class="text-xsmall text-textGrey hover:text-textLight border border-borderBase px-2 py-0.5 transition-colors duration-200"
+            @click=${this.resetToDefault}
+          >
+            ${translateText("user_setting.reset")}
+          </button>
+          <button
+            @click=${this.unbindKey}
+            class="text-xsmall text-textGrey hover:text-textLight border border-borderBase px-2 py-0.5 transition-colors duration-200"
+          >
+            ${translateText("user_setting.unbind")}
+          </button>
+        </div>
+      </div>
+    `;
   }
 }

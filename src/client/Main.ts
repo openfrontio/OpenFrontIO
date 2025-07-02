@@ -6,32 +6,39 @@ import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import { joinLobby } from "./ClientGameRunner";
-import "./DarkModeButton";
-import { DarkModeButton } from "./DarkModeButton";
-import "./FlagInput";
-import { FlagInput } from "./FlagInput";
-import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
 import GoogleAdElement from "./GoogleAdElement";
-import { HelpModal } from "./HelpModal";
-import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
-import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
-import "./LangSelector";
-import { LangSelector } from "./LangSelector";
-import { LanguageModal } from "./LanguageModal";
-import { NewsModal } from "./NewsModal";
-import "./PublicLobby";
-import { PublicLobby } from "./PublicLobby";
-import { SinglePlayerModal } from "./SinglePlayerModal";
-import { UserSettingModal } from "./UserSettingModal";
-import "./UsernameInput";
-import { UsernameInput } from "./UsernameInput";
 import { generateCryptoRandomUUID } from "./Utils";
+import "./components/FlagInput";
+import { FlagInput } from "./components/FlagInput";
+import "./components/PublicLobby";
+import { PublicLobby } from "./components/PublicLobby";
+import "./components/UsernameInput";
+import { UsernameInput } from "./components/UsernameInput";
+import { FlagSelectionModal } from "./components/modals/FlagSelectionModal";
+import { GameStartingModal } from "./components/modals/GameStartingModal";
+import { HelpModal } from "./components/modals/HelpModal";
+import { JoinPrivateLobbyModal } from "./components/modals/JoinPrivateLobbyModal";
+import "./components/modals/Language/LangSelector";
+import { HostLobbyModal as HostPrivateLobbyModal } from "./components/modals/Lobby/HostLobbyModal";
+import { SinglePlayerModal } from "./components/modals/Lobby/SinglePlayerModal";
+import { NewsModal } from "./components/modals/NewsModal";
+import { UserSettingModal } from "./components/modals/UserSettingModal";
+
+("./components/modals/FlagSelectionModal");
+
 import "./components/NewsButton";
-import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
 import { OButton } from "./components/baseComponents/Button";
+import "./components/baseComponents/Icon";
 import "./components/baseComponents/Modal";
+
+import "./components/layout/Footer";
+import "./components/layout/Navbar";
+import { LanguageModal } from "./components/modals/Language/LanguageModal";
+import "./components/modals/LoginModal";
+import { LoginModal } from "./components/modals/LoginModal";
+
 import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
 import "./styles.css";
 
@@ -50,7 +57,6 @@ class Client {
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
-  private darkModeButton: DarkModeButton | null = null;
 
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
@@ -60,12 +66,22 @@ class Client {
   constructor() {}
 
   initialize(): void {
+    /*
     const newsModal = document.querySelector("news-modal") as NewsModal;
-    if (!newsModal) {
+    if (!NewsModal) {
       consolex.warn("News modal element not found");
     } else {
       consolex.log("News modal element found");
     }
+*/
+    const newsModal = document.querySelector("news-modal") as NewsModal;
+    newsModal instanceof NewsModal;
+    const newsButton = document.getElementById("news-button");
+    if (newsButton === null) throw new Error("Missing news-button");
+    newsButton.addEventListener("click", () => {
+      newsModal.open();
+    });
+    /*
     newsModal instanceof NewsModal;
     const newsButton = document.querySelector("news-button") as NewsButton;
     if (!newsButton) {
@@ -73,10 +89,10 @@ class Client {
     } else {
       consolex.log("News button element found");
     }
-
+*/
     // Comment out to show news button.
     // newsButton.hidden = true;
-
+    /*
     const langSelector = document.querySelector(
       "lang-selector",
     ) as LangSelector;
@@ -89,17 +105,25 @@ class Client {
     if (!LanguageModal) {
       consolex.warn("Language modal element not found");
     }
+   */
+    const flagSelectionModal = document.querySelector(
+      "flag-modal",
+    ) as FlagSelectionModal;
+    flagSelectionModal instanceof FlagSelectionModal;
+
+    const languageModal = document.querySelector(
+      "language-modal",
+    ) as LanguageModal;
+    languageModal instanceof LanguageModal;
+    const languageButton = document.getElementById("language-button");
+    if (languageButton === null) throw new Error("Missing language-button");
+    languageButton.addEventListener("click", () => {
+      languageModal.open();
+    });
 
     this.flagInput = document.querySelector("flag-input") as FlagInput;
     if (!this.flagInput) {
       consolex.warn("Flag input element not found");
-    }
-
-    this.darkModeButton = document.querySelector(
-      "dark-mode-button",
-    ) as DarkModeButton;
-    if (!this.darkModeButton) {
-      consolex.warn("Dark mode button element not found");
     }
 
     const loginDiscordButton = document.getElementById(
@@ -142,6 +166,14 @@ class Client {
       if (this.usernameInput?.isValid()) {
         spModal.open();
       }
+    });
+
+    const loginModal = document.querySelector("login-modal") as LoginModal;
+    loginModal instanceof LoginModal;
+    const loginButton = document.getElementById("login-button");
+    if (loginButton === null) throw new Error("Missing login-button");
+    loginButton.addEventListener("click", () => {
+      loginModal.open();
     });
 
     // const ctModal = document.querySelector("chat-modal") as ChatModal;

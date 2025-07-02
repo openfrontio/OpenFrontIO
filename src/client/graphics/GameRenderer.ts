@@ -1,10 +1,8 @@
 import { consolex } from "../../core/Consolex";
 import { EventBus } from "../../core/EventBus";
 import { GameView } from "../../core/game/GameView";
-import { GameStartingModal } from "../GameStartingModal";
+import { GameStartingModal } from "../components/modals/GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
-import { TransformHandler } from "./TransformHandler";
-import { UIState } from "./UIState";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
@@ -32,6 +30,8 @@ import { UILayer } from "./layers/UILayer";
 import { UnitInfoModal } from "./layers/UnitInfoModal";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
+import { TransformHandler } from "./TransformHandler";
+import { UIState } from "./UIState";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,

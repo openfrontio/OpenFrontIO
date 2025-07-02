@@ -1,16 +1,179 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 @import url("./styles/core/variables.css");
 @import url("./styles/core/typography.css");
-@import url("./styles/layout/header.css");
-@import url("./styles/layout/footer.css");
-@import url("./styles/layout/container.css");
-@import url("./styles/components/button.css");
-@import url("./styles/components/modal.css");
-@import url("./styles/modal/chat.css");
-@import url("./styles/components/setting.css");
-@import url("./styles/components/controls.css");
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @font-face {
+    font-family: "Pixel";
+    src: url("https://fonts.cdnfonts.com/css/vcr-osd-mono") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  body {
+    @apply font-sans text-slate-800 dark:text-white bg-slate-900;
+    image-rendering: pixelated;
+  }
+
+  .font-title {
+    font-family: var(--font-family-base);
+    letter-spacing: 1px;
+    font-weight: 700;
+  }
+}
+
+@layer components {
+  .nav-link {
+    @apply text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors;
+  }
+
+  .pixel-border {
+    @apply relative;
+    box-shadow:
+      -4px 0 0 0 theme(colors.slate.800),
+      4px 0 0 0 theme(colors.slate.800),
+      0 -4px 0 0 theme(colors.slate.800),
+      0 4px 0 0 theme(colors.slate.800);
+  }
+
+  .pixel-button {
+    @apply relative font-title text-white px-6 py-3 transition-all duration-150;
+    background: theme(colors.blue.600);
+
+    box-shadow:
+      inset -2px -2px 0 0 theme(colors.blue.800),
+      inset 2px 2px 0 0 theme(colors.blue.400);
+  }
+
+  .pixel-button:hover {
+    transform: translate(1px, 1px);
+    box-shadow:
+      inset -1px -1px 0 0 theme(colors.blue.800),
+      inset 1px 1px 0 0 theme(colors.blue.400);
+  }
+
+  .background-panel {
+    @apply bg-slate-900/60 backdrop-blur-sm border border-white/10;
+    box-shadow:
+      inset -2px -2px 0 0 theme(colors.slate.800),
+      inset 2px 2px 0 0 theme(colors.slate.600);
+  }
+  .background-panel.has-grey {
+    background-color: var(--background-color-grey);
+    opacity: 0.8;
+  }
+
+  .scanlines {
+    @apply pointer-events-none fixed inset-0 z-50;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.2) 0px,
+      rgba(0, 0, 0, 0.2) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-slate-800;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-slate-600 hover:bg-slate-500 transition-colors;
+  }
+
+  .modal-overlay {
+    animation: fadeIn 0.2s ease-out forwards;
+  }
+
+  .modal-overlay.closing {
+    animation: fadeOut 0.2s ease-out forwards;
+  }
+
+  .modal-content {
+    animation: slideIn 0.3s ease-out forwards;
+  }
+
+  .modal-content.closing {
+    animation: slideOut 0.2s ease-out forwards;
+  }
+}
+
+@layer utilities {
+  .bg-grid-tactical {
+    background-size: 32px 32px;
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    image-rendering: pixelated;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideOut {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+  }
+}
+
 * {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
@@ -34,6 +197,44 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+.scanlines {
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 50;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.2) 0px,
+    rgba(0, 0, 0, 0.2) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+}
+.background-panel {
+  background-color: var(--background-color-dark); /* bg-slate-900/60 */
+  backdrop-filter: blur(
+    4px
+  ); /* backdrop-blur-sm, assuming Tailwind's sm blur is ~4px */
+  border: 1px solid rgba(255, 255, 255, 0.1); /* border border-white/10 */
+  box-shadow:
+    inset -2px -2px 0 0 #1e293b,
+    /* theme(colors.slate.800) */ inset 2px 2px 0 0 #475569; /* theme(colors.slate.600) */
+}
+.background-panel.has-grey {
+  background-color: var(--background-color-dark-lighter);
+  opacity: 0.8;
+}
+.background-panel.selected {
+  border: 1px solid var(--primary-color);
+}
+.selected-background-panel {
+  border: 1px solid #2563eb; /* border-blue-600 */
+  /*background-color: rgba(37, 99, 235, 0.2); /* bg-blue-600/20 */
 }
 
 .start-game-button {
@@ -613,4 +814,19 @@ label.option-card:hover {
   font-size: 14px;
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.2);
+}
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.5);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.7);
 }

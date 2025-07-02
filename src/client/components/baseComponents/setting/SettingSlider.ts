@@ -8,7 +8,7 @@ export class SettingSlider extends LitElement {
   @property({ type: Number }) value = 0;
   @property({ type: Number }) min = 0;
   @property({ type: Number }) max = 100;
-  @property({ type: Boolean }) easter = false;
+  @property({ type: String, reflect: true }) icon = "";
 
   createRenderRoot() {
     return this;
@@ -53,23 +53,33 @@ export class SettingSlider extends LitElement {
 
   render() {
     return html`
-      <div class="setting-item vertical${this.easter ? " easter-egg" : ""}">
-        <div class="setting-label-group">
-          <label class="setting-label" for="setting-slider-input"
-            >${this.label}</label
-          >
-          <div class="setting-description">${this.description}</div>
+      <div class="background-panel p-4 w-full max-w-full mb-4">
+        <div class="flex items-center gap-3 mb-3">
+          ${this.icon
+            ? html`<o-icon
+                src="${this.icon}"
+                size="large"
+                color="var(--text-color-grey)"
+                class="mr-2"
+              ></o-icon>`
+            : ""}
+          <div>
+            <div class="font-title text-textLight">${this.label}</div>
+            <div class="text-small text-textGrey">${this.description}</div>
+          </div>
         </div>
         <input
           type="range"
           id="setting-slider-input"
-          class="setting-input slider full-width"
+          class="w-full h-2 rounded-none appearance-none cursor-pointer"
           min=${this.min}
           max=${this.max}
           .value=${String(this.value)}
           @input=${this.handleInput}
         />
-        <div class="slider-value">${this.value}%</div>
+        <div class="text-center mt-2 font-title text-textGrey">
+          ${this.value}%
+        </div>
       </div>
     `;
   }
