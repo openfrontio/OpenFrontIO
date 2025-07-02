@@ -2,6 +2,7 @@ import { Execution, Game } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
+import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
 import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
 import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
@@ -111,6 +112,22 @@ export class Executor {
           this.mg.ref(intent.x, intent.y),
           intent.unit,
         );
+      case "allianceExtension": {
+        const from = player;
+        const to = this.mg.playerBySmallID(intent.recipient) ?? null;
+
+        if (
+          from === null ||
+          to === null ||
+          !from.isPlayer?.() ||
+          !to.isPlayer?.()
+        ) {
+          return new NoOpExecution();
+        }
+
+        return new AllianceExtensionExecution(from, to);
+      }
+
       case "upgrade_structure":
         return new UpgradeStructureExecution(player, intent.unitId);
       case "create_station":
