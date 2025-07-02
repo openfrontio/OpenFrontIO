@@ -11,6 +11,7 @@ import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { COSMETICS } from "../core/CosmeticSchemas";
 import { GameType } from "../core/game/Game";
 import { PatternDecoder } from "../core/PatternDecoder";
+import { base64url } from "jose";
 import {
   ClientMessageSchema,
   GameRecord,
