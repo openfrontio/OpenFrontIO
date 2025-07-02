@@ -30,15 +30,6 @@ export const CosmeticsSchema = z.object({
         flares: z.array(z.string()).optional(),
       }),
     ),
-    // layerCounts: z
-    //   .record(
-    //     z.string(),
-    //     z.object({
-    //       role_group: z.string().optional(),
-    //       flares: z.array(z.string()).optional(),
-    //     }),
-    //   )
-    //   .optional(),
   }),
 });
 export type Cosmetics = z.infer<typeof CosmeticsSchema>;
