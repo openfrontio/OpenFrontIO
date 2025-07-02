@@ -83,6 +83,41 @@ describe("UILayer", () => {
     expect(ui["allHealthBars"].has(1)).toBe(false);
   });
 
+  it("should handle unit selection event", () => {
+    const ui = new UILayer(game, eventBus, transformHandler);
+    ui.redraw();
+    const unit = {
+      type: () => "Warship",
+      isActive: () => true,
+      tile: () => ({}),
+      owner: () => ({}),
+    };
+    const event = { isSelected: true, unit };
+    ui.drawSelectionBox = jest.fn();
+    ui["onUnitSelection"](event as UnitSelectionEvent);
+    expect(ui.drawSelectionBox).toHaveBeenCalledWith(unit);
+  });
+
+  it("should remove health bars for inactive units", () => {
+    const ui = new UILayer(game, eventBus, transformHandler);
+    ui.redraw();
+    const unit = {
+      id: () => 1,
+      type: () => "Warship",
+      health: () => 5,
+      tile: () => ({}),
+      owner: () => ({}),
+      isActive: () => true,
+    } as unknown as UnitView;
+    ui.drawHealthBar(unit);
+    expect(ui["allHealthBars"].has(1)).toBe(true);
+
+    // an inactive unit doesnt have a health bar
+    unit.isActive = () => false;
+    ui.drawHealthBar(unit);
+    expect(ui["allHealthBars"].has(1)).toBe(false);
+  });
+
   it("should add loading bar for unit", () => {
     const ui = new UILayer(game, eventBus, transformHandler);
     ui.redraw();
