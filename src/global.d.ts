@@ -36,7 +36,13 @@ declare module "*.html" {
   const content: string;
   export default content;
 }
+
 declare module "*.mp3" {
+  const value: string;
+  export default value;
+}
+
+declare module "*.xml" {
   const value: string;
   export default value;
 }

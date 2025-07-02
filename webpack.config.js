@@ -87,7 +87,7 @@ export default async (env, argv) => {
           },
         },
         {
-          test: /\.(woff|woff2|eot|ttf|otf)$/,
+          test: /\.(woff|woff2|eot|ttf|otf|xml)$/,
           type: "asset/resource", // Changed from file-loader
           generator: {
             filename: "fonts/[name].[contenthash][ext]", // Added content hash and fixed path
