@@ -204,10 +204,7 @@ class Client {
       "territory-patterns-input-preview-button",
     );
     territoryModal instanceof TerritoryPatternsModal;
-
-    if (territoryModal) {
-      territoryModal.userSettings = this.userSettings;
-    }
+    territoryModal.userSettings = this.userSettings;
 
     if (tpButton === null)
       throw new Error("territory-patterns-input-preview-button");
@@ -394,7 +391,7 @@ class Client {
           "host-lobby-modal",
           "join-private-lobby-modal",
           "game-starting-modal",
-          "top-bar",
+          "game-top-bar",
           "help-modal",
           "user-setting",
         ].forEach((tag) => {

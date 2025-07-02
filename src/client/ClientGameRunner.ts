@@ -150,9 +150,10 @@ export async function createClientGame(
     worker,
     userSettings,
     config,
-    gameMap.gameMap,
+    gameMap,
     lobbyConfig.clientID,
     lobbyConfig.gameStartInfo.gameID,
+    lobbyConfig.gameStartInfo.players,
   );
 
   console.log("going to init path finder");

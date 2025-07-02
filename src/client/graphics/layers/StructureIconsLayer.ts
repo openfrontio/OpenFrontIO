@@ -1,4 +1,5 @@
 import * as PIXI from "pixi.js";
+import bitmapFont from "../../../../resources/fonts/round_6x6_modified.xml";
 import anchorIcon from "../../../../resources/images/AnchorIcon.png";
 import cityIcon from "../../../../resources/images/CityIcon.png";
 import factoryIcon from "../../../../resources/images/FactoryUnit.png";
@@ -17,7 +18,8 @@ class StructureRenderInfo {
   constructor(
     public unit: UnitView,
     public owner: PlayerID,
-    public pixiSprite: PIXI.Sprite,
+    public pixiContainer: PIXI.Container,
+    public level: number = 0,
   ) {}
 }
 const ZOOM_THRESHOLD = 2.8; // below this zoom level, structures are not rendered
@@ -54,6 +56,11 @@ export class StructureIconsLayer implements Layer {
   }
 
   async setupRenderer() {
+    try {
+      await PIXI.Assets.load(bitmapFont);
+    } catch (error) {
+      console.error("Failed to load bitmap font:", error);
+    }
     this.renderer = new PIXI.WebGLRenderer();
     this.pixicanvas = document.createElement("canvas");
     this.pixicanvas.width = window.innerWidth;
@@ -119,39 +126,55 @@ export class StructureIconsLayer implements Layer {
         if (unitView === undefined) return;
 
         if (unitView.isActive()) {
-          if (this.seenUnits.has(unitView)) {
-            // check if owner has changed
-            const render = this.renders.find(
-              (r) => r.unit.id() === unitView.id(),
-            );
-            if (render) {
-              this.ownerChangeCheck(render, unitView);
-            }
-          } else if (this.structures.has(unitView.type())) {
-            // new unit, create render info
-            this.seenUnits.add(unitView);
-            const render = new StructureRenderInfo(
-              unitView,
-              unitView.owner().id(),
-              this.createPixiSprite(unitView),
-            );
-            this.renders.push(render);
-            this.computeNewLocation(render);
-            this.shouldRedraw = true;
-          }
-        }
-
-        if (!unitView.isActive() && this.seenUnits.has(unitView)) {
-          const render = this.renders.find(
-            (r) => r.unit.id() === unitView.id(),
-          );
-          if (render) {
-            this.deleteStructure(render);
-          }
-          this.shouldRedraw = true;
-          return;
+          this.handleActiveUnit(unitView);
+        } else if (this.seenUnits.has(unitView)) {
+          this.handleInactiveUnit(unitView);
         }
       });
+  }
+
+  private findRenderByUnit(
+    unitView: UnitView,
+  ): StructureRenderInfo | undefined {
+    return this.renders.find((render) => render.unit.id() === unitView.id());
+  }
+
+  private handleActiveUnit(unitView: UnitView) {
+    if (this.seenUnits.has(unitView)) {
+      const render = this.findRenderByUnit(unitView);
+      if (render) {
+        this.checkForOwnershipChange(render, unitView);
+        this.checkForLevelChange(render, unitView);
+      }
+    } else if (this.structures.has(unitView.type())) {
+      this.addNewStructure(unitView);
+    }
+  }
+
+  private handleInactiveUnit(unitView: UnitView) {
+    const render = this.findRenderByUnit(unitView);
+    if (render) {
+      this.deleteStructure(render);
+      this.shouldRedraw = true;
+    }
+  }
+
+  private checkForOwnershipChange(render: StructureRenderInfo, unit: UnitView) {
+    if (render && render.owner !== unit.owner().id()) {
+      render.owner = unit.owner().id();
+      render.pixiContainer?.destroy();
+      render.pixiContainer = this.createPixiSprite(unit);
+      this.shouldRedraw = true;
+    }
+  }
+
+  private checkForLevelChange(render: StructureRenderInfo, unit: UnitView) {
+    if (render && render.level !== unit.level()) {
+      render.level = unit.level();
+      render.pixiContainer?.destroy();
+      render.pixiContainer = this.createPixiSprite(unit);
+      this.shouldRedraw = true;
+    }
   }
 
   redraw() {
@@ -174,15 +197,6 @@ export class StructureIconsLayer implements Layer {
       this.shouldRedraw = false;
     }
     mainContext.drawImage(this.renderer.canvas, 0, 0);
-  }
-
-  private ownerChangeCheck(render: StructureRenderInfo, unit: UnitView) {
-    if (render.owner !== unit.owner().id()) {
-      render.owner = unit.owner().id();
-      render.pixiSprite?.destroy();
-      render.pixiSprite = this.createPixiSprite(unit);
-      this.shouldRedraw = true;
-    }
   }
 
   private createTexture(unit: UnitView): PIXI.Texture {
@@ -229,7 +243,8 @@ export class StructureIconsLayer implements Layer {
     return texture;
   }
 
-  private createPixiSprite(unit: UnitView): PIXI.Sprite {
+  private createPixiSprite(unit: UnitView): PIXI.Container {
+    const parentContainer = new PIXI.Container();
     const sprite = new PIXI.Sprite(this.createTexture(unit));
     sprite.anchor.set(0.5, 0.5);
     const tile = unit.tile();
@@ -238,11 +253,26 @@ export class StructureIconsLayer implements Layer {
     const screenPos = this.transformHandler.worldToScreenCoordinates(
       new Cell(worldX, worldY),
     );
-    sprite.x = screenPos.x;
-    sprite.y = screenPos.y - this.transformHandler.scale * OFFSET_ZOOM_Y;
-    sprite.scale.set(Math.min(1, this.transformHandler.scale));
-    this.stage.addChild(sprite);
-    return sprite;
+    parentContainer.addChild(sprite);
+    if (unit.level() > 1) {
+      const text = new PIXI.BitmapText({
+        text: unit.level().toString(),
+        style: {
+          fontFamily: "round_6x6_modified",
+          fontSize: 12,
+        },
+      });
+      text.anchor.set(0.5, 0.5);
+      text.position.y = -ICON_SIZE / 2 - 2;
+      parentContainer.addChild(text);
+    }
+    parentContainer.position.set(
+      Math.round(screenPos.x),
+      Math.round(screenPos.y - this.transformHandler.scale * OFFSET_ZOOM_Y),
+    );
+    parentContainer.scale.set(Math.min(1, this.transformHandler.scale));
+    this.stage.addChild(parentContainer);
+    return parentContainer;
   }
 
   private getImageColored(
@@ -281,19 +311,32 @@ export class StructureIconsLayer implements Layer {
       screenPos.y - margin < this.pixicanvas.height;
 
     if (onScreen) {
-      render.pixiSprite.x = screenPos.x;
-      render.pixiSprite.y = screenPos.y;
-      render.pixiSprite.scale.set(Math.min(1, this.transformHandler.scale));
+      render.pixiContainer.x = screenPos.x;
+      render.pixiContainer.y = screenPos.y;
+      render.pixiContainer.scale.set(Math.min(1, this.transformHandler.scale));
     }
     if (render.isOnScreen !== onScreen) {
       // prevent unnecessary updates
       render.isOnScreen = onScreen;
-      render.pixiSprite.visible = onScreen;
+      render.pixiContainer.visible = onScreen;
     }
   }
 
+  private addNewStructure(unitView: UnitView) {
+    this.seenUnits.add(unitView);
+    const render = new StructureRenderInfo(
+      unitView,
+      unitView.owner().id(),
+      this.createPixiSprite(unitView),
+      unitView.level(),
+    );
+    this.renders.push(render);
+    this.computeNewLocation(render);
+    this.shouldRedraw = true;
+  }
+
   private deleteStructure(render: StructureRenderInfo) {
-    render.pixiSprite?.destroy();
+    render.pixiContainer?.destroy();
     this.renders = this.renders.filter((r) => r.unit !== render.unit);
     this.seenUnits.delete(render.unit);
   }
