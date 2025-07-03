@@ -1,3 +1,4 @@
+import { base64url } from "jose";
 import { Config } from "../configuration/Config";
 import { PatternDecoder } from "../PatternDecoder";
 import { ClientID, GameID, Player } from "../Schemas";
@@ -24,6 +25,7 @@ import {
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import {
+  AllianceView,
   AttackUpdate,
   GameUpdateType,
   GameUpdateViewData,
@@ -162,7 +164,7 @@ export class PlayerView {
     this.decoder =
       this.cosmetics.pattern === undefined
         ? undefined
-        : new PatternDecoder(this.cosmetics.pattern);
+        : new PatternDecoder(this.cosmetics.pattern, base64url.decode);
   }
 
   patternDecoder(): PatternDecoder | undefined {
@@ -289,6 +291,10 @@ export class PlayerView {
 
   isRequestingAllianceWith(other: PlayerView) {
     return this.data.outgoingAllianceRequests.some((id) => other.id() === id);
+  }
+
+  alliances(): AllianceView[] {
+    return this.data.alliances;
   }
 
   hasEmbargoAgainst(other: PlayerView): boolean {
