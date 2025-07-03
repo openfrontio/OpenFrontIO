@@ -502,7 +502,7 @@ export interface Player {
   workers(): number;
   troops(): number;
   targetTroopRatio(): number;
-  addGold(toAdd: Gold): void;
+  addGold(toAdd: Gold, tile?: TileRef): void;
   removeGold(toRemove: Gold): Gold;
   addWorkers(toAdd: number): void;
   removeWorkers(toRemove: number): void;

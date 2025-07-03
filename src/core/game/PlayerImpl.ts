@@ -698,8 +698,17 @@ export class PlayerImpl implements Player {
     return this._gold;
   }
 
-  addGold(toAdd: Gold): void {
+  addGold(toAdd: Gold, tile?: TileRef): void {
     this._gold += toAdd;
+    if (tile) {
+      this.mg.addUpdate({
+        type: GameUpdateType.BonusEvent,
+        tile,
+        gold: Number(toAdd),
+        workers: 0,
+        troops: 0,
+      });
+    }
   }
 
   removeGold(toRemove: Gold): Gold {

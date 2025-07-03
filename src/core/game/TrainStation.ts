@@ -21,14 +21,7 @@ class CityStopHandler implements TrainStopHandler {
     trainExecution: TrainExecution,
   ): void {
     const goldBonus = mg.config().trainGold();
-    station.unit.owner().addGold(goldBonus);
-    mg.addUpdate({
-      type: GameUpdateType.BonusEvent,
-      tile: station.tile(),
-      gold: Number(goldBonus),
-      workers: 0,
-      troops: 0,
-    });
+    station.unit.owner().addGold(goldBonus, station.tile());
   }
 }
 
