@@ -1,3 +1,4 @@
+import { base64url } from "jose";
 import type { TemplateResult } from "lit";
 import { html, LitElement, render } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
@@ -344,7 +345,10 @@ export function generatePreviewDataUrl(
   height?: number,
 ): string {
   // Calculate canvas size
-  const decoder = new PatternDecoder(pattern ?? DEFAULT_PATTERN_B64);
+  const decoder = new PatternDecoder(
+    pattern ?? DEFAULT_PATTERN_B64,
+    base64url.decode,
+  );
   const scaledWidth = decoder.scaledWidth();
   const scaledHeight = decoder.scaledHeight();
 

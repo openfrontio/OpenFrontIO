@@ -340,7 +340,11 @@ export class UILayer implements Layer {
       // full hp/dead warships dont need a hp bar
       this.allHealthBars.get(unit.id())?.clear();
       this.allHealthBars.delete(unit.id());
-    } else if (unit.health() < maxHealth && unit.health() > 0) {
+    } else if (
+      unit.isActive() &&
+      unit.health() < maxHealth &&
+      unit.health() > 0
+    ) {
       this.allHealthBars.get(unit.id())?.clear();
       const healthBar = new ProgressBar(
         COLOR_PROGRESSION,
