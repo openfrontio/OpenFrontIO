@@ -108,4 +108,36 @@ describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
       "restricted",
     );
   });
+  it("allowed: layer by role, color by flare", () => {
+    // layer a: role_group donor, color c: flares ["cosmetic:blue"]
+    expect(
+      checker.isCustomFlagAllowed("!a-c", ["role_donor"], ["cosmetic:blue"]),
+    ).toBe(true);
+  });
+  it("restricted: layer by role, color by flare (missing flare)", () => {
+    expect(checker.isCustomFlagAllowed("!a-c", ["role_donor"], [])).toBe(
+      "restricted",
+    );
+  });
+  it("restricted: layer by role, color by flare (missing role)", () => {
+    expect(checker.isCustomFlagAllowed("!a-c", [], ["cosmetic:blue"])).toBe(
+      "restricted",
+    );
+  });
+  it("allowed: layer by flare, color by role", () => {
+    // layer a: flares ["cosmetic:flags"], color a: role_group admin
+    expect(
+      checker.isCustomFlagAllowed("!a-a", ["role_admin"], ["cosmetic:flags"]),
+    ).toBe(true);
+  });
+  it("restricted: layer by flare, color by role (missing flare)", () => {
+    expect(checker.isCustomFlagAllowed("!a-a", ["role_admin"], [])).toBe(
+      "restricted",
+    );
+  });
+  it("restricted: layer by flare, color by role (missing role)", () => {
+    expect(checker.isCustomFlagAllowed("!a-a", [], ["cosmetic:flags"])).toBe(
+      "restricted",
+    );
+  });
 });

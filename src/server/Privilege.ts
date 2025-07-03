@@ -82,36 +82,68 @@ export class PrivilegeChecker {
       const color = this.cosmetics.flag.color[colorKey];
       if (!layer || !color) return "invalid";
 
-      const layerFlareOk =
-        layer.flares && flares && layer.flares.some((f) => flares.includes(f));
-      const colorFlareOk =
-        color.flares && flares && color.flares.some((f) => flares.includes(f));
-      const layerSuperFlareOk =
-        superFlare || (flares && flares.includes(`flag:layer:${layer.name}`));
-      const colorSuperFlareOk =
-        superFlare || (flares && flares.includes(`flag:color:${color.name}`));
-
-      if (
-        (layerFlareOk || layerSuperFlareOk || !layer.role_group) &&
-        (colorFlareOk || colorSuperFlareOk || !color.role_group)
-      ) {
+      // Super-flare bypasses all restrictions
+      if (superFlare) {
         continue;
       }
 
-      if (layer.role_group) {
-        const group = this.cosmetics.role_groups[layer.role_group];
-        if (!group) return "restricted";
-        if (!roles || !roles.some((role) => group.includes(role))) {
-          return "restricted";
+      // Check layer restrictions
+      const layerSpec = layer;
+      let layerAllowed = false;
+      if (!layerSpec.role_group && !layerSpec.flares) {
+        layerAllowed = true;
+      } else {
+        // By role
+        if (layerSpec.role_group) {
+          const allowedRoles =
+            this.cosmetics.role_groups[layerSpec.role_group] || [];
+          if (roles?.some((r) => allowedRoles.includes(r))) {
+            layerAllowed = true;
+          }
+        }
+        // By flare
+        if (
+          layerSpec.flares &&
+          flares?.some((f) => layerSpec.flares?.includes(f))
+        ) {
+          layerAllowed = true;
+        }
+        // By named flag:layer:{name}
+        if (flares?.includes(`flag:layer:${layerSpec.name}`)) {
+          layerAllowed = true;
         }
       }
 
-      if (color.role_group) {
-        const group = this.cosmetics.role_groups[color.role_group];
-        if (!group) return "restricted";
-        if (!roles || !roles.some((role) => group.includes(role))) {
-          return "restricted";
+      // Check color restrictions
+      const colorSpec = color;
+      let colorAllowed = false;
+      if (!colorSpec.role_group && !colorSpec.flares) {
+        colorAllowed = true;
+      } else {
+        // By role
+        if (colorSpec.role_group) {
+          const allowedRoles =
+            this.cosmetics.role_groups[colorSpec.role_group] || [];
+          if (roles?.some((r) => allowedRoles.includes(r))) {
+            colorAllowed = true;
+          }
         }
+        // By flare
+        if (
+          colorSpec.flares &&
+          flares?.some((f) => colorSpec.flares?.includes(f))
+        ) {
+          colorAllowed = true;
+        }
+        // By named flag:color:{name}
+        if (flares?.includes(`flag:color:${colorSpec.name}`)) {
+          colorAllowed = true;
+        }
+      }
+
+      // If either part is restricted, block
+      if (!(layerAllowed && colorAllowed)) {
+        return "restricted";
       }
     }
     return true;
