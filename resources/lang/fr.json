@@ -5,10 +5,14 @@
     "svg": "fr",
     "lang_code": "fr"
   },
+  "common": {
+    "close": "Fermer"
+  },
   "main": {
     "title": "OpenFront (ALPHA)",
     "join_discord": "Rejoignez le Discord !",
     "login_discord": "Se connecter avec Discord",
+    "checking_login": "Vérification de la connexion...",
     "logged_in": "Connecté !",
     "log_out": "Se déconnecter",
     "create_lobby": "Créer un salon",
@@ -16,7 +20,11 @@
     "single_player": "Mode solo",
     "instructions": "Instructions",
     "how_to_play": "Comment jouer ?",
+    "advertise": "Annoncer",
     "wiki": "Wiki"
+  },
+  "news": {
+    "title": "Version 23 disponible !"
   },
   "help_modal": {
     "hotkeys": "Raccourcis clavier",
@@ -135,14 +143,15 @@
     "random": "Aléatoire",
     "iceland": "Islande",
     "pangaea": "Pangée",
+    "eastasia": "Asie de l'Est",
     "betweentwoseas": "Entre deux mers",
-    "knownworld": "Monde connu",
     "faroeislands": "Îles Féroé",
     "deglaciatedantarctica": "Antarctique Déglacée",
     "europeclassic": "Europe (classique)",
     "falklandislands": "Îles Malouines",
     "baikal": "Lac Baïkal",
-    "halkidiki": "Chalcidique"
+    "halkidiki": "Chalcidique",
+    "giantworldmap": "Carte du monde géante"
   },
   "map_categories": {
     "continental": "Continental",
@@ -230,12 +239,14 @@
     "special_effects_desc": "Activer/désactiver les effets spéciaux. Désactiver pour améliorer les performances",
     "anonymous_names_label": "🥷 Noms masqués",
     "anonymous_names_desc": "Cacher le vrai nom des joueurs avec des noms aléatoires sur votre écran.",
-    "left_click_label": "Clic gauche pour ouvrir le menu",
+    "left_click_label": "🖱️ Clic gauche pour ouvrir le menu",
     "left_click_desc": "Activé, un clic gauche ouvre le menu et le bouton épée d'attaque. Désactivé, un clic gauche attaque directement.",
     "attack_ratio_label": "⚔️ Ratio d'attaque",
     "attack_ratio_desc": "Quel pourcentage de vos troupes envoyer dans une attaque (1–100%)",
     "troop_ratio_label": "🪖🛠️ Ratio des troupes et des ouvriers",
     "troop_ratio_desc": "Ajuster l'équilibre entre les troupes (pour le combat) et les ouvriers (pour la production d'or) (1–100%)",
+    "territory_patterns_label": "🏳️ Modèles de territoire",
+    "territory_patterns_desc": "Choisissez si vous voulez afficher les modèles de territoire en jeu",
     "easter_writing_speed_label": "Multiplicateur de vitesse d'écriture",
     "easter_writing_speed_desc": "Ajuster la vitesse à laquelle vous prétendez coder (x1–x100)",
     "easter_bug_count_label": "Nombre de bugs",
@@ -243,6 +254,14 @@
     "view_options": "Options d'affichage",
     "toggle_view": "Activer/désactiver l'affichage",
     "toggle_view_desc": "Vue alternative (terrain/pays)",
+    "attack_ratio_controls": "Contrôles du ratio d'attaque",
+    "attack_ratio_up": "Augmenter le ratio d'attaque",
+    "attack_ratio_up_desc": "Augmenter le ratio d'attaque de 10%",
+    "attack_ratio_down": "Diminuer le ratio d'attaque",
+    "attack_ratio_down_desc": "Diminuer le ratio d'attaque de 10%",
+    "attack_keybinds": "Raccourcis d'attaque",
+    "boat_attack": "Attaque navale",
+    "boat_attack_desc": "Envoyer une attaque navale à la tuile sous votre curseur.",
     "zoom_controls": "Contrôles de zoom",
     "zoom_out": "Zoom arrière",
     "zoom_out_desc": "Dézoom de la carte",
@@ -356,7 +375,8 @@
     "you_won": "Vous avez gagné !",
     "other_won": "{player} a gagné !",
     "exit": "Quitter la partie",
-    "keep": "Continuer à jouer"
+    "keep": "Continuer à jouer",
+    "wishlist": "Liste de souhaits sur Steam !"
   },
   "leaderboard": {
     "title": "Classement",
@@ -401,13 +421,27 @@
   "player_panel": {
     "gold": "Or",
     "troops": "Troupes",
+    "betrayals": "Nombre de trahisons",
     "traitor": "Traître",
-    "alliance_time_remaining": "Temps restant",
+    "alliance_time_remaining": "L'alliance expire dans",
     "embargo": "A cessé le commerce avec vous",
     "nuke": "Bombes nucléaires qu'ils vous envoient",
     "start_trade": "Commencer le commerce",
     "stop_trade": "Arrêter le commerce",
     "yes": "Oui",
-    "no": "Non"
+    "no": "Non",
+    "none": "Aucun",
+    "alliances": "Alliances"
+  },
+  "error_modal": {
+    "crashed": "Le jeu a planté !",
+    "paste_discord": "Veuillez coller ce qui suit dans votre rapport de bogue dans Discord :",
+    "copy_clipboard": "Copier dans le presse-papier",
+    "copied": "Copié !",
+    "failed_copy": "Échec de la copie",
+    "desync_notice": "Vous êtes désynchronisé des autres joueurs. Ce que vous voyez peut être différent des autres joueurs."
+  },
+  "heads_up_message": {
+    "choose_spawn": "Choisissez un emplacement de départ"
   }
 }

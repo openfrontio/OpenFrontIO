@@ -5,10 +5,14 @@
     "svg": "eo",
     "lang_code": "eo"
   },
+  "common": {
+    "close": "Fermi"
+  },
   "main": {
     "title": "OpenFront (ALFA)",
     "join_discord": "Kunigu la Discord-servilon !",
     "login_discord": "Ensaluti kun Diskordo",
+    "checking_login": "Kontrolado de la ensaluto...",
     "logged_in": "Ensalutinta!",
     "log_out": "Elsaluti",
     "create_lobby": "Krei Ludejon",
@@ -16,7 +20,11 @@
     "single_player": "Sola Ludanto",
     "instructions": "Instrukcioj",
     "how_to_play": "Kiel ludi",
+    "advertise": "Reklami",
     "wiki": "Vikio"
+  },
+  "news": {
+    "title": "23-a eldono publikigita!"
   },
   "help_modal": {
     "hotkeys": "Rapidklavoj",
@@ -135,14 +143,15 @@
     "random": "Hazarda",
     "iceland": "Islando",
     "pangaea": "Pangeo",
+    "eastasia": "Orienta Azio",
     "betweentwoseas": "Inter du maroj",
-    "knownworld": "Konata Mondo",
     "faroeislands": "Ferooj",
     "deglaciatedantarctica": "Malglacia Antarkto",
     "europeclassic": "Eŭropo (klasika)",
     "falklandislands": "Falklandoj",
     "baikal": "Bajkalo",
-    "halkidiki": "Ĥalkidiko"
+    "halkidiki": "Ĥalkidiko",
+    "giantworldmap": "Giganta Mondmapo"
   },
   "map_categories": {
     "continental": "Kontinenta",
@@ -230,12 +239,14 @@
     "special_effects_desc": "Baskuli specialajn efektojn. Malaktivigu por plibonigi funkciadon",
     "anonymous_names_label": "🥷 Maskitaj Nomoj",
     "anonymous_names_desc": "Kaŝi verajn uzantnomojn kun hazardaj sur via ekrano.",
-    "left_click_label": "Maldekstra alklako por malfermi menuon",
+    "left_click_label": "🖱️Maldekstra alklako por malfermi menuon",
     "left_click_desc": "Kiam aktiviga, maldekstra alklako malfermas menuon kaj glava atakbutono. Kiam malaktiviga, maldekstra alklako atakas direkten.",
     "attack_ratio_label": "⚔️ Atakkvociento",
     "attack_ratio_desc": "Kian procenton de viaj trupoj sendi en atako (1–100%)",
     "troop_ratio_label": "🪖🛠️ Trupoj kaj Laboristoj kvociento",
     "troop_ratio_desc": "Alĝustigu la ekvilibron inter soldatoj (por batalo) kaj laboristoj (por orproduktado) (1–100%)",
+    "territory_patterns_label": "🏳️ Teritoriaj Ŝablonoj",
+    "territory_patterns_desc": "Elektu ĉu montri teritoriajn ŝablonajn dezajnojn en la ludo",
     "easter_writing_speed_label": "Rapidskriba multiganto",
     "easter_writing_speed_desc": "Alĝustigu kiom rapide vi ŝajnigas kodi (x1–x100)",
     "easter_bug_count_label": "Nombro da cimoj",
@@ -243,6 +254,14 @@
     "view_options": "Vidi opciojn",
     "toggle_view": "Baskuli vido",
     "toggle_view_desc": "Alterna vido (tereno/landoj)",
+    "attack_ratio_controls": "Kontroloj de atakkvociento",
+    "attack_ratio_up": "Pliigi atakkvocienton",
+    "attack_ratio_up_desc": "Pliigi atakkvocienton je 10%",
+    "attack_ratio_down": "Malpliigi atakkvocienton",
+    "attack_ratio_down_desc": "Malpliigi atakkvocienton je 10%",
+    "attack_keybinds": "Atakaj Fulmoklavoj",
+    "boat_attack": "Boata Atako",
+    "boat_attack_desc": "Sendi boatan atakon al la kahelo sub via kursoro.",
     "zoom_controls": "Zomaj kontroloj",
     "zoom_out": "Malzomi",
     "zoom_out_desc": "Malzomi la mapon",
@@ -356,7 +375,8 @@
     "you_won": "Vi venkis!",
     "other_won": "{player} venkis!",
     "exit": "Eliri el la ludon",
-    "keep": "Daŭrigu ludi"
+    "keep": "Daŭrigu ludi",
+    "wishlist": "Dezirlisto ĉe Steam!"
   },
   "leaderboard": {
     "title": "Ĉampionejo",
@@ -401,13 +421,27 @@
   "player_panel": {
     "gold": "Oro",
     "troops": "Trupoj",
+    "betrayals": "Nombro da perfidoj",
     "traitor": "Perfidulo",
-    "alliance_time_remaining": "Restinta Tempo",
+    "alliance_time_remaining": "Alianco finiĝos en",
     "embargo": "Ĉesis komerci kun vi",
     "nuke": "Atombomboj senditaj de ili al vi",
     "start_trade": "Komenci komercadon",
     "stop_trade": "Ĉesi komercadon",
     "yes": "Jes",
-    "no": "Ne"
+    "no": "Ne",
+    "none": "Neniu",
+    "alliances": "Aliancoj"
+  },
+  "error_modal": {
+    "crashed": "Ludo kolapsis!",
+    "paste_discord": "Bonvolu elpoŝigi la jenon en via cimo-raporto en Discord:",
+    "copy_clipboard": "Kopii al tondujo",
+    "copied": "Kopiita!",
+    "failed_copy": "Malsukcesis kopii",
+    "desync_notice": "Vi estas malsinkronigita de aliaj ludantoj. Kion vi vidas eble diferencas de aliaj ludantoj."
+  },
+  "heads_up_message": {
+    "choose_spawn": "Elektu komencan lokon"
   }
 }
