@@ -419,10 +419,7 @@ export class ColorAllocator {
       case ColoredTeams.Bot:
         return botTeamColors;
       default:
-        // For unknown teams, use a color from available colors
-        return [
-          this.availableColors[simpleHash(team) % this.availableColors.length],
-        ];
+        throw new Error(`Unknown team color: ${team}`);
     }
   }
 
@@ -457,28 +454,24 @@ export class ColorAllocator {
     return color;
   }
 
-  assignTeamColor(team: Team, playerId?: string): Colord {
-    if (playerId) {
-      if (this.teamPlayerColors.has(playerId)) {
-        return this.teamPlayerColors.get(playerId)!;
-      }
+  assignTeamColor(team: Team): Colord {
+    const teamColors = this.getTeamColorVariations(team);
+    return teamColors[0];
+  }
+
+  assignTeamPlayerColor(team: Team, playerId: string): Colord {
+    if (this.teamPlayerColors.has(playerId)) {
+      return this.teamPlayerColors.get(playerId)!;
     }
 
     const teamColors = this.getTeamColorVariations(team);
+    const hashValue = simpleHash(playerId);
+    const colorIndex = hashValue % teamColors.length;
+    const color = teamColors[colorIndex];
 
-    // If we have a player ID, select a specific color variation based on the player ID
-    if (playerId) {
-      const hashValue = simpleHash(playerId);
-      const colorIndex = hashValue % teamColors.length;
-      const color = teamColors[colorIndex];
+    this.teamPlayerColors.set(playerId, color);
 
-      this.teamPlayerColors.set(playerId, color);
-
-      return color;
-    }
-
-    // Fallback: return the base color for the team
-    return teamColors[0];
+    return color;
   }
 }
 

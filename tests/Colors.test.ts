@@ -93,11 +93,23 @@ describe("ColorAllocator", () => {
   test("assignTeamColor returns consistent colors for the same player ID", () => {
     const playerId = "player123";
 
-    const blueColor1 = allocator.assignTeamColor(ColoredTeams.Blue, playerId);
-    const blueColor2 = allocator.assignTeamColor(ColoredTeams.Blue, playerId);
+    const blueColor1 = allocator.assignTeamPlayerColor(
+      ColoredTeams.Blue,
+      playerId,
+    );
+    const blueColor2 = allocator.assignTeamPlayerColor(
+      ColoredTeams.Blue,
+      playerId,
+    );
 
-    const redColor1 = allocator.assignTeamColor(ColoredTeams.Red, playerId);
-    const redColor2 = allocator.assignTeamColor(ColoredTeams.Red, playerId);
+    const redColor1 = allocator.assignTeamPlayerColor(
+      ColoredTeams.Red,
+      playerId,
+    );
+    const redColor2 = allocator.assignTeamPlayerColor(
+      ColoredTeams.Red,
+      playerId,
+    );
 
     expect(blueColor1.isEqual(blueColor2)).toBe(true);
     expect(redColor1.isEqual(redColor2)).toBe(true);

@@ -47,7 +47,7 @@ export class PastelThemeDark implements Theme {
   territoryColor(player: PlayerView): Colord {
     const team = player.team();
     if (team !== null) {
-      return this.teamColorAllocator.assignTeamColor(team, player.id());
+      return this.teamColorAllocator.assignTeamPlayerColor(team, player.id());
     }
     if (player.type() === PlayerType.Human) {
       return this.humanColorAllocator.assignColor(player.id());
