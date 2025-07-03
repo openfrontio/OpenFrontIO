@@ -24,7 +24,7 @@ interface StripeProduct {
 export interface Pattern {
   name: string;
   key: string;
-  roleGroup?: string;
+  roles: string[];
   price?: string;
   priceId?: string;
   lockedReason?: string;
@@ -39,7 +39,9 @@ export async function patterns(
       return {
         name: patternData.name,
         key,
-        roleGroup: patternData.role_group,
+        roles: patternData.role_group
+          ? (COSMETICS.role_groups[patternData.role_group] ?? [])
+          : [],
       };
     },
   );
@@ -75,8 +77,10 @@ function addRestrictions(
     return;
   }
 
-  const roles = userMe.player.roles ?? [];
-  if (roles.some((role) => role === pattern.roleGroup)) {
+  const myRoles = userMe.player.roles ?? [];
+  if (
+    pattern.roles.some((authorizedRole) => myRoles.includes(authorizedRole))
+  ) {
     // Pattern is unlocked by role
     return;
   }
