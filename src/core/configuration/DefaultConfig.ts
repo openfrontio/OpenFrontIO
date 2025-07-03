@@ -469,6 +469,7 @@ export class DefaultConfig implements Config {
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           canBuildTrainStation: true,
+          experimental: true,
         };
       case UnitType.Construction:
         return {
@@ -479,6 +480,7 @@ export class DefaultConfig implements Config {
         return {
           cost: () => 0n,
           territoryBound: false,
+          experimental: true,
         };
       default:
         assertNever(type);
@@ -836,5 +838,9 @@ export class DefaultConfig implements Config {
 
   defensePostTargettingRange(): number {
     return 75;
+  }
+
+  allianceExtensionPromptOffset(): number {
+    return 300; // 30 seconds before expiration
   }
 }

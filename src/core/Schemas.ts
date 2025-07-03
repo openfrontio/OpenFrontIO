@@ -26,6 +26,7 @@ export type Intent =
   | CancelBoatIntent
   | AllianceRequestIntent
   | AllianceRequestReplyIntent
+  | AllianceExtensionIntent
   | BreakAllianceIntent
   | TargetPlayerIntent
   | EmojiIntent
@@ -67,6 +68,9 @@ export type MoveWarshipIntent = z.infer<typeof MoveWarshipIntentSchema>;
 export type QuickChatIntent = z.infer<typeof QuickChatIntentSchema>;
 export type MarkDisconnectedIntent = z.infer<
   typeof MarkDisconnectedIntentSchema
+>;
+export type AllianceExtensionIntent = z.infer<
+  typeof AllianceExtensionIntentSchema
 >;
 
 export type Turn = z.infer<typeof TurnSchema>;
@@ -214,6 +218,11 @@ const BaseIntentSchema = z.object({
   clientID: ID,
 });
 
+export const AllianceExtensionIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("allianceExtension"),
+  recipient: ID,
+});
+
 export const AttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("attack"),
   targetID: ID.nullable(),
@@ -355,6 +364,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   EmbargoIntentSchema,
   MoveWarshipIntentSchema,
   QuickChatIntentSchema,
+  AllianceExtensionIntentSchema,
 ]);
 
 //
