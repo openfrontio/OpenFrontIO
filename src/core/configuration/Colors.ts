@@ -393,6 +393,7 @@ export class ColorAllocator {
   private availableColors: Colord[];
   private fallbackColors: Colord[];
   private assigned = new Map<string, Colord>();
+  private teamPlayerColors = new Map<string, Colord>();
 
   constructor(colors: Colord[], fallback: Colord[]) {
     this.availableColors = [...colors];
@@ -457,6 +458,12 @@ export class ColorAllocator {
   }
 
   assignTeamColor(team: Team, playerId?: string): Colord {
+    if (playerId) {
+      if (this.teamPlayerColors.has(playerId)) {
+        return this.teamPlayerColors.get(playerId)!;
+      }
+    }
+
     const teamColors = this.getTeamColorVariations(team);
 
     // If we have a player ID, select a specific color variation based on the player ID
@@ -464,6 +471,8 @@ export class ColorAllocator {
       const hashValue = simpleHash(playerId);
       const colorIndex = hashValue % teamColors.length;
       const color = teamColors[colorIndex];
+
+      this.teamPlayerColors.set(playerId, color);
 
       return color;
     }
