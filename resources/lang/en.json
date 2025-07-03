@@ -531,9 +531,11 @@
       "openfront_qr": "OpenFront.io QR code",
       "openfront": "OpenFront",
       "t_rex": "T-Rex",
-      "embelem": "Emblem",
-      "grogu_head": "Grogu Head",
-      "grogu": "Grogu"
+      "embelem": "Rebellion",
+      "grogu_head": "Elf Head",
+      "grogu": "Elf",
+      "Empire": "Empire",
+      "diamond":"Diamond"
     }
   }
 }
