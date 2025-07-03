@@ -381,36 +381,6 @@ export class RadialMenu implements Layer {
 
       path.attr("filter", "url(#glow)");
       path.attr("stroke-width", "3");
-      const color = disabled
-        ? this.config.disabledColor
-        : d.data.color || "#333333";
-      path.attr("fill", color);
-
-      const subMenu =
-        this.params !== null ? d.data.subMenu?.(this.params) : null;
-      if (
-        subMenu &&
-        subMenu.length > 0 &&
-        !disabled &&
-        !(
-          this.currentLevel > 0 &&
-          d.data.id === this.selectedItemId &&
-          level === 0
-        )
-      ) {
-        if (this.submenuHoverTimeout !== null) {
-          window.clearTimeout(this.submenuHoverTimeout);
-        }
-
-        // Set a small delay before opening submenu to prevent accidental triggers
-        this.submenuHoverTimeout = window.setTimeout(() => {
-          if (this.navigationInProgress) return;
-          this.navigationInProgress = true;
-          this.selectedItemId = d.data.id;
-          this.navigateToSubMenu(subMenu);
-          this.updateCenterButtonState("back");
-        }, 200);
-      }
     };
 
     const onMouseOut = (d: d3.PieArcDatum<MenuElement>, path: any) => {
