@@ -634,7 +634,7 @@ export class GameImpl implements Game {
       return [
         "player",
         clientId,
-        // TODO: assists
+        // TODO: Assists (vote for peace)
       ];
     }
   }
