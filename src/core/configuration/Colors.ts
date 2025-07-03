@@ -393,7 +393,6 @@ export class ColorAllocator {
   private availableColors: Colord[];
   private fallbackColors: Colord[];
   private assigned = new Map<string, Colord>();
-  private teamPlayerColors = new Map<string, Colord>();
 
   constructor(colors: Colord[], fallback: Colord[]) {
     this.availableColors = [...colors];
@@ -465,8 +464,6 @@ export class ColorAllocator {
       const hashValue = simpleHash(playerId);
       const colorIndex = hashValue % teamColors.length;
       const color = teamColors[colorIndex];
-
-      this.teamPlayerColors.set(playerId, color);
 
       return color;
     }

@@ -40,7 +40,7 @@ export class PastelThemeDark implements Theme {
 
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
 
-  teamColor(team: Team, player?: PlayerView): Colord {
+  teamColor(team: Team): Colord {
     return this.teamColorAllocator.assignTeamColor(team);
   }
 
