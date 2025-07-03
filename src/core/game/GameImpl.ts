@@ -1,5 +1,5 @@
 import { Config } from "../configuration/Config";
-import { AllPlayersStats, ClientID } from "../Schemas";
+import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
 import { AllianceRequestImpl } from "./AllianceRequestImpl";
@@ -614,12 +614,29 @@ export class GameImpl implements Game {
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
     this.addUpdate({
       type: GameUpdateType.Win,
-      winner:
-        typeof winner === "string"
-          ? ["team", winner]
-          : ["player", winner.smallID()],
+      winner: this.makeWinner(winner),
       allPlayersStats,
     });
+  }
+
+  private makeWinner(winner: string | Player): Winner | undefined {
+    if (typeof winner === "string") {
+      return [
+        "team",
+        winner,
+        ...this.players()
+          .filter((p) => p.team() === winner && p.clientID() !== null)
+          .map((p) => p.clientID()!),
+      ];
+    } else {
+      const clientId = winner.clientID();
+      if (clientId === null) return;
+      return [
+        "player",
+        clientId,
+        // TODO: Assists (vote for peace)
+      ];
+    }
   }
 
   teams(): Team[] {
