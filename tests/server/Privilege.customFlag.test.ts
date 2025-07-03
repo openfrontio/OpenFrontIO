@@ -140,4 +140,49 @@ describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
       "restricted",
     );
   });
+  it("allowed: two segments, both unrestricted", () => {
+    expect(checker.isCustomFlagAllowed("!b-b_b-b", [], [])).toBe(true);
+  });
+  it("restricted: two segments, one restricted by layer role", () => {
+    expect(checker.isCustomFlagAllowed("!a-b_b-b", [], [])).toBe("restricted");
+    expect(checker.isCustomFlagAllowed("!a-b_b-b", ["role_donor"], [])).toBe(
+      true,
+    );
+  });
+  it("restricted: two segments, one restricted by color role", () => {
+    expect(checker.isCustomFlagAllowed("!b-a_b-b", [], [])).toBe("restricted");
+    expect(checker.isCustomFlagAllowed("!b-a_b-b", ["role_admin"], [])).toBe(
+      true,
+    );
+  });
+  it("allowed: two segments, one by role, one by flare", () => {
+    expect(
+      checker.isCustomFlagAllowed(
+        "!a-c_b-b",
+        ["role_donor"],
+        ["cosmetic:blue"],
+      ),
+    ).toBe(true);
+    expect(checker.isCustomFlagAllowed("!a-c_b-b", ["role_donor"], [])).toBe(
+      "restricted",
+    );
+    expect(checker.isCustomFlagAllowed("!a-c_b-b", [], ["cosmetic:blue"])).toBe(
+      "restricted",
+    );
+  });
+  it("allowed: two segments, both by flare", () => {
+    expect(
+      checker.isCustomFlagAllowed(
+        "!a-c_a-c",
+        [],
+        ["cosmetic:flags", "cosmetic:blue"],
+      ),
+    ).toBe(true);
+    expect(
+      checker.isCustomFlagAllowed("!a-c_a-c", [], ["cosmetic:flags"]),
+    ).toBe("restricted");
+    expect(checker.isCustomFlagAllowed("!a-c_a-c", [], ["cosmetic:blue"])).toBe(
+      "restricted",
+    );
+  });
 });
