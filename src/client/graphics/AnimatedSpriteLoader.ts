@@ -25,7 +25,7 @@ type AnimatedSpriteConfig = {
 };
 
 const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
-  [FxType.MiniFire]: {
+  MiniFire: {
     url: miniFire,
     frameWidth: 7,
     frameCount: 6,
@@ -34,7 +34,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 3,
     originY: 11,
   },
-  [FxType.MiniSmoke]: {
+  MiniSmoke: {
     url: miniSmoke,
     frameWidth: 11,
     frameCount: 4,
@@ -43,7 +43,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 2,
     originY: 10,
   },
-  [FxType.MiniBigSmoke]: {
+  MiniBigSmoke: {
     url: miniBigSmoke,
     frameWidth: 24,
     frameCount: 5,
@@ -52,7 +52,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 9,
     originY: 14,
   },
-  [FxType.MiniSmokeAndFire]: {
+  MiniSmokeAndFire: {
     url: miniSmokeAndFire,
     frameWidth: 24,
     frameCount: 5,
@@ -61,7 +61,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 9,
     originY: 14,
   },
-  [FxType.MiniExplosion]: {
+  MiniExplosion: {
     url: miniExplosion,
     frameWidth: 13,
     frameCount: 4,
@@ -70,7 +70,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 6,
     originY: 6,
   },
-  [FxType.Dust]: {
+  Dust: {
     url: dust,
     frameWidth: 9,
     frameCount: 3,
@@ -79,7 +79,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 4,
     originY: 5,
   },
-  [FxType.UnitExplosion]: {
+  UnitExplosion: {
     url: unitExplosion,
     frameWidth: 19,
     frameCount: 4,
@@ -88,7 +88,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 9,
     originY: 9,
   },
-  [FxType.SinkingShip]: {
+  SinkingShip: {
     url: sinkingShip,
     frameWidth: 16,
     frameCount: 14,
@@ -97,7 +97,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 7,
     originY: 7,
   },
-  [FxType.Nuke]: {
+  Nuke: {
     url: nuke,
     frameWidth: 60,
     frameCount: 9,
@@ -106,7 +106,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 30,
     originY: 30,
   },
-  [FxType.SAMExplosion]: {
+  SAMExplosion: {
     url: SAMExplosion,
     frameWidth: 48,
     frameCount: 9,
