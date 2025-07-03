@@ -486,10 +486,6 @@ export class ColorAllocator {
     const colorIndex = hashValue % teamColors.length;
     const color = teamColors[colorIndex];
 
-    console.log(
-      `Assigning color ${color.toHex()} to player ${playerId} on team ${team}`,
-    );
-
     this.teamPlayerColors.set(playerId, color);
 
     return color;
