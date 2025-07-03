@@ -3,26 +3,28 @@ export interface AStar<NodeType> {
   reconstructPath(): NodeType[];
 }
 
-export enum PathFindResultType {
-  NextTile,
-  Pending,
-  Completed,
-  PathNotFound,
-}
+export const PathFindResultType = {
+  NextTile: "NextTile",
+  Pending: "Pending",
+  Completed: "Completed",
+  PathNotFound: "PathNotFound",
+} as const;
+export type PathFindResultType = keyof typeof PathFindResultType;
+
 export type AStarResult<NodeType> =
   | {
-      type: PathFindResultType.NextTile;
+      type: typeof PathFindResultType.NextTile;
       node: NodeType;
     }
   | {
-      type: PathFindResultType.Pending;
+      type: typeof PathFindResultType.Pending;
     }
   | {
-      type: PathFindResultType.Completed;
+      type: typeof PathFindResultType.Completed;
       node: NodeType;
     }
   | {
-      type: PathFindResultType.PathNotFound;
+      type: typeof PathFindResultType.PathNotFound;
     };
 
 export interface Point {
