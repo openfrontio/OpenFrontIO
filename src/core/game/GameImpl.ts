@@ -1,5 +1,4 @@
 import { Config } from "../configuration/Config";
-import { consolex } from "../Consolex";
 import { AllPlayersStats, ClientID } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
@@ -16,6 +15,7 @@ import {
   GameMode,
   GameUpdates,
   MessageType,
+  MutableAlliance,
   Nation,
   Player,
   PlayerID,
@@ -31,6 +31,8 @@ import {
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
+import { RailNetwork } from "./RailNetwork";
+import { createRailNetwork } from "./RailNetworkImpl";
 import { Stats } from "./Stats";
 import { StatsImpl } from "./StatsImpl";
 import { assignTeams } from "./TeamAssignment";
@@ -74,6 +76,10 @@ export class GameImpl implements Game {
 
   private playerTeams: Team[] = [ColoredTeams.Red, ColoredTeams.Blue];
   private botTeam: Team = ColoredTeams.Bot;
+  private _railNetwork: RailNetwork = createRailNetwork(this);
+
+  // Used to assign unique IDs to each new alliance
+  private nextAllianceID: number = 0;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -144,6 +150,11 @@ export class GameImpl implements Game {
   owner(ref: TileRef): Player | TerraNullius {
     return this.playerBySmallID(this.ownerID(ref));
   }
+
+  alliances(): MutableAlliance[] {
+    return this.alliances_;
+  }
+
   playerBySmallID(id: number): Player | TerraNullius {
     if (id === 0) {
       return this.terraNullius();
@@ -196,7 +207,7 @@ export class GameImpl implements Game {
     recipient: Player,
   ): AllianceRequest | null {
     if (requestor.isAlliedWith(recipient)) {
-      consolex.log("cannot request alliance, already allied");
+      console.log("cannot request alliance, already allied");
       return null;
     }
     if (
@@ -204,14 +215,14 @@ export class GameImpl implements Game {
         .incomingAllianceRequests()
         .find((ar) => ar.requestor() === requestor) !== undefined
     ) {
-      consolex.log(`duplicate alliance request from ${requestor.name()}`);
+      console.log(`duplicate alliance request from ${requestor.name()}`);
       return null;
     }
     const correspondingReq = requestor
       .incomingAllianceRequests()
       .find((ar) => ar.requestor() === recipient);
     if (correspondingReq !== undefined) {
-      consolex.log(`got corresponding alliance requests, accepting`);
+      console.log(`got corresponding alliance requests, accepting`);
       correspondingReq.accept();
       return null;
     }
@@ -229,11 +240,20 @@ export class GameImpl implements Game {
     const requestor = request.requestor();
     const recipient = request.recipient();
 
+    const existing = requestor.allianceWith(recipient);
+    if (existing) {
+      throw new Error(
+        `cannot accept alliance request, already allied with ${recipient.name()}`,
+      );
+    }
+
+    // Create and register the new alliance
     const alliance = new AllianceImpl(
       this,
       requestor as PlayerImpl,
       recipient as PlayerImpl,
       this._ticks,
+      this.nextAllianceID++,
     );
     this.alliances_.push(alliance);
     (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
@@ -613,6 +633,7 @@ export class GameImpl implements Game {
     message: string,
     type: MessageType,
     playerID: PlayerID | null,
+    goldAmount?: bigint,
   ): void {
     let id: number | null = null;
     if (playerID !== null) {
@@ -623,13 +644,14 @@ export class GameImpl implements Game {
       messageType: type,
       message: message,
       playerID: id,
+      goldAmount: goldAmount,
     });
   }
 
   displayChat(
     message: string,
     category: string,
-    variables: Record<string, string> = {},
+    target: PlayerID | undefined,
     playerID: PlayerID | null,
     isFrom: boolean,
     recipient: string,
@@ -642,7 +664,7 @@ export class GameImpl implements Game {
       type: GameUpdateType.DisplayChatEvent,
       key: message,
       category: category,
-      variables: variables,
+      target: target,
       playerID: id,
       isFrom,
       recipient: recipient,
@@ -671,14 +693,23 @@ export class GameImpl implements Game {
   }
   removeUnit(u: Unit) {
     this.unitGrid.removeUnit(u);
+    if (u.hasTrainStation()) {
+      this._railNetwork.removeStation(u);
+    }
   }
 
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
     types: UnitType | UnitType[],
+    predicate?: (value: { unit: Unit; distSquared: number }) => boolean,
   ): Array<{ unit: Unit; distSquared: number }> {
-    return this.unitGrid.nearbyUnits(tile, searchRange, types) as Array<{
+    return this.unitGrid.nearbyUnits(
+      tile,
+      searchRange,
+      types,
+      predicate,
+    ) as Array<{
       unit: Unit;
       distSquared: number;
     }>;
@@ -686,6 +717,9 @@ export class GameImpl implements Game {
 
   ref(x: number, y: number): TileRef {
     return this._map.ref(x, y);
+  }
+  isValidRef(ref: TileRef): boolean {
+    return this._map.isValidRef(ref);
   }
   x(ref: TileRef): number {
     return this._map.x(ref);
@@ -782,6 +816,9 @@ export class GameImpl implements Game {
   }
   stats(): Stats {
     return this._stats;
+  }
+  railNetwork(): RailNetwork {
+    return this._railNetwork;
   }
 }
 

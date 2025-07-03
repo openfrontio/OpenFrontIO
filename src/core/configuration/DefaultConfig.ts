@@ -1,5 +1,5 @@
 import { JWK } from "jose";
-import { z } from "zod";
+import { z } from "zod/v4";
 import {
   Difficulty,
   Duos,
@@ -53,7 +53,7 @@ const numPlayersConfig = {
   [GameMapType.Mena]: [60, 50, 30],
   [GameMapType.Mars]: [50, 40, 30],
   [GameMapType.Oceania]: [30, 20, 10],
-  [GameMapType.Japan]: [50, 40, 30],
+  [GameMapType.EastAsia]: [50, 40, 30],
   [GameMapType.FaroeIslands]: [50, 40, 30],
   [GameMapType.DeglaciatedAntarctica]: [50, 40, 30],
   [GameMapType.EuropeClassic]: [80, 30, 50],
@@ -61,17 +61,33 @@ const numPlayersConfig = {
   [GameMapType.BlackSea]: [40, 50, 30],
   [GameMapType.Pangaea]: [40, 20, 30],
   [GameMapType.World]: [150, 80, 50],
-  [GameMapType.WorldMapGiant]: [150, 100, 60],
+  [GameMapType.GiantWorldMap]: [150, 100, 60],
   [GameMapType.Halkidiki]: [50, 40, 30],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
-const TERRAIN_EFFECTS = {
-  [TerrainType.Plains]: { mag: 1, speed: 0.8 }, // higher speed, lower damage
-  [TerrainType.Highland]: { mag: 1.1, speed: 1 },
-  [TerrainType.Mountain]: { mag: 1.2, speed: 1.2 },
-} as const;
-
 export abstract class DefaultServerConfig implements ServerConfig {
+  stripePublishableKey(): string {
+    return process.env.STRIPE_PUBLISHABLE_KEY ?? "";
+  }
+  domain(): string {
+    return process.env.DOMAIN ?? "";
+  }
+  subdomain(): string {
+    return process.env.SUBDOMAIN ?? "";
+  }
+  cloudflareAccountId(): string {
+    return process.env.CF_ACCOUNT_ID ?? "";
+  }
+  cloudflareApiToken(): string {
+    return process.env.CF_API_TOKEN ?? "";
+  }
+  cloudflareConfigPath(): string {
+    return process.env.CF_CONFIG_PATH ?? "";
+  }
+  cloudflareCredsPath(): string {
+    return process.env.CF_CREDS_PATH ?? "";
+  }
+
   private publicKey: JWK;
   abstract jwtAudience(): string;
   jwtIssuer(): string {
@@ -85,8 +101,13 @@ export abstract class DefaultServerConfig implements ServerConfig {
     const jwksUrl = this.jwtIssuer() + "/.well-known/jwks.json";
     console.log(`Fetching JWKS from ${jwksUrl}`);
     const response = await fetch(jwksUrl);
-    const jwks = JwksSchema.parse(await response.json());
-    this.publicKey = jwks.keys[0];
+    const result = JwksSchema.safeParse(await response.json());
+    if (!result.success) {
+      const error = z.prettifyError(result.error);
+      console.error("Error parsing JWKS", error);
+      throw new Error("Invalid JWKS");
+    }
+    this.publicKey = result.data.keys[0];
     return this.publicKey;
   }
   otelEnabled(): boolean {
@@ -143,11 +164,19 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return 60 * 1000;
   }
 
-  lobbyMaxPlayers(map: GameMapType, mode: GameMode): number {
+  lobbyMaxPlayers(
+    map: GameMapType,
+    mode: GameMode,
+    numPlayerTeams: number | undefined,
+  ): number {
     const [l, m, s] = numPlayersConfig[map] ?? [50, 30, 20];
     const r = Math.random();
     const base = r < 0.3 ? l : r < 0.6 ? m : s;
-    return Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, 150);
+    let p = Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, l);
+    if (numPlayerTeams !== undefined) {
+      p -= p % numPlayerTeams;
+    }
+    return p;
   }
 
   workerIndex(gameID: GameID): number {
@@ -173,6 +202,11 @@ export class DefaultConfig implements Config {
     private _userSettings: UserSettings | null,
     private _isReplay: boolean,
   ) {}
+
+  stripePublishableKey(): string {
+    return process.env.STRIPE_PUBLISHABLE_KEY ?? "";
+  }
+
   isReplay(): boolean {
     return this._isReplay;
   }
@@ -229,8 +263,8 @@ export class DefaultConfig implements Config {
 
   falloutDefenseModifier(falloutRatio: number): number {
     // falloutRatio is between 0 and 1
-    // So defense modifier is between [3, 1]
-    return 2 - falloutRatio;
+    // So defense modifier is between [5, 2.5]
+    return 5 - falloutRatio * 2;
   }
   SAMCooldown(): number {
     return 75;
@@ -240,13 +274,10 @@ export class DefaultConfig implements Config {
   }
 
   defensePostRange(): number {
-    return 40;
+    return 30;
   }
-  defensePostLossMultiplier(): number {
-    return 8;
-  }
-  defensePostSpeedMultiplier(): number {
-    return 4;
+  defensePostDefenseBonus(): number {
+    return 5;
   }
   playerTeams(): number | typeof Duos {
     return this._gameConfig.playerTeams ?? 0;
@@ -273,146 +304,191 @@ export class DefaultConfig implements Config {
     return this._gameConfig.infiniteTroops;
   }
   tradeShipGold(dist: number): Gold {
-    return 10000 + 150 * Math.pow(dist, 1.1);
+    return BigInt(Math.floor(10000 + 150 * Math.pow(dist, 1.1)));
   }
   tradeShipSpawnRate(numberOfPorts: number): number {
-    return Math.round(10 * Math.pow(numberOfPorts, 0.3));
+    return Math.min(50, Math.round(10 * Math.pow(numberOfPorts, 0.6)));
+  }
+  trainSpawnRate(numberOfStations: number): number {
+    return Math.min(1400, Math.round(60 * Math.pow(numberOfStations, 0.8)));
+  }
+  trainGold(): Gold {
+    return BigInt(10_000);
+  }
+  trainStationMinRange(): number {
+    return 15;
+  }
+  trainStationMaxRange(): number {
+    return 80;
+  }
+  railroadMaxSize(): number {
+    return 100;
   }
 
   unitInfo(type: UnitType): UnitInfo {
     switch (type) {
       case UnitType.TransportShip:
         return {
-          cost: () => 0,
+          cost: () => 0n,
           territoryBound: false,
         };
       case UnitType.Warship:
         return {
           cost: (p: Player) =>
             p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0
-              : Math.min(
-                  1_000_000,
-                  (p.unitsIncludingConstruction(UnitType.Warship).length + 1) *
-                    250_000,
+              ? 0n
+              : BigInt(
+                  Math.min(
+                    1_000_000,
+                    (p.unitsOwned(UnitType.Warship) + 1) * 250_000,
+                  ),
                 ),
           territoryBound: false,
           maxHealth: 1000,
         };
       case UnitType.Shell:
         return {
-          cost: () => 0,
+          cost: () => 0n,
           territoryBound: false,
           damage: 250,
         };
       case UnitType.SAMMissile:
         return {
-          cost: () => 0,
+          cost: () => 0n,
           territoryBound: false,
         };
       case UnitType.Port:
         return {
           cost: (p: Player) =>
             p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0
-              : Math.min(
-                  1_000_000,
-                  Math.pow(
-                    2,
-                    p.unitsIncludingConstruction(UnitType.Port).length,
-                  ) * 125_000,
+              ? 0n
+              : BigInt(
+                  Math.min(
+                    1_000_000,
+                    Math.pow(2, p.unitsConstructed(UnitType.Port)) * 125_000,
+                  ),
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+          upgradable: true,
+          canBuildTrainStation: true,
         };
       case UnitType.AtomBomb:
         return {
           cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold() ? 0 : 750_000,
+            p.type() === PlayerType.Human && this.infiniteGold()
+              ? 0n
+              : 750_000n,
           territoryBound: false,
         };
       case UnitType.HydrogenBomb:
         return {
           cost: (p: Player) =>
             p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0
-              : 5_000_000,
+              ? 0n
+              : 5_000_000n,
           territoryBound: false,
         };
       case UnitType.MIRV:
         return {
           cost: (p: Player) =>
             p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0
-              : 25_000_000,
+              ? 0n
+              : 25_000_000n,
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
         return {
-          cost: () => 0,
+          cost: () => 0n,
           territoryBound: false,
         };
       case UnitType.TradeShip:
         return {
-          cost: () => 0,
+          cost: () => 0n,
           territoryBound: false,
         };
       case UnitType.MissileSilo:
         return {
           cost: (p: Player) =>
             p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0
-              : 1_000_000,
+              ? 0n
+              : 1_000_000n,
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 10 * 10,
+          upgradable: true,
         };
       case UnitType.DefensePost:
         return {
           cost: (p: Player) =>
             p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0
-              : Math.min(
-                  250_000,
-                  (p.unitsIncludingConstruction(UnitType.DefensePost).length +
-                    1) *
-                    50_000,
+              ? 0n
+              : BigInt(
+                  Math.min(
+                    250_000,
+                    (p.unitsConstructed(UnitType.DefensePost) + 1) * 50_000,
+                  ),
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
+          upgradable: true,
         };
       case UnitType.SAMLauncher:
         return {
           cost: (p: Player) =>
             p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0
-              : Math.min(
-                  3_000_000,
-                  (p.unitsIncludingConstruction(UnitType.SAMLauncher).length +
-                    1) *
-                    1_500_000,
+              ? 0n
+              : BigInt(
+                  Math.min(
+                    3_000_000,
+                    (p.unitsConstructed(UnitType.SAMLauncher) + 1) * 1_500_000,
+                  ),
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 30 * 10,
+          upgradable: true,
         };
       case UnitType.City:
         return {
           cost: (p: Player) =>
             p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0
-              : Math.min(
-                  1_000_000,
-                  Math.pow(
-                    2,
-                    p.unitsIncludingConstruction(UnitType.City).length,
-                  ) * 125_000,
+              ? 0n
+              : BigInt(
+                  Math.min(
+                    1_000_000,
+                    Math.pow(2, p.unitsConstructed(UnitType.City)) * 125_000,
+                  ),
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+          upgradable: true,
+          canBuildTrainStation: true,
+        };
+      case UnitType.Factory:
+        return {
+          cost: (p: Player) =>
+            p.type() === PlayerType.Human && this.infiniteGold()
+              ? 0n
+              : BigInt(
+                  Math.min(
+                    1_000_000,
+                    Math.pow(2, p.unitsConstructed(UnitType.Factory)) * 125_000,
+                  ),
+                ),
+          territoryBound: true,
+          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+          canBuildTrainStation: true,
+          experimental: true,
         };
       case UnitType.Construction:
         return {
-          cost: () => 0,
+          cost: () => 0n,
           territoryBound: true,
+        };
+      case UnitType.Train:
+        return {
+          cost: () => 0n,
+          territoryBound: false,
+          experimental: true,
         };
       default:
         assertNever(type);
@@ -478,29 +554,35 @@ export class DefaultConfig implements Config {
     defenderTroopLoss: number;
     tilesPerTickUsed: number;
   } {
+    let mag = 0;
+    let speed = 0;
     const type = gm.terrainType(tileToConquer);
-    const mod = TERRAIN_EFFECTS[type];
-    if (!mod) {
-      throw new Error(`terrain type ${type} not supported`);
+    switch (type) {
+      case TerrainType.Plains:
+        mag = 85;
+        speed = 16.5;
+        break;
+      case TerrainType.Highland:
+        mag = 100;
+        speed = 20;
+        break;
+      case TerrainType.Mountain:
+        mag = 120;
+        speed = 25;
+        break;
+      default:
+        throw new Error(`terrain type ${type} not supported`);
     }
-    let mag = mod.mag;
-    let speed = mod.speed;
-
-    const attackerType = attacker.type();
-    const defenderIsPlayer = defender.isPlayer();
-    const defenderType = defenderIsPlayer ? defender.type() : null;
-
-    if (defenderIsPlayer) {
+    if (defender.isPlayer()) {
       for (const dp of gm.nearbyUnits(
         tileToConquer,
         gm.config().defensePostRange(),
         UnitType.DefensePost,
+        ({ unit }) => unit.owner() === defender,
       )) {
-        if (dp.unit.owner() === defender) {
-          mag *= this.defensePostLossMultiplier();
-          speed *= this.defensePostSpeedMultiplier();
-          break;
-        }
+        mag *= this.defensePostDefenseBonus();
+        speed *= this.defensePostDefenseBonus();
+        break;
       }
     }
 
@@ -510,49 +592,55 @@ export class DefaultConfig implements Config {
       speed *= this.falloutDefenseModifier(falloutRatio);
     }
 
-    if (attacker.isPlayer() && defenderIsPlayer) {
+    if (attacker.isPlayer() && defender.isPlayer()) {
       if (
-        (attackerType === PlayerType.Human ||
-          attackerType === PlayerType.FakeHuman) &&
-        defenderType === PlayerType.Bot
+        attacker.type() === PlayerType.Human &&
+        defender.type() === PlayerType.Bot
       ) {
-        mag *= 0.6;
-        speed *= 0.6;
+        mag *= 0.8;
+      }
+      if (
+        attacker.type() === PlayerType.FakeHuman &&
+        defender.type() === PlayerType.Bot
+      ) {
+        mag *= 0.8;
       }
     }
-    if (attackerType === PlayerType.Bot) {
-      speed *= 4; // slow bot attacks
+
+    let largeLossModifier = 1;
+    if (attacker.numTilesOwned() > 100_000) {
+      largeLossModifier = Math.sqrt(100_000 / attacker.numTilesOwned());
     }
-    if (defenderIsPlayer) {
-      const defenderTroops = defender.troops();
-      const defenderTiles = defender.numTilesOwned();
-      const defenderDensity = defenderTroops / defenderTiles;
-      const attackRatio = defenderTroops / attackTroops;
-      const traitorDebuff = defender.isTraitor()
-        ? this.traitorDefenseDebuff()
-        : 1;
-      const baseTroopLoss = 16;
-      const attackLossModifier = 1.3;
-      const baseTileCost = 44;
-      const attackStandardSize = 10_000;
+    let largeSpeedMalus = 1;
+    if (attacker.numTilesOwned() > 75_000) {
+      // sqrt is only exponent 1/2 which doesn't slow enough huge players
+      largeSpeedMalus = (75_000 / attacker.numTilesOwned()) ** 0.6;
+    }
+
+    if (defender.isPlayer()) {
       return {
         attackerTroopLoss:
+          within(defender.troops() / attackTroops, 0.6, 2) *
           mag *
-          (baseTroopLoss +
-            attackLossModifier * defenderDensity * traitorDebuff),
-        defenderTroopLoss: defenderDensity,
+          0.8 *
+          largeLossModifier *
+          (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
+        defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
         tilesPerTickUsed:
-          baseTileCost *
-          within(defenderDensity, 3, 100) ** 0.2 *
-          (attackStandardSize / attackTroops) ** 0.2 *
+          within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
           speed *
-          within(attackRatio, 0.1, 20) ** 0.35,
+          largeSpeedMalus,
       };
     } else {
       return {
-        attackerTroopLoss: 16 * mag,
+        attackerTroopLoss:
+          attacker.type() === PlayerType.Bot ? mag / 10 : mag / 5,
         defenderTroopLoss: 0,
-        tilesPerTickUsed: 492 * speed * within(attackTroops, 1, 10000) ** -0.3,
+        tilesPerTickUsed: within(
+          (2000 * Math.max(10, speed)) / attackTroops,
+          5,
+          100,
+        ),
       };
     }
   }
@@ -564,9 +652,13 @@ export class DefaultConfig implements Config {
     numAdjacentTilesWithEnemy: number,
   ): number {
     if (defender.isPlayer()) {
-      return 10 * numAdjacentTilesWithEnemy;
+      return (
+        within(((5 * attackTroops) / defender.troops()) * 2, 0.01, 0.5) *
+        numAdjacentTilesWithEnemy *
+        3
+      );
     } else {
-      return 12 * numAdjacentTilesWithEnemy;
+      return numAdjacentTilesWithEnemy * 2;
     }
   }
 
@@ -596,29 +688,33 @@ export class DefaultConfig implements Config {
 
   startManpower(playerInfo: PlayerInfo): number {
     if (playerInfo.playerType === PlayerType.Bot) {
-      return 6_000;
+      return 10_000;
     }
     if (playerInfo.playerType === PlayerType.FakeHuman) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          return 2_500 + 1000 * (playerInfo?.nation?.strength ?? 1);
+          return 2_500 * (playerInfo?.nation?.strength ?? 1);
         case Difficulty.Medium:
-          return 6_000 + 2000 * (playerInfo?.nation?.strength ?? 1);
+          return 5_000 * (playerInfo?.nation?.strength ?? 1);
         case Difficulty.Hard:
-          return 20_000 + 4000 * (playerInfo?.nation?.strength ?? 1);
+          return 20_000 * (playerInfo?.nation?.strength ?? 1);
         case Difficulty.Impossible:
-          return 50_000 + 8000 * (playerInfo?.nation?.strength ?? 1);
+          return 50_000 * (playerInfo?.nation?.strength ?? 1);
       }
     }
-    return this.infiniteTroops() ? 1_000_000 : 20_000;
+    return this.infiniteTroops() ? 1_000_000 : 25_000;
   }
 
   maxPopulation(player: Player | PlayerView): number {
     const maxPop =
       player.type() === PlayerType.Human && this.infiniteTroops()
         ? 1_000_000_000
-        : 1 * (player.numTilesOwned() * 30 + 50000) +
-          player.units(UnitType.City).length * this.cityPopulationIncrease();
+        : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
+          player
+            .units(UnitType.City)
+            .map((city) => city.level())
+            .reduce((a, b) => a + b, 0) *
+            this.cityPopulationIncrease();
 
     if (player.type() === PlayerType.Bot) {
       return maxPop / 2;
@@ -630,26 +726,22 @@ export class DefaultConfig implements Config {
 
     switch (this._gameConfig.difficulty) {
       case Difficulty.Easy:
-        return maxPop * 0.4;
+        return maxPop * 0.5;
       case Difficulty.Medium:
-        return maxPop * 0.8;
+        return maxPop * 1;
       case Difficulty.Hard:
-        return maxPop * 1.4;
+        return maxPop * 1.5;
       case Difficulty.Impossible:
-        return maxPop * 1.8;
+        return maxPop * 2;
     }
   }
 
   populationIncreaseRate(player: Player): number {
     const max = this.maxPopulation(player);
-    //population grows proportional to current population with growth decreasing as it approaches max
-    // smaller countries recieve a boost to pop growth to speed up early game
-    const baseAdditionRate = 10;
-    const basePopGrowthRate = 1200 / max + 1 / 200;
-    const reproductionPop = player.troops() + 1.15 * player.workers();
-    let toAdd = baseAdditionRate + basePopGrowthRate * reproductionPop;
-    const totalPop = player.totalPopulation();
-    const ratio = 1 - totalPop / max;
+
+    let toAdd = 10 + Math.pow(player.population(), 0.73) / 4;
+
+    const ratio = 1 - player.population() / max;
     toAdd *= ratio;
 
     if (player.type() === PlayerType.Bot) {
@@ -673,15 +765,15 @@ export class DefaultConfig implements Config {
       }
     }
 
-    return Math.min(totalPop + toAdd, max) - totalPop;
+    return Math.min(player.population() + toAdd, max) - player.population();
   }
 
-  goldAdditionRate(player: Player): number {
-    return 0.08 * player.workers() ** 0.65;
+  goldAdditionRate(player: Player): Gold {
+    return BigInt(Math.floor(0.045 * player.workers() ** 0.7));
   }
 
   troopAdjustmentRate(player: Player): number {
-    const maxDiff = this.maxPopulation(player) / 600;
+    const maxDiff = this.maxPopulation(player) / 1000;
     const target = player.population() * player.targetTroopRatio();
     const diff = target - player.troops();
     if (Math.abs(diff) < maxDiff) {
@@ -708,7 +800,15 @@ export class DefaultConfig implements Config {
   }
 
   defaultNukeSpeed(): number {
-    return 4;
+    return 6;
+  }
+
+  defaultNukeTargetableRange(): number {
+    return 120;
+  }
+
+  defaultSamRange(): number {
+    return 80;
   }
 
   // Humans can be population, soldiers attacking, soldiers in boat etc.
@@ -717,8 +817,7 @@ export class DefaultConfig implements Config {
   }
 
   structureMinDist(): number {
-    // TODO: Increase this to ~15 once upgradable structures are implemented.
-    return 1;
+    return 15;
   }
 
   shellLifetime(): number {
@@ -747,5 +846,9 @@ export class DefaultConfig implements Config {
 
   defensePostTargettingRange(): number {
     return 75;
+  }
+
+  allianceExtensionPromptOffset(): number {
+    return 300; // 30 seconds before expiration
   }
 }

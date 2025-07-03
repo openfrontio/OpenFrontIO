@@ -8,3 +8,4 @@ resources/images/.DS_Store
 resources/.DS_Store
 .env*
 .DS_Store
+.clinic/

@@ -40,7 +40,7 @@ export class PlayerPanel extends LitElement implements Layer {
   private tile: TileRef | null = null;
 
   @state()
-  private isVisible: boolean = false;
+  public isVisible: boolean = false;
 
   @state()
   private allianceExpiryText: string | null = null;
@@ -90,7 +90,6 @@ export class PlayerPanel extends LitElement implements Layer {
     e.stopPropagation();
     this.eventBus.emit(
       new SendDonateTroopsIntentEvent(
-        myPlayer,
         other,
         myPlayer.troops() * this.uiState.attackRatio,
       ),
@@ -104,7 +103,7 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendDonateGoldIntentEvent(myPlayer, other, null));
+    this.eventBus.emit(new SendDonateGoldIntentEvent(other, null));
     this.hide();
   }
 
@@ -114,7 +113,7 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendEmbargoIntentEvent(myPlayer, other, "start"));
+    this.eventBus.emit(new SendEmbargoIntentEvent(other, "start"));
     this.hide();
   }
 
@@ -124,7 +123,7 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendEmbargoIntentEvent(myPlayer, other, "stop"));
+    this.eventBus.emit(new SendEmbargoIntentEvent(other, "stop"));
     this.hide();
   }
 
@@ -177,11 +176,9 @@ export class PlayerPanel extends LitElement implements Layer {
       if (myPlayer !== null && myPlayer.isAlive()) {
         this.actions = await myPlayer.actions(this.tile);
 
-        if (this.actions?.interaction?.allianceCreatedAtTick !== undefined) {
-          const createdAt = this.actions.interaction.allianceCreatedAtTick;
-          const durationTicks = this.g.config().allianceDuration();
-          const expiryTick = createdAt + durationTicks;
-          const remainingTicks = expiryTick - this.g.ticks();
+        if (this.actions?.interaction?.allianceExpiresAt !== undefined) {
+          const expiresAt = this.actions.interaction.allianceExpiresAt;
+          const remainingTicks = expiresAt - this.g.ticks();
 
           if (remainingTicks > 0) {
             const remainingSeconds = Math.max(
@@ -327,6 +324,25 @@ export class PlayerPanel extends LitElement implements Layer {
                   ${other.hasEmbargoAgainst(myPlayer)
                     ? translateText("player_panel.yes")
                     : translateText("player_panel.no")}
+                </div>
+              </div>
+
+              <!-- Alliances -->
+              <div class="flex flex-col gap-1">
+                <div class="text-white text-opacity-80 text-sm px-2">
+                  ${translateText("player_panel.alliances")}
+                  (${other.allies().length})
+                </div>
+                <div
+                  class="bg-opacity-50 bg-gray-700 rounded p-2 text-white max-w-72 max-h-20 overflow-y-auto"
+                  translate="no"
+                >
+                  ${other.allies().length > 0
+                    ? other
+                        .allies()
+                        .map((p) => p.name())
+                        .join(", ")
+                    : translateText("player_panel.none")}
                 </div>
               </div>
 

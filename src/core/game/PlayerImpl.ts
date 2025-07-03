@@ -1,5 +1,4 @@
 import { renderNumber, renderTroops } from "../../client/Utils";
-import { consolex } from "../Consolex";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
@@ -23,6 +22,8 @@ import {
   ColoredTeams,
   Embargo,
   EmojiMessage,
+  GameMode,
+  GameType,
   Gold,
   MessageType,
   MutableAlliance,
@@ -41,7 +42,12 @@ import {
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
-import { AttackUpdate, GameUpdateType, PlayerUpdate } from "./GameUpdates";
+import {
+  AllianceView,
+  AttackUpdate,
+  GameUpdateType,
+  PlayerUpdate,
+} from "./GameUpdates";
 import {
   bestShoreDeploymentSource,
   canBuildTransportShip,
@@ -80,11 +86,11 @@ export class PlayerImpl implements Player {
   public _units: Unit[] = [];
   public _tiles: Set<TileRef> = new Set();
 
-  private _flag: string | undefined;
   private _name: string;
   private _displayName: string;
 
   public pastOutgoingAllianceRequests: AllianceRequest[] = [];
+  private _expiredAlliances: Alliance[] = [];
 
   private targets_: Target[] = [];
 
@@ -99,6 +105,7 @@ export class PlayerImpl implements Player {
   public _outgoingLandAttacks: Attack[] = [];
 
   private _hasSpawned = false;
+  private _isDisconnected = false;
 
   constructor(
     private mg: GameImpl,
@@ -107,9 +114,8 @@ export class PlayerImpl implements Player {
     startTroops: number,
     private readonly _team: Team | null,
   ) {
-    this._flag = playerInfo.flag;
     this._name = sanitizeUsername(playerInfo.name);
-    this._targetTroopRatio = 60n;
+    this._targetTroopRatio = 95n;
     this._troops = toInt(startTroops);
     this._workers = 0n;
     this._gold = 0n;
@@ -128,7 +134,6 @@ export class PlayerImpl implements Player {
     return {
       type: GameUpdateType.Player,
       clientID: this.clientID(),
-      flag: this.flag(),
       name: this.name(),
       displayName: this.displayName(),
       id: this.id(),
@@ -136,10 +141,10 @@ export class PlayerImpl implements Player {
       smallID: this.smallID(),
       playerType: this.type(),
       isAlive: this.isAlive(),
+      isDisconnected: this.isDisconnected(),
       tilesOwned: this.numTilesOwned(),
-      gold: Number(this._gold),
+      gold: this._gold,
       population: this.population(),
-      totalPopulation: this.totalPopulation(),
       workers: this.workers(),
       troops: this.troops(),
       targetTroopRatio: this.targetTroopRatio(),
@@ -155,7 +160,7 @@ export class PlayerImpl implements Player {
           troops: a.troops(),
           id: a.id(),
           retreating: a.retreating(),
-        } as AttackUpdate;
+        } satisfies AttackUpdate;
       }),
       incomingAttacks: this._incomingAttacks.map((a) => {
         return {
@@ -164,9 +169,18 @@ export class PlayerImpl implements Player {
           troops: a.troops(),
           id: a.id(),
           retreating: a.retreating(),
-        } as AttackUpdate;
+        } satisfies AttackUpdate;
       }),
       outgoingAllianceRequests: outgoingAllianceRequests,
+      alliances: this.alliances().map(
+        (a) =>
+          ({
+            id: a.id(),
+            other: a.other(this).id(),
+            createdAt: a.createdAt(),
+            expiresAt: a.expiresAt(),
+          }) satisfies AllianceView,
+      ),
       hasSpawned: this.hasSpawned(),
       betrayals: stats?.betrayals,
     };
@@ -174,10 +188,6 @@ export class PlayerImpl implements Player {
 
   smallID(): number {
     return this._smallID;
-  }
-
-  flag(): string | undefined {
-    return this._flag;
   }
 
   name(): string {
@@ -211,14 +221,41 @@ export class PlayerImpl implements Player {
     return this._units.filter((u) => ts.has(u.type()));
   }
 
-  unitsIncludingConstruction(type: UnitType): Unit[] {
-    const units = this.units(type);
-    units.push(
-      ...this.units(UnitType.Construction).filter(
-        (u) => u.constructionType() === type,
-      ),
-    );
-    return units;
+  private numUnitsConstructed: number[] = [];
+  private recordUnitConstructed(type: UnitType): void {
+    if (type in this.numUnitsConstructed) {
+      this.numUnitsConstructed[type]++;
+    } else {
+      this.numUnitsConstructed[type] = 1;
+    }
+  }
+
+  // Count of units built by the player, including construction
+  unitsConstructed(type: UnitType): number {
+    const built = this.numUnitsConstructed[type] ?? 0;
+    let constructing = 0;
+    for (const unit of this._units) {
+      if (unit.type() !== UnitType.Construction) continue;
+      if (unit.constructionType() !== type) continue;
+      constructing++;
+    }
+    const total = constructing + built;
+    return total;
+  }
+
+  // Count of units owned by the player, including construction
+  unitsOwned(type: UnitType): number {
+    let total = 0;
+    for (const unit of this._units) {
+      if (unit.type() === type) {
+        total++;
+        continue;
+      }
+      if (unit.type() !== UnitType.Construction) continue;
+      if (unit.constructionType() !== type) continue;
+      total++;
+    }
+    return total;
   }
 
   sharesBorderWith(other: Player | TerraNullius): boolean {
@@ -250,7 +287,9 @@ export class PlayerImpl implements Player {
         if (this.mg.map().isLand(neighbor)) {
           const owner = this.mg.map().ownerID(neighbor);
           if (owner !== this.smallID()) {
-            ns.add(this.mg.playerBySmallID(owner) as Player | TerraNullius);
+            ns.add(
+              this.mg.playerBySmallID(owner) satisfies Player | TerraNullius,
+            );
           }
         }
       }
@@ -270,7 +309,7 @@ export class PlayerImpl implements Player {
   orderRetreat(id: string) {
     const attack = this._outgoingAttacks.filter((attack) => attack.id() === id);
     if (!attack || !attack[0]) {
-      consolex.warn(`Didn't find outgoing attack with id ${id}`);
+      console.warn(`Didn't find outgoing attack with id ${id}`);
       return;
     }
     attack[0].orderRetreat();
@@ -316,6 +355,10 @@ export class PlayerImpl implements Player {
     return this.mg.alliances_.filter(
       (a) => a.requestor() === this || a.recipient() === this,
     );
+  }
+
+  expiredAlliances(): Alliance[] {
+    return [...this._expiredAlliances];
   }
 
   allies(): Player[] {
@@ -392,7 +435,7 @@ export class PlayerImpl implements Player {
     if (this.isAlliedWith(recipient)) {
       throw new Error(`cannot create alliance request, already allies`);
     }
-    return this.mg.createAllianceRequest(this, recipient as Player);
+    return this.mg.createAllianceRequest(this, recipient satisfies Player);
   }
 
   relation(other: Player): Relation {
@@ -479,7 +522,7 @@ export class PlayerImpl implements Player {
       .map((a) => a.other(this))
       .flatMap((ally) => ally.targets());
     ts.push(...this.targets());
-    return [...new Set(ts)] as Player[];
+    return [...new Set(ts)] satisfies Player[];
   }
 
   sendEmoji(recipient: Player | typeof AllPlayers, emoji: string): void {
@@ -527,6 +570,13 @@ export class PlayerImpl implements Player {
     if (!this.isFriendly(recipient)) {
       return false;
     }
+    if (
+      recipient.type() === PlayerType.Human &&
+      this.mg.config().gameConfig().gameMode === GameMode.FFA &&
+      this.mg.config().gameConfig().gameType === GameType.Public
+    ) {
+      return false;
+    }
     for (const donation of this.sentDonations) {
       if (donation.recipient === recipient) {
         if (
@@ -540,33 +590,45 @@ export class PlayerImpl implements Player {
     return true;
   }
 
-  donateTroops(recipient: Player, troops: number): void {
+  donateTroops(recipient: Player, troops: number): boolean {
+    if (troops <= 0) return false;
+    const removed = this.removeTroops(troops);
+    if (removed === 0) return false;
+    recipient.addTroops(removed);
+
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
-    recipient.addTroops(this.removeTroops(troops));
     this.mg.displayMessage(
       `Sent ${renderTroops(troops)} troops to ${recipient.name()}`,
-      MessageType.INFO,
+      MessageType.SENT_TROOPS_TO_PLAYER,
       this.id(),
     );
     this.mg.displayMessage(
       `Received ${renderTroops(troops)} troops from ${this.name()}`,
-      MessageType.SUCCESS,
+      MessageType.RECEIVED_TROOPS_FROM_PLAYER,
       recipient.id(),
     );
+    return true;
   }
-  donateGold(recipient: Player, gold: number): void {
+
+  donateGold(recipient: Player, gold: Gold): boolean {
+    if (gold <= 0n) return false;
+    const removed = this.removeGold(gold);
+    if (removed === 0n) return false;
+    recipient.addGold(removed);
+
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
-    recipient.addGold(this.removeGold(gold));
     this.mg.displayMessage(
       `Sent ${renderNumber(gold)} gold to ${recipient.name()}`,
-      MessageType.INFO,
+      MessageType.SENT_GOLD_TO_PLAYER,
       this.id(),
     );
     this.mg.displayMessage(
       `Received ${renderNumber(gold)} gold from ${this.name()}`,
-      MessageType.SUCCESS,
+      MessageType.RECEIVED_GOLD_FROM_PLAYER,
       recipient.id(),
+      gold,
     );
+    return true;
   }
 
   hasEmbargoAgainst(other: Player): boolean {
@@ -633,40 +695,25 @@ export class PlayerImpl implements Player {
   }
 
   gold(): Gold {
-    return Number(this._gold);
+    return this._gold;
   }
 
   addGold(toAdd: Gold): void {
-    this._gold += toInt(toAdd);
+    this._gold += toAdd;
   }
 
-  removeGold(toRemove: Gold): number {
-    if (toRemove <= 1) {
-      return 0;
+  removeGold(toRemove: Gold): Gold {
+    if (toRemove <= 0n) {
+      return 0n;
     }
-    const actualRemoved = minInt(this._gold, toInt(toRemove));
+    const actualRemoved = minInt(this._gold, toRemove);
     this._gold -= actualRemoved;
-    return Number(actualRemoved);
+    return actualRemoved;
   }
 
   population(): number {
     return Number(this._troops + this._workers);
   }
-  totalPopulation(): number {
-    return this.population() + this.attackingTroops();
-  }
-  private attackingTroops(): number {
-    const landAttackTroops = this._outgoingAttacks
-      .filter((a) => a.isActive())
-      .reduce((sum, a) => sum + a.troops(), 0);
-
-    const boatTroops = this.units(UnitType.TransportShip)
-      .map((u) => u.troops())
-      .reduce((sum, n) => sum + n, 0);
-
-    return landAttackTroops + boatTroops;
-  }
-
   workers(): number {
     return Math.max(1, Number(this._workers));
   }
@@ -702,7 +749,7 @@ export class PlayerImpl implements Player {
     this._troops += toInt(troops);
   }
   removeTroops(troops: number): number {
-    if (troops <= 1) {
+    if (troops <= 0) {
       return 0;
     }
     const toRemove = minInt(this._troops, toInt(troops));
@@ -738,12 +785,19 @@ export class PlayerImpl implements Player {
       params,
     );
     this._units.push(b);
+    this.recordUnitConstructed(type);
     this.removeGold(cost);
     this.removeTroops("troops" in params ? (params.troops ?? 0) : 0);
     this.mg.addUpdate(b.toUpdate());
     this.mg.addUnit(b);
 
     return b;
+  }
+
+  upgradeUnit(unit: Unit) {
+    const cost = this.mg.unitInfo(unit.type()).cost(this);
+    this.removeGold(cost);
+    unit.increaseLevel();
   }
 
   public buildableUnits(tile: TileRef): BuildableUnit[] {
@@ -794,10 +848,13 @@ export class PlayerImpl implements Player {
         return canBuildTransportShip(this.mg, this, targetTile);
       case UnitType.TradeShip:
         return this.tradeShipSpawn(targetTile);
+      case UnitType.Train:
+        return this.landBasedUnitSpawn(targetTile);
       case UnitType.MissileSilo:
       case UnitType.DefensePost:
       case UnitType.SAMLauncher:
       case UnitType.City:
+      case UnitType.Factory:
       case UnitType.Construction:
         return this.landBasedStructureSpawn(targetTile, validTiles);
       default:
@@ -862,6 +919,10 @@ export class PlayerImpl implements Player {
     return spawns[0].tile();
   }
 
+  landBasedUnitSpawn(tile: TileRef): TileRef | false {
+    return this.mg.isLand(tile) ? tile : false;
+  }
+
   landBasedStructureSpawn(
     tile: TileRef,
     validTiles: TileRef[] | null = null,
@@ -883,9 +944,7 @@ export class PlayerImpl implements Player {
       return this.mg.config().unitInfo(unitTypeValue).territoryBound;
     });
 
-    const nearbyUnits = this.mg
-      .nearbyUnits(tile, searchRadius * 2, types)
-      .map((u) => u.unit);
+    const nearbyUnits = this.mg.nearbyUnits(tile, searchRadius * 2, types);
     const nearbyTiles = this.mg.bfs(tile, (gm, t) => {
       return (
         this.mg.euclideanDistSquared(tile, t) < searchRadiusSquared &&
@@ -896,7 +955,7 @@ export class PlayerImpl implements Player {
 
     const minDistSquared = this.mg.config().structureMinDist() ** 2;
     for (const t of nearbyTiles) {
-      for (const unit of nearbyUnits) {
+      for (const { unit } of nearbyUnits) {
         if (this.mg.euclideanDistSquared(unit.tile(), t) < minDistSquared) {
           validSet.delete(t);
           break;
@@ -923,6 +982,14 @@ export class PlayerImpl implements Player {
   }
   lastTileChange(): Tick {
     return this._lastTileChange;
+  }
+
+  isDisconnected(): boolean {
+    return this._isDisconnected;
+  }
+
+  markDisconnected(isDisconnected: boolean): void {
+    this._isDisconnected = isDisconnected;
   }
 
   hash(): number {
@@ -993,8 +1060,8 @@ export class PlayerImpl implements Player {
     if (this.mg.owner(tile) === this) {
       return false;
     }
-    if (this.mg.hasOwner(tile)) {
-      const other = this.mg.owner(tile) as Player;
+    const other = this.mg.owner(tile);
+    if (other.isPlayer()) {
       if (this.isFriendly(other)) {
         return false;
       }
@@ -1004,7 +1071,7 @@ export class PlayerImpl implements Player {
       return false;
     }
     if (this.mg.hasOwner(tile)) {
-      return this.sharesBorderWith(this.mg.owner(tile));
+      return this.sharesBorderWith(other);
     } else {
       for (const t of this.mg.bfs(
         tile,

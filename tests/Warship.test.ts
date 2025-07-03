@@ -24,20 +24,8 @@ describe("Warship", () => {
         instantBuild: true,
       },
       [
-        new PlayerInfo(
-          "us",
-          "boat dude",
-          PlayerType.Human,
-          null,
-          "player_1_id",
-        ),
-        new PlayerInfo(
-          "us",
-          "boat dude",
-          PlayerType.Human,
-          null,
-          "player_2_id",
-        ),
+        new PlayerInfo("boat dude", PlayerType.Human, null, "player_1_id"),
+        new PlayerInfo("boat dude", PlayerType.Human, null, "player_2_id"),
       ],
     );
 

@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import url("./styles/core/flag-animation.css");
 @import url("./styles/core/variables.css");
 @import url("./styles/core/typography.css");
 @import url("./styles/layout/header.css");
@@ -34,6 +35,14 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
 }
 
 .start-game-button {
@@ -375,13 +384,13 @@ label.option-card:hover {
 }
 
 #helpModal .missile-silo-icon {
-  mask: url("../../resources/images/MissileSiloIconWhite.svg") no-repeat
-    center / cover;
+  mask: url("../../resources/non-commercial/svg/MissileSiloIconWhite.svg")
+    no-repeat center / cover;
 }
 
 #helpModal .sam-launcher-icon {
-  mask: url("../../resources/images/SamLauncherIconWhite.svg") no-repeat
-    center / cover;
+  mask: url("../../resources/non-commercial/svg/SamLauncherIconWhite.svg")
+    no-repeat center / cover;
 }
 
 #helpModal .atom-bomb-icon {
@@ -482,6 +491,7 @@ label.option-card:hover {
   overflow-y: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
+  max-height: 400px;
 }
 
 #error-modal button.copy-btn {

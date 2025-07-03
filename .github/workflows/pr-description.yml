@@ -1,8 +1,13 @@
-name: 🧼 PR Description
+name: 🧼 PR
 
 on:
   pull_request:
-    types: [opened, edited, synchronize]
+    types:
+      - demilestoned
+      - edited
+      - milestoned
+      - opened
+      - synchronize
 
 permissions: {}
 
@@ -10,6 +15,7 @@ jobs:
   validate-description:
     name: Validate Description
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/github-script@v7
         with:
@@ -19,7 +25,7 @@ jobs:
             const errors = [];
 
             // Check for ## Description section
-            const descMatch = body.match(/^## Description:\s*\n((?:(?!^#).*\n?)*)/m);
+            const descMatch = body.match(/^## Description:\s*\n([\s\S]*?)(?:^## |\Z)/m);
             if (!descMatch || descMatch[1].trim().length < 20) {
               errors.push('❌ Missing or short `## Description:` section.');
             }
@@ -45,3 +51,19 @@ jobs:
             } else {
               console.log('✅ PR description and checklist look good.');
             }
+
+  has-milestone:
+    name: Has Milestone
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            // Get the pull request data
+            const milestone = context.payload.pull_request.milestone;
+            if (!milestone) {
+              core.setFailed('❌ Pull request must have a milestone assigned before merging.');
+              return;
+            }
+            console.log(`✅ Milestone found: ${milestone.title}`);

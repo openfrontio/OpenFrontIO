@@ -1,4 +1,5 @@
 import { decodeJwt } from "jose";
+import { z } from "zod/v4";
 import {
   RefreshResponseSchema,
   TokenPayload,
@@ -13,7 +14,7 @@ function getAudience() {
   return domainname;
 }
 
-function getApiBase() {
+export function getApiBase() {
   const domainname = getAudience();
   return domainname === "localhost"
     ? (localStorage.getItem("apiHost") ?? "http://localhost:8787")
@@ -27,12 +28,16 @@ function getToken(): string | null {
     const token = params.get("token");
     if (token) {
       localStorage.setItem("token", token);
+      params.delete("token");
+      params.toString();
     }
     // Clean the URL
     history.replaceState(
       null,
       "",
-      window.location.pathname + window.location.search,
+      window.location.pathname +
+        window.location.search +
+        (params.size > 0 ? "#" + params.toString() : ""),
     );
   }
   return localStorage.getItem("token");
@@ -42,6 +47,12 @@ export function discordLogin() {
   window.location.href = `${getApiBase()}/login/discord?redirect_uri=${window.location.href}`;
 }
 
+export function getAuthHeader(): string {
+  const token = getToken();
+  if (!token) return "";
+  return `Bearer ${token}`;
+}
+
 export async function logOut(allSessions: boolean = false) {
   const token = localStorage.getItem("token");
   if (token === null) return;
@@ -49,7 +60,7 @@ export async function logOut(allSessions: boolean = false) {
   __isLoggedIn = false;
 
   const response = await fetch(
-    getApiBase() + allSessions ? "/revoke" : "/logout",
+    getApiBase() + (allSessions ? "/revoke" : "/logout"),
     {
       method: "POST",
       headers: {
@@ -124,7 +135,7 @@ function _isLoggedIn(): IsLoggedInResponse {
       logOut();
       return false;
     }
-    const refreshAge: number = 6 * 3600; // 6 hours
+    const refreshAge: number = 3 * 24 * 3600; // 3 days
     if (iat !== undefined && now >= iat + refreshAge) {
       console.log("Refreshing access token...");
       postRefresh().then((success) => {
@@ -132,18 +143,16 @@ function _isLoggedIn(): IsLoggedInResponse {
           console.log("Refreshed access token successfully.");
         } else {
           console.error("Failed to refresh access token.");
+          // TODO: Update the UI to show logged out state
         }
       });
     }
 
     const result = TokenPayloadSchema.safeParse(payload);
     if (!result.success) {
+      const error = z.prettifyError(result.error);
       // Invalid response
-      console.error(
-        "Invalid payload",
-        // JSON.stringify(payload),
-        JSON.stringify(result.error),
-      );
+      console.error("Invalid payload", error);
       return false;
     }
 
@@ -167,15 +176,17 @@ export async function postRefresh(): Promise<boolean> {
         authorization: `Bearer ${token}`,
       },
     });
+    if (response.status === 401) {
+      localStorage.removeItem("token");
+      __isLoggedIn = false;
+      return false;
+    }
     if (response.status !== 200) return false;
     const body = await response.json();
     const result = RefreshResponseSchema.safeParse(body);
     if (!result.success) {
-      console.error(
-        "Invalid response",
-        JSON.stringify(body),
-        JSON.stringify(result.error),
-      );
+      const error = z.prettifyError(result.error);
+      console.error("Invalid response", error);
       return false;
     }
     localStorage.setItem("token", result.data.token);
@@ -197,15 +208,17 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
         authorization: `Bearer ${token}`,
       },
     });
+    if (response.status === 401) {
+      localStorage.removeItem("token");
+      __isLoggedIn = false;
+      return false;
+    }
     if (response.status !== 200) return false;
     const body = await response.json();
     const result = UserMeResponseSchema.safeParse(body);
     if (!result.success) {
-      console.error(
-        "Invalid response",
-        JSON.stringify(body),
-        JSON.stringify(result.error),
-      );
+      const error = z.prettifyError(result.error);
+      console.error("Invalid response", error);
       return false;
     }
     return result.data;

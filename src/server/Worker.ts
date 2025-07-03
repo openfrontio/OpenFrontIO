@@ -2,25 +2,29 @@ import express, { NextFunction, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import http from "http";
 import ipAnonymize from "ip-anonymize";
+import { base64url } from "jose";
 import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod/v4";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { COSMETICS } from "../core/CosmeticSchemas";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
-  GameConfig,
   GameRecord,
   GameRecordSchema,
+  ServerErrorMessage,
 } from "../core/Schemas";
+import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
 import { archive, readGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
+import { PrivilegeChecker } from "./Privilege";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
@@ -41,7 +45,9 @@ export function startWorker() {
 
   const gm = new GameManager(config, log);
 
-  if (config.env() === GameEnv.Prod && config.otelEnabled()) {
+  const privilegeChecker = new PrivilegeChecker(COSMETICS, base64url.decode);
+
+  if (config.otelEnabled()) {
     initWorkerMetrics(gm);
   }
 
@@ -89,7 +95,13 @@ export function startWorker() {
         return res.status(400).json({ error: "Game ID is required" });
       }
       const clientIP = req.ip || req.socket.remoteAddress || "unknown";
-      const gc = req.body?.gameConfig as GameConfig;
+      const result = CreateGameInputSchema.safeParse(req.body);
+      if (!result.success) {
+        const error = z.prettifyError(result.error);
+        return res.status(400).json({ error });
+      }
+
+      const gc = result.data;
       if (
         gc?.gameType === GameType.Public &&
         req.headers[config.adminHeader()] !== config.adminToken()
@@ -97,9 +109,7 @@ export function startWorker() {
         log.warn(
           `cannot create public game ${id}, ip ${ipAnonymize(clientIP)} incorrect admin token`,
         );
-        return res
-          .status(400)
-          .json({ error: "Invalid admin token for public game creation" });
+        return res.status(401).send("Unauthorized");
       }
 
       // Double-check this worker should host this game
@@ -144,9 +154,15 @@ export function startWorker() {
   app.put(
     "/api/game/:id",
     gatekeeper.httpHandler(LimiterType.Put, async (req, res) => {
+      const result = GameInputSchema.safeParse(req.body);
+      if (!result.success) {
+        const error = z.prettifyError(result.error);
+        return res.status(400).json({ error });
+      }
+      const config = result.data;
       // TODO: only update public game if from local host
       const lobbyID = req.params.id;
-      if (req.body.gameType === GameType.Public) {
+      if (config.gameType === GameType.Public) {
         log.info(`cannot update game ${lobbyID} to public`);
         return res.status(400).json({ error: "Cannot update public game" });
       }
@@ -167,18 +183,7 @@ export function startWorker() {
           .status(400)
           .json({ error: "Cannot update game after it has started" });
       }
-      game.updateGameConfig({
-        gameMap: req.body.gameMap,
-        difficulty: req.body.difficulty,
-        infiniteGold: req.body.infiniteGold,
-        infiniteTroops: req.body.infiniteTroops,
-        instantBuild: req.body.instantBuild,
-        bots: req.body.bots,
-        disableNPCs: req.body.disableNPCs,
-        disabledUnits: req.body.disabledUnits,
-        gameMode: req.body.gameMode,
-        playerTeams: req.body.playerTeams,
-      });
+      game.updateGameConfig(config);
       res.status(200).json({ success: true });
     }),
   );
@@ -251,8 +256,7 @@ export function startWorker() {
       if (!result.success) {
         const error = z.prettifyError(result.error);
         log.info(error);
-        res.status(400).json({ error });
-        return;
+        return res.status(400).json({ error });
       }
 
       const gameRecord: GameRecord = result.data;
@@ -295,64 +299,130 @@ export function startWorker() {
           : forwarded || req.socket.remoteAddress || "unknown";
 
         try {
-          // Process WebSocket messages as in your original code
           // Parse and handle client messages
-          const clientMsg = ClientMessageSchema.parse(
+          const parsed = ClientMessageSchema.safeParse(
             JSON.parse(message.toString()),
           );
+          if (!parsed.success) {
+            const error = z.prettifyError(parsed.error);
+            log.warn("Error parsing client message", error);
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                error: error.toString(),
+              } satisfies ServerErrorMessage),
+            );
+            ws.close(1002, "ClientJoinMessageSchema");
+            return;
+          }
+          const clientMsg = parsed.data;
 
-          if (clientMsg.type === "join") {
-            // Verify this worker should handle this game
-            const expectedWorkerId = config.workerIndex(clientMsg.gameID);
-            if (expectedWorkerId !== workerId) {
-              log.warn(
-                `Worker mismatch: Game ${clientMsg.gameID} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
-              );
+          if (clientMsg.type === "ping") {
+            // Ignore ping
+            return;
+          } else if (clientMsg.type !== "join") {
+            const error = `Invalid message before join: ${JSON.stringify(clientMsg)}`;
+            log.warn(error);
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                error,
+              } satisfies ServerErrorMessage),
+            );
+            ws.close(1002, "ClientJoinMessageSchema");
+            return;
+          }
+
+          // Verify this worker should handle this game
+          const expectedWorkerId = config.workerIndex(clientMsg.gameID);
+          if (expectedWorkerId !== workerId) {
+            log.warn(
+              `Worker mismatch: Game ${clientMsg.gameID} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
+            );
+            return;
+          }
+
+          // Verify token signature
+          const result = await verifyClientToken(clientMsg.token, config);
+          if (result === false) {
+            log.warn("Failed to verify token");
+            ws.close(1002, "Failed to verify token");
+            return;
+          }
+          const { persistentId, claims } = result;
+
+          let roles: string[] | undefined;
+          let flares: string[] | undefined;
+
+          if (claims === null) {
+            // TODO: Verify that the persistendId is is not a registered player
+          } else {
+            // Verify token and get player permissions
+            const result = await getUserMe(clientMsg.token, config);
+            if (result === false) {
+              log.warn("Failed to verify token");
+              ws.close(1002, "Failed to verify token");
               return;
             }
+            roles = result.player.roles;
+            flares = result.player.flares;
+          }
 
-            const { persistentId, claims } = await verifyClientToken(
-              clientMsg.token,
-              config,
-            );
-
-            const roles: string[] | null = null;
-
-            // Check user roles
-            if (claims !== null) {
-              const result = await getUserMe(clientMsg.token, config);
-              if (result === false) {
-                log.warn("Token is not valid", claims);
+          // Check if the flag is allowed
+          if (clientMsg.flag !== undefined) {
+            if (clientMsg.flag.startsWith("!")) {
+              const allowed = privilegeChecker.isCustomFlagAllowed(
+                clientMsg.flag,
+                roles,
+                flares,
+              );
+              if (allowed !== true) {
+                log.warn(`Custom flag ${allowed}: ${clientMsg.flag}`);
+                ws.close(1002, `Custom flag ${allowed}`);
                 return;
               }
             }
+          }
 
-            // TODO: Validate client settings based on roles
-
-            // Create client and add to game
-            const client = new Client(
-              clientMsg.clientID,
-              persistentId,
-              claims,
+          // Check if the pattern is allowed
+          if (clientMsg.pattern !== undefined) {
+            const allowed = privilegeChecker.isPatternAllowed(
+              clientMsg.pattern,
               roles,
-              ip,
-              clientMsg.username,
-              ws,
-              clientMsg.flag,
+              flares,
             );
-
-            const wasFound = gm.addClient(
-              client,
-              clientMsg.gameID,
-              clientMsg.lastTurn,
-            );
-
-            if (!wasFound) {
-              log.info(
-                `game ${clientMsg.gameID} not found on worker ${workerId}`,
-              );
-              // Handle game not found case
+            if (allowed !== true) {
+              log.warn(`Pattern ${allowed}: ${clientMsg.pattern}`);
+              ws.close(1002, `Pattern ${allowed}`);
+              return;
             }
+          }
+
+          // Create client and add to game
+          const client = new Client(
+            clientMsg.clientID,
+            persistentId,
+            claims,
+            roles,
+            flares,
+            ip,
+            clientMsg.username,
+            ws,
+            clientMsg.flag,
+            clientMsg.pattern,
+          );
+
+          const wasFound = gm.addClient(
+            client,
+            clientMsg.gameID,
+            clientMsg.lastTurn,
+          );
+
+          if (!wasFound) {
+            log.info(
+              `game ${clientMsg.gameID} not found on worker ${workerId}`,
+            );
+            // Handle game not found case
           }
 
           // Handle other message types
@@ -369,7 +439,7 @@ export function startWorker() {
 
     ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
-        ws.close(1002);
+        ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
       }
     });
   });
