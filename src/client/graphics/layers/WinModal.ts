@@ -249,7 +249,9 @@ export class WinModal extends LitElement implements Layer {
     const updates = this.game.updatesSinceLastTick();
     const winUpdates = updates !== null ? updates[GameUpdateType.Win] : [];
     winUpdates.forEach((wu) => {
-      if (wu.winner[0] === "team") {
+      if (wu.winner === undefined) {
+        // ...
+      } else if (wu.winner[0] === "team") {
         this.eventBus.emit(new SendWinnerEvent(wu.winner, wu.allPlayersStats));
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
@@ -260,8 +262,8 @@ export class WinModal extends LitElement implements Layer {
         }
         this.show();
       } else {
-        const winner = this.game.playerBySmallID(wu.winner[1]);
-        if (!winner.isPlayer()) return;
+        const winner = this.game.playerByClientID(wu.winner[1]);
+        if (!winner?.isPlayer()) return;
         const winnerClient = winner.clientID();
         if (winnerClient !== null) {
           this.eventBus.emit(
