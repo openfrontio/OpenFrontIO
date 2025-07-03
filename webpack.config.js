@@ -126,6 +126,9 @@ export default async (env, argv) => {
         ),
         "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
         "process.env.GIT_COMMIT": JSON.stringify(gitCommit),
+        "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
+          process.env.STRIPE_PUBLISHABLE_KEY,
+        ),
       }),
       new CopyPlugin({
         patterns: [

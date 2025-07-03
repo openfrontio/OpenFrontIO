@@ -14,7 +14,7 @@ function getAudience() {
   return domainname;
 }
 
-function getApiBase() {
+export function getApiBase() {
   const domainname = getAudience();
   return domainname === "localhost"
     ? (localStorage.getItem("apiHost") ?? "http://localhost:8787")
@@ -45,6 +45,12 @@ function getToken(): string | null {
 
 export function discordLogin() {
   window.location.href = `${getApiBase()}/login/discord?redirect_uri=${window.location.href}`;
+}
+
+export function getAuthHeader(): string {
+  const token = getToken();
+  if (!token) return "";
+  return `Bearer ${token}`;
 }
 
 export async function logOut(allSessions: boolean = false) {

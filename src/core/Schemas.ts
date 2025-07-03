@@ -1,3 +1,4 @@
+import { base64url } from "jose";
 import { z } from "zod/v4";
 import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
 import {
@@ -25,6 +26,7 @@ export type Intent =
   | CancelBoatIntent
   | AllianceRequestIntent
   | AllianceRequestReplyIntent
+  | AllianceExtensionIntent
   | BreakAllianceIntent
   | TargetPlayerIntent
   | EmojiIntent
@@ -66,6 +68,9 @@ export type MoveWarshipIntent = z.infer<typeof MoveWarshipIntentSchema>;
 export type QuickChatIntent = z.infer<typeof QuickChatIntentSchema>;
 export type MarkDisconnectedIntent = z.infer<
   typeof MarkDisconnectedIntentSchema
+>;
+export type AllianceExtensionIntent = z.infer<
+  typeof AllianceExtensionIntentSchema
 >;
 
 export type Turn = z.infer<typeof TurnSchema>;
@@ -186,7 +191,7 @@ export const RequiredPatternSchema = z
   .refine(
     (val) => {
       try {
-        new PatternDecoder(val);
+        new PatternDecoder(val, base64url.decode);
         return true;
       } catch (e) {
         console.error(JSON.stringify(e.message, null, 2));
@@ -211,6 +216,11 @@ export const QuickChatKeySchema = z.enum(
 
 const BaseIntentSchema = z.object({
   clientID: ID,
+});
+
+export const AllianceExtensionIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("allianceExtension"),
+  recipient: ID,
 });
 
 export const AttackIntentSchema = BaseIntentSchema.extend({
@@ -354,6 +364,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   EmbargoIntentSchema,
   MoveWarshipIntentSchema,
   QuickChatIntentSchema,
+  AllianceExtensionIntentSchema,
 ]);
 
 //

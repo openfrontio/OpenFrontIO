@@ -176,11 +176,9 @@ export class PlayerPanel extends LitElement implements Layer {
       if (myPlayer !== null && myPlayer.isAlive()) {
         this.actions = await myPlayer.actions(this.tile);
 
-        if (this.actions?.interaction?.allianceCreatedAtTick !== undefined) {
-          const createdAt = this.actions.interaction.allianceCreatedAtTick;
-          const durationTicks = this.g.config().allianceDuration();
-          const expiryTick = createdAt + durationTicks;
-          const remainingTicks = expiryTick - this.g.ticks();
+        if (this.actions?.interaction?.allianceExpiresAt !== undefined) {
+          const expiresAt = this.actions.interaction.allianceExpiresAt;
+          const remainingTicks = expiresAt - this.g.ticks();
 
           if (remainingTicks > 0) {
             const remainingSeconds = Math.max(

@@ -1,5 +1,3 @@
-import { base64url } from "jose";
-
 export class PatternDecoder {
   private bytes: Uint8Array;
 
@@ -7,8 +5,11 @@ export class PatternDecoder {
   readonly width: number;
   readonly scale: number;
 
-  constructor(base64: string) {
-    this.bytes = base64url.decode(base64);
+  constructor(
+    base64: string,
+    base64urlDecode: (input: Uint8Array | string) => Uint8Array,
+  ) {
+    this.bytes = base64urlDecode(base64);
 
     if (this.bytes.length < 3) {
       throw new Error(
