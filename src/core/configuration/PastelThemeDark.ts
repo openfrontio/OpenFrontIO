@@ -41,16 +41,13 @@ export class PastelThemeDark implements Theme {
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
 
   teamColor(team: Team, player?: PlayerView): Colord {
-    if (player) {
-      return this.teamColorAllocator.assignTeamColor(team, player.id());
-    }
     return this.teamColorAllocator.assignTeamColor(team);
   }
 
   territoryColor(player: PlayerView): Colord {
     const team = player.team();
     if (team !== null) {
-      return this.teamColor(team, player);
+      return this.teamColorAllocator.assignTeamColor(team, player.id());
     }
     if (player.type() === PlayerType.Human) {
       return this.humanColorAllocator.assignColor(player.id());

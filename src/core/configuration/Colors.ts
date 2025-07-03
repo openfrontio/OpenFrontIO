@@ -4,6 +4,7 @@ import lchPlugin from "colord/plugins/lch";
 import { ColoredTeams, Team } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
+
 extend([lchPlugin]);
 extend([labPlugin]);
 
@@ -457,14 +458,6 @@ export class ColorAllocator {
   }
 
   assignTeamColor(team: Team, playerId?: string): Colord {
-    // If we have a player ID, assign a consistent color variation to this player
-    if (playerId) {
-      const cacheKey = `${team}_${playerId}`;
-      if (this.teamPlayerColors.has(cacheKey)) {
-        return this.teamPlayerColors.get(cacheKey)!;
-      }
-    }
-
     const teamColors = this.getTeamColorVariations(team);
 
     // If we have a player ID, select a specific color variation based on the player ID
@@ -472,8 +465,8 @@ export class ColorAllocator {
       const hashValue = simpleHash(playerId);
       const colorIndex = hashValue % teamColors.length;
       const color = teamColors[colorIndex];
-      const cacheKey = `${team}_${playerId}`;
-      this.teamPlayerColors.set(cacheKey, color);
+
+      this.teamPlayerColors.set(playerId, color);
 
       return color;
     }
