@@ -64,7 +64,10 @@ export class ReplayPanel extends LitElement implements Layer {
           ${this.renderSpeedButton(ReplaySpeedMultiplier.slow, "×0.5")}
           ${this.renderSpeedButton(ReplaySpeedMultiplier.normal, "×1")}
           ${this.renderSpeedButton(ReplaySpeedMultiplier.fast, "×2")}
-          ${this.renderSpeedButton(ReplaySpeedMultiplier.fastest, "max")}
+          ${this.renderSpeedButton(
+            ReplaySpeedMultiplier.fastest,
+            translateText("replay_panel.max"),
+          )}
         </div>
       </div>
     `;

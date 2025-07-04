@@ -411,16 +411,18 @@ export class EventsDisplay extends LitElement implements Layer {
     ) as PlayerView;
 
     this.addEvent({
-      description: `${requestor.name()} requests an alliance!`,
+      description: translateText("events_display.request_alliance", {
+        name: requestor.name(),
+      }),
       buttons: [
         {
-          text: "Focus",
+          text: translateText("events_display.focus"),
           className: "btn-gray",
           action: () => this.eventBus.emit(new GoToPlayerEvent(requestor)),
           preventClose: true,
         },
         {
-          text: "Accept",
+          text: translateText("events_display.accept"),
           className: "btn",
           action: () =>
             this.eventBus.emit(
@@ -428,7 +430,7 @@ export class EventsDisplay extends LitElement implements Layer {
             ),
         },
         {
-          text: "Reject",
+          text: translateText("events_display.reject"),
           className: "btn-info",
           action: () =>
             this.eventBus.emit(
@@ -460,9 +462,12 @@ export class EventsDisplay extends LitElement implements Layer {
     ) as PlayerView;
 
     this.addEvent({
-      description: `${recipient.name()} ${
-        update.accepted ? "accepted" : "rejected"
-      } your alliance request`,
+      description: translateText("events_display.alliance_request_status", {
+        name: recipient.name(),
+        status: update.accepted
+          ? translateText("events_display.alliance_accepted")
+          : translateText("events_display.alliance_rejected"),
+      }),
       type: update.accepted
         ? MessageType.ALLIANCE_ACCEPTED
         : MessageType.ALLIANCE_REJECTED,
@@ -488,12 +493,18 @@ export class EventsDisplay extends LitElement implements Layer {
         this.game.config().traitorDuration() * 0.1,
       );
       const durationText =
-        traitorDuration === 1 ? "1 second" : `${traitorDuration} seconds`;
+        traitorDuration === 1
+          ? translateText("events_display.duration_seconds")
+          : translateText("events_display.duration_seconds_plural", {
+              seconds: traitorDuration,
+            });
 
       this.addEvent({
-        description:
-          `You broke your alliance with ${betrayed.name()}, making you a TRAITOR ` +
-          `(${malusPercent}% defense debuff for ${durationText})`,
+        description: translateText("events_display.betrayal_description", {
+          name: betrayed.name(),
+          malusPercent: malusPercent,
+          durationText: durationText,
+        }),
         type: MessageType.ALLIANCE_BROKEN,
         highlight: true,
         createdAt: this.game.ticks(),
@@ -502,14 +513,16 @@ export class EventsDisplay extends LitElement implements Layer {
     } else if (betrayed === myPlayer) {
       const buttons = [
         {
-          text: "Focus",
+          text: translateText("events_display.focus"),
           className: "btn-gray",
           action: () => this.eventBus.emit(new GoToPlayerEvent(traitor)),
           preventClose: true,
         },
       ];
       this.addEvent({
-        description: `${traitor.name()} broke their alliance with you`,
+        description: translateText("events_display.betrayed_you", {
+          name: traitor.name(),
+        }),
         type: MessageType.ALLIANCE_BROKEN,
         highlight: true,
         createdAt: this.game.ticks(),
@@ -534,7 +547,9 @@ export class EventsDisplay extends LitElement implements Layer {
     if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
 
     this.addEvent({
-      description: `Your alliance with ${other.name()} expired`,
+      description: translateText("events_display.alliance_expired", {
+        name: other.name(),
+      }),
       type: MessageType.ALLIANCE_EXPIRED,
       highlight: true,
       createdAt: this.game.ticks(),
@@ -550,7 +565,10 @@ export class EventsDisplay extends LitElement implements Layer {
     const target = this.game.playerBySmallID(event.targetID) as PlayerView;
 
     this.addEvent({
-      description: `${other.name()} requests you attack ${target.name()}`,
+      description: translateText("events_display.attack_request", {
+        name: other.name(),
+        target: target.name(),
+      }),
       type: MessageType.ATTACK_REQUEST,
       highlight: true,
       createdAt: this.game.ticks(),
@@ -598,7 +616,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
     if (recipient === myPlayer) {
       this.addEvent({
-        description: `${sender.displayName()}:${update.emoji.message}`,
+        description: `${sender.displayName()}: ${update.emoji.message}`,
         unsafeDescription: true,
         type: MessageType.CHAT,
         highlight: true,
@@ -607,9 +625,10 @@ export class EventsDisplay extends LitElement implements Layer {
       });
     } else if (sender === myPlayer && recipient !== AllPlayers) {
       this.addEvent({
-        description: `Sent ${(recipient as PlayerView).displayName()}: ${
-          update.emoji.message
-        }`,
+        description: translateText("events_display.sent_emoji", {
+          name: (recipient as PlayerView).displayName(),
+          emoji: update.emoji.message,
+        }),
         unsafeDescription: true,
         type: MessageType.CHAT,
         highlight: true,
@@ -745,7 +764,7 @@ export class EventsDisplay extends LitElement implements Layer {
                   <div class="inline-flex items-center gap-1">
                     ${this.renderButton({
                       content: html`${renderTroops(landAttack.troops)}
-                      Wilderness`,
+                      ${translateText("help_modal.ui_wilderness")}`,
                       className: "text-left text-gray-400",
                       translate: false,
                     })}
@@ -952,7 +971,7 @@ export class EventsDisplay extends LitElement implements Layer {
                         >`
                       : ""}
                     ${this.renderButton({
-                      content: "Hide",
+                      content: translateText("leaderboard.hide"),
                       onClick: this.toggleHidden,
                       className:
                         "text-white cursor-pointer pointer-events-auto",

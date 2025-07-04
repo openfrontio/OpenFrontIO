@@ -18,14 +18,13 @@ import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import treeIcon from "../../../../resources/images/TreeIconWhite.svg";
 import troopIcon from "../../../../resources/images/TroopIconWhite.svg";
 import workerIcon from "../../../../resources/images/WorkerIconWhite.svg";
-import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
-import { renderNumber, renderTroops } from "../../Utils";
+import { renderNumber, renderTroops, translateText } from "../../Utils";
 import { Layer } from "./Layer";
 
 @customElement("game-top-bar")
@@ -111,7 +110,9 @@ export class GameTopBar extends LitElement implements Layer {
   private onExitButtonClick() {
     const isAlive = this.game.myPlayer()?.isAlive();
     if (isAlive) {
-      const isConfirmed = confirm("Are you sure you want to exit the game?");
+      const isConfirmed = confirm(
+        translateText("help_modal.exit_confirmation"),
+      );
       if (!isConfirmed) return;
     }
     // redirect to the home page
@@ -163,13 +164,19 @@ export class GameTopBar extends LitElement implements Layer {
   }
 
   private secondsToHms = (d: number): string => {
+    if (d === 0) return translateText("time.dash") ?? "-";
+
     const h = Math.floor(d / 3600);
     const m = Math.floor((d % 3600) / 60);
     const s = Math.floor((d % 3600) % 60);
-    let time = d === 0 ? "-" : `${s}s`;
-    if (m > 0) time = `${m}m` + time;
-    if (h > 0) time = `${h}h` + time;
-    return time;
+
+    const parts: string[] = [];
+    if (h > 0) parts.push(translateText("time.hour", { n: h }));
+    if (m > 0) parts.push(translateText("time.minute", { n: m }));
+    if (s > 0 || parts.length === 0)
+      parts.push(translateText("time.second", { n: s }));
+
+    return parts.join(" ");
   };
 
   render() {
@@ -378,7 +385,12 @@ export class GameTopBar extends LitElement implements Layer {
                           width="20"
                           height="20"
                         />
-                        Toggle Terrain ${this.alternateView ? "On" : "Off"}
+                        ${translateText("user_setting.toggle_terrain")}
+                        ${translateText(
+                          this.alternateView
+                            ? "user_setting.on"
+                            : "user_setting.off",
+                        )}
                       </button>
                       <button
                         class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
@@ -391,7 +403,11 @@ export class GameTopBar extends LitElement implements Layer {
                           height="20"
                         />
                         ${translateText("user_setting.emojis_label")}
-                        ${this._userSettings.emojis() ? "On" : "Off"}
+                        ${translateText(
+                          this._userSettings.emojis()
+                            ? "user_setting.on"
+                            : "user_setting.off",
+                        )}
                       </button>
                       <button
                         class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
@@ -404,7 +420,11 @@ export class GameTopBar extends LitElement implements Layer {
                           height="20"
                         />
                         ${translateText("user_setting.dark_mode_label")}
-                        ${this._userSettings.darkMode() ? "On" : "Off"}
+                        ${translateText(
+                          this._userSettings.darkMode()
+                            ? "user_setting.on"
+                            : "user_setting.off",
+                        )}
                       </button>
                       <button
                         class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
@@ -417,7 +437,11 @@ export class GameTopBar extends LitElement implements Layer {
                           height="20"
                         />
                         ${translateText("user_setting.special_effects_label")}
-                        ${this._userSettings.fxLayer() ? "On" : "Off"}
+                        ${translateText(
+                          this._userSettings.fxLayer()
+                            ? "user_setting.on"
+                            : "user_setting.off",
+                        )}
                       </button>
                       <button
                         class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
@@ -430,7 +454,11 @@ export class GameTopBar extends LitElement implements Layer {
                           height="20"
                         />
                         ${translateText("user_setting.anonymous_names_label")}
-                        ${this._userSettings.anonymousNames() ? "On" : "Off"}
+                        ${translateText(
+                          this._userSettings.anonymousNames()
+                            ? "user_setting.on"
+                            : "user_setting.off",
+                        )}
                       </button>
                       <button
                         class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
@@ -442,10 +470,12 @@ export class GameTopBar extends LitElement implements Layer {
                           width="20"
                           height="20"
                         />
-                        Left click
-                        ${this._userSettings.leftClickOpensMenu()
-                          ? "On"
-                          : "Off"}
+                        ${translateText("user_setting.left_click")}
+                        ${translateText(
+                          this._userSettings.leftClickOpensMenu()
+                            ? "user_setting.on"
+                            : "user_setting.off",
+                        )}
                       </button>
                       <button
                         class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
@@ -457,7 +487,7 @@ export class GameTopBar extends LitElement implements Layer {
                           width="20"
                           height="20"
                         />
-                        Exit game
+                        ${translateText("win_modal.exit")}
                       </button>
                     </div>
                   `

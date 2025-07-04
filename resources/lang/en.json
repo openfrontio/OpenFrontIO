@@ -56,6 +56,7 @@
     "ui_events_alliance": "Alliance - Alliance requests can be accepted or rejected. Allies can share resources and troops, but can't attack each other. Clicking Focus moves the view to the player who sent the request.",
     "ui_events_attack": "Attacks - Incoming attacks and your outgoing attacks are shown. Click the message to center the view on the attack, nuke or Boat (transport ship). You can retreat troops by clicking the red X button. This will cost the lives of 25% of your attacking troops. If you retrieve a Boat attack, the boat returns to its starting point and will attack there if the land has been captured since. Nukes can't be retreated once launched.",
     "ui_events_quickchat": "Quick Chat - You can see sent and recieved chat messages here. Send a message to a player by clicking the Quick Chat icon in their Info menu.",
+    "ui_wilderness": "Wilderness",
     "ui_options": "Options",
     "ui_options_desc": "The following elements can be found inside:",
     "ui_playeroverlay": "Player info overlay",
@@ -112,7 +113,8 @@
     "icon_ally": "Handshake - Ally. This player is your ally.",
     "icon_embargo": "Dollar stop sign - Embargo. This player has stopped trading with you automatically or manually.",
     "icon_request": "Envelope - Alliance request. This player has sent you an alliance request.",
-    "info_enemy_panel": "Enemy info panel"
+    "info_enemy_panel": "Enemy info panel",
+    "exit_confirmation": "Are you sure you want to exit the game?"
   },
   "single_modal": {
     "title": "Single Player",
@@ -191,6 +193,7 @@
     "title": "Private Lobby",
     "mode": "Mode",
     "team_count": "Number of Teams",
+    "duos": "Duos",
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
@@ -253,6 +256,10 @@
     "dark_mode_desc": "Toggle the site’s appearance between light and dark themes",
     "emojis_label": "Emojis",
     "emojis_desc": "Toggle whether emojis are shown in game",
+    "toggle_terrain": "Toggle Terrain",
+    "on": "On",
+    "off": "Off",
+    "left_click": "Left Click",
     "alert_frame_label": "Alert Frame",
     "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed.",
     "special_effects_label": "Special effects",
@@ -390,6 +397,16 @@
     },
     "not_enough_money": "Not enough money"
   },
+  "time": {
+    "hour": "{n}h",
+    "minute": "{n}m",
+    "second": "{n}s",
+    "dash": "-"
+  },
+  "number_suffix": {
+    "million": "{n}M",
+    "thousand": "{n}K"
+  },
   "win_modal": {
     "died": "You died",
     "your_team": "Your team won!",
@@ -436,8 +453,41 @@
     "about_to_expire": "Your alliance with {name} is about to expire!",
     "renew_alliance": "Request to renew",
     "focus": "Focus",
+    "accept": "Accept",
+    "reject": "Reject",
+    "request_alliance": "{name} requests an alliance!",
+    "alliance_request_status": "{name} {status} your alliance request",
+    "alliance_accepted": "accepted",
+    "alliance_rejected": "rejected",
     "alliance_renewed": "Your alliance with {name} has been renewed",
-    "ignore": "Ignore"
+    "duration_seconds": "1 second",
+    "duration_seconds_plural": "{seconds} seconds",
+    "betrayed_you": "{name} broke their alliance with you",
+    "betrayal_description": "You broke your alliance with {name}, making you a TRAITOR ({malusPercent}% defense debuff for {durationText})",
+    "alliance_expired": "Your alliance with {name} expired",
+    "attack_request": "{name} requests you attack {target}",
+    "sent_emoji": "Sent {name}: {emoji}",
+    "ignore": "Ignore",
+    "attack_cancelled": "Attack cancelled, {deaths} soldiers killed during retreat",
+    "conquered_gold": "Conquered {name} received {gold} gold",
+    "unit_captured": "Your {unit} was captured by {owner}",
+    "captured_unit": "Captured {unit} from {owner}",
+    "unit_destroyed": "Your {unit} was destroyed",
+    "missile_failed": "Missile failed to intercept {type}",
+    "mirv_intercepted": "{count} MIRV warheads intercepted",
+    "sent_gold": "Sent {amount} gold to {name}",
+    "received_gold": "Received {amount} gold from {name}",
+    "sent_troops": "Sent {troops} troops to {name}",
+    "received_troops": "Received {troops} troops from {name}",
+    "alliance_renewed_message": "Your alliance with {name} has been renewed",
+    "atom_bomb_inbound": "{name} - atom bomb inbound",
+    "hydrogen_bomb_inbound": "{name} - hydrogen bomb inbound",
+    "mirv_inbound": "⚠️⚠️⚠️ {name} - MIRV INBOUND ⚠️⚠️⚠️",
+    "naval_invasion_incoming": "Naval invasion incoming from {attacker}",
+    "missile_intercepted": "Missile intercepted {target}",
+    "gold_from_ship_capture": "Received {gold} gold from ship captured from {owner}",
+    "gold_from_trade": "Received {gold} gold from trade with {owner}",
+    "no_boats_available": "No boats available, max {max}"
   },
   "unit_info_modal": {
     "structure_info": "Structure Info",
@@ -480,7 +530,8 @@
   },
   "replay_panel": {
     "replay_speed": "Replay speed",
-    "game_speed": "Game speed"
+    "game_speed": "Game speed",
+    "max": "max"
   },
   "error_modal": {
     "crashed": "Game crashed!",

@@ -9,6 +9,7 @@ import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { PauseGameEvent } from "../../Transport";
+import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 
 @customElement("game-right-sidebar")
@@ -61,7 +62,9 @@ export class GameRightSidebar extends LitElement implements Layer {
   private onExitButtonClick() {
     const isAlive = this.game.myPlayer()?.isAlive();
     if (isAlive) {
-      const isConfirmed = confirm("Are you sure you want to exit the game?");
+      const isConfirmed = confirm(
+        translateText("help_modal.exit_confirmation"),
+      );
       if (!isConfirmed) return;
     }
     // redirect to the home page
