@@ -797,7 +797,7 @@ export class PlayerImpl implements Player {
   // Returns the existing unit that can be upgraded,
   // or false if it cannot be upgraded.
   // New units of the same type can upgrade existing units.
-  // e.g. if a place a new city here, will it upgrade an existing city?
+  // e.g. if a place a new city here, can it upgrade an existing city?
   private canUpgradeExistingUnit(
     type: UnitType,
     targetTile: TileRef,
