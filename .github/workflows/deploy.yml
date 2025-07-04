@@ -51,7 +51,7 @@ jobs:
     environment: ${{ inputs.target_domain == 'openfront.io' && 'prod' || '' }}
     env:
       DOMAIN: ${{ inputs.target_domain || 'openfront.dev' }}
-      SUBDOMAIN: ${{ github.event_name == 'push' && github.ref_name || inputs.target_subdomain || 'main' }}
+      SUBDOMAIN: ${{ github.event_name == 'push' && github.ref_name || inputs.target_subdomain || 'head' }}
     steps:
       - uses: actions/checkout@v4
       - name: 📝 Update job summary
