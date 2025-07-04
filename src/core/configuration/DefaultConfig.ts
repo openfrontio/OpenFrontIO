@@ -430,7 +430,6 @@ export class DefaultConfig implements Config {
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
-          upgradable: true,
         };
       case UnitType.SAMLauncher:
         return {
@@ -478,6 +477,7 @@ export class DefaultConfig implements Config {
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           canBuildTrainStation: true,
           experimental: true,
+          upgradable: true,
         };
       case UnitType.Construction:
         return {

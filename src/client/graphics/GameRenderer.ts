@@ -35,7 +35,6 @@ import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { UILayer } from "./layers/UILayer";
-import { UnitInfoModal } from "./layers/UnitInfoModal";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
 
@@ -71,6 +70,7 @@ export function createRenderer(
   }
   buildMenu.game = game;
   buildMenu.eventBus = eventBus;
+  buildMenu.transformHandler = transformHandler;
 
   const leaderboard = document.querySelector("leader-board") as Leaderboard;
   if (!emojiTable || !(leaderboard instanceof Leaderboard)) {
@@ -190,21 +190,7 @@ export function createRenderer(
   }
   headsUpMessage.game = game;
 
-  const unitInfoModal = document.querySelector(
-    "unit-info-modal",
-  ) as UnitInfoModal;
-  if (!(unitInfoModal instanceof UnitInfoModal)) {
-    console.error("unit info modal not found");
-  }
-  unitInfoModal.game = game;
-  const structureLayer = new StructureLayer(
-    game,
-    eventBus,
-    transformHandler,
-    unitInfoModal,
-  );
-  unitInfoModal.structureLayer = structureLayer;
-  // unitInfoModal.eventBus = eventBus;
+  const structureLayer = new StructureLayer(game, eventBus, transformHandler);
 
   const spawnAd = document.querySelector("spawn-ad") as SpawnAd;
   if (!(spawnAd instanceof SpawnAd)) {
@@ -260,7 +246,6 @@ export function createRenderer(
     teamStats,
     playerPanel,
     headsUpMessage,
-    unitInfoModal,
     multiTabModal,
     spawnAd,
     gutterAdModal,
