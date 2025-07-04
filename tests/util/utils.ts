@@ -15,7 +15,7 @@ export function constructionExecution(
   unit: UnitType,
   ticks = 4,
 ) {
-  game.addExecution(new ConstructionExecution(_owner, game.ref(x, y), unit));
+  game.addExecution(new ConstructionExecution(_owner, unit, game.ref(x, y)));
 
   // 4 ticks by default as it usually goes like this
   // Init of construction execution

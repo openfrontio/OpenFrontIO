@@ -483,7 +483,7 @@ export class FakeHumanExecution implements Execution {
     if (canBuild === false) {
       return false;
     }
-    this.mg.addExecution(new ConstructionExecution(this.player, tile, type));
+    this.mg.addExecution(new ConstructionExecution(this.player, type, tile));
     return true;
   }
 
@@ -522,7 +522,7 @@ export class FakeHumanExecution implements Execution {
         return false;
       }
       this.mg.addExecution(
-        new ConstructionExecution(this.player, targetTile, UnitType.Warship),
+        new ConstructionExecution(this.player, UnitType.Warship, targetTile),
       );
       return true;
     }
