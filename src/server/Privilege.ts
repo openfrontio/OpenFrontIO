@@ -40,7 +40,7 @@ export class PrivilegeChecker {
       if (
         roles !== undefined &&
         roles.some((role) =>
-          this.cosmetics.role_groups[groupName].includes(role),
+          this.cosmetics.role_groups[groupName]?.includes(role),
         )
       ) {
         // Player is in a role group for this pattern

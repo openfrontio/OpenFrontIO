@@ -182,13 +182,13 @@ class Client {
     const territoryModal = document.querySelector(
       "territory-patterns-modal",
     ) as TerritoryPatternsModal;
-    const tpButton = document.getElementById(
+    const patternButton = document.getElementById(
       "territory-patterns-input-preview-button",
     );
     territoryModal instanceof TerritoryPatternsModal;
-    if (tpButton === null)
+    if (patternButton === null)
       throw new Error("territory-patterns-input-preview-button");
-    territoryModal.previewButton = tpButton;
+    territoryModal.previewButton = patternButton;
     territoryModal.updatePreview();
     territoryModal.resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -197,7 +197,7 @@ class Client {
         }
       }
     });
-    tpButton.addEventListener("click", () => {
+    patternButton.addEventListener("click", () => {
       territoryModal.open();
     });
 
