@@ -397,15 +397,19 @@ export class TerritoryLayer implements Layer {
     const isHighlighted =
       this.highlightedTerritory &&
       this.highlightedTerritory.id() === owner.id();
+    const myPlayer = this.game.myPlayer();
+
     if (this.game.isBorder(tile)) {
       const playerIsFocused = owner && this.game.focusedPlayer() === owner;
-      let alternativeColor = owner.isFriendly(this.game.myPlayer()!)
-        ? this.theme.allyColor()
-        : this.theme.enemyColor();
-      if (owner.smallID() === this.game.myPlayer()!.smallID()) {
-        alternativeColor = this.theme.selfColor();
+      if (myPlayer) {
+        let alternativeColor = owner.isFriendly(myPlayer)
+          ? this.theme.allyColor()
+          : this.theme.enemyColor();
+        if (owner.smallID() === myPlayer.smallID()) {
+          alternativeColor = this.theme.selfColor();
+        }
+        this.paintTile(this.alternativeImageData, tile, alternativeColor, 255);
       }
-      this.paintTile(this.alternativeImageData, tile, alternativeColor, 255);
       if (
         this.game.hasUnitNearby(
           tile,
@@ -431,20 +435,22 @@ export class TerritoryLayer implements Layer {
       const pattern = owner.cosmetics.pattern;
       const patternsEnabled = this.cachedTerritoryPatternsEnabled ?? false;
 
-      let alternativeColor = owner.isFriendly(this.game.myPlayer()!)
-        ? this.theme.allyColor()
-        : this.theme.enemyColor();
-      // If the current player is the owner
-      if (owner.smallID() === this.game.myPlayer()!.smallID()) {
-        alternativeColor = this.theme.selfColor();
+      if (myPlayer) {
+        let alternativeColor = owner.isFriendly(myPlayer)
+          ? this.theme.allyColor()
+          : this.theme.enemyColor();
+        // If the current player is the owner
+        if (owner.smallID() === myPlayer.smallID()) {
+          alternativeColor = this.theme.selfColor();
+        }
+        // If the tile is on a ally territory, use the ally color
+        this.paintTile(
+          this.alternativeImageData,
+          tile,
+          alternativeColor,
+          isHighlighted ? 150 : 60,
+        );
       }
-      // If the tile is on a ally territory, use the ally color
-      this.paintTile(
-        this.alternativeImageData,
-        tile,
-        alternativeColor,
-        isHighlighted ? 150 : 60,
-      );
 
       if (pattern === undefined || patternsEnabled === false) {
         this.paintTile(
