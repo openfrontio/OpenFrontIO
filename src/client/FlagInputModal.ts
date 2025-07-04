@@ -348,6 +348,54 @@ export class FlagInputModal extends LitElement {
     });
   }
 
+  private renderColorSwatchGeneric(
+    color: string,
+    sizeClasses: string,
+    isSelected: boolean,
+    onClick: () => void,
+  ) {
+    const isLocked = this.lockedColors.includes(color);
+    const isSpecial = !color.startsWith("#");
+    const cssClass = isSpecial ? `flag-color-${color}` : "";
+    const style = isSpecial ? "" : `background-color: ${color};`;
+    const selectedClass = isSelected ? "border-white" : "border-gray-400";
+    const lockedClass = isLocked ? "opacity-40 cursor-not-allowed" : "";
+    return html`
+      <button
+        class="${sizeClasses} rounded-full border-2 relative ${selectedClass} ${lockedClass} ${cssClass}"
+        style=${style}
+        title=${color}
+        @click=${() => {
+          if (!isLocked) onClick();
+        }}
+        @mouseenter=${(e: MouseEvent) => {
+          if (isLocked) this.onHover(color, e);
+        }}
+        @mousemove=${(e: MouseEvent) => {
+          if (isLocked) this.onHover(color, e);
+        }}
+        @mouseleave=${() => this.clearHover()}
+      >
+        ${isLocked
+          ? html`<img
+              src=${locked}
+              alt="Locked"
+              class="absolute inset-0 m-auto w-5 h-5 pointer-events-none"
+            />`
+          : ""}
+      </button>
+    `;
+  }
+
+  // Helper for hover logic (used in renderColorSwatchGeneric)
+  private onHover(color: string, e: MouseEvent) {
+    this.hoveredColor = color;
+    this.hoverPosition = { x: e.clientX, y: e.clientY };
+  }
+  private clearHover() {
+    this.hoveredColor = null;
+  }
+
   render() {
     const result = checkPermission(
       this.flag,
@@ -444,51 +492,16 @@ export class FlagInputModal extends LitElement {
                 <!-- left -->
                 <div class="flex flex-col items-center gap-2 overflow-y-auto">
                   <div class="flex flex-wrap gap-1 mb-2 justify-center">
-                    ${this.colorOptions.map((color) => {
-                      const isLocked = this.lockedColors.includes(color);
-                      const isSpecial = !color.startsWith("#");
-                      const colorClass = isSpecial ? `flag-color-${color}` : "";
-                      const inlineStyle = isSpecial
-                        ? ""
-                        : `background-color: ${color};`;
-                      const isSelected = this.selectedColor === color;
-                      return html`
-                        <button
-                          class="w-4 h-4 rounded-full border-2 relative
-${isSelected ? "border-white" : "border-gray-400"}
-${isLocked ? "opacity-40 cursor-not-allowed" : ""}
-${colorClass}"
-                          style=${inlineStyle}
-                          @click=${() =>
-                            !isLocked && (this.selectedColor = color)}
-                          @mouseenter=${(e: MouseEvent) => {
-                            if (isLocked) {
-                              this.hoveredColor = color;
-                            }
-                          }}
-                          @mousemove=${(e: MouseEvent) => {
-                            if (isLocked) {
-                              this.hoverPosition = {
-                                x: e.clientX,
-                                y: e.clientY,
-                              };
-                            }
-                          }}
-                          @mouseleave=${() => {
-                            this.hoveredColor = null;
-                          }}
-                          title=${color}
-                        >
-                          ${isLocked
-                            ? html`<img
-                                src=${locked}
-                                alt="Locked"
-                                class="absolute top-1/2 left-1/2 w-5 h-5 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-                              />`
-                            : ""}
-                        </button>
-                      `;
-                    })}
+                    ${this.colorOptions.map((color) =>
+                      this.renderColorSwatchGeneric(
+                        color,
+                        "w-4 h-4",
+                        this.selectedColor === color,
+                        () => {
+                          this.selectedColor = color;
+                        },
+                      ),
+                    )}
                   </div>
 
                   <p class="text-lg font-bold text-white self-start">
@@ -885,63 +898,25 @@ mask: url(${src}) center / contain no-repeat;
                                   <div
                                     class="flex flex-wrap gap-1 justify-start mt-1"
                                   >
-                                    ${this.colorOptions.map((color) => {
-                                      const isLocked =
-                                        this.lockedColors.includes(color);
-                                      const isSpecial = !color.startsWith("#");
-                                      const colorClass = isSpecial
-                                        ? `flag-color-${color}`
-                                        : "";
-                                      const inlineStyle = isSpecial
-                                        ? ""
-                                        : `background-color: ${color};`;
-
-                                      return html`
-                                        <button
-                                          class="w-3 h-3 rounded-full border-2 relative
-          ${arr[index].color === color ? "border-white" : "border-gray-400"}
-          ${isLocked ? "opacity-40 cursor-not-allowed" : ""}
-          ${colorClass}"
-                                          style=${inlineStyle}
-                                          @click=${() => {
-                                            if (
-                                              !isLocked &&
-                                              this.openColorIndex !== null
-                                            ) {
-                                              this.updateLayerColor(
-                                                this.openColorIndex,
-                                                color,
-                                              );
-                                            }
-                                          }}
-                                          @mouseenter=${(e: MouseEvent) => {
-                                            if (isLocked) {
-                                              this.hoveredColor = color;
-                                            }
-                                          }}
-                                          @mousemove=${(e: MouseEvent) => {
-                                            if (isLocked) {
-                                              this.hoverPosition = {
-                                                x: e.clientX,
-                                                y: e.clientY,
-                                              };
-                                            }
-                                          }}
-                                          @mouseleave=${() => {
-                                            this.hoveredColor = null;
-                                          }}
-                                          title=${color}
-                                        >
-                                          ${isLocked
-                                            ? html`<img
-                                                src=${locked}
-                                                alt="Locked"
-                                                class="absolute top-1/2 left-1/2 w-5 h-5 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-                                              />`
-                                            : ""}
-                                        </button>
-                                      `;
-                                    })}
+                                    ${this.colorOptions.map((color) =>
+                                      this.renderColorSwatchGeneric(
+                                        color,
+                                        "w-3 h-3",
+                                        arr[index].color === color,
+                                        () => {
+                                          if (
+                                            !this.lockedColors.includes(
+                                              color,
+                                            ) &&
+                                            this.openColorIndex !== null
+                                          )
+                                            this.updateLayerColor(
+                                              this.openColorIndex,
+                                              color,
+                                            );
+                                        },
+                                      ),
+                                    )}
                                   </div>
                                 `
                               : ""}
