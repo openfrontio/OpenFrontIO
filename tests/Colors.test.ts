@@ -1,11 +1,15 @@
 import { colord, Colord } from "colord";
 import {
-  blue,
-  botColor,
+  blueTeamColor,
+  botTeamColor,
   ColorAllocator,
-  red,
+  greenTeamColor,
+  orangeTeamColor,
+  purpleTeamColor,
+  redTeamColor,
   selectDistinctColor,
-  teal,
+  tealTeamColor,
+  yellowTeamColor,
 } from "../src/core/configuration/Colors";
 import { ColoredTeams } from "../src/core/game/Game";
 
@@ -75,11 +79,76 @@ describe("ColorAllocator", () => {
     expect(c2.isEqual(c2Again)).toBe(true);
   });
 
-  test("assignTeamColor returns the expected static color for known teams", () => {
-    expect(allocator.assignTeamColor(ColoredTeams.Blue)).toEqual(blue);
-    expect(allocator.assignTeamColor(ColoredTeams.Red)).toEqual(red);
-    expect(allocator.assignTeamColor(ColoredTeams.Teal)).toEqual(teal);
-    expect(allocator.assignTeamColor(ColoredTeams.Bot)).toEqual(botColor);
+  test("assignTeamColor returns the base color from the team", () => {
+    expect(allocator.assignTeamColor(ColoredTeams.Blue)).toEqual(blueTeamColor);
+    expect(allocator.assignTeamColor(ColoredTeams.Red)).toEqual(redTeamColor);
+    expect(allocator.assignTeamColor(ColoredTeams.Teal)).toEqual(tealTeamColor);
+    expect(allocator.assignTeamColor(ColoredTeams.Purple)).toEqual(
+      purpleTeamColor,
+    );
+    expect(allocator.assignTeamColor(ColoredTeams.Yellow)).toEqual(
+      yellowTeamColor,
+    );
+    expect(allocator.assignTeamColor(ColoredTeams.Orange)).toEqual(
+      orangeTeamColor,
+    );
+    expect(allocator.assignTeamColor(ColoredTeams.Green)).toEqual(
+      greenTeamColor,
+    );
+    expect(allocator.assignTeamColor(ColoredTeams.Bot)).toEqual(botTeamColor);
+  });
+
+  test("assignTeamPlayerColor always returns the same color for the same playerID", () => {
+    const playerId = "player123";
+
+    const blueColor1 = allocator.assignTeamPlayerColor(
+      ColoredTeams.Blue,
+      playerId,
+    );
+    const blueColor2 = allocator.assignTeamPlayerColor(
+      ColoredTeams.Blue,
+      playerId,
+    );
+
+    expect(blueColor1.isEqual(blueColor2)).toBe(true);
+
+    const redColor1 = allocator.assignTeamPlayerColor(
+      ColoredTeams.Red,
+      playerId,
+    );
+    const redColor2 = allocator.assignTeamPlayerColor(
+      ColoredTeams.Red,
+      playerId,
+    );
+
+    expect(redColor1.isEqual(redColor2)).toBe(true);
+  });
+
+  test("assignTeamPlayerColor returns a different color when the playerID is different", () => {
+    const playerIdOne = "player1";
+    const playerIdTwo = "player2";
+
+    const blueColorPlayerOne = allocator.assignTeamPlayerColor(
+      ColoredTeams.Blue,
+      playerIdOne,
+    );
+    const blueColorPlayerTwo = allocator.assignTeamPlayerColor(
+      ColoredTeams.Blue,
+      playerIdTwo,
+    );
+
+    expect(blueColorPlayerOne.isEqual(blueColorPlayerTwo)).toBe(false);
+
+    const redColorPlayerOne = allocator.assignTeamPlayerColor(
+      ColoredTeams.Red,
+      playerIdOne,
+    );
+    const redColorPlayerTwo = allocator.assignTeamPlayerColor(
+      ColoredTeams.Red,
+      playerIdTwo,
+    );
+
+    expect(redColorPlayerOne.isEqual(redColorPlayerTwo)).toBe(false);
   });
 });
 
