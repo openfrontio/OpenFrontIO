@@ -133,6 +133,9 @@ export class BuildMenu extends LitElement implements Layer {
 
   init() {
     this.eventBus.on(ShowBuildMenuEvent, (e) => {
+      if (!this.game.myPlayer()?.isAlive()) {
+        return;
+      }
       const clickedCell = this.transformHandler.screenToWorldCoordinates(
         e.x,
         e.y,
@@ -144,9 +147,6 @@ export class BuildMenu extends LitElement implements Layer {
         return;
       }
       const tile = this.game.ref(clickedCell.x, clickedCell.y);
-      if (!this.game.myPlayer()?.isAlive()) {
-        return;
-      }
       this.showMenu(tile);
     });
     this.eventBus.on(CloseViewEvent, () => this.hideMenu());
@@ -383,9 +383,6 @@ export class BuildMenu extends LitElement implements Layer {
   }
 
   public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile: TileRef): void {
-    if (buildableUnit === null) {
-      return;
-    }
     if (buildableUnit.canUpgrade !== false) {
       this.eventBus.emit(
         new SendUpgradeStructureIntentEvent(
