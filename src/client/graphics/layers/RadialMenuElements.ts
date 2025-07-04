@@ -26,6 +26,7 @@ import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import infoIcon from "../../../../resources/images/InfoIcon.svg";
 import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
+import { EventBus } from "../../../core/EventBus";
 
 export interface MenuElementParams {
   myPlayer: PlayerView;
@@ -38,6 +39,7 @@ export interface MenuElementParams {
   playerActionHandler: PlayerActionHandler;
   playerPanel: PlayerPanel;
   chatIntegration: ChatIntegration;
+  eventBus: EventBus;
   closeMenu: () => void;
 }
 
@@ -371,8 +373,10 @@ export const buildMenuElement: MenuElement = {
           ? item.key.replace("unit_type.", "")
           : item.unitType.toString(),
         disabled: (params: MenuElementParams) =>
-          !params.buildMenu.canBuild(item),
-        color: params.buildMenu.canBuild(item) ? COLORS.building : undefined,
+          !params.buildMenu.canBuildOrUpgrade(item),
+        color: params.buildMenu.canBuildOrUpgrade(item)
+          ? COLORS.building
+          : undefined,
         icon: item.icon,
         tooltipItems: [
           { text: translateText(item.key || ""), className: "title" },
@@ -389,11 +393,15 @@ export const buildMenuElement: MenuElement = {
             : null,
         ].filter((item): item is TooltipItem => item !== null),
         action: (params: MenuElementParams) => {
-          params.playerActionHandler.handleBuildUnit(
-            item.unitType,
-            params.game.x(params.tile),
-            params.game.y(params.tile),
+          const buildableUnit = params.playerActions.buildableUnits.find(
+            (bu) => bu.type === item.unitType,
           );
+          if (buildableUnit === undefined) {
+            return;
+          }
+          if (params.buildMenu.canBuildOrUpgrade(item)) {
+            params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
+          }
           params.closeMenu();
         },
       }));

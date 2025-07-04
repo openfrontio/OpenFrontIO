@@ -127,6 +127,7 @@ export class MainRadialMenu extends LitElement implements Layer {
       playerPanel: this.playerPanel,
       chatIntegration: this.chatIntegration,
       closeMenu: () => this.closeMenu(),
+      eventBus: this.eventBus,
     };
 
     this.radialMenu.setRootMenuItems(rootMenuItems, centerButtonElement);

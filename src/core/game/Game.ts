@@ -522,6 +522,7 @@ export interface Player {
     spawnTile: TileRef,
     params: UnitParams<T>,
   ): Unit;
+
   upgradeUnit(unit: Unit): void;
 
   captureUnit(unit: Unit): void;
@@ -682,6 +683,8 @@ export interface PlayerActions {
 
 export interface BuildableUnit {
   canBuild: TileRef | false;
+  // unit id of the existing unit that can be upgraded, or false if it cannot be upgraded.
+  canUpgrade: number | false;
   type: UnitType;
   cost: Gold;
 }
