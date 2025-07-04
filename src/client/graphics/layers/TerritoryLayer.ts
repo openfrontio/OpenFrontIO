@@ -102,6 +102,15 @@ export class TerritoryLayer implements Layer {
     // Detect alliance mutations
     const myPlayer = this.game.myPlayer();
     if (myPlayer) {
+      updates?.[GameUpdateType.BrokeAlliance]?.forEach((update) => {
+        const territory = this.game.playerBySmallID(update.betrayedID);
+        console.log("betrayedID", update.betrayedID);
+        console.log("territory", territory);
+        if (territory && territory instanceof PlayerView) {
+          this.redrawTerritory(territory);
+        }
+      });
+
       updates?.[GameUpdateType.AllianceRequestReply]?.forEach((update) => {
         if (
           update.accepted &&
@@ -112,9 +121,10 @@ export class TerritoryLayer implements Layer {
             update.request.requestorID === myPlayer.smallID()
               ? update.request.recipientID
               : update.request.requestorID;
-          this.redrawTerritory(
-            this.game.playerBySmallID(territoryId) as PlayerView,
-          );
+          const territory = this.game.playerBySmallID(territoryId);
+          if (territory && territory instanceof PlayerView) {
+            this.redrawTerritory(territory);
+          }
         }
       });
     }
@@ -240,7 +250,8 @@ export class TerritoryLayer implements Layer {
     if (!this.game.hasOwner(tile)) {
       return null;
     }
-    return this.game.owner(tile) as PlayerView;
+    const owner = this.game.owner(tile);
+    return owner instanceof PlayerView ? owner : null;
   }
 
   redraw() {
