@@ -37,6 +37,15 @@ export class ConstructionExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
+
+    if (this.mg.config().isUnitDisabled(this.constructionType)) {
+      console.warn(
+        `cannot build construction ${this.constructionType} because it is disabled`,
+      );
+      this.active = false;
+      return;
+    }
+
     if (this.tileOrCell instanceof Cell) {
       if (!this.mg.isValidCoord(this.tileOrCell.x, this.tileOrCell.y)) {
         console.warn(

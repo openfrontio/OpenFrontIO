@@ -1,5 +1,11 @@
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { Difficulty, GameMapType, GameMode, GameType } from "../core/game/Game";
+import {
+  Difficulty,
+  GameMapType,
+  GameMode,
+  GameType,
+  UnitType,
+} from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
 import { GameConfig } from "../core/Schemas";
 import { logger } from "./Logger";
@@ -61,6 +67,7 @@ export class MapPlaylist {
       gameMode: mode,
       playerTeams: numPlayerTeams,
       bots: 400,
+      disabledUnits: [UnitType.Train, UnitType.Factory],
     } satisfies GameConfig;
   }
 
