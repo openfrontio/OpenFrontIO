@@ -151,7 +151,11 @@ export class PublicLobby extends LitElement {
                   : "text-blue-600"} bg-white rounded-sm px-1"
               >
                 ${lobby.gameConfig.gameMode === GameMode.Team
-                  ? translateText("public_lobby.teams", { num: teamCount ?? 0 })
+                  ? typeof teamCount === "string"
+                    ? translateText(`public_lobby.teams_${teamCount}`)
+                    : translateText("public_lobby.teams", {
+                        num: teamCount ?? 0,
+                      })
                   : translateText("game_mode.ffa")}</span
               >
               <span

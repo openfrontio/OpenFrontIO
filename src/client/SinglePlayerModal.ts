@@ -8,10 +8,13 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  Quads,
+  Trios,
   UnitType,
   mapCategories,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
+import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
@@ -38,7 +41,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private instantBuild: boolean = false;
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
-  @state() private teamCount: number | typeof Duos = 2;
+  @state() private teamCount: TeamCountConfig = 2;
 
   @state() private disabledUnits: UnitType[] = [
     UnitType.Factory,
@@ -174,7 +177,7 @@ export class SinglePlayerModal extends LitElement {
                     ${translateText("host_modal.team_count")}
                   </div>
                   <div class="option-cards">
-                    ${["Duos", 2, 3, 4, 5, 6, 7].map(
+                    ${[2, 3, 4, 5, 6, 7, Quads, Trios, Duos].map(
                       (o) => html`
                         <div
                           class="option-card ${this.teamCount === o
@@ -182,7 +185,11 @@ export class SinglePlayerModal extends LitElement {
                             : ""}"
                           @click=${() => this.handleTeamCountSelection(o)}
                         >
-                          <div class="option-card-title">${o}</div>
+                          <div class="option-card-title">
+                            ${typeof o === "string"
+                              ? translateText(`public_lobby.teams_${o}`)
+                              : translateText(`public_lobby.teams`, { num: o })}
+                          </div>
                         </div>
                       `,
                     )}
@@ -361,8 +368,8 @@ export class SinglePlayerModal extends LitElement {
     this.gameMode = value;
   }
 
-  private handleTeamCountSelection(value: number | string) {
-    this.teamCount = value === "Duos" ? Duos : Number(value);
+  private handleTeamCountSelection(value: TeamCountConfig) {
+    this.teamCount = value;
   }
 
   private getRandomMap(): GameMapType {
