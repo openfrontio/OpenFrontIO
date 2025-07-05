@@ -470,15 +470,19 @@ export class GameTopBar extends LitElement implements Layer {
                         class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
                         @click="${this.onMuteMusicButtonClick}"
                       >
-                        <span class="mr-1">${this._userSettings.getMuteMusic() ? "🔇" : "🎵"}</span>
-                        Mute Music
+                        <span class="mr-1">
+                          ${this._userSettings.getMuteMusic() ? "🔇" : "🎵"}
+                        </span>
+                        ${translateText("user_setting.mute_music_label")}
                       </button>
                       <button
                         class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
                         @click="${this.onMuteSoundEffectsButtonClick}"
                       >
-                        <span class="mr-1">${this._userSettings.getMuteSoundEffects() ? "🔇" : "🔊"}</span>
-                        Mute Sound Effects
+                        <span class="mr-1">
+                          ${this._userSettings.getMuteSoundEffects() ? "🔇" : "🔊"}
+                        </span>
+                        ${translateText("user_setting.mute_sound_effects_label")}
                       </button>
                       <button
                         class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
