@@ -25,6 +25,7 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
+import { soundManager } from "../../SoundManager";
 import { renderNumber, renderTroops } from "../../Utils";
 import { Layer } from "./Layer";
 
@@ -145,6 +146,24 @@ export class GameTopBar extends LitElement implements Layer {
   }
   private onToggleLeftClickOpensMenu() {
     this._userSettings.toggleLeftClickOpenMenu();
+  }
+
+  private onMuteMusicButtonClick() {
+    if (this._userSettings.getMuteMusic()) {
+      soundManager.unmuteMusic();
+    } else {
+      soundManager.muteMusic();
+    }
+    this.requestUpdate();
+  }
+
+  private onMuteSoundEffectsButtonClick() {
+    if (this._userSettings.getMuteSoundEffects()) {
+      soundManager.unmuteSoundEffects();
+    } else {
+      soundManager.muteSoundEffects();
+    }
+    this.requestUpdate();
   }
 
   private toggleSettingsMenu() {
@@ -446,6 +465,20 @@ export class GameTopBar extends LitElement implements Layer {
                         ${this._userSettings.leftClickOpensMenu()
                           ? "On"
                           : "Off"}
+                      </button>
+                      <button
+                        class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
+                        @click="${this.onMuteMusicButtonClick}"
+                      >
+                        <span class="mr-1">${this._userSettings.getMuteMusic() ? "🔇" : "🎵"}</span>
+                        Mute Music
+                      </button>
+                      <button
+                        class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
+                        @click="${this.onMuteSoundEffectsButtonClick}"
+                      >
+                        <span class="mr-1">${this._userSettings.getMuteSoundEffects() ? "🔇" : "🔊"}</span>
+                        Mute Sound Effects
                       </button>
                       <button
                         class="flex gap-1 items-center w-full text-left px-2 py-1 hover:bg-slate-600 text-white text-sm"
