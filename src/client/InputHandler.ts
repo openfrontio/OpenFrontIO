@@ -10,6 +10,13 @@ export class MouseUpEvent implements GameEvent {
   ) {}
 }
 
+export class MouseOverEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
 /**
  * Event emitted when a unit is selected or deselected
  */
@@ -372,6 +379,7 @@ export class InputHandler {
     this.pointers.set(event.pointerId, event);
 
     if (!this.pointerDown) {
+      this.eventBus.emit(new MouseOverEvent(event.clientX, event.clientY));
       return;
     }
 
