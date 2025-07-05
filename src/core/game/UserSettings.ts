@@ -107,6 +107,22 @@ export class UserSettings {
     this.set("muted", muted);
   }
 
+  getMuteMusic(): boolean {
+    return this.get("muteMusic", false);
+  }
+
+  setMuteMusic(mute: boolean): void {
+    this.set("muteMusic", mute);
+  }
+
+  getMuteSoundEffects(): boolean {
+    return this.get("muteSoundEffects", false);
+  }
+
+  setMuteSoundEffects(mute: boolean): void {
+    this.set("muteSoundEffects", mute);
+  }
+
   getSelectedPattern(): string | undefined {
     return localStorage.getItem(PATTERN_KEY) ?? undefined;
   }
