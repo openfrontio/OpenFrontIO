@@ -7,6 +7,8 @@ class SoundManager {
   private musicSource: AudioBufferSourceNode | null = null;
   private userSettings: UserSettings;
   private masterVolume: GainNode;
+  private musicVolume: GainNode;
+  private soundEffectsVolume: GainNode;
   private muted: boolean;
   private activeSources: Map<string, AudioBufferSourceNode[]> = new Map();
 
@@ -15,12 +17,24 @@ class SoundManager {
       (window as any).webkitAudioContext)();
     this.userSettings = new UserSettings();
     this.masterVolume = this.audioContext.createGain();
+    this.musicVolume = this.audioContext.createGain();
+    this.soundEffectsVolume = this.audioContext.createGain();
+    this.musicVolume.connect(this.masterVolume);
+    this.soundEffectsVolume.connect(this.masterVolume);
     this.masterVolume.connect(this.audioContext.destination);
     this.muted = this.userSettings.getMuted();
     this.setMasterVolume(this.userSettings.getVolume());
 
     if (this.muted) {
       this.mute();
+    }
+
+    if (this.userSettings.getMuteMusic()) {
+      this.muteMusic();
+    }
+
+    if (this.userSettings.getMuteSoundEffects()) {
+      this.muteSoundEffects();
     }
   }
 
@@ -57,7 +71,7 @@ class SoundManager {
       const source = this.audioContext.createBufferSource();
       source.buffer = soundBuffer;
       source.loop = loop;
-      source.connect(this.masterVolume);
+      source.connect(this.soundEffectsVolume);
       source.start(0);
 
       if (!this.activeSources.has(name)) {
@@ -94,7 +108,7 @@ class SoundManager {
       this.musicSource = this.audioContext.createBufferSource();
       this.musicSource.buffer = musicBuffer;
       this.musicSource.loop = true;
-      this.musicSource.connect(this.masterVolume);
+      this.musicSource.connect(this.musicVolume);
       this.musicSource.start(0);
     }
   }
@@ -128,6 +142,26 @@ class SoundManager {
 
   public isMuted(): boolean {
     return this.muted;
+  }
+
+  public muteMusic(): void {
+    this.musicVolume.gain.setValueAtTime(0, this.audioContext.currentTime);
+    this.userSettings.setMuteMusic(true);
+  }
+
+  public unmuteMusic(): void {
+    this.musicVolume.gain.setValueAtTime(1, this.audioContext.currentTime);
+    this.userSettings.setMuteMusic(false);
+  }
+
+  public muteSoundEffects(): void {
+    this.soundEffectsVolume.gain.setValueAtTime(0, this.audioContext.currentTime);
+    this.userSettings.setMuteSoundEffects(true);
+  }
+
+  public unmuteSoundEffects(): void {
+    this.soundEffectsVolume.gain.setValueAtTime(1, this.audioContext.currentTime);
+    this.userSettings.setMuteSoundEffects(false);
   }
 
   public playSpatialSound(name: string, x: number, y: number, z: number): void {
