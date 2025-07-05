@@ -18,18 +18,20 @@ class StructureRenderInfo {
   constructor(
     public unit: UnitView,
     public owner: PlayerID,
-    public pixiContainer: PIXI.Container,
+    public iconContainer: PIXI.Container,
+    public levelContainer: PIXI.Container,
     public level: number = 0,
     public underConstruction: boolean = true,
   ) {}
 }
 const ZOOM_THRESHOLD = 2.5;
 const ICON_SIZE = 24;
-const OFFSET_ZOOM_Y = 12; // offset for the y position of the icon to avoid hiding the structure beneath
+const OFFSET_ZOOM_Y = 5; // offset for the y position of the icon to avoid hiding the structure beneath
 
 export class StructureIconsLayer implements Layer {
   private pixicanvas: HTMLCanvasElement;
-  private stage: PIXI.Container;
+  private iconsStage: PIXI.Container;
+  private levelsStage: PIXI.Container;
   private shouldRedraw: boolean = true;
   private textureCache: Map<string, PIXI.Texture> = new Map();
   private theme: Theme;
@@ -66,10 +68,17 @@ export class StructureIconsLayer implements Layer {
     this.pixicanvas = document.createElement("canvas");
     this.pixicanvas.width = window.innerWidth;
     this.pixicanvas.height = window.innerHeight;
-    this.stage = new PIXI.Container();
-    this.stage.position.set(0, 0);
-    this.stage.width = this.pixicanvas.width;
-    this.stage.height = this.pixicanvas.height;
+
+    this.iconsStage = new PIXI.Container();
+    this.iconsStage.position.set(0, 0);
+    this.iconsStage.width = this.pixicanvas.width;
+    this.iconsStage.height = this.pixicanvas.height;
+
+    this.levelsStage = new PIXI.Container();
+    this.levelsStage.position.set(0, 0);
+    this.levelsStage.width = this.pixicanvas.width;
+    this.levelsStage.height = this.pixicanvas.height;
+
     await this.renderer.init({
       canvas: this.pixicanvas,
       resolution: 1,
@@ -173,8 +182,8 @@ export class StructureIconsLayer implements Layer {
       render.unit.type() !== UnitType.Construction
     ) {
       render.underConstruction = false;
-      render.pixiContainer?.destroy();
-      render.pixiContainer = this.createPixiSprite(unit);
+      render.iconContainer?.destroy();
+      render.iconContainer = this.createIconSprite(unit);
       this.shouldRedraw = true;
     }
   }
@@ -182,8 +191,8 @@ export class StructureIconsLayer implements Layer {
   private checkForOwnershipChange(render: StructureRenderInfo, unit: UnitView) {
     if (render.owner !== unit.owner().id()) {
       render.owner = unit.owner().id();
-      render.pixiContainer?.destroy();
-      render.pixiContainer = this.createPixiSprite(unit);
+      render.iconContainer?.destroy();
+      render.iconContainer = this.createIconSprite(unit);
       this.shouldRedraw = true;
     }
   }
@@ -191,8 +200,10 @@ export class StructureIconsLayer implements Layer {
   private checkForLevelChange(render: StructureRenderInfo, unit: UnitView) {
     if (render.level !== unit.level()) {
       render.level = unit.level();
-      render.pixiContainer?.destroy();
-      render.pixiContainer = this.createPixiSprite(unit);
+      render.iconContainer?.destroy();
+      render.levelContainer?.destroy();
+      render.iconContainer = this.createIconSprite(unit);
+      render.levelContainer = this.createLevelSprite(unit);
       this.shouldRedraw = true;
     }
   }
@@ -202,7 +213,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   renderLayer(mainContext: CanvasRenderingContext2D) {
-    if (!this.renderer || this.transformHandler.scale > ZOOM_THRESHOLD) {
+    if (!this.renderer) {
       return;
     }
 
@@ -213,7 +224,11 @@ export class StructureIconsLayer implements Layer {
     }
 
     if (this.transformHandler.hasChanged() || this.shouldRedraw) {
-      this.renderer.render(this.stage);
+      if (this.transformHandler.scale > ZOOM_THRESHOLD) {
+        this.renderer.render(this.levelsStage);
+      } else {
+        this.renderer.render(this.iconsStage);
+      }
       this.shouldRedraw = false;
     }
     mainContext.drawImage(this.renderer.canvas, 0, 0);
@@ -282,17 +297,38 @@ export class StructureIconsLayer implements Layer {
     return texture;
   }
 
-  private createPixiSprite(unit: UnitView): PIXI.Container {
+  private createLevelSprite(unit: UnitView): PIXI.Container {
+    return this.createUnitContainer(unit, {
+      addIcon: false,
+      stage: this.levelsStage,
+    });
+  }
+
+  private createIconSprite(unit: UnitView): PIXI.Container {
+    return this.createUnitContainer(unit, {
+      addIcon: true,
+      stage: this.iconsStage,
+    });
+  }
+
+  private createUnitContainer(
+    unit: UnitView,
+    options: { addIcon?: boolean; stage: PIXI.Container },
+  ): PIXI.Container {
     const parentContainer = new PIXI.Container();
-    const sprite = new PIXI.Sprite(this.createTexture(unit));
-    sprite.anchor.set(0.5, 0.5);
     const tile = unit.tile();
     const worldX = this.game.x(tile);
     const worldY = this.game.y(tile);
     const screenPos = this.transformHandler.worldToScreenCoordinates(
       new Cell(worldX, worldY),
     );
-    parentContainer.addChild(sprite);
+
+    if (options.addIcon) {
+      const sprite = new PIXI.Sprite(this.createTexture(unit));
+      sprite.anchor.set(0.5, 0.5);
+      parentContainer.addChild(sprite);
+    }
+
     if (unit.level() > 1) {
       const text = new PIXI.BitmapText({
         text: unit.level().toString(),
@@ -305,19 +341,20 @@ export class StructureIconsLayer implements Layer {
       text.position.y = -ICON_SIZE / 2 - 2;
       parentContainer.addChild(text);
     }
+
     const posX = Math.round(screenPos.x);
     let posY = Math.round(screenPos.y);
+
     if (this.transformHandler.scale >= ZOOM_THRESHOLD) {
-      // Adjust the y position based on zoom level to avoid hiding the structure beneath
       posY = Math.round(
         screenPos.y - this.transformHandler.scale * OFFSET_ZOOM_Y,
       );
-    } else {
-      posY = Math.round(screenPos.y);
     }
+
     parentContainer.position.set(posX, posY);
     parentContainer.scale.set(Math.min(1, this.transformHandler.scale));
-    this.stage.addChild(parentContainer);
+
+    options.stage.addChild(parentContainer);
     return parentContainer;
   }
 
@@ -362,14 +399,21 @@ export class StructureIconsLayer implements Layer {
       screenPos.y - margin < this.pixicanvas.height;
 
     if (onScreen) {
-      render.pixiContainer.x = screenPos.x;
-      render.pixiContainer.y = screenPos.y;
-      render.pixiContainer.scale.set(Math.min(1, this.transformHandler.scale));
+      if (this.transformHandler.scale > ZOOM_THRESHOLD) {
+        render.levelContainer.x = screenPos.x;
+        render.levelContainer.y = screenPos.y;
+      } else {
+        render.iconContainer.x = screenPos.x;
+        render.iconContainer.y = screenPos.y;
+        render.iconContainer.scale.set(
+          Math.min(1, this.transformHandler.scale),
+        );
+      }
     }
     if (render.isOnScreen !== onScreen) {
       // prevent unnecessary updates
       render.isOnScreen = onScreen;
-      render.pixiContainer.visible = onScreen;
+      render.iconContainer.visible = onScreen;
     }
   }
 
@@ -378,7 +422,14 @@ export class StructureIconsLayer implements Layer {
     const render = new StructureRenderInfo(
       unitView,
       unitView.owner().id(),
-      this.createPixiSprite(unitView),
+      this.createUnitContainer(unitView, {
+        addIcon: true,
+        stage: this.iconsStage,
+      }),
+      this.createUnitContainer(unitView, {
+        addIcon: false,
+        stage: this.levelsStage,
+      }),
       unitView.level(),
       unitView.type() === UnitType.Construction,
     );
@@ -388,7 +439,8 @@ export class StructureIconsLayer implements Layer {
   }
 
   private deleteStructure(render: StructureRenderInfo) {
-    render.pixiContainer?.destroy();
+    render.iconContainer?.destroy();
+    render.levelContainer?.destroy();
     this.renders = this.renders.filter((r) => r.unit !== render.unit);
     this.seenUnits.delete(render.unit);
   }
