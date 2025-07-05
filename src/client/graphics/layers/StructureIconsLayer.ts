@@ -414,6 +414,7 @@ export class StructureIconsLayer implements Layer {
       // prevent unnecessary updates
       render.isOnScreen = onScreen;
       render.iconContainer.visible = onScreen;
+      render.levelContainer.visible = onScreen;
     }
   }
 
