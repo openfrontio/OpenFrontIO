@@ -29,6 +29,15 @@ export default [
       "@typescript-eslint/no-unused-vars": "off",
       "no-case-declarations": "off",
       "no-useless-escape": "off",
+      "no-restricted-syntax": [
+        "warn",
+        // ban all enums
+        {
+          selector: "TSEnumDeclaration",
+          message:
+            "Do not use native enums: see https://www.youtube.com/watch?v=jjMbPt_H3RQ",
+        },
+      ],
     },
   },
   {
