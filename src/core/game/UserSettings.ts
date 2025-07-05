@@ -87,6 +87,42 @@ export class UserSettings {
     }
   }
 
+  getVolume(): number {
+    const value = localStorage.getItem("volume");
+    if (value) {
+      return parseFloat(value);
+    }
+    return 1;
+  }
+
+  setVolume(volume: number): void {
+    localStorage.setItem("volume", volume.toString());
+  }
+
+  getMuted(): boolean {
+    return this.get("muted", false);
+  }
+
+  setMuted(muted: boolean): void {
+    this.set("muted", muted);
+  }
+
+  getMuteMusic(): boolean {
+    return this.get("muteMusic", false);
+  }
+
+  setMuteMusic(mute: boolean): void {
+    this.set("muteMusic", mute);
+  }
+
+  getMuteSoundEffects(): boolean {
+    return this.get("muteSoundEffects", false);
+  }
+
+  setMuteSoundEffects(mute: boolean): void {
+    this.set("muteSoundEffects", mute);
+  }
+
   getSelectedPattern(): string | undefined {
     return localStorage.getItem(PATTERN_KEY) ?? undefined;
   }

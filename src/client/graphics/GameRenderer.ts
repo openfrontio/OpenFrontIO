@@ -1,8 +1,10 @@
+import clickSound from "../../../resources/non-commercial/sounds/sound-effects/click.mp3";
 import { EventBus } from "../../core/EventBus";
 import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
+import { soundManager } from "../SoundManager";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { AlertFrame } from "./layers/AlertFrame";
@@ -276,6 +278,10 @@ export class GameRenderer {
     const context = canvas.getContext("2d");
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
+
+    const sounds = [{ name: "click", path: clickSound }];
+
+    soundManager.loadSounds(sounds);
   }
 
   initialize() {
