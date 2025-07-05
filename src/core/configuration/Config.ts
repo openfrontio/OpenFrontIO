@@ -1,9 +1,8 @@
 import { Colord } from "colord";
 import { JWK } from "jose";
-import { GameConfig, GameID } from "../Schemas";
+import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import {
   Difficulty,
-  Duos,
   Game,
   GameMapType,
   GameMode,
@@ -87,7 +86,7 @@ export interface Config {
   instantBuild(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
-  playerTeams(): number | typeof Duos;
+  playerTeams(): TeamCountConfig;
 
   startManpower(playerInfo: PlayerInfo): number;
   populationIncreaseRate(player: Player | PlayerView): number;

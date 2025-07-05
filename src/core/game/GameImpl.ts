@@ -21,9 +21,11 @@ import {
   PlayerID,
   PlayerInfo,
   PlayerType,
+  Quads,
   Team,
   TerrainType,
   TerraNullius,
+  Trios,
   Unit,
   UnitInfo,
   UnitType,
@@ -74,7 +76,7 @@ export class GameImpl implements Game {
   private updates: GameUpdates = createGameUpdatesMap();
   private unitGrid: UnitGrid;
 
-  private playerTeams: Team[] = [ColoredTeams.Red, ColoredTeams.Blue];
+  private playerTeams: Team[];
   private botTeam: Team = ColoredTeams.Bot;
   private _railNetwork: RailNetwork = createRailNetwork(this);
 
@@ -101,25 +103,37 @@ export class GameImpl implements Game {
   }
 
   private populateTeams() {
-    if (this._config.playerTeams() === Duos) {
-      this.playerTeams = [];
-      const numTeams = Math.ceil(
-        (this._humans.length + this._nations.length) / 2,
-      );
-      for (let i = 0; i < numTeams; i++) {
-        this.playerTeams.push("Team " + (i + 1));
+    let numPlayerTeams = this._config.playerTeams();
+    if (typeof numPlayerTeams !== "number") {
+      const players = this._humans.length + this._nations.length;
+      switch (numPlayerTeams) {
+        case Duos:
+          numPlayerTeams = Math.ceil(players / 2);
+          break;
+        case Trios:
+          numPlayerTeams = Math.ceil(players / 3);
+          break;
+        case Quads:
+          numPlayerTeams = Math.ceil(players / 4);
+          break;
+        default:
+          throw new Error(`Unknown TeamCountConfig ${numPlayerTeams}`);
       }
-    } else {
-      const numPlayerTeams = this._config.playerTeams() as number;
-      if (numPlayerTeams < 2)
-        throw new Error(`Too few teams: ${numPlayerTeams}`);
+    }
+    if (numPlayerTeams < 2) {
+      throw new Error(`Too few teams: ${numPlayerTeams}`);
+    } else if (numPlayerTeams < 8) {
+      this.playerTeams = [ColoredTeams.Red, ColoredTeams.Blue];
       if (numPlayerTeams >= 3) this.playerTeams.push(ColoredTeams.Yellow);
       if (numPlayerTeams >= 4) this.playerTeams.push(ColoredTeams.Green);
       if (numPlayerTeams >= 5) this.playerTeams.push(ColoredTeams.Purple);
       if (numPlayerTeams >= 6) this.playerTeams.push(ColoredTeams.Orange);
       if (numPlayerTeams >= 7) this.playerTeams.push(ColoredTeams.Teal);
-      if (numPlayerTeams >= 8)
-        throw new Error(`Too many teams: ${numPlayerTeams}`);
+    } else {
+      this.playerTeams = [];
+      for (let i = 1; i <= numPlayerTeams; i++) {
+        this.playerTeams.push(`Team ${i}`);
+      }
     }
   }
 

@@ -2,7 +2,6 @@ import { JWK } from "jose";
 import { z } from "zod/v4";
 import {
   Difficulty,
-  Duos,
   Game,
   GameMapType,
   GameMode,
@@ -20,7 +19,7 @@ import {
 import { TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
-import { GameConfig, GameID } from "../Schemas";
+import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import { assertNever, simpleHash, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { PastelTheme } from "./PastelTheme";
@@ -279,7 +278,7 @@ export class DefaultConfig implements Config {
   defensePostDefenseBonus(): number {
     return 5;
   }
-  playerTeams(): number | typeof Duos {
+  playerTeams(): TeamCountConfig {
     return this._gameConfig.playerTeams ?? 0;
   }
 
