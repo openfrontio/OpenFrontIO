@@ -2,6 +2,7 @@ import express, { NextFunction, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import http from "http";
 import ipAnonymize from "ip-anonymize";
+import { base64url } from "jose";
 import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
@@ -11,7 +12,7 @@ import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { COSMETICS } from "../core/CosmeticSchemas";
 import { GameType } from "../core/game/Game";
 import {
-  ClientJoinMessageSchema,
+  ClientMessageSchema,
   GameRecord,
   GameRecordSchema,
   ServerErrorMessage,
@@ -44,9 +45,9 @@ export function startWorker() {
 
   const gm = new GameManager(config, log);
 
-  const privilegeChecker = new PrivilegeChecker(COSMETICS);
+  const privilegeChecker = new PrivilegeChecker(COSMETICS, base64url.decode);
 
-  if (config.env() === GameEnv.Prod && config.otelEnabled()) {
+  if (config.otelEnabled()) {
     initWorkerMetrics(gm);
   }
 
@@ -301,12 +302,12 @@ export function startWorker() {
 
         try {
           // Parse and handle client messages
-          const parsed = ClientJoinMessageSchema.safeParse(
+          const parsed = ClientMessageSchema.safeParse(
             JSON.parse(message.toString()),
           );
           if (!parsed.success) {
             const error = z.prettifyError(parsed.error);
-            log.warn("Error parsing join message client", error);
+            log.warn("Error parsing client message", error);
             ws.send(
               JSON.stringify({
                 type: "error",
@@ -317,6 +318,22 @@ export function startWorker() {
             return;
           }
           const clientMsg = parsed.data;
+
+          if (clientMsg.type === "ping") {
+            // Ignore ping
+            return;
+          } else if (clientMsg.type !== "join") {
+            const error = `Invalid message before join: ${JSON.stringify(clientMsg)}`;
+            log.warn(error);
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                error,
+              } satisfies ServerErrorMessage),
+            );
+            ws.close(1002, "ClientJoinMessageSchema");
+            return;
+          }
 
           // Verify this worker should handle this game
           const expectedWorkerId = config.workerIndex(clientMsg.gameID);
@@ -355,7 +372,18 @@ export function startWorker() {
 
           // Check if the flag is allowed
           if (clientMsg.flag !== undefined) {
-            // TODO: Implement custom flag validation
+            if (clientMsg.flag.startsWith("!")) {
+              const allowed = privilegeChecker.isCustomFlagAllowed(
+                clientMsg.flag,
+                roles,
+                flares,
+              );
+              if (allowed !== true) {
+                log.warn(`Custom flag ${allowed}: ${clientMsg.flag}`);
+                ws.close(1002, `Custom flag ${allowed}`);
+                return;
+              }
+            }
           }
 
           // Check if the pattern is allowed

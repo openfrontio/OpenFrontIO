@@ -1,5 +1,5 @@
 import { Config } from "../configuration/Config";
-import { AllPlayersStats, ClientID } from "../Schemas";
+import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
 import { AllianceRequestImpl } from "./AllianceRequestImpl";
@@ -15,6 +15,7 @@ import {
   GameMode,
   GameUpdates,
   MessageType,
+  MutableAlliance,
   Nation,
   Player,
   PlayerID,
@@ -76,6 +77,9 @@ export class GameImpl implements Game {
   private playerTeams: Team[] = [ColoredTeams.Red, ColoredTeams.Blue];
   private botTeam: Team = ColoredTeams.Bot;
   private _railNetwork: RailNetwork = createRailNetwork(this);
+
+  // Used to assign unique IDs to each new alliance
+  private nextAllianceID: number = 0;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -146,6 +150,11 @@ export class GameImpl implements Game {
   owner(ref: TileRef): Player | TerraNullius {
     return this.playerBySmallID(this.ownerID(ref));
   }
+
+  alliances(): MutableAlliance[] {
+    return this.alliances_;
+  }
+
   playerBySmallID(id: number): Player | TerraNullius {
     if (id === 0) {
       return this.terraNullius();
@@ -231,11 +240,20 @@ export class GameImpl implements Game {
     const requestor = request.requestor();
     const recipient = request.recipient();
 
+    const existing = requestor.allianceWith(recipient);
+    if (existing) {
+      throw new Error(
+        `cannot accept alliance request, already allied with ${recipient.name()}`,
+      );
+    }
+
+    // Create and register the new alliance
     const alliance = new AllianceImpl(
       this,
       requestor as PlayerImpl,
       recipient as PlayerImpl,
       this._ticks,
+      this.nextAllianceID++,
     );
     this.alliances_.push(alliance);
     (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
@@ -596,12 +614,29 @@ export class GameImpl implements Game {
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
     this.addUpdate({
       type: GameUpdateType.Win,
-      winner:
-        typeof winner === "string"
-          ? ["team", winner]
-          : ["player", winner.smallID()],
+      winner: this.makeWinner(winner),
       allPlayersStats,
     });
+  }
+
+  private makeWinner(winner: string | Player): Winner | undefined {
+    if (typeof winner === "string") {
+      return [
+        "team",
+        winner,
+        ...this.players()
+          .filter((p) => p.team() === winner && p.clientID() !== null)
+          .map((p) => p.clientID()!),
+      ];
+    } else {
+      const clientId = winner.clientID();
+      if (clientId === null) return;
+      return [
+        "player",
+        clientId,
+        // TODO: Assists (vote for peace)
+      ];
+    }
   }
 
   teams(): Team[] {

@@ -182,13 +182,13 @@ class Client {
     const territoryModal = document.querySelector(
       "territory-patterns-modal",
     ) as TerritoryPatternsModal;
-    const tpButton = document.getElementById(
+    const patternButton = document.getElementById(
       "territory-patterns-input-preview-button",
     );
     territoryModal instanceof TerritoryPatternsModal;
-    if (tpButton === null)
+    if (patternButton === null)
       throw new Error("territory-patterns-input-preview-button");
-    territoryModal.previewButton = tpButton;
+    territoryModal.previewButton = patternButton;
     territoryModal.updatePreview();
     territoryModal.resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -197,7 +197,7 @@ class Client {
         }
       }
     });
-    tpButton.addEventListener("click", () => {
+    patternButton.addEventListener("click", () => {
       territoryModal.open();
     });
 
@@ -207,6 +207,7 @@ class Client {
       loginDiscordButton.translationKey = "main.login_discord";
       loginDiscordButton.addEventListener("click", discordLogin);
       logoutDiscordButton.hidden = true;
+      territoryModal.onUserMe(null);
     } else {
       // JWT appears to be valid
       loginDiscordButton.disable = true;
@@ -215,12 +216,12 @@ class Client {
       logoutDiscordButton.addEventListener("click", () => {
         // Log out
         logOut();
+        territoryModal.onUserMe(null);
         loginDiscordButton.disable = false;
         loginDiscordButton.translationKey = "main.login_discord";
         loginDiscordButton.hidden = false;
         loginDiscordButton.addEventListener("click", discordLogin);
         logoutDiscordButton.hidden = true;
-        territoryModal.onLogout();
       });
       // Look up the discord user object.
       // TODO: Add caching
@@ -231,6 +232,7 @@ class Client {
           loginDiscordButton.translationKey = "main.login_discord";
           loginDiscordButton.addEventListener("click", discordLogin);
           logoutDiscordButton.hidden = true;
+          territoryModal.onUserMe(null);
           return;
         }
         console.log(
@@ -366,7 +368,7 @@ class Client {
           "host-lobby-modal",
           "join-private-lobby-modal",
           "game-starting-modal",
-          "top-bar",
+          "game-top-bar",
           "help-modal",
           "user-setting",
         ].forEach((tag) => {

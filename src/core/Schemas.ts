@@ -1,3 +1,4 @@
+import { base64url } from "jose";
 import { z } from "zod/v4";
 import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
 import {
@@ -25,6 +26,7 @@ export type Intent =
   | CancelBoatIntent
   | AllianceRequestIntent
   | AllianceRequestReplyIntent
+  | AllianceExtensionIntent
   | BreakAllianceIntent
   | TargetPlayerIntent
   | EmojiIntent
@@ -66,6 +68,9 @@ export type MoveWarshipIntent = z.infer<typeof MoveWarshipIntentSchema>;
 export type QuickChatIntent = z.infer<typeof QuickChatIntentSchema>;
 export type MarkDisconnectedIntent = z.infer<
   typeof MarkDisconnectedIntentSchema
+>;
+export type AllianceExtensionIntent = z.infer<
+  typeof AllianceExtensionIntentSchema
 >;
 
 export type Turn = z.infer<typeof TurnSchema>;
@@ -170,12 +175,12 @@ export const UsernameSchema = SafeString;
 export const FlagSchema = z.string().max(128).optional();
 export const RequiredPatternSchema = z
   .string()
-  .max(128)
+  .max(1403)
   .base64url()
   .refine(
     (val) => {
       try {
-        new PatternDecoder(val);
+        new PatternDecoder(val, base64url.decode);
         return true;
       } catch (e) {
         console.error(JSON.stringify(e.message, null, 2));
@@ -215,6 +220,11 @@ export type GameInfo = z.infer<typeof GameInfoSchema>;
 
 const BaseIntentSchema = z.object({
   clientID: ID,
+});
+
+export const AllianceExtensionIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("allianceExtension"),
+  recipient: ID,
 });
 
 export const AttackIntentSchema = BaseIntentSchema.extend({
@@ -358,6 +368,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   EmbargoIntentSchema,
   MoveWarshipIntentSchema,
   QuickChatIntentSchema,
+  AllianceExtensionIntentSchema,
 ]);
 
 //
@@ -386,8 +397,8 @@ export const GameStartInfoSchema = z.object({
 
 export const WinnerSchema = z
   .union([
-    z.tuple([z.literal("player"), ID]),
-    z.tuple([z.literal("team"), SafeString]),
+    z.tuple([z.literal("player"), ID]).rest(ID),
+    z.tuple([z.literal("team"), SafeString]).rest(ID),
   ])
   .optional();
 export type Winner = z.infer<typeof WinnerSchema>;

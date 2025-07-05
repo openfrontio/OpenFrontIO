@@ -1,12 +1,13 @@
+import { base64url } from "jose";
 import type { TemplateResult } from "lit";
 import { html, LitElement, render } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { COSMETICS } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
 import { PatternDecoder } from "../core/PatternDecoder";
 import "./components/Difficulties";
 import "./components/Maps";
+import { handlePurchase, Pattern, patterns } from "./Cosmetics";
 import { translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")
@@ -17,17 +18,20 @@ export class TerritoryPatternsModal extends LitElement {
   };
 
   public previewButton: HTMLElement | null = null;
-  public buttonWidth: number = 100;
+  public buttonWidth: number = 150;
 
   @state() private selectedPattern: string | undefined;
 
   @state() private lockedPatterns: string[] = [];
   @state() private lockedReasons: Record<string, string> = {};
-  @state() private hoveredPattern: string | null = null;
+  @state() private hoveredPattern: Pattern | null = null;
   @state() private hoverPosition = { x: 0, y: 0 };
 
   @state() private keySequence: string[] = [];
   @state() private showChocoPattern = false;
+
+  private patterns: Pattern[] = [];
+  private me: UserMeResponse | null = null;
 
   public resizeObserver: ResizeObserver;
 
@@ -35,7 +39,6 @@ export class TerritoryPatternsModal extends LitElement {
 
   constructor() {
     super();
-    this.checkPatternPermission(undefined, undefined);
   }
 
   connectedCallback() {
@@ -59,52 +62,14 @@ export class TerritoryPatternsModal extends LitElement {
     this.resizeObserver.disconnect();
   }
 
-  onLogout() {
-    this.checkPatternPermission(undefined, undefined);
-  }
-
-  onUserMe(userMeResponse: UserMeResponse) {
-    const { player } = userMeResponse;
-    const { roles, flares } = player;
-    this.checkPatternPermission(roles, flares);
-  }
-
-  private checkPatternPermission(
-    roles: string[] | undefined,
-    flares: string[] | undefined,
-  ) {
-    this.lockedPatterns = [];
-    this.lockedReasons = {};
-    for (const key in COSMETICS.patterns) {
-      const patternData = COSMETICS.patterns[key];
-      const roleGroup: string[] | string | undefined = patternData.role_group;
-      if (
-        flares !== undefined &&
-        (flares.includes("pattern:*") || flares.includes(`pattern:${key}`))
-      ) {
-        continue;
-      }
-
-      if (!roleGroup || (Array.isArray(roleGroup) && roleGroup.length === 0)) {
-        if (roles === undefined || roles.length === 0) {
-          const reason = translateText("territory_patterns.blocked.login");
-          this.setLockedPatterns([key], reason);
-        }
-        continue;
-      }
-
-      const groupList = Array.isArray(roleGroup) ? roleGroup : [roleGroup];
-      const isAllowed =
-        roles !== undefined &&
-        groupList.some((required) => roles.includes(required));
-
-      if (!isAllowed) {
-        const reason = translateText("territory_patterns.blocked.role", {
-          role: groupList.join(", "),
-        });
-        this.setLockedPatterns([key], reason);
-      }
+  async onUserMe(userMeResponse: UserMeResponse | null) {
+    this.patterns = await patterns(userMeResponse);
+    const p = this.patterns.find((p) => p.name === this.selectedPattern);
+    if (p === undefined || p.lockedReason || p.notShown) {
+      console.warn("selected pattern is locked or not shown, resetting");
+      this.selectPattern(undefined);
     }
+    this.me = userMeResponse;
     this.requestUpdate();
   }
 
@@ -140,65 +105,85 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   private renderTooltip(): TemplateResult | null {
-    if (this.hoveredPattern && this.lockedReasons[this.hoveredPattern]) {
+    if (this.hoveredPattern && this.hoveredPattern.lockedReason) {
       return html`
         <div
           class="fixed z-[10000] px-3 py-2 rounded bg-black text-white text-sm pointer-events-none shadow-md"
           style="top: ${this.hoverPosition.y + 12}px; left: ${this.hoverPosition
             .x + 12}px;"
         >
-          ${this.lockedReasons[this.hoveredPattern]}
+          ${this.hoveredPattern.lockedReason}
         </div>
       `;
     }
     return null;
   }
 
-  private renderPatternButton(key: string): TemplateResult {
-    const isLocked = this.isPatternLocked(key);
-    const isSelected = this.selectedPattern === key;
-    const name = COSMETICS.patterns[key]?.name ?? "custom";
+  private renderPatternButton(pattern: Pattern): TemplateResult {
+    const isSelected = this.selectedPattern === pattern.key;
+
     return html`
-      <button
-        class="border p-2 rounded-lg shadow text-black dark:text-white text-left
-        ${isSelected
-          ? "bg-blue-500 text-white"
-          : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"}
-        ${isLocked ? "opacity-50 cursor-not-allowed" : ""}"
-        style="flex: 0 1 calc(25% - 1rem); max-width: calc(25% - 1rem);"
-        @click=${() => !isLocked && this.selectPattern(key)}
-        @mouseenter=${(e: MouseEvent) => this.handleMouseEnter(key, e)}
-        @mousemove=${(e: MouseEvent) => this.handleMouseMove(e)}
-        @mouseleave=${() => this.handleMouseLeave()}
-      >
-        <div class="text-sm font-bold mb-1">
-          ${translateText(`territory_patterns.pattern.${name}`)}
-        </div>
-        <div
-          class="preview-container"
-          style="
-            width: 100%;
-            aspect-ratio: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #fff;
-            border-radius: 8px;
-            overflow: hidden;
-          "
+      <div style="flex: 0 1 calc(25% - 1rem); max-width: calc(25% - 1rem);">
+        <button
+          class="border p-2 rounded-lg shadow text-black dark:text-white text-left w-full
+          ${isSelected
+            ? "bg-blue-500 text-white"
+            : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"}
+          ${pattern.lockedReason ? "opacity-50 cursor-not-allowed" : ""}"
+          @click=${() =>
+            !pattern.lockedReason && this.selectPattern(pattern.key)}
+          @mouseenter=${(e: MouseEvent) => this.handleMouseEnter(pattern, e)}
+          @mousemove=${(e: MouseEvent) => this.handleMouseMove(e)}
+          @mouseleave=${() => this.handleMouseLeave()}
         >
-          ${this.renderPatternPreview(key, this.buttonWidth, this.buttonWidth)}
-        </div>
-      </button>
+          <div class="text-sm font-bold mb-1">
+            ${translateText(`territory_patterns.pattern.${pattern.name}`)}
+          </div>
+          <div
+            class="preview-container"
+            style="
+              width: 100%;
+              aspect-ratio: 1;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background: #fff;
+              border-radius: 8px;
+              overflow: hidden;
+            "
+          >
+            ${this.renderPatternPreview(
+              pattern.key,
+              this.buttonWidth,
+              this.buttonWidth,
+            )}
+          </div>
+        </button>
+        ${pattern.priceId !== undefined && pattern.lockedReason
+          ? html`
+              <button
+                class="w-full mt-2 px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded transition-colors"
+                @click=${(e: Event) => {
+                  e.stopPropagation();
+                  handlePurchase(pattern.priceId!);
+                }}
+              >
+                ${translateText("territory_patterns.purchase")}
+                (${pattern.price})
+              </button>
+            `
+          : null}
+      </div>
     `;
   }
 
   private renderPatternGrid(): TemplateResult {
     const buttons: TemplateResult[] = [];
-    for (const key in COSMETICS.patterns) {
-      const value = COSMETICS.patterns[key];
-      if (!this.showChocoPattern && value.name === "choco") continue;
-      const result = this.renderPatternButton(key);
+    for (const pattern of this.patterns) {
+      if (!this.showChocoPattern && pattern.name === "choco") continue;
+      if (pattern.notShown === true) continue;
+
+      const result = this.renderPatternButton(pattern);
       buttons.push(result);
     }
 
@@ -267,68 +252,12 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   private renderPatternPreview(
-    pattern: string,
-    width: number,
-    height: number,
+    pattern?: string,
+    width?: number,
+    height?: number,
   ): TemplateResult {
-    const decoder = new PatternDecoder(pattern);
-    const cellCountX = decoder.getTileWidth();
-    const cellCountY = decoder.getTileHeight();
-
-    const cellSize =
-      cellCountX > 0 && cellCountY > 0
-        ? Math.min(height / cellCountY, width / cellCountX)
-        : 1;
-
     return html`
-      <div
-        style="
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: ${height}px;
-          width: ${width}px;
-          background-color: #f0f0f0;
-          border-radius: 4px;
-          box-sizing: border-box;
-          overflow: hidden;
-          position: relative;
-        "
-      >
-        <div
-          style="
-            display: grid;
-            grid-template-columns: repeat(${cellCountX}, ${cellSize}px);
-            grid-template-rows: repeat(${cellCountY}, ${cellSize}px);
-            background-color: #ccc;
-            padding: 2px;
-            border-radius: 4px;
-          "
-        >
-          ${(() => {
-            const tiles: TemplateResult[] = [];
-            for (let py = 0; py < cellCountY; py++) {
-              for (let px = 0; px < cellCountX; px++) {
-                const x = px << decoder.getScale();
-                const y = py << decoder.getScale();
-                const bit = decoder.isSet(x, y);
-                tiles.push(html`
-                  <div
-                    style="
-                      background-color: ${bit ? "#000" : "transparent"};
-                      border: 1px solid rgba(0, 0, 0, 0.1);
-                      width: ${cellSize}px;
-                      height: ${cellSize}px;
-                      border-radius: 1px;
-                    "
-                  ></div>
-                `);
-              }
-            }
-            return tiles;
-          })()}
-        </div>
-      </div>
+      <img src="${generatePreviewDataUrl(pattern, width, height)}"></img>
     `;
   }
 
@@ -376,10 +305,7 @@ export class TerritoryPatternsModal extends LitElement {
 
   public updatePreview() {
     if (this.previewButton === null) return;
-    const preview =
-      this.selectedPattern === undefined
-        ? this.renderBlankPreview(48, 48)
-        : this.renderPatternPreview(this.selectedPattern, 48, 48);
+    const preview = this.renderPatternPreview(this.selectedPattern, 48, 48);
     render(preview, this.previewButton);
   }
 
@@ -397,13 +323,9 @@ export class TerritoryPatternsModal extends LitElement {
     };
   }
 
-  private isPatternLocked(patternKey: string): boolean {
-    return this.lockedPatterns.includes(patternKey);
-  }
-
-  private handleMouseEnter(patternKey: string, event: MouseEvent) {
-    if (this.isPatternLocked(patternKey)) {
-      this.hoveredPattern = patternKey;
+  private handleMouseEnter(pattern: Pattern, event: MouseEvent) {
+    if (pattern.lockedReason) {
+      this.hoveredPattern = pattern;
       this.hoverPosition = { x: event.clientX, y: event.clientY };
     }
   }
@@ -417,4 +339,55 @@ export class TerritoryPatternsModal extends LitElement {
   private handleMouseLeave() {
     this.hoveredPattern = null;
   }
+}
+
+const DEFAULT_PATTERN_B64 = "AAAAAA"; // Empty 2x2 pattern
+const COLOR_SET = [0, 0, 0, 255]; // Black
+const COLOR_UNSET = [255, 255, 255, 255]; // White
+export function generatePreviewDataUrl(
+  pattern?: string,
+  width?: number,
+  height?: number,
+): string {
+  // Calculate canvas size
+  const decoder = new PatternDecoder(
+    pattern ?? DEFAULT_PATTERN_B64,
+    base64url.decode,
+  );
+  const scaledWidth = decoder.scaledWidth();
+  const scaledHeight = decoder.scaledHeight();
+
+  width =
+    width === undefined
+      ? scaledWidth
+      : Math.max(1, Math.floor(width / scaledWidth)) * scaledWidth;
+  height =
+    height === undefined
+      ? scaledHeight
+      : Math.max(1, Math.floor(height / scaledHeight)) * scaledHeight;
+
+  // Create the canvas
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2D context not supported");
+
+  // Create an image
+  const imageData = ctx.createImageData(width, height);
+  const data = imageData.data;
+  let i = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const rgba = decoder.isSet(x, y) ? COLOR_SET : COLOR_UNSET;
+      data[i++] = rgba[0]; // Red
+      data[i++] = rgba[1]; // Green
+      data[i++] = rgba[2]; // Blue
+      data[i++] = rgba[3]; // Alpha
+    }
+  }
+
+  // Create a data URL
+  ctx.putImageData(imageData, 0, 0);
+  return canvas.toDataURL("image/png");
 }

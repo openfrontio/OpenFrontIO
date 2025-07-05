@@ -307,7 +307,7 @@ export class TerritoryLayer implements Layer {
         this.paintTile(tile, useBorderColor, 255);
       }
     } else {
-      const pattern = owner.pattern();
+      const pattern = owner.cosmetics.pattern;
       const patternsEnabled = this.cachedTerritoryPatternsEnabled ?? false;
       if (pattern === undefined || patternsEnabled === false) {
         this.paintTile(tile, this.theme.territoryColor(owner), 150);
@@ -317,13 +317,10 @@ export class TerritoryLayer implements Layer {
         const baseColor = this.theme.territoryColor(owner);
 
         const decoder = owner.patternDecoder();
-        if (decoder !== undefined) {
-          const bit = decoder.isSet(x, y) ? 1 : 0;
-          const colorToUse = bit ? baseColor.darken(0.2) : baseColor;
-          this.paintTile(tile, colorToUse, 150);
-        } else {
-          this.paintTile(tile, baseColor, 150);
-        }
+        const color = decoder?.isSet(x, y)
+          ? baseColor.darken(0.125)
+          : baseColor;
+        this.paintTile(tile, color, 150);
       }
     }
   }

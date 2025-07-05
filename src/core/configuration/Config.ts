@@ -62,6 +62,7 @@ export interface ServerConfig {
   cloudflareApiToken(): string;
   cloudflareConfigPath(): string;
   cloudflareCredsPath(): string;
+  stripePublishableKey(): string;
 }
 
 export interface NukeMagnitude {
@@ -158,6 +159,7 @@ export interface Config {
   nukeDeathFactor(humans: number, tilesOwned: number): number;
   structureMinDist(): number;
   isReplay(): boolean;
+  allianceExtensionPromptOffset(): number;
 }
 
 export interface Theme {

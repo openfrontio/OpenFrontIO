@@ -230,7 +230,7 @@
     "special_effects_desc": "Attiva/disattiva gli effetti speciali. Disattiva per migliorare le prestazioni",
     "anonymous_names_label": "🥷 Nomi Nascosti",
     "anonymous_names_desc": "Nascondi i nomi dei giocatori reali sullo schermo con nomi casuali.",
-    "left_click_label": "🖱️ Clic sinistro per aprire il menu",
+    "left_click_label": "Clic sinistro per aprire il menu",
     "left_click_desc": "Quando attivo, il clic sinistro apre il menu e il pulsante di attacco. Quando non attivo, fare clic con il tasto sinistro attaccherà direttamente.",
     "attack_ratio_label": "⚔️ Rapporto Di Attacco",
     "attack_ratio_desc": "Quale percentuale delle tue truppe inviare in attacco (1–100%)",

@@ -1,3 +1,4 @@
+import { Config } from "../../../core/configuration/Config";
 import {
   AllPlayers,
   Cell,
@@ -25,6 +26,7 @@ import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import infoIcon from "../../../../resources/images/InfoIcon.svg";
 import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
+import { EventBus } from "../../../core/EventBus";
 
 export interface MenuElementParams {
   myPlayer: PlayerView;
@@ -37,6 +39,7 @@ export interface MenuElementParams {
   playerActionHandler: PlayerActionHandler;
   playerPanel: PlayerPanel;
   chatIntegration: ChatIntegration;
+  eventBus: EventBus;
   closeMenu: () => void;
 }
 
@@ -322,6 +325,32 @@ export const infoMenuElement: MenuElement = {
   },
 };
 
+function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
+  const Units: Set<UnitType> = new Set<UnitType>();
+
+  const addStructureIfEnabled = (unitType: UnitType) => {
+    if (!config.isUnitDisabled(unitType)) {
+      Units.add(unitType);
+    }
+  };
+
+  if (myPlayer) {
+    addStructureIfEnabled(UnitType.City);
+    addStructureIfEnabled(UnitType.DefensePost);
+    addStructureIfEnabled(UnitType.Port);
+    addStructureIfEnabled(UnitType.MissileSilo);
+    addStructureIfEnabled(UnitType.SAMLauncher);
+    addStructureIfEnabled(UnitType.Factory);
+  } else {
+    addStructureIfEnabled(UnitType.Warship);
+    addStructureIfEnabled(UnitType.HydrogenBomb);
+    addStructureIfEnabled(UnitType.MIRV);
+    addStructureIfEnabled(UnitType.AtomBomb);
+  }
+
+  return Units;
+}
+
 export const buildMenuElement: MenuElement = {
   id: Slot.Build,
   name: "build",
@@ -332,21 +361,10 @@ export const buildMenuElement: MenuElement = {
   subMenu: (params: MenuElementParams) => {
     if (params === undefined) return [];
 
-    const unitTypes: Set<UnitType> = new Set<UnitType>();
-    if (params.selected === params.myPlayer) {
-      unitTypes.add(UnitType.City);
-      unitTypes.add(UnitType.DefensePost);
-      unitTypes.add(UnitType.Port);
-      unitTypes.add(UnitType.MissileSilo);
-      unitTypes.add(UnitType.SAMLauncher);
-      unitTypes.add(UnitType.Factory);
-    } else {
-      unitTypes.add(UnitType.Warship);
-      unitTypes.add(UnitType.HydrogenBomb);
-      unitTypes.add(UnitType.MIRV);
-      unitTypes.add(UnitType.AtomBomb);
-    }
-
+    const unitTypes: Set<UnitType> = getAllEnabledUnits(
+      params.selected === params.myPlayer,
+      params.game.config(),
+    );
     const buildElements: MenuElement[] = flattenedBuildTable
       .filter((item) => unitTypes.has(item.unitType))
       .map((item: BuildItemDisplay) => ({
@@ -355,8 +373,10 @@ export const buildMenuElement: MenuElement = {
           ? item.key.replace("unit_type.", "")
           : item.unitType.toString(),
         disabled: (params: MenuElementParams) =>
-          !params.buildMenu.canBuild(item),
-        color: params.buildMenu.canBuild(item) ? COLORS.building : undefined,
+          !params.buildMenu.canBuildOrUpgrade(item),
+        color: params.buildMenu.canBuildOrUpgrade(item)
+          ? COLORS.building
+          : undefined,
         icon: item.icon,
         tooltipItems: [
           { text: translateText(item.key || ""), className: "title" },
@@ -373,11 +393,15 @@ export const buildMenuElement: MenuElement = {
             : null,
         ].filter((item): item is TooltipItem => item !== null),
         action: (params: MenuElementParams) => {
-          params.playerActionHandler.handleBuildUnit(
-            item.unitType,
-            params.game.x(params.tile),
-            params.game.y(params.tile),
+          const buildableUnit = params.playerActions.buildableUnits.find(
+            (bu) => bu.type === item.unitType,
           );
+          if (buildableUnit === undefined) {
+            return;
+          }
+          if (params.buildMenu.canBuildOrUpgrade(item)) {
+            params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
+          }
           params.closeMenu();
         },
       }));

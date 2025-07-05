@@ -1,7 +1,6 @@
 import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { GameType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { ReplaySpeedChangeEvent } from "../../InputHandler";
 import {
@@ -16,27 +15,26 @@ export class ReplayPanel extends LitElement implements Layer {
   public game: GameView | undefined;
   public eventBus: EventBus | undefined;
 
+  @property({ type: Boolean })
+  visible: boolean = false;
+
   @state()
   private _replaySpeedMultiplier: number = defaultReplaySpeedMultiplier;
-  private _isSinglePlayer: boolean = false;
 
-  @state()
-  private _isVisible = false;
+  @property({ type: Boolean })
+  isSingleplayer = false;
 
-  init() {
-    this._isSinglePlayer =
-      this.game?.config().gameConfig().gameType === GameType.Singleplayer;
-    if (this._isSinglePlayer) {
-      this.setVisible(true);
-    }
+  createRenderRoot() {
+    return this; // Enable Tailwind CSS
   }
 
-  tick() {
-    if (!this._isVisible && this.game?.config().isReplay()) {
-      this.setVisible(true);
-    }
+  init() {}
 
-    this.requestUpdate();
+  tick() {
+    if (!this.visible) return;
+    if (this.game!.ticks() % 10 === 0) {
+      this.requestUpdate();
+    }
   }
 
   onReplaySpeedChange(value: ReplaySpeedMultiplier) {
@@ -44,85 +42,45 @@ export class ReplayPanel extends LitElement implements Layer {
     this.eventBus?.emit(new ReplaySpeedChangeEvent(value));
   }
 
-  renderLayer(context: CanvasRenderingContext2D) {
-    // Render any necessary canvas elements
-  }
-
-  shouldTransform(): boolean {
+  renderLayer(_ctx: CanvasRenderingContext2D) {}
+  shouldTransform() {
     return false;
   }
 
-  setVisible(visible: boolean) {
-    this._isVisible = visible;
-    this.requestUpdate();
-  }
-
   render() {
-    if (!this._isVisible) {
-      return html``;
-    }
+    if (!this.visible) return html``;
 
     return html`
       <div
         class="bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-es-sm lg:rounded-lg backdrop-blur-md"
-        @contextmenu=${(e) => e.preventDefault()}
+        @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <label class="block mb-1 text-white" translate="no">
-          ${this._isSinglePlayer
+          ${this.isSingleplayer
             ? translateText("replay_panel.game_speed")
             : translateText("replay_panel.replay_speed")}
         </label>
         <div class="grid grid-cols-2 gap-1">
-          <button
-            class="text-white font-bold py-0 rounded border transition ${this
-              ._replaySpeedMultiplier === ReplaySpeedMultiplier.slow
-              ? "bg-blue-500 border-gray-400"
-              : "border-gray-500"}"
-            @click=${() => {
-              this.onReplaySpeedChange(ReplaySpeedMultiplier.slow);
-            }}
-          >
-            ×0.5
-          </button>
-          <button
-            class="text-white font-bold py-0 rounded border transition ${this
-              ._replaySpeedMultiplier === ReplaySpeedMultiplier.normal
-              ? "bg-blue-500 border-gray-400"
-              : "border-gray-500"}"
-            @click=${() => {
-              this.onReplaySpeedChange(ReplaySpeedMultiplier.normal);
-            }}
-          >
-            ×1
-          </button>
-          <button
-            class="text-white font-bold py-0 rounded border transition ${this
-              ._replaySpeedMultiplier === ReplaySpeedMultiplier.fast
-              ? "bg-blue-500 border-gray-400"
-              : "border-gray-500"}"
-            @click=${() => {
-              this.onReplaySpeedChange(ReplaySpeedMultiplier.fast);
-            }}
-          >
-            ×2
-          </button>
-          <button
-            class="text-white font-bold py-0 rounded border transition ${this
-              ._replaySpeedMultiplier === ReplaySpeedMultiplier.fastest
-              ? "bg-blue-500 border-gray-400"
-              : "border-gray-500"}"
-            @click=${() => {
-              this.onReplaySpeedChange(ReplaySpeedMultiplier.fastest);
-            }}
-          >
-            max
-          </button>
+          ${this.renderSpeedButton(ReplaySpeedMultiplier.slow, "×0.5")}
+          ${this.renderSpeedButton(ReplaySpeedMultiplier.normal, "×1")}
+          ${this.renderSpeedButton(ReplaySpeedMultiplier.fast, "×2")}
+          ${this.renderSpeedButton(ReplaySpeedMultiplier.fastest, "max")}
         </div>
       </div>
     `;
   }
 
-  createRenderRoot() {
-    return this; // Disable shadow DOM to allow Tailwind styles
+  private renderSpeedButton(value: ReplaySpeedMultiplier, label: string) {
+    const isActive = this._replaySpeedMultiplier === value;
+    return html`
+      <button
+        class="text-white font-bold py-0 rounded border transition ${isActive
+          ? "bg-blue-500 border-gray-400"
+          : "border-gray-500"}"
+        @click=${() => this.onReplaySpeedChange(value)}
+      >
+        ${label}
+      </button>
+    `;
   }
 }

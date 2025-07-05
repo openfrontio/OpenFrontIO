@@ -66,6 +66,9 @@ const numPlayersConfig = {
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
+  stripePublishableKey(): string {
+    return process.env.STRIPE_PUBLISHABLE_KEY ?? "";
+  }
   domain(): string {
     return process.env.DOMAIN ?? "";
   }
@@ -199,6 +202,11 @@ export class DefaultConfig implements Config {
     private _userSettings: UserSettings | null,
     private _isReplay: boolean,
   ) {}
+
+  stripePublishableKey(): string {
+    return process.env.STRIPE_PUBLISHABLE_KEY ?? "";
+  }
+
   isReplay(): boolean {
     return this._isReplay;
   }
@@ -422,7 +430,6 @@ export class DefaultConfig implements Config {
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
-          upgradable: true,
         };
       case UnitType.SAMLauncher:
         return {
@@ -469,6 +476,8 @@ export class DefaultConfig implements Config {
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           canBuildTrainStation: true,
+          experimental: true,
+          upgradable: true,
         };
       case UnitType.Construction:
         return {
@@ -479,6 +488,7 @@ export class DefaultConfig implements Config {
         return {
           cost: () => 0n,
           territoryBound: false,
+          experimental: true,
         };
       default:
         assertNever(type);
@@ -836,5 +846,9 @@ export class DefaultConfig implements Config {
 
   defensePostTargettingRange(): number {
     return 75;
+  }
+
+  allianceExtensionPromptOffset(): number {
+    return 300; // 30 seconds before expiration
   }
 }

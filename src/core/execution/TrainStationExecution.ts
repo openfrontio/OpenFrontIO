@@ -1,4 +1,4 @@
-import { Execution, Game, Player, Unit } from "../game/Game";
+import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
 import { TrainStation } from "../game/TrainStation";
 import { PseudoRandom } from "../PseudoRandom";
 import { TrainExecution } from "./TrainExecution";
@@ -21,6 +21,13 @@ export class TrainStationExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
+
+    if (this.mg.config().isUnitDisabled(UnitType.Train)) {
+      this.active = false;
+      console.warn(`train station is disabled`);
+      return;
+    }
+
     this.random = new PseudoRandom(mg.ticks());
 
     this.unit = this.player.units().find((unit) => unit.id() === this.unitId);
