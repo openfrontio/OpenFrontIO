@@ -5,10 +5,14 @@
     "svg": "jp",
     "lang_code": "ja"
   },
+  "common": {
+    "close": "閉じる"
+  },
   "main": {
     "title": "OpenFront (ALPHA)",
     "join_discord": "Discordサーバーに参加!",
     "login_discord": "Discordでログイン",
+    "checking_login": "ログイン中...",
     "logged_in": "ログイン中！",
     "log_out": "ログアウト",
     "create_lobby": "ロビーを作成",
@@ -16,7 +20,11 @@
     "single_player": "シングルプレイヤー",
     "instructions": "説明書",
     "how_to_play": "遊び方",
+    "advertise": "広告",
     "wiki": "ウィキ"
+  },
+  "news": {
+    "title": "バージョン23がリリースされました！"
   },
   "help_modal": {
     "hotkeys": "ホットキー",
@@ -135,14 +143,15 @@
     "random": "ランダム",
     "iceland": "アイスランド",
     "pangaea": "パンゲア",
+    "eastasia": "東アジア",
     "betweentwoseas": "2つの海の間",
-    "knownworld": "知られてる世界",
     "faroeislands": "フェロー諸島",
     "deglaciatedantarctica": "退氷した南極大陸",
     "europeclassic": "ヨーロッパ (クラシック)",
     "falklandislands": "フォークランド諸島",
     "baikal": "バイカル湖付近",
-    "halkidiki": "ハルキディキ半島"
+    "halkidiki": "ハルキディキ半島",
+    "giantworldmap": "巨大化した世界"
   },
   "map_categories": {
     "continental": "大陸",
@@ -222,27 +231,37 @@
     "title": "ユーザー設定",
     "tab_basic": "基本設定",
     "tab_keybinds": "キーの割り当て",
-    "dark_mode_label": "ダークモード",
+    "dark_mode_label": "🌙 ダークモード",
     "dark_mode_desc": "画面を黒基調に切り替えます",
-    "emojis_label": "絵文字を表示",
+    "emojis_label": "😊 絵文字を表示",
     "emojis_desc": "ゲーム中で絵文字を表示します",
-    "special_effects_label": "スペシャルエフェクト",
+    "special_effects_label": "💥 スペシャルエフェクト",
     "special_effects_desc": "特殊効果を切り替えます。無効にするとパフォーマンスが向上します。",
-    "anonymous_names_label": "ユーザー名を匿名にする",
+    "anonymous_names_label": "🥷 ユーザー名を匿名にする",
     "anonymous_names_desc": "自分の画面では他のプレイヤーのユーザー名を非表示にし、代わりに別の名前で表示します。",
-    "left_click_label": "左クリックでメニューを開く",
+    "left_click_label": "🖱️ 左クリックでメニューを開く",
     "left_click_desc": "オンにすると左クリックでメニューを開くことができ、剣ボタンで攻撃します。オフにすると左クリックでそのまま攻撃します。",
-    "attack_ratio_label": "出撃兵力の比率",
+    "attack_ratio_label": "⚔️ 出撃兵力の比率",
     "attack_ratio_desc": "初期時点で出撃する兵力の割合を設定します(1–100%)",
-    "troop_ratio_label": "兵士と労働者の比率",
+    "troop_ratio_label": "🪖🛠️ 兵士と労働者の比率",
     "troop_ratio_desc": "初期時点で兵士と金を生産する労働者の割合を設定します(1–100%)",
+    "territory_patterns_label": "🏳️ 領土の模様",
+    "territory_patterns_desc": "ゲーム内で領土の模様を表示するかどうか",
     "easter_writing_speed_label": "書き込み速度の倍率",
     "easter_writing_speed_desc": "コードを書く速さを調節する（x1-x100）",
     "easter_bug_count_label": "バグの個数",
-    "easter_bug_count_desc": "いくつでもバグがあっても構わないけど、(具体的に言えば0–1000)",
+    "easter_bug_count_desc": "どのぐらいの個数のバグを許容できるか(0–1000個)",
     "view_options": "表示オプション",
     "toggle_view": "表示切り替え",
     "toggle_view_desc": "国境を非表示にし、地形だけが見れます",
+    "attack_ratio_controls": "攻撃比率の調整",
+    "attack_ratio_up": "出撃兵力の割合を上げる",
+    "attack_ratio_up_desc": "出撃兵力を10%増加させる",
+    "attack_ratio_down": "出撃兵力の割合を下げる",
+    "attack_ratio_down_desc": "出撃兵力を10%減少させる",
+    "attack_keybinds": "攻撃機能",
+    "boat_attack": "ボート攻撃",
+    "boat_attack_desc": "カーソルの位置に合わせた土地にボート攻撃を送ります。",
     "zoom_controls": "ズーム操作",
     "zoom_out": "ズームアウト",
     "zoom_out_desc": "マップを縮小します",
@@ -356,7 +375,8 @@
     "you_won": "勝利！",
     "other_won": "{player}の勝利!",
     "exit": "ゲームから退出",
-    "keep": "観戦する"
+    "keep": "観戦する",
+    "wishlist": "Steamでウィッシュリストに追加して下さい！"
   },
   "leaderboard": {
     "title": "ランキング",
@@ -401,13 +421,27 @@
   "player_panel": {
     "gold": "資金",
     "troops": "兵士",
+    "betrayals": "裏切った回数",
     "traitor": "裏切り者かどうか",
-    "alliance_time_remaining": "残り時間",
+    "alliance_time_remaining": "同盟の有効期限までの残り時間",
     "embargo": "あなたが貿易制限の対象であるか",
     "nuke": "相手からあなたへの核攻撃数",
     "start_trade": "貿易を開始",
     "stop_trade": "貿易を停止",
     "yes": "はい",
-    "no": "いいえ"
+    "no": "いいえ",
+    "none": "該当なし",
+    "alliances": "同盟"
+  },
+  "error_modal": {
+    "crashed": "ゲームがクラッシュしました！",
+    "paste_discord": "以下の内容をDiscordのバグ報告に貼り付けてください:",
+    "copy_clipboard": "クリップボードにコピーする",
+    "copied": "コピーしました！",
+    "failed_copy": "コピーに失敗しました",
+    "desync_notice": "他のプレイヤと同期ズレが発生しています。他のプレイヤーとは違う画面になっている可能性があります。"
+  },
+  "heads_up_message": {
+    "choose_spawn": "スタート地点を選んで下さい"
   }
 }

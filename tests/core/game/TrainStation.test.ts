@@ -44,13 +44,7 @@ describe("TrainStation", () => {
 
     station.onTrainStop(trainExecution);
 
-    expect(unit.owner().addGold).toHaveBeenCalledWith(10);
-    expect(game.addUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: expect.any(Number),
-        gold: 10,
-      }),
-    );
+    expect(unit.owner().addGold).toHaveBeenCalledWith(10, unit.tile());
   });
 
   it("handles Port stop", () => {

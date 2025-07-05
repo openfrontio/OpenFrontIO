@@ -339,12 +339,17 @@ export interface Alliance {
   requestor(): Player;
   recipient(): Player;
   createdAt(): Tick;
+  expiresAt(): Tick;
   other(player: Player): Player;
 }
 
 export interface MutableAlliance extends Alliance {
   expire(): void;
   other(player: Player): Player;
+  canExtend(): boolean;
+  addExtensionRequest(player: Player): void;
+  id(): number;
+  extend(): void;
 }
 
 export class PlayerInfo {
@@ -497,7 +502,7 @@ export interface Player {
   workers(): number;
   troops(): number;
   targetTroopRatio(): number;
-  addGold(toAdd: Gold): void;
+  addGold(toAdd: Gold, tile?: TileRef): void;
   removeGold(toRemove: Gold): Gold;
   addWorkers(toAdd: number): void;
   removeWorkers(toRemove: number): void;
@@ -517,6 +522,7 @@ export interface Player {
     spawnTile: TileRef,
     params: UnitParams<T>,
   ): Unit;
+
   upgradeUnit(unit: Unit): void;
 
   captureUnit(unit: Unit): void;
@@ -536,6 +542,7 @@ export interface Player {
   incomingAllianceRequests(): AllianceRequest[];
   outgoingAllianceRequests(): AllianceRequest[];
   alliances(): MutableAlliance[];
+  expiredAlliances(): Alliance[];
   allies(): Player[];
   isAlliedWith(other: Player): boolean;
   allianceWith(other: Player): MutableAlliance | null;
@@ -591,7 +598,6 @@ export interface Player {
 }
 
 export interface Game extends GameMap {
-  expireAlliance(alliance: Alliance);
   // Map & Dimensions
   isOnMap(cell: Cell): boolean;
   width(): number;
@@ -612,6 +618,10 @@ export interface Game extends GameMap {
   owner(ref: TileRef): Player | TerraNullius;
 
   teams(): Team[];
+
+  // Alliances
+  alliances(): MutableAlliance[];
+  expireAlliance(alliance: Alliance): void;
 
   // Game State
   ticks(): Tick;
@@ -673,6 +683,8 @@ export interface PlayerActions {
 
 export interface BuildableUnit {
   canBuild: TileRef | false;
+  // unit id of the existing unit that can be upgraded, or false if it cannot be upgraded.
+  canUpgrade: number | false;
   type: UnitType;
   cost: Gold;
 }
@@ -694,7 +706,7 @@ export interface PlayerInteraction {
   canTarget: boolean;
   canDonate: boolean;
   canEmbargo: boolean;
-  allianceCreatedAtTick?: Tick;
+  allianceExpiresAt?: Tick;
 }
 
 export interface EmojiMessage {
@@ -729,6 +741,7 @@ export enum MessageType {
   SENT_TROOPS_TO_PLAYER,
   RECEIVED_TROOPS_FROM_PLAYER,
   CHAT,
+  RENEW_ALLIANCE,
 }
 
 // Message categories used for filtering events in the EventsDisplay
@@ -759,6 +772,7 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.ALLIANCE_REQUEST]: MessageCategory.ALLIANCE,
   [MessageType.ALLIANCE_BROKEN]: MessageCategory.ALLIANCE,
   [MessageType.ALLIANCE_EXPIRED]: MessageCategory.ALLIANCE,
+  [MessageType.RENEW_ALLIANCE]: MessageCategory.ALLIANCE,
   [MessageType.SENT_GOLD_TO_PLAYER]: MessageCategory.TRADE,
   [MessageType.RECEIVED_GOLD_FROM_PLAYER]: MessageCategory.TRADE,
   [MessageType.RECEIVED_GOLD_FROM_TRADE]: MessageCategory.TRADE,

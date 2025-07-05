@@ -42,7 +42,12 @@ import {
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
-import { AttackUpdate, GameUpdateType, PlayerUpdate } from "./GameUpdates";
+import {
+  AllianceView,
+  AttackUpdate,
+  GameUpdateType,
+  PlayerUpdate,
+} from "./GameUpdates";
 import {
   bestShoreDeploymentSource,
   canBuildTransportShip,
@@ -85,6 +90,7 @@ export class PlayerImpl implements Player {
   private _displayName: string;
 
   public pastOutgoingAllianceRequests: AllianceRequest[] = [];
+  private _expiredAlliances: Alliance[] = [];
 
   private targets_: Target[] = [];
 
@@ -166,6 +172,15 @@ export class PlayerImpl implements Player {
         } satisfies AttackUpdate;
       }),
       outgoingAllianceRequests: outgoingAllianceRequests,
+      alliances: this.alliances().map(
+        (a) =>
+          ({
+            id: a.id(),
+            other: a.other(this).id(),
+            createdAt: a.createdAt(),
+            expiresAt: a.expiresAt(),
+          }) satisfies AllianceView,
+      ),
       hasSpawned: this.hasSpawned(),
       betrayals: stats?.betrayals,
     };
@@ -340,6 +355,10 @@ export class PlayerImpl implements Player {
     return this.mg.alliances_.filter(
       (a) => a.requestor() === this || a.recipient() === this,
     );
+  }
+
+  expiredAlliances(): Alliance[] {
+    return [...this._expiredAlliances];
   }
 
   allies(): Player[] {
@@ -679,8 +698,17 @@ export class PlayerImpl implements Player {
     return this._gold;
   }
 
-  addGold(toAdd: Gold): void {
+  addGold(toAdd: Gold, tile?: TileRef): void {
     this._gold += toAdd;
+    if (tile) {
+      this.mg.addUpdate({
+        type: GameUpdateType.BonusEvent,
+        tile,
+        gold: Number(toAdd),
+        workers: 0,
+        troops: 0,
+      });
+    }
   }
 
   removeGold(toRemove: Gold): Gold {
@@ -775,6 +803,27 @@ export class PlayerImpl implements Player {
     return b;
   }
 
+  // Returns the existing unit that can be upgraded,
+  // or false if it cannot be upgraded.
+  // New units of the same type can upgrade existing units.
+  // e.g. if a place a new city here, can it upgrade an existing city?
+  private canUpgradeExistingUnit(
+    type: UnitType,
+    targetTile: TileRef,
+  ): Unit | false {
+    if (!this.mg.config().unitInfo(type).upgradable) {
+      return false;
+    }
+    const range = this.mg.config().structureMinDist();
+    const existing = this.mg
+      .nearbyUnits(targetTile, range, type)
+      .sort((a, b) => a.distSquared - b.distSquared);
+    if (existing.length > 0) {
+      return existing[0].unit;
+    }
+    return false;
+  }
+
   upgradeUnit(unit: Unit) {
     const cost = this.mg.unitInfo(unit.type()).cost(this);
     this.removeGold(cost);
@@ -784,11 +833,19 @@ export class PlayerImpl implements Player {
   public buildableUnits(tile: TileRef): BuildableUnit[] {
     const validTiles = this.validStructureSpawnTiles(tile);
     return Object.values(UnitType).map((u) => {
+      let canUpgrade: number | false = false;
+      if (!this.mg.inSpawnPhase()) {
+        const existingUnit = this.canUpgradeExistingUnit(u, tile);
+        if (existingUnit !== false) {
+          canUpgrade = existingUnit.id();
+        }
+      }
       return {
         type: u,
         canBuild: this.mg.inSpawnPhase()
           ? false
           : this.canBuild(u, tile, validTiles),
+        canUpgrade: canUpgrade,
         cost: this.mg.config().unitInfo(u).cost(this),
       } as BuildableUnit;
     });
