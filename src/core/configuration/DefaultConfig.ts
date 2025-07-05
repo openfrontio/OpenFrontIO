@@ -166,13 +166,13 @@ export abstract class DefaultServerConfig implements ServerConfig {
   lobbyMaxPlayers(
     map: GameMapType,
     mode: GameMode,
-    numPlayerTeams: number | undefined,
+    numPlayerTeams: TeamCountConfig | undefined,
   ): number {
     const [l, m, s] = numPlayersConfig[map] ?? [50, 30, 20];
     const r = Math.random();
     const base = r < 0.3 ? l : r < 0.6 ? m : s;
     let p = Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, l);
-    if (numPlayerTeams !== undefined) {
+    if (typeof numPlayerTeams === "number") {
       p -= p % numPlayerTeams;
     }
     return p;

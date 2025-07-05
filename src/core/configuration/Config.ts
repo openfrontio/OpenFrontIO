@@ -31,7 +31,7 @@ export interface ServerConfig {
   lobbyMaxPlayers(
     map: GameMapType,
     mode: GameMode,
-    numPlayerTeams: number | undefined,
+    numPlayerTeams: TeamCountConfig | undefined,
   ): number;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
