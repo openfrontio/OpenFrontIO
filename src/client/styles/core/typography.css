@@ -1,0 +1,19 @@
+@font-face {
+  font-family: "VCR OSD Mono";
+  font-style: normal;
+  font-weight: 400;
+  src:
+    local("VCR OSD Mono"),
+    url("https://fonts.cdnfonts.com/s/14798/VCR_OSD_MONO_1.001[1].woff")
+      format("woff");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 200;
+  src:
+    local("Inter"),
+    url("https://fonts.cdnfonts.com/s/19795/Inter-ExtraLight-BETA.woff")
+      format("woff");
+}

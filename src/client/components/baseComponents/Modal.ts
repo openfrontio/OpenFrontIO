@@ -193,7 +193,10 @@ export class OModal extends LitElement {
       ${this.isModalOpen
         ? html`
             <aside class="c-modal ${this.isClosing ? "closing" : ""}">
-              <div class="c-modal__wrapper width-${this.width}" tabindex="0">
+              <div
+                class="c-modal__wrapper custom-scrollbar width-${this.width}"
+                tabindex="0"
+              >
                 <header class="c-modal__header">
                   <h2>
                     ${this.translationKey === ""

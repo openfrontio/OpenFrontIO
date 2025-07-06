@@ -23,7 +23,7 @@ export class NewsButton extends LitElement {
     if (!this.file || this._isLoading) return;
 
     this._isLoading = true;
-    this.requestUpdate(); // Trigger re-render to show loading state
+    this.requestUpdate();
 
     try {
       const response = await fetch(this.file);
@@ -37,7 +37,7 @@ export class NewsButton extends LitElement {
       console.error("Error loading news article:", error);
     } finally {
       this._isLoading = false;
-      this.requestUpdate(); // Trigger re-render when loading is complete
+      this.requestUpdate();
     }
   }
 
@@ -46,9 +46,7 @@ export class NewsButton extends LitElement {
   }
 
   private async handleClick() {
-    // If we're still loading, wait for it to complete
     if (this._isLoading) {
-      // Wait for loading to complete
       while (this._isLoading) {
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
@@ -57,7 +55,6 @@ export class NewsButton extends LitElement {
     const currentArticle = this.getCurrentArticle();
     if (!currentArticle) return;
 
-    // Dispatch custom event that parent can listen to
     this.dispatchEvent(
       new CustomEvent("news-article-click", {
         detail: { article: currentArticle },
@@ -84,25 +81,65 @@ export class NewsButton extends LitElement {
     }
   }
 
+  private parseArticleDate(dateString: string): Date {
+    const date = new Date(dateString);
+
+    if (isNaN(date.getTime())) {
+      // Try parsing formats like "June 21, 2025"
+      const parsed = Date.parse(dateString);
+      if (!isNaN(parsed)) {
+        return new Date(parsed);
+      }
+
+      console.warn(`Unable to parse date: ${dateString}`);
+      return new Date();
+    }
+
+    return date;
+  }
+
   private formatTimeAgo(article: NewsArticle): string {
     if (this.timeAgo) {
       return this.timeAgo;
     }
 
-    // Simple time calculation based on article date
-    const articleDate = new Date(article.date);
+    const articleDate = this.parseArticleDate(article.date);
     const now = new Date();
-    const diffInHours = Math.floor(
-      (now.getTime() - articleDate.getTime()) / (1000 * 60 * 60),
-    );
+    const diffInMs = now.getTime() - articleDate.getTime();
 
-    if (diffInHours < 1) {
+    if (diffInMs < 0) {
+      const futureDiffInMs = Math.abs(diffInMs);
+      const futureDiffInHours = Math.floor(futureDiffInMs / (1000 * 60 * 60));
+
+      if (futureDiffInHours < 24) {
+        return `In ${futureDiffInHours}h`;
+      } else {
+        const futureDiffInDays = Math.floor(futureDiffInHours / 24);
+        return `In ${futureDiffInDays}d`;
+      }
+    }
+
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+    const diffInWeeks = Math.floor(diffInDays / 7);
+    const diffInMonths = Math.floor(diffInDays / 30);
+    const diffInYears = Math.floor(diffInDays / 365);
+
+    if (diffInMinutes < 1) {
       return "Just now";
+    } else if (diffInMinutes < 60) {
+      return `${diffInMinutes}m ago`;
     } else if (diffInHours < 24) {
       return `${diffInHours}h ago`;
-    } else {
-      const diffInDays = Math.floor(diffInHours / 24);
+    } else if (diffInDays < 7) {
       return `${diffInDays}d ago`;
+    } else if (diffInWeeks < 4) {
+      return `${diffInWeeks}w ago`;
+    } else if (diffInMonths < 12) {
+      return `${diffInMonths}mo ago`;
+    } else {
+      return `${diffInYears}y ago`;
     }
   }
 
@@ -159,22 +196,9 @@ export class NewsButton extends LitElement {
           ? html`
               <p class="text-xsmall font-secondary text-textGrey">
                 ${currentArticle.summary}
-                <span
-                  class="text-primary hover:text-primaryLighter transition-colors ml-1 read-more"
-                >
-                  Read more...
-                </span>
               </p>
             `
-          : html`
-              <p class="text-xsmall  text-textGrey">
-                <span
-                  class="text-primary hover:text-primaryLighter transition-colors read-more"
-                >
-                  Read more...
-                </span>
-              </p>
-            `}
+          : html` <p class="text-xsmall  text-textGrey"></p> `}
       </div>
     `;
   }

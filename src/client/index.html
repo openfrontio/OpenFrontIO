@@ -119,25 +119,11 @@
   </head>
   <!-- ------------------------------------------------------------------------------------------------------------------------------------------------------------- -->
   <body
-    class="min-h-screen bg-slate-900 flex flex-col items-center justify-between relative overflow-auto"
+    class="min-h-screen bg-backgroundDark flex flex-col items-center justify-between relative overflow-auto"
   >
     <!-- Background -->
-    <div class="absolute inset-0 z-[-1]">
-      <div
-        class="absolute inset-0 bg-cover bg-center"
-        style="
-          background-image: url(&quot;/images/background_globe.jpeg&quot;);
-          filter: blur(4px) brightness(0.4);
-          image-rendering: pixelated;
-        "
-      ></div>
-      <div
-        class="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/50 to-slate-900/80"
-      ></div>
-      <div class="absolute inset-0 bg-grid-tactical"></div>
-    </div>
-
-    <!-- Background grid -->
+    <app-background></app-background>
+    <!-- Overlay pixelation -->
     <div class="scanlines"></div>
 
     <div class="relative w-full max-w-7xl mx-auto px-4 pt-8">
@@ -193,35 +179,36 @@
             </div>
           </div>
         </div>
-        <!--  Side Panel -->
+        <!--  Side Panel Right -->
         <div class="lg:col-span-4 space-y-4">
           <!-- Quick Join -->
           <div class="background-panel p-4">
-            <h3 class="font-title text-xl text-white mb-4">QUICK JOIN</h3>
+            <h3
+              class="font-title text-medium text-textLight mb-4"
+              translationKey="main.quick_join"
+            >
+              QUICK JOIN
+            </h3>
             <div class="space-y-4">
               <div class="flex gap-2">
-                <div class="flex-1">
+                <div class="flex-1 relative">
                   <div class="relative">
                     <username-input></username-input>
                   </div>
                 </div>
-                <div class="flex gap-1">
+                <div class="flex gap-1 relative">
                   <!-- Flag Selection -->
-                  <div class="relative">
-                    <flag-trigger-button></flag-trigger-button>
-                  </div>
-                  <!-- Pattern Selection -->
-                  <div class="relative">
-                    <button
-                      class="h-full background-panel bg-slate-700 px-3 p-0 py-2 flex items-center justify-center min-w-[48px] hover:bg-slate-600"
-                    >
-                      <o-icon
-                        src="icons/squares-exclude.svg"
-                        size="medium"
-                        color="var(--text-color-white)"
-                      ></o-icon>
-                    </button>
-                  </div>
+                  <flag-trigger-button></flag-trigger-button>
+                  <!-- Pattern Selection (placeholder) -->
+                  <button
+                    class="h-full background-panel px-4 p-0 py-3 flex items-center justify-center min-w-[48px] hover:bg-backgroundDarkLighter"
+                  >
+                    <o-icon
+                      src="icons/squares-exclude.svg"
+                      size="medium"
+                      color="var(--text-color-white)"
+                    ></o-icon>
+                  </button>
                 </div>
               </div>
             </div>
@@ -230,7 +217,12 @@
           <!-- Latest News -->
           <div class="background-panel p-4 relative">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="font-title text-xl text-white">LATEST NEWS</h3>
+              <h3
+                class="font-title text-medium text-textLight"
+                translationKey="main.latest_news"
+              >
+                LATEST NEWS
+              </h3>
               <o-icon
                 src="icons/bell.svg"
                 size="medium"
@@ -238,13 +230,8 @@
               ></o-icon>
             </div>
             <div class="space-y-4">
-              <news-button
-                file="/data/weekend-tournament.json"
-                timeAgo="1d ago"
-              >
-              </news-button>
-              <news-button file="/data/v23.0.json" timeAgo="1d ago">
-              </news-button>
+              <news-button file="/data/weekend-tournament.json"> </news-button>
+              <news-button file="/data/v23.0.json"> </news-button>
             </div>
           </div>
         </div>
@@ -266,7 +253,7 @@
       </button>
     </div>
 
-    <!-- Game components -->
+    <!-- In-Game components -->
     <div id="customMenu" class="mt-4 sm:mt-6 lg:mt-8">
       <ul></ul>
     </div>
@@ -304,26 +291,9 @@
     </div>
 
     <!-- Game modals and overlays -->
-    <single-player-modal></single-player-modal>
-    <host-lobby-modal></host-lobby-modal>
-    <join-private-lobby-modal></join-private-lobby-modal>
-    <emoji-table></emoji-table>
-    <leader-board></leader-board>
-    <build-menu></build-menu>
-    <win-modal></win-modal>
-    <game-starting-modal></game-starting-modal>
-    <top-bar></top-bar>
-    <team-stats></team-stats>
-    <player-panel></player-panel>
-    <help-modal></help-modal>
-    <flag-modal></flag-modal>
-    <login-modal></login-modal>
-    <news-modal></news-modal>
-    <chat-modal></chat-modal>
+    <game-ui-components></game-ui-components>
 
-    <user-setting></user-setting>
-    <multi-tab-modal></multi-tab-modal>
-    <unit-info-modal></unit-info-modal>
+    <!-- Ads -->
     <left-in-game-ad></left-in-game-ad>
 
     <!-- Footer section -->

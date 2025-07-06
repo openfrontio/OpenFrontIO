@@ -96,7 +96,6 @@ export class PublicLobby extends LitElement {
         ? lobby.gameConfig.playerTeams || 0
         : null;
 
-    // Use isLobbyHighlighted for persistent styling, isButtonDebounced only for temporary click feedback
     const isJoined = this.isLobbyHighlighted;
     const isTemporarilyDisabled = this.isButtonDebounced;
 

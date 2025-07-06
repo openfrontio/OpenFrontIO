@@ -17,10 +17,7 @@ export class UsernameInput extends LitElement {
   private _isValid: boolean = true;
   private userSettings: UserSettings = new UserSettings();
 
-  // Remove static styles since we're using Tailwind
-
   createRenderRoot() {
-    // Disable shadow DOM to allow Tailwind classes to work
     return this;
   }
 
@@ -36,26 +33,28 @@ export class UsernameInput extends LitElement {
 
   render() {
     return html`
-      <input
-        type="text"
-        .value=${this.username}
-        @input=${this.handleChange}
-        @change=${this.handleChange}
-        placeholder="${translateText("username.enter_username")}"
-        maxlength="${MAX_USERNAME_LENGTH}"
-        class="w-full px-4 py-3 bg-backgroundDarkLighter border-2 border-borderBase font-title text-textLight placeholder-textGrey focus:outline-none focus:border-primary"
-        style="caret-color: var(--primary-color);"
-      />
-      ${this.validationError
-        ? html`<div
-            class="background-panel absolute !z-50 w-full mt-2 px-3 py-1 text-small border border-red text-red font-title"
-          >
-            ${this.validationError}
-          </div>`
-        : null}
+      <div class="relative w-full">
+        ${this.validationError
+          ? html`<div
+              class="background-panel absolute !z-50 w-full mb-2 px-3 py-1 text-small border border-red text-red font-title"
+              style="bottom: 100%;"
+            >
+              ${this.validationError}
+            </div>`
+          : null}
+        <input
+          type="text"
+          .value=${this.username}
+          @input=${this.handleChange}
+          @change=${this.handleChange}
+          placeholder="${translateText("username.enter_username")}"
+          maxlength="${MAX_USERNAME_LENGTH}"
+          class="w-full px-4 py-3 bg-backgroundDarkLighter border-2 border-borderBase font-title text-textLight placeholder-textGrey focus:outline-none focus:border-primary"
+          style="caret-color: var(--primary-color);"
+        />
+      </div>
     `;
   }
-
   private handleChange(e: Event) {
     const input = e.target as HTMLInputElement;
     this.username = input.value.trim();

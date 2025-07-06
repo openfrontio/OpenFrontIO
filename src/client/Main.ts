@@ -33,6 +33,8 @@ import { OButton } from "./components/baseComponents/Button";
 import "./components/baseComponents/Icon";
 import "./components/baseComponents/Modal";
 
+import "./GameUIComponents";
+import "./components/layout/Background";
 import "./components/layout/Footer";
 import "./components/layout/Navbar";
 import { LanguageModal } from "./components/modals/Language/LanguageModal";
@@ -326,6 +328,11 @@ class Client {
           (ad as HTMLElement).style.display = "none";
         });
 
+        const scanlines = document.querySelector(".scanlines") as HTMLElement;
+        if (scanlines) {
+          scanlines.style.display = "none";
+        }
+
         // show when the game loads
         const startingModal = document.querySelector(
           "game-starting-modal",
@@ -356,6 +363,11 @@ class Client {
     this.gameStop();
     this.gameStop = null;
     this.publicLobby.leaveLobby();
+
+    const scanlines = document.querySelector(".scanlines") as HTMLElement;
+    if (scanlines) {
+      scanlines.style.display = "";
+    }
   }
 }
 

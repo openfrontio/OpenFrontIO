@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
+import { translateText } from "../../Utils";
 
-// Universal content structure for any type of announcement/news
 export interface ContentItem {
   text: string;
   contributor?: string;
@@ -82,7 +82,7 @@ export class NewsModal extends LitElement {
       `;
     }
     return html`
-      <o-modal disableContentScroll title="Latest News">
+      <o-modal disableContentScroll title=${translateText("main.latest_news")}>
         <div
           class=" text-textLight max-h-[80vh] overflow-y-auto w-full mx-auto custom-scrollbar"
         >
@@ -109,11 +109,11 @@ export class NewsModal extends LitElement {
                 size="small"
                 color="var(--text-color-grey)"
               ></o-icon>
-              <span>${this.article.date}</span>
+              <span>${this.article.date}</span> q
             </div>
 
             ${this.article.summary
-              ? html`<div class="mt-4 text-textLight leading-relaxed">
+              ? html`<div class="mt-4  text-textLight leading-relaxed">
                   ${this.article.summary}
                 </div>`
               : ""}
@@ -146,20 +146,17 @@ export class NewsModal extends LitElement {
       this.article = undefined;
     }
 
-    // Force an update and wait for it to complete
     this.requestUpdate();
     await this.updateComplete;
 
-    // Wait for the modal element to be available
     await this.waitForModalElement();
 
     this.modalEl?.open();
   }
 
   private async waitForModalElement(): Promise<void> {
-    // Wait for the modal element to be available
     let attempts = 0;
-    const maxAttempts = 20; // Maximum 1 second wait (20 * 50ms)
+    const maxAttempts = 20;
 
     while (!this.modalEl && attempts < maxAttempts) {
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -179,7 +176,7 @@ export class NewsModal extends LitElement {
     return this;
   }
 
-  // Utility method to create articles programmatically
+  // Utility method to create articles
   public static createArticle(data: Partial<NewsArticle>): NewsArticle {
     return {
       id: data.id || `article-${Date.now()}`,

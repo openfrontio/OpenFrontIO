@@ -189,6 +189,7 @@ export class LangSelector extends LitElement {
       "game-mode-selection",
       "game-options",
       "game-setup-progress",
+      "news-modal",
     ];
 
     document.title = translations.main?.title || document.title;
