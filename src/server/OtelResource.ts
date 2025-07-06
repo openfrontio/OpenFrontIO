@@ -22,6 +22,6 @@ export function getOtelResource() {
     // The comma-separated list tells OpenTelemetry which resource attributes
     // should be converted to Loki labels
     "loki.resource.labels":
-      "service.name,service.instance.id,openfront.environment,openfront.host,openfront.domain,openfront.subdomain,openfront.component",
+      "service.name,openfront.environment,openfront.host,openfront.domain,openfront.subdomain,openfront.component",
   });
 }
