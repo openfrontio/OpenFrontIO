@@ -2,6 +2,7 @@ import { JWK } from "jose";
 import { z } from "zod/v4";
 import {
   Difficulty,
+  Duos,
   Game,
   GameMapType,
   GameMode,
@@ -10,9 +11,11 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
+  Quads,
   TerrainType,
   TerraNullius,
   Tick,
+  Trios,
   UnitInfo,
   UnitType,
 } from "../game/Game";
@@ -172,8 +175,20 @@ export abstract class DefaultServerConfig implements ServerConfig {
     const r = Math.random();
     const base = r < 0.3 ? l : r < 0.6 ? m : s;
     let p = Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, l);
-    if (typeof numPlayerTeams === "number") {
-      p -= p % numPlayerTeams;
+    if (numPlayerTeams === undefined) return p;
+    switch (numPlayerTeams) {
+      case Duos:
+        p -= p % 2;
+        break;
+      case Trios:
+        p -= p % 3;
+        break;
+      case Quads:
+        p -= p % 4;
+        break;
+      default:
+        p -= p % numPlayerTeams;
+        break;
     }
     return p;
   }
