@@ -22,7 +22,6 @@ import { ConstructionExecution } from "./ConstructionExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { NukeExecution } from "./NukeExecution";
 import { SpawnExecution } from "./SpawnExecution";
-import { TrainStationExecution } from "./TrainStationExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { closestTwoTiles } from "./Util";
 import { BotBehavior } from "./utils/BotBehavior";
@@ -438,33 +437,9 @@ export class FakeHumanExecution implements Execution {
       this.maybeSpawnStructure(UnitType.Port, 1) ||
       this.maybeSpawnStructure(UnitType.City, 2) ||
       this.maybeSpawnWarship() ||
-      this.maybeSpawnTrainStation() ||
+      this.maybeSpawnStructure(UnitType.Factory, 1) ||
       this.maybeSpawnStructure(UnitType.MissileSilo, 1)
     );
-  }
-
-  private maybeSpawnTrainStation(): boolean {
-    if (this.mg.config().isUnitDisabled(UnitType.Train)) {
-      return false;
-    }
-    if (this.player === null) throw new Error("not initialized");
-    const citiesWithoutStations = this.player.units().filter((unit) => {
-      switch (unit.type()) {
-        case UnitType.City:
-        case UnitType.Port:
-        case UnitType.Factory:
-          return !unit.hasTrainStation();
-        default:
-          return false;
-      }
-    });
-    if (citiesWithoutStations.length === 0) {
-      return false;
-    }
-    this.mg.addExecution(
-      new TrainStationExecution(this.player, citiesWithoutStations[0].id()),
-    );
-    return true;
   }
 
   private maybeSpawnStructure(type: UnitType, maxNum: number): boolean {

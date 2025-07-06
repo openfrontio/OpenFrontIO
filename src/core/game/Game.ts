@@ -633,6 +633,12 @@ export interface Game extends GameMap {
   // Units
   units(...types: UnitType[]): Unit[];
   unitInfo(type: UnitType): UnitInfo;
+  hasUnitNearby(
+    tile: TileRef,
+    searchRange: number,
+    type: UnitType,
+    playerId: PlayerID,
+  );
   nearbyUnits(
     tile: TileRef,
     searchRange: number,

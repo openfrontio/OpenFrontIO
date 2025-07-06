@@ -715,6 +715,15 @@ export class GameImpl implements Game {
     }
   }
 
+  hasUnitNearby(
+    tile: TileRef,
+    searchRange: number,
+    type: UnitType,
+    playerId: PlayerID,
+  ) {
+    return this.unitGrid.hasUnitNearby(tile, searchRange, type, playerId);
+  }
+
   nearbyUnits(
     tile: TileRef,
     searchRange: number,

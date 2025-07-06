@@ -23,7 +23,6 @@ import { RetreatExecution } from "./RetreatExecution";
 import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
-import { TrainStationExecution } from "./TrainStationExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 
@@ -118,8 +117,6 @@ export class Executor {
 
       case "upgrade_structure":
         return new UpgradeStructureExecution(player, intent.unitId);
-      case "create_station":
-        return new TrainStationExecution(player, intent.unitId);
       case "quick_chat":
         return new QuickChatExecution(
           player,

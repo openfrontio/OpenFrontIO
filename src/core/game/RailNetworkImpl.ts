@@ -120,6 +120,7 @@ export class RailNetworkImpl implements RailNetwork {
         newCluster.addStations(stations);
       }
     }
+    station.unit.setTrainStation(false);
   }
 
   /**

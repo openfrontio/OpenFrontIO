@@ -242,7 +242,6 @@
     "atom_bomb": "Atom Bomb",
     "hydrogen_bomb": "Hydrogen Bomb",
     "mirv": "MIRV",
-    "train": "Train",
     "factory": "Factory"
   },
   "user_setting": {
@@ -446,7 +445,6 @@
     "cooldown": "Cooldown",
     "type": "Type",
     "upgrade": "Upgrade",
-    "create_station": "Create Station",
     "level": "Level"
   },
   "relation": {
