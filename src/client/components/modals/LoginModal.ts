@@ -62,13 +62,13 @@ export class LoginModal extends LitElement {
             <p class="text-small text-textGrey m-0 leading-6">
               By signing in, you agree to our
               <a
-                href="/privacy-policy.html"
+                href="/terms-of-service.html"
                 class="text-primaryLighter no-underline transition-colors hover:text-primary"
                 >Terms of Service</a
               >
               and
               <a
-                href="/terms-of-service.html"
+                href="/privacy-policy.html"
                 class="text-primaryLighter no-underline transition-colors hover:text-primary"
                 >Privacy Policy</a
               >
