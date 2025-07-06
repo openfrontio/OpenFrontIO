@@ -22,7 +22,7 @@ export class TrainExecution implements Execution {
   private usedTiles: TileRef[] = []; // used for cars behind
   private stations: TrainStation[] = [];
   private currentRailroad: OrientedRailroad | null = null;
-  private speed: number = 3;
+  private speed: number = 2;
 
   constructor(
     private railNetwork: RailNetwork,
@@ -30,9 +30,7 @@ export class TrainExecution implements Execution {
     private source: TrainStation,
     private destination: TrainStation,
     private numCars: number,
-  ) {
-    this.hasCargo = source.unit.type() === UnitType.Factory;
-  }
+  ) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;

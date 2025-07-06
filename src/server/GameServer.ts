@@ -21,7 +21,7 @@ import {
 } from "../core/Schemas";
 import { createGameRecord } from "../core/Util";
 import { GameEnv, ServerConfig } from "../core/configuration/Config";
-import { GameType, UnitType } from "../core/game/Game";
+import { GameType } from "../core/game/Game";
 import { archive } from "./Archive";
 import { Client } from "./Client";
 import { gatekeeper } from "./Gatekeeper";
@@ -219,15 +219,6 @@ export class GameServer {
             if (clientMsg.intent.type === "mark_disconnected") {
               this.log.warn(
                 `Should not receive mark_disconnected intent from client`,
-              );
-              return;
-            }
-            if (
-              clientMsg.intent.type === "create_station" &&
-              this.gameConfig.disabledUnits?.includes(UnitType.Train)
-            ) {
-              this.log.warn(
-                `create_station is disabled, client: ${client.clientID}`,
               );
               return;
             }

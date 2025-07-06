@@ -1,4 +1,3 @@
-import { TradeShipExecution } from "../execution/TradeShipExecution";
 import { TrainExecution } from "../execution/TrainExecution";
 import { GraphAdapter } from "../pathfinding/SerialAStar";
 import { PseudoRandom } from "../PseudoRandom";
@@ -14,30 +13,34 @@ interface TrainStopHandler {
   onStop(mg: Game, station: TrainStation, trainExecution: TrainExecution): void;
 }
 
+/**
+ * All stop handlers share the same logic for the time being
+ * Behavior to be defined
+ */
 class CityStopHandler implements TrainStopHandler {
+  private factor: bigint = BigInt(2);
   onStop(
     mg: Game,
     station: TrainStation,
     trainExecution: TrainExecution,
   ): void {
-    const goldBonus = mg.config().trainGold();
+    const level = BigInt(station.unit.level() + 1);
+    const goldBonus = (mg.config().trainGold() * level) / this.factor;
     station.unit.owner().addGold(goldBonus, station.tile());
   }
 }
 
 class PortStopHandler implements TrainStopHandler {
+  private factor: bigint = BigInt(2);
   constructor(private random: PseudoRandom) {}
   onStop(
     mg: Game,
     station: TrainStation,
     trainExecution: TrainExecution,
   ): void {
-    const unit = station.unit;
-    const ports = unit.owner().tradingPorts(unit);
-    if (ports.length === 0) return;
-
-    const port = this.random.randElement(ports);
-    mg.addExecution(new TradeShipExecution(unit.owner(), unit, port));
+    const level = BigInt(station.unit.level() + 1);
+    const goldBonus = (mg.config().trainGold() * level) / this.factor;
+    station.unit.owner().addGold(goldBonus, station.tile());
   }
 }
 
@@ -47,7 +50,15 @@ class FactoryStopHandler implements TrainStopHandler {
     station: TrainStation,
     trainExecution: TrainExecution,
   ): void {
-    trainExecution.loadCargo();
+    const goldBonus = mg.config().trainGold();
+    station.unit.owner().addGold(goldBonus);
+    mg.addUpdate({
+      type: GameUpdateType.BonusEvent,
+      tile: station.tile(),
+      gold: Number(goldBonus),
+      workers: 0,
+      troops: 0,
+    });
   }
 }
 
