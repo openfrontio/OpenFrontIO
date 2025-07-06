@@ -217,7 +217,7 @@ export function createRenderer(
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
     new RailroadLayer(game),
     structureLayer,
-    new StructureIconsLayer(game, transformHandler),
+    new StructureIconsLayer(game, eventBus, transformHandler),
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, transformHandler),

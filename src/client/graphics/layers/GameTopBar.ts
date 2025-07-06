@@ -24,7 +24,11 @@ import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
-import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
+import {
+  AlternateViewEvent,
+  RefreshGraphicsEvent,
+  ToggleStructureEvent,
+} from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
 import { Layer } from "./Layer";
 
@@ -33,6 +37,7 @@ export class GameTopBar extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
   private _userSettings: UserSettings = new UserSettings();
+  private _selectedStructure: UnitType | null = null;
   private _population = 0;
   private _troops = 0;
   private _cities = 0;
@@ -138,6 +143,12 @@ export class GameTopBar extends LitElement implements Layer {
     this._userSettings.toggleDarkMode();
     this.requestUpdate();
     this.eventBus.emit(new RefreshGraphicsEvent());
+  }
+
+  private onToggleStructureClick(structureType: UnitType) {
+    this._selectedStructure =
+      this._selectedStructure === structureType ? null : structureType;
+    this.eventBus.emit(new ToggleStructureEvent(this._selectedStructure));
   }
 
   private onToggleRandomNameModeButtonClick() {
@@ -282,7 +293,15 @@ export class GameTopBar extends LitElement implements Layer {
                     <div
                       class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1 bg-slate-800/20 border border-slate-400 p-0.5 md:px-1 lg:px-2 md:gap-2"
                     >
-                      <div class="flex items-center gap-2">
+                      <div
+                        class="flex items-center gap-2"
+                        style="cursor: pointer; background: ${this
+                          ._selectedStructure === UnitType.City
+                          ? "#ffffff2e"
+                          : "none"}"
+                        @click="${() =>
+                          this.onToggleStructureClick(UnitType.City)}"
+                      >
                         <img
                           src=${cityIcon}
                           alt="gold"
@@ -292,7 +311,15 @@ export class GameTopBar extends LitElement implements Layer {
                         />
                         ${renderNumber(this._cities)}
                       </div>
-                      <div class="flex items-center gap-2">
+                      <div
+                        class="flex items-center gap-2"
+                        style="cursor: pointer; background: ${this
+                          ._selectedStructure === UnitType.Factory
+                          ? "#ffffff2e"
+                          : "none"}"
+                        @click="${() =>
+                          this.onToggleStructureClick(UnitType.Factory)}"
+                      >
                         <img
                           src=${factoryIcon}
                           alt="gold"
@@ -302,7 +329,15 @@ export class GameTopBar extends LitElement implements Layer {
                         />
                         ${renderNumber(this._factories)}
                       </div>
-                      <div class="flex items-center gap-2">
+                      <div
+                        class="flex items-center gap-2"
+                        style="cursor: pointer; background: ${this
+                          ._selectedStructure === UnitType.Port
+                          ? "#ffffff2e"
+                          : "none"}"
+                        @click="${() =>
+                          this.onToggleStructureClick(UnitType.Port)}"
+                      >
                         <img
                           src=${portIcon}
                           alt="gold"
@@ -312,7 +347,15 @@ export class GameTopBar extends LitElement implements Layer {
                         />
                         ${renderNumber(this._port)}
                       </div>
-                      <div class="flex items-center gap-2">
+                      <div
+                        class="flex items-center gap-2"
+                        style="cursor: pointer; background: ${this
+                          ._selectedStructure === UnitType.DefensePost
+                          ? "#ffffff2e"
+                          : "none"}"
+                        @click="${() =>
+                          this.onToggleStructureClick(UnitType.DefensePost)}"
+                      >
                         <img
                           src=${defensePostIcon}
                           alt="gold"
@@ -322,7 +365,15 @@ export class GameTopBar extends LitElement implements Layer {
                         />
                         ${renderNumber(this._defensePost)}
                       </div>
-                      <div class="flex items-center gap-2">
+                      <div
+                        class="flex items-center gap-2"
+                        style="cursor: pointer; background: ${this
+                          ._selectedStructure === UnitType.MissileSilo
+                          ? "#ffffff2e"
+                          : "none"}"
+                        @click="${() =>
+                          this.onToggleStructureClick(UnitType.MissileSilo)}"
+                      >
                         <img
                           src=${missileSiloIcon}
                           alt="gold"
@@ -332,7 +383,15 @@ export class GameTopBar extends LitElement implements Layer {
                         />
                         ${renderNumber(this._missileSilo)}
                       </div>
-                      <div class="flex items-center gap-2">
+                      <div
+                        class="flex items-center gap-2"
+                        style="cursor: pointer; background: ${this
+                          ._selectedStructure === UnitType.SAMLauncher
+                          ? "#ffffff2e"
+                          : "none"}"
+                        @click="${() =>
+                          this.onToggleStructureClick(UnitType.SAMLauncher)}"
+                      >
                         <img
                           src=${samLauncherIcon}
                           alt="gold"

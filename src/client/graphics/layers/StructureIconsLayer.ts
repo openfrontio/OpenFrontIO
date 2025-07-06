@@ -7,9 +7,11 @@ import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
 import SAMMissileIcon from "../../../../resources/images/SamLauncherUnit.png";
 import shieldIcon from "../../../../resources/images/ShieldIcon.png";
 import { Theme } from "../../../core/configuration/Config";
+import { EventBus } from "../../../core/EventBus";
 import { Cell, PlayerID, UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView, UnitView } from "../../../core/game/GameView";
+import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { ToggleStructureEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -40,18 +42,28 @@ export class StructureIconsLayer implements Layer {
   private seenUnits: Set<UnitView> = new Set();
   private structures: Map<
     UnitType,
-    { iconPath: string; image: HTMLImageElement | null }
+    { visible: boolean; iconPath: string; image: HTMLImageElement | null }
   > = new Map([
-    [UnitType.City, { iconPath: cityIcon, image: null }],
-    [UnitType.Factory, { iconPath: factoryIcon, image: null }],
-    [UnitType.DefensePost, { iconPath: shieldIcon, image: null }],
-    [UnitType.Port, { iconPath: anchorIcon, image: null }],
-    [UnitType.MissileSilo, { iconPath: missileSiloIcon, image: null }],
-    [UnitType.SAMLauncher, { iconPath: SAMMissileIcon, image: null }],
+    [UnitType.City, { visible: true, iconPath: cityIcon, image: null }],
+    [UnitType.Factory, { visible: true, iconPath: factoryIcon, image: null }],
+    [
+      UnitType.DefensePost,
+      { visible: true, iconPath: shieldIcon, image: null },
+    ],
+    [UnitType.Port, { visible: true, iconPath: anchorIcon, image: null }],
+    [
+      UnitType.MissileSilo,
+      { visible: true, iconPath: missileSiloIcon, image: null },
+    ],
+    [
+      UnitType.SAMLauncher,
+      { visible: true, iconPath: SAMMissileIcon, image: null },
+    ],
   ]);
 
   constructor(
     private game: GameView,
+    private eventBus: EventBus,
     private transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
@@ -114,6 +126,16 @@ export class StructureIconsLayer implements Layer {
   }
 
   async init() {
+    this.eventBus.on(ToggleStructureEvent, (e) => {
+      this.structures.forEach((infos, structureType) => {
+        infos.visible =
+          structureType === e.structureType || e.structureType === null;
+      });
+      for (const render of this.renders) {
+        this.modifyVisiblity(render);
+      }
+      this.shouldRedraw = true;
+    });
     window.addEventListener("resize", () => this.resizeCanvas());
     await this.setupRenderer();
     this.redraw();
@@ -173,6 +195,17 @@ export class StructureIconsLayer implements Layer {
     }
   }
 
+  private modifyVisiblity(render: StructureRenderInfo) {
+    const structureType =
+      render.unit.type() === UnitType.Construction
+        ? render.unit.constructionType()!
+        : render.unit.type();
+    const structureInfos = this.structures.get(structureType);
+    if (structureInfos) {
+      render.iconContainer.alpha = structureInfos.visible ? 1 : 0.3;
+    }
+  }
+
   private checkForConstructionState(
     render: StructureRenderInfo,
     unit: UnitView,
@@ -184,6 +217,7 @@ export class StructureIconsLayer implements Layer {
       render.underConstruction = false;
       render.iconContainer?.destroy();
       render.iconContainer = this.createIconSprite(unit);
+      this.modifyVisiblity(render);
       this.shouldRedraw = true;
     }
   }
@@ -193,6 +227,7 @@ export class StructureIconsLayer implements Layer {
       render.owner = unit.owner().id();
       render.iconContainer?.destroy();
       render.iconContainer = this.createIconSprite(unit);
+      this.modifyVisiblity(render);
       this.shouldRedraw = true;
     }
   }
@@ -204,6 +239,7 @@ export class StructureIconsLayer implements Layer {
       render.levelContainer?.destroy();
       render.iconContainer = this.createIconSprite(unit);
       render.levelContainer = this.createLevelSprite(unit);
+      this.modifyVisiblity(render);
       this.shouldRedraw = true;
     }
   }
@@ -251,6 +287,56 @@ export class StructureIconsLayer implements Layer {
       return this.textureCache.get(cacheKey)!;
     }
 
+    let texture: PIXI.Texture;
+    switch (structureType) {
+      case UnitType.City:
+      case UnitType.Port:
+      case UnitType.Factory:
+        texture = this.createIcon(
+          unit.owner(),
+          structureType,
+          isConstruction,
+          "circle",
+        );
+        break;
+      case UnitType.DefensePost:
+        texture = this.createIcon(
+          unit.owner(),
+          structureType,
+          isConstruction,
+          "octagon",
+        );
+        break;
+      case UnitType.SAMLauncher:
+        texture = this.createIcon(
+          unit.owner(),
+          structureType,
+          isConstruction,
+          "square",
+        );
+        break;
+      case UnitType.MissileSilo:
+        texture = this.createIcon(
+          unit.owner(),
+          structureType,
+          isConstruction,
+          "triangle",
+        );
+        break;
+      default:
+        texture = PIXI.Texture.EMPTY;
+    }
+
+    this.textureCache.set(cacheKey, texture);
+    return texture;
+  }
+
+  private createIcon(
+    owner: PlayerView,
+    structureType: UnitType,
+    isConstruction: boolean,
+    shape: "triangle" | "square" | "octagon" | "circle",
+  ) {
     const structureCanvas = document.createElement("canvas");
     structureCanvas.width = ICON_SIZE;
     structureCanvas.height = ICON_SIZE;
@@ -262,39 +348,100 @@ export class StructureIconsLayer implements Layer {
       borderColor = "rgb(128, 127, 127)";
     } else {
       context.fillStyle = this.theme
-        .territoryColor(unit.owner())
+        .territoryColor(owner)
         .lighten(0.06)
         .toRgbString();
-      borderColor = this.theme
-        .borderColor(unit.owner())
-        .darken(0.08)
-        .toRgbString();
+      borderColor = this.theme.borderColor(owner).darken(0.08).toRgbString();
     }
+
     context.strokeStyle = borderColor;
-    context.beginPath();
-    context.arc(
-      ICON_SIZE / 2,
-      ICON_SIZE / 2,
-      ICON_SIZE / 2 - 1,
-      0,
-      Math.PI * 2,
-    );
-    context.fill();
     context.lineWidth = 1;
-    context.stroke();
+
+    switch (shape) {
+      case "triangle":
+        context.beginPath();
+        context.moveTo(ICON_SIZE / 2, 0); // Top
+        context.lineTo(ICON_SIZE, ICON_SIZE); // Bottom right
+        context.lineTo(0, ICON_SIZE); // Bottom left
+        context.closePath();
+        context.fill();
+        context.stroke();
+        break;
+
+      case "square":
+        context.fillRect(0, 0, ICON_SIZE - 2, ICON_SIZE - 2);
+        context.strokeRect(0.5, 0.5, ICON_SIZE - 3, ICON_SIZE - 3);
+        break;
+
+      case "octagon":
+        {
+          const cx = ICON_SIZE / 2;
+          const cy = ICON_SIZE / 2;
+          const r = ICON_SIZE / 2 - 1;
+          const step = (Math.PI * 2) / 8;
+
+          context.beginPath();
+          for (let i = 0; i < 8; i++) {
+            const angle = step * i - Math.PI / 8; // slight rotation for flat top
+            const x = cx + r * Math.cos(angle);
+            const y = cy + r * Math.sin(angle);
+            if (i === 0) {
+              context.moveTo(x, y);
+            } else {
+              context.lineTo(x, y);
+            }
+          }
+          context.closePath();
+          context.fill();
+          context.stroke();
+        }
+        break;
+
+      case "circle":
+        context.beginPath();
+        context.arc(
+          ICON_SIZE / 2,
+          ICON_SIZE / 2,
+          ICON_SIZE / 2 - 1,
+          0,
+          Math.PI * 2,
+        );
+        context.fill();
+        context.stroke();
+        break;
+
+      default:
+        throw new Error(`Unknown shape: ${shape}`);
+    }
+
     const structureInfo = this.structures.get(structureType);
     if (!structureInfo?.image) {
       console.warn(`Image not loaded for unit type: ${structureType}`);
       return PIXI.Texture.from(structureCanvas);
     }
+
+    const [offsetX, offsetY] = (() => {
+      switch (shape) {
+        case "triangle":
+          return [4, 8];
+        case "square":
+          return [3, 3];
+        case "octagon":
+          return [4, 4];
+        case "circle":
+          return [4, 4];
+        default:
+          return [0, 0];
+      }
+    })();
+
     context.drawImage(
       this.getImageColored(structureInfo.image, borderColor),
-      4,
-      4,
+      offsetX,
+      offsetY,
     );
-    const texture = PIXI.Texture.from(structureCanvas);
-    this.textureCache.set(cacheKey, texture);
-    return texture;
+
+    return PIXI.Texture.from(structureCanvas);
   }
 
   private createLevelSprite(unit: UnitView): PIXI.Container {
@@ -436,6 +583,7 @@ export class StructureIconsLayer implements Layer {
     );
     this.renders.push(render);
     this.computeNewLocation(render);
+    this.modifyVisiblity(render);
     this.shouldRedraw = true;
   }
 
