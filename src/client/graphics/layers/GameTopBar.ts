@@ -145,50 +145,10 @@ export class GameTopBar extends LitElement implements Layer {
     this.eventBus.emit(new RefreshGraphicsEvent());
   }
 
-  private onTogglePortClick() {
+  private onToggleStructureClick(structureType: UnitType) {
     this._selectedStructure =
-      this._selectedStructure === UnitType.Port ? null : UnitType.Port;
-    this.toggleStructure(this._selectedStructure);
-  }
-
-  private onToggleCityClick() {
-    this._selectedStructure =
-      this._selectedStructure === UnitType.City ? null : UnitType.City;
-    this.toggleStructure(this._selectedStructure);
-  }
-
-  private onToggleFactoryClick() {
-    this._selectedStructure =
-      this._selectedStructure === UnitType.Factory ? null : UnitType.Factory;
-    this.toggleStructure(this._selectedStructure);
-  }
-
-  private onToggleDefensePostClick() {
-    this._selectedStructure =
-      this._selectedStructure === UnitType.DefensePost
-        ? null
-        : UnitType.DefensePost;
-    this.toggleStructure(this._selectedStructure);
-  }
-
-  private onToggleSiloClick() {
-    this._selectedStructure =
-      this._selectedStructure === UnitType.MissileSilo
-        ? null
-        : UnitType.MissileSilo;
-    this.toggleStructure(this._selectedStructure);
-  }
-
-  private onToggleSamClick() {
-    this._selectedStructure =
-      this._selectedStructure === UnitType.SAMLauncher
-        ? null
-        : UnitType.SAMLauncher;
-    this.toggleStructure(this._selectedStructure);
-  }
-
-  private toggleStructure(unitType: UnitType | null) {
-    this.eventBus.emit(new ToggleStructureEvent(unitType));
+      this._selectedStructure === structureType ? null : structureType;
+    this.eventBus.emit(new ToggleStructureEvent(this._selectedStructure));
   }
 
   private onToggleRandomNameModeButtonClick() {
@@ -339,7 +299,8 @@ export class GameTopBar extends LitElement implements Layer {
                           ._selectedStructure === UnitType.City
                           ? "#ffffff2e"
                           : "none"}"
-                        @click="${this.onToggleCityClick}"
+                        @click="${() =>
+                          this.onToggleStructureClick(UnitType.City)}"
                       >
                         <img
                           src=${cityIcon}
@@ -356,7 +317,8 @@ export class GameTopBar extends LitElement implements Layer {
                           ._selectedStructure === UnitType.Factory
                           ? "#ffffff2e"
                           : "none"}"
-                        @click="${this.onToggleFactoryClick}"
+                        @click="${() =>
+                          this.onToggleStructureClick(UnitType.Factory)}"
                       >
                         <img
                           src=${factoryIcon}
@@ -373,7 +335,8 @@ export class GameTopBar extends LitElement implements Layer {
                           ._selectedStructure === UnitType.Port
                           ? "#ffffff2e"
                           : "none"}"
-                        @click="${this.onTogglePortClick}"
+                        @click="${() =>
+                          this.onToggleStructureClick(UnitType.Port)}"
                       >
                         <img
                           src=${portIcon}
@@ -390,7 +353,8 @@ export class GameTopBar extends LitElement implements Layer {
                           ._selectedStructure === UnitType.DefensePost
                           ? "#ffffff2e"
                           : "none"}"
-                        @click="${this.onToggleDefensePostClick}"
+                        @click="${() =>
+                          this.onToggleStructureClick(UnitType.DefensePost)}"
                       >
                         <img
                           src=${defensePostIcon}
@@ -407,7 +371,8 @@ export class GameTopBar extends LitElement implements Layer {
                           ._selectedStructure === UnitType.MissileSilo
                           ? "#ffffff2e"
                           : "none"}"
-                        @click="${this.onToggleSiloClick}"
+                        @click="${() =>
+                          this.onToggleStructureClick(UnitType.MissileSilo)}"
                       >
                         <img
                           src=${missileSiloIcon}
@@ -424,7 +389,8 @@ export class GameTopBar extends LitElement implements Layer {
                           ._selectedStructure === UnitType.SAMLauncher
                           ? "#ffffff2e"
                           : "none"}"
-                        @click="${this.onToggleSamClick}"
+                        @click="${() =>
+                          this.onToggleStructureClick(UnitType.SAMLauncher)}"
                       >
                         <img
                           src=${samLauncherIcon}
