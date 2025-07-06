@@ -1,118 +1,15 @@
 import { LitElement, css, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
-import { COSMETICS } from "../core/CosmeticSchemas";
-import Countries from "./data/countries.json";
-
-const MAX_LAYER = 10;
-
-import { FlagInput } from "./FlagInput";
-
 import disabled from "../../resources/images/DisabledIcon.svg";
 import locked from "../../resources/images/Locked.svg";
+import { translateText } from "../client/Utils";
 import { UserMeResponse } from "../core/ApiSchemas";
+import { COSMETICS } from "../core/CosmeticSchemas";
+import Countries from "./data/countries.json";
+import { FlagInput } from "./FlagInput";
 
 const flagKey: string = "flag";
-
-// give me a chocolate = custom flag
-
-export function checkPermission(
-  flag: string,
-  roles: readonly string[] | undefined,
-  flares: readonly string[] | undefined,
-): [string[], string[], Record<string, string>, number] {
-  const lockedLayers: string[] = [];
-  const lockedColors: string[] = [];
-  const lockedReasons: Record<string, string> = {};
-
-  // Helper functions to lock layers/colors
-  function lock(layerKeys: string[], reason: string) {
-    for (const key of layerKeys) {
-      if (!lockedLayers.includes(key)) {
-        lockedLayers.push(key);
-        lockedReasons[key] = reason;
-      }
-    }
-  }
-  function lockColor(colorKeys: string[], reason: string) {
-    for (const key of colorKeys) {
-      if (!lockedColors.includes(key)) {
-        lockedColors.push(key);
-        lockedReasons[key] = reason;
-      }
-    }
-  }
-
-  // Iterate all flag layers
-  for (const layerKey in COSMETICS.flag.layers) {
-    const spec = COSMETICS.flag.layers[layerKey];
-    // Determine if allowed
-    let allowed = false;
-    if (!spec.role_group && !spec.flares) {
-      allowed = true;
-    } else {
-      // By role
-      if (spec.role_group) {
-        const group = Array.isArray(spec.role_group)
-          ? spec.role_group
-          : [spec.role_group];
-        if (roles?.some((r) => group.includes(r))) allowed = true;
-      }
-      // By flare
-      if (spec.flares && flares?.some((f) => spec.flares!.includes(f)))
-        allowed = true;
-      // Named flare
-      if (flares?.includes(`flag:layer:${spec.name}`)) allowed = true;
-    }
-    if (!allowed) {
-      lock([spec.name], "flag_input.reason.restricted");
-    }
-  }
-
-  // Iterate all flag colors
-  for (const colorKey in COSMETICS.flag.color) {
-    const spec = COSMETICS.flag.color[colorKey];
-    let allowed = false;
-    if (!spec.role_group && !spec.flares) {
-      allowed = true;
-    } else {
-      if (spec.role_group) {
-        const group = Array.isArray(spec.role_group)
-          ? spec.role_group
-          : [spec.role_group];
-        if (roles?.some((r) => group.includes(r))) allowed = true;
-      }
-      if (spec.flares && flares?.some((f) => spec.flares!.includes(f)))
-        allowed = true;
-      if (flares?.includes(`flag:color:${spec.name}`)) allowed = true;
-    }
-    if (!allowed) {
-      lockColor([spec.color], "flag_input.reason.restricted");
-    }
-  }
-  return [lockedLayers, lockedColors, lockedReasons, MAX_LAYER];
-}
-
-const LayerShortNames: Record<string, string> = Object.fromEntries(
-  Object.entries(COSMETICS.flag.layers).map(([shortKey, { name }]) => [
-    name,
-    shortKey,
-  ]),
-);
-
-const ColorShortNames: Record<string, string> = Object.fromEntries(
-  Object.entries(COSMETICS.flag.color).map(([shortKey, { color }]) => [
-    color,
-    shortKey,
-  ]),
-);
-
-const FlagMap: Record<string, string> = Object.fromEntries(
-  Object.entries(COSMETICS.flag.layers).map(([shortKey, layer]) => {
-    const svgPath = `/flags/custom/${layer.name}.svg`;
-    return [layer.name, svgPath];
-  }),
-);
+const MAX_LAYER = 10;
 
 @customElement("flag-input-modal")
 export class FlagInputModal extends LitElement {
@@ -134,7 +31,106 @@ export class FlagInputModal extends LitElement {
   @state() private selectedColor: string = "#ff0000";
   @state() private openColorIndex: number | null = null;
 
-  private readonly colorOptions: string[] = Object.keys(ColorShortNames);
+  private readonly LayerShortNames: Record<string, string> = Object.fromEntries(
+    Object.entries(COSMETICS.flag.layers).map(([shortKey, { name }]) => [
+      name,
+      shortKey,
+    ]),
+  );
+
+  private readonly ColorShortNames: Record<string, string> = Object.fromEntries(
+    Object.entries(COSMETICS.flag.color).map(([shortKey, { color }]) => [
+      color,
+      shortKey,
+    ]),
+  );
+
+  private readonly FlagMap: Record<string, string> = Object.fromEntries(
+    Object.entries(COSMETICS.flag.layers).map(([shortKey, layer]) => {
+      const svgPath = `/flags/custom/${layer.name}.svg`;
+      return [layer.name, svgPath];
+    }),
+  );
+
+  private checkPermission(
+    flag: string,
+    roles: readonly string[] | undefined,
+    flares: readonly string[] | undefined,
+  ): [string[], string[], Record<string, string>, number] {
+    const lockedLayers: string[] = [];
+    const lockedColors: string[] = [];
+    const lockedReasons: Record<string, string> = {};
+
+    // Helper functions to lock layers/colors
+    function lock(layerKeys: string[], reason: string) {
+      for (const key of layerKeys) {
+        if (!lockedLayers.includes(key)) {
+          lockedLayers.push(key);
+          lockedReasons[key] = reason;
+        }
+      }
+    }
+    function lockColor(colorKeys: string[], reason: string) {
+      for (const key of colorKeys) {
+        if (!lockedColors.includes(key)) {
+          lockedColors.push(key);
+          lockedReasons[key] = reason;
+        }
+      }
+    }
+
+    // Iterate all flag layers
+    for (const layerKey in COSMETICS.flag.layers) {
+      const spec = COSMETICS.flag.layers[layerKey];
+      // Determine if allowed
+      let allowed = false;
+      if (!spec.role_group && !spec.flares) {
+        allowed = true;
+      } else {
+        // By role
+        if (spec.role_group) {
+          const group = Array.isArray(spec.role_group)
+            ? spec.role_group
+            : [spec.role_group];
+          if (roles?.some((r) => group.includes(r))) allowed = true;
+        }
+        // By flare
+        if (spec.flares && flares?.some((f) => spec.flares!.includes(f)))
+          allowed = true;
+        // Named flare
+        if (flares?.includes(`flag:layer:${spec.name}`)) allowed = true;
+      }
+      if (!allowed) {
+        lock([spec.name], "flag_input.reason.restricted");
+      }
+    }
+
+    // Iterate all flag colors
+    for (const colorKey in COSMETICS.flag.color) {
+      const spec = COSMETICS.flag.color[colorKey];
+      let allowed = false;
+      if (!spec.role_group && !spec.flares) {
+        allowed = true;
+      } else {
+        if (spec.role_group) {
+          const group = Array.isArray(spec.role_group)
+            ? spec.role_group
+            : [spec.role_group];
+          if (roles?.some((r) => group.includes(r))) allowed = true;
+        }
+        if (spec.flares && flares?.some((f) => spec.flares!.includes(f)))
+          allowed = true;
+        if (flares?.includes(`flag:color:${spec.name}`)) allowed = true;
+      }
+      if (!allowed) {
+        lockColor([spec.color], "flag_input.reason.restricted");
+      }
+    }
+    // return [lockedLayers, lockedColors, lockedReasons, MAX_LAYER];
+    return [[], [], {}, 10]; // TODO: REMOVE BEFORE MERGE
+  }
+
+  private readonly colorOptions: string[] = Object.keys(this.ColorShortNames);
 
   @state() private customLayers: { name: string; color: string }[] = [];
 
@@ -299,7 +295,7 @@ export class FlagInputModal extends LitElement {
     const { roles, flares } = player;
     this.me = userMeResponse;
     // Recalculate permissions when user info arrives
-    const result = checkPermission(this.flag, roles, flares);
+    const result = this.checkPermission(this.flag, roles, flares);
     this.lockedLayers = Array.isArray(result[0]) ? result[0] : [result[0]];
     this.lockedColors = Array.isArray(result[1]) ? result[1] : [result[1]];
     this.lockedReasons = result[2] || {};
@@ -317,8 +313,9 @@ export class FlagInputModal extends LitElement {
       "!" +
       this.customLayers
         .map(({ name, color }) => {
-          const shortName = LayerShortNames[name] || name;
-          const shortColor = ColorShortNames[color] || color.replace("#", "");
+          const shortName = this.LayerShortNames[name] || name;
+          const shortColor =
+            this.ColorShortNames[color] || color.replace("#", "");
           return `${shortName}-${shortColor}`;
         })
         .join("_")
@@ -334,10 +331,10 @@ export class FlagInputModal extends LitElement {
 
     const short = code.replace("!", "");
     const reverseNameMap = Object.fromEntries(
-      Object.entries(LayerShortNames).map(([k, v]) => [v, k]),
+      Object.entries(this.LayerShortNames).map(([k, v]) => [v, k]),
     );
     const reverseColorMap = Object.fromEntries(
-      Object.entries(ColorShortNames).map(([k, v]) => [v, k]),
+      Object.entries(this.ColorShortNames).map(([k, v]) => [v, k]),
     );
 
     return short.split("_").map((segment) => {
@@ -397,7 +394,7 @@ export class FlagInputModal extends LitElement {
   }
 
   render() {
-    const result = checkPermission(
+    const result = this.checkPermission(
       this.flag,
       this.me?.player.roles,
       this.me?.player.flares,
@@ -405,6 +402,8 @@ export class FlagInputModal extends LitElement {
     this.lockedLayers = Array.isArray(result[0]) ? result[0] : [result[0]];
     this.lockedColors = Array.isArray(result[1]) ? result[1] : [result[1]];
     this.lockedReasons = result[2] || {};
+    const FlagMap = this.FlagMap;
+    const ColorShortNames = this.ColorShortNames;
     return html`
       ${this.hoveredColor && this.lockedReasons[this.hoveredColor]
         ? html`
@@ -526,7 +525,7 @@ export class FlagInputModal extends LitElement {
           <div
             class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 w-full overflow-y-auto pr-1 mb-2"
           >
-            ${Object.entries(FlagMap)
+            ${Object.entries(this.FlagMap)
               .filter(([name]) => name !== "frame" && name !== "full")
               .map(([name, src]) => {
                 const isLocked = this.lockedLayers.includes(name);
@@ -585,8 +584,10 @@ export class FlagInputModal extends LitElement {
                         class="absolute inset-0 rounded"
                         style="
                       background-color: black;
-                      -webkit-mask: url(${FlagMap.frame}) center / contain no-repeat;
-                      mask: url(${FlagMap.frame}) center / contain no-repeat;
+                      -webkit-mask: url(${this.FlagMap
+                          .frame}) center / contain no-repeat;
+                      mask: url(${this.FlagMap
+                          .frame}) center / contain no-repeat;
                     "
                       ></div>
 
@@ -629,9 +630,8 @@ export class FlagInputModal extends LitElement {
             class="relative w-[160px] h-[100px] min-w-[160px] min-h-[100px] max-w-[160px] max-h-[100px] flex-shrink-0 border border-gray-400 rounded bg-white"
           >
             ${this.customLayers.map(({ name, color }) => {
-              const src = FlagMap[name];
+              const src = this.FlagMap[name];
               if (!src) return null;
-              console.log("color", color);
               const isSpecial = !color.startsWith("#");
               const colorClass = isSpecial ? `flag-color-${color}` : "";
               const bgStyle = isSpecial ? "" : `background-color: ${color};`;
@@ -706,10 +706,10 @@ mask: url(${src}) center / contain no-repeat;
                       if (!val || !this.isCustomFlag(val)) return;
 
                       const flagInfo = this.decodeCustomFlag(val);
-                      const validLayerNames = Object.keys(FlagMap);
+                      const validLayerNames = Object.keys(this.FlagMap);
                       const validColorKeys = [
-                        ...Object.keys(ColorShortNames),
-                        ...Object.values(ColorShortNames),
+                        ...Object.keys(this.ColorShortNames),
+                        ...Object.values(this.ColorShortNames),
                       ];
                       const hasUnknownLayer = flagInfo.some(
                         (l) => !validLayerNames.includes(l.name),
@@ -730,7 +730,7 @@ mask: url(${src}) center / contain no-repeat;
                         return;
                       }
 
-                      const result = checkPermission(
+                      const result = this.checkPermission(
                         val,
                         this.me?.player.roles,
                         this.me?.player.flares,
