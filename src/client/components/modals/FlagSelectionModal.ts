@@ -13,6 +13,7 @@ export class FlagSelectionModal extends LitElement {
 
   public open() {
     this.isModalOpen = true;
+    this.requestUpdate();
   }
 
   public close() {

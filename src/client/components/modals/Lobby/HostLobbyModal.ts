@@ -2,7 +2,7 @@ import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { getServerConfigFromClient } from "../../../../core/configuration/ConfigLoader";
 import { consolex } from "../../../../core/Consolex";
-import { GameMapType } from "../../../../core/game/Game";
+import { Difficulty, GameMapType, GameMode } from "../../../../core/game/Game";
 import { GameInfo } from "../../../../core/Schemas";
 import { generateID } from "../../../../core/Util";
 import { JoinLobbyEvent } from "../../../Main";
@@ -42,6 +42,22 @@ export class HostLobbyModal extends BaseGameSetupModal {
   }
 
   protected cleanup() {
+    this.gameSetupConfig = {
+      selectedMap: GameMapType.World,
+      selectedDifficulty: Difficulty.Medium,
+      disableNPCs: false,
+      gameMode: GameMode.FFA,
+      teamCount: 2,
+      bots: 400,
+      infiniteGold: false,
+      infiniteTroops: false,
+      instantBuild: false,
+      useRandomMap: false,
+      disabledUnits: [],
+    };
+
+    this.currentStep = "map";
+
     this.copySuccess = false;
     if (this.playersInterval) {
       clearInterval(this.playersInterval);
@@ -107,7 +123,9 @@ export class HostLobbyModal extends BaseGameSetupModal {
     return html`
       <div class="flex items-center gap-2">
         <div class="px-4 py-2 background-panel flex items-center gap-2">
-          <span class="text-textLight font-base">${this.lobbyId}</span>
+          <span class="text-textLight font-base hidden sm:inline"
+            >${this.lobbyId}</span
+          >
           <button
             @click=${this.copyToClipboard}
             class="flex text-textGrey hover:text-textLight transition-colors"

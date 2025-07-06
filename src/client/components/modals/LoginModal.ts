@@ -15,25 +15,13 @@ export class LoginModal extends LitElement {
     return this;
   }
 
-  connectedCallback() {
-    super.connectedCallback();
-  }
-
   public open() {
     this.modalEl?.open();
+    this.requestUpdate();
   }
 
   public close() {
     this.modalEl?.close();
-  }
-
-  private handleUsernameChange(e: Event) {
-    this.username = (e.target as HTMLInputElement).value;
-  }
-
-  private handleSubmit(e: Event) {
-    e.preventDefault();
-    console.log("Login submitted with username:", this.username);
   }
 
   render() {
@@ -54,42 +42,12 @@ export class LoginModal extends LitElement {
           </span>
         </div>
 
-        <form @submit=${this.handleSubmit} class="flex flex-col space-y-6">
-          <!--
-          <div class="background-panel  p-4">
-            <label
-              for="username"
-              class="block font-title text-textLight mb-2 text-base"
-              >Username</label
-            >
-            <div class="relative">
-              <div
-                class="absolute top-1/2 left-3 -translate-y-1/2 text-textGrey pointer-events-none"
-              >
-                <o-icon
-                  src="icons/mail.svg"
-                  size="small"
-                  color="var(--primary-color-lighter)"
-                ></o-icon>
-              </div>
-              <input
-                type="text"
-                id="username"
-                .value=${this.username}
-                @input=${this.handleUsernameChange}
-                class="w-full pl-10 pr-4 py-3 bg-backgroundDarkLighter border-2 border-borderBase font-title text-textLight caret-primary outline-none transition-colors focus:border-primary placeholder:text-textGrey"
-                placeholder="Anon69"
-              />
-            </div>
-          </div>
-  -->
+        <div class="flex flex-col space-y-6">
           <o-button
             id="login-discord"
             title="Initializing..."
+            icon="icons/discord.svg"
             disable
-            block
-            class="hidden"
-            icon="icons/user.svg"
           ></o-button>
 
           <o-button
@@ -97,8 +55,6 @@ export class LoginModal extends LitElement {
             title="Log out"
             translationKey="main.log_out"
             visible="false"
-            block
-            class="hidden"
             icon="icons/user.svg"
           ></o-button>
 
@@ -118,7 +74,7 @@ export class LoginModal extends LitElement {
               >
             </p>
           </div>
-        </form>
+        </div>
       </o-modal>
     `;
   }

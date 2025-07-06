@@ -23,6 +23,8 @@ export class NewsButton extends LitElement {
     if (!this.file || this._isLoading) return;
 
     this._isLoading = true;
+    this.requestUpdate(); // Trigger re-render to show loading state
+
     try {
       const response = await fetch(this.file);
       if (!response.ok) {
@@ -31,11 +33,11 @@ export class NewsButton extends LitElement {
 
       const articleData = await response.json();
       this._loadedArticle = articleData as NewsArticle;
-      this.requestUpdate();
     } catch (error) {
       console.error("Error loading news article:", error);
     } finally {
       this._isLoading = false;
+      this.requestUpdate(); // Trigger re-render when loading is complete
     }
   }
 
@@ -43,7 +45,15 @@ export class NewsButton extends LitElement {
     return this.article || this._loadedArticle;
   }
 
-  private handleClick() {
+  private async handleClick() {
+    // If we're still loading, wait for it to complete
+    if (this._isLoading) {
+      // Wait for loading to complete
+      while (this._isLoading) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+    }
+
     const currentArticle = this.getCurrentArticle();
     if (!currentArticle) return;
 
@@ -62,11 +72,11 @@ export class NewsButton extends LitElement {
       case "patch":
         return "bg-green";
       case "event":
-        return "bg-red";
+        return "bg-orange";
       case "update":
-        return "bg-backgroundDark";
-      case "maintenance":
         return "bg-backgroundDarkLighter";
+      case "maintenance":
+        return "bg-red";
       case "announcement":
         return "bg-primary";
       default:
@@ -103,65 +113,63 @@ export class NewsButton extends LitElement {
       return html`
         <div class="background-panel p-3 animate-pulse">
           <div class="flex items-center justify-between mb-2">
-            <div class="h-4 bg-slate-600 rounded w-16"></div>
-            <div class="h-3 bg-slate-600 rounded w-12"></div>
+            <div class="h-4 bg-backgroundGrey rounded w-16"></div>
+            <div class="h-3 bg-backgroundGrey rounded w-12"></div>
           </div>
-          <div class="h-4 bg-slate-600 rounded w-3/4 mb-2"></div>
-          <div class="h-3 bg-slate-600 rounded w-full"></div>
+          <div class="h-4 bg-backgroundGrey rounded w-3/4 mb-2"></div>
+          <div class="h-3 bg-backgroundGrey rounded w-full"></div>
         </div>
       `;
     }
 
     if (!currentArticle) {
       return html`
-        <div
-          class="background-panel p-3 bg-red-900/20 border border-red-500/30"
-        >
-          <p class="text-red-400 text-xs">Failed to load news article</p>
+        <div class="background-panel p-3 bg-red">
+          <p class="text-red text-small">Failed to load news article</p>
         </div>
       `;
     }
 
     return html`
       <div
-        class="background-panel p-3 hover:bg-slate-800/50 transition-all cursor-pointer group mb-2"
+        class="background-panel p-3 hover:bg-backgroundDarkLighter transition-all cursor-pointer group mb-2"
         @click=${this.handleClick}
         id="news-button"
       >
         <div class="flex items-center justify-between mb-2">
           <span
-            class="text-xs font-title px-2 py-0.5 text-white uppercase ${this.getTypeColor(
+            class="font-title text-xsmall px-2 py-0.5 text-textLight uppercase ${this.getTypeColor(
               currentArticle.type,
             )}"
           >
             ${currentArticle.type}
           </span>
-          <span class="text-xs text-slate-400"
+          <span class="text-xsmall text-textGrey"
             >${this.formatTimeAgo(currentArticle)}</span
           >
         </div>
 
         <h4
-          class="font-title text-white text-sm mb-1 group-hover:text-blue-400 transition-colors"
+          class="font-title text-textLight text-small mb-1  transition-colors"
         >
           ${currentArticle.title}
         </h4>
 
         ${currentArticle.summary
           ? html`
-              <p class="text-xs text-slate-400">
+              <p class="text-xsmall font-secondary text-textGrey">
                 ${currentArticle.summary}
                 <span
-                  class="text-blue-400 hover:text-blue-300 transition-colors ml-1 read-more"
+                  class="text-primary hover:text-primaryLighter transition-colors ml-1 read-more"
                 >
                   Read more...
                 </span>
               </p>
             `
           : html`
-              <p class="text-xs text-slate-400">
+              <p class="text-xsmall  text-textGrey">
                 <span
-                  class="text-blue-400 hover:text-blue-300 transition-colors read-more"
+                  class="text-primary hover:text-primaryLighter transition-colors read-more"
                 >
                   Read more...
                 </span>

@@ -128,7 +128,7 @@ export class PublicLobby extends LitElement {
                 `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/\s+/g, "")}`,
               )}
             </h3>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-col  md:flex-row md:items-center gap-2">
               <span
                 class="px-2 py-1 text-textLight text-xsmall font-title uppercase transition-colors duration-300 ${isJoined
                   ? "bg-primaryLighter"
@@ -153,7 +153,7 @@ export class PublicLobby extends LitElement {
             </div>
           </div>
         </div>
-        <div class="grid grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div
             class="background-panel p-3 transition-base duration-300 ${isJoined
               ? "has-grey border-base"

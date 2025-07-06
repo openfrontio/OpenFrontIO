@@ -134,8 +134,8 @@ export class OModal extends LitElement {
   };
 
   // Handler for animation end to finalize closing
-  private handleAnimationEnd = (e: AnimationEvent) => {
-    if (e.animationName === "fade-out" && this.isClosing) {
+  handleAnimationEnd = (e: AnimationEvent) => {
+    if (e.animationName === "scale-out" && this.isClosing) {
       this.isModalOpen = false;
       this.isClosing = false;
       this.dispatchEvent(
@@ -159,6 +159,7 @@ export class OModal extends LitElement {
   // Initiates the closing process with fade-out and scale-out animations
   public close() {
     this.isClosing = true;
+    this.requestUpdate();
   }
 
   // Sets up event listeners and initial focus after first render

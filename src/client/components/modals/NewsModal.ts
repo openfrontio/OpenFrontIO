@@ -39,12 +39,12 @@ export class NewsModal extends LitElement {
     const itemClass = item.type ? `item-text ${item.type}` : "item-text";
 
     return html`
-      <li class="mb-2 leading-relaxed text-slate-300 text-small">
+      <li class="mb-2 leading-relaxed text-textGrey text-small">
         <span class="${itemClass} inline">
           ${item.text}
           ${item.contributor
             ? html`<span
-                class="contributor ml-2 text-xs italic text-blue-300 opacity-80 text-xsmall"
+                class="ml-2 italic text-primaryLighter opacity-80 text-xsmall"
                 >(${item.contributor})</span
               >`
             : ""}
@@ -55,17 +55,17 @@ export class NewsModal extends LitElement {
   private getTypeColor(type: string): string {
     switch (type.toLowerCase()) {
       case "patch":
-        return "bg-orange";
-      case "event":
         return "bg-green";
-      case "update":
+      case "event":
         return "bg-orange";
+      case "update":
+        return "bg-backgroundDarkLighter";
       case "maintenance":
-        return "bg-backgroundGrey";
+        return "bg-red";
       case "announcement":
         return "bg-primary";
       default:
-        return ""; // Or a default color
+        return "bg-backgroundGrey";
     }
   }
 
@@ -74,9 +74,9 @@ export class NewsModal extends LitElement {
       return html`
         <o-modal title="Latest News">
           <div
-            class="background-panel text-textLight max-h-[80vh] overflow-y-auto w-full max-w-3xl mx-auto custom scrollbar"
+            class="text-textLight max-h-[80vh] overflow-y-auto w-full mx-auto custom-scrollbar"
           >
-            <p class="p-6 text-slate-300">No news article to display.</p>
+            <p class="p-6 text-textGrey">No news article to display.</p>
           </div>
         </o-modal>
       `;
@@ -84,14 +84,14 @@ export class NewsModal extends LitElement {
     return html`
       <o-modal disableContentScroll title="Latest News">
         <div
-          class="background-panel text-textLight max-h-[80vh] overflow-y-auto w-full max-w-3xl mx-auto custom scrollbar"
+          class=" text-textLight max-h-[80vh] overflow-y-auto w-full mx-auto custom-scrollbar"
         >
           <!-- Header -->
-          <div class="article-header border-b border-slate-700 p-6">
-            <div class="header-top flex items-center justify-between mb-4">
-              <div class="header-left flex items-center gap-3">
+          <div class=" border-b border-borderBase py-6 px-0 sm:p-6">
+            <div class=" flex items-center justify-between mb-4">
+              <div class=" flex items-center gap-3">
                 <span
-                  class="article-type font-pixel text-xs px-2 py-1 text-white uppercase
+                  class=" font-title text-small px-2 py-1 text-textLight uppercase
                     ${this.getTypeColor(this.article.type)}"
                 >
                   ${this.article.type}
@@ -99,50 +99,35 @@ export class NewsModal extends LitElement {
               </div>
             </div>
 
-            <h2
-              class="article-title font-pixel text-3xl text-blue-400 mb-3 leading-tight"
-            >
+            <h2 class=" font-title text-3xl text-primary mb-3 leading-tight">
               ${this.article.title}
             </h2>
 
-            <div
-              class="article-date-container flex items-center gap-2 text-sm text-slate-400"
-            >
-              <svg
-                class="calendar-icon w-3.5 h-3.5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
-              </svg>
+            <div class="flex items-center gap-2 text-small text-textGrey">
+              <o-icon
+                src="icons/calendar.svg"
+                size="small"
+                color="var(--text-color-grey)"
+              ></o-icon>
               <span>${this.article.date}</span>
             </div>
 
             ${this.article.summary
-              ? html`<div
-                  class="article-summary mt-4 text-slate-200 leading-relaxed"
-                >
+              ? html`<div class="mt-4 text-textLight leading-relaxed">
                   ${this.article.summary}
                 </div>`
               : ""}
           </div>
 
           <!-- Content -->
-          <div class="article-content p-6">
+          <div class="py-6 px-0 sm:p-6">
             ${this.article.sections.map(
               (section) => html`
-                <div class="content-section mb-8">
-                  <h4
-                    class="section-title font-pixel text-lg text-blue-400 mb-4"
-                  >
+                <div class=" mb-8">
+                  <h4 class=" font-title text-medium text-textLight mb-4">
                     ${section.title}
                   </h4>
-                  <ul class="content-list list-disc pl-4 mb-6">
+                  <ul class=" list-disc pl-4 mb-6">
                     ${section.items.map((item) => this.renderContentItem(item))}
                   </ul>
                 </div>
@@ -154,14 +139,36 @@ export class NewsModal extends LitElement {
     `;
   }
 
-  public open(article?: NewsArticle) {
+  public async open(article?: NewsArticle) {
     if (article) {
       this.article = article;
     } else {
       this.article = undefined;
     }
+
+    // Force an update and wait for it to complete
     this.requestUpdate();
+    await this.updateComplete;
+
+    // Wait for the modal element to be available
+    await this.waitForModalElement();
+
     this.modalEl?.open();
+  }
+
+  private async waitForModalElement(): Promise<void> {
+    // Wait for the modal element to be available
+    let attempts = 0;
+    const maxAttempts = 20; // Maximum 1 second wait (20 * 50ms)
+
+    while (!this.modalEl && attempts < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      attempts++;
+    }
+
+    if (!this.modalEl) {
+      console.warn("Modal element not found after waiting");
+    }
   }
 
   public close() {

@@ -19,6 +19,7 @@ type TabType =
 export class HelpModal extends LitElement {
   @state() private activeTab: TabType = "hotkeys";
   @state() private isModalOpen = false;
+  @state() private isNavOpen = false;
 
   private get tabs() {
     return [
@@ -245,10 +246,16 @@ export class HelpModal extends LitElement {
   public open() {
     this.activeTab = "hotkeys";
     this.isModalOpen = true;
+    this.isNavOpen = false;
   }
 
   public close() {
     this.isModalOpen = false;
+    this.isNavOpen = false;
+  }
+
+  private toggleNav() {
+    this.isNavOpen = !this.isNavOpen;
   }
 
   createRenderRoot() {
@@ -257,6 +264,7 @@ export class HelpModal extends LitElement {
 
   private handleTabChange(tab: TabType) {
     this.activeTab = tab;
+    this.isNavOpen = false;
   }
 
   render() {
@@ -268,18 +276,44 @@ export class HelpModal extends LitElement {
         disableContentScroll
         @modal-close=${this.close}
       >
-        <div class="flex h-[calc(85vh-80px)]">
+        <div class="relative  flex h-[calc(85vh-80px)]">
+          <!-- Mobile Toggle Button -->
+          <button
+            class="sm:hidden p-1 relative z-20 background-panel text-textLight "
+            @click=${this.toggleNav}
+          >
+            <o-icon
+              src=${this.isNavOpen
+                ? "icons/chevron-left.svg"
+                : "icons/chevron-right.svg"}
+              size="medium"
+              color="var(--text-color-light)"
+            ></o-icon>
+          </button>
+
           <!-- Left Side Tabs -->
-          <div class="p-1 w-56 flex flex-col background-panel">
+          <div
+            class="
+      p-1  flex flex-col background-panel absolute left-8 z-10
+      sm:static sm:w-56 sm:h-auto
+      ${this.isNavOpen ? "block translate-x-0" : "hidden"} sm:block
+      transition-transform duration-300 ease-in-out
+    "
+          >
             ${this.tabs.map(
               (tab) => html`
                 <button
                   class="
-          flex items-center gap-2 px-4 py-3 font-pixel text-small leading-5 transition-all duration-200 text-left border-none bg-none cursor-pointer
-          ${this.activeTab === tab.id
+            flex items-center gap-2 px-4 py-3 font-title text-small leading-5 transition-all duration-200 text-left border-none bg-none cursor-pointer w-full
+            ${this.activeTab === tab.id
                     ? "text-textLight bg-primary hover:text-textLight hover:bg-primary"
-                    : "text-textGrey hover:text-textLight hover:bg-backgroundDarkLighter"}"
-                  @click=${() => this.handleTabChange(tab.id as TabType)}
+                    : "text-textGrey hover:text-textLight hover:bg-backgroundDarkLighter"}
+          "
+                  @click=${() => {
+                    this.handleTabChange(tab.id as TabType);
+                    this.isModalOpen = true; // Open modal when a tab is selected
+                    this.isNavOpen = false; // Close sidebar after selection
+                  }}
                 >
                   <o-icon
                     src=${tab.icon}
@@ -293,22 +327,33 @@ export class HelpModal extends LitElement {
               `,
             )}
           </div>
+
+          <!-- Overlay for mobile when nav is open -->
+          ${this.isNavOpen
+            ? html`
+                <div
+                  class="fixed inset-0 bg-black bg-opacity-50 sm:hidden z-0"
+                  @click=${this.toggleNav}
+                ></div>
+              `
+            : ""}
+
           <!-- Content Area -->
           <div
-            class="flex-1 p-8 overflow-y-auto background-panel custom-scrollbar"
+            class="flex-1 p-4 sm:p-8 overflow-y-auto background-panel custom-scrollbar"
           >
             ${this.activeTab === "hotkeys"
               ? html`
                   <div class="space-y-4">
                     <h3
-                      class="font-pixel text-large leading-7 text-textLight mb-5"
+                      class="font-title text-large leading-7 text-textLight mb-5"
                     >
                       Hotkeys
                     </h3>
                     ${this.hotkeys.map(
                       (hotkey) => html`
                         <div
-                          class="background-panel grid grid-cols-[2fr_1fr] items-center gap-4 p-4"
+                          class="background-panel grid grid-cols-1 sm:grid-cols-[2fr_1fr] items-center gap-4 p-4"
                         >
                           <span class="text-textLight">${hotkey.action}</span>
                           <div class="flex gap-2 items-center justify-end">
@@ -334,7 +379,7 @@ export class HelpModal extends LitElement {
               ? html`
                   <div class="space-y-4">
                     <h3
-                      class="font-pixel text-large leading-7 text-textLight mb-5"
+                      class="font-title text-large leading-7 text-textLight mb-5"
                     >
                       ${translateText("help_modal.ui_leaderboard")}
                     </h3>
@@ -366,38 +411,38 @@ export class HelpModal extends LitElement {
                           <tbody>
                             <tr class="text-textGrey">
                               <td>1</td>
-                              <td>Minoan Dynasty</td>
-                              <td>0.05%</td>
-                              <td>1.79K</td>
-                              <td>1.76K</td>
+                              <td>Minoa</td>
+                              <td>4%</td>
+                              <td>3K</td>
+                              <td>5K</td>
                             </tr>
                             <tr class="text-textGrey">
                               <td>2</td>
-                              <td>Italian Duchy</td>
-                              <td>0.04%</td>
-                              <td>1.72K</td>
-                              <td>1.78K</td>
+                              <td>Itali</td>
+                              <td>4%</td>
+                              <td>2K</td>
+                              <td>4K</td>
                             </tr>
                             <tr class="text-textGrey">
                               <td>3</td>
-                              <td>AngloSaxon Caliphate</td>
-                              <td>0.04%</td>
-                              <td>1.72K</td>
-                              <td>1.78K</td>
+                              <td>Anglo</td>
+                              <td>3%</td>
+                              <td>1</td>
+                              <td>3K</td>
                             </tr>
                             <tr class="text-textGrey">
                               <td>4</td>
-                              <td>Navajo Host</td>
-                              <td>0.04%</td>
-                              <td>1.80K</td>
-                              <td>1.73K</td>
+                              <td>Navajo</td>
+                              <td>2%</td>
+                              <td>1K</td>
+                              <td>2K</td>
                             </tr>
                             <tr class="text-primary">
                               <td>442</td>
                               <td>Anon69</td>
                               <td>0%</td>
-                              <td>1.16K</td>
-                              <td>6.23K</td>
+                              <td>1K</td>
+                              <td>1K</td>
                             </tr>
                           </tbody>
                         </table>
@@ -410,7 +455,7 @@ export class HelpModal extends LitElement {
               ? html`
                   <div class="space-y-4">
                     <h3
-                      class="font-pixel text-large leading-7 text-textLight mb-5"
+                      class="font-title text-large leading-7 text-textLight mb-5"
                     >
                       ${translateText("help_modal.ui_control")}
                     </h3>
@@ -421,10 +466,10 @@ export class HelpModal extends LitElement {
                       <div class="p-6 bg-backgroundDarkLighter">
                         <div class="mb-4">
                           <div class="flex justify-between items-center mb-2">
-                            <span class="text-textLight font-pixel text-small"
+                            <span class="text-textLight font-title text-small"
                               >${translateText("control_panel.pop")}</span
                             >
-                            <span class="text-textLight font-pixel text-small"
+                            <span class="text-textLight font-title text-small"
                               >3.60K / 12.1K
                               <span class="text-green"> (+379)</span></span
                             >
@@ -432,17 +477,17 @@ export class HelpModal extends LitElement {
                         </div>
                         <div class="mb-6">
                           <div class="flex justify-between items-center mb-2">
-                            <span class="text-textLight font-pixel text-small"
+                            <span class="text-textLight font-title text-small"
                               >${translateText("control_panel.gold")}</span
                             >
-                            <span class="text-textLight font-pixel text-small"
+                            <span class="text-textLight font-title text-small"
                               >245 <span class="text-green"> (+90)</span></span
                             >
                           </div>
                         </div>
                         <div class="mb-4">
                           <div
-                            class="text-textLight font-pixel text-small mb-2"
+                            class="text-textLight font-title text-small mb-2"
                           >
                             ${translateText("control_panel.troops")} 3.38K |
                             ${translateText("control_panel.workers")} 216
@@ -463,7 +508,7 @@ export class HelpModal extends LitElement {
                         </div>
                         <div>
                           <div
-                            class="text-textLight font-pixel text-small mb-2"
+                            class="text-textLight font-title text-small mb-2"
                           >
                             ${translateText("control_panel.attack_ratio")} 25%
                             (846)
@@ -487,7 +532,7 @@ export class HelpModal extends LitElement {
                     <div class="space-y-4">
                       <div class="p-4 background-panel">
                         <h4
-                          class="font-pixel text-medium leading-7 text-textLight mb-2"
+                          class="font-title text-medium leading-7 text-textLight mb-2"
                         >
                           ${translateText("control_panel.pop")}
                         </h4>
@@ -497,7 +542,7 @@ export class HelpModal extends LitElement {
                       </div>
                       <div class="p-4 background-panel">
                         <h4
-                          class="font-pixel text-medium leading-7 text-textLight mb-2"
+                          class="font-title text-medium leading-7 text-textLight mb-2"
                         >
                           ${translateText("control_panel.gold")}
                         </h4>
@@ -507,7 +552,7 @@ export class HelpModal extends LitElement {
                       </div>
                       <div class="p-4 background-panel">
                         <h4
-                          class="font-pixel text-medium leading-7 text-textLight mb-2"
+                          class="font-title text-medium leading-7 text-textLight mb-2"
                         >
                           ${translateText("control_panel.troops")} &
                           ${translateText("control_panel.workers")}
@@ -518,7 +563,7 @@ export class HelpModal extends LitElement {
                       </div>
                       <div class="p-4 background-panel">
                         <h4
-                          class="font-pixel text-medium leading-7 text-textLight mb-2"
+                          class="font-title text-medium leading-7 text-textLight mb-2"
                         >
                           ${translateText("control_panel.attack_ratio")}
                         </h4>
@@ -534,7 +579,7 @@ export class HelpModal extends LitElement {
               ? html`
                   <div class="space-y-4">
                     <h3
-                      class="font-pixel text-large leading-7 text-textLight mb-5"
+                      class="font-title text-large leading-7 text-textLight mb-5"
                     >
                       ${translateText("help_modal.ui_events")}
                     </h3>
@@ -641,7 +686,7 @@ export class HelpModal extends LitElement {
               ? html`
                   <div class="space-y-4">
                     <h3
-                      class="font-pixel text-large leading-7 text-textLight mb-5"
+                      class="font-title text-large leading-7 text-textLight mb-5"
                     >
                       ${translateText("help_modal.ui_options")}
                     </h3>
@@ -665,7 +710,7 @@ export class HelpModal extends LitElement {
                           <div
                             class="w-8 h-8 bg-backgroundGrey  flex items-center justify-center"
                           >
-                            <div class="text-textLight font-pixel text-small">
+                            <div class="text-textLight font-title text-small">
                               11s
                             </div>
                           </div>
@@ -693,7 +738,7 @@ export class HelpModal extends LitElement {
                     <div class="space-y-4">
                       <div class="p-4 background-panel">
                         <h4
-                          class="font-pixel text-medium leading-7 text-textLight mb-2"
+                          class="font-title text-medium leading-7 text-textLight mb-2"
                         >
                           ${translateText("help_modal.option_controls")}
                         </h4>
@@ -714,13 +759,13 @@ export class HelpModal extends LitElement {
               ? html`
                   <div class="space-y-4">
                     <h3
-                      class="font-pixel text-large leading-7 text-textLight mb-5"
+                      class="font-title text-large leading-7 text-textLight mb-5"
                     >
                       ${translateText("help_modal.info_title")}
                     </h3>
                     <div class="p-4 background-panel">
                       <h4
-                        class="font-pixel text-medium leading-7 text-textLight mb-4"
+                        class="font-title text-medium leading-7 text-textLight mb-4"
                       >
                         ${translateText("help_modal.info_enemy_panel")}
                       </h4>
@@ -730,87 +775,87 @@ export class HelpModal extends LitElement {
                         <div class="text-center mb-4"></div>
                         <div class="space-y-2 mb-4">
                           <h5
-                            class="text-textLight font-pixel text-medium mb-2"
+                            class="text-textLight font-title text-medium mb-2"
                           >
                             Persian Oligarchy
                           </h5>
                           <div class="flex justify-between">
-                            <span class="text-textGrey font-pixel text-small">
+                            <span class="text-textGrey font-title text-small">
                               ${translateText(
                                 "player_info_overlay.type",
                               )}:</span
                             >
-                            <span class="text-textLight font-pixel text-small"
+                            <span class="text-textLight font-title text-small"
                               >${translateText("player_info_overlay.bot")}</span
                             >
                           </div>
                           <div class="flex justify-between">
-                            <span class="text-textGrey font-pixel text-small"
+                            <span class="text-textGrey font-title text-small"
                               >${translateText(
                                 "player_info_overlay.d_troops",
                               )}</span
                             >
-                            <span class="text-textLight font-pixel text-small"
+                            <span class="text-textLight font-title text-small"
                               >6.39K</span
                             >
                           </div>
                           <div class="flex justify-between">
-                            <span class="text-textGrey font-pixel text-small"
+                            <span class="text-textGrey font-title text-small"
                               >${translateText(
                                 "player_info_overlay.gold",
                               )}:</span
                             >
-                            <span class="text-textLight font-pixel text-small"
+                            <span class="text-textLight font-title text-small"
                               >14.3K</span
                             >
                           </div>
                           <div class="flex justify-between">
-                            <span class="text-textGrey font-pixel text-small"
+                            <span class="text-textGrey font-title text-small"
                               >${translateText(
                                 "player_info_overlay.ports",
                               )}</span
                             >
-                            <span class="text-textLight font-pixel text-small"
+                            <span class="text-textLight font-title text-small"
                               >0</span
                             >
                           </div>
                           <div class="flex justify-between">
-                            <span class="text-textGrey font-pixel text-small"
+                            <span class="text-textGrey font-title text-small"
                               >${translateText(
                                 "player_info_overlay.cities",
                               )}</span
                             >
-                            <span class="text-textLight font-pixel text-small"
+                            <span class="text-textLight font-title text-small"
                               >0</span
                             >
                           </div>
                           <div class="flex justify-between">
-                            <span class="text-textGrey font-pixel text-small"
+                            <span class="text-textGrey font-title text-small"
                               >${translateText(
                                 "player_info_overlay.missile_launchers",
                               )}</span
                             >
-                            <span class="text-textLight font-pixel text-small"
+                            <span class="text-textLight font-title text-small"
                               >0</span
                             >
                           </div>
                           <div class="flex justify-between">
-                            <span class="text-textGrey font-pixel text-small"
+                            <span class="text-textGrey font-title text-small"
                               >${translateText(
                                 "player_info_overlay.sams",
                               )}:</span
                             >
-                            <span class="text-textLight font-pixel text-small"
+                            <span class="text-textLight font-title text-small"
                               >0</span
                             >
                           </div>
                           <div class="flex justify-between">
-                            <span class="text-textGrey font-pixel text-small"
+                            <span class="text-textGrey font-title text-small"
                               >${translateText(
                                 "player_info_overlay.warships",
                               )}:</span
                             >
-                            <span class="text-textLight font-pixel text-small"
+                            <span class="text-textLight font-title text-small"
                               >0</span
                             >
                           </div>
@@ -832,7 +877,7 @@ export class HelpModal extends LitElement {
               ? html`
                   <div class="space-y-4">
                     <h3
-                      class="font-pixel text-large leading-7 text-textLight mb-5"
+                      class="font-title text-large leading-7 text-textLight mb-5"
                     >
                       ${translateText("help_modal.radial_title")}
                     </h3>
@@ -910,13 +955,13 @@ export class HelpModal extends LitElement {
               ? html`
                   <div class="space-y-4">
                     <h3
-                      class="font-pixel text-large leading-7 text-textLight mb-5"
+                      class="font-title text-large leading-7 text-textLight mb-5"
                     >
                       ${translateText("help_modal.info_title")}
                     </h3>
                     <div class="p-4 background-panel">
                       <h4
-                        class="font-pixel text-medium leading-7 text-textLight mb-4"
+                        class="font-title text-medium leading-7 text-textLight mb-4"
                       >
                         ${translateText("help_modal.info_enemy_panel")}
                       </h4>
@@ -942,7 +987,7 @@ export class HelpModal extends LitElement {
                               >
                                 ${translateText("player_info_overlay.gold")}
                               </div>
-                              <div class="text-textLight font-pixel text-small">
+                              <div class="text-textLight font-title text-small">
                                 1.37K
                               </div>
                             </div>
@@ -995,9 +1040,9 @@ export class HelpModal extends LitElement {
                         <!-- Action Buttons -->
                         <div class="flex justify-center gap-3 mt-4">
                           <button
-                            class="w-8 h-8 bg-slate-600 rounded flex items-center justify-center hover:bg-slate-500 transition-colors"
+                            class="w-8 h-8 bg-backgroundGrey rounded flex items-center justify-center  transition-colors"
                           >
-                            <span class="text-white text-sm"
+                            <span class="text-textLight text-small flex"
                               ><o-icon
                                 src="icons/message-square-more.svg"
                                 size="large"
@@ -1006,9 +1051,9 @@ export class HelpModal extends LitElement {
                             ></span>
                           </button>
                           <button
-                            class="w-8 h-8 bg-slate-600 rounded flex items-center justify-center hover:bg-slate-500 transition-colors"
+                            class="w-8 h-8 bg-backgroundGrey rounded flex items-center justify-center  transition-colors"
                           >
-                            <span class="text-white text-sm">
+                            <span class="text-textLight text-small flex">
                               <o-icon
                                 src="icons/smile.svg"
                                 size="large"
@@ -1042,7 +1087,7 @@ export class HelpModal extends LitElement {
               ? html`
                   <div class="space-y-4">
                     <h3
-                      class="font-pixel text-large leading-7 text-textLight mb-5"
+                      class="font-title text-large leading-7 text-textLight mb-5"
                     >
                       ${translateText("help_modal.info_ally_panel")}
                     </h3>
@@ -1069,7 +1114,7 @@ export class HelpModal extends LitElement {
                               >
                                 ${translateText("player_info_overlay.gold")}
                               </div>
-                              <div class="text-textLight font-pixel text-small">
+                              <div class="text-textLight font-title text-small">
                                 1.37K
                               </div>
                             </div>
@@ -1122,9 +1167,9 @@ export class HelpModal extends LitElement {
                         <!-- Action Buttons -->
                         <div class="flex justify-center gap-3 mt-4">
                           <button
-                            class="w-8 h-8 bg-slate-600 rounded flex items-center justify-center hover:bg-slate-500 transition-colors"
+                            class="w-8 h-8 bg-backgroundGrey rounded flex items-center justify-center  transition-colors"
                           >
-                            <span class="text-white text-sm"
+                            <span class="text-textLight text-small flex"
                               ><o-icon
                                 src="icons/message-square-more.svg"
                                 size="large"
@@ -1133,9 +1178,9 @@ export class HelpModal extends LitElement {
                             ></span>
                           </button>
                           <button
-                            class="w-8 h-8 bg-slate-600 rounded flex items-center justify-center hover:bg-slate-500 transition-colors"
+                            class="w-8 h-8 bg-backgroundGrey rounded flex items-center justify-center  transition-colors"
                           >
-                            <span class="text-white text-sm">
+                            <span class="text-textLight text-small flex">
                               <o-icon
                                 src="icons/smile.svg"
                                 size="large"
@@ -1173,7 +1218,7 @@ export class HelpModal extends LitElement {
               ? html`
                   <div class="space-y-4">
                     <h3
-                      class="font-pixel text-large leading-7 text-textLight mb-5"
+                      class="font-title text-large leading-7 text-textLight mb-5"
                     >
                       ${translateText("help_modal.build_menu_title")}
                     </h3>
@@ -1182,7 +1227,7 @@ export class HelpModal extends LitElement {
                         ${translateText("help_modal.build_menu_desc")}
                       </p>
                       <div class="p-4">
-                        <div class="grid grid-cols-3 gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           ${this.buildings.map(
                             (building) => html`
                               <div class="p-3 background-panel text-center">
@@ -1194,12 +1239,12 @@ export class HelpModal extends LitElement {
                                   ></o-icon>
                                 </div>
                                 <div
-                                  class="text-textLight font-pixel text-small mb-1"
+                                  class="text-textLight font-title text-small mb-1"
                                 >
                                   ${building.name}
                                 </div>
                                 <div
-                                  class="text-textGrey font-pixel text-small mb-1"
+                                  class="text-textGrey font-title text-small mb-1"
                                 >
                                   ${building.description.split(" ").length > 5
                                     ? building.description
@@ -1208,7 +1253,7 @@ export class HelpModal extends LitElement {
                                         .join(" ") + "..."
                                     : building.description}
                                 </div>
-                                <div class="text-primary font-pixel text-small">
+                                <div class="text-primary font-title text-small">
                                   ${building.cost}
                                 </div>
                               </div>
@@ -1230,7 +1275,7 @@ export class HelpModal extends LitElement {
                                 ></o-icon>
                               </div>
                               <h4
-                                class="font-pixel text-medium leading-7 text-textLight"
+                                class="font-title text-medium leading-7 text-textLight"
                               >
                                 ${building.name}
                               </h4>
@@ -1247,7 +1292,7 @@ export class HelpModal extends LitElement {
               ? html`
                   <div class="space-y-4">
                     <h3
-                      class="font-pixel text-large leading-7 text-textLight mb-5"
+                      class="font-title text-large leading-7 text-textLight mb-5"
                     >
                       ${translateText("help_modal.player_icons")}
                     </h3>

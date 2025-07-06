@@ -11,7 +11,7 @@ export class MainFooter extends LitElement {
   render() {
     return html`
       <footer
-        class="fixed bottom-0 left-0 right-0 w-full bg-backgroundDark backdrop-blur-sm border-t border-borderBase z-[var(--z-index-base)]"
+        class="relative bottom-0 left-0 right-0 w-full bg-backgroundDark backdrop-blur-sm border-t border-borderBase "
       >
         <div class="w-full px-4 py-3 max-w-7xl mx-auto">
           <div

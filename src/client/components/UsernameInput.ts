@@ -48,7 +48,7 @@ export class UsernameInput extends LitElement {
       />
       ${this.validationError
         ? html`<div
-            class="background-panel absolute z-10 w-full mt-2 px-3 py-1 text-small border border-red text-red font-title"
+            class="background-panel absolute !z-50 w-full mt-2 px-3 py-1 text-small border border-red text-red font-title"
           >
             ${this.validationError}
           </div>`

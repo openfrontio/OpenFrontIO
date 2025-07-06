@@ -40,11 +40,17 @@ export abstract class BaseGameSetupModal extends LitElement {
   public open() {
     this.modalEl?.open();
     this.initialize();
+    this.requestUpdate();
   }
 
   public close() {
     this.modalEl?.close();
-    this.cleanup();
+  }
+  connectedCallback() {
+    super.connectedCallback();
+    this.addEventListener("modal-close", () => {
+      this.cleanup();
+    });
   }
 
   protected initialize() {
@@ -207,7 +213,7 @@ export abstract class BaseGameSetupModal extends LitElement {
 
           <!-- Navigation -->
           <div
-            class="flex items-center justify-between p-6 border-t border-textGrey"
+            class="flex items-center justify-between p-6 border-t border-textGrey sticky bottom-0 sm:static bg-backgroundDark"
           >
             <o-button
               .title=${"Back"}
@@ -218,7 +224,7 @@ export abstract class BaseGameSetupModal extends LitElement {
               class="${this.currentStep === "map" ||
               this.currentStep === "waiting"
                 ? "opacity-50 cursor-not-allowed"
-                : ""}"
+                : ""}  sm:w-auto"
             ></o-button>
 
             ${this.renderLobbyIdSection()}
@@ -239,6 +245,7 @@ export abstract class BaseGameSetupModal extends LitElement {
                 : this.handleNext}
               ?disable=${this.isStartGameDisabled()}
               ?secondary=${false}
+              class=" sm:w-auto"
             ></o-button>
           </div>
         </div>

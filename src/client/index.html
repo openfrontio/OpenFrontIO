@@ -119,14 +119,14 @@
   </head>
   <!-- ------------------------------------------------------------------------------------------------------------------------------------------------------------- -->
   <body
-    class="min-h-screen bg-slate-900 flex flex-col items-center justify-between relative overflow-hidden"
+    class="min-h-screen bg-slate-900 flex flex-col items-center justify-between relative overflow-auto"
   >
     <!-- Background -->
     <div class="absolute inset-0 z-[-1]">
       <div
         class="absolute inset-0 bg-cover bg-center"
         style="
-          background-image: url(&quot;https://images.pexels.com/photos/269724/pexels-photo-269724.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2&quot;);
+          background-image: url(&quot;/images/background_globe.jpeg&quot;);
           filter: blur(4px) brightness(0.4);
           image-rendering: pixelated;
         "
@@ -140,7 +140,7 @@
     <!-- Background grid -->
     <div class="scanlines"></div>
 
-    <div class="relative z-10 w-full max-w-7xl mx-auto px-4 pt-8">
+    <div class="relative w-full max-w-7xl mx-auto px-4 pt-8">
       <!-- Header -->
       <main-navbar></main-navbar>
 
@@ -152,12 +152,13 @@
           <public-lobby></public-lobby>
 
           <!-- Action Buttons -->
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <o-button
               id="join-private-lobby-button"
               title="Join Lobby"
               translationKey="main.join_lobby"
               icon="icons/users.svg"
+              class="w-full"
             ></o-button>
 
             <o-button
@@ -165,6 +166,7 @@
               title="Create Lobby"
               translationKey="main.create_lobby"
               icon="icons/swords.svg"
+              class="w-full"
             ></o-button>
 
             <o-button
@@ -173,6 +175,7 @@
               translationKey="main.single_player"
               icon="icons/user.svg"
               secondary
+              class="w-full"
             ></o-button>
 
             <o-button
@@ -181,10 +184,11 @@
               translationKey="main.instructions"
               icon="icons/book-open.svg"
               secondary
+              class="w-full"
             ></o-button>
 
             <!-- Language Selection -->
-            <div class="col-span-2">
+            <div class="col-span-1 md:col-span-2">
               <lang-selector></lang-selector>
             </div>
           </div>
@@ -227,20 +231,11 @@
           <div class="background-panel p-4 relative">
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-title text-xl text-white">LATEST NEWS</h3>
-              <svg
-                class="w-[18px] h-[18px] text-slate-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 7.388 6 10v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                ></path>
-              </svg>
+              <o-icon
+                src="icons/bell.svg"
+                size="medium"
+                color="var(--text-color-grey)"
+              ></o-icon>
             </div>
             <div class="space-y-4">
               <news-button
@@ -321,8 +316,6 @@
     <team-stats></team-stats>
     <player-panel></player-panel>
     <help-modal></help-modal>
-    <!--<flag-input></flag-input>-->
-    <!-- lagging flag-modal-->
     <flag-modal></flag-modal>
     <login-modal></login-modal>
     <news-modal></news-modal>

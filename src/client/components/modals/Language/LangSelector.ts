@@ -184,6 +184,11 @@ export class LangSelector extends LitElement {
       "user-setting",
       "o-modal",
       "o-button",
+      "map-selection",
+      "difficulty-selection",
+      "game-mode-selection",
+      "game-options",
+      "game-setup-progress",
     ];
 
     document.title = translations.main?.title || document.title;

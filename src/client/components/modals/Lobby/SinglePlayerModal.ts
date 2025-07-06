@@ -2,7 +2,13 @@
 import { html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { consolex } from "../../../../core/Consolex";
-import { GameMapType, GameType, UnitType } from "../../../../core/game/Game";
+import {
+  Difficulty,
+  GameMapType,
+  GameMode,
+  GameType,
+  UnitType,
+} from "../../../../core/game/Game";
 import { generateID } from "../../../../core/Util";
 import { JoinLobbyEvent } from "../../../Main";
 import { translateText } from "../../../Utils";
@@ -25,7 +31,21 @@ export class SinglePlayerModal extends BaseGameSetupModal {
   }
 
   protected cleanup() {
-    // No-op for single-player
+    this.gameSetupConfig = {
+      selectedMap: GameMapType.World,
+      selectedDifficulty: Difficulty.Medium,
+      disableNPCs: false,
+      gameMode: GameMode.FFA,
+      teamCount: 2,
+      bots: 400,
+      infiniteGold: false,
+      infiniteTroops: false,
+      instantBuild: false,
+      useRandomMap: false,
+      disabledUnits: [],
+    };
+
+    this.currentStep = "map";
   }
 
   protected handleStartGame() {
