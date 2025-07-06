@@ -127,16 +127,9 @@ export class StructureIconsLayer implements Layer {
   }
 
   async init() {
-    this.eventBus.on(ToggleStructureEvent, (e) => {
-      this.structures.forEach((infos, structureType) => {
-        infos.visible =
-          structureType === e.structureType || e.structureType === null;
-      });
-      for (const render of this.renders) {
-        this.modifyVisiblity(render);
-      }
-      this.shouldRedraw = true;
-    });
+    this.eventBus.on(ToggleStructureEvent, (e) =>
+      this.toggleStructure(e.structureType),
+    );
     window.addEventListener("resize", () => this.resizeCanvas());
     await this.setupRenderer();
     this.redraw();
@@ -164,6 +157,17 @@ export class StructureIconsLayer implements Layer {
           this.handleInactiveUnit(unitView);
         }
       });
+  }
+
+  private toggleStructure(toggleStructureType: UnitType | null): void {
+    for (const [structureType, infos] of this.structures) {
+      infos.visible =
+        structureType === toggleStructureType || toggleStructureType === null;
+    }
+    for (const render of this.renders) {
+      this.modifyVisibility(render);
+    }
+    this.shouldRedraw = true;
   }
 
   private findRenderByUnit(
@@ -196,20 +200,16 @@ export class StructureIconsLayer implements Layer {
     }
   }
 
-  private modifyVisiblity(render: StructureRenderInfo) {
+  private modifyVisibility(render: StructureRenderInfo) {
     const structureType =
       render.unit.type() === UnitType.Construction
         ? render.unit.constructionType()!
         : render.unit.type();
     const structureInfos = this.structures.get(structureType);
 
-    let focusStructure = false;
-    for (const infos of this.structures.values()) {
-      if (infos.visible === false) {
-        focusStructure = true;
-        break;
-      }
-    }
+    const focusStructure = Array.from(this.structures.values()).some(
+      (infos) => !infos.visible,
+    );
 
     if (structureInfos) {
       render.iconContainer.alpha = structureInfos.visible ? 1 : 0.3;
@@ -234,7 +234,7 @@ export class StructureIconsLayer implements Layer {
       render.underConstruction = false;
       render.iconContainer?.destroy();
       render.iconContainer = this.createIconSprite(unit);
-      this.modifyVisiblity(render);
+      this.modifyVisibility(render);
       this.shouldRedraw = true;
     }
   }
@@ -244,7 +244,7 @@ export class StructureIconsLayer implements Layer {
       render.owner = unit.owner().id();
       render.iconContainer?.destroy();
       render.iconContainer = this.createIconSprite(unit);
-      this.modifyVisiblity(render);
+      this.modifyVisibility(render);
       this.shouldRedraw = true;
     }
   }
@@ -256,7 +256,7 @@ export class StructureIconsLayer implements Layer {
       render.levelContainer?.destroy();
       render.iconContainer = this.createIconSprite(unit);
       render.levelContainer = this.createLevelSprite(unit);
-      this.modifyVisiblity(render);
+      this.modifyVisibility(render);
       this.shouldRedraw = true;
     }
   }
@@ -587,7 +587,7 @@ export class StructureIconsLayer implements Layer {
     );
     this.renders.push(render);
     this.computeNewLocation(render);
-    this.modifyVisiblity(render);
+    this.modifyVisibility(render);
     this.shouldRedraw = true;
   }
 
