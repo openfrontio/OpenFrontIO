@@ -2,7 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 
 @customElement("game-ui-components")
-export class GameModals extends LitElement {
+export class GameUIComponents extends LitElement {
   createRenderRoot() {
     return this;
   }

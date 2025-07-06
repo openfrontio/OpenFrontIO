@@ -41,12 +41,12 @@ export class MainFooter extends LitElement {
               >©2025 OpenFront™</a
             >
             <a
-              href="/terms-of-service.html"
+              href="/privacy-policy.html"
               class="hover:text-textLight transition-colors whitespace-nowrap"
               >Privacy Policy</a
             >
             <a
-              href="/privacy-policy.html"
+              href="/terms-of-service.html"
               class="hover:text-textLight transition-colors whitespace-nowrap"
               >Terms of Service</a
             >

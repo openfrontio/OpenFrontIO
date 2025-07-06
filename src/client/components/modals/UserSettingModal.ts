@@ -19,7 +19,6 @@ export class UserSettingModal extends LitElement {
 
   @state() private settingsMode: "basic" | "keybinds" = "basic";
   @state() private keybinds: Record<string, string> = {};
-  @state() private keySequence: string[] = [];
 
   createRenderRoot() {
     return this;
@@ -56,14 +55,6 @@ export class UserSettingModal extends LitElement {
 
   private handleKeyDown = (e: KeyboardEvent) => {
     if (!this.modalEl?.isModalOpen) return;
-
-    const key = e.key.toLowerCase();
-    const nextSequence = [...this.keySequence, key].slice(-4);
-    this.keySequence = nextSequence;
-
-    if (nextSequence.join("") === "evan") {
-      this.keySequence = [];
-    }
   };
 
   toggleDarkMode(e: CustomEvent<{ checked: boolean }>) {

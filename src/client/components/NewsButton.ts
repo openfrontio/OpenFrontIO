@@ -46,11 +46,7 @@ export class NewsButton extends LitElement {
   }
 
   private async handleClick() {
-    if (this._isLoading) {
-      while (this._isLoading) {
-        await new Promise((resolve) => setTimeout(resolve, 50));
-      }
-    }
+    if (this._isLoading) return;
 
     const currentArticle = this.getCurrentArticle();
     if (!currentArticle) return;
@@ -172,6 +168,7 @@ export class NewsButton extends LitElement {
         class="background-panel p-3 hover:bg-backgroundDarkLighter transition-all cursor-pointer group mb-2"
         @click=${this.handleClick}
         id="news-button"
+        style="${this._isLoading ? "pointer-events: none; opacity: 0.7;" : ""}"
       >
         <div class="flex items-center justify-between mb-2">
           <span

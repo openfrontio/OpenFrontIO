@@ -109,7 +109,7 @@ export class NewsModal extends LitElement {
                 size="small"
                 color="var(--text-color-grey)"
               ></o-icon>
-              <span>${this.article.date}</span> q
+              <span>${this.article.date}</span>
             </div>
 
             ${this.article.summary

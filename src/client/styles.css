@@ -1,9 +1,9 @@
+@import url("./styles/core/variables.css");
+@import url("./styles/core/typography.css");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url("./styles/core/variables.css");
-@import url("./styles/core/typography.css");
 
 * {
   -webkit-box-sizing: border-box;
