@@ -437,20 +437,13 @@ export class StructureIconsLayer implements Layer {
       return PIXI.Texture.from(structureCanvas);
     }
 
-    const [offsetX, offsetY] = (() => {
-      switch (shape) {
-        case "triangle":
-          return [4, 8];
-        case "square":
-          return [3, 3];
-        case "octagon":
-          return [4, 4];
-        case "circle":
-          return [4, 4];
-        default:
-          return [0, 0];
-      }
-    })();
+    const SHAPE_OFFSETS = {
+      triangle: [4, 8],
+      square: [3, 3],
+      octagon: [4, 4],
+      circle: [4, 4],
+    };
+    const [offsetX, offsetY] = SHAPE_OFFSETS[shape] || [0, 0];
 
     context.drawImage(
       this.getImageColored(structureInfo.image, borderColor),
