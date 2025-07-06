@@ -18,15 +18,6 @@ import { Layer } from "./Layer";
 
 type ShapeType = "triangle" | "square" | "octagon" | "circle";
 
-const STRUCTURE_SHAPES: Partial<Record<UnitType, ShapeType>> = {
-  [UnitType.City]: "circle",
-  [UnitType.Port]: "circle",
-  [UnitType.Factory]: "circle",
-  [UnitType.DefensePost]: "octagon",
-  [UnitType.SAMLauncher]: "square",
-  [UnitType.MissileSilo]: "triangle",
-};
-
 class StructureRenderInfo {
   public isOnScreen: boolean = false;
   constructor(
@@ -38,6 +29,15 @@ class StructureRenderInfo {
     public underConstruction: boolean = true,
   ) {}
 }
+
+const STRUCTURE_SHAPES: Partial<Record<UnitType, ShapeType>> = {
+  [UnitType.City]: "circle",
+  [UnitType.Port]: "circle",
+  [UnitType.Factory]: "circle",
+  [UnitType.DefensePost]: "octagon",
+  [UnitType.SAMLauncher]: "square",
+  [UnitType.MissileSilo]: "triangle",
+};
 const ZOOM_THRESHOLD = 3.5;
 const ICON_SIZE = 24;
 const OFFSET_ZOOM_Y = 5; // offset for the y position of the icon to avoid hiding the structure beneath
