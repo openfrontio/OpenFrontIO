@@ -291,15 +291,17 @@ export class GameTopBar extends LitElement implements Layer {
                       </div>
                     </div>
                     <div
-                      class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1 bg-slate-800/20 border border-slate-400 p-0.5 md:px-1 lg:px-2 md:gap-2"
+                      class="grid grid-rows-1 auto-cols-max grid-flow-col bg-slate-800/20 border border-slate-400 p-0.5 md:px-1 lg:px-2"
                     >
                       <div
-                        class="flex items-center gap-2"
-                        style="cursor: pointer; background: ${this
-                          ._selectedStructure === UnitType.City
+                        class="md:px-2 px-1 flex items-center gap-2"
+                        style="background: ${this._selectedStructure ===
+                        UnitType.City
                           ? "#ffffff2e"
                           : "none"}"
-                        @click="${() =>
+                        @mouseenter="${() =>
+                          this.onToggleStructureClick(UnitType.City)}"
+                        @mouseleave="${() =>
                           this.onToggleStructureClick(UnitType.City)}"
                       >
                         <img
@@ -312,12 +314,14 @@ export class GameTopBar extends LitElement implements Layer {
                         ${renderNumber(this._cities)}
                       </div>
                       <div
-                        class="flex items-center gap-2"
-                        style="cursor: pointer; background: ${this
-                          ._selectedStructure === UnitType.Factory
+                        class="md:px-2 px-1 flex items-center gap-2"
+                        style="background: ${this._selectedStructure ===
+                        UnitType.Factory
                           ? "#ffffff2e"
                           : "none"}"
-                        @click="${() =>
+                        @mouseenter="${() =>
+                          this.onToggleStructureClick(UnitType.Factory)}"
+                        @mouseleave="${() =>
                           this.onToggleStructureClick(UnitType.Factory)}"
                       >
                         <img
@@ -330,12 +334,14 @@ export class GameTopBar extends LitElement implements Layer {
                         ${renderNumber(this._factories)}
                       </div>
                       <div
-                        class="flex items-center gap-2"
-                        style="cursor: pointer; background: ${this
-                          ._selectedStructure === UnitType.Port
+                        class="md:px-2 px-1 flex items-center gap-2"
+                        style="background: ${this._selectedStructure ===
+                        UnitType.Port
                           ? "#ffffff2e"
                           : "none"}"
-                        @click="${() =>
+                        @mouseenter="${() =>
+                          this.onToggleStructureClick(UnitType.Port)}"
+                        @mouseleave="${() =>
                           this.onToggleStructureClick(UnitType.Port)}"
                       >
                         <img
@@ -348,12 +354,14 @@ export class GameTopBar extends LitElement implements Layer {
                         ${renderNumber(this._port)}
                       </div>
                       <div
-                        class="flex items-center gap-2"
-                        style="cursor: pointer; background: ${this
-                          ._selectedStructure === UnitType.DefensePost
+                        class="md:px-2 px-1 flex items-center gap-2"
+                        style="background: ${this._selectedStructure ===
+                        UnitType.DefensePost
                           ? "#ffffff2e"
                           : "none"}"
-                        @click="${() =>
+                        @mouseenter="${() =>
+                          this.onToggleStructureClick(UnitType.DefensePost)}"
+                        @mouseleave="${() =>
                           this.onToggleStructureClick(UnitType.DefensePost)}"
                       >
                         <img
@@ -366,12 +374,14 @@ export class GameTopBar extends LitElement implements Layer {
                         ${renderNumber(this._defensePost)}
                       </div>
                       <div
-                        class="flex items-center gap-2"
-                        style="cursor: pointer; background: ${this
-                          ._selectedStructure === UnitType.MissileSilo
+                        class="md:px-2 px-1 flex items-center gap-2"
+                        style="background: ${this._selectedStructure ===
+                        UnitType.MissileSilo
                           ? "#ffffff2e"
                           : "none"}"
-                        @click="${() =>
+                        @mouseenter="${() =>
+                          this.onToggleStructureClick(UnitType.MissileSilo)}"
+                        @mouseleave="${() =>
                           this.onToggleStructureClick(UnitType.MissileSilo)}"
                       >
                         <img
@@ -384,12 +394,14 @@ export class GameTopBar extends LitElement implements Layer {
                         ${renderNumber(this._missileSilo)}
                       </div>
                       <div
-                        class="flex items-center gap-2"
-                        style="cursor: pointer; background: ${this
-                          ._selectedStructure === UnitType.SAMLauncher
+                        class="md:px-2 px-1 flex items-center gap-2"
+                        style="background: ${this._selectedStructure ===
+                        UnitType.SAMLauncher
                           ? "#ffffff2e"
                           : "none"}"
-                        @click="${() =>
+                        @mouseenter="${() =>
+                          this.onToggleStructureClick(UnitType.SAMLauncher)}"
+                        @mouseleave="${() =>
                           this.onToggleStructureClick(UnitType.SAMLauncher)}"
                       >
                         <img

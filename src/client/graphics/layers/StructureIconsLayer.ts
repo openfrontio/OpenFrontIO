@@ -1,3 +1,4 @@
+import { OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
 import bitmapFont from "../../../../resources/fonts/round_6x6_modified.xml";
 import anchorIcon from "../../../../resources/images/AnchorIcon.png";
@@ -26,7 +27,7 @@ class StructureRenderInfo {
     public underConstruction: boolean = true,
   ) {}
 }
-const ZOOM_THRESHOLD = 2.5;
+const ZOOM_THRESHOLD = 3.5;
 const ICON_SIZE = 24;
 const OFFSET_ZOOM_Y = 5; // offset for the y position of the icon to avoid hiding the structure beneath
 
@@ -201,8 +202,24 @@ export class StructureIconsLayer implements Layer {
         ? render.unit.constructionType()!
         : render.unit.type();
     const structureInfos = this.structures.get(structureType);
+
+    let focusStructure = false;
+    for (const infos of this.structures.values()) {
+      if (infos.visible === false) {
+        focusStructure = true;
+        break;
+      }
+    }
+
     if (structureInfos) {
       render.iconContainer.alpha = structureInfos.visible ? 1 : 0.3;
+      if (structureInfos.visible && focusStructure) {
+        render.iconContainer.filters = [
+          new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
+        ];
+      } else {
+        render.iconContainer.filters = [];
+      }
     }
   }
 
@@ -570,14 +587,8 @@ export class StructureIconsLayer implements Layer {
     const render = new StructureRenderInfo(
       unitView,
       unitView.owner().id(),
-      this.createUnitContainer(unitView, {
-        addIcon: true,
-        stage: this.iconsStage,
-      }),
-      this.createUnitContainer(unitView, {
-        addIcon: false,
-        stage: this.levelsStage,
-      }),
+      this.createIconSprite(unitView),
+      this.createLevelSprite(unitView),
       unitView.level(),
       unitView.type() === UnitType.Construction,
     );
