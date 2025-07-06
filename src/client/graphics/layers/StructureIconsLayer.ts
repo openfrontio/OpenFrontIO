@@ -16,6 +16,8 @@ import { ToggleStructureEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
+type ShapeType = "triangle" | "square" | "octagon" | "circle";
+
 class StructureRenderInfo {
   public isOnScreen: boolean = false;
   constructor(
@@ -207,10 +209,13 @@ export class StructureIconsLayer implements Layer {
         : render.unit.type();
     const structureInfos = this.structures.get(structureType);
 
-    const focusStructure = Array.from(this.structures.values()).some(
-      (infos) => !infos.visible,
-    );
-
+    let focusStructure = false;
+    for (const infos of this.structures.values()) {
+      if (infos.visible === false) {
+        focusStructure = true;
+        break;
+      }
+    }
     if (structureInfos) {
       render.iconContainer.alpha = structureInfos.visible ? 1 : 0.3;
       if (structureInfos.visible && focusStructure) {
@@ -304,45 +309,18 @@ export class StructureIconsLayer implements Layer {
       return this.textureCache.get(cacheKey)!;
     }
 
-    let texture: PIXI.Texture;
-    switch (structureType) {
-      case UnitType.City:
-      case UnitType.Port:
-      case UnitType.Factory:
-        texture = this.createIcon(
-          unit.owner(),
-          structureType,
-          isConstruction,
-          "circle",
-        );
-        break;
-      case UnitType.DefensePost:
-        texture = this.createIcon(
-          unit.owner(),
-          structureType,
-          isConstruction,
-          "octagon",
-        );
-        break;
-      case UnitType.SAMLauncher:
-        texture = this.createIcon(
-          unit.owner(),
-          structureType,
-          isConstruction,
-          "square",
-        );
-        break;
-      case UnitType.MissileSilo:
-        texture = this.createIcon(
-          unit.owner(),
-          structureType,
-          isConstruction,
-          "triangle",
-        );
-        break;
-      default:
-        texture = PIXI.Texture.EMPTY;
-    }
+    const STRUCTURE_SHAPES: Partial<Record<UnitType, ShapeType>> = {
+      [UnitType.City]: "circle",
+      [UnitType.Port]: "circle",
+      [UnitType.Factory]: "circle",
+      [UnitType.DefensePost]: "octagon",
+      [UnitType.SAMLauncher]: "square",
+      [UnitType.MissileSilo]: "triangle",
+    };
+    const shape = STRUCTURE_SHAPES[structureType];
+    const texture = shape
+      ? this.createIcon(unit.owner(), structureType, isConstruction, shape)
+      : PIXI.Texture.EMPTY;
 
     this.textureCache.set(cacheKey, texture);
     return texture;
