@@ -11,7 +11,10 @@ const createMockStation = (unitId: number): any => {
   const cluster = new Cluster();
   const railroads = new Set<Railroad>();
   return {
-    unit: { id: unitId },
+    unit: {
+      id: unitId,
+      setTrainStation: jest.fn(),
+    },
     tile: jest.fn(),
     neighbors: jest.fn(() => []),
     getCluster: jest.fn(() => cluster),

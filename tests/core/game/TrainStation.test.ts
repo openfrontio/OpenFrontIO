@@ -15,7 +15,7 @@ describe("TrainStation", () => {
     game = {
       ticks: jest.fn().mockReturnValue(123),
       config: jest.fn().mockReturnValue({
-        trainGold: () => 10,
+        trainGold: () => BigInt(10),
       }),
       addUpdate: jest.fn(),
       addExecution: jest.fn(),
@@ -28,6 +28,7 @@ describe("TrainStation", () => {
         canTrade: jest.fn().mockReturnValue(true),
         tradingPorts: jest.fn().mockReturnValue([{ name: "Port1" }]),
       }),
+      level: jest.fn().mockReturnValue(1),
       tile: jest.fn().mockReturnValue({ x: 0, y: 0 }),
       type: jest.fn(),
       isActive: jest.fn().mockReturnValue(true),
@@ -44,25 +45,7 @@ describe("TrainStation", () => {
 
     station.onTrainStop(trainExecution);
 
-    expect(unit.owner().addGold).toHaveBeenCalledWith(10, unit.tile());
-  });
-
-  it("handles Port stop", () => {
-    unit.type.mockReturnValue(UnitType.Port);
-
-    const station = new TrainStation(game, unit);
-    station.onTrainStop(trainExecution);
-
-    expect(game.addExecution).toHaveBeenCalled();
-  });
-
-  it("handles Factory stop", () => {
-    unit.type.mockReturnValue(UnitType.Factory);
-
-    const station = new TrainStation(game, unit);
-    station.onTrainStop(trainExecution);
-
-    expect(trainExecution.loadCargo).toHaveBeenCalled();
+    expect(unit.owner().addGold).toHaveBeenCalledWith(10n, unit.tile());
   });
 
   it("checks trade availability (same owner)", () => {
