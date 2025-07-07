@@ -34,7 +34,7 @@ export class OModal extends LitElement {
       max-width: 860px;
     }
 
-    .c-modal__wrapper__special {
+    .c-modal > .wrapper.special {
       background: #23232382;
       border-radius: 8px;
       min-width: 340px;
