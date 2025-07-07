@@ -62,7 +62,8 @@ app.get(
   }),
 );
 
-if (config.requiredFlares().length > 0) {
+const allowedFlares = config.allowedFlares();
+if (allowedFlares !== undefined) {
   async function getBearerToken(
     request: express.Request,
   ): Promise<string | undefined> {
@@ -102,11 +103,12 @@ if (config.requiredFlares().length > 0) {
         `${config.jwtIssuer()}/login/discord?redirect_uri=${config.redirectUri()}`,
       );
     }
-    const hasAllRequiredFlares = config
-      .requiredFlares()
-      .every((f) => userMeResult.player.flares?.includes(f));
-    if (!hasAllRequiredFlares)
+    const hasAnyAllowedFlares = allowedFlares.some((f) =>
+      userMeResult.player.flares?.includes(f),
+    );
+    if (!hasAnyAllowedFlares) {
       return res.status(401).json({ error: "Unauthorized" });
+    }
 
     next();
   });

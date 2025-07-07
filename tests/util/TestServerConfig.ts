@@ -7,7 +7,7 @@ export class TestServerConfig implements ServerConfig {
   redirectUri(): string {
     throw new Error("Method not implemented.");
   }
-  requiredFlares(): string[] {
+  allowedFlares(): [string, ...string[]] | undefined {
     throw new Error("Method not implemented.");
   }
   stripePublishableKey(): string {

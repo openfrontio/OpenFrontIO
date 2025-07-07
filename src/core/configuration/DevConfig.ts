@@ -34,7 +34,7 @@ export class DevServerConfig extends DefaultServerConfig {
   gitCommit(): string {
     return "DEV";
   }
-  requiredFlares(): string[] {
+  allowedFlares(): [string, ...string[]] | undefined {
     return ["dev"];
   }
   redirectUri(): string {
