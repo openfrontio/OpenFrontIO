@@ -98,7 +98,7 @@ export class OModal extends LitElement {
         ? html`
             <aside class="c-modal">
               <div
-                class="c-modal__wrapper${this.special ? "__special" : ""}"
+                class="wrapper${this.special ? " special" : ""}"
                 style=${`height: ${this.heightRatio ? this.heightRatio * 100 + "vh" : "auto"};`}
               >
                 <header class="c-modal__header">
