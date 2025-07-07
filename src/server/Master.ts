@@ -71,10 +71,10 @@ app.get(
   }),
 );
 
-const allowedFlares = config.allowedFlares();
-if (allowedFlares !== undefined) {
-  // Middleware to require a specific Authorization header
+if (config.allowedFlares() !== undefined) {
+  // Middleware to require an authorized user
   app.use(async (req, res, next) => {
+    // Perform authentication checks
     const user = await authenticateUser(req);
     if (user === false) {
       return res
@@ -82,13 +82,16 @@ if (allowedFlares !== undefined) {
         .setHeader("WWW-Authenticate", "Bearer")
         .json({ error: "Unauthorized" });
     }
-    const hasAnyAllowedFlares = allowedFlares.some((f) =>
-      user.player.flares?.includes(f),
-    );
-    if (!hasAnyAllowedFlares) {
+
+    // Perform authorization checks
+    const hasAnyAllowedFlares =
+      config.allowedFlares()?.some((f) => user.player.flares?.includes(f)) ??
+      false;
+    if (hasAnyAllowedFlares) {
       return res.status(403).json({ error: "Forbidden" });
     }
 
+    // Authorized
     next();
   });
 }
