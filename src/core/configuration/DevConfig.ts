@@ -34,9 +34,6 @@ export class DevServerConfig extends DefaultServerConfig {
   gitCommit(): string {
     return "DEV";
   }
-  allowedFlares(): [string, ...string[]] | undefined {
-    return ["dev"];
-  }
   redirectUri(): string {
     return "http://localhost:9000";
   }

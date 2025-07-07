@@ -12,6 +12,6 @@ export const preprodConfig = new (class extends DefaultServerConfig {
     return "openfront.dev";
   }
   allowedFlares(): [string, ...string[]] | undefined {
-    return ["dev"];
+    return ["access:openfront.dev"];
   }
 })();
