@@ -35,6 +35,7 @@ import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { UILayer } from "./layers/UILayer";
+import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
 
@@ -158,6 +159,13 @@ export function createRenderer(
   gameTopBar.game = game;
   gameTopBar.eventBus = eventBus;
 
+  const unitDisplay = document.querySelector("unit-display") as UnitDisplay;
+  if (!(unitDisplay instanceof UnitDisplay)) {
+    console.error("unit display not found");
+  }
+  unitDisplay.game = game;
+  unitDisplay.eventBus = eventBus;
+
   const playerPanel = document.querySelector("player-panel") as PlayerPanel;
   if (!(playerPanel instanceof PlayerPanel)) {
     console.error("player panel not found");
@@ -238,6 +246,7 @@ export function createRenderer(
     leaderboard,
     gameLeftSidebar,
     gameTopBar,
+    unitDisplay,
     gameRightSidebar,
     controlPanel,
     playerInfo,

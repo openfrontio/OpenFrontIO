@@ -1,34 +1,23 @@
 import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import cityIcon from "../../../../resources/images/CityIconWhite.svg";
 import darkModeIcon from "../../../../resources/images/DarkModeIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
 import explosionIcon from "../../../../resources/images/ExplosionIconWhite.svg";
-import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
-import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
 import mouseIcon from "../../../../resources/images/MouseIconWhite.svg";
 import ninjaIcon from "../../../../resources/images/NinjaIconWhite.svg";
 import populationIcon from "../../../../resources/images/PopulationIconSolidWhite.svg";
-import portIcon from "../../../../resources/images/PortIcon.svg";
-import samLauncherIcon from "../../../../resources/images/SamLauncherUnitWhite.png";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
-import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import treeIcon from "../../../../resources/images/TreeIconWhite.svg";
 import troopIcon from "../../../../resources/images/TroopIconWhite.svg";
 import workerIcon from "../../../../resources/images/WorkerIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
-import {
-  AlternateViewEvent,
-  RefreshGraphicsEvent,
-  ToggleStructureEvent,
-} from "../../InputHandler";
+import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
 import { Layer } from "./Layer";
 
@@ -37,16 +26,9 @@ export class GameTopBar extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
   private _userSettings: UserSettings = new UserSettings();
-  private _selectedStructure: UnitType | null = null;
   private _population = 0;
   private _troops = 0;
-  private _cities = 0;
-  private _factories = 0;
   private _workers = 0;
-  private _missileSilo = 0;
-  private _port = 0;
-  private _defensePost = 0;
-  private _samLauncher = 0;
   private _lastPopulationIncreaseRate = 0;
   private _popRateIsIncreasing = false;
   private hasWinner = false;
@@ -76,12 +58,6 @@ export class GameTopBar extends LitElement implements Layer {
     if (!player) return;
     this._troops = player.troops();
     this._workers = player.workers();
-    this._cities = player.totalUnitLevels(UnitType.City);
-    this._missileSilo = player.totalUnitLevels(UnitType.MissileSilo);
-    this._port = player.totalUnitLevels(UnitType.Port);
-    this._defensePost = player.totalUnitLevels(UnitType.DefensePost);
-    this._samLauncher = player.totalUnitLevels(UnitType.SAMLauncher);
-    this._factories = player.totalUnitLevels(UnitType.Factory);
     const updates = this.game.updatesSinceLastTick();
     if (updates) {
       this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;
@@ -143,12 +119,6 @@ export class GameTopBar extends LitElement implements Layer {
     this._userSettings.toggleDarkMode();
     this.requestUpdate();
     this.eventBus.emit(new RefreshGraphicsEvent());
-  }
-
-  private onToggleStructureClick(structureType: UnitType) {
-    this._selectedStructure =
-      this._selectedStructure === structureType ? null : structureType;
-    this.eventBus.emit(new ToggleStructureEvent(this._selectedStructure));
   }
 
   private onToggleRandomNameModeButtonClick() {
@@ -222,7 +192,7 @@ export class GameTopBar extends LitElement implements Layer {
             ? html`
                 <div class="overflow-x-auto hide-scrollbar flex-1 max-w-[85vw]">
                   <div
-                    class="grid gap-1 grid-cols-[80px_100px_80px_minmax(80px,auto)] w-max md:gap-2 md:grid-cols-[90px_120px_90px_minmax(100px,auto)]"
+                    class="grid gap-1 grid-cols-[80px_100px_80px] w-max md:gap-2 md:grid-cols-[90px_120px_90px]"
                   >
                     <div
                       class="flex flex-wrap gap-1 flex-col bg-slate-800/20 border border-slate-400 p-0.5 md:px-1 lg:px-2"
@@ -288,130 +258,6 @@ export class GameTopBar extends LitElement implements Layer {
                           />
                           ${renderTroops(this._workers)}
                         </div>
-                      </div>
-                    </div>
-                    <div
-                      class="grid grid-rows-1 auto-cols-max grid-flow-col bg-slate-800/20 border border-slate-400 p-0.5 md:px-1 lg:px-2"
-                    >
-                      <div
-                        class="md:px-2 px-1 flex items-center gap-2"
-                        style="background: ${this._selectedStructure ===
-                        UnitType.City
-                          ? "#ffffff2e"
-                          : "none"}"
-                        @mouseenter="${() =>
-                          this.onToggleStructureClick(UnitType.City)}"
-                        @mouseleave="${() =>
-                          this.onToggleStructureClick(UnitType.City)}"
-                      >
-                        <img
-                          src=${cityIcon}
-                          alt="gold"
-                          width="20"
-                          height="20"
-                          style="vertical-align: middle;"
-                        />
-                        ${renderNumber(this._cities)}
-                      </div>
-                      <div
-                        class="md:px-2 px-1 flex items-center gap-2"
-                        style="background: ${this._selectedStructure ===
-                        UnitType.Factory
-                          ? "#ffffff2e"
-                          : "none"}"
-                        @mouseenter="${() =>
-                          this.onToggleStructureClick(UnitType.Factory)}"
-                        @mouseleave="${() =>
-                          this.onToggleStructureClick(UnitType.Factory)}"
-                      >
-                        <img
-                          src=${factoryIcon}
-                          alt="gold"
-                          width="20"
-                          height="20"
-                          style="vertical-align: middle;"
-                        />
-                        ${renderNumber(this._factories)}
-                      </div>
-                      <div
-                        class="md:px-2 px-1 flex items-center gap-2"
-                        style="background: ${this._selectedStructure ===
-                        UnitType.Port
-                          ? "#ffffff2e"
-                          : "none"}"
-                        @mouseenter="${() =>
-                          this.onToggleStructureClick(UnitType.Port)}"
-                        @mouseleave="${() =>
-                          this.onToggleStructureClick(UnitType.Port)}"
-                      >
-                        <img
-                          src=${portIcon}
-                          alt="gold"
-                          width="20"
-                          height="20"
-                          style="vertical-align: middle;"
-                        />
-                        ${renderNumber(this._port)}
-                      </div>
-                      <div
-                        class="md:px-2 px-1 flex items-center gap-2"
-                        style="background: ${this._selectedStructure ===
-                        UnitType.DefensePost
-                          ? "#ffffff2e"
-                          : "none"}"
-                        @mouseenter="${() =>
-                          this.onToggleStructureClick(UnitType.DefensePost)}"
-                        @mouseleave="${() =>
-                          this.onToggleStructureClick(UnitType.DefensePost)}"
-                      >
-                        <img
-                          src=${defensePostIcon}
-                          alt="gold"
-                          width="20"
-                          height="20"
-                          style="vertical-align: middle;"
-                        />
-                        ${renderNumber(this._defensePost)}
-                      </div>
-                      <div
-                        class="md:px-2 px-1 flex items-center gap-2"
-                        style="background: ${this._selectedStructure ===
-                        UnitType.MissileSilo
-                          ? "#ffffff2e"
-                          : "none"}"
-                        @mouseenter="${() =>
-                          this.onToggleStructureClick(UnitType.MissileSilo)}"
-                        @mouseleave="${() =>
-                          this.onToggleStructureClick(UnitType.MissileSilo)}"
-                      >
-                        <img
-                          src=${missileSiloIcon}
-                          alt="gold"
-                          width="20"
-                          height="20"
-                          style="vertical-align: middle;"
-                        />
-                        ${renderNumber(this._missileSilo)}
-                      </div>
-                      <div
-                        class="md:px-2 px-1 flex items-center gap-2"
-                        style="background: ${this._selectedStructure ===
-                        UnitType.SAMLauncher
-                          ? "#ffffff2e"
-                          : "none"}"
-                        @mouseenter="${() =>
-                          this.onToggleStructureClick(UnitType.SAMLauncher)}"
-                        @mouseleave="${() =>
-                          this.onToggleStructureClick(UnitType.SAMLauncher)}"
-                      >
-                        <img
-                          src=${samLauncherIcon}
-                          alt="gold"
-                          width="20"
-                          height="20"
-                          style="vertical-align: middle;"
-                        />
-                        ${renderNumber(this._samLauncher)}
                       </div>
                     </div>
                   </div>
