@@ -241,7 +241,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
   private checkForAllianceExpirations() {
     const myPlayer = this.game.myPlayer();
-    if (!myPlayer) return;
+    if (!myPlayer?.isAlive()) return;
 
     for (const alliance of myPlayer.alliances()) {
       if (
@@ -262,6 +262,7 @@ export class EventsDisplay extends LitElement implements Layer {
       this.alliancesCheckedAt.set(alliance.id, this.game.ticks());
 
       const other = this.game.player(alliance.other) as PlayerView;
+      if (!other.isAlive()) continue;
 
       this.addEvent({
         description: translateText("events_display.about_to_expire", {
