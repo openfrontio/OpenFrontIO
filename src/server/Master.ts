@@ -50,6 +50,15 @@ app.use(
     },
   }),
 );
+app.use(express.json());
+
+app.set("trust proxy", 3);
+app.use(
+  rateLimit({
+    windowMs: 1000, // 1 second
+    max: 20, // 20 requests per IP per second
+  }),
+);
 
 // Unauthenticated endpoints
 app.get(
@@ -115,15 +124,6 @@ if (allowedFlares !== undefined) {
     next();
   });
 }
-app.use(express.json());
-
-app.set("trust proxy", 3);
-app.use(
-  rateLimit({
-    windowMs: 1000, // 1 second
-    max: 20, // 20 requests per IP per second
-  }),
-);
 
 let publicLobbiesJsonStr = "";
 
