@@ -212,38 +212,12 @@ class Client {
           discordLogin();
         } else {
           // Unauthorized
-          document.open("text/html");
-          document.write(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Access Denied</title>
-  <style>
-    body {
-      margin: 0;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-    }
-
-    p {
-      margin: 1em;
-    }
-  </style>
-</head>
-<body>
-  <p align="center">
-    You are not authorized to access this website.
-  </p>
-  <p align="center">
-    If you believe you are sseing this message in error, please
-    contact the website administrator.
-  </p>
-</body>
-</html>`);
-          document.close();
+          document.body.innerHTML = `
+            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+              <p style="margin: 1em; text-align: center;">You are not authorized to access this website.</p>
+              <p style="margin: 1em; text-align: center;">If you believe you are seeing this message in error, please contact the website administrator.</p>
+            </div>
+          `;
         }
         return;
       } else if (userMeResponse === false) {
