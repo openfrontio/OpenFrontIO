@@ -36,6 +36,7 @@ export class UsernameInput extends LitElement {
       <div class="relative w-full">
         ${this.validationError
           ? html`<div
+              id="username-validation-error"
               class="background-panel absolute !z-50 w-full mb-2 px-3 py-1 text-small border border-red text-red font-title"
               style="bottom: 100%;"
             >

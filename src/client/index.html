@@ -26,65 +26,22 @@
         opacity: 0;
       }
 
-      .left-gutter-ad {
-        position: fixed;
-        left: 0;
-        top: 200px;
-        /* Changed from top: 50% */
-        transform: none;
-        /* Removed translateY(-50%) since we don't need to center anymore */
-        z-index: 40;
-        width: 300px;
-        height: 600px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        pointer-events: auto;
-      }
-
-      .left-gutter-ad google-ad {
-        width: 100%;
-        height: 100%;
-        display: block;
-      }
-
-      .right-gutter-ad {
-        position: fixed;
-        right: 0;
-        top: 200px;
-        /* Changed from top: 50% */
-        transform: none;
-        /* Removed translateY(-50%) since we don't need to center anymore */
-        z-index: 40;
-        width: 300px;
-        height: 600px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        pointer-events: auto;
-      }
-
-      .right-gutter-ad google-ad {
-        width: 100%;
-        height: 100%;
-        display: block;
-      }
-
-      /* Media query to hide the gutter ad on smaller screens */
-      @media (max-width: 1280px) {
-        .left-gutter-ad {
-          display: none;
-        }
-
-        .right-gutter-ad {
-          display: none;
-        }
+      /* display:none if child has class parent-hidden since we can't use shadow DOM in Lit due to Tailwind */
+      .component-hideable:has(> .parent-hidden) {
+        display: none;
       }
     </style>
 
     <!-- Immediate execution to prevent FOUC -->
     <script>
       document.documentElement.className = "preload";
+    </script>
+
+    <!-- Playwire ads -->
+    <script>
+      window.ramp = window.ramp || {};
+      window.ramp.que = window.ramp.que || [];
+      window.ramp.passiveMode = true;
     </script>
 
     <!-- Analytics -->
@@ -129,7 +86,7 @@
     <div class="relative w-full max-w-7xl mx-auto px-4 pt-8">
       <!-- Header -->
       <main-navbar></main-navbar>
-
+      <gutter-ad-modal></gutter-ad-modal>
       <!-- Game Interface -->
       <main class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <!--  Main Game Area and Buttons -->
@@ -148,12 +105,44 @@
             ></o-button>
 
             <o-button
-              id="host-lobby-button"
-              title="Create Lobby"
-              translationKey="main.create_lobby"
-              icon="icons/swords.svg"
-              class="w-full"
+              id="logout-discord"
+              title="Log out"
+              translationKey="main.log_out"
+              visible="false"
+              block
             ></o-button>
+
+            <div class="container__row">
+              <flag-input class="w-[20%] md:w-[15%]"></flag-input>
+              <username-input class="relative w-full"></username-input>
+              <news-button class="w-[20%] md:w-[15%]"></news-button>
+            </div>
+            <div></div>
+            <div>
+              <public-lobby class="block"></public-lobby>
+            </div>
+            <div class="container__row container__row--equal">
+              <o-button
+                id="host-lobby-button"
+                title="Create Lobby"
+                translationKey="main.create_lobby"
+                block
+                secondary
+              ></o-button>
+              <o-button
+                id="join-private-lobby-button"
+                title="Join Lobby"
+                translationKey="main.join_lobby"
+                block
+                secondary
+              ></o-button>
+              <!-- <o-button
+            id="chat-button"
+            title="Chat Test"
+            block
+            secondary
+          ></o-button> -->
+            </div>
 
             <o-button
               id="single-player"
@@ -259,9 +248,7 @@
     </div>
     <div id="app"></div>
     <div id="radialMenu" class="radial-menu"></div>
-    <div
-      class="flex flex-column gap-2 fixed right-[10px] top-[10px] z-50 flex flex-col w-32 sm:w-32 lg:w-48"
-    >
+    <div class="flex gap-2 fixed right-[10px] top-[10px] z-50 flex-col">
       <options-menu></options-menu>
       <player-info-overlay></player-info-overlay>
     </div>
@@ -270,22 +257,19 @@
     >
       <heads-up-message></heads-up-message>
     </div>
-    <div class="fixed left-[10px] top-[10px] z-50 w-36 lg:w-48 items-center">
-      <player-team-label></player-team-label>
-    </div>
 
     <div
-      class="bottom-0 w-full flex-col-reverse sm:flex-row z-50"
+      class="bottom-0 w-full flex-col-reverse sm:flex-row z-50 md:w-[320px]"
       style="position: fixed; pointer-events: none"
     >
       <div
-        class="w-full sm:w-2/3 sm:fixed sm:right-0 sm:bottom-0 sm:flex justify-end"
+        class="w-full md:w-2/3 md:fixed sm:right-0 md:bottom-0 md:flex flex-col items-end"
         style="pointer-events: none"
       >
         <chat-display></chat-display>
         <events-display></events-display>
       </div>
-      <div class="w-full sm:w-1/3 md:max-w-72" style="pointer-events: auto">
+      <div style="pointer-events: auto">
         <control-panel></control-panel>
       </div>
     </div>
@@ -307,6 +291,9 @@
         });
       });
     </script>
+
+    <!-- Playwire ads -->
+    <script async src="//cdn.intergient.com/1025558/75940/ramp.js"></script>
 
     <!-- Analytics -->
     <script

@@ -2,12 +2,14 @@ import { AllPlayersStats, ClientID } from "../Schemas";
 import {
   EmojiMessage,
   GameUpdates,
+  Gold,
   MessageType,
   NameViewData,
   PlayerID,
   PlayerType,
   Team,
   Tick,
+  TrainType,
   UnitType,
 } from "./Game";
 import { TileRef, TileUpdate } from "./GameMap";
@@ -39,6 +41,8 @@ export enum GameUpdateType {
   Win,
   Hash,
   UnitIncoming,
+  BonusEvent,
+  RailroadEvent,
 }
 
 export type GameUpdate =
@@ -55,7 +59,36 @@ export type GameUpdate =
   | EmojiUpdate
   | WinUpdate
   | HashUpdate
-  | UnitIncomingUpdate;
+  | UnitIncomingUpdate
+  | BonusEventUpdate
+  | RailroadUpdate;
+
+export interface BonusEventUpdate {
+  type: GameUpdateType.BonusEvent;
+  tile: TileRef;
+  gold: number;
+  workers: number;
+  troops: number;
+}
+
+export enum RailType {
+  VERTICAL,
+  HORIZONTAL,
+  TOP_LEFT,
+  TOP_RIGHT,
+  BOTTOM_LEFT,
+  BOTTOM_RIGHT,
+}
+
+export interface RailTile {
+  tile: TileRef;
+  railType: RailType;
+}
+export interface RailroadUpdate {
+  type: GameUpdateType.RailroadEvent;
+  isActive: boolean;
+  railTiles: RailTile[];
+}
 
 export interface TileUpdateWrapper {
   type: GameUpdateType.Tile;
@@ -75,11 +108,17 @@ export interface UnitUpdate {
   isActive: boolean;
   reachedTarget: boolean;
   retreating: boolean;
+  targetable: boolean;
   targetUnitId?: number; // Only for trade ships
   targetTile?: TileRef; // Only for nukes
   health?: number;
   constructionType?: UnitType;
-  ticksLeftInCooldown?: Tick;
+  missileTimerQueue: number[];
+  readyMissileCount: number;
+  level: number;
+  hasTrainStation: boolean;
+  trainType?: TrainType; // Only for trains
+  loaded?: boolean; // Only for trains
 }
 
 export interface AttackUpdate {
@@ -94,7 +133,6 @@ export interface PlayerUpdate {
   type: GameUpdateType.Player;
   nameViewData?: NameViewData;
   clientID: ClientID | null;
-  flag: string | undefined;
   name: string;
   displayName: string;
   id: PlayerID;
@@ -102,10 +140,10 @@ export interface PlayerUpdate {
   smallID: number;
   playerType: PlayerType;
   isAlive: boolean;
+  isDisconnected: boolean;
   tilesOwned: number;
-  gold: number;
+  gold: Gold;
   population: number;
-  totalPopulation: number;
   workers: number;
   troops: number;
   targetTroopRatio: number;
@@ -161,6 +199,7 @@ export interface DisplayMessageUpdate {
   type: GameUpdateType.DisplayEvent;
   message: string;
   messageType: MessageType;
+  goldAmount?: bigint;
   playerID: number | null;
 }
 
@@ -168,7 +207,7 @@ export type DisplayChatMessageUpdate = {
   type: GameUpdateType.DisplayChatEvent;
   key: string;
   category: string;
-  variables?: Record<string, string>;
+  target: string | undefined;
   playerID: number | null;
   isFrom: boolean;
   recipient: string;

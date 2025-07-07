@@ -1,13 +1,11 @@
-import page from "page";
 import favicon from "../../resources/images/Favicon.svg";
-import { consolex } from "../core/Consolex";
-import { GameRecord, GameStartInfo } from "../core/Schemas";
+import version from "../../resources/version.txt";
+import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import { joinLobby } from "./ClientGameRunner";
 import "./GoogleAdElement";
-import GoogleAdElement from "./GoogleAdElement";
 import { generateCryptoRandomUUID } from "./Utils";
 import "./components/FlagInput";
 import { FlagInput } from "./components/FlagInput";
@@ -41,8 +39,34 @@ import { LanguageModal } from "./components/modals/Language/LanguageModal";
 import "./components/modals/LoginModal";
 import { LoginModal } from "./components/modals/LoginModal";
 
+import "./DarkModeButton";
+import "./LangSelector";
+
+import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
+import { incrementGamesPlayed } from "./Utils";
+
 import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
 import "./styles.css";
+
+declare global {
+  interface Window {
+    PageOS: {
+      session: {
+        newPageView: () => void;
+      };
+    };
+    ramp: {
+      que: Array<() => void>;
+      passiveMode: boolean;
+      spaAddAds: (ads: Array<{ type: string; selectorId: string }>) => void;
+      destroyUnits: (adType: string) => void;
+      settings?: {
+        slots?: any;
+      };
+      spaNewPage: (url: string) => void;
+    };
+  }
+}
 
 export interface JoinLobbyEvent {
   clientID: string;
@@ -62,12 +86,19 @@ class Client {
 
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
-  private googleAds: NodeListOf<GoogleAdElement>;
   private userSettings: UserSettings = new UserSettings();
 
   constructor() {}
 
   initialize(): void {
+    const gameVersion = document.getElementById(
+      "game-version",
+    ) as HTMLDivElement;
+    if (!gameVersion) {
+      console.warn("Game version element not found");
+    }
+    gameVersion.innerText = version;
+
     const newsModal = document.querySelector("news-modal") as NewsModal;
     if (!(newsModal instanceof NewsModal))
       throw new Error("Missing news-modal");
@@ -97,7 +128,7 @@ class Client {
 
     this.flagInput = document.querySelector("flag-input") as FlagInput;
     if (!this.flagInput) {
-      consolex.warn("Flag input element not found");
+      console.warn("Flag input element not found");
     }
 
     const loginDiscordButton = document.getElementById(
@@ -111,16 +142,13 @@ class Client {
       "username-input",
     ) as UsernameInput;
     if (!this.usernameInput) {
-      consolex.warn("Username input element not found");
+      console.warn("Username input element not found");
     }
 
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
-    this.googleAds = document.querySelectorAll(
-      "google-ad",
-    ) as NodeListOf<GoogleAdElement>;
 
     window.addEventListener("beforeunload", () => {
-      consolex.log("Browser is closing");
+      console.log("Browser is closing");
       if (this.gameStop !== null) {
         this.gameStop();
       }
@@ -164,6 +192,28 @@ class Client {
       hlpModal.open();
     });
 
+    const territoryModal = document.querySelector(
+      "territory-patterns-modal",
+    ) as TerritoryPatternsModal;
+    const tpButton = document.getElementById(
+      "territory-patterns-input-preview-button",
+    );
+    territoryModal instanceof TerritoryPatternsModal;
+    if (tpButton === null)
+      throw new Error("territory-patterns-input-preview-button");
+    territoryModal.previewButton = tpButton;
+    territoryModal.updatePreview();
+    territoryModal.resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target.classList.contains("preview-container")) {
+          territoryModal.buttonWidth = entry.contentRect.width;
+        }
+      }
+    });
+    tpButton.addEventListener("click", () => {
+      territoryModal.open();
+    });
+
     if (isLoggedIn() === false) {
       // Not logged in
       loginDiscordButton.disable = false;
@@ -180,8 +230,10 @@ class Client {
         logOut();
         loginDiscordButton.disable = false;
         loginDiscordButton.translationKey = "main.login_discord";
+        loginDiscordButton.hidden = false;
         loginDiscordButton.addEventListener("click", discordLogin);
         logoutDiscordButton.hidden = true;
+        territoryModal.onLogout();
       });
       // Look up the discord user object.
       // TODO: Add caching
@@ -194,9 +246,13 @@ class Client {
           logoutDiscordButton.hidden = true;
           return;
         }
-        // TODO: Update the page for logged in user
+        console.log(
+          `Your player ID is ${userMeResponse.player.publicId}\n` +
+            "Sharing this ID will allow others to view your game history and stats.",
+        );
         loginDiscordButton.translationKey = "main.logged_in";
-        const { user, player } = userMeResponse;
+        loginDiscordButton.hidden = true;
+        territoryModal.onUserMe(userMeResponse);
       });
     }
 
@@ -243,27 +299,25 @@ class Client {
     } else {
       document.documentElement.classList.remove("dark");
     }
-    page("/join/:lobbyId", (ctx) => {
-      if (ctx.init && sessionStorage.getItem("inLobby")) {
-        // On page reload, go back home
-        page.redirect("/");
-        return;
-      }
-      const lobbyId = ctx.params.lobbyId;
 
-      if (lobbyId?.endsWith("#")) {
-        // When the cookies button is pressed, '#' is added to the url
-        // causing the page to attempt to rejoin the lobby during game play.
-        console.error("Invalid lobby ID provided");
-        return;
+    // Attempt to join lobby
+    this.handleHash();
+
+    const onHashUpdate = () => {
+      // Reset the UI to its initial state
+      this.joinModal.close();
+      if (this.gameStop !== null) {
+        this.handleLeaveLobby();
       }
 
-      this.joinModal.open(lobbyId);
+      // Attempt to join lobby
+      this.handleHash();
+    };
 
-      consolex.log(`joining lobby ${lobbyId}`);
-    });
+    // Handle browser navigation & manual hash edits
+    window.addEventListener("popstate", onHashUpdate);
+    window.addEventListener("hashchange", onHashUpdate);
 
-    page();
     function updateSliderProgress(slider) {
       const percent =
         ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
@@ -278,11 +332,23 @@ class Client {
       });
   }
 
-  private async handleJoinLobby(event: CustomEvent) {
-    const lobby = event.detail as JoinLobbyEvent;
-    consolex.log(`joining lobby ${lobby.gameID}`);
+  private handleHash() {
+    const { hash } = window.location;
+    if (hash.startsWith("#")) {
+      const params = new URLSearchParams(hash.slice(1));
+      const lobbyId = params.get("join");
+      if (lobbyId && ID.safeParse(lobbyId).success) {
+        this.joinModal.open(lobbyId);
+        console.log(`joining lobby ${lobbyId}`);
+      }
+    }
+  }
+
+  private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
+    const lobby = event.detail;
+    console.log(`joining lobby ${lobby.gameID}`);
     if (this.gameStop !== null) {
-      consolex.log("joining lobby, stopping existing game");
+      console.log("joining lobby, stopping existing game");
       this.gameStop();
     }
     const config = await getServerConfigFromClient();
@@ -291,6 +357,7 @@ class Client {
       {
         gameID: lobby.gameID,
         serverConfig: config,
+        pattern: this.userSettings.getSelectedPattern(),
         flag:
           this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
             ? ""
@@ -304,12 +371,15 @@ class Client {
       () => {
         console.log("Closing modals");
         document.getElementById("settings-button")?.classList.add("hidden");
+        document
+          .getElementById("username-validation-error")
+          ?.classList.add("hidden");
         [
           "single-player-modal",
           "host-lobby-modal",
           "join-private-lobby-modal",
           "game-starting-modal",
-          "top-bar",
+          "game-top-bar",
           "help-modal",
           "user-setting",
         ].forEach((tag) => {
@@ -343,13 +413,20 @@ class Client {
       () => {
         this.joinModal.close();
         this.publicLobby.stop();
+        incrementGamesPlayed();
+
+        try {
+          window.PageOS.session.newPageView();
+        } catch (e) {
+          console.error("Error calling newPageView", e);
+        }
+
         document.querySelectorAll(".ad").forEach((ad) => {
           (ad as HTMLElement).style.display = "none";
         });
 
-        if (event.detail.gameConfig?.gameType !== GameType.Singleplayer) {
-          window.history.pushState({}, "", `/join/${lobby.gameID}`);
-          sessionStorage.setItem("inLobby", "true");
+        if (lobby.gameStartInfo?.config.gameType !== GameType.Singleplayer) {
+          history.pushState(null, "", `#join=${lobby.gameID}`);
         }
       },
     );
@@ -359,7 +436,7 @@ class Client {
     if (this.gameStop === null) {
       return;
     }
-    consolex.log("leaving lobby, cancelling game");
+    console.log("leaving lobby, cancelling game");
     this.gameStop();
     this.gameStop = null;
     this.publicLobby.leaveLobby();

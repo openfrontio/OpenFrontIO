@@ -1,9 +1,8 @@
-import { consolex } from "../Consolex";
 import { Game } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { DistanceBasedBezierCurve } from "../utilities/Line";
-import { AStar, PathFindResultType, TileResult } from "./AStar";
+import { AStar, AStarResult, PathFindResultType } from "./AStar";
 import { MiniAStar } from "./MiniAStar";
 
 const parabolaMinHeight = 50;
@@ -90,15 +89,20 @@ export class PathFinder {
   private curr: TileRef | null = null;
   private dst: TileRef | null = null;
   private path: TileRef[] | null = null;
-  private aStar: AStar;
+  private aStar: AStar<TileRef>;
   private computeFinished = true;
 
   private constructor(
     private game: Game,
-    private newAStar: (curr: TileRef, dst: TileRef) => AStar,
+    private newAStar: (curr: TileRef, dst: TileRef) => AStar<TileRef>,
   ) {}
 
-  public static Mini(game: Game, iterations: number, maxTries: number = 20) {
+  public static Mini(
+    game: Game,
+    iterations: number,
+    waterPath: boolean = true,
+    maxTries: number = 20,
+  ) {
     return new PathFinder(game, (curr: TileRef, dst: TileRef) => {
       return new MiniAStar(
         game.map(),
@@ -107,6 +111,7 @@ export class PathFinder {
         dst,
         iterations,
         maxTries,
+        waterPath,
       );
     });
   }
@@ -115,18 +120,18 @@ export class PathFinder {
     curr: TileRef | null,
     dst: TileRef | null,
     dist: number = 1,
-  ): TileResult {
+  ): AStarResult<TileRef> {
     if (curr === null) {
-      consolex.error("curr is null");
+      console.error("curr is null");
       return { type: PathFindResultType.PathNotFound };
     }
     if (dst === null) {
-      consolex.error("dst is null");
+      console.error("dst is null");
       return { type: PathFindResultType.PathNotFound };
     }
 
     if (this.game.manhattanDist(curr, dst) < dist) {
-      return { type: PathFindResultType.Completed, tile: curr };
+      return { type: PathFindResultType.Completed, node: curr };
     }
 
     if (this.computeFinished) {
@@ -142,7 +147,7 @@ export class PathFinder {
         if (tile === undefined) {
           throw new Error("missing tile");
         }
-        return { type: PathFindResultType.NextTile, tile };
+        return { type: PathFindResultType.NextTile, node: tile };
       }
     }
 

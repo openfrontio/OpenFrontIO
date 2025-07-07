@@ -2,24 +2,25 @@ import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
+import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
 import mirvIcon from "../../../../resources/images/MIRVIcon.svg";
-import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
 import hydrogenBombIcon from "../../../../resources/images/MushroomCloudIconWhite.svg";
 import atomBombIcon from "../../../../resources/images/NukeIconWhite.svg";
 import portIcon from "../../../../resources/images/PortIcon.svg";
-import samlauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
+import missileSiloIcon from "../../../../resources/non-commercial/svg/MissileSiloIconWhite.svg";
+import samlauncherIcon from "../../../../resources/non-commercial/svg/SamLauncherIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import { Cell, PlayerActions, UnitType } from "../../../core/game/Game";
+import { Cell, Gold, PlayerActions, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
 import { BuildUnitIntentEvent } from "../../Transport";
 import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
 
-interface BuildItemDisplay {
+export interface BuildItemDisplay {
   unitType: UnitType;
   icon: string;
   description?: string;
@@ -27,7 +28,7 @@ interface BuildItemDisplay {
   countable?: boolean;
 }
 
-const buildTable: BuildItemDisplay[][] = [
+export const buildTable: BuildItemDisplay[][] = [
   [
     {
       unitType: UnitType.AtomBomb,
@@ -93,15 +94,24 @@ const buildTable: BuildItemDisplay[][] = [
       key: "unit_type.city",
       countable: true,
     },
+    {
+      unitType: UnitType.Factory,
+      icon: factoryIcon,
+      description: "build_menu.desc.factory",
+      key: "unit_type.factory",
+      countable: true,
+    },
   ],
 ];
+
+export const flattenedBuildTable = buildTable.flat();
 
 @customElement("build-menu")
 export class BuildMenu extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
   private clickedTile: TileRef;
-  private playerActions: PlayerActions | null;
+  public playerActions: PlayerActions | null;
   private filteredBuildTable: BuildItemDisplay[][] = buildTable;
 
   tick() {
@@ -302,7 +312,7 @@ export class BuildMenu extends LitElement implements Layer {
   @state()
   private _hidden = true;
 
-  private canBuild(item: BuildItemDisplay): boolean {
+  public canBuild(item: BuildItemDisplay): boolean {
     if (this.game?.myPlayer() === null || this.playerActions === null) {
       return false;
     }
@@ -314,16 +324,16 @@ export class BuildMenu extends LitElement implements Layer {
     return unit[0].canBuild !== false;
   }
 
-  private cost(item: BuildItemDisplay): number {
+  public cost(item: BuildItemDisplay): Gold {
     for (const bu of this.playerActions?.buildableUnits ?? []) {
       if (bu.type === item.unitType) {
         return bu.cost;
       }
     }
-    return 0;
+    return 0n;
   }
 
-  private count(item: BuildItemDisplay): string {
+  public count(item: BuildItemDisplay): string {
     const player = this.game?.myPlayer();
     if (!player) {
       return "?";

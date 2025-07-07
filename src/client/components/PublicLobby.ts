@@ -1,11 +1,10 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { consolex } from "../../core/Consolex";
-import { GameMode } from "../../core/game/Game";
+import { GameMapType, GameMode } from "../../core/game/Game";
+import { terrainMapFileLoader } from "../../core/game/TerrainMapFileLoader";
 import { GameID, GameInfo } from "../../core/Schemas";
 import { generateID } from "../../core/Util";
 import { JoinLobbyEvent } from "../Main";
-import { getMapsImage } from "../utilities/Maps";
 import { translateText } from "../Utils";
 
 @customElement("public-lobby")
@@ -13,6 +12,7 @@ export class PublicLobby extends LitElement {
   @state() private lobbies: GameInfo[] = [];
   @state() public isLobbyHighlighted: boolean = false;
   @state() private isButtonDebounced: boolean = false;
+  @state() private mapImages: Map<GameID, string> = new Map();
   private lobbiesInterval: number | null = null;
   private currLobby: GameInfo | null = null;
   private debounceDelay: number = 750;
@@ -49,9 +49,24 @@ export class PublicLobby extends LitElement {
           const msUntilStart = l.msUntilStart ?? 0;
           this.lobbyIDToStart.set(l.gameID, msUntilStart + Date.now());
         }
+        // Load map image if not already loaded
+        if (l.gameConfig && !this.mapImages.has(l.gameID)) {
+          this.loadMapImage(l.gameID, l.gameConfig.gameMap);
+        }
       });
     } catch (error) {
-      consolex.error("Error fetching lobbies:", error);
+      console.error("Error fetching lobbies:", error);
+    }
+  }
+  private async loadMapImage(gameID: GameID, gameMap: string) {
+    try {
+      // Convert string to GameMapType enum value
+      const mapType = gameMap as GameMapType;
+      const data = terrainMapFileLoader.getMapData(mapType);
+      this.mapImages.set(gameID, await data.webpPath());
+      this.requestUpdate();
+    } catch (error) {
+      console.error("Failed to load map image:", error);
     }
   }
 
@@ -63,7 +78,7 @@ export class PublicLobby extends LitElement {
       const data = await response.json();
       return data.lobbies;
     } catch (error) {
-      consolex.error("Error fetching lobbies:", error);
+      console.error("Error fetching lobbies:", error);
       throw error;
     }
   }
@@ -98,21 +113,26 @@ export class PublicLobby extends LitElement {
 
     const isJoined = this.isLobbyHighlighted;
     const isTemporarilyDisabled = this.isButtonDebounced;
+    const mapImageSrc = this.mapImages.get(lobby.gameID);
 
     return html`
-      <div
+      <button
         @click=${() => this.lobbyClicked(lobby)}
         class="background-panel p-4 h-full cursor-pointer transition-base duration-300 hover:backgroundDark hover:border-primary ${isJoined
           ? "border-primaryLighter has-grey"
           : ""} ${isTemporarilyDisabled ? "opacity-70 cursor-not-allowed" : ""}"
       >
         <div class="relative h-64 mb-4 ">
-          <img
-            src="${getMapsImage(lobby.gameConfig.gameMap)}"
-            alt="${lobby.gameConfig.gameMap}"
-            class="absolute inset-0 w-full h-full object-cover bg-backgroundDark"
-            style="image-rendering: pixelated;"
-          />
+          ${mapImageSrc
+            ? html`<img
+                src="${mapImageSrc}"
+                alt="${lobby.gameConfig.gameMap}"
+                class="absolute inset-0 w-full h-full object-cover bg-backgroundDark"
+                style="image-rendering: pixelated;"
+              />`
+            : html`<div
+                class="place-self-start col-span-full row-span-full h-full -z-10 bg-gray-300"
+              ></div>`}
 
           <div
             class="absolute inset-0 bg-gradient-to-t from-backgroundDark to-transparent "
@@ -200,8 +220,8 @@ export class PublicLobby extends LitElement {
                 ? "text-primaryLighter"
                 : "text-textLight"}"
             >
-              ${teamCount
-                ? translateText("game_mode.teams") + `: ${teamCount}`
+              ${lobby.gameConfig.gameMode === GameMode.Team
+                ? translateText("public_lobby.teams", { num: teamCount ?? 0 })
                 : translateText("game_mode.ffa")}
             </p>
           </div>
@@ -231,7 +251,7 @@ export class PublicLobby extends LitElement {
             </p>
           </div>
         </div>
-      </div>
+      </button>
     `;
   }
 
@@ -245,7 +265,7 @@ export class PublicLobby extends LitElement {
       return;
     }
 
-    // Set debounce state for temporary click feedback
+    // Set debounce state
     this.isButtonDebounced = true;
 
     // Reset debounce after delay

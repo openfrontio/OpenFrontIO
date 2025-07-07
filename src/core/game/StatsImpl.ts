@@ -20,6 +20,7 @@ import {
   OTHER_INDEX_CAPTURE,
   OTHER_INDEX_DESTROY,
   OTHER_INDEX_LOST,
+  OTHER_INDEX_UPGRADE,
   OtherUnitType,
   PlayerStats,
   unitTypeToBombUnit,
@@ -214,8 +215,8 @@ export class StatsImpl implements Stats {
     this._addBomb(player, type, BOMB_INDEX_LAND, 1);
   }
 
-  bombIntercept(player: Player, attacker: Player, type: NukeType): void {
-    this._addBomb(player, type, BOMB_INDEX_INTERCEPT, 1);
+  bombIntercept(player: Player, type: NukeType, count: BigIntLike): void {
+    this._addBomb(player, type, BOMB_INDEX_INTERCEPT, count);
   }
 
   goldWork(player: Player, gold: BigIntLike): void {
@@ -232,6 +233,10 @@ export class StatsImpl implements Stats {
 
   unitCapture(player: Player, type: OtherUnitType): void {
     this._addOtherUnit(player, type, OTHER_INDEX_CAPTURE, 1);
+  }
+
+  unitUpgrade(player: Player, type: OtherUnitType): void {
+    this._addOtherUnit(player, type, OTHER_INDEX_UPGRADE, 1);
   }
 
   unitDestroy(player: Player, type: OtherUnitType): void {

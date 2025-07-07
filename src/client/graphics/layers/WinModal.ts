@@ -1,10 +1,12 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import logo from "../../../../resources/images/ofm/logo_MASTER_2025.png";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { SendWinnerEvent } from "../../Transport";
+import { GutterAdModalEvent } from "./GutterAdModal";
 import { Layer } from "./Layer";
 
 @customElement("win-modal")
@@ -16,6 +18,12 @@ export class WinModal extends LitElement implements Layer {
 
   @state()
   isVisible = false;
+
+  @state()
+  showButtons = false;
+
+  @state()
+  private showSteamContent = Math.random() > 0.5;
 
   private _title: string;
 
@@ -134,8 +142,12 @@ export class WinModal extends LitElement implements Layer {
     return html`
       <div class="win-modal ${this.isVisible ? "visible" : ""}">
         <h2>${this._title || ""}</h2>
-        ${this.innerHtml()}
-        <div class="button-container">
+        ${this.showSteamContent
+          ? this.steamWishlist()
+          : this.openfrontMasters()}
+        <div
+          class="button-container ${this.showButtons ? "visible" : "hidden"}"
+        >
           <button @click=${this._handleExit}>
             ${translateText("win_modal.exit")}
           </button>
@@ -147,7 +159,7 @@ export class WinModal extends LitElement implements Layer {
     `;
   }
 
-  innerHtml() {
+  steamWishlist() {
     return html`<p>
       <a
         href="https://store.steampowered.com/app/3560670"
@@ -168,13 +180,49 @@ export class WinModal extends LitElement implements Layer {
     </p>`;
   }
 
+  openfrontMasters() {
+    return html`<p>
+      <img
+        src="${logo}"
+        alt="OpenFront Masters"
+        style="max-width: 100%; height: auto; margin-bottom: 16px;"
+      />
+      <a
+        href="https://discord.gg/gStsGh5vWR"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="
+          color: #4a9eff;
+          text-decoration: underline;
+          font-weight: 500;
+          transition: color 0.2s ease;
+          font-size: 24px;
+        "
+        onmouseover="this.style.color='#6db3ff'"
+        onmouseout="this.style.color='#4a9eff'"
+      >
+        Watch the best compete in the
+        <span style="font-weight: bold;">OpenFront Masters</span>
+      </a>
+    </p>`;
+  }
+
   show() {
-    this.isVisible = true;
-    this.requestUpdate();
+    this.eventBus.emit(new GutterAdModalEvent(true));
+    setTimeout(() => {
+      this.isVisible = true;
+      this.requestUpdate();
+    }, 1500);
+    setTimeout(() => {
+      this.showButtons = true;
+      this.requestUpdate();
+    }, 3000);
   }
 
   hide() {
+    this.eventBus.emit(new GutterAdModalEvent(false));
     this.isVisible = false;
+    this.showButtons = false;
     this.requestUpdate();
   }
 

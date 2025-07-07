@@ -1,7 +1,6 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { getServerConfigFromClient } from "../../../../core/configuration/ConfigLoader";
-import { consolex } from "../../../../core/Consolex";
 import { Difficulty, GameMapType, GameMode } from "../../../../core/game/Game";
 import { GameInfo } from "../../../../core/Schemas";
 import { generateID } from "../../../../core/Util";
@@ -95,7 +94,7 @@ export class HostLobbyModal extends BaseGameSetupModal {
       this.gameSetupConfig.selectedMap = this.getRandomMap();
     }
     await this.onConfigChange();
-    consolex.log(
+    console.log(
       `Starting private game with map: ${GameMapType[this.gameSetupConfig.selectedMap]} ${this.gameSetupConfig.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     this.close();
@@ -147,14 +146,14 @@ export class HostLobbyModal extends BaseGameSetupModal {
   private async copyToClipboard() {
     try {
       await navigator.clipboard.writeText(
-        `${location.origin}/join/${this.lobbyId}`,
+        `${location.origin}#join=${this.lobbyId}`,
       );
       this.copySuccess = true;
       setTimeout(() => {
         this.copySuccess = false;
       }, 2000);
     } catch (err) {
-      consolex.error(`Failed to copy text: ${err}`);
+      console.error(`Failed to copy text: ${err}`);
     }
   }
 
@@ -191,10 +190,10 @@ async function createLobby(): Promise<GameInfo> {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const data = await response.json();
-    consolex.log("Success:", data);
+    console.log("Success:", data);
     return data as GameInfo;
   } catch (error) {
-    consolex.error("Error creating lobby:", error);
+    console.error("Error creating lobby:", error);
     throw error;
   }
 }

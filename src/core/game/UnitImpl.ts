@@ -4,6 +4,7 @@ import {
   MessageType,
   Player,
   Tick,
+  TrainType,
   Unit,
   UnitInfo,
   UnitType,
@@ -26,8 +27,15 @@ export class UnitImpl implements Unit {
   private _constructionType: UnitType | undefined;
   private _lastOwner: PlayerImpl | null = null;
   private _troops: number;
-  private _cooldownStartTick: Tick | null = null;
+  private _missileTimerQueue: number[] = [];
+  private _readyMissileCount: number = 1;
+  private _hasTrainStation: boolean = false;
   private _patrolTile: TileRef | undefined;
+  private _level: number = 1;
+  private _targetable: boolean = true;
+  private _loaded: boolean | undefined;
+  private _trainType: TrainType | undefined;
+
   constructor(
     private _type: UnitType,
     private mg: GameImpl,
@@ -49,6 +57,9 @@ export class UnitImpl implements Unit {
       "patrolTile" in params ? (params.patrolTile ?? undefined) : undefined;
     this._targetUnit =
       "targetUnit" in params ? (params.targetUnit ?? undefined) : undefined;
+    this._loaded =
+      "loaded" in params ? (params.loaded ?? undefined) : undefined;
+    this._trainType = "trainType" in params ? params.trainType : undefined;
 
     switch (this._type) {
       case UnitType.Warship:
@@ -59,6 +70,17 @@ export class UnitImpl implements Unit {
       case UnitType.City:
         this.mg.stats().unitBuild(_owner, this._type);
     }
+  }
+
+  setTargetable(targetable: boolean): void {
+    if (this._targetable !== targetable) {
+      this._targetable = targetable;
+      this.mg.addUpdate(this.toUpdate());
+    }
+  }
+
+  isTargetable(): boolean {
+    return this._targetable;
   }
 
   setPatrolTile(tile: TileRef): void {
@@ -99,12 +121,18 @@ export class UnitImpl implements Unit {
       reachedTarget: this._reachedTarget,
       retreating: this._retreating,
       pos: this._tile,
+      targetable: this._targetable,
       lastPos: this._lastTile,
       health: this.hasHealth() ? Number(this._health) : undefined,
       constructionType: this._constructionType,
       targetUnitId: this._targetUnit?.id() ?? undefined,
       targetTile: this.targetTile() ?? undefined,
-      ticksLeftInCooldown: this.ticksLeftInCooldown() ?? undefined,
+      missileTimerQueue: this._missileTimerQueue,
+      readyMissileCount: this._readyMissileCount,
+      level: this.level(),
+      hasTrainStation: this._hasTrainStation,
+      trainType: this._trainType,
+      loaded: this._loaded,
     };
   }
 
@@ -160,6 +188,7 @@ export class UnitImpl implements Unit {
       case UnitType.City:
         this.mg.stats().unitCapture(newOwner, this._type);
         this.mg.stats().unitLose(this._owner, this._type);
+        break;
     }
     this._lastOwner = this._owner;
     this._lastOwner._units = this._lastOwner._units.filter((u) => u !== this);
@@ -168,12 +197,12 @@ export class UnitImpl implements Unit {
     this.mg.addUpdate(this.toUpdate());
     this.mg.displayMessage(
       `Your ${this.type()} was captured by ${newOwner.displayName()}`,
-      MessageType.ERROR,
+      MessageType.UNIT_CAPTURED_BY_ENEMY,
       this._lastOwner.id(),
     );
     this.mg.displayMessage(
       `Captured ${this.type()} from ${this._lastOwner.displayName()}`,
-      MessageType.SUCCESS,
+      MessageType.CAPTURED_ENEMY_UNIT,
       newOwner.id(),
     );
   }
@@ -200,7 +229,7 @@ export class UnitImpl implements Unit {
     if (displayMessage !== false && this._type !== UnitType.MIRVWarhead) {
       this.mg.displayMessage(
         `Your ${this._type} was destroyed`,
-        MessageType.ERROR,
+        MessageType.UNIT_DESTROYED,
         this.owner().id(),
       );
     }
@@ -266,30 +295,23 @@ export class UnitImpl implements Unit {
   }
 
   launch(): void {
-    this._cooldownStartTick = this.mg.ticks();
+    this._missileTimerQueue.push(this.mg.ticks());
+    this._readyMissileCount--;
     this.mg.addUpdate(this.toUpdate());
   }
 
   ticksLeftInCooldown(): Tick | undefined {
-    let cooldownDuration = 0;
-    if (this.type() === UnitType.SAMLauncher) {
-      cooldownDuration = this.mg.config().SAMCooldown();
-    } else if (this.type() === UnitType.MissileSilo) {
-      cooldownDuration = this.mg.config().SiloCooldown();
-    } else {
-      return undefined;
-    }
-
-    if (!this._cooldownStartTick) {
-      return undefined;
-    }
-
-    return cooldownDuration - (this.mg.ticks() - this._cooldownStartTick);
+    return this._missileTimerQueue[0];
   }
 
   isInCooldown(): boolean {
-    const ticksLeft = this.ticksLeftInCooldown();
-    return ticksLeft !== undefined && ticksLeft > 0;
+    return this._readyMissileCount === 0;
+  }
+
+  reloadMissile(): void {
+    this._missileTimerQueue.shift();
+    this._readyMissileCount++;
+    this.mg.addUpdate(this.toUpdate());
   }
 
   setTargetTile(targetTile: TileRef | undefined) {
@@ -333,5 +355,41 @@ export class UnitImpl implements Unit {
       this.mg.ticks() - this._lastSetSafeFromPirates <
       this.mg.config().safeFromPiratesCooldownMax()
     );
+  }
+
+  level(): number {
+    return this._level;
+  }
+
+  setTrainStation(trainStation: boolean): void {
+    this._hasTrainStation = trainStation;
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  hasTrainStation(): boolean {
+    return this._hasTrainStation;
+  }
+
+  increaseLevel(): void {
+    this._level++;
+    if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
+      this._readyMissileCount++;
+    }
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  trainType(): TrainType | undefined {
+    return this._trainType;
+  }
+
+  isLoaded(): boolean | undefined {
+    return this._loaded;
+  }
+
+  setLoaded(loaded: boolean): void {
+    if (this._loaded !== loaded) {
+      this._loaded = loaded;
+      this.mg.addUpdate(this.toUpdate());
+    }
   }
 }

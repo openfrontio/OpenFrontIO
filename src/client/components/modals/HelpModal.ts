@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../../Utils";
+import { getAltKey, getModifierKey, translateText } from "../../Utils";
 
 type TabType =
   | "hotkeys"
@@ -85,11 +85,17 @@ export class HelpModal extends LitElement {
     return [
       { key: "Space", action: translateText("help_modal.action_alt_view") },
       {
-        key: "Shift + Click",
+        key: "⇧ Shift + Click",
         action: translateText("help_modal.action_attack_altclick"),
       },
-      { key: "Ctrl + Click", action: translateText("help_modal.action_build") },
-      { key: "Alt + Click", action: translateText("help_modal.action_emote") },
+      {
+        key: getModifierKey() + " + Click",
+        action: translateText("help_modal.action_build"),
+      },
+      {
+        key: getAltKey() + " + Click",
+        action: translateText("help_modal.action_emote"),
+      },
       { key: "C", action: translateText("help_modal.action_center") },
       { key: "Q / E", action: translateText("help_modal.action_zoom") },
       {
@@ -98,10 +104,13 @@ export class HelpModal extends LitElement {
       },
       { key: "1 / 2", action: translateText("help_modal.action_ratio_change") },
       {
-        key: "Shift + Scroll",
+        key: "⇧ Shift + Scroll",
         action: translateText("help_modal.action_ratio_change"),
       },
-      { key: "Alt + R", action: translateText("help_modal.action_reset_gfx") },
+      {
+        key: getAltKey() + " + R",
+        action: translateText("help_modal.action_reset_gfx"),
+      },
     ];
   }
   private get buildings() {
@@ -270,6 +279,7 @@ export class HelpModal extends LitElement {
   render() {
     return html`
       <o-modal
+        id="helpModal"
         width="large"
         .isModalOpen=${this.isModalOpen}
         .title=${translateText("main.instructions")}

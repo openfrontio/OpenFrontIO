@@ -26,8 +26,8 @@ import uk from "../../../../../resources/lang/uk.json";
 
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
-  @state() public translations: any = {};
-  @state() private defaultTranslations: any = {};
+  @state() public translations: Record<string, string> | undefined;
+  @state() private defaultTranslations: Record<string, string> | undefined;
   @state() private currentLang: string = "en";
   @state() private languageList: any[] = [];
   @state() private showModal: boolean = false;
@@ -78,21 +78,31 @@ export class LangSelector extends LitElement {
     });
   }
 
-  private async initializeLanguage() {
-    const locale = new Intl.Locale(navigator.language);
-    const defaultLang = locale.language;
-    const userLang = localStorage.getItem("lang") || defaultLang;
+  private getClosestSupportedLang(lang: string): string {
+    if (!lang) return "en";
+    if (lang in this.languageMap) return lang;
+    const base = lang.split("-")[0];
+    if (base in this.languageMap) return base;
+    return "en";
+  }
 
-    this.defaultTranslations = await this.loadLanguage("en");
-    this.translations = await this.loadLanguage(userLang);
+  private async initializeLanguage() {
+    const browserLocale = navigator.language;
+    const savedLang = localStorage.getItem("lang");
+    const userLang = this.getClosestSupportedLang(savedLang || browserLocale);
+
+    this.defaultTranslations = this.loadLanguage("en");
+    this.translations = this.loadLanguage(userLang);
     this.currentLang = userLang;
 
     await this.loadLanguageList();
-    this.applyTranslation(this.translations);
+    this.applyTranslation();
   }
 
-  private async loadLanguage(lang: string): Promise<any> {
-    return Promise.resolve(this.languageMap[lang] || {});
+  private loadLanguage(lang: string): Record<string, string> {
+    const language = this.languageMap[lang] || {};
+    const flat = flattenTranslations(language);
+    return flat;
   }
 
   private async loadLanguageList() {
@@ -158,15 +168,15 @@ export class LangSelector extends LitElement {
     }
   }
 
-  private async changeLanguage(lang: string) {
+  private changeLanguage(lang: string) {
     localStorage.setItem("lang", lang);
-    this.translations = await this.loadLanguage(lang);
+    this.translations = this.loadLanguage(lang);
     this.currentLang = lang;
-    this.applyTranslation(this.translations);
+    this.applyTranslation();
     this.showModal = false;
   }
 
-  private applyTranslation(translations: any) {
+  private applyTranslation() {
     const components = [
       "single-player-modal",
       "host-lobby-modal",
@@ -178,6 +188,7 @@ export class LangSelector extends LitElement {
       "game-starting-modal",
       "top-bar",
       "player-panel",
+      "replay-panel",
       "help-modal",
       "username-input",
       "public-lobby",
@@ -192,32 +203,17 @@ export class LangSelector extends LitElement {
       "news-modal",
     ];
 
-    document.title = translations.main?.title || document.title;
+    document.title = this.translateText("main.title") ?? document.title;
 
     document.querySelectorAll("[data-i18n]").forEach((element) => {
       const key = element.getAttribute("data-i18n");
-      const keys = key?.split(".") || [];
-      let text = translations;
-
-      for (const k of keys) {
-        text = text?.[k];
-        if (!text) break;
-      }
-
-      if (!text && this.defaultTranslations) {
-        let fallback = this.defaultTranslations;
-        for (const k of keys) {
-          fallback = fallback?.[k];
-          if (!fallback) break;
-        }
-        text = fallback;
-      }
-
-      if (text) {
-        element.innerHTML = text;
-      } else {
+      if (key === null) return;
+      const text = this.translateText(key);
+      if (text === null) {
         console.warn(`Translation key not found: ${key}`);
+        return;
       }
+      element.textContent = text;
     });
 
     components.forEach((tag) => {
@@ -233,23 +229,18 @@ export class LangSelector extends LitElement {
     key: string,
     params: Record<string, string | number> = {},
   ): string {
-    const keys = key.split(".");
-    let text: any = this.translations;
-
-    for (const k of keys) {
-      text = text?.[k];
-      if (!text) break;
+    let text: string | undefined;
+    if (this.translations && key in this.translations) {
+      text = this.translations[key];
+    } else if (this.defaultTranslations && key in this.defaultTranslations) {
+      text = this.defaultTranslations[key];
+    } else {
+      console.warn(`Translation key not found: ${key}`);
+      return key;
     }
 
-    if (!text && this.defaultTranslations) {
-      text = this.defaultTranslations;
-      for (const k of keys) {
-        text = text?.[k];
-        if (!text) return key;
-      }
-    }
-
-    for (const [param, value] of Object.entries(params)) {
+    for (const param in params) {
+      const value = params[param];
       text = text.replace(`{${param}}`, String(value));
     }
 
@@ -297,4 +288,25 @@ export class LangSelector extends LitElement {
       ></language-modal>
     `;
   }
+}
+
+function flattenTranslations(
+  obj: Record<string, any>,
+  parentKey = "",
+  result: Record<string, string> = {},
+): Record<string, string> {
+  for (const key in obj) {
+    const value = obj[key];
+    const fullKey = parentKey ? `${parentKey}.${key}` : key;
+
+    if (typeof value === "string") {
+      result[fullKey] = value;
+    } else if (value && typeof value === "object" && !Array.isArray(value)) {
+      flattenTranslations(value, fullKey, result);
+    } else {
+      console.warn("Unknown type", typeof value, value);
+    }
+  }
+
+  return result;
 }

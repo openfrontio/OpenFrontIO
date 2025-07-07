@@ -42,7 +42,6 @@ export async function createGameRunner(
   const humans = gameStart.players.map(
     (p) =>
       new PlayerInfo(
-        p.flag,
         p.clientID === clientID
           ? sanitize(p.username)
           : fixProfaneUsername(sanitize(p.username)),
@@ -54,18 +53,12 @@ export async function createGameRunner(
 
   const nations = gameStart.config.disableNPCs
     ? []
-    : gameMap.nationMap.nations.map(
+    : gameMap.manifest.nations.map(
         (n) =>
           new Nation(
             new Cell(n.coordinates[0], n.coordinates[1]),
             n.strength,
-            new PlayerInfo(
-              n.flag || "",
-              n.name,
-              PlayerType.FakeHuman,
-              null,
-              random.nextID(),
-            ),
+            new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
           ),
       );
 

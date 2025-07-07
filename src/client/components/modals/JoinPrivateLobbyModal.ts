@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { consolex } from "../../../core/Consolex";
+
 import { GameInfo, GameRecord } from "../../../core/Schemas";
 import { generateID } from "../../../core/Util";
 import { getServerConfigFromClient } from "../../../core/configuration/ConfigLoader";
@@ -82,13 +82,13 @@ export class JoinPrivateLobbyModal extends LitElement {
 
       this.lobbyIdInput.value = lobbyId;
     } catch (err) {
-      consolex.error("Failed to read clipboard contents: ", err);
+      console.error("Failed to read clipboard contents: ", err);
     }
   }
 
   private async joinLobby(): Promise<void> {
     const lobbyId = this.lobbyIdInput.value;
-    consolex.log(`Joining lobby with ID: ${lobbyId}`);
+    console.log(`Joining lobby with ID: ${lobbyId}`);
     this.message = `${translateText("private_lobby.checking")}`;
     this.messageType = "";
 
@@ -102,7 +102,7 @@ export class JoinPrivateLobbyModal extends LitElement {
       this.message = `${translateText("private_lobby.not_found")}`;
       this.messageType = "error";
     } catch (error) {
-      consolex.error("Error checking lobby existence:", error);
+      console.error("Error checking lobby existence:", error);
       this.message = `${translateText("private_lobby.error")}`;
       this.messageType = "error";
     }
@@ -157,7 +157,7 @@ export class JoinPrivateLobbyModal extends LitElement {
       archiveData.success === false &&
       archiveData.error === "Version mismatch"
     ) {
-      consolex.warn(
+      console.warn(
         `Git commit hash mismatch for game ${lobbyId}`,
         archiveData.details,
       );
@@ -206,7 +206,7 @@ export class JoinPrivateLobbyModal extends LitElement {
         this.players = data.clients?.map((p) => p.username) ?? [];
       })
       .catch((error) => {
-        consolex.error("Error polling players:", error);
+        console.error("Error polling players:", error);
       });
   }
   render() {

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { UnitType } from "./game/Game";
 
 export const BombUnitSchema = z.union([
@@ -83,6 +83,7 @@ export const OTHER_INDEX_BUILT = 0; // Structures and warships built
 export const OTHER_INDEX_DESTROY = 1; // Structures and warships destroyed
 export const OTHER_INDEX_CAPTURE = 2; // Structures captured
 export const OTHER_INDEX_LOST = 3; // Structures/warships destroyed/captured by others
+export const OTHER_INDEX_UPGRADE = 4; // Structures upgraded
 
 const BigIntStringSchema = z.preprocess((val) => {
   if (typeof val === "string" && /^\d+$/.test(val)) return BigInt(val);
@@ -97,10 +98,10 @@ export const PlayerStatsSchema = z
   .object({
     attacks: AtLeastOneNumberSchema.optional(),
     betrayals: BigIntStringSchema.optional(),
-    boats: z.record(BoatUnitSchema, AtLeastOneNumberSchema).optional(),
-    bombs: z.record(BombUnitSchema, AtLeastOneNumberSchema).optional(),
+    boats: z.partialRecord(BoatUnitSchema, AtLeastOneNumberSchema).optional(),
+    bombs: z.partialRecord(BombUnitSchema, AtLeastOneNumberSchema).optional(),
     gold: AtLeastOneNumberSchema.optional(),
-    units: z.record(OtherUnitSchema, AtLeastOneNumberSchema).optional(),
+    units: z.partialRecord(OtherUnitSchema, AtLeastOneNumberSchema).optional(),
   })
   .optional();
 export type PlayerStats = z.infer<typeof PlayerStatsSchema>;

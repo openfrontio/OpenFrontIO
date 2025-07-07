@@ -4,6 +4,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import url("./styles/core/flag-animation.css");
 
 * {
   -webkit-box-sizing: border-box;
@@ -115,6 +116,14 @@ body {
   box-shadow:
     inset -1px -1px 0 0 #1e40af,
     /* Equivalent to theme(colors.blue.800) */ inset 1px 1px 0 0 #60a5fa; /* Equivalent to theme(colors.blue.400) */
+}
+
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
 }
 
 .start-game-button {
@@ -415,6 +424,7 @@ label.option-card:hover {
   overflow-y: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
+  max-height: 400px;
 }
 
 #error-modal button.copy-btn {

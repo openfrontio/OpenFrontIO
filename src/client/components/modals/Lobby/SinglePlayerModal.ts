@@ -1,7 +1,6 @@
 // shared/SinglePlayerModal.ts
 import { html } from "lit";
 import { customElement } from "lit/decorators.js";
-import { consolex } from "../../../../core/Consolex";
 import {
   Difficulty,
   GameMapType,
@@ -9,6 +8,7 @@ import {
   GameType,
   UnitType,
 } from "../../../../core/game/Game";
+import { UserSettings } from "../../../../core/game/UserSettings";
 import { generateID } from "../../../../core/Util";
 import { JoinLobbyEvent } from "../../../Main";
 import { translateText } from "../../../Utils";
@@ -19,6 +19,7 @@ import { Step } from "./GameSetupComponents";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends BaseGameSetupModal {
+  private userSettings: UserSettings = new UserSettings();
   protected steps: Step[] = ["map", "difficulty", "mode", "options"];
   protected isSinglePlayer = true;
 
@@ -52,7 +53,7 @@ export class SinglePlayerModal extends BaseGameSetupModal {
     if (this.gameSetupConfig.useRandomMap) {
       this.gameSetupConfig.selectedMap = this.getRandomMap();
     }
-    consolex.log(
+    console.log(
       `Starting single player game with map: ${GameMapType[this.gameSetupConfig.selectedMap]}${this.gameSetupConfig.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     const clientID = generateID();
@@ -62,14 +63,14 @@ export class SinglePlayerModal extends BaseGameSetupModal {
       "username-input",
     ) as UsernameInput;
     if (!usernameInput) {
-      consolex.warn("Username input element not found");
+      console.warn("Username input element not found");
     }
 
     const flagSelectionModal = document.querySelector(
       "flag-modal",
     ) as FlagSelectionModal;
     if (!flagSelectionModal) {
-      consolex.warn("Flag input element not found");
+      console.warn("Flag input element not found");
     }
 
     this.dispatchEvent(
@@ -87,6 +88,7 @@ export class SinglePlayerModal extends BaseGameSetupModal {
                   flagSelectionModal?.getCurrentFlag() === "xx"
                     ? ""
                     : (flagSelectionModal?.getCurrentFlag() ?? ""),
+                pattern: this.userSettings.getSelectedPattern(),
               },
             ],
             config: {
