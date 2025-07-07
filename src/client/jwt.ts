@@ -22,6 +22,7 @@ export function getApiBase() {
 }
 
 function getToken(): string | null {
+  // Check window hash
   const { hash } = window.location;
   if (hash.startsWith("#")) {
     const params = new URLSearchParams(hash.slice(1));
@@ -40,6 +41,18 @@ function getToken(): string | null {
         (params.size > 0 ? "#" + params.toString() : ""),
     );
   }
+
+  // Check cookie
+  const cookie = document.cookie
+    .split(";")
+    .find((c) => c.startsWith("token="))
+    ?.substring(6);
+  if (cookie !== undefined) {
+    // TODO: Replace localStorage with cookie
+    localStorage.setItem("token", cookie);
+  }
+
+  // Check local storage
   return localStorage.getItem("token");
 }
 
