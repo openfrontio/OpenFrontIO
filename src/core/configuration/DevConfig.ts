@@ -34,9 +34,6 @@ export class DevServerConfig extends DefaultServerConfig {
   gitCommit(): string {
     return "DEV";
   }
-  allowedFlares(): [string, ...string[]] | undefined {
-    return ["dev"];
-  }
 }
 
 export class DevConfig extends DefaultConfig {
