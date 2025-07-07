@@ -128,6 +128,7 @@
   "map": {
     "map": "地图",
     "world": "世界",
+    "worldmapgiant": "巨型世界地图",
     "europe": "欧洲",
     "mena": "中东/北非",
     "northamerica": "北美洲",
@@ -150,8 +151,7 @@
     "europeclassic": "欧洲 (古典)",
     "falklandislands": "福克兰群岛",
     "baikal": "贝加尔湖",
-    "halkidiki": "哈尔基迪基",
-    "giantworldmap": "巨型世界地图"
+    "halkidiki": "哈尔基迪基"
   },
   "map_categories": {
     "continental": "大陆",
@@ -245,8 +245,6 @@
     "attack_ratio_desc": "你要派出多少比例的军队进攻 (1–100%)",
     "troop_ratio_label": "🛠️ 军队和工人比例",
     "troop_ratio_desc": "调整军队 (用于战斗) 和工人 (用于生产黄金) 之间的比例 (1-100%)",
-    "territory_patterns_label": "🏳️ 领土样式",
-    "territory_patterns_desc": "选择在游戏中如何显示领土样式",
     "easter_writing_speed_label": "写入速度乘数",
     "easter_writing_speed_desc": "调节你“假装写代码”的速度 (x1–x100)",
     "easter_bug_count_label": "Bug 计数",
@@ -403,6 +401,17 @@
     "warships": "军舰",
     "health": "生命值",
     "attitude": "态度"
+  },
+  "events_display": {
+    "retreating": "正在撤退",
+    "boat": "船"
+  },
+  "unit_info_modal": {
+    "structure_info": "建筑信息",
+    "unit_type_unknown": "未知",
+    "close": "关闭",
+    "cooldown": "冷却时间",
+    "type": "类型"
   },
   "relation": {
     "hostile": "敌对",

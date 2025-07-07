@@ -128,6 +128,7 @@
   "map": {
     "map": "Kartta",
     "world": "Maailma",
+    "worldmapgiant": "Jättimäinen maailmankartta",
     "europe": "Eurooppa",
     "mena": "MENA",
     "northamerica": "Pohjois-Amerikka",
@@ -150,8 +151,7 @@
     "europeclassic": "Eurooppa (klassinen)",
     "falklandislands": "Falklandinsaaret",
     "baikal": "Baikal",
-    "halkidiki": "Halkidiki",
-    "giantworldmap": "Jättimäinen maailmankartta"
+    "halkidiki": "Halkidiki"
   },
   "map_categories": {
     "continental": "Mantereet",
@@ -245,8 +245,6 @@
     "attack_ratio_desc": "Mikä osuus joukoistasi lähetetään hyökkäykseen (1–100%)",
     "troop_ratio_label": "🪖🛠️ Joukkojen ja työntekijöiden suhde",
     "troop_ratio_desc": "Säädä joukkojen (sotia varten) ja työntekijöiden (tekevät kultaa) määrää (1 - 100%)",
-    "territory_patterns_label": "🏳️ Aluekuviot",
-    "territory_patterns_desc": "Valitse, näkyvätkö aluekuviot pelissä",
     "easter_writing_speed_label": "Kirjoittamisen nopeuskerroin",
     "easter_writing_speed_desc": "Säädä kuinka nopeasti teeskentelet koodaavasi (x1–x100)",
     "easter_bug_count_label": "Vikojen määrä",
@@ -403,6 +401,17 @@
     "warships": "Sota-aluksia",
     "health": "Terveys",
     "attitude": "Asenne"
+  },
+  "events_display": {
+    "retreating": "peräännytään",
+    "boat": "Vene"
+  },
+  "unit_info_modal": {
+    "structure_info": "Rakennuksen tiedot",
+    "unit_type_unknown": "Tuntematon",
+    "close": "Sulje",
+    "cooldown": "Odotusaika",
+    "type": "Tyyppi"
   },
   "relation": {
     "hostile": "Vihamielinen",

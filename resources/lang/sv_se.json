@@ -128,6 +128,7 @@
   "map": {
     "map": "Karta",
     "world": "Världen",
+    "worldmapgiant": "Massiv Världskarta",
     "europe": "Europa",
     "mena": "MENA",
     "northamerica": "Nordamerika",
@@ -150,8 +151,7 @@
     "europeclassic": "Europa (klassisk)",
     "falklandislands": "Falklandsöarna",
     "baikal": "Baikal",
-    "halkidiki": "Halkidiki",
-    "giantworldmap": "Massiv världskarta"
+    "halkidiki": "Halkidiki"
   },
   "map_categories": {
     "continental": "Kontinental",
@@ -245,8 +245,6 @@
     "attack_ratio_desc": "Vilken procent av dina trupper som ska skickas in vid ett anfall.(1–100%)",
     "troop_ratio_label": "🪖🛠️ Trupp- och Arbetarskala",
     "troop_ratio_desc": "Anpassa balansen mellan trupper (för strid) och arbetare (för guldproduktion) (1–100%)",
-    "territory_patterns_label": "🏳️ Mönster för Territorium",
-    "territory_patterns_desc": "Välj mellan att visa territorium mönsterdesign i spelet",
     "easter_writing_speed_label": "Multiplikator för skrivhastighet",
     "easter_writing_speed_desc": "Ändra hur snabbt du låtsas att koda (x1–x100)",
     "easter_bug_count_label": "Mängd buggar",
@@ -403,6 +401,17 @@
     "warships": "Krigsskepp",
     "health": "Hälsa",
     "attitude": "Attityd"
+  },
+  "events_display": {
+    "retreating": "retirerar",
+    "boat": "Båt"
+  },
+  "unit_info_modal": {
+    "structure_info": "Strukturinformation",
+    "unit_type_unknown": "Okänd",
+    "close": "Stäng",
+    "cooldown": "Fördröjning",
+    "type": "Typ"
   },
   "relation": {
     "hostile": "Fientlig",

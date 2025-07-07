@@ -128,6 +128,7 @@
   "map": {
     "map": "Kort",
     "world": "Verden",
+    "worldmapgiant": "Kæmpe Verdenskort",
     "europe": "Europa",
     "mena": "MENA",
     "northamerica": "Nordamerika",
@@ -150,8 +151,7 @@
     "europeclassic": "Europa (klassisk)",
     "falklandislands": "Falklandsøerne",
     "baikal": "Baikalsøen",
-    "halkidiki": "Halkidiki",
-    "giantworldmap": "Kæmpe Verdenskort"
+    "halkidiki": "Halkidiki"
   },
   "map_categories": {
     "continental": "Kontinental",
@@ -245,8 +245,6 @@
     "attack_ratio_desc": "Hvor stor en procentdel af dine tropper skal sendes i et angreb (1–100%)",
     "troop_ratio_label": "🪖🛠️ Forholdet mellem tropper og arbejdere",
     "troop_ratio_desc": "Juster balancen mellem tropper (til kamp) og arbejdere (til guldproduktion) (1–100%)",
-    "territory_patterns_label": "🏳️ Territoriummønstre",
-    "territory_patterns_desc": "Vælg, om territoriemønstre skal vises i spillet",
     "easter_writing_speed_label": "Skrivehastigheds-multiplikator",
     "easter_writing_speed_desc": "Juster, hvor hurtigt du simulerer at kode (x1–x100)",
     "easter_bug_count_label": "Fejlantal",
@@ -403,6 +401,17 @@
     "warships": "Krigsskibe",
     "health": "Helbred",
     "attitude": "Adfærd"
+  },
+  "events_display": {
+    "retreating": "trækker sig tilbage",
+    "boat": "Båd"
+  },
+  "unit_info_modal": {
+    "structure_info": "Strukturinfo",
+    "unit_type_unknown": "Ukendt",
+    "close": "Luk",
+    "cooldown": "Nedkøling",
+    "type": "Type"
   },
   "relation": {
     "hostile": "Fjendtlig",

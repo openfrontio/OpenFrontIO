@@ -20,7 +20,7 @@
     "single_player": "Mode solo",
     "instructions": "Instructions",
     "how_to_play": "Comment jouer ?",
-    "advertise": "Annoncer",
+    "advertise": "Faire de la publicité",
     "wiki": "Wiki"
   },
   "news": {
@@ -128,6 +128,7 @@
   "map": {
     "map": "Carte",
     "world": "Monde",
+    "worldmapgiant": "Carte du monde géante",
     "europe": "Europe",
     "mena": "MOAN",
     "northamerica": "Amérique du Nord",
@@ -150,8 +151,7 @@
     "europeclassic": "Europe (classique)",
     "falklandislands": "Îles Malouines",
     "baikal": "Lac Baïkal",
-    "halkidiki": "Chalcidique",
-    "giantworldmap": "Carte du monde géante"
+    "halkidiki": "Chalcidique"
   },
   "map_categories": {
     "continental": "Continental",
@@ -245,8 +245,6 @@
     "attack_ratio_desc": "Quel pourcentage de vos troupes envoyer dans une attaque (1–100%)",
     "troop_ratio_label": "🪖🛠️ Ratio des troupes et des ouvriers",
     "troop_ratio_desc": "Ajuster l'équilibre entre les troupes (pour le combat) et les ouvriers (pour la production d'or) (1–100%)",
-    "territory_patterns_label": "🏳️ Modèles de territoire",
-    "territory_patterns_desc": "Choisissez si vous voulez afficher les modèles de territoire en jeu",
     "easter_writing_speed_label": "Multiplicateur de vitesse d'écriture",
     "easter_writing_speed_desc": "Ajuster la vitesse à laquelle vous prétendez coder (x1–x100)",
     "easter_bug_count_label": "Nombre de bugs",
@@ -403,6 +401,17 @@
     "warships": "Navires de guerre",
     "health": "Santé",
     "attitude": "Attitude"
+  },
+  "events_display": {
+    "retreating": "en retraite",
+    "boat": "Bateau"
+  },
+  "unit_info_modal": {
+    "structure_info": "Infos sur la structure",
+    "unit_type_unknown": "Inconnu",
+    "close": "Fermer",
+    "cooldown": "Rechargement",
+    "type": "Type"
   },
   "relation": {
     "hostile": "Hostile",
