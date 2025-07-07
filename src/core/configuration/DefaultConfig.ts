@@ -80,10 +80,6 @@ export abstract class DefaultServerConfig implements ServerConfig {
   subdomain(): string {
     return process.env.SUBDOMAIN ?? "";
   }
-  redirectUri(): string {
-    const sub = this.subdomain();
-    return `https://${sub ? `${sub}.` : ""}${this.domain()}`;
-  }
   cloudflareAccountId(): string {
     return process.env.CF_ACCOUNT_ID ?? "";
   }

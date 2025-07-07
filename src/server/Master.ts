@@ -4,6 +4,7 @@ import rateLimit from "express-rate-limit";
 import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
+import { UserMeResponse } from "../core/ApiSchemas";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
@@ -72,52 +73,20 @@ app.get(
 
 const allowedFlares = config.allowedFlares();
 if (allowedFlares !== undefined) {
-  async function getBearerToken(
-    request: express.Request,
-  ): Promise<string | undefined> {
-    // Check search parameters
-    // const searchParams = new URL(request.url).searchParams;
-    // const token = searchParams.get("token");
-    // if (typeof token === "string") return token;
-
-    // Check cookie
-    const cookie = request.headers.cookie
-      ?.split(";")
-      .find((c) => c.trim().startsWith("token="))
-      ?.trim()
-      .substring(6);
-    if (cookie !== undefined) {
-      return cookie;
-    }
-
-    // Check headers
-    // const authHeader = request.headers.get("Authorization");
-    // if (!authHeader) return null;
-    // if (!authHeader.startsWith("Bearer ")) {
-    //   log.info("Invalid authorization header: ", authHeader);
-    //   return null;
-    // }
-    // return authHeader.slice(7);
-  }
-
   // Middleware to require a specific Authorization header
   app.use(async (req, res, next) => {
-    const token = await getBearerToken(req);
-    if (!token) return false;
-    const verify = await verifyClientToken(token, config);
-    if (!verify) return false;
-    const userMeResult = await getUserMe(token, config);
-    if (userMeResult === false) {
-      // Not logged in
-      return res.redirect(
-        `${config.jwtIssuer()}/login/discord?redirect_uri=${config.redirectUri()}`,
-      );
+    const user = await authenticateUser(req);
+    if (user === false) {
+      return res
+        .status(401)
+        .setHeader("WWW-Authenticate", "Bearer")
+        .json({ error: "Unauthorized" });
     }
     const hasAnyAllowedFlares = allowedFlares.some((f) =>
-      userMeResult.player.flares?.includes(f),
+      user.player.flares?.includes(f),
     );
     if (!hasAnyAllowedFlares) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(403).json({ error: "Forbidden" });
     }
 
     next();
@@ -350,6 +319,42 @@ async function schedulePublicGame(playlist: MapPlaylist) {
     log.error(`Failed to schedule public game on worker ${workerPath}:`, error);
     throw error;
   }
+}
+
+function getBearerToken(request: express.Request): string | undefined {
+  // Check search parameters
+  // const searchParams = new URL(request.url).searchParams;
+  // const token = searchParams.get("token");
+  // if (typeof token === "string") return token;
+
+  // Check cookie
+  const cookie = request.headers.cookie
+    ?.split(";")
+    .find((c) => c.trim().startsWith("token="))
+    ?.trim()
+    .substring(6);
+  if (cookie !== undefined) {
+    return cookie;
+  }
+
+  // Check headers
+  // const authorization = request.headers.authorization;
+  // if (authorization !== undefined) {
+  //   if (authorization.startsWith("Bearer ")) {
+  //     return authorization.slice(7);
+  //   }
+  //   log.info("Invalid authorization header: ", authorization);
+  // }
+}
+
+async function authenticateUser(
+  req: express.Request,
+): Promise<UserMeResponse | false> {
+  const token = getBearerToken(req);
+  if (!token) return false;
+  const verify = await verifyClientToken(token, config);
+  if (!verify) return false;
+  return getUserMe(token, config);
 }
 
 function sleep(ms: number): Promise<void> {

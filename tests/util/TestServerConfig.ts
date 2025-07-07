@@ -4,9 +4,6 @@ import { GameMapType } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
-  redirectUri(): string {
-    throw new Error("Method not implemented.");
-  }
   allowedFlares(): [string, ...string[]] | undefined {
     throw new Error("Method not implemented.");
   }

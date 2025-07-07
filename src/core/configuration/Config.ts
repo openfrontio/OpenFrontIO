@@ -57,7 +57,6 @@ export interface ServerConfig {
   jwkPublicKey(): Promise<JWK>;
   domain(): string;
   subdomain(): string;
-  redirectUri(): string;
   cloudflareAccountId(): string;
   cloudflareApiToken(): string;
   cloudflareConfigPath(): string;
