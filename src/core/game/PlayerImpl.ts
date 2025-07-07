@@ -828,6 +828,7 @@ export class PlayerImpl implements Player {
     const cost = this.mg.unitInfo(unit.type()).cost(this);
     this.removeGold(cost);
     unit.increaseLevel();
+    this.recordUnitConstructed(unit.type());
   }
 
   public buildableUnits(tile: TileRef): BuildableUnit[] {

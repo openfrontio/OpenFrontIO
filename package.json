@@ -123,6 +123,7 @@
     "nanoid": "^3.3.6",
     "obscenity": "^0.4.3",
     "pg": "^8.13.3",
+    "pixi-filters": "^6.1.3",
     "pixi.js": "^8.10.1",
     "prom-client": "^15.1.3",
     "protobufjs": "^7.3.2",

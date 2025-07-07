@@ -20,6 +20,14 @@ export class AllianceExtensionExecution implements Execution {
       return;
     }
     const to = mg.player(this.toID);
+
+    if (!this.from.isAlive() || !to.isAlive()) {
+      console.info(
+        `[AllianceExtensionExecution] Player ${this.from.id()} or ${this.toID} is not alive`,
+      );
+      return;
+    }
+
     const alliance = this.from.allianceWith(to);
     if (!alliance) {
       console.warn(
@@ -35,12 +43,12 @@ export class AllianceExtensionExecution implements Execution {
       alliance.extend();
 
       mg.displayMessage(
-        "alliance.renewed",
+        "events_display.alliance_renewed",
         MessageType.ALLIANCE_ACCEPTED,
         this.from.id(),
       );
       mg.displayMessage(
-        "alliance.renewed",
+        "events_display.alliance_renewed",
         MessageType.ALLIANCE_ACCEPTED,
         this.toID,
       );
