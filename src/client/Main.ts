@@ -1,6 +1,8 @@
 import favicon from "../../resources/images/Favicon.svg";
 import version from "../../resources/version.txt";
+import { UserMeResponse } from "../core/ApiSchemas";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
@@ -201,13 +203,39 @@ class Client {
       territoryModal.open();
     });
 
+    loginDiscordButton.addEventListener("click", discordLogin);
+    const onUserMe = async (userMeResponse: UserMeResponse | false) => {
+      const config = await getServerConfigFromClient();
+      if (!hasRequiredFlares(userMeResponse, config)) {
+        if (userMeResponse === false) {
+          // Login is required
+          discordLogin();
+        } else {
+          // Unauthorized
+          window.location.href = `/unauthorized.html`;
+        }
+      } else if (userMeResponse === false) {
+        // Not logged in
+        loginDiscordButton.disable = false;
+        loginDiscordButton.hidden = false;
+        loginDiscordButton.translationKey = "main.login_discord";
+        logoutDiscordButton.hidden = true;
+        territoryModal.onUserMe(null);
+      } else {
+        // Authorized
+        console.log(
+          `Your player ID is ${userMeResponse.player.publicId}\n` +
+            "Sharing this ID will allow others to view your game history and stats.",
+        );
+        loginDiscordButton.translationKey = "main.logged_in";
+        loginDiscordButton.hidden = true;
+        territoryModal.onUserMe(userMeResponse);
+      }
+    };
+
     if (isLoggedIn() === false) {
       // Not logged in
-      loginDiscordButton.disable = false;
-      loginDiscordButton.translationKey = "main.login_discord";
-      loginDiscordButton.addEventListener("click", discordLogin);
-      logoutDiscordButton.hidden = true;
-      territoryModal.onUserMe(null);
+      onUserMe(false);
     } else {
       // JWT appears to be valid
       loginDiscordButton.disable = true;
@@ -216,33 +244,11 @@ class Client {
       logoutDiscordButton.addEventListener("click", () => {
         // Log out
         logOut();
-        territoryModal.onUserMe(null);
-        loginDiscordButton.disable = false;
-        loginDiscordButton.translationKey = "main.login_discord";
-        loginDiscordButton.hidden = false;
-        loginDiscordButton.addEventListener("click", discordLogin);
-        logoutDiscordButton.hidden = true;
+        onUserMe(false);
       });
       // Look up the discord user object.
       // TODO: Add caching
-      getUserMe().then((userMeResponse) => {
-        if (userMeResponse === false) {
-          // Not logged in
-          loginDiscordButton.disable = false;
-          loginDiscordButton.translationKey = "main.login_discord";
-          loginDiscordButton.addEventListener("click", discordLogin);
-          logoutDiscordButton.hidden = true;
-          territoryModal.onUserMe(null);
-          return;
-        }
-        console.log(
-          `Your player ID is ${userMeResponse.player.publicId}\n` +
-            "Sharing this ID will allow others to view your game history and stats.",
-        );
-        loginDiscordButton.translationKey = "main.logged_in";
-        loginDiscordButton.hidden = true;
-        territoryModal.onUserMe(userMeResponse);
-      });
+      getUserMe().then(onUserMe);
     }
 
     const settingsModal = document.querySelector(
@@ -478,4 +484,18 @@ function getPersistentIDFromCookie(): string {
   ].join(";");
 
   return newID;
+}
+
+function hasRequiredFlares(
+  userMeResponse: UserMeResponse | false,
+  config: ServerConfig,
+) {
+  // Check for required flares
+  if (config.requiredFlares().length === 0) return true;
+  if (userMeResponse === false) return false;
+  const flares = userMeResponse.player.flares;
+  if (flares === undefined) return false;
+  const required = config.requiredFlares();
+  console.log({ flares, required });
+  return required.every((f) => flares.includes(f));
 }

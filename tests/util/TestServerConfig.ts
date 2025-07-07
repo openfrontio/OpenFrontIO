@@ -4,6 +4,12 @@ import { GameMapType } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
+  redirectUri(): string {
+    throw new Error("Method not implemented.");
+  }
+  requiredFlares(): string[] {
+    throw new Error("Method not implemented.");
+  }
   stripePublishableKey(): string {
     throw new Error("Method not implemented.");
   }

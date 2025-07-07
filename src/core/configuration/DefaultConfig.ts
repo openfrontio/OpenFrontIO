@@ -68,6 +68,9 @@ const numPlayersConfig = {
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
+  requiredFlares(): string[] {
+    return [];
+  }
   stripePublishableKey(): string {
     return process.env.STRIPE_PUBLISHABLE_KEY ?? "";
   }
@@ -76,6 +79,10 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   subdomain(): string {
     return process.env.SUBDOMAIN ?? "";
+  }
+  redirectUri(): string {
+    const sub = this.subdomain();
+    return `https://${sub ? `${sub}.` : ""}${this.domain()}`;
   }
   cloudflareAccountId(): string {
     return process.env.CF_ACCOUNT_ID ?? "";

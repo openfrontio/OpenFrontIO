@@ -57,11 +57,13 @@ export interface ServerConfig {
   jwkPublicKey(): Promise<JWK>;
   domain(): string;
   subdomain(): string;
+  redirectUri(): string;
   cloudflareAccountId(): string;
   cloudflareApiToken(): string;
   cloudflareConfigPath(): string;
   cloudflareCredsPath(): string;
   stripePublishableKey(): string;
+  requiredFlares(): string[];
 }
 
 export interface NukeMagnitude {

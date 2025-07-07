@@ -11,4 +11,7 @@ export const preprodConfig = new (class extends DefaultServerConfig {
   jwtAudience(): string {
     return "openfront.dev";
   }
+  requiredFlares(): string[] {
+    return ["dev"];
+  }
 })();

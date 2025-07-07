@@ -8,6 +8,7 @@ import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
+import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 
@@ -49,6 +50,67 @@ app.use(
     },
   }),
 );
+
+// Unauthenticated endpoints
+app.get(
+  "/api/env",
+  gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
+    const envConfig = {
+      game_env: process.env.GAME_ENV || "prod",
+    };
+    res.json(envConfig);
+  }),
+);
+
+if (config.requiredFlares().length > 0) {
+  async function getBearerToken(
+    request: express.Request,
+  ): Promise<string | undefined> {
+    // Check search parameters
+    // const searchParams = new URL(request.url).searchParams;
+    // const token = searchParams.get("token");
+    // if (typeof token === "string") return token;
+
+    // Check cookie
+    const found = request.headers.cookie
+      ?.split("; ")
+      .find((c) => c.startsWith("token="));
+    if (found !== undefined) {
+      return found.substring(6);
+    }
+
+    // Check headers
+    // const authHeader = request.headers.get("Authorization");
+    // if (!authHeader) return null;
+    // if (!authHeader.startsWith("Bearer ")) {
+    //   log.info("Invalid authorization header: ", authHeader);
+    //   return null;
+    // }
+    // return authHeader.slice(7);
+  }
+
+  // Middleware to require a specific Authorization header
+  app.use(async (req, res, next) => {
+    const token = await getBearerToken(req);
+    if (!token) return false;
+    const verify = await verifyClientToken(token, config);
+    if (!verify) return false;
+    const userMeResult = await getUserMe(token, config);
+    if (userMeResult === false) {
+      // Not logged in
+      return res.redirect(
+        `${config.jwtIssuer()}/login/discord?redirect_uri=${config.redirectUri()}`,
+      );
+    }
+    const hasAllRequiredFlares = config
+      .requiredFlares()
+      .every((f) => userMeResult.player.flares?.includes(f));
+    if (!hasAllRequiredFlares)
+      return res.status(401).json({ error: "Unauthorized" });
+
+    next();
+  });
+}
 app.use(express.json());
 
 app.set("trust proxy", 3);
@@ -141,16 +203,6 @@ export async function startMaster() {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });
 }
-
-app.get(
-  "/api/env",
-  gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
-    const envConfig = {
-      game_env: process.env.GAME_ENV || "prod",
-    };
-    res.json(envConfig);
-  }),
-);
 
 // Add lobbies endpoint to list public games for this worker
 app.get(
