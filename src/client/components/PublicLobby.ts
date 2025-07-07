@@ -116,9 +116,9 @@ export class PublicLobby extends LitElement {
     const mapImageSrc = this.mapImages.get(lobby.gameID);
 
     return html`
-      <button
+      <div
         @click=${() => this.lobbyClicked(lobby)}
-        class="background-panel p-4 h-full cursor-pointer transition-base duration-300 hover:backgroundDark hover:border-primary ${isJoined
+        class="background-panel  p-4 h-full  cursor-pointer transition-base duration-300 hover:backgroundDark hover:border-primary ${isJoined
           ? "border-primaryLighter has-grey"
           : ""} ${isTemporarilyDisabled ? "opacity-70 cursor-not-allowed" : ""}"
       >
@@ -251,7 +251,7 @@ export class PublicLobby extends LitElement {
             </p>
           </div>
         </div>
-      </button>
+      </div>
     `;
   }
 

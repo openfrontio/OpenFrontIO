@@ -18,9 +18,10 @@ export class Navbar extends LitElement {
               OpenFront
             </div>
             <div
+              id="game-version"
               class="ml-2 text-small font-title text-textGrey dark:text-textLight"
             >
-              v24.0
+              Loading version...
             </div>
           </div>
 

@@ -27,6 +27,12 @@ export class GameUIComponents extends LitElement {
       <user-setting></user-setting>
       <multi-tab-modal></multi-tab-modal>
       <unit-info-modal></unit-info-modal>
+      <game-top-bar></game-top-bar>
+      <game-right-sidebar></game-right-sidebar>
+      <dark-mode-button></dark-mode-button>
+      <alert-frame></alert-frame>
+      <game-left-sidebar></game-left-sidebar>
+      <spawn-ad></spawn-ad>
     `;
   }
 }

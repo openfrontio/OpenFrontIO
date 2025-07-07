@@ -523,7 +523,7 @@ export class GameOptions extends LitElement {
   @property({ type: Boolean }) instantBuild = false;
   @property({ type: Boolean }) infiniteGold = false;
   @property({ type: Boolean }) infiniteTroops = false;
-  @property() disabledUnits: UnitType[] = [];
+  @state() disabledUnits: UnitType[] = [UnitType.Factory];
   @property({ type: Boolean }) isSinglePlayer = false;
 
   private botsUpdateTimer: number | null = null;

@@ -5,8 +5,8 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import { COSMETICS } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
 import { PatternDecoder } from "../core/PatternDecoder";
-import "./components/Difficulties";
-import "./components/Maps";
+import "./components/modals/Lobby/Difficulties";
+import "./components/modals/Lobby/Maps";
 import { translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")

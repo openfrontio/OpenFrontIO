@@ -35,12 +35,10 @@ import "./GameUIComponents";
 import "./components/layout/Background";
 import "./components/layout/Footer";
 import "./components/layout/Navbar";
+import { LangSelector } from "./components/modals/Language/LangSelector";
 import { LanguageModal } from "./components/modals/Language/LanguageModal";
 import "./components/modals/LoginModal";
 import { LoginModal } from "./components/modals/LoginModal";
-
-import "./DarkModeButton";
-import "./LangSelector";
 
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { incrementGamesPlayed } from "./Utils";
@@ -110,6 +108,13 @@ class Client {
         newsModal.open(article);
       }
     });
+
+    const langSelector = document.querySelector(
+      "lang-selector",
+    ) as LangSelector;
+    if (!langSelector) {
+      console.warn("Lang selector element not found");
+    }
 
     const flagSelectionModal = document.querySelector(
       "flag-modal",
