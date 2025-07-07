@@ -108,7 +108,7 @@ export class OModal extends LitElement {
                   <div class="c-modal__close" @click=${this.close}>X</div>
                 </header>
                 <section
-                  class="c-modal__content${this.special ? "__special" : ""}"
+                  class="content${this.special ? " special" : ""}"
                   style=${`${this.disableScroll ? "overflow: hidden;" : ""}`}
                 >
                   <slot></slot>
