@@ -345,8 +345,8 @@ export function startWorker() {
           // Verify token signature
           const result = await verifyClientToken(clientMsg.token, config);
           if (result === false) {
-            log.warn("Invalid token");
-            ws.close(1002, "Invalid token");
+            log.warn("Unauthorized: Invalid token");
+            ws.close(1002, "Unauthorized");
             return;
           }
           const { persistentId, claims } = result;
@@ -357,16 +357,16 @@ export function startWorker() {
           const allowedFlares = config.allowedFlares();
           if (claims === null) {
             if (allowedFlares !== undefined) {
-              log.warn("Anonymous user attempted to join game");
-              ws.close(1002, "Login required");
+              log.warn("Unauthorized: Anonymous user attempted to join game");
+              ws.close(1002, "Unauthorized");
               return;
             }
           } else {
             // Verify token and get player permissions
             const result = await getUserMe(clientMsg.token, config);
             if (result === false) {
-              log.warn("Invalid session");
-              ws.close(1002, "Invalid session");
+              log.warn("Unauthorized: Invalid session");
+              ws.close(1002, "Unauthorized");
               return;
             }
             roles = result.player.roles;
@@ -375,8 +375,10 @@ export function startWorker() {
             if (allowedFlares !== undefined) {
               const allowed = allowedFlares.some((f) => flares?.includes(f));
               if (!allowed) {
-                log.warn("Unauthorized player attempted to join game");
-                ws.close(1002, "Unauthorized");
+                log.warn(
+                  "Forbidden: player without an allowed flare attempted to join game",
+                );
+                ws.close(1002, "Forbidden");
                 return;
               }
             }
