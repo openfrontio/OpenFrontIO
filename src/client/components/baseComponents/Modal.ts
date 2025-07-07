@@ -71,7 +71,7 @@ export class OModal extends LitElement {
       backdrop-filter: blur(8px);
     }
 
-    .c-modal__content__special {
+    .c-modal > .content.special {
       position: relative;
       color: #fff;
       padding: 1.4rem;
