@@ -178,6 +178,9 @@
   "public_lobby": {
     "join": "Join next Game",
     "waiting": "players waiting",
+    "teams_Duos": "Duos (teams of 2)",
+    "teams_Trios": "Trios (teams of 3)",
+    "teams_Quads": "Quads (teams of 4)",
     "teams": "{num} teams"
   },
   "username": {
@@ -242,7 +245,6 @@
     "atom_bomb": "Atom Bomb",
     "hydrogen_bomb": "Hydrogen Bomb",
     "mirv": "MIRV",
-    "train": "Train",
     "factory": "Factory"
   },
   "user_setting": {
@@ -446,7 +448,6 @@
     "cooldown": "Cooldown",
     "type": "Type",
     "upgrade": "Upgrade",
-    "create_station": "Create Station",
     "level": "Level"
   },
   "relation": {

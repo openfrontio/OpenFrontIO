@@ -11,16 +11,18 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
+  Quads,
   TerrainType,
   TerraNullius,
   Tick,
+  Trios,
   UnitInfo,
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
-import { GameConfig, GameID } from "../Schemas";
+import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import { assertNever, simpleHash, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { PastelTheme } from "./PastelTheme";
@@ -167,14 +169,26 @@ export abstract class DefaultServerConfig implements ServerConfig {
   lobbyMaxPlayers(
     map: GameMapType,
     mode: GameMode,
-    numPlayerTeams: number | undefined,
+    numPlayerTeams: TeamCountConfig | undefined,
   ): number {
     const [l, m, s] = numPlayersConfig[map] ?? [50, 30, 20];
     const r = Math.random();
     const base = r < 0.3 ? l : r < 0.6 ? m : s;
     let p = Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, l);
-    if (numPlayerTeams !== undefined) {
-      p -= p % numPlayerTeams;
+    if (numPlayerTeams === undefined) return p;
+    switch (numPlayerTeams) {
+      case Duos:
+        p -= p % 2;
+        break;
+      case Trios:
+        p -= p % 3;
+        break;
+      case Quads:
+        p -= p % 4;
+        break;
+      default:
+        p -= p % numPlayerTeams;
+        break;
     }
     return p;
   }
@@ -279,7 +293,7 @@ export class DefaultConfig implements Config {
   defensePostDefenseBonus(): number {
     return 5;
   }
-  playerTeams(): number | typeof Duos {
+  playerTeams(): TeamCountConfig {
     return this._gameConfig.playerTeams ?? 0;
   }
 
@@ -310,7 +324,7 @@ export class DefaultConfig implements Config {
     return Math.min(50, Math.round(10 * Math.pow(numberOfPorts, 0.6)));
   }
   trainSpawnRate(numberOfStations: number): number {
-    return Math.min(1400, Math.round(60 * Math.pow(numberOfStations, 0.8)));
+    return Math.min(1400, Math.round(70 * Math.pow(numberOfStations, 0.8)));
   }
   trainGold(): Gold {
     return BigInt(10_000);

@@ -1,4 +1,4 @@
-import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
+import { Execution, Game, Unit } from "../game/Game";
 import { TrainStation } from "../game/TrainStation";
 import { PseudoRandom } from "../PseudoRandom";
 import { TrainExecution } from "./TrainExecution";
@@ -8,11 +8,10 @@ export class TrainStationExecution implements Execution {
   private active: boolean = true;
   private random: PseudoRandom | null = null;
   private station: TrainStation | null = null;
-  private unit: Unit | undefined = undefined;
   private numCars: number = 5;
   constructor(
-    private player: Player,
-    private unitId: number,
+    private unit: Unit,
+    private randomSeed?: number,
   ) {}
 
   isActive(): boolean {
@@ -21,21 +20,7 @@ export class TrainStationExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-
-    if (this.mg.config().isUnitDisabled(UnitType.Train)) {
-      this.active = false;
-      console.warn(`train station is disabled`);
-      return;
-    }
-
-    this.random = new PseudoRandom(mg.ticks());
-
-    this.unit = this.player.units().find((unit) => unit.id() === this.unitId);
-    if (this.unit === undefined) {
-      console.warn(`station unit is undefined`);
-      this.active = false;
-      return;
-    }
+    this.random = new PseudoRandom(mg.ticks() + (this.randomSeed ?? 0));
     this.unit.setTrainStation(true);
   }
 

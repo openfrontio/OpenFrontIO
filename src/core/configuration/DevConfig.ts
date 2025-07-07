@@ -17,10 +17,6 @@ export class DevServerConfig extends DefaultServerConfig {
     return 5 * 1000;
   }
 
-  lobbyMaxPlayers(): number {
-    return Math.random() < 0.5 ? 2 : 3;
-  }
-
   samWarheadHittingChance(): number {
     return 1;
   }

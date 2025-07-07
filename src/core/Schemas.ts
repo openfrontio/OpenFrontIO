@@ -9,6 +9,8 @@ import {
   GameMode,
   GameType,
   PlayerType,
+  Quads,
+  Trios,
   UnitType,
 } from "./game/Game";
 import { PatternDecoder } from "./PatternDecoder";
@@ -38,9 +40,7 @@ export type Intent =
   | QuickChatIntent
   | MoveWarshipIntent
   | MarkDisconnectedIntent
-  | UpgradeStructureIntent
-  | CreateStationIntent;
-
+  | UpgradeStructureIntent;
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
 export type SpawnIntent = z.infer<typeof SpawnIntentSchema>;
@@ -63,7 +63,6 @@ export type BuildUnitIntent = z.infer<typeof BuildUnitIntentSchema>;
 export type UpgradeStructureIntent = z.infer<
   typeof UpgradeStructureIntentSchema
 >;
-export type CreateStationIntent = z.infer<typeof CreateStationIntentSchema>;
 export type MoveWarshipIntent = z.infer<typeof MoveWarshipIntentSchema>;
 export type QuickChatIntent = z.infer<typeof QuickChatIntentSchema>;
 export type MarkDisconnectedIntent = z.infer<
@@ -134,6 +133,14 @@ export enum LogSeverity {
 // Utility types
 //
 
+const TeamCountConfigSchema = z.union([
+  z.number(),
+  z.literal(Duos),
+  z.literal(Trios),
+  z.literal(Quads),
+]);
+export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
+
 export const GameConfigSchema = z.object({
   gameMap: z.enum(GameMapType),
   difficulty: z.enum(Difficulty),
@@ -146,7 +153,7 @@ export const GameConfigSchema = z.object({
   instantBuild: z.boolean(),
   maxPlayers: z.number().optional(),
   disabledUnits: z.enum(UnitType).array().optional(),
-  playerTeams: z.union([z.number(), z.literal(Duos)]).optional(),
+  playerTeams: TeamCountConfigSchema.optional(),
 });
 
 export const TeamSchema = z.string();
@@ -310,11 +317,6 @@ export const UpgradeStructureIntentSchema = BaseIntentSchema.extend({
   unitId: z.number(),
 });
 
-export const CreateStationIntentSchema = BaseIntentSchema.extend({
-  type: z.literal("create_station"),
-  unitId: z.number(),
-});
-
 export const CancelAttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("cancel_attack"),
   attackID: z.string(),
@@ -360,7 +362,6 @@ const IntentSchema = z.discriminatedUnion("type", [
   TargetTroopRatioIntentSchema,
   BuildUnitIntentSchema,
   UpgradeStructureIntentSchema,
-  CreateStationIntentSchema,
   EmbargoIntentSchema,
   MoveWarshipIntentSchema,
   QuickChatIntentSchema,

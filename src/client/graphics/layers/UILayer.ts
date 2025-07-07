@@ -10,8 +10,6 @@ import { ProgressBar } from "../ProgressBar";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
-import trainStationBadge from "../../../../resources/images/buildings/badges/trainStationBadge.png";
-
 const COLOR_PROGRESSION = [
   "rgb(232, 25, 25)",
   "rgb(240, 122, 25)",
@@ -49,7 +47,6 @@ export class UILayer implements Layer {
 
   // Visual settings for selection
   private readonly SELECTION_BOX_SIZE = 6; // Size of the selection box (should be larger than the warship)
-  private badges: Map<string, HTMLImageElement> = new Map();
 
   constructor(
     private game: GameView,
@@ -57,23 +54,6 @@ export class UILayer implements Layer {
     private transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
-    this.loadBadges();
-  }
-
-  private loadBadge(badge: string): Promise<HTMLImageElement> {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.src = badge;
-      img.onload = () => {
-        this.badges.set(badge, img);
-        resolve(img);
-      };
-      img.onerror = reject;
-    });
-  }
-
-  private async loadBadges() {
-    await Promise.all([this.loadBadge(trainStationBadge)]);
   }
 
   shouldTransform(): boolean {
@@ -165,32 +145,9 @@ export class UILayer implements Layer {
           const endTick = this.game.config().SAMCooldown();
           this.drawLoadingBar(unit, endTick);
         }
-        this.drawBadges(unit);
-        break;
-      case UnitType.City:
-      case UnitType.Port:
-      case UnitType.Factory:
-        this.drawBadges(unit);
         break;
       default:
         return;
-    }
-  }
-
-  private drawBadges(unit: UnitView) {
-    if (unit.hasTrainStation()) {
-      const icon = this.badges.get(trainStationBadge);
-      if (icon === undefined) {
-        return;
-      }
-      const startX = this.game.x(unit.tile()) - Math.floor(icon.width / 2) + 6;
-      const startY = this.game.y(unit.tile()) - Math.floor(icon.height / 2) - 6;
-
-      if (unit.isActive()) {
-        this.drawIcon(icon, unit, startX, startY);
-      } else {
-        this.clearIcon(icon, startX, startY);
-      }
     }
   }
 
