@@ -33,6 +33,7 @@ export class GameUIComponents extends LitElement {
       <alert-frame></alert-frame>
       <game-left-sidebar></game-left-sidebar>
       <spawn-ad></spawn-ad>
+      <territory-patterns-modal></territory-patterns-modal>
     `;
   }
 }

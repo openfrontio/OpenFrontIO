@@ -69,15 +69,15 @@ export class MapDisplay extends LitElement {
     return html`
       <div
         class="
-        background-panel
-        w-full
-        p-2
-        cursor-pointer
-        flex flex-col items-center
-        transition-all duration-300 
-        hover:bg-backgroundDarkLighter
-        ${this.selected ? "selected" : ""}
-      "
+          background-panel
+          w-full
+          p-2
+          cursor-pointer
+          flex flex-col items-center
+          transition-all duration-300 
+          hover:bg-backgroundDarkLighter
+          ${this.selected ? "selected" : ""}
+        "
       >
         <div class="w-full aspect-video overflow-hidden mb-2">
           ${this.isLoading
@@ -91,13 +91,13 @@ export class MapDisplay extends LitElement {
                   class="w-full h-full object-cover block"
                 />`
               : html`<div
-                  class="w-full h-full flex items-center justify-center bg-backgroudGrey text-textGrey text-small"
+                  class="w-full h-full flex items-center justify-center bg-backgroundGrey text-textGrey text-small"
                 >
                   Error
                 </div>`}
-          <div class=" text-small  text-textLight text-center">
-            ${this.translation || this.mapName}
-          </div>
+        </div>
+        <div class="text-small text-textLight text-center">
+          ${this.translation || this.mapName}
         </div>
       </div>
     `;
