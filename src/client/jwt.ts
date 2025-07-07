@@ -45,8 +45,9 @@ function getToken(): string | null {
   // Check cookie
   const cookie = document.cookie
     .split(";")
-    .find((c) => c.startsWith("token="))
-    ?.substring(6);
+    .find((c) => c.trim().startsWith("token="))
+    ?.trim()
+    .substring(6);
   if (cookie !== undefined) {
     // TODO: Replace localStorage with cookie
     localStorage.setItem("token", cookie);

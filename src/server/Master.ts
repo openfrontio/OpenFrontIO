@@ -73,11 +73,13 @@ if (allowedFlares !== undefined) {
     // if (typeof token === "string") return token;
 
     // Check cookie
-    const found = request.headers.cookie
-      ?.split("; ")
-      .find((c) => c.startsWith("token="));
-    if (found !== undefined) {
-      return found.substring(6);
+    const cookie = request.headers.cookie
+      ?.split(";")
+      .find((c) => c.trim().startsWith("token="))
+      ?.trim()
+      .substring(6);
+    if (cookie !== undefined) {
+      return cookie;
     }
 
     // Check headers
