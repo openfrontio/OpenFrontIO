@@ -60,7 +60,6 @@ app.use(
   }),
 );
 
-// Unauthenticated endpoints
 app.get(
   "/api/env",
   gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {

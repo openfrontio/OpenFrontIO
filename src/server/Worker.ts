@@ -345,8 +345,8 @@ export function startWorker() {
           // Verify token signature
           const result = await verifyClientToken(clientMsg.token, config);
           if (result === false) {
-            log.warn("Failed to verify token");
-            ws.close(1002, "Failed to verify token");
+            log.warn("Invalid token");
+            ws.close(1002, "Invalid token");
             return;
           }
           const { persistentId, claims } = result;
@@ -354,18 +354,32 @@ export function startWorker() {
           let roles: string[] | undefined;
           let flares: string[] | undefined;
 
+          const allowedFlares = config.allowedFlares();
           if (claims === null) {
-            // TODO: Verify that the persistendId is is not a registered player
+            if (allowedFlares !== undefined) {
+              log.warn("Anonymous user attempted to join game");
+              ws.close(1002, "Login required");
+              return;
+            }
           } else {
             // Verify token and get player permissions
             const result = await getUserMe(clientMsg.token, config);
             if (result === false) {
-              log.warn("Failed to verify token");
-              ws.close(1002, "Failed to verify token");
+              log.warn("Invalid session");
+              ws.close(1002, "Invalid session");
               return;
             }
             roles = result.player.roles;
             flares = result.player.flares;
+
+            if (allowedFlares !== undefined) {
+              const allowed = allowedFlares.some((f) => flares?.includes(f));
+              if (!allowed) {
+                log.warn("Unauthorized player attempted to join game");
+                ws.close(1002, "Unauthorized");
+                return;
+              }
+            }
           }
 
           // Check if the flag is allowed
