@@ -1,0 +1,300 @@
+import { html, LitElement } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
+import darkModeIcon from "../../../../resources/images/DarkModeIconWhite.svg";
+import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
+import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
+import explosionIcon from "../../../../resources/images/ExplosionIconWhite.svg";
+import mouseIcon from "../../../../resources/images/MouseIconWhite.svg";
+import ninjaIcon from "../../../../resources/images/NinjaIconWhite.svg";
+import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
+import treeIcon from "../../../../resources/images/TreeIconWhite.svg";
+import { translateText } from "../../../client/Utils";
+import { EventBus } from "../../../core/EventBus";
+import { UserSettings } from "../../../core/game/UserSettings";
+import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
+import { Layer } from "./Layer";
+
+export class ShowSettingsModalEvent {
+  constructor(public readonly isVisible: boolean = true) {}
+}
+
+@customElement("settings-modal")
+export class SettingsModal extends LitElement implements Layer {
+  public eventBus: EventBus;
+  public userSettings: UserSettings;
+
+  @state()
+  private isVisible: boolean = false;
+
+  @state()
+  private alternateView: boolean = false;
+
+  @query(".modal-overlay")
+  private modalOverlay!: HTMLElement;
+
+  init() {
+    this.eventBus.on(ShowSettingsModalEvent, (event) => {
+      this.isVisible = event.isVisible;
+    });
+  }
+
+  createRenderRoot() {
+    return this;
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("click", this.handleOutsideClick, true);
+    window.addEventListener("keydown", this.handleKeyDown);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("click", this.handleOutsideClick, true);
+    window.removeEventListener("keydown", this.handleKeyDown);
+    super.disconnectedCallback();
+  }
+
+  private handleOutsideClick = (event: MouseEvent) => {
+    if (
+      this.isVisible &&
+      this.modalOverlay &&
+      event.target === this.modalOverlay
+    ) {
+      this.closeModal();
+    }
+  };
+
+  private handleKeyDown = (event: KeyboardEvent) => {
+    if (this.isVisible && event.key === "Escape") {
+      this.closeModal();
+    }
+  };
+
+  public openModal() {
+    this.isVisible = true;
+    document.body.style.overflow = "hidden";
+    this.requestUpdate();
+  }
+
+  public closeModal() {
+    this.isVisible = false;
+    document.body.style.overflow = "";
+    this.requestUpdate();
+  }
+
+  private onTerrainButtonClick() {
+    this.alternateView = !this.alternateView;
+    this.eventBus.emit(new AlternateViewEvent(this.alternateView));
+    this.requestUpdate();
+  }
+
+  private onToggleEmojisButtonClick() {
+    this.userSettings.toggleEmojis();
+    this.requestUpdate();
+  }
+
+  private onToggleSpecialEffectsButtonClick() {
+    this.userSettings.toggleFxLayer();
+    this.requestUpdate();
+  }
+
+  private onToggleDarkModeButtonClick() {
+    this.userSettings.toggleDarkMode();
+    this.eventBus.emit(new RefreshGraphicsEvent());
+    this.requestUpdate();
+  }
+
+  private onToggleRandomNameModeButtonClick() {
+    this.userSettings.toggleRandomName();
+    this.requestUpdate();
+  }
+
+  private onToggleLeftClickOpensMenu() {
+    this.userSettings.toggleLeftClickOpenMenu();
+    this.requestUpdate();
+  }
+
+  private onExitButtonClick() {
+    // redirect to the home page
+    window.location.href = "/";
+  }
+
+  render() {
+    if (!this.isVisible) {
+      return null;
+    }
+
+    return html`
+      <div
+        class="modal-overlay fixed inset-0 bg-black/50 backdrop-blur-sm z-[2000] flex items-center justify-center p-4"
+        @contextmenu=${(e: Event) => e.preventDefault()}
+      >
+        <div
+          class="bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto"
+        >
+          <div
+            class="flex items-center justify-between p-4 border-b border-slate-600"
+          >
+            <div class="flex items-center gap-2">
+              <img
+                src=${settingsIcon}
+                alt="settings"
+                width="24"
+                height="24"
+                style="vertical-align: middle;"
+              />
+              <h2 class="text-xl font-semibold text-white">Settings</h2>
+            </div>
+            <button
+              class="text-slate-400 hover:text-white text-2xl font-bold leading-none"
+              @click=${this.closeModal}
+            >
+              ×
+            </button>
+          </div>
+
+          <div class="p-4 space-y-3">
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              @click="${this.onTerrainButtonClick}"
+            >
+              <img src=${treeIcon} alt="treeIcon" width="20" height="20" />
+              <div class="flex-1">
+                <div class="font-medium">Toggle Terrain</div>
+                <div class="text-sm text-slate-400">
+                  ${this.alternateView
+                    ? "Terrain view enabled"
+                    : "Terrain view disabled"}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.alternateView ? "On" : "Off"}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              @click="${this.onToggleEmojisButtonClick}"
+            >
+              <img src=${emojiIcon} alt="emojiIcon" width="20" height="20" />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.emojis_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${this.userSettings.emojis()
+                    ? "Emojis are visible"
+                    : "Emojis are hidden"}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.emojis() ? "On" : "Off"}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              @click="${this.onToggleDarkModeButtonClick}"
+            >
+              <img
+                src=${darkModeIcon}
+                alt="darkModeIcon"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.dark_mode_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${this.userSettings.darkMode()
+                    ? "Dark mode enabled"
+                    : "Light mode enabled"}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.darkMode() ? "On" : "Off"}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              @click="${this.onToggleSpecialEffectsButtonClick}"
+            >
+              <img
+                src=${explosionIcon}
+                alt="specialEffects"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.special_effects_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${this.userSettings.fxLayer()
+                    ? "Special effects enabled"
+                    : "Special effects disabled"}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.fxLayer() ? "On" : "Off"}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              @click="${this.onToggleRandomNameModeButtonClick}"
+            >
+              <img src=${ninjaIcon} alt="ninjaIcon" width="20" height="20" />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.anonymous_names_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${this.userSettings.anonymousNames()
+                    ? "Anonymous names enabled"
+                    : "Real names shown"}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.anonymousNames() ? "On" : "Off"}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              @click="${this.onToggleLeftClickOpensMenu}"
+            >
+              <img src=${mouseIcon} alt="mouseIcon" width="20" height="20" />
+              <div class="flex-1">
+                <div class="font-medium">Left Click Menu</div>
+                <div class="text-sm text-slate-400">
+                  ${this.userSettings.leftClickOpensMenu()
+                    ? "Left click opens menu"
+                    : "Right click opens menu"}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.leftClickOpensMenu() ? "On" : "Off"}
+              </div>
+            </button>
+
+            <div class="border-t border-slate-600 pt-3 mt-4">
+              <button
+                class="flex gap-3 items-center w-full text-left p-3 hover:bg-red-600/20 rounded text-red-400 transition-colors"
+                @click="${this.onExitButtonClick}"
+              >
+                <img src=${exitIcon} alt="exitIcon" width="20" height="20" />
+                <div class="flex-1">
+                  <div class="font-medium">Exit Game</div>
+                  <div class="text-sm text-slate-400">Return to main menu</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+}

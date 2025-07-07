@@ -27,6 +27,7 @@ import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
 import { ReplayPanel } from "./layers/ReplayPanel";
+import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnAd } from "./layers/SpawnAd";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
@@ -152,6 +153,15 @@ export function createRenderer(
   gameRightSidebar.game = game;
   gameRightSidebar.eventBus = eventBus;
 
+  const settingsModal = document.querySelector(
+    "settings-modal",
+  ) as SettingsModal;
+  if (!(settingsModal instanceof SettingsModal)) {
+    console.error("settings modal not found");
+  }
+  settingsModal.userSettings = userSettings;
+  settingsModal.eventBus = eventBus;
+
   const gameTopBar = document.querySelector("game-top-bar") as GameTopBar;
   if (!(gameTopBar instanceof GameTopBar)) {
     console.error("top bar not found");
@@ -252,6 +262,7 @@ export function createRenderer(
     playerInfo,
     winModal,
     replayPanel,
+    settingsModal,
     teamStats,
     playerPanel,
     headsUpMessage,
