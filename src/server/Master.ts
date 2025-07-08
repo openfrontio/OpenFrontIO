@@ -84,10 +84,13 @@ if (config.allowedFlares() !== undefined) {
     }
 
     // Perform authorization checks
-    const hasAnyAllowedFlares =
-      config.allowedFlares()?.some((f) => user.player.flares?.includes(f)) ??
-      false;
-    if (hasAnyAllowedFlares) {
+    const allowedFlares = config.allowedFlares();
+    const hasAnyAllowedFlares = allowedFlares?.some((f) =>
+      user.player.flares?.includes(f),
+    );
+    if (hasAnyAllowedFlares !== true) {
+      // log.warn(`Expected flares: ${allowedFlares?.join(", ")}`);
+      // log.warn(`Player flares: ${user.player.flares?.join(", ")}`);
       return res.status(403).json({ error: "Forbidden" });
     }
 
