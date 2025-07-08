@@ -6,7 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameInfo } from "../core/Schemas";
+import { GameInfo, ID } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { getUserMe, verifyClientToken } from "./jwt";
@@ -199,6 +199,11 @@ app.post(
     }
 
     const { gameID, clientID } = req.params;
+
+    if (!ID.safeParse(gameID).success || !ID.safeParse(clientID).success) {
+      res.sendStatus(400);
+      return;
+    }
 
     try {
       const response = await fetch(
