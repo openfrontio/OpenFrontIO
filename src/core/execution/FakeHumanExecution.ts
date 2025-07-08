@@ -508,7 +508,7 @@ export class FakeHumanExecution implements Execution {
 
     const src = this.random.randElement(oceanShore);
 
-    const dst = this.randOceanShoreTile(src, 150);
+    const dst = this.randomBoatTarget(src, 150);
     if (dst === null) {
       return;
     }
@@ -550,7 +550,7 @@ export class FakeHumanExecution implements Execution {
     return null;
   }
 
-  private randOceanShoreTile(tile: TileRef, dist: number): TileRef | null {
+  private randomBoatTarget(tile: TileRef, dist: number): TileRef | null {
     if (this.player === null) throw new Error("not initialized");
     const x = this.mg.x(tile);
     const y = this.mg.y(tile);
@@ -561,7 +561,7 @@ export class FakeHumanExecution implements Execution {
         continue;
       }
       const randTile = this.mg.ref(randX, randY);
-      if (!this.mg.isOceanShore(randTile)) {
+      if (!this.mg.isLand(randTile)) {
         continue;
       }
       const owner = this.mg.owner(randTile);
