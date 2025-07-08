@@ -10,6 +10,10 @@ import {
 import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 
+export class ShowReplayPanelEvent {
+  constructor(public visible: boolean = true) {}
+}
+
 @customElement("replay-panel")
 export class ReplayPanel extends LitElement implements Layer {
   public game: GameView | undefined;
@@ -28,7 +32,13 @@ export class ReplayPanel extends LitElement implements Layer {
     return this; // Enable Tailwind CSS
   }
 
-  init() {}
+  init() {
+    if (this.eventBus) {
+      this.eventBus.on(ShowReplayPanelEvent, (event: ShowReplayPanelEvent) => {
+        this.visible = event.visible;
+      });
+    }
+  }
 
   tick() {
     if (!this.visible) return;
@@ -52,7 +62,7 @@ export class ReplayPanel extends LitElement implements Layer {
 
     return html`
       <div
-        class="bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-es-sm lg:rounded-lg backdrop-blur-md"
+        class="flex-shrink-0 bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-es-sm lg:rounded-lg backdrop-blur-md"
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <label class="block mb-1 text-white" translate="no">

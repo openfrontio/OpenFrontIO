@@ -1,8 +1,7 @@
 import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement } from "lit/decorators.js";
 import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
 import populationIcon from "../../../../resources/images/PopulationIconSolidWhite.svg";
-import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
 import troopIcon from "../../../../resources/images/TroopIconWhite.svg";
 import workerIcon from "../../../../resources/images/WorkerIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
@@ -11,7 +10,6 @@ import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { renderNumber, renderTroops } from "../../Utils";
 import { Layer } from "./Layer";
-import { ShowSettingsModalEvent } from "./SettingsModal";
 
 @customElement("game-top-bar")
 export class GameTopBar extends LitElement implements Layer {
@@ -24,9 +22,6 @@ export class GameTopBar extends LitElement implements Layer {
   private _lastPopulationIncreaseRate = 0;
   private _popRateIsIncreasing = false;
   private hasWinner = false;
-
-  @state()
-  private timer: number = 0;
 
   createRenderRoot() {
     return this;
@@ -46,16 +41,7 @@ export class GameTopBar extends LitElement implements Layer {
     if (updates) {
       this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;
     }
-    if (this.game.inSpawnPhase()) {
-      this.timer = 0;
-    } else if (!this.hasWinner && this.game.ticks() % 10 === 0) {
-      this.timer++;
-    }
     this.requestUpdate();
-  }
-
-  private onSettingsButtonClick() {
-    this.eventBus.emit(new ShowSettingsModalEvent(true));
   }
 
   private updatePopulationIncrease() {
@@ -69,16 +55,6 @@ export class GameTopBar extends LitElement implements Layer {
     }
   }
 
-  private secondsToHms = (d: number): string => {
-    const h = Math.floor(d / 3600);
-    const m = Math.floor((d % 3600) / 60);
-    const s = Math.floor((d % 3600) % 60);
-    let time = d === 0 ? "-" : `${s}s`;
-    if (m > 0) time = `${m}m` + time;
-    if (h > 0) time = `${h}h` + time;
-    return time;
-  };
-
   render() {
     const myPlayer = this.game?.myPlayer();
     if (!this.game || !myPlayer || this.game.inSpawnPhase()) {
@@ -89,14 +65,8 @@ export class GameTopBar extends LitElement implements Layer {
     if (isAlt) {
       return html`
         <div
-          class="fixed top-0 left-auto right-0 z-[1100] bg-slate-800/40 backdrop-blur-sm p-2 flex justify-center items-center"
-        >
-          <div
-            class="w-[70px] h-8 lg:w-24 lg:h-10 border border-slate-400 p-0.5 text-xs md:text-sm lg:text-base flex items-center text-white px-1"
-          >
-            ${this.secondsToHms(this.timer)}
-          </div>
-        </div>
+          class="absolute top-4 left-1/2 transform -translate-x-1/2 flex justify-center items-center p-2"
+        ></div>
       `;
     }
     const popRate = myPlayer
@@ -109,19 +79,17 @@ export class GameTopBar extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed top-0 min-h-[50px] lg:min-h-[80px] z-[1100] flex flex-wrap bg-slate-800/40 backdrop-blur-sm shadow-xs text-white text-xs md:text-sm lg:text-base left-0 right-0 grid-cols-4 p-1 md:px-1.5 lg:px-4"
+        class="absolute top-4 left-1/2 transform -translate-x-1/2 flex justify-center items-center p-1 md:px-1.5 lg:px-4 z-[1100]"
       >
-        <div
-          class="flex flex-1 basis-full justify-between items-center gap-1 w-full"
-        >
+        <div class="flex justify-center items-center gap-1">
           ${myPlayer?.isAlive() && !this.game.inSpawnPhase()
             ? html`
-                <div class="overflow-x-auto hide-scrollbar flex-1 max-w-[85vw]">
+                <div class="overflow-x-auto hide-scrollbar">
                   <div
                     class="grid gap-1 grid-cols-[80px_100px_80px] w-max md:gap-2 md:grid-cols-[90px_120px_90px]"
                   >
                     <div
-                      class="flex flex-wrap gap-1 flex-col bg-slate-800/20 border border-slate-400 p-0.5 md:px-1 lg:px-2"
+                      class="flex flex-wrap gap-1 flex-col bg-gray-800/70 border border-slate-400 p-0.5 md:px-1 lg:px-2"
                     >
                       <div class="flex gap-2 items-center justify-between">
                         <img
@@ -131,12 +99,16 @@ export class GameTopBar extends LitElement implements Layer {
                           height="20"
                           style="vertical-align: middle;"
                         />
-                        +${renderNumber(goldPerSecond)}
+                        <span class="text-white"
+                          >+${renderNumber(goldPerSecond)}</span
+                        >
                       </div>
-                      <div>${renderNumber(myPlayer.gold())}</div>
+                      <div class="text-white">
+                        ${renderNumber(myPlayer.gold())}
+                      </div>
                     </div>
                     <div
-                      class="flex flex-wrap gap-1 flex-col bg-slate-800/20 border border-slate-400 p-0.5 md:px-1 lg:px-2"
+                      class="flex flex-wrap gap-1 flex-col bg-gray-800/70 border border-slate-400 p-0.5 md:px-1 lg:px-2"
                     >
                       <div class="flex gap-2 items-center justify-between">
                         <img
@@ -155,13 +127,13 @@ export class GameTopBar extends LitElement implements Layer {
                           +${renderTroops(popRate)}
                         </span>
                       </div>
-                      <div>
+                      <div class="text-white">
                         ${renderTroops(myPlayer.population())} /
                         ${renderTroops(maxPop)}
                       </div>
                     </div>
                     <div
-                      class="flex bg-slate-800/20 border border-slate-400 p-0.5 md:px-1 lg:px-2"
+                      class="flex bg-gray-800/70 border border-slate-400 p-0.5 md:px-1 lg:px-2"
                     >
                       <div class="flex flex-col flex-grow gap-1 w-full ">
                         <div class="flex gap-1">
@@ -172,7 +144,9 @@ export class GameTopBar extends LitElement implements Layer {
                             height="20"
                             style="vertical-align: middle;"
                           />
-                          ${renderTroops(this._troops)}
+                          <span class="text-white"
+                            >${renderTroops(this._troops)}</span
+                          >
                         </div>
                         <div class="flex gap-1">
                           <img
@@ -182,7 +156,9 @@ export class GameTopBar extends LitElement implements Layer {
                             height="20"
                             style="vertical-align: middle;"
                           />
-                          ${renderTroops(this._workers)}
+                          <span class="text-white"
+                            >${renderTroops(this._workers)}</span
+                          >
                         </div>
                       </div>
                     </div>
@@ -190,22 +166,6 @@ export class GameTopBar extends LitElement implements Layer {
                 </div>
               `
             : html`<div></div>`}
-          <div class="flex gap-1 items-center">
-            <div
-              class="w-[70px] h-8 lg:w-24 lg:h-10 border border-slate-400 p-0.5 text-xs md:text-sm lg:text-base flex items-center px-1"
-            >
-              ${this.secondsToHms(this.timer)}
-            </div>
-            <img
-              class="cursor-pointer bg-slate-800/20 border border-slate-400 p-0.5"
-              src=${settingsIcon}
-              alt="settings"
-              width="28"
-              height="28"
-              style="vertical-align: middle;"
-              @click=${this.onSettingsButtonClick}
-            />
-          </div>
         </div>
       </div>
     `;

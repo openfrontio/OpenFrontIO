@@ -91,7 +91,7 @@ export class UnitDisplay extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[1100] bg-slate-800/40 backdrop-blur-sm border border-slate-400 rounded-lg p-2 hidden lg:block"
+        class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[1100] bg-gray-800/70 backdrop-blur-sm border border-slate-400 rounded-lg p-2 hidden lg:block"
       >
         <div class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1">
           ${this.renderUnitItem(cityIcon, this._cities, UnitType.City, "city")}
