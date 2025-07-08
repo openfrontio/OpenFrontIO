@@ -154,7 +154,9 @@
     "europeclassic": "Europe (classic)",
     "falklandislands": "Falkland Islands",
     "baikal": "Baikal",
-    "halkidiki": "Halkidiki"
+    "halkidiki": "Halkidiki",
+    "straitofgibraltar": "Strait of Gibraltar",
+    "italia": "Italia"
   },
   "map_categories": {
     "continental": "Continental",

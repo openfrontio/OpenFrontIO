@@ -293,35 +293,8 @@ export const infoMenuElement: MenuElement = {
     !params.selected || params.game.inSpawnPhase(),
   icon: infoIcon,
   color: COLORS.info,
-
-  subMenu: (params: MenuElementParams) => {
-    if (!params.selected || params.game.inSpawnPhase()) return [];
-
-    if (params.selected === params.myPlayer) {
-      return [infoPlayerElement, infoEmojiElement];
-    }
-
-    const elements: MenuElement[] = [
-      infoPlayerElement,
-      infoEmojiElement,
-      infoChatElement,
-    ];
-    if (params.myPlayer.isAlliedWith(params.selected)) {
-      elements.push(
-        allyBreakElement,
-        allyDonateGoldElement,
-        allyDonateTroopsElement,
-      );
-    } else {
-      elements.push(allyTargetElement, allyRequestElement);
-    }
-    if (params.myPlayer.hasEmbargoAgainst(params.selected)) {
-      elements.push(allyTradeElement);
-    } else {
-      elements.push(allyEmbargoElement);
-    }
-
-    return elements;
+  action: (params: MenuElementParams) => {
+    params.playerPanel.show(params.playerActions, params.tile);
   },
 };
 

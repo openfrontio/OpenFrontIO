@@ -27,6 +27,7 @@ import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
 import { ReplayPanel } from "./layers/ReplayPanel";
+import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnAd } from "./layers/SpawnAd";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
@@ -35,6 +36,7 @@ import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { UILayer } from "./layers/UILayer";
+import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
 
@@ -151,12 +153,28 @@ export function createRenderer(
   gameRightSidebar.game = game;
   gameRightSidebar.eventBus = eventBus;
 
+  const settingsModal = document.querySelector(
+    "settings-modal",
+  ) as SettingsModal;
+  if (!(settingsModal instanceof SettingsModal)) {
+    console.error("settings modal not found");
+  }
+  settingsModal.userSettings = userSettings;
+  settingsModal.eventBus = eventBus;
+
   const gameTopBar = document.querySelector("game-top-bar") as GameTopBar;
   if (!(gameTopBar instanceof GameTopBar)) {
     console.error("top bar not found");
   }
   gameTopBar.game = game;
   gameTopBar.eventBus = eventBus;
+
+  const unitDisplay = document.querySelector("unit-display") as UnitDisplay;
+  if (!(unitDisplay instanceof UnitDisplay)) {
+    console.error("unit display not found");
+  }
+  unitDisplay.game = game;
+  unitDisplay.eventBus = eventBus;
 
   const playerPanel = document.querySelector("player-panel") as PlayerPanel;
   if (!(playerPanel instanceof PlayerPanel)) {
@@ -238,11 +256,13 @@ export function createRenderer(
     leaderboard,
     gameLeftSidebar,
     gameTopBar,
+    unitDisplay,
     gameRightSidebar,
     controlPanel,
     playerInfo,
     winModal,
     replayPanel,
+    settingsModal,
     teamStats,
     playerPanel,
     headsUpMessage,
