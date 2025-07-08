@@ -14,7 +14,6 @@ import { Layer } from "./Layer";
 export class GameTopBar extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
-  private _popLastTick = 0;
   private _troops = 0;
   private _workers = 0;
   private _lastPopulationIncreaseRate = 0;
@@ -45,13 +44,7 @@ export class GameTopBar extends LitElement implements Layer {
   private updatePopulationIncrease() {
     const player = this.game?.myPlayer();
     if (player === null) return;
-    if (this.game.ticks() % 5 !== 0) {
-      return;
-    }
-
-    const currentPop = player.population();
-    const popIncreaseRate = currentPop - this._popLastTick;
-    this._popLastTick = currentPop;
+    const popIncreaseRate = this.game.config().populationIncreaseRate(player);
     this._popRateIsIncreasing =
       popIncreaseRate >= this._lastPopulationIncreaseRate;
     this._lastPopulationIncreaseRate = popIncreaseRate;
