@@ -85,9 +85,10 @@ if (config.allowedFlares() !== undefined) {
 
     // Perform authorization checks
     const allowedFlares = config.allowedFlares();
-    const hasAnyAllowedFlares = allowedFlares?.some((f) =>
-      user.player.flares?.includes(f),
-    );
+    const hasAnyAllowedFlares =
+      allowedFlares !== undefined &&
+      (allowedFlares.length === 0 ||
+        allowedFlares.some((f) => user.player.flares?.includes(f)));
     if (hasAnyAllowedFlares !== true) {
       // log.warn(`Expected flares: ${allowedFlares?.join(", ")}`);
       // log.warn(`Player flares: ${user.player.flares?.join(", ")}`);

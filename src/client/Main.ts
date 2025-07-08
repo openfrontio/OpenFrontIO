@@ -501,5 +501,5 @@ function hasAllowedFlare(
   if (userMeResponse === false) return false;
   const flares = userMeResponse.player.flares;
   if (flares === undefined) return false;
-  return allowed.some((f) => flares.includes(f));
+  return allowed.length === 0 || allowed.some((f) => flares.includes(f));
 }

@@ -70,7 +70,7 @@ const numPlayersConfig = {
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
-  allowedFlares(): [string, ...string[]] | undefined {
+  allowedFlares(): string[] | undefined {
     return;
   }
   stripePublishableKey(): string {

@@ -373,7 +373,9 @@ export function startWorker() {
             flares = result.player.flares;
 
             if (allowedFlares !== undefined) {
-              const allowed = allowedFlares.some((f) => flares?.includes(f));
+              const allowed =
+                allowedFlares.length === 0 ||
+                allowedFlares.some((f) => flares?.includes(f));
               if (!allowed) {
                 log.warn(
                   "Forbidden: player without an allowed flare attempted to join game",

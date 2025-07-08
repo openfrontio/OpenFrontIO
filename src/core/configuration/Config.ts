@@ -62,7 +62,7 @@ export interface ServerConfig {
   cloudflareConfigPath(): string;
   cloudflareCredsPath(): string;
   stripePublishableKey(): string;
-  allowedFlares(): [string, ...string[]] | undefined;
+  allowedFlares(): string[] | undefined;
 }
 
 export interface NukeMagnitude {
