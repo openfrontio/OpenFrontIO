@@ -27,8 +27,6 @@ import { closestTwoTiles } from "./Util";
 import { BotBehavior } from "./utils/BotBehavior";
 
 export class FakeHumanExecution implements Execution {
-  private firstMove = true;
-
   private active = true;
   private random: PseudoRandom;
   private behavior: BotBehavior | null = null;
@@ -39,6 +37,7 @@ export class FakeHumanExecution implements Execution {
   private attackTick: number;
   private triggerRatio: number;
   private reserveRatio: number;
+  private expandRatio: number;
 
   private lastEmojiSent = new Map<Player, Tick>();
   private lastNukeSent: [Tick, TileRef][] = [];
@@ -56,6 +55,7 @@ export class FakeHumanExecution implements Execution {
     this.attackTick = this.random.nextInt(0, this.attackRate);
     this.triggerRatio = this.random.nextInt(60, 90) / 100;
     this.reserveRatio = this.random.nextInt(30, 60) / 100;
+    this.expandRatio = this.random.nextInt(15, 25) / 100;
     this.heckleEmoji = ["🤡", "😡"].map((e) => flattenedEmojiTable.indexOf(e));
   }
 
@@ -145,11 +145,10 @@ export class FakeHumanExecution implements Execution {
         this.player,
         this.triggerRatio,
         this.reserveRatio,
+        this.expandRatio,
       );
-    }
 
-    if (this.firstMove) {
-      this.firstMove = false;
+      // Send an attack on the first tick
       this.behavior.sendAttack(this.mg.terraNullius());
       return;
     }
