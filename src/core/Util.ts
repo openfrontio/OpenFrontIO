@@ -12,6 +12,7 @@ import {
   Winner,
 } from "./Schemas";
 
+import { ServerConfig } from "./configuration/Config";
 import {
   BOT_NAME_PREFIXES,
   BOT_NAME_SUFFIXES,
@@ -192,10 +193,13 @@ export function createGameRecord(
   start: number,
   end: number,
   winner: Winner,
+  serverConfig: ServerConfig,
 ): GameRecord {
   const duration = Math.floor((end - start) / 1000);
   const version = "v0.0.2";
-  const gitCommit = process.env.GIT_COMMIT ?? "unknown";
+  const gitCommit = serverConfig.gitCommit();
+  const subdomain = serverConfig.subdomain();
+  const domain = serverConfig.domain();
   const num_turns = allTurns.length;
   const turns = allTurns.filter(
     (t) => t.intents.length !== 0 || t.hash !== undefined,
@@ -213,6 +217,8 @@ export function createGameRecord(
     },
     version,
     gitCommit,
+    subdomain,
+    domain,
     turns,
   };
   return record;

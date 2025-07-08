@@ -130,12 +130,6 @@ export abstract class DefaultServerConfig implements ServerConfig {
   otelPassword(): string {
     return process.env.OTEL_PASSWORD ?? "";
   }
-  region(): string {
-    if (this.env() === GameEnv.Dev) {
-      return "dev";
-    }
-    return process.env.REGION ?? "";
-  }
   gitCommit(): string {
     return process.env.GIT_COMMIT ?? "";
   }
