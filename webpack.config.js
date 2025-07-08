@@ -129,6 +129,8 @@ export default async (env, argv) => {
         "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
           process.env.STRIPE_PUBLISHABLE_KEY,
         ),
+        "process.env.DOMAIN": JSON.stringify("localhost"),
+        "process.env.SUBDOMAIN": JSON.stringify("dev"),
       }),
       new CopyPlugin({
         patterns: [
