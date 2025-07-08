@@ -128,7 +128,6 @@
   "map": {
     "map": "地图",
     "world": "世界",
-    "worldmapgiant": "巨型世界地图",
     "europe": "欧洲",
     "mena": "中东/北非",
     "northamerica": "北美洲",
@@ -151,7 +150,8 @@
     "europeclassic": "欧洲 (古典)",
     "falklandislands": "福克兰群岛",
     "baikal": "贝加尔湖",
-    "halkidiki": "哈尔基迪基"
+    "halkidiki": "哈尔基迪基",
+    "giantworldmap": "巨型世界地图"
   },
   "map_categories": {
     "continental": "大陆",

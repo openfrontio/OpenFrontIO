@@ -128,7 +128,6 @@
   "map": {
     "map": "Carte",
     "world": "Monde",
-    "worldmapgiant": "Carte du monde géante",
     "europe": "Europe",
     "mena": "MOAN",
     "northamerica": "Amérique du Nord",
@@ -151,7 +150,8 @@
     "europeclassic": "Europe (classique)",
     "falklandislands": "Îles Malouines",
     "baikal": "Lac Baïkal",
-    "halkidiki": "Chalcidique"
+    "halkidiki": "Chalcidique",
+    "giantworldmap": "Carte du monde géante"
   },
   "map_categories": {
     "continental": "Continental",

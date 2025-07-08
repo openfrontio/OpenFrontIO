@@ -128,7 +128,6 @@
   "map": {
     "map": "Kartta",
     "world": "Maailma",
-    "worldmapgiant": "Jättimäinen maailmankartta",
     "europe": "Eurooppa",
     "mena": "MENA",
     "northamerica": "Pohjois-Amerikka",
@@ -151,7 +150,8 @@
     "europeclassic": "Eurooppa (klassinen)",
     "falklandislands": "Falklandinsaaret",
     "baikal": "Baikal",
-    "halkidiki": "Halkidiki"
+    "halkidiki": "Halkidiki",
+    "giantworldmap": "Jättimäinen maailmankartta"
   },
   "map_categories": {
     "continental": "Mantereet",

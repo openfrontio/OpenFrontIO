@@ -128,7 +128,6 @@
   "map": {
     "map": "Karta",
     "world": "Världen",
-    "worldmapgiant": "Massiv Världskarta",
     "europe": "Europa",
     "mena": "MENA",
     "northamerica": "Nordamerika",
@@ -151,7 +150,8 @@
     "europeclassic": "Europa (klassisk)",
     "falklandislands": "Falklandsöarna",
     "baikal": "Baikal",
-    "halkidiki": "Halkidiki"
+    "halkidiki": "Halkidiki",
+    "giantworldmap": "Massiv Världskarta"
   },
   "map_categories": {
     "continental": "Kontinental",

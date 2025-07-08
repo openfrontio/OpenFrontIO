@@ -128,7 +128,6 @@
   "map": {
     "map": "Karto",
     "world": "Mondo",
-    "worldmapgiant": "Giganta Mondmapo",
     "europe": "Eŭropo",
     "mena": "Mezoriento kaj Nordafriko",
     "northamerica": "Nordameriko",
@@ -151,7 +150,8 @@
     "europeclassic": "Eŭropo (klasika)",
     "falklandislands": "Falklandoj",
     "baikal": "Bajkalo",
-    "halkidiki": "Ĥalkidiko"
+    "halkidiki": "Ĥalkidiko",
+    "giantworldmap": "Giganta Mondmapo"
   },
   "map_categories": {
     "continental": "Kontinenta",

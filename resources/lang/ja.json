@@ -128,7 +128,6 @@
   "map": {
     "map": "地図",
     "world": "世界",
-    "worldmapgiant": "巨大化した世界",
     "europe": "ヨーロッパ",
     "mena": "中東・北アフリカ",
     "northamerica": "北アメリカ",
@@ -151,7 +150,8 @@
     "europeclassic": "ヨーロッパ (クラシック)",
     "falklandislands": "フォークランド諸島",
     "baikal": "バイカル湖付近",
-    "halkidiki": "ハルキディキ半島"
+    "halkidiki": "ハルキディキ半島",
+    "giantworldmap": "巨大化した世界"
   },
   "map_categories": {
     "continental": "大陸",

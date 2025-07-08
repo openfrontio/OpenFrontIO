@@ -128,7 +128,6 @@
   "map": {
     "map": "Карта",
     "world": "Мир",
-    "worldmapgiant": "Гигантская карта мира",
     "europe": "Европа",
     "mena": "MENA",
     "northamerica": "Северная Америка",
@@ -151,7 +150,8 @@
     "europeclassic": "Европа (классическая)",
     "falklandislands": "Фолклендские острова",
     "baikal": "Байкал",
-    "halkidiki": "Халкидики"
+    "halkidiki": "Халкидики",
+    "giantworldmap": "Гигантская карта мира"
   },
   "map_categories": {
     "continental": "Континентальные",

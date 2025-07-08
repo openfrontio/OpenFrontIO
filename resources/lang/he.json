@@ -128,7 +128,6 @@
   "map": {
     "map": "מפה",
     "world": "עולם",
-    "worldmapgiant": "מפת עולם ענקית",
     "europe": "אירופה",
     "mena": "המזרח התיכון וצפון אפריקה",
     "northamerica": "צפון אמריקה",
@@ -151,7 +150,8 @@
     "europeclassic": "אירופה (קלאסי)",
     "falklandislands": "איי פוקלנד",
     "baikal": "באיקל",
-    "halkidiki": "כלקידיקי"
+    "halkidiki": "כלקידיקי",
+    "giantworldmap": "מפת עולם ענקית"
   },
   "map_categories": {
     "continental": "יבשתי",
