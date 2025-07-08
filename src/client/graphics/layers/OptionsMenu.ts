@@ -7,6 +7,7 @@ import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
+import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 
 const button = ({
@@ -74,7 +75,9 @@ export class OptionsMenu extends LitElement implements Layer {
   private onExitButtonClick() {
     const isAlive = this.game.myPlayer()?.isAlive();
     if (isAlive) {
-      const isConfirmed = confirm("Are you sure you want to exit the game?");
+      const isConfirmed = confirm(
+        translateText("help_modal.exit_confirmation"),
+      );
       if (!isConfirmed) return;
     }
     // redirect to the home page
