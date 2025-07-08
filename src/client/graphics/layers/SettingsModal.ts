@@ -8,10 +8,10 @@ import mouseIcon from "../../../../resources/images/MouseIconWhite.svg";
 import ninjaIcon from "../../../../resources/images/NinjaIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
 import treeIcon from "../../../../resources/images/TreeIconWhite.svg";
-import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
+import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 
 export class ShowSettingsModalEvent {
@@ -143,7 +143,9 @@ export class SettingsModal extends LitElement implements Layer {
                 height="24"
                 style="vertical-align: middle;"
               />
-              <h2 class="text-xl font-semibold text-white">Settings</h2>
+              <h2 class="text-xl font-semibold text-white">
+                ${translateText("user_setting.tab_basic")}
+              </h2>
             </div>
             <button
               class="text-slate-400 hover:text-white text-2xl font-bold leading-none"
@@ -160,15 +162,19 @@ export class SettingsModal extends LitElement implements Layer {
             >
               <img src=${treeIcon} alt="treeIcon" width="20" height="20" />
               <div class="flex-1">
-                <div class="font-medium">Toggle Terrain</div>
+                <div class="font-medium">
+                  ${translateText("user_setting.toggle_terrain")}
+                </div>
                 <div class="text-sm text-slate-400">
                   ${this.alternateView
-                    ? "Terrain view enabled"
-                    : "Terrain view disabled"}
+                    ? translateText("user_setting.terrain_enabled")
+                    : translateText("user_setting.terrain_disabled")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.alternateView ? "On" : "Off"}
+                ${this.alternateView
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
               </div>
             </button>
 
@@ -183,12 +189,14 @@ export class SettingsModal extends LitElement implements Layer {
                 </div>
                 <div class="text-sm text-slate-400">
                   ${this.userSettings.emojis()
-                    ? "Emojis are visible"
-                    : "Emojis are hidden"}
+                    ? translateText("user_setting.emojis_visible")
+                    : translateText("user_setting.emojis_hidden")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings.emojis() ? "On" : "Off"}
+                ${this.userSettings.emojis()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
               </div>
             </button>
 
@@ -208,12 +216,14 @@ export class SettingsModal extends LitElement implements Layer {
                 </div>
                 <div class="text-sm text-slate-400">
                   ${this.userSettings.darkMode()
-                    ? "Dark mode enabled"
-                    : "Light mode enabled"}
+                    ? translateText("user_setting.dark_mode_enabled")
+                    : translateText("user_setting.light_mode_enabled")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings.darkMode() ? "On" : "Off"}
+                ${this.userSettings.darkMode()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
               </div>
             </button>
 
@@ -233,12 +243,14 @@ export class SettingsModal extends LitElement implements Layer {
                 </div>
                 <div class="text-sm text-slate-400">
                   ${this.userSettings.fxLayer()
-                    ? "Special effects enabled"
-                    : "Special effects disabled"}
+                    ? translateText("user_setting.special_effects_enabled")
+                    : translateText("user_setting.special_effects_disabled")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings.fxLayer() ? "On" : "Off"}
+                ${this.userSettings.fxLayer()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
               </div>
             </button>
 
@@ -253,12 +265,14 @@ export class SettingsModal extends LitElement implements Layer {
                 </div>
                 <div class="text-sm text-slate-400">
                   ${this.userSettings.anonymousNames()
-                    ? "Anonymous names enabled"
-                    : "Real names shown"}
+                    ? translateText("user_setting.anonymous_names_enabled")
+                    : translateText("user_setting.real_names_shown")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings.anonymousNames() ? "On" : "Off"}
+                ${this.userSettings.anonymousNames()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
               </div>
             </button>
 
@@ -268,15 +282,19 @@ export class SettingsModal extends LitElement implements Layer {
             >
               <img src=${mouseIcon} alt="mouseIcon" width="20" height="20" />
               <div class="flex-1">
-                <div class="font-medium">Left Click Menu</div>
+                <div class="font-medium">
+                  ${translateText("user_setting.left_click_menu")}
+                </div>
                 <div class="text-sm text-slate-400">
                   ${this.userSettings.leftClickOpensMenu()
-                    ? "Left click opens menu"
-                    : "Right click opens menu"}
+                    ? translateText("user_setting.left_click_opens_menu")
+                    : translateText("user_setting.right_click_opens_menu")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings.leftClickOpensMenu() ? "On" : "Off"}
+                ${this.userSettings.leftClickOpensMenu()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
               </div>
             </button>
 
@@ -287,8 +305,12 @@ export class SettingsModal extends LitElement implements Layer {
               >
                 <img src=${exitIcon} alt="exitIcon" width="20" height="20" />
                 <div class="flex-1">
-                  <div class="font-medium">Exit Game</div>
-                  <div class="text-sm text-slate-400">Return to main menu</div>
+                  <div class="font-medium">
+                    ${translateText("user_setting.exit_game_label")}
+                  </div>
+                  <div class="text-sm text-slate-400">
+                    ${translateText("user_setting.exit_game_info")}
+                  </div>
                 </div>
               </button>
             </div>

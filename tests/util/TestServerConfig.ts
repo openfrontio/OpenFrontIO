@@ -46,9 +46,6 @@ export class TestServerConfig implements ServerConfig {
   otelPassword(): string {
     throw new Error("Method not implemented.");
   }
-  region(): string {
-    return "test";
-  }
   turnIntervalMs(): number {
     throw new Error("Method not implemented.");
   }
