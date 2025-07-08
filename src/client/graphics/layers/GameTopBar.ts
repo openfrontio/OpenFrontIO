@@ -79,7 +79,7 @@ export class GameTopBar extends LitElement implements Layer {
 
     return html`
       <div
-        class="absolute top-4 left-1/2 transform -translate-x-1/2 flex justify-center items-center p-1 md:px-1.5 lg:px-4 z-[1100]"
+        class="fixed top-4 left-1/2 transform -translate-x-1/2 flex justify-center items-center p-1 md:px-1.5 lg:px-4 z-[1100]"
       >
         <div class="flex justify-center items-center gap-1">
           ${myPlayer?.isAlive() && !this.game.inSpawnPhase()
