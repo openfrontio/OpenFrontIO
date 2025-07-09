@@ -299,8 +299,8 @@ export class UserSettingModal extends LitElement {
 
       <!-- 👁️ Hidden Lobby IDs -->
       <setting-toggle
-        label="Hidden Lobby IDs"
-        description="Hide Lobby ID in private lobby creation"
+        label="${translateText("user_setting.lobby_id_visibility_label")}"
+        description="${translateText("user_setting.lobby_id_visibility_desc")}"
         id="lobby-id-visibility-toggle"
         .checked=${!this.userSettings.get("settings.lobbyIdVisibility", true)}
         @change=${this.toggleLobbyIdVisibility}
