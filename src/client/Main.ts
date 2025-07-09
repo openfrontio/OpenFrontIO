@@ -224,8 +224,8 @@ class Client {
                 background-color: rgba(0, 0, 0, 0.7);
                 color: white;
                 padding: 2em;
+                margin: 5em;
                 border-radius: 12px;
-                max-width: 400px;
                 text-align: center;
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
               ">
@@ -253,10 +253,30 @@ class Client {
         } else {
           // Unauthorized
           document.body.innerHTML = `
-            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0;">
-              <p style="margin: 1em; text-align: center;">You are not authorized to access this website.</p>
-              <p style="margin: 1em; text-align: center;">If you believe you are seeing this message in error, please contact the website administrator.</p>
+            <div style="
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              height: 100vh;
+              margin: 0;
+              font-family: sans-serif;
+              background-size: cover;
+              background-position: center;
+            ">
+              <div style="
+                background-color: rgba(0, 0, 0, 0.7);
+                color: white;
+                padding: 2em;
+                margin: 5em;
+                border-radius: 12px;
+                text-align: center;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+              ">
+                <p style="margin: 1em;">You are not authorized to access this website.</p>
+                <p style="margin: 1em;">If you believe you are seeing this message in error, please contact the website administrator.</p>
+              </div>
             </div>
+            <div class="bg-image"></div>
           `;
         }
         return;
