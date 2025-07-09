@@ -39,7 +39,6 @@ export interface ServerConfig {
   workerPort(gameID: GameID): number;
   workerPortByIndex(workerID: number): number;
   env(): GameEnv;
-  region(): string;
   adminToken(): string;
   adminHeader(): string;
   // Only available on the server
@@ -62,6 +61,7 @@ export interface ServerConfig {
   cloudflareConfigPath(): string;
   cloudflareCredsPath(): string;
   stripePublishableKey(): string;
+  allowedFlares(): string[] | undefined;
 }
 
 export interface NukeMagnitude {

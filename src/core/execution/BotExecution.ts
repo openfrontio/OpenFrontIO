@@ -14,13 +14,15 @@ export class BotExecution implements Execution {
   private attackTick: number;
   private triggerRatio: number;
   private reserveRatio: number;
+  private expandRatio: number;
 
   constructor(private bot: Player) {
     this.random = new PseudoRandom(simpleHash(bot.id()));
     this.attackRate = this.random.nextInt(40, 80);
     this.attackTick = this.random.nextInt(0, this.attackRate);
     this.triggerRatio = this.random.nextInt(60, 90) / 100;
-    this.reserveRatio = this.random.nextInt(30, 60) / 100;
+    this.reserveRatio = this.random.nextInt(20, 30) / 100;
+    this.expandRatio = this.random.nextInt(10, 20) / 100;
   }
 
   activeDuringSpawnPhase(): boolean {
@@ -47,7 +49,12 @@ export class BotExecution implements Execution {
         this.bot,
         this.triggerRatio,
         this.reserveRatio,
+        this.expandRatio,
       );
+
+      // Send an attack on the first tick
+      this.behavior.sendAttack(this.mg.terraNullius());
+      return;
     }
 
     this.behavior.handleAllianceRequests();

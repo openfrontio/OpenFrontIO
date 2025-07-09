@@ -5,7 +5,7 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameInfo } from "../core/Schemas";
+import { GameInfo, ID } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
@@ -169,6 +169,11 @@ app.post(
     }
 
     const { gameID, clientID } = req.params;
+
+    if (!ID.safeParse(gameID).success || !ID.safeParse(clientID).success) {
+      res.sendStatus(400);
+      return;
+    }
 
     try {
       const response = await fetch(

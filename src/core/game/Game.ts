@@ -80,6 +80,8 @@ export enum GameMapType {
   FalklandIslands = "Falkland Islands",
   Baikal = "Baikal",
   Halkidiki = "Halkidiki",
+  StraitOfGibraltar = "Strait of Gibraltar",
+  Italia = "Italia",
 }
 
 export const mapCategories: Record<string, GameMapType[]> = {
@@ -107,6 +109,8 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.FalklandIslands,
     GameMapType.Baikal,
     GameMapType.Halkidiki,
+    GameMapType.StraitOfGibraltar,
+    GameMapType.Italia,
   ],
   fantasy: [
     GameMapType.Pangaea,

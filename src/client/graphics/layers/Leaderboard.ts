@@ -193,10 +193,10 @@ export class Leaderboard extends LitElement implements Layer {
         </button>
 
         <div
-          class="grid bg-slate-800/70 w-full text-xs md:text-sm lg:text-base"
+          class="grid bg-gray-800/70 w-full text-xs md:text-sm lg:text-base"
           style="grid-template-columns: 35px 100px 85px 65px 65px;"
         >
-          <div class="contents font-bold bg-slate-700/50">
+          <div class="contents font-bold bg-gray-700/50">
             <div class="py-1.5 md:py-2.5 text-center border-b border-slate-500">
               #
             </div>

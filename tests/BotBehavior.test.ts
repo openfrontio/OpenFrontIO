@@ -43,7 +43,7 @@ describe("BotBehavior.handleAllianceRequests", () => {
 
     const random = new PseudoRandom(42);
 
-    botBehavior = new BotBehavior(random, game, player, 0.5, 0.5);
+    botBehavior = new BotBehavior(random, game, player, 0.5, 0.5, 0.2);
   });
 
   function setupAllianceRequest({
