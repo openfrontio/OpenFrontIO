@@ -356,7 +356,7 @@ export function startWorker() {
 
           const allowedFlares = config.allowedFlares();
           if (claims === null) {
-            if (allowedFlares !== undefined) {
+            if (allowedFlares.length > 0) {
               log.warn("Unauthorized: Anonymous user attempted to join game");
               ws.close(1002, "Unauthorized");
               return;
