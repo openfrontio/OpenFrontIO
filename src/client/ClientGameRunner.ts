@@ -119,7 +119,7 @@ export function joinLobby(
   };
 }
 
-export async function createClientGame(
+async function createClientGame(
   lobbyConfig: LobbyConfig,
   eventBus: EventBus,
   transport: Transport,
@@ -224,6 +224,7 @@ export class ClientGameRunner {
       startTime(),
       Date.now(),
       update.winner,
+      this.lobby.serverConfig,
     );
     endGame(record);
   }

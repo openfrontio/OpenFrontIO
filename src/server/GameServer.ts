@@ -628,6 +628,7 @@ export class GameServer {
         this._startTime ?? 0,
         Date.now(),
         this.winner?.winner,
+        this.config,
       ),
     );
   }

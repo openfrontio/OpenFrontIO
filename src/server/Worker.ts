@@ -345,8 +345,8 @@ export function startWorker() {
           // Verify token signature
           const result = await verifyClientToken(clientMsg.token, config);
           if (result === false) {
-            log.warn("Failed to verify token");
-            ws.close(1002, "Failed to verify token");
+            log.warn("Unauthorized: Invalid token");
+            ws.close(1002, "Unauthorized");
             return;
           }
           const { persistentId, claims } = result;
@@ -354,18 +354,36 @@ export function startWorker() {
           let roles: string[] | undefined;
           let flares: string[] | undefined;
 
+          const allowedFlares = config.allowedFlares();
           if (claims === null) {
-            // TODO: Verify that the persistendId is is not a registered player
+            if (allowedFlares !== undefined) {
+              log.warn("Unauthorized: Anonymous user attempted to join game");
+              ws.close(1002, "Unauthorized");
+              return;
+            }
           } else {
             // Verify token and get player permissions
             const result = await getUserMe(clientMsg.token, config);
             if (result === false) {
-              log.warn("Failed to verify token");
-              ws.close(1002, "Failed to verify token");
+              log.warn("Unauthorized: Invalid session");
+              ws.close(1002, "Unauthorized");
               return;
             }
             roles = result.player.roles;
             flares = result.player.flares;
+
+            if (allowedFlares !== undefined) {
+              const allowed =
+                allowedFlares.length === 0 ||
+                allowedFlares.some((f) => flares?.includes(f));
+              if (!allowed) {
+                log.warn(
+                  "Forbidden: player without an allowed flare attempted to join game",
+                );
+                ws.close(1002, "Forbidden");
+                return;
+              }
+            }
           }
 
           // Check if the flag is allowed

@@ -70,6 +70,9 @@ const numPlayersConfig = {
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
+  allowedFlares(): string[] | undefined {
+    return;
+  }
   stripePublishableKey(): string {
     return process.env.STRIPE_PUBLISHABLE_KEY ?? "";
   }
@@ -129,12 +132,6 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   otelPassword(): string {
     return process.env.OTEL_PASSWORD ?? "";
-  }
-  region(): string {
-    if (this.env() === GameEnv.Dev) {
-      return "dev";
-    }
-    return process.env.REGION ?? "";
   }
   gitCommit(): string {
     return process.env.GIT_COMMIT ?? "";
