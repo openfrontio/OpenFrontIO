@@ -129,6 +129,14 @@ export class UserSettingModal extends LitElement {
     console.log("🙈 Anonymous Names:", enabled ? "ON" : "OFF");
   }
 
+  private toggleLobbyIdVisibility(e: CustomEvent<{ checked: boolean }>) {
+    const hideIds = e.detail?.checked;
+    if (typeof hideIds !== "boolean") return;
+
+    this.userSettings.set("settings.lobbyIdVisibility", !hideIds); // Invert because checked=hide
+    console.log("👁️ Hidden Lobby IDs:", hideIds ? "ON" : "OFF");
+  }
+
   private toggleLeftClickOpensMenu(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -287,6 +295,15 @@ export class UserSettingModal extends LitElement {
         id="anonymous-names-toggle"
         .checked=${this.userSettings.anonymousNames()}
         @change=${this.toggleAnonymousNames}
+      ></setting-toggle>
+
+      <!-- 👁️ Hidden Lobby IDs -->
+      <setting-toggle
+        label="Hidden Lobby IDs"
+        description="Hide Lobby ID in private lobby creation"
+        id="lobby-id-visibility-toggle"
+        .checked=${!this.userSettings.get("settings.lobbyIdVisibility", true)}
+        @change=${this.toggleLobbyIdVisibility}
       ></setting-toggle>
 
       <!-- 🏳️ Territory Patterns -->
