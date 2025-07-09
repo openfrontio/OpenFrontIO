@@ -309,51 +309,80 @@ export function startWorker() {
               return;
             }
 
-            const { persistentId, claims } = await verifyClientToken(
-              clientMsg.token,
-              config,
-            );
+            // Verify token signature
+            const result = await verifyClientToken(clientMsg.token, config);
+            if (result.claims === null) {
+              log.warn("Unauthorized: Invalid token");
+              ws.close(1002, "Unauthorized");
+              return;
+            }
+            const { persistentId, claims } = result;
 
             let roles: string[] | undefined;
+            let flares: string[] | undefined;
 
-            // Check user roles
-            if (claims !== null) {
+            const allowedFlares = config.allowedFlares();
+            if (claims === null) {
+              if (allowedFlares !== undefined) {
+                log.warn("Unauthorized: Anonymous user attempted to join game");
+                ws.close(1002, "Unauthorized");
+                return;
+              }
+            } else {
+              // Verify token and get player permissions
               const result = await getUserMe(clientMsg.token, config);
               if (result === false) {
-                log.warn("Token is not valid", claims);
+                log.warn("Unauthorized: Invalid session");
+                ws.close(1002, "Unauthorized");
                 return;
               }
               roles = result.player.roles;
+              flares = result.player.flares;
+
+              if (allowedFlares !== undefined) {
+                const allowed =
+                  allowedFlares.length === 0 ||
+                  allowedFlares.some((f) => flares?.includes(f));
+                if (!allowed) {
+                  log.warn(
+                    "Forbidden: player without an allowed flare attempted to join game",
+                  );
+                  ws.close(1002, "Forbidden");
+                  return;
+                }
+              }
             }
 
-            // TODO: Validate client settings based on roles
+            // Check if the flag is allowed
+            if (clientMsg.flag !== undefined) {
+              // TODO: Validate client settings based on roles
 
-            // Create client and add to game
-            const client = new Client(
-              clientMsg.clientID,
-              persistentId,
-              claims,
-              roles,
-              ip,
-              clientMsg.username,
-              ws,
-              clientMsg.flag,
-            );
-
-            const wasFound = gm.addClient(
-              client,
-              clientMsg.gameID,
-              clientMsg.lastTurn,
-            );
-
-            if (!wasFound) {
-              log.info(
-                `game ${clientMsg.gameID} not found on worker ${workerId}`,
+              // Create client and add to game
+              const client = new Client(
+                clientMsg.clientID,
+                persistentId,
+                claims,
+                roles,
+                ip,
+                clientMsg.username,
+                ws,
+                clientMsg.flag,
               );
-              // Handle game not found case
+
+              const wasFound = gm.addClient(
+                client,
+                clientMsg.gameID,
+                clientMsg.lastTurn,
+              );
+
+              if (!wasFound) {
+                log.info(
+                  `game ${clientMsg.gameID} not found on worker ${workerId}`,
+                );
+                // Handle game not found case
+              }
             }
           }
-
           // Handle other message types
         } catch (error) {
           log.warn(

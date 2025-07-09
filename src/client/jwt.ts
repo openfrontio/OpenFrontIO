@@ -7,6 +7,7 @@ import {
   UserMeResponse,
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 
 function getAudience() {
   const { hostname } = new URL(window.location.href);
@@ -22,6 +23,7 @@ function getApiBase() {
 }
 
 function getToken(): string | null {
+  // Check window hash
   const { hash } = window.location;
   if (hash.startsWith("#")) {
     const params = new URLSearchParams(hash.slice(1));
@@ -33,10 +35,34 @@ function getToken(): string | null {
     history.replaceState(
       null,
       "",
-      window.location.pathname + window.location.search,
+      window.location.pathname +
+        window.location.search +
+        (params.size > 0 ? "#" + params.toString() : ""),
     );
   }
+
+  // Check cookie
+  const cookie = document.cookie
+    .split(";")
+    .find((c) => c.trim().startsWith("token="))
+    ?.trim()
+    .substring(6);
+  if (cookie !== undefined) {
+    return cookie;
+  }
+
+  // Check local storage
   return localStorage.getItem("token");
+}
+
+async function clearToken() {
+  localStorage.removeItem("token");
+  __isLoggedIn = false;
+  const config = await getServerConfigFromClient();
+  const audience = config.jwtAudience();
+  const isSecure = window.location.protocol === "https:";
+  const secure = isSecure ? "; Secure" : "";
+  document.cookie = `token=logged_out; Path=/; Max-Age=0; Domain=${audience}${secure}`;
 }
 
 export function discordLogin() {
@@ -44,10 +70,9 @@ export function discordLogin() {
 }
 
 export async function logOut(allSessions: boolean = false) {
-  const token = localStorage.getItem("token");
+  const token = getToken();
   if (token === null) return;
-  localStorage.removeItem("token");
-  __isLoggedIn = false;
+  clearToken();
 
   const response = await fetch(
     getApiBase() + (allSessions ? "/revoke" : "/logout"),
@@ -165,6 +190,10 @@ export async function postRefresh(): Promise<boolean> {
         authorization: `Bearer ${token}`,
       },
     });
+    if (response.status === 401) {
+      clearToken();
+      return false;
+    }
     if (response.status !== 200) return false;
     const body = await response.json();
     const result = RefreshResponseSchema.safeParse(body);
@@ -192,6 +221,10 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
         authorization: `Bearer ${token}`,
       },
     });
+    if (response.status === 401) {
+      clearToken();
+      return false;
+    }
     if (response.status !== 200) return false;
     const body = await response.json();
     const result = UserMeResponseSchema.safeParse(body);

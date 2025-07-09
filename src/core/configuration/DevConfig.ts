@@ -38,6 +38,19 @@ export class DevServerConfig extends DefaultServerConfig {
   gitCommit(): string {
     return "DEV";
   }
+
+  domain(): string {
+    return "localhost";
+  }
+
+  subdomain(): string {
+    return "";
+  }
+  allowedFlares(): string[] | undefined {
+    return [
+      // Require login but do not rqeuire any flares
+    ];
+  }
 }
 
 export class DevConfig extends DefaultConfig {
