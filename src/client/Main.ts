@@ -209,7 +209,26 @@ class Client {
       if (!hasAllowedFlare(userMeResponse, config)) {
         if (userMeResponse === false) {
           // Login is required
-          discordLogin();
+          document.body.innerHTML = `
+            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif;">
+              <p style="margin: 1em; text-align: center;">Login is required to access this website.</p>
+              <p style="margin: 1em; text-align: center;">You are being redirected...</p>
+              <div style="width: 80%; height: 8px; background-color: #ccc; border-radius: 4px; overflow: hidden;">
+                <div style="
+                  height: 100%;
+                  width: 0%;
+                  background-color: #4caf50;
+                  animation: fillBar 5s linear forwards;
+                "></div>
+              </div>
+            </div>
+            <style>
+              @keyframes fillBar {
+                from { width: 0%; }
+                to { width: 100%; }
+              }
+            </style>`;
+          setTimeout(discordLogin, 5000);
         } else {
           // Unauthorized
           document.body.innerHTML = `

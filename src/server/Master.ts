@@ -4,13 +4,10 @@ import rateLimit from "express-rate-limit";
 import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
-import { UserMeResponse } from "../core/ApiSchemas";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameInfo, ID } from "../core/Schemas";
 import { generateID } from "../core/Util";
-import { LruCache } from "../core/utilities/LruCache";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
-import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 
@@ -61,45 +58,6 @@ app.use(
     max: 20, // 20 requests per IP per second
   }),
 );
-
-app.get(
-  "/api/env",
-  gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
-    const envConfig = {
-      game_env: process.env.GAME_ENV || "prod",
-    };
-    res.json(envConfig);
-  }),
-);
-
-if (config.allowedFlares() !== undefined) {
-  // Middleware to require an authorized user
-  app.use(async (req, res, next) => {
-    // Perform authentication checks
-    const user = await authenticateRequest(req);
-    if (user === false) {
-      return res
-        .status(401)
-        .setHeader("WWW-Authenticate", "Bearer")
-        .json({ error: "Unauthorized" });
-    }
-
-    // Perform authorization checks
-    const allowedFlares = config.allowedFlares();
-    const hasAnyAllowedFlares =
-      allowedFlares !== undefined &&
-      (allowedFlares.length === 0 ||
-        allowedFlares.some((f) => user.player.flares?.includes(f)));
-    if (hasAnyAllowedFlares !== true) {
-      // log.warn(`Expected flares: ${allowedFlares?.join(", ")}`);
-      // log.warn(`Player flares: ${user.player.flares?.join(", ")}`);
-      return res.status(403).json({ error: "Forbidden" });
-    }
-
-    // Authorized
-    next();
-  });
-}
 
 let publicLobbiesJsonStr = "";
 
@@ -183,6 +141,16 @@ export async function startMaster() {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });
 }
+
+app.get(
+  "/api/env",
+  gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
+    const envConfig = {
+      game_env: process.env.GAME_ENV || "prod",
+    };
+    res.json(envConfig);
+  }),
+);
 
 // Add lobbies endpoint to list public games for this worker
 app.get(
@@ -332,58 +300,6 @@ async function schedulePublicGame(playlist: MapPlaylist) {
     log.error(`Failed to schedule public game on worker ${workerPath}:`, error);
     throw error;
   }
-}
-
-function getBearerToken(request: express.Request): string | undefined {
-  // Check headers
-  const authorization = request.headers.authorization;
-  if (authorization !== undefined) {
-    if (authorization.startsWith("Bearer ")) {
-      return authorization.slice(7);
-    }
-    log.info("Invalid authorization header: ", authorization);
-  }
-
-  // Check search parameters
-  const searchParams = new URL(request.url).searchParams;
-  const token = searchParams.get("token");
-  if (typeof token === "string") return token;
-
-  // Check cookie
-  const cookie = request.headers.cookie
-    ?.split(";")
-    .find((c) => c.trim().startsWith("token="))
-    ?.trim()
-    .substring(6);
-  if (cookie !== undefined) {
-    return cookie;
-  }
-}
-
-type TokenCacheKey = UserMeResponse | false;
-const TOKENS = new LruCache<Promise<TokenCacheKey> | TokenCacheKey>(2000);
-async function authenticateRequest(
-  req: express.Request,
-): Promise<TokenCacheKey> {
-  // Get the token from the request
-  const token = getBearerToken(req);
-  if (!token) return false;
-  // Check if we have seen this token recently
-  const cached = TOKENS.get(token);
-  if (cached) return await cached;
-  // Store the promise prevent multiple requests for the same token
-  const promise = authenticateCacheMiss(token);
-  TOKENS.set(token, promise);
-  return promise;
-}
-
-async function authenticateCacheMiss(token: string): Promise<TokenCacheKey> {
-  const verify = await verifyClientToken(token, config);
-  if (!verify) return false;
-  const user = await getUserMe(token, config);
-  // Update the cache to unwrap the Promise
-  TOKENS.set(token, user);
-  return user;
 }
 
 function sleep(ms: number): Promise<void> {
