@@ -16,10 +16,15 @@ export class NewsButton extends LitElement {
   }
 
   private checkForNewVersion() {
-    const lastSeenVersion = localStorage.getItem(
-      "news-button-last-seen-version",
-    );
-    this.isActive = lastSeenVersion !== version;
+    try {
+      const lastSeenVersion = localStorage.getItem(
+        "news-button-last-seen-version",
+      );
+      this.isActive = lastSeenVersion !== version;
+    } catch (error) {
+      // Fallback to NOT showing notification if localStorage fails
+      this.isActive = false;
+    }
   }
 
   private handleClick() {
