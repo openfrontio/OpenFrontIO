@@ -42,10 +42,8 @@ export class DevServerConfig extends DefaultServerConfig {
   subdomain(): string {
     return "";
   }
-  allowedFlares(): string[] | undefined {
-    return [
-      // Require login but do not rqeuire any flares
-    ];
+  allowedFlares(): string[] {
+    return [];
   }
 }
 

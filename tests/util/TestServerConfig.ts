@@ -4,7 +4,7 @@ import { GameMapType } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
-  allowedFlares(): string[] | undefined {
+  allowedFlares(): string[] {
     throw new Error("Method not implemented.");
   }
   stripePublishableKey(): string {

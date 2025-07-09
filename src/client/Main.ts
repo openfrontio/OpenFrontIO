@@ -557,9 +557,9 @@ function hasAllowedFlare(
   config: ServerConfig,
 ) {
   const allowed = config.allowedFlares();
-  if (allowed === undefined) return true;
+  if (allowed.length === 0) return true;
   if (userMeResponse === false) return false;
   const flares = userMeResponse.player.flares;
   if (flares === undefined) return false;
-  return allowed.length === 0 || allowed.some((f) => flares.includes(f));
+  return allowed.some((f) => flares.includes(f));
 }
