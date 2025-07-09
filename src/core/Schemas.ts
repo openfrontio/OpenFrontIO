@@ -526,6 +526,8 @@ export const AnalyticsRecordSchema = z.object({
   info: GameEndInfoSchema,
   version: z.literal("v0.0.2"),
   gitCommit: GitCommitSchema,
+  subdomain: z.string(),
+  domain: z.string(),
 });
 export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;
 

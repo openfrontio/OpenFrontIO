@@ -7,7 +7,6 @@ import workerIcon from "../../../../resources/images/WorkerIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
-import { UserSettings } from "../../../core/game/UserSettings";
 import { renderNumber, renderTroops } from "../../Utils";
 import { Layer } from "./Layer";
 
@@ -15,8 +14,6 @@ import { Layer } from "./Layer";
 export class GameTopBar extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
-  private _userSettings: UserSettings = new UserSettings();
-  private _population = 0;
   private _troops = 0;
   private _workers = 0;
   private _lastPopulationIncreaseRate = 0;
@@ -47,12 +44,10 @@ export class GameTopBar extends LitElement implements Layer {
   private updatePopulationIncrease() {
     const player = this.game?.myPlayer();
     if (player === null) return;
-    const popIncreaseRate = player.population() - this._population;
-    if (this.game.ticks() % 5 === 0) {
-      this._popRateIsIncreasing =
-        popIncreaseRate >= this._lastPopulationIncreaseRate;
-      this._lastPopulationIncreaseRate = popIncreaseRate;
-    }
+    const popIncreaseRate = this.game.config().populationIncreaseRate(player);
+    this._popRateIsIncreasing =
+      popIncreaseRate >= this._lastPopulationIncreaseRate;
+    this._lastPopulationIncreaseRate = popIncreaseRate;
   }
 
   render() {
@@ -79,7 +74,7 @@ export class GameTopBar extends LitElement implements Layer {
 
     return html`
       <div
-        class="absolute top-4 left-1/2 transform -translate-x-1/2 flex justify-center items-center p-1 md:px-1.5 lg:px-4 z-[1100]"
+        class="fixed top-4 left-1/2 transform -translate-x-1/2 flex justify-center items-center p-1 md:px-1.5 lg:px-4 z-[1100]"
       >
         <div class="flex justify-center items-center gap-1">
           ${myPlayer?.isAlive() && !this.game.inSpawnPhase()
