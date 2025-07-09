@@ -335,10 +335,19 @@ async function schedulePublicGame(playlist: MapPlaylist) {
 }
 
 function getBearerToken(request: express.Request): string | undefined {
+  // Check headers
+  const authorization = request.headers.authorization;
+  if (authorization !== undefined) {
+    if (authorization.startsWith("Bearer ")) {
+      return authorization.slice(7);
+    }
+    log.info("Invalid authorization header: ", authorization);
+  }
+
   // Check search parameters
-  // const searchParams = new URL(request.url).searchParams;
-  // const token = searchParams.get("token");
-  // if (typeof token === "string") return token;
+  const searchParams = new URL(request.url).searchParams;
+  const token = searchParams.get("token");
+  if (typeof token === "string") return token;
 
   // Check cookie
   const cookie = request.headers.cookie
@@ -349,15 +358,6 @@ function getBearerToken(request: express.Request): string | undefined {
   if (cookie !== undefined) {
     return cookie;
   }
-
-  // Check headers
-  // const authorization = request.headers.authorization;
-  // if (authorization !== undefined) {
-  //   if (authorization.startsWith("Bearer ")) {
-  //     return authorization.slice(7);
-  //   }
-  //   log.info("Invalid authorization header: ", authorization);
-  // }
 }
 
 type TokenCacheKey = UserMeResponse | false;
