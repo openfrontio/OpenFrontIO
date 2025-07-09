@@ -198,7 +198,7 @@ export const FlagSchema = z
   .optional()
   .refine(
     (val) => {
-      if (val === undefined) return true;
+      if (val === undefined || val === "") return true;
       if (val.startsWith("!")) return true;
       return countryCodes.includes(val);
     },
