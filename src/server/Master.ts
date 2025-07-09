@@ -8,6 +8,7 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameInfo, ID } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import { LruCache } from "../core/utilities/LruCache";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
@@ -75,7 +76,7 @@ if (config.allowedFlares() !== undefined) {
   // Middleware to require an authorized user
   app.use(async (req, res, next) => {
     // Perform authentication checks
-    const user = await authenticateUser(req);
+    const user = await authenticateRequest(req);
     if (user === false) {
       return res
         .status(401)
@@ -359,14 +360,30 @@ function getBearerToken(request: express.Request): string | undefined {
   // }
 }
 
-async function authenticateUser(
+type TokenCacheKey = UserMeResponse | false;
+const TOKENS = new LruCache<Promise<TokenCacheKey> | TokenCacheKey>(2000);
+async function authenticateRequest(
   req: express.Request,
-): Promise<UserMeResponse | false> {
+): Promise<TokenCacheKey> {
+  // Get the token from the request
   const token = getBearerToken(req);
   if (!token) return false;
+  // Check if we have seen this token recently
+  const cached = TOKENS.get(token);
+  if (cached) return await cached;
+  // Store the promise prevent multiple requests for the same token
+  const promise = authenticateCacheMiss(token);
+  TOKENS.set(token, promise);
+  return promise;
+}
+
+async function authenticateCacheMiss(token: string): Promise<TokenCacheKey> {
   const verify = await verifyClientToken(token, config);
   if (!verify) return false;
-  return getUserMe(token, config);
+  const user = await getUserMe(token, config);
+  // Update the cache to unwrap the Promise
+  TOKENS.set(token, user);
+  return user;
 }
 
 function sleep(ms: number): Promise<void> {
