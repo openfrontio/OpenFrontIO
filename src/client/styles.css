@@ -631,7 +631,7 @@ label.option-card:hover {
 }
 
 /* News Button Notification */
-.news-button .active button {
+news-button .active button {
   position: relative;
   border-color: #2563eb !important;
   border-width: 2px !important;
