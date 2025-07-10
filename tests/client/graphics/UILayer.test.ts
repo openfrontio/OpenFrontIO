@@ -65,6 +65,7 @@ describe("UILayer", () => {
       tile: () => ({}),
       owner: () => ({}),
       isActive: () => true,
+      createdAt: () => 1,
     } as unknown as UnitView;
     ui.drawHealthBar(unit);
     expect(ui["allHealthBars"].has(1)).toBe(true);
@@ -111,7 +112,7 @@ describe("UILayer", () => {
       tile: () => ({}),
       isActive: () => true,
     } as unknown as UnitView;
-    ui.drawLoadingBar(unit, 5);
+    ui.createLoadingBar(unit);
     expect(ui["allProgressBars"].has(2)).toBe(true);
   });
 
@@ -145,6 +146,7 @@ describe("UILayer", () => {
       owner: () => ({ id: () => 1 }),
       tile: () => ({}),
       isActive: () => true,
+      createdAt: () => 1,
     } as unknown as UnitView;
     ui.onUnitEvent(unit);
     expect(ui["allProgressBars"].has(2)).toBe(true);

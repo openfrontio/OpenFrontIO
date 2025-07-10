@@ -438,7 +438,7 @@ export interface Unit {
   launch(): void;
   reloadMissile(): void;
   isInCooldown(): boolean;
-  ticksLeftInCooldown(): Tick | undefined;
+  missileTimerQueue(): number[];
 
   // Trade Ships
   setSafeFromPirates(): void; // Only for trade ships
