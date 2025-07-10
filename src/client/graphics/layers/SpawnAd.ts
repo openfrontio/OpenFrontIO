@@ -1,5 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { translateText } from "../../../client/Utils";
 import { GameView } from "../../../core/game/GameView";
 import { getGamesPlayed } from "../../Utils";
 import { Layer } from "./Layer";
@@ -123,7 +124,9 @@ export class SpawnAd extends LitElement implements Layer {
           class="w-full h-full flex items-center justify-center"
         >
           ${!this.adLoaded
-            ? html`<span class="text-white text-sm">Loading ad...</span>`
+            ? html`<span class="text-white text-sm"
+                >${translateText("spawn_ad.loading")}</span
+              >`
             : ""}
         </div>
       </div>

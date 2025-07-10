@@ -572,5 +572,8 @@
       "grogu_head": "Grogu Head",
       "grogu": "Grogu"
     }
+  },
+  "spawn_ad": {
+    "loading": "Loading ad..."
   }
 }
