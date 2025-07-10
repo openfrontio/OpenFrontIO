@@ -235,6 +235,9 @@ export class DefaultConfig implements Config {
   traitorDefenseDebuff(): number {
     return 0.5;
   }
+  traitorSpeedDebuff(): number {
+    return 0.7;
+  }
   traitorDuration(): number {
     return 30 * 10; // 30 seconds
   }
@@ -289,9 +292,15 @@ export class DefaultConfig implements Config {
   defensePostRange(): number {
     return 30;
   }
+
   defensePostDefenseBonus(): number {
     return 5;
   }
+
+  defensePostSpeedBonus(): number {
+    return 3;
+  }
+
   playerTeams(): TeamCountConfig {
     return this._gameConfig.playerTeams ?? 0;
   }
@@ -316,12 +325,6 @@ export class DefaultConfig implements Config {
   infiniteTroops(): boolean {
     return this._gameConfig.infiniteTroops;
   }
-  tradeShipGold(dist: number): Gold {
-    return BigInt(Math.floor(10000 + 150 * Math.pow(dist, 1.1)));
-  }
-  tradeShipSpawnRate(numberOfPorts: number): number {
-    return Math.min(50, Math.round(10 * Math.pow(numberOfPorts, 0.6)));
-  }
   trainSpawnRate(numberOfStations: number): number {
     return Math.min(1400, Math.round(70 * Math.pow(numberOfStations, 0.8)));
   }
@@ -335,6 +338,34 @@ export class DefaultConfig implements Config {
     return 80;
   }
   railroadMaxSize(): number {
+    return 100;
+  }
+
+  tradeShipGold(dist: number, numPorts: number): Gold {
+    const baseGold = Math.floor(50000 + 130 * dist);
+    const basePortBonus = 0.2;
+    const diminishingFactor = 0.95;
+
+    let totalMultiplier = 1;
+    for (let i = 0; i < numPorts; i++) {
+      totalMultiplier += basePortBonus * Math.pow(diminishingFactor, i);
+    }
+
+    return BigInt(Math.floor(baseGold * totalMultiplier));
+  }
+
+  // Chance to spawn a trade ship in one second,
+  tradeShipSpawnRate(numTradeShips: number): number {
+    if (numTradeShips <= 20) {
+      return 5;
+    }
+    if (numTradeShips > this.tradeShipCap()) {
+      return 1_000_000;
+    }
+    return numTradeShips - 15;
+  }
+
+  tradeShipCap(): number {
     return 100;
   }
 
@@ -572,7 +603,7 @@ export class DefaultConfig implements Config {
     const type = gm.terrainType(tileToConquer);
     switch (type) {
       case TerrainType.Plains:
-        mag = 85;
+        mag = 80;
         speed = 16.5;
         break;
       case TerrainType.Highland:
@@ -591,11 +622,12 @@ export class DefaultConfig implements Config {
         tileToConquer,
         gm.config().defensePostRange(),
         UnitType.DefensePost,
-        ({ unit }) => unit.owner() === defender,
       )) {
-        mag *= this.defensePostDefenseBonus();
-        speed *= this.defensePostDefenseBonus();
-        break;
+        if (dp.unit.owner() === defender) {
+          mag *= this.defensePostDefenseBonus();
+          speed *= this.defensePostSpeedBonus();
+          break;
+        }
       }
     }
 
@@ -642,7 +674,8 @@ export class DefaultConfig implements Config {
         tilesPerTickUsed:
           within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
           speed *
-          largeSpeedMalus,
+          largeSpeedMalus *
+          (defender.isTraitor() ? this.traitorSpeedDebuff() : 1),
       };
     } else {
       return {
@@ -803,7 +836,7 @@ export class DefaultConfig implements Config {
   nukeMagnitudes(unitType: UnitType): NukeMagnitude {
     switch (unitType) {
       case UnitType.MIRVWarhead:
-        return { inner: 25, outer: 30 };
+        return { inner: 12, outer: 18 };
       case UnitType.AtomBomb:
         return { inner: 12, outer: 30 };
       case UnitType.HydrogenBomb:
