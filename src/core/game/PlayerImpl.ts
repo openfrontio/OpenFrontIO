@@ -243,6 +243,17 @@ export class PlayerImpl implements Player {
     return total;
   }
 
+  // Count of units owned by the player, not including construction
+  unitCount(type: UnitType): number {
+    let total = 0;
+    for (const unit of this._units) {
+      if (unit.type() === type) {
+        total++;
+      }
+    }
+    return total;
+  }
+
   // Count of units owned by the player, including construction
   unitsOwned(type: UnitType): number {
     let total = 0;

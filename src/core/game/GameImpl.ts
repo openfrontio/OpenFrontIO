@@ -209,9 +209,19 @@ export class GameImpl implements Game {
   units(...types: UnitType[]): Unit[] {
     return Array.from(this._players.values()).flatMap((p) => p.units(...types));
   }
+
+  unitCount(type: UnitType): number {
+    let total = 0;
+    for (const player of this._players.values()) {
+      total += player.unitCount(type);
+    }
+    return total;
+  }
+
   unitInfo(type: UnitType): UnitInfo {
     return this.config().unitInfo(type);
   }
+
   nations(): Nation[] {
     return this._nations;
   }
