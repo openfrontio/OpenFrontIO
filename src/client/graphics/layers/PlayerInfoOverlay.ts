@@ -65,11 +65,29 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
   private lastMouseUpdate = 0;
 
+  private isPortDisabled = false;
+  private isCityDisabled = false;
+  private isMissileSiloDisabled = false;
+  private isSAMLauncherDisabled = false;
+  private isWarshipDisabled = false;
+
   init() {
     this.eventBus.on(MouseMoveEvent, (e: MouseMoveEvent) =>
       this.onMouseEvent(e),
     );
     this._isActive = true;
+
+    this.isPortDisabled = this.game.config().isUnitDisabled(UnitType.Port);
+    this.isCityDisabled = this.game.config().isUnitDisabled(UnitType.City);
+    this.isMissileSiloDisabled = this.game
+      .config()
+      .isUnitDisabled(UnitType.MissileSilo);
+    this.isSAMLauncherDisabled = this.game
+      .config()
+      .isUnitDisabled(UnitType.SAMLauncher);
+    this.isWarshipDisabled = this.game
+      .config()
+      .isUnitDisabled(UnitType.Warship);
   }
 
   private onMouseEvent(event: MouseMoveEvent) {
@@ -250,7 +268,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           ${translateText("player_info_overlay.gold")}:
           ${renderNumber(player.gold())}
         </div>
-        ${!this.game.config().isUnitDisabled(UnitType.Port)
+        ${!this.isPortDisabled
           ? html`
               <div class="text-sm opacity-80" translate="no">
                 ${translateText("player_info_overlay.ports")}:
@@ -268,7 +286,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
               </div>
             `
           : ""}
-        ${!this.game.config().isUnitDisabled(UnitType.City)
+        ${!this.isCityDisabled
           ? html`
               <div class="text-sm opacity-80" translate="no">
                 ${translateText("player_info_overlay.cities")}:
@@ -286,7 +304,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
               </div>
             `
           : ""}
-        ${!this.game.config().isUnitDisabled(UnitType.MissileSilo)
+        ${!this.isMissileSiloDisabled
           ? html`
               <div class="text-sm opacity-80" translate="no">
                 ${translateText("player_info_overlay.missile_launchers")}:
@@ -304,7 +322,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
               </div>
             `
           : ""}
-        ${!this.game.config().isUnitDisabled(UnitType.SAMLauncher)
+        ${!this.isSAMLauncherDisabled
           ? html`
               <div class="text-sm opacity-80" translate="no">
                 ${translateText("player_info_overlay.sams")}:
@@ -322,7 +340,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
               </div>
             `
           : ""}
-        ${!this.game.config().isUnitDisabled(UnitType.Warship)
+        ${!this.isWarshipDisabled
           ? html`
               <div class="text-sm opacity-80" translate="no">
                 ${translateText("player_info_overlay.warships")}:
