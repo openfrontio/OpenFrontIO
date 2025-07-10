@@ -126,7 +126,6 @@ export interface UnitUpdate {
   health?: number;
   constructionType?: UnitType;
   missileTimerQueue: number[];
-  readyMissileCount: number;
   level: number;
   hasTrainStation: boolean;
   trainType?: TrainType; // Only for trains
