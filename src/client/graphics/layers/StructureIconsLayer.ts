@@ -39,8 +39,8 @@ const STRUCTURE_SHAPES: Partial<Record<UnitType, ShapeType>> = {
   [UnitType.MissileSilo]: "triangle",
 };
 const ZOOM_THRESHOLD = 3.5;
-const ICON_SIZE = 24;
-const OFFSET_ZOOM_Y = 5; // offset for the y position of the icon to avoid hiding the structure beneath
+const ICON_SIZE = 30;
+const OFFSET_ZOOM_Y = 8;
 
 export class StructureIconsLayer implements Layer {
   private pixicanvas: HTMLCanvasElement;
@@ -417,10 +417,10 @@ export class StructureIconsLayer implements Layer {
     }
 
     const SHAPE_OFFSETS = {
-      triangle: [4, 8],
-      square: [3, 3],
-      octagon: [4, 4],
-      circle: [4, 4],
+      triangle: [7, 11],
+      square: [6, 6],
+      octagon: [7, 7],
+      circle: [7, 7],
     };
     const [offsetX, offsetY] = SHAPE_OFFSETS[shape] || [0, 0];
 
