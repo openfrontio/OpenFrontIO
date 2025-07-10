@@ -5,10 +5,10 @@ import { TradeShipExecution } from "./TradeShipExecution";
 
 export class PortExecution implements Execution {
   private active = true;
-  private mg: Game | null = null;
+  private mg: Game;
   private port: Unit | null = null;
-  private random: PseudoRandom | null = null;
-  private checkOffset: number | null = null;
+  private random: PseudoRandom;
+  private checkOffset: number;
 
   constructor(
     private player: Player,
@@ -52,10 +52,7 @@ export class PortExecution implements Execution {
       return;
     }
 
-    const totalNbOfPorts = this.mg.units(UnitType.Port).length;
-    if (
-      !this.random.chance(this.mg.config().tradeShipSpawnRate(totalNbOfPorts))
-    ) {
+    if (!this.shouldSpawnTradeShip()) {
       return;
     }
 
@@ -74,6 +71,17 @@ export class PortExecution implements Execution {
   }
 
   activeDuringSpawnPhase(): boolean {
+    return false;
+  }
+
+  shouldSpawnTradeShip(): boolean {
+    const numTradeShips = this.mg.units(UnitType.TradeShip).length;
+    const spawnRate = this.mg.config().tradeShipSpawnRate(numTradeShips);
+    for (let i = 0; i < this.port!.level(); i++) {
+      if (this.random.chance(spawnRate)) {
+        return true;
+      }
+    }
     return false;
   }
 }
