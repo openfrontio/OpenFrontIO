@@ -47,12 +47,18 @@ interface PlayerCosmetics {
 export class UnitView {
   public _wasUpdated = true;
   public lastPos: TileRef[] = [];
+  private _createdAt: Tick;
 
   constructor(
     private gameView: GameView,
     private data: UnitUpdate,
   ) {
     this.lastPos.push(data.pos);
+    this._createdAt = this.gameView.ticks();
+  }
+
+  createdAt(): Tick {
+    return this._createdAt;
   }
 
   wasUpdated(): boolean {
@@ -123,12 +129,40 @@ export class UnitView {
   targetTile(): TileRef | undefined {
     return this.data.targetTile;
   }
-  ticksLeftInCooldown(): Tick | undefined {
-    return this.data.missileTimerQueue?.[0];
+
+  // How "ready" this unit is from 0 to 1.
+  missileReadinesss(): number {
+    const maxMissiles = this.data.level;
+    const missilesReloading = this.data.missileTimerQueue.length;
+
+    if (missilesReloading === 0) {
+      return 1;
+    }
+
+    const missilesReady = maxMissiles - missilesReloading;
+
+    if (missilesReady === 0 && maxMissiles > 1) {
+      // Unless we have just one missile (level 1),
+      // show 0% readiness so user knows no missiles are ready.
+      return 0;
+    }
+
+    let readiness = missilesReady / maxMissiles;
+
+    const cooldownDuration =
+      this.data.unitType === UnitType.SAMLauncher
+        ? this.gameView.config().SAMCooldown()
+        : this.gameView.config().SiloCooldown();
+
+    for (const cooldown of this.data.missileTimerQueue) {
+      const cooldownProgress = this.gameView.ticks() - cooldown;
+      const cooldownRatio = cooldownProgress / cooldownDuration;
+      const adjusted = cooldownRatio / maxMissiles;
+      readiness += adjusted;
+    }
+    return readiness;
   }
-  isInCooldown(): boolean {
-    return this.data.readyMissileCount === 0;
-  }
+
   level(): number {
     return this.data.level;
   }

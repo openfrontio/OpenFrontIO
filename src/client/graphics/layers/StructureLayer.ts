@@ -21,7 +21,7 @@ const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
 const BASE_BORDER_RADIUS = 16.5;
 const BASE_TERRITORY_RADIUS = 13.5;
 const RADIUS_SCALE_FACTOR = 0.5;
-const ZOOM_THRESHOLD = 2.5; // below this zoom level, structures are not rendered
+const ZOOM_THRESHOLD = 3.5; // below this zoom level, structures are not rendered
 
 interface UnitRenderConfig {
   icon: string;

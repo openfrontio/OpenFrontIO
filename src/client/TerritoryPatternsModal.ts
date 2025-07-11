@@ -64,11 +64,6 @@ export class TerritoryPatternsModal extends LitElement {
 
   async onUserMe(userMeResponse: UserMeResponse | null) {
     this.patterns = await patterns(userMeResponse);
-    const p = this.patterns.find((p) => p.name === this.selectedPattern);
-    if (p === undefined || p.lockedReason || p.notShown) {
-      console.warn("selected pattern is locked or not shown, resetting");
-      this.selectPattern(undefined);
-    }
     this.me = userMeResponse;
     this.requestUpdate();
   }

@@ -1,7 +1,7 @@
 import { Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
 import { Theme } from "../../../core/configuration/Config";
-import { Tick, UnitType } from "../../../core/game/Game";
+import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
@@ -32,7 +32,7 @@ export class UILayer implements Layer {
   private selectionAnimTime = 0;
   private allProgressBars: Map<
     number,
-    { unit: UnitView; startTick: Tick; endTick: Tick; progressBar: ProgressBar }
+    { unit: UnitView; progressBar: ProgressBar }
   > = new Map();
   private allHealthBars: Map<number, ProgressBar> = new Map();
   // Keep track of currently selected unit
@@ -105,21 +105,12 @@ export class UILayer implements Layer {
   onUnitEvent(unit: UnitView) {
     switch (unit.type()) {
       case UnitType.Construction: {
-        const playerId = this.game.myPlayer()?.id();
-        if (
-          unit.isActive() &&
-          playerId !== undefined &&
-          unit.owner().id() === playerId
-        ) {
-          const constructionType = unit.constructionType();
-          if (constructionType === undefined) {
-            // Skip units without construction type
-            return;
-          }
-          const endTick =
-            this.game.unitInfo(constructionType).constructionDuration || 0;
-          this.drawLoadingBar(unit, endTick);
+        const constructionType = unit.constructionType();
+        if (constructionType === undefined) {
+          // Skip units without construction type
+          return;
         }
+        this.createLoadingBar(unit);
         break;
       }
       case UnitType.Warship: {
@@ -127,24 +118,10 @@ export class UILayer implements Layer {
         break;
       }
       case UnitType.MissileSilo:
-        if (
-          unit.isActive() &&
-          unit.isInCooldown() &&
-          !this.allProgressBars.has(unit.id())
-        ) {
-          const endTick = this.game.config().SiloCooldown();
-          this.drawLoadingBar(unit, endTick);
-        }
+        this.createLoadingBar(unit);
         break;
       case UnitType.SAMLauncher:
-        if (
-          unit.isActive() &&
-          unit.isInCooldown() &&
-          !this.allProgressBars.has(unit.id())
-        ) {
-          const endTick = this.game.config().SAMCooldown();
-          this.drawLoadingBar(unit, endTick);
-        }
+        this.createLoadingBar(unit);
         break;
       default:
         return;
@@ -318,20 +295,41 @@ export class UILayer implements Layer {
   }
 
   private updateProgressBars() {
-    const currentTick = this.game.ticks();
     this.allProgressBars.forEach((progressBarInfo, unitId) => {
-      const progress =
-        (currentTick - progressBarInfo.startTick) / progressBarInfo.endTick;
-      if (progress >= 1 || !progressBarInfo.unit.isActive()) {
+      const progress = this.getProgress(progressBarInfo.unit);
+      if (progress >= 1) {
         this.allProgressBars.get(unitId)?.progressBar.clear();
         this.allProgressBars.delete(unitId);
         return;
+      } else {
+        progressBarInfo.progressBar.setProgress(progress);
       }
-      progressBarInfo.progressBar.setProgress(progress);
     });
   }
 
-  public drawLoadingBar(unit: UnitView, endTick: Tick) {
+  private getProgress(unit: UnitView): number {
+    if (!unit.isActive()) {
+      return 1;
+    }
+    switch (unit.type()) {
+      case UnitType.Construction:
+        const constructionType = unit.constructionType();
+        if (constructionType === undefined) {
+          return 1;
+        }
+        return (
+          (this.game.ticks() - unit.createdAt()) /
+          (this.game.unitInfo(constructionType).constructionDuration || 1)
+        );
+      case UnitType.MissileSilo:
+      case UnitType.SAMLauncher:
+        return unit.missileReadinesss();
+      default:
+        return 1;
+    }
+  }
+
+  public createLoadingBar(unit: UnitView) {
     if (!this.context) {
       return;
     }
@@ -347,8 +345,6 @@ export class UILayer implements Layer {
       );
       this.allProgressBars.set(unit.id(), {
         unit,
-        startTick: this.game.ticks(),
-        endTick,
         progressBar,
       });
     }

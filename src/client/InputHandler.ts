@@ -1,4 +1,5 @@
 import { EventBus, GameEvent } from "../core/EventBus";
+import { UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
@@ -63,6 +64,10 @@ export class AlternateViewEvent implements GameEvent {
 export class CloseViewEvent implements GameEvent {}
 
 export class RefreshGraphicsEvent implements GameEvent {}
+
+export class ToggleStructureEvent implements GameEvent {
+  constructor(public readonly structureType: UnitType | null) {}
+}
 
 export class ShowBuildMenuEvent implements GameEvent {
   constructor(
