@@ -572,5 +572,11 @@
       "grogu_head": "Grogu Head",
       "grogu": "Grogu"
     }
+  },
+  "auth": {
+    "login_required": "Login is required to access this website.",
+    "redirecting": "You are being redirected...",
+    "not_authorized": "You are not authorized to access this website.",
+    "contact_admin": "If you believe you are seeing this message in error, please contact the website administrator."
   }
 }
