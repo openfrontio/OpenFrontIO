@@ -9,7 +9,7 @@ export class TrainStationExecution implements Execution {
   private random: PseudoRandom;
   private station: TrainStation | null = null;
   private numCars: number = 5;
-  private lastSpawnTick: number;
+  private lastSpawnTick: number = 0;
   private ticksCooldown: number = 10; // Minimum cooldown between two trains
   constructor(
     private unit: Unit,

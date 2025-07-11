@@ -37,6 +37,7 @@ export class PortExecution implements Execution {
         return;
       }
       this.port = this.player.buildUnit(UnitType.Port, spawn, {});
+      this.createStation();
     }
 
     if (!this.port.isActive()) {
