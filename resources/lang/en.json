@@ -90,6 +90,8 @@
     "build_desc": "Description",
     "build_city": "City",
     "build_city_desc": "Increases your max population. Useful when you can't expand your territory or you're about to hit your population limit.",
+    "build_factory": "Factory",
+    "build_factory_desc": "Creates railroads automatically with nearby structures, and spawns trains sporadically.",
     "build_defense": "Defense Post",
     "build_defense_desc": "Increases defenses around nearby borders, which show a checkered pattern. Attacks from enemies are slower and have more casualties.",
     "build_port": "Port",
@@ -409,8 +411,9 @@
       "sam_launcher": "Defends against incoming nukes",
       "warship": "Captures trade ships, destroys ships and boats",
       "port": "Sends trade ships to generate gold",
-      "defense_post": "Increase defenses of nearby borders",
-      "city": "Increase max population"
+      "defense_post": "Increases defenses of nearby borders",
+      "city": "Increases max population",
+      "factory": "Creates railroads and spawns trains"
     },
     "not_enough_money": "Not enough money"
   },
