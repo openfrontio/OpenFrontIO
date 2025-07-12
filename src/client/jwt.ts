@@ -1,6 +1,7 @@
 import { decodeJwt } from "jose";
 import { z } from "zod/v4";
 import {
+  allowedDiscordIds,
   RefreshResponseSchema,
   TokenPayload,
   TokenPayloadSchema,
@@ -231,6 +232,12 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
     if (!result.success) {
       const error = z.prettifyError(result.error);
       console.error("Invalid response", error);
+      return false;
+    }
+    if (!allowedDiscordIds.includes(result.data.user.id)) {
+      console.error("Unauthorized: User not in allowed list");
+      clearToken();
+      window.location.href = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
       return false;
     }
     return result.data;
