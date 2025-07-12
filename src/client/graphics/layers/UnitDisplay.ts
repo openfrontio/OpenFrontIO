@@ -89,6 +89,19 @@ export class UnitDisplay extends LitElement implements Layer {
       return null;
     }
 
+    const config = this.game.config();
+    const allDisabled =
+      config.isUnitDisabled(UnitType.City) &&
+      config.isUnitDisabled(UnitType.Factory) &&
+      config.isUnitDisabled(UnitType.Port) &&
+      config.isUnitDisabled(UnitType.DefensePost) &&
+      config.isUnitDisabled(UnitType.MissileSilo) &&
+      config.isUnitDisabled(UnitType.SAMLauncher);
+
+    if (allDisabled) {
+      return null;
+    }
+
     return html`
       <div
         class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[1100] bg-gray-800/70 backdrop-blur-sm border border-slate-400 rounded-lg p-2 hidden lg:block"
