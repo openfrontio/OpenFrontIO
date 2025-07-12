@@ -13,6 +13,7 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
+import { UserSettings } from "../core/game/UserSettings";
 import { GameConfig, GameInfo, TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
@@ -42,41 +43,98 @@ export class HostLobbyModal extends LitElement {
   @state() private players: string[] = [];
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [UnitType.Factory];
+  @state() private lobbyIdVisible: boolean = true;
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
+  private userSettings: UserSettings = new UserSettings();
 
   render() {
     return html`
       <o-modal title=${translateText("host_modal.title")}>
         <div class="lobby-id-box">
-          <button
-            class="lobby-id-button"
-            @click=${this.copyToClipboard}
-            ?disabled=${this.copySuccess}
-          >
-            <span class="lobby-id">${this.lobbyId}</span>
+          <button class="lobby-id-button">
+            <!-- Visibility toggle icon on the left -->
             ${
-              this.copySuccess
-                ? html`<span class="copy-success-icon">✓</span>`
-                : html`
-                    <svg
-                      class="clipboard-icon"
+              this.lobbyIdVisible
+                ? html`<svg
+                    class="visibility-icon"
+                    @click=${() => {
+                      this.lobbyIdVisible = !this.lobbyIdVisible;
+                      this.requestUpdate();
+                    }}
+                    style="margin-right: 8px; cursor: pointer;"
+                    stroke="currentColor"
+                    fill="currentColor"
+                    stroke-width="0"
+                    viewBox="0 0 512 512"
+                    height="18px"
+                    width="18px"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M256 105c-101.8 0-188.4 62.7-224 151 35.6 88.3 122.2 151 224 151s188.4-62.7 224-151c-35.6-88.3-122.2-151-224-151zm0 251.7c-56 0-101.7-45.7-101.7-101.7S200 153.3 256 153.3 357.7 199 357.7 255 312 356.7 256 356.7zm0-161.1c-33 0-59.4 26.4-59.4 59.4s26.4 59.4 59.4 59.4 59.4-26.4 59.4-59.4-26.4-59.4-59.4-59.4z"
+                    ></path>
+                  </svg>`
+                : html`<svg
+                    class="visibility-icon"
+                    @click=${() => {
+                      this.lobbyIdVisible = !this.lobbyIdVisible;
+                      this.requestUpdate();
+                    }}
+                    style="margin-right: 8px; cursor: pointer;"
+                    stroke="currentColor"
+                    fill="currentColor"
+                    stroke-width="0"
+                    viewBox="0 0 512 512"
+                    height="18px"
+                    width="18px"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M448 256s-64-128-192-128S64 256 64 256c32 64 96 128 192 128s160-64 192-128z"
+                      fill="none"
                       stroke="currentColor"
-                      fill="currentColor"
-                      stroke-width="0"
-                      viewBox="0 0 512 512"
-                      height="18px"
-                      width="18px"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M296 48H176.5C154.4 48 136 65.4 136 87.5V96h-7.5C106.4 96 88 113.4 88 135.5v288c0 22.1 18.4 40.5 40.5 40.5h208c22.1 0 39.5-18.4 39.5-40.5V416h8.5c22.1 0 39.5-18.4 39.5-40.5V176L296 48zm0 44.6l83.4 83.4H296V92.6zm48 330.9c0 4.7-3.4 8.5-7.5 8.5h-208c-4.4 0-8.5-4.1-8.5-8.5v-288c0-4.1 3.8-7.5 8.5-7.5h7.5v255.5c0 22.1 10.4 32.5 32.5 32.5H344v7.5zm48-48c0 4.7-3.4 8.5-7.5 8.5h-208c-4.4 0-8.5-4.1-8.5-8.5v-288c0-4.1 3.8-7.5 8.5-7.5H264v128h128v167.5z"
-                      ></path>
-                    </svg>
-                  `
+                      stroke-width="32"
+                    ></path>
+                    <path
+                      d="M144 256l224 0"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="32"
+                      stroke-linecap="round"
+                    ></path>
+                  </svg>`
             }
+            <!-- Lobby ID (conditionally shown) -->
+            <span class="lobby-id" @click=${this.copyToClipboard} style="cursor: pointer;">
+              ${this.lobbyIdVisible ? this.lobbyId : "••••••••"}
+            </span>
+            
+            <!-- Copy icon/success indicator -->
+            <div @click=${this.copyToClipboard} style="margin-left: 8px; cursor: pointer;">
+              ${
+                this.copySuccess
+                  ? html`<span class="copy-success-icon">✓</span>`
+                  : html`
+                      <svg
+                        class="clipboard-icon"
+                        stroke="currentColor"
+                        fill="currentColor"
+                        stroke-width="0"
+                        viewBox="0 0 512 512"
+                        height="18px"
+                        width="18px"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M296 48H176.5C154.4 48 136 65.4 136 87.5V96h-7.5C106.4 96 88 113.4 88 135.5v288c0 22.1 18.4 40.5 40.5 40.5h208c22.1 0 39.5-18.4 39.5-40.5V416h8.5c22.1 0 39.5-18.4 39.5-40.5V176L296 48zm0 44.6l83.4 83.4H296V92.6zm48 330.9c0 4.7-3.4 8.5-7.5 8.5h-208c-4.4 0-8.5-4.1-8.5-8.5v-288c0-4.1 3.8-7.5 8.5-7.5h7.5v255.5c0 22.1 10.4 32.5 32.5 32.5H344v7.5zm48-48c0 4.7-3.4 8.5-7.5 8.5h-208c-4.4 0-8.5-4.1-8.5-8.5v-288c0-4.1 3.8-7.5 8.5-7.5H264v128h128v167.5z"
+                        ></path>
+                      </svg>
+                    `
+              }
+            </div>
           </button>
         </div>
         <div class="options-layout">
@@ -374,6 +432,11 @@ export class HostLobbyModal extends LitElement {
   }
 
   public open() {
+    this.lobbyIdVisible = this.userSettings.get(
+      "settings.lobbyIdVisibility",
+      true,
+    );
+
     createLobby()
       .then((lobby) => {
         this.lobbyId = lobby.gameID;
