@@ -248,7 +248,7 @@ export class PlayerImpl implements Player {
     let total = 0;
     for (const unit of this._units) {
       if (unit.type() === type) {
-        total++;
+        total += unit.level();
       }
     }
     return total;
@@ -259,7 +259,7 @@ export class PlayerImpl implements Player {
     let total = 0;
     for (const unit of this._units) {
       if (unit.type() === type) {
-        total++;
+        total += unit.level();
         continue;
       }
       if (unit.type() !== UnitType.Construction) continue;
