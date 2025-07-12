@@ -109,8 +109,8 @@ export async function handlePurchase(priceId: string) {
         },
         body: JSON.stringify({
           priceId: priceId,
-          successUrl: `${window.location.href}purchase-success`,
-          cancelUrl: `${window.location.href}purchase-cancel`,
+          successUrl: `${window.location.origin}?purchase=success`,
+          cancelUrl: `${window.location.origin}?purchase=cancel`,
         }),
       },
     );
