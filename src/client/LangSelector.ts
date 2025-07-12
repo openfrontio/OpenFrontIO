@@ -17,6 +17,7 @@ import he from "../../resources/lang/he.json";
 import hi from "../../resources/lang/hi.json";
 import it from "../../resources/lang/it.json";
 import ja from "../../resources/lang/ja.json";
+import ko from "../../resources/lang/ko.json";
 import nl from "../../resources/lang/nl.json";
 import pl from "../../resources/lang/pl.json";
 import pt_br from "../../resources/lang/pt_br.json";
@@ -65,6 +66,7 @@ export class LangSelector extends LitElement {
     fi,
     sv_se,
     zh_cn,
+    ko,
   };
 
   createRenderRoot() {

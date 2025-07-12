@@ -24,7 +24,9 @@
     "wiki": "Vikio"
   },
   "news": {
-    "title": "23-a eldono publikigita!"
+    "full_changelog": "Vidi la plenan ŝanĝprotokolon",
+    "github_link": "ĉe GitHub",
+    "title": "Eldonnotoj"
   },
   "help_modal": {
     "hotkeys": "Rapidklavoj",
@@ -41,6 +43,7 @@
     "action_reset_gfx": "Restarigi la grafismoj",
     "ui_section": "Ludo uzantinterfaco",
     "ui_leaderboard": "Ĉampionejo",
+    "ui_your_team": "Via teamo:",
     "ui_leaderboard_desc": "Montras la ĉefajn ludantojn de la ludo kaj iliajn nomojn, % de posedata tero, oro kaj trupoj. Uzante \"Montri Ĉiujn\" oni vidas ĉiujn ludantojn en la ludo. Se vi ne volas vidi la rangoliston, alklaku \"Kaŝi\".",
     "ui_control": "Kontrolpanelo",
     "ui_control_desc": "La kontrolpanelo enhavas la sekvajn elementojn:",
@@ -128,6 +131,7 @@
   "map": {
     "map": "Karto",
     "world": "Mondo",
+    "giantworldmap": "Giganta Mondmapo",
     "europe": "Eŭropo",
     "mena": "Mezoriento kaj Nordafriko",
     "northamerica": "Nordameriko",
@@ -151,12 +155,16 @@
     "falklandislands": "Falklandoj",
     "baikal": "Bajkalo",
     "halkidiki": "Ĥalkidiko",
-    "giantworldmap": "Giganta Mondmapo"
+    "straitofgibraltar": "Ĝibraltara Markolo",
+    "italia": "Italio"
   },
   "map_categories": {
     "continental": "Kontinenta",
     "regional": "Regiona",
     "fantasy": "Alia"
+  },
+  "map_component": {
+    "loading": "Ŝargante..."
   },
   "private_lobby": {
     "title": "Aliĝi al privata ludejo",
@@ -172,6 +180,9 @@
   "public_lobby": {
     "join": "Kunigi la baldaŭan ludon",
     "waiting": "atendante ludantoj",
+    "teams_Duos": "Duopoj (teamoj de 2)",
+    "teams_Trios": "Triopoj (teamoj de 3)",
+    "teams_Quads": "Kvaropoj (teamoj de 4)",
     "teams": "{num} teamoj"
   },
   "username": {
@@ -197,6 +208,16 @@
     "players": "Ludantoj",
     "waiting": "Atendante ludantojn...",
     "start": "Komenci la ludon"
+  },
+  "team_colors": {
+    "red": "Ruĝa",
+    "blue": "Blua",
+    "teal": "Verd-blua",
+    "purple": "Viola",
+    "yellow": "Flava",
+    "orange": "Oranĝa",
+    "green": "Verda",
+    "bot": "Roboto"
   },
   "game_starting_modal": {
     "title": "Ludo komenciĝas...",
@@ -225,21 +246,24 @@
     "sam_launcher": "SAM-lanĉilo",
     "atom_bomb": "Atombombo",
     "hydrogen_bomb": "Hidrogenbombo",
-    "mirv": "MIRV"
+    "mirv": "MIRV",
+    "factory": "Fabriko"
   },
   "user_setting": {
     "title": "Uzantparametroj",
     "tab_basic": "Bazaj parametroj",
     "tab_keybinds": "Fulmoklavoj",
-    "dark_mode_label": "🌙 Malhela Modo",
+    "dark_mode_label": "Malhela Modo",
     "dark_mode_desc": "Baskuli la retpaĝa aspekto inter hela kaj malhela temo",
-    "emojis_label": "😊 Emoĝioj",
+    "emojis_label": "Emoĝioj",
     "emojis_desc": "Montri/Maski la emoĝiojn en la ludo",
-    "special_effects_label": "💥 Specialaj efektoj",
+    "alert_frame_label": "Avertkadro",
+    "alert_frame_desc": "Ŝalti la avertkadron. Kiam ebligita, la kadro estos montrata kiam vi estos perfidita.",
+    "special_effects_label": "Specialaj efektoj",
     "special_effects_desc": "Baskuli specialajn efektojn. Malaktivigu por plibonigi funkciadon",
-    "anonymous_names_label": "🥷 Maskitaj Nomoj",
+    "anonymous_names_label": "Maskitaj Nomoj",
     "anonymous_names_desc": "Kaŝi verajn uzantnomojn kun hazardaj sur via ekrano.",
-    "left_click_label": "🖱️Maldekstra alklako por malfermi menuon",
+    "left_click_label": "Maldekstra alklako por malfermi menuon",
     "left_click_desc": "Kiam aktiviga, maldekstra alklako malfermas menuon kaj glava atakbutono. Kiam malaktiviga, maldekstra alklako atakas direkten.",
     "attack_ratio_label": "⚔️ Atakkvociento",
     "attack_ratio_desc": "Kian procenton de viaj trupoj sendi en atako (1–100%)",
@@ -262,6 +286,8 @@
     "attack_keybinds": "Atakaj Fulmoklavoj",
     "boat_attack": "Boata Atako",
     "boat_attack_desc": "Sendi boatan atakon al la kahelo sub via kursoro.",
+    "ground_attack": "Grundatako",
+    "ground_attack_desc": "Sendi grundatakon al la kahelo sub via kursoro.",
     "zoom_controls": "Zomaj kontroloj",
     "zoom_out": "Malzomi",
     "zoom_out_desc": "Malzomi la mapon",
@@ -383,9 +409,12 @@
     "hide": "Maski",
     "rank": "Rango",
     "player": "Ludanto",
+    "team": "Teamo",
     "owned": "Posedata",
     "gold": "Oro",
-    "troops": "Trupoj"
+    "troops": "Trupoj",
+    "show_top_5": "Montri Suprajn 5",
+    "show_all": "Montri ĉiujn"
   },
   "player_info_overlay": {
     "type": "Tipo",
@@ -402,7 +431,26 @@
     "sams": "SAM-oj",
     "warships": "Militŝipoj",
     "health": "Sano",
-    "attitude": "Teniĝo"
+    "attitude": "Teniĝo",
+    "levels": "Niveloj"
+  },
+  "events_display": {
+    "retreating": "retiriĝas",
+    "boat": "Boato",
+    "about_to_expire": "Via alianco kun {name} baldaŭ eksvalidiĝos!",
+    "renew_alliance": "Peti renovigon",
+    "focus": "Fokusi",
+    "alliance_renewed": "Via alianco kun {name} estis renovigita",
+    "ignore": "Ignori"
+  },
+  "unit_info_modal": {
+    "structure_info": "Informoj pri strukturo",
+    "unit_type_unknown": "Nekonata",
+    "close": "Fermi",
+    "cooldown": "Atendtempo",
+    "type": "Tipo",
+    "upgrade": "Promocii",
+    "level": "Nivelo"
   },
   "relation": {
     "hostile": "Malamika",
@@ -433,8 +481,13 @@
     "none": "Neniu",
     "alliances": "Aliancoj"
   },
+  "replay_panel": {
+    "replay_speed": "Reluda rapideco",
+    "game_speed": "Luda rapideco"
+  },
   "error_modal": {
     "crashed": "Ludo kolapsis!",
+    "connection_error": "Eraro de konekto!",
     "paste_discord": "Bonvolu elpoŝigi la jenon en via cimo-raporto en Discord:",
     "copy_clipboard": "Kopii al tondujo",
     "copied": "Kopiita!",
@@ -443,5 +496,47 @@
   },
   "heads_up_message": {
     "choose_spawn": "Elektu komencan lokon"
+  },
+  "territory_patterns": {
+    "title": "Elekti Teritoriajn Ŝablonojn",
+    "purchase": "Aĉeti",
+    "blocked": {
+      "login": "Vi devas esti ensalutinta por aliri ĉi tiun ŝablonon.",
+      "purchase": "Aĉetu ĉi tiun ŝablonon por malŝlosi ĝin."
+    },
+    "pattern": {
+      "default": "Defaŭlta",
+      "custom": "Propra",
+      "stripes_v": "Vertikala",
+      "stripes_h": "Horizontala",
+      "horizontal_stripes": "Horizontala (Alt)",
+      "vertical_bars": "Vertikala (Alt)",
+      "checkerboard": "Ŝaktabulo",
+      "choco": "Ĉoko",
+      "diagonal": "Diagonala",
+      "cross": "Kruca",
+      "mini_cross": "Kruceta",
+      "sword": "Glava",
+      "sparse_dots": "Maldensaj Punktoj",
+      "evan": "Evano",
+      "diagonal_stripe": "Diagonala Strio",
+      "mountain_ridge": "Montkresto",
+      "scattered_dots": "Disaj Punktoj",
+      "circuit_board": "Cirkvitplato",
+      "shells": "Konkoj",
+      "-w-": ".w.",
+      "white_rabbit": "Blanka Kuniklo",
+      "goat": "Kapro",
+      "cats": "Katoj",
+      "cursor": "Kursoro",
+      "hand": "Mano",
+      "radiation": "Radiado",
+      "openfront_qr": "OpenFront.io QR-kodo",
+      "openfront": "OpenFront",
+      "t_rex": "Tiranosaŭro",
+      "embelem": "Emblemo",
+      "grogu_head": "Grogu Kapo",
+      "grogu": "Grogu"
+    }
   }
 }
