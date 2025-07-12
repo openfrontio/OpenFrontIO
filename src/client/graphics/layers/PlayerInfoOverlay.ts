@@ -65,11 +65,29 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
   private lastMouseUpdate = 0;
 
+  private isPortDisabled = false;
+  private isCityDisabled = false;
+  private isMissileSiloDisabled = false;
+  private isSAMLauncherDisabled = false;
+  private isWarshipDisabled = false;
+
   init() {
     this.eventBus.on(MouseMoveEvent, (e: MouseMoveEvent) =>
       this.onMouseEvent(e),
     );
     this._isActive = true;
+
+    this.isPortDisabled = this.game.config().isUnitDisabled(UnitType.Port);
+    this.isCityDisabled = this.game.config().isUnitDisabled(UnitType.City);
+    this.isMissileSiloDisabled = this.game
+      .config()
+      .isUnitDisabled(UnitType.MissileSilo);
+    this.isSAMLauncherDisabled = this.game
+      .config()
+      .isUnitDisabled(UnitType.SAMLauncher);
+    this.isWarshipDisabled = this.game
+      .config()
+      .isUnitDisabled(UnitType.Warship);
   }
 
   private onMouseEvent(event: MouseMoveEvent) {
@@ -250,66 +268,86 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           ${translateText("player_info_overlay.gold")}:
           ${renderNumber(player.gold())}
         </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.ports")}:
-          ${player.units(UnitType.Port).length}
-          ${player
-            .units(UnitType.Port)
-            .map((unit) => unit.level())
-            .reduce((a, b) => a + b, 0) > 1
-            ? html`(${translateText("player_info_overlay.levels")}:
-              ${player
-                .units(UnitType.Port)
-                .map((unit) => unit.level())
-                .reduce((a, b) => a + b, 0)})`
-            : ""}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.cities")}:
-          ${player.units(UnitType.City).length}
-          ${player
-            .units(UnitType.City)
-            .map((unit) => unit.level())
-            .reduce((a, b) => a + b, 0) > 1
-            ? html`(${translateText("player_info_overlay.levels")}:
-              ${player
-                .units(UnitType.City)
-                .map((unit) => unit.level())
-                .reduce((a, b) => a + b, 0)})`
-            : ""}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.missile_launchers")}:
-          ${player.units(UnitType.MissileSilo).length}
-          ${player
-            .units(UnitType.MissileSilo)
-            .map((unit) => unit.level())
-            .reduce((a, b) => a + b, 0) > 1
-            ? html`(${translateText("player_info_overlay.levels")}:
-              ${player
-                .units(UnitType.MissileSilo)
-                .map((unit) => unit.level())
-                .reduce((a, b) => a + b, 0)})`
-            : ""}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.sams")}:
-          ${player.units(UnitType.SAMLauncher).length}
-          ${player
-            .units(UnitType.SAMLauncher)
-            .map((unit) => unit.level())
-            .reduce((a, b) => a + b, 0) > 1
-            ? html`(${translateText("player_info_overlay.levels")}:
-              ${player
-                .units(UnitType.SAMLauncher)
-                .map((unit) => unit.level())
-                .reduce((a, b) => a + b, 0)})`
-            : ""}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.warships")}:
-          ${player.units(UnitType.Warship).length}
-        </div>
+        ${!this.isPortDisabled
+          ? html`
+              <div class="text-sm opacity-80" translate="no">
+                ${translateText("player_info_overlay.ports")}:
+                ${player.units(UnitType.Port).length}
+                ${player
+                  .units(UnitType.Port)
+                  .map((unit) => unit.level())
+                  .reduce((a, b) => a + b, 0) > 1
+                  ? html`(${translateText("player_info_overlay.levels")}:
+                    ${player
+                      .units(UnitType.Port)
+                      .map((unit) => unit.level())
+                      .reduce((a, b) => a + b, 0)})`
+                  : ""}
+              </div>
+            `
+          : ""}
+        ${!this.isCityDisabled
+          ? html`
+              <div class="text-sm opacity-80" translate="no">
+                ${translateText("player_info_overlay.cities")}:
+                ${player.units(UnitType.City).length}
+                ${player
+                  .units(UnitType.City)
+                  .map((unit) => unit.level())
+                  .reduce((a, b) => a + b, 0) > 1
+                  ? html`(${translateText("player_info_overlay.levels")}:
+                    ${player
+                      .units(UnitType.City)
+                      .map((unit) => unit.level())
+                      .reduce((a, b) => a + b, 0)})`
+                  : ""}
+              </div>
+            `
+          : ""}
+        ${!this.isMissileSiloDisabled
+          ? html`
+              <div class="text-sm opacity-80" translate="no">
+                ${translateText("player_info_overlay.missile_launchers")}:
+                ${player.units(UnitType.MissileSilo).length}
+                ${player
+                  .units(UnitType.MissileSilo)
+                  .map((unit) => unit.level())
+                  .reduce((a, b) => a + b, 0) > 1
+                  ? html`(${translateText("player_info_overlay.levels")}:
+                    ${player
+                      .units(UnitType.MissileSilo)
+                      .map((unit) => unit.level())
+                      .reduce((a, b) => a + b, 0)})`
+                  : ""}
+              </div>
+            `
+          : ""}
+        ${!this.isSAMLauncherDisabled
+          ? html`
+              <div class="text-sm opacity-80" translate="no">
+                ${translateText("player_info_overlay.sams")}:
+                ${player.units(UnitType.SAMLauncher).length}
+                ${player
+                  .units(UnitType.SAMLauncher)
+                  .map((unit) => unit.level())
+                  .reduce((a, b) => a + b, 0) > 1
+                  ? html`(${translateText("player_info_overlay.levels")}:
+                    ${player
+                      .units(UnitType.SAMLauncher)
+                      .map((unit) => unit.level())
+                      .reduce((a, b) => a + b, 0)})`
+                  : ""}
+              </div>
+            `
+          : ""}
+        ${!this.isWarshipDisabled
+          ? html`
+              <div class="text-sm opacity-80" translate="no">
+                ${translateText("player_info_overlay.warships")}:
+                ${player.units(UnitType.Warship).length}
+              </div>
+            `
+          : ""}
         ${relationHtml}
       </div>
     `;
