@@ -6,13 +6,17 @@ import { TrainExecution } from "./TrainExecution";
 export class TrainStationExecution implements Execution {
   private mg: Game;
   private active: boolean = true;
-  private random: PseudoRandom | null = null;
+  private random: PseudoRandom;
   private station: TrainStation | null = null;
   private numCars: number = 5;
+  private lastSpawnTick: number = 0;
+  private ticksCooldown: number = 10; // Minimum cooldown between two trains
   constructor(
     private unit: Unit,
-    private randomSeed?: number,
-  ) {}
+    private spawnTrains?: boolean, // If set, the station will spawn trains
+  ) {
+    this.unit.setTrainStation(true);
+  }
 
   isActive(): boolean {
     return this.active;
@@ -20,8 +24,9 @@ export class TrainStationExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.random = new PseudoRandom(mg.ticks() + (this.randomSeed ?? 0));
-    this.unit.setTrainStation(true);
+    if (this.spawnTrains) {
+      this.random = new PseudoRandom(mg.ticks());
+    }
   }
 
   tick(ticks: number): void {
@@ -36,36 +41,57 @@ export class TrainStationExecution implements Execution {
       this.station = new TrainStation(this.mg, this.unit);
       this.mg.railNetwork().connectStation(this.station);
     }
-    if (!this.station.isActive() || !this.random) {
+    if (!this.station.isActive()) {
       this.active = false;
       return;
     }
-    const cluster = this.station.getCluster();
+    this.spawnTrain(this.station, ticks);
+  }
+
+  private shouldSpawnTrain(clusterSize: number): boolean {
+    const spawnRate = this.mg.config().trainSpawnRate(clusterSize);
+    for (let i = 0; i < this.unit!.level(); i++) {
+      if (this.random.chance(spawnRate)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private spawnTrain(station: TrainStation, currentTick: number) {
+    if (
+      !this.spawnTrains ||
+      currentTick - this.lastSpawnTick < this.ticksCooldown
+    ) {
+      return;
+    }
+    const cluster = station.getCluster();
     if (cluster === null) {
       return;
     }
     const availableForTrade = cluster.availableForTrade(this.unit.owner());
-    if (
-      availableForTrade.size === 0 ||
-      !this.random.chance(
-        this.mg.config().trainSpawnRate(availableForTrade.size),
-      )
-    ) {
+    if (availableForTrade.size === 0) {
       return;
     }
+    if (!this.shouldSpawnTrain(availableForTrade.size)) {
+      return;
+    }
+
     // Pick a destination randomly.
     // Could be improved to pick a lucrative trip
-    const destination = this.random.randFromSet(availableForTrade);
-    if (destination !== this.station) {
+    const destination: TrainStation =
+      this.random.randFromSet(availableForTrade);
+    if (destination !== station) {
       this.mg.addExecution(
         new TrainExecution(
           this.mg.railNetwork(),
           this.unit.owner(),
-          this.station,
+          station,
           destination,
           this.numCars,
         ),
       );
+      this.lastSpawnTick = currentTick;
     }
   }
 

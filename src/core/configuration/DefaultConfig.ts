@@ -326,7 +326,7 @@ export class DefaultConfig implements Config {
     return this._gameConfig.infiniteTroops;
   }
   trainSpawnRate(numberOfStations: number): number {
-    return Math.min(1400, Math.round(70 * Math.pow(numberOfStations, 0.8)));
+    return Math.min(1400, Math.round(20 * Math.pow(numberOfStations, 0.5)));
   }
   trainGold(): Gold {
     return BigInt(10_000);
