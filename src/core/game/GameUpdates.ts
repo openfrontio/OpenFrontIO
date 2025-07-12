@@ -44,6 +44,7 @@ export enum GameUpdateType {
   UnitIncoming,
   BonusEvent,
   RailroadEvent,
+  ConquestEvent,
 }
 
 export type GameUpdate =
@@ -63,7 +64,8 @@ export type GameUpdate =
   | UnitIncomingUpdate
   | AllianceExtensionUpdate
   | BonusEventUpdate
-  | RailroadUpdate;
+  | RailroadUpdate
+  | ConquestUpdate;
 
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;
@@ -86,10 +88,18 @@ export interface RailTile {
   tile: TileRef;
   railType: RailType;
 }
+
 export interface RailroadUpdate {
   type: GameUpdateType.RailroadEvent;
   isActive: boolean;
   railTiles: RailTile[];
+}
+
+export interface ConquestUpdate {
+  type: GameUpdateType.ConquestEvent;
+  conquerorId: PlayerID;
+  conqueredId: PlayerID;
+  gold: Gold;
 }
 
 export interface TileUpdateWrapper {

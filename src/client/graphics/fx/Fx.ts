@@ -14,4 +14,5 @@ export enum FxType {
   SAMExplosion = "SAMExplosion",
   UnderConstruction = "UnderConstruction",
   Dust = "Dust",
+  Conquest = "Conquest",
 }

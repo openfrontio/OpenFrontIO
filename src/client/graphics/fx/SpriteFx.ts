@@ -45,15 +45,16 @@ export class FadeFx implements Fx {
 export class SpriteFx implements Fx {
   protected animatedSprite: AnimatedSprite | null;
   protected elapsedTime = 0;
-  protected duration = 1000;
+  protected duration: number;
+  protected waitToTheEnd = false;
   constructor(
     animatedSpriteLoader: AnimatedSpriteLoader,
     protected x: number,
     protected y: number,
     fxType: FxType,
     duration?: number,
-    private owner?: PlayerView,
-    private theme?: Theme,
+    owner?: PlayerView,
+    theme?: Theme,
   ) {
     this.animatedSprite = animatedSpriteLoader.createAnimatedSprite(
       fxType,
@@ -63,6 +64,7 @@ export class SpriteFx implements Fx {
     if (!this.animatedSprite) {
       console.error("Could not load animated sprite", fxType);
     } else {
+      this.waitToTheEnd = duration ? true : false;
       this.duration = duration ?? this.animatedSprite.lifeTime() ?? 1000;
     }
   }
@@ -73,7 +75,7 @@ export class SpriteFx implements Fx {
     this.elapsedTime += frameTime;
     if (this.elapsedTime >= this.duration) return false;
 
-    if (!this.animatedSprite.isActive()) return false;
+    if (!this.animatedSprite.isActive() && !this.waitToTheEnd) return false;
 
     const t = this.elapsedTime / this.duration;
     this.animatedSprite.update(frameTime);
