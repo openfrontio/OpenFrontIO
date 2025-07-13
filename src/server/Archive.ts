@@ -37,7 +37,7 @@ export async function archive(gameRecord: GameRecord) {
     }
   } catch (error) {
     log.error(`${gameRecord.info.gameID}: Final archive error: ${error}`, {
-      message: error?.message || error,
+      message: error?.message ?? error,
       stack: error?.stack,
       name: error?.name,
       ...(error && typeof error === "object" ? error : {}),
@@ -70,7 +70,7 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
     log.info(`${info.gameID}: successfully wrote game analytics to R2`);
   } catch (error) {
     log.error(`${info.gameID}: Error writing game analytics to R2: ${error}`, {
-      message: error?.message || error,
+      message: error?.message ?? error,
       stack: error?.stack,
       name: error?.name,
       ...(error && typeof error === "object" ? error : {}),
@@ -119,7 +119,7 @@ export async function readGameRecord(
   } catch (error) {
     // Log the error for monitoring purposes
     log.error(`${gameId}: Error reading game record from R2: ${error}`, {
-      message: error?.message || error,
+      message: error?.message ?? error,
       stack: error?.stack,
       name: error?.name,
       ...(error && typeof error === "object" ? error : {}),
@@ -142,7 +142,7 @@ export async function gameRecordExists(gameId: GameID): Promise<boolean> {
       return false;
     }
     log.error(`${gameId}: Error checking archive existence: ${error}`, {
-      message: error?.message || error,
+      message: error?.message ?? error,
       stack: error?.stack,
       name: error?.name,
       ...(error && typeof error === "object" ? error : {}),

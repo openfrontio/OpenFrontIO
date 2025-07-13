@@ -319,6 +319,7 @@ export class UILayer implements Layer {
         }
         return (
           (this.game.ticks() - unit.createdAt()) /
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
           (this.game.unitInfo(constructionType).constructionDuration || 1)
         );
       case UnitType.MissileSilo:

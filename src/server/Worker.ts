@@ -29,6 +29,7 @@ import { initWorkerMetrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
 
+// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 const workerId = parseInt(process.env.WORKER_ID || "0");
 const log = logger.child({ comp: `w_${workerId}` });
 
@@ -94,6 +95,7 @@ export function startWorker() {
         log.warn(`cannot create game, id not found`);
         return res.status(400).json({ error: "Game ID is required" });
       }
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       const clientIP = req.ip || req.socket.remoteAddress || "unknown";
       const result = CreateGameInputSchema.safeParse(req.body);
       if (!result.success) {
@@ -140,6 +142,7 @@ export function startWorker() {
         return;
       }
       if (game.isPublic()) {
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
         const clientIP = req.ip || req.socket.remoteAddress || "unknown";
         log.info(
           `cannot start public game ${game.id}, game is public, ip: ${ipAnonymize(clientIP)}`,
@@ -171,6 +174,7 @@ export function startWorker() {
         return res.status(400).json({ error: "Game not found" });
       }
       if (game.isPublic()) {
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
         const clientIP = req.ip || req.socket.remoteAddress || "unknown";
         log.warn(
           `cannot update public game ${game.id}, ip: ${ipAnonymize(clientIP)}`,
@@ -296,6 +300,7 @@ export function startWorker() {
         const forwarded = req.headers["x-forwarded-for"];
         const ip = Array.isArray(forwarded)
           ? forwarded[0]
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
           : forwarded || req.socket.remoteAddress || "unknown";
 
         try {

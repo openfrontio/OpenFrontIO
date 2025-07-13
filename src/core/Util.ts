@@ -119,7 +119,7 @@ export function getMode(list: Set<number>): number {
   // Count occurrences
   const counts = new Map<number, number>();
   for (const item of list) {
-    counts.set(item, (counts.get(item) || 0) + 1);
+    counts.set(item, (counts.get(item) ?? 0) + 1);
   }
 
   // Find the item with the highest count

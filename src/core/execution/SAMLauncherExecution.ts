@@ -109,9 +109,7 @@ export class SAMLauncherExecution implements Execution {
       this.player = this.sam.owner();
     }
 
-    if (this.pseudoRandom === undefined) {
-      this.pseudoRandom = new PseudoRandom(this.sam.id());
-    }
+    this.pseudoRandom ??= new PseudoRandom(this.sam.id());
 
     const mirvWarheadTargets = this.mg.nearbyUnits(
       this.sam.tile(),
