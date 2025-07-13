@@ -187,21 +187,9 @@ export class Leaderboard extends LitElement implements Layer {
           : "hidden"}"
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
-        <button
-          class="mb-1.5 px-1.5 py-0.5 md:px-2 md:py-1 text-xs md:text-xs lg:text-sm border border-white/20 hover:bg-white/10"
-          @click=${() => {
-            this.showTopFive = !this.showTopFive;
-            this.updateLeaderboard();
-          }}
-        >
-          ${this.showTopFive
-            ? translateText("leaderboard.show_all")
-            : translateText("leaderboard.show_top_5")}
-        </button>
-
         <div
           class="grid bg-gray-800/70 w-full text-xs md:text-xs lg:text-sm"
-          style="grid-template-columns: 30px 85px 70px 55px 55px;"
+          style="grid-template-columns: 30px 100px 70px 55px 75px;"
         >
           <div class="contents font-bold bg-gray-700/50">
             <div class="py-1 md:py-2 text-center border-b border-slate-500">
@@ -211,7 +199,7 @@ export class Leaderboard extends LitElement implements Layer {
               ${translateText("leaderboard.player")}
             </div>
             <div
-              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer"
+              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
               @click=${() => this.setSort("tiles")}
             >
               ${translateText("leaderboard.owned")}
@@ -222,7 +210,7 @@ export class Leaderboard extends LitElement implements Layer {
                 : ""}
             </div>
             <div
-              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer"
+              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
               @click=${() => this.setSort("gold")}
             >
               ${translateText("leaderboard.gold")}
@@ -233,7 +221,7 @@ export class Leaderboard extends LitElement implements Layer {
                 : ""}
             </div>
             <div
-              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer"
+              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
               @click=${() => this.setSort("troops")}
             >
               ${translateText("leaderboard.troops")}
@@ -277,6 +265,16 @@ export class Leaderboard extends LitElement implements Layer {
           )}
         </div>
       </div>
+
+      <button
+        class="mt-1 px-1.5 py-0.5 md:px-2 md:py-0.5 text-xs md:text-xs lg:text-sm border border-white/20 hover:bg-white/10 text-white mx-auto block"
+        @click=${() => {
+          this.showTopFive = !this.showTopFive;
+          this.updateLeaderboard();
+        }}
+      >
+        ${this.showTopFive ? "+" : "-"}
+      </button>
     `;
   }
 }
