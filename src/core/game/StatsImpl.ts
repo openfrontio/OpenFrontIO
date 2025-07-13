@@ -89,7 +89,7 @@ export class StatsImpl implements Stats {
   ) {
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
-    p.boats = { [type]: [0n] };
+    p.boats ??= { [type]: [0n] };
     p.boats[type] ??= [0n];
     while (p.boats[type].length <= index) p.boats[type].push(0n);
     p.boats[type][index] += _bigint(value);
