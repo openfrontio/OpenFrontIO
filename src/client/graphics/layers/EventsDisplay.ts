@@ -137,7 +137,7 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private toggleEventFilter(filterName: MessageCategory) {
-    const currentState = this.eventsFilters.get(filterName) || false;
+    const currentState = this.eventsFilters.get(filterName) ?? false;
     this.eventsFilters.set(filterName, !currentState);
     this.requestUpdate();
   }

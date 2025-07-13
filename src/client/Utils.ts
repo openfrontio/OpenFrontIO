@@ -172,7 +172,7 @@ export function getAltKey(): string {
 
 export function getGamesPlayed(): number {
   try {
-    return parseInt(localStorage.getItem("gamesPlayed") || "0", 10) || 0;
+    return parseInt(localStorage.getItem("gamesPlayed") ?? "0", 10) || 0;
   } catch (error) {
     console.warn("Failed to read games played from localStorage:", error);
     return 0;

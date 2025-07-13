@@ -5,6 +5,7 @@ import globals from "globals";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import tseslint from "typescript-eslint";
+import webpack from "webpack";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,6 +21,23 @@ export default [
   ...tseslint.configs.recommended,
   eslintConfigPrettier,
   {
+    languageOptions: {
+      parserOptions: {
+        projectService: {
+          allowDefaultProject: [
+            '__mocks__/fileMock.js',
+            'eslint.config.js',
+            'jest.config.ts',
+            'postcss.config.js',
+            'tailwind.config.js',
+            'webpack.config.js',
+          ],
+        },
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
     rules: {
       // Disable rules that would fail. The failures should be fixed, and the entries here removed.
       "@typescript-eslint/no-empty-object-type": "off",
@@ -34,6 +52,7 @@ export default [
   {
     rules: {
       // Enable rules
+      "@typescript-eslint/prefer-nullish-coalescing": "error",
       eqeqeq: "error",
     },
   },

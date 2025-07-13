@@ -146,6 +146,8 @@ app.get(
   "/api/env",
   gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
     const envConfig = {
+      /* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing --
+      Allow for empty string ('') value to be substituted by default "prod". */
       game_env: process.env.GAME_ENV || "prod",
     };
     res.json(envConfig);
