@@ -321,9 +321,9 @@ export function startWorker() {
             let roles: string[] | undefined;
             let flares: string[] | undefined;
 
-            const allowedFlares = config.allowedFlares();
+            const allowedIds = config.allowedDiscordIds();
             if (claims === null) {
-              if (allowedFlares !== undefined) {
+              if (allowedIds !== undefined) {
                 log.warn("Unauthorized: Anonymous user attempted to join game");
                 ws.close(1002, "Unauthorized");
                 return;
@@ -339,10 +339,10 @@ export function startWorker() {
               roles = result.player.roles;
               flares = result.player.flares;
 
-              if (allowedFlares !== undefined) {
+              if (allowedIds !== undefined) {
                 const allowed =
-                  allowedFlares.length === 0 ||
-                  allowedFlares.some((f) => flares?.includes(f));
+                  allowedIds.length === 0 ||
+                  allowedIds.includes(result.user.id);
                 if (!allowed) {
                   log.warn(
                     "Forbidden: player without an allowed flare attempted to join game",

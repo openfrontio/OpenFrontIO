@@ -63,7 +63,7 @@ export interface ServerConfig {
   cloudflareConfigPath(): string;
   cloudflareCredsPath(): string;
   stripePublishableKey(): string;
-  allowedFlares(): string[] | undefined;
+  allowedDiscordIds(): string[] | undefined;
 }
 
 export interface NukeMagnitude {

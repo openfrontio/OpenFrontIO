@@ -11,7 +11,7 @@ export const preprodConfig = new (class extends DefaultServerConfig {
   jwtAudience(): string {
     return "openfront.dev";
   }
-  allowedFlares(): string[] | undefined {
+  allowedDiscordIds(): string[] | undefined {
     return [
       // "access:openfront.dev"
     ];

@@ -178,7 +178,7 @@ class Client {
     loginDiscordButton.addEventListener("click", discordLogin);
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       const config = await getServerConfigFromClient();
-      if (!hasAllowedFlare(userMeResponse, config)) {
+      if (!hasAllowedId(userMeResponse, config)) {
         if (userMeResponse === false) {
           // Login is required
           document.body.innerHTML = `
@@ -502,14 +502,12 @@ function getPersistentIDFromCookie(): string {
   return newID;
 }
 
-function hasAllowedFlare(
+function hasAllowedId(
   userMeResponse: UserMeResponse | false,
   config: ServerConfig,
 ) {
-  const allowed = config.allowedFlares();
+  const allowed = config.allowedDiscordIds();
   if (allowed === undefined) return true;
   if (userMeResponse === false) return false;
-  const flares = userMeResponse.player.flares;
-  if (flares === undefined) return false;
-  return allowed.length === 0 || allowed.some((f) => flares.includes(f));
+  return allowed.includes(userMeResponse.user.id);
 }
