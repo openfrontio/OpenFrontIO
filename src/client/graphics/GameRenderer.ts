@@ -15,7 +15,6 @@ import { EventsDisplay } from "./layers/EventsDisplay";
 import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
-import { GameTopBar } from "./layers/GameTopBar";
 import { GutterAdModal } from "./layers/GutterAdModal";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
@@ -162,13 +161,6 @@ export function createRenderer(
   settingsModal.userSettings = userSettings;
   settingsModal.eventBus = eventBus;
 
-  const gameTopBar = document.querySelector("game-top-bar") as GameTopBar;
-  if (!(gameTopBar instanceof GameTopBar)) {
-    console.error("top bar not found");
-  }
-  gameTopBar.game = game;
-  gameTopBar.eventBus = eventBus;
-
   const unitDisplay = document.querySelector("unit-display") as UnitDisplay;
   if (!(unitDisplay instanceof UnitDisplay)) {
     console.error("unit display not found");
@@ -255,7 +247,6 @@ export function createRenderer(
     new SpawnTimer(game, transformHandler),
     leaderboard,
     gameLeftSidebar,
-    gameTopBar,
     unitDisplay,
     gameRightSidebar,
     controlPanel,

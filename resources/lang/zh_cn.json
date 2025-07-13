@@ -24,7 +24,9 @@
     "wiki": "游戏百科"
   },
   "news": {
-    "title": "版本 23 已发布！"
+    "full_changelog": "查看完整的更新日志",
+    "github_link": "在 Github 上",
+    "title": "发行说明"
   },
   "help_modal": {
     "hotkeys": "快捷键",
@@ -41,6 +43,7 @@
     "action_reset_gfx": "重置图形",
     "ui_section": "游戏 UI",
     "ui_leaderboard": "排行榜",
+    "ui_your_team": "你的队伍:",
     "ui_leaderboard_desc": "显示游戏中的顶尖玩家及其姓名、所占领土百分比、黄金和军队数量。点击“显示全部”可以查看所有玩家的信息。如果你不想看到排行榜，点击“隐藏”即可。",
     "ui_control": "控制面板",
     "ui_control_desc": "控制面板包括下列元素：",
@@ -128,6 +131,7 @@
   "map": {
     "map": "地图",
     "world": "世界",
+    "giantworldmap": "巨型世界地图",
     "europe": "欧洲",
     "mena": "中东/北非",
     "northamerica": "北美洲",
@@ -151,12 +155,16 @@
     "falklandislands": "福克兰群岛",
     "baikal": "贝加尔湖",
     "halkidiki": "哈尔基迪基",
-    "giantworldmap": "巨型世界地图"
+    "straitofgibraltar": "直布罗陀海峡",
+    "italia": "意大利"
   },
   "map_categories": {
     "continental": "大陆",
     "regional": "地区",
     "fantasy": "其他"
+  },
+  "map_component": {
+    "loading": "正在加载..."
   },
   "private_lobby": {
     "title": "加入私人房间",
@@ -172,6 +180,9 @@
   "public_lobby": {
     "join": "加入下一场游戏",
     "waiting": "等待中的玩家",
+    "teams_Duos": "2人队",
+    "teams_Trios": "3人队",
+    "teams_Quads": "4人队",
     "teams": "{num} 个队伍"
   },
   "username": {
@@ -197,6 +208,16 @@
     "players": "玩家",
     "waiting": "正在等待玩家...",
     "start": "开始游戏"
+  },
+  "team_colors": {
+    "red": "红色",
+    "blue": "蓝色",
+    "teal": "青色",
+    "purple": "紫色",
+    "yellow": "黄色",
+    "orange": "橙色",
+    "green": "绿色",
+    "bot": "机器人"
   },
   "game_starting_modal": {
     "title": "游戏正在启动...",
@@ -225,28 +246,31 @@
     "sam_launcher": "防空塔",
     "atom_bomb": "原子弹",
     "hydrogen_bomb": "氢弹",
-    "mirv": "MIRV (分导式多弹头)"
+    "mirv": "MIRV (分导式多弹头)",
+    "factory": "工厂"
   },
   "user_setting": {
     "title": "用户设置",
     "tab_basic": "基本设置",
     "tab_keybinds": "热键绑定",
-    "dark_mode_label": "🌙 深色模式",
+    "dark_mode_label": "深色模式",
     "dark_mode_desc": "在浅色和深色主题之间切换网站外观",
-    "emojis_label": "😊 表情符号",
+    "emojis_label": "表情符号",
     "emojis_desc": "切换是否在游戏中显示表情符号",
-    "special_effects_label": "💥 特效",
+    "alert_frame_label": "警告框",
+    "alert_frame_desc": "切换警告框显示。若启用，当您被背叛时会弹出警告框。",
+    "special_effects_label": "特效",
     "special_effects_desc": "切换特效开关。停用以改进性能",
-    "anonymous_names_label": "🥷 隐藏名称",
+    "anonymous_names_label": "隐藏的名称",
     "anonymous_names_desc": "将真实玩家名字替换为随机名字。",
-    "left_click_label": "🖱️ 左键单击打开菜单",
+    "left_click_label": "左键单击打开菜单",
     "left_click_desc": "开启时，先左键单击打开菜单，然后再点进攻。关闭时，左键将直接进攻。",
     "attack_ratio_label": "⚔️ 攻击比例",
     "attack_ratio_desc": "你要派出多少比例的军队进攻 (1–100%)",
     "troop_ratio_label": "🛠️ 军队和工人比例",
     "troop_ratio_desc": "调整军队 (用于战斗) 和工人 (用于生产黄金) 之间的比例 (1-100%)",
     "territory_patterns_label": "🏳️ 领土样式",
-    "territory_patterns_desc": "选择在游戏中如何显示领土样式",
+    "territory_patterns_desc": "选择是否在游戏中显示领土样式设计",
     "easter_writing_speed_label": "写入速度乘数",
     "easter_writing_speed_desc": "调节你“假装写代码”的速度 (x1–x100)",
     "easter_bug_count_label": "Bug 计数",
@@ -262,6 +286,8 @@
     "attack_keybinds": "攻击快捷键",
     "boat_attack": "船只攻击",
     "boat_attack_desc": "向鼠标所指地块发送船只攻击。",
+    "ground_attack": "对地攻击",
+    "ground_attack_desc": "向鼠标所指地块发送船只攻击。",
     "zoom_controls": "缩放控制",
     "zoom_out": "缩小",
     "zoom_out_desc": "缩小地图",
@@ -383,9 +409,12 @@
     "hide": "隐藏",
     "rank": "排名",
     "player": "玩家",
+    "team": "队伍",
     "owned": "已拥有",
     "gold": "黄金",
-    "troops": "军队"
+    "troops": "军队",
+    "show_top_5": "显示前 5 名",
+    "show_all": "显示全部"
   },
   "player_info_overlay": {
     "type": "类型",
@@ -402,7 +431,26 @@
     "sams": "防空塔",
     "warships": "军舰",
     "health": "生命值",
-    "attitude": "态度"
+    "attitude": "态度",
+    "levels": "等级"
+  },
+  "events_display": {
+    "retreating": "正在撤退",
+    "boat": "船",
+    "about_to_expire": "你与 {name} 的结盟即将到期！",
+    "renew_alliance": "请求续期",
+    "focus": "聚焦",
+    "alliance_renewed": "你与 {name} 的结盟已续期",
+    "ignore": "忽略"
+  },
+  "unit_info_modal": {
+    "structure_info": "建筑信息",
+    "unit_type_unknown": "未知",
+    "close": "关闭",
+    "cooldown": "冷却时间",
+    "type": "类型",
+    "upgrade": "升级",
+    "level": "等级"
   },
   "relation": {
     "hostile": "敌对",
@@ -433,8 +481,13 @@
     "none": "空",
     "alliances": "盟友"
   },
+  "replay_panel": {
+    "replay_speed": "回放速度",
+    "game_speed": "游戏速度"
+  },
   "error_modal": {
     "crashed": "游戏崩溃了！",
+    "connection_error": "连接出错！",
     "paste_discord": "请在 Discord 中粘贴以下错误报告：",
     "copy_clipboard": "复制到剪贴板",
     "copied": "已复制！",
@@ -443,5 +496,47 @@
   },
   "heads_up_message": {
     "choose_spawn": "选择出生点"
+  },
+  "territory_patterns": {
+    "title": "选择领土样式",
+    "purchase": "购买",
+    "blocked": {
+      "login": "您必须登录才能使用此样式。",
+      "purchase": "购买此图案以解锁它。"
+    },
+    "pattern": {
+      "default": "默认",
+      "custom": "自定义",
+      "stripes_v": "垂直",
+      "stripes_h": "水平",
+      "horizontal_stripes": "水平 (替换)",
+      "vertical_bars": "垂直 (替换)",
+      "checkerboard": "棋盘格",
+      "choco": "巧克力",
+      "diagonal": "对角线",
+      "cross": "十字线",
+      "mini_cross": "迷你十字线",
+      "sword": "剑",
+      "sparse_dots": "稀疏点",
+      "evan": "埃文",
+      "diagonal_stripe": "斜纹",
+      "mountain_ridge": "山脊",
+      "scattered_dots": "散点",
+      "circuit_board": "电路板",
+      "shells": "贝壳",
+      "-w-": ".w.",
+      "white_rabbit": "小白兔",
+      "goat": "山羊",
+      "cats": "猫",
+      "cursor": "光标",
+      "hand": "手",
+      "radiation": "辐射",
+      "openfront_qr": "OpenFront.io 二维码",
+      "openfront": "OpenFront",
+      "t_rex": "霸王龙",
+      "embelem": "徽章",
+      "grogu_head": "格罗古的头",
+      "grogu": "格罗古"
+    }
   }
 }

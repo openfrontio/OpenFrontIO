@@ -24,7 +24,9 @@
     "wiki": "Wiki"
   },
   "news": {
-    "title": "Version 23 udgivet!"
+    "full_changelog": "Vis hele ændringsloggen",
+    "github_link": "på GitHub",
+    "title": "Udgivelsesnoter"
   },
   "help_modal": {
     "hotkeys": "Genvejstaster",
@@ -41,6 +43,7 @@
     "action_reset_gfx": "Nulstil grafik",
     "ui_section": "Spilgrænseflade",
     "ui_leaderboard": "Rangliste",
+    "ui_your_team": "Dit hold:",
     "ui_leaderboard_desc": "Viser de bedste spillere i spillet med deres navne, procentdel af ejet land, guld og tropper. Ved at vælge 'Vis alle' vises alle spillere i spillet. Hvis du ikke ønsker at se ranglisten, klik på 'Skjul'.",
     "ui_control": "Betjeningspanel",
     "ui_control_desc": "Kontrolpanelet indeholder følgende elementer:",
@@ -128,6 +131,7 @@
   "map": {
     "map": "Kort",
     "world": "Verden",
+    "giantworldmap": "Kæmpe Verdenskort",
     "europe": "Europa",
     "mena": "MENA",
     "northamerica": "Nordamerika",
@@ -151,12 +155,16 @@
     "falklandislands": "Falklandsøerne",
     "baikal": "Baikalsøen",
     "halkidiki": "Halkidiki",
-    "giantworldmap": "Kæmpe Verdenskort"
+    "straitofgibraltar": "Gibraltarstrædet",
+    "italia": "Italien"
   },
   "map_categories": {
     "continental": "Kontinental",
     "regional": "Regional",
     "fantasy": "Andre"
+  },
+  "map_component": {
+    "loading": "Indlæser..."
   },
   "private_lobby": {
     "title": "Deltag I Privat Lobby",
@@ -172,6 +180,9 @@
   "public_lobby": {
     "join": "Deltag i næste Spil",
     "waiting": "spillere venter",
+    "teams_Duos": "Duos (hold af 2)",
+    "teams_Trios": "Trioer (hold af 3)",
+    "teams_Quads": "Quads (hold af 4)",
     "teams": "{num} hold"
   },
   "username": {
@@ -197,6 +208,16 @@
     "players": "Spillere",
     "waiting": "Venter på spillerne...",
     "start": "Start spil"
+  },
+  "team_colors": {
+    "red": "Rød",
+    "blue": "Blå",
+    "teal": "Grønblå",
+    "purple": "Lilla",
+    "yellow": "Gul",
+    "orange": "Orange",
+    "green": "Grøn",
+    "bot": "Bot"
   },
   "game_starting_modal": {
     "title": "Spillet Starter...",
@@ -225,21 +246,24 @@
     "sam_launcher": "SAM-affyringsrampe",
     "atom_bomb": "Atombombe",
     "hydrogen_bomb": "Brintbombe",
-    "mirv": "MIRV"
+    "mirv": "MIRV",
+    "factory": "Fabrik"
   },
   "user_setting": {
     "title": "Brugerindstillinger",
     "tab_basic": "Grundlæggende indstillinger",
     "tab_keybinds": "Genvejstaster",
-    "dark_mode_label": "🌙 Mørk Tilstand",
+    "dark_mode_label": "Mørk Tilstand",
     "dark_mode_desc": "Skift webstedets udseende mellem lyst og mørkt tema",
-    "emojis_label": "😊 Emojis",
+    "emojis_label": "Emojis",
     "emojis_desc": "Skift mellem om emojis vises i spillet",
-    "special_effects_label": "💥 Specialeffekter",
+    "alert_frame_label": "Advarselsramme",
+    "alert_frame_desc": "Slå alarmrammen til og fra. Når den er aktiveret, vises rammen, når du bliver forrådt.",
+    "special_effects_label": "Specialeffekter",
     "special_effects_desc": "Slå specialeffekter til eller fra. Deaktivér for at forbedre ydeevnen",
-    "anonymous_names_label": "🥷 Skjulte Navne",
+    "anonymous_names_label": "Skjulte Navne",
     "anonymous_names_desc": "Skjul rigtige spillernavne med tilfældige navne på din skærm.",
-    "left_click_label": "🖱️ Venstreklik for at Åbne Menuen",
+    "left_click_label": "Venstreklik for at Åbne Menuen",
     "left_click_desc": "Når den er TIL, åbner venstreklik menuen, og sværdknappen angriber. Når den er FRA, angriber venstreklik direkte.",
     "attack_ratio_label": "⚔️ Angrebsforhold",
     "attack_ratio_desc": "Hvor stor en procentdel af dine tropper skal sendes i et angreb (1–100%)",
@@ -262,6 +286,8 @@
     "attack_keybinds": "Angrebsgenvejstaster",
     "boat_attack": "Båd Angreb",
     "boat_attack_desc": "Send et bådangreb til den flise, din markør peger på.",
+    "ground_attack": "Jordangreb",
+    "ground_attack_desc": "Send et jordangreb til den flise, din markør peger på.",
     "zoom_controls": "Zoom Styring",
     "zoom_out": "Zoom Ud",
     "zoom_out_desc": "Zoom ud af kortet",
@@ -383,9 +409,12 @@
     "hide": "Skjul",
     "rank": "Rang",
     "player": "Spiller",
+    "team": "Hold",
     "owned": "Ejet",
     "gold": "Guld",
-    "troops": "Tropper"
+    "troops": "Tropper",
+    "show_top_5": "Vis Top 5",
+    "show_all": "Vis alle"
   },
   "player_info_overlay": {
     "type": "Type",
@@ -402,7 +431,26 @@
     "sams": "SAMs",
     "warships": "Krigsskibe",
     "health": "Helbred",
-    "attitude": "Adfærd"
+    "attitude": "Adfærd",
+    "levels": "Niveauer"
+  },
+  "events_display": {
+    "retreating": "trækker sig tilbage",
+    "boat": "Båd",
+    "about_to_expire": "Din alliance med {name} er ved at udløbe!",
+    "renew_alliance": "Anmod om fornyelse",
+    "focus": "Fokus",
+    "alliance_renewed": "Din alliance med {name} er blevet fornyet",
+    "ignore": "Ignorér"
+  },
+  "unit_info_modal": {
+    "structure_info": "Strukturinfo",
+    "unit_type_unknown": "Ukendt",
+    "close": "Luk",
+    "cooldown": "Nedkøling",
+    "type": "Type",
+    "upgrade": "Opgradér",
+    "level": "Niveau"
   },
   "relation": {
     "hostile": "Fjendtlig",
@@ -433,8 +481,13 @@
     "none": "Ingen",
     "alliances": "Alliancer"
   },
+  "replay_panel": {
+    "replay_speed": "Genafspilnings hastighed",
+    "game_speed": "Spil hastighed"
+  },
   "error_modal": {
     "crashed": "Spillet crashede!",
+    "connection_error": "Forbindelsesfejl!",
     "paste_discord": "Indsæt venligst følgende i din fejlrapport i Discord:",
     "copy_clipboard": "Kopier til udklipsholder",
     "copied": "Kopieret!",
@@ -443,5 +496,47 @@
   },
   "heads_up_message": {
     "choose_spawn": "Vælg en startplacering"
+  },
+  "territory_patterns": {
+    "title": "Vælg Territoriummønster",
+    "purchase": "Køb",
+    "blocked": {
+      "login": "Du skal være logget ind for at få adgang til dette mønster.",
+      "purchase": "Køb dette mønster for at låse det op."
+    },
+    "pattern": {
+      "default": "Standard",
+      "custom": "Brugerdefineret",
+      "stripes_v": "Lodret",
+      "stripes_h": "Vandret",
+      "horizontal_stripes": "Vandret (Alt)",
+      "vertical_bars": "Lodret (Alt)",
+      "checkerboard": "Skaktern",
+      "choco": "Choco",
+      "diagonal": "Diagonalt",
+      "cross": "Kryds",
+      "mini_cross": "Mini Kryds",
+      "sword": "Sværd",
+      "sparse_dots": "Spredte Prikker",
+      "evan": "Evansk",
+      "diagonal_stripe": "Diagonale Striber",
+      "mountain_ridge": "Bjergryg",
+      "scattered_dots": "Spredte Prikker",
+      "circuit_board": "Kredsløbstavle",
+      "shells": "Skaller",
+      "-w-": ".w.",
+      "white_rabbit": "Hvid Kanin",
+      "goat": "Ged",
+      "cats": "Katte",
+      "cursor": "Musemarkør",
+      "hand": "Hånd",
+      "radiation": "Stråling",
+      "openfront_qr": "OpenFront.io QR kode",
+      "openfront": "OpenFront",
+      "t_rex": "T-Rex",
+      "embelem": "Emblem",
+      "grogu_head": "Grogu Hoved",
+      "grogu": "Grogu"
+    }
   }
 }
