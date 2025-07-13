@@ -53,12 +53,19 @@ export class Leaderboard extends LitElement implements Layer {
     return this; // use light DOM for Tailwind support
   }
 
-  init() {}
+  init() {
+    // Make it visible by default on large screens
+    if (window.innerWidth >= 1024) {
+      // lg breakpoint
+      this._shownOnInit = true;
+    }
+  }
 
   tick() {
     if (this.game === null) throw new Error("Not initialized");
-    if (!this._shownOnInit && !this.game.inSpawnPhase()) {
-      this._shownOnInit = true;
+    if (this._shownOnInit && !this.game.inSpawnPhase()) {
+      this._shownOnInit = false;
+      this.visible = true;
       this.updateLeaderboard();
     }
     if (!this.visible) return;
@@ -174,14 +181,14 @@ export class Leaderboard extends LitElement implements Layer {
     }
     return html`
       <div
-        class="max-h-[35vh] overflow-y-auto text-white text-xs md:text-sm md:max-h-[50vh]  ${this
+        class="max-h-[35vh] overflow-y-auto text-white text-xs md:text-xs lg:text-sm md:max-h-[50vh]  ${this
           .visible
           ? ""
           : "hidden"}"
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <button
-          class="mb-2 px-2 py-1 md:px-2.5 md:py-1.5 text-xs md:text-sm lg:text-base border border-white/20 hover:bg-white/10"
+          class="mb-1.5 px-1.5 py-0.5 md:px-2 md:py-1 text-xs md:text-xs lg:text-sm border border-white/20 hover:bg-white/10"
           @click=${() => {
             this.showTopFive = !this.showTopFive;
             this.updateLeaderboard();
@@ -193,18 +200,18 @@ export class Leaderboard extends LitElement implements Layer {
         </button>
 
         <div
-          class="grid bg-gray-800/70 w-full text-xs md:text-sm lg:text-base"
-          style="grid-template-columns: 35px 100px 85px 65px 65px;"
+          class="grid bg-gray-800/70 w-full text-xs md:text-xs lg:text-sm"
+          style="grid-template-columns: 30px 85px 70px 55px 55px;"
         >
           <div class="contents font-bold bg-gray-700/50">
-            <div class="py-1.5 md:py-2.5 text-center border-b border-slate-500">
+            <div class="py-1 md:py-2 text-center border-b border-slate-500">
               #
             </div>
-            <div class="py-1.5 md:py-2.5 text-center border-b border-slate-500">
+            <div class="py-1 md:py-2 text-center border-b border-slate-500">
               ${translateText("leaderboard.player")}
             </div>
             <div
-              class="py-1.5 md:py-2.5 text-center border-b border-slate-500 cursor-pointer"
+              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer"
               @click=${() => this.setSort("tiles")}
             >
               ${translateText("leaderboard.owned")}
@@ -215,7 +222,7 @@ export class Leaderboard extends LitElement implements Layer {
                 : ""}
             </div>
             <div
-              class="py-1.5 md:py-2.5 text-center border-b border-slate-500 cursor-pointer"
+              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer"
               @click=${() => this.setSort("gold")}
             >
               ${translateText("leaderboard.gold")}
@@ -226,7 +233,7 @@ export class Leaderboard extends LitElement implements Layer {
                 : ""}
             </div>
             <div
-              class="py-1.5 md:py-2.5 text-center border-b border-slate-500 cursor-pointer"
+              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer"
               @click=${() => this.setSort("troops")}
             >
               ${translateText("leaderboard.troops")}
@@ -248,29 +255,21 @@ export class Leaderboard extends LitElement implements Layer {
                   : ""} cursor-pointer"
                 @click=${() => this.handleRowClickPlayer(player.player)}
               >
-                <div
-                  class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
-                >
+                <div class="py-1 md:py-2 text-center border-b border-slate-500">
                   ${player.position}
                 </div>
                 <div
-                  class="py-1.5 md:py-2.5 text-center border-b border-slate-500 truncate"
+                  class="py-1 md:py-2 text-center border-b border-slate-500 truncate"
                 >
                   ${player.name}
                 </div>
-                <div
-                  class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
-                >
+                <div class="py-1 md:py-2 text-center border-b border-slate-500">
                   ${player.score}
                 </div>
-                <div
-                  class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
-                >
+                <div class="py-1 md:py-2 text-center border-b border-slate-500">
                   ${player.gold}
                 </div>
-                <div
-                  class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
-                >
+                <div class="py-1 md:py-2 text-center border-b border-slate-500">
                   ${player.troops}
                 </div>
               </div>
