@@ -312,7 +312,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="hidden lg:flex fixed top-[245px] right-0 w-full z-50 flex-col max-w-[180px]"
+        class="hidden lg:flex fixed top-[150px] right-0 w-full z-50 flex-col max-w-[180px]"
         @contextmenu=${(e) => e.preventDefault()}
       >
         <div
