@@ -163,7 +163,7 @@
 	},
     {
       "coordinates": [55, 134],
-      "name": "Agentinian Colony",
+      "name": "Argentinian Colony",
       "strength": 1,
       "flag": "ar"
 	},
@@ -205,9 +205,9 @@
 	},
     {
       "coordinates": [2088, 1143],
-      "name": "Mongolian Colony",
+      "name": "Swiss Colony",
       "strength": 1,
-      "flag": "mn"
+      "flag": "ch"
 	},
     {
       "coordinates": [965, 67],
