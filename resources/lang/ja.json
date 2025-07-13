@@ -24,7 +24,9 @@
     "wiki": "ウィキ"
   },
   "news": {
-    "title": "バージョン23がリリースされました！"
+    "full_changelog": "完全な変更ログを見る",
+    "github_link": "GitHub上で",
+    "title": "更新情報"
   },
   "help_modal": {
     "hotkeys": "ホットキー",
@@ -41,6 +43,7 @@
     "action_reset_gfx": "グラフィックをリセット",
     "ui_section": "ゲームUI",
     "ui_leaderboard": "リーダーボード",
+    "ui_your_team": "あなたのチーム：",
     "ui_leaderboard_desc": "このゲームのトッププレイヤーとその名前、占有した土地の割合、ゴールド、軍隊数を表示します。「すべて表示」を使うと、ゲーム内の全プレイヤーが表示されます。リーダーボードを見たくない場合は、「非表示」をクリックしてください。",
     "ui_control": "コントロールパネル",
     "ui_control_desc": "コントロールパネルには以下が含まれます：",
@@ -128,6 +131,7 @@
   "map": {
     "map": "地図",
     "world": "世界",
+    "giantworldmap": "巨大化した世界",
     "europe": "ヨーロッパ",
     "mena": "中東・北アフリカ",
     "northamerica": "北アメリカ",
@@ -151,12 +155,16 @@
     "falklandislands": "フォークランド諸島",
     "baikal": "バイカル湖付近",
     "halkidiki": "ハルキディキ半島",
-    "giantworldmap": "巨大化した世界"
+    "straitofgibraltar": "ジブラルタル海峡",
+    "italia": "イタリア"
   },
   "map_categories": {
     "continental": "大陸",
     "regional": "地域",
     "fantasy": "その他"
+  },
+  "map_component": {
+    "loading": "読み込み中…"
   },
   "private_lobby": {
     "title": "ランダム",
@@ -172,6 +180,9 @@
   "public_lobby": {
     "join": "次のゲームに参加",
     "waiting": "人が参加しています...",
+    "teams_Duos": "デュオ（2つのチーム）",
+    "teams_Trios": "トリオ（3つのチーム）",
+    "teams_Quads": "クワッド（4つのチーム）",
     "teams": "{num}チーム"
   },
   "username": {
@@ -197,6 +208,16 @@
     "players": "プレイヤー",
     "waiting": "他のプレイヤーの参加を待っています...",
     "start": "ゲーム開始"
+  },
+  "team_colors": {
+    "red": "赤",
+    "blue": "青",
+    "teal": "青緑",
+    "purple": "紫",
+    "yellow": "黄色",
+    "orange": "橙",
+    "green": "緑",
+    "bot": "ボット"
   },
   "game_starting_modal": {
     "title": "ゲーム開始中...",
@@ -225,21 +246,24 @@
     "sam_launcher": "SAMランチャー",
     "atom_bomb": "原子爆弾",
     "hydrogen_bomb": "水素爆弾",
-    "mirv": "MIRV"
+    "mirv": "MIRV",
+    "factory": "工場"
   },
   "user_setting": {
     "title": "ユーザー設定",
     "tab_basic": "基本設定",
     "tab_keybinds": "キーの割り当て",
-    "dark_mode_label": "🌙 ダークモード",
+    "dark_mode_label": "ダークモード",
     "dark_mode_desc": "画面を黒基調に切り替えます",
-    "emojis_label": "😊 絵文字を表示",
+    "emojis_label": "絵文字を表示",
     "emojis_desc": "ゲーム中で絵文字を表示します",
-    "special_effects_label": "💥 スペシャルエフェクト",
+    "alert_frame_label": "アラートフレーム",
+    "alert_frame_desc": "アラートフレームを切り替えます。有効にすると、裏切られたときにフレームが表示されます。",
+    "special_effects_label": "スペシャルエフェクト",
     "special_effects_desc": "特殊効果を切り替えます。無効にするとパフォーマンスが向上します。",
-    "anonymous_names_label": "🥷 ユーザー名を匿名にする",
+    "anonymous_names_label": "ユーザー名を匿名にする",
     "anonymous_names_desc": "自分の画面では他のプレイヤーのユーザー名を非表示にし、代わりに別の名前で表示します。",
-    "left_click_label": "🖱️ 左クリックでメニューを開く",
+    "left_click_label": "左クリックでメニューを開く",
     "left_click_desc": "オンにすると左クリックでメニューを開くことができ、剣ボタンで攻撃します。オフにすると左クリックでそのまま攻撃します。",
     "attack_ratio_label": "⚔️ 出撃兵力の比率",
     "attack_ratio_desc": "初期時点で出撃する兵力の割合を設定します(1–100%)",
@@ -262,6 +286,8 @@
     "attack_keybinds": "攻撃機能",
     "boat_attack": "ボート攻撃",
     "boat_attack_desc": "カーソルの位置に合わせた土地にボート攻撃を送ります。",
+    "ground_attack": "ボート攻撃",
+    "ground_attack_desc": "カーソルの位置に合わせた土地にボート攻撃を送ります。",
     "zoom_controls": "ズーム操作",
     "zoom_out": "ズームアウト",
     "zoom_out_desc": "マップを縮小します",
@@ -383,9 +409,12 @@
     "hide": "隠す",
     "rank": "順位",
     "player": "プレイヤー",
+    "team": "チーム",
     "owned": "領土",
     "gold": "ゴールド",
-    "troops": "兵士"
+    "troops": "兵士",
+    "show_top_5": "トップ5を表示",
+    "show_all": "すべて表示"
   },
   "player_info_overlay": {
     "type": "タイプ",
@@ -402,7 +431,26 @@
     "sams": "SAM",
     "warships": "戦艦",
     "health": "体力",
-    "attitude": "態度"
+    "attitude": "態度",
+    "levels": "レベル"
+  },
+  "events_display": {
+    "retreating": "撤退中",
+    "boat": "ボート",
+    "about_to_expire": "{name} との同盟は間もなく失効します！",
+    "renew_alliance": "更新のリクエスト",
+    "focus": "焦点",
+    "alliance_renewed": "{name} との同盟が更新されました",
+    "ignore": "無視"
+  },
+  "unit_info_modal": {
+    "structure_info": "建造物情報",
+    "unit_type_unknown": "不明",
+    "close": "閉じる",
+    "cooldown": "クールダウン",
+    "type": "タイプ",
+    "upgrade": "アップグレード",
+    "level": "レベル"
   },
   "relation": {
     "hostile": "敵対的",
@@ -433,8 +481,13 @@
     "none": "該当なし",
     "alliances": "同盟"
   },
+  "replay_panel": {
+    "replay_speed": "再生速度",
+    "game_speed": "ゲーム速度"
+  },
   "error_modal": {
     "crashed": "ゲームがクラッシュしました！",
+    "connection_error": "接続エラー！",
     "paste_discord": "以下の内容をDiscordのバグ報告に貼り付けてください:",
     "copy_clipboard": "クリップボードにコピーする",
     "copied": "コピーしました！",
@@ -443,5 +496,47 @@
   },
   "heads_up_message": {
     "choose_spawn": "スタート地点を選んで下さい"
+  },
+  "territory_patterns": {
+    "title": "領土の模様を選択",
+    "purchase": "購入",
+    "blocked": {
+      "login": "このページにアクセスするにはログインしてください。",
+      "purchase": "この模様を購入してロックを解除します。"
+    },
+    "pattern": {
+      "default": "デフォルト",
+      "custom": "カスタム",
+      "stripes_v": "縦模様",
+      "stripes_h": "横模様",
+      "horizontal_stripes": "横模様（別バージョン）",
+      "vertical_bars": "縦模様（別バージョン）",
+      "checkerboard": "市松模様",
+      "choco": "チョコレート",
+      "diagonal": "斜め",
+      "cross": "十字模様",
+      "mini_cross": "小さい十字模様",
+      "sword": "剣模様",
+      "sparse_dots": "まばらなドット模様",
+      "evan": "エヴァン模様",
+      "diagonal_stripe": "斜め縞模様",
+      "mountain_ridge": "山模様",
+      "scattered_dots": "散らばったドット模様",
+      "circuit_board": "回路基板模様",
+      "shells": "甲羅模様",
+      "-w-": ".w.",
+      "white_rabbit": "白ウサギ模様",
+      "goat": "ヤギ模様",
+      "cats": "猫模様",
+      "cursor": "カーソル模様",
+      "hand": "手",
+      "radiation": "放射線模様",
+      "openfront_qr": "Openfront.ioのQRコード",
+      "openfront": "OpenFront",
+      "t_rex": "ティラノサウルス模様",
+      "embelem": "紋章模様",
+      "grogu_head": "グローグーの顔模様",
+      "grogu": "グローグー模様"
+    }
   }
 }

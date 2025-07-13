@@ -24,7 +24,9 @@
     "wiki": "Wiki"
   },
   "news": {
-    "title": "Version 23 släppt!"
+    "full_changelog": "Se fullständig ändringslogg",
+    "github_link": "på GitHub",
+    "title": "Ändringslogg"
   },
   "help_modal": {
     "hotkeys": "Kortkommandon",
@@ -41,6 +43,7 @@
     "action_reset_gfx": "Återställ grafik",
     "ui_section": "Spelgränssnitt",
     "ui_leaderboard": "Topplista",
+    "ui_your_team": "Ditt lag:",
     "ui_leaderboard_desc": "Visar toppspelarna i spelet och deras namn, % ägd mark, guld och trupper. Använd Visa Alla för att visa alla spelare i spelet. Om du inte vill se topplistan, klicka Dölj.",
     "ui_control": "Kontrollpanel",
     "ui_control_desc": "Kontrollpanelen innehåller följande element:",
@@ -128,6 +131,7 @@
   "map": {
     "map": "Karta",
     "world": "Världen",
+    "giantworldmap": "Massiv Världskarta",
     "europe": "Europa",
     "mena": "MENA",
     "northamerica": "Nordamerika",
@@ -151,12 +155,16 @@
     "falklandislands": "Falklandsöarna",
     "baikal": "Baikal",
     "halkidiki": "Halkidiki",
-    "giantworldmap": "Massiv världskarta"
+    "straitofgibraltar": "Gibraltarsundet",
+    "italia": "Italien"
   },
   "map_categories": {
     "continental": "Kontinental",
     "regional": "Regional",
     "fantasy": "Övrigt"
+  },
+  "map_component": {
+    "loading": "Laddar..."
   },
   "private_lobby": {
     "title": "Gå med i Privat Lobby",
@@ -172,6 +180,9 @@
   "public_lobby": {
     "join": "Gå med i nästa spel",
     "waiting": "Spelare som väntar",
+    "teams_Duos": "Duos (lag av 2)",
+    "teams_Trios": "Trios (lag av 3)",
+    "teams_Quads": "Quads (lag av 4)",
     "teams": "{num} lag"
   },
   "username": {
@@ -197,6 +208,16 @@
     "players": "Spelare",
     "waiting": "Väntar på spelare...",
     "start": "Starta spelet"
+  },
+  "team_colors": {
+    "red": "Röd",
+    "blue": "Blå",
+    "teal": "Teal",
+    "purple": "Lila",
+    "yellow": "Gul",
+    "orange": "Orange",
+    "green": "Grön",
+    "bot": "Bot"
   },
   "game_starting_modal": {
     "title": "Spelet startar...",
@@ -225,28 +246,31 @@
     "sam_launcher": "Luftvärn",
     "atom_bomb": "Liten atombomb",
     "hydrogen_bomb": "Vätebomb",
-    "mirv": "MIRV"
+    "mirv": "MIRV",
+    "factory": "Fabrik"
   },
   "user_setting": {
     "title": "Användarinställningar",
     "tab_basic": "Grundläggande inställningar",
     "tab_keybinds": "Tangentbindningar",
-    "dark_mode_label": "🌙 Mörkt Läge",
+    "dark_mode_label": "Mörkt Tema",
     "dark_mode_desc": "Ändrar hemsidans utseende mellan mörkt och ljust tema.",
-    "emojis_label": "😊 Emojis",
+    "emojis_label": "Emojis",
     "emojis_desc": "Välj om emojis ska visas i spelet",
-    "special_effects_label": "💥 Specialeffekter",
+    "alert_frame_label": "Alertruta",
+    "alert_frame_desc": "Aktivera eller inaktivera varningsrutan. När den är aktiverad visas rutan när du blir förrådd.",
+    "special_effects_label": "Specialeffekter",
     "special_effects_desc": "Välj om specialeffekter visas. Avaktivera för att öka prestandan",
-    "anonymous_names_label": "🥷 Dölj namn",
+    "anonymous_names_label": "Dolda Namn",
     "anonymous_names_desc": "Dölj riktiga spelarnamn med slumpmässiga namn på din skärm.",
-    "left_click_label": "🖱️ Vänsterklicka för att öppna menyn",
+    "left_click_label": "Vänsterklicka för att Öppna Menyn",
     "left_click_desc": "När det är PÅ öppnar vänsterklick en meny, och svärdknappen anfaller. När det är AV, anfaller vänster musknapp direkt.",
     "attack_ratio_label": "⚔️ Anfallsskala",
     "attack_ratio_desc": "Vilken procent av dina trupper som ska skickas in vid ett anfall.(1–100%)",
     "troop_ratio_label": "🪖🛠️ Trupp- och Arbetarskala",
     "troop_ratio_desc": "Anpassa balansen mellan trupper (för strid) och arbetare (för guldproduktion) (1–100%)",
     "territory_patterns_label": "🏳️ Mönster för Territorium",
-    "territory_patterns_desc": "Välj mellan att visa territorium mönsterdesign i spelet",
+    "territory_patterns_desc": "Välj om mönster för territorium ska visas i spelet",
     "easter_writing_speed_label": "Multiplikator för skrivhastighet",
     "easter_writing_speed_desc": "Ändra hur snabbt du låtsas att koda (x1–x100)",
     "easter_bug_count_label": "Mängd buggar",
@@ -262,6 +286,8 @@
     "attack_keybinds": "Anfallstangentbindningar",
     "boat_attack": "Båtanfall",
     "boat_attack_desc": "Skicka en båt att anfalla rutan under din muspekare.",
+    "ground_attack": "Markanfall",
+    "ground_attack_desc": "Skick ett markanfall till rutan under din muspekare.",
     "zoom_controls": "Zoom Kontroller",
     "zoom_out": "Zooma Ut",
     "zoom_out_desc": "Zooma ut kartan",
@@ -383,9 +409,12 @@
     "hide": "Dölj",
     "rank": "Rank",
     "player": "Spelare",
+    "team": "Lag",
     "owned": "Ägd",
     "gold": "Guld",
-    "troops": "Trupper"
+    "troops": "Trupper",
+    "show_top_5": "Visa Topp 5",
+    "show_all": "Visa Alla"
   },
   "player_info_overlay": {
     "type": "Typ",
@@ -402,7 +431,26 @@
     "sams": "Luftvärn",
     "warships": "Krigsskepp",
     "health": "Hälsa",
-    "attitude": "Attityd"
+    "attitude": "Attityd",
+    "levels": "Nivåer"
+  },
+  "events_display": {
+    "retreating": "retirerar",
+    "boat": "Båt",
+    "about_to_expire": "Din allians med {name} håller på att gå ut!",
+    "renew_alliance": "Begär att förnya",
+    "focus": "Centrera",
+    "alliance_renewed": "Din allians med {name} har förnyats",
+    "ignore": "Ignorera"
+  },
+  "unit_info_modal": {
+    "structure_info": "Strukturinformation",
+    "unit_type_unknown": "Okänd",
+    "close": "Stäng",
+    "cooldown": "Fördröjning",
+    "type": "Typ",
+    "upgrade": "Uppgradera",
+    "level": "Nivå"
   },
   "relation": {
     "hostile": "Fientlig",
@@ -433,8 +481,13 @@
     "none": "Ingen",
     "alliances": "Allianser"
   },
+  "replay_panel": {
+    "replay_speed": "Återspelningshastighet",
+    "game_speed": "Spelhastighet"
+  },
   "error_modal": {
     "crashed": "Spelet kraschade!",
+    "connection_error": "Anslutningsfel!",
     "paste_discord": "Vänligen klistra in följande i din buggrapport på Discord:",
     "copy_clipboard": "Kopiera till urklipp",
     "copied": "Kopierat!",
@@ -443,5 +496,47 @@
   },
   "heads_up_message": {
     "choose_spawn": "Välj en plats att börja på"
+  },
+  "territory_patterns": {
+    "title": "Välj Mönster för Territorium",
+    "purchase": "Köp",
+    "blocked": {
+      "login": "Du måste vara inloggad för att få åtkomst till det här mönstret.",
+      "purchase": "Köp det här mönstret för att låsa upp det."
+    },
+    "pattern": {
+      "default": "Standard",
+      "custom": "Anpassad",
+      "stripes_v": "Vertikal",
+      "stripes_h": "Horisontell",
+      "horizontal_stripes": "Horisontell (Alt)",
+      "vertical_bars": "Vertikal (Alt)",
+      "checkerboard": "Schackbräde",
+      "choco": "Choco",
+      "diagonal": "Diagonal",
+      "cross": "Kors",
+      "mini_cross": "Minikors",
+      "sword": "Svärd",
+      "sparse_dots": "Glesa Prickar",
+      "evan": "Evan",
+      "diagonal_stripe": "Diagonal Rand",
+      "mountain_ridge": "Bergsås",
+      "scattered_dots": "Spridda Prickar",
+      "circuit_board": "Kretskort",
+      "shells": "Snäckor",
+      "-w-": ".w.",
+      "white_rabbit": "Vit Kanin",
+      "goat": "Get",
+      "cats": "Katter",
+      "cursor": "Muspekare",
+      "hand": "Hand",
+      "radiation": "Radioaktivitet",
+      "openfront_qr": "OpenFront.io QR kod",
+      "openfront": "OpenFront",
+      "t_rex": "T-Rex",
+      "embelem": "Emblem",
+      "grogu_head": "Grogu Huvud",
+      "grogu": "Grogu"
+    }
   }
 }

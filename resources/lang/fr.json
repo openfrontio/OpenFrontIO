@@ -20,11 +20,13 @@
     "single_player": "Mode solo",
     "instructions": "Instructions",
     "how_to_play": "Comment jouer ?",
-    "advertise": "Annoncer",
+    "advertise": "Faire de la publicité",
     "wiki": "Wiki"
   },
   "news": {
-    "title": "Version 23 disponible !"
+    "full_changelog": "Voir le journal des modifications complet",
+    "github_link": "sur Github",
+    "title": "Notes de version"
   },
   "help_modal": {
     "hotkeys": "Raccourcis clavier",
@@ -41,6 +43,7 @@
     "action_reset_gfx": "Réinitialiser les graphismes",
     "ui_section": "IU du jeu",
     "ui_leaderboard": "Classement",
+    "ui_your_team": "Votre équipe :",
     "ui_leaderboard_desc": "Montre les meilleurs joueurs du jeu et leurs noms, leur % de terres occupée, leur or et leurs troupes. Utiliser « Show All » montre tous les joueurs du jeu. Si vous ne voulez pas voir le classement, cliquez sur Masquer.",
     "ui_control": "Panneau de contrôle",
     "ui_control_desc": "Le panneau de contrôle contient les éléments suivants :",
@@ -128,6 +131,7 @@
   "map": {
     "map": "Carte",
     "world": "Monde",
+    "giantworldmap": "Carte du monde géante",
     "europe": "Europe",
     "mena": "MOAN",
     "northamerica": "Amérique du Nord",
@@ -151,12 +155,16 @@
     "falklandislands": "Îles Malouines",
     "baikal": "Lac Baïkal",
     "halkidiki": "Chalcidique",
-    "giantworldmap": "Carte du monde géante"
+    "straitofgibraltar": "Détroit de Gibraltar",
+    "italia": "Italie"
   },
   "map_categories": {
     "continental": "Continental",
     "regional": "Régional",
     "fantasy": "Autre"
+  },
+  "map_component": {
+    "loading": "Chargement..."
   },
   "private_lobby": {
     "title": "Rejoindre un salon privé",
@@ -172,6 +180,9 @@
   "public_lobby": {
     "join": "Rejoindre la prochaine partie",
     "waiting": "joueurs en attente",
+    "teams_Duos": "Duos (équipes de 2)",
+    "teams_Trios": "Trios (équipes de 3)",
+    "teams_Quads": "Quatuors (équipes de 4)",
     "teams": "{num} équipes"
   },
   "username": {
@@ -197,6 +208,16 @@
     "players": "Joueurs",
     "waiting": "En attente de joueurs...",
     "start": "Commencer la partie"
+  },
+  "team_colors": {
+    "red": "Rouge",
+    "blue": "Bleu",
+    "teal": "Turquoise",
+    "purple": "Violet",
+    "yellow": "Jaune",
+    "orange": "Orange",
+    "green": "Vert",
+    "bot": "Bot"
   },
   "game_starting_modal": {
     "title": "La partie est en train de commencer...",
@@ -225,28 +246,31 @@
     "sam_launcher": "Lanceur de SAM",
     "atom_bomb": "Bombe atomique",
     "hydrogen_bomb": "Bombe à hydrogène",
-    "mirv": "MIRV"
+    "mirv": "MIRV",
+    "factory": "Usine"
   },
   "user_setting": {
     "title": "Paramètres utilisateur",
     "tab_basic": "Réglages de base",
     "tab_keybinds": "Raccourcis clavier",
-    "dark_mode_label": "🌙 Mode nuit",
+    "dark_mode_label": "Mode sombre",
     "dark_mode_desc": "Basculer l'apparence du site entre les thèmes clairs et sombres",
-    "emojis_label": "😊 Émojis",
+    "emojis_label": "Émojis",
     "emojis_desc": "Afficher/Masquer les émoticônes dans le jeu",
-    "special_effects_label": "💥 Effets spéciaux",
+    "alert_frame_label": "Fenêtre d'alertes",
+    "alert_frame_desc": "Activer/désactiver la fenêtre d'alertes. Lorsqu'elle est activée, la fenêtre s'affichera lorsque vous serez trahi.",
+    "special_effects_label": "Effets spéciaux",
     "special_effects_desc": "Activer/désactiver les effets spéciaux. Désactiver pour améliorer les performances",
-    "anonymous_names_label": "🥷 Noms masqués",
+    "anonymous_names_label": "Noms masqués",
     "anonymous_names_desc": "Cacher le vrai nom des joueurs avec des noms aléatoires sur votre écran.",
-    "left_click_label": "🖱️ Clic gauche pour ouvrir le menu",
+    "left_click_label": "Clic gauche pour ouvrir le menu",
     "left_click_desc": "Activé, un clic gauche ouvre le menu et le bouton épée d'attaque. Désactivé, un clic gauche attaque directement.",
     "attack_ratio_label": "⚔️ Ratio d'attaque",
     "attack_ratio_desc": "Quel pourcentage de vos troupes envoyer dans une attaque (1–100%)",
     "troop_ratio_label": "🪖🛠️ Ratio des troupes et des ouvriers",
     "troop_ratio_desc": "Ajuster l'équilibre entre les troupes (pour le combat) et les ouvriers (pour la production d'or) (1–100%)",
     "territory_patterns_label": "🏳️ Modèles de territoire",
-    "territory_patterns_desc": "Choisissez si vous voulez afficher les modèles de territoire en jeu",
+    "territory_patterns_desc": "Choisissez si vous voulez afficher les motifs de territoire en jeu",
     "easter_writing_speed_label": "Multiplicateur de vitesse d'écriture",
     "easter_writing_speed_desc": "Ajuster la vitesse à laquelle vous prétendez coder (x1–x100)",
     "easter_bug_count_label": "Nombre de bugs",
@@ -262,6 +286,8 @@
     "attack_keybinds": "Raccourcis d'attaque",
     "boat_attack": "Attaque navale",
     "boat_attack_desc": "Envoyer une attaque navale à la tuile sous votre curseur.",
+    "ground_attack": "Attaque au sol",
+    "ground_attack_desc": "Envoyez une attaque au sol sur la tuile sous votre curseur.",
     "zoom_controls": "Contrôles de zoom",
     "zoom_out": "Zoom arrière",
     "zoom_out_desc": "Dézoom de la carte",
@@ -383,9 +409,12 @@
     "hide": "Masquer",
     "rank": "Rang",
     "player": "Joueur",
+    "team": "Équipe",
     "owned": "Possédé",
     "gold": "Or",
-    "troops": "Troupes"
+    "troops": "Troupes",
+    "show_top_5": "Afficher le Top 5",
+    "show_all": "Tout afficher"
   },
   "player_info_overlay": {
     "type": "Type",
@@ -402,7 +431,26 @@
     "sams": "SAMs",
     "warships": "Navires de guerre",
     "health": "Santé",
-    "attitude": "Attitude"
+    "attitude": "Attitude",
+    "levels": "Niveaux"
+  },
+  "events_display": {
+    "retreating": "en retraite",
+    "boat": "Bateau",
+    "about_to_expire": "Votre alliance avec {name} est sur le point d'expirer!",
+    "renew_alliance": "Demander le renouvellement",
+    "focus": "Focaliser",
+    "alliance_renewed": "Votre alliance avec {name} a été renouvelée",
+    "ignore": "Ignorer"
+  },
+  "unit_info_modal": {
+    "structure_info": "Infos sur la structure",
+    "unit_type_unknown": "Inconnu",
+    "close": "Fermer",
+    "cooldown": "Rechargement",
+    "type": "Type",
+    "upgrade": "Mettre à niveau",
+    "level": "Niveau"
   },
   "relation": {
     "hostile": "Hostile",
@@ -433,8 +481,13 @@
     "none": "Aucun",
     "alliances": "Alliances"
   },
+  "replay_panel": {
+    "replay_speed": "Vitesse de relecture",
+    "game_speed": "Vitesse de jeu"
+  },
   "error_modal": {
     "crashed": "Le jeu a planté !",
+    "connection_error": "Erreur de connexion !",
     "paste_discord": "Veuillez coller ce qui suit dans votre rapport de bogue dans Discord :",
     "copy_clipboard": "Copier dans le presse-papier",
     "copied": "Copié !",
@@ -443,5 +496,47 @@
   },
   "heads_up_message": {
     "choose_spawn": "Choisissez un emplacement de départ"
+  },
+  "territory_patterns": {
+    "title": "Sélectionnez un motif de territoire",
+    "purchase": "Acheter",
+    "blocked": {
+      "login": "Vous devez être connecté pour accéder à ce motif.",
+      "purchase": "Acheter ce motif pour le déverrouiller."
+    },
+    "pattern": {
+      "default": "Par défaut",
+      "custom": "Personnalisé",
+      "stripes_v": "Vertical",
+      "stripes_h": "Horizontal",
+      "horizontal_stripes": "Horizontal (Alt)",
+      "vertical_bars": "Vertical (Alt)",
+      "checkerboard": "Damier",
+      "choco": "Choco",
+      "diagonal": "Diagonal",
+      "cross": "Croix",
+      "mini_cross": "Petite croix",
+      "sword": "Épée",
+      "sparse_dots": "Points épars",
+      "evan": "Evan",
+      "diagonal_stripe": "Bande diagonale",
+      "mountain_ridge": "Crête de montagne",
+      "scattered_dots": "Pointillés",
+      "circuit_board": "Circuit imprimé",
+      "shells": "Coquilles",
+      "-w-": ".w.",
+      "white_rabbit": "Lapin blanc",
+      "goat": "Chèvre",
+      "cats": "Chats",
+      "cursor": "Curseur",
+      "hand": "Main",
+      "radiation": "Radiation",
+      "openfront_qr": "QR code OpenFront.io",
+      "openfront": "OpenFront",
+      "t_rex": "T-Rex",
+      "embelem": "Emblème",
+      "grogu_head": "Tête de Grogu",
+      "grogu": "Grogu"
+    }
   }
 }
