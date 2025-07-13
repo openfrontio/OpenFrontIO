@@ -51,9 +51,7 @@ class FactoryStopHandler implements TrainStopHandler {
     station: TrainStation,
     trainExecution: TrainExecution,
   ): void {
-    const level = BigInt(station.unit.level() + 1);
-    const goldBonus = (mg.config().trainGold() * level) / this.factor;
-    station.unit.owner().addGold(goldBonus, station.tile());
+    station.unit.owner().addGold(mg.config().trainGold(), station.tile());
   }
 }
 
