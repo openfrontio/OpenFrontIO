@@ -42,7 +42,19 @@ export interface BuildItemDisplay {
   description?: string;
   key?: string;
   countable?: boolean;
+  style?: string;
 }
+
+const STYLE_YELLOW =
+  "filter: invert(50%) sepia(100%) saturate(1352%) hue-rotate(30deg)";
+const STYLE_RED =
+  "filter: invert(50%) sepia(100%) saturate(3000%) hue-rotate(330deg)";
+const STYLE_BLUE =
+  "filter: invert(50%) sepia(100%) saturate(3000%) hue-rotate(180deg)";
+const STYLE_CYAN =
+  "filter: invert(50%) sepia(100%) saturate(3000%) hue-rotate(150deg)";
+const STYLE_GREEN =
+  "filter: invert(50%) sepia(100%) saturate(3000%) hue-rotate(120deg)";
 
 export const buildTable: BuildItemDisplay[][] = [
   [
@@ -52,6 +64,7 @@ export const buildTable: BuildItemDisplay[][] = [
       description: "build_menu.desc.atom_bomb",
       key: "unit_type.atom_bomb",
       countable: false,
+      style: STYLE_RED,
     },
     {
       unitType: UnitType.MIRV,
@@ -59,6 +72,7 @@ export const buildTable: BuildItemDisplay[][] = [
       description: "build_menu.desc.mirv",
       key: "unit_type.mirv",
       countable: false,
+      style: STYLE_RED,
     },
     {
       unitType: UnitType.HydrogenBomb,
@@ -66,6 +80,7 @@ export const buildTable: BuildItemDisplay[][] = [
       description: "build_menu.desc.hydrogen_bomb",
       key: "unit_type.hydrogen_bomb",
       countable: false,
+      style: STYLE_RED,
     },
     {
       unitType: UnitType.Warship,
@@ -73,6 +88,7 @@ export const buildTable: BuildItemDisplay[][] = [
       description: "build_menu.desc.warship",
       key: "unit_type.warship",
       countable: true,
+      style: STYLE_BLUE,
     },
     {
       unitType: UnitType.Port,
@@ -80,6 +96,7 @@ export const buildTable: BuildItemDisplay[][] = [
       description: "build_menu.desc.port",
       key: "unit_type.port",
       countable: true,
+      style: STYLE_CYAN,
     },
     {
       unitType: UnitType.MissileSilo,
@@ -102,6 +119,7 @@ export const buildTable: BuildItemDisplay[][] = [
       description: "build_menu.desc.defense_post",
       key: "unit_type.defense_post",
       countable: true,
+      style: STYLE_GREEN,
     },
     {
       unitType: UnitType.City,
@@ -109,6 +127,7 @@ export const buildTable: BuildItemDisplay[][] = [
       description: "build_menu.desc.city",
       key: "unit_type.city",
       countable: true,
+      style: STYLE_YELLOW,
     },
     {
       unitType: UnitType.Factory,
@@ -433,6 +452,7 @@ export class BuildMenu extends LitElement implements Layer {
                     <img
                       src=${item.icon}
                       alt="${item.unitType}"
+                      style="${item.style}"
                       width="40"
                       height="40"
                     />
