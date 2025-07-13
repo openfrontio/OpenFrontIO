@@ -21,7 +21,9 @@
     "instructions": "Instructions",
     "how_to_play": "How to Play",
     "advertise": "Advertise",
-    "wiki": "Wiki"
+    "wiki": "Wiki",
+    "privacy_policy": "Privacy Policy",
+    "terms_of_service": "Terms of Service"
   },
   "news": {
     "full_changelog": "See the complete change log",
