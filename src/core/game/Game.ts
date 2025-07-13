@@ -519,6 +519,7 @@ export interface Player {
 
   // Units
   units(...types: UnitType[]): Unit[];
+  unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
   buildableUnits(tile: TileRef): BuildableUnit[];
@@ -638,6 +639,7 @@ export interface Game extends GameMap {
 
   // Units
   units(...types: UnitType[]): Unit[];
+  unitCount(type: UnitType): number;
   unitInfo(type: UnitType): UnitInfo;
   hasUnitNearby(
     tile: TileRef,

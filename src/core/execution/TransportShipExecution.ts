@@ -67,7 +67,7 @@ export class TransportShipExecution implements Execution {
     this.pathFinder = PathFinder.Mini(mg, 10_000, true, 10);
 
     if (
-      this.attacker.units(UnitType.TransportShip).length >=
+      this.attacker.unitCount(UnitType.TransportShip) >=
       mg.config().boatMaxNumber()
     ) {
       mg.displayMessage(

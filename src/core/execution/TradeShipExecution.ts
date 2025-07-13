@@ -130,7 +130,7 @@ export class TradeShipExecution implements Execution {
       .config()
       .tradeShipGold(
         this.tilesTraveled,
-        this.tradeShip!.owner().units(UnitType.Port).length,
+        this.tradeShip!.owner().unitCount(UnitType.Port),
       );
 
     if (this.wasCaptured) {
