@@ -17,9 +17,7 @@ export class NewsButton extends LitElement {
 
   private checkForNewVersion() {
     try {
-      const lastSeenVersion = localStorage.getItem(
-        "news-button-last-seen-version",
-      );
+      const lastSeenVersion = localStorage.getItem("version");
       this.isActive = lastSeenVersion !== version;
     } catch (error) {
       // Fallback to NOT showing notification if localStorage fails
@@ -28,7 +26,7 @@ export class NewsButton extends LitElement {
   }
 
   private handleClick() {
-    localStorage.setItem("news-button-last-seen-version", version);
+    localStorage.setItem("version", version);
     this.isActive = false;
 
     const newsModal = document.querySelector("news-modal") as NewsModal;

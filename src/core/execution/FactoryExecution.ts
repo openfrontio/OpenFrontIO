@@ -51,11 +51,11 @@ export class FactoryExecution implements Execution {
         this.game.config().trainStationMaxRange(),
         [UnitType.City, UnitType.Port, UnitType.Factory],
       );
-      // Use different seeds or trains will spawn simultaneously
-      let seed = 0;
+
+      this.game.addExecution(new TrainStationExecution(this.factory, true));
       for (const { unit } of structures) {
         if (!unit.hasTrainStation()) {
-          this.game.addExecution(new TrainStationExecution(unit, ++seed));
+          this.game.addExecution(new TrainStationExecution(unit));
         }
       }
     }

@@ -22,6 +22,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
 
   private playerColor: Colord = new Colord("#FFFFFF");
   public game: GameView;
+  private _shownOnInit = false;
 
   createRenderRoot() {
     return this;
@@ -31,6 +32,11 @@ export class GameLeftSidebar extends LitElement implements Layer {
     this.isVisible = true;
     if (this.isTeamGame) {
       this.isPlayerTeamLabelVisible = true;
+    }
+    // Make it visible by default on large screens
+    if (window.innerWidth >= 1024) {
+      // lg breakpoint
+      this._shownOnInit = true;
     }
     this.requestUpdate();
   }
@@ -47,6 +53,12 @@ export class GameLeftSidebar extends LitElement implements Layer {
           .teamColor(this.playerTeam);
         this.requestUpdate();
       }
+    }
+
+    if (this._shownOnInit && !this.game.inSpawnPhase()) {
+      this._shownOnInit = false;
+      this.isLeaderboardShow = true;
+      this.requestUpdate();
     }
 
     if (!this.game.inSpawnPhase()) {
