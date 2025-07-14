@@ -1,4 +1,4 @@
-name: Check lang_code matches filename
+name: 🧪 CI / 🌐 LangCode Filename Check
 
 on: [push, pull_request]
 
@@ -8,7 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check lang_code matches filename
+      - name: 🌐 Check lang_code matches filename
         run: |
           shopt -s nullglob
           files=(resources/lang/*.json)
