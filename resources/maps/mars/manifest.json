@@ -1,51 +1,183 @@
 {
   "map": {
-    "height": 1000,
-    "num_land_tiles": 1384168,
-    "width": 2000
+    "height": 2500,
+    "num_land_tiles": 1064112,
+    "width": 1150
   },
   "mini_map": {
-    "height": 500,
-    "num_land_tiles": 343861,
-    "width": 1000
+    "height": 1250,
+    "num_land_tiles": 258192,
+    "width": 575
   },
   "name": "Mars",
   "nations": [
     {
-      "coordinates": [650, 415],
-      "flag": "us",
-      "name": "United States",
-      "strength": 3
+      "coordinates": [2030, 868],
+      "name": "United States Colony",
+      "strength": 3,
+      "flag": "us"
     },
     {
-      "coordinates": [122, 750],
-      "flag": "ussr",
-      "name": "USSR",
-      "strength": 2
+      "coordinates": [1710, 340],
+      "name": "Russian Colony",
+      "strength": 2,
+      "flag": "ru"
     },
     {
-      "coordinates": [1232, 735],
-      "flag": "ru",
-      "name": "Russia",
-      "strength": 2
-    },
-    {
-      "coordinates": [966, 511],
-      "flag": "",
+      "coordinates": [192, 410],
       "name": "European Space Agency",
-      "strength": 2
+      "strength": 2,
+      "flag": ""
     },
     {
       "coordinates": [1460, 488],
-      "flag": "gb",
-      "name": "United Kingdom",
-      "strength": 3
+      "name": "British Colony",
+      "strength": 3,
+      "flag": "gb"
     },
     {
-      "coordinates": [1850, 415],
-      "flag": "cn",
-      "name": "China",
-      "strength": 3
+      "coordinates": [700, 600],
+      "name": "Chinese Colony",
+      "strength": 3,
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1200, 276],
+      "name": "North Korean Colony",
+      "strength": 1,
+      "flag": ""
+    },
+    {
+      "coordinates": [1760, 840],
+      "name": "Olympus Mons Tribe",
+      "strength": 1,
+      "flag": ""
+    },
+    {
+      "coordinates": [837, 200],
+      "name": "African Space Agency",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [1140, 890],
+      "name": "Madagascar Colony",
+      "strength": 1,
+      "flag": "mg"
+    },
+    {
+      "coordinates": [430, 740],
+      "name": "Indian Colony",
+      "strength": 2,
+      "flag": "in"
+    },
+    {
+      "coordinates": [1350, 100],
+      "name": "United Nations Base",
+      "strength": 3,
+      "flag": ""
+    },
+    {
+      "coordinates": [460, 110],
+      "name": "Canadian Colony",
+      "strength": 2,
+      "flag": "ca"
+    },
+    {
+      "coordinates": [1070, 575],
+      "name": "Japanese Colony",
+      "strength": 3,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1960, 555],
+      "name": "German Colony",
+      "strength": 3,
+      "flag": "de"
+    },
+    {
+      "coordinates": [2020, 120],
+      "name": "Chilean Colony",
+      "strength": 3,
+      "flag": "cl"
+    },
+    {
+      "coordinates": [2100, 400],
+      "name": "French Colony",
+      "strength": 2,
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1660, 123],
+      "name": "Mexican Colony",
+      "strength": 1,
+      "flag": "mx"
+    },
+    {
+      "coordinates": [2200, 515],
+      "name": "Turkish Colony",
+      "strength": 1,
+      "flag": "tr"
+    },
+    {
+      "coordinates": [1924, 1015],
+      "name": "South African Colony",
+      "strength": 1,
+      "flag": "za"
+    },
+    {
+      "coordinates": [1727, 510],
+      "name": "Spanish Colony",
+      "strength": 2,
+      "flag": "es"
+    },
+    {
+      "coordinates": [295, 565],
+      "name": "Swiss Colony",
+      "strength": 1,
+      "flag": "ch"
+    },
+    {
+      "coordinates": [94, 82],
+      "name": "Brazilian Colony",
+      "strength": 1,
+      "flag": "br"
+    },
+    {
+      "coordinates": [1070, 69],
+      "name": "Saudi Arabian Colony",
+      "strength": 1,
+      "flag": "sa"
+    },
+    {
+      "coordinates": [470, 240],
+      "name": "Iceland Colony",
+      "strength": 3,
+      "flag": "is"
+    },
+    {
+      "coordinates": [106, 312],
+      "name": "Irish Colony",
+      "strength": 1,
+      "flag": "ie"
+    },
+    {
+      "coordinates": [1900, 380],
+      "name": "Romanian Colony",
+      "strength": 1,
+      "flag": "ro"
+    },
+    {
+      "coordinates": [1518, 40],
+      "name": "Swedish Colony",
+      "strength": 1,
+      "flag": "se"
+    },
+    {
+      "coordinates": [1870, 200],
+      "name": "Mongolian Colony",
+      "strength": 1,
+      "flag": "mn"
     }
   ]
 }
