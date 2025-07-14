@@ -40,7 +40,6 @@ export class Leaderboard extends LitElement implements Layer {
   players: Entry[] = [];
 
   @property({ type: Boolean }) visible = false;
-  private _shownOnInit = false;
   private showTopFive = true;
 
   @state()
@@ -53,21 +52,10 @@ export class Leaderboard extends LitElement implements Layer {
     return this; // use light DOM for Tailwind support
   }
 
-  init() {
-    // Make it visible by default on large screens
-    if (window.innerWidth >= 1024) {
-      // lg breakpoint
-      this._shownOnInit = true;
-    }
-  }
+  init() {}
 
   tick() {
     if (this.game === null) throw new Error("Not initialized");
-    if (this._shownOnInit && !this.game.inSpawnPhase()) {
-      this._shownOnInit = false;
-      this.visible = true;
-      this.updateLeaderboard();
-    }
     if (!this.visible) return;
     if (this.game.ticks() % 10 === 0) {
       this.updateLeaderboard();

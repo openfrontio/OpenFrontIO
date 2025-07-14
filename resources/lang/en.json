@@ -432,9 +432,7 @@
     "team": "Team",
     "owned": "Owned",
     "gold": "Gold",
-    "troops": "Troops",
-    "show_top_5": "Show Top 5",
-    "show_all": "Show All"
+    "troops": "Troops"
   },
   "player_info_overlay": {
     "type": "Type",
