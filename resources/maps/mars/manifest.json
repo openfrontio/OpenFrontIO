@@ -1,13 +1,13 @@
 {
   "map": {
-    "height": 2500,
+    "height": 1150,
     "num_land_tiles": 1064112,
-    "width": 1150
+    "width": 2500
   },
   "mini_map": {
-    "height": 1250,
+    "height": 575,
     "num_land_tiles": 258192,
-    "width": 575
+    "width": 1250
   },
   "name": "Mars",
   "nations": [
