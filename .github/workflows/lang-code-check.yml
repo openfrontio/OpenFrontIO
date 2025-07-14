@@ -16,12 +16,16 @@ jobs:
             echo "No resources/lang/*.json files found. Skipping check."
             exit 0
           fi
+          fail=0
           for f in "${files[@]}"; do
             name=$(basename "$f" .json)
             code=$(jq -r '.lang.lang_code' "$f")
             if [ "$name" != "$code" ]; then
               echo "❌ $f: lang_code ($code) does not match filename ($name)"
-              exit 1
+              fail=1
             fi
           done
+          if [ $fail -eq 1 ]; then
+            exit 1
+          fi
           echo "✅ All lang_code values match their filenames!"
