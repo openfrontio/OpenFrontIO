@@ -220,12 +220,14 @@ export class TerritoryLayer implements Layer {
     }
 
     if (previousTerritory?.id() !== this.highlightedTerritory?.id()) {
+      const territories: PlayerView[] = [];
       if (previousTerritory) {
-        this.redrawTerritory(previousTerritory);
+        territories.push(previousTerritory);
       }
       if (this.highlightedTerritory) {
-        this.redrawTerritory(this.highlightedTerritory);
+        territories.push(this.highlightedTerritory);
       }
+      this.redrawTerritory(territories);
     }
   }
 
@@ -285,9 +287,13 @@ export class TerritoryLayer implements Layer {
     });
   }
 
-  redrawTerritory(territory: PlayerView) {
+  redrawTerritory(territory: PlayerView | PlayerView[]) {
+    const territories = Array.isArray(territory) ? territory : [territory];
+    const territorySet = new Set(territories);
+
     this.game.forEachTile((t) => {
-      if (this.game.owner(t) === territory) {
+      const owner = this.game.owner(t) as PlayerView;
+      if (territorySet.has(owner)) {
         this.paintTerritory(t);
       }
     });
