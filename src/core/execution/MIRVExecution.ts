@@ -2,8 +2,8 @@ import {
   Execution,
   Game,
   MessageType,
+  nukeTypes,
   Player,
-  TerraNullius,
   Unit,
   UnitType,
 } from "../game/Game";
@@ -27,7 +27,7 @@ export class MirvExecution implements Execution {
 
   private pathFinder: ParabolaPathFinder;
 
-  private targetPlayer: Player | TerraNullius;
+  private targetPlayer: Player;
 
   private separateDst: TileRef;
 
@@ -42,7 +42,13 @@ export class MirvExecution implements Execution {
     this.random = new PseudoRandom(mg.ticks() + simpleHash(this.player.id()));
     this.mg = mg;
     this.pathFinder = new ParabolaPathFinder(mg);
-    this.targetPlayer = this.mg.owner(this.dst);
+    const target = this.mg.owner(this.dst);
+    if (!target.isPlayer()) {
+      console.warn(`cannot MIRV unowned land`);
+      this.active = false;
+      return;
+    }
+    this.targetPlayer = target as Player;
     this.speed = this.mg.config().defaultNukeSpeed();
 
     // Record stats
@@ -89,6 +95,19 @@ export class MirvExecution implements Execution {
   private separate() {
     if (this.nuke === null) throw new Error("uninitialized");
     const dsts: TileRef[] = [this.dst];
+    for (const unit of this.targetPlayer.units()) {
+      if (
+        unit.type() === UnitType.TradeShip ||
+        nukeTypes.includes(unit.type())
+      ) {
+        continue;
+      }
+      if (this.isNukeTooCloseToExisting(unit.tile(), dsts)) {
+        continue;
+      }
+      dsts.push(unit.tile());
+    }
+
     let attempts = 1000;
     while (attempts > 0 && dsts.length < this.warheadCount) {
       attempts--;
@@ -98,12 +117,11 @@ export class MirvExecution implements Execution {
       }
       dsts.push(potential);
     }
-    console.log(`dsts: ${dsts.length}`);
     dsts.sort(
       (a, b) =>
         this.mg.manhattanDist(b, this.dst) - this.mg.manhattanDist(a, this.dst),
     );
-    console.log(`got ${dsts.length} dsts!!`);
+    console.log(`MIRV created: ${dsts.length} warheads`);
 
     for (const [i, dst] of dsts.entries()) {
       this.mg.addExecution(
@@ -113,7 +131,6 @@ export class MirvExecution implements Execution {
           dst,
           this.nuke.tile(),
           15 + Math.floor((i / this.warheadCount) * 5),
-          //   this.random.nextInt(5, 9),
           this.random.nextInt(0, 15),
         ),
       );
@@ -156,7 +173,7 @@ export class MirvExecution implements Execution {
       if (this.mg.owner(tile) !== this.targetPlayer) {
         continue;
       }
-      if (this.proximityCheck(tile, taken)) {
+      if (this.isNukeTooCloseToExisting(tile, taken)) {
         continue;
       }
       return tile;
@@ -165,7 +182,7 @@ export class MirvExecution implements Execution {
     return null;
   }
 
-  private proximityCheck(tile: TileRef, taken: TileRef[]): boolean {
+  private isNukeTooCloseToExisting(tile: TileRef, taken: TileRef[]): boolean {
     for (const t of taken) {
       if (this.mg.manhattanDist(tile, t) < 25) {
         return true;
