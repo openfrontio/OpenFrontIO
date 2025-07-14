@@ -1,7 +1,4 @@
 export class WebGLUtils {
-  /**
-   * Creates and compiles a WebGL shader
-   */
   static createShader(
     gl: WebGLRenderingContext,
     type: number,
@@ -26,9 +23,6 @@ export class WebGLUtils {
     return shader;
   }
 
-  /**
-   * Creates a WebGL program from vertex and fragment shaders
-   */
   static createProgram(
     gl: WebGLRenderingContext,
     vertexShader: WebGLShader,
@@ -55,8 +49,44 @@ export class WebGLUtils {
   }
 
   /**
-   * Checks if WebGL is supported in the current browser
+   * Creates a WebGL texture from RGBA data
    */
+  static createTexture(
+    gl: WebGLRenderingContext,
+    width: number,
+    height: number,
+    data: Uint8Array,
+  ): WebGLTexture | null {
+    const texture = gl.createTexture();
+    if (!texture) {
+      console.error("Failed to create texture");
+      return null;
+    }
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+
+    // Upload the texture data
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      width,
+      height,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      data,
+    );
+
+    // Set texture parameters for pixel-perfect rendering
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+    return texture;
+  }
+
   static isWebGLSupported(): boolean {
     try {
       const canvas = document.createElement("canvas");
