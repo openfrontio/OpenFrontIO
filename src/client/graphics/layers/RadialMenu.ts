@@ -859,6 +859,11 @@ export class RadialMenu implements Layer {
   }
 
   private isCenterButtonEnabled(): boolean {
+    // Back button should always be enabled when in submenu levels
+    if (this.currentLevel > 0) {
+      return true;
+    }
+
     if (this.params && this.centerButtonElement) {
       return !this.centerButtonElement.disabled(this.params);
     }
