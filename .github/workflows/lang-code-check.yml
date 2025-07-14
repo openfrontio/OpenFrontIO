@@ -18,7 +18,7 @@ jobs:
           fi
           for f in "${files[@]}"; do
             name=$(basename "$f" .json)
-            code=$(jq -r '.lang_code' "$f")
+            code=$(jq -r '.lang.lang_code' "$f")
             if [ "$name" != "$code" ]; then
               echo "❌ $f: lang_code ($code) does not match filename ($name)"
               exit 1
