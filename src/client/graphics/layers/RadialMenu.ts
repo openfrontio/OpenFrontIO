@@ -237,10 +237,12 @@ export class RadialMenu implements Layer {
       .append("g")
       .attr("class", `menu-level-${level}`);
 
-    // Set initial animation styles
+    // Set initial animation styles only for submenus (level > 0)
     if (level === 0) {
-      menuGroup.style("opacity", 0.5).style("transform", "scale(0.2)");
+      // Main menu appears immediately without animation
+      menuGroup.style("opacity", 1).style("transform", "scale(1)");
     } else {
+      // Submenus get the expansion animation
       menuGroup.style("opacity", 0).style("transform", "scale(0.5)");
     }
 
@@ -857,6 +859,11 @@ export class RadialMenu implements Layer {
   }
 
   private isCenterButtonEnabled(): boolean {
+    // Back button should always be enabled when in submenu levels
+    if (this.currentLevel > 0) {
+      return true;
+    }
+
     if (this.params && this.centerButtonElement) {
       return !this.centerButtonElement.disabled(this.params);
     }
