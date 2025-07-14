@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 1840,
-    "num_land_tiles": 1171253,
+    "num_land_tiles": 1079790,
     "width": 2300
   },
   "mini_map": {
     "height": 920,
-    "num_land_tiles": 287132,
+    "num_land_tiles": 262417,
     "width": 1150
   },
   "name": "Deglaciated Antarctica",
