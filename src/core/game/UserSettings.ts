@@ -50,6 +50,10 @@ export class UserSettings {
     this.get("settings.focusLocked", true);
   }
 
+  webglTerrain() {
+    return this.get("settings.webglTerrain", true);
+  }
+
   toggleLeftClickOpenMenu() {
     this.set("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
   }
@@ -85,6 +89,10 @@ export class UserSettings {
     } else {
       document.documentElement.classList.remove("dark");
     }
+  }
+
+  toggleWebglTerrain() {
+    this.set("settings.webglTerrain", !this.webglTerrain());
   }
 
   getSelectedPattern(): string | undefined {
