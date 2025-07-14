@@ -49,11 +49,11 @@ export class WebGLTerrainLayer implements Layer {
   }
 
   init(): void {
-    console.log("🔴 WEBGL TERRAIN LAYER: Initializing WebGL terrain layer");
+    console.log("WEBGL TERRAIN LAYER: Initializing WebGL terrain layer");
 
     if (!WebGLUtils.isWebGLSupported()) {
       console.warn(
-        "🔴 WEBGL TERRAIN LAYER: WebGL not supported, falling back to canvas terrain layer",
+        "WEBGL TERRAIN LAYER: WebGL not supported, falling back to canvas terrain layer",
       );
       this.fallbackToCanvas();
       return;
@@ -61,13 +61,13 @@ export class WebGLTerrainLayer implements Layer {
 
     if (this.initWebGL()) {
       console.log(
-        "🔴 WEBGL TERRAIN LAYER: WebGL terrain layer initialized successfully - YOU SHOULD SEE ACTUAL TERRAIN!",
+        "WEBGL TERRAIN LAYER: WebGL terrain layer initialized successfully - YOU SHOULD SEE ACTUAL TERRAIN!",
       );
       this.isWebGLInitialized = true;
       this.redraw();
     } else {
       console.warn(
-        "🔴 WEBGL TERRAIN LAYER: WebGL initialization failed, falling back to canvas terrain layer",
+        "WEBGL TERRAIN LAYER: WebGL initialization failed, falling back to canvas terrain layer",
       );
       this.fallbackToCanvas();
     }

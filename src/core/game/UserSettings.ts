@@ -50,8 +50,8 @@ export class UserSettings {
     this.get("settings.focusLocked", true);
   }
 
-  webglTerrain() {
-    return this.get("settings.webglTerrain", true);
+  useWebGL() {
+    return this.get("settings.webGL", true);
   }
 
   toggleLeftClickOpenMenu() {
@@ -91,8 +91,8 @@ export class UserSettings {
     }
   }
 
-  toggleWebglTerrain() {
-    this.set("settings.webglTerrain", !this.webglTerrain());
+  toggleWebgl() {
+    this.set("settings.webGL", !this.useWebGL());
   }
 
   getSelectedPattern(): string | undefined {
