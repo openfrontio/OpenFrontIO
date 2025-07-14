@@ -29,8 +29,7 @@ import { initWorkerMetrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
 
-// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-const workerId = parseInt(process.env.WORKER_ID || "0");
+const workerId = parseInt(process.env.WORKER_ID ?? "0");
 const log = logger.child({ comp: `w_${workerId}` });
 
 // Worker setup
