@@ -423,7 +423,7 @@ export const centerButtonElement: CenterButtonElement = {
       }
       return false;
     }
-    return false;
+    return !params.playerActions.canAttack;
   },
   action: (params: MenuElementParams) => {
     if (params.game.inSpawnPhase()) {
