@@ -951,6 +951,39 @@ export class RadialMenu implements Layer {
     this.renderMenuItems(this.currentMenuItems, this.currentLevel);
   }
 
+  public refresh() {
+    if (!this.isVisible || !this.params) return;
+
+    // Refresh the disabled state of all menu items
+    this.menuPaths.forEach((path, itemId) => {
+      const item = this.findMenuItem(itemId);
+      if (item) {
+        const disabled = item.disabled(this.params!);
+        const color = disabled
+          ? this.config.disabledColor
+          : item.color || "#333333";
+        const opacity = disabled ? 0.5 : 0.7;
+
+        // Update path appearance
+        path.attr(
+          "fill",
+          d3.color(color)?.copy({ opacity: opacity })?.toString() || color,
+        );
+        path.style("opacity", disabled ? 0.5 : 1);
+        path.style("cursor", disabled ? "not-allowed" : "pointer");
+
+        // Update icon/text appearance
+        const icon = this.menuIcons.get(itemId);
+        if (icon) {
+          icon.style("opacity", disabled ? 0.5 : 1);
+        }
+      }
+    });
+
+    // Refresh center button state
+    this.updateCenterButtonState(this.centerButtonState);
+  }
+
   renderLayer(context: CanvasRenderingContext2D) {
     // No need to render anything on the canvas
   }

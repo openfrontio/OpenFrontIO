@@ -1,7 +1,7 @@
 import { LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { PlayerActions, TerraNullius } from "../../../core/game/Game";
+import { PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
@@ -31,7 +31,6 @@ export class MainRadialMenu extends LitElement implements Layer {
   private chatIntegration: ChatIntegration;
 
   private clickedTile: TileRef | null = null;
-  private selectedPlayer: PlayerView | TerraNullius | null = null;
 
   constructor(
     private eventBus: EventBus,
@@ -71,6 +70,7 @@ export class MainRadialMenu extends LitElement implements Layer {
 
   init() {
     this.radialMenu.init();
+    this.radialMenu.setRootMenuItems(rootMenuItems, centerButtonElement);
     this.eventBus.on(ContextMenuEvent, (event) => {
       const worldCoords = this.transformHandler.screenToWorldCoordinates(
         event.x,
@@ -83,12 +83,11 @@ export class MainRadialMenu extends LitElement implements Layer {
         return;
       }
       this.clickedTile = this.game.ref(worldCoords.x, worldCoords.y);
-      this.selectedPlayer = this.game.owner(this.clickedTile);
       this.game
         .myPlayer()!
         .actions(this.clickedTile)
         .then((actions) => {
-          this.handlePlayerActions(
+          this.updatePlayerActions(
             this.game.myPlayer()!,
             actions,
             this.clickedTile!,
@@ -99,12 +98,12 @@ export class MainRadialMenu extends LitElement implements Layer {
     });
   }
 
-  private async handlePlayerActions(
+  private async updatePlayerActions(
     myPlayer: PlayerView,
     actions: PlayerActions,
     tile: TileRef,
-    screenX: number,
-    screenY: number,
+    screenX: number | null = null,
+    screenY: number | null = null,
   ) {
     this.buildMenu.playerActions = actions;
 
@@ -130,18 +129,27 @@ export class MainRadialMenu extends LitElement implements Layer {
       eventBus: this.eventBus,
     };
 
-    this.radialMenu.setRootMenuItems(rootMenuItems, centerButtonElement);
     this.radialMenu.setParams(params);
-    this.radialMenu.showRadialMenu(screenX, screenY);
+    if (screenX !== null && screenY !== null) {
+      this.radialMenu.showRadialMenu(screenX, screenY);
+    } else {
+      this.radialMenu.refresh();
+    }
   }
 
   async tick() {
     if (!this.radialMenu.isMenuVisible() || this.clickedTile === null) return;
-    if (this.selectedPlayer === null) return;
-    const currentPlayer = this.game.owner(this.clickedTile);
-    if (currentPlayer.id() !== this.selectedPlayer.id()) {
-      this.closeMenu();
-      return;
+    if (this.game.ticks() % 5 === 0) {
+      this.game
+        .myPlayer()!
+        .actions(this.clickedTile)
+        .then((actions) => {
+          this.updatePlayerActions(
+            this.game.myPlayer()!,
+            actions,
+            this.clickedTile!,
+          );
+        });
     }
   }
 
