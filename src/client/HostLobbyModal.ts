@@ -350,7 +350,9 @@ export class HostLobbyModal extends LitElement {
                 <span class="player-tag">
                   ${player.username}
                   ${player.clientID === this.hostClientID
-                    ? html`<span class="host-badge">(Host)</span>`
+                    ? html`<span class="host-badge"
+                        >(${translateText("host_modal.host_badge")})</span
+                      >`
                     : html`
                         <button
                           class="remove-player-btn"
