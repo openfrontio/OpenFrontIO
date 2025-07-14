@@ -1,0 +1,21 @@
+name: Check lang_code matches filename
+
+on: [push, pull_request]
+
+jobs:
+  lang-code-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check lang_code matches filename
+        run: |
+          for f in lang/*.json; do
+            name=$(basename "$f" .json)
+            code=$(jq -r '.lang_code' "$f")
+            if [ "$name" != "$code" ]; then
+              echo "❌ $f: lang_code ($code) does not match filename ($name)"
+              exit 1
+            fi
+          done
+          echo "✅ All lang_code values match their filenames!"
