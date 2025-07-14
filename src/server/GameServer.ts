@@ -41,6 +41,8 @@ export class GameServer {
   private turns: Turn[] = [];
   private intents: Intent[] = [];
   public activeClients: Client[] = [];
+  // Used to track the Host of a Private Lobby (to kick players)
+  private hostClientID: string | null = null;
   // Used for record record keeping
   private allClients: Map<ClientID, Client> = new Map();
   private _hasStarted = false;
@@ -112,6 +114,14 @@ export class GameServer {
         clientID: client.clientID,
       });
       return;
+    }
+    // Set the first client as host for private games
+    if (this.hostClientID === null && !this.isPublic()) {
+      this.hostClientID = client.clientID;
+      this.log.info("Host set for private game", {
+        gameID: this.id,
+        hostClientID: client.clientID,
+      });
     }
     this.log.info("client (re)joining game", {
       clientID: client.clientID,
@@ -449,6 +459,10 @@ export class GameServer {
         error: errorDetails,
       });
     }
+  }
+
+  public isHost(clientID: string): boolean {
+    return this.hostClientID === clientID;
   }
 
   phase(): GamePhase {
