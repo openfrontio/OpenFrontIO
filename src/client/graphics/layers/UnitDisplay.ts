@@ -24,12 +24,21 @@ export class UnitDisplay extends LitElement implements Layer {
   private _port = 0;
   private _defensePost = 0;
   private _samLauncher = 0;
+  private allDisabled = false;
 
   createRenderRoot() {
     return this;
   }
 
   init() {
+    const config = this.game.config();
+    this.allDisabled =
+      config.isUnitDisabled(UnitType.City) &&
+      config.isUnitDisabled(UnitType.Factory) &&
+      config.isUnitDisabled(UnitType.Port) &&
+      config.isUnitDisabled(UnitType.DefensePost) &&
+      config.isUnitDisabled(UnitType.MissileSilo) &&
+      config.isUnitDisabled(UnitType.SAMLauncher);
     this.requestUpdate();
   }
 
@@ -89,16 +98,7 @@ export class UnitDisplay extends LitElement implements Layer {
       return null;
     }
 
-    const config = this.game.config();
-    const allDisabled =
-      config.isUnitDisabled(UnitType.City) &&
-      config.isUnitDisabled(UnitType.Factory) &&
-      config.isUnitDisabled(UnitType.Port) &&
-      config.isUnitDisabled(UnitType.DefensePost) &&
-      config.isUnitDisabled(UnitType.MissileSilo) &&
-      config.isUnitDisabled(UnitType.SAMLauncher);
-
-    if (allDisabled) {
+    if (this.allDisabled) {
       return null;
     }
 
