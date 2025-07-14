@@ -594,32 +594,24 @@ export class HostLobbyModal extends LitElement {
       });
   }
 
-  private async kickPlayer(clientID: string) {
-    const config = await getServerConfigFromClient();
-    try {
-      const response = await fetch(
-        `/${config.workerPath(this.lobbyId)}/api/kick_player/${this.lobbyId}/${clientID}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Client-ID": this.hostClientID, // Send host client ID as proof
-          },
-        },
-      );
+  private kickPlayer(clientID: string) {
+    console.log("🔴 Kick button clicked for client:", clientID);
+    console.log("🔴 Host client ID:", this.hostClientID);
+    console.log(
+      "🔴 Are we trying to kick ourselves?",
+      clientID === this.hostClientID,
+    );
 
-      if (!response.ok) {
-        if (response.status === 403) {
-          console.error("Only the host can kick players");
-        } else if (response.status === 400) {
-          console.error("Cannot kick yourself or invalid request");
-        } else {
-          console.error("Failed to kick player:", response.statusText);
-        }
-      }
-    } catch (error) {
-      console.error("Error kicking player:", error);
-    }
+    // Dispatch event to be handled by WebSocket instead of HTTP
+    this.dispatchEvent(
+      new CustomEvent("kick-player", {
+        detail: { targetClientID: clientID },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
+    console.log("📤 Kick event dispatched");
   }
 }
 

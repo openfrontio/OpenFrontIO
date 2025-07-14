@@ -1,6 +1,7 @@
 import favicon from "../../resources/images/Favicon.svg";
 import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
+import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
 import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
@@ -24,6 +25,7 @@ import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
+import { SendKickPlayerIntentEvent } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
@@ -72,6 +74,7 @@ export interface JoinLobbyEvent {
 
 class Client {
   private gameStop: (() => void) | null = null;
+  private gameEventBus: EventBus | null = null;
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
@@ -158,6 +161,7 @@ class Client {
     setFavicon();
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
+    document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
 
     const spModal = document.querySelector(
       "single-player-modal",
@@ -418,7 +422,7 @@ class Client {
     }
     const config = await getServerConfigFromClient();
 
-    this.gameStop = joinLobby(
+    const gameSession = joinLobby(
       {
         gameID: lobby.gameID,
         serverConfig: config,
@@ -490,6 +494,8 @@ class Client {
         }
       },
     );
+    this.gameStop = gameSession.stop;
+    this.gameEventBus = gameSession.eventBus;
   }
 
   private async handleLeaveLobby(/* event: CustomEvent */) {
@@ -500,6 +506,19 @@ class Client {
     this.gameStop();
     this.gameStop = null;
     this.publicLobby.leaveLobby();
+  }
+
+  private handleKickPlayer(event: CustomEvent) {
+    const { targetClientID } = event.detail;
+    console.log("📥 Main.ts received kick player request:", targetClientID);
+
+    // Forward to game's EventBus
+    if (this.gameEventBus) {
+      console.log("✅ Forwarding to game EventBus");
+      this.gameEventBus.emit(new SendKickPlayerIntentEvent(targetClientID));
+    } else {
+      console.log("❌ No active game EventBus");
+    }
   }
 }
 
