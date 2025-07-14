@@ -115,8 +115,7 @@
     "australia": "map.australia",
     "random": "map.random",
     "iceland": "map.iceland",
-    "pangaea": "map.pangaea",
-    "pluto": "map.pluto"
+    "pangaea": "map.pangaea"
   },
   "private_lobby": {
     "title": "private_lobby.title",
