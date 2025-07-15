@@ -77,7 +77,11 @@ export class TradeShipExecution implements Execution {
       return;
     }
 
-    if (this.wasCaptured) {
+    if (
+      this.wasCaptured &&
+      (this.tradeShip.owner().id() !== this._dstPort.owner().id() ||
+        !this._dstPort.isActive())
+    ) {
       const ports = this.tradeShip
         .owner()
         .units(UnitType.Port)
@@ -92,18 +96,18 @@ export class TradeShipExecution implements Execution {
       }
     }
 
-    const result = this.pathFinder.nextTile(
-      this.tradeShip.tile(),
-      this._dstPort.tile(),
-    );
+    const curTile = this.tradeShip.tile();
+    if (curTile === this.dstPort()) {
+      this.complete();
+      return;
+    }
+
+    const result = this.pathFinder.nextTile(curTile, this._dstPort.tile());
 
     switch (result.type) {
-      case PathFindResultType.Completed:
-        this.complete();
-        break;
       case PathFindResultType.Pending:
         // Fire unit event to rerender.
-        this.tradeShip.move(this.tradeShip.tile());
+        this.tradeShip.move(curTile);
         break;
       case PathFindResultType.NextTile:
         // Update safeFromPirates status
@@ -112,6 +116,9 @@ export class TradeShipExecution implements Execution {
         }
         this.tradeShip.move(result.node);
         this.tilesTraveled++;
+        break;
+      case PathFindResultType.Completed:
+        this.complete();
         break;
       case PathFindResultType.PathNotFound:
         console.warn("captured trade ship cannot find route");
