@@ -54,14 +54,16 @@ export class TradeShipExecution implements Execution {
       return;
     }
 
-    if (this.origOwner !== this.tradeShip.owner()) {
+    const tradeShipOwner = this.tradeShip.owner();
+    const dstPortOwner = this._dstPort.owner();
+    if (this.origOwner !== tradeShipOwner) {
       // Store as variable in case ship is recaptured by previous owner
       this.wasCaptured = true;
     }
 
     // If a player captures another player's port while trading we should delete
     // the ship.
-    if (this._dstPort.owner().id() === this.srcPort.owner().id()) {
+    if (dstPortOwner.id() === this.srcPort.owner().id()) {
       this.tradeShip.delete(false);
       this.active = false;
       return;
@@ -69,8 +71,7 @@ export class TradeShipExecution implements Execution {
 
     if (
       !this.wasCaptured &&
-      (!this._dstPort.isActive() ||
-        !this.tradeShip.owner().canTrade(this._dstPort.owner()))
+      (!this._dstPort.isActive() || !tradeShipOwner.canTrade(dstPortOwner))
     ) {
       this.tradeShip.delete(false);
       this.active = false;
@@ -79,8 +80,7 @@ export class TradeShipExecution implements Execution {
 
     if (
       this.wasCaptured &&
-      (this.tradeShip.owner().id() !== this._dstPort.owner().id() ||
-        !this._dstPort.isActive())
+      (tradeShipOwner !== dstPortOwner || !this._dstPort.isActive())
     ) {
       const ports = this.tradeShip
         .owner()
