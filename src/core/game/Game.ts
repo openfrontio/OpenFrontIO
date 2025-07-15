@@ -194,11 +194,11 @@ export interface UnitParamsMap {
     patrolTile: TileRef;
   };
 
-  [UnitType.Shell]: {};
+  [UnitType.Shell]: Record<string, never>;
 
-  [UnitType.SAMMissile]: {};
+  [UnitType.SAMMissile]: Record<string, never>;
 
-  [UnitType.Port]: {};
+  [UnitType.Port]: Record<string, never>;
 
   [UnitType.AtomBomb]: {
     targetTile?: number;
@@ -219,25 +219,23 @@ export interface UnitParamsMap {
     loaded?: boolean;
   };
 
-  [UnitType.Factory]: {};
+  [UnitType.Factory]: Record<string, never>;
 
-  [UnitType.MissileSilo]: {
-    cooldownDuration?: number;
-  };
+  [UnitType.MissileSilo]: Record<string, never>;
 
-  [UnitType.DefensePost]: {};
+  [UnitType.DefensePost]: Record<string, never>;
 
-  [UnitType.SAMLauncher]: {};
+  [UnitType.SAMLauncher]: Record<string, never>;
 
-  [UnitType.City]: {};
+  [UnitType.City]: Record<string, never>;
 
-  [UnitType.MIRV]: {};
+  [UnitType.MIRV]: Record<string, never>;
 
   [UnitType.MIRVWarhead]: {
     targetTile?: number;
   };
 
-  [UnitType.Construction]: {};
+  [UnitType.Construction]: Record<string, never>;
 }
 
 // Type helper to get params type for a specific unit type
@@ -381,7 +379,12 @@ export class PlayerInfo {
 }
 
 export function isUnit(unit: Unit | UnitParams<UnitType>): unit is Unit {
-  return "isUnit" in unit && typeof unit.isUnit === "function" && unit.isUnit();
+  return (
+    unit !== undefined &&
+    "isUnit" in unit &&
+    typeof unit.isUnit === "function" &&
+    unit.isUnit()
+  );
 }
 
 export interface Unit {

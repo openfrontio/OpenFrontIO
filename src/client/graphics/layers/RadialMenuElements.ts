@@ -352,9 +352,9 @@ export const buildMenuElement: MenuElement = {
           : undefined,
         icon: item.icon,
         tooltipItems: [
-          { text: translateText(item.key || ""), className: "title" },
+          { text: translateText(item.key ?? ""), className: "title" },
           {
-            text: translateText(item.description || ""),
+            text: translateText(item.description ?? ""),
             className: "description",
           },
           {
@@ -401,7 +401,7 @@ export const boatMenuElement: MenuElement = {
 
     params.playerActionHandler.handleBoatAttack(
       params.myPlayer,
-      params.selected?.id() || null,
+      params.selected?.id() ?? null,
       params.tile,
       spawn !== false ? spawn : null,
     );

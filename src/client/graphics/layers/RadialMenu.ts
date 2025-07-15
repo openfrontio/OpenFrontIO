@@ -298,14 +298,14 @@ export class RadialMenu implements Layer {
         const disabled = this.params === null || d.data.disabled(this.params);
         const color = disabled
           ? this.config.disabledColor
-          : d.data.color || "#333333";
+          : (d.data.color ?? "#333333");
         const opacity = disabled ? 0.5 : 0.7;
 
         if (d.data.id === this.selectedItemId && this.currentLevel > level) {
           return color;
         }
 
-        return d3.color(color)?.copy({ opacity: opacity })?.toString() || color;
+        return d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color;
       })
       .attr("stroke", "#ffffff")
       .attr("stroke-width", "2")
@@ -341,7 +341,7 @@ export class RadialMenu implements Layer {
         const color =
           this.params === null || d.data.disabled(this.params)
             ? this.config.disabledColor
-            : d.data.color || "#333333";
+            : (d.data.color ?? "#333333");
         path.attr("fill", color);
       }
     });
@@ -405,11 +405,11 @@ export class RadialMenu implements Layer {
       path.attr("stroke-width", "2");
       const color = disabled
         ? this.config.disabledColor
-        : d.data.color || "#333333";
+        : (d.data.color ?? "#333333");
       const opacity = disabled ? 0.5 : 0.7;
       path.attr(
         "fill",
-        d3.color(color)?.copy({ opacity: opacity })?.toString() || color,
+        d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color,
       );
     };
 
@@ -625,7 +625,7 @@ export class RadialMenu implements Layer {
       this.selectedItemId = null;
     }
 
-    this.currentMenuItems = previousItems || [];
+    this.currentMenuItems = previousItems ?? [];
 
     if (this.currentLevel === 0) {
       this.updateCenterButtonState("default");
@@ -645,11 +645,11 @@ export class RadialMenu implements Layer {
           const disabled = this.params === null || item.disabled(this.params);
           const color = disabled
             ? this.config.disabledColor
-            : item.color || "#333333";
+            : (item.color ?? "#333333");
           const opacity = disabled ? 0.5 : 0.7;
           selectedPath.attr(
             "fill",
-            d3.color(color)?.copy({ opacity: opacity })?.toString() || color,
+            d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color,
           );
         }
       }
