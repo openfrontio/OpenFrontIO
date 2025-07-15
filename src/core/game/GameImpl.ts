@@ -692,23 +692,23 @@ export class GameImpl implements Game {
   displayChat(
     message: string,
     category: string,
-    playerInMessageID: PlayerID | undefined,
+    target: PlayerID | undefined,
     playerID: PlayerID | null,
     isFrom: boolean,
-    otherPlayerID: PlayerID | null,
+    recipient: string,
   ): void {
-    let smallPID: number | null = null;
+    let id: number | null = null;
     if (playerID !== null) {
-      smallPID = this.player(playerID).smallID();
+      id = this.player(playerID).smallID();
     }
     this.addUpdate({
       type: GameUpdateType.DisplayChatEvent,
       key: message,
       category: category,
-      playerInMessageID: playerInMessageID,
-      playerSID: smallPID,
+      target: target,
+      playerID: id,
       isFrom,
-      otherPlayerID: otherPlayerID,
+      recipient: recipient,
     });
   }
 

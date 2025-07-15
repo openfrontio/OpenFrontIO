@@ -10,10 +10,10 @@ export class QuickChatExecution implements Execution {
     private sender: Player,
     private recipientID: PlayerID,
     private quickChatKey: string,
-    private playerInMessageID: PlayerID | undefined,
+    private target: PlayerID | undefined,
   ) {}
 
-  init(mg: Game): void {
+  init(mg: Game, ticks: number): void {
     this.mg = mg;
     if (!mg.hasPlayer(this.recipientID)) {
       console.warn(
@@ -26,29 +26,29 @@ export class QuickChatExecution implements Execution {
     this.recipient = mg.player(this.recipientID);
   }
 
-  tick(): void {
+  tick(ticks: number): void {
     const message = this.getMessageFromKey(this.quickChatKey);
 
     this.mg.displayChat(
       message[1],
       message[0],
-      this.playerInMessageID,
+      this.target,
       this.recipient.id(),
       true,
-      this.sender.id(),
+      this.sender.name(),
     );
 
     this.mg.displayChat(
       message[1],
       message[0],
-      this.playerInMessageID,
+      this.target,
       this.sender.id(),
       false,
-      this.recipient.id(),
+      this.recipient.name(),
     );
 
     console.log(
-      `[QuickChat] ${this.sender.name} → ${this.recipient.displayName}: ${message}`,
+      `[QuickChat] ${this.sender.name} → ${this.recipient.name}: ${message}`,
     );
 
     this.active = false;
