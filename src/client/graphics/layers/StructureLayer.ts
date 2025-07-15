@@ -217,6 +217,24 @@ export class StructureLayer implements Layer {
 
     this.drawBorder(unit, borderColor, config);
 
+    if (unitType === UnitType.SAMLauncher && unit.isActive()) {
+      const ctx = this.context;
+      const centerX = this.game.x(unit.tile()) * 2 + 1;
+      const centerY = this.game.y(unit.tile()) * 2 + 1;
+      const tileToPx = 2;
+      const radius = 50 * tileToPx; // 50 is MIRVWarheadProtectionRadius
+
+      ctx.save();
+      ctx.setLineDash([6, 6]);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#ff00ff"; // Pure magenta, highly visible
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     // Render icon at 1/2 scale for better quality
     const scaledWidth = icon.width >> 1;
     const scaledHeight = icon.height >> 1;
