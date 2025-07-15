@@ -12,7 +12,6 @@ import missileSiloIcon from "../../../../resources/non-commercial/images/buildin
 import SAMMissileIcon from "../../../../resources/non-commercial/images/buildings/silo4.png";
 import { Cell, UnitType } from "../../../core/game/Game";
 import { euclDistFN, isometricDistFN } from "../../../core/game/GameMap";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 
 const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
@@ -106,7 +105,7 @@ export class StructureLayer implements Layer {
 
   private loadIconData() {
     Object.entries(this.unitConfigs).forEach(([unitType, config]) => {
-      this.loadIcon(unitType, config);
+      this.loadIcon(unitType, config as UnitRenderConfig);
     });
   }
 
@@ -114,14 +113,18 @@ export class StructureLayer implements Layer {
     return true;
   }
 
+  // ------------------
+  // NEW: ensure outdated visuals (e.g., SAM radius) are cleared every tick
+  //       by wiping the canvas first, then redrawing all current units.
+  // ------------------
   tick() {
-    const updates = this.game.updatesSinceLastTick();
-    const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
-    for (const u of unitUpdates) {
-      const unit = this.game.unit(u.id);
-      if (unit === undefined) continue;
-      this.handleUnitRendering(unit);
+    // Clear everything previously rendered so stale graphics disappear
+    if (this.context) {
+      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
+
+    // Draw a fresh frame with the current game state
+    this.game.units().forEach((u) => this.handleUnitRendering(u));
   }
 
   init() {
@@ -214,12 +217,23 @@ export class StructureLayer implements Layer {
     ctx.restore();
   }
 
+  // ------------------
+  // NEW: centralized toggle helper to decide whether to show SAM radius
+  // ------------------
+  private shouldDrawSamRadius(unit: UnitView): boolean {
+    return (
+      unit.type() === UnitType.SAMLauncher &&
+      unit.isActive() &&
+      this.transformHandler.scale >= ZOOM_THRESHOLD
+    );
+  }
+
   private handleUnitRendering(unit: UnitView) {
     const unitType = unit.constructionType() ?? unit.type();
     const iconType = unitType;
     if (!this.isUnitTypeSupported(unitType)) return;
 
-    const config = this.unitConfigs[unitType];
+    const config = this.unitConfigs[unitType] as UnitRenderConfig;
     let icon: HTMLImageElement | undefined;
     let borderColor = this.theme.borderColor(unit.owner());
 
@@ -240,31 +254,12 @@ export class StructureLayer implements Layer {
       this.clearCell(new Cell(this.game.x(tile), this.game.y(tile)));
     }
 
-    // Special case: if this is a SAMLauncher and it is NOT active, clear the magenta radius area
-    if (unitType === UnitType.SAMLauncher && !unit.isActive()) {
-      const magentaRadius = 50 * 2; // 50 tiles * 2 px per tile
-      const clearRadius = Math.max(
-        config.borderRadius + 1,
-        magentaRadius / 2 + 2,
-      );
-      for (const tile of this.game.bfs(
-        unit.tile(),
-        euclDistFN(unit.tile(), clearRadius, true),
-      )) {
-        this.clearCell(new Cell(this.game.x(tile), this.game.y(tile)));
-      }
-      return; // Don't draw anything else for destroyed SAM
-    }
-
     if (!unit.isActive()) return;
 
     this.drawBorder(unit, borderColor, config);
 
-    // Draw magenta radius for active SAMLauncher when zoomed in
-    if (
-      unitType === UnitType.SAMLauncher &&
-      this.transformHandler.scale >= ZOOM_THRESHOLD
-    ) {
+    // Draw magenta radius for active SAMLauncher when appropriate
+    if (this.shouldDrawSamRadius(unit)) {
       this.drawSamRadius(unit);
     }
 
