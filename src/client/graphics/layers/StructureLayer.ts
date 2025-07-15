@@ -23,6 +23,12 @@ const BASE_TERRITORY_RADIUS = 13.5;
 const RADIUS_SCALE_FACTOR = 0.5;
 const ZOOM_THRESHOLD = 3.5; // below this zoom level, structures are not rendered
 
+// SAM launcher visual constants
+const SAM_PROTECTION_RADIUS = 50; // MIRVWarheadProtectionRadius from game logic
+const SAM_CIRCLE_COLOR = "#ff00ff"; // Magenta for high visibility
+const SAM_DASH_PATTERN = [6, 6];
+const SAM_LINE_WIDTH = 2;
+
 interface UnitRenderConfig {
   icon: string;
   borderRadius: number;
@@ -138,6 +144,10 @@ export class StructureLayer implements Layer {
     this.game.units().forEach((u) => this.handleUnitRendering(u));
   }
 
+  structureSamRadiusColor(): string {
+    return SAM_CIRCLE_COLOR;
+  }
+
   renderLayer(context: CanvasRenderingContext2D) {
     if (this.transformHandler.scale <= ZOOM_THRESHOLD) {
       return;
@@ -195,7 +205,6 @@ export class StructureLayer implements Layer {
     let icon: HTMLImageElement | undefined;
     let borderColor = this.theme.borderColor(unit.owner());
 
-    // Handle cooldown states and special icons
     if (unit.type() === UnitType.Construction) {
       icon = this.unitIcons.get(iconType);
       borderColor = underConstructionColor;
@@ -205,7 +214,7 @@ export class StructureLayer implements Layer {
 
     if (!config || !icon) return;
 
-    // Clear previous rendering
+    // Always clear the border area for this unit
     for (const tile of this.game.bfs(
       unit.tile(),
       euclDistFN(unit.tile(), config.borderRadius + 1, true),
@@ -213,23 +222,45 @@ export class StructureLayer implements Layer {
       this.clearCell(new Cell(this.game.x(tile), this.game.y(tile)));
     }
 
+    // Special case: if this is a SAMLauncher and it is NOT active, clear the magenta radius area
+    if (unitType === UnitType.SAMLauncher && !unit.isActive()) {
+      const magentaRadius = 50 * 2; // 50 tiles * 2 px per tile
+      const clearRadius = Math.max(
+        config.borderRadius + 1,
+        magentaRadius / 2 + 2,
+      );
+      for (const tile of this.game.bfs(
+        unit.tile(),
+        euclDistFN(unit.tile(), clearRadius, true),
+      )) {
+        this.clearCell(new Cell(this.game.x(tile), this.game.y(tile)));
+      }
+      return; // Don't draw anything else for destroyed SAM
+    }
+
     if (!unit.isActive()) return;
 
     this.drawBorder(unit, borderColor, config);
 
-    if (unitType === UnitType.SAMLauncher && unit.isActive()) {
+    // Draw magenta radius for active SAMLauncher when zoomed in
+    if (
+      unitType === UnitType.SAMLauncher &&
+      this.transformHandler.scale >= ZOOM_THRESHOLD
+    ) {
       const ctx = this.context;
       const centerX = this.game.x(unit.tile()) * 2 + 1;
       const centerY = this.game.y(unit.tile()) * 2 + 1;
       const tileToPx = 2;
-      const radius = 50 * tileToPx; // 50 is MIRVWarheadProtectionRadius
+      const radius = SAM_PROTECTION_RADIUS * tileToPx; // 50 is MIRVWarheadProtectionRadius
 
       ctx.save();
-      ctx.setLineDash([6, 6]);
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = "#ff00ff"; // Pure magenta, highly visible
+      ctx.setLineDash(SAM_DASH_PATTERN);
+      ctx.lineWidth = SAM_LINE_WIDTH;
+      ctx.strokeStyle = this.structureSamRadiusColor(); // magenta very visible
 
       ctx.beginPath();
+
+      // yay i used high school trig
       ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
       ctx.stroke();
       ctx.restore();
