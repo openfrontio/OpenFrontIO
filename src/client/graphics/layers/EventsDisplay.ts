@@ -375,7 +375,7 @@ export class EventsDisplay extends LitElement implements Layer {
     if (event.target) {
       try {
         const targetPlayer = this.game.player(event.target);
-        const targetName = targetPlayer?.name() ?? event.target;
+        const targetName = targetPlayer?.displayName() ?? event.target;
         translatedMessage = baseMessage.replace("[P1]", targetName);
       } catch (e) {
         console.warn(
@@ -386,9 +386,16 @@ export class EventsDisplay extends LitElement implements Layer {
       }
     }
 
+    let otherPlayerDiplayName: string = "";
+    if (event.recipient !== null) {
+      //'recipient' parameter contains sender ID or recipient ID
+      const player = this.game.player(event.recipient);
+      otherPlayerDiplayName = player ? player.displayName() : "";
+    }
+
     this.addEvent({
       description: translateText(event.isFrom ? "chat.from" : "chat.to", {
-        user: event.recipient,
+        user: otherPlayerDiplayName,
         msg: translatedMessage,
       }),
       createdAt: this.game.ticks(),
