@@ -217,7 +217,7 @@ export class RadialMenu implements Layer {
   }
 
   private getInnerRadiusForLevel(level: number): number {
-    return level === 0 ? 50 : 50 + 25;
+    return level === 0 ? 40 : 50 + 25;
   }
 
   private getOuterRadiusForLevel(level: number): number {
@@ -797,6 +797,28 @@ export class RadialMenu implements Layer {
   public updateCenterButtonState(state: CenterButtonState) {
     this.centerButtonState = state;
     if (state === "back") {
+      const backButtonSize = this.config.centerButtonSize * 0.8; // Make back button 20% smaller
+      this.menuElement
+        .select(".center-button-hitbox")
+        .transition()
+        .duration(0)
+        .attr("r", backButtonSize);
+      this.menuElement
+        .select(".center-button-visible")
+        .transition()
+        .duration(0)
+        .attr("r", backButtonSize);
+
+      const backIconImg = this.menuElement.select(".center-button-icon");
+      backIconImg
+        .attr("xlink:href", backIcon)
+        .attr("width", this.backIconSize)
+        .attr("height", this.backIconSize)
+        .attr("x", -this.backIconSize / 2)
+        .attr("y", -this.backIconSize / 2);
+    }
+    if (state === "default") {
+      // Restore original button size
       this.menuElement
         .select(".center-button-hitbox")
         .transition()
@@ -808,15 +830,6 @@ export class RadialMenu implements Layer {
         .duration(0)
         .attr("r", this.config.centerButtonSize);
 
-      const backIconImg = this.menuElement.select(".center-button-icon");
-      backIconImg
-        .attr("xlink:href", backIcon)
-        .attr("width", this.backIconSize)
-        .attr("height", this.backIconSize)
-        .attr("x", -this.backIconSize / 2)
-        .attr("y", -this.backIconSize / 2);
-    }
-    if (state === "default") {
       const iconImg = this.menuElement.select(".center-button-icon");
       iconImg
         .attr("xlink:href", this.originalCenterButtonIcon)
