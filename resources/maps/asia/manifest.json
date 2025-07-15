@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 1200,
-    "num_land_tiles": 1124099,
+    "num_land_tiles": 1079855,
     "width": 2000
   },
   "mini_map": {
     "height": 600,
-    "num_land_tiles": 277784,
+    "num_land_tiles": 266262,
     "width": 1000
   },
   "name": "Asia",

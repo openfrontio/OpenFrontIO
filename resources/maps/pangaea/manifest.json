@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 1000,
-    "num_land_tiles": 450234,
+    "num_land_tiles": 420336,
     "width": 1000
   },
   "mini_map": {
     "height": 500,
-    "num_land_tiles": 110270,
+    "num_land_tiles": 102357,
     "width": 500
   },
   "name": "Pangaea",
