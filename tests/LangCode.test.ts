@@ -14,8 +14,6 @@ describe("LangCode Filename Check", () => {
       return;
     }
 
-    let hasError = false;
-
     for (const file of files) {
       const filePath = path.join(langDir, file);
       const jsonData = JSON.parse(fs.readFileSync(filePath, "utf-8"));
@@ -23,18 +21,7 @@ describe("LangCode Filename Check", () => {
       const fileNameWithoutExt = path.basename(file, ".json");
       const langCode = jsonData.lang?.lang_code;
 
-      if (fileNameWithoutExt !== langCode) {
-        console.error(
-          `${file}: lang_code (${langCode}) does not match filename (${fileNameWithoutExt})`,
-        );
-        hasError = true;
-      }
-    }
-
-    if (hasError) {
-      throw new Error(
-        "One or more lang_code values do not match their filenames.",
-      );
+      expect(fileNameWithoutExt).toBe(langCode);
     }
   });
 });
