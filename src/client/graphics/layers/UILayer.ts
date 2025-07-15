@@ -317,10 +317,10 @@ export class UILayer implements Layer {
         if (constructionType === undefined) {
           return 1;
         }
-        const constDuration = 
+        const constDuration =
           this.game.unitInfo(constructionType).constructionDuration;
         if (constDuration === undefined) {
-          throw new Error('unit does not have constructionTime');
+          throw new Error("unit does not have constructionTime");
         }
         return (
           (this.game.ticks() - unit.createdAt()) /

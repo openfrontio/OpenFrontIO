@@ -24,12 +24,12 @@ export default [
       parserOptions: {
         projectService: {
           allowDefaultProject: [
-            '__mocks__/fileMock.js',
-            'eslint.config.js',
-            'jest.config.ts',
-            'postcss.config.js',
-            'tailwind.config.js',
-            'webpack.config.js',
+            "__mocks__/fileMock.js",
+            "eslint.config.js",
+            "jest.config.ts",
+            "postcss.config.js",
+            "tailwind.config.js",
+            "webpack.config.js",
           ],
         },
         tsconfigRootDir: import.meta.dirname,

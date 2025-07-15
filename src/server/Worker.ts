@@ -299,8 +299,8 @@ export function startWorker() {
         const forwarded = req.headers["x-forwarded-for"];
         const ip = Array.isArray(forwarded)
           ? forwarded[0]
-          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-          : forwarded || req.socket.remoteAddress || "unknown";
+          : // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+            forwarded || req.socket.remoteAddress || "unknown";
 
         try {
           // Parse and handle client messages

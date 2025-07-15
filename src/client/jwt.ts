@@ -105,7 +105,7 @@ export type IsLoggedInResponse =
 let __isLoggedIn: IsLoggedInResponse | undefined = undefined;
 export function isLoggedIn(): IsLoggedInResponse {
   __isLoggedIn ??= _isLoggedIn();
-  
+
   return __isLoggedIn;
 }
 function _isLoggedIn(): IsLoggedInResponse {
