@@ -244,15 +244,15 @@ label.option-card:hover {
 }
 
 .player-tag {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 4px 16px;
+  gap: 8px;
+  background: #2a2a2a;
+  color: #fff;
+  padding: 8px 12px;
+  margin: 4px;
   border-radius: 16px;
   font-size: 14px;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 #bots-count,
@@ -618,18 +618,6 @@ label.option-card:hover {
   padding: 0 16px;
 }
 
-.player-tag {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 4px 16px;
-  border-radius: 16px;
-  font-size: 14px;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
 /* News Button Notification */
 .news-button .active button {
   position: relative;
@@ -662,18 +650,6 @@ news-button .active button::after {
   50% {
     transform: scale(1.4);
   }
-}
-
-.player-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: #2a2a2a;
-  color: #fff;
-  padding: 8px 12px;
-  margin: 4px;
-  border-radius: 16px;
-  font-size: 14px;
 }
 
 .host-badge {
