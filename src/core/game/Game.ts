@@ -194,11 +194,11 @@ export interface UnitParamsMap {
     patrolTile: TileRef;
   };
 
-  [UnitType.Shell]: undefined;
+  [UnitType.Shell]: Record<string, never>;
 
-  [UnitType.SAMMissile]: undefined;
+  [UnitType.SAMMissile]: Record<string, never>;
 
-  [UnitType.Port]: undefined;
+  [UnitType.Port]: Record<string, never>;
 
   [UnitType.AtomBomb]: {
     targetTile?: number;
@@ -219,25 +219,23 @@ export interface UnitParamsMap {
     loaded?: boolean;
   };
 
-  [UnitType.Factory]: {};
+  [UnitType.Factory]: Record<string, never>;
 
-  [UnitType.MissileSilo]: {
-    cooldownDuration?: number;
-  };
+  [UnitType.MissileSilo]: Record<string, never>;
 
-  [UnitType.DefensePost]: undefined;
+  [UnitType.DefensePost]: Record<string, never>;
 
-  [UnitType.SAMLauncher]: undefined;
+  [UnitType.SAMLauncher]: Record<string, never>;
 
-  [UnitType.City]: undefined;
+  [UnitType.City]: Record<string, never>;
 
-  [UnitType.MIRV]: undefined;
+  [UnitType.MIRV]: Record<string, never>;
 
   [UnitType.MIRVWarhead]: {
     targetTile?: number;
   };
 
-  [UnitType.Construction]: undefined;
+  [UnitType.Construction]: Record<string, never>;
 }
 
 // Type helper to get params type for a specific unit type

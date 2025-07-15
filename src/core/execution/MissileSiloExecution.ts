@@ -25,9 +25,7 @@ export class MissileSiloExecution implements Execution {
         this.active = false;
         return;
       }
-      this.silo = this.player.buildUnit(UnitType.MissileSilo, spawn, {
-        cooldownDuration: this.mg.config().SiloCooldown(),
-      });
+      this.silo = this.player.buildUnit(UnitType.MissileSilo, spawn, {});
 
       if (this.player !== this.silo.owner()) {
         this.player = this.silo.owner();
