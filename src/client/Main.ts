@@ -510,14 +510,10 @@ class Client {
 
   private handleKickPlayer(event: CustomEvent) {
     const { targetClientID } = event.detail;
-    console.log("📥 Main.ts received kick player request:", targetClientID);
 
-    // Forward to game's EventBus
+    // Forward to game's EventBus if available
     if (this.gameEventBus) {
-      console.log("✅ Forwarding to game EventBus");
       this.gameEventBus.emit(new SendKickPlayerIntentEvent(targetClientID));
-    } else {
-      console.log("❌ No active game EventBus");
     }
   }
 }
