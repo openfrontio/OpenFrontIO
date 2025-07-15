@@ -54,10 +54,6 @@ export class SendUpgradeStructureIntentEvent implements GameEvent {
   ) {}
 }
 
-export class SendCreateTrainStationIntentEvent implements GameEvent {
-  constructor(public readonly unitId: number) {}
-}
-
 export class SendAllianceReplyIntentEvent implements GameEvent {
   constructor(
     // The original alliance requestor
@@ -211,9 +207,6 @@ export class Transport {
     this.eventBus.on(SendUpgradeStructureIntentEvent, (e) =>
       this.onSendUpgradeStructureIntent(e),
     );
-    this.eventBus.on(SendCreateTrainStationIntentEvent, (e) =>
-      this.onSendCreateTrainStationIntent(e),
-    );
     this.eventBus.on(SendBoatAttackIntentEvent, (e) =>
       this.onSendBoatAttackIntent(e),
     );
@@ -252,16 +245,14 @@ export class Transport {
   }
 
   private startPing() {
-    if (this.isLocal || this.pingInterval) return;
-    if (this.pingInterval === null) {
-      this.pingInterval = window.setInterval(() => {
-        if (this.socket !== null && this.socket.readyState === WebSocket.OPEN) {
-          this.sendMsg({
-            type: "ping",
-          } satisfies ClientPingMessage);
-        }
-      }, 5 * 1000);
-    }
+    if (this.isLocal) return;
+    this.pingInterval ??= window.setInterval(() => {
+      if (this.socket !== null && this.socket.readyState === WebSocket.OPEN) {
+        this.sendMsg({
+          type: "ping",
+        } satisfies ClientPingMessage);
+      }
+    }, 5 * 1000);
   }
 
   private stopPing() {
@@ -473,16 +464,6 @@ export class Transport {
     this.sendIntent({
       type: "upgrade_structure",
       unit: event.unitType,
-      clientID: this.lobbyConfig.clientID,
-      unitId: event.unitId,
-    });
-  }
-
-  private onSendCreateTrainStationIntent(
-    event: SendCreateTrainStationIntentEvent,
-  ) {
-    this.sendIntent({
-      type: "create_station",
       clientID: this.lobbyConfig.clientID,
       unitId: event.unitId,
     });

@@ -83,6 +83,10 @@ export class RailroadLayer implements Layer {
 
     this.canvas.width = this.game.width() * 2;
     this.canvas.height = this.game.height() * 2;
+
+    for (const [_, rail] of this.existingRailroads) {
+      this.paintRail(rail.tile);
+    }
   }
 
   renderLayer(context: CanvasRenderingContext2D) {

@@ -1,5 +1,5 @@
 import { Config } from "../configuration/Config";
-import { AllPlayersStats, ClientID } from "../Schemas";
+import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
 import { AllianceRequestImpl } from "./AllianceRequestImpl";
@@ -21,9 +21,11 @@ import {
   PlayerID,
   PlayerInfo,
   PlayerType,
+  Quads,
   Team,
   TerrainType,
   TerraNullius,
+  Trios,
   Unit,
   UnitInfo,
   UnitType,
@@ -74,7 +76,7 @@ export class GameImpl implements Game {
   private updates: GameUpdates = createGameUpdatesMap();
   private unitGrid: UnitGrid;
 
-  private playerTeams: Team[] = [ColoredTeams.Red, ColoredTeams.Blue];
+  private playerTeams: Team[];
   private botTeam: Team = ColoredTeams.Bot;
   private _railNetwork: RailNetwork = createRailNetwork(this);
 
@@ -101,25 +103,37 @@ export class GameImpl implements Game {
   }
 
   private populateTeams() {
-    if (this._config.playerTeams() === Duos) {
-      this.playerTeams = [];
-      const numTeams = Math.ceil(
-        (this._humans.length + this._nations.length) / 2,
-      );
-      for (let i = 0; i < numTeams; i++) {
-        this.playerTeams.push("Team " + (i + 1));
+    let numPlayerTeams = this._config.playerTeams();
+    if (typeof numPlayerTeams !== "number") {
+      const players = this._humans.length + this._nations.length;
+      switch (numPlayerTeams) {
+        case Duos:
+          numPlayerTeams = Math.ceil(players / 2);
+          break;
+        case Trios:
+          numPlayerTeams = Math.ceil(players / 3);
+          break;
+        case Quads:
+          numPlayerTeams = Math.ceil(players / 4);
+          break;
+        default:
+          throw new Error(`Unknown TeamCountConfig ${numPlayerTeams}`);
       }
-    } else {
-      const numPlayerTeams = this._config.playerTeams() as number;
-      if (numPlayerTeams < 2)
-        throw new Error(`Too few teams: ${numPlayerTeams}`);
+    }
+    if (numPlayerTeams < 2) {
+      throw new Error(`Too few teams: ${numPlayerTeams}`);
+    } else if (numPlayerTeams < 8) {
+      this.playerTeams = [ColoredTeams.Red, ColoredTeams.Blue];
       if (numPlayerTeams >= 3) this.playerTeams.push(ColoredTeams.Yellow);
       if (numPlayerTeams >= 4) this.playerTeams.push(ColoredTeams.Green);
       if (numPlayerTeams >= 5) this.playerTeams.push(ColoredTeams.Purple);
       if (numPlayerTeams >= 6) this.playerTeams.push(ColoredTeams.Orange);
       if (numPlayerTeams >= 7) this.playerTeams.push(ColoredTeams.Teal);
-      if (numPlayerTeams >= 8)
-        throw new Error(`Too many teams: ${numPlayerTeams}`);
+    } else {
+      this.playerTeams = [];
+      for (let i = 1; i <= numPlayerTeams; i++) {
+        this.playerTeams.push(`Team ${i}`);
+      }
     }
   }
 
@@ -195,9 +209,19 @@ export class GameImpl implements Game {
   units(...types: UnitType[]): Unit[] {
     return Array.from(this._players.values()).flatMap((p) => p.units(...types));
   }
+
+  unitCount(type: UnitType): number {
+    let total = 0;
+    for (const player of this._players.values()) {
+      total += player.unitCount(type);
+    }
+    return total;
+  }
+
   unitInfo(type: UnitType): UnitInfo {
     return this.config().unitInfo(type);
   }
+
   nations(): Nation[] {
     return this._nations;
   }
@@ -614,12 +638,29 @@ export class GameImpl implements Game {
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
     this.addUpdate({
       type: GameUpdateType.Win,
-      winner:
-        typeof winner === "string"
-          ? ["team", winner]
-          : ["player", winner.smallID()],
+      winner: this.makeWinner(winner),
       allPlayersStats,
     });
+  }
+
+  private makeWinner(winner: string | Player): Winner | undefined {
+    if (typeof winner === "string") {
+      return [
+        "team",
+        winner,
+        ...this.players()
+          .filter((p) => p.team() === winner && p.clientID() !== null)
+          .map((p) => p.clientID()!),
+      ];
+    } else {
+      const clientId = winner.clientID();
+      if (clientId === null) return;
+      return [
+        "player",
+        clientId,
+        // TODO: Assists (vote for peace)
+      ];
+    }
   }
 
   teams(): Team[] {
@@ -696,6 +737,15 @@ export class GameImpl implements Game {
     if (u.hasTrainStation()) {
       this._railNetwork.removeStation(u);
     }
+  }
+
+  hasUnitNearby(
+    tile: TileRef,
+    searchRange: number,
+    type: UnitType,
+    playerId: PlayerID,
+  ) {
+    return this.unitGrid.hasUnitNearby(tile, searchRange, type, playerId);
   }
 
   nearbyUnits(

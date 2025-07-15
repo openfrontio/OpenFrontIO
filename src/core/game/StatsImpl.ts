@@ -66,7 +66,7 @@ export class StatsImpl implements Stats {
   private _addAttack(player: Player, index: number, value: BigIntLike) {
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
-    if (p.attacks === undefined) p.attacks = [0n];
+    p.attacks ??= [0n];
     while (p.attacks.length <= index) p.attacks.push(0n);
     p.attacks[index] += _bigint(value);
   }
@@ -89,8 +89,8 @@ export class StatsImpl implements Stats {
   ) {
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
-    if (p.boats === undefined) p.boats = { [type]: [0n] };
-    if (p.boats[type] === undefined) p.boats[type] = [0n];
+    p.boats ??= { [type]: [0n] };
+    p.boats[type] ??= [0n];
     while (p.boats[type].length <= index) p.boats[type].push(0n);
     p.boats[type][index] += _bigint(value);
   }
@@ -104,8 +104,8 @@ export class StatsImpl implements Stats {
     const type = unitTypeToBombUnit[nukeType];
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
-    if (p.bombs === undefined) p.bombs = { [type]: [0n] };
-    if (p.bombs[type] === undefined) p.bombs[type] = [0n];
+    p.bombs ??= { [type]: [0n] };
+    p.bombs[type] ??= [0n];
     while (p.bombs[type].length <= index) p.bombs[type].push(0n);
     p.bombs[type][index] += _bigint(value);
   }
@@ -113,7 +113,7 @@ export class StatsImpl implements Stats {
   private _addGold(player: Player, index: number, value: BigIntLike) {
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
-    if (p.gold === undefined) p.gold = [0n];
+    p.gold ??= [0n];
     while (p.gold.length <= index) p.gold.push(0n);
     p.gold[index] += _bigint(value);
   }
@@ -127,8 +127,8 @@ export class StatsImpl implements Stats {
     const type = unitTypeToOtherUnit[otherUnitType];
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
-    if (p.units === undefined) p.units = { [type]: [0n] };
-    if (p.units[type] === undefined) p.units[type] = [0n];
+    p.units ??= { [type]: [0n] };
+    p.units[type] ??= [0n];
     while (p.units[type].length <= index) p.units[type].push(0n);
     p.units[type][index] += _bigint(value);
   }

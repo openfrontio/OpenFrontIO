@@ -15,7 +15,6 @@ import { EventsDisplay } from "./layers/EventsDisplay";
 import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
-import { GameTopBar } from "./layers/GameTopBar";
 import { GutterAdModal } from "./layers/GutterAdModal";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
@@ -27,6 +26,7 @@ import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
 import { ReplayPanel } from "./layers/ReplayPanel";
+import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnAd } from "./layers/SpawnAd";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
@@ -35,7 +35,7 @@ import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { UILayer } from "./layers/UILayer";
-import { UnitInfoModal } from "./layers/UnitInfoModal";
+import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
 
@@ -71,6 +71,7 @@ export function createRenderer(
   }
   buildMenu.game = game;
   buildMenu.eventBus = eventBus;
+  buildMenu.transformHandler = transformHandler;
 
   const leaderboard = document.querySelector("leader-board") as Leaderboard;
   if (!emojiTable || !(leaderboard instanceof Leaderboard)) {
@@ -151,12 +152,21 @@ export function createRenderer(
   gameRightSidebar.game = game;
   gameRightSidebar.eventBus = eventBus;
 
-  const gameTopBar = document.querySelector("game-top-bar") as GameTopBar;
-  if (!(gameTopBar instanceof GameTopBar)) {
-    console.error("top bar not found");
+  const settingsModal = document.querySelector(
+    "settings-modal",
+  ) as SettingsModal;
+  if (!(settingsModal instanceof SettingsModal)) {
+    console.error("settings modal not found");
   }
-  gameTopBar.game = game;
-  gameTopBar.eventBus = eventBus;
+  settingsModal.userSettings = userSettings;
+  settingsModal.eventBus = eventBus;
+
+  const unitDisplay = document.querySelector("unit-display") as UnitDisplay;
+  if (!(unitDisplay instanceof UnitDisplay)) {
+    console.error("unit display not found");
+  }
+  unitDisplay.game = game;
+  unitDisplay.eventBus = eventBus;
 
   const playerPanel = document.querySelector("player-panel") as PlayerPanel;
   if (!(playerPanel instanceof PlayerPanel)) {
@@ -190,21 +200,7 @@ export function createRenderer(
   }
   headsUpMessage.game = game;
 
-  const unitInfoModal = document.querySelector(
-    "unit-info-modal",
-  ) as UnitInfoModal;
-  if (!(unitInfoModal instanceof UnitInfoModal)) {
-    console.error("unit info modal not found");
-  }
-  unitInfoModal.game = game;
-  const structureLayer = new StructureLayer(
-    game,
-    eventBus,
-    transformHandler,
-    unitInfoModal,
-  );
-  unitInfoModal.structureLayer = structureLayer;
-  // unitInfoModal.eventBus = eventBus;
+  const structureLayer = new StructureLayer(game, eventBus, transformHandler);
 
   const spawnAd = document.querySelector("spawn-ad") as SpawnAd;
   if (!(spawnAd instanceof SpawnAd)) {
@@ -231,7 +227,7 @@ export function createRenderer(
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
     new RailroadLayer(game),
     structureLayer,
-    new StructureIconsLayer(game, transformHandler),
+    new StructureIconsLayer(game, eventBus, transformHandler),
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, transformHandler),
@@ -251,16 +247,16 @@ export function createRenderer(
     new SpawnTimer(game, transformHandler),
     leaderboard,
     gameLeftSidebar,
-    gameTopBar,
+    unitDisplay,
     gameRightSidebar,
     controlPanel,
     playerInfo,
     winModal,
     replayPanel,
+    settingsModal,
     teamStats,
     playerPanel,
     headsUpMessage,
-    unitInfoModal,
     multiTabModal,
     spawnAd,
     gutterAdModal,

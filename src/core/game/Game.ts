@@ -41,6 +41,8 @@ export enum Difficulty {
 export type Team = string;
 
 export const Duos = "Duos" as const;
+export const Trios = "Trios" as const;
+export const Quads = "Quads" as const;
 
 export const ColoredTeams: Record<string, Team> = {
   Red: "Red",
@@ -78,6 +80,8 @@ export enum GameMapType {
   FalklandIslands = "Falkland Islands",
   Baikal = "Baikal",
   Halkidiki = "Halkidiki",
+  StraitOfGibraltar = "Strait of Gibraltar",
+  Italia = "Italia",
 }
 
 export const mapCategories: Record<string, GameMapType[]> = {
@@ -105,6 +109,8 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.FalklandIslands,
     GameMapType.Baikal,
     GameMapType.Halkidiki,
+    GameMapType.StraitOfGibraltar,
+    GameMapType.Italia,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -437,7 +443,7 @@ export interface Unit {
   launch(): void;
   reloadMissile(): void;
   isInCooldown(): boolean;
-  ticksLeftInCooldown(): Tick | undefined;
+  missileTimerQueue(): number[];
 
   // Trade Ships
   setSafeFromPirates(): void; // Only for trade ships
@@ -507,7 +513,7 @@ export interface Player {
   workers(): number;
   troops(): number;
   targetTroopRatio(): number;
-  addGold(toAdd: Gold): void;
+  addGold(toAdd: Gold, tile?: TileRef): void;
   removeGold(toRemove: Gold): Gold;
   addWorkers(toAdd: number): void;
   removeWorkers(toRemove: number): void;
@@ -518,6 +524,7 @@ export interface Player {
 
   // Units
   units(...types: UnitType[]): Unit[];
+  unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
   buildableUnits(tile: TileRef): BuildableUnit[];
@@ -527,8 +534,14 @@ export interface Player {
     spawnTile: TileRef,
     params: UnitParams<T>,
   ): Unit;
-  upgradeUnit(unit: Unit): void;
 
+  // Returns the existing unit that can be upgraded,
+  // or false if it cannot be upgraded.
+  // New units of the same type can upgrade existing units.
+  // e.g. if a place a new city here, can it upgrade an existing city?
+  findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false;
+  canUpgradeUnit(unitType: UnitType): boolean;
+  upgradeUnit(unit: Unit): void;
   captureUnit(unit: Unit): void;
 
   // Relations & Diplomacy
@@ -636,7 +649,14 @@ export interface Game extends GameMap {
 
   // Units
   units(...types: UnitType[]): Unit[];
+  unitCount(type: UnitType): number;
   unitInfo(type: UnitType): UnitInfo;
+  hasUnitNearby(
+    tile: TileRef,
+    searchRange: number,
+    type: UnitType,
+    playerId: PlayerID,
+  );
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
@@ -687,6 +707,8 @@ export interface PlayerActions {
 
 export interface BuildableUnit {
   canBuild: TileRef | false;
+  // unit id of the existing unit that can be upgraded, or false if it cannot be upgraded.
+  canUpgrade: number | false;
   type: UnitType;
   cost: Gold;
 }

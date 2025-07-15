@@ -27,8 +27,8 @@ export class UnitImpl implements Unit {
   private _constructionType: UnitType | undefined;
   private _lastOwner: PlayerImpl | null = null;
   private _troops: number;
+  // Number of missiles in cooldown, if empty all missiles are ready.
   private _missileTimerQueue: number[] = [];
-  private _readyMissileCount: number = 1;
   private _hasTrainStation: boolean = false;
   private _patrolTile: TileRef | undefined;
   private _level: number = 1;
@@ -128,7 +128,6 @@ export class UnitImpl implements Unit {
       targetUnitId: this._targetUnit?.id() ?? undefined,
       targetTile: this.targetTile() ?? undefined,
       missileTimerQueue: this._missileTimerQueue,
-      readyMissileCount: this._readyMissileCount,
       level: this.level(),
       hasTrainStation: this._hasTrainStation,
       trainType: this._trainType,
@@ -249,6 +248,7 @@ export class UnitImpl implements Unit {
         case UnitType.Port:
         case UnitType.SAMLauncher:
         case UnitType.Warship:
+        case UnitType.Factory:
           this.mg.stats().unitDestroy(destroyer, this._type);
           this.mg.stats().unitLose(this.owner(), this._type);
           break;
@@ -296,7 +296,6 @@ export class UnitImpl implements Unit {
 
   launch(): void {
     this._missileTimerQueue.push(this.mg.ticks());
-    this._readyMissileCount--;
     this.mg.addUpdate(this.toUpdate());
   }
 
@@ -305,12 +304,15 @@ export class UnitImpl implements Unit {
   }
 
   isInCooldown(): boolean {
-    return this._readyMissileCount === 0;
+    return this._missileTimerQueue.length === this._level;
+  }
+
+  missileTimerQueue(): number[] {
+    return this._missileTimerQueue;
   }
 
   reloadMissile(): void {
     this._missileTimerQueue.shift();
-    this._readyMissileCount++;
     this.mg.addUpdate(this.toUpdate());
   }
 
@@ -373,7 +375,7 @@ export class UnitImpl implements Unit {
   increaseLevel(): void {
     this._level++;
     if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
-      this._readyMissileCount++;
+      this._missileTimerQueue.push(this.mg.ticks());
     }
     this.mg.addUpdate(this.toUpdate());
   }

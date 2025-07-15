@@ -243,12 +243,23 @@ export class PlayerImpl implements Player {
     return total;
   }
 
+  // Count of units owned by the player, not including construction
+  unitCount(type: UnitType): number {
+    let total = 0;
+    for (const unit of this._units) {
+      if (unit.type() === type) {
+        total += unit.level();
+      }
+    }
+    return total;
+  }
+
   // Count of units owned by the player, including construction
   unitsOwned(type: UnitType): number {
     let total = 0;
     for (const unit of this._units) {
       if (unit.type() === type) {
-        total++;
+        total += unit.level();
         continue;
       }
       if (unit.type() !== UnitType.Construction) continue;
@@ -698,8 +709,17 @@ export class PlayerImpl implements Player {
     return this._gold;
   }
 
-  addGold(toAdd: Gold): void {
+  addGold(toAdd: Gold, tile?: TileRef): void {
     this._gold += toAdd;
+    if (tile) {
+      this.mg.addUpdate({
+        type: GameUpdateType.BonusEvent,
+        tile,
+        gold: Number(toAdd),
+        workers: 0,
+        troops: 0,
+      });
+    }
   }
 
   removeGold(toRemove: Gold): Gold {
@@ -794,20 +814,57 @@ export class PlayerImpl implements Player {
     return b;
   }
 
+  public findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false {
+    const range = this.mg.config().structureMinDist();
+    const existing = this.mg
+      .nearbyUnits(targetTile, range, type)
+      .sort((a, b) => a.distSquared - b.distSquared);
+    if (existing.length === 0) {
+      return false;
+    }
+    const unit = existing[0].unit;
+    if (!this.canUpgradeUnit(unit.type())) {
+      return false;
+    }
+    return unit;
+  }
+
+  public canUpgradeUnit(unitType: UnitType): boolean {
+    if (!this.mg.config().unitInfo(unitType).upgradable) {
+      return false;
+    }
+    if (this.mg.config().isUnitDisabled(unitType)) {
+      return false;
+    }
+    if (this._gold < this.mg.config().unitInfo(unitType).cost(this)) {
+      return false;
+    }
+    return true;
+  }
+
   upgradeUnit(unit: Unit) {
     const cost = this.mg.unitInfo(unit.type()).cost(this);
     this.removeGold(cost);
     unit.increaseLevel();
+    this.recordUnitConstructed(unit.type());
   }
 
   public buildableUnits(tile: TileRef): BuildableUnit[] {
     const validTiles = this.validStructureSpawnTiles(tile);
     return Object.values(UnitType).map((u) => {
+      let canUpgrade: number | false = false;
+      if (!this.mg.inSpawnPhase()) {
+        const existingUnit = this.findUnitToUpgrade(u, tile);
+        if (existingUnit !== false) {
+          canUpgrade = existingUnit.id();
+        }
+      }
       return {
         type: u,
         canBuild: this.mg.inSpawnPhase()
           ? false
           : this.canBuild(u, tile, validTiles),
+        canUpgrade: canUpgrade,
         cost: this.mg.config().unitInfo(u).cost(this),
       } as BuildableUnit;
     });

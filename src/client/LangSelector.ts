@@ -6,23 +6,28 @@ import ar from "../../resources/lang/ar.json";
 import bg from "../../resources/lang/bg.json";
 import bn from "../../resources/lang/bn.json";
 import cs from "../../resources/lang/cs.json";
+import da from "../../resources/lang/da.json";
 import de from "../../resources/lang/de.json";
 import en from "../../resources/lang/en.json";
 import eo from "../../resources/lang/eo.json";
 import es from "../../resources/lang/es.json";
+import fi from "../../resources/lang/fi.json";
 import fr from "../../resources/lang/fr.json";
 import he from "../../resources/lang/he.json";
 import hi from "../../resources/lang/hi.json";
 import it from "../../resources/lang/it.json";
 import ja from "../../resources/lang/ja.json";
+import ko from "../../resources/lang/ko.json";
 import nl from "../../resources/lang/nl.json";
 import pl from "../../resources/lang/pl.json";
 import pt_br from "../../resources/lang/pt_br.json";
 import ru from "../../resources/lang/ru.json";
 import sh from "../../resources/lang/sh.json";
+import sv_se from "../../resources/lang/sv_se.json";
 import tp from "../../resources/lang/tp.json";
 import tr from "../../resources/lang/tr.json";
 import uk from "../../resources/lang/uk.json";
+import zh_cn from "../../resources/lang/zh_cn.json";
 
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
@@ -57,6 +62,11 @@ export class LangSelector extends LitElement {
     uk,
     cs,
     he,
+    da,
+    fi,
+    sv_se,
+    zh_cn,
+    ko,
   };
 
   createRenderRoot() {
@@ -89,7 +99,7 @@ export class LangSelector extends LitElement {
   private async initializeLanguage() {
     const browserLocale = navigator.language;
     const savedLang = localStorage.getItem("lang");
-    const userLang = this.getClosestSupportedLang(savedLang || browserLocale);
+    const userLang = this.getClosestSupportedLang(savedLang ?? browserLocale);
 
     this.defaultTranslations = this.loadLanguage("en");
     this.translations = this.loadLanguage(userLang);
@@ -100,7 +110,7 @@ export class LangSelector extends LitElement {
   }
 
   private loadLanguage(lang: string): Record<string, string> {
-    const language = this.languageMap[lang] || {};
+    const language = this.languageMap[lang] ?? {};
     const flat = flattenTranslations(language);
     return flat;
   }
@@ -190,6 +200,7 @@ export class LangSelector extends LitElement {
       "player-panel",
       "replay-panel",
       "help-modal",
+      "settings-modal",
       "username-input",
       "public-lobby",
       "user-setting",

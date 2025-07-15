@@ -29,7 +29,7 @@ import { initWorkerMetrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
 
-const workerId = parseInt(process.env.WORKER_ID || "0");
+const workerId = parseInt(process.env.WORKER_ID ?? "0");
 const log = logger.child({ comp: `w_${workerId}` });
 
 // Worker setup
@@ -47,7 +47,7 @@ export function startWorker() {
 
   const privilegeChecker = new PrivilegeChecker(COSMETICS, base64url.decode);
 
-  if (config.otelEnabled()) {
+  if (config.env() === GameEnv.Prod && config.otelEnabled()) {
     initWorkerMetrics(gm);
   }
 
@@ -94,6 +94,7 @@ export function startWorker() {
         log.warn(`cannot create game, id not found`);
         return res.status(400).json({ error: "Game ID is required" });
       }
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       const clientIP = req.ip || req.socket.remoteAddress || "unknown";
       const result = CreateGameInputSchema.safeParse(req.body);
       if (!result.success) {
@@ -140,6 +141,7 @@ export function startWorker() {
         return;
       }
       if (game.isPublic()) {
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
         const clientIP = req.ip || req.socket.remoteAddress || "unknown";
         log.info(
           `cannot start public game ${game.id}, game is public, ip: ${ipAnonymize(clientIP)}`,
@@ -171,6 +173,7 @@ export function startWorker() {
         return res.status(400).json({ error: "Game not found" });
       }
       if (game.isPublic()) {
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
         const clientIP = req.ip || req.socket.remoteAddress || "unknown";
         log.warn(
           `cannot update public game ${game.id}, ip: ${ipAnonymize(clientIP)}`,
@@ -296,7 +299,8 @@ export function startWorker() {
         const forwarded = req.headers["x-forwarded-for"];
         const ip = Array.isArray(forwarded)
           ? forwarded[0]
-          : forwarded || req.socket.remoteAddress || "unknown";
+          : // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+            forwarded || req.socket.remoteAddress || "unknown";
 
         try {
           // Parse and handle client messages
@@ -345,8 +349,8 @@ export function startWorker() {
           // Verify token signature
           const result = await verifyClientToken(clientMsg.token, config);
           if (result === false) {
-            log.warn("Failed to verify token");
-            ws.close(1002, "Failed to verify token");
+            log.warn("Unauthorized: Invalid token");
+            ws.close(1002, "Unauthorized");
             return;
           }
           const { persistentId, claims } = result;
@@ -354,18 +358,36 @@ export function startWorker() {
           let roles: string[] | undefined;
           let flares: string[] | undefined;
 
+          const allowedFlares = config.allowedFlares();
           if (claims === null) {
-            // TODO: Verify that the persistendId is is not a registered player
+            if (allowedFlares !== undefined) {
+              log.warn("Unauthorized: Anonymous user attempted to join game");
+              ws.close(1002, "Unauthorized");
+              return;
+            }
           } else {
             // Verify token and get player permissions
             const result = await getUserMe(clientMsg.token, config);
             if (result === false) {
-              log.warn("Failed to verify token");
-              ws.close(1002, "Failed to verify token");
+              log.warn("Unauthorized: Invalid session");
+              ws.close(1002, "Unauthorized");
               return;
             }
             roles = result.player.roles;
             flares = result.player.flares;
+
+            if (allowedFlares !== undefined) {
+              const allowed =
+                allowedFlares.length === 0 ||
+                allowedFlares.some((f) => flares?.includes(f));
+              if (!allowed) {
+                log.warn(
+                  "Forbidden: player without an allowed flare attempted to join game",
+                );
+                ws.close(1002, "Forbidden");
+                return;
+              }
+            }
           }
 
           // Check if the flag is allowed

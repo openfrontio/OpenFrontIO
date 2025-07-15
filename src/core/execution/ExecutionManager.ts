@@ -1,4 +1,4 @@
-import { Execution, Game } from "../game/Game";
+import { Cell, Execution, Game } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -23,7 +23,6 @@ import { RetreatExecution } from "./RetreatExecution";
 import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
-import { TrainStationExecution } from "./TrainStationExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 
@@ -109,8 +108,8 @@ export class Executor {
       case "build_unit":
         return new ConstructionExecution(
           player,
-          this.mg.ref(intent.x, intent.y),
           intent.unit,
+          new Cell(intent.x, intent.y),
         );
       case "allianceExtension": {
         return new AllianceExtensionExecution(player, intent.recipient);
@@ -118,8 +117,6 @@ export class Executor {
 
       case "upgrade_structure":
         return new UpgradeStructureExecution(player, intent.unitId);
-      case "create_station":
-        return new TrainStationExecution(player, intent.unitId);
       case "quick_chat":
         return new QuickChatExecution(
           player,

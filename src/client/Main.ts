@@ -1,6 +1,8 @@
 import favicon from "../../resources/images/Favicon.svg";
 import version from "../../resources/version.txt";
+import { UserMeResponse } from "../core/ApiSchemas";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
@@ -25,7 +27,11 @@ import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import { generateCryptoRandomUUID, incrementGamesPlayed } from "./Utils";
+import {
+  generateCryptoRandomUUID,
+  incrementGamesPlayed,
+  translateText,
+} from "./Utils";
 import "./components/NewsButton";
 import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
@@ -182,13 +188,13 @@ class Client {
     const territoryModal = document.querySelector(
       "territory-patterns-modal",
     ) as TerritoryPatternsModal;
-    const tpButton = document.getElementById(
+    const patternButton = document.getElementById(
       "territory-patterns-input-preview-button",
     );
     territoryModal instanceof TerritoryPatternsModal;
-    if (tpButton === null)
+    if (patternButton === null)
       throw new Error("territory-patterns-input-preview-button");
-    territoryModal.previewButton = tpButton;
+    territoryModal.previewButton = patternButton;
     territoryModal.updatePreview();
     territoryModal.resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -197,17 +203,109 @@ class Client {
         }
       }
     });
-    tpButton.addEventListener("click", () => {
+    patternButton.addEventListener("click", () => {
       territoryModal.open();
     });
 
+    loginDiscordButton.addEventListener("click", discordLogin);
+    const onUserMe = async (userMeResponse: UserMeResponse | false) => {
+      const config = await getServerConfigFromClient();
+      if (!hasAllowedFlare(userMeResponse, config)) {
+        if (userMeResponse === false) {
+          // Login is required
+          document.body.innerHTML = `
+            <div style="
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              height: 100vh;
+              margin: 0;
+              font-family: sans-serif;
+              background-size: cover;
+              background-position: center;
+            ">
+              <div style="
+                background-color: rgba(0, 0, 0, 0.7);
+                color: white;
+                padding: 2em;
+                margin: 5em;
+                border-radius: 12px;
+                text-align: center;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+              ">
+                <p style="margin-bottom: 1em;">${translateText("auth.login_required")}</p>
+                <p style="margin-bottom: 1.5em;">${translateText("auth.redirecting")}</p>
+                <div style="width: 100%; height: 8px; background-color: #444; border-radius: 4px; overflow: hidden;">
+                  <div style="
+                    height: 100%;
+                    width: 0%;
+                    background-color: #4caf50;
+                    animation: fillBar 5s linear forwards;
+                  "></div>
+                </div>
+              </div>
+            </div>
+            <div class="bg-image"></div>
+            <style>
+              @keyframes fillBar {
+                from { width: 0%; }
+                to { width: 100%; }
+              }
+            </style>
+          `;
+          setTimeout(discordLogin, 5000);
+        } else {
+          // Unauthorized
+          document.body.innerHTML = `
+            <div style="
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              height: 100vh;
+              margin: 0;
+              font-family: sans-serif;
+              background-size: cover;
+              background-position: center;
+            ">
+              <div style="
+                background-color: rgba(0, 0, 0, 0.7);
+                color: white;
+                padding: 2em;
+                margin: 5em;
+                border-radius: 12px;
+                text-align: center;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+              ">
+                <p style="margin-bottom: 1em;">${translateText("auth.not_authorized")}</p>
+                <p>${translateText("auth.contact_admin")}</p>
+              </div>
+            </div>
+            <div class="bg-image"></div>
+          `;
+        }
+        return;
+      } else if (userMeResponse === false) {
+        // Not logged in
+        loginDiscordButton.disable = false;
+        loginDiscordButton.hidden = false;
+        loginDiscordButton.translationKey = "main.login_discord";
+        logoutDiscordButton.hidden = true;
+        territoryModal.onUserMe(null);
+      } else {
+        // Authorized
+        console.log(
+          `Your player ID is ${userMeResponse.player.publicId}\n` +
+            "Sharing this ID will allow others to view your game history and stats.",
+        );
+        loginDiscordButton.translationKey = "main.logged_in";
+        loginDiscordButton.hidden = true;
+        territoryModal.onUserMe(userMeResponse);
+      }
+    };
+
     if (isLoggedIn() === false) {
       // Not logged in
-      loginDiscordButton.disable = false;
-      loginDiscordButton.translationKey = "main.login_discord";
-      loginDiscordButton.addEventListener("click", discordLogin);
-      logoutDiscordButton.hidden = true;
-      territoryModal.onUserMe(null);
+      onUserMe(false);
     } else {
       // JWT appears to be valid
       loginDiscordButton.disable = true;
@@ -216,33 +314,11 @@ class Client {
       logoutDiscordButton.addEventListener("click", () => {
         // Log out
         logOut();
-        territoryModal.onUserMe(null);
-        loginDiscordButton.disable = false;
-        loginDiscordButton.translationKey = "main.login_discord";
-        loginDiscordButton.hidden = false;
-        loginDiscordButton.addEventListener("click", discordLogin);
-        logoutDiscordButton.hidden = true;
+        onUserMe(false);
       });
       // Look up the discord user object.
       // TODO: Add caching
-      getUserMe().then((userMeResponse) => {
-        if (userMeResponse === false) {
-          // Not logged in
-          loginDiscordButton.disable = false;
-          loginDiscordButton.translationKey = "main.login_discord";
-          loginDiscordButton.addEventListener("click", discordLogin);
-          logoutDiscordButton.hidden = true;
-          territoryModal.onUserMe(null);
-          return;
-        }
-        console.log(
-          `Your player ID is ${userMeResponse.player.publicId}\n` +
-            "Sharing this ID will allow others to view your game history and stats.",
-        );
-        loginDiscordButton.translationKey = "main.logged_in";
-        loginDiscordButton.hidden = true;
-        territoryModal.onUserMe(userMeResponse);
-      });
+      getUserMe().then(onUserMe);
     }
 
     const settingsModal = document.querySelector(
@@ -478,4 +554,16 @@ function getPersistentIDFromCookie(): string {
   ].join(";");
 
   return newID;
+}
+
+function hasAllowedFlare(
+  userMeResponse: UserMeResponse | false,
+  config: ServerConfig,
+) {
+  const allowed = config.allowedFlares();
+  if (allowed === undefined) return true;
+  if (userMeResponse === false) return false;
+  const flares = userMeResponse.player.flares;
+  if (flares === undefined) return false;
+  return allowed.length === 0 || allowed.some((f) => flares.includes(f));
 }
