@@ -946,13 +946,13 @@ export class RadialMenu implements Layer {
         const disabled = this.isItemDisabled(item);
         const color = disabled
           ? this.config.disabledColor
-          : item.color || "#333333";
+          : (item.color ?? "#333333");
         const opacity = disabled ? 0.5 : 0.7;
 
         // Update path appearance
         path.attr(
           "fill",
-          d3.color(color)?.copy({ opacity: opacity })?.toString() || color,
+          d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color,
         );
         path.style("opacity", disabled ? 0.5 : 1);
         path.style("cursor", disabled ? "not-allowed" : "pointer");
