@@ -196,6 +196,24 @@ export class StructureLayer implements Layer {
     }
   }
 
+  private drawSamRadius(unit: UnitView) {
+    const ctx = this.context;
+    const centerX = this.game.x(unit.tile()) * 2 + 1;
+    const centerY = this.game.y(unit.tile()) * 2 + 1;
+    const tileToPx = 2;
+    const radius = SAM_PROTECTION_RADIUS * tileToPx; // 50 is MIRVWarheadProtectionRadius
+
+    ctx.save();
+    ctx.setLineDash(SAM_DASH_PATTERN);
+    ctx.lineWidth = SAM_LINE_WIDTH;
+    ctx.strokeStyle = SAM_CIRCLE_COLOR;
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   private handleUnitRendering(unit: UnitView) {
     const unitType = unit.constructionType() ?? unit.type();
     const iconType = unitType;
@@ -247,23 +265,7 @@ export class StructureLayer implements Layer {
       unitType === UnitType.SAMLauncher &&
       this.transformHandler.scale >= ZOOM_THRESHOLD
     ) {
-      const ctx = this.context;
-      const centerX = this.game.x(unit.tile()) * 2 + 1;
-      const centerY = this.game.y(unit.tile()) * 2 + 1;
-      const tileToPx = 2;
-      const radius = SAM_PROTECTION_RADIUS * tileToPx; // 50 is MIRVWarheadProtectionRadius
-
-      ctx.save();
-      ctx.setLineDash(SAM_DASH_PATTERN);
-      ctx.lineWidth = SAM_LINE_WIDTH;
-      ctx.strokeStyle = this.structureSamRadiusColor(); // magenta very visible
-
-      ctx.beginPath();
-
-      // yay i used high school trig
-      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-      ctx.stroke();
-      ctx.restore();
+      this.drawSamRadius(unit);
     }
 
     // Render icon at 1/2 scale for better quality
