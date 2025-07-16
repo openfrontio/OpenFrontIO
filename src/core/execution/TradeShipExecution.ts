@@ -56,7 +56,7 @@ export class TradeShipExecution implements Execution {
 
     const tradeShipOwner = this.tradeShip.owner();
     const dstPortOwner = this._dstPort.owner();
-    if (this.origOwner !== tradeShipOwner) {
+    if (this.wasCaptured !== true && this.origOwner !== tradeShipOwner) {
       // Store as variable in case ship is recaptured by previous owner
       this.wasCaptured = true;
     }
