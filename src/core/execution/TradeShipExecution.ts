@@ -16,9 +16,9 @@ export class TradeShipExecution implements Execution {
   private active = true;
   private mg: Game;
   private tradeShip: Unit | undefined;
-  private wasCaptured = false;
   private pathFinder: PathFinder;
   private tilesTraveled = 0;
+  private currentOwner: Player;
 
   constructor(
     private origOwner: Player,
@@ -29,6 +29,7 @@ export class TradeShipExecution implements Execution {
   init(mg: Game, ticks: number): void {
     this.mg = mg;
     this.pathFinder = PathFinder.Mini(mg, 2500);
+    this.currentOwner = this.origOwner;
   }
 
   tick(ticks: number): void {
@@ -54,11 +55,6 @@ export class TradeShipExecution implements Execution {
       return;
     }
 
-    if (this.origOwner !== this.tradeShip.owner()) {
-      // Store as variable in case ship is recaptured by previous owner
-      this.wasCaptured = true;
-    }
-
     // If a player captures another player's port while trading we should delete
     // the ship.
     if (this._dstPort.owner().id() === this.srcPort.owner().id()) {
@@ -67,17 +63,8 @@ export class TradeShipExecution implements Execution {
       return;
     }
 
-    if (
-      !this.wasCaptured &&
-      (!this._dstPort.isActive() ||
-        !this.tradeShip.owner().canTrade(this._dstPort.owner()))
-    ) {
-      this.tradeShip.delete(false);
-      this.active = false;
-      return;
-    }
-
-    if (this.wasCaptured) {
+    if (this.currentOwner !== this.tradeShip.owner()) {
+      this.currentOwner = this.tradeShip.owner();
       const ports = this.tradeShip
         .owner()
         .units(UnitType.Port)
@@ -90,6 +77,16 @@ export class TradeShipExecution implements Execution {
         this._dstPort = ports[0];
         this.tradeShip.setTargetUnit(this._dstPort);
       }
+    }
+
+    if (
+      !this._dstPort.isActive() ||
+      (this.tradeShip.owner() !== this.currentOwner &&
+        !this.tradeShip.owner().canTrade(this._dstPort.owner()))
+    ) {
+      this.tradeShip.delete(false);
+      this.active = false;
+      return;
     }
 
     const result = this.pathFinder.nextTile(
@@ -133,7 +130,7 @@ export class TradeShipExecution implements Execution {
         this.tradeShip!.owner().unitCount(UnitType.Port),
       );
 
-    if (this.wasCaptured) {
+    if (this.tradeShip!.owner() !== this.origOwner) {
       this.tradeShip!.owner().addGold(gold, this._dstPort.tile());
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
