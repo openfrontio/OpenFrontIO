@@ -104,7 +104,7 @@ describe("TradeShipExecution", () => {
     expect(tradeShipExecution.isActive()).toBe(false);
   });
 
-  it("should pick another port ship if captured", () => {
+  it("should pick another port if ship is captured", () => {
     tradeShip.owner = jest.fn(() => pirate);
     tradeShipExecution.tick(1);
     expect(tradeShip.setTargetUnit).toHaveBeenCalledWith(piratePort);
