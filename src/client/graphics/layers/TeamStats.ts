@@ -52,7 +52,7 @@ export class TeamStats extends LitElement implements Layer {
     for (const player of players) {
       const team = player.team();
       if (team === null) continue;
-      if (!grouped[team]) grouped[team] = [];
+      grouped[team] ??= [];
       grouped[team].push(player);
     }
 

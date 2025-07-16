@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 1062,
-    "num_land_tiles": 1541211,
+    "num_land_tiles": 1483208,
     "width": 1778
   },
   "mini_map": {
     "height": 531,
-    "num_land_tiles": 380567,
+    "num_land_tiles": 365411,
     "width": 889
   },
   "name": "BetweenTwoSeas",

@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 1500,
-    "num_land_tiles": 1123359,
+    "num_land_tiles": 1098655,
     "width": 2000
   },
   "mini_map": {
     "height": 750,
-    "num_land_tiles": 279119,
+    "num_land_tiles": 272699,
     "width": 1000
   },
   "name": "Iceland",

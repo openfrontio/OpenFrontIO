@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 1448,
-    "num_land_tiles": 1412703,
+    "num_land_tiles": 1243623,
     "width": 2800
   },
   "mini_map": {
     "height": 724,
-    "num_land_tiles": 339357,
+    "num_land_tiles": 295689,
     "width": 1400
   },
   "name": "NorthAmerica",

@@ -89,11 +89,9 @@ export class TransportShipExecution implements Execution {
       this.target = mg.player(this.targetID);
     }
 
-    if (this.troops === null) {
-      this.troops = this.mg
-        .config()
-        .boatAttackAmount(this.attacker, this.target);
-    }
+    this.troops ??= this.mg
+      .config()
+      .boatAttackAmount(this.attacker, this.target);
 
     this.troops = Math.min(this.troops, this.attacker.troops());
 

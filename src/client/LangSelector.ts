@@ -99,7 +99,7 @@ export class LangSelector extends LitElement {
   private async initializeLanguage() {
     const browserLocale = navigator.language;
     const savedLang = localStorage.getItem("lang");
-    const userLang = this.getClosestSupportedLang(savedLang || browserLocale);
+    const userLang = this.getClosestSupportedLang(savedLang ?? browserLocale);
 
     this.defaultTranslations = this.loadLanguage("en");
     this.translations = this.loadLanguage(userLang);
@@ -110,7 +110,7 @@ export class LangSelector extends LitElement {
   }
 
   private loadLanguage(lang: string): Record<string, string> {
-    const language = this.languageMap[lang] || {};
+    const language = this.languageMap[lang] ?? {};
     const flat = flattenTranslations(language);
     return flat;
   }
