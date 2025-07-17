@@ -36,10 +36,11 @@ export async function archive(gameRecord: GameRecord) {
       await archiveFullGameToR2(gameRecord);
     }
   } catch (error) {
+    const { message, stack, name } = (error as Error | undefined) ?? {};
     log.error(`${gameRecord.info.gameID}: Final archive error: ${error}`, {
-      message: error?.message ?? error,
-      stack: error?.stack,
-      name: error?.name,
+      message: message ?? error,
+      stack: stack,
+      name: name,
       ...(error && typeof error === "object" ? error : {}),
     });
   }
@@ -69,10 +70,11 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
 
     log.info(`${info.gameID}: successfully wrote game analytics to R2`);
   } catch (error) {
+    const { message, stack, name } = (error as Error | undefined) ?? {};
     log.error(`${info.gameID}: Error writing game analytics to R2: ${error}`, {
-      message: error?.message ?? error,
-      stack: error?.stack,
-      name: error?.name,
+      message: message ?? error,
+      stack: stack,
+      name: name,
       ...(error && typeof error === "object" ? error : {}),
     });
     throw error;
@@ -117,11 +119,12 @@ export async function readGameRecord(
     const bodyContents = await response.Body.transformToString();
     return JSON.parse(bodyContents) as GameRecord;
   } catch (error) {
+    const { message, stack, name } = (error as Error | undefined) ?? {};
     // Log the error for monitoring purposes
     log.error(`${gameId}: Error reading game record from R2: ${error}`, {
-      message: error?.message ?? error,
-      stack: error?.stack,
-      name: error?.name,
+      message: message ?? error,
+      stack: stack,
+      name: name,
       ...(error && typeof error === "object" ? error : {}),
     });
 
@@ -138,13 +141,14 @@ export async function gameRecordExists(gameId: GameID): Promise<boolean> {
     });
     return true;
   } catch (error) {
-    if (error.name === "NotFound") {
+    const { message, stack, name } = (error as Error | undefined) ?? {};
+    if (name === "NotFound") {
       return false;
     }
     log.error(`${gameId}: Error checking archive existence: ${error}`, {
-      message: error?.message ?? error,
-      stack: error?.stack,
-      name: error?.name,
+      message: message ?? error,
+      stack: stack,
+      name: name,
       ...(error && typeof error === "object" ? error : {}),
     });
     return false;

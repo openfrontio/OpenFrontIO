@@ -84,6 +84,8 @@ export enum GameMapType {
   Italia = "Italia",
 }
 
+export type GameMapName = keyof typeof GameMapType;
+
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
     GameMapType.World,
