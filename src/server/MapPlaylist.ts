@@ -109,11 +109,15 @@ export class MapPlaylist {
 
   private shuffleMapsPlaylist(): boolean {
     const maps: GameMapType[] = [];
-    Object.keys(GameMapType).forEach((key) => {
-      for (let i = 0; i < parseInt(frequency[key]); i++) {
-        maps.push(GameMapType[key]);
-      }
-    });
+    (Object.keys(GameMapType) as (keyof typeof GameMapType)[]).forEach(
+      (key) => {
+        // TODO: Giant world map does not exist in frequency
+        // TODO: Add safety for missing maps in frequency, DO NOT MERGE AS IS
+        for (let i = 0; i < frequency[key as keyof typeof frequency]; i++) {
+          maps.push(GameMapType[key]);
+        }
+      },
+    );
 
     const rand = new PseudoRandom(Date.now());
 
