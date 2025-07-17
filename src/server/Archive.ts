@@ -35,11 +35,20 @@ export async function archive(gameRecord: GameRecord) {
       );
       await archiveFullGameToR2(gameRecord);
     }
-  } catch (error) {
+  } catch (error: unknown) {
+    // If the error is not an instance of Error, log it as a string
+    if (!(error instanceof Error)) {
+      log.error(
+        `${gameRecord.info.gameID}: Final archive error. Non-Error type: ${String(error)}`,
+      );
+      return;
+    }
+
+    const { message, stack, name } = error;
     log.error(`${gameRecord.info.gameID}: Final archive error: ${error}`, {
-      message: error?.message ?? error,
-      stack: error?.stack,
-      name: error?.name,
+      message: message,
+      stack: stack,
+      name: name,
       ...(error && typeof error === "object" ? error : {}),
     });
   }
@@ -68,11 +77,20 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
     });
 
     log.info(`${info.gameID}: successfully wrote game analytics to R2`);
-  } catch (error) {
+  } catch (error: unknown) {
+    // If the error is not an instance of Error, log it as a string
+    if (!(error instanceof Error)) {
+      log.error(
+        `${gameRecord.info.gameID}: Error writing game analytics to R2. Non-Error type: ${String(error)}`,
+      );
+      return;
+    }
+
+    const { message, stack, name } = error;
     log.error(`${info.gameID}: Error writing game analytics to R2: ${error}`, {
-      message: error?.message ?? error,
-      stack: error?.stack,
-      name: error?.name,
+      message: message,
+      stack: stack,
+      name: name,
       ...(error && typeof error === "object" ? error : {}),
     });
     throw error;
@@ -116,12 +134,20 @@ export async function readGameRecord(
     if (response.Body === undefined) return null;
     const bodyContents = await response.Body.transformToString();
     return JSON.parse(bodyContents) as GameRecord;
-  } catch (error) {
+  } catch (error: unknown) {
+    // If the error is not an instance of Error, log it as a string
+    if (!(error instanceof Error)) {
+      log.error(
+        `${gameId}: Error reading game record from R2. Non-Error type: ${String(error)}`,
+      );
+      return null;
+    }
+    const { message, stack, name } = error;
     // Log the error for monitoring purposes
     log.error(`${gameId}: Error reading game record from R2: ${error}`, {
-      message: error?.message ?? error,
-      stack: error?.stack,
-      name: error?.name,
+      message: message,
+      stack: stack,
+      name: name,
       ...(error && typeof error === "object" ? error : {}),
     });
 
@@ -137,14 +163,22 @@ export async function gameRecordExists(gameId: GameID): Promise<boolean> {
       Key: `${gameFolder}/${gameId}`, // Fixed - needed to include gameFolder
     });
     return true;
-  } catch (error) {
-    if (error.name === "NotFound") {
+  } catch (error: unknown) {
+    // If the error is not an instance of Error, log it as a string
+    if (!(error instanceof Error)) {
+      log.error(
+        `${gameId}: Error checking archive existence. Non-Error type: ${String(error)}`,
+      );
+      return false;
+    }
+    const { message, stack, name } = error;
+    if (name === "NotFound") {
       return false;
     }
     log.error(`${gameId}: Error checking archive existence: ${error}`, {
-      message: error?.message ?? error,
-      stack: error?.stack,
-      name: error?.name,
+      message: message,
+      stack: stack,
+      name: name,
       ...(error && typeof error === "object" ? error : {}),
     });
     return false;

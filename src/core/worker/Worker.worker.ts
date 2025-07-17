@@ -1,4 +1,5 @@
 import { createGameRunner, GameRunner } from "../GameRunner";
+import { GameRunnerCallback } from "../game/Game";
 import { GameUpdateViewData } from "../game/GameUpdates";
 import {
   AttackAveragePositionResultMessage,
@@ -37,7 +38,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         gameRunner = createGameRunner(
           message.gameStartInfo,
           message.clientID,
-          gameUpdate,
+          gameUpdate as GameRunnerCallback,
         ).then((gr) => {
           sendMessage({
             type: "initialized",

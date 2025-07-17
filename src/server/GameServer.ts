@@ -46,13 +46,14 @@ export class GameServer {
   private _hasStarted = false;
   private _startTime: number | null = null;
 
-  private endTurnIntervalID;
+  private endTurnIntervalID: ReturnType<typeof setInterval> | undefined;
 
   private lastPingUpdate = 0;
 
   private winner: ClientSendWinnerMessage | null = null;
 
-  private gameStartInfo: GameStartInfo;
+  // Note: This can be undefined if accessed before the game starts.
+  private gameStartInfo!: GameStartInfo;
 
   private log: Logger;
 
@@ -402,7 +403,9 @@ export class GameServer {
 
   async end() {
     // Close all WebSocket connections
-    clearInterval(this.endTurnIntervalID);
+    if (this.endTurnIntervalID) {
+      clearInterval(this.endTurnIntervalID);
+    }
     this.allClients.forEach((client) => {
       client.ws.removeAllListeners("message");
       if (client.ws.readyState === WebSocket.OPEN) {

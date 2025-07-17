@@ -2,18 +2,20 @@ import { Config } from "../configuration/Config";
 import { AllPlayersStats, ClientID } from "../Schemas";
 import { GameMap, TileRef } from "./GameMap";
 import {
+  ErrorUpdate,
   GameUpdate,
   GameUpdateType,
+  GameUpdateViewData,
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
-import { PlayerView } from "./GameView";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 
 export type PlayerID = string;
 export type Tick = number;
 export type Gold = bigint;
+export type GameRunnerCallback = (gu: GameUpdateViewData | ErrorUpdate) => void;
 
 export const AllPlayers = "AllPlayers" as const;
 
@@ -84,6 +86,8 @@ export enum GameMapType {
   Italia = "Italia",
 }
 
+export type GameMapName = keyof typeof GameMapType;
+
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
     GameMapType.World,
@@ -131,7 +135,7 @@ export enum GameMode {
 }
 
 export interface UnitInfo {
-  cost: (player: Player | PlayerView) => Gold;
+  cost: (player: Player) => Gold;
   // Determines if its owner changes when its tile is conquered.
   territoryBound: boolean;
   maxHealth?: number;
@@ -266,7 +270,7 @@ export class Nation {
 }
 
 export class Cell {
-  public index: number;
+  public index: number | undefined;
 
   private strRepr: string;
 
@@ -654,7 +658,7 @@ export interface Game extends GameMap {
     searchRange: number,
     type: UnitType,
     playerId: PlayerID,
-  );
+  ): boolean;
   nearbyUnits(
     tile: TileRef,
     searchRange: number,

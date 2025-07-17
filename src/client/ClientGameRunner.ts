@@ -14,9 +14,7 @@ import { getConfig } from "../core/configuration/ConfigLoader";
 import { PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import {
-  ErrorUpdate,
   GameUpdateType,
-  GameUpdateViewData,
   HashUpdate,
   WinUpdate,
 } from "../core/game/GameUpdates";
@@ -253,7 +251,7 @@ export class ClientGameRunner {
 
     this.renderer.initialize();
     this.input.initialize();
-    this.worker.start((gu: GameUpdateViewData | ErrorUpdate) => {
+    this.worker.start((gu) => {
       if (this.lobby.gameStartInfo === undefined) {
         throw new Error("missing gameStartInfo");
       }
