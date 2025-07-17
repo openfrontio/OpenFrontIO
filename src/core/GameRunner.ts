@@ -4,8 +4,10 @@ import { Executor } from "./execution/ExecutionManager";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
+  Attack,
   Cell,
   Game,
+  GameRunnerCallback,
   GameUpdates,
   NameViewData,
   Nation,
@@ -19,11 +21,7 @@ import {
 } from "./game/Game";
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
-import {
-  ErrorUpdate,
-  GameUpdateType,
-  GameUpdateViewData,
-} from "./game/GameUpdates";
+import { ErrorUpdate, GameUpdateType } from "./game/GameUpdates";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
@@ -33,7 +31,7 @@ import { fixProfaneUsername } from "./validations/username";
 export async function createGameRunner(
   gameStart: GameStartInfo,
   clientID: ClientID,
-  callBack: (gu: GameUpdateViewData) => void,
+  callBack: GameRunnerCallback,
 ): Promise<GameRunner> {
   const config = await getConfig(gameStart.config, null);
   const gameMap = await loadGameMap(gameStart.config.gameMap);
@@ -89,7 +87,7 @@ export class GameRunner {
   constructor(
     public game: Game,
     private execManager: Executor,
-    private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
+    private callBack: GameRunnerCallback,
   ) {}
 
   init() {
@@ -229,7 +227,7 @@ export class GameRunner {
       throw new Error(`player with id ${playerID} not found`);
     }
 
-    const condition = (a) => a.id() === attackID;
+    const condition = (a: Attack) => a.id() === attackID;
     const attack =
       player.outgoingAttacks().find(condition) ??
       player.incomingAttacks().find(condition);

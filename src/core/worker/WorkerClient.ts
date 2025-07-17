@@ -1,5 +1,6 @@
 import {
   Cell,
+  GameRunnerCallback,
   PlayerActions,
   PlayerBorderTiles,
   PlayerID,
@@ -82,7 +83,7 @@ export class WorkerClient {
     });
   }
 
-  start(gameUpdate: (gu: GameUpdateViewData | ErrorUpdate) => void) {
+  start(gameUpdate: GameRunnerCallback) {
     if (!this.isInitialized) {
       throw new Error("Failed to initialize pathfinder");
     }
