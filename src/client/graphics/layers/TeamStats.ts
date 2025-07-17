@@ -15,8 +15,8 @@ interface TeamEntry {
   players: PlayerView[];
 }
 
-@customElement("team-stats")
-export class TeamStats extends LitElement implements Layer {
+@customElement("team-leaderboard")
+export class TeamLeaderboard extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
 

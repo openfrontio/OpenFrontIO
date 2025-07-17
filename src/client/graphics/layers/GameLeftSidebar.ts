@@ -141,10 +141,10 @@ export class GameLeftSidebar extends LitElement implements Layer {
         </div>
         <div class="block lg:flex flex-wrap gap-2">
           <leader-board .visible=${this.isLeaderboardShow}></leader-board>
-          <team-stats
+          <team-leaderboard
             class=${`flex-1 ${this.isTeamLeaderboardShow ? "sm:mt-4 lg:mt-12" : ""}`}
             .visible=${this.isTeamLeaderboardShow && this.isTeamGame}
-          ></team-stats>
+          ></team-leaderboard>
         </div>
         <slot></slot>
       </aside>

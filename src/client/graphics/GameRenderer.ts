@@ -31,7 +31,7 @@ import { SpawnAd } from "./layers/SpawnAd";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
 import { StructureLayer } from "./layers/StructureLayer";
-import { TeamStats } from "./layers/TeamStats";
+import { TeamLeaderboard } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { UILayer } from "./layers/UILayer";
@@ -88,8 +88,10 @@ export function createRenderer(
   }
   gameLeftSidebar.game = game;
 
-  const teamStats = document.querySelector("team-stats") as TeamStats;
-  if (!emojiTable || !(teamStats instanceof TeamStats)) {
+  const teamStats = document.querySelector(
+    "team-leaderboard",
+  ) as TeamLeaderboard;
+  if (!emojiTable || !(teamStats instanceof TeamLeaderboard)) {
     console.error("EmojiTable element not found in the DOM");
   }
   teamStats.eventBus = eventBus;
