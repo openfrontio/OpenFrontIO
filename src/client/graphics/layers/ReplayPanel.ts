@@ -11,7 +11,10 @@ import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 
 export class ShowReplayPanelEvent {
-  constructor(public visible: boolean = true) {}
+  constructor(
+    public visible: boolean = true,
+    public isSingleplayer: boolean = false,
+  ) {}
 }
 
 @customElement("replay-panel")
@@ -36,6 +39,7 @@ export class ReplayPanel extends LitElement implements Layer {
     if (this.eventBus) {
       this.eventBus.on(ShowReplayPanelEvent, (event: ShowReplayPanelEvent) => {
         this.visible = event.visible;
+        this.isSingleplayer = event.isSingleplayer;
       });
     }
   }

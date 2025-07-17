@@ -773,7 +773,7 @@ export class RadialMenu implements Layer {
 
   private handleCenterButtonClick() {
     if (this.centerButtonState === "default") {
-      if (this.params) {
+      if (this.params && this.isCenterButtonEnabled()) {
         this.centerButtonElement?.action(this.params);
       }
       return;
