@@ -694,7 +694,7 @@ export class GameServer {
     for (const client of this.activeClients) {
       if (client.hashes.has(turnNumber)) {
         const clientHash = client.hashes.get(turnNumber)!;
-        counts.set(clientHash, (counts.get(clientHash) || 0) + 1);
+        counts.set(clientHash, (counts.get(clientHash) ?? 0) + 1);
       }
     }
 

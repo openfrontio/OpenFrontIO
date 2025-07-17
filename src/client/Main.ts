@@ -27,7 +27,11 @@ import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import { generateCryptoRandomUUID, incrementGamesPlayed } from "./Utils";
+import {
+  generateCryptoRandomUUID,
+  incrementGamesPlayed,
+  translateText,
+} from "./Utils";
 import "./components/NewsButton";
 import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
@@ -229,8 +233,8 @@ class Client {
                 text-align: center;
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
               ">
-                <p style="margin-bottom: 1em;">Login is required to access this website.</p>
-                <p style="margin-bottom: 1.5em;">You are being redirected...</p>
+                <p style="margin-bottom: 1em;">${translateText("auth.login_required")}</p>
+                <p style="margin-bottom: 1.5em;">${translateText("auth.redirecting")}</p>
                 <div style="width: 100%; height: 8px; background-color: #444; border-radius: 4px; overflow: hidden;">
                   <div style="
                     height: 100%;
@@ -272,8 +276,8 @@ class Client {
                 text-align: center;
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
               ">
-                <p style="margin-bottom: 1em;">You are not authorized to access this website.</p>
-                <p>If you believe you are seeing this message in error, please contact the website administrator.</p>
+                <p style="margin-bottom: 1em;">${translateText("auth.not_authorized")}</p>
+                <p>${translateText("auth.contact_admin")}</p>
               </div>
             </div>
             <div class="bg-image"></div>

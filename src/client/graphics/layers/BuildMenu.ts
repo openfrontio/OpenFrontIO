@@ -136,6 +136,11 @@ export class BuildMenu extends LitElement implements Layer {
       if (!this.game.myPlayer()?.isAlive()) {
         return;
       }
+      if (!this._hidden) {
+        // Players sometimes hold control while building a unit,
+        // so if the menu is already open, ignore the event.
+        return;
+      }
       const clickedCell = this.transformHandler.screenToWorldCoordinates(
         e.x,
         e.y,

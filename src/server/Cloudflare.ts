@@ -162,7 +162,9 @@ export class Cloudflare {
     );
 
     const credentials = {
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       AccountTag: tokenData.a || this.accountId,
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       TunnelID: tokenData.t || tunnelId,
       TunnelName: tunnelName,
       TunnelSecret: tokenData.s,

@@ -326,7 +326,7 @@ export class DefaultConfig implements Config {
     return this._gameConfig.infiniteTroops;
   }
   trainSpawnRate(numberOfStations: number): number {
-    return Math.min(1400, Math.round(70 * Math.pow(numberOfStations, 0.8)));
+    return Math.min(1400, Math.round(20 * Math.pow(numberOfStations, 0.5)));
   }
   trainGold(): Gold {
     return BigInt(10_000);
@@ -356,17 +356,14 @@ export class DefaultConfig implements Config {
 
   // Chance to spawn a trade ship in one second,
   tradeShipSpawnRate(numTradeShips: number): number {
-    if (numTradeShips <= 20) {
+    if (numTradeShips < 20) {
       return 5;
     }
-    if (numTradeShips > this.tradeShipCap()) {
-      return 1_000_000;
+    if (numTradeShips <= 150) {
+      const additional = numTradeShips - 20;
+      return Math.pow(additional, 0.8) + 5;
     }
-    return numTradeShips - 15;
-  }
-
-  tradeShipCap(): number {
-    return 100;
+    return 1_000_000;
   }
 
   unitInfo(type: UnitType): UnitInfo {

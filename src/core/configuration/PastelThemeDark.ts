@@ -3,13 +3,8 @@ import { PseudoRandom } from "../PseudoRandom";
 import { PlayerType, Team, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
-import {
-  botColors,
-  ColorAllocator,
-  fallbackColors,
-  humanColors,
-  nationColors,
-} from "./Colors";
+import { ColorAllocator } from "./ColorAllocator";
+import { botColors, fallbackColors, humanColors, nationColors } from "./Colors";
 import { Theme } from "./Config";
 
 type ColorCache = Map<string, Colord>;

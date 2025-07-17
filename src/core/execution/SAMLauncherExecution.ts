@@ -96,9 +96,7 @@ export class SAMLauncherExecution implements Execution {
         this.active = false;
         return;
       }
-      this.sam = this.player.buildUnit(UnitType.SAMLauncher, spawnTile, {
-        cooldownDuration: this.mg.config().SAMCooldown(),
-      });
+      this.sam = this.player.buildUnit(UnitType.SAMLauncher, spawnTile, {});
     }
     if (!this.sam.isActive()) {
       this.active = false;
@@ -109,9 +107,7 @@ export class SAMLauncherExecution implements Execution {
       this.player = this.sam.owner();
     }
 
-    if (this.pseudoRandom === undefined) {
-      this.pseudoRandom = new PseudoRandom(this.sam.id());
-    }
+    this.pseudoRandom ??= new PseudoRandom(this.sam.id());
 
     const mirvWarheadTargets = this.mg.nearbyUnits(
       this.sam.tile(),

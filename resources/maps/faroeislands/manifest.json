@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 2000,
-    "num_land_tiles": 458869,
+    "num_land_tiles": 424994,
     "width": 1600
   },
   "mini_map": {
     "height": 1000,
-    "num_land_tiles": 111960,
+    "num_land_tiles": 103147,
     "width": 800
   },
   "name": "Faroe Islands",

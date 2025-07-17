@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 2032,
-    "num_land_tiles": 2266710,
+    "num_land_tiles": 2184135,
     "width": 1950
   },
   "mini_map": {
     "height": 1016,
-    "num_land_tiles": 559837,
+    "num_land_tiles": 538153,
     "width": 975
   },
   "name": "Africa",

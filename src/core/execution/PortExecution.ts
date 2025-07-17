@@ -2,6 +2,7 @@ import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { TradeShipExecution } from "./TradeShipExecution";
+import { TrainStationExecution } from "./TrainStationExecution";
 
 export class PortExecution implements Execution {
   private active = true;
@@ -36,6 +37,7 @@ export class PortExecution implements Execution {
         return;
       }
       this.port = this.player.buildUnit(UnitType.Port, spawn, {});
+      this.createStation();
     }
 
     if (!this.port.isActive()) {
@@ -75,7 +77,7 @@ export class PortExecution implements Execution {
   }
 
   shouldSpawnTradeShip(): boolean {
-    const numTradeShips = this.mg.units(UnitType.TradeShip).length;
+    const numTradeShips = this.mg.unitCount(UnitType.TradeShip);
     const spawnRate = this.mg.config().tradeShipSpawnRate(numTradeShips);
     for (let i = 0; i < this.port!.level(); i++) {
       if (this.random.chance(spawnRate)) {
@@ -83,5 +85,19 @@ export class PortExecution implements Execution {
       }
     }
     return false;
+  }
+
+  createStation(): void {
+    if (this.port !== null) {
+      const nearbyFactory = this.mg.hasUnitNearby(
+        this.port.tile()!,
+        this.mg.config().trainStationMaxRange(),
+        UnitType.Factory,
+        this.player.id(),
+      );
+      if (nearbyFactory) {
+        this.mg.addExecution(new TrainStationExecution(this.port));
+      }
+    }
   }
 }

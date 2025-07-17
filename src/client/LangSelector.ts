@@ -17,6 +17,7 @@ import he from "../../resources/lang/he.json";
 import hi from "../../resources/lang/hi.json";
 import it from "../../resources/lang/it.json";
 import ja from "../../resources/lang/ja.json";
+import ko from "../../resources/lang/ko.json";
 import nl from "../../resources/lang/nl.json";
 import pl from "../../resources/lang/pl.json";
 import pt_br from "../../resources/lang/pt_br.json";
@@ -65,6 +66,7 @@ export class LangSelector extends LitElement {
     fi,
     sv_se,
     zh_cn,
+    ko,
   };
 
   createRenderRoot() {
@@ -97,7 +99,7 @@ export class LangSelector extends LitElement {
   private async initializeLanguage() {
     const browserLocale = navigator.language;
     const savedLang = localStorage.getItem("lang");
-    const userLang = this.getClosestSupportedLang(savedLang || browserLocale);
+    const userLang = this.getClosestSupportedLang(savedLang ?? browserLocale);
 
     this.defaultTranslations = this.loadLanguage("en");
     this.translations = this.loadLanguage(userLang);
@@ -108,7 +110,7 @@ export class LangSelector extends LitElement {
   }
 
   private loadLanguage(lang: string): Record<string, string> {
-    const language = this.languageMap[lang] || {};
+    const language = this.languageMap[lang] ?? {};
     const flat = flattenTranslations(language);
     return flat;
   }

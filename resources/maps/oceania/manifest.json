@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 1000,
-    "num_land_tiles": 216012,
+    "num_land_tiles": 194648,
     "width": 2000
   },
   "mini_map": {
     "height": 500,
-    "num_land_tiles": 52422,
+    "num_land_tiles": 46767,
     "width": 1000
   },
   "name": "Oceania",
