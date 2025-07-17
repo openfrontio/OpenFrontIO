@@ -25,6 +25,7 @@ import { GameType } from "../core/game/Game";
 import { archive } from "./Archive";
 import { Client } from "./Client";
 import { gatekeeper } from "./Gatekeeper";
+import { OriginValidator } from "./OriginValidator";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -233,7 +234,7 @@ export class GameServer {
               return;
             }
 
-            // 🔒 SECURITY FIX: Handle kick_player intent securely via WebSocket
+            // Handle kick_player intent securely via WebSocket
             if (clientMsg.intent.type === "kick_player") {
               // Use the authenticated WebSocket client's identity (cannot be spoofed)
               const authenticatedClientID = client.clientID;
@@ -253,6 +254,21 @@ export class GameServer {
                   clientID: authenticatedClientID,
                   hostClientID: this.hostClientID,
                   gameID: this.id,
+                });
+                return;
+              }
+
+              // Validate origin for CSWSH protection
+              if (
+                !OriginValidator.isOriginAllowed(
+                  client.origin,
+                  this.config.env(),
+                )
+              ) {
+                this.log.warn(`Invalid origin for kick request`, {
+                  clientID: authenticatedClientID,
+                  origin: client.origin,
+                  env: this.config.env(),
                 });
                 return;
               }

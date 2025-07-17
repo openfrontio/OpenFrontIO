@@ -445,6 +445,7 @@ export function startWorker() {
           }
 
           // Create client and add to game
+          const origin = req.headers.origin as string | undefined;
           const client = new Client(
             clientMsg.clientID,
             persistentId,
@@ -456,6 +457,7 @@ export function startWorker() {
             ws,
             clientMsg.flag,
             clientMsg.pattern,
+            origin,
           );
 
           const wasFound = gm.addClient(
