@@ -46,7 +46,7 @@ export class GameServer {
   private _hasStarted = false;
   private _startTime: number | null = null;
 
-  private endTurnIntervalID: ReturnType<typeof setInterval> | null = null;
+  private endTurnIntervalID: ReturnType<typeof setInterval> | undefined;
 
   private lastPingUpdate = 0;
 
@@ -403,7 +403,9 @@ export class GameServer {
 
   async end() {
     // Close all WebSocket connections
-    this.endTurnIntervalID && clearInterval(this.endTurnIntervalID);
+    if (this.endTurnIntervalID) {
+      clearInterval(this.endTurnIntervalID);
+    }
     this.allClients.forEach((client) => {
       client.ws.removeAllListeners("message");
       if (client.ws.readyState === WebSocket.OPEN) {
