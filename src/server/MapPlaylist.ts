@@ -44,8 +44,8 @@ const frequency: Record<GameMapName, number> = {
   Halkidiki: 1,
   StraitOfGibraltar: 1,
   Italia: 1,
-  GiantWorldMap: 1,
-  Oceania: 1,
+  GiantWorldMap: 0, // Not used in the playlist
+  Oceania: 0, // Not used in the playlist
 };
 
 interface MapWithMode {
