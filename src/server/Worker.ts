@@ -460,6 +460,12 @@ export function startWorker() {
             origin,
           );
 
+          log.info("WebSocket connection established", {
+            clientID: clientMsg.clientID,
+            origin: origin,
+            gameID: clientMsg.gameID,
+          });
+
           const wasFound = gm.addClient(
             client,
             clientMsg.gameID,

@@ -128,6 +128,7 @@ export class GameServer {
       clientID: client.clientID,
       persistentID: client.persistentID,
       clientIP: ipAnonymize(client.ip),
+      origin: client.origin,
       isRejoin: lastTurn > 0,
     });
 
@@ -272,6 +273,13 @@ export class GameServer {
                 });
                 return;
               }
+
+              // Log successful origin validation
+              this.log.info(`Origin validation successful for kick request`, {
+                clientID: authenticatedClientID,
+                origin: client.origin,
+                env: this.config.env(),
+              });
 
               // Don't allow host to kick themselves
               if (authenticatedClientID === clientMsg.intent.targetClientID) {
