@@ -42,8 +42,6 @@ export class GameLeftSidebar extends LitElement implements Layer {
   }
 
   tick() {
-    if (!this.isPlayerTeamLabelVisible) return;
-
     if (!this.playerTeam && this.game.myPlayer()?.team()) {
       this.playerTeam = this.game.myPlayer()!.team();
       if (this.playerTeam) {
