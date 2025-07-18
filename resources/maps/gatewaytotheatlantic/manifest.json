@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 1968,
-    "num_land_tiles": 2291474,
+    "num_land_tiles": 2239818,
     "width": 2216
   },
   "mini_map": {
     "height": 984,
-    "num_land_tiles": 568298,
+    "num_land_tiles": 555003,
     "width": 1108
   },
   "name": "GatewayToTheAtlantic",

@@ -130,9 +130,7 @@ describe("SAM", () => {
   });
 
   test("two sams should not target twice same nuke", async () => {
-    const sam1 = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {
-      cooldownDuration: 10,
-    });
+    const sam1 = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
     game.addExecution(new SAMLauncherExecution(defender, null, sam1));
     const sam2 = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 2), {});
     game.addExecution(new SAMLauncherExecution(defender, null, sam2));

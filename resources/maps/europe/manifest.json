@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 1674,
-    "num_land_tiles": 2501136,
+    "num_land_tiles": 2318609,
     "width": 2350
   },
   "mini_map": {
     "height": 837,
-    "num_land_tiles": 610071,
+    "num_land_tiles": 563296,
     "width": 1175
   },
   "name": "Europe",

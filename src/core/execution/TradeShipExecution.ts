@@ -54,14 +54,16 @@ export class TradeShipExecution implements Execution {
       return;
     }
 
-    if (this.origOwner !== this.tradeShip.owner()) {
+    const tradeShipOwner = this.tradeShip.owner();
+    const dstPortOwner = this._dstPort.owner();
+    if (this.wasCaptured !== true && this.origOwner !== tradeShipOwner) {
       // Store as variable in case ship is recaptured by previous owner
       this.wasCaptured = true;
     }
 
     // If a player captures another player's port while trading we should delete
     // the ship.
-    if (this._dstPort.owner().id() === this.srcPort.owner().id()) {
+    if (dstPortOwner.id() === this.srcPort.owner().id()) {
       this.tradeShip.delete(false);
       this.active = false;
       return;
@@ -69,15 +71,17 @@ export class TradeShipExecution implements Execution {
 
     if (
       !this.wasCaptured &&
-      (!this._dstPort.isActive() ||
-        !this.tradeShip.owner().canTrade(this._dstPort.owner()))
+      (!this._dstPort.isActive() || !tradeShipOwner.canTrade(dstPortOwner))
     ) {
       this.tradeShip.delete(false);
       this.active = false;
       return;
     }
 
-    if (this.wasCaptured) {
+    if (
+      this.wasCaptured &&
+      (tradeShipOwner !== dstPortOwner || !this._dstPort.isActive())
+    ) {
       const ports = this.tradeShip
         .owner()
         .units(UnitType.Port)
@@ -92,18 +96,18 @@ export class TradeShipExecution implements Execution {
       }
     }
 
-    const result = this.pathFinder.nextTile(
-      this.tradeShip.tile(),
-      this._dstPort.tile(),
-    );
+    const curTile = this.tradeShip.tile();
+    if (curTile === this.dstPort()) {
+      this.complete();
+      return;
+    }
+
+    const result = this.pathFinder.nextTile(curTile, this._dstPort.tile());
 
     switch (result.type) {
-      case PathFindResultType.Completed:
-        this.complete();
-        break;
       case PathFindResultType.Pending:
         // Fire unit event to rerender.
-        this.tradeShip.move(this.tradeShip.tile());
+        this.tradeShip.move(curTile);
         break;
       case PathFindResultType.NextTile:
         // Update safeFromPirates status
@@ -112,6 +116,9 @@ export class TradeShipExecution implements Execution {
         }
         this.tradeShip.move(result.node);
         this.tilesTraveled++;
+        break;
+      case PathFindResultType.Completed:
+        this.complete();
         break;
       case PathFindResultType.PathNotFound:
         console.warn("captured trade ship cannot find route");

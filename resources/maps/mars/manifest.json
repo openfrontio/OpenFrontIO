@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 1000,
-    "num_land_tiles": 1384168,
+    "num_land_tiles": 1354047,
     "width": 2000
   },
   "mini_map": {
     "height": 500,
-    "num_land_tiles": 343861,
+    "num_land_tiles": 335950,
     "width": 1000
   },
   "name": "Mars",

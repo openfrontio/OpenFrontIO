@@ -59,17 +59,11 @@ export class SpawnTimer implements Layer {
 
     const barHeight = 10;
     const barWidth = this.transformHandler.width();
-    let yOffset: number;
 
-    if (this.game.inSpawnPhase()) {
-      // At spawn time, draw at top
-      yOffset = 0;
-    } else if (this.game.config().gameConfig().gameMode === GameMode.Team) {
-      // After spawn, only in team mode, offset based on screen width
-      const screenW = window.innerWidth;
-      yOffset = screenW > 1024 ? 80 : 58;
-    } else {
-      // Not spawn and not team mode: no bar
+    if (
+      !this.game.inSpawnPhase() &&
+      this.game.config().gameConfig().gameMode !== GameMode.Team
+    ) {
       return;
     }
 
@@ -80,7 +74,7 @@ export class SpawnTimer implements Layer {
       const segmentWidth = barWidth * ratio;
 
       context.fillStyle = this.colors[i];
-      context.fillRect(x, yOffset, segmentWidth, barHeight);
+      context.fillRect(x, 0, segmentWidth, barHeight);
 
       x += segmentWidth;
       filledRatio += ratio;

@@ -55,8 +55,8 @@ export class SpawnAd extends LitElement implements Layer {
       this.g.ticks() > 10 &&
       this.gamesPlayed > 5
     ) {
-      console.log("showing bottom left ad");
-      this.show();
+      console.log("not showing spawn ad");
+      // this.show();
     }
     if (this.isVisible && !this.g.inSpawnPhase()) {
       console.log("hiding bottom left ad");

@@ -317,10 +317,16 @@ export class UILayer implements Layer {
         if (constructionType === undefined) {
           return 1;
         }
+        const constDuration =
+          this.game.unitInfo(constructionType).constructionDuration;
+        if (constDuration === undefined) {
+          throw new Error("unit does not have constructionTime");
+        }
         return (
           (this.game.ticks() - unit.createdAt()) /
-          (this.game.unitInfo(constructionType).constructionDuration || 1)
+          (constDuration === 0 ? 1 : constDuration)
         );
+
       case UnitType.MissileSilo:
       case UnitType.SAMLauncher:
         return unit.missileReadinesss();
