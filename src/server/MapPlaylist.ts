@@ -19,7 +19,8 @@ const log = logger.child({});
 const config = getServerConfigFromServer();
 
 // How many times each map should appear in the playlist.
-const frequency: Record<GameMapName, number> = {
+// Note: The Partial should eventually be removed for better type safety.
+const frequency: Partial<Record<GameMapName, number>> = {
   World: 3,
   Europe: 2,
   Africa: 2,
@@ -44,8 +45,6 @@ const frequency: Record<GameMapName, number> = {
   Halkidiki: 1,
   StraitOfGibraltar: 1,
   Italia: 1,
-  GiantWorldMap: 0, // Not used in the playlist
-  Oceania: 0, // Not used in the playlist
 };
 
 interface MapWithMode {
@@ -113,7 +112,7 @@ export class MapPlaylist {
   private shuffleMapsPlaylist(): boolean {
     const maps: GameMapType[] = [];
     (Object.keys(GameMapType) as GameMapName[]).forEach((key) => {
-      for (let i = 0; i < frequency[key]; i++) {
+      for (let i = 0; i < (frequency[key] ?? 0); i++) {
         maps.push(GameMapType[key]);
       }
     });
