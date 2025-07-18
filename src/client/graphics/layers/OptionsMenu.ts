@@ -14,7 +14,7 @@ const button = ({
   classes = "",
   onClick = () => {},
   title = "",
-  children,
+  children = "",
 }) => html`
   <button
     class="flex items-center justify-center p-1
