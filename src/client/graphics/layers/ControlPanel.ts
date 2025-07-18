@@ -216,7 +216,7 @@ export class ControlPanel extends LitElement implements Layer {
           : "hidden"}"
         @contextmenu=${(e) => e.preventDefault()}
       >
-        <div class="hidden sm:block bg-black/30 text-white mb-4 p-2 rounded">
+        <div class="block bg-black/30 text-white mb-4 p-2 rounded">
           <div class="flex justify-between mb-1">
             <span class="font-bold"
               >${translateText("control_panel.pop")}:</span
