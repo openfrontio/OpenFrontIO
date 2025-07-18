@@ -20,6 +20,7 @@
     "experimentalDecorators": true,
     "resolveJsonModule": true,
     "strictNullChecks": true,
+    "useDefineForClassFields": false,
     "strictPropertyInitialization": false
   },
   "include": [
