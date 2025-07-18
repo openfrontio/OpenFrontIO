@@ -342,9 +342,9 @@ export class DefaultConfig implements Config {
   }
 
   tradeShipGold(dist: number, numPorts: number): Gold {
-    const baseGold = Math.floor(50000 + 130 * dist);
-    const basePortBonus = 0.2;
-    const diminishingFactor = 0.95;
+    const baseGold = Math.floor(50000 + 100 * dist);
+    const basePortBonus = 0.25;
+    const diminishingFactor = 0.9;
 
     let totalMultiplier = 1;
     for (let i = 0; i < numPorts; i++) {
@@ -361,7 +361,7 @@ export class DefaultConfig implements Config {
     }
     if (numTradeShips <= 150) {
       const additional = numTradeShips - 20;
-      return Math.pow(additional, 0.8) + 5;
+      return Math.floor(Math.pow(additional, 0.85) + 5);
     }
     return 1_000_000;
   }
