@@ -37,6 +37,8 @@ import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { UILayer } from "./layers/UILayer";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
+import { WebGLTerrainLayer } from "./layers/WebGLTerrainLayer";
+import { WebGLTerritoryLayer } from "./layers/WebGLTerritoryLayer";
 import { WinModal } from "./layers/WinModal";
 
 export function createRenderer(
@@ -223,8 +225,12 @@ export function createRenderer(
   alertFrame.game = game;
 
   const layers: Layer[] = [
-    new TerrainLayer(game, transformHandler),
-    new TerritoryLayer(game, eventBus, transformHandler, userSettings),
+    userSettings.useWebGL()
+      ? new WebGLTerrainLayer(game, transformHandler)
+      : new TerrainLayer(game, transformHandler),
+    userSettings.useWebGL()
+      ? new WebGLTerritoryLayer(game, eventBus, transformHandler, userSettings)
+      : new TerritoryLayer(game, eventBus, transformHandler, userSettings),
     new RailroadLayer(game),
     structureLayer,
     new StructureIconsLayer(game, eventBus, transformHandler),
