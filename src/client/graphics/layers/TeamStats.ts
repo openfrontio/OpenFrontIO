@@ -102,7 +102,7 @@ export class TeamStats extends LitElement implements Layer {
           .visible
           ? ""
           : "hidden"}"
-        @contextmenu=${(e) => e.preventDefault()}
+        @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
           class="grid w-full"

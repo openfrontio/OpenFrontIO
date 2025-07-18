@@ -214,7 +214,7 @@ export class ControlPanel extends LitElement implements Layer {
         class="${this._isVisible
           ? "w-[320px] text-sm lg:text-m bg-gray-800/70 p-2 pr-3 lg:p-4 shadow-lg lg:rounded-lg backdrop-blur"
           : "hidden"}"
-        @contextmenu=${(e) => e.preventDefault()}
+        @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div class="hidden lg:block bg-black/30 text-white mb-4 p-2 rounded">
           <div class="flex justify-between mb-1">
