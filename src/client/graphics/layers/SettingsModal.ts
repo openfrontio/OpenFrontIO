@@ -70,12 +70,6 @@ export class SettingsModal extends LitElement implements Layer {
     }
   };
 
-  public openModal() {
-    this.isVisible = true;
-    document.body.style.overflow = "hidden";
-    this.requestUpdate();
-  }
-
   public closeModal() {
     this.isVisible = false;
     document.body.style.overflow = "";
