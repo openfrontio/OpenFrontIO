@@ -20,14 +20,14 @@ import ja from "../../resources/lang/ja.json";
 import ko from "../../resources/lang/ko.json";
 import nl from "../../resources/lang/nl.json";
 import pl from "../../resources/lang/pl.json";
-import pt_br from "../../resources/lang/pt_br.json";
+import pt_br from "../../resources/lang/pt_BR.json";
 import ru from "../../resources/lang/ru.json";
 import sh from "../../resources/lang/sh.json";
-import sv_se from "../../resources/lang/sv_se.json";
+import sv_se from "../../resources/lang/sv_SE.json";
 import tp from "../../resources/lang/tp.json";
 import tr from "../../resources/lang/tr.json";
 import uk from "../../resources/lang/uk.json";
-import zh_cn from "../../resources/lang/zh_cn.json";
+import zh_cn from "../../resources/lang/zh_CN.json";
 
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
