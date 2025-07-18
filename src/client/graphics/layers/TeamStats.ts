@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { GameMode } from "../../../core/game/Game";
+import { GameMode, Team } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { renderNumber, translateText } from "../../Utils";
 import { Layer } from "./Layer";
@@ -47,7 +47,7 @@ export class TeamStats extends LitElement implements Layer {
 
   private updateTeamStats() {
     const players = this.game.playerViews();
-    const grouped: Record<number, PlayerView[]> = {};
+    const grouped: Record<Team, PlayerView[]> = {};
 
     for (const player of players) {
       const team = player.team();
@@ -102,7 +102,7 @@ export class TeamStats extends LitElement implements Layer {
           .visible
           ? ""
           : "hidden"}"
-        @contextmenu=${(e) => e.preventDefault()}
+        @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
           class="grid w-full"

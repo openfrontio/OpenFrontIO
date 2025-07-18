@@ -26,10 +26,6 @@ export class ChatDisplay extends LitElement implements Layer {
 
   private active: boolean = false;
 
-  private updateMap = new Map([
-    [GameUpdateType.DisplayEvent, (u) => this.onDisplayMessageEvent(u)],
-  ]);
-
   @state() private _hidden: boolean = false;
   @state() private newEvents: number = 0;
   @state() private chatEvents: ChatEvent[] = [];

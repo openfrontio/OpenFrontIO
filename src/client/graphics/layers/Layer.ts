@@ -1,7 +1,7 @@
 export interface Layer {
-  init?();
-  tick?();
-  renderLayer?(context: CanvasRenderingContext2D);
-  shouldTransform?(): boolean;
-  redraw?(): void;
+  init?: () => void;
+  tick?: () => void;
+  renderLayer?: (context: CanvasRenderingContext2D) => void;
+  shouldTransform?: () => boolean;
+  redraw?: () => void;
 }
