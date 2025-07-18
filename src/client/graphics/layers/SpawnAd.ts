@@ -110,6 +110,8 @@ export class SpawnAd extends LitElement implements Layer {
   }
 
   render() {
+    // Disable ads for now.
+    this.isVisible = false;
     if (!this.isVisible) {
       return html``;
     }
