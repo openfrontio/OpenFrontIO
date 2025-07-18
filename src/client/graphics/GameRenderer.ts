@@ -74,8 +74,8 @@ export function createRenderer(
   buildMenu.transformHandler = transformHandler;
 
   const leaderboard = document.querySelector("leader-board") as Leaderboard;
-  if (!emojiTable || !(leaderboard instanceof Leaderboard)) {
-    console.error("EmojiTable element not found in the DOM");
+  if (!leaderboard || !(leaderboard instanceof Leaderboard)) {
+    console.error("LeaderBoard element not found in the DOM");
   }
   leaderboard.eventBus = eventBus;
   leaderboard.game = game;
@@ -89,8 +89,8 @@ export function createRenderer(
   gameLeftSidebar.game = game;
 
   const teamStats = document.querySelector("team-stats") as TeamStats;
-  if (!emojiTable || !(teamStats instanceof TeamStats)) {
-    console.error("EmojiTable element not found in the DOM");
+  if (!teamStats || !(teamStats instanceof TeamStats)) {
+    console.error("TeamStats element not found in the DOM");
   }
   teamStats.eventBus = eventBus;
   teamStats.game = game;
