@@ -384,7 +384,7 @@ export class BuildMenu extends LitElement implements Layer {
       return "?";
     }
 
-    return player.units(item.unitType).length.toString();
+    return player.totalUnitLevels(item.unitType).toString();
   }
 
   public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile: TileRef): void {
