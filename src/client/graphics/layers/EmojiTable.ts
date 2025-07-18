@@ -53,12 +53,6 @@ export class EmojiTable extends LitElement {
 
   private onEmojiClicked: (emoji: string) => void = () => {};
 
-  public closeModal() {
-    this.isVisible = false;
-    document.body.style.overflow = "";
-    this.requestUpdate();
-  }
-
   render() {
     if (!this.isVisible) {
       return null;
@@ -76,7 +70,7 @@ export class EmojiTable extends LitElement {
           class="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center
                   bg-red-500 hover:bg-red-900 text-white rounded-full
                   text-sm font-bold transition-colors"
-          @click=${this.closeModal}
+          @click=${this.hideTable}
         >
           ✕
         </button>
