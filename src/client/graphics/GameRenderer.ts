@@ -23,7 +23,6 @@ import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { PlayerTeamLabel } from "./layers/PlayerTeamLabel";
 import { RadialMenu } from "./layers/RadialMenu";
-import { SpawnAd } from "./layers/SpawnAd";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
@@ -173,12 +172,6 @@ export function createRenderer(
   }
   playerTeamLabel.game = game;
 
-  const spawnAd = document.querySelector("spawn-ad") as SpawnAd;
-  if (!(spawnAd instanceof SpawnAd)) {
-    console.error("spawn ad not found");
-  }
-  spawnAd.g = game;
-
   const gutterAdModal = document.querySelector(
     "gutter-ad-modal",
   ) as GutterAdModal;
@@ -220,7 +213,6 @@ export function createRenderer(
     playerPanel,
     playerTeamLabel,
     multiTabModal,
-    spawnAd,
     gutterAdModal,
   ];
 
