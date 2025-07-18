@@ -621,6 +621,11 @@ export class Transport {
   }
 
   private onSendKickPlayerIntent(event: SendKickPlayerIntentEvent) {
+    console.log(`Sending kick intent via WebSocket`, {
+      targetClientID: event.targetClientID,
+      clientID: this.lobbyConfig.clientID,
+    });
+
     this.sendIntent({
       type: "kick_player",
       clientID: this.lobbyConfig.clientID,

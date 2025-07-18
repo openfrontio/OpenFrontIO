@@ -597,6 +597,7 @@ export class HostLobbyModal extends LitElement {
   }
 
   private kickPlayer(clientID: string) {
+    console.log(`Attempting to kick player`, { targetClientID: clientID });
     // Dispatch event to be handled by WebSocket instead of HTTP
     this.dispatchEvent(
       new CustomEvent("kick-player", {
@@ -605,6 +606,7 @@ export class HostLobbyModal extends LitElement {
         composed: true,
       }),
     );
+    console.log(`Kick event dispatched for player ${clientID}`);
   }
 }
 
