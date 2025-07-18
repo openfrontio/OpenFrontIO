@@ -435,7 +435,7 @@ export class DefaultConfig implements Config {
           cost: (p: Player) =>
             p.type() === PlayerType.Human && this.infiniteGold()
               ? 0n
-              : 25_000_000n,
+              : 35_000_000n,
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
