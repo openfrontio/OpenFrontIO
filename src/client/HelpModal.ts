@@ -136,7 +136,7 @@ export class HelpModal extends LitElement {
               ${translateText("help_modal.ui_leaderboard")}
             </div>
             <img
-              src="/images/helpModal/leaderboard2.webp"
+              src="/images/helpModal/leaderboard.webp"
               alt="Leaderboard"
               title="Leaderboard"
               class="default-image"
@@ -187,14 +187,21 @@ export class HelpModal extends LitElement {
             </div>
             <div class="flex flex-col gap-4">
               <img
-                src="/images/helpModal/eventsPanel.webp"
+                src="/images/helpModal/eventsPanel2.webp"
                 alt="Event panel"
                 title="Event panel"
                 class="default-image"
                 loading="lazy"
               />
               <img
-                src="/images/helpModal/eventsPanelAttack.webp"
+                src="/images/helpModal/eventsPanel3.webp"
+                alt="Event panel"
+                title="Event panel"
+                class="default-image"
+                loading="lazy"
+              />
+              <img
+                src="/images/helpModal/eventsPanelBoat.webp"
                 alt="Event panel"
                 title="Event panel"
                 class="default-image"
@@ -212,6 +219,12 @@ export class HelpModal extends LitElement {
                 ${translateText("help_modal.ui_events_attack")}
               </li>
               <li class="mb-4">
+                ${translateText("help_modal.ui_events_boat_attack")}
+              </li>
+              <li class="mb-4">
+                ${translateText("help_modal.ui_events_nuke")}
+              </li>
+              <li class="mb-4">
                 ${translateText("help_modal.ui_events_quickchat")}
               </li>
             </ul>
@@ -222,11 +235,24 @@ export class HelpModal extends LitElement {
 
         <div class="flex flex-col md:flex-row gap-4">
           <div class="flex flex-col items-center">
-            <div class="text-gray-300 font-bold">
+            <div class="text-gray-300 mb-5 font-bold">
               ${translateText("help_modal.ui_options")}
             </div>
+            <div class="text-gray-300 my-2">
+              ${translateText("help_modal.ui_options_single")}
+            </div>
             <img
-              src="/images/helpModal/options2.webp"
+              src="/images/helpModal/optionsSingle.webp"
+              alt="Options"
+              title="Options"
+              class="default-image"
+              loading="lazy"
+            />
+            <div class="text-gray-300 my-2">
+              ${translateText("help_modal.ui_options_multi")}
+            </div>
+            <img
+              src="/images/helpModal/options3.webp"
               alt="Options"
               title="Options"
               class="default-image"
@@ -236,6 +262,9 @@ export class HelpModal extends LitElement {
           <div>
             <p class="mb-4">${translateText("help_modal.ui_options_desc")}</p>
             <ul>
+              <li class="mb-4">
+                ${translateText("help_modal.option_game_speed")}
+              </li>
               <li class="mb-4">${translateText("help_modal.option_pause")}</li>
               <li class="mb-4">${translateText("help_modal.option_timer")}</li>
               <li class="mb-4">${translateText("help_modal.option_exit")}</li>
@@ -277,16 +306,9 @@ export class HelpModal extends LitElement {
         <div class="flex flex-col md:flex-row gap-4">
           <div class="flex flex-col gap-4">
             <img
-              src="/images/helpModal/radialMenu2.webp"
+              src="/images/helpModal/radialMenu3.webp"
               alt="Radial menu"
               title="Radial menu"
-              class="default-image"
-              loading="lazy"
-            />
-            <img
-              src="/images/helpModal/radialMenuAlly.webp"
-              alt="Radial menu ally"
-              title="Radial menu ally"
               class="default-image"
               loading="lazy"
             />
@@ -311,14 +333,6 @@ export class HelpModal extends LitElement {
                 <div class="inline-block icon boat-icon"></div>
                 <span>${translateText("help_modal.radial_boat")}</span>
               </li>
-              <li class="mb-4">
-                <div class="inline-block icon alliance-icon"></div>
-                <span>${translateText("help_modal.info_alliance")}</span>
-              </li>
-              <li class="mb-4">
-                <div class="inline-block icon betray-icon"></div>
-                <span>${translateText("help_modal.ally_betray")}</span>
-              </li>
             </ul>
           </div>
         </div>
@@ -336,7 +350,7 @@ export class HelpModal extends LitElement {
                 ${translateText("help_modal.info_enemy_panel")}
               </div>
               <img
-                src="/images/helpModal/infoMenu2.webp"
+                src="/images/helpModal/infoMenu3.webp"
                 alt="Enemy info panel"
                 title="Enemy info panel"
                 class="info-panel-img"
@@ -363,9 +377,6 @@ export class HelpModal extends LitElement {
                   <span>${translateText("help_modal.info_emoji")}</span>
                 </li>
                 <li class="mb-4">
-                  <div class="inline-block icon">
-                    <img src="/images/helpModal/stopTrading.webp" />
-                  </div>
                   <span>${translateText("help_modal.info_trade")}</span>
                 </li>
               </ul>
@@ -380,7 +391,7 @@ export class HelpModal extends LitElement {
                 ${translateText("help_modal.info_ally_panel")}
               </div>
               <img
-                src="/images/helpModal/infoMenu2Ally.webp"
+                src="/images/helpModal/infoMenu3Ally.webp"
                 alt="Ally info panel"
                 title="Ally info panel"
                 class="info-panel-img"
@@ -427,6 +438,11 @@ export class HelpModal extends LitElement {
                 <td>${translateText("help_modal.build_city")}</td>
                 <td><div class="icon city-icon"></div></td>
                 <td>${translateText("help_modal.build_city_desc")}</td>
+              </tr>
+              <tr>
+                <td>${translateText("help_modal.build_factory")}</td>
+                <td><div class="icon factory-icon"></div></td>
+                <td>${translateText("help_modal.build_factory_desc")}</td>
               </tr>
               <tr>
                 <td>${translateText("help_modal.build_defense")}</td>
