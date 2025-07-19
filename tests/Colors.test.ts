@@ -1,9 +1,11 @@
 import { colord, Colord } from "colord";
-import { selectDistinctColorIndex } from "../src/core/configuration/ColorAllocator";
+import {
+  ColorAllocator,
+  selectDistinctColorIndex,
+} from "../src/core/configuration/ColorAllocator";
 import {
   blueTeamColor,
   botTeamColor,
-  ColorAllocator,
   greenTeamColor,
   orangeTeamColor,
   purpleTeamColor,
