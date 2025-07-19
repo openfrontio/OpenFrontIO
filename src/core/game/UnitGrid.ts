@@ -45,6 +45,26 @@ export class UnitGrid {
     }
   }
 
+  /**
+   * Move an unit to its new cell if it changed
+   */
+  updateUnitCell(unit: Unit | UnitView) {
+    const newTile = unit.tile();
+    const oldTile = unit.lastTile();
+    const [gridX, gridY] = this.getGridCoords(
+      this.gm.x(oldTile),
+      this.gm.y(oldTile),
+    );
+    const [newGridX, newGridY] = this.getGridCoords(
+      this.gm.x(newTile),
+      this.gm.y(newTile),
+    );
+    if (gridX !== newGridX || gridY !== newGridY) {
+      this.removeUnitByTile(unit, oldTile);
+      this.addUnit(unit);
+    }
+  }
+
   private isValidCell(gridX: number, gridY: number): boolean {
     return (
       gridX >= 0 &&

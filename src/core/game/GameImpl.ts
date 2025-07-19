@@ -738,6 +738,9 @@ export class GameImpl implements Game {
       this._railNetwork.removeStation(u);
     }
   }
+  updateUnitCell(u: Unit) {
+    this.unitGrid.updateUnitCell(u);
+  }
 
   hasUnitNearby(
     tile: TileRef,

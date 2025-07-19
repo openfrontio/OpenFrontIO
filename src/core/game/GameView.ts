@@ -464,8 +464,7 @@ export class GameView implements GameMap {
       if (!update.isActive) {
         this.unitGrid.removeUnit(unit);
       } else if (unit.tile() !== unit.lastTile()) {
-        this.unitGrid.removeUnitByTile(unit, unit.lastTile());
-        this.unitGrid.addUnit(unit);
+        this.unitGrid.updateUnitCell(unit);
       }
       if (!unit.isActive()) {
         // Wait until next tick to delete the unit.
