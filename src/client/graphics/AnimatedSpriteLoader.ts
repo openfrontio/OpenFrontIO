@@ -1,4 +1,5 @@
 import miniBigSmoke from "../../../resources/sprites/bigsmoke.png";
+import conquestSword from "../../../resources/sprites/conquestSword.png";
 import dust from "../../../resources/sprites/dust.png";
 import miniExplosion from "../../../resources/sprites/miniExplosion.png";
 import miniFire from "../../../resources/sprites/minifire.png";
@@ -114,6 +115,15 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     looping: false,
     originX: 23,
     originY: 19,
+  },
+  [FxType.Conquest]: {
+    url: conquestSword,
+    frameWidth: 21,
+    frameCount: 10,
+    frameDuration: 90,
+    looping: false,
+    originX: 10,
+    originY: 16,
   },
 };
 

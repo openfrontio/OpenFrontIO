@@ -2,12 +2,14 @@ import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
 import {
   BonusEventUpdate,
+  ConquestUpdate,
   GameUpdateType,
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
+import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
@@ -54,6 +56,12 @@ export class FxLayer implements Layer {
       ?.[GameUpdateType.RailroadEvent]?.forEach((update) => {
         if (update === undefined) return;
         this.onRailroadEvent(update);
+      });
+    this.game
+      .updatesSinceLastTick()
+      ?.[GameUpdateType.ConquestEvent]?.forEach((update) => {
+        if (update === undefined) return;
+        this.onConquestEvent(update);
       });
   }
 
@@ -162,6 +170,21 @@ export class FxLayer implements Layer {
         this.allFx.push(animation);
       }
     }
+  }
+
+  onConquestEvent(conquest: ConquestUpdate) {
+    // Only display fx for the current player
+    const conqueror = this.game.player(conquest.conquerorId);
+    if (conqueror !== this.game.myPlayer()) {
+      return;
+    }
+
+    const conquestFx = conquestFxFactory(
+      this.animatedSpriteLoader,
+      conquest,
+      this.game,
+    );
+    this.allFx = this.allFx.concat(conquestFx);
   }
 
   onWarshipEvent(unit: UnitView) {

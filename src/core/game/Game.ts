@@ -694,6 +694,7 @@ export interface Game extends GameMap {
 
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
+  conquerPlayer(conqueror: Player, conquered: Player);
 }
 
 export interface PlayerActions {

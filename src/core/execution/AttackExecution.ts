@@ -1,4 +1,4 @@
-import { renderNumber, renderTroops } from "../../client/Utils";
+import { renderTroops } from "../../client/Utils";
 import {
   Attack,
   Execution,
@@ -331,17 +331,7 @@ export class AttackExecution implements Execution {
   private handleDeadDefender() {
     if (!(this.target.isPlayer() && this.target.numTilesOwned() < 100)) return;
 
-    const gold = this.target.gold();
-    this.mg.displayMessage(
-      `Conquered ${this.target.displayName()} received ${renderNumber(
-        gold,
-      )} gold`,
-      MessageType.CONQUERED_PLAYER,
-      this._owner.id(),
-      gold,
-    );
-    this.target.removeGold(gold);
-    this._owner.addGold(gold);
+    this.mg.conquerPlayer(this._owner, this.target);
 
     for (let i = 0; i < 10; i++) {
       for (const tile of this.target.tiles()) {
