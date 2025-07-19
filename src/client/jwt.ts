@@ -104,9 +104,8 @@ export type IsLoggedInResponse =
   | false;
 let __isLoggedIn: IsLoggedInResponse | undefined = undefined;
 export function isLoggedIn(): IsLoggedInResponse {
-  if (__isLoggedIn === undefined) {
-    __isLoggedIn = _isLoggedIn();
-  }
+  __isLoggedIn ??= _isLoggedIn();
+
   return __isLoggedIn;
 }
 function _isLoggedIn(): IsLoggedInResponse {

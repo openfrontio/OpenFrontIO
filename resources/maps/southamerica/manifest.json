@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 2378,
-    "num_land_tiles": 1513764,
+    "num_land_tiles": 1411064,
     "width": 1746
   },
   "mini_map": {
     "height": 1189,
-    "num_land_tiles": 369899,
+    "num_land_tiles": 342861,
     "width": 873
   },
   "name": "Americas",

@@ -24,7 +24,9 @@
     "wiki": "Wiki"
   },
   "news": {
-    "title": "Versio 23 julkaistu!"
+    "full_changelog": "Katso koko muutosloki",
+    "github_link": "GitHubissa",
+    "title": "Päivitystiedot"
   },
   "help_modal": {
     "hotkeys": "Pikanäppäimet",
@@ -41,6 +43,7 @@
     "action_reset_gfx": "Palauta grafiikat",
     "ui_section": "Pelin käyttöliittymä",
     "ui_leaderboard": "Pistetaulukko",
+    "ui_your_team": "Tiimisi:",
     "ui_leaderboard_desc": "Näyttää pelin parhaat pelaajat, sekä heidän kullan, sotilaiden ja maan (%) määrän. Painamalla \"Näytä kaikki\" näet kaikki pelin pelaajat. Jos et halua nähdä pistetaulukkoa, paina \"Sulje\".",
     "ui_control": "Ohjauspaneeli",
     "ui_control_desc": "Ohjauspaneeli sisältää seuraavat toiminnot:",
@@ -128,6 +131,7 @@
   "map": {
     "map": "Kartta",
     "world": "Maailma",
+    "giantworldmap": "Jättimäinen maailmankartta",
     "europe": "Eurooppa",
     "mena": "MENA",
     "northamerica": "Pohjois-Amerikka",
@@ -151,12 +155,16 @@
     "falklandislands": "Falklandinsaaret",
     "baikal": "Baikal",
     "halkidiki": "Halkidiki",
-    "giantworldmap": "Jättimäinen maailmankartta"
+    "straitofgibraltar": "Gibraltarinsalmi",
+    "italia": "Italia"
   },
   "map_categories": {
     "continental": "Mantereet",
     "regional": "Alueet",
     "fantasy": "Muut"
+  },
+  "map_component": {
+    "loading": "Ladataan..."
   },
   "private_lobby": {
     "title": "Liity yksityiseen aulaan",
@@ -172,6 +180,9 @@
   "public_lobby": {
     "join": "Liity seuraavaan peliin",
     "waiting": "pelaajaa odottaa",
+    "teams_Duos": "Duot (2:n tiimit)",
+    "teams_Trios": "Triot (3:n tiimit)",
+    "teams_Quads": "Neloset (4:n tiimit)",
     "teams": "{num} joukkuetta"
   },
   "username": {
@@ -197,6 +208,16 @@
     "players": "pelaajaa",
     "waiting": "Odotetaan pelaajia...",
     "start": "Aloita peli"
+  },
+  "team_colors": {
+    "red": "Punainen",
+    "blue": "Sininen",
+    "teal": "Sinivihreä",
+    "purple": "Liila",
+    "yellow": "Keltainen",
+    "orange": "Oranssi",
+    "green": "Vihreä",
+    "bot": "Botti"
   },
   "game_starting_modal": {
     "title": "Peli alkaa...",
@@ -225,26 +246,31 @@
     "sam_launcher": "Ilmatorjuntaohjusjärjestelmä",
     "atom_bomb": "Atomipommi",
     "hydrogen_bomb": "Vetypommi",
-    "mirv": "MIRV"
+    "mirv": "MIRV",
+    "factory": "Tehdas"
   },
   "user_setting": {
     "title": "Käyttäjäasetukset",
     "tab_basic": "Perusasetukset",
     "tab_keybinds": "Näppäinasetukset",
-    "dark_mode_label": "🌙 Tumma tila",
+    "dark_mode_label": "Tumma tila",
     "dark_mode_desc": "Vaihda sivuston ulkonäköä vaaleiden ja tummien teemojen välillä",
-    "emojis_label": "😊 Hymiöt",
+    "emojis_label": "Hymiöt",
     "emojis_desc": "Valitse, ovatko hymiöt näkyvissä pelissä",
-    "special_effects_label": "💥 Erikoistehosteet",
+    "alert_frame_label": "Hälytyskehys",
+    "alert_frame_desc": "Laita hälytyskehys pois tai päälle. Kun päällä, kehys näkyy, kun sinut petetään.",
+    "special_effects_label": "Erikoistehosteet",
     "special_effects_desc": "Valitse, ovatko erikoistehosteet päällä. Poista ne käytöstä parantaaksesi suorituskykyä",
-    "anonymous_names_label": "🥷 Piilotetut nimet",
+    "anonymous_names_label": "Piilotetut nimet",
     "anonymous_names_desc": "Korvaa pelaajien oikeat nimet satunnaisilla nimillä.",
-    "left_click_label": "🖱️Klikkaa hiiren vasenta näppäintä avataksesi valikon",
+    "left_click_label": "Hiiren vasen nappi valikon avaamiseen",
     "left_click_desc": "Kun päällä, hiiren vasen nappi avaa valikon, mistä voit hyökätä painamalla miekkaa. Kun pois päältä, vasen nappi hyökkää suoraan.",
     "attack_ratio_label": "⚔️ Hyökkäyksen osuus",
     "attack_ratio_desc": "Mikä osuus joukoistasi lähetetään hyökkäykseen (1–100%)",
     "troop_ratio_label": "🪖🛠️ Joukkojen ja työntekijöiden suhde",
     "troop_ratio_desc": "Säädä joukkojen (sotia varten) ja työntekijöiden (tekevät kultaa) määrää (1 - 100%)",
+    "territory_patterns_label": "Aluekuviot",
+    "territory_patterns_desc": "Valitse näkyvätkö aluekuviot pelissä",
     "easter_writing_speed_label": "Kirjoittamisen nopeuskerroin",
     "easter_writing_speed_desc": "Säädä kuinka nopeasti teeskentelet koodaavasi (x1–x100)",
     "easter_bug_count_label": "Vikojen määrä",
@@ -260,6 +286,8 @@
     "attack_keybinds": "Hyökkäyksen näppäinasetukset",
     "boat_attack": "Venehyökkäys",
     "boat_attack_desc": "Lähetä venehyökkäys hiiresi alla olevaan pikseliin.",
+    "ground_attack": "Maahyökkäys",
+    "ground_attack_desc": "Aloita maahyökkäys hiiresi alla olevaan ruutuun.",
     "zoom_controls": "Zoomausohjaimet",
     "zoom_out": "Loitonna",
     "zoom_out_desc": "Loitonna karttaa",
@@ -381,9 +409,12 @@
     "hide": "Sulje",
     "rank": "Sijoitus",
     "player": "Pelaaja",
+    "team": "Tiimi",
     "owned": "Maata",
     "gold": "Kultaa",
-    "troops": "Joukkoja"
+    "troops": "Joukkoja",
+    "show_top_5": "Näytä top 5",
+    "show_all": "Näytä kaikki"
   },
   "player_info_overlay": {
     "type": "Tyyppi",
@@ -400,18 +431,26 @@
     "sams": "Ilmatorjuntaohjusjärjestelmiä",
     "warships": "Sota-aluksia",
     "health": "Terveys",
-    "attitude": "Asenne"
+    "attitude": "Asenne",
+    "levels": "Tasot"
   },
   "events_display": {
     "retreating": "peräännytään",
-    "boat": "Vene"
+    "boat": "Vene",
+    "about_to_expire": "Liittosi pelaajan {name} kanssa on vanhentumassa!",
+    "renew_alliance": "Pyydä liitolle jatkoa",
+    "focus": "Keskitä",
+    "alliance_renewed": "Liittosi pelaajan {name} kanssa sai jatkoa",
+    "ignore": "Sivuuta"
   },
   "unit_info_modal": {
     "structure_info": "Rakennuksen tiedot",
     "unit_type_unknown": "Tuntematon",
     "close": "Sulje",
     "cooldown": "Odotusaika",
-    "type": "Tyyppi"
+    "type": "Tyyppi",
+    "upgrade": "Päivitä",
+    "level": "Taso"
   },
   "relation": {
     "hostile": "Vihamielinen",
@@ -442,8 +481,13 @@
     "none": "Tyhjä",
     "alliances": "Liittoumat"
   },
+  "replay_panel": {
+    "replay_speed": "Uusinnan nopeus",
+    "game_speed": "Pelin nopeus"
+  },
   "error_modal": {
     "crashed": "Peli kaatui!",
+    "connection_error": "Yhteysongelma!",
     "paste_discord": "Ole hyvä ja liitä seuraava vikailmoitukseesi Discordissa:",
     "copy_clipboard": "Kopioi leikepöydälle",
     "copied": "Kopioitu!",
@@ -452,5 +496,47 @@
   },
   "heads_up_message": {
     "choose_spawn": "Valitse aloituspaikka"
+  },
+  "territory_patterns": {
+    "title": "Valitse aluekuvio",
+    "purchase": "Osta",
+    "blocked": {
+      "login": "Sinun täytyy olla kirjautunut sisään saadaksesi tämän kuvion.",
+      "purchase": "Osta tämä kuvio avataksesi sen."
+    },
+    "pattern": {
+      "default": "Oletus",
+      "custom": "Mukautettu",
+      "stripes_v": "Pystysuora",
+      "stripes_h": "Vaakasuora",
+      "horizontal_stripes": "Vaakasuora (Vaihtoehto)",
+      "vertical_bars": "Pystysuora (Vaihtoehto)",
+      "checkerboard": "Shakkilauta",
+      "choco": "Suklaa",
+      "diagonal": "Diagonaalinen",
+      "cross": "Risti",
+      "mini_cross": "Pikkuristi",
+      "sword": "Miekka",
+      "sparse_dots": "Harvat pisteet",
+      "evan": "Evan",
+      "diagonal_stripe": "Diagonaalinen raita",
+      "mountain_ridge": "Vuorijono",
+      "scattered_dots": "Hajanaiset pisteet",
+      "circuit_board": "Piirilevy",
+      "shells": "Kuoret",
+      "-w-": ".w.",
+      "white_rabbit": "Valkoinen jänis",
+      "goat": "Pukki",
+      "cats": "Kissat",
+      "cursor": "Kursori",
+      "hand": "Käsi",
+      "radiation": "Säteily",
+      "openfront_qr": "OpenFront.io:n QR-koodi",
+      "openfront": "OpenFront",
+      "t_rex": "T-Rex",
+      "embelem": "Tunnus",
+      "grogu_head": "Grogun pää",
+      "grogu": "Grogu"
+    }
   }
 }

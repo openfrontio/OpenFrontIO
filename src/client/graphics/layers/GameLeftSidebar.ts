@@ -22,6 +22,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
 
   private playerColor: Colord = new Colord("#FFFFFF");
   public game: GameView;
+  private _shownOnInit = false;
 
   createRenderRoot() {
     return this;
@@ -32,12 +33,15 @@ export class GameLeftSidebar extends LitElement implements Layer {
     if (this.isTeamGame) {
       this.isPlayerTeamLabelVisible = true;
     }
+    // Make it visible by default on large screens
+    if (window.innerWidth >= 1024) {
+      // lg breakpoint
+      this._shownOnInit = true;
+    }
     this.requestUpdate();
   }
 
   tick() {
-    if (!this.isPlayerTeamLabelVisible) return;
-
     if (!this.playerTeam && this.game.myPlayer()?.team()) {
       this.playerTeam = this.game.myPlayer()!.team();
       if (this.playerTeam) {
@@ -47,6 +51,12 @@ export class GameLeftSidebar extends LitElement implements Layer {
           .teamColor(this.playerTeam);
         this.requestUpdate();
       }
+    }
+
+    if (this._shownOnInit && !this.game.inSpawnPhase()) {
+      this._shownOnInit = false;
+      this.isLeaderboardShow = true;
+      this.requestUpdate();
     }
 
     if (!this.game.inSpawnPhase()) {
@@ -130,7 +140,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
         <div class="block lg:flex flex-wrap gap-2">
           <leader-board .visible=${this.isLeaderboardShow}></leader-board>
           <team-stats
-            class=${`flex-1 ${this.isTeamLeaderboardShow ? "sm:mt-4 lg:mt-12" : ""}`}
+            class="flex-1"
             .visible=${this.isTeamLeaderboardShow && this.isTeamGame}
           ></team-stats>
         </div>

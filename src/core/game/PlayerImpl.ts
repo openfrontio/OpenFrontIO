@@ -814,25 +814,32 @@ export class PlayerImpl implements Player {
     return b;
   }
 
-  // Returns the existing unit that can be upgraded,
-  // or false if it cannot be upgraded.
-  // New units of the same type can upgrade existing units.
-  // e.g. if a place a new city here, can it upgrade an existing city?
-  private canUpgradeExistingUnit(
-    type: UnitType,
-    targetTile: TileRef,
-  ): Unit | false {
-    if (!this.mg.config().unitInfo(type).upgradable) {
-      return false;
-    }
+  public findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false {
     const range = this.mg.config().structureMinDist();
     const existing = this.mg
       .nearbyUnits(targetTile, range, type)
       .sort((a, b) => a.distSquared - b.distSquared);
-    if (existing.length > 0) {
-      return existing[0].unit;
+    if (existing.length === 0) {
+      return false;
     }
-    return false;
+    const unit = existing[0].unit;
+    if (!this.canUpgradeUnit(unit.type())) {
+      return false;
+    }
+    return unit;
+  }
+
+  public canUpgradeUnit(unitType: UnitType): boolean {
+    if (!this.mg.config().unitInfo(unitType).upgradable) {
+      return false;
+    }
+    if (this.mg.config().isUnitDisabled(unitType)) {
+      return false;
+    }
+    if (this._gold < this.mg.config().unitInfo(unitType).cost(this)) {
+      return false;
+    }
+    return true;
   }
 
   upgradeUnit(unit: Unit) {
@@ -847,7 +854,7 @@ export class PlayerImpl implements Player {
     return Object.values(UnitType).map((u) => {
       let canUpgrade: number | false = false;
       if (!this.mg.inSpawnPhase()) {
-        const existingUnit = this.canUpgradeExistingUnit(u, tile);
+        const existingUnit = this.findUnitToUpgrade(u, tile);
         if (existingUnit !== false) {
           canUpgrade = existingUnit.id();
         }
@@ -1158,23 +1165,19 @@ export class PlayerImpl implements Player {
         );
       });
 
-    // Make close ports twice more likely by putting them again
-    for (
-      let i = 0;
-      i < this.mg.config().proximityBonusPortsNb(ports.length);
-      i++
-    ) {
-      ports.push(ports[i]);
+    const weightedPorts: Unit[] = [];
+
+    for (const [i, otherPort] of ports.entries()) {
+      const expanded = new Array(otherPort.level()).fill(otherPort);
+      weightedPorts.push(...expanded);
+      if (i < this.mg.config().proximityBonusPortsNb(ports.length)) {
+        weightedPorts.push(...expanded);
+      }
+      if (port.owner().isFriendly(otherPort.owner())) {
+        weightedPorts.push(...expanded);
+      }
     }
 
-    // Make ally ports twice more likely by putting them again
-    this.mg
-      .players()
-      .filter((p) => p !== port.owner() && p.canTrade(port.owner()))
-      .filter((p) => p.isAlliedWith(port.owner()))
-      .flatMap((p) => p.units(UnitType.Port))
-      .forEach((p) => ports.push(p));
-
-    return ports;
+    return weightedPorts;
   }
 }
