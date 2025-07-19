@@ -302,6 +302,7 @@ export class UserSettingModal extends LitElement {
       <setting-slider
         label="${translateText("user_setting.attack_ratio_label")}"
         description="${translateText("user_setting.attack_ratio_desc")}"
+        id="attack-ratio-slider"
         min="1"
         max="100"
         .value=${Number(localStorage.getItem("settings.attackRatio") ?? "0.2") *
@@ -313,6 +314,7 @@ export class UserSettingModal extends LitElement {
       <setting-slider
         label="${translateText("user_setting.troop_ratio_label")}"
         description="${translateText("user_setting.troop_ratio_desc")}"
+        id="troop-ratio-slider"
         min="1"
         max="100"
         .value=${Number(localStorage.getItem("settings.troopRatio") ?? "0.95") *
