@@ -43,6 +43,7 @@ const frequency = {
   Halkidiki: 1,
   StraitOfGibraltar: 1,
   Italia: 1,
+  Pluto: 1,
 };
 
 interface MapWithMode {
