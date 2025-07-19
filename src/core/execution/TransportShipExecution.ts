@@ -181,16 +181,16 @@ export class TransportShipExecution implements Execution {
           // Record stats
           this.mg
             .stats()
-            .boatArriveTroops(this.attacker, this.target, this.troops);
+            .boatArriveTroops(this.attacker, this.target, this.boat.troops());
           return;
         }
         this.attacker.conquer(this.dst);
         if (this.target.isPlayer() && this.attacker.isFriendly(this.target)) {
-          this.attacker.addTroops(this.troops);
+          this.attacker.addTroops(this.boat.troops());
         } else {
           this.mg.addExecution(
             new AttackExecution(
-              this.troops,
+              this.boat.troops(),
               this.attacker,
               this.targetID,
               this.dst,
@@ -204,7 +204,7 @@ export class TransportShipExecution implements Execution {
         // Record stats
         this.mg
           .stats()
-          .boatArriveTroops(this.attacker, this.target, this.troops);
+          .boatArriveTroops(this.attacker, this.target, this.boat.troops());
         return;
       case PathFindResultType.NextTile:
         this.boat.move(result.node);
@@ -214,7 +214,7 @@ export class TransportShipExecution implements Execution {
       case PathFindResultType.PathNotFound:
         // TODO: add to poisoned port list
         console.warn(`path not found to dst`);
-        this.attacker.addTroops(this.troops);
+        this.attacker.addTroops(this.boat.troops());
         this.boat.delete(false);
         this.active = false;
         return;
