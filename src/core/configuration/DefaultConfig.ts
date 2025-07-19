@@ -236,7 +236,7 @@ export class DefaultConfig implements Config {
     return 0.5;
   }
   traitorSpeedDebuff(): number {
-    return 0.7;
+    return 0.6;
   }
   traitorDuration(): number {
     return 30 * 10; // 30 seconds
@@ -342,9 +342,9 @@ export class DefaultConfig implements Config {
   }
 
   tradeShipGold(dist: number, numPorts: number): Gold {
-    const baseGold = Math.floor(50000 + 130 * dist);
-    const basePortBonus = 0.2;
-    const diminishingFactor = 0.95;
+    const baseGold = Math.floor(50000 + 100 * dist);
+    const basePortBonus = 0.25;
+    const diminishingFactor = 0.9;
 
     let totalMultiplier = 1;
     for (let i = 0; i < numPorts; i++) {
@@ -356,17 +356,14 @@ export class DefaultConfig implements Config {
 
   // Chance to spawn a trade ship in one second,
   tradeShipSpawnRate(numTradeShips: number): number {
-    if (numTradeShips <= 20) {
+    if (numTradeShips < 20) {
       return 5;
     }
-    if (numTradeShips > this.tradeShipCap()) {
-      return 1_000_000;
+    if (numTradeShips <= 150) {
+      const additional = numTradeShips - 20;
+      return Math.floor(Math.pow(additional, 0.85) + 5);
     }
-    return numTradeShips - 15;
-  }
-
-  tradeShipCap(): number {
-    return 100;
+    return 1_000_000;
   }
 
   unitInfo(type: UnitType): UnitInfo {
@@ -438,7 +435,7 @@ export class DefaultConfig implements Config {
           cost: (p: Player) =>
             p.type() === PlayerType.Human && this.infiniteGold()
               ? 0n
-              : 25_000_000n,
+              : 35_000_000n,
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:

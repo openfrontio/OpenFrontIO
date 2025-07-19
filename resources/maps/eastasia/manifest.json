@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 1646,
-    "num_land_tiles": 928056,
+    "num_land_tiles": 879264,
     "width": 1562
   },
   "mini_map": {
     "height": 823,
-    "num_land_tiles": 228603,
+    "num_land_tiles": 215238,
     "width": 781
   },
   "name": "East Asia",

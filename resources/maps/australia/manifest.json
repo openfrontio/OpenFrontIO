@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 1500,
-    "num_land_tiles": 1338638,
+    "num_land_tiles": 1319763,
     "width": 2000
   },
   "mini_map": {
     "height": 750,
-    "num_land_tiles": 333175,
+    "num_land_tiles": 328215,
     "width": 1000
   },
   "name": "Australia",
