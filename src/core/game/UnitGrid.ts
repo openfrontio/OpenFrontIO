@@ -34,6 +34,10 @@ export class UnitGrid {
   // Remove a unit from the grid
   removeUnit(unit: Unit | UnitView) {
     const tile = unit.tile();
+    this.removeUnitByTile(unit, tile);
+  }
+
+  removeUnitByTile(unit: Unit | UnitView, tile: TileRef) {
     const [gridX, gridY] = this.getGridCoords(this.gm.x(tile), this.gm.y(tile));
 
     if (this.isValidCell(gridX, gridY)) {
