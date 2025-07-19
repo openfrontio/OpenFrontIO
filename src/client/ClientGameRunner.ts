@@ -61,7 +61,7 @@ export function joinLobby(
   lobbyConfig: LobbyConfig,
   onPrestart: () => void,
   onJoin: () => void,
-): () => void {
+): { stop: () => void; eventBus: EventBus } {
   const eventBus = new EventBus();
 
   console.log(
@@ -113,9 +113,12 @@ export function joinLobby(
     }
   };
   transport.connect(onconnect, onmessage);
-  return () => {
-    console.log("leaving game");
-    transport.leaveGame();
+  return {
+    stop: () => {
+      console.log("leaving game");
+      transport.leaveGame();
+    },
+    eventBus: eventBus,
   };
 }
 

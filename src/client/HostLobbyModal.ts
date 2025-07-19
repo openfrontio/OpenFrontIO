@@ -39,9 +39,10 @@ export class HostLobbyModal extends LitElement {
   @state() private instantBuild: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
-  @state() private players: string[] = [];
+  @state() private players: Array<{ username: string; clientID: string }> = [];
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [UnitType.Factory];
+  @state() private hostClientID: string = "";
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
@@ -345,7 +346,24 @@ export class HostLobbyModal extends LitElement {
 
           <div class="players-list">
             ${this.players.map(
-              (player) => html`<span class="player-tag">${player}</span>`,
+              (player) => html`
+                <span class="player-tag">
+                  ${player.username}
+                  ${player.clientID === this.hostClientID
+                    ? html`<span class="host-badge"
+                        >(${translateText("host_modal.host_badge")})</span
+                      >`
+                    : html`
+                        <button
+                          class="remove-player-btn"
+                          @click=${() => this.kickPlayer(player.clientID)}
+                          title="Remove ${player.username}"
+                        >
+                          ×
+                        </button>
+                      `}
+                </span>
+              `,
             )}
           </div>
         </div>
@@ -374,6 +392,7 @@ export class HostLobbyModal extends LitElement {
   }
 
   public open() {
+    this.hostClientID = generateID();
     createLobby()
       .then((lobby) => {
         this.lobbyId = lobby.gameID;
@@ -384,7 +403,7 @@ export class HostLobbyModal extends LitElement {
           new CustomEvent("join-lobby", {
             detail: {
               gameID: this.lobbyId,
-              clientID: generateID(),
+              clientID: this.hostClientID, // Use the host client ID
             } as JoinLobbyEvent,
             bubbles: true,
             composed: true,
@@ -568,8 +587,24 @@ export class HostLobbyModal extends LitElement {
       .then((response) => response.json())
       .then((data: GameInfo) => {
         console.log(`got game info response: ${JSON.stringify(data)}`);
-        this.players = data.clients?.map((p) => p.username) ?? [];
+        // Store both username and clientID
+        this.players =
+          data.clients?.map((p) => ({
+            username: p.username,
+            clientID: p.clientID,
+          })) ?? [];
       });
+  }
+
+  private kickPlayer(clientID: string) {
+    // Dispatch event to be handled by WebSocket instead of HTTP
+    this.dispatchEvent(
+      new CustomEvent("kick-player", {
+        detail: { targetClientID: clientID },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 }
 
