@@ -42,7 +42,7 @@ export class PastelTheme implements Theme {
   territoryColor(player: PlayerView): Colord {
     const team = player.team();
     if (team !== null) {
-      return this.teamColor(team);
+      return this.teamColorAllocator.assignTeamPlayerColor(team, player.id());
     }
     if (player.type() === PlayerType.Human) {
       return this.humanColorAllocator.assignColor(player.id());
