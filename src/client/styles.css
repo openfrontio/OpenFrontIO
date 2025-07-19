@@ -183,6 +183,13 @@ label.option-card:hover {
   color: #fff;
 }
 
+.visibility-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
 .copy-success {
   position: relative;
   color: green;

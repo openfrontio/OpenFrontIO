@@ -28,6 +28,10 @@ export class UserSettings {
     return this.get("settings.anonymousNames", false);
   }
 
+  lobbyIdVisibility() {
+    return this.get("settings.lobbyIdVisibility", true);
+  }
+
   fxLayer() {
     return this.get("settings.specialEffects", true);
   }
@@ -68,6 +72,10 @@ export class UserSettings {
 
   toggleRandomName() {
     this.set("settings.anonymousNames", !this.anonymousNames());
+  }
+
+  toggleLobbyIdVisibility() {
+    this.set("settings.lobbyIdVisibility", !this.lobbyIdVisibility());
   }
 
   toggleFxLayer() {
