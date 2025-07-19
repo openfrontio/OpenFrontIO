@@ -1,60 +1,60 @@
 {
   "map": {
-    "height": 1500,
-    "num_land_tiles": 1098655,
-    "width": 2000
+    "height": 1900,
+    "num_land_tiles": 1879640,
+    "width": 2450
   },
   "mini_map": {
-    "height": 750,
-    "num_land_tiles": 272699,
-    "width": 1000
+    "height": 950,
+    "num_land_tiles": 464588,
+    "width": 1225
   },
   "name": "Iceland",
   "nations": [
     {
-      "coordinates": [455, 1115],
+      "coordinates": [620, 1460],
       "flag": "is",
       "name": "Southern Peninsula",
       "strength": 2
     },
     {
-      "coordinates": [550, 1050],
+      "coordinates": [680, 1366],
       "flag": "is",
       "name": "Capital Region",
       "strength": 2
     },
     {
-      "coordinates": [370, 810],
+      "coordinates": [450, 1040],
       "flag": "is",
       "name": "Western Region",
       "strength": 1
     },
     {
-      "coordinates": [290, 560],
+      "coordinates": [300, 720],
       "flag": "is",
       "name": "Westfjords",
       "strength": 2
     },
     {
-      "coordinates": [790, 555],
+      "coordinates": [970, 720],
       "flag": "is",
       "name": "Northwestern Region",
       "strength": 2
     },
     {
-      "coordinates": [1050, 1235],
+      "coordinates": [1360, 1590],
       "flag": "is",
       "name": "Southern Region",
       "strength": 2
     },
     {
-      "coordinates": [1240, 660],
+      "coordinates": [1600, 840],
       "flag": "is",
       "name": "Northeastern Region",
       "strength": 2
     },
     {
-      "coordinates": [1740, 740],
+      "coordinates": [2250, 930],
       "flag": "is",
       "name": "Eastern Region",
       "strength": 2
