@@ -8,10 +8,12 @@ import {
   Duos,
   GameMapType,
   GameMode,
+  Quads,
+  Trios,
   UnitType,
   mapCategories,
 } from "../core/game/Game";
-import { GameConfig, GameInfo } from "../core/Schemas";
+import { GameConfig, GameInfo, TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
@@ -30,7 +32,7 @@ export class HostLobbyModal extends LitElement {
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs = false;
   @state() private gameMode: GameMode = GameMode.FFA;
-  @state() private teamCount: number | typeof Duos = 2;
+  @state() private teamCount: TeamCountConfig = 2;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
@@ -39,7 +41,7 @@ export class HostLobbyModal extends LitElement {
   @state() private copySuccess = false;
   @state() private players: string[] = [];
   @state() private useRandomMap: boolean = false;
-  @state() private disabledUnits: UnitType[] = [];
+  @state() private disabledUnits: UnitType[] = [UnitType.Factory];
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
@@ -196,7 +198,7 @@ export class HostLobbyModal extends LitElement {
                       ${translateText("host_modal.team_count")}
                     </div>
                     <div class="option-cards">
-                      ${[Duos, 2, 3, 4, 5, 6, 7].map(
+                      ${[2, 3, 4, 5, 6, 7, Quads, Trios, Duos].map(
                         (o) => html`
                           <div
                             class="option-card ${this.teamCount === o
@@ -204,7 +206,13 @@ export class HostLobbyModal extends LitElement {
                               : ""}"
                             @click=${() => this.handleTeamCountSelection(o)}
                           >
-                            <div class="option-card-title">${o}</div>
+                            <div class="option-card-title">
+                              ${typeof o === "string"
+                                ? translateText(`public_lobby.teams_${o}`)
+                                : translateText("public_lobby.teams", {
+                                    num: o,
+                                  })}
+                            </div>
                           </div>
                         `,
                       )}
@@ -465,8 +473,8 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
-  private async handleTeamCountSelection(value: number | typeof Duos) {
-    this.teamCount = value === Duos ? Duos : Number(value);
+  private async handleTeamCountSelection(value: TeamCountConfig) {
+    this.teamCount = value;
     this.putGameConfig();
   }
 

@@ -55,7 +55,7 @@ export class WarshipExecution implements Execution {
       this.warship.delete();
       return;
     }
-    const hasPort = this.warship.owner().units(UnitType.Port).length > 0;
+    const hasPort = this.warship.owner().unitCount(UnitType.Port) > 0;
     if (hasPort) {
       this.warship.modifyHealth(1);
     }
@@ -75,7 +75,7 @@ export class WarshipExecution implements Execution {
   }
 
   private findTargetUnit(): Unit | undefined {
-    const hasPort = this.warship.owner().units(UnitType.Port).length > 0;
+    const hasPort = this.warship.owner().unitCount(UnitType.Port) > 0;
     const patrolRangeSquared = this.mg.config().warshipPatrolRange() ** 2;
 
     const ships = this.mg.nearbyUnits(

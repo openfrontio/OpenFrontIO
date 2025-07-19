@@ -1,5 +1,6 @@
 import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { TrainStationExecution } from "./TrainStationExecution";
 
 export class CityExecution implements Execution {
   private mg: Game;
@@ -24,6 +25,7 @@ export class CityExecution implements Execution {
         return;
       }
       this.city = this.player.buildUnit(UnitType.City, spawnTile, {});
+      this.createStation();
     }
     if (!this.city.isActive()) {
       this.active = false;
@@ -41,5 +43,19 @@ export class CityExecution implements Execution {
 
   activeDuringSpawnPhase(): boolean {
     return false;
+  }
+
+  createStation(): void {
+    if (this.city !== null) {
+      const nearbyFactory = this.mg.hasUnitNearby(
+        this.city.tile()!,
+        this.mg.config().trainStationMaxRange(),
+        UnitType.Factory,
+        this.player.id(),
+      );
+      if (nearbyFactory) {
+        this.mg.addExecution(new TrainStationExecution(this.city));
+      }
+    }
   }
 }

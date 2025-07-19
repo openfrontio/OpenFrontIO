@@ -1,9 +1,8 @@
 import { Colord } from "colord";
 import { JWK } from "jose";
-import { GameConfig, GameID } from "../Schemas";
+import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import {
   Difficulty,
-  Duos,
   Game,
   GameMapType,
   GameMode,
@@ -32,7 +31,7 @@ export interface ServerConfig {
   lobbyMaxPlayers(
     map: GameMapType,
     mode: GameMode,
-    numPlayerTeams: number | undefined,
+    numPlayerTeams: TeamCountConfig | undefined,
   ): number;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
@@ -40,7 +39,6 @@ export interface ServerConfig {
   workerPort(gameID: GameID): number;
   workerPortByIndex(workerID: number): number;
   env(): GameEnv;
-  region(): string;
   adminToken(): string;
   adminHeader(): string;
   // Only available on the server
@@ -62,6 +60,8 @@ export interface ServerConfig {
   cloudflareApiToken(): string;
   cloudflareConfigPath(): string;
   cloudflareCredsPath(): string;
+  stripePublishableKey(): string;
+  allowedFlares(): string[] | undefined;
 }
 
 export interface NukeMagnitude {
@@ -86,7 +86,7 @@ export interface Config {
   instantBuild(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
-  playerTeams(): number | typeof Duos;
+  playerTeams(): TeamCountConfig;
 
   startManpower(playerInfo: PlayerInfo): number;
   populationIncreaseRate(player: Player | PlayerView): number;
@@ -129,7 +129,7 @@ export interface Config {
   donateCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
-  tradeShipGold(dist: number): Gold;
+  tradeShipGold(dist: number, numPorts: number): Gold;
   tradeShipSpawnRate(numberOfPorts: number): number;
   trainGold(): Gold;
   trainSpawnRate(numberOfStations: number): number;
@@ -141,6 +141,7 @@ export interface Config {
   SAMCooldown(): number;
   SiloCooldown(): number;
   defensePostDefenseBonus(): number;
+  defensePostSpeedBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
   warshipPatrolRange(): number;
@@ -158,6 +159,7 @@ export interface Config {
   nukeDeathFactor(humans: number, tilesOwned: number): number;
   structureMinDist(): number;
   isReplay(): boolean;
+  allianceExtensionPromptOffset(): number;
 }
 
 export interface Theme {

@@ -196,12 +196,13 @@ export class GameRunner {
       };
       const alliance = player.allianceWith(other as Player);
       if (alliance) {
-        actions.interaction.allianceCreatedAtTick = alliance.createdAt();
+        actions.interaction.allianceExpiresAt = alliance.expiresAt();
       }
     }
 
     return actions;
   }
+
   public playerProfile(playerID: number): PlayerProfile {
     const player = this.game.playerBySmallID(playerID);
     if (!player.isPlayer()) {

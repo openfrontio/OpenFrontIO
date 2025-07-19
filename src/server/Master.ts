@@ -5,7 +5,7 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameInfo } from "../core/Schemas";
+import { GameInfo, ID } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
@@ -146,8 +146,9 @@ app.get(
   "/api/env",
   gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
     const envConfig = {
-      game_env: process.env.GAME_ENV || "prod",
+      game_env: process.env.GAME_ENV,
     };
+    if (!envConfig.game_env) return res.sendStatus(500);
     res.json(envConfig);
   }),
 );
@@ -169,6 +170,11 @@ app.post(
     }
 
     const { gameID, clientID } = req.params;
+
+    if (!ID.safeParse(gameID).success || !ID.safeParse(clientID).success) {
+      res.sendStatus(400);
+      return;
+    }
 
     try {
       const response = await fetch(

@@ -80,7 +80,7 @@ export class ChatDisplay extends LitElement implements Layer {
   tick() {
     // this.active = true;
     const updates = this.game.updatesSinceLastTick();
-    if (updates === null) throw new Error("null updates");
+    if (updates === null) return;
     const messages = updates[GameUpdateType.DisplayEvent] as
       | DisplayMessageUpdate[]
       | undefined;

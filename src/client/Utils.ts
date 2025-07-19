@@ -141,6 +141,7 @@ export function getMessageTypeClasses(type: MessageType): string {
     case MessageType.SAM_MISS:
     case MessageType.ALLIANCE_EXPIRED:
     case MessageType.NAVAL_INVASION_INBOUND:
+    case MessageType.RENEW_ALLIANCE:
       return severityColors["warn"];
     case MessageType.CHAT:
     case MessageType.ALLIANCE_REQUEST:
@@ -171,7 +172,7 @@ export function getAltKey(): string {
 
 export function getGamesPlayed(): number {
   try {
-    return parseInt(localStorage.getItem("gamesPlayed") || "0", 10) || 0;
+    return parseInt(localStorage.getItem("gamesPlayed") ?? "0", 10) || 0;
   } catch (error) {
     console.warn("Failed to read games played from localStorage:", error);
     return 0;

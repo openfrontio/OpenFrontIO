@@ -1,4 +1,4 @@
-import { colord, Colord, extend, LabColor } from "colord";
+import { colord, Colord, extend } from "colord";
 import labPlugin from "colord/plugins/lab";
 import lchPlugin from "colord/plugins/lch";
 import { ColoredTeams, Team } from "../game/Game";
