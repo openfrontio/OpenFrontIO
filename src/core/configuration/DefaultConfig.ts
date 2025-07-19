@@ -435,7 +435,7 @@ export class DefaultConfig implements Config {
           cost: (p: Player) =>
             p.type() === PlayerType.Human && this.infiniteGold()
               ? 0n
-              : 35_000_000n,
+              : 25_000_000n,
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -479,8 +479,8 @@ export class DefaultConfig implements Config {
               ? 0n
               : BigInt(
                   Math.min(
-                    3_000_000,
-                    (p.unitsConstructed(UnitType.SAMLauncher) + 1) * 1_500_000,
+                    2_000_000,
+                    (p.unitsConstructed(UnitType.SAMLauncher) + 1) * 1_000_000,
                   ),
                 ),
           territoryBound: true,
