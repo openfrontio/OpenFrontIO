@@ -479,8 +479,8 @@ export class DefaultConfig implements Config {
               ? 0n
               : BigInt(
                   Math.min(
-                    3_000_000,
-                    (p.unitsConstructed(UnitType.SAMLauncher) + 1) * 1_500_000,
+                    2_000_000,
+                    (p.unitsConstructed(UnitType.SAMLauncher) + 1) * 1_000_000,
                   ),
                 ),
           territoryBound: true,
