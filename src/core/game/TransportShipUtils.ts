@@ -9,7 +9,7 @@ export function canBuildTransportShip(
   tile: TileRef,
 ): TileRef | false {
   if (
-    player.units(UnitType.TransportShip).length >= game.config().boatMaxNumber()
+    player.unitCount(UnitType.TransportShip) >= game.config().boatMaxNumber()
   ) {
     return false;
   }

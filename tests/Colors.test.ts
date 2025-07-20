@@ -1,12 +1,9 @@
 import { colord, Colord } from "colord";
 import {
-  blue,
-  botColor,
   ColorAllocator,
-  red,
-  selectDistinctColor,
-  teal,
-} from "../src/core/configuration/Colors";
+  selectDistinctColorIndex,
+} from "../src/core/configuration/ColorAllocator";
+import { blue, botColor, red, teal } from "../src/core/configuration/Colors";
 import { ColoredTeams } from "../src/core/game/Game";
 
 const mockColors: Colord[] = [
@@ -84,7 +81,7 @@ describe("ColorAllocator", () => {
 });
 
 describe("selectDistinctColor", () => {
-  test("returns a distinct color when one exceeds the delta threshold", () => {
+  test("returns the most distant color", () => {
     const assignedColors = [colord({ r: 255, g: 0, b: 0 })]; // bright red
     const availableColors = [
       colord({ r: 254, g: 1, b: 1 }), // too close
@@ -92,23 +89,12 @@ describe("selectDistinctColor", () => {
       colord({ r: 0, g: 0, b: 255 }), // distinct blue
     ];
 
-    const result = selectDistinctColor(availableColors, assignedColors, 25);
+    const result = selectDistinctColorIndex(availableColors, assignedColors);
     expect(result).not.toBeNull();
-    const rgb = result!.selectedColor.toRgb();
+    const rgb = availableColors[result!].toRgb();
     expect([
       { r: 0, g: 255, b: 0, a: 1 },
       { r: 0, g: 0, b: 255, a: 1 },
     ]).toContainEqual(rgb);
-  });
-
-  test("returns null if all available colors are too close", () => {
-    const assignedColors = [colord({ r: 255, g: 0, b: 0 })];
-    const availableColors = [
-      colord({ r: 250, g: 5, b: 5 }),
-      colord({ r: 245, g: 10, b: 10 }),
-    ];
-
-    const result = selectDistinctColor(availableColors, assignedColors, 50);
-    expect(result).toBeNull();
   });
 });

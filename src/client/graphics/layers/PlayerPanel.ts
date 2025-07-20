@@ -233,7 +233,7 @@ export class PlayerPanel extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed inset-0 flex items-center justify-center z-50 pointer-events-none overflow-auto"
+        class="fixed inset-0 flex items-center justify-center z-[1001] pointer-events-none overflow-auto"
         @contextmenu=${(e) => e.preventDefault()}
         @wheel=${(e) => e.stopPropagation()}
       >

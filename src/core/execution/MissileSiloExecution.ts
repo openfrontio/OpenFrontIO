@@ -25,25 +25,21 @@ export class MissileSiloExecution implements Execution {
         this.active = false;
         return;
       }
-      this.silo = this.player.buildUnit(UnitType.MissileSilo, spawn, {
-        cooldownDuration: this.mg.config().SiloCooldown(),
-      });
+      this.silo = this.player.buildUnit(UnitType.MissileSilo, spawn, {});
 
       if (this.player !== this.silo.owner()) {
         this.player = this.silo.owner();
       }
     }
 
-    const frontTime = this.silo.ticksLeftInCooldown();
+    // frontTime is the time the earliest missile fired.
+    const frontTime = this.silo.missileTimerQueue()[0];
     if (frontTime === undefined) {
       return;
     }
 
     const cooldown =
       this.mg.config().SiloCooldown() - (this.mg.ticks() - frontTime);
-    if (typeof cooldown === "number" && cooldown >= 0) {
-      this.silo.touch();
-    }
 
     if (cooldown <= 0) {
       this.silo.reloadMissile();

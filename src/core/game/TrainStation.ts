@@ -45,20 +45,13 @@ class PortStopHandler implements TrainStopHandler {
 }
 
 class FactoryStopHandler implements TrainStopHandler {
+  private factor: bigint = BigInt(2);
   onStop(
     mg: Game,
     station: TrainStation,
     trainExecution: TrainExecution,
   ): void {
-    const goldBonus = mg.config().trainGold();
-    station.unit.owner().addGold(goldBonus);
-    mg.addUpdate({
-      type: GameUpdateType.BonusEvent,
-      tile: station.tile(),
-      gold: Number(goldBonus),
-      workers: 0,
-      troops: 0,
-    });
+    station.unit.owner().addGold(mg.config().trainGold(), station.tile());
   }
 }
 
