@@ -199,7 +199,8 @@ export class GameServer {
             client.ws.send(
               JSON.stringify({
                 type: "error",
-                error: error.toString(),
+                error,
+                message,
               } satisfies ServerErrorMessage),
             );
             // Add a small delay before closing the connection to ensure the error message is received

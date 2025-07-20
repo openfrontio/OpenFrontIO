@@ -147,10 +147,9 @@ export class UnitImpl implements Unit {
     if (tile === null) {
       throw new Error("tile cannot be null");
     }
-    this.mg.removeUnit(this);
     this._lastTile = this._tile;
     this._tile = tile;
-    this.mg.addUnit(this);
+    this.mg.updateUnitTile(this);
     this.mg.addUpdate(this.toUpdate());
   }
 
