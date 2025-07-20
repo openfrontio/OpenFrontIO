@@ -450,6 +450,7 @@ export const ServerDesyncSchema = z.object({
 export const ServerErrorSchema = z.object({
   type: z.literal("error"),
   error: z.string(),
+  message: z.string().optional(),
 });
 
 export const ServerMessageSchema = z.discriminatedUnion("type", [
