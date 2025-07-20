@@ -738,7 +738,7 @@ export class GameImpl implements Game {
       this._railNetwork.removeStation(u);
     }
   }
-  updateUnitCell(u: Unit) {
+  updateUnitTile(u: Unit) {
     this.unitGrid.updateUnitCell(u);
   }
 

@@ -149,7 +149,7 @@ export class UnitImpl implements Unit {
     }
     this._lastTile = this._tile;
     this._tile = tile;
-    this.mg.updateUnitCell(this);
+    this.mg.updateUnitTile(this);
     this.mg.addUpdate(this.toUpdate());
   }
 
