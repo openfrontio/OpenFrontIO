@@ -21,7 +21,9 @@
     "instructions": "Instructions",
     "how_to_play": "How to Play",
     "advertise": "Advertise",
-    "wiki": "Wiki"
+    "wiki": "Wiki",
+    "privacy_policy": "Privacy Policy",
+    "terms_of_service": "Terms of Service"
   },
   "news": {
     "full_changelog": "See the complete change log",
@@ -573,6 +575,9 @@
       "grogu_head": "Grogu Head",
       "grogu": "Grogu"
     }
+  },
+  "spawn_ad": {
+    "loading": "Loading advertisement..."
   },
   "auth": {
     "login_required": "Login is required to access this website.",

@@ -103,7 +103,7 @@
     "build_atom_desc": "小型爆弹可摧毁领土、建筑、船只。从最近的导弹发射井发射并坠落在你初次点击部署它的区域。",
     "build_hydrogen": "氢弹",
     "build_hydrogen_desc": "大型爆弹。从最近的导弹发射井发射并坠落在你初次点击部署它的区域。",
-    "build_mirv": "MIRV (分导式多弹头)",
+    "build_mirv": "MIRV",
     "build_mirv_desc": "游戏中最强大的导弹。会分裂成多个小型导弹，覆盖大范围区域。只会对你最初点击发射时所选的玩家造成伤害。从最近的导弹发射井发射，并落在你最初点击发射的位置。",
     "player_icons": "玩家图标",
     "icon_desc": "您将遇到的一些游戏内图标及其含义的示例：",
@@ -190,7 +190,7 @@
     "not_string": "用户名必须是字符串。",
     "too_short": "用户名最少包含 {min} 个字符。",
     "too_long": "用户名不得超过 {max} 个字符。",
-    "invalid_chars": "用户名只能包含字母、 数字、 空格、 下划线和 [方括号]。"
+    "invalid_chars": "用户名只能包含字母、数字、空格、下划线和 [方括号]。"
   },
   "host_modal": {
     "title": "私人房间",
@@ -246,7 +246,7 @@
     "sam_launcher": "防空塔",
     "atom_bomb": "原子弹",
     "hydrogen_bomb": "氢弹",
-    "mirv": "MIRV (分导式多弹头)",
+    "mirv": "MIRV",
     "factory": "工厂"
   },
   "user_setting": {
@@ -386,8 +386,8 @@
       "hydrogen_bomb": "大型爆炸",
       "mirv": "巨型爆炸，仅针对选中的玩家",
       "missile_silo": "用于发射核弹",
-      "sam_launcher": "防御飞来的核弹",
-      "warship": "捕获商船、摧毁船只",
+      "sam_launcher": "抵御导弹攻击",
+      "warship": "俘获商船、摧毁船只和军舰",
       "port": "发送商船来获得黄金",
       "defense_post": "增加附近边界的防御力",
       "city": "增加最大人口"
@@ -410,7 +410,7 @@
     "rank": "排名",
     "player": "玩家",
     "team": "队伍",
-    "owned": "已拥有",
+    "owned": "已占领",
     "gold": "黄金",
     "troops": "军队",
     "show_top_5": "显示前 5 名",
