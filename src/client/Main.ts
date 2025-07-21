@@ -447,6 +447,9 @@ class Client {
           "game-top-bar",
           "help-modal",
           "user-setting",
+          "territory-patterns-modal",
+          "language-modal",
+          "news-modal",
         ].forEach((tag) => {
           const modal = document.querySelector(tag) as HTMLElement & {
             close?: () => void;
