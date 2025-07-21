@@ -48,8 +48,7 @@ export interface ServerConfig {
   r2AccessKey(): string;
   r2SecretKey(): string;
   otelEndpoint(): string;
-  otelUsername(): string;
-  otelPassword(): string;
+  otelAuthHeader(): string;
   otelEnabled(): boolean;
   jwtAudience(): string;
   jwtIssuer(): string;
