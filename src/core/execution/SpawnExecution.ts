@@ -20,6 +20,11 @@ export class SpawnExecution implements Execution {
   tick(ticks: number) {
     this.active = false;
 
+    if (!this.mg.isValidRef(this.tile)) {
+      console.warn(`SpawnExecution: tile ${this.tile} not valid`);
+      return;
+    }
+
     if (!this.mg.inSpawnPhase()) {
       this.active = false;
       return;

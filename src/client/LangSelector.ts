@@ -21,14 +21,14 @@ import ja from "../../resources/lang/ja.json";
 import ko from "../../resources/lang/ko.json";
 import nl from "../../resources/lang/nl.json";
 import pl from "../../resources/lang/pl.json";
-import pt_br from "../../resources/lang/pt_BR.json";
+import pt_BR from "../../resources/lang/pt_BR.json";
 import ru from "../../resources/lang/ru.json";
 import sh from "../../resources/lang/sh.json";
-import sv_se from "../../resources/lang/sv_SE.json";
+import sv_SE from "../../resources/lang/sv_SE.json";
 import tp from "../../resources/lang/tp.json";
 import tr from "../../resources/lang/tr.json";
 import uk from "../../resources/lang/uk.json";
-import zh_cn from "../../resources/lang/zh_CN.json";
+import zh_CN from "../../resources/lang/zh_CN.json";
 
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
@@ -55,7 +55,7 @@ export class LangSelector extends LitElement {
     ja,
     nl,
     pl,
-    pt_br,
+    pt_BR,
     ru,
     sh,
     tr,
@@ -65,8 +65,8 @@ export class LangSelector extends LitElement {
     he,
     da,
     fi,
-    sv_se,
-    zh_cn,
+    sv_SE,
+    zh_CN,
     ko,
     gl,
   };

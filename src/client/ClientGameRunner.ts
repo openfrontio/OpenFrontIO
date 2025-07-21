@@ -385,7 +385,7 @@ export class ClientGameRunner {
       !this.gameView.hasOwner(tile) &&
       this.gameView.inSpawnPhase()
     ) {
-      this.eventBus.emit(new SendSpawnIntentEvent(cell));
+      this.eventBus.emit(new SendSpawnIntentEvent(tile));
       return;
     }
     if (this.gameView.inSpawnPhase()) {
