@@ -255,8 +255,7 @@ export const SpawnIntentSchema = BaseIntentSchema.extend({
   flag: FlagSchema,
   pattern: PatternSchema,
   playerType: PlayerTypeSchema,
-  x: z.number(),
-  y: z.number(),
+  tile: z.number(),
 });
 
 export const BoatAttackIntentSchema = BaseIntentSchema.extend({
@@ -320,8 +319,7 @@ export const TargetTroopRatioIntentSchema = BaseIntentSchema.extend({
 export const BuildUnitIntentSchema = BaseIntentSchema.extend({
   type: z.literal("build_unit"),
   unit: z.enum(UnitType),
-  x: z.number(),
-  y: z.number(),
+  tile: z.number(),
 });
 
 export const UpgradeStructureIntentSchema = BaseIntentSchema.extend({

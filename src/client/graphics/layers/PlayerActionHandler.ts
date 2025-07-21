@@ -1,5 +1,5 @@
 import { EventBus } from "../../../core/EventBus";
-import { Cell, PlayerActions, PlayerID } from "../../../core/game/Game";
+import { PlayerActions, PlayerID } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { PlayerView } from "../../../core/game/GameView";
 import {
@@ -61,8 +61,9 @@ export class PlayerActionHandler {
   ): Promise<TileRef | false> {
     return await player.bestTransportShipSpawn(tile);
   }
-  handleSpawn(spawnCell: Cell) {
-    this.eventBus.emit(new SendSpawnIntentEvent(spawnCell));
+
+  handleSpawn(tile: TileRef) {
+    this.eventBus.emit(new SendSpawnIntentEvent(tile));
   }
 
   handleAllianceRequest(player: PlayerView, recipient: PlayerView) {

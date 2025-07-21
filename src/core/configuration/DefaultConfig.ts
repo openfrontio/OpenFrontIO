@@ -375,15 +375,9 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Warship:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : BigInt(
-                  Math.min(
-                    1_000_000,
-                    (p.unitsOwned(UnitType.Warship) + 1) * 250_000,
-                  ),
-                ),
+          cost: this.costWrapper(UnitType.Warship, (numUnits: number) =>
+            Math.min(1_000_000, (numUnits + 1) * 250_000),
+          ),
           territoryBound: false,
           maxHealth: 1000,
         };
@@ -400,15 +394,9 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Port:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : BigInt(
-                  Math.min(
-                    1_000_000,
-                    Math.pow(2, p.unitsConstructed(UnitType.Port)) * 125_000,
-                  ),
-                ),
+          cost: this.costWrapper(UnitType.Port, (numUnits: number) =>
+            Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+          ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
@@ -416,26 +404,17 @@ export class DefaultConfig implements Config {
         };
       case UnitType.AtomBomb:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : 750_000n,
+          cost: this.costWrapper(UnitType.AtomBomb, () => 750_000),
           territoryBound: false,
         };
       case UnitType.HydrogenBomb:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : 5_000_000n,
+          cost: this.costWrapper(UnitType.HydrogenBomb, () => 5_000_000),
           territoryBound: false,
         };
       case UnitType.MIRV:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : 35_000_000n,
+          cost: this.costWrapper(UnitType.MIRV, () => 35_000_000),
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -450,54 +429,33 @@ export class DefaultConfig implements Config {
         };
       case UnitType.MissileSilo:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : 1_000_000n,
+          cost: this.costWrapper(UnitType.MissileSilo, () => 1_000_000),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 10 * 10,
           upgradable: true,
         };
       case UnitType.DefensePost:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : BigInt(
-                  Math.min(
-                    250_000,
-                    (p.unitsConstructed(UnitType.DefensePost) + 1) * 50_000,
-                  ),
-                ),
+          cost: this.costWrapper(UnitType.DefensePost, (numUnits: number) =>
+            Math.min(250_000, (numUnits + 1) * 50_000),
+          ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
         };
       case UnitType.SAMLauncher:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : BigInt(
-                  Math.min(
-                    3_000_000,
-                    (p.unitsConstructed(UnitType.SAMLauncher) + 1) * 1_500_000,
-                  ),
-                ),
+          cost: this.costWrapper(UnitType.SAMLauncher, (numUnits: number) =>
+            Math.min(3_000_000, (numUnits + 1) * 1_500_000),
+          ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 30 * 10,
           upgradable: true,
         };
       case UnitType.City:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : BigInt(
-                  Math.min(
-                    1_000_000,
-                    Math.pow(2, p.unitsConstructed(UnitType.City)) * 125_000,
-                  ),
-                ),
+          cost: this.costWrapper(UnitType.City, (numUnits: number) =>
+            Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+          ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
@@ -505,15 +463,9 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Factory:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : BigInt(
-                  Math.min(
-                    1_000_000,
-                    Math.pow(2, p.unitsConstructed(UnitType.Factory)) * 125_000,
-                  ),
-                ),
+          cost: this.costWrapper(UnitType.Factory, (numUnits: number) =>
+            Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+          ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           canBuildTrainStation: true,
@@ -535,6 +487,20 @@ export class DefaultConfig implements Config {
         assertNever(type);
     }
   }
+
+  private costWrapper(
+    type: UnitType,
+    costFn: (units: number) => number,
+  ): (p: Player) => bigint {
+    return (p: Player) => {
+      if (p.type() === PlayerType.Human && this.infiniteGold()) {
+        return 0n;
+      }
+      const numUnits = Math.min(p.unitsOwned(type), p.unitsConstructed(type));
+      return BigInt(costFn(numUnits));
+    };
+  }
+
   defaultDonationAmount(sender: Player): number {
     return Math.floor(sender.troops() / 3);
   }
