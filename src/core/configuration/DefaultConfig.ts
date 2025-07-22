@@ -800,7 +800,7 @@ export class DefaultConfig implements Config {
       case UnitType.AtomBomb:
         return { inner: 12, outer: 30 };
       case UnitType.HydrogenBomb:
-        return { inner: 80, outer: 100 };
+        return { inner: 24, outer: 60 };
     }
     throw new Error(`Unknown nuke type: ${unitType}`);
   }
