@@ -183,9 +183,7 @@ export class GameServer {
 
     this.allClients.set(client.clientID, client);
 
-    client.ws.removeAllListeners("message");
-    client.ws.removeAllListeners("close");
-    client.ws.removeAllListeners("error");
+    client.ws.removeAllListeners();
     client.ws.on(
       "message",
       gatekeeper.wsHandler(client.ip, async (message: string) => {
@@ -405,7 +403,7 @@ export class GameServer {
     // Close all WebSocket connections
     clearInterval(this.endTurnIntervalID);
     this.allClients.forEach((client) => {
-      client.ws.removeAllListeners("message");
+      client.ws.removeAllListeners();
       if (client.ws.readyState === WebSocket.OPEN) {
         client.ws.close(1000, "game has ended");
       }
@@ -559,6 +557,7 @@ export class GameServer {
         this.activeClients = this.activeClients.filter(
           (c) => c.clientID !== clientID,
         );
+        client.ws.removeAllListeners();
         this.kickedClients.add(clientID);
       }, 100);
     } else {
