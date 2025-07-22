@@ -119,19 +119,16 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   otelEnabled(): boolean {
     return (
+      this.env() !== GameEnv.Dev &&
       Boolean(this.otelEndpoint()) &&
-      Boolean(this.otelUsername()) &&
-      Boolean(this.otelPassword())
+      Boolean(this.otelAuthHeader())
     );
   }
   otelEndpoint(): string {
-    return process.env.OTEL_ENDPOINT ?? "";
+    return process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "";
   }
-  otelUsername(): string {
-    return process.env.OTEL_USERNAME ?? "";
-  }
-  otelPassword(): string {
-    return process.env.OTEL_PASSWORD ?? "";
+  otelAuthHeader(): string {
+    return process.env.OTEL_AUTH_HEADER ?? "";
   }
   gitCommit(): string {
     return process.env.GIT_COMMIT ?? "";
