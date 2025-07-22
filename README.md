@@ -15,6 +15,9 @@ This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 
 # OpenFront - Licensing
 
+OpenFront Contributor License Agreement (CLA) can be found [here](https://gist.github.com/evanpelle/4c9e0fc2cb73b2b3b3402ca202f56672).
+This is to help us transition to AGPL, a stricter open source license. After creating a pull request you will be prompted to sign.
+
 This project uses a multi-licensing approach:
 
 - Code in the `server/` and `core/` directory is licensed under MIT
