@@ -8,25 +8,34 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { PseudoRandom } from "../../../core/PseudoRandom";
-import { AlternateViewEvent, DragEvent } from "../../InputHandler";
+import {
+  AlternateViewEvent,
+  DragEvent,
+  RefreshGraphicsEvent,
+} from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { WebGLUtils } from "../webgl/WebGLUtils";
 import { Layer } from "./Layer";
-import { TerritoryLayer } from "./TerritoryLayer";
 
 export class WebGLTerritoryLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private gl: WebGLRenderingContext | null = null;
   private program: WebGLProgram | null = null;
   private texture: WebGLTexture | null = null;
-  private fallbackLayer: TerritoryLayer | null = null;
-  private isWebGLInitialized = false;
+  private ownerTexture: WebGLTexture | null = null;
+  private vertexBuffer: WebGLBuffer | null = null;
   private theme: Theme;
   private textureUniformLocation: WebGLUniformLocation | null = null;
+  private ownerTextureUniformLocation: WebGLUniformLocation | null = null;
+  private textureSizeUniformLocation: WebGLUniformLocation | null = null;
+  private focusedBorderColorUniformLocation: WebGLUniformLocation | null = null;
+  private hasFocusedPlayerUniformLocation: WebGLUniformLocation | null = null;
+  private focusedPlayerIdUniformLocation: WebGLUniformLocation | null = null;
   private needsRedraw = false;
 
   private userSettings: UserSettings;
   private textureData: Uint8Array | null = null;
+  private ownerTextureData: Uint8Array | null = null;
   private tileToRenderQueue: PriorityQueue<{
     tile: TileRef;
     lastUpdate: number;
@@ -34,6 +43,7 @@ export class WebGLTerritoryLayer implements Layer {
     return a.lastUpdate - b.lastUpdate;
   });
   private random = new PseudoRandom(123);
+  private cachedTerritoryPatternsEnabled: boolean | undefined;
 
   // Used for spawn highlighting
   private highlightCanvas: HTMLCanvasElement;
@@ -62,10 +72,78 @@ export class WebGLTerritoryLayer implements Layer {
   private static readonly FRAGMENT_SHADER_SOURCE = `
     precision mediump float;
     uniform sampler2D u_texture;
+    uniform sampler2D u_ownerTexture;
+    uniform vec2 u_textureSize;
+    uniform vec3 u_focusedBorderColor;
+    uniform float u_hasFocusedPlayer;
+    uniform int u_focusedPlayerId;
     varying vec2 v_texCoord;
     
+    // Helper function to get owner ID from owner texture
+    int getOwnerId(vec2 coord) {
+      vec4 ownerData = texture2D(u_ownerTexture, coord);
+      // Owner ID is encoded in the red channel (0-255 range)
+      return int(ownerData.r * 255.0);
+    }
+    
+    // Check if a pixel is a border by comparing with neighbors
+    bool isBorder(vec2 coord, int ownerId) {
+      vec2 texelSize = 1.0 / u_textureSize;
+      
+      // Check 4-connected neighbors
+      vec2 neighbors[4];
+      neighbors[0] = coord + vec2(-texelSize.x, 0.0); // left
+      neighbors[1] = coord + vec2(texelSize.x, 0.0);  // right
+      neighbors[2] = coord + vec2(0.0, -texelSize.y); // up
+      neighbors[3] = coord + vec2(0.0, texelSize.y);  // down
+      
+      for (int i = 0; i < 4; i++) {
+        // Check bounds
+        if (neighbors[i].x < 0.0 || neighbors[i].x > 1.0 || 
+            neighbors[i].y < 0.0 || neighbors[i].y > 1.0) {
+          return true; // Edge of map is considered border
+        }
+        
+        int neighborOwnerId = getOwnerId(neighbors[i]);
+        if (neighborOwnerId != ownerId) {
+          return true;
+        }
+      }
+      
+      return false;
+    }
+    
+    // Compute border color by darkening the territory color
+    vec3 computeBorderColor(vec3 territoryColor) {
+      // Darken the territory color for border (similar to theme.borderColor logic)
+      return territoryColor * 0.7; // Darken by 30%
+    }
+    
     void main() {
-      gl_FragColor = texture2D(u_texture, v_texCoord);
+      vec4 territoryColor = texture2D(u_texture, v_texCoord);
+      
+      // If pixel is transparent, just return it
+      if (territoryColor.a == 0.0) {
+        gl_FragColor = territoryColor;
+        return;
+      }
+      
+      int ownerId = getOwnerId(v_texCoord);
+      
+      // Check if this pixel is a border
+      if (isBorder(v_texCoord, ownerId)) {
+        // Check if this is the focused player's border
+        if (u_hasFocusedPlayer > 0.5 && ownerId == u_focusedPlayerId) {
+          gl_FragColor = vec4(u_focusedBorderColor, 1.0);
+        } else {
+          // Compute border color from territory color
+          vec3 borderColor = computeBorderColor(territoryColor.rgb);
+          gl_FragColor = vec4(borderColor, 1.0);
+        }
+      } else {
+        // Regular territory color
+        gl_FragColor = territoryColor;
+      }
     }
   `;
 
@@ -95,18 +173,15 @@ export class WebGLTerritoryLayer implements Layer {
   async paintPlayerBorder(player: PlayerView) {
     const tiles = await player.borderTiles();
     tiles.borderTiles.forEach((tile: TileRef) => {
-      this.paintTerritory(tile, true); // Immediately paint the tile instead of enqueueing
+      this.paintTerritory(tile, true);
     });
   }
 
   tick() {
-    if (this.fallbackLayer) {
-      this.fallbackLayer.tick();
-      return;
-    }
-
-    if (!this.isWebGLInitialized) {
-      return;
+    const prev = this.cachedTerritoryPatternsEnabled;
+    this.cachedTerritoryPatternsEnabled = this.userSettings.territoryPatterns();
+    if (prev !== undefined && prev !== this.cachedTerritoryPatternsEnabled) {
+      this.eventBus.emit(new RefreshGraphicsEvent());
     }
 
     this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
@@ -187,8 +262,6 @@ export class WebGLTerritoryLayer implements Layer {
   }
 
   init() {
-    console.log("WEBGL TERRITORY LAYER: Initializing WebGL territory layer");
-
     this.eventBus.on(AlternateViewEvent, (e) => {
       this.alternativeView = e.alternateView;
     });
@@ -197,44 +270,19 @@ export class WebGLTerritoryLayer implements Layer {
       // this.lastDragTime = Date.now();
     });
 
-    if (!WebGLUtils.isWebGLSupported()) {
-      console.warn(
-        "🟢 WEBGL TERRITORY LAYER: WebGL not supported, falling back to canvas territory layer",
-      );
-      this.fallbackToCanvas();
-      return;
-    }
-
     if (this.initWebGL()) {
-      console.log(
-        "🟢 WEBGL TERRITORY LAYER: WebGL territory layer initialized successfully - YOU SHOULD SEE TERRITORY COLORS!",
-      );
-      this.isWebGLInitialized = true;
       this.redraw();
-    } else {
-      console.warn(
-        "🟢 WEBGL TERRITORY LAYER: WebGL initialization failed, falling back to canvas territory layer",
-      );
-      this.fallbackToCanvas();
     }
   }
 
   redraw() {
-    if (!this.isWebGLInitialized) {
-      if (this.fallbackLayer) {
-        this.fallbackLayer.redraw();
-      }
-      return;
-    }
-
-    console.log("🟢 WEBGL TERRITORY LAYER: redrew territory layer");
-
     // Set up highlight canvas dimensions
     this.highlightCanvas.width = this.game.width();
     this.highlightCanvas.height = this.game.height();
 
     // Initialize texture data and render all territories
     this.initTextureData();
+    this.initOwnerTextureData();
     this.game.forEachTile((t) => {
       this.paintTerritory(t);
     });
@@ -243,15 +291,6 @@ export class WebGLTerritoryLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
-    if (this.fallbackLayer) {
-      this.fallbackLayer.renderLayer(context);
-      return;
-    }
-
-    if (!this.isWebGLInitialized) {
-      return;
-    }
-
     const now = Date.now();
     if (
       now > this.lastDragTime + this.nodrawDragDuration &&
@@ -347,8 +386,8 @@ export class WebGLTerritoryLayer implements Layer {
       0.0, // Top right
     ]);
 
-    const vertexBuffer = this.gl.createBuffer();
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vertexBuffer);
+    this.vertexBuffer = this.gl.createBuffer();
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexBuffer);
     this.gl.bufferData(this.gl.ARRAY_BUFFER, vertexData, this.gl.STATIC_DRAW);
 
     const positionAttributeLocation = this.gl.getAttribLocation(
@@ -387,10 +426,34 @@ export class WebGLTerritoryLayer implements Layer {
       return false;
     }
 
-    // Cache uniform location to avoid lookup on every frame
+    this.ownerTexture = this.createOwnerTexture();
+    if (!this.ownerTexture) {
+      console.error("Failed to create owner texture");
+      return false;
+    }
     this.textureUniformLocation = this.gl.getUniformLocation(
       this.program,
       "u_texture",
+    );
+    this.ownerTextureUniformLocation = this.gl.getUniformLocation(
+      this.program,
+      "u_ownerTexture",
+    );
+    this.textureSizeUniformLocation = this.gl.getUniformLocation(
+      this.program,
+      "u_textureSize",
+    );
+    this.focusedBorderColorUniformLocation = this.gl.getUniformLocation(
+      this.program,
+      "u_focusedBorderColor",
+    );
+    this.hasFocusedPlayerUniformLocation = this.gl.getUniformLocation(
+      this.program,
+      "u_hasFocusedPlayer",
+    );
+    this.focusedPlayerIdUniformLocation = this.gl.getUniformLocation(
+      this.program,
+      "u_focusedPlayerId",
     );
 
     return true;
@@ -417,6 +480,25 @@ export class WebGLTerritoryLayer implements Layer {
     return texture;
   }
 
+  private createOwnerTexture(): WebGLTexture | null {
+    if (!this.gl) {
+      return null;
+    }
+
+    const width = this.game.width();
+    const height = this.game.height();
+    this.ownerTextureData = new Uint8Array(width * height * 4); // RGBA
+    this.initOwnerTextureData();
+
+    const texture = WebGLUtils.createTexture(
+      this.gl,
+      width,
+      height,
+      this.ownerTextureData,
+    );
+    return texture;
+  }
+
   private initTextureData() {
     if (!this.textureData) {
       return;
@@ -431,23 +513,68 @@ export class WebGLTerritoryLayer implements Layer {
     });
   }
 
+  private initOwnerTextureData() {
+    if (!this.ownerTextureData) {
+      return;
+    }
+
+    // Initialize owner texture with owner IDs
+    this.game.forEachTile((tile) => {
+      const cell = new Cell(this.game.x(tile), this.game.y(tile));
+      const index = cell.y * this.game.width() + cell.x;
+      const offset = index * 4;
+
+      if (this.game.hasOwner(tile)) {
+        const ownerId = this.game.ownerID(tile);
+        // Encode owner ID in red channel (0-255 range)
+        this.ownerTextureData![offset] = Math.min(255, Math.max(0, ownerId));
+        this.ownerTextureData![offset + 1] = 0; // Green channel unused
+        this.ownerTextureData![offset + 2] = 0; // Blue channel unused
+        this.ownerTextureData![offset + 3] = 255; // Full alpha
+      } else {
+        // No owner - set to transparent
+        this.ownerTextureData![offset] = 0;
+        this.ownerTextureData![offset + 1] = 0;
+        this.ownerTextureData![offset + 2] = 0;
+        this.ownerTextureData![offset + 3] = 0;
+      }
+    });
+  }
+
   private uploadTextureData() {
     if (!this.gl || !this.texture || !this.textureData) {
       return;
     }
 
+    this.gl.activeTexture(this.gl.TEXTURE0);
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
     this.gl.texImage2D(
       this.gl.TEXTURE_2D,
-      0,
+      0, // mip level
       this.gl.RGBA,
       this.game.width(),
       this.game.height(),
-      0,
+      0, // border
       this.gl.RGBA,
       this.gl.UNSIGNED_BYTE,
       this.textureData,
     );
+
+    if (this.ownerTexture && this.ownerTextureData) {
+      this.gl.activeTexture(this.gl.TEXTURE1);
+      this.gl.bindTexture(this.gl.TEXTURE_2D, this.ownerTexture);
+      this.gl.texImage2D(
+        this.gl.TEXTURE_2D,
+        0,
+        this.gl.RGBA,
+        this.game.width(),
+        this.game.height(),
+        0,
+        this.gl.RGBA,
+        this.gl.UNSIGNED_BYTE,
+        this.ownerTextureData,
+      );
+    }
   }
 
   private renderToCanvas(): void {
@@ -464,10 +591,53 @@ export class WebGLTerritoryLayer implements Layer {
     this.gl.clearColor(0.0, 0.0, 0.0, 0.0);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
     this.gl.useProgram(this.program);
+
+    // Bind territory texture to texture unit 0
     this.gl.activeTexture(this.gl.TEXTURE0);
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
     if (this.textureUniformLocation) {
       this.gl.uniform1i(this.textureUniformLocation, 0);
+    }
+
+    // Bind owner texture to texture unit 1
+    if (this.ownerTexture && this.ownerTextureUniformLocation) {
+      this.gl.activeTexture(this.gl.TEXTURE1);
+      this.gl.bindTexture(this.gl.TEXTURE_2D, this.ownerTexture);
+      this.gl.uniform1i(this.ownerTextureUniformLocation, 1);
+    }
+
+    // Set texture size uniform
+    if (this.textureSizeUniformLocation) {
+      this.gl.uniform2f(
+        this.textureSizeUniformLocation,
+        this.game.width(),
+        this.game.height(),
+      );
+    }
+
+    const focusedPlayer = this.game.focusedPlayer();
+    if (
+      focusedPlayer &&
+      this.focusedBorderColorUniformLocation &&
+      this.hasFocusedPlayerUniformLocation &&
+      this.focusedPlayerIdUniformLocation
+    ) {
+      this.gl.uniform1f(this.hasFocusedPlayerUniformLocation, 1.0);
+
+      const playerId = focusedPlayer.smallID();
+      this.gl.uniform1i(this.focusedPlayerIdUniformLocation, playerId);
+
+      const focusedBorderColor = this.theme.focusedBorderColor();
+      this.gl.uniform3f(
+        this.focusedBorderColorUniformLocation,
+        focusedBorderColor.rgba.r / 255.0,
+        focusedBorderColor.rgba.g / 255.0,
+        focusedBorderColor.rgba.b / 255.0,
+      );
+    } else {
+      if (this.hasFocusedPlayerUniformLocation) {
+        this.gl.uniform1f(this.hasFocusedPlayerUniformLocation, 0.0);
+      }
     }
 
     // Draw the textured quad
@@ -543,8 +713,23 @@ export class WebGLTerritoryLayer implements Layer {
         this.paintTile(tile, useBorderColor, 255);
       }
     } else {
-      // For now, only render solid colors (no patterns)
-      this.paintTile(tile, this.theme.territoryColor(owner), 150);
+      const pattern = owner.cosmetics.pattern;
+      const patternsEnabled = this.cachedTerritoryPatternsEnabled ?? false;
+
+      if (pattern === undefined || patternsEnabled === false) {
+        const territoryColor = this.theme.territoryColor(owner);
+        this.paintTile(tile, territoryColor, 150);
+      } else {
+        const x = this.game.x(tile);
+        const y = this.game.y(tile);
+        const baseColor = this.theme.territoryColor(owner);
+
+        const decoder = owner.patternDecoder();
+        const color = decoder?.isSet(x, y)
+          ? baseColor.darken(0.125)
+          : baseColor;
+        this.paintTile(tile, color, 150);
+      }
     }
   }
 
@@ -558,6 +743,7 @@ export class WebGLTerritoryLayer implements Layer {
     this.textureData[offset + 1] = color.rgba.g;
     this.textureData[offset + 2] = color.rgba.b;
     this.textureData[offset + 3] = alpha;
+    this.updateOwnerTile(tile);
   }
 
   clearTile(tile: TileRef) {
@@ -566,7 +752,31 @@ export class WebGLTerritoryLayer implements Layer {
     }
 
     const offset = tile * 4;
-    this.textureData[offset + 3] = 0; // Set alpha to 0 (fully transparent)
+    this.textureData[offset + 3] = 0;
+    this.updateOwnerTile(tile);
+  }
+
+  private updateOwnerTile(tile: TileRef) {
+    if (!this.ownerTextureData) {
+      return;
+    }
+
+    const offset = tile * 4;
+
+    if (this.game.hasOwner(tile)) {
+      const ownerId = this.game.ownerID(tile);
+      // Encode owner ID in red channel (0-255 range)
+      this.ownerTextureData[offset] = Math.min(255, Math.max(0, ownerId));
+      this.ownerTextureData[offset + 1] = 0; // Green channel unused
+      this.ownerTextureData[offset + 2] = 0; // Blue channel unused
+      this.ownerTextureData[offset + 3] = 255; // Full alpha
+    } else {
+      // No owner - set to transparent
+      this.ownerTextureData[offset] = 0;
+      this.ownerTextureData[offset + 1] = 0;
+      this.ownerTextureData[offset + 2] = 0;
+      this.ownerTextureData[offset + 3] = 0;
+    }
   }
 
   enqueueTile(tile: TileRef) {
@@ -597,13 +807,34 @@ export class WebGLTerritoryLayer implements Layer {
     this.highlightContext.clearRect(x, y, 1, 1);
   }
 
-  private fallbackToCanvas(): void {
-    this.fallbackLayer = new TerritoryLayer(
-      this.game,
-      this.eventBus,
-      this.transformHandler,
-      this.userSettings,
-    );
-    this.fallbackLayer.init();
+  dispose() {
+    if (!this.gl) {
+      return;
+    }
+
+    if (this.texture) {
+      this.gl.deleteTexture(this.texture);
+      this.texture = null;
+    }
+
+    if (this.ownerTexture) {
+      this.gl.deleteTexture(this.ownerTexture);
+      this.ownerTexture = null;
+    }
+
+    if (this.vertexBuffer) {
+      this.gl.deleteBuffer(this.vertexBuffer);
+      this.vertexBuffer = null;
+    }
+
+    if (this.program) {
+      this.gl.deleteProgram(this.program);
+      this.program = null;
+    }
+
+    this.textureData = null;
+    this.ownerTextureData = null;
+
+    this.gl = null;
   }
 }

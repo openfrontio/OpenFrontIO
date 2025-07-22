@@ -365,6 +365,7 @@ export class ClientGameRunner {
       clearInterval(this.connectionCheckInterval);
       this.connectionCheckInterval = null;
     }
+    this.renderer.dispose();
   }
 
   private inputEvent(event: MouseUpEvent) {
