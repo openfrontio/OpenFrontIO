@@ -199,7 +199,8 @@ export class GameServer {
             client.ws.send(
               JSON.stringify({
                 type: "error",
-                error: error.toString(),
+                error,
+                message,
               } satisfies ServerErrorMessage),
             );
             // Add a small delay before closing the connection to ensure the error message is received
@@ -694,7 +695,7 @@ export class GameServer {
     for (const client of this.activeClients) {
       if (client.hashes.has(turnNumber)) {
         const clientHash = client.hashes.get(turnNumber)!;
-        counts.set(clientHash, (counts.get(clientHash) || 0) + 1);
+        counts.set(clientHash, (counts.get(clientHash) ?? 0) + 1);
       }
     }
 

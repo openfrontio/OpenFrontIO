@@ -32,6 +32,7 @@ describe("AllianceExtensionExecution", () => {
   });
 
   test("Successfully extends existing alliance", () => {
+    jest.spyOn(player1, "canSendAllianceRequest").mockReturnValue(true);
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
     game.executeNextTick();
     game.executeNextTick();

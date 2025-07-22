@@ -369,6 +369,11 @@ label.option-card:hover {
   mask: url("../../resources/images/CityIconWhite.svg") no-repeat center / cover;
 }
 
+#helpModal .factory-icon {
+  mask: url("../../resources/images/FactoryIconWhite.svg") no-repeat center /
+    cover;
+}
+
 #helpModal .defense-post-icon {
   mask: url("../../resources/images/ShieldIconWhite.svg") no-repeat center /
     cover;
@@ -626,7 +631,7 @@ label.option-card:hover {
 }
 
 /* News Button Notification */
-.news-button .active button {
+news-button .active button {
   position: relative;
   border-color: #2563eb !important;
   border-width: 2px !important;

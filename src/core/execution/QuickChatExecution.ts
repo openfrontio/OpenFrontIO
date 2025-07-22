@@ -35,7 +35,7 @@ export class QuickChatExecution implements Execution {
       this.target,
       this.recipient.id(),
       true,
-      this.sender.name(),
+      this.sender.id(),
     );
 
     this.mg.displayChat(
@@ -44,11 +44,11 @@ export class QuickChatExecution implements Execution {
       this.target,
       this.sender.id(),
       false,
-      this.recipient.name(),
+      this.recipient.id(),
     );
 
     console.log(
-      `[QuickChat] ${this.sender.name} → ${this.recipient.name}: ${message}`,
+      `[QuickChat] ${this.sender.name} → ${this.recipient.displayName}: ${message}`,
     );
 
     this.active = false;

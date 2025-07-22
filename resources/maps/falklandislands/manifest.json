@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 1400,
-    "num_land_tiles": 929295,
+    "num_land_tiles": 859274,
     "width": 2100
   },
   "mini_map": {
     "height": 700,
-    "num_land_tiles": 226784,
+    "num_land_tiles": 208351,
     "width": 1050
   },
   "name": "Falkland Islands",

@@ -162,7 +162,7 @@ export const TeamSchema = z.string();
 const SafeString = z
   .string()
   .regex(
-    /^([a-zA-Z0-9\s.,!?@#$%&*()\-_+=\[\]{}|;:"'\/\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|üÜ])*$/,
+    /^([a-zA-Z0-9\s.,!?@#$%&*()\-_+=[\]{}|;:"'/\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|[üÜ])*$/u,
   )
   .max(1000);
 
@@ -255,8 +255,7 @@ export const SpawnIntentSchema = BaseIntentSchema.extend({
   flag: FlagSchema,
   pattern: PatternSchema,
   playerType: PlayerTypeSchema,
-  x: z.number(),
-  y: z.number(),
+  tile: z.number(),
 });
 
 export const BoatAttackIntentSchema = BaseIntentSchema.extend({
@@ -320,8 +319,7 @@ export const TargetTroopRatioIntentSchema = BaseIntentSchema.extend({
 export const BuildUnitIntentSchema = BaseIntentSchema.extend({
   type: z.literal("build_unit"),
   unit: z.enum(UnitType),
-  x: z.number(),
-  y: z.number(),
+  tile: z.number(),
 });
 
 export const UpgradeStructureIntentSchema = BaseIntentSchema.extend({
@@ -450,6 +448,7 @@ export const ServerDesyncSchema = z.object({
 export const ServerErrorSchema = z.object({
   type: z.literal("error"),
   error: z.string(),
+  message: z.string().optional(),
 });
 
 export const ServerMessageSchema = z.discriminatedUnion("type", [

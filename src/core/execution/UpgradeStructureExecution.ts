@@ -18,12 +18,11 @@ export class UpgradeStructureExecution implements Execution {
       console.warn(`structure is undefined`);
       return;
     }
-    if (!this.structure.info().upgradable) {
-      console.warn(`unit type ${this.structure} cannot be upgraded`);
-      return;
-    }
-    this.cost = this.structure.info().cost(this.player);
-    if (this.player.gold() < this.cost) {
+
+    if (!this.player.canUpgradeUnit(this.structure.type())) {
+      console.warn(
+        `[UpgradeStructureExecution] unit type ${this.structure.type()} cannot be upgraded`,
+      );
       return;
     }
     this.player.upgradeUnit(this.structure);

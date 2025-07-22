@@ -34,10 +34,34 @@ export class UnitGrid {
   // Remove a unit from the grid
   removeUnit(unit: Unit | UnitView) {
     const tile = unit.tile();
+    this.removeUnitByTile(unit, tile);
+  }
+
+  removeUnitByTile(unit: Unit | UnitView, tile: TileRef) {
     const [gridX, gridY] = this.getGridCoords(this.gm.x(tile), this.gm.y(tile));
 
     if (this.isValidCell(gridX, gridY)) {
       this.grid[gridY][gridX].delete(unit);
+    }
+  }
+
+  /**
+   * Move an unit to its new cell if it changed
+   */
+  updateUnitCell(unit: Unit | UnitView) {
+    const newTile = unit.tile();
+    const oldTile = unit.lastTile();
+    const [gridX, gridY] = this.getGridCoords(
+      this.gm.x(oldTile),
+      this.gm.y(oldTile),
+    );
+    const [newGridX, newGridY] = this.getGridCoords(
+      this.gm.x(newTile),
+      this.gm.y(newTile),
+    );
+    if (gridX !== newGridX || gridY !== newGridY) {
+      this.removeUnitByTile(unit, oldTile);
+      this.addUnit(unit);
     }
   }
 
