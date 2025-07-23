@@ -100,17 +100,6 @@ export function joinLobby(
         terrainLoad,
       ).then((r) => r.start());
     }
-    if (message.type === "error") {
-      showErrorModal(
-        message.error,
-        message.message,
-        lobbyConfig.gameID,
-        lobbyConfig.clientID,
-        true,
-        false,
-        "error_modal.connection_error",
-      );
-    }
   };
   transport.connect(onconnect, onmessage);
   return () => {
@@ -324,17 +313,6 @@ export class ClientGameRunner {
           true,
           false,
           "error_modal.desync_notice",
-        );
-      }
-      if (message.type === "error") {
-        showErrorModal(
-          message.error,
-          message.message,
-          this.lobby.gameID,
-          this.lobby.clientID,
-          true,
-          false,
-          "error_modal.connection_error",
         );
       }
       if (message.type === "turn") {

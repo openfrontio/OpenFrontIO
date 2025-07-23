@@ -13,7 +13,6 @@ import {
   Intent,
   PlayerRecord,
   ServerDesyncSchema,
-  ServerErrorMessage,
   ServerPrestartMessageSchema,
   ServerStartGameMessage,
   ServerTurnMessage,
@@ -194,17 +193,8 @@ export class GameServer {
             this.log.error("Failed to parse client message", error, {
               clientID: client.clientID,
             });
-            client.ws.send(
-              JSON.stringify({
-                type: "error",
-                error,
-                message,
-              } satisfies ServerErrorMessage),
-            );
-            // Add a small delay before closing the connection to ensure the error message is received
-            setTimeout(() => {
-              client.ws.close(1002, "ClientMessageSchema");
-            }, 100);
+            client.ws.removeAllListeners();
+            client.ws.close(1002, `Invalid client message: ${error}`);
             return;
           }
           const clientMsg = parsed.data;
@@ -545,21 +535,15 @@ export class GameServer {
         clientID: client.clientID,
         persistentID: client.persistentID,
       });
-      client.ws.send(
-        JSON.stringify({
-          type: "error",
-          error: "Kicked from game (you may have been playing on another tab)",
-        } satisfies ServerErrorMessage),
+      client.ws.close(
+        1002,
+        "Kicked from game (you may have been playing on another tab)",
       );
-      // Add a small delay before closing the connection to ensure the error message is received
-      setTimeout(() => {
-        client.ws.close(1000, "Kicked from game");
-        this.activeClients = this.activeClients.filter(
-          (c) => c.clientID !== clientID,
-        );
-        client.ws.removeAllListeners();
-        this.kickedClients.add(clientID);
-      }, 100);
+      this.activeClients = this.activeClients.filter(
+        (c) => c.clientID !== clientID,
+      );
+      client.ws.removeAllListeners();
+      this.kickedClients.add(clientID);
     } else {
       this.log.warn(`cannot kick client, not found in game`, {
         clientID,

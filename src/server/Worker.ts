@@ -15,7 +15,6 @@ import {
   ClientMessageSchema,
   GameRecord,
   GameRecordSchema,
-  ServerErrorMessage,
 } from "../core/Schemas";
 import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
 import { archive, readGameRecord } from "./Archive";
@@ -310,14 +309,8 @@ export function startWorker() {
           if (!parsed.success) {
             const error = z.prettifyError(parsed.error);
             log.warn("Error parsing client message", error);
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                error: error.toString(),
-              } satisfies ServerErrorMessage),
-            );
             ws.removeAllListeners();
-            ws.close(1002, "ClientJoinMessageSchema");
+            ws.close(1002, `Failed to parse client message: ${error}`);
             return;
           }
           const clientMsg = parsed.data;
@@ -328,14 +321,8 @@ export function startWorker() {
           } else if (clientMsg.type !== "join") {
             const error = `Invalid message before join: ${JSON.stringify(clientMsg)}`;
             log.warn(error);
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                error,
-              } satisfies ServerErrorMessage),
-            );
             ws.removeAllListeners();
-            ws.close(1002, "ClientJoinMessageSchema");
+            ws.close(1002, error);
             return;
           }
 
