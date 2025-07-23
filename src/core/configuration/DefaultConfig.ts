@@ -520,7 +520,7 @@ export class DefaultConfig implements Config {
     return 30 * 10;
   }
   allianceDuration(): Tick {
-    return 600 * 10; // 10 minutes.
+    return 300 * 10; // 5 minutes.
   }
   temporaryEmbargoDuration(): Tick {
     return 300 * 10; // 5 minutes.
