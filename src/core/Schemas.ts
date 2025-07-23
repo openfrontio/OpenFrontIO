@@ -1,5 +1,5 @@
 import { base64url } from "jose";
-import { z } from "zod";
+import { z } from "zod/v4";
 import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
 import countries from "../client/data/countries.json" with { type: "json" };
 import {

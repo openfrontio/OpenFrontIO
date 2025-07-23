@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { UnitType } from "./game/Game";
 
 export const BombUnitSchema = z.union([
