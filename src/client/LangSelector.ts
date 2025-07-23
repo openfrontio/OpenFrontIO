@@ -94,14 +94,11 @@ export class LangSelector extends LitElement {
     if (!lang) return "en";
     if (lang in this.languageMap) return lang;
 
-    const delimiters = ["-", "_"];
-    for (const delimiter of delimiters) {
-      if (lang.includes(delimiter)) {
-        const parts = lang.split(delimiter);
-        for (let i = parts.length; i > 0; i--) {
-          const code = parts.slice(0, i).join("_");
-          if (code in this.languageMap) return code;
-        }
+    if (lang.includes("-")) {
+      const parts = lang.split("-");
+      for (let i = parts.length; i > 0; i--) {
+        const code = parts.slice(0, i).join("_");
+        if (code in this.languageMap) return code;
       }
     }
 
