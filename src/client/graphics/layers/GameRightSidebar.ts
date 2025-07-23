@@ -49,6 +49,17 @@ export class GameRightSidebar extends LitElement implements Layer {
     this._isVisible = true;
     this.game.inSpawnPhase();
     this.requestUpdate();
+
+    // if(this._isSinglePlayer) {
+    //   this.eventBus.on(PauseGameEvent, (event) => {
+    //     this.isPaused = event.paused;
+    //     this.requestUpdate();
+    //     // if(this.isPaused !== event.paused) {
+    //     //   this.isPaused = event.paused;
+    //     //   this.requestUpdate();
+    //     // }
+    //   });
+    // }
   }
 
   tick() {
@@ -99,7 +110,10 @@ export class GameRightSidebar extends LitElement implements Layer {
   }
 
   private onSettingsButtonClick() {
-    this.eventBus.emit(new ShowSettingsModalEvent(true));
+    const shouldPause = this._isSinglePlayer || this.game?.config()?.isReplay();
+    this.eventBus.emit(
+      new ShowSettingsModalEvent(true, shouldPause, this.isPaused),
+    );
   }
 
   render() {

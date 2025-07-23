@@ -1,5 +1,5 @@
 import { html, LitElement } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
+import { customElement, property, query, state } from "lit/decorators.js";
 import darkModeIcon from "../../../../resources/images/DarkModeIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
@@ -11,11 +11,16 @@ import treeIcon from "../../../../resources/images/TreeIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
+import { PauseGameEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 
 export class ShowSettingsModalEvent {
-  constructor(public readonly isVisible: boolean = true) {}
+  constructor(
+    public readonly isVisible: boolean = true,
+    public readonly shouldPause: boolean = false,
+    public readonly isPaused: boolean = false,
+  ) {}
 }
 
 @customElement("settings-modal")
@@ -32,9 +37,18 @@ export class SettingsModal extends LitElement implements Layer {
   @query(".modal-overlay")
   private modalOverlay!: HTMLElement;
 
+  @property({ type: Boolean })
+  shouldPause = false;
+
+  @property({ type: Boolean })
+  isPausedOnOpen = false;
+
   init() {
     this.eventBus.on(ShowSettingsModalEvent, (event) => {
       this.isVisible = event.isVisible;
+      this.shouldPause = event.shouldPause;
+      this.isPausedOnOpen = event.isPaused;
+      this.pauseGame(true);
     });
   }
 
@@ -80,6 +94,13 @@ export class SettingsModal extends LitElement implements Layer {
     this.isVisible = false;
     document.body.style.overflow = "";
     this.requestUpdate();
+    this.pauseGame(false);
+  }
+
+  private pauseGame(pause: boolean) {
+    if (pause === undefined) return;
+    if (this.shouldPause && !this.isPausedOnOpen)
+      this.eventBus.emit(new PauseGameEvent(pause));
   }
 
   private onTerrainButtonClick() {
