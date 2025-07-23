@@ -167,7 +167,7 @@ export class MoveWarshipIntentEvent implements GameEvent {
 }
 
 export class SendKickPlayerIntentEvent implements GameEvent {
-  constructor(public readonly targetClientID: string) {}
+  constructor(public readonly target: string) {}
 }
 
 export class Transport {
@@ -624,7 +624,7 @@ export class Transport {
     this.sendIntent({
       type: "kick_player",
       clientID: this.lobbyConfig.clientID,
-      targetClientID: event.targetClientID,
+      target: event.target,
     });
   }
 

@@ -403,7 +403,7 @@ export class HostLobbyModal extends LitElement {
           new CustomEvent("join-lobby", {
             detail: {
               gameID: this.lobbyId,
-              clientID: this.hostClientID, // Use the host client ID
+              clientID: this.hostClientID,
             } as JoinLobbyEvent,
             bubbles: true,
             composed: true,
@@ -600,7 +600,7 @@ export class HostLobbyModal extends LitElement {
     // Dispatch event to be handled by WebSocket instead of HTTP
     this.dispatchEvent(
       new CustomEvent("kick-player", {
-        detail: { targetClientID: clientID },
+        detail: { target: clientID },
         bubbles: true,
         composed: true,
       }),

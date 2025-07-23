@@ -233,7 +233,7 @@ export class GameServer {
               return;
             }
 
-            // 🔒 SECURITY FIX: Handle kick_player intent securely via WebSocket
+            // Handle kick_player intent  via WebSocket
             if (clientMsg.intent.type === "kick_player") {
               // Use the authenticated WebSocket client's identity (cannot be spoofed)
               const authenticatedClientID = client.clientID;
@@ -242,7 +242,7 @@ export class GameServer {
               if (this.gameConfig.gameType === GameType.Public) {
                 this.log.warn(`Cannot kick players in public games`, {
                   clientID: authenticatedClientID,
-                  targetClientID: clientMsg.intent.targetClientID,
+                  target: clientMsg.intent.target,
                 });
                 return;
               }
@@ -258,7 +258,7 @@ export class GameServer {
               }
 
               // Don't allow host to kick themselves
-              if (authenticatedClientID === clientMsg.intent.targetClientID) {
+              if (authenticatedClientID === clientMsg.intent.target) {
                 this.log.warn(`Cannot kick yourself`, {
                   clientID: authenticatedClientID,
                 });
@@ -268,12 +268,12 @@ export class GameServer {
               // Log and execute the kick
               this.log.info(`Host kicking player via secure WebSocket`, {
                 authenticatedHostID: authenticatedClientID,
-                targetClientID: clientMsg.intent.targetClientID,
+                target: clientMsg.intent.target,
                 gameID: this.id,
               });
 
-              this.kickClient(clientMsg.intent.targetClientID);
-              return; // Don't add this as a regular game intent
+              this.kickClient(clientMsg.intent.target);
+              return;
             }
 
             this.addIntent(clientMsg.intent);

@@ -421,8 +421,11 @@ class Client {
       this.gameStop();
     }
     const config = await getServerConfigFromClient();
+    const eventBus = new EventBus();
+    this.gameEventBus = eventBus;
 
-    const gameSession = joinLobby(
+    this.gameStop = joinLobby(
+      eventBus,
       {
         gameID: lobby.gameID,
         serverConfig: config,
@@ -494,8 +497,6 @@ class Client {
         }
       },
     );
-    this.gameStop = gameSession.stop;
-    this.gameEventBus = gameSession.eventBus;
   }
 
   private async handleLeaveLobby(/* event: CustomEvent */) {
@@ -509,11 +510,11 @@ class Client {
   }
 
   private handleKickPlayer(event: CustomEvent) {
-    const { targetClientID } = event.detail;
+    const { target } = event.detail;
 
     // Forward to game's EventBus if available
     if (this.gameEventBus) {
-      this.gameEventBus.emit(new SendKickPlayerIntentEvent(targetClientID));
+      this.gameEventBus.emit(new SendKickPlayerIntentEvent(target));
     }
   }
 }

@@ -58,12 +58,11 @@ export interface LobbyConfig {
 }
 
 export function joinLobby(
+  eventBus: EventBus,
   lobbyConfig: LobbyConfig,
   onPrestart: () => void,
   onJoin: () => void,
-): { stop: () => void; eventBus: EventBus } {
-  const eventBus = new EventBus();
-
+): () => void {
   console.log(
     `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
   );
@@ -113,12 +112,9 @@ export function joinLobby(
     }
   };
   transport.connect(onconnect, onmessage);
-  return {
-    stop: () => {
-      console.log("leaving game");
-      transport.leaveGame();
-    },
-    eventBus: eventBus,
+  return () => {
+    console.log("leaving game");
+    transport.leaveGame();
   };
 }
 

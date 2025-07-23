@@ -363,7 +363,7 @@ export const MarkDisconnectedIntentSchema = BaseIntentSchema.extend({
 
 export const KickPlayerIntentSchema = BaseIntentSchema.extend({
   type: z.literal("kick_player"),
-  targetClientID: ID,
+  target: ID,
 });
 
 const IntentSchema = z.discriminatedUnion("type", [

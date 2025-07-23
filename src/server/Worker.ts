@@ -270,44 +270,16 @@ export function startWorker() {
   app.post(
     "/api/kick_player/:gameID/:clientID",
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
+      if (req.headers[config.adminHeader()] !== config.adminToken()) {
+        res.status(401).send("Unauthorized");
+        return;
+      }
+
       const { gameID, clientID } = req.params;
-      const requesterClientID = req.headers["x-client-id"] as string;
 
       const game = gm.game(gameID);
       if (!game) {
         res.status(404).send("Game not found");
-        return;
-      }
-      // Check if requester is admin first (admins can always kick)
-      const isAdmin = req.headers[config.adminHeader()] === config.adminToken();
-
-      if (isAdmin) {
-        // Admin can kick anyone in any game
-        game.kickClient(clientID);
-        res.status(200).send("Player kicked successfully (admin)");
-        return;
-      }
-      // For public games, only admins can kick
-      if (game.isPublic()) {
-        res
-          .status(401)
-          .send("Unauthorized - admin privileges required for public games");
-        return;
-      }
-      // For private games, only host can kick (if not admin)
-      if (!requesterClientID) {
-        res.status(400).send("Client ID required in X-Client-ID header");
-        return;
-      }
-
-      if (!game.isHost(requesterClientID)) {
-        res.status(403).send("Only the host can kick players");
-        return;
-      }
-
-      // Don't allow host to kick themselves
-      if (requesterClientID === clientID) {
-        res.status(400).send("Cannot kick yourself");
         return;
       }
 
