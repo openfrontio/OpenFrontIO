@@ -93,8 +93,27 @@ export class LangSelector extends LitElement {
   private getClosestSupportedLang(lang: string): string {
     if (!lang) return "en";
     if (lang in this.languageMap) return lang;
-    const base = lang.split("-")[0];
-    if (base in this.languageMap) return base;
+
+    const delimiters = ["-", "_"];
+    for (const delimiter of delimiters) {
+      if (lang.includes(delimiter)) {
+        const parts = lang.split(delimiter);
+        for (let i = parts.length; i > 0; i--) {
+          const code = parts.slice(0, i).join("_");
+          if (code in this.languageMap) return code;
+        }
+      }
+    }
+
+    const base = lang.slice(0, 2);
+    const candidates = Object.keys(this.languageMap).filter((key) =>
+      key.startsWith(base),
+    );
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => b.length - a.length); // More specific first
+      return candidates[0];
+    }
+
     return "en";
   }
 
