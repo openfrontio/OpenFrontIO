@@ -217,7 +217,6 @@ export interface DisplayMessageUpdate {
   goldAmount?: bigint;
   playerID: number | null;
   params?: Record<string, string | number>;
-  isKey?: boolean;
 }
 
 export type DisplayChatMessageUpdate = {

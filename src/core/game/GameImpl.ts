@@ -676,7 +676,6 @@ export class GameImpl implements Game {
     playerID: PlayerID | null,
     goldAmount?: bigint,
     params?: Record<string, string | number>,
-    isKey?: boolean,
   ): void {
     let id: number | null = null;
     if (playerID !== null) {
@@ -689,7 +688,6 @@ export class GameImpl implements Game {
       playerID: id,
       goldAmount: goldAmount,
       params: params,
-      isKey: isKey,
     });
   }
 

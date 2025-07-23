@@ -668,7 +668,6 @@ export interface Game extends GameMap {
     playerID: PlayerID | null,
     goldAmount?: bigint,
     params?: Record<string, string | number>,
-    isKey?: boolean,
   ): void;
   displayIncomingUnit(
     unitID: number,
