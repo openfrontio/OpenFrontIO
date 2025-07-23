@@ -8,9 +8,9 @@ echo "🚀 STARTING SERVER SETUP"
 echo "====================================================="
 
 # Verify required environment variables
-if [ -z "$OTEL_ENDPOINT" ] || [ -z "$OTEL_USERNAME" ] || [ -z "$OTEL_PASSWORD" ]; then
+if [ -z "$OTEL_EXPORTER_OTLP_ENDPOINT" ] || [ -z "$OTEL_AUTH_HEADER" ]; then
     echo "❌ ERROR: Required environment variables are not set!"
-    echo "Please set OTEL_ENDPOINT, OTEL_USERNAME, and OTEL_PASSWORD"
+    echo "Please set OTEL_EXPORTER_OTLP_ENDPOINT and OTEL_AUTH_HEADER"
     exit 1
 fi
 
@@ -91,9 +91,6 @@ if [ ! -d "$OTEL_CONFIG_DIR" ]; then
     echo "Created OpenTelemetry configuration directory"
 fi
 
-# Generate Base64 auth string
-BASE64_AUTH=$(echo -n "${OTEL_USERNAME}:${OTEL_PASSWORD}" | base64)
-
 # Create OpenTelemetry Collector configuration
 cat > "$OTEL_CONFIG_DIR/otel-collector-config.yaml" << EOF
 receivers:
@@ -118,9 +115,9 @@ processors:
 
 exporters:
   otlphttp:
-    endpoint: "${OTEL_ENDPOINT}"
+    endpoint: "${OTEL_EXPORTER_OTLP_ENDPOINT}"
     headers:
-      Authorization: "Basic ${BASE64_AUTH}"
+      Authorization: "${OTEL_AUTH_HEADER}"
     tls:
       insecure: true  # Set to false in production with proper certs
 
@@ -154,7 +151,6 @@ echo "🚀 Starting OpenTelemetry Collector..."
 docker pull otel/opentelemetry-collector-contrib:latest
 docker rm -f otel-collector 2> /dev/null || true
 # Run OpenTelemetry Collector with appropriate permissions
-# Run OpenTelemetry Collector
 echo "🚀 Starting OpenTelemetry Collector..."
 docker pull otel/opentelemetry-collector-contrib:latest
 docker rm -f otel-collector 2> /dev/null || true
@@ -165,7 +161,6 @@ docker run -d \
     --network=host \
     --user=0 \
     -v "$OTEL_CONFIG_DIR/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro" \
-    -e OTEL_ENDPOINT="${OTEL_ENDPOINT}" \
     otel/opentelemetry-collector-contrib:latest
 
 # Check if containers are running
@@ -186,6 +181,5 @@ echo "OpenTelemetry Collector is forwarding metrics to your endpoint."
 echo ""
 echo "📝 Configuration:"
 echo "   - Config Directory: $OTEL_CONFIG_DIR"
-echo "   - OpenTelemetry Endpoint: $OTEL_ENDPOINT"
-echo "   - Username: $OTEL_USERNAME"
+echo "   - OpenTelemetry Endpoint: $OTEL_EXPORTER_OTLP_ENDPOINT"
 echo "====================================================="
