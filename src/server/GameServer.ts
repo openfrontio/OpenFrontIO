@@ -1,7 +1,7 @@
 import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
-import { z } from "zod/v4";
+import { z } from "zod";
 import {
   ClientID,
   ClientMessageSchema,

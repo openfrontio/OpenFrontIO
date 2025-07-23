@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
 
 export const RefreshResponseSchema = z.object({
