@@ -111,6 +111,7 @@ export class GameServer {
       this.log.warn(`cannot add client, already kicked`, {
         clientID: client.clientID,
       });
+      client.ws.close(1002, "Kicked from game");
       return;
     }
     this.log.info("client (re)joining game", {
@@ -174,6 +175,7 @@ export class GameServer {
       client.lastPing = existing.lastPing;
 
       existing.ws.removeAllListeners();
+      existing.ws.close(1000);
       this.activeClients = this.activeClients.filter((c) => c !== existing);
     }
 
@@ -183,7 +185,6 @@ export class GameServer {
 
     this.allClients.set(client.clientID, client);
 
-    client.ws.removeAllListeners();
     client.ws.on(
       "message",
       gatekeeper.wsHandler(client.ip, async (message: string) => {

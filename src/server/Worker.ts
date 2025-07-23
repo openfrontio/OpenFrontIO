@@ -442,6 +442,8 @@ export function startWorker() {
             clientMsg.pattern,
           );
 
+          // Remove all listeners because we are passing ws ownership to the GameServer.
+          ws.removeAllListeners();
           const wasFound = gm.addClient(
             client,
             clientMsg.gameID,
@@ -452,7 +454,8 @@ export function startWorker() {
             log.info(
               `game ${clientMsg.gameID} not found on worker ${workerId}`,
             );
-            // Handle game not found case
+            ws.close(1002, "Game not found");
+            return;
           }
 
           // Handle other message types
