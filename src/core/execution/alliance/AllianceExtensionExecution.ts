@@ -46,11 +46,17 @@ export class AllianceExtensionExecution implements Execution {
         "events_display.alliance_renewed",
         MessageType.ALLIANCE_ACCEPTED,
         this.from.id(),
+        undefined,
+        { name: to.displayName() },
+        true,
       );
       mg.displayMessage(
         "events_display.alliance_renewed",
         MessageType.ALLIANCE_ACCEPTED,
         this.toID,
+        undefined,
+        { name: this.from.displayName() },
+        true,
       );
     }
   }

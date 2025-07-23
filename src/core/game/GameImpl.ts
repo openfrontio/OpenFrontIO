@@ -675,6 +675,8 @@ export class GameImpl implements Game {
     type: MessageType,
     playerID: PlayerID | null,
     goldAmount?: bigint,
+    params?: Record<string, string | number>,
+    isKey?: boolean,
   ): void {
     let id: number | null = null;
     if (playerID !== null) {
@@ -686,6 +688,8 @@ export class GameImpl implements Game {
       message: message,
       playerID: id,
       goldAmount: goldAmount,
+      params: params,
+      isKey: isKey,
     });
   }
 
