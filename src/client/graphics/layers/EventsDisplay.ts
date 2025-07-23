@@ -351,8 +351,15 @@ export class EventsDisplay extends LitElement implements Layer {
       }
     }
 
+    let description: string = event.message;
+    if (event.params !== undefined) {
+      if (event.message.startsWith("events_display.")) {
+        description = translateText(event.message, event.params);
+      }
+    }
+
     this.addEvent({
-      description: event.message,
+      description: description,
       createdAt: this.game.ticks(),
       highlight: true,
       type: event.messageType,
