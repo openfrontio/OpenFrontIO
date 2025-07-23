@@ -1,84 +1,84 @@
 {
   "map": {
     "height": 1400,
-    "num_land_tiles": 859274,
-    "width": 2100
+    "num_land_tiles": 830581,
+    "width": 2150
   },
   "mini_map": {
     "height": 700,
-    "num_land_tiles": 208351,
-    "width": 1050
+    "num_land_tiles": 210641,
+    "width": 1075
   },
   "name": "Falkland Islands",
   "nations": [
     {
-      "coordinates": [484, 987],
+      "coordinates": [500, 1000],
       "flag": "fk",
       "name": "Albermarle",
       "strength": 2
     },
     {
-      "coordinates": [228, 804],
+      "coordinates": [235, 825],
       "flag": "fk",
       "name": "Weddell",
       "strength": 1
     },
     {
-      "coordinates": [818, 873],
+      "coordinates": [836, 882],
       "flag": "fk",
       "name": "Fox Bay",
       "strength": 1
     },
     {
-      "coordinates": [994, 541],
+      "coordinates": [1015, 525],
       "flag": "fk",
       "name": "East Falkland",
       "strength": 2
     },
     {
-      "coordinates": [633, 518],
+      "coordinates": [640, 490],
       "flag": "fk",
       "name": "Saunders and Dunbar",
       "strength": 1
     },
     {
-      "coordinates": [1063, 1036],
+      "coordinates": [1080, 1045],
       "flag": "fk",
       "name": "South Lefonia",
       "strength": 1
     },
     {
-      "coordinates": [1298, 860],
+      "coordinates": [1335, 855],
       "flag": "fk",
       "name": "North Lefonia",
       "strength": 2
     },
     {
-      "coordinates": [1587, 743],
+      "coordinates": [1630, 735],
       "flag": "fk",
       "name": "Wickham and Fitzroy",
       "strength": 1
     },
     {
-      "coordinates": [1831, 456],
+      "coordinates": [1900, 430],
       "flag": "fk",
       "name": "Berkeley",
       "strength": 1
     },
     {
-      "coordinates": [1984, 657],
+      "coordinates": [1950, 620],
       "flag": "fk",
       "name": "Stanley",
       "strength": 1
     },
     {
-      "coordinates": [1468, 398],
+      "coordinates": [1505, 345],
       "flag": "fk",
       "name": "Concordia",
       "strength": 2
     },
     {
-      "coordinates": [1381, 624],
+      "coordinates": [1400, 633],
       "flag": "fk",
       "name": "San Carlos",
       "strength": 1
