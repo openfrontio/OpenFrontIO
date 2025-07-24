@@ -1,5 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
+import structureIcon from "../../../../resources/images/CityIconWhite.svg";
 import darkModeIcon from "../../../../resources/images/DarkModeIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
@@ -264,7 +265,7 @@ export class SettingsModal extends LitElement implements Layer {
               @click="${this.onToggleStructureSpritesButtonClick}"
             >
               <img
-                src=${explosionIcon}
+                src=${structureIcon}
                 alt="structureSprites"
                 width="20"
                 height="20"
