@@ -1,4 +1,4 @@
-import { Cell, Execution, Game } from "../game/Game";
+import { Execution, Game } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -67,10 +67,7 @@ export class Executor {
       case "move_warship":
         return new MoveWarshipExecution(player, intent.unitId, intent.tile);
       case "spawn":
-        return new SpawnExecution(
-          player.info(),
-          this.mg.ref(intent.x, intent.y),
-        );
+        return new SpawnExecution(player.info(), intent.tile);
       case "boat":
         return new TransportShipExecution(
           player,
@@ -106,11 +103,7 @@ export class Executor {
       case "embargo":
         return new EmbargoExecution(player, intent.targetID, intent.action);
       case "build_unit":
-        return new ConstructionExecution(
-          player,
-          intent.unit,
-          new Cell(intent.x, intent.y),
-        );
+        return new ConstructionExecution(player, intent.unit, intent.tile);
       case "allianceExtension": {
         return new AllianceExtensionExecution(player, intent.recipient);
       }

@@ -576,6 +576,9 @@
       "grogu": "Grogu"
     }
   },
+  "spawn_ad": {
+    "loading": "Loading advertisement..."
+  },
   "auth": {
     "login_required": "Login is required to access this website.",
     "redirecting": "You are being redirected...",
