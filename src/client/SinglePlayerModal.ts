@@ -24,6 +24,7 @@ import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
+  private maxBots = 4000;
   @query("o-modal") private modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
@@ -31,7 +32,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs: boolean = false;
-  @state() private bots: number = 400;
+  @state() private bots: number = 2500;
   @state() private infiniteGold: boolean = false;
   @state() private donateGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
@@ -220,7 +221,7 @@ export class SinglePlayerModal extends LitElement {
                   type="range"
                   id="bots-count"
                   min="0"
-                  max="400"
+                  max=${this.maxBots}
                   step="1"
                   @input=${this.handleBotsChange}
                   @change=${this.handleBotsChange}
@@ -354,7 +355,7 @@ export class SinglePlayerModal extends LitElement {
 
   private handleBotsChange(e: Event) {
     const value = parseInt((e.target as HTMLInputElement).value);
-    if (isNaN(value) || value < 0 || value > 400) {
+    if (isNaN(value) || value < 0 || value > this.maxBots) {
       return;
     }
     this.bots = value;
