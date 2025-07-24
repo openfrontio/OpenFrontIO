@@ -183,9 +183,7 @@ export class GameServer {
 
     this.allClients.set(client.clientID, client);
 
-    client.ws.removeAllListeners("message");
-    client.ws.removeAllListeners("close");
-    client.ws.removeAllListeners("error");
+    client.ws.removeAllListeners();
     client.ws.on(
       "message",
       gatekeeper.wsHandler(client.ip, async (message: string) => {
@@ -203,10 +201,8 @@ export class GameServer {
                 message,
               } satisfies ServerErrorMessage),
             );
-            // Add a small delay before closing the connection to ensure the error message is received
-            setTimeout(() => {
-              client.ws.close(1002, "ClientMessageSchema");
-            }, 100);
+            client.ws.close(1002, "ClientMessageSchema");
+            client.ws.removeAllListeners();
             return;
           }
           const clientMsg = parsed.data;
@@ -264,6 +260,7 @@ export class GameServer {
     });
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
+        client.ws.removeAllListeners();
         client.ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
       }
     });
@@ -405,7 +402,7 @@ export class GameServer {
     // Close all WebSocket connections
     clearInterval(this.endTurnIntervalID);
     this.allClients.forEach((client) => {
-      client.ws.removeAllListeners("message");
+      client.ws.removeAllListeners();
       if (client.ws.readyState === WebSocket.OPEN) {
         client.ws.close(1000, "game has ended");
       }
@@ -463,6 +460,7 @@ export class GameServer {
         });
         if (client.ws.readyState === WebSocket.OPEN) {
           client.ws.close(1000, "no heartbeats received, closing connection");
+          client.ws.removeAllListeners();
         }
       } else {
         alive.push(client);
@@ -553,14 +551,12 @@ export class GameServer {
           error: "Kicked from game (you may have been playing on another tab)",
         } satisfies ServerErrorMessage),
       );
-      // Add a small delay before closing the connection to ensure the error message is received
-      setTimeout(() => {
-        client.ws.close(1000, "Kicked from game");
-        this.activeClients = this.activeClients.filter(
-          (c) => c.clientID !== clientID,
-        );
-        this.kickedClients.add(clientID);
-      }, 100);
+      client.ws.close(1000, "Kicked from game");
+      this.activeClients = this.activeClients.filter(
+        (c) => c.clientID !== clientID,
+      );
+      client.ws.removeAllListeners();
+      this.kickedClients.add(clientID);
     } else {
       this.log.warn(`cannot kick client, not found in game`, {
         clientID,
