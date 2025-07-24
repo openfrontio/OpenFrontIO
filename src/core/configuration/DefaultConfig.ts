@@ -233,7 +233,7 @@ export class DefaultConfig implements Config {
     return 0.5;
   }
   traitorSpeedDebuff(): number {
-    return 0.6;
+    return 0.8;
   }
   traitorDuration(): number {
     return 30 * 10; // 30 seconds
