@@ -430,7 +430,7 @@ export class StructureIconsLayer implements Layer {
     }
 
     context.strokeStyle = borderColor;
-    context.lineWidth = 1.6;
+    context.lineWidth = 1;
 
     switch (shape) {
       case "triangle":
