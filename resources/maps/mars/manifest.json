@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 1150,
-    "num_land_tiles": 1064112,
+    "num_land_tiles": 1021856,
     "width": 2500
   },
   "mini_map": {
     "height": 575,
-    "num_land_tiles": 258192,
+    "num_land_tiles": 248400,
     "width": 1250
   },
   "name": "Mars",
@@ -61,9 +61,9 @@
     },
     {
       "coordinates": [1140, 890],
-      "name": "Madagascar Colony",
+      "name": "Elysium Mons Tribe",
       "strength": 1,
-      "flag": "mg"
+      "flag": ""
     },
     {
       "coordinates": [430, 740],
@@ -96,22 +96,10 @@
       "flag": "de"
     },
     {
-      "coordinates": [2020, 120],
-      "name": "Chilean Colony",
-      "strength": 3,
-      "flag": "cl"
-    },
-    {
       "coordinates": [2100, 400],
       "name": "French Colony",
       "strength": 2,
       "flag": "fr"
-    },
-    {
-      "coordinates": [1660, 123],
-      "name": "Mexican Colony",
-      "strength": 1,
-      "flag": "mx"
     },
     {
       "coordinates": [2200, 515],
