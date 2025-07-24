@@ -616,9 +616,9 @@ export class StructureIconsLayer implements Layer {
     // Scaling
     if (type === "icon") {
       const s =
-        scale >= ZOOM_THRESHOLD && spritesEnabled
-          ? Math.min(1, scale / ICON_SCALE_FACTOR_ZOOMED_OUT)
-          : Math.max(1, scale / ICON_SCALE_FACTOR_ZOOMED_IN);
+        scale >= ZOOM_THRESHOLD && !spritesEnabled
+          ? Math.max(1, scale / ICON_SCALE_FACTOR_ZOOMED_IN)
+          : Math.min(1, scale / ICON_SCALE_FACTOR_ZOOMED_OUT);
       parentContainer.scale.set(s);
     } else if (type === "level") {
       parentContainer.scale.set(Math.max(1, scale / LEVEL_SCALE_FACTOR));
