@@ -346,26 +346,26 @@ function generateTeamColors(baseColor: Colord): Colord[] {
   });
 }
 
-export const redTeamColor = colord({ h: 0, s: 100, l: 50 });
-export const redTeamColors: Colord[] = generateTeamColors(redTeamColor);
+export const red = colord({ h: 0, s: 82, l: 56 });
+export const redTeamColors: Colord[] = generateTeamColors(red);
 
-export const blueTeamColor = colord({ h: 240, s: 100, l: 50 });
-export const blueTeamColors: Colord[] = generateTeamColors(blueTeamColor);
+export const blue = colord({ h: 224, s: 100, l: 58 });
+export const blueTeamColors: Colord[] = generateTeamColors(blue);
 
-export const tealTeamColor = colord({ h: 180, s: 100, l: 50 });
-export const tealTeamColors: Colord[] = generateTeamColors(tealTeamColor);
+export const teal = colord({ h: 172, s: 66, l: 50 });
+export const tealTeamColors: Colord[] = generateTeamColors(teal);
 
-export const purpleTeamColor = colord({ h: 300, s: 100, l: 50 });
-export const purpleTeamColors: Colord[] = generateTeamColors(purpleTeamColor);
+export const purple = colord({ h: 271, s: 81, l: 56 });
+export const purpleTeamColors: Colord[] = generateTeamColors(purple);
 
-export const yellowTeamColor = colord({ h: 52, s: 100, l: 50 });
-export const yellowTeamColors: Colord[] = generateTeamColors(yellowTeamColor);
+export const yellow = colord({ h: 45, s: 93, l: 47 });
+export const yellowTeamColors: Colord[] = generateTeamColors(yellow);
 
-export const orangeTeamColor = colord({ h: 28, s: 100, l: 50 });
-export const orangeTeamColors: Colord[] = generateTeamColors(orangeTeamColor);
+export const orange = colord({ h: 25, s: 95, l: 53 });
+export const orangeTeamColors: Colord[] = generateTeamColors(orange);
 
-export const greenTeamColor = colord({ h: 120, s: 100, l: 50 });
-export const greenTeamColors: Colord[] = generateTeamColors(greenTeamColor);
+export const green = colord({ h: 128, s: 49, l: 50 });
+export const greenTeamColors: Colord[] = generateTeamColors(green);
 
-export const botTeamColor = colord({ h: 36, s: 9, l: 80 });
-export const botTeamColors: Colord[] = [colord(botTeamColor)];
+export const botColor = colord({ h: 36, s: 10, l: 80 });
+export const botTeamColors: Colord[] = [colord(botColor)];

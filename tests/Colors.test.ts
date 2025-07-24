@@ -4,14 +4,14 @@ import {
   selectDistinctColorIndex,
 } from "../src/core/configuration/ColorAllocator";
 import {
-  blueTeamColor,
-  botTeamColor,
-  greenTeamColor,
-  orangeTeamColor,
-  purpleTeamColor,
-  redTeamColor,
-  tealTeamColor,
-  yellowTeamColor,
+  blue,
+  botColor,
+  green,
+  orange,
+  purple,
+  red,
+  teal,
+  yellow,
 } from "../src/core/configuration/Colors";
 import { ColoredTeams } from "../src/core/game/Game";
 
@@ -82,22 +82,14 @@ describe("ColorAllocator", () => {
   });
 
   test("assignTeamColor returns the base color from the team", () => {
-    expect(allocator.assignTeamColor(ColoredTeams.Blue)).toEqual(blueTeamColor);
-    expect(allocator.assignTeamColor(ColoredTeams.Red)).toEqual(redTeamColor);
-    expect(allocator.assignTeamColor(ColoredTeams.Teal)).toEqual(tealTeamColor);
-    expect(allocator.assignTeamColor(ColoredTeams.Purple)).toEqual(
-      purpleTeamColor,
-    );
-    expect(allocator.assignTeamColor(ColoredTeams.Yellow)).toEqual(
-      yellowTeamColor,
-    );
-    expect(allocator.assignTeamColor(ColoredTeams.Orange)).toEqual(
-      orangeTeamColor,
-    );
-    expect(allocator.assignTeamColor(ColoredTeams.Green)).toEqual(
-      greenTeamColor,
-    );
-    expect(allocator.assignTeamColor(ColoredTeams.Bot)).toEqual(botTeamColor);
+    expect(allocator.assignTeamColor(ColoredTeams.Blue)).toEqual(blue);
+    expect(allocator.assignTeamColor(ColoredTeams.Red)).toEqual(red);
+    expect(allocator.assignTeamColor(ColoredTeams.Teal)).toEqual(teal);
+    expect(allocator.assignTeamColor(ColoredTeams.Purple)).toEqual(purple);
+    expect(allocator.assignTeamColor(ColoredTeams.Yellow)).toEqual(yellow);
+    expect(allocator.assignTeamColor(ColoredTeams.Orange)).toEqual(orange);
+    expect(allocator.assignTeamColor(ColoredTeams.Green)).toEqual(green);
+    expect(allocator.assignTeamColor(ColoredTeams.Bot)).toEqual(botColor);
   });
 
   test("assignTeamPlayerColor always returns the same color for the same playerID", () => {
