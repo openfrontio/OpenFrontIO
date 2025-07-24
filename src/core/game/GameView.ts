@@ -1,6 +1,7 @@
+import { base64url } from "jose";
 import { Config } from "../configuration/Config";
 import { PatternDecoder } from "../PatternDecoder";
-import { ClientID, GameID } from "../Schemas";
+import { ClientID, GameID, Player } from "../Schemas";
 import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
@@ -9,11 +10,9 @@ import {
   GameUpdates,
   Gold,
   NameViewData,
-  Player,
   PlayerActions,
   PlayerBorderTiles,
   PlayerID,
-  PlayerInfo,
   PlayerProfile,
   PlayerType,
   Team,
@@ -26,27 +25,40 @@ import {
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import {
+  AllianceView,
   AttackUpdate,
   GameUpdateType,
   GameUpdateViewData,
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
+import { TerrainMapData } from "./TerrainMapLoader";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid } from "./UnitGrid";
 import { UserSettings } from "./UserSettings";
 
 const userSettings: UserSettings = new UserSettings();
 
+interface PlayerCosmetics {
+  pattern?: string | undefined;
+  flag?: string | undefined;
+}
+
 export class UnitView {
   public _wasUpdated = true;
   public lastPos: TileRef[] = [];
+  private _createdAt: Tick;
 
   constructor(
     private gameView: GameView,
     private data: UnitUpdate,
   ) {
     this.lastPos.push(data.pos);
+    this._createdAt = this.gameView.ticks();
+  }
+
+  createdAt(): Tick {
+    return this._createdAt;
   }
 
   wasUpdated(): boolean {
@@ -117,12 +129,40 @@ export class UnitView {
   targetTile(): TileRef | undefined {
     return this.data.targetTile;
   }
-  ticksLeftInCooldown(): Tick | undefined {
-    return this.data.missileTimerQueue?.[0];
+
+  // How "ready" this unit is from 0 to 1.
+  missileReadinesss(): number {
+    const maxMissiles = this.data.level;
+    const missilesReloading = this.data.missileTimerQueue.length;
+
+    if (missilesReloading === 0) {
+      return 1;
+    }
+
+    const missilesReady = maxMissiles - missilesReloading;
+
+    if (missilesReady === 0 && maxMissiles > 1) {
+      // Unless we have just one missile (level 1),
+      // show 0% readiness so user knows no missiles are ready.
+      return 0;
+    }
+
+    let readiness = missilesReady / maxMissiles;
+
+    const cooldownDuration =
+      this.data.unitType === UnitType.SAMLauncher
+        ? this.gameView.config().SAMCooldown()
+        : this.gameView.config().SiloCooldown();
+
+    for (const cooldown of this.data.missileTimerQueue) {
+      const cooldownProgress = this.gameView.ticks() - cooldown;
+      const cooldownRatio = cooldownProgress / cooldownDuration;
+      const adjusted = cooldownRatio / maxMissiles;
+      readiness += adjusted;
+    }
+    return readiness;
   }
-  isInCooldown(): boolean {
-    return this.data.readyMissileCount === 0;
-  }
+
   level(): number {
     return this.data.level;
   }
@@ -145,6 +185,7 @@ export class PlayerView {
     private game: GameView,
     public data: PlayerUpdate,
     public nameData: NameViewData,
+    public cosmetics: PlayerCosmetics,
   ) {
     if (data.clientID === game.myClientID()) {
       this.anonymousName = this.data.name;
@@ -155,7 +196,9 @@ export class PlayerView {
       );
     }
     this.decoder =
-      data.pattern === undefined ? undefined : new PatternDecoder(data.pattern);
+      this.cosmetics.pattern === undefined
+        ? undefined
+        : new PatternDecoder(this.cosmetics.pattern, base64url.decode);
   }
 
   patternDecoder(): PatternDecoder | undefined {
@@ -202,13 +245,6 @@ export class PlayerView {
   smallID(): number {
     return this.data.smallID;
   }
-  flag(): string | undefined {
-    return this.data.flag;
-  }
-
-  pattern(): string | undefined {
-    return this.data.pattern;
-  }
 
   name(): string {
     return this.anonymousName !== null && userSettings.anonymousNames()
@@ -236,7 +272,7 @@ export class PlayerView {
   isAlive(): boolean {
     return this.data.isAlive;
   }
-  isPlayer(): this is Player {
+  isPlayer(): this is PlayerView {
     return true;
   }
   numTilesOwned(): number {
@@ -264,8 +300,15 @@ export class PlayerView {
   targetTroopRatio(): number {
     return this.data.targetTroopRatio;
   }
+
   troops(): number {
     return this.data.troops;
+  }
+
+  totalUnitLevels(type: UnitType): number {
+    return this.units(type)
+      .map((unit) => unit.level())
+      .reduce((a, b) => a + b, 0);
   }
 
   isAlliedWith(other: PlayerView): boolean {
@@ -282,6 +325,10 @@ export class PlayerView {
 
   isRequestingAllianceWith(other: PlayerView) {
     return this.data.outgoingAllianceRequests.some((id) => other.id() === id);
+  }
+
+  alliances(): AllianceView[] {
+    return this.data.alliances;
   }
 
   hasEmbargoAgainst(other: PlayerView): boolean {
@@ -306,16 +353,7 @@ export class PlayerView {
   outgoingEmojis(): EmojiMessage[] {
     return this.data.outgoingEmojis;
   }
-  info(): PlayerInfo {
-    return new PlayerInfo(
-      this.pattern(),
-      this.flag(),
-      this.name(),
-      this.type(),
-      this.clientID(),
-      this.id(),
-    );
-  }
+
   hasSpawned(): boolean {
     return this.data.hasSpawned;
   }
@@ -338,16 +376,35 @@ export class GameView implements GameMap {
 
   private toDelete = new Set<number>();
 
+  private _cosmetics: Map<string, PlayerCosmetics> = new Map();
+
+  private _map: GameMap;
+
   constructor(
     public worker: WorkerClient,
     private _config: Config,
-    private _map: GameMap,
+    private _mapData: TerrainMapData,
     private _myClientID: ClientID,
     private _gameID: GameID,
+    private _hunans: Player[],
   ) {
+    this._map = this._mapData.gameMap;
     this.lastUpdate = null;
-    this.unitGrid = new UnitGrid(_map);
+    this.unitGrid = new UnitGrid(this._map);
+    this._cosmetics = new Map(
+      this._hunans.map((h) => [
+        h.clientID,
+        { flag: h.flag, pattern: h.pattern } satisfies PlayerCosmetics,
+      ]),
+    );
+    for (const nation of this._mapData.manifest.nations) {
+      // Nations don't have client ids, so we use their name as the key instead.
+      this._cosmetics.set(nation.name, {
+        flag: nation.flag,
+      });
+    }
   }
+
   isOnEdgeOfMap(ref: TileRef): boolean {
     return this._map.isOnEdgeOfMap(ref);
   }
@@ -379,7 +436,15 @@ export class GameView implements GameMap {
       } else {
         this._players.set(
           pu.id,
-          new PlayerView(this, pu, gu.playerNameViewData[pu.id]),
+          new PlayerView(
+            this,
+            pu,
+            gu.playerNameViewData[pu.id],
+            // First check human by clientID, then check nation by name.
+            this._cosmetics.get(pu.clientID ?? "") ??
+              this._cosmetics.get(pu.name) ??
+              {},
+          ),
         );
       }
     });
@@ -394,11 +459,12 @@ export class GameView implements GameMap {
       } else {
         unit = new UnitView(this, update);
         this._units.set(update.id, unit);
-      }
-      if (update.isActive) {
         this.unitGrid.addUnit(unit);
-      } else {
+      }
+      if (!update.isActive) {
         this.unitGrid.removeUnit(unit);
+      } else if (unit.tile() !== unit.lastTile()) {
+        this.unitGrid.updateUnitCell(unit);
       }
       if (!unit.isActive()) {
         // Wait until next tick to delete the unit.
@@ -442,9 +508,7 @@ export class GameView implements GameMap {
   }
 
   myPlayer(): PlayerView | null {
-    if (this._myPlayer === null) {
-      this._myPlayer = this.playerByClientID(this._myClientID);
-    }
+    this._myPlayer ??= this.playerByClientID(this._myClientID);
     return this._myPlayer;
   }
 

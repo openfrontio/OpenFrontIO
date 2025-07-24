@@ -42,7 +42,12 @@ import {
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
-import { AttackUpdate, GameUpdateType, PlayerUpdate } from "./GameUpdates";
+import {
+  AllianceView,
+  AttackUpdate,
+  GameUpdateType,
+  PlayerUpdate,
+} from "./GameUpdates";
 import {
   bestShoreDeploymentSource,
   canBuildTransportShip,
@@ -85,6 +90,7 @@ export class PlayerImpl implements Player {
   private _displayName: string;
 
   public pastOutgoingAllianceRequests: AllianceRequest[] = [];
+  private _expiredAlliances: Alliance[] = [];
 
   private targets_: Target[] = [];
 
@@ -128,8 +134,6 @@ export class PlayerImpl implements Player {
     return {
       type: GameUpdateType.Player,
       clientID: this.clientID(),
-      pattern: this.pattern(),
-      flag: this.flag(),
       name: this.name(),
       displayName: this.displayName(),
       id: this.id(),
@@ -168,6 +172,15 @@ export class PlayerImpl implements Player {
         } satisfies AttackUpdate;
       }),
       outgoingAllianceRequests: outgoingAllianceRequests,
+      alliances: this.alliances().map(
+        (a) =>
+          ({
+            id: a.id(),
+            other: a.other(this).id(),
+            createdAt: a.createdAt(),
+            expiresAt: a.expiresAt(),
+          }) satisfies AllianceView,
+      ),
       hasSpawned: this.hasSpawned(),
       betrayals: stats?.betrayals,
     };
@@ -175,14 +188,6 @@ export class PlayerImpl implements Player {
 
   smallID(): number {
     return this._smallID;
-  }
-
-  pattern(): string | undefined {
-    return this.playerInfo.pattern;
-  }
-
-  flag(): string | undefined {
-    return this.playerInfo.flag;
   }
 
   name(): string {
@@ -238,12 +243,23 @@ export class PlayerImpl implements Player {
     return total;
   }
 
+  // Count of units owned by the player, not including construction
+  unitCount(type: UnitType): number {
+    let total = 0;
+    for (const unit of this._units) {
+      if (unit.type() === type) {
+        total += unit.level();
+      }
+    }
+    return total;
+  }
+
   // Count of units owned by the player, including construction
   unitsOwned(type: UnitType): number {
     let total = 0;
     for (const unit of this._units) {
       if (unit.type() === type) {
-        total++;
+        total += unit.level();
         continue;
       }
       if (unit.type() !== UnitType.Construction) continue;
@@ -352,6 +368,10 @@ export class PlayerImpl implements Player {
     );
   }
 
+  expiredAlliances(): Alliance[] {
+    return [...this._expiredAlliances];
+  }
+
   allies(): Player[] {
     return this.alliances().map((a) => a.other(this));
   }
@@ -378,7 +398,7 @@ export class PlayerImpl implements Player {
     if (other === this) {
       return false;
     }
-    if (this.isFriendly(other)) {
+    if (this.isFriendly(other) || !this.isAlive()) {
       return false;
     }
 
@@ -689,8 +709,17 @@ export class PlayerImpl implements Player {
     return this._gold;
   }
 
-  addGold(toAdd: Gold): void {
+  addGold(toAdd: Gold, tile?: TileRef): void {
     this._gold += toAdd;
+    if (tile) {
+      this.mg.addUpdate({
+        type: GameUpdateType.BonusEvent,
+        tile,
+        gold: Number(toAdd),
+        workers: 0,
+        troops: 0,
+      });
+    }
   }
 
   removeGold(toRemove: Gold): Gold {
@@ -785,20 +814,57 @@ export class PlayerImpl implements Player {
     return b;
   }
 
+  public findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false {
+    const range = this.mg.config().structureMinDist();
+    const existing = this.mg
+      .nearbyUnits(targetTile, range, type)
+      .sort((a, b) => a.distSquared - b.distSquared);
+    if (existing.length === 0) {
+      return false;
+    }
+    const unit = existing[0].unit;
+    if (!this.canUpgradeUnit(unit.type())) {
+      return false;
+    }
+    return unit;
+  }
+
+  public canUpgradeUnit(unitType: UnitType): boolean {
+    if (!this.mg.config().unitInfo(unitType).upgradable) {
+      return false;
+    }
+    if (this.mg.config().isUnitDisabled(unitType)) {
+      return false;
+    }
+    if (this._gold < this.mg.config().unitInfo(unitType).cost(this)) {
+      return false;
+    }
+    return true;
+  }
+
   upgradeUnit(unit: Unit) {
     const cost = this.mg.unitInfo(unit.type()).cost(this);
     this.removeGold(cost);
     unit.increaseLevel();
+    this.recordUnitConstructed(unit.type());
   }
 
   public buildableUnits(tile: TileRef): BuildableUnit[] {
     const validTiles = this.validStructureSpawnTiles(tile);
     return Object.values(UnitType).map((u) => {
+      let canUpgrade: number | false = false;
+      if (!this.mg.inSpawnPhase()) {
+        const existingUnit = this.findUnitToUpgrade(u, tile);
+        if (existingUnit !== false) {
+          canUpgrade = existingUnit.id();
+        }
+      }
       return {
         type: u,
         canBuild: this.mg.inSpawnPhase()
           ? false
           : this.canBuild(u, tile, validTiles),
+        canUpgrade: canUpgrade,
         cost: this.mg.config().unitInfo(u).cost(this),
       } as BuildableUnit;
     });
@@ -1113,24 +1179,20 @@ export class PlayerImpl implements Player {
         );
       });
 
-    // Make close ports twice more likely by putting them again
-    for (
-      let i = 0;
-      i < this.mg.config().proximityBonusPortsNb(ports.length);
-      i++
-    ) {
-      ports.push(ports[i]);
+    const weightedPorts: Unit[] = [];
+
+    for (const [i, otherPort] of ports.entries()) {
+      const expanded = new Array(otherPort.level()).fill(otherPort);
+      weightedPorts.push(...expanded);
+      if (i < this.mg.config().proximityBonusPortsNb(ports.length)) {
+        weightedPorts.push(...expanded);
+      }
+      if (port.owner().isFriendly(otherPort.owner())) {
+        weightedPorts.push(...expanded);
+      }
     }
 
-    // Make ally ports twice more likely by putting them again
-    this.mg
-      .players()
-      .filter((p) => p !== port.owner() && p.canTrade(port.owner()))
-      .filter((p) => p.isAlliedWith(port.owner()))
-      .flatMap((p) => p.units(UnitType.Port))
-      .forEach((p) => ports.push(p));
-
-    return ports;
+    return weightedPorts;
   }
 
   // It's a probability list, so if an element appears twice it's because it's

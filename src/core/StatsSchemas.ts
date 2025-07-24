@@ -37,6 +37,7 @@ export const OtherUnitSchema = z.union([
   z.literal("wshp"),
   z.literal("silo"),
   z.literal("saml"),
+  z.literal("fact"),
   z.literal("airp"),
 ]);
 export type OtherUnit = z.infer<typeof OtherUnitSchema>;
@@ -47,6 +48,7 @@ export type OtherUnitType =
   | UnitType.Port
   | UnitType.SAMLauncher
   | UnitType.Warship
+  | UnitType.Factory
   | UnitType.Airport;
 
 export const unitTypeToOtherUnit = {
@@ -56,6 +58,7 @@ export const unitTypeToOtherUnit = {
   [UnitType.Port]: "port",
   [UnitType.SAMLauncher]: "saml",
   [UnitType.Warship]: "wshp",
+  [UnitType.Factory]: "fact",
   [UnitType.Airport]: "airp",
 } as const satisfies Record<OtherUnitType, OtherUnit>;
 
@@ -89,7 +92,7 @@ export const OTHER_INDEX_LOST = 3; // Structures/warships destroyed/captured by 
 export const OTHER_INDEX_UPGRADE = 4; // Structures upgraded
 
 const BigIntStringSchema = z.preprocess((val) => {
-  if (typeof val === "string" && /^\d+$/.test(val)) return BigInt(val);
+  if (typeof val === "string" && /^-?\d+$/.test(val)) return BigInt(val);
   if (typeof val === "bigint") return val;
   return val;
 }, z.bigint());

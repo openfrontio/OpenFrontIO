@@ -2,7 +2,6 @@ import { z } from "zod/v4";
 import { EventBus, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
-  Cell,
   GameType,
   Gold,
   PlayerID,
@@ -54,10 +53,6 @@ export class SendUpgradeStructureIntentEvent implements GameEvent {
   ) {}
 }
 
-export class SendCreateTrainStationIntentEvent implements GameEvent {
-  constructor(public readonly unitId: number) {}
-}
-
 export class SendAllianceReplyIntentEvent implements GameEvent {
   constructor(
     // The original alliance requestor
@@ -67,8 +62,12 @@ export class SendAllianceReplyIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendAllianceExtensionIntentEvent implements GameEvent {
+  constructor(public readonly recipient: PlayerView) {}
+}
+
 export class SendSpawnIntentEvent implements GameEvent {
-  constructor(public readonly cell: Cell) {}
+  constructor(public readonly tile: TileRef) {}
 }
 
 export class SendAttackIntentEvent implements GameEvent {
@@ -90,7 +89,7 @@ export class SendBoatAttackIntentEvent implements GameEvent {
 export class BuildUnitIntentEvent implements GameEvent {
   constructor(
     public readonly unit: UnitType,
-    public readonly cell: Cell,
+    public readonly tile: TileRef,
   ) {}
 }
 
@@ -194,6 +193,9 @@ export class Transport {
     this.eventBus.on(SendAllianceReplyIntentEvent, (e) =>
       this.onAllianceRequestReplyUIEvent(e),
     );
+    this.eventBus.on(SendAllianceExtensionIntentEvent, (e) =>
+      this.onSendAllianceExtensionIntent(e),
+    );
     this.eventBus.on(SendBreakAllianceIntentEvent, (e) =>
       this.onBreakAllianceRequestUIEvent(e),
     );
@@ -203,9 +205,6 @@ export class Transport {
     this.eventBus.on(SendAttackIntentEvent, (e) => this.onSendAttackIntent(e));
     this.eventBus.on(SendUpgradeStructureIntentEvent, (e) =>
       this.onSendUpgradeStructureIntent(e),
-    );
-    this.eventBus.on(SendCreateTrainStationIntentEvent, (e) =>
-      this.onSendCreateTrainStationIntent(e),
     );
     this.eventBus.on(SendBoatAttackIntentEvent, (e) =>
       this.onSendBoatAttackIntent(e),
@@ -245,16 +244,14 @@ export class Transport {
   }
 
   private startPing() {
-    if (this.isLocal || this.pingInterval) return;
-    if (this.pingInterval === null) {
-      this.pingInterval = window.setInterval(() => {
-        if (this.socket !== null && this.socket.readyState === WebSocket.OPEN) {
-          this.sendMsg({
-            type: "ping",
-          } satisfies ClientPingMessage);
-        }
-      }, 5 * 1000);
-    }
+    if (this.isLocal) return;
+    this.pingInterval ??= window.setInterval(() => {
+      if (this.socket !== null && this.socket.readyState === WebSocket.OPEN) {
+        this.sendMsg({
+          type: "ping",
+        } satisfies ClientPingMessage);
+      }
+    }, 5 * 1000);
   }
 
   private stopPing() {
@@ -344,7 +341,10 @@ export class Transport {
       console.log(
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
-      if (event.code !== 1000 && event.code !== 1002) {
+      if (event.code === 1002) {
+        // TODO: make this a modal
+        alert(`connection refused: ${event.reason}`);
+      } else if (event.code !== 1000) {
         console.log(`recieved error code ${event.code}, reconnecting`);
         this.reconnect();
       }
@@ -419,6 +419,16 @@ export class Transport {
     });
   }
 
+  private onSendAllianceExtensionIntent(
+    event: SendAllianceExtensionIntentEvent,
+  ) {
+    this.sendIntent({
+      type: "allianceExtension",
+      clientID: this.lobbyConfig.clientID,
+      recipient: event.recipient.id(),
+    });
+  }
+
   private onSendSpawnIntentEvent(event: SendSpawnIntentEvent) {
     this.sendIntent({
       type: "spawn",
@@ -427,8 +437,7 @@ export class Transport {
       pattern: this.lobbyConfig.pattern,
       name: this.lobbyConfig.playerName,
       playerType: PlayerType.Human,
-      x: event.cell.x,
-      y: event.cell.y,
+      tile: event.tile,
     });
   }
 
@@ -456,16 +465,6 @@ export class Transport {
     this.sendIntent({
       type: "upgrade_structure",
       unit: event.unitType,
-      clientID: this.lobbyConfig.clientID,
-      unitId: event.unitId,
-    });
-  }
-
-  private onSendCreateTrainStationIntent(
-    event: SendCreateTrainStationIntentEvent,
-  ) {
-    this.sendIntent({
-      type: "create_station",
       clientID: this.lobbyConfig.clientID,
       unitId: event.unitId,
     });
@@ -539,8 +538,7 @@ export class Transport {
       type: "build_unit",
       clientID: this.lobbyConfig.clientID,
       unit: event.unit,
-      x: event.cell.x,
-      y: event.cell.y,
+      tile: event.tile,
     });
   }
 

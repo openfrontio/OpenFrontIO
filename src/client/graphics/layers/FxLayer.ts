@@ -6,11 +6,12 @@ import {
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
+import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { Fx, FxType } from "../fx/Fx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
-import { shortenNumber, TextFx } from "../fx/TextFx";
+import { TextFx } from "../fx/TextFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
 import { Layer } from "./Layer";
 export class FxLayer implements Layer {
@@ -69,25 +70,25 @@ export class FxLayer implements Layer {
     const workers = bonus.workers;
 
     if (gold > 0) {
-      const shortened = shortenNumber(gold);
-      this.addTextFx(`+ ${shortened} gold`, x, y);
+      const shortened = renderNumber(gold);
+      this.addTextFx(`+ ${shortened}`, x, y);
       y += 10; // increase y so the next popup starts bellow
     }
 
     if (troops > 0) {
-      const shortened = shortenNumber(troops);
+      const shortened = renderNumber(troops);
       this.addTextFx(`+ ${shortened} troops`, x, y);
       y += 10;
     }
 
     if (workers > 0) {
-      const shortened = shortenNumber(workers);
+      const shortened = renderNumber(workers);
       this.addTextFx(`+ ${shortened} workers`, x, y);
     }
   }
 
   addTextFx(text: string, x: number, y: number) {
-    const textFx = new TextFx(text, x, y, 500, 20);
+    const textFx = new TextFx(text, x, y, 1000, 20);
     this.allFx.push(textFx);
   }
 

@@ -93,9 +93,9 @@ const getSpriteForUnit = (unit: UnitView): ImageBitmap | null => {
   const unitType = unit.type();
   if (unitType === UnitType.Train) {
     const trainType = trainTypeToSpriteType(unit);
-    return spriteMap.get(trainType) || null;
+    return spriteMap.get(trainType) ?? null;
   }
-  return spriteMap.get(unitType) || null;
+  return spriteMap.get(unitType) ?? null;
 };
 
 export const isSpriteReady = (unit: UnitView): boolean => {

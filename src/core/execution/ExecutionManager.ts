@@ -2,6 +2,7 @@ import { Execution, Game } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
+import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
 import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
 import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
@@ -22,7 +23,6 @@ import { RetreatExecution } from "./RetreatExecution";
 import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
-import { TrainStationExecution } from "./TrainStationExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 
@@ -67,10 +67,7 @@ export class Executor {
       case "move_warship":
         return new MoveWarshipExecution(player, intent.unitId, intent.tile);
       case "spawn":
-        return new SpawnExecution(
-          player.info(),
-          this.mg.ref(intent.x, intent.y),
-        );
+        return new SpawnExecution(player.info(), intent.tile);
       case "boat":
         return new TransportShipExecution(
           player,
@@ -106,15 +103,13 @@ export class Executor {
       case "embargo":
         return new EmbargoExecution(player, intent.targetID, intent.action);
       case "build_unit":
-        return new ConstructionExecution(
-          player,
-          this.mg.ref(intent.x, intent.y),
-          intent.unit,
-        );
+        return new ConstructionExecution(player, intent.unit, intent.tile);
+      case "allianceExtension": {
+        return new AllianceExtensionExecution(player, intent.recipient);
+      }
+
       case "upgrade_structure":
         return new UpgradeStructureExecution(player, intent.unitId);
-      case "create_station":
-        return new TrainStationExecution(player, intent.unitId);
       case "quick_chat":
         return new QuickChatExecution(
           player,

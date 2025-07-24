@@ -12,6 +12,25 @@ export const CosmeticsSchema = z.object({
       role_group: z.string().optional(),
     }),
   ),
+  flag: z.object({
+    layers: z.record(
+      z.string(),
+      z.object({
+        name: z.string(),
+        role_group: z.string().optional(),
+        flares: z.array(z.string()).optional(),
+      }),
+    ),
+    color: z.record(
+      z.string(),
+      z.object({
+        color: z.string(),
+        name: z.string(),
+        role_group: z.string().optional(),
+        flares: z.array(z.string()).optional(),
+      }),
+    ),
+  }),
 });
 export type Cosmetics = z.infer<typeof CosmeticsSchema>;
 export const COSMETICS: Cosmetics = CosmeticsSchema.parse(cosmetics_json);

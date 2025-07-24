@@ -1,6 +1,8 @@
 import { LitElement, TemplateResult, html } from "lit";
+import { ref } from "lit-html/directives/ref.js";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
+import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import {
   PlayerProfile,
@@ -205,12 +207,23 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             ? "text-green-500"
             : "text-white"}"
         >
-          ${player.flag()
-            ? html`<img
-                class="h-8 mr-1 aspect-[3/4]"
-                src=${"/flags/" + player.flag() + ".svg"}
-              />`
-            : ""}
+          ${player.cosmetics.flag
+            ? player.cosmetics.flag!.startsWith("!")
+              ? html`<div
+                  class="h-8 mr-1 aspect-[3/4] player-flag"
+                  ${ref((el) => {
+                    if (el instanceof HTMLElement) {
+                      requestAnimationFrame(() => {
+                        renderPlayerFlag(player.cosmetics.flag!, el);
+                      });
+                    }
+                  })}
+                ></div>`
+              : html`<img
+                  class="h-8 mr-1 aspect-[3/4]"
+                  src=${"/flags/" + player.cosmetics.flag! + ".svg"}
+                />`
+            : html``}
           ${player.name()}
         </div>
         ${player.team() !== null
@@ -239,17 +252,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.ports")}:
-          ${player.units(UnitType.Port).length}
-          ${player
-            .units(UnitType.Port)
-            .map((unit) => unit.level())
-            .reduce((a, b) => a + b, 0) > 1
-            ? html`(${translateText("player_info_overlay.levels")}:
-              ${player
-                .units(UnitType.Port)
-                .map((unit) => unit.level())
-                .reduce((a, b) => a + b, 0)})`
-            : ""}
+          ${player.totalUnitLevels(UnitType.Port)}
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.airports")}:
@@ -267,45 +270,15 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.cities")}:
-          ${player.units(UnitType.City).length}
-          ${player
-            .units(UnitType.City)
-            .map((unit) => unit.level())
-            .reduce((a, b) => a + b, 0) > 1
-            ? html`(${translateText("player_info_overlay.levels")}:
-              ${player
-                .units(UnitType.City)
-                .map((unit) => unit.level())
-                .reduce((a, b) => a + b, 0)})`
-            : ""}
+          ${player.totalUnitLevels(UnitType.City)}
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.missile_launchers")}:
-          ${player.units(UnitType.MissileSilo).length}
-          ${player
-            .units(UnitType.MissileSilo)
-            .map((unit) => unit.level())
-            .reduce((a, b) => a + b, 0) > 1
-            ? html`(${translateText("player_info_overlay.levels")}:
-              ${player
-                .units(UnitType.MissileSilo)
-                .map((unit) => unit.level())
-                .reduce((a, b) => a + b, 0)})`
-            : ""}
+          ${player.totalUnitLevels(UnitType.MissileSilo)}
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.sams")}:
-          ${player.units(UnitType.SAMLauncher).length}
-          ${player
-            .units(UnitType.SAMLauncher)
-            .map((unit) => unit.level())
-            .reduce((a, b) => a + b, 0) > 1
-            ? html`(${translateText("player_info_overlay.levels")}:
-              ${player
-                .units(UnitType.SAMLauncher)
-                .map((unit) => unit.level())
-                .reduce((a, b) => a + b, 0)})`
-            : ""}
+          ${player.totalUnitLevels(UnitType.SAMLauncher)}
         </div>
         <div class="text-sm opacity-80" translate="no">
           ${translateText("player_info_overlay.warships")}:
@@ -353,11 +326,11 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="flex w-full z-50 flex-col"
+        class="hidden lg:flex fixed top-[150px] right-0 w-full z-50 flex-col max-w-[180px]"
         @contextmenu=${(e) => e.preventDefault()}
       >
         <div
-          class="bg-slate-800/40 backdrop-blur-sm shadow-xs rounded-lg shadow-lg backdrop-blur-sm transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
+          class="bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
         >
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}

@@ -23,16 +23,12 @@ describe("BotBehavior.handleAllianceRequests", () => {
     });
 
     const playerInfo = new PlayerInfo(
-      undefined,
-      "us",
       "player_id",
       PlayerType.Bot,
       null,
       "player_id",
     );
     const requestorInfo = new PlayerInfo(
-      undefined,
-      "fr",
       "requestor_id",
       PlayerType.Human,
       null,
@@ -47,7 +43,7 @@ describe("BotBehavior.handleAllianceRequests", () => {
 
     const random = new PseudoRandom(42);
 
-    botBehavior = new BotBehavior(random, game, player, 0.5, 0.5);
+    botBehavior = new BotBehavior(random, game, player, 0.5, 0.5, 0.2);
   });
 
   function setupAllianceRequest({

@@ -1,4 +1,4 @@
-import { AllPlayersStats, ClientID } from "../Schemas";
+import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import {
   EmojiMessage,
   GameUpdates,
@@ -36,6 +36,7 @@ export enum GameUpdateType {
   AllianceRequestReply,
   BrokeAlliance,
   AllianceExpired,
+  AllianceExtension,
   TargetPlayer,
   Emoji,
   Win,
@@ -60,6 +61,7 @@ export type GameUpdate =
   | WinUpdate
   | HashUpdate
   | UnitIncomingUpdate
+  | AllianceExtensionUpdate
   | BonusEventUpdate
   | RailroadUpdate;
 
@@ -114,7 +116,6 @@ export interface UnitUpdate {
   health?: number;
   constructionType?: UnitType;
   missileTimerQueue: number[];
-  readyMissileCount: number;
   level: number;
   hasTrainStation: boolean;
   trainType?: TrainType; // Only for trains
@@ -133,8 +134,6 @@ export interface PlayerUpdate {
   type: GameUpdateType.Player;
   nameViewData?: NameViewData;
   clientID: ClientID | null;
-  pattern: string | undefined;
-  flag: string | undefined;
   name: string;
   displayName: string;
   id: PlayerID;
@@ -157,8 +156,16 @@ export interface PlayerUpdate {
   outgoingAttacks: AttackUpdate[];
   incomingAttacks: AttackUpdate[];
   outgoingAllianceRequests: PlayerID[];
+  alliances: AllianceView[];
   hasSpawned: boolean;
   betrayals?: bigint;
+}
+
+export interface AllianceView {
+  id: number;
+  other: PlayerID;
+  createdAt: Tick;
+  expiresAt: Tick;
 }
 
 export interface AllianceRequestUpdate {
@@ -186,6 +193,12 @@ export interface AllianceExpiredUpdate {
   player2ID: number;
 }
 
+export interface AllianceExtensionUpdate {
+  type: GameUpdateType.AllianceExtension;
+  playerID: number;
+  allianceID: number;
+}
+
 export interface TargetPlayerUpdate {
   type: GameUpdateType.TargetPlayer;
   playerID: number;
@@ -203,6 +216,7 @@ export interface DisplayMessageUpdate {
   messageType: MessageType;
   goldAmount?: bigint;
   playerID: number | null;
+  params?: Record<string, string | number>;
 }
 
 export type DisplayChatMessageUpdate = {
@@ -218,8 +232,7 @@ export type DisplayChatMessageUpdate = {
 export interface WinUpdate {
   type: GameUpdateType.Win;
   allPlayersStats: AllPlayersStats;
-  // Player id or team name.
-  winner: ["player", number] | ["team", Team];
+  winner: Winner;
 }
 
 export interface HashUpdate {
