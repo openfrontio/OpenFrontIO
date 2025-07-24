@@ -351,8 +351,15 @@ export class EventsDisplay extends LitElement implements Layer {
       }
     }
 
+    let description: string = event.message;
+    if (event.params !== undefined) {
+      if (event.message.startsWith("events_display.")) {
+        description = translateText(event.message, event.params);
+      }
+    }
+
     this.addEvent({
-      description: event.message,
+      description: description,
       createdAt: this.game.ticks(),
       highlight: true,
       type: event.messageType,
@@ -900,7 +907,7 @@ export class EventsDisplay extends LitElement implements Layer {
         : html`
             <!-- Main Events Display -->
             <div
-              class="relative w-full lg:bottom-2.5 lg:right-2.5 z-50 lg:w-96 backdrop-blur"
+              class="relative w-full sm:bottom-2.5 sm:right-2.5 z-50 sm:w-96 backdrop-blur"
             >
               <!-- Button Bar -->
               <div

@@ -6,7 +6,7 @@ import {
 import * as dotenv from "dotenv";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameManager } from "./GameManager";
-import { getOtelResource } from "./OtelResource";
+import { getOtelResource, getPromLabels } from "./OtelResource";
 
 dotenv.config();
 
@@ -20,11 +20,7 @@ export function initWorkerMetrics(gameManager: GameManager): void {
   // Configure auth headers
   const headers = {};
   if (config.otelEnabled()) {
-    headers["Authorization"] =
-      "Basic " +
-      Buffer.from(`${config.otelUsername()}:${config.otelPassword()}`).toString(
-        "base64",
-      );
+    headers["Authorization"] = config.otelAuthHeader();
   }
 
   // Create metrics exporter
@@ -73,19 +69,19 @@ export function initWorkerMetrics(gameManager: GameManager): void {
   // Register callback for active games metric
   activeGamesGauge.addCallback((result) => {
     const count = gameManager.activeGames();
-    result.observe(count);
+    result.observe(count, getPromLabels());
   });
 
   // Register callback for connected clients metric
   connectedClientsGauge.addCallback((result) => {
     const count = gameManager.activeClients();
-    result.observe(count);
+    result.observe(count, getPromLabels());
   });
 
   // Register callback for memory usage metric
   memoryUsageGauge.addCallback((result) => {
     const memoryUsage = process.memoryUsage();
-    result.observe(memoryUsage.heapUsed);
+    result.observe(memoryUsage.heapUsed, getPromLabels());
   });
 
   console.log("Metrics initialized with GameManager");

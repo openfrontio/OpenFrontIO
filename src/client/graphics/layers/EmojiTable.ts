@@ -1,4 +1,4 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { AllPlayers } from "../../../core/game/Game";
@@ -11,91 +11,14 @@ import { TransformHandler } from "../TransformHandler";
 
 @customElement("emoji-table")
 export class EmojiTable extends LitElement {
+  @state() public isVisible = false;
   public eventBus: EventBus;
   public transformHandler: TransformHandler;
   public game: GameView;
 
-  static styles = css`
-    :host {
-      display: block;
-    }
-    .emoji-table {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 9999;
-      background-color: #1e1e1e;
-      padding: 15px;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-      border-radius: 10px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      max-width: 95vw;
-      max-height: 95vh;
-      overflow-y: auto;
-    }
-    .emoji-row {
-      display: flex;
-      justify-content: center;
-      width: 100%;
-    }
-    .emoji-button {
-      font-size: 60px;
-      width: 80px;
-      height: 80px;
-      border: 1px solid #333;
-      background-color: #2c2c2c;
-      color: white;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin: 8px;
-    }
-    .emoji-button:hover {
-      background-color: #3a3a3a;
-      transform: scale(1.1);
-    }
-    .emoji-button:active {
-      background-color: #4a4a4a;
-      transform: scale(0.95);
-    }
-    .hidden {
-      display: none !important;
-    }
-
-    @media (max-width: 600px) {
-      .emoji-button {
-        font-size: 32px;
-        /* Slightly smaller font size for mobile */
-        width: 60px;
-        /* Smaller width for mobile */
-        height: 60px;
-        /* Smaller height for mobile */
-        margin: 5px;
-        /* Smaller margin for mobile */
-      }
-    }
-
-    @media (max-width: 400px) {
-      .emoji-button {
-        font-size: 28px;
-        width: 50px;
-        height: 50px;
-        margin: 3px;
-      }
-    }
-  `;
-
-  @state()
-  private _hidden = true;
-
   initEventBus() {
     this.eventBus.on(ShowEmojiMenuEvent, (e) => {
+      this.isVisible = true;
       const cell = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
       if (!this.game.isValidCoord(cell.x, cell.y)) {
         return;
@@ -131,40 +54,66 @@ export class EmojiTable extends LitElement {
   private onEmojiClicked: (emoji: string) => void = () => {};
 
   render() {
+    if (!this.isVisible) {
+      return null;
+    }
+
     return html`
-      <div class="emoji-table ${this._hidden ? "hidden" : ""}">
-        ${emojiTable.map(
-          (row) => html`
-            <div class="emoji-row">
-              ${row.map(
-                (emoji) => html`
-                  <button
-                    class="emoji-button"
-                    @click=${() => this.onEmojiClicked(emoji)}
-                  >
-                    ${emoji}
-                  </button>
-                `,
-              )}
-            </div>
-          `,
-        )}
+      <div
+        class="bg-slate-800 max-w-[95vw] max-h-[95vh] pt-[15px] pb-[15px] fixed flex flex-col -translate-x-1/2 -translate-y-1/2 
+                items-center rounded-[10px] z-[9999] top-[50%] left-[50%] justify-center"
+        @contextmenu=${(e) => e.preventDefault()}
+        @wheel=${(e) => e.stopPropagation()}
+      >
+        <!-- Close button -->
+        <button
+          class="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center
+                  bg-red-500 hover:bg-red-900 text-white rounded-full
+                  text-sm font-bold transition-colors"
+          @click=${this.hideTable}
+        >
+          ✕
+        </button>
+        <div
+          class="flex flex-col overflow-y-auto"
+          style="scrollbar-gutter: stable both-edges;"
+        >
+          ${emojiTable.map(
+            (row) => html`
+              <div class="w-full justify-center flex">
+                ${row.map(
+                  (emoji) => html`
+                    <button
+                      class="flex transition-transform duration-300 ease justify-center items-center cursor-pointer
+                              border border-solid border-slate-500 rounded-[12px] bg-slate-700 hover:bg-slate-600 active:bg-slate-500 
+                              md:m-[8px] md:text-[60px] md:w-[80px] md:h-[80px] hover:scale-[1.1] active:scale-[0.95]
+                              sm:w-[60px] sm:h-[60px] sm:text-[32px] sm:m-[5px] text-[28px] w-[50px] h-[50px] m-[3px]"
+                      @click=${() => this.onEmojiClicked(emoji)}
+                    >
+                      ${emoji}
+                    </button>
+                  `,
+                )}
+              </div>
+            `,
+          )}
+        </div>
       </div>
     `;
   }
 
   hideTable() {
-    this._hidden = true;
+    this.isVisible = false;
     this.requestUpdate();
   }
 
   showTable(oneEmojiClicked: (emoji: string) => void) {
     this.onEmojiClicked = oneEmojiClicked;
-    this._hidden = false;
+    this.isVisible = true;
     this.requestUpdate();
   }
 
-  get isVisible() {
-    return !this._hidden;
+  createRenderRoot() {
+    return this; // Disable shadow DOM to allow Tailwind styles
   }
 }
