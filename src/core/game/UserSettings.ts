@@ -32,6 +32,10 @@ export class UserSettings {
     return this.get("settings.specialEffects", true);
   }
 
+  structureSprites() {
+    return this.get("settings.structureSprites", true);
+  }
+
   darkMode() {
     return this.get("settings.darkMode", false);
   }
@@ -72,6 +76,10 @@ export class UserSettings {
 
   toggleFxLayer() {
     this.set("settings.specialEffects", !this.fxLayer());
+  }
+
+  toggleStructureSprites() {
+    this.set("settings.structureSprites", !this.structureSprites());
   }
 
   toggleTerritoryPatterns() {
