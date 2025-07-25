@@ -200,6 +200,10 @@ export class NukeExecution implements Execution {
     const toDestroy = this.tilesToDestroy();
     this.breakAlliances(toDestroy);
 
+    const maxPop = this.target().isPlayer()
+      ? this.mg.config().maxPopulation(this.target() as Player)
+      : 1;
+
     for (const tile of toDestroy) {
       const owner = this.mg.owner(tile);
       if (owner.isPlayer()) {
@@ -207,25 +211,45 @@ export class NukeExecution implements Execution {
         owner.removeTroops(
           this.mg
             .config()
-            .nukeDeathFactor(owner.troops(), owner.numTilesOwned()),
+            .nukeDeathFactor(
+              this.nukeType,
+              owner.troops(),
+              owner.numTilesOwned(),
+              maxPop,
+            ),
         );
         owner.removeWorkers(
           this.mg
             .config()
-            .nukeDeathFactor(owner.workers(), owner.numTilesOwned()),
+            .nukeDeathFactor(
+              this.nukeType,
+              owner.workers(),
+              owner.numTilesOwned(),
+              maxPop,
+            ),
         );
         owner.outgoingAttacks().forEach((attack) => {
           const deaths =
             this.mg
               ?.config()
-              .nukeDeathFactor(attack.troops(), owner.numTilesOwned()) ?? 0;
+              .nukeDeathFactor(
+                this.nukeType,
+                attack.troops(),
+                owner.numTilesOwned(),
+                maxPop,
+              ) ?? 0;
           attack.setTroops(attack.troops() - deaths);
         });
         owner.units(UnitType.TransportShip).forEach((attack) => {
           const deaths =
             this.mg
               ?.config()
-              .nukeDeathFactor(attack.troops(), owner.numTilesOwned()) ?? 0;
+              .nukeDeathFactor(
+                this.nukeType,
+                attack.troops(),
+                owner.numTilesOwned(),
+                maxPop,
+              ) ?? 0;
           attack.setTroops(attack.troops() - deaths);
         });
       }
