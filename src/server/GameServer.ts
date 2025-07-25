@@ -61,6 +61,11 @@ export class GameServer {
   private kickedClients: Set<ClientID> = new Set();
   private outOfSyncClients: Set<ClientID> = new Set();
 
+  private winnerVotes: Map<
+    string,
+    { winner: ClientSendWinnerMessage; ips: Set<string> }
+  > = new Map();
+
   constructor(
     public readonly id: string,
     readonly log_: Logger,
@@ -172,6 +177,7 @@ export class GameServer {
 
       client.isDisconnected = existing.isDisconnected;
       client.lastPing = existing.lastPing;
+      client.reportedWinner = existing.reportedWinner;
 
       existing.ws.removeAllListeners();
       this.activeClients = this.activeClients.filter((c) => c !== existing);
@@ -229,15 +235,7 @@ export class GameServer {
             client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
           }
           if (clientMsg.type === "winner") {
-            if (
-              this.outOfSyncClients.has(client.clientID) ||
-              this.kickedClients.has(client.clientID) ||
-              this.winner !== null
-            ) {
-              return;
-            }
-            this.winner = clientMsg;
-            this.archiveGame();
+            this.handleWinner(client, clientMsg);
           }
         } catch (error) {
           this.log.info(
@@ -269,6 +267,48 @@ export class GameServer {
     if (this._hasStarted) {
       this.sendStartGameMsg(client.ws, lastTurn);
     }
+  }
+
+  private handleWinner(client: Client, clientMsg: ClientSendWinnerMessage) {
+    if (
+      this.outOfSyncClients.has(client.clientID) ||
+      this.kickedClients.has(client.clientID) ||
+      this.winner !== null ||
+      client.reportedWinner !== null
+    ) {
+      return;
+    }
+    client.reportedWinner = clientMsg.winner;
+
+    // Add client vote
+    const winnerKey = JSON.stringify(clientMsg.winner);
+    if (!this.winnerVotes.has(winnerKey)) {
+      this.winnerVotes.set(winnerKey, { winner: clientMsg, ips: new Set() });
+    }
+    const potentialWinner = this.winnerVotes.get(winnerKey)!;
+    potentialWinner.ips.add(client.ip);
+
+    // Check if winner has majority
+    const activeUniqueIPs = new Set(this.activeClients.map((c) => c.ip));
+    if (activeUniqueIPs.size < 2) {
+      return;
+    }
+
+    const percentVotes =
+      (potentialWinner.ips.size / activeUniqueIPs.size) * 100;
+    if (percentVotes < 51) {
+      return;
+    }
+
+    this.winner = potentialWinner.winner;
+    this.log.info(
+      `Winner determined by ${potentialWinner.ips.size}/${activeUniqueIPs.size} active IPs`,
+      {
+        gameID: this.id,
+        winnerKey: winnerKey,
+      },
+    );
+    this.archiveGame();
   }
 
   public numClients(): number {
