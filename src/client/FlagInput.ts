@@ -2,7 +2,7 @@ import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import Countries from "./data/countries.json";
 
-const flagKey: string = "flag";
+const LOCAL_STORAGE_KEY: string = "flag";
 
 @customElement("flag-input")
 export class FlagInput extends LitElement {
@@ -40,7 +40,7 @@ export class FlagInput extends LitElement {
   }
 
   private getStoredFlag(): string {
-    const storedFlag = localStorage.getItem(flagKey);
+    const storedFlag = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (storedFlag) {
       return storedFlag;
     }
@@ -49,9 +49,9 @@ export class FlagInput extends LitElement {
 
   private storeFlag(flag: string) {
     if (flag) {
-      localStorage.setItem(flagKey, flag);
+      localStorage.setItem(LOCAL_STORAGE_KEY, flag);
     } else if (flag === "") {
-      localStorage.removeItem(flagKey);
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
     }
   }
 
