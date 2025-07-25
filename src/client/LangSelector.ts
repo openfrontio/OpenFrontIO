@@ -21,14 +21,14 @@ import ja from "../../resources/lang/ja.json";
 import ko from "../../resources/lang/ko.json";
 import nl from "../../resources/lang/nl.json";
 import pl from "../../resources/lang/pl.json";
-import pt_BR from "../../resources/lang/pt_BR.json";
+import pt_BR from "../../resources/lang/pt-BR.json";
 import ru from "../../resources/lang/ru.json";
 import sh from "../../resources/lang/sh.json";
-import sv_SE from "../../resources/lang/sv_SE.json";
+import sv_SE from "../../resources/lang/sv-SE.json";
 import tp from "../../resources/lang/tp.json";
 import tr from "../../resources/lang/tr.json";
 import uk from "../../resources/lang/uk.json";
-import zh_CN from "../../resources/lang/zh_CN.json";
+import zh_CN from "../../resources/lang/zh-CN.json";
 
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
@@ -55,7 +55,7 @@ export class LangSelector extends LitElement {
     ja,
     nl,
     pl,
-    pt_BR,
+    "pt-BR": pt_BR,
     ru,
     sh,
     tr,
@@ -65,8 +65,8 @@ export class LangSelector extends LitElement {
     he,
     da,
     fi,
-    sv_SE,
-    zh_CN,
+    "sv-SE": sv_SE,
+    "zh-CN": zh_CN,
     ko,
     gl,
   };
@@ -93,8 +93,16 @@ export class LangSelector extends LitElement {
   private getClosestSupportedLang(lang: string): string {
     if (!lang) return "en";
     if (lang in this.languageMap) return lang;
-    const base = lang.split("-")[0];
-    if (base in this.languageMap) return base;
+
+    const base = lang.slice(0, 2);
+    const candidates = Object.keys(this.languageMap).filter((key) =>
+      key.startsWith(base),
+    );
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => b.length - a.length); // More specific first
+      return candidates[0];
+    }
+
     return "en";
   }
 

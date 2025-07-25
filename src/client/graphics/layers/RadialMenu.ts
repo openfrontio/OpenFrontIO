@@ -1,11 +1,16 @@
 import * as d3 from "d3";
 import backIcon from "../../../../resources/images/BackIconWhite.svg";
+import { EventBus, GameEvent } from "../../../core/EventBus";
 import { Layer } from "./Layer";
 import {
   CenterButtonElement,
   MenuElement,
   MenuElementParams,
 } from "./RadialMenuElements";
+
+export class CloseRadialMenuEvent implements GameEvent {
+  constructor() {}
+}
 
 export interface TooltipItem {
   text: string;
@@ -72,7 +77,10 @@ export class RadialMenu implements Layer {
 
   private params: MenuElementParams | null = null;
 
-  constructor(config: RadialMenuConfig = {}) {
+  constructor(
+    private eventBus: EventBus,
+    config: RadialMenuConfig = {},
+  ) {
     this.config = {
       menuSize: config.menuSize ?? 190,
       submenuScale: config.submenuScale ?? 1.5,
@@ -112,10 +120,12 @@ export class RadialMenu implements Layer {
       .style("height", "100vh")
       .on("click", () => {
         this.hideRadialMenu();
+        this.eventBus.emit(new CloseRadialMenuEvent());
       })
       .on("contextmenu", (e) => {
         e.preventDefault();
         this.hideRadialMenu();
+        this.eventBus.emit(new CloseRadialMenuEvent());
       });
 
     // Calculate the total svg size needed for all potential nested menus
