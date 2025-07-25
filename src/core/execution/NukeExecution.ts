@@ -64,7 +64,7 @@ export class NukeExecution implements Execution {
     return this.tilesToDestroyCache;
   }
 
-  private breakAlliances(toDestroy: Set<TileRef>) {
+  private maybeBreakAlliances(toDestroy: Set<TileRef>) {
     if (this.nuke === null) {
       throw new Error("Not initialized");
     }
@@ -77,8 +77,12 @@ export class NukeExecution implements Execution {
       }
     }
 
+    const threshold = this.mg.config().nukeAllianceBreakThreshold();
     for (const [other, tilesDestroyed] of attacked) {
-      if (tilesDestroyed > 100 && this.nuke.type() !== UnitType.MIRVWarhead) {
+      if (
+        tilesDestroyed > threshold &&
+        this.nuke.type() !== UnitType.MIRVWarhead
+      ) {
         // Mirv warheads shouldn't break alliances
         const alliance = this.player.allianceWith(other);
         if (alliance !== null) {
@@ -108,6 +112,7 @@ export class NukeExecution implements Execution {
       this.nuke = this.player.buildUnit(this.nukeType, spawn, {
         targetTile: this.dst,
       });
+      this.maybeBreakAlliances(this.tilesToDestroy());
       if (this.mg.hasOwner(this.dst)) {
         const target = this.mg.owner(this.dst);
         if (!target.isPlayer()) {
@@ -120,7 +125,6 @@ export class NukeExecution implements Execution {
             MessageType.NUKE_INBOUND,
             target.id(),
           );
-          this.breakAlliances(this.tilesToDestroy());
         } else if (this.nukeType === UnitType.HydrogenBomb) {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
@@ -129,7 +133,6 @@ export class NukeExecution implements Execution {
             MessageType.HYDROGEN_BOMB_INBOUND,
             target.id(),
           );
-          this.breakAlliances(this.tilesToDestroy());
         }
 
         // Record stats
@@ -198,7 +201,7 @@ export class NukeExecution implements Execution {
 
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const toDestroy = this.tilesToDestroy();
-    this.breakAlliances(toDestroy);
+    this.maybeBreakAlliances(toDestroy);
 
     for (const tile of toDestroy) {
       const owner = this.mg.owner(tile);

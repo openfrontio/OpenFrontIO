@@ -805,6 +805,10 @@ export class DefaultConfig implements Config {
     throw new Error(`Unknown nuke type: ${unitType}`);
   }
 
+  nukeAllianceBreakThreshold(): number {
+    return 100;
+  }
+
   defaultNukeSpeed(): number {
     return 6;
   }

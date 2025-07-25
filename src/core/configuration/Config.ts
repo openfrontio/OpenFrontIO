@@ -152,6 +152,8 @@ export interface Config {
   traitorDefenseDebuff(): number;
   traitorDuration(): number;
   nukeMagnitudes(unitType: UnitType): NukeMagnitude;
+  // Number of tiles destroyed to break an alliance
+  nukeAllianceBreakThreshold(): number;
   defaultNukeSpeed(): number;
   defaultNukeTargetableRange(): number;
   defaultSamRange(): number;
