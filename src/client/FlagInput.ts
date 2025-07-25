@@ -1,4 +1,4 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import Countries from "./data/countries.json";
 
@@ -9,18 +9,6 @@ export class FlagInput extends LitElement {
   @state() private flag: string = "";
   @state() private search: string = "";
   @state() private showModal: boolean = false;
-
-  static styles = css`
-    @media (max-width: 768px) {
-      .flag-modal {
-        width: 80vw;
-      }
-
-      .dropdown-item {
-        width: calc(100% / 3 - 15px);
-      }
-    }
-  `;
 
   private handleSearch(e: Event) {
     this.search = String((e.target as HTMLInputElement).value);
