@@ -342,6 +342,7 @@ export class AttackExecution implements Execution {
     );
     this.target.removeGold(gold);
     this._owner.addGold(gold);
+    this.mg.stats().goldWar(this._owner, this.target, gold);
 
     for (let i = 0; i < 10; i++) {
       for (const tile of this.target.tiles()) {
