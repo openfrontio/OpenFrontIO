@@ -1,7 +1,6 @@
 {
   "role_groups": {
     "donor": ["1359441841371480176", "1330243292306341969"],
-    "contributor": ["1314972008362020957"],
     "creator": ["1286745100411473930"]
   },
   "patterns": {
@@ -121,7 +120,7 @@
       "name": "grogu",
       "role_group": "donor"
     },
-    "ANIhAAIAAAAAAAAQAAAAAAAAgAAAAAAAAAAEAAAAAAAAIAAAAAAAAAABAAAAAAAACAAAAAAAAEAAAAAAAAAAAgAAAAAAABAAAAAAAAAA": {
+    "AMo0AAAAAAAAAAAAAIAAJAACEAIIQCAgAAGCAAQgCBCAgEAAAggBCIAEIAAAAAAAAAAAAAAA": {
       "name": "contributor",
       "role_group": "contributor"
     }
