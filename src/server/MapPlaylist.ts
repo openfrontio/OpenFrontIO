@@ -2,6 +2,7 @@ import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
   Duos,
+  GameMapName,
   GameMapType,
   GameMode,
   GameType,
@@ -17,7 +18,9 @@ const log = logger.child({});
 
 const config = getServerConfigFromServer();
 
-const frequency = {
+// How many times each map should appear in the playlist.
+// Note: The Partial should eventually be removed for better type safety.
+const frequency: Partial<Record<GameMapName, number>> = {
   World: 3,
   Europe: 2,
   Africa: 2,
@@ -27,7 +30,6 @@ const frequency = {
   GatewayToTheAtlantic: 1,
   Iceland: 1,
   SouthAmerica: 1,
-  KnownWorld: 1,
   DeglaciatedAntarctica: 1,
   EuropeClassic: 1,
   Mena: 1,
@@ -109,8 +111,8 @@ export class MapPlaylist {
 
   private shuffleMapsPlaylist(): boolean {
     const maps: GameMapType[] = [];
-    Object.keys(GameMapType).forEach((key) => {
-      for (let i = 0; i < parseInt(frequency[key]); i++) {
+    (Object.keys(GameMapType) as GameMapName[]).forEach((key) => {
+      for (let i = 0; i < (frequency[key] ?? 0); i++) {
         maps.push(GameMapType[key]);
       }
     });
