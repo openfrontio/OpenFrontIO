@@ -99,9 +99,9 @@ export class FlagInput extends LitElement {
                   : "hidden"}"
               >
                 <input
-                  class="h-[2rem] border-none text-center border border-gray-300 rounded-xl shadow-sm text-2xl text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black dark:border-gray-300/60 dark:bg-gray-700 dark:text-white"
+                  class="h-[2rem] border-none border leading-loose border-gray-300 rounded-xl shadow-sm text-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black dark:border-gray-300/60 dark:bg-gray-700 dark:text-white"
                   type="text"
-                  placeholder="Search..."
+                  placeholder="Search flags..."
                   @change=${this.handleSearch}
                   @keyup=${this.handleSearch}
                 />
