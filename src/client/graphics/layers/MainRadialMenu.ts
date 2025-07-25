@@ -56,7 +56,7 @@ export class MainRadialMenu extends LitElement implements Layer {
       `,
     };
 
-    this.radialMenu = new RadialMenu(menuConfig);
+    this.radialMenu = new RadialMenu(this.eventBus, menuConfig);
 
     this.playerActionHandler = new PlayerActionHandler(
       this.eventBus,
