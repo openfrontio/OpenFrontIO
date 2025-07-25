@@ -424,9 +424,9 @@ class Client {
         serverConfig: config,
         pattern: this.userSettings.getSelectedPattern(),
         flag:
-          this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
+          this.flagInput === null || this.flagInput.getSelectedFlag() === "xx"
             ? ""
-            : this.flagInput.getCurrentFlag(),
+            : this.flagInput.getSelectedFlag(),
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: getPlayToken(),
         clientID: lobby.clientID,

@@ -6,28 +6,28 @@ const LOCAL_STORAGE_KEY: string = "flag";
 
 @customElement("flag-input")
 export class FlagInput extends LitElement {
-  @state() private flag: string = "";
-  @state() private search: string = "";
+  @state() private selectedFlag: string = "";
+  @state() private searchQuery: string = "";
   @state() private showModal: boolean = false;
 
   private handleSearch(e: Event) {
-    this.search = String((e.target as HTMLInputElement).value);
+    this.searchQuery = String((e.target as HTMLInputElement).value);
   }
 
-  private setFlag(flag: string) {
+  private setSelectedFlag(flag: string) {
     if (flag === "xx") {
       flag = "";
     }
-    this.flag = flag;
+    this.selectedFlag = flag;
     this.showModal = false;
-    this.storeFlag(flag);
+    this.storeSelectedFlag(flag);
   }
 
-  public getCurrentFlag(): string {
-    return this.flag;
+  public getSelectedFlag(): string {
+    return this.selectedFlag;
   }
 
-  private getStoredFlag(): string {
+  private getStoredSelectedFlag(): string {
     const storedFlag = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (storedFlag) {
       return storedFlag;
@@ -35,7 +35,7 @@ export class FlagInput extends LitElement {
     return "";
   }
 
-  private storeFlag(flag: string) {
+  private storeSelectedFlag(flag: string) {
     if (flag) {
       localStorage.setItem(LOCAL_STORAGE_KEY, flag);
     } else if (flag === "") {
@@ -46,7 +46,7 @@ export class FlagInput extends LitElement {
   private dispatchFlagEvent() {
     this.dispatchEvent(
       new CustomEvent("flag-change", {
-        detail: { flag: this.flag },
+        detail: { flag: this.selectedFlag },
         bubbles: true,
         composed: true,
       }),
@@ -55,7 +55,7 @@ export class FlagInput extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.flag = this.getStoredFlag();
+    this.selectedFlag = this.getStoredSelectedFlag();
     this.dispatchFlagEvent();
   }
 
@@ -77,7 +77,10 @@ export class FlagInput extends LitElement {
           class="border p-[4px] rounded-lg flex cursor-pointer border-black/30 dark:border-gray-300/60 bg-white/70 dark:bg-[rgba(55,65,81,0.7)]"
           title="Pick a flag!"
         >
-          <img class="size-[48px]" src="/flags/${this.flag || "xx"}.svg" />
+          <img
+            class="size-[48px]"
+            src="/flags/${this.selectedFlag || "xx"}.svg"
+          />
         </button>
         ${this.showModal
           ? html`
@@ -123,16 +126,16 @@ export class FlagInput extends LitElement {
                     (country) =>
                       country.name
                         .toLowerCase()
-                        .includes(this.search.toLowerCase()) ||
+                        .includes(this.searchQuery.toLowerCase()) ||
                       country.code
                         .toLowerCase()
-                        .includes(this.search.toLowerCase()),
+                        .includes(this.searchQuery.toLowerCase()),
                   ).map(
                     (country) => html`
                       <button
                         class="group/flag flex flex-col text-center px-px pt-0.5 pb-2 space-y-0.5 rounded-lg border-2 cursor-pointer transition-all duration-200 ease-in-out will-change-transform hover:-translate-y-px bg-gray-500/25 border-gray-500/60 hover:bg-gray-400/35 hover:border-gray-400"
                         title="${country.name}"
-                        @click=${() => this.setFlag(country.code)}
+                        @click=${() => this.setSelectedFlag(country.code)}
                       >
                         <img
                           class="w-full h-[4.5rem] object-cover object-center"
