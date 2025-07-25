@@ -83,6 +83,7 @@ describe("SAM", () => {
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
     attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
       targetTile: game.ref(2, 1),
+      trajectory: [{ tile: game.ref(2, 1), targetable: true }],
     });
 
     executeTicks(game, 3);
@@ -95,9 +96,11 @@ describe("SAM", () => {
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
     attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 1), {
       targetTile: game.ref(2, 1),
+      trajectory: [{ tile: game.ref(2, 1), targetable: true }],
     });
     attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
       targetTile: game.ref(1, 2),
+      trajectory: [{ tile: game.ref(1, 2), targetable: true }],
     });
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(2);
 
@@ -113,6 +116,7 @@ describe("SAM", () => {
     expect(sam.isInCooldown()).toBeFalsy();
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
       targetTile: game.ref(1, 2),
+      trajectory: [{ tile: game.ref(1, 2), targetable: true }],
     });
 
     executeTicks(game, 3);
@@ -136,6 +140,7 @@ describe("SAM", () => {
     game.addExecution(new SAMLauncherExecution(defender, null, sam2));
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 2), {
       targetTile: game.ref(2, 2),
+      trajectory: [{ tile: game.ref(2, 2), targetable: true }],
     });
 
     executeTicks(game, 3);

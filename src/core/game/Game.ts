@@ -183,6 +183,10 @@ export interface OwnerComp {
   owner: Player;
 }
 
+export type TrajectoryTile = {
+  tile: TileRef;
+  targetable: boolean;
+};
 export interface UnitParamsMap {
   [UnitType.TransportShip]: {
     troops?: number;
@@ -201,10 +205,12 @@ export interface UnitParamsMap {
 
   [UnitType.AtomBomb]: {
     targetTile?: number;
+    trajectory: TrajectoryTile[];
   };
 
   [UnitType.HydrogenBomb]: {
     targetTile?: number;
+    trajectory: TrajectoryTile[];
   };
 
   [UnitType.TradeShip]: {
@@ -414,6 +420,9 @@ export interface Unit {
   // Targeting
   setTargetTile(cell: TileRef | undefined): void;
   targetTile(): TileRef | undefined;
+  setTrajectoryIndex(i: number): void;
+  trajectoryIndex(): number;
+  trajectory(): TrajectoryTile[];
   setTargetUnit(unit: Unit | undefined): void;
   targetUnit(): Unit | undefined;
   setTargetedBySAM(targeted: boolean): void;

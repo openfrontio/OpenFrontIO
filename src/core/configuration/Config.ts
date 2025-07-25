@@ -154,6 +154,7 @@ export interface Config {
   nukeMagnitudes(unitType: UnitType): NukeMagnitude;
   defaultNukeSpeed(): number;
   defaultNukeTargetableRange(): number;
+  defaultSamMissileSpeed(): number;
   defaultSamRange(): number;
   nukeDeathFactor(humans: number, tilesOwned: number): number;
   structureMinDist(): number;
