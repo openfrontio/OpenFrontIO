@@ -1,6 +1,7 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import Countries from "./data/countries.json";
+
 const flagKey: string = "flag";
 
 @customElement("flag-input")
@@ -93,20 +94,42 @@ export class FlagInput extends LitElement {
         ${this.showModal
           ? html`
               <div
-                class="text-white flex flex-col gap-[0.5rem] absolute top-[60px] left-[0px] w-[780%] h-[500px] max-h-[50vh] max-w-[87vw] bg-gray-900/80 backdrop-blur-md p-[10px] rounded-[8px] z-[3] ${this
+                class="text-white flex flex-col gap-[0.8rem] absolute top-[61px] left-[0px] w-[825%] h-[500px] max-h-[50vh] max-w-[87vw] bg-gray-900/80 backdrop-blur-md p-[10px] rounded-[8px] z-[3] ${this
                   .showModal
                   ? ""
                   : "hidden"}"
               >
-                <input
-                  class="h-[2rem] border-none border leading-loose border-gray-300 rounded-xl shadow-sm text-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black dark:border-gray-300/60 dark:bg-gray-700 dark:text-white"
-                  type="text"
-                  placeholder="Search flags..."
-                  @change=${this.handleSearch}
-                  @keyup=${this.handleSearch}
-                />
+                <div class="group/search relative text-black _dark:text-white">
+                  <div
+                    class="pointer-events-none absolute size-7 inset-y-1 start-0 ps-2 peer-disabled:opacity-50"
+                  >
+                    <svg
+                      class="search-icon shrink-0"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path d="m21 21-4.34-4.34" />
+                      <circle cx="11" cy="11" r="8" />
+                    </svg>
+                  </div>
+                  <input
+                    id="flagSearchInput"
+                    class="transition-[color,box-shadow] peer ps-10 pr-1 pb-[0.15rem] pt-0.5 w-full h-8 rounded-md border shadow-sm text-lg outline-none focus-visible:ring-1 focus-visible:border-blue-500 focus-visible:ring-blue-500"
+                    blablablabla="TODO REMOVE ps-10 dark:border-gray-300/60 dark:bg-gray-700"
+                    type="search"
+                    placeholder="Search flags..."
+                    @change=${this.handleSearch}
+                    @keyup=${this.handleSearch}
+                  />
+                </div>
                 <div
-                  class="flex flex-wrap justify-evenly gap-[1rem] overflow-y-auto overflow-x-hidden"
+                  class="grid grid-cols-3 gap-x-3.5 gap-3.5 overflow-y-auto overflow-x-hidden pt-px"
                 >
                   ${Countries.filter(
                     (country) =>
@@ -119,14 +142,22 @@ export class FlagInput extends LitElement {
                   ).map(
                     (country) => html`
                       <button
+                        class="group/flag flex flex-col text-center px-px pt-0.5 pb-2 space-y-0.5 rounded-lg border-2 cursor-pointer transition-all duration-200 ease-in-out will-change-transform hover:-translate-y-px bg-gray-500/25 border-gray-500/60 hover:bg-gray-400/35 hover:border-gray-400"
+                        title="${country.name}"
                         @click=${() => this.setFlag(country.code)}
-                        class="text-center cursor-pointer border-none bg-none opacity-70 sm:w-[calc(33.3333%-15px) w-[calc(100%/3-15px)] md:w-[calc(100%/4-15px)]"
                       >
                         <img
-                          class="country-flag w-full h-auto"
+                          class="w-full h-[4.5rem] object-cover object-center"
+                          alt="${country.name} flag"
                           src="/flags/${country.code}.svg"
                         />
-                        <span class="country-name">${country.name}</span>
+                        <div
+                          class="flex flex-col bg-blue-300/20 text-gray-100 group-hover/flag:bg-blue-300/40 items-center justify-center flex-1 rounded-md mx-[0.34rem] py-1 px-1.5"
+                        >
+                          <p class="leading-snug text-[0.8rem]">
+                            ${country.name}
+                          </p>
+                        </div>
                       </button>
                     `,
                   )}
