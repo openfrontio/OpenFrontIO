@@ -50,7 +50,9 @@ describe("AllianceExtensionExecution", () => {
     const expirationBefore =
       allianceBefore.createdAt() + game.config().allianceDuration();
 
-    game.addExecution(new AllianceExtensionExecution(player1, player2.id()));
+    game.addExecution(
+      new AllianceExtensionExecution("1b3xq", player1, player2.id()),
+    );
     game.executeNextTick();
 
     const allianceAfter = player1.allianceWith(player2)!;
@@ -64,7 +66,9 @@ describe("AllianceExtensionExecution", () => {
   });
 
   test("Fails gracefully if no alliance exists", () => {
-    game.addExecution(new AllianceExtensionExecution(player1, player2.id()));
+    game.addExecution(
+      new AllianceExtensionExecution("1b3xq", player1, player2.id()),
+    );
     game.executeNextTick();
 
     expect(player1.allianceWith(player2)).toBeFalsy();
