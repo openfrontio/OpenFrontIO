@@ -19,7 +19,6 @@ export class FlagInput extends LitElement {
       flag = "";
     }
     this.selectedFlag = flag;
-    this.showModal = false;
     this.storeSelectedFlag(flag);
   }
 
@@ -85,42 +84,48 @@ export class FlagInput extends LitElement {
         ${this.showModal
           ? html`
               <div
-                class="text-white flex flex-col gap-[0.8rem] absolute top-[61px] left-[0px] w-[825%] h-[500px] max-h-[50vh] max-w-[87vw] bg-gray-900/80 backdrop-blur-md p-[10px] rounded-[8px] z-[3] ${this
+                class="text-white flex flex-col absolute shadow-2xl p-2.5 top-[61px] left-0 w-[825%] h-[500px] max-h-[50vh] max-w-[87vw] bg-white/75 dark:bg-gray-900/70 backdrop-blur-md rounded-[8px] z-[3] ${this
                   .showModal
                   ? ""
                   : "hidden"}"
               >
-                <div class="group/search relative text-black _dark:text-white">
-                  <div
-                    class="pointer-events-none absolute size-7 inset-y-1 start-0 ps-2 peer-disabled:opacity-50"
+                <div class="pb-2.5">
+                  <label for="flagSearchInput" class="sr-only"
+                    >Search flags</label
                   >
-                    <svg
-                      class="search-icon shrink-0"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      xmlns="http://www.w3.org/2000/svg"
+                  <div
+                    class="group/search relative text-gray-950 dark:text-gray-50"
+                  >
+                    <input
+                      id="flagSearchInput"
+                      class="peer w-full font-light transition-all duration-300 tracking-wide h-9 ps-10 pr-1 pb-0.5 pt-px rounded-md shadow-sm text-xl outline-none border border-gray-300 dark:border-gray-300/60 focus-visible:!border-blue-500 focus-visible:ring-blue-500/60 focus-visible:ring-2 bg-gray-50 dark:bg-gray-700 placeholder-inherit placeholder:opacity-80 dark:placeholder:opacity-70 [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none [&::-webkit-search-results-button]:appearance-none [&::-webkit-search-results-decoration]:appearance-none"
+                      type="search"
+                      placeholder="Search flags..."
+                      @change=${this.handleSearch}
+                      @keyup=${this.handleSearch}
+                    />
+                    <div
+                      class="absolute flex inset-y-[0.36rem] start-0 ps-2.5 pointer-events-none text-inherit peer-focus-visible:!opacity-95 dark:peer-placeholder-shown:opacity-70 peer-placeholder-shown:opacity-80 transition-all"
                     >
-                      <path d="m21 21-4.34-4.34" />
-                      <circle cx="11" cy="11" r="8" />
-                    </svg>
+                      <svg
+                        class="search-icon size-6 shrink-0"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path d="m21 21-4.34-4.34" />
+                        <circle cx="11" cy="11" r="8" />
+                      </svg>
+                    </div>
                   </div>
-                  <input
-                    id="flagSearchInput"
-                    class="transition-[color,box-shadow] peer ps-10 pr-1 pb-[0.15rem] pt-0.5 w-full h-8 rounded-md border shadow-sm text-lg outline-none focus-visible:ring-1 focus-visible:border-blue-500 focus-visible:ring-blue-500"
-                    blablablabla="TODO REMOVE ps-10 dark:border-gray-300/60 dark:bg-gray-700"
-                    type="search"
-                    placeholder="Search flags..."
-                    @change=${this.handleSearch}
-                    @keyup=${this.handleSearch}
-                  />
                 </div>
                 <div
-                  class="grid grid-cols-3 gap-x-3.5 gap-3.5 overflow-y-auto overflow-x-hidden pt-px"
+                  class="grid grid-cols-3 gap-3 overflow-y-auto overflow-x-hidden p-px pt-0.5"
                 >
                   ${Countries.filter(
                     (country) =>
@@ -130,28 +135,42 @@ export class FlagInput extends LitElement {
                       country.code
                         .toLowerCase()
                         .includes(this.searchQuery.toLowerCase()),
-                  ).map(
-                    (country) => html`
+                  ).map((country) => {
+                    const isSelected = this.selectedFlag === country.code;
+                    return html`
                       <button
-                        class="group/flag flex flex-col text-center px-px pt-0.5 pb-2 space-y-0.5 rounded-lg border-2 cursor-pointer transition-all duration-200 ease-in-out will-change-transform hover:-translate-y-px bg-gray-500/25 border-gray-500/60 hover:bg-gray-400/35 hover:border-gray-400"
-                        title="${country.name}"
-                        @click=${() => this.setSelectedFlag(country.code)}
+                        @click=${isSelected
+                          ? () => {} // no-op if already selected
+                          : () => this.setSelectedFlag(country.code)}
+                        class="group/flag flex flex-col space-y-1.5 md:space-y-1 text-center px-px pt-1.5 md:pt-1 pb-1.5 border-2 rounded-lg transition-all duration-200 ease-in-out will-change-transform hover:scale-[1.01]
+                        ${isSelected
+                          ? `bg-blue-300/50 border-blue-500/75 hover:bg-blue-200 hover:border-blue-400
+                          dark:bg-blue-800/70 dark:border-blue-500/75 dark:hover:bg-blue-600/50 dark:hover:border-blue-400/75
+                          cursor-default scale-[1.01]`
+                          : `bg-gray-300/80 border-gray-400/75 hover:bg-gray-200 hover:border-gray-400
+                          dark:bg-gray-700 dark:border-gray-500/50 dark:hover:bg-gray-700/60 dark:hover:border-gray-400/75`}"
                       >
-                        <img
-                          class="w-full h-[4.5rem] object-cover object-center"
-                          alt="${country.name} flag"
-                          src="/flags/${country.code}.svg"
-                        />
+                        <div>
+                          <img
+                            class="w-full h-16 object-cover object-center"
+                            alt="${country.name} flag"
+                            src="/flags/${country.code}.svg"
+                          />
+                        </div>
+
                         <div
-                          class="flex flex-col bg-blue-300/20 text-gray-100 group-hover/flag:bg-blue-300/40 items-center justify-center flex-1 rounded-md mx-[0.34rem] py-1 px-1.5"
+                          class="flex-1 flex flex-col items-center justify-center text-black dark:!text-gray-100 rounded-md mx-[0.3rem] md:mx-[0.33rem] py-1 px-0.5 transition-all duration-300 ease-in-out
+                          ${isSelected
+                            ? "bg-blue-400/70 group-hover/flag:bg-blue-400/55 dark:bg-blue-400/40 dark:group-hover/flag:bg-blue-400/55"
+                            : "bg-gray-400/70 group-hover/flag:bg-gray-400/60 group-hover/flag:text-gray-900 dark:bg-gray-500/50 dark:group-hover/flag:bg-gray-400/45"}"
                         >
-                          <p class="leading-snug text-[0.8rem]">
+                          <p class="leading-snug font-medium text-[0.78rem]">
                             ${country.name}
                           </p>
                         </div>
                       </button>
-                    `,
-                  )}
+                    `;
+                  })}
                 </div>
               </div>
             `
