@@ -162,7 +162,8 @@
     "baikal": "Baikal",
     "halkidiki": "Halkidiki",
     "straitofgibraltar": "Strait of Gibraltar",
-    "italia": "Italia"
+    "italia": "Italia",
+    "pluto": "Pluto"
   },
   "map_categories": {
     "continental": "Continental",
@@ -276,6 +277,8 @@
     "anonymous_names_label": "Hidden Names",
     "anonymous_names_desc": "Hide real player names with random ones on your screen.",
     "anonymous_names_enabled": "Anonymous names enabled",
+    "lobby_id_visibility_label": "Hidden Lobby IDs",
+    "lobby_id_visibility_desc": "Hide Lobby ID in private lobby creation",
     "real_names_shown": "Real names shown",
     "left_click_label": "Left Click to Open Menu",
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
