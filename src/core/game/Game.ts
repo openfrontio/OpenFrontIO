@@ -81,6 +81,7 @@ export enum GameMapType {
   Halkidiki = "Halkidiki",
   StraitOfGibraltar = "Strait of Gibraltar",
   Italia = "Italia",
+  Yenisei = "Yenisei",
   Pluto = "Pluto",
 }
 
@@ -113,6 +114,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Halkidiki,
     GameMapType.StraitOfGibraltar,
     GameMapType.Italia,
+    GameMapType.Yenisei,
   ],
   fantasy: [
     GameMapType.Pangaea,
