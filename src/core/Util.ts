@@ -63,13 +63,14 @@ export function distSortUnit(
 }
 
 export function simpleHash(str: string): number {
-  let hash = 0;
+  // dbj2 is a fast string hashing function
+  let hash = 5381;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32-bit integer
+    // h = h * k + c (k=33)
+    hash = (hash << 5) + hash + char;
   }
-  return Math.abs(hash);
+  return hash >>> 0; // Coerce to 32-bit int
 }
 
 export function calculateBoundingBox(
