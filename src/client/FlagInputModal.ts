@@ -50,6 +50,13 @@ export class FlagInputModal extends LitElement {
                 <img
                   class="country-flag w-full h-auto"
                   src="/flags/${country.code}.svg"
+                  @error=${(e: Event) => {
+                    const img = e.currentTarget as HTMLImageElement;
+                    const fallback = "/flags/xx.svg";
+                    if (img.src && !img.src.endsWith(fallback)) {
+                      img.src = fallback;
+                    }
+                  }}
                 />
                 <span class="country-name">${country.name}</span>
               </button>
