@@ -165,6 +165,10 @@ export class MoveWarshipIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendKickPlayerIntentEvent implements GameEvent {
+  constructor(public readonly target: string) {}
+}
+
 export class Transport {
   private socket: WebSocket | null = null;
 
@@ -241,6 +245,9 @@ export class Transport {
     this.eventBus.on(MoveWarshipIntentEvent, (e) => {
       this.onMoveWarshipEvent(e);
     });
+    this.eventBus.on(SendKickPlayerIntentEvent, (e) =>
+      this.onSendKickPlayerIntent(e),
+    );
   }
 
   private startPing() {
@@ -608,6 +615,14 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       unitId: event.unitId,
       tile: event.tile,
+    });
+  }
+
+  private onSendKickPlayerIntent(event: SendKickPlayerIntentEvent) {
+    this.sendIntent({
+      type: "kick_player",
+      clientID: this.lobbyConfig.clientID,
+      target: event.target,
     });
   }
 
