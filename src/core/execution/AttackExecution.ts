@@ -185,8 +185,11 @@ export class AttackExecution implements Execution {
     this.attack.delete();
     this.active = false;
 
-    // Record stats
-    this.mg.stats().attackCancel(this._owner, this.target, survivors);
+    // Not all retreats are canceled attacks
+    if (this.attack.retreated()) {
+      // Record stats
+      this.mg.stats().attackCancel(this._owner, this.target, survivors);
+    }
   }
 
   tick(ticks: number) {
