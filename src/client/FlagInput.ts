@@ -22,7 +22,7 @@ export class FlagInput extends LitElement {
     this.storeSelectedFlag(flag);
   }
 
-  public getSelectedFlag(): string {
+  public getCurrentFlag(): string {
     return this.selectedFlag;
   }
 

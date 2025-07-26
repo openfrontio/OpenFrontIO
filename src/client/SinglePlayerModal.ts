@@ -417,9 +417,9 @@ export class SinglePlayerModal extends LitElement {
                 clientID,
                 username: usernameInput.getCurrentUsername(),
                 flag:
-                  flagInput.getSelectedFlag() === "xx"
+                  flagInput.getCurrentFlag() === "xx"
                     ? ""
-                    : flagInput.getSelectedFlag(),
+                    : flagInput.getCurrentFlag(),
                 pattern: this.userSettings.getSelectedPattern(),
               },
             ],
