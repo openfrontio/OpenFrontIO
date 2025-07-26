@@ -44,13 +44,11 @@ export class RadialMenu implements Layer {
   private currentLevel: number = 0; // Current menu level (0 = main menu, 1 = submenu, etc.)
   private menuStack: MenuElement[][] = []; // Stack to track menu navigation history
   private currentMenuItems: MenuElement[] = []; // Current active menu items (changes based on level)
-  private rootMenuItems: MenuElement[] = []; // Store the original root menu items
 
   private readonly config: RequiredRadialMenuConfig;
   private readonly backIconSize: number;
 
   private centerButtonState: CenterButtonState = "default";
-  private centerButtonElement: CenterButtonElement | null = null;
 
   private isTransitioning: boolean = false;
   private lastHideTime: number = 0;
@@ -79,6 +77,8 @@ export class RadialMenu implements Layer {
 
   constructor(
     private eventBus: EventBus,
+    private rootMenu: MenuElement,
+    private centerButtonElement: CenterButtonElement,
     config: RadialMenuConfig = {},
   ) {
     this.config = {
@@ -904,18 +904,6 @@ export class RadialMenu implements Layer {
     return this.currentLevel;
   }
 
-  public setRootMenuItems(
-    items: MenuElement[],
-    centerButton: CenterButtonElement,
-  ) {
-    this.currentMenuItems = [...items];
-    this.rootMenuItems = [...items];
-    this.centerButtonElement = centerButton;
-    if (this.isVisible) {
-      this.refreshMenu();
-    }
-  }
-
   public setParams(params: MenuElementParams) {
     this.params = params;
   }
@@ -928,7 +916,7 @@ export class RadialMenu implements Layer {
     this.currentLevel = 0;
     this.menuStack = [];
 
-    this.currentMenuItems = [...this.rootMenuItems];
+    this.currentMenuItems = this.rootMenu.subMenu!(this.params!);
 
     this.navigationInProgress = false;
 

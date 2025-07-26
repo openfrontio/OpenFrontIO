@@ -24,6 +24,7 @@ import pl from "../../resources/lang/pl.json";
 import pt_BR from "../../resources/lang/pt-BR.json";
 import ru from "../../resources/lang/ru.json";
 import sh from "../../resources/lang/sh.json";
+import sl from "../../resources/lang/sl.json";
 import sv_SE from "../../resources/lang/sv-SE.json";
 import tp from "../../resources/lang/tp.json";
 import tr from "../../resources/lang/tr.json";
@@ -69,6 +70,7 @@ export class LangSelector extends LitElement {
     "zh-CN": zh_CN,
     ko,
     gl,
+    sl,
   };
 
   createRenderRoot() {

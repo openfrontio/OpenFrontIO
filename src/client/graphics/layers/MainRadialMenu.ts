@@ -17,7 +17,7 @@ import {
   centerButtonElement,
   COLORS,
   MenuElementParams,
-  rootMenuItems,
+  rootMenuElement,
 } from "./RadialMenuElements";
 
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
@@ -56,7 +56,12 @@ export class MainRadialMenu extends LitElement implements Layer {
       `,
     };
 
-    this.radialMenu = new RadialMenu(this.eventBus, menuConfig);
+    this.radialMenu = new RadialMenu(
+      this.eventBus,
+      rootMenuElement,
+      centerButtonElement,
+      menuConfig,
+    );
 
     this.playerActionHandler = new PlayerActionHandler(
       this.eventBus,
@@ -64,13 +69,10 @@ export class MainRadialMenu extends LitElement implements Layer {
     );
 
     this.chatIntegration = new ChatIntegration(this.game, this.eventBus);
-
-    this.radialMenu.setRootMenuItems(rootMenuItems, centerButtonElement);
   }
 
   init() {
     this.radialMenu.init();
-    this.radialMenu.setRootMenuItems(rootMenuItems, centerButtonElement);
     this.eventBus.on(ContextMenuEvent, (event) => {
       const worldCoords = this.transformHandler.screenToWorldCoordinates(
         event.x,
