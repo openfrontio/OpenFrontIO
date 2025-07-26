@@ -64,7 +64,7 @@ export class TransportShipExecution implements Execution {
 
     this.lastMove = ticks;
     this.mg = mg;
-    this.pathFinder = PathFinder.Mini(mg, 10_000, true, 10);
+    this.pathFinder = PathFinder.Mini(mg, 10_000, true, 100);
 
     if (
       this.attacker.unitCount(UnitType.TransportShip) >=
