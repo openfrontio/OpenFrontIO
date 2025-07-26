@@ -176,7 +176,6 @@ export class GameServer {
       client.isDisconnected = existing.isDisconnected;
       client.lastPing = existing.lastPing;
 
-      existing.ws.removeAllListeners();
       this.activeClients = this.activeClients.filter((c) => c !== existing);
     }
 
@@ -186,7 +185,7 @@ export class GameServer {
 
     this.allClients.set(client.clientID, client);
 
-    client.ws.removeAllListeners();
+    client.ws.removeAllListeners("message");
     client.ws.on(
       "message",
       gatekeeper.wsHandler(client.ip, async (message: string) => {
@@ -205,7 +204,6 @@ export class GameServer {
               } satisfies ServerErrorMessage),
             );
             client.ws.close(1002, "ClientMessageSchema");
-            client.ws.removeAllListeners();
             return;
           }
           const clientMsg = parsed.data;
@@ -263,7 +261,6 @@ export class GameServer {
     });
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
-        client.ws.removeAllListeners();
         client.ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
       }
     });
@@ -405,7 +402,6 @@ export class GameServer {
     // Close all WebSocket connections
     clearInterval(this.endTurnIntervalID);
     this.websockets.forEach((ws) => {
-      ws.removeAllListeners();
       if (ws.readyState === WebSocket.OPEN) {
         ws.close(1000, "game has ended");
       }
@@ -463,7 +459,6 @@ export class GameServer {
         });
         if (client.ws.readyState === WebSocket.OPEN) {
           client.ws.close(1000, "no heartbeats received, closing connection");
-          client.ws.removeAllListeners();
         }
       } else {
         alive.push(client);
@@ -558,7 +553,6 @@ export class GameServer {
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== clientID,
       );
-      client.ws.removeAllListeners();
       this.kickedClients.add(clientID);
     } else {
       this.log.warn(`cannot kick client, not found in game`, {
