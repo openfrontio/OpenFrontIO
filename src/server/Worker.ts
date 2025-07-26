@@ -17,7 +17,12 @@ import {
   GameRecordSchema,
   ServerErrorMessage,
 } from "../core/Schemas";
-import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
+import {
+  CreateGameInputSchema,
+  GameInputSchema,
+  WorkerApiArchivedGameLobby,
+  WorkerApiGameIdExists,
+} from "../core/WorkerSchemas";
 import { archive, readGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
@@ -197,7 +202,7 @@ export function startWorker() {
       const lobbyId = req.params.id;
       res.json({
         exists: gm.game(lobbyId) !== null,
-      });
+      } satisfies WorkerApiGameIdExists);
     }),
   );
 
@@ -223,7 +228,7 @@ export function startWorker() {
           success: false,
           error: "Game not found",
           exists: false,
-        });
+        } satisfies WorkerApiArchivedGameLobby);
       }
 
       if (
@@ -241,14 +246,14 @@ export function startWorker() {
             expectedCommit: config.gitCommit(),
             actualCommit: gameRecord.gitCommit,
           },
-        });
+        } satisfies WorkerApiArchivedGameLobby);
       }
 
       return res.status(200).json({
         success: true,
         exists: true,
         gameRecord: gameRecord,
-      });
+      } satisfies WorkerApiArchivedGameLobby);
     }),
   );
 

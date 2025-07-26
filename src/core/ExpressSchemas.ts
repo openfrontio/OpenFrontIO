@@ -1,4 +1,4 @@
-// This file contians schemas for the openfront express server
+// This file contians schemas for the primary openfront express server
 import { z } from "zod";
 
 export const ApiEnvResponseSchema = z.object({
