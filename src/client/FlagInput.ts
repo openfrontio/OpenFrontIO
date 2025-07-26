@@ -72,25 +72,24 @@ export class FlagInput extends LitElement {
     const preview = this.renderRoot.querySelector(
       "#flag-preview",
     ) as HTMLElement;
-    if (preview) {
-      preview.innerHTML = "";
-      if (this.flag && this.flag.startsWith("!")) {
-        renderPlayerFlag(this.flag, preview);
-      } else if (this.flag) {
-        const img = document.createElement("img");
-        img.src = `/flags/${this.flag}.svg`;
-        img.style.width = "100%";
-        img.style.height = "100%";
-        img.style.objectFit = "contain";
-        preview.appendChild(img);
-      } else {
-        const img = document.createElement("img");
-        img.src = `/flags/xx.svg`;
-        img.style.width = "100%";
-        img.style.height = "100%";
-        img.style.objectFit = "contain";
-        preview.appendChild(img);
-      }
+    if (!preview) return;
+
+    preview.innerHTML = "";
+
+    if (this.flag?.startsWith("!")) {
+      renderPlayerFlag(this.flag, preview);
+    } else {
+      const img = document.createElement("img");
+      img.src = this.flag ? `/flags/${this.flag}.svg` : `/flags/xx.svg`;
+      img.style.width = "100%";
+      img.style.height = "100%";
+      img.style.objectFit = "contain";
+      img.onerror = () => {
+        if (!img.src.endsWith("/flags/xx.svg")) {
+          img.src = "/flags/xx.svg";
+        }
+      };
+      preview.appendChild(img);
     }
   }
 }
