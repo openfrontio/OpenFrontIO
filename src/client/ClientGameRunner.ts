@@ -199,13 +199,14 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
-  private saveGame(update: WinUpdate) {
+  private async saveGame(update: WinUpdate) {
     if (this.myPlayer === null) {
       return;
     }
+    const persistentID = await getPersistentID();
     const players: PlayerRecord[] = [
       {
-        persistentID: getPersistentID(),
+        persistentID: persistentID,
         username: this.lobby.playerName,
         clientID: this.lobby.clientID,
         stats: update.allPlayersStats[this.lobby.clientID],

@@ -174,15 +174,16 @@ export class LocalServer {
     });
   }
 
-  public endGame(saveFullGame: boolean = false) {
+  public async endGame(saveFullGame: boolean = false) {
     console.log("local server ending game");
     clearInterval(this.turnCheckInterval);
     if (this.isReplay) {
       return;
     }
+    const persistentID = await getPersistentID();
     const players: PlayerRecord[] = [
       {
-        persistentID: getPersistentID(),
+        persistentID: persistentID,
         username: this.lobbyConfig.playerName,
         clientID: this.lobbyConfig.clientID,
         stats: this.allPlayersStats[this.lobbyConfig.clientID],

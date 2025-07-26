@@ -103,12 +103,18 @@ export type IsLoggedInResponse =
   | { token: string; claims: TokenPayload }
   | false;
 let __isLoggedIn: IsLoggedInResponse | undefined = undefined;
-export function isLoggedIn(): IsLoggedInResponse {
-  __isLoggedIn ??= _isLoggedIn();
+let __refreshPromise: Promise<boolean> | null = null;
+export async function isLoggedIn(): Promise<IsLoggedInResponse> {
+  if (__refreshPromise) {
+    await __refreshPromise;
+    __refreshPromise = null;
+    __isLoggedIn = undefined;
+  }
 
+  __isLoggedIn ??= await _isLoggedIn();
   return __isLoggedIn;
 }
-function _isLoggedIn(): IsLoggedInResponse {
+async function _isLoggedIn(): Promise<IsLoggedInResponse> {
   try {
     const token = getToken();
     if (!token) {
@@ -126,7 +132,7 @@ function _isLoggedIn(): IsLoggedInResponse {
     // });
 
     // Decode the JWT
-    const payload = decodeJwt(token);
+    let payload = decodeJwt(token);
     const { iss, aud, exp, iat } = payload;
 
     if (iss !== getApiBase()) {
@@ -160,14 +166,19 @@ function _isLoggedIn(): IsLoggedInResponse {
     const refreshAge: number = 3 * 24 * 3600; // 3 days
     if (iat !== undefined && now >= iat + refreshAge) {
       console.log("Refreshing access token...");
-      postRefresh().then((success) => {
-        if (success) {
-          console.log("Refreshed access token successfully.");
-        } else {
-          console.error("Failed to refresh access token.");
-          // TODO: Update the UI to show logged out state
+      __refreshPromise = postRefresh();
+      const success = await __refreshPromise;
+      __refreshPromise = null;
+
+      if (success) {
+        console.log("Refreshed access token successfully.");
+        const newToken = getToken();
+        if (newToken) {
+          payload = decodeJwt(newToken);
         }
-      });
+      } else {
+        console.error("Failed to refresh access token.");
+      }
     }
 
     const result = TokenPayloadSchema.safeParse(payload);

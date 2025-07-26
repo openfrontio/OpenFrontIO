@@ -303,23 +303,30 @@ class Client {
       }
     };
 
-    if (isLoggedIn() === false) {
-      // Not logged in
-      onUserMe(false);
-    } else {
-      // JWT appears to be valid
-      loginDiscordButton.disable = true;
-      loginDiscordButton.translationKey = "main.checking_login";
-      logoutDiscordButton.hidden = false;
-      logoutDiscordButton.addEventListener("click", () => {
-        // Log out
-        logOut();
+    const checkAuthAndUser = async () => {
+      const loginResult = await isLoggedIn();
+      if (loginResult === false) {
+        // Not logged in
         onUserMe(false);
-      });
-      // Look up the discord user object.
-      // TODO: Add caching
-      getUserMe().then(onUserMe);
-    }
+      } else {
+        // JWT appears to be valid
+        loginDiscordButton.disable = true;
+        loginDiscordButton.translationKey = "main.checking_login";
+        logoutDiscordButton.hidden = false;
+        logoutDiscordButton.addEventListener("click", () => {
+          // Log out
+          logOut();
+          onUserMe(false);
+        });
+
+        // Look up the discord user object.
+        // TODO: Add caching
+        const userMeResponse = await getUserMe();
+        onUserMe(userMeResponse);
+      }
+    };
+
+    checkAuthAndUser();
 
     const settingsModal = document.querySelector(
       "user-setting",
@@ -417,6 +424,7 @@ class Client {
       this.gameStop();
     }
     const config = await getServerConfigFromClient();
+    const token = await getPlayToken();
 
     this.gameStop = joinLobby(
       {
@@ -428,7 +436,7 @@ class Client {
             ? ""
             : this.flagInput.getCurrentFlag(),
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
-        token: getPlayToken(),
+        token: token,
         clientID: lobby.clientID,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
@@ -520,15 +528,15 @@ function setFavicon(): void {
 }
 
 // WARNING: DO NOT EXPOSE THIS ID
-function getPlayToken(): string {
-  const result = isLoggedIn();
+async function getPlayToken(): Promise<string> {
+  const result = await isLoggedIn();
   if (result !== false) return result.token;
   return getPersistentIDFromCookie();
 }
 
 // WARNING: DO NOT EXPOSE THIS ID
-export function getPersistentID(): string {
-  const result = isLoggedIn();
+export async function getPersistentID(): Promise<string> {
+  const result = await isLoggedIn();
   if (result !== false) return result.claims.sub;
   return getPersistentIDFromCookie();
 }
