@@ -103,77 +103,72 @@ export type IsLoggedInResponse =
   | { token: string; claims: TokenPayload }
   | false;
 let __isLoggedIn: IsLoggedInResponse | undefined = undefined;
-export function isLoggedIn(): IsLoggedInResponse {
-  __isLoggedIn ??= _isLoggedIn();
+let __refreshPromise: Promise<boolean> | null = null;
 
+export async function isLoggedIn(): Promise<IsLoggedInResponse> {
+  if (__refreshPromise) {
+    await __refreshPromise;
+    __refreshPromise = null;
+    __isLoggedIn = undefined;
+  }
+
+  __isLoggedIn ??= await _isLoggedIn();
   return __isLoggedIn;
 }
-function _isLoggedIn(): IsLoggedInResponse {
+
+async function _isLoggedIn(): Promise<IsLoggedInResponse> {
   try {
     const token = getToken();
     if (!token) {
-      // console.log("No token found");
       return false;
     }
 
-    // Verify the JWT (requires browser support)
-    // const jwks = createRemoteJWKSet(
-    //   new URL(getApiBase() + "/.well-known/jwks.json"),
-    // );
-    // const { payload, protectedHeader } = await jwtVerify(token, jwks, {
-    //   issuer: getApiBase(),
-    //   audience: getAudience(),
-    // });
-
-    // Decode the JWT
     const payload = decodeJwt(token);
     const { iss, aud, exp, iat } = payload;
 
     if (iss !== getApiBase()) {
-      // JWT was not issued by the correct server
-      console.error(
-        'unexpected "iss" claim value',
-        // JSON.stringify(payload, null, 2),
-      );
+      console.error('unexpected "iss" claim value');
       logOut();
       return false;
     }
     if (aud !== getAudience()) {
-      // JWT was not issued for this website
-      console.error(
-        'unexpected "aud" claim value',
-        // JSON.stringify(payload, null, 2),
-      );
+      console.error('unexpected "aud" claim value');
       logOut();
       return false;
     }
     const now = Math.floor(Date.now() / 1000);
     if (exp !== undefined && now >= exp) {
-      // JWT expired
-      console.error(
-        'after "exp" claim value',
-        // JSON.stringify(payload, null, 2),
-      );
+      console.error('after "exp" claim value');
       logOut();
       return false;
     }
+
     const refreshAge: number = 3 * 24 * 3600; // 3 days
     if (iat !== undefined && now >= iat + refreshAge) {
       console.log("Refreshing access token...");
-      postRefresh().then((success) => {
-        if (success) {
-          console.log("Refreshed access token successfully.");
-        } else {
-          console.error("Failed to refresh access token.");
-          // TODO: Update the UI to show logged out state
+      __refreshPromise = postRefresh();
+      const success = await __refreshPromise;
+      __refreshPromise = null;
+
+      if (success) {
+        console.log("Refreshed access token successfully.");
+        const newToken = getToken();
+        if (newToken) {
+          const newPayload = decodeJwt(newToken);
+          const result = TokenPayloadSchema.safeParse(newPayload);
+          if (result.success) {
+            return { token: newToken, claims: result.data };
+          }
         }
-      });
+      } else {
+        console.error("Failed to refresh access token.");
+        return false;
+      }
     }
 
     const result = TokenPayloadSchema.safeParse(payload);
     if (!result.success) {
       const error = z.prettifyError(result.error);
-      // Invalid response
       console.error("Invalid payload", error);
       return false;
     }
