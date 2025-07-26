@@ -1,4 +1,7 @@
-import { UserMeResponse } from "../core/ApiSchemas";
+import {
+  StripeCreateCheckoutSessionResponseSchema,
+  UserMeResponse,
+} from "../core/ApiSchemas";
 import { COSMETICS } from "../core/CosmeticSchemas";
 import { getApiBase, getAuthHeader } from "./jwt";
 import { translateText } from "./Utils";
@@ -119,7 +122,9 @@ export async function handlePurchase(priceId: string) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const { url } = await response.json();
+    const json = await response.json();
+    const result = StripeCreateCheckoutSessionResponseSchema.parse(json);
+    const { url } = result;
 
     // Redirect to Stripe checkout
     window.location.href = url;

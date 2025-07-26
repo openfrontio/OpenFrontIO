@@ -111,17 +111,17 @@ export type Player = z.infer<typeof PlayerSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 const PlayerTypeSchema = z.enum(PlayerType);
 
-export interface GameInfo {
-  gameID: GameID;
-  clients?: ClientInfo[];
-  numClients?: number;
-  msUntilStart?: number;
-  gameConfig?: GameConfig;
-}
-export interface ClientInfo {
-  clientID: ClientID;
-  username: string;
-}
+// export interface GameInfo {
+//   gameID: GameID;
+//   clients?: ClientInfo[];
+//   numClients?: number;
+//   msUntilStart?: number;
+//   gameConfig?: GameConfig;
+// }
+// export interface ClientInfo {
+//   clientID: ClientID;
+//   username: string;
+// }
 export enum LogSeverity {
   Debug = "DEBUG",
   Info = "INFO",
@@ -191,6 +191,22 @@ export const ID = z
 export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
 export const UsernameSchema = SafeString;
+
+export const ClientInfoSchema = z.object({
+  clientID: ID,
+  username: UsernameSchema,
+});
+export type ClientInfo = z.infer<typeof ClientInfoSchema>;
+
+export const GameInfoSchema = z.object({
+  gameID: ID,
+  clients: ClientInfoSchema.array().optional(),
+  numClients: z.number().optional(),
+  msUntilStart: z.number().optional(),
+  gameConfig: GameConfigSchema.optional(),
+});
+export type GameInfo = z.infer<typeof GameInfoSchema>;
+
 const countryCodes = countries.map((c) => c.code);
 export const FlagSchema = z
   .string()

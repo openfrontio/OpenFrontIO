@@ -5,7 +5,10 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { ApiEnvResponse } from "../core/ExpressSchemas";
+import {
+  ApiEnvResponse,
+  ApiPublicLobbiesResponse,
+} from "../core/ExpressSchemas";
 import { GameInfo, ID } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
@@ -60,7 +63,9 @@ app.use(
   }),
 );
 
-let publicLobbiesJsonStr = "";
+let publicLobbiesJsonStr = JSON.stringify({
+  lobbies: [],
+} satisfies ApiPublicLobbiesResponse);
 
 const publicLobbyIDs: Set<string> = new Set();
 
@@ -267,7 +272,7 @@ async function fetchLobbies(): Promise<number> {
   // Update the JSON string
   publicLobbiesJsonStr = JSON.stringify({
     lobbies: lobbyInfos,
-  });
+  } satisfies ApiPublicLobbiesResponse);
 
   return publicLobbyIDs.size;
 }
