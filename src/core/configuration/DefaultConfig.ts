@@ -832,12 +832,13 @@ export class DefaultConfig implements Config {
     if (nukeType !== UnitType.MIRVWarhead) {
       return (5 * humans) / Math.max(1, tilesOwned);
     }
-
-    const targetPop = 0.05 * maxPop;
+    const targetPop = 0.03 * maxPop;
     const excessPop = Math.max(0, humans - targetPop);
-    const scalingFactor = 20000;
+    const scalingFactor = 500;
 
-    return (scalingFactor * excessPop * excessPop) / (maxPop * maxPop);
+    const steepness = 2;
+    const normalizedExcess = excessPop / maxPop;
+    return scalingFactor * (1 - Math.exp(-steepness * normalizedExcess));
   }
 
   structureMinDist(): number {
