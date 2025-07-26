@@ -6,6 +6,7 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
+import { soundManager } from "../../SoundManager";
 import { PauseGameEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
@@ -75,9 +76,7 @@ export class OptionsMenu extends LitElement implements Layer {
   private onExitButtonClick() {
     const isAlive = this.game.myPlayer()?.isAlive();
     if (isAlive) {
-      const isConfirmed = confirm(
-        translateText("help_modal.exit_confirmation"),
-      );
+      const isConfirmed = confirm("Are you sure you want to exit the game?");
       if (!isConfirmed) return;
     }
     // redirect to the home page
@@ -134,6 +133,21 @@ export class OptionsMenu extends LitElement implements Layer {
 
   private onToggleTerritoryPatterns() {
     this.userSettings.toggleTerritoryPatterns();
+    this.requestUpdate();
+  }
+
+  private onMuteButtonClick() {
+    if (soundManager.isMuted()) {
+      soundManager.unmute();
+    } else {
+      soundManager.mute();
+    }
+    this.requestUpdate();
+  }
+
+  private onVolumeChange(e: Event) {
+    const volume = parseFloat((e.target as HTMLInputElement).value);
+    soundManager.setMasterVolume(volume);
     this.requestUpdate();
   }
 
@@ -260,6 +274,21 @@ export class OptionsMenu extends LitElement implements Layer {
                 ? "Focus locked"
                 : "Hover focus"),
           })} -->
+
+          ${button({
+            onClick: this.onMuteButtonClick,
+            title: "Mute",
+            children: soundManager.isMuted() ? "🔇" : "🔊",
+          })}
+
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            .value=${soundManager.getMasterVolume()}
+            @input=${this.onVolumeChange}
+          />
         </div>
       </div>
     `;
