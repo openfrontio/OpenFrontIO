@@ -1,3 +1,4 @@
+import IntlMessageFormat from "intl-messageformat";
 import { MessageType } from "../core/game/Game";
 import { LangSelector } from "./LangSelector";
 
@@ -75,7 +76,6 @@ export function generateCryptoRandomUUID(): string {
   );
 }
 
-// Re-export translateText from LangSelector
 export const translateText = (
   key: string,
   params: Record<string, string | number> = {},
@@ -94,9 +94,17 @@ export const translateText = (
     return key;
   }
 
-  return langSelector.translateText(key, params);
-};
+  const message = langSelector.translations[key];
+  if (!message) return key;
 
+  try {
+    const formatter = new IntlMessageFormat(message, langSelector.currentLang);
+    return formatter.format(params) as string;
+  } catch (e) {
+    console.warn("ICU format error", e);
+    return message;
+  }
+};
 /**
  * Severity colors mapping for message types
  */
