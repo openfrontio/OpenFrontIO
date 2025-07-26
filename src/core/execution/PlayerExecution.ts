@@ -41,7 +41,9 @@ export class PlayerExecution implements Execution {
     });
 
     if (!this.player.isAlive()) {
-      // Player has no tiles, delete any remaining units
+      // Player has no tiles, delete any remaining units and gold
+      const gold = this.player.gold();
+      this.player.removeGold(gold);
       this.player.units().forEach((u) => {
         if (
           u.type() !== UnitType.AtomBomb &&
