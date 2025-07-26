@@ -12,7 +12,7 @@ import {
 import { createGame } from "../../src/core/game/GameImpl";
 import {
   genTerrainFromBin,
-  MapManifest,
+  MapManifestSchema,
 } from "../../src/core/game/TerrainMapLoader";
 import { UserSettings } from "../../src/core/game/UserSettings";
 import { GameConfig } from "../../src/core/Schemas";
@@ -44,9 +44,9 @@ export async function setup(
 
   const mapBinBuffer = fs.readFileSync(mapBinPath);
   const miniMapBinBuffer = fs.readFileSync(miniMapBinPath);
-  const manifest = JSON.parse(
-    fs.readFileSync(manifestPath, "utf8"),
-  ) satisfies MapManifest;
+  const manifest = MapManifestSchema.parse(
+    JSON.parse(fs.readFileSync(manifestPath, "utf8")),
+  );
 
   // Convert Buffer to string (binary encoding)
   const mapBinString = mapBinBuffer.toString("binary");

@@ -1,3 +1,4 @@
+// This file contains schemas for api.openfront.io
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
 
