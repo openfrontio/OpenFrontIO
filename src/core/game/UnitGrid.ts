@@ -180,7 +180,6 @@ export class UnitGrid {
         if (unitSet === undefined) continue;
         for (const unit of unitSet) {
           if (
-            unit.type() === type &&
             unit.owner().id() === playerId &&
             unit.isActive()
           ) {
