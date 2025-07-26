@@ -33,6 +33,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   StraitOfGibraltar: "Strait of Gibraltar",
   Italia: "Italia",
   Yenisei: "Yenisei",
+  Pluto: "Pluto",
 };
 
 @customElement("map-display")

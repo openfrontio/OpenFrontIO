@@ -1,3 +1,4 @@
+import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -675,6 +676,7 @@ export class GameImpl implements Game {
     type: MessageType,
     playerID: PlayerID | null,
     goldAmount?: bigint,
+    params?: Record<string, string | number>,
   ): void {
     let id: number | null = null;
     if (playerID !== null) {
@@ -686,6 +688,7 @@ export class GameImpl implements Game {
       message: message,
       playerID: id,
       goldAmount: goldAmount,
+      params: params,
     });
   }
 
@@ -872,6 +875,28 @@ export class GameImpl implements Game {
   }
   railNetwork(): RailNetwork {
     return this._railNetwork;
+  }
+  conquerPlayer(conqueror: Player, conquered: Player) {
+    const gold = conquered.gold();
+    this.displayMessage(
+      `Conquered ${conquered.displayName()} received ${renderNumber(
+        gold,
+      )} gold`,
+      MessageType.CONQUERED_PLAYER,
+      conqueror.id(),
+      gold,
+    );
+    conqueror.addGold(gold);
+    conquered.removeGold(gold);
+    this.addUpdate({
+      type: GameUpdateType.ConquestEvent,
+      conquerorId: conqueror.id(),
+      conqueredId: conquered.id(),
+      gold,
+    });
+
+    // Record stats
+    this.stats().goldWar(conqueror, conquered, gold);
   }
 }
 

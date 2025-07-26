@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import cosmetics_json from "../../resources/cosmetics/cosmetics.json" with { type: "json" };
 import { RequiredPatternSchema } from "./Schemas";
 

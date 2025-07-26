@@ -1,6 +1,5 @@
-import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
-import { Execution, Game, MessageType, Player, UnitType } from "../game/Game";
+import { Execution, Game, Player, UnitType } from "../game/Game";
 import { GameImpl } from "../game/GameImpl";
 import { TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
@@ -199,20 +198,7 @@ export class PlayerExecution implements Execution {
     const tiles = this.mg.bfs(firstTile, filter);
 
     if (this.player.numTilesOwned() === tiles.size) {
-      const gold = this.player.gold();
-      this.mg.displayMessage(
-        `Conquered ${this.player.displayName()} received ${renderNumber(
-          gold,
-        )} gold`,
-        MessageType.CONQUERED_PLAYER,
-        capturing.id(),
-        gold,
-      );
-      capturing.addGold(gold);
-      this.player.removeGold(gold);
-
-      // Record stats
-      this.mg.stats().goldWar(capturing, this.player, gold);
+      this.mg.conquerPlayer(capturing, this.player);
     }
 
     for (const tile of tiles) {

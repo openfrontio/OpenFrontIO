@@ -1,5 +1,5 @@
 import { base64url } from "jose";
-import { z } from "zod/v4";
+import { z } from "zod";
 import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
 import countries from "../client/data/countries.json" with { type: "json" };
 import {
@@ -246,7 +246,7 @@ export const AllianceExtensionIntentSchema = BaseIntentSchema.extend({
 export const AttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("attack"),
   targetID: ID.nullable(),
-  troops: z.number().nullable(),
+  troops: z.number().nonnegative().nullable(),
 });
 
 export const SpawnIntentSchema = BaseIntentSchema.extend({
@@ -255,14 +255,13 @@ export const SpawnIntentSchema = BaseIntentSchema.extend({
   flag: FlagSchema,
   pattern: PatternSchema,
   playerType: PlayerTypeSchema,
-  x: z.number(),
-  y: z.number(),
+  tile: z.number(),
 });
 
 export const BoatAttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("boat"),
   targetID: ID.nullable(),
-  troops: z.number(),
+  troops: z.number().nonnegative(),
   dst: z.number(),
   src: z.number().nullable(),
 });
@@ -320,8 +319,7 @@ export const TargetTroopRatioIntentSchema = BaseIntentSchema.extend({
 export const BuildUnitIntentSchema = BaseIntentSchema.extend({
   type: z.literal("build_unit"),
   unit: z.enum(UnitType),
-  x: z.number(),
-  y: z.number(),
+  tile: z.number(),
 });
 
 export const UpgradeStructureIntentSchema = BaseIntentSchema.extend({
