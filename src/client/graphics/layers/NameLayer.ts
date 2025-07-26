@@ -20,6 +20,11 @@ import { createCanvas, renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
+const OPACITY_UPDATE_DELAY = 100;
+const OPACITY_AT_ZOOM_LEVEL = 5;
+const OPACITY_MIN_FONT_SIZE = 4;
+const OPACITY_MIN_OPACITY = 0.5;
+
 class RenderInfo {
   public icons: Map<string, HTMLImageElement> = new Map(); // Track icon elements
 
@@ -57,6 +62,7 @@ export class NameLayer implements Layer {
   private firstPlace: PlayerView | null = null;
   private theme: Theme = this.game.config().theme();
   private userSettings: UserSettings = new UserSettings();
+  private opacityUpdateTimeout: number | null = null;
 
   constructor(
     private game: GameView,
@@ -93,6 +99,36 @@ export class NameLayer implements Layer {
     this.canvas.height = window.innerHeight;
   }
 
+  onZoom() {
+    if (this.opacityUpdateTimeout !== null) {
+      clearTimeout(this.opacityUpdateTimeout);
+    }
+
+    this.opacityUpdateTimeout = window.setTimeout(() => {
+      this.updateVisibleElementsOpacity();
+    }, OPACITY_UPDATE_DELAY);
+  }
+
+  private updateVisibleElementsOpacity() {
+    const currentScale = this.transformHandler.scale;
+
+    for (const render of this.renders) {
+      const element = render.element;
+
+      // Update only if the element is visible
+      if (element && element.style.display !== "none") {
+        // Apply opacity based on font size and zoom level
+        // Only add opacity to the text for large territory names and only when zoom scale is greater than 5
+        const opacity =
+          currentScale > OPACITY_AT_ZOOM_LEVEL &&
+          render.fontSize > OPACITY_MIN_FONT_SIZE
+            ? OPACITY_MIN_OPACITY
+            : 1;
+        element.style.opacity = opacity.toString();
+      }
+    }
+  }
+
   shouldTransform(): boolean {
     return false;
   }
@@ -104,7 +140,7 @@ export class NameLayer implements Layer {
   public init() {
     this.canvas = createCanvas();
     window.addEventListener("resize", () => this.resizeCanvas());
-    this.resizeCanvas();
+    window.addEventListener("wheel", () => this.onZoom());
 
     this.container = document.createElement("div");
     this.container.style.position = "fixed";
@@ -113,6 +149,10 @@ export class NameLayer implements Layer {
     this.container.style.pointerEvents = "none";
     this.container.style.zIndex = "2";
     document.body.appendChild(this.container);
+
+    this.resizeCanvas();
+    // Initialize opacity for existing elements
+    this.updateVisibleElementsOpacity();
   }
 
   public tick() {
@@ -124,6 +164,11 @@ export class NameLayer implements Layer {
       .sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
     if (sorted.length > 0) {
       this.firstPlace = sorted[0];
+    }
+
+    // If no opacity update is pending, update the opacity
+    if (this.opacityUpdateTimeout === null) {
+      this.updateVisibleElementsOpacity();
     }
 
     for (const player of this.game.playerViews()) {
@@ -179,6 +224,8 @@ export class NameLayer implements Layer {
     element.style.flexDirection = "column";
     element.style.alignItems = "center";
     element.style.gap = "0px";
+    element.style.opacity = "1";
+    element.style.transition = "opacity 0.5s ease-in-out";
 
     const iconsDiv = document.createElement("div");
     iconsDiv.classList.add("player-icons");
@@ -213,6 +260,7 @@ export class NameLayer implements Layer {
       }
     }
     nameDiv.classList.add("player-name");
+
     nameDiv.style.color = this.theme.textColor(player);
     nameDiv.style.fontFamily = this.theme.font();
     nameDiv.style.whiteSpace = "nowrap";
@@ -221,7 +269,7 @@ export class NameLayer implements Layer {
     nameDiv.style.display = "flex";
     nameDiv.style.justifyContent = "flex-end";
     nameDiv.style.alignItems = "center";
-
+    nameDiv.style.transition = "opacity 0.5s linear";
     const nameSpan = document.createElement("span");
     nameSpan.className = "player-name-span";
     nameSpan.innerHTML = player.name();
@@ -236,6 +284,7 @@ export class NameLayer implements Layer {
     troopsDiv.style.fontFamily = this.theme.font();
     troopsDiv.style.zIndex = "3";
     troopsDiv.style.marginTop = "-5%";
+    troopsDiv.style.opacity = "1";
     element.appendChild(troopsDiv);
 
     // TODO: Remove the shield icon.
