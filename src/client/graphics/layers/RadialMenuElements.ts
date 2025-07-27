@@ -322,33 +322,33 @@ function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
   return Units;
 }
 
+const ATTACK_UNIT_TYPES: UnitType[] = [
+  UnitType.AtomBomb,
+  UnitType.MIRV,
+  UnitType.HydrogenBomb,
+  UnitType.Warship,
+];
+
 function createMenuElements(
   params: MenuElementParams,
-  includeAttackTypes: boolean,
-  prefix: string,
+  filterType: "attack" | "build",
+  elementIdPrefix: string,
 ): MenuElement[] {
   const unitTypes: Set<UnitType> = getAllEnabledUnits(
     params.selected === params.myPlayer,
     params.game.config(),
   );
 
-  const attackUnitTypes = [
-    UnitType.AtomBomb,
-    UnitType.MIRV,
-    UnitType.HydrogenBomb,
-    UnitType.Warship,
-  ];
-
   return flattenedBuildTable
     .filter(
       (item) =>
         unitTypes.has(item.unitType) &&
-        (includeAttackTypes
-          ? attackUnitTypes.includes(item.unitType)
-          : !attackUnitTypes.includes(item.unitType)),
+        (filterType === "attack"
+          ? ATTACK_UNIT_TYPES.includes(item.unitType)
+          : !ATTACK_UNIT_TYPES.includes(item.unitType)),
     )
     .map((item: BuildItemDisplay) => ({
-      id: `${prefix}_${item.unitType}`,
+      id: `${elementIdPrefix}_${item.unitType}`,
       name: item.key
         ? item.key.replace("unit_type.", "")
         : item.unitType.toString(),
@@ -398,7 +398,7 @@ export const attackMenuElement: MenuElement = {
 
   subMenu: (params: MenuElementParams) => {
     if (params === undefined) return [];
-    return createMenuElements(params, true, "attack");
+    return createMenuElements(params, "attack", "attack");
   },
 };
 
@@ -411,7 +411,7 @@ export const buildMenuElement: MenuElement = {
 
   subMenu: (params: MenuElementParams) => {
     if (params === undefined) return [];
-    return createMenuElements(params, false, "build");
+    return createMenuElements(params, "build", "build");
   },
 };
 
