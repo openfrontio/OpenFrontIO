@@ -155,12 +155,18 @@ class SoundManager {
   }
 
   public muteSoundEffects(): void {
-    this.soundEffectsVolume.gain.setValueAtTime(0, this.audioContext.currentTime);
+    this.soundEffectsVolume.gain.setValueAtTime(
+      0,
+      this.audioContext.currentTime,
+    );
     this.userSettings.setMuteSoundEffects(true);
   }
 
   public unmuteSoundEffects(): void {
-    this.soundEffectsVolume.gain.setValueAtTime(1, this.audioContext.currentTime);
+    this.soundEffectsVolume.gain.setValueAtTime(
+      1,
+      this.audioContext.currentTime,
+    );
     this.userSettings.setMuteSoundEffects(false);
   }
 
