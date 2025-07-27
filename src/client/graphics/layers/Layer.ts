@@ -4,4 +4,5 @@ export interface Layer {
   renderLayer?(context: CanvasRenderingContext2D);
   shouldTransform?(): boolean;
   redraw?(): void;
+  dispose?(): void;
 }
