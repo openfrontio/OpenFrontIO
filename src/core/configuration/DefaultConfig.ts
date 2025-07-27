@@ -613,29 +613,41 @@ export class DefaultConfig implements Config {
       }
     }
 
-    let largeLossModifier = 1;
-    if (attacker.numTilesOwned() > 100_000) {
-      largeLossModifier = Math.sqrt(100_000 / attacker.numTilesOwned());
+    if (attacker.type() === PlayerType.Human) {
+      console.log(`number of tiles ${attacker.numTilesOwned()}`);
+      if (defender.isPlayer()) {
+        console.log(`defender # of tiles ${defender.numTilesOwned()}`);
+      }
     }
-    let largeSpeedMalus = 1;
-    if (attacker.numTilesOwned() > 75_000) {
-      // sqrt is only exponent 1/2 which doesn't slow enough huge players
-      largeSpeedMalus = (75_000 / attacker.numTilesOwned()) ** 0.6;
+
+    let attackerSpeedBonus = 1;
+    if (attacker.numTilesOwned() > 50_000) {
+      attackerSpeedBonus = Math.sqrt(50_000 / attacker.numTilesOwned());
     }
 
     if (defender.isPlayer()) {
+      let largeDefenseMalus = 1;
+      if (defender.numTilesOwned() > 50_000) {
+        largeDefenseMalus = Math.sqrt(50_000 / defender.numTilesOwned());
+      }
+
+      let largeDefenderSpeedMalus = 1;
+      if (defender.numTilesOwned() > 50_000) {
+        largeDefenderSpeedMalus = Math.sqrt(50_000 / defender.numTilesOwned());
+      }
+
       return {
         attackerTroopLoss:
           within(defender.troops() / attackTroops, 0.6, 2) *
           mag *
           0.8 *
-          largeLossModifier *
+          largeDefenseMalus *
           (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
         defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
         tilesPerTickUsed:
-          within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
+          within(defender.troops() / (5 * attackTroops), 0.1, 1.5) *
           speed *
-          largeSpeedMalus *
+          largeDefenderSpeedMalus *
           (defender.isTraitor() ? this.traitorSpeedDebuff() : 1),
       };
     } else {
