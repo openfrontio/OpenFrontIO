@@ -23,6 +23,7 @@ import { TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
+import { NukeType } from "../StatsSchemas";
 import { assertNever, simpleHash, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { PastelTheme } from "./PastelTheme";
@@ -805,6 +806,10 @@ export class DefaultConfig implements Config {
     throw new Error(`Unknown nuke type: ${unitType}`);
   }
 
+  nukeAllianceBreakThreshold(): number {
+    return 100;
+  }
+
   defaultNukeSpeed(): number {
     return 6;
   }
@@ -818,8 +823,22 @@ export class DefaultConfig implements Config {
   }
 
   // Humans can be population, soldiers attacking, soldiers in boat etc.
-  nukeDeathFactor(humans: number, tilesOwned: number): number {
-    return (5 * humans) / Math.max(1, tilesOwned);
+  nukeDeathFactor(
+    nukeType: NukeType,
+    humans: number,
+    tilesOwned: number,
+    maxPop: number,
+  ): number {
+    if (nukeType !== UnitType.MIRVWarhead) {
+      return (5 * humans) / Math.max(1, tilesOwned);
+    }
+    const targetPop = 0.03 * maxPop;
+    const excessPop = Math.max(0, humans - targetPop);
+    const scalingFactor = 500;
+
+    const steepness = 2;
+    const normalizedExcess = excessPop / maxPop;
+    return scalingFactor * (1 - Math.exp(-steepness * normalizedExcess));
   }
 
   structureMinDist(): number {
