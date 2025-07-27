@@ -181,7 +181,12 @@ export function createRenderer(
     console.error("chat modal not found");
   }
   chatModal.g = game;
+<<<<<<< HEAD
   chatModal.initEventBus(eventBus);
+=======
+  chatModal.eventBus = eventBus;
+  chatModal.initEventBus();
+>>>>>>> f0ac6d20 (allow additional modals to close when receiving CloseViewEvent)
 
   const multiTabModal = document.querySelector(
     "multi-tab-modal",
