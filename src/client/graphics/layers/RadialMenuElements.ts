@@ -548,9 +548,7 @@ export const rootMenuElement: MenuElement = {
 
     if (isOwnTerritory) {
       menuItems.push(buildMenuElement);
-    }
-
-    if (!isOwnTerritory) {
+    } else {
       menuItems.push(attackMenuElement);
     }
 

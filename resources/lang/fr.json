@@ -68,7 +68,6 @@
     "radial_title": "Menu radial",
     "radial_desc": "Un clic droit (ou un appui sur mobile) ouvre le menu Radial. Faites un clic droit à l'extérieur pour le fermer. À partir du menu, vous pouvez :",
     "radial_build": "Ouvrir le menu de construction.",
-    "radial_attack": "Ouvrir le menu d'attaque.",
     "radial_info": "Ouvrir le menu d'informations.",
     "radial_boat": "Envoyer un bateau (navire de transport) pour attaquer l'endroit sélectionné. Disponible uniquement si vous avez accès à l'eau.",
     "radial_close": "Fermer le menu.",
