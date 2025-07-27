@@ -436,14 +436,14 @@ export class ClientGameRunner {
 
     const tile = this.gameView.ref(cell.x, cell.y);
 
-    if (this.gameView.inSpawnPhase()) {
-      return;
-    }
-
     if (this.myPlayer === null) {
       const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
+    }
+
+    if (this.gameView.inSpawnPhase()) {
+      return;
     }
 
     this.findAndUpgradeNearestBuilding(tile);
@@ -451,48 +451,36 @@ export class ClientGameRunner {
 
   private findAndUpgradeNearestBuilding(clickedTile: TileRef) {
     this.myPlayer!.actions(clickedTile).then((actions) => {
-      const upgradableUnitTypes = [
-        UnitType.City,
-        UnitType.Factory,
-        UnitType.MissileSilo,
-        UnitType.SAMLauncher,
-        UnitType.DefensePost,
-      ];
-
-      let bestUpgrade: {
+      const upgradeUnits: {
         unitId: number;
         unitType: UnitType;
         distance: number;
-      } | null = null;
+      }[] = [];
 
-      for (const unitType of upgradableUnitTypes) {
-        const buildableUnit = actions.buildableUnits.find(
-          (bu) => bu.type === unitType,
-        );
-        if (buildableUnit && buildableUnit.canUpgrade !== false) {
+      for (const bu of actions.buildableUnits) {
+        if (bu.canUpgrade !== false) {
           const existingUnit = this.gameView
             .units()
-            .find((unit) => unit.id() === buildableUnit.canUpgrade);
+            .find((unit) => unit.id() === bu.canUpgrade);
           if (existingUnit) {
-            const clickedX = this.gameView.x(clickedTile);
-            const clickedY = this.gameView.y(clickedTile);
-            const unitX = this.gameView.x(existingUnit.tile());
-            const unitY = this.gameView.y(existingUnit.tile());
-            const distance =
-              Math.abs(unitX - clickedX) + Math.abs(unitY - clickedY);
+            const distance = this.gameView.manhattanDist(
+              clickedTile,
+              existingUnit.tile(),
+            );
 
-            if (bestUpgrade === null || distance < bestUpgrade.distance) {
-              bestUpgrade = {
-                unitId: buildableUnit.canUpgrade,
-                unitType: unitType,
-                distance: distance,
-              };
-            }
+            upgradeUnits.push({
+              unitId: bu.canUpgrade,
+              unitType: bu.type,
+              distance: distance,
+            });
           }
         }
       }
 
-      if (bestUpgrade !== null) {
+      if (upgradeUnits.length > 0) {
+        upgradeUnits.sort((a, b) => a.distance - b.distance);
+        const bestUpgrade = upgradeUnits[0];
+
         this.eventBus.emit(
           new SendUpgradeStructureIntentEvent(
             bestUpgrade.unitId,
