@@ -322,6 +322,73 @@ function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
   return Units;
 }
 
+function createMenuElements(
+  params: MenuElementParams,
+  includeAttackTypes: boolean,
+  prefix: string,
+): MenuElement[] {
+  const unitTypes: Set<UnitType> = getAllEnabledUnits(
+    params.selected === params.myPlayer,
+    params.game.config(),
+  );
+
+  const attackUnitTypes = [
+    UnitType.AtomBomb,
+    UnitType.MIRV,
+    UnitType.HydrogenBomb,
+    UnitType.Warship,
+  ];
+
+  return flattenedBuildTable
+    .filter(
+      (item) =>
+        unitTypes.has(item.unitType) &&
+        (includeAttackTypes
+          ? attackUnitTypes.includes(item.unitType)
+          : !attackUnitTypes.includes(item.unitType)),
+    )
+    .map((item: BuildItemDisplay) => ({
+      id: `${prefix}_${item.unitType}`,
+      name: item.key
+        ? item.key.replace("unit_type.", "")
+        : item.unitType.toString(),
+      disabled: (params: MenuElementParams) =>
+        !params.buildMenu.canBuildOrUpgrade(item),
+      color: params.buildMenu.canBuildOrUpgrade(item)
+        ? COLORS.building
+        : undefined,
+      icon: item.icon,
+      tooltipItems: [
+        { text: translateText(item.key ?? ""), className: "title" },
+        {
+          text: translateText(item.description ?? ""),
+          className: "description",
+        },
+        {
+          text: `${renderNumber(params.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
+          className: "cost",
+        },
+        item.countable
+          ? { text: `${params.buildMenu.count(item)}x`, className: "count" }
+          : null,
+      ].filter(
+        (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
+      ),
+      action: (params: MenuElementParams) => {
+        const buildableUnit = params.playerActions.buildableUnits.find(
+          (bu) => bu.type === item.unitType,
+        );
+        if (buildableUnit === undefined) {
+          return;
+        }
+        if (params.buildMenu.canBuildOrUpgrade(item)) {
+          params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
+        }
+        params.closeMenu();
+      },
+    }));
+}
+
 export const attackMenuElement: MenuElement = {
   id: Slot.Attack,
   name: "radial_attack",
@@ -331,67 +398,7 @@ export const attackMenuElement: MenuElement = {
 
   subMenu: (params: MenuElementParams) => {
     if (params === undefined) return [];
-
-    const unitTypes: Set<UnitType> = getAllEnabledUnits(
-      params.selected === params.myPlayer,
-      params.game.config(),
-    );
-
-    const attackUnitTypes = [
-      UnitType.AtomBomb,
-      UnitType.MIRV,
-      UnitType.HydrogenBomb,
-      UnitType.Warship,
-    ];
-
-    const attackElements: MenuElement[] = flattenedBuildTable
-      .filter(
-        (item) =>
-          unitTypes.has(item.unitType) &&
-          attackUnitTypes.includes(item.unitType),
-      )
-      .map((item: BuildItemDisplay) => ({
-        id: `attack_${item.unitType}`,
-        name: item.key
-          ? item.key.replace("unit_type.", "")
-          : item.unitType.toString(),
-        disabled: (params: MenuElementParams) =>
-          !params.buildMenu.canBuildOrUpgrade(item),
-        color: params.buildMenu.canBuildOrUpgrade(item)
-          ? COLORS.building
-          : undefined,
-        icon: item.icon,
-        tooltipItems: [
-          { text: translateText(item.key ?? ""), className: "title" },
-          {
-            text: translateText(item.description ?? ""),
-            className: "description",
-          },
-          {
-            text: `${renderNumber(params.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
-            className: "cost",
-          },
-          item.countable
-            ? { text: `${params.buildMenu.count(item)}x`, className: "count" }
-            : null,
-        ].filter(
-          (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
-        ),
-        action: (params: MenuElementParams) => {
-          const buildableUnit = params.playerActions.buildableUnits.find(
-            (bu) => bu.type === item.unitType,
-          );
-          if (buildableUnit === undefined) {
-            return;
-          }
-          if (params.buildMenu.canBuildOrUpgrade(item)) {
-            params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
-          }
-          params.closeMenu();
-        },
-      }));
-
-    return attackElements;
+    return createMenuElements(params, true, "attack");
   },
 };
 
@@ -404,67 +411,7 @@ export const buildMenuElement: MenuElement = {
 
   subMenu: (params: MenuElementParams) => {
     if (params === undefined) return [];
-
-    const unitTypes: Set<UnitType> = getAllEnabledUnits(
-      params.selected === params.myPlayer,
-      params.game.config(),
-    );
-
-    const attackUnitTypes = [
-      UnitType.AtomBomb,
-      UnitType.MIRV,
-      UnitType.HydrogenBomb,
-      UnitType.Warship,
-    ];
-
-    const buildElements: MenuElement[] = flattenedBuildTable
-      .filter(
-        (item) =>
-          unitTypes.has(item.unitType) &&
-          !attackUnitTypes.includes(item.unitType),
-      )
-      .map((item: BuildItemDisplay) => ({
-        id: `build_${item.unitType}`,
-        name: item.key
-          ? item.key.replace("unit_type.", "")
-          : item.unitType.toString(),
-        disabled: (params: MenuElementParams) =>
-          !params.buildMenu.canBuildOrUpgrade(item),
-        color: params.buildMenu.canBuildOrUpgrade(item)
-          ? COLORS.building
-          : undefined,
-        icon: item.icon,
-        tooltipItems: [
-          { text: translateText(item.key ?? ""), className: "title" },
-          {
-            text: translateText(item.description ?? ""),
-            className: "description",
-          },
-          {
-            text: `${renderNumber(params.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
-            className: "cost",
-          },
-          item.countable
-            ? { text: `${params.buildMenu.count(item)}x`, className: "count" }
-            : null,
-        ].filter(
-          (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
-        ),
-        action: (params: MenuElementParams) => {
-          const buildableUnit = params.playerActions.buildableUnits.find(
-            (bu) => bu.type === item.unitType,
-          );
-          if (buildableUnit === undefined) {
-            return;
-          }
-          if (params.buildMenu.canBuildOrUpgrade(item)) {
-            params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
-          }
-          params.closeMenu();
-        },
-      }));
-
-    return buildElements;
+    return createMenuElements(params, false, "build");
   },
 };
 
