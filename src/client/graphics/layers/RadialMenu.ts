@@ -1,6 +1,7 @@
 import * as d3 from "d3";
 import backIcon from "../../../../resources/images/BackIconWhite.svg";
 import { EventBus, GameEvent } from "../../../core/EventBus";
+import { CloseViewEvent } from "../../InputHandler";
 import { Layer } from "./Layer";
 import {
   CenterButtonElement,
@@ -102,6 +103,9 @@ export class RadialMenu implements Layer {
   init() {
     this.createMenuElement();
     this.createTooltipElement();
+    this.eventBus.on(CloseViewEvent, (e) => {
+      this.hideRadialMenu();
+    });
   }
 
   private createMenuElement() {
