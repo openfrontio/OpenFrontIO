@@ -68,7 +68,7 @@ const numPlayersConfig = {
   [GameMapType.Halkidiki]: [50, 40, 30],
   [GameMapType.StraitOfGibraltar]: [50, 40, 30],
   [GameMapType.Italia]: [50, 40, 30],
-  [GameMapType.Pluto]: [120, 80, 50],
+  [GameMapType.Pluto]: [70, 50, 40],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
