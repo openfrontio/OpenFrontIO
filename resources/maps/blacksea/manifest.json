@@ -58,6 +58,12 @@
       "flag": "am",
       "name": "Armenia",
       "strength": 1
+    },
+    {
+      "coordinates": [1115, 555],
+      "flag": "Circassia",
+      "name": "Circassia",
+      "strength": 1
     }
   ]
 }

@@ -94,6 +94,12 @@
       "flag": "tm",
       "name": "Turkmenistan",
       "strength": 1
+    },
+    {
+      "coordinates": [851, 589],
+      "flag": "Circassia",
+      "name": "Circassia",
+      "strength": 1
     }
   ]
 }

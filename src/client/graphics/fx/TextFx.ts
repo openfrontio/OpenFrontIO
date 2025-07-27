@@ -9,12 +9,12 @@ export class TextFx implements Fx {
     private y: number,
     private duration: number,
     private riseDistance: number = 30,
+    private font: string = "11px sans-serif",
     private color: { r: number; g: number; b: number } = {
       r: 255,
       g: 255,
       b: 255,
     },
-    private font: string = "11px sans-serif",
   ) {}
 
   renderTick(frameTime: number, ctx: CanvasRenderingContext2D): boolean {
