@@ -70,6 +70,7 @@
     "radial_title": "Radial menu",
     "radial_desc": "Right clicking (or touch on mobile) opens the Radial menu. Right click outside it to close it. From the menu you can:",
     "radial_build": "Open the Build menu.",
+    "radial_attack": "Open the Attack menu.",
     "radial_info": "Open the Info menu.",
     "radial_boat": "Send a Boat (transport ship) to attack at the selected location. Only available if you have access to water.",
     "radial_close": "Close the menu.",
