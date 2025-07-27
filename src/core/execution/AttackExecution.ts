@@ -147,8 +147,9 @@ export class AttackExecution implements Execution {
     }
 
     if (this.target.isPlayer()) {
+      // Only mark for alliance breaking if we were already allied at the time of attack initiation
+      // This prevents race conditions where an alliance is formed after the attack starts
       if (this._owner.isAlliedWith(this.target)) {
-        // No updates should happen in init.
         this.breakAlliance = true;
       }
       this.target.updateRelation(this._owner, -80);
@@ -228,6 +229,7 @@ export class AttackExecution implements Execution {
     }
     if (targetPlayer && this._owner.isAlliedWith(targetPlayer)) {
       // In this case a new alliance was created AFTER the attack started.
+      // We should retreat to avoid the attacker becoming a traitor.
       this.retreat();
       return;
     }
