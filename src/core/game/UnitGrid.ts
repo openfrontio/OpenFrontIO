@@ -179,10 +179,7 @@ export class UnitGrid {
         const unitSet = this.grid[cy][cx].get(type);
         if (unitSet === undefined) continue;
         for (const unit of unitSet) {
-          if (
-            unit.owner().id() === playerId &&
-            unit.isActive()
-          ) {
+          if (unit.owner().id() === playerId && unit.isActive()) {
             const distSquared = this.squaredDistanceFromTile(unit, tile);
             if (distSquared <= rangeSquared) {
               return true;
