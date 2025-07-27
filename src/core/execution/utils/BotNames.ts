@@ -157,6 +157,7 @@ export const BOT_NAME_PREFIXES = [
   "Micronesian",
   "Hebrew",
   "Armenian",
+  "Circassian",
   "Georgian",
   "Phoenician",
   "Chaldean",
