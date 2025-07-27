@@ -25,6 +25,7 @@ import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import {
+  AutoUpgradeEvent,
   DoBoatAttackEvent,
   DoGroundAttackEvent,
   InputHandler,
@@ -38,6 +39,7 @@ import {
   SendBoatAttackIntentEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
+  SendUpgradeStructureIntentEvent,
   Transport,
 } from "./Transport";
 import { createCanvas } from "./Utils";
@@ -242,6 +244,7 @@ export class ClientGameRunner {
     }, 20000);
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
     this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
+    this.eventBus.on(AutoUpgradeEvent, this.autoUpgradeEvent.bind(this));
     this.eventBus.on(
       DoBoatAttackEvent,
       this.doBoatAttackUnderCursor.bind(this),
@@ -414,6 +417,88 @@ export class ClientGameRunner {
         this.gameView.setFocusedPlayer(owner as PlayerView);
       } else {
         this.gameView.setFocusedPlayer(null);
+      }
+    });
+  }
+
+  private autoUpgradeEvent(event: AutoUpgradeEvent) {
+    if (!this.isActive) {
+      return;
+    }
+
+    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
+      event.x,
+      event.y,
+    );
+    if (!this.gameView.isValidCoord(cell.x, cell.y)) {
+      return;
+    }
+
+    const tile = this.gameView.ref(cell.x, cell.y);
+
+    if (this.gameView.inSpawnPhase()) {
+      return;
+    }
+
+    if (this.myPlayer === null) {
+      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    this.findAndUpgradeNearestBuilding(tile);
+  }
+
+  private findAndUpgradeNearestBuilding(clickedTile: TileRef) {
+    this.myPlayer!.actions(clickedTile).then((actions) => {
+      const upgradableUnitTypes = [
+        UnitType.City,
+        UnitType.Factory,
+        UnitType.MissileSilo,
+        UnitType.SAMLauncher,
+        UnitType.DefensePost,
+      ];
+
+      let bestUpgrade: {
+        unitId: number;
+        unitType: UnitType;
+        distance: number;
+      } | null = null;
+
+      for (const unitType of upgradableUnitTypes) {
+        const buildableUnit = actions.buildableUnits.find(
+          (bu) => bu.type === unitType,
+        );
+        if (buildableUnit && buildableUnit.canUpgrade !== false) {
+          const existingUnit = this.gameView
+            .units()
+            .find((unit) => unit.id() === buildableUnit.canUpgrade);
+          if (existingUnit) {
+            const clickedX = this.gameView.x(clickedTile);
+            const clickedY = this.gameView.y(clickedTile);
+            const unitX = this.gameView.x(existingUnit.tile());
+            const unitY = this.gameView.y(existingUnit.tile());
+            const distance =
+              Math.abs(unitX - clickedX) + Math.abs(unitY - clickedY);
+
+            if (bestUpgrade === null || distance < bestUpgrade.distance) {
+              bestUpgrade = {
+                unitId: buildableUnit.canUpgrade,
+                unitType: unitType,
+                distance: distance,
+              };
+            }
+          }
+        }
+      }
+
+      if (bestUpgrade !== null) {
+        this.eventBus.emit(
+          new SendUpgradeStructureIntentEvent(
+            bestUpgrade.unitId,
+            bestUpgrade.unitType,
+          ),
+        );
       }
     });
   }
