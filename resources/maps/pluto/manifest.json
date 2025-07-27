@@ -1,18 +1,18 @@
 {
   "map": {
     "height": 1300,
-    "num_land_tiles": 2010740,
+    "num_land_tiles": 1986092,
     "width": 2100
   },
   "mini_map": {
     "height": 650,
-    "num_land_tiles": 496462,
+    "num_land_tiles": 489193,
     "width": 1050
   },
   "name": "Pluto",
   "nations": [
     {
-      "coordinates": [178, 642],
+      "coordinates": [396, 364],
       "flag": "us",
       "name": "United States Colony",
       "strength": 3
@@ -21,7 +21,7 @@
       "coordinates": [285, 970],
       "flag": "ru",
       "name": "Russian Colony",
-      "strength": 2
+      "strength": 3
     },
     {
       "coordinates": [1700, 400],
@@ -45,13 +45,13 @@
       "coordinates": [1200, 185],
       "flag": "jp",
       "name": "Japanese Colony",
-      "strength": 3
+      "strength": 2
     },
     {
       "coordinates": [830, 1000],
       "flag": "in",
       "name": "Indian Colony",
-      "strength": 2
+      "strength": 1
     },
     {
       "coordinates": [75, 300],
@@ -72,75 +72,15 @@
       "strength": 1
     },
     {
-      "coordinates": [1980, 580],
-      "flag": "tw",
-      "name": "Taiwanese Colony",
-      "strength": 2
-    },
-    {
       "coordinates": [1920, 100],
       "flag": "",
       "name": "United Nations Base",
-      "strength": 2
+      "strength": 1
     },
     {
       "coordinates": [25, 1245],
       "flag": "pl",
       "name": "Polish Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [150, 1230],
-      "flag": "ua",
-      "name": "Ukrainian Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [360, 1250],
-      "flag": "de",
-      "name": "German Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [500, 1190],
-      "flag": "mn",
-      "name": "Mongolian Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [600, 1111],
-      "flag": "kr",
-      "name": "South Korean Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [733, 1230],
-      "flag": "nz",
-      "name": "New Zealand Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [900, 1220],
-      "flag": "fi",
-      "name": "Finnish Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [980, 920],
-      "flag": "nl",
-      "name": "Netherlands Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [1000, 1090],
-      "flag": "ro",
-      "name": "Romanian Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [835, 1005],
-      "flag": "tr",
-      "name": "Turkish Colony",
       "strength": 1
     },
     {
@@ -150,81 +90,9 @@
       "strength": 1
     },
     {
-      "coordinates": [696, 705],
-      "flag": "pk",
-      "name": "Pakistani Colony",
-      "strength": 1
-    },
-    {
       "coordinates": [1466, 1233],
       "flag": "cl",
       "name": "Chilean Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [55, 134],
-      "flag": "ar",
-      "name": "Argentinian Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [1888, 1145],
-      "flag": "br",
-      "name": "Brazilian Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [1914, 375],
-      "flag": "fr",
-      "name": "French Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [1743, 16],
-      "flag": "es",
-      "name": "Spanish Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [1800, 751],
-      "flag": "mx",
-      "name": "Mexican Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [1672, 302],
-      "flag": "ca",
-      "name": "Canadian Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [1520, 1134],
-      "flag": "it",
-      "name": "Italian Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [2088, 1143],
-      "flag": "ch",
-      "name": "Swiss Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [965, 67],
-      "flag": "id",
-      "name": "Indonesian Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [396, 364],
-      "flag": "mg",
-      "name": "Madagascar Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [135, 881],
-      "flag": "sa",
-      "name": "Saudi Arabian Colony",
       "strength": 1
     },
     {
@@ -234,13 +102,7 @@
       "strength": 1
     },
     {
-      "coordinates": [163, 175],
-      "flag": "is",
-      "name": "Iceland Colony",
-      "strength": 1
-    },
-    {
-      "coordinates": [1983, 575],
+      "coordinates": [2088, 1008],
       "flag": "",
       "name": "Free Pluto State",
       "strength": 3
