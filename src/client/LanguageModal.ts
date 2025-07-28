@@ -139,10 +139,23 @@ export class LanguageModal extends LitElement {
     }
   }
 
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("keydown", this.handleKeyDown);
+  }
+
   disconnectedCallback() {
     super.disconnectedCallback();
+    window.removeEventListener("keydown", this.handleKeyDown);
     document.body.style.overflow = "auto";
   }
+
+  private handleKeyDown = (e: KeyboardEvent) => {
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.close();
+    }
+  };
 
   private selectLanguage = (lang: string) => {
     this.dispatchEvent(
