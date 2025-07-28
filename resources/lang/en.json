@@ -501,7 +501,17 @@
     "gold": "Gold",
     "troops": "Troops",
     "workers": "Workers",
-    "attack_ratio": "Attack Ratio"
+    "attack_ratio": "Attack Ratio",
+    "stop_all_trades": "Stop All Trades",
+    "stop_all_trades_tooltip": "Stop trading with all non-allied players and non-team members",
+    "start_all_trades": "Start All Trades",
+    "start_all_trades_tooltip": "Resume trading with all previously embargoed players",
+    "stop_team_trades": "Stop Team Trades",
+    "stop_team_trades_dropdown_tooltip": "Select a specific team to stop trading with",
+    "stop_team_trades_tooltip": "Stop trading with all players from {{team}}",
+    "start_team_trades_tooltip": "Resume trading with all players from {{team}}",
+    "your_team_tooltip": "Cannot change trade status with your own team",
+    "no_players_tooltip": "No players available in {{team}} to trade with"
   },
   "player_panel": {
     "gold": "Gold",
