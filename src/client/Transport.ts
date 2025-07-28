@@ -133,6 +133,10 @@ export class SendEmbargoIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendDeleteUnitIntentEvent implements GameEvent {
+  constructor(public readonly unitId: number) {}
+}
+
 export class CancelAttackIntentEvent implements GameEvent {
   constructor(public readonly attackID: string) {}
 }
@@ -241,6 +245,9 @@ export class Transport {
     this.eventBus.on(MoveWarshipIntentEvent, (e) => {
       this.onMoveWarshipEvent(e);
     });
+    this.eventBus.on(SendDeleteUnitIntentEvent, (e) =>
+      this.onSendDeleteUnitIntent(e),
+    );
   }
 
   private startPing() {
@@ -608,6 +615,14 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       unitId: event.unitId,
       tile: event.tile,
+    });
+  }
+
+  private onSendDeleteUnitIntent(event: SendDeleteUnitIntentEvent) {
+    this.sendIntent({
+      type: "delete_unit",
+      clientID: this.lobbyConfig.clientID,
+      unitId: event.unitId,
     });
   }
 
