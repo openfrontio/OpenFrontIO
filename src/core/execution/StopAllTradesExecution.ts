@@ -15,27 +15,8 @@ export class StopAllTradesExecution implements Execution {
       const tradingPartners = this.player.tradingPartners();
 
       for (const partner of tradingPartners) {
-        // If targetTeamId is specified, only embargo players from that team
-        if (this.targetTeamId !== undefined && this.targetTeamId !== null) {
-          const partnerTeam = partner.team();
-          if (partnerTeam?.toString() !== this.targetTeamId) {
-            continue;
-          }
-        } else {
-          // If no targetTeamId specified (undefined or null), embargo all non-allied players except same team members
-          if (this.player.isAlliedWith(partner)) {
-            continue;
-          }
-          // Don't embargo same team members
-          const myTeam = this.player.team();
-          const partnerTeam = partner.team();
-          if (
-            myTeam !== null &&
-            partnerTeam !== null &&
-            myTeam === partnerTeam
-          ) {
-            continue;
-          }
+        if (!this.shouldEmbargoPartner(partner)) {
+          continue;
         }
 
         this.player.addEmbargo(partner.id(), false);
@@ -45,6 +26,30 @@ export class StopAllTradesExecution implements Execution {
     } finally {
       this.active = false;
     }
+  }
+
+  private shouldEmbargoPartner(partner: Player): boolean {
+    if (this.targetTeamId !== undefined && this.targetTeamId !== null) {
+      return this.shouldEmbargoSpecificTeam(partner);
+    }
+    return this.shouldEmbargoAllTeams(partner);
+  }
+
+  private shouldEmbargoSpecificTeam(partner: Player): boolean {
+    const partnerTeam = partner.team();
+    return partnerTeam?.toString() === this.targetTeamId;
+  }
+
+  private shouldEmbargoAllTeams(partner: Player): boolean {
+    if (this.player.isAlliedWith(partner)) {
+      return false;
+    }
+    
+    const myTeam = this.player.team();
+    const partnerTeam = partner.team();
+    
+    // Don't embargo same team members
+    return !(myTeam !== null && partnerTeam !== null && myTeam === partnerTeam);
   }
 
   isActive(): boolean {
