@@ -50,6 +50,26 @@ export class UserSettings {
     this.get("settings.focusLocked", true);
   }
 
+  infoDisplayMode(): string {
+    return localStorage.getItem("settings.infoDisplayMode") ?? "both";
+  }
+
+  setInfoDisplayMode(mode: string): void {
+    localStorage.setItem("settings.infoDisplayMode", mode);
+  }
+
+  showPlayerInfoOverlay(): boolean {
+    const mode = this.infoDisplayMode();
+
+    return mode === "overlay" || mode === "both";
+  }
+
+  showPlayerInfoMouseOverlay(): boolean {
+    const mode = this.infoDisplayMode();
+
+    return mode === "mousehud" || mode === "both";
+  }
+
   toggleLeftClickOpenMenu() {
     this.set("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
   }

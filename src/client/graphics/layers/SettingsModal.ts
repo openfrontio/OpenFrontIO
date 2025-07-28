@@ -114,6 +114,27 @@ export class SettingsModal extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onInfoDisplayModeClick() {
+    const currentMode = this.userSettings.infoDisplayMode();
+    let nextMode: string;
+
+    switch (currentMode) {
+      case "overlay":
+        nextMode = "mousehud";
+        break;
+      case "mousehud":
+        nextMode = "both";
+        break;
+      case "both":
+      default:
+        nextMode = "overlay";
+        break;
+    }
+
+    this.userSettings.setInfoDisplayMode(nextMode);
+    this.requestUpdate();
+  }
+
   private onExitButtonClick() {
     // redirect to the home page
     window.location.href = "/";
@@ -295,6 +316,32 @@ export class SettingsModal extends LitElement implements Layer {
                 ${this.userSettings.leftClickOpensMenu()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              @click="${this.onInfoDisplayModeClick}"
+            >
+              <img src=${mouseIcon} alt="infoDisplay" width="20" height="20" />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.info_display_mode_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${this.userSettings.infoDisplayMode() === "overlay"
+                    ? translateText("user_setting.info_display_overlay_only")
+                    : this.userSettings.infoDisplayMode() === "mousehud"
+                      ? translateText("user_setting.info_display_mousehud_only")
+                      : translateText("user_setting.info_display_both")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.infoDisplayMode() === "overlay"
+                  ? translateText("user_setting.info_display_overlay")
+                  : this.userSettings.infoDisplayMode() === "mousehud"
+                    ? translateText("user_setting.info_display_mousehud")
+                    : translateText("user_setting.info_display_both_short")}
               </div>
             </button>
 

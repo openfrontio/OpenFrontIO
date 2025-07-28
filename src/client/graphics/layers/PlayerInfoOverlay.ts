@@ -1,83 +1,30 @@
-import { LitElement, TemplateResult, html } from "lit";
+import { TemplateResult, html } from "lit";
 import { ref } from "lit-html/directives/ref.js";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
-import { EventBus } from "../../../core/EventBus";
-import {
-  PlayerProfile,
-  PlayerType,
-  Relation,
-  Unit,
-  UnitType,
-} from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { PlayerType, Relation, UnitType } from "../../../core/game/Game";
+import { PlayerView } from "../../../core/game/GameView";
 import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
-import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
+import { BasePlayerInfoOverlay } from "./BasePlayerInfoOverlay";
 import { CloseRadialMenuEvent } from "./RadialMenu";
 
-function euclideanDistWorld(
-  coord: { x: number; y: number },
-  tileRef: TileRef,
-  game: GameView,
-): number {
-  const x = game.x(tileRef);
-  const y = game.y(tileRef);
-  const dx = coord.x - x;
-  const dy = coord.y - y;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
-function distSortUnitWorld(coord: { x: number; y: number }, game: GameView) {
-  return (a: Unit | UnitView, b: Unit | UnitView) => {
-    const distA = euclideanDistWorld(coord, a.tile(), game);
-    const distB = euclideanDistWorld(coord, b.tile(), game);
-    return distA - distB;
-  };
-}
-
 @customElement("player-info-overlay")
-export class PlayerInfoOverlay extends LitElement implements Layer {
-  @property({ type: Object })
-  public game!: GameView;
-
-  @property({ type: Object })
-  public eventBus!: EventBus;
-
-  @property({ type: Object })
-  public transform!: TransformHandler;
-
-  @state()
-  private player: PlayerView | null = null;
-
-  @state()
-  private playerProfile: PlayerProfile | null = null;
-
-  @state()
-  private unit: UnitView | null = null;
-
+export class PlayerInfoOverlay extends BasePlayerInfoOverlay {
   @state()
   private _isInfoVisible: boolean = false;
 
-  private _isActive = false;
-
   private lastMouseUpdate = 0;
 
-  init() {
-    this.eventBus.on(MouseMoveEvent, (e: MouseMoveEvent) =>
-      this.onMouseEvent(e),
-    );
+  protected setupEventListeners() {
     this.eventBus.on(ContextMenuEvent, (e: ContextMenuEvent) =>
       this.maybeShow(e.x, e.y),
     );
     this.eventBus.on(CloseRadialMenuEvent, () => this.hide());
-    this._isActive = true;
   }
 
-  private onMouseEvent(event: MouseMoveEvent) {
+  protected onMouseMove(event: MouseMoveEvent) {
     const now = Date.now();
     if (now - this.lastMouseUpdate < 100) {
       return;
@@ -86,73 +33,26 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.maybeShow(event.x, event.y);
   }
 
+  protected shouldRender(): boolean {
+    return this._isActive && this.userSettings?.showPlayerInfoOverlay();
+  }
+
   public hide() {
     this.setVisible(false);
-    this.unit = null;
-    this.player = null;
+    this.resetHoverState();
   }
 
   public maybeShow(x: number, y: number) {
     this.hide();
-    const worldCoord = this.transform.screenToWorldCoordinates(x, y);
-    if (!this.game.isValidCoord(worldCoord.x, worldCoord.y)) {
-      return;
-    }
-
-    const tile = this.game.ref(worldCoord.x, worldCoord.y);
-    if (!tile) return;
-
-    const owner = this.game.owner(tile);
-
-    if (owner && owner.isPlayer()) {
-      this.player = owner as PlayerView;
-      this.player.profile().then((p) => {
-        this.playerProfile = p;
-      });
+    this.updateHoverInfo(x, y);
+    if (this.player || this.unit) {
       this.setVisible(true);
-    } else if (!this.game.isLand(tile)) {
-      const units = this.game
-        .units(UnitType.Warship, UnitType.TradeShip, UnitType.TransportShip)
-        .filter((u) => euclideanDistWorld(worldCoord, u.tile(), this.game) < 50)
-        .sort(distSortUnitWorld(worldCoord, this.game));
-
-      if (units.length > 0) {
-        this.unit = units[0];
-        this.setVisible(true);
-      }
     }
-  }
-
-  tick() {
-    this.requestUpdate();
-  }
-
-  renderLayer(context: CanvasRenderingContext2D) {
-    // Implementation for Layer interface
-  }
-
-  shouldTransform(): boolean {
-    return false;
   }
 
   setVisible(visible: boolean) {
     this._isInfoVisible = visible;
     this.requestUpdate();
-  }
-
-  private getRelationClass(relation: Relation): string {
-    switch (relation) {
-      case Relation.Hostile:
-        return "text-red-500";
-      case Relation.Distrustful:
-        return "text-red-300";
-      case Relation.Neutral:
-        return "text-white";
-      case Relation.Friendly:
-        return "text-green-500";
-      default:
-        return "text-white";
-    }
   }
 
   private getRelationName(relation: Relation): string {
@@ -280,34 +180,8 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     `;
   }
 
-  private renderUnitInfo(unit: UnitView) {
-    const isAlly =
-      (unit.owner() === this.game.myPlayer() ||
-        this.game.myPlayer()?.isFriendly(unit.owner())) ??
-      false;
-
-    return html`
-      <div class="p-2">
-        <div class="font-bold mb-1 ${isAlly ? "text-green-500" : "text-white"}">
-          ${unit.owner().name()}
-        </div>
-        <div class="mt-1">
-          <div class="text-sm opacity-80">${unit.type()}</div>
-          ${unit.hasHealth()
-            ? html`
-                <div class="text-sm opacity-80">
-                  ${translateText("player_info_overlay.health")}:
-                  ${unit.health()}
-                </div>
-              `
-            : ""}
-        </div>
-      </div>
-    `;
-  }
-
   render() {
-    if (!this._isActive) {
+    if (!this.shouldRender()) {
       return html``;
     }
 
@@ -318,7 +192,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     return html`
       <div
         class="block lg:flex fixed top-[150px] right-0 w-full z-50 flex-col max-w-[180px]"
-        @contextmenu=${(e) => e.preventDefault()}
+        @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <div
           class="bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
@@ -328,9 +202,5 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         </div>
       </div>
     `;
-  }
-
-  createRenderRoot() {
-    return this; // Disable shadow DOM to allow Tailwind styles
   }
 }
