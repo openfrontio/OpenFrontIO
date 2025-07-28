@@ -438,7 +438,10 @@ export const deleteUnitElement: MenuElement = {
   icon: xIcon,
   color: COLORS.delete,
   tooltipItems: [
-    { text: translateText("radial_menu.delete_unit_title"), className: "title" },
+    {
+      text: translateText("radial_menu.delete_unit_title"),
+      className: "title",
+    },
     {
       text: translateText("radial_menu.delete_unit_description"),
       className: "description",

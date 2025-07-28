@@ -9,7 +9,7 @@ import {
   UnitType,
 } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
-import { playerInfo, setup } from "./util/Setup";
+import { setup } from "./util/Setup";
 
 describe("DeleteUnitExecution Security Tests", () => {
   let game: Game;
@@ -23,10 +23,20 @@ describe("DeleteUnitExecution Security Tests", () => {
       instantBuild: true,
       infiniteTroops: true,
     });
-    
-    const player1Info = new PlayerInfo("TestPlayer", PlayerType.Human, null, "TestPlayer");
-    const player2Info = new PlayerInfo("EnemyPlayer", PlayerType.Human, null, "EnemyPlayer");
-    
+
+    const player1Info = new PlayerInfo(
+      "TestPlayer",
+      PlayerType.Human,
+      null,
+      "TestPlayer",
+    );
+    const player2Info = new PlayerInfo(
+      "EnemyPlayer",
+      PlayerType.Human,
+      null,
+      "EnemyPlayer",
+    );
+
     game.addPlayer(player1Info);
     game.addPlayer(player2Info);
 
@@ -51,7 +61,7 @@ describe("DeleteUnitExecution Security Tests", () => {
     }
     const spawnTile = playerTiles[0];
     unit = player.buildUnit(UnitType.City, spawnTile, {});
-    
+
     const tileOwner = game.owner(unit.tile());
     if (!tileOwner.isPlayer() || tileOwner.id() !== player.id()) {
       throw new Error("Unit is not on player's territory");
@@ -60,7 +70,11 @@ describe("DeleteUnitExecution Security Tests", () => {
 
   describe("Security Validations", () => {
     it("should prevent deleting units not owned by player", () => {
-      const enemyUnit = enemyPlayer.buildUnit(UnitType.City, Array.from(enemyPlayer.tiles())[0], {});
+      const enemyUnit = enemyPlayer.buildUnit(
+        UnitType.City,
+        Array.from(enemyPlayer.tiles())[0],
+        {},
+      );
       const execution = new DeleteUnitExecution(player, enemyUnit.id());
       execution.init(game, 0);
 
@@ -90,7 +104,7 @@ describe("DeleteUnitExecution Security Tests", () => {
 
     it("should allow deleting the last city (suicide)", () => {
       jest.spyOn(game, "inSpawnPhase").mockReturnValue(false);
-      
+
       const execution = new DeleteUnitExecution(player, unit.id());
       execution.init(game, 0);
 
@@ -99,7 +113,7 @@ describe("DeleteUnitExecution Security Tests", () => {
 
     it("should allow deleting units when all conditions are met", () => {
       jest.spyOn(game, "inSpawnPhase").mockReturnValue(false);
-      
+
       const execution = new DeleteUnitExecution(player, unit.id());
       execution.init(game, 0);
 
