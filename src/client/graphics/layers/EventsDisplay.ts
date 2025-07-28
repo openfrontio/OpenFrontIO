@@ -499,6 +499,8 @@ export class EventsDisplay extends LitElement implements Layer {
     const betrayed = this.game.playerBySmallID(update.betrayedID) as PlayerView;
     const traitor = this.game.playerBySmallID(update.traitorID) as PlayerView;
 
+    if (betrayed.isDisconnected()) return; // Do not send the message if betraying a disconnected player
+
     if (!betrayed.isTraitor() && traitor === myPlayer) {
       const malusPercent = Math.round(
         (1 - this.game.config().traitorDefenseDebuff()) * 100,
