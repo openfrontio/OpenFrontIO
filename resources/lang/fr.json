@@ -41,7 +41,6 @@
     "action_move_camera": "Déplacer la caméra",
     "action_ratio_change": "Diminuer/Augmenter le ratio d'attaque",
     "action_reset_gfx": "Réinitialiser les graphismes",
-    "action_auto_upgrade": "Upgrade automatique du bâtiment le plus proche",
     "ui_section": "IU du jeu",
     "ui_leaderboard": "Classement",
     "ui_your_team": "Votre équipe :",
