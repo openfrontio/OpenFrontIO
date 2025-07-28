@@ -18,52 +18,55 @@ jest.mock("../../../src/client/Utils", () => ({
   renderNumber: jest.fn((num: number) => num.toString()),
 }));
 
-jest.mock("../../../src/client/graphics/layers/BuildMenu", () => ({
-  flattenedBuildTable: [
-    {
-      unitType: UnitType.City,
-      key: "unit_type.city",
-      description: "unit_type.city_desc",
-      icon: "city-icon",
-      countable: true,
-    },
-    {
-      unitType: UnitType.Factory,
-      key: "unit_type.factory",
-      description: "unit_type.factory_desc",
-      icon: "factory-icon",
-      countable: true,
-    },
-    {
-      unitType: UnitType.AtomBomb,
-      key: "unit_type.atom_bomb",
-      description: "unit_type.atom_bomb_desc",
-      icon: "atom-bomb-icon",
-      countable: false,
-    },
-    {
-      unitType: UnitType.Warship,
-      key: "unit_type.warship",
-      description: "unit_type.warship_desc",
-      icon: "warship-icon",
-      countable: true,
-    },
-    {
-      unitType: UnitType.HydrogenBomb,
-      key: "unit_type.hydrogen_bomb",
-      description: "unit_type.hydrogen_bomb_desc",
-      icon: "hydrogen-bomb-icon",
-      countable: false,
-    },
-    {
-      unitType: UnitType.MIRV,
-      key: "unit_type.mirv",
-      description: "unit_type.mirv_desc",
-      icon: "mirv-icon",
-      countable: false,
-    },
-  ],
-}));
+jest.mock("../../../src/client/graphics/layers/BuildMenu", () => {
+  const { UnitType } = jest.requireActual("../../../src/core/game/Game");
+  return {
+    flattenedBuildTable: [
+      {
+        unitType: UnitType.City,
+        key: "unit_type.city",
+        description: "unit_type.city_desc",
+        icon: "city-icon",
+        countable: true,
+      },
+      {
+        unitType: UnitType.Factory,
+        key: "unit_type.factory",
+        description: "unit_type.factory_desc",
+        icon: "factory-icon",
+        countable: true,
+      },
+      {
+        unitType: UnitType.AtomBomb,
+        key: "unit_type.atom_bomb",
+        description: "unit_type.atom_bomb_desc",
+        icon: "atom-bomb-icon",
+        countable: false,
+      },
+      {
+        unitType: UnitType.Warship,
+        key: "unit_type.warship",
+        description: "unit_type.warship_desc",
+        icon: "warship-icon",
+        countable: true,
+      },
+      {
+        unitType: UnitType.HydrogenBomb,
+        key: "unit_type.hydrogen_bomb",
+        description: "unit_type.hydrogen_bomb_desc",
+        icon: "hydrogen-bomb-icon",
+        countable: false,
+      },
+      {
+        unitType: UnitType.MIRV,
+        key: "unit_type.mirv",
+        description: "unit_type.mirv_desc",
+        icon: "mirv-icon",
+        countable: false,
+      },
+    ],
+  };
+});
 
 jest.mock("nanoid", () => ({
   customAlphabet: jest.fn(() => jest.fn(() => "mock-id")),
