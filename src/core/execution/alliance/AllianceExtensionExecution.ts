@@ -4,13 +4,22 @@ import {
   MessageType,
   Player,
   PlayerID,
+  PlayerType,
 } from "../../game/Game";
+import { PseudoRandom } from "../../PseudoRandom";
+import { GameID } from "../../Schemas";
+import { simpleHash } from "../../Util";
 
 export class AllianceExtensionExecution implements Execution {
+  private random: PseudoRandom;
+
   constructor(
+    gameID: GameID,
     private readonly from: Player,
     private readonly toID: PlayerID,
-  ) {}
+  ) {
+    this.random = new PseudoRandom(simpleHash(toID) + simpleHash(gameID));
+  }
 
   init(mg: Game, ticks: number): void {
     if (!mg.hasPlayer(this.toID)) {
@@ -36,27 +45,26 @@ export class AllianceExtensionExecution implements Execution {
       return;
     }
 
-    // Mark this player's intent to extend
-    alliance.addExtensionRequest(this.from);
-
-    if (alliance.canExtend()) {
-      alliance.extend();
-
-      mg.displayMessage(
-        "events_display.alliance_renewed",
-        MessageType.ALLIANCE_ACCEPTED,
-        this.from.id(),
-        undefined,
-        { name: to.displayName() },
-      );
-      mg.displayMessage(
-        "events_display.alliance_renewed",
-        MessageType.ALLIANCE_ACCEPTED,
-        this.toID,
-        undefined,
-        { name: this.from.displayName() },
-      );
+    if (to.type() !== PlayerType.Human) {
+      if (!this.random.chance(1.3)) return;
+    } else {
+      // Mark this player's intent to extend
+      alliance.addExtensionRequest(this.from);
+      if (!alliance.canExtend()) return;
     }
+
+    alliance.extend();
+
+    mg.displayMessage(
+      "events_display.alliance_renewed",
+      MessageType.ALLIANCE_ACCEPTED,
+      this.from.id(),
+    );
+    mg.displayMessage(
+      "events_display.alliance_renewed",
+      MessageType.ALLIANCE_ACCEPTED,
+      this.toID,
+    );
   }
 
   tick(ticks: number): void {
