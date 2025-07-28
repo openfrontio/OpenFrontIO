@@ -67,11 +67,13 @@ jobs:
             const labels = issue.labels.map(label => label.name);
 
             const hasValidLabel = labels.some(label =>
-              label.startsWith("Bug") || label.startsWith("Feature")
+              label.startsWith("Bug") ||
+              label.startsWith("DevOps") ||
+              label.startsWith("Feature")
             );
 
             if (!hasValidLabel) {
-              core.setFailed("❌ At least one label starting with 'Bug' or 'Feature' is required.");
+              core.setFailed("❌ At least one label starting with 'Bug' 'DevOps' or 'Feature' is required.");
             }
 
   has-milestone:
