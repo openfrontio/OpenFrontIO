@@ -2,6 +2,7 @@ import { LitElement, TemplateResult, html } from "lit";
 import { property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { PlayerProfile, Relation, UnitType } from "../../../core/game/Game";
+import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { MouseMoveEvent } from "../../InputHandler";
@@ -38,7 +39,7 @@ const OVERLAY_CONFIG = {
 
 function euclideanDistWorld(
   coord: { x: number; y: number },
-  tileRef: any,
+  tileRef: TileRef,
   game: GameView,
 ): number {
   const x = game.x(tileRef);
@@ -49,7 +50,7 @@ function euclideanDistWorld(
 }
 
 function distSortUnitWorld(coord: { x: number; y: number }, game: GameView) {
-  return (a: any, b: any) => {
+  return (a: UnitView, b: UnitView) => {
     const distA = euclideanDistWorld(coord, a.tile(), game);
     const distB = euclideanDistWorld(coord, b.tile(), game);
     return distA - distB;
@@ -84,7 +85,9 @@ export abstract class BasePlayerInfoOverlay
   @state()
   protected isVisible = false;
 
+  @state()
   protected lastUpdate = 0;
+
   protected _isActive = false;
 
   protected emojiMap = Object.fromEntries(
