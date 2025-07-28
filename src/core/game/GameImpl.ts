@@ -675,6 +675,7 @@ export class GameImpl implements Game {
     type: MessageType,
     playerID: PlayerID | null,
     goldAmount?: bigint,
+    params?: Record<string, string | number>,
   ): void {
     let id: number | null = null;
     if (playerID !== null) {
@@ -686,6 +687,7 @@ export class GameImpl implements Game {
       message: message,
       playerID: id,
       goldAmount: goldAmount,
+      params: params,
     });
   }
 
@@ -737,6 +739,9 @@ export class GameImpl implements Game {
     if (u.hasTrainStation()) {
       this._railNetwork.removeStation(u);
     }
+  }
+  updateUnitTile(u: Unit) {
+    this.unitGrid.updateUnitCell(u);
   }
 
   hasUnitNearby(

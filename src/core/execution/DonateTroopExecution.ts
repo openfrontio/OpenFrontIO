@@ -19,9 +19,7 @@ export class DonateTroopsExecution implements Execution {
     }
 
     this.recipient = mg.player(this.recipientID);
-    if (this.troops === null) {
-      this.troops = mg.config().defaultDonationAmount(this.sender);
-    }
+    this.troops ??= mg.config().defaultDonationAmount(this.sender);
     const maxDonation =
       mg.config().maxPopulation(this.recipient) - this.recipient.population();
     this.troops = Math.min(this.troops, maxDonation);

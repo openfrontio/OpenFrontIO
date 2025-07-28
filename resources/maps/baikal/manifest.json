@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 1564,
-    "num_land_tiles": 2234157,
+    "num_land_tiles": 2181746,
     "width": 2500
   },
   "mini_map": {
     "height": 782,
-    "num_land_tiles": 554725,
+    "num_land_tiles": 540863,
     "width": 1250
   },
   "name": "Baikal",

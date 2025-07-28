@@ -1,5 +1,6 @@
 import {
   Cell,
+  Difficulty,
   Execution,
   Game,
   Gold,
@@ -196,22 +197,32 @@ export class FakeHumanExecution implements Execution {
       return;
     }
 
+    const enemies = borderPlayers
+      .filter((o) => o.isPlayer())
+      .sort((a, b) => a.troops() - b.troops());
+
+    // 5% chance to send a random alliance request
+    if (this.random.chance(20)) {
+      const toAlly = this.random.randElement(enemies);
+      if (this.player.canSendAllianceRequest(toAlly)) {
+        this.player.createAllianceRequest(toAlly);
+        return;
+      }
+    }
+
+    // 50-50 attack weakest player vs random player
+    const toAttack = this.random.chance(2)
+      ? enemies[0]
+      : this.random.randElement(enemies);
+    if (this.shouldAttack(toAttack)) {
+      this.behavior.sendAttack(toAttack);
+      return;
+    }
+
     this.behavior.forgetOldEnemies();
     this.behavior.assistAllies();
     const enemy = this.behavior.selectEnemy();
-    if (!enemy) {
-      // 5% chance to send a random alliance request
-      if (this.random.chance(20)) {
-        const enemies = borderPlayers
-          .filter((o) => o.isPlayer())
-          .sort((a, b) => a.troops() - b.troops());
-        const toAlly = this.random.randElement(enemies);
-        if (this.player.canSendAllianceRequest(toAlly)) {
-          this.player.createAllianceRequest(toAlly);
-        }
-      }
-      return;
-    }
+    if (!enemy) return;
     this.maybeSendEmoji(enemy);
     this.maybeSendNuke(enemy);
     if (this.player.sharesBorderWith(enemy)) {
@@ -219,6 +230,42 @@ export class FakeHumanExecution implements Execution {
     } else {
       this.maybeSendBoatAttack(enemy);
     }
+  }
+
+  private shouldAttack(other: Player): boolean {
+    if (this.player === null) throw new Error("not initialized");
+    if (this.player.isOnSameTeam(other)) {
+      return false;
+    }
+    if (this.player.isFriendly(other)) {
+      if (this.shouldDiscourageAttack(other)) {
+        return this.random.chance(200);
+      }
+      return this.random.chance(50);
+    } else {
+      if (this.shouldDiscourageAttack(other)) {
+        return this.random.chance(4);
+      }
+      return true;
+    }
+  }
+
+  private shouldDiscourageAttack(other: Player) {
+    if (other.isTraitor()) {
+      return false;
+    }
+    const difficulty = this.mg.config().gameConfig().difficulty;
+    if (
+      difficulty === Difficulty.Hard ||
+      difficulty === Difficulty.Impossible
+    ) {
+      return false;
+    }
+    if (other.type() !== PlayerType.Human) {
+      return false;
+    }
+    // Only discourage attacks on Humans who are not traitors on easy or medium difficulty.
+    return true;
   }
 
   private maybeSendEmoji(enemy: Player) {

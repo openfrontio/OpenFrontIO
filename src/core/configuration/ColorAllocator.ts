@@ -76,9 +76,7 @@ export class ColorAllocator {
       case ColoredTeams.Bot:
         return botColor;
       default:
-        return this.availableColors[
-          simpleHash(team) % this.availableColors.length
-        ];
+        return this.assignColor(team);
     }
   }
 }

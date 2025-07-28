@@ -26,9 +26,7 @@ class GameMapLoader {
   private createLazyLoader<T>(importFn: () => Promise<T>): () => Promise<T> {
     let cache: Promise<T> | null = null;
     return () => {
-      if (!cache) {
-        cache = importFn();
-      }
+      cache ??= importFn();
       return cache;
     };
   }

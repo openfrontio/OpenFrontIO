@@ -1,10 +1,5 @@
 import { Config } from "../../../core/configuration/Config";
-import {
-  AllPlayers,
-  Cell,
-  PlayerActions,
-  UnitType,
-} from "../../../core/game/Game";
+import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { flattenedEmojiTable } from "../../../core/Util";
@@ -352,9 +347,9 @@ export const buildMenuElement: MenuElement = {
           : undefined,
         icon: item.icon,
         tooltipItems: [
-          { text: translateText(item.key || ""), className: "title" },
+          { text: translateText(item.key ?? ""), className: "title" },
           {
-            text: translateText(item.description || ""),
+            text: translateText(item.description ?? ""),
             className: "description",
           },
           {
@@ -401,7 +396,7 @@ export const boatMenuElement: MenuElement = {
 
     params.playerActionHandler.handleBoatAttack(
       params.myPlayer,
-      params.selected?.id() || null,
+      params.selected?.id() ?? null,
       params.tile,
       spawn !== false ? spawn : null,
     );
@@ -423,15 +418,11 @@ export const centerButtonElement: CenterButtonElement = {
       }
       return false;
     }
-    return false;
+    return !params.playerActions.canAttack;
   },
   action: (params: MenuElementParams) => {
     if (params.game.inSpawnPhase()) {
-      const cell = new Cell(
-        params.game.x(params.tile),
-        params.game.y(params.tile),
-      );
-      params.playerActionHandler.handleSpawn(cell);
+      params.playerActionHandler.handleSpawn(params.tile);
     } else {
       params.playerActionHandler.handleAttack(
         params.myPlayer,
@@ -442,8 +433,17 @@ export const centerButtonElement: CenterButtonElement = {
   },
 };
 
-export const rootMenuItems: MenuElement[] = [
-  infoMenuElement,
-  boatMenuElement,
-  buildMenuElement,
-];
+export const rootMenuElement: MenuElement = {
+  id: "root",
+  name: "root",
+  disabled: () => false,
+  icon: infoIcon,
+  color: COLORS.info,
+  subMenu: (params: MenuElementParams) => {
+    let ally = allyRequestElement;
+    if (params.selected?.isAlliedWith(params.myPlayer)) {
+      ally = allyBreakElement;
+    }
+    return [infoMenuElement, boatMenuElement, ally, buildMenuElement];
+  },
+};

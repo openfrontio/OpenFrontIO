@@ -15,7 +15,6 @@ import { EventsDisplay } from "./layers/EventsDisplay";
 import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
-import { GameTopBar } from "./layers/GameTopBar";
 import { GutterAdModal } from "./layers/GutterAdModal";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
@@ -75,8 +74,8 @@ export function createRenderer(
   buildMenu.transformHandler = transformHandler;
 
   const leaderboard = document.querySelector("leader-board") as Leaderboard;
-  if (!emojiTable || !(leaderboard instanceof Leaderboard)) {
-    console.error("EmojiTable element not found in the DOM");
+  if (!leaderboard || !(leaderboard instanceof Leaderboard)) {
+    console.error("LeaderBoard element not found in the DOM");
   }
   leaderboard.eventBus = eventBus;
   leaderboard.game = game;
@@ -90,8 +89,8 @@ export function createRenderer(
   gameLeftSidebar.game = game;
 
   const teamStats = document.querySelector("team-stats") as TeamStats;
-  if (!emojiTable || !(teamStats instanceof TeamStats)) {
-    console.error("EmojiTable element not found in the DOM");
+  if (!teamStats || !(teamStats instanceof TeamStats)) {
+    console.error("TeamStats element not found in the DOM");
   }
   teamStats.eventBus = eventBus;
   teamStats.game = game;
@@ -161,13 +160,6 @@ export function createRenderer(
   }
   settingsModal.userSettings = userSettings;
   settingsModal.eventBus = eventBus;
-
-  const gameTopBar = document.querySelector("game-top-bar") as GameTopBar;
-  if (!(gameTopBar instanceof GameTopBar)) {
-    console.error("top bar not found");
-  }
-  gameTopBar.game = game;
-  gameTopBar.eventBus = eventBus;
 
   const unitDisplay = document.querySelector("unit-display") as UnitDisplay;
   if (!(unitDisplay instanceof UnitDisplay)) {
@@ -255,7 +247,6 @@ export function createRenderer(
     new SpawnTimer(game, transformHandler),
     leaderboard,
     gameLeftSidebar,
-    gameTopBar,
     unitDisplay,
     gameRightSidebar,
     controlPanel,

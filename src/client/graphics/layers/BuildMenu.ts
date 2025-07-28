@@ -15,7 +15,6 @@ import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import {
   BuildableUnit,
-  Cell,
   Gold,
   PlayerActions,
   UnitType,
@@ -134,6 +133,11 @@ export class BuildMenu extends LitElement implements Layer {
   init() {
     this.eventBus.on(ShowBuildMenuEvent, (e) => {
       if (!this.game.myPlayer()?.isAlive()) {
+        return;
+      }
+      if (!this._hidden) {
+        // Players sometimes hold control while building a unit,
+        // so if the menu is already open, ignore the event.
         return;
       }
       const clickedCell = this.transformHandler.screenToWorldCoordinates(
@@ -379,7 +383,7 @@ export class BuildMenu extends LitElement implements Layer {
       return "?";
     }
 
-    return player.units(item.unitType).length.toString();
+    return player.totalUnitLevels(item.unitType).toString();
   }
 
   public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile: TileRef): void {
@@ -391,12 +395,7 @@ export class BuildMenu extends LitElement implements Layer {
         ),
       );
     } else if (buildableUnit.canBuild) {
-      this.eventBus.emit(
-        new BuildUnitIntentEvent(
-          buildableUnit.type,
-          new Cell(this.game.x(tile), this.game.y(tile)),
-        ),
-      );
+      this.eventBus.emit(new BuildUnitIntentEvent(buildableUnit.type, tile));
     }
     this.hideMenu();
   }
