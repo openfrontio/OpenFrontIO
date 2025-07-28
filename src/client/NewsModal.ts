@@ -13,6 +13,23 @@ export class NewsModal extends LitElement {
     close: () => void;
   };
 
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("keydown", this.handleKeyDown);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("keydown", this.handleKeyDown);
+    super.disconnectedCallback();
+  }
+
+  private handleKeyDown = (e: KeyboardEvent) => {
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.close();
+    }
+  };
+
   @property({ type: String }) markdown = "Loading...";
 
   private initialized: boolean = false;
