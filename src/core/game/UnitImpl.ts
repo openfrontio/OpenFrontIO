@@ -37,7 +37,7 @@ export class UnitImpl implements Unit {
   private _loaded: boolean | undefined;
   private _trainType: TrainType | undefined;
   // Nuke only
-  private _trajectoryIndex: number;
+  private _trajectoryIndex: number = 0;
   private _trajectory: TrajectoryTile[];
 
   constructor(

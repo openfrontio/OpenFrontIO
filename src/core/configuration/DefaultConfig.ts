@@ -810,7 +810,7 @@ export class DefaultConfig implements Config {
   }
 
   defaultNukeTargetableRange(): number {
-    return 120;
+    return 150;
   }
 
   defaultSamRange(): number {

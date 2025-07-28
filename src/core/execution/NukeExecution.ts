@@ -178,18 +178,29 @@ export class NukeExecution implements Execution {
   private getTrajectory(target: TileRef): TrajectoryTile[] {
     const trajectoryTiles: TrajectoryTile[] = [];
     const targetRangeSquared =
-      this.mg.config().defaultNukeTargetableRange() *
-      this.mg.config().defaultNukeTargetableRange();
+      this.mg.config().defaultNukeTargetableRange() ** 2;
     const allTiles: TileRef[] = this.pathFinder.allTiles();
     for (const tile of allTiles) {
       trajectoryTiles.push({
         tile,
-        targetable:
-          this.mg.euclideanDistSquared(target, tile) <= targetRangeSquared,
+        targetable: this.isTargetable(target, tile, targetRangeSquared),
       });
     }
 
     return trajectoryTiles;
+  }
+
+  private isTargetable(
+    targetTile: TileRef,
+    nukeTile: TileRef,
+    targetRangeSquared: number,
+  ): boolean {
+    return (
+      this.mg.euclideanDistSquared(nukeTile, targetTile) < targetRangeSquared ||
+      (this.src !== undefined &&
+        this.src !== null &&
+        this.mg.euclideanDistSquared(this.src, nukeTile) < targetRangeSquared)
+    );
   }
 
   private updateNukeTargetable() {
@@ -197,16 +208,10 @@ export class NukeExecution implements Execution {
       return;
     }
     const targetRangeSquared =
-      this.mg.config().defaultNukeTargetableRange() *
-      this.mg.config().defaultNukeTargetableRange();
+      this.mg.config().defaultNukeTargetableRange() ** 2;
     const targetTile = this.nuke.targetTile();
     this.nuke.setTargetable(
-      this.mg.euclideanDistSquared(this.nuke.tile(), targetTile!) <
-        targetRangeSquared ||
-        (this.src !== undefined &&
-          this.src !== null &&
-          this.mg.euclideanDistSquared(this.src, this.nuke.tile()) <
-            targetRangeSquared),
+      this.isTargetable(targetTile!, this.nuke.tile(), targetRangeSquared),
     );
   }
 
