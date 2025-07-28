@@ -69,6 +69,11 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.close();
+    }
+
     const key = e.key.toLowerCase();
     const nextSequence = [...this.keySequence, key].slice(-5);
     this.keySequence = nextSequence;
