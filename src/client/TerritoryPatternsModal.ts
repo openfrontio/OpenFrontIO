@@ -37,6 +37,8 @@ export class TerritoryPatternsModal extends LitElement {
 
   private userSettings: UserSettings = new UserSettings();
 
+  private isActive = false;
+
   constructor() {
     super();
   }
@@ -44,7 +46,6 @@ export class TerritoryPatternsModal extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.selectedPattern = this.userSettings.getSelectedPattern();
-    window.addEventListener("keydown", this.handleKeyDown);
     this.updateComplete.then(() => {
       const containers = this.renderRoot.querySelectorAll(".preview-container");
       if (this.resizeObserver) {
@@ -54,12 +55,11 @@ export class TerritoryPatternsModal extends LitElement {
       }
       this.updatePreview();
     });
+    this.open();
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    window.removeEventListener("keydown", this.handleKeyDown);
-    this.resizeObserver.disconnect();
   }
 
   async onUserMe(userMeResponse: UserMeResponse | null) {
@@ -220,6 +220,7 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   render() {
+    if (!this.isActive) return html``;
     return html`
       ${this.renderTooltip()}
       <o-modal
@@ -233,10 +234,15 @@ export class TerritoryPatternsModal extends LitElement {
 
   public open() {
     this.modalEl?.open();
+    window.addEventListener("keydown", this.handleKeyDown);
+    this.isActive = true;
   }
 
   public close() {
     this.modalEl?.close();
+    window.removeEventListener("keydown", this.handleKeyDown);
+    this.resizeObserver?.disconnect();
+    this.isActive = false;
   }
 
   private selectPattern(pattern: string | undefined) {
@@ -336,6 +342,7 @@ export class TerritoryPatternsModal extends LitElement {
   }
 }
 
+const patternCache = new Map<string, string>();
 const DEFAULT_PATTERN_B64 = "AAAAAA"; // Empty 2x2 pattern
 const COLOR_SET = [0, 0, 0, 255]; // Black
 const COLOR_UNSET = [255, 255, 255, 255]; // White
@@ -344,11 +351,14 @@ export function generatePreviewDataUrl(
   width?: number,
   height?: number,
 ): string {
+  pattern ??= DEFAULT_PATTERN_B64;
+
+  if (patternCache.has(pattern)) {
+    return patternCache.get(pattern)!;
+  }
+
   // Calculate canvas size
-  const decoder = new PatternDecoder(
-    pattern ?? DEFAULT_PATTERN_B64,
-    base64url.decode,
-  );
+  const decoder = new PatternDecoder(pattern, base64url.decode);
   const scaledWidth = decoder.scaledWidth();
   const scaledHeight = decoder.scaledHeight();
 
@@ -384,5 +394,7 @@ export function generatePreviewDataUrl(
 
   // Create a data URL
   ctx.putImageData(imageData, 0, 0);
-  return canvas.toDataURL("image/png");
+  const dataUrl = canvas.toDataURL("image/png");
+  patternCache.set(pattern, dataUrl);
+  return dataUrl;
 }
