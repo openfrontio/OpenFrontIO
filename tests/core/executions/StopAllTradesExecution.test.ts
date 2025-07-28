@@ -90,8 +90,8 @@ describe("StopAllTradesExecution", () => {
     expect(execution.isActive()).toBe(false);
   });
 
-  it("should handle null team ID correctly", () => {
-    const execution = new StopAllTradesExecution(mockPlayer, null);
+  it("should handle undefined team ID correctly", () => {
+    const execution = new StopAllTradesExecution(mockPlayer);
     execution.init(mockGame, 0);
     execution.tick(0);
 

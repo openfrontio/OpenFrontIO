@@ -1,8 +1,8 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { GameMode, Gold } from "../../../core/game/Game";
-import { GameView } from "../../../core/game/GameView";
+import { GameMode, Gold, Team } from "../../../core/game/Game";
+import { GameView, PlayerView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
 import { AttackRatioEvent } from "../../InputHandler";
 import {
@@ -13,6 +13,15 @@ import {
 import { renderNumber, renderTroops, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
+
+type TeamInfo = {
+  id: string;
+  name: string;
+  color: string;
+  hasEmbargo: boolean;
+  isMyTeam: boolean;
+  hasPlayers: boolean;
+};
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Layer {
@@ -202,14 +211,17 @@ export class ControlPanel extends LitElement implements Layer {
     const players = this.game.playerViews();
     const teamMap = new Map<string, TeamInfo>();
     const myPlayer = this.game.myPlayer();
-    const myTeam = myPlayer?.team();
+    const myTeam = myPlayer?.team() ?? null;
 
     for (const player of players) {
       const team = player.team();
       if (team !== null) {
         const teamId = team.toString();
         if (!teamMap.has(teamId)) {
-          teamMap.set(teamId, this.createTeamInfo(team, players, myPlayer, myTeam));
+          teamMap.set(
+            teamId,
+            this.createTeamInfo(team, players, myPlayer, myTeam),
+          );
         }
       }
     }
@@ -217,20 +229,11 @@ export class ControlPanel extends LitElement implements Layer {
     return Array.from(teamMap.values());
   }
 
-  type TeamInfo = {
-    id: string;
-    name: string;
-    color: string;
-    hasEmbargo: boolean;
-    isMyTeam: boolean;
-    hasPlayers: boolean;
-  };
-
   private createTeamInfo(
     team: Team,
     players: PlayerView[],
     myPlayer: PlayerView | null,
-    myTeam: Team | null
+    myTeam: Team | null,
   ): TeamInfo {
     const teamColor = this.game.config().theme().teamColor(team);
     const hasEmbargo = this.checkTeamEmbargo(team, players, myPlayer);
@@ -249,23 +252,25 @@ export class ControlPanel extends LitElement implements Layer {
   private checkTeamEmbargo(
     team: Team,
     players: PlayerView[],
-    myPlayer: PlayerView | null
+    myPlayer: PlayerView | null,
   ): boolean {
     return players.some(
       (p) =>
         p.team() === team &&
         myPlayer &&
         myPlayer.hasEmbargoAgainst(p) &&
-        p !== myPlayer
+        p !== myPlayer,
     );
   }
 
   private checkTeamHasPlayers(
     team: Team,
     players: PlayerView[],
-    myPlayer: PlayerView | null
+    myPlayer: PlayerView | null,
   ): boolean {
-    return players.some((p) => p.team() === team && p !== myPlayer && p.isAlive());
+    return players.some(
+      (p) => p.team() === team && p !== myPlayer && p.isAlive(),
+    );
   }
 
   private onStopAllTrades() {
@@ -337,6 +342,110 @@ export class ControlPanel extends LitElement implements Layer {
   private handleTeamClick(e: Event, teamId: string, hasEmbargo: boolean) {
     e.stopPropagation();
     this.onToggleTeamTrades(teamId, hasEmbargo);
+  }
+
+  private renderTeamDropdown() {
+    if (!this.isTeamGame || this.getTeams().length === 0) {
+      return html``;
+    }
+
+    return html`
+      <div class="relative">
+        <button
+          @click=${this.toggleTeamDropdown}
+          class="w-full px-3 py-2 text-sm bg-red-700/80 hover:bg-red-700 text-white rounded border border-red-600/50 hover:border-red-500 transition-all duration-200 backdrop-blur font-medium flex items-center justify-between"
+          title="${translateText(
+            "control_panel.stop_team_trades_dropdown_tooltip",
+          )}"
+        >
+          <span>${translateText("control_panel.stop_team_trades")}</span>
+          <span
+            class="text-xs transition-transform duration-200 ${this
+              ._showTeamDropdown
+              ? "rotate-180"
+              : ""}"
+            >▼</span
+          >
+        </button>
+
+        <!-- Dropdown Menu -->
+        ${this._showTeamDropdown
+          ? html`
+              <div
+                class="absolute bottom-full left-0 right-0 mb-1 bg-gray-800/95 backdrop-blur border border-gray-600/50 rounded shadow-lg z-50 max-h-48 overflow-y-auto"
+              >
+                ${this.getTeams().map(
+                  (team) => html`
+                    <button
+                      @click=${team.isMyTeam || !team.hasPlayers
+                        ? null
+                        : (e: Event) =>
+                            this.handleTeamClick(e, team.id, team.hasEmbargo)}
+                      @mousedown=${(e: Event) => e.preventDefault()}
+                      class="w-full px-3 py-2 text-left text-sm transition-colors duration-150 flex items-center space-x-3 ${team.isMyTeam ||
+                      !team.hasPlayers
+                        ? "text-gray-500 cursor-not-allowed bg-gray-800/50"
+                        : "text-white hover:bg-gray-700/80 cursor-pointer"}"
+                      title="${team.isMyTeam
+                        ? translateText("control_panel.your_team_tooltip", {
+                            team: team.name,
+                          })
+                        : !team.hasPlayers
+                          ? translateText("control_panel.no_players_tooltip", {
+                              team: team.name,
+                            })
+                          : team.hasEmbargo
+                            ? translateText(
+                                "control_panel.start_team_trades_tooltip",
+                                { team: team.name },
+                              )
+                            : translateText(
+                                "control_panel.stop_team_trades_tooltip",
+                                { team: team.name },
+                              )}"
+                      ?disabled=${team.isMyTeam || !team.hasPlayers}
+                    >
+                      <div
+                        class="w-3 h-3 rounded-full flex-shrink-0 ${team.isMyTeam ||
+                        !team.hasPlayers
+                          ? "opacity-50"
+                          : ""}"
+                        style="background-color: ${team.color};"
+                      ></div>
+                      <span class="flex-1">${team.name}</span>
+                      <span class="text-xs flex items-center space-x-1">
+                        ${team.isMyTeam
+                          ? html`<span class="text-gray-500"
+                              >${translateText(
+                                "control_panel.team_status_your_team",
+                              )}</span
+                            >`
+                          : !team.hasPlayers
+                            ? html`<span class="text-gray-500"
+                                >${translateText(
+                                  "control_panel.team_status_no_players",
+                                )}</span
+                              >`
+                            : team.hasEmbargo
+                              ? html`<span class="text-red-400"
+                                  >${translateText(
+                                    "control_panel.team_status_blocked",
+                                  )}</span
+                                >`
+                              : html`<span class="text-green-400"
+                                  >${translateText(
+                                    "control_panel.team_status_trading",
+                                  )}</span
+                                >`}
+                      </span>
+                    </button>
+                  `,
+                )}
+              </div>
+            `
+          : html``}
+      </div>
+    `;
   }
 
   render() {
@@ -499,107 +608,7 @@ export class ControlPanel extends LitElement implements Layer {
               : translateText("control_panel.stop_all_trades")}
           </button>
 
-          ${this.isTeamGame && this.getTeams().length > 0
-            ? html`
-                <div class="relative">
-                  <button
-                    @click=${this.toggleTeamDropdown}
-                    class="w-full px-3 py-2 text-sm bg-red-700/80 hover:bg-red-700 text-white rounded border border-red-600/50 hover:border-red-500 transition-all duration-200 backdrop-blur font-medium flex items-center justify-between"
-                    title="${translateText(
-                      "control_panel.stop_team_trades_dropdown_tooltip",
-                    )}"
-                  >
-                    <span
-                      >${translateText("control_panel.stop_team_trades")}</span
-                    >
-                    <span
-                      class="text-xs transition-transform duration-200 ${this
-                        ._showTeamDropdown
-                        ? "rotate-180"
-                        : ""}"
-                      >▼</span
-                    >
-                  </button>
-
-                  <!-- Dropdown Menu -->
-                  ${this._showTeamDropdown
-                    ? html`
-                        <div
-                          class="absolute bottom-full left-0 right-0 mb-1 bg-gray-800/95 backdrop-blur border border-gray-600/50 rounded shadow-lg z-50 max-h-48 overflow-y-auto"
-                        >
-                          ${this.getTeams().map(
-                            (team) => html`
-                              <button
-                                @click=${team.isMyTeam || !team.hasPlayers
-                                  ? null
-                                  : (e: Event) =>
-                                      this.handleTeamClick(
-                                        e,
-                                        team.id,
-                                        team.hasEmbargo,
-                                      )}
-                                @mousedown=${(e: Event) => e.preventDefault()}
-                                class="w-full px-3 py-2 text-left text-sm transition-colors duration-150 flex items-center space-x-3 ${team.isMyTeam ||
-                                !team.hasPlayers
-                                  ? "text-gray-500 cursor-not-allowed bg-gray-800/50"
-                                  : "text-white hover:bg-gray-700/80 cursor-pointer"}"
-                                title="${team.isMyTeam
-                                  ? translateText(
-                                      "control_panel.your_team_tooltip",
-                                      { team: team.name },
-                                    )
-                                  : !team.hasPlayers
-                                    ? translateText(
-                                        "control_panel.no_players_tooltip",
-                                        { team: team.name },
-                                      )
-                                    : team.hasEmbargo
-                                      ? translateText(
-                                          "control_panel.start_team_trades_tooltip",
-                                          { team: team.name },
-                                        )
-                                      : translateText(
-                                          "control_panel.stop_team_trades_tooltip",
-                                          { team: team.name },
-                                        )}"
-                                ?disabled=${team.isMyTeam || !team.hasPlayers}
-                              >
-                                <div
-                                  class="w-3 h-3 rounded-full flex-shrink-0 ${team.isMyTeam ||
-                                  !team.hasPlayers
-                                    ? "opacity-50"
-                                    : ""}"
-                                  style="background-color: ${team.color};"
-                                ></div>
-                                <span class="flex-1">${team.name}</span>
-                                <span
-                                  class="text-xs flex items-center space-x-1"
-                                >
-                                  ${team.isMyTeam
-                                    ? html`<span class="text-gray-500"
-                                        >Your team</span
-                                      >`
-                                    : !team.hasPlayers
-                                      ? html`<span class="text-gray-500"
-                                          >No players</span
-                                        >`
-                                      : team.hasEmbargo
-                                        ? html`<span class="text-red-400"
-                                            >🚫 Blocked</span
-                                          >`
-                                        : html`<span class="text-green-400"
-                                            >✓ Trading</span
-                                          >`}
-                                </span>
-                              </button>
-                            `,
-                          )}
-                        </div>
-                      `
-                    : ""}
-                </div>
-              `
-            : ""}
+          ${this.renderTeamDropdown()}
         </div>
       </div>
     `;

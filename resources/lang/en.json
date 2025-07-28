@@ -511,7 +511,11 @@
     "stop_team_trades_tooltip": "Stop trading with all players from {{team}}",
     "start_team_trades_tooltip": "Resume trading with all players from {{team}}",
     "your_team_tooltip": "Cannot change trade status with your own team",
-    "no_players_tooltip": "No players available in {{team}} to trade with"
+    "no_players_tooltip": "No players available in {{team}} to trade with",
+    "team_status_your_team": "Your team",
+    "team_status_no_players": "No players",
+    "team_status_blocked": "🚫 Blocked",
+    "team_status_trading": "✓ Trading"
   },
   "player_panel": {
     "gold": "Gold",

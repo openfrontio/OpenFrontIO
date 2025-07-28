@@ -5,7 +5,7 @@ export class StopAllTradesExecution implements Execution {
 
   constructor(
     private player: Player,
-    private readonly targetTeamId?: string | null,
+    private readonly targetTeamId?: string,
   ) {}
 
   init(mg: Game, _: number): void {}
@@ -29,7 +29,7 @@ export class StopAllTradesExecution implements Execution {
   }
 
   private shouldEmbargoPartner(partner: Player): boolean {
-    if (this.targetTeamId !== undefined && this.targetTeamId !== null) {
+    if (this.targetTeamId !== undefined) {
       return this.shouldEmbargoSpecificTeam(partner);
     }
     return this.shouldEmbargoAllTeams(partner);
@@ -44,10 +44,10 @@ export class StopAllTradesExecution implements Execution {
     if (this.player.isAlliedWith(partner)) {
       return false;
     }
-    
+
     const myTeam = this.player.team();
     const partnerTeam = partner.team();
-    
+
     // Don't embargo same team members
     return !(myTeam !== null && partnerTeam !== null && myTeam === partnerTeam);
   }

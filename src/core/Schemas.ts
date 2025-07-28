@@ -303,7 +303,7 @@ export const EmbargoIntentSchema = BaseIntentSchema.extend({
 
 export const StopAllTradesIntentSchema = BaseIntentSchema.extend({
   type: z.literal("stopAllTrades"),
-  targetTeamId: z.string().nullable().optional(),
+  targetTeamId: z.string().optional(),
 });
 
 export const DonateGoldIntentSchema = BaseIntentSchema.extend({

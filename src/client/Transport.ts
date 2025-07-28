@@ -134,7 +134,7 @@ export class SendEmbargoIntentEvent implements GameEvent {
 }
 
 export class SendStopAllTradesIntentEvent implements GameEvent {
-  constructor(public readonly targetTeamId?: string | null) {}
+  constructor(public readonly targetTeamId?: string) {}
 }
 
 export class CancelAttackIntentEvent implements GameEvent {
