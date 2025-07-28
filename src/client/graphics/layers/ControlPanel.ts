@@ -200,17 +200,7 @@ export class ControlPanel extends LitElement implements Layer {
     if (!this.isTeamGame) return [];
 
     const players = this.game.playerViews();
-    const teamMap = new Map<
-      string,
-      {
-        id: string;
-        name: string;
-        color: string;
-        hasEmbargo: boolean;
-        isMyTeam: boolean;
-        hasPlayers: boolean;
-      }
-    >();
+    const teamMap = new Map<string, TeamInfo>();
     const myPlayer = this.game.myPlayer();
     const myTeam = myPlayer?.team();
 
@@ -219,34 +209,63 @@ export class ControlPanel extends LitElement implements Layer {
       if (team !== null) {
         const teamId = team.toString();
         if (!teamMap.has(teamId)) {
-          // Get team color from game theme
-          const teamColor = this.game.config().theme().teamColor(team);
-          // Check if this team has any players with embargoes
-          const hasEmbargo = players.some(
-            (p) =>
-              p.team() === team &&
-              myPlayer &&
-              myPlayer.hasEmbargoAgainst(p) &&
-              p !== myPlayer,
-          );
-          // Check if this team has any players at all (excluding myself)
-          const hasPlayers = players.some(
-            (p) => p.team() === team && p !== myPlayer && p.isAlive(),
-          );
-
-          teamMap.set(teamId, {
-            id: teamId,
-            name: `Team ${teamId}`,
-            color: teamColor.toHex(),
-            hasEmbargo: hasEmbargo,
-            isMyTeam: team === myTeam,
-            hasPlayers: hasPlayers,
-          });
+          teamMap.set(teamId, this.createTeamInfo(team, players, myPlayer, myTeam));
         }
       }
     }
 
     return Array.from(teamMap.values());
+  }
+
+  type TeamInfo = {
+    id: string;
+    name: string;
+    color: string;
+    hasEmbargo: boolean;
+    isMyTeam: boolean;
+    hasPlayers: boolean;
+  };
+
+  private createTeamInfo(
+    team: Team,
+    players: PlayerView[],
+    myPlayer: PlayerView | null,
+    myTeam: Team | null
+  ): TeamInfo {
+    const teamColor = this.game.config().theme().teamColor(team);
+    const hasEmbargo = this.checkTeamEmbargo(team, players, myPlayer);
+    const hasPlayers = this.checkTeamHasPlayers(team, players, myPlayer);
+
+    return {
+      id: team.toString(),
+      name: `Team ${team.toString()}`,
+      color: teamColor.toHex(),
+      hasEmbargo,
+      isMyTeam: team === myTeam,
+      hasPlayers,
+    };
+  }
+
+  private checkTeamEmbargo(
+    team: Team,
+    players: PlayerView[],
+    myPlayer: PlayerView | null
+  ): boolean {
+    return players.some(
+      (p) =>
+        p.team() === team &&
+        myPlayer &&
+        myPlayer.hasEmbargoAgainst(p) &&
+        p !== myPlayer
+    );
+  }
+
+  private checkTeamHasPlayers(
+    team: Team,
+    players: PlayerView[],
+    myPlayer: PlayerView | null
+  ): boolean {
+    return players.some((p) => p.team() === team && p !== myPlayer && p.isAlive());
   }
 
   private onStopAllTrades() {
