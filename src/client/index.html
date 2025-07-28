@@ -404,8 +404,7 @@
       });
       window.addEventListener("beforeunload", function (e) {
         e.preventDefault();
-        e.returnValue = true;
-        return "Are you sure you want to leave?";
+        e.returnValue = "Are you sure you want to leave?";
       });
     </script>
 
