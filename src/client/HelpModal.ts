@@ -15,6 +15,23 @@ export class HelpModal extends LitElement {
     return this;
   }
 
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("keydown", this.handleKeyDown);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("keydown", this.handleKeyDown);
+    super.disconnectedCallback();
+  }
+
+  private handleKeyDown = (e: KeyboardEvent) => {
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.close();
+    }
+  };
+
   render() {
     return html`
       <o-modal
