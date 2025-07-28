@@ -465,7 +465,7 @@ describe("RadialMenuElements", () => {
         (item) => item.id === "attack_Atom Bomb",
       );
 
-      expect(atomBombElement!.color).toBe(COLORS.building);
+      expect(atomBombElement!.color).toBe(COLORS.attack);
     });
 
     it("should not set color when element is disabled", () => {

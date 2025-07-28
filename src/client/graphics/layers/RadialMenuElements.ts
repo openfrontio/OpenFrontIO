@@ -355,7 +355,7 @@ function createMenuElements(
       disabled: (params: MenuElementParams) =>
         !params.buildMenu.canBuildOrUpgrade(item),
       color: params.buildMenu.canBuildOrUpgrade(item)
-        ? COLORS.building
+        ? (filterType === "attack" ? COLORS.attack : COLORS.building)
         : undefined,
       icon: item.icon,
       tooltipItems: [
