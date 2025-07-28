@@ -107,24 +107,22 @@ export class StructureIconsLayer implements Layer {
 
     this.iconsStage = new PIXI.Container();
     this.iconsStage.position.set(0, 0);
-    this.iconsStage.width = this.pixicanvas.width;
-    this.iconsStage.height = this.pixicanvas.height;
+    this.iconsStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
 
     this.levelsStage = new PIXI.Container();
     this.levelsStage.position.set(0, 0);
-    this.levelsStage.width = this.pixicanvas.width;
-    this.levelsStage.height = this.pixicanvas.height;
+    this.levelsStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
 
     this.dotsStage = new PIXI.Container();
     this.dotsStage.position.set(0, 0);
-    this.dotsStage.width = this.pixicanvas.width;
-    this.dotsStage.height = this.pixicanvas.height;
+    this.dotsStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
 
     await this.renderer.init({
       canvas: this.pixicanvas,
       resolution: 1,
       width: this.pixicanvas.width,
       height: this.pixicanvas.height,
+      antialias: false,
       clearBeforeRender: true,
       backgroundAlpha: 0,
       backgroundColor: 0x00000000,
@@ -244,6 +242,7 @@ export class StructureIconsLayer implements Layer {
     }
     if (structureInfos) {
       render.iconContainer.alpha = structureInfos.visible ? 1 : 0.3;
+      render.dotContainer.alpha = structureInfos.visible ? 1 : 0.3;
       if (structureInfos.visible && focusStructure) {
         render.iconContainer.filters = [
           new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
@@ -333,51 +332,7 @@ export class StructureIconsLayer implements Layer {
     mainContext.drawImage(this.renderer.canvas, 0, 0);
   }
 
-  private createDotTexture(unit: UnitView): PIXI.Texture {
-    const isConstruction = unit.type() === UnitType.Construction;
-    const cacheKey = isConstruction
-      ? `dot-construction`
-      : `dot-${unit.owner().id()}`;
-
-    if (this.textureCache.has(cacheKey)) {
-      return this.textureCache.get(cacheKey)!;
-    }
-
-    const structureCanvas = document.createElement("canvas");
-    structureCanvas.width = 8;
-    structureCanvas.height = 8;
-    const context = structureCanvas.getContext("2d")!;
-
-    let borderColor: string;
-    if (isConstruction) {
-      context.fillStyle = "rgb(198, 198, 198)";
-      borderColor = "rgb(128, 127, 127)";
-    } else {
-      context.fillStyle = this.theme
-        .territoryColor(unit.owner())
-        .lighten(0.1)
-        .toRgbString();
-      const darken = this.theme.borderColor(unit.owner()).isLight()
-        ? 0.17
-        : 0.15;
-      borderColor = this.theme
-        .borderColor(unit.owner())
-        .darken(darken)
-        .toRgbString();
-    }
-
-    context.strokeStyle = borderColor;
-    context.lineWidth = 1.5;
-    context.beginPath();
-    context.arc(4, 4, 3, 0, Math.PI * 2);
-    context.fill();
-    context.stroke();
-    const texture = PIXI.Texture.from(structureCanvas);
-    this.textureCache.set(cacheKey, texture);
-    return texture;
-  }
-
-  private createTexture(unit: UnitView): PIXI.Texture {
+  private createTexture(unit: UnitView, renderIcon: boolean): PIXI.Texture {
     const isConstruction = unit.type() === UnitType.Construction;
     const constructionType = unit.constructionType();
     if (isConstruction && constructionType === undefined) {
@@ -388,15 +343,22 @@ export class StructureIconsLayer implements Layer {
     }
     const structureType = isConstruction ? constructionType! : unit.type();
     const cacheKey = isConstruction
-      ? `construction-${structureType}`
-      : `${unit.owner().id()}-${structureType}`;
+      ? `construction-${structureType}` + (renderIcon ? "-icon" : "")
+      : `${this.theme.territoryColor(unit.owner()).toRgbString()}-${structureType}` +
+        (renderIcon ? "-icon" : "");
     if (this.textureCache.has(cacheKey)) {
       return this.textureCache.get(cacheKey)!;
     }
 
     const shape = STRUCTURE_SHAPES[structureType];
     const texture = shape
-      ? this.createIcon(unit.owner(), structureType, isConstruction, shape)
+      ? this.createIcon(
+          unit.owner(),
+          structureType,
+          isConstruction,
+          shape,
+          renderIcon,
+        )
       : PIXI.Texture.EMPTY;
 
     this.textureCache.set(cacheKey, texture);
@@ -408,11 +370,15 @@ export class StructureIconsLayer implements Layer {
     structureType: UnitType,
     isConstruction: boolean,
     shape: ShapeType,
-  ) {
+    renderIcon: boolean,
+  ): PIXI.Texture {
     const structureCanvas = document.createElement("canvas");
-    const iconSize = ICON_SIZE[shape];
-    structureCanvas.width = iconSize;
-    structureCanvas.height = iconSize;
+    let iconSize = ICON_SIZE[shape];
+    if (!renderIcon) {
+      iconSize /= 2.5;
+    }
+    structureCanvas.width = Math.ceil(iconSize);
+    structureCanvas.height = Math.ceil(iconSize);
     const context = structureCanvas.getContext("2d")!;
 
     let borderColor: string;
@@ -431,28 +397,28 @@ export class StructureIconsLayer implements Layer {
 
     context.strokeStyle = borderColor;
     context.lineWidth = 1;
-
+    const halfIconSize = iconSize / 2;
     switch (shape) {
       case "triangle":
         context.beginPath();
-        context.moveTo(iconSize / 2, 0); // Top
-        context.lineTo(iconSize, iconSize); // Bottom right
-        context.lineTo(0, iconSize); // Bottom left
+        context.moveTo(halfIconSize, 1); // Top
+        context.lineTo(iconSize - 1, iconSize - 1); // Bottom right
+        context.lineTo(0, iconSize - 1); // Bottom left
         context.closePath();
         context.fill();
         context.stroke();
         break;
 
       case "square":
-        context.fillRect(0, 0, iconSize - 2, iconSize - 2);
-        context.strokeRect(0.5, 0.5, iconSize - 3, iconSize - 3);
+        context.fillRect(1, 1, iconSize - 2, iconSize - 2);
+        context.strokeRect(1, 1, iconSize - 3, iconSize - 3);
         break;
 
       case "octagon":
         {
-          const cx = iconSize / 2;
-          const cy = iconSize / 2;
-          const r = iconSize / 2 - 1;
+          const cx = halfIconSize;
+          const cy = halfIconSize;
+          const r = halfIconSize - 1;
           const step = (Math.PI * 2) / 8;
 
           context.beginPath();
@@ -473,9 +439,9 @@ export class StructureIconsLayer implements Layer {
         break;
       case "pentagon":
         {
-          const cx = iconSize / 2;
-          const cy = iconSize / 2;
-          const r = iconSize / 2 - 1;
+          const cx = halfIconSize;
+          const cy = halfIconSize;
+          const r = halfIconSize - 1;
           const step = (Math.PI * 2) / 5;
 
           context.beginPath();
@@ -497,9 +463,9 @@ export class StructureIconsLayer implements Layer {
       case "circle":
         context.beginPath();
         context.arc(
-          iconSize / 2,
-          iconSize / 2,
-          iconSize / 2 - 1,
+          halfIconSize,
+          halfIconSize,
+          halfIconSize - 1,
           0,
           Math.PI * 2,
         );
@@ -517,21 +483,21 @@ export class StructureIconsLayer implements Layer {
       return PIXI.Texture.from(structureCanvas);
     }
 
-    const SHAPE_OFFSETS = {
-      triangle: [6, 11],
-      square: [5, 5],
-      octagon: [6, 6],
-      pentagon: [7, 7],
-      circle: [6, 6],
-    };
-    const [offsetX, offsetY] = SHAPE_OFFSETS[shape] || [0, 0];
-
-    context.drawImage(
-      this.getImageColored(structureInfo.image, borderColor),
-      offsetX,
-      offsetY,
-    );
-
+    if (renderIcon) {
+      const SHAPE_OFFSETS = {
+        triangle: [6, 11],
+        square: [5, 5],
+        octagon: [6, 6],
+        pentagon: [7, 7],
+        circle: [6, 6],
+      };
+      const [offsetX, offsetY] = SHAPE_OFFSETS[shape] || [0, 0];
+      context.drawImage(
+        this.getImageColored(structureInfo.image, borderColor),
+        offsetX,
+        offsetY,
+      );
+    }
     return PIXI.Texture.from(structureCanvas);
   }
 
@@ -574,10 +540,7 @@ export class StructureIconsLayer implements Layer {
 
     // Add sprite if needed
     if (type === "icon" || type === "dot") {
-      const texture =
-        type === "icon"
-          ? this.createTexture(unit)
-          : this.createDotTexture(unit);
+      const texture = this.createTexture(unit, type === "icon");
       const sprite = new PIXI.Sprite(texture);
       sprite.anchor.set(0.5);
       parentContainer.addChild(sprite);
@@ -600,7 +563,7 @@ export class StructureIconsLayer implements Layer {
           : unit.type();
       const shape = STRUCTURE_SHAPES[unitType!];
       if (shape !== undefined) {
-        text.position.y = -ICON_SIZE[shape] / 2 - 2;
+        text.position.y = Math.round(-ICON_SIZE[shape] / 2 - 2);
       }
       parentContainer.addChild(text);
     }
