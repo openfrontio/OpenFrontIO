@@ -20,7 +20,7 @@ describe("AutoUpgrade Feature", () => {
 
     test("should emit AutoUpgradeEvent when created", () => {
       const mockEmit = jest.spyOn(eventBus, "emit");
-      
+
       const event = new AutoUpgradeEvent(150, 250);
       eventBus.emit(event);
 
@@ -29,7 +29,7 @@ describe("AutoUpgrade Feature", () => {
         expect.objectContaining({
           x: 150,
           y: 250,
-        })
+        }),
       );
     });
   });
@@ -37,10 +37,10 @@ describe("AutoUpgrade Feature", () => {
   describe("AutoUpgradeEvent Integration", () => {
     test("should handle multiple AutoUpgradeEvents", () => {
       const mockEmit = jest.spyOn(eventBus, "emit");
-      
+
       const event1 = new AutoUpgradeEvent(100, 200);
       const event2 = new AutoUpgradeEvent(300, 400);
-      
+
       eventBus.emit(event1);
       eventBus.emit(event2);
 
@@ -72,7 +72,7 @@ describe("AutoUpgrade Feature", () => {
     test("should allow event listeners to subscribe to AutoUpgradeEvent", () => {
       const mockListener = jest.fn();
       const event = new AutoUpgradeEvent(100, 200);
-      
+
       eventBus.on(AutoUpgradeEvent, mockListener);
       eventBus.emit(event);
 
@@ -83,7 +83,7 @@ describe("AutoUpgrade Feature", () => {
       const mockListener1 = jest.fn();
       const mockListener2 = jest.fn();
       const event = new AutoUpgradeEvent(100, 200);
-      
+
       eventBus.on(AutoUpgradeEvent, mockListener1);
       eventBus.on(AutoUpgradeEvent, mockListener2);
       eventBus.emit(event);
@@ -95,7 +95,7 @@ describe("AutoUpgrade Feature", () => {
     test("should not call unsubscribed listeners", () => {
       const mockListener = jest.fn();
       const event = new AutoUpgradeEvent(100, 200);
-      
+
       eventBus.on(AutoUpgradeEvent, mockListener);
       eventBus.off(AutoUpgradeEvent, mockListener);
       eventBus.emit(event);
@@ -106,13 +106,19 @@ describe("AutoUpgrade Feature", () => {
 
   describe("AutoUpgradeEvent Edge Cases", () => {
     test("should handle very large coordinates", () => {
-      const event = new AutoUpgradeEvent(Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
+      const event = new AutoUpgradeEvent(
+        Number.MAX_SAFE_INTEGER,
+        Number.MAX_SAFE_INTEGER,
+      );
       expect(event.x).toBe(Number.MAX_SAFE_INTEGER);
       expect(event.y).toBe(Number.MAX_SAFE_INTEGER);
     });
 
     test("should handle very small coordinates", () => {
-      const event = new AutoUpgradeEvent(Number.MIN_SAFE_INTEGER, Number.MIN_SAFE_INTEGER);
+      const event = new AutoUpgradeEvent(
+        Number.MIN_SAFE_INTEGER,
+        Number.MIN_SAFE_INTEGER,
+      );
       expect(event.x).toBe(Number.MIN_SAFE_INTEGER);
       expect(event.y).toBe(Number.MIN_SAFE_INTEGER);
     });
@@ -141,9 +147,9 @@ describe("AutoUpgrade Feature", () => {
       const event = new AutoUpgradeEvent(100, 200);
       const eventString = JSON.stringify(event);
       const parsedEvent = JSON.parse(eventString);
-      
+
       expect(parsedEvent.x).toBe(100);
       expect(parsedEvent.y).toBe(200);
     });
   });
-}); 
+});

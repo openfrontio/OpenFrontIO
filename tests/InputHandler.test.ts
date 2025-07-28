@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import { InputHandler, AutoUpgradeEvent } from "../src/client/InputHandler";
+import { AutoUpgradeEvent, InputHandler } from "../src/client/InputHandler";
 import { EventBus } from "../src/core/EventBus";
 
 class MockPointerEvent {
@@ -42,7 +42,7 @@ describe("InputHandler AutoUpgrade", () => {
   describe("Middle Mouse Button Handling", () => {
     test("should emit AutoUpgradeEvent on middle mouse button press", () => {
       const mockEmit = jest.spyOn(eventBus, "emit");
-      
+
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
         clientX: 150,
@@ -56,13 +56,13 @@ describe("InputHandler AutoUpgrade", () => {
         expect.objectContaining({
           x: 150,
           y: 250,
-        })
+        }),
       );
     });
 
     test("should emit MouseDownEvent on left mouse button press instead of AutoUpgradeEvent", () => {
       const mockEmit = jest.spyOn(eventBus, "emit");
-      
+
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 0,
         clientX: 150,
@@ -76,9 +76,9 @@ describe("InputHandler AutoUpgrade", () => {
         expect.objectContaining({
           x: 150,
           y: 250,
-        })
+        }),
       );
-      
+
       const calls = mockEmit.mock.calls;
       const lastCall = calls[calls.length - 1];
       expect(lastCall[0]).not.toBeInstanceOf(AutoUpgradeEvent);
@@ -86,7 +86,7 @@ describe("InputHandler AutoUpgrade", () => {
 
     test("should not emit AutoUpgradeEvent on right mouse button press", () => {
       const mockEmit = jest.spyOn(eventBus, "emit");
-      
+
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 2,
         clientX: 150,
@@ -100,13 +100,13 @@ describe("InputHandler AutoUpgrade", () => {
         expect.objectContaining({
           x: 150,
           y: 250,
-        })
+        }),
       );
     });
 
     test("should handle multiple middle mouse button presses", () => {
       const mockEmit = jest.spyOn(eventBus, "emit");
-      
+
       const pointerEvent1 = new PointerEvent("pointerdown", {
         button: 1,
         clientX: 100,
@@ -124,19 +124,25 @@ describe("InputHandler AutoUpgrade", () => {
       inputHandler["onPointerDown"](pointerEvent2);
 
       expect(mockEmit).toHaveBeenCalledTimes(2);
-      expect(mockEmit).toHaveBeenNthCalledWith(1, expect.objectContaining({
-        x: 100,
-        y: 200,
-      }));
-      expect(mockEmit).toHaveBeenNthCalledWith(2, expect.objectContaining({
-        x: 300,
-        y: 400,
-      }));
+      expect(mockEmit).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          x: 100,
+          y: 200,
+        }),
+      );
+      expect(mockEmit).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          x: 300,
+          y: 400,
+        }),
+      );
     });
 
     test("should handle middle mouse button press with zero coordinates", () => {
       const mockEmit = jest.spyOn(eventBus, "emit");
-      
+
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
         clientX: 0,
@@ -150,13 +156,13 @@ describe("InputHandler AutoUpgrade", () => {
         expect.objectContaining({
           x: 0,
           y: 0,
-        })
+        }),
       );
     });
 
     test("should handle middle mouse button press with negative coordinates", () => {
       const mockEmit = jest.spyOn(eventBus, "emit");
-      
+
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
         clientX: -100,
@@ -170,13 +176,13 @@ describe("InputHandler AutoUpgrade", () => {
         expect.objectContaining({
           x: -100,
           y: -200,
-        })
+        }),
       );
     });
 
     test("should handle middle mouse button press with decimal coordinates", () => {
       const mockEmit = jest.spyOn(eventBus, "emit");
-      
+
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
         clientX: 100.5,
@@ -190,7 +196,7 @@ describe("InputHandler AutoUpgrade", () => {
         expect.objectContaining({
           x: 100.5,
           y: 200.7,
-        })
+        }),
       );
     });
   });
@@ -220,7 +226,7 @@ describe("InputHandler AutoUpgrade", () => {
 
     test("should handle pointer events with same pointer ID", () => {
       const mockEmit = jest.spyOn(eventBus, "emit");
-      
+
       const pointerEvent1 = new PointerEvent("pointerdown", {
         button: 1,
         clientX: 100,
@@ -244,7 +250,7 @@ describe("InputHandler AutoUpgrade", () => {
   describe("Edge Cases", () => {
     test("should handle very large coordinates", () => {
       const mockEmit = jest.spyOn(eventBus, "emit");
-      
+
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
         clientX: Number.MAX_SAFE_INTEGER,
@@ -258,13 +264,13 @@ describe("InputHandler AutoUpgrade", () => {
         expect.objectContaining({
           x: Number.MAX_SAFE_INTEGER,
           y: Number.MAX_SAFE_INTEGER,
-        })
+        }),
       );
     });
 
     test("should handle very small coordinates", () => {
       const mockEmit = jest.spyOn(eventBus, "emit");
-      
+
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
         clientX: Number.MIN_SAFE_INTEGER,
@@ -278,13 +284,13 @@ describe("InputHandler AutoUpgrade", () => {
         expect.objectContaining({
           x: Number.MIN_SAFE_INTEGER,
           y: Number.MIN_SAFE_INTEGER,
-        })
+        }),
       );
     });
 
     test("should handle NaN coordinates", () => {
       const mockEmit = jest.spyOn(eventBus, "emit");
-      
+
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
         clientX: NaN,
@@ -298,13 +304,13 @@ describe("InputHandler AutoUpgrade", () => {
         expect.objectContaining({
           x: NaN,
           y: NaN,
-        })
+        }),
       );
     });
 
     test("should handle Infinity coordinates", () => {
       const mockEmit = jest.spyOn(eventBus, "emit");
-      
+
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
         clientX: Infinity,
@@ -318,7 +324,7 @@ describe("InputHandler AutoUpgrade", () => {
         expect.objectContaining({
           x: Infinity,
           y: -Infinity,
-        })
+        }),
       );
     });
   });
@@ -326,9 +332,9 @@ describe("InputHandler AutoUpgrade", () => {
   describe("Integration with Event Bus", () => {
     test("should allow event listeners to receive AutoUpgradeEvents", () => {
       const mockListener = jest.fn();
-      
+
       eventBus.on(AutoUpgradeEvent, mockListener);
-      
+
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
         clientX: 150,
@@ -341,17 +347,17 @@ describe("InputHandler AutoUpgrade", () => {
         expect.objectContaining({
           x: 150,
           y: 250,
-        })
+        }),
       );
     });
 
     test("should allow multiple listeners for AutoUpgradeEvent", () => {
       const mockListener1 = jest.fn();
       const mockListener2 = jest.fn();
-      
+
       eventBus.on(AutoUpgradeEvent, mockListener1);
       eventBus.on(AutoUpgradeEvent, mockListener2);
-      
+
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
         clientX: 150,
@@ -364,22 +370,22 @@ describe("InputHandler AutoUpgrade", () => {
         expect.objectContaining({
           x: 150,
           y: 250,
-        })
+        }),
       );
       expect(mockListener2).toHaveBeenCalledWith(
         expect.objectContaining({
           x: 150,
           y: 250,
-        })
+        }),
       );
     });
 
     test("should not call unsubscribed listeners", () => {
       const mockListener = jest.fn();
-      
+
       eventBus.on(AutoUpgradeEvent, mockListener);
       eventBus.off(AutoUpgradeEvent, mockListener);
-      
+
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
         clientX: 150,
@@ -391,4 +397,4 @@ describe("InputHandler AutoUpgrade", () => {
       expect(mockListener).not.toHaveBeenCalled();
     });
   });
-}); 
+});
