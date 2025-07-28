@@ -7,7 +7,6 @@ import {
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
-import { PlayerView } from "./GameView";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 
@@ -131,7 +130,7 @@ export enum GameMode {
 }
 
 export interface UnitInfo {
-  cost: (player: Player | PlayerView) => Gold;
+  cost: (player: Player) => Gold;
   // Determines if its owner changes when its tile is conquered.
   territoryBound: boolean;
   maxHealth?: number;
@@ -668,6 +667,7 @@ export interface Game extends GameMap {
     type: MessageType,
     playerID: PlayerID | null,
     goldAmount?: bigint,
+    params?: Record<string, string | number>,
   ): void;
   displayIncomingUnit(
     unitID: number,

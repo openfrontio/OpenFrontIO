@@ -398,7 +398,7 @@ export class PlayerImpl implements Player {
     if (other === this) {
       return false;
     }
-    if (this.isFriendly(other)) {
+    if (this.isFriendly(other) || !this.isAlive()) {
       return false;
     }
 
