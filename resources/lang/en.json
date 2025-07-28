@@ -586,5 +586,12 @@
     "redirecting": "You are being redirected...",
     "not_authorized": "You are not authorized to access this website.",
     "contact_admin": "If you believe you are seeing this message in error, please contact the website administrator."
+  },
+  "events_display": {
+    "unit_voluntarily_deleted": "Unit voluntarily deleted"
+  },
+  "radial_menu": {
+    "delete_unit_title": "Delete Unit",
+    "delete_unit_description": "Click to delete the nearest unit"
   }
 }

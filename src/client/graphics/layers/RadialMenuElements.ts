@@ -438,9 +438,9 @@ export const deleteUnitElement: MenuElement = {
   icon: xIcon,
   color: COLORS.delete,
   tooltipItems: [
-    { text: "Supprimer l'unité", className: "title" },
+    { text: translateText("radial_menu.delete_unit_title"), className: "title" },
     {
-      text: "Cliquez pour supprimer l'unité la plus proche",
+      text: translateText("radial_menu.delete_unit_description"),
       className: "description",
     },
   ],

@@ -58,7 +58,7 @@ export class DeleteUnitExecution implements Execution {
     unit.delete(false);
 
     this.mg.displayMessage(
-      `Unit voluntarily deleted`,
+      `events_display.unit_voluntarily_deleted`,
       MessageType.UNIT_DESTROYED,
       this.player.id(),
     );
