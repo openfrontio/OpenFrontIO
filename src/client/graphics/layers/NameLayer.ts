@@ -11,11 +11,13 @@ import shieldIcon from "../../../../resources/images/ShieldIconBlack.svg";
 import targetIcon from "../../../../resources/images/TargetIcon.svg";
 import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
+import { EventBus } from "../../../core/EventBus";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { Theme } from "../../../core/configuration/Config";
 import { AllPlayers, Cell, nukeTypes } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
+import { AlternateViewEvent } from "../../InputHandler";
 import { createCanvas, renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -57,10 +59,12 @@ export class NameLayer implements Layer {
   private firstPlace: PlayerView | null = null;
   private theme: Theme = this.game.config().theme();
   private userSettings: UserSettings = new UserSettings();
+  private isVisible: boolean = true;
 
   constructor(
     private game: GameView,
     private transformHandler: TransformHandler,
+    private eventBus: EventBus,
   ) {
     this.traitorIconImage = new Image();
     this.traitorIconImage.src = traitorIcon;
@@ -113,6 +117,34 @@ export class NameLayer implements Layer {
     this.container.style.pointerEvents = "none";
     this.container.style.zIndex = "2";
     document.body.appendChild(this.container);
+
+    this.eventBus.on(AlternateViewEvent, (e) => this.onAlternateViewChange(e));
+  }
+
+  private onAlternateViewChange(event: AlternateViewEvent) {
+    this.isVisible = !event.alternateView;
+    // Update visibility of all name elements immediately
+    for (const render of this.renders) {
+      this.updateElementVisibility(render);
+    }
+  }
+
+  private updateElementVisibility(render: RenderInfo) {
+    if (!render.player.nameLocation() || !render.player.isAlive()) {
+      return;
+    }
+
+    const baseSize = Math.max(1, Math.floor(render.player.nameLocation().size));
+    const size = this.transformHandler.scale * baseSize;
+    const isOnScreen = render.location
+      ? this.transformHandler.isOnScreen(render.location)
+      : false;
+
+    if (!this.isVisible || size < 7 || !isOnScreen) {
+      render.element.style.display = "none";
+    } else {
+      render.element.style.display = "flex";
+    }
   }
 
   public tick() {
@@ -290,13 +322,13 @@ export class NameLayer implements Layer {
     render.fontSize = Math.max(4, Math.floor(baseSize * 0.4));
     render.fontColor = this.theme.textColor(render.player);
 
-    // Screen space calculations
-    const size = this.transformHandler.scale * baseSize;
-    if (size < 7 || !this.transformHandler.isOnScreen(render.location)) {
-      render.element.style.display = "none";
+    // Update element visibility (handles Ctrl key, size, and screen position)
+    this.updateElementVisibility(render);
+
+    // If element is hidden, don't continue with rendering
+    if (render.element.style.display === "none") {
       return;
     }
-    render.element.style.display = "flex";
 
     // Throttle updates
     const now = Date.now();

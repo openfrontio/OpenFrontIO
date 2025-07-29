@@ -15,7 +15,6 @@ import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import {
   BuildableUnit,
-  Cell,
   Gold,
   PlayerActions,
   UnitType,
@@ -384,7 +383,7 @@ export class BuildMenu extends LitElement implements Layer {
       return "?";
     }
 
-    return player.units(item.unitType).length.toString();
+    return player.totalUnitLevels(item.unitType).toString();
   }
 
   public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile: TileRef): void {
@@ -396,12 +395,7 @@ export class BuildMenu extends LitElement implements Layer {
         ),
       );
     } else if (buildableUnit.canBuild) {
-      this.eventBus.emit(
-        new BuildUnitIntentEvent(
-          buildableUnit.type,
-          new Cell(this.game.x(tile), this.game.y(tile)),
-        ),
-      );
+      this.eventBus.emit(new BuildUnitIntentEvent(buildableUnit.type, tile));
     }
     this.hideMenu();
   }

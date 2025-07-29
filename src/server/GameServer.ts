@@ -1,7 +1,7 @@
 import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
-import { z } from "zod/v4";
+import { z } from "zod";
 import {
   ClientID,
   ClientMessageSchema,
@@ -62,6 +62,8 @@ export class GameServer {
   private kickedClients: Set<ClientID> = new Set();
   private outOfSyncClients: Set<ClientID> = new Set();
 
+  private websockets: Set<WebSocket> = new Set();
+
   constructor(
     public readonly id: string,
     readonly log_: Logger,
@@ -108,6 +110,7 @@ export class GameServer {
   }
 
   public addClient(client: Client, lastTurn: number) {
+    this.websockets.add(client.ws);
     if (this.kickedClients.has(client.clientID)) {
       this.log.warn(`cannot add client, already kicked`, {
         clientID: client.clientID,
@@ -174,7 +177,6 @@ export class GameServer {
       client.isDisconnected = existing.isDisconnected;
       client.lastPing = existing.lastPing;
 
-      existing.ws.removeAllListeners();
       this.activeClients = this.activeClients.filter((c) => c !== existing);
     }
 
@@ -185,8 +187,6 @@ export class GameServer {
     this.allClients.set(client.clientID, client);
 
     client.ws.removeAllListeners("message");
-    client.ws.removeAllListeners("close");
-    client.ws.removeAllListeners("error");
     client.ws.on(
       "message",
       gatekeeper.wsHandler(client.ip, async (message: string) => {
@@ -200,13 +200,11 @@ export class GameServer {
             client.ws.send(
               JSON.stringify({
                 type: "error",
-                error: error.toString(),
+                error,
+                message,
               } satisfies ServerErrorMessage),
             );
-            // Add a small delay before closing the connection to ensure the error message is received
-            setTimeout(() => {
-              client.ws.close(1002, "ClientMessageSchema");
-            }, 100);
+            client.ws.close(1002, "ClientMessageSchema");
             return;
           }
           const clientMsg = parsed.data;
@@ -406,10 +404,9 @@ export class GameServer {
     if (this.endTurnIntervalID) {
       clearInterval(this.endTurnIntervalID);
     }
-    this.allClients.forEach((client) => {
-      client.ws.removeAllListeners("message");
-      if (client.ws.readyState === WebSocket.OPEN) {
-        client.ws.close(1000, "game has ended");
+    this.websockets.forEach((ws) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close(1000, "game has ended");
       }
     });
     if (!this._hasPrestarted && !this._hasStarted) {
@@ -555,14 +552,11 @@ export class GameServer {
           error: "Kicked from game (you may have been playing on another tab)",
         } satisfies ServerErrorMessage),
       );
-      // Add a small delay before closing the connection to ensure the error message is received
-      setTimeout(() => {
-        client.ws.close(1000, "Kicked from game");
-        this.activeClients = this.activeClients.filter(
-          (c) => c.clientID !== clientID,
-        );
-        this.kickedClients.add(clientID);
-      }, 100);
+      client.ws.close(1000, "Kicked from game");
+      this.activeClients = this.activeClients.filter(
+        (c) => c.clientID !== clientID,
+      );
+      this.kickedClients.add(clientID);
     } else {
       this.log.warn(`cannot kick client, not found in game`, {
         clientID,
