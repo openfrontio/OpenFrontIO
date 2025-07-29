@@ -2,8 +2,8 @@ import { GameMapType } from "./Game";
 import { MapManifest } from "./TerrainMapLoader";
 
 interface MapData {
-  mapBin: () => Promise<string>;
-  miniMapBin: () => Promise<string>;
+  mapBin: () => Promise<Uint8Array>;
+  miniMapBin: () => Promise<Uint8Array>;
   manifest: () => Promise<MapManifest>;
   webpPath: () => Promise<string>;
 }
@@ -46,14 +46,14 @@ class GameMapLoader {
           import(
             `!!binary-loader!../../../resources/maps/${fileName}/map.bin`
           ) as Promise<BinModule>
-        ).then((m) => m.default),
+        ).then((m) => this.toUInt8Array(m.default)),
       ),
       miniMapBin: this.createLazyLoader(() =>
         (
           import(
             `!!binary-loader!../../../resources/maps/${fileName}/mini_map.bin`
           ) as Promise<BinModule>
-        ).then((m) => m.default),
+        ).then((m) => this.toUInt8Array(m.default)),
       ),
       manifest: this.createLazyLoader(() =>
         (
@@ -73,6 +73,20 @@ class GameMapLoader {
 
     this.maps.set(map, mapData);
     return mapData;
+  }
+
+  /**
+   * Converts a given string into a UInt8Array where each character in the string
+   * is represented as an 8-bit unsigned integer.
+   */
+  private toUInt8Array(data: string) {
+    const rawData = new Uint8Array(data.length);
+
+    for (let i = 0; i < data.length; i++) {
+      rawData[i] = data.charCodeAt(i);
+    }
+
+    return rawData;
   }
 }
 
