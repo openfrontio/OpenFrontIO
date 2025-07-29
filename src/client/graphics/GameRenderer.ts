@@ -61,10 +61,9 @@ export function createRenderer(
   if (!emojiTable || !(emojiTable instanceof EmojiTable)) {
     console.error("EmojiTable element not found in the DOM");
   }
-  emojiTable.eventBus = eventBus;
   emojiTable.transformHandler = transformHandler;
   emojiTable.game = game;
-  emojiTable.initEventBus();
+  emojiTable.initEventBus(eventBus);
 
   const buildMenu = document.querySelector("build-menu") as BuildMenu;
   if (!buildMenu || !(buildMenu instanceof BuildMenu)) {
