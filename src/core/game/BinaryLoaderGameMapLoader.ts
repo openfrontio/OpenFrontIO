@@ -83,5 +83,3 @@ export class BinaryLoaderGameMapLoader implements GameMapLoader {
     return rawData;
   }
 }
-
-export const terrainMapFileLoader = new BinaryLoaderGameMapLoader();

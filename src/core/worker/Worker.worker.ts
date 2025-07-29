@@ -1,4 +1,5 @@
 import { createGameRunner, GameRunner } from "../GameRunner";
+import { BinaryLoaderGameMapLoader } from "../game/BinaryLoaderGameMapLoader";
 import { GameUpdateViewData } from "../game/GameUpdates";
 import {
   AttackAveragePositionResultMessage,
@@ -13,6 +14,7 @@ import {
 
 const ctx: Worker = self as any;
 let gameRunner: Promise<GameRunner> | null = null;
+const mapLoader = new BinaryLoaderGameMapLoader();
 
 function gameUpdate(gu: GameUpdateViewData) {
   sendMessage({
@@ -37,6 +39,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         gameRunner = createGameRunner(
           message.gameStartInfo,
           message.clientID,
+          mapLoader,
           gameUpdate,
         ).then((gr) => {
           sendMessage({

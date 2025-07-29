@@ -6,6 +6,7 @@ import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { BinaryLoaderGameMapLoader } from "../core/game/BinaryLoaderGameMapLoader";
 import { GameType } from "../core/game/Game";
+import { GameMapLoader } from "../core/game/GameMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { joinLobby } from "./ClientGameRunner";
 import "./DarkModeButton";
@@ -81,6 +82,7 @@ class Client {
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
+  private mapLoader: GameMapLoader = new BinaryLoaderGameMapLoader();
 
   constructor() {}
 
@@ -92,8 +94,6 @@ class Client {
       console.warn("Game version element not found");
     }
     gameVersion.innerText = version;
-
-    const mapLoader = new BinaryLoaderGameMapLoader();
 
     const newsModal = document.querySelector("news-modal") as NewsModal;
     if (!newsModal) {
@@ -150,7 +150,7 @@ class Client {
     }
 
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
-    this.publicLobby.injectMapLoader(mapLoader);
+    this.publicLobby.injectMapLoader(this.mapLoader);
 
     window.addEventListener("beforeunload", () => {
       console.log("Browser is closing");
@@ -347,7 +347,7 @@ class Client {
         this.publicLobby.leaveLobby();
       }
     });
-    hostModal.injectMapLoader(mapLoader);
+    hostModal.injectMapLoader(this.mapLoader);
 
     this.joinModal = document.querySelector(
       "join-private-lobby-modal",
@@ -438,6 +438,7 @@ class Client {
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
       },
+      this.mapLoader,
       () => {
         console.log("Closing modals");
         document.getElementById("settings-button")?.classList.add("hidden");

@@ -1,6 +1,6 @@
-import { terrainMapFileLoader } from "./BinaryLoaderGameMapLoader";
 import { GameMapType } from "./Game";
 import { GameMap, GameMapImpl } from "./GameMap";
+import { GameMapLoader } from "./GameMapLoader";
 
 export type TerrainMapData = {
   manifest: MapManifest;
@@ -32,6 +32,7 @@ export interface Nation {
 
 export async function loadTerrainMap(
   map: GameMapType,
+  terrainMapFileLoader: GameMapLoader,
 ): Promise<TerrainMapData> {
   const cached = loadedMaps.get(map);
   if (cached !== undefined) return cached;
