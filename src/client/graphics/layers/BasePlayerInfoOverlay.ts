@@ -11,20 +11,20 @@ import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
 interface StatDefinition {
-  label: string;
+  code: string;
   emoji: string;
   row: number;
 }
 
 const STAT_DEFINITIONS: StatDefinition[] = [
-  { label: "Defending troops", emoji: "🛡️", row: 1 },
-  { label: "Attacking troops", emoji: "⚔️", row: 1 },
-  { label: "Gold", emoji: "💰", row: 1 },
-  { label: "Ports", emoji: "⚓", row: 2 },
-  { label: "Cities", emoji: "🏙️", row: 2 },
-  { label: "Missile launchers", emoji: "🚀", row: 2 },
-  { label: "SAMs", emoji: "🎯", row: 2 },
-  { label: "Warships", emoji: "🚢", row: 2 },
+  { code: "defending_troops", emoji: "🛡️", row: 1 },
+  { code: "attacking_troops", emoji: "⚔️", row: 1 },
+  { code: "gold", emoji: "💰", row: 1 },
+  { code: "ports", emoji: "⚓", row: 2 },
+  { code: "cities", emoji: "🏙️", row: 2 },
+  { code: "missile_launchers", emoji: "🚀", row: 2 },
+  { code: "sams", emoji: "🎯", row: 2 },
+  { code: "warships", emoji: "🚢", row: 2 },
 ];
 
 const OVERLAY_CONFIG = {
@@ -92,11 +92,11 @@ export abstract class BasePlayerInfoOverlay
   protected mouseMoveCallback: ((event: MouseMoveEvent) => void) | null = null;
 
   protected emojiMap = Object.fromEntries(
-    STAT_DEFINITIONS.map(({ label, emoji }) => [label, emoji]),
+    STAT_DEFINITIONS.map(({ code, emoji }) => [code, emoji]),
   );
 
   protected rowMap = Object.fromEntries(
-    STAT_DEFINITIONS.map(({ label, row }) => [label, row]),
+    STAT_DEFINITIONS.map(({ code, row }) => [code, row]),
   );
 
   init() {
@@ -226,17 +226,17 @@ export abstract class BasePlayerInfoOverlay
       .reduce((a, b) => a + b, 0);
 
     return [
-      ["Defending troops", renderTroops(player.troops())],
-      ["Attacking troops", renderTroops(attackingTroops)],
-      ["Gold", renderNumber(player.gold())],
-      ["Ports", player.totalUnitLevels(UnitType.Port).toString()],
-      ["Cities", player.totalUnitLevels(UnitType.City).toString()],
+      ["defending_troops", renderTroops(player.troops())],
+      ["attacking_troops", renderTroops(attackingTroops)],
+      ["gold", renderNumber(player.gold())],
+      ["ports", player.totalUnitLevels(UnitType.Port).toString()],
+      ["cities", player.totalUnitLevels(UnitType.City).toString()],
       [
-        "Missile launchers",
+        "missile_launchers",
         player.totalUnitLevels(UnitType.MissileSilo).toString(),
       ],
-      ["SAMs", player.totalUnitLevels(UnitType.SAMLauncher).toString()],
-      ["Warships", player.units(UnitType.Warship).length.toString()],
+      ["sams", player.totalUnitLevels(UnitType.SAMLauncher).toString()],
+      ["warships", player.units(UnitType.Warship).length.toString()],
     ];
   }
 
