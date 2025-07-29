@@ -37,9 +37,10 @@ export class OModal extends LitElement {
       min-width: 340px;
       max-width: 860px;
       min-height: 320px;
+      /* Fallback for older browsers */
+      height: 60vh;
+      /* Use dvh if supported for dynamic viewport handling */
       height: 60dvh;
-      min-height: 60dvh;
-      max-height: 60dvh;
     }
 
     .c-modal__header {
