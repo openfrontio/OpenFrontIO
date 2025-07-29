@@ -475,7 +475,6 @@ export class EventsDisplay extends LitElement implements Layer {
     const recipient = this.game.playerBySmallID(
       update.request.recipientID,
     ) as PlayerView;
-
     this.addEvent({
       description: translateText("events_display.alliance_request_status", {
         name: recipient.name(),
