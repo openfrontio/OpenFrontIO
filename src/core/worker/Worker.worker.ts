@@ -1,5 +1,6 @@
+import version from "../../../resources/version.txt";
 import { createGameRunner, GameRunner } from "../GameRunner";
-import { BinaryLoaderGameMapLoader } from "../game/BinaryLoaderGameMapLoader";
+import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { GameUpdateViewData } from "../game/GameUpdates";
 import {
   AttackAveragePositionResultMessage,
@@ -14,7 +15,7 @@ import {
 
 const ctx: Worker = self as any;
 let gameRunner: Promise<GameRunner> | null = null;
-const mapLoader = new BinaryLoaderGameMapLoader();
+const mapLoader = new FetchGameMapLoader(`/maps`, version);
 
 function gameUpdate(gu: GameUpdateViewData) {
   sendMessage({

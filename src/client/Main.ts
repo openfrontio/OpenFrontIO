@@ -4,7 +4,7 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
 import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { BinaryLoaderGameMapLoader } from "../core/game/BinaryLoaderGameMapLoader";
+import { FetchGameMapLoader } from "../core/game/FetchGameMapLoader";
 import { GameType } from "../core/game/Game";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
@@ -82,7 +82,7 @@ class Client {
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
-  private mapLoader: GameMapLoader = new BinaryLoaderGameMapLoader();
+  private mapLoader: GameMapLoader = new FetchGameMapLoader(`/maps`, version);
 
   constructor() {}
 
