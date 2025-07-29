@@ -31,6 +31,8 @@ export interface Pattern {
   notShown?: boolean;
 }
 
+export const PURCHASE_SUCCESS_PARAM = "purchase-success";
+
 export async function patterns(
   userMe: UserMeResponse | null,
 ): Promise<Pattern[]> {
@@ -109,8 +111,8 @@ export async function handlePurchase(priceId: string) {
         },
         body: JSON.stringify({
           priceId: priceId,
-          successUrl: `${window.location.href}purchase-success`,
-          cancelUrl: `${window.location.href}purchase-cancel`,
+          successUrl: `${window.location.href}#${PURCHASE_SUCCESS_PARAM}=true`,
+          cancelUrl: `${window.location.href}#${PURCHASE_SUCCESS_PARAM}=false`,
         }),
       },
     );
@@ -139,7 +141,8 @@ export async function listAllProducts(): Promise<Map<string, StripeProduct>> {
     const products = (await response.json()) as StripeProduct[];
     const productMap = new Map<string, StripeProduct>();
     products.forEach((product) => {
-      productMap.set(product.metadata.flare, product);
+      const flare = `${product.metadata.type}:${product.metadata.name}`;
+      productMap.set(flare, product);
     });
     return productMap;
   } catch (error) {

@@ -7,6 +7,7 @@ import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import { joinLobby } from "./ClientGameRunner";
+import { PURCHASE_SUCCESS_PARAM } from "./Cosmetics";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
@@ -399,13 +400,24 @@ class Client {
 
   private handleHash() {
     const { hash } = window.location;
-    if (hash.startsWith("#")) {
-      const params = new URLSearchParams(hash.slice(1));
-      const lobbyId = params.get("join");
-      if (lobbyId && ID.safeParse(lobbyId).success) {
-        this.joinModal.open(lobbyId);
-        console.log(`joining lobby ${lobbyId}`);
-      }
+    if (!hash.startsWith("#")) {
+      return;
+    }
+    const params = new URLSearchParams(hash.slice(1));
+    const lobbyId = params.get("join");
+    if (lobbyId && ID.safeParse(lobbyId).success) {
+      this.joinModal.open(lobbyId);
+      console.log(`joining lobby ${lobbyId}`);
+    }
+
+    const purchaseSuccess = params.get(PURCHASE_SUCCESS_PARAM);
+    // TODO: Add a purchase success/failure modal
+    if (purchaseSuccess === "true") {
+      alert("Purchase successful!");
+      window.history.replaceState(null, "", window.location.pathname);
+    } else if (purchaseSuccess === "false") {
+      alert("Purchase cancelled");
+      window.history.replaceState(null, "", window.location.pathname);
     }
   }
 
