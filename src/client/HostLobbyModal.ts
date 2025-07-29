@@ -13,6 +13,7 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
+import type { GameMapLoader } from "../core/game/GameMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { GameConfig, GameInfo, TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
@@ -49,6 +50,18 @@ export class HostLobbyModal extends LitElement {
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
   private userSettings: UserSettings = new UserSettings();
+
+  private mapLoaderResolve: (value: GameMapLoader) => void;
+  private mapLoader: Promise<GameMapLoader> = new Promise((resolve) => {
+    this.mapLoaderResolve = resolve;
+  });
+
+  /**
+   * @TODO: Get GameMapLoader from context
+   */
+  public injectMapLoader(mapLoader: GameMapLoader) {
+    this.mapLoaderResolve(mapLoader);
+  }
 
   render() {
     return html`
@@ -167,6 +180,7 @@ export class HostLobbyModal extends LitElement {
                               .translation=${translateText(
                                 `map.${mapKey?.toLowerCase()}`,
                               )}
+                              .mapLoader=${this.mapLoader}
                             ></map-display>
                           </div>
                         `;

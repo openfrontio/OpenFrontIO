@@ -1,8 +1,8 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { terrainMapFileLoader } from "../core/game/BinaryLoaderGameMapLoader";
 import { GameMapType, GameMode } from "../core/game/Game";
+import { type GameMapLoader } from "../core/game/GameMapLoader";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { JoinLobbyEvent } from "./Main";
@@ -17,6 +17,17 @@ export class PublicLobby extends LitElement {
   private currLobby: GameInfo | null = null;
   private debounceDelay: number = 750;
   private lobbyIDToStart = new Map<GameID, number>();
+  private mapLoaderResolve: (value: GameMapLoader) => void;
+  private mapLoader: Promise<GameMapLoader> = new Promise((resolve) => {
+    this.mapLoaderResolve = resolve;
+  });
+
+  /**
+   * @TODO: Get GameMapLoader from context
+   */
+  public injectMapLoader(mapLoader: GameMapLoader) {
+    this.mapLoaderResolve(mapLoader);
+  }
 
   createRenderRoot() {
     return this;
@@ -62,9 +73,10 @@ export class PublicLobby extends LitElement {
 
   private async loadMapImage(gameID: GameID, gameMap: string) {
     try {
+      const mapLoader = await this.mapLoader;
       // Convert string to GameMapType enum value
       const mapType = gameMap as GameMapType;
-      const data = terrainMapFileLoader.getMapData(mapType);
+      const data = mapLoader.getMapData(mapType);
       this.mapImages.set(gameID, await data.webpPath());
       this.requestUpdate();
     } catch (error) {

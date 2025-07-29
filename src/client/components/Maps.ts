@@ -1,7 +1,7 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { terrainMapFileLoader } from "../../core/game/BinaryLoaderGameMapLoader";
 import { GameMapType } from "../../core/game/Game";
+import { type GameMapLoader } from "../../core/game/GameMapLoader";
 import { translateText } from "../Utils";
 
 // Add map descriptions
@@ -41,6 +41,8 @@ export class MapDisplay extends LitElement {
   @property({ type: String }) mapKey = "";
   @property({ type: Boolean }) selected = false;
   @property({ type: String }) translation: string = "";
+  @property({ type: Promise<GameMapLoader> })
+  mapLoader: Promise<GameMapLoader> = new Promise<GameMapLoader>(() => {});
   @state() private mapWebpPath: string | null = null;
   @state() private mapName: string | null = null;
   @state() private isLoading = true;
@@ -104,8 +106,9 @@ export class MapDisplay extends LitElement {
 
     try {
       this.isLoading = true;
+      const mapLoader = await this.mapLoader;
       const mapValue = GameMapType[this.mapKey as keyof typeof GameMapType];
-      const data = terrainMapFileLoader.getMapData(mapValue);
+      const data = mapLoader.getMapData(mapValue);
       this.mapWebpPath = await data.webpPath();
       this.mapName = (await data.manifest()).name;
     } catch (error) {

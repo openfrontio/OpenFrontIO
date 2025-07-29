@@ -4,6 +4,7 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
 import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { BinaryLoaderGameMapLoader } from "../core/game/BinaryLoaderGameMapLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import { joinLobby } from "./ClientGameRunner";
@@ -92,6 +93,8 @@ class Client {
     }
     gameVersion.innerText = version;
 
+    const mapLoader = new BinaryLoaderGameMapLoader();
+
     const newsModal = document.querySelector("news-modal") as NewsModal;
     if (!newsModal) {
       console.warn("News modal element not found");
@@ -147,6 +150,7 @@ class Client {
     }
 
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
+    this.publicLobby.injectMapLoader(mapLoader);
 
     window.addEventListener("beforeunload", () => {
       console.log("Browser is closing");
@@ -343,6 +347,7 @@ class Client {
         this.publicLobby.leaveLobby();
       }
     });
+    hostModal.injectMapLoader(mapLoader);
 
     this.joinModal = document.querySelector(
       "join-private-lobby-modal",
