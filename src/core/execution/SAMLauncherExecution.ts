@@ -20,7 +20,7 @@ type Target = {
  */
 class SAMTargetingSystem {
   // Store unreachable nukes so the SAM won't compute an interception point for them every frame
-  private nukesToIgnore: Set<{ unit: Unit; distSquared: number }> = new Set();
+  private nukesToIgnore: Set<number> = new Set();
 
   constructor(
     private mg: Game,
@@ -29,16 +29,16 @@ class SAMTargetingSystem {
   ) {}
 
   updateUnreachableNukes(nearbyUnits: { unit: Unit; distSquared: number }[]) {
-    const nearbyUnitSet = new Set(nearbyUnits);
-    for (const unit of this.nukesToIgnore) {
-      if (!nearbyUnitSet.has(unit)) {
-        this.nukesToIgnore.delete(unit);
+    const nearbyUnitSet = new Set(nearbyUnits.map((u) => u.unit.id()));
+    for (const nukeId of this.nukesToIgnore) {
+      if (!nearbyUnitSet.has(nukeId)) {
+        this.nukesToIgnore.delete(nukeId);
       }
     }
   }
 
-  private storeUnreachableNukes(nuke: { unit: Unit; distSquared: number }) {
-    this.nukesToIgnore.add(nuke);
+  private storeUnreachableNukes(nukeId: number) {
+    this.nukesToIgnore.add(nukeId);
   }
 
   private isInRange(tile: TileRef) {
@@ -90,7 +90,7 @@ class SAMTargetingSystem {
 
     const targets: Array<Target> = [];
     for (const nuke of nukes) {
-      if (this.nukesToIgnore.has(nuke)) {
+      if (this.nukesToIgnore.has(nuke.unit.id())) {
         continue;
       }
       const interceptionTile = this.computeInterceptionTile(nuke.unit);
@@ -98,7 +98,7 @@ class SAMTargetingSystem {
         targets.push({ unit: nuke.unit, tile: interceptionTile });
       } else {
         // Store unreachable nukes in order to prevent useless interception computation
-        this.storeUnreachableNukes(nuke);
+        this.storeUnreachableNukes(nuke.unit.id());
       }
     }
 
@@ -116,7 +116,7 @@ class SAMTargetingSystem {
         )
           return 1;
 
-        return 1;
+        return 0;
       })[0] ?? null
     );
   }

@@ -50,13 +50,19 @@ export class ParabolaPathFinder {
   }
 
   currentIndex(): number {
-    return this.curve!.getCurrentIndex();
+    if (!this.curve) {
+      return 0;
+    }
+    return this.curve.getCurrentIndex();
   }
 
   allTiles(): TileRef[] {
-    return this.curve!.getAllPoints().map((point) =>
-      this.mg.ref(Math.floor(point.x), Math.floor(point.y)),
-    );
+    if (!this.curve) {
+      return [];
+    }
+    return this.curve
+      .getAllPoints()
+      .map((point) => this.mg.ref(Math.floor(point.x), Math.floor(point.y)));
   }
 }
 
