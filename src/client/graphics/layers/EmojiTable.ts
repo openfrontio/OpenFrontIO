@@ -16,7 +16,7 @@ export class EmojiTable extends LitElement {
   public transformHandler: TransformHandler;
   public game: GameView;
 
-  initEventBus() {
+  initEventBus(eventBus) {
     this.eventBus.on(ShowEmojiMenuEvent, (e) => {
       this.isVisible = true;
       const cell = this.transformHandler.screenToWorldCoordinates(e.x, e.y);

@@ -165,11 +165,7 @@ export class PlayerPanel extends LitElement implements Layer {
   private ctModal;
 
   init() {
-    this.eventBus.on(MouseUpEvent, (e: MouseEvent) => this.hide());
-
-    this.eventBus.on(CloseViewEvent, (e) => {
-      this.hide();
-    });
+    this.eventBus.on(MouseUpEvent, () => this.hide());
 
     this.ctModal = document.querySelector("chat-modal") as ChatModal;
   }
