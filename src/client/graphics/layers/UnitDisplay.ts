@@ -1,10 +1,10 @@
 import { html, LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
+import portIcon from "../../../../resources/images/AnchorIcon.png";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
 import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
-import portIcon from "../../../../resources/images/PortIcon.svg";
-import samLauncherIcon from "../../../../resources/images/SamLauncherUnitWhite.png";
+import samLauncherIcon from "../../../../resources/images/SamLauncherUnit.png";
 import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
