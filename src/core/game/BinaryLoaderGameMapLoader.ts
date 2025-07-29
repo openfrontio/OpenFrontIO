@@ -1,12 +1,6 @@
 import { GameMapType } from "./Game";
+import { GameMapLoader, MapData } from "./GameMapLoader";
 import { MapManifest } from "./TerrainMapLoader";
-
-interface MapData {
-  mapBin: () => Promise<Uint8Array>;
-  miniMapBin: () => Promise<Uint8Array>;
-  manifest: () => Promise<MapManifest>;
-  webpPath: () => Promise<string>;
-}
 
 export interface BinModule {
   default: string;
@@ -16,7 +10,7 @@ interface NationMapModule {
   default: MapManifest;
 }
 
-class GameMapLoader {
+export class BinaryLoaderGameMapLoader implements GameMapLoader {
   private maps: Map<GameMapType, MapData>;
 
   constructor() {
@@ -31,7 +25,7 @@ class GameMapLoader {
     };
   }
 
-  public getMapData(map: GameMapType): MapData {
+  getMapData(map: GameMapType): MapData {
     const cachedMap = this.maps.get(map);
     if (cachedMap) {
       return cachedMap;
@@ -90,4 +84,4 @@ class GameMapLoader {
   }
 }
 
-export const terrainMapFileLoader = new GameMapLoader();
+export const terrainMapFileLoader = new BinaryLoaderGameMapLoader();

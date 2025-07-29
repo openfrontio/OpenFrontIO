@@ -1,6 +1,6 @@
+import { terrainMapFileLoader } from "./BinaryLoaderGameMapLoader";
 import { GameMapType } from "./Game";
 import { GameMap, GameMapImpl } from "./GameMap";
-import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
 export type TerrainMapData = {
   manifest: MapManifest;
