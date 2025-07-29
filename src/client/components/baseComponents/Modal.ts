@@ -7,6 +7,7 @@ export class OModal extends LitElement {
   @state() public isModalOpen = false;
   @property({ type: String }) title = "";
   @property({ type: String }) translationKey = "";
+  @property({ type: Boolean }) alwaysMaximized = false;
 
   static styles = css`
     .c-modal {
@@ -29,6 +30,16 @@ export class OModal extends LitElement {
       border-radius: 8px;
       min-width: 340px;
       max-width: 860px;
+    }
+
+    .c-modal__wrapper.always-maximized {
+      width: 100%;
+      min-width: 340px;
+      max-width: 860px;
+      min-height: 320px;
+      height: 60dvh;
+      min-height: 60dvh;
+      max-height: 60dvh;
     }
 
     .c-modal__header {
@@ -74,7 +85,11 @@ export class OModal extends LitElement {
       ${this.isModalOpen
         ? html`
             <aside class="c-modal">
-              <div class="c-modal__wrapper">
+              <div
+                class="c-modal__wrapper ${this.alwaysMaximized
+                  ? "always-maximized"
+                  : ""}"
+              >
                 <header class="c-modal__header">
                   ${`${this.translationKey}` === ""
                     ? `${this.title}`

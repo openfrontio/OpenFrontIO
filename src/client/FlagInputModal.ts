@@ -17,7 +17,7 @@ export class FlagInputModal extends LitElement {
 
   render() {
     return html`
-      <o-modal title="Flag Selector Modal">
+      <o-modal title="Flag Selector Modal" alwaysMaximized>
         <input
           class="h-[2rem] border-none text-center border border-gray-300 rounded-xl shadow-sm text-2xl text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black dark:border-gray-300/60 dark:bg-gray-700 dark:text-white"
           type="text"
