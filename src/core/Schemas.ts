@@ -172,7 +172,7 @@ const TokenSchema = z
   .string()
   .refine(
     (v) =>
-      PersistentIdSchema.safeParse(v).success ||
+      PersistentIdSchema.safeParse(v).success ??
       JwtTokenSchema.safeParse(v).success,
     {
       message: "Token must be a valid UUID or JWT",
@@ -214,7 +214,9 @@ export const RequiredPatternSchema = z
         new PatternDecoder(val, base64url.decode);
         return true;
       } catch (e) {
-        console.error(JSON.stringify(e.message, null, 2));
+        if (e instanceof Error) {
+          console.error(JSON.stringify(e.message, null, 2));
+        }
         return false;
       }
     },

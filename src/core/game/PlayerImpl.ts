@@ -221,9 +221,9 @@ export class PlayerImpl implements Player {
     return this._units.filter((u) => ts.has(u.type()));
   }
 
-  private numUnitsConstructed: number[] = [];
+  private numUnitsConstructed: { [key in UnitType]?: number } = {};
   private recordUnitConstructed(type: UnitType): void {
-    if (type in this.numUnitsConstructed) {
+    if (this.numUnitsConstructed[type] !== undefined) {
       this.numUnitsConstructed[type]++;
     } else {
       this.numUnitsConstructed[type] = 1;

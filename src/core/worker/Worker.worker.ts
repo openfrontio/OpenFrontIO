@@ -1,5 +1,5 @@
 import { createGameRunner, GameRunner } from "../GameRunner";
-import { GameUpdateViewData } from "../game/GameUpdates";
+import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import {
   AttackAveragePositionResultMessage,
   InitializedMessage,
@@ -14,7 +14,11 @@ import {
 const ctx: Worker = self as any;
 let gameRunner: Promise<GameRunner> | null = null;
 
-function gameUpdate(gu: GameUpdateViewData) {
+function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
+  // skip if ErrorUpdate
+  if (!("updates" in gu)) {
+    return;
+  }
   sendMessage({
     type: "game_update",
     gameUpdate: gu,

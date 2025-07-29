@@ -9,6 +9,7 @@ import {
 } from "./GameUpdates";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
+import { UnitPredicate } from "./UnitGrid";
 
 export type PlayerID = string;
 export type Tick = number;
@@ -659,12 +660,12 @@ export interface Game extends GameMap {
     searchRange: number,
     type: UnitType,
     playerId: PlayerID,
-  );
+  ): boolean;
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
     types: UnitType | UnitType[],
-    predicate?: (value: { unit: Unit; distSquared: number }) => boolean,
+    predicate?: UnitPredicate,
   ): Array<{ unit: Unit; distSquared: number }>;
 
   addExecution(...exec: Execution[]): void;
@@ -700,7 +701,7 @@ export interface Game extends GameMap {
 
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
-  conquerPlayer(conqueror: Player, conquered: Player);
+  conquerPlayer(conqueror: Player, conquered: Player): void;
 }
 
 export interface PlayerActions {
