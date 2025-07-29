@@ -389,7 +389,7 @@ export class StructureIconsLayer implements Layer {
       context.fillStyle = this.theme
         .territoryColor(owner)
         .lighten(0.13)
-        .alpha(0.65)
+        .alpha(renderIcon ? 0.65 : 1)
         .toRgbString();
       const darken = this.theme.borderColor(owner).isLight() ? 0.17 : 0.15;
       borderColor = this.theme.borderColor(owner).darken(darken).toRgbString();
