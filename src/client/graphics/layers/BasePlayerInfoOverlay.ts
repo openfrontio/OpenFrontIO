@@ -89,6 +89,7 @@ export abstract class BasePlayerInfoOverlay
   protected lastUpdate = 0;
 
   protected _isActive = false;
+  protected mouseMoveCallback: ((event: MouseMoveEvent) => void) | null = null;
 
   protected emojiMap = Object.fromEntries(
     STAT_DEFINITIONS.map(({ label, emoji }) => [label, emoji]),
@@ -99,11 +100,18 @@ export abstract class BasePlayerInfoOverlay
   );
 
   init() {
-    this.eventBus.on(MouseMoveEvent, (e: MouseMoveEvent) =>
-      this.onMouseMove(e),
-    );
+    this.mouseMoveCallback = (e: MouseMoveEvent) => this.onMouseMove(e);
+    this.eventBus.on(MouseMoveEvent, this.mouseMoveCallback);
     this.setupEventListeners();
     this._isActive = true;
+  }
+
+  destroy() {
+    if (this.mouseMoveCallback) {
+      this.eventBus.off(MouseMoveEvent, this.mouseMoveCallback);
+      this.mouseMoveCallback = null;
+    }
+    this._isActive = false;
   }
 
   protected abstract setupEventListeners(): void;

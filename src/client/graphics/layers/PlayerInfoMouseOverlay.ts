@@ -15,12 +15,36 @@ export class PlayerInfoMouseOverlay extends BasePlayerInfoOverlay {
   @state()
   private isDragging = false;
 
+  private canvas: HTMLCanvasElement | null = null;
+  private handleMouseDown = () => (this.isDragging = true);
+  private handleMouseUp = () => (this.isDragging = false);
+  private handleMouseLeave = () => (this.isDragging = false);
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.setupEventListeners();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.removeCanvasEventListeners();
+  }
+
   protected setupEventListeners() {
-    const canvas = document.querySelector("canvas");
-    if (canvas) {
-      canvas.addEventListener("mousedown", () => (this.isDragging = true));
-      canvas.addEventListener("mouseup", () => (this.isDragging = false));
-      canvas.addEventListener("mouseleave", () => (this.isDragging = false));
+    this.canvas = document.querySelector("canvas");
+    if (this.canvas) {
+      this.canvas.addEventListener("mousedown", this.handleMouseDown);
+      this.canvas.addEventListener("mouseup", this.handleMouseUp);
+      this.canvas.addEventListener("mouseleave", this.handleMouseLeave);
+    }
+  }
+
+  private removeCanvasEventListeners() {
+    if (this.canvas) {
+      this.canvas.removeEventListener("mousedown", this.handleMouseDown);
+      this.canvas.removeEventListener("mouseup", this.handleMouseUp);
+      this.canvas.removeEventListener("mouseleave", this.handleMouseLeave);
+      this.canvas = null;
     }
   }
 
