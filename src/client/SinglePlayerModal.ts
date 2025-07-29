@@ -13,6 +13,7 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
+import type { GameMapLoader } from "../core/game/GameMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
@@ -47,6 +48,18 @@ export class SinglePlayerModal extends LitElement {
 
   private userSettings: UserSettings = new UserSettings();
 
+  private mapLoaderResolve: (value: GameMapLoader) => void;
+  private mapLoader: Promise<GameMapLoader> = new Promise((resolve) => {
+    this.mapLoaderResolve = resolve;
+  });
+
+  /**
+   * @TODO: Get GameMapLoader from context
+   */
+  public injectMapLoader(mapLoader: GameMapLoader) {
+    this.mapLoaderResolve(mapLoader);
+  }
+
   render() {
     return html`
       <o-modal title=${translateText("single_modal.title")}>
@@ -80,6 +93,7 @@ export class SinglePlayerModal extends LitElement {
                               .translation=${translateText(
                                 `map.${mapKey?.toLowerCase()}`,
                               )}
+                              .mapLoader=${this.mapLoader}
                             ></map-display>
                           </div>
                         `;

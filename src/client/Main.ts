@@ -167,6 +167,8 @@ class Client {
       "single-player-modal",
     ) as SinglePlayerModal;
     spModal instanceof SinglePlayerModal;
+    spModal.injectMapLoader(this.mapLoader);
+
     const singlePlayer = document.getElementById("single-player");
     if (singlePlayer === null) throw new Error("Missing single-player");
     singlePlayer.addEventListener("click", () => {
