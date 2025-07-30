@@ -832,10 +832,13 @@ export class PlayerImpl implements Player {
   }
 
   public deleteUnit(unit: Unit): void {
-    this._unitsByType.get(unit.type())?.splice(
-      this._unitsByType.get(unit.type())!.indexOf(unit),
-      1,
-    );
+    const units = this._unitsByType.get(unit.type());
+    if (units) {
+      const index = units.indexOf(unit);
+      if (index !== -1) {
+        units.splice(index, 1);
+      }
+    }
   }
 
   public findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false {
