@@ -39,7 +39,7 @@ export class HostLobbyModal extends LitElement {
   @state() private instantBuild: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
-  @state() private players: Array<{ username: string; clientID: string }> = [];
+  @state() private clients: any[] = [];
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [UnitType.Factory];
   @state() private lobbyCreatorClientID: string = "";
@@ -336,28 +336,28 @@ export class HostLobbyModal extends LitElement {
         <!-- Lobby Selection -->
         <div class="options-section">
           <div class="option-title">
-            ${this.players.length}
+            ${this.clients.length}
             ${
-              this.players.length === 1
+              this.clients.length === 1
                 ? translateText("host_modal.player")
                 : translateText("host_modal.players")
             }
           </div>
 
           <div class="players-list">
-            ${this.players.map(
-              (player) => html`
+            ${this.clients.map(
+              (client) => html`
                 <span class="player-tag">
-                  ${player.username}
-                  ${player.clientID === this.lobbyCreatorClientID
+                  ${client.username}
+                  ${client.id === this.lobbyCreatorClientID
                     ? html`<span class="host-badge"
                         >(${translateText("host_modal.host_badge")})</span
                       >`
                     : html`
                         <button
                           class="remove-player-btn"
-                          @click=${() => this.kickPlayer(player.clientID)}
-                          title="Remove ${player.username}"
+                          @click=${() => this.kickPlayer(client.id)}
+                          title="Remove ${client.username}"
                         >
                           ×
                         </button>
@@ -365,17 +365,16 @@ export class HostLobbyModal extends LitElement {
                 </span>
               `,
             )}
-          </div>
         </div>
 
         <div class="start-game-button-container">
           <button
             @click=${this.startGame}
-            ?disabled=${this.players.length < 2}
+            ?disabled=${this.clients.length < 2}
             class="start-game-button"
           >
             ${
-              this.players.length === 1
+              this.clients.length === 1
                 ? translateText("host_modal.waiting")
                 : translateText("host_modal.start")
             }
@@ -577,24 +576,19 @@ export class HostLobbyModal extends LitElement {
   }
 
   private async pollPlayers() {
-    const config = await getServerConfigFromClient();
-    fetch(`/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((data: GameInfo) => {
-        console.log(`got game info response: ${JSON.stringify(data)}`);
-        // Store both username and clientID
-        this.players =
-          data.clients?.map((p) => ({
-            username: p.username,
-            clientID: p.clientID,
-          })) ?? [];
-      });
-  }
+  const config = await getServerConfigFromClient();
+  fetch(`/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  })
+    .then((response) => response.json())
+    .then((data: GameInfo) => {
+      console.log(`got game info response: ${JSON.stringify(data)}`);
+      this.clients = data.clients ?? [];
+    });
+}
 
   private kickPlayer(clientID: string) {
     // Dispatch event to be handled by WebSocket instead of HTTP
