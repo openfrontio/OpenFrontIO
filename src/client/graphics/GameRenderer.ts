@@ -12,6 +12,7 @@ import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
+import { FPSDisplay } from "./layers/FPSDisplay";
 import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
@@ -38,6 +39,8 @@ import { UILayer } from "./layers/UILayer";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
+
+const isDevelopment = process.env.GAME_ENV === "dev";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,
@@ -202,6 +205,11 @@ export function createRenderer(
 
   const structureLayer = new StructureLayer(game, eventBus, transformHandler);
 
+  const fpsDisplay = document.querySelector("fps-display") as FPSDisplay;
+  if (!(fpsDisplay instanceof FPSDisplay)) {
+    console.error("fps display not found");
+  }
+
   const spawnAd = document.querySelector("spawn-ad") as SpawnAd;
   if (!(spawnAd instanceof SpawnAd)) {
     console.error("spawn ad not found");
@@ -270,6 +278,7 @@ export function createRenderer(
     transformHandler,
     uiState,
     layers,
+    fpsDisplay,
   );
 }
 
@@ -283,6 +292,7 @@ export class GameRenderer {
     public transformHandler: TransformHandler,
     public uiState: UIState,
     private layers: Layer[],
+    private fpsDisplay: FPSDisplay,
   ) {
     const context = canvas.getContext("2d");
     if (context === null) throw new Error("2d context not supported");
@@ -306,7 +316,9 @@ export class GameRenderer {
 
     //show whole map on startup
     this.transformHandler.centerAll(0.9);
-
+    if (isDevelopment) {
+      this.fpsDisplay.setVisible(true);
+    }
     requestAnimationFrame(() => this.renderGame());
   }
 
@@ -356,8 +368,12 @@ export class GameRenderer {
     this.transformHandler.resetChanged();
 
     requestAnimationFrame(() => this.renderGame());
-
     const duration = performance.now() - start;
+
+    if (isDevelopment) {
+      this.fpsDisplay.updateFPS(duration);
+    }
+
     if (duration > 50) {
       console.warn(
         `tick ${this.game.ticks()} took ${duration}ms to render frame`,
