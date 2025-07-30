@@ -421,11 +421,9 @@ class Client {
       this.gameStop();
     }
     const config = await getServerConfigFromClient();
-    const eventBus = new EventBus();
-    this.gameEventBus = eventBus;
 
     this.gameStop = joinLobby(
-      eventBus,
+      this.eventBus,
       {
         gameID: lobby.gameID,
         serverConfig: config,
