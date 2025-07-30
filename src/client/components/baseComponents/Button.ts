@@ -7,6 +7,7 @@ import { translateText } from "../../Utils";
 export class OButton extends LitElement {
   @property({ type: String }) title = "";
   @property({ type: String }) translationKey = "";
+  @property({ type: String }) icon = "";
   @property({ type: Boolean }) secondary = false;
   @property({ type: Boolean }) block = false;
   @property({ type: Boolean }) blockDesktop = false;
@@ -28,9 +29,14 @@ export class OButton extends LitElement {
         })}
         ?disabled=${this.disable}
       >
-        ${`${this.translationKey}` === ""
-          ? `${this.title}`
-          : `${translateText(this.translationKey)}`}
+        <div class="flex items-center justify-center">
+          ${this.icon && html`<img src="icons/${this.icon}" class="mr-2 h-5 w-5" />`}
+          <span>
+            ${`${this.translationKey}` === ""
+              ? `${this.title}`
+              : `${translateText(this.translationKey)}`}
+          </span>
+        </div>
       </button>
     `;
   }
