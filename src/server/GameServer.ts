@@ -236,14 +236,7 @@ export class GameServer {
             if (clientMsg.intent.type === "kick_player") {
               const authenticatedClientID = client.clientID;
 
-              // Only allow kicking in private games
-              if (this.gameConfig.gameType === GameType.Public) {
-                this.log.warn(`Cannot kick players in public games`, {
-                  clientID: authenticatedClientID,
-                  target: clientMsg.intent.target,
-                });
-                return;
-              }
+
 
               // Check if the authenticated client is the lobby creator
               if (authenticatedClientID !== this.privateLobbyCreatorID) {
