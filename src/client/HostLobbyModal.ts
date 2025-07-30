@@ -349,14 +349,14 @@ export class HostLobbyModal extends LitElement {
               (client) => html`
                 <span class="player-tag">
                   ${client.username}
-                  ${client.id === this.lobbyCreatorClientID
+                  ${client.clientID === this.lobbyCreatorClientID
                     ? html`<span class="host-badge"
                         >(${translateText("host_modal.host_badge")})</span
                       >`
                     : html`
                         <button
                           class="remove-player-btn"
-                          @click=${() => this.kickPlayer(client.id)}
+                          @click=${() => this.kickPlayer(client.clientID)}
                           title="Remove ${client.username}"
                         >
                           ×
@@ -586,6 +586,13 @@ export class HostLobbyModal extends LitElement {
     .then((response) => response.json())
     .then((data: GameInfo) => {
       console.log(`got game info response: ${JSON.stringify(data)}`);
+
+      if (data.clients && data.clients.length > 0) {
+        console.log('Client object structure:', Object.keys(data.clients[0]));
+        console.log('First client:', data.clients[0]);
+        console.log('Lobby creator ID:', this.lobbyCreatorClientID);
+      }
+
       this.clients = data.clients ?? [];
     });
 }
