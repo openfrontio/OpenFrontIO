@@ -74,7 +74,7 @@ export interface JoinLobbyEvent {
 
 class Client {
   private gameStop: (() => void) | null = null;
-  private gameEventBus: EventBus | null = null;
+  private eventBus: EventBus;
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
@@ -422,11 +422,8 @@ class Client {
     }
     const config = await getServerConfigFromClient();
 
-    const eventBus = new EventBus();
-    this.gameEventBus = eventBus;
-
     this.gameStop = joinLobby(
-      eventBus,
+      this.eventBus = new EventBus(),
       {
         gameID: lobby.gameID,
         serverConfig: config,
@@ -514,8 +511,8 @@ class Client {
     const { target } = event.detail;
 
     // Forward to eventBus if available
-    if (this.gameEventBus) {
-      this.gameEventBus.emit(new SendKickPlayerIntentEvent(target));
+    if (this.eventBus) {
+      this.eventBus.emit(new SendKickPlayerIntentEvent(target));
     }
   }
 }
