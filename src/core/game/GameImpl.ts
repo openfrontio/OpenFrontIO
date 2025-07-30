@@ -591,7 +591,7 @@ export class GameImpl implements Game {
         `${breaker} not allied with ${other}, cannot break alliance`,
       );
     }
-    if (!other.isTraitor()) {
+    if (!other.isTraitor() && !other.isDisconnected()) {
       breaker.markTraitor();
     }
 
