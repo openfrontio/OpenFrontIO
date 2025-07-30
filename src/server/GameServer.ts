@@ -41,7 +41,7 @@ export class GameServer {
   private turns: Turn[] = [];
   private intents: Intent[] = [];
   public activeClients: Client[] = [];
-  private privateLobbyCreatorID: string | undefined;
+  private LobbyCreatorID: string | undefined;
   private allClients: Map<ClientID, Client> = new Map();
   private _hasStarted = false;
   private _startTime: number | null = null;
@@ -70,7 +70,7 @@ export class GameServer {
     lobbyCreatorID?: string,
   ) {
     this.log = log_.child({ gameID: id });
-    this.privateLobbyCreatorID = lobbyCreatorID || undefined;
+    this.LobbyCreatorID = lobbyCreatorID || undefined;
   }
 
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
@@ -116,10 +116,10 @@ export class GameServer {
       return;
     }
     // Log when lobby creator joins private game
-    if (!this.isPublic() && client.clientID === this.privateLobbyCreatorID) {
+    if (client.clientID === this.LobbyCreatorID) {
       this.log.info("Lobby creator joined", {
         gameID: this.id,
-        creatorID: this.privateLobbyCreatorID,
+        creatorID: this.LobbyCreatorID,
       });
     }
     this.log.info("client (re)joining game", {
@@ -239,10 +239,10 @@ export class GameServer {
 
 
               // Check if the authenticated client is the lobby creator
-              if (authenticatedClientID !== this.privateLobbyCreatorID) {
+              if (authenticatedClientID !== this.LobbyCreatorID) {
                 this.log.warn(`Only lobby creator can kick players`, {
                   clientID: authenticatedClientID,
-                  creatorID: this.privateLobbyCreatorID,
+                  creatorID: this.LobbyCreatorID,
                   target: clientMsg.intent.target,
                   gameID: this.id,
                 });
@@ -499,7 +499,7 @@ export class GameServer {
   }
 
   public isPrivateLobbyCreator(clientID: string): boolean {
-    return this.privateLobbyCreatorID === clientID;
+    return this.LobbyCreatorID === clientID;
   }
 
   phase(): GamePhase {
