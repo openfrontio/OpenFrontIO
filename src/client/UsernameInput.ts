@@ -7,12 +7,14 @@ import {
   MAX_USERNAME_LENGTH,
   validateUsername,
 } from "../core/validations/username";
+import { isUserLoggedIn } from "./jwt";
 
 const usernameKey: string = "username";
 
 @customElement("username-input")
 export class UsernameInput extends LitElement {
   @state() private username: string = "";
+  @state() private disabled: boolean = true; // starts disabled
   @property({ type: String }) validationError: string = "";
   private _isValid: boolean = true;
   private userSettings: UserSettings = new UserSettings();
@@ -27,11 +29,18 @@ export class UsernameInput extends LitElement {
   public getCurrentUsername(): string {
     return this.username;
   }
-
+  F;
   connectedCallback() {
     super.connectedCallback();
-    this.username = this.getStoredUsername();
-    this.dispatchUsernameEvent();
+
+    const loginResult: boolean = isUserLoggedIn();
+
+    if (loginResult) {
+      this.disabled = false; // enable if logged in
+      this.username = this.getStoredUsername();
+      this.dispatchUsernameEvent();
+    }
+    this.disabled = true;
   }
 
   render() {
@@ -39,6 +48,7 @@ export class UsernameInput extends LitElement {
       <input
         type="text"
         .value=${this.username}
+        ?disabled=${this.disabled}
         @input=${this.handleChange}
         @change=${this.handleChange}
         placeholder="${translateText("username.enter_username")}"
@@ -57,6 +67,8 @@ export class UsernameInput extends LitElement {
   }
 
   private handleChange(e: Event) {
+    if (this.disabled) return; // Ignore changes if disabled
+
     const input = e.target as HTMLInputElement;
     this.username = input.value.trim();
     const result = validateUsername(this.username);
