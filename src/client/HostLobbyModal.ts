@@ -41,7 +41,10 @@ export class HostLobbyModal extends LitElement {
   @state() private copySuccess = false;
   @state() private players: string[] = [];
   @state() private useRandomMap: boolean = false;
-  @state() private disabledUnits: UnitType[] = [UnitType.Factory, UnitType.TrainingCamp];
+  @state() private disabledUnits: UnitType[] = [
+    UnitType.Factory,
+    UnitType.TrainingCamp,
+  ];
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes

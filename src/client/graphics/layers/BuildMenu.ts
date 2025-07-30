@@ -9,9 +9,9 @@ import hydrogenBombIcon from "../../../../resources/images/MushroomCloudIconWhit
 import atomBombIcon from "../../../../resources/images/NukeIconWhite.svg";
 import portIcon from "../../../../resources/images/PortIcon.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
+import trainingCampIcon from "../../../../resources/images/TrainingCampIcon.svg";
 import missileSiloIcon from "../../../../resources/non-commercial/svg/MissileSiloIconWhite.svg";
 import samlauncherIcon from "../../../../resources/non-commercial/svg/SamLauncherIconWhite.svg";
-import trainingCampIcon from "../../../../resources/images/TrainingCampIcon.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import {

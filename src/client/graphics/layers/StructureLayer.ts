@@ -213,7 +213,9 @@ export class StructureLayer implements Layer {
     }
 
     if (!config || !icon) {
-      console.log(`No config or icon for unit type ${unitType}, config: ${!!config}, icon: ${!!icon}`);
+      console.log(
+        `No config or icon for unit type ${unitType}, config: ${!!config}, icon: ${!!icon}`,
+      );
       return;
     }
 
