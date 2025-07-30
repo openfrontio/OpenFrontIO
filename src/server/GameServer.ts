@@ -41,9 +41,7 @@ export class GameServer {
   private turns: Turn[] = [];
   private intents: Intent[] = [];
   public activeClients: Client[] = [];
-  // Used to track the Creator of a Private Lobby (to kick players)
-  private privateLobbyCreatorID: string | null = null;
-  // Used for record record keeping
+  private privateLobbyCreatorID: string | undefined;
   private allClients: Map<ClientID, Client> = new Map();
   private _hasStarted = false;
   private _startTime: number | null = null;
@@ -72,7 +70,7 @@ export class GameServer {
     lobbyCreatorID?: string,
   ) {
     this.log = log_.child({ gameID: id });
-    this.privateLobbyCreatorID = lobbyCreatorID || null;
+    this.privateLobbyCreatorID = lobbyCreatorID || undefined;
   }
 
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
