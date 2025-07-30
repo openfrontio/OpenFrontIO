@@ -154,7 +154,9 @@ export class HostLobbyModal extends LitElement {
                     <div class="flex flex-row flex-wrap justify-center gap-4">
                       ${maps.map((mapValue) => {
                         const mapKey = Object.keys(GameMapType).find(
-                          (key) => GameMapType[key] === mapValue,
+                          (key) =>
+                            GameMapType[key as keyof typeof GameMapType] ===
+                            mapValue,
                         );
                         return html`
                           <div
@@ -214,7 +216,7 @@ export class HostLobbyModal extends LitElement {
                       ></difficulty-display>
                       <p class="option-card-title">
                         ${translateText(
-                          `difficulty.${DifficultyDescription[key]}`,
+                          `difficulty.${DifficultyDescription[key as keyof typeof DifficultyDescription]}`,
                         )}
                       </p>
                     </div>
@@ -589,7 +591,7 @@ export class HostLobbyModal extends LitElement {
 
     await this.putGameConfig();
     console.log(
-      `Starting private game with map: ${GameMapType[this.selectedMap]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     this.close();
     const config = await getServerConfigFromClient();
