@@ -184,6 +184,11 @@ export class GameServer {
     this.activeClients.push(client);
     client.lastPing = Date.now();
 
+    // If there was a previously-connected client, and it is currently disconnected, and will be replaced by a new client, resend the 'mark-disconnected = false' intent so all clients can receive the update
+    if (this.allClients.get(client.clientID)?.isDisconnected) {
+      this.markClientDisconnected(client, false);
+    }
+
     this.allClients.set(client.clientID, client);
 
     client.ws.removeAllListeners("message");
