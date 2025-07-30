@@ -107,4 +107,27 @@ describe("PlayerImpl", () => {
     }
     expect(other.canSendAllianceRequest(player)).toBe(false);
   });
+
+  test("Can find units by type", () => {
+    expect(player.unitsOwned(UnitType.DefensePost)).toBe(0);
+    expect(player.unitsConstructed(UnitType.DefensePost)).toBe(0);
+    expect(player.unitCount(UnitType.DefensePost)).toBe(0);
+    var defensePost = player.buildUnit(UnitType.DefensePost, game.ref(0, 0), {});
+    expect(player.unitsOwned(UnitType.DefensePost)).toBe(1);
+    expect(player.unitsConstructed(UnitType.DefensePost)).toBe(1);
+    expect(player.unitCount(UnitType.DefensePost)).toBe(1);
+    defensePost.delete();
+    expect(player.unitsOwned(UnitType.DefensePost)).toBe(0);
+    expect(player.unitsConstructed(UnitType.DefensePost)).toBe(1);
+    expect(player.unitCount(UnitType.DefensePost)).toBe(0);
+  });
+
+  test("Can switch owners of units", () => {
+    var defensePost = player.buildUnit(UnitType.DefensePost, game.ref(0, 0), {});
+    expect(player.unitsOwned(UnitType.DefensePost)).toBe(1);
+    expect(other.unitsOwned(UnitType.DefensePost)).toBe(0);
+    defensePost.setOwner(other);
+    expect(player.unitsOwned(UnitType.DefensePost)).toBe(0);
+    expect(other.unitsOwned(UnitType.DefensePost)).toBe(1);
+  });
 });

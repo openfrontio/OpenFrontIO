@@ -83,7 +83,7 @@ export class PlayerImpl implements Player {
 
   public _borderTiles: Set<TileRef> = new Set();
 
-  public _units: Unit[] = [];
+  private _unitsByType = new Map<UnitType, Unit[]>();
   public _tiles: Set<TileRef> = new Set();
 
   private _name: string;
@@ -214,11 +214,20 @@ export class PlayerImpl implements Player {
   }
 
   units(...types: UnitType[]): Unit[] {
+    const units: Unit[] = [];
     if (types.length === 0) {
-      return this._units;
+      for (const type of this._unitsByType.keys()) {
+        units.push(...this._unitsByType.get(type) ?? []);
+      }
+      return units;
     }
-    const ts = new Set(types);
-    return this._units.filter((u) => ts.has(u.type()));
+  
+    for (const type of types) {
+      if (this._unitsByType.has(type)) {
+        units.push(...this._unitsByType.get(type)!);
+      }
+    }
+    return units;
   }
 
   private numUnitsConstructed: number[] = [];
@@ -234,7 +243,7 @@ export class PlayerImpl implements Player {
   unitsConstructed(type: UnitType): number {
     const built = this.numUnitsConstructed[type] ?? 0;
     let constructing = 0;
-    for (const unit of this._units) {
+    for (const unit of this.units()) {
       if (unit.type() !== UnitType.Construction) continue;
       if (unit.constructionType() !== type) continue;
       constructing++;
@@ -246,7 +255,7 @@ export class PlayerImpl implements Player {
   // Count of units owned by the player, not including construction
   unitCount(type: UnitType): number {
     let total = 0;
-    for (const unit of this._units) {
+    for (const unit of this._unitsByType.get(type) ?? []) {
       if (unit.type() === type) {
         total += unit.level();
       }
@@ -257,7 +266,7 @@ export class PlayerImpl implements Player {
   // Count of units owned by the player, including construction
   unitsOwned(type: UnitType): number {
     let total = 0;
-    for (const unit of this._units) {
+    for (const unit of this.units()) {
       if (unit.type() === type) {
         total += unit.level();
         continue;
@@ -804,7 +813,7 @@ export class PlayerImpl implements Player {
       this,
       params,
     );
-    this._units.push(b);
+    this.addUnit(b);
     this.recordUnitConstructed(type);
     this.removeGold(cost);
     this.removeTroops("troops" in params ? (params.troops ?? 0) : 0);
@@ -812,6 +821,21 @@ export class PlayerImpl implements Player {
     this.mg.addUnit(b);
 
     return b;
+  }
+
+  public addUnit(unit: Unit): void {
+    if (this._unitsByType.has(unit.type())) {
+      this._unitsByType.get(unit.type())!.push(unit);
+    } else {
+      this._unitsByType.set(unit.type(), [unit]);
+    }
+  }
+
+  public deleteUnit(unit: Unit): void {
+    this._unitsByType.get(unit.type())?.splice(
+      this._unitsByType.get(unit.type())!.indexOf(unit),
+      1,
+    );
   }
 
   public findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false {
@@ -1052,7 +1076,7 @@ export class PlayerImpl implements Player {
   hash(): number {
     return (
       simpleHash(this.id()) * (this.population() + this.numTilesOwned()) +
-      this._units.reduce((acc, unit) => acc + unit.hash(), 0)
+      this.units().reduce((acc, unit) => acc + unit.hash(), 0)
     );
   }
   toString(): string {
