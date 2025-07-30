@@ -294,6 +294,7 @@ class Client {
         loginDiscordButton.disable = false;
         loginDiscordButton.hidden = false;
         loginDiscordButton.translationKey = "main.login_discord";
+        loginDiscordButton.icon = "discord.svg";
         logoutDiscordButton.hidden = true;
         territoryModal.onUserMe(null);
       } else {
