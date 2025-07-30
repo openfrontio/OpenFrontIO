@@ -16,6 +16,7 @@ import {
   GameRecord,
   GameRecordSchema,
   ServerErrorMessage,
+  ID
 } from "../core/Schemas";
 import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
 import { archive, readGameRecord } from "./Archive";
@@ -90,7 +91,12 @@ export function startWorker() {
     "/api/create_game/:id",
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
       const id = req.params.id;
-      const creatorClientID = req.query.creatorClientID as string; // Get from query params
+      const creatorClientID = (() => {
+        if (typeof req.query.creatorClientID !== 'string') return undefined;
+        
+        const trimmed = req.query.creatorClientID.trim();
+        return ID.safeParse(trimmed).success ? trimmed : undefined;
+      })();
 
       if (!id) {
         log.warn(`cannot create game, id not found`);
