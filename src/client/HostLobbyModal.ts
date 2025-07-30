@@ -587,11 +587,6 @@ export class HostLobbyModal extends LitElement {
     .then((data: GameInfo) => {
       console.log(`got game info response: ${JSON.stringify(data)}`);
 
-      if (data.clients && data.clients.length > 0) {
-        console.log('Client object structure:', Object.keys(data.clients[0]));
-        console.log('First client:', data.clients[0]);
-        console.log('Lobby creator ID:', this.lobbyCreatorClientID);
-      }
 
       this.clients = data.clients ?? [];
     });
