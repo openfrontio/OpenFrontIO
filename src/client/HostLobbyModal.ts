@@ -13,7 +13,7 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
-import { GameConfig, GameInfo, TeamCountConfig } from "../core/Schemas";
+import { GameConfig, GameInfo, TeamCountConfig, ClientInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
@@ -39,7 +39,7 @@ export class HostLobbyModal extends LitElement {
   @state() private instantBuild: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
-  @state() private clients: any[] = [];
+  @state() private clients: ClientInfo[] = [];
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [UnitType.Factory];
   @state() private lobbyCreatorClientID: string = "";
