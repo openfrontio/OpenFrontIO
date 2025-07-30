@@ -217,11 +217,11 @@ export class PlayerImpl implements Player {
     const units: Unit[] = [];
     if (types.length === 0) {
       for (const type of this._unitsByType.keys()) {
-        units.push(...this._unitsByType.get(type) ?? []);
+        units.push(...(this._unitsByType.get(type) ?? []));
       }
       return units;
     }
-  
+
     for (const type of types) {
       if (this._unitsByType.has(type)) {
         units.push(...this._unitsByType.get(type)!);

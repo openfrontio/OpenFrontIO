@@ -112,7 +112,11 @@ describe("PlayerImpl", () => {
     expect(player.unitsOwned(UnitType.DefensePost)).toBe(0);
     expect(player.unitsConstructed(UnitType.DefensePost)).toBe(0);
     expect(player.unitCount(UnitType.DefensePost)).toBe(0);
-    const defensePost = player.buildUnit(UnitType.DefensePost, game.ref(0, 0), {});
+    const defensePost = player.buildUnit(
+      UnitType.DefensePost,
+      game.ref(0, 0),
+      {},
+    );
     expect(player.unitsOwned(UnitType.DefensePost)).toBe(1);
     expect(player.unitsConstructed(UnitType.DefensePost)).toBe(1);
     expect(player.unitCount(UnitType.DefensePost)).toBe(1);
@@ -123,7 +127,11 @@ describe("PlayerImpl", () => {
   });
 
   test("Can switch owners of units", () => {
-    const defensePost = player.buildUnit(UnitType.DefensePost, game.ref(0, 0), {});
+    const defensePost = player.buildUnit(
+      UnitType.DefensePost,
+      game.ref(0, 0),
+      {},
+    );
     expect(player.unitsOwned(UnitType.DefensePost)).toBe(1);
     expect(other.unitsOwned(UnitType.DefensePost)).toBe(0);
     defensePost.setOwner(other);
