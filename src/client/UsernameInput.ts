@@ -29,7 +29,7 @@ export class UsernameInput extends LitElement {
   public getCurrentUsername(): string {
     return this.username;
   }
-  F;
+
   connectedCallback() {
     super.connectedCallback();
 
