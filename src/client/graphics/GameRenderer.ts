@@ -40,8 +40,6 @@ import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
 
-const isDevelopment = process.env.GAME_ENV === "dev";
-
 export function createRenderer(
   canvas: HTMLCanvasElement,
   game: GameView,
@@ -209,6 +207,8 @@ export function createRenderer(
   if (!(fpsDisplay instanceof FPSDisplay)) {
     console.error("fps display not found");
   }
+  fpsDisplay.eventBus = eventBus;
+  fpsDisplay.userSettings = userSettings;
 
   const spawnAd = document.querySelector("spawn-ad") as SpawnAd;
   if (!(spawnAd instanceof SpawnAd)) {
@@ -269,6 +269,7 @@ export function createRenderer(
     spawnAd,
     gutterAdModal,
     alertFrame,
+    fpsDisplay,
   ];
 
   return new GameRenderer(
@@ -316,9 +317,7 @@ export class GameRenderer {
 
     //show whole map on startup
     this.transformHandler.centerAll(0.9);
-    if (isDevelopment) {
-      this.fpsDisplay.setVisible(true);
-    }
+
     requestAnimationFrame(() => this.renderGame());
   }
 
@@ -370,9 +369,7 @@ export class GameRenderer {
     requestAnimationFrame(() => this.renderGame());
     const duration = performance.now() - start;
 
-    if (isDevelopment) {
-      this.fpsDisplay.updateFPS(duration);
-    }
+    this.fpsDisplay.updateFPS(duration);
 
     if (duration > 50) {
       console.warn(

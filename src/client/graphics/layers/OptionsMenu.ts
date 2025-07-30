@@ -137,6 +137,11 @@ export class OptionsMenu extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onTogglePerformanceOverlayButtonClick() {
+    this.userSettings.togglePerformanceOverlay();
+    this.requestUpdate();
+  }
+
   init() {
     console.log("init called from OptionsMenu");
     this.showPauseButton =
@@ -250,6 +255,12 @@ export class OptionsMenu extends LitElement implements Layer {
               (this.userSettings.leftClickOpensMenu()
                 ? "Opens menu"
                 : "Attack"),
+          })}
+          ${button({
+            onClick: this.onTogglePerformanceOverlayButtonClick,
+            title: "Performance Overlay",
+            children:
+              "🚀: " + (this.userSettings.performanceOverlay() ? "On" : "Off"),
           })}
           <!-- ${button({
             onClick: this.onToggleFocusLockedButtonClick,
