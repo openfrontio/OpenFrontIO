@@ -50,14 +50,6 @@ describe("TrainingCampExecution", () => {
     });
   });
 
-  describe("Training Camp Cost Progression", () => {
-    it("should have progressive cost for training camps", () => {
-      // This test would verify the progressive cost system
-      // Currently tested in the actual game configuration
-      expect(true).toBe(true); // Placeholder test
-    });
-  });
-
   describe("Training Camp Multiplier Logic", () => {
     it("should calculate correct multiplier for multiple camps", () => {
       // Test the multiplier calculation logic
