@@ -10,6 +10,7 @@ import shieldIcon from "../../../../resources/non-commercial/images/buildings/fo
 import anchorIcon from "../../../../resources/non-commercial/images/buildings/port1.png";
 import missileSiloIcon from "../../../../resources/non-commercial/images/buildings/silo1.png";
 import SAMMissileIcon from "../../../../resources/non-commercial/images/buildings/silo4.png";
+import trainingCampIcon from "../../../../resources/non-commercial/images/buildings/trainingCamp1.svg";
 import { Cell, UnitType } from "../../../core/game/Game";
 import { euclDistFN, isometricDistFN } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
@@ -66,6 +67,11 @@ export class StructureLayer implements Layer {
     },
     [UnitType.SAMLauncher]: {
       icon: SAMMissileIcon,
+      borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
+      territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
+    },
+    [UnitType.TrainingCamp]: {
+      icon: trainingCampIcon,
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
@@ -189,7 +195,10 @@ export class StructureLayer implements Layer {
   private handleUnitRendering(unit: UnitView) {
     const unitType = unit.constructionType() ?? unit.type();
     const iconType = unitType;
-    if (!this.isUnitTypeSupported(unitType)) return;
+    if (!this.isUnitTypeSupported(unitType)) {
+      console.log(`Unit type ${unitType} not supported in StructureLayer`);
+      return;
+    }
 
     const config = this.unitConfigs[unitType];
     let icon: HTMLImageElement | undefined;
@@ -203,7 +212,10 @@ export class StructureLayer implements Layer {
       icon = this.unitIcons.get(iconType);
     }
 
-    if (!config || !icon) return;
+    if (!config || !icon) {
+      console.log(`No config or icon for unit type ${unitType}, config: ${!!config}, icon: ${!!icon}`);
+      return;
+    }
 
     // Clear previous rendering
     for (const tile of this.game.bfs(

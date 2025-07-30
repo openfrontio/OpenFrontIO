@@ -80,6 +80,9 @@ export class UnitView {
     this.lastPos.push(data.pos);
     this._wasUpdated = true;
     this.data = data;
+    if (this.data.unitType === UnitType.TrainingCamp) {
+      console.log(`Unit ${this.data.id} updated, level: ${this.data.level}`);
+    }
   }
 
   id(): number {

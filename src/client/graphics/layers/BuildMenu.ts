@@ -11,6 +11,7 @@ import portIcon from "../../../../resources/images/PortIcon.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import missileSiloIcon from "../../../../resources/non-commercial/svg/MissileSiloIconWhite.svg";
 import samlauncherIcon from "../../../../resources/non-commercial/svg/SamLauncherIconWhite.svg";
+import trainingCampIcon from "../../../../resources/images/TrainingCampIcon.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import {
@@ -114,6 +115,13 @@ export const buildTable: BuildItemDisplay[][] = [
       icon: factoryIcon,
       description: "build_menu.desc.factory",
       key: "unit_type.factory",
+      countable: true,
+    },
+    {
+      unitType: UnitType.TrainingCamp,
+      icon: trainingCampIcon,
+      description: "build_menu.desc.training_camp",
+      key: "unit_type.training_camp",
       countable: true,
     },
   ],

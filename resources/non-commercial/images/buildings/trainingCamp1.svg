@@ -1,0 +1,12 @@
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="15" width="18" height="6" fill="#8B4513" stroke="#654321" stroke-width="0.5"/>
+  <polygon points="12,3 3,15 21,15" fill="#DEB887" stroke="#CD853F" stroke-width="0.5"/>
+  <line x1="12" y1="3" x2="12" y2="1.5" stroke="#8B0000" stroke-width="0.5"/>
+  <rect x="12" y="1.5" width="3" height="2" fill="#FF0000"/>
+  <line x1="6" y1="15" x2="6" y2="12" stroke="#8B4513" stroke-width="0.5"/>
+  <line x1="18" y1="15" x2="18" y2="12" stroke="#8B4513" stroke-width="0.5"/>
+  <rect x="4.5" y="16.5" width="3" height="3" fill="#696969" rx="0.5"/>
+  <rect x="16.5" y="16.5" width="3" height="3" fill="#696969" rx="0.5"/>
+  <circle cx="12" cy="9" r="1.5" fill="#FFD700" stroke="#DAA520" stroke-width="0.5"/>
+  <text x="12" y="10.5" text-anchor="middle" font-size="3" fill="#8B0000" font-weight="bold">⚔</text>
+</svg> 

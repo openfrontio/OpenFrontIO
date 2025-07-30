@@ -134,6 +134,7 @@ export function getMessageTypeClasses(type: MessageType): string {
     case MessageType.SENT_TROOPS_TO_PLAYER:
     case MessageType.RECEIVED_GOLD_FROM_PLAYER:
     case MessageType.RECEIVED_TROOPS_FROM_PLAYER:
+    case MessageType.TRAINING_CAMP_GENERATION:
       return severityColors["blue"];
     case MessageType.MIRV_INBOUND:
     case MessageType.NUKE_INBOUND:

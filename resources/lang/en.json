@@ -94,6 +94,8 @@
     "build_city_desc": "Increases your max population. Useful when you can't expand your territory or you're about to hit your population limit.",
     "build_factory": "Factory",
     "build_factory_desc": "Creates railroads automatically with nearby structures, and spawns trains sporadically.",
+    "build_training_camp": "Training Camp",
+    "build_training_camp_desc": "Automatically generates troops at regular intervals. Generation rate increases with camp level. Balanced to prevent cheating.",
     "build_defense": "Defense Post",
     "build_defense_desc": "Increases defenses around nearby borders, which show a checkered pattern. Attacks from enemies are slower and have more casualties.",
     "build_port": "Port",
@@ -253,7 +255,8 @@
     "atom_bomb": "Atom Bomb",
     "hydrogen_bomb": "Hydrogen Bomb",
     "mirv": "MIRV",
-    "factory": "Factory"
+    "factory": "Factory",
+    "training_camp": "Training Camp"
   },
   "user_setting": {
     "title": "User Settings",
@@ -415,7 +418,8 @@
       "port": "Sends trade ships to generate gold",
       "defense_post": "Increases defenses of nearby borders",
       "city": "Increases max population",
-      "factory": "Creates railroads and spawns trains"
+      "factory": "Creates railroads and spawns trains",
+      "training_camp": "Automatically generates troops at regular intervals. Generation rate increases with camp level. Balanced to prevent cheating."
     },
     "not_enough_money": "Not enough money"
   },
