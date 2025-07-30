@@ -90,10 +90,13 @@ export function startWorker() {
     "/api/create_game/:id",
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
       const id = req.params.id;
+      const creatorClientID = req.query.creatorClientID as string; // Get from query params
+
       if (!id) {
         log.warn(`cannot create game, id not found`);
         return res.status(400).json({ error: "Game ID is required" });
       }
+
       const clientIP = req.ip || req.socket.remoteAddress || "unknown";
       const result = CreateGameInputSchema.safeParse(req.body);
       if (!result.success) {
@@ -121,10 +124,11 @@ export function startWorker() {
         return res.status(400).json({ error: "Worker, game id mismatch" });
       }
 
-      const game = gm.createGame(id, gc);
+      // Pass creatorClientID to createGame
+      const game = gm.createGame(id, gc, creatorClientID);
 
       log.info(
-        `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating game ${game.isPublic() ? "Public" : "Private"} with id ${id}`,
+        `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? "Public" : "Private"} game with id ${id}${creatorClientID ? `, creator: ${creatorClientID}` : ""}`,
       );
       res.json(game.gameInfo());
     }),

@@ -42,7 +42,7 @@ export class HostLobbyModal extends LitElement {
   @state() private players: Array<{ username: string; clientID: string }> = [];
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [UnitType.Factory];
-  @state() private hostClientID: string = "";
+  @state() private lobbyCreatorClientID: string = "";
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
@@ -349,7 +349,7 @@ export class HostLobbyModal extends LitElement {
               (player) => html`
                 <span class="player-tag">
                   ${player.username}
-                  ${player.clientID === this.hostClientID
+                  ${player.clientID === this.lobbyCreatorClientID
                     ? html`<span class="host-badge"
                         >(${translateText("host_modal.host_badge")})</span
                       >`
@@ -392,8 +392,8 @@ export class HostLobbyModal extends LitElement {
   }
 
   public open() {
-    this.hostClientID = generateID();
-    createLobby()
+    this.lobbyCreatorClientID = generateID();
+    createLobby(this.lobbyCreatorClientID)
       .then((lobby) => {
         this.lobbyId = lobby.gameID;
         // join lobby
@@ -403,7 +403,7 @@ export class HostLobbyModal extends LitElement {
           new CustomEvent("join-lobby", {
             detail: {
               gameID: this.lobbyId,
-              clientID: this.hostClientID,
+              clientID: this.lobbyCreatorClientID,
             } as JoinLobbyEvent,
             bubbles: true,
             composed: true,
@@ -608,12 +608,16 @@ export class HostLobbyModal extends LitElement {
   }
 }
 
-async function createLobby(): Promise<GameInfo> {
+async function createLobby(creatorClientID: string): Promise<GameInfo> {
   const config = await getServerConfigFromClient();
   try {
     const id = generateID();
+
+    console.log("Creating lobby with ID:", id);
+    console.log("Creator Client ID:", creatorClientID);
+
     const response = await fetch(
-      `/${config.workerPath(id)}/api/create_game/${id}`,
+      `/${config.workerPath(id)}/api/create_game/${id}?creatorClientID=${encodeURIComponent(creatorClientID)}`,
       {
         method: "POST",
         headers: {
@@ -623,7 +627,11 @@ async function createLobby(): Promise<GameInfo> {
       },
     );
 
+    console.log("Response status:", response.status);
+
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Server error response:", errorText);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
@@ -633,6 +641,6 @@ async function createLobby(): Promise<GameInfo> {
     return data as GameInfo;
   } catch (error) {
     console.error("Error creating lobby:", error);
-    throw error; // Re-throw the error so the caller can handle it
+    throw error;
   }
 }

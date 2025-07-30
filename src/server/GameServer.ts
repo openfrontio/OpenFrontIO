@@ -41,8 +41,8 @@ export class GameServer {
   private turns: Turn[] = [];
   private intents: Intent[] = [];
   public activeClients: Client[] = [];
-  // Used to track the Host of a Private Lobby (to kick players)
-  private hostClientID: string | null = null;
+  // Used to track the Creator of a Private Lobby (to kick players)
+  private privateLobbyCreatorID: string | null = null;
   // Used for record record keeping
   private allClients: Map<ClientID, Client> = new Map();
   private _hasStarted = false;
@@ -69,8 +69,10 @@ export class GameServer {
     public readonly createdAt: number,
     private config: ServerConfig,
     public gameConfig: GameConfig,
+    lobbyCreatorID?: string,
   ) {
     this.log = log_.child({ gameID: id });
+    this.privateLobbyCreatorID = lobbyCreatorID || null;
   }
 
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
@@ -115,12 +117,11 @@ export class GameServer {
       });
       return;
     }
-    // Set the first client as host for private games
-    if (this.hostClientID === null && !this.isPublic()) {
-      this.hostClientID = client.clientID;
-      this.log.info("Host set for private game", {
+    // Log when lobby creator joins private game
+    if (!this.isPublic() && client.clientID === this.privateLobbyCreatorID) {
+      this.log.info("Lobby creator joined", {
         gameID: this.id,
-        hostClientID: client.clientID,
+        creatorID: this.privateLobbyCreatorID,
       });
     }
     this.log.info("client (re)joining game", {
@@ -233,9 +234,8 @@ export class GameServer {
               return;
             }
 
-            // Handle kick_player intent  via WebSocket
+            // Handle kick_player intent via WebSocket
             if (clientMsg.intent.type === "kick_player") {
-              // Use the authenticated WebSocket client's identity (cannot be spoofed)
               const authenticatedClientID = client.clientID;
 
               // Only allow kicking in private games
@@ -247,17 +247,18 @@ export class GameServer {
                 return;
               }
 
-              // Check if the authenticated client is the host
-              if (!this.isHost(authenticatedClientID)) {
-                this.log.warn(`Only host can kick players`, {
+              // Check if the authenticated client is the lobby creator
+              if (authenticatedClientID !== this.privateLobbyCreatorID) {
+                this.log.warn(`Only lobby creator can kick players`, {
                   clientID: authenticatedClientID,
-                  hostClientID: this.hostClientID,
+                  creatorID: this.privateLobbyCreatorID,
+                  target: clientMsg.intent.target,
                   gameID: this.id,
                 });
                 return;
               }
 
-              // Don't allow host to kick themselves
+              // Don't allow lobby creator to kick themselves
               if (authenticatedClientID === clientMsg.intent.target) {
                 this.log.warn(`Cannot kick yourself`, {
                   clientID: authenticatedClientID,
@@ -266,10 +267,11 @@ export class GameServer {
               }
 
               // Log and execute the kick
-              this.log.info(`Host kicking player via secure WebSocket`, {
-                authenticatedHostID: authenticatedClientID,
+              this.log.info(`Lobby creator initiated kick of player`, {
+                creatorID: authenticatedClientID,
                 target: clientMsg.intent.target,
                 gameID: this.id,
+                kickMethod: "websocket",
               });
 
               this.kickClient(clientMsg.intent.target);
@@ -505,8 +507,8 @@ export class GameServer {
     }
   }
 
-  public isHost(clientID: string): boolean {
-    return this.hostClientID === clientID;
+  public isPrivateLobbyCreator(clientID: string): boolean {
+    return this.privateLobbyCreatorID === clientID;
   }
 
   phase(): GamePhase {

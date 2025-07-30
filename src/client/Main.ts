@@ -422,8 +422,11 @@ class Client {
     }
     const config = await getServerConfigFromClient();
 
+    const eventBus = new EventBus();
+    this.gameEventBus = eventBus;
+
     this.gameStop = joinLobby(
-      this.eventBus,
+      eventBus,
       {
         gameID: lobby.gameID,
         serverConfig: config,
@@ -510,7 +513,7 @@ class Client {
   private handleKickPlayer(event: CustomEvent) {
     const { target } = event.detail;
 
-    // Forward to game's EventBus if available
+    // Forward to eventBus if available
     if (this.gameEventBus) {
       this.gameEventBus.emit(new SendKickPlayerIntentEvent(target));
     }
