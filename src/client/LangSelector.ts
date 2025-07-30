@@ -40,7 +40,7 @@ export class LangSelector extends LitElement {
   @state() private showModal: boolean = false;
   @state() private debugMode: boolean = false;
 
-  private dKeyPressed: boolean = false;
+  private debugKeyPressed: boolean = false;
 
   private languageMap: Record<string, any> = {
     ar,
@@ -85,10 +85,10 @@ export class LangSelector extends LitElement {
 
   private setupDebugKey() {
     window.addEventListener("keydown", (e) => {
-      if (e.key.toLowerCase() === "t") this.dKeyPressed = true;
+      if (e.key.toLowerCase() === "t") this.debugKeyPressed = true;
     });
     window.addEventListener("keyup", (e) => {
-      if (e.key.toLowerCase() === "t") this.dKeyPressed = false;
+      if (e.key.toLowerCase() === "t") this.debugKeyPressed = false;
     });
   }
 
@@ -147,7 +147,7 @@ export class LangSelector extends LitElement {
       }
 
       let debugLang: any = null;
-      if (this.dKeyPressed) {
+      if (this.debugKeyPressed) {
         debugLang = {
           code: "debug",
           native: "Debug",
@@ -266,7 +266,7 @@ export class LangSelector extends LitElement {
   }
 
   private openModal() {
-    this.debugMode = this.dKeyPressed;
+    this.debugMode = this.debugKeyPressed;
     this.showModal = true;
     this.loadLanguageList();
   }

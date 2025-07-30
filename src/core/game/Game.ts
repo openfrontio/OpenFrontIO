@@ -81,7 +81,11 @@ export enum GameMapType {
   Halkidiki = "Halkidiki",
   StraitOfGibraltar = "Strait of Gibraltar",
   Italia = "Italia",
+  Yenisei = "Yenisei",
+  Pluto = "Pluto",
 }
+
+export type GameMapName = keyof typeof GameMapType;
 
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
@@ -110,9 +114,11 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Halkidiki,
     GameMapType.StraitOfGibraltar,
     GameMapType.Italia,
+    GameMapType.Yenisei,
   ],
   fantasy: [
     GameMapType.Pangaea,
+    GameMapType.Pluto,
     GameMapType.Mars,
     GameMapType.DeglaciatedAntarctica,
   ],
@@ -699,6 +705,7 @@ export interface Game extends GameMap {
 
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
+  conquerPlayer(conqueror: Player, conquered: Player);
 }
 
 export interface PlayerActions {
