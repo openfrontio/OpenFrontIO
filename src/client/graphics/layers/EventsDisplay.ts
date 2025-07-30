@@ -137,25 +137,25 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private toggleEventFilter(filterName: MessageCategory) {
-    const currentState = this.eventsFilters.get(filterName) || false;
+    const currentState = this.eventsFilters.get(filterName) ?? false;
     this.eventsFilters.set(filterName, !currentState);
     this.requestUpdate();
   }
 
-  private updateMap = new Map([
-    [GameUpdateType.DisplayEvent, (u) => this.onDisplayMessageEvent(u)],
-    [GameUpdateType.DisplayChatEvent, (u) => this.onDisplayChatEvent(u)],
-    [GameUpdateType.AllianceRequest, (u) => this.onAllianceRequestEvent(u)],
+  private updateMap = [
+    [GameUpdateType.DisplayEvent, this.onDisplayMessageEvent.bind(this)],
+    [GameUpdateType.DisplayChatEvent, this.onDisplayChatEvent.bind(this)],
+    [GameUpdateType.AllianceRequest, this.onAllianceRequestEvent.bind(this)],
     [
       GameUpdateType.AllianceRequestReply,
-      (u) => this.onAllianceRequestReplyEvent(u),
+      this.onAllianceRequestReplyEvent.bind(this),
     ],
-    [GameUpdateType.BrokeAlliance, (u) => this.onBrokeAllianceEvent(u)],
-    [GameUpdateType.TargetPlayer, (u) => this.onTargetPlayerEvent(u)],
-    [GameUpdateType.Emoji, (u) => this.onEmojiMessageEvent(u)],
-    [GameUpdateType.UnitIncoming, (u) => this.onUnitIncomingEvent(u)],
-    [GameUpdateType.AllianceExpired, (u) => this.onAllianceExpiredEvent(u)],
-  ]);
+    [GameUpdateType.BrokeAlliance, this.onBrokeAllianceEvent.bind(this)],
+    [GameUpdateType.TargetPlayer, this.onTargetPlayerEvent.bind(this)],
+    [GameUpdateType.Emoji, this.onEmojiMessageEvent.bind(this)],
+    [GameUpdateType.UnitIncoming, this.onUnitIncomingEvent.bind(this)],
+    [GameUpdateType.AllianceExpired, this.onAllianceExpiredEvent.bind(this)],
+  ] as const;
 
   constructor() {
     super();
@@ -189,7 +189,7 @@ export class EventsDisplay extends LitElement implements Layer {
     const updates = this.game.updatesSinceLastTick();
     if (updates) {
       for (const [ut, fn] of this.updateMap) {
-        updates[ut]?.forEach(fn);
+        updates[ut]?.forEach(fn as (event: unknown) => void);
       }
     }
 
@@ -351,8 +351,15 @@ export class EventsDisplay extends LitElement implements Layer {
       }
     }
 
+    let description: string = event.message;
+    if (event.params !== undefined) {
+      if (event.message.startsWith("events_display.")) {
+        description = translateText(event.message, event.params);
+      }
+    }
+
     this.addEvent({
-      description: event.message,
+      description: description,
       createdAt: this.game.ticks(),
       highlight: true,
       type: event.messageType,
@@ -375,7 +382,7 @@ export class EventsDisplay extends LitElement implements Layer {
     if (event.target) {
       try {
         const targetPlayer = this.game.player(event.target);
-        const targetName = targetPlayer?.name() ?? event.target;
+        const targetName = targetPlayer?.displayName() ?? event.target;
         translatedMessage = baseMessage.replace("[P1]", targetName);
       } catch (e) {
         console.warn(
@@ -386,9 +393,16 @@ export class EventsDisplay extends LitElement implements Layer {
       }
     }
 
+    let otherPlayerDiplayName: string = "";
+    if (event.recipient !== null) {
+      //'recipient' parameter contains sender ID or recipient ID
+      const player = this.game.player(event.recipient);
+      otherPlayerDiplayName = player ? player.displayName() : "";
+    }
+
     this.addEvent({
       description: translateText(event.isFrom ? "chat.from" : "chat.to", {
-        user: event.recipient,
+        user: otherPlayerDiplayName,
         msg: translatedMessage,
       }),
       createdAt: this.game.ticks(),
@@ -484,6 +498,8 @@ export class EventsDisplay extends LitElement implements Layer {
 
     const betrayed = this.game.playerBySmallID(update.betrayedID) as PlayerView;
     const traitor = this.game.playerBySmallID(update.traitorID) as PlayerView;
+
+    if (betrayed.isDisconnected()) return; // Do not send the message if betraying a disconnected player
 
     if (!betrayed.isTraitor() && traitor === myPlayer) {
       const malusPercent = Math.round(
@@ -893,7 +909,7 @@ export class EventsDisplay extends LitElement implements Layer {
         : html`
             <!-- Main Events Display -->
             <div
-              class="relative w-full lg:bottom-2.5 lg:right-2.5 z-50 lg:w-96 backdrop-blur"
+              class="relative w-full sm:bottom-2.5 sm:right-2.5 z-50 sm:w-96 backdrop-blur"
             >
               <!-- Button Bar -->
               <div

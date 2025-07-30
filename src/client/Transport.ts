@@ -1,8 +1,7 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import { EventBus, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
-  Cell,
   GameType,
   Gold,
   PlayerID,
@@ -68,7 +67,7 @@ export class SendAllianceExtensionIntentEvent implements GameEvent {
 }
 
 export class SendSpawnIntentEvent implements GameEvent {
-  constructor(public readonly cell: Cell) {}
+  constructor(public readonly tile: TileRef) {}
 }
 
 export class SendAttackIntentEvent implements GameEvent {
@@ -90,7 +89,7 @@ export class SendBoatAttackIntentEvent implements GameEvent {
 export class BuildUnitIntentEvent implements GameEvent {
   constructor(
     public readonly unit: UnitType,
-    public readonly cell: Cell,
+    public readonly tile: TileRef,
   ) {}
 }
 
@@ -252,16 +251,14 @@ export class Transport {
   }
 
   private startPing() {
-    if (this.isLocal || this.pingInterval) return;
-    if (this.pingInterval === null) {
-      this.pingInterval = window.setInterval(() => {
-        if (this.socket !== null && this.socket.readyState === WebSocket.OPEN) {
-          this.sendMsg({
-            type: "ping",
-          } satisfies ClientPingMessage);
-        }
-      }, 5 * 1000);
-    }
+    if (this.isLocal) return;
+    this.pingInterval ??= window.setInterval(() => {
+      if (this.socket !== null && this.socket.readyState === WebSocket.OPEN) {
+        this.sendMsg({
+          type: "ping",
+        } satisfies ClientPingMessage);
+      }
+    }, 5 * 1000);
   }
 
   private stopPing() {
@@ -351,7 +348,10 @@ export class Transport {
       console.log(
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
-      if (event.code !== 1000 && event.code !== 1002) {
+      if (event.code === 1002) {
+        // TODO: make this a modal
+        alert(`connection refused: ${event.reason}`);
+      } else if (event.code !== 1000) {
         console.log(`recieved error code ${event.code}, reconnecting`);
         this.reconnect();
       }
@@ -444,8 +444,7 @@ export class Transport {
       pattern: this.lobbyConfig.pattern,
       name: this.lobbyConfig.playerName,
       playerType: PlayerType.Human,
-      x: event.cell.x,
-      y: event.cell.y,
+      tile: event.tile,
     });
   }
 
@@ -546,8 +545,7 @@ export class Transport {
       type: "build_unit",
       clientID: this.lobbyConfig.clientID,
       unit: event.unit,
-      x: event.cell.x,
-      y: event.cell.y,
+      tile: event.tile,
     });
   }
 

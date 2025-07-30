@@ -102,7 +102,7 @@ export function joinLobby(
     if (message.type === "error") {
       showErrorModal(
         message.error,
-        "",
+        message.message,
         lobbyConfig.gameID,
         lobbyConfig.clientID,
         true,
@@ -328,7 +328,7 @@ export class ClientGameRunner {
       if (message.type === "error") {
         showErrorModal(
           message.error,
-          "",
+          message.message,
           this.lobby.gameID,
           this.lobby.clientID,
           true,
@@ -384,7 +384,7 @@ export class ClientGameRunner {
       !this.gameView.hasOwner(tile) &&
       this.gameView.inSpawnPhase()
     ) {
-      this.eventBus.emit(new SendSpawnIntentEvent(cell));
+      this.eventBus.emit(new SendSpawnIntentEvent(tile));
       return;
     }
     if (this.gameView.inSpawnPhase()) {
@@ -581,27 +581,31 @@ export class ClientGameRunner {
 }
 
 function showErrorModal(
-  errMsg: string,
-  stack: string,
+  error: string,
+  message: string | undefined,
   gameID: GameID,
   clientID: ClientID,
   closable = false,
   showDiscord = true,
   heading = "error_modal.crashed",
 ) {
-  const errorText = `Error: ${errMsg}\nStack: ${stack}`;
-
   if (document.querySelector("#error-modal")) {
     return;
   }
 
   const modal = document.createElement("div");
-
   modal.id = "error-modal";
 
-  const discord = showDiscord ? translateText("error_modal.paste_discord") : "";
-
-  const content = `${discord}\n${translateText(heading)}\n game id: ${gameID}, client id: ${clientID}\n${errorText}`;
+  const content = [
+    showDiscord ? translateText("error_modal.paste_discord") : null,
+    translateText(heading),
+    `game id: ${gameID}`,
+    `client id: ${clientID}`,
+    `Error: ${error}`,
+    message ? `Message: ${message}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   // Create elements
   const pre = document.createElement("pre");

@@ -13,6 +13,7 @@ import eo from "../../resources/lang/eo.json";
 import es from "../../resources/lang/es.json";
 import fi from "../../resources/lang/fi.json";
 import fr from "../../resources/lang/fr.json";
+import gl from "../../resources/lang/gl.json";
 import he from "../../resources/lang/he.json";
 import hi from "../../resources/lang/hi.json";
 import it from "../../resources/lang/it.json";
@@ -20,14 +21,15 @@ import ja from "../../resources/lang/ja.json";
 import ko from "../../resources/lang/ko.json";
 import nl from "../../resources/lang/nl.json";
 import pl from "../../resources/lang/pl.json";
-import pt_br from "../../resources/lang/pt_br.json";
+import pt_BR from "../../resources/lang/pt-BR.json";
 import ru from "../../resources/lang/ru.json";
 import sh from "../../resources/lang/sh.json";
-import sv_se from "../../resources/lang/sv_se.json";
+import sl from "../../resources/lang/sl.json";
+import sv_SE from "../../resources/lang/sv-SE.json";
 import tp from "../../resources/lang/tp.json";
 import tr from "../../resources/lang/tr.json";
 import uk from "../../resources/lang/uk.json";
-import zh_cn from "../../resources/lang/zh_cn.json";
+import zh_CN from "../../resources/lang/zh-CN.json";
 
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
@@ -38,7 +40,7 @@ export class LangSelector extends LitElement {
   @state() private showModal: boolean = false;
   @state() private debugMode: boolean = false;
 
-  private dKeyPressed: boolean = false;
+  private debugKeyPressed: boolean = false;
 
   private languageMap: Record<string, any> = {
     ar,
@@ -54,7 +56,7 @@ export class LangSelector extends LitElement {
     ja,
     nl,
     pl,
-    pt_br,
+    "pt-BR": pt_BR,
     ru,
     sh,
     tr,
@@ -64,9 +66,11 @@ export class LangSelector extends LitElement {
     he,
     da,
     fi,
-    sv_se,
-    zh_cn,
+    "sv-SE": sv_SE,
+    "zh-CN": zh_CN,
     ko,
+    gl,
+    sl,
   };
 
   createRenderRoot() {
@@ -81,25 +85,33 @@ export class LangSelector extends LitElement {
 
   private setupDebugKey() {
     window.addEventListener("keydown", (e) => {
-      if (e.key.toLowerCase() === "t") this.dKeyPressed = true;
+      if (e.key.toLowerCase() === "t") this.debugKeyPressed = true;
     });
     window.addEventListener("keyup", (e) => {
-      if (e.key.toLowerCase() === "t") this.dKeyPressed = false;
+      if (e.key.toLowerCase() === "t") this.debugKeyPressed = false;
     });
   }
 
   private getClosestSupportedLang(lang: string): string {
     if (!lang) return "en";
     if (lang in this.languageMap) return lang;
-    const base = lang.split("-")[0];
-    if (base in this.languageMap) return base;
+
+    const base = lang.slice(0, 2);
+    const candidates = Object.keys(this.languageMap).filter((key) =>
+      key.startsWith(base),
+    );
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => b.length - a.length); // More specific first
+      return candidates[0];
+    }
+
     return "en";
   }
 
   private async initializeLanguage() {
     const browserLocale = navigator.language;
     const savedLang = localStorage.getItem("lang");
-    const userLang = this.getClosestSupportedLang(savedLang || browserLocale);
+    const userLang = this.getClosestSupportedLang(savedLang ?? browserLocale);
 
     this.defaultTranslations = this.loadLanguage("en");
     this.translations = this.loadLanguage(userLang);
@@ -110,7 +122,7 @@ export class LangSelector extends LitElement {
   }
 
   private loadLanguage(lang: string): Record<string, string> {
-    const language = this.languageMap[lang] || {};
+    const language = this.languageMap[lang] ?? {};
     const flat = flattenTranslations(language);
     return flat;
   }
@@ -135,7 +147,7 @@ export class LangSelector extends LitElement {
       }
 
       let debugLang: any = null;
-      if (this.dKeyPressed) {
+      if (this.debugKeyPressed) {
         debugLang = {
           code: "debug",
           native: "Debug",
@@ -206,6 +218,7 @@ export class LangSelector extends LitElement {
       "user-setting",
       "o-modal",
       "o-button",
+      "territory-patterns-modal",
     ];
 
     document.title = this.translateText("main.title") ?? document.title;
@@ -253,7 +266,7 @@ export class LangSelector extends LitElement {
   }
 
   private openModal() {
-    this.debugMode = this.dKeyPressed;
+    this.debugMode = this.debugKeyPressed;
     this.showModal = true;
     this.loadLanguageList();
   }

@@ -162,7 +162,7 @@ export class LanguageModal extends LitElement {
         <div class="c-modal__wrapper">
           <header class="c-modal__header">
             ${translateText("select_lang.title")}
-            <div class="c-modal__close" @click=${this.close}>X</div>
+            <div class="c-modal__close" @click=${this.close}>✕</div>
           </header>
 
           <section class="c-modal__content">

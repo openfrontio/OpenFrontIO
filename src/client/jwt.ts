@@ -1,5 +1,5 @@
 import { decodeJwt } from "jose";
-import { z } from "zod/v4";
+import { z } from "zod";
 import {
   RefreshResponseSchema,
   TokenPayload,
@@ -104,9 +104,8 @@ export type IsLoggedInResponse =
   | false;
 let __isLoggedIn: IsLoggedInResponse | undefined = undefined;
 export function isLoggedIn(): IsLoggedInResponse {
-  if (__isLoggedIn === undefined) {
-    __isLoggedIn = _isLoggedIn();
-  }
+  __isLoggedIn ??= _isLoggedIn();
+
   return __isLoggedIn;
 }
 function _isLoggedIn(): IsLoggedInResponse {

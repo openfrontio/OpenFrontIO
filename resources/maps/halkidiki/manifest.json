@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 1760,
-    "num_land_tiles": 1777270,
+    "num_land_tiles": 1729369,
     "width": 2200
   },
   "mini_map": {
     "height": 880,
-    "num_land_tiles": 441119,
+    "num_land_tiles": 428074,
     "width": 1100
   },
   "name": "Halkidiki",

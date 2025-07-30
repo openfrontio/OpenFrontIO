@@ -444,6 +444,11 @@
     "name": "Chuvashia"
   },
   {
+    "code": "Circassia",
+    "continent": "Asia",
+    "name": "Circassia"
+  },
+  {
     "code": "cp",
     "name": "Clipperton Island"
   },

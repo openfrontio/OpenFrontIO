@@ -7,7 +7,6 @@ import {
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
-import { PlayerView } from "./GameView";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 
@@ -82,7 +81,11 @@ export enum GameMapType {
   Halkidiki = "Halkidiki",
   StraitOfGibraltar = "Strait of Gibraltar",
   Italia = "Italia",
+  Yenisei = "Yenisei",
+  Pluto = "Pluto",
 }
+
+export type GameMapName = keyof typeof GameMapType;
 
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
@@ -111,9 +114,11 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Halkidiki,
     GameMapType.StraitOfGibraltar,
     GameMapType.Italia,
+    GameMapType.Yenisei,
   ],
   fantasy: [
     GameMapType.Pangaea,
+    GameMapType.Pluto,
     GameMapType.Mars,
     GameMapType.DeglaciatedAntarctica,
   ],
@@ -131,7 +136,7 @@ export enum GameMode {
 }
 
 export interface UnitInfo {
-  cost: (player: Player | PlayerView) => Gold;
+  cost: (player: Player) => Gold;
   // Determines if its owner changes when its tile is conquered.
   territoryBound: boolean;
   maxHealth?: number;
@@ -194,11 +199,11 @@ export interface UnitParamsMap {
     patrolTile: TileRef;
   };
 
-  [UnitType.Shell]: {};
+  [UnitType.Shell]: Record<string, never>;
 
-  [UnitType.SAMMissile]: {};
+  [UnitType.SAMMissile]: Record<string, never>;
 
-  [UnitType.Port]: {};
+  [UnitType.Port]: Record<string, never>;
 
   [UnitType.AtomBomb]: {
     targetTile?: number;
@@ -219,25 +224,23 @@ export interface UnitParamsMap {
     loaded?: boolean;
   };
 
-  [UnitType.Factory]: {};
+  [UnitType.Factory]: Record<string, never>;
 
-  [UnitType.MissileSilo]: {
-    cooldownDuration?: number;
-  };
+  [UnitType.MissileSilo]: Record<string, never>;
 
-  [UnitType.DefensePost]: {};
+  [UnitType.DefensePost]: Record<string, never>;
 
-  [UnitType.SAMLauncher]: {};
+  [UnitType.SAMLauncher]: Record<string, never>;
 
-  [UnitType.City]: {};
+  [UnitType.City]: Record<string, never>;
 
-  [UnitType.MIRV]: {};
+  [UnitType.MIRV]: Record<string, never>;
 
   [UnitType.MIRVWarhead]: {
     targetTile?: number;
   };
 
-  [UnitType.Construction]: {};
+  [UnitType.Construction]: Record<string, never>;
 }
 
 // Type helper to get params type for a specific unit type
@@ -381,7 +384,12 @@ export class PlayerInfo {
 }
 
 export function isUnit(unit: Unit | UnitParams<UnitType>): unit is Unit {
-  return "isUnit" in unit && typeof unit.isUnit === "function" && unit.isUnit();
+  return (
+    unit !== undefined &&
+    "isUnit" in unit &&
+    typeof unit.isUnit === "function" &&
+    unit.isUnit()
+  );
 }
 
 export interface Unit {
@@ -530,8 +538,13 @@ export interface Player {
     params: UnitParams<T>,
   ): Unit;
 
+  // Returns the existing unit that can be upgraded,
+  // or false if it cannot be upgraded.
+  // New units of the same type can upgrade existing units.
+  // e.g. if a place a new city here, can it upgrade an existing city?
+  findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false;
+  canUpgradeUnit(unitType: UnitType): boolean;
   upgradeUnit(unit: Unit): void;
-
   captureUnit(unit: Unit): void;
 
   // Relations & Diplomacy
@@ -660,6 +673,7 @@ export interface Game extends GameMap {
     type: MessageType,
     playerID: PlayerID | null,
     goldAmount?: bigint,
+    params?: Record<string, string | number>,
   ): void;
   displayIncomingUnit(
     unitID: number,
@@ -686,6 +700,7 @@ export interface Game extends GameMap {
 
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
+  conquerPlayer(conqueror: Player, conquered: Player);
 }
 
 export interface PlayerActions {

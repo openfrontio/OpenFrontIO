@@ -119,7 +119,7 @@ export function getMode(list: Set<number>): number {
   // Count occurrences
   const counts = new Map<number, number>();
   for (const item of list) {
-    counts.set(item, (counts.get(item) || 0) + 1);
+    counts.set(item, (counts.get(item) ?? 0) + 1);
   }
 
   // Find the item with the highest count
@@ -139,7 +139,7 @@ export function getMode(list: Set<number>): number {
 export function sanitize(name: string): string {
   return Array.from(name)
     .join("")
-    .replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}\[\]_]/gu, "");
+    .replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}[\]_]/gu, "");
 }
 
 export function processName(name: string): string {

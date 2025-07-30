@@ -1,6 +1,5 @@
 import { Colord } from "colord";
 import { JWK } from "jose";
-import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import {
   Difficulty,
   Game,
@@ -18,6 +17,8 @@ import {
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
+import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
+import { NukeType } from "../StatsSchemas";
 
 export enum GameEnv {
   Dev,
@@ -48,8 +49,7 @@ export interface ServerConfig {
   r2AccessKey(): string;
   r2SecretKey(): string;
   otelEndpoint(): string;
-  otelUsername(): string;
-  otelPassword(): string;
+  otelAuthHeader(): string;
   otelEnabled(): boolean;
   jwtAudience(): string;
   jwtIssuer(): string;
@@ -153,10 +153,17 @@ export interface Config {
   traitorDefenseDebuff(): number;
   traitorDuration(): number;
   nukeMagnitudes(unitType: UnitType): NukeMagnitude;
+  // Number of tiles destroyed to break an alliance
+  nukeAllianceBreakThreshold(): number;
   defaultNukeSpeed(): number;
   defaultNukeTargetableRange(): number;
   defaultSamRange(): number;
-  nukeDeathFactor(humans: number, tilesOwned: number): number;
+  nukeDeathFactor(
+    nukeType: NukeType,
+    humans: number,
+    tilesOwned: number,
+    maxPop: number,
+  ): number;
   structureMinDist(): number;
   isReplay(): boolean;
   allianceExtensionPromptOffset(): number;

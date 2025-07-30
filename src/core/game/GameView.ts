@@ -459,11 +459,12 @@ export class GameView implements GameMap {
       } else {
         unit = new UnitView(this, update);
         this._units.set(update.id, unit);
-      }
-      if (update.isActive) {
         this.unitGrid.addUnit(unit);
-      } else {
+      }
+      if (!update.isActive) {
         this.unitGrid.removeUnit(unit);
+      } else if (unit.tile() !== unit.lastTile()) {
+        this.unitGrid.updateUnitCell(unit);
       }
       if (!unit.isActive()) {
         // Wait until next tick to delete the unit.
@@ -507,9 +508,7 @@ export class GameView implements GameMap {
   }
 
   myPlayer(): PlayerView | null {
-    if (this._myPlayer === null) {
-      this._myPlayer = this.playerByClientID(this._myClientID);
-    }
+    this._myPlayer ??= this.playerByClientID(this._myClientID);
     return this._myPlayer;
   }
 
