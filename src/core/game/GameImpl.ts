@@ -333,19 +333,13 @@ export class GameImpl implements Game {
         (!this.inSpawnPhase() || e.activeDuringSpawnPhase()) &&
         e.isActive()
       ) {
-        if (e.constructor.name === 'TrainingCampExecution') {
-          console.log("Ticking TrainingCampExecution");
-        }
         e.tick(this._ticks);
-      } else if (e.constructor.name === 'TrainingCampExecution') {
-        console.log("TrainingCampExecution not ticked - spawnPhase:", this.inSpawnPhase(), "active:", e.isActive());
       }
     });
     const inited: Execution[] = [];
     const unInited: Execution[] = [];
     this.unInitExecs.forEach((e) => {
       if (!this.inSpawnPhase() || e.activeDuringSpawnPhase()) {
-        console.log("Initializing execution:", e.constructor.name);
         e.init(this, this._ticks);
         inited.push(e);
       } else {
@@ -417,9 +411,11 @@ export class GameImpl implements Game {
   }
 
   addExecution(...exec: Execution[]) {
-    console.log("Adding executions to game:", exec.map(e => e.constructor.name));
     this.unInitExecs.push(...exec);
-    console.log(`Total unInitExecs: ${this.unInitExecs.length}, execs: ${this.execs.length}`);
+  }
+
+  addExecutionAtBeginning(...exec: Execution[]) {
+    this.unInitExecs.unshift(...exec);
   }
 
   removeExecution(exec: Execution) {

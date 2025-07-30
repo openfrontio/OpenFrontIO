@@ -666,6 +666,7 @@ export interface Game extends GameMap {
   ): Array<{ unit: Unit; distSquared: number }>;
 
   addExecution(...exec: Execution[]): void;
+  addExecutionAtBeginning(...exec: Execution[]): void;
   displayMessage(
     message: string,
     type: MessageType,

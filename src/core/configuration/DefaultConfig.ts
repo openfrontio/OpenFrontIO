@@ -472,8 +472,9 @@ export class DefaultConfig implements Config {
         };
       case UnitType.TrainingCamp:
         return {
-          cost: this.costWrapper(UnitType.TrainingCamp, (numUnits: number) =>
-            Math.min(500_000, (numUnits + 1) * 100_000),
+          cost: this.costWrapper(
+            UnitType.TrainingCamp,
+            (numUnits: number) => (numUnits + 1) * 500_000,
           ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 3 * 10,

@@ -37,7 +37,7 @@ export class NameLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private lastChecked = 0;
   private renderCheckRate = 100;
-  private renderRefreshRate = 500;
+  private renderRefreshRate = 100;
   private rand = new PseudoRandom(10);
   private renders: RenderInfo[] = [];
   private seenPlayers: Set<PlayerView> = new Set();
@@ -301,6 +301,12 @@ export class NameLayer implements Layer {
     // Throttle updates
     const now = Date.now();
     if (now - render.lastRenderCalc <= this.renderRefreshRate) {
+      const troopsDiv = render.element.querySelector(
+        ".player-troops",
+      ) as HTMLDivElement;
+      if (troopsDiv) {
+        troopsDiv.textContent = renderTroops(render.player.troops());
+      }
       return;
     }
     render.lastRenderCalc = now + this.rand.nextInt(0, 100);
