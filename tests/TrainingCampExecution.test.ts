@@ -5,7 +5,7 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
-  Unit,
+  UnitType,
 } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
 import { setup } from "./util/Setup";
@@ -50,49 +50,9 @@ describe("TrainingCampExecution", () => {
     });
   });
 
-  describe("Training Camp Multiplier Logic", () => {
-    it("should calculate correct multiplier for multiple camps", () => {
-      // Test the multiplier calculation logic
-      const camps = Array.from(
-        { length: 10 },
-        (_, i) =>
-          ({
-            isActive: () => true,
-            level: () => 1,
-          }) as Unit,
-      );
-
-      // 10 camps should give +100% = 2.0x multiplier
-      const activeCamps = camps.filter((camp) => camp.isActive());
-      const totalBonus = activeCamps.length * 10; // +10% per camp
-      const multiplier = 1 + totalBonus / 100; // Convert percentage to multiplier
-
-      expect(activeCamps.length).toBe(10);
-      expect(totalBonus).toBe(100); // +100%
-      expect(multiplier).toBe(2.0); // 2.0x multiplier
-    });
-
-    it("should only count active camps", () => {
-      const camps = [
-        { isActive: () => true, level: () => 1 } as Unit,
-        { isActive: () => false, level: () => 1 } as Unit,
-        { isActive: () => true, level: () => 1 } as Unit,
-      ];
-
-      const activeCamps = camps.filter((camp) => camp.isActive());
-      const totalBonus = activeCamps.length * 10;
-      const multiplier = 1 + totalBonus / 100;
-
-      expect(activeCamps.length).toBe(2);
-      expect(totalBonus).toBe(20); // +20%
-      expect(multiplier).toBe(1.2); // 1.2x multiplier
-    });
-  });
-
   describe("Training Camp Execution Behavior", () => {
     it("should deactivate when cannot build", () => {
       // Create execution with a tile that the player cannot build on
-      // We'll use a tile that's not owned by the player
       const invalidTile = game.ref(20, 20); // Tile not owned by player
       const execution = new TrainingCampExecution(player, invalidTile);
       execution.init(game, 100);
@@ -104,16 +64,18 @@ describe("TrainingCampExecution", () => {
     });
 
     it("should remain active when training camp is active", () => {
-      // Test that the execution can be created and initialized
       const execution = new TrainingCampExecution(player, tile);
       execution.init(game, 100);
-
-      // The execution should be active initially
       expect(execution.isActive()).toBe(true);
 
-      // The execution behavior depends on whether the player can build
-      // and whether the camp becomes active, which varies by game state
-      // For now, we just test that the execution can be created
+      // Tick once to trigger training camp creation
+      execution.tick(100);
+
+      // Should still be active after successful camp creation
+      expect(execution.isActive()).toBe(true);
+
+      // Verify player now has a training camp
+      expect(player.unitCount(UnitType.TrainingCamp)).toBeGreaterThan(0);
     });
   });
 });
