@@ -1,5 +1,6 @@
 import { placeName } from "../client/graphics/NameBoxCalculator";
 import { getConfig } from "./configuration/ConfigLoader";
+import { DelayedBotSpawnExecution } from "./execution/DelayedBotSpawnExecution";
 import { Executor } from "./execution/ExecutionManager";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
@@ -7,6 +8,7 @@ import {
   Attack,
   Cell,
   Game,
+  GameType,
   GameUpdates,
   NameViewData,
   Nation,
@@ -85,6 +87,7 @@ export async function createGameRunner(
     game,
     new Executor(game, gameStart.gameID, clientID),
     callBack,
+    gameStart,
   );
   gr.init();
   return gr;
@@ -101,6 +104,7 @@ export class GameRunner {
     public game: Game,
     private execManager: Executor,
     private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
+    private gameStartInfo: GameStartInfo,
   ) {}
 
   init() {
@@ -108,9 +112,15 @@ export class GameRunner {
       this.game.addExecution(...this.execManager.spawnPlayers());
     }
     if (this.game.config().bots() > 0) {
-      this.game.addExecution(
-        ...this.execManager.spawnBots(this.game.config().numBots()),
-      );
+      if (this.game.config().gameConfig().gameType === GameType.Singleplayer) {
+        this.game.addExecution(
+          new DelayedBotSpawnExecution(this.gameStartInfo.gameID),
+        );
+      } else {
+        this.game.addExecution(
+          ...this.execManager.spawnBots(this.game.config().numBots()),
+        );
+      }
     }
     if (this.game.config().spawnNPCs()) {
       this.game.addExecution(...this.execManager.fakeHumanExecutions());
@@ -157,7 +167,11 @@ export class GameRunner {
       return;
     }
 
-    if (this.game.inSpawnPhase() && this.game.ticks() % 2 === 0) {
+    if (
+      (this.game.inSpawnPhase() ||
+        this.game.config().gameConfig().gameType === GameType.Singleplayer) &&
+      this.game.ticks() % 2 === 0
+    ) {
       this.game
         .players()
         .filter(
