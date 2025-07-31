@@ -72,6 +72,8 @@ export class CloseViewEvent implements GameEvent {}
 
 export class RefreshGraphicsEvent implements GameEvent {}
 
+export class TogglePerformanceOverlayEvent implements GameEvent {}
+
 export class ToggleStructureEvent implements GameEvent {
   constructor(public readonly structureType: UnitType | null) {}
 }
@@ -183,6 +185,14 @@ export class InputHandler {
       let deltaX = 0;
       let deltaY = 0;
 
+      // Skip if shift is held down
+      if (
+        this.activeKeys.has("ShiftLeft") ||
+        this.activeKeys.has("ShiftRight")
+      ) {
+        return;
+      }
+
       if (
         this.activeKeys.has(this.keybinds.moveUp) ||
         this.activeKeys.has("ArrowUp")
@@ -258,6 +268,8 @@ export class InputHandler {
           this.keybinds.centerCamera,
           "ControlLeft",
           "ControlRight",
+          "ShiftLeft",
+          "ShiftRight",
         ].includes(e.code)
       ) {
         this.activeKeys.add(e.code);
@@ -298,6 +310,14 @@ export class InputHandler {
       if (e.code === this.keybinds.centerCamera) {
         e.preventDefault();
         this.eventBus.emit(new CenterCameraEvent());
+      }
+
+      // Shift-D to toggle performance overlay
+      console.log(e.code, e.shiftKey, e.ctrlKey, e.altKey, e.metaKey);
+      if (e.code === "KeyD" && e.shiftKey) {
+        e.preventDefault();
+        console.log("TogglePerformanceOverlayEvent");
+        this.eventBus.emit(new TogglePerformanceOverlayEvent());
       }
 
       this.activeKeys.delete(e.code);
