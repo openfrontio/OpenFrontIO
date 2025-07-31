@@ -27,10 +27,6 @@ export class SpawnExecution implements Execution {
   tick(ticks: number) {
     this.active = false;
 
-    console.log(
-      `SpawnExecution tick ${ticks}: player=${this.playerInfo.name}, tile=${this.tile}, inSpawnPhase=${this.mg.inSpawnPhase()}, gameType=${this.mg.config().gameConfig().gameType}`,
-    );
-
     if (!this.mg.isValidRef(this.tile)) {
       console.warn(`SpawnExecution: tile ${this.tile} not valid`);
       return;
@@ -40,9 +36,6 @@ export class SpawnExecution implements Execution {
       !this.mg.inSpawnPhase() &&
       this.mg.config().gameConfig().gameType !== GameType.Singleplayer
     ) {
-      console.log(
-        `SpawnExecution: spawn phase ended, not singleplayer, aborting`,
-      );
       this.active = false;
       return;
     }
