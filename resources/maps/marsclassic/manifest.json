@@ -1,171 +1,51 @@
 {
   "map": {
-    "height": 1150,
-    "num_land_tiles": 1021856,
-    "width": 2500
+    "height": 1000,
+    "num_land_tiles": 1354047,
+    "width": 2000
   },
   "mini_map": {
-    "height": 575,
-    "num_land_tiles": 248400,
-    "width": 1250
+    "height": 500,
+    "num_land_tiles": 335950,
+    "width": 1000
   },
   "name": "Mars",
   "nations": [
     {
-      "coordinates": [2030, 868],
-      "name": "United States Colony",
-      "strength": 3,
-      "flag": "us"
+      "coordinates": [650, 415],
+      "flag": "us",
+      "name": "United States",
+      "strength": 3
     },
     {
-      "coordinates": [1710, 340],
-      "name": "Russian Colony",
-      "strength": 2,
-      "flag": "ru"
+      "coordinates": [122, 750],
+      "flag": "ussr",
+      "name": "USSR",
+      "strength": 2
     },
     {
-      "coordinates": [192, 410],
+      "coordinates": [1232, 735],
+      "flag": "ru",
+      "name": "Russia",
+      "strength": 2
+    },
+    {
+      "coordinates": [966, 511],
+      "flag": "",
       "name": "European Space Agency",
-      "strength": 2,
-      "flag": ""
+      "strength": 2
     },
     {
       "coordinates": [1460, 488],
-      "name": "British Colony",
-      "strength": 3,
-      "flag": "gb"
+      "flag": "gb",
+      "name": "United Kingdom",
+      "strength": 3
     },
     {
-      "coordinates": [700, 600],
-      "name": "Chinese Colony",
-      "strength": 3,
-      "flag": "cn"
-    },
-    {
-      "coordinates": [1200, 276],
-      "name": "North Korean Colony",
-      "strength": 1,
-      "flag": ""
-    },
-    {
-      "coordinates": [1760, 840],
-      "name": "Olympus Mons Tribe",
-      "strength": 1,
-      "flag": ""
-    },
-    {
-      "coordinates": [837, 200],
-      "name": "African Space Agency",
-      "strength": 2,
-      "flag": ""
-    },
-    {
-      "coordinates": [1140, 890],
-      "name": "Elysium Mons Tribe",
-      "strength": 1,
-      "flag": ""
-    },
-    {
-      "coordinates": [430, 740],
-      "name": "Indian Colony",
-      "strength": 2,
-      "flag": "in"
-    },
-    {
-      "coordinates": [1350, 100],
-      "name": "United Nations Base",
-      "strength": 3,
-      "flag": ""
-    },
-    {
-      "coordinates": [460, 110],
-      "name": "Canadian Colony",
-      "strength": 2,
-      "flag": "ca"
-    },
-    {
-      "coordinates": [1070, 575],
-      "name": "Japanese Colony",
-      "strength": 3,
-      "flag": "jp"
-    },
-    {
-      "coordinates": [1960, 555],
-      "name": "German Colony",
-      "strength": 3,
-      "flag": "de"
-    },
-    {
-      "coordinates": [2100, 400],
-      "name": "French Colony",
-      "strength": 2,
-      "flag": "fr"
-    },
-    {
-      "coordinates": [2200, 515],
-      "name": "Turkish Colony",
-      "strength": 1,
-      "flag": "tr"
-    },
-    {
-      "coordinates": [1924, 1015],
-      "name": "South African Colony",
-      "strength": 1,
-      "flag": "za"
-    },
-    {
-      "coordinates": [1727, 510],
-      "name": "Spanish Colony",
-      "strength": 2,
-      "flag": "es"
-    },
-    {
-      "coordinates": [295, 565],
-      "name": "Swiss Colony",
-      "strength": 1,
-      "flag": "ch"
-    },
-    {
-      "coordinates": [94, 82],
-      "name": "Brazilian Colony",
-      "strength": 1,
-      "flag": "br"
-    },
-    {
-      "coordinates": [1070, 69],
-      "name": "Saudi Arabian Colony",
-      "strength": 1,
-      "flag": "sa"
-    },
-    {
-      "coordinates": [470, 240],
-      "name": "Iceland Colony",
-      "strength": 3,
-      "flag": "is"
-    },
-    {
-      "coordinates": [106, 312],
-      "name": "Irish Colony",
-      "strength": 1,
-      "flag": "ie"
-    },
-    {
-      "coordinates": [1900, 380],
-      "name": "Romanian Colony",
-      "strength": 1,
-      "flag": "ro"
-    },
-    {
-      "coordinates": [1518, 40],
-      "name": "Swedish Colony",
-      "strength": 1,
-      "flag": "se"
-    },
-    {
-      "coordinates": [1870, 200],
-      "name": "Mongolian Colony",
-      "strength": 1,
-      "flag": "mn"
+      "coordinates": [1850, 415],
+      "flag": "cn",
+      "name": "China",
+      "strength": 3
     }
   ]
 }
