@@ -1,4 +1,11 @@
-import { Execution, Game, Player, PlayerInfo, PlayerType } from "../game/Game";
+import {
+  Execution,
+  Game,
+  GameType,
+  Player,
+  PlayerInfo,
+  PlayerType,
+} from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { BotExecution } from "./BotExecution";
 import { PlayerExecution } from "./PlayerExecution";
@@ -20,12 +27,22 @@ export class SpawnExecution implements Execution {
   tick(ticks: number) {
     this.active = false;
 
+    console.log(
+      `SpawnExecution tick ${ticks}: player=${this.playerInfo.name}, tile=${this.tile}, inSpawnPhase=${this.mg.inSpawnPhase()}, gameType=${this.mg.config().gameConfig().gameType}`,
+    );
+
     if (!this.mg.isValidRef(this.tile)) {
       console.warn(`SpawnExecution: tile ${this.tile} not valid`);
       return;
     }
 
-    if (!this.mg.inSpawnPhase()) {
+    if (
+      !this.mg.inSpawnPhase() &&
+      this.mg.config().gameConfig().gameType !== GameType.Singleplayer
+    ) {
+      console.log(
+        `SpawnExecution: spawn phase ended, not singleplayer, aborting`,
+      );
       this.active = false;
       return;
     }

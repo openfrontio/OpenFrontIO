@@ -11,7 +11,7 @@ import {
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import { GameType, PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import {
   ErrorUpdate,
@@ -383,7 +383,10 @@ export class ClientGameRunner {
     if (
       this.gameView.isLand(tile) &&
       !this.gameView.hasOwner(tile) &&
-      this.gameView.inSpawnPhase()
+      (this.gameView.inSpawnPhase() ||
+        (this.gameView.config().gameConfig().gameType ===
+          GameType.Singleplayer &&
+          !this.gameView.playerByClientID(this.lobby.clientID)?.hasSpawned()))
     ) {
       this.eventBus.emit(new SendSpawnIntentEvent(tile));
       return;
