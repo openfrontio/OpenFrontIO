@@ -49,10 +49,17 @@ export interface MenuElement {
   text?: string;
   fontSize?: string;
   tooltipItems?: TooltipItem[];
+  tooltipKeys?: TooltipKey[];
 
   disabled: (params: MenuElementParams) => boolean;
   action?: (params: MenuElementParams) => void; // For leaf items that perform actions
   subMenu?: (params: MenuElementParams) => MenuElement[]; // For non-leaf items that open submenus
+}
+
+export interface TooltipKey {
+  key: string;
+  className: string;
+  params?: Record<string, string | number>;
 }
 
 export interface CenterButtonElement {
@@ -437,13 +444,13 @@ export const deleteUnitElement: MenuElement = {
   },
   icon: xIcon,
   color: COLORS.delete,
-  tooltipItems: [
+  tooltipKeys: [
     {
-      text: translateText("radial_menu.delete_unit_title"),
+      key: "radial_menu.delete_unit_title",
       className: "title",
     },
     {
-      text: translateText("radial_menu.delete_unit_description"),
+      key: "radial_menu.delete_unit_description",
       className: "description",
     },
   ],
