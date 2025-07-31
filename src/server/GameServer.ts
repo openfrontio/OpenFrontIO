@@ -219,14 +219,16 @@ export class GameServer {
             return;
           }
           const clientMsg = parsed.data;
-          if (clientMsg.type === "intent") {
+          switch (clientMsg.type) {
+          case "intent": {
             if (clientMsg.intent.clientID !== client.clientID) {
               this.log.warn(
                 `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
               );
               return;
             }
-            if (clientMsg.intent.type === "mark_disconnected") {
+            switch (clientMsg.intent.type) {
+            case "mark_disconnected": {
               this.log.warn(
                 `Should not receive mark_disconnected intent from client`,
               );
@@ -234,7 +236,7 @@ export class GameServer {
             }
 
             // Handle kick_player intent via WebSocket
-            if (clientMsg.intent.type === "kick_player") {
+            case "kick_player": {
               const authenticatedClientID = client.clientID;
 
               // Check if the authenticated client is the lobby creator
@@ -267,17 +269,23 @@ export class GameServer {
               this.kickClient(clientMsg.intent.target);
               return;
             }
-
-            this.addIntent(clientMsg.intent);
+            default: {
+              this.addIntent(clientMsg.intent);
+              break;
+            }
+            }
+            break;
           }
-          if (clientMsg.type === "ping") {
+          case "ping": {
             this.lastPingUpdate = Date.now();
             client.lastPing = Date.now();
+            break;
           }
-          if (clientMsg.type === "hash") {
+          case "hash": {
             client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
+            break;
           }
-          if (clientMsg.type === "winner") {
+          case "winner": {
             if (
               this.outOfSyncClients.has(client.clientID) ||
               this.kickedClients.has(client.clientID) ||
@@ -287,6 +295,14 @@ export class GameServer {
             }
             this.winner = clientMsg;
             this.archiveGame();
+            break;
+          }
+          default: {
+          this.log.warn(`Unknown message type: ${(clientMsg as any).type}`, {
+            clientID: client.clientID,
+          });
+          break;
+          }
           }
         } catch (error) {
           this.log.info(
