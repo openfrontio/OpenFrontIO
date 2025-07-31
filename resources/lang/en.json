@@ -21,7 +21,9 @@
     "instructions": "Instructions",
     "how_to_play": "How to Play",
     "advertise": "Advertise",
-    "wiki": "Wiki"
+    "wiki": "Wiki",
+    "privacy_policy": "Privacy Policy",
+    "terms_of_service": "Terms of Service"
   },
   "news": {
     "full_changelog": "See the complete change log",
@@ -160,7 +162,9 @@
     "baikal": "Baikal",
     "halkidiki": "Halkidiki",
     "straitofgibraltar": "Strait of Gibraltar",
-    "italia": "Italia"
+    "italia": "Italia",
+    "yenisei": "Yenisei",
+    "pluto": "Pluto"
   },
   "map_categories": {
     "continental": "Continental",
@@ -274,6 +278,8 @@
     "anonymous_names_label": "Hidden Names",
     "anonymous_names_desc": "Hide real player names with random ones on your screen.",
     "anonymous_names_enabled": "Anonymous names enabled",
+    "lobby_id_visibility_label": "Hidden Lobby IDs",
+    "lobby_id_visibility_desc": "Hide Lobby ID in private lobby creation",
     "real_names_shown": "Real names shown",
     "left_click_label": "Left Click to Open Menu",
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
@@ -286,6 +292,8 @@
     "troop_ratio_desc": "Adjust the balance between troops (for combat) and workers (for gold production) (1–100%)",
     "territory_patterns_label": "🏳️ Territory Patterns",
     "territory_patterns_desc": "Choose whether to display territory pattern designs in game",
+    "performance_overlay_label": "Performance Overlay",
+    "performance_overlay_desc": "Toggle the performance overlay. When enabled, the performance overlay will be displayed. Press shift-D during game to toggle.",
     "easter_writing_speed_label": "Writing Speed Multiplier",
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
     "easter_bug_count_label": "Bug Count",
@@ -448,6 +456,7 @@
     "gold": "Gold",
     "ports": "Ports",
     "cities": "Cities",
+    "factories": "Factories",
     "missile_launchers": "Missile launchers",
     "sams": "SAMs",
     "warships": "Warships",
@@ -573,6 +582,9 @@
       "grogu_head": "Grogu Head",
       "grogu": "Grogu"
     }
+  },
+  "spawn_ad": {
+    "loading": "Loading advertisement..."
   },
   "auth": {
     "login_required": "Login is required to access this website.",
