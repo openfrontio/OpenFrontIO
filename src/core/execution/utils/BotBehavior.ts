@@ -41,14 +41,15 @@ export class BotBehavior {
   handleAllianceExtensionRequests() {
     for (const alliance of this.player.alliances()) {
       if (!alliance.extensionRequested()) continue;
-      if (!alliance.canExtend() && this.random.chance(1.5)) {
-        this.game.addExecution(
-          new AllianceExtensionExecution(
-            this.player,
-            alliance.other(this.player).id(),
-          ),
-        );
-      }
+      if (!alliance.canExtend()) continue;
+      if (!this.random.chance(1.5)) continue;
+
+      this.game.addExecution(
+        new AllianceExtensionExecution(
+          this.player,
+          alliance.other(this.player).id(),
+        ),
+      );
     }
   }
 
