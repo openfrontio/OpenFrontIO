@@ -41,7 +41,7 @@ export class BotBehavior {
   handleAllianceExtensionRequests() {
     for (const alliance of this.player.alliances()) {
       if (!alliance.extensionRequested()) continue;
-      if (!alliance.canExtend()) continue;
+      if (alliance.canExtend()) continue;
       if (!this.random.chance(1.5)) continue;
 
       this.game.addExecution(
