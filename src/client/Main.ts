@@ -4,9 +4,7 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
 import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { FetchGameMapLoader } from "../core/game/FetchGameMapLoader";
 import { GameType } from "../core/game/Game";
-import { GameMapLoader } from "../core/game/GameMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { joinLobby } from "./ClientGameRunner";
 import "./DarkModeButton";
@@ -82,7 +80,6 @@ class Client {
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
-  private mapLoader: GameMapLoader = new FetchGameMapLoader(`/maps`, version);
 
   constructor() {}
 
@@ -150,7 +147,6 @@ class Client {
     }
 
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
-    this.publicLobby.injectMapLoader(this.mapLoader);
 
     window.addEventListener("beforeunload", () => {
       console.log("Browser is closing");
@@ -167,7 +163,6 @@ class Client {
       "single-player-modal",
     ) as SinglePlayerModal;
     spModal instanceof SinglePlayerModal;
-    spModal.injectMapLoader(this.mapLoader);
 
     const singlePlayer = document.getElementById("single-player");
     if (singlePlayer === null) throw new Error("Missing single-player");
@@ -349,7 +344,6 @@ class Client {
         this.publicLobby.leaveLobby();
       }
     });
-    hostModal.injectMapLoader(this.mapLoader);
 
     this.joinModal = document.querySelector(
       "join-private-lobby-modal",
@@ -440,7 +434,6 @@ class Client {
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
       },
-      this.mapLoader,
       () => {
         console.log("Closing modals");
         document.getElementById("settings-button")?.classList.add("hidden");

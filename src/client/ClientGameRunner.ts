@@ -34,6 +34,7 @@ import {
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentID } from "./Main";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -60,7 +61,6 @@ export interface LobbyConfig {
 
 export function joinLobby(
   lobbyConfig: LobbyConfig,
-  mapLoader: GameMapLoader,
   onPrestart: () => void,
   onJoin: () => void,
 ): () => void {
@@ -84,7 +84,7 @@ export function joinLobby(
   const onmessage = (message: ServerMessage) => {
     if (message.type === "prestart") {
       console.log(`lobby: game prestarting: ${JSON.stringify(message)}`);
-      terrainLoad = loadTerrainMap(message.gameMap, mapLoader);
+      terrainLoad = loadTerrainMap(message.gameMap, terrainMapFileLoader);
       onPrestart();
     }
     if (message.type === "start") {
@@ -100,7 +100,7 @@ export function joinLobby(
         transport,
         userSettings,
         terrainLoad,
-        mapLoader,
+        terrainMapFileLoader,
       ).then((r) => r.start());
     }
     if (message.type === "error") {
