@@ -6,7 +6,7 @@ import { base64url } from "jose";
 import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { COSMETICS } from "../core/CosmeticSchemas";
@@ -47,7 +47,7 @@ export function startWorker() {
 
   const privilegeChecker = new PrivilegeChecker(COSMETICS, base64url.decode);
 
-  if (config.env() === GameEnv.Prod && config.otelEnabled()) {
+  if (config.otelEnabled()) {
     initWorkerMetrics(gm);
   }
 
@@ -449,6 +449,7 @@ export function startWorker() {
 
           // Handle other message types
         } catch (error) {
+          ws.close(1011, "Internal server error");
           log.warn(
             `error handling websocket message for ${ipAnonymize(ip)}: ${error}`.substring(
               0,
@@ -463,6 +464,9 @@ export function startWorker() {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
         ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
       }
+    });
+    ws.on("close", () => {
+      ws.removeAllListeners();
     });
   });
 
