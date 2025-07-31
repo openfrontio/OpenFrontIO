@@ -5,7 +5,7 @@ import { AllPlayers } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { TerraNulliusImpl } from "../../../core/game/TerraNulliusImpl";
 import { emojiTable, flattenedEmojiTable } from "../../../core/Util";
-import { ShowEmojiMenuEvent } from "../../InputHandler";
+import { CloseViewEvent, ShowEmojiMenuEvent } from "../../InputHandler";
 import { SendEmojiIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 
@@ -48,6 +48,11 @@ export class EmojiTable extends LitElement {
         );
         this.hideTable();
       });
+    });
+    this.eventBus.on(CloseViewEvent, (e) => {
+      if (!this.hidden) {
+        this.hideTable();
+      }
     });
   }
 
