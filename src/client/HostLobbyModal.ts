@@ -14,7 +14,12 @@ import {
   mapCategories,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
-import { GameConfig, GameInfo, TeamCountConfig, ClientInfo } from "../core/Schemas";
+import {
+  ClientInfo,
+  GameConfig,
+  GameInfo,
+  TeamCountConfig,
+} from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
@@ -641,21 +646,20 @@ export class HostLobbyModal extends LitElement {
   }
 
   private async pollPlayers() {
-  const config = await getServerConfigFromClient();
-  fetch(`/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  })
-    .then((response) => response.json())
-    .then((data: GameInfo) => {
-      console.log(`got game info response: ${JSON.stringify(data)}`);
+    const config = await getServerConfigFromClient();
+    fetch(`/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((data: GameInfo) => {
+        console.log(`got game info response: ${JSON.stringify(data)}`);
 
-
-      this.clients = data.clients ?? [];
-    });
-}
+        this.clients = data.clients ?? [];
+      });
+  }
 
   private kickPlayer(clientID: string) {
     // Dispatch event to be handled by WebSocket instead of HTTP

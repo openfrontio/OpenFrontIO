@@ -15,8 +15,8 @@ import {
   ClientMessageSchema,
   GameRecord,
   GameRecordSchema,
+  ID,
   ServerErrorMessage,
-  ID
 } from "../core/Schemas";
 import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
 import { archive, readGameRecord } from "./Archive";
@@ -92,8 +92,8 @@ export function startWorker() {
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
       const id = req.params.id;
       const creatorClientID = (() => {
-        if (typeof req.query.creatorClientID !== 'string') return undefined;
-        
+        if (typeof req.query.creatorClientID !== "string") return undefined;
+
         const trimmed = req.query.creatorClientID.trim();
         return ID.safeParse(trimmed).success ? trimmed : undefined;
       })();
