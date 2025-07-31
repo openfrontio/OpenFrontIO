@@ -563,7 +563,7 @@
   {
     "code": "cd",
     "continent": "Africa",
-    "name": "Democratic Republic of the Congo"
+    "name": "Congo, Democratic Republic of"
   },
   {
     "code": "dg",
@@ -707,7 +707,7 @@
   {
     "code": "fm",
     "continent": "Oceania",
-    "name": "Federated States of Micronesia"
+    "name": "Micronesia, Federated States of"
   },
   {
     "code": "fj",
@@ -1677,7 +1677,7 @@
   {
     "code": "cg",
     "continent": "Africa",
-    "name": "Republic of the Congo"
+    "name": "Congo, Republic of"
   },
   {
     "code": "Republic of Egypt",
