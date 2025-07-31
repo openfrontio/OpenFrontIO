@@ -86,8 +86,12 @@ export function joinLobby(
       onPrestart();
     }
     if (message.type === "start") {
-      // Trigger prestart for singleplayer games
-      onPrestart();
+      // Only trigger prestart for multiplayer games, not for singleplayer
+      if (
+        lobbyConfig.gameStartInfo?.config.gameType !== GameType.Singleplayer
+      ) {
+        onPrestart();
+      }
       console.log(`lobby: game started: ${JSON.stringify(message, null, 2)}`);
       onJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
@@ -383,10 +387,7 @@ export class ClientGameRunner {
     if (
       this.gameView.isLand(tile) &&
       !this.gameView.hasOwner(tile) &&
-      (this.gameView.inSpawnPhase() ||
-        (this.gameView.config().gameConfig().gameType ===
-          GameType.Singleplayer &&
-          !this.gameView.playerByClientID(this.lobby.clientID)?.hasSpawned()))
+      this.gameView.inSpawnPhase()
     ) {
       this.eventBus.emit(new SendSpawnIntentEvent(tile));
       return;

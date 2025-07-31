@@ -253,6 +253,13 @@ export class DefaultConfig implements Config {
     return this._serverConfig;
   }
 
+  turnIntervalMs(): number {
+    if (this._gameConfig.gameType === GameType.Singleplayer) {
+      return 10;
+    }
+    return this._serverConfig.turnIntervalMs();
+  }
+
   userSettings(): UserSettings {
     if (this._userSettings === null) {
       throw new Error("userSettings is null");
@@ -539,7 +546,7 @@ export class DefaultConfig implements Config {
     return 3;
   }
   numSpawnPhaseTurns(): number {
-    return this._gameConfig.gameType === GameType.Singleplayer ? 0 : 300;
+    return this._gameConfig.gameType === GameType.Singleplayer ? 100 : 300;
   }
   numBots(): number {
     return this.bots();
