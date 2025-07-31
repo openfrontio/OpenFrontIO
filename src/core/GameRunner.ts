@@ -1,14 +1,13 @@
 import { placeName } from "../client/graphics/NameBoxCalculator";
 import { getConfig } from "./configuration/ConfigLoader";
-import { DelayedBotSpawnExecution } from "./execution/DelayedBotSpawnExecution";
 import { Executor } from "./execution/ExecutionManager";
+import { SpawnExecution } from "./execution/SpawnExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
   Attack,
   Cell,
   Game,
-  GameType,
   GameUpdates,
   NameViewData,
   Nation,
@@ -87,7 +86,6 @@ export async function createGameRunner(
     game,
     new Executor(game, gameStart.gameID, clientID),
     callBack,
-    gameStart,
   );
   gr.init();
   return gr;
@@ -97,6 +95,7 @@ export class GameRunner {
   private turns: Turn[] = [];
   private currTurn = 0;
   private isExecuting = false;
+  private nationsSpawned = false;
 
   private playerViewData: Record<PlayerID, NameViewData> = {};
 
@@ -104,7 +103,6 @@ export class GameRunner {
     public game: Game,
     private execManager: Executor,
     private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
-    private gameStartInfo: GameStartInfo,
   ) {}
 
   init() {
@@ -112,20 +110,25 @@ export class GameRunner {
       this.game.addExecution(...this.execManager.spawnPlayers());
     }
     if (this.game.config().bots() > 0) {
-      if (this.game.config().gameConfig().gameType === GameType.Singleplayer) {
-        this.game.addExecution(
-          new DelayedBotSpawnExecution(this.gameStartInfo.gameID),
-        );
-      } else {
-        this.game.addExecution(
-          ...this.execManager.spawnBots(this.game.config().numBots()),
-        );
-      }
+      this.game.addExecution(
+        ...this.execManager.spawnBots(this.game.config().numBots()),
+      );
     }
-    if (this.game.config().spawnNPCs()) {
-      this.game.addExecution(...this.execManager.fakeHumanExecutions());
-    }
+
     this.game.addExecution(new WinCheckExecution());
+  }
+
+  private spawnNationsWithDelay() {
+    if (this.game.config().spawnNPCs()) {
+      for (const nation of this.game.nations()) {
+        const tile = this.game.ref(nation.spawnCell.x, nation.spawnCell.y);
+        const spawnExecution = new SpawnExecution(nation.playerInfo, tile);
+        this.game.addExecution(spawnExecution);
+      }
+
+      const nationExecutions = this.execManager.fakeHumanExecutions();
+      this.game.addExecution(...nationExecutions);
+    }
   }
 
   public addTurn(turn: Turn): void {
@@ -167,17 +170,27 @@ export class GameRunner {
       return;
     }
 
-    if (
-      (this.game.inSpawnPhase() ||
-        this.game.config().gameConfig().gameType === GameType.Singleplayer) &&
-      this.game.ticks() % 2 === 0
-    ) {
+    if (!this.nationsSpawned && !this.game.inSpawnPhase()) {
+      this.spawnNationsWithDelay();
+      this.nationsSpawned = true;
+    }
+
+    if (this.game.inSpawnPhase() && this.game.ticks() % 2 === 0) {
       this.game
         .players()
         .filter(
           (p) =>
             p.type() === PlayerType.Human || p.type() === PlayerType.FakeHuman,
         )
+        .forEach(
+          (p) => (this.playerViewData[p.id()] = placeName(this.game, p)),
+        );
+    }
+
+    if (this.nationsSpawned && this.game.ticks() % 2 === 0) {
+      this.game
+        .players()
+        .filter((p) => p.type() === PlayerType.FakeHuman)
         .forEach(
           (p) => (this.playerViewData[p.id()] = placeName(this.game, p)),
         );

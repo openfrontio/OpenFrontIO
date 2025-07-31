@@ -1,11 +1,4 @@
-import {
-  Execution,
-  Game,
-  GameType,
-  Player,
-  PlayerInfo,
-  PlayerType,
-} from "../game/Game";
+import { Execution, Game, Player, PlayerInfo, PlayerType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { BotExecution } from "./BotExecution";
 import { PlayerExecution } from "./PlayerExecution";
@@ -34,7 +27,7 @@ export class SpawnExecution implements Execution {
 
     if (
       !this.mg.inSpawnPhase() &&
-      this.mg.config().gameConfig().gameType !== GameType.Singleplayer
+      this.playerInfo.playerType !== PlayerType.FakeHuman
     ) {
       this.active = false;
       return;
@@ -47,18 +40,21 @@ export class SpawnExecution implements Execution {
       player = this.mg.addPlayer(this.playerInfo);
     }
 
-    player.tiles().forEach((t) => player.relinquish(t));
-    getSpawnTiles(this.mg, this.tile).forEach((t) => {
-      player.conquer(t);
-    });
+    if (player) {
+      player.tiles().forEach((t) => player.relinquish(t));
+      getSpawnTiles(this.mg, this.tile).forEach((t) => {
+        player.conquer(t);
+      });
 
-    if (!player.hasSpawned()) {
-      this.mg.addExecution(new PlayerExecution(player));
-      if (player.type() === PlayerType.Bot) {
-        this.mg.addExecution(new BotExecution(player));
+      if (player && !player.hasSpawned()) {
+        this.mg.addExecution(new PlayerExecution(player));
+        if (player.type() === PlayerType.Bot) {
+          this.mg.addExecution(new BotExecution(player));
+        }
+
+        player.setHasSpawned(true);
       }
     }
-    player.setHasSpawned(true);
   }
 
   isActive(): boolean {
