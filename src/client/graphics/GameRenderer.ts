@@ -183,6 +183,7 @@ export function createRenderer(
   }
   chatModal.g = game;
   chatModal.eventBus = eventBus;
+  chatModal.initEventBus();
 
   const multiTabModal = document.querySelector(
     "multi-tab-modal",
