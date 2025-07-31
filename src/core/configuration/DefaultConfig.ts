@@ -1,5 +1,5 @@
 import { JWK } from "jose";
-import { z } from "zod/v4";
+import { z } from "zod";
 import {
   Difficulty,
   Duos,
@@ -68,6 +68,8 @@ const numPlayersConfig = {
   [GameMapType.Halkidiki]: [50, 40, 30],
   [GameMapType.StraitOfGibraltar]: [50, 40, 30],
   [GameMapType.Italia]: [50, 40, 30],
+  [GameMapType.Pluto]: [70, 50, 40],
+  [GameMapType.Yenisei]: [60, 50, 40],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
@@ -832,12 +834,13 @@ export class DefaultConfig implements Config {
     if (nukeType !== UnitType.MIRVWarhead) {
       return (5 * humans) / Math.max(1, tilesOwned);
     }
-
-    const targetPop = 0.05 * maxPop;
+    const targetPop = 0.03 * maxPop;
     const excessPop = Math.max(0, humans - targetPop);
-    const scalingFactor = 20000;
+    const scalingFactor = 500;
 
-    return (scalingFactor * excessPop * excessPop) / (maxPop * maxPop);
+    const steepness = 2;
+    const normalizedExcess = excessPop / maxPop;
+    return scalingFactor * (1 - Math.exp(-steepness * normalizedExcess));
   }
 
   structureMinDist(): number {

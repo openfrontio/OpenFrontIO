@@ -41,7 +41,7 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
-      - run: npm test
+      - run: npm run test:coverage
 
   eslint:
     name: 🔍 ESLint

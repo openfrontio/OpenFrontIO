@@ -70,6 +70,18 @@ export class PlayerInfoOverlay extends BasePlayerInfoOverlay {
     }
   }
 
+  private displayUnitCount(
+    player: PlayerView,
+    type: UnitType,
+    description: string,
+  ) {
+    return !this.game.config().isUnitDisabled(type)
+      ? html`<div class="text-sm opacity-80" translate="no">
+          ${translateText(description)}: ${player.totalUnitLevels(type)}
+        </div>`
+      : "";
+  }
+
   private renderPlayerInfo(player: PlayerView) {
     const myPlayer = this.game.myPlayer();
     const isFriendly = myPlayer?.isFriendly(player);
@@ -155,26 +167,36 @@ export class PlayerInfoOverlay extends BasePlayerInfoOverlay {
           ${translateText("player_info_overlay.gold")}:
           ${renderNumber(player.gold())}
         </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.ports")}:
-          ${player.totalUnitLevels(UnitType.Port)}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.cities")}:
-          ${player.totalUnitLevels(UnitType.City)}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.missile_launchers")}:
-          ${player.totalUnitLevels(UnitType.MissileSilo)}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.sams")}:
-          ${player.totalUnitLevels(UnitType.SAMLauncher)}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.warships")}:
-          ${player.units(UnitType.Warship).length}
-        </div>
+        ${this.displayUnitCount(
+          player,
+          UnitType.Port,
+          "player_info_overlay.ports",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.City,
+          "player_info_overlay.cities",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.Factory,
+          "player_info_overlay.factories",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.MissileSilo,
+          "player_info_overlay.missile_launchers",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.SAMLauncher,
+          "player_info_overlay.sams",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.Warship,
+          "player_info_overlay.warships",
+        )}
         ${relationHtml}
       </div>
     `;
@@ -192,7 +214,7 @@ export class PlayerInfoOverlay extends BasePlayerInfoOverlay {
     return html`
       <div
         class="block lg:flex fixed top-[150px] right-0 w-full z-50 flex-col max-w-[180px]"
-        @contextmenu=${(e: Event) => e.preventDefault()}
+        @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
           class="bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"

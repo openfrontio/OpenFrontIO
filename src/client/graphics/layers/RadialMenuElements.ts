@@ -433,8 +433,17 @@ export const centerButtonElement: CenterButtonElement = {
   },
 };
 
-export const rootMenuItems: MenuElement[] = [
-  infoMenuElement,
-  boatMenuElement,
-  buildMenuElement,
-];
+export const rootMenuElement: MenuElement = {
+  id: "root",
+  name: "root",
+  disabled: () => false,
+  icon: infoIcon,
+  color: COLORS.info,
+  subMenu: (params: MenuElementParams) => {
+    let ally = allyRequestElement;
+    if (params.selected?.isAlliedWith(params.myPlayer)) {
+      ally = allyBreakElement;
+    }
+    return [infoMenuElement, boatMenuElement, ally, buildMenuElement];
+  },
+};

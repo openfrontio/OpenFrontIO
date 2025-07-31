@@ -58,6 +58,11 @@ declare global {
       spaNewPage: (url: string) => void;
     };
   }
+
+  // Extend the global interfaces to include your custom events
+  interface DocumentEventMap {
+    "join-lobby": CustomEvent<JoinLobbyEvent>;
+  }
 }
 
 export interface JoinLobbyEvent {
@@ -383,14 +388,18 @@ class Client {
     window.addEventListener("popstate", onHashUpdate);
     window.addEventListener("hashchange", onHashUpdate);
 
-    function updateSliderProgress(slider) {
+    function updateSliderProgress(slider: HTMLInputElement) {
       const percent =
-        ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
+        ((Number(slider.value) - Number(slider.min)) /
+          (Number(slider.max) - Number(slider.min))) *
+        100;
       slider.style.setProperty("--progress", `${percent}%`);
     }
 
     document
-      .querySelectorAll("#bots-count, #private-lobby-bots-count")
+      .querySelectorAll<HTMLInputElement>(
+        "#bots-count, #private-lobby-bots-count",
+      )
       .forEach((slider) => {
         updateSliderProgress(slider);
         slider.addEventListener("input", () => updateSliderProgress(slider));
