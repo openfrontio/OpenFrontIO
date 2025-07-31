@@ -7,14 +7,13 @@ import {
   MAX_USERNAME_LENGTH,
   validateUsername,
 } from "../core/validations/username";
-import { isUserLoggedIn } from "./jwt";
 
 const usernameKey: string = "username";
 
 @customElement("username-input")
 export class UsernameInput extends LitElement {
   @state() private username: string = "";
-  @state() private disabled: boolean = true; // starts disabled
+  @property({ type: Boolean }) disabled: boolean = true; // controlled externally
   @property({ type: String }) validationError: string = "";
   private _isValid: boolean = true;
   private userSettings: UserSettings = new UserSettings();
@@ -32,15 +31,10 @@ export class UsernameInput extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-
-    const loginResult: boolean = isUserLoggedIn();
-
-    if (loginResult) {
-      this.disabled = false; // enable if logged in
-      this.username = this.getStoredUsername();
-      this.dispatchUsernameEvent();
-    }
-    this.disabled = true;
+    // Initialize with stored username
+    this.username = this.getStoredUsername();
+    // Dispatch username event on initialization
+    this.dispatchUsernameEvent();
   }
 
   render() {
@@ -121,5 +115,11 @@ export class UsernameInput extends LitElement {
 
   public isValid(): boolean {
     return this._isValid;
+  }
+
+  public resetToAnonymous(): void {
+    this.username = this.generateNewUsername();
+    this.dispatchUsernameEvent();
+    this.requestUpdate();
   }
 }

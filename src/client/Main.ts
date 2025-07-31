@@ -296,6 +296,10 @@ class Client {
         loginDiscordButton.translationKey = "main.login_discord";
         logoutDiscordButton.hidden = true;
         territoryModal.onUserMe(null);
+        if (this.usernameInput) {
+          this.usernameInput.disabled = true; // Disable when not logged in
+          this.usernameInput.resetToAnonymous(); // Reset to anonymous username
+        }
       } else {
         // Authorized
         console.log(
@@ -305,6 +309,9 @@ class Client {
         loginDiscordButton.translationKey = "main.logged_in";
         loginDiscordButton.hidden = true;
         territoryModal.onUserMe(userMeResponse);
+        if (this.usernameInput) {
+          this.usernameInput.disabled = false; // Enable when logged in
+        }
       }
     };
 
