@@ -149,3 +149,35 @@ describe("BotBehavior.handleAllianceRequests", () => {
     expect(request.reject).toHaveBeenCalled();
   });
 });
+
+describe("BotBehavior.handleAllianceExtensionRequests", () => {
+  it("should call game.addExecution when alliance extension is requested and random chance is true", () => {
+    const mockGame = { addExecution: jest.fn() } as any;
+    const mockAlliance = {
+      extensionRequested: jest.fn(() => true),
+      canExtend: jest.fn(() => false),
+      other: jest.fn(() => ({ id: () => "human_id" })),
+    };
+    const mockPlayer = {
+      alliances: jest.fn(() => [mockAlliance]),
+      id: jest.fn(() => "bot_id"),
+    } as any;
+    const mockRandom = { chance: jest.fn(() => true) } as any;
+
+    const botBehavior = new BotBehavior(
+      mockRandom,
+      mockGame,
+      mockPlayer,
+      0.5,
+      0.5,
+      0.2,
+    );
+
+    botBehavior.handleAllianceExtensionRequests();
+
+    expect(mockGame.addExecution).toHaveBeenCalled();
+    expect(mockGame.addExecution.mock.calls[0][0].constructor.name).toBe(
+      "AllianceExtensionExecution",
+    );
+  });
+});

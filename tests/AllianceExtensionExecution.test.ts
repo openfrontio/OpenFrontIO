@@ -8,7 +8,7 @@ let game: Game;
 let player1: Player;
 let player2: Player;
 let player3: Player;
-const gameID = "1b3xq";
+const gameID = "1b3xQn";
 
 describe("AllianceExtensionExecution", () => {
   beforeEach(async () => {
@@ -56,14 +56,10 @@ describe("AllianceExtensionExecution", () => {
     const allianceSpy = jest.spyOn(allianceBefore, "extend");
     const expirationBefore = allianceBefore.expiresAt();
 
-    game.addExecution(
-      new AllianceExtensionExecution(gameID, player1, player2.id()),
-    );
+    game.addExecution(new AllianceExtensionExecution(player1, player2.id()));
     game.executeNextTick();
     expect(allianceSpy).toHaveBeenCalledTimes(0); // both players must agree to extend
-    game.addExecution(
-      new AllianceExtensionExecution(gameID, player2, player1.id()),
-    );
+    game.addExecution(new AllianceExtensionExecution(player2, player1.id()));
     game.executeNextTick();
 
     const allianceAfter = player1.allianceWith(player2)!;
@@ -77,9 +73,7 @@ describe("AllianceExtensionExecution", () => {
   });
 
   test("Fails gracefully if no alliance exists", () => {
-    game.addExecution(
-      new AllianceExtensionExecution(gameID, player1, player2.id()),
-    );
+    game.addExecution(new AllianceExtensionExecution(player1, player2.id()));
     game.executeNextTick();
 
     expect(player1.allianceWith(player2)).toBeFalsy();
@@ -87,10 +81,10 @@ describe("AllianceExtensionExecution", () => {
   });
 
   test("Successfully extends existing alliance between Human and non-Human", () => {
+    //test of handleAllianceExtensions is done in BotBehavior tests
     jest.spyOn(player1, "canSendAllianceRequest").mockReturnValue(true);
     jest.spyOn(player3, "isAlive").mockReturnValue(true);
     jest.spyOn(player1, "isAlive").mockReturnValue(true);
-
     game.addExecution(new AllianceRequestExecution(player1, player3.id()));
     game.executeNextTick();
     game.executeNextTick();
@@ -105,17 +99,22 @@ describe("AllianceExtensionExecution", () => {
     expect(player3.allianceWith(player1)).toBeTruthy();
 
     const allianceBefore = player1.allianceWith(player3)!;
+    const allianceSpy = jest.spyOn(allianceBefore, "extend");
     const expirationBefore = allianceBefore.expiresAt();
 
-    const exec = new AllianceExtensionExecution(gameID, player1, player3.id());
-    jest.spyOn(exec["random"], "chance").mockReturnValue(true);
-    game.addExecution(exec);
+    game.addExecution(new AllianceExtensionExecution(player1, player3.id()));
+    game.executeNextTick();
+    expect(allianceSpy).toHaveBeenCalledTimes(0); // both players must agree to extend
+    game.addExecution(new AllianceExtensionExecution(player3, player1.id()));
     game.executeNextTick();
 
     const allianceAfter = player1.allianceWith(player3)!;
+
     expect(allianceAfter.id()).toBe(allianceBefore.id());
 
-    const expirationAfter = allianceBefore.expiresAt();
+    const expirationAfter = allianceAfter.expiresAt();
+
     expect(expirationAfter).toBeGreaterThan(expirationBefore);
+    expect(allianceSpy).toHaveBeenCalledTimes(1);
   });
 });

@@ -9,6 +9,7 @@ import {
 } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
 import { flattenedEmojiTable } from "../../Util";
+import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
 import { AttackExecution } from "../AttackExecution";
 import { EmojiExecution } from "../EmojiExecution";
 
@@ -33,6 +34,21 @@ export class BotBehavior {
         req.accept();
       } else {
         req.reject();
+      }
+    }
+  }
+
+  handleAllianceExtensionRequests() {
+    for (const alliance of this.player.alliances()) {
+      if (alliance.extensionRequested() && !alliance.canExtend()) {
+        if (this.random.chance(1.5)) {
+          this.game.addExecution(
+            new AllianceExtensionExecution(
+              this.player,
+              alliance.other(this.player).id(),
+            ),
+          );
+        }
       }
     }
   }

@@ -105,11 +105,7 @@ export class Executor {
       case "build_unit":
         return new ConstructionExecution(player, intent.unit, intent.tile);
       case "allianceExtension": {
-        return new AllianceExtensionExecution(
-          this.gameID,
-          player,
-          intent.recipient,
-        );
+        return new AllianceExtensionExecution(player, intent.recipient);
       }
 
       case "upgrade_structure":

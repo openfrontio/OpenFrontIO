@@ -53,6 +53,12 @@ export class AllianceImpl implements MutableAlliance {
     );
   }
 
+  extensionRequested(): boolean {
+    return (
+      this.extensionRequestedRequestor_ || this.extensionRequestedRecipient_
+    );
+  }
+
   public id(): number {
     return this.id_;
   }
