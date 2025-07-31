@@ -349,7 +349,7 @@ export interface Alliance {
 export interface MutableAlliance extends Alliance {
   expire(): void;
   other(player: Player): Player;
-  canExtend(): boolean;
+  bothAgreedToExtend(): boolean;
   addExtensionRequest(player: Player): void;
   id(): number;
   extend(): void;

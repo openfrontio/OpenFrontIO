@@ -40,15 +40,24 @@ export class BotBehavior {
 
   handleAllianceExtensionRequests() {
     for (const alliance of this.player.alliances()) {
+      // Alliance expiration tracked by Events Panel, only human can click Request Renew
+      // Skip if human ally didn't request extension yet, bot waits for it
       if (!alliance.extensionRequested()) continue;
-      if (alliance.canExtend()) continue;
-      if (!this.random.chance(1.5)) continue;
+      // Skip if human and bot both already agreed to extend
+      if (alliance.bothAgreedToExtend()) continue;
+
+      // If Friendly, always agree to extend
+      const human = alliance.other(this.player);
+      const attitude = this.player.relation(human);
+
+      if (attitude === Relation.Hostile || attitude === Relation.Distrustful)
+        continue;
+      if (attitude === Relation.Neutral) {
+        if (!this.random.chance(1.5)) continue;
+      }
 
       this.game.addExecution(
-        new AllianceExtensionExecution(
-          this.player,
-          alliance.other(this.player).id(),
-        ),
+        new AllianceExtensionExecution(this.player, human.id()),
       );
     }
   }

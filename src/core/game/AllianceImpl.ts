@@ -47,13 +47,15 @@ export class AllianceImpl implements MutableAlliance {
     }
   }
 
-  canExtend(): boolean {
+  bothAgreedToExtend(): boolean {
     return (
       this.extensionRequestedRequestor_ && this.extensionRequestedRecipient_
     );
   }
 
   extensionRequested(): boolean {
+    // Requestor / Recipient of the original alliance request, not of the extension request
+    // Check both booleans as we don't know who was original requestor/recipient here
     return (
       this.extensionRequestedRequestor_ || this.extensionRequestedRecipient_
     );
