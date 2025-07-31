@@ -47,18 +47,19 @@ export class BotBehavior {
       if (alliance.bothAgreedToExtend()) continue;
 
       // If Friendly, always agree to extend
-      const human = alliance.other(this.player);
-      const attitude = this.player.relation(human);
-
-      if (attitude === Relation.Hostile || attitude === Relation.Distrustful) {
-        continue;
-      }
-      if (attitude === Relation.Neutral) {
-        if (!this.random.chance(1.5)) continue;
+      switch (this.player.relation(alliance.other(this.player))) {
+        case Relation.Hostile:
+        case Relation.Distrustful:
+          continue;
+        case Relation.Neutral:
+          if (!this.random.chance(1.5)) continue;
       }
 
       this.game.addExecution(
-        new AllianceExtensionExecution(this.player, human.id()),
+        new AllianceExtensionExecution(
+          this.player,
+          alliance.other(this.player).id(),
+        ),
       );
     }
   }
