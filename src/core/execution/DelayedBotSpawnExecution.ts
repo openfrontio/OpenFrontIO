@@ -16,14 +16,16 @@ export class DelayedBotSpawnExecution implements Execution {
 
   tick(ticks: number) {
     this.tickCount++;
-    
+
     if (this.botsSpawned) {
       this.active = false;
       return;
     }
 
     if (this.tickCount >= this.MAX_WAIT_TICKS) {
-      console.warn("DelayedBotSpawnExecution: No human spawned after timeout, spawning bots anyway");
+      console.warn(
+        "DelayedBotSpawnExecution: No human spawned after timeout, spawning bots anyway",
+      );
       const botSpawner = new BotSpawner(this.mg, this.gameID);
       const botSpawns = botSpawner.spawnBots(this.mg.config().numBots());
       this.mg.addExecution(...botSpawns);
