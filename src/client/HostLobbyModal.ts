@@ -677,10 +677,6 @@ async function createLobby(creatorClientID: string): Promise<GameInfo> {
   const config = await getServerConfigFromClient();
   try {
     const id = generateID();
-
-    console.log("Creating lobby with ID:", id);
-    console.log("Creator Client ID:", creatorClientID);
-
     const response = await fetch(
       `/${config.workerPath(id)}/api/create_game/${id}?creatorClientID=${encodeURIComponent(creatorClientID)}`,
       {
@@ -691,8 +687,6 @@ async function createLobby(creatorClientID: string): Promise<GameInfo> {
         // body: JSON.stringify(data), // Include this if you need to send data
       },
     );
-
-    console.log("Response status:", response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
