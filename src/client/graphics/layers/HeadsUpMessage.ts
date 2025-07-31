@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { GameView } from "../../../core/game/GameView";
+import { GameType } from "../../../core/game/Game";
 import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 
@@ -21,7 +22,13 @@ export class HeadsUpMessage extends LitElement implements Layer {
   }
 
   tick() {
-    if (!this.game.inSpawnPhase()) {
+    // Check if we should show the spawn message
+    const shouldShowSpawnMessage = 
+      this.game.inSpawnPhase() ||
+      (this.game.config().gameConfig().gameType === GameType.Singleplayer &&
+       !this.game.myPlayer()?.hasSpawned());
+    
+    if (!shouldShowSpawnMessage) {
       this.isVisible = false;
       this.requestUpdate();
     }
