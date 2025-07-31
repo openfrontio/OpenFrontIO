@@ -65,7 +65,7 @@ export class ShellExecution implements Execution {
     const { damage } = this.mg.config().unitInfo(UnitType.Shell);
     const baseDamage = damage ?? 250;
 
-    const roll = this.random.nextInt(1, 5);
+    const roll = this.random.nextInt(1, 6);
     const damageMultiplier = (roll - 1) * 25 + 200;
 
     return Math.round((baseDamage / 250) * damageMultiplier);
