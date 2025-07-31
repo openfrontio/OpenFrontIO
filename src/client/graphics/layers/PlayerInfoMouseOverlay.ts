@@ -1,11 +1,27 @@
-import { TemplateResult, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { PlayerView } from "../../../core/game/GameView";
-import { MouseMoveEvent } from "../../InputHandler";
-import { BasePlayerInfoOverlay, OVERLAY_CONFIG } from "./BasePlayerInfoOverlay";
+import { html, LitElement, TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
+import { EventBus } from "../../../core/EventBus";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
+import { TransformHandler } from "../TransformHandler";
+import { Layer } from "./Layer";
+import { PlayerInfoManager } from "./PlayerInfoManager";
+import { HoverInfo, OVERLAY_CONFIG } from "./PlayerInfoService";
 
 @customElement("mouse-hud")
-export class PlayerInfoMouseOverlay extends BasePlayerInfoOverlay {
+export class PlayerInfoMouseOverlay extends LitElement implements Layer {
+  @property({ type: Object })
+  public game!: GameView;
+
+  @property({ type: Object })
+  public eventBus!: EventBus;
+
+  @property({ type: Object })
+  public transform!: TransformHandler;
+
+  @property({ type: Object })
+  public userSettings!: UserSettings;
+
   @state()
   private mouseX = 0;
 
@@ -15,14 +31,68 @@ export class PlayerInfoMouseOverlay extends BasePlayerInfoOverlay {
   @state()
   private isDragging = false;
 
+  @state()
+  private player: PlayerView | null = null;
+
+  @state()
+  private unit: any | null = null;
+
+  @state()
+  private isVisible = false;
+
+  private playerInfoManager!: PlayerInfoManager;
+  private _isActive = false;
   private canvas: HTMLCanvasElement | null = null;
   private handleMouseDown = () => (this.isDragging = true);
   private handleMouseUp = () => (this.isDragging = false);
   private handleMouseLeave = () => (this.isDragging = false);
+  private hoverCallback = (hoverInfo: HoverInfo) =>
+    this.onHoverInfoUpdate(hoverInfo);
+  private mouseCallback = (x: number, y: number) =>
+    this.onMousePositionUpdate(x, y);
+
+  init() {
+    this.playerInfoManager = PlayerInfoManager.getInstance(
+      this.game,
+      this.transform,
+      this.eventBus,
+    );
+
+    this.playerInfoManager.init();
+    this.playerInfoManager.subscribeToData(this.hoverCallback);
+    this.playerInfoManager.subscribeToMouse(this.mouseCallback);
+    this.setupEventListeners();
+    this._isActive = true;
+  }
+
+  destroy() {
+    this.playerInfoManager?.unsubscribeFromData(this.hoverCallback);
+    this.playerInfoManager?.unsubscribeFromMouse(this.mouseCallback);
+    this.removeCanvasEventListeners();
+    this._isActive = false;
+  }
+
+  private onMousePositionUpdate(x: number, y: number) {
+    this.mouseX = x;
+    this.mouseY = y;
+    this.requestUpdate();
+  }
+
+  private onHoverInfoUpdate(hoverInfo: HoverInfo) {
+    if (!this.userSettings?.showPlayerInfoMouseOverlay()) {
+      this.resetHoverState();
+      return;
+    }
+
+    this.player = hoverInfo.player;
+    this.unit = hoverInfo.unit;
+    this.isVisible = !!(this.player ?? this.unit);
+    this.requestUpdate();
+  }
 
   connectedCallback() {
     super.connectedCallback();
-    this.setupEventListeners();
+    this.setupCanvasEventListeners();
   }
 
   disconnectedCallback() {
@@ -31,6 +101,10 @@ export class PlayerInfoMouseOverlay extends BasePlayerInfoOverlay {
   }
 
   protected setupEventListeners() {
+    this.setupCanvasEventListeners();
+  }
+
+  private setupCanvasEventListeners() {
     this.canvas = document.querySelector("canvas");
     if (this.canvas) {
       this.canvas.addEventListener("mousedown", this.handleMouseDown);
@@ -48,17 +122,10 @@ export class PlayerInfoMouseOverlay extends BasePlayerInfoOverlay {
     }
   }
 
-  protected onMouseMove(event: MouseMoveEvent) {
-    this.mouseX = event.x;
-    this.mouseY = event.y;
-
-    const now = Date.now();
-    if (now - this.lastUpdate < OVERLAY_CONFIG.updateThrottleMs) {
-      return;
-    }
-    this.lastUpdate = now;
-
-    this.updateHoverInfo(event.x, event.y);
+  private resetHoverState() {
+    this.player = null;
+    this.unit = null;
+    this.isVisible = false;
   }
 
   protected shouldRender(): boolean {
@@ -92,10 +159,11 @@ export class PlayerInfoMouseOverlay extends BasePlayerInfoOverlay {
   }
 
   private renderPlayerInfo(player: PlayerView): TemplateResult {
-    const { row1, row2 } = this.formatStats(player);
-    const displayName = this.getShortDisplayName(player);
-    const relation = this.getRelation(player);
-    const relationClass = this.getRelationClass(relation);
+    const playerInfoService = this.playerInfoManager.getPlayerInfoService();
+    const { row1, row2 } = playerInfoService.formatStats(player);
+    const displayName = playerInfoService.getShortDisplayName(player);
+    const relation = playerInfoService.getRelation(player);
+    const relationClass = playerInfoService.getRelationClass(relation);
 
     if (row1.length === 0 && row2.length === 0) {
       return html`
@@ -120,6 +188,42 @@ export class PlayerInfoMouseOverlay extends BasePlayerInfoOverlay {
         </div>
       </div>
     `;
+  }
+
+  private renderUnitInfo(unit: any): TemplateResult {
+    const playerInfoService = this.playerInfoManager.getPlayerInfoService();
+    const relation = playerInfoService.getRelation(unit.owner());
+    const relationClass = playerInfoService.getRelationClass(relation);
+
+    return html`
+      <div class="p-2">
+        <div class="font-bold mb-1 ${relationClass}">
+          ${playerInfoService.getShortDisplayName(unit.owner())}
+        </div>
+        <div class="mt-1">
+          <div class="text-sm opacity-80">${unit.type()}</div>
+          ${unit.hasHealth()
+            ? html`
+                <div class="text-sm opacity-80">Health: ${unit.health()}</div>
+              `
+            : ""}
+        </div>
+      </div>
+    `;
+  }
+
+  tick() {
+    this.requestUpdate();
+  }
+
+  renderLayer(context: CanvasRenderingContext2D) {}
+
+  shouldTransform(): boolean {
+    return false;
+  }
+
+  createRenderRoot() {
+    return this;
   }
 
   render() {

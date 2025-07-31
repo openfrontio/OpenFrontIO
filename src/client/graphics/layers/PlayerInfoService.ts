@@ -1,14 +1,8 @@
-import { LitElement, TemplateResult, html } from "lit";
-import { property, state } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
 import { PlayerProfile, Relation, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { UserSettings } from "../../../core/game/UserSettings";
-import { MouseMoveEvent } from "../../InputHandler";
-import { renderNumber, renderTroops, translateText } from "../../Utils";
+import { renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
 
 interface StatDefinition {
   code: string;
@@ -57,71 +51,32 @@ function distSortUnitWorld(coord: { x: number; y: number }, game: GameView) {
   };
 }
 
-export abstract class BasePlayerInfoOverlay
-  extends LitElement
-  implements Layer
-{
-  @property({ type: Object })
-  public game!: GameView;
+export interface HoverInfo {
+  player: PlayerView | null;
+  playerProfile: PlayerProfile | null;
+  unit: UnitView | null;
+  mouseX: number;
+  mouseY: number;
+}
 
-  @property({ type: Object })
-  public eventBus!: EventBus;
+export class PlayerInfoService {
+  private readonly game: GameView;
+  private transform: TransformHandler;
 
-  @property({ type: Object })
-  public transform!: TransformHandler;
-
-  @property({ type: Object })
-  public userSettings!: UserSettings;
-
-  @state()
-  protected player: PlayerView | null = null;
-
-  @state()
-  protected playerProfile: PlayerProfile | null = null;
-
-  @state()
-  protected unit: UnitView | null = null;
-
-  @state()
-  protected isVisible = false;
-
-  @state()
-  protected lastUpdate = 0;
-
-  protected _isActive = false;
-  protected mouseMoveCallback: ((event: MouseMoveEvent) => void) | null = null;
-
-  protected emojiMap = Object.fromEntries(
+  private readonly emojiMap = Object.fromEntries(
     STAT_DEFINITIONS.map(({ code, emoji }) => [code, emoji]),
   );
 
-  protected rowMap = Object.fromEntries(
+  private readonly rowMap = Object.fromEntries(
     STAT_DEFINITIONS.map(({ code, row }) => [code, row]),
   );
 
-  init() {
-    this.mouseMoveCallback = (e: MouseMoveEvent) => this.onMouseMove(e);
-    this.eventBus.on(MouseMoveEvent, this.mouseMoveCallback);
-    this.setupEventListeners();
-    this._isActive = true;
+  constructor(game: GameView, transform: TransformHandler) {
+    this.game = game;
+    this.transform = transform;
   }
 
-  destroy() {
-    if (this.mouseMoveCallback) {
-      this.eventBus.off(MouseMoveEvent, this.mouseMoveCallback);
-      this.mouseMoveCallback = null;
-    }
-    this._isActive = false;
-  }
-
-  protected abstract setupEventListeners(): void;
-  protected abstract onMouseMove(event: MouseMoveEvent): void;
-  protected abstract shouldRender(): boolean;
-
-  protected findNearestUnit(worldCoord: {
-    x: number;
-    y: number;
-  }): UnitView | null {
+  findNearestUnit(worldCoord: { x: number; y: number }): UnitView | null {
     const units = this.game
       .units(UnitType.Warship, UnitType.TradeShip, UnitType.TransportShip)
       .filter(
@@ -134,52 +89,39 @@ export abstract class BasePlayerInfoOverlay
     return units.length > 0 ? units[0] : null;
   }
 
-  protected handlePlayerHover(owner: PlayerView) {
-    this.player = owner;
-    this.player.profile().then((p) => {
-      this.playerProfile = p;
-      this.requestUpdate();
-    });
-    this.isVisible = true;
-  }
-
-  protected handleUnitHover(unit: UnitView) {
-    this.unit = unit;
-    this.isVisible = true;
-  }
-
-  protected resetHoverState() {
-    this.player = null;
-    this.unit = null;
-    this.isVisible = false;
-  }
-
-  protected updateHoverInfo(x: number, y: number) {
-    this.resetHoverState();
+  async getHoverInfo(x: number, y: number): Promise<HoverInfo> {
+    const hoverInfo: HoverInfo = {
+      player: null,
+      playerProfile: null,
+      unit: null,
+      mouseX: x,
+      mouseY: y,
+    };
 
     const worldCoord = this.transform.screenToWorldCoordinates(x, y);
     if (!this.game.isValidCoord(worldCoord.x, worldCoord.y)) {
-      return;
+      return hoverInfo;
     }
 
     const tile = this.game.ref(worldCoord.x, worldCoord.y);
-    if (!tile) return;
+    if (!tile) return hoverInfo;
 
     const owner = this.game.owner(tile);
 
     if (owner && owner.isPlayer()) {
-      this.handlePlayerHover(owner as PlayerView);
+      hoverInfo.player = owner as PlayerView;
+      hoverInfo.playerProfile = await hoverInfo.player.profile();
     } else if (!this.game.isLand(tile)) {
       const nearestUnit = this.findNearestUnit(worldCoord);
       if (nearestUnit) {
-        this.handleUnitHover(nearestUnit);
+        hoverInfo.unit = nearestUnit;
       }
     }
 
-    this.requestUpdate();
+    return hoverInfo;
   }
 
-  protected getRelationClass(relation: Relation): string {
+  getRelationClass(relation: Relation): string {
     switch (relation) {
       case Relation.Hostile:
         return "text-red-500";
@@ -194,7 +136,7 @@ export abstract class BasePlayerInfoOverlay
     }
   }
 
-  protected getRelation(player: PlayerView): Relation {
+  getRelation(player: PlayerView): Relation {
     const myPlayer = this.game.myPlayer();
 
     if (myPlayer === null) {
@@ -212,14 +154,14 @@ export abstract class BasePlayerInfoOverlay
     return Relation.Neutral;
   }
 
-  protected getShortDisplayName(player: PlayerView): string {
+  getShortDisplayName(player: PlayerView): string {
     const name = player.name();
     return name.length > OVERLAY_CONFIG.maxNameLength
       ? name.slice(0, OVERLAY_CONFIG.maxNameLength - 2) + "…"
       : name;
   }
 
-  protected calculatePlayerStats(player: PlayerView): Array<[string, string]> {
+  calculatePlayerStats(player: PlayerView): Array<[string, string]> {
     const attackingTroops = player
       .outgoingAttacks()
       .map((a) => a.troops)
@@ -240,11 +182,11 @@ export abstract class BasePlayerInfoOverlay
     ];
   }
 
-  protected isStatValueEmpty(value: string): boolean {
+  private isStatValueEmpty(value: string): boolean {
     return ["0", "0.0", "0K"].includes(value);
   }
 
-  protected formatStats(player: PlayerView): {
+  formatStats(player: PlayerView): {
     row1: string[];
     row2: string[];
   } {
@@ -266,46 +208,6 @@ export abstract class BasePlayerInfoOverlay
     }
 
     return { row1, row2 };
-  }
-
-  protected renderUnitInfo(unit: UnitView): TemplateResult {
-    const relation = this.getRelation(unit.owner());
-    const relationClass = this.getRelationClass(relation);
-
-    return html`
-      <div class="p-2">
-        <div class="font-bold mb-1 ${relationClass}">
-          ${this.getShortDisplayName(unit.owner())}
-        </div>
-        <div class="mt-1">
-          <div class="text-sm opacity-80">${unit.type()}</div>
-          ${unit.hasHealth()
-            ? html`
-                <div class="text-sm opacity-80">
-                  ${translateText("player_info_overlay.health")}:
-                  ${unit.health()}
-                </div>
-              `
-            : ""}
-        </div>
-      </div>
-    `;
-  }
-
-  tick() {
-    this.requestUpdate();
-  }
-
-  renderLayer(context: CanvasRenderingContext2D) {
-    // Implementation for Layer interface - not needed for DOM-based overlays
-  }
-
-  shouldTransform(): boolean {
-    return false;
-  }
-
-  createRenderRoot() {
-    return this;
   }
 }
 

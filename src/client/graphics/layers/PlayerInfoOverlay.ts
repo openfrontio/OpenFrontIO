@@ -1,36 +1,96 @@
-import { TemplateResult, html } from "lit";
+import { html, LitElement, TemplateResult } from "lit";
 import { ref } from "lit-html/directives/ref.js";
-import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../../../client/Utils";
+import { customElement, property, state } from "lit/decorators.js";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
-import { PlayerType, Relation, UnitType } from "../../../core/game/Game";
-import { PlayerView } from "../../../core/game/GameView";
-import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
-import { renderNumber, renderTroops } from "../../Utils";
-import { BasePlayerInfoOverlay } from "./BasePlayerInfoOverlay";
+import { EventBus } from "../../../core/EventBus";
+import {
+  PlayerProfile,
+  PlayerType,
+  Relation,
+  UnitType,
+} from "../../../core/game/Game";
+import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
+import { ContextMenuEvent } from "../../InputHandler";
+import { renderNumber, renderTroops, translateText } from "../../Utils";
+import { TransformHandler } from "../TransformHandler";
+import { Layer } from "./Layer";
+import { PlayerInfoManager } from "./PlayerInfoManager";
+import { HoverInfo } from "./PlayerInfoService";
 import { CloseRadialMenuEvent } from "./RadialMenu";
 
 @customElement("player-info-overlay")
-export class PlayerInfoOverlay extends BasePlayerInfoOverlay {
+export class PlayerInfoOverlay extends LitElement implements Layer {
+  @property({ type: Object })
+  public game!: GameView;
+
+  @property({ type: Object })
+  public eventBus!: EventBus;
+
+  @property({ type: Object })
+  public transform!: TransformHandler;
+
+  @property({ type: Object })
+  public userSettings!: UserSettings;
+
   @state()
   private _isInfoVisible: boolean = false;
 
-  private lastMouseUpdate = 0;
+  @state()
+  private player: PlayerView | null = null;
+
+  @state()
+  private playerProfile: PlayerProfile | null = null;
+
+  @state()
+  private unit: UnitView | null = null;
+
+  private playerInfoManager!: PlayerInfoManager;
+  private _isActive = false;
+  private hoverCallback = (hoverInfo: HoverInfo) =>
+    this.onHoverInfoUpdate(hoverInfo);
+
+  init() {
+    this.playerInfoManager = PlayerInfoManager.getInstance(
+      this.game,
+      this.transform,
+      this.eventBus,
+    );
+
+    this.playerInfoManager.init();
+    this.playerInfoManager.subscribe(this.hoverCallback);
+    this.setupEventListeners();
+    this._isActive = true;
+  }
+
+  destroy() {
+    this.playerInfoManager?.unsubscribe(this.hoverCallback);
+    this._isActive = false;
+  }
+
+  private onHoverInfoUpdate(hoverInfo: HoverInfo) {
+    if (!this.userSettings?.showPlayerInfoOverlay()) {
+      this.hide();
+      return;
+    }
+
+    this.player = hoverInfo.player;
+    this.playerProfile = hoverInfo.playerProfile;
+    this.unit = hoverInfo.unit;
+
+    if (this.player || this.unit) {
+      this.setVisible(true);
+    } else {
+      this.hide();
+    }
+    this.requestUpdate();
+  }
 
   protected setupEventListeners() {
     this.eventBus.on(ContextMenuEvent, (e: ContextMenuEvent) =>
       this.maybeShow(e.x, e.y),
     );
     this.eventBus.on(CloseRadialMenuEvent, () => this.hide());
-  }
-
-  protected onMouseMove(event: MouseMoveEvent) {
-    const now = Date.now();
-    if (now - this.lastMouseUpdate < 100) {
-      return;
-    }
-    this.lastMouseUpdate = now;
-    this.maybeShow(event.x, event.y);
   }
 
   protected shouldRender(): boolean {
@@ -42,12 +102,18 @@ export class PlayerInfoOverlay extends BasePlayerInfoOverlay {
     this.resetHoverState();
   }
 
-  public maybeShow(x: number, y: number) {
+  public async maybeShow(x: number, y: number) {
     this.hide();
-    this.updateHoverInfo(x, y);
-    if (this.player || this.unit) {
-      this.setVisible(true);
-    }
+    const hoverInfo = await this.playerInfoManager
+      .getPlayerInfoService()
+      .getHoverInfo(x, y);
+    this.onHoverInfoUpdate(hoverInfo);
+  }
+
+  private resetHoverState() {
+    this.player = null;
+    this.playerProfile = null;
+    this.unit = null;
   }
 
   setVisible(visible: boolean) {
@@ -82,6 +148,31 @@ export class PlayerInfoOverlay extends BasePlayerInfoOverlay {
       : "";
   }
 
+  private renderUnitInfo(unit: UnitView): TemplateResult {
+    const playerInfoService = this.playerInfoManager.getPlayerInfoService();
+    const relation = playerInfoService.getRelation(unit.owner());
+    const relationClass = playerInfoService.getRelationClass(relation);
+
+    return html`
+      <div class="p-2">
+        <div class="font-bold mb-1 ${relationClass}">
+          ${playerInfoService.getShortDisplayName(unit.owner())}
+        </div>
+        <div class="mt-1">
+          <div class="text-sm opacity-80">${unit.type()}</div>
+          ${unit.hasHealth()
+            ? html`
+                <div class="text-sm opacity-80">
+                  ${translateText("player_info_overlay.health")}:
+                  ${unit.health()}
+                </div>
+              `
+            : ""}
+        </div>
+      </div>
+    `;
+  }
+
   private renderPlayerInfo(player: PlayerView) {
     const myPlayer = this.game.myPlayer();
     const isFriendly = myPlayer?.isFriendly(player);
@@ -91,10 +182,12 @@ export class PlayerInfoOverlay extends BasePlayerInfoOverlay {
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
 
+    const playerInfoService = this.playerInfoManager.getPlayerInfoService();
+
     if (player.type() === PlayerType.FakeHuman && myPlayer !== null) {
       const relation =
         this.playerProfile?.relations[myPlayer.smallID()] ?? Relation.Neutral;
-      const relationClass = this.getRelationClass(relation);
+      const relationClass = playerInfoService.getRelationClass(relation);
       const relationName = this.getRelationName(relation);
 
       relationHtml = html`
@@ -200,6 +293,20 @@ export class PlayerInfoOverlay extends BasePlayerInfoOverlay {
         ${relationHtml}
       </div>
     `;
+  }
+
+  tick() {
+    this.requestUpdate();
+  }
+
+  renderLayer(context: CanvasRenderingContext2D) {}
+
+  shouldTransform(): boolean {
+    return false;
+  }
+
+  createRenderRoot() {
+    return this;
   }
 
   render() {
