@@ -73,7 +73,7 @@ export class GameServer {
     lobbyCreatorID?: string,
   ) {
     this.log = log_.child({ gameID: id });
-    this.LobbyCreatorID = lobbyCreatorID || undefined;
+    this.LobbyCreatorID = lobbyCreatorID ?? undefined;
   }
 
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
@@ -234,8 +234,6 @@ export class GameServer {
             // Handle kick_player intent via WebSocket
             if (clientMsg.intent.type === "kick_player") {
               const authenticatedClientID = client.clientID;
-
-
 
               // Check if the authenticated client is the lobby creator
               if (authenticatedClientID !== this.LobbyCreatorID) {
