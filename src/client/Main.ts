@@ -79,7 +79,7 @@ export interface JoinLobbyEvent {
 
 class Client {
   private gameStop: (() => void) | null = null;
-  private eventBus: EventBus;
+  private eventBus: EventBus = new EventBus();
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
@@ -432,7 +432,7 @@ class Client {
     const config = await getServerConfigFromClient();
 
     this.gameStop = joinLobby(
-      (this.eventBus = new EventBus()),
+      this.eventBus,
       {
         gameID: lobby.gameID,
         serverConfig: config,
