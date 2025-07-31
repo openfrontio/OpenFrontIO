@@ -50,8 +50,9 @@ export class BotBehavior {
       const human = alliance.other(this.player);
       const attitude = this.player.relation(human);
 
-      if (attitude === Relation.Hostile || attitude === Relation.Distrustful)
+      if (attitude === Relation.Hostile || attitude === Relation.Distrustful) {
         continue;
+      }
       if (attitude === Relation.Neutral) {
         if (!this.random.chance(1.5)) continue;
       }
