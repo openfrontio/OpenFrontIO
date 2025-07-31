@@ -2,8 +2,8 @@ import * as d3 from "d3";
 import backIcon from "../../../../resources/images/BackIconWhite.svg";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { CloseViewEvent } from "../../InputHandler";
-import { Layer } from "./Layer";
 import { translateText } from "../../Utils";
+import { Layer } from "./Layer";
 import {
   CenterButtonElement,
   MenuElement,
@@ -1020,13 +1020,13 @@ export class RadialMenu implements Layer {
     for (const item of items) {
       const div = document.createElement("div");
       div.className = item.className;
-      
-      if ('key' in item) {
+
+      if ("key" in item) {
         div.textContent = translateText(item.key, item.params);
       } else {
         div.textContent = item.text;
       }
-      
+
       this.tooltipElement.appendChild(div);
     }
 
