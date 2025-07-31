@@ -134,7 +134,7 @@ export function startWorker() {
       const game = gm.createGame(id, gc, creatorClientID);
 
       log.info(
-        `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? "Public" : "Private"} game with id ${id}${creatorClientID ? `, creator: ${creatorClientID}` : ""}${gc?.gameMode ? `, mode: ${gc.gameMode}` : ""}`,
+        `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? "Public" : "Private"}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorClientID ? `, creator: ${creatorClientID}` : ""}`,
       );
       res.json(game.gameInfo());
     }),
