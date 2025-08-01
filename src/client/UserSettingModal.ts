@@ -138,6 +138,14 @@ export class UserSettingModal extends LitElement {
     console.log("🙈 Anonymous Names:", enabled ? "ON" : "OFF");
   }
 
+  private toggleLobbyIdVisibility(e: CustomEvent<{ checked: boolean }>) {
+    const hideIds = e.detail?.checked;
+    if (typeof hideIds !== "boolean") return;
+
+    this.userSettings.set("settings.lobbyIdVisibility", !hideIds); // Invert because checked=hide
+    console.log("👁️ Hidden Lobby IDs:", hideIds ? "ON" : "OFF");
+  }
+
   private toggleLeftClickOpensMenu(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -175,6 +183,13 @@ export class UserSettingModal extends LitElement {
     this.userSettings.set("settings.territoryPatterns", enabled);
 
     console.log("🏳️ Territory Patterns:", enabled ? "ON" : "OFF");
+  }
+
+  private togglePerformanceOverlay(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.performanceOverlay", enabled);
   }
 
   private handleKeybindChange(
@@ -307,6 +322,15 @@ export class UserSettingModal extends LitElement {
         @change=${this.toggleAnonymousNames}
       ></setting-toggle>
 
+      <!-- 👁️ Hidden Lobby IDs -->
+      <setting-toggle
+        label="${translateText("user_setting.lobby_id_visibility_label")}"
+        description="${translateText("user_setting.lobby_id_visibility_desc")}"
+        id="lobby-id-visibility-toggle"
+        .checked=${!this.userSettings.get("settings.lobbyIdVisibility", true)}
+        @change=${this.toggleLobbyIdVisibility}
+      ></setting-toggle>
+
       <!-- 🏳️ Territory Patterns -->
       <setting-toggle
         label="${translateText("user_setting.territory_patterns_label")}"
@@ -314,6 +338,15 @@ export class UserSettingModal extends LitElement {
         id="territory-patterns-toggle"
         .checked=${this.userSettings.territoryPatterns()}
         @change=${this.toggleTerritoryPatterns}
+      ></setting-toggle>
+
+      <!-- 📱 Performance Overlay -->
+      <setting-toggle
+        label="${translateText("user_setting.performance_overlay_label")}"
+        description="${translateText("user_setting.performance_overlay_desc")}"
+        id="performance-overlay-toggle"
+        .checked=${this.userSettings.performanceOverlay()}
+        @change=${this.togglePerformanceOverlay}
       ></setting-toggle>
 
       <!-- ⚔️ Attack Ratio -->

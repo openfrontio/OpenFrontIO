@@ -20,12 +20,20 @@ export class UserSettings {
     return this.get("settings.emojis", true);
   }
 
+  performanceOverlay() {
+    return this.get("settings.performanceOverlay", false);
+  }
+
   alertFrame() {
     return this.get("settings.alertFrame", true);
   }
 
   anonymousNames() {
     return this.get("settings.anonymousNames", false);
+  }
+
+  lobbyIdVisibility() {
+    return this.get("settings.lobbyIdVisibility", true);
   }
 
   fxLayer() {
@@ -66,12 +74,20 @@ export class UserSettings {
     this.set("settings.emojis", !this.emojis());
   }
 
+  togglePerformanceOverlay() {
+    this.set("settings.performanceOverlay", !this.performanceOverlay());
+  }
+
   toggleAlertFrame() {
     this.set("settings.alertFrame", !this.alertFrame());
   }
 
   toggleRandomName() {
     this.set("settings.anonymousNames", !this.anonymousNames());
+  }
+
+  toggleLobbyIdVisibility() {
+    this.set("settings.lobbyIdVisibility", !this.lobbyIdVisibility());
   }
 
   toggleFxLayer() {
