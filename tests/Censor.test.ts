@@ -1,29 +1,42 @@
+/**
+ * @jest-environment jsdom
+ */
+import { jest } from "@jest/globals";
+
 // Mocking the obscenity library to control its behavior in tests.
-jest.mock("obscenity", () => {
-  return {
-    RegExpMatcher: class {
-      private dummy: string[] = ["foo", "bar", "leet", "code"];
-      constructor(_opts: any) {}
-      hasMatch(input: string): boolean {
-        const lower = input.toLowerCase();
-        const decoded = lower
-          .replace(/4/g, "a")
-          .replace(/3/g, "e")
-          .replace(/1/g, "i")
-          .replace(/0/g, "o")
-          .replace(/5/g, "s")
-          .replace(/7/g, "t");
-        return this.dummy.some((token) => decoded.includes(token));
-      }
-    },
-    collapseDuplicatesTransformer: () => ({}),
-    englishRecommendedTransformers: {},
-    englishDataset: { build: () => ({}) },
-    resolveConfusablesTransformer: () => ({}),
-    resolveLeetSpeakTransformer: () => ({}),
-    skipNonAlphabeticTransformer: () => ({}),
-  };
-});
+jest.unstable_mockModule("obscenity", () => ({
+  RegExpMatcher: class {
+    dummy = ["foo", "bar", "leet", "code"];
+    constructor(_opts: any) {}
+    hasMatch(input: string): boolean {
+      const lower = input.toLowerCase();
+      const decoded = lower
+        .replace(/4/g, "a")
+        .replace(/3/g, "e")
+        .replace(/1/g, "i")
+        .replace(/0/g, "o")
+        .replace(/5/g, "s")
+        .replace(/7/g, "t");
+      return this.dummy.some((token) => decoded.includes(token));
+    }
+  },
+  collapseDuplicatesTransformer: () => ({}),
+  englishRecommendedTransformers: {},
+  englishDataset: { build: () => ({}) },
+  resolveConfusablesTransformer: () => ({}),
+  resolveLeetSpeakTransformer: () => ({}),
+  skipNonAlphabeticTransformer: () => ({}),
+}));
+
+// Must use dynamic import AFTER mock
+const {
+  fixProfaneUsername,
+  isProfaneUsername,
+  MAX_USERNAME_LENGTH,
+  MIN_USERNAME_LENGTH,
+  sanitizeUsername,
+  validateUsername,
+} = await import("../src/core/validations/username");
 
 // Mocks the output of translation functions to return predictable values.
 jest.mock("../src/client/Utils", () => ({
@@ -31,14 +44,14 @@ jest.mock("../src/client/Utils", () => ({
     vars ? `${key}:${JSON.stringify(vars)}` : key,
 }));
 
-import {
+/*import {
   fixProfaneUsername,
   isProfaneUsername,
   MAX_USERNAME_LENGTH,
   MIN_USERNAME_LENGTH,
   sanitizeUsername,
   validateUsername,
-} from "../src/core/validations/username";
+} from "../src/core/validations/username";*/
 
 describe("username.ts functions", () => {
   const shadowNames = [

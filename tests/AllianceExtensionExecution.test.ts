@@ -1,3 +1,5 @@
+import { jest } from "@jest/globals";
+
 import { AllianceExtensionExecution } from "../src/core/execution/alliance/AllianceExtensionExecution";
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "../src/core/execution/alliance/AllianceRequestReplyExecution";

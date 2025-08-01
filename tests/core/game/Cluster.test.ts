@@ -1,3 +1,5 @@
+import { jest } from "@jest/globals";
+
 import { Cluster, TrainStation } from "../../../src/core/game/TrainStation";
 
 const createMockStation = (id: string): jest.Mocked<TrainStation> => {

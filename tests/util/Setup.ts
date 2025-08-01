@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import {
   Difficulty,
   Game,
@@ -23,7 +24,7 @@ export async function setup(
   mapName: string,
   _gameConfig: Partial<GameConfig> = {},
   humans: PlayerInfo[] = [],
-  currentDir: string = __dirname,
+  currentDir: string = path.dirname(fileURLToPath(import.meta.url)),
 ): Promise<Game> {
   // Suppress console.debug for tests.
   console.debug = () => {};

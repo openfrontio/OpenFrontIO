@@ -10,13 +10,13 @@ export default {
     "\\.(css|less)$": "<rootDir>/__mocks__/fileMock.js",
   },
   transform: {
-    "^.+\\.tsx?$": [
+    "^.+\\.[tj]sx?$": [
       "ts-jest",
       {
         useESM: true,
         tsconfig: {
           target: "ES2020",
-          module: "es2022",
+          module: "esnext",
           moduleResolution: "node",
           experimentalDecorators: true,
           types: ["jest", "node"],

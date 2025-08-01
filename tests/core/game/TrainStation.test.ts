@@ -1,3 +1,5 @@
+import { jest } from "@jest/globals";
+
 import { TrainExecution } from "../../../src/core/execution/TrainExecution";
 import { Game, Unit, UnitType } from "../../../src/core/game/Game";
 import { Cluster, TrainStation } from "../../../src/core/game/TrainStation";

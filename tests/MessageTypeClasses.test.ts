@@ -1,9 +1,11 @@
+import { jest } from "@jest/globals";
+
 import { getMessageTypeClasses, severityColors } from "../src/client/Utils";
 import { MessageType } from "../src/core/game/Game";
 
 describe("getMessageTypeClasses", () => {
   // Spy on console.warn to track when the default case is hit
-  let consoleSpy: jest.SpyInstance;
+  let consoleSpy: ReturnType<typeof jest.spyOn>;
 
   beforeEach(() => {
     consoleSpy = jest.spyOn(console, "warn").mockImplementation(() => {});

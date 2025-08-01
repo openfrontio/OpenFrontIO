@@ -1,3 +1,5 @@
+import { jest } from "@jest/globals";
+
 import { BotBehavior } from "../src/core/execution/utils/BotBehavior";
 import {
   AllianceRequest,

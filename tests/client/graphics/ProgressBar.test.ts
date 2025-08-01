@@ -3,6 +3,8 @@
  */
 import { ProgressBar } from "../../../src/client/graphics/ProgressBar";
 
+import { jest } from "@jest/globals";
+
 describe("ProgressBar", () => {
   let ctx: CanvasRenderingContext2D;
   let canvas: HTMLCanvasElement;

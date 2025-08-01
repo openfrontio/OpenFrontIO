@@ -1,3 +1,5 @@
+import { jest } from "@jest/globals";
+
 import { Unit } from "../../../src/core/game/Game";
 import {
   RailNetworkImpl,

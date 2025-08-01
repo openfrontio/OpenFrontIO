@@ -5,6 +5,8 @@ import { UILayer } from "../../../src/client/graphics/layers/UILayer";
 import { UnitSelectionEvent } from "../../../src/client/InputHandler";
 import { UnitView } from "../../../src/core/game/GameView";
 
+import { jest } from "@jest/globals";
+
 describe("UILayer", () => {
   let game: any;
   let eventBus: any;

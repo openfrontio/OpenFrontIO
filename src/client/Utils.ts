@@ -1,3 +1,6 @@
+/**
+ * @jest-environment jsdom
+ */
 import { MessageType } from "../core/game/Game";
 import { LangSelector } from "./LangSelector";
 
