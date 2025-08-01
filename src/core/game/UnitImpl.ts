@@ -189,9 +189,9 @@ export class UnitImpl implements Unit {
         break;
     }
     this._lastOwner = this._owner;
-    this._lastOwner._units = this._lastOwner._units.filter((u) => u !== this);
+    this._lastOwner.deleteUnit(this);
     this._owner = newOwner;
-    this._owner._units.push(this);
+    this._owner.addUnit(this);
     this.mg.addUpdate(this.toUpdate());
     this.mg.displayMessage(
       `Your ${this.type()} was captured by ${newOwner.displayName()}`,
@@ -220,7 +220,7 @@ export class UnitImpl implements Unit {
     if (!this.isActive()) {
       throw new Error(`cannot delete ${this} not active`);
     }
-    this._owner._units = this._owner._units.filter((b) => b !== this);
+    this._owner.deleteUnit(this);
     this._active = false;
     this.mg.addUpdate(this.toUpdate());
     this.mg.removeUnit(this);
