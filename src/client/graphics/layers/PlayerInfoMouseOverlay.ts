@@ -1,7 +1,7 @@
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { GameView, PlayerView } from "../../../core/game/GameView";
+import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -35,7 +35,7 @@ export class PlayerInfoMouseOverlay extends LitElement implements Layer {
   private player: PlayerView | null = null;
 
   @state()
-  private unit: any | null = null;
+  private unit: UnitView | null = null;
 
   @state()
   private isVisible = false;
@@ -138,9 +138,7 @@ export class PlayerInfoMouseOverlay extends LitElement implements Layer {
   }
 
   private getHUDPosition(): { x: number; y: number } {
-    const hudElement = this.shadowRoot?.querySelector(
-      ".mouse-hud",
-    ) as HTMLElement;
+    const hudElement = this.querySelector(".mouse-hud") as HTMLElement;
     if (!hudElement) return { x: this.mouseX, y: this.mouseY };
 
     const w = hudElement.offsetWidth || OVERLAY_CONFIG.defaultWidth;
@@ -190,7 +188,7 @@ export class PlayerInfoMouseOverlay extends LitElement implements Layer {
     `;
   }
 
-  private renderUnitInfo(unit: any): TemplateResult {
+  private renderUnitInfo(unit: UnitView): TemplateResult {
     const playerInfoService = this.playerInfoManager.getPlayerInfoService();
     const relation = playerInfoService.getRelation(unit.owner());
     const relationClass = playerInfoService.getRelationClass(relation);

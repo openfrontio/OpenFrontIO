@@ -81,14 +81,6 @@ export class PlayerInfoManager {
     this.mouseSubscribers.delete(callback);
   }
 
-  subscribe(callback: (hoverInfo: HoverInfo) => void) {
-    this.subscribeToData(callback);
-  }
-
-  unsubscribe(callback: (hoverInfo: HoverInfo) => void) {
-    this.unsubscribeFromData(callback);
-  }
-
   private async onMouseMove(event: MouseMoveEvent) {
     this.currentMousePosition.x = event.x;
     this.currentMousePosition.y = event.y;

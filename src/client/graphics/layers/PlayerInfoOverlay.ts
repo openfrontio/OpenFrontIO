@@ -58,13 +58,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     );
 
     this.playerInfoManager.init();
-    this.playerInfoManager.subscribe(this.hoverCallback);
+    this.playerInfoManager.subscribeToData(this.hoverCallback);
     this.setupEventListeners();
     this._isActive = true;
   }
 
   destroy() {
-    this.playerInfoManager?.unsubscribe(this.hoverCallback);
+    this.playerInfoManager?.unsubscribeFromData(this.hoverCallback);
     this._isActive = false;
   }
 
