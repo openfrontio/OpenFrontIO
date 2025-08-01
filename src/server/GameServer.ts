@@ -43,6 +43,7 @@ export class GameServer {
   public activeClients: Client[] = [];
   // Used for record record keeping
   private allClients: Map<ClientID, Client> = new Map();
+  private clientsDisconnectedStatus: Map<ClientID, boolean> = new Map();
   private _hasStarted = false;
   private _startTime: number | null = null;
 
@@ -174,7 +175,6 @@ export class GameServer {
         return;
       }
 
-      client.isDisconnected = existing.isDisconnected;
       client.lastPing = existing.lastPing;
 
       this.activeClients = this.activeClients.filter((c) => c !== existing);
@@ -183,6 +183,8 @@ export class GameServer {
     // Client connection accepted
     this.activeClients.push(client);
     client.lastPing = Date.now();
+
+    this.markClientDisconnected(client.clientID, false);
 
     this.allClients.set(client.clientID, client);
 
@@ -571,25 +573,27 @@ export class GameServer {
 
     const now = Date.now();
     for (const [clientID, client] of this.allClients) {
-      if (
-        client.isDisconnected === false &&
-        now - client.lastPing > this.disconnectedTimeout
-      ) {
-        this.markClientDisconnected(client, true);
+      const isDisconnected = this.isClientDisconnected(clientID);
+      if (!isDisconnected && now - client.lastPing > this.disconnectedTimeout) {
+        this.markClientDisconnected(clientID, true);
       } else if (
-        client.isDisconnected &&
+        isDisconnected &&
         now - client.lastPing < this.disconnectedTimeout
       ) {
-        this.markClientDisconnected(client, false);
+        this.markClientDisconnected(clientID, false);
       }
     }
   }
 
-  private markClientDisconnected(client: Client, isDisconnected: boolean) {
-    client.isDisconnected = isDisconnected;
+  public isClientDisconnected(clientID: string): boolean {
+    return this.clientsDisconnectedStatus.get(clientID) ?? true;
+  }
+
+  private markClientDisconnected(clientID: string, isDisconnected: boolean) {
+    this.clientsDisconnectedStatus.set(clientID, isDisconnected);
     this.addIntent({
       type: "mark_disconnected",
-      clientID: client.clientID,
+      clientID: clientID,
       isDisconnected: isDisconnected,
     });
   }
