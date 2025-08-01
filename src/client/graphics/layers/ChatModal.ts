@@ -6,6 +6,7 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 
 import quickChatData from "../../../../resources/QuickChat.json";
 import { EventBus } from "../../../core/EventBus";
+import { CloseViewEvent } from "../../InputHandler";
 import { SendQuickChatEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 
@@ -170,6 +171,14 @@ export class ChatModal extends LitElement {
         </div>
       </o-modal>
     `;
+  }
+
+  initEventBus() {
+    this.eventBus.on(CloseViewEvent, (e) => {
+      if (!this.hidden) {
+        this.close();
+      }
+    });
   }
 
   private selectCategory(categoryId: string) {
