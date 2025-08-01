@@ -49,6 +49,9 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   private _isActive = false;
   private hoverCallback = (hoverInfo: HoverInfo) =>
     this.onHoverInfoUpdate(hoverInfo);
+  private contextMenuHandler = (e: ContextMenuEvent) =>
+    this.maybeShow(e.x, e.y);
+  private closeRadialMenuHandler = () => this.hide();
 
   init() {
     this.playerInfoManager = PlayerInfoManager.getInstance(
@@ -65,6 +68,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
   destroy() {
     this.playerInfoManager?.unsubscribeFromData(this.hoverCallback);
+    this.removeEventListeners();
     this._isActive = false;
   }
 
@@ -86,11 +90,24 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  connectedCallback() {
+    super.connectedCallback();
+    this.setupEventListeners();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.removeEventListeners();
+  }
+
   protected setupEventListeners() {
-    this.eventBus.on(ContextMenuEvent, (e: ContextMenuEvent) =>
-      this.maybeShow(e.x, e.y),
-    );
-    this.eventBus.on(CloseRadialMenuEvent, () => this.hide());
+    this.eventBus.on(ContextMenuEvent, this.contextMenuHandler);
+    this.eventBus.on(CloseRadialMenuEvent, this.closeRadialMenuHandler);
+  }
+
+  private removeEventListeners() {
+    this.eventBus.off(ContextMenuEvent, this.contextMenuHandler);
+    this.eventBus.off(CloseRadialMenuEvent, this.closeRadialMenuHandler);
   }
 
   protected shouldRender(): boolean {
