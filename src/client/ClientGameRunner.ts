@@ -13,6 +13,7 @@ import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
 import { PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
+import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
   ErrorUpdate,
   GameUpdateType,
@@ -33,6 +34,7 @@ import {
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentID } from "./Main";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -81,7 +83,7 @@ export function joinLobby(
   const onmessage = (message: ServerMessage) => {
     if (message.type === "prestart") {
       console.log(`lobby: game prestarting: ${JSON.stringify(message)}`);
-      terrainLoad = loadTerrainMap(message.gameMap);
+      terrainLoad = loadTerrainMap(message.gameMap, terrainMapFileLoader);
       onPrestart();
     }
     if (message.type === "start") {
@@ -97,6 +99,7 @@ export function joinLobby(
         transport,
         userSettings,
         terrainLoad,
+        terrainMapFileLoader,
       ).then((r) => r.start());
     }
     if (message.type === "error") {
@@ -124,6 +127,7 @@ async function createClientGame(
   transport: Transport,
   userSettings: UserSettings,
   terrainLoad: Promise<TerrainMapData> | null,
+  mapLoader: GameMapLoader,
 ): Promise<ClientGameRunner> {
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
@@ -138,7 +142,10 @@ async function createClientGame(
   if (terrainLoad) {
     gameMap = await terrainLoad;
   } else {
-    gameMap = await loadTerrainMap(lobbyConfig.gameStartInfo.config.gameMap);
+    gameMap = await loadTerrainMap(
+      lobbyConfig.gameStartInfo.config.gameMap,
+      mapLoader,
+    );
   }
   const worker = new WorkerClient(
     lobbyConfig.gameStartInfo,

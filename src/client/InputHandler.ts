@@ -391,7 +391,8 @@ export class InputHandler {
 
   private onShiftScroll(event: WheelEvent) {
     if (event.shiftKey) {
-      const ratio = event.deltaY > 0 ? -10 : 10;
+      const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
+      const ratio = scrollValue > 0 ? -10 : 10;
       this.eventBus.emit(new AttackRatioEvent(ratio));
     }
   }

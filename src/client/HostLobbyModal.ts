@@ -117,7 +117,7 @@ export class HostLobbyModal extends LitElement {
             <span class="lobby-id" @click=${this.copyToClipboard} style="cursor: pointer;">
               ${this.lobbyIdVisible ? this.lobbyId : "••••••••"}
             </span>
-            
+
             <!-- Copy icon/success indicator -->
             <div @click=${this.copyToClipboard} style="margin-left: 8px; cursor: pointer;">
               ${
