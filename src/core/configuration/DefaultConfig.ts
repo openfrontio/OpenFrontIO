@@ -814,7 +814,7 @@ export class DefaultConfig implements Config {
   }
 
   defaultSamRange(): number {
-    return 80;
+    return 70;
   }
 
   defaultSamMissileSpeed(): number {
