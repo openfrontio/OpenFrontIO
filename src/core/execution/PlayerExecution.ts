@@ -1,6 +1,5 @@
-import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
-import { Execution, Game, MessageType, Player, UnitType } from "../game/Game";
+import { Execution, Game, Player, UnitType } from "../game/Game";
 import { GameImpl } from "../game/GameImpl";
 import { TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
@@ -57,18 +56,13 @@ export class PlayerExecution implements Execution {
       return;
     }
 
-    const popInc = this.config.populationIncreaseRate(this.player);
-    this.player.addWorkers(popInc * (1 - this.player.targetTroopRatio()));
-    this.player.addTroops(popInc * this.player.targetTroopRatio());
+    const troopInc = this.config.troopIncreaseRate(this.player);
+    this.player.addTroops(troopInc);
     const goldFromWorkers = this.config.goldAdditionRate(this.player);
     this.player.addGold(goldFromWorkers);
 
     // Record stats
     this.mg.stats().goldWork(this.player, goldFromWorkers);
-
-    const adjustRate = this.config.troopAdjustmentRate(this.player);
-    this.player.addTroops(adjustRate);
-    this.player.removeWorkers(adjustRate);
 
     const alliances = Array.from(this.player.alliances());
     for (const alliance of alliances) {
@@ -199,20 +193,7 @@ export class PlayerExecution implements Execution {
     const tiles = this.mg.bfs(firstTile, filter);
 
     if (this.player.numTilesOwned() === tiles.size) {
-      const gold = this.player.gold();
-      this.mg.displayMessage(
-        `Conquered ${this.player.displayName()} received ${renderNumber(
-          gold,
-        )} gold`,
-        MessageType.CONQUERED_PLAYER,
-        capturing.id(),
-        gold,
-      );
-      capturing.addGold(gold);
-      this.player.removeGold(gold);
-
-      // Record stats
-      this.mg.stats().goldWar(capturing, this.player, gold);
+      this.mg.conquerPlayer(capturing, this.player);
     }
 
     for (const tile of tiles) {
