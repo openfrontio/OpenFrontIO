@@ -48,14 +48,10 @@ export async function setup(
     fs.readFileSync(manifestPath, "utf8"),
   ) satisfies MapManifest;
 
-  // Convert Buffer to string (binary encoding)
-  const mapBinString = mapBinBuffer.toString("binary");
-  const miniMapBinString = miniMapBinBuffer.toString("binary");
-
-  const gameMap = await genTerrainFromBin(manifest.map, mapBinString);
+  const gameMap = await genTerrainFromBin(manifest.map, mapBinBuffer);
   const miniGameMap = await genTerrainFromBin(
     manifest.mini_map,
-    miniMapBinString,
+    miniMapBinBuffer,
   );
 
   // Configure the game

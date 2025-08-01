@@ -5,19 +5,18 @@ import { AllPlayers } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { TerraNulliusImpl } from "../../../core/game/TerraNulliusImpl";
 import { emojiTable, flattenedEmojiTable } from "../../../core/Util";
-import { ShowEmojiMenuEvent } from "../../InputHandler";
+import { CloseViewEvent, ShowEmojiMenuEvent } from "../../InputHandler";
 import { SendEmojiIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 
 @customElement("emoji-table")
 export class EmojiTable extends LitElement {
   @state() public isVisible = false;
-  public eventBus: EventBus;
   public transformHandler: TransformHandler;
   public game: GameView;
 
-  initEventBus() {
-    this.eventBus.on(ShowEmojiMenuEvent, (e) => {
+  initEventBus(eventBus: EventBus) {
+    eventBus.on(ShowEmojiMenuEvent, (e) => {
       this.isVisible = true;
       const cell = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
       if (!this.game.isValidCoord(cell.x, cell.y)) {
@@ -40,7 +39,7 @@ export class EmojiTable extends LitElement {
           targetPlayer === this.game.myPlayer()
             ? AllPlayers
             : (targetPlayer as PlayerView);
-        this.eventBus.emit(
+        eventBus.emit(
           new SendEmojiIntentEvent(
             recipient,
             flattenedEmojiTable.indexOf(emoji),
@@ -48,6 +47,11 @@ export class EmojiTable extends LitElement {
         );
         this.hideTable();
       });
+    });
+    eventBus.on(CloseViewEvent, (e) => {
+      if (!this.hidden) {
+        this.hideTable();
+      }
     });
   }
 

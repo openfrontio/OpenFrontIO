@@ -20,6 +20,10 @@ export class UserSettings {
     return this.get("settings.emojis", true);
   }
 
+  performanceOverlay() {
+    return this.get("settings.performanceOverlay", false);
+  }
+
   alertFrame() {
     return this.get("settings.alertFrame", true);
   }
@@ -64,6 +68,10 @@ export class UserSettings {
 
   toggleEmojis() {
     this.set("settings.emojis", !this.emojis());
+  }
+
+  togglePerformanceOverlay() {
+    this.set("settings.performanceOverlay", !this.performanceOverlay());
   }
 
   toggleAlertFrame() {
