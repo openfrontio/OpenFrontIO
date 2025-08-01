@@ -22,7 +22,7 @@ describe("GameServer and GameManager", () => {
   });
 
   test("GameServer has no clients", async () => {
-    expect(gm.activeClients).toBe(0);
-    expect(gameServer.activeClients).toBe(0);
+    expect(gm.activeClients()).toBe(0);
+    expect(gameServer.activeClients.length).toBe(0);
   });
 });
