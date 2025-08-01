@@ -10,7 +10,7 @@
     "tunnel": "npm run build-prod && npm run start:server",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "perf": "npx tsx tests/perf/*.ts",
-    "test:coverage": "jest --coverage",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "format": "prettier --ignore-unknown --write .",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
