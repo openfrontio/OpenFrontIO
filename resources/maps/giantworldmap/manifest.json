@@ -85,7 +85,7 @@
     },
     {
       "coordinates": [2242, 461],
-      "flag": "custom:Communist_Romania",
+      "flag": "",
       "name": "Romania",
       "strength": 1
     },
@@ -97,7 +97,7 @@
     },
     {
       "coordinates": [2272, 418],
-      "flag": "custom:Ukrainian_SSR",
+      "flag": "",
       "name": "Ukrainian_SSR",
       "strength": 1
     },
@@ -127,19 +127,19 @@
     },
     {
       "coordinates": [2376, 363],
-      "flag": "custom:Russian_SSR",
+      "flag": "",
       "name": "Russian SSR",
       "strength": 1
     },
     {
       "coordinates": [2222, 371],
-      "flag": "custom:Byelorussian_SSR",
+      "flag": "",
       "name": "Byelorussian SSR",
       "strength": 1
     },
     {
       "coordinates": [2441, 507],
-      "flag": "custom:Georgian_SSR",
+      "flag": "",
       "name": "Georgian SSR",
       "strength": 1
     },
@@ -163,13 +163,13 @@
     },
     {
       "coordinates": [2434, 815],
-      "flag": "custom:North_yemen",
+      "flag": "",
       "name": "North Yemen",
       "strength": 1
     },
     {
       "coordinates": [2479, 824],
-      "flag": "custom:south_yemen",
+      "flag": "",
       "name": "South Yemen",
       "strength": 1
     },
@@ -181,7 +181,7 @@
     },
     {
       "coordinates": [2532, 609],
-      "flag": "custom:Pahlavi_Iran",
+      "flag": "",
       "name": "Iran",
       "strength": 1
     },
@@ -199,13 +199,13 @@
     },
     {
       "coordinates": [2727, 416],
-      "flag": "custom:Kazakh SSR",
+      "flag": "",
       "name": "Kazakh SSR",
       "strength": 1
     },
     {
       "coordinates": [2556, 544],
-      "flag": "custom:Turkmen SSR",
+      "flag": "",
       "name": "Turkmen SSR",
       "strength": 1
     },
@@ -289,7 +289,7 @@
     },
     {
       "coordinates": [3153, 833],
-      "flag": "custom:South Vietnam",
+      "flag": "",
       "name": "South Vietnam",
       "strength": 1
     },
@@ -319,7 +319,7 @@
     },
     {
       "coordinates": [3422, 1203],
-      "flag": "custom:Australian Aboriginal Flag",
+      "flag": "",
       "name": "Nawan-mirri",
       "strength": 1
     },
@@ -379,13 +379,13 @@
     },
     {
       "coordinates": [2352, 895],
-      "flag": "custom:Imperial Ethiopia",
+      "flag": "",
       "name": "Ethiopia",
       "strength": 1
     },
     {
       "coordinates": [1790, 729],
-      "flag": "custom:Mauritania",
+      "flag": "",
       "name": "Mauritania",
       "strength": 1
     },
@@ -427,7 +427,7 @@
     },
     {
       "coordinates": [2189, 1372],
-      "flag": "custom:Apartheid South Africa",
+      "flag": "",
       "name": "South Africa",
       "strength": 1
     },
@@ -457,7 +457,7 @@
     },
     {
       "coordinates": [2128, 1292],
-      "flag": "custom:Apartheid South Africa",
+      "flag": "",
       "name": "South West Africa",
       "strength": 1
     },
@@ -553,7 +553,7 @@
     },
     {
       "coordinates": [1231, 395],
-      "flag": "custom:Newfoundland",
+      "flag": "",
       "name": "Newfoundland",
       "strength": 1
     },
@@ -571,13 +571,13 @@
     },
     {
       "coordinates": [741, 234],
-      "flag": "custom:Nunavut",
+      "flag": "",
       "name": "Nunavut",
       "strength": 1
     },
     {
       "coordinates": [484, 256],
-      "flag": "custom:Yukon",
+      "flag": "",
       "name": "Yukon",
       "strength": 1
     },
@@ -589,7 +589,7 @@
     },
     {
       "coordinates": [2247, 1229],
-      "flag": "custom:Rhodesia",
+      "flag": "",
       "name": "Rhodesia",
       "strength": 1
     }
