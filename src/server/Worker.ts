@@ -325,15 +325,9 @@ export function startWorker() {
             // Ignore ping
             return;
           } else if (clientMsg.type !== "join") {
-            const error = `Invalid message before join: ${JSON.stringify(clientMsg)}`;
-            log.warn(error);
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                error,
-              } satisfies ServerErrorMessage),
+            log.warn(
+              `Invalid message before join: ${JSON.stringify(clientMsg)}`,
             );
-            ws.close(1002, "ClientJoinMessageSchema");
             return;
           }
 
