@@ -220,89 +220,92 @@ export class GameServer {
           }
           const clientMsg = parsed.data;
           switch (clientMsg.type) {
-          case "intent": {
-            if (clientMsg.intent.clientID !== client.clientID) {
-              this.log.warn(
-                `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
-              );
-              return;
-            }
-            switch (clientMsg.intent.type) {
-            case "mark_disconnected": {
-              this.log.warn(
-                `Should not receive mark_disconnected intent from client`,
-              );
-              return;
-            }
-
-            // Handle kick_player intent via WebSocket
-            case "kick_player": {
-              const authenticatedClientID = client.clientID;
-
-              // Check if the authenticated client is the lobby creator
-              if (authenticatedClientID !== this.LobbyCreatorID) {
-                this.log.warn(`Only lobby creator can kick players`, {
-                  clientID: authenticatedClientID,
-                  creatorID: this.LobbyCreatorID,
-                  target: clientMsg.intent.target,
-                  gameID: this.id,
-                });
+            case "intent": {
+              if (clientMsg.intent.clientID !== client.clientID) {
+                this.log.warn(
+                  `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
+                );
                 return;
               }
+              switch (clientMsg.intent.type) {
+                case "mark_disconnected": {
+                  this.log.warn(
+                    `Should not receive mark_disconnected intent from client`,
+                  );
+                  return;
+                }
 
-              // Don't allow lobby creator to kick themselves
-              if (authenticatedClientID === clientMsg.intent.target) {
-                this.log.warn(`Cannot kick yourself`, {
-                  clientID: authenticatedClientID,
-                });
-                return;
+                // Handle kick_player intent via WebSocket
+                case "kick_player": {
+                  const authenticatedClientID = client.clientID;
+
+                  // Check if the authenticated client is the lobby creator
+                  if (authenticatedClientID !== this.LobbyCreatorID) {
+                    this.log.warn(`Only lobby creator can kick players`, {
+                      clientID: authenticatedClientID,
+                      creatorID: this.LobbyCreatorID,
+                      target: clientMsg.intent.target,
+                      gameID: this.id,
+                    });
+                    return;
+                  }
+
+                  // Don't allow lobby creator to kick themselves
+                  if (authenticatedClientID === clientMsg.intent.target) {
+                    this.log.warn(`Cannot kick yourself`, {
+                      clientID: authenticatedClientID,
+                    });
+                    return;
+                  }
+
+                  // Log and execute the kick
+                  this.log.info(`Lobby creator initiated kick of player`, {
+                    creatorID: authenticatedClientID,
+                    target: clientMsg.intent.target,
+                    gameID: this.id,
+                    kickMethod: "websocket",
+                  });
+
+                  this.kickClient(clientMsg.intent.target);
+                  return;
+                }
+                default: {
+                  this.addIntent(clientMsg.intent);
+                  break;
+                }
               }
-
-              // Log and execute the kick
-              this.log.info(`Lobby creator initiated kick of player`, {
-                creatorID: authenticatedClientID,
-                target: clientMsg.intent.target,
-                gameID: this.id,
-                kickMethod: "websocket",
-              });
-
-              this.kickClient(clientMsg.intent.target);
-              return;
-            }
-            default: {
-              this.addIntent(clientMsg.intent);
               break;
             }
+            case "ping": {
+              this.lastPingUpdate = Date.now();
+              client.lastPing = Date.now();
+              break;
             }
-            break;
-          }
-          case "ping": {
-            this.lastPingUpdate = Date.now();
-            client.lastPing = Date.now();
-            break;
-          }
-          case "hash": {
-            client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
-            break;
-          }
-          case "winner": {
-            if (
-              this.outOfSyncClients.has(client.clientID) ||
-              this.kickedClients.has(client.clientID) ||
-              this.winner !== null
-            ) {
-              return;
+            case "hash": {
+              client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
+              break;
             }
-            this.winner = clientMsg;
-            this.archiveGame();
-            break;
-          }
-          default: {
-          this.log.warn(`Unknown message type: ${(clientMsg as any).type}`, {
-            clientID: client.clientID,
-          });
-          break;
-          }
+            case "winner": {
+              if (
+                this.outOfSyncClients.has(client.clientID) ||
+                this.kickedClients.has(client.clientID) ||
+                this.winner !== null
+              ) {
+                return;
+              }
+              this.winner = clientMsg;
+              this.archiveGame();
+              break;
+            }
+            default: {
+              this.log.warn(
+                `Unknown message type: ${(clientMsg as any).type}`,
+                {
+                  clientID: client.clientID,
+                },
+              );
+              break;
+            }
           }
         } catch (error) {
           this.log.info(
