@@ -25,7 +25,7 @@ export class ColorAllocator {
 
   constructor(colors: Colord[], fallback: Colord[]) {
     this.availableColors = [...colors];
-    this.fallbackColors = [...colors, ...fallback];
+    this.fallbackColors = [...fallback]; 
   }
 
   assignColor(id: string): Colord {
