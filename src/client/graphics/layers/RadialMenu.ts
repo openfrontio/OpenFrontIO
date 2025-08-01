@@ -1,11 +1,17 @@
 import * as d3 from "d3";
 import backIcon from "../../../../resources/images/BackIconWhite.svg";
+import { EventBus, GameEvent } from "../../../core/EventBus";
+import { CloseViewEvent } from "../../InputHandler";
 import { Layer } from "./Layer";
 import {
   CenterButtonElement,
   MenuElement,
   MenuElementParams,
 } from "./RadialMenuElements";
+
+export class CloseRadialMenuEvent implements GameEvent {
+  constructor() {}
+}
 
 export interface TooltipItem {
   text: string;
@@ -39,13 +45,11 @@ export class RadialMenu implements Layer {
   private currentLevel: number = 0; // Current menu level (0 = main menu, 1 = submenu, etc.)
   private menuStack: MenuElement[][] = []; // Stack to track menu navigation history
   private currentMenuItems: MenuElement[] = []; // Current active menu items (changes based on level)
-  private rootMenuItems: MenuElement[] = []; // Store the original root menu items
 
   private readonly config: RequiredRadialMenuConfig;
   private readonly backIconSize: number;
 
   private centerButtonState: CenterButtonState = "default";
-  private centerButtonElement: CenterButtonElement | null = null;
 
   private isTransitioning: boolean = false;
   private lastHideTime: number = 0;
@@ -72,7 +76,12 @@ export class RadialMenu implements Layer {
 
   private params: MenuElementParams | null = null;
 
-  constructor(config: RadialMenuConfig = {}) {
+  constructor(
+    private eventBus: EventBus,
+    private rootMenu: MenuElement,
+    private centerButtonElement: CenterButtonElement,
+    config: RadialMenuConfig = {},
+  ) {
     this.config = {
       menuSize: config.menuSize ?? 190,
       submenuScale: config.submenuScale ?? 1.5,
@@ -94,6 +103,9 @@ export class RadialMenu implements Layer {
   init() {
     this.createMenuElement();
     this.createTooltipElement();
+    this.eventBus.on(CloseViewEvent, (e) => {
+      this.hideRadialMenu();
+    });
   }
 
   private createMenuElement() {
@@ -112,10 +124,12 @@ export class RadialMenu implements Layer {
       .style("height", "100vh")
       .on("click", () => {
         this.hideRadialMenu();
+        this.eventBus.emit(new CloseRadialMenuEvent());
       })
       .on("contextmenu", (e) => {
         e.preventDefault();
         this.hideRadialMenu();
+        this.eventBus.emit(new CloseRadialMenuEvent());
       });
 
     // Calculate the total svg size needed for all potential nested menus
@@ -894,18 +908,6 @@ export class RadialMenu implements Layer {
     return this.currentLevel;
   }
 
-  public setRootMenuItems(
-    items: MenuElement[],
-    centerButton: CenterButtonElement,
-  ) {
-    this.currentMenuItems = [...items];
-    this.rootMenuItems = [...items];
-    this.centerButtonElement = centerButton;
-    if (this.isVisible) {
-      this.refreshMenu();
-    }
-  }
-
   public setParams(params: MenuElementParams) {
     this.params = params;
   }
@@ -918,7 +920,7 @@ export class RadialMenu implements Layer {
     this.currentLevel = 0;
     this.menuStack = [];
 
-    this.currentMenuItems = [...this.rootMenuItems];
+    this.currentMenuItems = this.rootMenu.subMenu!(this.params!);
 
     this.navigationInProgress = false;
 
