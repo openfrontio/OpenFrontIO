@@ -215,7 +215,8 @@
     "player": "Player",
     "players": "Players",
     "waiting": "Waiting for players...",
-    "start": "Start Game"
+    "start": "Start Game",
+    "host_badge": "Host"
   },
   "team_colors": {
     "red": "Red",
