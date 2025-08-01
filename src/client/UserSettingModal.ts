@@ -342,17 +342,6 @@ export class UserSettingModal extends LitElement {
         @change=${this.sliderAttackRatio}
       ></setting-slider>
 
-      <!-- 🪖🛠️ Troop Ratio -->
-      <setting-slider
-        label="${translateText("user_setting.troop_ratio_label")}"
-        description="${translateText("user_setting.troop_ratio_desc")}"
-        min="1"
-        max="100"
-        .value=${Number(localStorage.getItem("settings.troopRatio") ?? "0.95") *
-        100}
-        @change=${this.sliderTroopRatio}
-      ></setting-slider>
-
       ${this.showEasterEggSettings
         ? html`
             <setting-slider

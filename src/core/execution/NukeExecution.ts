@@ -203,8 +203,8 @@ export class NukeExecution implements Execution {
     const toDestroy = this.tilesToDestroy();
     this.maybeBreakAlliances(toDestroy);
 
-    const maxPop = this.target().isPlayer()
-      ? this.mg.config().maxPopulation(this.target() as Player)
+    const maxTroops = this.target().isPlayer()
+      ? this.mg.config().maxTroops(this.target() as Player)
       : 1;
 
     for (const tile of toDestroy) {
@@ -218,17 +218,7 @@ export class NukeExecution implements Execution {
               this.nukeType,
               owner.troops(),
               owner.numTilesOwned(),
-              maxPop,
-            ),
-        );
-        owner.removeWorkers(
-          this.mg
-            .config()
-            .nukeDeathFactor(
-              this.nukeType,
-              owner.workers(),
-              owner.numTilesOwned(),
-              maxPop,
+              maxTroops,
             ),
         );
         owner.outgoingAttacks().forEach((attack) => {
@@ -239,7 +229,7 @@ export class NukeExecution implements Execution {
                 this.nukeType,
                 attack.troops(),
                 owner.numTilesOwned(),
-                maxPop,
+                maxTroops,
               ) ?? 0;
           attack.setTroops(attack.troops() - deaths);
         });
@@ -251,7 +241,7 @@ export class NukeExecution implements Execution {
                 this.nukeType,
                 attack.troops(),
                 owner.numTilesOwned(),
-                maxPop,
+                maxTroops,
               ) ?? 0;
           attack.setTroops(attack.troops() - deaths);
         });

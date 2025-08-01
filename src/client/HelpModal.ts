@@ -166,11 +166,7 @@ export class HelpModal extends LitElement {
           <div>
             <p class="mb-4">${translateText("help_modal.ui_control_desc")}</p>
             <ul>
-              <li class="mb-4">${translateText("help_modal.ui_pop")}</li>
               <li class="mb-4">${translateText("help_modal.ui_gold")}</li>
-              <li class="mb-4">
-                ${translateText("help_modal.ui_troops_workers")}
-              </li>
               <li class="mb-4">
                 ${translateText("help_modal.ui_attack_ratio")}
               </li>
