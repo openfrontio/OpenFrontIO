@@ -1,7 +1,7 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { GameMapType } from "../../core/game/Game";
-import { terrainMapFileLoader } from "../../core/game/TerrainMapFileLoader";
+import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { translateText } from "../Utils";
 
 // Add map descriptions
@@ -32,6 +32,8 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Halkidiki: "Halkidiki",
   StraitOfGibraltar: "Strait of Gibraltar",
   Italia: "Italia",
+  Yenisei: "Yenisei",
+  Pluto: "Pluto",
 };
 
 @customElement("map-display")
