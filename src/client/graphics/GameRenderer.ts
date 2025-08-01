@@ -301,14 +301,7 @@ export class GameRenderer {
   }
 
   initialize() {
-    this.eventBus.on(RedrawGraphicsEvent, (e) => {
-      this.layers.forEach((l) => {
-        if (l.redraw) {
-          l.redraw();
-        }
-      });
-    });
-
+    this.eventBus.on(RedrawGraphicsEvent, () => this.redraw());
     this.layers.forEach((l) => l.init?.());
 
     document.body.appendChild(this.canvas);
@@ -318,7 +311,14 @@ export class GameRenderer {
     //show whole map on startup
     this.transformHandler.centerAll(0.9);
 
-    requestAnimationFrame(() => this.renderGame());
+    let rafId = requestAnimationFrame(() => this.renderGame());
+    this.canvas.addEventListener("contextlost", () => {
+      cancelAnimationFrame(rafId);
+    });
+    this.canvas.addEventListener("contextrestored", () => {
+      this.redraw();
+      rafId = requestAnimationFrame(() => this.renderGame());
+    });
   }
 
   resizeCanvas() {
@@ -326,6 +326,14 @@ export class GameRenderer {
     this.canvas.height = window.innerHeight;
     this.transformHandler.updateCanvasBoundingRect();
     //this.redraw()
+  }
+
+  redraw() {
+    this.layers.forEach((l) => {
+      if (l.redraw) {
+        l.redraw();
+      }
+    });
   }
 
   renderGame() {
