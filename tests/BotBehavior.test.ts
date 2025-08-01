@@ -6,7 +6,6 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
-  Relation,
   Tick,
 } from "../src/core/game/Game";
 import { PseudoRandom } from "../src/core/PseudoRandom";
@@ -163,13 +162,11 @@ describe("BotBehavior.handleAllianceExtensionRequests", () => {
     mockGame = { addExecution: jest.fn() };
     mockHuman = { id: jest.fn(() => "human_id") };
     mockAlliance = {
-      extensionRequested: jest.fn(() => true),
-      bothAgreedToExtend: jest.fn(() => false),
+      onlyOneAgreedToExtend: jest.fn(() => true),
       other: jest.fn(() => mockHuman),
     };
     mockPlayer = {
       alliances: jest.fn(() => [mockAlliance]),
-      relation: jest.fn(),
       id: jest.fn(() => "bot_id"),
     };
     mockRandom = { chance: jest.fn() };
@@ -183,17 +180,20 @@ describe("BotBehavior.handleAllianceExtensionRequests", () => {
     );
   });
 
-  it("should always extend if relation is Friendly", () => {
-    mockPlayer.relation.mockReturnValue(Relation.Friendly);
+  it("should NOT request extension if onlyOneAgreedToExtend is false (no expiration yet)", () => {
+    mockAlliance.onlyOneAgreedToExtend.mockReturnValue(false);
     botBehavior.handleAllianceExtensionRequests();
-    expect(mockGame.addExecution).toHaveBeenCalled();
-    expect(mockGame.addExecution.mock.calls[0][0]).toBeInstanceOf(
-      AllianceExtensionExecution,
-    );
+    expect(mockGame.addExecution).not.toHaveBeenCalled();
   });
 
-  it("should extend if relation is Neutral and random chance is true", () => {
-    mockPlayer.relation.mockReturnValue(Relation.Neutral);
+  it("should NOT request extension if onlyOneAgreedToExtend is false (both already agreed)", () => {
+    mockAlliance.onlyOneAgreedToExtend.mockReturnValue(false);
+    mockRandom.chance.mockReturnValue(true);
+    botBehavior.handleAllianceExtensionRequests();
+    expect(mockGame.addExecution).not.toHaveBeenCalled();
+  });
+
+  it("should extend if random chance is true", () => {
     mockRandom.chance.mockReturnValue(true);
     botBehavior.handleAllianceExtensionRequests();
     expect(mockGame.addExecution).toHaveBeenCalled();
@@ -202,21 +202,8 @@ describe("BotBehavior.handleAllianceExtensionRequests", () => {
     );
   });
 
-  it("should NOT extend if relation is Neutral and random chance is false", () => {
-    mockPlayer.relation.mockReturnValue(Relation.Neutral);
+  it("should NOT extend if random chance is false", () => {
     mockRandom.chance.mockReturnValue(false);
-    botBehavior.handleAllianceExtensionRequests();
-    expect(mockGame.addExecution).not.toHaveBeenCalled();
-  });
-
-  it("should NOT extend if relation is Hostile", () => {
-    mockPlayer.relation.mockReturnValue(Relation.Hostile);
-    botBehavior.handleAllianceExtensionRequests();
-    expect(mockGame.addExecution).not.toHaveBeenCalled();
-  });
-
-  it("should NOT extend if relation is Distrustful", () => {
-    mockPlayer.relation.mockReturnValue(Relation.Distrustful);
     botBehavior.handleAllianceExtensionRequests();
     expect(mockGame.addExecution).not.toHaveBeenCalled();
   });

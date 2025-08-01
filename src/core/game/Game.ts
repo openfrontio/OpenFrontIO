@@ -353,7 +353,7 @@ export interface MutableAlliance extends Alliance {
   addExtensionRequest(player: Player): void;
   id(): number;
   extend(): void;
-  extensionRequested(): boolean;
+  onlyOneAgreedToExtend(): boolean;
 }
 
 export class PlayerInfo {

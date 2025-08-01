@@ -40,20 +40,12 @@ export class BotBehavior {
 
   handleAllianceExtensionRequests() {
     for (const alliance of this.player.alliances()) {
-      // Alliance expiration tracked by Events Panel, only human can click Request Renew
-      // Skip if human ally didn't request extension yet, bot waits for it
-      if (!alliance.extensionRequested()) continue;
-      // Skip if human and bot both already agreed to extend
-      if (alliance.bothAgreedToExtend()) continue;
-
-      // If Friendly, always agree to extend
-      switch (this.player.relation(alliance.other(this.player))) {
-        case Relation.Hostile:
-        case Relation.Distrustful:
-          continue;
-        case Relation.Neutral:
-          if (!this.random.chance(1.5)) continue;
-      }
+      // Alliance expiration tracked by Events Panel, only human ally can click Request to Renew
+      // Skip if no expiration yet/ ally didn't request extension yet/ bot already agreed to extend
+      if (!alliance.onlyOneAgreedToExtend()) continue;
+      // Bot is friendly towards human because they're already allies, no need to check relation
+      // Just have random chance as though bot decided to extend alliance or not
+      if (!this.random.chance(1.5)) continue;
 
       this.game.addExecution(
         new AllianceExtensionExecution(
