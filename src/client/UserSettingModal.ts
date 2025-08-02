@@ -51,6 +51,11 @@ export class UserSettingModal extends LitElement {
   private handleKeyDown = (e: KeyboardEvent) => {
     if (!this.modalEl?.isModalOpen || this.showEasterEggSettings) return;
 
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.close();
+    }
+
     const key = e.key.toLowerCase();
     const nextSequence = [...this.keySequence, key].slice(-4);
     this.keySequence = nextSequence;
