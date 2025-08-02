@@ -43,7 +43,10 @@ export class SinglePlayerModal extends LitElement {
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
 
-  @state() private disabledUnits: UnitType[] = [UnitType.Factory];
+  @state() private disabledUnits: UnitType[] = [
+    UnitType.Factory,
+    UnitType.TrainingCamp,
+  ];
 
   private userSettings: UserSettings = new UserSettings();
 

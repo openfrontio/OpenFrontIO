@@ -165,6 +165,7 @@ export enum UnitType {
   Construction = "Construction",
   Train = "Train",
   Factory = "Factory",
+  TrainingCamp = "Training Camp",
 }
 
 export enum TrainType {
@@ -179,6 +180,7 @@ const _structureTypes: ReadonlySet<UnitType> = new Set([
   UnitType.SAMLauncher,
   UnitType.MissileSilo,
   UnitType.Port,
+  UnitType.TrainingCamp,
 ]);
 
 export function isStructureType(type: UnitType): boolean {
@@ -241,6 +243,8 @@ export interface UnitParamsMap {
   };
 
   [UnitType.Construction]: Record<string, never>;
+
+  [UnitType.TrainingCamp]: Record<string, never>;
 }
 
 // Type helper to get params type for a specific unit type
@@ -662,6 +666,7 @@ export interface Game extends GameMap {
   ): Array<{ unit: Unit; distSquared: number }>;
 
   addExecution(...exec: Execution[]): void;
+  addExecutionAtBeginning(...exec: Execution[]): void;
   displayMessage(
     message: string,
     type: MessageType,
@@ -765,6 +770,7 @@ export enum MessageType {
   RECEIVED_TROOPS_FROM_PLAYER,
   CHAT,
   RENEW_ALLIANCE,
+  TRAINING_CAMP_GENERATION,
 }
 
 // Message categories used for filtering events in the EventsDisplay
@@ -802,6 +808,7 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.SENT_TROOPS_TO_PLAYER]: MessageCategory.TRADE,
   [MessageType.RECEIVED_TROOPS_FROM_PLAYER]: MessageCategory.TRADE,
   [MessageType.CHAT]: MessageCategory.CHAT,
+  [MessageType.TRAINING_CAMP_GENERATION]: MessageCategory.TRADE,
 } as const;
 
 /**

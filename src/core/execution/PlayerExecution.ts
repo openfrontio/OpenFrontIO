@@ -58,6 +58,22 @@ export class PlayerExecution implements Execution {
       return;
     }
 
+    const popInc = this.config.populationIncreaseRate(this.player);
+
+    const trainingCamps = this.player.units(UnitType.TrainingCamp);
+    const hasTrainingCamp = trainingCamps.length > 0;
+
+    let troopMultiplier = 1.0;
+    if (hasTrainingCamp) {
+      const totalCamps = trainingCamps.filter((camp) => camp.isActive()).length;
+      const bonusMultiplier = totalCamps * 0.1;
+      troopMultiplier += bonusMultiplier;
+    }
+
+    this.player.addWorkers(popInc * (1 - this.player.targetTroopRatio()));
+    this.player.addTroops(
+      popInc * this.player.targetTroopRatio() * troopMultiplier,
+    );
     const troopInc = this.config.troopIncreaseRate(this.player);
     this.player.addTroops(troopInc);
     const goldFromWorkers = this.config.goldAdditionRate(this.player);

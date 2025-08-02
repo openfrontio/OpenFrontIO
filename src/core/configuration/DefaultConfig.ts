@@ -472,6 +472,16 @@ export class DefaultConfig implements Config {
           experimental: true,
           upgradable: true,
         };
+      case UnitType.TrainingCamp:
+        return {
+          cost: this.costWrapper(
+            UnitType.TrainingCamp,
+            (numUnits: number) => (numUnits + 1) * 500_000,
+          ),
+          territoryBound: true,
+          constructionDuration: this.instantBuild() ? 0 : 3 * 10,
+          upgradable: true,
+        };
       case UnitType.Construction:
         return {
           cost: () => 0n,

@@ -16,6 +16,7 @@ import { MissileSiloExecution } from "./MissileSiloExecution";
 import { NukeExecution } from "./NukeExecution";
 import { PortExecution } from "./PortExecution";
 import { SAMLauncherExecution } from "./SAMLauncherExecution";
+import { TrainingCampExecution } from "./TrainingCampExecution";
 import { WarshipExecution } from "./WarshipExecution";
 
 export class ConstructionExecution implements Execution {
@@ -132,6 +133,11 @@ export class ConstructionExecution implements Execution {
         break;
       case UnitType.Factory:
         this.mg.addExecution(new FactoryExecution(player, this.tile));
+        break;
+      case UnitType.TrainingCamp:
+        this.mg.addExecutionAtBeginning(
+          new TrainingCampExecution(player, this.tile),
+        );
         break;
       default:
         console.warn(

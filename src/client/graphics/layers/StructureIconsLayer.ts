@@ -7,6 +7,7 @@ import factoryIcon from "../../../../resources/images/FactoryUnit.png";
 import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
 import SAMMissileIcon from "../../../../resources/images/SamLauncherUnit.png";
 import shieldIcon from "../../../../resources/images/ShieldIcon.png";
+import trainingCampIcon from "../../../../resources/images/TrainingCampIcon.png";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import { Cell, PlayerID, UnitType } from "../../../core/game/Game";
@@ -37,6 +38,7 @@ const STRUCTURE_SHAPES: Partial<Record<UnitType, ShapeType>> = {
   [UnitType.DefensePost]: "octagon",
   [UnitType.SAMLauncher]: "square",
   [UnitType.MissileSilo]: "triangle",
+  [UnitType.TrainingCamp]: "circle",
 };
 const ZOOM_THRESHOLD = 3.5;
 const ICON_SIZE = 24;
@@ -70,6 +72,10 @@ export class StructureIconsLayer implements Layer {
     [
       UnitType.SAMLauncher,
       { visible: true, iconPath: SAMMissileIcon, image: null },
+    ],
+    [
+      UnitType.TrainingCamp,
+      { visible: true, iconPath: trainingCampIcon, image: null },
     ],
   ]);
 
@@ -265,6 +271,9 @@ export class StructureIconsLayer implements Layer {
 
   private checkForLevelChange(render: StructureRenderInfo, unit: UnitView) {
     if (render.level !== unit.level()) {
+      console.log(
+        `Level change detected for unit ${unit.id()}: ${render.level} -> ${unit.level()}`,
+      );
       render.level = unit.level();
       render.iconContainer?.destroy();
       render.levelContainer?.destroy();
@@ -314,11 +323,13 @@ export class StructureIconsLayer implements Layer {
     const cacheKey = isConstruction
       ? `construction-${structureType}`
       : `${unit.owner().id()}-${structureType}`;
+
     if (this.textureCache.has(cacheKey)) {
       return this.textureCache.get(cacheKey)!;
     }
 
     const shape = STRUCTURE_SHAPES[structureType];
+
     const texture = shape
       ? this.createIcon(unit.owner(), structureType, isConstruction, shape)
       : PIXI.Texture.EMPTY;
@@ -412,7 +423,9 @@ export class StructureIconsLayer implements Layer {
 
     const structureInfo = this.structures.get(structureType);
     if (!structureInfo?.image) {
-      console.warn(`Image not loaded for unit type: ${structureType}`);
+      if (structureInfo) {
+        this.loadIcon(structureInfo, structureType);
+      }
       return PIXI.Texture.from(structureCanvas);
     }
 
@@ -424,11 +437,15 @@ export class StructureIconsLayer implements Layer {
     };
     const [offsetX, offsetY] = SHAPE_OFFSETS[shape] || [0, 0];
 
-    context.drawImage(
-      this.getImageColored(structureInfo.image, borderColor),
-      offsetX,
-      offsetY,
-    );
+    try {
+      context.drawImage(
+        this.getImageColored(structureInfo.image, borderColor),
+        offsetX,
+        offsetY,
+      );
+    } catch (error) {
+      console.error(`Error drawing image for ${structureType}:`, error);
+    }
 
     return PIXI.Texture.from(structureCanvas);
   }
@@ -460,12 +477,16 @@ export class StructureIconsLayer implements Layer {
     );
 
     if (options.addIcon) {
-      const sprite = new PIXI.Sprite(this.createTexture(unit));
+      const texture = this.createTexture(unit);
+      const sprite = new PIXI.Sprite(texture);
       sprite.anchor.set(0.5, 0.5);
       parentContainer.addChild(sprite);
     }
 
     if (unit.level() > 1) {
+      console.log(
+        `Creating level text for unit ${unit.id()}: level ${unit.level()}`,
+      );
       const text = new PIXI.BitmapText({
         text: unit.level().toString(),
         style: {
@@ -535,15 +556,16 @@ export class StructureIconsLayer implements Layer {
       screenPos.y - margin < this.pixicanvas.height;
 
     if (onScreen) {
+      render.iconContainer.x = screenPos.x;
+      render.iconContainer.y = screenPos.y;
+      render.iconContainer.scale.set(Math.min(1, this.transformHandler.scale));
+
       if (this.transformHandler.scale > ZOOM_THRESHOLD) {
         render.levelContainer.x = screenPos.x;
         render.levelContainer.y = screenPos.y;
+        render.levelContainer.visible = true;
       } else {
-        render.iconContainer.x = screenPos.x;
-        render.iconContainer.y = screenPos.y;
-        render.iconContainer.scale.set(
-          Math.min(1, this.transformHandler.scale),
-        );
+        render.levelContainer.visible = false;
       }
     }
     if (render.isOnScreen !== onScreen) {

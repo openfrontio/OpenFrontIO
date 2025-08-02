@@ -6,6 +6,7 @@ import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
 import portIcon from "../../../../resources/images/PortIcon.svg";
 import samLauncherIcon from "../../../../resources/images/SamLauncherUnitWhite.png";
 import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
+import trainingCampIcon from "../../../../resources/images/TrainingCampIcon.svg";
 import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
@@ -24,6 +25,7 @@ export class UnitDisplay extends LitElement implements Layer {
   private _port = 0;
   private _defensePost = 0;
   private _samLauncher = 0;
+  private _trainingCamps = 0;
   private allDisabled = false;
 
   createRenderRoot() {
@@ -38,7 +40,8 @@ export class UnitDisplay extends LitElement implements Layer {
       config.isUnitDisabled(UnitType.Port) &&
       config.isUnitDisabled(UnitType.DefensePost) &&
       config.isUnitDisabled(UnitType.MissileSilo) &&
-      config.isUnitDisabled(UnitType.SAMLauncher);
+      config.isUnitDisabled(UnitType.SAMLauncher) &&
+      config.isUnitDisabled(UnitType.TrainingCamp);
     this.requestUpdate();
   }
 
@@ -51,6 +54,7 @@ export class UnitDisplay extends LitElement implements Layer {
     this._defensePost = player.totalUnitLevels(UnitType.DefensePost);
     this._samLauncher = player.totalUnitLevels(UnitType.SAMLauncher);
     this._factories = player.totalUnitLevels(UnitType.Factory);
+    this._trainingCamps = player.totalUnitLevels(UnitType.TrainingCamp);
     this.requestUpdate();
   }
 
@@ -132,6 +136,12 @@ export class UnitDisplay extends LitElement implements Layer {
             this._samLauncher,
             UnitType.SAMLauncher,
             "SAM launcher",
+          )}
+          ${this.renderUnitItem(
+            trainingCampIcon,
+            this._trainingCamps,
+            UnitType.TrainingCamp,
+            "training camp",
           )}
         </div>
       </div>

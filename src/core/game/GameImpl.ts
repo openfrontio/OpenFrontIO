@@ -415,6 +415,10 @@ export class GameImpl implements Game {
     this.unInitExecs.push(...exec);
   }
 
+  addExecutionAtBeginning(...exec: Execution[]) {
+    this.unInitExecs.unshift(...exec);
+  }
+
   removeExecution(exec: Execution) {
     this.execs = this.execs.filter((execution) => execution !== exec);
     this.unInitExecs = this.unInitExecs.filter(
