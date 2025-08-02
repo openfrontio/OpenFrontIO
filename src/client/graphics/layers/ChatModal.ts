@@ -173,7 +173,7 @@ export class ChatModal extends LitElement {
     `;
   }
 
-  initEventBus(eventBus) {
+  initEventBus(eventBus: EventBus) {
     this.eventBus = eventBus;
     eventBus.on(CloseViewEvent, (e) => {
       if (!this.hidden) {
