@@ -55,7 +55,14 @@ export class DeleteUnitExecution implements Execution {
       return;
     }
 
+    if (!this.player.canDeleteUnit()) {
+      console.warn(`SECURITY: delete unit cooldown not expired`);
+      this.active = false;
+      return;
+    }
+
     unit.delete(false);
+    this.player.recordDeleteUnit();
 
     this.mg.displayMessage(
       `events_display.unit_voluntarily_deleted`,

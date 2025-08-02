@@ -351,6 +351,10 @@ export class PlayerView {
   isDisconnected(): boolean {
     return this.data.isDisconnected;
   }
+
+  canDeleteUnit(): boolean {
+    return true;
+  }
 }
 
 export class GameView implements GameMap {

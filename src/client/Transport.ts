@@ -245,11 +245,11 @@ export class Transport {
 
     this.eventBus.on(SendDeleteUnitIntentEvent, (e) =>
       this.onSendDeleteUnitIntent(e),
-    });
-      
+    );
+
     this.eventBus.on(SendKickPlayerIntentEvent, (e) =>
       this.onSendKickPlayerIntent(e),
-    });
+    );
   }
 
   private startPing() {
@@ -612,14 +612,14 @@ export class Transport {
     });
   }
 
-
   private onSendDeleteUnitIntent(event: SendDeleteUnitIntentEvent) {
     this.sendIntent({
       type: "delete_unit",
       clientID: this.lobbyConfig.clientID,
       unitId: event.unitId,
-  });
-    
+    });
+  }
+
   private onSendKickPlayerIntent(event: SendKickPlayerIntentEvent) {
     this.sendIntent({
       type: "kick_player",

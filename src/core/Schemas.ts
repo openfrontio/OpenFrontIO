@@ -42,7 +42,7 @@ export type Intent =
   | MarkDisconnectedIntent
   | UpgradeStructureIntent
   | DeleteUnitIntent
-  | KickPlayerIntent
+  | KickPlayerIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -383,7 +383,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   QuickChatIntentSchema,
   AllianceExtensionIntentSchema,
   DeleteUnitIntentSchema,
-  KickPlayerIntentSchema
+  KickPlayerIntentSchema,
 ]);
 
 //

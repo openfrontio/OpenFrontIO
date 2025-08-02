@@ -433,6 +433,10 @@ export const deleteUnitElement: MenuElement = {
       return true;
     }
 
+    if (!params.myPlayer.canDeleteUnit()) {
+      return true;
+    }
+
     const DELETE_SELECTION_RADIUS = 5;
     const myUnits = params.myPlayer
       .units()
