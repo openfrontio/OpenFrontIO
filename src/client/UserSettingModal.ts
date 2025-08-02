@@ -125,6 +125,15 @@ export class UserSettingModal extends LitElement {
     console.log("💥 Special effects:", enabled ? "ON" : "OFF");
   }
 
+  private toggleStructureSprites(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.structureSprites", enabled);
+
+    console.log("🏠 Structure sprites:", enabled ? "ON" : "OFF");
+  }
+
   private toggleAnonymousNames(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -289,6 +298,15 @@ export class UserSettingModal extends LitElement {
         id="special-effect-toggle"
         .checked=${this.userSettings.fxLayer()}
         @change=${this.toggleFxLayer}
+      ></setting-toggle>
+
+      <!-- 🏠 Structure Sprites -->
+      <setting-toggle
+        label="${translateText("user_setting.structure_sprites_label")}"
+        description="${translateText("user_setting.structure_sprites_desc")}"
+        id="structure_sprites-toggle"
+        .checked=${this.userSettings.structureSprites()}
+        @change=${this.toggleStructureSprites}
       ></setting-toggle>
 
       <!-- 🖱️ Left Click Menu -->
