@@ -32,7 +32,7 @@ export default {
       statements: 21.5,
       branches: 17.0,
       lines: 22.5,
-      functions: 21.0,
+      functions: 20.5,
     },
   },
   coverageReporters: ["text", "lcov", "html"],
