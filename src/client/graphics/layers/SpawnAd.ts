@@ -1,6 +1,7 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
+import { GameType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { getGamesPlayed } from "../../Utils";
 import { Layer } from "./Layer";
@@ -50,17 +51,19 @@ export class SpawnAd extends LitElement implements Layer {
   }
 
   public async tick() {
+    if (this.g.config().gameConfig().gameType === GameType.Singleplayer) {
+      return;
+    }
+
     if (
       !this.isVisible &&
       this.g.inSpawnPhase() &&
       this.g.ticks() > 10 &&
       this.gamesPlayed > 5
     ) {
-      console.log("not showing spawn ad");
-      // this.show();
+      this.show();
     }
     if (this.isVisible && !this.g.inSpawnPhase()) {
-      console.log("hiding bottom left ad");
       this.hide();
     }
   }

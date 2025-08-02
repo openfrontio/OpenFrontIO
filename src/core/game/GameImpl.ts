@@ -14,6 +14,7 @@ import {
   Execution,
   Game,
   GameMode,
+  GameType,
   GameUpdates,
   MessageType,
   MutableAlliance,
@@ -320,6 +321,14 @@ export class GameImpl implements Game {
   }
 
   inSpawnPhase(): boolean {
+    if (this.config().gameConfig().gameType === GameType.Singleplayer) {
+      const hasHumanSpawned = Array.from(this._players.values()).some(
+        (player) => player.type() === PlayerType.Human && player.hasSpawned(),
+      );
+      if (hasHumanSpawned) {
+        return false;
+      }
+    }
     return this._ticks <= this.config().numSpawnPhaseTurns();
   }
 
