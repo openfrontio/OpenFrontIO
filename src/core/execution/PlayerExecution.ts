@@ -41,7 +41,9 @@ export class PlayerExecution implements Execution {
     });
 
     if (!this.player.isAlive()) {
-      // Player has no tiles, delete any remaining units
+      // Player has no tiles, delete any remaining units and gold
+      const gold = this.player.gold();
+      this.player.removeGold(gold);
       this.player.units().forEach((u) => {
         if (
           u.type() !== UnitType.AtomBomb &&
@@ -72,15 +74,13 @@ export class PlayerExecution implements Execution {
     this.player.addTroops(
       popInc * this.player.targetTroopRatio() * troopMultiplier,
     );
+    const troopInc = this.config.troopIncreaseRate(this.player);
+    this.player.addTroops(troopInc);
     const goldFromWorkers = this.config.goldAdditionRate(this.player);
     this.player.addGold(goldFromWorkers);
 
     // Record stats
     this.mg.stats().goldWork(this.player, goldFromWorkers);
-
-    const adjustRate = this.config.troopAdjustmentRate(this.player);
-    this.player.addTroops(adjustRate);
-    this.player.removeWorkers(adjustRate);
 
     const alliances = Array.from(this.player.alliances());
     for (const alliance of alliances) {

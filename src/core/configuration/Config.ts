@@ -89,9 +89,8 @@ export interface Config {
   playerTeams(): TeamCountConfig;
 
   startManpower(playerInfo: PlayerInfo): number;
-  populationIncreaseRate(player: Player | PlayerView): number;
+  troopIncreaseRate(player: Player | PlayerView): number;
   goldAdditionRate(player: Player | PlayerView): Gold;
-  troopAdjustmentRate(player: Player): number;
   attackTilesPerTick(
     attckTroops: number,
     attacker: Player,
@@ -114,8 +113,8 @@ export interface Config {
   // When computing likelihood of trading for any given port, the X closest port
   // are twice more likely to be selected. X is determined below.
   proximityBonusPortsNb(totalPorts: number): number;
-  maxPopulation(player: Player | PlayerView): number;
-  cityPopulationIncrease(): number;
+  maxTroops(player: Player | PlayerView): number;
+  cityTroopIncrease(): number;
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number;
   shellLifetime(): number;
   boatMaxNumber(): number;
@@ -162,7 +161,7 @@ export interface Config {
     nukeType: NukeType,
     humans: number,
     tilesOwned: number,
-    maxPop: number,
+    maxTroops: number,
   ): number;
   structureMinDist(): number;
   isReplay(): boolean;
