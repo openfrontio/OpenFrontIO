@@ -23,6 +23,7 @@ import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
+import { PlayerInfoMouseOverlay } from "./layers/PlayerInfoMouseOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
@@ -128,6 +129,18 @@ export function createRenderer(
   playerInfo.eventBus = eventBus;
   playerInfo.transform = transformHandler;
   playerInfo.game = game;
+  playerInfo.userSettings = userSettings;
+
+  const mouseHUD = document.querySelector(
+    "mouse-hud",
+  ) as PlayerInfoMouseOverlay;
+  if (!(mouseHUD instanceof PlayerInfoMouseOverlay)) {
+    console.error("mouse hud not found");
+  }
+  mouseHUD.eventBus = eventBus;
+  mouseHUD.transform = transformHandler;
+  mouseHUD.game = game;
+  mouseHUD.userSettings = userSettings;
 
   const winModal = document.querySelector("win-modal") as WinModal;
   if (!(winModal instanceof WinModal)) {
@@ -258,6 +271,7 @@ export function createRenderer(
     gameRightSidebar,
     controlPanel,
     playerInfo,
+    mouseHUD,
     winModal,
     replayPanel,
     settingsModal,
