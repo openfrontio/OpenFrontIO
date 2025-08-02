@@ -43,8 +43,8 @@ export class SAMLauncherExecution implements Execution {
       [UnitType.AtomBomb, UnitType.HydrogenBomb],
       ({ unit }) =>
         unit.owner() !== this.player &&
-        !this.player.isFriendly(unit.owner()) &&
-        unit.isTargetable(),
+        !this.player.isFriendly(unit.owner() as Player) &&
+        (unit as Unit).isTargetable(),
     );
 
     return (
@@ -115,7 +115,7 @@ export class SAMLauncherExecution implements Execution {
       UnitType.MIRVWarhead,
       ({ unit }) => {
         if (unit.owner() === this.player) return false;
-        if (this.player.isFriendly(unit.owner())) return false;
+        if (this.player.isFriendly(unit.owner() as Player)) return false;
         const dst = unit.targetTile();
         return (
           this.sam !== null &&

@@ -51,7 +51,7 @@ describe("Unit Grid range tests", () => {
     ["plains", 0, 10, 11, false], // Exactly 1px outside
     ["big_plains", 0, 198, 42, true], // Inside huge range
     ["big_plains", 0, 198, 199, false], // Exactly 1px outside huge range
-  ];
+  ] as const;
 
   describe("Is unit in range", () => {
     test.each(hasUnitCases)(
@@ -77,25 +77,18 @@ describe("Unit Grid range tests", () => {
     ["plains", 0, 10, 11, [UnitType.DefensePost], 0], // 1px outside
     ["big_plains", 0, 198, 42, [UnitType.TradeShip], 1], // Inside huge range
     ["big_plains", 0, 198, 199, [UnitType.TransportShip], 0], // 1px outside
-  ];
+  ] as const;
 
   describe("Retrieve all units in range", () => {
     test.each(unitsInRangeCases)(
       "on %p map, look if unit at position %p with a range of %p is in range of %p position, returns %p",
-      async (
-        mapName: string,
-        unitPosX: number,
-        range: number,
-        rangeCheck: number,
-        units: UnitType[],
-        expectedResult: number,
-      ) => {
+      async (mapName, unitPosX, range, rangeCheck, units, expectedResult) => {
         const result = await nearbyUnits(
           mapName,
           unitPosX,
           rangeCheck,
           range,
-          units,
+          Array.from(units), // remove readonly
         );
         expect(result.length).toBe(expectedResult);
       },

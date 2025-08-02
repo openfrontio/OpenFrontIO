@@ -1,7 +1,7 @@
 import { Config } from "../configuration/Config";
 import { Execution, Game, Player, UnitType } from "../game/Game";
 import { GameImpl } from "../game/GameImpl";
-import { TileRef } from "../game/GameMap";
+import { GameMap, TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 
 export class PlayerExecution implements Execution {
@@ -190,7 +190,11 @@ export class PlayerExecution implements Execution {
     }
 
     const firstTile = cluster.values().next().value;
-    const filter = (_, t: TileRef): boolean =>
+    if (!firstTile) {
+      return;
+    }
+
+    const filter = (_: GameMap, t: TileRef): boolean =>
       this.mg?.ownerID(t) === this.player?.smallID();
     const tiles = this.mg.bfs(firstTile, filter);
 
