@@ -80,7 +80,7 @@
     {
       "coordinates": [904, 805],
       "flag": "de",
-      "name": "Federal Republic of Germany",
+      "name": "Germany",
       "strength": 3
     },
     {
@@ -164,7 +164,7 @@
     {
       "coordinates": [517, 1483],
       "flag": "dz",
-      "name": "People's Democratic Republic of Algeria",
+      "name": "Algeria",
       "strength": 1
     },
     {
@@ -296,7 +296,7 @@
     {
       "coordinates": [1919, 1608],
       "flag": "jo",
-      "name": "Hashemite Kingdom of Jordan",
+      "name": "Jordan",
       "strength": 1
     },
     {

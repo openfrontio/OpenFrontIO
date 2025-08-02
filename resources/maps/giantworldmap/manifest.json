@@ -194,7 +194,7 @@
     {
       "coordinates": [2565.136, 653.844],
       "flag": "ir",
-      "name": "Islamic Republic Of Iran",
+      "name": "Iran",
       "strength": 1
     },
     {
@@ -224,7 +224,7 @@
     {
       "coordinates": [2134.16, 680],
       "flag": "ly",
-      "name": "Libyan Arab Jamahiriya",
+      "name": "Libya",
       "strength": 1
     },
     {
@@ -248,7 +248,7 @@
     {
       "coordinates": [2225.328, 1074.928],
       "flag": "cd",
-      "name": "The Democratic Republic of the Congo",
+      "name": "DR Congo",
       "strength": 1
     },
     {
