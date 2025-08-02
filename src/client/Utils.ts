@@ -1,33 +1,6 @@
 import { MessageType } from "../core/game/Game";
 import { LangSelector } from "./LangSelector";
 
-export function renderTroops(troops: number): string {
-  return renderNumber(troops / 10);
-}
-
-export function renderNumber(num: number | bigint): string {
-  num = Number(num);
-  num = Math.max(num, 0);
-
-  if (num >= 10_000_000) {
-    const value = Math.floor(num / 100000) / 10;
-    return value.toFixed(1) + "M";
-  } else if (num >= 1_000_000) {
-    const value = Math.floor(num / 10000) / 100;
-    return value.toFixed(2) + "M";
-  } else if (num >= 100000) {
-    return Math.floor(num / 1000) + "K";
-  } else if (num >= 10000) {
-    const value = Math.floor(num / 100) / 10;
-    return value.toFixed(1) + "K";
-  } else if (num >= 1000) {
-    const value = Math.floor(num / 10) / 100;
-    return value.toFixed(2) + "K";
-  } else {
-    return Math.floor(num).toString();
-  }
-}
-
 export function createCanvas(): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
 

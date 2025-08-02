@@ -1,6 +1,6 @@
 import { ConquestUpdate } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
-import { renderNumber } from "../../Utils";
+import { renderNumber } from "../../../core/Util";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { Fx, FxType } from "./Fx";
 import { FadeFx, SpriteFx } from "./SpriteFx";

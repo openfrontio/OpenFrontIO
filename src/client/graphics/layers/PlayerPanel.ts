@@ -12,7 +12,11 @@ import { EventBus } from "../../../core/EventBus";
 import { AllPlayers, PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { flattenedEmojiTable } from "../../../core/Util";
+import {
+  flattenedEmojiTable,
+  renderNumber,
+  renderTroops,
+} from "../../../core/Util";
 import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
@@ -23,7 +27,6 @@ import {
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
-import { renderNumber, renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";

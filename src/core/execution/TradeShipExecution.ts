@@ -1,4 +1,3 @@
-import { renderNumber } from "../../client/Utils";
 import {
   Execution,
   Game,
@@ -10,7 +9,7 @@ import {
 import { TileRef } from "../game/GameMap";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
-import { distSortUnit } from "../Util";
+import { distSortUnit, renderNumber } from "../Util";
 
 export class TradeShipExecution implements Execution {
   private active = true;

@@ -13,8 +13,8 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { renderNumber, renderTroops } from "../../../core/Util";
 import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
-import { renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";

@@ -1,4 +1,3 @@
-import { renderTroops } from "../../client/Utils";
 import {
   Attack,
   Execution,
@@ -12,6 +11,7 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
+import { renderTroops } from "../Util";
 import { FlatBinaryHeap } from "./utils/FlatBinaryHeap"; // adjust path if needed
 
 const malusForRetreat = 25;

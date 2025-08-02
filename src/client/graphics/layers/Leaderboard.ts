@@ -4,7 +4,7 @@ import { repeat } from "lit/directives/repeat.js";
 import { translateText } from "../../../client/Utils";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { renderNumber } from "../../Utils";
+import { renderNumber } from "../../../core/Util";
 import { Layer } from "./Layer";
 
 interface Entry {
