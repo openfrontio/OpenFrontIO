@@ -58,7 +58,7 @@ export class PlayerExecution implements Execution {
       return;
     }
 
-    const popInc = this.config.populationIncreaseRate(this.player);
+    const popInc = this.config.troopIncreaseRate(this.player);
 
     const trainingCamps = this.player.units(UnitType.TrainingCamp);
     const hasTrainingCamp = trainingCamps.length > 0;
@@ -70,10 +70,8 @@ export class PlayerExecution implements Execution {
       troopMultiplier += bonusMultiplier;
     }
 
-    this.player.addWorkers(popInc * (1 - this.player.targetTroopRatio()));
-    this.player.addTroops(
-      popInc * this.player.targetTroopRatio() * troopMultiplier,
-    );
+    const attackRatio = 0.2;
+    this.player.addTroops(popInc * attackRatio * troopMultiplier);
     const troopInc = this.config.troopIncreaseRate(this.player);
     this.player.addTroops(troopInc);
     const goldFromWorkers = this.config.goldAdditionRate(this.player);

@@ -39,7 +39,7 @@ export class NameLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private lastChecked = 0;
   private renderCheckRate = 100;
-  private renderRefreshRate = 100;
+  private renderRefreshRate = 500;
   private rand = new PseudoRandom(10);
   private renders: RenderInfo[] = [];
   private seenPlayers: Set<PlayerView> = new Set();

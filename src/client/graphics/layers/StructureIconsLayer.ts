@@ -271,9 +271,6 @@ export class StructureIconsLayer implements Layer {
 
   private checkForLevelChange(render: StructureRenderInfo, unit: UnitView) {
     if (render.level !== unit.level()) {
-      console.log(
-        `Level change detected for unit ${unit.id()}: ${render.level} -> ${unit.level()}`,
-      );
       render.level = unit.level();
       render.iconContainer?.destroy();
       render.levelContainer?.destroy();
@@ -484,9 +481,6 @@ export class StructureIconsLayer implements Layer {
     }
 
     if (unit.level() > 1) {
-      console.log(
-        `Creating level text for unit ${unit.id()}: level ${unit.level()}`,
-      );
       const text = new PIXI.BitmapText({
         text: unit.level().toString(),
         style: {

@@ -135,9 +135,7 @@ export class ConstructionExecution implements Execution {
         this.mg.addExecution(new FactoryExecution(player, this.tile));
         break;
       case UnitType.TrainingCamp:
-        this.mg.addExecutionAtBeginning(
-          new TrainingCampExecution(player, this.tile),
-        );
+        this.mg.addExecution(new TrainingCampExecution(player, this.tile));
         break;
       default:
         console.warn(
