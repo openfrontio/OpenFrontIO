@@ -273,7 +273,7 @@
   {
     "code": "bq",
     "continent": "South America",
-    "name": "Bonaire, Sint Eustatius and Saba"
+    "name": "Caribbean Netherlands"
   },
   {
     "code": "ba",
@@ -297,7 +297,7 @@
   {
     "code": "io",
     "continent": "Asia",
-    "name": "British Indian Ocean Territory"
+    "name": "BIOT"
   },
   {
     "code": "brittany",
@@ -563,7 +563,7 @@
   {
     "code": "cd",
     "continent": "Africa",
-    "name": "Congo, Democratic Republic of"
+    "name": "DR Congo"
   },
   {
     "code": "dg",
@@ -707,7 +707,7 @@
   {
     "code": "fm",
     "continent": "Oceania",
-    "name": "Micronesia, Federated States of"
+    "name": "FSM"
   },
   {
     "code": "fj",
@@ -765,7 +765,7 @@
   {
     "code": "tf",
     "continent": "Africa",
-    "name": "French Southern Territories"
+    "name": "French Southern Lands"
   },
   {
     "code": "ga",
@@ -899,7 +899,7 @@
   },
   {
     "code": "hm",
-    "name": "Heard Island and McDonald Islands"
+    "name": "Heard & McDonald Is."
   },
   {
     "code": "va",
@@ -1627,7 +1627,7 @@
   {
     "code": "Polish–Lithuanian Commonwealth",
     "continent": "Europe",
-    "name": "Polish–Lithuanian Commonwealth"
+    "name": "Poland-Lithuania"
   },
   {
     "code": "pt",
@@ -1776,7 +1776,7 @@
   {
     "code": "vc",
     "continent": "North America",
-    "name": "Saint Vincent and the Grenadines"
+    "name": "St. Vincent & Grenadines"
   },
   {
     "code": "Sami flag",
@@ -1933,7 +1933,7 @@
   {
     "code": "gs",
     "continent": "Antarctica",
-    "name": "South Georgia and the South Sandwich Islands"
+    "name": "South Georgia"
   },
   {
     "code": "kr",
