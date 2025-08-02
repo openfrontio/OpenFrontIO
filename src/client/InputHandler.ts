@@ -107,6 +107,13 @@ export class CenterCameraEvent implements GameEvent {
   constructor() {}
 }
 
+export class AutoUpgradeEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
 export class InputHandler {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;
@@ -325,6 +332,12 @@ export class InputHandler {
   }
 
   private onPointerDown(event: PointerEvent) {
+    if (event.button === 1) {
+      event.preventDefault();
+      this.eventBus.emit(new AutoUpgradeEvent(event.clientX, event.clientY));
+      return;
+    }
+
     if (event.button > 0) {
       return;
     }
@@ -346,6 +359,11 @@ export class InputHandler {
   }
 
   onPointerUp(event: PointerEvent) {
+    if (event.button === 1) {
+      event.preventDefault();
+      return;
+    }
+
     if (event.button > 0) {
       return;
     }
@@ -398,6 +416,11 @@ export class InputHandler {
   }
 
   private onPointerMove(event: PointerEvent) {
+    if (event.button === 1) {
+      event.preventDefault();
+      return;
+    }
+
     if (event.button > 0) {
       return;
     }
