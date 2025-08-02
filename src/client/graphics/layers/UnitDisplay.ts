@@ -9,8 +9,8 @@ import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
+import { renderNumber } from "../../../core/Util";
 import { ToggleStructureEvent } from "../../InputHandler";
-import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
 
 @customElement("unit-display")

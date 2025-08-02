@@ -1,7 +1,6 @@
-import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
-import { simpleHash } from "../Util";
+import { renderNumber, simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
 import { AllianceRequestImpl } from "./AllianceRequestImpl";
 import {

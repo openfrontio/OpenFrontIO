@@ -5,8 +5,8 @@ import { EventBus } from "../../../core/EventBus";
 import { Gold } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
+import { renderNumber, renderTroops } from "../../../core/Util";
 import { AttackRatioEvent } from "../../InputHandler";
-import { renderNumber, renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 

@@ -1,10 +1,11 @@
-import { renderNumber, renderTroops } from "../../client/Utils";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
   assertNever,
   distSortUnit,
   minInt,
+  renderNumber,
+  renderTroops,
   simpleHash,
   toInt,
   within,

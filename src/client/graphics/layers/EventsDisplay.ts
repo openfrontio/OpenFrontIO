@@ -38,8 +38,7 @@ import {
 import { Layer } from "./Layer";
 
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { onlyImages } from "../../../core/Util";
-import { renderNumber, renderTroops } from "../../Utils";
+import { onlyImages, renderNumber, renderTroops } from "../../../core/Util";
 import {
   GoToPlayerEvent,
   GoToPositionEvent,

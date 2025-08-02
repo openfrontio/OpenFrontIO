@@ -1,5 +1,5 @@
-import { Cell, Game, NameViewData, Player } from "../../core/game/Game";
-import { calculateBoundingBox } from "../../core/Util";
+import { calculateBoundingBox } from "../Util";
+import { Cell, Game, NameViewData, Player } from "./Game";
 
 export interface Point {
   x: number;
@@ -100,7 +100,7 @@ export function createGrid(
 }
 
 export function findLargestInscribedRectangle(grid: boolean[][]): Rectangle {
-  const rows = grid[0].length;
+  const rows = grid[0]?.length ?? 0;
   const cols = grid.length;
   const heights: number[] = new Array(cols).fill(0);
   let largestRect: Rectangle = { x: 0, y: 0, width: 0, height: 0 };

@@ -21,6 +21,7 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
+import { renderNumber } from "../../../core/Util";
 import {
   CloseViewEvent,
   MouseDownEvent,
@@ -31,7 +32,6 @@ import {
   BuildUnitIntentEvent,
   SendUpgradeStructureIntentEvent,
 } from "../../Transport";
-import { renderNumber } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 

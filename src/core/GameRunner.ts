@@ -1,4 +1,3 @@
-import { placeName } from "../client/graphics/NameBoxCalculator";
 import { getConfig } from "./configuration/ConfigLoader";
 import { Executor } from "./execution/ExecutionManager";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
@@ -25,6 +24,7 @@ import {
   GameUpdateType,
   GameUpdateViewData,
 } from "./game/GameUpdates";
+import { placeName } from "./game/NameBoxCalculator";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
