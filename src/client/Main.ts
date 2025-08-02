@@ -1,6 +1,7 @@
 import favicon from "../../resources/images/Favicon.svg";
 import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
+import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
 import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
@@ -24,6 +25,7 @@ import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
+import { SendKickPlayerIntentEvent } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
@@ -77,6 +79,7 @@ export interface JoinLobbyEvent {
 
 class Client {
   private gameStop: (() => void) | null = null;
+  private eventBus: EventBus = new EventBus();
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
@@ -163,11 +166,13 @@ class Client {
     setFavicon();
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
+    document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
 
     const spModal = document.querySelector(
       "single-player-modal",
     ) as SinglePlayerModal;
     spModal instanceof SinglePlayerModal;
+
     const singlePlayer = document.getElementById("single-player");
     if (singlePlayer === null) throw new Error("Missing single-player");
     singlePlayer.addEventListener("click", () => {
@@ -428,6 +433,7 @@ class Client {
     const config = await getServerConfigFromClient();
 
     this.gameStop = joinLobby(
+      this.eventBus,
       {
         gameID: lobby.gameID,
         serverConfig: config,
@@ -512,6 +518,15 @@ class Client {
     this.gameStop();
     this.gameStop = null;
     this.publicLobby.leaveLobby();
+  }
+
+  private handleKickPlayer(event: CustomEvent) {
+    const { target } = event.detail;
+
+    // Forward to eventBus if available
+    if (this.eventBus) {
+      this.eventBus.emit(new SendKickPlayerIntentEvent(target));
+    }
   }
 }
 
