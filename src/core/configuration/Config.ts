@@ -157,6 +157,7 @@ export interface Config {
   nukeAllianceBreakThreshold(): number;
   defaultNukeSpeed(): number;
   defaultNukeTargetableRange(): number;
+  defaultSamMissileSpeed(): number;
   defaultSamRange(): number;
   nukeDeathFactor(
     nukeType: NukeType,
