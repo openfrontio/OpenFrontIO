@@ -163,10 +163,6 @@ export class MainRadialMenu extends LitElement implements Layer {
     return this.radialMenu.shouldTransform();
   }
 
-  redraw() {
-    // No redraw implementation needed
-  }
-
   closeMenu() {
     if (this.radialMenu.isMenuVisible()) {
       this.radialMenu.hideRadialMenu();
