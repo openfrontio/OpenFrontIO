@@ -13,7 +13,6 @@ export default {
     "^.+\\.tsx?$": ["@swc/jest"],
   },
   transformIgnorePatterns: ["node_modules/(?!(node:)/)"],
-  preset: "ts-jest/presets/default-esm",
   collectCoverageFrom: ["src/**/*.ts", "!src/**/*.d.ts"],
   coverageThreshold: {
     global: {
