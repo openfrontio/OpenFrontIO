@@ -1,3 +1,4 @@
+import { AllianceExtensionExecution } from "../src/core/execution/alliance/AllianceExtensionExecution";
 import { BotBehavior } from "../src/core/execution/utils/BotBehavior";
 import {
   AllianceRequest,
@@ -147,5 +148,63 @@ describe("BotBehavior.handleAllianceRequests", () => {
 
     expect(request.accept).not.toHaveBeenCalled();
     expect(request.reject).toHaveBeenCalled();
+  });
+});
+
+describe("BotBehavior.handleAllianceExtensionRequests", () => {
+  let mockGame: any;
+  let mockPlayer: any;
+  let mockAlliance: any;
+  let mockHuman: any;
+  let mockRandom: any;
+
+  beforeEach(() => {
+    mockGame = { addExecution: jest.fn() };
+    mockHuman = { id: jest.fn(() => "human_id") };
+    mockAlliance = {
+      onlyOneAgreedToExtend: jest.fn(() => true),
+      other: jest.fn(() => mockHuman),
+    };
+    mockPlayer = {
+      alliances: jest.fn(() => [mockAlliance]),
+      id: jest.fn(() => "bot_id"),
+    };
+    mockRandom = { chance: jest.fn() };
+    botBehavior = new BotBehavior(
+      mockRandom,
+      mockGame,
+      mockPlayer,
+      0.5,
+      0.5,
+      0.2,
+    );
+  });
+
+  it("should NOT request extension if onlyOneAgreedToExtend is false (no expiration yet)", () => {
+    mockAlliance.onlyOneAgreedToExtend.mockReturnValue(false);
+    botBehavior.handleAllianceExtensionRequests();
+    expect(mockGame.addExecution).not.toHaveBeenCalled();
+  });
+
+  it("should NOT request extension if onlyOneAgreedToExtend is false (both already agreed)", () => {
+    mockAlliance.onlyOneAgreedToExtend.mockReturnValue(false);
+    mockRandom.chance.mockReturnValue(true);
+    botBehavior.handleAllianceExtensionRequests();
+    expect(mockGame.addExecution).not.toHaveBeenCalled();
+  });
+
+  it("should extend if random chance is true", () => {
+    mockRandom.chance.mockReturnValue(true);
+    botBehavior.handleAllianceExtensionRequests();
+    expect(mockGame.addExecution).toHaveBeenCalled();
+    expect(mockGame.addExecution.mock.calls[0][0]).toBeInstanceOf(
+      AllianceExtensionExecution,
+    );
+  });
+
+  it("should NOT extend if random chance is false", () => {
+    mockRandom.chance.mockReturnValue(false);
+    botBehavior.handleAllianceExtensionRequests();
+    expect(mockGame.addExecution).not.toHaveBeenCalled();
   });
 });

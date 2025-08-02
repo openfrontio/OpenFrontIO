@@ -9,6 +9,7 @@ import {
 } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
 import { flattenedEmojiTable } from "../../Util";
+import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
 import { AttackExecution } from "../AttackExecution";
 import { EmojiExecution } from "../EmojiExecution";
 
@@ -34,6 +35,24 @@ export class BotBehavior {
       } else {
         req.reject();
       }
+    }
+  }
+
+  handleAllianceExtensionRequests() {
+    for (const alliance of this.player.alliances()) {
+      // Alliance expiration tracked by Events Panel, only human ally can click Request to Renew
+      // Skip if no expiration yet/ ally didn't request extension yet/ bot already agreed to extend
+      if (!alliance.onlyOneAgreedToExtend()) continue;
+      // Bot is friendly towards human because they're already allies, no need to check relation
+      // Just have random chance as though bot decided to extend alliance or not
+      if (!this.random.chance(1.5)) continue;
+
+      this.game.addExecution(
+        new AllianceExtensionExecution(
+          this.player,
+          alliance.other(this.player).id(),
+        ),
+      );
     }
   }
 

@@ -58,6 +58,7 @@ export class BotExecution implements Execution {
     }
 
     this.behavior.handleAllianceRequests();
+    this.behavior.handleAllianceExtensionRequests();
     this.maybeAttack();
   }
 
