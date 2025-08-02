@@ -43,6 +43,17 @@ export default [
       "@typescript-eslint/no-unused-expressions": "off",
       "@typescript-eslint/no-unused-vars": "off",
       "no-case-declarations": "off",
+      "sort-keys": [
+        "off",
+        "asc",
+        {
+          allowLineSeparatedGroups: false,
+          caseSensitive: true,
+          ignoreComputedKeys: false,
+          minKeys: 2,
+          natural: true,
+        },
+      ],
     },
   },
   {
