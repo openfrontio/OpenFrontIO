@@ -2,6 +2,8 @@ name: 🧼 PR
 
 on:
   merge_group:
+    types:
+      - checks_requested
   pull_request:
     types:
       - demilestoned
@@ -61,10 +63,31 @@ jobs:
       - uses: actions/github-script@v7
         with:
           script: |
-            // Get the pull request data
-            const milestone = context.payload.pull_request.milestone;
-            if (!milestone) {
-              core.setFailed('❌ Pull request must have a milestone assigned before merging.');
+            let prs = [];
+
+            if (context.eventName === 'merge_group') {
+              const sha = context.payload.merge_group.head_sha;
+              console.log(`ℹ️ Merge group detected. Looking up PRs for commit ${sha}...`);
+
+              prs = await github.request('GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls', {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: sha,
+                headers: { accept: 'application/vnd.github.groot-preview+json' }
+              }).then(r => r.data);
+            } else {
+              prs = [context.payload.pull_request];
+            }
+
+            if (!prs || prs.length === 0) {
+              core.setFailed('❌ No associated PRs found for this commit.');
               return;
             }
-            console.log(`✅ Milestone found: ${milestone.title}`);
+
+            for (const pr of prs) {
+              if (!pr.milestone) {
+                core.setFailed(`❌ PR #${pr.number} is missing a milestone.`);
+                return;
+              }
+              console.log(`✅ PR #${pr.number} has milestone: ${pr.milestone.title}`);
+            }
