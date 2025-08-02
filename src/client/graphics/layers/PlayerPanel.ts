@@ -164,9 +164,17 @@ export class PlayerPanel extends LitElement implements Layer {
 
   private ctModal: ChatModal;
 
+  initEventBus(eventBus: EventBus) {
+    this.eventBus = eventBus;
+    eventBus.on(CloseViewEvent, (e) => {
+      if (!this.hidden) {
+        this.hide();
+      }
+    });
+  }
+
   init() {
     this.eventBus.on(MouseUpEvent, () => this.hide());
-
     this.eventBus.on(CloseViewEvent, (e) => {
       this.hide();
     });
