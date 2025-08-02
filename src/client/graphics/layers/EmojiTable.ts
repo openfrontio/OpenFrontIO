@@ -17,7 +17,7 @@ export class EmojiTable extends LitElement {
   public game: GameView;
 
   initEventBus(eventBus) {
-    this.eventBus.on(ShowEmojiMenuEvent, (e) => {
+    eventBus.on(ShowEmojiMenuEvent, (e) => {
       this.isVisible = true;
       const cell = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
       if (!this.game.isValidCoord(cell.x, cell.y)) {
@@ -40,7 +40,7 @@ export class EmojiTable extends LitElement {
           targetPlayer === this.game.myPlayer()
             ? AllPlayers
             : (targetPlayer as PlayerView);
-        this.eventBus.emit(
+        eventBus.emit(
           new SendEmojiIntentEvent(
             recipient,
             flattenedEmojiTable.indexOf(emoji),
