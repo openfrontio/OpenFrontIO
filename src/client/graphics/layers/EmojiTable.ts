@@ -12,11 +12,10 @@ import { TransformHandler } from "../TransformHandler";
 @customElement("emoji-table")
 export class EmojiTable extends LitElement {
   @state() public isVisible = false;
-  public eventBus: EventBus;
   public transformHandler: TransformHandler;
   public game: GameView;
 
-  initEventBus(eventBus) {
+  initEventBus(eventBus: EventBus) {
     eventBus.on(ShowEmojiMenuEvent, (e) => {
       this.isVisible = true;
       const cell = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
@@ -67,8 +66,8 @@ export class EmojiTable extends LitElement {
       <div
         class="bg-slate-800 max-w-[95vw] max-h-[95vh] pt-[15px] pb-[15px] fixed flex flex-col -translate-x-1/2 -translate-y-1/2 
                 items-center rounded-[10px] z-[9999] top-[50%] left-[50%] justify-center"
-        @contextmenu=${(e) => e.preventDefault()}
-        @wheel=${(e) => e.stopPropagation()}
+        @contextmenu=${(e: MouseEvent) => e.preventDefault()}
+        @wheel=${(e: WheelEvent) => e.stopPropagation()}
       >
         <!-- Close button -->
         <button

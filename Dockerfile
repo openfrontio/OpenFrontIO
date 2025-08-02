@@ -34,6 +34,11 @@ RUN npm run build-prod
 # https://openfront.io/commit.txt
 RUN echo "$GIT_COMMIT" > static/commit.txt
 
+# Remove maps data from final image
+FROM base AS prod-files
+COPY . .
+RUN rm -rf resources/maps
+
 FROM dependencies AS npm-dependencies
 # Disable Husky hooks
 ENV HUSKY=0
@@ -67,7 +72,7 @@ COPY --from=npm-dependencies /usr/src/app/node_modules node_modules
 COPY package.json .
 
 # Copy the rest of the application code
-COPY . .
+COPY --from=prod-files /usr/src/app/ /usr/src/app/
 
 # Copy frontend
 COPY --from=build /usr/src/app/static static
