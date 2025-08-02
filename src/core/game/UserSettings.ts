@@ -50,6 +50,10 @@ export class UserSettings {
     this.get("settings.focusLocked", true);
   }
 
+  useWebGL() {
+    return this.get("settings.webGL", true);
+  }
+
   toggleLeftClickOpenMenu() {
     this.set("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
   }
@@ -85,6 +89,10 @@ export class UserSettings {
     } else {
       document.documentElement.classList.remove("dark");
     }
+  }
+
+  toggleWebgl() {
+    this.set("settings.webGL", !this.useWebGL());
   }
 
   getSelectedPattern(): string | undefined {
