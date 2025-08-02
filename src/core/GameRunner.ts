@@ -19,6 +19,7 @@ import {
 } from "./game/Game";
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
+import { GameMapLoader } from "./game/GameMapLoader";
 import {
   ErrorUpdate,
   GameUpdateType,
@@ -33,10 +34,11 @@ import { fixProfaneUsername } from "./validations/username";
 export async function createGameRunner(
   gameStart: GameStartInfo,
   clientID: ClientID,
+  mapLoader: GameMapLoader,
   callBack: (gu: GameUpdateViewData) => void,
 ): Promise<GameRunner> {
   const config = await getConfig(gameStart.config, null);
-  const gameMap = await loadGameMap(gameStart.config.gameMap);
+  const gameMap = await loadGameMap(gameStart.config.gameMap, mapLoader);
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
 
   const humans = gameStart.players.map(

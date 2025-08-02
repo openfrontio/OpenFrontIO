@@ -114,6 +114,11 @@ export class SettingsModal extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onTogglePerformanceOverlayButtonClick() {
+    this.userSettings.togglePerformanceOverlay();
+    this.requestUpdate();
+  }
+
   private onExitButtonClick() {
     // redirect to the home page
     window.location.href = "/";
@@ -293,6 +298,35 @@ export class SettingsModal extends LitElement implements Layer {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.userSettings.leftClickOpensMenu()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              @click="${this.onTogglePerformanceOverlayButtonClick}"
+            >
+              <img
+                src=${settingsIcon}
+                alt="performanceIcon"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.performance_overlay_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${this.userSettings.performanceOverlay()
+                    ? translateText("user_setting.performance_overlay_enabled")
+                    : translateText(
+                        "user_setting.performance_overlay_disabled",
+                      )}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.performanceOverlay()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>

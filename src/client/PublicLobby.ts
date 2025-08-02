@@ -2,10 +2,10 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { GameMapType, GameMode } from "../core/game/Game";
-import { terrainMapFileLoader } from "../core/game/TerrainMapFileLoader";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { JoinLobbyEvent } from "./Main";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {

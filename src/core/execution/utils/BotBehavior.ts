@@ -59,8 +59,8 @@ export class BotBehavior {
   }
 
   private hasSufficientTroops(): boolean {
-    const maxPop = this.game.config().maxPopulation(this.player);
-    const ratio = this.player.population() / maxPop;
+    const maxTroops = this.game.config().maxTroops(this.player);
+    const ratio = this.player.troops() / maxTroops;
     return ratio >= this.triggerRatio;
   }
 
@@ -208,8 +208,7 @@ export class BotBehavior {
 
   sendAttack(target: Player | TerraNullius) {
     if (target.isPlayer() && this.player.isOnSameTeam(target)) return;
-    const maxPop = this.game.config().maxPopulation(this.player);
-    const maxTroops = maxPop * this.player.targetTroopRatio();
+    const maxTroops = this.game.config().maxTroops(this.player);
     const reserveRatio = target.isPlayer()
       ? this.reserveRatio
       : this.expandRatio;

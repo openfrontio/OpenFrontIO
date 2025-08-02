@@ -41,8 +41,9 @@ export class GameServer {
   private turns: Turn[] = [];
   private intents: Intent[] = [];
   public activeClients: Client[] = [];
-  // Used for record record keeping
+  private LobbyCreatorID: string | undefined;
   private allClients: Map<ClientID, Client> = new Map();
+  private clientsDisconnectedStatus: Map<ClientID, boolean> = new Map();
   private _hasStarted = false;
   private _startTime: number | null = null;
 
@@ -70,8 +71,10 @@ export class GameServer {
     public readonly createdAt: number,
     private config: ServerConfig,
     public gameConfig: GameConfig,
+    lobbyCreatorID?: string,
   ) {
     this.log = log_.child({ gameID: id });
+    this.LobbyCreatorID = lobbyCreatorID ?? undefined;
   }
 
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
@@ -116,6 +119,13 @@ export class GameServer {
         clientID: client.clientID,
       });
       return;
+    }
+    // Log when lobby creator joins private game
+    if (client.clientID === this.LobbyCreatorID) {
+      this.log.info("Lobby creator joined", {
+        gameID: this.id,
+        creatorID: this.LobbyCreatorID,
+      });
     }
     this.log.info("client (re)joining game", {
       clientID: client.clientID,
@@ -174,7 +184,6 @@ export class GameServer {
         return;
       }
 
-      client.isDisconnected = existing.isDisconnected;
       client.lastPing = existing.lastPing;
 
       this.activeClients = this.activeClients.filter((c) => c !== existing);
@@ -183,6 +192,8 @@ export class GameServer {
     // Client connection accepted
     this.activeClients.push(client);
     client.lastPing = Date.now();
+
+    this.markClientDisconnected(client.clientID, false);
 
     this.allClients.set(client.clientID, client);
 
@@ -208,38 +219,93 @@ export class GameServer {
             return;
           }
           const clientMsg = parsed.data;
-          if (clientMsg.type === "intent") {
-            if (clientMsg.intent.clientID !== client.clientID) {
+          switch (clientMsg.type) {
+            case "intent": {
+              if (clientMsg.intent.clientID !== client.clientID) {
+                this.log.warn(
+                  `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
+                );
+                return;
+              }
+              switch (clientMsg.intent.type) {
+                case "mark_disconnected": {
+                  this.log.warn(
+                    `Should not receive mark_disconnected intent from client`,
+                  );
+                  return;
+                }
+
+                // Handle kick_player intent via WebSocket
+                case "kick_player": {
+                  const authenticatedClientID = client.clientID;
+
+                  // Check if the authenticated client is the lobby creator
+                  if (authenticatedClientID !== this.LobbyCreatorID) {
+                    this.log.warn(`Only lobby creator can kick players`, {
+                      clientID: authenticatedClientID,
+                      creatorID: this.LobbyCreatorID,
+                      target: clientMsg.intent.target,
+                      gameID: this.id,
+                    });
+                    return;
+                  }
+
+                  // Don't allow lobby creator to kick themselves
+                  if (authenticatedClientID === clientMsg.intent.target) {
+                    this.log.warn(`Cannot kick yourself`, {
+                      clientID: authenticatedClientID,
+                    });
+                    return;
+                  }
+
+                  // Log and execute the kick
+                  this.log.info(`Lobby creator initiated kick of player`, {
+                    creatorID: authenticatedClientID,
+                    target: clientMsg.intent.target,
+                    gameID: this.id,
+                    kickMethod: "websocket",
+                  });
+
+                  this.kickClient(clientMsg.intent.target);
+                  return;
+                }
+                default: {
+                  this.addIntent(clientMsg.intent);
+                  break;
+                }
+              }
+              break;
+            }
+            case "ping": {
+              this.lastPingUpdate = Date.now();
+              client.lastPing = Date.now();
+              break;
+            }
+            case "hash": {
+              client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
+              break;
+            }
+            case "winner": {
+              if (
+                this.outOfSyncClients.has(client.clientID) ||
+                this.kickedClients.has(client.clientID) ||
+                this.winner !== null
+              ) {
+                return;
+              }
+              this.winner = clientMsg;
+              this.archiveGame();
+              break;
+            }
+            default: {
               this.log.warn(
-                `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
+                `Unknown message type: ${(clientMsg as any).type}`,
+                {
+                  clientID: client.clientID,
+                },
               );
-              return;
+              break;
             }
-            if (clientMsg.intent.type === "mark_disconnected") {
-              this.log.warn(
-                `Should not receive mark_disconnected intent from client`,
-              );
-              return;
-            }
-            this.addIntent(clientMsg.intent);
-          }
-          if (clientMsg.type === "ping") {
-            this.lastPingUpdate = Date.now();
-            client.lastPing = Date.now();
-          }
-          if (clientMsg.type === "hash") {
-            client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
-          }
-          if (clientMsg.type === "winner") {
-            if (
-              this.outOfSyncClients.has(client.clientID) ||
-              this.kickedClients.has(client.clientID) ||
-              this.winner !== null
-            ) {
-              return;
-            }
-            this.winner = clientMsg;
-            this.archiveGame();
           }
         } catch (error) {
           this.log.info(
@@ -451,6 +517,10 @@ export class GameServer {
     }
   }
 
+  public isPrivateLobbyCreator(clientID: string): boolean {
+    return this.LobbyCreatorID === clientID;
+  }
+
   phase(): GamePhase {
     const now = Date.now();
     const alive: Client[] = [];
@@ -571,25 +641,27 @@ export class GameServer {
 
     const now = Date.now();
     for (const [clientID, client] of this.allClients) {
-      if (
-        client.isDisconnected === false &&
-        now - client.lastPing > this.disconnectedTimeout
-      ) {
-        this.markClientDisconnected(client, true);
+      const isDisconnected = this.isClientDisconnected(clientID);
+      if (!isDisconnected && now - client.lastPing > this.disconnectedTimeout) {
+        this.markClientDisconnected(clientID, true);
       } else if (
-        client.isDisconnected &&
+        isDisconnected &&
         now - client.lastPing < this.disconnectedTimeout
       ) {
-        this.markClientDisconnected(client, false);
+        this.markClientDisconnected(clientID, false);
       }
     }
   }
 
-  private markClientDisconnected(client: Client, isDisconnected: boolean) {
-    client.isDisconnected = isDisconnected;
+  public isClientDisconnected(clientID: string): boolean {
+    return this.clientsDisconnectedStatus.get(clientID) ?? true;
+  }
+
+  private markClientDisconnected(clientID: string, isDisconnected: boolean) {
+    this.clientsDisconnectedStatus.set(clientID, isDisconnected);
     this.addIntent({
       type: "mark_disconnected",
-      clientID: client.clientID,
+      clientID: clientID,
       isDisconnected: isDisconnected,
     });
   }

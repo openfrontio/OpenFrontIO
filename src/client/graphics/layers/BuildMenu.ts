@@ -404,7 +404,7 @@ export class BuildMenu extends LitElement implements Layer {
     return html`
       <div
         class="build-menu ${this._hidden ? "hidden" : ""}"
-        @contextmenu=${(e) => e.preventDefault()}
+        @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         ${this.filteredBuildTable.map(
           (row) => html`

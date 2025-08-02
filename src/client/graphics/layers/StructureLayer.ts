@@ -135,7 +135,14 @@ export class StructureLayer implements Layer {
 
     this.canvas.width = this.game.width() * 2;
     this.canvas.height = this.game.height() * 2;
-    this.game.units().forEach((u) => this.handleUnitRendering(u));
+
+    Promise.all(
+      Array.from(this.unitIcons.values()).map((img) =>
+        img.decode?.().catch(() => {}),
+      ),
+    ).finally(() => {
+      this.game.units().forEach((u) => this.handleUnitRendering(u));
+    });
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
