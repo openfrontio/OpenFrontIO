@@ -68,7 +68,20 @@ export class FlagInput extends LitElement {
     super.connectedCallback();
     this.flag = this.getStoredFlag();
     this.dispatchFlagEvent();
+    window.addEventListener("keydown", this.handleKeyDown);
   }
+
+  disconnectedCallback() {
+    window.removeEventListener("keydown", this.handleKeyDown);
+    super.disconnectedCallback();
+  }
+
+  private handleKeyDown = (e: KeyboardEvent) => {
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.showModal = false;
+    }
+  };
 
   createRenderRoot() {
     return this;

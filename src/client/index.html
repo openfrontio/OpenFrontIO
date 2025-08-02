@@ -413,6 +413,10 @@
           document.documentElement.classList.remove("preload");
         });
       });
+      window.addEventListener("beforeunload", function (e) {
+        e.preventDefault();
+        e.returnValue = "Are you sure you want to leave?";
+      });
     </script>
 
     <!-- Playwire ads -->
