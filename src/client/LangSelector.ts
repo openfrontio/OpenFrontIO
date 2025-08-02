@@ -34,8 +34,8 @@ import zh_CN from "../../resources/lang/zh-CN.json";
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
   @state() public translations: Record<string, string> | undefined;
-  @state() private defaultTranslations: Record<string, string> | undefined;
-  @state() private currentLang: string = "en";
+  @state() public defaultTranslations: Record<string, string> | undefined;
+  @state() public currentLang: string = "en";
   @state() private languageList: any[] = [];
   @state() private showModal: boolean = false;
   @state() private debugMode: boolean = false;

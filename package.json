@@ -113,6 +113,7 @@
     "express": "^4.21.1",
     "express-rate-limit": "^7.5.0",
     "fastpriorityqueue": "^0.7.5",
+    "intl-messageformat": "^10.7.16",
     "ip-anonymize": "^0.1.0",
     "jose": "^6.0.10",
     "js-yaml": "^4.1.0",
