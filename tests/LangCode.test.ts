@@ -1,8 +1,13 @@
 import fs from "fs";
 import path from "path";
 
+import { fileURLToPath } from "url";
+
 describe("LangCode Filename Check", () => {
-  const langDir = path.join(__dirname, "../resources/lang");
+  const langDir = path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../resources/lang",
+  );
 
   test("lang_code matches filename", () => {
     const files = fs

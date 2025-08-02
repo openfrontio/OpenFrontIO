@@ -1,3 +1,5 @@
+import { jest } from "@jest/globals";
+
 import { NukeExecution } from "../../../src/core/execution/NukeExecution";
 import {
   Game,
