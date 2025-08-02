@@ -63,7 +63,7 @@ describe("Shell Random Damage", () => {
       shell.init(game, game.ticks() + i);
 
       const healthBefore = target.health();
-      target.modifyHealth(-shell["effectOnTarget"](), player1);
+      target.modifyHealth(-shell.getEffectOnTargetForTesting(), player1);
       const healthAfter = target.health();
 
       const damage = healthBefore - healthAfter;
@@ -218,7 +218,7 @@ describe("Shell Random Damage", () => {
       shell.init(game, game.ticks() + i);
 
       const healthBefore = target.health();
-      target.modifyHealth(-shell["effectOnTarget"](), player1);
+      target.modifyHealth(-shell.getEffectOnTargetForTesting(), player1);
       const healthAfter = target.health();
 
       const damage = healthBefore - healthAfter;
@@ -291,13 +291,13 @@ describe("Shell Random Damage", () => {
     shell2.init(game, currentTicks);
 
     const healthBefore1 = target.health();
-    target.modifyHealth(-shell1["effectOnTarget"](), player1);
+    target.modifyHealth(-shell1.getEffectOnTargetForTesting(), player1);
     const damage1 = healthBefore1 - target.health();
 
     target.modifyHealth(-(healthBefore1 - initialHealth));
 
     const healthBefore2 = target.health();
-    target.modifyHealth(-shell2["effectOnTarget"](), player1);
+    target.modifyHealth(-shell2.getEffectOnTargetForTesting(), player1);
     const damage2 = healthBefore2 - target.health();
 
     expect(damage1).toBe(damage2);

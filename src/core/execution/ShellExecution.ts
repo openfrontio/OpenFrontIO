@@ -71,6 +71,10 @@ export class ShellExecution implements Execution {
     return Math.round((baseDamage / 250) * damageMultiplier);
   }
 
+  public getEffectOnTargetForTesting(): number {
+    return this.effectOnTarget();
+  }
+
   isActive(): boolean {
     return this.active;
   }
