@@ -45,6 +45,7 @@ export class TerritoryPatternsModal extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    window.addEventListener("keydown", this.handleKeyDown);
     this.selectedPattern = this.userSettings.getSelectedPattern();
     this.updateComplete.then(() => {
       const containers = this.renderRoot.querySelectorAll(".preview-container");
@@ -59,6 +60,7 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   disconnectedCallback() {
+    window.removeEventListener("keydown", this.handleKeyDown);
     super.disconnectedCallback();
   }
 
@@ -69,6 +71,11 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.close();
+    }
+
     const key = e.key.toLowerCase();
     const nextSequence = [...this.keySequence, key].slice(-5);
     this.keySequence = nextSequence;

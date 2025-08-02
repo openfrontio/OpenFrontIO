@@ -273,7 +273,7 @@ export class DefaultConfig implements Config {
     }
   }
 
-  cityPopulationIncrease(): number {
+  cityTroopIncrease(): number {
     return 250_000;
   }
 
@@ -714,8 +714,8 @@ export class DefaultConfig implements Config {
     return this.infiniteTroops() ? 1_000_000 : 25_000;
   }
 
-  maxPopulation(player: Player | PlayerView): number {
-    const maxPop =
+  maxTroops(player: Player | PlayerView): number {
+    const maxTroops =
       player.type() === PlayerType.Human && this.infiniteTroops()
         ? 1_000_000_000
         : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
@@ -723,34 +723,34 @@ export class DefaultConfig implements Config {
             .units(UnitType.City)
             .map((city) => city.level())
             .reduce((a, b) => a + b, 0) *
-            this.cityPopulationIncrease();
+            this.cityTroopIncrease();
 
     if (player.type() === PlayerType.Bot) {
-      return maxPop / 2;
+      return maxTroops / 2;
     }
 
     if (player.type() === PlayerType.Human) {
-      return maxPop;
+      return maxTroops;
     }
 
     switch (this._gameConfig.difficulty) {
       case Difficulty.Easy:
-        return maxPop * 0.5;
+        return maxTroops * 0.5;
       case Difficulty.Medium:
-        return maxPop * 1;
+        return maxTroops * 1;
       case Difficulty.Hard:
-        return maxPop * 1.5;
+        return maxTroops * 1.5;
       case Difficulty.Impossible:
-        return maxPop * 2;
+        return maxTroops * 2;
     }
   }
 
-  populationIncreaseRate(player: Player): number {
-    const max = this.maxPopulation(player);
+  troopIncreaseRate(player: Player): number {
+    const max = this.maxTroops(player);
 
-    let toAdd = 10 + Math.pow(player.population(), 0.73) / 4;
+    let toAdd = 10 + Math.pow(player.troops(), 0.73) / 4;
 
-    const ratio = 1 - player.population() / max;
+    const ratio = 1 - player.troops() / max;
     toAdd *= ratio;
 
     if (player.type() === PlayerType.Bot) {
@@ -774,26 +774,11 @@ export class DefaultConfig implements Config {
       }
     }
 
-    return Math.min(player.population() + toAdd, max) - player.population();
+    return Math.min(player.troops() + toAdd, max) - player.troops();
   }
 
   goldAdditionRate(player: Player): Gold {
-    return BigInt(Math.floor(0.045 * player.workers() ** 0.7));
-  }
-
-  troopAdjustmentRate(player: Player): number {
-    const maxDiff = this.maxPopulation(player) / 1000;
-    const target = player.population() * player.targetTroopRatio();
-    const diff = target - player.troops();
-    if (Math.abs(diff) < maxDiff) {
-      return diff;
-    }
-    const adjustment = maxDiff * Math.sign(diff);
-    // Can ramp down troops much faster
-    if (adjustment < 0) {
-      return adjustment * 5;
-    }
-    return adjustment;
+    return 100n;
   }
 
   nukeMagnitudes(unitType: UnitType): NukeMagnitude {
@@ -824,22 +809,22 @@ export class DefaultConfig implements Config {
     return 80;
   }
 
-  // Humans can be population, soldiers attacking, soldiers in boat etc.
+  // Humans can be soldiers, soldiers attacking, soldiers in boat etc.
   nukeDeathFactor(
     nukeType: NukeType,
     humans: number,
     tilesOwned: number,
-    maxPop: number,
+    maxTroops: number,
   ): number {
     if (nukeType !== UnitType.MIRVWarhead) {
       return (5 * humans) / Math.max(1, tilesOwned);
     }
-    const targetPop = 0.03 * maxPop;
-    const excessPop = Math.max(0, humans - targetPop);
+    const targetTroops = 0.03 * maxTroops;
+    const excessTroops = Math.max(0, humans - targetTroops);
     const scalingFactor = 500;
 
     const steepness = 2;
-    const normalizedExcess = excessPop / maxPop;
+    const normalizedExcess = excessTroops / maxTroops;
     return scalingFactor * (1 - Math.exp(-steepness * normalizedExcess));
   }
 
