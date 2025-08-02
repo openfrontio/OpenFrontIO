@@ -52,6 +52,10 @@ export class UserSettings {
     return this.get("settings.territoryPatterns", true);
   }
 
+  allianceTimer() {
+    return this.get("settings.allianceTimer", true);
+  }
+
   focusLocked() {
     return false;
     // TODO: renable when performance issues are fixed.
@@ -92,6 +96,10 @@ export class UserSettings {
 
   toggleTerritoryPatterns() {
     this.set("settings.territoryPatterns", !this.territoryPatterns());
+  }
+
+  toggleAllianceTimer() {
+    this.set("settings.allianceTimer", !this.allianceTimer());
   }
 
   toggleDarkMode() {
