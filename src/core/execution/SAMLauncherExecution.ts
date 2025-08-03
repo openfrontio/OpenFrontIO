@@ -121,8 +121,10 @@ export class SAMLauncherExecution implements Execution {
       this.MIRVWarheadSearchRadius,
       UnitType.MIRVWarhead,
       ({ unit }) => {
+        // skip if UnitView is received
+        if (!("isUnit" in unit) || !unit.isUnit()) return false;
         if (unit.owner() === this.player) return false;
-        if (this.player.isFriendly(unit.owner() as Player)) return false;
+        if (this.player.isFriendly(unit.owner())) return false;
         const dst = unit.targetTile();
         return (
           this.sam !== null &&
