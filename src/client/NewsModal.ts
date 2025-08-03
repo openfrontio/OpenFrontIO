@@ -83,7 +83,7 @@ export class NewsModal extends LitElement {
         </div>
 
         <div>
-          ${translateText("news.full_changelog")}
+          ${translateText("news.see_all_releases")}
           <a
             href="https://github.com/openfrontio/OpenFrontIO/releases"
             target="_blank"
@@ -105,6 +105,19 @@ export class NewsModal extends LitElement {
       this.initialized = true;
       fetch(changelog)
         .then((response) => (response.ok ? response.text() : "Failed to load"))
+        .then((markdown) =>
+          markdown
+            .replace(
+              /(?<!\()\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/pull\/(\d+)\b/g,
+              (_match, prNumber) =>
+                `[#${prNumber}](https://github.com/openfrontio/OpenFrontIO/pull/${prNumber})`,
+            )
+            .replace(
+              /(?<!\()\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/compare\/([\w.-]+)\b/g,
+              (_match, comparison) =>
+                `[${comparison}](https://github.com/openfrontio/OpenFrontIO/compare/${comparison})`,
+            ),
+        )
         .then((markdown) => (this.markdown = markdown));
     }
     this.requestUpdate();
