@@ -83,7 +83,7 @@ export class NewsModal extends LitElement {
         </div>
 
         <div>
-          ${translateText("news.full_changelog")}
+          ${translateText("news.see_all_releases")}
           <a
             href="https://github.com/openfrontio/OpenFrontIO/releases"
             target="_blank"
