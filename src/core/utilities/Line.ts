@@ -124,7 +124,7 @@ export class DistanceBasedBezierCurve extends CubicBezierCurve {
   /**
    * Precompute all points spaced @p pixelSpacing apart
    */
-  computeAllPoints(pixelSpacing: number, precision): void {
+  computeAllPoints(pixelSpacing: number, precision: number): void {
     this.cachedPoints = [];
     this.totalDistance = 0;
     this.currentIndex = 0;
