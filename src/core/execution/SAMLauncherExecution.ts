@@ -41,10 +41,17 @@ export class SAMLauncherExecution implements Execution {
       this.sam.tile(),
       this.mg.config().defaultSamRange(),
       [UnitType.AtomBomb, UnitType.HydrogenBomb],
-      ({ unit }) =>
-        unit.owner() !== this.player &&
-        !this.player.isFriendly(unit.owner() as Player) &&
-        (unit as Unit).isTargetable(),
+      ({ unit }) => {
+        // skip if UnitView is received
+        if (!("isUnit" in unit) || !unit.isUnit()) {
+          return false;
+        }
+        return (
+          unit.owner() !== this.player &&
+          !this.player.isFriendly(unit.owner()) &&
+          unit.isTargetable()
+        );
+      },
     );
 
     return (
