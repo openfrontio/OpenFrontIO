@@ -802,11 +802,15 @@ export class DefaultConfig implements Config {
   }
 
   defaultNukeTargetableRange(): number {
-    return 120;
+    return 150;
   }
 
   defaultSamRange(): number {
-    return 80;
+    return 70;
+  }
+
+  defaultSamMissileSpeed(): number {
+    return 12;
   }
 
   // Humans can be soldiers, soldiers attacking, soldiers in boat etc.
