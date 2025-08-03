@@ -211,7 +211,7 @@ export class PlayerImpl implements Player {
     return this._units.filter((u) => ts.has(u.type()));
   }
 
-  private numUnitsConstructed: { [key in UnitType]?: number } = {};
+  private numUnitsConstructed: Partial<Record<UnitType, number>> = {};
   private recordUnitConstructed(type: UnitType): void {
     if (this.numUnitsConstructed[type] !== undefined) {
       this.numUnitsConstructed[type]++;
