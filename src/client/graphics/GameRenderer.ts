@@ -173,7 +173,7 @@ export function createRenderer(
     console.error("player panel not found");
   }
   playerPanel.g = game;
-  playerPanel.eventBus = eventBus;
+  playerPanel.initEventBus(eventBus);
   playerPanel.emojiTable = emojiTable;
   playerPanel.uiState = uiState;
 
@@ -182,8 +182,7 @@ export function createRenderer(
     console.error("chat modal not found");
   }
   chatModal.g = game;
-  chatModal.eventBus = eventBus;
-  chatModal.initEventBus();
+  chatModal.initEventBus(eventBus);
 
   const multiTabModal = document.querySelector(
     "multi-tab-modal",

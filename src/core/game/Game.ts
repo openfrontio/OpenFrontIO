@@ -189,6 +189,10 @@ export interface OwnerComp {
   owner: Player;
 }
 
+export type TrajectoryTile = {
+  tile: TileRef;
+  targetable: boolean;
+};
 export interface UnitParamsMap {
   [UnitType.TransportShip]: {
     troops?: number;
@@ -207,10 +211,12 @@ export interface UnitParamsMap {
 
   [UnitType.AtomBomb]: {
     targetTile?: number;
+    trajectory: TrajectoryTile[];
   };
 
   [UnitType.HydrogenBomb]: {
     targetTile?: number;
+    trajectory: TrajectoryTile[];
   };
 
   [UnitType.TradeShip]: {
@@ -420,6 +426,9 @@ export interface Unit {
   // Targeting
   setTargetTile(cell: TileRef | undefined): void;
   targetTile(): TileRef | undefined;
+  setTrajectoryIndex(i: number): void;
+  trajectoryIndex(): number;
+  trajectory(): TrajectoryTile[];
   setTargetUnit(unit: Unit | undefined): void;
   targetUnit(): Unit | undefined;
   setTargetedBySAM(targeted: boolean): void;
@@ -510,17 +519,11 @@ export interface Player {
   conquer(tile: TileRef): void;
   relinquish(tile: TileRef): void;
 
-  // Resources & Population
+  // Resources & Troops
   gold(): Gold;
-  population(): number;
-  workers(): number;
-  troops(): number;
-  targetTroopRatio(): number;
   addGold(toAdd: Gold, tile?: TileRef): void;
   removeGold(toRemove: Gold): Gold;
-  addWorkers(toAdd: number): void;
-  removeWorkers(toRemove: number): void;
-  setTargetTroopRatio(target: number): void;
+  troops(): number;
   setTroops(troops: number): void;
   addTroops(troops: number): void;
   removeTroops(troops: number): number;
