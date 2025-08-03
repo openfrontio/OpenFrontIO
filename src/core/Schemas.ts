@@ -215,6 +215,8 @@ export const RequiredPatternSchema = z
       } catch (e) {
         if (e instanceof Error) {
           console.error(JSON.stringify(e.message, null, 2));
+        } else {
+          console.error(String(e));
         }
         return false;
       }
