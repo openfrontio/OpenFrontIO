@@ -69,9 +69,9 @@ export type GameUpdate =
 
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;
+  player: PlayerID;
   tile: TileRef;
   gold: number;
-  workers: number;
   troops: number;
 }
 

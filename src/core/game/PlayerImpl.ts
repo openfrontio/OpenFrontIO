@@ -704,9 +704,9 @@ export class PlayerImpl implements Player {
     if (tile) {
       this.mg.addUpdate({
         type: GameUpdateType.BonusEvent,
+        player: this.id(),
         tile,
         gold: Number(toAdd),
-        workers: 0,
         troops: 0,
       });
     }
