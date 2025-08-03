@@ -153,13 +153,6 @@ export class FakeHumanExecution implements Execution {
       return;
     }
 
-    if (
-      this.player.troops() > 100_000 &&
-      this.player.targetTroopRatio() > 0.7
-    ) {
-      this.player.setTargetTroopRatio(0.7);
-    }
-
     this.updateRelationsFromEmbargos();
     this.behavior.handleAllianceRequests();
     this.handleUnits();
