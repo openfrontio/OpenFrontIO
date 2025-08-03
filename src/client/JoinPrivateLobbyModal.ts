@@ -135,19 +135,23 @@ export class JoinPrivateLobbyModal extends LitElement {
     );
   }
 
-  private setLobbyId(id: string) {
-    if (id.startsWith("http")) {
-      if (id.includes("#join=")) {
-        const params = new URLSearchParams(id.split("#")[1]);
-        this.lobbyIdInput.value = params.get("join") || id;
-      } else if (id.includes("join/")) {
-        this.lobbyIdInput.value = id.split("join/")[1];
+  private extractLobbyIdFromUrl(input: string): string {
+    if (input.startsWith("http")) {
+      if (input.includes("#join=")) {
+        const params = new URLSearchParams(input.split("#")[1]);
+        return params.get("join") ?? input;
+      } else if (input.includes("join/")) {
+        return input.split("join/")[1];
       } else {
-        this.lobbyIdInput.value = id;
+        return input;
       }
     } else {
-      this.lobbyIdInput.value = id;
+      return input;
     }
+  }
+
+  private setLobbyId(id: string) {
+    this.lobbyIdInput.value = this.extractLobbyIdFromUrl(id);
   }
 
   private handleChange(e: Event) {
@@ -158,22 +162,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   private async pasteFromClipboard() {
     try {
       const clipText = await navigator.clipboard.readText();
-
-      let lobbyId: string;
-      if (clipText.startsWith("http")) {
-        if (clipText.includes("#join=")) {
-          const params = new URLSearchParams(clipText.split("#")[1]);
-          lobbyId = params.get("join") || clipText;
-        } else if (clipText.includes("join/")) {
-          lobbyId = clipText.split("join/")[1];
-        } else {
-          lobbyId = clipText;
-        }
-      } else {
-        lobbyId = clipText;
-      }
-
-      this.lobbyIdInput.value = lobbyId;
+      this.setLobbyId(clipText);
     } catch (err) {
       console.error("Failed to read clipboard contents: ", err);
     }
