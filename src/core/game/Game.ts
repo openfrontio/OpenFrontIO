@@ -390,9 +390,10 @@ export class PlayerInfo {
   }
 }
 
-export function isUnit(unit: Unit | UnitParams<UnitType>): unit is Unit {
+export function isUnit(unit: unknown): unit is Unit {
   return (
-    unit !== undefined &&
+    unit &&
+    typeof unit === "object" &&
     "isUnit" in unit &&
     typeof unit.isUnit === "function" &&
     unit.isUnit()
