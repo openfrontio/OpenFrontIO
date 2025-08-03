@@ -29,7 +29,7 @@ async function nearbyUnits(
   unitPosX: number,
   rangeCheck: number,
   range: number,
-  unitTypes: UnitType[],
+  unitTypes: readonly UnitType[],
 ) {
   const game = await setup(mapName, { infiniteGold: true, instantBuild: true });
   const grid = new UnitGrid(game.map());
@@ -88,7 +88,7 @@ describe("Unit Grid range tests", () => {
           unitPosX,
           rangeCheck,
           range,
-          Array.from(units), // remove readonly
+          units, // remove readonly
         );
         expect(result.length).toBe(expectedResult);
       },

@@ -135,7 +135,7 @@ export class UnitGrid {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
+    types: readonly UnitType[] | UnitType,
     predicate?: UnitPredicate,
   ): Array<{ unit: Unit | UnitView; distSquared: number }> {
     const nearby: Array<{ unit: Unit | UnitView; distSquared: number }> = [];
