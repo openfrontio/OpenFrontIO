@@ -137,7 +137,14 @@ export class JoinPrivateLobbyModal extends LitElement {
 
   private setLobbyId(id: string) {
     if (id.startsWith("http")) {
-      this.lobbyIdInput.value = id.split("join/")[1];
+      if (id.includes("#join=")) {
+        const params = new URLSearchParams(id.split("#")[1]);
+        this.lobbyIdInput.value = params.get("join") || id;
+      } else if (id.includes("join/")) {
+        this.lobbyIdInput.value = id.split("join/")[1];
+      } else {
+        this.lobbyIdInput.value = id;
+      }
     } else {
       this.lobbyIdInput.value = id;
     }
@@ -154,7 +161,14 @@ export class JoinPrivateLobbyModal extends LitElement {
 
       let lobbyId: string;
       if (clipText.startsWith("http")) {
-        lobbyId = clipText.split("join/")[1];
+        if (clipText.includes("#join=")) {
+          const params = new URLSearchParams(clipText.split("#")[1]);
+          lobbyId = params.get("join") || clipText;
+        } else if (clipText.includes("join/")) {
+          lobbyId = clipText.split("join/")[1];
+        } else {
+          lobbyId = clipText;
+        }
       } else {
         lobbyId = clipText;
       }
