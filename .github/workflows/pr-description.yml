@@ -2,6 +2,8 @@ name: 🧼 PR
 
 on:
   merge_group:
+    types:
+      - checks_requested
   pull_request:
     types:
       - demilestoned
@@ -21,6 +23,11 @@ jobs:
       - uses: actions/github-script@v7
         with:
           script: |
+            if (context.eventName === 'merge_group') {
+              // Ignore merge_group events
+              return;
+            }
+
             const body = context.payload.pull_request.body || '';
 
             const errors = [];
@@ -61,10 +68,16 @@ jobs:
       - uses: actions/github-script@v7
         with:
           script: |
-            // Get the pull request data
-            const milestone = context.payload.pull_request.milestone;
-            if (!milestone) {
-              core.setFailed('❌ Pull request must have a milestone assigned before merging.');
-              return;
+            if (context.eventName === 'merge_group') {
+              // Ignore merge_group events
+            } else if (context.eventName === 'pull_request') {
+              // Get the pull request data
+              const milestone = context.payload.pull_request.milestone;
+              if (!milestone) {
+                core.setFailed('❌ Pull request must have a milestone assigned before merging.');
+                return;
+              }
+              console.log(`✅ Milestone found: ${milestone.title}`);
+            } else {
+              core.setFailed(`❌ Unknown event type ${context.eventName}.`);
             }
-            console.log(`✅ Milestone found: ${milestone.title}`);
