@@ -105,6 +105,19 @@ export class NewsModal extends LitElement {
       this.initialized = true;
       fetch(changelog)
         .then((response) => (response.ok ? response.text() : "Failed to load"))
+        .then((markdown) =>
+          markdown
+            .replace(
+              /https:\/\/github\.com\/openfrontio\/OpenFrontIO\/pull\/(\d+)/g,
+              (_match, prNumber) =>
+                `[#${prNumber}](https://github.com/openfrontio/OpenFrontIO/pull/${prNumber})`,
+            )
+            .replace(
+              /https:\/\/github\.com\/openfrontio\/OpenFrontIO\/compare\/([\w.-]+)/g,
+              (_match, comparison) =>
+                `[${comparison}](https://github.com/openfrontio/OpenFrontIO/compare/${comparison})`,
+            ),
+        )
         .then((markdown) => (this.markdown = markdown));
     }
     this.requestUpdate();
