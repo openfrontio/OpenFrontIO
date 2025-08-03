@@ -108,12 +108,12 @@ export class NewsModal extends LitElement {
         .then((markdown) =>
           markdown
             .replace(
-              /https:\/\/github\.com\/openfrontio\/OpenFrontIO\/pull\/(\d+)/g,
+              /(?<!\()\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/pull\/(\d+)\b/g,
               (_match, prNumber) =>
                 `[#${prNumber}](https://github.com/openfrontio/OpenFrontIO/pull/${prNumber})`,
             )
             .replace(
-              /https:\/\/github\.com\/openfrontio\/OpenFrontIO\/compare\/([\w.-]+)/g,
+              /(?<!\()\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/compare\/([\w.-]+)\b/g,
               (_match, comparison) =>
                 `[${comparison}](https://github.com/openfrontio/OpenFrontIO/compare/${comparison})`,
             ),
