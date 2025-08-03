@@ -84,6 +84,7 @@ export class StructureIconsLayer implements Layer {
       { visible: true, iconPath: SAMMissileIcon, image: null },
     ],
   ]);
+  private renderSprites = true;
 
   constructor(
     private game: GameView,
@@ -183,6 +184,8 @@ export class StructureIconsLayer implements Layer {
           this.handleInactiveUnit(unitView);
         }
       });
+    this.renderSprites =
+      this.game.config().userSettings()?.structureSprites() ?? true;
   }
 
   private toggleStructure(toggleStructureType: UnitType | null): void {
@@ -317,10 +320,7 @@ export class StructureIconsLayer implements Layer {
     }
 
     if (this.transformHandler.hasChanged() || this.shouldRedraw) {
-      if (
-        this.transformHandler.scale > ZOOM_THRESHOLD &&
-        this.game.config().userSettings()?.structureSprites()
-      ) {
+      if (this.transformHandler.scale > ZOOM_THRESHOLD && this.renderSprites) {
         this.renderer.render(this.levelsStage);
       } else if (this.transformHandler.scale > DOTS_ZOOM_THRESHOLD) {
         this.renderer.render(this.iconsStage);
