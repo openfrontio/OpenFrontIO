@@ -350,7 +350,7 @@ export class FakeHumanExecution implements Execution {
     const dist = euclDistFN(tile, 25, false);
     let tileValue = targets
       .filter((unit) => dist(this.mg, unit.tile()))
-      .map((unit) => {
+      .map((unit): number => {
         switch (unit.type()) {
           case UnitType.City:
             return 25_000;
