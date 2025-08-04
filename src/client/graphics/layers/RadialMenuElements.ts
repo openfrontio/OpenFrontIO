@@ -19,6 +19,7 @@ import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg
 import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import infoIcon from "../../../../resources/images/InfoIcon.svg";
+import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
@@ -66,6 +67,7 @@ export const COLORS = {
   breakAlly: "#c74848",
   info: "#64748B",
   target: "#ff0000",
+  attack: "#ff0000",
   infoDetails: "#7f8c8d",
   infoEmoji: "#f1c40f",
   trade: "#008080",
@@ -89,6 +91,7 @@ export enum Slot {
   Info = "info",
   Boat = "boat",
   Build = "build",
+  Attack = "attack",
   Ally = "ally",
   Back = "back",
 }
@@ -319,6 +322,88 @@ function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
   return Units;
 }
 
+const ATTACK_UNIT_TYPES: UnitType[] = [
+  UnitType.AtomBomb,
+  UnitType.MIRV,
+  UnitType.HydrogenBomb,
+  UnitType.Warship,
+];
+
+function createMenuElements(
+  params: MenuElementParams,
+  filterType: "attack" | "build",
+  elementIdPrefix: string,
+): MenuElement[] {
+  const unitTypes: Set<UnitType> = getAllEnabledUnits(
+    params.selected === params.myPlayer,
+    params.game.config(),
+  );
+
+  return flattenedBuildTable
+    .filter(
+      (item) =>
+        unitTypes.has(item.unitType) &&
+        (filterType === "attack"
+          ? ATTACK_UNIT_TYPES.includes(item.unitType)
+          : !ATTACK_UNIT_TYPES.includes(item.unitType)),
+    )
+    .map((item: BuildItemDisplay) => ({
+      id: `${elementIdPrefix}_${item.unitType}`,
+      name: item.key
+        ? item.key.replace("unit_type.", "")
+        : item.unitType.toString(),
+      disabled: (params: MenuElementParams) =>
+        !params.buildMenu.canBuildOrUpgrade(item),
+      color: params.buildMenu.canBuildOrUpgrade(item)
+        ? filterType === "attack"
+          ? COLORS.attack
+          : COLORS.building
+        : undefined,
+      icon: item.icon,
+      tooltipItems: [
+        { text: translateText(item.key ?? ""), className: "title" },
+        {
+          text: translateText(item.description ?? ""),
+          className: "description",
+        },
+        {
+          text: `${renderNumber(params.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
+          className: "cost",
+        },
+        item.countable
+          ? { text: `${params.buildMenu.count(item)}x`, className: "count" }
+          : null,
+      ].filter(
+        (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
+      ),
+      action: (params: MenuElementParams) => {
+        const buildableUnit = params.playerActions.buildableUnits.find(
+          (bu) => bu.type === item.unitType,
+        );
+        if (buildableUnit === undefined) {
+          return;
+        }
+        if (params.buildMenu.canBuildOrUpgrade(item)) {
+          params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
+        }
+        params.closeMenu();
+      },
+    }));
+}
+
+export const attackMenuElement: MenuElement = {
+  id: Slot.Attack,
+  name: "radial_attack",
+  disabled: (params: MenuElementParams) => params.game.inSpawnPhase(),
+  icon: swordIcon,
+  color: COLORS.attack,
+
+  subMenu: (params: MenuElementParams) => {
+    if (params === undefined) return [];
+    return createMenuElements(params, "attack", "attack");
+  },
+};
+
 export const buildMenuElement: MenuElement = {
   id: Slot.Build,
   name: "build",
@@ -328,53 +413,7 @@ export const buildMenuElement: MenuElement = {
 
   subMenu: (params: MenuElementParams) => {
     if (params === undefined) return [];
-
-    const unitTypes: Set<UnitType> = getAllEnabledUnits(
-      params.selected === params.myPlayer,
-      params.game.config(),
-    );
-    const buildElements: MenuElement[] = flattenedBuildTable
-      .filter((item) => unitTypes.has(item.unitType))
-      .map((item: BuildItemDisplay) => ({
-        id: `build_${item.unitType}`,
-        name: item.key
-          ? item.key.replace("unit_type.", "")
-          : item.unitType.toString(),
-        disabled: (params: MenuElementParams) =>
-          !params.buildMenu.canBuildOrUpgrade(item),
-        color: params.buildMenu.canBuildOrUpgrade(item)
-          ? COLORS.building
-          : undefined,
-        icon: item.icon,
-        tooltipItems: [
-          { text: translateText(item.key ?? ""), className: "title" },
-          {
-            text: translateText(item.description ?? ""),
-            className: "description",
-          },
-          {
-            text: `${renderNumber(params.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
-            className: "cost",
-          },
-          item.countable
-            ? { text: `${params.buildMenu.count(item)}x`, className: "count" }
-            : null,
-        ].filter((item): item is TooltipItem => item !== null),
-        action: (params: MenuElementParams) => {
-          const buildableUnit = params.playerActions.buildableUnits.find(
-            (bu) => bu.type === item.unitType,
-          );
-          if (buildableUnit === undefined) {
-            return;
-          }
-          if (params.buildMenu.canBuildOrUpgrade(item)) {
-            params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
-          }
-          params.closeMenu();
-        },
-      }));
-
-    return buildElements;
+    return createMenuElements(params, "build", "build");
   },
 };
 
@@ -444,6 +483,24 @@ export const rootMenuElement: MenuElement = {
     if (params.selected?.isAlliedWith(params.myPlayer)) {
       ally = allyBreakElement;
     }
-    return [infoMenuElement, boatMenuElement, ally, buildMenuElement];
+
+    const tileOwner = params.game.owner(params.tile);
+    const isOwnTerritory =
+      tileOwner.isPlayer() &&
+      (tileOwner as PlayerView).id() === params.myPlayer.id();
+
+    const menuItems: (MenuElement | null)[] = [
+      infoMenuElement,
+      boatMenuElement,
+      ally,
+    ];
+
+    if (isOwnTerritory) {
+      menuItems.push(buildMenuElement);
+    } else {
+      menuItems.push(attackMenuElement);
+    }
+
+    return menuItems.filter((item): item is MenuElement => item !== null);
   },
 };
