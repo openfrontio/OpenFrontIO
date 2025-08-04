@@ -127,7 +127,7 @@ export class FlagInputModal extends LitElement {
       }
     }
     // return [lockedLayers, lockedColors, lockedReasons, MAX_LAYER];
-    return [[], [], {}, 10]; // TODO: REMOVE BEFORE MERGE
+    return [[], [], {}, MAX_LAYER]; // TODO: REMOVE BEFORE MERGE
   }
 
   private readonly colorOptions: string[] = Object.keys(this.ColorShortNames);
@@ -840,6 +840,7 @@ mask: url(${src}) center / contain no-repeat;
                                     <button
                                       @click=${() => this.moveLayerDown(index)}
                                       title="Move Down"
+                                      aria-label="Move layer down"
                                       class="text-sm px-2 py-1 bg-gray-600 rounded hover:bg-gray-500"
                                     >
                                       ↑
@@ -852,6 +853,7 @@ mask: url(${src}) center / contain no-repeat;
                                     <button
                                       @click=${() => this.moveLayerUp(index)}
                                       title="Move Up"
+                                      aria-label="Move layer up"
                                       class="text-sm px-2 py-1 bg-gray-600 rounded hover:bg-gray-500"
                                     >
                                       ↓
