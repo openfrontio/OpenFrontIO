@@ -4,7 +4,6 @@ import { ClientID } from "../Schemas";
 import {
   assertNever,
   distSortUnit,
-  maxInt,
   minInt,
   simpleHash,
   toInt,
@@ -72,10 +71,6 @@ export class PlayerImpl implements Player {
 
   private _gold: bigint;
   private _troops: bigint;
-  private _workers: bigint;
-
-  // 0 to 100
-  private _targetTroopRatio: bigint;
 
   markedTraitorTick = -1;
 
@@ -115,11 +110,9 @@ export class PlayerImpl implements Player {
     private readonly _team: Team | null,
   ) {
     this._name = sanitizeUsername(playerInfo.name);
-    this._targetTroopRatio = 95n;
     this._troops = toInt(startTroops);
-    this._workers = 0n;
     this._gold = 0n;
-    this._displayName = this._name; // processName(this._name)
+    this._displayName = this._name;
     this._pseudo_random = new PseudoRandom(simpleHash(this.playerInfo.id));
   }
 
@@ -144,10 +137,7 @@ export class PlayerImpl implements Player {
       isDisconnected: this.isDisconnected(),
       tilesOwned: this.numTilesOwned(),
       gold: this._gold,
-      population: this.population(),
-      workers: this.workers(),
       troops: this.troops(),
-      targetTroopRatio: this.targetTroopRatio(),
       allies: this.alliances().map((a) => a.other(this).smallID()),
       embargoes: new Set([...this.embargoes.keys()].map((p) => p.toString())),
       isTraitor: this.isTraitor(),
@@ -221,9 +211,9 @@ export class PlayerImpl implements Player {
     return this._units.filter((u) => ts.has(u.type()));
   }
 
-  private numUnitsConstructed: number[] = [];
+  private numUnitsConstructed: Partial<Record<UnitType, number>> = {};
   private recordUnitConstructed(type: UnitType): void {
-    if (type in this.numUnitsConstructed) {
+    if (this.numUnitsConstructed[type] !== undefined) {
       this.numUnitsConstructed[type]++;
     } else {
       this.numUnitsConstructed[type] = 1;
@@ -714,9 +704,9 @@ export class PlayerImpl implements Player {
     if (tile) {
       this.mg.addUpdate({
         type: GameUpdateType.BonusEvent,
+        player: this.id(),
         tile,
         gold: Number(toAdd),
-        workers: 0,
         troops: 0,
       });
     }
@@ -729,32 +719,6 @@ export class PlayerImpl implements Player {
     const actualRemoved = minInt(this._gold, toRemove);
     this._gold -= actualRemoved;
     return actualRemoved;
-  }
-
-  population(): number {
-    return Number(this._troops + this._workers);
-  }
-  workers(): number {
-    return Math.max(1, Number(this._workers));
-  }
-  addWorkers(toAdd: number): void {
-    this._workers += toInt(toAdd);
-  }
-  removeWorkers(toRemove: number): void {
-    this._workers = maxInt(1n, this._workers - toInt(toRemove));
-  }
-
-  targetTroopRatio(): number {
-    return Number(this._targetTroopRatio) / 100;
-  }
-
-  setTargetTroopRatio(target: number): void {
-    if (target < 0 || target > 1) {
-      throw new Error(
-        `invalid targetTroopRatio ${target} set on player ${PlayerImpl}`,
-      );
-    }
-    this._targetTroopRatio = toInt(target * 100);
   }
 
   troops(): number {
@@ -1051,7 +1015,7 @@ export class PlayerImpl implements Player {
 
   hash(): number {
     return (
-      simpleHash(this.id()) * (this.population() + this.numTilesOwned()) +
+      simpleHash(this.id()) * (this.troops() + this.numTilesOwned()) +
       this._units.reduce((acc, unit) => acc + unit.hash(), 0)
     );
   }

@@ -8,6 +8,31 @@
     />
     <title>OpenFront (ALPHA)</title>
     <link rel="manifest" href="../../resources/manifest.json" />
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="../../resources/images/Favicon.svg"
+    />
+
+    <!-- SEO -->
+    <link rel="canonical" href="https://openfront.io/" />
+    <meta
+      name="description"
+      content="Conquer the world in this multiplayer battle royale! Expand your nation, eliminate opponents, and dominate the map in this fast-paced IO game."
+    />
+
+    <!-- Open Graph -->
+    <meta property="og:url" content="https://openfront.io/" />
+    <meta property="og:title" content="OpenFront - Battle Royale" />
+    <meta
+      property="og:description"
+      content="Conquer the world in this multiplayer battle royale! Expand your nation, eliminate opponents, and dominate the map in this fast-paced IO game."
+    />
+    <meta
+      property="og:image"
+      content="https://openfront.io/resources/images/GameplayScreenshot.png"
+    />
+    <meta property="og:type" content="game" />
 
     <!-- Critical CSS to prevent FOUC -->
     <style>
@@ -45,7 +70,7 @@
       }
 
       .dark .bg-image {
-        filter: blur(4px) brightness(0.7);
+        filter: blur(4px) brightness(0.4) saturate(0.3) contrast(1.2);
       }
 
       /* display:none if child has class parent-hidden since we can't use shadow DOM in Lit due to Tailwind */
@@ -389,6 +414,7 @@
     <news-modal></news-modal>
     <game-left-sidebar></game-left-sidebar>
     <spawn-ad></spawn-ad>
+    <flag-input-modal></flag-input-modal>
     <fps-display></fps-display>
     <div
       id="language-modal"
@@ -415,6 +441,10 @@
         requestAnimationFrame(() => {
           document.documentElement.classList.remove("preload");
         });
+      });
+      window.addEventListener("beforeunload", function (e) {
+        e.preventDefault();
+        e.returnValue = "Are you sure you want to leave?";
       });
     </script>
 

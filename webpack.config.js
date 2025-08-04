@@ -136,9 +136,6 @@ export default async (env, argv) => {
             from: path.resolve(__dirname, "resources"),
             to: path.resolve(__dirname, "static"),
             noErrorOnMissing: true,
-            globOptions: {
-              ignore: ["resources/maps/**/*"],
-            },
           },
         ],
         options: { concurrency: 100 },
