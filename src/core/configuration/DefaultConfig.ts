@@ -336,7 +336,7 @@ export class DefaultConfig implements Config {
     return Math.min(1400, Math.round(20 * Math.pow(numberOfStations, 0.5)));
   }
   trainGold(): Gold {
-    return BigInt(10_000);
+    return BigInt(4_000);
   }
   trainStationMinRange(): number {
     return 15;

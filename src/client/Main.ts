@@ -11,6 +11,7 @@ import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
+import { FlagInputModal } from "./FlagInputModal";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
@@ -63,6 +64,7 @@ declare global {
   // Extend the global interfaces to include your custom events
   interface DocumentEventMap {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
+    "kick-player": CustomEvent;
   }
 }
 
@@ -191,6 +193,16 @@ class Client {
     if (helpButton === null) throw new Error("Missing help-button");
     helpButton.addEventListener("click", () => {
       hlpModal.open();
+    });
+
+    const flagInputModal = document.querySelector(
+      "flag-input-modal",
+    ) as FlagInputModal;
+    flagInputModal instanceof FlagInputModal;
+    const flgInput = document.getElementById("flag-input_");
+    if (flgInput === null) throw new Error("Missing flag-input_");
+    flgInput.addEventListener("click", () => {
+      flagInputModal.open();
     });
 
     const territoryModal = document.querySelector(

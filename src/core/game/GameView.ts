@@ -35,7 +35,7 @@ import {
 } from "./GameUpdates";
 import { TerrainMapData } from "./TerrainMapLoader";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
-import { UnitGrid } from "./UnitGrid";
+import { UnitGrid, UnitPredicate } from "./UnitGrid";
 import { UserSettings } from "./UserSettings";
 
 const userSettings: UserSettings = new UserSettings();
@@ -473,7 +473,7 @@ export class GameView implements GameMap {
     tile: TileRef,
     searchRange: number,
     types: UnitType | UnitType[],
-    predicate?: (value: { unit: UnitView; distSquared: number }) => boolean,
+    predicate?: UnitPredicate,
   ): Array<{ unit: UnitView; distSquared: number }> {
     return this.unitGrid.nearbyUnits(
       tile,
