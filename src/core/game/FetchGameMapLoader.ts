@@ -17,7 +17,9 @@ export class FetchGameMapLoader implements GameMapLoader {
       return cachedMap;
     }
 
-    const key = Object.keys(GameMapType).find((k) => GameMapType[k] === map);
+    const key = Object.keys(GameMapType).find(
+      (k) => GameMapType[k as keyof typeof GameMapType] === map,
+    );
     const fileName = key?.toLowerCase();
 
     if (!fileName) {

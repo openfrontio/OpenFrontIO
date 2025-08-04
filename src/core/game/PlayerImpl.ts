@@ -211,9 +211,9 @@ export class PlayerImpl implements Player {
     return this._units.filter((u) => ts.has(u.type()));
   }
 
-  private numUnitsConstructed: number[] = [];
+  private numUnitsConstructed: Partial<Record<UnitType, number>> = {};
   private recordUnitConstructed(type: UnitType): void {
-    if (type in this.numUnitsConstructed) {
+    if (this.numUnitsConstructed[type] !== undefined) {
       this.numUnitsConstructed[type]++;
     } else {
       this.numUnitsConstructed[type] = 1;
@@ -704,9 +704,9 @@ export class PlayerImpl implements Player {
     if (tile) {
       this.mg.addUpdate({
         type: GameUpdateType.BonusEvent,
+        player: this.id(),
         tile,
         gold: Number(toAdd),
-        workers: 0,
         troops: 0,
       });
     }
