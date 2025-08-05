@@ -489,7 +489,8 @@
     "accept_alliance": "Accept",
     "reject_alliance": "Reject",
     "alliance_renewed": "Your alliance with {name} has been renewed",
-    "ignore": "Ignore"
+    "ignore": "Ignore",
+    "unit_voluntarily_deleted": "Unit voluntarily deleted"
   },
   "unit_info_modal": {
     "structure_info": "Structure Info",
@@ -673,5 +674,9 @@
     "reason": {
       "restricted": "You do not have permission to use this."
     }
+  },
+  "radial_menu": {
+    "delete_unit_title": "Delete Unit",
+    "delete_unit_description": "Click to delete the nearest unit"
   }
 }

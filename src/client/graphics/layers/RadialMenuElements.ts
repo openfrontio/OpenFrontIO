@@ -22,6 +22,7 @@ import infoIcon from "../../../../resources/images/InfoIcon.svg";
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
+import xIcon from "../../../../resources/images/XIcon.svg";
 import { EventBus } from "../../../core/EventBus";
 
 export interface MenuElementParams {
@@ -48,10 +49,17 @@ export interface MenuElement {
   text?: string;
   fontSize?: string;
   tooltipItems?: TooltipItem[];
+  tooltipKeys?: TooltipKey[];
 
   disabled: (params: MenuElementParams) => boolean;
   action?: (params: MenuElementParams) => void; // For leaf items that perform actions
   subMenu?: (params: MenuElementParams) => MenuElement[]; // For non-leaf items that open submenus
+}
+
+export interface TooltipKey {
+  key: string;
+  className: string;
+  params?: Record<string, string | number>;
 }
 
 export interface CenterButtonElement {
@@ -65,6 +73,7 @@ export const COLORS = {
   boat: "#3f6ab1",
   ally: "#53ac75",
   breakAlly: "#c74848",
+  delete: "#ff0000",
   info: "#64748B",
   target: "#ff0000",
   attack: "#ff0000",
@@ -94,6 +103,7 @@ export enum Slot {
   Attack = "attack",
   Ally = "ally",
   Back = "back",
+  Delete = "delete",
 }
 
 const infoChatElement: MenuElement = {
@@ -404,6 +414,76 @@ export const attackMenuElement: MenuElement = {
   },
 };
 
+export const deleteUnitElement: MenuElement = {
+  id: Slot.Delete,
+  name: "delete",
+  disabled: (params: MenuElementParams) => {
+    const tileOwner = params.game.owner(params.tile);
+    const isLand = params.game.isLand(params.tile);
+
+    if (!tileOwner.isPlayer() || tileOwner.id() !== params.myPlayer.id()) {
+      return true;
+    }
+
+    if (!isLand) {
+      return true;
+    }
+
+    if (params.game.inSpawnPhase()) {
+      return true;
+    }
+
+    if (!params.myPlayer.canDeleteUnit()) {
+      return true;
+    }
+
+    const DELETE_SELECTION_RADIUS = 5;
+    const myUnits = params.myPlayer
+      .units()
+      .filter(
+        (unit) =>
+          params.game.manhattanDist(unit.tile(), params.tile) <=
+          DELETE_SELECTION_RADIUS,
+      );
+
+    return myUnits.length === 0;
+  },
+  icon: xIcon,
+  color: COLORS.delete,
+  tooltipKeys: [
+    {
+      key: "radial_menu.delete_unit_title",
+      className: "title",
+    },
+    {
+      key: "radial_menu.delete_unit_description",
+      className: "description",
+    },
+  ],
+  action: (params: MenuElementParams) => {
+    const DELETE_SELECTION_RADIUS = 5;
+    const myUnits = params.myPlayer
+      .units()
+      .filter(
+        (unit) =>
+          params.game.manhattanDist(unit.tile(), params.tile) <=
+          DELETE_SELECTION_RADIUS,
+      );
+
+    if (myUnits.length > 0) {
+      myUnits.sort(
+        (a, b) =>
+          params.game.manhattanDist(a.tile(), params.tile) -
+          params.game.manhattanDist(b.tile(), params.tile),
+      );
+
+      params.playerActionHandler.handleDeleteUnit(myUnits[0].id());
+    }
+
+    params.closeMenu();
+  },
+};
+
 export const buildMenuElement: MenuElement = {
   id: Slot.Build,
   name: "build",
@@ -497,6 +577,7 @@ export const rootMenuElement: MenuElement = {
 
     if (isOwnTerritory) {
       menuItems.push(buildMenuElement);
+      menuItems.push(deleteUnitElement);
     } else {
       menuItems.push(attackMenuElement);
     }
