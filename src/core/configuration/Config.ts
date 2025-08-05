@@ -126,6 +126,7 @@ export interface Config {
   emojiMessageCooldown(): Tick;
   emojiMessageDuration(): Tick;
   donateCooldown(): Tick;
+  deleteUnitCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
   tradeShipGold(dist: number, numPorts: number): Gold;
