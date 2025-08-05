@@ -55,6 +55,7 @@ const numPlayersConfig = {
   [GameMapType.Baikal]: [60, 50, 40],
   [GameMapType.Mena]: [60, 50, 30],
   [GameMapType.Mars]: [50, 40, 30],
+  [GameMapType.Mars_new]: [70, 50, 40],
   [GameMapType.Oceania]: [30, 20, 10],
   [GameMapType.EastAsia]: [50, 40, 30],
   [GameMapType.FaroeIslands]: [50, 40, 30],
