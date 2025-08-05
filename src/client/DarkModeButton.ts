@@ -5,7 +5,7 @@ import { UserSettings } from "../core/game/UserSettings";
 @customElement("dark-mode-button")
 export class DarkModeButton extends LitElement {
   private userSettings: UserSettings = new UserSettings();
-  @state() private darkMode: boolean = this.userSettings.darkMode();
+  @state() public darkMode: boolean = this.userSettings.darkMode();
 
   createRenderRoot() {
     return this;
