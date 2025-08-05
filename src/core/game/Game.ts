@@ -121,8 +121,8 @@ export const mapCategories: Record<string, GameMapType[]> = {
   fantasy: [
     GameMapType.Pangaea,
     GameMapType.Pluto,
+    GameMapType.MarsRevised,
     GameMapType.Mars,
-    GameMapType.MarsClassic,
     GameMapType.DeglaciatedAntarctica,
   ],
 };
