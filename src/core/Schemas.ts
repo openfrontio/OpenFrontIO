@@ -1,5 +1,5 @@
 import { base64url } from "jose";
-import { z } from "zod/v4";
+import { z } from "zod";
 import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
 import countries from "../client/data/countries.json" with { type: "json" };
 import {
@@ -35,13 +35,14 @@ export type Intent =
   | EmojiIntent
   | DonateGoldIntent
   | DonateTroopsIntent
-  | TargetTroopRatioIntent
   | BuildUnitIntent
   | EmbargoIntent
   | QuickChatIntent
   | MoveWarshipIntent
   | MarkDisconnectedIntent
-  | UpgradeStructureIntent;
+  | UpgradeStructureIntent
+  | KickPlayerIntent;
+
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
 export type SpawnIntent = z.infer<typeof SpawnIntentSchema>;
@@ -57,9 +58,6 @@ export type EmojiIntent = z.infer<typeof EmojiIntentSchema>;
 export type DonateGoldIntent = z.infer<typeof DonateGoldIntentSchema>;
 export type DonateTroopsIntent = z.infer<typeof DonateTroopIntentSchema>;
 export type EmbargoIntent = z.infer<typeof EmbargoIntentSchema>;
-export type TargetTroopRatioIntent = z.infer<
-  typeof TargetTroopRatioIntentSchema
->;
 export type BuildUnitIntent = z.infer<typeof BuildUnitIntentSchema>;
 export type UpgradeStructureIntent = z.infer<
   typeof UpgradeStructureIntentSchema
@@ -72,6 +70,7 @@ export type MarkDisconnectedIntent = z.infer<
 export type AllianceExtensionIntent = z.infer<
   typeof AllianceExtensionIntentSchema
 >;
+export type KickPlayerIntent = z.infer<typeof KickPlayerIntentSchema>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -214,7 +213,11 @@ export const RequiredPatternSchema = z
         new PatternDecoder(val, base64url.decode);
         return true;
       } catch (e) {
-        console.error(JSON.stringify(e.message, null, 2));
+        if (e instanceof Error) {
+          console.error(JSON.stringify(e.message, null, 2));
+        } else {
+          console.error(String(e));
+        }
         return false;
       }
     },
@@ -311,11 +314,6 @@ export const DonateTroopIntentSchema = BaseIntentSchema.extend({
   troops: z.number().nullable(),
 });
 
-export const TargetTroopRatioIntentSchema = BaseIntentSchema.extend({
-  type: z.literal("troop_ratio"),
-  ratio: z.number().min(0).max(1),
-});
-
 export const BuildUnitIntentSchema = BaseIntentSchema.extend({
   type: z.literal("build_unit"),
   unit: z.enum(UnitType),
@@ -356,6 +354,11 @@ export const MarkDisconnectedIntentSchema = BaseIntentSchema.extend({
   isDisconnected: z.boolean(),
 });
 
+export const KickPlayerIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("kick_player"),
+  target: ID,
+});
+
 const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -370,13 +373,13 @@ const IntentSchema = z.discriminatedUnion("type", [
   EmojiIntentSchema,
   DonateGoldIntentSchema,
   DonateTroopIntentSchema,
-  TargetTroopRatioIntentSchema,
   BuildUnitIntentSchema,
   UpgradeStructureIntentSchema,
   EmbargoIntentSchema,
   MoveWarshipIntentSchema,
   QuickChatIntentSchema,
   AllianceExtensionIntentSchema,
+  KickPlayerIntentSchema,
 ]);
 
 //

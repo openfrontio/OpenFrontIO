@@ -1,3 +1,4 @@
+import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -39,7 +40,7 @@ import { Stats } from "./Stats";
 import { StatsImpl } from "./StatsImpl";
 import { assignTeams } from "./TeamAssignment";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
-import { UnitGrid } from "./UnitGrid";
+import { UnitGrid, UnitPredicate } from "./UnitGrid";
 
 export function createGame(
   humans: PlayerInfo[],
@@ -590,7 +591,7 @@ export class GameImpl implements Game {
         `${breaker} not allied with ${other}, cannot break alliance`,
       );
     }
-    if (!other.isTraitor()) {
+    if (!other.isTraitor() && !other.isDisconnected()) {
       breaker.markTraitor();
     }
 
@@ -757,7 +758,7 @@ export class GameImpl implements Game {
     tile: TileRef,
     searchRange: number,
     types: UnitType | UnitType[],
-    predicate?: (value: { unit: Unit; distSquared: number }) => boolean,
+    predicate?: UnitPredicate,
   ): Array<{ unit: Unit; distSquared: number }> {
     return this.unitGrid.nearbyUnits(
       tile,
@@ -874,6 +875,28 @@ export class GameImpl implements Game {
   }
   railNetwork(): RailNetwork {
     return this._railNetwork;
+  }
+  conquerPlayer(conqueror: Player, conquered: Player) {
+    const gold = conquered.gold();
+    this.displayMessage(
+      `Conquered ${conquered.displayName()} received ${renderNumber(
+        gold,
+      )} gold`,
+      MessageType.CONQUERED_PLAYER,
+      conqueror.id(),
+      gold,
+    );
+    conqueror.addGold(gold);
+    conquered.removeGold(gold);
+    this.addUpdate({
+      type: GameUpdateType.ConquestEvent,
+      conquerorId: conqueror.id(),
+      conqueredId: conquered.id(),
+      gold,
+    });
+
+    // Record stats
+    this.stats().goldWar(conqueror, conquered, gold);
   }
 }
 

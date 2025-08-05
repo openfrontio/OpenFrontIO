@@ -38,6 +38,7 @@ describe("AllianceExtensionExecution", () => {
     jest.spyOn(player1, "canSendAllianceRequest").mockReturnValue(true);
     jest.spyOn(player2, "isAlive").mockReturnValue(true);
     jest.spyOn(player1, "isAlive").mockReturnValue(true);
+    
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
     game.executeNextTick();
     game.executeNextTick();
@@ -53,6 +54,7 @@ describe("AllianceExtensionExecution", () => {
 
     const allianceBefore = player1.allianceWith(player2)!;
     const allianceSpy = jest.spyOn(allianceBefore, "extend");
+
     const expirationBefore = allianceBefore.expiresAt();
 
     game.addExecution(new AllianceExtensionExecution(player1, player2.id()));
@@ -66,7 +68,7 @@ describe("AllianceExtensionExecution", () => {
     expect(allianceAfter.id()).toBe(allianceBefore.id());
 
     const expirationAfter = allianceAfter.expiresAt();
-
+    
     expect(expirationAfter).toBeGreaterThan(expirationBefore);
     expect(allianceSpy).toHaveBeenCalledTimes(1);
   });
@@ -84,6 +86,7 @@ describe("AllianceExtensionExecution", () => {
     jest.spyOn(player1, "canSendAllianceRequest").mockReturnValue(true);
     jest.spyOn(player3, "isAlive").mockReturnValue(true);
     jest.spyOn(player1, "isAlive").mockReturnValue(true);
+    
     game.addExecution(new AllianceRequestExecution(player1, player3.id()));
     game.executeNextTick();
     game.executeNextTick();

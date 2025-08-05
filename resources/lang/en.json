@@ -26,7 +26,7 @@
     "terms_of_service": "Terms of Service"
   },
   "news": {
-    "full_changelog": "See the complete change log",
+    "see_all_releases": "See all releases",
     "github_link": "on GitHub",
     "title": "Release Notes"
   },
@@ -51,7 +51,6 @@
     "ui_control_desc": "The control panel contains the following elements:",
     "ui_pop": "Pop - The amount of units you have, your max population and the rate at which you gain them.",
     "ui_gold": "Gold - The amount of gold you have and the rate at which you gain it.",
-    "ui_troops_workers": "Troops and Workers - The amount of allocated troops and workers. Troops are used to attack or defend against attacks. Workers are used to generate gold. You can adjust the number of troops and workers using the slider.",
     "ui_attack_ratio": "Attack ratio - The amount of troops that will be used when you attack. You can adjust the attack ratio using the slider. Having more attacking troops than defending troops will make you lose fewer troops in the attack, while having less will increase the damage dealt to your attacking troops. The effect doesn't go beyond ratios of 2:1.",
     "ui_events": "Event panel",
     "ui_events_desc": "The Event panel displays the latest events, requests and Quick Chat messages. Some examples are:",
@@ -163,7 +162,9 @@
     "baikal": "Baikal",
     "halkidiki": "Halkidiki",
     "straitofgibraltar": "Strait of Gibraltar",
-    "italia": "Italia"
+    "italia": "Italia",
+    "yenisei": "Yenisei",
+    "pluto": "Pluto"
   },
   "map_categories": {
     "continental": "Continental",
@@ -214,7 +215,8 @@
     "player": "Player",
     "players": "Players",
     "waiting": "Waiting for players...",
-    "start": "Start Game"
+    "start": "Start Game",
+    "host_badge": "Host"
   },
   "team_colors": {
     "red": "Red",
@@ -274,9 +276,15 @@
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
     "special_effects_enabled": "Special effects enabled",
     "special_effects_disabled": "Special effects disabled",
+    "structure_sprites_label": "Structure Sprites",
+    "structure_sprites_desc": "Toggle structure sprites",
+    "structure_sprites_enabled": "Structure Sprites enabled",
+    "structure_sprites_disabled": "Structure Sprites disabled",
     "anonymous_names_label": "Hidden Names",
     "anonymous_names_desc": "Hide real player names with random ones on your screen.",
     "anonymous_names_enabled": "Anonymous names enabled",
+    "lobby_id_visibility_label": "Hidden Lobby IDs",
+    "lobby_id_visibility_desc": "Hide Lobby ID in private lobby creation",
     "real_names_shown": "Real names shown",
     "left_click_label": "Left Click to Open Menu",
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
@@ -285,10 +293,11 @@
     "right_click_opens_menu": "Right click opens menu",
     "attack_ratio_label": "⚔️ Attack Ratio",
     "attack_ratio_desc": "What percentage of your troops to send in an attack (1–100%)",
-    "troop_ratio_label": "🪖🛠️ Troops and Workers Ratio",
     "troop_ratio_desc": "Adjust the balance between troops (for combat) and workers (for gold production) (1–100%)",
     "territory_patterns_label": "🏳️ Territory Patterns",
     "territory_patterns_desc": "Choose whether to display territory pattern designs in game",
+    "performance_overlay_label": "Performance Overlay",
+    "performance_overlay_desc": "Toggle the performance overlay. When enabled, the performance overlay will be displayed. Press shift-D during game to toggle.",
     "easter_writing_speed_label": "Writing Speed Multiplier",
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
     "easter_bug_count_label": "Bug Count",
@@ -498,10 +507,8 @@
     "default": "Default"
   },
   "control_panel": {
-    "pop": "Pop",
     "gold": "Gold",
     "troops": "Troops",
-    "workers": "Workers",
     "attack_ratio": "Attack Ratio"
   },
   "player_panel": {
@@ -574,6 +581,7 @@
       "openfront": "OpenFront",
       "t_rex": "T-Rex",
       "embelem": "Emblem",
+      "contributor": "Contributor",
       "grogu_head": "Grogu Head",
       "grogu": "Grogu"
     }

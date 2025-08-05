@@ -79,13 +79,6 @@ jest.mock("dompurify", () => ({
   },
 }));
 
-jest.mock("twemoji", () => ({
-  __esModule: true,
-  default: {
-    parse: jest.fn((str: string) => str),
-  },
-}));
-
 describe("RadialMenuElements", () => {
   let mockParams: MenuElementParams;
   let mockPlayer: PlayerView;

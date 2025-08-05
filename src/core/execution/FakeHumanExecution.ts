@@ -153,13 +153,6 @@ export class FakeHumanExecution implements Execution {
       return;
     }
 
-    if (
-      this.player.troops() > 100_000 &&
-      this.player.targetTroopRatio() > 0.7
-    ) {
-      this.player.setTargetTroopRatio(0.7);
-    }
-
     this.updateRelationsFromEmbargos();
     this.behavior.handleAllianceRequests();
     this.behavior.handleAllianceExtensionRequests();
@@ -358,7 +351,7 @@ export class FakeHumanExecution implements Execution {
     const dist = euclDistFN(tile, 25, false);
     let tileValue = targets
       .filter((unit) => dist(this.mg, unit.tile()))
-      .map((unit) => {
+      .map((unit): number => {
         switch (unit.type()) {
           case UnitType.City:
             return 25_000;

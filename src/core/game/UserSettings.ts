@@ -20,6 +20,10 @@ export class UserSettings {
     return this.get("settings.emojis", true);
   }
 
+  performanceOverlay() {
+    return this.get("settings.performanceOverlay", false);
+  }
+
   alertFrame() {
     return this.get("settings.alertFrame", true);
   }
@@ -28,8 +32,16 @@ export class UserSettings {
     return this.get("settings.anonymousNames", false);
   }
 
+  lobbyIdVisibility() {
+    return this.get("settings.lobbyIdVisibility", true);
+  }
+
   fxLayer() {
     return this.get("settings.specialEffects", true);
+  }
+
+  structureSprites() {
+    return this.get("settings.structureSprites", true);
   }
 
   darkMode() {
@@ -62,6 +74,10 @@ export class UserSettings {
     this.set("settings.emojis", !this.emojis());
   }
 
+  togglePerformanceOverlay() {
+    this.set("settings.performanceOverlay", !this.performanceOverlay());
+  }
+
   toggleAlertFrame() {
     this.set("settings.alertFrame", !this.alertFrame());
   }
@@ -70,8 +86,16 @@ export class UserSettings {
     this.set("settings.anonymousNames", !this.anonymousNames());
   }
 
+  toggleLobbyIdVisibility() {
+    this.set("settings.lobbyIdVisibility", !this.lobbyIdVisibility());
+  }
+
   toggleFxLayer() {
     this.set("settings.specialEffects", !this.fxLayer());
+  }
+
+  toggleStructureSprites() {
+    this.set("settings.structureSprites", !this.structureSprites());
   }
 
   toggleTerritoryPatterns() {
