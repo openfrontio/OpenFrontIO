@@ -14,7 +14,12 @@ import {
   mapCategories,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
-import { GameConfig, GameInfo, TeamCountConfig } from "../core/Schemas";
+import {
+  ClientInfo,
+  GameConfig,
+  GameInfo,
+  TeamCountConfig,
+} from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
@@ -40,15 +45,33 @@ export class HostLobbyModal extends LitElement {
   @state() private instantBuild: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
-  @state() private players: string[] = [];
+  @state() private clients: ClientInfo[] = [];
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [UnitType.Factory];
+  @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyIdVisible: boolean = true;
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
   private userSettings: UserSettings = new UserSettings();
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("keydown", this.handleKeyDown);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("keydown", this.handleKeyDown);
+    super.disconnectedCallback();
+  }
+
+  private handleKeyDown = (e: KeyboardEvent) => {
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.close();
+    }
+  };
 
   render() {
     return html`
@@ -111,7 +134,7 @@ export class HostLobbyModal extends LitElement {
             <span class="lobby-id" @click=${this.copyToClipboard} style="cursor: pointer;">
               ${this.lobbyIdVisible ? this.lobbyId : "••••••••"}
             </span>
-            
+
             <!-- Copy icon/success indicator -->
             <div @click=${this.copyToClipboard} style="margin-left: 8px; cursor: pointer;">
               ${
@@ -154,7 +177,9 @@ export class HostLobbyModal extends LitElement {
                     <div class="flex flex-row flex-wrap justify-center gap-4">
                       ${maps.map((mapValue) => {
                         const mapKey = Object.keys(GameMapType).find(
-                          (key) => GameMapType[key] === mapValue,
+                          (key) =>
+                            GameMapType[key as keyof typeof GameMapType] ===
+                            mapValue,
                         );
                         return html`
                           <div
@@ -214,7 +239,7 @@ export class HostLobbyModal extends LitElement {
                       ></difficulty-display>
                       <p class="option-card-title">
                         ${translateText(
-                          `difficulty.${DifficultyDescription[key]}`,
+                          `difficulty.${DifficultyDescription[key as keyof typeof DifficultyDescription]}`,
                         )}
                       </p>
                     </div>
@@ -393,29 +418,45 @@ export class HostLobbyModal extends LitElement {
         <!-- Lobby Selection -->
         <div class="options-section">
           <div class="option-title">
-            ${this.players.length}
+            ${this.clients.length}
             ${
-              this.players.length === 1
+              this.clients.length === 1
                 ? translateText("host_modal.player")
                 : translateText("host_modal.players")
             }
           </div>
 
           <div class="players-list">
-            ${this.players.map(
-              (player) => html`<span class="player-tag">${player}</span>`,
+            ${this.clients.map(
+              (client) => html`
+                <span class="player-tag">
+                  ${client.username}
+                  ${client.clientID === this.lobbyCreatorClientID
+                    ? html`<span class="host-badge"
+                        >(${translateText("host_modal.host_badge")})</span
+                      >`
+                    : html`
+                        <button
+                          class="remove-player-btn"
+                          @click=${() => this.kickPlayer(client.clientID)}
+                          title="Remove ${client.username}"
+                        >
+                          ×
+                        </button>
+                      `}
+                </span>
+              `,
             )}
-          </div>
         </div>
 
         <div class="start-game-button-container">
           <button
             @click=${this.startGame}
-            ?disabled=${this.players.length < 2}
+            ?disabled=${this.clients.length < 2}
             class="start-game-button"
           >
             ${
-              this.players.length === 1
+              this.clients.length === 1
                 ? translateText("host_modal.waiting")
                 : translateText("host_modal.start")
             }
@@ -432,12 +473,13 @@ export class HostLobbyModal extends LitElement {
   }
 
   public open() {
+    this.lobbyCreatorClientID = generateID();
     this.lobbyIdVisible = this.userSettings.get(
       "settings.lobbyIdVisibility",
       true,
     );
 
-    createLobby()
+    createLobby(this.lobbyCreatorClientID)
       .then((lobby) => {
         this.lobbyId = lobby.gameID;
         // join lobby
@@ -447,7 +489,7 @@ export class HostLobbyModal extends LitElement {
           new CustomEvent("join-lobby", {
             detail: {
               gameID: this.lobbyId,
-              clientID: generateID(),
+              clientID: this.lobbyCreatorClientID,
             } as JoinLobbyEvent,
             bubbles: true,
             composed: true,
@@ -589,7 +631,7 @@ export class HostLobbyModal extends LitElement {
 
     await this.putGameConfig();
     console.log(
-      `Starting private game with map: ${GameMapType[this.selectedMap]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     this.close();
     const config = await getServerConfigFromClient();
@@ -609,7 +651,7 @@ export class HostLobbyModal extends LitElement {
     try {
       //TODO: Convert id to url and copy
       await navigator.clipboard.writeText(
-        `${location.origin}#join=${this.lobbyId}`,
+        `${location.origin}/#join=${this.lobbyId}`,
       );
       this.copySuccess = true;
       setTimeout(() => {
@@ -631,17 +673,29 @@ export class HostLobbyModal extends LitElement {
       .then((response) => response.json())
       .then((data: GameInfo) => {
         console.log(`got game info response: ${JSON.stringify(data)}`);
-        this.players = data.clients?.map((p) => p.username) ?? [];
+
+        this.clients = data.clients ?? [];
       });
+  }
+
+  private kickPlayer(clientID: string) {
+    // Dispatch event to be handled by WebSocket instead of HTTP
+    this.dispatchEvent(
+      new CustomEvent("kick-player", {
+        detail: { target: clientID },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 }
 
-async function createLobby(): Promise<GameInfo> {
+async function createLobby(creatorClientID: string): Promise<GameInfo> {
   const config = await getServerConfigFromClient();
   try {
     const id = generateID();
     const response = await fetch(
-      `/${config.workerPath(id)}/api/create_game/${id}`,
+      `/${config.workerPath(id)}/api/create_game/${id}?creatorClientID=${encodeURIComponent(creatorClientID)}`,
       {
         method: "POST",
         headers: {
@@ -652,6 +706,8 @@ async function createLobby(): Promise<GameInfo> {
     );
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Server error response:", errorText);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
@@ -661,6 +717,6 @@ async function createLobby(): Promise<GameInfo> {
     return data as GameInfo;
   } catch (error) {
     console.error("Error creating lobby:", error);
-    throw error; // Re-throw the error so the caller can handle it
+    throw error;
   }
 }

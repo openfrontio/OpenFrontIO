@@ -74,10 +74,6 @@ export class DevConfig extends DefaultConfig {
   //     return 1
   // }
 
-  // populationIncreaseRate(player: Player): number {
-  //     return this.maxPopulation(player)
-  // }
-
   // boatMaxDistance(): number {
   //     return 5000
   // }
