@@ -7,7 +7,6 @@ import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybi
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
-import { DarkModeButton } from "./DarkModeButton";
 
 @customElement("user-setting")
 export class UserSettingModal extends LitElement {
@@ -96,14 +95,13 @@ export class UserSettingModal extends LitElement {
       document.documentElement.classList.remove("dark");
     }
 
-    const darkModeButton = document.querySelector(
-      "dark-mode-button",
-    ) as DarkModeButton;
-    if (!darkModeButton) {
-      console.warn("Dark mode button element not found");
-    } else {
-      darkModeButton.darkMode = this.userSettings.darkMode();
-    }
+    this.dispatchEvent(
+      new CustomEvent("dark-mode-changed", {
+        detail: { darkMode: enabled },
+        bubbles: true,
+        composed: true,
+      }),
+    );
 
     console.log("🌙 Dark Mode:", enabled ? "ON" : "OFF");
   }
