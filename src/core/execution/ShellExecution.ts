@@ -9,6 +9,7 @@ export class ShellExecution implements Execution {
   private shell: Unit | undefined;
   private mg: Game;
   private destroyAtTick: number = -1;
+  private random: PseudoRandom;
 
   constructor(
     private spawn: TileRef,
@@ -20,6 +21,7 @@ export class ShellExecution implements Execution {
   init(mg: Game, ticks: number): void {
     this.pathFinder = new AirPathFinder(mg, new PseudoRandom(mg.ticks()));
     this.mg = mg;
+    this.random = new PseudoRandom(mg.ticks());
   }
 
   tick(ticks: number): void {
@@ -61,7 +63,16 @@ export class ShellExecution implements Execution {
 
   private effectOnTarget(): number {
     const { damage } = this.mg.config().unitInfo(UnitType.Shell);
-    return damage ?? 0;
+    const baseDamage = damage ?? 250;
+
+    const roll = this.random.nextInt(1, 6);
+    const damageMultiplier = (roll - 1) * 25 + 200;
+
+    return Math.round((baseDamage / 250) * damageMultiplier);
+  }
+
+  public getEffectOnTargetForTesting(): number {
+    return this.effectOnTarget();
   }
 
   isActive(): boolean {

@@ -1,4 +1,3 @@
-import favicon from "../../resources/images/Favicon.svg";
 import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
@@ -12,6 +11,7 @@ import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
+import { FlagInputModal } from "./FlagInputModal";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
@@ -64,6 +64,7 @@ declare global {
   // Extend the global interfaces to include your custom events
   interface DocumentEventMap {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
+    "kick-player": CustomEvent;
   }
 }
 
@@ -163,7 +164,6 @@ class Client {
       }
     });
 
-    setFavicon();
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
@@ -193,6 +193,16 @@ class Client {
     if (helpButton === null) throw new Error("Missing help-button");
     helpButton.addEventListener("click", () => {
       hlpModal.open();
+    });
+
+    const flagInputModal = document.querySelector(
+      "flag-input-modal",
+    ) as FlagInputModal;
+    flagInputModal instanceof FlagInputModal;
+    const flgInput = document.getElementById("flag-input_");
+    if (flgInput === null) throw new Error("Missing flag-input_");
+    flgInput.addEventListener("click", () => {
+      flagInputModal.open();
     });
 
     const territoryModal = document.querySelector(
@@ -534,14 +544,6 @@ class Client {
 document.addEventListener("DOMContentLoaded", () => {
   new Client().initialize();
 });
-
-function setFavicon(): void {
-  const link = document.createElement("link");
-  link.type = "image/x-icon";
-  link.rel = "shortcut icon";
-  link.href = favicon;
-  document.head.appendChild(link);
-}
 
 // WARNING: DO NOT EXPOSE THIS ID
 function getPlayToken(): string {

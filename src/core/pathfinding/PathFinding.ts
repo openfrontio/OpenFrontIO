@@ -14,6 +14,7 @@ export class ParabolaPathFinder {
   computeControlPoints(
     orig: TileRef,
     dst: TileRef,
+    increment: number = 3,
     distanceBasedHeight = true,
   ) {
     const p0 = { x: this.mg.x(orig), y: this.mg.y(orig) };
@@ -34,7 +35,7 @@ export class ParabolaPathFinder {
       y: Math.max(p0.y + ((p3.y - p0.y) * 3) / 4 - maxHeight, 0),
     };
 
-    this.curve = new DistanceBasedBezierCurve(p0, p1, p2, p3);
+    this.curve = new DistanceBasedBezierCurve(p0, p1, p2, p3, increment);
   }
 
   nextTile(speed: number): TileRef | true {
@@ -46,6 +47,22 @@ export class ParabolaPathFinder {
       return true;
     }
     return this.mg.ref(Math.floor(nextPoint.x), Math.floor(nextPoint.y));
+  }
+
+  currentIndex(): number {
+    if (!this.curve) {
+      return 0;
+    }
+    return this.curve.getCurrentIndex();
+  }
+
+  allTiles(): TileRef[] {
+    if (!this.curve) {
+      return [];
+    }
+    return this.curve
+      .getAllPoints()
+      .map((point) => this.mg.ref(Math.floor(point.x), Math.floor(point.y)));
   }
 }
 
