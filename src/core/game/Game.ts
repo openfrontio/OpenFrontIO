@@ -69,7 +69,7 @@ export enum GameMapType {
   Pangaea = "Pangaea",
   Asia = "Asia",
   Mars = "Mars Classic",
-  Mars_new = "Mars",
+  MarsNew = "Mars",
   Britannia = "Britannia",
   GatewayToTheAtlantic = "Gateway to the Atlantic",
   Australia = "Australia",
@@ -122,7 +122,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Pangaea,
     GameMapType.Pluto,
     GameMapType.Mars,
-    GameMapType.Mars_new,
+    GameMapType.MarsNew,
     GameMapType.DeglaciatedAntarctica,
   ],
 };

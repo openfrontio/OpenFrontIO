@@ -43,7 +43,7 @@
     },
     {
       "coordinates": [1200, 276],
-      "flag": "",
+      "flag": "kp",
       "name": "North Korean Colony",
       "strength": 1
     },
@@ -55,7 +55,7 @@
     },
     {
       "coordinates": [837, 200],
-      "flag": "",
+      "flag": "African union",
       "name": "African Space Agency",
       "strength": 2
     },
@@ -73,7 +73,7 @@
     },
     {
       "coordinates": [1350, 100],
-      "flag": "",
+      "flag": "un",
       "name": "United Nations Base",
       "strength": 3
     },
