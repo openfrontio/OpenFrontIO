@@ -112,3 +112,147 @@ describe("Attack", () => {
     expect(defender.units(UnitType.TransportShip)[0].troops()).toBeLessThan(90);
   });
 });
+
+describe("Attack race condition with alliance requests", () => {
+  it("should not mark attacker as traitor when alliance is formed after attack starts", async () => {
+    const game = await setup("ocean_and_land", {
+      infiniteGold: true,
+      instantBuild: true,
+      infiniteTroops: true,
+    });
+
+    const playerAInfo = new PlayerInfo(
+      "playerA",
+      PlayerType.Human,
+      null,
+      "playerA_id",
+    );
+    const playerBInfo = new PlayerInfo(
+      "playerB",
+      PlayerType.Human,
+      null,
+      "playerB_id",
+    );
+
+    game.addPlayer(playerAInfo);
+    game.addPlayer(playerBInfo);
+
+    const playerA = game.player(playerAInfo.id);
+    const playerB = game.player(playerBInfo.id);
+
+    // Spawn both players
+    const spawnA = game.ref(0, 10);
+    const spawnB = game.ref(0, 15);
+
+    game.addExecution(
+      new SpawnExecution(playerAInfo, spawnA),
+      new SpawnExecution(playerBInfo, spawnB),
+    );
+
+    while (game.inSpawnPhase()) {
+      game.executeNextTick();
+    }
+
+    // Player A sends alliance request to Player B
+    const allianceRequest = playerA.createAllianceRequest(playerB);
+    expect(allianceRequest).not.toBeNull();
+
+    // Player A attacks Player B
+    const attackExecution = new AttackExecution(
+      null,
+      playerA,
+      playerB.id(),
+      null,
+    );
+    game.addExecution(attackExecution);
+
+    // Player B counter-attacks Player A
+    const counterAttackExecution = new AttackExecution(
+      null,
+      playerB,
+      playerA.id(),
+      null,
+    );
+    game.addExecution(counterAttackExecution);
+
+    // Player B accepts the alliance request
+    if (allianceRequest) {
+      allianceRequest.accept();
+    }
+
+    // Execute a few ticks to process the attacks
+    for (let i = 0; i < 5; i++) {
+      game.executeNextTick();
+    }
+
+    // Player A should not be marked as traitor because the alliance was formed after the attack started
+    expect(playerA.isTraitor()).toBe(false);
+
+    // The attacks should have retreated due to the alliance being formed
+    expect(playerA.outgoingAttacks()).toHaveLength(0);
+    expect(playerB.outgoingAttacks()).toHaveLength(0);
+  });
+
+  it("should mark attacker as traitor when alliance existed before attack", async () => {
+    const game = await setup("ocean_and_land", {
+      infiniteGold: true,
+      instantBuild: true,
+      infiniteTroops: true,
+    });
+
+    const playerAInfo = new PlayerInfo(
+      "playerA",
+      PlayerType.Human,
+      null,
+      "playerA_id",
+    );
+    const playerBInfo = new PlayerInfo(
+      "playerB",
+      PlayerType.Human,
+      null,
+      "playerB_id",
+    );
+
+    game.addPlayer(playerAInfo);
+    game.addPlayer(playerBInfo);
+
+    const playerA = game.player(playerAInfo.id);
+    const playerB = game.player(playerBInfo.id);
+
+    // Spawn both players
+    const spawnA = game.ref(0, 10);
+    const spawnB = game.ref(0, 15);
+
+    game.addExecution(
+      new SpawnExecution(playerAInfo, spawnA),
+      new SpawnExecution(playerBInfo, spawnB),
+    );
+
+    while (game.inSpawnPhase()) {
+      game.executeNextTick();
+    }
+
+    // Create an alliance between Player A and Player B
+    const allianceRequest = playerA.createAllianceRequest(playerB);
+    if (allianceRequest) {
+      allianceRequest.accept();
+    }
+
+    // Player A attacks Player B (should break the alliance)
+    const attackExecution = new AttackExecution(
+      null,
+      playerA,
+      playerB.id(),
+      null,
+    );
+    game.addExecution(attackExecution);
+
+    // Execute a few ticks to process the attack
+    for (let i = 0; i < 10; i++) {
+      game.executeNextTick();
+    }
+
+    // Player A should be marked as traitor because they attacked an ally
+    expect(playerA.isTraitor()).toBe(true);
+  });
+});

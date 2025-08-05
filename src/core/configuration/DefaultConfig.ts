@@ -329,7 +329,7 @@ export class DefaultConfig implements Config {
     return Math.min(1400, Math.round(20 * Math.pow(numberOfStations, 0.5)));
   }
   trainGold(): Gold {
-    return BigInt(10_000);
+    return BigInt(4_000);
   }
   trainStationMinRange(): number {
     return 15;
@@ -802,11 +802,15 @@ export class DefaultConfig implements Config {
   }
 
   defaultNukeTargetableRange(): number {
-    return 120;
+    return 150;
   }
 
   defaultSamRange(): number {
-    return 80;
+    return 70;
+  }
+
+  defaultSamMissileSpeed(): number {
+    return 12;
   }
 
   // Humans can be soldiers, soldiers attacking, soldiers in boat etc.

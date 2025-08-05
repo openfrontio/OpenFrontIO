@@ -2,6 +2,11 @@ import { PlayerID, Unit, UnitType } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
 import { UnitView } from "./GameView";
 
+export type UnitPredicate = (value: {
+  unit: Unit | UnitView;
+  distSquared: number;
+}) => boolean;
+
 export class UnitGrid {
   private grid: Map<UnitType, Set<Unit | UnitView>>[][];
   private readonly cellSize = 100;
@@ -130,11 +135,8 @@ export class UnitGrid {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
-    predicate?: (value: {
-      unit: Unit | UnitView;
-      distSquared: number;
-    }) => boolean,
+    types: readonly UnitType[] | UnitType,
+    predicate?: UnitPredicate,
   ): Array<{ unit: Unit | UnitView; distSquared: number }> {
     const nearby: Array<{ unit: Unit | UnitView; distSquared: number }> = [];
     const { startGridX, endGridX, startGridY, endGridY } = this.getCellsInRange(
