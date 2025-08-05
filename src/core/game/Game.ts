@@ -69,7 +69,7 @@ export enum GameMapType {
   Pangaea = "Pangaea",
   Asia = "Asia",
   Mars = "Mars Classic",
-  MarsNew = "Mars",
+  MarsNew = "Mars New",
   Britannia = "Britannia",
   GatewayToTheAtlantic = "Gateway to the Atlantic",
   Australia = "Australia",

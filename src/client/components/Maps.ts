@@ -18,7 +18,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Pangaea: "Pangaea",
   Asia: "Asia",
   Mars: "Mars Classic",
-  MarsNew: "Mars",
+  MarsNew: "Mars New",
   SouthAmerica: "South America",
   Britannia: "Britannia",
   GatewayToTheAtlantic: "Gateway to the Atlantic",
