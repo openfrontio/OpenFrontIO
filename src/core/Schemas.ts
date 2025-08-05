@@ -215,11 +215,7 @@ export const RequiredPatternSchema = z
         new PatternDecoder(val, base64url.decode);
         return true;
       } catch (e) {
-        if (e instanceof Error) {
-          console.error(JSON.stringify(e.message, null, 2));
-        } else {
-          console.error(String(e));
-        }
+        console.error(JSON.stringify(e.message, null, 2));
         return false;
       }
     },

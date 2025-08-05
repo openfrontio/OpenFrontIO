@@ -213,9 +213,9 @@ export class PlayerImpl implements Player {
     return this._units.filter((u) => ts.has(u.type()));
   }
 
-  private numUnitsConstructed: Partial<Record<UnitType, number>> = {};
+  private numUnitsConstructed: number[] = [];
   private recordUnitConstructed(type: UnitType): void {
-    if (this.numUnitsConstructed[type] !== undefined) {
+    if (type in this.numUnitsConstructed) {
       this.numUnitsConstructed[type]++;
     } else {
       this.numUnitsConstructed[type] = 1;

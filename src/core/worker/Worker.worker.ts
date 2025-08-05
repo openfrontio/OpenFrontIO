@@ -1,7 +1,7 @@
 import version from "../../../resources/version.txt";
 import { createGameRunner, GameRunner } from "../GameRunner";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
-import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
+import { GameUpdateViewData } from "../game/GameUpdates";
 import {
   AttackAveragePositionResultMessage,
   InitializedMessage,
@@ -17,11 +17,7 @@ const ctx: Worker = self as any;
 let gameRunner: Promise<GameRunner> | null = null;
 const mapLoader = new FetchGameMapLoader(`/maps`, version);
 
-function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
-  // skip if ErrorUpdate
-  if (!("updates" in gu)) {
-    return;
-  }
+function gameUpdate(gu: GameUpdateViewData) {
   sendMessage({
     type: "game_update",
     gameUpdate: gu,

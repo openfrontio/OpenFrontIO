@@ -1,7 +1,6 @@
 import {
   Execution,
   Game,
-  isUnit,
   MessageType,
   Player,
   Unit,
@@ -81,9 +80,7 @@ class SAMTargetingSystem {
       [UnitType.AtomBomb, UnitType.HydrogenBomb],
       ({ unit }) => {
         return (
-          isUnit(unit) &&
-          unit.owner() !== this.player &&
-          !this.player.isFriendly(unit.owner())
+          unit.owner() !== this.player && !this.player.isFriendly(unit.owner())
         );
       },
     );
@@ -215,7 +212,6 @@ export class SAMLauncherExecution implements Execution {
       this.MIRVWarheadSearchRadius,
       UnitType.MIRVWarhead,
       ({ unit }) => {
-        if (!isUnit(unit)) return false;
         if (unit.owner() === this.player) return false;
         if (this.player.isFriendly(unit.owner())) return false;
         const dst = unit.targetTile();
