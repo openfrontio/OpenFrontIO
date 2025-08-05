@@ -18,7 +18,7 @@ export interface GameUpdateViewData {
   tick: number;
   updates: GameUpdates;
   packedTileUpdates: BigUint64Array;
-  playerNameViewData: Record<number, NameViewData>;
+  playerNameViewData: Record<string, NameViewData>;
 }
 
 export interface ErrorUpdate {
@@ -69,9 +69,9 @@ export type GameUpdate =
 
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;
+  player: PlayerID;
   tile: TileRef;
   gold: number;
-  workers: number;
   troops: number;
 }
 
@@ -154,10 +154,7 @@ export interface PlayerUpdate {
   isDisconnected: boolean;
   tilesOwned: number;
   gold: Gold;
-  population: number;
-  workers: number;
   troops: number;
-  targetTroopRatio: number;
   allies: number[];
   embargoes: Set<PlayerID>;
   isTraitor: boolean;

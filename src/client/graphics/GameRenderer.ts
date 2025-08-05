@@ -61,10 +61,9 @@ export function createRenderer(
   if (!emojiTable || !(emojiTable instanceof EmojiTable)) {
     console.error("EmojiTable element not found in the DOM");
   }
-  emojiTable.eventBus = eventBus;
   emojiTable.transformHandler = transformHandler;
   emojiTable.game = game;
-  emojiTable.initEventBus();
+  emojiTable.initEventBus(eventBus);
 
   const buildMenu = document.querySelector("build-menu") as BuildMenu;
   if (!buildMenu || !(buildMenu instanceof BuildMenu)) {
@@ -174,7 +173,7 @@ export function createRenderer(
     console.error("player panel not found");
   }
   playerPanel.g = game;
-  playerPanel.eventBus = eventBus;
+  playerPanel.initEventBus(eventBus);
   playerPanel.emojiTable = emojiTable;
   playerPanel.uiState = uiState;
 
@@ -183,7 +182,7 @@ export function createRenderer(
     console.error("chat modal not found");
   }
   chatModal.g = game;
-  chatModal.eventBus = eventBus;
+  chatModal.initEventBus(eventBus);
 
   const multiTabModal = document.querySelector(
     "multi-tab-modal",
@@ -301,14 +300,7 @@ export class GameRenderer {
   }
 
   initialize() {
-    this.eventBus.on(RedrawGraphicsEvent, (e) => {
-      this.layers.forEach((l) => {
-        if (l.redraw) {
-          l.redraw();
-        }
-      });
-    });
-
+    this.eventBus.on(RedrawGraphicsEvent, () => this.redraw());
     this.layers.forEach((l) => l.init?.());
 
     document.body.appendChild(this.canvas);
@@ -318,7 +310,14 @@ export class GameRenderer {
     //show whole map on startup
     this.transformHandler.centerAll(0.9);
 
-    requestAnimationFrame(() => this.renderGame());
+    let rafId = requestAnimationFrame(() => this.renderGame());
+    this.canvas.addEventListener("contextlost", () => {
+      cancelAnimationFrame(rafId);
+    });
+    this.canvas.addEventListener("contextrestored", () => {
+      this.redraw();
+      rafId = requestAnimationFrame(() => this.renderGame());
+    });
   }
 
   resizeCanvas() {
@@ -326,6 +325,14 @@ export class GameRenderer {
     this.canvas.height = window.innerHeight;
     this.transformHandler.updateCanvasBoundingRect();
     //this.redraw()
+  }
+
+  redraw() {
+    this.layers.forEach((l) => {
+      if (l.redraw) {
+        l.redraw();
+      }
+    });
   }
 
   renderGame() {

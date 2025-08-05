@@ -29,10 +29,10 @@ export default {
   collectCoverageFrom: ["src/**/*.ts", "!src/**/*.d.ts"],
   coverageThreshold: {
     global: {
-      branches: 0,
-      functions: 0,
-      lines: 0,
-      statements: 0,
+      statements: 21.5,
+      branches: 17.0,
+      lines: 22.0,
+      functions: 20.5,
     },
   },
   coverageReporters: ["text", "lcov", "html"],
