@@ -9,6 +9,7 @@ import {
 } from "./GameUpdates";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
+import { UnitPredicate } from "./UnitGrid";
 
 export type PlayerID = string;
 export type Tick = number;
@@ -81,7 +82,11 @@ export enum GameMapType {
   Halkidiki = "Halkidiki",
   StraitOfGibraltar = "Strait of Gibraltar",
   Italia = "Italia",
+  Yenisei = "Yenisei",
+  Pluto = "Pluto",
 }
+
+export type GameMapName = keyof typeof GameMapType;
 
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
@@ -110,9 +115,11 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Halkidiki,
     GameMapType.StraitOfGibraltar,
     GameMapType.Italia,
+    GameMapType.Yenisei,
   ],
   fantasy: [
     GameMapType.Pangaea,
+    GameMapType.Pluto,
     GameMapType.Mars,
     GameMapType.DeglaciatedAntarctica,
   ],
@@ -183,6 +190,10 @@ export interface OwnerComp {
   owner: Player;
 }
 
+export type TrajectoryTile = {
+  tile: TileRef;
+  targetable: boolean;
+};
 export interface UnitParamsMap {
   [UnitType.TransportShip]: {
     troops?: number;
@@ -201,10 +212,12 @@ export interface UnitParamsMap {
 
   [UnitType.AtomBomb]: {
     targetTile?: number;
+    trajectory: TrajectoryTile[];
   };
 
   [UnitType.HydrogenBomb]: {
     targetTile?: number;
+    trajectory: TrajectoryTile[];
   };
 
   [UnitType.TradeShip]: {
@@ -377,9 +390,10 @@ export class PlayerInfo {
   }
 }
 
-export function isUnit(unit: Unit | UnitParams<UnitType>): unit is Unit {
+export function isUnit(unit: unknown): unit is Unit {
   return (
-    unit !== undefined &&
+    unit &&
+    typeof unit === "object" &&
     "isUnit" in unit &&
     typeof unit.isUnit === "function" &&
     unit.isUnit()
@@ -414,6 +428,9 @@ export interface Unit {
   // Targeting
   setTargetTile(cell: TileRef | undefined): void;
   targetTile(): TileRef | undefined;
+  setTrajectoryIndex(i: number): void;
+  trajectoryIndex(): number;
+  trajectory(): TrajectoryTile[];
   setTargetUnit(unit: Unit | undefined): void;
   targetUnit(): Unit | undefined;
   setTargetedBySAM(targeted: boolean): void;
@@ -504,17 +521,11 @@ export interface Player {
   conquer(tile: TileRef): void;
   relinquish(tile: TileRef): void;
 
-  // Resources & Population
+  // Resources & Troops
   gold(): Gold;
-  population(): number;
-  workers(): number;
-  troops(): number;
-  targetTroopRatio(): number;
   addGold(toAdd: Gold, tile?: TileRef): void;
   removeGold(toRemove: Gold): Gold;
-  addWorkers(toAdd: number): void;
-  removeWorkers(toRemove: number): void;
-  setTargetTroopRatio(target: number): void;
+  troops(): number;
   setTroops(troops: number): void;
   addTroops(troops: number): void;
   removeTroops(troops: number): number;
@@ -579,6 +590,8 @@ export interface Player {
   canDonate(recipient: Player): boolean;
   donateTroops(recipient: Player, troops: number): boolean;
   donateGold(recipient: Player, gold: Gold): boolean;
+  canDeleteUnit(): boolean;
+  recordDeleteUnit(): void;
 
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;
@@ -653,12 +666,12 @@ export interface Game extends GameMap {
     searchRange: number,
     type: UnitType,
     playerId: PlayerID,
-  );
+  ): boolean;
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
     types: UnitType | UnitType[],
-    predicate?: (value: { unit: Unit; distSquared: number }) => boolean,
+    predicate?: UnitPredicate,
   ): Array<{ unit: Unit; distSquared: number }>;
 
   addExecution(...exec: Execution[]): void;
@@ -694,6 +707,7 @@ export interface Game extends GameMap {
 
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
+  conquerPlayer(conqueror: Player, conquered: Player): void;
 }
 
 export interface PlayerActions {

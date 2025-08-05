@@ -1,5 +1,5 @@
 import { jwtVerify } from "jose";
-import { z } from "zod/v4";
+import { z } from "zod";
 import {
   TokenPayload,
   TokenPayloadSchema,

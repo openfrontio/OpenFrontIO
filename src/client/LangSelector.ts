@@ -40,7 +40,7 @@ export class LangSelector extends LitElement {
   @state() private showModal: boolean = false;
   @state() private debugMode: boolean = false;
 
-  private dKeyPressed: boolean = false;
+  private debugKeyPressed: boolean = false;
 
   private languageMap: Record<string, any> = {
     ar,
@@ -85,10 +85,10 @@ export class LangSelector extends LitElement {
 
   private setupDebugKey() {
     window.addEventListener("keydown", (e) => {
-      if (e.key.toLowerCase() === "t") this.dKeyPressed = true;
+      if (e.key.toLowerCase() === "t") this.debugKeyPressed = true;
     });
     window.addEventListener("keyup", (e) => {
-      if (e.key.toLowerCase() === "t") this.dKeyPressed = false;
+      if (e.key.toLowerCase() === "t") this.debugKeyPressed = false;
     });
   }
 
@@ -147,7 +147,7 @@ export class LangSelector extends LitElement {
       }
 
       let debugLang: any = null;
-      if (this.dKeyPressed) {
+      if (this.debugKeyPressed) {
         debugLang = {
           code: "debug",
           native: "Debug",
@@ -266,7 +266,7 @@ export class LangSelector extends LitElement {
   }
 
   private openModal() {
-    this.debugMode = this.dKeyPressed;
+    this.debugMode = this.debugKeyPressed;
     this.showModal = true;
     this.loadLanguageList();
   }
@@ -292,7 +292,7 @@ export class LangSelector extends LitElement {
         <button
           id="lang-selector"
           @click=${this.openModal}
-          class="text-center appearance-none w-full bg-blue-100 hover:bg-blue-200 text-blue-900 p-3 sm:p-4 lg:p-5 font-medium text-sm sm:text-base lg:text-lg rounded-md border-none cursor-pointer transition-colors duration-300 flex items-center gap-2 justify-center"
+          class="text-center appearance-none w-full bg-blue-100 dark:bg-gray-700 hover:bg-blue-200 dark:hover:bg-gray-600 text-blue-900 dark:text-gray-100 p-3 sm:p-4 lg:p-5 font-medium text-sm sm:text-base lg:text-lg rounded-md border-none cursor-pointer transition-colors duration-300 flex items-center gap-2 justify-center"
         >
           <img
             id="lang-flag"

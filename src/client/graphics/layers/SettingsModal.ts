@@ -1,5 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
+import structureIcon from "../../../../resources/images/CityIconWhite.svg";
 import darkModeIcon from "../../../../resources/images/DarkModeIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
@@ -114,6 +115,11 @@ export class SettingsModal extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onToggleStructureSpritesButtonClick() {
+    this.userSettings.toggleStructureSprites();
+    this.requestUpdate();
+  }
+
   private onToggleSpecialEffectsButtonClick() {
     this.userSettings.toggleFxLayer();
     this.requestUpdate();
@@ -132,6 +138,11 @@ export class SettingsModal extends LitElement implements Layer {
 
   private onToggleLeftClickOpensMenu() {
     this.userSettings.toggleLeftClickOpenMenu();
+    this.requestUpdate();
+  }
+
+  private onTogglePerformanceOverlayButtonClick() {
+    this.userSettings.togglePerformanceOverlay();
     this.requestUpdate();
   }
 
@@ -277,6 +288,33 @@ export class SettingsModal extends LitElement implements Layer {
 
             <button
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              @click="${this.onToggleStructureSpritesButtonClick}"
+            >
+              <img
+                src=${structureIcon}
+                alt="structureSprites"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.structure_sprites_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${this.userSettings.structureSprites()
+                    ? translateText("user_setting.structure_sprites_enabled")
+                    : translateText("user_setting.structure_sprites_disabled")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.structureSprites()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
               @click="${this.onToggleRandomNameModeButtonClick}"
             >
               <img src=${ninjaIcon} alt="ninjaIcon" width="20" height="20" />
@@ -314,6 +352,35 @@ export class SettingsModal extends LitElement implements Layer {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.userSettings.leftClickOpensMenu()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              @click="${this.onTogglePerformanceOverlayButtonClick}"
+            >
+              <img
+                src=${settingsIcon}
+                alt="performanceIcon"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.performance_overlay_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${this.userSettings.performanceOverlay()
+                    ? translateText("user_setting.performance_overlay_enabled")
+                    : translateText(
+                        "user_setting.performance_overlay_disabled",
+                      )}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.performanceOverlay()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>

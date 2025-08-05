@@ -1,5 +1,5 @@
 import { decodeJwt } from "jose";
-import { z } from "zod/v4";
+import { z } from "zod";
 import {
   RefreshResponseSchema,
   TokenPayload,
