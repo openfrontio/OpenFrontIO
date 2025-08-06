@@ -259,6 +259,36 @@ describe("Stats", () => {
     });
   });
 
+  test("quickChatSend", () => {
+    stats.quickChatSend(player1, player2);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        quickchats: [1n, 0n],
+      },
+      client2: {
+        quickchats: [0n, 1n],
+      },
+    });
+    stats.quickChatSend(player1, player2);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        quickchats: [2n, 0n],
+      },
+      client2: {
+        quickchats: [0n, 2n],
+      },
+    });
+    stats.quickChatSend(player2, player1);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        quickchats: [2n, 1n],
+      },
+      client2: {
+        quickchats: [1n, 2n],
+      },
+    });
+  });
+
   test("stringify", () => {
     stats.unitLose(player1, UnitType.Port);
     expect(JSON.stringify(stats.stats(), replacer)).toBe(

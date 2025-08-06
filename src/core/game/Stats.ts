@@ -99,4 +99,7 @@ export interface Stats {
 
   // Player broadcasts an emoji to all players
   emojiBroadcast(player: Player): void;
+
+  // Player sends a quick chat to another player
+  quickChatSend(player: Player, target: Player): void;
 }

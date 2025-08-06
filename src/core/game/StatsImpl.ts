@@ -26,6 +26,8 @@ import {
   OTHER_INDEX_UPGRADE,
   OtherUnitType,
   PlayerStats,
+  QUICKCHAT_INDEX_RECV,
+  QUICKCHAT_INDEX_SENT,
   unitTypeToBombUnit,
   unitTypeToOtherUnit,
 } from "../StatsSchemas";
@@ -142,6 +144,14 @@ export class StatsImpl implements Stats {
     p.emojis ??= [0n, 0n, 0n];
     while (p.emojis.length <= index) p.emojis.push(0n);
     p.emojis[index] += 1n;
+  }
+
+  private _addQuickChat(player: Player, index: number) {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    p.quickchats ??= [0n, 0n];
+    while (p.quickchats.length <= index) p.quickchats.push(0n);
+    p.quickchats[index] += 1n;
   }
 
   attack(
@@ -265,5 +275,10 @@ export class StatsImpl implements Stats {
 
   emojiBroadcast(player: Player) {
     this._addEmoji(player, EMOJI_INDEX_BROADCAST);
+  }
+
+  quickChatSend(player: Player, target: Player): void {
+    this._addQuickChat(player, QUICKCHAT_INDEX_SENT);
+    this._addQuickChat(target, QUICKCHAT_INDEX_RECV);
   }
 }
