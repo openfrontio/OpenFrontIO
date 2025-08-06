@@ -28,6 +28,8 @@ import {
   PlayerStats,
   QUICKCHAT_INDEX_RECV,
   QUICKCHAT_INDEX_SENT,
+  TARGET_INDEX_RECV,
+  TARGET_INDEX_SENT,
   unitTypeToBombUnit,
   unitTypeToOtherUnit,
 } from "../StatsSchemas";
@@ -152,6 +154,14 @@ export class StatsImpl implements Stats {
     p.quickchats ??= [0n, 0n];
     while (p.quickchats.length <= index) p.quickchats.push(0n);
     p.quickchats[index] += 1n;
+  }
+
+  private _addTarget(player: Player, index: number) {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    p.targets ??= [0n, 0n];
+    while (p.targets.length <= index) p.targets.push(0n);
+    p.targets[index] += 1n;
   }
 
   attack(
@@ -280,5 +290,10 @@ export class StatsImpl implements Stats {
   quickChatSend(player: Player, target: Player): void {
     this._addQuickChat(player, QUICKCHAT_INDEX_SENT);
     this._addQuickChat(target, QUICKCHAT_INDEX_RECV);
+  }
+
+  targetSend(player: Player, target: Player): void {
+    this._addTarget(player, TARGET_INDEX_SENT);
+    this._addTarget(target, TARGET_INDEX_RECV);
   }
 }

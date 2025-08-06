@@ -97,6 +97,10 @@ export const EMOJI_INDEX_BROADCAST = 2; // Emojis broadcasted to all players
 export const QUICKCHAT_INDEX_SENT = 0; // QuickChats sent
 export const QUICKCHAT_INDEX_RECV = 1; // QuickChats received
 
+// Targets
+export const TARGET_INDEX_SENT = 0; // Targeting a player (outgoing)
+export const TARGET_INDEX_RECV = 1; // Targeting received (incoming)
+
 const BigIntStringSchema = z.preprocess((val) => {
   if (typeof val === "string" && /^-?\d+$/.test(val)) return BigInt(val);
   if (typeof val === "bigint") return val;
@@ -116,6 +120,7 @@ export const PlayerStatsSchema = z
     units: z.partialRecord(OtherUnitSchema, AtLeastOneNumberSchema).optional(),
     emojis: AtLeastOneNumberSchema.optional(),
     quickchats: AtLeastOneNumberSchema.optional(),
+    targets: AtLeastOneNumberSchema.optional(),
   })
   .optional();
 export type PlayerStats = z.infer<typeof PlayerStatsSchema>;

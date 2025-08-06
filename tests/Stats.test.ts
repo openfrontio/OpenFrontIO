@@ -289,6 +289,36 @@ describe("Stats", () => {
     });
   });
 
+  test("targetSend", () => {
+    stats.targetSend(player1, player2);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        targets: [1n, 0n],
+      },
+      client2: {
+        targets: [0n, 1n],
+      },
+    });
+    stats.targetSend(player1, player2);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        targets: [2n, 0n],
+      },
+      client2: {
+        targets: [0n, 2n],
+      },
+    });
+    stats.targetSend(player2, player1);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        targets: [2n, 1n],
+      },
+      client2: {
+        targets: [1n, 2n],
+      },
+    });
+  });
+
   test("stringify", () => {
     stats.unitLose(player1, UnitType.Port);
     expect(JSON.stringify(stats.stats(), replacer)).toBe(

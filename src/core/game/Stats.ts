@@ -102,4 +102,7 @@ export interface Stats {
 
   // Player sends a quick chat to another player
   quickChatSend(player: Player, target: Player): void;
+
+  // Player targets another player
+  targetSend(player: Player, target: Player): void;
 }
