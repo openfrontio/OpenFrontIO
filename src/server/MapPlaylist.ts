@@ -8,7 +8,6 @@ import {
   GameType,
   Quads,
   Trios,
-  UnitType,
 } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
 import { GameConfig, TeamCountConfig } from "../core/Schemas";
@@ -89,7 +88,7 @@ export class MapPlaylist {
       gameMode: mode,
       playerTeams,
       bots: 400,
-      disabledUnits: [UnitType.Train, UnitType.Factory],
+      disabledUnits: [],
     } satisfies GameConfig;
   }
 
