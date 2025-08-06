@@ -492,6 +492,7 @@ class Client {
           "territory-patterns-modal",
           "language-modal",
           "news-modal",
+          "flag-input-modal",
         ].forEach((tag) => {
           const modal = document.querySelector(tag) as HTMLElement & {
             close?: () => void;
