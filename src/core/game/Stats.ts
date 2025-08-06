@@ -93,4 +93,10 @@ export interface Stats {
 
   // Player loses a unit of type
   unitLose(player: Player, type: OtherUnitType): void;
+
+  // Player sends an emoji to another player
+  emojiSend(player: Player, target: Player): void;
+
+  // Player broadcasts an emoji to all players
+  emojiBroadcast(player: Player): void;
 }

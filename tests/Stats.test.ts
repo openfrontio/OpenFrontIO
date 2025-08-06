@@ -211,6 +211,54 @@ describe("Stats", () => {
     });
   });
 
+  test("emojiSend", () => {
+    stats.emojiSend(player1, player2);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        emojis: [1n, 0n, 0n],
+      },
+      client2: {
+        emojis: [0n, 1n, 0n],
+      },
+    });
+    stats.emojiSend(player1, player2);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        emojis: [2n, 0n, 0n],
+      },
+      client2: {
+        emojis: [0n, 2n, 0n],
+      },
+    });
+    stats.emojiSend(player2, player1);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        emojis: [2n, 1n, 0n],
+      },
+      client2: {
+        emojis: [1n, 2n, 0n],
+      },
+    });
+  });
+
+  test("emojiBroadcast", () => {
+    stats.emojiBroadcast(player1);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        emojis: [0n, 0n, 1n],
+      },
+    });
+
+    // multiple broadcasts accumulate
+    stats.emojiBroadcast(player1);
+    stats.emojiBroadcast(player1);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        emojis: [0n, 0n, 3n],
+      },
+    });
+  });
+
   test("stringify", () => {
     stats.unitLose(player1, UnitType.Port);
     expect(JSON.stringify(stats.stats(), replacer)).toBe(

@@ -11,6 +11,9 @@ import {
   BOMB_INDEX_INTERCEPT,
   BOMB_INDEX_LAND,
   BOMB_INDEX_LAUNCH,
+  EMOJI_INDEX_BROADCAST,
+  EMOJI_INDEX_RECV,
+  EMOJI_INDEX_SENT,
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
   GOLD_INDEX_WAR,
@@ -133,6 +136,14 @@ export class StatsImpl implements Stats {
     p.units[type][index] += _bigint(value);
   }
 
+  private _addEmoji(player: Player, index: number) {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    p.emojis ??= [0n, 0n, 0n];
+    while (p.emojis.length <= index) p.emojis.push(0n);
+    p.emojis[index] += 1n;
+  }
+
   attack(
     player: Player,
     target: Player | TerraNullius,
@@ -245,5 +256,14 @@ export class StatsImpl implements Stats {
 
   unitLose(player: Player, type: OtherUnitType): void {
     this._addOtherUnit(player, type, OTHER_INDEX_LOST, 1);
+  }
+
+  emojiSend(player: Player, target: Player): void {
+    this._addEmoji(player, EMOJI_INDEX_SENT);
+    this._addEmoji(target, EMOJI_INDEX_RECV);
+  }
+
+  emojiBroadcast(player: Player) {
+    this._addEmoji(player, EMOJI_INDEX_BROADCAST);
   }
 }
