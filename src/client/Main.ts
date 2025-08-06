@@ -423,8 +423,25 @@ class Client {
 
   private handleHash() {
     const { hash } = window.location;
+
+    const alertAndStrip = (message: string) => {
+      alert(message);
+      history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    };
+
     if (hash.startsWith("#")) {
       const params = new URLSearchParams(hash.slice(1));
+      if (params.get("purchase-completed") === "true") {
+        alertAndStrip("purchase succeeded");
+        return;
+      } else if (params.get("purchase-completed") === "false") {
+        alertAndStrip("purchase failed");
+        return;
+      }
       const lobbyId = params.get("join");
       if (lobbyId && ID.safeParse(lobbyId).success) {
         this.joinModal.open(lobbyId);
@@ -475,6 +492,7 @@ class Client {
           "territory-patterns-modal",
           "language-modal",
           "news-modal",
+          "flag-input-modal",
         ].forEach((tag) => {
           const modal = document.querySelector(tag) as HTMLElement & {
             close?: () => void;
