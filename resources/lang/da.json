@@ -128,6 +128,7 @@
     "instant_build": "Øjeblikkelig opbygning",
     "infinite_gold": "Uendeligt guld",
     "infinite_troops": "Uendelige tropper",
+    "donate_troops": "Bidrag med tropper",
     "disable_nukes": "Deaktiver Atommissiler",
     "enables_title": "Aktiver Indstillinger",
     "start": "Start spil"
@@ -207,6 +208,7 @@
     "instant_build": "Øjeblikkelig opbygning",
     "infinite_gold": "Uendeligt guld",
     "infinite_troops": "Uendelige tropper",
+    "donate_troops": "Bidrag med tropper",
     "enables_title": "Aktiver Indstillinger",
     "player": "Spiller",
     "players": "Spillere",

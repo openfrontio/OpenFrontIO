@@ -97,6 +97,7 @@
     "instant_build": "Neposredna izgradnja",
     "infinite_gold": "Beskrajno zlato",
     "infinite_troops": "Beskrajna vojska",
+    "donate_troops": "Donašanje vojnika",
     "disable_nukes": "Onemogući nuklearna oružja",
     "start": "Započni partiju"
   },
@@ -156,6 +157,7 @@
     "instant_build": "Neposredna izgradnja",
     "infinite_gold": "Beskrajno zlato",
     "infinite_troops": "Beskrajna vojska",
+    "donate_troops": "Donašanje vojnika",
     "disable_nukes": "Onemogući nuklearna oružja",
     "player": "Igrač",
     "players": "Igrači",

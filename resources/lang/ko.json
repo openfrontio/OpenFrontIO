@@ -128,6 +128,7 @@
     "instant_build": "빠른 건설",
     "infinite_gold": "무한 금",
     "infinite_troops": "무한 병력",
+    "donate_troops": "병력 기부",
     "disable_nukes": "핵 금지",
     "enables_title": "설정 활성화",
     "start": "게임 시작하기"
@@ -207,6 +208,7 @@
     "instant_build": "빠른 건설",
     "infinite_gold": "무한 금",
     "infinite_troops": "무한 병력",
+    "donate_troops": "병력 기부",
     "enables_title": "설정 활성화",
     "player": "플레이어",
     "players": "플레이어",

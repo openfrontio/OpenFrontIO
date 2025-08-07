@@ -128,6 +128,7 @@
     "instant_build": "Мгновенная стройка",
     "infinite_gold": "Неограниченное золото",
     "infinite_troops": "Неограниченные войска",
+    "donate_troops": "Пожертвовать войска",
     "disable_nukes": "Отключить бомбы",
     "enables_title": "Разрешения",
     "start": "Начать игру"
@@ -207,6 +208,7 @@
     "instant_build": "Мгновенная стройка",
     "infinite_gold": "Неограниченное золото",
     "infinite_troops": "Неограниченные войска",
+    "donate_troops": "Пожертвовать войска",
     "enables_title": "Разрешения",
     "player": "Игрок",
     "players": "Игрока(-ов)",

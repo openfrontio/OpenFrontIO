@@ -128,6 +128,7 @@
     "instant_build": "Миттєве будівництво",
     "infinite_gold": "Необмежене золото",
     "infinite_troops": "Необмежені війська",
+    "donate_troops": "Донація військ",
     "disable_nukes": "Вимкнути бомби",
     "enables_title": "Дозволи",
     "start": "Розпочати гру"
@@ -207,6 +208,7 @@
     "instant_build": "Миттєве будівництво",
     "infinite_gold": "Необмежене золото",
     "infinite_troops": "Необмежені війська",
+    "donate_troops": "Донація військ",
     "enables_title": "Дозволи",
     "player": "Гравець",
     "players": "Гравці(в)",

@@ -128,6 +128,7 @@
     "instant_build": "Omedelbar byggnation",
     "infinite_gold": "Obegränsat guld",
     "infinite_troops": "Obegränsade trupper",
+    "donate_troops": "Dona trupper",
     "disable_nukes": "Inaktivera Kärnvapen",
     "enables_title": "Aktivera Inställningar",
     "start": "Starta spelet"
@@ -207,6 +208,7 @@
     "instant_build": "Omedelbar byggnation",
     "infinite_gold": "Obegränsat guld",
     "infinite_troops": "Obegränsade trupper",
+    "donate_troops": "Dona trupper",
     "enables_title": "Aktivera inställningar",
     "player": "Spelare",
     "players": "Spelare",
