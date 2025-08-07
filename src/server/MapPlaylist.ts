@@ -8,7 +8,6 @@ import {
   GameType,
   Quads,
   Trios,
-  UnitType,
 } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
 import { GameConfig, TeamCountConfig } from "../core/Schemas";
@@ -37,6 +36,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Pangaea: 1,
   Asia: 1,
   Mars: 1,
+  MarsRevised: 1,
   BetweenTwoSeas: 1,
   EastAsia: 1,
   BlackSea: 1,
@@ -88,7 +88,7 @@ export class MapPlaylist {
       gameMode: mode,
       playerTeams,
       bots: 400,
-      disabledUnits: [UnitType.Train, UnitType.Factory],
+      disabledUnits: [],
     } satisfies GameConfig;
   }
 

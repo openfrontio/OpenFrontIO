@@ -25,8 +25,15 @@ class CityStopHandler implements TrainStopHandler {
     trainExecution: TrainExecution,
   ): void {
     const level = BigInt(station.unit.level() + 1);
-    const goldBonus = (mg.config().trainGold() * level) / this.factor;
-    station.unit.owner().addGold(goldBonus, station.tile());
+    let goldBonus = (mg.config().trainGold() * level) / this.factor;
+    const stationOwner = station.unit.owner();
+    const trainOwner = trainExecution.owner();
+    // Share revenue with the station owner if it's not the current player
+    if (stationOwner.isFriendly(trainOwner)) {
+      goldBonus += BigInt(1_000); // Bonus for everybody when trading with an ally!
+      stationOwner.addGold(goldBonus, station.tile());
+    }
+    trainOwner.addGold(goldBonus, station.tile());
   }
 }
 
@@ -39,8 +46,15 @@ class PortStopHandler implements TrainStopHandler {
     trainExecution: TrainExecution,
   ): void {
     const level = BigInt(station.unit.level() + 1);
-    const goldBonus = (mg.config().trainGold() * level) / this.factor;
-    station.unit.owner().addGold(goldBonus, station.tile());
+    let goldBonus = (mg.config().trainGold() * level) / this.factor;
+    const stationOwner = station.unit.owner();
+    const trainOwner = trainExecution.owner();
+    // Share revenue with the station owner if it's not the current player
+    if (stationOwner.isFriendly(trainOwner)) {
+      goldBonus += BigInt(1_000); // Bonus for everybody when trading with an ally!
+      stationOwner.addGold(goldBonus, station.tile());
+    }
+    trainOwner.addGold(goldBonus, station.tile());
   }
 }
 
@@ -51,7 +65,15 @@ class FactoryStopHandler implements TrainStopHandler {
     station: TrainStation,
     trainExecution: TrainExecution,
   ): void {
-    station.unit.owner().addGold(mg.config().trainGold(), station.tile());
+    let goldBonus = mg.config().trainGold();
+    const stationOwner = station.unit.owner();
+    const trainOwner = trainExecution.owner();
+    // Share revenue with the station owner if it's not the current player
+    if (stationOwner.isFriendly(trainOwner)) {
+      goldBonus += BigInt(1_000); // Bonus for everybody when trading with an ally!
+      stationOwner.addGold(goldBonus, station.tile());
+    }
+    trainOwner.addGold(goldBonus, station.tile());
   }
 }
 

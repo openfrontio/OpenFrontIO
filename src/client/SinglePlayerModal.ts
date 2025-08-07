@@ -43,9 +43,26 @@ export class SinglePlayerModal extends LitElement {
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
 
-  @state() private disabledUnits: UnitType[] = [UnitType.Factory];
+  @state() private disabledUnits: UnitType[] = [];
 
   private userSettings: UserSettings = new UserSettings();
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("keydown", this.handleKeyDown);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("keydown", this.handleKeyDown);
+    super.disconnectedCallback();
+  }
+
+  private handleKeyDown = (e: KeyboardEvent) => {
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.close();
+    }
+  };
 
   render() {
     return html`

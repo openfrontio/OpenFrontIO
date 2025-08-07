@@ -4,6 +4,7 @@ import { Executor } from "./execution/ExecutionManager";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
+  Attack,
   Cell,
   Game,
   GameUpdates,
@@ -19,6 +20,7 @@ import {
 } from "./game/Game";
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
+import { GameMapLoader } from "./game/GameMapLoader";
 import {
   ErrorUpdate,
   GameUpdateType,
@@ -33,10 +35,11 @@ import { fixProfaneUsername } from "./validations/username";
 export async function createGameRunner(
   gameStart: GameStartInfo,
   clientID: ClientID,
-  callBack: (gu: GameUpdateViewData) => void,
+  mapLoader: GameMapLoader,
+  callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
   const config = await getConfig(gameStart.config, null);
-  const gameMap = await loadGameMap(gameStart.config.gameMap);
+  const gameMap = await loadGameMap(gameStart.config.gameMap, mapLoader);
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
 
   const humans = gameStart.players.map(
@@ -229,7 +232,7 @@ export class GameRunner {
       throw new Error(`player with id ${playerID} not found`);
     }
 
-    const condition = (a) => a.id() === attackID;
+    const condition = (a: Attack) => a.id() === attackID;
     const attack =
       player.outgoingAttacks().find(condition) ??
       player.incomingAttacks().find(condition);

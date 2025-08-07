@@ -47,6 +47,17 @@ export class MirvExecution implements Execution {
 
     // Record stats
     this.mg.stats().bombLaunch(this.player, this.targetPlayer, UnitType.MIRV);
+
+    // Betrayal on launch
+    if (this.targetPlayer.isPlayer()) {
+      const alliance = this.player.allianceWith(this.targetPlayer);
+      if (alliance !== null) {
+        this.player.breakAlliance(alliance);
+      }
+      if (this.targetPlayer !== this.player) {
+        this.targetPlayer.updateRelation(this.player, -100);
+      }
+    }
   }
 
   tick(ticks: number): void {
@@ -117,15 +128,6 @@ export class MirvExecution implements Execution {
           this.random.nextInt(0, 15),
         ),
       );
-    }
-    if (this.targetPlayer.isPlayer()) {
-      const alliance = this.player.allianceWith(this.targetPlayer);
-      if (alliance !== null) {
-        this.player.breakAlliance(alliance);
-      }
-      if (this.targetPlayer !== this.player) {
-        this.targetPlayer.updateRelation(this.player, -100);
-      }
     }
     this.nuke.delete(false);
   }

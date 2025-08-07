@@ -97,11 +97,6 @@ export class LocalServer {
         return;
       }
       if (this.paused) {
-        if (clientMsg.intent.type === "troop_ratio") {
-          // Store troop change events because otherwise they are
-          // not registered when game is paused.
-          this.intents.push(clientMsg.intent);
-        }
         return;
       }
       this.intents.push(clientMsg.intent);

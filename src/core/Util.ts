@@ -1,6 +1,5 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
-import twemoji from "twemoji";
 import { Cell, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import {
@@ -140,39 +139,6 @@ export function sanitize(name: string): string {
   return Array.from(name)
     .join("")
     .replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}[\]_]/gu, "");
-}
-
-export function processName(name: string): string {
-  // First sanitize the raw input - strip everything except text and emojis
-  const sanitizedName = sanitize(name);
-  // Process emojis with twemoji
-  const withEmojis = twemoji.parse(sanitizedName, {
-    base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
-    folder: "svg",
-    ext: ".svg",
-  });
-
-  // Add CSS styles inline to the wrapper span
-  const styledHTML = `
-        <span class="player-name" style="
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            font-weight: 500;
-            vertical-align: middle;
-        ">
-            ${withEmojis}
-        </span>
-    `;
-
-  // Add CSS for the emoji images
-  const withEmojiStyles = styledHTML.replace(
-    /<img/g,
-    '<img style="height: 1.2em; width: 1.2em; vertical-align: -0.2em; margin: 0 0.05em 0 0.1em;"',
-  );
-
-  // Sanitize the final HTML, allowing styles and specific attributes
-  return onlyImages(withEmojiStyles);
 }
 
 export function onlyImages(html: string) {

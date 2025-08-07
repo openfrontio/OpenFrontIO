@@ -13,6 +13,7 @@ import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
 import { PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
+import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
   ErrorUpdate,
   GameUpdateType,
@@ -25,6 +26,7 @@ import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import {
+  AutoUpgradeEvent,
   DoBoatAttackEvent,
   DoGroundAttackEvent,
   InputHandler,
@@ -33,11 +35,13 @@ import {
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentID } from "./Main";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
+  SendUpgradeStructureIntentEvent,
   Transport,
 } from "./Transport";
 import { createCanvas } from "./Utils";
@@ -58,12 +62,11 @@ export interface LobbyConfig {
 }
 
 export function joinLobby(
+  eventBus: EventBus,
   lobbyConfig: LobbyConfig,
   onPrestart: () => void,
   onJoin: () => void,
 ): () => void {
-  const eventBus = new EventBus();
-
   console.log(
     `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
   );
@@ -82,7 +85,7 @@ export function joinLobby(
   const onmessage = (message: ServerMessage) => {
     if (message.type === "prestart") {
       console.log(`lobby: game prestarting: ${JSON.stringify(message)}`);
-      terrainLoad = loadTerrainMap(message.gameMap);
+      terrainLoad = loadTerrainMap(message.gameMap, terrainMapFileLoader);
       onPrestart();
     }
     if (message.type === "start") {
@@ -98,6 +101,7 @@ export function joinLobby(
         transport,
         userSettings,
         terrainLoad,
+        terrainMapFileLoader,
       ).then((r) => r.start());
     }
     if (message.type === "error") {
@@ -125,6 +129,7 @@ async function createClientGame(
   transport: Transport,
   userSettings: UserSettings,
   terrainLoad: Promise<TerrainMapData> | null,
+  mapLoader: GameMapLoader,
 ): Promise<ClientGameRunner> {
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
@@ -139,7 +144,10 @@ async function createClientGame(
   if (terrainLoad) {
     gameMap = await terrainLoad;
   } else {
-    gameMap = await loadTerrainMap(lobbyConfig.gameStartInfo.config.gameMap);
+    gameMap = await loadTerrainMap(
+      lobbyConfig.gameStartInfo.config.gameMap,
+      mapLoader,
+    );
   }
   const worker = new WorkerClient(
     lobbyConfig.gameStartInfo,
@@ -242,6 +250,7 @@ export class ClientGameRunner {
     }, 20000);
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
     this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
+    this.eventBus.on(AutoUpgradeEvent, this.autoUpgradeEvent.bind(this));
     this.eventBus.on(
       DoBoatAttackEvent,
       this.doBoatAttackUnderCursor.bind(this),
@@ -414,6 +423,76 @@ export class ClientGameRunner {
         this.gameView.setFocusedPlayer(owner as PlayerView);
       } else {
         this.gameView.setFocusedPlayer(null);
+      }
+    });
+  }
+
+  private autoUpgradeEvent(event: AutoUpgradeEvent) {
+    if (!this.isActive) {
+      return;
+    }
+
+    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
+      event.x,
+      event.y,
+    );
+    if (!this.gameView.isValidCoord(cell.x, cell.y)) {
+      return;
+    }
+
+    const tile = this.gameView.ref(cell.x, cell.y);
+
+    if (this.myPlayer === null) {
+      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    if (this.gameView.inSpawnPhase()) {
+      return;
+    }
+
+    this.findAndUpgradeNearestBuilding(tile);
+  }
+
+  private findAndUpgradeNearestBuilding(clickedTile: TileRef) {
+    this.myPlayer!.actions(clickedTile).then((actions) => {
+      const upgradeUnits: {
+        unitId: number;
+        unitType: UnitType;
+        distance: number;
+      }[] = [];
+
+      for (const bu of actions.buildableUnits) {
+        if (bu.canUpgrade !== false) {
+          const existingUnit = this.gameView
+            .units()
+            .find((unit) => unit.id() === bu.canUpgrade);
+          if (existingUnit) {
+            const distance = this.gameView.manhattanDist(
+              clickedTile,
+              existingUnit.tile(),
+            );
+
+            upgradeUnits.push({
+              unitId: bu.canUpgrade,
+              unitType: bu.type,
+              distance: distance,
+            });
+          }
+        }
+      }
+
+      if (upgradeUnits.length > 0) {
+        upgradeUnits.sort((a, b) => a.distance - b.distance);
+        const bestUpgrade = upgradeUnits[0];
+
+        this.eventBus.emit(
+          new SendUpgradeStructureIntentEvent(
+            bestUpgrade.unitId,
+            bestUpgrade.unitType,
+          ),
+        );
       }
     });
   }

@@ -107,6 +107,13 @@ export class CenterCameraEvent implements GameEvent {
   constructor() {}
 }
 
+export class AutoUpgradeEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
 export class InputHandler {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;
@@ -168,6 +175,7 @@ export class InputHandler {
       (e) => {
         this.onScroll(e);
         this.onShiftScroll(e);
+        this.onTrackpadPan(e);
         e.preventDefault();
       },
       { passive: false },
@@ -178,6 +186,16 @@ export class InputHandler {
       if (e.movementX || e.movementY) {
         this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
       }
+    });
+
+    this.canvas.addEventListener("touchstart", (e) => this.onTouchStart(e), {
+      passive: false,
+    });
+    this.canvas.addEventListener("touchmove", (e) => this.onTouchMove(e), {
+      passive: false,
+    });
+    this.canvas.addEventListener("touchend", (e) => this.onTouchEnd(e), {
+      passive: false,
     });
     this.pointers.clear();
 
@@ -325,6 +343,12 @@ export class InputHandler {
   }
 
   private onPointerDown(event: PointerEvent) {
+    if (event.button === 1) {
+      event.preventDefault();
+      this.eventBus.emit(new AutoUpgradeEvent(event.clientX, event.clientY));
+      return;
+    }
+
     if (event.button > 0) {
       return;
     }
@@ -346,6 +370,11 @@ export class InputHandler {
   }
 
   onPointerUp(event: PointerEvent) {
+    if (event.button === 1) {
+      event.preventDefault();
+      return;
+    }
+
     if (event.button > 0) {
       return;
     }
@@ -384,19 +413,65 @@ export class InputHandler {
       const realCtrl =
         this.activeKeys.has("ControlLeft") ||
         this.activeKeys.has("ControlRight");
-      const ratio = event.ctrlKey && !realCtrl ? 10 : 1; // Compensate pinch-zoom low sensitivity
-      this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY * ratio));
+
+      const isZoomGesture =
+        event.ctrlKey ||
+        event.metaKey ||
+        Math.abs(event.deltaZ) > 0 ||
+        (event.deltaMode === 1 && Math.abs(event.deltaY) > 0) ||
+        (event.deltaMode === 0 && Math.abs(event.deltaY) >= 50);
+
+      if (isZoomGesture) {
+        const ratio = event.ctrlKey && !realCtrl ? 10 : 1;
+        this.eventBus.emit(
+          new ZoomEvent(event.x, event.y, event.deltaY * ratio),
+        );
+      }
     }
   }
 
   private onShiftScroll(event: WheelEvent) {
     if (event.shiftKey) {
-      const ratio = event.deltaY > 0 ? -10 : 10;
+      const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
+      const ratio = scrollValue > 0 ? -10 : 10;
       this.eventBus.emit(new AttackRatioEvent(ratio));
     }
   }
 
+  private onTrackpadPan(event: WheelEvent) {
+    if (event.shiftKey) {
+      return;
+    }
+
+    if (event.ctrlKey || event.metaKey) {
+      return;
+    }
+
+    const isTrackpadPan =
+      event.deltaMode === 0 &&
+      (Math.abs(event.deltaX) > 0 || Math.abs(event.deltaY) > 0) &&
+      ((Math.abs(event.deltaX) > 0 && Math.abs(event.deltaY) > 0) ||
+        event.deltaX % 1 !== 0 ||
+        event.deltaY % 1 !== 0 ||
+        (Math.abs(event.deltaX) < 30 && Math.abs(event.deltaY) < 30));
+
+    if (isTrackpadPan) {
+      const panSensitivity = 1.0;
+      const deltaX = -event.deltaX * panSensitivity;
+      const deltaY = -event.deltaY * panSensitivity;
+
+      if (Math.abs(deltaX) > 0.5 || Math.abs(deltaY) > 0.5) {
+        this.eventBus.emit(new DragEvent(deltaX, deltaY));
+      }
+    }
+  }
+
   private onPointerMove(event: PointerEvent) {
+    if (event.button === 1) {
+      event.preventDefault();
+      return;
+    }
+
     if (event.button > 0) {
       return;
     }
@@ -433,6 +508,42 @@ export class InputHandler {
   private onContextMenu(event: MouseEvent) {
     event.preventDefault();
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
+  }
+
+  private onTouchStart(event: TouchEvent) {
+    if (event.touches.length === 2) {
+      event.preventDefault();
+    }
+  }
+
+  private onTouchMove(event: TouchEvent) {
+    if (event.touches.length === 2) {
+      event.preventDefault();
+
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      const centerX = (touch1.clientX + touch2.clientX) / 2;
+      const centerY = (touch1.clientY + touch2.clientY) / 2;
+
+      if (this.lastPointerX !== 0 && this.lastPointerY !== 0) {
+        const deltaX = centerX - this.lastPointerX;
+        const deltaY = centerY - this.lastPointerY;
+
+        if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
+          this.eventBus.emit(new DragEvent(deltaX, deltaY));
+        }
+      }
+
+      this.lastPointerX = centerX;
+      this.lastPointerY = centerY;
+    }
+  }
+
+  private onTouchEnd(event: TouchEvent) {
+    if (event.touches.length < 2) {
+      this.lastPointerX = 0;
+      this.lastPointerY = 0;
+    }
   }
 
   private getPinchDistance(): number {

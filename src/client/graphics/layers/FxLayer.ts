@@ -66,32 +66,26 @@ export class FxLayer implements Layer {
   }
 
   onBonusEvent(bonus: BonusEventUpdate) {
-    const tile = bonus.tile;
-    if (this.game.owner(tile) !== this.game.myPlayer()) {
+    if (this.game.player(bonus.player) !== this.game.myPlayer()) {
       // Only display text fx for the current player
       return;
     }
+    const tile = bonus.tile;
     const x = this.game.x(tile);
     let y = this.game.y(tile);
     const gold = bonus.gold;
     const troops = bonus.troops;
-    const workers = bonus.workers;
 
     if (gold > 0) {
-      const shortened = renderNumber(gold);
+      const shortened = renderNumber(gold, 0);
       this.addTextFx(`+ ${shortened}`, x, y);
       y += 10; // increase y so the next popup starts bellow
     }
 
     if (troops > 0) {
-      const shortened = renderNumber(troops);
+      const shortened = renderNumber(troops, 0);
       this.addTextFx(`+ ${shortened} troops`, x, y);
       y += 10;
-    }
-
-    if (workers > 0) {
-      const shortened = renderNumber(workers);
-      this.addTextFx(`+ ${shortened} workers`, x, y);
     }
   }
 

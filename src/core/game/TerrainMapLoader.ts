@@ -1,6 +1,6 @@
 import { GameMapType } from "./Game";
 import { GameMap, GameMapImpl } from "./GameMap";
-import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { GameMapLoader } from "./GameMapLoader";
 
 export type TerrainMapData = {
   manifest: MapManifest;
@@ -32,6 +32,7 @@ export interface Nation {
 
 export async function loadTerrainMap(
   map: GameMapType,
+  terrainMapFileLoader: GameMapLoader,
 ): Promise<TerrainMapData> {
   const cached = loadedMaps.get(map);
   if (cached !== undefined) return cached;
@@ -57,7 +58,7 @@ export async function loadTerrainMap(
 
 export async function genTerrainFromBin(
   mapData: MapMetadata,
-  data: string,
+  data: Uint8Array,
 ): Promise<GameMap> {
   if (data.length !== mapData.width * mapData.height) {
     throw new Error(
@@ -65,19 +66,10 @@ export async function genTerrainFromBin(
     );
   }
 
-  // Store raw data in Uint8Array
-  const rawData = new Uint8Array(mapData.width * mapData.height);
-
-  // Copy data starting after the header
-  for (let i = 0; i < mapData.width * mapData.height; i++) {
-    const packedByte = data.charCodeAt(i);
-    rawData[i] = packedByte;
-  }
-
   return new GameMapImpl(
     mapData.width,
     mapData.height,
-    rawData,
+    data,
     mapData.num_land_tiles,
   );
 }

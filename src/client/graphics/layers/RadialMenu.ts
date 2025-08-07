@@ -1,11 +1,14 @@
 import * as d3 from "d3";
 import backIcon from "../../../../resources/images/BackIconWhite.svg";
 import { EventBus, GameEvent } from "../../../core/EventBus";
+import { CloseViewEvent } from "../../InputHandler";
+import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import {
   CenterButtonElement,
   MenuElement,
   MenuElementParams,
+  TooltipKey,
 } from "./RadialMenuElements";
 
 export class CloseRadialMenuEvent implements GameEvent {
@@ -102,6 +105,9 @@ export class RadialMenu implements Layer {
   init() {
     this.createMenuElement();
     this.createTooltipElement();
+    this.eventBus.on(CloseViewEvent, (e) => {
+      this.hideRadialMenu();
+    });
   }
 
   private createMenuElement() {
@@ -382,6 +388,8 @@ export class RadialMenu implements Layer {
       const disabled = this.params === null || d.data.disabled(this.params);
       if (d.data.tooltipItems && d.data.tooltipItems.length > 0) {
         this.showTooltip(d.data.tooltipItems);
+      } else if (d.data.tooltipKeys && d.data.tooltipKeys.length > 0) {
+        this.showTooltip(d.data.tooltipKeys);
       }
       if (
         disabled ||
@@ -1004,7 +1012,7 @@ export class RadialMenu implements Layer {
     return timeSinceHide >= this.reopenCooldownMs;
   }
 
-  private showTooltip(items: TooltipItem[]) {
+  private showTooltip(items: TooltipItem[] | TooltipKey[]) {
     if (!this.tooltipElement) return;
 
     this.tooltipElement.innerHTML = "";
@@ -1012,7 +1020,13 @@ export class RadialMenu implements Layer {
     for (const item of items) {
       const div = document.createElement("div");
       div.className = item.className;
-      div.textContent = item.text;
+
+      if ("key" in item) {
+        div.textContent = translateText(item.key, item.params);
+      } else {
+        div.textContent = item.text;
+      }
+
       this.tooltipElement.appendChild(div);
     }
 

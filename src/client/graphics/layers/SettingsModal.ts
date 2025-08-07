@@ -1,5 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
+import structureIcon from "../../../../resources/images/CityIconWhite.svg";
 import darkModeIcon from "../../../../resources/images/DarkModeIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
@@ -90,6 +91,11 @@ export class SettingsModal extends LitElement implements Layer {
 
   private onToggleEmojisButtonClick() {
     this.userSettings.toggleEmojis();
+    this.requestUpdate();
+  }
+
+  private onToggleStructureSpritesButtonClick() {
+    this.userSettings.toggleStructureSprites();
     this.requestUpdate();
   }
 
@@ -254,6 +260,33 @@ export class SettingsModal extends LitElement implements Layer {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.userSettings.fxLayer()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              @click="${this.onToggleStructureSpritesButtonClick}"
+            >
+              <img
+                src=${structureIcon}
+                alt="structureSprites"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.structure_sprites_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${this.userSettings.structureSprites()
+                    ? translateText("user_setting.structure_sprites_enabled")
+                    : translateText("user_setting.structure_sprites_disabled")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.structureSprites()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
