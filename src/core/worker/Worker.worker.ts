@@ -23,8 +23,8 @@ function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
     return;
   }
   sendMessage({
-    type: "game_update",
     gameUpdate: gu,
+    type: "game_update",
   });
 }
 
@@ -48,8 +48,8 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           gameUpdate,
         ).then((gr) => {
           sendMessage({
-            type: "initialized",
             id: message.id,
+            type: "initialized",
           } as InitializedMessage);
           return gr;
         });
@@ -85,9 +85,9 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           message.y,
         );
         sendMessage({
-          type: "player_actions_result",
           id: message.id,
           result: actions,
+          type: "player_actions_result",
         } as PlayerActionsResultMessage);
       } catch (error) {
         console.error("Failed to check borders:", error);
@@ -102,9 +102,9 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       try {
         const profile = (await gameRunner).playerProfile(message.playerID);
         sendMessage({
-          type: "player_profile_result",
           id: message.id,
           result: profile,
+          type: "player_profile_result",
         } as PlayerProfileResultMessage);
       } catch (error) {
         console.error("Failed to check borders:", error);
@@ -121,9 +121,9 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           message.playerID,
         );
         sendMessage({
-          type: "player_border_tiles_result",
           id: message.id,
           result: borderTiles,
+          type: "player_border_tiles_result",
         } as PlayerBorderTilesResultMessage);
       } catch (error) {
         console.error("Failed to get border tiles:", error);
@@ -141,8 +141,8 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           message.attackID,
         );
         sendMessage({
-          type: "attack_average_position_result",
           id: message.id,
+          type: "attack_average_position_result",
           x: averagePosition ? averagePosition.x : null,
           y: averagePosition ? averagePosition.y : null,
         } as AttackAveragePositionResultMessage);
@@ -162,9 +162,9 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           message.targetTile,
         );
         sendMessage({
-          type: "transport_ship_spawn_result",
           id: message.id,
           result: spawnTile,
+          type: "transport_ship_spawn_result",
         } as TransportShipSpawnResultMessage);
       } catch (error) {
         console.error("Failed to spawn transport ship:", error);

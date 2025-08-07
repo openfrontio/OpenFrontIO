@@ -119,13 +119,13 @@ export class TrainStation {
     );
     if (toRemove) {
       const railTiles: RailTile[] = toRemove.tiles.map((tile) => ({
-        tile,
         railType: RailType.VERTICAL,
+        tile,
       }));
       this.mg.addUpdate({
-        type: GameUpdateType.RailroadEvent,
         isActive: false,
         railTiles,
+        type: GameUpdateType.RailroadEvent,
       });
       this.railroads.delete(toRemove);
     }

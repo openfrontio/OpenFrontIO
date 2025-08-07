@@ -114,6 +114,7 @@ export class UnitImpl implements Unit {
     return this._id;
   }
 
+  /* eslint-disable sort-keys */
   toUpdate(): UnitUpdate {
     return {
       type: GameUpdateType.Unit,
@@ -139,6 +140,7 @@ export class UnitImpl implements Unit {
       loaded: this._loaded,
     };
   }
+  /* eslint-enable sort-keys */
 
   type(): UnitType {
     return this._type;

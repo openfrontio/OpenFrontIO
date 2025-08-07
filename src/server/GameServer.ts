@@ -123,15 +123,15 @@ export class GameServer {
     // Log when lobby creator joins private game
     if (client.clientID === this.LobbyCreatorID) {
       this.log.info("Lobby creator joined", {
-        gameID: this.id,
         creatorID: this.LobbyCreatorID,
+        gameID: this.id,
       });
     }
     this.log.info("client (re)joining game", {
       clientID: client.clientID,
-      persistentID: client.persistentID,
       clientIP: ipAnonymize(client.ip),
       isRejoin: lastTurn > 0,
+      persistentID: client.persistentID,
     });
 
     if (
@@ -210,9 +210,9 @@ export class GameServer {
             });
             client.ws.send(
               JSON.stringify({
-                type: "error",
                 error,
                 message,
+                type: "error",
               } satisfies ServerErrorMessage),
             );
             client.ws.close(1002, "ClientMessageSchema");
@@ -244,8 +244,8 @@ export class GameServer {
                     this.log.warn(`Only lobby creator can kick players`, {
                       clientID: authenticatedClientID,
                       creatorID: this.LobbyCreatorID,
-                      target: clientMsg.intent.target,
                       gameID: this.id,
+                      target: clientMsg.intent.target,
                     });
                     return;
                   }
@@ -261,9 +261,9 @@ export class GameServer {
                   // Log and execute the kick
                   this.log.info(`Lobby creator initiated kick of player`, {
                     creatorID: authenticatedClientID,
-                    target: clientMsg.intent.target,
                     gameID: this.id,
                     kickMethod: "websocket",
+                    target: clientMsg.intent.target,
                   });
 
                   this.kickClient(clientMsg.intent.target);
@@ -358,8 +358,8 @@ export class GameServer {
     this._hasPrestarted = true;
 
     const prestartMsg = ServerPrestartMessageSchema.safeParse({
-      type: "prestart",
       gameMap: this.gameConfig.gameMap,
+      type: "prestart",
     });
 
     if (!prestartMsg.success) {
@@ -393,13 +393,13 @@ export class GameServer {
     this.lastPingUpdate = Date.now();
 
     const result = GameStartInfoSchema.safeParse({
-      gameID: this.id,
       config: this.gameConfig,
+      gameID: this.id,
       players: this.activeClients.map((c) => ({
-        username: c.username,
         clientID: c.clientID,
-        pattern: c.pattern,
         flag: c.flag,
+        pattern: c.pattern,
+        username: c.username,
       })),
     });
     if (!result.success) {
@@ -430,9 +430,9 @@ export class GameServer {
     try {
       ws.send(
         JSON.stringify({
-          type: "start",
-          turns: this.turns.slice(lastTurn),
           gameStartInfo: this.gameStartInfo,
+          turns: this.turns.slice(lastTurn),
+          type: "start",
         } satisfies ServerStartGameMessage),
       );
     } catch (error) {
@@ -447,8 +447,8 @@ export class GameServer {
 
   private endTurn() {
     const pastTurn: Turn = {
-      turnNumber: this.turns.length,
       intents: this.intents,
+      turnNumber: this.turns.length,
     };
     this.turns.push(pastTurn);
     this.intents = [];
@@ -457,8 +457,8 @@ export class GameServer {
     this.checkDisconnectedStatus();
 
     const msg = JSON.stringify({
-      type: "turn",
       turn: pastTurn,
+      type: "turn",
     } satisfies ServerTurnMessage);
     this.activeClients.forEach((c) => {
       c.ws.send(msg);
@@ -510,9 +510,9 @@ export class GameServer {
       }
 
       this.log.error("Error archiving game record details:", {
-        gameId: this.id,
-        errorType: typeof error,
         error: errorDetails,
+        errorType: typeof error,
+        gameId: this.id,
       });
     }
   }
@@ -587,12 +587,12 @@ export class GameServer {
 
   public gameInfo(): GameInfo {
     return {
-      gameID: this.id,
       clients: this.activeClients.map((c) => ({
-        username: c.username,
         clientID: c.clientID,
+        username: c.username,
       })),
       gameConfig: this.gameConfig,
+      gameID: this.id,
       msUntilStart: this.isPublic()
         ? this.createdAt + this.config.gameCreationRate()
         : undefined,
@@ -618,8 +618,8 @@ export class GameServer {
       });
       client.ws.send(
         JSON.stringify({
-          type: "error",
           error: "Kicked from game (you may have been playing on another tab)",
+          type: "error",
         } satisfies ServerErrorMessage),
       );
       client.ws.close(1000, "Kicked from game");
@@ -660,9 +660,9 @@ export class GameServer {
   private markClientDisconnected(clientID: string, isDisconnected: boolean) {
     this.clientsDisconnectedStatus.set(clientID, isDisconnected);
     this.addIntent({
-      type: "mark_disconnected",
-      clientID: clientID,
+      clientID,
       isDisconnected: isDisconnected,
+      type: "mark_disconnected",
     });
   }
 
@@ -681,10 +681,10 @@ export class GameServer {
         }
         return {
           clientID: player.clientID,
-          username: player.username,
           persistentID:
             this.allClients.get(player.clientID)?.persistentID ?? "",
           stats,
+          username: player.username,
         } satisfies PlayerRecord;
       },
     );
@@ -722,17 +722,17 @@ export class GameServer {
     }
 
     const serverDesync = ServerDesyncSchema.safeParse({
-      type: "desync",
-      turn: lastHashTurn,
-      correctHash: mostCommonHash,
       clientsWithCorrectHash:
         this.activeClients.length - outOfSyncClients.length,
+      correctHash: mostCommonHash,
       totalActiveClients: this.activeClients.length,
+      turn: lastHashTurn,
+      type: "desync",
     });
     if (!serverDesync.success) {
       this.log.warn("failed to create desync message", {
-        gameID: this.id,
         error: serverDesync.error,
+        gameID: this.id,
       });
       return;
     }
@@ -745,8 +745,8 @@ export class GameServer {
       }
       this.sentDesyncMessageClients.add(c.clientID);
       this.log.info("sending desync to client", {
-        gameID: this.id,
         clientID: c.clientID,
+        gameID: this.id,
         persistentID: c.persistentID,
       });
       c.ws.send(desyncMsg);

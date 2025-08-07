@@ -85,8 +85,8 @@ export async function startWorker() {
   app.use(express.static(path.join(__dirname, "../../out")));
   app.use(
     rateLimit({
-      windowMs: 1000, // 1 second
       max: 20, // 20 requests per IP per second
+      windowMs: 1000, // 1 second
     }),
   );
 
@@ -232,9 +232,9 @@ export async function startWorker() {
 
       if (!gameRecord) {
         return res.status(404).json({
-          success: false,
           error: "Game not found",
           exists: false,
+          success: false,
         });
       }
 
@@ -246,20 +246,20 @@ export async function startWorker() {
           `git commit mismatch for game ${req.params.id}, expected ${config.gitCommit()}, got ${gameRecord.gitCommit}`,
         );
         return res.status(409).json({
-          success: false,
+          details: {
+            actualCommit: gameRecord.gitCommit,
+            expectedCommit: config.gitCommit(),
+          },
           error: "Version mismatch",
           exists: true,
-          details: {
-            expectedCommit: config.gitCommit(),
-            actualCommit: gameRecord.gitCommit,
-          },
+          success: false,
         });
       }
 
       return res.status(200).json({
-        success: true,
         exists: true,
         gameRecord: gameRecord,
+        success: true,
       });
     }),
   );
@@ -324,8 +324,8 @@ export async function startWorker() {
             log.warn("Error parsing client message", error);
             ws.send(
               JSON.stringify({
-                type: "error",
                 error: error.toString(),
+                type: "error",
               } satisfies ServerErrorMessage),
             );
             ws.close(1002, "ClientJoinMessageSchema");

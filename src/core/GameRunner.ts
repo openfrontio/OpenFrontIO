@@ -165,10 +165,10 @@ export class GameRunner {
     updates[GameUpdateType.Tile] = [];
 
     this.callBack({
-      tick: this.game.ticks(),
       packedTileUpdates: new BigUint64Array(packedTileUpdates),
-      updates: updates,
       playerNameViewData: this.playerViewData,
+      tick: this.game.ticks(),
+      updates: updates,
     });
     this.isExecuting = false;
   }
@@ -181,21 +181,21 @@ export class GameRunner {
     const player = this.game.player(playerID);
     const tile = this.game.ref(x, y);
     const actions = {
-      canAttack: player.canAttack(tile),
       buildableUnits: player.buildableUnits(tile),
+      canAttack: player.canAttack(tile),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
     } as PlayerActions;
 
     if (this.game.hasOwner(tile)) {
       const other = this.game.owner(tile) as Player;
       actions.interaction = {
-        sharedBorder: player.sharesBorderWith(other),
-        canSendEmoji: player.canSendEmoji(other),
-        canTarget: player.canTarget(other),
-        canSendAllianceRequest: player.canSendAllianceRequest(other),
         canBreakAlliance: player.isAlliedWith(other),
         canDonate: player.canDonate(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
+        canSendAllianceRequest: player.canSendAllianceRequest(other),
+        canSendEmoji: player.canSendEmoji(other),
+        canTarget: player.canTarget(other),
+        sharedBorder: player.sharesBorderWith(other),
       };
       const alliance = player.allianceWith(other as Player);
       if (alliance) {
