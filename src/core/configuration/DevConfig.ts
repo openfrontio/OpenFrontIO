@@ -44,7 +44,9 @@ export class DevServerConfig extends DefaultServerConfig {
   }
 
   replayFallbackUrl(gameId: GameID): string {
-    return `https://api.openfront.io/game/${gameId}`;
+    const url = new URL("https://api.openfront.io");
+    url.pathname = `/game/${gameId}`;
+    return url.toString();
   }
 }
 
