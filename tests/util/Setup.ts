@@ -64,6 +64,7 @@ export async function setup(
     disableNPCs: false,
     bots: 0,
     infiniteGold: false,
+    donateGold: false,
     infiniteTroops: false,
     donateTroops: false,
     instantBuild: false,

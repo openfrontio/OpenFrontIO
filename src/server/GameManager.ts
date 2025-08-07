@@ -44,6 +44,7 @@ export class GameManager {
         difficulty: Difficulty.Medium,
         disableNPCs: false,
         infiniteGold: false,
+        donateGold: false,
         infiniteTroops: false,
         donateTroops: false,
         instantBuild: false,
