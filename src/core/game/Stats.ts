@@ -105,4 +105,7 @@ export interface Stats {
 
   // Player targets another player
   targetSend(player: Player, target: Player): void;
+
+  // Player conquers a bot, nation, or player
+  recordConquer(player: Player, type: "bot" | "nation" | "player"): void;
 }

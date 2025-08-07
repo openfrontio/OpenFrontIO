@@ -319,6 +319,30 @@ describe("Stats", () => {
     });
   });
 
+  test("recordConquer", () => {
+    stats.recordConquer(player1, "bot");
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        conquers: [1n, 0n, 0n],
+      },
+    });
+    stats.recordConquer(player1, "nation");
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        conquers: [1n, 1n, 0n],
+      },
+    });
+    stats.recordConquer(player2, "player");
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        conquers: [1n, 1n, 0n],
+      },
+      client2: {
+        conquers: [0n, 0n, 1n],
+      },
+    });
+  });
+
   test("stringify", () => {
     stats.unitLose(player1, UnitType.Port);
     expect(JSON.stringify(stats.stats(), replacer)).toBe(

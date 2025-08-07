@@ -11,6 +11,9 @@ import {
   BOMB_INDEX_INTERCEPT,
   BOMB_INDEX_LAND,
   BOMB_INDEX_LAUNCH,
+  CONQUER_INDEX_BOT,
+  CONQUER_INDEX_NATION,
+  CONQUER_INDEX_PLAYER,
   EMOJI_INDEX_BROADCAST,
   EMOJI_INDEX_RECV,
   EMOJI_INDEX_SENT,
@@ -164,6 +167,14 @@ export class StatsImpl implements Stats {
     p.targets[index] += 1n;
   }
 
+  private _addConquer(player: Player, index: number) {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    p.conquers ??= [0n, 0n, 0n];
+    while (p.conquers.length <= index) p.conquers.push(0n);
+    p.conquers[index] += 1n;
+  }
+
   attack(
     player: Player,
     target: Player | TerraNullius,
@@ -295,5 +306,19 @@ export class StatsImpl implements Stats {
   targetSend(player: Player, target: Player): void {
     this._addTarget(player, TARGET_INDEX_SENT);
     this._addTarget(target, TARGET_INDEX_RECV);
+  }
+
+  recordConquer(player: Player, type: "bot" | "nation" | "player"): void {
+    switch (type) {
+      case "bot":
+        this._addConquer(player, CONQUER_INDEX_BOT);
+        break;
+      case "nation":
+        this._addConquer(player, CONQUER_INDEX_NATION);
+        break;
+      case "player":
+        this._addConquer(player, CONQUER_INDEX_PLAYER);
+        break;
+    }
   }
 }

@@ -343,6 +343,15 @@ export class AttackExecution implements Execution {
 
     this.mg.conquerPlayer(this._owner, this.target);
 
+    // Record stats of conquered players
+    if (this.target.type() === PlayerType.Bot) {
+      this.mg.stats().recordConquer(this._owner, "bot");
+    } else if (this.target.type() === PlayerType.FakeHuman) {
+      this.mg.stats().recordConquer(this._owner, "nation");
+    } else if (this.target.type() === PlayerType.Human) {
+      this.mg.stats().recordConquer(this._owner, "player");
+    }
+
     for (let i = 0; i < 10; i++) {
       for (const tile of this.target.tiles()) {
         const borders = this.mg

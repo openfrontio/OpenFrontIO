@@ -101,6 +101,11 @@ export const QUICKCHAT_INDEX_RECV = 1; // QuickChats received
 export const TARGET_INDEX_SENT = 0; // Targeting a player (outgoing)
 export const TARGET_INDEX_RECV = 1; // Targeting received (incoming)
 
+// Bots, Nations, Players conquered
+export const CONQUER_INDEX_BOT = 0; // Bots conquered
+export const CONQUER_INDEX_NATION = 1; // Nations conquered
+export const CONQUER_INDEX_PLAYER = 2; // Players conquered
+
 const BigIntStringSchema = z.preprocess((val) => {
   if (typeof val === "string" && /^-?\d+$/.test(val)) return BigInt(val);
   if (typeof val === "bigint") return val;
@@ -121,6 +126,7 @@ export const PlayerStatsSchema = z
     emojis: AtLeastOneNumberSchema.optional(),
     quickchats: AtLeastOneNumberSchema.optional(),
     targets: AtLeastOneNumberSchema.optional(),
+    conquers: AtLeastOneNumberSchema.optional(),
   })
   .optional();
 export type PlayerStats = z.infer<typeof PlayerStatsSchema>;
