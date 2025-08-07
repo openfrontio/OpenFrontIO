@@ -26,14 +26,14 @@ export async function archive(gameRecord: GameRecord) {
   try {
     gameRecord.gitCommit = config.gitCommit();
     // Archive to R2
-    await archiveAnalyticsToR2(gameRecord);
+    await archiveAnalyticsToR2(stripTurns(gameRecord));
 
     // Archive full game if there are turns
     if (gameRecord.turns.length > 0) {
       log.info(
         `${gameRecord.info.gameID}: game has more than zero turns, attempting to write to full game to R2`,
       );
-      await archiveFullGameToR2(gameRecord);
+      await archiveFullGameToR2(stripPerisistentIds(gameRecord));
     }
   } catch (error: unknown) {
     // If the error is not an instance of Error, log it as a string
@@ -54,7 +54,7 @@ export async function archive(gameRecord: GameRecord) {
   }
 }
 
-async function archiveAnalyticsToR2(gameRecord: GameRecord) {
+function stripTurns(gameRecord: GameRecord): AnalyticsRecord {
   // Create analytics data object
   const { info, version, gitCommit, subdomain, domain } = gameRecord;
   const analyticsData: AnalyticsRecord = {
@@ -64,7 +64,49 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
     subdomain,
     domain,
   };
+  return analyticsData;
+}
 
+function stripPerisistentIds(gameRecord: GameRecord): GameRecord {
+  // Create replay object
+  const {
+    info: {
+      gameID,
+      config,
+      players: privatePlayers,
+      start,
+      end,
+      duration,
+      num_turns,
+      winner,
+    },
+    version,
+    gitCommit,
+    subdomain,
+    domain,
+    turns,
+  } = gameRecord;
+  const players = privatePlayers.map(
+    ({ clientID, persistentID: _, username, pattern, flag }) => ({
+      clientID,
+      username,
+      pattern,
+      flag,
+    }),
+  );
+  const replayData: GameRecord = {
+    info: { gameID, config, players, start, end, duration, num_turns, winner },
+    version,
+    gitCommit,
+    subdomain,
+    domain,
+    turns,
+  };
+  return replayData;
+}
+
+async function archiveAnalyticsToR2(gameRecord: AnalyticsRecord) {
+  const { info } = gameRecord;
   try {
     // Store analytics data using just the game ID as the key
     const analyticsKey = `${info.gameID}.json`;
@@ -72,7 +114,7 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
     await r2.putObject({
       Bucket: bucket,
       Key: `${analyticsFolder}/${analyticsKey}`,
-      Body: JSON.stringify(analyticsData, replacer),
+      Body: JSON.stringify(gameRecord, replacer),
       ContentType: "application/json",
     });
 
@@ -98,19 +140,11 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
 }
 
 async function archiveFullGameToR2(gameRecord: GameRecord) {
-  // Create a deep copy to avoid modifying the original
-  const recordCopy = structuredClone(gameRecord);
-
-  // Players may see this so make sure to clear PII
-  recordCopy.info.players.forEach((p) => {
-    p.persistentID = "REDACTED";
-  });
-
   try {
     await r2.putObject({
       Bucket: bucket,
-      Key: `${gameFolder}/${recordCopy.info.gameID}`,
-      Body: JSON.stringify(recordCopy, replacer),
+      Key: `${gameFolder}/${gameRecord.info.gameID}`,
+      Body: JSON.stringify(gameRecord, replacer),
       ContentType: "application/json",
     });
   } catch (error) {
