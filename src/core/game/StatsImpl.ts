@@ -33,6 +33,8 @@ import {
   QUICKCHAT_INDEX_SENT,
   TARGET_INDEX_RECV,
   TARGET_INDEX_SENT,
+  TROOPS_INDEX_RECV,
+  TROOPS_INDEX_SENT,
   unitTypeToBombUnit,
   unitTypeToOtherUnit,
 } from "../StatsSchemas";
@@ -173,6 +175,14 @@ export class StatsImpl implements Stats {
     p.conquers ??= [0n, 0n, 0n];
     while (p.conquers.length <= index) p.conquers.push(0n);
     p.conquers[index] += 1n;
+  }
+
+  private _addTroops(player: Player, index: number, value: BigIntLike) {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    p.troopsDonated ??= [0n, 0n];
+    while (p.troopsDonated.length <= index) p.troopsDonated.push(0n);
+    p.troopsDonated[index] += _bigint(value);
   }
 
   attack(
@@ -320,5 +330,10 @@ export class StatsImpl implements Stats {
         this._addConquer(player, CONQUER_INDEX_PLAYER);
         break;
     }
+  }
+
+  troopsSend(player: Player, target: Player, troops: BigIntLike): void {
+    this._addTroops(player, TROOPS_INDEX_SENT, troops);
+    this._addTroops(target, TROOPS_INDEX_RECV, troops);
   }
 }

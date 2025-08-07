@@ -108,4 +108,7 @@ export interface Stats {
 
   // Player conquers a bot, nation, or player
   recordConquer(player: Player, type: "bot" | "nation" | "player"): void;
+
+  // Player sends troops to another player
+  troopsSend(player: Player, target: Player, troops: number | bigint): void;
 }

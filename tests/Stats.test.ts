@@ -343,6 +343,38 @@ describe("Stats", () => {
     });
   });
 
+  test("troopsSend", () => {
+    stats.troopsSend(player1, player2, 100);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        troopsDonated: [100n, 0n],
+      },
+      client2: {
+        troopsDonated: [0n, 100n],
+      },
+    });
+
+    stats.troopsSend(player1, player2, 50);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        troopsDonated: [150n, 0n],
+      },
+      client2: {
+        troopsDonated: [0n, 150n],
+      },
+    });
+
+    stats.troopsSend(player2, player1, 25);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        troopsDonated: [150n, 25n],
+      },
+      client2: {
+        troopsDonated: [25n, 150n],
+      },
+    });
+  });
+
   test("stringify", () => {
     stats.unitLose(player1, UnitType.Port);
     expect(JSON.stringify(stats.stats(), replacer)).toBe(

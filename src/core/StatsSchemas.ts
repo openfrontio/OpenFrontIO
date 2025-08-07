@@ -106,6 +106,10 @@ export const CONQUER_INDEX_BOT = 0; // Bots conquered
 export const CONQUER_INDEX_NATION = 1; // Nations conquered
 export const CONQUER_INDEX_PLAYER = 2; // Players conquered
 
+// Troops
+export const TROOPS_INDEX_SENT = 0; // Troops sent to other players
+export const TROOPS_INDEX_RECV = 1; // Troops received from other players
+
 const BigIntStringSchema = z.preprocess((val) => {
   if (typeof val === "string" && /^-?\d+$/.test(val)) return BigInt(val);
   if (typeof val === "bigint") return val;
@@ -127,6 +131,7 @@ export const PlayerStatsSchema = z
     quickchats: AtLeastOneNumberSchema.optional(),
     targets: AtLeastOneNumberSchema.optional(),
     conquers: AtLeastOneNumberSchema.optional(),
+    troopsDonated: AtLeastOneNumberSchema.optional(),
   })
   .optional();
 export type PlayerStats = z.infer<typeof PlayerStatsSchema>;
