@@ -17,6 +17,7 @@ export class PastelThemeDark implements Theme {
   private teamColorAllocator = new ColorAllocator(humanColors, fallbackColors);
   private nationColorAllocator = new ColorAllocator(nationColors, nationColors);
 
+  /* eslint-disable sort-keys */
   private background = colord({ r: 0, g: 0, b: 0 });
   private shore = colord({ r: 134, g: 133, b: 88 });
   private falloutColors = [
@@ -35,6 +36,7 @@ export class PastelThemeDark implements Theme {
   private _enemyColor = colord({ r: 255, g: 0, b: 0 });
 
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
+  /* eslint-enable sort-keys */
 
   teamColor(team: Team): Colord {
     return this.teamColorAllocator.assignTeamColor(team);
@@ -58,6 +60,7 @@ export class PastelThemeDark implements Theme {
     return player.type() === PlayerType.Human ? "#ffffff" : "#e6e6e6";
   }
 
+  /* eslint-disable sort-keys */
   specialBuildingColor(player: PlayerView): Colord {
     const tc = this.territoryColor(player).rgba;
     return colord({
@@ -143,6 +146,7 @@ export class PastelThemeDark implements Theme {
         });
     }
   }
+  /* eslint-enable sort-keys */
 
   backgroundColor(): Colord {
     return this.background;

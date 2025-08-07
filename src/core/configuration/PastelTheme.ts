@@ -17,6 +17,7 @@ export class PastelTheme implements Theme {
   private teamColorAllocator = new ColorAllocator(humanColors, fallbackColors);
   private nationColorAllocator = new ColorAllocator(nationColors, nationColors);
 
+  /* eslint-disable sort-keys */
   private background = colord({ r: 60, g: 60, b: 60 });
   private shore = colord({ r: 204, g: 203, b: 158 });
   private falloutColors = [
@@ -35,6 +36,7 @@ export class PastelTheme implements Theme {
   private _enemyColor = colord({ r: 255, g: 0, b: 0 });
 
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
+  /* eslint-enable sort-keys */
 
   teamColor(team: Team): Colord {
     return this.teamColorAllocator.assignTeamColor(team);
@@ -60,20 +62,24 @@ export class PastelTheme implements Theme {
 
   specialBuildingColor(player: PlayerView): Colord {
     const tc = this.territoryColor(player).rgba;
+    /* eslint-disable sort-keys */
     return colord({
       r: Math.max(tc.r - 50, 0),
       g: Math.max(tc.g - 50, 0),
       b: Math.max(tc.b - 50, 0),
     });
+    /* eslint-enable sort-keys */
   }
 
   railroadColor(player: PlayerView): Colord {
     const tc = this.territoryColor(player).rgba;
+    /* eslint-disable sort-keys */
     const color = colord({
       r: Math.max(tc.r - 10, 0),
       g: Math.max(tc.g - 10, 0),
       b: Math.max(tc.b - 10, 0),
     });
+    /* eslint-enable sort-keys */
     return color;
   }
 
@@ -82,16 +88,19 @@ export class PastelTheme implements Theme {
       return this.borderColorCache.get(player.id())!;
     }
     const tc = this.territoryColor(player).rgba;
+    /* eslint-disable sort-keys */
     const color = colord({
       r: Math.max(tc.r - 40, 0),
       g: Math.max(tc.g - 40, 0),
       b: Math.max(tc.b - 40, 0),
     });
+    /* eslint-enable sort-keys */
 
     this.borderColorCache.set(player.id(), color);
     return color;
   }
 
+  /* eslint-disable sort-keys */
   defendedBorderColors(player: PlayerView): { light: Colord; dark: Colord } {
     return {
       light: this.territoryColor(player).darken(0.2),
@@ -141,6 +150,7 @@ export class PastelTheme implements Theme {
         });
     }
   }
+  /* eslint-enable sort-keys */
 
   backgroundColor(): Colord {
     return this.background;

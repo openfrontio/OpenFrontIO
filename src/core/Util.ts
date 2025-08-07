@@ -88,6 +88,7 @@ export function calculateBoundingBox(
     maxY = Math.max(maxY, cell.y);
   });
 
+  // eslint-disable-next-line sort-keys
   return { min: new Cell(minX, minY), max: new Cell(maxX, maxY) };
 }
 
@@ -143,10 +144,10 @@ export function sanitize(name: string): string {
 
 export function onlyImages(html: string) {
   return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ["span", "img"],
-    ALLOWED_ATTR: ["src", "alt", "class", "style"],
-    ALLOWED_URI_REGEXP: /^https:\/\/cdn\.jsdelivr\.net\/gh\/twitter\/twemoji/,
     ADD_ATTR: ["style"],
+    ALLOWED_ATTR: ["src", "alt", "class", "style"],
+    ALLOWED_TAGS: ["span", "img"],
+    ALLOWED_URI_REGEXP: /^https:\/\/cdn\.jsdelivr\.net\/gh\/twitter\/twemoji/,
   });
 }
 
@@ -171,21 +172,21 @@ export function createGameRecord(
     (t) => t.intents.length !== 0 || t.hash !== undefined,
   );
   const record: GameRecord = {
+    domain,
+    gitCommit,
     info: {
-      gameID,
       config,
+      duration,
+      end,
+      gameID,
+      num_turns,
       players,
       start,
-      end,
-      duration,
-      num_turns,
       winner,
     },
-    version,
-    gitCommit,
     subdomain,
-    domain,
     turns,
+    version,
   };
   return record;
 }
@@ -197,8 +198,8 @@ export function decompressGameRecord(gameRecord: GameRecord) {
     while (lastTurnNum < turn.turnNumber - 1) {
       lastTurnNum++;
       turns.push({
-        turnNumber: lastTurnNum,
         intents: [],
+        turnNumber: lastTurnNum,
       });
     }
     turns.push(turn);
@@ -207,8 +208,8 @@ export function decompressGameRecord(gameRecord: GameRecord) {
   const turnLength = turns.length;
   for (let i = turnLength; i < gameRecord.info.num_turns; i++) {
     turns.push({
-      turnNumber: i,
       intents: [],
+      turnNumber: i,
     });
   }
   gameRecord.turns = turns;

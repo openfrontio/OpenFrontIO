@@ -113,7 +113,7 @@ export class UnitGrid {
       gridY + Math.ceil((range - (cellSize - (y % cellSize))) / cellSize),
     );
 
-    return { startGridX, endGridX, startGridY, endGridY };
+    return { endGridX, endGridY, startGridX, startGridY };
   }
 
   private squaredDistanceFromTile(
@@ -154,6 +154,7 @@ export class UnitGrid {
             if (!unit.isActive()) continue;
             const distSquared = this.squaredDistanceFromTile(unit, tile);
             if (distSquared > rangeSquared) continue;
+            // eslint-disable-next-line sort-keys
             const value = { unit, distSquared };
             if (predicate !== undefined && !predicate(value)) continue;
             nearby.push(value);

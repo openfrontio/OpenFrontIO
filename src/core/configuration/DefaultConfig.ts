@@ -407,6 +407,7 @@ export class DefaultConfig implements Config {
     return 1 / (1 + decayRate * numPlayerPorts);
   }
 
+  /* eslint-disable sort-keys */
   unitInfo(type: UnitType): UnitInfo {
     switch (type) {
       case UnitType.TransportShip:
@@ -540,6 +541,7 @@ export class DefaultConfig implements Config {
         assertNever(type);
     }
   }
+  /* eslint-enable sort-keys */
 
   private costWrapper(
     costFn: (units: number) => number,
