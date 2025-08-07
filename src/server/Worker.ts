@@ -24,6 +24,7 @@ import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 
+import { replacer } from "../core/Util";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
@@ -256,11 +257,19 @@ export async function startWorker() {
         });
       }
 
-      return res.status(200).json({
-        success: true,
-        exists: true,
-        gameRecord: gameRecord,
-      });
+      return res
+        .status(200)
+        .header("Content-Type", "application/json")
+        .send(
+          JSON.stringify(
+            {
+              success: true,
+              exists: true,
+              gameRecord: gameRecord,
+            },
+            replacer,
+          ),
+        );
     }),
   );
 
