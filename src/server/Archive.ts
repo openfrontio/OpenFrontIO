@@ -1,5 +1,5 @@
 import { S3 } from "@aws-sdk/client-s3";
-import z from "zod";
+import { z } from "zod";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import {
   AnalyticsRecord,
