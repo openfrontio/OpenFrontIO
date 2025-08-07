@@ -570,6 +570,7 @@ export class PlayerImpl implements Player {
   }
 
   canDonate(recipient: Player): boolean {
+    // TODO: break this into canDonateTroops and canDonateGold
     if (!this.isFriendly(recipient)) {
       return false;
     }
@@ -578,6 +579,9 @@ export class PlayerImpl implements Player {
       this.mg.config().gameConfig().gameMode === GameMode.FFA &&
       this.mg.config().gameConfig().gameType === GameType.Public
     ) {
+      return false;
+    }
+    if (this.mg.config().donateTroops() === false) {
       return false;
     }
     for (const donation of this.sentDonations) {

@@ -38,6 +38,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
+  @state() private donateTroops: boolean = false;
   @state() private instantBuild: boolean = false;
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
@@ -452,6 +453,7 @@ export class SinglePlayerModal extends LitElement {
               bots: this.bots,
               infiniteGold: this.infiniteGold,
               infiniteTroops: this.infiniteTroops,
+              donateTroops: this.donateTroops,
               instantBuild: this.instantBuild,
               disabledUnits: this.disabledUnits
                 .map((u) => Object.values(UnitType).find((ut) => ut === u))

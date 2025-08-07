@@ -83,6 +83,7 @@ export interface Config {
   bots(): number;
   infiniteGold(): boolean;
   infiniteTroops(): boolean;
+  donateTroops(): boolean;
   instantBuild(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;

@@ -42,6 +42,7 @@ export class HostLobbyModal extends LitElement {
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
+  @state() private donateTroops: boolean = false;
   @state() private instantBuild: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
@@ -377,7 +378,6 @@ export class HostLobbyModal extends LitElement {
                     ${translateText("host_modal.infinite_gold")}
                   </div>
                 </label>
-
                 <label
                   for="infinite-troops"
                   class="option-card ${this.infiniteTroops ? "selected" : ""}"
@@ -391,6 +391,22 @@ export class HostLobbyModal extends LitElement {
                   />
                   <div class="option-card-title">
                     ${translateText("host_modal.infinite_troops")}
+                  </div>
+                </label>
+
+                <label
+                  for="donate-troops"
+                  class="option-card ${this.donateTroops ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="donate-troops"
+                    @change=${this.handleDonateTroopsChange}
+                    .checked=${this.donateTroops}
+                  />
+                  <div class="option-card-title">
+                    ${translateText("host_modal.donate_troops")}
                   </div>
                 </label>
 
@@ -567,6 +583,11 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
+  private handleDonateTroopsChange(e: Event) {
+    this.donateTroops = Boolean((e.target as HTMLInputElement).checked);
+    this.putGameConfig();
+  }
+
   private async handleDisableNPCsChange(e: Event) {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
     console.log(`updating disable npcs to ${this.disableNPCs}`);
@@ -599,6 +620,7 @@ export class HostLobbyModal extends LitElement {
           bots: this.bots,
           infiniteGold: this.infiniteGold,
           infiniteTroops: this.infiniteTroops,
+          donateTroops: this.donateTroops,
           instantBuild: this.instantBuild,
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,

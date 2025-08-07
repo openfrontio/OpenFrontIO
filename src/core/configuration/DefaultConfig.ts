@@ -326,6 +326,9 @@ export class DefaultConfig implements Config {
   infiniteTroops(): boolean {
     return this._gameConfig.infiniteTroops;
   }
+  donateTroops(): boolean {
+    return this._gameConfig.donateTroops;
+  }
   trainSpawnRate(numberOfStations: number): number {
     return Math.min(1400, Math.round(20 * Math.pow(numberOfStations, 0.5)));
   }

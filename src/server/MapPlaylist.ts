@@ -83,6 +83,7 @@ export class MapPlaylist {
       difficulty: Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
+      donateTroops: false,
       instantBuild: false,
       disableNPCs: mode === GameMode.Team,
       gameMode: mode,

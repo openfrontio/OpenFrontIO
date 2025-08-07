@@ -95,6 +95,7 @@
     "instant_build": "single_modal.instant_build",
     "infinite_gold": "single_modal.infinite_gold",
     "infinite_troops": "single_modal.infinite_troops",
+    "donate_troops": "single_modal.donate_troops",
     "disable_nukes": "single_modal.disable_nukes",
     "start": "single_modal.start"
   },
@@ -148,6 +149,7 @@
     "instant_build": "host_modal.instant_build",
     "infinite_gold": "host_modal.infinite_gold",
     "infinite_troops": "host_modal.infinite_troops",
+    "donate_troops": "host_modal.donate_troops",
     "disable_nukes": "host_modal.disable_nukes",
     "player": "host_modal.player",
     "players": "host_modal.players",
