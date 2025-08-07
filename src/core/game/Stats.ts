@@ -111,4 +111,7 @@ export interface Stats {
 
   // Player sends troops to another player
   troopsSend(player: Player, target: Player, troops: number | bigint): void;
+
+  // Player sends gold to another player
+  goldSend(player: Player, target: Player, gold: number | bigint): void;
 }

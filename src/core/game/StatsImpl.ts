@@ -17,6 +17,8 @@ import {
   EMOJI_INDEX_BROADCAST,
   EMOJI_INDEX_RECV,
   EMOJI_INDEX_SENT,
+  GOLD_DONATED_INDEX_RECV,
+  GOLD_DONATED_INDEX_SENT,
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
   GOLD_INDEX_WAR,
@@ -185,6 +187,14 @@ export class StatsImpl implements Stats {
     p.troopsDonated[index] += _bigint(value);
   }
 
+  private _addGoldDonated(player: Player, index: number, value: BigIntLike) {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    p.goldDonated ??= [0n, 0n];
+    while (p.goldDonated.length <= index) p.goldDonated.push(0n);
+    p.goldDonated[index] += _bigint(value);
+  }
+
   attack(
     player: Player,
     target: Player | TerraNullius,
@@ -335,5 +345,10 @@ export class StatsImpl implements Stats {
   troopsSend(player: Player, target: Player, troops: BigIntLike): void {
     this._addTroops(player, TROOPS_INDEX_SENT, troops);
     this._addTroops(target, TROOPS_INDEX_RECV, troops);
+  }
+
+  goldSend(player: Player, target: Player, gold: number | bigint): void {
+    this._addGoldDonated(player, GOLD_DONATED_INDEX_SENT, gold);
+    this._addGoldDonated(target, GOLD_DONATED_INDEX_RECV, gold);
   }
 }

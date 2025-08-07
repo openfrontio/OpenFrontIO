@@ -375,6 +375,38 @@ describe("Stats", () => {
     });
   });
 
+  test("goldSend", () => {
+    stats.goldSend(player1, player2, 1000n);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        goldDonated: [1000n, 0n],
+      },
+      client2: {
+        goldDonated: [0n, 1000n],
+      },
+    });
+
+    stats.goldSend(player1, player2, 500n);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        goldDonated: [1500n, 0n],
+      },
+      client2: {
+        goldDonated: [0n, 1500n],
+      },
+    });
+
+    stats.goldSend(player2, player1, 250n);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        goldDonated: [1500n, 250n],
+      },
+      client2: {
+        goldDonated: [250n, 1500n],
+      },
+    });
+  });
+
   test("stringify", () => {
     stats.unitLose(player1, UnitType.Port);
     expect(JSON.stringify(stats.stats(), replacer)).toBe(

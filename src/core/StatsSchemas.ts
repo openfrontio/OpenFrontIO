@@ -110,6 +110,10 @@ export const CONQUER_INDEX_PLAYER = 2; // Players conquered
 export const TROOPS_INDEX_SENT = 0; // Troops sent to other players
 export const TROOPS_INDEX_RECV = 1; // Troops received from other players
 
+// Gold Donations
+export const GOLD_DONATED_INDEX_SENT = 0; // Gold sent to other players
+export const GOLD_DONATED_INDEX_RECV = 1; // Gold received from other players
+
 const BigIntStringSchema = z.preprocess((val) => {
   if (typeof val === "string" && /^-?\d+$/.test(val)) return BigInt(val);
   if (typeof val === "bigint") return val;
@@ -132,6 +136,7 @@ export const PlayerStatsSchema = z
     targets: AtLeastOneNumberSchema.optional(),
     conquers: AtLeastOneNumberSchema.optional(),
     troopsDonated: AtLeastOneNumberSchema.optional(),
+    goldDonated: AtLeastOneNumberSchema.optional(),
   })
   .optional();
 export type PlayerStats = z.infer<typeof PlayerStatsSchema>;
