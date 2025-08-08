@@ -38,8 +38,7 @@ export async function preJoinMessageHandler(
     return;
   } else if (result.success === false) {
     // Join failure
-    const { code, description, error, reason } = result;
-    log.warn(`${reason}: ${description}`, error);
+    const { code, error, reason } = result;
     if (error) {
       ws.send(
         JSON.stringify({
@@ -68,7 +67,6 @@ async function handleJoinMessage(
   | {
       success: false;
       code: 1002;
-      description: string;
       error?: string;
       reason:
         | "ClientJoinMessageSchema"
@@ -86,7 +84,6 @@ async function handleJoinMessage(
       code: 1011;
       reason: "Internal server error";
       error: string;
-      description: string;
     }
 > {
   const forwarded = req.headers["x-forwarded-for"];
@@ -102,9 +99,9 @@ async function handleJoinMessage(
     );
     if (!parsed.success) {
       const error = z.prettifyError(parsed.error);
+      log.warn("Error parsing client message:", error);
       return {
         code: 1002,
-        description: "Error parsing client message",
         error,
         reason: "ClientJoinMessageSchema",
         success: false,
@@ -132,9 +129,9 @@ async function handleJoinMessage(
     // Verify token signature
     const result = await verifyClientToken(clientMsg.token, config);
     if (result === false) {
+      log.warn("Unauthorized: Invalid token");
       return {
         code: 1002,
-        description: "Invalid token",
         reason: "Unauthorized",
         success: false,
       };
@@ -147,9 +144,9 @@ async function handleJoinMessage(
     const allowedFlares = config.allowedFlares();
     if (claims === null) {
       if (allowedFlares !== undefined) {
+        log.warn("Unauthorized: Anonymous user attempted to join game");
         return {
           code: 1002,
-          description: "Anonymous user attempted to join game",
           reason: "Unauthorized",
           success: false,
         };
@@ -158,9 +155,9 @@ async function handleJoinMessage(
       // Verify token and get player permissions
       const result = await getUserMe(clientMsg.token, config);
       if (result === false) {
+        log.warn("Unauthorized: Token verification failed");
         return {
           code: 1002,
-          description: "Anonymous user attempted to join game",
           reason: "Unauthorized",
           success: false,
         };
@@ -173,10 +170,11 @@ async function handleJoinMessage(
           allowedFlares.length === 0 ||
           allowedFlares.some((f) => flares?.includes(f));
         if (!allowed) {
+          log.warn(
+            "Fobidden: player without an allowed flare attempted to join game",
+          );
           return {
             code: 1002,
-            description:
-              "player without an allowed flare attempted to join game",
             reason: "Forbidden",
             success: false,
           };
@@ -191,9 +189,9 @@ async function handleJoinMessage(
           .get()
           .isCustomFlagAllowed(clientMsg.flag, flares);
         if (allowed !== true) {
+          log.warn(`Flag ${allowed}: ${clientMsg.flag}`);
           return {
             code: 1002,
-            description: clientMsg.flag,
             reason: `Flag ${allowed}`,
             success: false,
           };
@@ -207,9 +205,9 @@ async function handleJoinMessage(
         .get()
         .isPatternAllowed(clientMsg.pattern, flares);
       if (allowed !== true) {
+        log.warn(`Pattern ${allowed}: ${clientMsg.pattern}`);
         return {
           code: 1002,
-          description: clientMsg.pattern,
           reason: `Pattern ${allowed}`,
           success: false,
         };
@@ -233,9 +231,9 @@ async function handleJoinMessage(
     const wasFound = gm.addClient(client, clientMsg.gameID, clientMsg.lastTurn);
 
     if (!wasFound) {
+      log.warn(`game ${clientMsg.gameID} not found on worker ${workerId}`);
       return {
         code: 1002,
-        description: `game ${clientMsg.gameID} not found on worker ${workerId}`,
         reason: "Not found",
         success: false,
       };
@@ -246,9 +244,9 @@ async function handleJoinMessage(
       success: true,
     };
   } catch (error) {
+    log.warn(`error handling websocket message for ${ipAnonymize(ip)}`, error);
     return {
       code: 1011,
-      description: `error handling websocket message for ${ipAnonymize(ip)}`,
       error: error instanceof Error ? error.message : String(error),
       reason: "Internal server error",
       success: false,
